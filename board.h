@@ -17,9 +17,12 @@ struct board {
 	int moves;
 	struct move last_move;
 
-	enum stone *b; /* map of stones */
-	int *g; /* map of group ids; 0 == no group */
-	int *g_libs; /* cache of group liberties; indexed by gid */
+	/* Stones played on the board */
+	enum stone *b;
+	/* Group id the stones are part of; 0 == no group */
+	int *g;
+	/* Cache of group liberties, indexed by gid */
+	int *g_libs;
 
 	/* private */
 	int last_gid;
