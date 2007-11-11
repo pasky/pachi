@@ -3,8 +3,12 @@
 PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
-CUSTOM_CFLAGS=-Wall -ggdb
+CUSTOM_CFLAGS=-Wall -ggdb -O3
 SYS_CFLAGS=
+
+# Profiling:
+# LD_FLAGS=-pg
+# CUSTOM_CFLAGS+= -pg
 
 LD=ld
 AR=ar
