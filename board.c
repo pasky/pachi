@@ -8,7 +8,9 @@
 struct board *
 board_init(void)
 {
-	return calloc(1, sizeof(struct board));
+	struct board *b = calloc(1, sizeof(struct board));
+	b->last_move = pass;
+	return b;
 }
 
 struct board *
