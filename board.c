@@ -178,6 +178,10 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 	if (board_at(board, m->coord) != S_NONE)
 		return false;
 
+	/* Check ko */
+	if (m->coord.x == board->last_move.coord.x && m->coord.y == board->last_move.coord.y)
+		return false;
+
 	/* Try it! */
 	b2 = board_copy(board);
 	board_play_nocheck(b2, m);
