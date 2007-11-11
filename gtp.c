@@ -139,7 +139,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		free(str); coord_done(c);
 
 	} else if (!strcasecmp(cmd, "final_score")) {
-		float score = board_count_score(board);
+		float score = board_official_score(board);
 		char str[64];
 		if (score == 0) {
 			gtp_reply(id, "0", NULL);

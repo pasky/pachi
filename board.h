@@ -55,6 +55,6 @@ int board_group_libs(struct board *board, int group);
 void board_group_capture(struct board *board, int group);
 
 /* Positive: W wins */
-float board_count_score(struct board *board);
+float board_official_score(struct board *board);
 
 #endif

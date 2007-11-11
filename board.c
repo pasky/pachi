@@ -248,7 +248,7 @@ board_group_capture(struct board *board, int group)
 
 /* Chinese counting */
 float
-board_count_score(struct board *board)
+board_official_score(struct board *board)
 {
 	int scores[S_MAX];
 	memcpy(scores, board->captures, sizeof(scores));
