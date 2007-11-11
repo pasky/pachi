@@ -3,7 +3,7 @@ Go/Weiqi/Baduk. The aim is to make it easy to plug your engine
 to the common infrastructure and implement your ideas while
 minimalizing the overhead of implementing the GTP, board tools, etc.
 
-ZZGo is under the BSD licence (close to public domain) so that as
+ZZGo is under the MIT licence (close to public domain) so that as
 many people as possible can use it. Some of the bundled engines
 might be under a more restrictive licence (GPL).
 
