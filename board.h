@@ -7,8 +7,6 @@
 #include "move.h"
 
 
-#define MAXSIZE 19
-
 struct board {
 	int size;
 	int captures[S_MAX];
