@@ -45,7 +45,7 @@ board_copy(struct board *b2, struct board *b1)
 		(b2)->g = alloca((b2)->size * (b2)->size * sizeof(*(b2)->g)); \
 		memcpy((b2)->b, (b1)->b, (b2)->size * (b2)->size * sizeof(*(b2)->b)); \
 		memcpy((b2)->g, (b1)->g, (b2)->size * (b2)->size * sizeof(*(b2)->g)); \
-		(b2)->gi = (b1)->gi; (b2)->g_libs_ro = true; \
+		(b2)->gi = (b1)->gi; (b2)->gi_ro = true; \
 	} while (0)
 
 void
@@ -151,13 +151,13 @@ board_play_nocheck(struct board *board, struct move *m)
 	} foreach_neighbor_end;
 
 	if (gid <= 0) {
-		if (!board->g_libs_ro && g_libs_alloc(board->last_gid + 1) < g_libs_alloc(board->last_gid + 2)) {
+		if (!board->gi_ro && g_libs_alloc(board->last_gid + 1) < g_libs_alloc(board->last_gid + 2)) {
 			board->gi = realloc(board->gi, g_libs_alloc(board->last_gid + 2) * sizeof(*board->gi));
 		}
 		gid = ++board->last_gid;
 	}
 	group_add(board, gid, m->coord);
-	if (!board->g_libs_ro)
+	if (!board->gi_ro)
 		board_group_libs_recount(board, gid);
 
 record:
@@ -249,7 +249,7 @@ board_group_libs_recount(struct board *board, int group)
 
 	board->libcount_watermark = NULL;
 
-	if (!board->g_libs_ro)
+	if (!board->gi_ro)
 		board_group_libs(board, group) = l;
 	return l;
 }
