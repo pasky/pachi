@@ -25,11 +25,11 @@ struct board {
 	bool *libcount_watermark;
 };
 
-#define board_atxy(b_, x, y) (b_->b[x + b_->size * y])
-#define board_at(b_, c) board_atxy(b_, c.x, c.y)
+#define board_atxy(b_, x, y) ((b_)->b[(x) + (b_)->size * (y)])
+#define board_at(b_, c) board_atxy(b_, (c).x, (c).y)
 
-#define group_atxy(b_, x, y) (b_->g[x + b_->size * y])
-#define group_at(b_, c) group_atxy(b_, c.x, c.y)
+#define group_atxy(b_, x, y) ((b_)->g[x + (b_)->size * (y)])
+#define group_at(b_, c) group_atxy(b_, (c).x, (c).y)
 
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);

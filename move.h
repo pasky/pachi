@@ -9,8 +9,8 @@ struct coord {
 
 static struct coord pass = { -1, -1 };
 static struct coord resign = { -2, -2 };
-#define is_pass(c) (c.x == pass.x && c.y == pass.y)
-#define is_resign(c) (c.x == resign.x && c.y == resign.y)
+#define is_pass(c) ((c).x == pass.x && (c).y == pass.y)
+#define is_resign(c) ((c).x == resign.x && (c).y == resign.y)
 
 /* dyn allocated */
 static struct coord *coord_init(int x, int y);
