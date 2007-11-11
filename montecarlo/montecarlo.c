@@ -16,7 +16,7 @@
 #define MC_GAMES	1000
 #define MC_GAMELEN	400
 #else
-#define MC_GAMES	200
+#define MC_GAMES	1000
 #define MC_GAMELEN	150
 #endif
 
@@ -75,7 +75,7 @@ play_random_game(struct board *b, enum stone color, int moves)
 
 /* positive: player-to-play wins more, negative: player-to-play loses more */
 static int
-play_many_random_games_after(struct board *b, struct move *m)
+play_many_random_games_from(struct board *b, struct move *m)
 {
 	struct board b2;
 	board_copy(&b2, b);
@@ -118,7 +118,7 @@ montecarlo_genmove(struct board *b, enum stone color)
 			continue;
 
 		//fprintf(stderr, "[%d,%d] random\n", x, y);
-		int score = -play_many_random_games_after(b, &m);
+		int score = - play_many_random_games_from(b, &m);
 		//fprintf(stderr, "\tscore %d\n", score);
 		if (score > top_score) {
 			top_score = score;
