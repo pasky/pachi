@@ -54,11 +54,11 @@ play_random_game(struct board *b, enum stone color, int moves)
 		struct move m = { coord, color };
 		//char *cs = coord2str(coord); fprintf(stderr, "%s %s\n", stone2str(color), cs); free(cs);
 		board_play(&b2, &m);
-		color = stone_other(color);
 		if (is_pass(coord))
 			passes++;
 		else
 			passes = 0;
+		color = stone_other(color);
 	}
 
 	return board_fast_score(&b2);
