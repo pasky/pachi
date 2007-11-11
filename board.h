@@ -9,6 +9,9 @@
 
 struct group {
 	int libs; /* Number of group liberties */
+	/* Tried to experiment with tracing group start/end coordinates,
+	 * however then we cannot use ro group cache anymore and it does
+	 * not pay off. */
 };
 
 struct board {
