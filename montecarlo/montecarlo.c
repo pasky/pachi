@@ -22,14 +22,16 @@
 
 
 /* Stolen from the random engine. */
-static bool
+static void
 random_move(struct board *b, enum stone color, struct coord *coord)
 {
 	struct move m;
 	m.color = color;
 
-	if (board_no_valid_moves(b, color))
-		return false;
+	if (board_no_valid_moves(b, color)) {
+		*coord = pass;
+		return;
+	}
 
 	do {
 		m.coord.x = random() % b->size;
@@ -37,7 +39,6 @@ random_move(struct board *b, enum stone color, struct coord *coord)
 	} while (!board_valid_move(b, &m, true));
 
 	*coord = m.coord;
-	return true;
 }
 
 static float
@@ -47,10 +48,16 @@ play_random_game(struct board *b, enum stone color, int moves)
 	board_copy(&b2, b);
 	
 	struct coord coord;
-	while (moves-- && random_move(&b2, color, &coord)) {
+	int passes = 0;
+	while (moves-- && passes < 2) {
+		random_move(&b2, color, &coord);
 		struct move m = { coord, color };
 		board_play(&b2, &m);
 		color = stone_other(color);
+		if (is_pass(coord))
+			passes++;
+		else
+			passes = 0;
 	}
 
 	return board_fast_score(&b2);
@@ -99,7 +106,7 @@ montecarlo_genmove(struct board *b, enum stone color)
 			continue;
 
 		fprintf(stderr, "[%d,%d] random\n", x, y);
-		int score = play_many_random_games_after(b, &m);
+		int score = -play_many_random_games_after(b, &m);
 		fprintf(stderr, "\tscore %d\n", score);
 		if (score > top_score) {
 			top_score = score;
