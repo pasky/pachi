@@ -267,6 +267,28 @@ board_official_score(struct board *board)
 				gcache[g] = board_group_libs(board, g) == 1 ? GC_DEAD : GC_ALIVE;
 			if (gcache[g] == GC_ALIVE)
 				scores[board_at(board, c)]++;
+#if 0
+			This simply is not good enough.
+		} else {
+			/* Our opponent was sloppy. We try to just look at
+			 * our neighbors and as soon as we see a live group
+			 * we are set. We always see one or we would already
+			 * play on the empty place ourselves. */
+			/* The trouble is that sometimes our opponent won't even
+			 * bother to atari our group and then we get it still
+			 * wrong. */
+			foreach_neighbor(board, c) {
+				if (board_at(board, c) == S_NONE)
+					continue;
+				int g = group_at(board, c);
+				if (gcache[g] == GC_DUNNO)
+					gcache[g] = board_group_libs(board, g) == 1 ? GC_DEAD : GC_ALIVE;
+				if (gcache[g] == GC_ALIVE) {
+					scores[board_at(board, c)]++;
+					break;
+				}
+			} foreach_neighbor_end;
+#endif
 		}
 	} foreach_point_end;
 
