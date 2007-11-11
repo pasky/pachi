@@ -15,7 +15,7 @@ board_init(void)
 	struct board *b = calloc(1, sizeof(struct board));
 	struct move m = { pass, S_NONE };
 	b->last_move = m;
-	b->g_libs = calloc(g_libs_alloc(1), sizeof(*b->g_libs));
+	b->gi = calloc(g_libs_alloc(1), sizeof(*b->gi));
 	return b;
 }
 
@@ -30,8 +30,8 @@ board_copy(struct board *b2, struct board *b1)
 	memcpy(b2->g, b1->g, b2->size * b2->size * sizeof(*b2->g));
 
 	int g_libs_a = g_libs_alloc(b2->last_gid + 1);
-	b2->g_libs = calloc(g_libs_a, sizeof(*b2->g_libs));
-	memcpy(b2->g_libs, b1->g_libs, g_libs_a * sizeof(*b2->g_libs));
+	b2->gi = calloc(g_libs_a, sizeof(*b2->gi));
+	memcpy(b2->gi, b1->gi, g_libs_a * sizeof(*b2->gi));
 
 	return b2;
 }
@@ -45,7 +45,7 @@ board_copy(struct board *b2, struct board *b1)
 		(b2)->g = alloca((b2)->size * (b2)->size * sizeof(*(b2)->g)); \
 		memcpy((b2)->b, (b1)->b, (b2)->size * (b2)->size * sizeof(*(b2)->b)); \
 		memcpy((b2)->g, (b1)->g, (b2)->size * (b2)->size * sizeof(*(b2)->g)); \
-		(b2)->g_libs = (b1)->g_libs; (b2)->g_libs_ro = true; \
+		(b2)->gi = (b1)->gi; (b2)->g_libs_ro = true; \
 	} while (0)
 
 void
@@ -53,7 +53,7 @@ board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
 	if (board->g) free(board->g);
-	if (board->g_libs) free(board->g_libs);
+	if (board->gi) free(board->gi);
 }
 
 void
@@ -81,7 +81,7 @@ board_clear(struct board *board)
 	memset(board->g, 0, board->size * board->size * sizeof(*board->g));
 
 	int g_libs_a = g_libs_alloc(board->last_gid + 1);
-	memset(board->g_libs, 0, g_libs_a * sizeof(*board->g_libs));
+	memset(board->gi, 0, g_libs_a * sizeof(*board->gi));
 	board->last_gid = 0;
 }
 
@@ -145,7 +145,7 @@ board_play_nocheck(struct board *board, struct move *m)
 
 	if (gid <= 0) {
 		if (!board->g_libs_ro && g_libs_alloc(board->last_gid + 1) < g_libs_alloc(board->last_gid + 2)) {
-			board->g_libs = realloc(board->g_libs, g_libs_alloc(board->last_gid + 2) * sizeof(*board->g_libs));
+			board->gi = realloc(board->gi, g_libs_alloc(board->last_gid + 2) * sizeof(*board->gi));
 		}
 		gid = ++board->last_gid;
 	}
@@ -243,7 +243,7 @@ board_group_libs_recount(struct board *board, int group)
 	board->libcount_watermark = NULL;
 
 	if (!board->g_libs_ro)
-		board->g_libs[group] = l;
+		board->gi[group].libs = l;
 	return l;
 }
 

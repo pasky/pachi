@@ -7,6 +7,10 @@
 #include "move.h"
 
 
+struct group {
+	int libs; /* Number of group liberties */
+};
+
 struct board {
 	int size;
 	int captures[S_MAX];
@@ -21,8 +25,8 @@ struct board {
 	/* Note that "group" is only chain of stones that is solidly
 	 * connected for us. */
 	int *g;
-	/* Cache of group liberties, indexed by gid */
-	int *g_libs;
+	/* Cache of group info, indexed by gid */
+	struct group *gi;
 
 	/* private */
 	int last_gid;
@@ -36,7 +40,7 @@ struct board {
 #define group_atxy(b_, x, y) ((b_)->g[x + (b_)->size * (y)])
 #define group_at(b_, c) group_atxy(b_, (c).x, (c).y)
 
-#define board_group_libs(b_, g_) ((b_)->g_libs[(g_)])
+#define board_group_libs(b_, g_) ((b_)->gi[(g_)].libs)
 
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
