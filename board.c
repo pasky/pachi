@@ -117,6 +117,13 @@ board_print(struct board *board, FILE *f)
 }
 
 
+static void
+group_add(struct board *board, int gid, struct coord *c)
+{
+	group_at(board, c) = gid;
+}
+
+
 int
 board_play_nocheck(struct board *board, struct move *m)
 {
@@ -134,7 +141,7 @@ board_play_nocheck(struct board *board, struct move *m)
 			} else {
 				/* Merge groups */
 				foreach_in_group(board, group_at(board, c)) {
-					group_at(board, c) = gid;
+					group_add(board, gid, c);
 				} foreach_in_group_end;
 			}
 		} else if (board_at(board, c) == stone_other(m->color)
@@ -149,7 +156,7 @@ board_play_nocheck(struct board *board, struct move *m)
 		}
 		gid = ++board->last_gid;
 	}
-	group_at(board, m->coord) = gid;
+	group_add(board, gid, m->coord);
 	if (!board->g_libs_ro)
 		board_group_libs_recount(board, gid);
 
