@@ -2,6 +2,8 @@ ZZGo is a simple modular framework for robots playing the game of
 Go/Weiqi/Baduk. The aim is to make it easy to plug your engine
 to the common infrastructure and implement your ideas while
 minimalizing the overhead of implementing the GTP, board tools, etc.
+The infrastructure is optimized for maximal speed, to make it well
+suited for bruteforce engines.
 
 ZZGo is under the MIT licence (close to public domain) so that as
 many people as possible can use it. Some of the bundled engines
