@@ -118,7 +118,7 @@ board_print(struct board *board, FILE *f)
 
 
 static void
-group_add(struct board *board, int gid, struct coord *c)
+group_add(struct board *board, int gid, struct coord c)
 {
 	group_at(board, c) = gid;
 }
