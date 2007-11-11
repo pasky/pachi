@@ -17,8 +17,8 @@ struct board {
 	int moves;
 	struct move last_move;
 
-	enum stone *b; /* stones */
-	int *g; /* group ids */
+	enum stone *b; /* map of stones */
+	int *g; /* map of group ids; 0 == no group */
 
 	/* private */
 	int last_gid;
@@ -55,6 +55,9 @@ int board_group_libs(struct board *board, int group);
 void board_group_capture(struct board *board, int group);
 
 /* Positive: W wins */
+/* This is the scoring method for yielding score suitable for
+ * external presentation. For fast scoring of two ZZGos playing,
+ * there will be a separate function. */
 float board_official_score(struct board *board);
 
 #endif
