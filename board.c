@@ -23,10 +23,16 @@ board_copy(struct board *b2, struct board *b1)
 }
 
 void
-board_done(struct board *board)
+board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
 	if (board->g) free(board->g);
+}
+
+void
+board_done(struct board *board)
+{
+	board_done_noalloc(board);
 	free(board);
 }
 
@@ -153,11 +159,11 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 	board_play_nocheck(&b2, m);
 	if (board_group_libs(&b2, group_at((&b2), m->coord)) <= sensible) {
 		/* oops, suicide (or self-atari if sensible) */
-		board_done(&b2);
+		board_done_noalloc(&b2);
 		return false;
 	}
 
-	board_done(&b2);
+	board_done_noalloc(&b2);
 	return true;
 }
 
