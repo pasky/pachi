@@ -93,6 +93,9 @@ board_play_nocheck(struct board *board, struct move *m)
 {
 	int gid = 0;
 
+	if (is_pass(m->coord) || is_resign(m->coord))
+		goto record;
+
 	board_at(board, m->coord) = m->color;
 
 	foreach_neighbor(board, m->coord) {
@@ -115,6 +118,7 @@ board_play_nocheck(struct board *board, struct move *m)
 		gid = ++board->last_gid;
 	group_at(board, m->coord) = gid;
 
+record:
 	board->last_move = *m;
 	board->moves++;
 
