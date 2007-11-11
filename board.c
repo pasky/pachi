@@ -250,6 +250,7 @@ float
 board_official_score(struct board *board)
 {
 	int scores[S_MAX];
+	memset(scores, 0, sizeof(scores));
 
 	enum { GC_DUNNO, GC_ALIVE, GC_DEAD } gcache[board->last_gid + 1];
 	memset(gcache, 0, sizeof(gcache));
@@ -297,6 +298,7 @@ float
 board_fast_score(struct board *board)
 {
 	int scores[S_MAX];
+	memset(scores, 0, sizeof(scores));
 
 	foreach_point(board) {
 		scores[board_at(board, c)]++;
