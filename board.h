@@ -81,9 +81,10 @@ float board_fast_score(struct board *board);
 
 #define foreach_in_group(board_, group_) \
 	do { \
+		int *g__ = board_->g; \
 		int group__ = group_; \
 		foreach_point(board_) \
-			if (group_at(board_, c) == group__)
+			if (*g__++ == group__)
 #define foreach_in_group_end \
 		foreach_point_end; \
 	} while (0)
