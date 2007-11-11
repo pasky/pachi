@@ -175,6 +175,9 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 {
 	struct board *b2;
 
+	if (is_pass(m->coord) || is_resign(m->coord))
+		return true;
+
 	if (board_at(board, m->coord) != S_NONE)
 		return false;
 
