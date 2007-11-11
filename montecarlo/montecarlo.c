@@ -91,7 +91,7 @@ play_many_random_games_from(struct board *b, struct move *m)
 	for (i = 0; i < MC_GAMES; i++) {
 		float score = play_random_game(&b2, stone_other(m->color), gamelen);
 		//fprintf(stderr, "--- game result: %f\n", score);
-		balance += (score > 0 ? 1 : -1);
+		balance += (score > 0 ? 1 : -1) * (stone_other(m->color) == S_WHITE ? 1 : -1);
 	}
 
 	board_done_noalloc(&b2);
