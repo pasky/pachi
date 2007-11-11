@@ -138,6 +138,19 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		gtp_reply(id, str, NULL);
 		free(str); coord_done(c);
 
+	} else if (!strcasecmp(cmd, "final_score")) {
+		float score = board_count_score(board);
+		char str[64];
+		if (score == 0) {
+			gtp_reply(id, "0", NULL);
+		} else if (score > 0) {
+			snprintf(str, 64, "W+%.1f", score);
+			gtp_reply(id, str, NULL);
+		} else {
+			snprintf(str, 64, "B+%.1f", -score);
+			gtp_reply(id, str, NULL);
+		}
+
 	} else {
 		gtp_error(id, "unknown command", NULL);
 	}

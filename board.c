@@ -241,3 +241,31 @@ board_group_capture(struct board *board, int group)
 		group_at(board, c) = 0;
 	} foreach_in_group_end;
 }
+
+
+/* Chinese counting */
+float
+board_count_score(struct board *board)
+{
+	int scores[S_MAX];
+	memcpy(scores, board->captures, sizeof(scores));
+
+	enum { GC_DUNNO, GC_ALIVE, GC_DEAD } gcache[board->last_gid + 1];
+	memset(gcache, 0, sizeof(gcache));
+
+	foreach_point(board) {
+		if (board_at(board, c) != S_NONE) {
+			/* There is a complication: There can be some dead
+			 * stones that could not have been removed because
+			 * they are in enemy territory and we can't suicide.
+			 * At least we know they are in atari. */
+			int g = group_at(board, c);
+			if (gcache[g] == GC_DUNNO)
+				gcache[g] = board_group_libs(board, g) == 1 ? GC_DEAD : GC_ALIVE;
+			if (gcache[g] == GC_ALIVE)
+				scores[board_at(board, c)]++;
+		}
+	} foreach_point_end;
+
+	return board->komi + scores[S_WHITE] - scores[S_BLACK];
+}
