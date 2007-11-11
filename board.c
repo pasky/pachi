@@ -1,3 +1,4 @@
+#include <alloca.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,18 @@ board_copy(struct board *b2, struct board *b1)
 
 	return b2;
 }
+
+/* Like board_copy, but faster (arrays on stack) and with only read-only
+ * gid cache */
+#define board_copy_on_stack(b2, b1) \
+	do { \
+		memcpy((b2), (b1), sizeof(struct board)); \
+		(b2)->b = alloca((b2)->size * (b2)->size * sizeof(*(b2)->b)); \
+		(b2)->g = alloca((b2)->size * (b2)->size * sizeof(*(b2)->g)); \
+		memcpy((b2)->b, (b1)->b, (b2)->size * (b2)->size * sizeof(*(b2)->b)); \
+		memcpy((b2)->g, (b1)->g, (b2)->size * (b2)->size * sizeof(*(b2)->g)); \
+		(b2)->g_libs = (b1)->g_libs; (b2)->g_libs_ro = true; \
+	} while (0)
 
 void
 board_done_noalloc(struct board *board)
@@ -131,13 +144,14 @@ board_play_nocheck(struct board *board, struct move *m)
 	} foreach_neighbor_end;
 
 	if (gid <= 0) {
-		if (g_libs_alloc(board->last_gid + 1) < g_libs_alloc(board->last_gid + 2)) {
+		if (!board->g_libs_ro && g_libs_alloc(board->last_gid + 1) < g_libs_alloc(board->last_gid + 2)) {
 			board->g_libs = realloc(board->g_libs, g_libs_alloc(board->last_gid + 2) * sizeof(*board->g_libs));
 		}
 		gid = ++board->last_gid;
 	}
 	group_at(board, m->coord) = gid;
-	board_group_libs_recount(board, gid);
+	if (!board->g_libs_ro)
+		board_group_libs_recount(board, gid);
 
 record:
 	board->last_move = *m;
@@ -183,15 +197,13 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 		return false;
 
 	/* Try it! */
-	board_copy(&b2, board);
+	board_copy_on_stack(&b2, board);
 	board_play_nocheck(&b2, m);
-	if (board_group_libs(&b2, group_at((&b2), m->coord)) <= sensible) {
+	if (board_group_libs_recount(&b2, group_at((&b2), m->coord)) <= sensible) {
 		/* oops, suicide (or self-atari if sensible) */
-		board_done_noalloc(&b2);
 		return false;
 	}
 
-	board_done_noalloc(&b2);
 	return true;
 }
 
@@ -230,7 +242,8 @@ board_group_libs_recount(struct board *board, int group)
 
 	board->libcount_watermark = NULL;
 
-	board->g_libs[group] = l;
+	if (!board->g_libs_ro)
+		board->g_libs[group] = l;
 	return l;
 }
 
