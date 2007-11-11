@@ -105,9 +105,9 @@ montecarlo_genmove(struct board *b, enum stone color)
 		if (!board_valid_move(b, &m, true))
 			continue;
 
-		fprintf(stderr, "[%d,%d] random\n", x, y);
+		//fprintf(stderr, "[%d,%d] random\n", x, y);
 		int score = -play_many_random_games_after(b, &m);
-		fprintf(stderr, "\tscore %d\n", score);
+		//fprintf(stderr, "\tscore %d\n", score);
 		if (score > top_score) {
 			top_score = score;
 			top_coord = m.coord;
