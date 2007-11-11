@@ -25,20 +25,26 @@
 static void
 random_move(struct board *b, enum stone color, struct coord *coord)
 {
+#define TRIES	MC_GAMELEN
 	struct move m;
 	m.color = color;
+	int tries = 0;
 
-	if (board_no_valid_moves(b, color)) {
-		*coord = pass;
-		return;
-	}
+	/* board_no_valid_moves() is too expensive for us so we just try
+	 * a "few" times and then give up. */
 
 	do {
 		m.coord.x = random() % b->size;
 		m.coord.y = random() % b->size;
-	} while (!board_valid_move(b, &m, true));
+	} while ((board_at(b, m.coord) != S_NONE /* common case */
+	          || !board_valid_move(b, &m, true))
+		 && tries++ < TRIES);
 
-	*coord = m.coord;
+	if (tries <= TRIES)
+		*coord = m.coord;
+	else
+		*coord = pass;
+#undef TRIES
 }
 
 static float
