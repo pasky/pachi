@@ -1,0 +1,5 @@
+.deps
+.*.swp
+*.o
+*.a
+zzgo
