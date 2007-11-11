@@ -61,4 +61,43 @@ void board_group_capture(struct board *board, int group);
 float board_official_score(struct board *board);
 float board_fast_score(struct board *board);
 
+
+/** Iterators */
+
+#define foreach_point(board_) \
+	do { \
+		int x, y; \
+		for (x = 0; x < board_->size; x++) { \
+			for (y = 0; y < board_->size; y++) { \
+				struct coord c = { x, y }; c = c; /* shut up gcc */
+#define foreach_point_end \
+			} \
+		} \
+	} while (0)
+
+#define foreach_in_group(board_, group_) \
+	do { \
+		int group__ = group_; \
+		foreach_point(board_) \
+			if (group_at(board_, c) == group__)
+#define foreach_in_group_end \
+		foreach_point_end; \
+	} while (0)
+
+#define foreach_neighbor(board_, coord_) \
+	do { \
+		struct coord q__[] = { { (coord_).x - 1, (coord_).y }, \
+		                       { (coord_).x, (coord_).y - 1 }, \
+		                       { (coord_).x + 1, (coord_).y }, \
+		                       { (coord_).x, (coord_).y + 1 } }; \
+		int fn__i; \
+		for (fn__i = 0; fn__i < 4; fn__i++) { \
+			int x = q__[fn__i].x, y = q__[fn__i].y; struct coord c = { x, y }; \
+			if (x < 0 || y < 0 || x >= board_->size || y >= board->size) \
+				continue;
+#define foreach_neighbor_end \
+		} \
+	} while (0)
+
+
 #endif
