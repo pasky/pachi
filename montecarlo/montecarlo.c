@@ -17,7 +17,7 @@
 #define MC_GAMELEN	400
 #else
 #define MC_GAMES	200
-#define MC_GAMELEN	100
+#define MC_GAMELEN	150
 #endif
 
 
