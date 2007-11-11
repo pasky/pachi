@@ -5,12 +5,16 @@
 #include "board.h"
 
 
+#define g_libs_alloc(gids) (256 + ((gids) >> 8) * 256)
+
+
 struct board *
 board_init(void)
 {
 	struct board *b = calloc(1, sizeof(struct board));
 	struct move m = { pass, S_NONE };
 	b->last_move = m;
+	b->g_libs = calloc(g_libs_alloc(1), sizeof(*b->g_libs));
 	return b;
 }
 
@@ -18,10 +22,16 @@ struct board *
 board_copy(struct board *b2, struct board *b1)
 {
 	memcpy(b2, b1, sizeof(struct board));
+
 	b2->b = calloc(b2->size * b2->size, sizeof(*b2->b));
 	b2->g = calloc(b2->size * b2->size, sizeof(*b2->g));
 	memcpy(b2->b, b1->b, b2->size * b2->size * sizeof(*b2->b));
 	memcpy(b2->g, b1->g, b2->size * b2->size * sizeof(*b2->g));
+
+	int g_libs_a = g_libs_alloc(b2->last_gid + 1);
+	b2->g_libs = calloc(g_libs_a, sizeof(*b2->g_libs));
+	memcpy(b2->g_libs, b1->g_libs, g_libs_a * sizeof(*b2->g_libs));
+
 	return b2;
 }
 
@@ -30,6 +40,7 @@ board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
 	if (board->g) free(board->g);
+	if (board->g_libs) free(board->g_libs);
 }
 
 void
@@ -50,10 +61,15 @@ board_resize(struct board *board, int size)
 void
 board_clear(struct board *board)
 {
-	memset(board->b, 0, board->size * board->size * sizeof(*board->b));
-	memset(board->g, 0, board->size * board->size * sizeof(*board->g));
 	board->captures[S_BLACK] = board->captures[S_WHITE] = 0;
 	board->moves = 0;
+
+	memset(board->b, 0, board->size * board->size * sizeof(*board->b));
+	memset(board->g, 0, board->size * board->size * sizeof(*board->g));
+
+	int g_libs_a = g_libs_alloc(board->last_gid + 1);
+	memset(board->g_libs, 0, g_libs_a * sizeof(*board->g_libs));
+	board->last_gid = 0;
 }
 
 
@@ -114,9 +130,14 @@ board_play_nocheck(struct board *board, struct move *m)
 		}
 	} foreach_neighbor_end;
 
-	if (gid <= 0)
+	if (gid <= 0) {
+		if (g_libs_alloc(board->last_gid + 1) < g_libs_alloc(board->last_gid + 2)) {
+			board->g_libs = realloc(board->g_libs, g_libs_alloc(board->last_gid + 2) * sizeof(*board->g_libs));
+		}
 		gid = ++board->last_gid;
+	}
 	group_at(board, m->coord) = gid;
+	board_group_libs_recount(board, gid);
 
 record:
 	board->last_move = *m;
@@ -195,7 +216,7 @@ board_local_libs(struct board *board, struct coord *coord)
 
 
 int
-board_group_libs(struct board *board, int group)
+board_group_libs_recount(struct board *board, int group)
 {
 	int l = 0;
 	bool watermarks[board->size * board->size];
@@ -208,6 +229,8 @@ board_group_libs(struct board *board, int group)
 	} foreach_in_group_end;
 
 	board->libcount_watermark = NULL;
+
+	board->g_libs[group] = l;
 	return l;
 }
 

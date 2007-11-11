@@ -19,6 +19,7 @@ struct board {
 
 	enum stone *b; /* map of stones */
 	int *g; /* map of group ids; 0 == no group */
+	int *g_libs; /* cache of group liberties; indexed by gid */
 
 	/* private */
 	int last_gid;
@@ -30,6 +31,8 @@ struct board {
 
 #define group_atxy(b_, x, y) ((b_)->g[x + (b_)->size * (y)])
 #define group_at(b_, c) group_atxy(b_, (c).x, (c).y)
+
+#define board_group_libs(b_, g_) ((b_)->g_libs[(g_)])
 
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
@@ -52,7 +55,7 @@ bool board_valid_move(struct board *board, struct move *m, bool sensible);
  * zero local liberties.) */
 int board_local_libs(struct board *board, struct coord *c);
 
-int board_group_libs(struct board *board, int group);
+int board_group_libs_recount(struct board *board, int group);
 void board_group_capture(struct board *board, int group);
 
 /* Positive: W wins */
