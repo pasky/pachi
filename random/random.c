@@ -6,7 +6,7 @@
 #include "move.h"
 #include "random/random.h"
 
-struct coord *
+static struct coord *
 random_genmove(struct board *b, enum stone color)
 {
 	struct move m;
