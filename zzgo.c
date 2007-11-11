@@ -15,9 +15,9 @@ int main(int argc, char *argv[])
 	struct engine *e = engine_montecarlo_init();
 	char buf[256];
 	while (fgets(buf, 256, stdin)) {
-		fprintf(stderr, "IN: %s", buf);
+		//fprintf(stderr, "IN: %s", buf);
 		gtp_parse(b, e, buf);
-		board_print(b, stderr);
+		//board_print(b, stderr);
 	}
 	return 0;
 }
