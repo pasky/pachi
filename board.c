@@ -292,3 +292,15 @@ board_official_score(struct board *board)
 
 	return board->komi + scores[S_WHITE] - scores[S_BLACK];
 }
+
+float
+board_fast_score(struct board *board)
+{
+	int scores[S_MAX];
+
+	foreach_point(board) {
+		scores[board_at(board, c)]++;
+	} foreach_point_end;
+
+	return board->komi + scores[S_WHITE] - scores[S_BLACK];
+}

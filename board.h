@@ -55,9 +55,10 @@ int board_group_libs(struct board *board, int group);
 void board_group_capture(struct board *board, int group);
 
 /* Positive: W wins */
-/* This is the scoring method for yielding score suitable for
- * external presentation. For fast scoring of two ZZGos playing,
- * there will be a separate function. */
+/* board_official_score() is the scoring method for yielding score suitable
+ * for external presentation. For fast scoring of two ZZGos playing,
+ * use board_fast_score(). */
 float board_official_score(struct board *board);
+float board_fast_score(struct board *board);
 
 #endif
