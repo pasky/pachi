@@ -243,7 +243,7 @@ board_group_libs_recount(struct board *board, int group)
 	board->libcount_watermark = NULL;
 
 	if (!board->g_libs_ro)
-		board->gi[group].libs = l;
+		board_group_libs(board, group) = l;
 	return l;
 }
 
