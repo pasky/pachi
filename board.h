@@ -32,7 +32,7 @@ struct board {
 #define group_at(b_, c) group_atxy(b_, c.x, c.y)
 
 struct board *board_init(void);
-struct board *board_copy(struct board *board);
+struct board *board_copy(struct board *board2, struct board *board1);
 void board_done(struct board *board);
 void board_resize(struct board *board, int size);
 void board_clear(struct board *board);

@@ -12,9 +12,8 @@ board_init(void)
 }
 
 struct board *
-board_copy(struct board *b1)
+board_copy(struct board *b2, struct board *b1)
 {
-	struct board *b2 = board_init();
 	memcpy(b2, b1, sizeof(struct board));
 	b2->b = calloc(b2->size * b2->size, sizeof(*b2->b));
 	b2->g = calloc(b2->size * b2->size, sizeof(*b2->g));
@@ -173,7 +172,7 @@ board_no_valid_moves(struct board *board, enum stone color)
 bool
 board_valid_move(struct board *board, struct move *m, bool sensible)
 {
-	struct board *b2;
+	struct board b2;
 
 	if (is_pass(m->coord) || is_resign(m->coord))
 		return true;
@@ -186,15 +185,15 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 		return false;
 
 	/* Try it! */
-	b2 = board_copy(board);
-	board_play_nocheck(b2, m);
-	if (board_group_libs(b2, group_at(b2, m->coord)) <= sensible) {
+	board_copy(&b2, board);
+	board_play_nocheck(&b2, m);
+	if (board_group_libs(&b2, group_at((&b2), m->coord)) <= sensible) {
 		/* oops, suicide (or self-atari if sensible) */
-		board_done(b2);
+		board_done(&b2);
 		return false;
 	}
 
-	board_done(b2);
+	board_done(&b2);
 	return true;
 }
 
