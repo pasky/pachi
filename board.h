@@ -13,7 +13,9 @@ struct board {
 	int size;
 	int captures[S_MAX];
 	float komi;
+
 	int moves;
+	struct move last_move;
 
 	enum stone *b; /* stones */
 	int *g; /* group ids */

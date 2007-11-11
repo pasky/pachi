@@ -65,8 +65,12 @@ board_print(struct board *board, FILE *f)
 	fprintf(f, "+\n");
 	for (y = board->size - 1; y >= 0; y--) {
 		fprintf(f, "%2d | ", y + 1);
-		for (x = 0; x < board->size; x++)
-			fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
+		for (x = 0; x < board->size; x++) {
+			if (board->last_move.coord.x == x && board->last_move.coord.y)
+				fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
+			else
+				fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
+		}
 		fprintf(f, "|\n");
 	}
 	fprintf(f, "   +-");
@@ -139,6 +143,7 @@ board_play_nocheck(struct board *board, struct move *m)
 		gid = ++board->last_gid;
 	group_at(board, m->coord) = gid;
 
+	board->last_move = *m;
 	board->moves++;
 
 	return gid;
