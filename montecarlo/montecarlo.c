@@ -53,7 +53,7 @@ play_random_game(struct board *b, enum stone color, int moves)
 		random_move(&b2, color, &coord);
 		struct move m = { coord, color };
 		//char *cs = coord2str(coord); fprintf(stderr, "%s %s\n", stone2str(color), cs); free(cs);
-		board_play(&b2, &m);
+		board_play_nocheck(&b2, &m);
 		if (is_pass(coord))
 			passes++;
 		else
@@ -70,7 +70,7 @@ play_many_random_games_after(struct board *b, struct move *m)
 {
 	struct board b2;
 	board_copy(&b2, b);
-	board_play(&b2, m);
+	board_play_nocheck(&b2, m);
 
 	int gamelen = MC_GAMELEN - b2.moves;
 	if (gamelen < 10)

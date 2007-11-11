@@ -104,7 +104,7 @@ board_print(struct board *board, FILE *f)
 }
 
 
-static int
+int
 board_play_nocheck(struct board *board, struct move *m)
 {
 	int gid = 0;
