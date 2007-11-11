@@ -20,6 +20,8 @@ struct board {
 	/* Stones played on the board */
 	enum stone *b;
 	/* Group id the stones are part of; 0 == no group */
+	/* Note that "group" is only chain of stones that is solidly
+	 * connected for us. */
 	int *g;
 	/* Cache of group liberties, indexed by gid */
 	int *g_libs;
