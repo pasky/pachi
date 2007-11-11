@@ -67,7 +67,10 @@ play_random_game(struct board *b, enum stone color, int moves)
 		color = stone_other(color);
 	}
 
-	return board_fast_score(&b2);
+	float score = board_fast_score(&b2);
+
+	board_done_noalloc(&b2);
+	return score;
 }
 
 /* positive: player-to-play wins more, negative: player-to-play loses more */
@@ -91,6 +94,7 @@ play_many_random_games_after(struct board *b, struct move *m)
 		balance += (score > 0 ? 1 : -1);
 	}
 
+	board_done_noalloc(&b2);
 	return balance;
 }
 
