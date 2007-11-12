@@ -197,10 +197,14 @@ already_took_liberty:
 
 	if (likely(gid <= 0)) {
 		if (unlikely(gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2))) {
-			if (board->use_alloca)
-				board->gi = malloc(gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
-			else
+			if (board->use_alloca) {
+				struct group *gi;
+				gi = malloc(gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
+				memcpy(gi, board->gi, (board->last_gid + 1) * sizeof(*board->gi));
+				board->gi = gi;
+			} else {
 				board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
+			}
 		}
 		gid = ++board->last_gid;
 		memset(&board->gi[gid], 0, sizeof(*board->gi));
@@ -256,6 +260,7 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 		memcpy(board->gi, b2.gi, (b2.last_gid + 1) * sizeof(*b2.gi));
 		memcpy(board, &b2, sizeof(b2));
 		board->b = b; board->g = g; board->gi = gi;
+		board->use_alloca = false;
 	}
 
 	return gid;
