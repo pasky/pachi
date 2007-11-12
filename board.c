@@ -144,19 +144,22 @@ board_play_raw(struct board *board, struct move *m)
 	board_at(board, m->coord) = m->color;
 
 	foreach_neighbor(board, m->coord) {
-		if (unlikely(board_at(board, c) == m->color) && group_at(board, c) != gid) {
+		enum stone color = board_at(board, c);
+		group_t group = group_at(board, c);
+		if (unlikely(color == m->color) && group != gid) {
 			if (likely(gid <= 0)) {
-				gid = group_at(board, c);
+				gid = group;
 			} else {
 				/* Merge groups */
-				foreach_in_group(board, group_at(board, c)) {
+				foreach_in_group(board, group) {
 					group_add(board, gid, c);
 				} foreach_in_group_end;
 			}
-		} else if (unlikely(board_at(board, c) == stone_other(m->color))
-			   && unlikely(board_group_libs(board, group_at(board, c)) == 1)) {
-			/* We just filled last liberty of a group in atari. */
-			board_group_capture(board, group_at(board, c));
+		} else if (unlikely(color == stone_other(m->color))) {
+			board_group_libs(board, group)--;
+			if (unlikely(board_group_libs(board, group) == 0)) {
+				board_group_capture(board, group);
+			}
 		}
 	} foreach_neighbor_end;
 
