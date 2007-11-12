@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "board.h"
+#include "debug.h"
 
 
 #define gi_granularity 4
@@ -112,6 +113,12 @@ board_print(struct board *board, FILE *f)
 			else
 				fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
 		}
+		if (unlikely(debug_level > 6)) {
+			fprintf(f, "| ");
+			for (x = 0; x < board->size; x++) {
+				fprintf(f, "%d ", board_group_libs(board, group_atxy(board, x, y)));
+			}
+		}
 		fprintf(f, "|\n");
 	}
 	fprintf(f, "   +-");
@@ -131,6 +138,10 @@ group_add(struct board *board, int gid, struct coord coord)
 		}
 	} foreach_neighbor_end;
 	group_at(board, coord) = gid;
+
+	if (unlikely(debug_level > 8))
+		fprintf(stderr, "group_add: added %d,%d to group %d - libs %d\n",
+			coord.x, coord.y, gid, board_group_libs(board, gid));
 }
 
 int
@@ -156,6 +167,9 @@ board_play_raw(struct board *board, struct move *m)
 
 		gidls[gids++] = group;
 		board_group_libs(board, group)--;
+		if (unlikely(debug_level > 7))
+			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
+				group, board_group_libs(board, group));
 already_took_liberty:
 
 		if (unlikely(color == m->color) && group != gid) {
@@ -163,9 +177,16 @@ already_took_liberty:
 				gid = group;
 			} else {
 				/* Merge groups */
+				if (unlikely(debug_level > 7))
+					fprintf(stderr, "board_play_raw: merging groups %d(%d), %d(%d)\n",
+						group, board_group_libs(board, group),
+						gid, board_group_libs(board, gid));
 				foreach_in_group(board, group) {
 					group_add(board, gid, c);
 				} foreach_in_group_end;
+				if (unlikely(debug_level > 7))
+					fprintf(stderr, "board_play_raw: merged group: %d(%d)\n",
+						gid, board_group_libs(board, gid));
 			}
 		} else if (unlikely(color == stone_other(m->color))) {
 			if (unlikely(board_group_libs(board, group) == 0)) {
@@ -200,19 +221,30 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord)))
 		return -1;
 
-	if (unlikely(board_at(board, m->coord) != S_NONE))
+	if (unlikely(board_at(board, m->coord) != S_NONE)) {
+		if (unlikely(debug_level > 7))
+			fprintf(stderr, "board_check: stone exists\n");
 		return 0;
+	}
 
 	/* Check ko */
-	if (unlikely(m->coord.x == board->last_move.coord.x && m->coord.y == board->last_move.coord.y))
+	if (unlikely(m->coord.x == board->last_move.coord.x && m->coord.y == board->last_move.coord.y)) {
+		if (unlikely(debug_level > 7))
+			fprintf(stderr, "board_check: ko\n");
 		return 0;
+	}
 
 	/* Try it! */
 	/* XXX: play == false is kinda rare so we don't bother to optimize that */
 	board_copy_on_stack(&b2, board);
 	int gid = board_play_raw(board, m);
+	if (unlikely(debug_level > 7))
+		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, m->coord.x, m->coord.y, gid);
 	if (unlikely(board_group_libs(board, group_at(board, m->coord)) <= sensible)) {
 		/* oops, suicide (or self-atari if sensible) */
+		if (unlikely(debug_level > 5))
+			fprintf(stderr, "suicide: libs %d <= sens %d\n",
+				board_group_libs(board, group_at(board, m->coord)), sensible);
 		gid = 0; play = false;
 	}
 
