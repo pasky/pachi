@@ -16,7 +16,7 @@ board_init(void)
 {
 	struct board *b = calloc(1, sizeof(struct board));
 	struct move m = { pass, S_NONE };
-	b->last_move = m;
+	b->last_move = b->ko = m;
 	b->gi = calloc(gi_allocsize(1), sizeof(*b->gi));
 	return b;
 }
@@ -147,6 +147,7 @@ group_add(struct board *board, int gid, struct coord coord)
 int
 board_play_raw(struct board *board, struct move *m)
 {
+	struct move ko = { pass, S_NONE };
 	int gid = 0;
 
 	board_at(board, m->coord) = m->color;
@@ -190,7 +191,14 @@ already_took_liberty:
 			}
 		} else if (unlikely(color == stone_other(m->color))) {
 			if (unlikely(board_group_libs(board, group) == 0)) {
-				board_group_capture(board, group);
+				int stones = board_group_capture(board, group);
+				if (stones == 1) {
+					/* If we captured multiple groups at once,
+					 * we can't be fighting ko so we don't need
+					 * to check for that. */
+					ko.color = color;
+					ko.coord = c;
+				}
 			}
 		}
 	} foreach_neighbor_end;
@@ -213,6 +221,7 @@ already_took_liberty:
 
 	board->last_move = *m;
 	board->moves++;
+	board->ko = ko;
 
 	return gid;
 }
@@ -231,24 +240,26 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 		return 0;
 	}
 
-	/* Check ko */
-	if (unlikely(m->coord.x == board->last_move.coord.x && m->coord.y == board->last_move.coord.y)) {
-		if (unlikely(debug_level > 7))
-			fprintf(stderr, "board_check: ko\n");
-		return 0;
-	}
-
 	/* Try it! */
 	/* XXX: play == false is kinda rare so we don't bother to optimize that */
 	board_copy_on_stack(&b2, board);
 	int gid = board_play_raw(board, m);
 	if (unlikely(debug_level > 7))
 		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, m->coord.x, m->coord.y, gid);
-	if (unlikely(board_group_libs(board, group_at(board, m->coord)) <= sensible)) {
+
+	int my_libs = board_group_libs(board, group_at(board, m->coord));
+	if (unlikely(my_libs <= sensible)) {
 		/* oops, suicide (or self-atari if sensible) */
 		if (unlikely(debug_level > 5))
 			fprintf(stderr, "suicide: libs %d <= sens %d\n",
 				board_group_libs(board, group_at(board, m->coord)), sensible);
+		gid = 0; play = false;
+	}
+
+	/* Check ko: self-atari at a position of one-stone capture one move ago (thus b2, not board !) */
+	if (unlikely(my_libs == 1 && m->color == b2.ko.color && m->coord.x == b2.ko.coord.x && m->coord.y == b2.ko.coord.y)) {
+		if (unlikely(debug_level > 5))
+			fprintf(stderr, "board_check: ko at %d,%d\n", m->coord.x, m->coord.y);
 		gid = 0; play = false;
 	}
 
@@ -303,13 +314,16 @@ board_is_liberty_of(struct board *board, struct coord *coord, int group)
 }
 
 
-void
+int
 board_group_capture(struct board *board, int group)
 {
+	int stones = 0;
+
 	foreach_in_group(board, group) {
 		board->captures[stone_other(board_at(board, c))]++;
 		board_at(board, c) = S_NONE;
 		group_at(board, c) = 0;
+		stones++;
 
 		/* Increase liberties of surrounding groups */
 		struct coord coord = c;
@@ -332,6 +346,8 @@ board_group_capture(struct board *board, int group)
 next_neighbor:;
 		} foreach_neighbor_end;
 	} foreach_in_group_end;
+
+	return stones;
 }
 
 

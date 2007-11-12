@@ -45,6 +45,7 @@ struct board {
 	/* --- private */
 	int last_gid;
 	bool use_alloca;
+	struct move ko;
 };
 
 #define board_atxy(b_, x, y) ((b_)->b[(x) + (b_)->size * (y)])
@@ -76,7 +77,7 @@ bool board_valid_move(struct board *board, struct move *m, bool sensible);
 
 bool board_is_liberty_of(struct board *board, struct coord *c, int group);
 
-void board_group_capture(struct board *board, int group);
+int board_group_capture(struct board *board, int group);
 
 /* Positive: W wins */
 /* board_official_score() is the scoring method for yielding score suitable
