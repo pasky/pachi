@@ -36,7 +36,7 @@ zzgo: $(OBJS) $(LOCALLIBS)
 .PHONY: zzgo-profiled
 zzgo-profiled:
 	@make clean all LDFLAGS=-fprofile-generate XCFLAGS=-fprofile-generate
-	echo -e 'boardsize 9\nkomi 0\nclear_board\ngenmove black\ngenmove white' | ./zzgo games=200
+	echo -e 'boardsize 9\nkomi 0\nclear_board\ngenmove black\ngenmove white' | ./zzgo games=5000
 	@make clean all clean-profiled LDFLAGS=-fprofile-use XCFLAGS=-fprofile-use
 
 # install-recursive?
