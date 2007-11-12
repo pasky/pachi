@@ -34,6 +34,7 @@ struct montecarlo {
 	int debug_level;
 	int games, gamelen;
 	int move_stabs;
+	int resign_score;
 };
 
 
@@ -99,9 +100,10 @@ play_many_random_games_from(struct montecarlo *mc, struct board *b, struct move 
 {
 	struct board b2;
 	board_copy(&b2, b);
-	if (!board_play(&b2, m))
+	if (board_is_one_point_eye(b, &m->coord) == m->color
+	    || !board_play(&b2, m))
 		/* Invalid move */
-		return 0;
+		return -mc->games-1;
 
 	int gamelen = mc->gamelen - b2.moves;
 	if (gamelen < 10)
@@ -132,28 +134,38 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	if (board_no_valid_moves(b, color))
 		return coord_pass();
 
-	/* pass is better than playing a losing move. */
-	struct coord top_coord = pass;
-	int top_score = 0;
+	/* resign when the hope for win vanishes */
+	struct coord top_coord = resign;
+	int top_score = -mc->resign_score;
+	int moves = 0;
 
 	foreach_point(b) {
 		m.coord = c;
 
 		if (mc->debug_level > 3)
-			fprintf(stderr, "[%d,%d] random games\n", x, y);
+			fprintf(stderr, "[%d,%d] playing random games\n", x, y);
+
 		int score = - play_many_random_games_from(mc, b, &m);
+		if (score == mc->games + 1) {
+			if (mc->debug_level > 3)
+				fprintf(stderr, "\tinvalid move\n");
+			continue;
+		}
+
 		if (mc->debug_level > 3)
 			fprintf(stderr, "\tscore %d\n", score);
-
-		if (!score)
-			/* Error or meta-jigo. We don't need to distinguish. */
-			continue;
 
 		if (score > top_score) {
 			top_score = score;
 			top_coord = m.coord;
 		}
+		moves++;
 	} foreach_point_end;
+
+	if (!moves) {
+		/* Final candidate! But only if we CAN'T make any further move. */
+		top_coord = pass; top_score = 0;
+	}
 
 	if (mc->debug_level > 1)
 		fprintf(stderr, "*** WINNER is %d,%d with score %d\n", top_coord.x, top_coord.y, top_score);
@@ -203,6 +215,8 @@ engine_montecarlo_init(char *arg)
 			}
 		}
 	}
+
+	mc->resign_score = mc->games; /* Resign only when all games are lost. */
 
 	return e;
 }
