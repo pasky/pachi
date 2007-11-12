@@ -12,14 +12,17 @@
 #include "gtp.h"
 
 int debug_level = 1;
+int seed;
 
 int main(int argc, char *argv[])
 {
 	struct board *b = board_init();
 	enum { E_RANDOM, E_MONTECARLO } engine = E_MONTECARLO;
 
+	seed = time(NULL);
+
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:s:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -34,12 +37,19 @@ int main(int argc, char *argv[])
 			case 'd':
 				debug_level = atoi(optarg);
 				break;
+			case 's':
+				seed = atoi(optarg);
+				break;
 			default: /* '?' */
-				fprintf(stderr, "Usage: %s [-e random|montecarlo] [-d DEBUG_LEVEL] [ENGINE_ARGS]\n",
+				fprintf(stderr, "Usage: %s [-e random|montecarlo] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}
 	}
+
+	srandom(seed);
+	if (debug_level > 0)
+		fprintf(stderr, "Random seed: %d", seed);
 
 	char *e_arg = NULL;
 	if (optind < argc)
