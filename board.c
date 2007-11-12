@@ -6,8 +6,8 @@
 #include "board.h"
 
 
-#define g_libs_granularity 4
-#define g_libs_alloc(gids) ((1 << g_libs_granularity) + ((gids) >> g_libs_granularity) * (1 << g_libs_granularity))
+#define gi_granularity 4
+#define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
 
 
 struct board *
@@ -16,7 +16,7 @@ board_init(void)
 	struct board *b = calloc(1, sizeof(struct board));
 	struct move m = { pass, S_NONE };
 	b->last_move = m;
-	b->gi = calloc(g_libs_alloc(1), sizeof(*b->gi));
+	b->gi = calloc(gi_allocsize(1), sizeof(*b->gi));
 	return b;
 }
 
@@ -30,9 +30,9 @@ board_copy(struct board *b2, struct board *b1)
 	memcpy(b2->b, b1->b, b2->size * b2->size * sizeof(*b2->b));
 	memcpy(b2->g, b1->g, b2->size * b2->size * sizeof(*b2->g));
 
-	int g_libs_a = g_libs_alloc(b2->last_gid + 1);
-	b2->gi = calloc(g_libs_a, sizeof(*b2->gi));
-	memcpy(b2->gi, b1->gi, g_libs_a * sizeof(*b2->gi));
+	int gi_a = gi_allocsize(b2->last_gid + 1);
+	b2->gi = calloc(gi_a, sizeof(*b2->gi));
+	memcpy(b2->gi, b1->gi, gi_a * sizeof(*b2->gi));
 
 	return b2;
 }
@@ -46,9 +46,9 @@ board_copy(struct board *b2, struct board *b1)
 		(b2)->g = alloca((b2)->size * (b2)->size * sizeof(*(b2)->g)); \
 		memcpy((b2)->b, (b1)->b, (b2)->size * (b2)->size * sizeof(*(b2)->b)); \
 		memcpy((b2)->g, (b1)->g, (b2)->size * (b2)->size * sizeof(*(b2)->g)); \
-		/* int g_libs_a = g_libs_alloc((b2)->last_gid + 1); \
-		(b2)->gi = alloca(g_libs_a * sizeof(*(b2)->gi)); \
-		memcpy((b2)->gi, (b1)->gi, g_libs_a * sizeof(*(b2)->gi)); */ \
+		/* int gi_a = gi_allocsize((b2)->last_gid + 1); \
+		(b2)->gi = alloca(gi_a * sizeof(*(b2)->gi)); \
+		memcpy((b2)->gi, (b1)->gi, gi_a * sizeof(*(b2)->gi)); */ \
 		(b2)->gi = (b1)->gi; (b2)->gi_ro = true; \
 	} while (0)
 
@@ -84,8 +84,8 @@ board_clear(struct board *board)
 	memset(board->b, 0, board->size * board->size * sizeof(*board->b));
 	memset(board->g, 0, board->size * board->size * sizeof(*board->g));
 
-	int g_libs_a = g_libs_alloc(board->last_gid + 1);
-	memset(board->gi, 0, g_libs_a * sizeof(*board->gi));
+	int gi_a = gi_allocsize(board->last_gid + 1);
+	memset(board->gi, 0, gi_a * sizeof(*board->gi));
 	board->last_gid = 0;
 }
 
@@ -156,8 +156,8 @@ board_play_nocheck(struct board *board, struct move *m)
 	} foreach_neighbor_end;
 
 	if (gid <= 0) {
-		if (!board->gi_ro && g_libs_alloc(board->last_gid + 1) < g_libs_alloc(board->last_gid + 2)) {
-			board->gi = realloc(board->gi, g_libs_alloc(board->last_gid + 2) * sizeof(*board->gi));
+		if (!board->gi_ro && gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2)) {
+			board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
 		}
 		gid = ++board->last_gid;
 	}
