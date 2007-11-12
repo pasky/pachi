@@ -173,6 +173,29 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		} foreach_point_end;
 	}
 
+	if (mc->debug_level > 2) {
+		struct board *board = b;
+		FILE *f = stderr;
+		fprintf(f, "\n       ");
+		int x, y;
+		char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+		for (x = 0; x < board->size; x++)
+			fprintf(f, "%c    ", asdf[x]);
+		fprintf(f, "\n   +-");
+		for (x = 0; x < board->size; x++)
+			fprintf(f, "-----");
+		fprintf(f, "+\n");
+		for (y = board->size - 1; y >= 0; y--) {
+			fprintf(f, "%2d | ", y + 1);
+			for (x = 0; x < board->size; x++)
+				fprintf(f, "%1.2f ", (float) wins[y][x] / games[y][x]);
+			fprintf(f, "|\n");
+		}
+		fprintf(f, "   +-");
+		for (x = 0; x < board->size; x++)
+			fprintf(f, "-----");
+		fprintf(f, "+\n");
+	}
 	if (mc->debug_level > 1)
 		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", top_coord.x, top_coord.y, top_ratio);
 
