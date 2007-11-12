@@ -163,6 +163,7 @@ board_play_raw(struct board *board, struct move *m, bool check_valid)
 			board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
 		}
 		gid = ++board->last_gid;
+		memset(&board->gi[gid], 0, sizeof(*board->gi));
 	}
 	group_add(board, gid, m->coord);
 	if (!board->gi_ro)
