@@ -135,12 +135,9 @@ group_add(struct board *board, int gid, struct coord coord)
 
 
 int
-board_play_raw(struct board *board, struct move *m, bool check_valid)
+board_play_raw(struct board *board, struct move *m)
 {
 	int gid = 0;
-
-	if (check_valid && !board_valid_move(board, m, false))
-		return 0;
 
 	if (is_pass(m->coord) || is_resign(m->coord))
 		goto record;
@@ -200,7 +197,7 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 
 	/* Try it! */
 	board_copy_on_stack(&b2, board);
-	int gid = board_play_raw(&b2, m, false);
+	int gid = board_play_raw(&b2, m);
 	if (board_group_libs(&b2, group_at((&b2), m->coord)) <= sensible) {
 		/* oops, suicide (or self-atari if sensible) */
 		return 0;
