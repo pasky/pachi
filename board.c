@@ -386,7 +386,7 @@ board_official_score(struct board *board)
 	memset(gcache, 0, sizeof(gcache));
 
 	foreach_point(board) {
-		enum stone color = board_at(board, c) != S_NONE;
+		enum stone color = board_at(board, c);
 		if (color != S_NONE) {
 			/* There is a complication: There can be some dead
 			 * stones that could not have been removed because
@@ -399,7 +399,7 @@ board_official_score(struct board *board)
 				scores[color]++;
 			/* XXX: But we still miss the one empty opponent's point. */
 
-		} else if (color == S_NONE) {
+		} else {
 			/* TODO: Count multi-point eyes */
 			color = board_is_one_point_eye(board, &c);
 			scores[color]++;
