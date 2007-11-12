@@ -49,6 +49,7 @@ board_copy(struct board *b2, struct board *b1)
 		int gi_a = gi_allocsize((b2)->last_gid + 1); \
 		(b2)->gi = alloca(gi_a * sizeof(*(b2)->gi)); \
 		memcpy((b2)->gi, (b1)->gi, gi_a * sizeof(*(b2)->gi)); \
+		(b2)->use_alloca = true; \
 	} while (0)
 
 void
@@ -165,7 +166,10 @@ board_play_raw(struct board *board, struct move *m, bool check_valid)
 
 	if (gid <= 0) {
 		if (gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2)) {
-			board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
+			if (board->use_alloca)
+				board->gi = malloc(gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
+			else
+				board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
 		}
 		gid = ++board->last_gid;
 		memset(&board->gi[gid], 0, sizeof(*board->gi));
