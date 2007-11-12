@@ -17,6 +17,7 @@
  * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
  * games=MC_GAMES		number of random games to play
  * gamelen=MC_GAMELEN		maximal length of played random game
+ * move_stabs=NUM		number of tries to choose a random move before passing; gamelen is good default
  */
 
 
@@ -32,6 +33,7 @@
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
+	int move_stabs;
 };
 
 
@@ -39,7 +41,6 @@ struct montecarlo {
 static void
 random_move(struct montecarlo *mc, struct board *b, enum stone color, struct coord *coord)
 {
-#define TRIES	MC_GAMELEN
 	struct move m;
 	m.color = color;
 	int tries = 0;
@@ -52,13 +53,12 @@ random_move(struct montecarlo *mc, struct board *b, enum stone color, struct coo
 		m.coord.y = random() % b->size;
 	} while ((board_at(b, m.coord) != S_NONE /* common case */
 	          || !board_valid_move(b, &m, true))
-		 && tries++ < TRIES);
+		 && tries++ < mc->move_stabs);
 
-	if (tries <= TRIES)
+	if (tries <= mc->move_stabs)
 		*coord = m.coord;
 	else
 		*coord = pass;
-#undef TRIES
 }
 
 static float
@@ -167,6 +167,7 @@ engine_montecarlo_init(char *arg)
 	mc->debug_level = 1;
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
+	mc->move_stabs = MC_GAMELEN;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -188,6 +189,8 @@ engine_montecarlo_init(char *arg)
 				mc->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
+			} else if (!strcasecmp(optname, "move_stabs") && optval) {
+				mc->move_stabs = atoi(optval);
 			} else {
 				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
 			}
