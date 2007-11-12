@@ -5,10 +5,13 @@
 #include <time.h>
 
 #include "board.h"
+#include "debug.h"
 #include "engine.h"
 #include "montecarlo/montecarlo.h"
 #include "random/random.h"
 #include "gtp.h"
+
+int debug_level = 1;
 
 int main(int argc, char *argv[])
 {
@@ -16,7 +19,7 @@ int main(int argc, char *argv[])
 	enum { E_RANDOM, E_MONTECARLO } engine = E_MONTECARLO;
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -28,8 +31,11 @@ int main(int argc, char *argv[])
 					exit(1);
 				}
 				break;
+			case 'd':
+				debug_level = atoi(optarg);
+				break;
 			default: /* '?' */
-				fprintf(stderr, "Usage: %s [-e random|montecarlo]\n",
+				fprintf(stderr, "Usage: %s [-e random|montecarlo] [-d DEBUGLEVEL]\n",
 						argv[0]);
 				exit(1);
 		}
@@ -47,9 +53,11 @@ int main(int argc, char *argv[])
 
 	char buf[256];
 	while (fgets(buf, 256, stdin)) {
-		//fprintf(stderr, "IN: %s", buf);
+		if (debug_level > 1)
+			fprintf(stderr, "IN: %s", buf);
 		gtp_parse(b, e, buf);
-		//board_print(b, stderr);
+		if (debug_level > 1)
+			board_print(b, stderr);
 	}
 	return 0;
 }

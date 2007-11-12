@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "board.h"
+#include "debug.h"
 #include "engine.h"
 #include "gtp.h"
 
@@ -118,9 +119,11 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		struct coord *c = str2coord(arg);
 		m.coord = *c; coord_done(c);
 
-		//fprintf(stderr, "got move %d,%d,%d\n", m.color, m.coord.x, m.coord.y);
+		if (debug_level > 1)
+			fprintf(stderr, "got move %d,%d,%d\n", m.color, m.coord.x, m.coord.y);
 		if (!board_play(board, &m)) {
-			fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, m.coord.x, m.coord.y);
+			if (debug_level > 0)
+				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, m.coord.x, m.coord.y);
 			gtp_error(id, "illegal move", NULL);
 		} else {
 			gtp_reply(id, NULL);
@@ -134,7 +137,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		struct move m = { *c, color };
 		board_play(board, &m);
 		char *str = coord2str(*c);
-		//fprintf(stderr, "playing move %s\n", str);
+		if (debug_level > 1)
+			fprintf(stderr, "playing move %s\n", str);
 		gtp_reply(id, str, NULL);
 		free(str); coord_done(c);
 
