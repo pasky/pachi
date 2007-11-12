@@ -138,9 +138,6 @@ board_play_raw(struct board *board, struct move *m)
 {
 	int gid = 0;
 
-	if (unlikely(is_pass(m->coord) || is_resign(m->coord)))
-		goto record;
-
 	board_at(board, m->coord) = m->color;
 
 	int gidls[4], gids = 0;
@@ -189,7 +186,6 @@ already_took_liberty:
 	}
 	group_add(board, gid, m->coord);
 
-record:
 	board->last_move = *m;
 	board->moves++;
 
