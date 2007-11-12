@@ -8,9 +8,9 @@
 #include "montecarlo/montecarlo.h"
 
 
-/* This is simple monte-carlo engine. For each possible play on current board,
- * it plays MC_GAMES random games from that board; the move with the biggest
- * number of winning games gets played. */
+/* This is simple monte-carlo engine. It plays MC_GAMES random games from the
+ * current board and records win/loss ratio for each first move. The move with
+ * the biggest number of winning games gets played. */
 
 /* Pass me arguments like a=b,c=d,...
  * Supported arguments:
@@ -21,20 +21,15 @@
  */
 
 
-#if 0 // board 19
-#define MC_GAMES	1000
+#define MC_GAMES	10000
 #define MC_GAMELEN	400
-#else
-#define MC_GAMES	1000
-#define MC_GAMELEN	150
-#endif
 
 
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
 	int move_stabs;
-	int resign_score;
+	float resign_ratio;
 };
 
 
@@ -94,33 +89,27 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 	return score;
 }
 
-/* positive: player-to-play wins more, negative: player-to-play loses more */
+/* 1: player-to-play wins, 0: player-to-play loses; -1: invalid move */
 static int
-play_many_random_games_from(struct montecarlo *mc, struct board *b, struct move *m)
+play_random_game_from(struct montecarlo *mc, struct board *b, struct move *m, int i)
 {
 	struct board b2;
 	board_copy(&b2, b);
 	if (board_is_one_point_eye(b, &m->coord) == m->color
 	    || !board_play(&b2, m))
 		/* Invalid move */
-		return -mc->games-1;
+		return -1;
 
 	int gamelen = mc->gamelen - b2.moves;
 	if (gamelen < 10)
 		gamelen = 10;
 
-	int balance = 0;
-
-	int i;
-	for (i = 0; i < mc->games; i++) {
-		float score = play_random_game(mc, &b2, stone_other(m->color), gamelen, i);
-		if (mc->debug_level > 5 - !(i % (mc->games/2)))
-			fprintf(stderr, "--- game result: %f\n", score);
-		balance += (score > 0 ? 1 : -1) * (stone_other(m->color) == S_WHITE ? 1 : -1);
-	}
+	float score = play_random_game(mc, &b2, stone_other(m->color), gamelen, i);
+	if (mc->debug_level > 5 - !(i % (mc->games/2)))
+		fprintf(stderr, "--- game result: %f\n", score);
 
 	board_done_noalloc(&b2);
-	return balance;
+	return (stone_other(m->color) == S_WHITE ? (score > 0 ? 1 : 0) : (score < 0 ? 1 : 0));
 }
 
 
@@ -136,39 +125,56 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* resign when the hope for win vanishes */
 	struct coord top_coord = resign;
-	int top_score = -mc->resign_score;
+	float top_ratio = mc->resign_ratio;
+
 	int moves = 0;
 
-	foreach_point(b) {
-		m.coord = c;
+	int games[b->size][b->size];
+	int wins[b->size][b->size];
+	memset(games, 0, sizeof(games));
+	memset(wins, 0, sizeof(wins));
+
+	int i;
+	for (i = 0; i < mc->games; i++) {
+		m.coord.x = random() % b->size;
+		m.coord.y = random() % b->size;
 
 		if (mc->debug_level > 3)
-			fprintf(stderr, "[%d,%d] playing random games\n", x, y);
+			fprintf(stderr, "[%d,%d] playing random game\n", m.coord.x, m.coord.y);
 
-		int score = - play_many_random_games_from(mc, b, &m);
-		if (score == mc->games + 1) {
+		int result = play_random_game_from(mc, b, &m, i);
+		if (result < 0) {
 			if (mc->debug_level > 3)
 				fprintf(stderr, "\tinvalid move\n");
 			continue;
 		}
+		result = 1 - result; /* We care about whether *we* win. */
 
 		if (mc->debug_level > 3)
-			fprintf(stderr, "\tscore %d\n", score);
+			fprintf(stderr, "\tresult %d\n", result);
 
-		if (score > top_score) {
-			top_score = score;
-			top_coord = m.coord;
-		}
+		games[m.coord.y][m.coord.x]++;
+		wins[m.coord.y][m.coord.x] += result;
 		moves++;
-	} foreach_point_end;
+	}
 
 	if (!moves) {
 		/* Final candidate! But only if we CAN'T make any further move. */
-		top_coord = pass; top_score = 0;
+		top_coord = pass; top_ratio = 0.5;
+
+	} else {
+		foreach_point(b) {
+			float ratio = (float) wins[c.y][c.x] / games[c.y][c.x];
+			printf("contest %d,%d %1.4f > %1.4f\n", c.x, c.y, ratio, top_ratio);
+			if (ratio > top_ratio) {
+				top_ratio = ratio;
+				top_coord = c;
+			}
+		} foreach_point_end;
 	}
 
 	if (mc->debug_level > 1)
-		fprintf(stderr, "*** WINNER is %d,%d with score %d\n", top_coord.x, top_coord.y, top_score);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", top_coord.x, top_coord.y, top_ratio);
 
 	return coord_copy(top_coord);
 }
@@ -216,7 +222,7 @@ engine_montecarlo_init(char *arg)
 		}
 	}
 
-	mc->resign_score = mc->games * 4 / 5; /* Resign when most games are lost. */
+	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
 
 	return e;
 }
