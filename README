@@ -27,3 +27,13 @@ determining whose player the territory is. ;-)
 
 Also, ZZGo supports only few GTP commands now. Most importantly,
 it does not support the known_command and final_status_list commands.
+
+
+To build zzgo, simply type:
+
+	make
+
+Built zzgo binary in the current directory is a GTP client; use your
+favorite Go client to connect to it (generally it should be possible
+to use it in place of GNU Go), or use kgsGtp to connect to KGS.
+The zzgo binary can take some parameters.
