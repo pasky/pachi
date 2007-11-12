@@ -20,7 +20,7 @@
  */
 
 
-#define MC_GAMES	20000
+#define MC_GAMES	40000
 #define MC_GAMELEN	400
 
 
