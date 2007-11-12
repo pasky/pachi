@@ -5,6 +5,8 @@ all: random.a
 random.a: $(OBJS)
 
 clean:
-	rm -rf *.o *.a
+	rm -f *.o *.a
+clean-profiled:
+	rm -f *.gcda *.gcno
 
 -include ../Makefile.lib

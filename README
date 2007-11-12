@@ -37,3 +37,11 @@ Built zzgo binary in the current directory is a GTP client; use your
 favorite Go client to connect to it (generally it should be possible
 to use it in place of GNU Go), or use kgsGtp to connect to KGS.
 The zzgo binary can take some parameters.
+
+To build better optimized binary, type:
+
+	make zzgo-profiled
+
+This will also create binary zzgo, but while the build will take
+more time (probably less than a minute anyway), the resulting binary
+will be about 1/4 to 1/5 faster.

@@ -33,12 +33,21 @@ LOCALLIBS=random/random.a montecarlo/montecarlo.a
 zzgo: $(OBJS) $(LOCALLIBS)
 	$(call cmd,link)
 
+.PHONY: zzgo-profiled
+zzgo-profiled:
+	@make all LDFLAGS=-fprofile-generate XCFLAGS=-fprofile-generate
+	echo -e 'boardsize 9\nkomi 0\nclear_board\ngenmove black\ngenmove white' | ./zzgo games=200
+	@make clean all clean-profiled LDFLAGS=-fprofile-use XCFLAGS=-fprofile-use
+
 # install-recursive?
 install:
 	$(INSTALL) ./zzgo $(DESTDIR)$(BINDIR)
 
 
 clean: clean-recursive
-	rm -rf zzgo *.o
+	rm -f zzgo *.o
+
+clean-profiled: clean-profiled-recursive
+	rm -f *.gcda *.gcno
 
 -include Makefile.lib
