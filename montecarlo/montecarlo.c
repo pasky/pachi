@@ -17,7 +17,6 @@
  * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
  * games=MC_GAMES		number of random games to play
  * gamelen=MC_GAMELEN		maximal length of played random game
- * move_stabs=NUM		number of tries to choose a random move before passing; gamelen is good default
  */
 
 
@@ -28,35 +27,9 @@
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
-	int move_stabs;
 	float resign_ratio;
 };
 
-
-/* Stolen from the random engine. */
-static void
-random_move(struct montecarlo *mc, struct board *b, enum stone color, struct coord *coord)
-{
-	struct move m;
-	m.color = color;
-	int tries = 0;
-
-	/* board_no_valid_moves() is too expensive for us so we just try
-	 * a "few" times and then give up. */
-
-	do {
-		m.coord.x = random() % b->size;
-		m.coord.y = random() % b->size;
-	} while ((board_at(b, m.coord) != S_NONE /* common case */
-	          || board_is_one_point_eye(b, &m.coord) == color /* bad idea, usually */
-	          || !board_play(b, &m))
-		 && tries++ < mc->move_stabs);
-
-	if (tries <= mc->move_stabs)
-		*coord = m.coord;
-	else
-		*coord = pass;
-}
 
 static float
 play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int moves, int n)
@@ -67,7 +40,7 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 	struct coord coord;
 	int passes = 0;
 	while (moves-- && passes < 2) {
-		random_move(mc, &b2, color, &coord);
+		board_play_random(&b2, color, &coord);
 		if (mc->debug_level > 7) {
 			char *cs = coord2str(coord);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
@@ -214,7 +187,6 @@ engine_montecarlo_init(char *arg)
 	mc->debug_level = 1;
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
-	mc->move_stabs = MC_GAMELEN;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -236,8 +208,6 @@ engine_montecarlo_init(char *arg)
 				mc->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
-			} else if (!strcasecmp(optname, "move_stabs") && optval) {
-				mc->move_stabs = atoi(optval);
 			} else {
 				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
 			}

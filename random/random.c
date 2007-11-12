@@ -9,18 +9,15 @@
 static struct coord *
 random_genmove(struct engine *e, struct board *b, enum stone color)
 {
-	struct move m;
-	m.color = color;
+	struct board b2;
+	board_copy(&b2, b);
 
-	if (board_no_valid_moves(b, color))
-		return coord_pass();
+	struct coord coord;
+	board_play_random(&b2, color, &coord);
 
-	do {
-		m.coord.x = random() % b->size;
-		m.coord.y = random() % b->size;
-	} while (!board_valid_move(b, &m, true) || board_is_one_point_eye(b, &m.coord) == color);
+	board_done_noalloc(&b2);
 
-	return coord_copy(m.coord);
+	return coord_copy(coord);
 }
 
 struct engine *

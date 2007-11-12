@@ -71,6 +71,10 @@ void board_print(struct board *board, FILE *f);
 /* If you want to check if a move is valid, then play it, call this
  * right away; board_valid_move() actually just wraps this. */
 int board_play(struct board *board, struct move *m);
+/* Like above, but plays random move; the move coordinate is recorded
+ * to *coord. This method will never fill your own eye. pass is played
+ * when no move can be played. */
+void board_play_random(struct board *b, enum stone color, struct coord *coord);
 
 bool board_no_valid_moves(struct board *board, enum stone color);
 bool board_valid_move(struct board *board, struct move *m, bool sensible);

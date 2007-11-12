@@ -303,6 +303,38 @@ board_no_valid_moves(struct board *board, enum stone color)
 }
 
 
+static inline bool
+board_is_sensible_move(struct board *b, struct move *m, int i)
+{
+	m->coord.x = i % b->size;
+	m->coord.y = i / b->size;
+	return (board_at(b, m->coord) == S_NONE
+	        && board_is_one_point_eye(b, &m->coord) != m->color /* bad idea, usually */
+	        && board_play(b, m));
+}
+
+void
+board_play_random(struct board *b, enum stone color, struct coord *coord)
+{
+	struct move m;
+	m.color = color;
+
+	int ofs = random() % (b->size * b->size);
+	int i;
+	for (i = ofs; i < b->size * b->size; i++)
+		if (board_is_sensible_move(b, &m, i))
+			goto found_move;
+	for (i = 0; i < ofs; i++)
+		if (board_is_sensible_move(b, &m, i))
+			goto found_move;
+
+	m.coord = pass;
+
+found_move:
+	*coord = m.coord;
+}
+
+
 bool
 board_is_liberty_of(struct board *board, struct coord *coord, int group)
 {
