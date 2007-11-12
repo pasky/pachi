@@ -46,6 +46,9 @@ board_copy(struct board *b2, struct board *b1)
 		(b2)->g = alloca((b2)->size * (b2)->size * sizeof(*(b2)->g)); \
 		memcpy((b2)->b, (b1)->b, (b2)->size * (b2)->size * sizeof(*(b2)->b)); \
 		memcpy((b2)->g, (b1)->g, (b2)->size * (b2)->size * sizeof(*(b2)->g)); \
+		/* int g_libs_a = g_libs_alloc((b2)->last_gid + 1); \
+		(b2)->gi = alloca(g_libs_a * sizeof(*(b2)->gi)); \
+		memcpy((b2)->gi, (b1)->gi, g_libs_a * sizeof(*(b2)->gi)); */ \
 		(b2)->gi = (b1)->gi; (b2)->gi_ro = true; \
 	} while (0)
 
