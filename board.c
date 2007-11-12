@@ -143,9 +143,24 @@ board_play_raw(struct board *board, struct move *m)
 
 	board_at(board, m->coord) = m->color;
 
+	int gidls[4], gids = 0;
+
 	foreach_neighbor(board, m->coord) {
 		enum stone color = board_at(board, c);
 		group_t group = group_at(board, c);
+
+		if (color == S_NONE)
+			continue;
+
+		int i;
+		for (i = 0; i < gids; i++)
+			if (gidls[i] == group)
+				goto already_took_liberty;
+
+		gidls[gids++] = group;
+		board_group_libs(board, group)--;
+already_took_liberty:
+
 		if (unlikely(color == m->color) && group != gid) {
 			if (likely(gid <= 0)) {
 				gid = group;
@@ -156,7 +171,6 @@ board_play_raw(struct board *board, struct move *m)
 				} foreach_in_group_end;
 			}
 		} else if (unlikely(color == stone_other(m->color))) {
-			board_group_libs(board, group)--;
 			if (unlikely(board_group_libs(board, group) == 0)) {
 				board_group_capture(board, group);
 			}
