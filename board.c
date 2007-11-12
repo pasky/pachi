@@ -196,17 +196,22 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 		return 0;
 
 	/* Try it! */
+	/* XXX: play == false is kinda rare so we don't bother to optimize that */
 	board_copy_on_stack(&b2, board);
-	int gid = board_play_raw(&b2, m);
-	if (board_group_libs(&b2, group_at((&b2), m->coord)) <= sensible) {
+	int gid = board_play_raw(board, m);
+	if (board_group_libs(board, group_at(board, m->coord)) <= sensible) {
 		/* oops, suicide (or self-atari if sensible) */
-		return 0;
+		gid = 0; play = false;
 	}
 
-	if (play) {
-		/* We did all the job, record it back to the original board! */
-		board_done_noalloc(board);
+	if (!play) {
+		/* Restore the original board. */
+		void *b = board->b, *g = board->g, *gi = board->gi;
+		memcpy(board->b, b2.b, b2.size * b2.size * sizeof(*b2.b));
+		memcpy(board->g, b2.g, b2.size * b2.size * sizeof(*b2.g));
+		memcpy(board->gi, b2.gi, (b2.last_gid + 1) * sizeof(*b2.gi));
 		memcpy(board, &b2, sizeof(b2));
+		board->b = b; board->g = g; board->gi = gi;
 	}
 
 	return gid;
