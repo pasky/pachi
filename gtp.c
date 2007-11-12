@@ -145,6 +145,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 	} else if (!strcasecmp(cmd, "final_score")) {
 		float score = board_official_score(board);
 		char str[64];
+		if (debug_level > 1)
+			fprintf(stderr, "counted score %.1f\n", score);
 		if (score == 0) {
 			gtp_reply(id, "0", NULL);
 		} else if (score > 0) {
