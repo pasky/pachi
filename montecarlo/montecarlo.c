@@ -165,7 +165,6 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	} else {
 		foreach_point(b) {
 			float ratio = (float) wins[c.y][c.x] / games[c.y][c.x];
-			printf("contest %d,%d %1.4f > %1.4f\n", c.x, c.y, ratio, top_ratio);
 			if (ratio > top_ratio) {
 				top_ratio = ratio;
 				top_coord = c;
