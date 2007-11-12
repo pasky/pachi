@@ -7,6 +7,9 @@
 #include "move.h"
 
 
+/* Note that "group" is only chain of stones that is solidly
+ * connected for us. */
+
 struct group {
 	int libs; /* Number of group liberties */
 	/* Tried to experiment with tracing group start/end coordinates,
@@ -28,8 +31,6 @@ struct board {
 	/* Stones played on the board */
 	enum stone *b;
 	/* Group id the stones are part of; 0 == no group */
-	/* Note that "group" is only chain of stones that is solidly
-	 * connected for us. */
 	int *g;
 
 	/* Cache of group info, indexed by gid */
