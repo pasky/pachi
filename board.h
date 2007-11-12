@@ -62,7 +62,6 @@ void board_print(struct board *board, FILE *f);
 
 /* Returns group id */
 int board_play(struct board *board, struct move *m);
-int board_play_raw(struct board *board, struct move *m);
 
 bool board_no_valid_moves(struct board *board, enum stone color);
 bool board_valid_move(struct board *board, struct move *m, bool sensible);
