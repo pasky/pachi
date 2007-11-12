@@ -91,8 +91,8 @@ float board_fast_score(struct board *board);
 #define foreach_point(board_) \
 	do { \
 		int x, y; \
-		for (x = 0; x < board_->size; x++) { \
-			for (y = 0; y < board_->size; y++) { \
+		for (y = 0; y < board_->size; y++) { \
+			for (x = 0; x < board_->size; x++) { \
 				struct coord c = { x, y }; c = c; /* shut up gcc */
 #define foreach_point_end \
 			} \
