@@ -129,9 +129,12 @@ group_add(struct board *board, int gid, struct coord c)
 
 
 int
-board_play_nocheck(struct board *board, struct move *m)
+board_play_raw(struct board *board, struct move *m, bool check_valid)
 {
 	int gid = 0;
+
+	if (check_valid && !board_valid_move(board, m, false))
+		return 0;
 
 	if (is_pass(m->coord) || is_resign(m->coord))
 		goto record;
@@ -175,9 +178,7 @@ record:
 int
 board_play(struct board *board, struct move *m)
 {
-	if (!board_valid_move(board, m, false))
-		return 0;
-	return board_play_nocheck(board, m);
+	return board_play_raw(board, m, true);
 }
 
 bool
@@ -210,7 +211,7 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 
 	/* Try it! */
 	board_copy_on_stack(&b2, board);
-	board_play_nocheck(&b2, m);
+	board_play_raw(&b2, m, false);
 	if (board_group_libs_recount(&b2, group_at((&b2), m->coord)) <= sensible) {
 		/* oops, suicide (or self-atari if sensible) */
 		return false;

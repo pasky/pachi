@@ -77,7 +77,7 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
 		}
-		board_play_nocheck(&b2, &m);
+		board_play_raw(&b2, &m, false);
 		if (is_pass(coord))
 			passes++;
 		else
@@ -100,7 +100,7 @@ play_many_random_games_from(struct montecarlo *mc, struct board *b, struct move 
 {
 	struct board b2;
 	board_copy(&b2, b);
-	board_play_nocheck(&b2, m);
+	board_play_raw(&b2, m, false);
 
 	int gamelen = mc->gamelen - b2.moves;
 	if (gamelen < 10)

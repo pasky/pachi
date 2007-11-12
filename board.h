@@ -28,6 +28,9 @@ struct board {
 	/* Note that "group" is only chain of stones that is solidly
 	 * connected for us. */
 	int *g;
+
+	/* Id of groups this is a liberty of */
+
 	/* Cache of group info, indexed by gid */
 	struct group *gi;
 
@@ -58,7 +61,7 @@ void board_print(struct board *board, FILE *f);
 
 /* Returns group id */
 int board_play(struct board *board, struct move *m);
-int board_play_nocheck(struct board *board, struct move *m);
+int board_play_raw(struct board *board, struct move *m, bool check_valid);
 
 bool board_no_valid_moves(struct board *board, enum stone color);
 bool board_valid_move(struct board *board, struct move *m, bool sensible);
