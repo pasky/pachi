@@ -17,13 +17,11 @@ profiling) and it should be quite easy to extend it to provide more
 facilities for your engine (but it should be at the same time kept
 as simple as possible).
 
-ZZGo uses Old Chinese scoring, currently. That means, it simply counts
+ZZGo uses Chinese scoring, currently. That means, it simply counts
 the number of stones of each color on the board, plus komi. Additional
-hack is that it does not count groups in atari.
-
-Most importantly, this means that it does NOT count any territory at all!
-Even eyes are ignored. I have simply been too lazy to implement
-determining whose player the territory is. ;-)
+hack is that it does not count groups in atari, if the opponent neglected
+to remove them; it is still one-point off there, though. In addition,
+ZZGo cannot count multi-point eyes.
 
 Also, ZZGo supports only few GTP commands now. Most importantly,
 it does not support the known_command and final_status_list commands.

@@ -313,6 +313,30 @@ board_is_liberty_of(struct board *board, struct coord *coord, int group)
 	return false;
 }
 
+enum stone
+board_is_one_point_eye(struct board *board, struct coord *coord)
+{
+	enum stone eye_color = S_NONE;
+
+	foreach_neighbor(board, *coord) {
+		enum stone color = board_at(board, c);
+
+		if (color == S_NONE)
+			return S_NONE;
+		if (eye_color != S_NONE && color != eye_color)
+			return S_NONE;
+		eye_color = color;
+
+		/* But there's a catch - false eye. To make things simple,
+		 * we aren't an eye if at least one of the neighbors is
+		 * in atari. That should be good enough. */
+		if (board_group_libs(board, group_at(board, c)) == 1)
+			return S_NONE;
+	} foreach_neighbor_end;
+
+	return eye_color;
+}
+
 
 int
 board_group_capture(struct board *board, int group)
@@ -362,7 +386,8 @@ board_official_score(struct board *board)
 	memset(gcache, 0, sizeof(gcache));
 
 	foreach_point(board) {
-		if (board_at(board, c) != S_NONE) {
+		enum stone color = board_at(board, c) != S_NONE;
+		if (color != S_NONE) {
 			/* There is a complication: There can be some dead
 			 * stones that could not have been removed because
 			 * they are in enemy territory and we can't suicide.
@@ -371,29 +396,13 @@ board_official_score(struct board *board)
 			if (gcache[g] == GC_DUNNO)
 				gcache[g] = board_group_libs(board, g) == 1 ? GC_DEAD : GC_ALIVE;
 			if (gcache[g] == GC_ALIVE)
-				scores[board_at(board, c)]++;
-#if 0
-			This simply is not good enough.
-		} else {
-			/* Our opponent was sloppy. We try to just look at
-			 * our neighbors and as soon as we see a live group
-			 * we are set. We always see one or we would already
-			 * play on the empty place ourselves. */
-			/* The trouble is that sometimes our opponent won't even
-			 * bother to atari our group and then we get it still
-			 * wrong. */
-			foreach_neighbor(board, c) {
-				if (board_at(board, c) == S_NONE)
-					continue;
-				int g = group_at(board, c);
-				if (gcache[g] == GC_DUNNO)
-					gcache[g] = board_group_libs(board, g) == 1 ? GC_DEAD : GC_ALIVE;
-				if (gcache[g] == GC_ALIVE) {
-					scores[board_at(board, c)]++;
-					break;
-				}
-			} foreach_neighbor_end;
-#endif
+				scores[color]++;
+			/* XXX: But we still miss the one empty opponent's point. */
+
+		} else if (color == S_NONE) {
+			/* TODO: Count multi-point eyes */
+			color = board_is_one_point_eye(board, &c);
+			scores[color]++;
 		}
 	} foreach_point_end;
 
@@ -407,7 +416,10 @@ board_fast_score(struct board *board)
 	memset(scores, 0, sizeof(scores));
 
 	foreach_point(board) {
-		scores[board_at(board, c)]++;
+		enum stone color = board_at(board, c);
+		if (color == S_NONE)
+			color = board_is_one_point_eye(board, &c);
+		scores[color]++;
 	} foreach_point_end;
 
 	return board->komi + scores[S_WHITE] - scores[S_BLACK];

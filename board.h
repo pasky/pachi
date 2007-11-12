@@ -76,6 +76,8 @@ bool board_no_valid_moves(struct board *board, enum stone color);
 bool board_valid_move(struct board *board, struct move *m, bool sensible);
 
 bool board_is_liberty_of(struct board *board, struct coord *c, int group);
+/* Returns S_NONE if not a 1pt eye, color of owner otherwise. */
+enum stone board_is_one_point_eye(struct board *board, struct coord *c);
 
 int board_group_capture(struct board *board, int group);
 
