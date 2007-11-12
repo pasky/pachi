@@ -14,6 +14,9 @@ struct group {
 	 * not pay off. */
 };
 
+/* You should treat this struct as read-only. Always call functions below if
+ * you want to change it. */
+
 struct board {
 	int size;
 	int captures[S_MAX];
@@ -28,8 +31,6 @@ struct board {
 	/* Note that "group" is only chain of stones that is solidly
 	 * connected for us. */
 	int *g;
-
-	/* Id of groups this is a liberty of */
 
 	/* Cache of group info, indexed by gid */
 	struct group *gi;
