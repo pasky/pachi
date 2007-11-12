@@ -187,7 +187,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		for (y = board->size - 1; y >= 0; y--) {
 			fprintf(f, "%2d | ", y + 1);
 			for (x = 0; x < board->size; x++)
-				fprintf(f, "%1.2f ", (float) wins[y][x] / games[y][x]);
+				fprintf(f, "%0.2f ", (float) wins[y][x] / games[y][x]);
 			fprintf(f, "|\n");
 		}
 		fprintf(f, "   +-");
