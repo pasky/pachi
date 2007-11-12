@@ -126,27 +126,26 @@ group_add(struct board *board, int gid, struct coord coord)
 {
 	foreach_neighbor(board, coord) {
 		if (board_at(board, c) == S_NONE
-		    && !board_is_liberty_of(board, &c, gid)) {
+		    && likely(!board_is_liberty_of(board, &c, gid))) {
 			board_group_libs(board, gid)++;
 		}
 	} foreach_neighbor_end;
 	group_at(board, coord) = gid;
 }
 
-
 int
 board_play_raw(struct board *board, struct move *m)
 {
 	int gid = 0;
 
-	if (is_pass(m->coord) || is_resign(m->coord))
+	if (unlikely(is_pass(m->coord) || is_resign(m->coord)))
 		goto record;
 
 	board_at(board, m->coord) = m->color;
 
 	foreach_neighbor(board, m->coord) {
-		if (board_at(board, c) == m->color && group_at(board, c) != gid) {
-			if (gid <= 0) {
+		if (unlikely(board_at(board, c) == m->color) && group_at(board, c) != gid) {
+			if (likely(gid <= 0)) {
 				gid = group_at(board, c);
 			} else {
 				/* Merge groups */
@@ -154,15 +153,15 @@ board_play_raw(struct board *board, struct move *m)
 					group_add(board, gid, c);
 				} foreach_in_group_end;
 			}
-		} else if (board_at(board, c) == stone_other(m->color)
-			   && board_group_libs(board, group_at(board, c)) == 1) {
+		} else if (unlikely(board_at(board, c) == stone_other(m->color))
+			   && unlikely(board_group_libs(board, group_at(board, c)) == 1)) {
 			/* We just filled last liberty of a group in atari. */
 			board_group_capture(board, group_at(board, c));
 		}
 	} foreach_neighbor_end;
 
-	if (gid <= 0) {
-		if (gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2)) {
+	if (likely(gid <= 0)) {
+		if (unlikely(gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2))) {
 			if (board->use_alloca)
 				board->gi = malloc(gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
 			else
@@ -185,26 +184,26 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 {
 	struct board b2;
 
-	if (is_pass(m->coord) || is_resign(m->coord))
+	if (unlikely(is_pass(m->coord) || is_resign(m->coord)))
 		return -1;
 
-	if (board_at(board, m->coord) != S_NONE)
+	if (unlikely(board_at(board, m->coord) != S_NONE))
 		return 0;
 
 	/* Check ko */
-	if (m->coord.x == board->last_move.coord.x && m->coord.y == board->last_move.coord.y)
+	if (unlikely(m->coord.x == board->last_move.coord.x && m->coord.y == board->last_move.coord.y))
 		return 0;
 
 	/* Try it! */
 	/* XXX: play == false is kinda rare so we don't bother to optimize that */
 	board_copy_on_stack(&b2, board);
 	int gid = board_play_raw(board, m);
-	if (board_group_libs(board, group_at(board, m->coord)) <= sensible) {
+	if (unlikely(board_group_libs(board, group_at(board, m->coord)) <= sensible)) {
 		/* oops, suicide (or self-atari if sensible) */
 		gid = 0; play = false;
 	}
 
-	if (!play) {
+	if (unlikely(!play)) {
 		/* Restore the original board. */
 		void *b = board->b, *g = board->g, *gi = board->gi;
 		memcpy(board->b, b2.b, b2.size * b2.size * sizeof(*b2.b));
@@ -247,7 +246,7 @@ bool
 board_is_liberty_of(struct board *board, struct coord *coord, int group)
 {
 	foreach_neighbor(board, *coord) {
-		if (group_at(board, c) == group)
+		if (unlikely(group_at(board, c) == group))
 			return true;
 	} foreach_neighbor_end;
 	return false;
@@ -274,7 +273,7 @@ board_group_capture(struct board *board, int group)
 				/* Do not add a liberty twice to one group. */
 				int i;
 				for (i = 0; i < gids; i++)
-					if (gidls[i] == gid)
+					if (unlikely(gidls[i] == gid))
 						goto next_neighbor;
 				gidls[gids++] = gid;
 

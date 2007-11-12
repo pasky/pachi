@@ -7,6 +7,9 @@
 #include "stone.h"
 #include "move.h"
 
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect((x), 0)
+
 
 /* Note that "group" is only chain of stones that is solidly
  * connected for us. */
@@ -73,7 +76,6 @@ bool board_valid_move(struct board *board, struct move *m, bool sensible);
 
 bool board_is_liberty_of(struct board *board, struct coord *c, int group);
 
-int board_group_libs_recount(struct board *board, int group);
 void board_group_capture(struct board *board, int group);
 
 /* Positive: W wins */
@@ -102,7 +104,7 @@ float board_fast_score(struct board *board);
 		group_t *g__ = board_->g; \
 		int group__ = group_; \
 		foreach_point(board_) \
-			if (*g__++ == group__)
+			if (unlikely(*g__++ == group__))
 #define foreach_in_group_end \
 		foreach_point_end; \
 	} while (0)
@@ -116,7 +118,7 @@ float board_fast_score(struct board *board);
 		int fn__i; \
 		for (fn__i = 0; fn__i < 4; fn__i++) { \
 			int x = q__[fn__i].x, y = q__[fn__i].y; struct coord c = { x, y }; \
-			if (x < 0 || y < 0 || x >= board_->size || y >= board->size) \
+			if (unlikely(x < 0 || y < 0 || x >= board_->size || y >= board->size)) \
 				continue;
 #define foreach_neighbor_end \
 		} \
