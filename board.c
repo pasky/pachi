@@ -6,7 +6,8 @@
 #include "board.h"
 
 
-#define g_libs_alloc(gids) (256 + ((gids) >> 8) * 256)
+#define g_libs_granularity 8
+#define g_libs_alloc(gids) ((1 << g_libs_granularity) + ((gids) >> g_libs_granularity) * (1 << g_libs_granularity))
 
 
 struct board *
