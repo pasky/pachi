@@ -52,7 +52,7 @@ random_move(struct montecarlo *mc, struct board *b, enum stone color, struct coo
 		m.coord.x = random() % b->size;
 		m.coord.y = random() % b->size;
 	} while ((board_at(b, m.coord) != S_NONE /* common case */
-	          || !board_valid_move(b, &m, true))
+	          || !board_play(b, &m))
 		 && tries++ < mc->move_stabs);
 
 	if (tries <= mc->move_stabs)
@@ -71,13 +71,11 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 	int passes = 0;
 	while (moves-- && passes < 2) {
 		random_move(mc, &b2, color, &coord);
-		struct move m = { coord, color };
 		if (mc->debug_level > 6) {
 			char *cs = coord2str(coord);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
 		}
-		board_play_raw(&b2, &m);
 		if (is_pass(coord))
 			passes++;
 		else
@@ -100,7 +98,9 @@ play_many_random_games_from(struct montecarlo *mc, struct board *b, struct move 
 {
 	struct board b2;
 	board_copy(&b2, b);
-	board_play_raw(&b2, m);
+	if (!board_play(&b2, m))
+		/* Invalid move */
+		return 0;
 
 	int gamelen = mc->gamelen - b2.moves;
 	if (gamelen < 10)
@@ -137,14 +137,17 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 	foreach_point(b) {
 		m.coord = c;
-		if (!board_valid_move(b, &m, true))
-			continue;
 
 		if (mc->debug_level > 3)
 			fprintf(stderr, "[%d,%d] random games\n", x, y);
 		int score = - play_many_random_games_from(mc, b, &m);
 		if (mc->debug_level > 3)
 			fprintf(stderr, "\tscore %d\n", score);
+
+		if (!score)
+			/* Error or meta-jigo. We don't need to distinguish. */
+			continue;
+
 		if (score > top_score) {
 			top_score = score;
 			top_coord = m.coord;
