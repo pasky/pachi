@@ -3,6 +3,6 @@
 
 #include "engine.h"
 
-struct engine *engine_random_init(void);
+struct engine *engine_random_init(char *arg);
 
 #endif

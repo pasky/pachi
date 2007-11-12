@@ -130,11 +130,15 @@ montecarlo_genmove(struct board *b, enum stone color)
 }
 
 struct engine *
-engine_montecarlo_init(void)
+engine_montecarlo_init(char *arg)
 {
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "MonteCarlo Engine";
 	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = montecarlo_genmove;
+
+	if (arg)
+		fprintf(stderr, "MonteCarlo: I support no engine arguments.\n");
+
 	return e;
 }

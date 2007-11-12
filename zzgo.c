@@ -35,19 +35,22 @@ int main(int argc, char *argv[])
 				debug_level = atoi(optarg);
 				break;
 			default: /* '?' */
-				fprintf(stderr, "Usage: %s [-e random|montecarlo] [-d DEBUGLEVEL]\n",
+				fprintf(stderr, "Usage: %s [-e random|montecarlo] [-d DEBUG_LEVEL] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}
 	}
 
+	char *e_arg = NULL;
+	if (optind < argc)
+		e_arg = argv[optind];
 	struct engine *e;
 	switch (engine) {
 		case E_RANDOM:
 		default:
-			e = engine_random_init(); break;
+			e = engine_random_init(e_arg); break;
 		case E_MONTECARLO:
-			e = engine_montecarlo_init(); break;
+			e = engine_montecarlo_init(e_arg); break;
 
 	}
 
