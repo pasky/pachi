@@ -153,7 +153,7 @@ board_play_raw(struct board *board, struct move *m, bool check_valid)
 			}
 		} else if (board_at(board, c) == stone_other(m->color)
 			   && board_group_libs(board, group_at(board, c)) == 1) {
-			/* Zero liberties now, then (group liberty cache not updated yet). */
+			/* We just filled last liberty of a group in atari. */
 			board_group_capture(board, group_at(board, c));
 		}
 	} foreach_neighbor_end;
