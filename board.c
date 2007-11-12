@@ -296,7 +296,7 @@ board_no_valid_moves(struct board *board, enum stone color)
 		struct move m;
 		m.coord.x = x; m.coord.y = y; m.color = color;
 		/* Self-atari doesn't count. :-) */
-		if (board_valid_move(board, &m, true))
+		if (board_valid_move(board, &m, true) && !board_is_one_point_eye(board, &m.coord))
 			return false;
 	} foreach_point_end;
 	return true;
