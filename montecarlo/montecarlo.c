@@ -14,9 +14,9 @@
 
 /* Pass me arguments like a=b,c=d,...
  * Supported arguments:
- * debug=DEBUG_LEVEL
- * games=MC_GAMES
- * gamelen=MC_GAMELEN
+ * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
+ * games=MC_GAMES		number of random games to play
+ * gamelen=MC_GAMELEN		maximal length of played random game
  */
 
 
