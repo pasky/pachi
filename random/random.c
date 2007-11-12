@@ -18,7 +18,7 @@ random_genmove(struct engine *e, struct board *b, enum stone color)
 	do {
 		m.coord.x = random() % b->size;
 		m.coord.y = random() % b->size;
-	} while (!board_valid_move(b, &m, true) && board_is_one_point_eye(b, &m.coord) != color);
+	} while (!board_valid_move(b, &m, true) || board_is_one_point_eye(b, &m.coord) == color);
 
 	return coord_copy(m.coord);
 }

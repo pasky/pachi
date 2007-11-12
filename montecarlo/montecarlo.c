@@ -52,7 +52,7 @@ random_move(struct montecarlo *mc, struct board *b, enum stone color, struct coo
 		m.coord.x = random() % b->size;
 		m.coord.y = random() % b->size;
 	} while ((board_at(b, m.coord) != S_NONE /* common case */
-	          || board_is_one_point_eye(b, &m.coord) != color /* bad idea, usually */
+	          || board_is_one_point_eye(b, &m.coord) == color /* bad idea, usually */
 	          || !board_play(b, &m))
 		 && tries++ < mc->move_stabs);
 
