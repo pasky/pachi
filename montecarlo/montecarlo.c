@@ -216,7 +216,7 @@ engine_montecarlo_init(char *arg)
 		}
 	}
 
-	mc->resign_score = mc->games; /* Resign only when all games are lost. */
+	mc->resign_score = mc->games * 4 / 5; /* Resign when most games are lost. */
 
 	return e;
 }
