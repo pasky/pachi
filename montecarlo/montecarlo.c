@@ -15,6 +15,8 @@
 /* Pass me arguments like a=b,c=d,...
  * Supported arguments:
  * debug=DEBUG_LEVEL
+ * games=MC_GAMES
+ * gamelen=MC_GAMELEN
  */
 
 
@@ -29,6 +31,7 @@
 
 struct montecarlo {
 	int debug_level;
+	int games, gamelen;
 };
 
 
@@ -99,14 +102,14 @@ play_many_random_games_from(struct montecarlo *mc, struct board *b, struct move 
 	board_copy(&b2, b);
 	board_play_nocheck(&b2, m);
 
-	int gamelen = MC_GAMELEN - b2.moves;
+	int gamelen = mc->gamelen - b2.moves;
 	if (gamelen < 10)
 		gamelen = 10;
 
 	int balance = 0;
 
 	int i;
-	for (i = 0; i < MC_GAMES; i++) {
+	for (i = 0; i < mc->games; i++) {
 		float score = play_random_game(mc, &b2, stone_other(m->color), gamelen);
 		if (mc->debug_level > 4)
 			fprintf(stderr, "--- game result: %f\n", score);
@@ -162,6 +165,8 @@ engine_montecarlo_init(char *arg)
 	e->data = mc;
 
 	mc->debug_level = 1;
+	mc->games = MC_GAMES;
+	mc->gamelen = MC_GAMELEN;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -179,8 +184,12 @@ engine_montecarlo_init(char *arg)
 					mc->debug_level = atoi(optval);
 				else
 					mc->debug_level++;
+			} else if (!strcasecmp(optname, "games") && optval) {
+				mc->games = atoi(optval);
+			} else if (!strcasecmp(optname, "gamelen") && optval) {
+				mc->gamelen = atoi(optval);
 			} else {
-				fprintf(stderr, "MonteCarlo: Invalid engine argument %s\n", optname);
+				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
 			}
 		}
 	}
