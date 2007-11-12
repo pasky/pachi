@@ -64,7 +64,7 @@ random_move(struct montecarlo *mc, struct board *b, enum stone color, struct coo
 }
 
 static float
-play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int moves)
+play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int moves, int n)
 {
 	struct board b2;
 	board_copy(&b2, b);
@@ -73,7 +73,7 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 	int passes = 0;
 	while (moves-- && passes < 2) {
 		random_move(mc, &b2, color, &coord);
-		if (mc->debug_level > 6) {
+		if (mc->debug_level > 7) {
 			char *cs = coord2str(coord);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
@@ -85,7 +85,7 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 		color = stone_other(color);
 	}
 
-	if (mc->debug_level > 5)
+	if (mc->debug_level > 6 - !(n % (mc->games/2)))
 		board_print(&b2, stderr);
 
 	float score = board_fast_score(&b2);
@@ -113,8 +113,8 @@ play_many_random_games_from(struct montecarlo *mc, struct board *b, struct move 
 
 	int i;
 	for (i = 0; i < mc->games; i++) {
-		float score = play_random_game(mc, &b2, stone_other(m->color), gamelen);
-		if (mc->debug_level > 4)
+		float score = play_random_game(mc, &b2, stone_other(m->color), gamelen, i);
+		if (mc->debug_level > 5 - !(i % (mc->games/2)))
 			fprintf(stderr, "--- game result: %f\n", score);
 		balance += (score > 0 ? 1 : -1) * (stone_other(m->color) == S_WHITE ? 1 : -1);
 	}
