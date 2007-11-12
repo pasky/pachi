@@ -2,6 +2,7 @@
 #define ZZGO_BOARD_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "stone.h"
 #include "move.h"
@@ -10,8 +11,10 @@
 /* Note that "group" is only chain of stones that is solidly
  * connected for us. */
 
+typedef uint16_t group_t;
+
 struct group {
-	int libs; /* Number of group liberties */
+	uint16_t libs; /* Number of group liberties */
 	/* Tried to experiment with tracing group start/end coordinates,
 	 * however then we cannot use ro group cache anymore and it does
 	 * not pay off. */
@@ -29,9 +32,9 @@ struct board {
 	struct move last_move;
 
 	/* Stones played on the board */
-	enum stone *b;
+	char *b; /* enum stone */
 	/* Group id the stones are part of; 0 == no group */
-	int *g;
+	group_t *g;
 
 	/* Cache of group info, indexed by gid */
 	struct group *gi;
@@ -96,7 +99,7 @@ float board_fast_score(struct board *board);
 
 #define foreach_in_group(board_, group_) \
 	do { \
-		int *g__ = board_->g; \
+		group_t *g__ = board_->g; \
 		int group__ = group_; \
 		foreach_point(board_) \
 			if (*g__++ == group__)
