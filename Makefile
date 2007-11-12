@@ -7,7 +7,7 @@ CUSTOM_CFLAGS=-Wall -ggdb -O3
 SYS_CFLAGS=
 
 # Profiling:
-# LD_FLAGS=-pg
+# LDFLAGS+=-pg
 # CUSTOM_CFLAGS+= -pg
 
 LD=ld
