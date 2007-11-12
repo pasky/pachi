@@ -66,12 +66,17 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 static int
 play_random_game_from(struct montecarlo *mc, struct board *b, struct move *m, int i)
 {
-	struct board b2;
-	board_copy(&b2, b);
-	if (board_is_one_point_eye(b, &m->coord) == m->color
-	    || !board_play(&b2, m))
+	if (board_is_one_point_eye(b, &m->coord) == m->color)
 		/* Invalid move */
 		return -1;
+
+	struct board b2;
+	board_copy(&b2, b);
+	if (!board_play(&b2, m)) {
+		/* Invalid move */
+		board_done_noalloc(&b2);
+		return -1;
+	}
 
 	int gamelen = mc->gamelen - b2.moves;
 	if (gamelen < 10)
