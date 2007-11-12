@@ -60,7 +60,9 @@ void board_clear(struct board *board);
 struct FILE;
 void board_print(struct board *board, FILE *f);
 
-/* Returns group id */
+/* Returns group id, 0 on error */
+/* If you want to check if a move is valid, then play it, call this
+ * right away; board_valid_move() actually just wraps this. */
 int board_play(struct board *board, struct move *m);
 
 bool board_no_valid_moves(struct board *board, enum stone color);
