@@ -100,7 +100,7 @@ play_many_random_games_from(struct board *b, struct move *m)
 
 
 static struct coord *
-montecarlo_genmove(struct board *b, enum stone color)
+montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	struct move m;
 	m.color = color;
