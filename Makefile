@@ -35,7 +35,7 @@ zzgo: $(OBJS) $(LOCALLIBS)
 
 .PHONY: zzgo-profiled
 zzgo-profiled:
-	@make all LDFLAGS=-fprofile-generate XCFLAGS=-fprofile-generate
+	@make clean all LDFLAGS=-fprofile-generate XCFLAGS=-fprofile-generate
 	echo -e 'boardsize 9\nkomi 0\nclear_board\ngenmove black\ngenmove white' | ./zzgo games=200
 	@make clean all clean-profiled LDFLAGS=-fprofile-use XCFLAGS=-fprofile-use
 
