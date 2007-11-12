@@ -36,9 +36,8 @@ struct board {
 	/* Cache of group info, indexed by gid */
 	struct group *gi;
 
-	/* private */
+	/* --- private */
 	int last_gid;
-	bool *libcount_watermark;
 };
 
 #define board_atxy(b_, x, y) ((b_)->b[(x) + (b_)->size * (y)])
@@ -67,10 +66,7 @@ int board_play_raw(struct board *board, struct move *m, bool check_valid);
 bool board_no_valid_moves(struct board *board, enum stone color);
 bool board_valid_move(struct board *board, struct move *m, bool sensible);
 
-/* Local liberties of a position - adj. positions with no
- * stones on them. (Thus, even stones in alive group may have
- * zero local liberties.) */
-int board_local_libs(struct board *board, struct coord *c);
+bool board_is_liberty_of(struct board *board, struct coord *c, int group);
 
 int board_group_libs_recount(struct board *board, int group);
 void board_group_capture(struct board *board, int group);

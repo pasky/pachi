@@ -121,9 +121,15 @@ board_print(struct board *board, FILE *f)
 
 
 static void
-group_add(struct board *board, int gid, struct coord c)
+group_add(struct board *board, int gid, struct coord coord)
 {
-	group_at(board, c) = gid;
+	foreach_neighbor(board, coord) {
+		if (board_at(board, c) == S_NONE
+		    && !board_is_liberty_of(board, &c, gid)) {
+			board_group_libs(board, gid)++;
+		}
+	} foreach_neighbor_end;
+	group_at(board, coord) = gid;
 }
 
 
@@ -219,43 +225,16 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 }
 
 
-int
-board_local_libs(struct board *board, struct coord *coord)
+bool
+board_is_liberty_of(struct board *board, struct coord *coord, int group)
 {
-	int l = 0;
-
 	foreach_neighbor(board, *coord) {
-		if (board->libcount_watermark) {
-			/* If we get called in loop, our caller can prevent us
-			 * from counting some liberties multiple times. */
-			if (board->libcount_watermark[c.x + board->size * c.y])
-				continue;
-			board->libcount_watermark[c.x + board->size * c.y] = true;
-		}
-		l += (board_at(board, c) == S_NONE);
+		if (group_at(board, c) == group)
+			return true;
 	} foreach_neighbor_end;
-	return l;
+	return false;
 }
 
-
-int
-board_group_libs_recount(struct board *board, int group)
-{
-	int l = 0;
-	bool watermarks[board->size * board->size];
-	memset(watermarks, 0, sizeof(watermarks));
-
-	board->libcount_watermark = watermarks;
-
-	foreach_in_group(board, group) {
-		l += board_local_libs(board, &c);
-	} foreach_in_group_end;
-
-	board->libcount_watermark = NULL;
-
-	board_group_libs(board, group) = l;
-	return l;
-}
 
 void
 board_group_capture(struct board *board, int group)
@@ -264,6 +243,27 @@ board_group_capture(struct board *board, int group)
 		board->captures[stone_other(board_at(board, c))]++;
 		board_at(board, c) = S_NONE;
 		group_at(board, c) = 0;
+
+		/* Increase liberties of surrounding groups */
+		struct coord coord = c;
+		int gidls[4], gids = 0;
+		foreach_neighbor(board, coord) {
+			if (board_at(board, c) != S_NONE) {
+				int gid = group_at(board, c);
+				if (gid == group)
+					goto next_neighbor; /* Not worth the trouble */
+
+				/* Do not add a liberty twice to one group. */
+				int i;
+				for (i = 0; i < gids; i++)
+					if (gidls[i] == gid)
+						goto next_neighbor;
+				gidls[gids++] = gid;
+
+				board_group_libs(board, gid)++;
+			}
+next_neighbor:;
+		} foreach_neighbor_end;
 	} foreach_in_group_end;
 }
 
