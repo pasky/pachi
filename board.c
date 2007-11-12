@@ -256,10 +256,10 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 		gid = 0; play = false;
 	}
 
-	/* Check ko: self-atari at a position of one-stone capture one move ago (thus b2, not board !) */
-	if (unlikely(my_libs == 1 && m->color == b2.ko.color && m->coord.x == b2.ko.coord.x && m->coord.y == b2.ko.coord.y)) {
+	/* Check ko: self-atari one-stone capture at a position of one-stone capture one move ago (thus b2, not board !) */
+	if (unlikely(my_libs == 1 && m->color == b2.ko.color && m->coord.x == b2.ko.coord.x && m->coord.y == b2.ko.coord.y && board->captures[m->color] - b2.captures[m->color] == 1)) {
 		if (unlikely(debug_level > 5))
-			fprintf(stderr, "board_check: ko at %d,%d\n", m->coord.x, m->coord.y);
+			fprintf(stderr, "board_check: ko at %d,%d color %d captures %d-%d\n", m->coord.x, m->coord.y, m->color, board->captures[m->color], b2.captures[m->color]);
 		gid = 0; play = false;
 	}
 
