@@ -154,6 +154,9 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		}
 	} foreach_point_end;
 
+	if (mc->debug_level > 1)
+		fprintf(stderr, "*** WINNER is %d,%d with score %d\n", top_coord.x, top_coord.y, top_score);
+
 	return coord_copy(top_coord);
 }
 
