@@ -46,10 +46,9 @@ board_copy(struct board *b2, struct board *b1)
 		(b2)->g = alloca((b2)->size * (b2)->size * sizeof(*(b2)->g)); \
 		memcpy((b2)->b, (b1)->b, (b2)->size * (b2)->size * sizeof(*(b2)->b)); \
 		memcpy((b2)->g, (b1)->g, (b2)->size * (b2)->size * sizeof(*(b2)->g)); \
-		/* int gi_a = gi_allocsize((b2)->last_gid + 1); \
+		int gi_a = gi_allocsize((b2)->last_gid + 1); \
 		(b2)->gi = alloca(gi_a * sizeof(*(b2)->gi)); \
-		memcpy((b2)->gi, (b1)->gi, gi_a * sizeof(*(b2)->gi)); */ \
-		(b2)->gi = (b1)->gi; (b2)->gi_ro = true; \
+		memcpy((b2)->gi, (b1)->gi, gi_a * sizeof(*(b2)->gi)); \
 	} while (0)
 
 void
@@ -159,16 +158,13 @@ board_play_raw(struct board *board, struct move *m, bool check_valid)
 	} foreach_neighbor_end;
 
 	if (gid <= 0) {
-		if (!board->gi_ro && gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2)) {
+		if (gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2)) {
 			board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
 		}
 		gid = ++board->last_gid;
-		if (!board->gi_ro)
-			memset(&board->gi[gid], 0, sizeof(*board->gi));
+		memset(&board->gi[gid], 0, sizeof(*board->gi));
 	}
 	group_add(board, gid, m->coord);
-	if (!board->gi_ro)
-		board_group_libs_recount(board, gid);
 
 record:
 	board->last_move = *m;
@@ -214,7 +210,7 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 	/* Try it! */
 	board_copy_on_stack(&b2, board);
 	board_play_raw(&b2, m, false);
-	if (board_group_libs_recount(&b2, group_at((&b2), m->coord)) <= sensible) {
+	if (board_group_libs(&b2, group_at((&b2), m->coord)) <= sensible) {
 		/* oops, suicide (or self-atari if sensible) */
 		return false;
 	}
@@ -257,8 +253,7 @@ board_group_libs_recount(struct board *board, int group)
 
 	board->libcount_watermark = NULL;
 
-	if (!board->gi_ro)
-		board_group_libs(board, group) = l;
+	board_group_libs(board, group) = l;
 	return l;
 }
 

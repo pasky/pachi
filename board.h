@@ -39,7 +39,6 @@ struct board {
 	/* private */
 	int last_gid;
 	bool *libcount_watermark;
-	bool gi_ro;
 };
 
 #define board_atxy(b_, x, y) ((b_)->b[(x) + (b_)->size * (y)])
