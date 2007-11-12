@@ -183,10 +183,48 @@ record:
 	return gid;
 }
 
+static int
+board_check_and_play(struct board *board, struct move *m, bool sensible, bool play)
+{
+	struct board b2;
+
+	if (is_pass(m->coord) || is_resign(m->coord))
+		return -1;
+
+	if (board_at(board, m->coord) != S_NONE)
+		return 0;
+
+	/* Check ko */
+	if (m->coord.x == board->last_move.coord.x && m->coord.y == board->last_move.coord.y)
+		return 0;
+
+	/* Try it! */
+	board_copy_on_stack(&b2, board);
+	int gid = board_play_raw(&b2, m, false);
+	if (board_group_libs(&b2, group_at((&b2), m->coord)) <= sensible) {
+		/* oops, suicide (or self-atari if sensible) */
+		return 0;
+	}
+
+	if (play) {
+		/* We did all the job, record it back to the original board! */
+		board_done_noalloc(board);
+		memcpy(board, &b2, sizeof(b2));
+	}
+
+	return gid;
+}
+
 int
 board_play(struct board *board, struct move *m)
 {
-	return board_play_raw(board, m, true);
+	return board_check_and_play(board, m, false, true);
+}
+
+bool
+board_valid_move(struct board *board, struct move *m, bool sensible)
+{
+	return board_check_and_play(board, m, sensible, false);
 }
 
 bool
@@ -199,32 +237,6 @@ board_no_valid_moves(struct board *board, enum stone color)
 		if (board_valid_move(board, &m, true))
 			return false;
 	} foreach_point_end;
-	return true;
-}
-
-bool
-board_valid_move(struct board *board, struct move *m, bool sensible)
-{
-	struct board b2;
-
-	if (is_pass(m->coord) || is_resign(m->coord))
-		return true;
-
-	if (board_at(board, m->coord) != S_NONE)
-		return false;
-
-	/* Check ko */
-	if (m->coord.x == board->last_move.coord.x && m->coord.y == board->last_move.coord.y)
-		return false;
-
-	/* Try it! */
-	board_copy_on_stack(&b2, board);
-	board_play_raw(&b2, m, false);
-	if (board_group_libs(&b2, group_at((&b2), m->coord)) <= sensible) {
-		/* oops, suicide (or self-atari if sensible) */
-		return false;
-	}
-
 	return true;
 }
 
