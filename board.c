@@ -260,8 +260,11 @@ board_play_f(struct board *board, struct move *m, int f)
 	int my_libs = board_group_libs(board, group_at(board, m->coord));
 	if (unlikely(my_libs == 0)) {
 		/* oops, suicide */
-		if (unlikely(debug_level > 5))
-			fprintf(stderr, "suicide: libs %d\n", my_libs);
+		if (unlikely(debug_level > 5)) {
+			if (unlikely(debug_level > 6))
+				board_print(board, stderr);
+			fprintf(stderr, "board_check: suicide\n");
+		}
 		gid = 0;
 	}
 
