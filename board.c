@@ -26,10 +26,12 @@ board_copy(struct board *b2, struct board *b1)
 {
 	memcpy(b2, b1, sizeof(struct board));
 
-	b2->b = calloc(b2->size * b2->size, sizeof(*b2->b));
-	b2->g = calloc(b2->size * b2->size, sizeof(*b2->g));
-	memcpy(b2->b, b1->b, b2->size * b2->size * sizeof(*b2->b));
-	memcpy(b2->g, b1->g, b2->size * b2->size * sizeof(*b2->g));
+	int bsize = b2->size * b2->size * sizeof(*b2->b);
+	int gsize = b2->size * b2->size * sizeof(*b2->g);
+	void *x = malloc(bsize + gsize);
+	memcpy(x, b1->b, bsize + gsize);
+	b2->b = x; x += bsize;
+	b2->g = x;
 
 	int gi_a = gi_allocsize(b2->last_gid + 1);
 	b2->gi = calloc(gi_a, sizeof(*b2->gi));
@@ -38,18 +40,22 @@ board_copy(struct board *b2, struct board *b1)
 	return b2;
 }
 
-/* Like board_copy, but faster (arrays on stack) and with only read-only
- * gid cache */
+/* Like board_copy, but faster (arrays on stack) */
 #define board_copy_on_stack(b2, b1) \
 	do { \
 		memcpy((b2), (b1), sizeof(struct board)); \
-		(b2)->b = alloca((b2)->size * (b2)->size * sizeof(*(b2)->b)); \
-		(b2)->g = alloca((b2)->size * (b2)->size * sizeof(*(b2)->g)); \
-		memcpy((b2)->b, (b1)->b, (b2)->size * (b2)->size * sizeof(*(b2)->b)); \
-		memcpy((b2)->g, (b1)->g, (b2)->size * (b2)->size * sizeof(*(b2)->g)); \
+\
+		int bsize = ((b2))->size * (b2)->size * sizeof(*(b2)->b); \
+		int gsize = ((b2))->size * (b2)->size * sizeof(*(b2)->g); \
+		void *x = alloca(bsize + gsize); \
+		memcpy(x, b1->b, bsize + gsize); \
+		((b2))->b = x; x += bsize; \
+		((b2))->g = x; \
+\
 		int gi_a = gi_allocsize((b2)->last_gid + 1); \
 		(b2)->gi = alloca(gi_a * sizeof(*(b2)->gi)); \
 		memcpy((b2)->gi, (b1)->gi, gi_a * sizeof(*(b2)->gi)); \
+\
 		(b2)->use_alloca = true; \
 	} while (0)
 
@@ -57,7 +63,6 @@ void
 board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
-	if (board->g) free(board->g);
 	if (board->gi) free(board->gi);
 }
 
@@ -72,8 +77,13 @@ void
 board_resize(struct board *board, int size)
 {
 	board->size = size;
-	board->b = realloc(board->b, board->size * board->size * sizeof(*board->b));
-	board->g = realloc(board->g, board->size * board->size * sizeof(*board->g));
+	free(board->b);
+
+	int bsize = board->size * board->size * sizeof(*board->b);
+	int gsize = board->size * board->size * sizeof(*board->g);
+	void *x = malloc(bsize + gsize);
+	board->b = x; x += bsize;
+	board->g = x;
 }
 
 void
