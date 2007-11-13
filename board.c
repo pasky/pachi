@@ -359,6 +359,9 @@ board_is_one_point_eye(struct board *board, coord_t *coord)
 {
 	enum stone eye_color = S_NONE;
 
+	/* XXX: We attempt false eye detection but we will yield false
+	 * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
+
 	foreach_neighbor(board, *coord) {
 		enum stone color = board_at(board, c);
 
@@ -369,13 +372,21 @@ board_is_one_point_eye(struct board *board, coord_t *coord)
 		if (eye_color != S_NONE && color != eye_color)
 			return S_NONE;
 		eye_color = color;
-
-		/* But there's a catch - false eye. To make things simple,
-		 * we aren't an eye if at least one of the neighbors is
-		 * in atari. That should be good enough. */
-		if (board_group_libs(board, group_at(board, c)) == 1)
-			return S_NONE;
 	} foreach_neighbor_end;
+
+	int false_eye = 0, edge = 0;
+	foreach_diag_neighbor(board, *coord) {
+		enum stone color = board_at(board, c);
+		if (color == stone_other(eye_color))
+			false_eye++;
+		else if (color == S_OFFBOARD)
+			edge++;
+	} foreach_neighbor_end;
+
+	if (false_eye >= 2 - !!edge) {
+		/* Eye is false! */
+		return S_NONE;
+	}
 
 	return eye_color;
 }

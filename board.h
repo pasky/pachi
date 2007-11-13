@@ -132,5 +132,19 @@ float board_fast_score(struct board *board);
 		} \
 	} while (0)
 
+#define foreach_diag_neighbor(board_, coord_) \
+	do { \
+		coord_t q__[4]; int q__i = 0; \
+		coord_pos(q__[q__i++], (coord_).pos - (coord_).size - 1, (board_)); \
+		coord_pos(q__[q__i++], (coord_).pos - (coord_).size + 1, (board_)); \
+		coord_pos(q__[q__i++], (coord_).pos + (coord_).size - 1, (board_)); \
+		coord_pos(q__[q__i++], (coord_).pos + (coord_).size + 1, (board_)); \
+		int fn__i; \
+		for (fn__i = 0; fn__i < q__i; fn__i++) { \
+			coord_t c = q__[fn__i];
+#define foreach_diag_neighbor_end \
+		} \
+	} while (0)
+
 
 #endif
