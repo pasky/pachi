@@ -68,15 +68,11 @@ struct FILE;
 void board_print(struct board *board, FILE *f);
 
 /* Returns group id, 0 on error */
-/* If you want to check if a move is valid, then play it, call this
- * right away; board_valid_move() actually just wraps this. */
 int board_play(struct board *board, struct move *m);
 /* Like above, but plays random move; the move coordinate is recorded
  * to *coord. This method will never fill your own eye. pass is played
  * when no move can be played. */
 void board_play_random(struct board *b, enum stone color, coord_t *coord);
-
-bool board_valid_move(struct board *board, struct move *m, bool sensible);
 
 bool board_is_liberty_of(struct board *board, coord_t *c, int group);
 /* Returns S_NONE if not a 1pt eye, color of owner otherwise. */

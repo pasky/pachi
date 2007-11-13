@@ -226,8 +226,8 @@ already_took_liberty:
 	return gid;
 }
 
-static int
-board_check_and_play(struct board *board, struct move *m, bool sensible, bool play)
+int
+board_play(struct board *board, struct move *m)
 {
 	struct board b2;
 
@@ -241,29 +241,27 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 	}
 
 	/* Try it! */
-	/* XXX: play == false is kinda rare so we don't bother to optimize that */
 	board_copy_on_stack(&b2, board);
 	int gid = board_play_raw(board, m);
 	if (unlikely(debug_level > 7))
 		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, coord_x(m->coord), coord_y(m->coord), gid);
 
 	int my_libs = board_group_libs(board, group_at(board, m->coord));
-	if (unlikely(my_libs <= sensible)) {
-		/* oops, suicide (or self-atari if sensible) */
+	if (unlikely(my_libs == 0)) {
+		/* oops, suicide */
 		if (unlikely(debug_level > 5))
-			fprintf(stderr, "suicide: libs %d <= sens %d\n",
-				board_group_libs(board, group_at(board, m->coord)), sensible);
-		gid = 0; play = false;
+			fprintf(stderr, "suicide: libs %d\n", board_group_libs(board, group_at(board, m->coord)));
+		gid = 0;
 	}
 
 	/* Check ko: self-atari one-stone capture at a position of one-stone capture one move ago (thus b2, not board !) */
 	if (unlikely(my_libs == 1 && m->color == b2.ko.color && coord_eq(m->coord, b2.ko.coord) && board->captures[m->color] - b2.captures[m->color] == 1)) {
 		if (unlikely(debug_level > 5))
 			fprintf(stderr, "board_check: ko at %d,%d color %d captures %d-%d\n", coord_x(m->coord), coord_y(m->coord), m->color, board->captures[m->color], b2.captures[m->color]);
-		gid = 0; play = false;
+		gid = 0;
 	}
 
-	if (unlikely(!play)) {
+	if (unlikely(!gid)) {
 		/* Restore the original board. */
 		void *b = board->b, *g = board->g, *gi = board->gi;
 		memcpy(board->b, b2.b, b2.size * b2.size * sizeof(*b2.b));
@@ -275,18 +273,6 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 	}
 
 	return gid;
-}
-
-int
-board_play(struct board *board, struct move *m)
-{
-	return board_check_and_play(board, m, false, true);
-}
-
-bool
-board_valid_move(struct board *board, struct move *m, bool sensible)
-{
-	return board_check_and_play(board, m, sensible, false);
 }
 
 
