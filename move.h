@@ -1,30 +1,37 @@
 #ifndef ZZGO_MOVE_H
 #define ZZGO_MOVE_H
 
+#include <string.h>
+
 #include "stone.h"
 
 typedef struct coord {
-	int x, y;
+	int pos, size;
 } coord_t;
 
-#define coord_x(c) (c).x
-#define coord_y(c) (c).y
-#define coord_eq(c1, c2) ((c1).x == (c2).x && (c1).y == (c2).y)
+#define coord_x(c) ((c).pos % (c).size)
+#define coord_y(c) ((c).pos / (c).size)
+#define coord_eq(c1, c2) ((c1).pos == (c2).pos)
 
-static coord_t pass = { -1, -1 };
-static coord_t resign = { -2, -2 };
-#define is_pass(c) ((c).x == pass.x && (c).y == pass.y)
-#define is_resign(c) ((c).x == resign.x && (c).y == resign.y)
+static coord_t pass = { -1, 1 };
+static coord_t resign = { -2, 1 };
+#define is_pass(c) (coord_eq(c, pass))
+#define is_resign(c) (coord_eq(c, resign))
+
+/* Initialize existing coord */
+#define coord_pos(coord, pos_, board) do { coord_t *c__ = &(coord); c__->size = (board)->size; c__->pos = (pos_); } while (0)
+#define coord_xy(coord, x, y, board) coord_pos(coord, x + y * (board)->size, board)
+#define coord_random(coord, board) coord_pos(coord, random() % ((board)->size * (board)->size), board)
 
 /* dyn allocated */
-static coord_t *coord_init(int x, int y);
+static coord_t *coord_init(int x, int y, int size);
 static coord_t *coord_copy(coord_t c);
 static coord_t *coord_pass(void);
 static coord_t *coord_resign(void);
 static void coord_done(coord_t *c);
 
 char *coord2str(coord_t c);
-coord_t *str2coord(char *str);
+coord_t *str2coord(char *str, int board_size);
 
 
 struct move {
@@ -35,17 +42,19 @@ struct move {
 
 
 static inline coord_t *
-coord_init(int x, int y)
+coord_init(int x, int y, int size)
 {
 	coord_t *c = calloc(1, sizeof(coord_t));
-	c->x = x; c->y = y;
+	c->size = size; c->pos = x + y * size;
 	return c;
 }
 
 static inline coord_t *
 coord_copy(coord_t c)
 {
-	return coord_init(coord_x(c), coord_y(c));
+	coord_t *c2 = calloc(1, sizeof(coord_t));
+	memcpy(c2, &c, sizeof(c));
+	return c2;
 }
 
 static inline coord_t *

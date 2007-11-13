@@ -25,7 +25,7 @@ coord2str(coord_t c)
 
 /* No sanity checking */
 coord_t *
-str2coord(char *str)
+str2coord(char *str, int size)
 {
 	if (!strcasecmp(str, "pass")) {
 		return coord_pass();
@@ -33,6 +33,6 @@ str2coord(char *str)
 		return coord_resign();
 	} else {
 		char xc = tolower(str[0]);
-		return coord_init(xc - 'a' - (xc > 'i'), atoi(str + 1) - 1);
+		return coord_init(xc - 'a' - (xc > 'i'), atoi(str + 1) - 1, size);
 	}
 }

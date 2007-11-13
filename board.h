@@ -48,11 +48,11 @@ struct board {
 	struct move ko;
 };
 
+#define board_at(b_, c) ((b_)->b[(c).pos])
 #define board_atxy(b_, x, y) ((b_)->b[(x) + (b_)->size * (y)])
-#define board_at(b_, c) board_atxy(b_, coord_x(c), coord_y(c))
 
-#define group_atxy(b_, x, y) ((b_)->g[x + (b_)->size * (y)])
-#define group_at(b_, c) group_atxy(b_, coord_x(c), coord_y(c))
+#define group_at(b_, c) ((b_)->g[(c).pos])
+#define group_atxy(b_, x, y) ((b_)->g[(x) + (b_)->size * (y)])
 
 #define board_group(b_, g_) ((b_)->gi[(g_)])
 #define board_group_libs(b_, g_) (board_group(b_, g_).libs)
@@ -97,13 +97,9 @@ float board_fast_score(struct board *board);
 
 #define foreach_point(board_) \
 	do { \
-		int x, y; \
-		for (y = 0; y < board_->size; y++) { \
-			for (x = 0; x < board_->size; x++) { \
-				coord_t c = { x, y }; c = c; /* shut up gcc */
+		coord_t c; coord_pos(c, 0, (board_)); \
+		for (; c.pos < c.size * c.size; c.pos++)
 #define foreach_point_end \
-			} \
-		} \
 	} while (0)
 
 #define foreach_in_group(board_, group_) \
@@ -118,15 +114,18 @@ float board_fast_score(struct board *board);
 
 #define foreach_neighbor(board_, coord_) \
 	do { \
-		coord_t q__[] = { { coord_x(coord_) - 1, coord_y(coord_) }, \
-		                       { coord_x(coord_), coord_y(coord_) - 1 }, \
-		                       { coord_x(coord_) + 1, coord_y(coord_) }, \
-		                       { coord_y(coord_), coord_y(coord_) + 1 } }; \
+		coord_t q__[4]; int q__i = 0; \
+		if (likely((coord_).pos % (coord_).size > 0)) \
+			coord_pos(q__[q__i++], (coord_).pos - 1, (board_)); \
+		if (likely((coord_).pos > (coord_).size - 1)) \
+			coord_pos(q__[q__i++], (coord_).pos - (coord_).size, (board_)); \
+		if (likely((coord_).pos % (coord_).size < (coord_).size - 1)) \
+			coord_pos(q__[q__i++], (coord_).pos + 1, (board_)); \
+		if (likely((coord_).pos < (coord_).size * ((coord_).size - 1))) \
+			coord_pos(q__[q__i++], (coord_).pos + (coord_).size, (board_)); \
 		int fn__i; \
-		for (fn__i = 0; fn__i < 4; fn__i++) { \
-			int x = coord_x(q__[fn__i]), y = coord_y(q__[fn__i]); coord_t c = { x, y }; \
-			if (unlikely(x < 0 || y < 0 || x >= board_->size || y >= board->size)) \
-				continue;
+		for (fn__i = 0; fn__i < q__i; fn__i++) { \
+			coord_t c = q__[fn__i];
 #define foreach_neighbor_end \
 		} \
 	} while (0)

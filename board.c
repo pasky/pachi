@@ -304,34 +304,28 @@ board_no_valid_moves(struct board *board, enum stone color)
 
 
 static inline bool
-board_is_sensible_move(struct board *b, struct move *m, int i)
+board_is_sensible_move(struct board *b, enum stone color, coord_t *coord)
 {
-	m->coord.x = i % b->size;
-	m->coord.y = i / b->size;
-	return (board_at(b, m->coord) == S_NONE
-	        && board_is_one_point_eye(b, &m->coord) != m->color /* bad idea, usually */
-	        && board_play(b, m));
+	struct move m = { *coord, color };
+	return (board_at(b, *coord) == S_NONE
+	        && board_is_one_point_eye(b, coord) != color /* bad idea, usually */
+	        && board_play(b, &m));
 }
 
 void
 board_play_random(struct board *b, enum stone color, coord_t *coord)
 {
-	struct move m;
-	m.color = color;
+	coord_random(*coord, b);
+	coord_t base = *coord;
 
-	int ofs = random() % (b->size * b->size);
-	int i;
-	for (i = ofs; i < b->size * b->size; i++)
-		if (board_is_sensible_move(b, &m, i))
-			goto found_move;
-	for (i = 0; i < ofs; i++)
-		if (board_is_sensible_move(b, &m, i))
-			goto found_move;
+	for (; coord->pos < b->size * b->size; coord->pos++)
+		if (board_is_sensible_move(b, color, coord))
+			return;
+	for (coord->pos = 0; coord->pos < base.pos; coord->pos++)
+		if (board_is_sensible_move(b, color, coord))
+			return;
 
-	m.coord = pass;
-
-found_move:
-	*coord = m.coord;
+	*coord = pass;
 }
 
 

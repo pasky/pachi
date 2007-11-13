@@ -116,7 +116,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		next_tok(arg);
 		m.color = str2stone(arg);
 		next_tok(arg);
-		coord_t *c = str2coord(arg);
+		coord_t *c = str2coord(arg, board->size);
 		m.coord = *c; coord_done(c);
 
 		if (debug_level > 1)
