@@ -326,7 +326,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 	struct move m = { *coord, color };
 	if (unlikely(debug_level > 6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord), coord_y(*coord));
-	return (board_is_one_point_eye(b, coord) != color /* bad idea, usually */
+	return (board_is_one_point_eye(b, coord, color) != color /* bad idea, usually */
 	        && board_play_f(b, &m, f));
 }
 
@@ -359,10 +359,8 @@ board_is_liberty_of(struct board *board, coord_t *coord, int group)
 }
 
 enum stone
-board_is_one_point_eye(struct board *board, coord_t *coord)
+board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color)
 {
-	enum stone eye_color;
-
 	enum stone color_libs[S_MAX], color_diag_libs[S_MAX];
 	memset(color_libs, 0, sizeof(color_libs));
 	memset(color_diag_libs, 0, sizeof(color_diag_libs));
@@ -371,9 +369,14 @@ board_is_one_point_eye(struct board *board, coord_t *coord)
 		color_libs[(enum stone) board_at(board, c)]++;
 	} foreach_neighbor_end;
 
-	if (color_libs[S_NONE] || (color_libs[S_WHITE] && color_libs[S_BLACK]))
-		return S_NONE;
-	eye_color = color_libs[S_WHITE] ? S_WHITE : S_BLACK;
+	if (likely(eye_color != S_NONE)) {
+		if (color_libs[eye_color] + color_libs[S_OFFBOARD] < 4)
+			return S_NONE;
+	} else {
+		if (color_libs[S_NONE] || (color_libs[S_WHITE] && color_libs[S_BLACK]))
+			return S_NONE;
+		eye_color = color_libs[S_WHITE] ? S_WHITE : S_BLACK;
+	}
 
 	/* XXX: We attempt false eye detection but we will yield false
 	 * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
@@ -452,7 +455,7 @@ board_official_score(struct board *board)
 
 		} else if (color == S_NONE) {
 			/* TODO: Count multi-point eyes */
-			color = board_is_one_point_eye(board, &c);
+			color = board_is_one_point_eye(board, &c, S_NONE);
 			scores[color]++;
 		}
 	} foreach_point_end;
@@ -469,7 +472,7 @@ board_fast_score(struct board *board)
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
 		if (color == S_NONE)
-			color = board_is_one_point_eye(board, &c);
+			color = board_is_one_point_eye(board, &c, S_NONE);
 		scores[color]++;
 	} foreach_point_end;
 
