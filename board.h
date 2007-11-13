@@ -40,7 +40,7 @@ struct board {
 	group_t *g;
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
-	int *f; int flen;
+	uint16_t *f; int flen;
 
 	/* Cache of group info, indexed by gid */
 	struct group *gi;
