@@ -18,7 +18,7 @@ coord2str(coord_t c)
 		return strdup("resign");
 	} else {
 		/* Some GTP servers are broken and won't grok lowercase coords */
-		snprintf(b, 4, "%c%d", toupper(asdf[c.x]), c.y + 1);
+		snprintf(b, 4, "%c%d", toupper(asdf[coord_x(c)]), coord_y(c) + 1);
 		return strdup(b);
 	}
 }

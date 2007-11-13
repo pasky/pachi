@@ -49,10 +49,10 @@ struct board {
 };
 
 #define board_atxy(b_, x, y) ((b_)->b[(x) + (b_)->size * (y)])
-#define board_at(b_, c) board_atxy(b_, (c).x, (c).y)
+#define board_at(b_, c) board_atxy(b_, coord_x(c), coord_y(c))
 
 #define group_atxy(b_, x, y) ((b_)->g[x + (b_)->size * (y)])
-#define group_at(b_, c) group_atxy(b_, (c).x, (c).y)
+#define group_at(b_, c) group_atxy(b_, coord_x(c), coord_y(c))
 
 #define board_group(b_, g_) ((b_)->gi[(g_)])
 #define board_group_libs(b_, g_) (board_group(b_, g_).libs)
@@ -118,13 +118,13 @@ float board_fast_score(struct board *board);
 
 #define foreach_neighbor(board_, coord_) \
 	do { \
-		coord_t q__[] = { { (coord_).x - 1, (coord_).y }, \
-		                       { (coord_).x, (coord_).y - 1 }, \
-		                       { (coord_).x + 1, (coord_).y }, \
-		                       { (coord_).x, (coord_).y + 1 } }; \
+		coord_t q__[] = { { coord_x(coord_) - 1, coord_y(coord_) }, \
+		                       { coord_x(coord_), coord_y(coord_) - 1 }, \
+		                       { coord_x(coord_) + 1, coord_y(coord_) }, \
+		                       { coord_y(coord_), coord_y(coord_) + 1 } }; \
 		int fn__i; \
 		for (fn__i = 0; fn__i < 4; fn__i++) { \
-			int x = q__[fn__i].x, y = q__[fn__i].y; coord_t c = { x, y }; \
+			int x = coord_x(q__[fn__i]), y = coord_y(q__[fn__i]); coord_t c = { x, y }; \
 			if (unlikely(x < 0 || y < 0 || x >= board_->size || y >= board->size)) \
 				continue;
 #define foreach_neighbor_end \

@@ -7,6 +7,10 @@ typedef struct coord {
 	int x, y;
 } coord_t;
 
+#define coord_x(c) (c).x
+#define coord_y(c) (c).y
+#define coord_eq(c1, c2) ((c1).x == (c2).x && (c1).y == (c2).y)
+
 static coord_t pass = { -1, -1 };
 static coord_t resign = { -2, -2 };
 #define is_pass(c) ((c).x == pass.x && (c).y == pass.y)
@@ -41,7 +45,7 @@ coord_init(int x, int y)
 static inline coord_t *
 coord_copy(coord_t c)
 {
-	return coord_init(c.x, c.y);
+	return coord_init(coord_x(c), coord_y(c));
 }
 
 static inline coord_t *

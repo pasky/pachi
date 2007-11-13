@@ -120,10 +120,10 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		m.coord = *c; coord_done(c);
 
 		if (debug_level > 1)
-			fprintf(stderr, "got move %d,%d,%d\n", m.color, m.coord.x, m.coord.y);
+			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
 		if (!board_play(board, &m)) {
 			if (debug_level > 0)
-				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, m.coord.x, m.coord.y);
+				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
 			gtp_error(id, "illegal move", NULL);
 		} else {
 			gtp_reply(id, NULL);

@@ -118,7 +118,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		m.coord.y = random() % b->size;
 
 		if (mc->debug_level > 3)
-			fprintf(stderr, "[%d,%d] playing random game\n", m.coord.x, m.coord.y);
+			fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m.coord), coord_y(m.coord));
 
 		int result = play_random_game_from(mc, b, &m, i);
 		if (result < 0) {
@@ -131,8 +131,8 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		if (mc->debug_level > 3)
 			fprintf(stderr, "\tresult %d\n", result);
 
-		games[m.coord.y][m.coord.x]++;
-		wins[m.coord.y][m.coord.x] += result;
+		games[coord_y(m.coord)][coord_x(m.coord)]++;
+		wins[coord_y(m.coord)][coord_x(m.coord)] += result;
 		moves++;
 	}
 
@@ -142,7 +142,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 	} else {
 		foreach_point(b) {
-			float ratio = (float) wins[c.y][c.x] / games[c.y][c.x];
+			float ratio = (float) wins[coord_y(c)][coord_x(c)] / games[coord_y(c)][coord_x(c)];
 			if (ratio > top_ratio) {
 				top_ratio = ratio;
 				top_coord = c;
@@ -174,7 +174,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		fprintf(f, "+\n");
 	}
 	if (mc->debug_level > 1)
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", top_coord.x, top_coord.y, top_ratio);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", coord_x(top_coord), coord_y(top_coord), top_ratio);
 
 	return coord_copy(top_coord);
 }

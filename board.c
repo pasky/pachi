@@ -108,7 +108,7 @@ board_print(struct board *board, FILE *f)
 	for (y = board->size - 1; y >= 0; y--) {
 		fprintf(f, "%2d | ", y + 1);
 		for (x = 0; x < board->size; x++) {
-			if (board->last_move.coord.x == x && board->last_move.coord.y == y)
+			if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
 				fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
 			else
 				fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
@@ -141,7 +141,7 @@ group_add(struct board *board, int gid, coord_t coord)
 
 	if (unlikely(debug_level > 8))
 		fprintf(stderr, "group_add: added %d,%d to group %d - libs %d\n",
-			coord.x, coord.y, gid, board_group_libs(board, gid));
+			coord_x(coord), coord_y(coord), gid, board_group_libs(board, gid));
 }
 
 int
@@ -245,7 +245,7 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 	board_copy_on_stack(&b2, board);
 	int gid = board_play_raw(board, m);
 	if (unlikely(debug_level > 7))
-		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, m->coord.x, m->coord.y, gid);
+		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, coord_x(m->coord), coord_y(m->coord), gid);
 
 	int my_libs = board_group_libs(board, group_at(board, m->coord));
 	if (unlikely(my_libs <= sensible)) {
@@ -257,9 +257,9 @@ board_check_and_play(struct board *board, struct move *m, bool sensible, bool pl
 	}
 
 	/* Check ko: self-atari one-stone capture at a position of one-stone capture one move ago (thus b2, not board !) */
-	if (unlikely(my_libs == 1 && m->color == b2.ko.color && m->coord.x == b2.ko.coord.x && m->coord.y == b2.ko.coord.y && board->captures[m->color] - b2.captures[m->color] == 1)) {
+	if (unlikely(my_libs == 1 && m->color == b2.ko.color && coord_eq(m->coord, b2.ko.coord) && board->captures[m->color] - b2.captures[m->color] == 1)) {
 		if (unlikely(debug_level > 5))
-			fprintf(stderr, "board_check: ko at %d,%d color %d captures %d-%d\n", m->coord.x, m->coord.y, m->color, board->captures[m->color], b2.captures[m->color]);
+			fprintf(stderr, "board_check: ko at %d,%d color %d captures %d-%d\n", coord_x(m->coord), coord_y(m->coord), m->color, board->captures[m->color], b2.captures[m->color]);
 		gid = 0; play = false;
 	}
 
@@ -294,7 +294,7 @@ board_no_valid_moves(struct board *board, enum stone color)
 {
 	foreach_point(board) {
 		struct move m;
-		m.coord.x = x; m.coord.y = y; m.color = color;
+		m.coord = c; m.color = color;
 		/* Self-atari doesn't count. :-) */
 		if (board_valid_move(board, &m, true) && !board_is_one_point_eye(board, &m.coord))
 			return false;
