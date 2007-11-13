@@ -98,9 +98,6 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	struct move m;
 	m.color = color;
 
-	if (board_no_valid_moves(b, color))
-		return coord_pass();
-
 	/* resign when the hope for win vanishes */
 	coord_t top_coord = resign;
 	float top_ratio = mc->resign_ratio;
