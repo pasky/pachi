@@ -9,6 +9,9 @@ ZZGo is under the MIT licence (close to public domain) so that as
 many people as possible can use it. Some of the bundled engines
 might be under a more restrictive licence (GPL).
 
+Some optimizations are inspired by libEGo by Lukasz Lew. The code
+is all original, though.
+
 
 Currently, ZZGo support barely enough for a trivial "random move"
 engine to play with idiotbot (and usually lose). The infrastructure
