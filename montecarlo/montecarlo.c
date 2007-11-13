@@ -64,19 +64,21 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 
 /* 1: player-to-play wins, 0: player-to-play loses; -1: invalid move */
 static int
-play_random_game_from(struct montecarlo *mc, struct board *b, struct move *m, int i)
+play_some_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 {
-	if (board_is_one_point_eye(b, &m->coord) == m->color)
-		/* Invalid move */
-		return -1;
-
 	struct board b2;
 	board_copy(&b2, b);
-	if (!board_play(&b2, m)) {
-		/* Invalid move */
+
+	board_play_random(&b2, m->color, &m->coord);
+	if (is_pass(m->coord)) {
+		if (mc->debug_level > 3)
+			fprintf(stderr, "\tno moves left\n");
 		board_done_noalloc(&b2);
 		return -1;
 	}
+
+	if (mc->debug_level > 3)
+		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord), coord_y(m->coord));
 
 	int gamelen = mc->gamelen - b2.moves;
 	if (gamelen < 10)
@@ -111,16 +113,11 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 	int i;
 	for (i = 0; i < mc->games; i++) {
-		coord_random(m.coord, b);
-
-		if (mc->debug_level > 3)
-			fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m.coord), coord_y(m.coord));
-
-		int result = play_random_game_from(mc, b, &m, i);
+		int result = play_some_random_game(mc, b, &m, i);
 		if (result < 0) {
-			if (mc->debug_level > 3)
-				fprintf(stderr, "\tinvalid move\n");
-			continue;
+			/* No more moves. */
+			top_coord = pass; top_ratio = 0.5;
+			goto pass_wins;
 		}
 		result = 1 - result; /* We care about whether *we* win. */
 
@@ -132,19 +129,13 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		moves++;
 	}
 
-	if (!moves) {
-		/* Final candidate! But only if we CAN'T make any further move. */
-		top_coord = pass; top_ratio = 0.5;
-
-	} else {
-		foreach_point(b) {
-			float ratio = (float) wins[c.pos] / games[c.pos];
-			if (ratio > top_ratio) {
-				top_ratio = ratio;
-				top_coord = c;
-			}
-		} foreach_point_end;
-	}
+	foreach_point(b) {
+		float ratio = (float) wins[c.pos] / games[c.pos];
+		if (ratio > top_ratio) {
+			top_ratio = ratio;
+			top_coord = c;
+		}
+	} foreach_point_end;
 
 	if (mc->debug_level > 2) {
 		struct board *board = b;
@@ -169,6 +160,8 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 			fprintf(f, "-----");
 		fprintf(f, "+\n");
 	}
+
+pass_wins:
 	if (mc->debug_level > 1)
 		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", coord_x(top_coord), coord_y(top_coord), top_ratio);
 
