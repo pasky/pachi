@@ -27,17 +27,24 @@ struct group {
  * you want to change it. */
 
 struct board {
-	int size;
+	int size; /* Including S_OFFBOARD margin - see below. */
 	int captures[S_MAX];
 	float komi;
 
 	int moves;
 	struct move last_move;
 
+	/* The following two structures are goban maps and are indexed by
+	 * coord.pos. The map is surrounded by a one-point margin from
+	 * S_OFFBOARD stones in order to speed up some internal loops.
+	 * Some of the foreach iterators below might include these points;
+	 * you need to handle them yourselves, if you need to. */
+
 	/* Stones played on the board */
 	char *b; /* enum stone */
 	/* Group id the stones are part of; 0 == no group */
 	group_t *g;
+
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
 	uint16_t *f; int flen;
@@ -64,6 +71,7 @@ struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
 void board_done_noalloc(struct board *board);
 void board_done(struct board *board);
+/* size here is without the S_OFFBOARD margin. */
 void board_resize(struct board *board, int size);
 void board_clear(struct board *board);
 
@@ -113,14 +121,10 @@ float board_fast_score(struct board *board);
 #define foreach_neighbor(board_, coord_) \
 	do { \
 		coord_t q__[4]; int q__i = 0; \
-		if (likely((coord_).pos % (coord_).size > 0)) \
-			coord_pos(q__[q__i++], (coord_).pos - 1, (board_)); \
-		if (likely((coord_).pos > (coord_).size - 1)) \
-			coord_pos(q__[q__i++], (coord_).pos - (coord_).size, (board_)); \
-		if (likely((coord_).pos % (coord_).size < (coord_).size - 1)) \
-			coord_pos(q__[q__i++], (coord_).pos + 1, (board_)); \
-		if (likely((coord_).pos < (coord_).size * ((coord_).size - 1))) \
-			coord_pos(q__[q__i++], (coord_).pos + (coord_).size, (board_)); \
+		coord_pos(q__[q__i++], (coord_).pos - 1, (board_)); \
+		coord_pos(q__[q__i++], (coord_).pos - (coord_).size, (board_)); \
+		coord_pos(q__[q__i++], (coord_).pos + 1, (board_)); \
+		coord_pos(q__[q__i++], (coord_).pos + (coord_).size, (board_)); \
 		int fn__i; \
 		for (fn__i = 0; fn__i < q__i; fn__i++) { \
 			coord_t c = q__[fn__i];

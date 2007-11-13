@@ -5,6 +5,7 @@ enum stone {
 	S_NONE,
 	S_BLACK,
 	S_WHITE,
+	S_OFFBOARD,
 	S_MAX,
 };
 
@@ -18,7 +19,7 @@ static enum stone stone_other(enum stone s);
 static inline char
 stone2char(enum stone s)
 {
-	return ".XO"[s];
+	return ".XO#"[s];
 }
 
 static inline enum stone

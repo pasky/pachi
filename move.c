@@ -6,6 +6,8 @@
 #include "move.h"
 
 
+/* The S_OFFBOARD margin is not addressable by coordinates. */
+
 static char asdf[] = "abcdefghjklmnopqrstuvwxyz";
 
 char *
@@ -18,7 +20,7 @@ coord2str(coord_t c)
 		return strdup("resign");
 	} else {
 		/* Some GTP servers are broken and won't grok lowercase coords */
-		snprintf(b, 4, "%c%d", toupper(asdf[coord_x(c)]), coord_y(c) + 1);
+		snprintf(b, 4, "%c%d", toupper(asdf[coord_x(c) - 1]), coord_y(c));
 		return strdup(b);
 	}
 }
@@ -33,6 +35,6 @@ str2coord(char *str, int size)
 		return coord_resign();
 	} else {
 		char xc = tolower(str[0]);
-		return coord_init(xc - 'a' - (xc > 'i'), atoi(str + 1) - 1, size);
+		return coord_init(xc - 'a' - (xc > 'i') + 1, atoi(str + 1), size);
 	}
 }

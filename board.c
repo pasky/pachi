@@ -80,7 +80,7 @@ board_done(struct board *board)
 void
 board_resize(struct board *board, int size)
 {
-	board->size = size;
+	board->size = size + 2 /* S_OFFBOARD margin */;
 	free(board->b);
 
 	int bsize = board->size * board->size * sizeof(*board->b);
@@ -101,8 +101,18 @@ board_clear(struct board *board)
 	memset(board->b, 0, board->size * board->size * sizeof(*board->b));
 	memset(board->g, 0, board->size * board->size * sizeof(*board->g));
 
-	for (board->flen = 0; board->flen < board->size * board->size; board->flen++)
-		board->f[board->flen] = board->flen;
+	/* Draw the offboard margin */
+	int top_row = (board->size - 1) * board->size;
+	int i;
+	for (i = 0; i < board->size; i++)
+		board->b[i] = board->b[top_row + i] = S_OFFBOARD;
+	for (i = 0; i <= top_row; i += board->size)
+		board->b[i] = board->b[board->size - 1 + i] = S_OFFBOARD;
+
+	/* All positions are free! Except the margin. */
+	for (board->flen = board->size; board->flen < (board->size - 1) * board->size; board->flen++)
+		if (board->flen % board->size != 0 && board->flen % board->size != board->size - 1)
+			board->f[board->flen] = board->flen;
 
 	int gi_a = gi_allocsize(board->last_gid + 1);
 	memset(board->gi, 0, gi_a * sizeof(*board->gi));
@@ -118,15 +128,15 @@ board_print(struct board *board, FILE *f)
 		board->captures[S_BLACK], board->captures[S_WHITE]);
 	int x, y;
 	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-	for (x = 0; x < board->size; x++)
-		fprintf(f, "%c ", asdf[x]);
+	for (x = 1; x < board->size - 1; x++)
+		fprintf(f, "%c ", asdf[x - 1]);
 	fprintf(f, "\n   +-");
-	for (x = 0; x < board->size; x++)
+	for (x = 1; x < board->size - 1; x++)
 		fprintf(f, "--");
 	fprintf(f, "+\n");
-	for (y = board->size - 1; y >= 0; y--) {
-		fprintf(f, "%2d | ", y + 1);
-		for (x = 0; x < board->size; x++) {
+	for (y = board->size - 2; y >= 1; y--) {
+		fprintf(f, "%2d | ", y);
+		for (x = 1; x < board->size - 1; x++) {
 			if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
 				fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
 			else
@@ -134,14 +144,14 @@ board_print(struct board *board, FILE *f)
 		}
 		if (unlikely(debug_level > 6)) {
 			fprintf(f, "| ");
-			for (x = 0; x < board->size; x++) {
+			for (x = 1; x < board->size - 1; x++) {
 				fprintf(f, "%d ", board_group_libs(board, group_atxy(board, x, y)));
 			}
 		}
 		fprintf(f, "|\n");
 	}
 	fprintf(f, "   +-");
-	for (x = 0; x < board->size; x++)
+	for (x = 1; x < board->size - 1; x++)
 		fprintf(f, "--");
 	fprintf(f, "+\n\n");
 }
@@ -178,7 +188,7 @@ board_play_raw(struct board *board, struct move *m, int f)
 		enum stone color = board_at(board, c);
 		group_t group = group_at(board, c);
 
-		if (color == S_NONE)
+		if (group == 0)
 			continue;
 
 		int i;
@@ -352,6 +362,8 @@ board_is_one_point_eye(struct board *board, coord_t *coord)
 	foreach_neighbor(board, *coord) {
 		enum stone color = board_at(board, c);
 
+		if (color == S_OFFBOARD)
+			continue;
 		if (color == S_NONE)
 			return S_NONE;
 		if (eye_color != S_NONE && color != eye_color)
@@ -385,7 +397,7 @@ board_group_capture(struct board *board, int group)
 		coord_t coord = c;
 		int gidls[4], gids = 0;
 		foreach_neighbor(board, coord) {
-			if (board_at(board, c) != S_NONE) {
+			if (group_at(board, c) > 0) {
 				int gid = group_at(board, c);
 				if (gid == group)
 					goto next_neighbor; /* Not worth the trouble */
@@ -419,19 +431,19 @@ board_official_score(struct board *board)
 
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
-		if (color != S_NONE) {
+		group_t g = group_at(board, c);
+		if (g > 0) {
 			/* There is a complication: There can be some dead
 			 * stones that could not have been removed because
 			 * they are in enemy territory and we can't suicide.
 			 * At least we know they are in atari. */
-			int g = group_at(board, c);
 			if (gcache[g] == GC_DUNNO)
 				gcache[g] = board_group_libs(board, g) == 1 ? GC_DEAD : GC_ALIVE;
 			if (gcache[g] == GC_ALIVE)
 				scores[color]++;
 			/* XXX: But we still miss the one empty opponent's point. */
 
-		} else {
+		} else if (color == S_NONE) {
 			/* TODO: Count multi-point eyes */
 			color = board_is_one_point_eye(board, &c);
 			scores[color]++;

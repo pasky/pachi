@@ -131,20 +131,20 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		fprintf(f, "\n       ");
 		int x, y;
 		char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-		for (x = 0; x < board->size; x++)
-			fprintf(f, "%c    ", asdf[x]);
+		for (x = 1; x < board->size - 1; x++)
+			fprintf(f, "%c    ", asdf[x - 1]);
 		fprintf(f, "\n   +-");
-		for (x = 0; x < board->size; x++)
+		for (x = 1; x < board->size - 1; x++)
 			fprintf(f, "-----");
 		fprintf(f, "+\n");
-		for (y = board->size - 1; y >= 0; y--) {
-			fprintf(f, "%2d | ", y + 1);
-			for (x = 0; x < board->size; x++)
+		for (y = board->size - 2; y >= 1; y--) {
+			fprintf(f, "%2d | ", y);
+			for (x = 1; x < board->size - 1; x++)
 				fprintf(f, "%0.2f ", (float) wins[y * board->size + x] / games[y * board->size + x]);
 			fprintf(f, "|\n");
 		}
 		fprintf(f, "   +-");
-		for (x = 0; x < board->size; x++)
+		for (x = 1; x < board->size - 1; x++)
 			fprintf(f, "-----");
 		fprintf(f, "+\n");
 	}
