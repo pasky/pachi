@@ -30,7 +30,7 @@ struct montecarlo {
 	float resign_ratio;
 };
 
-/* 1: player-to-play wins, 0: player-to-play loses; -1: invalid move */
+/* 1: m->color wins, 0: m->color loses; -1: no moves left */
 static int
 play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 {
@@ -78,7 +78,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 		fprintf(stderr, "--- game result: %f\n", score);
 
 	board_done_noalloc(&b2);
-	return (stone_other(m->color) == S_WHITE ? (score > 0 ? 1 : 0) : (score < 0 ? 1 : 0));
+	return (m->color == S_WHITE ? (score > 0 ? 1 : 0) : (score < 0 ? 1 : 0));
 }
 
 
@@ -108,7 +108,6 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 			top_coord = pass; top_ratio = 0.5;
 			goto pass_wins;
 		}
-		result = 1 - result; /* We care about whether *we* win. */
 
 		if (mc->debug_level > 3)
 			fprintf(stderr, "\tresult %d\n", result);
