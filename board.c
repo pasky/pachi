@@ -269,7 +269,7 @@ board_play_f(struct board *board, struct move *m, int f)
 		if (board_group_libs(board, gid) == 0) {
 			board_group_capture(board, gid);
 		}
-		return gid;
+		return 0;
 	}
 
 	/* Nakade - playing inside opponent's "eye" (maybe false). Either this
@@ -292,14 +292,14 @@ board_play_f(struct board *board, struct move *m, int f)
 				board_print(board, stderr);
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
-		gid = 0;
+		gid = -1;
 	}
 
 	/* Check ko: self-atari one-stone capture at a position of one-stone capture one move ago (thus b2, not board !) */
 	if (unlikely(my_libs == 1 && m->color == b2.ko.color && coord_eq(m->coord, b2.ko.coord) && board->captures[m->color] - b2.captures[m->color] == 1)) {
 		if (unlikely(debug_level > 5))
 			fprintf(stderr, "board_check: ko at %d,%d color %d captures %d-%d\n", coord_x(m->coord), coord_y(m->coord), m->color, board->captures[m->color], b2.captures[m->color]);
-		gid = 0;
+		gid = -1;
 	}
 
 	if (unlikely(!gid)) {
@@ -342,7 +342,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 	if (unlikely(debug_level > 6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord), coord_y(*coord));
 	return (board_is_one_point_eye(b, coord, color) != color /* bad idea, usually */
-	        && board_play_f(b, &m, f));
+	        && board_play_f(b, &m, f) >= 0);
 }
 
 void
