@@ -44,6 +44,8 @@ struct board {
 	char *b; /* enum stone */
 	/* Group id the stones are part of; 0 == no group */
 	group_t *g;
+	/* Neighboring colors; 4 bits per color, with number of neighbors */
+	uint16_t *n;
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
@@ -63,6 +65,11 @@ struct board {
 
 #define group_at(b_, c) ((b_)->g[(c).pos])
 #define group_atxy(b_, x, y) ((b_)->g[(x) + (b_)->size * (y)])
+
+#define neighbor_count_at(b_, coord, color) (((b_)->n[(coord).pos] >> (color*4)) & 15)
+#define set_neighbor_count_at(b_, coord, color, count) ((b_)->n[(coord).pos] = ((b_)->n[(coord).pos] & ~(15 << (color*4))) | ((count) << (color*4)))
+#define inc_neighbor_count_at(b_, coord, color) set_neighbor_count_at(b_, coord, color, neighbor_count_at(b_, coord, color) + 1)
+#define dec_neighbor_count_at(b_, coord, color) set_neighbor_count_at(b_, coord, color, neighbor_count_at(b_, coord, color) - 1)
 
 #define board_group(b_, g_) ((b_)->gi[(g_)])
 #define board_group_libs(b_, g_) (board_group(b_, g_).libs)
@@ -119,6 +126,8 @@ float board_fast_score(struct board *board);
 		foreach_point_end; \
 	} while (0)
 
+/* NOT VALID inside of foreach_point() or another foreach_neighbor(), or rather
+ * on S_OFFBOARD coordinates. */
 #define foreach_neighbor(board_, coord_) \
 	do { \
 		coord_t q__[4]; int q__i = 0; \
