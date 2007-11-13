@@ -1,12 +1,13 @@
 #ifndef ZZGO_MOVE_H
 #define ZZGO_MOVE_H
 
+#include <stdint.h>
 #include <string.h>
 
 #include "stone.h"
 
 typedef struct coord {
-	int pos, size;
+	uint16_t pos, size;
 } coord_t;
 
 #define coord_x(c) ((c).pos % (c).size)
