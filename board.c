@@ -110,9 +110,9 @@ board_clear(struct board *board)
 		board->b[i] = board->b[board->size - 1 + i] = S_OFFBOARD;
 
 	/* All positions are free! Except the margin. */
-	for (board->flen = board->size; board->flen < (board->size - 1) * board->size; board->flen++)
-		if (board->flen % board->size != 0 && board->flen % board->size != board->size - 1)
-			board->f[board->flen] = board->flen;
+	for (i = board->size; i < (board->size - 1) * board->size; i++)
+		if (i % board->size != 0 && i % board->size != board->size - 1)
+			board->f[board->flen++] = i;
 
 	int gi_a = gi_allocsize(board->last_gid + 1);
 	memset(board->gi, 0, gi_a * sizeof(*board->gi));
@@ -180,6 +180,8 @@ board_play_raw(struct board *board, struct move *m, int f)
 	int gid = 0;
 
 	board->f[f] = board->f[--board->flen];
+	if (unlikely(debug_level > 6))
+		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 	board_at(board, m->coord) = m->color;
 
 	int gidls[4], gids = 0;
@@ -322,6 +324,8 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 {
 	coord->pos = b->f[f];
 	struct move m = { *coord, color };
+	if (unlikely(debug_level > 6))
+		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord), coord_y(*coord));
 	return (board_is_one_point_eye(b, coord) != color /* bad idea, usually */
 	        && board_play_f(b, &m, f));
 }
@@ -391,6 +395,8 @@ board_group_capture(struct board *board, int group)
 		board->captures[stone_other(board_at(board, c))]++;
 		board_at(board, c) = S_NONE;
 		group_at(board, c) = 0;
+		if (unlikely(debug_level > 6))
+			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
 		board->f[board->flen++] = c.pos;
 		stones++;
 
