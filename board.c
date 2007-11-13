@@ -289,19 +289,6 @@ board_valid_move(struct board *board, struct move *m, bool sensible)
 	return board_check_and_play(board, m, sensible, false);
 }
 
-bool
-board_no_valid_moves(struct board *board, enum stone color)
-{
-	foreach_point(board) {
-		struct move m;
-		m.coord = c; m.color = color;
-		/* Self-atari doesn't count. :-) */
-		if (board_valid_move(board, &m, true) && !board_is_one_point_eye(board, &m.coord))
-			return false;
-	} foreach_point_end;
-	return true;
-}
-
 
 static inline bool
 board_is_sensible_move(struct board *b, enum stone color, coord_t *coord)

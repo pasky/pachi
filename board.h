@@ -76,7 +76,6 @@ int board_play(struct board *board, struct move *m);
  * when no move can be played. */
 void board_play_random(struct board *b, enum stone color, coord_t *coord);
 
-bool board_no_valid_moves(struct board *board, enum stone color);
 bool board_valid_move(struct board *board, struct move *m, bool sensible);
 
 bool board_is_liberty_of(struct board *board, coord_t *c, int group);
