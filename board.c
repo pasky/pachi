@@ -305,7 +305,7 @@ board_play(struct board *board, struct move *m)
 
 
 static inline bool
-board_is_sensible_move(struct board *b, enum stone color, coord_t *coord, int f)
+board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 {
 	coord->pos = b->f[f];
 	struct move m = { *coord, color };
@@ -321,10 +321,10 @@ board_play_random(struct board *b, enum stone color, coord_t *coord)
 
 	int f;
 	for (f = base; f < b->flen; f++)
-		if (board_is_sensible_move(b, color, coord, f))
+		if (board_try_random_move(b, color, coord, f))
 			return;
 	for (f = 0; f < base; f++)
-		if (board_is_sensible_move(b, color, coord, f))
+		if (board_try_random_move(b, color, coord, f))
 			return;
 
 	*coord = pass;
