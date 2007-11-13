@@ -30,41 +30,9 @@ struct montecarlo {
 	float resign_ratio;
 };
 
-
-static float
-play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int moves, int n)
-{
-	struct board b2;
-	board_copy(&b2, b);
-	
-	coord_t coord;
-	int passes = 0;
-	while (moves-- && passes < 2) {
-		board_play_random(&b2, color, &coord);
-		if (mc->debug_level > 7) {
-			char *cs = coord2str(coord);
-			fprintf(stderr, "%s %s\n", stone2str(color), cs);
-			free(cs);
-		}
-		if (is_pass(coord))
-			passes++;
-		else
-			passes = 0;
-		color = stone_other(color);
-	}
-
-	if (mc->debug_level > 6 - !(n % (mc->games/2)))
-		board_print(&b2, stderr);
-
-	float score = board_fast_score(&b2);
-
-	board_done_noalloc(&b2);
-	return score;
-}
-
 /* 1: player-to-play wins, 0: player-to-play loses; -1: invalid move */
 static int
-play_some_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
+play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 {
 	struct board b2;
 	board_copy(&b2, b);
@@ -84,7 +52,28 @@ play_some_random_game(struct montecarlo *mc, struct board *b, struct move *m, in
 	if (gamelen < 10)
 		gamelen = 10;
 
-	float score = play_random_game(mc, &b2, stone_other(m->color), gamelen, i);
+	enum stone color = stone_other(m->color);
+
+	int passes = 0;
+	while (gamelen-- && passes < 2) {
+		coord_t coord;
+		board_play_random(&b2, color, &coord);
+		if (mc->debug_level > 7) {
+			char *cs = coord2str(coord);
+			fprintf(stderr, "%s %s\n", stone2str(color), cs);
+			free(cs);
+		}
+		if (is_pass(coord))
+			passes++;
+		else
+			passes = 0;
+		color = stone_other(color);
+	}
+
+	if (mc->debug_level > 6 - !(i % (mc->games/2)))
+		board_print(&b2, stderr);
+
+	float score = board_fast_score(&b2);
 	if (mc->debug_level > 5 - !(i % (mc->games/2)))
 		fprintf(stderr, "--- game result: %f\n", score);
 
@@ -113,7 +102,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 	int i;
 	for (i = 0; i < mc->games; i++) {
-		int result = play_some_random_game(mc, b, &m, i);
+		int result = play_random_game(mc, b, &m, i);
 		if (result < 0) {
 			/* No more moves. */
 			top_coord = pass; top_ratio = 0.5;
