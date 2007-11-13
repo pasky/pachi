@@ -261,6 +261,21 @@ already_took_liberty:
 static int
 board_play_f(struct board *board, struct move *m, int f)
 {
+	if (!board_is_eyelike(board, &m->coord, stone_other(m->color))) {
+		/* NOT nakade. Thus this move has to succeed. (This is thanks
+		 * to New Zealand rules. Otherwise, multi-stone suicide might
+		 * fail.) */
+		int gid = board_play_raw(board, m, f);
+		if (board_group_libs(board, gid) == 0) {
+			board_group_capture(board, gid);
+		}
+		return gid;
+	}
+
+	/* Nakade - playing inside opponent's "eye" (maybe false). Either this
+	 * is a suicide, or one of the opponent's groups is going to get
+	 * captured (unless the ko rule prevents that). */
+
 	struct board b2;
 
 	/* Try it! */
@@ -275,7 +290,7 @@ board_play_f(struct board *board, struct move *m, int f)
 		if (unlikely(debug_level > 5)) {
 			if (unlikely(debug_level > 6))
 				board_print(board, stderr);
-			fprintf(stderr, "board_check: suicide\n");
+			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
 		gid = 0;
 	}
@@ -356,6 +371,19 @@ board_is_liberty_of(struct board *board, coord_t *coord, int group)
 			return true;
 	} foreach_neighbor_end;
 	return false;
+}
+
+bool
+board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
+{
+	enum stone color_libs[S_MAX];
+	memset(color_libs, 0, sizeof(color_libs));
+
+	foreach_neighbor(board, *coord) {
+		color_libs[(enum stone) board_at(board, c)]++;
+	} foreach_neighbor_end;
+
+	return (color_libs[eye_color] + color_libs[S_OFFBOARD]) == 4;
 }
 
 enum stone

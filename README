@@ -20,11 +20,13 @@ profiling) and it should be quite easy to extend it to provide more
 facilities for your engine (but it should be at the same time kept
 as simple as possible).
 
-ZZGo uses Chinese scoring, currently. That means, it simply counts
+ZZGo uses New Zealand scoring, currently. That means, it simply counts
 the number of stones of each color on the board, plus komi. Additional
 hack is that it does not count groups in atari, if the opponent neglected
 to remove them; it is still one-point off there, though. In addition,
 ZZGo cannot count multi-point eyes.
+
+New Zealand rules also mean that multi-stone suicide is allowed!
 
 Also, ZZGo supports only few GTP commands now. Most importantly,
 it does not support the known_command and final_status_list commands.

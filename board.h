@@ -86,9 +86,12 @@ int board_play(struct board *board, struct move *m);
 void board_play_random(struct board *b, enum stone color, coord_t *coord);
 
 bool board_is_liberty_of(struct board *board, coord_t *c, int group);
+
 /* Returns S_NONE if not a 1pt eye, color of owner otherwise. If you expect
  * the color, set hint, otherwise use S_NONE. */
 enum stone board_is_one_point_eye(struct board *board, coord_t *c, enum stone hint);
+/* Returns true if given coordinate has all neighbors of given color or the edge. */
+bool board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
 
 int board_group_capture(struct board *board, int group);
 
