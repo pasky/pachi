@@ -357,38 +357,28 @@ board_is_liberty_of(struct board *board, coord_t *coord, int group)
 enum stone
 board_is_one_point_eye(struct board *board, coord_t *coord)
 {
-	enum stone eye_color = S_NONE;
+	enum stone eye_color;
+
+	enum stone color_libs[S_MAX], color_diag_libs[S_MAX];
+	memset(color_libs, 0, sizeof(color_libs));
+	memset(color_diag_libs, 0, sizeof(color_diag_libs));
+
+	foreach_neighbor(board, *coord) {
+		color_libs[(enum stone) board_at(board, c)]++;
+	} foreach_neighbor_end;
+
+	if (color_libs[S_NONE] || (color_libs[S_WHITE] && color_libs[S_BLACK]))
+		return S_NONE;
+	eye_color = color_libs[S_WHITE] ? S_WHITE : S_BLACK;
 
 	/* XXX: We attempt false eye detection but we will yield false
 	 * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
 
-	foreach_neighbor(board, *coord) {
-		enum stone color = board_at(board, c);
-
-		if (color == S_OFFBOARD)
-			continue;
-		if (color == S_NONE)
-			return S_NONE;
-		if (eye_color != S_NONE && color != eye_color)
-			return S_NONE;
-		eye_color = color;
-	} foreach_neighbor_end;
-
-	int false_eye = 0, edge = 0;
 	foreach_diag_neighbor(board, *coord) {
-		enum stone color = board_at(board, c);
-		if (color == stone_other(eye_color))
-			false_eye++;
-		else if (color == S_OFFBOARD)
-			edge++;
+		color_diag_libs[(enum stone) board_at(board, c)]++;
 	} foreach_neighbor_end;
-
-	if (false_eye >= 2 - !!edge) {
-		/* Eye is false! */
-		return S_NONE;
-	}
-
-	return eye_color;
+	color_diag_libs[stone_other(eye_color)] += !!color_diag_libs[S_OFFBOARD];
+	return likely(color_diag_libs[stone_other(eye_color)] < 2) ? eye_color : S_NONE;
 }
 
 
