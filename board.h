@@ -38,6 +38,9 @@ struct board {
 	char *b; /* enum stone */
 	/* Group id the stones are part of; 0 == no group */
 	group_t *g;
+	/* Positions of free positions - queue (not map) */
+	/* Note that free position here is any valid move; including single-point eyes! */
+	int *f; int flen;
 
 	/* Cache of group info, indexed by gid */
 	struct group *gi;

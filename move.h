@@ -21,7 +21,6 @@ static coord_t resign = { -2, 1 };
 /* Initialize existing coord */
 #define coord_pos(coord, pos_, board) do { coord_t *c__ = &(coord); c__->size = (board)->size; c__->pos = (pos_); } while (0)
 #define coord_xy(coord, x, y, board) coord_pos(coord, x + y * (board)->size, board)
-#define coord_random(coord, board) coord_pos(coord, random() % ((board)->size * (board)->size), board)
 
 /* dyn allocated */
 static coord_t *coord_init(int x, int y, int size);

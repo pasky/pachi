@@ -28,10 +28,12 @@ board_copy(struct board *b2, struct board *b1)
 
 	int bsize = b2->size * b2->size * sizeof(*b2->b);
 	int gsize = b2->size * b2->size * sizeof(*b2->g);
-	void *x = malloc(bsize + gsize);
-	memcpy(x, b1->b, bsize + gsize);
+	int fsize = b2->size * b2->size * sizeof(*b2->f);
+	void *x = malloc(bsize + gsize + fsize);
+	memcpy(x, b1->b, bsize + gsize + fsize);
 	b2->b = x; x += bsize;
-	b2->g = x;
+	b2->g = x; x += gsize;
+	b2->f = x;
 
 	int gi_a = gi_allocsize(b2->last_gid + 1);
 	b2->gi = calloc(gi_a, sizeof(*b2->gi));
@@ -47,10 +49,12 @@ board_copy(struct board *b2, struct board *b1)
 \
 		int bsize = ((b2))->size * (b2)->size * sizeof(*(b2)->b); \
 		int gsize = ((b2))->size * (b2)->size * sizeof(*(b2)->g); \
-		void *x = alloca(bsize + gsize); \
-		memcpy(x, b1->b, bsize + gsize); \
+		int fsize = ((b2))->size * (b2)->size * sizeof(*(b2)->f); \
+		void *x = alloca(bsize + gsize + fsize); \
+		memcpy(x, b1->b, bsize + gsize + fsize); \
 		((b2))->b = x; x += bsize; \
-		((b2))->g = x; \
+		((b2))->g = x; x += gsize; \
+		((b2))->f = x; \
 \
 		int gi_a = gi_allocsize((b2)->last_gid + 1); \
 		(b2)->gi = alloca(gi_a * sizeof(*(b2)->gi)); \
@@ -81,9 +85,11 @@ board_resize(struct board *board, int size)
 
 	int bsize = board->size * board->size * sizeof(*board->b);
 	int gsize = board->size * board->size * sizeof(*board->g);
-	void *x = malloc(bsize + gsize);
+	int fsize = board->size * board->size * sizeof(*board->f);
+	void *x = malloc(bsize + gsize + fsize);
 	board->b = x; x += bsize;
-	board->g = x;
+	board->g = x; x += gsize;
+	board->f = x;
 }
 
 void
@@ -94,6 +100,9 @@ board_clear(struct board *board)
 
 	memset(board->b, 0, board->size * board->size * sizeof(*board->b));
 	memset(board->g, 0, board->size * board->size * sizeof(*board->g));
+
+	for (board->flen = 0; board->flen < board->size * board->size; board->flen++)
+		board->f[board->flen] = board->flen;
 
 	int gi_a = gi_allocsize(board->last_gid + 1);
 	memset(board->gi, 0, gi_a * sizeof(*board->gi));
@@ -154,12 +163,13 @@ group_add(struct board *board, int gid, coord_t coord)
 			coord_x(coord), coord_y(coord), gid, board_group_libs(board, gid));
 }
 
-int
-board_play_raw(struct board *board, struct move *m)
+static int
+board_play_raw(struct board *board, struct move *m, int f)
 {
 	struct move ko = { pass, S_NONE };
 	int gid = 0;
 
+	board->f[f] = board->f[--board->flen];
 	board_at(board, m->coord) = m->color;
 
 	int gidls[4], gids = 0;
@@ -236,23 +246,14 @@ already_took_liberty:
 	return gid;
 }
 
-int
-board_play(struct board *board, struct move *m)
+static int
+board_play_f(struct board *board, struct move *m, int f)
 {
 	struct board b2;
 
-	if (unlikely(is_pass(m->coord) || is_resign(m->coord)))
-		return -1;
-
-	if (unlikely(board_at(board, m->coord) != S_NONE)) {
-		if (unlikely(debug_level > 7))
-			fprintf(stderr, "board_check: stone exists\n");
-		return 0;
-	}
-
 	/* Try it! */
 	board_copy_on_stack(&b2, board);
-	int gid = board_play_raw(board, m);
+	int gid = board_play_raw(board, m, f);
 	if (unlikely(debug_level > 7))
 		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, coord_x(m->coord), coord_y(m->coord), gid);
 
@@ -273,39 +274,57 @@ board_play(struct board *board, struct move *m)
 
 	if (unlikely(!gid)) {
 		/* Restore the original board. */
-		void *b = board->b, *g = board->g, *gi = board->gi;
+		void *b = board->b, *g = board->g, *f = board->f, *gi = board->gi;
 		memcpy(board->b, b2.b, b2.size * b2.size * sizeof(*b2.b));
 		memcpy(board->g, b2.g, b2.size * b2.size * sizeof(*b2.g));
+		memcpy(board->f, b2.f, b2.size * b2.size * sizeof(*b2.f));
 		memcpy(board->gi, b2.gi, (b2.last_gid + 1) * sizeof(*b2.gi));
 		memcpy(board, &b2, sizeof(b2));
-		board->b = b; board->g = g; board->gi = gi;
+		board->b = b; board->g = g; board->f = f; board->gi = gi;
 		board->use_alloca = false;
 	}
 
 	return gid;
 }
 
+int
+board_play(struct board *board, struct move *m)
+{
+	if (unlikely(is_pass(m->coord) || is_resign(m->coord)))
+		return -1;
+
+	int f;
+	for (f = 0; f < board->flen; f++)
+		if (board->f[f] == m->coord.pos)
+			return board_play_f(board, m, f);
+
+	if (unlikely(debug_level > 7))
+		fprintf(stderr, "board_check: stone exists\n");
+	return 0;
+}
+
 
 static inline bool
-board_is_sensible_move(struct board *b, enum stone color, coord_t *coord)
+board_is_sensible_move(struct board *b, enum stone color, coord_t *coord, int f)
 {
+	coord->pos = b->f[f];
 	struct move m = { *coord, color };
-	return (board_at(b, *coord) == S_NONE
-	        && board_is_one_point_eye(b, coord) != color /* bad idea, usually */
-	        && board_play(b, &m));
+	return (board_is_one_point_eye(b, coord) != color /* bad idea, usually */
+	        && board_play_f(b, &m, f));
 }
 
 void
 board_play_random(struct board *b, enum stone color, coord_t *coord)
 {
-	coord_random(*coord, b);
-	coord_t base = *coord;
+	int base = random() % b->flen;
+	coord_pos(*coord, base, b);
 
-	for (; coord->pos < b->size * b->size; coord->pos++)
-		if (board_is_sensible_move(b, color, coord))
+	int f;
+	for (f = base; f < b->flen; f++)
+		if (board_is_sensible_move(b, color, coord, f))
 			return;
-	for (coord->pos = 0; coord->pos < base.pos; coord->pos++)
-		if (board_is_sensible_move(b, color, coord))
+	for (f = 0; f < base; f++)
+		if (board_is_sensible_move(b, color, coord, f))
 			return;
 
 	*coord = pass;
@@ -356,6 +375,7 @@ board_group_capture(struct board *board, int group)
 		board->captures[stone_other(board_at(board, c))]++;
 		board_at(board, c) = S_NONE;
 		group_at(board, c) = 0;
+		board->f[board->flen++] = c.pos;
 		stones++;
 
 		/* Increase liberties of surrounding groups */
