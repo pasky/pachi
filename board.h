@@ -74,14 +74,14 @@ int board_play(struct board *board, struct move *m);
 /* Like above, but plays random move; the move coordinate is recorded
  * to *coord. This method will never fill your own eye. pass is played
  * when no move can be played. */
-void board_play_random(struct board *b, enum stone color, struct coord *coord);
+void board_play_random(struct board *b, enum stone color, coord_t *coord);
 
 bool board_no_valid_moves(struct board *board, enum stone color);
 bool board_valid_move(struct board *board, struct move *m, bool sensible);
 
-bool board_is_liberty_of(struct board *board, struct coord *c, int group);
+bool board_is_liberty_of(struct board *board, coord_t *c, int group);
 /* Returns S_NONE if not a 1pt eye, color of owner otherwise. */
-enum stone board_is_one_point_eye(struct board *board, struct coord *c);
+enum stone board_is_one_point_eye(struct board *board, coord_t *c);
 
 int board_group_capture(struct board *board, int group);
 
@@ -100,7 +100,7 @@ float board_fast_score(struct board *board);
 		int x, y; \
 		for (y = 0; y < board_->size; y++) { \
 			for (x = 0; x < board_->size; x++) { \
-				struct coord c = { x, y }; c = c; /* shut up gcc */
+				coord_t c = { x, y }; c = c; /* shut up gcc */
 #define foreach_point_end \
 			} \
 		} \
@@ -118,13 +118,13 @@ float board_fast_score(struct board *board);
 
 #define foreach_neighbor(board_, coord_) \
 	do { \
-		struct coord q__[] = { { (coord_).x - 1, (coord_).y }, \
+		coord_t q__[] = { { (coord_).x - 1, (coord_).y }, \
 		                       { (coord_).x, (coord_).y - 1 }, \
 		                       { (coord_).x + 1, (coord_).y }, \
 		                       { (coord_).x, (coord_).y + 1 } }; \
 		int fn__i; \
 		for (fn__i = 0; fn__i < 4; fn__i++) { \
-			int x = q__[fn__i].x, y = q__[fn__i].y; struct coord c = { x, y }; \
+			int x = q__[fn__i].x, y = q__[fn__i].y; coord_t c = { x, y }; \
 			if (unlikely(x < 0 || y < 0 || x >= board_->size || y >= board->size)) \
 				continue;
 #define foreach_neighbor_end \

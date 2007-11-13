@@ -37,7 +37,7 @@ play_random_game(struct montecarlo *mc, struct board *b, enum stone color, int m
 	struct board b2;
 	board_copy(&b2, b);
 	
-	struct coord coord;
+	coord_t coord;
 	int passes = 0;
 	while (moves-- && passes < 2) {
 		board_play_random(&b2, color, &coord);
@@ -91,7 +91,7 @@ play_random_game_from(struct montecarlo *mc, struct board *b, struct move *m, in
 }
 
 
-static struct coord *
+static coord_t *
 montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	struct montecarlo *mc = e->data;
@@ -102,7 +102,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		return coord_pass();
 
 	/* resign when the hope for win vanishes */
-	struct coord top_coord = resign;
+	coord_t top_coord = resign;
 	float top_ratio = mc->resign_ratio;
 
 	int moves = 0;

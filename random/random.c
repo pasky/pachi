@@ -6,13 +6,13 @@
 #include "move.h"
 #include "random/random.h"
 
-static struct coord *
+static coord_t *
 random_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	struct board b2;
 	board_copy(&b2, b);
 
-	struct coord coord;
+	coord_t coord;
 	board_play_random(&b2, color, &coord);
 
 	board_done_noalloc(&b2);

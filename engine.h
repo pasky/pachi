@@ -6,7 +6,7 @@
 struct board;
 struct engine;
 
-typedef struct coord *(*engine_genmove)(struct engine *e, struct board *b, enum stone color);
+typedef coord_t *(*engine_genmove)(struct engine *e, struct board *b, enum stone color);
 
 struct engine {
 	char *name;

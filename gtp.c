@@ -116,7 +116,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		next_tok(arg);
 		m.color = str2stone(arg);
 		next_tok(arg);
-		struct coord *c = str2coord(arg);
+		coord_t *c = str2coord(arg);
 		m.coord = *c; coord_done(c);
 
 		if (debug_level > 1)
@@ -133,7 +133,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		struct coord *c = engine->genmove(engine, board, color);
+		coord_t *c = engine->genmove(engine, board, color);
 		struct move m = { *c, color };
 		board_play(board, &m);
 		char *str = coord2str(*c);

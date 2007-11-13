@@ -9,7 +9,7 @@
 static char asdf[] = "abcdefghjklmnopqrstuvwxyz";
 
 char *
-coord2str(struct coord c)
+coord2str(coord_t c)
 {
 	char b[4];
 	if (is_pass(c)) {
@@ -24,7 +24,7 @@ coord2str(struct coord c)
 }
 
 /* No sanity checking */
-struct coord *
+coord_t *
 str2coord(char *str)
 {
 	if (!strcasecmp(str, "pass")) {

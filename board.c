@@ -129,7 +129,7 @@ board_print(struct board *board, FILE *f)
 
 
 static void
-group_add(struct board *board, int gid, struct coord coord)
+group_add(struct board *board, int gid, coord_t coord)
 {
 	foreach_neighbor(board, coord) {
 		if (board_at(board, c) == S_NONE
@@ -314,7 +314,7 @@ board_is_sensible_move(struct board *b, struct move *m, int i)
 }
 
 void
-board_play_random(struct board *b, enum stone color, struct coord *coord)
+board_play_random(struct board *b, enum stone color, coord_t *coord)
 {
 	struct move m;
 	m.color = color;
@@ -336,7 +336,7 @@ found_move:
 
 
 bool
-board_is_liberty_of(struct board *board, struct coord *coord, int group)
+board_is_liberty_of(struct board *board, coord_t *coord, int group)
 {
 	foreach_neighbor(board, *coord) {
 		if (unlikely(group_at(board, c) == group))
@@ -346,7 +346,7 @@ board_is_liberty_of(struct board *board, struct coord *coord, int group)
 }
 
 enum stone
-board_is_one_point_eye(struct board *board, struct coord *coord)
+board_is_one_point_eye(struct board *board, coord_t *coord)
 {
 	enum stone eye_color = S_NONE;
 
@@ -382,7 +382,7 @@ board_group_capture(struct board *board, int group)
 		stones++;
 
 		/* Increase liberties of surrounding groups */
-		struct coord coord = c;
+		coord_t coord = c;
 		int gidls[4], gids = 0;
 		foreach_neighbor(board, coord) {
 			if (board_at(board, c) != S_NONE) {
