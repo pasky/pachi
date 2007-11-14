@@ -29,13 +29,15 @@ board_copy(struct board *b2, struct board *b1)
 	int bsize = b2->size * b2->size * sizeof(*b2->b);
 	int gsize = b2->size * b2->size * sizeof(*b2->g);
 	int fsize = b2->size * b2->size * sizeof(*b2->f);
+	int nsize = b2->size * b2->size * sizeof(*b2->n);
 	int psize = b2->size * b2->size * sizeof(*b2->p);
-	void *x = malloc(bsize + gsize + fsize + psize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
 	b2->p = x; x += psize;
+	b2->n = x; x += nsize;
 
 	int gi_a = gi_allocsize(b2->last_gid + 1);
 	b2->gi = calloc(gi_a, sizeof(*b2->gi));
@@ -53,12 +55,14 @@ board_copy(struct board *b2, struct board *b1)
 		int gsize = ((b2))->size * (b2)->size * sizeof(*(b2)->g); \
 		int fsize = ((b2))->size * (b2)->size * sizeof(*(b2)->f); \
 		int psize = ((b2))->size * (b2)->size * sizeof(*(b2)->p); \
-		void *x = alloca(bsize + gsize + fsize + psize); \
-		memcpy(x, b1->b, bsize + gsize + fsize + psize); \
+		int nsize = ((b2))->size * (b2)->size * sizeof(*(b2)->n); \
+		void *x = alloca(bsize + gsize + fsize + psize + nsize); \
+		memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize); \
 		((b2))->b = x; x += bsize; \
 		((b2))->g = x; x += gsize; \
 		((b2))->f = x; x += fsize; \
 		((b2))->p = x; x += psize; \
+		((b2))->n = x; x += nsize; \
 \
 		int gi_a = gi_allocsize((b2)->last_gid + 1); \
 		(b2)->gi = alloca(gi_a * sizeof(*(b2)->gi)); \
@@ -91,11 +95,13 @@ board_resize(struct board *board, int size)
 	int gsize = board->size * board->size * sizeof(*board->g);
 	int fsize = board->size * board->size * sizeof(*board->f);
 	int psize = board->size * board->size * sizeof(*board->p);
-	void *x = malloc(bsize + gsize + fsize + psize);
+	int nsize = board->size * board->size * sizeof(*board->n);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
 	board->p = x; x += psize;
+	board->n = x; x += nsize;
 }
 
 void
@@ -114,6 +120,15 @@ board_clear(struct board *board)
 		board->b[i] = board->b[top_row + i] = S_OFFBOARD;
 	for (i = 0; i <= top_row; i += board->size)
 		board->b[i] = board->b[board->size - 1 + i] = S_OFFBOARD;
+
+	foreach_point(board) {
+		coord_t coord = c;
+		if (board_at(board, coord) == S_OFFBOARD)
+			continue;
+		foreach_neighbor(board, c) {
+			inc_neighbor_count_at(board, coord, board_at(board, c));
+		} foreach_neighbor_end;
+	} foreach_point_end;
 
 	/* All positions are free! Except the margin. */
 	for (i = board->size; i < (board->size - 1) * board->size; i++)
@@ -249,6 +264,9 @@ board_play_raw(struct board *board, struct move *m, int f)
 		enum stone color = board_at(board, c);
 		group_t group = group_at(board, c);
 
+		dec_neighbor_count_at(board, c, S_NONE);
+		inc_neighbor_count_at(board, c, m->color);
+
 		if (group == 0)
 			continue;
 
@@ -335,14 +353,15 @@ board_play_f(struct board *board, struct move *m, int f)
 
 	if (unlikely(gid < 0)) {
 		/* Restore the original board. */
-		void *b = board->b, *g = board->g, *f = board->f, *p = board->p, *gi = board->gi;
+		void *b = board->b, *g = board->g, *f = board->f, *p = board->p, *n = board->n, *gi = board->gi;
 		memcpy(board->b, b2.b, b2.size * b2.size * sizeof(*b2.b));
 		memcpy(board->g, b2.g, b2.size * b2.size * sizeof(*b2.g));
 		memcpy(board->f, b2.f, b2.size * b2.size * sizeof(*b2.f));
 		memcpy(board->p, b2.p, b2.size * b2.size * sizeof(*b2.p));
+		memcpy(board->n, b2.n, b2.size * b2.size * sizeof(*b2.n));
 		memcpy(board->gi, b2.gi, (b2.last_gid + 1) * sizeof(*b2.gi));
 		memcpy(board, &b2, sizeof(b2));
-		board->b = b; board->g = g; board->f = f; board->p = p; board->gi = gi;
+		board->b = b; board->g = g; board->f = f; board->p = p; board->n = n; board->gi = gi;
 		board->use_alloca = false;
 	}
 
@@ -398,14 +417,7 @@ board_play_random(struct board *b, enum stone color, coord_t *coord)
 bool
 board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 {
-	enum stone color_libs[S_MAX];
-	memset(color_libs, 0, sizeof(color_libs));
-
-	foreach_neighbor(board, *coord) {
-		color_libs[(enum stone) board_at(board, c)]++;
-	} foreach_neighbor_end;
-
-	return (color_libs[eye_color] + color_libs[S_OFFBOARD]) == 4;
+	return (neighbor_count_at(board, *coord, eye_color) + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
 }
 
 enum stone
@@ -415,9 +427,10 @@ board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color
 	memset(color_libs, 0, sizeof(color_libs));
 	memset(color_diag_libs, 0, sizeof(color_diag_libs));
 
-	foreach_neighbor(board, *coord) {
-		color_libs[(enum stone) board_at(board, c)]++;
-	} foreach_neighbor_end;
+	int i;
+	for (i = 0; i < S_MAX; i++) {
+		color_libs[i] = neighbor_count_at(board, *coord, i);
+	}
 
 	if (likely(eye_color != S_NONE)) {
 		if (color_libs[eye_color] + color_libs[S_OFFBOARD] < 4)
@@ -445,7 +458,8 @@ board_group_capture(struct board *board, int group)
 	int stones = 0;
 
 	foreach_in_group(board, group) {
-		board->captures[stone_other(board_at(board, c))]++;
+		enum stone color = board_at(board, c);
+		board->captures[stone_other(color)]++;
 		board_at(board, c) = S_NONE;
 		group_at(board, c) = 0;
 		if (unlikely(debug_level > 6))
@@ -456,6 +470,8 @@ board_group_capture(struct board *board, int group)
 		/* Increase liberties of surrounding groups */
 		coord_t coord = c;
 		foreach_neighbor(board, coord) {
+			dec_neighbor_count_at(board, c, color);
+			inc_neighbor_count_at(board, c, S_NONE);
 			int gid = group_at(board, c);
 			if (group_at(board, c) > 0)
 				board_group_libs(board, gid)++;
