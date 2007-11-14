@@ -19,7 +19,8 @@
  * games=MC_GAMES		number of random games to play
  * gamelen=MC_GAMELEN		maximal length of played random game
  * domainrate=MC_DOMAINRATE	how many of 10 moves should be non-random but hinted
- * 				by heuristics (currently just taking care of atari);
+ * 				by heuristics (currently taking care of atari and
+ * 				assuming local responses);
  * 				set to 0 to have purely rules-driven MC search;
  * 				default 5; carries high performance penalty!
  */
@@ -38,10 +39,12 @@ struct montecarlo {
 	int loss_threshold;
 };
 
+
 /* *** Domain-specific knowledge comes here (that is, any heuristics that perfer
  * certain moves, aside of requiring the moves to be according to the rules. */
+
 static coord_t
-in_domain_hint(struct montecarlo *mc, struct board *b, coord_t coord)
+domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 {
 	/* If we or our neighbors are in atari, fix that, (Capture or escape.)
 	 * This test costs a lot of performance (the whole playout is about 1/4
@@ -53,6 +56,7 @@ in_domain_hint(struct montecarlo *mc, struct board *b, coord_t coord)
 	}
 
 	coord_t urgents[5]; int urgents_len = 0;
+	memset(urgents, 0, sizeof(urgents));
 
 	coord_t fix;
 	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)))
@@ -76,6 +80,46 @@ in_domain_hint(struct montecarlo *mc, struct board *b, coord_t coord)
 	}
 	return pass;
 }
+
+static coord_t
+domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
+{
+	/* Pick a suitable move that is directly or diagonally adjecent. In the
+	 * real game, local moves often tend to be the urgent ones, even if they
+	 * aren't atari. */
+	/* Note that this test is about as expensive as the atari test. (Maybe
+	 * slightly cheaper.) */
+
+	if (unlikely(mc->debug_level > 8)) {
+		fprintf(stderr, "-- Scanning for %d,%d-local moves:\n", coord_x(coord), coord_y(coord));
+		board_print(b, stderr);
+	}
+
+	coord_t neis[S_MAX][8]; int neis_len[S_MAX];
+	memset(neis, 0, sizeof(neis));
+	memset(neis_len, 0, sizeof(neis_len));
+
+	foreach_neighbor(b, coord) {
+		neis[(enum stone) board_at(b, c)][neis_len[(enum stone) board_at(b, c)]++] = c;
+	} foreach_neighbor_end;
+
+	foreach_diag_neighbor(b, coord) {
+		neis[(enum stone) board_at(b, c)][neis_len[(enum stone) board_at(b, c)]++] = c;
+	} foreach_diag_neighbor_end;
+
+	if (likely(neis_len[S_NONE])) {
+		if (unlikely(mc->debug_level > 8)) {
+			fprintf(stderr, "Local moves found:");
+			int i = 0;
+			for (i = 0; i < neis_len[S_NONE]; i++)
+				fprintf(stderr, " %d,%d", coord_x(neis[S_NONE][i]), coord_y(neis[S_NONE][i]));
+			fprintf(stderr, "\n");
+		}
+		return neis[S_NONE][fast_random(neis_len[S_NONE])];
+	}
+	return pass;
+}
+
 
 /* 1: m->color wins, 0: m->color loses; -1: no moves left */
 static int
@@ -138,10 +182,14 @@ play_random:
 
 			/* In 1/2 of the cases, we pick one of the urgent moves
 			 * instead of a completely random one. */
+			urgent = pass;
 			if (mc->domain_rate && fast_random(10) < mc->domain_rate) {
-				urgent = in_domain_hint(mc, &b2, coord);
-			} else {
-				urgent = pass;
+				urgent = domain_hint_atari(mc, &b2, coord);
+			}
+			/* For the non-urgent moves, 1/2 will be contact play
+			 * (tsuke or diagonal). These tend to be most likely. */
+			if (is_pass(urgent) && mc->domain_rate && fast_random(10) < mc->domain_rate) {
+				urgent = domain_hint_local(mc, &b2, coord);
 			}
 		}
 
