@@ -182,10 +182,10 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 			char *str = coord2str(*c);
 			if (debug_level > 1)
 				fprintf(stderr, "choosing handicap %s\n", str);
-			printf("%s\n", str);
+			printf("%s ", str);
 			free(str); coord_done(c);
 		}
-		printf("\n\n");
+		printf("\n\n"); fflush(stdout);
 
 	} else if (!strcasecmp(cmd, "final_score")) {
 		float score = board_official_score(board);
