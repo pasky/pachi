@@ -114,7 +114,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 		if (!is_pass(urgent)) {
 			struct move m = { urgent, color };
 			if (board_play(&b2, &m) < 0) {
-				if (unlikely(mc->debug_level > 0)) {
+				if (unlikely(mc->debug_level > 7)) {
 					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent), coord_y(urgent));
 					board_print(&b2, stderr);
 				}
