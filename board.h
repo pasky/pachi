@@ -17,10 +17,12 @@
 typedef uint16_t group_t;
 
 struct group {
-	uint16_t libs; /* Number of group liberties */
-	/* Tried to experiment with tracing group start/end coordinates,
-	 * however then we cannot use ro group cache anymore and it does
-	 * not pay off. */
+	/* Number of group pseudo-liberties */
+	/* Pseudo-liberties count empty-stone edges, not empty positions.
+	 * Thus, a single stone will have 4 pseudo-liberties, but so will
+	 * an one-eyed group in atari. The advantage is that we can update
+	 * the liberties lightning-fast. */
+	uint16_t libs;
 	coord_t base_stone; /* First stone in group */
 };
 
@@ -94,8 +96,6 @@ int board_play(struct board *board, struct move *m);
  * to *coord. This method will never fill your own eye. pass is played
  * when no move can be played. */
 void board_play_random(struct board *b, enum stone color, coord_t *coord);
-
-bool board_is_liberty_of(struct board *board, coord_t *c, int group);
 
 /* Returns S_NONE if not a 1pt eye, color of owner otherwise. If you expect
  * the color, set hint, otherwise use S_NONE. */
