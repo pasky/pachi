@@ -261,7 +261,8 @@ already_took_liberty:
 static int
 board_play_f(struct board *board, struct move *m, int f)
 {
-	if (!board_is_eyelike(board, &m->coord, stone_other(m->color))) {
+	if (!board->prohibit_suicide
+	    && !board_is_eyelike(board, &m->coord, stone_other(m->color))) {
 		/* NOT nakade. Thus this move has to succeed. (This is thanks
 		 * to New Zealand rules. Otherwise, multi-stone suicide might
 		 * fail.) */

@@ -13,6 +13,7 @@ random_genmove(struct engine *e, struct board *b, enum stone color)
 	board_copy(&b2, b);
 
 	coord_t coord;
+	b->prohibit_suicide = true;
 	board_play_random(&b2, color, &coord);
 
 	board_done_noalloc(&b2);
