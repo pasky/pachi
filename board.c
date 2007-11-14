@@ -501,6 +501,8 @@ board_official_score(struct board *board)
 				gcache[g] = board_group_in_atari(board, g) == 1 ? GC_DEAD : GC_ALIVE;
 			if (gcache[g] == GC_ALIVE)
 				scores[color]++;
+			else
+				scores[stone_other(color)]++;
 			/* XXX: But we still miss the one empty opponent's point. */
 
 		} else if (color == S_NONE) {
