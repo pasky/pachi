@@ -348,6 +348,10 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		if (unlikely(debug_level > 5))
 			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(m->coord), coord_y(m->coord), m->color);
 		return -1;
+	} else if (unlikely(debug_level > 6)) {
+		fprintf(stderr, "board_check: no ko at %d,%d,%d - ko is %d,%d,%d\n",
+			m->color, coord_x(m->coord), coord_y(m->coord),
+			board->ko.color, coord_x(board->ko.coord), coord_y(board->ko.coord));
 	}
 
 	struct move ko = { pass, S_NONE };
@@ -374,6 +378,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				 * to check for that. */
 				ko.color = board_at(board, c);
 				ko.coord = c;
+				if (unlikely(debug_level > 5))
+					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord), coord_y(ko.coord));
 			}
 		}
 	} foreach_neighbor_end;
