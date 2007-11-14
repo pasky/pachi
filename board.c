@@ -401,8 +401,7 @@ board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 bool
 board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color)
 {
-	enum stone color_diag_libs[S_MAX];
-	memset(color_diag_libs, 0, sizeof(color_diag_libs));
+	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
 
 	if (likely(neighbor_count_at(board, *coord, eye_color) + neighbor_count_at(board, *coord, S_OFFBOARD) < 4)) {
 		return false;
