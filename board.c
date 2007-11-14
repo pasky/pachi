@@ -182,16 +182,10 @@ static void
 add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
 	board_group_libs(board, gid) += neighbor_count_at(board, coord, S_NONE);
-	group_at(board, coord) = gid;
 
-	if (prevstone.pos == 0) {
-		/* First stone in group */
-		groupnext_at(board, coord) = 0;
-		board_group(board, gid).base_stone = coord;
-	} else {
-		groupnext_at(board, coord) = groupnext_at(board, prevstone);
-		groupnext_at(board, prevstone) = coord.pos;
-	}
+	group_at(board, coord) = gid;
+	groupnext_at(board, coord) = groupnext_at(board, prevstone);
+	groupnext_at(board, prevstone) = coord.pos;
 
 	if (unlikely(debug_level > 8))
 		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d - libs %d\n",
@@ -225,7 +219,7 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 }
 
 static group_t
-group_allocate(struct board *board)
+new_group(struct board *board, coord_t coord)
 {
 	if (unlikely(gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2))) {
 		if (board->use_alloca) {
@@ -239,6 +233,18 @@ group_allocate(struct board *board)
 	}
 	group_t gid = ++board->last_gid;
 	memset(&board->gi[gid], 0, sizeof(*board->gi));
+
+	board_group(board, gid).base_stone = coord;
+	board_group_libs(board, gid) = neighbor_count_at(board, coord, S_NONE);
+
+	group_at(board, coord) = gid;
+	groupnext_at(board, coord) = 0;
+
+	if (unlikely(debug_level > 8))
+		fprintf(stderr, "new_group: added %d,%d to group %d - libs %d\n",
+			coord_x(coord), coord_y(coord),
+			gid, board_group_libs(board, gid));
+
 	return gid;
 }
 
@@ -252,9 +258,6 @@ board_play_raw(struct board *board, struct move *m, int f)
 	if (unlikely(debug_level > 6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 	board_at(board, m->coord) = m->color;
-
-	coord_t group_stone;
-	coord_pos(group_stone, 0, board);
 
 	foreach_neighbor(board, m->coord) {
 		enum stone color = board_at(board, c);
@@ -274,7 +277,7 @@ board_play_raw(struct board *board, struct move *m, int f)
 		if (color == m->color && group != gid) {
 			if (gid <= 0) {
 				gid = group;
-				group_stone = c;
+				add_to_group(board, gid, c, m->coord);
 			} else {
 				merge_groups(board, gid, group);
 			}
@@ -293,8 +296,7 @@ board_play_raw(struct board *board, struct move *m, int f)
 	} foreach_neighbor_end;
 
 	if (unlikely(gid <= 0))
-		gid = group_allocate(board);
-	add_to_group(board, gid, group_stone, m->coord);
+		gid = new_group(board, m->coord);
 
 	board->last_move = *m;
 	board->moves++;
