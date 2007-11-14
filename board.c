@@ -326,6 +326,13 @@ board_play_f(struct board *board, struct move *m, int f)
 	 * is a suicide, or one of the opponent's groups is going to get
 	 * captured (unless the ko rule prevents that). */
 
+	/* Check ko: Capture at a position of ko capture one move ago */
+	if (unlikely(m->color == board->ko.color && coord_eq(m->coord, board->ko.coord))) {
+		if (unlikely(debug_level > 5))
+			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(m->coord), coord_y(m->coord), m->color);
+		return -1;
+	}
+
 	struct board b2;
 
 	/* Try it! */
@@ -341,13 +348,6 @@ board_play_f(struct board *board, struct move *m, int f)
 				board_print(board, stderr);
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
-		gid = -1;
-	}
-
-	/* Check ko: Capture at a position of ko capture one move ago */
-	if (unlikely(m->color == b2.ko.color && coord_eq(m->coord, b2.ko.coord))) {
-		if (unlikely(debug_level > 5))
-			fprintf(stderr, "board_check: ko at %d,%d color %d captures %d-%d\n", coord_x(m->coord), coord_y(m->coord), m->color, board->captures[m->color], b2.captures[m->color]);
 		gid = -1;
 	}
 
