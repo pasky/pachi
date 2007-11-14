@@ -489,7 +489,7 @@ board_group_capture(struct board *board, int group)
 }
 
 bool
-board_group_in_atari(struct board *board, int group)
+board_group_in_atari(struct board *board, int group, coord_t *lastlib)
 {
 	/* First rule out obvious fakes. */
 	if (board_group_libs(board, group) > 4)
@@ -513,6 +513,7 @@ board_group_in_atari(struct board *board, int group)
 				libs++;
 			if (unlikely(libs > 1))
 				return false;
+			*lastlib = c;
 		} foreach_neighbor_end;
 	} foreach_in_group_end;
 
@@ -538,8 +539,10 @@ board_official_score(struct board *board)
 			 * stones that could not have been removed because
 			 * they are in enemy territory and we can't suicide.
 			 * At least we know they are in atari. */
-			if (gcache[g] == GC_DUNNO)
-				gcache[g] = board_group_in_atari(board, g) == 1 ? GC_DEAD : GC_ALIVE;
+			if (gcache[g] == GC_DUNNO) {
+				coord_t x;
+				gcache[g] = board_group_in_atari(board, g, &x) == 1 ? GC_DEAD : GC_ALIVE;
+			}
 			if (gcache[g] == GC_ALIVE)
 				scores[color]++;
 			else
