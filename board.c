@@ -303,7 +303,7 @@ board_play_f(struct board *board, struct move *m, int f)
 		gid = -1;
 	}
 
-	if (unlikely(!gid)) {
+	if (unlikely(gid < 0)) {
 		/* Restore the original board. */
 		void *b = board->b, *g = board->g, *f = board->f, *gi = board->gi;
 		memcpy(board->b, b2.b, b2.size * b2.size * sizeof(*b2.b));
