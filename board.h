@@ -21,6 +21,7 @@ struct group {
 	/* Tried to experiment with tracing group start/end coordinates,
 	 * however then we cannot use ro group cache anymore and it does
 	 * not pay off. */
+	coord_t base_stone; /* First stone in group */
 };
 
 /* You should treat this struct as read-only. Always call functions below if
@@ -47,6 +48,8 @@ struct board {
 	char *b; /* enum stone */
 	/* Group id the stones are part of; 0 == no group */
 	group_t *g;
+	/* Positions of next stones in the stone group; 0 == last stone */
+	uint16_t *p;
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
@@ -66,6 +69,9 @@ struct board {
 
 #define group_at(b_, c) ((b_)->g[(c).pos])
 #define group_atxy(b_, x, y) ((b_)->g[(x) + (b_)->size * (y)])
+
+#define groupnext_at(b_, c) ((b_)->p[(c).pos])
+#define groupnext_atxy(b_, x, y) ((b_)->p[(x) + (b_)->size * (y)])
 
 #define board_group(b_, g_) ((b_)->gi[(g_)])
 #define board_group_libs(b_, g_) (board_group(b_, g_).libs)
@@ -119,12 +125,13 @@ float board_fast_score(struct board *board);
 
 #define foreach_in_group(board_, group_) \
 	do { \
-		group_t *g__ = board_->g; \
-		int group__ = group_; \
-		foreach_point(board_) \
-			if (unlikely(*g__++ == group__))
+		struct board *board__ = board_; \
+		coord_t c = board_group(board_, group_).base_stone; \
+		coord_t c2 = c; c2.pos = groupnext_at(board__, c2); \
+		do {
 #define foreach_in_group_end \
-		foreach_point_end; \
+			c = c2; c2.pos = groupnext_at(board__, c2); \
+		} while (c.pos != 0); \
 	} while (0)
 
 #define foreach_neighbor(board_, coord_) \

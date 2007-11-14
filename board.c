@@ -29,11 +29,13 @@ board_copy(struct board *b2, struct board *b1)
 	int bsize = b2->size * b2->size * sizeof(*b2->b);
 	int gsize = b2->size * b2->size * sizeof(*b2->g);
 	int fsize = b2->size * b2->size * sizeof(*b2->f);
-	void *x = malloc(bsize + gsize + fsize);
-	memcpy(x, b1->b, bsize + gsize + fsize);
+	int psize = b2->size * b2->size * sizeof(*b2->p);
+	void *x = malloc(bsize + gsize + fsize + psize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
-	b2->f = x;
+	b2->f = x; x += fsize;
+	b2->p = x; x += psize;
 
 	int gi_a = gi_allocsize(b2->last_gid + 1);
 	b2->gi = calloc(gi_a, sizeof(*b2->gi));
@@ -50,11 +52,13 @@ board_copy(struct board *b2, struct board *b1)
 		int bsize = ((b2))->size * (b2)->size * sizeof(*(b2)->b); \
 		int gsize = ((b2))->size * (b2)->size * sizeof(*(b2)->g); \
 		int fsize = ((b2))->size * (b2)->size * sizeof(*(b2)->f); \
-		void *x = alloca(bsize + gsize + fsize); \
-		memcpy(x, b1->b, bsize + gsize + fsize); \
+		int psize = ((b2))->size * (b2)->size * sizeof(*(b2)->p); \
+		void *x = alloca(bsize + gsize + fsize + psize); \
+		memcpy(x, b1->b, bsize + gsize + fsize + psize); \
 		((b2))->b = x; x += bsize; \
 		((b2))->g = x; x += gsize; \
-		((b2))->f = x; \
+		((b2))->f = x; x += fsize; \
+		((b2))->p = x; x += psize; \
 \
 		int gi_a = gi_allocsize((b2)->last_gid + 1); \
 		(b2)->gi = alloca(gi_a * sizeof(*(b2)->gi)); \
@@ -86,10 +90,12 @@ board_resize(struct board *board, int size)
 	int bsize = board->size * board->size * sizeof(*board->b);
 	int gsize = board->size * board->size * sizeof(*board->g);
 	int fsize = board->size * board->size * sizeof(*board->f);
-	void *x = malloc(bsize + gsize + fsize);
+	int psize = board->size * board->size * sizeof(*board->p);
+	void *x = malloc(bsize + gsize + fsize + psize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
-	board->f = x;
+	board->f = x; x += fsize;
+	board->p = x; x += psize;
 }
 
 void
@@ -158,7 +164,7 @@ board_print(struct board *board, FILE *f)
 
 
 static void
-group_add(struct board *board, int gid, coord_t coord)
+group_add(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
 	foreach_neighbor(board, coord) {
 		if (board_at(board, c) == S_NONE
@@ -168,20 +174,32 @@ group_add(struct board *board, int gid, coord_t coord)
 	} foreach_neighbor_end;
 	group_at(board, coord) = gid;
 
+	if (prevstone.pos == 0) {
+		/* First stone in group */
+		groupnext_at(board, coord) = 0;
+		board_group(board, gid).base_stone = coord;
+	} else {
+		groupnext_at(board, coord) = groupnext_at(board, prevstone);
+		groupnext_at(board, prevstone) = coord.pos;
+	}
+
 	if (unlikely(debug_level > 8))
-		fprintf(stderr, "group_add: added %d,%d to group %d - libs %d\n",
-			coord_x(coord), coord_y(coord), gid, board_group_libs(board, gid));
+		fprintf(stderr, "group_add: added (%d,%d ->) %d,%d (-> %d,%d) to group %d - libs %d\n",
+			coord_x(prevstone), coord_y(prevstone),
+			coord_x(coord), coord_y(coord),
+			groupnext_at(board, coord) % board->size, groupnext_at(board, coord) / board->size,
+			gid, board_group_libs(board, gid));
 }
 
 static void
-merge_groups(struct board *board, group_t group_to, group_t group_from)
+merge_groups(struct board *board, coord_t base_stone, group_t group_to, group_t group_from)
 {
 	if (unlikely(debug_level > 7))
 		fprintf(stderr, "board_play_raw: merging groups %d(%d) -> %d(%d)\n",
 			group_from, board_group_libs(board, group_from),
 			group_to, board_group_libs(board, group_to));
-	foreach_in_group(board, group_to) {
-		group_add(board, group_from, c);
+	foreach_in_group(board, group_from) {
+		group_add(board, group_to, base_stone, c);
 	} foreach_in_group_end;
 	if (unlikely(debug_level > 7))
 		fprintf(stderr, "board_play_raw: merged group: %d(%d)\n",
@@ -200,6 +218,9 @@ board_play_raw(struct board *board, struct move *m, int f)
 	board_at(board, m->coord) = m->color;
 
 	int gidls[4], gids = 0;
+
+	coord_t group_stone;
+	coord_pos(group_stone, 0, board);
 
 	foreach_neighbor(board, m->coord) {
 		enum stone color = board_at(board, c);
@@ -223,8 +244,9 @@ already_took_liberty:
 		if (unlikely(color == m->color) && group != gid) {
 			if (likely(gid <= 0)) {
 				gid = group;
+				group_stone = c;
 			} else {
-				merge_groups(board, gid, group);
+				merge_groups(board, group_stone, gid, group);
 			}
 		} else if (unlikely(color == stone_other(m->color))) {
 			if (unlikely(board_group_captured(board, group))) {
@@ -254,7 +276,7 @@ already_took_liberty:
 		gid = ++board->last_gid;
 		memset(&board->gi[gid], 0, sizeof(*board->gi));
 	}
-	group_add(board, gid, m->coord);
+	group_add(board, gid, group_stone, m->coord);
 
 	board->last_move = *m;
 	board->moves++;
@@ -309,13 +331,14 @@ board_play_f(struct board *board, struct move *m, int f)
 
 	if (unlikely(gid < 0)) {
 		/* Restore the original board. */
-		void *b = board->b, *g = board->g, *f = board->f, *gi = board->gi;
+		void *b = board->b, *g = board->g, *f = board->f, *p = board->p, *gi = board->gi;
 		memcpy(board->b, b2.b, b2.size * b2.size * sizeof(*b2.b));
 		memcpy(board->g, b2.g, b2.size * b2.size * sizeof(*b2.g));
 		memcpy(board->f, b2.f, b2.size * b2.size * sizeof(*b2.f));
+		memcpy(board->p, b2.p, b2.size * b2.size * sizeof(*b2.p));
 		memcpy(board->gi, b2.gi, (b2.last_gid + 1) * sizeof(*b2.gi));
 		memcpy(board, &b2, sizeof(b2));
-		board->b = b; board->g = g; board->f = f; board->gi = gi;
+		board->b = b; board->g = g; board->f = f; board->p = p; board->gi = gi;
 		board->use_alloca = false;
 	}
 
