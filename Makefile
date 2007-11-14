@@ -8,7 +8,7 @@ SYS_CFLAGS=
 
 # Profiling:
 # LDFLAGS+=-pg
-# CUSTOM_CFLAGS+= -pg
+# CUSTOM_CFLAGS+= -pg -fno-inline
 
 LD=ld
 AR=ar
