@@ -491,6 +491,13 @@ board_group_capture(struct board *board, int group)
 bool
 board_group_in_atari(struct board *board, int group)
 {
+	/* First rule out obvious fakes. */
+	if (board_group_libs(board, group) > 4)
+		return false;
+	coord_t base_stone = board_group(board, group).base_stone;
+	if (neighbor_count_at(board, base_stone, S_NONE) > 1)
+		return false;
+
 	int libs = 0;
 
 	bool watermark[board->size * board->size];
@@ -499,11 +506,13 @@ board_group_in_atari(struct board *board, int group)
 	foreach_in_group(board, group) {
 		coord_t coord = c;
 		foreach_neighbor(board, coord) {
-			if (watermark[c.pos])
+			if (likely(watermark[c.pos]))
 				continue;
 			watermark[c.pos] = true;
-			if (board_at(board, c) == S_NONE)
+			if (unlikely(board_at(board, c) == S_NONE))
 				libs++;
+			if (unlikely(libs > 1))
+				return false;
 		} foreach_neighbor_end;
 	} foreach_in_group_end;
 
