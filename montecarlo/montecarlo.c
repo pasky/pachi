@@ -98,8 +98,6 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	coord_t top_coord = resign;
 	float top_ratio = mc->resign_ratio;
 
-	int moves = 0;
-
 	int games[b->size * b->size];
 	int wins[b->size * b->size];
 	bool suicides[b->size * b->size];
@@ -124,7 +122,6 @@ pass_wins:
 		games[m.coord.pos]++;
 		wins[m.coord.pos] += result;
 		suicides[m.coord.pos] = suicide;
-		moves++;
 	}
 
 	bool suicide_candidate = false;
