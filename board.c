@@ -334,7 +334,7 @@ board_play_f(struct board *board, struct move *m, int f)
 		 * to New Zealand rules. Otherwise, multi-stone suicide might
 		 * fail.) */
 		int gid = board_play_raw(board, m, f);
-		if (board_group_captured(board, gid)) {
+		if (unlikely(board_group_captured(board, gid))) {
 			board_group_capture(board, gid);
 		}
 		return 0;
