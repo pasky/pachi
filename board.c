@@ -222,7 +222,7 @@ already_took_liberty:
 						gid, board_group_libs(board, gid));
 			}
 		} else if (unlikely(color == stone_other(m->color))) {
-			if (unlikely(board_group_libs(board, group) == 0)) {
+			if (unlikely(board_group_captured(board, group))) {
 				int stones = board_group_capture(board, group);
 				if (stones == 1) {
 					/* If we captured multiple groups at once,
@@ -267,7 +267,7 @@ board_play_f(struct board *board, struct move *m, int f)
 		 * to New Zealand rules. Otherwise, multi-stone suicide might
 		 * fail.) */
 		int gid = board_play_raw(board, m, f);
-		if (board_group_libs(board, gid) == 0) {
+		if (board_group_captured(board, gid)) {
 			board_group_capture(board, gid);
 		}
 		return 0;
@@ -285,7 +285,7 @@ board_play_f(struct board *board, struct move *m, int f)
 	if (unlikely(debug_level > 7))
 		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, coord_x(m->coord), coord_y(m->coord), gid);
 
-	if (unlikely(board_group_libs(board, group_at(board, m->coord)) == 0)) {
+	if (unlikely(board_group_captured(board, group_at(board, m->coord)))) {
 		/* oops, suicide */
 		if (unlikely(debug_level > 5)) {
 			if (unlikely(debug_level > 6))
@@ -476,7 +476,7 @@ board_official_score(struct board *board)
 			 * they are in enemy territory and we can't suicide.
 			 * At least we know they are in atari. */
 			if (gcache[g] == GC_DUNNO)
-				gcache[g] = board_group_libs(board, g) == 1 ? GC_DEAD : GC_ALIVE;
+				gcache[g] = board_group_in_atari(board, g) == 1 ? GC_DEAD : GC_ALIVE;
 			if (gcache[g] == GC_ALIVE)
 				scores[color]++;
 			/* XXX: But we still miss the one empty opponent's point. */
