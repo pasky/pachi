@@ -422,9 +422,11 @@ board_play_random(struct board *b, enum stone color, coord_t *coord)
 {
 	int base = fast_random(b->flen);
 	coord_pos(*coord, base, b);
+	if (likely(board_try_random_move(b, color, coord, base)))
+		return;
 
 	int f;
-	for (f = base; f < b->flen; f++)
+	for (f = base + 1; f < b->flen; f++)
 		if (board_try_random_move(b, color, coord, f))
 			return;
 	for (f = 0; f < base; f++)
