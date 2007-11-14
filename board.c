@@ -181,11 +181,7 @@ board_print(struct board *board, FILE *f)
 static void
 add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
-	foreach_neighbor(board, coord) {
-		if (board_at(board, c) == S_NONE) {
-			board_group_libs(board, gid)++;
-		}
-	} foreach_neighbor_end;
+	board_group_libs(board, gid) += neighbor_count_at(board, coord, S_NONE);
 	group_at(board, coord) = gid;
 
 	if (prevstone.pos == 0) {
