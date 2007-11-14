@@ -13,8 +13,12 @@ random_genmove(struct engine *e, struct board *b, enum stone color)
 	board_copy(&b2, b);
 
 	coord_t coord;
-	b->prohibit_suicide = true;
 	board_play_random(&b2, color, &coord);
+	if (group_at(&b2, coord) == 0) {
+		/* This was suicide. Just pass. */
+		/* XXX: We should check for non-suicide alternatives. */
+		return coord_pass();
+	}
 
 	board_done_noalloc(&b2);
 
