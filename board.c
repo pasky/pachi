@@ -392,7 +392,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 	struct move m = { *coord, color };
 	if (unlikely(debug_level > 6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord), coord_y(*coord));
-	return (board_is_one_point_eye(b, coord, color) != color /* bad idea, usually */
+	return (!board_is_one_point_eye(b, coord, color) /* bad idea to play into one, usually */
 	        && board_play_f(b, &m, f) >= 0);
 }
 
@@ -420,25 +420,14 @@ board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 	return (neighbor_count_at(board, *coord, eye_color) + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
 }
 
-enum stone
+bool
 board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color)
 {
-	enum stone color_libs[S_MAX], color_diag_libs[S_MAX];
-	memset(color_libs, 0, sizeof(color_libs));
+	enum stone color_diag_libs[S_MAX];
 	memset(color_diag_libs, 0, sizeof(color_diag_libs));
 
-	int i;
-	for (i = 0; i < S_MAX; i++) {
-		color_libs[i] = neighbor_count_at(board, *coord, i);
-	}
-
-	if (likely(eye_color != S_NONE)) {
-		if (color_libs[eye_color] + color_libs[S_OFFBOARD] < 4)
-			return S_NONE;
-	} else {
-		if (color_libs[S_NONE] || (color_libs[S_WHITE] && color_libs[S_BLACK]))
-			return S_NONE;
-		eye_color = color_libs[S_WHITE] ? S_WHITE : S_BLACK;
+	if (likely(neighbor_count_at(board, *coord, eye_color) + neighbor_count_at(board, *coord, S_OFFBOARD) < 4)) {
+		return false;
 	}
 
 	/* XXX: We attempt false eye detection but we will yield false
@@ -448,7 +437,18 @@ board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color
 		color_diag_libs[(enum stone) board_at(board, c)]++;
 	} foreach_neighbor_end;
 	color_diag_libs[stone_other(eye_color)] += !!color_diag_libs[S_OFFBOARD];
-	return likely(color_diag_libs[stone_other(eye_color)] < 2) ? eye_color : S_NONE;
+	return likely(color_diag_libs[stone_other(eye_color)] < 2);
+}
+
+enum stone
+board_get_one_point_eye(struct board *board, coord_t *coord)
+{
+	if (board_is_one_point_eye(board, coord, S_WHITE))
+		return S_WHITE;
+	else if (board_is_one_point_eye(board, coord, S_BLACK))
+		return S_BLACK;
+	else
+		return S_NONE;
 }
 
 
@@ -532,7 +532,7 @@ board_official_score(struct board *board)
 
 		} else if (color == S_NONE) {
 			/* TODO: Count multi-point eyes */
-			color = board_is_one_point_eye(board, &c, S_NONE);
+			color = board_get_one_point_eye(board, &c);
 			scores[color]++;
 		}
 	} foreach_point_end;
@@ -549,7 +549,7 @@ board_fast_score(struct board *board)
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
 		if (color == S_NONE)
-			color = board_is_one_point_eye(board, &c, S_NONE);
+			color = board_get_one_point_eye(board, &c);
 		scores[color]++;
 	} foreach_point_end;
 
