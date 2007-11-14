@@ -10,6 +10,7 @@
 #include "montecarlo/montecarlo.h"
 #include "random/random.h"
 #include "gtp.h"
+#include "random.h"
 
 int debug_level = 1;
 int seed;
@@ -47,7 +48,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	srandom(seed);
+	fast_srandom(seed);
 	if (debug_level > 0)
 		fprintf(stderr, "Random seed: %d", seed);
 

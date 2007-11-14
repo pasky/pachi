@@ -24,7 +24,7 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o stone.o zzgo.o
+OBJS=board.o gtp.o move.o random.o stone.o zzgo.o
 SUBDIRS=random montecarlo
 
 all: all-recursive zzgo

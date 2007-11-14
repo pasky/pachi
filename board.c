@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "debug.h"
+#include "random.h"
 
 
 #define gi_granularity 4
@@ -369,7 +370,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 void
 board_play_random(struct board *b, enum stone color, coord_t *coord)
 {
-	int base = random() % b->flen;
+	int base = fast_random(b->flen);
 	coord_pos(*coord, base, b);
 
 	int f;
