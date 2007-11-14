@@ -456,6 +456,28 @@ next_neighbor:;
 	return stones;
 }
 
+bool
+board_group_in_atari(struct board *board, int group)
+{
+	int libs = 0;
+
+	bool watermark[board->size * board->size];
+	memset(watermark, 0, sizeof(watermark));
+
+	foreach_in_group(board, group) {
+		coord_t coord = c;
+		foreach_neighbor(board, coord) {
+			if (watermark[c.pos])
+				continue;
+			watermark[c.pos] = true;
+			if (board_at(board, c) == S_NONE)
+				libs++;
+		} foreach_neighbor_end;
+	} foreach_in_group_end;
+
+	return libs == 1;
+}
+
 
 /* Chinese counting */
 float

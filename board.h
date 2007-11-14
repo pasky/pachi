@@ -70,7 +70,6 @@ struct board {
 #define board_group(b_, g_) ((b_)->gi[(g_)])
 #define board_group_libs(b_, g_) (board_group(b_, g_).libs)
 #define board_group_captured(b_, g_) (board_group_libs(b_, g_) == 0)
-#define board_group_in_atari(b_, g_) (board_group_libs(b_, g_) == 1)
 
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
@@ -99,6 +98,7 @@ enum stone board_is_one_point_eye(struct board *board, coord_t *c, enum stone hi
 bool board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
 
 int board_group_capture(struct board *board, int group);
+bool board_group_in_atari(struct board *board, int group);
 
 /* Positive: W wins */
 /* board_official_score() is the scoring method for yielding score suitable
