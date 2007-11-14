@@ -275,14 +275,14 @@ board_play_raw(struct board *board, struct move *m, int f)
 			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
 				group, board_group_libs(board, group));
 
-		if (unlikely(color == m->color) && group != gid) {
-			if (likely(gid <= 0)) {
+		if (color == m->color && group != gid) {
+			if (gid <= 0) {
 				gid = group;
 				group_stone = c;
 			} else {
 				merge_groups(board, gid, group);
 			}
-		} else if (unlikely(color == stone_other(m->color))) {
+		} else if (color == stone_other(m->color)) {
 			if (unlikely(board_group_captured(board, group))) {
 				int stones = board_group_capture(board, group);
 				if (stones == 1) {
@@ -296,7 +296,7 @@ board_play_raw(struct board *board, struct move *m, int f)
 		}
 	} foreach_neighbor_end;
 
-	if (likely(gid <= 0))
+	if (unlikely(gid <= 0))
 		gid = group_allocate(board);
 	add_to_group(board, gid, group_stone, m->coord);
 
