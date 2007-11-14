@@ -342,7 +342,7 @@ int
 board_play(struct board *board, struct move *m)
 {
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord)))
-		return -1;
+		return 0;
 
 	int f;
 	for (f = 0; f < board->flen; f++)
@@ -351,7 +351,7 @@ board_play(struct board *board, struct move *m)
 
 	if (unlikely(debug_level > 7))
 		fprintf(stderr, "board_check: stone exists\n");
-	return 0;
+	return -1;
 }
 
 
