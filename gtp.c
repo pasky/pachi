@@ -10,13 +10,18 @@
 #include "gtp.h"
 
 void
-gtp_output(char prefix, int id, va_list params)
+gtp_prefix(char prefix, int id)
 {
 	if (id >= 0)
 		printf("%c%d ", prefix, id);
 	else
 		printf("%c ", prefix);
+}
 
+void
+gtp_output(char prefix, int id, va_list params)
+{
+	gtp_prefix(prefix, id);
 	char *s;
 	while ((s = va_arg(params, char *))) {
 		fputs(s, stdout);
@@ -86,7 +91,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		/* TODO: known_command */
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\n", NULL);
+		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\nset_free_handicap\nplace_free_handicap\n", NULL);
 
 	} else if (!strcasecmp(cmd, "quit")) {
 		gtp_reply(id, NULL);
@@ -142,6 +147,45 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 			fprintf(stderr, "playing move %s\n", str);
 		gtp_reply(id, str, NULL);
 		free(str); coord_done(c);
+
+	} else if (!strcasecmp(cmd, "set_free_handicap")) {
+		struct move m;
+		m.color = S_BLACK;
+
+		char *arg;
+		next_tok(arg);
+		do {
+			coord_t *c = str2coord(arg, board->size);
+			m.coord = *c; coord_done(c);
+			if (debug_level > 1)
+				fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord), coord_y(m.coord));
+
+			if (board_play(board, &m) < 0) {
+				if (debug_level > 0)
+					fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
+				gtp_error(id, "illegal move", NULL);
+			}
+			next_tok(arg);
+		} while (*arg);
+		gtp_reply(id, NULL);
+
+	} else if (!strcasecmp(cmd, "place_free_handicap")) {
+		char *arg;
+		next_tok(arg);
+		int stones = atoi(arg);
+
+		gtp_prefix('=', id);
+		while (stones--) {
+			coord_t *c = engine->genmove(engine, board, S_BLACK);
+			struct move m = { *c, S_BLACK };
+			board_play(board, &m);
+			char *str = coord2str(*c);
+			if (debug_level > 1)
+				fprintf(stderr, "choosing handicap %s\n", str);
+			printf("%s\n", str);
+			free(str); coord_done(c);
+		}
+		printf("\n\n");
 
 	} else if (!strcasecmp(cmd, "final_score")) {
 		float score = board_official_score(board);
