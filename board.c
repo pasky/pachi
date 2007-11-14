@@ -173,6 +173,21 @@ group_add(struct board *board, int gid, coord_t coord)
 			coord_x(coord), coord_y(coord), gid, board_group_libs(board, gid));
 }
 
+static void
+merge_groups(struct board *board, group_t group_to, group_t group_from)
+{
+	if (unlikely(debug_level > 7))
+		fprintf(stderr, "board_play_raw: merging groups %d(%d) -> %d(%d)\n",
+			group_from, board_group_libs(board, group_from),
+			group_to, board_group_libs(board, group_to));
+	foreach_in_group(board, group_to) {
+		group_add(board, group_from, c);
+	} foreach_in_group_end;
+	if (unlikely(debug_level > 7))
+		fprintf(stderr, "board_play_raw: merged group: %d(%d)\n",
+			group_to, board_group_libs(board, group_to));
+}
+
 static int
 board_play_raw(struct board *board, struct move *m, int f)
 {
@@ -209,17 +224,7 @@ already_took_liberty:
 			if (likely(gid <= 0)) {
 				gid = group;
 			} else {
-				/* Merge groups */
-				if (unlikely(debug_level > 7))
-					fprintf(stderr, "board_play_raw: merging groups %d(%d), %d(%d)\n",
-						group, board_group_libs(board, group),
-						gid, board_group_libs(board, gid));
-				foreach_in_group(board, group) {
-					group_add(board, gid, c);
-				} foreach_in_group_end;
-				if (unlikely(debug_level > 7))
-					fprintf(stderr, "board_play_raw: merged group: %d(%d)\n",
-						gid, board_group_libs(board, gid));
+				merge_groups(board, gid, group);
 			}
 		} else if (unlikely(color == stone_other(m->color))) {
 			if (unlikely(board_group_captured(board, group))) {
