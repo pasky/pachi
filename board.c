@@ -247,8 +247,10 @@ new_group(struct board *board, coord_t coord)
 	return gid;
 }
 
+/* We played on a place with at least one liberty. We will become a member of
+ * some group for sure. */
 static int
-board_play_raw(struct board *board, struct move *m, int f, bool nakade)
+board_play_outside(struct board *board, struct move *m, int f)
 {
 	enum stone other_color = stone_other(m->color);
 
@@ -280,16 +282,8 @@ board_play_raw(struct board *board, struct move *m, int f, bool nakade)
 				merge_groups(board, gid, group);
 			}
 		} else if (color == other_color) {
-			if (unlikely(board_group_captured(board, group))) {
-				int stones = board_group_capture(board, group);
-				if (nakade && stones == 1) {
-					/* If we captured multiple groups at once,
-					 * we can't be fighting ko so we don't need
-					 * to check for that. */
-					ko.color = color;
-					ko.coord = c;
-				}
-			}
+			if (unlikely(board_group_captured(board, group)))
+				board_group_capture(board, group);
 		}
 	} foreach_neighbor_end;
 
@@ -303,25 +297,11 @@ board_play_raw(struct board *board, struct move *m, int f, bool nakade)
 	return gid;
 }
 
+/* We played in an eye-like shape. Either we capture at least one of the eye
+ * sides in the process of playing, or return -1. */
 static int
-board_play_f(struct board *board, struct move *m, int f)
+board_play_in_eye(struct board *board, struct move *m, int f)
 {
-	if (likely(!board->prohibit_suicide)
-	    && likely(!board_is_eyelike(board, &m->coord, stone_other(m->color)))) {
-		/* NOT nakade. Thus this move has to succeed. (This is thanks
-		 * to New Zealand rules. Otherwise, multi-stone suicide might
-		 * fail.) */
-		int gid = board_play_raw(board, m, f, true);
-		if (unlikely(board_group_captured(board, gid))) {
-			board_group_capture(board, gid);
-		}
-		return 0;
-	}
-
-	/* Nakade - playing inside opponent's "eye" (maybe false). Either this
-	 * is a suicide, or one of the opponent's groups is going to get
-	 * captured (unless the ko rule prevents that). */
-
 	/* Check ko: Capture at a position of ko capture one move ago */
 	if (unlikely(m->color == board->ko.color && coord_eq(m->coord, board->ko.coord))) {
 		if (unlikely(debug_level > 5))
@@ -329,20 +309,84 @@ board_play_f(struct board *board, struct move *m, int f)
 		return -1;
 	}
 
-	group_t gid = board_play_raw(board, m, f, false);
+	struct move ko = { pass, S_NONE };
 
-	/* Check suicide */
-	if (unlikely(board_group_captured(board, group_at(board, m->coord)))) {
+	board->f[f] = board->f[--board->flen];
+	if (unlikely(debug_level > 6))
+		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
+
+	int captured_groups = 0;
+
+	foreach_neighbor(board, m->coord) {
+		group_t group = group_at(board, c);
+
+		board_group_libs(board, group)--;
+		if (unlikely(debug_level > 7))
+			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
+				group, board_group_libs(board, group));
+
+		if (unlikely(board_group_captured(board, group))) {
+			captured_groups++;
+			if (board_group_capture(board, group) == 1) {
+				/* If we captured multiple groups at once,
+				 * we can't be fighting ko so we don't need
+				 * to check for that. */
+				ko.color = board_at(board, c);
+				ko.coord = c;
+			}
+		}
+	} foreach_neighbor_end;
+
+	if (likely(captured_groups == 0)) {
 		if (unlikely(debug_level > 5)) {
 			if (unlikely(debug_level > 6))
 				board_print(board, stderr);
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
-		board_remove_stone(board, m->coord);
+
+		foreach_neighbor(board, m->coord) {
+			board_group_libs(board, group_at(board, c))++;
+			if (unlikely(debug_level > 7))
+				fprintf(stderr, "board_play_raw: restoring libs for group %d: libs %d\n",
+					group_at(board, c), board_group_libs(board, group_at(board, c)));
+		} foreach_neighbor_end;
+
+		coord_t c = m->coord;
+		if (unlikely(debug_level > 6))
+			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
+		board->f[board->flen++] = c.pos;
 		return -1;
 	}
 
-	return gid;
+	foreach_neighbor(board, m->coord) {
+		dec_neighbor_count_at(board, c, S_NONE);
+		inc_neighbor_count_at(board, c, m->color);
+	} foreach_neighbor_end;
+
+	board_at(board, m->coord) = m->color;
+
+	board->last_move = *m;
+	board->moves++;
+	board->ko = ko;
+
+	return new_group(board, m->coord);
+}
+
+static int
+board_play_f(struct board *board, struct move *m, int f)
+{
+	if (likely(!board_is_eyelike(board, &m->coord, stone_other(m->color)))) {
+		/* NOT playing in an eye. Thus this move has to succeed. (This
+		 * is thanks to New Zealand rules. Otherwise, multi-stone
+		 * suicide might fail.) */
+		int gid = board_play_outside(board, m, f);
+		if (unlikely(board_group_captured(board, gid))) {
+			board_group_capture(board, gid);
+		}
+		return 0;
+	} else {
+		return board_play_in_eye(board, m, f);
+	}
 }
 
 int

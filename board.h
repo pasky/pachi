@@ -37,9 +37,6 @@ struct board {
 	int size; /* Including S_OFFBOARD margin - see below. */
 	int captures[S_MAX];
 	float komi;
-	/* Whether suicide shall be prohibited. Note that this makes
-	 * for slower playouts. */
-	bool prohibit_suicide;
 
 	int moves;
 	struct move last_move;
