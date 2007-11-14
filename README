@@ -13,12 +13,12 @@ Some optimizations are inspired by libEGo by Lukasz Lew. The code
 is all original, though.
 
 
-Currently, ZZGo support barely enough for a trivial "random move"
-engine to play with idiotbot (and usually lose). The infrastructure
-should be pretty fast though (and can be further optimized based on
-profiling) and it should be quite easy to extend it to provide more
-facilities for your engine (but it should be at the same time kept
-as simple as possible).
+Currently, ZZGo supports a simple idiotbot-like engine and an example
+MonteCarlo-player with bits of optional domain-specific knowledge
+(dealing with ataris; see montecarlo/montecarlo.c for details).
+The infrastructure is pretty fast and it should be quite easy to extend
+it to provide more facilities for your engine (but it should be at
+the same time kept as simple as possible).
 
 ZZGo uses New Zealand scoring, currently. That means, it simply counts
 the number of stones of each color on the board, plus komi. Additional

@@ -6,6 +6,7 @@
 #include "engine.h"
 #include "move.h"
 #include "montecarlo/montecarlo.h"
+#include "random.h"
 
 
 /* This is simple monte-carlo engine. It plays MC_GAMES random games from the
@@ -17,19 +18,64 @@
  * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
  * games=MC_GAMES		number of random games to play
  * gamelen=MC_GAMELEN		maximal length of played random game
+ * domainrate=MC_DOMAINRATE	how many of 10 moves should be non-random but hinted
+ * 				by heuristics (currently just taking care of atari);
+ * 				set to 0 to have purely rules-driven MC search;
+ * 				default 5; carries high performance penalty!
  */
 
 
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
+#define MC_DOMAINRATE	5
 
 
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
+	int domain_rate;
 	float resign_ratio;
 	int loss_threshold;
 };
+
+/* *** Domain-specific knowledge comes here (that is, any heuristics that perfer
+ * certain moves, aside of requiring the moves to be according to the rules. */
+static coord_t
+in_domain_hint(struct montecarlo *mc, struct board *b, coord_t coord)
+{
+	/* If we or our neighbors are in atari, fix that, (Capture or escape.)
+	 * This test costs a lot of performance (the whole playout is about 1/4
+	 * slower), but improves the playouts a lot. */
+
+	if (unlikely(mc->debug_level > 8)) {
+		fprintf(stderr, "-- Scanning for %d,%d-urgent moves:\n", coord_x(coord), coord_y(coord));
+		board_print(b, stderr);
+	}
+
+	coord_t urgents[5]; int urgents_len = 0;
+
+	coord_t fix;
+	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)))
+		urgents[urgents_len++] = fix;
+	foreach_neighbor(b, coord) {
+		/* This can produce duplicate candidates. But we should prefer
+		 * bigger groups to smaller ones, so I guess that is kinda ok. */
+		if (likely(group_at(b, c)) && unlikely(board_group_in_atari(b, group_at(b, c), &fix)))
+			urgents[urgents_len++] = fix;
+	} foreach_neighbor_end;
+
+	if (unlikely(urgents_len)) {
+		if (unlikely(mc->debug_level > 8)) {
+			fprintf(stderr, "Urgent moves found:");
+			int i = 0;
+			for (i = 0; i < urgents_len; i++)
+				fprintf(stderr, " %d,%d", coord_x(urgents[i]), coord_y(urgents[i]));
+			fprintf(stderr, "\n");
+		}
+		return urgents[fast_random(urgents_len)];
+	}
+	return pass;
+}
 
 /* 1: m->color wins, 0: m->color loses; -1: no moves left */
 static int
@@ -59,20 +105,46 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 		gamelen = 10;
 
 	enum stone color = stone_other(m->color);
+	coord_t urgent = pass;
 
 	int passes = 0;
 	while (gamelen-- && passes < 2) {
 		coord_t coord;
-		board_play_random(&b2, color, &coord);
-		if (mc->debug_level > 7) {
+
+		if (!is_pass(urgent)) {
+			struct move m = { urgent, color };
+			if (board_play(&b2, &m) < 0) {
+				if (unlikely(mc->debug_level > 0)) {
+					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent), coord_y(urgent));
+					board_print(&b2, stderr);
+				}
+				goto play_random;
+			}
+		} else {
+play_random:
+			board_play_random(&b2, color, &coord);
+		}
+
+		if (unlikely(mc->debug_level > 7)) {
 			char *cs = coord2str(coord);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
 		}
-		if (is_pass(coord))
+
+		if (unlikely(is_pass(coord))) {
 			passes++;
-		else
+		} else {
 			passes = 0;
+
+			/* In 1/2 of the cases, we pick one of the urgent moves
+			 * instead of a completely random one. */
+			if (mc->domain_rate && fast_random(10) < mc->domain_rate) {
+				urgent = in_domain_hint(mc, &b2, coord);
+			} else {
+				urgent = pass;
+			}
+		}
+
 		color = stone_other(color);
 	}
 
@@ -212,6 +284,7 @@ engine_montecarlo_init(char *arg)
 	mc->debug_level = 1;
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
+	mc->domain_rate = MC_DOMAINRATE;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -233,6 +306,8 @@ engine_montecarlo_init(char *arg)
 				mc->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
+			} else if (!strcasecmp(optname, "domainrate") && optval) {
+				mc->domain_rate = atoi(optval);
 			} else {
 				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
 			}
