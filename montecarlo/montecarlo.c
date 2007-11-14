@@ -122,6 +122,16 @@ pass_wins:
 			fprintf(stderr, "\tresult %d\n", result);
 
 		games[m.coord.pos]++;
+
+		if (b->moves < 3) {
+			/* Simple heuristic: avoid opening too low. Do not
+			 * play on second or first line as first white or
+			 * first two black moves.*/
+			if (coord_x(m.coord) < 3 || coord_x(m.coord) > b->size - 4
+			    || coord_y(m.coord) < 3 || coord_y(m.coord) > b->size - 4)
+				continue;
+		}
+
 		losses += 1 - result;
 		wins[m.coord.pos] += result;
 		suicides[m.coord.pos] = suicide;
