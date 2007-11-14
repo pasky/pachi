@@ -164,6 +164,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 				}
 				goto play_random;
 			}
+			coord = urgent;
 		} else {
 play_random:
 			board_play_random(&b2, color, &coord);
