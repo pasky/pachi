@@ -177,7 +177,13 @@ pass_wins:
 		for (y = board->size - 2; y >= 1; y--) {
 			fprintf(f, "%2d | ", y);
 			for (x = 1; x < board->size - 1; x++)
-				fprintf(f, "%0.2f ", (float) wins[y * board->size + x] / games[y * board->size + x]);
+				if (games[y * board->size + x])
+					fprintf(f, "%0.2f ", (float) wins[y * board->size + x] / games[y * board->size + x]);
+				else
+					fprintf(f, "---- ");
+			fprintf(f, "| ");
+			for (x = 1; x < board->size - 1; x++)
+				fprintf(f, "%4d ", games[y * board->size + x]);
 			fprintf(f, "|\n");
 		}
 		fprintf(f, "   +-");
