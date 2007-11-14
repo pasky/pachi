@@ -169,22 +169,17 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		} while (*arg);
 		gtp_reply(id, NULL);
 
-	} else if (!strcasecmp(cmd, "place_free_handicap")) {
+	/* TODO: Engine should choose free handicap; however, it tends to take
+	 * overly long to think it all out, and unless it's clever its
+	 * handicap stones won't be of much help. ;-) */
+	} else if (!strcasecmp(cmd, "place_free_handicap")
+	          || !strcasecmp(cmd, "fixed_handicap")) {
 		char *arg;
 		next_tok(arg);
 		int stones = atoi(arg);
 
 		gtp_prefix('=', id);
-		while (stones--) {
-			coord_t *c = engine->genmove(engine, board, S_BLACK);
-			struct move m = { *c, S_BLACK };
-			board_play(board, &m);
-			char *str = coord2str(*c);
-			if (debug_level > 1)
-				fprintf(stderr, "choosing handicap %s\n", str);
-			printf("%s ", str);
-			free(str); coord_done(c);
-		}
+		board_handicap(board, stones, stdout);
 		printf("\n\n"); fflush(stdout);
 
 	} else if (!strcasecmp(cmd, "final_score")) {

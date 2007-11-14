@@ -161,6 +161,47 @@ board_print(struct board *board, FILE *f)
 }
 
 
+void
+board_handicap_stone(struct board *board, int x, int y, FILE *f)
+{
+	struct move m;
+	m.color = S_BLACK;
+	coord_xy(m.coord, x, y, board);
+
+	board_play(board, &m);
+
+	char *str = coord2str(m.coord);
+	if (debug_level > 1)
+		fprintf(stderr, "choosing handicap %s (%d,%d)\n", str, x, y);
+	fprintf(f, "%s ", str);
+	free(str);
+}
+
+void
+board_handicap(struct board *board, int stones, FILE *f)
+{
+	int margin = 3 + (board->size >= 13);
+	int min = margin;
+	int mid = board->size / 2;
+	int max = board->size - 1 - margin;
+	const int places[][2] = {
+		{ min, min }, { max, max }, { max, min }, { min, max },
+		{ min, mid }, { max, mid },
+		{ mid, min }, { mid, max },
+		{ mid, mid },
+	};
+
+	if (stones == 5 || stones == 7) {
+		board_handicap_stone(board, mid, mid, f);
+		stones--;
+	}
+
+	int i;
+	for (i = 0; i < stones; i++)
+		board_handicap_stone(board, places[i][0], places[i][1], f);
+}
+
+
 /* This is a low-level routine that doesn't maintain consistency
  * of all the board data structures. Use board_group_capture() from
  * your code. */

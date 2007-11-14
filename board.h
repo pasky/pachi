@@ -97,6 +97,9 @@ void board_clear(struct board *board);
 struct FILE;
 void board_print(struct board *board, FILE *f);
 
+/* Place given handicap on the board; coordinates are printed to f. */
+void board_handicap(struct board *board, int stones, FILE *f);
+
 /* Returns group id, 0 on allowed suicide, pass or resign, -1 on error */
 int board_play(struct board *board, struct move *m);
 /* Like above, but plays random move; the move coordinate is recorded
