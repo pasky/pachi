@@ -161,8 +161,7 @@ static void
 group_add(struct board *board, int gid, coord_t coord)
 {
 	foreach_neighbor(board, coord) {
-		if (board_at(board, c) == S_NONE
-		    && likely(!board_is_liberty_of(board, &c, gid))) {
+		if (board_at(board, c) == S_NONE) {
 			board_group_libs(board, gid)++;
 		}
 	} foreach_neighbor_end;
@@ -184,8 +183,6 @@ board_play_raw(struct board *board, struct move *m, int f)
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 	board_at(board, m->coord) = m->color;
 
-	int gidls[4], gids = 0;
-
 	foreach_neighbor(board, m->coord) {
 		enum stone color = board_at(board, c);
 		group_t group = group_at(board, c);
@@ -193,17 +190,10 @@ board_play_raw(struct board *board, struct move *m, int f)
 		if (group == 0)
 			continue;
 
-		int i;
-		for (i = 0; i < gids; i++)
-			if (gidls[i] == group)
-				goto already_took_liberty;
-
-		gidls[gids++] = group;
 		board_group_libs(board, group)--;
 		if (unlikely(debug_level > 7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
 				group, board_group_libs(board, group));
-already_took_liberty:
 
 		if (unlikely(color == m->color) && group != gid) {
 			if (likely(gid <= 0)) {
@@ -364,16 +354,6 @@ board_play_random(struct board *b, enum stone color, coord_t *coord)
 
 
 bool
-board_is_liberty_of(struct board *board, coord_t *coord, int group)
-{
-	foreach_neighbor(board, *coord) {
-		if (unlikely(group_at(board, c) == group))
-			return true;
-	} foreach_neighbor_end;
-	return false;
-}
-
-bool
 board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 {
 	enum stone color_libs[S_MAX];
@@ -433,23 +413,10 @@ board_group_capture(struct board *board, int group)
 
 		/* Increase liberties of surrounding groups */
 		coord_t coord = c;
-		int gidls[4], gids = 0;
 		foreach_neighbor(board, coord) {
-			if (group_at(board, c) > 0) {
-				int gid = group_at(board, c);
-				if (gid == group)
-					goto next_neighbor; /* Not worth the trouble */
-
-				/* Do not add a liberty twice to one group. */
-				int i;
-				for (i = 0; i < gids; i++)
-					if (unlikely(gidls[i] == gid))
-						goto next_neighbor;
-				gidls[gids++] = gid;
-
+			int gid = group_at(board, c);
+			if (group_at(board, c) > 0)
 				board_group_libs(board, gid)++;
-			}
-next_neighbor:;
 		} foreach_neighbor_end;
 	} foreach_in_group_end;
 
