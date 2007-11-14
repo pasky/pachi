@@ -285,8 +285,7 @@ board_play_f(struct board *board, struct move *m, int f)
 	if (unlikely(debug_level > 7))
 		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, coord_x(m->coord), coord_y(m->coord), gid);
 
-	int my_libs = board_group_libs(board, group_at(board, m->coord));
-	if (unlikely(my_libs == 0)) {
+	if (unlikely(board_group_libs(board, group_at(board, m->coord)) == 0)) {
 		/* oops, suicide */
 		if (unlikely(debug_level > 5)) {
 			if (unlikely(debug_level > 6))
@@ -296,8 +295,8 @@ board_play_f(struct board *board, struct move *m, int f)
 		gid = -1;
 	}
 
-	/* Check ko: self-atari one-stone capture at a position of one-stone capture one move ago (thus b2, not board !) */
-	if (unlikely(my_libs == 1 && m->color == b2.ko.color && coord_eq(m->coord, b2.ko.coord) && board->captures[m->color] - b2.captures[m->color] == 1)) {
+	/* Check ko: one-stone capture at a position of ko capture one move ago (thus b2, not board !) */
+	if (unlikely(m->color == b2.ko.color && coord_eq(m->coord, b2.ko.coord) && board->captures[m->color] - b2.captures[m->color] == 1)) {
 		if (unlikely(debug_level > 5))
 			fprintf(stderr, "board_check: ko at %d,%d color %d captures %d-%d\n", coord_x(m->coord), coord_y(m->coord), m->color, board->captures[m->color], b2.captures[m->color]);
 		gid = -1;
