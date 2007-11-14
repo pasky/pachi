@@ -550,11 +550,12 @@ board_group_in_atari(struct board *board, int group, coord_t *lastlib)
 			if (likely(watermark[c.pos]))
 				continue;
 			watermark[c.pos] = true;
-			if (unlikely(board_at(board, c) == S_NONE))
+			if (unlikely(board_at(board, c) == S_NONE)) {
 				libs++;
-			if (unlikely(libs > 1))
-				return false;
-			*lastlib = c;
+				if (unlikely(libs > 1))
+					return false;
+				*lastlib = c;
+			}
 		} foreach_neighbor_end;
 	} foreach_in_group_end;
 
