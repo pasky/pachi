@@ -248,7 +248,7 @@ new_group(struct board *board, coord_t coord)
 }
 
 static int
-board_play_raw(struct board *board, struct move *m, int f)
+board_play_raw(struct board *board, struct move *m, int f, bool nakade)
 {
 	enum stone other_color = stone_other(m->color);
 
@@ -282,7 +282,7 @@ board_play_raw(struct board *board, struct move *m, int f)
 		} else if (color == other_color) {
 			if (unlikely(board_group_captured(board, group))) {
 				int stones = board_group_capture(board, group);
-				if (stones == 1) {
+				if (nakade && stones == 1) {
 					/* If we captured multiple groups at once,
 					 * we can't be fighting ko so we don't need
 					 * to check for that. */
@@ -311,7 +311,7 @@ board_play_f(struct board *board, struct move *m, int f)
 		/* NOT nakade. Thus this move has to succeed. (This is thanks
 		 * to New Zealand rules. Otherwise, multi-stone suicide might
 		 * fail.) */
-		int gid = board_play_raw(board, m, f);
+		int gid = board_play_raw(board, m, f, true);
 		if (unlikely(board_group_captured(board, gid))) {
 			board_group_capture(board, gid);
 		}
@@ -329,7 +329,7 @@ board_play_f(struct board *board, struct move *m, int f)
 		return -1;
 	}
 
-	group_t gid = board_play_raw(board, m, f);
+	group_t gid = board_play_raw(board, m, f, false);
 
 	/* Check suicide */
 	if (unlikely(board_group_captured(board, group_at(board, m->coord)))) {
