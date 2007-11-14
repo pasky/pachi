@@ -26,6 +26,10 @@ struct group {
 	coord_t base_stone; /* First stone in group */
 };
 
+struct neighbor_colors {
+	char colors[S_MAX];
+};
+
 /* You should treat this struct as read-only. Always call functions below if
  * you want to change it. */
 
@@ -52,8 +56,8 @@ struct board {
 	group_t *g;
 	/* Positions of next stones in the stone group; 0 == last stone */
 	uint16_t *p;
-	/* Neighboring colors; 4 bits per color, with number of neighbors */
-	uint16_t *n;
+	/* Neighboring colors; numbers of neighbors of index color */
+	struct neighbor_colors *n;
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
@@ -73,10 +77,10 @@ struct board {
 #define group_at(b_, c) ((b_)->g[(c).pos])
 #define group_atxy(b_, x, y) ((b_)->g[(x) + (b_)->size * (y)])
 
-#define neighbor_count_at(b_, coord, color) (((b_)->n[(coord).pos] >> (color*4)) & 15)
-#define set_neighbor_count_at(b_, coord, color, count) ((b_)->n[(coord).pos] = ((b_)->n[(coord).pos] & ~(15 << (color*4))) | ((count) << (color*4)))
-#define inc_neighbor_count_at(b_, coord, color) set_neighbor_count_at(b_, coord, color, neighbor_count_at(b_, coord, color) + 1)
-#define dec_neighbor_count_at(b_, coord, color) set_neighbor_count_at(b_, coord, color, neighbor_count_at(b_, coord, color) - 1)
+#define neighbor_count_at(b_, coord, color) ((b_)->n[(coord).pos].colors[(enum stone) color])
+#define set_neighbor_count_at(b_, coord, color, count) (neighbor_count_at(b_, coord, color) = (count))
+#define inc_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)++)
+#define dec_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)--)
 
 #define groupnext_at(b_, c) ((b_)->p[(c).pos])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + (b_)->size * (y)])
