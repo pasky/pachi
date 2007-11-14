@@ -83,6 +83,7 @@ board_resize(struct board *board, int size)
 	int psize = board->size * board->size * sizeof(*board->p);
 	int nsize = board->size * board->size * sizeof(*board->n);
 	void *x = malloc(bsize + gsize + fsize + psize + nsize);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
