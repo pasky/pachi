@@ -178,6 +178,26 @@ board_print(struct board *board, FILE *f)
 }
 
 
+/* This is a low-level routine that doesn't maintain consistency
+ * of all the board data structures. Use board_group_capture() from
+ * your code. */
+static void
+board_remove_stone(struct board *board, coord_t c)
+{
+	enum stone color = board_at(board, c);
+	board_at(board, c) = S_NONE;
+	group_at(board, c) = 0;
+
+	/* Increase liberties of surrounding groups */
+	coord_t coord = c;
+	foreach_neighbor(board, coord) {
+		dec_neighbor_count_at(board, c, color);
+		inc_neighbor_count_at(board, c, S_NONE);
+		board_group_libs(board, group_at(board, c))++;
+	} foreach_neighbor_end;
+}
+
+
 static void
 add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
@@ -456,24 +476,12 @@ board_group_capture(struct board *board, int group)
 	int stones = 0;
 
 	foreach_in_group(board, group) {
-		enum stone color = board_at(board, c);
-		board->captures[stone_other(color)]++;
-		board_at(board, c) = S_NONE;
-		group_at(board, c) = 0;
+		board_remove_stone(board, c);
+		board->captures[stone_other(board_at(board, c))]++;
 		if (unlikely(debug_level > 6))
 			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
 		board->f[board->flen++] = c.pos;
 		stones++;
-
-		/* Increase liberties of surrounding groups */
-		coord_t coord = c;
-		foreach_neighbor(board, coord) {
-			dec_neighbor_count_at(board, c, color);
-			inc_neighbor_count_at(board, c, S_NONE);
-			int gid = group_at(board, c);
-			if (group_at(board, c) > 0)
-				board_group_libs(board, gid)++;
-		} foreach_neighbor_end;
 	} foreach_in_group_end;
 
 	return stones;
