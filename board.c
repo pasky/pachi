@@ -213,6 +213,24 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 			group_to, board_group_libs(board, group_to));
 }
 
+static group_t
+group_allocate(struct board *board)
+{
+	if (unlikely(gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2))) {
+		if (board->use_alloca) {
+			struct group *gi;
+			gi = malloc(gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
+			memcpy(gi, board->gi, (board->last_gid + 1) * sizeof(*board->gi));
+			board->gi = gi;
+		} else {
+			board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
+		}
+	}
+	group_t gid = ++board->last_gid;
+	memset(&board->gi[gid], 0, sizeof(*board->gi));
+	return gid;
+}
+
 static int
 board_play_raw(struct board *board, struct move *m, int f)
 {
@@ -261,18 +279,7 @@ board_play_raw(struct board *board, struct move *m, int f)
 	} foreach_neighbor_end;
 
 	if (likely(gid <= 0)) {
-		if (unlikely(gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2))) {
-			if (board->use_alloca) {
-				struct group *gi;
-				gi = malloc(gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
-				memcpy(gi, board->gi, (board->last_gid + 1) * sizeof(*board->gi));
-				board->gi = gi;
-			} else {
-				board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
-			}
-		}
-		gid = ++board->last_gid;
-		memset(&board->gi[gid], 0, sizeof(*board->gi));
+		gid = group_allocate(board);
 	}
 	group_add(board, gid, group_stone, m->coord);
 
