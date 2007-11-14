@@ -265,9 +265,6 @@ board_play_raw(struct board *board, struct move *m, int f)
 		dec_neighbor_count_at(board, c, S_NONE);
 		inc_neighbor_count_at(board, c, m->color);
 
-		if (group == 0)
-			continue;
-
 		board_group_libs(board, group)--;
 		if (unlikely(debug_level > 7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
