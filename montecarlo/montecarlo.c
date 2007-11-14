@@ -28,6 +28,7 @@ struct montecarlo {
 	int debug_level;
 	int games, gamelen;
 	float resign_ratio;
+	int loss_threshold;
 };
 
 /* 1: m->color wins, 0: m->color loses; -1: no moves left */
@@ -105,6 +106,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	memset(wins, 0, sizeof(wins));
 	memset(suicides, 0, sizeof(suicides));
 
+	int losses = 0;
 	int i;
 	for (i = 0; i < mc->games; i++) {
 		bool suicide = false;
@@ -120,8 +122,15 @@ pass_wins:
 			fprintf(stderr, "\tresult %d\n", result);
 
 		games[m.coord.pos]++;
+		losses += 1 - result;
 		wins[m.coord.pos] += result;
 		suicides[m.coord.pos] = suicide;
+
+		if (unlikely(!losses && i == mc->loss_threshold)) {
+			/* We played out many games and didn't lose once yet.
+			 * This game is over. */
+			break;
+		}
 	}
 
 	bool suicide_candidate = false;
@@ -215,6 +224,7 @@ engine_montecarlo_init(char *arg)
 	}
 
 	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
+	mc->loss_threshold = mc->games / 10; /* Stop reading if no loss encountered in first n games. */
 
 	return e;
 }
