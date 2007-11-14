@@ -164,7 +164,7 @@ board_print(struct board *board, FILE *f)
 
 
 static void
-group_add(struct board *board, int gid, coord_t prevstone, coord_t coord)
+add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
 	foreach_neighbor(board, coord) {
 		if (board_at(board, c) == S_NONE) {
@@ -183,7 +183,7 @@ group_add(struct board *board, int gid, coord_t prevstone, coord_t coord)
 	}
 
 	if (unlikely(debug_level > 8))
-		fprintf(stderr, "group_add: added (%d,%d ->) %d,%d (-> %d,%d) to group %d - libs %d\n",
+		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d - libs %d\n",
 			coord_x(prevstone), coord_y(prevstone),
 			coord_x(coord), coord_y(coord),
 			groupnext_at(board, coord) % board->size, groupnext_at(board, coord) / board->size,
@@ -278,10 +278,9 @@ board_play_raw(struct board *board, struct move *m, int f)
 		}
 	} foreach_neighbor_end;
 
-	if (likely(gid <= 0)) {
+	if (likely(gid <= 0))
 		gid = group_allocate(board);
-	}
-	group_add(board, gid, group_stone, m->coord);
+	add_to_group(board, gid, group_stone, m->coord);
 
 	board->last_move = *m;
 	board->moves++;
