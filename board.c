@@ -344,8 +344,8 @@ board_play_f(struct board *board, struct move *m, int f)
 		gid = -1;
 	}
 
-	/* Check ko: one-stone capture at a position of ko capture one move ago (thus b2, not board !) */
-	if (unlikely(m->color == b2.ko.color && coord_eq(m->coord, b2.ko.coord) && board->captures[m->color] - b2.captures[m->color] == 1)) {
+	/* Check ko: Capture at a position of ko capture one move ago */
+	if (unlikely(m->color == b2.ko.color && coord_eq(m->coord, b2.ko.coord))) {
 		if (unlikely(debug_level > 5))
 			fprintf(stderr, "board_check: ko at %d,%d color %d captures %d-%d\n", coord_x(m->coord), coord_y(m->coord), m->color, board->captures[m->color], b2.captures[m->color]);
 		gid = -1;
