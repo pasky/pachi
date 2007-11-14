@@ -250,6 +250,8 @@ new_group(struct board *board, coord_t coord)
 static int
 board_play_raw(struct board *board, struct move *m, int f)
 {
+	enum stone other_color = stone_other(m->color);
+
 	struct move ko = { pass, S_NONE };
 	int gid = 0;
 
@@ -277,7 +279,7 @@ board_play_raw(struct board *board, struct move *m, int f)
 			} else {
 				merge_groups(board, gid, group);
 			}
-		} else if (color == stone_other(m->color)) {
+		} else if (color == other_color) {
 			if (unlikely(board_group_captured(board, group))) {
 				int stones = board_group_capture(board, group);
 				if (stones == 1) {
