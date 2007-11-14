@@ -12,13 +12,22 @@
 #define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
 
 
+static void
+board_setup(struct board *b)
+{
+	memset(b, 0, sizeof(*b));
+
+	struct move m = { pass, S_NONE };
+	b->last_move = b->ko = m;
+
+	b->gi = calloc(gi_allocsize(1), sizeof(*b->gi));
+}
+
 struct board *
 board_init(void)
 {
-	struct board *b = calloc(1, sizeof(struct board));
-	struct move m = { pass, S_NONE };
-	b->last_move = b->ko = m;
-	b->gi = calloc(gi_allocsize(1), sizeof(*b->gi));
+	struct board *b = malloc(sizeof(struct board));
+	board_setup(b);
 	return b;
 }
 
@@ -65,7 +74,8 @@ void
 board_resize(struct board *board, int size)
 {
 	board->size = size + 2 /* S_OFFBOARD margin */;
-	free(board->b);
+	if (board->b)
+		free(board->b);
 
 	int bsize = board->size * board->size * sizeof(*board->b);
 	int gsize = board->size * board->size * sizeof(*board->g);
@@ -83,11 +93,11 @@ board_resize(struct board *board, int size)
 void
 board_clear(struct board *board)
 {
-	board->captures[S_BLACK] = board->captures[S_WHITE] = 0;
-	board->moves = 0;
+	int size = board->size;
 
-	memset(board->b, 0, board->size * board->size * sizeof(*board->b));
-	memset(board->g, 0, board->size * board->size * sizeof(*board->g));
+	board_done_noalloc(board);
+	board_setup(board);
+	board_resize(board, size - 2 /* S_OFFBOARD margin */);
 
 	/* Draw the offboard margin */
 	int top_row = (board->size - 1) * board->size;
@@ -110,10 +120,6 @@ board_clear(struct board *board)
 	for (i = board->size; i < (board->size - 1) * board->size; i++)
 		if (i % board->size != 0 && i % board->size != board->size - 1)
 			board->f[board->flen++] = i;
-
-	int gi_a = gi_allocsize(board->last_gid + 1);
-	memset(board->gi, 0, gi_a * sizeof(*board->gi));
-	board->last_gid = 0;
 }
 
 
