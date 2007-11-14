@@ -376,7 +376,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				/* If we captured multiple groups at once,
 				 * we can't be fighting ko so we don't need
 				 * to check for that. */
-				ko.color = board_at(board, c);
+				ko.color = stone_other(m->color);
 				ko.coord = c;
 				if (unlikely(debug_level > 5))
 					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord), coord_y(ko.coord));
