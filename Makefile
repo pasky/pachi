@@ -3,7 +3,8 @@
 PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
-CUSTOM_CFLAGS=-Wall -ggdb -O3
+# -ffast-math breaks us
+CUSTOM_CFLAGS=-Wall -ggdb -O3 -march=athlon-xp
 SYS_CFLAGS=
 
 # Profiling:
@@ -35,9 +36,9 @@ zzgo: $(OBJS) $(LOCALLIBS)
 
 .PHONY: zzgo-profiled
 zzgo-profiled:
-	@make clean all LDFLAGS=-fprofile-generate XCFLAGS=-fprofile-generate
+	@make clean all LDFLAGS=-fprofile-generate XCFLAGS="-fprofile-generate -fomit-frame-pointer -frename-registers"
 	echo -e 'boardsize 9\nkomi 0\nclear_board\ngenmove black\ngenmove white' | ./zzgo games=5000
-	@make clean all clean-profiled LDFLAGS=-fprofile-use XCFLAGS=-fprofile-use
+	@make clean all clean-profiled LDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
 
 # install-recursive?
 install:
