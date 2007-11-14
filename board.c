@@ -145,7 +145,7 @@ board_print(struct board *board, FILE *f)
 		if (unlikely(debug_level > 6)) {
 			fprintf(f, "| ");
 			for (x = 1; x < board->size - 1; x++) {
-				fprintf(f, "%d ", board, group_atxy(board, x, y));
+				fprintf(f, "%d ", group_atxy(board, x, y));
 			}
 		}
 		fprintf(f, "|\n");
