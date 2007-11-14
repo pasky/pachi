@@ -22,13 +22,13 @@
  * 				by heuristics (currently taking care of atari and
  * 				assuming local responses);
  * 				set to 0 to have purely rules-driven MC search;
- * 				default 5; carries high performance penalty!
+ * 				default 8; carries high performance penalty!
  */
 
 
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
-#define MC_DOMAINRATE	5
+#define MC_DOMAINRATE	8
 
 
 struct montecarlo {
