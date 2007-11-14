@@ -46,31 +46,6 @@ board_copy(struct board *b2, struct board *b1)
 	return b2;
 }
 
-/* Like board_copy, but faster (arrays on stack) */
-#define board_copy_on_stack(b2, b1) \
-	do { \
-		memcpy((b2), (b1), sizeof(struct board)); \
-\
-		int bsize = ((b2))->size * (b2)->size * sizeof(*(b2)->b); \
-		int gsize = ((b2))->size * (b2)->size * sizeof(*(b2)->g); \
-		int fsize = ((b2))->size * (b2)->size * sizeof(*(b2)->f); \
-		int psize = ((b2))->size * (b2)->size * sizeof(*(b2)->p); \
-		int nsize = ((b2))->size * (b2)->size * sizeof(*(b2)->n); \
-		void *x = alloca(bsize + gsize + fsize + psize + nsize); \
-		memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize); \
-		((b2))->b = x; x += bsize; \
-		((b2))->g = x; x += gsize; \
-		((b2))->f = x; x += fsize; \
-		((b2))->p = x; x += psize; \
-		((b2))->n = x; x += nsize; \
-\
-		int gi_a = gi_allocsize((b2)->last_gid + 1); \
-		(b2)->gi = alloca(gi_a * sizeof(*(b2)->gi)); \
-		memcpy((b2)->gi, (b1)->gi, gi_a * sizeof(*(b2)->gi)); \
-\
-		(b2)->use_alloca = true; \
-	} while (0)
-
 void
 board_done_noalloc(struct board *board)
 {
@@ -195,6 +170,10 @@ board_remove_stone(struct board *board, coord_t c)
 		inc_neighbor_count_at(board, c, S_NONE);
 		board_group_libs(board, group_at(board, c))++;
 	} foreach_neighbor_end;
+
+	if (unlikely(debug_level > 6))
+		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
+	board->f[board->flen++] = c.pos;
 }
 
 
@@ -241,16 +220,8 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 static group_t
 new_group(struct board *board, coord_t coord)
 {
-	if (unlikely(gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2))) {
-		if (board->use_alloca) {
-			struct group *gi;
-			gi = malloc(gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
-			memcpy(gi, board->gi, (board->last_gid + 1) * sizeof(*board->gi));
-			board->gi = gi;
-		} else {
-			board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
-		}
-	}
+	if (unlikely(gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2)))
+		board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
 	group_t gid = ++board->last_gid;
 	memset(&board->gi[gid], 0, sizeof(*board->gi));
 
@@ -351,36 +322,17 @@ board_play_f(struct board *board, struct move *m, int f)
 		return -1;
 	}
 
-	struct board b2;
+	group_t gid = board_play_raw(board, m, f);
 
-	/* Try it! */
-	board_copy_on_stack(&b2, board);
-	int gid = board_play_raw(board, m, f);
-	if (unlikely(debug_level > 7))
-		fprintf(stderr, "board_play_raw(%d,%d,%d): %d\n", m->color, coord_x(m->coord), coord_y(m->coord), gid);
-
+	/* Check suicide */
 	if (unlikely(board_group_captured(board, group_at(board, m->coord)))) {
-		/* oops, suicide */
 		if (unlikely(debug_level > 5)) {
 			if (unlikely(debug_level > 6))
 				board_print(board, stderr);
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
-		gid = -1;
-	}
-
-	if (unlikely(gid < 0)) {
-		/* Restore the original board. */
-		void *b = board->b, *g = board->g, *f = board->f, *p = board->p, *n = board->n, *gi = board->gi;
-		memcpy(board->b, b2.b, b2.size * b2.size * sizeof(*b2.b));
-		memcpy(board->g, b2.g, b2.size * b2.size * sizeof(*b2.g));
-		memcpy(board->f, b2.f, b2.size * b2.size * sizeof(*b2.f));
-		memcpy(board->p, b2.p, b2.size * b2.size * sizeof(*b2.p));
-		memcpy(board->n, b2.n, b2.size * b2.size * sizeof(*b2.n));
-		memcpy(board->gi, b2.gi, (b2.last_gid + 1) * sizeof(*b2.gi));
-		memcpy(board, &b2, sizeof(b2));
-		board->b = b; board->g = g; board->f = f; board->p = p; board->n = n; board->gi = gi;
-		board->use_alloca = false;
+		board_remove_stone(board, m->coord);
+		return -1;
 	}
 
 	return gid;
@@ -478,9 +430,6 @@ board_group_capture(struct board *board, int group)
 	foreach_in_group(board, group) {
 		board_remove_stone(board, c);
 		board->captures[stone_other(board_at(board, c))]++;
-		if (unlikely(debug_level > 6))
-			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
-		board->f[board->flen++] = c.pos;
 		stones++;
 	} foreach_in_group_end;
 

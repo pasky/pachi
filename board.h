@@ -64,7 +64,6 @@ struct board {
 
 	/* --- private */
 	int last_gid;
-	bool use_alloca;
 	struct move ko;
 };
 
