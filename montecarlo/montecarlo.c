@@ -180,7 +180,7 @@ engine_montecarlo_init(char *arg)
 	struct montecarlo *mc = calloc(1, sizeof(struct montecarlo));
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "MonteCarlo Engine";
-	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive.";
+	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
 	e->genmove = montecarlo_genmove;
 	e->data = mc;
 

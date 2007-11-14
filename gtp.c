@@ -77,7 +77,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		gtp_reply(id, "2", NULL);
 
 	} else if (!strcasecmp(cmd, "name")) {
-		gtp_reply(id, "ZZGo ", engine->name, NULL);
+		/* KGS hack */
+		gtp_reply(id, "ZZGo ", engine->name, ": ", engine->comment, NULL);
 
 	} else if (!strcasecmp(cmd, "version")) {
 		gtp_reply(id, NULL);
