@@ -177,6 +177,18 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 	coord_t urgent;
 
 	int passes = 0;
+
+	/* Special check: We probably tenukied the last opponent's move. But
+	 * check if the opponent has lucrative local continuation for her last
+	 * move! */
+	/* This check is ultra-important BTW. Without it domain checking does
+	 * not bring that much of an advantage. It might even warrant it to by
+	 * default do only this domain check. */
+	urgent = pass;
+	domain_hint(mc, b, &urgent);
+	if (!is_pass(urgent))
+		goto play_urgent;
+
 	while (gamelen-- && passes < 2) {
 		urgent = pass;
 		domain_hint(mc, &b2, &urgent);
@@ -184,7 +196,9 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 		coord_t coord;
 
 		if (!is_pass(urgent)) {
-			struct move m = { urgent, color };
+			struct move m;
+play_urgent:
+			m.coord = urgent; m.color = color;
 			if (board_play(&b2, &m) < 0) {
 				if (unlikely(mc->debug_level > 7)) {
 					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent), coord_y(urgent));
