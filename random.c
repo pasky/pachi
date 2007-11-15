@@ -14,7 +14,7 @@ fast_srandom(unsigned long seed_)
 }
 
 unsigned long
-fast_random(unsigned long max)
+fast_random(unsigned int max)
 {
 	unsigned long hi, lo;
 	lo = 16807 * (seed & 0xffff);
