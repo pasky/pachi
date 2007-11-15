@@ -40,6 +40,14 @@
 #define MC_LOCALRATE	30 /* +100ms */
 
 
+/* FIXME: Cutoff rule for simulations. Currently we are so fast that this
+ * simply does not matter; even 100000 simulations are fast enough to
+ * play 5 minutes S.D. on 19x19 and anything more sounds too ridiculous
+ * already. */
+/* FIXME: We cannot handle seki. Any good ideas are welcome. A possibility is
+ * to consider 'pass' among the moves, but this seems tricky. */
+
+
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
