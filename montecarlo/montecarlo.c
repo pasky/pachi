@@ -31,11 +31,13 @@
  * 				if there are any */
 
 
+/* Times for 10000 runs on 1.6GHz Athlon. pure runs at ~500ms */
+
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
-#define MC_ATARIRATE	50
-#define MC_CUTRATE	40
-#define MC_LOCALRATE	30
+#define MC_ATARIRATE	50 /* +200ms */
+#define MC_CUTRATE	40 /* +100ms */
+#define MC_LOCALRATE	30 /* +100ms */
 
 
 struct montecarlo {
@@ -145,8 +147,6 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 	/* Pick a suitable move that is directly or diagonally adjecent. In the
 	 * real game, local moves often tend to be the urgent ones, even if they
 	 * aren't atari. */
-	/* Note that this test is about as expensive as the atari test. (Maybe
-	 * slightly cheaper.) */
 
 	if (unlikely(mc->debug_level > 8)) {
 		fprintf(stderr, "-- Scanning for %d,%d-local moves:\n", coord_x(coord), coord_y(coord));
