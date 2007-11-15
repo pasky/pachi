@@ -27,19 +27,21 @@
  * 				fix local atari, if there is any
  * local_rate=MC_LOCALRATE	how many of 100 moves should be contact plays
  * 				(tsuke or diagonal)
- */
+ * cut_rate=MC_CUTRATE		how many of 100 moves should fix local cuts,
+ * 				if there are any */
 
 
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
 #define MC_ATARIRATE	75
 #define MC_LOCALRATE	50
+#define MC_CUTRATE	50
 
 
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
-	int atari_rate, local_rate;
+	int atari_rate, local_rate, cut_rate;
 	float resign_ratio;
 	int loss_threshold;
 };
@@ -82,6 +84,57 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 			fprintf(stderr, "\n");
 		}
 		return urgents[fast_random(urgents_len)];
+	}
+	return pass;
+}
+
+static coord_t
+domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
+{
+	/* Check if this move is cutting kosumi:
+	 * (O) X
+	 *  X  .  */
+
+	if (unlikely(mc->debug_level > 8)) {
+		fprintf(stderr, "-- Scanning for %d,%d-cut moves:\n", coord_x(coord), coord_y(coord));
+		board_print(b, stderr);
+	}
+
+	coord_t cuts[4]; int cuts_len = 0;
+	memset(cuts, 0, sizeof(cuts));
+
+	enum stone cutting_color = stone_other(board_at(b, coord));
+	foreach_diag_neighbor(b, coord) {
+		if (board_at(b, c) == S_NONE) {
+			/* XXX: Some internal board specific magic here... */
+			coord_t cutted = coord;
+			if (coord_x(c) < coord_x(coord))
+				cutted.pos--;
+			else
+				cutted.pos++;
+			if (board_at(b, cutted) != cutting_color)
+				continue;
+			cutted.pos = c.pos;
+			if (coord_y(c) < coord_y(coord))
+				cutted.pos -= cutted.size;
+			else
+				cutted.pos += cutted.size;
+			if (board_at(b, cutted) != cutting_color)
+				continue;
+			/* Cut kosumi! */
+			cuts[cuts_len++] = c;
+		}
+	} foreach_diag_neighbor_end;
+
+	if (unlikely(cuts_len)) {
+		if (unlikely(mc->debug_level > 8)) {
+			fprintf(stderr, "Cutting moves found:");
+			int i = 0;
+			for (i = 0; i < cuts_len; i++)
+				fprintf(stderr, " %d,%d", coord_x(cuts[i]), coord_y(cuts[i]));
+			fprintf(stderr, "\n");
+		}
+		return cuts[fast_random(cuts_len)];
 	}
 	return pass;
 }
@@ -137,8 +190,15 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent)
 			return;
 	}
 
+	/* Cutting is kinda urgent, too. */
+	if (mc->cut_rate && fast_random(10) < mc->cut_rate) {
+		*urgent = domain_hint_cut(mc, b, b->last_move.coord);
+		if (!is_pass(*urgent))
+			return;
+	}
+
 	/* For the non-urgent moves, some of them will be contact play (tsuke
-	 * or diagonal). These tend to be very likely urgent. */
+	 * or diagonal). These tend to be likely urgent. */
 	if (mc->local_rate && fast_random(10) < mc->local_rate) {
 		*urgent = domain_hint_local(mc, b, b->last_move.coord);
 		if (!is_pass(*urgent))
@@ -364,6 +424,7 @@ engine_montecarlo_init(char *arg)
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
 	mc->atari_rate = MC_ATARIRATE;
+	mc->cut_rate = MC_CUTRATE;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -386,11 +447,13 @@ engine_montecarlo_init(char *arg)
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "pure") && optval) {
-				mc->atari_rate = mc->local_rate = 0;
+				mc->atari_rate = mc->local_rate = mc->cut_rate = 0;
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				mc->atari_rate = atoi(optval);
 			} else if (!strcasecmp(optname, "localrate") && optval) {
 				mc->local_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "cutrate") && optval) {
+				mc->cut_rate = atoi(optval);
 			} else {
 				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
 			}
