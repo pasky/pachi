@@ -216,7 +216,8 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent)
 	}
 }
 
-/* 1: m->color wins, 0: m->color loses; -1: no moves left */
+/* 1: m->color wins, 0: m->color loses; -1: no moves left
+ * -2 superko inside the game tree (NOT at root, that's simply invalid move) */
 static int
 play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *suicide, int i)
 {
@@ -224,7 +225,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 	board_copy(&b2, b);
 
 	board_play_random(&b2, m->color, &m->coord);
-	if (is_pass(m->coord)) {
+	if (is_pass(m->coord) || b->superko_violation) {
 		if (mc->debug_level > 3)
 			fprintf(stderr, "\tno moves left\n");
 		board_done_noalloc(&b2);
@@ -282,6 +283,11 @@ play_random:
 			board_play_random(&b2, color, &coord);
 		}
 
+		if (b2.superko_violation) {
+			board_done_noalloc(&b2);
+			return -2;
+		}
+
 		if (unlikely(mc->debug_level > 7)) {
 			char *cs = coord2str(coord);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
@@ -328,19 +334,35 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	memset(suicides, 0, sizeof(suicides));
 
 	int losses = 0;
-	int i;
+	int i, superko = 0;
 	for (i = 0; i < mc->games; i++) {
 		bool suicide = false;
 		int result = play_random_game(mc, b, &m, &suicide, i);
-		if (result < 0) {
+
+		if (mc->debug_level > 3)
+			fprintf(stderr, "\tresult %d\n", result);
+
+		if (result == -1) {
 pass_wins:
 			/* No more moves. */
 			top_coord = pass; top_ratio = 0.5;
 			goto move_found;
 		}
-
-		if (mc->debug_level > 3)
-			fprintf(stderr, "\tresult %d\n", result);
+		if (result == -2) {
+			/* Superko. We just ignore this playout.
+			 * And play again. */
+			if (superko > 2 * MC_GAMES) {
+				/* Uhh. Triple ko, or something? */
+				if (mc->debug_level > 0)
+					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
+				goto pass_wins;
+			}
+			/* This playout didn't count; we should not
+			 * disadvantage moves that lead to a superko.
+			 * And it is supposed to be rare. */
+			i--, superko++;
+			continue;
+		}
 
 		games[m.coord.pos]++;
 

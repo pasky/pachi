@@ -11,6 +11,9 @@
 #define unlikely(x) __builtin_expect((x), 0)
 
 
+typedef uint64_t hash_t;
+
+
 /* Note that "group" is only chain of stones that is solidly
  * connected for us. */
 
@@ -40,6 +43,9 @@ struct board {
 
 	int moves;
 	struct move last_move;
+	/* Whether we tried to add a hash twice; board_play*() can
+	 * set this, but it will still carry out the move as well! */
+	bool superko_violation;
 
 	/* The following two structures are goban maps and are indexed by
 	 * coord.pos. The map is surrounded by a one-point margin from
@@ -55,6 +61,8 @@ struct board {
 	uint16_t *p;
 	/* Neighboring colors; numbers of neighbors of index color */
 	struct neighbor_colors *n;
+	/* Zobrist hash for each position */
+	hash_t *h;
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
@@ -63,9 +71,23 @@ struct board {
 	/* Cache of group info, indexed by gid */
 	struct group *gi;
 
-	/* --- private */
+	/* --- PRIVATE DATA --- */
+
+	/* For board->gi */
 	int last_gid;
+
+	/* Basic ko check */
 	struct move ko;
+
+	/* For superko check: */
+
+	/* Board "history" - hashes encountered. Size of the hash should be
+	 * >> board_size^2. */
+#define history_hash_bits 12
+#define history_hash_mask ((1 << history_hash_bits) - 1)
+	hash_t history_hash[1 << history_hash_bits];
+	/* Hash of current board position. */
+	hash_t hash;
 };
 
 #define board_at(b_, c) ((b_)->b[(c).pos])
@@ -119,7 +141,6 @@ enum stone board_get_one_point_eye(struct board *board, coord_t *c);
  * The last liberty is recorded to lastlib (content is undefined if group
  * is not in atari). */
 bool board_group_in_atari(struct board *board, int group, coord_t *lastlib);
-int board_group_capture(struct board *board, int group);
 
 /* Positive: W wins */
 /* board_official_score() is the scoring method for yielding score suitable

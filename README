@@ -29,7 +29,12 @@ ZZGo cannot count multi-point eyes.
 New Zealand rules also mean that multi-stone suicide is allowed! If you
 do not like that (basically if you want to pretend it plays according
 to Chinese rules), you need to rule that out in your engine, currently.
-There is only simple ko rule, though.
+
+New Zealand rules have positional superko. Unfortunately, it is not quite
+possible to prevent superko plays easily and keep the board_play() function
+fast, since we need a way to undo our move. Thus, the default playout
+guards only against basic ko. You can _check_ against superko quickly in
+your engine and decide based on that (e.g. restart the playout).
 
 
 Also, ZZGo supports only few GTP commands now. Most importantly,

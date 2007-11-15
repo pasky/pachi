@@ -7,6 +7,8 @@
 #include "debug.h"
 #include "random.h"
 
+int board_group_capture(struct board *board, int group);
+
 
 #define gi_granularity 4
 #define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
@@ -41,13 +43,15 @@ board_copy(struct board *b2, struct board *b1)
 	int fsize = b2->size * b2->size * sizeof(*b2->f);
 	int nsize = b2->size * b2->size * sizeof(*b2->n);
 	int psize = b2->size * b2->size * sizeof(*b2->p);
-	void *x = malloc(bsize + gsize + fsize + psize + nsize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize);
+	int hsize = b2->size * b2->size * sizeof(*b2->h);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
 	b2->p = x; x += psize;
 	b2->n = x; x += nsize;
+	b2->h = x; x += hsize;
 
 	int gi_a = gi_allocsize(b2->last_gid + 1);
 	b2->gi = calloc(gi_a, sizeof(*b2->gi));
@@ -81,14 +85,16 @@ board_resize(struct board *board, int size)
 	int gsize = board->size * board->size * sizeof(*board->g);
 	int fsize = board->size * board->size * sizeof(*board->f);
 	int psize = board->size * board->size * sizeof(*board->p);
+	int hsize = board->size * board->size * sizeof(*board->h);
 	int nsize = board->size * board->size * sizeof(*board->n);
-	void *x = malloc(bsize + gsize + fsize + psize + nsize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
 	board->p = x; x += psize;
 	board->n = x; x += nsize;
+	board->h = x; x += hsize;
 }
 
 void
@@ -121,6 +127,19 @@ board_clear(struct board *board)
 	for (i = board->size; i < (board->size - 1) * board->size; i++)
 		if (i % board->size != 0 && i % board->size != board->size - 1)
 			board->f[board->flen++] = i;
+
+	/* Initialize zobrist hashtable. */
+	foreach_point(board) {
+		int max = (sizeof(hash_t) << history_hash_bits);
+		/* fast_random() is 16-bit only */
+		board->h[c.pos] = ((hash_t) fast_random(max))
+				| ((hash_t) fast_random(max) << 16)
+				| ((hash_t) fast_random(max) << 32)
+				| ((hash_t) fast_random(max) << 48);
+		if (!board->h[c.pos])
+			/* Would be kinda "oops". */
+			board->h[c.pos] = 1;
+	} foreach_point_end;
 }
 
 
@@ -158,6 +177,38 @@ board_print(struct board *board, FILE *f)
 	for (x = 1; x < board->size - 1; x++)
 		fprintf(f, "--");
 	fprintf(f, "+\n\n");
+}
+
+
+/* Update board hash with given coordinate. */
+static void
+board_hash_update(struct board *board, coord_t coord)
+{
+	board->hash ^= board->h[coord.pos];
+}
+
+/* Commit current board hash to history. */
+static void
+board_hash_commit(struct board *board)
+{
+	if (unlikely(debug_level > 8))
+		fprintf(stderr, "board_hash_commit %llx\n", board->hash);
+	if (likely(board->history_hash[board->hash & history_hash_mask]) == 0) {
+		board->history_hash[board->hash & history_hash_mask] = board->hash;
+	} else {
+		hash_t i = board->hash;
+		while (board->history_hash[i & history_hash_mask]) {
+			if (board->history_hash[i & history_hash_mask] == board->hash) {
+				if (unlikely(debug_level > 5))
+					fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
+						coord_x(board->last_move.coord), coord_y(board->last_move.coord));
+				board->superko_violation = true;
+				return;
+			}
+			i++;
+		}
+		board->history_hash[i & history_hash_mask] = board->hash;
+	}
 }
 
 
@@ -211,6 +262,7 @@ board_remove_stone(struct board *board, coord_t c)
 	enum stone color = board_at(board, c);
 	board_at(board, c) = S_NONE;
 	group_at(board, c) = 0;
+	board_hash_update(board, c);
 
 	/* Increase liberties of surrounding groups */
 	coord_t coord = c;
@@ -294,8 +346,6 @@ static int
 board_play_outside(struct board *board, struct move *m, int f)
 {
 	enum stone other_color = stone_other(m->color);
-
-	struct move ko = { pass, S_NONE };
 	int gid = 0;
 
 	board->f[f] = board->f[--board->flen];
@@ -333,6 +383,9 @@ board_play_outside(struct board *board, struct move *m, int f)
 
 	board->last_move = *m;
 	board->moves++;
+	board_hash_update(board, m->coord);
+	board_hash_commit(board);
+	struct move ko = { pass, S_NONE };
 	board->ko = ko;
 
 	return gid;
@@ -414,6 +467,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	board->last_move = *m;
 	board->moves++;
+	board_hash_update(board, m->coord);
+	board_hash_commit(board);
 	board->ko = ko;
 
 	return new_group(board, m->coord);
@@ -429,6 +484,8 @@ board_play_f(struct board *board, struct move *m, int f)
 		int gid = board_play_outside(board, m, f);
 		if (unlikely(board_group_captured(board, gid))) {
 			board_group_capture(board, gid);
+			/* Redundant hash item is ok. */
+			board_hash_commit(board);
 		}
 		return 0;
 	} else {
