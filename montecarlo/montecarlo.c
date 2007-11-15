@@ -12,6 +12,9 @@
 /* This is simple monte-carlo engine. It plays MC_GAMES random games from the
  * current board and records win/loss ratio for each first move. The move with
  * the biggest number of winning games gets played. */
+/* Note that while the library is based on New Zealand rules, this engine
+ * returns moves according to Chinese rules. Thus, it does not return suicide
+ * moves. It of course respects positional superko too. */
 
 /* Pass me arguments like a=b,c=d,...
  * Supported arguments:
@@ -217,9 +220,10 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent)
 }
 
 /* 1: m->color wins, 0: m->color loses; -1: no moves left
- * -2 superko inside the game tree (NOT at root, that's simply invalid move) */
+ * -2 superko inside the game tree (NOT at root, that's simply invalid move)
+ * -3 first move is multi-stone suicide */
 static int
-play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *suicide, int i)
+play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 {
 	struct board b2;
 	board_copy(&b2, b);
@@ -231,10 +235,12 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 		board_done_noalloc(&b2);
 		return -1;
 	}
-	*suicide = !group_at(&b2, m->coord);
-	if (mc->debug_level > 4 && *suicide) {
-		fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord), coord_y(m->coord));
-		board_print(&b2, stderr);
+	if (!group_at(&b2, m->coord)) {
+		if (mc->debug_level > 4) {
+			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord), coord_y(m->coord));
+			board_print(&b2, stderr);
+		}
+		return -3;
 	}
 
 	if (mc->debug_level > 3)
@@ -328,16 +334,13 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 	int games[b->size * b->size];
 	int wins[b->size * b->size];
-	bool suicides[b->size * b->size];
 	memset(games, 0, sizeof(games));
 	memset(wins, 0, sizeof(wins));
-	memset(suicides, 0, sizeof(suicides));
 
 	int losses = 0;
-	int i, superko = 0;
+	int i, superko = 0, good_games = 0;
 	for (i = 0; i < mc->games; i++) {
-		bool suicide = false;
-		int result = play_random_game(mc, b, &m, &suicide, i);
+		int result = play_random_game(mc, b, &m, i);
 
 		if (mc->debug_level > 3)
 			fprintf(stderr, "\tresult %d\n", result);
@@ -363,7 +366,14 @@ pass_wins:
 			i--, superko++;
 			continue;
 		}
+		if (result == -3) {
+			/* Multi-stone suicide. We play chinese rules,
+			 * so we can't consider this. (Note that we
+			 * unfortunately still consider this in playouts.) */
+			continue;
+		}
 
+		good_games++;
 		games[m.coord.pos]++;
 
 		if (b->moves < 3) {
@@ -377,7 +387,6 @@ pass_wins:
 
 		losses += 1 - result;
 		wins[m.coord.pos] += result;
-		suicides[m.coord.pos] = suicide;
 
 		if (unlikely(!losses && i == mc->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.
@@ -386,24 +395,18 @@ pass_wins:
 		}
 	}
 
-	bool suicide_candidate = false;
+	if (!good_games) {
+		/* No more valid moves. */
+		goto pass_wins;
+	}
+
 	foreach_point(b) {
 		float ratio = (float) wins[c.pos] / games[c.pos];
 		if (ratio > top_ratio) {
-			if (ratio == 1 && suicides[c.pos]) {
-				if (mc->debug_level > 2)
-					fprintf(stderr, "not playing suicide at %d,%d\n", coord_x(top_coord), coord_y(top_coord));
-				suicide_candidate = true;
-				continue;
-			}
 			top_ratio = ratio;
 			top_coord = c;
 		}
 	} foreach_point_end;
-	if (is_resign(top_coord) && suicide_candidate) {
-		/* The only possibilities now are suicides. */
-		goto pass_wins;
-	}
 
 	if (mc->debug_level > 2) {
 		struct board *board = b;
