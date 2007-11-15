@@ -26,7 +26,11 @@ hack is that it does not count groups in atari, if the opponent neglected
 to remove them; it is still one-point off there, though. In addition,
 ZZGo cannot count multi-point eyes.
 
-New Zealand rules also mean that multi-stone suicide is allowed!
+New Zealand rules also mean that multi-stone suicide is allowed! If you
+do not like that (basically if you want to pretend it plays according
+to Chinese rules), you need to rule that out in your engine, currently.
+There is only simple ko rule, though.
+
 
 Also, ZZGo supports only few GTP commands now. Most importantly,
 it does not support the known_command and final_status_list commands.
