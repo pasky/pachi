@@ -18,23 +18,28 @@
  * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
  * games=MC_GAMES		number of random games to play
  * gamelen=MC_GAMELEN		maximal length of played random game
- * domainrate=MC_DOMAINRATE	how many of 10 moves should be non-random but hinted
- * 				by heuristics (currently taking care of atari and
- * 				assuming local responses);
- * 				set to 0 to have purely rules-driven MC search;
- * 				default 8; carries high performance penalty!
+ *
+ * The following arguments tune domain-specific heuristics. They tend to carry
+ * very high performance penalty.
+ * pure				turns all the heuristics off; you can then turn
+ * 				them on selectively
+ * atari_rate=MC_ATARIRATE	how many of 100 moves should be non-random but
+ * 				fix local atari, if there is any
+ * local_rate=MC_LOCALRATE	how many of 100 moves should be contact plays
+ * 				(tsuke or diagonal)
  */
 
 
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
-#define MC_DOMAINRATE	8
+#define MC_ATARIRATE	75
+#define MC_LOCALRATE	50
 
 
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
-	int domain_rate;
+	int atari_rate, local_rate;
 	float resign_ratio;
 	int loss_threshold;
 };
@@ -153,15 +158,16 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 
 	int passes = 0;
 	while (gamelen-- && passes < 2) {
-		/* In 1/2 of the cases, we pick one of the urgent moves
-		 * instead of a completely random one. */
+		/* In some of the cases, we pick atari response instead of
+		 * random move. If there is an atari, capturing tends to be
+		 * huge. */
 		urgent = pass;
-		if (mc->domain_rate && fast_random(10) < mc->domain_rate) {
+		if (mc->atari_rate && fast_random(10) < mc->atari_rate) {
 			urgent = domain_hint_atari(mc, &b2, b2.last_move.coord);
 		}
-		/* For the non-urgent moves, 1/2 will be contact play
-		 * (tsuke or diagonal). These tend to be most likely. */
-		if (is_pass(urgent) && mc->domain_rate && fast_random(10) < mc->domain_rate) {
+		/* For the non-urgent moves, some of them will be contact play
+		 * (tsuke or diagonal). These tend to be very likely urgent. */
+		if (is_pass(urgent) && mc->local_rate && fast_random(10) < mc->local_rate) {
 			urgent = domain_hint_local(mc, &b2, b2.last_move.coord);
 		}
 
@@ -333,7 +339,7 @@ engine_montecarlo_init(char *arg)
 	mc->debug_level = 1;
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
-	mc->domain_rate = MC_DOMAINRATE;
+	mc->atari_rate = MC_ATARIRATE;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -355,8 +361,12 @@ engine_montecarlo_init(char *arg)
 				mc->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
-			} else if (!strcasecmp(optname, "domainrate") && optval) {
-				mc->domain_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "pure") && optval) {
+				mc->atari_rate = mc->local_rate = 0;
+			} else if (!strcasecmp(optname, "atarirate") && optval) {
+				mc->atari_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "localrate") && optval) {
+				mc->local_rate = atoi(optval);
 			} else {
 				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
 			}
