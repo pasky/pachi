@@ -189,6 +189,8 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 static void
 domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent)
 {
+	if (is_pass(b->last_move.coord))
+		return;
 
 	/* In some of the cases, we pick atari response instead of random move.
 	 * If there is an atari, capturing tends to be huge. */
