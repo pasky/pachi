@@ -447,7 +447,7 @@ engine_montecarlo_init(char *arg)
 				mc->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
-			} else if (!strcasecmp(optname, "pure") && optval) {
+			} else if (!strcasecmp(optname, "pure")) {
 				mc->atari_rate = mc->local_rate = mc->cut_rate = 0;
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				mc->atari_rate = atoi(optval);
