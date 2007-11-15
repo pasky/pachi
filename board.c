@@ -539,7 +539,7 @@ bool
 board_group_in_atari(struct board *board, int group, coord_t *lastlib)
 {
 	/* First rule out obvious fakes. */
-	if (board_group_libs(board, group) > 4)
+	if (!group || board_group_libs(board, group) > 4)
 		return false;
 	coord_t base_stone = board_group(board, group).base_stone;
 	if (neighbor_count_at(board, base_stone, S_NONE) > 1)
