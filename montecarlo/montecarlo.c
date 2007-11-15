@@ -184,14 +184,14 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent)
 
 	/* In some of the cases, we pick atari response instead of random move.
 	 * If there is an atari, capturing tends to be huge. */
-	if (mc->atari_rate && fast_random(10) < mc->atari_rate) {
+	if (mc->atari_rate && fast_random(100) < mc->atari_rate) {
 		*urgent = domain_hint_atari(mc, b, b->last_move.coord);
 		if (!is_pass(*urgent))
 			return;
 	}
 
 	/* Cutting is kinda urgent, too. */
-	if (mc->cut_rate && fast_random(10) < mc->cut_rate) {
+	if (mc->cut_rate && fast_random(100) < mc->cut_rate) {
 		*urgent = domain_hint_cut(mc, b, b->last_move.coord);
 		if (!is_pass(*urgent))
 			return;
@@ -199,7 +199,7 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent)
 
 	/* For the non-urgent moves, some of them will be contact play (tsuke
 	 * or diagonal). These tend to be likely urgent. */
-	if (mc->local_rate && fast_random(10) < mc->local_rate) {
+	if (mc->local_rate && fast_random(100) < mc->local_rate) {
 		*urgent = domain_hint_local(mc, b, b->last_move.coord);
 		if (!is_pass(*urgent))
 			return;
