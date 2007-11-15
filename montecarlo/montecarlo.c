@@ -424,6 +424,7 @@ engine_montecarlo_init(char *arg)
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
 	mc->atari_rate = MC_ATARIRATE;
+	mc->local_rate = MC_LOCALRATE;
 	mc->cut_rate = MC_CUTRATE;
 
 	if (arg) {
