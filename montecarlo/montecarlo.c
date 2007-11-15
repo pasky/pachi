@@ -33,9 +33,9 @@
 
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
-#define MC_ATARIRATE	75
-#define MC_LOCALRATE	50
-#define MC_CUTRATE	50
+#define MC_ATARIRATE	50
+#define MC_CUTRATE	40
+#define MC_LOCALRATE	30
 
 
 struct montecarlo {
