@@ -149,10 +149,22 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, bool *s
 		gamelen = 10;
 
 	enum stone color = stone_other(m->color);
-	coord_t urgent = pass;
+	coord_t urgent;
 
 	int passes = 0;
 	while (gamelen-- && passes < 2) {
+		/* In 1/2 of the cases, we pick one of the urgent moves
+		 * instead of a completely random one. */
+		urgent = pass;
+		if (mc->domain_rate && fast_random(10) < mc->domain_rate) {
+			urgent = domain_hint_atari(mc, &b2, b2.last_move.coord);
+		}
+		/* For the non-urgent moves, 1/2 will be contact play
+		 * (tsuke or diagonal). These tend to be most likely. */
+		if (is_pass(urgent) && mc->domain_rate && fast_random(10) < mc->domain_rate) {
+			urgent = domain_hint_local(mc, &b2, b2.last_move.coord);
+		}
+
 		coord_t coord;
 
 		if (!is_pass(urgent)) {
@@ -180,18 +192,6 @@ play_random:
 			passes++;
 		} else {
 			passes = 0;
-
-			/* In 1/2 of the cases, we pick one of the urgent moves
-			 * instead of a completely random one. */
-			urgent = pass;
-			if (mc->domain_rate && fast_random(10) < mc->domain_rate) {
-				urgent = domain_hint_atari(mc, &b2, coord);
-			}
-			/* For the non-urgent moves, 1/2 will be contact play
-			 * (tsuke or diagonal). These tend to be most likely. */
-			if (is_pass(urgent) && mc->domain_rate && fast_random(10) < mc->domain_rate) {
-				urgent = domain_hint_local(mc, &b2, coord);
-			}
 		}
 
 		color = stone_other(color);
