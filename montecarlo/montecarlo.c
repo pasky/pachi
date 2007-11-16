@@ -122,6 +122,12 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 	enum stone cutting_color = stone_other(board_at(b, coord));
 	foreach_diag_neighbor(b, coord) {
 		if (board_at(b, c) == S_NONE) {
+			if (neighbor_count_at(b, c, cutting_color) != 2) {
+				/* Either this isn't a cut or the opponent has
+				 * too many friends there. */
+				continue;
+			}
+
 			/* XXX: Some internal board specific magic here... */
 			coord_t cutted = coord;
 			if (coord_x(c) < coord_x(coord))
