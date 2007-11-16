@@ -289,14 +289,20 @@ play_random:
 			board_play_random(&b2, color, &coord);
 		}
 
-		if (b2.superko_violation) {
-			if (mc->debug_level > 3) {
-				fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord), coord_y(coord));
-				if (mc->debug_level > 4)
-					board_print(&b2, stderr);
+		if (unlikely(b2.superko_violation) && group_at(&b2, coord)) {
+			/* We ignore superko violations that are suicides. These
+			 * are common only at the end of the game and are
+			 * rather harmless. (They will not go through as a root
+			 * move anyway.) */
+			if (!group_at(&b2, coord)) {
+				if (unlikely(mc->debug_level > 3)) {
+					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord), coord_y(coord));
+					if (mc->debug_level > 4)
+						board_print(&b2, stderr);
+				}
+				board_done_noalloc(&b2);
+				return -2;
 			}
-			board_done_noalloc(&b2);
-			return -2;
 		}
 
 		if (unlikely(mc->debug_level > 7)) {
@@ -359,7 +365,7 @@ pass_wins:
 		if (result == -2) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
-			if (superko > 2 * MC_GAMES) {
+			if (unlikely(superko > 2 * MC_GAMES)) {
 				/* Uhh. Triple ko, or something? */
 				if (mc->debug_level > 0)
 					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
