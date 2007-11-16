@@ -182,9 +182,9 @@ board_print(struct board *board, FILE *f)
 
 /* Update board hash with given coordinate. */
 static void
-board_hash_update(struct board *board, coord_t coord)
+board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
-	board->hash ^= board->h[coord.pos];
+	board->hash ^= board->h[coord.pos] + color;
 }
 
 /* Commit current board hash to history. */
@@ -262,7 +262,7 @@ board_remove_stone(struct board *board, coord_t c)
 	enum stone color = board_at(board, c);
 	board_at(board, c) = S_NONE;
 	group_at(board, c) = 0;
-	board_hash_update(board, c);
+	board_hash_update(board, c, color);
 
 	/* Increase liberties of surrounding groups */
 	coord_t coord = c;
@@ -383,7 +383,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 
 	board->last_move = *m;
 	board->moves++;
-	board_hash_update(board, m->coord);
+	board_hash_update(board, m->coord, m->color);
 	board_hash_commit(board);
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
@@ -467,7 +467,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	board->last_move = *m;
 	board->moves++;
-	board_hash_update(board, m->coord);
+	board_hash_update(board, m->coord, m->color);
 	board_hash_commit(board);
 	board->ko = ko;
 
