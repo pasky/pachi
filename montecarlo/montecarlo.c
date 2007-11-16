@@ -290,6 +290,11 @@ play_random:
 		}
 
 		if (b2.superko_violation) {
+			if (mc->debug_level > 3) {
+				fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord), coord_y(coord));
+				if (mc->debug_level > 4)
+					board_print(&b2, stderr);
+			}
 			board_done_noalloc(&b2);
 			return -2;
 		}
@@ -440,7 +445,7 @@ pass_wins:
 
 move_found:
 	if (mc->debug_level > 1)
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", coord_x(top_coord), coord_y(top_coord), top_ratio);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord), coord_y(top_coord), top_ratio, i, superko);
 
 	return coord_copy(top_coord);
 }
