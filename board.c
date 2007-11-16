@@ -43,7 +43,7 @@ board_copy(struct board *b2, struct board *b1)
 	int fsize = b2->size * b2->size * sizeof(*b2->f);
 	int nsize = b2->size * b2->size * sizeof(*b2->n);
 	int psize = b2->size * b2->size * sizeof(*b2->p);
-	int hsize = b2->size * b2->size * sizeof(*b2->h);
+	int hsize = b2->size * b2->size * 2 * sizeof(*b2->h);
 	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize);
 	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize);
 	b2->b = x; x += bsize;
@@ -84,9 +84,9 @@ board_resize(struct board *board, int size)
 	int bsize = board->size * board->size * sizeof(*board->b);
 	int gsize = board->size * board->size * sizeof(*board->g);
 	int fsize = board->size * board->size * sizeof(*board->f);
-	int psize = board->size * board->size * sizeof(*board->p);
-	int hsize = board->size * board->size * sizeof(*board->h);
 	int nsize = board->size * board->size * sizeof(*board->n);
+	int psize = board->size * board->size * sizeof(*board->p);
+	int hsize = board->size * board->size * 2 * sizeof(*board->h);
 	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize);
 	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize);
 	board->b = x; x += bsize;
@@ -132,13 +132,20 @@ board_clear(struct board *board)
 	foreach_point(board) {
 		int max = (sizeof(hash_t) << history_hash_bits);
 		/* fast_random() is 16-bit only */
-		board->h[c.pos] = ((hash_t) fast_random(max))
+		board->h[c.pos * 2] = ((hash_t) fast_random(max))
 				| ((hash_t) fast_random(max) << 16)
 				| ((hash_t) fast_random(max) << 32)
 				| ((hash_t) fast_random(max) << 48);
-		if (!board->h[c.pos])
+		if (!board->h[c.pos * 2])
 			/* Would be kinda "oops". */
-			board->h[c.pos] = 1;
+			board->h[c.pos * 2] = 1;
+		/* And once again for white */
+		board->h[c.pos * 2 + 1] = ((hash_t) fast_random(max))
+				| ((hash_t) fast_random(max) << 16)
+				| ((hash_t) fast_random(max) << 32)
+				| ((hash_t) fast_random(max) << 48);
+		if (!board->h[c.pos * 2 + 1])
+			board->h[c.pos * 2 + 1] = 1;
 	} foreach_point_end;
 }
 
@@ -184,7 +191,9 @@ board_print(struct board *board, FILE *f)
 static void
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
-	board->hash ^= board->h[coord.pos] + color;
+	board->hash ^= board->h[(color == S_BLACK ? board->size * board->size : 0) + coord.pos];
+	if (unlikely(debug_level > 8))
+		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord), coord_y(coord), board->h[color * coord.pos], board->hash);
 }
 
 /* Commit current board hash to history. */
@@ -384,7 +393,6 @@ board_play_outside(struct board *board, struct move *m, int f)
 	board->last_move = *m;
 	board->moves++;
 	board_hash_update(board, m->coord, m->color);
-	board_hash_commit(board);
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
 
@@ -487,9 +495,8 @@ board_play_f(struct board *board, struct move *m, int f)
 		int gid = board_play_outside(board, m, f);
 		if (unlikely(board_group_captured(board, gid))) {
 			board_group_capture(board, gid);
-			/* Redundant hash item is ok. */
-			board_hash_commit(board);
 		}
+		board_hash_commit(board);
 		return 0;
 	} else {
 		return board_play_in_eye(board, m, f);
