@@ -477,6 +477,9 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 static int
 board_play_f(struct board *board, struct move *m, int f)
 {
+	if (unlikely(debug_level > 7)) {
+		fprintf(stderr, "board_play(): ---- Playing %d,%d\n", coord_x(m->coord), coord_y(m->coord));
+	}
 	if (likely(!board_is_eyelike(board, &m->coord, stone_other(m->color)))) {
 		/* NOT playing in an eye. Thus this move has to succeed. (This
 		 * is thanks to New Zealand rules. Otherwise, multi-stone
