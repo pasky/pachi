@@ -57,6 +57,9 @@ struct montecarlo {
 	int atari_rate, local_rate, cut_rate;
 	float resign_ratio;
 	int loss_threshold;
+
+	coord_t last_hint;
+	int last_hint_value;
 };
 
 
@@ -195,28 +198,49 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent)
 	if (is_pass(b->last_move.coord))
 		return;
 
+	/* Now now, if we ignored an urgent move, the opponent will
+	 * take it! */
+	if (!is_pass(mc->last_hint)
+	    && !coord_eq(b->last_move.coord, mc->last_hint)
+	    && fast_random(100) < mc->last_hint_value) {
+		*urgent = mc->last_hint;
+		mc->last_hint = pass;
+		return;
+	}
+
 	/* In some of the cases, we pick atari response instead of random move.
 	 * If there is an atari, capturing tends to be huge. */
 	if (mc->atari_rate && fast_random(100) < mc->atari_rate) {
 		*urgent = domain_hint_atari(mc, b, b->last_move.coord);
-		if (!is_pass(*urgent))
+		if (!is_pass(*urgent)) {
+			mc->last_hint = *urgent;
+			mc->last_hint_value = mc->atari_rate;
 			return;
+		}
 	}
 
 	/* Cutting is kinda urgent, too. */
 	if (mc->cut_rate && fast_random(100) < mc->cut_rate) {
 		*urgent = domain_hint_cut(mc, b, b->last_move.coord);
-		if (!is_pass(*urgent))
+		if (!is_pass(*urgent)) {
+			mc->last_hint = *urgent;
+			mc->last_hint_value = mc->cut_rate;
 			return;
+		}
 	}
 
 	/* For the non-urgent moves, some of them will be contact play (tsuke
 	 * or diagonal). These tend to be likely urgent. */
 	if (mc->local_rate && fast_random(100) < mc->local_rate) {
 		*urgent = domain_hint_local(mc, b, b->last_move.coord);
-		if (!is_pass(*urgent))
+		if (!is_pass(*urgent)) {
+			mc->last_hint = *urgent;
+			mc->last_hint_value = mc->local_rate;
 			return;
+		}
 	}
+
+	mc->last_hint = pass;
 }
 
 /* 1: m->color wins, 0: m->color loses; -1: no moves left
@@ -465,6 +489,8 @@ engine_montecarlo_init(char *arg)
 	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
 	e->genmove = montecarlo_genmove;
 	e->data = mc;
+
+	mc->last_hint = pass;
 
 	mc->debug_level = 1;
 	mc->games = MC_GAMES;
