@@ -319,12 +319,12 @@ play_random:
 			board_play_random(&b2, color, &coord);
 		}
 
-		if (unlikely(b2.superko_violation) && group_at(&b2, coord)) {
+		if (unlikely(b2.superko_violation)) {
 			/* We ignore superko violations that are suicides. These
 			 * are common only at the end of the game and are
 			 * rather harmless. (They will not go through as a root
 			 * move anyway.) */
-			if (!group_at(&b2, coord)) {
+			if (group_at(&b2, coord)) {
 				if (unlikely(mc->debug_level > 3)) {
 					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord), coord_y(coord));
 					if (mc->debug_level > 4)
@@ -332,6 +332,12 @@ play_random:
 				}
 				board_done_noalloc(&b2);
 				return -2;
+			} else {
+				if (unlikely(mc->debug_level > 6)) {
+					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord), coord_y(coord));
+					board_print(&b2, stderr);
+				}
+				b2.superko_violation = false;
 			}
 		}
 
