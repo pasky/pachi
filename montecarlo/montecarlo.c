@@ -199,15 +199,19 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 }
 
 static void
-domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent)
+domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent, enum stone our_real_color)
 {
 	if (is_pass(b->last_move.coord))
 		return;
 
 	/* Now now, if we ignored an urgent move, the opponent will
 	 * take it! */
+	/* Note that we should use this only when the _REAL_ us tenukies
+	 * and the _REAL_ opponent comes back. Otherwise we hope in
+	 * opponent's tenuki too much and play out ladders. :-) */
 	if (!is_pass(mc->last_hint)
-	    && !coord_eq(b->last_move.coord, mc->last_hint)
+	    && unlikely(!coord_eq(b->last_move.coord, mc->last_hint))
+	    && b->last_move.color == our_real_color
 	    && fast_random(100) < mc->last_hint_value) {
 		*urgent = mc->last_hint;
 		mc->last_hint = pass;
@@ -292,13 +296,13 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 	 * not bring that much of an advantage. It might even warrant it to by
 	 * default do only this domain check. */
 	urgent = pass;
-	domain_hint(mc, b, &urgent);
+	domain_hint(mc, b, &urgent, m->color);
 	if (!is_pass(urgent))
 		goto play_urgent;
 
 	while (gamelen-- && passes < 2) {
 		urgent = pass;
-		domain_hint(mc, &b2, &urgent);
+		domain_hint(mc, &b2, &urgent, m->color);
 
 		coord_t coord;
 
