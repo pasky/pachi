@@ -38,6 +38,7 @@ struct neighbor_colors {
 
 struct board {
 	int size; /* Including S_OFFBOARD margin - see below. */
+	int size2; /* size^2 */
 	int captures[S_MAX];
 	float komi;
 

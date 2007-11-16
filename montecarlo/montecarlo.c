@@ -379,8 +379,8 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	coord_t top_coord = resign;
 	float top_ratio = mc->resign_ratio;
 
-	int games[b->size * b->size];
-	int wins[b->size * b->size];
+	int games[b->size2];
+	int wins[b->size2];
 	memset(games, 0, sizeof(games));
 	memset(wins, 0, sizeof(wins));
 

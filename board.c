@@ -38,12 +38,12 @@ board_copy(struct board *b2, struct board *b1)
 {
 	memcpy(b2, b1, sizeof(struct board));
 
-	int bsize = b2->size * b2->size * sizeof(*b2->b);
-	int gsize = b2->size * b2->size * sizeof(*b2->g);
-	int fsize = b2->size * b2->size * sizeof(*b2->f);
-	int nsize = b2->size * b2->size * sizeof(*b2->n);
-	int psize = b2->size * b2->size * sizeof(*b2->p);
-	int hsize = b2->size * b2->size * 2 * sizeof(*b2->h);
+	int bsize = b2->size2 * sizeof(*b2->b);
+	int gsize = b2->size2 * sizeof(*b2->g);
+	int fsize = b2->size2 * sizeof(*b2->f);
+	int nsize = b2->size2 * sizeof(*b2->n);
+	int psize = b2->size2 * sizeof(*b2->p);
+	int hsize = b2->size2 * 2 * sizeof(*b2->h);
 	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize);
 	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize);
 	b2->b = x; x += bsize;
@@ -78,15 +78,16 @@ void
 board_resize(struct board *board, int size)
 {
 	board->size = size + 2 /* S_OFFBOARD margin */;
+	board->size2 = board->size * board->size;
 	if (board->b)
 		free(board->b);
 
-	int bsize = board->size * board->size * sizeof(*board->b);
-	int gsize = board->size * board->size * sizeof(*board->g);
-	int fsize = board->size * board->size * sizeof(*board->f);
-	int nsize = board->size * board->size * sizeof(*board->n);
-	int psize = board->size * board->size * sizeof(*board->p);
-	int hsize = board->size * board->size * 2 * sizeof(*board->h);
+	int bsize = board->size2 * sizeof(*board->b);
+	int gsize = board->size2 * sizeof(*board->g);
+	int fsize = board->size2 * sizeof(*board->f);
+	int nsize = board->size2 * sizeof(*board->n);
+	int psize = board->size2 * sizeof(*board->p);
+	int hsize = board->size2 * 2 * sizeof(*board->h);
 	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize);
 	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize);
 	board->b = x; x += bsize;
@@ -107,7 +108,7 @@ board_clear(struct board *board)
 	board_resize(board, size - 2 /* S_OFFBOARD margin */);
 
 	/* Draw the offboard margin */
-	int top_row = (board->size - 1) * board->size;
+	int top_row = board->size2 - board->size;
 	int i;
 	for (i = 0; i < board->size; i++)
 		board->b[i] = board->b[top_row + i] = S_OFFBOARD;
@@ -191,7 +192,7 @@ board_print(struct board *board, FILE *f)
 static void
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
-	board->hash ^= board->h[(color == S_BLACK ? board->size * board->size : 0) + coord.pos];
+	board->hash ^= board->h[(color == S_BLACK ? board->size2 : 0) + coord.pos];
 	if (unlikely(debug_level > 8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord), coord_y(coord), board->h[color * coord.pos], board->hash);
 }
@@ -614,7 +615,7 @@ board_group_in_atari(struct board *board, int group, coord_t *lastlib)
 
 	int libs = 0;
 
-	bool watermark[board->size * board->size];
+	bool watermark[board->size2];
 	memset(watermark, 0, sizeof(watermark));
 
 	foreach_in_group(board, group) {
