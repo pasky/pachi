@@ -38,8 +38,12 @@
 
 
 /* We reuse large part of the code from the montecarlo/ engine. The
- * struct montecarlo internal state is part of our internal state; actually,
- * for now we just use the montecarlo state. */
+ * struct montecarlo internal state is part of our internal state. */
+
+struct montecasino {
+	struct montecarlo *carlo;
+	int debug_level; // shortcut for carlo->debug_level
+};
 
 
 /* FIXME: Cutoff rule for simulations. Currently we are so fast that this
@@ -54,7 +58,7 @@
  * -2 superko inside the game tree (NOT at root, that's simply invalid move)
  * -3 first move is multi-stone suicide */
 static int
-play_random_game(struct montecarlo *mc, struct board *b, struct move_stat *moves,
+play_random_game(struct montecasino *mc, struct board *b, struct move_stat *moves,
 		 struct move *m, int i)
 {
 	struct board b2;
@@ -79,7 +83,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move_stat *moves
 	if (mc->debug_level > 3)
 		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord), coord_y(m->coord));
 
-	int gamelen = mc->gamelen - b2.moves;
+	int gamelen = mc->carlo->gamelen - b2.moves;
 	if (gamelen < 10)
 		gamelen = 10;
 
@@ -96,13 +100,13 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move_stat *moves
 	 * not bring that much of an advantage. It might even warrant it to by
 	 * default do only this domain check. */
 	urgent = pass;
-	domain_hint(mc, b, &urgent, m->color);
+	domain_hint(mc->carlo, b, &urgent, m->color);
 	if (!is_pass(urgent))
 		goto play_urgent;
 
 	while (gamelen-- && passes < 2) {
 		urgent = pass;
-		domain_hint(mc, &b2, &urgent, m->color);
+		domain_hint(mc->carlo, &b2, &urgent, m->color);
 
 		coord_t coord;
 
@@ -163,7 +167,7 @@ play_random:
 		color = stone_other(color);
 	}
 
-	if (mc->debug_level > 6 - !(i % (mc->games/2)))
+	if (mc->debug_level > 6 - !(i % (mc->carlo->games/2)))
 		board_print(&b2, stderr);
 
 	float score = board_fast_score(&b2);
@@ -186,7 +190,7 @@ play_random:
 
 /* 1: Games played. 0: No games can be played from this position anymore. */
 static int
-play_many_random_games(struct montecarlo *mc, struct board *b, int games, enum stone color,
+play_many_random_games(struct montecasino *mc, struct board *b, int games, enum stone color,
 			struct move_stat *moves, struct move_stat *second_moves)
 {
 	if (mc->debug_level > 3)
@@ -204,7 +208,7 @@ play_many_random_games(struct montecarlo *mc, struct board *b, int games, enum s
 		if (result == -2) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
-			if (unlikely(superko > 2 * mc->games)) {
+			if (unlikely(superko > 2 * mc->carlo->games)) {
 				/* Uhh. Triple ko, or something? */
 				if (mc->debug_level > 0)
 					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
@@ -238,7 +242,7 @@ play_many_random_games(struct montecarlo *mc, struct board *b, int games, enum s
 		losses += 1 - result;
 		moves[m.coord.pos].wins += result;
 
-		if (unlikely(!losses && i == mc->loss_threshold)) {
+		if (unlikely(!losses && i == mc->carlo->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.
 			 * This game is over. */
 			break;
@@ -260,7 +264,7 @@ struct move_info {
 };
 
 static void
-create_move_queue(struct montecarlo *mc, struct board *b,
+create_move_queue(struct montecasino *mc, struct board *b,
                   struct move_stat *moves, struct move_info *q)
 {
 	int qlen = 0;
@@ -285,7 +289,7 @@ create_move_queue(struct montecarlo *mc, struct board *b,
 }
 
 static float
-best_move_at_board(struct montecarlo *mc, struct board *b, struct move_stat *moves)
+best_move_at_board(struct montecasino *mc, struct board *b, struct move_stat *moves)
 {
 	float top_ratio = 0;
 	foreach_point(b) {
@@ -299,7 +303,7 @@ best_move_at_board(struct montecarlo *mc, struct board *b, struct move_stat *mov
 }
 
 static void
-choose_best_move(struct montecarlo *mc, struct board *b, enum stone color,
+choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 		struct move_stat *moves, struct move_stat *second_moves, struct move_stat *first_moves,
 		float *top_ratio, coord_t *top_coord)
 {
@@ -338,7 +342,7 @@ choose_best_move(struct montecarlo *mc, struct board *b, enum stone color,
 				board_done_noalloc(&b2);
 				continue;
 			}
-			play_many_random_games(mc, b, mc->games / GAMES_SLICE_CANDIDATE, color, moves, (struct move_stat *) second_moves);
+			play_many_random_games(mc, b, mc->carlo->games / GAMES_SLICE_CANDIDATE, color, moves, (struct move_stat *) second_moves);
 			board_done_noalloc(&b2);
 		}
 
@@ -361,11 +365,11 @@ choose_best_move(struct montecarlo *mc, struct board *b, enum stone color,
 static coord_t *
 montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 {
-	struct montecarlo *mc = e->data;
+	struct montecasino *mc = e->data;
 
 	/* resign when the hope for win vanishes */
 	coord_t top_coord = resign;
-	float top_ratio = mc->resign_ratio;
+	float top_ratio = mc->carlo->resign_ratio;
 
 	struct move_stat moves[b->size2];
 	struct move_stat second_moves[b->size2][b->size2];
@@ -375,7 +379,7 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 	memset(second_moves, 0, sizeof(second_moves));
 	memset(first_moves, 0, sizeof(first_moves));
 
-	if (!play_many_random_games(mc, b, mc->games / GAMES_SLICE_BASIC, color, moves, (struct move_stat *) second_moves)) {
+	if (!play_many_random_games(mc, b, mc->carlo->games / GAMES_SLICE_BASIC, color, moves, (struct move_stat *) second_moves)) {
 		/* No more moves. */
 		top_coord = pass; top_ratio = 0.5;
 		goto move_found;
@@ -409,12 +413,16 @@ move_found:
 struct engine *
 engine_montecasino_init(char *arg)
 {
-	struct montecarlo *mc = montecarlo_state_init(arg);
+	struct montecarlo *carlo = montecarlo_state_init(arg);
+	struct montecasino *mc = calloc(1, sizeof(*mc));
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "MonteCasino Engine";
 	e->comment = "I'm playing in Monte Casino now! When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
 	e->genmove = montecasino_genmove;
 	e->data = mc;
+
+	mc->carlo = carlo;
+	mc->debug_level = carlo->debug_level;
 
 	return e;
 }
