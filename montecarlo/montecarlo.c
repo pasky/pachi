@@ -62,6 +62,12 @@ struct montecarlo {
 	int last_hint_value;
 };
 
+/* Per-move playout statistics. */
+struct move_stat {
+	int games;
+	int wins;
+};
+
 
 /* *** Domain-specific knowledge comes here (that is, any heuristics that perfer
  * certain moves, aside of requiring the moves to be according to the rules. */
@@ -383,10 +389,8 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	coord_t top_coord = resign;
 	float top_ratio = mc->resign_ratio;
 
-	int games[b->size2];
-	int wins[b->size2];
-	memset(games, 0, sizeof(games));
-	memset(wins, 0, sizeof(wins));
+	struct move_stat moves[b->size2];
+	memset(moves, 0, sizeof(moves));
 
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
@@ -425,7 +429,7 @@ pass_wins:
 		}
 
 		good_games++;
-		games[m.coord.pos]++;
+		moves[m.coord.pos].games++;
 
 		if (b->moves < 3) {
 			/* Simple heuristic: avoid opening too low. Do not
@@ -437,7 +441,7 @@ pass_wins:
 		}
 
 		losses += 1 - result;
-		wins[m.coord.pos] += result;
+		moves[m.coord.pos].wins += result;
 
 		if (unlikely(!losses && i == mc->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.
@@ -452,7 +456,7 @@ pass_wins:
 	}
 
 	foreach_point(b) {
-		float ratio = (float) wins[c.pos] / games[c.pos];
+		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
 		if (ratio > top_ratio) {
 			top_ratio = ratio;
 			top_coord = c;
@@ -474,13 +478,13 @@ pass_wins:
 		for (y = board->size - 2; y >= 1; y--) {
 			fprintf(f, "%2d | ", y);
 			for (x = 1; x < board->size - 1; x++)
-				if (games[y * board->size + x])
-					fprintf(f, "%0.2f ", (float) wins[y * board->size + x] / games[y * board->size + x]);
+				if (moves[y * board->size + x].games)
+					fprintf(f, "%0.2f ", (float) moves[y * board->size + x].wins / moves[y * board->size + x].games);
 				else
 					fprintf(f, "---- ");
 			fprintf(f, "| ");
 			for (x = 1; x < board->size - 1; x++)
-				fprintf(f, "%4d ", games[y * board->size + x]);
+				fprintf(f, "%4d ", moves[y * board->size + x].games);
 			fprintf(f, "|\n");
 		}
 		fprintf(f, "   +-");
