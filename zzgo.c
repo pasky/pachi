@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "engine.h"
 #include "montecarlo/montecarlo.h"
+#include "montecasino/montecasino.h"
 #include "random/random.h"
 #include "gtp.h"
 #include "random.h"
@@ -18,7 +19,7 @@ int seed;
 int main(int argc, char *argv[])
 {
 	struct board *b = board_init();
-	enum { E_RANDOM, E_MONTECARLO } engine = E_MONTECARLO;
+	enum { E_RANDOM, E_MONTECARLO, E_MONTECASINO } engine = E_MONTECASINO;
 
 	seed = time(NULL);
 
@@ -30,6 +31,8 @@ int main(int argc, char *argv[])
 					engine = E_RANDOM;
 				} else if (!strcasecmp(optarg, "montecarlo")) {
 					engine = E_MONTECARLO;
+				} else if (!strcasecmp(optarg, "montecasino")) {
+					engine = E_MONTECASINO;
 				} else {
 					fprintf(stderr, "%s: Invalid -e argument %s\n", argv[0], optarg);
 					exit(1);
@@ -42,7 +45,7 @@ int main(int argc, char *argv[])
 				seed = atoi(optarg);
 				break;
 			default: /* '?' */
-				fprintf(stderr, "Usage: %s [-e random|montecarlo] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
+				fprintf(stderr, "Usage: %s [-e random|montecarlo|montecasino] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}
@@ -62,6 +65,8 @@ int main(int argc, char *argv[])
 			e = engine_random_init(e_arg); break;
 		case E_MONTECARLO:
 			e = engine_montecarlo_init(e_arg); break;
+		case E_MONTECASINO:
+			e = engine_montecasino_init(e_arg); break;
 
 	}
 
