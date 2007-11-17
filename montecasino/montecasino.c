@@ -109,7 +109,7 @@ play_random:
 			board_play_random(&b2, color, &coord);
 		}
 
-		if (unlikely(mc->debug_level > 2) && is_pass(next_move))
+		if (is_pass(next_move))
 			next_move = coord;
 
 		if (unlikely(b2.superko_violation)) {
