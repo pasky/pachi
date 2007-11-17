@@ -274,7 +274,7 @@ pass_wins:
 		/* float ratio = (float) moves[c.pos].wins / moves[c.pos].games; */
 		/* Instead of our best average, we take the opposite of best
 		 * enemy's counterattack. */
-		if (!moves[c.pos].games) /* unless there is no counterattack */
+		if (!moves[c.pos].wins) /* unless there is no counterattack (needed) */
 			continue;
 		float ratio = 1 - best_move_at_board(mc, b, second_moves[c.pos]);
 		if (ratio > top_ratio) {
