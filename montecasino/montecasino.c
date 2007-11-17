@@ -29,6 +29,13 @@
 /* How many games must be played for a move in order to trust it. */
 #define TRUST_THRESHOLD 10
 
+/* Slice of played-out games to play out initially. */
+#define GAMES_SLICE_BASIC 4
+/* Number of candidates looked at in more detail. */
+#define CANDIDATES 8
+/* Slice of played-out games to play out per candidate. */
+#define GAMES_SLICE_CANDIDATE 10
+
 
 /* We reuse large part of the code from the montecarlo/ engine. The
  * struct montecarlo internal state is part of our internal state; actually,
@@ -189,7 +196,7 @@ play_many_random_games(struct montecarlo *mc, struct board *b, int games, enum s
 	m.color = color;
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
-	for (i = 0; i < mc->games; i++) {
+	for (i = 0; i < games; i++) {
 		int result = play_random_game(mc, b, second_moves, &m, i);
 
 		if (result == -1)
@@ -292,7 +299,7 @@ best_move_at_board(struct montecarlo *mc, struct board *b, struct move_stat *mov
 }
 
 static void
-choose_best_move(struct montecarlo *mc, struct board *b,
+choose_best_move(struct montecarlo *mc, struct board *b, enum stone color,
 		struct move_stat *moves, struct move_stat *second_moves, struct move_stat *first_moves,
 		float *top_ratio, coord_t *top_coord)
 {
@@ -302,7 +309,7 @@ choose_best_move(struct montecarlo *mc, struct board *b,
 	/* Now, moves sorted descending by ratio are in sorted_moves. */
 
 	/* We take the moves with ratio better than 0.55 (arbitrary value),
-	 * but at least best ten (arbitrary value). From those, we choose
+	 * but at least best nine (arbitrary value). From those, we choose
 	 * the one where opponent's best counterattack has worst chance
 	 * of working. */
 
@@ -312,11 +319,27 @@ choose_best_move(struct montecarlo *mc, struct board *b,
 	 * second_moves[], apparently. */
 
 	int move = 0;
-	while (move < 10 || (move < b->size2 && sorted_moves[move].ratio > 0.55)) {
+	while (move < CANDIDATES) {
 		coord_t c = sorted_moves[move].coord;
 		move++;
 		if (!moves[c.pos].wins) { /* whatever */
 			continue;
+		}
+
+		/* These moves could use further reading. */
+		{
+			struct board b2;
+			board_copy(&b2, b);
+			struct move m = { c, stone_other(color) };
+			if (board_play(&b2, &m) < 0) {
+				if (mc->debug_level > 0) {
+					fprintf(stderr, "INTERNAL ERROR - Suggested impossible move %d,%d.\n", coord_x(c), coord_y(c));
+				}
+				board_done_noalloc(&b2);
+				continue;
+			}
+			play_many_random_games(mc, b, mc->games / GAMES_SLICE_CANDIDATE, color, moves, (struct move_stat *) second_moves);
+			board_done_noalloc(&b2);
 		}
 
 		float ratio = 1 - best_move_at_board(mc, b, &second_moves[c.pos * b->size2]);
@@ -352,7 +375,7 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 	memset(second_moves, 0, sizeof(second_moves));
 	memset(first_moves, 0, sizeof(first_moves));
 
-	if (!play_many_random_games(mc, b, mc->games, color, moves, (struct move_stat *) second_moves)) {
+	if (!play_many_random_games(mc, b, mc->games / GAMES_SLICE_BASIC, color, moves, (struct move_stat *) second_moves)) {
 		/* No more moves. */
 		top_coord = pass; top_ratio = 0.5;
 		goto move_found;
@@ -363,7 +386,7 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* We take the best moves and choose the one with least lucrative
 	 * opponent's counterattack. */
-	choose_best_move(mc, b, moves, (struct move_stat *) second_moves, first_moves, &top_ratio, &top_coord);
+	choose_best_move(mc, b, color, moves, (struct move_stat *) second_moves, first_moves, &top_ratio, &top_coord);
 
 	if (mc->debug_level > 2) {
 		fprintf(stderr, "Our board stats:\n");
