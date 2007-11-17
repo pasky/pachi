@@ -69,6 +69,37 @@ struct move_stat {
 };
 
 
+static void
+board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
+{
+	fprintf(f, "\n       ");
+	int x, y;
+	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+	for (x = 1; x < board->size - 1; x++)
+		fprintf(f, "%c    ", asdf[x - 1]);
+	fprintf(f, "\n   +-");
+	for (x = 1; x < board->size - 1; x++)
+		fprintf(f, "-----");
+	fprintf(f, "+\n");
+	for (y = board->size - 2; y >= 1; y--) {
+		fprintf(f, "%2d | ", y);
+		for (x = 1; x < board->size - 1; x++)
+			if (moves[y * board->size + x].games)
+				fprintf(f, "%0.2f ", (float) moves[y * board->size + x].wins / moves[y * board->size + x].games);
+			else
+				fprintf(f, "---- ");
+		fprintf(f, "| ");
+		for (x = 1; x < board->size - 1; x++)
+			fprintf(f, "%4d ", moves[y * board->size + x].games);
+		fprintf(f, "|\n");
+	}
+	fprintf(f, "   +-");
+	for (x = 1; x < board->size - 1; x++)
+		fprintf(f, "-----");
+	fprintf(f, "+\n");
+}
+
+
 /* *** Domain-specific knowledge comes here (that is, any heuristics that perfer
  * certain moves, aside of requiring the moves to be according to the rules. */
 
@@ -464,33 +495,7 @@ pass_wins:
 	} foreach_point_end;
 
 	if (mc->debug_level > 2) {
-		struct board *board = b;
-		FILE *f = stderr;
-		fprintf(f, "\n       ");
-		int x, y;
-		char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-		for (x = 1; x < board->size - 1; x++)
-			fprintf(f, "%c    ", asdf[x - 1]);
-		fprintf(f, "\n   +-");
-		for (x = 1; x < board->size - 1; x++)
-			fprintf(f, "-----");
-		fprintf(f, "+\n");
-		for (y = board->size - 2; y >= 1; y--) {
-			fprintf(f, "%2d | ", y);
-			for (x = 1; x < board->size - 1; x++)
-				if (moves[y * board->size + x].games)
-					fprintf(f, "%0.2f ", (float) moves[y * board->size + x].wins / moves[y * board->size + x].games);
-				else
-					fprintf(f, "---- ");
-			fprintf(f, "| ");
-			for (x = 1; x < board->size - 1; x++)
-				fprintf(f, "%4d ", moves[y * board->size + x].games);
-			fprintf(f, "|\n");
-		}
-		fprintf(f, "   +-");
-		for (x = 1; x < board->size - 1; x++)
-			fprintf(f, "-----");
-		fprintf(f, "+\n");
+		board_stats_print(b, moves, stderr);
 	}
 
 move_found:
