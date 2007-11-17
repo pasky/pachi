@@ -20,31 +20,13 @@
  * returns moves according to Chinese rules. Thus, it does not return suicide
  * moves. It of course respects positional superko too. */
 
-/* Pass me arguments like a=b,c=d,...
- * Supported arguments:
- * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
- * games=MC_GAMES		number of random games to play
- * gamelen=MC_GAMELEN		maximal length of played random game
- *
- * The following arguments tune domain-specific heuristics. They tend to carry
- * very high performance penalty.
- * pure				turns all the heuristics off; you can then turn
- * 				them on selectively
- * atari_rate=MC_ATARIRATE	how many of 100 moves should be non-random but
- * 				fix local atari, if there is any
- * local_rate=MC_LOCALRATE	how many of 100 moves should be contact plays
- * 				(tsuke or diagonal)
- * cut_rate=MC_CUTRATE		how many of 100 moves should fix local cuts,
- * 				if there are any */
+/* The arguments accepted are same as montecarlo's. Please see
+ * montecarlo/montecarlo.c for the documentation. */
 
 
-/* Times for 10000 runs on 1.6GHz Athlon. pure runs at ~500ms */
-
-#define MC_GAMES	40000
-#define MC_GAMELEN	400
-#define MC_ATARIRATE	50 /* +200ms */
-#define MC_CUTRATE	40 /* +100ms */
-#define MC_LOCALRATE	30 /* +100ms */
+/* We reuse large part of the code from the montecarlo/ engine. The
+ * struct montecarlo internal state is part of our internal state; actually,
+ * for now we just use the montecarlo state. */
 
 
 /* FIXME: Cutoff rule for simulations. Currently we are so fast that this
@@ -53,11 +35,6 @@
  * already. */
 /* FIXME: We cannot handle seki. Any good ideas are welcome. A possibility is
  * to consider 'pass' among the moves, but this seems tricky. */
-
-
-/*** We reuse some code from the montecarlo/ engine. The struct montecarlo
- * internal state is part of our internal state; actually, for now we just
- * use the montecarlo state. */
 
 
 /* 1: m->color wins, 0: m->color loses; -1: no moves left
@@ -227,7 +204,7 @@ pass_wins:
 		if (result == -2) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
-			if (unlikely(superko > 2 * MC_GAMES)) {
+			if (unlikely(superko > 2 * mc->games)) {
 				/* Uhh. Triple ko, or something? */
 				if (mc->debug_level > 0)
 					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
@@ -298,58 +275,12 @@ move_found:
 struct engine *
 engine_montecasino_init(char *arg)
 {
-	struct montecarlo *mc = calloc(1, sizeof(struct montecarlo));
+	struct montecarlo *mc = montecarlo_state_init(arg);
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "MonteCasino Engine";
 	e->comment = "I'm playing in Monte Casino now! When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
 	e->genmove = montecasino_genmove;
 	e->data = mc;
-
-	mc->last_hint = pass;
-
-	mc->debug_level = 1;
-	mc->games = MC_GAMES;
-	mc->gamelen = MC_GAMELEN;
-	mc->atari_rate = MC_ATARIRATE;
-	mc->local_rate = MC_LOCALRATE;
-	mc->cut_rate = MC_CUTRATE;
-
-	if (arg) {
-		char *optspec, *next = arg;
-		while (*next) {
-			optspec = next;
-			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
-
-			char *optname = optspec;
-			char *optval = strchr(optspec, '=');
-			if (optval) *optval++ = 0;
-
-			if (!strcasecmp(optname, "debug")) {
-				if (optval)
-					mc->debug_level = atoi(optval);
-				else
-					mc->debug_level++;
-			} else if (!strcasecmp(optname, "games") && optval) {
-				mc->games = atoi(optval);
-			} else if (!strcasecmp(optname, "gamelen") && optval) {
-				mc->gamelen = atoi(optval);
-			} else if (!strcasecmp(optname, "pure")) {
-				mc->atari_rate = mc->local_rate = mc->cut_rate = 0;
-			} else if (!strcasecmp(optname, "atarirate") && optval) {
-				mc->atari_rate = atoi(optval);
-			} else if (!strcasecmp(optname, "localrate") && optval) {
-				mc->local_rate = atoi(optval);
-			} else if (!strcasecmp(optname, "cutrate") && optval) {
-				mc->cut_rate = atoi(optval);
-			} else {
-				fprintf(stderr, "MonteCasino: Invalid engine argument %s or missing value\n", optname);
-			}
-		}
-	}
-
-	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
-	mc->loss_threshold = mc->games / 10; /* Stop reading if no loss encountered in first n games. */
 
 	return e;
 }

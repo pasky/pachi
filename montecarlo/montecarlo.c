@@ -233,7 +233,7 @@ pass_wins:
 		if (result == -2) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
-			if (unlikely(superko > 2 * MC_GAMES)) {
+			if (unlikely(superko > 2 * mc->games)) {
 				/* Uhh. Triple ko, or something? */
 				if (mc->debug_level > 0)
 					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
@@ -298,15 +298,11 @@ move_found:
 	return coord_copy(top_coord);
 }
 
-struct engine *
-engine_montecarlo_init(char *arg)
+
+struct montecarlo *
+montecarlo_state_init(char *arg)
 {
 	struct montecarlo *mc = calloc(1, sizeof(struct montecarlo));
-	struct engine *e = calloc(1, sizeof(struct engine));
-	e->name = "MonteCarlo Engine";
-	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
-	e->genmove = montecarlo_genmove;
-	e->data = mc;
 
 	mc->last_hint = pass;
 
@@ -353,6 +349,20 @@ engine_montecarlo_init(char *arg)
 
 	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
 	mc->loss_threshold = mc->games / 10; /* Stop reading if no loss encountered in first n games. */
+
+	return mc;
+}
+
+
+struct engine *
+engine_montecarlo_init(char *arg)
+{
+	struct montecarlo *mc = montecarlo_state_init(arg);
+	struct engine *e = calloc(1, sizeof(struct engine));
+	e->name = "MonteCarlo Engine";
+	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
+	e->genmove = montecarlo_genmove;
+	e->data = mc;
 
 	return e;
 }
