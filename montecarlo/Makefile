@@ -1,5 +1,5 @@
 INCLUDES=-I..
-OBJS=montecarlo.o
+OBJS=hint.o montecarlo.o
 
 all: montecarlo.a
 montecarlo.a: $(OBJS)
