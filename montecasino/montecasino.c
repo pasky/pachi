@@ -159,10 +159,10 @@ play_random:
 		fprintf(stderr, "\tresult %d (score %f)\n", result, score);
 	}
 
-	int i = m->coord.pos * b->size2 + next_move.pos;
-	moves[i].games++;
+	int j = m->coord.pos * b->size2 + next_move.pos;
+	moves[j].games++;
 	if (!result)
-		moves[i].wins++;
+		moves[j].wins++;
 
 	board_done_noalloc(&b2);
 	return result;
@@ -257,7 +257,7 @@ pass_wins:
 	if (mc->debug_level > 2) {
 		fprintf(stderr, "Our board stats:\n");
 		board_stats_print(b, moves, stderr);
-		if (!is_resign(top_coor)) {
+		if (!is_resign(top_coord)) {
 			fprintf(stderr, "Opponent's reaction stats:\n");
 			board_stats_print(b, second_moves[top_coord.pos], stderr);
 		}
