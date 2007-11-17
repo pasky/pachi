@@ -4,8 +4,9 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
 # -ffast-math breaks us
-CUSTOM_CFLAGS=-Wall -ggdb -O3 -march=athlon-xp
+CUSTOM_CFLAGS=-Wall -ggdb -O3 -march=athlon-xp -std=gnu99
 SYS_CFLAGS=
+LDFLAGS=-lm
 
 # Profiling:
 # LDFLAGS+=-pg

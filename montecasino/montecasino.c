@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,6 +175,36 @@ play_random:
 }
 
 
+struct move_info {
+	coord_t coord;
+	float ratio;
+};
+
+static void
+create_move_queue(struct montecarlo *mc, struct board *b,
+                  struct move_stat *moves, struct move_info *q)
+{
+	int qlen = 0;
+	foreach_point(b) {
+		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
+		if (!isfinite(ratio))
+			continue;
+		struct move_info mi = { c, ratio };
+		if (qlen == 0 || q[qlen - 1].ratio > ratio) {
+			q[qlen++] = mi;
+		} else {
+			int i;
+			for (i = 0; i < qlen; i++) {
+				if (q[i].ratio >= ratio)
+					continue;
+				memmove(&q[i + 1], &q[i], sizeof(*q) * (qlen++ - i));
+				q[i] = mi;
+				break;
+			}
+		}
+	} foreach_point_end;
+}
+
 static float
 best_move_at_board(struct montecarlo *mc, struct board *b, struct move_stat *moves)
 {
@@ -186,6 +217,51 @@ best_move_at_board(struct montecarlo *mc, struct board *b, struct move_stat *mov
 			top_ratio = ratio;
 	} foreach_point_end;
 	return top_ratio;
+}
+
+static void
+choose_best_move(struct montecarlo *mc, struct board *b,
+		struct move_stat *moves, struct move_stat *second_moves, struct move_stat *first_moves,
+		float *top_ratio, coord_t *top_coord)
+{
+	struct move_info sorted_moves[b->size2];
+	memset(sorted_moves, 0, b->size2 * sizeof(*sorted_moves));
+	create_move_queue(mc, b, moves, sorted_moves);
+	/* Now, moves sorted descending by ratio are in sorted_moves. */
+
+	/* We take the moves with ratio better than 0.55 (arbitrary value),
+	 * but at least best ten (arbitrary value). From those, we choose
+	 * the one where opponent's best counterattack has worst chance
+	 * of working. */
+
+	/* Before, we just tried to take _any_ move with the opponent's worst
+	 * counterattack, but that didn't work very well in the practice;
+	 * there have to be way too many game playouts to have reliable
+	 * second_moves[], apparently. */
+
+	int move = 0;
+	while (move < 10 || (move < b->size2 && sorted_moves[move].ratio > 0.55)) {
+		coord_t c = sorted_moves[move].coord;
+		if (!moves[c.pos].wins) { /* whatever */
+			move++;
+			continue;
+		}
+
+		float ratio = 1 - best_move_at_board(mc, b, &second_moves[c.pos * b->size2]);
+		if (ratio > *top_ratio) {
+			*top_ratio = ratio;
+			*top_coord = c;
+		}
+		/* Evil cheat. */
+		first_moves[c.pos].games = 100; first_moves[c.pos].wins = ratio * 100;
+		if (mc->debug_level > 2) {
+			fprintf(stderr, "Winner candidate [%d,%d] has counter ratio %f\n", coord_x(c), coord_y(c), ratio);
+			if (mc->debug_level > 3)
+				board_stats_print(b, &second_moves[c.pos * b->size2], stderr);
+		}
+
+		move++;
+	}
 }
 
 
@@ -270,26 +346,9 @@ pass_wins:
 		goto pass_wins;
 	}
 
-	foreach_point(b) {
-		/* float ratio = (float) moves[c.pos].wins / moves[c.pos].games; */
-		/* Instead of our best average, we take the opposite of best
-		 * enemy's counterattack. */
-		if (!moves[c.pos].wins) /* unless there is no counterattack (needed) */
-			continue;
-		float ratio = 1 - best_move_at_board(mc, b, second_moves[c.pos]);
-		if (ratio > top_ratio) {
-			top_ratio = ratio;
-			top_coord = c;
-		}
-		/* Evil cheat. */
-		first_moves[c.pos].games = 100; first_moves[c.pos].wins = ratio * 100;
-#if 0
-		if (mc->debug_level > 2) {
-			fprintf(stderr, "Oppoent stats for [%d,%d %f]:\n", coord_x(c), coord_y(c), ratio);
-			board_stats_print(b, second_moves[c.pos], stderr);
-		}
-#endif
-	} foreach_point_end;
+	/* We take the best moves and choose the one with least lucrative
+	 * opponent's counterattack. */
+	choose_best_move(mc, b, moves, (struct move_stat *) second_moves, first_moves, &top_ratio, &top_coord);
 
 	if (mc->debug_level > 2) {
 		fprintf(stderr, "Our board stats:\n");
