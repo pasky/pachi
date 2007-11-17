@@ -174,6 +174,72 @@ play_random:
 	return result;
 }
 
+/* 1: Games played. 0: No games can be played from this position anymore. */
+static int
+play_many_random_games(struct montecarlo *mc, struct board *b, int games, enum stone color,
+			struct move_stat *moves, struct move_stat *second_moves)
+{
+	struct move m;
+	m.color = color;
+	int losses = 0;
+	int i, superko = 0, good_games = 0;
+	for (i = 0; i < mc->games; i++) {
+		int result = play_random_game(mc, b, second_moves, &m, i);
+
+		if (result == -1)
+			return 0;
+		if (result == -2) {
+			/* Superko. We just ignore this playout.
+			 * And play again. */
+			if (unlikely(superko > 2 * mc->games)) {
+				/* Uhh. Triple ko, or something? */
+				if (mc->debug_level > 0)
+					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
+				return 0;
+			}
+			/* This playout didn't count; we should not
+			 * disadvantage moves that lead to a superko.
+			 * And it is supposed to be rare. */
+			i--, superko++;
+			continue;
+		}
+		if (result == -3) {
+			/* Multi-stone suicide. We play chinese rules,
+			 * so we can't consider this. (Note that we
+			 * unfortunately still consider this in playouts.) */
+			continue;
+		}
+
+		good_games++;
+		moves[m.coord.pos].games++;
+
+		if (b->moves < 3) {
+			/* Simple heuristic: avoid opening too low. Do not
+			 * play on second or first line as first white or
+			 * first two black moves.*/
+			if (coord_x(m.coord) < 3 || coord_x(m.coord) > b->size - 4
+			    || coord_y(m.coord) < 3 || coord_y(m.coord) > b->size - 4)
+				continue;
+		}
+
+		losses += 1 - result;
+		moves[m.coord.pos].wins += result;
+
+		if (unlikely(!losses && i == mc->loss_threshold)) {
+			/* We played out many games and didn't lose once yet.
+			 * This game is over. */
+			break;
+		}
+	}
+
+	if (!good_games) {
+		/* No more valid moves. */
+		return 0;
+	}
+
+	return 1;
+}
+
 
 struct move_info {
 	coord_t coord;
@@ -269,81 +335,23 @@ static coord_t *
 montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	struct montecarlo *mc = e->data;
-	struct move m;
-	m.color = color;
 
 	/* resign when the hope for win vanishes */
 	coord_t top_coord = resign;
 	float top_ratio = mc->resign_ratio;
 
 	struct move_stat moves[b->size2];
-	memset(moves, 0, sizeof(moves));
-
 	struct move_stat second_moves[b->size2][b->size2];
-	memset(second_moves, 0, sizeof(second_moves));
-
 	/* Then first moves again, final decision; only for debugging */
 	struct move_stat first_moves[b->size2];
+	memset(moves, 0, sizeof(moves));
+	memset(second_moves, 0, sizeof(second_moves));
 	memset(first_moves, 0, sizeof(first_moves));
 
-	int losses = 0;
-	int i, superko = 0, good_games = 0;
-	for (i = 0; i < mc->games; i++) {
-		int result = play_random_game(mc, b, (struct move_stat *) second_moves, &m, i);
-
-		if (result == -1) {
-pass_wins:
-			/* No more moves. */
-			top_coord = pass; top_ratio = 0.5;
-			goto move_found;
-		}
-		if (result == -2) {
-			/* Superko. We just ignore this playout.
-			 * And play again. */
-			if (unlikely(superko > 2 * mc->games)) {
-				/* Uhh. Triple ko, or something? */
-				if (mc->debug_level > 0)
-					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
-				goto pass_wins;
-			}
-			/* This playout didn't count; we should not
-			 * disadvantage moves that lead to a superko.
-			 * And it is supposed to be rare. */
-			i--, superko++;
-			continue;
-		}
-		if (result == -3) {
-			/* Multi-stone suicide. We play chinese rules,
-			 * so we can't consider this. (Note that we
-			 * unfortunately still consider this in playouts.) */
-			continue;
-		}
-
-		good_games++;
-		moves[m.coord.pos].games++;
-
-		if (b->moves < 3) {
-			/* Simple heuristic: avoid opening too low. Do not
-			 * play on second or first line as first white or
-			 * first two black moves.*/
-			if (coord_x(m.coord) < 3 || coord_x(m.coord) > b->size - 4
-			    || coord_y(m.coord) < 3 || coord_y(m.coord) > b->size - 4)
-				continue;
-		}
-
-		losses += 1 - result;
-		moves[m.coord.pos].wins += result;
-
-		if (unlikely(!losses && i == mc->loss_threshold)) {
-			/* We played out many games and didn't lose once yet.
-			 * This game is over. */
-			break;
-		}
-	}
-
-	if (!good_games) {
-		/* No more valid moves. */
-		goto pass_wins;
+	if (!play_many_random_games(mc, b, mc->games, color, moves, (struct move_stat *) second_moves)) {
+		/* No more moves. */
+		top_coord = pass; top_ratio = 0.5;
+		goto move_found;
 	}
 
 	/* We take the best moves and choose the one with least lucrative
@@ -363,7 +371,7 @@ pass_wins:
 
 move_found:
 	if (mc->debug_level > 1)
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord), coord_y(top_coord), top_ratio, i, superko);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", coord_x(top_coord), coord_y(top_coord), top_ratio);
 
 	return coord_copy(top_coord);
 }
