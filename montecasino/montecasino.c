@@ -165,10 +165,12 @@ play_random:
 		fprintf(stderr, "\tresult %d (score %f)\n", result, score);
 	}
 
-	int j = m->coord.pos * b->size2 + next_move.pos;
-	moves[j].games++;
-	if (!result)
-		moves[j].wins++;
+	if (!is_pass(next_move)) {
+		int j = m->coord.pos * b->size2 + next_move.pos;
+		moves[j].games++;
+		if (!result)
+			moves[j].wins++;
+	}
 
 	board_done_noalloc(&b2);
 	return result;
@@ -179,6 +181,9 @@ static int
 play_many_random_games(struct montecarlo *mc, struct board *b, int games, enum stone color,
 			struct move_stat *moves, struct move_stat *second_moves)
 {
+	if (mc->debug_level > 3)
+		fprintf(stderr, "Playing %d random games\n", games);
+
 	struct move m;
 	m.color = color;
 	int losses = 0;
@@ -351,6 +356,9 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 		top_coord = pass; top_ratio = 0.5;
 		goto move_found;
 	}
+
+	if (mc->debug_level > 3)
+		fprintf(stderr, "Played the random games\n");
 
 	/* We take the best moves and choose the one with least lucrative
 	 * opponent's counterattack. */
