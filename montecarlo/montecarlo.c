@@ -294,7 +294,8 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent, enum stone 
  * -2 superko inside the game tree (NOT at root, that's simply invalid move)
  * -3 first move is multi-stone suicide */
 static int
-play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
+play_random_game(struct montecarlo *mc, struct board *b, struct move_stat *moves,
+		 struct move *m, int i)
 {
 	struct board b2;
 	board_copy(&b2, b);
@@ -322,6 +323,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 		gamelen = 10;
 
 	enum stone color = stone_other(m->color);
+	coord_t next_move = pass;
 	coord_t urgent;
 
 	int passes = 0;
@@ -359,6 +361,9 @@ play_urgent:
 play_random:
 			board_play_random(&b2, color, &coord);
 		}
+
+		if (unlikely(mc->debug_level > 2) && is_pass(next_move))
+			next_move = coord;
 
 		if (unlikely(b2.superko_violation)) {
 			/* We ignore superko violations that are suicides. These
@@ -401,11 +406,21 @@ play_random:
 		board_print(&b2, stderr);
 
 	float score = board_fast_score(&b2);
-	if (mc->debug_level > 5 - !(i % (mc->games/2)))
-		fprintf(stderr, "--- game result: %f\n", score);
+	bool result = (m->color == S_WHITE ? (score > 0 ? 1 : 0) : (score < 0 ? 1 : 0));
+
+	if (mc->debug_level > 3) {
+		fprintf(stderr, "\tresult %d (score %f)\n", result, score);
+	}
+
+	if (unlikely(mc->debug_level > 2)) {
+		int i = m->coord.pos * b->size2 + next_move.pos;
+		moves[i].games++;
+		if (!result)
+			moves[i].wins++;
+	}
 
 	board_done_noalloc(&b2);
-	return (m->color == S_WHITE ? (score > 0 ? 1 : 0) : (score < 0 ? 1 : 0));
+	return result;
 }
 
 
@@ -423,13 +438,15 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	struct move_stat moves[b->size2];
 	memset(moves, 0, sizeof(moves));
 
+	struct move_stat second_moves[b->size2][b->size2];
+	if (mc->debug_level > 2) {
+		memset(second_moves, 0, sizeof(second_moves));
+	}
+
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
 	for (i = 0; i < mc->games; i++) {
-		int result = play_random_game(mc, b, &m, i);
-
-		if (mc->debug_level > 3)
-			fprintf(stderr, "\tresult %d\n", result);
+		int result = play_random_game(mc, b, (struct move_stat *) second_moves, &m, i);
 
 		if (result == -1) {
 pass_wins:
@@ -495,7 +512,10 @@ pass_wins:
 	} foreach_point_end;
 
 	if (mc->debug_level > 2) {
+		fprintf(stderr, "Our board stats:\n");
 		board_stats_print(b, moves, stderr);
+		fprintf(stderr, "Opponent's reaction stats:\n");
+		board_stats_print(b, second_moves[top_coord.pos], stderr);
 	}
 
 move_found:
