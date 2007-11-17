@@ -261,8 +261,10 @@ pass_wins:
 	if (mc->debug_level > 2) {
 		fprintf(stderr, "Our board stats:\n");
 		board_stats_print(b, moves, stderr);
-		fprintf(stderr, "Opponent's reaction stats:\n");
-		board_stats_print(b, second_moves[top_coord.pos], stderr);
+		if (!is_resign(top_coor)) {
+			fprintf(stderr, "Opponent's reaction stats:\n");
+			board_stats_print(b, second_moves[top_coord.pos], stderr);
+		}
 	}
 
 move_found:
