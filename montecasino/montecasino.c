@@ -22,6 +22,11 @@
 
 /* The arguments accepted are same as montecarlo's. Please see
  * montecarlo/montecarlo.c for the documentation. */
+/* Note that YOU MUST PLAY MANY SIMULATIONS for montecasino to work well!
+ * 100000 is about the low sensible bound. */
+
+/* How many games must be played for a move in order to trust it. */
+#define TRUST_THRESHOLD 10
 
 
 /* We reuse large part of the code from the montecarlo/ engine. The
@@ -174,7 +179,7 @@ best_move_at_board(struct montecarlo *mc, struct board *b, struct move_stat *mov
 {
 	float top_ratio = 0;
 	foreach_point(b) {
-		if (!moves[c.pos].games)
+		if (moves[c.pos].games < TRUST_THRESHOLD)
 			continue;
 		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
 		if (ratio > top_ratio)
@@ -278,6 +283,12 @@ pass_wins:
 		}
 		/* Evil cheat. */
 		first_moves[c.pos].games = 100; first_moves[c.pos].wins = ratio * 100;
+#if 0
+		if (mc->debug_level > 2) {
+			fprintf(stderr, "Oppoent stats for [%d,%d %f]:\n", coord_x(c), coord_y(c), ratio);
+			board_stats_print(b, second_moves[c.pos], stderr);
+		}
+#endif
 	} foreach_point_end;
 
 	if (mc->debug_level > 2) {
