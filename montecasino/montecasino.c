@@ -169,6 +169,21 @@ play_random:
 }
 
 
+static float
+best_move_at_board(struct montecarlo *mc, struct board *b, struct move_stat *moves)
+{
+	float top_ratio = 0;
+	foreach_point(b) {
+		if (!moves[c.pos].games)
+			continue;
+		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
+		if (ratio > top_ratio)
+			top_ratio = ratio;
+	} foreach_point_end;
+	return top_ratio;
+}
+
+
 static coord_t *
 montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 {
@@ -185,6 +200,10 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 
 	struct move_stat second_moves[b->size2][b->size2];
 	memset(second_moves, 0, sizeof(second_moves));
+
+	/* Then first moves again, final decision; only for debugging */
+	struct move_stat first_moves[b->size2];
+	memset(first_moves, 0, sizeof(first_moves));
 
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
@@ -247,16 +266,25 @@ pass_wins:
 	}
 
 	foreach_point(b) {
-		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
+		/* float ratio = (float) moves[c.pos].wins / moves[c.pos].games; */
+		/* Instead of our best average, we take the opposite of best
+		 * enemy's counterattack. */
+		if (!moves[c.pos].games) /* unless there is no counterattack */
+			continue;
+		float ratio = 1 - best_move_at_board(mc, b, second_moves[c.pos]);
 		if (ratio > top_ratio) {
 			top_ratio = ratio;
 			top_coord = c;
 		}
+		/* Evil cheat. */
+		first_moves[c.pos].games = 100; first_moves[c.pos].wins = ratio * 100;
 	} foreach_point_end;
 
 	if (mc->debug_level > 2) {
 		fprintf(stderr, "Our board stats:\n");
 		board_stats_print(b, moves, stderr);
+		fprintf(stderr, "Opponents' counters stats:\n");
+		board_stats_print(b, first_moves, stderr);
 		if (!is_resign(top_coord)) {
 			fprintf(stderr, "Opponent's reaction stats:\n");
 			board_stats_print(b, second_moves[top_coord.pos], stderr);
