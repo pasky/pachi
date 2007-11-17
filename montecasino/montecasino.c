@@ -308,8 +308,8 @@ choose_best_move(struct montecarlo *mc, struct board *b,
 	int move = 0;
 	while (move < 10 || (move < b->size2 && sorted_moves[move].ratio > 0.55)) {
 		coord_t c = sorted_moves[move].coord;
+		move++;
 		if (!moves[c.pos].wins) { /* whatever */
-			move++;
 			continue;
 		}
 
@@ -325,8 +325,6 @@ choose_best_move(struct montecarlo *mc, struct board *b,
 			if (mc->debug_level > 3)
 				board_stats_print(b, &second_moves[c.pos * b->size2], stderr);
 		}
-
-		move++;
 	}
 }
 
