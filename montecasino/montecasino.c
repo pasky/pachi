@@ -159,12 +159,10 @@ play_random:
 		fprintf(stderr, "\tresult %d (score %f)\n", result, score);
 	}
 
-	if (unlikely(mc->debug_level > 2)) {
-		int i = m->coord.pos * b->size2 + next_move.pos;
-		moves[i].games++;
-		if (!result)
-			moves[i].wins++;
-	}
+	int i = m->coord.pos * b->size2 + next_move.pos;
+	moves[i].games++;
+	if (!result)
+		moves[i].wins++;
 
 	board_done_noalloc(&b2);
 	return result;
@@ -186,9 +184,7 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 	memset(moves, 0, sizeof(moves));
 
 	struct move_stat second_moves[b->size2][b->size2];
-	if (mc->debug_level > 2) {
-		memset(second_moves, 0, sizeof(second_moves));
-	}
+	memset(second_moves, 0, sizeof(second_moves));
 
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
