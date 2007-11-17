@@ -595,8 +595,8 @@ board_group_capture(struct board *board, int group)
 	int stones = 0;
 
 	foreach_in_group(board, group) {
-		board_remove_stone(board, c);
 		board->captures[stone_other(board_at(board, c))]++;
+		board_remove_stone(board, c);
 		stones++;
 	} foreach_in_group_end;
 
@@ -686,6 +686,7 @@ board_fast_score(struct board *board)
 		if (color == S_NONE)
 			color = board_get_one_point_eye(board, &c);
 		scores[color]++;
+		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c), coord_y(c), color, scores[color]);
 	} foreach_point_end;
 
 	return board->komi + scores[S_WHITE] - scores[S_BLACK];
