@@ -101,7 +101,12 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 
 
 /* *** Domain-specific knowledge comes here (that is, any heuristics that perfer
- * certain moves, aside of requiring the moves to be according to the rules. */
+ * certain moves, aside of requiring the moves to be according to the rules). */
+/* NOTE: This heuristics affects ONLY the random playouts! It does not help the
+ * engine directly to pick a move, but it makes it pick the hinted moves in the
+ * random playouts FROM the random initial move. So the engine will not prefer
+ * to fix atari on the current board, but it will fix it as the other player
+ * when the next move on current board failed to deal with it. */
 
 static coord_t
 domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
