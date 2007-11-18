@@ -12,11 +12,14 @@
 #include "random.h"
 
 
-/* This is a monte-carlo-based engine with additional per-move heuristics and
- * some feedback mechanisms. It is based on montecarlo/, with some enhancements
- * that would make it too convoluted already. It plays MC_GAMES "random" games
- * from the current board and records win/loss ratio for each first move.
- * The move with the biggest number of winning games gets played. */
+/* This is a monte-carlo-based engine with a feedback mechanism.
+ * It is based on montecarlo/, but the algorithm works a little differently.
+ * It plays MC_GAMES "random" games from the current board and records
+ * win/loss ratio for each first TWO moves. From the first moves with
+ * the biggest number of winning games, the one with the least lucrative
+ * opponent response gets chosen. In a sense, if Monte Carlo looks one
+ * move ahead, this algorithm looks two moves ahead. (And UCT would look
+ * many moves ahead.) */
 /* Note that while the library is based on New Zealand rules, this engine
  * returns moves according to Chinese rules. Thus, it does not return suicide
  * moves. It of course respects positional superko too. */
@@ -24,7 +27,7 @@
 /* The arguments accepted are same as montecarlo's. Please see
  * montecarlo/montecarlo.c for the documentation. */
 /* Note that YOU MUST PLAY MANY SIMULATIONS for montecasino to work well!
- * 100000 is about the low sensible bound. */
+ * 50000 is probably the lowest sensible bound. */
 
 /* How many games must be played for a move in order to trust it. */
 #define TRUST_THRESHOLD 10
