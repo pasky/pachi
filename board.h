@@ -11,6 +11,11 @@
 #define unlikely(x) __builtin_expect((x), 0)
 
 
+/* Allow board_play_random_move() to return pass even when
+ * there are other moves available. */
+extern bool random_pass;
+
+
 typedef uint64_t hash_t;
 
 

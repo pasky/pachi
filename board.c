@@ -9,6 +9,8 @@
 
 int board_group_capture(struct board *board, int group);
 
+bool random_pass = false;
+
 
 #define gi_granularity 4
 #define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
@@ -528,7 +530,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 {
 	coord->pos = b->f[f];
 	if (is_pass(*coord))
-		return true;
+		return random_pass;
 	struct move m = { *coord, color };
 	if (unlikely(debug_level > 6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord), coord_y(*coord));
