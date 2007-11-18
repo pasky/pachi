@@ -217,10 +217,7 @@ play_many_random_games(struct montecasino *mc, struct board *b, int games, enum 
 					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
 				return 0;
 			}
-			/* This playout didn't count; we should not
-			 * disadvantage moves that lead to a superko.
-			 * And it is supposed to be rare. */
-			i--, superko++;
+			superko++;
 			continue;
 		}
 		if (result == -3) {
