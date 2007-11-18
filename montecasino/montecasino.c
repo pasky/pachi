@@ -334,7 +334,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 		{
 			struct board b2;
 			board_copy(&b2, b);
-			struct move m = { c, stone_other(color) };
+			struct move m = { c, color };
 			if (board_play(&b2, &m) < 0) {
 				if (mc->debug_level > 0) {
 					fprintf(stderr, "INTERNAL ERROR - Suggested impossible move %d,%d.\n", coord_x(c), coord_y(c));
@@ -342,7 +342,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 				board_done_noalloc(&b2);
 				continue;
 			}
-			play_many_random_games(mc, &b2, mc->carlo->games / GAMES_SLICE_CANDIDATE, m.color, (struct move_stat *) &second_moves[c.pos * b->size2], NULL);
+			play_many_random_games(mc, &b2, mc->carlo->games / GAMES_SLICE_CANDIDATE, stone_other(color), (struct move_stat *) &second_moves[c.pos * b->size2], NULL);
 			board_done_noalloc(&b2);
 		}
 
