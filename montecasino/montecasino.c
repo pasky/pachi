@@ -347,7 +347,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 		}
 
 		float coratio = 1 - best_move_at_board(mc, b, &second_moves[c.pos * b->size2]);
-		float ratio = sorted_moves[move - 1].ratio * coratio;
+		float ratio = /* sorted_moves[move - 1].ratio * */ coratio;
 		if (coratio > *top_ratio) {
 			*top_ratio = ratio;
 			*top_coord = c;
