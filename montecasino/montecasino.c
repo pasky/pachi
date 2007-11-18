@@ -346,15 +346,16 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 			board_done_noalloc(&b2);
 		}
 
-		float ratio = 1 - best_move_at_board(mc, b, &second_moves[c.pos * b->size2]);
-		if (ratio > *top_ratio) {
+		float coratio = 1 - best_move_at_board(mc, b, &second_moves[c.pos * b->size2]);
+		float ratio = sorted_moves[move - 1].ratio * coratio;
+		if (coratio > *top_ratio) {
 			*top_ratio = ratio;
 			*top_coord = c;
 		}
 		/* Evil cheat. */
 		first_moves[c.pos].games = 100; first_moves[c.pos].wins = ratio * 100;
 		if (mc->debug_level > 2) {
-			fprintf(stderr, "Winner candidate [%d,%d] has counter ratio %f\n", coord_x(c), coord_y(c), ratio);
+			fprintf(stderr, "Winner candidate [%d,%d] has ratio %f counter ratio %f => final ratio %f\n", coord_x(c), coord_y(c), sorted_moves[move - 1].ratio, coratio, ratio);
 			if (mc->debug_level > 3)
 				board_stats_print(b, &second_moves[c.pos * b->size2], stderr);
 		}
