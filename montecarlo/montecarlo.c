@@ -104,6 +104,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord), coord_y(m->coord));
 			board_print(&b2, stderr);
 		}
+		board_done_noalloc(&b2);
 		return -3;
 	}
 
