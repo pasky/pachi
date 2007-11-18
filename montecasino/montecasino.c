@@ -33,11 +33,11 @@
 #define TRUST_THRESHOLD 10
 
 /* Slice of played-out games to play out initially. */
-#define GAMES_SLICE_BASIC 4
+#define GAMES_SLICE_BASIC 8
 /* Number of candidates looked at in more detail. */
-#define CANDIDATES 8
+#define CANDIDATES 10
 /* Slice of played-out games to play out per candidate. */
-#define GAMES_SLICE_CANDIDATE 10
+#define GAMES_SLICE_CANDIDATE 8
 
 
 /* We reuse large part of the code from the montecarlo/ engine. The
