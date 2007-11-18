@@ -57,24 +57,27 @@ struct montecasino {
  * to consider 'pass' among the moves, but this seems tricky. */
 
 
-/* 1: m->color wins, 0: m->color loses; -1: no moves left
+/* 1: m->color wins, 0: m->color loses
+ * -1 superko at the game root
  * -2 superko inside the game tree (NOT at root, that's simply invalid move)
  * -3 first move is multi-stone suicide */
 static int
 play_random_game(struct montecasino *mc, struct board *b, struct move_stat *moves,
 		 struct move *m, int i)
 {
+	if (b->superko_violation) {
+		if (mc->debug_level > 0) {
+			fprintf(stderr, "\tILLEGAL: superko violation at root!\n");
+			board_print(b, stderr);
+		}
+		return -1;
+	}
+
 	struct board b2;
 	board_copy(&b2, b);
 
 	board_play_random(&b2, m->color, &m->coord);
-	if (is_pass(m->coord) || b->superko_violation) {
-		if (mc->debug_level > 3)
-			fprintf(stderr, "\tno moves left\n");
-		board_done_noalloc(&b2);
-		return -1;
-	}
-	if (!group_at(&b2, m->coord)) {
+	if (!is_pass(m->coord) && !group_at(&b2, m->coord)) {
 		if (mc->debug_level > 4) {
 			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord), coord_y(m->coord));
 			board_print(&b2, stderr);
@@ -94,7 +97,7 @@ play_random_game(struct montecasino *mc, struct board *b, struct move_stat *move
 	coord_t next_move = pass;
 	coord_t urgent;
 
-	int passes = 0;
+	int passes = is_pass(m->coord);
 
 	/* Special check: We probably tenukied the last opponent's move. But
 	 * check if the opponent has lucrative local continuation for her last
@@ -180,7 +183,7 @@ play_random:
 		fprintf(stderr, "\tresult %d (score %f)\n", result, score);
 	}
 
-	if (!is_pass(next_move) && moves) {
+	if (!is_pass(m->coord) && !is_pass(next_move) && moves) {
 		int j = m->coord.pos * b->size2 + next_move.pos;
 		moves[j].games++;
 		if (!result)
@@ -206,8 +209,10 @@ play_many_random_games(struct montecasino *mc, struct board *b, int games, enum 
 	for (i = 0; i < games; i++) {
 		int result = play_random_game(mc, b, second_moves, &m, i);
 
-		if (result == -1)
+		if (result == -1) {
+			/* Uh. Oops? Er... */
 			return 0;
+		}
 		if (result == -2) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
@@ -236,11 +241,13 @@ play_many_random_games(struct montecasino *mc, struct board *b, int games, enum 
 				continue;
 		}
 
+		int pos = is_pass(m.coord) ? 0 : m.coord.pos;
+
 		good_games++;
-		moves[m.coord.pos].games++;
+		moves[pos].games++;
 
 		losses += 1 - result;
-		moves[m.coord.pos].wins += result;
+		moves[pos].wins += result;
 
 		if (unlikely(!losses && i == mc->carlo->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.
@@ -250,7 +257,11 @@ play_many_random_games(struct montecasino *mc, struct board *b, int games, enum 
 	}
 
 	if (!good_games) {
-		/* No more valid moves. */
+		/* No moves to try??? */
+		if (mc->debug_level > 0) {
+			fprintf(stderr, "OUT OF MOVES! I will pass. But how did this happen?\n");
+			board_print(b, stderr);
+		}
 		return 0;
 	}
 
@@ -263,7 +274,7 @@ struct move_info {
 	float ratio;
 };
 
-static void
+static int
 create_move_queue(struct montecasino *mc, struct board *b,
                   struct move_stat *moves, struct move_info *q)
 {
@@ -273,19 +284,19 @@ create_move_queue(struct montecasino *mc, struct board *b,
 		if (!isfinite(ratio))
 			continue;
 		struct move_info mi = { c, ratio };
-		if (qlen == 0 || q[qlen - 1].ratio > ratio) {
+		if (qlen == 0 || q[qlen - 1].ratio >= ratio) {
 			q[qlen++] = mi;
 		} else {
 			int i;
 			for (i = 0; i < qlen; i++) {
-				if (q[i].ratio >= ratio)
-					continue;
-				memmove(&q[i + 1], &q[i], sizeof(*q) * (qlen++ - i));
-				q[i] = mi;
-				break;
+				if (q[i].ratio < ratio)
+					break;
 			}
+			memmove(&q[i + 1], &q[i], sizeof(*q) * (qlen++ - i));
+			q[i] = mi;
 		}
 	} foreach_point_end;
+	return qlen;
 }
 
 static float
@@ -309,7 +320,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 {
 	struct move_info sorted_moves[b->size2];
 	memset(sorted_moves, 0, b->size2 * sizeof(*sorted_moves));
-	create_move_queue(mc, b, moves, sorted_moves);
+	int qlen = create_move_queue(mc, b, moves, sorted_moves);
 	/* Now, moves sorted descending by ratio are in sorted_moves. */
 
 	/* We take the moves with ratio better than 0.55 (arbitrary value),
@@ -323,7 +334,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 	 * second_moves[], apparently. */
 
 	int move = 0;
-	while (move < CANDIDATES) {
+	while (move < CANDIDATES && move < qlen) {
 		coord_t c = sorted_moves[move].coord;
 		move++;
 		if (!moves[c.pos].wins) { /* whatever */
@@ -334,7 +345,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 		{
 			struct board b2;
 			board_copy(&b2, b);
-			struct move m = { c, color };
+			struct move m = { c.pos == 0 ? pass : c, color };
 			if (board_play(&b2, &m) < 0) {
 				if (mc->debug_level > 0) {
 					fprintf(stderr, "INTERNAL ERROR - Suggested impossible move %d,%d.\n", coord_x(c), coord_y(c));
@@ -348,9 +359,11 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 
 		float coratio = 1 - best_move_at_board(mc, b, &second_moves[c.pos * b->size2]);
 		float ratio = /* sorted_moves[move - 1].ratio * */ coratio;
-		if (coratio > *top_ratio) {
+		/* Since pass is [0,0], we will pass only when we have nothing
+		 * better to do. */
+		if (ratio >= *top_ratio) {
 			*top_ratio = ratio;
-			*top_coord = c;
+			*top_coord = c.pos == 0 ? pass : c;
 		}
 		/* Evil cheat. */
 		first_moves[c.pos].games = 100; first_moves[c.pos].wins = ratio * 100;
@@ -372,6 +385,8 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 	coord_t top_coord = resign;
 	float top_ratio = mc->carlo->resign_ratio;
 
+	/* We use [0] for pass. Normally, this is an inaccessible corner
+	 * of board margin. */
 	struct move_stat moves[b->size2];
 	struct move_stat second_moves[b->size2][b->size2];
 	/* Then first moves again, final decision; only for debugging */
@@ -398,7 +413,7 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 		board_stats_print(b, moves, stderr);
 		fprintf(stderr, "Opponents' counters stats:\n");
 		board_stats_print(b, first_moves, stderr);
-		if (!is_resign(top_coord)) {
+		if (!is_resign(top_coord) && !is_pass(top_coord)) {
 			fprintf(stderr, "Opponent's reaction stats:\n");
 			board_stats_print(b, second_moves[top_coord.pos], stderr);
 		}

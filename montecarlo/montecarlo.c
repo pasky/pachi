@@ -83,23 +83,26 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 }
 
 
-/* 1: m->color wins, 0: m->color loses; -1: no moves left
+/* 1: m->color wins, 0: m->color loses
+ * -1 superko at the root
  * -2 superko inside the game tree (NOT at root, that's simply invalid move)
  * -3 first move is multi-stone suicide */
 static int
 play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 {
+	if (b->superko_violation) {
+		if (mc->debug_level > 0) {
+			fprintf(stderr, "\tILLEGAL: superko violation at root!\n");
+			board_print(b, stderr);
+		}
+		return -1;
+	}
+
 	struct board b2;
 	board_copy(&b2, b);
 
 	board_play_random(&b2, m->color, &m->coord);
-	if (is_pass(m->coord) || b->superko_violation) {
-		if (mc->debug_level > 3)
-			fprintf(stderr, "\tno moves left\n");
-		board_done_noalloc(&b2);
-		return -1;
-	}
-	if (!group_at(&b2, m->coord)) {
+	if (!is_pass(m->coord) && !group_at(&b2, m->coord)) {
 		if (mc->debug_level > 4) {
 			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord), coord_y(m->coord));
 			board_print(&b2, stderr);
@@ -118,7 +121,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 	enum stone color = stone_other(m->color);
 	coord_t urgent;
 
-	int passes = 0;
+	int passes = is_pass(m->coord);
 
 	/* Special check: We probably tenukied the last opponent's move. But
 	 * check if the opponent has lucrative local continuation for her last
@@ -214,6 +217,8 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	coord_t top_coord = resign;
 	float top_ratio = mc->resign_ratio;
 
+	/* We use [0] for pass. Normally, this is an inaccessible corner
+	 * of board margin. */
 	struct move_stat moves[b->size2];
 	memset(moves, 0, sizeof(moves));
 
@@ -227,7 +232,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 		if (result == -1) {
 pass_wins:
-			/* No more moves. */
+			/* Uh. Oops? Er... */
 			top_coord = pass; top_ratio = 0.5;
 			goto move_found;
 		}
@@ -253,8 +258,10 @@ pass_wins:
 			continue;
 		}
 
+		int pos = is_pass(m.coord) ? 0 : m.coord.pos;
+
 		good_games++;
-		moves[m.coord.pos].games++;
+		moves[pos].games++;
 
 		if (b->moves < 3) {
 			/* Simple heuristic: avoid opening too low. Do not
@@ -266,7 +273,7 @@ pass_wins:
 		}
 
 		losses += 1 - result;
-		moves[m.coord.pos].wins += result;
+		moves[pos].wins += result;
 
 		if (unlikely(!losses && i == mc->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.
@@ -276,15 +283,21 @@ pass_wins:
 	}
 
 	if (!good_games) {
-		/* No more valid moves. */
+		/* No moves to try??? */
+		if (mc->debug_level > 0) {
+			fprintf(stderr, "OUT OF MOVES! I will pass. But how did this happen?\n");
+			board_print(b, stderr);
+		}
 		goto pass_wins;
 	}
 
 	foreach_point(b) {
 		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
-		if (ratio > top_ratio) {
+		/* Since pass is [0,0], we will pass only when we have nothing
+		 * better to do. */
+		if (ratio >= top_ratio) {
 			top_ratio = ratio;
-			top_coord = c;
+			top_coord = c.pos == 0 ? pass : c;
 		}
 	} foreach_point_end;
 

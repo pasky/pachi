@@ -124,6 +124,8 @@ board_clear(struct board *board)
 		} foreach_neighbor_end;
 	} foreach_point_end;
 
+	/* First, pass is always a free position. */
+	board->f[board->flen++] = pass.pos;
 	/* All positions are free! Except the margin. */
 	for (i = board->size; i < (board->size - 1) * board->size; i++)
 		if (i % board->size != 0 && i % board->size != board->size - 1)
@@ -525,6 +527,8 @@ static inline bool
 board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 {
 	coord->pos = b->f[f];
+	if (is_pass(*coord))
+		return true;
 	struct move m = { *coord, color };
 	if (unlikely(debug_level > 6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord), coord_y(*coord));
