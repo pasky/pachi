@@ -227,9 +227,6 @@ play_many_random_games(struct montecasino *mc, struct board *b, int games, enum 
 			continue;
 		}
 
-		good_games++;
-		moves[m.coord.pos].games++;
-
 		if (b->moves < 3) {
 			/* Simple heuristic: avoid opening too low. Do not
 			 * play on second or first line as first white or
@@ -238,6 +235,9 @@ play_many_random_games(struct montecasino *mc, struct board *b, int games, enum 
 			    || coord_y(m.coord) < 3 || coord_y(m.coord) > b->size - 4)
 				continue;
 		}
+
+		good_games++;
+		moves[m.coord.pos].games++;
 
 		losses += 1 - result;
 		moves[m.coord.pos].wins += result;
