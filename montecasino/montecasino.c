@@ -342,7 +342,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 				board_done_noalloc(&b2);
 				continue;
 			}
-			play_many_random_games(mc, b, mc->carlo->games / GAMES_SLICE_CANDIDATE, color, (struct move_stat *) &second_moves[c.pos * b->size2], NULL);
+			play_many_random_games(mc, &b2, mc->carlo->games / GAMES_SLICE_CANDIDATE, color, (struct move_stat *) &second_moves[c.pos * b->size2], NULL);
 			board_done_noalloc(&b2);
 		}
 
