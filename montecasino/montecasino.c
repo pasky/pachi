@@ -177,7 +177,7 @@ play_random:
 		fprintf(stderr, "\tresult %d (score %f)\n", result, score);
 	}
 
-	if (!is_pass(next_move)) {
+	if (!is_pass(next_move) && moves) {
 		int j = m->coord.pos * b->size2 + next_move.pos;
 		moves[j].games++;
 		if (!result)
@@ -342,7 +342,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 				board_done_noalloc(&b2);
 				continue;
 			}
-			play_many_random_games(mc, b, mc->carlo->games / GAMES_SLICE_CANDIDATE, color, moves, (struct move_stat *) second_moves);
+			play_many_random_games(mc, b, mc->carlo->games / GAMES_SLICE_CANDIDATE, color, (struct move_stat *) &second_moves[c.pos * b->size2], NULL);
 			board_done_noalloc(&b2);
 		}
 
