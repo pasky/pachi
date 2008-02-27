@@ -256,6 +256,8 @@ board_handicap(struct board *board, int stones, FILE *f)
 		{ mid, mid },
 	};
 
+	board->handicap = stones;
+
 	if (stones == 5 || stones == 7) {
 		board_handicap_stone(board, mid, mid, f);
 		stones--;
@@ -695,5 +697,5 @@ board_fast_score(struct board *board)
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c), coord_y(c), color, scores[color]);
 	} foreach_point_end;
 
-	return board->komi + scores[S_WHITE] - scores[S_BLACK];
+	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
 }

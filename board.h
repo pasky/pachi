@@ -46,6 +46,7 @@ struct board {
 	int size2; /* size^2 */
 	int captures[S_MAX];
 	float komi;
+	int handicap;
 
 	int moves;
 	struct move last_move;
