@@ -120,9 +120,9 @@ board_clear(struct board *board)
 		coord_t coord = c;
 		if (board_at(board, coord) == S_OFFBOARD)
 			continue;
-		foreach_neighbor(board, c) {
+		foreach_neighbor(board, c, {
 			inc_neighbor_count_at(board, coord, board_at(board, c));
-		} foreach_neighbor_end;
+		} );
 	} foreach_point_end;
 
 	/* First, pass is always a free position. */
@@ -281,10 +281,10 @@ board_remove_stone(struct board *board, coord_t c)
 
 	/* Increase liberties of surrounding groups */
 	coord_t coord = c;
-	foreach_neighbor(board, coord) {
+	foreach_neighbor(board, coord, {
 		dec_neighbor_count_at(board, c, color);
 		board_group_libs(board, group_at(board, c))++;
-	} foreach_neighbor_end;
+	});
 
 	if (DEBUGL(6))
 		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
@@ -364,7 +364,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 	board_at(board, coord) = color;
 
-	foreach_neighbor(board, coord) {
+	foreach_neighbor(board, coord, {
 		enum stone ncolor = board_at(board, c);
 		group_t ngroup = group_at(board, c);
 
@@ -386,7 +386,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 			if (unlikely(board_group_captured(board, ngroup)))
 				board_group_capture(board, ngroup);
 		}
-	} foreach_neighbor_end;
+	});
 
 	if (unlikely(gid <= 0))
 		gid = new_group(board, coord);
@@ -426,7 +426,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	int captured_groups = 0;
 
-	foreach_neighbor(board, coord) {
+	foreach_neighbor(board, coord, {
 		group_t group = group_at(board, c);
 
 		board_group_libs(board, group)--;
@@ -446,7 +446,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord, board), coord_y(ko.coord, board));
 			}
 		}
-	} foreach_neighbor_end;
+	});
 
 	if (likely(captured_groups == 0)) {
 		if (DEBUGL(5)) {
@@ -455,12 +455,12 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
 
-		foreach_neighbor(board, coord) {
+		foreach_neighbor(board, coord, {
 			board_group_libs(board, group_at(board, c))++;
 			if (DEBUGL(7))
 				fprintf(stderr, "board_play_raw: restoring libs for group %d: libs %d\n",
 					group_at(board, c), board_group_libs(board, group_at(board, c)));
-		} foreach_neighbor_end;
+		});
 
 		coord_t c = coord;
 		if (DEBUGL(6))
@@ -469,9 +469,9 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		return -1;
 	}
 
-	foreach_neighbor(board, coord) {
+	foreach_neighbor(board, coord, {
 		inc_neighbor_count_at(board, c, color);
-	} foreach_neighbor_end;
+	});
 
 	board_at(board, coord) = color;
 
@@ -575,7 +575,7 @@ board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color
 
 	foreach_diag_neighbor(board, *coord) {
 		color_diag_libs[(enum stone) board_at(board, c)]++;
-	} foreach_neighbor_end;
+	} foreach_diag_neighbor_end;
 	color_diag_libs[stone_other(eye_color)] += !!color_diag_libs[S_OFFBOARD];
 	return likely(color_diag_libs[stone_other(eye_color)] < 2);
 }
@@ -623,7 +623,7 @@ board_group_in_atari(struct board *board, group_t group, coord_t *lastlib)
 
 	foreach_in_group(board, group) {
 		coord_t coord = c;
-		foreach_neighbor(board, coord) {
+		foreach_neighbor(board, coord, {
 			if (likely(watermark[coord_raw(c)]))
 				continue;
 			watermark[coord_raw(c)] = true;
@@ -633,7 +633,7 @@ board_group_in_atari(struct board *board, group_t group, coord_t *lastlib)
 					return false;
 				*lastlib = c;
 			}
-		} foreach_neighbor_end;
+		} );
 	} foreach_in_group_end;
 
 	return libs == 1;

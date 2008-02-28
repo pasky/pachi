@@ -32,12 +32,12 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	coord_t fix;
 	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)))
 		urgents[urgents_len++] = fix;
-	foreach_neighbor(b, coord) {
+	foreach_neighbor(b, coord, {
 		/* This can produce duplicate candidates. But we should prefer
 		 * bigger groups to smaller ones, so I guess that is kinda ok. */
 		if (likely(group_at(b, c)) && unlikely(board_group_in_atari(b, group_at(b, c), &fix)))
 			urgents[urgents_len++] = fix;
-	} foreach_neighbor_end;
+	} );
 
 	if (unlikely(urgents_len)) {
 		if (MCDEBUGL(8)) {
@@ -125,9 +125,9 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 	memset(neis, 0, sizeof(neis));
 	memset(neis_len, 0, sizeof(neis_len));
 
-	foreach_neighbor(b, coord) {
+	foreach_neighbor(b, coord, {
 		neis[(enum stone) board_at(b, c)][neis_len[(enum stone) board_at(b, c)]++] = c;
-	} foreach_neighbor_end;
+	} );
 
 	foreach_diag_neighbor(b, coord) {
 		neis[(enum stone) board_at(b, c)][neis_len[(enum stone) board_at(b, c)]++] = c;

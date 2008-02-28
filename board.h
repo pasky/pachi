@@ -177,18 +177,15 @@ float board_fast_score(struct board *board);
 
 /* NOT VALID inside of foreach_point() or another foreach_neighbor(), or rather
  * on S_OFFBOARD coordinates. */
-#define foreach_neighbor(board_, coord_) \
+#define foreach_neighbor(board_, coord_, loop_body) \
 	do { \
-		coord_t q__[4]; int q__i = 0; \
-		coord_pos(q__[q__i++], coord_raw(coord_) - 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) - (board_)->size, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + (board_)->size, (board_)); \
-		int fn__i; \
-		for (fn__i = 0; fn__i < q__i; fn__i++) { \
-			coord_t c = q__[fn__i];
-#define foreach_neighbor_end \
-		} \
+		struct board *board__ = board_; \
+		coord_t coord__ = coord_; \
+		coord_t c; \
+		coord_pos(c, coord_raw(coord__) - 1, (board__)); loop_body; \
+		coord_pos(c, coord_raw(coord__) - (board__)->size, (board__)); loop_body; \
+		coord_pos(c, coord_raw(coord__) + 1, (board__)); loop_body; \
+		coord_pos(c, coord_raw(coord__) + (board__)->size, (board__)); loop_body; \
 	} while (0)
 
 #define foreach_diag_neighbor(board_, coord_) \
