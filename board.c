@@ -275,7 +275,7 @@ board_handicap(struct board *board, int stones, FILE *f)
 /* This is a low-level routine that doesn't maintain consistency
  * of all the board data structures. Use board_group_capture() from
  * your code. */
-static void profiling_noinline
+static void
 board_remove_stone(struct board *board, coord_t c)
 {
 	enum stone color = board_at(board, c);
@@ -596,7 +596,7 @@ board_get_one_point_eye(struct board *board, coord_t *coord)
 }
 
 
-int
+int profiling_noinline
 board_group_capture(struct board *board, int group)
 {
 	int stones = 0;
