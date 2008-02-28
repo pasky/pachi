@@ -361,30 +361,32 @@ new_group(struct board *board, coord_t coord)
 static int
 board_play_outside(struct board *board, struct move *m, int f)
 {
-	enum stone other_color = stone_other(m->color);
+	coord_t coord = m->coord;
+	enum stone color = m->color;
+	enum stone other_color = stone_other(color);
 	int gid = 0;
 
 	board->f[f] = board->f[--board->flen];
 	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
-	board_at(board, m->coord) = m->color;
+	board_at(board, coord) = color;
 
-	foreach_neighbor(board, m->coord) {
+	foreach_neighbor(board, coord) {
 		enum stone ncolor = board_at(board, c);
 		group_t ngroup = group_at(board, c);
 
 		dec_neighbor_count_at(board, c, S_NONE);
-		inc_neighbor_count_at(board, c, m->color);
+		inc_neighbor_count_at(board, c, color);
 
 		board_group_libs(board, ngroup)--;
 		if (DEBUGL(7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
 				ngroup, board_group_libs(board, ngroup));
 
-		if (ncolor == m->color && ngroup != gid) {
+		if (ncolor == color && ngroup != gid) {
 			if (gid <= 0) {
 				gid = ngroup;
-				add_to_group(board, gid, c, m->coord);
+				add_to_group(board, gid, c, coord);
 			} else {
 				merge_groups(board, gid, ngroup);
 			}
@@ -395,11 +397,11 @@ board_play_outside(struct board *board, struct move *m, int f)
 	} foreach_neighbor_end;
 
 	if (unlikely(gid <= 0))
-		gid = new_group(board, m->coord);
+		gid = new_group(board, coord);
 
 	board->last_move = *m;
 	board->moves++;
-	board_hash_update(board, m->coord, m->color);
+	board_hash_update(board, coord, color);
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
 
@@ -411,14 +413,16 @@ board_play_outside(struct board *board, struct move *m, int f)
 static int
 board_play_in_eye(struct board *board, struct move *m, int f)
 {
+	coord_t coord = m->coord;
+	enum stone color = m->color;
 	/* Check ko: Capture at a position of ko capture one move ago */
-	if (unlikely(m->color == board->ko.color && coord_eq(m->coord, board->ko.coord))) {
+	if (unlikely(color == board->ko.color && coord_eq(coord, board->ko.coord))) {
 		if (DEBUGL(5))
-			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(m->coord), coord_y(m->coord), m->color);
+			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord), coord_y(coord), color);
 		return -1;
 	} else if (DEBUGL(6)) {
 		fprintf(stderr, "board_check: no ko at %d,%d,%d - ko is %d,%d,%d\n",
-			m->color, coord_x(m->coord), coord_y(m->coord),
+			color, coord_x(coord), coord_y(coord),
 			board->ko.color, coord_x(board->ko.coord), coord_y(board->ko.coord));
 	}
 
@@ -430,7 +434,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	int captured_groups = 0;
 
-	foreach_neighbor(board, m->coord) {
+	foreach_neighbor(board, coord) {
 		group_t group = group_at(board, c);
 
 		board_group_libs(board, group)--;
@@ -444,7 +448,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				/* If we captured multiple groups at once,
 				 * we can't be fighting ko so we don't need
 				 * to check for that. */
-				ko.color = stone_other(m->color);
+				ko.color = stone_other(color);
 				ko.coord = c;
 				if (DEBUGL(5))
 					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord), coord_y(ko.coord));
@@ -459,34 +463,34 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
 
-		foreach_neighbor(board, m->coord) {
+		foreach_neighbor(board, coord) {
 			board_group_libs(board, group_at(board, c))++;
 			if (DEBUGL(7))
 				fprintf(stderr, "board_play_raw: restoring libs for group %d: libs %d\n",
 					group_at(board, c), board_group_libs(board, group_at(board, c)));
 		} foreach_neighbor_end;
 
-		coord_t c = m->coord;
+		coord_t c = coord;
 		if (DEBUGL(6))
 			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
 		board->f[board->flen++] = c.pos;
 		return -1;
 	}
 
-	foreach_neighbor(board, m->coord) {
+	foreach_neighbor(board, coord) {
 		dec_neighbor_count_at(board, c, S_NONE);
-		inc_neighbor_count_at(board, c, m->color);
+		inc_neighbor_count_at(board, c, color);
 	} foreach_neighbor_end;
 
-	board_at(board, m->coord) = m->color;
+	board_at(board, coord) = color;
 
 	board->last_move = *m;
 	board->moves++;
-	board_hash_update(board, m->coord, m->color);
+	board_hash_update(board, coord, color);
 	board_hash_commit(board);
 	board->ko = ko;
 
-	return new_group(board, m->coord);
+	return new_group(board, coord);
 }
 
 static int
