@@ -6,7 +6,7 @@
 
 #include "stone.h"
 
-typedef uint16_t coord_t;
+typedef int coord_t;
 
 #define coord_raw(c) (c)
 #define coord_x(c, b) ((c) % (b)->size)

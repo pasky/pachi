@@ -22,7 +22,7 @@ typedef uint64_t hash_t;
 /* Note that "group" is only chain of stones that is solidly
  * connected for us. */
 
-typedef uint16_t group_t;
+typedef int group_t;
 
 struct group {
 	/* Number of group pseudo-liberties */
@@ -30,7 +30,7 @@ struct group {
 	 * Thus, a single stone will have 4 pseudo-liberties, but so will
 	 * an one-eyed group in atari. The advantage is that we can update
 	 * the liberties lightning-fast. */
-	uint16_t libs;
+	int libs;
 	coord_t base_stone; /* First stone in group */
 };
 
@@ -61,11 +61,11 @@ struct board {
 	 * you need to handle them yourselves, if you need to. */
 
 	/* Stones played on the board */
-	char *b; /* enum stone */
+	enum stone *b; /* enum stone */
 	/* Group id the stones are part of; 0 == no group */
 	group_t *g;
 	/* Positions of next stones in the stone group; 0 == last stone */
-	uint16_t *p;
+	int *p;
 	/* Neighboring colors; numbers of neighbors of index color */
 	struct neighbor_colors *n;
 	/* Zobrist hash for each position */
@@ -73,7 +73,7 @@ struct board {
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
-	uint16_t *f; int flen;
+	int *f; int flen;
 
 	/* Cache of group info, indexed by gid */
 	struct group *gi;
