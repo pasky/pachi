@@ -12,7 +12,11 @@ int board_group_capture(struct board *board, int group);
 bool random_pass = false;
 
 
-//#define profiling_noinline __attribute__((noinline))
+#if 0
+#define profiling_noinline __attribute__((noinline))
+#else
+#define profiling_noinline
+#endif
 
 #define gi_granularity 4
 #define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
