@@ -493,8 +493,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	return new_group(board, coord);
 }
 
-static int
-board_play_f(struct board *board, struct move *m, int f) __attribute__((flatten))
+static int __attribute__((flatten))
+board_play_f(struct board *board, struct move *m, int f)
 {
 	if (DEBUGL(7)) {
 		fprintf(stderr, "board_play(): ---- Playing %d,%d\n", coord_x(m->coord, board), coord_y(m->coord, board));
