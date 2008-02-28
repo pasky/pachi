@@ -263,15 +263,6 @@ pass_wins:
 		good_games++;
 		moves[pos].games++;
 
-		if (b->moves < 3) {
-			/* Simple heuristic: avoid opening too low. Do not
-			 * play on second or first line as first white or
-			 * first two black moves.*/
-			if (coord_x(m.coord, b) < 3 || coord_x(m.coord, b) > b->size - 4
-			    || coord_y(m.coord, b) < 3 || coord_y(m.coord, b) > b->size - 4)
-				continue;
-		}
-
 		losses += 1 - result;
 		moves[pos].wins += result;
 
@@ -292,6 +283,15 @@ pass_wins:
 	}
 
 	foreach_point(b) {
+		if (b->moves < 3) {
+			/* Simple heuristic: avoid opening too low. Do not
+			 * play on second or first line as first white or
+			 * first two black moves.*/
+			if (coord_x(c, b) < 3 || coord_x(c, b) > b->size - 4
+			    || coord_y(c, b) < 3 || coord_y(c, b) > b->size - 4)
+				continue;
+		}
+
 		float ratio = (float) moves[coord_raw(c)].wins / moves[coord_raw(c)].games;
 		/* Since pass is [0,0], we will pass only when we have nothing
 		 * better to do. */
