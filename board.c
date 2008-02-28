@@ -12,6 +12,8 @@ int board_group_capture(struct board *board, int group);
 bool random_pass = false;
 
 
+//#define profiling_noinline __attribute__((noinline))
+
 #define gi_granularity 4
 #define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
 
@@ -190,7 +192,7 @@ board_print(struct board *board, FILE *f)
 
 
 /* Update board hash with given coordinate. */
-static void
+static void profiling_noinline
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
 	board->hash ^= board->h[(color == S_BLACK ? board->size2 : 0) + coord_raw(coord)];
@@ -199,7 +201,7 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 }
 
 /* Commit current board hash to history. */
-static void
+static void profiling_noinline
 board_hash_commit(struct board *board)
 {
 	if (DEBUGL(8))
@@ -269,7 +271,7 @@ board_handicap(struct board *board, int stones, FILE *f)
 /* This is a low-level routine that doesn't maintain consistency
  * of all the board data structures. Use board_group_capture() from
  * your code. */
-static void
+static void profiling_noinline
 board_remove_stone(struct board *board, coord_t c)
 {
 	enum stone color = board_at(board, c);
@@ -290,7 +292,7 @@ board_remove_stone(struct board *board, coord_t c)
 }
 
 
-static void
+static void profiling_noinline
 add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
 	board_group_libs(board, gid) += immediate_liberty_count(board, coord);
@@ -307,7 +309,7 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 			gid, board_group_libs(board, gid));
 }
 
-static void
+static void profiling_noinline
 merge_groups(struct board *board, group_t group_to, group_t group_from)
 {
 	if (DEBUGL(7))
@@ -330,7 +332,7 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 			group_to, board_group_libs(board, group_to));
 }
 
-static group_t
+static group_t profiling_noinline
 new_group(struct board *board, coord_t coord)
 {
 	group_t gid = coord_raw(coord);
@@ -349,7 +351,7 @@ new_group(struct board *board, coord_t coord)
 
 /* We played on a place with at least one liberty. We will become a member of
  * some group for sure. */
-static int
+static int profiling_noinline
 board_play_outside(struct board *board, struct move *m, int f)
 {
 	coord_t coord = m->coord;
@@ -400,7 +402,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 
 /* We played in an eye-like shape. Either we capture at least one of the eye
  * sides in the process of playing, or return -1. */
-static int
+static int profiling_noinline
 board_play_in_eye(struct board *board, struct move *m, int f)
 {
 	coord_t coord = m->coord;
