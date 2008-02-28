@@ -284,7 +284,6 @@ board_remove_stone(struct board *board, coord_t c)
 	coord_t coord = c;
 	foreach_neighbor(board, coord) {
 		dec_neighbor_count_at(board, c, color);
-		inc_neighbor_count_at(board, c, S_NONE);
 		board_group_libs(board, group_at(board, c))++;
 	} foreach_neighbor_end;
 
@@ -297,7 +296,7 @@ board_remove_stone(struct board *board, coord_t c)
 static void
 add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
-	board_group_libs(board, gid) += neighbor_count_at(board, coord, S_NONE);
+	board_group_libs(board, gid) += immediate_liberty_count(board, coord);
 
 	group_at(board, coord) = gid;
 	groupnext_at(board, coord) = groupnext_at(board, prevstone);
@@ -343,7 +342,7 @@ new_group(struct board *board, coord_t coord)
 	memset(&board->gi[gid], 0, sizeof(*board->gi));
 
 	board_group(board, gid).base_stone = coord;
-	board_group_libs(board, gid) = neighbor_count_at(board, coord, S_NONE);
+	board_group_libs(board, gid) = immediate_liberty_count(board, coord);
 
 	group_at(board, coord) = gid;
 	groupnext_at(board, coord) = 0;
@@ -375,7 +374,6 @@ board_play_outside(struct board *board, struct move *m, int f)
 		enum stone ncolor = board_at(board, c);
 		group_t ngroup = group_at(board, c);
 
-		dec_neighbor_count_at(board, c, S_NONE);
 		inc_neighbor_count_at(board, c, color);
 
 		board_group_libs(board, ngroup)--;
@@ -478,7 +476,6 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	}
 
 	foreach_neighbor(board, coord) {
-		dec_neighbor_count_at(board, c, S_NONE);
 		inc_neighbor_count_at(board, c, color);
 	} foreach_neighbor_end;
 
@@ -622,7 +619,7 @@ board_group_in_atari(struct board *board, int group, coord_t *lastlib)
 	if (!group || board_group_libs(board, group) > 4)
 		return false;
 	coord_t base_stone = board_group(board, group).base_stone;
-	if (neighbor_count_at(board, base_stone, S_NONE) > 1)
+	if (immediate_liberty_count(board, base_stone) > 1)
 		return false;
 
 	int libs = 0;

@@ -107,6 +107,7 @@ struct board {
 #define set_neighbor_count_at(b_, coord, color, count) (neighbor_count_at(b_, coord, color) = (count))
 #define inc_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)++)
 #define dec_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)--)
+#define immediate_liberty_count(b_, coord) (4 - neighbor_count_at(b_, coord, S_BLACK) - neighbor_count_at(b_, coord, S_WHITE) - neighbor_count_at(b_, coord, S_OFFBOARD))
 
 #define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + (b_)->size * (y)])
