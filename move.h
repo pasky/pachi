@@ -6,22 +6,20 @@
 
 #include "stone.h"
 
-typedef struct coord {
-	uint16_t pos, size;
-} coord_t;
+typedef uint16_t coord_t;
 
-#define coord_raw(c) ((c).pos)
-#define coord_x(c, b) ((c).pos % (c).size)
-#define coord_y(c, b) ((c).pos / (c).size)
-#define coord_eq(c1, c2) ((c1).pos == (c2).pos)
+#define coord_raw(c) (c)
+#define coord_x(c, b) ((c) % (b)->size)
+#define coord_y(c, b) ((c) / (b)->size)
+#define coord_eq(c1, c2) ((c1) == (c2))
 
-static coord_t pass = { -1, 1 };
-static coord_t resign = { -2, 1 };
+static coord_t pass = -1;
+static coord_t resign = -2;
 #define is_pass(c) (coord_eq(c, pass))
 #define is_resign(c) (coord_eq(c, resign))
 
 /* Initialize existing coord */
-#define coord_pos(coord, pos_, board) do { coord_t *c__ = &(coord); c__->size = (board)->size; c__->pos = (pos_); } while (0)
+#define coord_pos(coord, pos_, board) do { (coord) = (pos_); } while (0)
 #define coord_xy(coord, x, y, board) coord_pos(coord, x + y * (board)->size, board)
 
 /* dyn allocated */
@@ -47,7 +45,7 @@ static inline coord_t *
 coord_init(int x, int y, int size)
 {
 	coord_t *c = calloc(1, sizeof(coord_t));
-	c->size = size; c->pos = x + y * size;
+	*c = x + y * size;
 	return c;
 }
 
