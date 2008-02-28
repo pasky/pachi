@@ -370,27 +370,27 @@ board_play_outside(struct board *board, struct move *m, int f)
 	board_at(board, m->coord) = m->color;
 
 	foreach_neighbor(board, m->coord) {
-		enum stone color = board_at(board, c);
-		group_t group = group_at(board, c);
+		enum stone ncolor = board_at(board, c);
+		group_t ngroup = group_at(board, c);
 
 		dec_neighbor_count_at(board, c, S_NONE);
 		inc_neighbor_count_at(board, c, m->color);
 
-		board_group_libs(board, group)--;
+		board_group_libs(board, ngroup)--;
 		if (DEBUGL(7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
-				group, board_group_libs(board, group));
+				ngroup, board_group_libs(board, ngroup));
 
-		if (color == m->color && group != gid) {
+		if (ncolor == m->color && ngroup != gid) {
 			if (gid <= 0) {
-				gid = group;
+				gid = ngroup;
 				add_to_group(board, gid, c, m->coord);
 			} else {
-				merge_groups(board, gid, group);
+				merge_groups(board, gid, ngroup);
 			}
-		} else if (color == other_color) {
-			if (unlikely(board_group_captured(board, group)))
-				board_group_capture(board, group);
+		} else if (ncolor == other_color) {
+			if (unlikely(board_group_captured(board, ngroup)))
+				board_group_capture(board, ngroup);
 		}
 	} foreach_neighbor_end;
 
