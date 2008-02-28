@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 	}
 
 	fast_srandom(seed);
-	if (debug_level > 0)
+	if (DEBUGL(0))
 		fprintf(stderr, "Random seed: %d", seed);
 
 	char *e_arg = NULL;
@@ -72,10 +72,10 @@ int main(int argc, char *argv[])
 
 	char buf[256];
 	while (fgets(buf, 256, stdin)) {
-		if (debug_level > 1)
+		if (DEBUGL(1))
 			fprintf(stderr, "IN: %s", buf);
 		gtp_parse(b, e, buf);
-		if (debug_level > 1)
+		if (DEBUGL(1))
 			board_print(b, stderr);
 	}
 	return 0;

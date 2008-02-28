@@ -177,7 +177,7 @@ board_print(struct board *board, FILE *f)
 			else
 				fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
 		}
-		if (unlikely(debug_level > 6)) {
+		if (DEBUGL(6)) {
 			fprintf(f, "| ");
 			for (x = 1; x < board->size - 1; x++) {
 				fprintf(f, "%d ", group_atxy(board, x, y));
@@ -197,7 +197,7 @@ static void
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
 	board->hash ^= board->h[(color == S_BLACK ? board->size2 : 0) + coord.pos];
-	if (unlikely(debug_level > 8))
+	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord), coord_y(coord), board->h[color * coord.pos], board->hash);
 }
 
@@ -205,7 +205,7 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 static void
 board_hash_commit(struct board *board)
 {
-	if (unlikely(debug_level > 8))
+	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_commit %llx\n", board->hash);
 	if (likely(board->history_hash[board->hash & history_hash_mask]) == 0) {
 		board->history_hash[board->hash & history_hash_mask] = board->hash;
@@ -213,7 +213,7 @@ board_hash_commit(struct board *board)
 		hash_t i = board->hash;
 		while (board->history_hash[i & history_hash_mask]) {
 			if (board->history_hash[i & history_hash_mask] == board->hash) {
-				if (unlikely(debug_level > 5))
+				if (DEBUGL(5))
 					fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
 						coord_x(board->last_move.coord), coord_y(board->last_move.coord));
 				board->superko_violation = true;
@@ -236,7 +236,7 @@ board_handicap_stone(struct board *board, int x, int y, FILE *f)
 	board_play(board, &m);
 
 	char *str = coord2str(m.coord);
-	if (debug_level > 1)
+	if (DEBUGL(1))
 		fprintf(stderr, "choosing handicap %s (%d,%d)\n", str, x, y);
 	fprintf(f, "%s ", str);
 	free(str);
@@ -288,7 +288,7 @@ board_remove_stone(struct board *board, coord_t c)
 		board_group_libs(board, group_at(board, c))++;
 	} foreach_neighbor_end;
 
-	if (unlikely(debug_level > 6))
+	if (DEBUGL(6))
 		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
 	board->f[board->flen++] = c.pos;
 }
@@ -303,7 +303,7 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 	groupnext_at(board, coord) = groupnext_at(board, prevstone);
 	groupnext_at(board, prevstone) = coord.pos;
 
-	if (unlikely(debug_level > 8))
+	if (DEBUGL(8))
 		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d - libs %d\n",
 			coord_x(prevstone), coord_y(prevstone),
 			coord_x(coord), coord_y(coord),
@@ -314,7 +314,7 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 static void
 merge_groups(struct board *board, group_t group_to, group_t group_from)
 {
-	if (unlikely(debug_level > 7))
+	if (DEBUGL(7))
 		fprintf(stderr, "board_play_raw: merging groups %d(%d) -> %d(%d)\n",
 			group_from, board_group_libs(board, group_from),
 			group_to, board_group_libs(board, group_to));
@@ -329,7 +329,7 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 
 	board_group_libs(board, group_to) += board_group_libs(board, group_from);
 
-	if (unlikely(debug_level > 7))
+	if (DEBUGL(7))
 		fprintf(stderr, "board_play_raw: merged group: %d(%d)\n",
 			group_to, board_group_libs(board, group_to));
 }
@@ -348,7 +348,7 @@ new_group(struct board *board, coord_t coord)
 	group_at(board, coord) = gid;
 	groupnext_at(board, coord) = 0;
 
-	if (unlikely(debug_level > 8))
+	if (DEBUGL(8))
 		fprintf(stderr, "new_group: added %d,%d to group %d - libs %d\n",
 			coord_x(coord), coord_y(coord),
 			gid, board_group_libs(board, gid));
@@ -365,7 +365,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 	int gid = 0;
 
 	board->f[f] = board->f[--board->flen];
-	if (unlikely(debug_level > 6))
+	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 	board_at(board, m->coord) = m->color;
 
@@ -377,7 +377,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 		inc_neighbor_count_at(board, c, m->color);
 
 		board_group_libs(board, group)--;
-		if (unlikely(debug_level > 7))
+		if (DEBUGL(7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
 				group, board_group_libs(board, group));
 
@@ -413,10 +413,10 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 {
 	/* Check ko: Capture at a position of ko capture one move ago */
 	if (unlikely(m->color == board->ko.color && coord_eq(m->coord, board->ko.coord))) {
-		if (unlikely(debug_level > 5))
+		if (DEBUGL(5))
 			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(m->coord), coord_y(m->coord), m->color);
 		return -1;
-	} else if (unlikely(debug_level > 6)) {
+	} else if (DEBUGL(6)) {
 		fprintf(stderr, "board_check: no ko at %d,%d,%d - ko is %d,%d,%d\n",
 			m->color, coord_x(m->coord), coord_y(m->coord),
 			board->ko.color, coord_x(board->ko.coord), coord_y(board->ko.coord));
@@ -425,7 +425,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	struct move ko = { pass, S_NONE };
 
 	board->f[f] = board->f[--board->flen];
-	if (unlikely(debug_level > 6))
+	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 
 	int captured_groups = 0;
@@ -434,7 +434,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		group_t group = group_at(board, c);
 
 		board_group_libs(board, group)--;
-		if (unlikely(debug_level > 7))
+		if (DEBUGL(7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
 				group, board_group_libs(board, group));
 
@@ -446,28 +446,28 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				 * to check for that. */
 				ko.color = stone_other(m->color);
 				ko.coord = c;
-				if (unlikely(debug_level > 5))
+				if (DEBUGL(5))
 					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord), coord_y(ko.coord));
 			}
 		}
 	} foreach_neighbor_end;
 
 	if (likely(captured_groups == 0)) {
-		if (unlikely(debug_level > 5)) {
-			if (unlikely(debug_level > 6))
+		if (DEBUGL(5)) {
+			if (DEBUGL(6))
 				board_print(board, stderr);
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
 
 		foreach_neighbor(board, m->coord) {
 			board_group_libs(board, group_at(board, c))++;
-			if (unlikely(debug_level > 7))
+			if (DEBUGL(7))
 				fprintf(stderr, "board_play_raw: restoring libs for group %d: libs %d\n",
 					group_at(board, c), board_group_libs(board, group_at(board, c)));
 		} foreach_neighbor_end;
 
 		coord_t c = m->coord;
-		if (unlikely(debug_level > 6))
+		if (DEBUGL(6))
 			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
 		board->f[board->flen++] = c.pos;
 		return -1;
@@ -492,7 +492,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 static int
 board_play_f(struct board *board, struct move *m, int f)
 {
-	if (unlikely(debug_level > 7)) {
+	if (DEBUGL(7)) {
 		fprintf(stderr, "board_play(): ---- Playing %d,%d\n", coord_x(m->coord), coord_y(m->coord));
 	}
 	if (likely(!board_is_eyelike(board, &m->coord, stone_other(m->color)))) {
@@ -521,7 +521,7 @@ board_play(struct board *board, struct move *m)
 		if (board->f[f] == m->coord.pos)
 			return board_play_f(board, m, f);
 
-	if (unlikely(debug_level > 7))
+	if (DEBUGL(7))
 		fprintf(stderr, "board_check: stone exists\n");
 	return -1;
 }
@@ -534,7 +534,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 	if (is_pass(*coord))
 		return random_pass;
 	struct move m = { *coord, color };
-	if (unlikely(debug_level > 6))
+	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord), coord_y(*coord));
 	return (!board_is_one_point_eye(b, coord, color) /* bad idea to play into one, usually */
 	        && board_play_f(b, &m, f) >= 0);

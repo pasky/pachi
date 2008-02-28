@@ -1,6 +1,7 @@
 #ifndef ZZGO_MONTECARLO_INTERNAL_H
 #define ZZGO_MONTECARLO_INTERNAL_H
 
+#include "debug.h"
 #include "move.h"
 
 /* Internal MonteCarlo structures */
@@ -17,6 +18,8 @@ struct montecarlo {
 	coord_t last_hint;
 	int last_hint_value;
 };
+
+#define MCDEBUGL(n) DEBUGL_(mc->debug_level, n)
 
 
 /* Per-move playout statistics. */

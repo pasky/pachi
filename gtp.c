@@ -125,10 +125,10 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		coord_t *c = str2coord(arg, board->size);
 		m.coord = *c; coord_done(c);
 
-		if (debug_level > 1)
+		if (DEBUGL(1))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
 		if (board_play(board, &m) < 0) {
-			if (debug_level > 0)
+			if (DEBUGL(0))
 				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
 			gtp_error(id, "illegal move", NULL);
 		} else {
@@ -143,7 +143,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		struct move m = { *c, color };
 		board_play(board, &m);
 		char *str = coord2str(*c);
-		if (debug_level > 1)
+		if (DEBUGL(1))
 			fprintf(stderr, "playing move %s\n", str);
 		gtp_reply(id, str, NULL);
 		free(str); coord_done(c);
@@ -157,11 +157,11 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		do {
 			coord_t *c = str2coord(arg, board->size);
 			m.coord = *c; coord_done(c);
-			if (debug_level > 1)
+			if (DEBUGL(1))
 				fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord), coord_y(m.coord));
 
 			if (board_play(board, &m) < 0) {
-				if (debug_level > 0)
+				if (DEBUGL(0))
 					fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
 				gtp_error(id, "illegal move", NULL);
 			}
@@ -185,7 +185,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 	} else if (!strcasecmp(cmd, "final_score")) {
 		float score = board_official_score(board);
 		char str[64];
-		if (debug_level > 1)
+		if (DEBUGL(1))
 			fprintf(stderr, "counted score %.1f\n", score);
 		if (score == 0) {
 			gtp_reply(id, "0", NULL);

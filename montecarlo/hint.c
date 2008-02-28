@@ -21,7 +21,7 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	 * This test costs a lot of performance (the whole playout is about 1/4
 	 * slower), but improves the playouts a lot. */
 
-	if (unlikely(mc->debug_level > 8)) {
+	if (MCDEBUGL(8)) {
 		fprintf(stderr, "-- Scanning for %d,%d-urgent moves:\n", coord_x(coord), coord_y(coord));
 		board_print(b, stderr);
 	}
@@ -40,7 +40,7 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	} foreach_neighbor_end;
 
 	if (unlikely(urgents_len)) {
-		if (unlikely(mc->debug_level > 8)) {
+		if (MCDEBUGL(8)) {
 			fprintf(stderr, "Urgent moves found:");
 			int i = 0;
 			for (i = 0; i < urgents_len; i++)
@@ -59,7 +59,7 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 	 * (O) X
 	 *  X  .  */
 
-	if (unlikely(mc->debug_level > 8)) {
+	if (MCDEBUGL(8)) {
 		fprintf(stderr, "-- Scanning for %d,%d-cut moves:\n", coord_x(coord), coord_y(coord));
 		board_print(b, stderr);
 	}
@@ -97,7 +97,7 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 	} foreach_diag_neighbor_end;
 
 	if (unlikely(cuts_len)) {
-		if (unlikely(mc->debug_level > 8)) {
+		if (MCDEBUGL(8)) {
 			fprintf(stderr, "Cutting moves found:");
 			int i = 0;
 			for (i = 0; i < cuts_len; i++)
@@ -116,7 +116,7 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 	 * real game, local moves often tend to be the urgent ones, even if they
 	 * aren't atari. */
 
-	if (unlikely(mc->debug_level > 8)) {
+	if (MCDEBUGL(8)) {
 		fprintf(stderr, "-- Scanning for %d,%d-local moves:\n", coord_x(coord), coord_y(coord));
 		board_print(b, stderr);
 	}
@@ -134,7 +134,7 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 	} foreach_diag_neighbor_end;
 
 	if (likely(neis_len[S_NONE])) {
-		if (unlikely(mc->debug_level > 8)) {
+		if (MCDEBUGL(8)) {
 			fprintf(stderr, "Local moves found:");
 			int i = 0;
 			for (i = 0; i < neis_len[S_NONE]; i++)

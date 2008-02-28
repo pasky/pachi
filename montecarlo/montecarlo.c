@@ -91,7 +91,7 @@ static int
 play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 {
 	if (b->superko_violation) {
-		if (mc->debug_level > 0) {
+		if (MCDEBUGL(0)) {
 			fprintf(stderr, "\tILLEGAL: superko violation at root!\n");
 			board_print(b, stderr);
 		}
@@ -103,7 +103,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 
 	board_play_random(&b2, m->color, &m->coord);
 	if (!is_pass(m->coord) && !group_at(&b2, m->coord)) {
-		if (mc->debug_level > 4) {
+		if (MCDEBUGL(4)) {
 			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord), coord_y(m->coord));
 			board_print(&b2, stderr);
 		}
@@ -111,7 +111,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 		return -3;
 	}
 
-	if (mc->debug_level > 3)
+	if (MCDEBUGL(3))
 		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord), coord_y(m->coord));
 
 	int gamelen = mc->gamelen - b2.moves;
@@ -145,7 +145,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 play_urgent:
 			m.coord = urgent; m.color = color;
 			if (board_play(&b2, &m) < 0) {
-				if (unlikely(mc->debug_level > 7)) {
+				if (MCDEBUGL(7)) {
 					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent), coord_y(urgent));
 					board_print(&b2, stderr);
 				}
@@ -163,15 +163,15 @@ play_random:
 			 * rather harmless. (They will not go through as a root
 			 * move anyway.) */
 			if (group_at(&b2, coord)) {
-				if (unlikely(mc->debug_level > 3)) {
+				if (MCDEBUGL(3)) {
 					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord), coord_y(coord));
-					if (mc->debug_level > 4)
+					if (MCDEBUGL(4))
 						board_print(&b2, stderr);
 				}
 				board_done_noalloc(&b2);
 				return -2;
 			} else {
-				if (unlikely(mc->debug_level > 6)) {
+				if (MCDEBUGL(6)) {
 					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord), coord_y(coord));
 					board_print(&b2, stderr);
 				}
@@ -179,7 +179,7 @@ play_random:
 			}
 		}
 
-		if (unlikely(mc->debug_level > 7)) {
+		if (MCDEBUGL(7)) {
 			char *cs = coord2str(coord);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
@@ -194,11 +194,11 @@ play_random:
 		color = stone_other(color);
 	}
 
-	if (mc->debug_level > 6 - !(i % (mc->games/2)))
+	if (MCDEBUGL(6 - !(i % (mc->games/2))))
 		board_print(&b2, stderr);
 
 	float score = board_fast_score(&b2);
-	if (mc->debug_level > 5 - !(i % (mc->games/2)))
+	if (MCDEBUGL(5 - !(i % (mc->games/2))))
 		fprintf(stderr, "--- game result: %f\n", score);
 
 	board_done_noalloc(&b2);
@@ -227,7 +227,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	for (i = 0; i < mc->games; i++) {
 		int result = play_random_game(mc, b, &m, i);
 
-		if (mc->debug_level > 3)
+		if (MCDEBUGL(3))
 			fprintf(stderr, "\tresult %d\n", result);
 
 		if (result == -1) {
@@ -241,7 +241,7 @@ pass_wins:
 			 * And play again. */
 			if (unlikely(superko > 2 * mc->games)) {
 				/* Uhh. Triple ko, or something? */
-				if (mc->debug_level > 0)
+				if (MCDEBUGL(0))
 					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
 				goto pass_wins;
 			}
@@ -284,7 +284,7 @@ pass_wins:
 
 	if (!good_games) {
 		/* No moves to try??? */
-		if (mc->debug_level > 0) {
+		if (MCDEBUGL(0)) {
 			fprintf(stderr, "OUT OF MOVES! I will pass. But how did this happen?\n");
 			board_print(b, stderr);
 		}
@@ -301,12 +301,12 @@ pass_wins:
 		}
 	} foreach_point_end;
 
-	if (mc->debug_level > 2) {
+	if (MCDEBUGL(2)) {
 		board_stats_print(b, moves, stderr);
 	}
 
 move_found:
-	if (mc->debug_level > 1)
+	if (MCDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord), coord_y(top_coord), top_ratio, i, superko);
 
 	return coord_copy(top_coord);
