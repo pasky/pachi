@@ -22,7 +22,7 @@ typedef uint64_t hash_t;
 /* Note that "group" is only chain of stones that is solidly
  * connected for us. */
 
-typedef int group_t;
+typedef coord_t group_t;
 
 struct group {
 	/* Number of group pseudo-liberties */
@@ -71,17 +71,15 @@ struct board {
 	/* Zobrist hash for each position */
 	hash_t *h;
 
+	/* Group liberties - indexed by gid (which is coord of base group stone) */
+	int *l;
+
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
 	int *f; int flen;
 
-	/* Cache of group info, indexed by gid */
-	struct group *gi;
 
 	/* --- PRIVATE DATA --- */
-
-	/* For board->gi */
-	int last_gid;
 
 	/* Basic ko check */
 	struct move ko;
@@ -112,8 +110,7 @@ struct board {
 #define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + (b_)->size * (y)])
 
-#define board_group(b_, g_) ((b_)->gi[(g_)])
-#define board_group_libs(b_, g_) (board_group(b_, g_).libs)
+#define board_group_libs(b_, g_) ((b_)->l[(g_)])
 #define board_group_captured(b_, g_) (board_group_libs(b_, g_) == 0)
 
 struct board *board_init(void);
@@ -170,7 +167,7 @@ float board_fast_score(struct board *board);
 #define foreach_in_group(board_, group_) \
 	do { \
 		struct board *board__ = board_; \
-		coord_t c = board_group(board_, group_).base_stone; \
+		coord_t c = (group_); \
 		coord_t c2 = c; coord_raw(c2) = groupnext_at(board__, c2); \
 		do {
 #define foreach_in_group_end \

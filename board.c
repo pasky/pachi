@@ -23,8 +23,6 @@ board_setup(struct board *b)
 
 	struct move m = { pass, S_NONE };
 	b->last_move = b->ko = m;
-
-	b->gi = calloc(gi_allocsize(1), sizeof(*b->gi));
 }
 
 struct board *
@@ -46,18 +44,16 @@ board_copy(struct board *b2, struct board *b1)
 	int nsize = b2->size2 * sizeof(*b2->n);
 	int psize = b2->size2 * sizeof(*b2->p);
 	int hsize = b2->size2 * 2 * sizeof(*b2->h);
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize);
+	int lsize = b2->size2 * sizeof(*b2->l);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + lsize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + lsize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
 	b2->p = x; x += psize;
 	b2->n = x; x += nsize;
 	b2->h = x; x += hsize;
-
-	int gi_a = gi_allocsize(b2->last_gid + 1);
-	b2->gi = calloc(gi_a, sizeof(*b2->gi));
-	memcpy(b2->gi, b1->gi, gi_a * sizeof(*b2->gi));
+	b2->l = x; x += lsize;
 
 	return b2;
 }
@@ -66,7 +62,6 @@ void
 board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
-	if (board->gi) free(board->gi);
 }
 
 void
@@ -90,14 +85,16 @@ board_resize(struct board *board, int size)
 	int nsize = board->size2 * sizeof(*board->n);
 	int psize = board->size2 * sizeof(*board->p);
 	int hsize = board->size2 * 2 * sizeof(*board->h);
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize);
+	int lsize = board->size2 * sizeof(*board->l);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + lsize);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + lsize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
 	board->p = x; x += psize;
 	board->n = x; x += nsize;
 	board->h = x; x += hsize;
+	board->l = x; x += lsize;
 }
 
 void
@@ -323,8 +320,8 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 		last_in_group = c;
 		group_at(board, c) = group_to;
 	} foreach_in_group_end;
-	groupnext_at(board, last_in_group) = coord_raw(board_group(board, group_to).base_stone);
-	board_group(board, group_to).base_stone = board_group(board, group_from).base_stone;
+	groupnext_at(board, last_in_group) = groupnext_at(board, group_to);
+	groupnext_at(board, group_to) = group_from;
 
 	board_group_libs(board, group_to) += board_group_libs(board, group_from);
 
@@ -336,12 +333,7 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 static group_t
 new_group(struct board *board, coord_t coord)
 {
-	if (unlikely(gi_allocsize(board->last_gid + 1) < gi_allocsize(board->last_gid + 2)))
-		board->gi = realloc(board->gi, gi_allocsize(board->last_gid + 2) * sizeof(*board->gi));
-	group_t gid = ++board->last_gid;
-	memset(&board->gi[gid], 0, sizeof(*board->gi));
-
-	board_group(board, gid).base_stone = coord;
+	group_t gid = coord_raw(coord);
 	board_group_libs(board, gid) = immediate_liberty_count(board, coord);
 
 	group_at(board, coord) = gid;
@@ -613,12 +605,12 @@ board_group_capture(struct board *board, int group)
 }
 
 bool
-board_group_in_atari(struct board *board, int group, coord_t *lastlib)
+board_group_in_atari(struct board *board, group_t group, coord_t *lastlib)
 {
 	/* First rule out obvious fakes. */
 	if (!group || board_group_libs(board, group) > 4)
 		return false;
-	coord_t base_stone = board_group(board, group).base_stone;
+	coord_t base_stone = group;
 	if (immediate_liberty_count(board, base_stone) > 1)
 		return false;
 
@@ -653,7 +645,7 @@ board_official_score(struct board *board)
 	int scores[S_MAX];
 	memset(scores, 0, sizeof(scores));
 
-	enum { GC_DUNNO, GC_ALIVE, GC_DEAD } gcache[board->last_gid + 1];
+	enum { GC_DUNNO, GC_ALIVE, GC_DEAD } gcache[board->size * board->size + 1];
 	memset(gcache, 0, sizeof(gcache));
 
 	foreach_point(board) {
