@@ -97,18 +97,18 @@ struct board {
 	hash_t hash;
 };
 
-#define board_at(b_, c) ((b_)->b[(c).pos])
+#define board_at(b_, c) ((b_)->b[coord_raw(c)])
 #define board_atxy(b_, x, y) ((b_)->b[(x) + (b_)->size * (y)])
 
-#define group_at(b_, c) ((b_)->g[(c).pos])
+#define group_at(b_, c) ((b_)->g[coord_raw(c)])
 #define group_atxy(b_, x, y) ((b_)->g[(x) + (b_)->size * (y)])
 
-#define neighbor_count_at(b_, coord, color) ((b_)->n[(coord).pos].colors[(enum stone) color])
+#define neighbor_count_at(b_, coord, color) ((b_)->n[coord_raw(coord)].colors[(enum stone) color])
 #define set_neighbor_count_at(b_, coord, color, count) (neighbor_count_at(b_, coord, color) = (count))
 #define inc_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)++)
 #define dec_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)--)
 
-#define groupnext_at(b_, c) ((b_)->p[(c).pos])
+#define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + (b_)->size * (y)])
 
 #define board_group(b_, g_) ((b_)->gi[(g_)])
@@ -162,7 +162,7 @@ float board_fast_score(struct board *board);
 #define foreach_point(board_) \
 	do { \
 		coord_t c; coord_pos(c, 0, (board_)); \
-		for (; c.pos < c.size * c.size; c.pos++)
+		for (; coord_raw(c) < (board_)->size * (board_)->size; coord_raw(c)++)
 #define foreach_point_end \
 	} while (0)
 
@@ -170,11 +170,11 @@ float board_fast_score(struct board *board);
 	do { \
 		struct board *board__ = board_; \
 		coord_t c = board_group(board_, group_).base_stone; \
-		coord_t c2 = c; c2.pos = groupnext_at(board__, c2); \
+		coord_t c2 = c; coord_raw(c2) = groupnext_at(board__, c2); \
 		do {
 #define foreach_in_group_end \
-			c = c2; c2.pos = groupnext_at(board__, c2); \
-		} while (c.pos != 0); \
+			c = c2; coord_raw(c2) = groupnext_at(board__, c2); \
+		} while (coord_raw(c) != 0); \
 	} while (0)
 
 /* NOT VALID inside of foreach_point() or another foreach_neighbor(), or rather
@@ -182,10 +182,10 @@ float board_fast_score(struct board *board);
 #define foreach_neighbor(board_, coord_) \
 	do { \
 		coord_t q__[4]; int q__i = 0; \
-		coord_pos(q__[q__i++], (coord_).pos - 1, (board_)); \
-		coord_pos(q__[q__i++], (coord_).pos - (coord_).size, (board_)); \
-		coord_pos(q__[q__i++], (coord_).pos + 1, (board_)); \
-		coord_pos(q__[q__i++], (coord_).pos + (coord_).size, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - (board_)->size, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + (board_)->size, (board_)); \
 		int fn__i; \
 		for (fn__i = 0; fn__i < q__i; fn__i++) { \
 			coord_t c = q__[fn__i];
@@ -196,10 +196,10 @@ float board_fast_score(struct board *board);
 #define foreach_diag_neighbor(board_, coord_) \
 	do { \
 		coord_t q__[4]; int q__i = 0; \
-		coord_pos(q__[q__i++], (coord_).pos - (coord_).size - 1, (board_)); \
-		coord_pos(q__[q__i++], (coord_).pos - (coord_).size + 1, (board_)); \
-		coord_pos(q__[q__i++], (coord_).pos + (coord_).size - 1, (board_)); \
-		coord_pos(q__[q__i++], (coord_).pos + (coord_).size + 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - (board_)->size - 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - (board_)->size + 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + (board_)->size - 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + (board_)->size + 1, (board_)); \
 		int fn__i; \
 		for (fn__i = 0; fn__i < q__i; fn__i++) { \
 			coord_t c = q__[fn__i];

@@ -258,7 +258,7 @@ pass_wins:
 			continue;
 		}
 
-		int pos = is_pass(m.coord) ? 0 : m.coord.pos;
+		int pos = is_pass(m.coord) ? 0 : coord_raw(m.coord);
 
 		good_games++;
 		moves[pos].games++;
@@ -292,12 +292,12 @@ pass_wins:
 	}
 
 	foreach_point(b) {
-		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
+		float ratio = (float) moves[coord_raw(c)].wins / moves[coord_raw(c)].games;
 		/* Since pass is [0,0], we will pass only when we have nothing
 		 * better to do. */
 		if (ratio >= top_ratio) {
 			top_ratio = ratio;
-			top_coord = c.pos == 0 ? pass : c;
+			top_coord = coord_raw(c) == 0 ? pass : c;
 		}
 	} foreach_point_end;
 

@@ -79,16 +79,16 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 			/* XXX: Some internal board specific magic here... */
 			coord_t cutted = coord;
 			if (coord_x(c, b) < coord_x(coord, b))
-				cutted.pos--;
+				coord_raw(cutted)--;
 			else
-				cutted.pos++;
+				coord_raw(cutted)++;
 			if (likely(board_at(b, cutted) != cutting_color))
 				continue;
-			cutted.pos = c.pos;
+			coord_raw(cutted) = coord_raw(c);
 			if (coord_y(c, b) < coord_y(coord, b))
-				cutted.pos -= cutted.size;
+				coord_raw(cutted) -= b->size;
 			else
-				cutted.pos += cutted.size;
+				coord_raw(cutted) += b->size;
 			if (likely(board_at(b, cutted) != cutting_color))
 				continue;
 			/* Cut kosumi! */

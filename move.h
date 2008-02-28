@@ -10,6 +10,7 @@ typedef struct coord {
 	uint16_t pos, size;
 } coord_t;
 
+#define coord_raw(c) ((c).pos)
 #define coord_x(c, b) ((c).pos % (c).size)
 #define coord_y(c, b) ((c).pos / (c).size)
 #define coord_eq(c1, c2) ((c1).pos == (c2).pos)

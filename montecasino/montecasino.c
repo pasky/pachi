@@ -184,7 +184,7 @@ play_random:
 	}
 
 	if (!is_pass(m->coord) && !is_pass(next_move) && moves) {
-		int j = m->coord.pos * b->size2 + next_move.pos;
+		int j = coord_raw(m->coord) * b->size2 + coord_raw(next_move);
 		moves[j].games++;
 		if (!result)
 			moves[j].wins++;
@@ -241,7 +241,7 @@ play_many_random_games(struct montecasino *mc, struct board *b, int games, enum 
 				continue;
 		}
 
-		int pos = is_pass(m.coord) ? 0 : m.coord.pos;
+		int pos = is_pass(m.coord) ? 0 : coord_raw(m.coord);
 
 		good_games++;
 		moves[pos].games++;
@@ -280,7 +280,7 @@ create_move_queue(struct montecasino *mc, struct board *b,
 {
 	int qlen = 0;
 	foreach_point(b) {
-		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
+		float ratio = (float) moves[coord_raw(c)].wins / moves[coord_raw(c)].games;
 		if (!isfinite(ratio))
 			continue;
 		struct move_info mi = { c, ratio };
@@ -304,9 +304,9 @@ best_move_at_board(struct montecasino *mc, struct board *b, struct move_stat *mo
 {
 	float top_ratio = 0;
 	foreach_point(b) {
-		if (moves[c.pos].games < TRUST_THRESHOLD)
+		if (moves[coord_raw(c)].games < TRUST_THRESHOLD)
 			continue;
-		float ratio = (float) moves[c.pos].wins / moves[c.pos].games;
+		float ratio = (float) moves[coord_raw(c)].wins / moves[coord_raw(c)].games;
 		if (ratio > top_ratio)
 			top_ratio = ratio;
 	} foreach_point_end;
@@ -337,7 +337,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 	while (move < CANDIDATES && move < qlen) {
 		coord_t c = sorted_moves[move].coord;
 		move++;
-		if (!moves[c.pos].wins) { /* whatever */
+		if (!moves[coord_raw(c)].wins) { /* whatever */
 			continue;
 		}
 
@@ -345,7 +345,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 		{
 			struct board b2;
 			board_copy(&b2, b);
-			struct move m = { c.pos == 0 ? pass : c, color };
+			struct move m = { coord_raw(c) == 0 ? pass : c, color };
 			if (board_play(&b2, &m) < 0) {
 				if (MCDEBUGL(0)) {
 					fprintf(stderr, "INTERNAL ERROR - Suggested impossible move %d,%d.\n", coord_x(c, b), coord_y(c, b));
@@ -353,24 +353,24 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 				board_done_noalloc(&b2);
 				continue;
 			}
-			play_many_random_games(mc, &b2, mc->carlo->games / GAMES_SLICE_CANDIDATE, stone_other(color), (struct move_stat *) &second_moves[c.pos * b->size2], NULL);
+			play_many_random_games(mc, &b2, mc->carlo->games / GAMES_SLICE_CANDIDATE, stone_other(color), (struct move_stat *) &second_moves[coord_raw(c) * b->size2], NULL);
 			board_done_noalloc(&b2);
 		}
 
-		float coratio = 1 - best_move_at_board(mc, b, &second_moves[c.pos * b->size2]);
+		float coratio = 1 - best_move_at_board(mc, b, &second_moves[coord_raw(c) * b->size2]);
 		float ratio = /* sorted_moves[move - 1].ratio * */ coratio;
 		/* Since pass is [0,0], we will pass only when we have nothing
 		 * better to do. */
 		if (ratio >= *top_ratio) {
 			*top_ratio = ratio;
-			*top_coord = c.pos == 0 ? pass : c;
+			*top_coord = coord_raw(c) == 0 ? pass : c;
 		}
 		/* Evil cheat. */
-		first_moves[c.pos].games = 100; first_moves[c.pos].wins = ratio * 100;
+		first_moves[coord_raw(c)].games = 100; first_moves[coord_raw(c)].wins = ratio * 100;
 		if (MCDEBUGL(2)) {
 			fprintf(stderr, "Winner candidate [%d,%d] has ratio %f counter ratio %f => final ratio %f\n", coord_x(c, b), coord_y(c, b), sorted_moves[move - 1].ratio, coratio, ratio);
 			if (MCDEBUGL(3))
-				board_stats_print(b, &second_moves[c.pos * b->size2], stderr);
+				board_stats_print(b, &second_moves[coord_raw(c) * b->size2], stderr);
 		}
 	}
 }
@@ -415,7 +415,7 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 		board_stats_print(b, first_moves, stderr);
 		if (!is_resign(top_coord) && !is_pass(top_coord)) {
 			fprintf(stderr, "Opponent's reaction stats:\n");
-			board_stats_print(b, second_moves[top_coord.pos], stderr);
+			board_stats_print(b, second_moves[coord_raw(top_coord)], stderr);
 		}
 	}
 

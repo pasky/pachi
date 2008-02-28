@@ -127,7 +127,7 @@ board_clear(struct board *board)
 	} foreach_point_end;
 
 	/* First, pass is always a free position. */
-	board->f[board->flen++] = pass.pos;
+	board->f[board->flen++] = coord_raw(pass);
 	/* All positions are free! Except the margin. */
 	for (i = board->size; i < (board->size - 1) * board->size; i++)
 		if (i % board->size != 0 && i % board->size != board->size - 1)
@@ -137,20 +137,20 @@ board_clear(struct board *board)
 	foreach_point(board) {
 		int max = (sizeof(hash_t) << history_hash_bits);
 		/* fast_random() is 16-bit only */
-		board->h[c.pos * 2] = ((hash_t) fast_random(max))
+		board->h[coord_raw(c) * 2] = ((hash_t) fast_random(max))
 				| ((hash_t) fast_random(max) << 16)
 				| ((hash_t) fast_random(max) << 32)
 				| ((hash_t) fast_random(max) << 48);
-		if (!board->h[c.pos * 2])
+		if (!board->h[coord_raw(c) * 2])
 			/* Would be kinda "oops". */
-			board->h[c.pos * 2] = 1;
+			board->h[coord_raw(c) * 2] = 1;
 		/* And once again for white */
-		board->h[c.pos * 2 + 1] = ((hash_t) fast_random(max))
+		board->h[coord_raw(c) * 2 + 1] = ((hash_t) fast_random(max))
 				| ((hash_t) fast_random(max) << 16)
 				| ((hash_t) fast_random(max) << 32)
 				| ((hash_t) fast_random(max) << 48);
-		if (!board->h[c.pos * 2 + 1])
-			board->h[c.pos * 2 + 1] = 1;
+		if (!board->h[coord_raw(c) * 2 + 1])
+			board->h[coord_raw(c) * 2 + 1] = 1;
 	} foreach_point_end;
 }
 
@@ -196,9 +196,9 @@ board_print(struct board *board, FILE *f)
 static void
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
-	board->hash ^= board->h[(color == S_BLACK ? board->size2 : 0) + coord.pos];
+	board->hash ^= board->h[(color == S_BLACK ? board->size2 : 0) + coord_raw(coord)];
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord, board), coord_y(coord, board), board->h[color * coord.pos], board->hash);
+		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord, board), coord_y(coord, board), board->h[color * coord_raw(coord)], board->hash);
 }
 
 /* Commit current board hash to history. */
@@ -290,7 +290,7 @@ board_remove_stone(struct board *board, coord_t c)
 
 	if (DEBUGL(6))
 		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
-	board->f[board->flen++] = c.pos;
+	board->f[board->flen++] = coord_raw(c);
 }
 
 
@@ -301,7 +301,7 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 
 	group_at(board, coord) = gid;
 	groupnext_at(board, coord) = groupnext_at(board, prevstone);
-	groupnext_at(board, prevstone) = coord.pos;
+	groupnext_at(board, prevstone) = coord_raw(coord);
 
 	if (DEBUGL(8))
 		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d - libs %d\n",
@@ -324,8 +324,8 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 		last_in_group = c;
 		group_at(board, c) = group_to;
 	} foreach_in_group_end;
-	groupnext_at(board, last_in_group) = board_group(board, group_to).base_stone.pos;
-	board_group(board, group_to).base_stone.pos = board_group(board, group_from).base_stone.pos;
+	groupnext_at(board, last_in_group) = coord_raw(board_group(board, group_to).base_stone);
+	board_group(board, group_to).base_stone = board_group(board, group_from).base_stone;
 
 	board_group_libs(board, group_to) += board_group_libs(board, group_from);
 
@@ -473,7 +473,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		coord_t c = coord;
 		if (DEBUGL(6))
 			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
-		board->f[board->flen++] = c.pos;
+		board->f[board->flen++] = coord_raw(c);
 		return -1;
 	}
 
@@ -522,7 +522,7 @@ board_play(struct board *board, struct move *m)
 
 	int f;
 	for (f = 0; f < board->flen; f++)
-		if (board->f[f] == m->coord.pos)
+		if (board->f[f] == coord_raw(m->coord))
 			return board_play_f(board, m, f);
 
 	if (DEBUGL(7))
@@ -534,7 +534,7 @@ board_play(struct board *board, struct move *m)
 static inline bool
 board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 {
-	coord->pos = b->f[f];
+	coord_raw(*coord) = b->f[f];
 	if (is_pass(*coord))
 		return random_pass;
 	struct move m = { *coord, color };
@@ -633,9 +633,9 @@ board_group_in_atari(struct board *board, int group, coord_t *lastlib)
 	foreach_in_group(board, group) {
 		coord_t coord = c;
 		foreach_neighbor(board, coord) {
-			if (likely(watermark[c.pos]))
+			if (likely(watermark[coord_raw(c)]))
 				continue;
-			watermark[c.pos] = true;
+			watermark[coord_raw(c)] = true;
 			if (unlikely(board_at(board, c) == S_NONE)) {
 				libs++;
 				if (unlikely(libs > 1))
