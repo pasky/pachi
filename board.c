@@ -172,7 +172,7 @@ board_print(struct board *board, FILE *f)
 	for (y = board->size - 2; y >= 1; y--) {
 		fprintf(f, "%2d | ", y);
 		for (x = 1; x < board->size - 1; x++) {
-			if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
+			if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
 				fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
 			else
 				fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
@@ -198,7 +198,7 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
 	board->hash ^= board->h[(color == S_BLACK ? board->size2 : 0) + coord.pos];
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord), coord_y(coord), board->h[color * coord.pos], board->hash);
+		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord, board), coord_y(coord, board), board->h[color * coord.pos], board->hash);
 }
 
 /* Commit current board hash to history. */
@@ -215,7 +215,7 @@ board_hash_commit(struct board *board)
 			if (board->history_hash[i & history_hash_mask] == board->hash) {
 				if (DEBUGL(5))
 					fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
-						coord_x(board->last_move.coord), coord_y(board->last_move.coord));
+						coord_x(board->last_move.coord, board), coord_y(board->last_move.coord, board));
 				board->superko_violation = true;
 				return;
 			}
@@ -235,7 +235,7 @@ board_handicap_stone(struct board *board, int x, int y, FILE *f)
 
 	board_play(board, &m);
 
-	char *str = coord2str(m.coord);
+	char *str = coord2str(m.coord, board);
 	if (DEBUGL(1))
 		fprintf(stderr, "choosing handicap %s (%d,%d)\n", str, x, y);
 	fprintf(f, "%s ", str);
@@ -289,7 +289,7 @@ board_remove_stone(struct board *board, coord_t c)
 	} foreach_neighbor_end;
 
 	if (DEBUGL(6))
-		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
+		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
 	board->f[board->flen++] = c.pos;
 }
 
@@ -305,8 +305,8 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 
 	if (DEBUGL(8))
 		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d - libs %d\n",
-			coord_x(prevstone), coord_y(prevstone),
-			coord_x(coord), coord_y(coord),
+			coord_x(prevstone, board), coord_y(prevstone, board),
+			coord_x(coord, board), coord_y(coord, board),
 			groupnext_at(board, coord) % board->size, groupnext_at(board, coord) / board->size,
 			gid, board_group_libs(board, gid));
 }
@@ -350,7 +350,7 @@ new_group(struct board *board, coord_t coord)
 
 	if (DEBUGL(8))
 		fprintf(stderr, "new_group: added %d,%d to group %d - libs %d\n",
-			coord_x(coord), coord_y(coord),
+			coord_x(coord, board), coord_y(coord, board),
 			gid, board_group_libs(board, gid));
 
 	return gid;
@@ -418,12 +418,12 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	/* Check ko: Capture at a position of ko capture one move ago */
 	if (unlikely(color == board->ko.color && coord_eq(coord, board->ko.coord))) {
 		if (DEBUGL(5))
-			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord), coord_y(coord), color);
+			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord, board), coord_y(coord, board), color);
 		return -1;
 	} else if (DEBUGL(6)) {
 		fprintf(stderr, "board_check: no ko at %d,%d,%d - ko is %d,%d,%d\n",
-			color, coord_x(coord), coord_y(coord),
-			board->ko.color, coord_x(board->ko.coord), coord_y(board->ko.coord));
+			color, coord_x(coord, board), coord_y(coord, board),
+			board->ko.color, coord_x(board->ko.coord, board), coord_y(board->ko.coord, board));
 	}
 
 	struct move ko = { pass, S_NONE };
@@ -451,7 +451,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				ko.color = stone_other(color);
 				ko.coord = c;
 				if (DEBUGL(5))
-					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord), coord_y(ko.coord));
+					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord, board), coord_y(ko.coord, board));
 			}
 		}
 	} foreach_neighbor_end;
@@ -472,7 +472,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 		coord_t c = coord;
 		if (DEBUGL(6))
-			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
+			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
 		board->f[board->flen++] = c.pos;
 		return -1;
 	}
@@ -497,7 +497,7 @@ static int
 board_play_f(struct board *board, struct move *m, int f) __attribute__((flatten))
 {
 	if (DEBUGL(7)) {
-		fprintf(stderr, "board_play(): ---- Playing %d,%d\n", coord_x(m->coord), coord_y(m->coord));
+		fprintf(stderr, "board_play(): ---- Playing %d,%d\n", coord_x(m->coord, board), coord_y(m->coord, board));
 	}
 	if (likely(!board_is_eyelike(board, &m->coord, stone_other(m->color)))) {
 		/* NOT playing in an eye. Thus this move has to succeed. (This
@@ -539,7 +539,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 		return random_pass;
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
-		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord), coord_y(*coord));
+		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, board), coord_y(*coord, board));
 	return (!board_is_one_point_eye(b, coord, color) /* bad idea to play into one, usually */
 	        && board_play_f(b, &m, f) >= 0);
 }
@@ -698,7 +698,7 @@ board_fast_score(struct board *board)
 		if (color == S_NONE)
 			color = board_get_one_point_eye(board, &c);
 		scores[color]++;
-		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c), coord_y(c), color, scores[color]);
+		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
 
 	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];

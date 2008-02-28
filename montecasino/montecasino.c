@@ -79,7 +79,7 @@ play_random_game(struct montecasino *mc, struct board *b, struct move_stat *move
 	board_play_random(&b2, m->color, &m->coord);
 	if (!is_pass(m->coord) && !group_at(&b2, m->coord)) {
 		if (MCDEBUGL(4)) {
-			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord), coord_y(m->coord));
+			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord, b), coord_y(m->coord, b));
 			board_print(&b2, stderr);
 		}
 		board_done_noalloc(&b2);
@@ -87,7 +87,7 @@ play_random_game(struct montecasino *mc, struct board *b, struct move_stat *move
 	}
 
 	if (MCDEBUGL(3))
-		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord), coord_y(m->coord));
+		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord, b), coord_y(m->coord, b));
 
 	int gamelen = mc->carlo->gamelen - b2.moves;
 	if (gamelen < 10)
@@ -122,7 +122,7 @@ play_urgent:
 			m.coord = urgent; m.color = color;
 			if (board_play(&b2, &m) < 0) {
 				if (MCDEBUGL(7)) {
-					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent), coord_y(urgent));
+					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent, b), coord_y(urgent, b));
 					board_print(&b2, stderr);
 				}
 				goto play_random;
@@ -143,7 +143,7 @@ play_random:
 			 * move anyway.) */
 			if (group_at(&b2, coord)) {
 				if (MCDEBUGL(3)) {
-					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord), coord_y(coord));
+					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
 					if (MCDEBUGL(4))
 						board_print(&b2, stderr);
 				}
@@ -151,7 +151,7 @@ play_random:
 				return -2;
 			} else {
 				if (MCDEBUGL(6)) {
-					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord), coord_y(coord));
+					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
 					board_print(&b2, stderr);
 				}
 				b2.superko_violation = false;
@@ -159,7 +159,7 @@ play_random:
 		}
 
 		if (MCDEBUGL(7)) {
-			char *cs = coord2str(coord);
+			char *cs = coord2str(coord, b);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
 		}
@@ -236,8 +236,8 @@ play_many_random_games(struct montecasino *mc, struct board *b, int games, enum 
 			/* Simple heuristic: avoid opening too low. Do not
 			 * play on second or first line as first white or
 			 * first two black moves.*/
-			if (coord_x(m.coord) < 3 || coord_x(m.coord) > b->size - 4
-			    || coord_y(m.coord) < 3 || coord_y(m.coord) > b->size - 4)
+			if (coord_x(m.coord, b) < 3 || coord_x(m.coord, b) > b->size - 4
+			    || coord_y(m.coord, b) < 3 || coord_y(m.coord, b) > b->size - 4)
 				continue;
 		}
 
@@ -348,7 +348,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 			struct move m = { c.pos == 0 ? pass : c, color };
 			if (board_play(&b2, &m) < 0) {
 				if (MCDEBUGL(0)) {
-					fprintf(stderr, "INTERNAL ERROR - Suggested impossible move %d,%d.\n", coord_x(c), coord_y(c));
+					fprintf(stderr, "INTERNAL ERROR - Suggested impossible move %d,%d.\n", coord_x(c, b), coord_y(c, b));
 				}
 				board_done_noalloc(&b2);
 				continue;
@@ -368,7 +368,7 @@ choose_best_move(struct montecasino *mc, struct board *b, enum stone color,
 		/* Evil cheat. */
 		first_moves[c.pos].games = 100; first_moves[c.pos].wins = ratio * 100;
 		if (MCDEBUGL(2)) {
-			fprintf(stderr, "Winner candidate [%d,%d] has ratio %f counter ratio %f => final ratio %f\n", coord_x(c), coord_y(c), sorted_moves[move - 1].ratio, coratio, ratio);
+			fprintf(stderr, "Winner candidate [%d,%d] has ratio %f counter ratio %f => final ratio %f\n", coord_x(c, b), coord_y(c, b), sorted_moves[move - 1].ratio, coratio, ratio);
 			if (MCDEBUGL(3))
 				board_stats_print(b, &second_moves[c.pos * b->size2], stderr);
 		}
@@ -421,7 +421,7 @@ montecasino_genmove(struct engine *e, struct board *b, enum stone color)
 
 move_found:
 	if (MCDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", coord_x(top_coord), coord_y(top_coord), top_ratio);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f\n", coord_x(top_coord, b), coord_y(top_coord, b), top_ratio);
 
 	return coord_copy(top_coord);
 }

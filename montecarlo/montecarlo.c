@@ -104,7 +104,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 	board_play_random(&b2, m->color, &m->coord);
 	if (!is_pass(m->coord) && !group_at(&b2, m->coord)) {
 		if (MCDEBUGL(4)) {
-			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord), coord_y(m->coord));
+			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord, b), coord_y(m->coord, b));
 			board_print(&b2, stderr);
 		}
 		board_done_noalloc(&b2);
@@ -112,7 +112,7 @@ play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
 	}
 
 	if (MCDEBUGL(3))
-		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord), coord_y(m->coord));
+		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord, b), coord_y(m->coord, b));
 
 	int gamelen = mc->gamelen - b2.moves;
 	if (gamelen < 10)
@@ -146,7 +146,7 @@ play_urgent:
 			m.coord = urgent; m.color = color;
 			if (board_play(&b2, &m) < 0) {
 				if (MCDEBUGL(7)) {
-					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent), coord_y(urgent));
+					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent, b), coord_y(urgent, b));
 					board_print(&b2, stderr);
 				}
 				goto play_random;
@@ -164,7 +164,7 @@ play_random:
 			 * move anyway.) */
 			if (group_at(&b2, coord)) {
 				if (MCDEBUGL(3)) {
-					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord), coord_y(coord));
+					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
 					if (MCDEBUGL(4))
 						board_print(&b2, stderr);
 				}
@@ -172,7 +172,7 @@ play_random:
 				return -2;
 			} else {
 				if (MCDEBUGL(6)) {
-					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord), coord_y(coord));
+					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
 					board_print(&b2, stderr);
 				}
 				b2.superko_violation = false;
@@ -180,7 +180,7 @@ play_random:
 		}
 
 		if (MCDEBUGL(7)) {
-			char *cs = coord2str(coord);
+			char *cs = coord2str(coord, b);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
 		}
@@ -267,8 +267,8 @@ pass_wins:
 			/* Simple heuristic: avoid opening too low. Do not
 			 * play on second or first line as first white or
 			 * first two black moves.*/
-			if (coord_x(m.coord) < 3 || coord_x(m.coord) > b->size - 4
-			    || coord_y(m.coord) < 3 || coord_y(m.coord) > b->size - 4)
+			if (coord_x(m.coord, b) < 3 || coord_x(m.coord, b) > b->size - 4
+			    || coord_y(m.coord, b) < 3 || coord_y(m.coord, b) > b->size - 4)
 				continue;
 		}
 
@@ -307,7 +307,7 @@ pass_wins:
 
 move_found:
 	if (MCDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord), coord_y(top_coord), top_ratio, i, superko);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord, b), coord_y(top_coord, b), top_ratio, i, superko);
 
 	return coord_copy(top_coord);
 }

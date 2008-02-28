@@ -126,10 +126,10 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		m.coord = *c; coord_done(c);
 
 		if (DEBUGL(1))
-			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
+			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 		if (board_play(board, &m) < 0) {
 			if (DEBUGL(0))
-				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
+				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 			gtp_error(id, "illegal move", NULL);
 		} else {
 			gtp_reply(id, NULL);
@@ -142,7 +142,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		coord_t *c = engine->genmove(engine, board, color);
 		struct move m = { *c, color };
 		board_play(board, &m);
-		char *str = coord2str(*c);
+		char *str = coord2str(*c, board);
 		if (DEBUGL(1))
 			fprintf(stderr, "playing move %s\n", str);
 		gtp_reply(id, str, NULL);
@@ -158,11 +158,11 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 			coord_t *c = str2coord(arg, board->size);
 			m.coord = *c; coord_done(c);
 			if (DEBUGL(1))
-				fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord), coord_y(m.coord));
+				fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord, board), coord_y(m.coord, board));
 
 			if (board_play(board, &m) < 0) {
 				if (DEBUGL(0))
-					fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord), coord_y(m.coord));
+					fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 				gtp_error(id, "illegal move", NULL);
 			}
 			next_tok(arg);

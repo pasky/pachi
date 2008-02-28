@@ -22,7 +22,7 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	 * slower), but improves the playouts a lot. */
 
 	if (MCDEBUGL(8)) {
-		fprintf(stderr, "-- Scanning for %d,%d-urgent moves:\n", coord_x(coord), coord_y(coord));
+		fprintf(stderr, "-- Scanning for %d,%d-urgent moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
 
@@ -44,7 +44,7 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 			fprintf(stderr, "Urgent moves found:");
 			int i = 0;
 			for (i = 0; i < urgents_len; i++)
-				fprintf(stderr, " %d,%d", coord_x(urgents[i]), coord_y(urgents[i]));
+				fprintf(stderr, " %d,%d", coord_x(urgents[i], b), coord_y(urgents[i], b));
 			fprintf(stderr, "\n");
 		}
 		return urgents[fast_random(urgents_len)];
@@ -60,7 +60,7 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 	 *  X  .  */
 
 	if (MCDEBUGL(8)) {
-		fprintf(stderr, "-- Scanning for %d,%d-cut moves:\n", coord_x(coord), coord_y(coord));
+		fprintf(stderr, "-- Scanning for %d,%d-cut moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
 
@@ -78,14 +78,14 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 
 			/* XXX: Some internal board specific magic here... */
 			coord_t cutted = coord;
-			if (coord_x(c) < coord_x(coord))
+			if (coord_x(c, b) < coord_x(coord, b))
 				cutted.pos--;
 			else
 				cutted.pos++;
 			if (likely(board_at(b, cutted) != cutting_color))
 				continue;
 			cutted.pos = c.pos;
-			if (coord_y(c) < coord_y(coord))
+			if (coord_y(c, b) < coord_y(coord, b))
 				cutted.pos -= cutted.size;
 			else
 				cutted.pos += cutted.size;
@@ -101,7 +101,7 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 			fprintf(stderr, "Cutting moves found:");
 			int i = 0;
 			for (i = 0; i < cuts_len; i++)
-				fprintf(stderr, " %d,%d", coord_x(cuts[i]), coord_y(cuts[i]));
+				fprintf(stderr, " %d,%d", coord_x(cuts[i], b), coord_y(cuts[i], b));
 			fprintf(stderr, "\n");
 		}
 		return cuts[fast_random(cuts_len)];
@@ -117,7 +117,7 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 	 * aren't atari. */
 
 	if (MCDEBUGL(8)) {
-		fprintf(stderr, "-- Scanning for %d,%d-local moves:\n", coord_x(coord), coord_y(coord));
+		fprintf(stderr, "-- Scanning for %d,%d-local moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
 
@@ -138,7 +138,7 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 			fprintf(stderr, "Local moves found:");
 			int i = 0;
 			for (i = 0; i < neis_len[S_NONE]; i++)
-				fprintf(stderr, " %d,%d", coord_x(neis[S_NONE][i]), coord_y(neis[S_NONE][i]));
+				fprintf(stderr, " %d,%d", coord_x(neis[S_NONE][i], b), coord_y(neis[S_NONE][i], b));
 			fprintf(stderr, "\n");
 		}
 		return neis[S_NONE][fast_random(neis_len[S_NONE])];

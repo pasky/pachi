@@ -10,8 +10,8 @@ typedef struct coord {
 	uint16_t pos, size;
 } coord_t;
 
-#define coord_x(c) ((c).pos % (c).size)
-#define coord_y(c) ((c).pos / (c).size)
+#define coord_x(c, b) ((c).pos % (c).size)
+#define coord_y(c, b) ((c).pos / (c).size)
 #define coord_eq(c1, c2) ((c1).pos == (c2).pos)
 
 static coord_t pass = { -1, 1 };
@@ -30,7 +30,8 @@ static coord_t *coord_pass(void);
 static coord_t *coord_resign(void);
 static void coord_done(coord_t *c);
 
-char *coord2str(coord_t c);
+struct board;
+char *coord2str(coord_t c, struct board *b);
 coord_t *str2coord(char *str, int board_size);
 
 
