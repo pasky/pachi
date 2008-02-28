@@ -494,7 +494,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 }
 
 static int
-board_play_f(struct board *board, struct move *m, int f)
+board_play_f(struct board *board, struct move *m, int f) __attribute__((flatten))
 {
 	if (DEBUGL(7)) {
 		fprintf(stderr, "board_play(): ---- Playing %d,%d\n", coord_x(m->coord), coord_y(m->coord));
