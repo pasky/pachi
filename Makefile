@@ -27,11 +27,11 @@ INCLUDES=-I.
 
 
 OBJS=board.o gtp.o move.o playout.o random.o stone.o zzgo.o
-SUBDIRS=random montecarlo montecasino
+SUBDIRS=random montecarlo montecasino uct
 
 all: all-recursive zzgo
 
-LOCALLIBS=random/random.a montecarlo/montecarlo.a montecasino/montecasino.a
+LOCALLIBS=random/random.a montecarlo/montecarlo.a montecasino/montecasino.a uct/uct.a
 zzgo: $(OBJS) $(LOCALLIBS)
 	$(call cmd,link)
 

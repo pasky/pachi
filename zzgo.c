@@ -10,6 +10,7 @@
 #include "montecarlo/montecarlo.h"
 #include "montecasino/montecasino.h"
 #include "random/random.h"
+#include "uct/uct.h"
 #include "gtp.h"
 #include "random.h"
 
@@ -19,7 +20,7 @@ int seed;
 int main(int argc, char *argv[])
 {
 	struct board *b = board_init();
-	enum { E_RANDOM, E_MONTECARLO, E_MONTECASINO } engine = E_MONTECASINO;
+	enum { E_RANDOM, E_MONTECARLO, E_MONTECASINO, E_UCT } engine = E_UCT;
 
 	seed = time(NULL);
 
@@ -33,6 +34,8 @@ int main(int argc, char *argv[])
 					engine = E_MONTECARLO;
 				} else if (!strcasecmp(optarg, "montecasino")) {
 					engine = E_MONTECASINO;
+				} else if (!strcasecmp(optarg, "uct")) {
+					engine = E_UCT;
 				} else {
 					fprintf(stderr, "%s: Invalid -e argument %s\n", argv[0], optarg);
 					exit(1);
@@ -67,6 +70,8 @@ int main(int argc, char *argv[])
 			e = engine_montecarlo_init(e_arg); break;
 		case E_MONTECASINO:
 			e = engine_montecasino_init(e_arg); break;
+		case E_UCT:
+			e = engine_uct_init(e_arg); break;
 
 	}
 
