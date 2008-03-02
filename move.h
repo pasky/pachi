@@ -20,7 +20,8 @@ static coord_t resign = -2;
 
 /* Initialize existing coord */
 #define coord_pos(coord, pos_, board) do { (coord) = (pos_); } while (0)
-#define coord_xy(coord, x, y, board) coord_pos(coord, x + y * (board)->size, board)
+#define coord_xy(coord, x, y, board) coord_pos(coord, (x) + (y) * (board)->size, board)
+#define coord_xy_otf(x, y, board) ((x) + (y) * (board)->size)
 
 /* dyn allocated */
 static coord_t *coord_init(int x, int y, int size);
