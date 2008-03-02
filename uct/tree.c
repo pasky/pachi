@@ -146,7 +146,15 @@ tree_uct_descend(struct tree *tree, struct tree_node *node, int parity)
 	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+#ifdef UCB1_TUNED
+		float xpl_loc = (ni->value - ni->value * ni->value);
+		if (parity < 0) xpl_loc = 1 - xpl_loc;
+		xpl_loc += sqrt(xpl / ni->playouts);
+		if (xpl_loc > 1.0/4) xpl_loc = 1.0/4;
+		float urgency = ni->value * parity + sqrt(xpl * xpl_loc / ni->playouts);
+#else
 		float urgency = ni->value * parity + sqrt(xpl / ni->playouts);
+#endif
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
