@@ -99,7 +99,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	for (i = 0; i < u->games; i++) {
 		int result = uct_playout(u, b, color, t);
 		if (result == -1) {
-			/* Tree descend has hit invalid move. */
+			/* Tree descent has hit invalid move. */
 			continue;
 		}
 
