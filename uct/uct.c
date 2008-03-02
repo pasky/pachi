@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
+
 #include "debug.h"
 #include "board.h"
 #include "move.h"
@@ -45,6 +47,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	enum stone orig_color = color;
 	int result;
 	int passes = 0;
+	if (UDEBUGL(8))
+		fprintf(stderr, "--- UCT walk\n");
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
 			if (n->playouts > 5)
@@ -52,14 +56,16 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 			struct move m = { n->coord, color };
 			result = play_random_game(&b2, &m, u->gamelen, no_policy, NULL);
-			if (UDEBUGL(7))
-				fprintf(stderr, "%d,%d playout result %d\n", coord_x(n->coord,b), coord_y(n->coord,b), result);
 			if (orig_color != color && result >= 0)
 				result = !result;
+			if (UDEBUGL(7))
+				fprintf(stderr, "[%d..%d] %s playout result %d\n", orig_color, color, coord2sstr(n->coord, t->board), result);
 			break;
 		}
 
 		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1));
+		if (UDEBUGL(8))
+			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		struct move m = { n->coord, color };
 		int res = board_play(&b2, &m);
 		if (res == -1 || (!group_at(&b2, m.coord) && !is_pass(n->coord)) /* suicide */) {
@@ -76,6 +82,10 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 				result = board_fast_score(&b2) > 0;
 				if (orig_color == S_BLACK)
 					result = !result;
+				if (UDEBUGL(7))
+					fprintf(stderr, "[%d..%d] %s playout result %d\n", orig_color, color, coord2sstr(n->coord, t->board), result);
+				if (UDEBUGL(8))
+					board_print(&b2, stderr);
 				break;
 			}
 		} else {
