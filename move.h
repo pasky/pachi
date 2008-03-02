@@ -31,6 +31,7 @@ static void coord_done(coord_t *c);
 
 struct board;
 char *coord2str(coord_t c, struct board *b);
+char *coord2sstr(coord_t c, struct board *b);
 coord_t *str2coord(char *str, int board_size);
 
 

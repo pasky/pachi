@@ -14,15 +14,21 @@ static char asdf[] = "abcdefghjklmnopqrstuvwxyz";
 char *
 coord2str(coord_t c, struct board *board)
 {
-	char b[4];
+	return strdup(coord2sstr(c, board));
+}
+
+char *
+coord2sstr(coord_t c, struct board *board)
+{
+	static char b[4];
 	if (is_pass(c)) {
-		return strdup("pass");
+		return "pass";
 	} else if (is_resign(c)) {
-		return strdup("resign");
+		return "resign";
 	} else {
 		/* Some GTP servers are broken and won't grok lowercase coords */
 		snprintf(b, 4, "%c%d", toupper(asdf[coord_x(c, board) - 1]), coord_y(c, board));
-		return strdup(b);
+		return b;
 	}
 }
 
