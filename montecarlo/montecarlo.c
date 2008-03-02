@@ -8,6 +8,7 @@
 #include "montecarlo/hint.h"
 #include "montecarlo/internal.h"
 #include "montecarlo/montecarlo.h"
+#include "playout.h"
 
 
 /* This is simple monte-carlo engine. It plays MC_GAMES random games from the
@@ -83,129 +84,6 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 }
 
 
-/* 1: m->color wins, 0: m->color loses
- * -1 superko at the root
- * -2 superko inside the game tree (NOT at root, that's simply invalid move)
- * -3 first move is multi-stone suicide */
-static int
-play_random_game(struct montecarlo *mc, struct board *b, struct move *m, int i)
-{
-	if (b->superko_violation) {
-		if (MCDEBUGL(0)) {
-			fprintf(stderr, "\tILLEGAL: superko violation at root!\n");
-			board_print(b, stderr);
-		}
-		return -1;
-	}
-
-	struct board b2;
-	board_copy(&b2, b);
-
-	board_play_random(&b2, m->color, &m->coord);
-	if (!is_pass(m->coord) && !group_at(&b2, m->coord)) {
-		if (MCDEBUGL(4)) {
-			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord, b), coord_y(m->coord, b));
-			board_print(&b2, stderr);
-		}
-		board_done_noalloc(&b2);
-		return -3;
-	}
-
-	if (MCDEBUGL(3))
-		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord, b), coord_y(m->coord, b));
-
-	int gamelen = mc->gamelen - b2.moves;
-	if (gamelen < 10)
-		gamelen = 10;
-
-	enum stone color = stone_other(m->color);
-	coord_t urgent;
-
-	int passes = is_pass(m->coord);
-
-	/* Special check: We probably tenukied the last opponent's move. But
-	 * check if the opponent has lucrative local continuation for her last
-	 * move! */
-	/* This check is ultra-important BTW. Without it domain checking does
-	 * not bring that much of an advantage. It might even warrant it to by
-	 * default do only this domain check. */
-	urgent = pass;
-	domain_hint(mc, b, &urgent, m->color);
-	if (!is_pass(urgent))
-		goto play_urgent;
-
-	while (gamelen-- && passes < 2) {
-		urgent = pass;
-		domain_hint(mc, &b2, &urgent, m->color);
-
-		coord_t coord;
-
-		if (!is_pass(urgent)) {
-			struct move m;
-play_urgent:
-			m.coord = urgent; m.color = color;
-			if (board_play(&b2, &m) < 0) {
-				if (MCDEBUGL(7)) {
-					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent, b), coord_y(urgent, b));
-					board_print(&b2, stderr);
-				}
-				goto play_random;
-			}
-			coord = urgent;
-		} else {
-play_random:
-			board_play_random(&b2, color, &coord);
-		}
-
-		if (unlikely(b2.superko_violation)) {
-			/* We ignore superko violations that are suicides. These
-			 * are common only at the end of the game and are
-			 * rather harmless. (They will not go through as a root
-			 * move anyway.) */
-			if (group_at(&b2, coord)) {
-				if (MCDEBUGL(3)) {
-					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
-					if (MCDEBUGL(4))
-						board_print(&b2, stderr);
-				}
-				board_done_noalloc(&b2);
-				return -2;
-			} else {
-				if (MCDEBUGL(6)) {
-					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
-					board_print(&b2, stderr);
-				}
-				b2.superko_violation = false;
-			}
-		}
-
-		if (MCDEBUGL(7)) {
-			char *cs = coord2str(coord, b);
-			fprintf(stderr, "%s %s\n", stone2str(color), cs);
-			free(cs);
-		}
-
-		if (unlikely(is_pass(coord))) {
-			passes++;
-		} else {
-			passes = 0;
-		}
-
-		color = stone_other(color);
-	}
-
-	if (MCDEBUGL(6 - !(i % (mc->games/2))))
-		board_print(&b2, stderr);
-
-	float score = board_fast_score(&b2);
-	if (MCDEBUGL(5 - !(i % (mc->games/2))))
-		fprintf(stderr, "--- game result: %f\n", score);
-
-	board_done_noalloc(&b2);
-	return (m->color == S_WHITE ? (score > 0 ? 1 : 0) : (score < 0 ? 1 : 0));
-}
-
-
 static coord_t *
 montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 {
@@ -225,7 +103,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
 	for (i = 0; i < mc->games; i++) {
-		int result = play_random_game(mc, b, &m, i);
+		int result = play_random_game(b, &m, mc->gamelen);
 
 		if (MCDEBUGL(3))
 			fprintf(stderr, "\tresult %d\n", result);

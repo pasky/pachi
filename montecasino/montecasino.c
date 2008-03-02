@@ -57,6 +57,7 @@ struct montecasino {
  * to consider 'pass' among the moves, but this seems tricky. */
 
 
+/* TODO: Use the standard play_random_game(). */
 /* 1: m->color wins, 0: m->color loses
  * -1 superko at the game root
  * -2 superko inside the game tree (NOT at root, that's simply invalid move)
@@ -106,13 +107,13 @@ play_random_game(struct montecasino *mc, struct board *b, struct move_stat *move
 	 * not bring that much of an advantage. It might even warrant it to by
 	 * default do only this domain check. */
 	urgent = pass;
-	domain_hint(mc->carlo, b, &urgent, m->color);
+	//domain_hint(mc->carlo, b, &urgent, m->color);
 	if (!is_pass(urgent))
 		goto play_urgent;
 
 	while (gamelen-- && passes < 2) {
 		urgent = pass;
-		domain_hint(mc->carlo, &b2, &urgent, m->color);
+		//domain_hint(mc->carlo, &b2, &urgent, m->color);
 
 		coord_t coord;
 

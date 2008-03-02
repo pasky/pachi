@@ -26,7 +26,7 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o random.o stone.o zzgo.o
+OBJS=board.o gtp.o move.o playout.o random.o stone.o zzgo.o
 SUBDIRS=random montecarlo montecasino
 
 all: all-recursive zzgo
