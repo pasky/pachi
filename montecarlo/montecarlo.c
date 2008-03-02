@@ -103,7 +103,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
 	for (i = 0; i < mc->games; i++) {
-		int result = play_random_game(b, &m, mc->gamelen);
+		int result = play_random_game(b, &m, mc->gamelen, domain_hint, mc);
 
 		if (MCDEBUGL(3))
 			fprintf(stderr, "\tresult %d\n", result);

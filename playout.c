@@ -9,7 +9,8 @@
 #include "playout.h"
 
 int
-play_random_game(struct board *b, struct move *m, int gamelen)
+play_random_game(struct board *b, struct move *m, int gamelen,
+		 playout_policeman policeman, void *policy)
 {
 	if (b->superko_violation) {
 		if (DEBUGL(0)) {
@@ -50,14 +51,12 @@ play_random_game(struct board *b, struct move *m, int gamelen)
 	/* This check is ultra-important BTW. Without it domain checking does
 	 * not bring that much of an advantage. It might even warrant it to by
 	 * default do only this domain check. */
-	urgent = pass;
-	/* domain_hint(mc, b, &urgent, m->color); */
+	urgent = policeman(policy, b, m->color);
 	if (!is_pass(urgent))
 		goto play_urgent;
 
 	while (gamelen-- && passes < 2) {
-		urgent = pass;
-		/* domain_hint(mc, &b2, &urgent, m->color); */
+		urgent = policeman(policy, &b2, m->color);
 
 		coord_t coord;
 

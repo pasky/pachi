@@ -7,6 +7,6 @@
 struct montecarlo;
 struct board;
 
-void domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent, enum stone our_real_color);
+coord_t domain_hint(struct montecarlo *mc, struct board *b, enum stone our_real_color);
 
 #endif

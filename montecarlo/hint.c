@@ -146,11 +146,11 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 	return pass;
 }
 
-void
-domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent, enum stone our_real_color)
+coord_t
+domain_hint(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 {
 	if (is_pass(b->last_move.coord))
-		return;
+		return pass;
 
 	/* Now now, if we ignored an urgent move, the opponent will
 	 * take it! */
@@ -161,42 +161,39 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t *urgent, enum stone 
 	    && unlikely(!coord_eq(b->last_move.coord, mc->last_hint))
 	    && b->last_move.color == our_real_color
 	    && fast_random(100) < mc->last_hint_value) {
-		*urgent = mc->last_hint;
+		coord_t urgent = mc->last_hint;
 		mc->last_hint = pass;
-		return;
+		return urgent;
 	}
 
 	/* In some of the cases, we pick atari response instead of random move.
 	 * If there is an atari, capturing tends to be huge. */
 	if (mc->atari_rate && fast_random(100) < mc->atari_rate) {
-		*urgent = domain_hint_atari(mc, b, b->last_move.coord);
-		if (!is_pass(*urgent)) {
-			mc->last_hint = *urgent;
+		mc->last_hint = domain_hint_atari(mc, b, b->last_move.coord);
+		if (!is_pass(mc->last_hint)) {
 			mc->last_hint_value = mc->atari_rate;
-			return;
+			return mc->last_hint;
 		}
 	}
 
 	/* Cutting is kinda urgent, too. */
 	if (mc->cut_rate && fast_random(100) < mc->cut_rate) {
-		*urgent = domain_hint_cut(mc, b, b->last_move.coord);
-		if (!is_pass(*urgent)) {
-			mc->last_hint = *urgent;
+		mc->last_hint = domain_hint_cut(mc, b, b->last_move.coord);
+		if (!is_pass(mc->last_hint)) {
 			mc->last_hint_value = mc->cut_rate;
-			return;
+			return mc->last_hint;
 		}
 	}
 
 	/* For the non-urgent moves, some of them will be contact play (tsuke
 	 * or diagonal). These tend to be likely urgent. */
 	if (mc->local_rate && fast_random(100) < mc->local_rate) {
-		*urgent = domain_hint_local(mc, b, b->last_move.coord);
-		if (!is_pass(*urgent)) {
-			mc->last_hint = *urgent;
+		mc->last_hint = domain_hint_local(mc, b, b->last_move.coord);
+		if (!is_pass(mc->last_hint)) {
 			mc->last_hint_value = mc->local_rate;
-			return;
+			return mc->last_hint;
 		}
 	}
 
-	mc->last_hint = pass;
+	return ((mc->last_hint = pass));
 }
