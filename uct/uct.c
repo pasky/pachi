@@ -21,6 +21,7 @@ struct uct {
 	int games, gamelen;
 	float resign_ratio;
 	int loss_threshold;
+	float explore_p;
 };
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
@@ -58,7 +59,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			break;
 		}
 
-		n = tree_uct_descend(n, (color == orig_color ? 1 : -1));
+		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1));
 		struct move m = { n->coord, color };
 		int res = board_play(&b2, &m);
 		if (res == -1 || (!group_at(&b2, m.coord) && !is_pass(n->coord)) /* suicide */) {
@@ -93,6 +94,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	struct uct *u = e->data;
 
 	struct tree *t = tree_init(b);
+	t->explore_p = u->explore_p;
 
 	int i;
 	int losses = 0;
@@ -133,6 +135,7 @@ uct_state_init(char *arg)
 	u->debug_level = 1;
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
+	u->explore_p = 0.2;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -154,6 +157,8 @@ uct_state_init(char *arg)
 				u->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				u->gamelen = atoi(optval);
+			} else if (!strcasecmp(optname, "explore_p") && optval) {
+				u->explore_p = atof(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 			}

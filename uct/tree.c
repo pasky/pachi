@@ -139,9 +139,9 @@ tree_best_child(struct tree_node *node)
 
 
 struct tree_node *
-tree_uct_descend(struct tree_node *node, int parity)
+tree_uct_descend(struct tree *tree, struct tree_node *node, int parity)
 {
-	float xpl = log(node->playouts) * 0.2;
+	float xpl = log(node->playouts) * tree->explore_p;
 
 	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
