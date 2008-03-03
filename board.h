@@ -149,7 +149,7 @@ bool board_group_in_atari(struct board *board, int group, coord_t *lastlib);
 
 /* Positive: W wins */
 /* board_official_score() is the scoring method for yielding score suitable
- * for external presentation. For fast scoring of two ZZGos playing,
+ * for external presentation. For fast scoring of two Pachis playing,
  * use board_fast_score(). */
 float board_official_score(struct board *board);
 float board_fast_score(struct board *board);

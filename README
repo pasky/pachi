@@ -1,11 +1,11 @@
-ZZGo is a simple modular framework for robots playing the game of
+Pachi is a simple modular framework for robots playing the game of
 Go/Weiqi/Baduk. The aim is to make it easy to plug your engine
 to the common infrastructure and implement your ideas while
 minimalizing the overhead of implementing the GTP, board tools, etc.
 The infrastructure is optimized for maximal speed, to make it well
 suited for bruteforce engines.
 
-ZZGo is under the MIT licence (close to public domain) so that as
+Pachi is under the MIT licence (close to public domain) so that as
 many people as possible can use it. Some of the bundled engines
 might be under a more restrictive licence (GPL).
 
@@ -13,18 +13,18 @@ Some optimizations are inspired by libEGo by Lukasz Lew. The code
 is all original, though.
 
 
-Currently, ZZGo supports a simple idiotbot-like engine and an example
+Currently, Pachi supports a simple idiotbot-like engine and an example
 MonteCarlo-player with bits of optional domain-specific knowledge
 (dealing with ataris; see montecarlo/montecarlo.c for details).
 The infrastructure is pretty fast and it should be quite easy to extend
 it to provide more facilities for your engine (but it should be at
 the same time kept as simple as possible).
 
-ZZGo uses New Zealand scoring, currently. That means, it simply counts
+Pachi uses New Zealand scoring, currently. That means, it simply counts
 the number of stones of each color on the board, plus komi. Additional
 hack is that it does not count groups in atari, if the opponent neglected
 to remove them; it is still one-point off there, though. In addition,
-ZZGo cannot count multi-point eyes.
+Pachi cannot count multi-point eyes.
 
 New Zealand rules also mean that multi-stone suicide is allowed! If you
 do not like that (basically if you want to pretend it plays according
@@ -37,18 +37,18 @@ guards only against basic ko. You can _check_ against superko quickly in
 your engine and decide based on that (e.g. restart the playout).
 
 
-Also, ZZGo supports only few GTP commands now. Most importantly,
+Also, Pachi supports only few GTP commands now. Most importantly,
 it does not support the known_command and final_status_list commands.
 
 
-To build zzgo, simply type:
+To build Pachi, simply type:
 
 	make
 
-Built zzgo binary in the current directory is a GTP client; use your
-favorite Go client to connect to it (generally it should be possible
-to use it in place of GNU Go), or use kgsGtp to connect to KGS.
-The zzgo binary can take some parameters.
+Built zzgo binary (named that way from historical reasons) in the current
+directory is a GTP client; use your favorite Go client to connect to it
+(generally it should be possible to use it in place of GNU Go), or use kgsGtp
+to connect to KGS.  The zzgo binary can take some parameters.
 
 To build better optimized binary, type:
 
