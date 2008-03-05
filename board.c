@@ -374,6 +374,9 @@ board_play_outside(struct board *board, struct move *m, int f)
 
 		inc_neighbor_count_at(board, c, color);
 
+		if (!ngroup)
+			continue;
+
 		board_group_libs(board, ngroup)--;
 		if (DEBUGL(7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
@@ -432,6 +435,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	foreach_neighbor(board, coord, {
 		group_t group = group_at(board, c);
+		if (!group)
+			continue;
 
 		board_group_libs(board, group)--;
 		if (DEBUGL(7))
