@@ -8,6 +8,8 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
+#include "montecarlo/hint.h"
+#include "montecarlo/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
 
@@ -32,7 +34,8 @@ struct uct {
 static coord_t
 no_policy(void *playout_policy, struct board *b, enum stone my_color)
 {
-	return pass;
+	static struct montecarlo mc = { .atari_rate = 80, .cut_rate = 50, .local_rate = 50 };
+	return domain_hint(&mc, b, my_color);
 }
 
 static int
