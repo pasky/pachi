@@ -182,10 +182,10 @@ float board_fast_score(struct board *board);
 		struct board *board__ = board_; \
 		coord_t coord__ = coord_; \
 		coord_t c; \
-		coord_pos(c, coord_raw(coord__) - 1, (board__)); loop_body; \
-		coord_pos(c, coord_raw(coord__) - (board__)->size, (board__)); loop_body; \
-		coord_pos(c, coord_raw(coord__) + 1, (board__)); loop_body; \
-		coord_pos(c, coord_raw(coord__) + (board__)->size, (board__)); loop_body; \
+		coord_pos(c, coord_raw(coord__) - 1, (board__)); do { loop_body } while (0); \
+		coord_pos(c, coord_raw(coord__) - (board__)->size, (board__)); do { loop_body } while (0); \
+		coord_pos(c, coord_raw(coord__) + 1, (board__)); do { loop_body } while (0); \
+		coord_pos(c, coord_raw(coord__) + (board__)->size, (board__)); do { loop_body } while (0); \
 	} while (0)
 
 #define foreach_diag_neighbor(board_, coord_) \
