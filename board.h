@@ -21,18 +21,7 @@ typedef uint64_t hash_t;
 
 /* Note that "group" is only chain of stones that is solidly
  * connected for us. */
-
 typedef coord_t group_t;
-
-struct group {
-	/* Number of group pseudo-liberties */
-	/* Pseudo-liberties count empty-stone edges, not empty positions.
-	 * Thus, a single stone will have 4 pseudo-liberties, but so will
-	 * an one-eyed group in atari. The advantage is that we can update
-	 * the liberties lightning-fast. */
-	int libs;
-	coord_t base_stone; /* First stone in group */
-};
 
 struct neighbor_colors {
 	char colors[S_MAX];
