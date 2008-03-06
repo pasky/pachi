@@ -54,7 +54,7 @@ struct board {
 	/* Group id the stones are part of; 0 == no group */
 	group_t *g;
 	/* Positions of next stones in the stone group; 0 == last stone */
-	int *p;
+	coord_t *p;
 	/* Neighboring colors; numbers of neighbors of index color */
 	struct neighbor_colors *n;
 	/* Zobrist hash for each position */
@@ -65,7 +65,7 @@ struct board {
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
-	int *f; int flen;
+	coord_t *f; int flen;
 
 
 	/* --- PRIVATE DATA --- */
