@@ -27,6 +27,7 @@ struct uct {
 	int loss_threshold;
 	float explore_p;
 
+	struct montecarlo mc;
 	struct tree *t;
 };
 
@@ -34,10 +35,10 @@ struct uct {
 
 
 static coord_t
-no_policy(void *playout_policy, struct board *b, enum stone my_color)
+domainhint_policy(void *playout_policy, struct board *b, enum stone my_color)
 {
-	static struct montecarlo mc = { .atari_rate = 80, .cut_rate = 50, .local_rate = 50 };
-	return domain_hint(&mc, b, my_color);
+	struct uct *u = playout_policy;
+	return domain_hint(&u->mc, b, my_color);
 }
 
 static int
@@ -60,7 +61,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 				tree_expand_node(t, n, &b2);
 
 			struct move m = { n->coord, color };
-			result = play_random_game(&b2, &m, u->gamelen, no_policy, NULL);
+			result = play_random_game(&b2, &m, u->gamelen, domainhint_policy, u);
 			if (orig_color != color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
@@ -153,6 +154,9 @@ uct_state_init(char *arg)
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
 	u->explore_p = 0.2;
+	u->mc.atari_rate = 80;
+	u->mc.cut_rate = 50;
+	u->mc.local_rate = 50;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -184,6 +188,7 @@ uct_state_init(char *arg)
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
 	u->loss_threshold = u->games / 10; /* Stop reading if no loss encountered in first n games. */
+	u->mc.debug_level = u->debug_level;
 
 	return u;
 }
