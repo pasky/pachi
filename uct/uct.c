@@ -110,8 +110,21 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	struct uct *u = e->data;
 
 	if (!u->t) {
+tree_init:
 		u->t = tree_init(b);
 		u->t->explore_p = u->explore_p;
+	} else {
+		/* XXX: We hope that the opponent didn't suddenly play
+		 * several moves in the row. */
+		for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling)
+			if (ni->coord == b->last_move.coord) {
+				tree_promote_node(u->t, ni);
+				goto promoted;
+			}
+		fprintf(stderr, "CANNOT FIND NODE TO PROMOTE!\n");
+		tree_done(u->t);
+		goto tree_init;
+promoted:;
 	}
 
 	int i;
