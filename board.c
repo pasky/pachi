@@ -306,20 +306,19 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 	groupnext_at(board, prevstone) = coord_raw(coord);
 
 	if (DEBUGL(8))
-		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d - libs %d\n",
+		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d\n",
 			coord_x(prevstone, board), coord_y(prevstone, board),
 			coord_x(coord, board), coord_y(coord, board),
 			groupnext_at(board, coord) % board->size, groupnext_at(board, coord) / board->size,
-			gid, board_group_libs(board, gid));
+			gid);
 }
 
 static void profiling_noinline
 merge_groups(struct board *board, group_t group_to, group_t group_from)
 {
 	if (DEBUGL(7))
-		fprintf(stderr, "board_play_raw: merging groups %d(%d) -> %d(%d)\n",
-			group_from, board_group_libs(board, group_from),
-			group_to, board_group_libs(board, group_to));
+		fprintf(stderr, "board_play_raw: merging groups %d -> %d\n",
+			group_from, group_to);
 
 	coord_t last_in_group;
 	foreach_in_group(board, group_from) {
@@ -332,8 +331,8 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 	board_group_libs(board, group_to) += board_group_libs(board, group_from);
 
 	if (DEBUGL(7))
-		fprintf(stderr, "board_play_raw: merged group: %d(%d)\n",
-			group_to, board_group_libs(board, group_to));
+		fprintf(stderr, "board_play_raw: merged group: %d\n",
+			group_to);
 }
 
 static group_t profiling_noinline
@@ -346,9 +345,9 @@ new_group(struct board *board, coord_t coord)
 	groupnext_at(board, coord) = 0;
 
 	if (DEBUGL(8))
-		fprintf(stderr, "new_group: added %d,%d to group %d - libs %d\n",
+		fprintf(stderr, "new_group: added %d,%d to group %d\n",
 			coord_x(coord, board), coord_y(coord, board),
-			gid, board_group_libs(board, gid));
+			gid);
 
 	return gid;
 }
@@ -379,8 +378,8 @@ board_play_outside(struct board *board, struct move *m, int f)
 
 		board_group_libs(board, ngroup)--;
 		if (DEBUGL(7))
-			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
-				ngroup, board_group_libs(board, ngroup));
+			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
+				ngroup);
 
 		if (ncolor == color && ngroup != gid) {
 			if (gid <= 0) {
@@ -440,8 +439,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 		board_group_libs(board, group)--;
 		if (DEBUGL(7))
-			fprintf(stderr, "board_play_raw: reducing libs for group %d: libs %d\n",
-				group, board_group_libs(board, group));
+			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
+				group);
 
 		if (unlikely(board_group_captured(board, group))) {
 			captured_groups++;
@@ -467,8 +466,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		foreach_neighbor(board, coord, {
 			board_group_libs(board, group_at(board, c))++;
 			if (DEBUGL(7))
-				fprintf(stderr, "board_play_raw: restoring libs for group %d: libs %d\n",
-					group_at(board, c), board_group_libs(board, group_at(board, c)));
+				fprintf(stderr, "board_play_raw: restoring libs for group %d\n",
+					group_at(board, c));
 		});
 
 		coord_t c = coord;
