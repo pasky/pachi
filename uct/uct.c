@@ -154,9 +154,11 @@ uct_state_init(char *arg)
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
 	u->explore_p = 0.2;
-	u->mc.atari_rate = 80;
-	u->mc.cut_rate = 50;
-	u->mc.local_rate = 50;
+	u->mc.atari_rate = 90;
+	u->mc.cut_rate = 80;
+	// Looking at the actual playouts, this just encourages MC to make
+	// stupid shapes.
+	u->mc.local_rate = 0;
 
 	if (arg) {
 		char *optspec, *next = arg;
