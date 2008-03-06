@@ -55,7 +55,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
 			if (n->playouts > 5)
-				tree_expand_node(t, n);
+				tree_expand_node(t, n, &b2);
 
 			struct move m = { n->coord, color };
 			result = play_random_game(&b2, &m, u->gamelen, no_policy, NULL);
