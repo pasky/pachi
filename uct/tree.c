@@ -103,10 +103,9 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b)
 	}
 }
 
-void
-tree_delete_node(struct tree_node *node)
+static void
+tree_unlink_node(struct tree_node *node)
 {
-	/* Unlink */
 	struct tree_node *ni = node->parent;
 	if (ni->children == node) {
 		ni->children = node->sibling;
@@ -116,10 +115,24 @@ tree_delete_node(struct tree_node *node)
 			ni = ni->sibling;
 		ni->sibling = node->sibling;
 	}
+}
 
-	/* Free */
+void
+tree_delete_node(struct tree_node *node)
+{
+	tree_unlink_node(node);
 	assert(!node->children);
 	free(node);
+}
+
+void
+tree_promote_node(struct tree *tree, struct tree_node *node)
+{
+	assert(node->parent == tree->root);
+	tree_unlink_node(node);
+	tree_done_node(tree->root);
+	tree->root = node;
+	node->parent = NULL;
 }
 
 bool

@@ -26,6 +26,8 @@ struct uct {
 	float resign_ratio;
 	int loss_threshold;
 	float explore_p;
+
+	struct tree *t;
 };
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
@@ -106,13 +108,15 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 
-	struct tree *t = tree_init(b);
-	t->explore_p = u->explore_p;
+	if (!u->t) {
+		u->t = tree_init(b);
+		u->t->explore_p = u->explore_p;
+	}
 
 	int i;
 	int losses = 0;
 	for (i = 0; i < u->games; i++) {
-		int result = uct_playout(u, b, color, t);
+		int result = uct_playout(u, b, color, u->t);
 		if (result == -1) {
 			/* Tree descent has hit invalid move. */
 			continue;
@@ -126,16 +130,16 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	}
 
 	if (UDEBUGL(2))
-		tree_dump(t);
+		tree_dump(u->t);
 
-	struct tree_node *best = tree_best_child(t->root);
+	struct tree_node *best = tree_best_child(u->t->root);
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games)\n", coord_x(best->coord, b), coord_y(best->coord, b), best->value, i);
 	if (best->value < u->resign_ratio) {
-		tree_done(t);
+		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
 	}
-	tree_done(t);
+	tree_promote_node(u->t, best);
 	return coord_copy(best->coord);
 }
 
