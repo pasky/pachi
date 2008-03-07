@@ -24,7 +24,7 @@ struct uct {
 	int debug_level;
 	int games, gamelen;
 	float resign_ratio;
-	int loss_threshold;
+	float loss_threshold;
 	float explore_p;
 	int expand_p;
 
@@ -129,7 +129,6 @@ promoted:;
 	}
 
 	int i;
-	int losses = 0;
 	for (i = 0; i < u->games; i++) {
 		int result = uct_playout(u, b, color, u->t);
 		if (result < 0) {
@@ -137,9 +136,10 @@ promoted:;
 			continue;
 		}
 
-		losses += 1 - result;
-		if (!losses && i >= u->loss_threshold) {
-			break;
+		if (!(i % 1000)) {
+			struct tree_node *best = tree_best_child(u->t->root);
+			if (best && best->value >= u->loss_threshold)
+				break;
 		}
 	}
 
@@ -220,7 +220,7 @@ uct_state_init(char *arg)
 	}
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
-	u->loss_threshold = u->games / 10; /* Stop reading if no loss encountered in first n games. */
+	u->loss_threshold = 0.9; /* Stop reading if after at least 1000 games this is best value. */
 	u->mc.debug_level = u->debug_level;
 
 	return u;
