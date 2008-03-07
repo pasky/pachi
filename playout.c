@@ -34,7 +34,7 @@ play_random_game(struct board *b, struct move *m, int gamelen,
 	}
 
 	if (DEBUGL(3))
-		fprintf(stderr, "[%d,%d] playing random game\n", coord_x(m->coord, b), coord_y(m->coord, b));
+		fprintf(stderr, "[%d,%d] playing random game of color %d\n", coord_x(m->coord, b), coord_y(m->coord, b), m->color);
 
 	gamelen = gamelen - b2.moves;
 	if (gamelen < 10)
@@ -65,7 +65,7 @@ play_random_game(struct board *b, struct move *m, int gamelen,
 play_urgent:
 			m.coord = urgent; m.color = color;
 			if (board_play(&b2, &m) < 0) {
-				if (DEBUGL(7)) {
+				if (DEBUGL(8)) {
 					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent, b), coord_y(urgent, b));
 					board_print(&b2, stderr);
 				}
@@ -99,7 +99,7 @@ play_random:
 			}
 		}
 
-		if (DEBUGL(7)) {
+		if (DEBUGL(8)) {
 			char *cs = coord2str(coord, b);
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
@@ -115,7 +115,14 @@ play_random:
 	}
 
 	float score = board_fast_score(&b2);
+	bool result = (m->color == S_WHITE ? (score > 0) : (score < 0));
+
+	if (DEBUGL(6)) {
+		fprintf(stderr, "Random playout result: %d (W %f)\n", result, score);
+		if (DEBUGL(7))
+			board_print(&b2, stderr);
+	}
 
 	board_done_noalloc(&b2);
-	return (m->color == S_WHITE ? (score > 0 ? 1 : 0) : (score < 0 ? 1 : 0));
+	return result;
 }
