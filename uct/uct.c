@@ -70,7 +70,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		}
 
 		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1), b2.moves > b2.size2 * 2 / 3);
-		if (UDEBUGL(8))
+		if (UDEBUGL(7))
 			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		struct move m = { n->coord, color };
 		int res = board_play(&b2, &m);
@@ -87,9 +87,9 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			if (passes >= 2) {
 				float score = board_fast_score(&b2) > 0;
 				result = (orig_color == S_BLACK) ? score < 0 : score > 0;
-				if (UDEBUGL(7))
+				if (UDEBUGL(5))
 					fprintf(stderr, "[%d..%d] %s playout result %d (W %f)\n", orig_color, color, coord2sstr(n->coord, t->board), result, score);
-				if (UDEBUGL(8))
+				if (UDEBUGL(6))
 					board_print(&b2, stderr);
 				break;
 			}
