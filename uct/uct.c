@@ -98,7 +98,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		}
 	}
 
-	tree_uct_update(n, result);
+	if (result >= 0)
+		tree_uct_update(n, result);
 	board_done_noalloc(&b2);
 	return result;
 }
@@ -130,7 +131,7 @@ promoted:;
 	int losses = 0;
 	for (i = 0; i < u->games; i++) {
 		int result = uct_playout(u, b, color, u->t);
-		if (result == -1) {
+		if (result < 0) {
 			/* Tree descent has hit invalid move. */
 			continue;
 		}
