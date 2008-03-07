@@ -196,6 +196,16 @@ uct_state_init(char *arg)
 				u->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "explore_p") && optval) {
 				u->explore_p = atof(optval);
+			} else if (!strcasecmp(optname, "pure")) {
+				u->mc.capture_rate = u->mc.local_rate = u->mc.cut_rate = 0;
+			} else if (!strcasecmp(optname, "capturerate") && optval) {
+				u->mc.capture_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "atarirate") && optval) {
+				u->mc.atari_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "localrate") && optval) {
+				u->mc.local_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "cutrate") && optval) {
+				u->mc.cut_rate = atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 			}
