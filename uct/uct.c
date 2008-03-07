@@ -85,11 +85,10 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		if (is_pass(n->coord)) {
 			passes++;
 			if (passes >= 2) {
-				result = board_fast_score(&b2) > 0;
-				if (orig_color == S_BLACK)
-					result = !result;
+				float score = board_fast_score(&b2) > 0;
+				result = (orig_color == S_BLACK) ? score < 0 : score > 0;
 				if (UDEBUGL(7))
-					fprintf(stderr, "[%d..%d] %s playout result %d\n", orig_color, color, coord2sstr(n->coord, t->board), result);
+					fprintf(stderr, "[%d..%d] %s playout result %d (W %f)\n", orig_color, color, coord2sstr(n->coord, t->board), result, score);
 				if (UDEBUGL(8))
 					board_print(&b2, stderr);
 				break;
