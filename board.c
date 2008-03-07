@@ -1,4 +1,5 @@
 #include <alloca.h>
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,16 +51,16 @@ board_copy(struct board *b2, struct board *b1)
 	int nsize = b2->size2 * sizeof(*b2->n);
 	int psize = b2->size2 * sizeof(*b2->p);
 	int hsize = b2->size2 * 2 * sizeof(*b2->h);
-	int lsize = b2->size2 * sizeof(*b2->l);
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + lsize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + lsize);
+	int gisize = b2->size2 * sizeof(*b2->gi);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
 	b2->p = x; x += psize;
 	b2->n = x; x += nsize;
 	b2->h = x; x += hsize;
-	b2->l = x; x += lsize;
+	b2->gi = x; x += gisize;
 
 	return b2;
 }
@@ -91,16 +92,16 @@ board_resize(struct board *board, int size)
 	int nsize = board->size2 * sizeof(*board->n);
 	int psize = board->size2 * sizeof(*board->p);
 	int hsize = board->size2 * 2 * sizeof(*board->h);
-	int lsize = board->size2 * sizeof(*board->l);
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + lsize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + lsize);
+	int gisize = board->size2 * sizeof(*board->gi);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
 	board->p = x; x += psize;
 	board->n = x; x += nsize;
 	board->h = x; x += hsize;
-	board->l = x; x += lsize;
+	board->gi = x; x += gisize;
 }
 
 void
@@ -272,6 +273,75 @@ board_handicap(struct board *board, int stones, FILE *f)
 }
 
 
+static void
+board_group_addlib(struct board *board, group_t group, coord_t coord)
+{
+	if (DEBUGL(7)) {
+		fprintf(stderr, "Group %d[%s]: Adding liberty %s\n",
+			group, coord2sstr(group, board), coord2sstr(coord, board));
+	}
+
+	struct group *gi = &board_group_info(board, group);
+	if (gi->libs < GROUP_KEEP_LIBS) {
+		for (int i = 0; i < gi->libs; i++)
+			if (gi->lib[i] == coord)
+				return;
+		gi->lib[gi->libs++] = coord;
+	}
+}
+
+static void
+board_group_rmlib(struct board *board, group_t group, coord_t coord)
+{
+	if (DEBUGL(7)) {
+		fprintf(stderr, "Group %d[%s]: Removing liberty %s\n",
+			group, coord2sstr(group, board), coord2sstr(coord, board));
+	}
+
+	struct group *gi = &board_group_info(board, group);
+	for (int i = 0; i < gi->libs; i++) {
+		if (gi->lib[i] == coord) {
+			for (i++; i < gi->libs; i++)
+				gi->lib[i - 1] = gi->lib[i];
+			gi->libs--;
+			if (gi->libs < GROUP_KEEP_LIBS - 1)
+				return;
+			goto find_extra_lib;
+		}
+	}
+	/* This is ok even if gi->libs < GROUP_KEEP_LIBS since we
+	 * can call this multiple times per coord. */
+	return;
+
+	/* Add extra liberty from the board to our liberty list. */
+find_extra_lib:;
+	bool watermark[board->size2];
+	memset(watermark, 0, sizeof(watermark));
+
+	foreach_in_group(board, group) {
+		coord_t coord = c;
+		foreach_neighbor(board, coord, {
+			if (likely(watermark[coord_raw(c)]))
+				continue;
+			watermark[coord_raw(c)] = true;
+			if (board_at(board, c) == S_NONE) {
+				bool next = false;
+				for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++) {
+					if (gi->lib[i] == c) {
+						next = true;
+						break;
+					}
+				}
+				if (!next) {
+					gi->lib[gi->libs++] = c;
+					return;
+				}
+			}
+		} );
+	} foreach_in_group_end;
+}
+
+
 /* This is a low-level routine that doesn't maintain consistency
  * of all the board data structures. Use board_group_capture() from
  * your code. */
@@ -287,7 +357,7 @@ board_remove_stone(struct board *board, coord_t c)
 	coord_t coord = c;
 	foreach_neighbor(board, coord, {
 		dec_neighbor_count_at(board, c, color);
-		board_group_libs(board, group_at(board, c))++;
+		board_group_addlib(board, group_at(board, c), coord);
 	});
 
 	if (DEBUGL(6))
@@ -299,7 +369,10 @@ board_remove_stone(struct board *board, coord_t c)
 static void profiling_noinline
 add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
-	board_group_libs(board, gid) += immediate_liberty_count(board, coord);
+	foreach_neighbor(board, coord, {
+		if (board_at(board, c) == S_NONE)
+			board_group_addlib(board, gid, c);
+	});
 
 	group_at(board, coord) = gid;
 	groupnext_at(board, coord) = groupnext_at(board, prevstone);
@@ -328,7 +401,19 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 	groupnext_at(board, last_in_group) = groupnext_at(board, group_to);
 	groupnext_at(board, group_to) = group_from;
 
-	board_group_libs(board, group_to) += board_group_libs(board, group_from);
+	struct group *gi_from = &board_group_info(board, group_from);
+	struct group *gi_to = &board_group_info(board, group_to);
+	if (gi_to->libs < GROUP_KEEP_LIBS) {
+		for (int i = 0; i < gi_from->libs; i++) {
+			for (int j = 0; j < gi_to->libs; j++)
+				if (gi_to->lib[j] == gi_from->lib[i])
+					goto next_from_lib;
+			gi_to->lib[gi_to->libs++] = gi_from->lib[i];
+			if (gi_to->libs >= GROUP_KEEP_LIBS)
+				break;
+next_from_lib:;
+		}
+	}
 
 	if (DEBUGL(7))
 		fprintf(stderr, "board_play_raw: merged group: %d\n",
@@ -339,7 +424,11 @@ static group_t profiling_noinline
 new_group(struct board *board, coord_t coord)
 {
 	group_t gid = coord_raw(coord);
-	board_group_libs(board, gid) = immediate_liberty_count(board, coord);
+	foreach_neighbor(board, coord, {
+		if (board_at(board, c) == S_NONE)
+			board_group_addlib(board, gid, c);
+	});
+
 
 	group_at(board, coord) = gid;
 	groupnext_at(board, coord) = 0;
@@ -376,7 +465,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 		if (!ngroup)
 			continue;
 
-		board_group_libs(board, ngroup)--;
+		board_group_rmlib(board, ngroup, coord);
 		if (DEBUGL(7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
 				ngroup);
@@ -389,6 +478,13 @@ board_play_outside(struct board *board, struct move *m, int f)
 				merge_groups(board, gid, ngroup);
 			}
 		} else if (ncolor == other_color) {
+			if (DEBUGL(8)) {
+				struct group *gi = &board_group_info(board, ngroup);
+				fprintf(stderr, "testing captured group %d[%s]: ", ngroup, coord2sstr(ngroup, board));
+				for (int i = 0; i < gi->libs; i++)
+					fprintf(stderr, "%s ", coord2sstr(gi->lib[i], board));
+				fprintf(stderr, "\n");
+			}
 			if (unlikely(board_group_captured(board, ngroup)))
 				board_group_capture(board, ngroup);
 		}
@@ -437,7 +533,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		if (!group)
 			continue;
 
-		board_group_libs(board, group)--;
+		board_group_rmlib(board, group, coord);
 		if (DEBUGL(7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
 				group);
@@ -464,7 +560,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		}
 
 		foreach_neighbor(board, coord, {
-			board_group_libs(board, group_at(board, c))++;
+			board_group_addlib(board, group_at(board, c), coord);
 			if (DEBUGL(7))
 				fprintf(stderr, "board_play_raw: restoring libs for group %d\n",
 					group_at(board, c));
@@ -617,34 +713,10 @@ board_group_capture(struct board *board, int group)
 bool
 board_group_in_atari(struct board *board, group_t group, coord_t *lastlib)
 {
-	/* First rule out obvious fakes. */
-	if (!group || board_group_libs(board, group) > 4)
+	if (board_group_info(board, group).libs != 1)
 		return false;
-	coord_t base_stone = group;
-	if (immediate_liberty_count(board, base_stone) > 1)
-		return false;
-
-	int libs = 0;
-
-	bool watermark[board->size2];
-	memset(watermark, 0, sizeof(watermark));
-
-	foreach_in_group(board, group) {
-		coord_t coord = c;
-		foreach_neighbor(board, coord, {
-			if (likely(watermark[coord_raw(c)]))
-				continue;
-			watermark[coord_raw(c)] = true;
-			if (unlikely(board_at(board, c) == S_NONE)) {
-				libs++;
-				if (unlikely(libs > 1))
-					return false;
-				*lastlib = c;
-			}
-		} );
-	} foreach_in_group_end;
-
-	return libs == 1;
+	*lastlib = board_group_info(board, group).lib[0];
+	return true;
 }
 
 

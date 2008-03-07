@@ -23,6 +23,14 @@ typedef uint64_t hash_t;
  * connected for us. */
 typedef coord_t group_t;
 
+struct group {
+	/* We keep track of only up to GROUP_KEEP_LIBS; over that, we
+	 * don't care. */
+#define GROUP_KEEP_LIBS 4 // +-1 can make noticeable speed difference
+	coord_t lib[GROUP_KEEP_LIBS];
+	int libs;
+};
+
 struct neighbor_colors {
 	char colors[S_MAX];
 };
@@ -60,8 +68,8 @@ struct board {
 	/* Zobrist hash for each position */
 	hash_t *h;
 
-	/* Group liberties - indexed by gid (which is coord of base group stone) */
-	int *l;
+	/* Group information - indexed by gid (which is coord of base group stone) */
+	struct group *gi;
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
@@ -99,8 +107,8 @@ struct board {
 #define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + (b_)->size * (y)])
 
-#define board_group_libs(b_, g_) ((b_)->l[(g_)])
-#define board_group_captured(b_, g_) (board_group_libs(b_, g_) == 0)
+#define board_group_info(b_, g_) ((b_)->gi[(g_)])
+#define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
 
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
