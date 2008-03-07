@@ -136,7 +136,7 @@ promoted:;
 			continue;
 		}
 
-		if (!(i % 1000)) {
+		if (i > 0 && !(i % 1000)) {
 			struct tree_node *best = tree_best_child(u->t->root);
 			if (best && best->value >= u->loss_threshold)
 				break;
