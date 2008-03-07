@@ -57,7 +57,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		fprintf(stderr, "--- UCT walk\n");
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
-			if (n->playouts > 5)
+			if (n->playouts > 1)
 				tree_expand_node(t, n, &b2);
 
 			struct move m = { n->coord, color };
