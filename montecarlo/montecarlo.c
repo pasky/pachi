@@ -228,7 +228,7 @@ montecarlo_state_init(char *arg)
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "pure")) {
-				mc->capture_rate = mc->local_rate = mc->cut_rate = 0;
+				mc->capture_rate = mc->atari_rate = mc->local_rate = mc->cut_rate = 0;
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
 				mc->capture_rate = atoi(optval);
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
