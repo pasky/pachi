@@ -339,12 +339,12 @@ find_extra_lib:;
 	memset(watermark, 0, sizeof(watermark));
 
 	foreach_in_group(board, group) {
-		coord_t coord = c;
-		foreach_neighbor(board, coord, {
+		coord_t coord2 = c;
+		foreach_neighbor(board, coord2, {
 			if (likely(watermark[coord_raw(c)]))
 				continue;
 			watermark[coord_raw(c)] = true;
-			if (board_at(board, c) == S_NONE) {
+			if (c != coord && board_at(board, c) == S_NONE) {
 				bool next = false;
 				for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++) {
 					if (gi->lib[i] == c) {
