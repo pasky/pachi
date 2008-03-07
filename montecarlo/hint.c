@@ -81,6 +81,35 @@ choosen:
 	return pass;
 }
 
+
+static bool inline
+valid_atari_move(struct board *b, coord_t coord)
+{
+	/* Do not avoid atari moves that the opponent actuall can never
+	 * play because they are one of our eyes. Without this, the
+	 * atari avoidance will actually fill one eye of surrounded
+	 * two-eyed group. */
+	return board_get_one_point_eye(b, &coord) == S_NONE;
+}
+
+static bool inline
+validate_atari_pair(struct board *b, coord_t coord[2])
+{
+	/* DTRT if only one of the atari moves is sensible. */
+	bool v[2] = { valid_atari_move(b, coord[0]), valid_atari_move(b, coord[1]) };
+	if (likely(v[0] && v[1]))
+		return true;
+	if (v[0]) {
+		coord[1] = coord[0];
+		return true;
+	}
+	if (v[1]) {
+		coord[0] = coord[1];
+		return true;
+	}
+	return false;
+}
+
 static coord_t
 domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 {
@@ -95,16 +124,19 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	memset(ataris, 0, sizeof(ataris));
 
 	if (unlikely(board_group_can_atari(b, group_at(b, coord), ataris[ataris_len]))) {
-		/* Atari-ing opponent is always better than preventing
-		 * opponent atari-ing us. */
-		atari_choice = ataris_len++;
-		goto choosen;
+		if (likely(validate_atari_pair(b, ataris[ataris_len]))) {
+			/* Atari-ing opponent is always better than preventing
+			 * opponent atari-ing us. */
+			atari_choice = ataris_len++;
+			goto choosen;
+		}
 	}
 	foreach_neighbor(b, coord, {
 		/* This can produce duplicate candidates. But we should prefer
 		 * bigger groups to smaller ones, so I guess that is kinda ok. */
 		if (likely(group_at(b, c)) && unlikely(board_group_can_atari(b, group_at(b, c), ataris[ataris_len])))
-			ataris_len++;
+			if (likely(validate_atari_pair(b, ataris[ataris_len])))
+				ataris_len++;
 	} );
 
 	if (unlikely(ataris_len)) {
