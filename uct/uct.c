@@ -172,9 +172,9 @@ uct_state_init(char *arg)
 	u->gamelen = MC_GAMELEN;
 	u->explore_p = 0.2;
 	u->expand_p = 2;
-	u->mc.capture_rate = 90;
-	u->mc.atari_rate = 90;
-	u->mc.cut_rate = 80;
+	u->mc.capture_rate = 100;
+	u->mc.atari_rate = 100;
+	u->mc.cut_rate = 50;
 	// Looking at the actual playouts, this just encourages MC to make
 	// stupid shapes.
 	u->mc.local_rate = 0;
