@@ -30,6 +30,8 @@
  * 				them on selectively
  * capture_rate=MC_CAPTURERATE	how many of 100 moves should be non-random but
  * 				fix local atari, if there is any
+ * atari_rate=MC_ATARIRATE	how many of 100 moves should be non-random but
+ * 				make an atari, if there is any
  * local_rate=MC_LOCALRATE	how many of 100 moves should be contact plays
  * 				(tsuke or diagonal)
  * cut_rate=MC_CUTRATE		how many of 100 moves should fix local cuts,
@@ -39,6 +41,7 @@
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
 #define MC_CAPTURERATE	50
+#define MC_ATARIRATE	50
 #define MC_CUTRATE	40
 #define MC_LOCALRATE	30
 
@@ -200,6 +203,7 @@ montecarlo_state_init(char *arg)
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
 	mc->capture_rate = MC_CAPTURERATE;
+	mc->atari_rate = MC_ATARIRATE;
 	mc->local_rate = MC_LOCALRATE;
 	mc->cut_rate = MC_CUTRATE;
 
@@ -227,6 +231,8 @@ montecarlo_state_init(char *arg)
 				mc->capture_rate = mc->local_rate = mc->cut_rate = 0;
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
 				mc->capture_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "atarirate") && optval) {
+				mc->atari_rate = atoi(optval);
 			} else if (!strcasecmp(optname, "localrate") && optval) {
 				mc->local_rate = atoi(optval);
 			} else if (!strcasecmp(optname, "cutrate") && optval) {

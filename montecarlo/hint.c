@@ -53,6 +53,43 @@ domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 }
 
 static coord_t
+domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
+{
+	/* If we can put the last-move group in atari, do that. */
+
+	if (MCDEBUGL(8)) {
+		fprintf(stderr, "-- Scanning for %d,%d-atari moves:\n", coord_x(coord, b), coord_y(coord, b));
+		board_print(b, stderr);
+	}
+
+	coord_t ataris[5][2]; int ataris_len = 0;
+	memset(ataris, 0, sizeof(ataris));
+
+	if (unlikely(board_group_can_atari(b, group_at(b, coord), ataris[ataris_len])))
+		ataris_len++;
+	foreach_neighbor(b, coord, {
+		/* This can produce duplicate candidates. But we should prefer
+		 * bigger groups to smaller ones, so I guess that is kinda ok. */
+		if (likely(group_at(b, c)) && unlikely(board_group_can_atari(b, group_at(b, c), ataris[ataris_len])))
+			ataris_len++;
+	} );
+
+	if (unlikely(ataris_len)) {
+		if (MCDEBUGL(8)) {
+			fprintf(stderr, "atari moves found:");
+			int i = 0;
+			for (i = 0; i < ataris_len; i++)
+				fprintf(stderr, " %d,%d;%d,%d",
+					coord_x(ataris[i][0], b), coord_y(ataris[i][0], b),
+					coord_x(ataris[i][1], b), coord_y(ataris[i][1], b));
+			fprintf(stderr, "\n");
+		}
+		return ataris[fast_random(ataris_len)][fast_random(2)];
+	}
+	return pass;
+}
+
+static coord_t
 domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 {
 	/* Check if this move is cutting kosumi:
@@ -170,6 +207,15 @@ domain_hint(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 	 * If there is an atari, capturing tends to be huge. */
 	if (mc->capture_rate && fast_random(100) < mc->capture_rate) {
 		mc->last_hint = domain_hint_capture(mc, b, b->last_move.coord);
+		if (!is_pass(mc->last_hint)) {
+			mc->last_hint_value = mc->capture_rate;
+			return mc->last_hint;
+		}
+	}
+
+	/* Maybe we can _put_ some stones into atari. That's cool. */
+	if (mc->capture_rate && fast_random(100) < mc->atari_rate) {
+		mc->last_hint = domain_hint_atari(mc, b, b->last_move.coord);
 		if (!is_pass(mc->last_hint)) {
 			mc->last_hint_value = mc->capture_rate;
 			return mc->last_hint;
