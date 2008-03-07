@@ -35,7 +35,7 @@ domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 		board_print(b, stderr);
 	}
 
-	coord_t captures[5]; int captures_len = 0;
+	coord_t captures[5]; int captures_len = 0, capture_choice = 0;
 	memset(captures, 0, sizeof(captures));
 
 	coord_t fix;
@@ -49,14 +49,17 @@ domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 	} );
 
 	if (unlikely(captures_len)) {
+		capture_choice = fast_random(captures_len);
 		if (MCDEBUGL(8)) {
 			fprintf(stderr, "capture moves found:");
 			int i = 0;
 			for (i = 0; i < captures_len; i++)
-				fprintf(stderr, " %d,%d", coord_x(captures[i], b), coord_y(captures[i], b));
+				fprintf(stderr, " %c%d,%d",
+					capture_choice == i ? '*' : ' ',
+					coord_x(captures[i], b), coord_y(captures[i], b));
 			fprintf(stderr, "\n");
 		}
-		return captures[fast_random(captures_len)];
+		return captures[capture_choice];
 	}
 	return pass;
 }
@@ -71,7 +74,7 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 		board_print(b, stderr);
 	}
 
-	coord_t ataris[5][2]; int ataris_len = 0;
+	coord_t ataris[5][2]; int ataris_len = 0, atari_choice = 0;
 	memset(ataris, 0, sizeof(ataris));
 
 	if (unlikely(board_group_can_atari(b, group_at(b, coord), ataris[ataris_len])))
@@ -84,16 +87,18 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	} );
 
 	if (unlikely(ataris_len)) {
+		atari_choice = fast_random(ataris_len);
 		if (MCDEBUGL(8)) {
 			fprintf(stderr, "atari moves found:");
 			int i = 0;
 			for (i = 0; i < ataris_len; i++)
-				fprintf(stderr, " %d,%d;%d,%d",
+				fprintf(stderr, " %c%d,%d;%d,%d",
+					atari_choice == i ? '*' : ' ',
 					coord_x(ataris[i][0], b), coord_y(ataris[i][0], b),
 					coord_x(ataris[i][1], b), coord_y(ataris[i][1], b));
 			fprintf(stderr, "\n");
 		}
-		return ataris[fast_random(ataris_len)][fast_random(2)];
+		return ataris[atari_choice][fast_random(2)];
 	}
 	return pass;
 }
