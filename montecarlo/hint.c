@@ -19,8 +19,19 @@
 static bool inline
 valid_escape_route(struct board *b, coord_t from, coord_t to)
 {
-	/* Make sure we actually gain any liberties by this escape route. */
-	return immediate_liberty_count(b, to) > 1;
+	/* Assess if we actually gain any liberties by this escape route.
+	 * Note that this is not 100% as we cannot check whether we are
+	 * connecting out or just to ourselves. */
+	/* Also, we prohibit 1-1 here:
+	 *  X X X X |
+	 *  O X O O |
+	 *  O O X O |
+	 *  .(O)X . |
+	 *  --------+
+	 */
+	int friends = neighbor_count_at(b, to, board_at(b, from));
+	int libs = immediate_liberty_count(b, to);
+	return (friends > 1 && friends < 4) || (libs > 1);
 }
 
 static coord_t
