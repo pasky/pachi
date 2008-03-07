@@ -273,6 +273,20 @@ board_handicap(struct board *board, int stones, FILE *f)
 }
 
 
+static void __attribute__((noinline))
+check_libs_consistency(struct board *board, group_t g)
+{
+#ifdef DEBUG
+	if (!g) return;
+	struct group *gi = &board_group_info(board, g);
+	for (int i = 0; i < gi->libs; i++)
+		if (board_at(board, gi->lib[i]) != S_NONE) {
+			fprintf(stderr, "BOGUS LIBERTY %s of group %d[%s]\n", coord2sstr(gi->lib[i], board), g, coord2sstr(g, board));
+			assert(0);
+		}
+#endif
+}
+
 static void
 board_group_addlib(struct board *board, group_t group, coord_t coord)
 {
@@ -280,6 +294,8 @@ board_group_addlib(struct board *board, group_t group, coord_t coord)
 		fprintf(stderr, "Group %d[%s]: Adding liberty %s\n",
 			group, coord2sstr(group, board), coord2sstr(coord, board));
 	}
+
+	check_libs_consistency(board, group);
 
 	struct group *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
@@ -304,13 +320,17 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 			for (i++; i < gi->libs; i++)
 				gi->lib[i - 1] = gi->lib[i];
 			gi->libs--;
+
+			check_libs_consistency(board, group);
 			if (gi->libs < GROUP_KEEP_LIBS - 1)
 				return;
 			goto find_extra_lib;
 		}
 	}
+
 	/* This is ok even if gi->libs < GROUP_KEEP_LIBS since we
 	 * can call this multiple times per coord. */
+	check_libs_consistency(board, group);
 	return;
 
 	/* Add extra liberty from the board to our liberty list. */
@@ -456,7 +476,6 @@ board_play_outside(struct board *board, struct move *m, int f)
 	board->f[f] = board->f[--board->flen];
 	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
-	board_at(board, coord) = color;
 
 	foreach_neighbor(board, coord, {
 		enum stone ncolor = board_at(board, c);
@@ -495,6 +514,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 	if (unlikely(gid <= 0))
 		gid = new_group(board, coord);
 
+	board_at(board, coord) = color;
 	board->last_move = *m;
 	board->moves++;
 	board_hash_update(board, coord, color);
