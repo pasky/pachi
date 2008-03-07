@@ -139,7 +139,7 @@ bool board_is_one_point_eye(struct board *board, coord_t *c, enum stone eye_colo
 /* Returns color of a 1pt eye owner, S_NONE if not an eye. */
 enum stone board_get_one_point_eye(struct board *board, coord_t *c);
 
-/* Check if group is in atari; this check can be potentially quite expensive!
+/* Check if group is in atari. This is very fast.
  * The last liberty is recorded to lastlib (content is undefined if group
  * is not in atari). */
 bool board_group_in_atari(struct board *board, int group, coord_t *lastlib);
