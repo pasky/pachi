@@ -22,32 +22,32 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	 * slower), but improves the playouts a lot. */
 
 	if (MCDEBUGL(8)) {
-		fprintf(stderr, "-- Scanning for %d,%d-urgent moves:\n", coord_x(coord, b), coord_y(coord, b));
+		fprintf(stderr, "-- Scanning for %d,%d-atari moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
 
-	coord_t urgents[5]; int urgents_len = 0;
-	memset(urgents, 0, sizeof(urgents));
+	coord_t ataris[5]; int ataris_len = 0;
+	memset(ataris, 0, sizeof(ataris));
 
 	coord_t fix;
 	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)))
-		urgents[urgents_len++] = fix;
+		ataris[ataris_len++] = fix;
 	foreach_neighbor(b, coord, {
 		/* This can produce duplicate candidates. But we should prefer
 		 * bigger groups to smaller ones, so I guess that is kinda ok. */
 		if (likely(group_at(b, c)) && unlikely(board_group_in_atari(b, group_at(b, c), &fix)))
-			urgents[urgents_len++] = fix;
+			ataris[ataris_len++] = fix;
 	} );
 
-	if (unlikely(urgents_len)) {
+	if (unlikely(ataris_len)) {
 		if (MCDEBUGL(8)) {
-			fprintf(stderr, "Urgent moves found:");
+			fprintf(stderr, "Atari moves found:");
 			int i = 0;
-			for (i = 0; i < urgents_len; i++)
-				fprintf(stderr, " %d,%d", coord_x(urgents[i], b), coord_y(urgents[i], b));
+			for (i = 0; i < ataris_len; i++)
+				fprintf(stderr, " %d,%d", coord_x(ataris[i], b), coord_y(ataris[i], b));
 			fprintf(stderr, "\n");
 		}
-		return urgents[fast_random(urgents_len)];
+		return ataris[fast_random(ataris_len)];
 	}
 	return pass;
 }
