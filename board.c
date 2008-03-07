@@ -415,6 +415,8 @@ next_from_lib:;
 		}
 	}
 
+	memset(gi_from, 0, sizeof(struct group));
+
 	if (DEBUGL(7))
 		fprintf(stderr, "board_play_raw: merged group: %d\n",
 			group_to);
@@ -467,8 +469,8 @@ board_play_outside(struct board *board, struct move *m, int f)
 
 		board_group_rmlib(board, ngroup, coord);
 		if (DEBUGL(7))
-			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
-				ngroup);
+			fprintf(stderr, "board_play_raw: reducing libs for group %d (%d:%d,%d)\n",
+				ngroup, ncolor, color, other_color);
 
 		if (ncolor == color && ngroup != gid) {
 			if (gid <= 0) {
@@ -706,6 +708,8 @@ board_group_capture(struct board *board, int group)
 		board_remove_stone(board, c);
 		stones++;
 	} foreach_in_group_end;
+
+	memset(&board_group_info(board, group), 0, sizeof(struct group));
 
 	return stones;
 }
