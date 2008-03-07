@@ -1,0 +1,37 @@
+# Spirit-gman KGS 2007-03-07 19:14
+boardsize 9
+komi 0.5
+clear_board
+play b d6
+play w d3
+play b d4
+play w c4
+# !!
+play b e3
+play w e2
+# !!
+play b c3
+play w d2
+play b c5
+play w b4
+# !!
+play b e7
+play w g5
+# !! do you see e4 reply?
+play b f2
+play w e4
+play b f7
+play w b5
+play b d5
+play w f3
+play b b6
+play w h7
+play b b3
+play w b2
+play b g6
+play w h6
+# this should be better a4
+play b a3
+play w a2
+# !! are we seeing the a2 atari threat?
+play b h5
