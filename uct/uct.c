@@ -149,7 +149,7 @@ promoted:;
 	struct tree_node *best = tree_best_child(u->t->root);
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games)\n", coord_x(best->coord, b), coord_y(best->coord, b), best->value, i);
-	if (best->value < u->resign_ratio) {
+	if (best->value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
 	}
