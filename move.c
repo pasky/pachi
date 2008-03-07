@@ -20,13 +20,16 @@ coord2str(coord_t c, struct board *board)
 char *
 coord2sstr(coord_t c, struct board *board)
 {
-	static char b[4];
+	static char *b;
+	static char bl[10][4];
+	static int bi;
 	if (is_pass(c)) {
 		return "pass";
 	} else if (is_resign(c)) {
 		return "resign";
 	} else {
 		/* Some GTP servers are broken and won't grok lowercase coords */
+		b = bl[bi]; bi = (bi + 1) % 10;
 		snprintf(b, 4, "%c%d", toupper(asdf[coord_x(c, board) - 1]), coord_y(c, board));
 		return b;
 	}
