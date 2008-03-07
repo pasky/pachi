@@ -39,8 +39,13 @@ domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 	memset(captures, 0, sizeof(captures));
 
 	coord_t fix;
-	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)) && likely(valid_escape_route(b, coord, fix)))
-		captures[captures_len++] = fix;
+	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)) && likely(valid_escape_route(b, coord, fix))) {
+		/* We can capture the opponent! Don't even think about escaping
+		 * our own ataris then. */
+		captures[captures_len] = fix;
+		capture_choice = captures_len++;
+		goto choosen;
+	}
 	foreach_neighbor(b, coord, {
 		/* This can produce duplicate candidates. But we should prefer
 		 * bigger groups to smaller ones, so I guess that is kinda ok. */
@@ -50,6 +55,7 @@ domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 
 	if (unlikely(captures_len)) {
 		capture_choice = fast_random(captures_len);
+choosen:
 		if (MCDEBUGL(8)) {
 			fprintf(stderr, "capture moves found:");
 			int i = 0;
@@ -77,8 +83,12 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	coord_t ataris[5][2]; int ataris_len = 0, atari_choice = 0;
 	memset(ataris, 0, sizeof(ataris));
 
-	if (unlikely(board_group_can_atari(b, group_at(b, coord), ataris[ataris_len])))
-		ataris_len++;
+	if (unlikely(board_group_can_atari(b, group_at(b, coord), ataris[ataris_len]))) {
+		/* Atari-ing opponent is always better than preventing
+		 * opponent atari-ing us. */
+		atari_choice = ataris_len++;
+		goto choosen;
+	}
 	foreach_neighbor(b, coord, {
 		/* This can produce duplicate candidates. But we should prefer
 		 * bigger groups to smaller ones, so I guess that is kinda ok. */
@@ -88,6 +98,7 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 
 	if (unlikely(ataris_len)) {
 		atari_choice = fast_random(ataris_len);
+choosen:
 		if (MCDEBUGL(8)) {
 			fprintf(stderr, "atari moves found:");
 			int i = 0;
