@@ -155,13 +155,16 @@ tree_best_child(struct tree_node *node)
 
 
 struct tree_node *
-tree_uct_descend(struct tree *tree, struct tree_node *node, int parity)
+tree_uct_descend(struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	float xpl = log(node->playouts) * tree->explore_p;
 
 	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+		/* Do not consider passing early. */
+		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
+			continue;
 #ifdef UCB1_TUNED
 		float xpl_loc = (ni->value - ni->value * ni->value);
 		if (parity < 0) xpl_loc = 1 - xpl_loc;

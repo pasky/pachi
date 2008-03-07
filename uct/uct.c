@@ -69,7 +69,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			break;
 		}
 
-		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1));
+		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1), b2.moves > b2.size2 * 2 / 3);
 		if (UDEBUGL(8))
 			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		struct move m = { n->coord, color };

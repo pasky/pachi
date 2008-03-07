@@ -49,7 +49,7 @@ void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_leaf_node(struct tree_node *node);
 struct tree_node *tree_best_child(struct tree_node *node);
 
-struct tree_node *tree_uct_descend(struct tree *tree, struct tree_node *node, int parity);
+struct tree_node *tree_uct_descend(struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
 void tree_uct_update(struct tree_node *node, int result);
 
 #endif
