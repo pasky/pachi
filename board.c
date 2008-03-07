@@ -719,6 +719,16 @@ board_group_in_atari(struct board *board, group_t group, coord_t *lastlib)
 	return true;
 }
 
+bool
+board_group_can_atari(struct board *board, group_t group, coord_t lastlib[2])
+{
+	if (board_group_info(board, group).libs != 2)
+		return false;
+	lastlib[0] = board_group_info(board, group).lib[0];
+	lastlib[1] = board_group_info(board, group).lib[1];
+	return true;
+}
+
 
 /* Chinese counting */
 float
