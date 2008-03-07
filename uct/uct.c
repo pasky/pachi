@@ -26,6 +26,7 @@ struct uct {
 	float resign_ratio;
 	int loss_threshold;
 	float explore_p;
+	int expand_p;
 
 	struct montecarlo mc;
 	struct tree *t;
@@ -57,7 +58,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		fprintf(stderr, "--- UCT walk\n");
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
-			if (n->playouts > 1)
+			if (n->playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2);
 
 			struct move m = { n->coord, color };
@@ -69,7 +70,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			break;
 		}
 
-		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1), b2.moves > b2.size2 * 2 / 3);
+		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1), b2.moves > (b2.size2 - 2) / 2);
 		if (UDEBUGL(7))
 			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		struct move m = { n->coord, color };
@@ -139,7 +140,6 @@ promoted:;
 		losses += 1 - result;
 		if (!losses && i >= u->loss_threshold) {
 			break;
-
 		}
 	}
 
@@ -167,6 +167,7 @@ uct_state_init(char *arg)
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
 	u->explore_p = 0.2;
+	u->expand_p = 2;
 	u->mc.capture_rate = 90;
 	u->mc.atari_rate = 90;
 	u->mc.cut_rate = 80;
@@ -196,6 +197,8 @@ uct_state_init(char *arg)
 				u->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "explore_p") && optval) {
 				u->explore_p = atof(optval);
+			} else if (!strcasecmp(optname, "expand_p") && optval) {
+				u->expand_p = atoi(optval);
 			} else if (!strcasecmp(optname, "pure")) {
 				u->mc.capture_rate = u->mc.local_rate = u->mc.cut_rate = 0;
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
