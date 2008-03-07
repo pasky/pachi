@@ -28,7 +28,7 @@
  * very high performance penalty.
  * pure				turns all the heuristics off; you can then turn
  * 				them on selectively
- * atari_rate=MC_ATARIRATE	how many of 100 moves should be non-random but
+ * capture_rate=MC_CAPTURERATE	how many of 100 moves should be non-random but
  * 				fix local atari, if there is any
  * local_rate=MC_LOCALRATE	how many of 100 moves should be contact plays
  * 				(tsuke or diagonal)
@@ -36,13 +36,11 @@
  * 				if there are any */
 
 
-/* Times for 10000 runs on 1.6GHz Athlon. pure runs at ~500ms */
-
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
-#define MC_ATARIRATE	50 /* +200ms */
-#define MC_CUTRATE	40 /* +100ms */
-#define MC_LOCALRATE	30 /* +100ms */
+#define MC_CAPTURERATE	50
+#define MC_CUTRATE	40
+#define MC_LOCALRATE	30
 
 
 /* FIXME: Cutoff rule for simulations. Currently we are so fast that this
@@ -201,7 +199,7 @@ montecarlo_state_init(char *arg)
 	mc->debug_level = 1;
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
-	mc->atari_rate = MC_ATARIRATE;
+	mc->capture_rate = MC_CAPTURERATE;
 	mc->local_rate = MC_LOCALRATE;
 	mc->cut_rate = MC_CUTRATE;
 
@@ -226,9 +224,9 @@ montecarlo_state_init(char *arg)
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "pure")) {
-				mc->atari_rate = mc->local_rate = mc->cut_rate = 0;
-			} else if (!strcasecmp(optname, "atarirate") && optval) {
-				mc->atari_rate = atoi(optval);
+				mc->capture_rate = mc->local_rate = mc->cut_rate = 0;
+			} else if (!strcasecmp(optname, "capturerate") && optval) {
+				mc->capture_rate = atoi(optval);
 			} else if (!strcasecmp(optname, "localrate") && optval) {
 				mc->local_rate = atoi(optval);
 			} else if (!strcasecmp(optname, "cutrate") && optval) {

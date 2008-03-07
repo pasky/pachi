@@ -11,7 +11,7 @@
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
-	int atari_rate, local_rate, cut_rate;
+	int capture_rate, cut_rate, local_rate;
 	float resign_ratio;
 	int loss_threshold;
 

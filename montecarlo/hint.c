@@ -15,39 +15,39 @@
  * when the next move on current board failed to deal with it. */
 
 static coord_t
-domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
+domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 {
 	/* If we or our neighbors are in atari, fix that, (Capture or escape.)
 	 * This test costs a lot of performance (the whole playout is about 1/4
 	 * slower), but improves the playouts a lot. */
 
 	if (MCDEBUGL(8)) {
-		fprintf(stderr, "-- Scanning for %d,%d-atari moves:\n", coord_x(coord, b), coord_y(coord, b));
+		fprintf(stderr, "-- Scanning for %d,%d-capture moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
 
-	coord_t ataris[5]; int ataris_len = 0;
-	memset(ataris, 0, sizeof(ataris));
+	coord_t captures[5]; int captures_len = 0;
+	memset(captures, 0, sizeof(captures));
 
 	coord_t fix;
 	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)))
-		ataris[ataris_len++] = fix;
+		captures[captures_len++] = fix;
 	foreach_neighbor(b, coord, {
 		/* This can produce duplicate candidates. But we should prefer
 		 * bigger groups to smaller ones, so I guess that is kinda ok. */
 		if (likely(group_at(b, c)) && unlikely(board_group_in_atari(b, group_at(b, c), &fix)))
-			ataris[ataris_len++] = fix;
+			captures[captures_len++] = fix;
 	} );
 
-	if (unlikely(ataris_len)) {
+	if (unlikely(captures_len)) {
 		if (MCDEBUGL(8)) {
-			fprintf(stderr, "Atari moves found:");
+			fprintf(stderr, "capture moves found:");
 			int i = 0;
-			for (i = 0; i < ataris_len; i++)
-				fprintf(stderr, " %d,%d", coord_x(ataris[i], b), coord_y(ataris[i], b));
+			for (i = 0; i < captures_len; i++)
+				fprintf(stderr, " %d,%d", coord_x(captures[i], b), coord_y(captures[i], b));
 			fprintf(stderr, "\n");
 		}
-		return ataris[fast_random(ataris_len)];
+		return captures[fast_random(captures_len)];
 	}
 	return pass;
 }
@@ -168,10 +168,10 @@ domain_hint(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 
 	/* In some of the cases, we pick atari response instead of random move.
 	 * If there is an atari, capturing tends to be huge. */
-	if (mc->atari_rate && fast_random(100) < mc->atari_rate) {
-		mc->last_hint = domain_hint_atari(mc, b, b->last_move.coord);
+	if (mc->capture_rate && fast_random(100) < mc->capture_rate) {
+		mc->last_hint = domain_hint_capture(mc, b, b->last_move.coord);
 		if (!is_pass(mc->last_hint)) {
-			mc->last_hint_value = mc->atari_rate;
+			mc->last_hint_value = mc->capture_rate;
 			return mc->last_hint;
 		}
 	}
