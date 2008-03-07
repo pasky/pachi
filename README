@@ -2,39 +2,38 @@ Pachi is a simple modular framework for robots playing the game of
 Go/Weiqi/Baduk. The aim is to make it easy to plug your engine
 to the common infrastructure and implement your ideas while
 minimalizing the overhead of implementing the GTP, board tools, etc.
-The infrastructure is optimized for maximal speed, to make it well
-suited for bruteforce engines.
+Also, there are premade random playout and UCT tree engines, so that
+you can directly tweak only particular policies.
+
+The infrastructure is optimized for speed to make it well suited
+for bruteforce engines, however tradeoffs are made to make it useful
+for heavier MonteCarlo playouts as well (e.g. real liberties are
+tracked instead of pseudoliberties). If you are looking for raw
+light playout speed, libEGO is better choice.
 
 Pachi is under the MIT licence (close to public domain) so that as
 many people as possible can use it. Some of the bundled engines
-might be under a more restrictive licence (GPL).
-
-Some optimizations are inspired by libEGo by Lukasz Lew. The code
-is all original, though.
+or policies might be under a more restrictive licence (GPL).
 
 
 Currently, Pachi supports a simple idiotbot-like engine and an example
-MonteCarlo-player with bits of optional domain-specific knowledge
-(dealing with ataris; see montecarlo/montecarlo.c for details).
+MonteCarlo-player with bits of optional domain-specific knowledge.
+Also, example UCT engine is provided, reusing the same knowledge.
 The infrastructure is pretty fast and it should be quite easy to extend
 it to provide more facilities for your engine (but it should be at
 the same time kept as simple as possible).
 
 Pachi uses New Zealand scoring, currently. That means, it simply counts
-the number of stones of each color on the board, plus komi. Additional
-hack is that it does not count groups in atari, if the opponent neglected
-to remove them; it is still one-point off there, though. In addition,
-Pachi cannot count multi-point eyes.
+the number of stones and one-point eyes of each color on the board,
+plus komi and handicap correction.
 
 New Zealand rules also mean that multi-stone suicide is allowed! If you
 do not like that (basically if you want to pretend it plays according
 to Chinese rules), you need to rule that out in your engine, currently.
+The provided engines avoid multi-stone suicide.
 
-New Zealand rules have positional superko. Unfortunately, it is not quite
-possible to prevent superko plays easily and keep the board_play() function
-fast, since we need a way to undo our move. Thus, the default playout
-guards only against basic ko. You can _check_ against superko quickly in
-your engine and decide based on that (e.g. restart the playout).
+New Zealand rules have positional superko. It is checked in every move
+played, even during random playouts.
 
 
 Also, Pachi supports only few GTP commands now. Most importantly,
