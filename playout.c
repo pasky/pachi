@@ -12,14 +12,6 @@ int
 play_random_game(struct board *b, struct move *m, int gamelen,
 		 playout_policeman policeman, void *policy)
 {
-	if (b->superko_violation) {
-		if (DEBUGL(0)) {
-			fprintf(stderr, "\tILLEGAL: superko violation at root!\n");
-			board_print(b, stderr);
-		}
-		return -1;
-	}
-
 	struct board b2;
 	board_copy(&b2, b);
 

@@ -104,17 +104,12 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
 	for (i = 0; i < mc->games; i++) {
+		assert(!b->superko_violation);
 		int result = play_random_game(b, &m, mc->gamelen, domain_hint, mc);
 
 		if (MCDEBUGL(3))
 			fprintf(stderr, "\tresult %d\n", result);
 
-		if (result == -1) {
-pass_wins:
-			/* Uh. Oops? Er... */
-			top_coord = pass; top_ratio = 0.5;
-			goto move_found;
-		}
 		if (result == -2) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
@@ -158,7 +153,9 @@ pass_wins:
 			fprintf(stderr, "OUT OF MOVES! I will pass. But how did this happen?\n");
 			board_print(b, stderr);
 		}
-		goto pass_wins;
+pass_wins:
+		top_coord = pass; top_ratio = 0.5;
+		goto move_found;
 	}
 
 	foreach_point(b) {
