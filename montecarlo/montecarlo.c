@@ -128,7 +128,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 		board_done_noalloc(&b2);
 
-		if (result == -2) {
+		if (result < 0) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
 			if (unlikely(superko > 2 * mc->games)) {
