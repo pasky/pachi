@@ -142,14 +142,24 @@ tree_leaf_node(struct tree_node *node)
 }
 
 struct tree_node *
-tree_best_child(struct tree_node *node)
+tree_best_child(struct tree_node *node, struct board *b, enum stone color)
 {
-	struct tree_node *nbest = node->children;
+	struct tree_node *nbest = NULL;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
-		if (ni->playouts > nbest->playouts)
+		if (!nbest || ni->playouts > nbest->playouts) {
+			/* Play pass only if we can afford scoring */
+			if (is_pass(ni->coord)) {
+				float score = board_fast_score(b);
+				if (color == S_BLACK)
+					score = -score;
+				//fprintf(stderr, "%d score %f\n", b->last_move.color, score);
+				if (score <= 0)
+					continue;
+			}
 			nbest = ni;
+		}
 	return nbest;
 }
 

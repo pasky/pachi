@@ -114,6 +114,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	if (!u->t) {
 tree_init:
 		u->t = tree_init(b);
+		//board_print(b, stderr);
 		u->t->explore_p = u->explore_p;
 	} else {
 		/* XXX: We hope that the opponent didn't suddenly play
@@ -138,7 +139,7 @@ promoted:;
 		}
 
 		if (i > 0 && !(i % 1000)) {
-			struct tree_node *best = tree_best_child(u->t->root);
+			struct tree_node *best = tree_best_child(u->t->root, b, color);
 			if (best && best->playouts >= 500
 			    && ((is_pass(best->coord) && best->value == 1.0)
 			        || best->value >= u->loss_threshold))
@@ -149,7 +150,7 @@ promoted:;
 	if (UDEBUGL(2))
 		tree_dump(u->t);
 
-	struct tree_node *best = tree_best_child(u->t->root);
+	struct tree_node *best = tree_best_child(u->t->root, b, color);
 	if (!best) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(pass);
