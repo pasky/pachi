@@ -139,7 +139,7 @@ promoted:;
 
 		if (i > 0 && !(i % 1000)) {
 			struct tree_node *best = tree_best_child(u->t->root);
-			if (best && best->playouts >= 100
+			if (best && best->playouts >= 500
 			    && ((is_pass(best->coord) && best->value == 1.0)
 			        || best->value >= u->loss_threshold))
 				break;
@@ -223,7 +223,7 @@ uct_state_init(char *arg)
 	}
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
-	u->loss_threshold = 0.9; /* Stop reading if after at least 1000 games this is best value. */
+	u->loss_threshold = 0.95; /* Stop reading if after at least 500 playouts this is best value. */
 	u->mc.debug_level = u->debug_level;
 
 	return u;
