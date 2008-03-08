@@ -151,10 +151,10 @@ tree_best_child(struct tree_node *node, struct board *b, enum stone color)
 		if (!nbest || ni->playouts > nbest->playouts) {
 			/* Play pass only if we can afford scoring */
 			if (is_pass(ni->coord)) {
-				float score = board_fast_score(b);
+				float score = board_official_score(b);
 				if (color == S_BLACK)
 					score = -score;
-				//fprintf(stderr, "%d score %f\n", b->last_move.color, score);
+				//fprintf(stderr, "%d score %f\n", color, score);
 				if (score <= 0)
 					continue;
 			}
