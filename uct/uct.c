@@ -53,6 +53,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	struct tree_node *n = t->root;
 	enum stone orig_color = color;
 	int result;
+	int pass_limit = (b2.size - 2) * (b2.size - 2) / 2;
 	int passes = 0;
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk\n");
@@ -70,7 +71,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			break;
 		}
 
-		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1), b2.moves > (b2.size2 - 2) / 2);
+		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1), pass_limit);
 		if (UDEBUGL(7))
 			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		struct move m = { n->coord, color };
