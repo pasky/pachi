@@ -754,42 +754,55 @@ board_group_can_atari(struct board *board, group_t group, coord_t lastlib[2])
 }
 
 
-/* Chinese counting */
+static enum stone
+board_tromp_taylor_owner(struct board *board, coord_t c)
+{
+	int x = coord_x(c, board), y = coord_y(c, board);
+	enum stone color = S_NONE;
+#define TEST_REACH(xx, yy) \
+	{ \
+		enum stone c2 = board_atxy(board, xx, yy); \
+		if (c2 != S_NONE) { \
+			if (color != S_NONE && color != c2) \
+				return S_NONE; \
+			color = c2; \
+			break; \
+		} \
+	}
+	for (int i = x; i > 0; i--)
+		TEST_REACH(i, y);
+	for (int i = x; i < board->size - 1; i++)
+		TEST_REACH(i, y);
+	for (int i = y; i > 0; i--)
+		TEST_REACH(x, i);
+	for (int i = y; i < board->size - 1; i++)
+		TEST_REACH(x, i);
+	return color;
+}
+
+/* Tromp-Taylor Counting */
 float
 board_official_score(struct board *board)
 {
+
+	/* A point P, not colored C, is said to reach C, if there is a path of
+	 * (vertically or horizontally) adjacent points of P's color from P to
+	 * a point of color C.
+	 *
+	 * A player's score is the number of points of her color, plus the
+	 * number of empty points that reach only her color. */
+
 	int scores[S_MAX];
 	memset(scores, 0, sizeof(scores));
 
-	enum { GC_DUNNO, GC_ALIVE, GC_DEAD } gcache[board->size * board->size + 1];
-	memset(gcache, 0, sizeof(gcache));
-
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
-		group_t g = group_at(board, c);
-		if (g > 0) {
-			/* There is a complication: There can be some dead
-			 * stones that could not have been removed because
-			 * they are in enemy territory and we can't suicide.
-			 * At least we know they are in atari. */
-			if (gcache[g] == GC_DUNNO) {
-				coord_t x;
-				gcache[g] = board_group_in_atari(board, g, &x) == 1 ? GC_DEAD : GC_ALIVE;
-			}
-			if (gcache[g] == GC_ALIVE)
-				scores[color]++;
-			else
-				scores[stone_other(color)]++;
-			/* XXX: But we still miss the one empty opponent's point. */
-
-		} else if (color == S_NONE) {
-			/* TODO: Count multi-point eyes */
-			color = board_get_one_point_eye(board, &c);
-			scores[color]++;
-		}
+		if (color == S_NONE)
+			color = board_tromp_taylor_owner(board, c);
+		scores[color]++;
 	} foreach_point_end;
 
-	return board->komi + scores[S_WHITE] - scores[S_BLACK];
+	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
 }
 
 float

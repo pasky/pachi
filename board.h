@@ -149,11 +149,13 @@ bool board_group_in_atari(struct board *board, int group, coord_t *lastlib);
  * can't be put in atari). */
 bool board_group_can_atari(struct board *board, int group, coord_t lastlib[2]);
 
-/* Positive: W wins */
 /* board_official_score() is the scoring method for yielding score suitable
- * for external presentation. For fast scoring of two Pachis playing,
- * use board_fast_score(). */
+ * for external presentation. For fast scoring of entirely filled boards
+ * (e.g. playouts), use board_fast_score(). */
+/* Positive: W wins */
+/* Tromp-Taylor scoring. */
 float board_official_score(struct board *board);
+/* Compare number of stones + 1pt eyes. */
 float board_fast_score(struct board *board);
 
 
