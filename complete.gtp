@@ -1,0 +1,252 @@
+boardsize 9
+
+clear_board
+
+komi 7.5
+
+
+play b C4
+
+
+play w E5
+
+play b C6
+
+
+play w E6
+
+play b D3
+
+
+play w F4
+
+play b D7
+
+
+play w E7
+
+play b E4
+
+
+play w E3
+
+play b D4
+
+
+play w F3
+
+play b D5
+
+
+play w F5
+
+play b D6
+
+
+play w E8
+
+play b D2
+
+
+play w D8
+
+play b C8
+
+
+play w E2
+
+play b D9
+
+
+play w H5
+
+play b E1
+
+
+play w G2
+
+play b E9
+
+
+play w F8
+
+play b F9
+
+
+play w G9
+
+play b C9
+
+
+play w G8
+
+play b G1
+
+
+play w H2
+
+play b F1
+
+
+play w J2
+
+play b H1
+
+
+play w G3
+
+play b J1
+
+
+play w G6
+
+play b D1
+
+
+play w H4
+
+play b PASS
+
+
+play w H7
+
+play b PASS
+
+
+play w A2
+
+play b B2
+
+
+play w A1
+
+play b A3
+
+
+play w A5
+
+play b B1
+
+
+play w A2
+
+play b A1
+
+
+play w A4
+
+play b B4
+
+
+play w A7
+
+play b B5
+
+
+play w A6
+
+play b B6
+
+
+play w pass
+
+play b B7
+
+
+play w B8
+
+play b A8
+
+
+play w G5
+
+play b B9
+
+
+play w F2
+
+play b PASS
+
+
+play w C2
+
+play b C3
+
+
+play w H8
+
+play b C1
+
+
+play w A4
+
+play b A5
+
+
+play w A7
+
+play b A6
+
+
+play w F6
+
+play b PASS
+
+
+play w F7
+
+play b PASS
+
+
+play w G4
+
+play b PASS
+
+
+play w H6
+
+play b PASS
+
+
+play w J4
+
+play b PASS
+
+
+play w G7
+
+play b PASS
+
+
+play w J9
+
+play b PASS
+
+
+play w H9
+
+play b PASS
+
+
+play w J6
+
+play b PASS
+
+
+play w H3
+
+play b PASS
+
+
+play w J3
+
+play b PASS
+
+
+play w J7
+
+play b PASS
+
+
+genmove w
+
