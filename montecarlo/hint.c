@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DEBUG
-
 #include "board.h"
 #include "montecarlo/internal.h"
 #include "random.h"
