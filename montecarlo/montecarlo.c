@@ -90,8 +90,6 @@ static coord_t *
 montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	struct montecarlo *mc = e->data;
-	struct move m;
-	m.color = color;
 
 	/* resign when the hope for win vanishes */
 	coord_t top_coord = resign;
@@ -109,15 +107,26 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 		struct board b2;
 		board_copy(&b2, b);
-		int result = play_random_game(&b2, &m, mc->gamelen, domain_hint, mc);
-		board_done_noalloc(&b2);
 
-		if (result == -3) {
+		coord_t coord;
+		board_play_random(&b2, color, &coord);
+		if (!is_pass(coord) && !group_at(b, coord)) {
 			/* Multi-stone suicide. We play chinese rules,
 			 * so we can't consider this. (Note that we
 			 * unfortunately still consider this in playouts.) */
+			if (DEBUGL(4)) {
+				fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(coord, b), coord_y(coord, b));
+				board_print(b, stderr);
+			}
 			continue;
 		}
+
+		if (DEBUGL(3))
+			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord, b), coord_y(coord, b), color);
+
+		int result = play_random_game(&b2, color, mc->gamelen, domain_hint, mc);
+
+		board_done_noalloc(&b2);
 
 		if (result == -2) {
 			/* Superko. We just ignore this playout.
@@ -136,15 +145,15 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		}
 
 		if (MCDEBUGL(3))
-			fprintf(stderr, "\tresult %d\n", result);
+			fprintf(stderr, "\tresult for other player: %d\n", result);
 
-		int pos = is_pass(m.coord) ? 0 : coord_raw(m.coord);
+		int pos = is_pass(coord) ? 0 : coord_raw(coord);
 
 		good_games++;
 		moves[pos].games++;
 
-		losses += 1 - result;
-		moves[pos].wins += result;
+		losses += result;
+		moves[pos].wins += 1 - result;
 
 		if (unlikely(!losses && i == mc->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.

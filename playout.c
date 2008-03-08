@@ -9,48 +9,26 @@
 #include "playout.h"
 
 int
-play_random_game(struct board *b, struct move *m, int gamelen,
+play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		 playout_policeman policeman, void *policy)
 {
-	board_play_random(b, m->color, &m->coord);
-	if (!is_pass(m->coord) && !group_at(b, m->coord)) {
-		if (DEBUGL(4)) {
-			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord, b), coord_y(m->coord, b));
-			board_print(b, stderr);
-		}
-		return -3;
-	}
-
-	if (DEBUGL(3))
-		fprintf(stderr, "[%d,%d] playing random game of color %d\n", coord_x(m->coord, b), coord_y(m->coord, b), m->color);
-
 	gamelen = gamelen - b->moves;
 	if (gamelen < 10)
 		gamelen = 10;
 
-	enum stone color = stone_other(m->color);
+	enum stone color = starting_color;
+	enum stone policy_color = stone_other(starting_color);
 	coord_t urgent;
 
-	int passes = is_pass(m->coord);
-
-	/* Special check: We probably tenukied the last opponent's move. But
-	 * check if the opponent has lucrative local continuation for her last
-	 * move! */
-	/* This check is ultra-important BTW. Without it domain checking does
-	 * not bring that much of an advantage. It might even warrant it to by
-	 * default do only this domain check. */
-	urgent = policeman(policy, b, m->color);
-	if (!is_pass(urgent))
-		goto play_urgent;
+	int passes = is_pass(b->last_move.coord);
 
 	while (gamelen-- && passes < 2) {
-		urgent = policeman(policy, b, m->color);
+		urgent = policeman(policy, b, policy_color);
 
 		coord_t coord;
 
 		if (!is_pass(urgent)) {
 			struct move m;
-play_urgent:
 			m.coord = urgent; m.color = color;
 			if (board_play(b, &m) < 0) {
 				if (DEBUGL(8)) {
@@ -102,7 +80,7 @@ play_random:
 	}
 
 	float score = board_fast_score(b);
-	bool result = (m->color == S_WHITE ? (score > 0) : (score < 0));
+	bool result = (starting_color == S_WHITE ? (score > 0) : (score < 0));
 
 	if (DEBUGL(6)) {
 		fprintf(stderr, "Random playout result: %d (W %f)\n", result, score);

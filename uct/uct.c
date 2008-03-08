@@ -62,9 +62,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			if (n->playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2);
 
-			struct move m = { n->coord, color };
-			result = play_random_game(&b2, &m, u->gamelen, domainhint_policy, u);
-			if (orig_color != color && result >= 0)
+			result = play_random_game(&b2, stone_other(color), u->gamelen, domainhint_policy, u);
+			if (orig_color == color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
 				fprintf(stderr, "[%d..%d] %s playout result %d\n", orig_color, color, coord2sstr(n->coord, t->board), result);
