@@ -75,7 +75,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		struct move m = { n->coord, color };
 		int res = board_play(&b2, &m);
-		if (res == -1 || (!group_at(&b2, m.coord) && !is_pass(n->coord)) /* suicide */) {
+		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */) {
 			if (UDEBUGL(6))
 				fprintf(stderr, "deleting invalid node %d,%d\n", coord_x(n->coord,b), coord_y(n->coord,b));
 			tree_delete_node(n);
