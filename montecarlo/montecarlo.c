@@ -105,7 +105,11 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 	int i, superko = 0, good_games = 0;
 	for (i = 0; i < mc->games; i++) {
 		assert(!b->superko_violation);
-		int result = play_random_game(b, &m, mc->gamelen, domain_hint, mc);
+
+		struct board b2;
+		board_copy(&b2, b);
+		int result = play_random_game(&b2, &m, mc->gamelen, domain_hint, mc);
+		board_done_noalloc(&b2);
 
 		if (result == -3) {
 			/* Multi-stone suicide. We play chinese rules,

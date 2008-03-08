@@ -12,23 +12,19 @@ int
 play_random_game(struct board *b, struct move *m, int gamelen,
 		 playout_policeman policeman, void *policy)
 {
-	struct board b2;
-	board_copy(&b2, b);
-
-	board_play_random(&b2, m->color, &m->coord);
-	if (!is_pass(m->coord) && !group_at(&b2, m->coord)) {
+	board_play_random(b, m->color, &m->coord);
+	if (!is_pass(m->coord) && !group_at(b, m->coord)) {
 		if (DEBUGL(4)) {
 			fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(m->coord, b), coord_y(m->coord, b));
-			board_print(&b2, stderr);
+			board_print(b, stderr);
 		}
-		board_done_noalloc(&b2);
 		return -3;
 	}
 
 	if (DEBUGL(3))
 		fprintf(stderr, "[%d,%d] playing random game of color %d\n", coord_x(m->coord, b), coord_y(m->coord, b), m->color);
 
-	gamelen = gamelen - b2.moves;
+	gamelen = gamelen - b->moves;
 	if (gamelen < 10)
 		gamelen = 10;
 
@@ -48,7 +44,7 @@ play_random_game(struct board *b, struct move *m, int gamelen,
 		goto play_urgent;
 
 	while (gamelen-- && passes < 2) {
-		urgent = policeman(policy, &b2, m->color);
+		urgent = policeman(policy, b, m->color);
 
 		coord_t coord;
 
@@ -56,38 +52,37 @@ play_random_game(struct board *b, struct move *m, int gamelen,
 			struct move m;
 play_urgent:
 			m.coord = urgent; m.color = color;
-			if (board_play(&b2, &m) < 0) {
+			if (board_play(b, &m) < 0) {
 				if (DEBUGL(8)) {
 					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent, b), coord_y(urgent, b));
-					board_print(&b2, stderr);
+					board_print(b, stderr);
 				}
 				goto play_random;
 			}
 			coord = urgent;
 		} else {
 play_random:
-			board_play_random(&b2, color, &coord);
+			board_play_random(b, color, &coord);
 		}
 
-		if (unlikely(b2.superko_violation)) {
+		if (unlikely(b->superko_violation)) {
 			/* We ignore superko violations that are suicides. These
 			 * are common only at the end of the game and are
 			 * rather harmless. (They will not go through as a root
 			 * move anyway.) */
-			if (group_at(&b2, coord)) {
+			if (group_at(b, coord)) {
 				if (DEBUGL(3)) {
 					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
 					if (DEBUGL(4))
-						board_print(&b2, stderr);
+						board_print(b, stderr);
 				}
-				board_done_noalloc(&b2);
 				return -2;
 			} else {
 				if (DEBUGL(6)) {
 					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
-					board_print(&b2, stderr);
+					board_print(b, stderr);
 				}
-				b2.superko_violation = false;
+				b->superko_violation = false;
 			}
 		}
 
@@ -106,15 +101,14 @@ play_random:
 		color = stone_other(color);
 	}
 
-	float score = board_fast_score(&b2);
+	float score = board_fast_score(b);
 	bool result = (m->color == S_WHITE ? (score > 0) : (score < 0));
 
 	if (DEBUGL(6)) {
 		fprintf(stderr, "Random playout result: %d (W %f)\n", result, score);
 		if (DEBUGL(7))
-			board_print(&b2, stderr);
+			board_print(b, stderr);
 	}
 
-	board_done_noalloc(&b2);
 	return result;
 }
