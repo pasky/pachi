@@ -107,8 +107,12 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		assert(!b->superko_violation);
 		int result = play_random_game(b, &m, mc->gamelen, domain_hint, mc);
 
-		if (MCDEBUGL(3))
-			fprintf(stderr, "\tresult %d\n", result);
+		if (result == -3) {
+			/* Multi-stone suicide. We play chinese rules,
+			 * so we can't consider this. (Note that we
+			 * unfortunately still consider this in playouts.) */
+			continue;
+		}
 
 		if (result == -2) {
 			/* Superko. We just ignore this playout.
@@ -125,12 +129,9 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 			i--, superko++;
 			continue;
 		}
-		if (result == -3) {
-			/* Multi-stone suicide. We play chinese rules,
-			 * so we can't consider this. (Note that we
-			 * unfortunately still consider this in playouts.) */
-			continue;
-		}
+
+		if (MCDEBUGL(3))
+			fprintf(stderr, "\tresult %d\n", result);
 
 		int pos = is_pass(m.coord) ? 0 : coord_raw(m.coord);
 
