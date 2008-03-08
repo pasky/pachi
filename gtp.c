@@ -128,8 +128,10 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		if (DEBUGL(1))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 		if (board_play(board, &m) < 0) {
-			if (DEBUGL(0))
+			if (DEBUGL(0)) {
 				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
+				board_print(board, stderr);
+			}
 			gtp_error(id, "illegal move", NULL);
 		} else {
 			gtp_reply(id, NULL);
