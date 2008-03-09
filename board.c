@@ -634,8 +634,10 @@ board_play_f(struct board *board, struct move *m, int f)
 int
 board_play(struct board *board, struct move *m)
 {
-	if (unlikely(is_pass(m->coord) || is_resign(m->coord)))
+	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
+		board->last_move = *m;
 		return 0;
+	}
 
 	int f;
 	for (f = 0; f < board->flen; f++)
