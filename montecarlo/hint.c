@@ -250,9 +250,9 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 }
 
 coord_t
-domain_hint(struct montecarlo *mc, struct board *b, coord_t last_move, enum stone our_real_color)
+domain_hint(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 {
-	if (is_pass(last_move))
+	if (is_pass(b->last_move.coord))
 		return pass;
 
 	/* Now now, if we ignored an urgent move, the opponent will
@@ -261,8 +261,8 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t last_move, enum ston
 	 * and the _REAL_ opponent comes back. Otherwise we hope in
 	 * opponent's tenuki too much and play out ladders. :-) */
 	if (!is_pass(mc->last_hint)
-	    && unlikely(!coord_eq(last_move, mc->last_hint))
-	    && (!coord_eq(last_move, b->last_move.coord) || b->last_move.color == our_real_color)
+	    && unlikely(!coord_eq(b->last_move.coord, mc->last_hint))
+	    && b->last_move.color == our_real_color
 	    && fast_random(100) < mc->last_hint_value) {
 		coord_t urgent = mc->last_hint;
 		mc->last_hint = pass;
@@ -272,7 +272,7 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t last_move, enum ston
 	/* In some of the cases, we pick atari response instead of random move.
 	 * If there is an atari, capturing tends to be huge. */
 	if (mc->capture_rate && fast_random(100) < mc->capture_rate) {
-		mc->last_hint = domain_hint_capture(mc, b, last_move);
+		mc->last_hint = domain_hint_capture(mc, b, b->last_move.coord);
 		if (!is_pass(mc->last_hint)) {
 			mc->last_hint_value = mc->capture_rate;
 			return mc->last_hint;
@@ -281,7 +281,7 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t last_move, enum ston
 
 	/* Maybe we can _put_ some stones into atari. That's cool. */
 	if (mc->capture_rate && fast_random(100) < mc->atari_rate) {
-		mc->last_hint = domain_hint_atari(mc, b, last_move);
+		mc->last_hint = domain_hint_atari(mc, b, b->last_move.coord);
 		if (!is_pass(mc->last_hint)) {
 			mc->last_hint_value = mc->capture_rate;
 			return mc->last_hint;
@@ -290,7 +290,7 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t last_move, enum ston
 
 	/* Cutting is kinda urgent, too. */
 	if (mc->cut_rate && fast_random(100) < mc->cut_rate) {
-		mc->last_hint = domain_hint_cut(mc, b, last_move);
+		mc->last_hint = domain_hint_cut(mc, b, b->last_move.coord);
 		if (!is_pass(mc->last_hint)) {
 			mc->last_hint_value = mc->cut_rate;
 			return mc->last_hint;
@@ -300,7 +300,7 @@ domain_hint(struct montecarlo *mc, struct board *b, coord_t last_move, enum ston
 	/* For the non-urgent moves, some of them will be contact play (tsuke
 	 * or diagonal). These tend to be likely urgent. */
 	if (mc->local_rate && fast_random(100) < mc->local_rate) {
-		mc->last_hint = domain_hint_local(mc, b, last_move);
+		mc->last_hint = domain_hint_local(mc, b, b->last_move.coord);
 		if (!is_pass(mc->last_hint)) {
 			mc->last_hint_value = mc->local_rate;
 			return mc->last_hint;

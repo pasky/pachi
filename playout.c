@@ -10,7 +10,6 @@
 
 int
 play_random_game(struct board *b, enum stone starting_color, int gamelen,
-                 coord_t second_to_last_coord,
 		 playout_policeman policeman, void *policy)
 {
 	gamelen = gamelen - b->moves;
@@ -23,21 +22,13 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 
 	int passes = is_pass(b->last_move.coord);
 
-	/* Check for urgent positions on second to last move, and play
-	 * a followup if desirable - this makes sure we get punished
-	 * for tenukiing urgent situation with the last random move. */
-	urgent = policeman(policy, b, second_to_last_coord, policy_color);
-	if (!is_pass(urgent))
-		goto play_urgent;
-
 	while (gamelen-- && passes < 2) {
-		urgent = policeman(policy, b, b->last_move.coord, policy_color);
+		urgent = policeman(policy, b, policy_color);
 
 		coord_t coord;
 
 		if (!is_pass(urgent)) {
 			struct move m;
-play_urgent:
 			m.coord = urgent; m.color = color;
 			if (board_play(b, &m) < 0) {
 				if (DEBUGL(8)) {
