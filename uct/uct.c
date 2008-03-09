@@ -54,7 +54,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	enum stone orig_color = color;
 	int result;
 	int pass_limit = (b2.size - 2) * (b2.size - 2) / 2;
-	int passes = 0;
+	int passes = is_pass(b->last_move.coord);
 	coord_t second_to_last_coord = pass;
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk\n");
