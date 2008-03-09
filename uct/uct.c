@@ -36,10 +36,10 @@ struct uct {
 
 
 static coord_t
-domainhint_policy(void *playout_policy, struct board *b, enum stone my_color)
+domainhint_policy(void *playout_policy, struct board *b, coord_t last_move, enum stone my_color)
 {
 	struct uct *u = playout_policy;
-	return domain_hint(&u->mc, b, my_color);
+	return domain_hint(&u->mc, b, last_move, my_color);
 }
 
 static int
@@ -55,6 +55,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	int result;
 	int pass_limit = (b2.size - 2) * (b2.size - 2) / 2;
 	int passes = 0;
+	coord_t second_to_last_coord = pass;
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk\n");
 	for (; pass; color = stone_other(color)) {
@@ -62,7 +63,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			if (n->playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2);
 
-			result = play_random_game(&b2, stone_other(color), u->gamelen, domainhint_policy, u);
+			result = play_random_game(&b2, stone_other(color), u->gamelen, second_to_last_coord, domainhint_policy, u);
 			if (orig_color == color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
@@ -74,6 +75,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		if (UDEBUGL(7))
 			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		struct move m = { n->coord, color };
+		second_to_last_coord = b2.last_move.coord;
 		int res = board_play(&b2, &m);
 		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
 		    || b2.superko_violation) {
