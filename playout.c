@@ -52,6 +52,11 @@ play_random:
 			board_play_random(b, color, &coord);
 		}
 
+#if 0
+		/* For UCT, superko test here is downright harmful since
+		 * in superko-likely situation we throw away literarily
+		 * 95% of our playouts; UCT will deal with this fine by
+		 * itself. */
 		if (unlikely(b->superko_violation)) {
 			/* We ignore superko violations that are suicides. These
 			 * are common only at the end of the game and are
@@ -72,6 +77,7 @@ play_random:
 				b->superko_violation = false;
 			}
 		}
+#endif
 
 		if (DEBUGL(8)) {
 			char *cs = coord2str(coord, b);
