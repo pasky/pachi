@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -91,7 +92,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		/* TODO: known_command */
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\nset_free_handicap\nplace_free_handicap", NULL);
+		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\nset_free_handicap\nplace_free_handicap\nfinal_status_list", NULL);
 
 	} else if (!strcasecmp(cmd, "quit")) {
 		gtp_reply(id, NULL);
@@ -198,6 +199,13 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 			snprintf(str, 64, "B+%.1f", -score);
 			gtp_reply(id, str, NULL);
 		}
+
+	/* XXX: This is a huge hack. */
+	} else if (!strcasecmp(cmd, "final_status_list")) {
+		char *arg;
+		next_tok(arg);
+		assert(!strcasecmp(arg, "dead")); // yes, I know...
+		gtp_reply(id, "", NULL);
 
 	} else {
 		gtp_error(id, "unknown command", NULL);
