@@ -9,30 +9,15 @@
 #include "move.h"
 #include "playout.h"
 #include "montecarlo/hint.h"
-#include "montecarlo/internal.h"
+#include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
 
+struct uct_policy *policy_ucb1_init(struct uct *u);
 
 
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
-
-
-/* Internal engine state. */
-struct uct {
-	int debug_level;
-	int games, gamelen;
-	float resign_ratio;
-	float loss_threshold;
-	float explore_p;
-	int expand_p;
-
-	struct montecarlo mc;
-	struct tree *t;
-};
-
-#define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
 
 static coord_t
@@ -70,7 +55,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			break;
 		}
 
-		n = tree_uct_descend(t, n, (color == orig_color ? 1 : -1), pass_limit);
+		n = u->policy->descend(u->policy, t, n, (color == orig_color ? 1 : -1), pass_limit);
 		if (UDEBUGL(7))
 			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		struct move m = { n->coord, color };
@@ -139,7 +124,7 @@ promoted:;
 		}
 
 		if (i > 0 && !(i % 1000)) {
-			struct tree_node *best = tree_best_child(u->t->root, b, color);
+			struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 			if (best && best->playouts >= 500 && best->value >= u->loss_threshold)
 				break;
 		}
@@ -148,7 +133,7 @@ promoted:;
 	if (UDEBUGL(2))
 		tree_dump(u->t);
 
-	struct tree_node *best = tree_best_child(u->t->root, b, color);
+	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 	if (!best) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(pass);
@@ -224,6 +209,7 @@ uct_state_init(char *arg)
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
 	u->loss_threshold = 0.95; /* Stop reading if after at least 500 playouts this is best value. */
 	u->mc.debug_level = u->debug_level;
+	u->policy = policy_ucb1_init(u);
 
 	return u;
 }

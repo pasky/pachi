@@ -141,57 +141,6 @@ tree_leaf_node(struct tree_node *node)
 	return !(node->children);
 }
 
-struct tree_node *
-tree_best_child(struct tree_node *node, struct board *b, enum stone color)
-{
-	struct tree_node *nbest = NULL;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
-		// we compare playouts and choose the best-explored
-		// child; comparing values is more brittle
-		if (!nbest || ni->playouts > nbest->playouts) {
-			/* Play pass only if we can afford scoring */
-			if (is_pass(ni->coord)) {
-				float score = board_official_score(b);
-				if (color == S_BLACK)
-					score = -score;
-				//fprintf(stderr, "%d score %f\n", color, score);
-				if (score <= 0)
-					continue;
-			}
-			nbest = ni;
-		}
-	return nbest;
-}
-
-
-struct tree_node *
-tree_uct_descend(struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
-{
-	float xpl = log(node->playouts) * tree->explore_p;
-
-	struct tree_node *nbest = node->children;
-	float best_urgency = -9999;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-		/* Do not consider passing early. */
-		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
-			continue;
-#ifdef UCB1_TUNED
-		float xpl_loc = (ni->value - ni->value * ni->value);
-		if (parity < 0) xpl_loc = 1 - xpl_loc;
-		xpl_loc += sqrt(xpl / ni->playouts);
-		if (xpl_loc > 1.0/4) xpl_loc = 1.0/4;
-		float urgency = ni->value * parity + sqrt(xpl * xpl_loc / ni->playouts);
-#else
-		float urgency = ni->value * parity + sqrt(xpl / ni->playouts);
-#endif
-		if (urgency > best_urgency) {
-			best_urgency = urgency;
-			nbest = ni;
-		}
-	}
-	return nbest;
-}
-
 void
 tree_uct_update(struct tree_node *node, int result)
 {
