@@ -11,6 +11,11 @@
 #define unlikely(x) __builtin_expect((x), 0)
 
 
+/* The board implementation has bunch of optional features.
+ * Turn them on below: */
+//#define WANT_BOARD_C
+
+
 /* Allow board_play_random_move() to return pass even when
  * there are other moves available. */
 extern bool random_pass;
@@ -74,6 +79,11 @@ struct board {
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes! */
 	coord_t *f; int flen;
+
+#ifdef WANT_BOARD_C
+	/* Queue of capturable groups */
+	coord_t *c; int clen;
+#endif
 
 
 	/* --- PRIVATE DATA --- */

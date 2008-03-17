@@ -52,8 +52,13 @@ board_copy(struct board *b2, struct board *b1)
 	int psize = b2->size2 * sizeof(*b2->p);
 	int hsize = b2->size2 * 2 * sizeof(*b2->h);
 	int gisize = b2->size2 * sizeof(*b2->gi);
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize);
+#ifdef WANT_BOARD_C
+	int csize = b2->size2 * sizeof(*b2->c);
+#else
+	int csize = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
@@ -61,6 +66,9 @@ board_copy(struct board *b2, struct board *b1)
 	b2->n = x; x += nsize;
 	b2->h = x; x += hsize;
 	b2->gi = x; x += gisize;
+#ifdef WANT_BOARD_C
+	b2->c = x; x += csize;
+#endif
 
 	return b2;
 }
@@ -93,8 +101,13 @@ board_resize(struct board *board, int size)
 	int psize = board->size2 * sizeof(*board->p);
 	int hsize = board->size2 * 2 * sizeof(*board->h);
 	int gisize = board->size2 * sizeof(*board->gi);
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize);
+#ifdef WANT_BOARD_C
+	int csize = board->size2 * sizeof(*board->c);
+#else
+	int csize = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -102,6 +115,9 @@ board_resize(struct board *board, int size)
 	board->n = x; x += nsize;
 	board->h = x; x += hsize;
 	board->gi = x; x += gisize;
+#ifdef WANT_BOARD_C
+	board->c = x; x += csize;
+#endif
 }
 
 void
@@ -288,6 +304,31 @@ check_libs_consistency(struct board *board, group_t g)
 }
 
 static void
+board_capturable_add(struct board *board, group_t group)
+{
+#ifdef WANT_BOARD_C
+	//fprintf(stderr, "add of group %d (%d)\n", group, board->clen);
+	assert(board->clen < board->size2);
+	board->c[board->clen++] = group;
+#endif
+}
+static void
+board_capturable_rm(struct board *board, group_t group)
+{
+#ifdef WANT_BOARD_C
+	//fprintf(stderr, "rm of group %d\n", group);
+	for (int i = 0; i < board->clen; i++) {
+		if (unlikely(board->c[i] == group)) {
+			board->c[i] = board->c[--board->clen];
+			return;
+		}
+	}
+	fprintf(stderr, "rm of bad group %d\n", group);
+	assert(0);
+#endif
+}
+
+static void
 board_group_addlib(struct board *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(7)) {
@@ -302,6 +343,10 @@ board_group_addlib(struct board *board, group_t group, coord_t coord)
 		for (int i = 0; i < gi->libs; i++)
 			if (gi->lib[i] == coord)
 				return;
+		if (gi->libs == 0)
+			board_capturable_add(board, group);
+		else if (gi->libs == 1)
+			board_capturable_rm(board, group);
 		gi->lib[gi->libs++] = coord;
 	}
 }
@@ -322,8 +367,13 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 			gi->libs--;
 
 			check_libs_consistency(board, group);
-			if (gi->libs < GROUP_KEEP_LIBS - 1)
+			if (gi->libs < GROUP_KEEP_LIBS - 1) {
+				if (gi->libs == 1)
+					board_capturable_add(board, group);
+				else if (gi->libs == 0)
+					board_capturable_rm(board, group);
 				return;
+			}
 			goto find_extra_lib;
 		}
 	}
@@ -428,6 +478,10 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 			for (int j = 0; j < gi_to->libs; j++)
 				if (gi_to->lib[j] == gi_from->lib[i])
 					goto next_from_lib;
+			if (gi_to->libs == 0)
+				board_capturable_add(board, group_to);
+			else if (gi_to->libs == 1)
+				board_capturable_rm(board, group_to);
 			gi_to->lib[gi_to->libs++] = gi_from->lib[i];
 			if (gi_to->libs >= GROUP_KEEP_LIBS)
 				break;
@@ -435,6 +489,8 @@ next_from_lib:;
 		}
 	}
 
+	if (gi_from->libs == 1)
+		board_capturable_rm(board, group_from);
 	memset(gi_from, 0, sizeof(struct group));
 
 	if (DEBUGL(7))
@@ -450,7 +506,6 @@ new_group(struct board *board, coord_t coord)
 		if (board_at(board, c) == S_NONE)
 			board_group_addlib(board, gid, c);
 	});
-
 
 	group_at(board, coord) = gid;
 	groupnext_at(board, coord) = 0;
@@ -731,6 +786,8 @@ board_group_capture(struct board *board, int group)
 		stones++;
 	} foreach_in_group_end;
 
+	if (board_group_info(board, group).libs == 1)
+		board_capturable_rm(board, group);
 	memset(&board_group_info(board, group), 0, sizeof(struct group));
 
 	return stones;
