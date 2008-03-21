@@ -215,7 +215,8 @@ uct_state_init(char *arg)
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
 	u->loss_threshold = 0.95; /* Stop reading if after at least 500 playouts this is best value. */
 	u->mc.debug_level = u->debug_level;
-	u->policy = policy_ucb1_init(u, NULL);
+	if (!u->policy)
+		u->policy = policy_ucb1_init(u, NULL);
 
 	return u;
 }
