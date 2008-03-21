@@ -7,7 +7,6 @@
 #include "engine.h"
 #include "move.h"
 #include "montecarlo/internal.h"
-#include "montecarlo/hint.h"
 #include "montecasino/montecasino.h"
 #include "random.h"
 

@@ -1,8 +1,8 @@
 INCLUDES=-I..
-OBJS=montecarlo.o
+OBJS=old.o
 
-all: montecarlo.a
-montecarlo.a: $(OBJS)
+all: playout.a
+playout.a: $(OBJS)
 
 clean:
 	rm -f *.o *.a

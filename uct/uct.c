@@ -8,7 +8,7 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
-#include "montecarlo/hint.h"
+#include "playout/old.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
@@ -25,7 +25,7 @@ static coord_t
 domainhint_policy(void *playout_policy, struct board *b, enum stone my_color)
 {
 	struct uct *u = playout_policy;
-	return domain_hint(&u->mc, b, my_color);
+	return playout_old(&u->mc, b, my_color);
 }
 
 static int

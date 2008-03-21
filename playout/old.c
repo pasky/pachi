@@ -3,6 +3,7 @@
 
 #include "board.h"
 #include "montecarlo/internal.h"
+#include "playout/old.h"
 #include "random.h"
 
 
@@ -250,7 +251,7 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 }
 
 coord_t
-domain_hint(struct montecarlo *mc, struct board *b, enum stone our_real_color)
+playout_old(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 {
 	if (is_pass(b->last_move.coord))
 		return pass;

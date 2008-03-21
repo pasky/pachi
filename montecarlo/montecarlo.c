@@ -6,7 +6,7 @@
 #include "board.h"
 #include "engine.h"
 #include "move.h"
-#include "montecarlo/hint.h"
+#include "playout/old.h"
 #include "montecarlo/internal.h"
 #include "montecarlo/montecarlo.h"
 #include "playout.h"
@@ -124,7 +124,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		if (DEBUGL(3))
 			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord, b), coord_y(coord, b), color);
 
-		int result = play_random_game(&b2, color, mc->gamelen, domain_hint, mc);
+		int result = play_random_game(&b2, color, mc->gamelen, playout_old, mc);
 
 		board_done_noalloc(&b2);
 
