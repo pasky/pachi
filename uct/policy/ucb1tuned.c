@@ -86,7 +86,7 @@ policy_ucb1tuned_init(struct uct *u, char *arg)
 		char *optspec, *next = arg;
 		while (*next) {
 			optspec = next;
-			next += strcspn(next, "+");
+			next += strcspn(next, ":");
 			if (*next) { *next++ = 0; } else { *next = 0; }
 
 			char *optname = optspec;

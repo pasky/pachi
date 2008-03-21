@@ -188,7 +188,7 @@ uct_state_init(char *arg)
 			} else if (!strcasecmp(optname, "expand_p") && optval) {
 				u->expand_p = atoi(optval);
 			} else if (!strcasecmp(optname, "policy") && optval) {
-				char *policyarg = strchr(optval, '+');
+				char *policyarg = strchr(optval, ':');
 				if (policyarg)
 					*policyarg++ = 0;
 				if (!strcasecmp(optval, "ucb1")) {
