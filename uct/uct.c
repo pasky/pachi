@@ -14,6 +14,7 @@
 #include "uct/uct.h"
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
+struct uct_policy *policy_ucb1tuned_init(struct uct *u, char *arg);
 
 
 #define MC_GAMES	40000
@@ -192,6 +193,8 @@ uct_state_init(char *arg)
 					*policyarg++ = 0;
 				if (!strcasecmp(optval, "ucb1")) {
 					u->policy = policy_ucb1_init(u, policyarg);
+				} else if (!strcasecmp(optval, "ucb1tuned")) {
+					u->policy = policy_ucb1tuned_init(u, policyarg);
 				}
 			} else if (!strcasecmp(optname, "pure")) {
 				u->mc.capture_rate = u->mc.local_rate = u->mc.cut_rate = 0;

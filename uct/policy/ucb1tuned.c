@@ -10,7 +10,7 @@
 #include "uct/internal.h"
 #include "uct/tree.h"
 
-/* This implements the basic UCB1 policy. */
+/* This implements the UCB1-TUNED policy. */
 
 struct ucb1_policy {
 	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
@@ -56,7 +56,11 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
-		float urgency = ni->value * parity + sqrt(xpl / ni->playouts);
+		float xpl_loc = (ni->value - ni->value * ni->value);
+		if (parity < 0) xpl_loc = 1 - xpl_loc;
+		xpl_loc += sqrt(xpl / ni->playouts);
+		if (xpl_loc > 1.0/4) xpl_loc = 1.0/4;
+		float urgency = ni->value * parity + sqrt(xpl * xpl_loc / ni->playouts);
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
@@ -67,7 +71,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 
 
 struct uct_policy *
-policy_ucb1_init(struct uct *u, char *arg)
+policy_ucb1tuned_init(struct uct *u, char *arg)
 {
 	struct uct_policy *p = calloc(1, sizeof(*p));
 	struct ucb1_policy *b = calloc(1, sizeof(*b));
@@ -92,7 +96,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 			if (!strcasecmp(optname, "explore_p")) {
 				b->explore_p = atof(optval);
 			} else {
-				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
+				fprintf(stderr, "ucb1tuned: Invalid policy argument %s or missing value\n", optname);
 			}
 		}
 	}
