@@ -25,7 +25,7 @@ static coord_t
 domainhint_policy(void *playout_policy, struct board *b, enum stone my_color)
 {
 	struct uct *u = playout_policy;
-	return playout_old(&u->mc, b, my_color);
+	return u->playout(&u->mc, b, my_color);
 }
 
 static int
@@ -217,6 +217,8 @@ uct_state_init(char *arg)
 	u->mc.debug_level = u->debug_level;
 	if (!u->policy)
 		u->policy = policy_ucb1_init(u, NULL);
+	if (!u->playout)
+		u->playout = playout_old;
 
 	return u;
 }
