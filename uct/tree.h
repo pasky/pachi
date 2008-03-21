@@ -31,12 +31,6 @@ struct tree_node {
 struct tree {
 	struct tree_node *root;
 	struct board *board;
-
-	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
-	 * paper calls 'p'. Original UCB has this on 2, but this seems to
-	 * produce way too wide searches; reduce this to get deeper and
-	 * narrower readouts - try 0.2. */
-	float explore_p;
 };
 
 struct tree *tree_init(struct board *board);

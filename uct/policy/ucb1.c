@@ -12,6 +12,14 @@
 
 /* This implements the basic UCB1 policy. */
 
+struct ucb1_policy {
+	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
+	 * paper calls 'p'. Original UCB has this on 2, but this seems to
+	 * produce way too wide searches; reduce this to get deeper and
+	 * narrower readouts - try 0.2. */
+	float explore_p;
+};
+
 
 static struct tree_node *
 ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color)
@@ -39,7 +47,8 @@ ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum 
 static struct tree_node *
 ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
-	float xpl = log(node->playouts) * tree->explore_p;
+	struct ucb1_policy *b = p->data;
+	float xpl = log(node->playouts) * b->explore_p;
 
 	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
@@ -66,11 +75,35 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 
 
 struct uct_policy *
-policy_ucb1_init(struct uct *u)
+policy_ucb1_init(struct uct *u, char *arg)
 {
 	struct uct_policy *p = calloc(1, sizeof(*p));
+	struct ucb1_policy *b = calloc(1, sizeof(*b));
 	p->uct = u;
+	p->data = b;
 	p->descend = ucb1_descend;
 	p->choose = ucb1_choose;
+
+	b->explore_p = 0.2;
+
+	if (arg) {
+		char *optspec, *next = arg;
+		while (*next) {
+			optspec = next;
+			next += strcspn(next, "+");
+			if (*next) { *next++ = 0; } else { *next = 0; }
+
+			char *optname = optspec;
+			char *optval = strchr(optspec, '=');
+			if (optval) *optval++ = 0;
+
+			if (!strcasecmp(optname, "explore_p")) {
+				b->explore_p = atof(optval);
+			} else {
+				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
+			}
+		}
+	}
+
 	return p;
 }

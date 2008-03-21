@@ -13,7 +13,7 @@
 #include "uct/tree.h"
 #include "uct/uct.h"
 
-struct uct_policy *policy_ucb1_init(struct uct *u);
+struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 
 
 #define MC_GAMES	40000
@@ -100,7 +100,6 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 tree_init:
 		u->t = tree_init(b);
 		//board_print(b, stderr);
-		u->t->explore_p = u->explore_p;
 	} else {
 		/* XXX: We hope that the opponent didn't suddenly play
 		 * several moves in the row. */
@@ -157,7 +156,6 @@ uct_state_init(char *arg)
 	u->debug_level = 1;
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
-	u->explore_p = 0.2;
 	u->expand_p = 2;
 	u->mc.capture_rate = 100;
 	u->mc.atari_rate = 100;
@@ -186,10 +184,15 @@ uct_state_init(char *arg)
 				u->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				u->gamelen = atoi(optval);
-			} else if (!strcasecmp(optname, "explore_p") && optval) {
-				u->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "expand_p") && optval) {
 				u->expand_p = atoi(optval);
+			} else if (!strcasecmp(optname, "policy") && optval) {
+				char *policyarg = strchr(optval, '+');
+				if (policyarg)
+					*policyarg++ = 0;
+				if (!strcasecmp(optval, "ucb1")) {
+					u->policy = policy_ucb1_init(u, policyarg);
+				}
 			} else if (!strcasecmp(optname, "pure")) {
 				u->mc.capture_rate = u->mc.local_rate = u->mc.cut_rate = 0;
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
@@ -209,7 +212,7 @@ uct_state_init(char *arg)
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
 	u->loss_threshold = 0.95; /* Stop reading if after at least 500 playouts this is best value. */
 	u->mc.debug_level = u->debug_level;
-	u->policy = policy_ucb1_init(u);
+	u->policy = policy_ucb1_init(u, NULL);
 
 	return u;
 }
