@@ -196,6 +196,13 @@ uct_state_init(char *arg)
 				} else if (!strcasecmp(optval, "ucb1tuned")) {
 					u->policy = policy_ucb1tuned_init(u, policyarg);
 				}
+			} else if (!strcasecmp(optname, "playout") && optval) {
+				char *playoutarg = strchr(optval, ':');
+				if (playoutarg)
+					*playoutarg++ = 0;
+				if (!strcasecmp(optval, "old")) {
+					u->playout = playout_old;
+				}
 			} else if (!strcasecmp(optname, "pure")) {
 				u->mc.capture_rate = u->mc.local_rate = u->mc.cut_rate = 0;
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
