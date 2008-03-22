@@ -8,6 +8,7 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
+#include "playout/moggy.h"
 #include "playout/old.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
@@ -202,6 +203,8 @@ uct_state_init(char *arg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "old")) {
 					u->playout = playout_old;
+				} else if (!strcasecmp(optval, "moggy")) {
+					u->playout = playout_moggy;
 				}
 			} else if (!strcasecmp(optname, "pure")) {
 				u->mc.capture_rate = u->mc.local_rate = u->mc.cut_rate = 0;

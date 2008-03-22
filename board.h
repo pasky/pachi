@@ -13,7 +13,7 @@
 
 /* The board implementation has bunch of optional features.
  * Turn them on below: */
-//#define WANT_BOARD_C
+#define WANT_BOARD_C // required by playout_moggy
 
 
 /* Allow board_play_random_move() to return pass even when
