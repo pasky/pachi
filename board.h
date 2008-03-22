@@ -82,7 +82,7 @@ struct board {
 
 #ifdef WANT_BOARD_C
 	/* Queue of capturable groups */
-	coord_t *c; int clen;
+	group_t *c; int clen;
 #endif
 
 
