@@ -16,7 +16,7 @@
  * when the next move on current board failed to deal with it. */
 
 static bool inline
-valid_escape_route(struct board *b, coord_t from, coord_t to)
+valid_escape_route(struct board *b, enum stone color, coord_t to)
 {
 	/* Assess if we actually gain any liberties by this escape route.
 	 * Note that this is not 100% as we cannot check whether we are
@@ -28,7 +28,7 @@ valid_escape_route(struct board *b, coord_t from, coord_t to)
 	 *  .(O)X . |
 	 *  --------+
 	 */
-	int friends = neighbor_count_at(b, to, board_at(b, from));
+	int friends = neighbor_count_at(b, to, color);
 	int libs = immediate_liberty_count(b, to);
 	return (friends > 1 && friends < 4) || (libs > 1);
 }
@@ -49,7 +49,7 @@ domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 	memset(captures, 0, sizeof(captures));
 
 	coord_t fix;
-	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)) && likely(valid_escape_route(b, coord, fix))) {
+	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)) && likely(valid_escape_route(b, board_at(b, coord), fix))) {
 		/* We can capture the opponent! Don't even think about escaping
 		 * our own ataris then. */
 		captures[captures_len] = fix;
@@ -59,7 +59,7 @@ domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 	foreach_neighbor(b, coord, {
 		/* This can produce duplicate candidates. But we should prefer
 		 * bigger groups to smaller ones, so I guess that is kinda ok. */
-		if (likely(group_at(b, c)) && unlikely(board_group_in_atari(b, group_at(b, c), &fix)) && likely(valid_escape_route(b, c, fix)))
+		if (likely(group_at(b, c)) && unlikely(board_group_in_atari(b, group_at(b, c), &fix)) && likely(valid_escape_route(b, board_at(b, c), fix)))
 			captures[captures_len++] = fix;
 	} );
 
