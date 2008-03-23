@@ -880,3 +880,22 @@ board_fast_score(struct board *board)
 
 	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
 }
+
+
+bool
+valid_escape_route(struct board *b, enum stone color, coord_t to)
+{
+	/* Assess if we actually gain any liberties by this escape route.
+	 * Note that this is not 100% as we cannot check whether we are
+	 * connecting out or just to ourselves. */
+	/* Also, we prohibit 1-1 here:
+	 *  X X X X |
+	 *  O X O O |
+	 *  O O X O |
+	 *  .(O)X . |
+	 *  --------+
+	 */
+	int friends = neighbor_count_at(b, to, color);
+	int libs = immediate_liberty_count(b, to);
+	return (friends > 1 && friends < 4) || (libs > 1);
+}

@@ -15,24 +15,6 @@
  * to fix atari on the current board, but it will fix it as the other player
  * when the next move on current board failed to deal with it. */
 
-static bool inline
-valid_escape_route(struct board *b, enum stone color, coord_t to)
-{
-	/* Assess if we actually gain any liberties by this escape route.
-	 * Note that this is not 100% as we cannot check whether we are
-	 * connecting out or just to ourselves. */
-	/* Also, we prohibit 1-1 here:
-	 *  X X X X |
-	 *  O X O O |
-	 *  O O X O |
-	 *  .(O)X . |
-	 *  --------+
-	 */
-	int friends = neighbor_count_at(b, to, color);
-	int libs = immediate_liberty_count(b, to);
-	return (friends > 1 && friends < 4) || (libs > 1);
-}
-
 static coord_t
 domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 {

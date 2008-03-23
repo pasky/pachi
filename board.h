@@ -168,6 +168,10 @@ float board_official_score(struct board *board);
 /* Compare number of stones + 1pt eyes. */
 float board_fast_score(struct board *board);
 
+/* Assess if it is desirable to pull out from atari
+ * by this move. */
+bool valid_escape_route(struct board *b, enum stone color, coord_t to);
+
 
 /** Iterators */
 
