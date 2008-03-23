@@ -21,7 +21,12 @@ playout_moggy(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 	/* Any groups in atari? */
 	if (b->clen > 0) {
 		group_t group = b->c[fast_random(b->clen)];
-		return board_group_info(b, group).lib[0];
+		enum stone color = board_at(b, group);
+		coord_t lib = board_group_info(b, group).lib[0];
+
+		/* Do not suicide. */
+		if (valid_escape_route(b, color, lib))
+			return lib;
 	}
 
 	return pass;
