@@ -89,21 +89,18 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 	} while (1);
 }
 
-static coord_t
-global_atari_check(struct board *b)
-{
-	if (b->clen == 0)
-		return pass;
 
-	group_t group = b->c[fast_random(b->clen)];
+static coord_t
+group_atari_check(struct board *b, group_t group)
+{
 	enum stone color = board_at(b, group);
 	coord_t lib = board_group_info(b, group).lib[0];
-	if (PLDEBUGL(4))
-		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
 	if (board_at(b, group) == S_OFFBOARD) {
 		/* Bogus group. */
 		return pass;
 	}
+	if (PLDEBUGL(4))
+		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
 	/* Do not suicide... */
@@ -119,6 +116,26 @@ global_atari_check(struct board *b)
 		fprintf(stderr, "...no ladder\n");
 
 	return lib;
+}
+
+static coord_t
+global_atari_check(struct board *b)
+{
+	if (b->clen == 0)
+		return pass;
+
+	int g_base = fast_random(b->clen);
+	for (int g = g_base; g < b->clen; g++) {
+		coord_t c = group_atari_check(b, b->c[g]);
+		if (!is_pass(c))
+			return c;
+	}
+	for (int g = 0; g < g_base; g++) {
+		coord_t c = group_atari_check(b, b->c[g]);
+		if (!is_pass(c))
+			return c;
+	}
+	return pass;
 }
 
 coord_t
