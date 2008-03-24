@@ -1,11 +1,15 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#define DEBUG
 
 #include "board.h"
+#include "debug.h"
 #include "montecarlo/internal.h"
 #include "playout/moggy.h"
 #include "random.h"
+
+#define PLDEBUGL(n) DEBUGL_(debug_level, n)
 
 
 /* Is this ladder breaker friendly for the one who catches ladder. */
@@ -47,7 +51,8 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 	if (!(ladder_catcher(b, x - xd, y, lcolor) ^ ladder_catcher(b, x, y - yd, lcolor))) {
 		/* Silly situation, probably non-simple ladder or suicide. */
 		/* TODO: In case of non-simple ladder, play out both variants. */
-		//fprintf(stderr, "non-simple\n");
+		if (PLDEBUGL(5))
+			fprintf(stderr, "non-simple ladder\n");
 		return false;
 	}
 
@@ -70,8 +75,8 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 		if (board_atxy(b, x + (xd_), y + (yd_)) == lcolor) \
 			return false; \
 	}
-#define ladder_horiz	do { /*fprintf(stderr, "%d,%d horiz step %d\n", x, y, xd);*/ x += xd; /* keima, see above */ ladder_check(-2 * xd, yd); } while (0)
-#define ladder_vert	do { /*fprintf(stderr, "%d,%d vert step %d\n", x, y, yd);*/ y += yd; /* keima, see above */ ladder_check(xd, -2 * yd); } while (0)
+#define ladder_horiz	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d horiz step %d\n", x, y, xd); x += xd; /* keima, see above */ ladder_check(-2 * xd, yd); } while (0)
+#define ladder_vert	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d vert step %d\n", x, y, yd); y += yd; /* keima, see above */ ladder_check(xd, -2 * yd); } while (0)
 
 	if (ladder_catcher(b, x - xd, y, lcolor))
 		ladder_horiz;
@@ -90,7 +95,8 @@ global_atari_check(struct board *b)
 	group_t group = b->c[fast_random(b->clen)];
 	enum stone color = board_at(b, group);
 	coord_t lib = board_group_info(b, group).lib[0];
-	//fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
+	if (PLDEBUGL(4))
+		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
 	if (board_at(b, group) == S_OFFBOARD) {
 		/* Bogus group. */
 		return pass;
@@ -100,12 +106,14 @@ global_atari_check(struct board *b)
 	/* Do not suicide... */
 	if (!valid_escape_route(b, color, lib))
 		return pass;
-	//fprintf(stderr, "...escape route valid\n");
+	if (PLDEBUGL(4))
+		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
 	if (ladder_catches(b, lib, group))
 		return pass;
-	//fprintf(stderr, "...no ladder\n");
+	if (PLDEBUGL(4))
+		fprintf(stderr, "...no ladder\n");
 
 	return lib;
 }
@@ -114,7 +122,8 @@ coord_t
 playout_moggy(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 {
 	coord_t c;
-	//board_print(b, stderr);
+	if (PLDEBUGL(4))
+		board_print(b, stderr);
 
 	/* Local checks */
 
