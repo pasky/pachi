@@ -32,8 +32,8 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 	/* Figure out the ladder direction */
 	int x = coord_x(coord, b), y = coord_y(coord, b);
 	int xd, yd;
-	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : -1;
-	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : -1;
+	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
+	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : board_atxy(b, x, y - 1) == S_NONE ? -1 : 0;
 
 	/* We do only tight ladders, not loose ladders. Furthermore,
 	 * the ladders need to be simple:
@@ -48,9 +48,9 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 	 * c O X   X O #
 	 * X # #   . X #
 	 */
-	if (!(ladder_catcher(b, x - xd, y, lcolor) ^ ladder_catcher(b, x, y - yd, lcolor))) {
+	if (!xd || !yd || !(ladder_catcher(b, x - xd, y, lcolor) ^ ladder_catcher(b, x, y - yd, lcolor))) {
 		/* Silly situation, probably non-simple ladder or suicide. */
-		/* TODO: In case of non-simple ladder, play out both variants. */
+		/* TODO: In case of basic non-simple ladder, play out both variants. */
 		if (PLDEBUGL(5))
 			fprintf(stderr, "non-simple ladder\n");
 		return false;
