@@ -32,8 +32,8 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 	/* Figure out the ladder direction */
 	int x = coord_x(coord, b), y = coord_y(coord, b);
 	int xd, yd;
-	xd = group_atxy(b, x - 1, y) ? 1 : -1;
-	yd = group_atxy(b, x, y - 1) ? 1 : -1;
+	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : -1;
+	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : -1;
 
 	/* We do only tight ladders, not loose ladders. Furthermore,
 	 * the ladders need to be simple:
