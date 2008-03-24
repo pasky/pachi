@@ -84,19 +84,30 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 static coord_t
 global_atari_check(struct board *b)
 {
-	if (b->clen > 0) {
-		group_t group = b->c[fast_random(b->clen)];
-		enum stone color = board_at(b, group);
-		coord_t lib = board_group_info(b, group).lib[0];
-		//fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
-		//assert(board_at(b, lib) == S_NONE);
+	if (b->clen == 0)
+		return pass;
 
-		/* Do not suicide or play out ladders. */
-		if ((color == S_BLACK || color == S_WHITE) && valid_escape_route(b, color, lib) && !ladder_catches(b, lib, group))
-			return lib;
-		//fprintf(stderr, "...ignoring\n");
+	group_t group = b->c[fast_random(b->clen)];
+	enum stone color = board_at(b, group);
+	coord_t lib = board_group_info(b, group).lib[0];
+	//fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
+	if (board_at(b, group) == S_OFFBOARD) {
+		/* Bogus group. */
+		return pass;
 	}
-	return pass;
+	assert(board_at(b, lib) == S_NONE);
+
+	/* Do not suicide... */
+	if (!valid_escape_route(b, color, lib))
+		return pass;
+	//fprintf(stderr, "...escape route valid\n");
+	
+	/* ...or play out ladders. */
+	if (ladder_catches(b, lib, group))
+		return pass;
+	//fprintf(stderr, "...no ladder\n");
+
+	return lib;
 }
 
 coord_t
