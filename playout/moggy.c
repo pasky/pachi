@@ -81,20 +81,9 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 	} while (1);
 }
 
-coord_t
-playout_moggy(struct montecarlo *mc, struct board *b, enum stone our_real_color)
+static coord_t
+global_atari_check(struct board *b)
 {
-	//board_print(b, stderr);
-
-	/* Local checks */
-
-	if (!is_pass(b->last_move.coord)) {
-		// TODO
-	}
-
-	/* Global checks */
-
-	/* Any groups in atari? */
 	if (b->clen > 0) {
 		group_t group = b->c[fast_random(b->clen)];
 		enum stone color = board_at(b, group);
@@ -107,6 +96,27 @@ playout_moggy(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 			return lib;
 		//fprintf(stderr, "...ignoring\n");
 	}
+	return pass;
+}
+
+coord_t
+playout_moggy(struct montecarlo *mc, struct board *b, enum stone our_real_color)
+{
+	coord_t c;
+	//board_print(b, stderr);
+
+	/* Local checks */
+
+	if (!is_pass(b->last_move.coord)) {
+		// TODO
+	}
+
+	/* Global checks */
+
+	/* Any groups in atari? */
+	c = global_atari_check(b);
+	if (!is_pass(c))
+		return c;
 
 	return pass;
 }
