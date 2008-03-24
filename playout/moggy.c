@@ -56,7 +56,7 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 		return false;
 	}
 
-#define ladder_check(xd_, yd_)	\
+#define ladder_check(xd1_, yd1_, xd2_, yd2_)	\
 	if (board_atxy(b, x, y) != S_NONE) { \
 		/* Did we hit a stone when playing out ladder? */ \
 		if (ladder_catcher(b, x, y, lcolor)) \
@@ -66,17 +66,21 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 	} else { \
 		/* No. So we are at new position. \
 		 * We need to check indirect ladder breakers. */ \
-		/* . 1 x . \
-		 * . x o O <- only at O we can check for o at 1 \
-		 * x o o x    otherwise x at O would be still deadly \
-		 * o o x . \
-		 * We check only for o at 1; x at 1 would mean we \
+		/* . 2 x . . \
+		 * . x o O 1 <- only at O we can check for o at 2 \
+		 * x o o x .    otherwise x at O would be still deadly \
+		 * o o x . . \
+		 * We check for o and x at 1, these are vital. \
+		 * We check only for o at 2; x at 2 would mean we \
 		 * need to fork (one step earlier). */ \
-		if (board_atxy(b, x + (xd_), y + (yd_)) == lcolor) \
-			return false; \
+		enum stone s1 = board_atxy(b, x + (xd1_), y + (yd1_)); \
+		if (s1 == lcolor) return false; \
+		if (s1 == stone_other(lcolor)) return true; \
+		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
+		if (s2 == lcolor) return false; \
 	}
-#define ladder_horiz	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d horiz step %d\n", x, y, xd); x += xd; /* keima, see above */ ladder_check(-2 * xd, yd); } while (0)
-#define ladder_vert	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d vert step %d\n", x, y, yd); y += yd; /* keima, see above */ ladder_check(xd, -2 * yd); } while (0)
+#define ladder_horiz	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d horiz step %d\n", x, y, xd); x += xd; ladder_check(xd, 0, -2 * xd, yd); } while (0)
+#define ladder_vert	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d vert step %d\n", x, y, yd); y += yd; ladder_check(0, yd, xd, -2 * yd); } while (0)
 
 	if (ladder_catcher(b, x - xd, y, lcolor))
 		ladder_horiz;
