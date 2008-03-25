@@ -43,17 +43,17 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	int pass_limit = (b2.size - 2) * (b2.size - 2) / 2;
 	int passes = is_pass(b->last_move.coord);
 	if (UDEBUGL(8))
-		fprintf(stderr, "--- UCT walk\n");
+		fprintf(stderr, "--- UCT walk with color %d\n", color);
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
 			if (n->playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2);
 
-			result = play_random_game(&b2, stone_other(color), u->gamelen, domainhint_policy, u);
-			if (orig_color == color && result >= 0)
+			result = play_random_game(&b2, color, u->gamelen, domainhint_policy, u);
+			if (orig_color != color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
-				fprintf(stderr, "[%d..%d] %s playout result %d\n", orig_color, color, coord2sstr(n->coord, t->board), result);
+				fprintf(stderr, "[%d..%d] %s random playout result %d\n", orig_color, color, coord2sstr(n->coord, t->board), result);
 			break;
 		}
 
