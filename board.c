@@ -216,9 +216,9 @@ board_print(struct board *board, FILE *f)
 static void profiling_noinline
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
-	board->hash ^= board->h[(color == S_BLACK ? board->size2 : 0) + coord_raw(coord)];
+	board->hash ^= hash_at(board, coord, color);
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord, board), coord_y(coord, board), board->h[color * coord_raw(coord)], board->hash);
+		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
 }
 
 /* Commit current board hash to history. */

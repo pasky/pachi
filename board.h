@@ -122,6 +122,8 @@ struct board {
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
 
+#define hash_at(b_, coord, color) (b_)->h[((color) == S_BLACK ? (b_)->size2 : 0) + coord_raw(coord)]
+
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
 void board_done_noalloc(struct board *board);
