@@ -239,7 +239,7 @@ board_hash_commit(struct board *board)
 				board->superko_violation = true;
 				return;
 			}
-			i++;
+			i = history_hash_next(i);
 		}
 		board->history_hash[i & history_hash_mask] = board->hash;
 	}

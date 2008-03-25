@@ -97,6 +97,8 @@ struct board {
 	 * >> board_size^2. */
 #define history_hash_bits 12
 #define history_hash_mask ((1 << history_hash_bits) - 1)
+#define history_hash_prev(i) ((i - 1) & history_hash_mask)
+#define history_hash_next(i) ((i + 1) & history_hash_mask)
 	hash_t history_hash[1 << history_hash_bits];
 	/* Hash of current board position. */
 	hash_t hash;
