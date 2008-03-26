@@ -101,7 +101,7 @@ done_boardpos(struct tree *t, struct boardpos *pos, struct tree_node *n)
 					/* This is slightly anomalous but
 					 * can happen in imminent superko
 					 * situation sometimes. */
-					fprintf(stderr, "Orphaned a node with %d playouts!\n", ni->pos->playouts);
+					fprintf(stderr, "Orphaned %s->%s node with %d playouts!\n", coord2sstr(n->coord, t->board), coord2sstr(ni->coord, t->board), ni->pos->playouts);
 				tree_delete_node(t, ni);
 				removed_child = true;
 			}
