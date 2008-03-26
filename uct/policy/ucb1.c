@@ -25,10 +25,10 @@ static struct tree_node *
 ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color)
 {
 	struct tree_node *nbest = NULL;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+	for (struct tree_node *ni = node->pos->children; ni; ni = ni->sibling)
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
-		if (!nbest || ni->playouts > nbest->playouts) {
+		if (!nbest || ni->pos->playouts > nbest->pos->playouts) {
 			/* Play pass only if we can afford scoring */
 			if (is_pass(ni->coord)) {
 				float score = board_official_score(b);
@@ -47,16 +47,17 @@ ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum 
 static struct tree_node *
 ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
+	struct boardpos *pos = node->pos;
 	struct ucb1_policy *b = p->data;
-	float xpl = log(node->playouts) * b->explore_p;
+	float xpl = log(pos->playouts) * b->explore_p;
 
-	struct tree_node *nbest = node->children;
+	struct tree_node *nbest = pos->children;
 	float best_urgency = -9999;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+	for (struct tree_node *ni = pos->children; ni; ni = ni->sibling) {
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
-		float urgency = ni->value * parity + sqrt(xpl / ni->playouts);
+		float urgency = ni->pos->value * parity + sqrt(xpl / ni->pos->playouts);
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;

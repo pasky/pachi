@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,8 +47,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		fprintf(stderr, "--- UCT walk with color %d\n", color);
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
-			if (n->playouts >= u->expand_p)
-				tree_expand_node(t, n, &b2);
+			if (n->pos->playouts >= u->expand_p)
+				tree_expand_node(t, n, &b2, color);
 
 			result = play_random_game(&b2, color, u->gamelen, domainhint_policy, u);
 			if (orig_color != color && result >= 0)
@@ -58,15 +59,16 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		}
 
 		n = u->policy->descend(u->policy, t, n, (color == orig_color ? 1 : -1), pass_limit);
+		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
-			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
+			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->pos->value);
 		struct move m = { n->coord, color };
 		int res = board_play(&b2, &m);
 		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
 		    || b2.superko_violation) {
 			if (UDEBUGL(6))
 				fprintf(stderr, "deleting invalid node %d,%d\n", coord_x(n->coord,b), coord_y(n->coord,b));
-			tree_delete_node(n);
+			tree_delete_node(t, n);
 			board_done_noalloc(&b2);
 			return -1;
 		}
@@ -87,6 +89,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		}
 	}
 
+	assert(n == t->root || n->parent);
 	if (result >= 0)
 		tree_uct_update(n, result);
 	board_done_noalloc(&b2);
@@ -100,12 +103,12 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	if (!u->t) {
 tree_init:
-		u->t = tree_init(b);
+		u->t = tree_init(b, color);
 		//board_print(b, stderr);
 	} else {
 		/* XXX: We hope that the opponent didn't suddenly play
 		 * several moves in the row. */
-		for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling)
+		for (struct tree_node *ni = u->t->root->pos->children; ni; ni = ni->sibling)
 			if (ni->coord == b->last_move.coord) {
 				tree_promote_node(u->t, ni);
 				goto promoted;
@@ -126,7 +129,7 @@ promoted:;
 
 		if (i > 0 && !(i % 1000)) {
 			struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
-			if (best && best->playouts >= 500 && best->value >= u->loss_threshold)
+			if (best && best->pos->playouts >= 500 && best->pos->value >= u->loss_threshold)
 				break;
 		}
 	}
@@ -140,8 +143,8 @@ promoted:;
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games)\n", coord_x(best->coord, b), coord_y(best->coord, b), best->value, i);
-	if (best->value < u->resign_ratio && !is_pass(best->coord)) {
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d/%d positions reused)\n", coord_x(best->coord, b), coord_y(best->coord, b), best->pos->value, i, u->t->reused_pos, u->t->total_pos);
+	if (best->pos->value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
 	}
