@@ -1,5 +1,5 @@
 boardsize 9
-komi 0
 clear_board
+komi 0
 genmove black
 genmove white
