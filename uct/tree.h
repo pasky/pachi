@@ -53,7 +53,6 @@ struct tree {
 #define uct_hash_next(i) ((i + 1) & uct_hash_mask)
 	/* The positions are hashed by Zobrist hashes; when passing,
 	 * the previous position is xor'd by color passing. */
-	//struct tree_node *nodes[1 << uct_hash_bits];
 	struct boardpos *positions[1 << uct_hash_bits];
 
 	/* Statistics: Number of nodes reusing existing boardpos. */

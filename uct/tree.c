@@ -37,13 +37,6 @@ tree_init_node(struct tree *t, coord_t coord, struct boardpos *pos)
 	if (pos->refcount > 1)
 		t->reused_pos++;
 	t->total_pos++;
-#if 0
-	for (int h = n->hash & uct_hash_mask; 1; h = uct_hash_next(h))
-		if (!t->nodes[h]) {
-			t->nodes[h] = n;
-			break;
-		}
-#endif
 	return n;
 }
 
@@ -148,15 +141,6 @@ tree_done_node(struct tree *t, struct tree_node *n)
 		t->reused_pos--;
 	t->total_pos--;
 	done_boardpos(t, n->pos, n);
-#if 0
-	for (int h = n->hash & uct_hash_mask; !t->nodes[h]; h = uct_hash_next(h))
-		if (t->nodes[h] == pos) {
-			int h2 = uct_hash_next(h);
-			while (t->nodes[h2])
-				h2 = uct_hash_next(h);
-			t->nodes[h] = (h2 == uct_hash_next(h) ? NULL : uct_hash_prev(h2));
-		}
-#endif
 	free(n);
 }
 
