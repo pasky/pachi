@@ -23,6 +23,47 @@ struct uct_policy *policy_ucb1tuned_init(struct uct *u, char *arg);
 #define MC_GAMELEN	400
 
 
+static void
+progress_status(struct uct *u, struct tree *t, enum stone color)
+{
+	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color);
+	if (!best) {
+		printf("... No moves left\n");
+		return;
+	}
+	printf("%f ", best->pos->value);
+
+	/* Best sequence */
+	printf("| seq ");
+	for (int depth = 0; depth < 6; depth++) {
+		if (best && best->pos->playouts >= 100) {
+			printf("%s ", coord2sstr(best->coord, t->board));
+			best = u->policy->choose(u->policy, best, t->board, color);
+		} else {
+			printf("   ");
+		}
+	}
+
+	/* Best candidates */
+	printf("| can ");
+	int cans = 4;
+	struct tree_node *can[cans];
+	memset(can, 0, sizeof(can));
+	best = t->root->pos->children;
+	while (best) {
+		int c = 0;
+		while ((!can[c] || best->pos->playouts > can[c]->pos->playouts) && ++c < cans);
+		if (c > 0) can[c - 1] = best;
+		best = best->sibling;
+	}
+	while (--cans >= 0) {
+		printf("%s(%.3f) ", coord2sstr(can[cans]->coord, t->board), can[cans]->pos->value);
+	}
+
+	printf("\n");
+}
+
+
 static coord_t
 domainhint_policy(void *playout_policy, struct board *b, enum stone my_color)
 {
@@ -127,6 +168,10 @@ promoted:;
 			continue;
 		}
 
+		if (i > 0 && !(i % 10000)) {
+			progress_status(u, u->t, color);
+		}
+
 		if (i > 0 && !(i % 1000)) {
 			struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 			if (best && best->pos->playouts >= 500 && best->pos->value >= u->loss_threshold)
@@ -134,6 +179,7 @@ promoted:;
 		}
 	}
 
+	progress_status(u, u->t, color);
 	if (UDEBUGL(2))
 		tree_dump(u->t);
 
