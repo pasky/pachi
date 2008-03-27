@@ -10,6 +10,7 @@
 
 int
 play_random_game(struct board *b, enum stone starting_color, int gamelen,
+		 struct playout_ravemap *ravemap,
 		 playout_policeman policeman, void *policy)
 {
 	gamelen = gamelen - b->moves;
@@ -75,6 +76,9 @@ play_random:
 			fprintf(stderr, "%s %s\n", stone2str(color), cs);
 			free(cs);
 		}
+
+		if (ravemap && ravemap->map[coord] == S_NONE)
+			ravemap->map[coord] = color;
 
 		if (unlikely(is_pass(coord))) {
 			passes++;
