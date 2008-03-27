@@ -11,9 +11,10 @@ for heavier MonteCarlo playouts as well (e.g. real liberties are
 tracked instead of pseudoliberties). If you are looking for raw
 light playout speed, libEGO is better choice.
 
-Pachi is under the MIT licence (close to public domain) so that as
-many people as possible can use it. Some of the bundled engines
-or policies might be under a more restrictive licence (GPL).
+Pachi is under the MIT licence (almost public domain) so that as
+many people as possible can use it; if you use it to create your engine,
+appropriate credits would be appreciated. Some of the bundled engines
+or policies are under a more restrictive licence (GPL).
 
 
 Currently, Pachi supports a simple idiotbot-like engine and an example
