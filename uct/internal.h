@@ -21,6 +21,7 @@ struct uct {
 	float resign_ratio;
 	float loss_threshold;
 	int expand_p;
+	int radar_d;
 
 	struct montecarlo mc;
 	struct uct_policy *policy;

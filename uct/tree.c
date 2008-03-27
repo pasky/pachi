@@ -185,7 +185,7 @@ tree_dump(struct tree *tree)
 
 
 void
-tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color)
+tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar)
 {
 	assert(!node->pos->children);
 
@@ -197,6 +197,9 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 		for (int j = 1; j < t->board->size; j++) {
 			coord_t c = coord_xy_otf(i, j, t->board);
 			if (board_at(b, c) != S_NONE)
+				continue;
+			/* This looks very useful on large boards - weeds out huge amount of crufty moves. */
+			if (b->hash /* not empty board */ && radar && !board_stone_radar(b, c, radar))
 				continue;
 			struct tree_node *nj = tree_init_node(t, c, init_boardpos(t, node->hash ^ hash_at(b, c, color)));
 			nj->parent = node; ni->sibling = nj; ni = nj;

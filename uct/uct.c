@@ -92,7 +92,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
 			if (n->pos->playouts >= u->expand_p)
-				tree_expand_node(t, n, &b2, color);
+				tree_expand_node(t, n, &b2, color, u->radar_d);
 
 			result = play_random_game(&b2, color, u->gamelen, domainhint_policy, u);
 			if (orig_color != color && result >= 0)
@@ -240,6 +240,9 @@ uct_state_init(char *arg)
 				u->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "expand_p") && optval) {
 				u->expand_p = atoi(optval);
+			} else if (!strcasecmp(optname, "radar_d") && optval) {
+				/* For 19x19, it is good idea to set this to 3. */
+				u->radar_d = atoi(optval);
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				char *policyarg = strchr(optval, ':');
 				if (policyarg)
