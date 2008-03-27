@@ -21,6 +21,9 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 	enum stone policy_color = stone_other(starting_color);
 	coord_t urgent;
 
+	if (amafmap)
+		amafmap->color = color;
+
 	int passes = is_pass(b->last_move.coord);
 
 	while (gamelen-- && passes < 2) {

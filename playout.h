@@ -14,6 +14,7 @@ typedef coord_t (*playout_policeman)(void *playout_policy, struct board *b, enum
  * S_WHITE: This move was played by white first
  */
 struct playout_amafmap {
+	enum stone color;
 	enum stone *map; // [b->size2]
 };
 
