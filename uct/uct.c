@@ -80,6 +80,12 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	struct board b2;
 	board_copy(&b2, b);
 
+	struct playout_amafmap *amaf = NULL;
+	if (u->policy->wants_amaf) {
+		amaf = calloc(1, sizeof(*amaf));
+		amaf->map = calloc(b2.size2, sizeof(*amaf->map));
+	}
+
 	/* Walk the tree until we find a leaf, then expand it and do
 	 * a random playout. */
 	struct tree_node *n = t->root;
@@ -94,7 +100,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			if (n->pos->playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2, color, u->radar_d);
 
-			result = play_random_game(&b2, color, u->gamelen, NULL, domainhint_policy, u);
+			result = play_random_game(&b2, color, u->gamelen, amaf, domainhint_policy, u);
 			if (orig_color != color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
@@ -113,8 +119,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			if (UDEBUGL(6))
 				fprintf(stderr, "deleting invalid node %d,%d\n", coord_x(n->coord,b), coord_y(n->coord,b));
 			tree_delete_node(t, n);
-			board_done_noalloc(&b2);
-			return -1;
+			result = -1;
+			goto end;
 		}
 
 		if (is_pass(n->coord)) {
@@ -135,7 +141,13 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 	assert(n == t->root || n->parent);
 	if (result >= 0)
-		u->policy->update(u->policy, n, result);
+		u->policy->update(u->policy, n, amaf, result);
+
+end:
+	if (amaf) {
+		free(amaf->map);
+		free(amaf);
+	}
 	board_done_noalloc(&b2);
 	return result;
 }

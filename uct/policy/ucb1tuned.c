@@ -71,7 +71,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 }
 
 static void
-ucb1_update(struct uct_policy *p, struct tree_node *node, int result)
+ucb1_update(struct uct_policy *p, struct tree_node *node, struct playout_amafmap *map, int result)
 {
 	/* It is enough to iterate by a single chain; we will
 	 * update all the preceding positions properly since
