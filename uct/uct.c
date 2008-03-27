@@ -135,7 +135,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 	assert(n == t->root || n->parent);
 	if (result >= 0)
-		tree_uct_update(n, result);
+		u->policy->update(u->policy, n, result);
 	board_done_noalloc(&b2);
 	return result;
 }

@@ -66,6 +66,21 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 	return nbest;
 }
 
+static void
+ucb1_update(struct uct_policy *p, struct tree_node *node, int result)
+{
+	/* It is enough to iterate by a single chain; we will
+	 * update all the preceding positions properly since
+	 * they had to all occur in all branches, only in
+	 * different order. */
+	for (; node; node = node->parent) {
+		struct boardpos *pos = node->pos;
+		pos->playouts++;
+		pos->wins += result;
+		pos->value = (float)pos->wins / pos->playouts;
+	}
+}
+
 
 struct uct_policy *
 policy_ucb1_init(struct uct *u, char *arg)
@@ -76,6 +91,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 	p->data = b;
 	p->descend = ucb1_descend;
 	p->choose = ucb1_choose;
+	p->update = ucb1_update;
 
 	b->explore_p = 0.2;
 

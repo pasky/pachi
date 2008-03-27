@@ -34,11 +34,13 @@ struct uct {
 
 typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
 typedef struct tree_node *(*uctp_descend)(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
+typedef void (*uctp_update)(struct uct_policy *p, struct tree_node *node, int result);
 
 struct uct_policy {
 	struct uct *uct;
 	uctp_choose choose;
 	uctp_descend descend;
+	uctp_update update;
 	void *data;
 };
 

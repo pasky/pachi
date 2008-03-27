@@ -243,18 +243,3 @@ tree_leaf_node(struct tree_node *node)
 {
 	return !(node->pos->children);
 }
-
-void
-tree_uct_update(struct tree_node *node, int result)
-{
-	/* It is enough to iterate by a single chain; we will
-	 * update all the preceding positions properly since
-	 * they had to all occur in all branches, only in
-	 * different order. */
-	for (; node; node = node->parent) {
-		struct boardpos *pos = node->pos;
-		pos->playouts++;
-		pos->wins += result;
-		pos->value = (float)pos->wins / pos->playouts;
-	}
-}
