@@ -21,7 +21,7 @@ struct ucb1_policy {
 };
 
 
-static struct tree_node *
+struct tree_node *
 ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color)
 {
 	struct tree_node *nbest = NULL;
@@ -44,7 +44,7 @@ ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum 
 }
 
 
-static struct tree_node *
+struct tree_node *
 ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	struct boardpos *pos = node->pos;
@@ -66,7 +66,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 	return nbest;
 }
 
-static void
+void
 ucb1_update(struct uct_policy *p, struct tree_node *node, struct playout_amafmap *map, int result)
 {
 	/* It is enough to iterate by a single chain; we will

@@ -21,31 +21,10 @@ struct ucb1_policy {
 };
 
 
-static struct tree_node *
-ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color)
-{
-	struct tree_node *nbest = NULL;
-	for (struct tree_node *ni = node->pos->children; ni; ni = ni->sibling)
-		// we compare playouts and choose the best-explored
-		// child; comparing values is more brittle
-		if (!nbest || ni->pos->playouts > nbest->pos->playouts) {
-			/* Play pass only if we can afford scoring */
-			if (is_pass(ni->coord)) {
-				float score = board_official_score(b);
-				if (color == S_BLACK)
-					score = -score;
-				//fprintf(stderr, "%d score %f\n", color, score);
-				if (score <= 0)
-					continue;
-			}
-			nbest = ni;
-		}
-	return nbest;
-}
+struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
 
-
-static struct tree_node *
-ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
+struct tree_node *
+ucb1tuned_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	struct boardpos *pos = node->pos;
 	struct ucb1_policy *b = p->data;
@@ -70,20 +49,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 	return nbest;
 }
 
-static void
-ucb1_update(struct uct_policy *p, struct tree_node *node, struct playout_amafmap *map, int result)
-{
-	/* It is enough to iterate by a single chain; we will
-	 * update all the preceding positions properly since
-	 * they had to all occur in all branches, only in
-	 * different order. */
-	for (; node; node = node->parent) {
-		struct boardpos *pos = node->pos;
-		pos->playouts++;
-		pos->wins += result;
-		pos->value = (float)pos->wins / pos->playouts;
-	}
-}
+void ucb1_update(struct uct_policy *p, struct tree_node *node, struct playout_amafmap *map, int result);
 
 
 struct uct_policy *
@@ -93,7 +59,7 @@ policy_ucb1tuned_init(struct uct *u, char *arg)
 	struct ucb1_policy *b = calloc(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
-	p->descend = ucb1_descend;
+	p->descend = ucb1tuned_descend;
 	p->choose = ucb1_choose;
 	p->update = ucb1_update;
 
