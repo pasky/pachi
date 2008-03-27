@@ -26,26 +26,29 @@ struct uct_policy *policy_ucb1tuned_init(struct uct *u, char *arg);
 static void
 progress_status(struct uct *u, struct tree *t, enum stone color)
 {
+	if (!UDEBUGL(0))
+		return;
+
 	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color);
 	if (!best) {
-		printf("... No moves left\n");
+		fprintf(stderr, "... No moves left\n");
 		return;
 	}
-	printf("%f ", best->pos->value);
+	fprintf(stderr, "%f ", best->pos->value);
 
 	/* Best sequence */
-	printf("| seq ");
+	fprintf(stderr, "| seq ");
 	for (int depth = 0; depth < 6; depth++) {
-		if (best && best->pos->playouts >= 100) {
-			printf("%s ", coord2sstr(best->coord, t->board));
+		if (best && best->pos->playouts >= 25) {
+			fprintf(stderr, "%3s ", coord2sstr(best->coord, t->board));
 			best = u->policy->choose(u->policy, best, t->board, color);
 		} else {
-			printf("   ");
+			fprintf(stderr, "    ");
 		}
 	}
 
 	/* Best candidates */
-	printf("| can ");
+	fprintf(stderr, "| can ");
 	int cans = 4;
 	struct tree_node *can[cans];
 	memset(can, 0, sizeof(can));
@@ -57,10 +60,10 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 		best = best->sibling;
 	}
 	while (--cans >= 0) {
-		printf("%s(%.3f) ", coord2sstr(can[cans]->coord, t->board), can[cans]->pos->value);
+		fprintf(stderr, "%s(%.3f) ", coord2sstr(can[cans]->coord, t->board), can[cans]->pos->value);
 	}
 
-	printf("\n");
+	fprintf(stderr, "\n");
 }
 
 
@@ -189,7 +192,7 @@ promoted:;
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d/%d positions reused)\n", coord_x(best->coord, b), coord_y(best->coord, b), best->pos->value, i, u->t->reused_pos, u->t->total_pos);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d/%d positions reused)\n", coord_x(best->coord, b), coord_y(best->coord, b), best->pos->value, u->t->root->pos->playouts, u->t->reused_pos, u->t->total_pos);
 	if (best->pos->value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
