@@ -273,6 +273,8 @@ uct_state_init(char *arg)
 					u->policy = policy_ucb1tuned_init(u, policyarg);
 				} else if (!strcasecmp(optval, "ucb1amaf")) {
 					u->policy = policy_ucb1amaf_init(u, policyarg);
+				} else {
+					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
 				}
 			} else if (!strcasecmp(optname, "playout") && optval) {
 				char *playoutarg = strchr(optval, ':');
@@ -282,6 +284,8 @@ uct_state_init(char *arg)
 					u->playout = playout_old_init(playoutarg);
 				} else if (!strcasecmp(optval, "moggy")) {
 					u->playout = playout_moggy_init(playoutarg);
+				} else {
+					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 				}
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);

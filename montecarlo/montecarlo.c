@@ -227,6 +227,8 @@ montecarlo_state_init(char *arg)
 					mc->playout = playout_old_init(playoutarg);
 				} else if (!strcasecmp(optval, "moggy")) {
 					mc->playout = playout_moggy_init(playoutarg);
+				} else {
+					fprintf(stderr, "MonteCarlo: Invalid playout policy %s\n", optval);
 				}
 			} else {
 				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
