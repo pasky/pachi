@@ -13,10 +13,13 @@
 
 
 static struct tree_node *
-tree_init_node(struct tree *t, coord_t coord)
+tree_init_node(struct tree *t, coord_t coord, int depth)
 {
 	struct tree_node *n = calloc(1, sizeof(*n));
 	n->coord = coord;
+	n->depth = depth;
+	if (depth > t->max_depth)
+		t->max_depth = depth;
 	return n;
 }
 
@@ -26,7 +29,7 @@ tree_init(struct board *board, enum stone color)
 	struct tree *t = calloc(1, sizeof(*t));
 	t->board = board;
 	/* The root PASS move is only virtual, we never play it. */
-	t->root = tree_init_node(t, pass);
+	t->root = tree_init_node(t, pass, 0);
 	return t;
 }
 
@@ -88,7 +91,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 {
 	assert(!node->children);
 
-	struct tree_node *ni = tree_init_node(t, pass);
+	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
 
 	/* The loop excludes the offboard margin. */
@@ -101,7 +104,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			if (b->hash /* not empty board */ && radar && !board_stone_radar(b, c, radar))
 				continue;
 
-			struct tree_node *nj = tree_init_node(t, c);
+			struct tree_node *nj = tree_init_node(t, c, node->depth + 1);
 			nj->parent = node; ni->sibling = nj; ni = nj;
 		}
 	}

@@ -30,12 +30,16 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 	if (!UDEBUGL(0))
 		return;
 
+	/* Best move */
 	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color);
 	if (!best) {
 		fprintf(stderr, "... No moves left\n");
 		return;
 	}
-	fprintf(stderr, "%f ", best->value);
+	fprintf(stderr, "best %f ", best->value);
+
+	/* Max depth */
+	fprintf(stderr, "deepest %d ", t->max_depth);
 
 	/* Best sequence */
 	fprintf(stderr, "| seq ");

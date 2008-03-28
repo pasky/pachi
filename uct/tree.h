@@ -23,6 +23,7 @@ struct board;
 struct tree_node {
 	hash_t hash;
 	struct tree_node *parent, *sibling, *children;
+	int depth; // just for statistics
 
 	coord_t coord;
 
@@ -34,6 +35,9 @@ struct tree_node {
 struct tree {
 	struct tree_node *root;
 	struct board *board;
+
+	// Statistics
+	int max_depth;
 };
 
 struct tree *tree_init(struct board *board, enum stone color);
