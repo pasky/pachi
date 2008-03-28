@@ -8,10 +8,15 @@ enum stone;
 
 struct playout_policy;
 typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone my_color);
+/* 0.0 - 1.0; can return NAN is policy has no opinion */
+typedef float (*playoutp_assess)(struct playout_policy *playout_policy, struct board *b, struct move *m);
 
 struct playout_policy {
 	int debug_level;
+	/* We call choose when we ask policy about next move.
+	 * We call assess when we ask policy about how good given move is. */
 	playoutp_choose choose;
+	playoutp_assess assess;
 	void *data;
 };
 
