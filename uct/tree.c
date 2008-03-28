@@ -107,7 +107,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			if (policy->prior)
-				policy->prior(policy, t, ni, color);
+				policy->prior(policy, t, ni, b, color);
 		}
 	}
 }
