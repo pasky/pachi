@@ -35,12 +35,12 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 		fprintf(stderr, "... No moves left\n");
 		return;
 	}
-	fprintf(stderr, "%f ", best->pos->value);
+	fprintf(stderr, "%f ", best->value);
 
 	/* Best sequence */
 	fprintf(stderr, "| seq ");
 	for (int depth = 0; depth < 6; depth++) {
-		if (best && best->pos->playouts >= 25) {
+		if (best && best->playouts >= 25) {
 			fprintf(stderr, "%3s ", coord2sstr(best->coord, t->board));
 			best = u->policy->choose(u->policy, best, t->board, color);
 		} else {
@@ -53,17 +53,17 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 	int cans = 4;
 	struct tree_node *can[cans];
 	memset(can, 0, sizeof(can));
-	best = t->root->pos->children;
+	best = t->root->children;
 	while (best) {
 		int c = 0;
-		while ((!can[c] || best->pos->playouts > can[c]->pos->playouts) && ++c < cans);
+		while ((!can[c] || best->playouts > can[c]->playouts) && ++c < cans);
 		for (int d = 0; d < c; d++) can[d] = can[d + 1];
 		if (c > 0) can[c - 1] = best;
 		best = best->sibling;
 	}
 	while (--cans >= 0) {
 		if (can[cans]) {
-			fprintf(stderr, "%3s(%.3f) ", coord2sstr(can[cans]->coord, t->board), can[cans]->pos->value);
+			fprintf(stderr, "%3s(%.3f) ", coord2sstr(can[cans]->coord, t->board), can[cans]->value);
 		} else {
 			fprintf(stderr, "           ");
 		}
@@ -104,7 +104,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		fprintf(stderr, "--- UCT walk with color %d\n", color);
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
-			if (n->pos->playouts >= u->expand_p)
+			if (n->playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2, color, u->radar_d);
 
 			result = play_random_game(&b2, color, u->gamelen, u->playout_amaf ? amaf : NULL, domainhint_policy, u);
@@ -118,7 +118,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		n = u->policy->descend(u->policy, t, n, (color == orig_color ? 1 : -1), pass_limit);
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
-			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->pos->value);
+			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->value);
 		if (amaf && n->coord >= -1)
 			amaf->map[n->coord] = color;
 		struct move m = { n->coord, color };
@@ -170,12 +170,12 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	if (!u->t) {
 tree_init:
-		u->t = tree_init(b, color, u->sharepos);
+		u->t = tree_init(b, color);
 		//board_print(b, stderr);
 	} else {
 		/* XXX: We hope that the opponent didn't suddenly play
 		 * several moves in the row. */
-		for (struct tree_node *ni = u->t->root->pos->children; ni; ni = ni->sibling)
+		for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling)
 			if (ni->coord == b->last_move.coord) {
 				tree_promote_node(u->t, ni);
 				goto promoted;
@@ -200,7 +200,7 @@ promoted:;
 
 		if (i > 0 && !(i % 1000)) {
 			struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
-			if (best && best->pos->playouts >= 500 && best->pos->value >= u->loss_threshold)
+			if (best && best->playouts >= 500 && best->value >= u->loss_threshold)
 				break;
 		}
 	}
@@ -215,8 +215,8 @@ promoted:;
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d/%d positions reused)\n", coord_x(best->coord, b), coord_y(best->coord, b), best->pos->value, u->t->root->pos->playouts, u->t->reused_pos, u->t->total_pos);
-	if (best->pos->value < u->resign_ratio && !is_pass(best->coord)) {
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games)\n", coord_x(best->coord, b), coord_y(best->coord, b), best->value, u->t->root->playouts);
+	if (best->value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
 	}
@@ -272,11 +272,6 @@ uct_state_init(char *arg)
 				 * are included in AMAF. Of course makes sense
 				 * only in connection with an AMAF policy.) */
 				u->playout_amaf = true;
-			} else if (!strcasecmp(optname, "sharepos")) {
-				/* Whether to reuse statistics between different
-				 * orders of play leading to the same position.
-				 * This should be always beneficial. */
-				u->sharepos = true;
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				char *policyarg = strchr(optval, ':');
 				if (policyarg)

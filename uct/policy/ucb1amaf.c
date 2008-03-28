@@ -28,10 +28,9 @@ struct tree_node *ucb1_descend(struct uct_policy *p, struct tree *tree, struct t
 static void
 update_node(struct uct_policy *p, struct tree_node *node, int result)
 {
-	struct boardpos *pos = node->pos;
-	pos->playouts++;
-	pos->wins += result;
-	pos->value = (float)pos->wins / pos->playouts;
+	node->playouts++;
+	node->wins += result;
+	node->value = (float)node->wins / node->playouts;
 }
 
 void
@@ -44,7 +43,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree_node *node, struct playout_ama
 		 * to make more sense to give the main branch more weight
 		 * than other orders of play. */
 		update_node(p, node, result);
-		for (struct tree_node *ni = node->pos->children; ni; ni = ni->sibling) {
+		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			if (is_pass(ni->coord) || map->map[ni->coord] != color)
 				continue;
 			update_node(p, node, result);

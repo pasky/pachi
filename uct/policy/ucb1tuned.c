@@ -26,21 +26,20 @@ struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, stru
 struct tree_node *
 ucb1tuned_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
-	struct boardpos *pos = node->pos;
 	struct ucb1_policy *b = p->data;
-	float xpl = log(pos->playouts) * b->explore_p;
+	float xpl = log(node->playouts) * b->explore_p;
 
-	struct tree_node *nbest = pos->children;
+	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
-	for (struct tree_node *ni = pos->children; ni; ni = ni->sibling) {
+	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
-		float xpl_loc = (ni->pos->value - ni->pos->value * ni->pos->value);
+		float xpl_loc = (ni->value - ni->value * ni->value);
 		if (parity < 0) xpl_loc = 1 - xpl_loc;
-		xpl_loc += sqrt(xpl / ni->pos->playouts);
+		xpl_loc += sqrt(xpl / ni->playouts);
 		if (xpl_loc > 1.0/4) xpl_loc = 1.0/4;
-		float urgency = ni->pos->value * parity + sqrt(xpl * xpl_loc / ni->pos->playouts);
+		float urgency = ni->value * parity + sqrt(xpl * xpl_loc / ni->playouts);
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
