@@ -9,8 +9,6 @@
 
 
 /* The following arguments tune domain-specific heuristics.
- * pure				turns all the heuristics off; you can then turn
- * 				them on selectively
  * capture_rate=MC_CAPTURERATE	how many of 100 moves should be non-random but
  * 				fix local atari, if there is any
  * atari_rate=MC_ATARIRATE	how many of 100 moves should be non-random but
@@ -352,9 +350,7 @@ playout_old_init(char *arg)
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
-			if (!strcasecmp(optname, "pure")) {
-				pp->capture_rate = pp->atari_rate = pp->local_rate = pp->cut_rate = 0;
-			} else if (!strcasecmp(optname, "capturerate") && optval) {
+			if (!strcasecmp(optname, "capturerate") && optval) {
 				pp->capture_rate = atoi(optval);
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atari_rate = atoi(optval);

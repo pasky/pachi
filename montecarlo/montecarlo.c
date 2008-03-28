@@ -8,6 +8,7 @@
 #include "move.h"
 #include "playout/moggy.h"
 #include "playout/old.h"
+#include "playout/light.h"
 #include "montecarlo/internal.h"
 #include "montecarlo/montecarlo.h"
 #include "playout.h"
@@ -227,6 +228,8 @@ montecarlo_state_init(char *arg)
 					mc->playout = playout_old_init(playoutarg);
 				} else if (!strcasecmp(optval, "moggy")) {
 					mc->playout = playout_moggy_init(playoutarg);
+				} else if (!strcasecmp(optval, "light")) {
+					mc->playout = playout_light_init(playoutarg);
 				} else {
 					fprintf(stderr, "MonteCarlo: Invalid playout policy %s\n", optval);
 				}

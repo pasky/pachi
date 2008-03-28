@@ -11,6 +11,7 @@
 #include "playout.h"
 #include "playout/moggy.h"
 #include "playout/old.h"
+#include "playout/light.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
@@ -284,6 +285,8 @@ uct_state_init(char *arg)
 					u->playout = playout_old_init(playoutarg);
 				} else if (!strcasecmp(optval, "moggy")) {
 					u->playout = playout_moggy_init(playoutarg);
+				} else if (!strcasecmp(optval, "light")) {
+					u->playout = playout_light_init(playoutarg);
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 				}
