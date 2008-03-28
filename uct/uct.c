@@ -83,7 +83,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	struct playout_amafmap *amaf = NULL;
 	if (u->policy->wants_amaf) {
 		amaf = calloc(1, sizeof(*amaf));
-		amaf->map = calloc(b2.size2, sizeof(*amaf->map));
+		amaf->map = calloc(b2.size2 + 1, sizeof(*amaf->map));
+		amaf->map++; // -1 is pass
 	}
 
 	/* Walk the tree until we find a leaf, then expand it and do
@@ -112,6 +113,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->pos->value);
+		if (amaf && n->coord >= -1)
+			amaf->map[n->coord] = color;
 		struct move m = { n->coord, color };
 		int res = board_play(&b2, &m);
 		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
@@ -140,12 +143,13 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	}
 
 	assert(n == t->root || n->parent);
+	amaf->color = stone_other(color);
 	if (result >= 0)
 		u->policy->update(u->policy, n, amaf, result);
 
 end:
 	if (amaf) {
-		free(amaf->map);
+		free(amaf->map - 1);
 		free(amaf);
 	}
 	board_done_noalloc(&b2);
