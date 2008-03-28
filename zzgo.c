@@ -8,7 +8,6 @@
 #include "debug.h"
 #include "engine.h"
 #include "montecarlo/montecarlo.h"
-#include "montecasino/montecasino.h"
 #include "random/random.h"
 #include "uct/uct.h"
 #include "gtp.h"
@@ -21,7 +20,7 @@ int seed;
 int main(int argc, char *argv[])
 {
 	struct board *b = board_init();
-	enum { E_RANDOM, E_MONTECARLO, E_MONTECASINO, E_UCT } engine = E_UCT;
+	enum { E_RANDOM, E_MONTECARLO, E_UCT } engine = E_UCT;
 
 	seed = time(NULL);
 
@@ -33,8 +32,6 @@ int main(int argc, char *argv[])
 					engine = E_RANDOM;
 				} else if (!strcasecmp(optarg, "montecarlo")) {
 					engine = E_MONTECARLO;
-				} else if (!strcasecmp(optarg, "montecasino")) {
-					engine = E_MONTECASINO;
 				} else if (!strcasecmp(optarg, "uct")) {
 					engine = E_UCT;
 				} else {
@@ -50,7 +47,7 @@ int main(int argc, char *argv[])
 				break;
 			default: /* '?' */
 				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-				fprintf(stderr, "Usage: %s [-e random|montecarlo|montecasino|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
+				fprintf(stderr, "Usage: %s [-e random|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}
@@ -70,8 +67,6 @@ int main(int argc, char *argv[])
 			e = engine_random_init(e_arg); break;
 		case E_MONTECARLO:
 			e = engine_montecarlo_init(e_arg); break;
-		case E_MONTECASINO:
-			e = engine_montecasino_init(e_arg); break;
 		case E_UCT:
 			e = engine_uct_init(e_arg); break;
 
