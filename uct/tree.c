@@ -15,14 +15,17 @@
 static struct boardpos *
 init_boardpos(struct tree *t, hash_t hash)
 {
-	int h;
-	for (h = hash & uct_hash_mask; t->positions[h]; h = uct_hash_next(h))
-		if (t->positions[h]->hash == hash)
-			return t->positions[h];
+	int h = 0;
+	if (t->sharepos) {
+		for (h = hash & uct_hash_mask; t->positions[h]; h = uct_hash_next(h))
+			if (t->positions[h]->hash == hash)
+				return t->positions[h];
+	}
 
 	struct boardpos *pos = calloc(1, sizeof(*pos));
 	pos->hash = hash;
-	t->positions[h] = pos;
+	if (t->sharepos)
+		t->positions[h] = pos;
 	return pos;
 }
 
@@ -41,12 +44,13 @@ tree_init_node(struct tree *t, coord_t coord, struct boardpos *pos)
 }
 
 struct tree *
-tree_init(struct board *board, enum stone color)
+tree_init(struct board *board, enum stone color, bool sharepos)
 {
 	struct tree *t = calloc(1, sizeof(*t));
+	t->board = board;
+	t->sharepos = sharepos;
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, init_boardpos(t, 0 ^ color));
-	t->board = board;
 	return t;
 }
 
@@ -122,15 +126,17 @@ done_boardpos(struct tree *t, struct boardpos *pos, struct tree_node *n)
 		tree_done_node(t, ni);
 		ni = nj;
 	}
-	bool found = false;
-	for (int h = pos->hash & uct_hash_mask; t->positions[h]; h = uct_hash_next(h))
-		if (t->positions[h] == pos) {
-			assert(h >= (t->positions[h]->hash & uct_hash_mask));
-			remove_hash_from_chain(t, pos, h);
-			found = true;
-			break;
-		}
-	assert(found);
+	if (t->sharepos) {
+		bool found = false;
+		for (int h = pos->hash & uct_hash_mask; t->positions[h]; h = uct_hash_next(h))
+			if (t->positions[h] == pos) {
+				assert(h >= (t->positions[h]->hash & uct_hash_mask));
+				remove_hash_from_chain(t, pos, h);
+				found = true;
+				break;
+			}
+		assert(found);
+	}
 	free(pos);
 }
 

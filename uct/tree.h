@@ -47,6 +47,8 @@ struct tree {
 	struct tree_node *root;
 	struct board *board;
 
+	bool sharepos;
+
 #define uct_hash_bits 25
 #define uct_hash_mask ((1 << uct_hash_bits) - 1)
 #define uct_hash_prev(i) ((i - 1) & uct_hash_mask)
@@ -59,7 +61,7 @@ struct tree {
 	int reused_pos, total_pos;
 };
 
-struct tree *tree_init(struct board *board, enum stone color);
+struct tree *tree_init(struct board *board, enum stone color, bool sharepos);
 void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree);
 

@@ -168,7 +168,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	if (!u->t) {
 tree_init:
-		u->t = tree_init(b, color);
+		u->t = tree_init(b, color, u->sharepos);
 		//board_print(b, stderr);
 	} else {
 		/* XXX: We hope that the opponent didn't suddenly play
@@ -270,6 +270,11 @@ uct_state_init(char *arg)
 				 * are included in AMAF. Of course makes sense
 				 * only in connection with an AMAF policy.) */
 				u->playout_amaf = true;
+			} else if (!strcasecmp(optname, "sharepos")) {
+				/* Whether to reuse statistics between different
+				 * orders of play leading to the same position.
+				 * This should be always beneficial. */
+				u->sharepos = true;
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				char *policyarg = strchr(optval, ':');
 				if (policyarg)

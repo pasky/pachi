@@ -22,7 +22,7 @@ struct uct {
 	float loss_threshold;
 	int expand_p;
 	int radar_d;
-	bool playout_amaf;
+	bool playout_amaf, sharepos;
 
 	struct montecarlo mc;
 	struct uct_policy *policy;
