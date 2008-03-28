@@ -240,7 +240,7 @@ montecarlo_state_init(char *arg)
 	}
 
 	if (!mc->playout)
-		mc->playout = playout_old_init(NULL);
+		mc->playout = playout_light_init(NULL);
 	mc->playout->debug_level = mc->debug_level;
 
 	mc->resign_ratio = 0.1; /* Resign when most games are lost. */

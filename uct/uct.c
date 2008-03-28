@@ -302,7 +302,7 @@ uct_state_init(char *arg)
 		u->policy = policy_ucb1_init(u, NULL);
 
 	if (!u->playout)
-		u->playout = playout_old_init(NULL);
+		u->playout = playout_light_init(NULL);
 	u->playout->debug_level = u->debug_level;
 
 	return u;
