@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 				break;
 			default: /* '?' */
 				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-				fprintf(stderr, "Usage: %s [-e random|montecarlo|montecasino] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
+				fprintf(stderr, "Usage: %s [-e random|montecarlo|montecasino|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}
