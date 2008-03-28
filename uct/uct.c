@@ -148,7 +148,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	}
 
 	assert(n == t->root || n->parent);
-	amaf->color = stone_other(color);
+	if (amaf)
+		amaf->color = stone_other(color);
 	if (result >= 0)
 		u->policy->update(u->policy, n, amaf, result);
 
