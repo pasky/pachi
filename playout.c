@@ -11,7 +11,7 @@
 int
 play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		 struct playout_amafmap *amafmap,
-		 playout_policeman policeman, void *policy)
+		 struct playout_policy *policy)
 {
 	gamelen = gamelen - b->moves;
 	if (gamelen < 10)
@@ -27,7 +27,7 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 	int passes = is_pass(b->last_move.coord);
 
 	while (gamelen-- && passes < 2) {
-		urgent = policeman(policy, b, policy_color);
+		urgent = policy->choose(policy, b, policy_color);
 
 		coord_t coord;
 

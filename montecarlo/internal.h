@@ -4,6 +4,8 @@
 #include "debug.h"
 #include "move.h"
 
+struct playout_policy;
+
 /* Internal MonteCarlo structures */
 
 
@@ -11,12 +13,9 @@
 struct montecarlo {
 	int debug_level;
 	int games, gamelen;
-	int capture_rate, atari_rate, cut_rate, local_rate;
 	float resign_ratio;
 	int loss_threshold;
-
-	coord_t last_hint;
-	int last_hint_value;
+	struct playout_policy *playout;
 };
 
 #define MCDEBUGL(n) DEBUGL_(mc->debug_level, n)

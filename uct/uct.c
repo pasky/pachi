@@ -77,13 +77,6 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 }
 
 
-static coord_t
-domainhint_policy(void *playout_policy, struct board *b, enum stone my_color)
-{
-	struct uct *u = playout_policy;
-	return u->playout(&u->mc, b, my_color);
-}
-
 static int
 uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
@@ -111,7 +104,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			if (n->playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2, color, u->radar_d);
 
-			result = play_random_game(&b2, color, u->gamelen, u->playout_amaf ? amaf : NULL, domainhint_policy, u);
+			result = play_random_game(&b2, color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
 			if (orig_color != color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
@@ -238,12 +231,6 @@ uct_state_init(char *arg)
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
 	u->expand_p = 2;
-	u->mc.capture_rate = 100;
-	u->mc.atari_rate = 100;
-	u->mc.cut_rate = 0;
-	// Looking at the actual playouts, this just encourages MC to make
-	// stupid shapes.
-	u->mc.local_rate = 0;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -292,20 +279,10 @@ uct_state_init(char *arg)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "old")) {
-					u->playout = playout_old;
+					u->playout = playout_old_init(playoutarg);
 				} else if (!strcasecmp(optval, "moggy")) {
-					u->playout = playout_moggy;
+					u->playout = playout_moggy_init(playoutarg);
 				}
-			} else if (!strcasecmp(optname, "pure")) {
-				u->mc.capture_rate = u->mc.local_rate = u->mc.cut_rate = 0;
-			} else if (!strcasecmp(optname, "capturerate") && optval) {
-				u->mc.capture_rate = atoi(optval);
-			} else if (!strcasecmp(optname, "atarirate") && optval) {
-				u->mc.atari_rate = atoi(optval);
-			} else if (!strcasecmp(optname, "localrate") && optval) {
-				u->mc.local_rate = atoi(optval);
-			} else if (!strcasecmp(optname, "cutrate") && optval) {
-				u->mc.cut_rate = atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 			}
@@ -314,11 +291,12 @@ uct_state_init(char *arg)
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
 	u->loss_threshold = 0.95; /* Stop reading if after at least 500 playouts this is best value. */
-	u->mc.debug_level = u->debug_level;
 	if (!u->policy)
 		u->policy = policy_ucb1_init(u, NULL);
+
 	if (!u->playout)
-		u->playout = playout_old;
+		u->playout = playout_old_init(NULL);
+	u->playout->debug_level = u->debug_level;
 
 	return u;
 }

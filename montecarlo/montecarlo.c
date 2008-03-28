@@ -6,6 +6,7 @@
 #include "board.h"
 #include "engine.h"
 #include "move.h"
+#include "playout/moggy.h"
 #include "playout/old.h"
 #include "montecarlo/internal.h"
 #include "montecarlo/montecarlo.h"
@@ -24,27 +25,12 @@
  * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
  * games=MC_GAMES		number of random games to play
  * gamelen=MC_GAMELEN		maximal length of played random game
- *
- * The following arguments tune domain-specific heuristics. They tend to carry
- * very high performance penalty.
- * pure				turns all the heuristics off; you can then turn
- * 				them on selectively
- * capture_rate=MC_CAPTURERATE	how many of 100 moves should be non-random but
- * 				fix local atari, if there is any
- * atari_rate=MC_ATARIRATE	how many of 100 moves should be non-random but
- * 				make an atari, if there is any
- * local_rate=MC_LOCALRATE	how many of 100 moves should be contact plays
- * 				(tsuke or diagonal)
- * cut_rate=MC_CUTRATE		how many of 100 moves should fix local cuts,
- * 				if there are any */
+ * playout={old,moggy}[:playout_params]
+ */
 
 
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
-#define MC_CAPTURERATE	50
-#define MC_ATARIRATE	50
-#define MC_CUTRATE	40
-#define MC_LOCALRATE	30
 
 
 /* FIXME: Cutoff rule for simulations. Currently we are so fast that this
@@ -124,7 +110,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		if (DEBUGL(3))
 			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord, b), coord_y(coord, b), color);
 
-		int result = play_random_game(&b2, color, mc->gamelen, NULL, playout_old, mc);
+		int result = play_random_game(&b2, color, mc->gamelen, NULL, mc->playout);
 
 		board_done_noalloc(&b2);
 
@@ -209,15 +195,9 @@ montecarlo_state_init(char *arg)
 {
 	struct montecarlo *mc = calloc(1, sizeof(struct montecarlo));
 
-	mc->last_hint = pass;
-
 	mc->debug_level = 1;
 	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
-	mc->capture_rate = MC_CAPTURERATE;
-	mc->atari_rate = MC_ATARIRATE;
-	mc->local_rate = MC_LOCALRATE;
-	mc->cut_rate = MC_CUTRATE;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -239,21 +219,24 @@ montecarlo_state_init(char *arg)
 				mc->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
-			} else if (!strcasecmp(optname, "pure")) {
-				mc->capture_rate = mc->atari_rate = mc->local_rate = mc->cut_rate = 0;
-			} else if (!strcasecmp(optname, "capturerate") && optval) {
-				mc->capture_rate = atoi(optval);
-			} else if (!strcasecmp(optname, "atarirate") && optval) {
-				mc->atari_rate = atoi(optval);
-			} else if (!strcasecmp(optname, "localrate") && optval) {
-				mc->local_rate = atoi(optval);
-			} else if (!strcasecmp(optname, "cutrate") && optval) {
-				mc->cut_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "playout") && optval) {
+				char *playoutarg = strchr(optval, ':');
+				if (playoutarg)
+					*playoutarg++ = 0;
+				if (!strcasecmp(optval, "old")) {
+					mc->playout = playout_old_init(playoutarg);
+				} else if (!strcasecmp(optval, "moggy")) {
+					mc->playout = playout_moggy_init(playoutarg);
+				}
 			} else {
 				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
 			}
 		}
 	}
+
+	if (!mc->playout)
+		mc->playout = playout_old_init(NULL);
+	mc->playout->debug_level = mc->debug_level;
 
 	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
 	mc->loss_threshold = mc->games / 10; /* Stop reading if no loss encountered in first n games. */

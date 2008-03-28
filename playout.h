@@ -6,7 +6,15 @@ struct move;
 enum stone;
 
 
-typedef coord_t (*playout_policeman)(void *playout_policy, struct board *b, enum stone my_color);
+struct playout_policy;
+typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone my_color);
+
+struct playout_policy {
+	int debug_level;
+	playoutp_choose choose;
+	void *data;
+};
+
 
 /* Record of the random playout - for each intersection:
  * S_NONE: This move was never played
@@ -21,6 +29,6 @@ struct playout_amafmap {
 
 /* 1: starting_color wins, 0: starting_color loses
  * -1: superko inside the game tree */
-int play_random_game(struct board *b, enum stone starting_color, int gamelen, struct playout_amafmap *amafmap, playout_policeman policeman, void *policy);
+int play_random_game(struct board *b, enum stone starting_color, int gamelen, struct playout_amafmap *amafmap, struct playout_policy *policy);
 
 #endif

@@ -5,8 +5,6 @@
 #include "move.h"
 #include "playout.h"
 
-#include "montecarlo/internal.h"
-
 struct tree;
 struct tree_node;
 struct uct_policy;
@@ -24,10 +22,9 @@ struct uct {
 	int radar_d;
 	bool playout_amaf;
 
-	struct montecarlo mc;
 	struct uct_policy *policy;
 	struct tree *t;
-	playout_policeman playout;
+	struct playout_policy *playout;
 };
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)

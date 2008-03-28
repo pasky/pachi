@@ -4,11 +4,11 @@
 
 #include "board.h"
 #include "debug.h"
-#include "montecarlo/internal.h"
+#include "playout.h"
 #include "playout/moggy.h"
 #include "random.h"
 
-#define PLDEBUGL(n) DEBUGL_(debug_level, n)
+#define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
 
 /* Is this ladder breaker friendly for the one who catches ladder. */
@@ -139,7 +139,7 @@ global_atari_check(struct board *b)
 }
 
 coord_t
-playout_moggy(struct montecarlo *mc, struct board *b, enum stone our_real_color)
+playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_real_color)
 {
 	coord_t c;
 	if (PLDEBUGL(4))
@@ -159,4 +159,33 @@ playout_moggy(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 		return c;
 
 	return pass;
+}
+
+
+struct playout_policy *
+playout_moggy_init(char *arg)
+{
+	struct playout_policy *p = calloc(1, sizeof(*p));
+	p->choose = playout_moggy_choose;
+
+	if (arg) {
+		char *optspec, *next = arg;
+		while (*next) {
+			optspec = next;
+			next += strcspn(next, ":");
+			if (*next) { *next++ = 0; } else { *next = 0; }
+
+			char *optname = optspec;
+			char *optval = strchr(optspec, '=');
+			if (optval) *optval++ = 0;
+
+			if (0) {
+				// No parameters yet.
+			} else {
+				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
+			}
+		}
+	}
+
+	return p;
 }

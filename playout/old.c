@@ -1,10 +1,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "debug.h"
 #include "board.h"
-#include "montecarlo/internal.h"
 #include "playout/old.h"
+#include "playout.h"
 #include "random.h"
+
+
+/* The following arguments tune domain-specific heuristics.
+ * pure				turns all the heuristics off; you can then turn
+ * 				them on selectively
+ * capture_rate=MC_CAPTURERATE	how many of 100 moves should be non-random but
+ * 				fix local atari, if there is any
+ * atari_rate=MC_ATARIRATE	how many of 100 moves should be non-random but
+ * 				make an atari, if there is any
+ * local_rate=MC_LOCALRATE	how many of 100 moves should be contact plays
+ * 				(tsuke or diagonal)
+ * cut_rate=MC_CUTRATE		how many of 100 moves should fix local cuts,
+ * 				if there are any */
+
+#define MC_CAPTURERATE	50
+#define MC_ATARIRATE	50
+#define MC_CUTRATE	40
+#define MC_LOCALRATE	30
 
 
 /* *** Domain-specific knowledge comes here (that is, any heuristics that perfer
@@ -15,14 +34,25 @@
  * to fix atari on the current board, but it will fix it as the other player
  * when the next move on current board failed to deal with it. */
 
+
+struct old_policy {
+	int capture_rate, atari_rate, cut_rate, local_rate;
+
+	coord_t last_hint;
+	int last_hint_value;
+};
+
+#define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
+
+
 static coord_t
-domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
+domain_hint_capture(struct playout_policy *p, struct board *b, coord_t coord)
 {
 	/* If we or our neighbors are in atari, fix that, (Capture or escape.)
 	 * This test costs a lot of performance (the whole playout is about 1/4
 	 * slower), but improves the playouts a lot. */
 
-	if (MCDEBUGL(8)) {
+	if (PLDEBUGL(8)) {
 		fprintf(stderr, "-- Scanning for %d,%d-capture moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
@@ -48,7 +78,7 @@ domain_hint_capture(struct montecarlo *mc, struct board *b, coord_t coord)
 	if (unlikely(captures_len)) {
 		capture_choice = fast_random(captures_len);
 choosen:
-		if (MCDEBUGL(8)) {
+		if (PLDEBUGL(8)) {
 			fprintf(stderr, "capture moves found:");
 			int i = 0;
 			for (i = 0; i < captures_len; i++)
@@ -92,11 +122,11 @@ validate_atari_pair(struct board *b, coord_t coord[2])
 }
 
 static coord_t
-domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
+domain_hint_atari(struct playout_policy *p, struct board *b, coord_t coord)
 {
 	/* If we can put the last-move group in atari, do that. */
 
-	if (MCDEBUGL(8)) {
+	if (PLDEBUGL(8)) {
 		fprintf(stderr, "-- Scanning for %d,%d-atari moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
@@ -123,7 +153,7 @@ domain_hint_atari(struct montecarlo *mc, struct board *b, coord_t coord)
 	if (unlikely(ataris_len)) {
 		atari_choice = fast_random(ataris_len);
 choosen:
-		if (MCDEBUGL(8)) {
+		if (PLDEBUGL(8)) {
 			fprintf(stderr, "atari moves found:");
 			int i = 0;
 			for (i = 0; i < ataris_len; i++)
@@ -139,13 +169,13 @@ choosen:
 }
 
 static coord_t
-domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
+domain_hint_cut(struct playout_policy *p, struct board *b, coord_t coord)
 {
 	/* Check if this move is cutting kosumi:
 	 * (O) X
 	 *  X  .  */
 
-	if (MCDEBUGL(8)) {
+	if (PLDEBUGL(8)) {
 		fprintf(stderr, "-- Scanning for %d,%d-cut moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
@@ -183,7 +213,7 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 	} foreach_diag_neighbor_end;
 
 	if (unlikely(cuts_len)) {
-		if (MCDEBUGL(8)) {
+		if (PLDEBUGL(8)) {
 			fprintf(stderr, "Cutting moves found:");
 			int i = 0;
 			for (i = 0; i < cuts_len; i++)
@@ -196,13 +226,13 @@ domain_hint_cut(struct montecarlo *mc, struct board *b, coord_t coord)
 }
 
 static coord_t
-domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
+domain_hint_local(struct playout_policy *p, struct board *b, coord_t coord)
 {
 	/* Pick a suitable move that is directly or diagonally adjecent. In the
 	 * real game, local moves often tend to be the urgent ones, even if they
 	 * aren't atari. */
 
-	if (MCDEBUGL(8)) {
+	if (PLDEBUGL(8)) {
 		fprintf(stderr, "-- Scanning for %d,%d-local moves:\n", coord_x(coord, b), coord_y(coord, b));
 		board_print(b, stderr);
 	}
@@ -220,7 +250,7 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 	} foreach_diag_neighbor_end;
 
 	if (likely(neis_len[S_NONE])) {
-		if (MCDEBUGL(8)) {
+		if (PLDEBUGL(8)) {
 			fprintf(stderr, "Local moves found:");
 			int i = 0;
 			for (i = 0; i < neis_len[S_NONE]; i++)
@@ -233,8 +263,10 @@ domain_hint_local(struct montecarlo *mc, struct board *b, coord_t coord)
 }
 
 coord_t
-playout_old(struct montecarlo *mc, struct board *b, enum stone our_real_color)
+playout_old_choose(struct playout_policy *p, struct board *b, enum stone our_real_color)
 {
+	struct old_policy *pp = p->data;
+
 	if (is_pass(b->last_move.coord))
 		return pass;
 
@@ -243,52 +275,98 @@ playout_old(struct montecarlo *mc, struct board *b, enum stone our_real_color)
 	/* Note that we should use this only when the _REAL_ us tenukies
 	 * and the _REAL_ opponent comes back. Otherwise we hope in
 	 * opponent's tenuki too much and play out ladders. :-) */
-	if (!is_pass(mc->last_hint)
-	    && unlikely(!coord_eq(b->last_move.coord, mc->last_hint))
+	if (!is_pass(pp->last_hint)
+	    && unlikely(!coord_eq(b->last_move.coord, pp->last_hint))
 	    && b->last_move.color == our_real_color
-	    && fast_random(100) < mc->last_hint_value) {
-		coord_t urgent = mc->last_hint;
-		mc->last_hint = pass;
+	    && fast_random(100) < pp->last_hint_value) {
+		coord_t urgent = pp->last_hint;
+		pp->last_hint = pass;
 		return urgent;
 	}
 
 	/* In some of the cases, we pick atari response instead of random move.
 	 * If there is an atari, capturing tends to be huge. */
-	if (mc->capture_rate && fast_random(100) < mc->capture_rate) {
-		mc->last_hint = domain_hint_capture(mc, b, b->last_move.coord);
-		if (!is_pass(mc->last_hint)) {
-			mc->last_hint_value = mc->capture_rate;
-			return mc->last_hint;
+	if (pp->capture_rate && fast_random(100) < pp->capture_rate) {
+		pp->last_hint = domain_hint_capture(p, b, b->last_move.coord);
+		if (!is_pass(pp->last_hint)) {
+			pp->last_hint_value = pp->capture_rate;
+			return pp->last_hint;
 		}
 	}
 
 	/* Maybe we can _put_ some stones into atari. That's cool. */
-	if (mc->capture_rate && fast_random(100) < mc->atari_rate) {
-		mc->last_hint = domain_hint_atari(mc, b, b->last_move.coord);
-		if (!is_pass(mc->last_hint)) {
-			mc->last_hint_value = mc->capture_rate;
-			return mc->last_hint;
+	if (pp->capture_rate && fast_random(100) < pp->atari_rate) {
+		pp->last_hint = domain_hint_atari(p, b, b->last_move.coord);
+		if (!is_pass(pp->last_hint)) {
+			pp->last_hint_value = pp->capture_rate;
+			return pp->last_hint;
 		}
 	}
 
 	/* Cutting is kinda urgent, too. */
-	if (mc->cut_rate && fast_random(100) < mc->cut_rate) {
-		mc->last_hint = domain_hint_cut(mc, b, b->last_move.coord);
-		if (!is_pass(mc->last_hint)) {
-			mc->last_hint_value = mc->cut_rate;
-			return mc->last_hint;
+	if (pp->cut_rate && fast_random(100) < pp->cut_rate) {
+		pp->last_hint = domain_hint_cut(p, b, b->last_move.coord);
+		if (!is_pass(pp->last_hint)) {
+			pp->last_hint_value = pp->cut_rate;
+			return pp->last_hint;
 		}
 	}
 
 	/* For the non-urgent moves, some of them will be contact play (tsuke
 	 * or diagonal). These tend to be likely urgent. */
-	if (mc->local_rate && fast_random(100) < mc->local_rate) {
-		mc->last_hint = domain_hint_local(mc, b, b->last_move.coord);
-		if (!is_pass(mc->last_hint)) {
-			mc->last_hint_value = mc->local_rate;
-			return mc->last_hint;
+	if (pp->local_rate && fast_random(100) < pp->local_rate) {
+		pp->last_hint = domain_hint_local(p, b, b->last_move.coord);
+		if (!is_pass(pp->last_hint)) {
+			pp->last_hint_value = pp->local_rate;
+			return pp->last_hint;
 		}
 	}
 
-	return ((mc->last_hint = pass));
+	return ((pp->last_hint = pass));
+}
+
+
+struct playout_policy *
+playout_old_init(char *arg)
+{
+	struct playout_policy *p = calloc(1, sizeof(*p));
+	struct old_policy *pp = calloc(1, sizeof(*pp));
+	p->data = pp;
+	p->choose = playout_old_choose;
+
+	pp->last_hint = pass;
+
+	pp->capture_rate = MC_CAPTURERATE;
+	pp->atari_rate = MC_ATARIRATE;
+	pp->local_rate = MC_LOCALRATE;
+	pp->cut_rate = MC_CUTRATE;
+
+	if (arg) {
+		char *optspec, *next = arg;
+		while (*next) {
+			optspec = next;
+			next += strcspn(next, ":");
+			if (*next) { *next++ = 0; } else { *next = 0; }
+
+			char *optname = optspec;
+			char *optval = strchr(optspec, '=');
+			if (optval) *optval++ = 0;
+
+			if (!strcasecmp(optname, "pure")) {
+				pp->capture_rate = pp->atari_rate = pp->local_rate = pp->cut_rate = 0;
+			} else if (!strcasecmp(optname, "capturerate") && optval) {
+				pp->capture_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "atarirate") && optval) {
+				pp->atari_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "localrate") && optval) {
+				pp->local_rate = atoi(optval);
+			} else if (!strcasecmp(optname, "cutrate") && optval) {
+				pp->cut_rate = atoi(optval);
+			} else {
+				fprintf(stderr, "playout-old: Invalid policy argument %s or missing value\n", optname);
+			}
+		}
+	}
+
+	return p;
 }
