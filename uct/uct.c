@@ -102,7 +102,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			if (n->pos->playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2, color, u->radar_d);
 
-			result = play_random_game(&b2, color, u->gamelen, amaf, domainhint_policy, u);
+			result = play_random_game(&b2, color, u->gamelen, u->playout_amaf ? amaf : NULL, domainhint_policy, u);
 			if (orig_color != color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
@@ -260,6 +260,12 @@ uct_state_init(char *arg)
 			} else if (!strcasecmp(optname, "radar_d") && optval) {
 				/* For 19x19, it is good idea to set this to 3. */
 				u->radar_d = atoi(optval);
+			} else if (!strcasecmp(optname, "playout_amaf")) {
+				/* Whether to include random playout moves in
+				 * AMAF as well. (Otherwise, only tree moves
+				 * are included in AMAF. Of course makes sense
+				 * only in connection with an AMAF policy.) */
+				u->playout_amaf = true;
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				char *policyarg = strchr(optval, ':');
 				if (policyarg)
