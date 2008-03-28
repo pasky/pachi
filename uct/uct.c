@@ -17,6 +17,7 @@
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1tuned_init(struct uct *u, char *arg);
+struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 
 
 #define MC_GAMES	40000
@@ -267,6 +268,8 @@ uct_state_init(char *arg)
 					u->policy = policy_ucb1_init(u, policyarg);
 				} else if (!strcasecmp(optval, "ucb1tuned")) {
 					u->policy = policy_ucb1tuned_init(u, policyarg);
+				} else if (!strcasecmp(optval, "ucb1amaf")) {
+					u->policy = policy_ucb1amaf_init(u, policyarg);
 				}
 			} else if (!strcasecmp(optname, "playout") && optval) {
 				char *playoutarg = strchr(optval, ':');
