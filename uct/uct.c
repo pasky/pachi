@@ -103,7 +103,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
 			if (n->playouts >= u->expand_p)
-				tree_expand_node(t, n, &b2, color, u->radar_d);
+				tree_expand_node(t, n, &b2, color, u->radar_d, u->policy);
 
 			result = play_random_game(&b2, color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
 			if (orig_color != color && result >= 0)

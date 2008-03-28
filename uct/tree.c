@@ -9,6 +9,7 @@
 #include "engine.h"
 #include "move.h"
 #include "playout.h"
+#include "uct/internal.h"
 #include "uct/tree.h"
 
 
@@ -87,10 +88,8 @@ tree_dump(struct tree *tree)
 
 
 void
-tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar)
+tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy)
 {
-	assert(!node->children);
-
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
 
@@ -106,6 +105,9 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 
 			struct tree_node *nj = tree_init_node(t, c, node->depth + 1);
 			nj->parent = node; ni->sibling = nj; ni = nj;
+
+			if (policy->prior)
+				policy->prior(policy, t, ni, color);
 		}
 	}
 }
