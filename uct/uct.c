@@ -57,6 +57,7 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 	while (best) {
 		int c = 0;
 		while ((!can[c] || best->pos->playouts > can[c]->pos->playouts) && ++c < cans);
+		for (int d = 0; d < c; d++) can[d] = can[d + 1];
 		if (c > 0) can[c - 1] = best;
 		best = best->sibling;
 	}
