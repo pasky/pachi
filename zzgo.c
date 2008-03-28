@@ -13,6 +13,7 @@
 #include "uct/uct.h"
 #include "gtp.h"
 #include "random.h"
+#include "version.h"
 
 int debug_level = 1;
 int seed;
@@ -48,6 +49,7 @@ int main(int argc, char *argv[])
 				seed = atoi(optarg);
 				break;
 			default: /* '?' */
+				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 				fprintf(stderr, "Usage: %s [-e random|montecarlo|montecasino] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);

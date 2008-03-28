@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "engine.h"
 #include "gtp.h"
+#include "version.h"
 
 void
 gtp_prefix(char prefix, int id)
@@ -87,7 +88,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		gtp_reply(id, "Pachi ", engine->name, ": ", engine->comment, NULL);
 
 	} else if (!strcasecmp(cmd, "version")) {
-		gtp_reply(id, NULL);
+		gtp_reply(id, PACHI_VERSION, NULL);
 
 		/* TODO: known_command */
 
