@@ -61,7 +61,11 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 		best = best->sibling;
 	}
 	while (--cans >= 0) {
-		fprintf(stderr, "%s(%.3f) ", coord2sstr(can[cans]->coord, t->board), can[cans]->pos->value);
+		if (can[cans]) {
+			fprintf(stderr, "%3s(%.3f) ", coord2sstr(can[cans]->coord, t->board), can[cans]->pos->value);
+		} else {
+			fprintf(stderr, "           ");
+		}
 	}
 
 	fprintf(stderr, "\n");
