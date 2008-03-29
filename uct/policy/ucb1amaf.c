@@ -26,6 +26,8 @@ struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, stru
 
 struct tree_node *ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
 
+void ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color);
+
 static void
 update_node(struct uct_policy *p, struct tree_node *node, int result)
 {
@@ -81,6 +83,10 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 
 			if (!strcasecmp(optname, "explore_p")) {
 				b->explore_p = atof(optval);
+			} else if (!strcasecmp(optname, "prior")) {
+				p->prior = ucb1_prior;
+			} else if (!strcasecmp(optname, "fpu") && optval) {
+				b->fpu = atof(optval);
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}
