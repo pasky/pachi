@@ -18,6 +18,10 @@ struct ucb1_policy {
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
 	float explore_p;
+	/* First Play Urgency - if set to less than infinity (the MoGo paper
+	 * above reports 1.0 as the best), new branches are explored only
+	 * if none of the existing ones has higher urgency than fpu. */
+	float fpu;
 };
 
 
@@ -56,7 +60,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
-		float urgency = ni->value * parity + sqrt(xpl / ni->playouts);
+		float urgency = ni->playouts ? ni->value * parity + sqrt(xpl / ni->playouts) : b->fpu;
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
@@ -136,6 +140,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 	p->update = ucb1_update;
 
 	b->explore_p = 0.2;
+	b->fpu = INFINITY;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -148,10 +153,12 @@ policy_ucb1_init(struct uct *u, char *arg)
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
-			if (!strcasecmp(optname, "explore_p")) {
+			if (!strcasecmp(optname, "explore_p") && optval) {
 				b->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "prior")) {
 				p->prior = ucb1_prior;
+			} else if (!strcasecmp(optname, "fpu") && optval) {
+				b->fpu = atof(optval);
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}
