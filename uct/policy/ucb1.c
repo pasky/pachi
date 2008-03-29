@@ -108,7 +108,7 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	}
 
 	if (node->playouts)
-		node->value = node->wins / node->playouts;
+		node->value = (float) node->wins / node->playouts;
 
 	//fprintf(stderr, "prior: %d/%d\n", node->wins, node->playouts);
 }
