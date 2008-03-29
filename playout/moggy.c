@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -161,12 +162,32 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 	return pass;
 }
 
+float
+playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
+{
+	if (is_pass(m->coord))
+		return NAN;
+
+	if (PLDEBUGL(4))
+		board_print(b, stderr);
+
+	/* Are we dealing with atari? */
+	foreach_neighbor(b, m->coord, {
+		if (board_group_info(b, group_at(b, c)).libs == 1
+		    && group_atari_check(p, b, group_at(b, c)) == m->coord)
+			return 1.0;
+	});
+
+	return NAN;
+}
+
 
 struct playout_policy *
 playout_moggy_init(char *arg)
 {
 	struct playout_policy *p = calloc(1, sizeof(*p));
 	p->choose = playout_moggy_choose;
+	p->assess = playout_moggy_assess;
 
 	if (arg) {
 		char *optspec, *next = arg;
