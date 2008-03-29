@@ -196,9 +196,9 @@ promoted:;
 			progress_status(u, u->t, color);
 		}
 
-		if (i > 0 && !(i % 1000)) {
+		if (i > 0 && !(i % 500)) {
 			struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
-			if (best && best->playouts >= 500 && best->value >= u->loss_threshold)
+			if (best && best->playouts >= 1000 && best->value >= u->loss_threshold)
 				break;
 		}
 	}
