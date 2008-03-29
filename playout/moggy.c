@@ -20,7 +20,7 @@ ladder_catcher(struct board *b, int x, int y, enum stone laddered)
 }
 
 static bool
-ladder_catches(struct board *b, coord_t coord, group_t laddered)
+ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t laddered)
 {
 	/* This is very trivial and gets a lot of corner cases wrong.
 	 * We need this to be just very fast. */
@@ -91,7 +91,7 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered)
 
 
 static coord_t
-group_atari_check(struct board *b, group_t group)
+group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 {
 	enum stone color = board_at(b, group);
 	coord_t lib = board_group_info(b, group).lib[0];
@@ -110,7 +110,7 @@ group_atari_check(struct board *b, group_t group)
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
-	if (ladder_catches(b, lib, group))
+	if (ladder_catches(p, b, lib, group))
 		return pass;
 	if (PLDEBUGL(4))
 		fprintf(stderr, "...no ladder\n");
@@ -119,19 +119,19 @@ group_atari_check(struct board *b, group_t group)
 }
 
 static coord_t
-global_atari_check(struct board *b)
+global_atari_check(struct playout_policy *p, struct board *b)
 {
 	if (b->clen == 0)
 		return pass;
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		coord_t c = group_atari_check(b, b->c[g]);
+		coord_t c = group_atari_check(p, b, b->c[g]);
 		if (!is_pass(c))
 			return c;
 	}
 	for (int g = 0; g < g_base; g++) {
-		coord_t c = group_atari_check(b, b->c[g]);
+		coord_t c = group_atari_check(p, b, b->c[g]);
 		if (!is_pass(c))
 			return c;
 	}
@@ -154,7 +154,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 	/* Global checks */
 
 	/* Any groups in atari? */
-	c = global_atari_check(b);
+	c = global_atari_check(p, b);
 	if (!is_pass(c))
 		return c;
 
