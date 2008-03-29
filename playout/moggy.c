@@ -12,6 +12,12 @@
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
 
+struct moggy_policy {
+	int capturerate;
+	bool ladders;
+};
+
+
 /* Is this ladder breaker friendly for the one who catches ladder. */
 static bool
 ladder_catcher(struct board *b, int x, int y, enum stone laddered)
@@ -94,8 +100,10 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 static coord_t
 group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 {
+	struct moggy_policy *pp = p->data;
 	enum stone color = board_at(b, group);
 	coord_t lib = board_group_info(b, group).lib[0];
+
 	if (board_at(b, group) == S_OFFBOARD) {
 		/* Bogus group. */
 		return pass;
@@ -111,7 +119,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
-	if (ladder_catches(p, b, lib, group))
+	if (pp->ladders && ladder_catches(p, b, lib, group))
 		return pass;
 	if (PLDEBUGL(4))
 		fprintf(stderr, "...no ladder\n");
@@ -142,7 +150,9 @@ global_atari_check(struct playout_policy *p, struct board *b)
 coord_t
 playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_real_color)
 {
+	struct moggy_policy *pp = p->data;
 	coord_t c;
+
 	if (PLDEBUGL(4))
 		board_print(b, stderr);
 
@@ -155,9 +165,11 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 	/* Global checks */
 
 	/* Any groups in atari? */
-	c = global_atari_check(p, b);
-	if (!is_pass(c))
-		return c;
+	if (pp->capturerate > fast_random(100)) {
+		c = global_atari_check(p, b);
+		if (!is_pass(c))
+			return c;
+	}
 
 	return pass;
 }
@@ -165,6 +177,8 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 float
 playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 {
+	struct moggy_policy *pp = p->data;
+
 	if (is_pass(m->coord))
 		return NAN;
 
@@ -172,11 +186,13 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 		board_print(b, stderr);
 
 	/* Are we dealing with atari? */
-	foreach_neighbor(b, m->coord, {
-		if (board_group_info(b, group_at(b, c)).libs == 1
-		    && group_atari_check(p, b, group_at(b, c)) == m->coord)
-			return 1.0;
-	});
+	if (pp->capturerate > fast_random(100)) {
+		foreach_neighbor(b, m->coord, {
+			if (board_group_info(b, group_at(b, c)).libs == 1
+			    && group_atari_check(p, b, group_at(b, c)) == m->coord)
+				return 1.0;
+		});
+	}
 
 	return NAN;
 }
@@ -186,8 +202,12 @@ struct playout_policy *
 playout_moggy_init(char *arg)
 {
 	struct playout_policy *p = calloc(1, sizeof(*p));
+	struct moggy_policy *pp = calloc(1, sizeof(*pp));
+	p->data = pp;
 	p->choose = playout_moggy_choose;
 	p->assess = playout_moggy_assess;
+
+	pp->capturerate = 100;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -200,8 +220,10 @@ playout_moggy_init(char *arg)
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
-			if (0) {
-				// No parameters yet.
+			if (!strcasecmp(optname, "capturerate") && optval) {
+				pp->capturerate = atoi(optval);
+			} else if (!strcasecmp(optname, "ladders")) {
+				pp->ladders = true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 			}
