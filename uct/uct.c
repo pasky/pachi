@@ -40,7 +40,7 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 	fprintf(stderr, "best %f ", best->value);
 
 	/* Max depth */
-	fprintf(stderr, "deepest %d ", t->max_depth);
+	fprintf(stderr, "deepest % 2d ", t->max_depth - t->root->depth);
 
 	/* Best sequence */
 	fprintf(stderr, "| seq ");
