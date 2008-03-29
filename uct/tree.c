@@ -65,7 +65,7 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l)
 
 	struct tree_node *nbox[1000]; int nboxl = 0;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
-		if (ni->playouts > 200)
+		if (ni->playouts > 500)
 			nbox[nboxl++] = ni;
 
 	while (true) {
