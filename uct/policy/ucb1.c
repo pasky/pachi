@@ -83,15 +83,10 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	struct tree_node *gp = node->parent ? node->parent->parent : NULL;
 	if (gp) {
 		for (struct tree_node *ni = gp->children; ni; ni = ni->sibling) {
-			if (ni->coord == node->coord) {
-				/* Be careful not to emphasize too random results. */
-				int playouts = ni->playouts, wins = ni->wins;
-				if (playouts > eqex) {
-					playouts = eqex;
-					wins = eqex * wins / playouts;
-				}
-				node->playouts += playouts;
-				node->wins += wins;
+			/* Be careful not to emphasize too random results. */
+			if (ni->coord == node->coord && ni->playouts > eqex * 2) {
+				node->playouts += eqex;
+				node->wins += eqex * ni->wins / ni->playouts;
 			}
 		}
 	}
