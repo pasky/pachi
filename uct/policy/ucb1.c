@@ -66,6 +66,55 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 }
 
 void
+ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color)
+{
+	/* Initialization of UCT values based on prior knowledge */
+
+	int eqex = 50; // majic
+
+#if 0
+	/* Q_{even} */
+	/* This somehow does not work at all. */
+	node->playouts += eqex;
+	node->wins += eqex / 2;
+#endif
+
+	/* Q_{grandparent} */
+	struct tree_node *gp = node->parent ? node->parent->parent : NULL;
+	if (gp) {
+		for (struct tree_node *ni = gp->children; ni; ni = ni->sibling) {
+			if (ni->coord == node->coord) {
+				/* Be careful not to emphasize too random results. */
+				int playouts = ni->playouts, wins = ni->wins;
+				if (playouts > eqex) {
+					playouts = eqex;
+					wins = eqex * wins / playouts;
+				}
+				node->playouts += playouts;
+				node->wins += wins;
+			}
+		}
+	}
+
+	/* Q_{playout-policy} */
+	float assess = NAN;
+	struct playout_policy *playout = p->uct->playout;
+	if (playout->assess) {
+		struct move m = { node->coord, color };
+		assess = playout->assess(playout, b, &m);
+	}
+	if (!isnan(assess)) {
+		node->playouts += eqex;
+		node->wins += eqex * assess;
+	}
+
+	if (node->playouts)
+		node->value = node->wins / node->playouts;
+
+	//fprintf(stderr, "prior: %d/%d\n", node->wins, node->playouts);
+}
+
+void
 ucb1_update(struct uct_policy *p, struct tree_node *node, struct playout_amafmap *map, int result)
 {
 	/* It is enough to iterate by a single chain; we will
@@ -106,6 +155,8 @@ policy_ucb1_init(struct uct *u, char *arg)
 
 			if (!strcasecmp(optname, "explore_p")) {
 				b->explore_p = atof(optval);
+			} else if (!strcasecmp(optname, "prior")) {
+				p->prior = ucb1_prior;
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}
