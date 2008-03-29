@@ -18,6 +18,7 @@ struct ucb1_policy {
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
 	float explore_p;
+	float fpu;
 };
 
 
@@ -63,6 +64,7 @@ policy_ucb1tuned_init(struct uct *u, char *arg)
 	p->update = ucb1_update;
 
 	b->explore_p = 0.2;
+	b->fpu = INFINITY;
 
 	if (arg) {
 		char *optspec, *next = arg;
