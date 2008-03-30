@@ -18,7 +18,13 @@ struct ucb1_policy {
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
 	float explore_p;
+	/* First Play Urgency - if set to less than infinity (the MoGo paper
+	 * above reports 1.0 as the best), new branches are explored only
+	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
+	/* Equivalent experience for prior knowledge. MoGo paper recommends
+	 * 50 playouts per source. */
+	int eqex;
 };
 
 
@@ -84,7 +90,9 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			if (!strcasecmp(optname, "explore_p")) {
 				b->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "prior")) {
-				p->prior = ucb1_prior;
+				b->eqex = optval ? atoi(optval) : 50;
+				if (b->eqex)
+					p->prior = ucb1_prior;
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
 			} else {

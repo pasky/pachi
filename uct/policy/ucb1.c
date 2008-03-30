@@ -22,6 +22,9 @@ struct ucb1_policy {
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
+	/* Equivalent experience for prior knowledge. MoGo paper recommends
+	 * 50 playouts per source. */
+	int eqex;
 };
 
 
@@ -73,14 +76,13 @@ void
 ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color)
 {
 	/* Initialization of UCT values based on prior knowledge */
-
-	int eqex = 50; // majic
+	struct ucb1_policy *pp = p->data;
 
 #if 0
 	/* Q_{even} */
 	/* This somehow does not work at all. */
-	node->playouts += eqex;
-	node->wins += eqex / 2;
+	node->playouts += p->eqex;
+	node->wins += p->eqex / 2;
 #endif
 
 	/* Q_{grandparent} */
@@ -88,9 +90,9 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	if (gp) {
 		for (struct tree_node *ni = gp->children; ni; ni = ni->sibling) {
 			/* Be careful not to emphasize too random results. */
-			if (ni->coord == node->coord && ni->playouts > eqex * 2) {
-				node->playouts += eqex;
-				node->wins += eqex * ni->wins / ni->playouts;
+			if (ni->coord == node->coord && ni->playouts > pp->eqex * 2) {
+				node->playouts += pp->eqex;
+				node->wins += pp->eqex * ni->wins / ni->playouts;
 			}
 		}
 	}
@@ -103,8 +105,8 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 		assess = playout->assess(playout, b, &m);
 	}
 	if (!isnan(assess)) {
-		node->playouts += eqex;
-		node->wins += eqex * assess;
+		node->playouts += pp->eqex;
+		node->wins += pp->eqex * assess;
 	}
 
 	if (node->playouts)
@@ -156,7 +158,9 @@ policy_ucb1_init(struct uct *u, char *arg)
 			if (!strcasecmp(optname, "explore_p") && optval) {
 				b->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "prior")) {
-				p->prior = ucb1_prior;
+				b->eqex = optval ? atoi(optval) : 50;
+				if (b->eqex)
+					p->prior = ucb1_prior;
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
 			} else {
