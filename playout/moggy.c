@@ -15,7 +15,7 @@
 
 struct moggy_policy {
 	bool ladders;
-	int capturerate, patternrate;
+	int lcapturerate, capturerate, patternrate;
 	/* These are relative to patternrate. */
 	int hanerate, cut1rate, cut2rate;
 };
@@ -209,7 +209,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	}
 
 	if (PLDEBUGL(4)) {
-		fprintf(stderr, "Candidate moves: ");
+		fprintf(stderr, "Pattern candidate moves: ");
 		for (int i = 0; i < q.moves; i++) {
 			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
 		}
@@ -227,9 +227,6 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	}
 
 	int i = fast_random(q.moves);
-	if (PLDEBUGL(5)) {
-		fprintf(stderr, "Chosen %s\n", coord2sstr(q.move[i], b));
-	}
 	return q.moves ? q.move[i] : pass;
 }
 
@@ -364,6 +361,49 @@ global_atari_check(struct playout_policy *p, struct board *b)
 	return pass;
 }
 
+static coord_t
+local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove)
+{
+	struct move_queue q;
+	q.moves = 0;
+
+	/* Did the opponent play a self-atari? */
+	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
+		coord_t l = group_atari_check(p, b, group_at(b, m->coord));
+		if (!is_pass(l))
+			q.move[q.moves++] = l;
+	}
+
+	foreach_neighbor(b, m->coord, {
+		if (board_group_info(b, group_at(b, c)).libs != 1)
+			continue;
+		coord_t l = group_atari_check(p, b, group_at(b, c));
+		if (!is_pass(l))
+			q.move[q.moves++] = l;
+	});
+
+	if (PLDEBUGL(4)) {
+		fprintf(stderr, "Local atari candidate moves: ");
+		for (int i = 0; i < q.moves; i++) {
+			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
+		}
+		fprintf(stderr, "\n");
+	}
+
+	if (testmove) {
+		while (q.moves--)
+			if (q.move[q.moves] == testmove->coord) {
+				if (PLDEBUGL(4))
+					fprintf(stderr, "Found queried move.\n");
+				return testmove->coord;
+			}
+		return pass;
+	}
+
+	int i = fast_random(q.moves);
+	return q.moves ? q.move[i] : pass;
+}
+
 coord_t
 playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_real_color)
 {
@@ -375,6 +415,13 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
+		/* Local group in atari? */
+		if (pp->lcapturerate > fast_random(100)) {
+			c = local_atari_check(p, b, &b->last_move, NULL);
+			if (!is_pass(c))
+				return c;
+		}
+
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
 			c = apply_pattern(p, b, &b->last_move, NULL);
@@ -406,6 +453,16 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	if (PLDEBUGL(4))
 		board_print(b, stderr);
 
+	/* Are we dealing with atari? */
+	if (pp->lcapturerate > fast_random(100)) {
+		foreach_neighbor(b, m->coord, {
+			struct move m2;
+			m2.coord = c; m2.color = stone_other(m->color);
+			if (local_atari_check(p, b, &m2, m) == m->coord)
+				return 1.0;
+		});
+	}
+
 	/* Pattern check */
 	if (pp->patternrate > fast_random(100)) {
 		foreach_neighbor(b, m->coord, {
@@ -422,15 +479,6 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 		} foreach_diag_neighbor_end;
 	}
 
-	/* Are we dealing with atari? */
-	if (pp->capturerate > fast_random(100)) {
-		foreach_neighbor(b, m->coord, {
-			if (board_group_info(b, group_at(b, c)).libs == 1
-			    && group_atari_check(p, b, group_at(b, c)) == m->coord)
-				return 1.0;
-		});
-	}
-
 	return NAN;
 }
 
@@ -444,6 +492,7 @@ playout_moggy_init(char *arg)
 	p->choose = playout_moggy_choose;
 	p->assess = playout_moggy_assess;
 
+	pp->lcapturerate = 75;
 	pp->capturerate = 75;
 	pp->patternrate = 75;
 	pp->hanerate = pp->cut1rate = pp->cut2rate = 100;
@@ -459,7 +508,9 @@ playout_moggy_init(char *arg)
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
-			if (!strcasecmp(optname, "capturerate") && optval) {
+			if (!strcasecmp(optname, "lcapturerate") && optval) {
+				pp->lcapturerate = atoi(optval);
+			} else if (!strcasecmp(optname, "capturerate") && optval) {
 				pp->capturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladders")) {
 				pp->ladders = true;
