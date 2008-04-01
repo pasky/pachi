@@ -88,7 +88,7 @@ tree_dump(struct tree *tree)
 
 
 void
-tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy)
+tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy, int parity)
 {
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
@@ -107,7 +107,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			if (policy->prior)
-				policy->prior(policy, t, ni, b, color);
+				policy->prior(policy, t, ni, b, color, parity);
 		}
 	}
 }

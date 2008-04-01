@@ -73,7 +73,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 }
 
 void
-ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color)
+ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity)
 {
 	/* Initialization of UCT values based on prior knowledge */
 	struct ucb1_policy *pp = p->data;
@@ -105,6 +105,8 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 		assess = playout->assess(playout, b, &m);
 	}
 	if (!isnan(assess)) {
+		if (parity < 0)
+			assess = 1 - assess;
 		node->playouts += pp->eqex;
 		node->wins += pp->eqex * assess;
 	}

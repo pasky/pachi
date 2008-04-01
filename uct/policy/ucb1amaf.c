@@ -32,7 +32,7 @@ struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, stru
 
 struct tree_node *ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
 
-void ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color);
+void ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
 
 static void
 update_node(struct uct_policy *p, struct tree_node *node, int result)
