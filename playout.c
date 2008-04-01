@@ -74,10 +74,10 @@ play_random:
 		}
 #endif
 
-		if (DEBUGL(8)) {
-			char *cs = coord2str(coord, b);
-			fprintf(stderr, "%s %s\n", stone2str(color), cs);
-			free(cs);
+		if (DEBUGL(7)) {
+			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord, b));
+			if (DEBUGL(8))
+				board_print(b, stderr);
 		}
 
 		if (amafmap && amafmap->map[coord] == S_NONE)
