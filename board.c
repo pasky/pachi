@@ -896,8 +896,9 @@ valid_escape_route(struct board *b, enum stone color, coord_t to)
 	 *  --------+
 	 */
 	int friends = neighbor_count_at(b, to, color);
+	int borders = neighbor_count_at(b, to, S_OFFBOARD);
 	int libs = immediate_liberty_count(b, to);
-	return (friends > 1 && friends < 4) || (libs > 1);
+	return (friends > 1 && friends + borders < 4) || (libs > 1);
 }
 
 
