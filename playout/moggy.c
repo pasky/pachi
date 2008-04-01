@@ -193,7 +193,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	q.moves = 0;
 
 	/* Suicides do not make any patterns and confuse us. */
-	if (board_at(b, m->coord) == S_NONE)
+	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return pass;
 
 	if (pp->hanerate > fast_random(100)) {
