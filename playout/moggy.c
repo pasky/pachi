@@ -444,8 +444,8 @@ playout_moggy_init(char *arg)
 	p->choose = playout_moggy_choose;
 	p->assess = playout_moggy_assess;
 
-	pp->capturerate = 100;
-	pp->patternrate = 0;
+	pp->capturerate = 75;
+	pp->patternrate = 75;
 	pp->hanerate = pp->cut1rate = pp->cut2rate = 100;
 
 	if (arg) {
