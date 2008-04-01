@@ -40,7 +40,7 @@ ucb1tuned_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		if (parity < 0) xpl_loc = 1 - xpl_loc;
 		xpl_loc += sqrt(xpl / ni->playouts);
 		if (xpl_loc > 1.0/4) xpl_loc = 1.0/4;
-		float urgency = ni->value * parity + sqrt(xpl * xpl_loc / ni->playouts);
+		float urgency = (parity > 0 ? ni->value : 1 - ni->value) + sqrt(xpl * xpl_loc / ni->playouts);
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;

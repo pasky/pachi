@@ -63,7 +63,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
-		float urgency = ni->playouts ? ni->value * parity + sqrt(xpl / ni->playouts) : b->fpu;
+		float urgency = ni->playouts ? (parity > 0 ? ni->value : 1 - ni->value) + sqrt(xpl / ni->playouts) : b->fpu;
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
@@ -112,7 +112,7 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	if (node->playouts)
 		node->value = (float) node->wins / node->playouts;
 
-	//fprintf(stderr, "prior: %d/%d\n", node->wins, node->playouts);
+	//fprintf(stderr, "%s,%s prior: %d/%d = %f (%f)\n", coord2sstr(node->parent->coord, b), coord2sstr(node->coord, b), node->wins, node->playouts, node->value, assess);
 }
 
 void
