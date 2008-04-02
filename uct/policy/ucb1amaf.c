@@ -43,9 +43,8 @@ update_node(struct uct_policy *p, struct tree_node *node, int result)
 }
 
 void
-ucb1amaf_update(struct uct_policy *p, struct tree_node *node, struct playout_amafmap *map, int result)
+ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
 {
-	enum stone color = map->color;
 	for (; node; node = node->parent, color = stone_other(color)) {
 		/* Account for root node. */
 		/* But we do the update everytime, since it simply seems

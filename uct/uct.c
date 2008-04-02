@@ -110,6 +110,9 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 				result = !result;
 			if (UDEBUGL(7))
 				fprintf(stderr, "[%d..%d] %s random playout result %d\n", orig_color, color, coord2sstr(n->coord, t->board), result);
+
+			/* Reset color to the @n color. */
+			color = stone_other(color);
 			break;
 		}
 
@@ -147,10 +150,8 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	}
 
 	assert(n == t->root || n->parent);
-	if (amaf)
-		amaf->color = stone_other(color);
 	if (result >= 0)
-		u->policy->update(u->policy, n, amaf, result);
+		u->policy->update(u->policy, n, color, amaf, result);
 
 end:
 	if (amaf) {

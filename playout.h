@@ -27,7 +27,6 @@ struct playout_policy {
  * S_WHITE: This move was played by white first
  */
 struct playout_amafmap {
-	enum stone color;
 	enum stone *map; // [b->size2]
 };
 
