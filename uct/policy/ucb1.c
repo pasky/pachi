@@ -93,6 +93,7 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 			if (ni->coord == node->coord && ni->playouts > pp->eqex * 2) {
 				node->playouts += pp->eqex;
 				node->wins += pp->eqex * ni->wins / ni->playouts;
+				node->hints |= 1;
 			}
 		}
 	}
@@ -109,6 +110,7 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 			assess = 1 - assess;
 		node->playouts += pp->eqex;
 		node->wins += pp->eqex * assess;
+		node->hints |= 2;
 	}
 
 	if (node->playouts)

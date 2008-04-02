@@ -31,6 +31,7 @@ struct tree_node {
 	int playouts; // # of playouts coming through this node
 	int wins; // # of wins coming through this node
 	float value; // wins/playouts
+	int hints;
 };
 
 struct tree {
