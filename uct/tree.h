@@ -44,7 +44,7 @@ struct tree {
 
 struct tree *tree_init(struct board *board, enum stone color);
 void tree_done(struct tree *tree);
-void tree_dump(struct tree *tree);
+void tree_dump(struct tree *tree, int thres);
 
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy, int parity);
 void tree_delete_node(struct tree *tree, struct tree_node *node);

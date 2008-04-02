@@ -56,7 +56,7 @@ tree_done(struct tree *t)
 
 
 static void
-tree_node_dump(struct tree *tree, struct tree_node *node, int l)
+tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 {
 	for (int i = 0; i < l; i++) fputc(' ', stderr);
 	fprintf(stderr, "[%s] %f (%d/%d playouts; hints %x)\n", coord2sstr(node->coord, tree->board), node->value, node->wins, node->playouts, node->hints);
@@ -65,7 +65,7 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l)
 
 	struct tree_node *nbox[1000]; int nboxl = 0;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
-		if (ni->playouts > 50)
+		if (ni->playouts > thres)
 			nbox[nboxl++] = ni;
 
 	while (true) {
@@ -75,15 +75,15 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l)
 				best = i;
 		if (best < 0)
 			break;
-		tree_node_dump(tree, nbox[best], l + 1);
+		tree_node_dump(tree, nbox[best], l + 1, thres);
 		nbox[best] = NULL;
 	}
 }
 
 void
-tree_dump(struct tree *tree)
+tree_dump(struct tree *tree, int thres)
 {
-	tree_node_dump(tree, tree->root, 0);
+	tree_node_dump(tree, tree->root, 0, thres);
 }
 
 

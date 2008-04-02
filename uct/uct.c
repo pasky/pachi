@@ -206,7 +206,7 @@ promoted:;
 
 	progress_status(u, u->t, color);
 	if (UDEBUGL(2))
-		tree_dump(u->t);
+		tree_dump(u->t, u->dumpthres);
 
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 	if (!best) {
@@ -233,6 +233,7 @@ uct_state_init(char *arg)
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
 	u->expand_p = 2;
+	u->dumpthres = 500;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -259,6 +260,8 @@ uct_state_init(char *arg)
 			} else if (!strcasecmp(optname, "radar_d") && optval) {
 				/* For 19x19, it is good idea to set this to 3. */
 				u->radar_d = atoi(optval);
+			} else if (!strcasecmp(optname, "dumpthres") && optval) {
+				u->dumpthres = atoi(optval);
 			} else if (!strcasecmp(optname, "playout_amaf")) {
 				/* Whether to include random playout moves in
 				 * AMAF as well. (Otherwise, only tree moves

@@ -21,6 +21,7 @@ struct uct {
 	int expand_p;
 	int radar_d;
 	bool playout_amaf;
+	int dumpthres;
 
 	struct uct_policy *policy;
 	struct tree *t;
