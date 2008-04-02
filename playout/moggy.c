@@ -14,7 +14,7 @@
 
 
 struct moggy_policy {
-	bool ladders;
+	bool ladders, localassess;
 	int lcapturerate, capturerate, patternrate;
 	/* These are relative to patternrate. */
 	int hanerate, cut1rate, cut2rate;
@@ -455,28 +455,38 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate > fast_random(100)) {
-		foreach_neighbor(b, m->coord, {
-			struct move m2;
-			m2.coord = c; m2.color = stone_other(m->color);
-			if (local_atari_check(p, b, &m2, m) == m->coord)
+		if (pp->localassess) {
+			if (local_atari_check(p, b, &b->last_move, m) == m->coord)
 				return 1.0;
-		});
+		} else {
+			foreach_neighbor(b, m->coord, {
+				struct move m2;
+				m2.coord = c; m2.color = stone_other(m->color);
+				if (local_atari_check(p, b, &m2, m) == m->coord)
+					return 1.0;
+			});
+		}
 	}
 
 	/* Pattern check */
 	if (pp->patternrate > fast_random(100)) {
-		foreach_neighbor(b, m->coord, {
-			struct move m2;
-			m2.coord = c; m2.color = stone_other(m->color);
-			if (apply_pattern(p, b, &m2, m) == m->coord)
+		if (pp->localassess) {
+			if (apply_pattern(p, b, &b->last_move, m) == m->coord)
 				return 1.0;
-		});
-		foreach_diag_neighbor(b, m->coord) {
-			struct move m2;
-			m2.coord = c; m2.color = stone_other(m->color);
-			if (apply_pattern(p, b, &m2, m) == m->coord)
-				return 1.0;
-		} foreach_diag_neighbor_end;
+		} else {
+			foreach_neighbor(b, m->coord, {
+				struct move m2;
+				m2.coord = c; m2.color = stone_other(m->color);
+				if (apply_pattern(p, b, &m2, m) == m->coord)
+					return 1.0;
+			});
+			foreach_diag_neighbor(b, m->coord) {
+				struct move m2;
+				m2.coord = c; m2.color = stone_other(m->color);
+				if (apply_pattern(p, b, &m2, m) == m->coord)
+					return 1.0;
+			} foreach_diag_neighbor_end;
+		}
 	}
 
 	return NAN;
@@ -522,6 +532,8 @@ playout_moggy_init(char *arg)
 				pp->cut1rate = atoi(optval);
 			} else if (!strcasecmp(optname, "cut2rate") && optval) {
 				pp->cut2rate = atoi(optval);
+			} else if (!strcasecmp(optname, "localassess")) {
+				pp->localassess = true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 			}
