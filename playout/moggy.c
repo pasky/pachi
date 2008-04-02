@@ -49,9 +49,9 @@ cut1_test_cut(struct playout_policy *p, struct board *b, coord_t base, coord_t c
 	enum stone fix2 = board_atxy(b, xc - (x - xc), yc);
 	if (PLDEBUGL(6))
 		fprintf(stderr, "Protection check: %d,%d\n", fix1, fix2);
-	if (fix1 == stone_other(color) && fix2 == S_NONE)
+	if ((fix1 == stone_other(color) || fix1 == S_OFFBOARD) && fix2 != color)
 		return false;
-	if (fix2 == stone_other(color) && fix1 == S_NONE)
+	if ((fix2 == stone_other(color) || fix2 == S_OFFBOARD) && fix1 != color)
 		return false;
 
 	/* Unprotected cut. Feast! */
