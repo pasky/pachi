@@ -495,7 +495,7 @@ playout_moggy_init(char *arg)
 	pp->lcapturerate = 75;
 	pp->capturerate = 75;
 	pp->patternrate = 75;
-	pp->hanerate = pp->cut1rate = pp->cut2rate = 100;
+	pp->hanerate = pp->cut1rate = pp->cut2rate = 75;
 
 	if (arg) {
 		char *optspec, *next = arg;
