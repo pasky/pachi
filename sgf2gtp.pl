@@ -16,7 +16,7 @@ my @m = split /;/, $sgf;
 foreach (@m) {
 	/^([BW])\[(\w\w)\]/ or next;
 	my ($color, $coord) = ($1, $2);
-	$coord =~ s/i/j/;
+	$coord =~ s/i/j/g;
 	my ($x, $y) = split //, $coord;
 	$y =~ tr/abcdefghj/987654321/;
 	print "play $color $x$y";
