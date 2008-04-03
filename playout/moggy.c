@@ -14,7 +14,7 @@
 
 
 struct moggy_policy {
-	bool ladders, localassess, ladderassess;
+	bool ladders, localassess, ladderassess, borderladders;
 	int lcapturerate, capturerate, patternrate;
 	/* These are relative to patternrate. */
 	int hanerate, cut1rate, cut2rate;
@@ -244,14 +244,61 @@ ladder_catcher(struct board *b, int x, int y, enum stone laddered)
 static bool
 ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t laddered)
 {
+	struct moggy_policy *pp = p->data;
+
 	/* This is very trivial and gets a lot of corner cases wrong.
-	 * We need this to be just very fast. */
+	 * We need this to be just very fast. One important point is
+	 * that we sometimes might not notice a ladder but if we do,
+	 * it should always work; thus we can use this for strong
+	 * negative hinting safely. */
 	//fprintf(stderr, "ladder check\n");
 
 	enum stone lcolor = board_at(b, laddered);
+	int x = coord_x(coord, b), y = coord_y(coord, b);
+
+	/* First, special-case first-line "ladders". This is a huge chunk
+	 * of ladders we actually meet and want to play. */
+	if (pp->borderladders
+	    && neighbor_count_at(b, coord, S_OFFBOARD) == 1
+	    && neighbor_count_at(b, coord, lcolor) == 1) {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "border ladder\n");
+		/* Direction along border; xd is horiz. border, yd vertical. */
+		int xd = 0, yd = 0;
+		if (board_atxy(b, x + 1, y) == S_OFFBOARD || board_atxy(b, x - 1, y) == S_OFFBOARD)
+			yd = 1;
+		else
+			xd = 1;
+		/* Direction from the border; -1 is above/left, 1 is below/right. */
+		int dd = (board_atxy(b, x + yd, y + xd) == S_OFFBOARD) ? 1 : -1;
+		if (PLDEBUGL(6))
+			fprintf(stderr, "xd %d yd %d dd %d\n", xd, yd, dd);
+		/* | ? ?
+		 * | . O #
+		 * | c X #
+		 * | . O #
+		 * | ? ?   */
+		/* This is normally caught, unless we have friends both above
+		 * and below... */
+		if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor
+		    && board_atxy(b, x - xd * 2, y - yd * 2) == lcolor)
+			return false;
+		/* ...or can't block where we need because of shortage
+		 * of liberties. */
+		int libs1 = board_group_info(b, group_atxy(b, x + xd - yd * dd, y + yd - xd * dd)).libs;
+		int libs2 = board_group_info(b, group_atxy(b, x - xd - yd * dd, y - yd - xd * dd)).libs;
+		if (PLDEBUGL(6))
+			fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);
+		if (libs1 < 2 && libs2 < 2)
+			return false;
+		if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor && libs1 < 3)
+			return false;
+		if (board_atxy(b, x - xd * 2, y - yd * 2) == lcolor && libs2 < 3)
+			return false;
+		return true;
+	}
 
 	/* Figure out the ladder direction */
-	int x = coord_x(coord, b), y = coord_y(coord, b);
 	int xd, yd;
 	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
 	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : board_atxy(b, x, y - 1) == S_NONE ? -1 : 0;
@@ -546,6 +593,8 @@ playout_moggy_init(char *arg)
 				pp->localassess = true;
 			} else if (!strcasecmp(optname, "ladderassess")) {
 				pp->ladderassess = true;
+			} else if (!strcasecmp(optname, "borderladders")) {
+				pp->borderladders = true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 			}
