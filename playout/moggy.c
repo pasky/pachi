@@ -14,15 +14,16 @@
 
 
 struct moggy_policy {
-	bool ladders, localassess;
+	bool ladders, localassess, ladderassess;
 	int lcapturerate, capturerate, patternrate;
 	/* These are relative to patternrate. */
 	int hanerate, cut1rate, cut2rate;
 };
 
+#define MQL 64
 struct move_queue {
 	int moves;
-	coord_t move[64];
+	coord_t move[MQL];
 };
 
 
@@ -312,7 +313,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 
 
 static coord_t
-group_atari_check(struct playout_policy *p, struct board *b, group_t group)
+group_atari_check(struct playout_policy *p, struct board *b, group_t group, bool *ladder)
 {
 	struct moggy_policy *pp = p->data;
 	enum stone color = board_at(b, group);
@@ -333,8 +334,11 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
-	if (pp->ladders && ladder_catches(p, b, lib, group))
+	if (pp->ladders && ladder_catches(p, b, lib, group)) {
+		if (ladder)
+			*ladder = true;
 		return pass;
+	}
 	if (PLDEBUGL(4))
 		fprintf(stderr, "...no ladder\n");
 
@@ -349,12 +353,12 @@ global_atari_check(struct playout_policy *p, struct board *b)
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		coord_t c = group_atari_check(p, b, b->c[g]);
+		coord_t c = group_atari_check(p, b, b->c[g], NULL);
 		if (!is_pass(c))
 			return c;
 	}
 	for (int g = 0; g < g_base; g++) {
-		coord_t c = group_atari_check(p, b, b->c[g]);
+		coord_t c = group_atari_check(p, b, b->c[g], NULL);
 		if (!is_pass(c))
 			return c;
 	}
@@ -362,23 +366,25 @@ global_atari_check(struct playout_policy *p, struct board *b)
 }
 
 static coord_t
-local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove)
+local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove, bool *ladder)
 {
+	bool ladders[MQL];
 	struct move_queue q;
 	q.moves = 0;
+	memset(ladders, 0, sizeof(ladders));
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		coord_t l = group_atari_check(p, b, group_at(b, m->coord));
-		if (!is_pass(l))
+		coord_t l = group_atari_check(p, b, group_at(b, m->coord), &ladders[q.moves]);
+		if (!is_pass(l) || (ladder && ladders[q.moves]))
 			q.move[q.moves++] = l;
 	}
 
 	foreach_neighbor(b, m->coord, {
 		if (board_group_info(b, group_at(b, c)).libs != 1)
 			continue;
-		coord_t l = group_atari_check(p, b, group_at(b, c));
-		if (!is_pass(l))
+		coord_t l = group_atari_check(p, b, group_at(b, c), &ladders[q.moves]);
+		if (!is_pass(l) || (ladder && ladders[q.moves]))
 			q.move[q.moves++] = l;
 	});
 
@@ -395,6 +401,8 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 			if (q.move[q.moves] == testmove->coord) {
 				if (PLDEBUGL(4))
 					fprintf(stderr, "Found queried move.\n");
+				if (ladder)
+					*ladder = ladders[q.moves];
 				return testmove->coord;
 			}
 		return pass;
@@ -417,7 +425,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			c = local_atari_check(p, b, &b->last_move, NULL);
+			c = local_atari_check(p, b, &b->last_move, NULL, NULL);
 			if (!is_pass(c))
 				return c;
 		}
@@ -456,14 +464,16 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate > fast_random(100)) {
 		if (pp->localassess) {
-			if (local_atari_check(p, b, &b->last_move, m) == m->coord)
-				return 1.0;
+			bool ladder = false;
+			if (local_atari_check(p, b, &b->last_move, m, pp->ladderassess ? &ladder : NULL) == m->coord)
+				return ladder ? 0.0 : 1.0;
 		} else {
 			foreach_neighbor(b, m->coord, {
+				bool ladder = false;
 				struct move m2;
 				m2.coord = c; m2.color = stone_other(m->color);
-				if (local_atari_check(p, b, &m2, m) == m->coord)
-					return 1.0;
+				if (local_atari_check(p, b, &m2, m, pp->ladderassess ? &ladder : NULL) == m->coord)
+					return ladder ? 0.0 : 1.0;
 			});
 		}
 	}
@@ -534,6 +544,8 @@ playout_moggy_init(char *arg)
 				pp->cut2rate = atoi(optval);
 			} else if (!strcasecmp(optname, "localassess")) {
 				pp->localassess = true;
+			} else if (!strcasecmp(optname, "ladderassess")) {
+				pp->ladderassess = true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 			}
