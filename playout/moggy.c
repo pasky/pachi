@@ -360,7 +360,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 
 
 static coord_t
-group_atari_check(struct playout_policy *p, struct board *b, group_t group, bool *ladder)
+group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 {
 	struct moggy_policy *pp = p->data;
 	enum stone color = board_at(b, group);
@@ -382,8 +382,6 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, bool
 	
 	/* ...or play out ladders. */
 	if (pp->ladders && ladder_catches(p, b, lib, group)) {
-		if (ladder)
-			*ladder = true;
 		return pass;
 	}
 	if (PLDEBUGL(4))
@@ -400,12 +398,12 @@ global_atari_check(struct playout_policy *p, struct board *b)
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		coord_t c = group_atari_check(p, b, b->c[g], NULL);
+		coord_t c = group_atari_check(p, b, b->c[g]);
 		if (!is_pass(c))
 			return c;
 	}
 	for (int g = 0; g < g_base; g++) {
-		coord_t c = group_atari_check(p, b, b->c[g], NULL);
+		coord_t c = group_atari_check(p, b, b->c[g]);
 		if (!is_pass(c))
 			return c;
 	}
@@ -413,25 +411,23 @@ global_atari_check(struct playout_policy *p, struct board *b)
 }
 
 static coord_t
-local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove, bool *ladder)
+local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove)
 {
-	bool ladders[MQL];
 	struct move_queue q;
 	q.moves = 0;
-	memset(ladders, 0, sizeof(ladders));
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		coord_t l = group_atari_check(p, b, group_at(b, m->coord), &ladders[q.moves]);
-		if (!is_pass(l) || (ladder && ladders[q.moves]))
+		coord_t l = group_atari_check(p, b, group_at(b, m->coord));
+		if (!is_pass(l))
 			q.move[q.moves++] = l;
 	}
 
 	foreach_neighbor(b, m->coord, {
 		if (board_group_info(b, group_at(b, c)).libs != 1)
 			continue;
-		coord_t l = group_atari_check(p, b, group_at(b, c), &ladders[q.moves]);
-		if (!is_pass(l) || (ladder && ladders[q.moves]))
+		coord_t l = group_atari_check(p, b, group_at(b, c));
+		if (!is_pass(l))
 			q.move[q.moves++] = l;
 	});
 
@@ -448,8 +444,6 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 			if (q.move[q.moves] == testmove->coord) {
 				if (PLDEBUGL(4))
 					fprintf(stderr, "Found queried move.\n");
-				if (ladder)
-					*ladder = ladders[q.moves];
 				return testmove->coord;
 			}
 		return pass;
@@ -472,7 +466,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			c = local_atari_check(p, b, &b->last_move, NULL, NULL);
+			c = local_atari_check(p, b, &b->last_move, NULL);
 			if (!is_pass(c))
 				return c;
 		}
@@ -510,17 +504,28 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate > fast_random(100)) {
+		/* Assess ladders anywhere, local or not. */
+		if (pp->ladderassess) {
+			//fprintf(stderr, "ASSESS %s\n", coord2sstr(m->coord, b));
+			foreach_neighbor(b, m->coord, {
+				if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
+					continue;
+				group_t g = group_at(b, c);
+				if (board_group_info(b, g).libs != 1)
+					continue;
+				if (ladder_catches(p, b, m->coord, g))
+					return 0.0;
+			});
+		}
 		if (pp->localassess) {
-			bool ladder = false;
-			if (local_atari_check(p, b, &b->last_move, m, pp->ladderassess ? &ladder : NULL) == m->coord)
-				return ladder ? 0.0 : 1.0;
+			if (local_atari_check(p, b, &b->last_move, m) == m->coord)
+				return 1.0;
 		} else {
 			foreach_neighbor(b, m->coord, {
-				bool ladder = false;
 				struct move m2;
 				m2.coord = c; m2.color = stone_other(m->color);
-				if (local_atari_check(p, b, &m2, m, pp->ladderassess ? &ladder : NULL) == m->coord)
-					return ladder ? 0.0 : 1.0;
+				if (local_atari_check(p, b, &m2, m) == m->coord)
+					return 1.0;
 			});
 		}
 	}
