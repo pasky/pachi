@@ -52,9 +52,11 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
 		ni->amaf.value = (float)ni->amaf.wins / ni->amaf.playouts;
+		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
 		float uctp = (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / ni->u.playouts);
 		float ravep = (parity > 0 ? ni->amaf.value : 1 - ni->amaf.value) + sqrt(xpl_rave / ni->amaf.playouts);
-		float urgency = ni->u.playouts ? beta * ravep + (1 - beta) * uctp : b->fpu;
+		float priorp = (parity > 0 ? ni->prior.value : 1- ni->prior.value);
+		float urgency = ni->u.playouts ? beta * ravep + (1 - beta) * uctp : ni->prior.playouts ? priorp : b->fpu;
 		//fprintf(stderr, "u %f (%d/%d) r %f (%f %d/%d) b %f -> %f\n", uctp, ni->u.wins, ni->u.playouts, ravep, xpl_rave, ni->amaf.wins, ni->amaf.playouts, beta, urgency);
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
