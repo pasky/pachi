@@ -59,7 +59,7 @@ static void
 tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 {
 	for (int i = 0; i < l; i++) fputc(' ', stderr);
-	fprintf(stderr, "[%s] %f (%d/%d playouts; hints %x)\n", coord2sstr(node->coord, tree->board), node->u.value, node->u.wins, node->u.playouts, node->hints);
+	fprintf(stderr, "[%s] %f (%d/%d playouts [prior %d/%d amaf %d/%d]; hints %x)\n", coord2sstr(node->coord, tree->board), node->u.value, node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->amaf.wins, node->amaf.playouts, node->hints);
 
 	/* Print nodes sorted by #playouts. */
 
