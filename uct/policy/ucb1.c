@@ -81,8 +81,8 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 #if 0
 	/* Q_{even} */
 	/* This somehow does not work at all. */
-	node->u.playouts += p->eqex;
-	node->u.wins += p->eqex / 2;
+	node->prior.playouts += p->eqex;
+	node->prior.wins += p->eqex / 2;
 #endif
 
 	/* Q_{grandparent} */
@@ -91,8 +91,8 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 		for (struct tree_node *ni = gpp->children; ni; ni = ni->sibling) {
 			/* Be careful not to emphasize too random results. */
 			if (ni->coord == node->coord && ni->u.playouts > pp->eqex) {
-				node->u.playouts += pp->eqex;
-				node->u.wins += pp->eqex * ni->u.wins / ni->u.playouts;
+				node->prior.playouts += pp->eqex;
+				node->prior.wins += pp->eqex * ni->u.wins / ni->u.playouts;
 				node->hints |= 1;
 			}
 		}
@@ -108,15 +108,15 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	if (!isnan(assess)) {
 		if (parity < 0)
 			assess = 1 - assess;
-		node->u.playouts += pp->eqex;
-		node->u.wins += pp->eqex * assess;
+		node->prior.playouts += pp->eqex;
+		node->prior.wins += pp->eqex * assess;
 		node->hints |= 2;
 	}
 
-	if (node->u.playouts)
-		node->u.value = (float) node->u.wins / node->u.playouts;
+	if (node->prior.playouts)
+		node->prior.value = (float) node->prior.wins / node->prior.playouts;
 
-	//fprintf(stderr, "%s,%s prior: %d/%d = %f (%f)\n", coord2sstr(node->parent->coord, b), coord2sstr(node->coord, b), node->u.wins, node->u.playouts, node->u.value, assess);
+	//fprintf(stderr, "%s,%s prior: %d/%d = %f (%f)\n", coord2sstr(node->parent->coord, b), coord2sstr(node->coord, b), node->prior.wins, node->prior.playouts, node->prior.value, assess);
 }
 
 void
@@ -129,7 +129,7 @@ ucb1_update(struct uct_policy *p, struct tree_node *node, enum stone color, stru
 	for (; node; node = node->parent) {
 		node->u.playouts++;
 		node->u.wins += result;
-		node->u.value = (float)node->u.wins / node->u.playouts;
+		node->u.value = ((float)node->u.wins + (float)node->prior.wins) / (node->u.playouts + node->prior.playouts);
 	}
 }
 

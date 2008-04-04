@@ -39,7 +39,7 @@ update_node(struct uct_policy *p, struct tree_node *node, int result)
 {
 	node->u.playouts++;
 	node->u.wins += result;
-	node->u.value = (float)node->u.wins / node->u.playouts;
+	node->u.value = ((float)node->u.wins + (float)node->prior.wins) / (node->u.playouts + node->prior.playouts);
 }
 
 void

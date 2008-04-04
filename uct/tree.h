@@ -35,6 +35,7 @@ struct tree_node {
 	coord_t coord;
 
 	struct move_stats u;
+	struct move_stats prior;
 	int hints;
 };
 
