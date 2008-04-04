@@ -35,7 +35,7 @@ ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum 
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
-		if (!nbest || ni->playouts > nbest->playouts) {
+		if (!nbest || ni->u.playouts > nbest->u.playouts) {
 			/* Play pass only if we can afford scoring */
 			if (is_pass(ni->coord)) {
 				float score = board_official_score(b);
@@ -55,7 +55,7 @@ struct tree_node *
 ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	struct ucb1_policy *b = p->data;
-	float xpl = log(node->playouts) * b->explore_p;
+	float xpl = log(node->u.playouts) * b->explore_p;
 
 	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
@@ -63,7 +63,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
-		float urgency = ni->playouts ? (parity > 0 ? ni->value : 1 - ni->value) + sqrt(xpl / ni->playouts) : b->fpu;
+		float urgency = ni->u.playouts ? (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / ni->u.playouts) : b->fpu;
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
@@ -81,8 +81,8 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 #if 0
 	/* Q_{even} */
 	/* This somehow does not work at all. */
-	node->playouts += p->eqex;
-	node->wins += p->eqex / 2;
+	node->u.playouts += p->eqex;
+	node->u.wins += p->eqex / 2;
 #endif
 
 	/* Q_{grandparent} */
@@ -90,9 +90,9 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 		struct tree_node *gpp = node->parent->parent->parent;
 		for (struct tree_node *ni = gpp->children; ni; ni = ni->sibling) {
 			/* Be careful not to emphasize too random results. */
-			if (ni->coord == node->coord && ni->playouts > pp->eqex) {
-				node->playouts += pp->eqex;
-				node->wins += pp->eqex * ni->wins / ni->playouts;
+			if (ni->coord == node->coord && ni->u.playouts > pp->eqex) {
+				node->u.playouts += pp->eqex;
+				node->u.wins += pp->eqex * ni->u.wins / ni->u.playouts;
 				node->hints |= 1;
 			}
 		}
@@ -108,15 +108,15 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	if (!isnan(assess)) {
 		if (parity < 0)
 			assess = 1 - assess;
-		node->playouts += pp->eqex;
-		node->wins += pp->eqex * assess;
+		node->u.playouts += pp->eqex;
+		node->u.wins += pp->eqex * assess;
 		node->hints |= 2;
 	}
 
-	if (node->playouts)
-		node->value = (float) node->wins / node->playouts;
+	if (node->u.playouts)
+		node->u.value = (float) node->u.wins / node->u.playouts;
 
-	//fprintf(stderr, "%s,%s prior: %d/%d = %f (%f)\n", coord2sstr(node->parent->coord, b), coord2sstr(node->coord, b), node->wins, node->playouts, node->value, assess);
+	//fprintf(stderr, "%s,%s prior: %d/%d = %f (%f)\n", coord2sstr(node->parent->coord, b), coord2sstr(node->coord, b), node->u.wins, node->u.playouts, node->u.value, assess);
 }
 
 void
@@ -127,9 +127,9 @@ ucb1_update(struct uct_policy *p, struct tree_node *node, enum stone color, stru
 	 * they had to all occur in all branches, only in
 	 * different order. */
 	for (; node; node = node->parent) {
-		node->playouts++;
-		node->wins += result;
-		node->value = (float)node->wins / node->playouts;
+		node->u.playouts++;
+		node->u.wins += result;
+		node->u.value = (float)node->u.wins / node->u.playouts;
 	}
 }
 

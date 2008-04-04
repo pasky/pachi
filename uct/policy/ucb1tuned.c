@@ -28,7 +28,7 @@ struct tree_node *
 ucb1tuned_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	struct ucb1_policy *b = p->data;
-	float xpl = log(node->playouts) * b->explore_p;
+	float xpl = log(node->u.playouts) * b->explore_p;
 
 	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
@@ -36,11 +36,11 @@ ucb1tuned_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
-		float xpl_loc = (ni->value - ni->value * ni->value);
+		float xpl_loc = (ni->u.value - ni->u.value * ni->u.value);
 		if (parity < 0) xpl_loc = 1 - xpl_loc;
-		xpl_loc += sqrt(xpl / ni->playouts);
+		xpl_loc += sqrt(xpl / ni->u.playouts);
 		if (xpl_loc > 1.0/4) xpl_loc = 1.0/4;
-		float urgency = (parity > 0 ? ni->value : 1 - ni->value) + sqrt(xpl * xpl_loc / ni->playouts);
+		float urgency = (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl * xpl_loc / ni->u.playouts);
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;

@@ -37,9 +37,9 @@ void ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 static void
 update_node(struct uct_policy *p, struct tree_node *node, int result)
 {
-	node->playouts++;
-	node->wins += result;
-	node->value = (float)node->wins / node->playouts;
+	node->u.playouts++;
+	node->u.wins += result;
+	node->u.value = (float)node->u.wins / node->u.playouts;
 }
 
 void

@@ -21,6 +21,12 @@ struct uct_policy;
  * +------+   +------+   +------+   +------+
  */
 
+struct move_stats {
+	int playouts; // # of playouts coming through this node
+	int wins; // # of wins coming through this node
+	float value; // wins/playouts
+};
+
 struct tree_node {
 	hash_t hash;
 	struct tree_node *parent, *sibling, *children;
@@ -28,9 +34,7 @@ struct tree_node {
 
 	coord_t coord;
 
-	int playouts; // # of playouts coming through this node
-	int wins; // # of wins coming through this node
-	float value; // wins/playouts
+	struct move_stats u;
 	int hints;
 };
 
