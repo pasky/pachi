@@ -113,8 +113,10 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 		node->hints |= 2;
 	}
 
-	if (node->prior.playouts)
+	if (node->prior.playouts) {
 		node->prior.value = (float) node->prior.wins / node->prior.playouts;
+		tree_update_node_value(node);
+	}
 
 	//fprintf(stderr, "%s,%s prior: %d/%d = %f (%f)\n", coord2sstr(node->parent->coord, b), coord2sstr(node->coord, b), node->prior.wins, node->prior.playouts, node->prior.value, assess);
 }
@@ -129,7 +131,7 @@ ucb1_update(struct uct_policy *p, struct tree_node *node, enum stone color, stru
 	for (; node; node = node->parent) {
 		node->u.playouts++;
 		node->u.wins += result;
-		node->u.value = ((float)node->u.wins + (float)node->prior.wins) / (node->u.playouts + node->prior.playouts);
+		tree_update_node_value(node);
 	}
 }
 

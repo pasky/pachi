@@ -148,3 +148,10 @@ tree_leaf_node(struct tree_node *node)
 {
 	return !(node->children);
 }
+
+void
+tree_update_node_value(struct tree_node *node)
+{
+	node->u.value = ((float)node->u.wins + (float)node->prior.wins)
+			/ (node->u.playouts + node->prior.playouts);
+}
