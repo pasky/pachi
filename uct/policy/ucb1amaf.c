@@ -41,6 +41,13 @@ update_node(struct uct_policy *p, struct tree_node *node, int result)
 	node->u.wins += result;
 	tree_update_node_value(node);
 }
+static void
+update_node_amaf(struct uct_policy *p, struct tree_node *node, int result)
+{
+	node->amaf.playouts++;
+	node->amaf.wins += result;
+	tree_update_node_value(node);
+}
 
 void
 ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
@@ -54,7 +61,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, 
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			if (is_pass(ni->coord) || map->map[ni->coord] != color)
 				continue;
-			update_node(p, node, result);
+			update_node_amaf(p, node, result);
 		}
 	}
 }

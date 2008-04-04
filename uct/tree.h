@@ -36,6 +36,8 @@ struct tree_node {
 
 	struct move_stats u;
 	struct move_stats prior;
+	/* XXX: Should be way for policies to add their own stats */
+	struct move_stats amaf;
 	int hints;
 };
 

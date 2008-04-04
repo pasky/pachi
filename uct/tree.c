@@ -152,6 +152,6 @@ tree_leaf_node(struct tree_node *node)
 void
 tree_update_node_value(struct tree_node *node)
 {
-	node->u.value = ((float)node->u.wins + (float)node->prior.wins)
-			/ (node->u.playouts + node->prior.playouts);
+	node->u.value = (float)(node->u.wins + node->prior.wins + node->amaf.wins)
+			/ (node->u.playouts + node->prior.playouts + node->amaf.playouts);
 }
