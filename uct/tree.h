@@ -57,6 +57,6 @@ void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b
 void tree_delete_node(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_leaf_node(struct tree_node *node);
-void tree_update_node_value(struct tree_node *node);
+void tree_update_node_value(struct tree_node *node, bool add_amaf);
 
 #endif

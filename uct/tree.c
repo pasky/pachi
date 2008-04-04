@@ -150,8 +150,8 @@ tree_leaf_node(struct tree_node *node)
 }
 
 void
-tree_update_node_value(struct tree_node *node)
+tree_update_node_value(struct tree_node *node, bool add_amaf)
 {
-	node->u.value = (float)(node->u.wins + node->prior.wins + node->amaf.wins)
-			/ (node->u.playouts + node->prior.playouts + node->amaf.playouts);
+	node->u.value = (float)(node->u.wins + node->prior.wins + (add_amaf ? node->amaf.wins : 0))
+			/ (node->u.playouts + node->prior.playouts + (add_amaf ? node->amaf.playouts : 0));
 }
