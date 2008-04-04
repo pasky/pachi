@@ -82,6 +82,7 @@ update_node_amaf(struct uct_policy *p, struct tree_node *node, int result)
 void
 ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
 {
+	color = stone_other(color); // We will look in CHILDREN of the node!
 	for (; node; node = node->parent, color = stone_other(color)) {
 		/* Account for root node. */
 		/* But we do the update everytime, since it simply seems
@@ -95,7 +96,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, 
 			//fprintf(stderr, "?%s [%d %d]\n", coord2sstr(ni->coord, &b), map->map[ni->coord], color);
 			if (is_pass(ni->coord) || map->map[ni->coord] != color)
 				continue;
-			update_node_amaf(p, node, result);
+			update_node_amaf(p, ni, result);
 		}
 	}
 }
