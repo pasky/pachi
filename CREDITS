@@ -1,0 +1,7 @@
+Pachi stands on research shoulders of giants, specifically:
+
+Modification of UCT with Patterns in Monte-Carlo Go
+	Sylvain Gelly, Yizao Wang, Remi Munos & Olivier Teytaud
+
+Combining Online and Offline Knowledge in UCT
+	Sylvain Gelly, David Silver
