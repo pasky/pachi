@@ -66,6 +66,12 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
 		float priorp = (parity > 0 ? ni->prior.value : 1- ni->prior.value);
 		float urgency = ni->u.playouts ? (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / ni->u.playouts) : ni->prior.playouts ? priorp : b->fpu;
+#if 0
+		{
+			struct board b2; b2.size = 9;
+			fprintf(stderr, "[%s -> %s] UCB1 urgency %f (%f + %f : %f : %f)\n", coord2sstr(node->coord, &b2), coord2sstr(ni->coord, &b2), urgency, ni->u.value, sqrt(xpl / ni->u.playouts), priorp, b->fpu);
+		}
+#endif
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
