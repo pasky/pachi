@@ -54,8 +54,13 @@ ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum 
 struct tree_node *
 ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
+	/* We want to count in the prior stats here after all. Otherwise,
+	 * nodes with positive prior will get explored _LESS_ since the
+	 * urgency will be always higher; even with normal FPU because
+	 * of the explore coefficient. */
+
 	struct ucb1_policy *b = p->data;
-	float xpl = log(node->u.playouts) * b->explore_p;
+	float xpl = log(node->u.playouts + node->prior.playouts) * b->explore_p;
 
 	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
@@ -63,13 +68,14 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
+		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
-		float priorp = (parity > 0 ? ni->prior.value : 1- ni->prior.value);
-		float urgency = ni->u.playouts ? (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / ni->u.playouts) : ni->prior.playouts ? priorp : b->fpu;
+		float urgency = uct_playouts ? (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts) : b->fpu;
+
 #if 0
 		{
 			struct board b2; b2.size = 9;
-			fprintf(stderr, "[%s -> %s] UCB1 urgency %f (%f + %f : %f : %f)\n", coord2sstr(node->coord, &b2), coord2sstr(ni->coord, &b2), urgency, ni->u.value, sqrt(xpl / ni->u.playouts), priorp, b->fpu);
+			fprintf(stderr, "[%s -> %s] UCB1 urgency %f (%f + %f : %f)\n", coord2sstr(node->coord, &b2), coord2sstr(ni->coord, &b2), urgency, ni->u.value, sqrt(xpl / ni->u.playouts), b->fpu);
 		}
 #endif
 		if (urgency > best_urgency) {

@@ -27,6 +27,7 @@ struct ucb1_policy {
 	int eqex;
 	float explore_p_rave;
 	int equiv_rave;
+	bool rave_prior;
 };
 
 
@@ -40,10 +41,15 @@ void ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 struct tree_node *
 ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
+	/* We want to count in the prior stats here after all. Otherwise,
+	 * nodes with positive prior will get explored _LESS_ since the
+	 * urgency will be always higher; even with normal FPU because
+	 * of the explore coefficient. */
+
 	struct ucb1_policy *b = p->data;
-	float xpl = log(node->u.playouts) * b->explore_p;
-	float xpl_rave = log(node->amaf.playouts) * b->explore_p_rave;
-	float beta = sqrt((float)b->equiv_rave / (3 * node->u.playouts + b->equiv_rave));
+	float xpl = log(node->u.playouts + node->prior.playouts) * b->explore_p;
+	float xpl_rave = log(node->amaf.playouts + (b->rave_prior ? node->prior.playouts : 0)) * b->explore_p_rave;
+	float beta = sqrt((float)b->equiv_rave / (3 * (node->u.playouts + node->prior.playouts) + b->equiv_rave));
 
 	struct tree_node *nbest = node->children;
 	float best_urgency = -9999;
@@ -51,13 +57,15 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
-		ni->amaf.value = (float)ni->amaf.wins / ni->amaf.playouts;
+		int amaf_wins = ni->amaf.wins + (b->rave_prior ? ni->prior.wins : 0);
+		int amaf_playouts = ni->amaf.playouts + (b->rave_prior ? ni->prior.playouts : 0);
+		int uct_playouts = ni->u.playouts + ni->prior.playouts;
+		ni->amaf.value = (float)amaf_wins / amaf_playouts;
 		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
-		float uctp = (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / ni->u.playouts);
-		float ravep = (parity > 0 ? ni->amaf.value : 1 - ni->amaf.value) + sqrt(xpl_rave / ni->amaf.playouts);
-		float priorp = (parity > 0 ? ni->prior.value : 1- ni->prior.value);
-		float urgency = ni->u.playouts ? beta * ravep + (1 - beta) * uctp : ni->prior.playouts ? priorp : b->fpu;
-		//fprintf(stderr, "u %f (%d/%d) r %f (%f %d/%d) b %f -> %f\n", uctp, ni->u.wins, ni->u.playouts, ravep, xpl_rave, ni->amaf.wins, ni->amaf.playouts, beta, urgency);
+		float uctp = (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts);
+		float ravep = (parity > 0 ? ni->amaf.value : 1 - ni->amaf.value) + sqrt(xpl_rave / amaf_playouts);
+		float urgency = uct_playouts ? beta * ravep + (1 - beta) * uctp : b->fpu;
+		//fprintf(stderr, "u %f (%d/%d) r %f (%f %d/%d) b %f -> %f\n", uctp, ni->u.wins, ni->u.playouts, ravep, xpl_rave, amaf_wins, amaf_playouts, beta, urgency);
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
@@ -142,10 +150,12 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->fpu = atof(optval);
 			} else if (!strcasecmp(optname, "rave")) {
 				p->descend = ucb1rave_descend;
-			} else if (!strcasecmp(optname, "explore_p_rave")) {
+			} else if (!strcasecmp(optname, "explore_p_rave") && optval) {
 				b->explore_p_rave = atof(optval);
-			} else if (!strcasecmp(optname, "equiv_rave")) {
+			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
 				b->equiv_rave = atof(optval);
+			} else if (!strcasecmp(optname, "rave_prior")) {
+				b->rave_prior = true;
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}
