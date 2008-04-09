@@ -24,7 +24,7 @@ struct ucb1_policy {
 	float fpu;
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
 	 * 50 playouts per source. */
-	int eqex;
+	int eqex, gp_eqex, policy_eqex;
 };
 
 
@@ -100,31 +100,33 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 #endif
 
 	/* Q_{grandparent} */
-	if (node->parent && node->parent->parent && node->parent->parent->parent) {
+	if (pp->gp_eqex && node->parent && node->parent->parent && node->parent->parent->parent) {
 		struct tree_node *gpp = node->parent->parent->parent;
 		for (struct tree_node *ni = gpp->children; ni; ni = ni->sibling) {
 			/* Be careful not to emphasize too random results. */
-			if (ni->coord == node->coord && ni->u.playouts > pp->eqex) {
-				node->prior.playouts += pp->eqex;
-				node->prior.wins += pp->eqex * ni->u.wins / ni->u.playouts;
+			if (ni->coord == node->coord && ni->u.playouts > pp->gp_eqex) {
+				node->prior.playouts += pp->gp_eqex;
+				node->prior.wins += pp->gp_eqex * ni->u.wins / ni->u.playouts;
 				node->hints |= 1;
 			}
 		}
 	}
 
 	/* Q_{playout-policy} */
-	float assess = NAN;
-	struct playout_policy *playout = p->uct->playout;
-	if (playout->assess) {
-		struct move m = { node->coord, color };
-		assess = playout->assess(playout, b, &m);
-	}
-	if (!isnan(assess)) {
-		if (parity < 0)
-			assess = 1 - assess;
-		node->prior.playouts += pp->eqex;
-		node->prior.wins += pp->eqex * assess;
-		node->hints |= 2;
+	if (pp->policy_eqex) {
+		float assess = NAN;
+		struct playout_policy *playout = p->uct->playout;
+		if (playout->assess) {
+			struct move m = { node->coord, color };
+			assess = playout->assess(playout, b, &m);
+		}
+		if (!isnan(assess)) {
+			if (parity < 0)
+				assess = 1 - assess;
+			node->prior.playouts += pp->policy_eqex;
+			node->prior.wins += pp->policy_eqex * assess;
+			node->hints |= 2;
+		}
 	}
 
 	if (node->prior.playouts) {
@@ -163,6 +165,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 
 	b->explore_p = 0.2;
 	b->fpu = INFINITY;
+	b->gp_eqex = b->policy_eqex = -1;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -181,6 +184,10 @@ policy_ucb1_init(struct uct *u, char *arg)
 				b->eqex = optval ? atoi(optval) : 50;
 				if (b->eqex)
 					p->prior = ucb1_prior;
+			} else if (!strcasecmp(optname, "prior_gp") && optval) {
+				b->gp_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_policy") && optval) {
+				b->policy_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
 			} else {
@@ -188,6 +195,9 @@ policy_ucb1_init(struct uct *u, char *arg)
 			}
 		}
 	}
+
+	if (b->gp_eqex < 0) b->gp_eqex = b->eqex;
+	if (b->policy_eqex < 0) b->policy_eqex = b->eqex;
 
 	return p;
 }
