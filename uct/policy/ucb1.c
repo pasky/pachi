@@ -7,6 +7,7 @@
 #include "board.h"
 #include "debug.h"
 #include "move.h"
+#include "random.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 
@@ -25,6 +26,7 @@ struct ucb1_policy {
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
 	 * 50 playouts per source. */
 	int eqex, gp_eqex, policy_eqex;
+	int urg_randoma, urg_randomm;
 };
 
 
@@ -78,6 +80,10 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 			fprintf(stderr, "[%s -> %s] UCB1 urgency %f (%f + %f : %f)\n", coord2sstr(node->coord, &b2), coord2sstr(ni->coord, &b2), urgency, ni->u.value, sqrt(xpl / ni->u.playouts), b->fpu);
 		}
 #endif
+		if (b->urg_randoma)
+			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
+		if (b->urg_randomm)
+			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
@@ -190,6 +196,10 @@ policy_ucb1_init(struct uct *u, char *arg)
 				b->policy_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
+			} else if (!strcasecmp(optname, "urg_randoma") && optval) {
+				b->urg_randoma = atoi(optval);
+			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
+				b->urg_randomm = atoi(optval);
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}

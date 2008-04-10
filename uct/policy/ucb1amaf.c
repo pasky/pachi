@@ -7,6 +7,7 @@
 #include "board.h"
 #include "debug.h"
 #include "move.h"
+#include "random.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 
@@ -25,6 +26,7 @@ struct ucb1_policy {
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
 	 * 50 playouts per source. */
 	int eqex, gp_eqex, policy_eqex;
+	int urg_randoma, urg_randomm;
 	float explore_p_rave;
 	int equiv_rave;
 	bool rave_prior;
@@ -65,7 +67,11 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		float uctp = (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts);
 		float ravep = (parity > 0 ? ni->amaf.value : 1 - ni->amaf.value) + sqrt(xpl_rave / amaf_playouts);
 		float urgency = uct_playouts ? beta * ravep + (1 - beta) * uctp : b->fpu;
-		//fprintf(stderr, "u %f (%d/%d) r %f (%f %d/%d) b %f -> %f\n", uctp, ni->u.wins, ni->u.playouts, ravep, xpl_rave, amaf_wins, amaf_playouts, beta, urgency);
+		// fprintf(stderr, "uctp %f (uct %d/%d) ravep %f (xpl %f amaf %d/%d) beta %f => %f\n", uctp, ni->u.wins, ni->u.playouts, ravep, xpl_rave, amaf_wins, amaf_playouts, beta, urgency);
+		if (b->urg_randoma)
+			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
+		if (b->urg_randomm)
+			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
 		if (urgency > best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
@@ -153,6 +159,10 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->policy_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
+			} else if (!strcasecmp(optname, "urg_randoma") && optval) {
+				b->urg_randoma = atoi(optval);
+			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
+				b->urg_randomm = atoi(optval);
 			} else if (!strcasecmp(optname, "rave")) {
 				p->descend = ucb1rave_descend;
 			} else if (!strcasecmp(optname, "explore_p_rave") && optval) {
