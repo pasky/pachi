@@ -29,7 +29,7 @@ struct ucb1_policy {
 	int urg_randoma, urg_randomm;
 	float explore_p_rave;
 	int equiv_rave;
-	bool rave_prior;
+	bool rave_prior, both_colors;
 };
 
 
@@ -98,6 +98,8 @@ update_node_amaf(struct uct_policy *p, struct tree_node *node, int result)
 void
 ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
 {
+	struct ucb1_policy *b = p->data;
+
 	color = stone_other(color); // We will look in CHILDREN of the node!
 	for (; node; node = node->parent, color = stone_other(color)) {
 		/* Account for root node. */
@@ -110,9 +112,18 @@ ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, 
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			//struct board b; b.size = 9;
 			//fprintf(stderr, "?%s [%d %d]\n", coord2sstr(ni->coord, &b), map->map[ni->coord], color);
-			if (is_pass(ni->coord) || map->map[ni->coord] != color)
+			assert(map->map[ni->coord] != S_OFFBOARD);
+			if (is_pass(ni->coord) || map->map[ni->coord] == S_NONE)
 				continue;
-			update_node_amaf(p, ni, result);
+#if 1
+			struct board bb; bb.size = 9+2;
+			fprintf(stderr, "%s -> %s [%d %d => %d]\n", coord2sstr(node->coord, &bb), coord2sstr(ni->coord, &bb), map->map[ni->coord], color, result);
+#endif
+			if (b->both_colors) {
+				update_node_amaf(p, ni, map->map[ni->coord] == color ? result : !result);
+			} else if (map->map[ni->coord] == color) {
+				update_node_amaf(p, ni, result);
+			}
 		}
 	}
 }
@@ -171,6 +182,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "rave_prior")) {
 				b->rave_prior = true;
+			} else if (!strcasecmp(optname, "both_colors")) {
+				b->both_colors = true;
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}
