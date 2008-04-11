@@ -110,12 +110,10 @@ ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, 
 		if (is_pass(node->coord) || !node->parent)
 			update_node_amaf(p, node, result);
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-			//struct board b; b.size = 9;
-			//fprintf(stderr, "?%s [%d %d]\n", coord2sstr(ni->coord, &b), map->map[ni->coord], color);
 			assert(map->map[ni->coord] != S_OFFBOARD);
 			if (is_pass(ni->coord) || map->map[ni->coord] == S_NONE)
 				continue;
-#if 1
+#if 0
 			struct board bb; bb.size = 9+2;
 			fprintf(stderr, "%s -> %s [%d %d => %d]\n", coord2sstr(node->coord, &bb), coord2sstr(ni->coord, &bb), map->map[ni->coord], color, result);
 #endif
