@@ -46,7 +46,7 @@ quiet_cmd_recmake = "[MAKE $$target]   $$subdir"
 unexport CFLAGS
 CFLAGS += $(CUSTOM_CFLAGS) $(XCFLAGS) $(INCLUDES) -I- $(SYS_CFLAGS)
 COMPILE = $(CC) $(CFLAGS)
-LINK = $(CC) $(LDFLAGS) $(LIBS)
+LINK = $(CC) $(LDFLAGS) $(XLDFLAGS) $(LIBS)
 
 DEP_FILES_1 = $(foreach src,$(OBJS),.deps/$(src))
 DEP_FILES = $(DEP_FILES_1:%.o=%.P)
