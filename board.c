@@ -377,7 +377,7 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 			if (!gi->lib[i])
 				break; /* Unfilled liberties. */
 		}
-		gi->libs--;
+		gi->lib[--gi->libs] = 0;
 
 		check_libs_consistency(board, group);
 		if (gi->libs < GROUP_KEEP_LIBS - 1) {
