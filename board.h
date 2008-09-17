@@ -14,6 +14,7 @@
 /* The board implementation has bunch of optional features.
  * Turn them on below: */
 #define WANT_BOARD_C // required by playout_moggy
+//#define BOARD_SIZE 9 // constant board size, allows better optimization
 
 
 /* Allow board_play_random_move() to return pass even when
@@ -105,8 +106,14 @@ struct board {
 	hash_t hash;
 };
 
+#ifdef BOARD_SIZE
+/* Avoid unused variable warnings */
+#define board_size(b_) ((&(b_) == &(b_)) ? BOARD_SIZE + 2 : 0)
+#define board_size2(b_) (board_size(b_) * board_size(b_))
+#else
 #define board_size(b_) ((b_).size)
 #define board_size2(b_) ((b_).size2)
+#endif
 
 #define board_at(b_, c) ((b_)->b[coord_raw(c)])
 #define board_atxy(b_, x, y) ((b_)->b[(x) + board_size(b_) * (y)])

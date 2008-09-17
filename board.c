@@ -89,8 +89,12 @@ board_done(struct board *board)
 void
 board_resize(struct board *board, int size)
 {
+#ifdef BOARD_SIZE
+	assert(board_size(*board) == size + 2);
+#else
 	board_size(*board) = size + 2 /* S_OFFBOARD margin */;
 	board_size2(*board) = board_size(*board) * board_size(*board);
+#endif
 	if (board->b)
 		free(board->b);
 
