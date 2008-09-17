@@ -642,13 +642,29 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	struct move ko = { pass, S_NONE };
 
+	int captured_groups = 0;
+
+	foreach_neighbor(board, coord, {
+		captured_groups += (board_group_info(board, group_at(board, c)).libs == 1);
+	});
+
+	if (likely(captured_groups == 0)) {
+		if (DEBUGL(5)) {
+			if (DEBUGL(6))
+				board_print(board, stderr);
+			fprintf(stderr, "board_check: one-stone suicide\n");
+		}
+
+		return -1;
+	}
+
 	board->f[f] = board->f[--board->flen];
 	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 
-	int captured_groups = 0;
-
 	foreach_neighbor(board, coord, {
+		inc_neighbor_count_at(board, c, color);
+
 		group_t group = group_at(board, c);
 		if (!group)
 			continue;
@@ -658,8 +674,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
 				group);
 
-		if (unlikely(board_group_captured(board, group))) {
-			captured_groups++;
+		if (board_group_captured(board, group)) {
 			if (board_group_capture(board, group) == 1) {
 				/* If we captured multiple groups at once,
 				 * we can't be fighting ko so we don't need
@@ -670,31 +685,6 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord, board), coord_y(ko.coord, board));
 			}
 		}
-	});
-
-	if (likely(captured_groups == 0)) {
-		if (DEBUGL(5)) {
-			if (DEBUGL(6))
-				board_print(board, stderr);
-			fprintf(stderr, "board_check: one-stone suicide\n");
-		}
-
-		foreach_neighbor(board, coord, {
-			board_group_addlib(board, group_at(board, c), coord, true);
-			if (DEBUGL(7))
-				fprintf(stderr, "board_play_raw: restoring libs for group %d\n",
-					group_at(board, c));
-		});
-
-		coord_t c = coord;
-		if (DEBUGL(6))
-			fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
-		board->f[board->flen++] = coord_raw(c);
-		return -1;
-	}
-
-	foreach_neighbor(board, coord, {
-		inc_neighbor_count_at(board, c, color);
 	});
 
 	board_at(board, coord) = color;
