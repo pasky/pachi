@@ -742,13 +742,13 @@ static inline bool
 board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 {
 	coord_raw(*coord) = b->f[f];
-	if (is_pass(*coord))
+	if (unlikely(is_pass(*coord)))
 		return random_pass;
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
-	return (!board_is_one_point_eye(b, coord, color) /* bad idea to play into one, usually */
-	        && board_play_f(b, &m, f) >= 0);
+	return (likely(!board_is_one_point_eye(b, coord, color)) /* bad idea to play into one, usually */
+	        && likely(board_play_f(b, &m, f) >= 0));
 }
 
 void
