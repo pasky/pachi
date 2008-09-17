@@ -333,7 +333,7 @@ board_capturable_rm(struct board *board, group_t group)
 }
 
 static void
-board_group_addlib(struct board *board, group_t group, coord_t coord)
+board_group_addlib(struct board *board, group_t group, coord_t coord, bool fresh)
 {
 	if (DEBUGL(7)) {
 		fprintf(stderr, "Group %d[%s]: Adding liberty %s\n",
@@ -344,15 +344,18 @@ board_group_addlib(struct board *board, group_t group, coord_t coord)
 
 	struct group *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
-		for (int i = 0; i < gi_libs_bound(*gi); i++)
-			if (gi->lib[i] == coord)
-				return;
+		if (!fresh)
+			for (int i = 0; i < gi_libs_bound(*gi); i++)
+				if (gi->lib[i] == coord)
+					return;
 		if (gi->libs == 0)
 			board_capturable_add(board, group);
 		else if (gi->libs == 1)
 			board_capturable_rm(board, group);
 		gi->lib[gi->libs++] = coord;
 	}
+
+	check_libs_consistency(board, group);
 }
 
 static void
@@ -438,7 +441,7 @@ board_remove_stone(struct board *board, coord_t c)
 	coord_t coord = c;
 	foreach_neighbor(board, coord, {
 		dec_neighbor_count_at(board, c, color);
-		board_group_addlib(board, group_at(board, c), coord);
+		board_group_addlib(board, group_at(board, c), coord, true);
 	});
 
 	if (DEBUGL(6))
@@ -452,7 +455,7 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 {
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
-			board_group_addlib(board, gid, c);
+			board_group_addlib(board, gid, c, false);
 	});
 
 	group_at(board, coord) = gid;
@@ -513,10 +516,18 @@ static group_t profiling_noinline
 new_group(struct board *board, coord_t coord)
 {
 	group_t gid = coord_raw(coord);
+	struct group *gi = &board_group_info(board, gid);
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
-			board_group_addlib(board, gid, c);
+			/* board_group_addlib is ridiculously expensive for us */
+#if GROUP_KEEP_LIBS < 4
+			if (gi->libs < GROUP_KEEP_LIBS)
+#endif
+			gi->lib[gi->libs++] = c;
 	});
+	if (gi->libs == 1)
+		board_capturable_add(board, gid);
+	check_libs_consistency(board, gid);
 
 	group_at(board, coord) = gid;
 	groupnext_at(board, coord) = 0;
@@ -648,7 +659,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		}
 
 		foreach_neighbor(board, coord, {
-			board_group_addlib(board, group_at(board, c), coord);
+			board_group_addlib(board, group_at(board, c), coord, true);
 			if (DEBUGL(7))
 				fprintf(stderr, "board_play_raw: restoring libs for group %d\n",
 					group_at(board, c));
