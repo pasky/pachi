@@ -300,7 +300,7 @@ check_libs_consistency(struct board *board, group_t g)
 	if (!g) return;
 	struct group *gi = &board_group_info(board, g);
 	for (int i = 0; i < gi_libs_bound(*gi); i++)
-		if (board_at(board, gi->lib[i]) != S_NONE) {
+		if (gi->lib[i] && board_at(board, gi->lib[i]) != S_NONE) {
 			fprintf(stderr, "BOGUS LIBERTY %s of group %d[%s]\n", coord2sstr(gi->lib[i], board), g, coord2sstr(g, board));
 			assert(0);
 		}
