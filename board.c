@@ -295,7 +295,7 @@ check_libs_consistency(struct board *board, group_t g)
 #ifdef DEBUG
 	if (!g) return;
 	struct group *gi = &board_group_info(board, g);
-	for (int i = 0; i < gi->libs; i++)
+	for (int i = 0; i < gi_libs_bound(*gi); i++)
 		if (board_at(board, gi->lib[i]) != S_NONE) {
 			fprintf(stderr, "BOGUS LIBERTY %s of group %d[%s]\n", coord2sstr(gi->lib[i], board), g, coord2sstr(g, board));
 			assert(0);
@@ -340,7 +340,7 @@ board_group_addlib(struct board *board, group_t group, coord_t coord)
 
 	struct group *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
-		for (int i = 0; i < gi->libs; i++)
+		for (int i = 0; i < gi_libs_bound(*gi); i++)
 			if (gi->lib[i] == coord)
 				return;
 		if (gi->libs == 0)
@@ -360,9 +360,9 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 	}
 
 	struct group *gi = &board_group_info(board, group);
-	for (int i = 0; i < gi->libs; i++) {
-		if (gi->lib[i] == coord) {
-			for (i++; i < gi->libs; i++)
+	for (int i = 0; i < gi_libs_bound(*gi); i++) {
+		if (unlikely(gi->lib[i] == coord)) {
+			for (i++; i < gi_libs_bound(*gi); i++)
 				gi->lib[i - 1] = gi->lib[i];
 			gi->libs--;
 
@@ -557,7 +557,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 			if (DEBUGL(8)) {
 				struct group *gi = &board_group_info(board, ngroup);
 				fprintf(stderr, "testing captured group %d[%s]: ", ngroup, coord2sstr(ngroup, board));
-				for (int i = 0; i < gi->libs; i++)
+				for (int i = 0; i < gi_libs_bound(*gi); i++)
 					fprintf(stderr, "%s ", coord2sstr(gi->lib[i], board));
 				fprintf(stderr, "\n");
 			}
