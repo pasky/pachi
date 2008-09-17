@@ -132,7 +132,6 @@ struct board {
 
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
-#define gi_libs_bound(g_) ((g_).libs > GROUP_KEEP_LIBS ? GROUP_KEEP_LIBS : (g_).libs)
 
 #define hash_at(b_, coord, color) (b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord_raw(coord)]
 
