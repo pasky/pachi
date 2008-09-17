@@ -345,9 +345,15 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, bool fresh
 	struct group *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
 		if (!fresh)
-			for (int i = 0; i < GROUP_KEEP_LIBS; i++)
+			for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
+#if 0
+				/* Seems extra branch just slows it down */
+				if (!gi->lib[i])
+					break;
+#endif
 				if (unlikely(gi->lib[i] == coord))
 					return;
+			}
 		if (gi->libs == 0)
 			board_capturable_add(board, group);
 		else if (gi->libs == 1)
@@ -368,6 +374,11 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 
 	struct group *gi = &board_group_info(board, group);
 	for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
+#if 0
+		/* Seems extra branch just slows it down */
+		if (!gi->lib[i])
+			break;
+#endif
 		if (likely(gi->lib[i] != coord))
 			continue;
 
