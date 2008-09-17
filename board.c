@@ -367,28 +367,30 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 	}
 
 	struct group *gi = &board_group_info(board, group);
-	for (int i = 0; i < gi_libs_bound(*gi); i++) {
-		if (unlikely(gi->lib[i] == coord)) {
-			for (i++; i < gi_libs_bound(*gi); i++) {
-				gi->lib[i - 1] = gi->lib[i];
-				if (!gi->lib[i])
-					break; /* Unfilled liberties. */
-			}
-			gi->libs--;
+	int j = gi_libs_bound(*gi);
+	for (int i = 0; i < j; i++) {
+		if (likely(gi->lib[i] != coord))
+			continue;
 
-			check_libs_consistency(board, group);
-			if (gi->libs < GROUP_KEEP_LIBS - 1) {
-				if (gi->libs == 1)
-					board_capturable_add(board, group);
-				else if (gi->libs == 0)
-					board_capturable_rm(board, group);
-				return;
-			}
-			/* Postpone refilling lib[] until we need to. */
-			if (i > GROUP_REFILL_LIBS)
-				return;
-			goto find_extra_lib;
+		for (i++; i < gi_libs_bound(*gi); i++) {
+			gi->lib[i - 1] = gi->lib[i];
+			if (!gi->lib[i])
+				break; /* Unfilled liberties. */
 		}
+		gi->libs--;
+
+		check_libs_consistency(board, group);
+		if (gi->libs < GROUP_KEEP_LIBS - 1) {
+			if (gi->libs == 1)
+				board_capturable_add(board, group);
+			else if (gi->libs == 0)
+				board_capturable_rm(board, group);
+			return;
+		}
+		/* Postpone refilling lib[] until we need to. */
+		if (i > GROUP_REFILL_LIBS)
+			return;
+		goto find_extra_lib;
 	}
 
 	/* This is ok even if gi->libs < GROUP_KEEP_LIBS since we
