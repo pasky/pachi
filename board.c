@@ -346,7 +346,7 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, bool fresh
 	if (gi->libs < GROUP_KEEP_LIBS) {
 		if (!fresh)
 			for (int i = 0; i < gi_libs_bound(*gi); i++)
-				if (gi->lib[i] == coord)
+				if (unlikely(gi->lib[i] == coord))
 					return;
 		if (gi->libs == 0)
 			board_capturable_add(board, group);
