@@ -552,6 +552,45 @@ new_group(struct board *board, coord_t coord)
 	return gid;
 }
 
+static inline int
+play_one_neighbor(struct board *board,
+		coord_t coord, enum stone color, enum stone other_color,
+		coord_t c, int gid)
+{
+	enum stone ncolor = board_at(board, c);
+	group_t ngroup = group_at(board, c);
+
+	inc_neighbor_count_at(board, c, color);
+
+	if (!ngroup)
+		return gid;
+
+	board_group_rmlib(board, ngroup, coord);
+	if (DEBUGL(7))
+		fprintf(stderr, "board_play_raw: reducing libs for group %d (%d:%d,%d)\n",
+			ngroup, ncolor, color, other_color);
+
+	if (ncolor == color && ngroup != gid) {
+		if (gid <= 0) {
+			gid = ngroup;
+			add_to_group(board, gid, c, coord);
+		} else {
+			merge_groups(board, gid, ngroup);
+		}
+	} else if (ncolor == other_color) {
+		if (DEBUGL(8)) {
+			struct group *gi = &board_group_info(board, ngroup);
+			fprintf(stderr, "testing captured group %d[%s]: ", ngroup, coord2sstr(ngroup, board));
+			for (int i = 0; i < GROUP_KEEP_LIBS; i++)
+				fprintf(stderr, "%s ", coord2sstr(gi->lib[i], board));
+			fprintf(stderr, "\n");
+		}
+		if (unlikely(board_group_captured(board, ngroup)))
+			board_group_capture(board, ngroup);
+	}
+	return gid;
+}
+
 /* We played on a place with at least one liberty. We will become a member of
  * some group for sure. */
 static int profiling_noinline
@@ -567,37 +606,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 
 	foreach_neighbor(board, coord, {
-		enum stone ncolor = board_at(board, c);
-		group_t ngroup = group_at(board, c);
-
-		inc_neighbor_count_at(board, c, color);
-
-		if (!ngroup)
-			continue;
-
-		board_group_rmlib(board, ngroup, coord);
-		if (DEBUGL(7))
-			fprintf(stderr, "board_play_raw: reducing libs for group %d (%d:%d,%d)\n",
-				ngroup, ncolor, color, other_color);
-
-		if (ncolor == color && ngroup != gid) {
-			if (gid <= 0) {
-				gid = ngroup;
-				add_to_group(board, gid, c, coord);
-			} else {
-				merge_groups(board, gid, ngroup);
-			}
-		} else if (ncolor == other_color) {
-			if (DEBUGL(8)) {
-				struct group *gi = &board_group_info(board, ngroup);
-				fprintf(stderr, "testing captured group %d[%s]: ", ngroup, coord2sstr(ngroup, board));
-				for (int i = 0; i < GROUP_KEEP_LIBS; i++)
-					fprintf(stderr, "%s ", coord2sstr(gi->lib[i], board));
-				fprintf(stderr, "\n");
-			}
-			if (unlikely(board_group_captured(board, ngroup)))
-				board_group_capture(board, ngroup);
-		}
+			gid = play_one_neighbor(board, coord, color, other_color, c, gid);
 	});
 
 	if (unlikely(gid <= 0))
