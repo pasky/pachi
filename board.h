@@ -31,7 +31,8 @@ typedef coord_t group_t;
 struct group {
 	/* We keep track of only up to GROUP_KEEP_LIBS; over that, we
 	 * don't care. */
-#define GROUP_KEEP_LIBS 4 // +-1 can make noticeable speed difference
+#define GROUP_KEEP_LIBS 4 // +1 can make noticeable speed difference
+#define GROUP_REFILL_LIBS 2 // refill lib[] when we go under this; this must be at least 2!
 	coord_t lib[GROUP_KEEP_LIBS];
 	int libs;
 };

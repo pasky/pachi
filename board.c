@@ -362,8 +362,11 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 	struct group *gi = &board_group_info(board, group);
 	for (int i = 0; i < gi_libs_bound(*gi); i++) {
 		if (unlikely(gi->lib[i] == coord)) {
-			for (i++; i < gi_libs_bound(*gi); i++)
+			for (i++; i < gi_libs_bound(*gi); i++) {
 				gi->lib[i - 1] = gi->lib[i];
+				if (!gi->lib[i])
+					break; /* Unfilled liberties. */
+			}
 			gi->libs--;
 
 			check_libs_consistency(board, group);
@@ -374,6 +377,9 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 					board_capturable_rm(board, group);
 				return;
 			}
+			/* Postpone refilling lib[] until we need to. */
+			if (i > GROUP_REFILL_LIBS)
+				return;
 			goto find_extra_lib;
 		}
 	}
@@ -404,7 +410,8 @@ find_extra_lib:;
 				}
 				if (!next) {
 					gi->lib[gi->libs++] = c;
-					return;
+					if (gi->libs >= GROUP_KEEP_LIBS)
+						return;
 				}
 			}
 		} );
