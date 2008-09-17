@@ -12,7 +12,7 @@
 
 /* This implements the UCB1-TUNED policy. */
 
-struct ucb1_policy {
+struct ucb1_policy_tuned {
 	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
 	 * paper calls 'p'. Original UCB has this on 2, but this seems to
 	 * produce way too wide searches; reduce this to get deeper and
@@ -27,7 +27,7 @@ struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, stru
 struct tree_node *
 ucb1tuned_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
-	struct ucb1_policy *b = p->data;
+	struct ucb1_policy_tuned *b = p->data;
 	float xpl = log(node->u.playouts) * b->explore_p;
 
 	struct tree_node *nbest = node->children;
@@ -56,7 +56,7 @@ struct uct_policy *
 policy_ucb1tuned_init(struct uct *u, char *arg)
 {
 	struct uct_policy *p = calloc(1, sizeof(*p));
-	struct ucb1_policy *b = calloc(1, sizeof(*b));
+	struct ucb1_policy_tuned *b = calloc(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
 	p->descend = ucb1tuned_descend;

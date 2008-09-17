@@ -13,7 +13,7 @@
 
 /* This implements the UCB1 policy with an extra AMAF heuristics. */
 
-struct ucb1_policy {
+struct ucb1_policy_amaf {
 	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
 	 * paper calls 'p'. Original UCB has this on 2, but this seems to
 	 * produce way too wide searches; reduce this to get deeper and
@@ -48,7 +48,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 	 * urgency will be always higher; even with normal FPU because
 	 * of the explore coefficient. */
 
-	struct ucb1_policy *b = p->data;
+	struct ucb1_policy_amaf *b = p->data;
 	float xpl = log(node->u.playouts + node->prior.playouts) * b->explore_p;
 	float xpl_rave = log(node->amaf.playouts + (b->rave_prior ? node->prior.playouts : 0)) * b->explore_p_rave;
 	float beta = sqrt((float)b->equiv_rave / (3 * (node->u.playouts + node->prior.playouts) + b->equiv_rave));
@@ -98,7 +98,7 @@ update_node_amaf(struct uct_policy *p, struct tree_node *node, int result)
 void
 ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
 {
-	struct ucb1_policy *b = p->data;
+	struct ucb1_policy_amaf *b = p->data;
 
 	color = stone_other(color); // We will look in CHILDREN of the node!
 	for (; node; node = node->parent, color = stone_other(color)) {
@@ -131,7 +131,7 @@ struct uct_policy *
 policy_ucb1amaf_init(struct uct *u, char *arg)
 {
 	struct uct_policy *p = calloc(1, sizeof(*p));
-	struct ucb1_policy *b = calloc(1, sizeof(*b));
+	struct ucb1_policy_amaf *b = calloc(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
 	p->descend = ucb1_descend;
