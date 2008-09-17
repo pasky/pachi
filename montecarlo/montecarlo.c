@@ -48,26 +48,26 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 	fprintf(f, "\n       ");
 	int x, y;
 	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-	for (x = 1; x < board_size(*board) - 1; x++)
+	for (x = 1; x < board_size(board) - 1; x++)
 		fprintf(f, "%c    ", asdf[x - 1]);
 	fprintf(f, "\n   +-");
-	for (x = 1; x < board_size(*board) - 1; x++)
+	for (x = 1; x < board_size(board) - 1; x++)
 		fprintf(f, "-----");
 	fprintf(f, "+\n");
-	for (y = board_size(*board) - 2; y >= 1; y--) {
+	for (y = board_size(board) - 2; y >= 1; y--) {
 		fprintf(f, "%2d | ", y);
-		for (x = 1; x < board_size(*board) - 1; x++)
-			if (moves[y * board_size(*board) + x].games)
-				fprintf(f, "%0.2f ", (float) moves[y * board_size(*board) + x].wins / moves[y * board_size(*board) + x].games);
+		for (x = 1; x < board_size(board) - 1; x++)
+			if (moves[y * board_size(board) + x].games)
+				fprintf(f, "%0.2f ", (float) moves[y * board_size(board) + x].wins / moves[y * board_size(board) + x].games);
 			else
 				fprintf(f, "---- ");
 		fprintf(f, "| ");
-		for (x = 1; x < board_size(*board) - 1; x++)
-			fprintf(f, "%4d ", moves[y * board_size(*board) + x].games);
+		for (x = 1; x < board_size(board) - 1; x++)
+			fprintf(f, "%4d ", moves[y * board_size(board) + x].games);
 		fprintf(f, "|\n");
 	}
 	fprintf(f, "   +-");
-	for (x = 1; x < board_size(*board) - 1; x++)
+	for (x = 1; x < board_size(board) - 1; x++)
 		fprintf(f, "-----");
 	fprintf(f, "+\n");
 }
@@ -84,7 +84,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* We use [0] for pass. Normally, this is an inaccessible corner
 	 * of board margin. */
-	struct move_stat moves[board_size2(*b)];
+	struct move_stat moves[board_size2(b)];
 	memset(moves, 0, sizeof(moves));
 
 	int losses = 0;
@@ -165,8 +165,8 @@ pass_wins:
 			/* Simple heuristic: avoid opening too low. Do not
 			 * play on second or first line as first white or
 			 * first two black moves.*/
-			if (coord_x(c, b) < 3 || coord_x(c, b) > board_size(*b) - 4
-			    || coord_y(c, b) < 3 || coord_y(c, b) > board_size(*b) - 4)
+			if (coord_x(c, b) < 3 || coord_x(c, b) > board_size(b) - 4
+			    || coord_y(c, b) < 3 || coord_y(c, b) > board_size(b) - 4)
 				continue;
 		}
 

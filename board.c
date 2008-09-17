@@ -45,15 +45,15 @@ board_copy(struct board *b2, struct board *b1)
 {
 	memcpy(b2, b1, sizeof(struct board));
 
-	int bsize = board_size2(*b2) * sizeof(*b2->b);
-	int gsize = board_size2(*b2) * sizeof(*b2->g);
-	int fsize = board_size2(*b2) * sizeof(*b2->f);
-	int nsize = board_size2(*b2) * sizeof(*b2->n);
-	int psize = board_size2(*b2) * sizeof(*b2->p);
-	int hsize = board_size2(*b2) * 2 * sizeof(*b2->h);
-	int gisize = board_size2(*b2) * sizeof(*b2->gi);
+	int bsize = board_size2(b2) * sizeof(*b2->b);
+	int gsize = board_size2(b2) * sizeof(*b2->g);
+	int fsize = board_size2(b2) * sizeof(*b2->f);
+	int nsize = board_size2(b2) * sizeof(*b2->n);
+	int psize = board_size2(b2) * sizeof(*b2->p);
+	int hsize = board_size2(b2) * 2 * sizeof(*b2->h);
+	int gisize = board_size2(b2) * sizeof(*b2->gi);
 #ifdef WANT_BOARD_C
-	int csize = board_size2(*b2) * sizeof(*b2->c);
+	int csize = board_size2(b2) * sizeof(*b2->c);
 #else
 	int csize = 0;
 #endif
@@ -90,23 +90,23 @@ void
 board_resize(struct board *board, int size)
 {
 #ifdef BOARD_SIZE
-	assert(board_size(*board) == size + 2);
+	assert(board_size(board) == size + 2);
 #else
-	board_size(*board) = size + 2 /* S_OFFBOARD margin */;
-	board_size2(*board) = board_size(*board) * board_size(*board);
+	board_size(board) = size + 2 /* S_OFFBOARD margin */;
+	board_size2(board) = board_size(board) * board_size(board);
 #endif
 	if (board->b)
 		free(board->b);
 
-	int bsize = board_size2(*board) * sizeof(*board->b);
-	int gsize = board_size2(*board) * sizeof(*board->g);
-	int fsize = board_size2(*board) * sizeof(*board->f);
-	int nsize = board_size2(*board) * sizeof(*board->n);
-	int psize = board_size2(*board) * sizeof(*board->p);
-	int hsize = board_size2(*board) * 2 * sizeof(*board->h);
-	int gisize = board_size2(*board) * sizeof(*board->gi);
+	int bsize = board_size2(board) * sizeof(*board->b);
+	int gsize = board_size2(board) * sizeof(*board->g);
+	int fsize = board_size2(board) * sizeof(*board->f);
+	int nsize = board_size2(board) * sizeof(*board->n);
+	int psize = board_size2(board) * sizeof(*board->p);
+	int hsize = board_size2(board) * 2 * sizeof(*board->h);
+	int gisize = board_size2(board) * sizeof(*board->gi);
 #ifdef WANT_BOARD_C
-	int csize = board_size2(*board) * sizeof(*board->c);
+	int csize = board_size2(board) * sizeof(*board->c);
 #else
 	int csize = 0;
 #endif
@@ -127,19 +127,19 @@ board_resize(struct board *board, int size)
 void
 board_clear(struct board *board)
 {
-	int size = board_size(*board);
+	int size = board_size(board);
 
 	board_done_noalloc(board);
 	board_setup(board);
 	board_resize(board, size - 2 /* S_OFFBOARD margin */);
 
 	/* Draw the offboard margin */
-	int top_row = board_size2(*board) - board_size(*board);
+	int top_row = board_size2(board) - board_size(board);
 	int i;
-	for (i = 0; i < board_size(*board); i++)
+	for (i = 0; i < board_size(board); i++)
 		board->b[i] = board->b[top_row + i] = S_OFFBOARD;
-	for (i = 0; i <= top_row; i += board_size(*board))
-		board->b[i] = board->b[board_size(*board) - 1 + i] = S_OFFBOARD;
+	for (i = 0; i <= top_row; i += board_size(board))
+		board->b[i] = board->b[board_size(board) - 1 + i] = S_OFFBOARD;
 
 	foreach_point(board) {
 		coord_t coord = c;
@@ -153,8 +153,8 @@ board_clear(struct board *board)
 	/* First, pass is always a free position. */
 	board->f[board->flen++] = coord_raw(pass);
 	/* All positions are free! Except the margin. */
-	for (i = board_size(*board); i < (board_size(*board) - 1) * board_size(*board); i++)
-		if (i % board_size(*board) != 0 && i % board_size(*board) != board_size(*board) - 1)
+	for (i = board_size(board); i < (board_size(board) - 1) * board_size(board); i++)
+		if (i % board_size(board) != 0 && i % board_size(board) != board_size(board) - 1)
 			board->f[board->flen++] = i;
 
 	/* Initialize zobrist hashtable. */
@@ -187,15 +187,15 @@ board_print(struct board *board, FILE *f)
 		board->captures[S_BLACK], board->captures[S_WHITE]);
 	int x, y;
 	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-	for (x = 1; x < board_size(*board) - 1; x++)
+	for (x = 1; x < board_size(board) - 1; x++)
 		fprintf(f, "%c ", asdf[x - 1]);
 	fprintf(f, "\n   +-");
-	for (x = 1; x < board_size(*board) - 1; x++)
+	for (x = 1; x < board_size(board) - 1; x++)
 		fprintf(f, "--");
 	fprintf(f, "+\n");
-	for (y = board_size(*board) - 2; y >= 1; y--) {
+	for (y = board_size(board) - 2; y >= 1; y--) {
 		fprintf(f, "%2d | ", y);
-		for (x = 1; x < board_size(*board) - 1; x++) {
+		for (x = 1; x < board_size(board) - 1; x++) {
 			if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
 				fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
 			else
@@ -203,14 +203,14 @@ board_print(struct board *board, FILE *f)
 		}
 		if (DEBUGL(6)) {
 			fprintf(f, "| ");
-			for (x = 1; x < board_size(*board) - 1; x++) {
+			for (x = 1; x < board_size(board) - 1; x++) {
 				fprintf(f, "%d ", group_atxy(board, x, y));
 			}
 		}
 		fprintf(f, "|\n");
 	}
 	fprintf(f, "   +-");
-	for (x = 1; x < board_size(*board) - 1; x++)
+	for (x = 1; x < board_size(board) - 1; x++)
 		fprintf(f, "--");
 	fprintf(f, "+\n\n");
 }
@@ -269,10 +269,10 @@ board_handicap_stone(struct board *board, int x, int y, FILE *f)
 void
 board_handicap(struct board *board, int stones, FILE *f)
 {
-	int margin = 3 + (board_size(*board) >= 13);
+	int margin = 3 + (board_size(board) >= 13);
 	int min = margin;
-	int mid = board_size(*board) / 2;
-	int max = board_size(*board) - 1 - margin;
+	int mid = board_size(board) / 2;
+	int max = board_size(board) - 1 - margin;
 	const int places[][2] = {
 		{ min, min }, { max, max }, { max, min }, { min, max },
 		{ min, mid }, { max, mid },
@@ -312,7 +312,7 @@ board_capturable_add(struct board *board, group_t group)
 {
 #ifdef WANT_BOARD_C
 	//fprintf(stderr, "add of group %d (%d)\n", group, board->clen);
-	assert(board->clen < board_size2(*board));
+	assert(board->clen < board_size2(board));
 	board->c[board->clen++] = group;
 #endif
 }
@@ -395,7 +395,7 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 
 	/* Add extra liberty from the board to our liberty list. */
 find_extra_lib:;
-	bool watermark[board_size2(*board)];
+	bool watermark[board_size2(board)];
 	memset(watermark, 0, sizeof(watermark));
 
 	foreach_in_group(board, group) {
@@ -463,7 +463,7 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d\n",
 			coord_x(prevstone, board), coord_y(prevstone, board),
 			coord_x(coord, board), coord_y(coord, board),
-			groupnext_at(board, coord) % board_size(*board), groupnext_at(board, coord) / board_size(*board),
+			groupnext_at(board, coord) % board_size(board), groupnext_at(board, coord) / board_size(board),
 			gid);
 }
 
@@ -841,11 +841,11 @@ board_tromp_taylor_owner(struct board *board, coord_t c)
 	}
 	for (int i = x; i > 0; i--)
 		TEST_REACH(i, y);
-	for (int i = x; i < board_size(*board) - 1; i++)
+	for (int i = x; i < board_size(board) - 1; i++)
 		TEST_REACH(i, y);
 	for (int i = y; i > 0; i--)
 		TEST_REACH(x, i);
-	for (int i = y; i < board_size(*board) - 1; i++)
+	for (int i = y; i < board_size(board) - 1; i++)
 		TEST_REACH(x, i);
 	return color;
 }
@@ -925,8 +925,8 @@ board_stone_radar(struct board *b, coord_t coord, int distance)
 	for (int i = 0; i < 4; i++)
 		if (bounds[i] < 1)
 			bounds[i] = 1;
-		else if (bounds[i] > board_size(*b) - 2)
-			bounds[i] = board_size(*b) - 2;
+		else if (bounds[i] > board_size(b) - 2)
+			bounds[i] = board_size(b) - 2;
 	for (int x = bounds[0]; x <= bounds[2]; x++)
 		for (int y = bounds[1]; y <= bounds[3]; y++)
 			if (board_atxy(b, x, y) != S_NONE) {

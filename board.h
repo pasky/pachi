@@ -108,11 +108,11 @@ struct board {
 
 #ifdef BOARD_SIZE
 /* Avoid unused variable warnings */
-#define board_size(b_) ((&(b_) == &(b_)) ? BOARD_SIZE + 2 : 0)
+#define board_size(b_) (((b_) == (b_)) ? BOARD_SIZE + 2 : 0)
 #define board_size2(b_) (board_size(b_) * board_size(b_))
 #else
-#define board_size(b_) ((b_).size)
-#define board_size2(b_) ((b_).size2)
+#define board_size(b_) ((b_)->size)
+#define board_size2(b_) ((b_)->size2)
 #endif
 
 #define board_at(b_, c) ((b_)->b[coord_raw(c)])

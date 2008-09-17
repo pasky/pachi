@@ -87,7 +87,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	struct playout_amafmap *amaf = NULL;
 	if (u->policy->wants_amaf) {
 		amaf = calloc(1, sizeof(*amaf));
-		amaf->map = calloc(board_size2(b2) + 1, sizeof(*amaf->map));
+		amaf->map = calloc(board_size2(&b2) + 1, sizeof(*amaf->map));
 		amaf->map++; // -1 is pass
 	}
 
@@ -96,7 +96,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	struct tree_node *n = t->root;
 	enum stone orig_color = color;
 	int result;
-	int pass_limit = (board_size(b2) - 2) * (board_size(b2) - 2) / 2;
+	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
 	int passes = is_pass(b->last_move.coord);
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk with color %d\n", color);
