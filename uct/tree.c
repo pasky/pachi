@@ -94,8 +94,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	ni->parent = node; node->children = ni;
 
 	/* The loop excludes the offboard margin. */
-	for (int i = 1; i < t->board->size; i++) {
-		for (int j = 1; j < t->board->size; j++) {
+	for (int i = 1; i < board_size(*t->board); i++) {
+		for (int j = 1; j < board_size(*t->board); j++) {
 			coord_t c = coord_xy_otf(i, j, t->board);
 			if (board_at(b, c) != S_NONE)
 				continue;
@@ -155,7 +155,7 @@ tree_update_node_value(struct tree_node *node, bool add_amaf)
 	node->u.value = (float)(node->u.wins + node->prior.wins + (add_amaf ? node->amaf.wins : 0))
 			/ (node->u.playouts + node->prior.playouts + (add_amaf ? node->amaf.playouts : 0));
 #if 0
-	{ struct board b2; b2.size = 9+2;
+	{ struct board b2; board_size(b2) = 9+2;
 	fprintf(stderr, "%s->%s %d/%d %d/%d %f\n", node->parent ? coord2sstr(node->parent->coord, &b2) : NULL, coord2sstr(node->coord, &b2), node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->u.value); }
 #endif
 }

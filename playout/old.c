@@ -200,9 +200,9 @@ domain_hint_cut(struct playout_policy *p, struct board *b, coord_t coord)
 				continue;
 			coord_raw(cutted) = coord_raw(c);
 			if (coord_y(c, b) < coord_y(coord, b))
-				coord_raw(cutted) -= b->size;
+				coord_raw(cutted) -= board_size(*b);
 			else
-				coord_raw(cutted) += b->size;
+				coord_raw(cutted) += board_size(*b);
 			if (likely(board_at(b, cutted) != cutting_color))
 				continue;
 			/* Cut kosumi! */

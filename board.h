@@ -104,11 +104,14 @@ struct board {
 	hash_t hash;
 };
 
+#define board_size(b_) ((b_).size)
+#define board_size2(b_) ((b_).size2)
+
 #define board_at(b_, c) ((b_)->b[coord_raw(c)])
-#define board_atxy(b_, x, y) ((b_)->b[(x) + (b_)->size * (y)])
+#define board_atxy(b_, x, y) ((b_)->b[(x) + board_size(b_) * (y)])
 
 #define group_at(b_, c) ((b_)->g[coord_raw(c)])
-#define group_atxy(b_, x, y) ((b_)->g[(x) + (b_)->size * (y)])
+#define group_atxy(b_, x, y) ((b_)->g[(x) + board_size(b_) * (y)])
 
 #define neighbor_count_at(b_, coord, color) ((b_)->n[coord_raw(coord)].colors[(enum stone) color])
 #define set_neighbor_count_at(b_, coord, color, count) (neighbor_count_at(b_, coord, color) = (count))
@@ -117,12 +120,12 @@ struct board {
 #define immediate_liberty_count(b_, coord) (4 - neighbor_count_at(b_, coord, S_BLACK) - neighbor_count_at(b_, coord, S_WHITE) - neighbor_count_at(b_, coord, S_OFFBOARD))
 
 #define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
-#define groupnext_atxy(b_, x, y) ((b_)->p[(x) + (b_)->size * (y)])
+#define groupnext_atxy(b_, x, y) ((b_)->p[(x) + board_size(b_) * (y)])
 
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
 
-#define hash_at(b_, coord, color) (b_)->h[((color) == S_BLACK ? (b_)->size2 : 0) + coord_raw(coord)]
+#define hash_at(b_, coord, color) (b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord_raw(coord)]
 
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
@@ -185,7 +188,7 @@ bool board_stone_radar(struct board *b, coord_t coord, int distance);
 #define foreach_point(board_) \
 	do { \
 		coord_t c; coord_pos(c, 0, (board_)); \
-		for (; coord_raw(c) < (board_)->size * (board_)->size; coord_raw(c)++)
+		for (; coord_raw(c) < board_size(board_) * board_size(board_); coord_raw(c)++)
 #define foreach_point_end \
 	} while (0)
 
@@ -208,18 +211,18 @@ bool board_stone_radar(struct board *b, coord_t coord, int distance);
 		coord_t coord__ = coord_; \
 		coord_t c; \
 		coord_pos(c, coord_raw(coord__) - 1, (board__)); do { loop_body } while (0); \
-		coord_pos(c, coord_raw(coord__) - (board__)->size, (board__)); do { loop_body } while (0); \
+		coord_pos(c, coord_raw(coord__) - board_size(board__), (board__)); do { loop_body } while (0); \
 		coord_pos(c, coord_raw(coord__) + 1, (board__)); do { loop_body } while (0); \
-		coord_pos(c, coord_raw(coord__) + (board__)->size, (board__)); do { loop_body } while (0); \
+		coord_pos(c, coord_raw(coord__) + board_size(board__), (board__)); do { loop_body } while (0); \
 	} while (0)
 
 #define foreach_diag_neighbor(board_, coord_) \
 	do { \
 		coord_t q__[4]; int q__i = 0; \
-		coord_pos(q__[q__i++], coord_raw(coord_) - (board_)->size - 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) - (board_)->size + 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + (board_)->size - 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + (board_)->size + 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_) - 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_) + 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_) - 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_) + 1, (board_)); \
 		int fn__i; \
 		for (fn__i = 0; fn__i < q__i; fn__i++) { \
 			coord_t c = q__[fn__i];

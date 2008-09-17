@@ -9,8 +9,8 @@
 typedef int coord_t;
 
 #define coord_raw(c) (c)
-#define coord_x(c, b) ((c) % (b)->size)
-#define coord_y(c, b) ((c) / (b)->size)
+#define coord_x(c, b) ((c) % board_size(b))
+#define coord_y(c, b) ((c) / board_size(b))
 #define coord_eq(c1, c2) ((c1) == (c2))
 
 static coord_t pass = -1;
@@ -20,8 +20,8 @@ static coord_t resign = -2;
 
 /* Initialize existing coord */
 #define coord_pos(coord, pos_, board) do { (coord) = (pos_); } while (0)
-#define coord_xy(coord, x, y, board) coord_pos(coord, (x) + (y) * (board)->size, board)
-#define coord_xy_otf(x, y, board) ((x) + (y) * (board)->size)
+#define coord_xy(coord, x, y, board) coord_pos(coord, (x) + (y) * board_size(board), board)
+#define coord_xy_otf(x, y, board) ((x) + (y) * board_size(board))
 
 /* dyn allocated */
 static coord_t *coord_init(int x, int y, int size);

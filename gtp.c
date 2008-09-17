@@ -124,7 +124,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		next_tok(arg);
 		m.color = str2stone(arg);
 		next_tok(arg);
-		coord_t *c = str2coord(arg, board->size);
+		coord_t *c = str2coord(arg, board_size(*board));
 		m.coord = *c; coord_done(c);
 
 		if (DEBUGL(1))
@@ -159,7 +159,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		char *arg;
 		next_tok(arg);
 		do {
-			coord_t *c = str2coord(arg, board->size);
+			coord_t *c = str2coord(arg, board_size(*board));
 			m.coord = *c; coord_done(c);
 			if (DEBUGL(1))
 				fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord, board), coord_y(m.coord, board));
