@@ -168,12 +168,12 @@ enum stone board_get_one_point_eye(struct board *board, coord_t *c);
 /* Check if group is in atari. This is very fast.
  * The last liberty is recorded to lastlib (content is undefined if group
  * is not in atari). */
-bool board_group_in_atari(struct board *board, int group, coord_t *lastlib);
+bool board_group_in_atari(struct board *board, group_t group, coord_t *lastlib);
 
 /* Check if group can be put in atari. This is also very fast.
  * The last two liberties are recorded to lastlib (content is undefined if group
  * can't be put in atari). */
-bool board_group_can_atari(struct board *board, int group, coord_t lastlib[2]);
+bool board_group_can_atari(struct board *board, group_t group, coord_t lastlib[2]);
 
 /* board_official_score() is the scoring method for yielding score suitable
  * for external presentation. For fast scoring of entirely filled boards
