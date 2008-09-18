@@ -395,12 +395,12 @@ global_atari_check(struct playout_policy *p, struct board *b)
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		coord_t c = group_atari_check(p, b, group_at(b, b->c[g]));
+		coord_t c = group_atari_check(p, b, group_at(b, group_base(b->c[g])));
 		if (!is_pass(c))
 			return c;
 	}
 	for (int g = 0; g < g_base; g++) {
-		coord_t c = group_atari_check(p, b, group_at(b, b->c[g]));
+		coord_t c = group_atari_check(p, b, group_at(b, group_base(b->c[g])));
 		if (!is_pass(c))
 			return c;
 	}
