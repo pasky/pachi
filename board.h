@@ -32,8 +32,12 @@ typedef coord_t group_t;
 struct group {
 	/* We keep track of only up to GROUP_KEEP_LIBS; over that, we
 	 * don't care. */
-#define GROUP_KEEP_LIBS 4 // +1 can make noticeable speed difference
-#define GROUP_REFILL_LIBS 2 // refill lib[] when we go under this; this must be at least 2!
+	/* _Combination_ of these two values can make some difference
+	 * in performance - fine-tune. */
+#define GROUP_KEEP_LIBS 10
+	// refill lib[] only when we hit this; this must be at least 2!
+	// Moggy requires at least 3 - see below for semantic impact.
+#define GROUP_REFILL_LIBS 5
 	coord_t lib[GROUP_KEEP_LIBS];
 	/* libs is only LOWER BOUND for the number of real liberties!!!
 	 * It denotes only number of items in lib[], thus you can rely
