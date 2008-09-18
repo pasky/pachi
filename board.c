@@ -698,7 +698,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	board_hash_commit(board);
 	board->ko = ko;
 
-	return new_group(board, coord);
+	return !!new_group(board, coord);
 }
 
 static int __attribute__((flatten))
