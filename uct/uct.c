@@ -26,7 +26,7 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 
 
 static void
-progress_status(struct uct *u, struct tree *t, enum stone color)
+progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
 {
 	if (!UDEBUGL(0))
 		return;
@@ -37,6 +37,7 @@ progress_status(struct uct *u, struct tree *t, enum stone color)
 		fprintf(stderr, "... No moves left\n");
 		return;
 	}
+	fprintf(stderr, "[%d] ", playouts);
 	fprintf(stderr, "best %f ", best->u.value);
 
 	/* Max depth */
@@ -197,7 +198,7 @@ promoted:;
 		}
 
 		if (i > 0 && !(i % 10000)) {
-			progress_status(u, u->t, color);
+			progress_status(u, u->t, color, i);
 		}
 
 		if (i > 0 && !(i % 500)) {
@@ -207,7 +208,7 @@ promoted:;
 		}
 	}
 
-	progress_status(u, u->t, color);
+	progress_status(u, u->t, color, i);
 	if (UDEBUGL(2))
 		tree_dump(u->t, u->dumpthres);
 
@@ -241,10 +242,10 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 		}
 
 		if (i > 0 && !(i % 10000)) {
-			progress_status(u, u->t, color);
+			progress_status(u, u->t, color, i);
 		}
 	}
-	progress_status(u, u->t, color);
+	progress_status(u, u->t, color, i);
 
 	tree_save(u->t, b, u->games / 100);
 
