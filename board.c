@@ -497,8 +497,8 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 		last_in_group = c;
 		group_at(board, c) = group_to;
 	} foreach_in_group_end;
-	groupnext_at(board, last_in_group) = groupnext_at(board, group_to);
-	groupnext_at(board, group_to) = group_from;
+	groupnext_at(board, last_in_group) = groupnext_at(board, group_base(group_to));
+	groupnext_at(board, group_base(group_to)) = group_base(group_from);
 
 	struct group *gi_from = &board_group_info(board, group_from);
 	struct group *gi_to = &board_group_info(board, group_to);
