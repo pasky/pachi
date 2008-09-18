@@ -370,29 +370,22 @@ static void
 board_group_find_extra_libs(struct board *board, group_t group, struct group *gi, coord_t avoid)
 {
 	/* Add extra liberty from the board to our liberty list. */
-	bool watermark[board_size2(board)];
-	memset(watermark, 0, sizeof(watermark));
+	enum stone watermark[board_size2(board)];
+	memcpy(watermark, board->b, sizeof(watermark));
+
+	for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++)
+		watermark[coord_raw(gi->lib[i])] = S_OFFBOARD;
+	watermark[coord_raw(avoid)] = S_OFFBOARD;
 
 	foreach_in_group(board, group) {
 		coord_t coord2 = c;
 		foreach_neighbor(board, coord2, {
-			if (likely(watermark[coord_raw(c)]))
+			if (likely(watermark[coord_raw(c)] != S_NONE))
 				continue;
-			watermark[coord_raw(c)] = true;
-			if (c != avoid && board_at(board, c) == S_NONE) {
-				bool next = false;
-				for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++) {
-					if (gi->lib[i] == c) {
-						next = true;
-						break;
-					}
-				}
-				if (!next) {
-					gi->lib[gi->libs++] = c;
-					if (gi->libs >= GROUP_KEEP_LIBS)
-						return;
-				}
-			}
+			watermark[coord_raw(c)] = S_OFFBOARD;
+			gi->lib[gi->libs++] = c;
+			if (unlikely(gi->libs >= GROUP_KEEP_LIBS))
+				return;
 		} );
 	} foreach_in_group_end;
 }
