@@ -189,8 +189,8 @@ tree_init:
 promoted:;
 	}
 
-	int i;
-	for (i = 0; i < u->games - (u->t->root->u.playouts / 1.5); i++) {
+	int i, games = u->games - (u->t->root->u.playouts / 1.5);
+	for (i = 0; i < games; i++) {
 		int result = uct_playout(u, b, color, u->t);
 		if (result < 0) {
 			/* Tree descent has hit invalid move. */
