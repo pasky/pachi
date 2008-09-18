@@ -232,6 +232,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	u->t = tree_init(b, color);
+	tree_load(u->t, b);
 
 	int i;
 	for (i = 0; i < u->games; i++) {
