@@ -8,7 +8,7 @@
 #include "debug.h"
 #include "random.h"
 
-int board_group_capture(struct board *board, int group);
+int board_group_capture(struct board *board, group_t group);
 
 bool random_pass = false;
 
@@ -812,7 +812,7 @@ board_get_one_point_eye(struct board *board, coord_t *coord)
 
 
 int profiling_noinline
-board_group_capture(struct board *board, int group)
+board_group_capture(struct board *board, group_t group)
 {
 	int stones = 0;
 
