@@ -253,7 +253,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 	 * negative hinting safely. */
 	//fprintf(stderr, "ladder check\n");
 
-	enum stone lcolor = board_at(b, laddered);
+	enum stone lcolor = board_at(b, group_base(laddered));
 	int x = coord_x(coord, b), y = coord_y(coord, b);
 
 	/* First, special-case first-line "ladders". This is a huge chunk
@@ -363,7 +363,7 @@ static coord_t
 group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 {
 	struct moggy_policy *pp = p->data;
-	enum stone color = board_at(b, group);
+	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
 
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -395,12 +395,12 @@ global_atari_check(struct playout_policy *p, struct board *b)
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		coord_t c = group_atari_check(p, b, b->c[g]);
+		coord_t c = group_atari_check(p, b, group_at(b, b->c[g]));
 		if (!is_pass(c))
 			return c;
 	}
 	for (int g = 0; g < g_base; g++) {
-		coord_t c = group_atari_check(p, b, b->c[g]);
+		coord_t c = group_atari_check(p, b, group_at(b, b->c[g]));
 		if (!is_pass(c))
 			return c;
 	}
@@ -421,9 +421,10 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 	}
 
 	foreach_neighbor(b, m->coord, {
-		if (board_group_info(b, group_at(b, c)).libs != 1)
+		group_t g = group_at(b, c);
+		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		coord_t l = group_atari_check(p, b, group_at(b, c));
+		coord_t l = group_atari_check(p, b, g);
 		if (!is_pass(l))
 			q.move[q.moves++] = l;
 	});

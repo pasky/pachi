@@ -130,6 +130,7 @@ struct board {
 #define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + board_size(b_) * (y)])
 
+#define group_base(g_) (g_)
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
 
@@ -203,7 +204,7 @@ bool board_stone_radar(struct board *b, coord_t coord, int distance);
 #define foreach_in_group(board_, group_) \
 	do { \
 		struct board *board__ = board_; \
-		coord_t c = (group_); \
+		coord_t c = group_base(group_); \
 		coord_t c2 = c; coord_raw(c2) = groupnext_at(board__, c2); \
 		do {
 #define foreach_in_group_end \

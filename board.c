@@ -204,7 +204,7 @@ board_print(struct board *board, FILE *f)
 		if (DEBUGL(6)) {
 			fprintf(f, "| ");
 			for (x = 1; x < board_size(board) - 1; x++) {
-				fprintf(f, "%d ", group_atxy(board, x, y));
+				fprintf(f, "%d ", group_base(group_atxy(board, x, y)));
 			}
 		}
 		fprintf(f, "|\n");
@@ -301,7 +301,7 @@ check_libs_consistency(struct board *board, group_t g)
 	struct group *gi = &board_group_info(board, g);
 	for (int i = 0; i < GROUP_KEEP_LIBS; i++)
 		if (gi->lib[i] && board_at(board, gi->lib[i]) != S_NONE) {
-			fprintf(stderr, "BOGUS LIBERTY %s of group %d[%s]\n", coord2sstr(gi->lib[i], board), g, coord2sstr(g, board));
+			fprintf(stderr, "BOGUS LIBERTY %s of group %d[%s]\n", coord2sstr(gi->lib[i], board), g, coord2sstr(group_base(g), board));
 			assert(0);
 		}
 #endif
@@ -311,7 +311,8 @@ static void
 board_capturable_add(struct board *board, group_t group)
 {
 #ifdef WANT_BOARD_C
-	//fprintf(stderr, "add of group %d (%d)\n", group, board->clen);
+	//fprintf(stderr, "add of group %d (%d)\n", group_base(group), board->clen);
+	assert(group);
 	assert(board->clen < board_size2(board));
 	board->c[board->clen++] = group;
 #endif
@@ -320,14 +321,14 @@ static void
 board_capturable_rm(struct board *board, group_t group)
 {
 #ifdef WANT_BOARD_C
-	//fprintf(stderr, "rm of group %d\n", group);
+	//fprintf(stderr, "rm of group %d\n", group_base(group));
 	for (int i = 0; i < board->clen; i++) {
 		if (unlikely(board->c[i] == group)) {
 			board->c[i] = board->c[--board->clen];
 			return;
 		}
 	}
-	fprintf(stderr, "rm of bad group %d\n", group);
+	fprintf(stderr, "rm of bad group %d\n", group_base(group));
 	assert(0);
 #endif
 }
@@ -337,7 +338,7 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, bool fresh
 {
 	if (DEBUGL(7)) {
 		fprintf(stderr, "Group %d[%s]: Adding liberty %s\n",
-			group, coord2sstr(group, board), coord2sstr(coord, board));
+			group, coord2sstr(group_base(group), board), coord2sstr(coord, board));
 	}
 
 	check_libs_consistency(board, group);
@@ -369,7 +370,7 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(7)) {
 		fprintf(stderr, "Group %d[%s]: Removing liberty %s\n",
-			group, coord2sstr(group, board), coord2sstr(coord, board));
+			group, coord2sstr(group_base(group), board), coord2sstr(coord, board));
 	}
 
 	struct group *gi = &board_group_info(board, group);
@@ -489,7 +490,7 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 {
 	if (DEBUGL(7))
 		fprintf(stderr, "board_play_raw: merging groups %d -> %d\n",
-			group_from, group_to);
+			group_base(group_from), group_base(group_to));
 
 	coord_t last_in_group;
 	foreach_in_group(board, group_from) {
@@ -523,7 +524,7 @@ next_from_lib:;
 
 	if (DEBUGL(7))
 		fprintf(stderr, "board_play_raw: merged group: %d\n",
-			group_to);
+			group_base(group_to));
 }
 
 static group_t profiling_noinline
@@ -549,7 +550,7 @@ new_group(struct board *board, coord_t coord)
 	if (DEBUGL(8))
 		fprintf(stderr, "new_group: added %d,%d to group %d\n",
 			coord_x(coord, board), coord_y(coord, board),
-			gid);
+			group_base(gid));
 
 	return gid;
 }
@@ -570,7 +571,7 @@ play_one_neighbor(struct board *board,
 	board_group_rmlib(board, ngroup, coord);
 	if (DEBUGL(7))
 		fprintf(stderr, "board_play_raw: reducing libs for group %d (%d:%d,%d)\n",
-			ngroup, ncolor, color, other_color);
+			group_base(ngroup), ncolor, color, other_color);
 
 	if (ncolor == color && ngroup != gid) {
 		if (gid <= 0) {
@@ -582,7 +583,7 @@ play_one_neighbor(struct board *board,
 	} else if (ncolor == other_color) {
 		if (DEBUGL(8)) {
 			struct group *gi = &board_group_info(board, ngroup);
-			fprintf(stderr, "testing captured group %d[%s]: ", ngroup, coord2sstr(ngroup, board));
+			fprintf(stderr, "testing captured group %d[%s]: ", group_base(ngroup), coord2sstr(group_base(ngroup), board));
 			for (int i = 0; i < GROUP_KEEP_LIBS; i++)
 				fprintf(stderr, "%s ", coord2sstr(gi->lib[i], board));
 			fprintf(stderr, "\n");
@@ -674,7 +675,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		board_group_rmlib(board, group, coord);
 		if (DEBUGL(7))
 			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
-				group);
+				group_base(group));
 
 		if (board_group_captured(board, group)) {
 			if (board_group_capture(board, group) == 1) {
