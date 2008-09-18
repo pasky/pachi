@@ -555,7 +555,7 @@ new_group(struct board *board, coord_t coord)
 	return group;
 }
 
-static inline int
+static inline group_t
 play_one_neighbor(struct board *board,
 		coord_t coord, enum stone color, enum stone other_color,
 		coord_t c, group_t group)
