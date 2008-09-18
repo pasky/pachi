@@ -11,7 +11,7 @@ random_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	coord_t coord;
 	board_play_random(b, color, &coord);
-	if (group_at(b, coord) == 0) {
+	if (!group_at(b, coord)) {
 		/* This was suicide. Just pass. */
 		/* XXX: We should check for non-suicide alternatives. */
 		return coord_pass();
