@@ -334,7 +334,7 @@ board_capturable_rm(struct board *board, group_t group)
 }
 
 static void
-board_group_addlib(struct board *board, group_t group, coord_t coord, bool fresh)
+board_group_addlib(struct board *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(7)) {
 		fprintf(stderr, "Group %d[%s] %d: Adding liberty %s\n",
@@ -346,16 +346,15 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, bool fresh
 
 	struct group *gi = &board_group_info(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
-		if (!fresh)
-			for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
+		for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
 #if 0
-				/* Seems extra branch just slows it down */
-				if (!gi->lib[i])
-					break;
+			/* Seems extra branch just slows it down */
+			if (!gi->lib[i])
+				break;
 #endif
-				if (unlikely(gi->lib[i] == coord))
-					return;
-			}
+			if (unlikely(gi->lib[i] == coord))
+				return;
+		}
 		if (gi->libs == 0)
 			board_capturable_add(board, group);
 		else if (gi->libs == 1)
@@ -452,7 +451,7 @@ board_remove_stone(struct board *board, coord_t c)
 		dec_neighbor_count_at(board, c, color);
 		group_t g = group_at(board, c);
 		if (g)
-			board_group_addlib(board, g, coord, true);
+			board_group_addlib(board, g, coord);
 	});
 
 	if (DEBUGL(6))
@@ -466,7 +465,7 @@ add_to_group(struct board *board, group_t group, coord_t prevstone, coord_t coor
 {
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
-			board_group_addlib(board, group, c, false);
+			board_group_addlib(board, group, c);
 	});
 
 	group_at(board, coord) = group;
@@ -644,7 +643,11 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	int captured_groups = 0;
 
 	foreach_neighbor(board, coord, {
-		captured_groups += (board_group_info(board, group_at(board, c)).libs == 1);
+		group_t g = group_at(board, c);
+		if (DEBUGL(7))
+			fprintf(stderr, "board_check: group %d has %d libs\n",
+				g, board_group_info(board, g).libs);
+		captured_groups += (board_group_info(board, g).libs == 1);
 	});
 
 	if (likely(captured_groups == 0)) {
