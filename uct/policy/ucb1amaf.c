@@ -96,7 +96,7 @@ update_node_amaf(struct uct_policy *p, struct tree_node *node, int result)
 }
 
 void
-ucb1amaf_update(struct uct_policy *p, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
+ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
 {
 	struct ucb1_policy_amaf *b = p->data;
 

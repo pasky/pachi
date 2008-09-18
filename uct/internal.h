@@ -34,7 +34,7 @@ struct uct {
 typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
 typedef struct tree_node *(*uctp_descend)(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
 typedef void (*uctp_prior)(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
-typedef void (*uctp_update)(struct uct_policy *p, struct tree_node *node, enum stone color, struct playout_amafmap *amaf, int result);
+typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone color, struct playout_amafmap *amaf, int result);
 
 struct uct_policy {
 	struct uct *uct;
