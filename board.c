@@ -466,14 +466,14 @@ board_remove_stone(struct board *board, coord_t c)
 
 
 static void profiling_noinline
-add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
+add_to_group(struct board *board, group_t group, coord_t prevstone, coord_t coord)
 {
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
-			board_group_addlib(board, gid, c, false);
+			board_group_addlib(board, group, c, false);
 	});
 
-	group_at(board, coord) = gid;
+	group_at(board, coord) = group;
 	groupnext_at(board, coord) = groupnext_at(board, prevstone);
 	groupnext_at(board, prevstone) = coord_raw(coord);
 
@@ -482,7 +482,7 @@ add_to_group(struct board *board, int gid, coord_t prevstone, coord_t coord)
 			coord_x(prevstone, board), coord_y(prevstone, board),
 			coord_x(coord, board), coord_y(coord, board),
 			groupnext_at(board, coord) % board_size(board), groupnext_at(board, coord) / board_size(board),
-			gid);
+			group_base(group));
 }
 
 static void profiling_noinline
