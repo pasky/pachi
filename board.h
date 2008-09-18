@@ -35,6 +35,9 @@ struct group {
 #define GROUP_KEEP_LIBS 4 // +1 can make noticeable speed difference
 #define GROUP_REFILL_LIBS 2 // refill lib[] when we go under this; this must be at least 2!
 	coord_t lib[GROUP_KEEP_LIBS];
+	/* libs is only LOWER BOUND for the number of real liberties!!!
+	 * It denotes only number of items in lib[], thus you can rely
+	 * on it to store real liberties only up to <= GROUP_REFILL_LIBS. */
 	int libs;
 };
 

@@ -367,6 +367,37 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, bool fresh
 }
 
 static void
+board_group_find_extra_libs(struct board *board, group_t group, struct group *gi, coord_t avoid)
+{
+	/* Add extra liberty from the board to our liberty list. */
+	bool watermark[board_size2(board)];
+	memset(watermark, 0, sizeof(watermark));
+
+	foreach_in_group(board, group) {
+		coord_t coord2 = c;
+		foreach_neighbor(board, coord2, {
+			if (likely(watermark[coord_raw(c)]))
+				continue;
+			watermark[coord_raw(c)] = true;
+			if (c != avoid && board_at(board, c) == S_NONE) {
+				bool next = false;
+				for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++) {
+					if (gi->lib[i] == c) {
+						next = true;
+						break;
+					}
+				}
+				if (!next) {
+					gi->lib[gi->libs++] = c;
+					if (gi->libs >= GROUP_KEEP_LIBS)
+						return;
+				}
+			}
+		} );
+	} foreach_in_group_end;
+}
+
+static void
 board_group_rmlib(struct board *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(7)) {
@@ -389,51 +420,24 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 		gi->lib[gi->libs] = 0;
 
 		check_libs_consistency(board, group);
-		if (gi->libs < GROUP_KEEP_LIBS - 1) {
-			if (gi->libs == 1)
-				board_capturable_add(board, group);
-			else if (gi->libs == 0)
-				board_capturable_rm(board, group);
-			return;
-		}
+
 		/* Postpone refilling lib[] until we need to. */
-		if (i > GROUP_REFILL_LIBS)
+		assert(GROUP_REFILL_LIBS > 1);
+		if (gi->libs > GROUP_REFILL_LIBS)
 			return;
-		goto find_extra_lib;
+		board_group_find_extra_libs(board, group, gi, coord);
+
+		if (gi->libs == 1)
+			board_capturable_add(board, group);
+		else if (gi->libs == 0)
+			board_capturable_rm(board, group);
+		return;
 	}
 
 	/* This is ok even if gi->libs < GROUP_KEEP_LIBS since we
 	 * can call this multiple times per coord. */
 	check_libs_consistency(board, group);
 	return;
-
-	/* Add extra liberty from the board to our liberty list. */
-find_extra_lib:;
-	bool watermark[board_size2(board)];
-	memset(watermark, 0, sizeof(watermark));
-
-	foreach_in_group(board, group) {
-		coord_t coord2 = c;
-		foreach_neighbor(board, coord2, {
-			if (likely(watermark[coord_raw(c)]))
-				continue;
-			watermark[coord_raw(c)] = true;
-			if (c != coord && board_at(board, c) == S_NONE) {
-				bool next = false;
-				for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++) {
-					if (gi->lib[i] == c) {
-						next = true;
-						break;
-					}
-				}
-				if (!next) {
-					gi->lib[gi->libs++] = c;
-					if (gi->libs >= GROUP_KEEP_LIBS)
-						return;
-				}
-			}
-		} );
-	} foreach_in_group_end;
 }
 
 
