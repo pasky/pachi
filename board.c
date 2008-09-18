@@ -385,12 +385,8 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 		if (likely(gi->lib[i] != coord))
 			continue;
 
-		int j = i;
-		for (i++; i < GROUP_KEEP_LIBS; i++)
-			if (!gi->lib[i])
-				break; /* Unfilled liberties. */
-		gi->lib[j] = gi->lib[i - 1];
-		gi->lib[--gi->libs] = 0;
+		gi->lib[i] = gi->lib[--gi->libs];
+		gi->lib[gi->libs] = 0;
 
 		check_libs_consistency(board, group);
 		if (gi->libs < GROUP_KEEP_LIBS - 1) {
