@@ -453,7 +453,9 @@ board_remove_stone(struct board *board, coord_t c)
 	coord_t coord = c;
 	foreach_neighbor(board, coord, {
 		dec_neighbor_count_at(board, c, color);
-		board_group_addlib(board, group_at(board, c), coord, true);
+		group_t g = group_at(board, c);
+		if (g)
+			board_group_addlib(board, g, coord, true);
 	});
 
 	if (DEBUGL(6))

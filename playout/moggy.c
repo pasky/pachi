@@ -366,10 +366,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 	enum stone color = board_at(b, group);
 	coord_t lib = board_group_info(b, group).lib[0];
 
-	if (board_at(b, group) == S_OFFBOARD) {
-		/* Bogus group. */
-		return pass;
-	}
+	assert(color != S_OFFBOARD && color != S_NONE);
 	if (PLDEBUGL(4))
 		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
