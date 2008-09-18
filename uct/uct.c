@@ -214,7 +214,7 @@ promoted:;
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(0))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, u->t->root->u.playouts);
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts);
 	if (best->u.value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
