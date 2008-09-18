@@ -337,8 +337,9 @@ static void
 board_group_addlib(struct board *board, group_t group, coord_t coord, bool fresh)
 {
 	if (DEBUGL(7)) {
-		fprintf(stderr, "Group %d[%s]: Adding liberty %s\n",
-			group_base(group), coord2sstr(group_base(group), board), coord2sstr(coord, board));
+		fprintf(stderr, "Group %d[%s] %d: Adding liberty %s\n",
+			group_base(group), coord2sstr(group_base(group), board),
+			board_group_info(board, group).libs, coord2sstr(coord, board));
 	}
 
 	check_libs_consistency(board, group);
@@ -369,8 +370,9 @@ static void
 board_group_rmlib(struct board *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(7)) {
-		fprintf(stderr, "Group %d[%s]: Removing liberty %s\n",
-			group_base(group), coord2sstr(group_base(group), board), coord2sstr(coord, board));
+		fprintf(stderr, "Group %d[%s] %d: Removing liberty %s\n",
+			group_base(group), coord2sstr(group_base(group), board),
+			board_group_info(board, group).libs, coord2sstr(coord, board));
 	}
 
 	struct group *gi = &board_group_info(board, group);
