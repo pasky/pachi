@@ -247,7 +247,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 	}
 	progress_status(u, u->t, color, i);
 
-	tree_save(u->t, b, u->games / 100);
+	tree_save(u->t, b, u->games / 1000);
 
 	tree_done(u->t);
 
