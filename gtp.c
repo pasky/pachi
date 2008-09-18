@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "engine.h"
 #include "gtp.h"
+#include "uct/uct.h"
 #include "version.h"
 
 void
@@ -207,6 +208,25 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		next_tok(arg);
 		assert(!strcasecmp(arg, "dead")); // yes, I know...
 		gtp_reply(id, "", NULL);
+
+	/* Custom commands for handling UCT opening book */
+	} else if (!strcasecmp(cmd, "uct_genbook")) {
+		/* Board must be initialized properly, as if for genmove;
+		 * makes sense only as 'uct_genbook b'. */
+		char *arg;
+		next_tok(arg);
+		enum stone color = str2stone(arg);
+		if (uct_genbook(engine, board, color))
+			gtp_reply(id, NULL);
+		else
+			gtp_error(id, "error generating book", NULL);
+
+	} else if (!strcasecmp(cmd, "uct_dumpbook")) {
+		char *arg;
+		next_tok(arg);
+		enum stone color = str2stone(arg);
+		uct_dumpbook(engine, board, color);
+		gtp_reply(id, NULL);
 
 	} else {
 		gtp_error(id, "unknown command", NULL);

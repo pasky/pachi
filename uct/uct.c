@@ -171,6 +171,9 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 tree_init:
 		u->t = tree_init(b, color);
 		//board_print(b, stderr);
+
+		if (!b->moves)
+			tree_load(u->t, b);
 	} else {
 		/* XXX: We hope that the opponent didn't suddenly play
 		 * several moves in the row. */
@@ -221,6 +224,43 @@ promoted:;
 	}
 	tree_promote_node(u->t, best);
 	return coord_copy(best->coord);
+}
+
+bool
+uct_genbook(struct engine *e, struct board *b, enum stone color)
+{
+	struct uct *u = e->data;
+	u->t = tree_init(b, color);
+
+	int i;
+	for (i = 0; i < u->games; i++) {
+		int result = uct_playout(u, b, color, u->t);
+		if (result < 0) {
+			/* Tree descent has hit invalid move. */
+			continue;
+		}
+
+		if (i > 0 && !(i % 10000)) {
+			progress_status(u, u->t, color);
+		}
+	}
+	progress_status(u, u->t, color);
+
+	tree_save(u->t, b, u->games / 100);
+
+	tree_done(u->t);
+
+	return true;
+}
+
+void
+uct_dumpbook(struct engine *e, struct board *b, enum stone color)
+{
+	struct uct *u = e->data;
+	u->t = tree_init(b, color);
+	tree_load(u->t, b);
+	tree_dump(u->t, 0);
+	tree_done(u->t);
 }
 
 

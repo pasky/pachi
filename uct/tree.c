@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <math.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,6 +85,87 @@ void
 tree_dump(struct tree *tree, int thres)
 {
 	tree_node_dump(tree, tree->root, 0, thres);
+}
+
+
+static char *
+tree_book_name(struct board *b)
+{
+	static char buf[256];
+	sprintf(buf, "uct-%d-%02.01f.pachibook", b->size - 2, b->komi);
+	return buf;
+}
+
+static void
+tree_node_save(FILE *f, struct tree_node *node, int thres)
+{
+	if (node->u.playouts < thres)
+		return;
+
+	fputc(1, f);
+	fwrite(((void *) node) + offsetof(struct tree_node, depth),
+	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
+	       1, f);
+
+	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+		tree_node_save(f, ni, thres);
+	}
+
+	fputc(0, f);
+}
+
+void
+tree_save(struct tree *tree, struct board *b, int thres)
+{
+	char *filename = tree_book_name(b);
+	FILE *f = fopen(filename, "wb");
+	if (!f) {
+		perror("fopen");
+		return;
+	}
+	tree_node_save(f, tree->root, thres);
+	fputc(0, f);
+	fclose(f);
+}
+
+
+void
+tree_node_load(FILE *f, struct tree_node *node, int *num)
+{
+	(*num)++;
+
+	fread(((void *) node) + offsetof(struct tree_node, depth),
+	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
+	       1, f);
+
+	struct tree_node *ni = NULL, *ni_prev = NULL;
+	while (fgetc(f)) {
+		ni_prev = ni; ni = calloc(1, sizeof(*ni));
+		if (!node->children)
+			node->children = ni;
+		else
+			ni_prev->sibling = ni;
+		ni->parent = node;
+		tree_node_load(f, ni, num);
+	}
+}
+
+void
+tree_load(struct tree *tree, struct board *b)
+{
+	char *filename = tree_book_name(b);
+	FILE *f = fopen(filename, "rb");
+	if (!f)
+		return;
+
+	fprintf(stderr, "Loading opening book %s...\n", filename);
+
+	int num = 0;
+	if (fgetc(f))
+		tree_node_load(f, tree->root, &num);
+	fprintf(stderr, "Loaded %d nodes.\n", num);
+
+	fclose(f);
 }
 
 
