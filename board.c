@@ -530,8 +530,8 @@ next_from_lib:;
 static group_t profiling_noinline
 new_group(struct board *board, coord_t coord)
 {
-	group_t gid = coord_raw(coord);
-	struct group *gi = &board_group_info(board, gid);
+	group_t group = coord_raw(coord);
+	struct group *gi = &board_group_info(board, group);
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
 			/* board_group_addlib is ridiculously expensive for us */
@@ -541,18 +541,18 @@ new_group(struct board *board, coord_t coord)
 			gi->lib[gi->libs++] = c;
 	});
 	if (gi->libs == 1)
-		board_capturable_add(board, gid);
-	check_libs_consistency(board, gid);
+		board_capturable_add(board, group);
+	check_libs_consistency(board, group);
 
-	group_at(board, coord) = gid;
+	group_at(board, coord) = group;
 	groupnext_at(board, coord) = 0;
 
 	if (DEBUGL(8))
 		fprintf(stderr, "new_group: added %d,%d to group %d\n",
 			coord_x(coord, board), coord_y(coord, board),
-			group_base(gid));
+			group_base(group));
 
-	return gid;
+	return group;
 }
 
 static inline int
