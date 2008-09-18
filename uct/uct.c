@@ -167,17 +167,24 @@ static coord_t *
 uct_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
+	bool loaded = false;
 
 	if (!u->t) {
 tree_init:
 		u->t = tree_init(b, color);
 		//board_print(b, stderr);
 
-		if (!b->moves)
+		if (!b->moves) {
 			tree_load(u->t, b);
+		} else if (b->moves == 1 && !loaded) {
+			tree_load(u->t, b);
+			loaded = true;
+			goto promotion;
+		}
 	} else {
 		/* XXX: We hope that the opponent didn't suddenly play
 		 * several moves in the row. */
+promotion:
 		for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling)
 			if (ni->coord == b->last_move.coord) {
 				tree_promote_node(u->t, ni);
