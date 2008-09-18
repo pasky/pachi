@@ -418,7 +418,8 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 		assert(GROUP_REFILL_LIBS > 1);
 		if (gi->libs > GROUP_REFILL_LIBS)
 			return;
-		board_group_find_extra_libs(board, group, gi, coord);
+		if (gi->libs == GROUP_REFILL_LIBS)
+			board_group_find_extra_libs(board, group, gi, coord);
 
 		if (gi->libs == 1)
 			board_capturable_add(board, group);
