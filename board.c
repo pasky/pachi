@@ -558,7 +558,7 @@ new_group(struct board *board, coord_t coord)
 static inline int
 play_one_neighbor(struct board *board,
 		coord_t coord, enum stone color, enum stone other_color,
-		coord_t c, int gid)
+		coord_t c, group_t group)
 {
 	enum stone ncolor = board_at(board, c);
 	group_t ngroup = group_at(board, c);
@@ -566,19 +566,19 @@ play_one_neighbor(struct board *board,
 	inc_neighbor_count_at(board, c, color);
 
 	if (!ngroup)
-		return gid;
+		return group;
 
 	board_group_rmlib(board, ngroup, coord);
 	if (DEBUGL(7))
 		fprintf(stderr, "board_play_raw: reducing libs for group %d (%d:%d,%d)\n",
 			group_base(ngroup), ncolor, color, other_color);
 
-	if (ncolor == color && ngroup != gid) {
-		if (gid <= 0) {
-			gid = ngroup;
-			add_to_group(board, gid, c, coord);
+	if (ncolor == color && ngroup != group) {
+		if (!group) {
+			group = ngroup;
+			add_to_group(board, group, c, coord);
 		} else {
-			merge_groups(board, gid, ngroup);
+			merge_groups(board, group, ngroup);
 		}
 	} else if (ncolor == other_color) {
 		if (DEBUGL(8)) {
@@ -591,29 +591,29 @@ play_one_neighbor(struct board *board,
 		if (unlikely(board_group_captured(board, ngroup)))
 			board_group_capture(board, ngroup);
 	}
-	return gid;
+	return group;
 }
 
 /* We played on a place with at least one liberty. We will become a member of
  * some group for sure. */
-static int profiling_noinline
+static group_t profiling_noinline
 board_play_outside(struct board *board, struct move *m, int f)
 {
 	coord_t coord = m->coord;
 	enum stone color = m->color;
 	enum stone other_color = stone_other(color);
-	int gid = 0;
+	group_t group = 0;
 
 	board->f[f] = board->f[--board->flen];
 	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 
 	foreach_neighbor(board, coord, {
-			gid = play_one_neighbor(board, coord, color, other_color, c, gid);
+			group = play_one_neighbor(board, coord, color, other_color, c, group);
 	});
 
-	if (unlikely(gid <= 0))
-		gid = new_group(board, coord);
+	if (unlikely(!group))
+		group = new_group(board, coord);
 
 	board_at(board, coord) = color;
 	board->last_move = *m;
@@ -622,7 +622,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
 
-	return gid;
+	return group;
 }
 
 /* We played in an eye-like shape. Either we capture at least one of the eye
@@ -711,9 +711,9 @@ board_play_f(struct board *board, struct move *m, int f)
 		/* NOT playing in an eye. Thus this move has to succeed. (This
 		 * is thanks to New Zealand rules. Otherwise, multi-stone
 		 * suicide might fail.) */
-		int gid = board_play_outside(board, m, f);
-		if (unlikely(board_group_captured(board, gid))) {
-			board_group_capture(board, gid);
+		group_t group = board_play_outside(board, m, f);
+		if (unlikely(board_group_captured(board, group))) {
+			board_group_capture(board, group);
 		}
 		board_hash_commit(board);
 		return 0;
