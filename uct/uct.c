@@ -189,7 +189,7 @@ promoted:;
 	}
 
 	int i;
-	for (i = 0; i < u->games; i++) {
+	for (i = 0; i < u->games - (u->t->root->u.playouts / 1.5); i++) {
 		int result = uct_playout(u, b, color, u->t);
 		if (result < 0) {
 			/* Tree descent has hit invalid move. */
@@ -217,7 +217,7 @@ promoted:;
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(0))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts);
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts, i);
 	if (best->u.value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
