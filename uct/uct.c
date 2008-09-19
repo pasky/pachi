@@ -169,6 +169,12 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	struct uct *u = e->data;
 	bool loaded = false;
 
+	if (b->moves < 2 && u->t) {
+		/* Stale state from last game */
+		tree_done(u->t);
+		u->t = NULL;
+	}
+
 	if (!u->t) {
 tree_init:
 		u->t = tree_init(b, color);
