@@ -226,6 +226,17 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 }
 
 bool
+tree_promote_at(struct tree *tree, struct board *b, coord_t c)
+{
+	for (struct tree_node *ni = tree->root->children; ni; ni = ni->sibling)
+		if (ni->coord == c) {
+			tree_promote_node(tree, ni);
+			return true;
+		}
+	return false;
+}
+
+bool
 tree_leaf_node(struct tree_node *node)
 {
 	return !(node->children);

@@ -61,6 +61,7 @@ void tree_load(struct tree *tree, struct board *b);
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy, int parity);
 void tree_delete_node(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node *node);
+bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 bool tree_leaf_node(struct tree_node *node);
 void tree_update_node_value(struct tree_node *node, bool add_amaf);
 

@@ -195,15 +195,11 @@ tree_init:
 		/* XXX: We hope that the opponent didn't suddenly play
 		 * several moves in the row. */
 promotion:
-		for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling)
-			if (ni->coord == b->last_move.coord) {
-				tree_promote_node(u->t, ni);
-				goto promoted;
-			}
-		fprintf(stderr, "CANNOT FIND NODE TO PROMOTE!\n");
-		tree_done(u->t);
-		goto tree_init;
-promoted:;
+		if (!tree_promote_at(u->t, b, b->last_move.coord)) {
+			fprintf(stderr, "CANNOT FIND NODE TO PROMOTE!\n");
+			tree_done(u->t);
+			goto tree_init;
+		}
 	}
 
 	int i, games = u->games - (u->t->root->u.playouts / 1.5);
