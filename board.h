@@ -190,6 +190,9 @@ int board_play(struct board *board, struct move *m);
  * when no move can be played. */
 void board_play_random(struct board *b, enum stone color, coord_t *coord);
 
+/* Adjust symmetry information as if given coordinate has been played. */
+void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
+
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 bool board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
 /* Returns true if given coordinate is a 1-pt eye (checks against false eyes, or
