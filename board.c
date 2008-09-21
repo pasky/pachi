@@ -237,7 +237,7 @@ board_hash_commit(struct board *board)
 		hash_t i = board->hash;
 		while (board->history_hash[i & history_hash_mask]) {
 			if (board->history_hash[i & history_hash_mask] == board->hash) {
-				if (DEBUGL(5))
+				//if (DEBUGL(5))
 					fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
 						coord_x(board->last_move.coord, board), coord_y(board->last_move.coord, board));
 				board->superko_violation = true;

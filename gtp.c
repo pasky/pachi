@@ -1,3 +1,4 @@
+#define DEBUG
 #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
