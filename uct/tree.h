@@ -45,8 +45,9 @@ struct tree_node {
 };
 
 struct tree {
-	struct tree_node *root;
 	struct board *board;
+	struct tree_node *root;
+	struct board_symmetry root_symmetry;
 
 	// Statistics
 	int max_depth;

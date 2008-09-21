@@ -32,6 +32,7 @@ tree_init(struct board *board, enum stone color)
 	t->board = board;
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0);
+	t->root_symmetry = board->symmetry;
 	return t;
 }
 
@@ -245,14 +246,8 @@ tree_fix_node_symmetry(struct board *b, struct tree_node *node,
 static void
 tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 {
-	/* XXX: We hard-coded assume c is the same move that tree-root,
-	 * just possibly flipped. */
-
-	if (c == tree->root->coord)
-		return;
-
+	struct board_symmetry *s = &tree->root_symmetry;
 	int cx = coord_x(c, b), cy = coord_y(c, b);
-	int rx = coord_x(tree->root->coord, b), ry = coord_y(tree->root->coord, b);
 
 	/* playground	X->h->v->d normalization
 	 * :::..	.d...
@@ -260,19 +255,21 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 	 * ..:..	.....
 	 * .....	h...X
 	 * .....	.....  */
-	bool flip_horiz = cy == ry;
-	bool flip_vert = cx == rx;
-
-	int nx = flip_horiz ? board_size(b) - rx : rx;
-	int ny = flip_vert ? board_size(b) - ry : ry;
+	bool flip_horiz = cx < s->x1 || cx > s->x2;
+	bool flip_vert = cy < s->y1 || cy > s->y2;
 
 	int flip_diag = 0;
-	if (nx == cy && ny == cx) {
-		flip_diag = 1;
-	} else if (board_size(b) - nx == cy && ny == board_size(b) - cx) {
-		flip_diag = 2;
+	if (s->d) {
+		bool dir = (s->type == SYM_DIAG_DOWN) ^ flip_horiz ^ flip_vert;
+		int x = dir ? board_size(b) - cx : cx;
+		if (s->d < 0 ? x < cy : x > cy) {
+			flip_diag = 1 + dir;
+		}
 	}
 
+	fprintf(stderr, "%s will flip %d %d %d, sym %d (%d) -> %d (%d)\n",
+		coord2sstr(c, b), flip_horiz, flip_vert, flip_diag,
+		s->type, s->d, b->symmetry.type, b->symmetry.d);
 	tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
 }
 
@@ -305,6 +302,7 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 	tree_unlink_node(node);
 	tree_done_node(tree, tree->root);
 	tree->root = node;
+	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
 	node->parent = NULL;
 }
 
