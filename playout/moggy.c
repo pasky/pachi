@@ -209,7 +209,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 		cut2_test(p, b, m, &q);
 	}
 
-	if (PLDEBUGL(4)) {
+	if (PLDEBUGL(5)) {
 		fprintf(stderr, "Pattern candidate moves: ");
 		for (int i = 0; i < q.moves; i++) {
 			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
@@ -220,7 +220,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	if (testmove) {
 		while (q.moves--)
 			if (q.move[q.moves] == testmove->coord) {
-				if (PLDEBUGL(4))
+				if (PLDEBUGL(5))
 					fprintf(stderr, "Found queried move.\n");
 				return testmove->coord;
 			}
@@ -367,21 +367,21 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 	coord_t lib = board_group_info(b, group).lib[0];
 
 	assert(color != S_OFFBOARD && color != S_NONE);
-	if (PLDEBUGL(4))
+	if (PLDEBUGL(5))
 		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
 	/* Do not suicide... */
 	if (!valid_escape_route(b, color, lib))
 		return pass;
-	if (PLDEBUGL(4))
+	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
 	if (pp->ladders && ladder_catches(p, b, lib, group)) {
 		return pass;
 	}
-	if (PLDEBUGL(4))
+	if (PLDEBUGL(6))
 		fprintf(stderr, "...no ladder\n");
 
 	return lib;
@@ -429,7 +429,7 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 			q.move[q.moves++] = l;
 	});
 
-	if (PLDEBUGL(4)) {
+	if (PLDEBUGL(5)) {
 		fprintf(stderr, "Local atari candidate moves: ");
 		for (int i = 0; i < q.moves; i++) {
 			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
@@ -440,7 +440,7 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 	if (testmove) {
 		while (q.moves--)
 			if (q.move[q.moves] == testmove->coord) {
-				if (PLDEBUGL(4))
+				if (PLDEBUGL(5))
 					fprintf(stderr, "Found queried move.\n");
 				return testmove->coord;
 			}
@@ -457,7 +457,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 	struct moggy_policy *pp = p->data;
 	coord_t c;
 
-	if (PLDEBUGL(4))
+	if (PLDEBUGL(5))
 		board_print(b, stderr);
 
 	/* Local checks */
@@ -497,7 +497,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	if (is_pass(m->coord))
 		return NAN;
 
-	if (PLDEBUGL(4))
+	if (PLDEBUGL(5))
 		board_print(b, stderr);
 
 	/* Are we dealing with atari? */
