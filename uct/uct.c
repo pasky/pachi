@@ -129,8 +129,10 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
 		    || b2.superko_violation) {
 			if (UDEBUGL(3 + (res < 0))) {
-				fprintf(stderr, "deleting invalid node %d,%d res %d group %d spk %d\n",
-				        coord_x(n->coord,b), coord_y(n->coord,b),
+				for (struct tree_node *ni = n; ni; ni = ni->parent)
+					fprintf(stderr, "%s ", coord2sstr(ni->coord, t->board));
+				fprintf(stderr, "deleting invalid %s node %d,%d res %d group %d spk %d\n",
+				        stone2str(color), coord_x(n->coord,b), coord_y(n->coord,b),
 					res, group_at(&b2, m.coord), b2.superko_violation);
 			}
 			tree_delete_node(t, n);
