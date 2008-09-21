@@ -185,12 +185,22 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	ni->parent = node; node->children = ni;
 
 	/* The loop considers only the symmetry playground. */
+	if (UDEBUGL(6)) {
+		fprintf(stderr, "expanding %s within [%d,%d],[%d,%d] %d-%d\n",
+				coord2sstr(node->coord, b),
+				b->symmetry.x1, b->symmetry.y1,
+				b->symmetry.x2, b->symmetry.y2,
+				b->symmetry.type, b->symmetry.d);
+	}
 	for (int i = b->symmetry.x1; i <= b->symmetry.x2; i++) {
 		for (int j = b->symmetry.y1; j <= b->symmetry.y2; j++) {
 			if (b->symmetry.d) {
 				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_size(b) - i : i;
-				if (b->symmetry.d < 0 ? x < j : x > j)
+				if (b->symmetry.d < 0 ? x < j : x > j) {
+					if (UDEBUGL(7))
+						fprintf(stderr, "drop %d,%d\n", i, j);
 					continue;
+				}
 			}
 
 			coord_t c = coord_xy_otf(i, j, t->board);
