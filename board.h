@@ -22,6 +22,29 @@
 extern bool random_pass;
 
 
+/* Some engines might normalize their reading and skip symmetrical
+ * moves. We will tell them how can they do it. */
+struct board_symmetry {
+	/* Playground is in this rectangle. */
+	int x1, x2, y1, y2;
+	/* d ==  0: Full rectangle
+	 * d == -1: x <= y rectangle
+	 * d ==  1: x >= y rectangle */
+	int d;
+	/* General symmetry type. */
+	enum {
+		SYM_FULL,
+		SYM_DIAG_UP,
+		SYM_DIAG_DOWN,
+		SYM_HORIZ,
+		SYM_VERT,
+		SYM_NONE
+	} type;
+	/* Can we flip symmetry if necessary? */
+	bool free;
+};
+
+
 typedef uint64_t hash_t;
 
 
@@ -93,6 +116,9 @@ struct board {
 	/* Queue of capturable groups */
 	group_t *c; int clen;
 #endif
+
+	/* Symmetry information */
+	struct board_symmetry symmetry;
 
 
 	/* --- PRIVATE DATA --- */

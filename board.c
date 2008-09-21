@@ -133,6 +133,13 @@ board_clear(struct board *board)
 	board_setup(board);
 	board_resize(board, size - 2 /* S_OFFBOARD margin */);
 
+	/* Setup initial symmetry */
+	board->symmetry.d = -1;
+	board->symmetry.x1 = board->symmetry.y1 = board->size / 2;
+	board->symmetry.x2 = board->symmetry.y2 = board->size - 1;
+	board->symmetry.type = SYM_FULL;
+	board->symmetry.free = true;
+
 	/* Draw the offboard margin */
 	int top_row = board_size2(board) - board_size(board);
 	int i;
@@ -247,6 +254,124 @@ board_hash_commit(struct board *board)
 		}
 		board->history_hash[i & history_hash_mask] = board->hash;
 	}
+}
+
+
+static void
+board_symmetry_update(struct board *b, coord_t c)
+{
+	if (likely(b->symmetry.type == SYM_NONE)) {
+		/* Fully degenerated already. We do not support detection
+		 * of restoring of symmetry, assuming that this is too rare
+		 * a case to handle. */
+		return;
+	}
+
+	int x = coord_x(c, b), y = coord_y(c, b), t = board_size(b) / 2;
+	int dx = board_size(b) - x; /* for SYM_DOWN */
+	if (DEBUGL(6)) {
+		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d+%d] update for %d,%d\n",
+			b->symmetry.x1, b->symmetry.y1, b->symmetry.x2, b->symmetry.y2,
+			b->symmetry.d, b->symmetry.type, b->symmetry.free, x, y);
+	}
+
+	switch (b->symmetry.type) {
+		case SYM_FULL:
+			if (x == t && y == t) {
+				/* Tengen keeps full symmetry. */
+				return;
+			}
+			/* New symmetry now? */
+			if (x == y) {
+				b->symmetry.type = SYM_DIAG_UP;
+				b->symmetry.x1 = b->symmetry.y1 = 1;
+				b->symmetry.x2 = b->symmetry.y2 = board_size(b) - 1;
+				b->symmetry.d = 1;
+			} else if (dx == y) {
+				b->symmetry.type = SYM_DIAG_DOWN;
+				b->symmetry.x1 = b->symmetry.y1 = 1;
+				b->symmetry.x2 = b->symmetry.y2 = board_size(b) - 1;
+				b->symmetry.d = 1;
+			} else if (x == t) {
+				b->symmetry.type = SYM_HORIZ;
+				b->symmetry.y1 = 1;
+				b->symmetry.y2 = board_size(b) - 1;
+				b->symmetry.d = 0;
+			} else if (y == t) {
+				b->symmetry.type = SYM_VERT;
+				b->symmetry.x1 = 1;
+				b->symmetry.x2 = board_size(b) - 1;
+				b->symmetry.d = 0;
+			} else {
+break_symmetry:
+				b->symmetry.type = SYM_NONE;
+				b->symmetry.x1 = b->symmetry.y1 = 1;
+				b->symmetry.x2 = b->symmetry.y2 = board_size(b) - 1;
+				b->symmetry.d = 0;
+			}
+			break;
+		case SYM_DIAG_UP:
+			if (x == y)
+				return;
+			if (b->symmetry.d > 0 ? x < y : x > y) {
+				/* Good side of symmetry. Just froze it. */
+				b->symmetry.free = false;
+			} else if (b->symmetry.free) {
+				/* Flip symmetry. */
+				b->symmetry.d = - b->symmetry.d;
+				b->symmetry.free = false;
+			} else {
+				/* Break symmetry. */
+				goto break_symmetry;
+			}
+			break;
+		case SYM_DIAG_DOWN:
+			if (dx == y)
+				return;
+			if (b->symmetry.d > 0 ? dx < y : dx > y) {
+				b->symmetry.free = false;
+			} else if (b->symmetry.free) {
+				b->symmetry.d = - b->symmetry.d;
+				b->symmetry.free = false;
+			} else {
+				goto break_symmetry;
+			}
+			break;
+		case SYM_HORIZ:
+			if (x == t)
+				return;
+			if (b->symmetry.x1 <= x && x <= b->symmetry.x2) {
+				b->symmetry.free = false;
+			} else if (b->symmetry.free) {
+				b->symmetry.x1 = t;
+				b->symmetry.x2 = board_size(b) - 1;
+				b->symmetry.free = false;
+			} else {
+				goto break_symmetry;
+			}
+			break;
+		case SYM_VERT:
+			if (b->symmetry.y1 <= y && y <= b->symmetry.y2) {
+				b->symmetry.free = false;
+			} else if (b->symmetry.free) {
+				b->symmetry.y1 = t;
+				b->symmetry.y2 = board_size(b) - 1;
+				b->symmetry.free = false;
+			} else {
+				goto break_symmetry;
+			}
+			break;
+		case SYM_NONE:
+			assert(0);
+			break;
+	}
+
+	if (DEBUGL(6)) {
+		fprintf(stderr, "NEW SYMMETRY [%d,%d,%d,%d|%d=%d+%d]\n",
+			b->symmetry.x1, b->symmetry.y1, b->symmetry.x2, b->symmetry.y2,
+			b->symmetry.d, b->symmetry.type, b->symmetry.free);
+	}
+	/* Whew. */
 }
 
 
@@ -614,6 +739,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 	board->last_move = *m;
 	board->moves++;
 	board_hash_update(board, coord, color);
+	board_symmetry_update(board, coord);
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
 
@@ -695,6 +821,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	board->moves++;
 	board_hash_update(board, coord, color);
 	board_hash_commit(board);
+	board_symmetry_update(board, coord);
 	board->ko = ko;
 
 	return !!new_group(board, coord);
