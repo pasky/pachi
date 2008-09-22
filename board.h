@@ -22,6 +22,28 @@
 extern bool random_pass;
 
 
+/* Some engines might normalize their reading and skip symmetrical
+ * moves. We will tell them how can they do it. */
+struct board_symmetry {
+	/* Playground is in this rectangle. */
+	int x1, x2, y1, y2;
+	/* d ==  0: Full rectangle
+	 * d ==  1: Top triangle */
+	int d;
+	/* General symmetry type. */
+	/* Note that the above is redundant to this, but just provided
+	 * for easier usage. */
+	enum {
+		SYM_FULL,
+		SYM_DIAG_UP,
+		SYM_DIAG_DOWN,
+		SYM_HORIZ,
+		SYM_VERT,
+		SYM_NONE
+	} type;
+};
+
+
 typedef uint64_t hash_t;
 
 
@@ -94,6 +116,9 @@ struct board {
 	group_t *c; int clen;
 #endif
 
+	/* Symmetry information */
+	struct board_symmetry symmetry;
+
 
 	/* --- PRIVATE DATA --- */
 
@@ -163,6 +188,9 @@ int board_play(struct board *board, struct move *m);
  * to *coord. This method will never fill your own eye. pass is played
  * when no move can be played. */
 void board_play_random(struct board *b, enum stone color, coord_t *coord);
+
+/* Adjust symmetry information as if given coordinate has been played. */
+void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 bool board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color);

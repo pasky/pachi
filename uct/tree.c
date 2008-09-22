@@ -32,6 +32,7 @@ tree_init(struct board *board, enum stone color)
 	t->board = board;
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0);
+	t->root_symmetry = board->symmetry;
 	return t;
 }
 
@@ -95,7 +96,7 @@ static char *
 tree_book_name(struct board *b)
 {
 	static char buf[256];
-	sprintf(buf, "uct-%d-%02.01f.pachibook", b->size - 2, b->komi);
+	sprintf(buf, "uctbook-%d-%02.01f.pachitree", b->size - 2, b->komi);
 	return buf;
 }
 
@@ -172,15 +173,37 @@ tree_load(struct tree *tree, struct board *b)
 }
 
 
+/* Tree symmetry: When possible, we will localize the tree to a single part
+ * of the board in tree_expand_node() and possibly flip along symmetry axes
+ * to another part of the board in tree_promote_at(). We follow b->symmetry
+ * guidelines here. */
+
+
 void
 tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy, int parity)
 {
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
 
-	/* The loop excludes the offboard margin. */
-	for (int i = 1; i < board_size(t->board); i++) {
-		for (int j = 1; j < board_size(t->board); j++) {
+	/* The loop considers only the symmetry playground. */
+	if (UDEBUGL(6)) {
+		fprintf(stderr, "expanding %s within [%d,%d],[%d,%d] %d-%d\n",
+				coord2sstr(node->coord, b),
+				b->symmetry.x1, b->symmetry.y1,
+				b->symmetry.x2, b->symmetry.y2,
+				b->symmetry.type, b->symmetry.d);
+	}
+	for (int i = b->symmetry.x1; i <= b->symmetry.x2; i++) {
+		for (int j = b->symmetry.y1; j <= b->symmetry.y2; j++) {
+			if (b->symmetry.d) {
+				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_size(b) - 1 - i : i;
+				if (x > j) {
+					if (UDEBUGL(7))
+						fprintf(stderr, "drop %d,%d\n", i, j);
+					continue;
+				}
+			}
+
 			coord_t c = coord_xy_otf(i, j, t->board);
 			if (board_at(b, c) != S_NONE)
 				continue;
@@ -196,6 +219,68 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 		}
 	}
 }
+
+
+static coord_t
+flip_coord(struct board *b, coord_t c,
+           bool flip_horiz, bool flip_vert, int flip_diag)
+{
+	int x = coord_x(c, b), y = coord_y(c, b);
+	if (flip_diag) {
+		int z = x; x = y; y = z;
+	}
+	if (flip_horiz) {
+		x = board_size(b) - 1 - x;
+	}
+	if (flip_vert) {
+		y = board_size(b) - 1 - y;
+	}
+	return coord_xy_otf(x, y, b);
+}
+
+static void
+tree_fix_node_symmetry(struct board *b, struct tree_node *node,
+                       bool flip_horiz, bool flip_vert, int flip_diag)
+{
+	node->coord = flip_coord(b, node->coord, flip_horiz, flip_vert, flip_diag);
+
+	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+		tree_fix_node_symmetry(b, ni, flip_horiz, flip_vert, flip_diag);
+}
+
+static void
+tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
+{
+	struct board_symmetry *s = &tree->root_symmetry;
+	int cx = coord_x(c, b), cy = coord_y(c, b);
+
+	/* playground	X->h->v->d normalization
+	 * :::..	.d...
+	 * .::..	v....
+	 * ..:..	.....
+	 * .....	h...X
+	 * .....	.....  */
+	bool flip_horiz = cx < s->x1 || cx > s->x2;
+	bool flip_vert = cy < s->y1 || cy > s->y2;
+
+	bool flip_diag = 0;
+	if (s->d) {
+		bool dir = (s->type == SYM_DIAG_DOWN);
+		int x = dir ^ flip_horiz ^ flip_vert ? board_size(b) - 1 - cx : cx;
+		if (flip_vert ? x < cy : x > cy) {
+			flip_diag = 1;
+		}
+	}
+
+	if (UDEBUGL(4)) {
+		fprintf(stderr, "%s will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
+			coord2sstr(c, b), flip_horiz, flip_vert, flip_diag,
+			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
+			s->type, s->d, b->symmetry.type, b->symmetry.d);
+	}
+	tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
+}
+
 
 static void
 tree_unlink_node(struct tree_node *node)
@@ -225,17 +310,21 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 	tree_unlink_node(node);
 	tree_done_node(tree, tree->root);
 	tree->root = node;
+	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
 	node->parent = NULL;
 }
 
 bool
 tree_promote_at(struct tree *tree, struct board *b, coord_t c)
 {
-	for (struct tree_node *ni = tree->root->children; ni; ni = ni->sibling)
+	tree_fix_symmetry(tree, b, c);
+
+	for (struct tree_node *ni = tree->root->children; ni; ni = ni->sibling) {
 		if (ni->coord == c) {
 			tree_promote_node(tree, ni);
 			return true;
 		}
+	}
 	return false;
 }
 

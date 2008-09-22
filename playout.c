@@ -46,7 +46,7 @@ play_random:
 
 #if 0
 		/* For UCT, superko test here is downright harmful since
-		 * in superko-likely situation we throw away literarily
+		 * in superko-likely situation we throw away literally
 		 * 95% of our playouts; UCT will deal with this fine by
 		 * itself. */
 		if (unlikely(b->superko_violation)) {

@@ -109,6 +109,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		update_node(p, node, result);
 		if (is_pass(node->coord) || !node->parent)
 			update_node_amaf(p, node, result);
+		/* This loop ignores symmetry considerations, but they should
+		 * matter only at a point when AMAF doesn't help much. */
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			assert(map->map[ni->coord] != S_OFFBOARD);
 			if (is_pass(ni->coord) || map->map[ni->coord] == S_NONE)
