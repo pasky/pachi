@@ -170,6 +170,14 @@ end:
 }
 
 static void
+expand_callback(struct tree *t, struct tree_node *n, struct board *b,
+                enum stone color, int parity, void *data)
+{
+	struct uct *u = data;
+	tree_expand_node(t, n, b, color, u->radar_d, u->policy, parity);
+}
+
+static void
 prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promote)
 {
 	struct uct *u = e->data;
@@ -183,7 +191,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 	if (!u->t) {
 		u->t = tree_init(b, color);
 		//board_print(b, stderr);
-		tree_load(u->t, b);
+		tree_load(u->t, b, color, expand_callback, u);
 	}
 
 	/* XXX: We hope that the opponent didn't suddenly play
@@ -253,7 +261,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	u->t = tree_init(b, color);
-	tree_load(u->t, b);
+	tree_load(u->t, b, color, expand_callback, u);
 
 	int i;
 	for (i = 0; i < u->games; i++) {
@@ -269,7 +277,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 	}
 	progress_status(u, u->t, color, i);
 
-	tree_save(u->t, b, u->games / 1000);
+	tree_save(u->t, b, u->games / 100);
 
 	tree_done(u->t);
 
@@ -281,7 +289,7 @@ uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	u->t = tree_init(b, color);
-	tree_load(u->t, b);
+	tree_load(u->t, b, color, NULL, NULL);
 	tree_dump(u->t, 0);
 	tree_done(u->t);
 }

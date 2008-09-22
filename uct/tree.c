@@ -103,13 +103,15 @@ tree_book_name(struct board *b)
 static void
 tree_node_save(FILE *f, struct tree_node *node, int thres)
 {
-	if (node->u.playouts < thres)
-		return;
-
 	fputc(1, f);
 	fwrite(((void *) node) + offsetof(struct tree_node, depth),
 	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
 	       1, f);
+
+	if (node->u.playouts < thres) {
+		fputc(2, f);
+		return;
+	}
 
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 		tree_node_save(f, ni, thres);
@@ -134,7 +136,10 @@ tree_save(struct tree *tree, struct board *b, int thres)
 
 
 void
-tree_node_load(FILE *f, struct tree_node *node, int *num)
+tree_node_load(FILE *f, struct tree *tree, struct board *b,
+               struct tree_node *node, int *num,
+	       enum stone color, int parity,
+	       tree_load_expander expander, void *expander_data)
 {
 	(*num)++;
 
@@ -143,19 +148,26 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 	       1, f);
 
 	struct tree_node *ni = NULL, *ni_prev = NULL;
-	while (fgetc(f)) {
+	int s;
+	while ((s = fgetc(f))) {
+		if (s == 2) {
+			if (expander)
+				expander(tree, node, b, color, parity, expander_data);
+			break;
+		}
 		ni_prev = ni; ni = calloc(1, sizeof(*ni));
 		if (!node->children)
 			node->children = ni;
 		else
 			ni_prev->sibling = ni;
 		ni->parent = node;
-		tree_node_load(f, ni, num);
+		tree_node_load(f, tree, b, ni, num, stone_other(color), - parity, expander, expander_data);
 	}
 }
 
 void
-tree_load(struct tree *tree, struct board *b)
+tree_load(struct tree *tree, struct board *b, enum stone color,
+          tree_load_expander expander, void *expander_data)
 {
 	char *filename = tree_book_name(b);
 	FILE *f = fopen(filename, "rb");
@@ -166,7 +178,7 @@ tree_load(struct tree *tree, struct board *b)
 
 	int num = 0;
 	if (fgetc(f))
-		tree_node_load(f, tree->root, &num);
+		tree_node_load(f, tree, b, tree->root, &num, color, 1, expander, expander_data);
 	fprintf(stderr, "Loaded %d nodes.\n", num);
 
 	fclose(f);
