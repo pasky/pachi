@@ -31,6 +31,8 @@ struct board_symmetry {
 	 * d ==  1: Top triangle */
 	int d;
 	/* General symmetry type. */
+	/* Note that the above is redundant to this, but just provided
+	 * for easier usage. */
 	enum {
 		SYM_FULL,
 		SYM_DIAG_UP,
