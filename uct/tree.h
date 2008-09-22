@@ -56,10 +56,8 @@ struct tree {
 struct tree *tree_init(struct board *board, enum stone color);
 void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree, int thres);
-
-typedef void (*tree_load_expander)(struct tree *t, struct tree_node *n, struct board *b, enum stone color, int parity, void *data);
 void tree_save(struct tree *tree, struct board *b, int thres);
-void tree_load(struct tree *tree, struct board *b, enum stone color, tree_load_expander expander, void *expander_data);
+void tree_load(struct tree *tree, struct board *b);
 
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy, int parity);
 void tree_delete_node(struct tree *tree, struct tree_node *node);
