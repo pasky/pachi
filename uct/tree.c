@@ -131,13 +131,22 @@ tree_save(struct tree *tree, struct board *b, int thres)
 
 
 void
-tree_node_load(FILE *f, struct tree_node *node, int *num)
+tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
 {
 	(*num)++;
 
 	fread(((void *) node) + offsetof(struct tree_node, depth),
 	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
 	       1, f);
+
+	if (invert) {
+		node->u.wins = node->u.playouts - node->u.wins;
+		node->u.value = 1 - node->u.value;
+		node->amaf.wins = node->amaf.playouts - node->amaf.wins;
+		node->amaf.value = 1 - node->amaf.value;
+		node->prior.wins = node->prior.playouts - node->prior.wins;
+		node->prior.value = 1 - node->prior.value;
+	}
 
 	struct tree_node *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {
@@ -147,12 +156,12 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 		else
 			ni_prev->sibling = ni;
 		ni->parent = node;
-		tree_node_load(f, ni, num);
+		tree_node_load(f, ni, num, invert);
 	}
 }
 
 void
-tree_load(struct tree *tree, struct board *b)
+tree_load(struct tree *tree, struct board *b, enum stone color)
 {
 	char *filename = tree_book_name(b);
 	FILE *f = fopen(filename, "rb");
@@ -163,7 +172,7 @@ tree_load(struct tree *tree, struct board *b)
 
 	int num = 0;
 	if (fgetc(f))
-		tree_node_load(f, tree->root, &num);
+		tree_node_load(f, tree->root, &num, color != S_BLACK);
 	fprintf(stderr, "Loaded %d nodes.\n", num);
 
 	fclose(f);
