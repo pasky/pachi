@@ -134,11 +134,10 @@ board_clear(struct board *board)
 	board_resize(board, size - 2 /* S_OFFBOARD margin */);
 
 	/* Setup initial symmetry */
-	board->symmetry.d = -1;
+	board->symmetry.d = 1;
 	board->symmetry.x1 = board->symmetry.y1 = board->size / 2;
 	board->symmetry.x2 = board->symmetry.y2 = board->size - 1;
 	board->symmetry.type = SYM_FULL;
-	board->symmetry.free = true;
 
 	/* Draw the offboard margin */
 	int top_row = board_size2(board) - board_size(board);
@@ -270,9 +269,9 @@ board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t 
 	int x = coord_x(c, b), y = coord_y(c, b), t = board_size(b) / 2;
 	int dx = board_size(b) - 1 - x; /* for SYM_DOWN */
 	if (DEBUGL(6)) {
-		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d+%d] update for %d,%d\n",
+		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d] update for %d,%d\n",
 			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
-			symmetry->d, symmetry->type, symmetry->free, x, y);
+			symmetry->d, symmetry->type, x, y);
 	}
 
 	switch (symmetry->type) {
@@ -313,63 +312,28 @@ break_symmetry:
 		case SYM_DIAG_UP:
 			if (x == y)
 				return;
-			if (symmetry->d > 0 ? x < y : x > y) {
-				/* Good side of symmetry. Just froze it. */
-				symmetry->free = false;
-			} else if (symmetry->free) {
-				/* Flip symmetry. */
-				symmetry->d = - symmetry->d;
-				symmetry->free = false;
-			} else {
-				/* Break symmetry. */
-				goto break_symmetry;
-			}
-			break;
+			goto break_symmetry;
 		case SYM_DIAG_DOWN:
 			if (dx == y)
 				return;
-			if (symmetry->d > 0 ? dx < y : dx > y) {
-				symmetry->free = false;
-			} else if (symmetry->free) {
-				symmetry->d = - symmetry->d;
-				symmetry->free = false;
-			} else {
-				goto break_symmetry;
-			}
-			break;
+			goto break_symmetry;
 		case SYM_HORIZ:
 			if (x == t)
 				return;
-			if (symmetry->x1 <= x && x <= symmetry->x2) {
-				symmetry->free = false;
-			} else if (symmetry->free) {
-				symmetry->x1 = t;
-				symmetry->x2 = board_size(b) - 1;
-				symmetry->free = false;
-			} else {
-				goto break_symmetry;
-			}
-			break;
+			goto break_symmetry;
 		case SYM_VERT:
-			if (symmetry->y1 <= y && y <= symmetry->y2) {
-				symmetry->free = false;
-			} else if (symmetry->free) {
-				symmetry->y1 = t;
-				symmetry->y2 = board_size(b) - 1;
-				symmetry->free = false;
-			} else {
-				goto break_symmetry;
-			}
-			break;
+			if (y == t)
+				return;
+			goto break_symmetry;
 		case SYM_NONE:
 			assert(0);
 			break;
 	}
 
 	if (DEBUGL(6)) {
-		fprintf(stderr, "NEW SYMMETRY [%d,%d,%d,%d|%d=%d+%d]\n",
+		fprintf(stderr, "NEW SYMMETRY [%d,%d,%d,%d|%d=%d]\n",
 			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
-			symmetry->d, symmetry->type, symmetry->free);
+			symmetry->d, symmetry->type);
 	}
 	/* Whew. */
 }

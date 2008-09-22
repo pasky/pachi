@@ -28,8 +28,7 @@ struct board_symmetry {
 	/* Playground is in this rectangle. */
 	int x1, x2, y1, y2;
 	/* d ==  0: Full rectangle
-	 * d == -1: x <= y rectangle
-	 * d ==  1: x >= y rectangle */
+	 * d ==  1: Top triangle */
 	int d;
 	/* General symmetry type. */
 	enum {
@@ -40,8 +39,6 @@ struct board_symmetry {
 		SYM_VERT,
 		SYM_NONE
 	} type;
-	/* Can we flip symmetry if necessary? */
-	bool free;
 };
 
 
