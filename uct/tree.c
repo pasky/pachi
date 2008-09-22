@@ -221,15 +221,13 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 }
 
 
-static void
-tree_fix_node_symmetry(struct board *b, struct tree_node *node,
-                       bool flip_horiz, bool flip_vert, int flip_diag)
+static coord_t
+flip_coord(struct board *b, coord_t c,
+           bool flip_horiz, bool flip_vert, int flip_diag)
 {
-	int x = coord_x(node->coord, b), y = coord_y(node->coord, b);
+	int x = coord_x(c, b), y = coord_y(c, b);
 	if (flip_diag) {
-		int z = x;
-		x = flip_diag == 1 ? y : board_size(b) - 1 - y;
-		y = flip_diag == 1 ? z : board_size(b) - 1 - z;
+		int z = x; x = y; y = z;
 	}
 	if (flip_horiz) {
 		x = board_size(b) - 1 - x;
@@ -237,7 +235,14 @@ tree_fix_node_symmetry(struct board *b, struct tree_node *node,
 	if (flip_vert) {
 		y = board_size(b) - 1 - y;
 	}
-	node->coord = coord_xy_otf(x, y, b);
+	return coord_xy_otf(x, y, b);
+}
+
+static void
+tree_fix_node_symmetry(struct board *b, struct tree_node *node,
+                       bool flip_horiz, bool flip_vert, int flip_diag)
+{
+	node->coord = flip_coord(b, node->coord, flip_horiz, flip_vert, flip_diag);
 
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		tree_fix_node_symmetry(b, ni, flip_horiz, flip_vert, flip_diag);
@@ -258,18 +263,21 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 	bool flip_horiz = cx < s->x1 || cx > s->x2;
 	bool flip_vert = cy < s->y1 || cy > s->y2;
 
-	int flip_diag = 0;
+	bool flip_diag = 0;
 	if (s->d) {
-		bool dir = (s->type == SYM_DIAG_DOWN) ^ flip_horiz ^ flip_vert;
-		int x = dir ? board_size(b) - 1 - cx : cx;
-		if (x > cy) {
-			flip_diag = 1 + dir;
+		bool dir = (s->type == SYM_DIAG_DOWN);
+		int x = dir ^ flip_horiz ^ flip_vert ? board_size(b) - 1 - cx : cx;
+		if (flip_vert ? x < cy : x > cy) {
+			flip_diag = 1;
 		}
 	}
 
-	fprintf(stderr, "%s will flip %d %d %d, sym %d (%d) -> %d (%d)\n",
-		coord2sstr(c, b), flip_horiz, flip_vert, flip_diag,
-		s->type, s->d, b->symmetry.type, b->symmetry.d);
+	if (UDEBUGL(4)) {
+		fprintf(stderr, "%s will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
+			coord2sstr(c, b), flip_horiz, flip_vert, flip_diag,
+			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
+			s->type, s->d, b->symmetry.type, b->symmetry.d);
+	}
 	tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
 }
 
@@ -311,11 +319,12 @@ tree_promote_at(struct tree *tree, struct board *b, coord_t c)
 {
 	tree_fix_symmetry(tree, b, c);
 
-	for (struct tree_node *ni = tree->root->children; ni; ni = ni->sibling)
+	for (struct tree_node *ni = tree->root->children; ni; ni = ni->sibling) {
 		if (ni->coord == c) {
 			tree_promote_node(tree, ni);
 			return true;
 		}
+	}
 	return false;
 }
 
