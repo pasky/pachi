@@ -147,12 +147,18 @@ tree_node_load(FILE *f, struct tree *tree, struct board *b,
 	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
 	       1, f);
 
+	struct board b2;
+	board_copy(&b2, b);
+	struct move m = { node->coord, color };
+	int res = board_play(&b2, &m);
+	assert(!res);
+
 	struct tree_node *ni = NULL, *ni_prev = NULL;
 	int s;
 	while ((s = fgetc(f))) {
 		if (s == 2) {
 			if (expander)
-				expander(tree, node, b, color, parity, expander_data);
+				expander(tree, node, &b2, color, parity, expander_data);
 			break;
 		}
 		ni_prev = ni; ni = calloc(1, sizeof(*ni));
@@ -161,7 +167,7 @@ tree_node_load(FILE *f, struct tree *tree, struct board *b,
 		else
 			ni_prev->sibling = ni;
 		ni->parent = node;
-		tree_node_load(f, tree, b, ni, num, stone_other(color), - parity, expander, expander_data);
+		tree_node_load(f, tree, &b2, ni, num, stone_other(color), - parity, expander, expander_data);
 	}
 }
 
