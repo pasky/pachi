@@ -268,7 +268,7 @@ board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t 
 	}
 
 	int x = coord_x(c, b), y = coord_y(c, b), t = board_size(b) / 2;
-	int dx = board_size(b) - x; /* for SYM_DOWN */
+	int dx = board_size(b) - 1 - x; /* for SYM_DOWN */
 	if (DEBUGL(6)) {
 		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d+%d] update for %d,%d\n",
 			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,

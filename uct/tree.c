@@ -196,7 +196,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	for (int i = b->symmetry.x1; i <= b->symmetry.x2; i++) {
 		for (int j = b->symmetry.y1; j <= b->symmetry.y2; j++) {
 			if (b->symmetry.d) {
-				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_size(b) - i : i;
+				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_size(b) - 1 - i : i;
 				if (b->symmetry.d < 0 ? x < j : x > j) {
 					if (UDEBUGL(7))
 						fprintf(stderr, "drop %d,%d\n", i, j);
@@ -228,14 +228,14 @@ tree_fix_node_symmetry(struct board *b, struct tree_node *node,
 	int x = coord_x(node->coord, b), y = coord_y(node->coord, b);
 	if (flip_diag) {
 		int z = x;
-		x = flip_diag == 1 ? y : board_size(b) - y;
-		y = flip_diag == 1 ? z : board_size(b) - z;
+		x = flip_diag == 1 ? y : board_size(b) - 1 - y;
+		y = flip_diag == 1 ? z : board_size(b) - 1 - z;
 	}
 	if (flip_horiz) {
-		x = board_size(b) - x;
+		x = board_size(b) - 1 - x;
 	}
 	if (flip_vert) {
-		y = board_size(b) - y;
+		y = board_size(b) - 1 - y;
 	}
 	node->coord = coord_xy_otf(x, y, b);
 
@@ -261,7 +261,7 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 	int flip_diag = 0;
 	if (s->d) {
 		bool dir = (s->type == SYM_DIAG_DOWN) ^ flip_horiz ^ flip_vert;
-		int x = dir ? board_size(b) - cx : cx;
+		int x = dir ? board_size(b) - 1 - cx : cx;
 		if (s->d < 0 ? x < cy : x > cy) {
 			flip_diag = 1 + dir;
 		}
