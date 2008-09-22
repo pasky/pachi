@@ -66,7 +66,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
 		float uctp = (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts);
 		float ravep = (parity > 0 ? ni->amaf.value : 1 - ni->amaf.value) + sqrt(xpl_rave / amaf_playouts);
-		float urgency = uct_playouts ? beta * ravep + (1 - beta) * uctp : b->fpu;
+		float urgency = ni->u.playouts ? beta * ravep + (1 - beta) * uctp : b->fpu;
 		// fprintf(stderr, "uctp %f (uct %d/%d) ravep %f (xpl %f amaf %d/%d) beta %f => %f\n", uctp, ni->u.wins, ni->u.playouts, ravep, xpl_rave, amaf_wins, amaf_playouts, beta, urgency);
 		if (b->urg_randoma)
 			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
