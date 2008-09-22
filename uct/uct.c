@@ -169,40 +169,46 @@ end:
 	return result;
 }
 
-static coord_t *
-uct_genmove(struct engine *e, struct board *b, enum stone color)
+static void
+prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promote)
 {
 	struct uct *u = e->data;
-	bool loaded = false;
 
-	if (b->moves < 2 && u->t) {
+	if (!b->moves && u->t) {
 		/* Stale state from last game */
 		tree_done(u->t);
 		u->t = NULL;
 	}
 
 	if (!u->t) {
-tree_init:
 		u->t = tree_init(b, color);
 		//board_print(b, stderr);
-
-		if (!b->moves) {
-			tree_load(u->t, b);
-		} else if (b->moves == 1 && !loaded) {
-			tree_load(u->t, b);
-			loaded = true;
-			goto promotion;
-		}
-	} else {
-		/* XXX: We hope that the opponent didn't suddenly play
-		 * several moves in the row. */
-promotion:
-		if (!tree_promote_at(u->t, b, b->last_move.coord)) {
-			fprintf(stderr, "CANNOT FIND NODE TO PROMOTE!\n");
-			tree_done(u->t);
-			goto tree_init;
-		}
+		tree_load(u->t, b);
 	}
+
+	/* XXX: We hope that the opponent didn't suddenly play
+	 * several moves in the row. */
+	if (!is_resign(promote) && !tree_promote_at(u->t, b, promote)) {
+		fprintf(stderr, "CANNOT FIND NODE TO PROMOTE!\n");
+		/* Reset tree */
+		tree_done(u->t);
+		u->t = tree_init(b, color);
+	}
+}
+
+static void
+uct_notify_play(struct engine *e, struct board *b, struct move *m)
+{
+	prepare_move(e, b, stone_other(m->color), m->coord);
+}
+
+static coord_t *
+uct_genmove(struct engine *e, struct board *b, enum stone color)
+{
+	struct uct *u = e->data;
+
+	/* Seed the tree. */
+	prepare_move(e, b, color, resign);
 
 	int i, games = u->games - (u->t->root->u.playouts / 1.5);
 	for (i = 0; i < games; i++) {
@@ -378,6 +384,7 @@ engine_uct_init(char *arg)
 	e->name = "UCT Engine";
 	e->comment = "I'm playing UCT. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
 	e->genmove = uct_genmove;
+	e->notify_play = uct_notify_play;
 	e->data = u;
 
 	return e;
