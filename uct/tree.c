@@ -79,7 +79,7 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 				best = i;
 		if (best < 0)
 			break;
-		tree_node_dump(tree, nbox[best], l + 1, thres);
+		tree_node_dump(tree, nbox[best], l + 1, node->u.value < 0.1 ? 0 : thres);
 		nbox[best] = NULL;
 	}
 }
