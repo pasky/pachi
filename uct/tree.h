@@ -41,6 +41,7 @@ struct tree_node {
 	struct move_stats prior;
 	/* XXX: Should be way for policies to add their own stats */
 	struct move_stats amaf;
+#define NODE_HINT_NOAMAF 0x80
 	int hints;
 };
 
@@ -64,6 +65,6 @@ void tree_delete_node(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 bool tree_leaf_node(struct tree_node *node);
-void tree_update_node_value(struct tree_node *node, bool add_amaf);
+void tree_update_node_value(struct tree_node *node);
 
 #endif

@@ -341,10 +341,11 @@ tree_leaf_node(struct tree_node *node)
 }
 
 void
-tree_update_node_value(struct tree_node *node, bool add_amaf)
+tree_update_node_value(struct tree_node *node)
 {
-	node->u.value = (float)(node->u.wins + node->prior.wins + (add_amaf ? node->amaf.wins : 0))
-			/ (node->u.playouts + node->prior.playouts + (add_amaf ? node->amaf.playouts : 0));
+	bool noamaf = node->hints & NODE_HINT_NOAMAF;
+	node->u.value = (float)(node->u.wins + node->prior.wins + (!noamaf ? node->amaf.wins : 0))
+			/ (node->u.playouts + node->prior.playouts + (!noamaf ? node->amaf.playouts : 0));
 #if 0
 	{ struct board b2; board_size(&b2) = 9+2;
 	fprintf(stderr, "%s->%s %d/%d %d/%d %f\n", node->parent ? coord2sstr(node->parent->coord, &b2) : NULL, coord2sstr(node->coord, &b2), node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->u.value); }
