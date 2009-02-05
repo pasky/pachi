@@ -196,20 +196,9 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 	}
 }
 
-static void
-uct_notify_play(struct engine *e, struct board *b, struct move *m)
+static int
+uct_playouts(struct uct *u, struct board *b, enum stone color)
 {
-	prepare_move(e, b, stone_other(m->color), m->coord);
-}
-
-static coord_t *
-uct_genmove(struct engine *e, struct board *b, enum stone color)
-{
-	struct uct *u = e->data;
-
-	/* Seed the tree. */
-	prepare_move(e, b, color, resign);
-
 	int i, games = u->games - (u->t->root->u.playouts / 1.5);
 	for (i = 0; i < games; i++) {
 		int result = uct_playout(u, b, color, u->t);
@@ -233,13 +222,32 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	if (UDEBUGL(2))
 		tree_dump(u->t, u->dumpthres);
 
+	return i;
+}
+
+static void
+uct_notify_play(struct engine *e, struct board *b, struct move *m)
+{
+	prepare_move(e, b, stone_other(m->color), m->coord);
+}
+
+static coord_t *
+uct_genmove(struct engine *e, struct board *b, enum stone color)
+{
+	struct uct *u = e->data;
+
+	/* Seed the tree. */
+	prepare_move(e, b, color, resign);
+
+	int played_games = uct_playouts(u, b, color);
+
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 	if (!best) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(0))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts, i);
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts, played_games);
 	if (best->u.value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
