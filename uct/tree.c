@@ -179,6 +179,62 @@ tree_load(struct tree *tree, struct board *b, enum stone color)
 }
 
 
+static void
+tree_node_merge(struct tree_node *dest, struct tree_node *src)
+{
+	dest->hints |= src->hints;
+
+	/* Merge the children, both are coord-sorted lists. */
+	struct tree_node *di = dest->children, *dip = NULL;
+	struct tree_node *si = src->children;
+	while (di && si) {
+		if (di->coord != si->coord) {
+			/* src has some extra items or misses di */
+			struct tree_node *si2 = si->sibling, *si2p = si;
+			while (si2 && di->coord != si2->coord) {
+				si2p = si2; si2 = si2->sibling;
+			}
+			if (!si2)
+				goto next_di; /* src misses di, move on */
+			/* chain the extra [si,si2) items before di */
+			if (dip)
+				dip->sibling = si;
+			else
+				dest->children = si;
+			si2p->sibling = di;
+			si = si2;
+		}
+		/* Matching nodes - recurse... */
+		tree_node_merge(di, si);
+		/* ...and move on. */
+		si = si->sibling;
+next_di:
+		dip = di; di = di->sibling;
+	}
+	if (si)
+		dip->sibling = si;
+
+	dest->prior.playouts += src->prior.playouts;
+	dest->prior.wins += src->prior.wins;
+	dest->prior.value = dest->prior.wins / dest->prior.playouts;
+	dest->amaf.playouts += src->amaf.playouts;
+	dest->amaf.wins += src->amaf.wins;
+	dest->amaf.value = dest->amaf.wins / dest->amaf.playouts;
+	dest->u.playouts += src->u.playouts;
+	dest->u.wins += src->u.wins;
+	tree_update_node_value(dest);
+}
+
+/* Merge two trees built upon the same board. */
+void
+tree_merge(struct tree *dest, struct tree *src)
+{
+	if (src->max_depth > dest->max_depth)
+		dest->max_depth = src->max_depth;
+	tree_node_merge(dest->root, src->root);
+}
+
+
 /* Tree symmetry: When possible, we will localize the tree to a single part
  * of the board in tree_expand_node() and possibly flip along symmetry axes
  * to another part of the board in tree_promote_at(). We follow b->symmetry
