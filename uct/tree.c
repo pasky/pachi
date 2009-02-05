@@ -179,6 +179,33 @@ tree_load(struct tree *tree, struct board *b, enum stone color)
 }
 
 
+static struct tree_node *
+tree_node_copy(struct tree_node *node)
+{
+	struct tree_node *n2 = malloc(sizeof(*n2));
+	*n2 = *node;
+	if (!node->children)
+		return n2;
+	struct tree_node *ni = node->children;
+	struct tree_node *ni2 = tree_node_copy(ni);
+	n2->children = ni2; ni2->parent = n2;
+	while ((ni = ni->sibling)) {
+		ni2->sibling = tree_node_copy(ni);
+		ni2 = ni2->sibling; ni2->parent = n2;
+	}
+	return n2;
+}
+
+struct tree *
+tree_copy(struct tree *tree)
+{
+	struct tree *t2 = malloc(sizeof(*t2));
+	*t2 = *tree;
+	t2->root = tree_node_copy(tree->root);
+	return t2;
+}
+
+
 static void
 tree_node_merge(struct tree_node *dest, struct tree_node *src)
 {
