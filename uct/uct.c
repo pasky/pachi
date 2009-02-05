@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,7 @@
 #include "playout/moggy.h"
 #include "playout/old.h"
 #include "playout/light.h"
+#include "random.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
@@ -219,10 +221,27 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	}
 
 	progress_status(u, t, color, i);
-	if (UDEBUGL(2))
+	if (UDEBUGL(3))
 		tree_dump(t, u->dumpthres);
-
 	return i;
+}
+
+struct spawn_ctx {
+	struct uct *u;
+	struct board *b;
+	enum stone color;
+	struct tree *t;
+	unsigned long seed;
+	int games;
+};
+
+static void *
+spawn_helper(void *ctx_)
+{
+	struct spawn_ctx *ctx = ctx_;
+	fast_srandom(ctx->seed);
+	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
+	return ctx;
 }
 
 static void
@@ -239,7 +258,34 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	/* Seed the tree. */
 	prepare_move(e, b, color, resign);
 
-	int played_games = uct_playouts(u, b, color, u->t);
+	int played_games = 0;
+	if (!u->threads) {
+		played_games = uct_playouts(u, b, color, u->t);
+	} else {
+		pthread_t threads[u->threads];
+		for (int ti = 0; ti < u->threads; ti++) {
+			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
+			ctx->u = u; ctx->b = b; ctx->color = color;
+			ctx->t = tree_copy(u->t);
+			ctx->seed = fast_random(65536) + ti;
+			pthread_create(&threads[ti], NULL, spawn_helper, ctx);
+			if (UDEBUGL(2))
+				fprintf(stderr, "Spawned thread %d\n", ti);
+		}
+		for (int ti = 0; ti < u->threads; ti++) {
+			struct spawn_ctx *ctx;
+			pthread_join(threads[ti], (void **) &ctx);
+			played_games += ctx->games;
+			tree_merge(u->t, ctx->t);
+			tree_done(ctx->t);
+			free(ctx);
+			if (UDEBUGL(2))
+				fprintf(stderr, "Joined thread %d\n", ti);
+		}
+	}
+
+	if (UDEBUGL(2))
+		tree_dump(u->t, u->dumpthres);
 
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 	if (!best) {
