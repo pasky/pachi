@@ -197,30 +197,30 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 }
 
 static int
-uct_playouts(struct uct *u, struct board *b, enum stone color)
+uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
-	int i, games = u->games - (u->t->root->u.playouts / 1.5);
+	int i, games = u->games - (t->root->u.playouts / 1.5);
 	for (i = 0; i < games; i++) {
-		int result = uct_playout(u, b, color, u->t);
+		int result = uct_playout(u, b, color, t);
 		if (result < 0) {
 			/* Tree descent has hit invalid move. */
 			continue;
 		}
 
 		if (i > 0 && !(i % 10000)) {
-			progress_status(u, u->t, color, i);
+			progress_status(u, t, color, i);
 		}
 
 		if (i > 0 && !(i % 500)) {
-			struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
+			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
 			if (best && best->u.playouts >= 1000 && best->u.value >= u->loss_threshold)
 				break;
 		}
 	}
 
-	progress_status(u, u->t, color, i);
+	progress_status(u, t, color, i);
 	if (UDEBUGL(2))
-		tree_dump(u->t, u->dumpthres);
+		tree_dump(t, u->dumpthres);
 
 	return i;
 }
@@ -239,7 +239,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	/* Seed the tree. */
 	prepare_move(e, b, color, resign);
 
-	int played_games = uct_playouts(u, b, color);
+	int played_games = uct_playouts(u, b, color, u->t);
 
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 	if (!best) {
@@ -365,6 +365,8 @@ uct_state_init(char *arg)
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 				}
+			} else if (!strcasecmp(optname, "threads") && optval) {
+				u->threads = atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 			}
