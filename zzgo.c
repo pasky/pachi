@@ -54,8 +54,7 @@ int main(int argc, char *argv[])
 	}
 
 	fast_srandom(seed);
-	if (DEBUGL(0))
-		fprintf(stderr, "Random seed: %d", seed);
+	fprintf(stderr, "Random seed: %d\n", seed);
 
 	char *e_arg = NULL;
 	if (optind < argc)
