@@ -213,13 +213,13 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src)
 
 	/* Merge the children, both are coord-sorted lists. */
 	struct tree_node *di = dest->children, *dip = NULL;
-	struct tree_node *si = src->children;
+	struct tree_node *si = src->children, *sip = NULL;
 	while (di && si) {
 		if (di->coord != si->coord) {
 			/* src has some extra items or misses di */
-			struct tree_node *si2 = si->sibling, *si2p = si;
+			struct tree_node *si2 = si->sibling;
 			while (si2 && di->coord != si2->coord) {
-				si2p = si2; si2 = si2->sibling;
+				si2 = si2->sibling;
 			}
 			if (!si2)
 				goto next_di; /* src misses di, move on */
@@ -228,31 +228,55 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src)
 				dip->sibling = si;
 			else
 				dest->children = si;
-			si2p->sibling = di;
+			while (si->sibling != si2) {
+				si->parent = dest;
+				si = si->sibling;
+			}
+			si->sibling = di;
 			si = si2;
+			if (sip)
+				sip->sibling = si;
+			else
+				src->children = si;
 		}
 		/* Matching nodes - recurse... */
 		tree_node_merge(di, si);
 		/* ...and move on. */
-		si = si->sibling;
+		sip = si; si = si->sibling;
 next_di:
 		dip = di; di = di->sibling;
 	}
-	if (si)
-		dip->sibling = si;
+	if (si) {
+		if (dip)
+			dip->sibling = si;
+		else
+			dest->children = si;
+		while (si) {
+			si->parent = dest;
+			si = si->sibling;
+		}
+		if (sip)
+			sip->sibling = NULL;
+		else
+			src->children = NULL;
+	}
 
 	dest->prior.playouts += src->prior.playouts;
 	dest->prior.wins += src->prior.wins;
-	dest->prior.value = dest->prior.wins / dest->prior.playouts;
+	if (dest->prior.playouts)
+		dest->prior.value = dest->prior.wins / dest->prior.playouts;
 	dest->amaf.playouts += src->amaf.playouts;
 	dest->amaf.wins += src->amaf.wins;
-	dest->amaf.value = dest->amaf.wins / dest->amaf.playouts;
+	if (dest->amaf.playouts)
+		dest->amaf.value = dest->amaf.wins / dest->amaf.playouts;
 	dest->u.playouts += src->u.playouts;
 	dest->u.wins += src->u.wins;
-	tree_update_node_value(dest);
+	if (dest->prior.playouts + dest->amaf.playouts + dest->u.playouts)
+		tree_update_node_value(dest);
 }
 
-/* Merge two trees built upon the same board. */
+/* Merge two trees built upon the same board. Note that the operation is
+ * destructive on src. */
 void
 tree_merge(struct tree *dest, struct tree *src)
 {
