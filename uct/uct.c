@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -198,6 +199,9 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 	}
 }
 
+/* Set in main thread in case the playouts should stop. */
+static sig_atomic_t halt = 0;
+
 static int
 uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
@@ -217,6 +221,12 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
 			if (best && best->u.playouts >= 1000 && best->u.value >= u->loss_threshold)
 				break;
+		}
+
+		if (halt) {
+			if (UDEBUGL(2))
+				fprintf(stderr, "<halting early, %d games skipped>\n", games - i);
+			break;
 		}
 	}
 
@@ -263,6 +273,8 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		played_games = uct_playouts(u, b, color, u->t);
 	} else {
 		pthread_t threads[u->threads];
+		int joined = 0;
+		halt = 0;
 		for (int ti = 0; ti < u->threads; ti++) {
 			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 			ctx->u = u; ctx->b = b; ctx->color = color;
@@ -276,11 +288,15 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 			struct spawn_ctx *ctx;
 			pthread_join(threads[ti], (void **) &ctx);
 			played_games += ctx->games;
+			joined++;
 			tree_merge(u->t, ctx->t);
 			tree_done(ctx->t);
 			free(ctx);
 			if (UDEBUGL(2))
 				fprintf(stderr, "Joined thread %d\n", ti);
+			/* Do not get stalled by slow threads. */
+			if (joined >= u->threads / 2)
+				halt = 1;
 		}
 	}
 
