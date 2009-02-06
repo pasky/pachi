@@ -89,6 +89,11 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 void
 tree_dump(struct tree *tree, int thres)
 {
+	if (thres && tree->root->u.playouts / thres > 100) {
+		/* Be a bit sensible about this; the opening book can create
+		 * huge dumps at first. */
+		thres = tree->root->u.playouts / 100;
+	}
 	tree_node_dump(tree, tree->root, 0, thres);
 }
 
