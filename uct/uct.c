@@ -200,7 +200,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 }
 
 /* Set in main thread in case the playouts should stop. */
-static sig_atomic_t halt = 0;
+static volatile sig_atomic_t halt = 0;
 
 static int
 uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
