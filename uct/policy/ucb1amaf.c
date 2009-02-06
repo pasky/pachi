@@ -138,7 +138,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	struct ucb1_policy_amaf *b = calloc(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
-	p->descend = ucb1_descend;
+	p->descend = ucb1rave_descend;
 	p->choose = ucb1_choose;
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
@@ -177,7 +177,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
 				b->urg_randomm = atoi(optval);
 			} else if (!strcasecmp(optname, "rave")) {
-				p->descend = ucb1rave_descend;
+				if (optval && *optval == '0')
+					p->descend = ucb1_descend;
 			} else if (!strcasecmp(optname, "explore_p_rave") && optval) {
 				b->explore_p_rave = atof(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
