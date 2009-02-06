@@ -24,7 +24,7 @@ struct uct_policy *policy_ucb1tuned_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 
 
-#define MC_GAMES	40000
+#define MC_GAMES	80000
 #define MC_GAMELEN	400
 
 
@@ -385,7 +385,7 @@ uct_state_init(char *arg)
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
 	u->expand_p = 2;
-	u->dumpthres = 500;
+	u->dumpthres = 1000;
 
 	if (arg) {
 		char *optspec, *next = arg;
