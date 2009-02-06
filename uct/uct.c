@@ -239,6 +239,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 static pthread_mutex_t finish_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
 static volatile int finish_thread;
+static pthread_mutex_t finish_serializer = PTHREAD_MUTEX_INITIALIZER;
 
 struct spawn_ctx {
 	int tid;
@@ -259,6 +260,7 @@ spawn_helper(void *ctx_)
 	/* Run */
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
 	/* Finish */
+	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
 	finish_thread = ctx->tid;
 	pthread_cond_signal(&finish_cond);
@@ -315,6 +317,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 			/* Do not get stalled by slow threads. */
 			if (joined >= u->threads / 2)
 				halt = 1;
+			pthread_mutex_unlock(&finish_serializer);
 		}
 		pthread_mutex_unlock(&finish_mutex);
 	}
