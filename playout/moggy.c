@@ -566,6 +566,8 @@ playout_moggy_init(char *arg)
 	pp->capturerate = 75;
 	pp->patternrate = 75;
 	pp->hanerate = pp->cut1rate = pp->cut2rate = 75;
+	pp->ladders = pp->borderladders = true;
+	pp->localassess = pp->ladderassess = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -582,8 +584,6 @@ playout_moggy_init(char *arg)
 				pp->lcapturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
 				pp->capturerate = atoi(optval);
-			} else if (!strcasecmp(optname, "ladders")) {
-				pp->ladders = true;
 			} else if (!strcasecmp(optname, "patternrate") && optval) {
 				pp->patternrate = atoi(optval);
 			} else if (!strcasecmp(optname, "hanerate") && optval) {
@@ -592,12 +592,14 @@ playout_moggy_init(char *arg)
 				pp->cut1rate = atoi(optval);
 			} else if (!strcasecmp(optname, "cut2rate") && optval) {
 				pp->cut2rate = atoi(optval);
-			} else if (!strcasecmp(optname, "localassess")) {
-				pp->localassess = true;
-			} else if (!strcasecmp(optname, "ladderassess")) {
-				pp->ladderassess = true;
+			} else if (!strcasecmp(optname, "ladders")) {
+				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
-				pp->borderladders = true;
+				pp->borderladders = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "localassess")) {
+				pp->localassess = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "ladderassess")) {
+				pp->ladderassess = optval && *optval == '0' ? false : true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 			}
