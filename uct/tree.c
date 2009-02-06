@@ -140,16 +140,18 @@ tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
 	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
 	       1, f);
 
-	/* Keep values in sane scale, otherwise we start overflowing. */
+	/* Keep values in sane scale, otherwise we start overflowing.
+	 * We may go slow here but we must be careful about not getting
+	 * too huge integers.*/
 #define MAX_PLAYOUTS	10000000
 	if (node->u.playouts > MAX_PLAYOUTS) {
-		uint64_t w = node->u.wins;
-		node->u.wins = (uint64_t) (w * node->u.playouts / MAX_PLAYOUTS);
+		int over = node->u.playouts - MAX_PLAYOUTS;
+		node->u.wins -= ((double) node->u.wins / node->u.playouts) * over;
 		node->u.playouts = MAX_PLAYOUTS;
 	}
 	if (node->amaf.playouts > MAX_PLAYOUTS) {
-		uint64_t w = node->amaf.wins;
-		node->amaf.wins = (uint64_t) (w * node->amaf.playouts / MAX_PLAYOUTS);
+		int over = node->amaf.playouts - MAX_PLAYOUTS;
+		node->amaf.wins -= ((double) node->amaf.wins / node->amaf.playouts) * over;
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
 
