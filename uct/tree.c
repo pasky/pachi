@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -138,6 +139,19 @@ tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
 	fread(((void *) node) + offsetof(struct tree_node, depth),
 	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
 	       1, f);
+
+	/* Keep values in sane scale, otherwise we start overflowing. */
+#define MAX_PLAYOUTS	10000000
+	if (node->u.playouts > MAX_PLAYOUTS) {
+		uint64_t w = node->u.wins;
+		node->u.wins = (uint64_t) (w * node->u.playouts / MAX_PLAYOUTS);
+		node->u.playouts = MAX_PLAYOUTS;
+	}
+	if (node->amaf.playouts > MAX_PLAYOUTS) {
+		uint64_t w = node->amaf.wins;
+		node->amaf.wins = (uint64_t) (w * node->amaf.playouts / MAX_PLAYOUTS);
+		node->amaf.playouts = MAX_PLAYOUTS;
+	}
 
 	if (invert) {
 		node->u.wins = node->u.playouts - node->u.wins;
