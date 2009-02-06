@@ -85,14 +85,14 @@ update_node(struct uct_policy *p, struct tree_node *node, int result)
 {
 	node->u.playouts++;
 	node->u.wins += result;
-	tree_update_node_value(node, p->descend != ucb1rave_descend);
+	tree_update_node_value(node);
 }
 static void
 update_node_amaf(struct uct_policy *p, struct tree_node *node, int result)
 {
 	node->amaf.playouts++;
 	node->amaf.wins += result;
-	tree_update_node_value(node, p->descend != ucb1rave_descend);
+	tree_update_node_value(node);
 }
 
 void
@@ -106,6 +106,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		/* But we do the update everytime, since it simply seems
 		 * to make more sense to give the main branch more weight
 		 * than other orders of play. */
+		if (p->descend == ucb1rave_descend)
+			node->hints |= NODE_HINT_NOAMAF;
 		update_node(p, node, result);
 		if (is_pass(node->coord) || !node->parent)
 			update_node_amaf(p, node, result);

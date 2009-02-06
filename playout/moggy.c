@@ -515,7 +515,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 					return 0.0;
 			});
 		}
-		if (pp->localassess) {
+		if (pp->localassess && !is_pass(b->last_move.coord)) {
 			if (local_atari_check(p, b, &b->last_move, m) == m->coord)
 				return 1.0;
 		} else {
@@ -530,7 +530,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Pattern check */
 	if (pp->patternrate > fast_random(100)) {
-		if (pp->localassess) {
+		if (pp->localassess && !is_pass(b->last_move.coord)) {
 			if (apply_pattern(p, b, &b->last_move, m) == m->coord)
 				return 1.0;
 		} else {

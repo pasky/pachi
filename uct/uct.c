@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,7 @@
 #include "playout/moggy.h"
 #include "playout/old.h"
 #include "playout/light.h"
+#include "random.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
@@ -196,6 +198,52 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 	}
 }
 
+static int
+uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
+{
+	int i, games = u->games - (t->root->u.playouts / 1.5);
+	for (i = 0; i < games; i++) {
+		int result = uct_playout(u, b, color, t);
+		if (result < 0) {
+			/* Tree descent has hit invalid move. */
+			continue;
+		}
+
+		if (i > 0 && !(i % 10000)) {
+			progress_status(u, t, color, i);
+		}
+
+		if (i > 0 && !(i % 500)) {
+			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
+			if (best && best->u.playouts >= 1000 && best->u.value >= u->loss_threshold)
+				break;
+		}
+	}
+
+	progress_status(u, t, color, i);
+	if (UDEBUGL(3))
+		tree_dump(t, u->dumpthres);
+	return i;
+}
+
+struct spawn_ctx {
+	struct uct *u;
+	struct board *b;
+	enum stone color;
+	struct tree *t;
+	unsigned long seed;
+	int games;
+};
+
+static void *
+spawn_helper(void *ctx_)
+{
+	struct spawn_ctx *ctx = ctx_;
+	fast_srandom(ctx->seed);
+	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
+	return ctx;
+}
+
 static void
 uct_notify_play(struct engine *e, struct board *b, struct move *m)
 {
@@ -210,26 +258,32 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	/* Seed the tree. */
 	prepare_move(e, b, color, resign);
 
-	int i, games = u->games - (u->t->root->u.playouts / 1.5);
-	for (i = 0; i < games; i++) {
-		int result = uct_playout(u, b, color, u->t);
-		if (result < 0) {
-			/* Tree descent has hit invalid move. */
-			continue;
+	int played_games = 0;
+	if (!u->threads) {
+		played_games = uct_playouts(u, b, color, u->t);
+	} else {
+		pthread_t threads[u->threads];
+		for (int ti = 0; ti < u->threads; ti++) {
+			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
+			ctx->u = u; ctx->b = b; ctx->color = color;
+			ctx->t = tree_copy(u->t);
+			ctx->seed = fast_random(65536) + ti;
+			pthread_create(&threads[ti], NULL, spawn_helper, ctx);
+			if (UDEBUGL(2))
+				fprintf(stderr, "Spawned thread %d\n", ti);
 		}
-
-		if (i > 0 && !(i % 10000)) {
-			progress_status(u, u->t, color, i);
-		}
-
-		if (i > 0 && !(i % 500)) {
-			struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
-			if (best && best->u.playouts >= 1000 && best->u.value >= u->loss_threshold)
-				break;
+		for (int ti = 0; ti < u->threads; ti++) {
+			struct spawn_ctx *ctx;
+			pthread_join(threads[ti], (void **) &ctx);
+			played_games += ctx->games;
+			tree_merge(u->t, ctx->t);
+			tree_done(ctx->t);
+			free(ctx);
+			if (UDEBUGL(2))
+				fprintf(stderr, "Joined thread %d\n", ti);
 		}
 	}
 
-	progress_status(u, u->t, color, i);
 	if (UDEBUGL(2))
 		tree_dump(u->t, u->dumpthres);
 
@@ -239,7 +293,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(0))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts, i);
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts, played_games);
 	if (best->u.value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
@@ -357,6 +411,8 @@ uct_state_init(char *arg)
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 				}
+			} else if (!strcasecmp(optname, "threads") && optval) {
+				u->threads = atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 			}

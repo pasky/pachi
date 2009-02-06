@@ -179,6 +179,113 @@ tree_load(struct tree *tree, struct board *b, enum stone color)
 }
 
 
+static struct tree_node *
+tree_node_copy(struct tree_node *node)
+{
+	struct tree_node *n2 = malloc(sizeof(*n2));
+	*n2 = *node;
+	if (!node->children)
+		return n2;
+	struct tree_node *ni = node->children;
+	struct tree_node *ni2 = tree_node_copy(ni);
+	n2->children = ni2; ni2->parent = n2;
+	while ((ni = ni->sibling)) {
+		ni2->sibling = tree_node_copy(ni);
+		ni2 = ni2->sibling; ni2->parent = n2;
+	}
+	return n2;
+}
+
+struct tree *
+tree_copy(struct tree *tree)
+{
+	struct tree *t2 = malloc(sizeof(*t2));
+	*t2 = *tree;
+	t2->root = tree_node_copy(tree->root);
+	return t2;
+}
+
+
+static void
+tree_node_merge(struct tree_node *dest, struct tree_node *src)
+{
+	dest->hints |= src->hints;
+
+	/* Merge the children, both are coord-sorted lists. */
+	struct tree_node *di = dest->children, *dip = NULL;
+	struct tree_node *si = src->children, *sip = NULL;
+	while (di && si) {
+		if (di->coord != si->coord) {
+			/* src has some extra items or misses di */
+			struct tree_node *si2 = si->sibling;
+			while (si2 && di->coord != si2->coord) {
+				si2 = si2->sibling;
+			}
+			if (!si2)
+				goto next_di; /* src misses di, move on */
+			/* chain the extra [si,si2) items before di */
+			if (dip)
+				dip->sibling = si;
+			else
+				dest->children = si;
+			while (si->sibling != si2) {
+				si->parent = dest;
+				si = si->sibling;
+			}
+			si->sibling = di;
+			si = si2;
+			if (sip)
+				sip->sibling = si;
+			else
+				src->children = si;
+		}
+		/* Matching nodes - recurse... */
+		tree_node_merge(di, si);
+		/* ...and move on. */
+		sip = si; si = si->sibling;
+next_di:
+		dip = di; di = di->sibling;
+	}
+	if (si) {
+		if (dip)
+			dip->sibling = si;
+		else
+			dest->children = si;
+		while (si) {
+			si->parent = dest;
+			si = si->sibling;
+		}
+		if (sip)
+			sip->sibling = NULL;
+		else
+			src->children = NULL;
+	}
+
+	dest->prior.playouts += src->prior.playouts;
+	dest->prior.wins += src->prior.wins;
+	if (dest->prior.playouts)
+		dest->prior.value = dest->prior.wins / dest->prior.playouts;
+	dest->amaf.playouts += src->amaf.playouts;
+	dest->amaf.wins += src->amaf.wins;
+	if (dest->amaf.playouts)
+		dest->amaf.value = dest->amaf.wins / dest->amaf.playouts;
+	dest->u.playouts += src->u.playouts;
+	dest->u.wins += src->u.wins;
+	if (dest->prior.playouts + dest->amaf.playouts + dest->u.playouts)
+		tree_update_node_value(dest);
+}
+
+/* Merge two trees built upon the same board. Note that the operation is
+ * destructive on src. */
+void
+tree_merge(struct tree *dest, struct tree *src)
+{
+	if (src->max_depth > dest->max_depth)
+		dest->max_depth = src->max_depth;
+	tree_node_merge(dest->root, src->root);
+}
+
+
 /* Tree symmetry: When possible, we will localize the tree to a single part
  * of the board in tree_expand_node() and possibly flip along symmetry axes
  * to another part of the board in tree_promote_at(). We follow b->symmetry
@@ -341,10 +448,11 @@ tree_leaf_node(struct tree_node *node)
 }
 
 void
-tree_update_node_value(struct tree_node *node, bool add_amaf)
+tree_update_node_value(struct tree_node *node)
 {
-	node->u.value = (float)(node->u.wins + node->prior.wins + (add_amaf ? node->amaf.wins : 0))
-			/ (node->u.playouts + node->prior.playouts + (add_amaf ? node->amaf.playouts : 0));
+	bool noamaf = node->hints & NODE_HINT_NOAMAF;
+	node->u.value = (float)(node->u.wins + node->prior.wins + (!noamaf ? node->amaf.wins : 0))
+			/ (node->u.playouts + node->prior.playouts + (!noamaf ? node->amaf.playouts : 0));
 #if 0
 	{ struct board b2; board_size(&b2) = 9+2;
 	fprintf(stderr, "%s->%s %d/%d %d/%d %f\n", node->parent ? coord2sstr(node->parent->coord, &b2) : NULL, coord2sstr(node->coord, &b2), node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->u.value); }
