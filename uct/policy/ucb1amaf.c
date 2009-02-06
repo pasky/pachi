@@ -148,6 +148,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
 	b->gp_eqex = b->policy_eqex = -1;
+	b->eqex = 50;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -163,9 +164,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			if (!strcasecmp(optname, "explore_p")) {
 				b->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "prior")) {
-				b->eqex = optval ? atoi(optval) : 50;
-				if (b->eqex)
-					p->prior = ucb1_prior;
+				if (optval)
+					b->eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_gp") && optval) {
 				b->gp_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_policy") && optval) {
@@ -192,6 +192,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 		}
 	}
 
+	if (b->eqex) p->prior = ucb1_prior;
 	if (b->gp_eqex < 0) b->gp_eqex = b->eqex;
 	if (b->policy_eqex < 0) b->policy_eqex = b->eqex;
 
