@@ -236,7 +236,12 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	return i;
 }
 
+static pthread_mutex_t finish_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
+static volatile int finish_thread;
+
 struct spawn_ctx {
+	int tid;
 	struct uct *u;
 	struct board *b;
 	enum stone color;
@@ -249,8 +254,15 @@ static void *
 spawn_helper(void *ctx_)
 {
 	struct spawn_ctx *ctx = ctx_;
+	/* Setup */
 	fast_srandom(ctx->seed);
+	/* Run */
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
+	/* Finish */
+	pthread_mutex_lock(&finish_mutex);
+	finish_thread = ctx->tid;
+	pthread_cond_signal(&finish_cond);
+	pthread_mutex_unlock(&finish_mutex);
 	return ctx;
 }
 
@@ -275,29 +287,36 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		pthread_t threads[u->threads];
 		int joined = 0;
 		halt = 0;
+		pthread_mutex_lock(&finish_mutex);
+		/* Spawn threads... */
 		for (int ti = 0; ti < u->threads; ti++) {
 			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 			ctx->u = u; ctx->b = b; ctx->color = color;
-			ctx->t = tree_copy(u->t);
+			ctx->t = tree_copy(u->t); ctx->tid = ti;
 			ctx->seed = fast_random(65536) + ti;
 			pthread_create(&threads[ti], NULL, spawn_helper, ctx);
 			if (UDEBUGL(2))
 				fprintf(stderr, "Spawned thread %d\n", ti);
 		}
-		for (int ti = 0; ti < u->threads; ti++) {
+		/* ...and collect them back: */
+		while (joined < u->threads) {
+			/* Wait for some thread to finish... */
+			pthread_cond_wait(&finish_cond, &finish_mutex);
+			/* ...and gather its remnants. */
 			struct spawn_ctx *ctx;
-			pthread_join(threads[ti], (void **) &ctx);
+			pthread_join(threads[finish_thread], (void **) &ctx);
 			played_games += ctx->games;
 			joined++;
 			tree_merge(u->t, ctx->t);
 			tree_done(ctx->t);
 			free(ctx);
 			if (UDEBUGL(2))
-				fprintf(stderr, "Joined thread %d\n", ti);
+				fprintf(stderr, "Joined thread %d\n", finish_thread);
 			/* Do not get stalled by slow threads. */
 			if (joined >= u->threads / 2)
 				halt = 1;
 		}
+		pthread_mutex_unlock(&finish_mutex);
 	}
 
 	if (UDEBUGL(2))
