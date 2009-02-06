@@ -147,7 +147,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			if (passes >= 2) {
 				float score = board_official_score(&b2);
 				result = (orig_color == S_BLACK) ? score < 0 : score > 0;
-				//if (UDEBUGL(5))
+				if (UDEBUGL(5))
 					fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n", orig_color, color, coord2sstr(n->coord, t->board), result, score);
 				if (UDEBUGL(6))
 					board_print(&b2, stderr);
