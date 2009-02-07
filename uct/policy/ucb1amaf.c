@@ -40,8 +40,9 @@ struct tree_node *ucb1_descend(struct uct_policy *p, struct tree *tree, struct t
 void ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
 
 
+/* Original RAVE function */
 struct tree_node *
-ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
+ucb1orave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	/* We want to count in the prior stats here after all. Otherwise,
 	 * nodes with positive prior will get explored _LESS_ since the
@@ -80,6 +81,58 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 	return nbest;
 }
 
+/* Sylvain RAVE function */
+struct tree_node *
+ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
+{
+	struct ucb1_policy_amaf *b = p->data;
+	float rave_coef = 1.0f / b->equiv_rave;
+
+	struct tree_node *nbest = node->children;
+	float best_urgency = -9999;
+	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+		/* Do not consider passing early. */
+		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
+			continue;
+
+		/* TODO: Exploration? */
+
+		int ngames = ni->u.playouts + ni->prior.playouts;
+		int nwins = ni->u.wins + ni->prior.wins;
+		int rgames = ni->amaf.playouts;
+		int rwins = ni->amaf.wins;
+
+		float urgency;
+		if (ngames) {
+			if (rgames) {
+				/* At the beginning, beta is at 1 and RAVE is used.
+				 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
+				float beta = (float) rgames / (rgames + ngames + rave_coef * ngames * rgames);
+				//fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
+				//	beta, rgames, rgames, ngames, rave_coef * ngames * rgames);
+				urgency = beta * rwins / rgames + (1 - beta) * nwins / ngames;
+			} else {
+				urgency = (float) nwins / ngames;
+			}
+		} else if (rgames) {
+			urgency = (float) rwins / rgames;
+		} else {
+			urgency = b->fpu;
+		}
+
+		//fprintf(stderr, "urgency %f (r %d / %d, n %d / %d)\n", urgency, rwins, rgames, nwins, ngames);
+		if (b->urg_randoma)
+			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
+		if (b->urg_randomm)
+			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
+		if (urgency > best_urgency) {
+			best_urgency = urgency;
+			nbest = ni;
+		}
+	}
+	return nbest;
+}
+
 static void
 update_node(struct uct_policy *p, struct tree_node *node, int result)
 {
@@ -106,8 +159,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		/* But we do the update everytime, since it simply seems
 		 * to make more sense to give the main branch more weight
 		 * than other orders of play. */
-		if (p->descend == ucb1rave_descend)
-			node->hints |= NODE_HINT_NOAMAF;
+		if (p->descend != ucb1_descend)
+			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 		update_node(p, node, result);
 		if (is_pass(node->coord) || !node->parent)
 			update_node_amaf(p, node, result);
@@ -138,7 +191,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	struct ucb1_policy_amaf *b = calloc(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
-	p->descend = ucb1rave_descend;
+	p->descend = ucb1orave_descend;
 	p->choose = ucb1_choose;
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
@@ -179,6 +232,10 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			} else if (!strcasecmp(optname, "rave")) {
 				if (optval && *optval == '0')
 					p->descend = ucb1_descend;
+				else if (optval && *optval == 'o')
+					p->descend = ucb1orave_descend;
+				else if (optval && *optval == 's')
+					p->descend = ucb1srave_descend;
 			} else if (!strcasecmp(optname, "explore_p_rave") && optval) {
 				b->explore_p_rave = atof(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
