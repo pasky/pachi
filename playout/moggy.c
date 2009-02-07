@@ -520,19 +520,6 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate > fast_random(100)) {
-		/* Assess ladders anywhere, local or not. */
-		if (pp->ladderassess) {
-			//fprintf(stderr, "ASSESS %s\n", coord2sstr(m->coord, b));
-			foreach_neighbor(b, m->coord, {
-				if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
-					continue;
-				group_t g = group_at(b, c);
-				if (board_group_info(b, g).libs != 1)
-					continue;
-				if (ladder_catches(p, b, m->coord, g))
-					return 0.0;
-			});
-		}
 		if (pp->localassess && !is_pass(b->last_move.coord)) {
 			if (local_atari_check(p, b, &b->last_move, m) == m->coord)
 				return 1.0;
@@ -542,6 +529,22 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 				m2.coord = c; m2.color = stone_other(m->color);
 				if (local_atari_check(p, b, &m2, m) == m->coord)
 					return 1.0;
+			});
+		}
+
+		/* Assess ladders anywhere, local or not. */
+		/* In case we don't localassess, local_atari_check() will
+		 * alaready do the job. */
+		if (!pp->localassess && pp->ladderassess) {
+			//fprintf(stderr, "ASSESS %s\n", coord2sstr(m->coord, b));
+			foreach_neighbor(b, m->coord, {
+				if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
+					continue;
+				group_t g = group_at(b, c);
+				if (board_group_info(b, g).libs != 1)
+					continue;
+				if (ladder_catches(p, b, m->coord, g))
+					return 0.0;
 			});
 		}
 	}
