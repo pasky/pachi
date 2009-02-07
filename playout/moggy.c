@@ -590,7 +590,7 @@ playout_moggy_init(char *arg)
 	pp->patternrate = 75;
 	pp->hanerate = pp->cut1rate = pp->cut2rate = 75;
 	pp->ladders = pp->borderladders = true;
-	pp->localassess = pp->ladderassess = true;
+	pp->ladderassess = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
