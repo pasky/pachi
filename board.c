@@ -1021,10 +1021,26 @@ valid_escape_route(struct board *b, enum stone color, coord_t to)
 	 *  .(O)X . |
 	 *  --------+
 	 */
-	int friends = neighbor_count_at(b, to, color);
-	int borders = neighbor_count_at(b, to, S_OFFBOARD);
-	int libs = immediate_liberty_count(b, to);
-	return (friends > 1 && friends + borders < 4) || (libs > 1);
+	int groupcts[S_MAX] = {};
+	group_t groupids[S_MAX][4] = {};
+	foreach_neighbor(b, to, {
+		enum stone s = board_at(b, c);
+		groupids[s][groupcts[s]++] = group_at(b, c);
+	});
+
+	/* More than one immediate liberty, thumbs up! */
+	if (groupcts[S_NONE] > 1)
+		return true;
+
+	/* Leave unique friendly groups only */
+	for (int i = 0; i < 4; i++) {
+		/* We can escape by connecting to this group if it's
+		 * not in atari. */
+		if (groupids[color][i] && board_group_info(b, groupids[color][i]).libs > 1)
+			return true;
+	}
+	/* No way to pull out, no way to connect out. */
+	return false;
 }
 
 
