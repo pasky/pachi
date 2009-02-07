@@ -112,8 +112,10 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 				/* At the beginning, beta is at 1 and RAVE is used.
 				 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
 				float beta = (float) rgames / (rgames + ngames + rave_coef * ngames * rgames);
-				//fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
-				//	beta, rgames, rgames, ngames, rave_coef * ngames * rgames);
+#if 0
+				fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
+					beta, rgames, rgames, ngames, rave_coef * ngames * rgames);
+#endif
 				urgency = beta * rwins / rgames + (1 - beta) * nwins / ngames;
 			} else {
 				urgency = (float) nwins / ngames;
@@ -124,12 +126,19 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 			urgency = b->fpu;
 		}
 
-		//fprintf(stderr, "urgency %f (r %d / %d, n %d / %d)\n", urgency, rwins, rgames, nwins, ngames);
+#if 0
+		struct board bb; bb.size = 11;
+		fprintf(stderr, "%s urgency %f (r %d / %d, n %d / %d)\n",
+			coord2sstr(ni->coord, &bb), urgency, rwins, rgames, nwins, ngames);
+#endif
 		if (b->urg_randoma)
 			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
 		if (b->urg_randomm)
 			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
-		if (urgency > best_urgency) {
+		/* The >= is important since we will always choose something
+		 * else than a pass in case of a tie. pass causes degenerative
+		 * behaviour. */
+		if (urgency >= best_urgency) {
 			best_urgency = urgency;
 			nbest = ni;
 		}
