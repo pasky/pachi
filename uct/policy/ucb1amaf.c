@@ -198,7 +198,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	struct ucb1_policy_amaf *b = calloc(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
-	p->descend = ucb1orave_descend;
+	p->descend = ucb1srave_descend;
 	p->choose = ucb1_choose;
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
