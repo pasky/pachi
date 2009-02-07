@@ -101,6 +101,10 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		int nwins = ni->u.wins + ni->prior.wins;
 		int rgames = ni->amaf.playouts;
 		int rwins = ni->amaf.wins;
+		if (parity < 0) {
+			nwins = ngames - nwins;
+			rwins = rgames - rwins;
+		}
 
 		float urgency;
 		if (ngames) {
