@@ -515,8 +515,10 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	if (is_pass(m->coord))
 		return NAN;
 
-	if (PLDEBUGL(5))
+	if (PLDEBUGL(5)) {
+		fprintf(stderr, "ASSESS of %s:\n", coord2sstr(m->coord, b));
 		board_print(b, stderr);
+	}
 
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate > fast_random(100)) {
