@@ -389,6 +389,7 @@ uct_state_init(char *arg)
 	u->gamelen = MC_GAMELEN;
 	u->expand_p = 2;
 	u->dumpthres = 1000;
+	u->playout_amaf = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -422,7 +423,9 @@ uct_state_init(char *arg)
 				 * AMAF as well. (Otherwise, only tree moves
 				 * are included in AMAF. Of course makes sense
 				 * only in connection with an AMAF policy.) */
-				u->playout_amaf = true;
+				/* with-without: 55.5% (+-4.1) */
+				if (optval && *optval == '0')
+					u->playout_amaf = false;
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				char *policyarg = strchr(optval, ':');
 				if (policyarg)
