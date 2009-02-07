@@ -159,20 +159,14 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 
 	color = stone_other(color); // We will look in CHILDREN of the node!
 	for (; node; node = node->parent, color = stone_other(color)) {
-		/* Account for root node. */
-		/* But we do the update everytime, since it simply seems
-		 * to make more sense to give the main branch more weight
-		 * than other orders of play. */
 		if (p->descend != ucb1_descend)
 			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 		update_node(p, node, result);
-		if (is_pass(node->coord) || !node->parent)
-			update_node_amaf(p, node, result);
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			assert(map->map[ni->coord] != S_OFFBOARD);
-			if (is_pass(ni->coord) || map->map[ni->coord] == S_NONE)
+			if (map->map[ni->coord] == S_NONE)
 				continue;
 #if 0
 			struct board bb; bb.size = 9+2;
