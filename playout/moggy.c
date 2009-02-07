@@ -373,18 +373,36 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 
 	/* Do not suicide... */
 	if (!valid_escape_route(b, color, lib))
-		return pass;
+		goto caught;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
 	if (pp->ladders && ladder_catches(p, b, lib, group)) {
-		return pass;
+		goto caught;
 	}
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...no ladder\n");
 
 	return lib;
+
+caught:
+	/* There is still hope - can't we capture some neighbor? */
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			if (board_at(b, c) != stone_other(color)
+			    || board_group_info(b, group_at(b, c)).libs > 1)
+				continue;
+			if (PLDEBUGL(6))
+				fprintf(stderr, "can capture group %d\n", group_at(b, c));
+			/* If we are saving our group, capture! */
+			if (b->last_move.color == stone_other(color))
+				return board_group_info(b, group_at(b, c)).lib[0];
+			/* If we chase the group, capture it now! */
+			return lib;
+		});
+	} foreach_in_group_end;
+	return pass;
 }
 
 static coord_t
