@@ -323,7 +323,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	p->wants_amaf = true;
 
 	b->explore_p = 0.2;
-	b->explore_p_rave = 0.2;
+	b->explore_p_rave = -1;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
 	b->gp_eqex = b->policy_eqex = -1;
@@ -379,6 +379,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	if (b->eqex) p->prior = ucb1_prior;
 	if (b->gp_eqex < 0) b->gp_eqex = b->eqex;
 	if (b->policy_eqex < 0) b->policy_eqex = b->eqex;
+	if (b->explore_p_rave < 0) b->explore_p_rave = b->explore_p;
 
 	return p;
 }
