@@ -198,10 +198,17 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 
 		/* TODO: Exploration? */
 
-		int ngames = ni->u.playouts + ni->prior.playouts;
-		int nwins = ni->u.wins + ni->prior.wins;
+		int ngames = ni->u.playouts;
+		int nwins = ni->u.wins;
 		int rgames = ni->amaf.playouts;
 		int rwins = ni->amaf.wins;
+		if (b->rave_prior) {
+			rgames += ni->prior.playouts;
+			rwins += ni->prior.wins;
+		} else {
+			ngames += ni->prior.playouts;
+			nwins += ni->prior.wins;
+		}
 		if (parity < 0) {
 			nwins = ngames - nwins;
 			rwins = rgames - rwins;
