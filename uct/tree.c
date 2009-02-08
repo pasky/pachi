@@ -102,7 +102,11 @@ static char *
 tree_book_name(struct board *b)
 {
 	static char buf[256];
-	sprintf(buf, "uctbook-%d-%02.01f.pachitree", b->size - 2, b->komi);
+	if (b->handicap > 0) {
+		sprintf(buf, "uctbook-%d-%02.01f-h%d.pachitree", b->size - 2, b->komi, b->handicap);
+	} else {
+		sprintf(buf, "uctbook-%d-%02.01f.pachitree", b->size - 2, b->komi);
+	}
 	return buf;
 }
 
