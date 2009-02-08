@@ -322,7 +322,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
 
-	b->explore_p = 0.2;
+	// RAVE: 0.2vs0: 40% (+-7.3) 0.1vs0: 54.7% (+-3.5)
+	b->explore_p = 0.1;
 	b->explore_p_rave = -1;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
