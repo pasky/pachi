@@ -127,8 +127,12 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 			assess = playout->assess(playout, b, &m);
 		}
 		if (!isnan(assess)) {
-			if (parity < 0)
+			if (parity < 0) {
+				/* Good moves for enemy are losses for us.
+				 * We will properly maximize this in the UCB1
+				 * decision. */
 				assess = 1 - assess;
+			}
 			node->prior.playouts += pp->policy_eqex;
 			node->prior.wins += pp->policy_eqex * assess;
 			node->hints |= 2;
