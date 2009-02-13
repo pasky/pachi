@@ -25,7 +25,7 @@ struct ucb1_policy_amaf {
 	float fpu;
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
 	 * 50 playouts per source. */
-	int eqex, gp_eqex, policy_eqex;
+	int eqex, even_eqex, gp_eqex, policy_eqex;
 	int urg_randoma, urg_randomm;
 	float explore_p_rave;
 	int equiv_rave;
@@ -327,6 +327,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->explore_p_rave = -1;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
+	b->even_eqex = 0;
 	b->gp_eqex = b->policy_eqex = -1;
 	b->eqex = 50;
 
@@ -346,6 +347,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			} else if (!strcasecmp(optname, "prior")) {
 				if (optval)
 					b->eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_even") && optval) {
+				b->even_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_gp") && optval) {
 				b->gp_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_policy") && optval) {
@@ -378,6 +381,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	}
 
 	if (b->eqex) p->prior = ucb1_prior;
+	// if (b->even_eqex < 0) b->even_eqex = b->eqex;
 	if (b->gp_eqex < 0) b->gp_eqex = b->eqex;
 	if (b->policy_eqex < 0) b->policy_eqex = b->eqex;
 	if (b->explore_p_rave < 0) b->explore_p_rave = b->explore_p;

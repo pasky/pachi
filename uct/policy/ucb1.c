@@ -25,7 +25,7 @@ struct ucb1_policy {
 	float fpu;
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
 	 * 50 playouts per source. */
-	int eqex, gp_eqex, policy_eqex;
+	int eqex, even_eqex, gp_eqex, policy_eqex;
 	int urg_randoma, urg_randomm;
 };
 
@@ -98,12 +98,13 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	/* Initialization of UCT values based on prior knowledge */
 	struct ucb1_policy *pp = p->data;
 
-#if 0
 	/* Q_{even} */
-	/* This somehow does not work at all. */
-	node->prior.playouts += p->eqex;
-	node->prior.wins += p->eqex / 2;
-#endif
+	/* This may be dubious for normal UCB1 but is essential for
+	 * reading stability of RAVE, it appears. */
+	if (pp->even_eqex) {
+		node->prior.playouts += pp->even_eqex;
+		node->prior.wins += pp->even_eqex / 2;
+	}
 
 	/* Q_{grandparent} */
 	if (pp->gp_eqex && node->parent && node->parent->parent && node->parent->parent->parent) {
@@ -175,6 +176,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 
 	b->explore_p = 0.2;
 	b->fpu = INFINITY;
+	b->even_eqex = 0;
 	b->gp_eqex = b->policy_eqex = -1;
 	b->eqex = 50;
 
@@ -194,6 +196,8 @@ policy_ucb1_init(struct uct *u, char *arg)
 			} else if (!strcasecmp(optname, "prior")) {
 				if (optval)
 					b->eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_even") && optval) {
+				b->even_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_gp") && optval) {
 				b->gp_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_policy") && optval) {
@@ -211,6 +215,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 	}
 
 	if (b->eqex) p->prior = ucb1_prior;
+	// if (b->even_eqex < 0) b->even_eqex = b->eqex;
 	if (b->gp_eqex < 0) b->gp_eqex = b->eqex;
 	if (b->policy_eqex < 0) b->policy_eqex = b->eqex;
 
