@@ -215,7 +215,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 	}
 
 	if (b->eqex) p->prior = ucb1_prior;
-	// if (b->even_eqex < 0) b->even_eqex = b->eqex;
+	if (b->even_eqex < 0) b->even_eqex = b->eqex;
 	if (b->gp_eqex < 0) b->gp_eqex = b->eqex;
 	if (b->policy_eqex < 0) b->policy_eqex = b->eqex;
 
