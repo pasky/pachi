@@ -242,6 +242,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		} else if (rgames) {
 			urgency = rval;
 		} else {
+			assert(!b->even_eqex);
 			urgency = parity < 0 ? 1 - b->fpu : b->fpu;
 		}
 
