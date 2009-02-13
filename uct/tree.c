@@ -331,6 +331,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 {
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
+	if (policy->prior)
+		policy->prior(policy, t, ni, b, color, parity);
 
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
