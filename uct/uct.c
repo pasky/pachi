@@ -102,28 +102,35 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	int result;
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
 	int passes = is_pass(b->last_move.coord);
+	/* debug */
+	int depth = 0;
+	static char spaces[] = "\0                                                      ";
+	/* /debug */
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk with color %d\n", color);
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
 			if (n->u.playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2, color, u->radar_d, u->policy, (color == orig_color ? 1 : -1));
+			if (UDEBUGL(7))
+				fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n", spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
 
 			result = play_random_game(&b2, color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
 			if (orig_color != color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
-				fprintf(stderr, "[%d..%d] %s random playout result %d\n", orig_color, color, coord2sstr(n->coord, t->board), result);
+				fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n", spaces, orig_color, color, coord2sstr(n->coord, t->board), result);
 
 			/* Reset color to the @n color. */
 			color = stone_other(color);
 			break;
 		}
+		spaces[depth++] = ' '; spaces[depth] = 0;
 
 		n = u->policy->descend(u->policy, t, n, (color == orig_color ? 1 : -1), pass_limit);
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
-			fprintf(stderr, "-- UCT sent us to [%s] %f\n", coord2sstr(n->coord, t->board), n->u.value);
+			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n", spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
 		if (amaf && n->coord >= -1)
 			amaf->map[n->coord] = color;
 		struct move m = { n->coord, color };
