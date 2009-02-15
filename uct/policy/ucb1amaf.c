@@ -335,8 +335,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->explore_p_rave = -1;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
-	b->even_eqex = 0;
-	b->gp_eqex = b->policy_eqex = -1;
+	b->gp_eqex = 0;
+	b->even_eqex = b->policy_eqex = -1;
 	b->eqex = 8;
 
 	if (arg) {
