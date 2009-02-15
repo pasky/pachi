@@ -401,7 +401,7 @@ uct_state_init(char *arg)
 	u->gamelen = MC_GAMELEN;
 	u->expand_p = 2;
 	u->dumpthres = 1000;
-	u->playout_amaf = true;
+	u->playout_amaf = false;
 
 	if (arg) {
 		char *optspec, *next = arg;
