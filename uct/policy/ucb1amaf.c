@@ -289,7 +289,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 	struct ucb1_policy_amaf *b = p->data;
 
 	color = stone_other(color); // We will look in CHILDREN of the node!
-	for (; node; node = node->parent, color = stone_other(color)) {
+	for (; node; node = node->parent) {
 		if (p->descend != ucb1_descend)
 			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 		update_node(p, node, result);
