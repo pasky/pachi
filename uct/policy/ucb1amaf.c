@@ -291,11 +291,13 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		if (p->descend != ucb1_descend)
 			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 		update_node(p, node, result);
+		if (amaf_nakade(map->map[node->coord]))
+			amaf_op(map->map[node->coord], -);
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			assert(map->map[ni->coord] != S_OFFBOARD);
-			if (map->map[ni->coord] == S_NONE)
+			if (map->map[ni->coord] == S_NONE || amaf_nakade(map->map[ni->coord]))
 				continue;
 #if 0
 			struct board bb; bb.size = 9+2;

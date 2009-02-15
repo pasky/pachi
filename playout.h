@@ -28,6 +28,15 @@ struct playout_policy {
  */
 struct playout_amafmap {
 	enum stone *map; // [board_size2(b)]
+	/* the lowest &0xf is the enum stone, upper bits are nakade
+	 * counter - in case of nakade, we record only color of the
+	 * first stone played inside, but count further throwins
+	 * and ignore AMAF value after these. */
+#define amaf_nakade(item_) (item_ >> 8)
+#define amaf_op(item_, op_) do { \
+		int mi_ = item_; \
+		item_ = (mi_ & 0xf) | ((amaf_nakade(mi_) op_ 1) << 8); \
+} while (0)
 };
 
 

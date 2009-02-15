@@ -131,8 +131,13 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n", spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
-		if (amaf && n->coord >= -1 && !is_pass(n->coord))
-			amaf->map[n->coord] = color;
+		if (amaf && n->coord >= -1 && !is_pass(n->coord)) {
+			if (amaf->map[n->coord] == S_NONE) {
+				amaf->map[n->coord] = color;
+			} else {
+				amaf_op(amaf->map[n->coord], +);
+			}
+		}
 		struct move m = { n->coord, color };
 		int res = board_play(&b2, &m);
 

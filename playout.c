@@ -80,6 +80,10 @@ play_random:
 		if (unlikely(is_pass(coord))) {
 			passes++;
 		} else {
+			/* We don't care about nakade counters, since we want
+			 * to avoid taking pre-nakade moves into account only
+			 * if they happenned in the tree before nakade nodes;
+			 * but this is always out of the tree. */
 			if (amafmap && amafmap->map[coord] == S_NONE)
 				amafmap->map[coord] = color;
 
