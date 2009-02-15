@@ -77,12 +77,12 @@ play_random:
 				board_print(b, stderr);
 		}
 
-		if (amafmap && amafmap->map[coord] == S_NONE)
-			amafmap->map[coord] = color;
-
 		if (unlikely(is_pass(coord))) {
 			passes++;
 		} else {
+			if (amafmap && amafmap->map[coord] == S_NONE)
+				amafmap->map[coord] = color;
+
 			passes = 0;
 		}
 
