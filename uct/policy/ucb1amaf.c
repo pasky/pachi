@@ -232,6 +232,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 				 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
 				float beta = (float) rgames / (rgames + ngames + rave_coef * ngames * rgames);
 #if 0
+				//if (node->coord == 7*11+4) // D7
 				fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
 					beta, rgames, rgames, ngames, rave_coef * ngames * rgames);
 #endif
@@ -248,6 +249,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 
 #if 0
 		struct board bb; bb.size = 11;
+		//if (node->coord == 7*11+4) // D7
 		fprintf(stderr, "%s<%lld> urgency %f (r %d / %d, n %d / %d)\n",
 			coord2sstr(ni->coord, &bb), ni->hash, urgency, rwins, rgames, nwins, ngames);
 #endif
