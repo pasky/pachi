@@ -306,6 +306,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			struct board bb; bb.size = 9+2;
 			fprintf(stderr, "%s<%lld> -> %s<%lld> [%d %d => %d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, map->map[ni->coord], color, result);
 #endif
+			if (p->descend != ucb1_descend)
+				ni->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 			if (b->both_colors) {
 				update_node_amaf(p, ni, map->map[ni->coord] == color ? result : !result);
 			} else if (map->map[ni->coord] == color) {
