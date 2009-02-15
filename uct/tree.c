@@ -21,6 +21,8 @@ tree_init_node(struct tree *t, coord_t coord, int depth)
 	struct tree_node *n = calloc(1, sizeof(*n));
 	n->coord = coord;
 	n->depth = depth;
+	static long c = 1000000;
+	n->hash = c++;
 	if (depth > t->max_depth)
 		t->max_depth = depth;
 	return n;
@@ -65,7 +67,7 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 	int children = 0;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		children++;
-	fprintf(stderr, "[%s] %f (%d/%d playouts [prior %d/%d amaf %d/%d]; hints %x; %d children)\n", coord2sstr(node->coord, tree->board), node->u.value, node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->amaf.wins, node->amaf.playouts, node->hints, children);
+	fprintf(stderr, "[%s] %f (%d/%d playouts [prior %d/%d amaf %d/%d]; hints %x; %d children) <%lld>\n", coord2sstr(node->coord, tree->board), node->u.value, node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->amaf.wins, node->amaf.playouts, node->hints, children, node->hash);
 
 	/* Print nodes sorted by #playouts. */
 

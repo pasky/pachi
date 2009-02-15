@@ -248,8 +248,8 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 
 #if 0
 		struct board bb; bb.size = 11;
-		fprintf(stderr, "%s urgency %f (r %d / %d, n %d / %d)\n",
-			coord2sstr(ni->coord, &bb), urgency, rwins, rgames, nwins, ngames);
+		fprintf(stderr, "%s<%lld> urgency %f (r %d / %d, n %d / %d)\n",
+			coord2sstr(ni->coord, &bb), ni->hash, urgency, rwins, rgames, nwins, ngames);
 #endif
 		if (b->urg_randoma)
 			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
@@ -299,9 +299,10 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			assert(map->map[ni->coord] != S_OFFBOARD);
 			if (map->map[ni->coord] == S_NONE || amaf_nakade(map->map[ni->coord]))
 				continue;
+
 #if 0
 			struct board bb; bb.size = 9+2;
-			fprintf(stderr, "%s -> %s [%d %d => %d]\n", coord2sstr(node->coord, &bb), coord2sstr(ni->coord, &bb), map->map[ni->coord], color, result);
+			fprintf(stderr, "%s<%lld> -> %s<%lld> [%d %d => %d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, map->map[ni->coord], color, result);
 #endif
 			if (b->both_colors) {
 				update_node_amaf(p, ni, map->map[ni->coord] == color ? result : !result);
