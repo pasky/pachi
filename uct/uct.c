@@ -197,6 +197,8 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 
 	if (!u->t) {
 		u->t = tree_init(b, color);
+		if (UDEBUGL(2))
+			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
 		tree_load(u->t, b, color);
 	}

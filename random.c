@@ -14,6 +14,12 @@ fast_srandom(unsigned long seed_)
 }
 
 unsigned long
+fast_getseed(void)
+{
+	return pmseed;
+}
+
+unsigned long
 fast_random(unsigned int max)
 {
 	unsigned long hi, lo;
