@@ -197,7 +197,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 
 	if (!u->t) {
 		u->t = tree_init(b, color);
-		if (UDEBUGL(2))
+		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
 		tree_load(u->t, b, color);
@@ -206,7 +206,8 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 	/* XXX: We hope that the opponent didn't suddenly play
 	 * several moves in the row. */
 	if (!is_resign(promote) && !tree_promote_at(u->t, b, promote)) {
-		fprintf(stderr, "CANNOT FIND NODE TO PROMOTE!\n");
+		if (UDEBUGL(2))
+			fprintf(stderr, "<cannot find node to promote>\n");
 		/* Reset tree */
 		tree_done(u->t);
 		u->t = tree_init(b, color);
