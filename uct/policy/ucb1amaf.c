@@ -380,6 +380,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "rave_prior")) {
+				// 46% (+-3.5)
 				b->rave_prior = true;
 			} else if (!strcasecmp(optname, "both_colors")) {
 				b->both_colors = true;
