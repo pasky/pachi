@@ -25,6 +25,4 @@ UCT:
 UCB1AMAF:
 * Fix RAVE for good (still much weaker than light fuego)
 * Optimize the tree walk
-* Agressive AMAF counting: "if opponent got a stone here,
-  count that as a !result for my stone play" ?
 * Separate constants for prior and amaf elements

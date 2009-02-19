@@ -307,11 +307,15 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		 * matter only at a point when AMAF doesn't help much. */
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			assert(map->map[ni->coord] != S_OFFBOARD);
-			if (map->map[ni->coord] != child_color
+			if (map->map[ni->coord] == S_NONE
 			    || amaf_nakade(map->map[ni->coord]))
 				continue;
-			if (child_color != player_color && !b->both_colors)
-				continue;
+			int nres = result;
+			if (map->map[ni->coord] != child_color) {
+				if (!b->both_colors)
+					continue;
+				nres = !nres;
+			}
 
 			if (p->descend != ucb1_descend)
 				ni->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
@@ -319,7 +323,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * to record a win-result for opponent's stones
 			 * if we win, since for opponent's nodes we will
 			 * try to minimize winrate. */
-			update_node_amaf(p, ni, result);
+			update_node_amaf(p, ni, nres);
 
 #if 0
 			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d %d => %d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, player_color, child_color, result);
