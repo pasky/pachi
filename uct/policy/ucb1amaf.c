@@ -289,6 +289,13 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 	struct ucb1_policy_amaf *b = p->data;
 	enum stone child_color = stone_other(color);
 
+#if 0
+	struct board bb; bb.size = 9+2;
+	for (struct tree_node *ni = node; ni; ni = ni->parent)
+		fprintf(stderr, "%s ", coord2sstr(ni->coord, &bb));
+	fprintf(stderr, "update color %d result %d\n", color, result);
+#endif
+
 	for (; node; node = node->parent, child_color = stone_other(child_color)) {
 		if (p->descend != ucb1_descend)
 			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
@@ -300,14 +307,13 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			assert(map->map[ni->coord] != S_OFFBOARD);
 			if (map->map[ni->coord] != child_color
-				|| amaf_nakade(map->map[ni->coord]))
+			    || amaf_nakade(map->map[ni->coord]))
 				continue;
 			if (child_color != color && !b->both_colors)
 				continue;
 
 #if 0
-			struct board bb; bb.size = 9+2;
-			fprintf(stderr, "%s<%lld> -> %s<%lld> [%d %d => %d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, map->map[ni->coord], child_color, result);
+			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d %d => %d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, color, child_color, child_color == color ? result : !result);
 #endif
 			if (p->descend != ucb1_descend)
 				ni->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
