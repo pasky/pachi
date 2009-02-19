@@ -287,9 +287,9 @@ void
 ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
 {
 	struct ucb1_policy_amaf *b = p->data;
+	enum stone child_color = stone_other(color);
 
-	color = stone_other(color); // We will look in CHILDREN of the node!
-	for (; node; node = node->parent, color = stone_other(color)) {
+	for (; node; node = node->parent, child_color = stone_other(child_color)) {
 		if (p->descend != ucb1_descend)
 			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 		update_node(p, node, result);
@@ -299,20 +299,19 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		 * matter only at a point when AMAF doesn't help much. */
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			assert(map->map[ni->coord] != S_OFFBOARD);
-			if (map->map[ni->coord] == S_NONE || amaf_nakade(map->map[ni->coord]))
+			if (map->map[ni->coord] != child_color
+				|| amaf_nakade(map->map[ni->coord]))
+				continue;
+			if (child_color != color && !b->both_colors)
 				continue;
 
 #if 0
 			struct board bb; bb.size = 9+2;
-			fprintf(stderr, "%s<%lld> -> %s<%lld> [%d %d => %d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, map->map[ni->coord], color, result);
+			fprintf(stderr, "%s<%lld> -> %s<%lld> [%d %d => %d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, map->map[ni->coord], child_color, result);
 #endif
 			if (p->descend != ucb1_descend)
 				ni->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
-			if (b->both_colors) {
-				update_node_amaf(p, ni, map->map[ni->coord] == color ? result : !result);
-			} else if (map->map[ni->coord] == color) {
-				update_node_amaf(p, ni, result);
-			}
+			update_node_amaf(p, ni, child_color == color ? result : !result);
 		}
 	}
 }
