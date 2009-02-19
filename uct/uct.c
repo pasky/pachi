@@ -173,7 +173,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 	assert(n == t->root || n->parent);
 	if (result >= 0)
-		u->policy->update(u->policy, t, n, color, amaf, result);
+		u->policy->update(u->policy, t, n, color, orig_color, amaf, result);
 
 end:
 	if (amaf) {

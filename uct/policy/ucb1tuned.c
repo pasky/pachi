@@ -49,7 +49,7 @@ ucb1tuned_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 	return nbest;
 }
 
-void ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result);
+void ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, int result);
 
 
 struct uct_policy *

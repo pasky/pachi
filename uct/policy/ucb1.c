@@ -149,7 +149,7 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 }
 
 void
-ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone color, struct playout_amafmap *map, int result)
+ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, int result)
 {
 	/* It is enough to iterate by a single chain; we will
 	 * update all the preceding positions properly since
