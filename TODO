@@ -1,0 +1,30 @@
+Docs:
+* High-level architecture overview
+* Usage documentation
+* GTP interface documentation
+
+Base:
+* Further optimize board implementation, oprofile fun
+* Clean up GTP interface, allow custom GTP commands for
+  modules
+
+Playouts:
+* Mercy rule
+* Separate prior-hinting class
+* Separate parameters for playout module
+* Split playout aspects to custom-stackable pieces
+* Possibly replay top-rated unplayed moves from the tree
+  in the playout?
+
+UCT:
+* Resync threads periodically
+* Ponder mode
+* In S.D., stop reading early if result cannot change
+* Time controls infrastructure
+
+UCB1AMAF:
+* Fix RAVE for good (still much weaker than light fuego)
+* Optimize the tree walk
+* Agressive AMAF counting: "if opponent got a stone here,
+  count that as a !result for my stone play" ?
+* Separate constants for prior and amaf elements
