@@ -220,9 +220,9 @@ static volatile sig_atomic_t halt = 0;
 static int
 uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
-	int i, games;
+	int i, games = u->games;
 	if (t->root->children)
-		games = u->games - (t->root->u.playouts / 1.5);
+		games -= t->root->u.playouts / 1.5;
 	/* else this is highly read-out but dead-end branch of opening book;
 	 * we need to start from scratch; XXX: Maybe actually base the readout
 	 * count based on number of playouts of best node? */
