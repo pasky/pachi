@@ -446,6 +446,8 @@ uct_state_init(char *arg)
 				/* with-without: 55.5% (+-4.1) */
 				if (optval && *optval == '0')
 					u->playout_amaf = false;
+				else
+					u->playout_amaf = true;
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				char *policyarg = strchr(optval, ':');
 				if (policyarg)
