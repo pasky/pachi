@@ -31,10 +31,10 @@ struct move_queue {
  * X: black;  O: white;  .: empty;  #: edge
  * x: !black; o: !white; ?: any
  *
- * X in the middle: pattern valid only for one side;
- * otherwise, middle ignored. */
+ * extra X: pattern valid only for one side;
+ * middle point ignored. */
 
-static char mogo_patterns_src[][10] = {
+static char mogo_patterns_src[][11] = {
 	/* hane pattern - enclosing hane */
 	"XOX"
 	"..."
@@ -49,8 +49,8 @@ static char mogo_patterns_src[][10] = {
 	"?.?",
 	/* hane pattern - thin hane (SUSPICIOUS) */
 	"XOO"
-	".X."
-	"?.?",
+	"..."
+	"?.?" "X",
 	/* cut1 pattern (kiri) - unprotected cut */
 	"XO?"
 	"O.o"
@@ -73,69 +73,105 @@ static char mogo_patterns_src[][10] = {
 	"###",
 	/* side pattern - sagari (SUSPICIOUS) */
 	"?XO"
-	"?X?" /* "?Xx" ? */
-	"###",
+	"?.?" /* "?.x" ? */
+	"###" "X",
 	/* side pattern - weirdcut (SUSPICIOUS) */
-	"?XO"
 	"?OX"
-	"?##",
+	"?.O"
+	"?##" "X",
 	/* side pattern - cut (SUSPICIOUS) */
-	"?XO"
-	"OOX" /* "O.X" ? */
-	"###",
+	"?OX"
+	"X.O"
+	"###" "X" /* no "X"? */,
 };
 #define mogo_patterns_src_n sizeof(mogo_patterns_src) / sizeof(mogo_patterns_src[0])
 
-static char mogo_patterns[mogo_patterns_src_n * 8][10];
-#define mogo_patterns_n sizeof(mogo_patterns) / sizeof(mogo_patterns[0])
+/* Hashtable: 2*8 bits (ignore middle point, 2 bits per intersection) */
+/* Value: 0: no pattern, 1: black pattern, 2: white pattern, 3: both patterns */
+static char mogo_patterns[65536];
+
+static void
+_record_pattern(char *table, int pat, int fixed_color)
+{
+	/* Original color assignment */
+	table[pat] = fixed_color ? fixed_color : 3;
+
+	/* Reverse color assignment - achieved by swapping odd and even bits */
+	pat = ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1);
+	table[pat] = fixed_color ? 2 - (fixed_color == 2) : 3;
+}
+
+static void
+_gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
+{
+	for (; srclen > 0; src++, srclen--) {
+		if (srclen == 5)
+			continue;
+		int patofs = (srclen > 5 ? srclen - 1 : srclen) - 1;
+		switch (*src) {
+			case '?':
+				*src = '.'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = 'X'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = 'O'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = '#'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = '?'; // for future recursions
+				return;
+			case 'x':
+				*src = '.'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = 'O'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = '#'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = 'x'; // for future recursions
+				return;
+			case 'o':
+				*src = '.'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = 'X'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = '#'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = 'o'; // for future recursions
+				return;
+			case '.': /* 0 */ break;
+			case 'X': pat |= S_BLACK << (patofs * 2); break;
+			case 'O': pat |= S_WHITE << (patofs * 2); break;
+			case '#': pat |= S_OFFBOARD << (patofs * 2); break;
+		}
+	}
+
+	/* Original pattern */
+	fprintf(stderr, "[%s] %04x\n", src - 9, pat);
+	_record_pattern(table, pat, fixed_color);
+	/* V/H mirror pattern; reverse order of all 2-bit values */
+	{
+		int p2 = pat;
+		p2 = ((p2 >> 2) & 0x3333) | ((p2 & 0x3333) << 2);
+		p2 = ((p2 >> 4) & 0x0F0F) | ((p2 & 0x0F0F) << 4);
+		p2 = ((p2 >> 8) & 0x00FF) | ((p2 & 0x00FF) << 8);
+		fprintf(stderr, "[%s] %04x\n", src - 9, p2);
+		_record_pattern(table, p2, fixed_color);
+	}
+	/* V mirror pattern; reverse order of 3-2-3 chunks */
+	{
+		int p2 = ((pat & 0xfc00) >> 10) | (pat & 0x03c0) | ((pat & 0x003f) << 10);
+		fprintf(stderr, "[%s] %04x\n", src - 9, p2);
+		_record_pattern(table, p2, fixed_color);
+		/* H mirror pattern; reverse this bitstring */
+		p2 = ((p2 >> 2) & 0x3333) | ((p2 & 0x3333) << 2);
+		p2 = ((p2 >> 4) & 0x0F0F) | ((p2 & 0x0F0F) << 4);
+		p2 = ((p2 >> 8) & 0x00FF) | ((p2 & 0x00FF) << 8);
+		fprintf(stderr, "[%s] %04x\n", src - 9, p2);
+		_record_pattern(table, p2, fixed_color);
+	}
+}
 
 static void __attribute__((constructor))
 _init_patterns(void)
 {
-	for (int i = 0; i < mogo_patterns_src_n; i++)
-	{
-		int j;
-		strcpy(mogo_patterns[i], mogo_patterns_src[i]);
-
-		/* Transpositions: */
-
-		/* reverse */
-		for (j = 8; j >= 0; j--) {
-			mogo_patterns[i + mogo_patterns_src_n][8 - j] = mogo_patterns[i][j];
-			//printf("%s - %s\n", mogo_patterns[i], mogo_patterns[i + mogo_patterns_src_n]);
+	for (int i = 0; i < mogo_patterns_src_n; i++) {
+		int fixed_color = 0;
+		switch (mogo_patterns_src[i][9]) {
+			case 'X': fixed_color = S_BLACK; break;
+			case 'O': fixed_color = S_WHITE; break;
 		}
-		mogo_patterns[i + mogo_patterns_src_n][9] = 0;
-
-		/* reverse triplets */
-		for (j = 2; j >= 0; j--)
-			memcpy(&mogo_patterns[i + mogo_patterns_src_n * 2][6 - j * 3], &mogo_patterns[i][j * 3], 3);
-		mogo_patterns[i + mogo_patterns_src_n * 2][9] = 0;
-
-		/* reverse reverse triplets */
-		for (j = 2; j >= 0; j--)
-			memcpy(&mogo_patterns[i + mogo_patterns_src_n * 3][6 - j * 3], &mogo_patterns[i + mogo_patterns_src_n][j * 3], 3);
-		mogo_patterns[i + mogo_patterns_src_n * 3][9] = 0;
+		_gen_pattern(mogo_patterns, 0, mogo_patterns_src[i], 9, fixed_color);
 	}
-
-	/* Now, swap colors: */
-	for (int i = 0; i < mogo_patterns_src_n * 4; i++)
-	{
-		for (int j = 0; j < 10; j++) {
-			switch (mogo_patterns[i][j]) {
-				case 'X': mogo_patterns[mogo_patterns_src_n * 4 + i][j] = 'O'; break;
-				case 'x': mogo_patterns[mogo_patterns_src_n * 4 + i][j] = 'o'; break;
-				case 'O': mogo_patterns[mogo_patterns_src_n * 4 + i][j] = 'X'; break;
-				case 'o': mogo_patterns[mogo_patterns_src_n * 4 + i][j] = 'x'; break;
-				default:  mogo_patterns[mogo_patterns_src_n * 4 + i][j] = mogo_patterns[i][j]; break;
-			}
-		}
-	}
-
-#if 0
-	for (int i = 0; i < mogo_patterns_n; i++) {
-		printf("%s\n", mogo_patterns[i]);
-	}
-#endif
 }
 
 
@@ -301,43 +337,24 @@ cut2_test(struct playout_policy *p, struct board *b, struct move *m, struct move
 #endif
 
 
-/*** OPTIMIZE ME ***/
-
-/* Check if we match a certain pattern transposition centered on given move. */
-static void
-apply_one_pattern_here(struct playout_policy *p, char pattern[10],
-		struct board *b, struct move *m, struct move_queue *q)
-{
-	switch (pattern[4]) {
-		case 'X': case 'o': if (m->color != S_BLACK) return; break;
-		case 'O': case 'x': if (m->color != S_WHITE) return; break;
-	}
-	for (int y = 0; y < 3; y++) {
-		for (int x = 0; x < 3; x++) {
-			if (x == 1 && y == 1)
-				continue;
-			enum stone color = board_at(b, m->coord + x - 1 + (y - 1) * board_size(b));
-			switch (pattern[x + 3 * y]) {
-				case '?': continue;
-				case '.': if (color != S_NONE) return; break;
-				case '#': if (color != S_OFFBOARD) return; break;
-				case 'X': if (color != S_BLACK) return; break;
-				case 'O': if (color != S_WHITE) return; break;
-				case 'x': if (color == S_BLACK) return; break;
-				case 'o': if (color == S_WHITE) return; break;
-			}
-		}
-	}
-	q->move[q->moves++] = m->coord;
-}
-
 /* Check if we match any pattern centered on given move. */
 static void
-apply_pattern_here(struct playout_policy *p, char patternset[][10], int patterns,
+apply_pattern_here(struct playout_policy *p, char *hashtable,
 		struct board *b, struct move *m, struct move_queue *q)
 {
-	for (int i = 0; i < patterns; i++)
-		apply_one_pattern_here(p, patternset[i], b, m, q);
+	int pat = 0;
+	int x = coord_x(m->coord, b), y = coord_y(m->coord, b);
+	pat |= (board_atxy(b, x - 1, y - 1) << 14)
+		| (board_atxy(b, x, y - 1) << 12)
+		| (board_atxy(b, x + 1, y - 1) << 10);
+	pat |= (board_atxy(b, x - 1, y) << 8)
+		| (board_atxy(b, x + 1, y) << 6);
+	pat |= (board_atxy(b, x - 1, y + 1) << 4)
+		| (board_atxy(b, x, y + 1) << 2)
+		| (board_atxy(b, x + 1, y + 1));
+	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, hashtable[pat]);
+	if (hashtable[pat] & m->color)
+		q->move[q->moves++] = m->coord;
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
@@ -369,12 +386,12 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	foreach_neighbor(b, m->coord, {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
-			apply_pattern_here(p, mogo_patterns, mogo_patterns_n, b, &m2, &q);
+			apply_pattern_here(p, mogo_patterns, b, &m2, &q);
 	});
 	foreach_diag_neighbor(b, m->coord) {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
-			apply_pattern_here(p, mogo_patterns, mogo_patterns_n, b, &m2, &q);
+			apply_pattern_here(p, mogo_patterns, b, &m2, &q);
 	} foreach_diag_neighbor_end;
 
 	if (0){//PLDEBUGL(5)) {
