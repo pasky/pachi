@@ -14,7 +14,7 @@
 
 
 struct moggy_policy {
-	bool ladders, localassess, ladderassess, borderladders;
+	bool ladders, ladderassess, borderladders;
 	int lcapturerate, capturerate, patternrate;
 	/* These are relative to patternrate. */
 	int hanerate, cut1rate, cut2rate;
@@ -136,7 +136,7 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 	}
 
 	/* Original pattern */
-	fprintf(stderr, "[%s] %04x\n", src - 9, pat);
+	//fprintf(stderr, "[%s] %04x\n", src - 9, pat);
 	_record_pattern(table, pat, fixed_color);
 	/* V/H mirror pattern; reverse order of all 2-bit values */
 	{
@@ -144,7 +144,7 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 		p2 = ((p2 >> 2) & 0x3333) | ((p2 & 0x3333) << 2);
 		p2 = ((p2 >> 4) & 0x0F0F) | ((p2 & 0x0F0F) << 4);
 		p2 = ((p2 >> 8) & 0x00FF) | ((p2 & 0x00FF) << 8);
-		fprintf(stderr, "[%s] %04x\n", src - 9, p2);
+		//fprintf(stderr, "[%s] %04x\n", src - 9, p2);
 		_record_pattern(table, p2, fixed_color);
 	}
 	/* V mirror pattern; reverse order of 3-2-3 chunks */
@@ -156,7 +156,7 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 		p2 = ((p2 >> 2) & 0x3333) | ((p2 & 0x3333) << 2);
 		p2 = ((p2 >> 4) & 0x0F0F) | ((p2 & 0x0F0F) << 4);
 		p2 = ((p2 >> 8) & 0x00FF) | ((p2 & 0x00FF) << 8);
-		fprintf(stderr, "[%s] %04x\n", src - 9, p2);
+		//fprintf(stderr, "[%s] %04x\n", src - 9, p2);
 		_record_pattern(table, p2, fixed_color);
 	}
 }
@@ -177,9 +177,9 @@ _init_patterns(void)
 
 
 /* Check if we match any pattern centered on given move. */
-static void
-apply_pattern_here(struct playout_policy *p, char *hashtable,
-		struct board *b, struct move *m, struct move_queue *q)
+static bool
+test_pattern_here(struct playout_policy *p, char *hashtable,
+		struct board *b, struct move *m)
 {
 	int pat = 0;
 	int x = coord_x(m->coord, b), y = coord_y(m->coord, b);
@@ -192,7 +192,14 @@ apply_pattern_here(struct playout_policy *p, char *hashtable,
 		| (board_atxy(b, x, y + 1) << 2)
 		| (board_atxy(b, x + 1, y + 1));
 	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, hashtable[pat]);
-	if (hashtable[pat] & m->color)
+	return (hashtable[pat] & m->color);
+}
+
+static void
+apply_pattern_here(struct playout_policy *p, char *hashtable,
+		struct board *b, struct move *m, struct move_queue *q)
+{
+	if (test_pattern_here(p, hashtable, b, m))
 		q->move[q->moves++] = m->coord;
 }
 
@@ -533,22 +540,15 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate > fast_random(100)) {
-		if (pp->localassess && !is_pass(b->last_move.coord)) {
-			if (local_atari_check(p, b, &b->last_move, m) == m->coord)
+		foreach_neighbor(b, m->coord, {
+			struct move m2;
+			m2.coord = c; m2.color = stone_other(m->color);
+			if (local_atari_check(p, b, &m2, m) == m->coord)
 				return 1.0;
-		} else {
-			foreach_neighbor(b, m->coord, {
-				struct move m2;
-				m2.coord = c; m2.color = stone_other(m->color);
-				if (local_atari_check(p, b, &m2, m) == m->coord)
-					return 1.0;
-			});
-		}
+		});
 
 		/* Assess ladders anywhere, local or not. */
-		/* In case we don't localassess, local_atari_check() will
-		 * alaready do the job. */
-		if (!pp->localassess && pp->ladderassess) {
+		if (pp->ladderassess) {
 			//fprintf(stderr, "ASSESS %s\n", coord2sstr(m->coord, b));
 			foreach_neighbor(b, m->coord, {
 				if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
@@ -564,23 +564,8 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Pattern check */
 	if (pp->patternrate > fast_random(100)) {
-		if (pp->localassess && !is_pass(b->last_move.coord)) {
-			if (apply_pattern(p, b, &b->last_move, m) == m->coord)
-				return 1.0;
-		} else {
-			foreach_neighbor(b, m->coord, {
-				struct move m2;
-				m2.coord = c; m2.color = stone_other(m->color);
-				if (apply_pattern(p, b, &m2, m) == m->coord)
-					return 1.0;
-			});
-			foreach_diag_neighbor(b, m->coord) {
-				struct move m2;
-				m2.coord = c; m2.color = stone_other(m->color);
-				if (apply_pattern(p, b, &m2, m) == m->coord)
-					return 1.0;
-			} foreach_diag_neighbor_end;
-		}
+		if (test_pattern_here(p, mogo_patterns, b, m))
+			return 1.0;
 	}
 
 	return NAN;
@@ -630,8 +615,6 @@ playout_moggy_init(char *arg)
 				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
 				pp->borderladders = optval && *optval == '0' ? false : true;
-			} else if (!strcasecmp(optname, "localassess")) {
-				pp->localassess = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "ladderassess")) {
 				pp->ladderassess = optval && *optval == '0' ? false : true;
 			} else {
