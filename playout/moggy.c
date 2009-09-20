@@ -175,167 +175,6 @@ _init_patterns(void)
 }
 
 
-#if 0
-
-static bool
-cut1_test_cut(struct playout_policy *p, struct board *b, coord_t base, coord_t cut)
-{
-	/* X O ?
-	 * O(.)?   X is base, (.) is cut
-	 * ? ? ? */
-	int x = coord_x(base, b), y = coord_y(base, b);
-	enum stone color = board_at(b, base);
-	int xc = coord_x(cut, b), yc = coord_y(cut, b);
-
-	if (PLDEBUGL(5))
-		fprintf(stderr, "Probing CUT1 %s -> %s\n", coord2sstr(base, b), coord2sstr(cut, b));
-
-	/* Kosumi available. Is it cutting? */
-	if (board_atxy(b, x, yc) != stone_other(color)
-	    || board_atxy(b, xc, y) != stone_other(color))
-		return false;
-
-	/* It is! Is the cut protected? */
-	enum stone fix1 = board_atxy(b, xc, yc - (y - yc));
-	enum stone fix2 = board_atxy(b, xc - (x - xc), yc);
-	if (PLDEBUGL(6))
-		fprintf(stderr, "Protection check: %d,%d\n", fix1, fix2);
-	if ((fix1 == stone_other(color) || fix1 == S_OFFBOARD) && fix2 != color)
-		return false;
-	if ((fix2 == stone_other(color) || fix2 == S_OFFBOARD) && fix1 != color)
-		return false;
-
-	/* Unprotected cut. Feast! */
-	if (PLDEBUGL(6))
-		fprintf(stderr, "Passed.\n");
-	return true;
-}
-
-static void
-cut1_test(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
-{
-	coord_t coord = m->coord;
-	int x = coord_x(coord, b), y = coord_y(coord, b);
-	enum stone color = board_at(b, coord);
-
-	/* Either last move was cutting threat... */
-	foreach_diag_neighbor(b, coord) {
-		if (board_at(b, c) != S_NONE)
-			continue;
-		/* X O ?
-		 * O(.)?   X is coord, (.) is c
-		 * ? ? ? */
-		if (cut1_test_cut(p, b, coord, c))
-			q->move[q->moves++] = c;
-	} foreach_diag_neighbor_end;
-
-	/* ...or a cuttable hane. */
-#define cutbase_test(xb_, yb_) \
-		base = coord_xy_otf(xb_, yb_, b); \
-		if (board_at(b, base) == stone_other(color)) \
-			if (cut1_test_cut(p, b, base, c)) \
-				q->move[q->moves++] = c;
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) != S_NONE)
-			continue;
-		/* X O ?
-		 * O(.)?   O is coord, (.) is c
-		 * ? ? ? */
-		/* Check for X on both sides of O. */
-		int xc = coord_x(c, b);
-		int yc = coord_y(c, b);
-		coord_t base;
-		/* Either x == xc or y == yc. */
-		cutbase_test(x - (yc - y), y - (xc - x));
-		cutbase_test(x + (yc - y), y + (xc - x));
-	});
-#undef cutbase_test
-}
-
-static bool
-cut2_test_cut(struct playout_policy *p, struct board *b, coord_t base, coord_t cut)
-{
-	/* ? X ?
-	 * O(.)O   X is base, (.) is cut
-	 * ? ? ? */
-	int x = coord_x(base, b), y = coord_y(base, b);
-	enum stone color = board_at(b, base);
-	int xc = coord_x(cut, b), yc = coord_y(cut, b);
-
-	if (PLDEBUGL(5))
-		fprintf(stderr, "Probing CUT2 %s -> %s\n", coord2sstr(base, b), coord2sstr(cut, b));
-
-	/* Nobi available. Is it cutting? */
-	if (board_atxy(b, xc - (yc - y), yc - (xc - x)) != stone_other(color)
-	    || board_atxy(b, xc + (yc - y), yc + (xc - x)) != stone_other(color))
-		return false;
-
-	/* It is! Is the cut protected? */
-	enum stone ocolor = stone_other(color);
-	if (x == xc) {
-		if (PLDEBUGL(6))
-			fprintf(stderr, "Protection check - row [%d,%d].\n", xc, yc + (yc - y));
-		if (board_atxy(b, xc - 1, yc + (yc - y)) == ocolor
-		    || board_atxy(b, xc, yc + (yc - y)) == ocolor
-		    || board_atxy(b, xc + 1, yc + (yc - y)) == ocolor)
-			return false;
-	} else {
-		if (PLDEBUGL(6))
-			fprintf(stderr, "Protection check - column [%d,%d].\n", xc + (xc - x), yc);
-		if (board_atxy(b, xc + (xc - x), yc - 1) == ocolor
-		    || board_atxy(b, xc + (xc - x), yc) == ocolor
-		    || board_atxy(b, xc + (xc - x), yc + 1) == ocolor)
-			return false;
-	}
-
-	/* Unprotected cut. Feast! */
-	if (PLDEBUGL(6))
-		fprintf(stderr, "Passed.\n");
-	return true;
-}
-
-static void
-cut2_test(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
-{
-	coord_t coord = m->coord;
-	int x = coord_x(coord, b), y = coord_y(coord, b);
-	enum stone color = board_at(b, coord);
-
-	/* Either last move was cutting threat... */
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) != S_NONE)
-			continue;
-		/* ? X ?
-		 * O(.)O   X is coord, (.) is c
-		 * ? ? ? */
-		if (cut2_test_cut(p, b, coord, c))
-			q->move[q->moves++] = c;
-	});
-
-	/* ...or a cuttable ikken tobi. */
-#define cutbase_test(xb_, yb_) \
-		base = coord_xy_otf(xb_, yb_, b); \
-		if (board_at(b, base) == stone_other(color)) \
-			if (cut2_test_cut(p, b, base, c)) \
-				q->move[q->moves++] = c;
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) != S_NONE)
-			continue;
-		/* ? X ?
-		 * O(.)O   O is coord, (.) is c
-		 * ? ? ? */
-		/* Check for X on both sides of (.). */
-		int xc = coord_x(c, b);
-		int yc = coord_y(c, b);
-		coord_t base;
-		/* Either x == xc or y == yc. */
-		cutbase_test(xc - (yc - y), yc - (xc - x));
-		cutbase_test(xc + (yc - y), yc + (xc - x));
-	});
-#undef cutbase_test
-}
-#endif
-
 
 /* Check if we match any pattern centered on given move. */
 static void
@@ -369,19 +208,6 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return pass;
 
-#if 0
-	if (pp->hanerate > fast_random(100)) {
-		/* TODO */
-	}
-
-	if (pp->cut1rate > fast_random(100)) {
-		cut1_test(p, b, m, &q);
-	}
-
-	if (pp->cut2rate > fast_random(100)) {
-		cut2_test(p, b, m, &q);
-	}
-#endif
 	// FIXME: Fix assess callers
 	foreach_neighbor(b, m->coord, {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
@@ -394,7 +220,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 			apply_pattern_here(p, mogo_patterns, b, &m2, &q);
 	} foreach_diag_neighbor_end;
 
-	if (0){//PLDEBUGL(5)) {
+	if (PLDEBUGL(5)) {
 		fprintf(stderr, "Pattern candidate moves: ");
 		for (int i = 0; i < q.moves; i++) {
 			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
