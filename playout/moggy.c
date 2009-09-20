@@ -86,7 +86,7 @@ static char mogo_patterns_src[][10] = {
 };
 #define mogo_patterns_src_n sizeof(mogo_patterns_src) / sizeof(mogo_patterns_src[0])
 
-static char mogo_patterns[mogo_patterns_src_n * 4][10];
+static char mogo_patterns[mogo_patterns_src_n * 8][10];
 #define mogo_patterns_n sizeof(mogo_patterns) / sizeof(mogo_patterns[0])
 
 static void __attribute__((constructor))
@@ -96,6 +96,8 @@ _init_patterns(void)
 	{
 		int j;
 		strcpy(mogo_patterns[i], mogo_patterns_src[i]);
+
+		/* Transpositions: */
 
 		/* reverse */
 		for (j = 8; j >= 0; j--) {
@@ -113,6 +115,20 @@ _init_patterns(void)
 		for (j = 2; j >= 0; j--)
 			memcpy(&mogo_patterns[i + mogo_patterns_src_n * 3][6 - j * 3], &mogo_patterns[i + mogo_patterns_src_n][j * 3], 3);
 		mogo_patterns[i + mogo_patterns_src_n * 3][9] = 0;
+	}
+
+	/* Now, swap colors: */
+	for (int i = 0; i < mogo_patterns_src_n * 4; i++)
+	{
+		for (int j = 0; j < 10; j++) {
+			switch (mogo_patterns[i][j]) {
+				case 'X': mogo_patterns[mogo_patterns_src_n * 4 + i][j] = 'O'; break;
+				case 'x': mogo_patterns[mogo_patterns_src_n * 4 + i][j] = 'o'; break;
+				case 'O': mogo_patterns[mogo_patterns_src_n * 4 + i][j] = 'X'; break;
+				case 'o': mogo_patterns[mogo_patterns_src_n * 4 + i][j] = 'x'; break;
+				default:  mogo_patterns[mogo_patterns_src_n * 4 + i][j] = mogo_patterns[i][j]; break;
+			}
+		}
 	}
 
 #if 0
@@ -292,9 +308,10 @@ static void
 apply_one_pattern_here(struct playout_policy *p, char pattern[10],
 		struct board *b, struct move *m, struct move_queue *q)
 {
-	enum stone bcolor = S_NONE; // which color is black in pattern
-	if (pattern[4] == 'X')
-		bcolor = stone_other(m->color);
+	switch (pattern[4]) {
+		case 'X': case 'o': if (m->color != S_BLACK) return; break;
+		case 'O': case 'x': if (m->color != S_WHITE) return; break;
+	}
 	for (int y = 0; y < 3; y++) {
 		for (int x = 0; x < 3; x++) {
 			if (x == 1 && y == 1)
@@ -304,18 +321,10 @@ apply_one_pattern_here(struct playout_policy *p, char pattern[10],
 				case '?': continue;
 				case '.': if (color != S_NONE) return; break;
 				case '#': if (color != S_OFFBOARD) return; break;
-				case 'O': color = stone_other(color); // fall-through
-				case 'X': if (color != S_BLACK && color != S_WHITE) return;
-					  if (!bcolor) bcolor = color;
-					  else if (color != bcolor) return;
-					  break;
-				case 'o': color = stone_other(color); // fall-through
-				case 'x': if (!bcolor) {
-						  if (color != S_BLACK && color != S_WHITE) break;
-						  bcolor = stone_other(color);
-					  }
-					  else if (color == bcolor) return;
-					  break;
+				case 'X': if (color != S_BLACK) return; break;
+				case 'O': if (color != S_WHITE) return; break;
+				case 'x': if (color == S_BLACK) return; break;
+				case 'o': if (color == S_WHITE) return; break;
 			}
 		}
 	}
@@ -358,12 +367,12 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 #endif
 	// FIXME: Fix assess callers
 	foreach_neighbor(b, m->coord, {
-		struct move m2; m2.coord = c; m2.color = m->color;
+		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
 			apply_pattern_here(p, mogo_patterns, mogo_patterns_n, b, &m2, &q);
 	});
 	foreach_diag_neighbor(b, m->coord) {
-		struct move m2; m2.coord = c; m2.color = m->color;
+		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
 			apply_pattern_here(p, mogo_patterns, mogo_patterns_n, b, &m2, &q);
 	} foreach_diag_neighbor_end;
