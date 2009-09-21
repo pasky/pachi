@@ -356,6 +356,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			}
 
 			coord_t c = coord_xy_otf(i, j, t->board);
+			assert(c != node->coord); // I have spotted "C3 C3" in some sequence...
 			if (board_at(b, c) != S_NONE)
 				continue;
 			/* This looks very useful on large boards - weeds out huge amount of crufty moves. */
