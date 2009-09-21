@@ -244,12 +244,12 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	// FIXME: Fix assess callers
 	foreach_neighbor(b, m->coord, {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
-		if (board_at(b, c) == S_NONE && board_is_eyelike(b, &c, m->color))
+		if (board_at(b, c) == S_NONE && !board_is_eyelike(b, &c, m->color))
 			apply_pattern_here(p, moggy_patterns, b, &m2, &q);
 	});
 	foreach_diag_neighbor(b, m->coord) {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
-		if (board_at(b, c) == S_NONE && board_is_eyelike(b, &c, m->color))
+		if (board_at(b, c) == S_NONE && !board_is_eyelike(b, &c, m->color))
 			apply_pattern_here(p, moggy_patterns, b, &m2, &q);
 	} foreach_diag_neighbor_end;
 
