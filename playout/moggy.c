@@ -609,9 +609,9 @@ playout_moggy_init(char *arg)
 	p->choose = playout_moggy_choose;
 	p->assess = playout_moggy_assess;
 
-	pp->lcapturerate = 75;
-	pp->capturerate = 75;
-	pp->patternrate = 95;
+	pp->lcapturerate = 90;
+	pp->capturerate = 90;
+	pp->patternrate = 90;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
