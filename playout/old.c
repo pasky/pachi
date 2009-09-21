@@ -59,7 +59,7 @@ domain_hint_capture(struct playout_policy *p, struct board *b, coord_t coord)
 	memset(captures, 0, sizeof(captures));
 
 	coord_t fix;
-	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)) && likely(valid_escape_route(b, board_at(b, coord), fix))) {
+	if (unlikely(board_group_in_atari(b, group_at(b, coord), &fix)) && likely(is_selfatari(b, board_at(b, coord), fix))) {
 		/* We can capture the opponent! Don't even think about escaping
 		 * our own ataris then. */
 		captures[captures_len] = fix;
@@ -69,7 +69,7 @@ domain_hint_capture(struct playout_policy *p, struct board *b, coord_t coord)
 	foreach_neighbor(b, coord, {
 		/* This can produce duplicate candidates. But we should prefer
 		 * bigger groups to smaller ones, so I guess that is kinda ok. */
-		if (likely(group_at(b, c)) && unlikely(board_group_in_atari(b, group_at(b, c), &fix)) && likely(valid_escape_route(b, board_at(b, c), fix)))
+		if (likely(group_at(b, c)) && unlikely(board_group_in_atari(b, group_at(b, c), &fix)) && likely(is_selfatari(b, board_at(b, c), fix)))
 			captures[captures_len++] = fix;
 	} );
 

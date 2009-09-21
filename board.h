@@ -222,7 +222,7 @@ float board_fast_score(struct board *board);
 
 /* Check if this move is not self-atari. This also in fact assesses if it is
  * desirable to pull out from atari by this move. */
-bool valid_escape_route(struct board *b, enum stone color, coord_t to);
+bool is_selfatari(struct board *b, enum stone color, coord_t to);
 
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(struct board *b, coord_t coord, int distance);

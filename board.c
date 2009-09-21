@@ -1009,7 +1009,7 @@ board_fast_score(struct board *board)
 
 
 bool
-valid_escape_route(struct board *b, enum stone color, coord_t to)
+is_selfatari(struct board *b, enum stone color, coord_t to)
 {
 	/* Assess if we actually gain any liberties by this escape route.
 	 * Note that this is not 100% as we cannot check whether we are

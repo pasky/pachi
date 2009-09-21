@@ -215,7 +215,6 @@ _init_patterns(void)
 }
 
 
-
 /* Check if we match any pattern centered on given move. */
 static bool
 test_pattern_here(struct playout_policy *p, char *hashtable,
@@ -447,7 +446,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, stru
 	} foreach_in_group_end;
 
 	/* Do not suicide... */
-	if (!valid_escape_route(b, color, lib))
+	if (!is_selfatari(b, color, lib))
 		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
