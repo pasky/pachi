@@ -441,7 +441,13 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, stru
 				q->move[q->moves++] = board_group_info(b, group_at(b, c)).lib[0];
 			else /* If we chase the group, capture it now! */
 				q->move[q->moves++] = lib;
-			mq_nodup(q);
+			/* Make sure capturing the group will actually
+			 * expand our liberties if we are filling our
+			 * last liberty. */
+			if (q->move[q->moves - 1] == lib && is_selfatari(b, color, lib))
+				q->moves--;
+			else
+				mq_nodup(q);
 		});
 	} foreach_in_group_end;
 
