@@ -34,7 +34,7 @@ struct move_queue {
  * extra X: pattern valid only for one side;
  * middle point ignored. */
 
-static char mogo_patterns_src[][11] = {
+static char moggy_patterns_src[][11] = {
 	/* hane pattern - enclosing hane */
 	"XOX"
 	"..."
@@ -84,11 +84,11 @@ static char mogo_patterns_src[][11] = {
 	"X.O"
 	"###" "X" /* no "X"? */,
 };
-#define mogo_patterns_src_n sizeof(mogo_patterns_src) / sizeof(mogo_patterns_src[0])
+#define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
 /* Hashtable: 2*8 bits (ignore middle point, 2 bits per intersection) */
 /* Value: 0: no pattern, 1: black pattern, 2: white pattern, 3: both patterns */
-static char mogo_patterns[65536];
+static char moggy_patterns[65536];
 
 static void
 _record_pattern(char *table, int pat, int fixed_color)
@@ -150,7 +150,7 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 	/* V mirror pattern; reverse order of 3-2-3 chunks */
 	{
 		int p2 = ((pat & 0xfc00) >> 10) | (pat & 0x03c0) | ((pat & 0x003f) << 10);
-		fprintf(stderr, "[%s] %04x\n", src - 9, p2);
+		//fprintf(stderr, "[%s] %04x\n", src - 9, p2);
 		_record_pattern(table, p2, fixed_color);
 		/* H mirror pattern; reverse this bitstring */
 		p2 = ((p2 >> 2) & 0x3333) | ((p2 & 0x3333) << 2);
@@ -164,13 +164,13 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 static void __attribute__((constructor))
 _init_patterns(void)
 {
-	for (int i = 0; i < mogo_patterns_src_n; i++) {
+	for (int i = 0; i < moggy_patterns_src_n; i++) {
 		int fixed_color = 0;
-		switch (mogo_patterns_src[i][9]) {
+		switch (moggy_patterns_src[i][9]) {
 			case 'X': fixed_color = S_BLACK; break;
 			case 'O': fixed_color = S_WHITE; break;
 		}
-		_gen_pattern(mogo_patterns, 0, mogo_patterns_src[i], 9, fixed_color);
+		_gen_pattern(moggy_patterns, 0, moggy_patterns_src[i], 9, fixed_color);
 	}
 }
 
@@ -219,12 +219,12 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	foreach_neighbor(b, m->coord, {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
-			apply_pattern_here(p, mogo_patterns, b, &m2, &q);
+			apply_pattern_here(p, moggy_patterns, b, &m2, &q);
 	});
 	foreach_diag_neighbor(b, m->coord) {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
-			apply_pattern_here(p, mogo_patterns, b, &m2, &q);
+			apply_pattern_here(p, moggy_patterns, b, &m2, &q);
 	} foreach_diag_neighbor_end;
 
 	if (PLDEBUGL(5)) {
@@ -564,7 +564,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Pattern check */
 	if (pp->patternrate > fast_random(100)) {
-		if (test_pattern_here(p, mogo_patterns, b, m))
+		if (test_pattern_here(p, moggy_patterns, b, m))
 			return 1.0;
 	}
 
