@@ -197,6 +197,8 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 
 	if (!u->t) {
 		u->t = tree_init(b, color);
+		if (u->force_seed)
+			fast_srandom(u->force_seed);
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
@@ -476,6 +478,8 @@ uct_state_init(char *arg)
 				}
 			} else if (!strcasecmp(optname, "threads") && optval) {
 				u->threads = atoi(optval);
+			} else if (!strcasecmp(optname, "force_seed") && optval) {
+				u->force_seed = atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 			}

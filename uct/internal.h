@@ -23,6 +23,7 @@ struct uct {
 	bool playout_amaf;
 	int dumpthres;
 	int threads;
+	int force_seed;
 
 	struct uct_policy *policy;
 	struct tree *t;
