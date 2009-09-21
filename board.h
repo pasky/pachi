@@ -165,7 +165,7 @@ struct board {
 #define group_base(g_) (g_)
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
-#define group_is_onestone(g_) (groupnext_at(group_base(g_)) == 0)
+#define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
 
 #define hash_at(b_, coord, color) (b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord_raw(coord)]
 

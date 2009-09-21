@@ -1037,7 +1037,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		 * have one outside liberty, or the group is more than
 		 * 1 stone. */
 		if (groupids[stone_other(color)][i] && board_group_info(b, groupids[color][i]).libs == 1
-		    && (groupcts[S_NONE] > 0 || !group_is_onestone(groupids[color][i])))
+		    && (groupcts[S_NONE] > 0 || !group_is_onestone(b, groupids[color][i])))
 			return true;
 	}
 	/* No way to pull out, no way to connect out. */
