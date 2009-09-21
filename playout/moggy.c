@@ -45,7 +45,7 @@ static char moggy_patterns_src[][11] = {
 	"XO?"
 	"X.."
 	"?.?",
-	/* hane pattern - thin hane (SUSPICIOUS) */
+	/* hane pattern - thin hane */
 	"XOO"
 	"..."
 	"?.?" "X",
@@ -61,6 +61,10 @@ static char moggy_patterns_src[][11] = {
 	"?X?"
 	"O.O"
 	"ooo",
+	/* cut keima (not in Mogo) */
+	"OX?",
+	"o.O",
+	"o??",
 	/* side pattern - chase */
 	"X.?"
 	"O.?"
@@ -74,13 +78,13 @@ static char moggy_patterns_src[][11] = {
 	"?.?" /* "?.x" ? */
 	"###" "X",
 	/* side pattern - weirdcut (SUSPICIOUS) */
-	"?OX"
+	/* "?OX"
 	"?.O"
-	"?##" "X",
+	"?##" "X", */
 	/* side pattern - cut (SUSPICIOUS) */
 	"?OX"
 	"X.O"
-	"###" "X" /* no "X"? */,
+	"###" /* Mogo has "X" */,
 };
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
