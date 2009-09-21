@@ -16,8 +16,6 @@
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders;
 	int lcapturerate, capturerate, patternrate;
-	/* These are relative to patternrate. */
-	int hanerate, cut1rate, cut2rate;
 };
 
 #define MQL 64
@@ -584,7 +582,6 @@ playout_moggy_init(char *arg)
 	pp->lcapturerate = 75;
 	pp->capturerate = 75;
 	pp->patternrate = 75;
-	pp->hanerate = pp->cut1rate = pp->cut2rate = 75;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -605,12 +602,6 @@ playout_moggy_init(char *arg)
 				pp->capturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "patternrate") && optval) {
 				pp->patternrate = atoi(optval);
-			} else if (!strcasecmp(optname, "hanerate") && optval) {
-				pp->hanerate = atoi(optval);
-			} else if (!strcasecmp(optname, "cut1rate") && optval) {
-				pp->cut1rate = atoi(optval);
-			} else if (!strcasecmp(optname, "cut2rate") && optval) {
-				pp->cut2rate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladders")) {
 				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
