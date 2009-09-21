@@ -24,6 +24,16 @@ struct move_queue {
 	coord_t move[MQL];
 };
 
+static void
+mq_nodup(struct move_queue *q)
+{
+	if (q->moves > 4 &&
+	    (q->move[q->moves - 2] == q->move[q->moves - 1]
+	     || q->move[q->moves - 3] == q->move[q->moves - 1]
+	     || q->move[q->moves - 4] == q->move[q->moves - 1]))
+		q->moves--;
+}
+
 
 /* Pattern encoding:
  * X: black;  O: white;  .: empty;  #: edge
@@ -432,12 +442,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, stru
 				q->move[q->moves++] = board_group_info(b, group_at(b, c)).lib[0];
 			else /* If we chase the group, capture it now! */
 				q->move[q->moves++] = lib;
-			/* In semeais, queue can be awfully long. */
-			if (q->moves > 4 &&
-			    (q->move[q->moves - 2] == q->move[q->moves - 1]
-			     || q->move[q->moves - 3] == q->move[q->moves - 1]
-			     || q->move[q->moves - 4] == q->move[q->moves - 1]))
-				q->moves--;
+			mq_nodup(q);
 		});
 	} foreach_in_group_end;
 
@@ -455,6 +460,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, stru
 		fprintf(stderr, "...no ladder\n");
 
 	q->move[q->moves++] = lib;
+	mq_nodup(q);
 }
 
 static coord_t
