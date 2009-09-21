@@ -1014,13 +1014,6 @@ valid_escape_route(struct board *b, enum stone color, coord_t to)
 	/* Assess if we actually gain any liberties by this escape route.
 	 * Note that this is not 100% as we cannot check whether we are
 	 * connecting out or just to ourselves. */
-	/* Also, we prohibit 1-1 here:
-	 *  X X X X |
-	 *  O X O O |
-	 *  O O X O |
-	 *  .(O)X . |
-	 *  --------+
-	 */
 	int groupcts[S_MAX] = {};
 	group_t groupids[S_MAX][4] = {};
 	foreach_neighbor(b, to, {
@@ -1036,7 +1029,15 @@ valid_escape_route(struct board *b, enum stone color, coord_t to)
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
+		/* XXX: We can self-atari the group here. */
 		if (groupids[color][i] && board_group_info(b, groupids[color][i]).libs > 1)
+			return true;
+		/* We can escape by capturing this group,
+		 * if we get to at least two liberties by that - we already
+		 * have one outside liberty, or the group is more than
+		 * 1 stone. */
+		if (groupids[stone_other(color)][i] && (groupcts[S_NONE] > 0
+		      || !group_is_onestone(groupids[color][i])))
 			return true;
 	}
 	/* No way to pull out, no way to connect out. */

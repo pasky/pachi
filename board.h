@@ -165,6 +165,7 @@ struct board {
 #define group_base(g_) (g_)
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
+#define group_is_onestone(g_) (groupnext_at(group_base(g_)) == 0)
 
 #define hash_at(b_, coord, color) (b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord_raw(coord)]
 
@@ -219,8 +220,8 @@ float board_official_score(struct board *board);
 /* Compare number of stones + 1pt eyes. */
 float board_fast_score(struct board *board);
 
-/* Assess if it is desirable to pull out from atari
- * by this move. */
+/* Check if this move is not self-atari. This also in fact assesses if it is
+ * desirable to pull out from atari by this move. */
 bool valid_escape_route(struct board *b, enum stone color, coord_t to);
 
 /* Checks if there are any stones in n-vincinity of coord. */
