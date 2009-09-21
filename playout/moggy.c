@@ -567,6 +567,8 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate > fast_random(100)) {
 		foreach_neighbor(b, m->coord, {
+			if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
+				continue;
 			struct move m2;
 			m2.coord = c; m2.color = stone_other(m->color);
 			if (local_atari_check(p, b, &m2, m) == m->coord)
