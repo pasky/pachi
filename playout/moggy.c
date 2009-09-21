@@ -583,7 +583,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	}
 
 	/* Are we dealing with atari? */
-	if (pp->lcapturerate > fast_random(100)) {
+	if (pp->lcapturerate || pp->capturerate) {
 		foreach_neighbor(b, m->coord, {
 			if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
 				continue;
@@ -609,7 +609,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	}
 
 	/* Pattern check */
-	if (pp->patternrate > fast_random(100)) {
+	if (pp->patternrate) {
 		if (test_pattern_here(p, moggy_patterns, b, m))
 			return 1.0;
 	}
