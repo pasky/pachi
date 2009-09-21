@@ -27,10 +27,9 @@ struct move_queue {
 static void
 mq_nodup(struct move_queue *q)
 {
-	if (q->moves > 4 &&
-	    (q->move[q->moves - 2] == q->move[q->moves - 1]
-	     || q->move[q->moves - 3] == q->move[q->moves - 1]
-	     || q->move[q->moves - 4] == q->move[q->moves - 1]))
+	if ((q->moves > 1 && q->move[q->moves - 2] == q->move[q->moves - 1])
+	    || (q->moves > 2 && q->move[q->moves - 3] == q->move[q->moves - 1])
+	    || (q->moves > 3 && q->move[q->moves - 4] == q->move[q->moves - 1]))
 		q->moves--;
 }
 
