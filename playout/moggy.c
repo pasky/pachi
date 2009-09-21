@@ -407,8 +407,8 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 }
 
 
-static coord_t
-group_atari_check(struct playout_policy *p, struct board *b, group_t group)
+static void
+group_atari_check(struct playout_policy *p, struct board *b, group_t group, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
 	enum stone color = board_at(b, group_base(group));
@@ -419,23 +419,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group)
 		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
-	/* Do not suicide... */
-	if (!valid_escape_route(b, color, lib))
-		goto caught;
-	if (PLDEBUGL(6))
-		fprintf(stderr, "...escape route valid\n");
-	
-	/* ...or play out ladders. */
-	if (pp->ladders && ladder_catches(p, b, lib, group)) {
-		goto caught;
-	}
-	if (PLDEBUGL(6))
-		fprintf(stderr, "...no ladder\n");
-
-	return lib;
-
-caught:
-	/* There is still hope - can't we capture some neighbor? */
+	/* Can we capture some neighbor? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
 			if (board_at(b, c) != stone_other(color)
@@ -445,30 +429,53 @@ caught:
 				fprintf(stderr, "can capture group %d\n", group_at(b, c));
 			/* If we are saving our group, capture! */
 			if (b->last_move.color == stone_other(color))
-				return board_group_info(b, group_at(b, c)).lib[0];
-			/* If we chase the group, capture it now! */
-			return lib;
+				q->move[q->moves++] = board_group_info(b, group_at(b, c)).lib[0];
+			else /* If we chase the group, capture it now! */
+				q->move[q->moves++] = lib;
+			/* In semeais, queue can be awfully long. */
+			if (q->moves > 4 &&
+			    (q->move[q->moves - 2] == q->move[q->moves - 1]
+			     || q->move[q->moves - 3] == q->move[q->moves - 1]
+			     || q->move[q->moves - 4] == q->move[q->moves - 1]))
+				q->moves--;
 		});
 	} foreach_in_group_end;
-	return pass;
+
+	/* Do not suicide... */
+	if (!valid_escape_route(b, color, lib))
+		return;
+	if (PLDEBUGL(6))
+		fprintf(stderr, "...escape route valid\n");
+	
+	/* ...or play out ladders. */
+	if (pp->ladders && ladder_catches(p, b, lib, group)) {
+		return;
+	}
+	if (PLDEBUGL(6))
+		fprintf(stderr, "...no ladder\n");
+
+	q->move[q->moves++] = lib;
 }
 
 static coord_t
 global_atari_check(struct playout_policy *p, struct board *b)
 {
+	struct move_queue q;
+	q.moves = 0;
+
 	if (b->clen == 0)
 		return pass;
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		coord_t c = group_atari_check(p, b, group_at(b, group_base(b->c[g])));
-		if (!is_pass(c))
-			return c;
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), &q);
+		if (q.moves > 0)
+			return q.move[fast_random(q.moves)];
 	}
 	for (int g = 0; g < g_base; g++) {
-		coord_t c = group_atari_check(p, b, group_at(b, group_base(b->c[g])));
-		if (!is_pass(c))
-			return c;
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), &q);
+		if (q.moves > 0)
+			return q.move[fast_random(q.moves)];
 	}
 	return pass;
 }
@@ -481,18 +488,14 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		coord_t l = group_atari_check(p, b, group_at(b, m->coord));
-		if (!is_pass(l))
-			q.move[q.moves++] = l;
+		group_atari_check(p, b, group_at(b, m->coord), &q);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		coord_t l = group_atari_check(p, b, g);
-		if (!is_pass(l))
-			q.move[q.moves++] = l;
+		group_atari_check(p, b, g, &q);
 	});
 
 	if (PLDEBUGL(5)) {
