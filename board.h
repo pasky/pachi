@@ -220,7 +220,7 @@ float board_official_score(struct board *board);
 /* Compare number of stones + 1pt eyes. */
 float board_fast_score(struct board *board);
 
-/* Check if this move is not self-atari. This also in fact assesses if it is
+/* Check if this move is self-atari. This also in fact assesses if it is
  * desirable to pull out from atari by this move. */
 bool is_selfatari(struct board *b, enum stone color, coord_t to);
 
