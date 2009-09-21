@@ -89,14 +89,57 @@ static char moggy_patterns_src[][11] = {
 static char moggy_patterns[65536];
 
 static void
-_record_pattern(char *table, int pat, int fixed_color)
+_record_pattern(char *table, char *str, int pat, int fixed_color)
 {
+	//fprintf(stderr, "[%s] %04x\n", str, pat);
+
 	/* Original color assignment */
 	table[pat] = fixed_color ? fixed_color : 3;
 
 	/* Reverse color assignment - achieved by swapping odd and even bits */
 	pat = ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1);
 	table[pat] = fixed_color ? 2 - (fixed_color == 2) : 3;
+}
+
+static int
+_pat_vmirror(int pat)
+{
+	/* V mirror pattern; reverse order of 3-2-3 chunks */
+	return ((pat & 0xfc00) >> 10) | (pat & 0x03c0) | ((pat & 0x003f) << 10);
+}
+
+static int
+_pat_hmirror(int pat)
+{
+	/* H mirror pattern; reverse order of 2-bit values within the chunks */
+#define rev3(p) ((p >> 4) | (p & 0xc) | ((p & 0x3) << 4))
+#define rev2(p) ((p >> 2) | ((p & 0x3) << 2))
+	return (rev3((pat & 0xfc00) >> 10) << 10)
+		| (rev2((pat & 0x03c0) >> 6) << 6)
+		| rev3((pat & 0x003f));
+#undef rev3
+#undef rev2
+}
+
+static int
+_pat_90rot(int pat)
+{
+	/* Rotate by 90 degrees:
+	 * 5 6 7    7 4 2
+	 * 3   4 -> 6   1
+	 * 0 1 2    5 3 0 */
+	/* I'm too lazy to optimize this :) */
+	int vals[8];
+	for (int i = 0; i < 8; i++)
+		vals[i] = (pat >> (i * 2)) & 0x3;
+	int vals2[8];
+	vals2[0] = vals[5]; vals2[1] = vals[3]; vals2[2] = vals[0];
+	vals2[3] = vals[6];                     vals2[4] = vals[1];
+	vals2[5] = vals[7]; vals2[6] = vals[4]; vals2[7] = vals[2];
+	int p2 = 0;
+	for (int i = 0; i < 8; i++)
+		p2 |= vals2[i] << (i * 2);
+	return p2;
 }
 
 static void
@@ -133,30 +176,15 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 		}
 	}
 
-	/* Original pattern */
-	//fprintf(stderr, "[%s] %04x\n", src - 9, pat);
-	_record_pattern(table, pat, fixed_color);
-	/* V/H mirror pattern; reverse order of all 2-bit values */
-	{
-		int p2 = pat;
-		p2 = ((p2 >> 2) & 0x3333) | ((p2 & 0x3333) << 2);
-		p2 = ((p2 >> 4) & 0x0F0F) | ((p2 & 0x0F0F) << 4);
-		p2 = ((p2 >> 8) & 0x00FF) | ((p2 & 0x00FF) << 8);
-		//fprintf(stderr, "[%s] %04x\n", src - 9, p2);
-		_record_pattern(table, p2, fixed_color);
-	}
-	/* V mirror pattern; reverse order of 3-2-3 chunks */
-	{
-		int p2 = ((pat & 0xfc00) >> 10) | (pat & 0x03c0) | ((pat & 0x003f) << 10);
-		//fprintf(stderr, "[%s] %04x\n", src - 9, p2);
-		_record_pattern(table, p2, fixed_color);
-		/* H mirror pattern; reverse this bitstring */
-		p2 = ((p2 >> 2) & 0x3333) | ((p2 & 0x3333) << 2);
-		p2 = ((p2 >> 4) & 0x0F0F) | ((p2 & 0x0F0F) << 4);
-		p2 = ((p2 >> 8) & 0x00FF) | ((p2 & 0x00FF) << 8);
-		//fprintf(stderr, "[%s] %04x\n", src - 9, p2);
-		_record_pattern(table, p2, fixed_color);
-	}
+	/* Original pattern, all transpositions and rotations */
+	_record_pattern(table, src - 9, pat, fixed_color);
+	_record_pattern(table, src - 9, _pat_vmirror(pat), fixed_color);
+	_record_pattern(table, src - 9, _pat_hmirror(pat), fixed_color);
+	_record_pattern(table, src - 9, _pat_vmirror(_pat_hmirror(pat)), fixed_color);
+	_record_pattern(table, src - 9, _pat_90rot(pat), fixed_color);
+	_record_pattern(table, src - 9, _pat_90rot(_pat_vmirror(pat)), fixed_color);
+	_record_pattern(table, src - 9, _pat_90rot(_pat_hmirror(pat)), fixed_color);
+	_record_pattern(table, src - 9, _pat_90rot(_pat_vmirror(_pat_hmirror(pat))), fixed_color);
 }
 
 static void __attribute__((constructor))
