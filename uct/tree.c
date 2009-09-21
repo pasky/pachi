@@ -394,7 +394,8 @@ static void
 tree_fix_node_symmetry(struct board *b, struct tree_node *node,
                        bool flip_horiz, bool flip_vert, int flip_diag)
 {
-	node->coord = flip_coord(b, node->coord, flip_horiz, flip_vert, flip_diag);
+	if (!is_pass(node->coord))
+		node->coord = flip_coord(b, node->coord, flip_horiz, flip_vert, flip_diag);
 
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		tree_fix_node_symmetry(b, ni, flip_horiz, flip_vert, flip_diag);
