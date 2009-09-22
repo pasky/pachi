@@ -244,7 +244,7 @@ apply_pattern_here(struct playout_policy *p, char *hashtable,
 
 /* Check if we match any pattern around given move (with the other color to play). */
 static coord_t
-apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove)
+apply_pattern(struct playout_policy *p, struct board *b, struct move *m)
 {
 	//struct moggy_policy *pp = p->data;
 	struct move_queue q;
@@ -254,7 +254,6 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return pass;
 
-	// FIXME: Fix assess callers
 	foreach_neighbor(b, m->coord, {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
@@ -272,16 +271,6 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
 		}
 		fprintf(stderr, "\n");
-	}
-
-	if (testmove) {
-		while (q.moves--)
-			if (q.move[q.moves] == testmove->coord) {
-				if (PLDEBUGL(5))
-					fprintf(stderr, "Found queried move.\n");
-				return testmove->coord;
-			}
-		return pass;
 	}
 
 	int i = fast_random(q.moves);
@@ -492,7 +481,7 @@ global_atari_check(struct playout_policy *p, struct board *b)
 }
 
 static coord_t
-local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove)
+local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
 {
 	struct move_queue q;
 	q.moves = 0;
@@ -517,16 +506,6 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 		fprintf(stderr, "\n");
 	}
 
-	if (testmove) {
-		while (q.moves--)
-			if (q.move[q.moves] == testmove->coord) {
-				if (PLDEBUGL(5))
-					fprintf(stderr, "Found queried move.\n");
-				return testmove->coord;
-			}
-		return pass;
-	}
-
 	int i = fast_random(q.moves);
 	return q.moves ? q.move[i] : pass;
 }
@@ -544,14 +523,14 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			c = local_atari_check(p, b, &b->last_move, NULL);
+			c = local_atari_check(p, b, &b->last_move);
 			if (!is_pass(c))
 				return c;
 		}
 
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
-			c = apply_pattern(p, b, &b->last_move, NULL);
+			c = apply_pattern(p, b, &b->last_move);
 			if (!is_pass(c))
 				return c;
 		}
