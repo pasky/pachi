@@ -563,6 +563,8 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate || pp->capturerate) {
+		bool ladder = false;
+
 		foreach_neighbor(b, m->coord, {
 			group_t g = group_at(b, c);
 			if (!g || board_group_info(b, g).libs != 1)
@@ -575,10 +577,14 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 					return 1.0;
 
 			/* _Never_ play here if this move plays out
-			 * a caught ladder. */
+			 * a caught ladder. (Unless it captures another
+			 * group. :-) */
 			if (pp->ladderassess && ladder_catches(p, b, m->coord, g))
-				return 0.0;
+				ladder = true;
 		});
+
+		if (ladder)
+			return 0.0;
 	}
 
 	/* Pattern check */
