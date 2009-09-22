@@ -53,7 +53,7 @@ static char moggy_patterns_src[][11] = {
 	/* hane pattern - magari */
 	"XO?"
 	"X.."
-	"?.?",
+	"x.?",
 	/* hane pattern - thin hane */
 	"XOO"
 	"..."
@@ -88,7 +88,7 @@ static char moggy_patterns_src[][11] = {
 	"###",
 	/* side pattern - sagari (SUSPICIOUS) */
 	"?XO"
-	"?.?" /* "?.x" ? */
+	"x.?" /* "?.x" ? */
 	"###" "X",
 	/* side pattern - weirdcut (SUSPICIOUS) */
 #if 0
