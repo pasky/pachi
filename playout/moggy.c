@@ -573,8 +573,11 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 			struct move_queue q; q.moves = 0;
 			group_atari_check(p, b, g, &q);
 			while (q.moves--)
-				if (q.move[q.moves] == m->coord)
+				if (q.move[q.moves] == m->coord) {
+					if (PLDEBUGL(5))
+						fprintf(stderr, "1.0: atari\n");
 					return 1.0;
+				}
 
 			/* _Never_ play here if this move plays out
 			 * a caught ladder. (Unless it captures another
@@ -583,14 +586,20 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 				ladder = true;
 		});
 
-		if (ladder)
+		if (ladder) {
+			if (PLDEBUGL(5))
+				fprintf(stderr, "0.0: ladder\n");
 			return 0.0;
+		}
 	}
 
 	/* Pattern check */
 	if (pp->patternrate) {
-		if (test_pattern_here(p, moggy_patterns, b, m))
+		if (test_pattern_here(p, moggy_patterns, b, m)) {
+			if (PLDEBUGL(5))
+				fprintf(stderr, "1.0: pattern\n");
 			return 1.0;
+		}
 	}
 
 	return NAN;
