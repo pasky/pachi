@@ -16,7 +16,7 @@
 
 
 coord_t
-playout_light_choose(struct playout_policy *p, struct board *b, enum stone our_real_color)
+playout_light_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	return pass;
 }

@@ -516,7 +516,7 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
 }
 
 coord_t
-playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_real_color)
+playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
 	coord_t c;

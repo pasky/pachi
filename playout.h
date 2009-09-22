@@ -7,7 +7,7 @@ enum stone;
 
 
 struct playout_policy;
-typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone my_color);
+typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone to_play);
 /* 0.0 - 1.0; can return NAN is policy has no opinion */
 typedef float (*playoutp_assess)(struct playout_policy *playout_policy, struct board *b, struct move *m);
 

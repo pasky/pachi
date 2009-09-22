@@ -18,13 +18,12 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		gamelen = 10;
 
 	enum stone color = starting_color;
-	enum stone policy_color = stone_other(starting_color);
 	coord_t urgent;
 
 	int passes = is_pass(b->last_move.coord);
 
 	while (gamelen-- && passes < 2) {
-		urgent = policy->choose(policy, b, policy_color);
+		urgent = policy->choose(policy, b, color);
 
 		coord_t coord;
 
