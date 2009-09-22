@@ -12,7 +12,6 @@
 #include "move.h"
 #include "playout.h"
 #include "playout/moggy.h"
-#include "playout/old.h"
 #include "playout/light.h"
 #include "random.h"
 #include "uct/internal.h"
@@ -485,9 +484,7 @@ uct_state_init(char *arg)
 				char *playoutarg = strchr(optval, ':');
 				if (playoutarg)
 					*playoutarg++ = 0;
-				if (!strcasecmp(optval, "old")) {
-					u->playout = playout_old_init(playoutarg);
-				} else if (!strcasecmp(optval, "moggy")) {
+				if (!strcasecmp(optval, "moggy")) {
 					u->playout = playout_moggy_init(playoutarg);
 				} else if (!strcasecmp(optval, "light")) {
 					u->playout = playout_light_init(playoutarg);
