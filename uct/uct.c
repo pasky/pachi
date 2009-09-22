@@ -98,7 +98,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* Walk the tree until we find a leaf, then expand it and do
 	 * a random playout. */
 	struct tree_node *n = t->root;
-	enum stone node_color = player_color;
+	enum stone node_color = stone_other(player_color);
 	int result;
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
 	int passes = is_pass(b->last_move.coord);
@@ -108,7 +108,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* /debug */
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk with color %d\n", player_color);
-	for (; pass; node_color = stone_other(node_color)) {
+	while (1) {
 		if (tree_leaf_node(n)) {
 			if (n->u.playouts >= u->expand_p)
 				tree_expand_node(t, n, &b2, node_color, u->radar_d, u->policy, (node_color == player_color ? 1 : -1));
@@ -128,6 +128,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		spaces[depth++] = ' '; spaces[depth] = 0;
 
 		n = u->policy->descend(u->policy, t, n, (node_color == player_color ? 1 : -1), pass_limit);
+		node_color = stone_other(node_color);
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n", spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
