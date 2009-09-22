@@ -585,27 +585,21 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	/* Are we dealing with atari? */
 	if (pp->lcapturerate || pp->capturerate) {
 		foreach_neighbor(b, m->coord, {
-			if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
+			group_t g = group_at(b, c);
+			if (!g || board_group_info(b, g).libs != 1)
 				continue;
-			struct move m2;
-			m2.coord = c; m2.color = stone_other(m->color);
-			if (local_atari_check(p, b, &m2, m) == m->coord)
-				return 1.0;
-		});
 
-		/* Assess ladders anywhere, local or not. */
-		if (pp->ladderassess) {
-			//fprintf(stderr, "ASSESS %s\n", coord2sstr(m->coord, b));
-			foreach_neighbor(b, m->coord, {
-				if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
-					continue;
-				group_t g = group_at(b, c);
-				if (board_group_info(b, g).libs != 1)
-					continue;
-				if (ladder_catches(p, b, m->coord, g))
-					return 0.0;
-			});
-		}
+			struct move_queue q; q.moves = 0;
+			group_atari_check(p, b, g, &q);
+			while (q.moves--)
+				if (q.move[q.moves] == m->coord)
+					return 1.0;
+
+			/* _Never_ play here if this move plays out
+			 * a caught ladder. */
+			if (pp->ladderassess && ladder_catches(p, b, m->coord, g))
+				return 0.0;
+		});
 	}
 
 	/* Pattern check */
