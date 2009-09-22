@@ -83,7 +83,7 @@ progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
 
 
 static int
-uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
 {
 	struct board b2;
 	board_copy(&b2, b);
@@ -98,7 +98,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	/* Walk the tree until we find a leaf, then expand it and do
 	 * a random playout. */
 	struct tree_node *n = t->root;
-	enum stone orig_color = color;
+	enum stone color = player_color;
 	int result;
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
 	int passes = is_pass(b->last_move.coord);
@@ -111,15 +111,15 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	for (; pass; color = stone_other(color)) {
 		if (tree_leaf_node(n)) {
 			if (n->u.playouts >= u->expand_p)
-				tree_expand_node(t, n, &b2, color, u->radar_d, u->policy, (color == orig_color ? 1 : -1));
+				tree_expand_node(t, n, &b2, color, u->radar_d, u->policy, (color == player_color ? 1 : -1));
 			if (UDEBUGL(7))
 				fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n", spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
 
 			result = play_random_game(&b2, color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
-			if (orig_color != color && result >= 0)
+			if (player_color != color && result >= 0)
 				result = !result;
 			if (UDEBUGL(7))
-				fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n", spaces, orig_color, color, coord2sstr(n->coord, t->board), result);
+				fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n", spaces, player_color, color, coord2sstr(n->coord, t->board), result);
 
 			/* Reset color to the @n color. */
 			color = stone_other(color);
@@ -127,7 +127,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		}
 		spaces[depth++] = ' '; spaces[depth] = 0;
 
-		n = u->policy->descend(u->policy, t, n, (color == orig_color ? 1 : -1), pass_limit);
+		n = u->policy->descend(u->policy, t, n, (color == player_color ? 1 : -1), pass_limit);
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n", spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
@@ -159,9 +159,9 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			passes++;
 			if (passes >= 2) {
 				float score = board_official_score(&b2);
-				result = (orig_color == S_BLACK) ? score < 0 : score > 0;
+				result = (player_color == S_BLACK) ? score < 0 : score > 0;
 				if (UDEBUGL(5))
-					fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n", orig_color, color, coord2sstr(n->coord, t->board), result, score);
+					fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n", player_color, color, coord2sstr(n->coord, t->board), result, score);
 				if (UDEBUGL(6))
 					board_print(&b2, stderr);
 				break;
@@ -173,7 +173,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 	assert(n == t->root || n->parent);
 	if (result >= 0)
-		u->policy->update(u->policy, t, n, color, orig_color, amaf, result);
+		u->policy->update(u->policy, t, n, color, player_color, amaf, result);
 
 end:
 	if (amaf) {
