@@ -58,6 +58,10 @@ static char moggy_patterns_src[][11] = {
 	"XOO"
 	"..."
 	"?.?" "X",
+	/* generic pattern - katatsuke or diagonal attachment; similar to magari */
+	".O."
+	"X.."
+	"...",
 	/* cut1 pattern (kiri) - unprotected cut */
 	"XO?"
 	"O.o"
@@ -87,9 +91,11 @@ static char moggy_patterns_src[][11] = {
 	"?.?" /* "?.x" ? */
 	"###" "X",
 	/* side pattern - weirdcut (SUSPICIOUS) */
-	/* "?OX"
+#if 0
+	"?OX"
 	"?.O"
-	"?##" "X", */
+	"?##" "X",
+#endif
 	/* side pattern - cut (SUSPICIOUS) */
 	"?OX"
 	"X.O"
