@@ -236,15 +236,14 @@ test_pattern_here(struct playout_policy *p, char *hashtable,
 		| (board_atxy(b, x, y + 1) << 2)
 		| (board_atxy(b, x + 1, y + 1));
 	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, hashtable[pat]);
-	return (hashtable[pat] & m->color);
+	return (hashtable[pat] & m->color) && !is_selfatari(b, m->color, m->coord);
 }
 
 static void
 apply_pattern_here(struct playout_policy *p, char *hashtable,
 		struct board *b, struct move *m, struct move_queue *q)
 {
-	if (test_pattern_here(p, hashtable, b, m)
-	    && !is_selfatari(b, m->color, m->coord))
+	if (test_pattern_here(p, hashtable, b, m))
 		q->move[q->moves++] = m->coord;
 }
 
