@@ -353,7 +353,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	// gp: 14 vs 0: 44% (+-3.5)
 	b->gp_eqex = 0;
 	b->even_eqex = b->policy_eqex = -1;
-	b->eqex = 8;
+	b->eqex = 50;
 
 	if (arg) {
 		char *optspec, *next = arg;
