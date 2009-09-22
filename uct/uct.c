@@ -95,7 +95,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
 
-	int result = play_random_game(&b2, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
+	int result = play_random_game(b, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
 	if (player_color != next_color && result >= 0)
 		result = !result;
 	if (UDEBUGL(7))
