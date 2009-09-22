@@ -1,7 +1,10 @@
 #!/bin/sh
 rm uctbook-9-7.5.pachitree
+n=0
 genbook1()
 {
+	echo "[#$n:$1]"
+	n=$((n+1))
 	echo -e 'boardsize 9\nclear_board\nkomi 7.5\nuct_genbook b' | ./zzgo games=1000000,policy=ucb1amaf:explore_p=$1
 }
 genbook1 0.2
