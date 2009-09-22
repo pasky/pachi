@@ -261,7 +261,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 		if (i > 0 && !(i % 500)) {
 			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
-			if (best && best->u.playouts >= 1500 && best->u.value >= u->loss_threshold)
+			if (best && best->u.playouts >= 5000 && best->u.value >= u->loss_threshold)
 				break;
 		}
 
@@ -505,7 +505,7 @@ uct_state_init(char *arg)
 	}
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
-	u->loss_threshold = 0.85; /* Stop reading if after at least 1500 playouts this is best value. */
+	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
 
