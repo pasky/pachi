@@ -189,8 +189,10 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 	if (b->explore_p > 0 || b->explore_p_rave > 0)
 		conf = sqrt(log(node->u.playouts + node->prior.playouts));
 
-	struct tree_node *nbest = node->children;
+	// XXX: Stack overflow danger on big boards?
+	struct tree_node *nbest[256] = { node->children }; int nbests = 1;
 	float best_urgency = -9999;
+
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
@@ -225,7 +227,15 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 				rval += b->explore_p_rave * conf / fast_sqrt(rgames);
 		}
 
-		float urgency;
+		/* XXX: We later compare urgency with best_urgency; this can
+		 * be difficult given that urgency can be in register with
+		 * higher precision than best_urgency, thus even though
+		 * the numbers are in fact the same, urgency will be
+		 * slightly higher (or lower). Thus, we declare urgency
+		 * as volatile, attempting to force the compiler to keep
+		 * everything as a float. Ideally, we should do some random
+		 * __FLT_EPSILON__ magic instead. */
+		volatile float urgency;
 		if (ngames) {
 			if (rgames) {
 				/* At the beginning, beta is at 1 and RAVE is used.
@@ -250,22 +260,36 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 #if 0
 		struct board bb; bb.size = 11;
 		//if (node->coord == 7*11+4) // D7
-		fprintf(stderr, "%s<%lld> urgency %f (r %d / %d, n %d / %d)\n",
-			coord2sstr(ni->coord, &bb), ni->hash, urgency, rwins, rgames, nwins, ngames);
+		fprintf(stderr, "%s<%lld>-%s<%lld> urgency %f (r %d / %d, n %d / %d)\n",
+			coord2sstr(ni->parent->coord, &bb), ni->parent->hash,
+			coord2sstr(ni->coord, &bb), ni->hash, urgency,
+			rwins, rgames, nwins, ngames);
 #endif
 		if (b->urg_randoma)
 			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
 		if (b->urg_randomm)
 			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
-		/* The >= is important since we will always choose something
-		 * else than a pass in case of a tie. pass causes degenerative
-		 * behaviour. */
+
+		if (urgency > best_urgency) {
+			best_urgency = urgency; nbests = 0;
+		}
 		if (urgency >= best_urgency) {
-			best_urgency = urgency;
-			nbest = ni;
+			/* We want to always choose something else than a pass
+			 * in case of a tie. pass causes degenerative behaviour. */
+			if (nbests == 1 && is_pass(nbest[0]->coord)) {
+				nbests--;
+			}
+			nbest[nbests++] = ni;
 		}
 	}
-	return nbest;
+#if 0
+	struct board bb; bb.size = 11;
+	fprintf(stderr, "[%s %d: ", coord2sstr(node->coord, &bb), nbests);
+	for (int zz = 0; zz < nbests; zz++)
+		fprintf(stderr, "%s", coord2sstr(nbest[zz]->coord, &bb));
+	fprintf(stderr, "]\n");
+#endif
+	return nbest[fast_random(nbests)];
 }
 
 static void
