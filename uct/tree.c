@@ -447,6 +447,8 @@ tree_unlink_node(struct tree_node *node)
 			ni = ni->sibling;
 		ni->sibling = node->sibling;
 	}
+	node->sibling = NULL;
+	node->parent = NULL;
 }
 
 void
@@ -464,7 +466,6 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 	tree_done_node(tree, tree->root);
 	tree->root = node;
 	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
-	node->parent = NULL;
 }
 
 bool
