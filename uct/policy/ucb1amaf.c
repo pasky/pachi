@@ -321,12 +321,13 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			node_color, result, player_color);
 #endif
 
-	for (; node; node = node->parent, child_color = stone_other(child_color)) {
+	while (node) {
 		if (p->descend != ucb1_descend)
 			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 		update_node(p, node, result);
 		if (amaf_nakade(map->map[node->coord]))
 			amaf_op(map->map[node->coord], -);
+
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
@@ -334,25 +335,27 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			if (map->map[ni->coord] == S_NONE
 			    || amaf_nakade(map->map[ni->coord]))
 				continue;
+
 			int nres = result;
 			if (map->map[ni->coord] != child_color) {
 				if (!b->both_colors)
 					continue;
 				nres = !nres;
 			}
+			/* For child_color != player_color, we still want
+			 * to record the result unmodified; in that case,
+			 * we will correctly negate them at the descend phase. */
 
 			if (p->descend != ucb1_descend)
 				ni->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
-			/* For child_color != player_color, we still want
-			 * to record a win-result for opponent's stones
-			 * if we win, since for opponent's nodes we will
-			 * try to minimize winrate. */
 			update_node_amaf(p, ni, nres);
 
 #if 0
-			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d %d => %d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, player_color, child_color, result);
+			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d %d => %d/%d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, player_color, child_color, result);
 #endif
 		}
+
+		node = node->parent; child_color = stone_other(child_color);
 	}
 }
 
