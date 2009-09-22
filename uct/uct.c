@@ -83,6 +83,30 @@ progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
 
 
 static int
+uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
+              struct playout_amafmap *amaf,
+              struct tree *t, struct tree_node *n, enum stone node_color,
+	      char *spaces)
+{
+	enum stone next_color = stone_other(node_color);
+	if (n->u.playouts >= u->expand_p)
+		tree_expand_node(t, n, b, next_color, u->radar_d, u->policy,
+		                 (next_color == player_color ? 1 : -1));
+	if (UDEBUGL(7))
+		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
+			spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
+
+	int result = play_random_game(&b2, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
+	if (player_color != next_color && result >= 0)
+		result = !result;
+	if (UDEBUGL(7))
+		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n",
+		        spaces, player_color, next_color, coord2sstr(n->coord, t->board), result);
+
+	return result;
+}
+
+static int
 uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
 {
 	struct board b2;
@@ -159,20 +183,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 	/* Found a leaf node! */
-
-	enum stone next_color = stone_other(node_color);
-	if (n->u.playouts >= u->expand_p)
-		tree_expand_node(t, n, &b2, next_color, u->radar_d, u->policy,
-		                 (next_color == player_color ? 1 : -1));
-	if (UDEBUGL(7))
-		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
-			spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
-
-	result = play_random_game(&b2, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
-	if (player_color != next_color && result >= 0)
-		result = !result;
-	if (UDEBUGL(7))
-		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n", spaces, player_color, next_color, coord2sstr(n->coord, t->board), result);
+	result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 
 update:
 	assert(n == t->root || n->parent);
