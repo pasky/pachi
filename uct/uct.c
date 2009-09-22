@@ -108,26 +108,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* /debug */
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk with color %d\n", player_color);
-	while (1) {
-		if (tree_leaf_node(n)) {
-			if (n->u.playouts >= u->expand_p)
-				tree_expand_node(t, n, &b2, node_color, u->radar_d, u->policy, (node_color == player_color ? 1 : -1));
-			if (UDEBUGL(7))
-				fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n", spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
-
-			result = play_random_game(&b2, node_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
-			if (player_color != node_color && result >= 0)
-				result = !result;
-			if (UDEBUGL(7))
-				fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n", spaces, player_color, node_color, coord2sstr(n->coord, t->board), result);
-
-			/* Reset color to the @n color. */
-			node_color = stone_other(node_color);
-			break;
-		}
+	while (!tree_leaf_node(n)) {
 		spaces[depth++] = ' '; spaces[depth] = 0;
 
-		n = u->policy->descend(u->policy, t, n, (node_color == player_color ? 1 : -1), pass_limit);
+		n = u->policy->descend(u->policy, t, n, (node_color == player_color ? -1 : 1), pass_limit);
 		node_color = stone_other(node_color);
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
@@ -165,13 +149,34 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 					fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n", player_color, node_color, coord2sstr(n->coord, t->board), result, score);
 				if (UDEBUGL(6))
 					board_print(&b2, stderr);
-				break;
+				goto update;
 			}
 		} else {
 			passes = 0;
 		}
 	}
 
+	/* Found a leaf node! */
+
+	/* Color of next move... */
+	node_color = stone_other(node_color);
+	if (n->u.playouts >= u->expand_p)
+		tree_expand_node(t, n, &b2, node_color, u->radar_d, u->policy,
+		                 (node_color == player_color ? 1 : -1));
+	if (UDEBUGL(7))
+		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
+			spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
+
+	result = play_random_game(&b2, node_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
+	if (player_color != node_color && result >= 0)
+		result = !result;
+	if (UDEBUGL(7))
+		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n", spaces, player_color, node_color, coord2sstr(n->coord, t->board), result);
+
+	/* Reset color to the @n color. */
+	node_color = stone_other(node_color);
+
+update:
 	assert(n == t->root || n->parent);
 	if (result >= 0)
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, result);
