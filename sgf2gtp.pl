@@ -9,8 +9,8 @@ use warnings;
 local $/ = undef; my $sgf = <>;
 
 print "boardsize " . ($sgf =~ /SZ\[(\d+)\]/)[0];
-print "komi " . ($sgf =~ /KM\[([\d.]+)\]/)[0];
 print "clear_board";
+print "komi " . ($sgf =~ /KM\[([\d.]+)\]/)[0];
 
 my @m = split /;/, $sgf;
 foreach (@m) {
