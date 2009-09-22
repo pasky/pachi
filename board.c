@@ -1030,14 +1030,16 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
 		/* XXX: We can self-atari the group here. */
-		if (groupids[color][i] && board_group_info(b, groupids[color][i]).libs > 1)
+		group_t g = groupids[color][i];
+		if (g && board_group_info(b, g).libs > 1)
 			return false;
 		/* We can escape by capturing this group,
 		 * if we get to at least two liberties by that - we already
 		 * have one outside liberty, or the group is more than
 		 * 1 stone. */
-		if (groupids[stone_other(color)][i] && board_group_info(b, groupids[color][i]).libs == 1
-		    && (groupcts[S_NONE] > 0 || !group_is_onestone(b, groupids[color][i])))
+		g = groupids[stone_other(color)][i];
+		if (g && board_group_info(b, g).libs == 1
+		    && (groupcts[S_NONE] > 0 || !group_is_onestone(b, g)))
 			return false;
 	}
 	/* No way to pull out, no way to connect out. */
