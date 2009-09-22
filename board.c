@@ -1029,10 +1029,24 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
-		/* XXX: We can self-atari the group here. */
 		group_t g = groupids[color][i];
-		if (g && board_group_info(b, g).libs > 1)
-			return false;
+		if (g && board_group_info(b, g).libs > 1) {
+			/* We could self-atari the group here. */
+			if (board_group_info(b, g).libs == 2) {
+				/* We need to contribute a liberty, and
+				 * it must not be the other liberty of
+				 * the group. */
+				if (groupcts[S_NONE] > 0) {
+					int lib2 = board_group_info(b, g).lib[0];
+					if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+					/* Non-adjecent? */
+					if (abs(lib2 - to) != 1 && abs(lib2 - to) != board_size(b))
+						return false;
+				}
+			} else {
+				return false;
+			}
+		}
 		/* We can escape by capturing this group,
 		 * if we get to at least two liberties by that - we already
 		 * have one outside liberty, or the group is more than
