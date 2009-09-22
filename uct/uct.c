@@ -132,7 +132,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* /debug */
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk with color %d\n", player_color);
-	while (!tree_leaf_node(n)) {
+
+	while (!tree_leaf_node(n) && passes < 2) {
 		spaces[depth++] = ' '; spaces[depth] = 0;
 
 		n = u->policy->descend(u->policy, t, n, (node_color == player_color ? -1 : 1), pass_limit);
@@ -141,6 +142,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
 			        spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
+
 		if (amaf && n->coord >= -1 && !is_pass(n->coord)) {
 			if (amaf->map[n->coord] == S_NONE) {
 				amaf->map[n->coord] = node_color;
@@ -148,6 +150,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 				amaf_op(amaf->map[n->coord], +);
 			}
 		}
+
 		struct move m = { n->coord, node_color };
 		int res = board_play(&b2, &m);
 
@@ -165,27 +168,27 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			goto end;
 		}
 
-		if (is_pass(n->coord)) {
+		if (is_pass(n->coord))
 			passes++;
-			if (passes >= 2) {
-				float score = board_official_score(&b2);
-				result = (player_color == S_BLACK) ? score < 0 : score > 0;
-				if (UDEBUGL(5))
-					fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
-					        player_color, node_color, coord2sstr(n->coord, t->board), result, score);
-				if (UDEBUGL(6))
-					board_print(&b2, stderr);
-				goto update;
-			}
-		} else {
+		else
 			passes = 0;
-		}
 	}
 
-	/* Found a leaf node! */
-	result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
+	if (tree_leaf_node(n)) {
+		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 
-update:
+	} else { assert(passes >= 2);
+
+		float score = board_official_score(&b2);
+		result = (player_color == S_BLACK) ? score < 0 : score > 0;
+
+		if (UDEBUGL(5))
+			fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
+				player_color, node_color, coord2sstr(n->coord, t->board), result, score);
+		if (UDEBUGL(6))
+			board_print(&b2, stderr);
+	}
+
 	assert(n == t->root || n->parent);
 	if (result >= 0)
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, result);
