@@ -135,8 +135,11 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	while (!tree_leaf_node(n) && passes < 2) {
 		spaces[depth++] = ' '; spaces[depth] = 0;
 
-		n = u->policy->descend(u->policy, t, n, (node_color == player_color ? -1 : 1), pass_limit);
+		/* Parity is chosen already according to the child color, since
+		 * it is applied to children. */
 		node_color = stone_other(node_color);
+		n = u->policy->descend(u->policy, t, n, (node_color == player_color ? 1 : -1), pass_limit);
+
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
