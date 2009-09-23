@@ -88,8 +88,8 @@ static char moggy_patterns_src[][11] = {
 	"###",
 	/* side pattern - sagari (SUSPICIOUS) */
 	"?XO"
-	"x.?" /* "?.x" ? */
-	"###" "X",
+	"x.x" /* Mogo has "x.?" */
+	"###" /* Mogo has "X" */,
 	/* side pattern - weirdcut (SUSPICIOUS) */
 #if 0
 	"?OX"
@@ -110,14 +110,14 @@ static char moggy_patterns[65536];
 static void
 _record_pattern(char *table, char *str, int pat, int fixed_color)
 {
-	//fprintf(stderr, "[%s] %04x\n", str, pat);
-
 	/* Original color assignment */
 	table[pat] = fixed_color ? fixed_color : 3;
+	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 
 	/* Reverse color assignment - achieved by swapping odd and even bits */
 	pat = ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1);
 	table[pat] = fixed_color ? 2 - (fixed_color == 2) : 3;
+	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 }
 
 static int
@@ -215,6 +215,7 @@ _init_patterns(void)
 			case 'X': fixed_color = S_BLACK; break;
 			case 'O': fixed_color = S_WHITE; break;
 		}
+		//fprintf(stderr, "** %s **\n", moggy_patterns_src[i]);
 		_gen_pattern(moggy_patterns, 0, moggy_patterns_src[i], 9, fixed_color);
 	}
 }
