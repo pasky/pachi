@@ -98,6 +98,11 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	/* Initialization of UCT values based on prior knowledge */
 	struct ucb1_policy *pp = p->data;
 
+	if (is_pass(node->coord)) {
+		node->prior.playouts += 0;
+		node->prior.wins += 10;
+	}
+
 	/* Q_{even} */
 	/* This may be dubious for normal UCB1 but is essential for
 	 * reading stability of RAVE, it appears. */
