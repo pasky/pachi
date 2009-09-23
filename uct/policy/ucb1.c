@@ -99,10 +99,10 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	struct ucb1_policy *pp = p->data;
 
 	if (is_pass(node->coord)) {
-		node->prior.playouts += 0;
-		node->prior.wins += 10;
-	}
-
+		/* Discourage passing */
+		node->prior.playouts += 10;
+		node->prior.wins += parity > 0 ? 0 : 10;
+	} else
 	/* Q_{even} */
 	/* This may be dubious for normal UCB1 but is essential for
 	 * reading stability of RAVE, it appears. */
