@@ -615,6 +615,16 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	return NAN;
 }
 
+bool
+playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
+{
+	/* The idea is simple for now - never allow self-atari moves.
+	 * They suck in general, but this also permits us to actually
+	 * handle seki in the playout stage. */
+	/* FIXME: We must allow self-atari in some basic nakade shapes. */
+	return !is_selfatari(b, m->color, m->coord);
+}
+
 
 struct playout_policy *
 playout_moggy_init(char *arg)
@@ -624,6 +634,7 @@ playout_moggy_init(char *arg)
 	p->data = pp;
 	p->choose = playout_moggy_choose;
 	p->assess = playout_moggy_assess;
+	p->permit = playout_moggy_permit;
 
 	pp->lcapturerate = 90;
 	pp->capturerate = 90;
