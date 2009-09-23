@@ -1026,7 +1026,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	if (groupcts[S_NONE] > 1)
 		return false;
 
-	/* Leave unique friendly groups only */
+	bool needs_capture = false, can_capture = false;
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
@@ -1044,19 +1044,31 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 					if (abs(lib2 - to) != 1 && abs(lib2 - to) != board_size(b))
 						return false;
 				}
+				/* ...ok, then we can still contribute a liberty
+				 * later by capturing something. */
+				needs_capture = true;
 			} else {
 				return false;
 			}
 		}
-		/* We can escape by capturing this group,
-		 * if we get to at least two liberties by that - we already
-		 * have one outside liberty, or the group is more than
-		 * 1 stone. */
+
+		/* We can escape by capturing this group if it's in atari. */
 		g = groupids[stone_other(color)][i];
-		if (g && board_group_info(b, g).libs == 1
-		    && (groupcts[S_NONE] > 0 || !group_is_onestone(b, g)))
-			return false;
+		if (g && board_group_info(b, g).libs == 1) {
+			/* But we need to get to at least two liberties by this;
+			 * we already have one outside liberty, or the group is
+			 * more than 1 stone. */
+			if (groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
+				return false;
+			/* ...or, we already have one indirect liberty provided
+			 * by a friendly group. */
+			can_capture = true;
+		}
 	}
+
+	if (needs_capture && can_capture)
+		return false;
+
 	/* No way to pull out, no way to connect out. */
 	return true;
 }
