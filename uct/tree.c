@@ -259,6 +259,7 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src)
 				si->parent = dest;
 				si = si->sibling;
 			}
+			si->parent = dest;
 			si->sibling = di;
 			si = si2;
 			if (sip)
