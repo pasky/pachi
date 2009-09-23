@@ -8,6 +8,7 @@
 #include "move.h"
 #include "playout.h"
 
+
 int
 play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		 struct playout_amafmap *amafmap,
@@ -40,7 +41,7 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 			coord = urgent;
 		} else {
 play_random:
-			board_play_random(b, color, &coord);
+			board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
 		}
 
 #if 0

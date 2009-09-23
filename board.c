@@ -832,7 +832,7 @@ board_play(struct board *board, struct move *m)
 
 
 static inline bool
-board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
+board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)
 {
 	coord_raw(*coord) = b->f[f];
 	if (unlikely(is_pass(*coord)))
@@ -841,23 +841,24 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
 	return (likely(!board_is_one_point_eye(b, coord, color)) /* bad idea to play into one, usually */
+		&& (!permit || permit(permit_data, b, &m))
 	        && likely(board_play_f(b, &m, f) >= 0));
 }
 
 void
-board_play_random(struct board *b, enum stone color, coord_t *coord)
+board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
 {
 	int base = fast_random(b->flen);
 	coord_pos(*coord, base, b);
-	if (likely(board_try_random_move(b, color, coord, base)))
+	if (likely(board_try_random_move(b, color, coord, base, permit, permit_data)))
 		return;
 
 	int f;
 	for (f = base + 1; f < b->flen; f++)
-		if (board_try_random_move(b, color, coord, f))
+		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 	for (f = 0; f < base; f++)
-		if (board_try_random_move(b, color, coord, f))
+		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 
 	*coord = pass;

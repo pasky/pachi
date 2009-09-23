@@ -10,7 +10,7 @@ static coord_t *
 random_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	coord_t coord;
-	board_play_random(b, color, &coord);
+	board_play_random(b, color, &coord, NULL, NULL);
 	if (!group_at(b, coord)) {
 		/* This was suicide. Just pass. */
 		/* XXX: We should check for non-suicide alternatives. */

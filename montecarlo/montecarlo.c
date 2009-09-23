@@ -95,7 +95,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		board_copy(&b2, b);
 
 		coord_t coord;
-		board_play_random(&b2, color, &coord);
+		board_play_random(&b2, color, &coord, NULL, NULL);
 		if (!is_pass(coord) && !group_at(&b2, coord)) {
 			/* Multi-stone suicide. We play chinese rules,
 			 * so we can't consider this. (Note that we
