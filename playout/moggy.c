@@ -414,6 +414,11 @@ static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
+
+	/* Do not bother with kos. */
+	if (group_is_onestone(b, group))
+		return;
+
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
 
