@@ -623,6 +623,10 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 	/* FIXME: We must allow self-atari in some basic nakade shapes. */
+#if 0
+	if (is_selfatari(b, m->color, m->coord))
+		fprintf(stderr, "__ Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
+#endif
 	return !is_selfatari(b, m->color, m->coord);
 }
 
