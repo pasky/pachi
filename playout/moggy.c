@@ -16,6 +16,7 @@
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders;
 	int lcapturerate, capturerate, patternrate;
+	int selfatarirate;
 };
 
 #define MQL 64
@@ -619,6 +620,8 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 bool
 playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 {
+	struct moggy_policy *pp = p->data;
+
 	/* The idea is simple for now - never allow self-atari moves.
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
@@ -627,7 +630,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	if (is_selfatari(b, m->color, m->coord))
 		fprintf(stderr, "__ Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
 #endif
-	return !is_selfatari(b, m->color, m->coord);
+	return fast_random(100) >= pp->selfatarirate || !is_selfatari(b, m->color, m->coord);
 }
 
 
@@ -644,6 +647,7 @@ playout_moggy_init(char *arg)
 	pp->lcapturerate = 90;
 	pp->capturerate = 90;
 	pp->patternrate = 90;
+	pp->selfatarirate = 90;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -664,6 +668,8 @@ playout_moggy_init(char *arg)
 				pp->capturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "patternrate") && optval) {
 				pp->patternrate = atoi(optval);
+			} else if (!strcasecmp(optname, "selfatarirate") && optval) {
+				pp->selfatarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladders")) {
 				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
