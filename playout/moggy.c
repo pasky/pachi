@@ -200,17 +200,54 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 	_record_pattern(table, src - 9, _pat_90rot(_pat_vmirror(_pat_hmirror(pat))), fixed_color);
 }
 
-static void __attribute__((constructor))
-_init_patterns(void)
+#warning gcc is stupid; ignore following out-of-bounds warnings
+
+static void
+_gen_patterns(char src[][11], int src_n)
 {
-	for (int i = 0; i < moggy_patterns_src_n; i++) {
+	for (int i = 0; i < src_n; i++) {
+		//printf("<%s>\n", src[i]);
 		int fixed_color = 0;
-		switch (moggy_patterns_src[i][9]) {
+		switch (src[i][9]) {
 			case 'X': fixed_color = S_BLACK; break;
 			case 'O': fixed_color = S_WHITE; break;
 		}
-		_gen_pattern(moggy_patterns, 0, moggy_patterns_src[i], 9, fixed_color);
+		_gen_pattern(moggy_patterns, 0, src[i], 9, fixed_color);
 	}
+}
+
+static bool
+_load_patterns(char src[][11], int src_n, char *filename)
+{
+	FILE *f = fopen("moggy.patterns", "r");
+	if (!f) return false;
+
+	int i;
+	for (i = 0; i < moggy_patterns_src_n; i++) {
+		char line[32];
+		if (!fgets(line, sizeof(line), f))
+			goto error;
+		int l = strlen(line);
+		if (l != 10 + (line[l - 1] == '\n'))
+			goto error;
+		memcpy(src[i], line, 10);
+	}
+	fprintf(stderr, "moggy.patterns: %d patterns loaded\n", i);
+	fclose(f);
+	return true;
+error:
+	fprintf(stderr, "Error loading moggy.patterns.\n");
+	fclose(f);
+	return false;
+}
+
+static void __attribute__((constructor))
+_init_patterns(void)
+{
+	/* Replaces default patterns if the file is found, no-op otherwise. */
+	_load_patterns(moggy_patterns_src, moggy_patterns_src_n, "moggy.patterns");
+
+	_gen_patterns(moggy_patterns_src, moggy_patterns_src_n);
 }
 
 
