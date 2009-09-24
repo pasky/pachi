@@ -257,10 +257,15 @@ error:
 static void
 init_patterns(struct playout_policy *p)
 {
-	/* Replaces default patterns if the file is found, no-op otherwise. */
-	load_patterns(moggy_patterns_src, moggy_patterns_src_n, "moggy.patterns");
+	char src[moggy_patterns_src_n][11];
 
-	pattern_genall(p, moggy_patterns_src, moggy_patterns_src_n);
+	if (!load_patterns(src, moggy_patterns_src_n, "moggy.patterns")) {
+		/* Use default pattern set. */
+		for (int i = 0; i < moggy_patterns_src_n; i++)
+			strcpy(src[i], moggy_patterns_src[i]);
+	}
+
+	pattern_genall(p, src, moggy_patterns_src_n);
 }
 
 
