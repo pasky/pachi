@@ -193,10 +193,10 @@ policy_ucb1_init(struct uct *u, char *arg)
 	p->update = ucb1_update;
 
 	b->explore_p = 0.2;
-	b->fpu = INFINITY;
+	b->fpu = 1.1; //INFINITY;
 	b->even_eqex = 0;
 	b->gp_eqex = b->policy_eqex = -1;
-	b->eqex = 50;
+	b->eqex = 0; //50;
 
 	if (arg) {
 		char *optspec, *next = arg;
