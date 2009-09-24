@@ -383,7 +383,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	// gp: 14 vs 0: 44% (+-3.5)
 	b->gp_eqex = 0;
 	b->even_eqex = b->policy_eqex = -1;
-	b->eqex = 50;
+	b->eqex = 6; /* Even number! */
+	b->rave_prior = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -424,9 +425,9 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->explore_p_rave = atof(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
 				b->equiv_rave = atof(optval);
-			} else if (!strcasecmp(optname, "rave_prior")) {
+			} else if (!strcasecmp(optname, "rave_prior") && optval) {
 				// 46% (+-3.5)
-				b->rave_prior = true;
+				b->rave_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "both_colors")) {
 				b->both_colors = true;
 			} else {

@@ -3,9 +3,8 @@ Opponent: gnugo --mode gtp --chinese-rules --capture-all-dead --level 10
 GNUGo 3.7.12
 
 Template:
-../../gogui-1.1.10/bin/gogui-twogtp -black  'gnugo --mode gtp --chinese-rules --capture-all-dead --level 10' -white './zzgo-77d2d games=5000,policy=ucb1amaf,playout=moggy' -auto -verbose -size 9 -komi 7.5 -games 100 -sgffile f1-77d2d
+../../gogui-1.1.10/bin/gogui-twogtp -black  'gnugo --mode gtp --chinese-rules --capture-all-dead --level 10' -white './zzgo-77d2d games=5000,policy=ucb1amaf,playout=moggy' -alternate -auto -verbose -size 9 -komi 7.5 -games 100 -sgffile f1-77d2d
 for i in *.dat; do ../../gogui-1.1.10/bin/gogui-twogtp -force -analyze $i; done
-# NEVER use the -alternate mode, it's buggy and broken!
 
 ead8e	ucb1amaf	16.5% (+-4.5%)
 b2185	ucb1amaf	50% (+-6%)
@@ -16,5 +15,7 @@ c7249	ucb1amaf	34.2% (+-4.8%)
 9367d	ucb1amaf	37% (+-8%)
 ce540	ucb1amaf*	42% (+-2%)	selfatarirate=0
 ce540	ucb1amaf	43% (+-2%)
-62592	ucb1amaf*	48.5% (+-5%)	selfatarirate=0
+62592	ucb1amaf*	47% (+-2.5%)	selfatarirate=0
 62592	ucb1amaf	44% (+-2.5%)
+62592	ucb1amaf*#	45.2% (+-2.5%)	selfatarirate=0,rave_prior
+62592	ucb1amaf#	47.5% (+-2.5%)	rave_prior
