@@ -358,9 +358,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			}
 
 			coord_t c = coord_xy_otf(i, j, t->board);
-			/* Do not create nodes for obviously invalid moves
-			 * and do not permit filling own eyes. */
-			if (board_at(b, c) != S_NONE || board_is_one_point_eye(b, &c, color))
+			if (board_at(b, c) != S_NONE)
 				continue;
 			assert(c != node->coord); // I have spotted "C3 C3" in some sequence...
 			/* This looks very useful on large boards - weeds out huge amount of crufty moves. */

@@ -106,6 +106,18 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 		node->prior.wins += pp->even_eqex / 2;
 	}
 
+	/* Discourage playing into our own eyes. However, we cannot
+	 * completely prohibit it:
+	 * ######
+	 * ...XX.
+	 * XOOOXX
+	 * X.OOOO
+	 * .XXXX. */
+	if (board_is_one_point_eye(b, &node->coord, color)) {
+		node->prior.playouts += 0;
+		node->prior.wins += pp->eqex;
+	}
+
 	/* Q_{grandparent} */
 	if (pp->gp_eqex && node->parent && node->parent->parent && node->parent->parent->parent) {
 		struct tree_node *gpp = node->parent->parent->parent;
