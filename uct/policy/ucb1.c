@@ -64,15 +64,26 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 	struct ucb1_policy *b = p->data;
 	float xpl = log(node->u.playouts + node->prior.playouts) * b->explore_p;
 
-	struct tree_node *nbest = node->children;
+	// XXX: Stack overflow danger on big boards?
+	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
 	float best_urgency = -9999;
+
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 		/* Do not consider passing early. */
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
-		float urgency = uct_playouts ? (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts) : b->fpu;
+
+		/* XXX: We later compare urgency with best_urgency; this can
+		 * be difficult given that urgency can be in register with
+		 * higher precision than best_urgency, thus even though
+		 * the numbers are in fact the same, urgency will be
+		 * slightly higher (or lower). Thus, we declare urgency
+		 * as volatile, attempting to force the compiler to keep
+		 * everything as a float. Ideally, we should do some random
+		 * __FLT_EPSILON__ magic instead. */
+		volatile float urgency = uct_playouts ? (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts) : b->fpu;
 
 #if 0
 		{
@@ -85,11 +96,13 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		if (b->urg_randomm)
 			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
 		if (urgency > best_urgency) {
-			best_urgency = urgency;
-			nbest = ni;
+			best_urgency = urgency; nbests = 0;
+		}
+		if (urgency >= best_urgency) {
+			nbest[nbests++] = ni;
 		}
 	}
-	return nbest;
+	return nbest[fast_random(nbests)];
 }
 
 void
