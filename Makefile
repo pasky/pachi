@@ -4,7 +4,7 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
 # -ffast-math breaks us
-CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=i686 -std=gnu99 -fomit-frame-pointer -frename-registers -pthread
+CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -fomit-frame-pointer -frename-registers -pthread
 SYS_CFLAGS=
 LDFLAGS=-lm -pthread
 
