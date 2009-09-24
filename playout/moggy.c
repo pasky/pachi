@@ -594,8 +594,15 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 			/* _Never_ play here if this move plays out
 			 * a caught ladder. (Unless it captures another
 			 * group. :-) */
-			if (pp->ladderassess && ladder_catches(p, b, m->coord, g))
-				ladder = true;
+			if (pp->ladderassess && ladder_catches(p, b, m->coord, g)) {
+				/* Note that the opposite is not guarded against;
+				 * we do not advise against capturing a laddered
+				 * group (but we don't encourage it either). Such
+				 * a move can simplify tactical situations if we
+				 * can afford it. */
+				if (m->color == board_at(b, c))
+					ladder = true;
+			}
 		});
 
 		if (ladder) {
