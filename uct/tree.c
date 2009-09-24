@@ -405,6 +405,9 @@ tree_fix_node_symmetry(struct board *b, struct tree_node *node,
 static void
 tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 {
+	if (is_pass(c))
+		return;
+
 	struct board_symmetry *s = &tree->root_symmetry;
 	int cx = coord_x(c, b), cy = coord_y(c, b);
 
