@@ -181,11 +181,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			passes = 0;
 	}
 
-	if (tree_leaf_node(n)) {
-		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
-
-	} else { assert(passes >= 2);
-
+	if (passes >= 2) {
 		float score = board_official_score(&b2);
 		result = (player_color == S_BLACK) ? score < 0 : score > 0;
 
@@ -194,6 +190,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 				player_color, node_color, coord2sstr(n->coord, t->board), result, score);
 		if (UDEBUGL(6))
 			board_print(&b2, stderr);
+
+	} else { assert(tree_leaf_node(n));
+		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 	}
 
 	assert(n == t->root || n->parent);
