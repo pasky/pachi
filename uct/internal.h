@@ -24,6 +24,7 @@ struct uct {
 	int dumpthres;
 	int threads;
 	int force_seed;
+	bool no_book;
 
 	struct uct_policy *policy;
 	struct tree *t;
