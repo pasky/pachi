@@ -109,7 +109,7 @@ static char moggy_patterns_src[][11] = {
 static char moggy_patterns[65536];
 
 static void
-_record_pattern(char *table, char *str, int pat, int fixed_color)
+pattern_record(char *table, char *str, int pat, int fixed_color)
 {
 	/* Original color assignment */
 	table[pat] = fixed_color ? fixed_color : 3;
@@ -122,14 +122,14 @@ _record_pattern(char *table, char *str, int pat, int fixed_color)
 }
 
 static int
-_pat_vmirror(int pat)
+pat_vmirror(int pat)
 {
 	/* V mirror pattern; reverse order of 3-2-3 chunks */
 	return ((pat & 0xfc00) >> 10) | (pat & 0x03c0) | ((pat & 0x003f) << 10);
 }
 
 static int
-_pat_hmirror(int pat)
+pat_hmirror(int pat)
 {
 	/* H mirror pattern; reverse order of 2-bit values within the chunks */
 #define rev3(p) ((p >> 4) | (p & 0xc) | ((p & 0x3) << 4))
@@ -142,7 +142,7 @@ _pat_hmirror(int pat)
 }
 
 static int
-_pat_90rot(int pat)
+pat_90rot(int pat)
 {
 	/* Rotate by 90 degrees:
 	 * 5 6 7    7 4 2
@@ -163,7 +163,7 @@ _pat_90rot(int pat)
 }
 
 static void
-_gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
+pattern_gen(char *table, int pat, char *src, int srclen, int fixed_color)
 {
 	for (; srclen > 0; src++, srclen--) {
 		if (srclen == 5)
@@ -171,22 +171,22 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 		int patofs = (srclen > 5 ? srclen - 1 : srclen) - 1;
 		switch (*src) {
 			case '?':
-				*src = '.'; _gen_pattern(table, pat, src, srclen, fixed_color);
-				*src = 'X'; _gen_pattern(table, pat, src, srclen, fixed_color);
-				*src = 'O'; _gen_pattern(table, pat, src, srclen, fixed_color);
-				*src = '#'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(table, pat, src, srclen, fixed_color);
+				*src = 'X'; pattern_gen(table, pat, src, srclen, fixed_color);
+				*src = 'O'; pattern_gen(table, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(table, pat, src, srclen, fixed_color);
 				*src = '?'; // for future recursions
 				return;
 			case 'x':
-				*src = '.'; _gen_pattern(table, pat, src, srclen, fixed_color);
-				*src = 'O'; _gen_pattern(table, pat, src, srclen, fixed_color);
-				*src = '#'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(table, pat, src, srclen, fixed_color);
+				*src = 'O'; pattern_gen(table, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(table, pat, src, srclen, fixed_color);
 				*src = 'x'; // for future recursions
 				return;
 			case 'o':
-				*src = '.'; _gen_pattern(table, pat, src, srclen, fixed_color);
-				*src = 'X'; _gen_pattern(table, pat, src, srclen, fixed_color);
-				*src = '#'; _gen_pattern(table, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(table, pat, src, srclen, fixed_color);
+				*src = 'X'; pattern_gen(table, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(table, pat, src, srclen, fixed_color);
 				*src = 'o'; // for future recursions
 				return;
 			case '.': /* 0 */ break;
@@ -197,20 +197,20 @@ _gen_pattern(char *table, int pat, char *src, int srclen, int fixed_color)
 	}
 
 	/* Original pattern, all transpositions and rotations */
-	_record_pattern(table, src - 9, pat, fixed_color);
-	_record_pattern(table, src - 9, _pat_vmirror(pat), fixed_color);
-	_record_pattern(table, src - 9, _pat_hmirror(pat), fixed_color);
-	_record_pattern(table, src - 9, _pat_vmirror(_pat_hmirror(pat)), fixed_color);
-	_record_pattern(table, src - 9, _pat_90rot(pat), fixed_color);
-	_record_pattern(table, src - 9, _pat_90rot(_pat_vmirror(pat)), fixed_color);
-	_record_pattern(table, src - 9, _pat_90rot(_pat_hmirror(pat)), fixed_color);
-	_record_pattern(table, src - 9, _pat_90rot(_pat_vmirror(_pat_hmirror(pat))), fixed_color);
+	pattern_record(table, src - 9, pat, fixed_color);
+	pattern_record(table, src - 9, pat_vmirror(pat), fixed_color);
+	pattern_record(table, src - 9, pat_hmirror(pat), fixed_color);
+	pattern_record(table, src - 9, pat_vmirror(pat_hmirror(pat)), fixed_color);
+	pattern_record(table, src - 9, pat_90rot(pat), fixed_color);
+	pattern_record(table, src - 9, pat_90rot(pat_vmirror(pat)), fixed_color);
+	pattern_record(table, src - 9, pat_90rot(pat_hmirror(pat)), fixed_color);
+	pattern_record(table, src - 9, pat_90rot(pat_vmirror(pat_hmirror(pat))), fixed_color);
 }
 
 #warning gcc is stupid; ignore following out-of-bounds warnings
 
 static void
-_gen_patterns(char src[][11], int src_n)
+pattern_genall(char src[][11], int src_n)
 {
 	for (int i = 0; i < src_n; i++) {
 		//printf("<%s>\n", src[i]);
@@ -220,12 +220,12 @@ _gen_patterns(char src[][11], int src_n)
 			case 'O': fixed_color = S_WHITE; break;
 		}
 		//fprintf(stderr, "** %s **\n", src[i]);
-		_gen_pattern(moggy_patterns, 0, src[i], 9, fixed_color);
+		pattern_gen(moggy_patterns, 0, src[i], 9, fixed_color);
 	}
 }
 
 static bool
-_load_patterns(char src[][11], int src_n, char *filename)
+load_patterns(char src[][11], int src_n, char *filename)
 {
 	FILE *f = fopen("moggy.patterns", "r");
 	if (!f) return false;
@@ -250,12 +250,12 @@ error:
 }
 
 static void __attribute__((constructor))
-_init_patterns(void)
+init_patterns(void)
 {
 	/* Replaces default patterns if the file is found, no-op otherwise. */
-	_load_patterns(moggy_patterns_src, moggy_patterns_src_n, "moggy.patterns");
+	load_patterns(moggy_patterns_src, moggy_patterns_src_n, "moggy.patterns");
 
-	_gen_patterns(moggy_patterns_src, moggy_patterns_src_n);
+	pattern_genall(moggy_patterns_src, moggy_patterns_src_n);
 }
 
 
