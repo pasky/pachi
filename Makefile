@@ -38,7 +38,7 @@ zzgo: $(OBJS) $(LOCALLIBS)
 .PHONY: zzgo-profiled
 zzgo-profiled:
 	@make clean all XLDFLAGS=-fprofile-generate XCFLAGS="-fprofile-generate -fomit-frame-pointer -frename-registers"
-	echo -e 'boardsize 9\nkomi 0\nclear_board\ngenmove black\ngenmove white' | ./zzgo games=5000
+	./zzgo games=5000 <genmove.gtp
 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
 
 # install-recursive?

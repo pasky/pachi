@@ -36,6 +36,7 @@ tree_init(struct board *board, enum stone color)
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0);
 	t->root_symmetry = board->symmetry;
+	t->root_color = stone_other(color); // to research black moves, root will be white
 	return t;
 }
 
@@ -259,6 +260,7 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src)
 				si->parent = dest;
 				si = si->sibling;
 			}
+			si->parent = dest;
 			si->sibling = di;
 			si = si2;
 			if (sip)
@@ -404,6 +406,9 @@ tree_fix_node_symmetry(struct board *b, struct tree_node *node,
 static void
 tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 {
+	if (is_pass(c))
+		return;
+
 	struct board_symmetry *s = &tree->root_symmetry;
 	int cx = coord_x(c, b), cy = coord_y(c, b);
 
@@ -431,7 +436,8 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
 			s->type, s->d, b->symmetry.type, b->symmetry.d);
 	}
-	tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
+	if (flip_horiz || flip_vert || flip_diag)
+		tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
 }
 
 
@@ -447,6 +453,8 @@ tree_unlink_node(struct tree_node *node)
 			ni = ni->sibling;
 		ni->sibling = node->sibling;
 	}
+	node->sibling = NULL;
+	node->parent = NULL;
 }
 
 void
@@ -464,7 +472,6 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 	tree_done_node(tree, tree->root);
 	tree->root = node;
 	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
-	node->parent = NULL;
 }
 
 bool

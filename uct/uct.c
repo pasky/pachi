@@ -12,7 +12,6 @@
 #include "move.h"
 #include "playout.h"
 #include "playout/moggy.h"
-#include "playout/old.h"
 #include "playout/light.h"
 #include "random.h"
 #include "uct/internal.h"
@@ -83,7 +82,33 @@ progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
 
 
 static int
-uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
+              struct playout_amafmap *amaf,
+              struct tree *t, struct tree_node *n, enum stone node_color,
+	      char *spaces)
+{
+	enum stone next_color = stone_other(node_color);
+	if (n->u.playouts >= u->expand_p) {
+		// fprintf(stderr, "expanding %s (%p ^-%p)\n", coord2sstr(n->coord, b), n, n->parent);
+		tree_expand_node(t, n, b, next_color, u->radar_d, u->policy,
+		                 (next_color == player_color ? 1 : -1));
+	}
+	if (UDEBUGL(7))
+		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
+			spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
+
+	int result = play_random_game(b, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
+	if (player_color != next_color && result >= 0)
+		result = !result;
+	if (UDEBUGL(7))
+		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n",
+		        spaces, player_color, next_color, coord2sstr(n->coord, t->board), result);
+
+	return result;
+}
+
+static int
+uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
 {
 	struct board b2;
 	board_copy(&b2, b);
@@ -98,47 +123,42 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	/* Walk the tree until we find a leaf, then expand it and do
 	 * a random playout. */
 	struct tree_node *n = t->root;
-	enum stone orig_color = color;
+	enum stone node_color = stone_other(player_color);
+	assert(node_color == t->root_color);
+
 	int result;
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
 	int passes = is_pass(b->last_move.coord);
+
 	/* debug */
 	int depth = 0;
 	static char spaces[] = "\0                                                      ";
 	/* /debug */
 	if (UDEBUGL(8))
-		fprintf(stderr, "--- UCT walk with color %d\n", color);
-	for (; pass; color = stone_other(color)) {
-		if (tree_leaf_node(n)) {
-			if (n->u.playouts >= u->expand_p)
-				tree_expand_node(t, n, &b2, color, u->radar_d, u->policy, (color == orig_color ? 1 : -1));
-			if (UDEBUGL(7))
-				fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n", spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
+		fprintf(stderr, "--- UCT walk with color %d\n", player_color);
 
-			result = play_random_game(&b2, color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
-			if (orig_color != color && result >= 0)
-				result = !result;
-			if (UDEBUGL(7))
-				fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n", spaces, orig_color, color, coord2sstr(n->coord, t->board), result);
-
-			/* Reset color to the @n color. */
-			color = stone_other(color);
-			break;
-		}
+	while (!tree_leaf_node(n) && passes < 2) {
 		spaces[depth++] = ' '; spaces[depth] = 0;
 
-		n = u->policy->descend(u->policy, t, n, (color == orig_color ? 1 : -1), pass_limit);
+		/* Parity is chosen already according to the child color, since
+		 * it is applied to children. */
+		node_color = stone_other(node_color);
+		n = u->policy->descend(u->policy, t, n, (node_color == player_color ? 1 : -1), pass_limit);
+
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
-			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n", spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
+			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
+			        spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
+
 		if (amaf && n->coord >= -1 && !is_pass(n->coord)) {
 			if (amaf->map[n->coord] == S_NONE) {
-				amaf->map[n->coord] = color;
+				amaf->map[n->coord] = node_color;
 			} else {
 				amaf_op(amaf->map[n->coord], +);
 			}
 		}
-		struct move m = { n->coord, color };
+
+		struct move m = { n->coord, node_color };
 		int res = board_play(&b2, &m);
 
 		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
@@ -147,7 +167,7 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 				for (struct tree_node *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s ", coord2sstr(ni->coord, t->board));
 				fprintf(stderr, "deleting invalid %s node %d,%d res %d group %d spk %d\n",
-				        stone2str(color), coord_x(n->coord,b), coord_y(n->coord,b),
+				        stone2str(node_color), coord_x(n->coord,b), coord_y(n->coord,b),
 					res, group_at(&b2, m.coord), b2.superko_violation);
 			}
 			tree_delete_node(t, n);
@@ -155,25 +175,29 @@ uct_playout(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			goto end;
 		}
 
-		if (is_pass(n->coord)) {
+		if (is_pass(n->coord))
 			passes++;
-			if (passes >= 2) {
-				float score = board_official_score(&b2);
-				result = (orig_color == S_BLACK) ? score < 0 : score > 0;
-				if (UDEBUGL(5))
-					fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n", orig_color, color, coord2sstr(n->coord, t->board), result, score);
-				if (UDEBUGL(6))
-					board_print(&b2, stderr);
-				break;
-			}
-		} else {
+		else
 			passes = 0;
-		}
+	}
+
+	if (passes >= 2) {
+		float score = board_official_score(&b2);
+		result = (player_color == S_BLACK) ? score < 0 : score > 0;
+
+		if (UDEBUGL(5))
+			fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
+				player_color, node_color, coord2sstr(n->coord, t->board), result, score);
+		if (UDEBUGL(6))
+			board_print(&b2, stderr);
+
+	} else { assert(tree_leaf_node(n));
+		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 	}
 
 	assert(n == t->root || n->parent);
 	if (result >= 0)
-		u->policy->update(u->policy, t, n, color, orig_color, amaf, result);
+		u->policy->update(u->policy, t, n, node_color, player_color, amaf, result);
 
 end:
 	if (amaf) {
@@ -189,7 +213,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 {
 	struct uct *u = e->data;
 
-	if (!b->moves && u->t) {
+	if ((!b->moves || color != stone_other(u->t->root_color)) && u->t) {
 		/* Stale state from last game */
 		tree_done(u->t);
 		u->t = NULL;
@@ -241,7 +265,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 		if (i > 0 && !(i % 500)) {
 			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
-			if (best && best->u.playouts >= 1500 && best->u.value >= u->loss_threshold)
+			if (best && best->u.playouts >= 5000 && best->u.value >= u->loss_threshold)
 				break;
 		}
 
@@ -353,6 +377,8 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(0))
+		progress_status(u, u->t, color, played_games);
+	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts, played_games);
 	if (best->u.value < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
@@ -467,9 +493,7 @@ uct_state_init(char *arg)
 				char *playoutarg = strchr(optval, ':');
 				if (playoutarg)
 					*playoutarg++ = 0;
-				if (!strcasecmp(optval, "old")) {
-					u->playout = playout_old_init(playoutarg);
-				} else if (!strcasecmp(optval, "moggy")) {
+				if (!strcasecmp(optval, "moggy")) {
 					u->playout = playout_moggy_init(playoutarg);
 				} else if (!strcasecmp(optval, "light")) {
 					u->playout = playout_light_init(playoutarg);
@@ -487,7 +511,7 @@ uct_state_init(char *arg)
 	}
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
-	u->loss_threshold = 0.85; /* Stop reading if after at least 1500 playouts this is best value. */
+	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
 

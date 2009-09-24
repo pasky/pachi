@@ -832,7 +832,7 @@ board_play(struct board *board, struct move *m)
 
 
 static inline bool
-board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
+board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)
 {
 	coord_raw(*coord) = b->f[f];
 	if (unlikely(is_pass(*coord)))
@@ -841,23 +841,24 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f)
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
 	return (likely(!board_is_one_point_eye(b, coord, color)) /* bad idea to play into one, usually */
+		&& (!permit || permit(permit_data, b, &m))
 	        && likely(board_play_f(b, &m, f) >= 0));
 }
 
 void
-board_play_random(struct board *b, enum stone color, coord_t *coord)
+board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
 {
 	int base = fast_random(b->flen);
 	coord_pos(*coord, base, b);
-	if (likely(board_try_random_move(b, color, coord, base)))
+	if (likely(board_try_random_move(b, color, coord, base, permit, permit_data)))
 		return;
 
 	int f;
 	for (f = base + 1; f < b->flen; f++)
-		if (board_try_random_move(b, color, coord, f))
+		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 	for (f = 0; f < base; f++)
-		if (board_try_random_move(b, color, coord, f))
+		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 
 	*coord = pass;
@@ -1025,21 +1026,49 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	if (groupcts[S_NONE] > 1)
 		return false;
 
-	/* Leave unique friendly groups only */
+	bool needs_capture = false, can_capture = false;
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
-		/* XXX: We can self-atari the group here. */
-		if (groupids[color][i] && board_group_info(b, groupids[color][i]).libs > 1)
-			return false;
-		/* We can escape by capturing this group,
-		 * if we get to at least two liberties by that - we already
-		 * have one outside liberty, or the group is more than
-		 * 1 stone. */
-		if (groupids[stone_other(color)][i] && board_group_info(b, groupids[color][i]).libs == 1
-		    && (groupcts[S_NONE] > 0 || !group_is_onestone(b, groupids[color][i])))
-			return false;
+		group_t g = groupids[color][i];
+		if (g && board_group_info(b, g).libs > 1) {
+			/* We could self-atari the group here. */
+			if (board_group_info(b, g).libs == 2) {
+				/* We need to contribute a liberty, and
+				 * it must not be the other liberty of
+				 * the group. */
+				if (groupcts[S_NONE] > 0) {
+					int lib2 = board_group_info(b, g).lib[0];
+					if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+					/* Non-adjecent? */
+					if (abs(lib2 - to) != 1 && abs(lib2 - to) != board_size(b))
+						return false;
+				}
+				/* ...ok, then we can still contribute a liberty
+				 * later by capturing something. */
+				needs_capture = true;
+			} else {
+				return false;
+			}
+		}
+
+		/* We can escape by capturing this group if it's in atari. */
+		g = groupids[stone_other(color)][i];
+		if (g && board_group_info(b, g).libs == 1) {
+			/* But we need to get to at least two liberties by this;
+			 * we already have one outside liberty, or the group is
+			 * more than 1 stone. */
+			if (groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
+				return false;
+			/* ...or, we already have one indirect liberty provided
+			 * by a friendly group. */
+			can_capture = true;
+		}
 	}
+
+	if (needs_capture && can_capture)
+		return false;
+
 	/* No way to pull out, no way to connect out. */
 	return true;
 }

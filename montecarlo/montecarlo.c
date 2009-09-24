@@ -7,7 +7,6 @@
 #include "engine.h"
 #include "move.h"
 #include "playout/moggy.h"
-#include "playout/old.h"
 #include "playout/light.h"
 #include "montecarlo/internal.h"
 #include "montecarlo/montecarlo.h"
@@ -26,7 +25,7 @@
  * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
  * games=MC_GAMES		number of random games to play
  * gamelen=MC_GAMELEN		maximal length of played random game
- * playout={old,moggy}[:playout_params]
+ * playout={light,moggy}[:playout_params]
  */
 
 
@@ -96,7 +95,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		board_copy(&b2, b);
 
 		coord_t coord;
-		board_play_random(&b2, color, &coord);
+		board_play_random(&b2, color, &coord, NULL, NULL);
 		if (!is_pass(coord) && !group_at(&b2, coord)) {
 			/* Multi-stone suicide. We play chinese rules,
 			 * so we can't consider this. (Note that we
@@ -224,9 +223,7 @@ montecarlo_state_init(char *arg)
 				char *playoutarg = strchr(optval, ':');
 				if (playoutarg)
 					*playoutarg++ = 0;
-				if (!strcasecmp(optval, "old")) {
-					mc->playout = playout_old_init(playoutarg);
-				} else if (!strcasecmp(optval, "moggy")) {
+				if (!strcasecmp(optval, "moggy")) {
 					mc->playout = playout_moggy_init(playoutarg);
 				} else if (!strcasecmp(optval, "light")) {
 					mc->playout = playout_light_init(playoutarg);

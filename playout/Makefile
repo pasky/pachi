@@ -1,5 +1,5 @@
 INCLUDES=-I..
-OBJS=moggy.o old.o light.o
+OBJS=moggy.o light.o
 
 all: playout.a
 playout.a: $(OBJS)

@@ -16,6 +16,7 @@
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders;
 	int lcapturerate, capturerate, patternrate;
+	int selfatarirate;
 };
 
 #define MQL 64
@@ -53,11 +54,15 @@ static char moggy_patterns_src[][11] = {
 	/* hane pattern - magari */
 	"XO?"
 	"X.."
-	"?.?",
+	"x.?",
 	/* hane pattern - thin hane */
 	"XOO"
 	"..."
 	"?.?" "X",
+	/* generic pattern - katatsuke or diagonal attachment; similar to magari */
+	".O."
+	"X.."
+	"...",
 	/* cut1 pattern (kiri) - unprotected cut */
 	"XO?"
 	"O.o"
@@ -84,12 +89,14 @@ static char moggy_patterns_src[][11] = {
 	"###",
 	/* side pattern - sagari (SUSPICIOUS) */
 	"?XO"
-	"?.?" /* "?.x" ? */
-	"###" "X",
+	"x.x" /* Mogo has "x.?" */
+	"###" /* Mogo has "X" */,
 	/* side pattern - weirdcut (SUSPICIOUS) */
-	/* "?OX"
+#if 0
+	"?OX"
 	"?.O"
-	"?##" "X", */
+	"?##" "X",
+#endif
 	/* side pattern - cut (SUSPICIOUS) */
 	"?OX"
 	"X.O"
@@ -104,14 +111,14 @@ static char moggy_patterns[65536];
 static void
 _record_pattern(char *table, char *str, int pat, int fixed_color)
 {
-	//fprintf(stderr, "[%s] %04x\n", str, pat);
-
 	/* Original color assignment */
 	table[pat] = fixed_color ? fixed_color : 3;
+	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 
 	/* Reverse color assignment - achieved by swapping odd and even bits */
 	pat = ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1);
 	table[pat] = fixed_color ? 2 - (fixed_color == 2) : 3;
+	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 }
 
 static int
@@ -212,6 +219,7 @@ _gen_patterns(char src[][11], int src_n)
 			case 'X': fixed_color = S_BLACK; break;
 			case 'O': fixed_color = S_WHITE; break;
 		}
+		//fprintf(stderr, "** %s **\n", src[i]);
 		_gen_pattern(moggy_patterns, 0, src[i], 9, fixed_color);
 	}
 }
@@ -267,21 +275,20 @@ test_pattern_here(struct playout_policy *p, char *hashtable,
 		| (board_atxy(b, x, y + 1) << 2)
 		| (board_atxy(b, x + 1, y + 1));
 	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, hashtable[pat]);
-	return (hashtable[pat] & m->color);
+	return (hashtable[pat] & m->color) && !is_selfatari(b, m->color, m->coord);
 }
 
 static void
 apply_pattern_here(struct playout_policy *p, char *hashtable,
 		struct board *b, struct move *m, struct move_queue *q)
 {
-	if (test_pattern_here(p, hashtable, b, m)
-	    && !is_selfatari(b, m->color, m->coord))
+	if (test_pattern_here(p, hashtable, b, m))
 		q->move[q->moves++] = m->coord;
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
 static coord_t
-apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove)
+apply_pattern(struct playout_policy *p, struct board *b, struct move *m)
 {
 	//struct moggy_policy *pp = p->data;
 	struct move_queue q;
@@ -291,7 +298,6 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return pass;
 
-	// FIXME: Fix assess callers
 	foreach_neighbor(b, m->coord, {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
@@ -309,16 +315,6 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
 		}
 		fprintf(stderr, "\n");
-	}
-
-	if (testmove) {
-		while (q.moves--)
-			if (q.move[q.moves] == testmove->coord) {
-				if (PLDEBUGL(5))
-					fprintf(stderr, "Found queried move.\n");
-				return testmove->coord;
-			}
-		return pass;
 	}
 
 	int i = fast_random(q.moves);
@@ -457,6 +453,11 @@ static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
+
+	/* Do not bother with kos. */
+	if (group_is_onestone(b, group))
+		return;
+
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
 
@@ -529,7 +530,7 @@ global_atari_check(struct playout_policy *p, struct board *b)
 }
 
 static coord_t
-local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move *testmove)
+local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
 {
 	struct move_queue q;
 	q.moves = 0;
@@ -554,22 +555,12 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 		fprintf(stderr, "\n");
 	}
 
-	if (testmove) {
-		while (q.moves--)
-			if (q.move[q.moves] == testmove->coord) {
-				if (PLDEBUGL(5))
-					fprintf(stderr, "Found queried move.\n");
-				return testmove->coord;
-			}
-		return pass;
-	}
-
 	int i = fast_random(q.moves);
 	return q.moves ? q.move[i] : pass;
 }
 
 coord_t
-playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_real_color)
+playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
 	coord_t c;
@@ -581,14 +572,14 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone our_r
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			c = local_atari_check(p, b, &b->last_move, NULL);
+			c = local_atari_check(p, b, &b->last_move);
 			if (!is_pass(c))
 				return c;
 		}
 
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
-			c = apply_pattern(p, b, &b->last_move, NULL);
+			c = apply_pattern(p, b, &b->last_move);
 			if (!is_pass(c))
 				return c;
 		}
@@ -620,38 +611,71 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 	}
 
 	/* Are we dealing with atari? */
-	if (pp->lcapturerate > fast_random(100)) {
+	if (pp->lcapturerate || pp->capturerate) {
+		bool ladder = false;
+
 		foreach_neighbor(b, m->coord, {
-			if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
+			group_t g = group_at(b, c);
+			if (!g || board_group_info(b, g).libs != 1)
 				continue;
-			struct move m2;
-			m2.coord = c; m2.color = stone_other(m->color);
-			if (local_atari_check(p, b, &m2, m) == m->coord)
-				return 1.0;
+
+			/* _Never_ play here if this move plays out
+			 * a caught ladder. (Unless it captures another
+			 * group. :-) */
+			if (pp->ladderassess && ladder_catches(p, b, m->coord, g)) {
+				/* Note that the opposite is not guarded against;
+				 * we do not advise against capturing a laddered
+				 * group (but we don't encourage it either). Such
+				 * a move can simplify tactical situations if we
+				 * can afford it. */
+				if (m->color == board_at(b, c))
+					ladder = true;
+				continue;
+			}
+
+			struct move_queue q; q.moves = 0;
+			group_atari_check(p, b, g, &q);
+			while (q.moves--)
+				if (q.move[q.moves] == m->coord) {
+					if (PLDEBUGL(5))
+						fprintf(stderr, "1.0: atari\n");
+					return 1.0;
+				}
 		});
 
-		/* Assess ladders anywhere, local or not. */
-		if (pp->ladderassess) {
-			//fprintf(stderr, "ASSESS %s\n", coord2sstr(m->coord, b));
-			foreach_neighbor(b, m->coord, {
-				if (board_at(b, c) == S_NONE || board_at(b, c) == S_OFFBOARD)
-					continue;
-				group_t g = group_at(b, c);
-				if (board_group_info(b, g).libs != 1)
-					continue;
-				if (ladder_catches(p, b, m->coord, g))
-					return 0.0;
-			});
+		if (ladder) {
+			if (PLDEBUGL(5))
+				fprintf(stderr, "0.0: ladder\n");
+			return 0.0;
 		}
 	}
 
 	/* Pattern check */
-	if (pp->patternrate > fast_random(100)) {
-		if (test_pattern_here(p, moggy_patterns, b, m))
+	if (pp->patternrate) {
+		if (test_pattern_here(p, moggy_patterns, b, m)) {
+			if (PLDEBUGL(5))
+				fprintf(stderr, "1.0: pattern\n");
 			return 1.0;
+		}
 	}
 
 	return NAN;
+}
+
+bool
+playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
+{
+	struct moggy_policy *pp = p->data;
+
+	/* The idea is simple for now - never allow self-atari moves.
+	 * They suck in general, but this also permits us to actually
+	 * handle seki in the playout stage. */
+	/* FIXME: We must allow self-atari in some basic nakade shapes. */
+#if 0
+	if (is_selfatari(b, m->color, m->coord))
+		fprintf(stderr, "__ Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
+#endif
+	return fast_random(100) >= pp->selfatarirate || !is_selfatari(b, m->color, m->coord);
 }
 
 
@@ -663,10 +687,12 @@ playout_moggy_init(char *arg)
 	p->data = pp;
 	p->choose = playout_moggy_choose;
 	p->assess = playout_moggy_assess;
+	p->permit = playout_moggy_permit;
 
 	pp->lcapturerate = 90;
 	pp->capturerate = 90;
 	pp->patternrate = 90;
+	pp->selfatarirate = 90;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -687,6 +713,8 @@ playout_moggy_init(char *arg)
 				pp->capturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "patternrate") && optval) {
 				pp->patternrate = atoi(optval);
+			} else if (!strcasecmp(optname, "selfatarirate") && optval) {
+				pp->selfatarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladders")) {
 				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
