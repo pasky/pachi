@@ -16,5 +16,7 @@ c7249	ucb1amaf	34.2% (+-4.8%)
 9367d	ucb1amaf	37% (+-8%)
 ce540	ucb1amaf*	42% (+-2%)	selfatarirate=0
 ce540	ucb1amaf	43% (+-2%)
-62592	ucb1amaf*	48.5% (+-5%)	selfatarirate=0
+62592	ucb1amaf*	47% (+-2.5%)	selfatarirate=0
 62592	ucb1amaf	44% (+-2.5%)
+62592	ucb1amaf*#	45.2% (+-2.5%)	selfatarirate=0,rave_prior
+62592	ucb1amaf#	47.5% (+-2.5%)	rave_prior
