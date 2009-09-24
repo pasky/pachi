@@ -190,7 +190,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		conf = sqrt(log(node->u.playouts + node->prior.playouts));
 
 	// XXX: Stack overflow danger on big boards?
-	struct tree_node *nbest[256] = { node->children }; int nbests = 1;
+	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
 	float best_urgency = -9999;
 
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
