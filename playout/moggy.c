@@ -582,15 +582,6 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 			if (!g || board_group_info(b, g).libs != 1)
 				continue;
 
-			struct move_queue q; q.moves = 0;
-			group_atari_check(p, b, g, &q);
-			while (q.moves--)
-				if (q.move[q.moves] == m->coord) {
-					if (PLDEBUGL(5))
-						fprintf(stderr, "1.0: atari\n");
-					return 1.0;
-				}
-
 			/* _Never_ play here if this move plays out
 			 * a caught ladder. (Unless it captures another
 			 * group. :-) */
@@ -602,7 +593,17 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 				 * can afford it. */
 				if (m->color == board_at(b, c))
 					ladder = true;
+				continue;
 			}
+
+			struct move_queue q; q.moves = 0;
+			group_atari_check(p, b, g, &q);
+			while (q.moves--)
+				if (q.move[q.moves] == m->coord) {
+					if (PLDEBUGL(5))
+						fprintf(stderr, "1.0: atari\n");
+					return 1.0;
+				}
 		});
 
 		if (ladder) {
