@@ -322,6 +322,9 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 #endif
 
 	while (node) {
+		if (node->parent == NULL)
+			assert(tree->root_color == stone_other(child_color));
+
 		if (p->descend != ucb1_descend)
 			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 		update_node(p, node, result);

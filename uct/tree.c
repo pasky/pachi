@@ -36,6 +36,7 @@ tree_init(struct board *board, enum stone color)
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0);
 	t->root_symmetry = board->symmetry;
+	t->root_color = stone_other(color); // to research black moves, root will be white
 	return t;
 }
 

@@ -49,6 +49,7 @@ struct tree {
 	struct board *board;
 	struct tree_node *root;
 	struct board_symmetry root_symmetry;
+	enum stone root_color;
 
 	// Statistics
 	int max_depth;

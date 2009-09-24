@@ -124,9 +124,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	 * a random playout. */
 	struct tree_node *n = t->root;
 	enum stone node_color = stone_other(player_color);
+	assert(node_color == t->root_color);
+
 	int result;
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
 	int passes = is_pass(b->last_move.coord);
+
 	/* debug */
 	int depth = 0;
 	static char spaces[] = "\0                                                      ";
