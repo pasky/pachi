@@ -4,7 +4,7 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
 # -ffast-math breaks us
-CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=i686 -std=gnu99 -fomit-frame-pointer -frename-registers -pthread
+CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -fomit-frame-pointer -frename-registers -pthread
 SYS_CFLAGS=
 LDFLAGS=-lm -pthread
 
@@ -38,7 +38,7 @@ zzgo: $(OBJS) $(LOCALLIBS)
 .PHONY: zzgo-profiled
 zzgo-profiled:
 	@make clean all XLDFLAGS=-fprofile-generate XCFLAGS="-fprofile-generate -fomit-frame-pointer -frename-registers"
-	./zzgo games=5000 <genmove.gtp
+	./zzgo games=5000,no_book <genmove.gtp
 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
 
 # install-recursive?

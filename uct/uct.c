@@ -226,7 +226,8 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
-		tree_load(u->t, b, color);
+		if (!u->no_book)
+			tree_load(u->t, b, color);
 	}
 
 	/* XXX: We hope that the opponent didn't suddenly play
@@ -504,6 +505,8 @@ uct_state_init(char *arg)
 				u->threads = atoi(optval);
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				u->force_seed = atoi(optval);
+			} else if (!strcasecmp(optname, "no_book")) {
+				u->no_book = true;
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 			}
