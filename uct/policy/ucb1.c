@@ -99,6 +99,11 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 			best_urgency = urgency; nbests = 0;
 		}
 		if (urgency >= best_urgency) {
+			/* We want to always choose something else than a pass
+			 * in case of a tie. pass causes degenerative behaviour. */
+			if (nbests == 1 && is_pass(nbest[0]->coord)) {
+				nbests--;
+			}
 			nbest[nbests++] = ni;
 		}
 	}
