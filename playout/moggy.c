@@ -13,6 +13,8 @@
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
 
+/* Note that the context can be shared by multiple threads! */
+
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders;
 	int lcapturerate, capturerate, patternrate;
