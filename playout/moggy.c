@@ -213,7 +213,7 @@ pattern_gen(char *table, int pat, char *src, int srclen, int fixed_color)
 #warning gcc is stupid; ignore following out-of-bounds warnings
 
 static void
-pattern_genall(struct playout_policy *p, char src[][11], int src_n)
+patterns_gen(struct playout_policy *p, char src[][11], int src_n)
 {
 	struct moggy_policy *pp = p->data;
 
@@ -230,7 +230,7 @@ pattern_genall(struct playout_policy *p, char src[][11], int src_n)
 }
 
 static bool
-load_patterns(char src[][11], int src_n, char *filename)
+patterns_load(char src[][11], int src_n, char *filename)
 {
 	FILE *f = fopen("moggy.patterns", "r");
 	if (!f) return false;
@@ -255,17 +255,17 @@ error:
 }
 
 static void
-init_patterns(struct playout_policy *p)
+patterns_init(struct playout_policy *p)
 {
 	char src[moggy_patterns_src_n][11];
 
-	if (!load_patterns(src, moggy_patterns_src_n, "moggy.patterns")) {
+	if (!patterns_load(src, moggy_patterns_src_n, "moggy.patterns")) {
 		/* Use default pattern set. */
 		for (int i = 0; i < moggy_patterns_src_n; i++)
 			strcpy(src[i], moggy_patterns_src[i]);
 	}
 
-	pattern_genall(p, src, moggy_patterns_src_n);
+	patterns_gen(p, src, moggy_patterns_src_n);
 }
 
 
@@ -737,7 +737,7 @@ playout_moggy_init(char *arg)
 		}
 	}
 
-	init_patterns(p);
+	patterns_init(p);
 
 	return p;
 }
