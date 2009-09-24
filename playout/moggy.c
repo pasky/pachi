@@ -17,6 +17,11 @@ struct moggy_policy {
 	bool ladders, ladderassess, borderladders;
 	int lcapturerate, capturerate, patternrate;
 	int selfatarirate;
+
+	/* Hashtable: 2*8 bits (ignore middle point, 2 bits per intersection) */
+	/* Value: 0: no pattern, 1: black pattern,
+	 * 2: white pattern, 3: both patterns */
+	char patterns[65536];
 };
 
 #define MQL 64
@@ -103,10 +108,6 @@ static char moggy_patterns_src[][11] = {
 	"###" /* Mogo has "X" */,
 };
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
-
-/* Hashtable: 2*8 bits (ignore middle point, 2 bits per intersection) */
-/* Value: 0: no pattern, 1: black pattern, 2: white pattern, 3: both patterns */
-static char moggy_patterns[65536];
 
 static void
 pattern_record(char *table, char *str, int pat, int fixed_color)
@@ -210,8 +211,10 @@ pattern_gen(char *table, int pat, char *src, int srclen, int fixed_color)
 #warning gcc is stupid; ignore following out-of-bounds warnings
 
 static void
-pattern_genall(char src[][11], int src_n)
+pattern_genall(struct playout_policy *p, char src[][11], int src_n)
 {
+	struct moggy_policy *pp = p->data;
+
 	for (int i = 0; i < src_n; i++) {
 		//printf("<%s>\n", src[i]);
 		int fixed_color = 0;
@@ -220,7 +223,7 @@ pattern_genall(char src[][11], int src_n)
 			case 'O': fixed_color = S_WHITE; break;
 		}
 		//fprintf(stderr, "** %s **\n", src[i]);
-		pattern_gen(moggy_patterns, 0, src[i], 9, fixed_color);
+		pattern_gen(pp->patterns, 0, src[i], 9, fixed_color);
 	}
 }
 
@@ -249,13 +252,13 @@ error:
 	return false;
 }
 
-static void __attribute__((constructor))
-init_patterns(void)
+static void
+init_patterns(struct playout_policy *p)
 {
 	/* Replaces default patterns if the file is found, no-op otherwise. */
 	load_patterns(moggy_patterns_src, moggy_patterns_src_n, "moggy.patterns");
 
-	pattern_genall(moggy_patterns_src, moggy_patterns_src_n);
+	pattern_genall(p, moggy_patterns_src, moggy_patterns_src_n);
 }
 
 
@@ -290,7 +293,7 @@ apply_pattern_here(struct playout_policy *p, char *hashtable,
 static coord_t
 apply_pattern(struct playout_policy *p, struct board *b, struct move *m)
 {
-	//struct moggy_policy *pp = p->data;
+	struct moggy_policy *pp = p->data;
 	struct move_queue q;
 	q.moves = 0;
 
@@ -301,12 +304,12 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m)
 	foreach_neighbor(b, m->coord, {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
-			apply_pattern_here(p, moggy_patterns, b, &m2, &q);
+			apply_pattern_here(p, pp->patterns, b, &m2, &q);
 	});
 	foreach_diag_neighbor(b, m->coord) {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_at(b, c) == S_NONE)
-			apply_pattern_here(p, moggy_patterns, b, &m2, &q);
+			apply_pattern_here(p, pp->patterns, b, &m2, &q);
 	} foreach_diag_neighbor_end;
 
 	if (PLDEBUGL(5)) {
@@ -652,7 +655,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Pattern check */
 	if (pp->patternrate) {
-		if (test_pattern_here(p, moggy_patterns, b, m)) {
+		if (test_pattern_here(p, pp->patterns, b, m)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
 			return 1.0;
@@ -726,6 +729,8 @@ playout_moggy_init(char *arg)
 			}
 		}
 	}
+
+	init_patterns(p);
 
 	return p;
 }
