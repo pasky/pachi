@@ -435,7 +435,8 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
 			s->type, s->d, b->symmetry.type, b->symmetry.d);
 	}
-	tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
+	if (flip_horiz || flip_vert || flip_diag)
+		tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
 }
 
 
