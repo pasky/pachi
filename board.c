@@ -1147,6 +1147,39 @@ enemy_capture_gains_liberty:;
 	if (needs_capture && can_capture)
 		return false;
 
+	/* We are throwing-in to false eye:
+	 * X X X O X X X O X X X X X
+	 * X . * X * O . X * O O . X
+	 * # # # # # # # # # # # # # */
+	if (neighbor_count_at(b, to, stone_other(color))
+	    + neighbor_count_at(b, to, S_OFFBOARD) == 3) {
+		/* *Any space* we can throw a stone in. Is it
+		 * a false eye? */
+		if (board_is_false_eyelike(b, &to, stone_other(color))) {
+			assert(groupcts[color] <= 1);
+			/* Single-stone throw-in is ok. */
+			if (groupcts[color] == 0)
+				return false;
+			/* Bad throwin: we are connected to a group whose
+			 * other liberty is a connection out
+			 * X X O X X X O X
+			 * X . X . O O . X
+			 * # # # # # # # # */
+			group_t g = groupids[color][0];
+			assert(board_group_info(b, g).libs <= 2);
+			/* Suicide is not ok. */
+			if (board_group_info(b, g).libs == 1)
+				return true;
+			int lib2 = board_group_info(b, g).lib[0];
+			if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+			/* This is actually slightly more general than above,
+			 * and not perfect (the other group can be in atari),
+			 * but should be ok. */
+			if (neighbor_count_at(b, to, color) + neighbor_count_at(b, to, S_NONE) > 1)
+				return false;
+		}
+	}
+
 	/* No way to pull out, no way to connect out. */
 	return true;
 }
