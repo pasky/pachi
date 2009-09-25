@@ -1077,18 +1077,39 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			/* (i) is guaranteed; otherwise this move would not be
 			 * self-atari or the enemy group had >2 liberties. */
 			;
-			/* (ii) the other liberty has only stone_other(color)
-			 * || S_OFFBOARD neighbors and the stone neighbors
-			 * are all in atari or their other liberty is again
-			 * @to. */
+			/* (ii) let's see: */
 			int lib2 = board_group_info(b, g).lib[0];
 			if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
 			foreach_neighbor(b, lib2, {
-				if (board_at(b, c) == S_NONE || board_at(b, c) == color)
+				/* If the other liberty has empty neighbor,
+				 * it of course gained a liberty. */
+				if (board_at(b, c) == S_NONE)
 					goto enemy_capture_gains_liberty;
+				/* This neighbor of course does not contribute
+				 * a liberty. */
+				if (board_at(b, c) == S_OFFBOARD)
+					continue;
+				/* If the neighbor is of our color, it must
+				 * be our group; if it is a different group,
+				 * we won't allow the self-atari, it's better
+				 * to connect to that group. */
 				int g2 = group_at(b, c);
+				if (board_at(b, c) == color) {
+					/* Our group == one of the groups
+					 * we (@to) are connected to. */
+					int j;
+					for (j = 0; j < 4; j++)
+						if (groupids[color][j] == g2)
+							break;
+					if (j == 4)
+						goto enemy_capture_gains_liberty;
+				}
+				/* The neighbor is enemy color. It's ok if
+				 * it is in atari. */
 				if (board_group_info(b, g2).libs == 1)
 					continue;
+				/* Otherwise, it must have the exact same
+				 * liberties as the original enemy group. */
 				if (board_group_info(b, g2).libs > 2
 				    || board_group_info(b, g2).lib[0] == to
 				    || board_group_info(b, g2).lib[1] == to)
@@ -1097,6 +1118,14 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			return true;
 enemy_capture_gains_liberty:;
 		}
+
+		/* FIXME: We prohibit another "good self-atari" - eye
+		 * falsification:
+		 * O O O . .
+		 * X X O O .
+		 * X . X O .
+		 * X X X O O
+		 * X O * . . */
 	}
 
 	if (needs_capture && can_capture)
