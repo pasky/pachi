@@ -1070,6 +1070,9 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			/* ...or, we already have one indirect liberty provided
 			 * by a friendly group. */
 			can_capture = true;
+			/* ...or, it's a ko stone. */
+			if (neighbor_count_at(b, g, color) == 3)
+				return false;
 		}
 
 		/* There is another possibility - we can self-atari if it is
