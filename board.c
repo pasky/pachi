@@ -868,7 +868,8 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 bool
 board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 {
-	return (neighbor_count_at(board, *coord, eye_color) + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
+	return (neighbor_count_at(board, *coord, eye_color)
+	        + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
 }
 
 bool
@@ -882,6 +883,9 @@ board_is_false_eyelike(struct board *board, coord_t *coord, enum stone eye_color
 	foreach_diag_neighbor(board, *coord) {
 		color_diag_libs[(enum stone) board_at(board, c)]++;
 	} foreach_diag_neighbor_end;
+	/* For false eye, we need two enemy stones diagonally in the
+	 * middle of the board, or just one enemy stone at the edge
+	 * or in the corner. */
 	color_diag_libs[stone_other(eye_color)] += !!color_diag_libs[S_OFFBOARD];
 	return color_diag_libs[stone_other(eye_color)] >= 2;
 }
