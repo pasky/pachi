@@ -1019,6 +1019,7 @@ board_fast_score(struct board *board)
 bool
 is_selfatari(struct board *b, enum stone color, coord_t to)
 {
+	//fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
 	/* Assess if we actually gain any liberties by this escape route.
 	 * Note that this is not 100% as we cannot check whether we are
 	 * connecting out or just to ourselves. */
@@ -1033,7 +1034,15 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	if (groupcts[S_NONE] > 1)
 		return false;
 
-	bool needs_capture = false, can_capture = false;
+	/* We may be looking for one extra liberty.
+	 * In that case, @needs_more_lib is id of group
+	 * already providing one, don't consider it again. */
+	group_t needs_more_lib = 0;
+	/* ID of the first liberty, providing it again is not
+	 * interesting. */
+	coord_t needs_more_lib_except = 0;
+	/* If we can gain a liberty by capturing a group. */
+	bool can_capture = false;
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
@@ -1041,19 +1050,29 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		if (g && board_group_info(b, g).libs > 1) {
 			/* We could self-atari the group here. */
 			if (board_group_info(b, g).libs == 2) {
-				/* We need to contribute a liberty, and
+				/* We need to get another liberty, and
 				 * it must not be the other liberty of
 				 * the group. */
-				if (groupcts[S_NONE] > 0) {
-					int lib2 = board_group_info(b, g).lib[0];
-					if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
-					/* Non-adjecent? */
-					if (abs(lib2 - to) != 1 && abs(lib2 - to) != board_size(b))
-						return false;
-				}
+				int lib2 = board_group_info(b, g).lib[0];
+				if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+				/* Maybe we already looked at another
+				 * group providing one liberty? */
+				if (needs_more_lib && needs_more_lib != g
+				    && needs_more_lib_except != lib2)
+					return false;
+				/* Can we get the liberty locally? */
+				/* Yes if we are route to more liberties... */
+				if (groupcts[S_NONE] > 1)
+					return false;
+				/* ...or one liberty, but not lib2. */
+				if (groupcts[S_NONE] > 0
+				    && abs(lib2 - to) != 1
+				    && abs(lib2 - to) != board_size(b))
+					return false;
 				/* ...ok, then we can still contribute a liberty
 				 * later by capturing something. */
-				needs_capture = true;
+				needs_more_lib = g;
+				needs_more_lib_except = lib2;
 			} else {
 				return false;
 			}
@@ -1144,7 +1163,8 @@ enemy_capture_gains_liberty:;
 		}
 	}
 
-	if (needs_capture && can_capture)
+	//fprintf(stderr, "%d,%d\n", needs_more_lib, can_capture);
+	if (needs_more_lib && can_capture)
 		return false;
 
 	/* We are throwing-in to false eye:
