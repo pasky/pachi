@@ -1041,8 +1041,8 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	/* ID of the first liberty, providing it again is not
 	 * interesting. */
 	coord_t needs_more_lib_except = 0;
-	/* If we can gain a liberty by capturing a group. */
-	bool can_capture = false;
+	/* We may be able to gain a liberty by capturing this group. */
+	group_t can_capture = 0;
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
@@ -1086,12 +1086,14 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			 * more than 1 stone. */
 			if (groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
 				return false;
-			/* ...or, we already have one indirect liberty provided
-			 * by a friendly group. */
-			can_capture = true;
 			/* ...or, it's a ko stone. */
 			if (neighbor_count_at(b, g, color) == 3)
 				return false;
+			/* ...or, we already have one indirect liberty provided
+			 * by another group. */
+			if (can_capture && can_capture != g)
+				return false;
+			can_capture = g;
 		}
 
 		/* There is another possibility - we can self-atari if it is
