@@ -1064,6 +1064,39 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			 * by a friendly group. */
 			can_capture = true;
 		}
+
+		/* There is another possibility - we can self-atari if it is
+		 * a nakade: we put an enemy group in atari. */
+		/* TODO: Allow to only nakade if the created shape is dead
+		 * (http://senseis.xmp.net/?Nakade). */
+		if (g && board_group_info(b, g).libs == 2) {
+			/* We must make sure the other liberty of that group:
+			 * (i) will capture our group
+			 * (ii) filling it to capture our group will not gain
+			 * any extra liberties */
+			/* (i) is guaranteed; otherwise this move would not be
+			 * self-atari or the enemy group had >2 liberties. */
+			;
+			/* (ii) the other liberty has only stone_other(color)
+			 * || S_OFFBOARD neighbors and the stone neighbors
+			 * are all in atari or their other liberty is again
+			 * @to. */
+			int lib2 = board_group_info(b, g).lib[0];
+			if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+			foreach_neighbor(b, lib2, {
+				if (board_at(b, c) == S_NONE || board_at(b, c) == color)
+					goto enemy_capture_gains_liberty;
+				int g2 = group_at(b, c);
+				if (board_group_info(b, g2).libs == 1)
+					continue;
+				if (board_group_info(b, g2).libs > 2
+				    || board_group_info(b, g2).lib[0] == to
+				    || board_group_info(b, g2).lib[1] == to)
+					goto enemy_capture_gains_liberty;
+			});
+			return true;
+enemy_capture_gains_liberty:;
+		}
 	}
 
 	if (needs_capture && can_capture)
