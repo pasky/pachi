@@ -266,7 +266,8 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 		if (i > 0 && !(i % 500)) {
 			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
-			if (best && best->u.playouts >= 5000 && best->u.value >= u->loss_threshold)
+			if (best && ((best->u.playouts >= 5000 && best->u.value >= u->loss_threshold)
+			             || (best->u.playouts >= 500 && best->u.value >= 0.95)))
 				break;
 		}
 
