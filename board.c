@@ -1034,6 +1034,11 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	if (groupcts[S_NONE] > 1)
 		return false;
 
+	/* Quickly weed out suicides. */
+	if (groupcts[stone_other(color)] + groupcts[S_OFFBOARD] == 4 &&
+	    board_group_info(b, groupids[stone_other(color)][0]).libs > 1)
+		return true;
+
 	/* We may be looking for one extra liberty.
 	 * In that case, @needs_more_lib is id of group
 	 * already providing one, don't consider it again. */
