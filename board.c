@@ -872,13 +872,9 @@ board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 }
 
 bool
-board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color)
+board_is_false_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 {
 	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
-
-	if (likely(neighbor_count_at(board, *coord, eye_color) + neighbor_count_at(board, *coord, S_OFFBOARD) < 4)) {
-		return false;
-	}
 
 	/* XXX: We attempt false eye detection but we will yield false
 	 * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
@@ -887,7 +883,14 @@ board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color
 		color_diag_libs[(enum stone) board_at(board, c)]++;
 	} foreach_diag_neighbor_end;
 	color_diag_libs[stone_other(eye_color)] += !!color_diag_libs[S_OFFBOARD];
-	return likely(color_diag_libs[stone_other(eye_color)] < 2);
+	return color_diag_libs[stone_other(eye_color)] >= 2;
+}
+
+bool
+board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color)
+{
+	return board_is_eyelike(board, coord, eye_color)
+		&& !board_is_false_eyelike(board, coord, eye_color);
 }
 
 enum stone
