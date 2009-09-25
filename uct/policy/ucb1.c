@@ -132,8 +132,8 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	 * X.OOOO
 	 * .XXXX. */
 	if (board_is_one_point_eye(b, &node->coord, color)) {
-		node->prior.playouts += 0;
-		node->prior.wins += pp->eqex;
+		node->prior.playouts += pp->eqex;
+		node->prior.wins += parity > 0 ? 0 : pp->eqex;
 	}
 
 	/* Q_{grandparent} */
