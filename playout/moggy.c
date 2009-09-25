@@ -464,10 +464,6 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, stru
 {
 	struct moggy_policy *pp = p->data;
 
-	/* Do not bother with kos. */
-	if (group_is_onestone(b, group))
-		return;
-
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
 
@@ -475,6 +471,11 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, stru
 	if (PLDEBUGL(5))
 		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
+
+	/* Do not bother with kos. */
+	if (group_is_onestone(b, group)
+	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4)
+		return;
 
 	/* Can we capture some neighbor? */
 	foreach_in_group(b, group) {
