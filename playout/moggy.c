@@ -660,6 +660,15 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 		}
 	}
 
+	/* Is this move a self-atari? */
+	if (pp->selfatarirate) {
+		if (is_selfatari(b, m->color, m->coord)) {
+			if (PLDEBUGL(5))
+				fprintf(stderr, "0.0: self-atari\n");
+			return 0.0;
+		}
+	}
+
 	/* Pattern check */
 	if (pp->patternrate) {
 		if (test_pattern_here(p, pp->patterns, b, m)) {
