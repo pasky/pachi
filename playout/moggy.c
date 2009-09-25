@@ -98,10 +98,10 @@ static char moggy_patterns_src[][11] = {
 	"?XO"
 	"x.x" /* Mogo has "x.?" */
 	"###" /* Mogo has "X" */,
-	/* side pattern - weirdcut (SUSPICIOUS) */
+	/* side pattern - throw-in (SUSPICIOUS) */
 #if 0
 	"?OX"
-	"?.O"
+	"o.O"
 	"?##" "X",
 #endif
 	/* side pattern - cut (SUSPICIOUS) */
