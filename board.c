@@ -1138,7 +1138,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 				    || board_group_info(b, g2).lib[1] == to)
 					goto enemy_capture_gains_liberty;
 			});
-			return true;
+			return false;
 
 enemy_capture_gains_liberty:;
 		}
