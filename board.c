@@ -1171,8 +1171,10 @@ enemy_capture_gains_liberty:;
 	 * X X X O X X X O X X X X X
 	 * X . * X * O . X * O O . X
 	 * # # # # # # # # # # # # # */
-	if (neighbor_count_at(b, to, stone_other(color))
-	    + neighbor_count_at(b, to, S_OFFBOARD) == 3) {
+	/* We cannot sensibly throw-in into a corner. */
+	if (neighbor_count_at(b, to, S_OFFBOARD) < 2
+	    && neighbor_count_at(b, to, stone_other(color))
+	       + neighbor_count_at(b, to, S_OFFBOARD) == 3) {
 		/* *Any space* we can throw a stone in. Is it
 		 * a false eye? */
 		if (board_is_false_eyelike(b, &to, stone_other(color))) {
