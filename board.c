@@ -1073,26 +1073,39 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			/* We must make sure the other liberty of that group:
 			 * (i) will capture our group
 			 * (ii) filling it to capture our group will not gain
-			 * any extra liberties */
+			 * safety */
+
 			/* (i) is guaranteed; otherwise this move would not be
 			 * self-atari or the enemy group had >2 liberties. */
 			;
-			/* (ii) let's see: */
+
+			/* (ii) let's look at the liberty neighbors: */
 			int lib2 = board_group_info(b, g).lib[0];
 			if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
 			foreach_neighbor(b, lib2, {
-				/* If the other liberty has empty neighbor,
-				 * it of course gained a liberty. */
-				if (board_at(b, c) == S_NONE)
-					goto enemy_capture_gains_liberty;
 				/* This neighbor of course does not contribute
-				 * a liberty. */
+				 * anything to the enemy. */
 				if (board_at(b, c) == S_OFFBOARD)
+					continue;
+				/* If the other liberty has empty neighbor,
+				 * it may not yet be an escape path.
+				 * This enables eyes falsification:
+				 * O O O . .
+				 * X X O O .
+				 * X . X O .
+				 * X X X O O
+				 * X O * . . */
+				if (board_at(b, c) == S_NONE)
 					continue;
 				/* If the neighbor is of our color, it must
 				 * be our group; if it is a different group,
-				 * we won't allow the self-atari, it's better
-				 * to connect to that group. */
+				 * we won't allow the self-atari. */
+				/* This is the main point of having so
+				 * convoluted nakade detection. */
+				/* X X X X We will not allow play on 'a',
+				 * X X a X because it would capture two
+				 * X O b X different groups, forming two
+				 * X X X X eyes. */
 				int g2 = group_at(b, c);
 				if (board_at(b, c) == color) {
 					/* Our group == one of the groups
@@ -1105,7 +1118,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 						goto enemy_capture_gains_liberty;
 				}
 				/* The neighbor is enemy color. It's ok if
-				 * it is in atari. */
+				 * this is its only liberty. */
 				if (board_group_info(b, g2).libs == 1)
 					continue;
 				/* Otherwise, it must have the exact same
@@ -1116,16 +1129,9 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 					goto enemy_capture_gains_liberty;
 			});
 			return true;
+
 enemy_capture_gains_liberty:;
 		}
-
-		/* FIXME: We prohibit another "good self-atari" - eye
-		 * falsification:
-		 * O O O . .
-		 * X X O O .
-		 * X . X O .
-		 * X X X O O
-		 * X O * . . */
 	}
 
 	if (needs_capture && can_capture)
