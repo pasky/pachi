@@ -1283,8 +1283,12 @@ invalid_nakade:;
 		/* This is actually slightly more general than above,
 		 * and not perfect (the other group can be in atari),
 		 * but should be ok. */
-		if (neighbor_count_at(b, to, color) + neighbor_count_at(b, to, S_NONE) > 1)
-			return false;
+		if (neighbor_count_at(b, lib2, stone_other(color))
+		    + neighbor_count_at(b, lib2, S_OFFBOARD) < 3)
+			goto invalid_throwin;
+
+		return false;
+invalid_throwin:;
 	}
 
 	//fprintf(stderr, "no throw-in group\n");
