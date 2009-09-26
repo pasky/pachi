@@ -424,7 +424,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 		return false;
 	}
 
-#define ladder_check(xd1_, yd1_, xd2_, yd2_)	\
+#define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
 	if (board_atxy(b, x, y) != S_NONE) { \
 		/* Did we hit a stone when playing out ladder? */ \
 		if (ladder_catcher(b, x, y, lcolor)) \
@@ -434,21 +434,32 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 	} else { \
 		/* No. So we are at new position. \
 		 * We need to check indirect ladder breakers. */ \
-		/* . 2 x . . \
+		/* . 2 x 3 . \
 		 * . x o O 1 <- only at O we can check for o at 2 \
 		 * x o o x .    otherwise x at O would be still deadly \
 		 * o o x . . \
 		 * We check for o and x at 1, these are vital. \
 		 * We check only for o at 2; x at 2 would mean we \
 		 * need to fork (one step earlier). */ \
-		enum stone s1 = board_atxy(b, x + (xd1_), y + (yd1_)); \
+		coord_t c1 = coord_xy(b, x + (xd1_), y + (yd1_)); \
+		enum stone s1 = board_at(b, c1); \
 		if (s1 == lcolor) return false; \
-		if (s1 == stone_other(lcolor)) return true; \
+		if (s1 == stone_other(lcolor)) { \
+			/* One more thing - if the position at 3 is \
+			 * friendly and safe, we escaped anyway! */ \
+			coord_t c3 = coord_xy(b, x + (xd3_), y + (yd3_)); \
+			return board_at(b, c3) != lcolor \
+			       || board_group_info(b, group_at(b, c3)).libs < 1; \
+				return false; \
+		} \
 		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
 		if (s2 == lcolor) return false; \
+		/* Then, can X actually "play" 1 in the ladder? */ \
+		if (neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) \
+			return false; /* It would be self-atari! */ \
 	}
-#define ladder_horiz	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d horiz step %d\n", x, y, xd); x += xd; ladder_check(xd, 0, -2 * xd, yd); } while (0)
-#define ladder_vert	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d vert step %d\n", x, y, yd); y += yd; ladder_check(0, yd, xd, -2 * yd); } while (0)
+#define ladder_horiz	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d horiz step (%d,%d)\n", x, y, xd, yd); x += xd; ladder_check(xd, 0, -2 * xd, yd, 0, yd); } while (0)
+#define ladder_vert	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d vert step of (%d,%d)\n", x, y, xd, yd); y += yd; ladder_check(0, yd, xd, -2 * yd, xd, 0); } while (0)
 
 	if (ladder_catcher(b, x - xd, y, lcolor))
 		ladder_horiz;
@@ -707,6 +718,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 #if 0
+	fprintf(stderr, "__ sar test? %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
 	if (is_bad_selfatari(b, m->color, m->coord))
 		fprintf(stderr, "__ Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
 #endif
