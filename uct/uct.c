@@ -226,7 +226,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
-		if (!u->no_book)
+		if (!u->no_book && !b->moves && color == S_BLACK)
 			tree_load(u->t, b, color);
 	}
 
