@@ -7,19 +7,29 @@ Template:
 for i in *.dat; do ../../gogui-1.1.10/bin/gogui-twogtp -force -analyze $i; done
 
 ead8e	ucb1amaf	16.5% (+-4.5%)
+
 b2185	ucb1amaf	50% (+-6%)
+
 75fff	ucb1amaf	49% (+-4%)
+
 c5bea	ucb1amaf	42.5% (+-2.5%)
+
 95bf3	ucb1amaf	25.2% (+-4%)
+
 c7249	ucb1amaf	34.2% (+-4.8%)
+
 9367d	ucb1amaf	37% (+-8%)
+
 ce540	ucb1amaf*	42% (+-2%)	selfatarirate=0
 ce540	ucb1amaf	43% (+-2%)
+
 62592	ucb1amaf*	47% (+-2.5%)	selfatarirate=0
 62592	ucb1amaf	44% (+-2.5%)
 62592	ucb1amaf*#	45.2% (+-2.5%)	selfatarirate=0,rave_prior
 62592	ucb1amaf#	47.5% (+-2.5%)	rave_prior
+
 1a1eb	ucb1		15% (+-2%)	selfatarirate=0:capturerate=0:lcapturerate=0
+
 6e22f	ucb1amaf	49.5% (+-2.5%)
 6e22f	ucb1amaf*0	48% (+-2.5%)	rave_equiv=6000
 6e22f	ucb1amaf*1	49% (+-2.5%)	rave_equiv=500
@@ -30,5 +40,11 @@ ce540	ucb1amaf	43% (+-2%)
 6e22f	ucb1amaf#1	24.8% (+-2.5%)	explore_p=0.5
 6e22f	19x19 ucb1amaf	0%
 6e22f	19x19 ucb1amaf*	0%	explore_p=0.01,rave_equiv=100
+
 88fe2	ucb1amaf	50.8% (+-2.5%)
 88fe2	ucb1amaf*	49.5% (+-2.5%)	selfatarirate=0
+
+04b7b	ucb1amaf	60.5% (+-2.4%)
+04b7b	ucb1amaf*	60.2% (+-2.4%)	selfatarirate=0
+04b7b	ucb1amaf#	58.5% (+-2.5%)	rate=75
+04b7b	ucb1amaf%	54.5% (+-2.5%)	explore_p=0
