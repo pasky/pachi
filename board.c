@@ -1176,8 +1176,9 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			}
 
 			/* The neighbor is enemy color. It's ok if
-			 * this is its only liberty. */
-			if (board_group_info(b, g2).libs == 1)
+			 * it's still the same group or this is its
+			 * only liberty. */
+			if (g == g2 || board_group_info(b, g2).libs == 1)
 				continue;
 			/* Otherwise, it must have the exact same
 			 * liberties as the original enemy group. */
