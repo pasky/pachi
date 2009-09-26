@@ -1039,7 +1039,7 @@ board_fast_score(struct board *board)
 
 
 bool
-is_selfatari(struct board *b, enum stone color, coord_t to)
+is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 {
 	//fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
 	/* Assess if we actually gain any liberties by this escape route.

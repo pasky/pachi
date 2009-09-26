@@ -285,7 +285,7 @@ test_pattern_here(struct playout_policy *p, char *hashtable,
 		| (board_atxy(b, x, y + 1) << 2)
 		| (board_atxy(b, x + 1, y + 1));
 	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, hashtable[pat]);
-	return (hashtable[pat] & m->color) && !is_selfatari(b, m->color, m->coord);
+	return (hashtable[pat] & m->color) && !is_bad_selfatari(b, m->color, m->coord);
 }
 
 static void
@@ -498,7 +498,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 				continue;
 			/* Make sure capturing the group will actually
 			 * do us any good. */
-			else if (is_selfatari(b, to_play, capture))
+			else if (is_bad_selfatari(b, to_play, capture))
 				continue;
 
 			q->move[q->moves++] = capture;
@@ -511,7 +511,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		return;
 
 	/* Do not suicide... */
-	if (is_selfatari(b, color, lib))
+	if (is_bad_selfatari(b, color, lib))
 		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
@@ -679,7 +679,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Is this move a self-atari? */
 	if (pp->selfatarirate) {
-		if (is_selfatari(b, m->color, m->coord)) {
+		if (is_bad_selfatari(b, m->color, m->coord)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: self-atari\n");
 			return 0.0;
@@ -707,10 +707,10 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 #if 0
-	if (is_selfatari(b, m->color, m->coord))
+	if (is_bad_selfatari(b, m->color, m->coord))
 		fprintf(stderr, "__ Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
 #endif
-	return fast_random(100) >= pp->selfatarirate || !is_selfatari(b, m->color, m->coord);
+	return fast_random(100) >= pp->selfatarirate || !is_bad_selfatari(b, m->color, m->coord);
 }
 
 

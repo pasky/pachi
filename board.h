@@ -226,9 +226,12 @@ float board_official_score(struct board *board);
 /* Compare number of stones + 1pt eyes. */
 float board_fast_score(struct board *board);
 
-/* Check if this move is self-atari. This also in fact assesses if it is
- * desirable to pull out from atari by this move. */
-bool is_selfatari(struct board *b, enum stone color, coord_t to);
+/* Check if this move is undesirable self-atari (resulting group would have
+ * only single liberty and not capture anything; ko is allowed); we mostly
+ * want to avoid these moves. The function actually does a rather elaborate
+ * tactical check, allowing self-atari moves that are nakade, eye falsification
+ * or throw-ins. */
+bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
 
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(struct board *b, coord_t coord, int distance);
