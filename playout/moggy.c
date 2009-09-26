@@ -310,12 +310,12 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m)
 
 	foreach_neighbor(b, m->coord, {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
-		if (board_at(b, c) == S_NONE)
+		if (board_is_valid_move(b, &m2))
 			apply_pattern_here(p, pp->patterns, b, &m2, &q);
 	});
 	foreach_diag_neighbor(b, m->coord) {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
-		if (board_at(b, c) == S_NONE)
+		if (board_is_valid_move(b, &m2))
 			apply_pattern_here(p, pp->patterns, b, &m2, &q);
 	} foreach_diag_neighbor_end;
 
@@ -460,9 +460,13 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 
 
 static void
-group_atari_check(struct playout_policy *p, struct board *b, group_t group, struct move_queue *q)
+group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
+	int qmoves_prev = q->moves;
+
+	/* We don't use @to_play almost anywhere since any moves here are good
+	 * for both defender and attacker. */
 
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
@@ -483,22 +487,28 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, stru
 			if (board_at(b, c) != stone_other(color)
 			    || board_group_info(b, group_at(b, c)).libs > 1)
 				continue;
+
+			coord_t capture = board_group_info(b, group_at(b, c)).lib[0];
 			if (PLDEBUGL(6))
-				fprintf(stderr, "can capture group %d\n", group_at(b, c));
-			/* If we are saving our group, capture! */
-			if (b->last_move.color == stone_other(color))
-				q->move[q->moves++] = board_group_info(b, group_at(b, c)).lib[0];
-			else /* If we chase the group, capture it now! */
-				q->move[q->moves++] = lib;
+				fprintf(stderr, "can capture group %d (%s)?\n",
+					group_at(b, c), coord2sstr(capture, b));
+			struct move m; m.color = to_play; m.coord = capture;
+			/* Does that move even make sense? */
+			if (!board_is_valid_move(b, &m))
+				continue;
 			/* Make sure capturing the group will actually
-			 * expand our liberties if we are filling our
-			 * last liberty. */
-			if (q->move[q->moves - 1] == lib && is_selfatari(b, color, lib))
-				q->moves--;
-			else
-				mq_nodup(q);
+			 * do us any good. */
+			else if (is_selfatari(b, to_play, capture))
+				continue;
+
+			q->move[q->moves++] = capture;
+			mq_nodup(q);
 		});
 	} foreach_in_group_end;
+
+	struct move m; m.color = to_play; m.coord = lib;
+	if (!board_is_valid_move(b, &m))
+		return;
 
 	/* Do not suicide... */
 	if (is_selfatari(b, color, lib))
@@ -513,12 +523,18 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, stru
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...no ladder\n");
 
+	if (to_play != color) {
+		/* We are the attacker! In that case, throw away the moves
+		 * that defend our groups, since we can capture the culprit. */
+		q->moves = qmoves_prev;
+	}
+
 	q->move[q->moves++] = lib;
 	mq_nodup(q);
 }
 
 static coord_t
-global_atari_check(struct playout_policy *p, struct board *b)
+global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct move_queue q;
 	q.moves = 0;
@@ -528,12 +544,12 @@ global_atari_check(struct playout_policy *p, struct board *b)
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), &q);
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q);
 		if (q.moves > 0)
 			return q.move[fast_random(q.moves)];
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), &q);
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q);
 		if (q.moves > 0)
 			return q.move[fast_random(q.moves)];
 	}
@@ -548,14 +564,14 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(p, b, group_at(b, m->coord), &q);
+		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), &q);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(p, b, g, &q);
+		group_atari_check(p, b, g, stone_other(m->color), &q);
 	});
 
 	if (PLDEBUGL(5)) {
@@ -600,7 +616,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
-		c = global_atari_check(p, b);
+		c = global_atari_check(p, b, to_play);
 		if (!is_pass(c))
 			return c;
 	}
@@ -645,7 +661,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 			}
 
 			struct move_queue q; q.moves = 0;
-			group_atari_check(p, b, g, &q);
+			group_atari_check(p, b, g, m->color, &q);
 			while (q.moves--)
 				if (q.move[q.moves] == m->coord) {
 					if (PLDEBUGL(5))
@@ -708,10 +724,9 @@ playout_moggy_init(char *arg)
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
 
-	pp->lcapturerate = 90;
-	pp->capturerate = 90;
-	pp->patternrate = 90;
-	pp->selfatarirate = 90;
+	int rate = 90;
+
+	pp->lcapturerate = pp->capturerate = pp->patternrate = pp->selfatarirate = -1;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -734,6 +749,8 @@ playout_moggy_init(char *arg)
 				pp->patternrate = atoi(optval);
 			} else if (!strcasecmp(optname, "selfatarirate") && optval) {
 				pp->selfatarirate = atoi(optval);
+			} else if (!strcasecmp(optname, "rate") && optval) {
+				rate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladders")) {
 				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
@@ -745,6 +762,10 @@ playout_moggy_init(char *arg)
 			}
 		}
 	}
+	if (pp->lcapturerate == -1) pp->lcapturerate = rate;
+	if (pp->capturerate == -1) pp->capturerate = rate;
+	if (pp->patternrate == -1) pp->patternrate = rate;
+	if (pp->selfatarirate == -1) pp->selfatarirate = rate;
 
 	patterns_init(p);
 

@@ -153,6 +153,7 @@ struct board {
 #define group_at(b_, c) ((b_)->g[coord_raw(c)])
 #define group_atxy(b_, x, y) ((b_)->g[(x) + board_size(b_) * (y)])
 
+/* Warning! Neighbor count is kept up-to-date for S_NONE! */
 #define neighbor_count_at(b_, coord, color) ((b_)->n[coord_raw(coord)].colors[(enum stone) color])
 #define set_neighbor_count_at(b_, coord, color, count) (neighbor_count_at(b_, coord, color) = (count))
 #define inc_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)++)
@@ -191,6 +192,9 @@ int board_play(struct board *board, struct move *m);
  * supply your own permit function. */
 typedef bool (*ppr_permit)(void *data, struct board *b, struct move *m);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
+
+/* Returns true if given move can be played. */
+bool board_is_valid_move(struct board *b, struct move *m);
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);

@@ -347,6 +347,9 @@ board_handicap_stone(struct board *board, int x, int y, FILE *f)
 	coord_xy(m.coord, x, y, board);
 
 	board_play(board, &m);
+	/* Simulate white passing; otherwise, UCT search can get confused since
+	 * tree depth parity won't match the color to move. */
+	board->moves++;
 
 	char *str = coord2str(m.coord, board);
 	if (DEBUGL(1))
@@ -866,6 +869,25 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 
 
 bool
+board_is_valid_move(struct board *board, struct move *m)
+{
+	if (board_at(board, m->coord) != S_NONE)
+		return false;
+	if (!board_is_eyelike(board, &m->coord, stone_other(m->color)))
+		return true;
+	/* Play within {true,false} eye-ish formation */
+	if (board->ko.coord == m->coord && board->ko.color == m->coord)
+		return false;
+	int groups_in_atari = 0;
+	foreach_neighbor(board, m->coord, {
+		group_t g = group_at(board, c);
+		groups_in_atari += (board_group_info(board, g).libs == 1);
+	});
+	return !!groups_in_atari;
+}
+
+
+bool
 board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 {
 	return (neighbor_count_at(board, *coord, eye_color)
@@ -1034,177 +1056,264 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	if (groupcts[S_NONE] > 1)
 		return false;
 
-	/* We may be looking for one extra liberty.
+	/* Quickly weed out suicides. */
+	if (board_is_one_point_eye(b, &to, stone_other(color))
+	    && board_group_info(b, groupids[stone_other(color)][0]).libs > 1)
+		return true;
+
+	/* This is set if this move puts a group out of _all_
+	 * liberties; we need to watch out for snapback then. */
+	bool friend_has_no_libs = false;
+	/* We may have one liberty, but be looking for one more.
 	 * In that case, @needs_more_lib is id of group
 	 * already providing one, don't consider it again. */
 	group_t needs_more_lib = 0;
 	/* ID of the first liberty, providing it again is not
 	 * interesting. */
 	coord_t needs_more_lib_except = 0;
-	/* We may be able to gain a liberty by capturing this group. */
-	group_t can_capture = 0;
+
+	/* Examine friendly groups: */
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
 		group_t g = groupids[color][i];
-		if (g && board_group_info(b, g).libs > 1) {
-			/* We could self-atari the group here. */
-			if (board_group_info(b, g).libs == 2) {
-				/* We need to get another liberty, and
-				 * it must not be the other liberty of
-				 * the group. */
-				int lib2 = board_group_info(b, g).lib[0];
-				if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
-				/* Maybe we already looked at another
-				 * group providing one liberty? */
-				if (needs_more_lib && needs_more_lib != g
-				    && needs_more_lib_except != lib2)
-					return false;
-				/* Can we get the liberty locally? */
-				/* Yes if we are route to more liberties... */
-				if (groupcts[S_NONE] > 1)
-					return false;
-				/* ...or one liberty, but not lib2. */
-				if (groupcts[S_NONE] > 0
-				    && abs(lib2 - to) != 1
-				    && abs(lib2 - to) != board_size(b))
-					return false;
-				/* ...ok, then we can still contribute a liberty
-				 * later by capturing something. */
-				needs_more_lib = g;
-				needs_more_lib_except = lib2;
-			} else {
+		if (!g) continue;
+
+		if (board_group_info(b, g).libs == 1) {
+			if (!needs_more_lib)
+				friend_has_no_libs = true;
+			// or we already have a friend with 1 lib
+			continue;
+		}
+
+		/* Could we self-atari the group here? */
+		if (board_group_info(b, g).libs > 2)
+			return false;
+
+		/* We need to have another liberty, and
+		 * it must not be the other liberty of
+		 * the group. */
+		int lib2 = board_group_info(b, g).lib[0];
+		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+		/* Maybe we already looked at another
+		 * group providing one liberty? */
+		if (needs_more_lib && needs_more_lib != g
+		    && needs_more_lib_except != lib2)
+			return false;
+
+		/* Can we get the liberty locally? */
+		/* Yes if we are route to more liberties... */
+		if (groupcts[S_NONE] > 1)
+			return false;
+		/* ...or one liberty, but not lib2. */
+		if (groupcts[S_NONE] > 0
+		    && abs(lib2 - to) != 1
+		    && abs(lib2 - to) != board_size(b))
+			return false;
+
+		/* ...ok, then we can still contribute a liberty
+		 * later by capturing something. */
+		needs_more_lib = g;
+		needs_more_lib_except = lib2;
+		friend_has_no_libs = false;
+	}
+
+	//fprintf(stderr, "no friendly group\n");
+
+	/* We may be able to gain a liberty by capturing this group. */
+	group_t can_capture = 0;
+
+	/* Examine enemy groups: */
+	for (int i = 0; i < 4; i++) {
+		/* We can escape by capturing this group if it's in atari. */
+		group_t g = groupids[stone_other(color)][i];
+		if (!g || board_group_info(b, g).libs > 1)
+			continue;
+
+		/* But we need to get to at least two liberties by this;
+		 * we already have one outside liberty, or the group is
+		 * more than 1 stone (in that case, capturing is always
+		 * nice!). */
+		if (groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
+			return false;
+		/* ...or, it's a ko stone, */
+		if (neighbor_count_at(b, g, color) + neighbor_count_at(b, g, S_OFFBOARD) == 3) {
+			/* and we don't have a group to save: then, just taking
+			 * single stone means snapback! */
+			if (!friend_has_no_libs)
 				return false;
+		}
+		/* ...or, we already have one indirect liberty provided
+		 * by another group. */
+		if (needs_more_lib || (can_capture && can_capture != g))
+			return false;
+		can_capture = g;
+
+	}
+
+	//fprintf(stderr, "no cap group\n");
+
+	/* There is another possibility - we can self-atari if it is
+	 * a nakade: we put an enemy group in atari from the inside. */
+	/* This branch also allows eyes falsification:
+	 * O O O . .  (This is different from throw-in to false eye
+	 * X X O O .  checked below in that there is no X stone at the
+	 * X . X O .  right of the star point in this diagram.)
+	 * X X X O O
+	 * X O * . . */
+	/* TODO: Allow to only nakade if the created shape is dead
+	 * (http://senseis.xmp.net/?Nakade). */
+
+	/* The nakade is valid only if it's valid for all surrounding
+	 * enemy groups, thus we do the check only once - for the
+	 * first one. */
+	group_t g = groupids[stone_other(color)][0];
+	if (g && board_group_info(b, g).libs == 2) {
+		/* We must make sure the other liberty of that group:
+		 * (i) is an internal liberty
+		 * (ii) filling it to capture our group will not gain
+		 * safety */
+
+		/* Let's look at the other liberty neighbors: */
+		int lib2 = board_group_info(b, g).lib[0];
+		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+		foreach_neighbor(b, lib2, {
+			/* This neighbor of course does not contribute
+			 * anything to the enemy. */
+			if (board_at(b, c) == S_OFFBOARD)
+				continue;
+
+			/* If the other liberty has empty neighbor,
+			 * it must be the original liberty; otherwise,
+			 * since the whole group has only 2 liberties,
+			 * the other liberty may not be internal and
+			 * we are nakade'ing eyeless group from outside,
+			 * which is stupid. */
+			if (board_at(b, c) == S_NONE) {
+				if (c == to)
+					continue;
+				else
+					goto invalid_nakade;
+			}
+
+			int g2 = group_at(b, c);
+			/* If the neighbor is of our color, it must
+			 * be our group; if it is a different group,
+			 * we won't allow the self-atari. */
+			/* X X X X  We will not allow play on 'a',
+			 * X X a X  because 'b' would capture two
+			 * X O b X  different groups, forming two
+			 * X X X X  eyes. */
+			if (board_at(b, c) == color) {
+				/* Our group == one of the groups
+				 * we (@to) are connected to. */
+				int j;
+				for (j = 0; j < 4; j++)
+					if (groupids[color][j] == g2)
+						break;
+				if (j == 4)
+					goto invalid_nakade;
+				continue;
+			}
+
+			/* The neighbor is enemy color. It's ok if
+			 * it's still the same group or this is its
+			 * only liberty. */
+			if (g == g2 || board_group_info(b, g2).libs == 1)
+				continue;
+			/* Otherwise, it must have the exact same
+			 * liberties as the original enemy group. */
+			if (board_group_info(b, g2).libs > 2
+			    || board_group_info(b, g2).lib[0] == to
+			    || board_group_info(b, g2).lib[1] == to)
+				goto invalid_nakade;
+		});
+
+		/* Now, we must distinguish between nakade and eye
+		 * falsification; we must not falsify an eye by more
+		 * than two stones. */
+		if (groupcts[color] < 1 ||
+		    (groupcts[color] == 1 && group_is_onestone(b, groupids[color][0])))
+			return false;
+
+		/* We would create more than 2-stone group; in that
+		 * case, the liberty of our result must be lib2,
+		 * indicating this really is a nakade. */
+		for (int j = 0; j < 4; j++) {
+			group_t g2 = groupids[color][j];
+			if (!g2) continue;
+			assert(board_group_info(b, g2).libs <= 2);
+			if (board_group_info(b, g2).libs == 2) {
+				if (board_group_info(b, g2).lib[0] != lib2
+				    && board_group_info(b, g2).lib[1] != lib2)
+					goto invalid_nakade;
+			} else {
+				assert(board_group_info(b, g2).lib[0] == to);
 			}
 		}
 
-		/* We can escape by capturing this group if it's in atari. */
-		g = groupids[stone_other(color)][i];
-		if (g && board_group_info(b, g).libs == 1) {
-			/* But we need to get to at least two liberties by this;
-			 * we already have one outside liberty, or the group is
-			 * more than 1 stone. */
-			if (groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
-				return false;
-			/* ...or, it's a ko stone. */
-			if (neighbor_count_at(b, g, color) == 3)
-				return false;
-			/* ...or, we already have one indirect liberty provided
-			 * by another group. */
-			if (can_capture && can_capture != g)
-				return false;
-			can_capture = g;
-		}
-
-		/* There is another possibility - we can self-atari if it is
-		 * a nakade: we put an enemy group in atari. */
-		/* TODO: Allow to only nakade if the created shape is dead
-		 * (http://senseis.xmp.net/?Nakade). */
-		if (g && board_group_info(b, g).libs == 2) {
-			/* We must make sure the other liberty of that group:
-			 * (i) will capture our group
-			 * (ii) filling it to capture our group will not gain
-			 * safety */
-
-			/* (i) is guaranteed; otherwise this move would not be
-			 * self-atari or the enemy group had >2 liberties. */
-			;
-
-			/* (ii) let's look at the liberty neighbors: */
-			int lib2 = board_group_info(b, g).lib[0];
-			if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
-			foreach_neighbor(b, lib2, {
-				/* This neighbor of course does not contribute
-				 * anything to the enemy. */
-				if (board_at(b, c) == S_OFFBOARD)
-					continue;
-				/* If the other liberty has empty neighbor,
-				 * it may not yet be an escape path.
-				 * This enables eyes falsification:
-				 * O O O . .
-				 * X X O O .
-				 * X . X O .
-				 * X X X O O
-				 * X O * . . */
-				if (board_at(b, c) == S_NONE)
-					continue;
-				/* If the neighbor is of our color, it must
-				 * be our group; if it is a different group,
-				 * we won't allow the self-atari. */
-				/* This is the main point of having so
-				 * convoluted nakade detection. */
-				/* X X X X We will not allow play on 'a',
-				 * X X a X because it would capture two
-				 * X O b X different groups, forming two
-				 * X X X X eyes. */
-				int g2 = group_at(b, c);
-				if (board_at(b, c) == color) {
-					/* Our group == one of the groups
-					 * we (@to) are connected to. */
-					int j;
-					for (j = 0; j < 4; j++)
-						if (groupids[color][j] == g2)
-							break;
-					if (j == 4)
-						goto enemy_capture_gains_liberty;
-				}
-				/* The neighbor is enemy color. It's ok if
-				 * this is its only liberty. */
-				if (board_group_info(b, g2).libs == 1)
-					continue;
-				/* Otherwise, it must have the exact same
-				 * liberties as the original enemy group. */
-				if (board_group_info(b, g2).libs > 2
-				    || board_group_info(b, g2).lib[0] == to
-				    || board_group_info(b, g2).lib[1] == to)
-					goto enemy_capture_gains_liberty;
-			});
-			return false;
-
-enemy_capture_gains_liberty:;
-		}
-	}
-
-	//fprintf(stderr, "%d,%d\n", needs_more_lib, can_capture);
-	if (needs_more_lib && can_capture)
 		return false;
 
-	/* We are throwing-in to false eye:
+invalid_nakade:;
+	}
+
+	//fprintf(stderr, "no nakade group\n");
+
+	/* We can be throwing-in to false eye:
 	 * X X X O X X X O X X X X X
 	 * X . * X * O . X * O O . X
 	 * # # # # # # # # # # # # # */
 	/* We cannot sensibly throw-in into a corner. */
 	if (neighbor_count_at(b, to, S_OFFBOARD) < 2
 	    && neighbor_count_at(b, to, stone_other(color))
-	       + neighbor_count_at(b, to, S_OFFBOARD) == 3) {
-		/* *Any space* we can throw a stone in. Is it
-		 * a false eye? */
-		if (board_is_false_eyelike(b, &to, stone_other(color))) {
-			assert(groupcts[color] <= 1);
-			/* Single-stone throw-in is ok. */
-			if (groupcts[color] == 0)
-				return false;
-			/* Bad throwin: we are connected to a group whose
-			 * other liberty is a connection out
-			 * X X O X X X O X
-			 * X . X . O O . X
-			 * # # # # # # # # */
-			group_t g = groupids[color][0];
-			assert(board_group_info(b, g).libs <= 2);
-			/* Suicide is not ok. */
-			if (board_group_info(b, g).libs == 1)
-				return true;
-			int lib2 = board_group_info(b, g).lib[0];
-			if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
-			/* This is actually slightly more general than above,
-			 * and not perfect (the other group can be in atari),
-			 * but should be ok. */
-			if (neighbor_count_at(b, to, color) + neighbor_count_at(b, to, S_NONE) > 1)
-				return false;
+	       + neighbor_count_at(b, to, S_OFFBOARD) == 3
+	    && board_is_false_eyelike(b, &to, stone_other(color))) {
+		assert(groupcts[color] <= 1);
+		/* Single-stone throw-in may be ok... */
+		if (groupcts[color] == 0) {
+			/* O X .  There is one problem - when it's
+			 * . * X  actually not a throw-in!
+			 * # # #  */
+			foreach_neighbor(b, to, {
+				if (board_at(b, c) == S_NONE) {
+					/* Is the empty neighbor an escape path? */
+					/* (Note that one S_NONE neighbor is already @to.) */
+					if (neighbor_count_at(b, c, stone_other(color))
+					    + neighbor_count_at(b, c, S_OFFBOARD) < 2)
+						goto invalid_throwin;
+				}
+			});
+			return false;
 		}
+
+		/* Bad throwin: we are connected to a group whose
+		 * other liberty is a connection out
+		 * X X O X X X O X
+		 * X . X . O O . X
+		 * # # # # # # # # */
+		group_t g = groupids[color][0];
+		assert(board_group_info(b, g).libs <= 2);
+		/* Suicide is definitely NOT ok. */
+		if (board_group_info(b, g).libs == 1)
+			return true;
+
+		int lib2 = board_group_info(b, g).lib[0];
+		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+		/* This is actually slightly more general than above,
+		 * and not perfect (the other group can be in atari),
+		 * but should be ok. */
+		if (neighbor_count_at(b, lib2, stone_other(color))
+		    + neighbor_count_at(b, lib2, S_OFFBOARD) < 3)
+			goto invalid_throwin;
+
+		return false;
+invalid_throwin:;
 	}
 
-	/* No way to pull out, no way to connect out. */
+	//fprintf(stderr, "no throw-in group\n");
+
+	/* No way to pull out, no way to connect out. This really
+	 * is a bad self-atari! */
 	return true;
 }
 
