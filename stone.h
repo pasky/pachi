@@ -25,11 +25,8 @@ stone2char(enum stone s)
 static inline enum stone
 stone_other(enum stone s)
 {
-	switch (s) {
-		case S_BLACK: return S_WHITE;
-		case S_WHITE: return S_BLACK;
-		default: return s;
-	}
+	static const enum stone o[S_MAX] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
+	return o[s];
 }
 
 #endif
