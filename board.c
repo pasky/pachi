@@ -1250,9 +1250,22 @@ invalid_nakade:;
 	       + neighbor_count_at(b, to, S_OFFBOARD) == 3
 	    && board_is_false_eyelike(b, &to, stone_other(color))) {
 		assert(groupcts[color] <= 1);
-		/* Single-stone throw-in is ok. */
-		if (groupcts[color] == 0)
+		/* Single-stone throw-in may be ok... */
+		if (groupcts[color] == 0) {
+			/* O X .  There is one problem - when it's
+			 * . * X  actually not a throw-in!
+			 * # # #  */
+			foreach_neighbor(b, to, {
+				if (board_at(b, c) == S_NONE) {
+					/* Is the empty neighbor an escape path? */
+					/* (Note that one S_NONE neighbor is already @to.) */
+					if (neighbor_count_at(b, c, stone_other(color))
+					    + neighbor_count_at(b, c, S_OFFBOARD) < 2)
+						goto invalid_throwin;
+				}
+			});
 			return false;
+		}
 
 		/* Bad throwin: we are connected to a group whose
 		 * other liberty is a connection out
@@ -1261,7 +1274,7 @@ invalid_nakade:;
 		 * # # # # # # # # */
 		group_t g = groupids[color][0];
 		assert(board_group_info(b, g).libs <= 2);
-		/* Suicide is not ok. */
+		/* Suicide is definitely NOT ok. */
 		if (board_group_info(b, g).libs == 1)
 			return true;
 
