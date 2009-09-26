@@ -1049,8 +1049,8 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	/* ID of the first liberty, providing it again is not
 	 * interesting. */
 	coord_t needs_more_lib_except = 0;
-	/* We may be able to gain a liberty by capturing this group. */
-	group_t can_capture = 0;
+
+	/* Examine friendly groups: */
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
@@ -1085,9 +1085,15 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 				return false;
 			}
 		}
+	}
 
+	/* We may be able to gain a liberty by capturing this group. */
+	group_t can_capture = 0;
+
+	/* Examine enemy groups: */
+	for (int i = 0; i < 4; i++) {
 		/* We can escape by capturing this group if it's in atari. */
-		g = groupids[stone_other(color)][i];
+		group_t g = groupids[stone_other(color)][i];
 		if (g && board_group_info(b, g).libs == 1) {
 			/* But we need to get to at least two liberties by this;
 			 * we already have one outside liberty, or the group is
@@ -1099,7 +1105,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 				return false;
 			/* ...or, we already have one indirect liberty provided
 			 * by another group. */
-			if (can_capture && can_capture != g)
+			if (needs_more_lib || (can_capture && can_capture != g))
 				return false;
 			can_capture = g;
 		}
@@ -1173,11 +1179,7 @@ enemy_capture_gains_liberty:;
 		}
 	}
 
-	//fprintf(stderr, "%d,%d\n", needs_more_lib, can_capture);
-	if (needs_more_lib && can_capture)
-		return false;
-
-	/* We are throwing-in to false eye:
+	/* We can be throwing-in to false eye:
 	 * X X X O X X X O X X X X X
 	 * X . * X * O . X * O O . X
 	 * # # # # # # # # # # # # # */
