@@ -708,10 +708,9 @@ playout_moggy_init(char *arg)
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
 
-	pp->lcapturerate = 90;
-	pp->capturerate = 90;
-	pp->patternrate = 90;
-	pp->selfatarirate = 90;
+	int rate = 90;
+
+	pp->lcapturerate = pp->capturerate = pp->patternrate = pp->selfatarirate = -1;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -734,6 +733,8 @@ playout_moggy_init(char *arg)
 				pp->patternrate = atoi(optval);
 			} else if (!strcasecmp(optname, "selfatarirate") && optval) {
 				pp->selfatarirate = atoi(optval);
+			} else if (!strcasecmp(optname, "rate") && optval) {
+				rate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladders")) {
 				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
@@ -745,6 +746,10 @@ playout_moggy_init(char *arg)
 			}
 		}
 	}
+	if (pp->lcapturerate == -1) pp->lcapturerate = rate;
+	if (pp->capturerate == -1) pp->capturerate = rate;
+	if (pp->patternrate == -1) pp->patternrate = rate;
+	if (pp->selfatarirate == -1) pp->selfatarirate = rate;
 
 	patterns_init(p);
 
