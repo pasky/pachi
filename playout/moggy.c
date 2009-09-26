@@ -463,6 +463,7 @@ static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
+	int qmoves_prev = q->moves;
 
 	/* We don't use @to_play almost anywhere since any moves here are good
 	 * for both defender and attacker. */
@@ -486,25 +487,23 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 			if (board_at(b, c) != stone_other(color)
 			    || board_group_info(b, group_at(b, c)).libs > 1)
 				continue;
-			/* If we are saving our group, capture! */
-			if (to_play == color)
-				q->move[q->moves++] = board_group_info(b, group_at(b, c)).lib[0];
-			else /* If we chase the group, capture it now! */
-				q->move[q->moves++] = lib;
+
+			coord_t capture = board_group_info(b, group_at(b, c)).lib[0];
 			if (PLDEBUGL(6))
 				fprintf(stderr, "can capture group %d (%s)?\n",
-					group_at(b, c), coord2sstr(q->move[q->moves - 1], b));
-			struct move m; m.color = to_play; m.coord = q->move[q->moves - 1];
+					group_at(b, c), coord2sstr(capture, b));
+			struct move m; m.color = to_play; m.coord = capture;
 			/* Does that move even make sense? */
 			if (!board_is_valid_move(b, &m))
-				q->moves--;
+				continue;
 			/* Make sure capturing the group will actually
 			 * expand our liberties if we have filled our
 			 * last liberty to perform the capture. */
-			else if (q->move[q->moves - 1] == lib && is_selfatari(b, to_play, lib))
-				q->moves--;
-			else
-				mq_nodup(q);
+			else if (capture == lib && is_selfatari(b, to_play, capture))
+				continue;
+
+			q->move[q->moves++] = capture;
+			mq_nodup(q);
 		});
 	} foreach_in_group_end;
 
@@ -524,6 +523,12 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	}
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...no ladder\n");
+
+	if (to_play != color) {
+		/* We are the attacker! In that case, throw away the moves
+		 * that defend our groups, since we can capture the culprit. */
+		q->moves = qmoves_prev;
+	}
 
 	q->move[q->moves++] = lib;
 	mq_nodup(q);
