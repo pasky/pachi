@@ -48,3 +48,6 @@ ce540	ucb1amaf	43% (+-2%)
 04b7b	ucb1amaf*	60.2% (+-2.4%)	selfatarirate=0
 04b7b	ucb1amaf#	58.5% (+-2.5%)	rate=75
 04b7b	ucb1amaf%	54.5% (+-2.5%)	explore_p=0
+
+
+TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
