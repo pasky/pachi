@@ -1089,6 +1089,8 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		needs_more_lib_except = lib2;
 	}
 
+	//fprintf(stderr, "no friendly group\n");
+
 	/* We may be able to gain a liberty by capturing this group. */
 	group_t can_capture = 0;
 
@@ -1116,12 +1118,14 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 
 	}
 
+	//fprintf(stderr, "no cap group\n");
+
 	/* There is another possibility - we can self-atari if it is
 	 * a nakade: we put an enemy group in atari from the inside. */
 	/* This branch also allows eyes falsification:
-	 * O O O . .
-	 * X X O O .
-	 * X . X O .
+	 * O O O . .  (This is different from throw-in to false eye
+	 * X X O O .  checked below in that there is no X stone at the
+	 * X . X O .  right of the star point in this diagram.)
 	 * X X X O O
 	 * X O * . . */
 	/* TODO: Allow to only nakade if the created shape is dead
@@ -1133,7 +1137,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	group_t g = groupids[stone_other(color)][0];
 	if (g && board_group_info(b, g).libs == 2) {
 		/* We must make sure the other liberty of that group:
-		 * (i) will capture our group
+		 * (i) is an internal liberty
 		 * (ii) filling it to capture our group will not gain
 		 * safety */
 
@@ -1191,10 +1195,36 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			    || board_group_info(b, g2).lib[1] == to)
 				goto invalid_nakade;
 		});
+
+		/* Now, we must distinguish between nakade and eye
+		 * falsification; we must not falsify an eye by more
+		 * than two stones. */
+		if (groupcts[color] < 1 ||
+		    (groupcts[color] == 1 && group_is_onestone(b, groupids[color][0])))
+			return false;
+
+		/* We would create more than 2-stone group; in that
+		 * case, the liberty of our result must be lib2,
+		 * indicating this really is a nakade. */
+		for (int j = 0; j < 4; j++) {
+			group_t g2 = groupids[color][j];
+			if (!g2) continue;
+			assert(board_group_info(b, g2).libs <= 2);
+			if (board_group_info(b, g2).libs == 2) {
+				if (board_group_info(b, g2).lib[0] != lib2
+				    && board_group_info(b, g2).lib[1] != lib2)
+					goto invalid_nakade;
+			} else {
+				assert(board_group_info(b, g2).lib[0] == to);
+			}
+		}
+
 		return false;
 
 invalid_nakade:;
 	}
+
+	//fprintf(stderr, "no nakade group\n");
 
 	/* We can be throwing-in to false eye:
 	 * X X X O X X X O X X X X X
@@ -1229,6 +1259,8 @@ invalid_nakade:;
 		if (neighbor_count_at(b, to, color) + neighbor_count_at(b, to, S_NONE) > 1)
 			return false;
 	}
+
+	//fprintf(stderr, "no throw-in group\n");
 
 	/* No way to pull out, no way to connect out. This really
 	 * is a bad self-atari! */
