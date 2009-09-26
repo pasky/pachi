@@ -240,8 +240,8 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src)
 	dest->hints |= src->hints;
 
 	/* Merge the children, both are coord-sorted lists. */
-	struct tree_node *di = dest->children, *dip = NULL;
-	struct tree_node *si = src->children, *sip = NULL;
+	struct tree_node *di = dest->children, **dref = &dest->children;
+	struct tree_node *si = src->children, **sref = &src->children;
 	while (di && si) {
 		if (di->coord != si->coord) {
 			/* src has some extra items or misses di */
@@ -252,10 +252,7 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src)
 			if (!si2)
 				goto next_di; /* src misses di, move on */
 			/* chain the extra [si,si2) items before di */
-			if (dip)
-				dip->sibling = si;
-			else
-				dest->children = si;
+			(*dref) = si;
 			while (si->sibling != si2) {
 				si->parent = dest;
 				si = si->sibling;
@@ -263,34 +260,27 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src)
 			si->parent = dest;
 			si->sibling = di;
 			si = si2;
-			if (sip)
-				sip->sibling = si;
-			else
-				src->children = si;
+			(*sref) = si;
 		}
 		/* Matching nodes - recurse... */
 		tree_node_merge(di, si);
 		/* ...and move on. */
-		sip = si; si = si->sibling;
+		sref = &si->sibling; si = si->sibling;
 next_di:
-		dip = di; di = di->sibling;
+		dref = &di->sibling; di = di->sibling;
 	}
 	if (si) {
-		if (dip)
-			dip->sibling = si;
-		else
-			dest->children = si;
+		/* Some outstanding nodes are left on src side, rechain
+		 * them to dst. */
+		(*dref) = si;
 		while (si) {
 			si->parent = dest;
 			si = si->sibling;
 		}
-		if (sip)
-			sip->sibling = NULL;
-		else
-			src->children = NULL;
+		(*sref) = NULL;
 	}
 
-	/* Priors should not be randomized. */
+	/* Priors should be constant. */
 	assert(dest->prior.playouts == src->prior.playouts && dest->prior.wins == src->prior.wins);
 
 	dest->amaf.playouts += src->amaf.playouts;
