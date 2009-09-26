@@ -343,8 +343,7 @@ void
 board_handicap_stone(struct board *board, int x, int y, FILE *f)
 {
 	struct move m;
-	m.color = S_BLACK;
-	coord_xy(m.coord, x, y, board);
+	m.color = S_BLACK; m.coord = coord_xy(board, x, y);
 
 	board_play(board, &m);
 	/* Simulate white passing; otherwise, UCT search can get confused since
