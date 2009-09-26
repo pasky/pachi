@@ -347,6 +347,9 @@ board_handicap_stone(struct board *board, int x, int y, FILE *f)
 	coord_xy(m.coord, x, y, board);
 
 	board_play(board, &m);
+	/* Simulate white passing; otherwise, UCT search can get confused since
+	 * tree depth parity won't match the color to move. */
+	board->moves++;
 
 	char *str = coord2str(m.coord, board);
 	if (DEBUGL(1))
