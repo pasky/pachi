@@ -1042,7 +1042,10 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	    && board_group_info(b, groupids[stone_other(color)][0]).libs > 1)
 		return true;
 
-	/* We may be looking for one extra liberty.
+	/* This is set if this move puts a group out of _all_
+	 * liberties; we need to watch out for snapback then. */
+	bool friend_has_no_libs = false;
+	/* We may have one liberty, but be looking for one more.
 	 * In that case, @needs_more_lib is id of group
 	 * already providing one, don't consider it again. */
 	group_t needs_more_lib = 0;
@@ -1055,8 +1058,14 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
 		group_t g = groupids[color][i];
-		if (!g || board_group_info(b, g).libs == 1)
+		if (!g) continue;
+
+		if (board_group_info(b, g).libs == 1) {
+			if (!needs_more_lib)
+				friend_has_no_libs = true;
+			// or we already have a friend with 1 lib
 			continue;
+		}
 
 		/* Could we self-atari the group here? */
 		if (board_group_info(b, g).libs > 2)
@@ -1087,6 +1096,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		 * later by capturing something. */
 		needs_more_lib = g;
 		needs_more_lib_except = lib2;
+		friend_has_no_libs = false;
 	}
 
 	//fprintf(stderr, "no friendly group\n");
@@ -1107,9 +1117,13 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		 * nice!). */
 		if (groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
 			return false;
-		/* ...or, it's a ko stone. */
-		if (neighbor_count_at(b, g, color) == 3)
-			return false;
+		/* ...or, it's a ko stone, */
+		if (neighbor_count_at(b, g, color) + neighbor_count_at(b, g, S_OFFBOARD) == 3) {
+			/* and we don't have a group to save: then, just taking
+			 * single stone means snapback! */
+			if (!friend_has_no_libs)
+				return false;
+		}
 		/* ...or, we already have one indirect liberty provided
 		 * by another group. */
 		if (needs_more_lib || (can_capture && can_capture != g))
