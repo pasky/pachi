@@ -1038,8 +1038,8 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		return false;
 
 	/* Quickly weed out suicides. */
-	if (groupcts[stone_other(color)] + groupcts[S_OFFBOARD] == 4 &&
-	    board_group_info(b, groupids[stone_other(color)][0]).libs > 1)
+	if (board_is_one_point_eye(b, &to, stone_other(color))
+	    && board_group_info(b, groupids[stone_other(color)][0]).libs > 1)
 		return true;
 
 	/* We may be looking for one extra liberty.
