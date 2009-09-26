@@ -290,17 +290,8 @@ next_di:
 			src->children = NULL;
 	}
 
-	/* In case of prior playouts, we do not want to accumulate them
-	 * over merges - they remain static after setup. However, different
-	 * trees may have different priors non-deterministically. We just
-	 * take the average. */
-	if (dest->prior.playouts != src->prior.playouts
-	    || dest->prior.wins != src->prior.wins) {
-		dest->prior.playouts = (dest->prior.playouts + src->prior.playouts) / 2;
-		dest->prior.wins = (dest->prior.wins + src->prior.wins) / 2;
-		if (dest->prior.playouts)
-			dest->prior.value = (float) dest->prior.wins / dest->prior.playouts;
-	}
+	/* Priors should not be randomized. */
+	assert(dest->prior.playouts == src->prior.playouts && dest->prior.wins == src->prior.wins);
 
 	dest->amaf.playouts += src->amaf.playouts;
 	dest->amaf.wins += src->amaf.wins;
