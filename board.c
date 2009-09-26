@@ -1160,10 +1160,10 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			 * we won't allow the self-atari. */
 			/* This is the main point of having so
 			 * convoluted nakade detection. */
-			/* X X X X We will not allow play on 'a',
-			 * X X a X because it would capture two
-			 * X O b X different groups, forming two
-			 * X X X X eyes. */
+			/* X X X X  We will not allow play on 'a',
+			 * X X a X  because it would capture two
+			 * X O b X  different groups, forming two
+			 * X X X X  eyes. */
 			if (board_at(b, c) == color) {
 				/* Our group == one of the groups
 				 * we (@to) are connected to. */
@@ -1173,6 +1173,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 						break;
 				if (j == 4)
 					goto enemy_capture_gains_liberty;
+				continue;
 			}
 
 			/* The neighbor is enemy color. It's ok if
