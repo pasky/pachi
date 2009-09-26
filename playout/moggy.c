@@ -497,9 +497,8 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 			if (!board_is_valid_move(b, &m))
 				continue;
 			/* Make sure capturing the group will actually
-			 * expand our liberties if we have filled our
-			 * last liberty to perform the capture. */
-			else if (capture == lib && is_selfatari(b, to_play, capture))
+			 * do us any good. */
+			else if (is_selfatari(b, to_play, capture))
 				continue;
 
 			q->move[q->moves++] = capture;
