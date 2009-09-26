@@ -1118,6 +1118,12 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 
 	/* There is another possibility - we can self-atari if it is
 	 * a nakade: we put an enemy group in atari from the inside. */
+	/* This branch also allows eyes falsification:
+	 * O O O . .
+	 * X X O O .
+	 * X . X O .
+	 * X X X O O
+	 * X O * . . */
 	/* TODO: Allow to only nakade if the created shape is dead
 	 * (http://senseis.xmp.net/?Nakade). */
 
@@ -1131,11 +1137,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 		 * (ii) filling it to capture our group will not gain
 		 * safety */
 
-		/* (i) is guaranteed; otherwise this move would not be
-		 * self-atari or the enemy group had >2 liberties. */
-		;
-
-		/* (ii) let's look at the liberty neighbors: */
+		/* Let's look at the other liberty neighbors: */
 		int lib2 = board_group_info(b, g).lib[0];
 		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
 		foreach_neighbor(b, lib2, {
@@ -1145,24 +1147,24 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 				continue;
 
 			/* If the other liberty has empty neighbor,
-			 * it may not yet be an escape path.
-			 * This enables eyes falsification:
-			 * O O O . .
-			 * X X O O .
-			 * X . X O .
-			 * X X X O O
-			 * X O * . . */
-			if (board_at(b, c) == S_NONE)
-				continue;
+			 * it must be the original liberty; otherwise,
+			 * since the whole group has only 2 liberties,
+			 * the other liberty may not be internal and
+			 * we are nakade'ing eyeless group from outside,
+			 * which is stupid. */
+			if (board_at(b, c) == S_NONE) {
+				if (c == to)
+					continue;
+				else
+					goto invalid_nakade;
+			}
 
 			int g2 = group_at(b, c);
 			/* If the neighbor is of our color, it must
 			 * be our group; if it is a different group,
 			 * we won't allow the self-atari. */
-			/* This is the main point of having so
-			 * convoluted nakade detection. */
 			/* X X X X  We will not allow play on 'a',
-			 * X X a X  because it would capture two
+			 * X X a X  because 'b' would capture two
 			 * X O b X  different groups, forming two
 			 * X X X X  eyes. */
 			if (board_at(b, c) == color) {
@@ -1173,7 +1175,7 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 					if (groupids[color][j] == g2)
 						break;
 				if (j == 4)
-					goto enemy_capture_gains_liberty;
+					goto invalid_nakade;
 				continue;
 			}
 
@@ -1187,11 +1189,11 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 			if (board_group_info(b, g2).libs > 2
 			    || board_group_info(b, g2).lib[0] == to
 			    || board_group_info(b, g2).lib[1] == to)
-				goto enemy_capture_gains_liberty;
+				goto invalid_nakade;
 		});
 		return false;
 
-enemy_capture_gains_liberty:;
+invalid_nakade:;
 	}
 
 	/* We can be throwing-in to false eye:
