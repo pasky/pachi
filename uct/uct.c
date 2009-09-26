@@ -213,7 +213,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 {
 	struct uct *u = e->data;
 
-	if ((!b->moves || color != stone_other(u->t->root_color)) && u->t) {
+	if (u->t && (!b->moves || color != stone_other(u->t->root_color))) {
 		/* Stale state from last game */
 		tree_done(u->t);
 		u->t = NULL;
