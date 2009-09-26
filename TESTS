@@ -26,3 +26,9 @@ ce540	ucb1amaf	43% (+-2%)
 6e22f	ucb1amaf#	43.2% (+-2.5%)	explore_p=0
 6e22f	ucb1amaf#*0	45.8% (+-2.5%)	explore_p=0,rave_equiv=6000
 6e22f	ucb1amaf#*1	48.8% (+-2.5%)	explore_p=0,rave_equiv=500
+6e22f	ucb1amaf#0	49.5% (+-2.5%)	explore_p=0.01
+6e22f	ucb1amaf#1	24.8% (+-2.5%)	explore_p=0.5
+6e22f	19x19 ucb1amaf	0%
+6e22f	19x19 ucb1amaf*	0%	explore_p=0.01,rave_equiv=100
+88fe2	ucb1amaf	50.8% (+-2.5%)
+88fe2	ucb1amaf*	49.5% (+-2.5%)	selfatarirate=0
