@@ -1285,27 +1285,20 @@ invalid_nakade:;
 			return false;
 		}
 
-		/* Bad throwin: we are connected to a group whose
-		 * other liberty is a connection out
-		 * X X O X X X O X
-		 * X . X . O O . X
-		 * # # # # # # # # */
+		/* Multi-stone throwin...? */
+		assert(groupcts[color] == 1);
 		group_t g = groupids[color][0];
+
 		assert(board_group_info(b, g).libs <= 2);
-		/* Suicide is definitely NOT ok. */
+		/* Suicide is definitely NOT ok, no matter what else
+		 * we could test. */
 		if (board_group_info(b, g).libs == 1)
 			return true;
 
-		int lib2 = board_group_info(b, g).lib[0];
-		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
-		/* This is actually slightly more general than above,
-		 * and not perfect (the other group can be in atari),
-		 * but should be ok. */
-		if (neighbor_count_at(b, lib2, stone_other(color))
-		    + neighbor_count_at(b, lib2, S_OFFBOARD) < 3)
-			goto invalid_throwin;
-
-		return false;
+		/* In that case, we must be connected to at most one stone,
+		 * or throwin will not destroy any eyes. */
+		if (group_is_onestone(b, g))
+			return false;
 invalid_throwin:;
 	}
 
