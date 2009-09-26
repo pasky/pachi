@@ -193,6 +193,9 @@ int board_play(struct board *board, struct move *m);
 typedef bool (*ppr_permit)(void *data, struct board *b, struct move *m);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
 
+/* Returns true if given move can be played. */
+bool board_is_valid_move(struct board *b, struct move *m);
+
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
 
