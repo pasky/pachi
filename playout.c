@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -84,8 +85,16 @@ play_random:
 			 * to avoid taking pre-nakade moves into account only
 			 * if they happenned in the tree before nakade nodes;
 			 * but this is always out of the tree. */
-			if (amafmap && amafmap->map[coord] == S_NONE)
-				amafmap->map[coord] = color;
+			if (amafmap) {
+				if (amafmap->map[coord] == S_NONE)
+					amafmap->map[coord] = color;
+				else
+					amaf_op(amafmap->map[coord], +);
+				amafmap->game[amafmap->gamelen].coord = coord;
+				amafmap->game[amafmap->gamelen].color = color;
+				amafmap->gamelen++;
+				assert(amafmap->gamelen < sizeof(amafmap->game) / sizeof(amafmap->game[0]));
+			}
 
 			passes = 0;
 		}

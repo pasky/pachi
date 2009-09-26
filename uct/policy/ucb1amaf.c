@@ -335,12 +335,25 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		 * matter only at a point when AMAF doesn't help much. */
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			assert(map->map[ni->coord] != S_OFFBOARD);
-			if (map->map[ni->coord] == S_NONE
-			    || amaf_nakade(map->map[ni->coord]))
+			if (map->map[ni->coord] == S_NONE)
 				continue;
+			assert(map->game_baselen >= 0);
+			enum stone amaf_color = map->map[ni->coord];
+			if (amaf_nakade(map->map[ni->coord])) {
+				/* We don't care to implement both_colors
+				 * properly since it sucks anyway. */
+				int i;
+				for (i = map->game_baselen; i < map->gamelen; i++)
+					if (map->game[i].coord == ni->coord
+					    && map->game[i].color == child_color)
+						break;
+				if (i == map->gamelen)
+					continue;
+				amaf_color = child_color;
+			}
 
 			int nres = result;
-			if (map->map[ni->coord] != child_color) {
+			if (amaf_color != child_color) {
 				if (!b->both_colors)
 					continue;
 				nres = !nres;
@@ -358,6 +371,9 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 #endif
 		}
 
+		if (!is_pass(node->coord)) {
+			map->game_baselen--;
+		}
 		node = node->parent; child_color = stone_other(child_color);
 	}
 }
