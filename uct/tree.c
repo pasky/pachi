@@ -299,13 +299,13 @@ next_di:
 		dest->prior.playouts = (dest->prior.playouts + src->prior.playouts) / 2;
 		dest->prior.wins = (dest->prior.wins + src->prior.wins) / 2;
 		if (dest->prior.playouts)
-			dest->prior.value = dest->prior.wins / dest->prior.playouts;
+			dest->prior.value = (float) dest->prior.wins / dest->prior.playouts;
 	}
 
 	dest->amaf.playouts += src->amaf.playouts;
 	dest->amaf.wins += src->amaf.wins;
 	if (dest->amaf.playouts)
-		dest->amaf.value = dest->amaf.wins / dest->amaf.playouts;
+		dest->amaf.value = (float) dest->amaf.wins / dest->amaf.playouts;
 
 	dest->u.playouts += src->u.playouts;
 	dest->u.wins += src->u.wins;
