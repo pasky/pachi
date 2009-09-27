@@ -152,7 +152,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		assert(n->coord >= -1);
 		if (amaf && !is_pass(n->coord)) {
-			if (amaf->map[n->coord] == S_NONE) {
+			if (amaf->map[n->coord] == S_NONE || amaf->map[n->coord] == node_color) {
 				amaf->map[n->coord] = node_color;
 			} else {
 				amaf_op(amaf->map[n->coord], +);

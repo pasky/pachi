@@ -86,7 +86,7 @@ play_random:
 			 * if they happenned in the tree before nakade nodes;
 			 * but this is always out of the tree. */
 			if (amafmap) {
-				if (amafmap->map[coord] == S_NONE)
+				if (amafmap->map[coord] == S_NONE || amafmap->map[coord] == color)
 					amafmap->map[coord] = color;
 				else
 					amaf_op(amafmap->map[coord], +);
