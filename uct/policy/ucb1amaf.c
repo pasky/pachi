@@ -185,9 +185,11 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 {
 	struct ucb1_policy_amaf *b = p->data;
 	float rave_coef = 1.0f / b->equiv_rave;
-	float conf = 1.f;
-	if (b->explore_p > 0 || b->explore_p_rave > 0)
-		conf = sqrt(log(node->u.playouts + node->prior.playouts));
+	float nconf = 1.f, rconf = 1.f;
+	if (b->explore_p > 0)
+		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
+	if (b->explore_p_rave > 0 && node->amaf.playouts)
+		rconf = sqrt(log(node->amaf.playouts + node->prior.playouts));
 
 	// XXX: Stack overflow danger on big boards?
 	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
@@ -219,12 +221,12 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		if (ngames) {
 			nval = (float) nwins / ngames;
 			if (b->explore_p > 0)
-				nval += b->explore_p * conf / fast_sqrt(ngames);
+				nval += b->explore_p * nconf / fast_sqrt(ngames);
 		}
 		if (rgames) {
 			rval = (float) rwins / rgames;
-			if (b->explore_p_rave > 0)
-				rval += b->explore_p_rave * conf / fast_sqrt(rgames);
+			if (b->explore_p_rave > 0 && !is_pass(ni->coord))
+				rval += b->explore_p_rave * rconf / fast_sqrt(rgames);
 		}
 
 		/* XXX: We later compare urgency with best_urgency; this can
