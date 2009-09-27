@@ -693,7 +693,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, 
 				if (q.move[q.moves] == m->coord) {
 					if (PLDEBUGL(5))
 						fprintf(stderr, "1.0: atari\n");
-					return assess_local_bonus(p, b, &b->last_move, m, games);
+					return assess_local_bonus(p, b, &b->last_move, m, games) * 2;
 				}
 		});
 
