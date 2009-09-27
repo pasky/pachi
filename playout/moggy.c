@@ -441,6 +441,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 	/* We do that below for further moves, but now initially - check
 	 * that at 'c', we aren't putting any of the catching stones
 	 * in atari. */
+#if 0 // this seems somehow broken
 #define check_catcher_danger(b, x_, y_) do { \
 	if (board_atxy(b, (x_), (y_)) != S_OFFBOARD \
 	    && board_group_info(b, group_atxy(b, (x_), (y_))).libs <= 2) { \
@@ -457,6 +458,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 		check_catcher_danger(b, x + xd, y - yd);
 	}
 #undef check_catcher_danger
+#endif
 
 #define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
 	if (board_atxy(b, x, y) != S_NONE) { \
