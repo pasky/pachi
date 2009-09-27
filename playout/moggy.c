@@ -16,7 +16,7 @@
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	bool ladders, ladderassess, borderladders;
+	bool ladders, ladderassess, borderladders, assess_local;
 	int lcapturerate, capturerate, patternrate;
 	int selfatarirate;
 
@@ -635,6 +635,22 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	return pass;
 }
 
+static int
+assess_local_bonus(struct playout_policy *p, struct board *board, struct move *a, struct move *b, int games)
+{
+	struct moggy_policy *pp = p->data;
+	if (!pp->assess_local)
+		return games;
+
+	int dx = abs(coord_x(a->coord, board) - coord_x(b->coord, board));
+	int dy = abs(coord_y(a->coord, board) - coord_y(b->coord, board));
+	/* adjecent move, directly or diagonally? */
+	if (dx + dy <= 1 + (dx && dy))
+		return games;
+	else
+		return games / 2;
+}
+
 int
 playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, int games)
 {
@@ -677,7 +693,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, 
 				if (q.move[q.moves] == m->coord) {
 					if (PLDEBUGL(5))
 						fprintf(stderr, "1.0: atari\n");
-					return games;
+					return assess_local_bonus(p, b, &b->last_move, m, games);
 				}
 		});
 
@@ -702,7 +718,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, 
 		if (test_pattern_here(p, pp->patterns, b, m)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
-			return games;
+			return assess_local_bonus(p, b, &b->last_move, m, games);
 		}
 	}
 
@@ -769,6 +785,8 @@ playout_moggy_init(char *arg)
 				pp->borderladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "ladderassess")) {
 				pp->ladderassess = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "assess_local")) {
+				pp->assess_local = optval && *optval == '0' ? false : true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 			}
