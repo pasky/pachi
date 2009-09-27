@@ -150,12 +150,17 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
 			        spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
 
-		if (amaf && n->coord >= -1 && !is_pass(n->coord)) {
-			if (amaf->map[n->coord] == S_NONE) {
+		assert(n->coord >= -1);
+		if (amaf && !is_pass(n->coord)) {
+			if (amaf->map[n->coord] == S_NONE || amaf->map[n->coord] == node_color) {
 				amaf->map[n->coord] = node_color;
 			} else {
 				amaf_op(amaf->map[n->coord], +);
 			}
+			amaf->game[amaf->gamelen].coord = n->coord;
+			amaf->game[amaf->gamelen].color = node_color;
+			amaf->gamelen++;
+			assert(amaf->gamelen < sizeof(amaf->game) / sizeof(amaf->game[0]));
 		}
 
 		struct move m = { n->coord, node_color };
@@ -180,6 +185,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		else
 			passes = 0;
 	}
+
+	if (amaf) amaf->game_baselen = amaf->gamelen;
 
 	if (passes >= 2) {
 		float score = board_official_score(&b2);
@@ -439,7 +446,7 @@ uct_state_init(char *arg)
 	u->gamelen = MC_GAMELEN;
 	u->expand_p = 2;
 	u->dumpthres = 1000;
-	u->playout_amaf = false;
+	u->playout_amaf = true;
 
 	if (arg) {
 		char *optspec, *next = arg;

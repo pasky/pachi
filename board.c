@@ -343,8 +343,7 @@ void
 board_handicap_stone(struct board *board, int x, int y, FILE *f)
 {
 	struct move m;
-	m.color = S_BLACK;
-	coord_xy(m.coord, x, y, board);
+	m.color = S_BLACK; m.coord = coord_xy(board, x, y);
 
 	board_play(board, &m);
 	/* Simulate white passing; otherwise, UCT search can get confused since
@@ -1039,7 +1038,7 @@ board_fast_score(struct board *board)
 
 
 bool
-is_selfatari(struct board *b, enum stone color, coord_t to)
+is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 {
 	//fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
 	/* Assess if we actually gain any liberties by this escape route.
@@ -1152,6 +1151,14 @@ is_selfatari(struct board *b, enum stone color, coord_t to)
 	}
 
 	//fprintf(stderr, "no cap group\n");
+
+	if (!needs_more_lib && !can_capture) {
+		/* We have no hope for more fancy tactics - this move is simply
+		 * a suicide, not even a self-atari. */
+		return true;
+	}
+	/* XXX: I wonder if it makes sense to continue if we actually
+	 * just !needs_more_lib. */
 
 	/* There is another possibility - we can self-atari if it is
 	 * a nakade: we put an enemy group in atari from the inside. */
@@ -1286,27 +1293,20 @@ invalid_nakade:;
 			return false;
 		}
 
-		/* Bad throwin: we are connected to a group whose
-		 * other liberty is a connection out
-		 * X X O X X X O X
-		 * X . X . O O . X
-		 * # # # # # # # # */
+		/* Multi-stone throwin...? */
+		assert(groupcts[color] == 1);
 		group_t g = groupids[color][0];
+
 		assert(board_group_info(b, g).libs <= 2);
-		/* Suicide is definitely NOT ok. */
+		/* Suicide is definitely NOT ok, no matter what else
+		 * we could test. */
 		if (board_group_info(b, g).libs == 1)
 			return true;
 
-		int lib2 = board_group_info(b, g).lib[0];
-		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
-		/* This is actually slightly more general than above,
-		 * and not perfect (the other group can be in atari),
-		 * but should be ok. */
-		if (neighbor_count_at(b, lib2, stone_other(color))
-		    + neighbor_count_at(b, lib2, S_OFFBOARD) < 3)
-			goto invalid_throwin;
-
-		return false;
+		/* In that case, we must be connected to at most one stone,
+		 * or throwin will not destroy any eyes. */
+		if (group_is_onestone(b, g))
+			return false;
 invalid_throwin:;
 	}
 

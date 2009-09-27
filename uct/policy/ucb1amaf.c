@@ -185,9 +185,11 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 {
 	struct ucb1_policy_amaf *b = p->data;
 	float rave_coef = 1.0f / b->equiv_rave;
-	float conf = 1.f;
-	if (b->explore_p > 0 || b->explore_p_rave > 0)
-		conf = sqrt(log(node->u.playouts + node->prior.playouts));
+	float nconf = 1.f, rconf = 1.f;
+	if (b->explore_p > 0)
+		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
+	if (b->explore_p_rave > 0 && node->amaf.playouts)
+		rconf = sqrt(log(node->amaf.playouts + node->prior.playouts));
 
 	// XXX: Stack overflow danger on big boards?
 	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
@@ -219,12 +221,12 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		if (ngames) {
 			nval = (float) nwins / ngames;
 			if (b->explore_p > 0)
-				nval += b->explore_p * conf / fast_sqrt(ngames);
+				nval += b->explore_p * nconf / fast_sqrt(ngames);
 		}
 		if (rgames) {
 			rval = (float) rwins / rgames;
-			if (b->explore_p_rave > 0)
-				rval += b->explore_p_rave * conf / fast_sqrt(rgames);
+			if (b->explore_p_rave > 0 && !is_pass(ni->coord))
+				rval += b->explore_p_rave * rconf / fast_sqrt(rgames);
 		}
 
 		/* XXX: We later compare urgency with best_urgency; this can
@@ -335,12 +337,25 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		 * matter only at a point when AMAF doesn't help much. */
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 			assert(map->map[ni->coord] != S_OFFBOARD);
-			if (map->map[ni->coord] == S_NONE
-			    || amaf_nakade(map->map[ni->coord]))
+			if (map->map[ni->coord] == S_NONE)
 				continue;
+			assert(map->game_baselen >= 0);
+			enum stone amaf_color = map->map[ni->coord];
+			if (amaf_nakade(map->map[ni->coord])) {
+				/* We don't care to implement both_colors
+				 * properly since it sucks anyway. */
+				int i;
+				for (i = map->game_baselen; i < map->gamelen; i++)
+					if (map->game[i].coord == ni->coord
+					    && map->game[i].color == child_color)
+						break;
+				if (i == map->gamelen)
+					continue;
+				amaf_color = child_color;
+			}
 
 			int nres = result;
-			if (map->map[ni->coord] != child_color) {
+			if (amaf_color != child_color) {
 				if (!b->both_colors)
 					continue;
 				nres = !nres;
@@ -358,6 +373,9 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 #endif
 		}
 
+		if (!is_pass(node->coord)) {
+			map->game_baselen--;
+		}
 		node = node->parent; child_color = stone_other(child_color);
 	}
 }

@@ -16,7 +16,7 @@
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	bool ladders, ladderassess, borderladders;
+	bool ladders, ladderassess, borderladders, assess_local;
 	int lcapturerate, capturerate, patternrate;
 	int selfatarirate;
 
@@ -285,7 +285,7 @@ test_pattern_here(struct playout_policy *p, char *hashtable,
 		| (board_atxy(b, x, y + 1) << 2)
 		| (board_atxy(b, x + 1, y + 1));
 	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, hashtable[pat]);
-	return (hashtable[pat] & m->color) && !is_selfatari(b, m->color, m->coord);
+	return (hashtable[pat] & m->color) && !is_bad_selfatari(b, m->color, m->coord);
 }
 
 static void
@@ -424,7 +424,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 		return false;
 	}
 
-#define ladder_check(xd1_, yd1_, xd2_, yd2_)	\
+#define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
 	if (board_atxy(b, x, y) != S_NONE) { \
 		/* Did we hit a stone when playing out ladder? */ \
 		if (ladder_catcher(b, x, y, lcolor)) \
@@ -434,21 +434,32 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 	} else { \
 		/* No. So we are at new position. \
 		 * We need to check indirect ladder breakers. */ \
-		/* . 2 x . . \
+		/* . 2 x 3 . \
 		 * . x o O 1 <- only at O we can check for o at 2 \
 		 * x o o x .    otherwise x at O would be still deadly \
 		 * o o x . . \
 		 * We check for o and x at 1, these are vital. \
 		 * We check only for o at 2; x at 2 would mean we \
 		 * need to fork (one step earlier). */ \
-		enum stone s1 = board_atxy(b, x + (xd1_), y + (yd1_)); \
+		coord_t c1 = coord_xy(b, x + (xd1_), y + (yd1_)); \
+		enum stone s1 = board_at(b, c1); \
 		if (s1 == lcolor) return false; \
-		if (s1 == stone_other(lcolor)) return true; \
+		if (s1 == stone_other(lcolor)) { \
+			/* One more thing - if the position at 3 is \
+			 * friendly and safe, we escaped anyway! */ \
+			coord_t c3 = coord_xy(b, x + (xd3_), y + (yd3_)); \
+			return board_at(b, c3) != lcolor \
+			       || board_group_info(b, group_at(b, c3)).libs < 1; \
+				return false; \
+		} \
 		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
 		if (s2 == lcolor) return false; \
+		/* Then, can X actually "play" 1 in the ladder? */ \
+		if (neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) \
+			return false; /* It would be self-atari! */ \
 	}
-#define ladder_horiz	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d horiz step %d\n", x, y, xd); x += xd; ladder_check(xd, 0, -2 * xd, yd); } while (0)
-#define ladder_vert	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d vert step %d\n", x, y, yd); y += yd; ladder_check(0, yd, xd, -2 * yd); } while (0)
+#define ladder_horiz	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d horiz step (%d,%d)\n", x, y, xd, yd); x += xd; ladder_check(xd, 0, -2 * xd, yd, 0, yd); } while (0)
+#define ladder_vert	do { if (PLDEBUGL(6)) fprintf(stderr, "%d,%d vert step of (%d,%d)\n", x, y, xd, yd); y += yd; ladder_check(0, yd, xd, -2 * yd, xd, 0); } while (0)
 
 	if (ladder_catcher(b, x - xd, y, lcolor))
 		ladder_horiz;
@@ -498,7 +509,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 				continue;
 			/* Make sure capturing the group will actually
 			 * do us any good. */
-			else if (is_selfatari(b, to_play, capture))
+			else if (is_bad_selfatari(b, to_play, capture))
 				continue;
 
 			q->move[q->moves++] = capture;
@@ -511,7 +522,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		return;
 
 	/* Do not suicide... */
-	if (is_selfatari(b, color, lib))
+	if (is_bad_selfatari(b, to_play, lib))
 		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
@@ -624,13 +635,29 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	return pass;
 }
 
-float
-playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
+static int
+assess_local_bonus(struct playout_policy *p, struct board *board, struct move *a, struct move *b, int games)
+{
+	struct moggy_policy *pp = p->data;
+	if (!pp->assess_local)
+		return games;
+
+	int dx = abs(coord_x(a->coord, board) - coord_x(b->coord, board));
+	int dy = abs(coord_y(a->coord, board) - coord_y(b->coord, board));
+	/* adjecent move, directly or diagonally? */
+	if (dx + dy <= 1 + (dx && dy))
+		return games;
+	else
+		return games / 2;
+}
+
+int
+playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, int games)
 {
 	struct moggy_policy *pp = p->data;
 
 	if (is_pass(m->coord))
-		return NAN;
+		return 0;
 
 	if (PLDEBUGL(5)) {
 		fprintf(stderr, "ASSESS of %s:\n", coord2sstr(m->coord, b));
@@ -666,23 +693,23 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 				if (q.move[q.moves] == m->coord) {
 					if (PLDEBUGL(5))
 						fprintf(stderr, "1.0: atari\n");
-					return 1.0;
+					return assess_local_bonus(p, b, &b->last_move, m, games) * 2;
 				}
 		});
 
 		if (ladder) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: ladder\n");
-			return 0.0;
+			return -games;
 		}
 	}
 
 	/* Is this move a self-atari? */
 	if (pp->selfatarirate) {
-		if (is_selfatari(b, m->color, m->coord)) {
+		if (is_bad_selfatari(b, m->color, m->coord)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: self-atari\n");
-			return 0.0;
+			return -games;
 		}
 	}
 
@@ -691,11 +718,11 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 		if (test_pattern_here(p, pp->patterns, b, m)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
-			return 1.0;
+			return assess_local_bonus(p, b, &b->last_move, m, games);
 		}
 	}
 
-	return NAN;
+	return 0;
 }
 
 bool
@@ -707,10 +734,11 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 #if 0
-	if (is_selfatari(b, m->color, m->coord))
+	fprintf(stderr, "__ sar test? %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
+	if (is_bad_selfatari(b, m->color, m->coord))
 		fprintf(stderr, "__ Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
 #endif
-	return fast_random(100) >= pp->selfatarirate || !is_selfatari(b, m->color, m->coord);
+	return fast_random(100) >= pp->selfatarirate || !is_bad_selfatari(b, m->color, m->coord);
 }
 
 
@@ -757,6 +785,8 @@ playout_moggy_init(char *arg)
 				pp->borderladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "ladderassess")) {
 				pp->ladderassess = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "assess_local")) {
+				pp->assess_local = optval && *optval == '0' ? false : true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 			}
