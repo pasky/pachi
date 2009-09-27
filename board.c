@@ -1152,6 +1152,14 @@ is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 
 	//fprintf(stderr, "no cap group\n");
 
+	if (!needs_more_lib && !can_capture) {
+		/* We have no hope for more fancy tactics - this move is simply
+		 * a suicide, not even a self-atari. */
+		return true;
+	}
+	/* XXX: I wonder if it makes sense to continue if we actually
+	 * just !needs_more_lib. */
+
 	/* There is another possibility - we can self-atari if it is
 	 * a nakade: we put an enemy group in atari from the inside. */
 	/* This branch also allows eyes falsification:
