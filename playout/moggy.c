@@ -766,12 +766,17 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	/* The idea is simple for now - never allow self-atari moves.
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
-#if 0
-	fprintf(stderr, "__ sar test? %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
-	if (is_bad_selfatari(b, m->color, m->coord))
-		fprintf(stderr, "__ Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
-#endif
-	return fast_random(100) >= pp->selfatarirate || !is_bad_selfatari(b, m->color, m->coord);
+
+	if (fast_random(100) >= pp->selfatarirate) {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "skipping sar test\n");
+		return true;
+	}
+	bool selfatari = is_bad_selfatari(b, m->color, m->coord);
+	if (PLDEBUGL(5) && selfatari)
+		fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
+			stone2str(m->color), coord2sstr(m->coord, b));
+	return !selfatari;
 }
 
 
