@@ -480,8 +480,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 			 * friendly and safe, we escaped anyway! */ \
 			coord_t c3 = coord_xy(b, x + (xd3_), y + (yd3_)); \
 			return board_at(b, c3) != lcolor \
-			       || board_group_info(b, group_at(b, c3)).libs < 1; \
-				return false; \
+			       || board_group_info(b, group_at(b, c3)).libs < 2; \
 		} \
 		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
 		if (s2 == lcolor) return false; \
