@@ -212,6 +212,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 	}
 
+	if (amaf && !u->playout_amaf_nakade) {
+		/* We don't want to consider AMAF nakades from playout;
+		 * cut off the playout part of the game sequence. */
+		amaf->gamelen = amaf->game_baselen;
+	}
+
 	assert(n == t->root || n->parent);
 	if (result >= 0)
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, result);
@@ -470,6 +476,7 @@ uct_state_init(char *arg)
 	u->expand_p = 2;
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
+	u->playout_amaf_nakade = false;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -508,6 +515,15 @@ uct_state_init(char *arg)
 					u->playout_amaf = false;
 				else
 					u->playout_amaf = true;
+			} else if (!strcasecmp(optname, "playout_amaf_nakade")) {
+				/* Whether to include nakade moves from playouts
+				 * in the AMAF statistics; this tends to nullify
+				 * the playout_amaf effect by adding too much
+				 * noise. */
+				if (optval && *optval == '0')
+					u->playout_amaf_nakade = false;
+				else
+					u->playout_amaf_nakade = true;
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				char *policyarg = strchr(optval, ':');
 				if (policyarg)

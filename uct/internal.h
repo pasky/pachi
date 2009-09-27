@@ -20,7 +20,7 @@ struct uct {
 	float loss_threshold;
 	int expand_p;
 	int radar_d;
-	bool playout_amaf;
+	bool playout_amaf, playout_amaf_nakade;
 	int dumpthres;
 	int threads;
 	int force_seed;
