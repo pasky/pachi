@@ -337,6 +337,14 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	/* Seed the tree. */
 	prepare_move(e, b, color, resign);
 
+	if (b->superko_violation) {
+		fprintf(stderr, "!!! WARNING: SUPERKO VIOLATION OCCURED BEFORE THIS MOVE\n");
+		fprintf(stderr, "Maybe you play with situational instead of positional superko?\n");
+		fprintf(stderr, "I'm going to ignore the violation, but note that I may miss\n");
+		fprintf(stderr, "some moves valid under this ruleset because of this.\n");
+		b->superko_violation = false;
+	}
+
 	int played_games = 0;
 	if (!u->threads) {
 		played_games = uct_playouts(u, b, color, u->t);
