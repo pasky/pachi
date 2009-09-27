@@ -8,8 +8,9 @@ enum stone;
 
 struct playout_policy;
 typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone to_play);
-/* 0.0 - 1.0; can return NAN is policy has no opinion */
-typedef float (*playoutp_assess)(struct playout_policy *playout_policy, struct board *b, struct move *m);
+/* number of won (>0) or lost (<0) games to seed the node with (usually a proportion of @games);
+ * can return 0 if policy has no opinion */
+typedef int (*playoutp_assess)(struct playout_policy *playout_policy, struct board *b, struct move *m, int games);
 typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m);
 
 struct playout_policy {

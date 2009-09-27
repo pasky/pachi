@@ -635,13 +635,13 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	return pass;
 }
 
-float
-playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
+int
+playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, int games)
 {
 	struct moggy_policy *pp = p->data;
 
 	if (is_pass(m->coord))
-		return NAN;
+		return 0;
 
 	if (PLDEBUGL(5)) {
 		fprintf(stderr, "ASSESS of %s:\n", coord2sstr(m->coord, b));
@@ -677,14 +677,14 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 				if (q.move[q.moves] == m->coord) {
 					if (PLDEBUGL(5))
 						fprintf(stderr, "1.0: atari\n");
-					return 1.0;
+					return games;
 				}
 		});
 
 		if (ladder) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: ladder\n");
-			return 0.0;
+			return -games;
 		}
 	}
 
@@ -693,7 +693,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 		if (is_bad_selfatari(b, m->color, m->coord)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: self-atari\n");
-			return 0.0;
+			return -games;
 		}
 	}
 
@@ -702,11 +702,11 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m)
 		if (test_pattern_here(p, pp->patterns, b, m)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
-			return 1.0;
+			return games;
 		}
 	}
 
-	return NAN;
+	return 0;
 }
 
 bool

@@ -151,21 +151,19 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 
 	/* Q_{playout-policy} */
 	if (pp->policy_eqex) {
-		float assess = NAN;
+		int assess = 0;
 		struct playout_policy *playout = p->uct->playout;
 		if (playout->assess) {
 			struct move m = { node->coord, color };
-			assess = playout->assess(playout, b, &m);
+			assess = playout->assess(playout, b, &m, pp->policy_eqex);
 		}
-		if (!isnan(assess)) {
-			if (parity < 0) {
-				/* Good moves for enemy are losses for us.
-				 * We will properly maximize this in the UCB1
-				 * decision. */
-				assess = 1 - assess;
-			}
-			node->prior.playouts += pp->policy_eqex;
-			node->prior.wins += pp->policy_eqex * assess;
+		if (assess) {
+			node->prior.playouts += abs(assess);
+			/* Good moves for enemy are losses for us.
+			 * We will properly maximize this in the UCB1
+			 * decision. */
+			assess *= parity;
+			if (assess > 0) node->prior.wins += assess;
 			node->hints |= 2;
 		}
 	}
