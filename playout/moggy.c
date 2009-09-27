@@ -522,7 +522,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		return;
 
 	/* Do not suicide... */
-	if (is_bad_selfatari(b, color, lib))
+	if (is_bad_selfatari(b, to_play, lib))
 		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
