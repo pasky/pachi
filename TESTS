@@ -54,6 +54,9 @@ ce540	ucb1amaf	43% (+-2%)
 04b7b	ucb1amaf!	79.5% (+-2%)	playout_amaf
 04b7b	ucb1amaf!&	46% (+-2.5%)	playout_amaf,patternrate=0
 
+82790	ucb1amaf	54.1% (+-2.9%)
+82790	ucb1amaf!	79% (+-2.9%)	playout_amaf
+
 <unknown playout_amaf regression>
 
 c031a	ucb1amaf	52.5% (+-4.2%)
