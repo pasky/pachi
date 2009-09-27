@@ -398,6 +398,9 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 		return true;
 	}
 
+	if (!pp->ladders)
+		return false;
+
 	/* Figure out the ladder direction */
 	int xd, yd;
 	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
@@ -558,7 +561,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
-	if (pp->ladders && ladder_catches(p, b, lib, group)) {
+	if (ladder_catches(p, b, lib, group)) {
 		return;
 	}
 	if (PLDEBUGL(6))
