@@ -403,26 +403,57 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
 	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : board_atxy(b, x, y - 1) == S_NONE ? -1 : 0;
 
+	if (!xd || !yd) {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "no ladder, too little space; self-atari?\n");
+		return false;
+	}
+
+	/* For given (xd,yd), we have two possibilities where to move
+	 * next. Consider (-1,-1):
+	 * n X .   n c X
+	 * c O X   X O #
+	 * X # #   . X #
+	 */
+	bool horiz_first = ladder_catcher(b, x, y - yd, lcolor); // left case
+	bool vert_first = ladder_catcher(b, x - xd, y, lcolor); // right case
+
+	/* We don't have to look at the other 'X' in the position - if it
+	 * wouldn't be there, the group wouldn't be in atari. */
+
 	/* We do only tight ladders, not loose ladders. Furthermore,
 	 * the ladders need to be simple:
 	 * . X .             . . X
 	 * c O X supported   . c O unsupported
 	 * X # #             X O #
 	 */
-
-	/* For given (xd,yd), we have two possibilities where to move
-	 * next. Consider (-1,1):
-	 * n X .   n c X
-	 * c O X   X O #
-	 * X # #   . X #
-	 */
-	if (!xd || !yd || !(ladder_catcher(b, x - xd, y, lcolor) ^ ladder_catcher(b, x, y - yd, lcolor))) {
-		/* Silly situation, probably non-simple ladder or suicide. */
+	assert(!(horiz_first && vert_first));
+	if (!horiz_first && !vert_first) {
 		/* TODO: In case of basic non-simple ladder, play out both variants. */
 		if (PLDEBUGL(5))
 			fprintf(stderr, "non-simple ladder\n");
 		return false;
 	}
+
+	/* We do that below for further moves, but now initially - check
+	 * that at 'c', we aren't putting any of the catching stones
+	 * in atari. */
+#define check_catcher_danger(b, x_, y_) do { \
+	if (board_atxy(b, (x_), (y_)) != S_OFFBOARD \
+	    && board_group_info(b, group_atxy(b, (x_), (y_))).libs <= 2) { \
+		if (PLDEBUGL(5)) \
+			fprintf(stderr, "ladder failed - atari at the beginning\n"); \
+		return false; \
+	} } while (0)
+
+	if (horiz_first) {
+		check_catcher_danger(b, x, y - yd);
+		check_catcher_danger(b, x - xd, y + yd);
+	} else {
+		check_catcher_danger(b, x - xd, y);
+		check_catcher_danger(b, x + xd, y - yd);
+	}
+#undef check_catcher_danger
 
 #define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
 	if (board_atxy(b, x, y) != S_NONE) { \
