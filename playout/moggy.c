@@ -506,7 +506,6 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q)
 {
-	struct moggy_policy *pp = p->data;
 	int qmoves_prev = q->moves;
 
 	/* We don't use @to_play almost anywhere since any moves here are good
