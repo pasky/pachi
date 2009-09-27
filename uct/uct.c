@@ -27,6 +27,16 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 #define MC_GAMELEN	400
 
 
+static bool
+can_pass(struct board *b, enum stone color)
+{
+	float score = board_official_score(b);
+	if (color == S_BLACK)
+		score = -score;
+	//fprintf(stderr, "%d score %f\n", color, score);
+	return (score > 0);
+}
+
 static void
 progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
 {
@@ -344,6 +354,11 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		fprintf(stderr, "some moves valid under this ruleset because of this.\n");
 		b->superko_violation = false;
 	}
+
+	/* If the opponent just passes and we win counting, just
+	 * pass as well. */
+	if (b->moves > 1 && is_pass(b->last_move.coord) && can_pass(b, color))
+		return coord_copy(pass);
 
 	int played_games = 0;
 	if (!u->threads) {
