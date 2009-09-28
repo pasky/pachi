@@ -37,7 +37,7 @@ ucb1tuned_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
 		float xpl_loc = (ni->u.value - ni->u.value * ni->u.value);
-		if (parity < 0) xpl_loc = 1 - xpl_loc;
+		if (tree_parity(tree, parity) < 0) xpl_loc = 1 - xpl_loc;
 		xpl_loc += sqrt(xpl / ni->u.playouts);
 		if (xpl_loc > 1.0/4) xpl_loc = 1.0/4;
 		float urgency = tree_node_get_value(tree, ni, u, parity) + sqrt(xpl * xpl_loc / ni->u.playouts);

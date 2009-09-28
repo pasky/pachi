@@ -213,7 +213,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 			ngames += ni->prior.playouts;
 			nwins += ni->prior.wins;
 		}
-		if (parity < 0) {
+		if (tree_parity(tree, parity) < 0) {
 			nwins = ngames - nwins;
 			rwins = rgames - rwins;
 		}

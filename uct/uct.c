@@ -111,8 +111,10 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			tree_node_get_value(t, n, u, parity));
 
 	int result = play_random_game(b, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
-	if (player_color != next_color && result >= 0)
+	if (next_color == S_WHITE && result >= 0) {
+		/* We need the result from black's perspective. */
 		result = !result;
+	}
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n",
 		        spaces, player_color, next_color, coord2sstr(n->coord, t->board), result);
@@ -205,7 +207,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	if (passes >= 2) {
 		float score = board_official_score(&b2);
-		result = (player_color == S_BLACK) ? score < 0 : score > 0;
+		/* Result from black's perspective (no matter who
+		 * the player; black's perspective is always
+		 * what the tree stores. */
+		result = score < 0;
 
 		if (UDEBUGL(5))
 			fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
