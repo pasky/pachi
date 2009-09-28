@@ -398,7 +398,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 
 	// RAVE: 0.2vs0: 40% (+-7.3) 0.1vs0: 54.7% (+-3.5)
 	b->explore_p = 0.1;
-	b->explore_p_rave = -1;
+	b->explore_p_rave = 0.01;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
 	// gp: 14 vs 0: 44% (+-3.5)
