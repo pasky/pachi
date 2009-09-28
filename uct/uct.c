@@ -259,7 +259,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
-		if (!u->no_book && !b->moves && color == S_BLACK)
+		if (!u->no_book && b->moves < 2)
 			tree_load(u->t, b);
 	}
 
@@ -352,7 +352,7 @@ spawn_helper(void *ctx_)
 static void
 uct_notify_play(struct engine *e, struct board *b, struct move *m)
 {
-	prepare_move(e, b, stone_other(m->color), m->coord);
+	prepare_move(e, b, m->color, m->coord);
 }
 
 static coord_t *

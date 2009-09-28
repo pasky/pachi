@@ -451,6 +451,7 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 	tree_unlink_node(node);
 	tree_done_node(tree, tree->root);
 	tree->root = node;
+	tree->root_color = stone_other(tree->root_color);
 	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
 }
 
