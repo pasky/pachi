@@ -73,5 +73,13 @@ c031a	ucb1amaf!	63.4% (+-4.2%)	playout_amaf
 87b9e	ucb1amaf!&	61.8% (+-2.4%)	playout_amaf,eqex=25
 87b9e	ucb1amaf!	61.4% (+-2.1%)	playout_amaf
 
+<playout_amaf is now default>
+
+eac23	ucb1amaf	77.4% (+-1.5%)
+eac23	ucb1amaf#	76.6% (+-1.5%)	explore_p_rave=0.01
+eac23	ucb1amaf!	74.3% (+-1.5%)	check_nakade=0
+eac23	ucb1amaf!#	75.5% (+-1.6%)	check_nakade=0,explore_p_rave=0.01
+eac23	ucb1amaf!#*	75% (+-1.5%)	check_nakade=0,explore_p_rave=0.01,explore_p=0.01
+
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
