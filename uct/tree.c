@@ -144,7 +144,7 @@ tree_save(struct tree *tree, struct board *b, int thres)
 
 
 void
-tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
+tree_node_load(FILE *f, struct tree_node *node, int *num)
 {
 	(*num)++;
 
@@ -167,15 +167,6 @@ tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
 
-	if (invert) {
-		node->u.wins = node->u.playouts - node->u.wins;
-		node->u.value = 1 - node->u.value;
-		node->amaf.wins = node->amaf.playouts - node->amaf.wins;
-		node->amaf.value = 1 - node->amaf.value;
-		node->prior.wins = node->prior.playouts - node->prior.wins;
-		node->prior.value = 1 - node->prior.value;
-	}
-
 	struct tree_node *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {
 		ni_prev = ni; ni = calloc(1, sizeof(*ni));
@@ -184,7 +175,7 @@ tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
 		else
 			ni_prev->sibling = ni;
 		ni->parent = node;
-		tree_node_load(f, ni, num, invert);
+		tree_node_load(f, ni, num);
 	}
 }
 
@@ -200,7 +191,7 @@ tree_load(struct tree *tree, struct board *b, enum stone color)
 
 	int num = 0;
 	if (fgetc(f))
-		tree_node_load(f, tree->root, &num, color != S_BLACK);
+		tree_node_load(f, tree->root, &num);
 	fprintf(stderr, "Loaded %d nodes.\n", num);
 
 	fclose(f);
