@@ -30,6 +30,7 @@ struct ucb1_policy_amaf {
 	float explore_p_rave;
 	int equiv_rave;
 	bool rave_prior, both_colors;
+	bool check_nakade;
 };
 
 
@@ -342,6 +343,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			assert(map->game_baselen >= 0);
 			enum stone amaf_color = map->map[ni->coord];
 			if (amaf_nakade(map->map[ni->coord])) {
+				if (!b->check_nakade)
+					continue;
 				/* We don't care to implement both_colors
 				 * properly since it sucks anyway. */
 				int i;
@@ -403,6 +406,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->even_eqex = b->policy_eqex = -1;
 	b->eqex = 6; /* Even number! */
 	b->rave_prior = true;
+	b->check_nakade = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -448,6 +452,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->rave_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "both_colors")) {
 				b->both_colors = true;
+			} else if (!strcasecmp(optname, "check_nakade")) {
+				b->check_nakade = optval && *optval == '1';
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}
