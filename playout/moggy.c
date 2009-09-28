@@ -561,6 +561,9 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Do not suicide... */
 	if (is_bad_selfatari(b, to_play, lib))
 		return;
+	/* Do not remove group that cannot be saved by the opponent. */
+	if (is_bad_selfatari(b, stone_other(to_play), lib))
+		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
 	
