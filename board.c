@@ -128,10 +128,13 @@ void
 board_clear(struct board *board)
 {
 	int size = board_size(board);
+	float komi = board->komi;
 
 	board_done_noalloc(board);
 	board_setup(board);
 	board_resize(board, size - 2 /* S_OFFBOARD margin */);
+
+	board->komi = komi;
 
 	/* Setup initial symmetry */
 	board->symmetry.d = 1;
