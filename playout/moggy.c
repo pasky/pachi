@@ -351,10 +351,13 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 	 * that we sometimes might not notice a ladder but if we do,
 	 * it should always work; thus we can use this for strong
 	 * negative hinting safely. */
-	//fprintf(stderr, "ladder check\n");
 
 	enum stone lcolor = board_at(b, group_base(laddered));
 	int x = coord_x(coord, b), y = coord_y(coord, b);
+
+	if (PLDEBUGL(6))
+		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
+			coord2sstr(coord, b), stone2str(lcolor), coord2sstr(laddered, b));
 
 	/* First, special-case first-line "ladders". This is a huge chunk
 	 * of ladders we actually meet and want to play. */
