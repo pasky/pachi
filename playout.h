@@ -53,6 +53,12 @@ struct playout_amafmap {
 	/* Our current position in the game sequence; in AMAF, we search
 	 * the range [game_baselen, gamelen]. */
 	int game_baselen;
+
+	/* Whether to record the nakade moves (true) or just completely
+	 * ignore them (false; just the first color on the intersection
+	 * is stored in the map, nakade counter is not incremented; game
+	 * record is still kept). */
+	bool record_nakade;
 };
 
 

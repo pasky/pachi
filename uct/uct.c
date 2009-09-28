@@ -171,7 +171,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (amaf && !is_pass(n->coord)) {
 			if (amaf->map[n->coord] == S_NONE || amaf->map[n->coord] == node_color) {
 				amaf->map[n->coord] = node_color;
-			} else {
+			} else { // XXX: Respect amaf->record_nakade
 				amaf_op(amaf->map[n->coord], +);
 			}
 			amaf->game[amaf->gamelen].coord = n->coord;
@@ -203,7 +203,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			passes = 0;
 	}
 
-	if (amaf) amaf->game_baselen = amaf->gamelen;
+	if (amaf) {
+		amaf->game_baselen = amaf->gamelen;
+		amaf->record_nakade = u->playout_amaf_nakade;
+	}
 
 	if (passes >= 2) {
 		float score = board_official_score(&b2);
@@ -220,12 +223,6 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	} else { assert(tree_leaf_node(n));
 		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
-	}
-
-	if (amaf && !u->playout_amaf_nakade) {
-		/* We don't want to consider AMAF nakades from playout;
-		 * cut off the playout part of the game sequence. */
-		amaf->gamelen = amaf->game_baselen;
 	}
 
 	assert(n == t->root || n->parent);
