@@ -50,7 +50,7 @@ progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
 		return;
 	}
 	fprintf(stderr, "[%d] ", playouts);
-	fprintf(stderr, "best %f ", best->u.value);
+	fprintf(stderr, "best %f ", tree_node_get_value(t, best, u, 1));
 
 	/* Max depth */
 	fprintf(stderr, "deepest % 2d ", t->max_depth - t->root->depth);
@@ -81,7 +81,9 @@ progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
 	}
 	while (--cans >= 0) {
 		if (can[cans]) {
-			fprintf(stderr, "%3s(%.3f) ", coord2sstr(can[cans]->coord, t->board), can[cans]->u.value);
+			fprintf(stderr, "%3s(%.3f) ",
+			        coord2sstr(can[cans]->coord, t->board),
+				tree_node_get_value(t, can[cans], u, 1));
 		} else {
 			fprintf(stderr, "           ");
 		}
@@ -98,14 +100,15 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	      char *spaces)
 {
 	enum stone next_color = stone_other(node_color);
+	int parity = (next_color == player_color ? 1 : -1);
 	if (n->u.playouts >= u->expand_p) {
 		// fprintf(stderr, "expanding %s (%p ^-%p)\n", coord2sstr(n->coord, b), n, n->parent);
-		tree_expand_node(t, n, b, next_color, u->radar_d, u->policy,
-		                 (next_color == player_color ? 1 : -1));
+		tree_expand_node(t, n, b, next_color, u->radar_d, u->policy, parity);
 	}
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
-			spaces, n->u.playouts, coord2sstr(n->coord, t->board), n->u.value);
+			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
+			tree_node_get_value(t, n, u, parity));
 
 	int result = play_random_game(b, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
 	if (player_color != next_color && result >= 0)
@@ -153,12 +156,14 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		/* Parity is chosen already according to the child color, since
 		 * it is applied to children. */
 		node_color = stone_other(node_color);
-		n = u->policy->descend(u->policy, t, n, (node_color == player_color ? 1 : -1), pass_limit);
+		int parity = (node_color == player_color ? 1 : -1);
+		n = u->policy->descend(u->policy, t, n, parity, pass_limit);
 
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
-			        spaces, coord2sstr(n->coord, t->board), n->coord, n->u.value);
+			        spaces, coord2sstr(n->coord, t->board), n->coord,
+				tree_node_get_value(t, n, u, parity));
 
 		assert(n->coord >= -1);
 		if (amaf && !is_pass(n->coord)) {
@@ -289,8 +294,8 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 		if (i > 0 && !(i % 500)) {
 			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
-			if (best && ((best->u.playouts >= 5000 && best->u.value >= u->loss_threshold)
-			             || (best->u.playouts >= 500 && best->u.value >= 0.95)))
+			if (best && ((best->u.playouts >= 5000 && tree_node_get_value(t, best, u, 1) >= u->loss_threshold)
+			             || (best->u.playouts >= 500 && tree_node_get_value(t, best, u, 1) >= 0.95)))
 				break;
 		}
 
@@ -417,8 +422,8 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	if (UDEBUGL(0))
 		progress_status(u, u->t, color, played_games);
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), best->u.value, best->u.playouts, u->t->root->u.playouts, played_games);
-	if (best->u.value < u->resign_ratio && !is_pass(best->coord)) {
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), tree_node_get_value(t, best, u, 1), best->u.playouts, u->t->root->u.playouts, played_games);
+	if (tree_node_get_value(t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
 	}

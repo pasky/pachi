@@ -68,7 +68,15 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 	int children = 0;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		children++;
-	fprintf(stderr, "[%s] %f (%d/%d playouts [prior %d/%d amaf %d/%d]; hints %x; %d children) <%lld>\n", coord2sstr(node->coord, tree->board), node->u.value, node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->amaf.wins, node->amaf.playouts, node->hints, children, node->hash);
+	/* We use 1 as parity, since for all nodes we want to know the
+	 * win probability of _us_, not the node color. */
+	fprintf(stderr, "[%s] %f (%d/%d playouts [prior %d/%d amaf %d/%d]; hints %x; %d children) <%lld>\n",
+		coord2sstr(node->coord, tree->board),
+		tree_node_get_value(tree, node, u, 1),
+		tree_node_get_wins(tree, node, u, 1), node->u.playouts,
+		tree_node_get_wins(tree, node, prior, 1), node->prior.playouts,
+		tree_node_get_wins(tree, node, amaf, 1), node->amaf.playouts,
+		node->hints, children, node->hash);
 
 	/* Print nodes sorted by #playouts. */
 

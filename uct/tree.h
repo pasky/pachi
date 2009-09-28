@@ -70,4 +70,9 @@ bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 bool tree_leaf_node(struct tree_node *node);
 void tree_update_node_value(struct tree_node *node);
 
+#define tree_node_get_value(tree, node, type, parity) \
+	(parity > 0 ? node->type.value : 1 - node->type.value)
+#define tree_node_get_wins(tree, node, type, parity) \
+	(parity > 0 ? node->type.wins : node->type.playouts - node->type.wins)
+
 #endif

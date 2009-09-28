@@ -83,7 +83,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		 * as volatile, attempting to force the compiler to keep
 		 * everything as a float. Ideally, we should do some random
 		 * __FLT_EPSILON__ magic instead. */
-		volatile float urgency = uct_playouts ? (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts) : b->fpu;
+		volatile float urgency = uct_playouts ? tree_node_get_value(tree, ni, u, parity) + sqrt(xpl / uct_playouts) : b->fpu;
 
 #if 0
 		{
