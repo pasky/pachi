@@ -57,6 +57,14 @@ ce540	ucb1amaf	43% (+-2%)
 82790	ucb1amaf	54.1% (+-2.9%)
 82790	ucb1amaf!	79% (+-2.9%)	playout_amaf
 
+129bb	ucb1amaf	64.5% (+-2.4%)
+129bb	ucb1amaf!	77.2% (+-2.1%)	playout_amaf
+
+<playout_amaf_nakade on by default>
+
+605dd	ucb1amaf	56.2% (+-2.5%)
+605dd	ucb1amaf!	63.5% (+-2.4%)	playout_amaf
+
 <unknown playout_amaf regression>
 
 c031a	ucb1amaf	52.5% (+-4.2%)
@@ -78,6 +86,11 @@ c031a	ucb1amaf!	63.4% (+-4.2%)	playout_amaf
 093e7	ucb1amaf	60.5% (+-2.4%)
 093e7	ucb1amaf!	58.8% (+-2.5%)	plaout_amaf=0
 093e7	ucb1amaf%	60.8% (+-2.4%)	ladders=0
+
+<playout_amaf_nakade partially off>
+
+635a3	ucb1amaf	65% (+-2.4%)
+635a3	ucb1amaf	63% (+-2.4%)	explore_p_rave=0.01
 
 <playout_amaf_nakade off by default>
 
