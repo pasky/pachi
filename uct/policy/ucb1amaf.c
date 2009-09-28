@@ -453,7 +453,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			} else if (!strcasecmp(optname, "both_colors")) {
 				b->both_colors = true;
 			} else if (!strcasecmp(optname, "check_nakade")) {
-				b->check_nakade = optval && *optval == '1';
+				b->check_nakade = !optval || *optval == '1';
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}
