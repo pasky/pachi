@@ -37,6 +37,11 @@ board_init(void)
 {
 	struct board *b = malloc(sizeof(struct board));
 	board_setup(b);
+
+	// Default setup
+	b->size = 9 + 2;
+	board_clear(b);
+
 	return b;
 }
 
