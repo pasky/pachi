@@ -188,7 +188,7 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 }
 
 void
-tree_load(struct tree *tree, struct board *b, enum stone color)
+tree_load(struct tree *tree, struct board *b)
 {
 	char *filename = tree_book_name(b);
 	FILE *f = fopen(filename, "rb");

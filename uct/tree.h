@@ -59,7 +59,7 @@ struct tree *tree_init(struct board *board, enum stone color);
 void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
-void tree_load(struct tree *tree, struct board *b, enum stone color);
+void tree_load(struct tree *tree, struct board *b);
 struct tree *tree_copy(struct tree *tree);
 void tree_merge(struct tree *dest, struct tree *src);
 

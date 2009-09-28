@@ -255,7 +255,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
 		if (!u->no_book && !b->moves && color == S_BLACK)
-			tree_load(u->t, b, color);
+			tree_load(u->t, b);
 	}
 
 	/* XXX: We hope that the opponent didn't suddenly play
@@ -422,8 +422,11 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	if (UDEBUGL(0))
 		progress_status(u, u->t, color, played_games);
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n", coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b), tree_node_get_value(t, best, u, 1), best->u.playouts, u->t->root->u.playouts, played_games);
-	if (tree_node_get_value(t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n",
+			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
+			tree_node_get_value(u->t, best, u, 1),
+			best->u.playouts, u->t->root->u.playouts, played_games);
+	if (tree_node_get_value(u->t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
 		tree_done(u->t); u->t = NULL;
 		return coord_copy(resign);
 	}
@@ -436,7 +439,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	u->t = tree_init(b, color);
-	tree_load(u->t, b, color);
+	tree_load(u->t, b);
 
 	int i;
 	for (i = 0; i < u->games; i++) {
@@ -464,7 +467,7 @@ uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	u->t = tree_init(b, color);
-	tree_load(u->t, b, color);
+	tree_load(u->t, b);
 	tree_dump(u->t, 0);
 	tree_done(u->t);
 }
