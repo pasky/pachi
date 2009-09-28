@@ -75,6 +75,12 @@ c031a	ucb1amaf!	63.4% (+-4.2%)	playout_amaf
 
 <playout_amaf is now default>
 
+093e7	ucb1amaf	60.5% (+-2.4%)
+093e7	ucb1amaf!	58.8% (+-2.5%)	plaout_amaf=0
+093e7	ucb1amaf%	60.8% (+-2.4%)	ladders=0
+
+<playout_amaf_nakade off by default>
+
 eac23	ucb1amaf	77.4% (+-1.5%)
 eac23	ucb1amaf#	76.6% (+-1.5%)	explore_p_rave=0.01
 eac23	ucb1amaf!	74.3% (+-1.5%)	check_nakade=0
