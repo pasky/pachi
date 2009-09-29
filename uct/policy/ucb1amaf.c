@@ -30,6 +30,7 @@ struct ucb1_policy_amaf {
 	float explore_p_rave;
 	int equiv_rave;
 	bool rave_prior, both_colors;
+	bool check_nakade;
 };
 
 
@@ -65,8 +66,8 @@ ucb1orave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 		ni->amaf.value = (float)amaf_wins / amaf_playouts;
 		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
-		float uctp = (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts);
-		float ravep = (parity > 0 ? ni->amaf.value : 1 - ni->amaf.value) + sqrt(xpl_rave / amaf_playouts);
+		float uctp = tree_node_get_value(tree, ni, u, parity) + sqrt(xpl / uct_playouts);
+		float ravep = tree_node_get_value(tree, ni, amaf, parity) + sqrt(xpl_rave / amaf_playouts);
 		float urgency = ni->u.playouts ? beta * ravep + (1 - beta) * uctp : b->fpu;
 		// fprintf(stderr, "uctp %f (uct %d/%d) ravep %f (xpl %f amaf %d/%d) beta %f => %f\n", uctp, ni->u.wins, ni->u.playouts, ravep, xpl_rave, amaf_wins, amaf_playouts, beta, urgency);
 		if (b->urg_randoma)
@@ -213,7 +214,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 			ngames += ni->prior.playouts;
 			nwins += ni->prior.wins;
 		}
-		if (parity < 0) {
+		if (tree_parity(tree, parity) < 0) {
 			nwins = ngames - nwins;
 			rwins = rgames - rwins;
 		}
@@ -342,6 +343,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			assert(map->game_baselen >= 0);
 			enum stone amaf_color = map->map[ni->coord];
 			if (amaf_nakade(map->map[ni->coord])) {
+				if (!b->check_nakade)
+					continue;
 				/* We don't care to implement both_colors
 				 * properly since it sucks anyway. */
 				int i;
@@ -395,7 +398,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 
 	// RAVE: 0.2vs0: 40% (+-7.3) 0.1vs0: 54.7% (+-3.5)
 	b->explore_p = 0.1;
-	b->explore_p_rave = -1;
+	b->explore_p_rave = 0.01;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
 	// gp: 14 vs 0: 44% (+-3.5)
@@ -403,6 +406,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->even_eqex = b->policy_eqex = -1;
 	b->eqex = 6; /* Even number! */
 	b->rave_prior = true;
+	b->check_nakade = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -448,6 +452,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->rave_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "both_colors")) {
 				b->both_colors = true;
+			} else if (!strcasecmp(optname, "check_nakade")) {
+				b->check_nakade = !optval || *optval == '1';
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
 			}

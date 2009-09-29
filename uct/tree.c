@@ -68,7 +68,15 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 	int children = 0;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		children++;
-	fprintf(stderr, "[%s] %f (%d/%d playouts [prior %d/%d amaf %d/%d]; hints %x; %d children) <%lld>\n", coord2sstr(node->coord, tree->board), node->u.value, node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->amaf.wins, node->amaf.playouts, node->hints, children, node->hash);
+	/* We use 1 as parity, since for all nodes we want to know the
+	 * win probability of _us_, not the node color. */
+	fprintf(stderr, "[%s] %f (%d/%d playouts [prior %d/%d amaf %d/%d]; hints %x; %d children) <%lld>\n",
+		coord2sstr(node->coord, tree->board),
+		tree_node_get_value(tree, node, u, 1),
+		tree_node_get_wins(tree, node, u, 1), node->u.playouts,
+		tree_node_get_wins(tree, node, prior, 1), node->prior.playouts,
+		tree_node_get_wins(tree, node, amaf, 1), node->amaf.playouts,
+		node->hints, children, node->hash);
 
 	/* Print nodes sorted by #playouts. */
 
@@ -144,7 +152,7 @@ tree_save(struct tree *tree, struct board *b, int thres)
 
 
 void
-tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
+tree_node_load(FILE *f, struct tree_node *node, int *num)
 {
 	(*num)++;
 
@@ -167,15 +175,6 @@ tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
 
-	if (invert) {
-		node->u.wins = node->u.playouts - node->u.wins;
-		node->u.value = 1 - node->u.value;
-		node->amaf.wins = node->amaf.playouts - node->amaf.wins;
-		node->amaf.value = 1 - node->amaf.value;
-		node->prior.wins = node->prior.playouts - node->prior.wins;
-		node->prior.value = 1 - node->prior.value;
-	}
-
 	struct tree_node *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {
 		ni_prev = ni; ni = calloc(1, sizeof(*ni));
@@ -184,12 +183,12 @@ tree_node_load(FILE *f, struct tree_node *node, int *num, bool invert)
 		else
 			ni_prev->sibling = ni;
 		ni->parent = node;
-		tree_node_load(f, ni, num, invert);
+		tree_node_load(f, ni, num);
 	}
 }
 
 void
-tree_load(struct tree *tree, struct board *b, enum stone color)
+tree_load(struct tree *tree, struct board *b)
 {
 	char *filename = tree_book_name(b);
 	FILE *f = fopen(filename, "rb");
@@ -200,7 +199,7 @@ tree_load(struct tree *tree, struct board *b, enum stone color)
 
 	int num = 0;
 	if (fgetc(f))
-		tree_node_load(f, tree->root, &num, color != S_BLACK);
+		tree_node_load(f, tree->root, &num);
 	fprintf(stderr, "Loaded %d nodes.\n", num);
 
 	fclose(f);
@@ -452,6 +451,7 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 	tree_unlink_node(node);
 	tree_done_node(tree, tree->root);
 	tree->root = node;
+	tree->root_color = stone_other(tree->root_color);
 	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
 }
 

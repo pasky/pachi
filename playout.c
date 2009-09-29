@@ -88,7 +88,7 @@ play_random:
 			if (amafmap) {
 				if (amafmap->map[coord] == S_NONE || amafmap->map[coord] == color)
 					amafmap->map[coord] = color;
-				else
+				else if (amafmap->record_nakade)
 					amaf_op(amafmap->map[coord], +);
 				amafmap->game[amafmap->gamelen].coord = coord;
 				amafmap->game[amafmap->gamelen].color = color;

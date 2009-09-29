@@ -37,6 +37,11 @@ board_init(void)
 {
 	struct board *b = malloc(sizeof(struct board));
 	board_setup(b);
+
+	// Default setup
+	b->size = 9 + 2;
+	board_clear(b);
+
 	return b;
 }
 
@@ -128,10 +133,13 @@ void
 board_clear(struct board *board)
 {
 	int size = board_size(board);
+	float komi = board->komi;
 
 	board_done_noalloc(board);
 	board_setup(board);
 	board_resize(board, size - 2 /* S_OFFBOARD margin */);
+
+	board->komi = komi;
 
 	/* Setup initial symmetry */
 	board->symmetry.d = 1;
@@ -875,7 +883,7 @@ board_is_valid_move(struct board *board, struct move *m)
 	if (!board_is_eyelike(board, &m->coord, stone_other(m->color)))
 		return true;
 	/* Play within {true,false} eye-ish formation */
-	if (board->ko.coord == m->coord && board->ko.color == m->coord)
+	if (board->ko.coord == m->coord && board->ko.color == m->color)
 		return false;
 	int groups_in_atari = 0;
 	foreach_neighbor(board, m->coord, {

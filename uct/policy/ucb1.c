@@ -83,7 +83,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		 * as volatile, attempting to force the compiler to keep
 		 * everything as a float. Ideally, we should do some random
 		 * __FLT_EPSILON__ magic instead. */
-		volatile float urgency = uct_playouts ? (parity > 0 ? ni->u.value : 1 - ni->u.value) + sqrt(xpl / uct_playouts) : b->fpu;
+		volatile float urgency = uct_playouts ? tree_node_get_value(tree, ni, u, parity) + sqrt(xpl / uct_playouts) : b->fpu;
 
 #if 0
 		{
@@ -133,7 +133,7 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 	 * .XXXX. */
 	if (board_is_one_point_eye(b, &node->coord, color)) {
 		node->prior.playouts += pp->eqex;
-		node->prior.wins += parity > 0 ? 0 : pp->eqex;
+		node->prior.wins += tree_parity(tree, parity) > 0 ? 0 : pp->eqex;
 	}
 
 	/* Q_{grandparent} */
@@ -162,7 +162,7 @@ ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, stru
 			/* Good moves for enemy are losses for us.
 			 * We will properly maximize this in the UCB1
 			 * decision. */
-			assess *= parity;
+			assess *= tree_parity(tree, parity);
 			if (assess > 0) node->prior.wins += assess;
 			node->hints |= 2;
 		}

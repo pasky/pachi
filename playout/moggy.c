@@ -351,10 +351,13 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 	 * that we sometimes might not notice a ladder but if we do,
 	 * it should always work; thus we can use this for strong
 	 * negative hinting safely. */
-	//fprintf(stderr, "ladder check\n");
 
 	enum stone lcolor = board_at(b, group_base(laddered));
 	int x = coord_x(coord, b), y = coord_y(coord, b);
+
+	if (PLDEBUGL(6))
+		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
+			coord2sstr(coord, b), stone2str(lcolor), coord2sstr(laddered, b));
 
 	/* First, special-case first-line "ladders". This is a huge chunk
 	 * of ladders we actually meet and want to play. */
@@ -398,10 +401,31 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 		return true;
 	}
 
+	if (!pp->ladders)
+		return false;
+
 	/* Figure out the ladder direction */
 	int xd, yd;
 	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
 	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : board_atxy(b, x, y - 1) == S_NONE ? -1 : 0;
+
+	if (!xd || !yd) {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "no ladder, too little space; self-atari?\n");
+		return false;
+	}
+
+	/* For given (xd,yd), we have two possibilities where to move
+	 * next. Consider (-1,-1):
+	 * n X .   n c X
+	 * c O X   X O #
+	 * X # #   . X #
+	 */
+	bool horiz_first = ladder_catcher(b, x, y - yd, lcolor); // left case
+	bool vert_first = ladder_catcher(b, x - xd, y, lcolor); // right case
+
+	/* We don't have to look at the other 'X' in the position - if it
+	 * wouldn't be there, the group wouldn't be in atari. */
 
 	/* We do only tight ladders, not loose ladders. Furthermore,
 	 * the ladders need to be simple:
@@ -409,20 +433,35 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 	 * c O X supported   . c O unsupported
 	 * X # #             X O #
 	 */
-
-	/* For given (xd,yd), we have two possibilities where to move
-	 * next. Consider (-1,1):
-	 * n X .   n c X
-	 * c O X   X O #
-	 * X # #   . X #
-	 */
-	if (!xd || !yd || !(ladder_catcher(b, x - xd, y, lcolor) ^ ladder_catcher(b, x, y - yd, lcolor))) {
-		/* Silly situation, probably non-simple ladder or suicide. */
+	assert(!(horiz_first && vert_first));
+	if (!horiz_first && !vert_first) {
 		/* TODO: In case of basic non-simple ladder, play out both variants. */
 		if (PLDEBUGL(5))
 			fprintf(stderr, "non-simple ladder\n");
 		return false;
 	}
+
+	/* We do that below for further moves, but now initially - check
+	 * that at 'c', we aren't putting any of the catching stones
+	 * in atari. */
+#if 1 // this might be broken?
+#define check_catcher_danger(b, x_, y_) do { \
+	if (board_atxy(b, (x_), (y_)) != S_OFFBOARD \
+	    && board_group_info(b, group_atxy(b, (x_), (y_))).libs <= 2) { \
+		if (PLDEBUGL(5)) \
+			fprintf(stderr, "ladder failed - atari at the beginning\n"); \
+		return false; \
+	} } while (0)
+
+	if (horiz_first) {
+		check_catcher_danger(b, x, y - yd);
+		check_catcher_danger(b, x - xd, y + yd);
+	} else {
+		check_catcher_danger(b, x - xd, y);
+		check_catcher_danger(b, x + xd, y - yd);
+	}
+#undef check_catcher_danger
+#endif
 
 #define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
 	if (board_atxy(b, x, y) != S_NONE) { \
@@ -449,8 +488,7 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 			 * friendly and safe, we escaped anyway! */ \
 			coord_t c3 = coord_xy(b, x + (xd3_), y + (yd3_)); \
 			return board_at(b, c3) != lcolor \
-			       || board_group_info(b, group_at(b, c3)).libs < 1; \
-				return false; \
+			       || board_group_info(b, group_at(b, c3)).libs < 2; \
 		} \
 		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
 		if (s2 == lcolor) return false; \
@@ -470,10 +508,49 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 }
 
 
+static coord_t
+can_be_captured(struct playout_policy *p, struct board *b, enum stone capturer, coord_t c, enum stone to_play)
+{
+	if (board_at(b, c) != stone_other(capturer)
+	    || board_group_info(b, group_at(b, c)).libs > 1)
+		return pass;
+
+	coord_t capture = board_group_info(b, group_at(b, c)).lib[0];
+	if (PLDEBUGL(6))
+		fprintf(stderr, "can capture group %d (%s)?\n",
+			group_at(b, c), coord2sstr(capture, b));
+	struct move m; m.color = to_play; m.coord = capture;
+	/* Does that move even make sense? */
+	if (!board_is_valid_move(b, &m))
+		return pass;
+	/* Make sure capturing the group will actually
+	 * do us any good. */
+	else if (is_bad_selfatari(b, to_play, capture))
+		return pass;
+
+	return capture;
+}
+
+static bool
+can_be_rescued(struct playout_policy *p, struct board *b, group_t group, enum stone color, coord_t lib)
+{
+	/* Does playing on the liberty rescue the group? */
+	if (!is_bad_selfatari(b, color, lib))
+		return true;
+
+	/* Then, maybe we can capture one of our neighbors? */
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			if (!is_pass(can_be_captured(p, b, color, c, color)))
+				return true;
+		});
+	} foreach_in_group_end;
+	return false;
+}
+
 static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q)
 {
-	struct moggy_policy *pp = p->data;
 	int qmoves_prev = q->moves;
 
 	/* We don't use @to_play almost anywhere since any moves here are good
@@ -484,7 +561,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 
 	assert(color != S_OFFBOARD && color != S_NONE);
 	if (PLDEBUGL(5))
-		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
+		fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n", coord2sstr(group, b), coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
 	/* Do not bother with kos. */
@@ -495,21 +572,8 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Can we capture some neighbor? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			if (board_at(b, c) != stone_other(color)
-			    || board_group_info(b, group_at(b, c)).libs > 1)
-				continue;
-
-			coord_t capture = board_group_info(b, group_at(b, c)).lib[0];
-			if (PLDEBUGL(6))
-				fprintf(stderr, "can capture group %d (%s)?\n",
-					group_at(b, c), coord2sstr(capture, b));
-			struct move m; m.color = to_play; m.coord = capture;
-			/* Does that move even make sense? */
-			if (!board_is_valid_move(b, &m))
-				continue;
-			/* Make sure capturing the group will actually
-			 * do us any good. */
-			else if (is_bad_selfatari(b, to_play, capture))
+			coord_t capture = can_be_captured(p, b, color, c, to_play);
+			if (is_pass(capture))
 				continue;
 
 			q->move[q->moves++] = capture;
@@ -524,11 +588,14 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Do not suicide... */
 	if (is_bad_selfatari(b, to_play, lib))
 		return;
+	/* Do not remove group that cannot be saved by the opponent. */
+	if (to_play != color && !can_be_rescued(p, b, group, color, lib))
+		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
-	if (pp->ladders && ladder_catches(p, b, lib, group)) {
+	if (ladder_catches(p, b, lib, group)) {
 		return;
 	}
 	if (PLDEBUGL(6))
@@ -733,12 +800,17 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	/* The idea is simple for now - never allow self-atari moves.
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
-#if 0
-	fprintf(stderr, "__ sar test? %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
-	if (is_bad_selfatari(b, m->color, m->coord))
-		fprintf(stderr, "__ Prohibiting self-atari %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
-#endif
-	return fast_random(100) >= pp->selfatarirate || !is_bad_selfatari(b, m->color, m->coord);
+
+	if (fast_random(100) >= pp->selfatarirate) {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "skipping sar test\n");
+		return true;
+	}
+	bool selfatari = is_bad_selfatari(b, m->color, m->coord);
+	if (PLDEBUGL(5) && selfatari)
+		fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
+			stone2str(m->color), coord2sstr(m->coord, b));
+	return !selfatari;
 }
 
 
