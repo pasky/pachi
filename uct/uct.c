@@ -235,7 +235,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			enum stone color = amaf->game[i].color;
 			if (amaf->map[coord] == S_NONE || amaf->map[coord] == color) {
 				amaf->map[coord] = color;
-			} else { // XXX: Respect amaf->record_nakade
+			/* Nakade always recorded for in-tree part */
+			} else if (amaf->record_nakade || i <= amaf->game_baselen) {
 				amaf_op(amaf->map[n->coord], +);
 			}
 		}
