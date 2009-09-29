@@ -113,5 +113,10 @@ eac23	ucb1amaf!#*	75% (+-1.5%)	check_nakade=0,explore_p_rave=0.01,explore_p=0.01
 229b9	ucb1amaf% 5k	77.2% (+-2.1%)	ladders=0
 229b9	ucb1amaf*# 5k	74.9% (+-2.2%)	explore_p=0.005,explore_p_rave=0.005
 
+2d54a	ucb1amaf	72.2% (+-2.2%)
+
+8ac8a	ucb1amaf	77% (+-2.1%)
+8ac8a	ucb1amaf@	77% (+-2.1%)	ladder catcher atari check disabled
+
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
