@@ -508,6 +508,46 @@ ladder_catches(struct playout_policy *p, struct board *b, coord_t coord, group_t
 }
 
 
+static coord_t
+can_be_captured(struct playout_policy *p, struct board *b, enum stone capturer, coord_t c, enum stone to_play)
+{
+	if (board_at(b, c) != stone_other(capturer)
+	    || board_group_info(b, group_at(b, c)).libs > 1)
+		return pass;
+
+	coord_t capture = board_group_info(b, group_at(b, c)).lib[0];
+	if (PLDEBUGL(6))
+		fprintf(stderr, "can capture group %d (%s)?\n",
+			group_at(b, c), coord2sstr(capture, b));
+	struct move m; m.color = to_play; m.coord = capture;
+	/* Does that move even make sense? */
+	if (!board_is_valid_move(b, &m))
+		return pass;
+	/* Make sure capturing the group will actually
+	 * do us any good. */
+	else if (is_bad_selfatari(b, to_play, capture))
+		return pass;
+
+	return capture;
+}
+
+static bool
+can_be_rescued(struct playout_policy *p, struct board *b, group_t group, enum stone color, coord_t lib)
+{
+	/* Does playing on the liberty rescue the group? */
+	if (!is_bad_selfatari(b, color, lib))
+		return true;
+
+	/* Then, maybe we can capture one of our neighbors? */
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			if (!is_pass(can_be_captured(p, b, color, c, color)))
+				return true;
+		});
+	} foreach_in_group_end;
+	return false;
+}
+
 static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q)
 {
@@ -521,7 +561,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 
 	assert(color != S_OFFBOARD && color != S_NONE);
 	if (PLDEBUGL(5))
-		fprintf(stderr, "atariiiiiiiii %s of color %d\n", coord2sstr(lib, b), color);
+		fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n", coord2sstr(group, b), coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
 	/* Do not bother with kos. */
@@ -532,21 +572,8 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Can we capture some neighbor? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			if (board_at(b, c) != stone_other(color)
-			    || board_group_info(b, group_at(b, c)).libs > 1)
-				continue;
-
-			coord_t capture = board_group_info(b, group_at(b, c)).lib[0];
-			if (PLDEBUGL(6))
-				fprintf(stderr, "can capture group %d (%s)?\n",
-					group_at(b, c), coord2sstr(capture, b));
-			struct move m; m.color = to_play; m.coord = capture;
-			/* Does that move even make sense? */
-			if (!board_is_valid_move(b, &m))
-				continue;
-			/* Make sure capturing the group will actually
-			 * do us any good. */
-			else if (is_bad_selfatari(b, to_play, capture))
+			coord_t capture = can_be_captured(p, b, color, c, to_play);
+			if (is_pass(capture))
 				continue;
 
 			q->move[q->moves++] = capture;
@@ -562,7 +589,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	if (is_bad_selfatari(b, to_play, lib))
 		return;
 	/* Do not remove group that cannot be saved by the opponent. */
-	if (is_bad_selfatari(b, stone_other(to_play), lib))
+	if (to_play != color && !can_be_rescued(p, b, group, color, lib))
 		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
