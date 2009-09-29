@@ -227,7 +227,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	if (amaf && u->playout_amaf_cutoff) {
 		int cutoff = amaf->game_baselen;
-		cutoff += (amaf->gamelen - amaf->game_baselen) * 100 / u->playout_amaf_cutoff;
+		cutoff += (amaf->gamelen - amaf->game_baselen) * u->playout_amaf_cutoff / 100;
 		/* Now, reconstruct the amaf map. */
 		memset(amaf->map, 0, board_size2(&b2) * sizeof(*amaf->map));
 		for (int i = 0; i < cutoff; i++) {
