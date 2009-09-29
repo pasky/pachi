@@ -225,6 +225,22 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 	}
 
+	if (amaf && u->playout_amaf_cutoff) {
+		int cutoff = amaf->game_baselen;
+		cutoff += (amaf->gamelen - amaf->game_baselen) * 100 / u->playout_amaf_cutoff;
+		/* Now, reconstruct the amaf map. */
+		memset(amaf->map, 0, board_size2(&b2) * sizeof(*amaf->map));
+		for (int i = 0; i < cutoff; i++) {
+			coord_t coord = amaf->game[i].coord;
+			enum stone color = amaf->game[i].color;
+			if (amaf->map[coord] == S_NONE || amaf->map[coord] == color) {
+				amaf->map[coord] = color;
+			} else { // XXX: Respect amaf->record_nakade
+				amaf_op(amaf->map[n->coord], +);
+			}
+		}
+	}
+
 	assert(n == t->root || n->parent);
 	if (result >= 0)
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, result);
@@ -534,6 +550,10 @@ uct_state_init(char *arg)
 					u->playout_amaf_nakade = false;
 				else
 					u->playout_amaf_nakade = true;
+			} else if (!strcasecmp(optname, "playout_amaf_cutoff") && optval) {
+				/* Keep only first N% of playout stage AMAF
+				 * information. */
+				u->playout_amaf_cutoff = atoi(optval);
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				char *policyarg = strchr(optval, ':');
 				if (policyarg)
