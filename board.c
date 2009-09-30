@@ -876,32 +876,6 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 
 
 bool
-board_is_valid_move(struct board *board, struct move *m)
-{
-	if (board_at(board, m->coord) != S_NONE)
-		return false;
-	if (!board_is_eyelike(board, &m->coord, stone_other(m->color)))
-		return true;
-	/* Play within {true,false} eye-ish formation */
-	if (board->ko.coord == m->coord && board->ko.color == m->color)
-		return false;
-	int groups_in_atari = 0;
-	foreach_neighbor(board, m->coord, {
-		group_t g = group_at(board, c);
-		groups_in_atari += (board_group_info(board, g).libs == 1);
-	});
-	return !!groups_in_atari;
-}
-
-
-bool
-board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
-{
-	return (neighbor_count_at(board, *coord, eye_color)
-	        + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
-}
-
-bool
 board_is_false_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 {
 	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
