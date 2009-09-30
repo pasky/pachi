@@ -72,15 +72,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
 
-		/* XXX: We later compare urgency with best_urgency; this can
-		 * be difficult given that urgency can be in register with
-		 * higher precision than best_urgency, thus even though
-		 * the numbers are in fact the same, urgency will be
-		 * slightly higher (or lower). Thus, we declare urgency
-		 * as volatile, attempting to force the compiler to keep
-		 * everything as a float. Ideally, we should do some random
-		 * __FLT_EPSILON__ magic instead. */
-		volatile float urgency = uct_playouts ? tree_node_get_value(tree, ni, u, parity) + sqrt(xpl / uct_playouts) : b->fpu;
+		float urgency = uct_playouts ? tree_node_get_value(tree, ni, u, parity) + sqrt(xpl / uct_playouts) : b->fpu;
 
 #if 0
 		{
@@ -92,10 +84,10 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
 		if (b->urg_randomm)
 			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
-		if (urgency > best_urgency) {
+		if (urgency - best_urgency > __FLT_EPSILON__) { // urgency > best_urgency
 			best_urgency = urgency; nbests = 0;
 		}
-		if (urgency >= best_urgency) {
+		if (urgency - best_urgency > -__FLT_EPSILON__) { // urgency >= best_urgency
 			/* We want to always choose something else than a pass
 			 * in case of a tie. pass causes degenerative behaviour. */
 			if (nbests == 1 && is_pass(nbest[0]->coord)) {
