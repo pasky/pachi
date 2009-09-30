@@ -75,7 +75,6 @@ uct_prior(struct uct *u, struct tree *tree, struct tree_node *node,
 	}
 
 	if (node->prior.playouts) {
-		node->prior.value = (float) node->prior.wins / node->prior.playouts;
 		tree_update_node_value(node, u->amaf_prior);
 	}
 

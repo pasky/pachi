@@ -70,7 +70,6 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
 			continue;
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
-		ni->prior.value = (float)ni->prior.wins / ni->prior.playouts;
 
 		float urgency = uct_playouts ? tree_node_get_value(tree, ni, u, parity) + sqrt(xpl / uct_playouts) : b->fpu;
 
