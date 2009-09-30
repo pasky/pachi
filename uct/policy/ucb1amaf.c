@@ -36,7 +36,7 @@ struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, stru
 struct tree_node *ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
 
 
-float fast_sqrt(int x)
+static inline float fast_sqrt(int x)
 {
 	static const float table[] = {
 		0,
