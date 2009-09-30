@@ -12,6 +12,7 @@
 #include "move.h"
 #include "playout.h"
 #include "uct/internal.h"
+#include "uct/prior.h"
 #include "uct/tree.h"
 
 
@@ -342,12 +343,11 @@ tree_normalize(struct tree *tree, int factor)
 
 
 void
-tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy, int parity)
+tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct *u, int parity)
 {
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
-	if (policy->prior)
-		policy->prior(policy, t, ni, b, color, parity);
+	uct_prior(u, t, ni, b, color, parity);
 
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
@@ -379,8 +379,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			struct tree_node *nj = tree_init_node(t, c, node->depth + 1);
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
-			if (policy->prior)
-				policy->prior(policy, t, ni, b, color, parity);
+			uct_prior(u, t, ni, b, color, parity);
 		}
 	}
 }

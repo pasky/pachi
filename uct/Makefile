@@ -1,5 +1,5 @@
 INCLUDES=-I..
-OBJS=tree.o uct.o
+OBJS=tree.o uct.o prior.o
 
 all: uct.a
 uct.a: $(OBJS)

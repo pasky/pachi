@@ -15,6 +15,7 @@
 #include "playout/light.h"
 #include "random.h"
 #include "uct/internal.h"
+#include "uct/prior.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
 
@@ -103,7 +104,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	int parity = (next_color == player_color ? 1 : -1);
 	if (n->u.playouts >= u->expand_p) {
 		// fprintf(stderr, "expanding %s (%p ^-%p)\n", coord2sstr(n->coord, b), n, n->parent);
-		tree_expand_node(t, n, b, next_color, u->radar_d, u->policy, parity);
+		tree_expand_node(t, n, b, next_color, u->radar_d, u, parity);
 	}
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
@@ -507,6 +508,11 @@ uct_state_init(char *arg)
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
 
+	// gp: 14 vs 0: 44% (+-3.5)
+	u->gp_eqex = 0;
+	u->even_eqex = u->policy_eqex = -1;
+	u->eqex = 6; /* Even number! */
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -581,6 +587,14 @@ uct_state_init(char *arg)
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 				}
+			} else if (!strcasecmp(optname, "prior") && optval) {
+				u->eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_even") && optval) {
+				u->even_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_gp") && optval) {
+				u->gp_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_policy") && optval) {
+				u->policy_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {
 				u->threads = atoi(optval);
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
@@ -592,6 +606,10 @@ uct_state_init(char *arg)
 			}
 		}
 	}
+
+	if (u->even_eqex < 0) u->even_eqex = u->eqex;
+	if (u->gp_eqex < 0) u->gp_eqex = u->eqex;
+	if (u->policy_eqex < 0) u->policy_eqex = u->eqex;
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */

@@ -23,9 +23,6 @@ struct ucb1_policy_amaf {
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
-	/* Equivalent experience for prior knowledge. MoGo paper recommends
-	 * 50 playouts per source. */
-	int eqex, even_eqex, gp_eqex, policy_eqex;
 	int urg_randoma, urg_randomm;
 	float explore_p_rave;
 	int equiv_rave;
@@ -37,8 +34,6 @@ struct ucb1_policy_amaf {
 struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
 
 struct tree_node *ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
-
-void ucb1_prior(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
 
 
 /* Original RAVE function */
@@ -256,7 +251,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		} else if (rgames) {
 			urgency = rval;
 		} else {
-			assert(!b->even_eqex);
+			/* assert(!u->even_eqex); */
 			urgency = b->fpu;
 		}
 
@@ -401,10 +396,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->explore_p_rave = 0.01;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
-	// gp: 14 vs 0: 44% (+-3.5)
-	b->gp_eqex = 0;
-	b->even_eqex = b->policy_eqex = -1;
-	b->eqex = 6; /* Even number! */
 	b->rave_prior = true;
 	b->check_nakade = true;
 
@@ -421,15 +412,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 
 			if (!strcasecmp(optname, "explore_p")) {
 				b->explore_p = atof(optval);
-			} else if (!strcasecmp(optname, "prior")) {
-				if (optval)
-					b->eqex = atoi(optval);
-			} else if (!strcasecmp(optname, "prior_even") && optval) {
-				b->even_eqex = atoi(optval);
-			} else if (!strcasecmp(optname, "prior_gp") && optval) {
-				b->gp_eqex = atoi(optval);
-			} else if (!strcasecmp(optname, "prior_policy") && optval) {
-				b->policy_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
 			} else if (!strcasecmp(optname, "urg_randoma") && optval) {
@@ -460,10 +442,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 		}
 	}
 
-	if (b->eqex) p->prior = ucb1_prior;
-	if (b->even_eqex < 0) b->even_eqex = b->eqex;
-	if (b->gp_eqex < 0) b->gp_eqex = b->eqex;
-	if (b->policy_eqex < 0) b->policy_eqex = b->eqex;
 	if (b->explore_p_rave < 0) b->explore_p_rave = b->explore_p;
 
 	return p;

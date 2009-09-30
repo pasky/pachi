@@ -5,7 +5,7 @@
 #include "move.h"
 
 struct board;
-struct uct_policy;
+struct uct;
 
 /*
  *            +------+
@@ -66,7 +66,7 @@ struct tree *tree_copy(struct tree *tree);
 void tree_merge(struct tree *dest, struct tree *src);
 void tree_normalize(struct tree *tree, int factor);
 
-void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy, int parity);
+void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct *u, int parity);
 void tree_delete_node(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
