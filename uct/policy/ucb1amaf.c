@@ -26,7 +26,7 @@ struct ucb1_policy_amaf {
 	int urg_randoma, urg_randomm;
 	float explore_p_rave;
 	int equiv_rave;
-	bool rave_prior, both_colors;
+	bool both_colors;
 	bool check_nakade;
 };
 
@@ -80,7 +80,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 		int nwins = ni->u.wins;
 		int rgames = ni->amaf.playouts;
 		int rwins = ni->amaf.wins;
-		if (b->rave_prior) {
+		if (p->uct->amaf_prior) {
 			rgames += ni->prior.playouts;
 			rwins += ni->prior.wins;
 		} else {
@@ -270,7 +270,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->explore_p_rave = 0.01;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
-	b->rave_prior = true;
 	b->check_nakade = true;
 
 	if (arg) {
@@ -296,9 +295,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->explore_p_rave = atof(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
 				b->equiv_rave = atof(optval);
-			} else if (!strcasecmp(optname, "rave_prior") && optval) {
-				// 46% (+-3.5)
-				b->rave_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "both_colors")) {
 				b->both_colors = true;
 			} else if (!strcasecmp(optname, "check_nakade")) {

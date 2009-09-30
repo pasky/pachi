@@ -507,6 +507,7 @@ uct_state_init(char *arg)
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
+	u->amaf_prior = true;
 
 	// gp: 14 vs 0: 44% (+-3.5)
 	u->gp_eqex = 0;
@@ -595,6 +596,8 @@ uct_state_init(char *arg)
 				u->gp_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_policy") && optval) {
 				u->policy_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
+				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {
 				u->threads = atoi(optval);
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
