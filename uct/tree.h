@@ -70,8 +70,9 @@ void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b
 void tree_delete_node(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
-bool tree_leaf_node(struct tree_node *node);
-void tree_update_node_value(struct tree_node *node);
+
+static bool tree_leaf_node(struct tree_node *node);
+static void tree_update_node_value(struct tree_node *node);
 
 /* Get black parity from parity within the tree. */
 #define tree_parity(tree, parity) \
@@ -82,5 +83,19 @@ void tree_update_node_value(struct tree_node *node);
 	(tree_parity(tree, parity) > 0 ? node->type.value : 1 - node->type.value)
 #define tree_node_get_wins(tree, node, type, parity) \
 	(tree_parity(tree, parity) > 0 ? node->type.wins : node->type.playouts - node->type.wins)
+
+static inline bool
+tree_leaf_node(struct tree_node *node)
+{
+	return !(node->children);
+}
+
+static inline void
+tree_update_node_value(struct tree_node *node)
+{
+	bool noamaf = node->hints & NODE_HINT_NOAMAF;
+	node->u.value = (float)(node->u.wins + node->prior.wins + (!noamaf ? node->amaf.wins : 0))
+			/ (node->u.playouts + node->prior.playouts + (!noamaf ? node->amaf.playouts : 0));
+}
 
 #endif

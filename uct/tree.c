@@ -499,21 +499,3 @@ tree_promote_at(struct tree *tree, struct board *b, coord_t c)
 	}
 	return false;
 }
-
-bool
-tree_leaf_node(struct tree_node *node)
-{
-	return !(node->children);
-}
-
-void
-tree_update_node_value(struct tree_node *node)
-{
-	bool noamaf = node->hints & NODE_HINT_NOAMAF;
-	node->u.value = (float)(node->u.wins + node->prior.wins + (!noamaf ? node->amaf.wins : 0))
-			/ (node->u.playouts + node->prior.playouts + (!noamaf ? node->amaf.playouts : 0));
-#if 0
-	{ struct board b2; board_size(&b2) = 9+2;
-	fprintf(stderr, "%s->%s %d/%d %d/%d %f\n", node->parent ? coord2sstr(node->parent->coord, &b2) : NULL, coord2sstr(node->coord, &b2), node->u.wins, node->u.playouts, node->prior.wins, node->prior.playouts, node->u.value); }
-#endif
-}
