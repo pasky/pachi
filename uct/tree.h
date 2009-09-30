@@ -41,6 +41,8 @@ struct tree_node {
 	struct move_stats prior;
 	/* XXX: Should be way for policies to add their own stats */
 	struct move_stats amaf;
+	/* Stats before starting playout; used for multi-thread normalization. */
+	struct move_stats pu, pamaf;
 #define NODE_HINT_NOAMAF 0x80
 	int hints;
 };
@@ -62,6 +64,7 @@ void tree_save(struct tree *tree, struct board *b, int thres);
 void tree_load(struct tree *tree, struct board *b);
 struct tree *tree_copy(struct tree *tree);
 void tree_merge(struct tree *dest, struct tree *src);
+void tree_normalize(struct tree *tree, int factor);
 
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct_policy *policy, int parity);
 void tree_delete_node(struct tree *tree, struct tree_node *node);

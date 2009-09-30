@@ -113,10 +113,26 @@ eac23	ucb1amaf!#*	75% (+-1.5%)	check_nakade=0,explore_p_rave=0.01,explore_p=0.01
 229b9	ucb1amaf% 5k	77.2% (+-2.1%)	ladders=0
 229b9	ucb1amaf*# 5k	74.9% (+-2.2%)	explore_p=0.005,explore_p_rave=0.005
 
+self-play:
+229b9	ucb1amaf km5.5	B+57.5% (+-2.5%)
+229b9	ucb1amaf km7.5	B+48.8% (+-2.5%)
+
 2d54a	ucb1amaf	72.2% (+-2.2%)
 
 8ac8a	ucb1amaf	77% (+-2.1%)
 8ac8a	ucb1amaf@	77% (+-2.1%)	ladder catcher atari check disabled
+8ac8a	ucb1amaf 50k	93.5% (+-1.2%)
+
+
+fccfe	ucb1amaf	78% (+-2.1%)
+fccfe	ucb1amaf*1	79.8% (+-2%)	playout_amaf_cutoff=75
+fccfe	ucb1amaf*1!	74% (+-2.2%)	playout_amaf_cutoff=75,playout_amaf_nakade=1
+fccfe	ucb1amaf*2	76.7% (+-2.1%)	playout_amaf_cutoff=85
+fccfe	ucb1amaf*2!	77% (+-2.1%)	playout_amaf_cutoff=85,playout_amaf_nakade=1
+fccfe	ucb1amaf*3	72% (+-2.2%)	playout_amaf_cutoff=90
+fccfe	ucb1amaf*3!	73% (+-2.2%)	playout_amaf_cutoff=90,playout_amaf_nakade=1
+fccfe	ucb1amaf*3	72% (+-2.2%)	playout_amaf_cutoff=90
+fccfe	ucb1amaf*3!	73% (+-2.2%)	playout_amaf_cutoff=90,playout_amaf_nakade=1
 
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2

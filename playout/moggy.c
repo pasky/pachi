@@ -19,6 +19,7 @@ struct moggy_policy {
 	bool ladders, ladderassess, borderladders, assess_local;
 	int lcapturerate, capturerate, patternrate;
 	int selfatarirate;
+	int fillboardtries;
 
 	/* Hashtable: 2*8 bits (ignore middle point, 2 bits per intersection) */
 	/* Value: 0: no pattern, 1: black pattern,
@@ -699,6 +700,15 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 			return c;
 	}
 
+	/* Fill board */
+	int fbtries = b->flen / 8;
+	for (int i = 0; i < (fbtries < pp->fillboardtries ? fbtries : pp->fillboardtries); i++) {
+		coord_t c = b->f[fast_random(b->flen)];
+		if (immediate_liberty_count(b, c) == 4)
+			return c;
+		/* XXX: We ignore stones placed diagonally. */
+	}
+
 	return pass;
 }
 
@@ -851,6 +861,8 @@ playout_moggy_init(char *arg)
 				pp->selfatarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
 				rate = atoi(optval);
+			} else if (!strcasecmp(optname, "fillboardtries")) {
+				pp->fillboardtries = atoi(optval);
 			} else if (!strcasecmp(optname, "ladders")) {
 				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
