@@ -43,7 +43,6 @@ struct tree_node {
 	struct move_stats amaf;
 	/* Stats before starting playout; used for multi-thread normalization. */
 	struct move_stats pu, pamaf;
-#define NODE_HINT_NOAMAF 0x80
 	int hints;
 };
 
@@ -93,9 +92,8 @@ tree_leaf_node(struct tree_node *node)
 static inline void
 tree_update_node_value(struct tree_node *node)
 {
-	bool noamaf = node->hints & NODE_HINT_NOAMAF;
-	node->u.value = (float)(node->u.wins + node->prior.wins + (!noamaf ? node->amaf.wins : 0))
-			/ (node->u.playouts + node->prior.playouts + (!noamaf ? node->amaf.playouts : 0));
+	node->u.value = (float)(node->u.wins + node->prior.wins)
+			/ (node->u.playouts + node->prior.playouts);
 }
 
 #endif

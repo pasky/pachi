@@ -201,8 +201,6 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		if (node->parent == NULL)
 			assert(tree->root_color == stone_other(child_color));
 
-		if (p->descend != ucb1_descend)
-			node->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 		update_node(p, node, result);
 		if (amaf_nakade(map->map[node->coord]))
 			amaf_op(map->map[node->coord], -);
@@ -240,8 +238,6 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * to record the result unmodified; in that case,
 			 * we will correctly negate them at the descend phase. */
 
-			if (p->descend != ucb1_descend)
-				ni->hints |= NODE_HINT_NOAMAF; /* Rave, different update function */
 			update_node_amaf(p, ni, nres);
 
 #if 0
@@ -296,11 +292,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->urg_randoma = atoi(optval);
 			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
 				b->urg_randomm = atoi(optval);
-			} else if (!strcasecmp(optname, "rave")) {
-				if (optval && *optval == '0')
-					p->descend = ucb1_descend;
-				else if (optval && *optval == 's')
-					p->descend = ucb1srave_descend;
 			} else if (!strcasecmp(optname, "explore_p_rave") && optval) {
 				b->explore_p_rave = atof(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
