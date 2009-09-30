@@ -1020,7 +1020,7 @@ board_fast_score(struct board *board)
 
 
 bool
-is_bad_selfatari(struct board *b, enum stone color, coord_t to)
+is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 {
 	//fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
 	/* Assess if we actually gain any liberties by this escape route.
@@ -1033,9 +1033,8 @@ is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 		groupids[s][groupcts[s]++] = group_at(b, c);
 	});
 
-	/* More than one immediate liberty, thumbs up! */
-	if (groupcts[S_NONE] > 1)
-		return false;
+	/* We have shortage of liberties; that's the point. */
+	assert(groupcts[S_NONE] <= 1);
 
 	/* This is set if this move puts a group out of _all_
 	 * liberties; we need to watch out for snapback then. */
