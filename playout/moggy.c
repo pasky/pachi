@@ -703,7 +703,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	/* Fill board */
 	int fbtries = b->flen / 8;
 	for (int i = 0; i < (fbtries < pp->fillboardtries ? fbtries : pp->fillboardtries); i++) {
-		coord_t c = fast_random(b->f[fast_random(b->flen)]);
+		coord_t c = b->f[fast_random(b->flen)];
 		if (immediate_liberty_count(b, c) == 4)
 			return c;
 		/* XXX: We ignore stones placed diagonally. */
