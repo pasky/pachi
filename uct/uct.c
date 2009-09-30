@@ -428,6 +428,8 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 			pthread_mutex_unlock(&finish_serializer);
 		}
 		pthread_mutex_unlock(&finish_mutex);
+
+		tree_normalize(u->t, u->threads);
 	}
 
 	if (UDEBUGL(2))

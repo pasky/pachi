@@ -304,6 +304,35 @@ tree_merge(struct tree *dest, struct tree *src)
 }
 
 
+static void
+tree_node_normalize(struct tree_node *node, int factor)
+{
+	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+		tree_node_normalize(node, factor);
+
+#define normalize(s1, s2, t) node->s2.t = node->s1.t + (node->s2.t - node->s1.t) / factor;
+	normalize(pamaf, amaf, playouts);
+	normalize(pamaf, amaf, wins);
+	normalize(pamaf, amaf, value);
+
+	normalize(pu, u, playouts);
+	normalize(pu, u, wins);
+	normalize(pu, u, value);
+#undef normalize
+}
+
+/* Normalize a tree, dividing the amaf and u values by given
+ * factor; otherwise, simulations run in independent threads
+ * two trees built upon the same board. To correctly handle
+ * results taken from previous simulation run, they are backed
+ * up in tree. */
+void
+tree_normalize(struct tree *tree, int factor)
+{
+	tree_node_normalize(tree->root, factor);
+}
+
+
 /* Tree symmetry: When possible, we will localize the tree to a single part
  * of the board in tree_expand_node() and possibly flip along symmetry axes
  * to another part of the board in tree_promote_at(). We follow b->symmetry
