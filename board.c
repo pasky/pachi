@@ -1037,11 +1037,6 @@ is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 	if (groupcts[S_NONE] > 1)
 		return false;
 
-	/* Quickly weed out suicides. */
-	if (board_is_one_point_eye(b, &to, stone_other(color))
-	    && board_group_info(b, groupids[stone_other(color)][0]).libs > 1)
-		return true;
-
 	/* This is set if this move puts a group out of _all_
 	 * liberties; we need to watch out for snapback then. */
 	bool friend_has_no_libs = false;
