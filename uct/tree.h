@@ -71,7 +71,8 @@ void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 
 static bool tree_leaf_node(struct tree_node *node);
-static void tree_update_node_value(struct tree_node *node);
+static void tree_update_node_value(struct tree_node *node, bool rave_prior);
+static void tree_update_node_rvalue(struct tree_node *node, bool rave_prior);
 
 /* Get black parity from parity within the tree. */
 #define tree_parity(tree, parity) \
@@ -90,10 +91,17 @@ tree_leaf_node(struct tree_node *node)
 }
 
 static inline void
-tree_update_node_value(struct tree_node *node)
+tree_update_node_value(struct tree_node *node, bool rave_prior)
 {
-	node->u.value = (float)(node->u.wins + node->prior.wins)
-			/ (node->u.playouts + node->prior.playouts);
+	node->u.value = (float)(node->u.wins + (!rave_prior ? node->prior.wins : 0))
+			/ (node->u.playouts + (!rave_prior ? node->prior.playouts : 0));
+}
+
+static inline void
+tree_update_node_rvalue(struct tree_node *node, bool rave_prior)
+{
+	node->amaf.value = (float)(node->amaf.wins + (rave_prior ? node->prior.wins : 0))
+			/ (node->amaf.playouts + (rave_prior ? node->prior.playouts : 0));
 }
 
 #endif

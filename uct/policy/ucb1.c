@@ -117,7 +117,7 @@ ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enu
 	for (; node; node = node->parent) {
 		node->u.playouts++;
 		node->u.wins += result;
-		tree_update_node_value(node);
+		tree_update_node_value(node, false);
 	}
 }
 

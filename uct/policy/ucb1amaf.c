@@ -173,14 +173,15 @@ update_node(struct uct_policy *p, struct tree_node *node, int result)
 {
 	node->u.playouts++;
 	node->u.wins += result;
-	tree_update_node_value(node);
+	tree_update_node_value(node, p->uct->amaf_prior);
 }
+
 static void
 update_node_amaf(struct uct_policy *p, struct tree_node *node, int result)
 {
 	node->amaf.playouts++;
 	node->amaf.wins += result;
-	tree_update_node_value(node);
+	tree_update_node_rvalue(node, p->uct->amaf_prior);
 }
 
 void

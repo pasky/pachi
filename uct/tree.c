@@ -289,12 +289,12 @@ next_di:
 	dest->amaf.playouts += src->amaf.playouts;
 	dest->amaf.wins += src->amaf.wins;
 	if (dest->amaf.playouts)
-		dest->amaf.value = (float) dest->amaf.wins / dest->amaf.playouts;
+		dest->amaf.value = (dest->amaf.value + src->amaf.value) / 2;
 
 	dest->u.playouts += src->u.playouts;
 	dest->u.wins += src->u.wins;
 	if (dest->prior.playouts + dest->amaf.playouts + dest->u.playouts)
-		tree_update_node_value(dest);
+		dest->u.value = (dest->u.value + src->u.value) / 2;
 }
 
 /* Merge two trees built upon the same board. Note that the operation is
