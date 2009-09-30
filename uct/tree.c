@@ -175,6 +175,9 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
 
+	memcpy(&node->pamaf, &node->amaf, sizeof(node->amaf));
+	memcpy(&node->pu, &node->u, sizeof(node->u));
+
 	struct tree_node *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {
 		ni_prev = ni; ni = calloc(1, sizeof(*ni));
