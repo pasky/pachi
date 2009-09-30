@@ -313,12 +313,10 @@ tree_node_normalize(struct tree_node *node, int factor)
 #define normalize(s1, s2, t) node->s2.t = node->s1.t + (node->s2.t - node->s1.t) / factor;
 	normalize(pamaf, amaf, playouts);
 	normalize(pamaf, amaf, wins);
-	normalize(pamaf, amaf, value);
 	memcpy(&node->pamaf, &node->amaf, sizeof(node->amaf));
 
 	normalize(pu, u, playouts);
 	normalize(pu, u, wins);
-	normalize(pu, u, value);
 	memcpy(&node->pu, &node->u, sizeof(node->u));
 #undef normalize
 }
