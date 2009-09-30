@@ -134,5 +134,11 @@ fccfe	ucb1amaf*3!	73% (+-2.2%)	playout_amaf_cutoff=90,playout_amaf_nakade=1
 fccfe	ucb1amaf*3	72% (+-2.2%)	playout_amaf_cutoff=90
 fccfe	ucb1amaf*3!	73% (+-2.2%)	playout_amaf_cutoff=90,playout_amaf_nakade=1
 
+Threading test:
+fccfe	ucb1amaf	78% (+-2.1%)
+fccfe	ucb1amaf 10k	79.8% (+-2%)
+fccfe	ucb1amaf t=2	75.5% (+-2.2%)
+569d7	ucb1amaf t=2	82.9% (+-1.9%)
+
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
