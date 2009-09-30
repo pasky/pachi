@@ -22,7 +22,9 @@ stone2char(enum stone s)
 	return ".XO#"[s];
 }
 
-static inline enum stone
+/* Curiously, gcc is reluctant to inline this; I have cofirmed
+ * there is performance benefit. */
+static inline enum stone __attribute__((always_inline))
 stone_other(enum stone s)
 {
 	static const enum stone o[S_MAX] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
