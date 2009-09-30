@@ -733,7 +733,7 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, 
 {
 	struct moggy_policy *pp = p->data;
 
-	if (is_pass(m->coord))
+	if (is_pass(m->coord) || !board_is_valid_move(b, m))
 		return 0;
 
 	if (PLDEBUGL(5)) {
