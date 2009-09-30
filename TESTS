@@ -125,6 +125,9 @@ self-play:
 
 
 fccfe	ucb1amaf	78% (+-2.1%)
+fccfe	ucb1amaf#	78.5% (+-2.1%)	rave_prior=0
+fccfe	ucb1amaf*0	76% (+-2.1%)	playout_amaf_cutoff=50
+fccfe	ucb1amaf*0!	78.5% (+-2.1%)	playout_amaf_cutoff=50,playout_amaf_nakade=1
 fccfe	ucb1amaf*1	79.8% (+-2%)	playout_amaf_cutoff=75
 fccfe	ucb1amaf*1!	74% (+-2.2%)	playout_amaf_cutoff=75,playout_amaf_nakade=1
 fccfe	ucb1amaf*2	76.7% (+-2.1%)	playout_amaf_cutoff=85
