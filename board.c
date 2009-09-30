@@ -851,6 +851,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
 	return (likely(!board_is_one_point_eye(b, coord, color)) /* bad idea to play into one, usually */
+		&& board_is_valid_move(b, &m)
 		&& (!permit || permit(permit_data, b, &m))
 	        && likely(board_play_f(b, &m, f) >= 0));
 }
