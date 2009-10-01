@@ -17,7 +17,7 @@
 
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders, assess_local;
-	int lcapturerate, capturerate, patternrate;
+	int lcapturerate, atarirate, capturerate, patternrate;
 	int selfatarirate;
 	int fillboardtries;
 	/* Whether to look for patterns around second-to-last move. */
@@ -684,6 +684,128 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
 	return q.moves ? q.move[i] : pass;
 }
 
+static bool
+miai_2lib(struct board *b, group_t group, enum stone color)
+{
+	bool can_connect = false, can_pull_out = false;
+	/* We have miai if we can either connect on both libs,
+	 * or connect on one lib and escape on another. (Just
+	 * having two escape routes can be risky.) */
+	foreach_neighbor(b, board_group_info(b, group).lib[0], {
+		enum stone cc = board_at(b, c);
+		if (cc == S_NONE && cc != board_group_info(b, group).lib[1]) {
+			can_pull_out = true;
+		} else if (cc != color) {
+			continue;
+		}
+
+		group_t cg = group_at(b, c);
+		if (cg && cg != group && board_group_info(b, cg).libs > 1)
+			can_connect = true;
+	});
+	foreach_neighbor(b, board_group_info(b, group).lib[1], {
+		enum stone cc = board_at(b, c);
+		if (cc == S_NONE && cc != board_group_info(b, group).lib[0] && can_connect) {
+			return true;
+		} else if (cc != color) {
+			continue;
+		}
+
+		group_t cg = group_at(b, c);
+		if (cg && cg != group && board_group_info(b, cg).libs > 1)
+			return (can_connect || can_pull_out);
+	});
+	return false;
+}
+
+static void
+group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q)
+{
+	enum stone color = board_at(b, group_base(group));
+	assert(color != S_OFFBOARD && color != S_NONE);
+
+	if (PLDEBUGL(5))
+		fprintf(stderr, "[%s] 2lib check of color %d\n",
+			coord2sstr(group, b), color);
+
+	/* Do not try to atari groups that cannot be harmed. */
+	if (miai_2lib(b, group, color))
+		return;
+
+	for (int i = 0; i < 2; i++) {
+		coord_t lib = board_group_info(b, group).lib[i];
+		assert(board_at(b, lib) == S_NONE);
+		struct move m; m.color = to_play; m.coord = lib;
+		if (!board_is_valid_move(b, &m))
+			continue;
+
+		/* Don't play at the spot if it is extremely short
+		 * of liberties... */
+		/* XXX: This looks harmful, could significantly
+		 * prefer atari to throwin:
+		 *
+		 * XXXOOOOOXX
+		 * .OO.....OX
+		 * XXXOOOOOOX */
+#if 0
+		if (neighbor_count_at(b, lib, stone_other(color)) + immediate_liberty_count(b, lib) < 2)
+			continue;
+#endif
+
+		/* If the owner can't play at the spot, we don't want
+		 * to bother either. */
+		if (is_bad_selfatari(b, color, lib))
+			continue;
+
+		/* Of course we don't want to play bad selfatari
+		 * ourselves, if we are the attacker... */
+		if (to_play != color && is_bad_selfatari(b, to_play, lib))
+			continue;
+
+		/* Tasty! Crispy! Good! */
+		q->move[q->moves++] = lib;
+	}
+}
+
+static coord_t
+local_2lib_check(struct playout_policy *p, struct board *b, struct move *m)
+{
+	struct move_queue q;
+	q.moves = 0;
+
+	/* Does the opponent have just two liberties? */
+	if (board_group_info(b, group_at(b, m->coord)).libs == 2) {
+		group_2lib_check(p, b, group_at(b, m->coord), stone_other(m->color), &q);
+#if 0
+		/* We always prefer to take off an enemy chain liberty
+		 * before pulling out ourselves. */
+		/* XXX: We aren't guaranteed to return to that group
+		 * later. */
+		if (q.moves)
+			return q.move[fast_random(q.moves)];
+#endif
+	}
+
+	/* Then he took a third liberty from neighboring chain? */
+	foreach_neighbor(b, m->coord, {
+		group_t g = group_at(b, c);
+		if (!g || board_group_info(b, g).libs != 2)
+			continue;
+		group_2lib_check(p, b, g, stone_other(m->color), &q);
+	});
+
+	if (PLDEBUGL(5)) {
+		fprintf(stderr, "Local 2lib candidate moves: ");
+		for (int i = 0; i < q.moves; i++) {
+			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
+		}
+		fprintf(stderr, "\n");
+	}
+
+	int i = fast_random(q.moves);
+	return q.moves ? q.move[i] : pass;
+}
+
 coord_t
 playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
@@ -698,6 +820,13 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
 			c = local_atari_check(p, b, &b->last_move);
+			if (!is_pass(c))
+				return c;
+		}
+
+		/* Local group can be PUT in atari? */
+		if (pp->atarirate > fast_random(100)) {
+			c = local_2lib_check(p, b, &b->last_move);
 			if (!is_pass(c))
 				return c;
 		}
@@ -856,7 +985,7 @@ playout_moggy_init(char *arg)
 
 	int rate = 90;
 
-	pp->lcapturerate = pp->capturerate = pp->patternrate = pp->selfatarirate = -1;
+	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate = pp->selfatarirate = -1;
 	pp->pattern2 = true;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
@@ -874,6 +1003,8 @@ playout_moggy_init(char *arg)
 
 			if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
+			} else if (!strcasecmp(optname, "atarirate") && optval) {
+				pp->atarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
 				pp->capturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "patternrate") && optval) {
@@ -900,6 +1031,7 @@ playout_moggy_init(char *arg)
 		}
 	}
 	if (pp->lcapturerate == -1) pp->lcapturerate = rate;
+	if (pp->atarirate == -1) pp->atarirate = rate;
 	if (pp->capturerate == -1) pp->capturerate = rate;
 	if (pp->patternrate == -1) pp->patternrate = rate;
 	if (pp->selfatarirate == -1) pp->selfatarirate = rate;
