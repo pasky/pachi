@@ -29,7 +29,7 @@ board_setup(struct board *b)
 	memset(b, 0, sizeof(*b));
 
 	struct move m = { pass, S_NONE };
-	b->last_move = b->ko = m;
+	b->last_move = b->last_move2 = b->ko = m;
 }
 
 struct board *
@@ -710,6 +710,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 		group = new_group(board, coord);
 
 	board_at(board, coord) = color;
+	board->last_move2 = board->last_move;
 	board->last_move = *m;
 	board->moves++;
 	board_hash_update(board, coord, color);
@@ -791,6 +792,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	board_at(board, coord) = color;
 
+	board->last_move2 = board->last_move;
 	board->last_move = *m;
 	board->moves++;
 	board_hash_update(board, coord, color);
@@ -826,6 +828,7 @@ int
 board_play(struct board *board, struct move *m)
 {
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
+		board->last_move2 = board->last_move;
 		board->last_move = *m;
 		return 0;
 	}
