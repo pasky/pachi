@@ -83,6 +83,7 @@ struct board {
 
 	int moves;
 	struct move last_move;
+	struct move last_move2; /* second-to-last move */
 	/* Whether we tried to add a hash twice; board_play*() can
 	 * set this, but it will still carry out the move as well! */
 	bool superko_violation;

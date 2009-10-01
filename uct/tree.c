@@ -238,7 +238,7 @@ tree_copy(struct tree *tree)
 
 
 static void
-tree_node_merge(struct tree_node *dest, struct tree_node *src)
+tree_node_merge(struct tree_node *dest, struct tree_node *src, bool amaf_prior)
 {
 	dest->hints |= src->hints;
 
@@ -266,7 +266,7 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src)
 			(*sref) = si;
 		}
 		/* Matching nodes - recurse... */
-		tree_node_merge(di, si);
+		tree_node_merge(di, si, amaf_prior);
 		/* ...and move on. */
 		sref = &si->sibling; si = si->sibling;
 next_di:
@@ -288,23 +288,21 @@ next_di:
 
 	dest->amaf.playouts += src->amaf.playouts;
 	dest->amaf.wins += src->amaf.wins;
-	if (dest->amaf.playouts)
-		dest->amaf.value = (dest->amaf.value + src->amaf.value) / 2;
+	tree_update_node_value(dest, amaf_prior);
 
 	dest->u.playouts += src->u.playouts;
 	dest->u.wins += src->u.wins;
-	if (dest->prior.playouts + dest->amaf.playouts + dest->u.playouts)
-		dest->u.value = (dest->u.value + src->u.value) / 2;
+	tree_update_node_rvalue(dest, amaf_prior);
 }
 
 /* Merge two trees built upon the same board. Note that the operation is
  * destructive on src. */
 void
-tree_merge(struct tree *dest, struct tree *src)
+tree_merge(struct tree *dest, struct tree *src, bool amaf_prior)
 {
 	if (src->max_depth > dest->max_depth)
 		dest->max_depth = src->max_depth;
-	tree_node_merge(dest->root, src->root);
+	tree_node_merge(dest->root, src->root, amaf_prior);
 }
 
 

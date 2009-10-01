@@ -62,7 +62,7 @@ void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
 void tree_load(struct tree *tree, struct board *b);
 struct tree *tree_copy(struct tree *tree);
-void tree_merge(struct tree *dest, struct tree *src);
+void tree_merge(struct tree *dest, struct tree *src, bool amaf_prior);
 void tree_normalize(struct tree *tree, int factor);
 
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct *u, int parity);
