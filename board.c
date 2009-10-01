@@ -1129,9 +1129,10 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 
 	//fprintf(stderr, "no cap group\n");
 
-	if (!needs_more_lib && !can_capture) {
+	if (!needs_more_lib && !can_capture && !groupcts[S_NONE]) {
 		/* We have no hope for more fancy tactics - this move is simply
 		 * a suicide, not even a self-atari. */
+		//fprintf(stderr, "suicide\n");
 		return true;
 	}
 	/* XXX: I wonder if it makes sense to continue if we actually
@@ -1148,11 +1149,16 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 	/* TODO: Allow to only nakade if the created shape is dead
 	 * (http://senseis.xmp.net/?Nakade). */
 
-	/* The nakade is valid only if it's valid for all surrounding
-	 * enemy groups, thus we do the check only once - for the
-	 * first one. */
-	group_t g = groupids[stone_other(color)][0];
-	if (g && board_group_info(b, g).libs == 2) {
+	/* This branch also covers snapback, which is kind of special
+	 * nakade case. ;-) */
+	for (int i = 0; i < 4; i++) {
+		group_t g = groupids[stone_other(color)][i];
+		if (!g || board_group_info(b, g).libs != 2)
+			continue;
+		/* Simple check not to re-examine the same group. */
+		if (i > 0 && groupids[stone_other(color)][i] == groupids[stone_other(color)][i - 1])
+			continue;
+
 		/* We must make sure the other liberty of that group:
 		 * (i) is an internal liberty
 		 * (ii) filling it to capture our group will not gain
@@ -1183,12 +1189,14 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 			int g2 = group_at(b, c);
 			/* If the neighbor is of our color, it must
 			 * be our group; if it is a different group,
-			 * we won't allow the self-atari. */
+			 * it must not be in atari. */
 			/* X X X X  We will not allow play on 'a',
 			 * X X a X  because 'b' would capture two
 			 * X O b X  different groups, forming two
 			 * X X X X  eyes. */
 			if (board_at(b, c) == color) {
+				if (board_group_info(b, group_at(b, c)).libs > 1)
+					continue;
 				/* Our group == one of the groups
 				 * we (@to) are connected to. */
 				int j;
@@ -1207,10 +1215,12 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 				continue;
 			/* Otherwise, it must have the exact same
 			 * liberties as the original enemy group. */
-			if (board_group_info(b, g2).libs > 2
-			    || board_group_info(b, g2).lib[0] == to
-			    || board_group_info(b, g2).lib[1] == to)
-				goto invalid_nakade;
+			if (board_group_info(b, g2).libs == 2
+			    && (board_group_info(b, g2).lib[0] == to
+			        || board_group_info(b, g2).lib[1] == to))
+				continue;
+
+			goto invalid_nakade;
 		});
 
 		/* Now, we must distinguish between nakade and eye
