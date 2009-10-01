@@ -891,12 +891,28 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, 
 	}
 
 	/* Are we dealing with atari? */
-	if (pp->lcapturerate || pp->capturerate) {
+	if (pp->lcapturerate || pp->capturerate || pp->atarirate) {
 		bool ladder = false;
 
 		foreach_neighbor(b, m->coord, {
 			group_t g = group_at(b, c);
-			if (!g || board_group_info(b, g).libs != 1)
+			if (!g || board_group_info(b, g).libs > 2)
+				continue;
+
+			if (board_group_info(b, g).libs == 2) {
+				if (!pp->atarirate)
+					continue;
+				struct move_queue q; q.moves = 0;
+				group_2lib_check(p, b, g, m->color, &q);
+				while (q.moves--)
+					if (q.move[q.moves] == m->coord) {
+						if (PLDEBUGL(5))
+							fprintf(stderr, "1.0: 2lib\n");
+						return assess_local_bonus(p, b, &b->last_move, m, games) / 2;
+					}
+			}
+
+			if (!pp->capturerate && !pp->lcapturerate)
 				continue;
 
 			/* _Never_ play here if this move plays out
