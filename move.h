@@ -24,6 +24,7 @@ static coord_t resign = -2;
 #define coord_xy_otf(x, y, board) coord_xy(board, x, y) // obsolete
 
 #define coord_is_adjecent(c1, c2, b) (abs(c1 - c2) == 1 || abs(c1 - c2) == board_size(b))
+#define coord_is_8adjecent(c1, c2, b) (abs(c1 - c2) == 1 || abs(abs(c1 - c2) - board_size(b)) < 2)
 
 /* dyn allocated */
 static coord_t *coord_init(int x, int y, int size);
