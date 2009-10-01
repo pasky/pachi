@@ -144,4 +144,22 @@ fccfe	ucb1amaf t=2	75.5% (+-2.2%)
 569d7	ucb1amaf t=2	82.9% (+-1.9%)
 
 
+<Multiple board sizes from now on>
+
+Fillboard investigations:
+
+569d7	9ucb1amaf!	81.2% (+-2%)	fillboardtries=10
+569d7	9ucb1amaf 50k	90% (+-1.5%)
+569d7	9ucb1amaf! 50k	90.8% (+-1.4%)	fillboardtries=10
+
+ce382	13ucb1amaf	51.8% (+-2.5%)
+569d7	13ucb1amaf!	47% (+-2.5%)	fillboardtries=10
+
+
+<many optimizations>
+
+4181b	9ucb1amaf	76% (+-2.4%)
+4181b	13ucb1amaf	47.8% (+-2.5%)
+
+
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
