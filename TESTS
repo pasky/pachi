@@ -161,5 +161,7 @@ ce382	13ucb1amaf	51.8% (+-2.5%)
 4181b	9ucb1amaf	76% (+-2.4%)
 4181b	13ucb1amaf	47.8% (+-2.5%)
 
+0965e	9ucb1amaf	77.5% (+-2.1%)
+
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
