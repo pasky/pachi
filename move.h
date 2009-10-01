@@ -7,6 +7,7 @@
 #include "stone.h"
 
 typedef int coord_t;
+struct board;
 
 #define coord_raw(c) (c)
 #define coord_x(c, b) ((c) % board_size(b))
@@ -29,6 +30,7 @@ static coord_t *coord_copy(coord_t c);
 static coord_t *coord_pass(void);
 static coord_t *coord_resign(void);
 static void coord_done(coord_t *c);
+int coord_edge_distance(coord_t c, struct board *b);
 
 struct board;
 char *coord2str(coord_t c, struct board *b);

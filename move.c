@@ -48,3 +48,13 @@ str2coord(char *str, int size)
 		return coord_init(xc - 'a' - (xc > 'i') + 1, atoi(str + 1), size);
 	}
 }
+
+
+int
+coord_edge_distance(coord_t c, struct board *b)
+{
+	int x = coord_x(c, b), y = coord_y(c, b);
+	int dx = x > board_size(b) / 2 ? board_size(b) - x : x;
+	int dy = y > board_size(b) / 2 ? board_size(b) - y : y;
+	return (dx < dy ? dx : dy) - 1 /* S_OFFBOARD */;
+}
