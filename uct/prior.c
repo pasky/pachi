@@ -32,14 +32,31 @@ uct_prior(struct uct *u, struct tree *tree, struct tree_node *node,
 
 	/* Discourage playing into our own eyes. However, we cannot
 	 * completely prohibit it:
-	 * ######
-	 * ...XX.
-	 * XOOOXX
-	 * X.OOOO
-	 * .XXXX. */
+	 * #######
+	 * ...XX.#
+	 * XOOOXX#
+	 * X.OOOO#
+	 * .XXXX.# */
 	if (board_is_one_point_eye(b, &node->coord, color)) {
 		node->prior.playouts += u->eqex;
 		node->prior.wins += tree_parity(tree, parity) > 0 ? 0 : u->eqex;
+	}
+
+	/* Q_{b19} */
+	/* Specific hints for 19x19 board - priors for certain edge distances. */
+	if (u->b19_eqex) {
+		int d = coord_edge_distance(node->coord, b);
+		if (d == 1 || d == 3) {
+			/* The bonus applies only with no stones in immediate
+			 * vincinity. */
+			if (!board_stone_radar(b, node->coord, 2)) {
+				/* First line: -eqex */
+				/* Third line: +eqex */
+				int v = d == 1 ? -1 : 1;
+				node->prior.playouts += u->b19_eqex;
+				node->prior.wins += tree_parity(tree, parity * v) > 0 ? u->b19_eqex : 0;
+			}
+		}
 	}
 
 	/* Q_{grandparent} */
