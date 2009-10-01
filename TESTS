@@ -160,8 +160,14 @@ ce382	13ucb1amaf	51.8% (+-2.5%)
 
 4181b	9ucb1amaf	76% (+-2.4%)
 4181b	13ucb1amaf	47.8% (+-2.5%)
+4181b	19ucb1amaf	1.6% (+-0.9%)
+4181b	19ucb1amaf!	1% (+-0.7%)	fillboardtries=10
+
 
 0965e	9ucb1amaf	77.5% (+-2.1%)
+0965e	9ucb1amaf#	9.5% (+-1.5%)	sylvain_rave=0
+0965e	9ucb1amaf&	79% (+-2.1%)	self-atari protection turned off for single-stone groups
+
 
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
