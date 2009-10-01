@@ -28,6 +28,7 @@ struct ucb1_policy_amaf {
 	int equiv_rave;
 	bool both_colors;
 	bool check_nakade;
+	bool sylvain_rave;
 };
 
 
@@ -79,17 +80,19 @@ static inline float fast_sqrt(int x)
 	}
 }
 
-/* Sylvain RAVE function */
 struct tree_node *
-ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
+ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	struct ucb1_policy_amaf *b = p->data;
-	float rave_coef = 1.0f / b->equiv_rave;
+	float beta = 0;
 	float nconf = 1.f, rconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
 	if (b->explore_p_rave > 0 && node->amaf.playouts)
 		rconf = sqrt(log(node->amaf.playouts + node->prior.playouts));
+
+	if (!b->sylvain_rave)
+		beta = sqrt(b->equiv_rave / (3 * node->u.playouts + b->equiv_rave));
 
 	// XXX: Stack overflow danger on big boards?
 	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
@@ -134,13 +137,14 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 			if (rgames) {
 				/* At the beginning, beta is at 1 and RAVE is used.
 				 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
-				float beta = (float) rgames / (rgames + ngames + rave_coef * ngames * rgames);
+				if (b->sylvain_rave)
+					beta = (float) rgames / (rgames + ngames + ngames * rgames / b->equiv_rave);
 #if 0
 				//if (node->coord == 7*11+4) // D7
 				fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
-					beta, rgames, rgames, ngames, rave_coef * ngames * rgames);
+					beta, rgames, rgames, ngames, ngames * rgames / b->equiv_rave);
 #endif
-				urgency = beta * rval + (1 - beta) * nval;
+				urgency = beta * rval + (1.f - beta) * nval;
 			} else {
 				urgency = nval;
 			}
@@ -154,10 +158,10 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 #if 0
 		struct board bb; bb.size = 11;
 		//if (node->coord == 7*11+4) // D7
-		fprintf(stderr, "%s<%lld>-%s<%lld> urgency %f (r %d / %d, n %d / %d)\n",
+		fprintf(stderr, "%s<%lld>-%s<%lld> urgency %f (r %d / %d + e = %f, n %d / %d + e = %f)\n",
 			coord2sstr(ni->parent->coord, &bb), ni->parent->hash,
 			coord2sstr(ni->coord, &bb), ni->hash, urgency,
-			rwins, rgames, nwins, ngames);
+			rwins, rgames, rval, nwins, ngames, nval);
 #endif
 		if (b->urg_randoma)
 			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
@@ -178,7 +182,7 @@ ucb1srave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 	}
 #if 0
 	struct board bb; bb.size = 11;
-	fprintf(stderr, "[%s %d: ", coord2sstr(node->coord, &bb), nbests);
+	fprintf(stderr, "RESULT [%s %d: ", coord2sstr(node->coord, &bb), nbests);
 	for (int zz = 0; zz < nbests; zz++)
 		fprintf(stderr, "%s", coord2sstr(nbest[zz]->coord, &bb));
 	fprintf(stderr, "]\n");
@@ -279,7 +283,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	struct ucb1_policy_amaf *b = calloc(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
-	p->descend = ucb1srave_descend;
+	p->descend = ucb1rave_descend;
 	p->choose = ucb1_choose;
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
@@ -290,6 +294,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
 	b->check_nakade = true;
+	b->sylvain_rave = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -316,6 +321,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "both_colors")) {
 				b->both_colors = true;
+			} else if (!strcasecmp(optname, "sylvain_rave")) {
+				b->sylvain_rave = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "check_nakade")) {
 				b->check_nakade = !optval || *optval == '1';
 			} else {
