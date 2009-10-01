@@ -20,6 +20,8 @@ struct moggy_policy {
 	int lcapturerate, capturerate, patternrate;
 	int selfatarirate;
 	int fillboardtries;
+	/* Whether to look for patterns around second-to-last move. */
+	bool pattern2;
 
 	/* Hashtable: 2*8 bits (ignore middle point, 2 bits per intersection) */
 	/* Value: 0: no pattern, 1: black pattern,
@@ -299,7 +301,7 @@ apply_pattern_here(struct playout_policy *p, char *hashtable,
 
 /* Check if we match any pattern around given move (with the other color to play). */
 static coord_t
-apply_pattern(struct playout_policy *p, struct board *b, struct move *m)
+apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *mm)
 {
 	struct moggy_policy *pp = p->data;
 	struct move_queue q;
@@ -319,6 +321,23 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m)
 		if (board_is_valid_move(b, &m2))
 			apply_pattern_here(p, pp->patterns, b, &m2, &q);
 	} foreach_diag_neighbor_end;
+
+	if (mm) { /* Second move for pattern searching */
+		foreach_neighbor(b, mm->coord, {
+			if (coord_is_8adjecent(m->coord, c, b))
+				continue;
+			struct move m2; m2.coord = c; m2.color = stone_other(m->color);
+			if (board_is_valid_move(b, &m2))
+				apply_pattern_here(p, pp->patterns, b, &m2, &q);
+		});
+		foreach_diag_neighbor(b, mm->coord) {
+			if (coord_is_8adjecent(m->coord, c, b))
+				continue;
+			struct move m2; m2.coord = c; m2.color = stone_other(m->color);
+			if (board_is_valid_move(b, &m2))
+				apply_pattern_here(p, pp->patterns, b, &m2, &q);
+		} foreach_diag_neighbor_end;
+	}
 
 	if (PLDEBUGL(5)) {
 		fprintf(stderr, "Pattern candidate moves: ");
@@ -685,7 +704,8 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
-			c = apply_pattern(p, b, &b->last_move);
+			c = apply_pattern(p, b, &b->last_move,
+			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL);
 			if (!is_pass(c))
 				return c;
 		}
@@ -837,6 +857,7 @@ playout_moggy_init(char *arg)
 	int rate = 90;
 
 	pp->lcapturerate = pp->capturerate = pp->patternrate = pp->selfatarirate = -1;
+	pp->pattern2 = true;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -871,6 +892,8 @@ playout_moggy_init(char *arg)
 				pp->ladderassess = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "assess_local")) {
 				pp->assess_local = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "pattern2")) {
+				pp->pattern2 = optval && *optval == '0' ? false : true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 			}
