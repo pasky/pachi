@@ -1086,8 +1086,7 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 			return false;
 		/* ...or one liberty, but not lib2. */
 		if (groupcts[S_NONE] > 0
-		    && abs(lib2 - to) != 1
-		    && abs(lib2 - to) != board_size(b))
+		    && !coord_is_adjecent(lib2, to, b))
 			return false;
 
 		/* ...ok, then we can still contribute a liberty
