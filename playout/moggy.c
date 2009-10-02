@@ -386,7 +386,7 @@ can_be_rescued(struct playout_policy *p, struct board *b, group_t group, enum st
 }
 
 static void
-group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q)
+group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q, coord_t *ladder)
 {
 	int qmoves_prev = q->moves;
 
@@ -433,7 +433,12 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	
 	/* ...or play out ladders. */
 	if (ladder_catches(p, b, lib, group)) {
-		return;
+		/* Sometimes we want to keep the ladder move in the
+		 * queue in order to discourage it. */
+		if (!ladder)
+			return;
+		else
+			*ladder = lib;
 	}
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...no ladder\n");
@@ -459,12 +464,12 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q);
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL);
 		if (q.moves > 0)
 			return q.move[fast_random(q.moves)];
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q);
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL);
 		if (q.moves > 0)
 			return q.move[fast_random(q.moves)];
 	}
@@ -479,14 +484,14 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), &q);
+		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), &q, NULL);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(p, b, g, stone_other(m->color), &q);
+		group_atari_check(p, b, g, stone_other(m->color), &q, NULL);
 	});
 
 	if (PLDEBUGL(5)) {
@@ -734,19 +739,20 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	if (!pp->capturerate && !pp->lcapturerate && !pp->ladderassess)
 		return;
 
-	group_atari_check(p, b, g, map->to_play, &q);
+	coord_t ladder = pass;
+	group_atari_check(p, b, g, map->to_play, &q, &ladder);
 	while (q.moves--) {
 		coord_t coord = q.move[q.moves];
 
 		/* _Never_ play here if this move plays out
 		 * a caught ladder. */
-		if (pp->ladderassess && ladder_catches(p, b, coord, g)) {
+		if (coord == ladder) {
 			/* Note that the opposite is not guarded against;
 			 * we do not advise against capturing a laddered
 			 * group (but we don't encourage it either). Such
 			 * a move can simplify tactical situations if we
 			 * can afford it. */
-			if (map->to_play != board_at(b, g))
+			if (!pp->ladderassess || map->to_play != board_at(b, g))
 				continue;
 			/* FIXME: We give the malus even if this move
 			 * captures another group. */
