@@ -88,7 +88,7 @@ static char moggy_patterns_src[][11] = {
 	/* cut keima (not in Mogo) */
 	"OX?"
 	"o.O"
-	"o??",
+	"???", /* o?? has some pathological tsumego cases */
 	/* side pattern - chase */
 	"X.?"
 	"O.?"
