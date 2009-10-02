@@ -208,24 +208,14 @@ bool board_is_one_point_eye(struct board *board, coord_t *c, enum stone eye_colo
 /* Returns color of a 1pt eye owner, S_NONE if not an eye. */
 enum stone board_get_one_point_eye(struct board *board, coord_t *c);
 
-/* Check if group is in atari. This is very fast.
- * The last liberty is recorded to lastlib (content is undefined if group
- * is not in atari). */
-bool board_group_in_atari(struct board *board, group_t group, coord_t *lastlib);
-
-/* Check if group can be put in atari. This is also very fast.
- * The last two liberties are recorded to lastlib (content is undefined if group
- * can't be put in atari). */
-bool board_group_can_atari(struct board *board, group_t group, coord_t lastlib[2]);
-
 /* board_official_score() is the scoring method for yielding score suitable
  * for external presentation. For fast scoring of entirely filled boards
  * (e.g. playouts), use board_fast_score(). */
 /* Positive: W wins */
-/* Tromp-Taylor scoring. */
-float board_official_score(struct board *board);
 /* Compare number of stones + 1pt eyes. */
 float board_fast_score(struct board *board);
+/* Tromp-Taylor scoring. */
+float board_official_score(struct board *board);
 
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(struct board *b, coord_t coord, int distance);

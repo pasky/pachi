@@ -934,25 +934,23 @@ board_group_capture(struct board *board, group_t group)
 	return stones;
 }
 
-bool
-board_group_in_atari(struct board *board, group_t group, coord_t *lastlib)
-{
-	if (board_group_info(board, group).libs != 1)
-		return false;
-	*lastlib = board_group_info(board, group).lib[0];
-	return true;
-}
 
-bool
-board_group_can_atari(struct board *board, group_t group, coord_t lastlib[2])
+float
+board_fast_score(struct board *board)
 {
-	if (board_group_info(board, group).libs != 2)
-		return false;
-	lastlib[0] = board_group_info(board, group).lib[0];
-	lastlib[1] = board_group_info(board, group).lib[1];
-	return true;
-}
+	int scores[S_MAX];
+	memset(scores, 0, sizeof(scores));
 
+	foreach_point(board) {
+		enum stone color = board_at(board, c);
+		if (color == S_NONE)
+			color = board_get_one_point_eye(board, &c);
+		scores[color]++;
+		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
+	} foreach_point_end;
+
+	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
+}
 
 static enum stone
 board_tromp_taylor_owner(struct board *board, coord_t c)
@@ -1000,23 +998,6 @@ board_official_score(struct board *board)
 		if (color == S_NONE)
 			color = board_tromp_taylor_owner(board, c);
 		scores[color]++;
-	} foreach_point_end;
-
-	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
-}
-
-float
-board_fast_score(struct board *board)
-{
-	int scores[S_MAX];
-	memset(scores, 0, sizeof(scores));
-
-	foreach_point(board) {
-		enum stone color = board_at(board, c);
-		if (color == S_NONE)
-			color = board_get_one_point_eye(board, &c);
-		scores[color]++;
-		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
 
 	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
