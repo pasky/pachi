@@ -956,7 +956,7 @@ board_fast_score(struct board *board)
 
 /* One flood-fill iteration; returns true if next iteration
  * is required. */
-static __attribute__((noinline)) bool
+static bool
 board_tromp_taylor_iter(struct board *board, int *ownermap)
 {
 	bool needs_update = false;
