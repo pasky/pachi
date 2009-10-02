@@ -60,8 +60,8 @@ uct_prior_one(struct uct *u, struct tree_node *node, struct prior_map *map, coor
 	}
 
 	/* Q_{grandparent} */
-	if (u->gp_eqex && node->parent && node->parent->parent && node->parent->parent->parent) {
-		struct tree_node *gpp = node->parent->parent->parent;
+	if (u->gp_eqex && node->parent && node->parent->parent) {
+		struct tree_node *gpp = node->parent->parent;
 		for (struct tree_node *ni = gpp->children; ni; ni = ni->sibling) {
 			/* Be careful not to emphasize too random results. */
 			if (ni->coord == node->coord && ni->u.playouts > u->gp_eqex) {
