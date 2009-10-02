@@ -44,10 +44,10 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 	foreach_point_and_pass(map->b) {
 		if (!map->consider[c])
 			continue;
-		if (board_is_one_point_eye(map->b, &c, map->to_play)) {
-			map->prior[c].playouts += u->eqex;
-			map->prior[c].wins += map->parity > 0 ? 0 : u->eqex;
-		}
+		if (!board_is_one_point_eye(map->b, &c, map->to_play))
+			continue;
+		map->prior[c].playouts += u->eqex;
+		map->prior[c].wins += map->parity > 0 ? 0 : u->eqex;
 	} foreach_point_end;
 }
 
@@ -60,17 +60,17 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 		if (!map->consider[c])
 			continue;
 		int d = coord_edge_distance(c, map->b);
-		if (d == 1 || d == 3) {
-			/* The bonus applies only with no stones in immediate
-			 * vincinity. */
-			if (!board_stone_radar(map->b, c, 2)) {
-				/* First line: -eqex */
-				/* Third line: +eqex */
-				int v = d == 1 ? -1 : 1;
-				map->prior[c].playouts += u->b19_eqex;
-				map->prior[c].wins += map->parity * v > 0 ? u->b19_eqex : 0;
-			}
-		}
+		if (d != 1 && d != 3)
+			continue;
+		/* The bonus applies only with no stones in immediate
+		 * vincinity. */
+		if (board_stone_radar(map->b, c, 2))
+			continue;
+		/* First line: -eqex */
+		/* Third line: +eqex */
+		int v = d == 1 ? -1 : 1;
+		map->prior[c].playouts += u->b19_eqex;
+		map->prior[c].wins += map->parity * v > 0 ? u->b19_eqex : 0;
 	} foreach_point_end;
 }
 
@@ -106,14 +106,15 @@ uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
 			struct move m = { c, map->to_play };
 			assess = u->playout->assess(u->playout, map->b, &m, u->policy_eqex);
 		}
-		if (assess) {
-			map->prior[c].playouts += abs(assess);
-			/* Good moves for enemy are losses for us.
-			 * We will properly maximize this in the UCB1
-			 * decision. */
-			assess *= map->parity;
-			if (assess > 0) map->prior[c].wins += assess;
-		}
+		if (!assess)
+			continue;
+		map->prior[c].playouts += abs(assess);
+		/* Good moves for enemy are losses for us.
+		 * We will properly maximize this in the UCB1
+		 * decision. */
+		assess *= map->parity;
+		if (assess > 0)
+			map->prior[c].wins += assess;
 	} foreach_point_end;
 }
 
