@@ -4,13 +4,16 @@
 struct board;
 struct move;
 enum stone;
+struct prior_map;
 
 
 struct playout_policy;
 typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone to_play);
-/* number of won (>0) or lost (<0) games to seed the node with (usually a proportion of @games);
- * can return 0 if policy has no opinion */
-typedef int (*playoutp_assess)(struct playout_policy *playout_policy, struct board *b, struct move *m, int games);
+/* Set number of won (>0) or lost (<0) games for each considerable
+ * move (usually a proportion of @games); can leave some untouched
+ * if policy has no opinion. The number must have proper parity;
+ * just use uct/prior.h:add_prior_value(). */
+typedef void (*playoutp_assess)(struct playout_policy *playout_policy, struct prior_map *map, int games);
 typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m);
 
 struct playout_policy {

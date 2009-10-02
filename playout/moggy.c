@@ -11,6 +11,7 @@
 #include "playout/moggy.h"
 #include "random.h"
 #include "tactics.h"
+#include "uct/prior.h"
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
@@ -699,7 +700,7 @@ assess_local_bonus(struct playout_policy *p, struct board *board, struct move *a
 }
 
 int
-playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, int games)
+playout_moggy_assess_one(struct playout_policy *p, struct board *b, struct move *m, int games)
 {
 	struct moggy_policy *pp = p->data;
 
@@ -786,6 +787,22 @@ playout_moggy_assess(struct playout_policy *p, struct board *b, struct move *m, 
 	}
 
 	return 0;
+}
+
+void
+playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
+{
+	/* TODO: Optimize this! */
+	foreach_point_and_pass(map->b) {
+		if (!map->consider[c])
+			continue;
+		int assess = 0;
+		struct move m = { c, map->to_play };
+		assess = playout_moggy_assess_one(p, map->b, &m, games);
+		if (!assess)
+			continue;
+		add_prior_value(map, c, assess, abs(assess));
+	} foreach_point_end;
 }
 
 bool

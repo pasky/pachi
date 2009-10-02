@@ -96,18 +96,8 @@ void
 uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{playout-policy} */
-	foreach_point_and_pass(map->b) {
-		if (!map->consider[c])
-			continue;
-		int assess = 0;
-		if (u->playout->assess) {
-			struct move m = { c, map->to_play };
-			assess = u->playout->assess(u->playout, map->b, &m, u->policy_eqex);
-		}
-		if (!assess)
-			continue;
-		add_prior_value(map, c, assess, abs(assess));
-	} foreach_point_end;
+	if (u->playout->assess)
+		u->playout->assess(u->playout, map, u->policy_eqex);
 }
 
 void
