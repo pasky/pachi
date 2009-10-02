@@ -353,7 +353,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 		.parity = tree_parity(t, parity),
 	};
 	/* Include pass in the prior map. */
-	map.prior = calloc(board_size2(b) + 1, sizeof(*map.prior)) + 1;
+	map.prior = calloc(board_size2(b) + 1, sizeof(*map.prior));
+	map.prior++;
 	uct_prior(u, node, &map);
 
 	/* Now, create the nodes. */
