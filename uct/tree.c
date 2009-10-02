@@ -241,6 +241,14 @@ tree_copy(struct tree *tree)
 static void
 tree_node_merge(struct tree_node *dest, struct tree_node *src, bool amaf_prior)
 {
+	/* Do not merge nodes that weren't touched at all. */
+	assert(dest->pamaf.playouts == src->pamaf.playouts);
+	assert(dest->pu.playouts == src->pu.playouts);
+	if (src->amaf.playouts - src->pamaf.playouts == 0
+	    && src->u.playouts - src->pu.playouts == 0) {
+		return;
+	}
+
 	dest->hints |= src->hints;
 
 	/* Merge the children, both are coord-sorted lists. */
