@@ -9,6 +9,7 @@
 #include "playout.h"
 #include "playout/moggy.h"
 #include "random.h"
+#include "tactics.h"
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 

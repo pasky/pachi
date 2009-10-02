@@ -227,13 +227,6 @@ float board_official_score(struct board *board);
 /* Compare number of stones + 1pt eyes. */
 float board_fast_score(struct board *board);
 
-/* Check if this move is undesirable self-atari (resulting group would have
- * only single liberty and not capture anything; ko is allowed); we mostly
- * want to avoid these moves. The function actually does a rather elaborate
- * tactical check, allowing self-atari moves that are nakade, eye falsification
- * or throw-ins. */
-static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
-
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(struct board *b, coord_t coord, int distance);
 
@@ -309,17 +302,6 @@ board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 {
 	return (neighbor_count_at(board, *coord, eye_color)
 	        + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
-}
-
-bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
-static inline bool
-is_bad_selfatari(struct board *b, enum stone color, coord_t to)
-{
-	/* More than one immediate liberty, thumbs up! */
-	if (immediate_liberty_count(b, to) > 1)
-		return false;
-
-	return is_bad_selfatari_slow(b, color, to);
 }
 
 #endif
