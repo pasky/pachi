@@ -202,6 +202,9 @@ void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coo
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 static bool board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
+/* Returns true if given coordinate could be a false eye; this check makes
+ * sense only if you already know the coordinate is_eyelike(). */
+bool board_is_false_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
 /* Returns true if given coordinate is a 1-pt eye (checks against false eyes, or
  * at least tries to). */
 bool board_is_one_point_eye(struct board *board, coord_t *c, enum stone eye_color);
