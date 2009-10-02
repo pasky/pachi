@@ -297,11 +297,13 @@ next_di:
 
 	dest->amaf.playouts += src->amaf.playouts;
 	dest->amaf.wins += src->amaf.wins;
-	tree_update_node_value(dest, amaf_prior);
+	if (dest->amaf.playouts)
+		tree_update_node_rvalue(dest, amaf_prior);
 
 	dest->u.playouts += src->u.playouts;
 	dest->u.wins += src->u.wins;
-	tree_update_node_rvalue(dest, amaf_prior);
+	if (dest->u.playouts)
+		tree_update_node_value(dest, amaf_prior);
 }
 
 /* Merge two trees built upon the same board. Note that the operation is
@@ -369,8 +371,12 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
 	ni->prior = map.prior[pass];
-	if (node->prior.playouts)
-		tree_update_node_value(ni, u->amaf_prior);
+	if (ni->prior.playouts) {
+		if (u->amaf_prior)
+			tree_update_node_rvalue(ni, u->amaf_prior);
+		else
+			tree_update_node_value(ni, u->amaf_prior);
+	}
 
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
@@ -403,8 +409,12 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			ni->prior = map.prior[c];
-			if (node->prior.playouts)
-				tree_update_node_value(ni, u->amaf_prior);
+			if (ni->prior.playouts) {
+				if (u->amaf_prior)
+					tree_update_node_rvalue(ni, u->amaf_prior);
+				else
+					tree_update_node_value(ni, u->amaf_prior);
+			}
 		}
 	}
 }
