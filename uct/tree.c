@@ -363,8 +363,10 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 		.parity = tree_parity(t, parity),
 	};
 	// Include pass in the prior map.
-	map.prior = calloc(board_size2(b) + 1, sizeof(*map.prior)); map.prior++;
-	map.consider = calloc(board_size2(b) + 1, sizeof(*map.consider)); map.consider++;
+	struct move_stats map_prior[board_size2(b) + 1]; map.prior = &map_prior[1];
+	bool map_consider[board_size2(b) + 1]; map.consider = &map_consider[1];
+	memset(map_prior, 0, sizeof(map_prior));
+	memset(map_consider, 0, sizeof(map_consider));
 	struct move pm = { .color = color };
 	map.consider[pass] = true;
 	foreach_point(b) {
