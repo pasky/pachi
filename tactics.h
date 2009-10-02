@@ -15,6 +15,14 @@ static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(struct board *b, coord_t coord, int distance);
 
+/* Construct a "common fate graph" from given coordinate; that is, a weighted
+ * graph of intersections where edges between all neighbors have weight 1,
+ * but edges between neighbors of same color have weight 0. Thus, this is
+ * "stone chain" metric in a sense. */
+/* The output are distanes from start stored in given [board_size2()] array;
+ * intersections further away than maxdist have all distance maxdist+1 set. */
+void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
+
 
 bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
 static inline bool

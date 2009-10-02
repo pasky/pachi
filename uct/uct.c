@@ -510,7 +510,7 @@ uct_state_init(char *arg)
 	u->amaf_prior = true;
 
 	// gp: 14 vs 0: 44% (+-3.5)
-	u->gp_eqex = u->b19_eqex = 0;
+	u->gp_eqex = u->b19_eqex = u->cfgd_eqex = 0;
 	u->even_eqex = u->policy_eqex = -1;
 	u->eqex = 6; /* Even number! */
 
@@ -598,6 +598,8 @@ uct_state_init(char *arg)
 				u->policy_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_b19") && optval) {
 				u->b19_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_cfgd") && optval) {
+				u->cfgd_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
 				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {
@@ -616,6 +618,7 @@ uct_state_init(char *arg)
 	if (u->gp_eqex < 0) u->gp_eqex = u->eqex;
 	if (u->policy_eqex < 0) u->policy_eqex = u->eqex;
 	if (u->b19_eqex < 0) u->b19_eqex = u->eqex;
+	if (u->cfgd_eqex < 0) u->cfgd_eqex = u->eqex;
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */

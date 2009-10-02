@@ -314,3 +314,52 @@ board_stone_radar(struct board *b, coord_t coord, int distance)
 			}
 	return false;
 }
+
+void
+cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
+{
+	/* Queue for d+1 spots; no two spots of the same group
+	 * should appear in the queue. */
+#define qinc(x) (x = ((x + 1) >= board_size2(b) ? ((x) + 1 - board_size2(b)) : (x) + 1))
+	coord_t queue[board_size2(b)]; int qstart = 0, qstop = 0;
+
+	foreach_point(b) {
+		distances[c] = board_at(b, c) == S_OFFBOARD ? maxdist + 1 : -1;
+	} foreach_point_end;
+
+	queue[qstop++] = start;
+	for (int d = 0; d <= maxdist; d++) {
+		/* Process queued moves, while setting the queue
+		 * for new wave. */
+		int qa = qstart, qb = qstop;
+		qstart = qstop;
+		for (int q = qa; q < qb; qinc(q)) {
+#define cfg_one(coord, grp) do {\
+	distances[coord] = d; \
+	foreach_neighbor (b, coord, { \
+		if (distances[c] < 0 && (!grp || group_at(b, coord) != grp)) { \
+			queue[qstop] = c; \
+			qinc(qstop); \
+		} \
+	}); \
+} while (0)
+			coord_t cq = queue[q];
+			if (distances[cq] >= 0)
+				continue; /* We already looked here. */
+			if (board_at(b, cq) == S_NONE) {
+				cfg_one(cq, 0);
+			} else {
+				group_t g = group_at(b, cq);
+				foreach_in_group(b, g) {
+					cfg_one(c, g);
+				} foreach_in_group_end;
+			}
+#undef cfg_one
+		}
+	}
+
+	foreach_point(b) {
+		if (distances[c] < 0)
+			distances[c] = maxdist + 1;
+	} foreach_point_end;
+}

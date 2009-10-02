@@ -101,6 +101,30 @@ uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 void
+uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
+{
+	/* Q_{common_fate_graph_distance} */
+	/* Give bonus to moves local to the last move, where "local" means
+	 * local in terms of groups, not just manhattan distance. */
+	if (is_pass(map->b->last_move.coord))
+		return;
+
+	int distances[board_size2(map->b)];
+	cfg_distances(map->b, map->b->last_move.coord, distances, 3);
+	foreach_point(map->b) {
+		if (!map->consider[c])
+			continue;
+		// fprintf(stderr, "distance %s-%s: %d\n", coord2sstr(map->b->last_move.coord, map->b), coord2sstr(c, map->b), distances[c]);
+		if (distances[c] > 3)
+			continue;
+		assert(distances[c] != 0);
+		int bonuses[] = { 0, u->cfgd_eqex, u->cfgd_eqex / 2, u->cfgd_eqex / 2 };
+		int bonus = bonuses[distances[c]];
+		add_prior_value(map, c, bonus, bonus);
+	} foreach_point_end;
+}
+
+void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	if (u->even_eqex)
@@ -112,4 +136,6 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_grandparent(u, node, map);
 	if (u->policy_eqex)
 		uct_prior_playout(u, node, map);
+	if (u->cfgd_eqex)
+		uct_prior_cfgd(u, node, map);
 }

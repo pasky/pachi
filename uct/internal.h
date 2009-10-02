@@ -31,7 +31,7 @@ struct uct {
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6
 	 * playouts per source seems best. */
-	int eqex, even_eqex, gp_eqex, policy_eqex, b19_eqex;
+	int eqex, even_eqex, gp_eqex, policy_eqex, b19_eqex, cfgd_eqex;
 
 	struct uct_policy *policy;
 	struct tree *t;
