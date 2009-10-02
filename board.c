@@ -1011,10 +1011,16 @@ board_official_score(struct board *board)
 	 * number of empty points that reach only her color. */
 
 	int ownermap[board_size2(board)];
+	int s[4] = {0};
 	foreach_point(board) {
 		int o[4] = {0, 1, 2, 0};
 		ownermap[c] = o[board_at(board, c)];
+		s[board_at(board, c)]++;
 	} foreach_point_end;
+
+	/* We need to special-case empty board. */
+	if (!s[S_BLACK] && !s[S_WHITE])
+		return board->komi + board->handicap;
 
 	while (board_tromp_taylor_iter(board, ownermap))
 		/* Flood-fill... */;
