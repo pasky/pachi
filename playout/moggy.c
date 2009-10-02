@@ -684,14 +684,14 @@ next_try:;
 }
 
 static int
-assess_local_bonus(struct playout_policy *p, struct board *board, struct move *a, struct move *b, int games)
+assess_local_bonus(struct playout_policy *p, struct board *board, coord_t a, coord_t b, int games)
 {
 	struct moggy_policy *pp = p->data;
 	if (!pp->assess_local)
 		return games;
 
-	int dx = abs(coord_x(a->coord, board) - coord_x(b->coord, board));
-	int dy = abs(coord_y(a->coord, board) - coord_y(b->coord, board));
+	int dx = abs(coord_x(a, board) - coord_x(b, board));
+	int dy = abs(coord_y(a, board) - coord_y(b, board));
 	/* adjecent move, directly or diagonally? */
 	if (dx + dy <= 1 + (dx && dy))
 		return games;
@@ -700,15 +700,13 @@ assess_local_bonus(struct playout_policy *p, struct board *board, struct move *a
 }
 
 int
-playout_moggy_assess_one(struct playout_policy *p, struct board *b, struct move *m, int games)
+playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_t coord, int games)
 {
 	struct moggy_policy *pp = p->data;
-
-	if (is_pass(m->coord) || !board_is_valid_move(b, m))
-		return 0;
+	struct board *b = map->b;
 
 	if (PLDEBUGL(5)) {
-		fprintf(stderr, "ASSESS of %s:\n", coord2sstr(m->coord, b));
+		fprintf(stderr, "ASSESS of %s:\n", coord2sstr(coord, b));
 		board_print(b, stderr);
 	}
 
@@ -716,7 +714,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct board *b, struct move 
 	if (pp->lcapturerate || pp->capturerate || pp->atarirate) {
 		bool ladder = false;
 
-		foreach_neighbor(b, m->coord, {
+		foreach_neighbor(b, coord, {
 			group_t g = group_at(b, c);
 			if (!g || board_group_info(b, g).libs > 2)
 				continue;
@@ -725,12 +723,12 @@ playout_moggy_assess_one(struct playout_policy *p, struct board *b, struct move 
 				if (!pp->atarirate)
 					continue;
 				struct move_queue q; q.moves = 0;
-				group_2lib_check(p, b, g, m->color, &q);
+				group_2lib_check(p, b, g, map->to_play, &q);
 				while (q.moves--)
-					if (q.move[q.moves] == m->coord) {
+					if (q.move[q.moves] == coord) {
 						if (PLDEBUGL(5))
 							fprintf(stderr, "1.0: 2lib\n");
-						return assess_local_bonus(p, b, &b->last_move, m, games) / 2;
+						return assess_local_bonus(p, b, b->last_move.coord, coord, games) / 2;
 					}
 			}
 
@@ -740,24 +738,24 @@ playout_moggy_assess_one(struct playout_policy *p, struct board *b, struct move 
 			/* _Never_ play here if this move plays out
 			 * a caught ladder. (Unless it captures another
 			 * group. :-) */
-			if (pp->ladderassess && ladder_catches(p, b, m->coord, g)) {
+			if (pp->ladderassess && ladder_catches(p, b, coord, g)) {
 				/* Note that the opposite is not guarded against;
 				 * we do not advise against capturing a laddered
 				 * group (but we don't encourage it either). Such
 				 * a move can simplify tactical situations if we
 				 * can afford it. */
-				if (m->color == board_at(b, c))
+				if (map->to_play == board_at(b, c))
 					ladder = true;
 				continue;
 			}
 
 			struct move_queue q; q.moves = 0;
-			group_atari_check(p, b, g, m->color, &q);
+			group_atari_check(p, b, g, map->to_play, &q);
 			while (q.moves--)
-				if (q.move[q.moves] == m->coord) {
+				if (q.move[q.moves] == coord) {
 					if (PLDEBUGL(5))
 						fprintf(stderr, "1.0: atari\n");
-					return assess_local_bonus(p, b, &b->last_move, m, games) * 2;
+					return assess_local_bonus(p, b, b->last_move.coord, coord, games) * 2;
 				}
 		});
 
@@ -770,7 +768,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct board *b, struct move 
 
 	/* Is this move a self-atari? */
 	if (pp->selfatarirate) {
-		if (is_bad_selfatari(b, m->color, m->coord)) {
+		if (is_bad_selfatari(b, map->to_play, coord)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: self-atari\n");
 			return -games;
@@ -779,10 +777,11 @@ playout_moggy_assess_one(struct playout_policy *p, struct board *b, struct move 
 
 	/* Pattern check */
 	if (pp->patternrate) {
-		if (test_pattern3_here(&pp->patterns, b, m)) {
+		struct move m = { .color = map->to_play, .coord = coord };
+		if (test_pattern3_here(&pp->patterns, b, &m)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
-			return assess_local_bonus(p, b, &b->last_move, m, games);
+			return assess_local_bonus(p, b, b->last_move.coord, coord, games);
 		}
 	}
 
@@ -793,12 +792,11 @@ void
 playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	/* TODO: Optimize this! */
-	foreach_point_and_pass(map->b) {
+	foreach_point(map->b) {
 		if (!map->consider[c])
 			continue;
 		int assess = 0;
-		struct move m = { c, map->to_play };
-		assess = playout_moggy_assess_one(p, map->b, &m, games);
+		assess = playout_moggy_assess_one(p, map, c, games);
 		if (!assess)
 			continue;
 		add_prior_value(map, c, assess, abs(assess));
