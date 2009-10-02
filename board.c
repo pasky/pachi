@@ -952,30 +952,50 @@ board_fast_score(struct board *board)
 	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
 }
 
-static enum stone
-board_tromp_taylor_owner(struct board *board, coord_t c)
+/* Owner map: 0: undecided; 1: black; 2: white; 3: dame */
+
+/* One flood-fill iteration; returns true if next iteration
+ * is required. */
+static __attribute__((noinline)) bool
+board_tromp_taylor_iter(struct board *board, int *ownermap)
 {
-	int x = coord_x(c, board), y = coord_y(c, board);
-	enum stone color = S_NONE;
-#define TEST_REACH(xx, yy) \
-	{ \
-		enum stone c2 = board_atxy(board, xx, yy); \
-		if (c2 != S_NONE) { \
-			if (color != S_NONE && color != c2) \
-				return S_NONE; \
-			color = c2; \
-			break; \
-		} \
-	}
-	for (int i = x; i > 0; i--)
-		TEST_REACH(i, y);
-	for (int i = x; i < board_size(board) - 1; i++)
-		TEST_REACH(i, y);
-	for (int i = y; i > 0; i--)
-		TEST_REACH(x, i);
-	for (int i = y; i < board_size(board) - 1; i++)
-		TEST_REACH(x, i);
-	return color;
+	bool needs_update = false;
+	foreach_point(board) {
+		/* Ignore occupied and already-dame positions. */
+		if (board_at(board, c) != S_NONE || ownermap[c] == 3)
+			continue;
+		/* Count neighbors. */
+		int nei[4] = {0};
+		foreach_neighbor(board, c, {
+			nei[ownermap[c]]++;
+		});
+		/* If we have neighbors of both colors, or dame,
+		 * we are dame too. */
+		if ((nei[1] && nei[2]) || nei[3]) {
+			ownermap[c] = 3;
+			/* Speed up the propagation. */
+			foreach_neighbor(board, c, {
+				if (board_at(board, c) == S_NONE)
+					ownermap[c] = 3;
+			});
+			needs_update = true;
+			continue;
+		}
+		/* If we have neighbors of one color, we are owned
+		 * by that color, too. */
+		if (!ownermap[c] && (nei[1] || nei[2])) {
+			int newowner = nei[1] ? 1 : 2;
+			ownermap[c] = newowner;
+			/* Speed up the propagation. */
+			foreach_neighbor(board, c, {
+				if (board_at(board, c) == S_NONE && !ownermap[c])
+					ownermap[c] = newowner;
+			});
+			needs_update = true;
+			continue;
+		}
+	} foreach_point_end;
+	return needs_update;
 }
 
 /* Tromp-Taylor Counting */
@@ -990,14 +1010,23 @@ board_official_score(struct board *board)
 	 * A player's score is the number of points of her color, plus the
 	 * number of empty points that reach only her color. */
 
+	int ownermap[board_size2(board)];
+	foreach_point(board) {
+		int o[4] = {0, 1, 2, 0};
+		ownermap[c] = o[board_at(board, c)];
+	} foreach_point_end;
+
+	while (board_tromp_taylor_iter(board, ownermap))
+		/* Flood-fill... */;
+
 	int scores[S_MAX];
 	memset(scores, 0, sizeof(scores));
 
 	foreach_point(board) {
-		enum stone color = board_at(board, c);
-		if (color == S_NONE)
-			color = board_tromp_taylor_owner(board, c);
-		scores[color]++;
+		assert(board_at(board, c) == S_OFFBOARD || ownermap[c] != 0);
+		if (ownermap[c] == 3)
+			continue;
+		scores[ownermap[c]]++;
 	} foreach_point_end;
 
 	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
