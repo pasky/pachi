@@ -366,6 +366,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	map.prior = calloc(board_size2(b) + 1, sizeof(*map.prior)); map.prior++;
 	map.consider = calloc(board_size2(b) + 1, sizeof(*map.consider)); map.consider++;
 	struct move pm = { .color = color };
+	map.consider[pass] = true;
 	foreach_point(b) {
 		if (board_at(b, c) != S_NONE)
 			continue;

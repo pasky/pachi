@@ -92,6 +92,7 @@ uct_prior_one(struct uct *u, struct tree_node *node, struct prior_map *map, coor
 void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
+	uct_prior_one(u, node, map, pass);
 	foreach_point(map->b) {
 		if (!map->consider[c])
 			continue;
