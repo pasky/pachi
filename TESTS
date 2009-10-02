@@ -146,14 +146,16 @@ fccfe	ucb1amaf t=2	75.5% (+-2.2%)
 
 <Multiple board sizes from now on>
 
-Fillboard investigations:
+Fillboard investigations (only 4-lib fillboard yet):
 
 569d7	9ucb1amaf!	81.2% (+-2%)	fillboardtries=10
 569d7	9ucb1amaf 50k	90% (+-1.5%)
 569d7	9ucb1amaf! 50k	90.8% (+-1.4%)	fillboardtries=10
 
 ce382	13ucb1amaf	51.8% (+-2.5%)
+ce382	13ucb1amaf 50k	79.6% (+-2.6%)
 569d7	13ucb1amaf!	47% (+-2.5%)	fillboardtries=10
+569d7	13ucb1amaf! 50k	82.8% (+-2.4%)	fillboardtries=10
 
 
 <many optimizations>
@@ -168,7 +170,26 @@ ce382	13ucb1amaf	51.8% (+-2.5%)
 0965e	9ucb1amaf#	9.5% (+-1.5%)	sylvain_rave=0
 0965e	9ucb1amaf&	79% (+-2.1%)	self-atari protection turned off for single-stone groups
 
-<add 2-liberty and pattern2>
+0965e	13ucb1amaf	45.2% (+-2.5%)
+0965e	13ucb1amaf&	52.2% (+-2.5%)	self-atari protection turned off for single-stone groups
+
+<permit snapbacks>
+
+234b3	9ucb1amaf	77.2% (+-2.1%)
+234b3	13ucb1amaf	47% (+-2.5%)
+
+
+<add pattern2>
+
+035fc	9ucb1amaf	70.5% (+-2.3%)
+035fc	9ucb1amaf#	79.8% (+-2%)	pattern2=0
+
+<add 2-liberty>
+
+74b71	9ucb1amaf	74.2% (+-2.2%)
+74b71	9ucb1amaf#	77% (+-2.1%)	pattern2=0
+74b71	13ucb1amaf	46.8% (+-2.5%)
+74b71	13ucb1amaf#	50.2% (+-2.5%)	pattern2=0
 
 e34f9	9ucb1amaf	74.2% (+-2.2%)
 e34f9	9ucb1amaf#	74% (+-2.2%)	pattern2=0
