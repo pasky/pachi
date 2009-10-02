@@ -362,9 +362,18 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 		.to_play = color,
 		.parity = tree_parity(t, parity),
 	};
-	/* Include pass in the prior map. */
-	map.prior = calloc(board_size2(b) + 1, sizeof(*map.prior));
-	map.prior++;
+	// Include pass in the prior map.
+	map.prior = calloc(board_size2(b) + 1, sizeof(*map.prior)); map.prior++;
+	map.consider = calloc(board_size2(b) + 1, sizeof(*map.consider)); map.consider++;
+	struct move pm = { .color = color };
+	foreach_point(b) {
+		if (board_at(b, c) != S_NONE)
+			continue;
+		pm.coord = c;
+		if (!board_is_valid_move(b, &pm))
+			continue;
+		map.consider[c] = true;
+	} foreach_point_end;
 	uct_prior(u, node, &map);
 
 	/* Now, create the nodes. */

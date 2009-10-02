@@ -93,7 +93,7 @@ void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	foreach_point(map->b) {
-		if (board_at(map->b, c) != S_NONE)
+		if (!map->consider[c])
 			continue;
 		uct_prior_one(u, node, map, c);
 	} foreach_point_end;

@@ -17,6 +17,9 @@ struct prior_map {
 	 * values to be assigned to individual moves;
 	 * move_stats.value is not updated. */
 	struct move_stats *prior;
+	/* [board_size2(b)] array, whether to compute
+	 * prior for the given value. */
+	bool *consider;
 };
 
 void uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map);
