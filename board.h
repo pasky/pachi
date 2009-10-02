@@ -227,6 +227,10 @@ float board_official_score(struct board *board);
 	do { \
 		coord_t c; coord_pos(c, 0, (board_)); \
 		for (; coord_raw(c) < board_size(board_) * board_size(board_); coord_raw(c)++)
+#define foreach_point_and_pass(board_) \
+	do { \
+		coord_t c; coord_pos(c, -1, (board_)); \
+		for (; coord_raw(c) < board_size(board_) * board_size(board_); coord_raw(c)++)
 #define foreach_point_end \
 	} while (0)
 
