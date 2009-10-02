@@ -88,7 +88,7 @@ static char moggy_patterns_src[][11] = {
 	/* cut keima (not in Mogo) */
 	"OX?"
 	"o.O"
-	"o??",
+	"???", /* o?? has some pathological tsumego cases */
 	/* side pattern - chase */
 	"X.?"
 	"O.?"
@@ -852,10 +852,15 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	/* Fill board */
 	int fbtries = b->flen / 8;
 	for (int i = 0; i < (fbtries < pp->fillboardtries ? fbtries : pp->fillboardtries); i++) {
-		coord_t c = b->f[fast_random(b->flen)];
-		if (immediate_liberty_count(b, c) == 4)
-			return c;
-		/* XXX: We ignore stones placed diagonally. */
+		coord_t coord = b->f[fast_random(b->flen)];
+		if (immediate_liberty_count(b, coord) != 4)
+			continue;
+		foreach_diag_neighbor(b, coord) {
+			if (board_at(b, c) != S_NONE)
+				goto next_try;
+		} foreach_diag_neighbor_end;
+		return coord;
+next_try:;
 	}
 
 	return pass;
