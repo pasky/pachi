@@ -345,9 +345,23 @@ tree_normalize(struct tree *tree, int factor)
 void
 tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct *u, int parity)
 {
+	/* First, get a map of prior values to initialize the new
+	 * nodes with. */
+	struct prior_map map = {
+		.b = b,
+		.to_play = color,
+		.parity = tree_parity(t, parity),
+	};
+	/* Include pass in the prior map. */
+	map.prior = calloc(board_size2(b) + 1, sizeof(*map.prior)) + 1;
+	uct_prior(u, node, &map);
+
+	/* Now, create the nodes. */
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
-	uct_prior(u, t, ni, b, color, parity);
+	ni->prior = map.prior[pass];
+	if (node->prior.playouts)
+		tree_update_node_value(ni, u->amaf_prior);
 
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
@@ -379,7 +393,9 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			struct tree_node *nj = tree_init_node(t, c, node->depth + 1);
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
-			uct_prior(u, t, ni, b, color, parity);
+			ni->prior = map.prior[c];
+			if (node->prior.playouts)
+				tree_update_node_value(ni, u->amaf_prior);
 		}
 	}
 }
