@@ -683,6 +683,7 @@ next_try:;
 	return pass;
 }
 
+
 static int
 assess_local_bonus(struct playout_policy *p, struct board *board, coord_t a, coord_t b, int games)
 {
@@ -699,6 +700,72 @@ assess_local_bonus(struct playout_policy *p, struct board *board, coord_t a, coo
 		return games / 2;
 }
 
+void
+playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, group_t g, int games)
+{
+	struct moggy_policy *pp = p->data;
+	struct board *b = map->b;
+	struct move_queue q; q.moves = 0;
+
+	if (board_group_info(b, g).libs > 2)
+		return;
+
+	if (PLDEBUGL(5)) {
+		fprintf(stderr, "ASSESS of group %s:\n", coord2sstr(g, b));
+		board_print(b, stderr);
+	}
+
+	if (board_group_info(b, g).libs == 2) {
+		if (!pp->atarirate)
+			return;
+		group_2lib_check(p, b, g, map->to_play, &q);
+		while (q.moves--) {
+			coord_t coord = q.move[q.moves];
+			if (PLDEBUGL(5))
+				fprintf(stderr, "1.0: 2lib %s\n", coord2sstr(coord, b));
+			int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games) / 2;
+			add_prior_value(map, coord, assess, assess);
+		}
+		return;
+	}
+
+	/* This group, sir, is in atari! */
+
+	if (!pp->capturerate && !pp->lcapturerate && !pp->ladderassess)
+		return;
+
+	group_atari_check(p, b, g, map->to_play, &q);
+	while (q.moves--) {
+		coord_t coord = q.move[q.moves];
+
+		/* _Never_ play here if this move plays out
+		 * a caught ladder. */
+		if (pp->ladderassess && ladder_catches(p, b, coord, g)) {
+			/* Note that the opposite is not guarded against;
+			 * we do not advise against capturing a laddered
+			 * group (but we don't encourage it either). Such
+			 * a move can simplify tactical situations if we
+			 * can afford it. */
+			if (map->to_play != board_at(b, g))
+				continue;
+			/* FIXME: We give the malus even if this move
+			 * captures another group. */
+			if (PLDEBUGL(5))
+				fprintf(stderr, "0.0: ladder %s\n", coord2sstr(coord, b));
+			add_prior_value(map, coord, -games, games);
+			continue;
+		}
+
+		if (!pp->capturerate && !pp->lcapturerate)
+			continue;
+
+		if (PLDEBUGL(5))
+			fprintf(stderr, "1.0: atari %s\n", coord2sstr(coord, b));
+		int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games) * 2;
+		add_prior_value(map, coord, assess, assess);
+	}
+}
+
 int
 playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_t coord, int games)
 {
@@ -706,64 +773,8 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 	struct board *b = map->b;
 
 	if (PLDEBUGL(5)) {
-		fprintf(stderr, "ASSESS of %s:\n", coord2sstr(coord, b));
+		fprintf(stderr, "ASSESS of move %s:\n", coord2sstr(coord, b));
 		board_print(b, stderr);
-	}
-
-	/* Are we dealing with atari? */
-	if (pp->lcapturerate || pp->capturerate || pp->atarirate) {
-		bool ladder = false;
-
-		foreach_neighbor(b, coord, {
-			group_t g = group_at(b, c);
-			if (!g || board_group_info(b, g).libs > 2)
-				continue;
-
-			if (board_group_info(b, g).libs == 2) {
-				if (!pp->atarirate)
-					continue;
-				struct move_queue q; q.moves = 0;
-				group_2lib_check(p, b, g, map->to_play, &q);
-				while (q.moves--)
-					if (q.move[q.moves] == coord) {
-						if (PLDEBUGL(5))
-							fprintf(stderr, "1.0: 2lib\n");
-						return assess_local_bonus(p, b, b->last_move.coord, coord, games) / 2;
-					}
-			}
-
-			if (!pp->capturerate && !pp->lcapturerate)
-				continue;
-
-			/* _Never_ play here if this move plays out
-			 * a caught ladder. (Unless it captures another
-			 * group. :-) */
-			if (pp->ladderassess && ladder_catches(p, b, coord, g)) {
-				/* Note that the opposite is not guarded against;
-				 * we do not advise against capturing a laddered
-				 * group (but we don't encourage it either). Such
-				 * a move can simplify tactical situations if we
-				 * can afford it. */
-				if (map->to_play == board_at(b, c))
-					ladder = true;
-				continue;
-			}
-
-			struct move_queue q; q.moves = 0;
-			group_atari_check(p, b, g, map->to_play, &q);
-			while (q.moves--)
-				if (q.move[q.moves] == coord) {
-					if (PLDEBUGL(5))
-						fprintf(stderr, "1.0: atari\n");
-					return assess_local_bonus(p, b, b->last_move.coord, coord, games) * 2;
-				}
-		});
-
-		if (ladder) {
-			if (PLDEBUGL(5))
-				fprintf(stderr, "0.0: ladder\n");
-			return -games;
-		}
 	}
 
 	/* Is this move a self-atari? */
@@ -791,12 +802,21 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 void
 playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
-	/* TODO: Optimize this! */
+	struct moggy_policy *pp = p->data;
+
+	/* First, go through all endangered groups. */
+	if (pp->lcapturerate || pp->capturerate || pp->atarirate || pp->ladderassess)
+		for (group_t g = 1; g < board_size2(map->b); g++)
+			if (group_at(map->b, g) == g)
+				playout_moggy_assess_group(p, map, g, games);
+
+	/* Then, assess individual moves. */
+	if (!pp->patternrate && !pp->selfatarirate)
+		return;
 	foreach_point(map->b) {
 		if (!map->consider[c])
 			continue;
-		int assess = 0;
-		assess = playout_moggy_assess_one(p, map, c, games);
+		int assess = playout_moggy_assess_one(p, map, c, games);
 		if (!assess)
 			continue;
 		add_prior_value(map, c, assess, abs(assess));
