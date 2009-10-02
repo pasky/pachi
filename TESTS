@@ -168,6 +168,13 @@ ce382	13ucb1amaf	51.8% (+-2.5%)
 0965e	9ucb1amaf#	9.5% (+-1.5%)	sylvain_rave=0
 0965e	9ucb1amaf&	79% (+-2.1%)	self-atari protection turned off for single-stone groups
 
+<add 2-liberty and pattern2>
+
+e34f9	9ucb1amaf	74.2% (+-2.2%)
+e34f9	9ucb1amaf#	74% (+-2.2%)	pattern2=0
+e34f9	9ucb1amaf*	76% (+-2.1%)	atarirate=0
+e34f9	9ucb1amaf#*	79% (+-2%)	pattern2=0,atarirate=0
+
 
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
