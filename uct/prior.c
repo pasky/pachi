@@ -41,7 +41,7 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 	 * XOOOXX#
 	 * X.OOOO#
 	 * .XXXX.# */
-	foreach_point_and_pass(map->b) {
+	foreach_point(map->b) {
 		if (!map->consider[c])
 			continue;
 		if (!board_is_one_point_eye(map->b, &c, map->to_play))
@@ -56,7 +56,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{b19} */
 	/* Specific hints for 19x19 board - priors for certain edge distances. */
-	foreach_point_and_pass(map->b) {
+	foreach_point(map->b) {
 		if (!map->consider[c])
 			continue;
 		int d = coord_edge_distance(c, map->b);
