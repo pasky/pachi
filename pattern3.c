@@ -108,8 +108,6 @@ pattern_gen(struct pattern3s *p, int pat, char *src, int srclen, int fixed_color
 	pattern_record(p->hash, src - 9, pat_90rot(pat_vmirror(pat_hmirror(pat))), fixed_color);
 }
 
-#warning gcc is stupid; ignore following out-of-bounds warnings
-
 static void
 patterns_gen(struct pattern3s *p, char src[][11], int src_n)
 {
