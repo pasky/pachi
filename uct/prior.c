@@ -26,8 +26,7 @@ uct_prior_even(struct uct *u, struct tree_node *node, struct prior_map *map)
 	foreach_point_and_pass(map->b) {
 		if (!map->consider[c])
 			continue;
-		map->prior[c].playouts += u->even_eqex;
-		map->prior[c].wins += u->even_eqex / 2;
+		add_prior_value(map, c, u->even_eqex / 2, u->even_eqex);
 	} foreach_point_end;
 }
 
@@ -46,8 +45,7 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 			continue;
 		if (!board_is_one_point_eye(map->b, &c, map->to_play))
 			continue;
-		map->prior[c].playouts += u->eqex;
-		map->prior[c].wins += map->parity > 0 ? 0 : u->eqex;
+		add_prior_value(map, c, -u->eqex, u->eqex);
 	} foreach_point_end;
 }
 
@@ -69,8 +67,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 		/* First line: -eqex */
 		/* Third line: +eqex */
 		int v = d == 1 ? -1 : 1;
-		map->prior[c].playouts += u->b19_eqex;
-		map->prior[c].wins += map->parity * v > 0 ? u->b19_eqex : 0;
+		add_prior_value(map, c, v * u->b19_eqex, u->b19_eqex);
 	} foreach_point_end;
 }
 
@@ -87,6 +84,7 @@ uct_prior_grandparent(struct uct *u, struct tree_node *node, struct prior_map *m
 		for (struct tree_node *ni = gpp->children; ni; ni = ni->sibling) {
 			/* Be careful not to emphasize too random results. */
 			if (ni->coord == node->coord && ni->u.playouts > u->gp_eqex) {
+				/* We purposefuly ignore the parity. */
 				map->prior[c].playouts += u->gp_eqex;
 				map->prior[c].wins += u->gp_eqex * ni->u.wins / ni->u.playouts;
 			}
@@ -108,13 +106,7 @@ uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
 		}
 		if (!assess)
 			continue;
-		map->prior[c].playouts += abs(assess);
-		/* Good moves for enemy are losses for us.
-		 * We will properly maximize this in the UCB1
-		 * decision. */
-		assess *= map->parity;
-		if (assess > 0)
-			map->prior[c].wins += assess;
+		add_prior_value(map, c, assess, abs(assess));
 	} foreach_point_end;
 }
 

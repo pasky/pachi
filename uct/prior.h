@@ -22,6 +22,21 @@ struct prior_map {
 	bool *consider;
 };
 
+/* Wins can be negative to give losses; passing 0 wins is undefined. */
+static void add_prior_value(struct prior_map *map, coord_t c, int wins, int playouts);
+
 void uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map);
+
+
+static inline void
+add_prior_value(struct prior_map *map, coord_t c, int wins, int playouts)
+{
+	map->prior[c].playouts += playouts;
+
+	assert(wins != 0);
+	int w = wins * map->parity;
+	if (w < 0) w = playouts + wins;
+	map->prior[c].wins += wins;
+}
 
 #endif
