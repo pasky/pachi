@@ -35,8 +35,9 @@ add_prior_value(struct prior_map *map, coord_t c, int wins, int playouts)
 
 	assert(wins != 0);
 	int w = wins * map->parity;
-	if (w < 0) w = playouts + wins;
-	map->prior[c].wins += wins;
+	if (w < 0) w += playouts;
+	assert(w >= 0);
+	map->prior[c].wins += w;
 }
 
 #endif
