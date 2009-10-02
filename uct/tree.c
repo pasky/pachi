@@ -370,6 +370,9 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	foreach_point(b) {
 		if (board_at(b, c) != S_NONE)
 			continue;
+		/* This looks very useful on large boards - weeds out huge amount of crufty moves. */
+		if (b->hash /* not empty board */ && radar && !board_stone_radar(b, c, radar))
+			continue;
 		pm.coord = c;
 		if (!board_is_valid_move(b, &pm))
 			continue;
@@ -408,12 +411,9 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			}
 
 			coord_t c = coord_xy_otf(i, j, t->board);
-			if (board_at(b, c) != S_NONE)
+			if (!map.consider[c]) // Filter out invalid moves
 				continue;
 			assert(c != node->coord); // I have spotted "C3 C3" in some sequence...
-			/* This looks very useful on large boards - weeds out huge amount of crufty moves. */
-			if (b->hash /* not empty board */ && radar && !board_stone_radar(b, c, radar))
-				continue;
 
 			struct tree_node *nj = tree_init_node(t, c, node->depth + 1);
 			nj->parent = node; ni->sibling = nj; ni = nj;
