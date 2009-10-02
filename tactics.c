@@ -288,3 +288,29 @@ invalid_throwin:;
 	 * is a bad self-atari! */
 	return true;
 }
+
+
+bool
+board_stone_radar(struct board *b, coord_t coord, int distance)
+{
+	int bounds[4] = {
+		coord_x(coord, b) - distance,
+		coord_y(coord, b) - distance,
+		coord_x(coord, b) + distance,
+		coord_y(coord, b) + distance
+	};
+	for (int i = 0; i < 4; i++)
+		if (bounds[i] < 1)
+			bounds[i] = 1;
+		else if (bounds[i] > board_size(b) - 2)
+			bounds[i] = board_size(b) - 2;
+	for (int x = bounds[0]; x <= bounds[2]; x++)
+		for (int y = bounds[1]; y <= bounds[3]; y++)
+			if (board_atxy(b, x, y) != S_NONE) {
+				/* fprintf(stderr, "radar %d,%d,%d: %d,%d (%d)\n",
+					coord_x(coord, b), coord_y(coord, b),
+					distance, x, y, board_atxy(b, x, y)); */
+				return true;
+			}
+	return false;
+}

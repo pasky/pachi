@@ -217,9 +217,6 @@ float board_fast_score(struct board *board);
 /* Tromp-Taylor scoring. */
 float board_official_score(struct board *board);
 
-/* Checks if there are any stones in n-vincinity of coord. */
-bool board_stone_radar(struct board *b, coord_t coord, int distance);
-
 
 /** Iterators */
 

@@ -12,6 +12,9 @@
  * or throw-ins. */
 static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
 
+/* Checks if there are any stones in n-vincinity of coord. */
+bool board_stone_radar(struct board *b, coord_t coord, int distance);
+
 
 bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
 static inline bool

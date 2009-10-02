@@ -11,6 +11,7 @@
 #include "engine.h"
 #include "move.h"
 #include "playout.h"
+#include "tactics.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
