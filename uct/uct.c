@@ -25,7 +25,7 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 
 
 #define MC_GAMES	80000
-#define MC_GAMELEN	400
+#define MC_GAMELEN	MAX_GAMELEN
 
 
 static bool

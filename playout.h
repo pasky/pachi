@@ -1,6 +1,8 @@
 #ifndef ZZGO_PLAYOUT_H
 #define ZZGO_PLAYOUT_H
 
+#define MAX_GAMELEN 600
+
 struct board;
 struct move;
 enum stone;
@@ -51,7 +53,7 @@ struct playout_amafmap {
 	 * implement nakade AMAF properly turns out to be crucial
 	 * when reading some tactical positions in depth (even if
 	 * they are just one-stone-snapback). */
-	struct move game[512];
+	struct move game[MAX_GAMELEN];
 	int gamelen;
 	/* Our current position in the game sequence; in AMAF, we search
 	 * the range [game_baselen, gamelen]. */
