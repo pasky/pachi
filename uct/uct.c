@@ -639,7 +639,7 @@ engine_uct_init(char *arg)
 	struct uct *u = uct_state_init(arg);
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "UCT Engine";
-	e->comment = "I'm playing UCT. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
+	e->comment = "I'm playing UCT. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please capture all dead stones before passing; it will not cost you points (area scoring is used).";
 	e->genmove = uct_genmove;
 	e->notify_play = uct_notify_play;
 	e->data = u;
