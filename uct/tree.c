@@ -21,6 +21,10 @@ static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth)
 {
 	struct tree_node *n = calloc(1, sizeof(*n));
+	if (!n) {
+		fprintf(stderr, "tree_init_node(): OUT OF MEMORY\n");
+		exit(1);
+	}
 	n->coord = coord;
 	n->depth = depth;
 	static long c = 1000000;
