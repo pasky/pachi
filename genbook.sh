@@ -6,6 +6,12 @@ popts="$3" # UCT policy options
 [ -z "$opts" ] || opts=",$opts"
 [ -z "$popts" ] || popts=":$popts"
 
+if [ "$size" -le 13 ]; then
+	games=1000000
+else
+	games=500000
+fi
+
 rm uctbook-$size-7.5.pachitree
 n=0
 genbook1()
@@ -13,7 +19,7 @@ genbook1()
 	echo "[#$n:$1]"
 	n=$((n+1))
 	echo -e 'boardsize '$size'\nclear_board\nkomi 7.5\nuct_genbook b' |
-		./zzgo "games=1000000,policy=ucb1amaf:explore_p=$1$popts$opts"
+		./zzgo "games=$games,policy=ucb1amaf:explore_p=$1$popts$opts"
 }
 genbook1 0.1
 genbook1 0.2
