@@ -110,6 +110,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 
 	} else if (!strcasecmp(cmd, "clear_board")) {
 		board_clear(board);
+		if (DEBUGL(1))
+			board_print(b, stderr);
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "komi")) {
@@ -117,6 +119,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		next_tok(arg);
 		sscanf(arg, "%f", &board->komi);
 
+		if (DEBUGL(1))
+			board_print(b, stderr);
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "play")) {
@@ -139,6 +143,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 			}
 			gtp_error(id, "illegal move", NULL);
 		} else {
+			if (DEBUGL(1))
+				board_print(b, stderr);
 			gtp_reply(id, NULL);
 		}
 
@@ -152,6 +158,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		char *str = coord2str(*c, board);
 		if (DEBUGL(1))
 			fprintf(stderr, "playing move %s\n", str);
+		if (DEBUGL(1))
+			board_print(b, stderr);
 		gtp_reply(id, str, NULL);
 		free(str); coord_done(c);
 
@@ -174,6 +182,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 			}
 			next_tok(arg);
 		} while (*arg);
+		if (DEBUGL(1))
+			board_print(b, stderr);
 		gtp_reply(id, NULL);
 
 	/* TODO: Engine should choose free handicap; however, it tends to take
@@ -187,6 +197,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 
 		gtp_prefix('=', id);
 		board_handicap(board, stones, stdout);
+		if (DEBUGL(1))
+			board_print(b, stderr);
 		printf("\n\n"); fflush(stdout);
 
 	} else if (!strcasecmp(cmd, "final_score")) {

@@ -77,8 +77,6 @@ int main(int argc, char *argv[])
 		if (DEBUGL(1))
 			fprintf(stderr, "IN: %s", buf);
 		gtp_parse(b, e, buf);
-		if (DEBUGL(1))
-			board_print(b, stderr);
 	}
 	return 0;
 }
