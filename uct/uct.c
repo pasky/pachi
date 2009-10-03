@@ -510,8 +510,8 @@ uct_state_init(char *arg)
 	u->amaf_prior = true;
 
 	// gp: 14 vs 0: 44% (+-3.5)
-	u->gp_eqex = u->b19_eqex = u->cfgd_eqex = 0;
-	u->even_eqex = u->policy_eqex = -1;
+	u->gp_eqex = 0;
+	u->even_eqex = u->policy_eqex = u->b19_eqex = u->cfgd_eqex = -1;
 	u->eqex = 6; /* Even number! */
 
 	if (arg) {
