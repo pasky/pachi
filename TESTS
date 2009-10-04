@@ -201,8 +201,8 @@ e34f9	13ucb1amaf#*	52.2% (+-2.5%)	pattern2=0,atarirate=0
 
 ba2e1	9ucb1amaf	78.2% (+-2.1%)
 ba2e1	9ucb1amaf#	81.8% (+-1.9%)	pattern2=0
-ba2e1	9ucb1amaf*	68.8% (+-2.3%)	atarirate=0	(?!)
-ba2e1	9ucb1amaf#*	73.8% (+-2.2%)	pattern2=0,atarirate=0
+ba2e1	9ucb1amaf*	74.5% (+-2.2%)	atarirate=0
+ba2e1	9ucb1amaf#*	75.5% (+-2.2%)	pattern2=0,atarirate=0
 ba2e1	9ucb1amaf#*+	78.5% (+-2.1%)	pattern2=0,atarirate=0,prior_cfgd=6
 ba2e1	9ucb1amaf+%	81.2% (+-2%)	prior_cfgd=6,prior_b19=6
 ba2e1	9ucb1amaf#+%	83% (+-1.9%)	pattern2=0,prior_cfgd=6,prior_b19=6
