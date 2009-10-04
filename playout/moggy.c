@@ -864,7 +864,6 @@ playout_moggy_init(char *arg)
 	int rate = 90;
 
 	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate = pp->selfatarirate = -1;
-	pp->pattern2 = true;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
