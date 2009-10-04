@@ -196,6 +196,7 @@ e34f9	9ucb1amaf#	74% (+-2.2%)	pattern2=0
 e34f9	9ucb1amaf*	76% (+-2.1%)	atarirate=0
 e34f9	9ucb1amaf#*	79% (+-2%)	pattern2=0,atarirate=0
 e34f9	13ucb1amaf	47.2% (+-2.5%)
+e34f9	13ucb1amaf#	49.7% (+-2.8%)	pattern2=0
 e34f9	13ucb1amaf#*	52.2% (+-2.5%)	pattern2=0,atarirate=0
 
 ba2e1	9ucb1amaf	78.2% (+-2.1%)
@@ -206,6 +207,8 @@ ba2e1	9ucb1amaf#*+	78.5% (+-2.1%)	pattern2=0,atarirate=0,prior_cfgd=6
 ba2e1	9ucb1amaf+%	81.2% (+-2%)	prior_cfgd=6,prior_b19=6
 ba2e1	9ucb1amaf#+%	83% (+-1.9%)	pattern2=0,prior_cfgd=6,prior_b19=6
 
+ba2e1	13ucb1amaf+	57% (+-2.5%)	prior_cfgd=6
+ba2e1	13ucb1amaf+%	51.2% (+-2.5%)	prior_cfgd=6,prior_b19=6
 ba2e1	13ucb1amaf#*+	54.8% (+-2.5%)	pattern2=0,atarirate=0,prior_cfgd=6
 
 
