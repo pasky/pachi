@@ -610,6 +610,7 @@ uct_state_init(char *arg)
 				u->no_book = true;
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
+				exit(1);
 			}
 		}
 	}

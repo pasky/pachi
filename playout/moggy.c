@@ -904,6 +904,7 @@ playout_moggy_init(char *arg)
 				pp->pattern2 = optval && *optval == '0' ? false : true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
+				exit(1);
 			}
 		}
 	}

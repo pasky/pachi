@@ -81,6 +81,7 @@ policy_ucb1tuned_init(struct uct *u, char *arg)
 				b->explore_p = atof(optval);
 			} else {
 				fprintf(stderr, "ucb1tuned: Invalid policy argument %s or missing value\n", optname);
+				exit(1);
 			}
 		}
 	}

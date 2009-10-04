@@ -327,6 +327,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->check_nakade = !optval || *optval == '1';
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
+				exit(1);
 			}
 		}
 	}
