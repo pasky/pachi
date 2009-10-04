@@ -20,7 +20,6 @@
 #include "uct/uct.h"
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
-struct uct_policy *policy_ucb1tuned_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 
 
@@ -570,8 +569,6 @@ uct_state_init(char *arg)
 					*policyarg++ = 0;
 				if (!strcasecmp(optval, "ucb1")) {
 					u->policy = policy_ucb1_init(u, policyarg);
-				} else if (!strcasecmp(optval, "ucb1tuned")) {
-					u->policy = policy_ucb1tuned_init(u, policyarg);
 				} else if (!strcasecmp(optval, "ucb1amaf")) {
 					u->policy = policy_ucb1amaf_init(u, policyarg);
 				} else {
