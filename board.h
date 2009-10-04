@@ -274,6 +274,13 @@ float board_official_score(struct board *board);
 
 
 static inline bool
+board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
+{
+	return (neighbor_count_at(board, *coord, eye_color)
+	        + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
+}
+
+static inline bool
 board_is_valid_move(struct board *board, struct move *m)
 {
 	if (board_at(board, m->coord) != S_NONE)
@@ -289,13 +296,6 @@ board_is_valid_move(struct board *board, struct move *m)
 		groups_in_atari += (board_group_info(board, g).libs == 1);
 	});
 	return !!groups_in_atari;
-}
-
-static inline bool
-board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
-{
-	return (neighbor_count_at(board, *coord, eye_color)
-	        + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
 }
 
 #endif
