@@ -34,12 +34,10 @@ mq_pick(struct move_queue *q)
 }
 
 static inline void
-mq_nodup(struct move_queue *q)
+mq_add(struct move_queue *q, coord_t c)
 {
-	if ((q->moves > 1 && q->move[q->moves - 2] == q->move[q->moves - 1])
-	    || (q->moves > 2 && q->move[q->moves - 3] == q->move[q->moves - 1])
-	    || (q->moves > 3 && q->move[q->moves - 4] == q->move[q->moves - 1]))
-		q->moves--;
+	assert(q->moves < MQL);
+	q->move[q->moves++] = c;
 }
 
 static inline void
@@ -51,10 +49,12 @@ mq_append(struct move_queue *qd, struct move_queue *qs)
 }
 
 static inline void
-mq_add(struct move_queue *q, coord_t c)
+mq_nodup(struct move_queue *q)
 {
-	assert(q->moves < MQL);
-	q->move[q->moves++] = c;
+	if ((q->moves > 1 && q->move[q->moves - 2] == q->move[q->moves - 1])
+	    || (q->moves > 2 && q->move[q->moves - 3] == q->move[q->moves - 1])
+	    || (q->moves > 3 && q->move[q->moves - 4] == q->move[q->moves - 1]))
+		q->moves--;
 }
 
 #endif
