@@ -93,7 +93,6 @@ static char moggy_patterns_src[][11] = {
 };
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
-
 static void
 apply_pattern_here(struct playout_policy *p,
 		struct board *b, struct move *m, struct move_queue *q)
@@ -149,6 +148,27 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 }
 
 
+struct group_state {
+	enum {
+		G_UNKNOWN, /* Initial state. */
+		G_ATARI, /* Unused. */
+		G_2LIB, /* Unused. */
+		G_SAFE /* Unused. */
+	} state;
+	/* Move candidates for dealing with this group. */
+	struct move_queue q;
+};
+
+/* Cache of evaluation of various board features. */
+struct board_state {
+	struct group_state *groups; /* [board_size2()], indexed by group_t */
+};
+
+#define board_state_init(s, b) do { \
+	s.groups = alloca(board_size2(b) * sizeof(*s.groups)); \
+	memset(s.groups, 0, board_size2(b) * sizeof(*s.groups)); \
+} while (0)
+
 
 static coord_t
 can_be_captured(struct playout_policy *p, struct board *b, enum stone capturer, coord_t c, enum stone to_play)
@@ -191,7 +211,8 @@ can_be_rescued(struct playout_policy *p, struct board *b, group_t group, enum st
 }
 
 static void
-group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q, coord_t *ladder)
+group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
+                  struct move_queue *q, coord_t *ladder, struct board_state *s)
 {
 	struct moggy_policy *pp = p->data;
 	int qmoves_prev = q->moves;
@@ -260,7 +281,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 }
 
 static coord_t
-global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play)
+global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s)
 {
 	struct move_queue q;
 	q.moves = 0;
@@ -270,12 +291,12 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL);
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL, s);
 		if (q.moves > 0)
 			return mq_pick(&q);
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL);
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL, s);
 		if (q.moves > 0)
 			return mq_pick(&q);
 	}
@@ -283,21 +304,21 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 }
 
 static coord_t
-local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
+local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct board_state *s)
 {
 	struct move_queue q;
 	q.moves = 0;
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), &q, NULL);
+		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), &q, NULL, s);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(p, b, g, stone_other(m->color), &q, NULL);
+		group_atari_check(p, b, g, stone_other(m->color), &q, NULL, s);
 	});
 
 	if (PLDEBUGL(5))
@@ -341,7 +362,7 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 }
 
 static void
-group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q)
+group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q, struct board_state *s)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -390,14 +411,14 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 }
 
 static coord_t
-local_2lib_check(struct playout_policy *p, struct board *b, struct move *m)
+local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct board_state *s)
 {
 	struct move_queue q;
 	q.moves = 0;
 
 	/* Does the opponent have just two liberties? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 2) {
-		group_2lib_check(p, b, group_at(b, m->coord), stone_other(m->color), &q);
+		group_2lib_check(p, b, group_at(b, m->coord), stone_other(m->color), &q, s);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
@@ -413,7 +434,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m)
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 2)
 			continue;
-		group_2lib_check(p, b, g, stone_other(m->color), &q);
+		group_2lib_check(p, b, g, stone_other(m->color), &q, s);
 	});
 
 	if (PLDEBUGL(5))
@@ -428,6 +449,9 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	struct moggy_policy *pp = p->data;
 	coord_t c;
 
+	struct board_state s;
+	board_state_init(s, b);
+
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
 
@@ -435,14 +459,14 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			c = local_atari_check(p, b, &b->last_move);
+			c = local_atari_check(p, b, &b->last_move, &s);
 			if (!is_pass(c))
 				return c;
 		}
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
-			c = local_2lib_check(p, b, &b->last_move);
+			c = local_2lib_check(p, b, &b->last_move, &s);
 			if (!is_pass(c))
 				return c;
 		}
@@ -460,7 +484,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
-		c = global_atari_check(p, b, to_play);
+		c = global_atari_check(p, b, to_play, &s);
 		if (!is_pass(c))
 			return c;
 	}
@@ -500,7 +524,7 @@ assess_local_bonus(struct playout_policy *p, struct board *board, coord_t a, coo
 }
 
 void
-playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, group_t g, int games)
+playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, group_t g, int games, struct board_state *s)
 {
 	struct moggy_policy *pp = p->data;
 	struct board *b = map->b;
@@ -517,7 +541,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	if (board_group_info(b, g).libs == 2) {
 		if (!pp->atarirate)
 			return;
-		group_2lib_check(p, b, g, map->to_play, &q);
+		group_2lib_check(p, b, g, map->to_play, &q, s);
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
@@ -534,7 +558,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		return;
 
 	coord_t ladder = pass;
-	group_atari_check(p, b, g, map->to_play, &q, &ladder);
+	group_atari_check(p, b, g, map->to_play, &q, &ladder, s);
 	while (q.moves--) {
 		coord_t coord = q.move[q.moves];
 
@@ -604,11 +628,14 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct moggy_policy *pp = p->data;
 
+	struct board_state s;
+	board_state_init(s, map->b);
+
 	/* First, go through all endangered groups. */
 	if (pp->lcapturerate || pp->capturerate || pp->atarirate || pp->ladderassess)
 		for (group_t g = 1; g < board_size2(map->b); g++)
 			if (group_at(map->b, g) == g)
-				playout_moggy_assess_group(p, map, g, games);
+				playout_moggy_assess_group(p, map, g, games, &s);
 
 	/* Then, assess individual moves. */
 	if (!pp->patternrate && !pp->selfatarirate)
