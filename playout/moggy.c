@@ -44,6 +44,21 @@ mq_nodup(struct move_queue *q)
 		q->moves--;
 }
 
+static void
+mq_append(struct move_queue *qd, struct move_queue *qs)
+{
+	assert(qd->moves + qs->moves < MQL);
+	memcpy(&qd->move[qd->moves], qs->move, qs->moves * sizeof(*qs->move));
+	qd->moves += qs->moves;
+}
+
+static void
+mq_add(struct move_queue *q, coord_t c)
+{
+	assert(q->moves < MQL);
+	q->move[q->moves++] = c;
+}
+
 
 static char moggy_patterns_src[][11] = {
 	/* hane pattern - enclosing hane */
@@ -114,7 +129,7 @@ apply_pattern_here(struct playout_policy *p,
 {
 	struct moggy_policy *pp = p->data;
 	if (test_pattern3_here(&pp->patterns, b, m))
-		q->move[q->moves++] = m->coord;
+		mq_add(q, m->coord);
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
@@ -413,7 +428,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 			if (is_pass(capture))
 				continue;
 
-			q->move[q->moves++] = capture;
+			mq_add(q, capture);
 			mq_nodup(q);
 		});
 	} foreach_in_group_end;
@@ -449,7 +464,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		q->moves = qmoves_prev;
 	}
 
-	q->move[q->moves++] = lib;
+	mq_add(q, lib);
 	mq_nodup(q);
 }
 
@@ -585,7 +600,7 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 			continue;
 
 		/* Tasty! Crispy! Good! */
-		q->move[q->moves++] = lib;
+		mq_add(q, lib);
 	}
 }
 
