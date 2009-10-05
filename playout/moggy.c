@@ -148,6 +148,13 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 }
 
 
+struct group_view {
+	/* Have we read this out? */
+	bool ready;
+	/* Move candidates for dealing with this group. */
+	struct move_queue q;
+};
+
 struct group_state {
 	enum {
 		G_UNKNOWN, /* Initial state. */
@@ -155,8 +162,8 @@ struct group_state {
 		G_2LIB, /* Unused. */
 		G_SAFE /* Unused. */
 	} state;
-	/* Move candidates for dealing with this group. */
-	struct move_queue q;
+	/* We have "views" for both b-to-play and w-to-play. */
+	struct group_view view[S_OFFBOARD];
 };
 
 /* Cache of evaluation of various board features. */
