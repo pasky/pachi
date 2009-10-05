@@ -142,13 +142,8 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 		} foreach_diag_neighbor_end;
 	}
 
-	if (PLDEBUGL(5)) {
-		fprintf(stderr, "Pattern candidate moves: ");
-		for (int i = 0; i < q.moves; i++) {
-			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
-		}
-		fprintf(stderr, "\n");
-	}
+	if (PLDEBUGL(5))
+		mq_print(&q, b, "Pattern");
 
 	return mq_pick(&q);
 }
@@ -479,13 +474,8 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
 		group_atari_check(p, b, g, stone_other(m->color), &q, NULL);
 	});
 
-	if (PLDEBUGL(5)) {
-		fprintf(stderr, "Local atari candidate moves: ");
-		for (int i = 0; i < q.moves; i++) {
-			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
-		}
-		fprintf(stderr, "\n");
-	}
+	if (PLDEBUGL(5))
+		mq_print(&q, b, "Local atari");
 
 	return mq_pick(&q);
 }
@@ -600,13 +590,8 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m)
 		group_2lib_check(p, b, g, stone_other(m->color), &q);
 	});
 
-	if (PLDEBUGL(5)) {
-		fprintf(stderr, "Local 2lib candidate moves: ");
-		for (int i = 0; i < q.moves; i++) {
-			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
-		}
-		fprintf(stderr, "\n");
-	}
+	if (PLDEBUGL(5))
+		mq_print(&q, b, "Local 2lib");
 
 	return mq_pick(&q);
 }

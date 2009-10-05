@@ -26,6 +26,9 @@ static void mq_append(struct move_queue *qd, struct move_queue *qs);
  * in that case. */
 static void mq_nodup(struct move_queue *q);
 
+/* Print queue contents on stderr. */
+static void mq_print(struct move_queue *q, struct board *b, char *label);
+
 
 static inline coord_t
 mq_pick(struct move_queue *q)
@@ -55,6 +58,16 @@ mq_nodup(struct move_queue *q)
 	    || (q->moves > 2 && q->move[q->moves - 3] == q->move[q->moves - 1])
 	    || (q->moves > 3 && q->move[q->moves - 4] == q->move[q->moves - 1]))
 		q->moves--;
+}
+
+static inline void
+mq_print(struct move_queue *q, struct board *b, char *label)
+{
+	fprintf(stderr, "%s candidate moves: ", label);
+	for (int i = 0; i < q->moves; i++) {
+		fprintf(stderr, "%s ", coord2sstr(q->move[i], b));
+	}
+	fprintf(stderr, "\n");
 }
 
 #endif
