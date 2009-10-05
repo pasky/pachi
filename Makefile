@@ -4,13 +4,13 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
 # -ffast-math breaks us
-CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -fomit-frame-pointer -frename-registers -pthread
+CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -pthread
 SYS_CFLAGS=
 LDFLAGS=-lm -pthread
 
 # Profiling:
-# LDFLAGS+=-pg
-# CUSTOM_CFLAGS+= -pg -fno-inline
+LDFLAGS+=-pg
+CUSTOM_CFLAGS+= -pg -fno-inline
 
 LD=ld
 AR=ar

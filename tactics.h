@@ -12,6 +12,13 @@
  * or throw-ins. */
 static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
 
+/* Check if escaping on this liberty by given group in atari would play out
+ * a simple ladder. */
+/* Two ways of ladder reading can be enabled separately; simple first-line
+ * ladders and trivial middle-board ladders. */
+bool ladder_catches(struct board *b, coord_t coord, group_t laddered,
+                    bool border_ladders, bool middle_ladders);
+
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(struct board *b, coord_t coord, int distance);
 
