@@ -31,6 +31,35 @@ struct moggy_policy {
 };
 
 
+struct group_view {
+	/* Have we read this out? */
+	bool ready;
+	/* Can we capture this group? */
+	bool capturable;
+};
+
+struct group_state {
+	enum {
+		G_UNKNOWN, /* Initial state. */
+		G_ATARI, /* Unused. */
+		G_2LIB, /* Unused. */
+		G_SAFE /* Unused. */
+	} status;
+	/* We have "views" for both b-to-play and w-to-play. */
+	struct group_view view[2];
+};
+
+/* Cache of evaluation of various board features. */
+struct board_state {
+	struct group_state *groups; /* [board_size2()], indexed by group_t */
+};
+
+#define board_state_init(s, b) do { \
+	s.groups = alloca(board_size2(b) * sizeof(*s.groups)); \
+	memset(s.groups, 0, board_size2(b) * sizeof(*s.groups)); \
+} while (0)
+
+
 static char moggy_patterns_src[][11] = {
 	/* hane pattern - enclosing hane */
 	"XOX"
@@ -148,35 +177,6 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 }
 
 
-struct group_view {
-	/* Have we read this out? */
-	bool ready;
-	/* Can we capture this group? */
-	bool capturable;
-};
-
-struct group_state {
-	enum {
-		G_UNKNOWN, /* Initial state. */
-		G_ATARI, /* Unused. */
-		G_2LIB, /* Unused. */
-		G_SAFE /* Unused. */
-	} status;
-	/* We have "views" for both b-to-play and w-to-play. */
-	struct group_view view[S_OFFBOARD];
-};
-
-/* Cache of evaluation of various board features. */
-struct board_state {
-	struct group_state *groups; /* [board_size2()], indexed by group_t */
-};
-
-#define board_state_init(s, b) do { \
-	s.groups = alloca(board_size2(b) * sizeof(*s.groups)); \
-	memset(s.groups, 0, board_size2(b) * sizeof(*s.groups)); \
-} while (0)
-
-
 static coord_t
 can_be_captured(struct playout_policy *p, struct board_state *s,
                 struct board *b, enum stone capturer, coord_t c, enum stone to_play)
@@ -188,17 +188,17 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 
 	coord_t capture = board_group_info(b, g).lib[0];
 
-	if (s->groups[g].status != G_UNKNOWN && s->groups[g].view[capturer].ready) {
+	if (s->groups[g].status != G_UNKNOWN && s->groups[g].view[capturer - 1].ready) {
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
-		if (s->groups[g].view[capturer].capturable)
+		if (s->groups[g].view[capturer - 1].capturable)
 			return capture;
 		else
 			return pass;
 	}
 	s->groups[g].status = G_ATARI;
-	s->groups[g].view[capturer].ready = true;
-	s->groups[g].view[capturer].capturable = false;
+	s->groups[g].view[capturer - 1].ready = true;
+	s->groups[g].view[capturer - 1].capturable = false;
 
 	if (PLDEBUGL(6))
 		fprintf(stderr, "can capture group %d (%s)?\n",
@@ -212,7 +212,7 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 	else if (is_bad_selfatari(b, to_play, capture))
 		return pass;
 
-	s->groups[g].view[capturer].capturable = true;
+	s->groups[g].view[capturer - 1].capturable = true;
 	return capture;
 }
 
