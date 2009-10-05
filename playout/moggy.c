@@ -225,7 +225,8 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 
 	assert(color != S_OFFBOARD && color != S_NONE);
 	if (PLDEBUGL(5))
-		fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n", coord2sstr(group, b), coord2sstr(lib, b), color);
+		fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n",
+		        coord2sstr(group, b), coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
 	/* Do not bother with kos. */
@@ -362,7 +363,8 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 }
 
 static void
-group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play, struct move_queue *q, struct board_state *s)
+group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
+                 struct move_queue *q, struct board_state *s)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -524,7 +526,8 @@ assess_local_bonus(struct playout_policy *p, struct board *board, coord_t a, coo
 }
 
 void
-playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, group_t g, int games, struct board_state *s)
+playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, group_t g, int games,
+                           struct board_state *s)
 {
 	struct moggy_policy *pp = p->data;
 	struct board *b = map->b;
