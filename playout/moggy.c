@@ -150,8 +150,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 		fprintf(stderr, "\n");
 	}
 
-	int i = fast_random(q.moves);
-	return q.moves ? q.move[i] : pass;
+	return mq_pick(&q);
 }
 
 
@@ -452,12 +451,12 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 	for (int g = g_base; g < b->clen; g++) {
 		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL);
 		if (q.moves > 0)
-			return q.move[fast_random(q.moves)];
+			return mq_pick(&q);
 	}
 	for (int g = 0; g < g_base; g++) {
 		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL);
 		if (q.moves > 0)
-			return q.move[fast_random(q.moves)];
+			return mq_pick(&q);
 	}
 	return pass;
 }
@@ -488,8 +487,7 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m)
 		fprintf(stderr, "\n");
 	}
 
-	int i = fast_random(q.moves);
-	return q.moves ? q.move[i] : pass;
+	return mq_pick(&q);
 }
 
 static bool
@@ -610,8 +608,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m)
 		fprintf(stderr, "\n");
 	}
 
-	int i = fast_random(q.moves);
-	return q.moves ? q.move[i] : pass;
+	return mq_pick(&q);
 }
 
 coord_t

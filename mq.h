@@ -5,12 +5,16 @@
  * equally good move candidates, then choosing from them randomly. */
 
 #include "move.h"
+#include "random.h"
 
 #define MQL 64
 struct move_queue {
 	int moves;
 	coord_t move[MQL];
 };
+
+/* Pick a random move from the queue. */
+static coord_t mq_pick(struct move_queue *q);
 
 /* Add a move to the queue. */
 static void mq_add(struct move_queue *q, coord_t c);
@@ -22,6 +26,12 @@ static void mq_append(struct move_queue *qd, struct move_queue *qs);
  * in that case. */
 static void mq_nodup(struct move_queue *q);
 
+
+static inline coord_t
+mq_pick(struct move_queue *q)
+{
+	return q->moves ? q->move[fast_random(q->moves)] : pass;
+}
 
 static inline void
 mq_nodup(struct move_queue *q)
