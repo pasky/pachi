@@ -342,8 +342,8 @@ border_ladder(struct board *b, coord_t coord, group_t laddered)
 }
 
 bool
-ladder_catches(struct board *b, coord_t coord, group_t laddered,
-               bool border_ladders, bool middle_ladders)
+is_ladder(struct board *b, coord_t coord, group_t laddered,
+          bool border_ladders, bool middle_ladders)
 {
 	/* This is very trivial and gets a lot of corner cases wrong.
 	 * We need this to be just very fast. One important point is

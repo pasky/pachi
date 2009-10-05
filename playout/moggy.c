@@ -238,7 +238,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
-	if (ladder_catches(b, lib, group, pp->borderladders, pp->ladders)) {
+	if (is_ladder(b, lib, group, pp->borderladders, pp->ladders)) {
 		/* Sometimes we want to keep the ladder move in the
 		 * queue in order to discourage it. */
 		if (!ladder)
