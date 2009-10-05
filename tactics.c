@@ -298,10 +298,9 @@ ladder_catcher(struct board *b, int x, int y, enum stone laddered)
 	return breaker == stone_other(laddered) || breaker == S_OFFBOARD;
 }
 
-static bool
-border_ladder(struct board *b, coord_t coord, group_t laddered)
+bool
+is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
 {
-	enum stone lcolor = board_at(b, group_base(laddered));
 	int x = coord_x(coord, b), y = coord_y(coord, b);
 
 	if (DEBUGL(5))
@@ -341,33 +340,15 @@ border_ladder(struct board *b, coord_t coord, group_t laddered)
 	return true;
 }
 
+/* This is very trivial and gets a lot of corner cases wrong.
+ * We need this to be just very fast. One important point is
+ * that we sometimes might not notice a ladder but if we do,
+ * it should always work; thus we can use this for strong
+ * negative hinting safely. */
 bool
-is_ladder(struct board *b, coord_t coord, group_t laddered,
-          bool border_ladders, bool middle_ladders)
+is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor)
 {
-	/* This is very trivial and gets a lot of corner cases wrong.
-	 * We need this to be just very fast. One important point is
-	 * that we sometimes might not notice a ladder but if we do,
-	 * it should always work; thus we can use this for strong
-	 * negative hinting safely. */
-
-	enum stone lcolor = board_at(b, group_base(laddered));
 	int x = coord_x(coord, b), y = coord_y(coord, b);
-
-	if (DEBUGL(6))
-		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
-			coord2sstr(coord, b), stone2str(lcolor), coord2sstr(laddered, b));
-
-	/* First, special-case first-line "ladders". This is a huge chunk
-	 * of ladders we actually meet and want to play. */
-	if (border_ladders
-	    && neighbor_count_at(b, coord, S_OFFBOARD) == 1
-	    && neighbor_count_at(b, coord, lcolor) == 1) {
-		return border_ladder(b, coord, laddered);
-	}
-
-	if (!middle_ladders)
-		return false;
 
 	/* Figure out the ladder direction */
 	int xd, yd;
