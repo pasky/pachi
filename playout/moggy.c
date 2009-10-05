@@ -151,8 +151,8 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 struct group_view {
 	/* Have we read this out? */
 	bool ready;
-	/* Move candidates for dealing with this group. */
-	struct move_queue q;
+	/* Can we capture this group? */
+	bool capturable;
 };
 
 struct group_state {
@@ -161,7 +161,7 @@ struct group_state {
 		G_ATARI, /* Unused. */
 		G_2LIB, /* Unused. */
 		G_SAFE /* Unused. */
-	} state;
+	} status;
 	/* We have "views" for both b-to-play and w-to-play. */
 	struct group_view view[S_OFFBOARD];
 };
@@ -178,16 +178,31 @@ struct board_state {
 
 
 static coord_t
-can_be_captured(struct playout_policy *p, struct board *b, enum stone capturer, coord_t c, enum stone to_play)
+can_be_captured(struct playout_policy *p, struct board_state *s,
+                struct board *b, enum stone capturer, coord_t c, enum stone to_play)
 {
+	group_t g = group_at(b, c);
 	if (board_at(b, c) != stone_other(capturer)
-	    || board_group_info(b, group_at(b, c)).libs > 1)
+	    || board_group_info(b, g).libs > 1)
 		return pass;
 
-	coord_t capture = board_group_info(b, group_at(b, c)).lib[0];
+	coord_t capture = board_group_info(b, g).lib[0];
+
+	if (s->groups[g].status != G_UNKNOWN && s->groups[g].view[capturer].ready) {
+		/* We have already seen this group. */
+		assert(s->groups[g].status == G_ATARI);
+		if (s->groups[g].view[capturer].capturable)
+			return capture;
+		else
+			return pass;
+	}
+	s->groups[g].status = G_ATARI;
+	s->groups[g].view[capturer].ready = true;
+	s->groups[g].view[capturer].capturable = false;
+
 	if (PLDEBUGL(6))
 		fprintf(stderr, "can capture group %d (%s)?\n",
-			group_at(b, c), coord2sstr(capture, b));
+			g, coord2sstr(capture, b));
 	struct move m; m.color = to_play; m.coord = capture;
 	/* Does that move even make sense? */
 	if (!board_is_valid_move(b, &m))
@@ -197,11 +212,13 @@ can_be_captured(struct playout_policy *p, struct board *b, enum stone capturer, 
 	else if (is_bad_selfatari(b, to_play, capture))
 		return pass;
 
+	s->groups[g].view[capturer].capturable = true;
 	return capture;
 }
 
 static bool
-can_be_rescued(struct playout_policy *p, struct board *b, group_t group, enum stone color, coord_t lib)
+can_be_rescued(struct playout_policy *p, struct board_state *s,
+               struct board *b, group_t group, enum stone color, coord_t lib)
 {
 	/* Does playing on the liberty rescue the group? */
 	if (!is_bad_selfatari(b, color, lib))
@@ -210,7 +227,7 @@ can_be_rescued(struct playout_policy *p, struct board *b, group_t group, enum st
 	/* Then, maybe we can capture one of our neighbors? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			if (!is_pass(can_be_captured(p, b, color, c, color)))
+			if (!is_pass(can_be_captured(p, s, b, color, c, color)))
 				return true;
 		});
 	} foreach_in_group_end;
@@ -244,7 +261,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Can we capture some neighbor? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			coord_t capture = can_be_captured(p, b, color, c, to_play);
+			coord_t capture = can_be_captured(p, s, b, color, c, to_play);
 			if (is_pass(capture))
 				continue;
 
@@ -261,7 +278,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	if (is_bad_selfatari(b, to_play, lib))
 		return;
 	/* Do not remove group that cannot be saved by the opponent. */
-	if (to_play != color && !can_be_rescued(p, b, group, color, lib))
+	if (to_play != color && !can_be_rescued(p, s, b, group, color, lib))
 		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
