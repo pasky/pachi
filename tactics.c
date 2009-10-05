@@ -298,6 +298,49 @@ ladder_catcher(struct board *b, int x, int y, enum stone laddered)
 	return breaker == stone_other(laddered) || breaker == S_OFFBOARD;
 }
 
+static bool
+border_ladder(struct board *b, coord_t coord, group_t laddered)
+{
+	enum stone lcolor = board_at(b, group_base(laddered));
+	int x = coord_x(coord, b), y = coord_y(coord, b);
+
+	if (DEBUGL(5))
+		fprintf(stderr, "border ladder\n");
+	/* Direction along border; xd is horiz. border, yd vertical. */
+	int xd = 0, yd = 0;
+	if (board_atxy(b, x + 1, y) == S_OFFBOARD || board_atxy(b, x - 1, y) == S_OFFBOARD)
+		yd = 1;
+	else
+		xd = 1;
+	/* Direction from the border; -1 is above/left, 1 is below/right. */
+	int dd = (board_atxy(b, x + yd, y + xd) == S_OFFBOARD) ? 1 : -1;
+	if (DEBUGL(6))
+		fprintf(stderr, "xd %d yd %d dd %d\n", xd, yd, dd);
+	/* | ? ?
+	 * | . O #
+	 * | c X #
+	 * | . O #
+	 * | ? ?   */
+	/* This is normally caught, unless we have friends both above
+	 * and below... */
+	if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor
+	    && board_atxy(b, x - xd * 2, y - yd * 2) == lcolor)
+		return false;
+	/* ...or can't block where we need because of shortage
+	 * of liberties. */
+	int libs1 = board_group_info(b, group_atxy(b, x + xd - yd * dd, y + yd - xd * dd)).libs;
+	int libs2 = board_group_info(b, group_atxy(b, x - xd - yd * dd, y - yd - xd * dd)).libs;
+	if (DEBUGL(6))
+		fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);
+	if (libs1 < 2 && libs2 < 2)
+		return false;
+	if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor && libs1 < 3)
+		return false;
+	if (board_atxy(b, x - xd * 2, y - yd * 2) == lcolor && libs2 < 3)
+		return false;
+	return true;
+}
+
 bool
 ladder_catches(struct board *b, coord_t coord, group_t laddered,
                bool border_ladders, bool middle_ladders)
@@ -320,41 +363,7 @@ ladder_catches(struct board *b, coord_t coord, group_t laddered,
 	if (border_ladders
 	    && neighbor_count_at(b, coord, S_OFFBOARD) == 1
 	    && neighbor_count_at(b, coord, lcolor) == 1) {
-		if (DEBUGL(5))
-			fprintf(stderr, "border ladder\n");
-		/* Direction along border; xd is horiz. border, yd vertical. */
-		int xd = 0, yd = 0;
-		if (board_atxy(b, x + 1, y) == S_OFFBOARD || board_atxy(b, x - 1, y) == S_OFFBOARD)
-			yd = 1;
-		else
-			xd = 1;
-		/* Direction from the border; -1 is above/left, 1 is below/right. */
-		int dd = (board_atxy(b, x + yd, y + xd) == S_OFFBOARD) ? 1 : -1;
-		if (DEBUGL(6))
-			fprintf(stderr, "xd %d yd %d dd %d\n", xd, yd, dd);
-		/* | ? ?
-		 * | . O #
-		 * | c X #
-		 * | . O #
-		 * | ? ?   */
-		/* This is normally caught, unless we have friends both above
-		 * and below... */
-		if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor
-		    && board_atxy(b, x - xd * 2, y - yd * 2) == lcolor)
-			return false;
-		/* ...or can't block where we need because of shortage
-		 * of liberties. */
-		int libs1 = board_group_info(b, group_atxy(b, x + xd - yd * dd, y + yd - xd * dd)).libs;
-		int libs2 = board_group_info(b, group_atxy(b, x - xd - yd * dd, y - yd - xd * dd)).libs;
-		if (DEBUGL(6))
-			fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);
-		if (libs1 < 2 && libs2 < 2)
-			return false;
-		if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor && libs1 < 3)
-			return false;
-		if (board_atxy(b, x - xd * 2, y - yd * 2) == lcolor && libs2 < 3)
-			return false;
-		return true;
+		return border_ladder(b, coord, laddered);
 	}
 
 	if (!middle_ladders)
