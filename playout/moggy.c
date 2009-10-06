@@ -251,6 +251,30 @@ capturable_group(struct playout_policy *p, struct board_state *s,
 	return can_be_captured(p, s, b, g, to_play);
 }
 
+/* For given atari group @group owned by @owner, decide if @to_play
+ * can save it / keep it in danger by dealing with one of the
+ * neighboring groups. */
+static bool
+can_countercapture(struct playout_policy *p, struct board_state *s,
+                   struct board *b, enum stone owner, group_t group,
+		   enum stone to_play, struct move_queue *q)
+{
+	int qmoves_prev = q ? q->moves : 0;
+
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			if (!capturable_group(p, s, b, owner, c, to_play))
+				continue;
+
+			if (!q) return true;
+			mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
+			mq_nodup(q);
+		});
+	} foreach_in_group_end;
+
+	return q ? q->moves > qmoves_prev : false;
+}
+
 static bool
 can_be_rescued(struct playout_policy *p, struct board_state *s,
                struct board *b, group_t group, enum stone color)
@@ -260,13 +284,7 @@ can_be_rescued(struct playout_policy *p, struct board_state *s,
 		return true;
 
 	/* Then, maybe we can capture one of our neighbors? */
-	foreach_in_group(b, group) {
-		foreach_neighbor(b, c, {
-			if (capturable_group(p, s, b, color, c, color))
-				return true;
-		});
-	} foreach_in_group_end;
-	return false;
+	return can_countercapture(p, s, b, color, group, color, NULL);
 }
 
 static void
@@ -294,15 +312,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		return;
 
 	/* Can we capture some neighbor? */
-	foreach_in_group(b, group) {
-		foreach_neighbor(b, c, {
-			if (!capturable_group(p, s, b, color, c, to_play))
-				continue;
-
-			mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
-			mq_nodup(q);
-		});
-	} foreach_in_group_end;
+	can_countercapture(p, s, b, color, group, to_play, q);
 
 	struct move m; m.color = to_play; m.coord = lib;
 	if (!board_is_valid_move(b, &m))
