@@ -40,7 +40,6 @@ struct group_view {
 
 struct group_state {
 	enum {
-		G_UNKNOWN, /* Initial state. */
 		G_ATARI, /* Unused. */
 		G_2LIB, /* Unused. */
 		G_SAFE /* Unused. */
@@ -52,12 +51,17 @@ struct group_state {
 /* Cache of evaluation of various board features. */
 struct board_state {
 	struct group_state *groups; /* [board_size2()], indexed by group_t */
+	unsigned char *groups_known; /* Bitmap of known groups. */
 };
 
 #define board_state_init(s, b) do { \
 	s.groups = alloca(board_size2(b) * sizeof(*s.groups)); \
-	memset(s.groups, 0, board_size2(b) * sizeof(*s.groups)); \
+	s.groups_known = alloca(board_size2(b) / 8 + 1); \
+	memset(s.groups_known, 0, board_size2(b) / 8 + 1); \
 } while (0)
+
+#define group_is_known(s, g) (s->groups_known[g / 8] & (1 << (g % 8)))
+#define group_set_known(s, g) (s->groups_known[g / 8] |= (1 << (g % 8)))
 
 
 static char moggy_patterns_src[][11] = {
@@ -188,13 +192,17 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 
 	coord_t capture = board_group_info(b, g).lib[0];
 
-	if (s->groups[g].status != G_UNKNOWN && s->groups[g].view[capturer - 1].ready) {
+	if (group_is_known(s, g) && s->groups[g].view[capturer - 1].ready) {
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
 		if (s->groups[g].view[capturer - 1].capturable)
 			return capture;
 		else
 			return pass;
+	}
+	if (!group_is_known(s, g)) {
+		group_set_known(s, g);
+		s->groups[g].view[stone_other(capturer) - 1].ready = false;
 	}
 	s->groups[g].status = G_ATARI;
 	s->groups[g].view[capturer - 1].ready = true;
