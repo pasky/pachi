@@ -205,20 +205,19 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 
 static bool
 can_be_captured(struct playout_policy *p, struct board_state *s,
-                struct board *b, enum stone capturer,
-		group_t g, enum stone to_play)
+                struct board *b, group_t g, enum stone to_play)
 {
-	if (group_is_known(s, g) && s->groups[g].view[capturer - 1].ready) {
+	if (group_is_known(s, g) && s->groups[g].view[to_play - 1].ready) {
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
-		if (s->groups[g].view[capturer - 1].capturable)
+		if (s->groups[g].view[to_play - 1].capturable)
 			return true;
 		else
 			return false;
 	}
 
 	/* Cache miss. Set up cache entry, default at capturable = false. */
-	group_cache_set(s, g, capturer, G_ATARI);
+	group_cache_set(s, g, to_play, G_ATARI);
 
 	coord_t capture = board_group_info(b, g).lib[0];
 	if (PLDEBUGL(6))
@@ -227,7 +226,7 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 	/* Does playing on the liberty usefully capture the group? */
 	struct move m; m.color = to_play; m.coord = capture;
 	if (board_is_valid_move(b, &m) && !is_bad_selfatari(b, to_play, capture)) {
-		s->groups[g].view[capturer - 1].capturable = true;
+		s->groups[g].view[to_play - 1].capturable = true;
 		return true;
 	}
 
@@ -249,7 +248,7 @@ capturable_group(struct playout_policy *p, struct board_state *s,
 	           || board_group_info(b, g).libs > 1))
 		return false;
 
-	return can_be_captured(p, s, b, capturer, g, to_play);
+	return can_be_captured(p, s, b, g, to_play);
 }
 
 static bool
