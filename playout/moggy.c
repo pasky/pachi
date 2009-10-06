@@ -253,11 +253,10 @@ capturable_group(struct playout_policy *p, struct board_state *s,
 
 static bool
 can_be_rescued(struct playout_policy *p, struct board_state *s,
-               struct board *b, group_t group, enum stone color, coord_t lib)
+               struct board *b, group_t group, enum stone color)
 {
 	/* Does playing on the liberty rescue the group? */
-	struct move m; m.color = color; m.coord = lib;
-	if (board_is_valid_move(b, &m) && !is_bad_selfatari(b, color, lib))
+	if (can_be_captured(p, s, b, group, color))
 		return true;
 
 	/* Then, maybe we can capture one of our neighbors? */
@@ -313,7 +312,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	if (is_bad_selfatari(b, to_play, lib))
 		return;
 	/* Do not remove group that cannot be saved by the opponent. */
-	if (to_play != color && !can_be_rescued(p, s, b, group, color, lib))
+	if (to_play != color && !can_be_rescued(p, s, b, group, color))
 		return;
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
