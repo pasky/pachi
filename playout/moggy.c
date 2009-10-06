@@ -187,10 +187,9 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 }
 
 
-static coord_t
+static bool
 can_be_captured_nc(struct playout_policy *p, struct board_state *s,
-                   struct board *b,
-		   coord_t capture, enum stone capturer,
+                   struct board *b, enum stone capturer,
 		   group_t g, enum stone to_play)
 {
 	if (likely(!group_is_known(s, g))) {
@@ -201,42 +200,42 @@ can_be_captured_nc(struct playout_policy *p, struct board_state *s,
 	s->groups[g].view[capturer - 1].ready = true;
 	s->groups[g].view[capturer - 1].capturable = false;
 
+	coord_t capture = board_group_info(b, g).lib[0];
 	if (PLDEBUGL(6))
 		fprintf(stderr, "can capture group %d (%s)?\n",
 			g, coord2sstr(capture, b));
 	struct move m; m.color = to_play; m.coord = capture;
 	/* Does that move even make sense? */
 	if (!board_is_valid_move(b, &m))
-		return pass;
+		return false;
 	/* Make sure capturing the group will actually
 	 * do us any good. */
 	else if (is_bad_selfatari(b, to_play, capture))
-		return pass;
+		return false;
 
 	s->groups[g].view[capturer - 1].capturable = true;
-	return capture;
+	return true;
 }
 
-static inline coord_t
+static inline bool
 can_be_captured(struct playout_policy *p, struct board_state *s,
                 struct board *b, enum stone capturer, coord_t c, enum stone to_play)
 {
 	group_t g = group_at(b, c);
 	if (likely(board_at(b, g) != stone_other(capturer)
 	           || board_group_info(b, g).libs > 1))
-		return pass;
-	coord_t capture = board_group_info(b, g).lib[0];
+		return false;
 
 	if (group_is_known(s, g) && s->groups[g].view[capturer - 1].ready) {
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
 		if (s->groups[g].view[capturer - 1].capturable)
-			return capture;
+			return true;
 		else
-			return pass;
+			return false;
 	}
 
-	return can_be_captured_nc(p, s, b, capture, capturer, g, to_play);
+	return can_be_captured_nc(p, s, b, capturer, g, to_play);
 }
 
 static bool
@@ -250,7 +249,7 @@ can_be_rescued(struct playout_policy *p, struct board_state *s,
 	/* Then, maybe we can capture one of our neighbors? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			if (!is_pass(can_be_captured(p, s, b, color, c, color)))
+			if (can_be_captured(p, s, b, color, c, color))
 				return true;
 		});
 	} foreach_in_group_end;
@@ -284,11 +283,10 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Can we capture some neighbor? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			coord_t capture = can_be_captured(p, s, b, color, c, to_play);
-			if (is_pass(capture))
+			if (!can_be_captured(p, s, b, color, c, to_play))
 				continue;
 
-			mq_add(q, capture);
+			mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
 			mq_nodup(q);
 		});
 	} foreach_in_group_end;
