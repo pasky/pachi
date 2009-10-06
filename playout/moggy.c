@@ -82,7 +82,7 @@ struct board_state {
 	s->groups[g].trait ## _ready |= color; \
 } while (0)
 #define group_trait_is_ready(s, g, color, trait) (s->groups[g].trait ## _ready & color)
-#define group_trait_set(s, g, color, trait, val) s->groups[g].trait |= val
+#define group_trait_set(s, g, color, trait, val) s->groups[g].trait = (s->groups[g].trait & ~color) | (!!val * color)
 #define group_trait_get(s, g, color, trait) (s->groups[g].trait & color)
 
 static __thread struct board_state *ss;
