@@ -143,8 +143,8 @@ board_clear(struct board *board)
 
 	/* Setup initial symmetry */
 	board->symmetry.d = 1;
-	board->symmetry.x1 = board->symmetry.y1 = board->size / 2;
-	board->symmetry.x2 = board->symmetry.y2 = board->size - 1;
+	board->symmetry.x1 = board->symmetry.y1 = board_size(board) / 2;
+	board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
 	board->symmetry.type = SYM_FULL;
 
 	/* Draw the offboard margin */
