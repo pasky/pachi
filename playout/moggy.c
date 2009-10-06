@@ -314,12 +314,8 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Can we capture some neighbor? */
 	can_countercapture(p, s, b, color, group, to_play, q);
 
-	struct move m; m.color = to_play; m.coord = lib;
-	if (!board_is_valid_move(b, &m))
-		return;
-
 	/* Do not suicide... */
-	if (is_bad_selfatari(b, to_play, lib))
+	if (!can_be_captured(p, s, b, group, color))
 		return;
 	/* Do not remove group that cannot be saved by the opponent. */
 	if (to_play != color && !can_be_rescued(p, s, b, group, color))
