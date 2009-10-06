@@ -86,6 +86,7 @@ struct board_state {
 	s->groups[g].status = gstat; \
 	s->groups[g].view[color - 1].trait.ready = true; \
 } while (0)
+#define group_trait_set(s, g, color, trait, val) s->groups[g].view[color - 1].trait.possible = val
 
 static __thread struct board_state *ss;
 
@@ -230,7 +231,7 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 	/* Does playing on the liberty usefully capture the group? */
 	struct move m; m.color = to_play; m.coord = capture;
 	if (board_is_valid_move(b, &m) && !is_bad_selfatari(b, to_play, capture)) {
-		s->groups[g].view[to_play - 1].capturable.possible = true;
+		group_trait_set(s, g, to_play, capturable, true);
 		return true;
 	}
 
@@ -267,8 +268,9 @@ can_countercapture(struct playout_policy *p, struct board_state *s,
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
 		if (s->groups[g].view[to_play - 1].can_countercapture.possible) {
-			if (q) /* Scan for countercapture liberties. */
+			if (q) { /* Scan for countercapture liberties. */
 				goto scan;
+			}
 			return true;
 		} else {
 			return false;
@@ -277,7 +279,7 @@ can_countercapture(struct playout_policy *p, struct board_state *s,
 
 	/* Cache miss. Set up cache entry, default at can_countercapture = true. */
 	group_trait_ready(s, g, to_play, G_ATARI, can_countercapture);
-	s->groups[g].view[to_play - 1].can_countercapture.possible = true;
+	group_trait_set(s, g, to_play, can_countercapture, true);
 
 scan:;
 	int qmoves_prev = q ? q->moves : 0;
@@ -294,7 +296,7 @@ scan:;
 	} foreach_in_group_end;
 
 	bool can = q ? q->moves > qmoves_prev : false;
-	s->groups[g].view[to_play - 1].can_countercapture.possible = can;
+	group_trait_set(s, g, to_play, can_countercapture, can);
 	return can;
 }
 
