@@ -31,11 +31,16 @@ struct moggy_policy {
 };
 
 
-struct group_view {
+struct group_trait {
 	/* Have we read this out? */
 	bool ready;
-	/* Can we capture this group? */
-	bool capturable;
+	/* Can we do it? */
+	bool possible;
+};
+
+struct group_view {
+	struct group_trait capturable;
+	struct group_trait can_countercapture;
 };
 
 struct group_state {
@@ -73,14 +78,13 @@ struct board_state {
 
 #define group_is_known(s, g) (s->groups_known[g / 8] & (1 << (g % 8)))
 #define group_set_known(s, g) (s->groups_known[g / 8] |= (1 << (g % 8)))
-#define group_cache_set(s, g, color, gstat) do { \
-	if (likely(!group_is_known(s, g))) { \
+#define group_trait_ready(s, g, color, gstat, trait) do { \
+	if (!group_is_known(s, g)) { \
+		memset(&s->groups[g], 0, sizeof(s->groups[g])); \
 		group_set_known(s, g); \
-		s->groups[g].view[stone_other(color) - 1].ready = false; \
 	} \
 	s->groups[g].status = gstat; \
-	memset(&s->groups[g].view[color - 1], 0, sizeof(struct group_view)); \
-	s->groups[g].view[color - 1].ready = true; \
+	s->groups[g].view[color - 1].trait.ready = true; \
 } while (0)
 
 static __thread struct board_state *ss;
@@ -207,17 +211,17 @@ static bool
 can_be_captured(struct playout_policy *p, struct board_state *s,
                 struct board *b, group_t g, enum stone to_play)
 {
-	if (group_is_known(s, g) && s->groups[g].view[to_play - 1].ready) {
+	if (group_is_known(s, g) && s->groups[g].view[to_play - 1].capturable.ready) {
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
-		if (s->groups[g].view[to_play - 1].capturable)
+		if (s->groups[g].view[to_play - 1].capturable.possible)
 			return true;
 		else
 			return false;
 	}
 
 	/* Cache miss. Set up cache entry, default at capturable = false. */
-	group_cache_set(s, g, to_play, G_ATARI);
+	group_trait_ready(s, g, to_play, G_ATARI, capturable);
 
 	coord_t capture = board_group_info(b, g).lib[0];
 	if (PLDEBUGL(6))
@@ -226,7 +230,7 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 	/* Does playing on the liberty usefully capture the group? */
 	struct move m; m.color = to_play; m.coord = capture;
 	if (board_is_valid_move(b, &m) && !is_bad_selfatari(b, to_play, capture)) {
-		s->groups[g].view[to_play - 1].capturable = true;
+		s->groups[g].view[to_play - 1].capturable.possible = true;
 		return true;
 	}
 
@@ -238,7 +242,7 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
  * liberty to either capture or escape). */
 /* Note that @to_play is important; e.g. consider snapback, it's good
  * to play at the last liberty by attacker, but not defender. */
-static inline bool
+static __attribute__((always_inline)) bool
 capturable_group(struct playout_policy *p, struct board_state *s,
                  struct board *b, enum stone capturer, coord_t c,
 		 enum stone to_play)
@@ -256,12 +260,29 @@ capturable_group(struct playout_policy *p, struct board_state *s,
  * neighboring groups. */
 static bool
 can_countercapture(struct playout_policy *p, struct board_state *s,
-                   struct board *b, enum stone owner, group_t group,
+                   struct board *b, enum stone owner, group_t g,
 		   enum stone to_play, struct move_queue *q)
 {
+	if (group_is_known(s, g) && s->groups[g].view[to_play - 1].can_countercapture.ready) {
+		/* We have already seen this group. */
+		assert(s->groups[g].status == G_ATARI);
+		if (s->groups[g].view[to_play - 1].can_countercapture.possible) {
+			if (q) /* Scan for countercapture liberties. */
+				goto scan;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/* Cache miss. Set up cache entry, default at can_countercapture = true. */
+	group_trait_ready(s, g, to_play, G_ATARI, can_countercapture);
+	s->groups[g].view[to_play - 1].can_countercapture.possible = true;
+
+scan:;
 	int qmoves_prev = q ? q->moves : 0;
 
-	foreach_in_group(b, group) {
+	foreach_in_group(b, g) {
 		foreach_neighbor(b, c, {
 			if (!capturable_group(p, s, b, owner, c, to_play))
 				continue;
@@ -272,7 +293,9 @@ can_countercapture(struct playout_policy *p, struct board_state *s,
 		});
 	} foreach_in_group_end;
 
-	return q ? q->moves > qmoves_prev : false;
+	bool can = q ? q->moves > qmoves_prev : false;
+	s->groups[g].view[to_play - 1].can_countercapture.possible = can;
+	return can;
 }
 
 static bool
