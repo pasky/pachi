@@ -252,6 +252,10 @@ static bool
 can_be_rescued(struct playout_policy *p, struct board_state *s,
                struct board *b, group_t group, enum stone color, coord_t lib)
 {
+	struct move m; m.color = color; m.coord = lib;
+	if (!board_is_valid_move(b, &m))
+		return;
+
 	/* Does playing on the liberty rescue the group? */
 	if (!is_bad_selfatari(b, color, lib))
 		return true;
