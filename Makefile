@@ -1,16 +1,23 @@
 #### CONFIGURATION
 
+# PROFILING=1
+
 PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
 # -ffast-math breaks us
-CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -fomit-frame-pointer -frename-registers -pthread
+CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -frename-registers -pthread
 SYS_CFLAGS=
 LDFLAGS=-lm -pthread
 
 # Profiling:
-#LDFLAGS+=-pg
-#CUSTOM_CFLAGS+= -pg -fno-inline
+ifdef PROFILING
+	LDFLAGS+=-pg
+	CUSTOM_CFLAGS+=-pg -fno-inline
+else
+	# Whee, an extra register!
+	CUSTOM_CFLAGS+=-fomit-frame-pointer
+endif
 
 LD=ld
 AR=ar
