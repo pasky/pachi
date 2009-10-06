@@ -40,7 +40,7 @@ struct group_view {
 
 struct group_state {
 	enum {
-		G_ATARI, /* Unused. */
+		G_ATARI,
 		G_2LIB, /* Unused. */
 		G_SAFE /* Unused. */
 	} status;
