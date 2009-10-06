@@ -188,25 +188,12 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 
 
 static coord_t
-can_be_captured(struct playout_policy *p, struct board_state *s,
-                struct board *b, enum stone capturer, coord_t c, enum stone to_play)
+can_be_captured_nc(struct playout_policy *p, struct board_state *s,
+                   struct board *b,
+		   coord_t capture, enum stone capturer,
+		   group_t g, enum stone to_play)
 {
-	group_t g = group_at(b, c);
-	if (board_at(b, c) != stone_other(capturer)
-	    || board_group_info(b, g).libs > 1)
-		return pass;
-
-	coord_t capture = board_group_info(b, g).lib[0];
-
-	if (group_is_known(s, g) && s->groups[g].view[capturer - 1].ready) {
-		/* We have already seen this group. */
-		assert(s->groups[g].status == G_ATARI);
-		if (s->groups[g].view[capturer - 1].capturable)
-			return capture;
-		else
-			return pass;
-	}
-	if (!group_is_known(s, g)) {
+	if (likely(!group_is_known(s, g))) {
 		group_set_known(s, g);
 		s->groups[g].view[stone_other(capturer) - 1].ready = false;
 	}
@@ -228,6 +215,28 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 
 	s->groups[g].view[capturer - 1].capturable = true;
 	return capture;
+}
+
+static inline coord_t
+can_be_captured(struct playout_policy *p, struct board_state *s,
+                struct board *b, enum stone capturer, coord_t c, enum stone to_play)
+{
+	group_t g = group_at(b, c);
+	if (likely(board_at(b, g) != stone_other(capturer)
+	           || board_group_info(b, g).libs > 1))
+		return pass;
+	coord_t capture = board_group_info(b, g).lib[0];
+
+	if (group_is_known(s, g) && s->groups[g].view[capturer - 1].ready) {
+		/* We have already seen this group. */
+		assert(s->groups[g].status == G_ATARI);
+		if (s->groups[g].view[capturer - 1].capturable)
+			return capture;
+		else
+			return pass;
+	}
+
+	return can_be_captured_nc(p, s, b, capture, capturer, g, to_play);
 }
 
 static bool
