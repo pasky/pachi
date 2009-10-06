@@ -33,25 +33,25 @@ struct moggy_policy {
 
 struct group_trait {
 	/* Have we read this out? */
-	bool ready;
+	bool ready:1;
 	/* Can we do it? */
-	bool possible;
-};
+	bool possible:1;
+} __attribute__((packed));
 
 struct group_view {
 	struct group_trait capturable;
 	struct group_trait can_countercapture;
-};
+} __attribute__((packed));
 
 struct group_state {
 	enum {
 		G_ATARI,
 		G_2LIB, /* Unused. */
 		G_SAFE /* Unused. */
-	} status;
+	} status:2;
 	/* We have "views" for both b-to-play and w-to-play. */
 	struct group_view view[2];
-};
+} __attribute__((packed));
 
 /* Cache of evaluation of various board features. */
 struct board_state {
