@@ -204,10 +204,22 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 
 
 static bool
-can_be_captured_nc(struct playout_policy *p, struct board_state *s,
-                   struct board *b, enum stone capturer,
-		   group_t g, enum stone to_play)
+can_be_captured(struct playout_policy *p, struct board_state *s,
+                struct board *b, enum stone capturer,
+		group_t g, enum stone to_play)
 {
+	if (group_is_known(s, g) && s->groups[g].view[capturer - 1].ready) {
+		/* We have already seen this group. */
+		assert(s->groups[g].status == G_ATARI);
+		if (s->groups[g].view[capturer - 1].capturable)
+			return true;
+		else
+			return false;
+	}
+
+	/* Cache miss. Set up cache entry, default at capturable = false. */
+	group_cache_set(s, g, capturer, G_ATARI);
+
 	coord_t capture = board_group_info(b, g).lib[0];
 	if (PLDEBUGL(6))
 		fprintf(stderr, "can capture group %d (%s)?\n",
@@ -221,31 +233,26 @@ can_be_captured_nc(struct playout_policy *p, struct board_state *s,
 	else if (is_bad_selfatari(b, to_play, capture))
 		return false;
 
+	s->groups[g].view[capturer - 1].capturable = true;
 	return true;
 }
 
+/* For given position @c, decide if this is a group that is in danger from
+ * @capturer and @to_play can do anything about it (play at the last
+ * liberty to either capture or escape). */
+/* Note that @to_play is important; e.g. consider snapback, it's good
+ * to play at the last liberty by attacker, but not defender. */
 static inline bool
-can_be_captured(struct playout_policy *p, struct board_state *s,
-                struct board *b, enum stone capturer, coord_t c, enum stone to_play)
+capturable_group(struct playout_policy *p, struct board_state *s,
+                 struct board *b, enum stone capturer, coord_t c,
+		 enum stone to_play)
 {
 	group_t g = group_at(b, c);
 	if (likely(board_at(b, g) != stone_other(capturer)
 	           || board_group_info(b, g).libs > 1))
 		return false;
 
-	if (group_is_known(s, g) && s->groups[g].view[capturer - 1].ready) {
-		/* We have already seen this group. */
-		assert(s->groups[g].status == G_ATARI);
-		if (s->groups[g].view[capturer - 1].capturable)
-			return true;
-		else
-			return false;
-	}
-
-	group_cache_set(s, g, capturer, G_ATARI);
-	bool can = can_be_captured_nc(p, s, b, capturer, g, to_play);
-	s->groups[g].view[capturer - 1].capturable = can;
-	return can;
+	return can_be_captured(p, s, b, capturer, g, to_play);
 }
 
 static bool
@@ -263,7 +270,7 @@ can_be_rescued(struct playout_policy *p, struct board_state *s,
 	/* Then, maybe we can capture one of our neighbors? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			if (can_be_captured(p, s, b, color, c, color))
+			if (capturable_group(p, s, b, color, c, color))
 				return true;
 		});
 	} foreach_in_group_end;
@@ -297,7 +304,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Can we capture some neighbor? */
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
-			if (!can_be_captured(p, s, b, color, c, to_play))
+			if (!capturable_group(p, s, b, color, c, to_play))
 				continue;
 
 			mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
