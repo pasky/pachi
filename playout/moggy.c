@@ -55,13 +55,19 @@ struct board_state {
 };
 
 #define board_state_init(s, b) do { \
-	s.groups = alloca(board_size2(b) * sizeof(*s.groups)); \
-	s.groups_known = alloca(board_size2(b) / 8 + 1); \
+	if (!ss) { \
+		ss = malloc(sizeof(*ss)); \
+		ss->groups = malloc(board_size2(b) * sizeof(*s.groups)); \
+		ss->groups_known = malloc(board_size2(b) / 8 + 1); \
+	} \
+	s.groups = ss->groups; s.groups_known = ss->groups_known; \
 	memset(s.groups_known, 0, board_size2(b) / 8 + 1); \
 } while (0)
 
 #define group_is_known(s, g) (s->groups_known[g / 8] & (1 << (g % 8)))
 #define group_set_known(s, g) (s->groups_known[g / 8] |= (1 << (g % 8)))
+
+static __thread struct board_state *ss;
 
 
 static char moggy_patterns_src[][11] = {
