@@ -88,15 +88,19 @@ struct board_state {
 	s->groups[g].status = gstat; \
 	s->groups[g].view[color - 1].trait.ready = true; \
 } while (0)
+#define group_trait_is_ready(s, g, color, trait) s->groups[g].view[color - 1].trait.ready
 #define group_trait_set(s, g, color, trait, val) s->groups[g].view[color - 1].trait.possible = val
+#define group_trait_get(s, g, color, trait) s->groups[g].view[color - 1].trait.possible
 
 static __thread struct board_state *ss;
 #else
 #define board_state_init(s, b)
-#define group_is_known(s, g) (0)
+#define group_is_known(s, g) false
 #define group_set_known(s, g)
 #define group_trait_ready(s, g, color, gstat, trait)
+#define group_trait_is_ready(s, g, color, trait) false
 #define group_trait_set(s, g, color, trait, val)
+#define group_trait_get(s, g, color, trait) false
 #endif
 
 
@@ -221,10 +225,10 @@ static bool
 can_be_captured(struct playout_policy *p, struct board_state *s,
                 struct board *b, group_t g, enum stone to_play)
 {
-	if (group_is_known(s, g) && s->groups[g].view[to_play - 1].capturable.ready) {
+	if (group_is_known(s, g) && group_trait_is_ready(s, g, to_play, capturable)) {
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
-		if (s->groups[g].view[to_play - 1].capturable.possible)
+		if (group_trait_get(s, g, to_play, capturable))
 			return true;
 		else
 			return false;
@@ -273,10 +277,10 @@ can_countercapture(struct playout_policy *p, struct board_state *s,
                    struct board *b, enum stone owner, group_t g,
 		   enum stone to_play, struct move_queue *q)
 {
-	if (group_is_known(s, g) && s->groups[g].view[to_play - 1].can_countercapture.ready) {
+	if (group_is_known(s, g) && group_trait_is_ready(s, g, to_play, can_countercapture)) {
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
-		if (s->groups[g].view[to_play - 1].can_countercapture.possible) {
+		if (group_trait_get(s, g, to_play, can_countercapture)) {
 			if (q) { /* Scan for countercapture liberties. */
 				goto scan;
 			}
