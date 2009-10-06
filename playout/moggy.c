@@ -66,6 +66,15 @@ struct board_state {
 
 #define group_is_known(s, g) (s->groups_known[g / 8] & (1 << (g % 8)))
 #define group_set_known(s, g) (s->groups_known[g / 8] |= (1 << (g % 8)))
+#define group_cache_set(s, g, color, gstat) do { \
+	if (likely(!group_is_known(s, g))) { \
+		group_set_known(s, g); \
+		s->groups[g].view[stone_other(color) - 1].ready = false; \
+	} \
+	s->groups[g].status = gstat; \
+	memset(&s->groups[g].view[color - 1], 0, sizeof(struct group_view)); \
+	s->groups[g].view[color - 1].ready = true; \
+} while (0)
 
 static __thread struct board_state *ss;
 
@@ -192,14 +201,6 @@ can_be_captured_nc(struct playout_policy *p, struct board_state *s,
                    struct board *b, enum stone capturer,
 		   group_t g, enum stone to_play)
 {
-	if (likely(!group_is_known(s, g))) {
-		group_set_known(s, g);
-		s->groups[g].view[stone_other(capturer) - 1].ready = false;
-	}
-	s->groups[g].status = G_ATARI;
-	s->groups[g].view[capturer - 1].ready = true;
-	s->groups[g].view[capturer - 1].capturable = false;
-
 	coord_t capture = board_group_info(b, g).lib[0];
 	if (PLDEBUGL(6))
 		fprintf(stderr, "can capture group %d (%s)?\n",
@@ -213,7 +214,6 @@ can_be_captured_nc(struct playout_policy *p, struct board_state *s,
 	else if (is_bad_selfatari(b, to_play, capture))
 		return false;
 
-	s->groups[g].view[capturer - 1].capturable = true;
 	return true;
 }
 
@@ -235,7 +235,10 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 			return false;
 	}
 
-	return can_be_captured_nc(p, s, b, capturer, g, to_play);
+	group_cache_set(s, g, capturer, G_ATARI);
+	bool can = can_be_captured_nc(p, s, b, capturer, g, to_play);
+	s->groups[g].view[capturer - 1].capturable = can;
+	return can;
 }
 
 static bool
