@@ -50,13 +50,20 @@ struct group_state {
 
 /* Cache of evaluation of various board features. */
 struct board_state {
+	int bsize2;
 	struct group_state *groups; /* [board_size2()], indexed by group_t */
 	unsigned char *groups_known; /* Bitmap of known groups. */
 };
 
 #define board_state_init(s, b) do { \
+	if (ss && ss->bsize2 != board_size2(b)) { \
+		free(ss->groups); \
+		free(ss->groups_known); \
+		free(ss); \
+	} \
 	if (!ss) { \
 		ss = malloc(sizeof(*ss)); \
+		ss->bsize2 = board_size2(b); \
 		ss->groups = malloc(board_size2(b) * sizeof(*s.groups)); \
 		ss->groups_known = malloc(board_size2(b) / 8 + 1); \
 	} \
