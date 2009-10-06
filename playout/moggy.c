@@ -60,6 +60,8 @@ struct board_state {
 	unsigned char *groups_known; /* Bitmap of known groups. */
 };
 
+#if 0
+/* Using board cache: this turns out to be actually a 10% slowdown. */
 #define board_state_init(s, b) do { \
 	if (ss && ss->bsize2 != board_size2(b)) { \
 		free(ss->groups); \
@@ -89,6 +91,13 @@ struct board_state {
 #define group_trait_set(s, g, color, trait, val) s->groups[g].view[color - 1].trait.possible = val
 
 static __thread struct board_state *ss;
+#else
+#define board_state_init(s, b)
+#define group_is_known(s, g) (0)
+#define group_set_known(s, g)
+#define group_trait_ready(s, g, color, gstat, trait)
+#define group_trait_set(s, g, color, trait, val)
+#endif
 
 
 static char moggy_patterns_src[][11] = {
