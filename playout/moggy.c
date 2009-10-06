@@ -255,7 +255,7 @@ capturable_group(struct playout_policy *p, struct board_state *s,
 		 enum stone to_play)
 {
 	group_t g = group_at(b, c);
-	if (likely(board_at(b, g) != stone_other(capturer)
+	if (likely(board_at(b, c) != stone_other(capturer)
 	           || board_group_info(b, g).libs > 1))
 		return false;
 
