@@ -224,17 +224,14 @@ can_be_captured(struct playout_policy *p, struct board_state *s,
 	if (PLDEBUGL(6))
 		fprintf(stderr, "can capture group %d (%s)?\n",
 			g, coord2sstr(capture, b));
+	/* Does playing on the liberty usefully capture the group? */
 	struct move m; m.color = to_play; m.coord = capture;
-	/* Does that move even make sense? */
-	if (!board_is_valid_move(b, &m))
-		return false;
-	/* Make sure capturing the group will actually
-	 * do us any good. */
-	else if (is_bad_selfatari(b, to_play, capture))
-		return false;
+	if (board_is_valid_move(b, &m) && !is_bad_selfatari(b, to_play, capture)) {
+		s->groups[g].view[capturer - 1].capturable = true;
+		return true;
+	}
 
-	s->groups[g].view[capturer - 1].capturable = true;
-	return true;
+	return false;
 }
 
 /* For given position @c, decide if this is a group that is in danger from
