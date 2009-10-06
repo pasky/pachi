@@ -31,27 +31,20 @@ struct moggy_policy {
 };
 
 
-struct group_trait {
-	/* Have we read this out? */
-	bool ready:1;
-	/* Can we do it? */
-	bool possible:1;
-} __attribute__((packed));
-
-struct group_view {
-	struct group_trait capturable;
-	struct group_trait can_countercapture;
-} __attribute__((packed));
-
 struct group_state {
 	enum {
 		G_ATARI,
 		G_2LIB, /* Unused. */
 		G_SAFE /* Unused. */
 	} status:2;
-	/* We have "views" for both b-to-play and w-to-play. */
-	struct group_view view[2];
-} __attribute__((packed));
+
+	/* Below, we keep track of each trait for each |color_to_play */
+	int capturable_ready:2; // is @capturable meaningful?
+	int capturable:2;
+
+	int can_countercapture_ready:2;
+	int can_countercapture:2;
+};
 
 /* Cache of evaluation of various board features. */
 struct board_state {
@@ -78,19 +71,19 @@ struct board_state {
 	memset(s.groups_known, 0, board_size2(b) / 8 + 1); \
 } while (0)
 
-#define group_is_known(s, g) (s->groups_known[g / 8] & (1 << (g % 8)))
-#define group_set_known(s, g) (s->groups_known[g / 8] |= (1 << (g % 8)))
+#define group_is_known(s, g) (s->groups_known[g >> 3] & (1 << (g & 7)))
+#define group_set_known(s, g) (s->groups_known[g >> 3] |= (1 << (g & 7)))
 #define group_trait_ready(s, g, color, gstat, trait) do { \
 	if (!group_is_known(s, g)) { \
 		memset(&s->groups[g], 0, sizeof(s->groups[g])); \
 		group_set_known(s, g); \
 	} \
 	s->groups[g].status = gstat; \
-	s->groups[g].view[color - 1].trait.ready = true; \
+	s->groups[g].trait ## _ready |= color; \
 } while (0)
-#define group_trait_is_ready(s, g, color, trait) s->groups[g].view[color - 1].trait.ready
-#define group_trait_set(s, g, color, trait, val) s->groups[g].view[color - 1].trait.possible = val
-#define group_trait_get(s, g, color, trait) s->groups[g].view[color - 1].trait.possible
+#define group_trait_is_ready(s, g, color, trait) (s->groups[g].trait ## _ready & color)
+#define group_trait_set(s, g, color, trait, val) s->groups[g].trait |= val
+#define group_trait_get(s, g, color, trait) (s->groups[g].trait & color)
 
 static __thread struct board_state *ss;
 #else
