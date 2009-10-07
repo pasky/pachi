@@ -193,40 +193,62 @@ board_clear(struct board *board)
 }
 
 
+static void
+board_print_top(struct board *board, FILE *f)
+{
+	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+	fprintf(f, "      ");
+	for (int x = 1; x < board_size(board) - 1; x++)
+		fprintf(f, "%c ", asdf[x - 1]);
+	fprintf(f, "\n");
+	fprintf(f, "    +-");
+	for (int x = 1; x < board_size(board) - 1; x++)
+		fprintf(f, "--");
+	fprintf(f, "+");
+	fprintf(f, "\n");
+}
+
+static void
+board_print_bottom(struct board *board, FILE *f)
+{
+	fprintf(f, "    +-");
+	for (int x = 1; x < board_size(board) - 1; x++)
+		fprintf(f, "--");
+	fprintf(f, "+");
+	fprintf(f, "\n");
+}
+
+static void
+board_print_row(struct board *board, int y, FILE *f)
+{
+	fprintf(f, " %2d | ", y);
+	for (int x = 1; x < board_size(board) - 1; x++) {
+		if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
+			fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
+		else
+			fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
+	}
+	if (DEBUGL(6)) {
+		fprintf(f, "| ");
+		for (int x = 1; x < board_size(board) - 1; x++) {
+			fprintf(f, "%d ", group_base(group_atxy(board, x, y)));
+		}
+	}
+	fprintf(f, "|");
+	fprintf(f, "\n");
+}
+
 void
 board_print(struct board *board, FILE *f)
 {
-	fprintf(f, "Move: % 3d  Komi: %2.1f  Captures B: %d W: %d\n     ",
+	fprintf(f, "Move: % 3d  Komi: %2.1f  Captures B: %d W: %d\n",
 		board->moves, board->komi,
 		board->captures[S_BLACK], board->captures[S_WHITE]);
-	int x, y;
-	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-	for (x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "%c ", asdf[x - 1]);
-	fprintf(f, "\n   +-");
-	for (x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "--");
-	fprintf(f, "+\n");
-	for (y = board_size(board) - 2; y >= 1; y--) {
-		fprintf(f, "%2d | ", y);
-		for (x = 1; x < board_size(board) - 1; x++) {
-			if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
-				fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
-			else
-				fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
-		}
-		if (DEBUGL(6)) {
-			fprintf(f, "| ");
-			for (x = 1; x < board_size(board) - 1; x++) {
-				fprintf(f, "%d ", group_base(group_atxy(board, x, y)));
-			}
-		}
-		fprintf(f, "|\n");
-	}
-	fprintf(f, "   +-");
-	for (x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "--");
-	fprintf(f, "+\n\n");
+	board_print_top(board, f);
+	for (int y = board_size(board) - 2; y >= 1; y--)
+		board_print_row(board, y, f);
+	board_print_bottom(board, f);
+	fprintf(f, "\n");
 }
 
 
