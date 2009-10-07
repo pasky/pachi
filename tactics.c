@@ -168,7 +168,7 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 				if (c == to)
 					continue;
 				else
-					return -1;
+					goto next_group;
 			}
 
 			int g2 = group_at(b, c);
@@ -189,7 +189,7 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 					if (s->groupids[color][j] == g2)
 						break;
 				if (j == 4)
-					return -1;
+					goto next_group;
 				continue;
 			}
 
@@ -205,7 +205,7 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 			        || board_group_info(b, g2).lib[1] == to))
 				continue;
 
-			return -1;
+			goto next_group;
 		});
 
 		/* Now, we must distinguish between nakade and eye
@@ -225,13 +225,14 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 			if (board_group_info(b, g2).libs == 2) {
 				if (board_group_info(b, g2).lib[0] != lib2
 				    && board_group_info(b, g2).lib[1] != lib2)
-					return -1;
+					goto next_group;
 			} else {
 				assert(board_group_info(b, g2).lib[0] == to);
 			}
 		}
 
 		return false;
+next_group:;
 	}
 
 	return -1;
