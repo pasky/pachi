@@ -377,6 +377,10 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	/* Seed the tree. */
 	prepare_move(e, b, color, resign);
 
+	if (UDEBUGL(2)) {
+		board_print(b, stderr);
+	}
+
 	if (b->superko_violation) {
 		fprintf(stderr, "!!! WARNING: SUPERKO VIOLATION OCCURED BEFORE THIS MOVE\n");
 		fprintf(stderr, "Maybe you play with situational instead of positional superko?\n");
@@ -432,8 +436,10 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		tree_normalize(u->t, u->threads);
 	}
 
-	if (UDEBUGL(2))
+	if (UDEBUGL(2)) {
 		tree_dump(u->t, u->dumpthres);
+		board_print(b, stderr);
+	}
 
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 	if (!best) {
