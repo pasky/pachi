@@ -49,6 +49,7 @@ struct group_state {
 /* Cache of evaluation of various board features. */
 struct board_state {
 	int bsize2;
+	hash_t hash;
 	struct group_state *groups; /* [board_size2()], indexed by group_t */
 	unsigned char *groups_known; /* Bitmap of known groups. */
 };
@@ -57,17 +58,59 @@ struct board_state {
  * since we reuse data in the cache only very little within single
  * move. */
 // #define CACHE_STATE
+/* Reusing board cache across moves if they are successive on the
+ * board; only cache entries within cfg distance 2 of the last move
+ * are cleared. */
+// #define PERSISTENT_STATE
 
 #ifdef CACHE_STATE
 static __thread struct board_state *ss;
 
+static bool
+board_state_reuse(struct board_state *s, struct board *b)
+{
+	/* Decide how much of the board state we can reuse. */
+	/* We do not cache ladder decisions, so we don't have
+	 * to worry about this. */
+	coord_t c = b->last_move.coord;
+
+	if (unlikely(is_pass(c))) {
+		/* Passes don't change anything. */
+		return true;
+	}
+
+	if (unlikely(board_at(b, c) == S_NONE)) {
+		/* Suicide is hopeless. */
+		return false;
+	}
+
+	/* XXX: we can make some moves self-atari. */
+
+	if (neighbor_count_at(b, c, S_BLACK) + neighbor_count_at(b, c, S_WHITE) == 0) {
+		/* We are not taking off liberties of any other stones. */
+		return true;
+	}
+
+	return false;
+}
+
 static inline struct board_state *
 board_state_init(struct board *b)
 {
-	if (ss && ss->bsize2 != board_size2(b)) {
-		free(ss->groups);
-		free(ss->groups_known);
-		free(ss); ss = NULL;
+	if (ss) {
+		if (ss->bsize2 != board_size2(b)) {
+			free(ss->groups);
+			free(ss->groups_known);
+			free(ss); ss = NULL;
+		}
+#ifdef PERSISTENT_STATE
+		/* Only one stone added to the board, nothing removed. */
+		else if (ss->hash == (b->hash ^ hash_at(b, b->last_move.coord, b->last_move.color))) {
+			ss->hash = b->hash;
+			if (likely(board_state_reuse(ss, b)))
+				return ss;
+		}
+#endif
 	}
 	if (!ss) {
 		ss = malloc(sizeof(*ss));
@@ -75,6 +118,7 @@ board_state_init(struct board *b)
 		ss->groups = malloc(board_size2(b) * sizeof(*ss->groups));
 		ss->groups_known = malloc(board_size2(b) / 8 + 1);
 	}
+	ss->hash = b->hash;
 	memset(ss->groups_known, 0, board_size2(b) / 8 + 1);
 	return ss;
 }

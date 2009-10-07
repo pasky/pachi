@@ -169,7 +169,7 @@ struct board {
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
 #define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
 
-#define hash_at(b_, coord, color) (b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord_raw(coord)]
+#define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord_raw(coord)])
 
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
