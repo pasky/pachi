@@ -54,22 +54,26 @@ struct board_state {
 };
 
 #if 0
+static __thread struct board_state *ss;
+
 /* Using board cache: this turns out to be actually a 10% slowdown. */
-#define board_state_init(s, b) do { \
-	if (ss && ss->bsize2 != board_size2(b)) { \
-		free(ss->groups); \
-		free(ss->groups_known); \
-		free(ss); \
-	} \
-	if (!ss) { \
-		ss = malloc(sizeof(*ss)); \
-		ss->bsize2 = board_size2(b); \
-		ss->groups = malloc(board_size2(b) * sizeof(*s.groups)); \
-		ss->groups_known = malloc(board_size2(b) / 8 + 1); \
-	} \
-	s.groups = ss->groups; s.groups_known = ss->groups_known; \
-	memset(s.groups_known, 0, board_size2(b) / 8 + 1); \
-} while (0)
+static inline struct board_state *
+board_state_init(struct board *b)
+{
+	if (ss && ss->bsize2 != board_size2(b)) {
+		free(ss->groups);
+		free(ss->groups_known);
+		free(ss);
+	}
+	if (!ss) {
+		ss = malloc(sizeof(*ss));
+		ss->bsize2 = board_size2(b);
+		ss->groups = malloc(board_size2(b) * sizeof(*ss->groups));
+		ss->groups_known = malloc(board_size2(b) / 8 + 1);
+	}
+	memset(ss->groups_known, 0, board_size2(b) / 8 + 1);
+	return ss;
+}
 
 #define group_is_known(s, g) (s->groups_known[g >> 3] & (1 << (g & 7)))
 #define group_set_known(s, g) (s->groups_known[g >> 3] |= (1 << (g & 7)))
@@ -85,9 +89,9 @@ struct board_state {
 #define group_trait_set(s, g, color, trait, val) s->groups[g].trait = (s->groups[g].trait & ~color) | (!!val * color)
 #define group_trait_get(s, g, color, trait) (s->groups[g].trait & color)
 
-static __thread struct board_state *ss;
 #else
-#define board_state_init(s, b)
+
+#define board_state_init(s, b) NULL
 #define group_is_known(s, g) false
 #define group_set_known(s, g)
 #define group_trait_ready(s, g, color, gstat, trait)
@@ -295,7 +299,9 @@ scan:;
 			if (!capturable_group(p, s, b, owner, c, to_play))
 				continue;
 
-			if (!q) return true;
+			if (!q) {
+				return true;
+			}
 			mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
 			mq_nodup(q);
 		});
@@ -546,8 +552,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	struct moggy_policy *pp = p->data;
 	coord_t c;
 
-	struct board_state s;
-	board_state_init(s, b);
+	struct board_state *s = board_state_init(b);
 
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
@@ -556,14 +561,14 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			c = local_atari_check(p, b, &b->last_move, &s);
+			c = local_atari_check(p, b, &b->last_move, s);
 			if (!is_pass(c))
 				return c;
 		}
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
-			c = local_2lib_check(p, b, &b->last_move, &s);
+			c = local_2lib_check(p, b, &b->last_move, s);
 			if (!is_pass(c))
 				return c;
 		}
@@ -581,7 +586,7 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
-		c = global_atari_check(p, b, to_play, &s);
+		c = global_atari_check(p, b, to_play, s);
 		if (!is_pass(c))
 			return c;
 	}
@@ -726,14 +731,13 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct moggy_policy *pp = p->data;
 
-	struct board_state s;
-	board_state_init(s, map->b);
+	struct board_state *s = board_state_init(map->b);
 
 	/* First, go through all endangered groups. */
 	if (pp->lcapturerate || pp->capturerate || pp->atarirate || pp->ladderassess)
 		for (group_t g = 1; g < board_size2(map->b); g++)
 			if (group_at(map->b, g) == g)
-				playout_moggy_assess_group(p, map, g, games, &s);
+				playout_moggy_assess_group(p, map, g, games, s);
 
 	/* Then, assess individual moves. */
 	if (!pp->patternrate && !pp->selfatarirate)
