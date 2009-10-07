@@ -25,11 +25,10 @@ struct selfatari_state {
 static int
 examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
 {
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < s->groupcts[color]; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
 		group_t g = s->groupids[color][i];
-		if (!g) continue;
 
 		if (board_group_info(b, g).libs == 1) {
 			if (!s->needs_more_lib)
@@ -79,10 +78,10 @@ examine_enemy_groups(struct board *b, enum stone color, coord_t to, struct selfa
 	group_t can_capture = 0;
 
 	/* Examine enemy groups: */
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
 		/* We can escape by capturing this group if it's in atari. */
 		group_t g = s->groupids[stone_other(color)][i];
-		if (!g || board_group_info(b, g).libs > 1)
+		if (board_group_info(b, g).libs > 1)
 			continue;
 
 		/* But we need to get to at least two liberties by this;
@@ -136,9 +135,9 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 
 	/* This branch also covers snapback, which is kind of special
 	 * nakade case. ;-) */
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
 		group_t g = s->groupids[stone_other(color)][i];
-		if (!g || board_group_info(b, g).libs != 2)
+		if (board_group_info(b, g).libs != 2)
 			continue;
 		/* Simple check not to re-examine the same group. */
 		if (i > 0 && s->groupids[stone_other(color)][i] == s->groupids[stone_other(color)][i - 1])
@@ -218,9 +217,8 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 		/* We would create more than 2-stone group; in that
 		 * case, the liberty of our result must be lib2,
 		 * indicating this really is a nakade. */
-		for (int j = 0; j < 4; j++) {
+		for (int j = 0; j < s->groupcts[color]; j++) {
 			group_t g2 = s->groupids[color][j];
-			if (!g2) continue;
 			assert(board_group_info(b, g2).libs <= 2);
 			if (board_group_info(b, g2).libs == 2) {
 				if (board_group_info(b, g2).lib[0] != lib2
