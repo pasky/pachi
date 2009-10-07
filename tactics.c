@@ -571,3 +571,13 @@ cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 			distances[c] = maxdist + 1;
 	} foreach_point_end;
 }
+
+float
+board_effective_handicap(struct board *b)
+{
+	/* For very small/very large boards, we might want
+	 * to account for different "base komi". */
+	float first_move = 7.5; // point value of move on empty board
+	assert(b->handicap != 1);
+	return (b->handicap ? b->handicap : 1) * first_move - b->komi;
+}

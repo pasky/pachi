@@ -30,6 +30,12 @@ bool board_stone_radar(struct board *b, coord_t coord, int distance);
  * intersections further away than maxdist have all distance maxdist+1 set. */
 void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
 
+/* Compute an extra komi describing the "effective handicap" black receives
+ * (returns 0 for evne game with 7.5 komi). */
+/* This is just an approximation since in reality, handicap seems to be usually
+ * non-linear. */
+float board_effective_handicap(struct board *b);
+
 
 bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
 static inline bool
