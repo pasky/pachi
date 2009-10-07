@@ -67,7 +67,7 @@ board_state_init(struct board *b)
 	if (ss && ss->bsize2 != board_size2(b)) {
 		free(ss->groups);
 		free(ss->groups_known);
-		free(ss);
+		free(ss); ss = NULL;
 	}
 	if (!ss) {
 		ss = malloc(sizeof(*ss));
