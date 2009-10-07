@@ -139,7 +139,7 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 	for (int i = 0; i < 4; i++) {
 		group_t g = s->groupids[stone_other(color)][i];
 		if (!g || board_group_info(b, g).libs != 2)
-			continue;
+			goto next_group;
 		/* Simple check not to re-examine the same group. */
 		if (i > 0 && s->groupids[stone_other(color)][i] == s->groupids[stone_other(color)][i - 1])
 			continue;
@@ -232,7 +232,11 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 		}
 
 		return false;
-next_group:;
+next_group:	
+		/* Unless we are dealing with snapback setup, we don't need to look
+		 * further. */
+		if (!s->groupcts[color])
+			return -1;
 	}
 
 	return -1;
