@@ -194,32 +194,41 @@ board_clear(struct board *board)
 
 
 static void
-board_print_top(struct board *board, FILE *f)
+board_print_top(struct board *board, FILE *f, int c)
 {
-	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-	fprintf(f, "      ");
-	for (int x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "%c ", asdf[x - 1]);
+	for (int i = 0; i < c; i++) {
+		char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+		fprintf(f, "      ");
+		for (int x = 1; x < board_size(board) - 1; x++)
+			fprintf(f, "%c ", asdf[x - 1]);
+		fprintf(f, " ");
+	}
 	fprintf(f, "\n");
-	fprintf(f, "    +-");
-	for (int x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "--");
-	fprintf(f, "+");
+	for (int i = 0; i < c; i++) {
+		fprintf(f, "    +-");
+		for (int x = 1; x < board_size(board) - 1; x++)
+			fprintf(f, "--");
+		fprintf(f, "+");
+	}
 	fprintf(f, "\n");
 }
 
 static void
-board_print_bottom(struct board *board, FILE *f)
+board_print_bottom(struct board *board, FILE *f, int c)
 {
-	fprintf(f, "    +-");
-	for (int x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "--");
-	fprintf(f, "+");
+	for (int i = 0; i < c; i++) {
+		fprintf(f, "    +-");
+		for (int x = 1; x < board_size(board) - 1; x++)
+			fprintf(f, "--");
+		fprintf(f, "+");
+	}
 	fprintf(f, "\n");
 }
 
+typedef void (*board_cprint)(struct board *b, coord_t c, FILE *f);
+
 static void
-board_print_row(struct board *board, int y, FILE *f)
+board_print_row(struct board *board, int y, FILE *f, board_cprint cprint)
 {
 	fprintf(f, " %2d | ", y);
 	for (int x = 1; x < board_size(board) - 1; x++) {
@@ -228,27 +237,40 @@ board_print_row(struct board *board, int y, FILE *f)
 		else
 			fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
 	}
-	if (DEBUGL(6)) {
-		fprintf(f, "| ");
-		for (int x = 1; x < board_size(board) - 1; x++) {
-			fprintf(f, "%d ", group_base(group_atxy(board, x, y)));
-		}
-	}
 	fprintf(f, "|");
+	if (cprint) {
+		fprintf(f, " %2d | ", y);
+		for (int x = 1; x < board_size(board) - 1; x++) {
+			cprint(board, coord_xy(board, x, y), f);
+		}
+		fprintf(f, "|");
+	}
 	fprintf(f, "\n");
+}
+
+static void
+board_print_x(struct board *board, FILE *f, board_cprint cprint)
+{
+	fprintf(f, "Move: % 3d  Komi: %2.1f  Captures B: %d W: %d\n",
+		board->moves, board->komi,
+		board->captures[S_BLACK], board->captures[S_WHITE]);
+	board_print_top(board, f, 1 + !!cprint);
+	for (int y = board_size(board) - 2; y >= 1; y--)
+		board_print_row(board, y, f, cprint);
+	board_print_bottom(board, f, 1 + !!cprint);
+	fprintf(f, "\n");
+}
+
+static void
+cprint_group(struct board *board, coord_t c, FILE *f)
+{
+	fprintf(f, "%d ", group_base(group_at(board, c)));
 }
 
 void
 board_print(struct board *board, FILE *f)
 {
-	fprintf(f, "Move: % 3d  Komi: %2.1f  Captures B: %d W: %d\n",
-		board->moves, board->komi,
-		board->captures[S_BLACK], board->captures[S_WHITE]);
-	board_print_top(board, f);
-	for (int y = board_size(board) - 2; y >= 1; y--)
-		board_print_row(board, y, f);
-	board_print_bottom(board, f);
-	fprintf(f, "\n");
+	board_print_x(board, f, DEBUGL(6) ? cprint_group : NULL);
 }
 
 
