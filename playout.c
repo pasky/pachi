@@ -13,6 +13,7 @@
 int
 play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		 struct playout_amafmap *amafmap,
+		 struct playout_ownermap *ownermap,
 		 struct playout_policy *policy)
 {
 	gamelen = gamelen - b->moves;
@@ -109,6 +110,13 @@ play_random:
 		fprintf(stderr, "Random playout result: %d (W %f)\n", result, score);
 		if (DEBUGL(7))
 			board_print(b, stderr);
+	}
+
+	if (ownermap) {
+		ownermap->playouts++;
+		foreach_point(b) {
+			ownermap->map[board_at(b, c)]++;
+		} foreach_point_end;
 	}
 
 	return result;

@@ -29,6 +29,13 @@ struct playout_policy {
 	void *data;
 };
 
+struct playout_ownermap {
+	int playouts;
+	/* At the final board position, for each coordinate increase the
+	 * counter of appropriate color. */
+	int *map[S_MAX]; // [board_size2(b)]
+};
+
 
 struct playout_amafmap {
 	/* Record of the random playout - for each intersection:
@@ -69,6 +76,9 @@ struct playout_amafmap {
 
 /* 1: starting_color wins, 0: starting_color loses
  * -1: superko inside the game tree */
-int play_random_game(struct board *b, enum stone starting_color, int gamelen, struct playout_amafmap *amafmap, struct playout_policy *policy);
+int play_random_game(struct board *b, enum stone starting_color, int gamelen,
+                     struct playout_amafmap *amafmap,
+		     struct playout_ownermap *ownermap,
+		     struct playout_policy *policy);
 
 #endif
