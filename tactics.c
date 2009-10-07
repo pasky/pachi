@@ -22,35 +22,18 @@ struct selfatari_state {
 	coord_t needs_more_lib_except;
 };
 
-bool
-is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
+static int
+examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
 {
-	//fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
-	/* Assess if we actually gain any liberties by this escape route.
-	 * Note that this is not 100% as we cannot check whether we are
-	 * connecting out or just to ourselves. */
-
-	struct selfatari_state s;
-	memset(&s, 0, sizeof(s));
-
-	foreach_neighbor(b, to, {
-		enum stone color = board_at(b, c);
-		s.groupids[color][s.groupcts[color]++] = group_at(b, c);
-	});
-
-	/* We have shortage of liberties; that's the point. */
-	assert(s.groupcts[S_NONE] <= 1);
-
-	/* Examine friendly groups: */
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by connecting to this group if it's
 		 * not in atari. */
-		group_t g = s.groupids[color][i];
+		group_t g = s->groupids[color][i];
 		if (!g) continue;
 
 		if (board_group_info(b, g).libs == 1) {
-			if (!s.needs_more_lib)
-				s.friend_has_no_libs = true;
+			if (!s->needs_more_lib)
+				s->friend_has_no_libs = true;
 			// or we already have a friend with 1 lib
 			continue;
 		}
@@ -66,35 +49,39 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
 		/* Maybe we already looked at another
 		 * group providing one liberty? */
-		if (s.needs_more_lib && s.needs_more_lib != g
-		    && s.needs_more_lib_except != lib2)
+		if (s->needs_more_lib && s->needs_more_lib != g
+		    && s->needs_more_lib_except != lib2)
 			return false;
 
 		/* Can we get the liberty locally? */
 		/* Yes if we are route to more liberties... */
-		if (s.groupcts[S_NONE] > 1)
+		if (s->groupcts[S_NONE] > 1)
 			return false;
 		/* ...or one liberty, but not lib2. */
-		if (s.groupcts[S_NONE] > 0
+		if (s->groupcts[S_NONE] > 0
 		    && !coord_is_adjecent(lib2, to, b))
 			return false;
 
 		/* ...ok, then we can still contribute a liberty
 		 * later by capturing something. */
-		s.needs_more_lib = g;
-		s.needs_more_lib_except = lib2;
-		s.friend_has_no_libs = false;
+		s->needs_more_lib = g;
+		s->needs_more_lib_except = lib2;
+		s->friend_has_no_libs = false;
 	}
 
-	//fprintf(stderr, "no friendly group\n");
+	return -1;
+}
 
+static int
+examine_enemy_groups(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+{
 	/* We may be able to gain a liberty by capturing this group. */
 	group_t can_capture = 0;
 
 	/* Examine enemy groups: */
 	for (int i = 0; i < 4; i++) {
 		/* We can escape by capturing this group if it's in atari. */
-		group_t g = s.groupids[stone_other(color)][i];
+		group_t g = s->groupids[stone_other(color)][i];
 		if (!g || board_group_info(b, g).libs > 1)
 			continue;
 
@@ -102,18 +89,18 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 		 * we already have one outside liberty, or the group is
 		 * more than 1 stone (in that case, capturing is always
 		 * nice!). */
-		if (s.groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
+		if (s->groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
 			return false;
 		/* ...or, it's a ko stone, */
 		if (neighbor_count_at(b, g, color) + neighbor_count_at(b, g, S_OFFBOARD) == 3) {
 			/* and we don't have a group to save: then, just taking
 			 * single stone means snapback! */
-			if (!s.friend_has_no_libs)
+			if (!s->friend_has_no_libs)
 				return false;
 		}
 		/* ...or, we already have one indirect liberty provided
 		 * by another group. */
-		if (s.needs_more_lib || (can_capture && can_capture != g))
+		if (s->needs_more_lib || (can_capture && can_capture != g))
 			return false;
 		can_capture = g;
 
@@ -121,15 +108,21 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 
 	//fprintf(stderr, "no cap group\n");
 
-	if (!s.needs_more_lib && !can_capture && !s.groupcts[S_NONE]) {
+	if (!s->needs_more_lib && !can_capture && !s->groupcts[S_NONE]) {
 		/* We have no hope for more fancy tactics - this move is simply
 		 * a suicide, not even a self-atari. */
 		//fprintf(stderr, "suicide\n");
 		return true;
 	}
 	/* XXX: I wonder if it makes sense to continue if we actually
-	 * just !s.needs_more_lib. */
+	 * just !s->needs_more_lib. */
 
+	return -1;
+}
+
+static int
+setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+{
 	/* There is another possibility - we can self-atari if it is
 	 * a nakade: we put an enemy group in atari from the inside. */
 	/* This branch also allows eyes falsification:
@@ -144,11 +137,11 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 	/* This branch also covers snapback, which is kind of special
 	 * nakade case. ;-) */
 	for (int i = 0; i < 4; i++) {
-		group_t g = s.groupids[stone_other(color)][i];
+		group_t g = s->groupids[stone_other(color)][i];
 		if (!g || board_group_info(b, g).libs != 2)
 			continue;
 		/* Simple check not to re-examine the same group. */
-		if (i > 0 && s.groupids[stone_other(color)][i] == s.groupids[stone_other(color)][i - 1])
+		if (i > 0 && s->groupids[stone_other(color)][i] == s->groupids[stone_other(color)][i - 1])
 			continue;
 
 		/* We must make sure the other liberty of that group:
@@ -175,7 +168,7 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 				if (c == to)
 					continue;
 				else
-					goto invalid_nakade;
+					return -1;
 			}
 
 			int g2 = group_at(b, c);
@@ -193,10 +186,10 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 				 * we (@to) are connected to. */
 				int j;
 				for (j = 0; j < 4; j++)
-					if (s.groupids[color][j] == g2)
+					if (s->groupids[color][j] == g2)
 						break;
 				if (j == 4)
-					goto invalid_nakade;
+					return -1;
 				continue;
 			}
 
@@ -212,39 +205,41 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 			        || board_group_info(b, g2).lib[1] == to))
 				continue;
 
-			goto invalid_nakade;
+			return -1;
 		});
 
 		/* Now, we must distinguish between nakade and eye
 		 * falsification; we must not falsify an eye by more
 		 * than two stones. */
-		if (s.groupcts[color] < 1 ||
-		    (s.groupcts[color] == 1 && group_is_onestone(b, s.groupids[color][0])))
+		if (s->groupcts[color] < 1 ||
+		    (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0])))
 			return false;
 
 		/* We would create more than 2-stone group; in that
 		 * case, the liberty of our result must be lib2,
 		 * indicating this really is a nakade. */
 		for (int j = 0; j < 4; j++) {
-			group_t g2 = s.groupids[color][j];
+			group_t g2 = s->groupids[color][j];
 			if (!g2) continue;
 			assert(board_group_info(b, g2).libs <= 2);
 			if (board_group_info(b, g2).libs == 2) {
 				if (board_group_info(b, g2).lib[0] != lib2
 				    && board_group_info(b, g2).lib[1] != lib2)
-					goto invalid_nakade;
+					return -1;
 			} else {
 				assert(board_group_info(b, g2).lib[0] == to);
 			}
 		}
 
 		return false;
-
-invalid_nakade:;
 	}
 
-	//fprintf(stderr, "no nakade group\n");
+	return -1;
+}
 
+static int
+check_throwin(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+{
 	/* We can be throwing-in to false eye:
 	 * X X X O X X X O X X X X X
 	 * X . * X * O . X * O O . X
@@ -254,9 +249,9 @@ invalid_nakade:;
 	    && neighbor_count_at(b, to, stone_other(color))
 	       + neighbor_count_at(b, to, S_OFFBOARD) == 3
 	    && board_is_false_eyelike(b, &to, stone_other(color))) {
-		assert(s.groupcts[color] <= 1);
+		assert(s->groupcts[color] <= 1);
 		/* Single-stone throw-in may be ok... */
-		if (s.groupcts[color] == 0) {
+		if (s->groupcts[color] == 0) {
 			/* O X .  There is one problem - when it's
 			 * . * X  actually not a throw-in!
 			 * # # #  */
@@ -266,15 +261,15 @@ invalid_nakade:;
 					/* (Note that one S_NONE neighbor is already @to.) */
 					if (neighbor_count_at(b, c, stone_other(color))
 					    + neighbor_count_at(b, c, S_OFFBOARD) < 2)
-						goto invalid_throwin;
+						return -1;
 				}
 			});
 			return false;
 		}
 
 		/* Multi-stone throwin...? */
-		assert(s.groupcts[color] == 1);
-		group_t g = s.groupids[color][0];
+		assert(s->groupcts[color] == 1);
+		group_t g = s->groupids[color][0];
 
 		assert(board_group_info(b, g).libs <= 2);
 		/* Suicide is definitely NOT ok, no matter what else
@@ -286,8 +281,51 @@ invalid_nakade:;
 		 * or throwin will not destroy any eyes. */
 		if (group_is_onestone(b, g))
 			return false;
-invalid_throwin:;
 	}
+	return -1;
+}
+
+bool
+is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
+{
+	//fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
+	/* Assess if we actually gain any liberties by this escape route.
+	 * Note that this is not 100% as we cannot check whether we are
+	 * connecting out or just to ourselves. */
+
+	struct selfatari_state s;
+	memset(&s, 0, sizeof(s));
+	int d;
+
+	foreach_neighbor(b, to, {
+		enum stone color = board_at(b, c);
+		s.groupids[color][s.groupcts[color]++] = group_at(b, c);
+	});
+
+	/* We have shortage of liberties; that's the point. */
+	assert(s.groupcts[S_NONE] <= 1);
+
+	d = examine_friendly_groups(b, color, to, &s);
+	if (d >= 0)
+		return d;
+
+	//fprintf(stderr, "no friendly group\n");
+
+	d = examine_enemy_groups(b, color, to, &s);
+	if (d >= 0)
+		return d;
+
+	//fprintf(stderr, "no escape\n");
+
+	d = setup_nakade_or_snapback(b, color, to, &s);
+	if (d >= 0)
+		return d;
+
+	//fprintf(stderr, "no nakade group\n");
+
+	d = check_throwin(b, color, to, &s);
+	if (d >= 0)
+		return d;
 
 	//fprintf(stderr, "no throw-in group\n");
 
