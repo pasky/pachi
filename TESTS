@@ -211,15 +211,17 @@ ba2e1	13ucb1amaf+	57% (+-2.5%)	prior_cfgd=6
 ba2e1	13ucb1amaf+%	51.2% (+-2.5%)	prior_cfgd=6,prior_b19=6
 ba2e1	13ucb1amaf#*+	54.8% (+-2.5%)	pattern2=0,atarirate=0,prior_cfgd=6
 
-ba2e1	19ucb1amaf!+	13.8% (+-1.7%)	prior_cfgd=6,fillboard
-ba2e1	19ucb1amaf#*+%!	9.8% (+-1.5%)	pattern2=0,atarirate=0,prior_cfgd=prior_b19=6,fillboard
-ba2e1	19ucb1amaf#*+%2	25% (+-2.2%)	pattern2=0,atarirate=0,prior_cfgd=prior_b19=prior=20
+ba2e1	19ucb1amaf+!	13.8% (+-1.7%)	prior_cfgd=6,fillboard
 ba2e1	19ucb1amaf+%2	21.2% (+-2%)	prior_cfgd=prior_b19=prior=20
 ba2e1	19ucb1amaf+%2!	20.5% (+-2%)	prior_cfgd=prior_b19=prior=20,fillboard
 ba2e1	19ucb1amaf+%3	20.8% (+-2%)	prior_cfgd=prior_b19=prior=30
 ba2e1	19ucb1amaf+%4	25.8% (+-2.2%)	prior_cfgd=prior_b19=prior=40
 ba2e1	19ucb1amaf+%5	23.2% (+-2.1%)	prior_cfgd=prior_b19=prior=50
+ba2e1	19ucb1amaf#*+%!	9.8% (+-1.5%)	pattern2=0,atarirate=0,prior_cfgd=prior_b19=6,fillboard
+ba2e1	19ucb1amaf#*+%2	25% (+-2.2%)	pattern2=0,atarirate=0,prior_cfgd=prior_b19=prior=20
 ba2e1	19ucb1amaf#+%2	26.5% (+-2.2%)	pattern2=0,prior_cfgd=prior_b19=prior=20
+ba2e1	19ucb1amaf#+%3	24% (+-2.2%)	pattern2=0,prior_cfgd=prior_b19=prior=30
+ba2e1	19ucb1amaf#+%4	27% (+-2.2%)	pattern2=0,prior_cfgd=prior_b19=prior=40
 ba2e1	19ucb1amaf#+%2!	22.5% (+-2.1%)	pattern2=0,prior_cfgd=prior_b19=prior=20,fillboard
 ba2e1	19ucb1amaf#+%2_	23.5% (+-2.1%)	pattern2=0,prior_cfgd=prior_b19=prior=20,prior_policy=10
 ba2e1	19ucb1amaf#+%2a	1% (+-0.7%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playouts=1000
