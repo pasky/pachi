@@ -53,10 +53,14 @@ struct board_state {
 	unsigned char *groups_known; /* Bitmap of known groups. */
 };
 
-#if 0
+/* Using board cache: this turns out to be actually a 10% slowdown,
+ * since we reuse data in the cache only very little within single
+ * move. */
+// #define CACHE_STATE
+
+#ifdef CACHE_STATE
 static __thread struct board_state *ss;
 
-/* Using board cache: this turns out to be actually a 10% slowdown. */
 static inline struct board_state *
 board_state_init(struct board *b)
 {
@@ -91,7 +95,7 @@ board_state_init(struct board *b)
 
 #else
 
-#define board_state_init(s, b) NULL
+#define board_state_init(b) NULL
 #define group_is_known(s, g) false
 #define group_set_known(s, g)
 #define group_trait_ready(s, g, color, gstat, trait)
