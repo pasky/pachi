@@ -78,8 +78,7 @@ static bool tree_leaf_node(struct tree_node *node);
 	(tree_parity(tree, parity) > 0 ? node->type.wins : node->type.playouts - node->type.wins)
 
 /* Recompute the value. */
-#define tree_node_update_value(node, type) \
-	((node)->type.value = (float)(node)->type.wins / (node)->type.playouts)
+#define tree_node_update_value(node, type) stats_update_value(&(node)->type)
 
 static inline bool
 tree_leaf_node(struct tree_node *node)
