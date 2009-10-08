@@ -32,7 +32,7 @@ static inline void
 add_prior_value(struct prior_map *map, coord_t c, float value, int playouts)
 {
 	float v = map->parity > 0 ? value : 1 - value;
-	stats_add_result(&map->prior[c], v * playouts, playouts);
+	stats_add_result(&map->prior[c], v, playouts);
 }
 
 #endif

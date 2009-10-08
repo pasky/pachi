@@ -10,7 +10,7 @@ struct move_stats {
 };
 
 /* Add a result to the stats. */
-static void stats_add_result(struct move_stats *s, int wins, int playouts);
+static void stats_add_result(struct move_stats *s, float result, int playouts);
 
 /* Merge two stats together. */
 static void stats_merge(struct move_stats *dest, struct move_stats *src);
@@ -26,10 +26,10 @@ stats_update_value(struct move_stats *s)
 }
 
 static inline void
-stats_add_result(struct move_stats *s, int wins, int playouts)
+stats_add_result(struct move_stats *s, float result, int playouts)
 {
 	s->playouts += playouts;
-	s->wins += wins;
+	s->wins += result * playouts;
 	stats_update_value(s);
 }
 
