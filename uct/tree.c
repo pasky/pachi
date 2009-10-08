@@ -384,7 +384,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	ni->parent = node; node->children = ni;
 	ni->prior = map.prior[pass];
 	if (ni->prior.playouts)
-		tree_node_update_value(ni, prior);
+		stats_update_value(&ni->prior);
 
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
@@ -415,7 +415,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 
 			ni->prior = map.prior[c];
 			if (ni->prior.playouts)
-				tree_node_update_value(ni, prior);
+				stats_update_value(&ni->prior);
 		}
 	}
 }
