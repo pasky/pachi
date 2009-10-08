@@ -102,48 +102,38 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 
 		/* TODO: Exploration? */
 
-		int ngames = ni->u.playouts;
-		int nwins = ni->u.wins;
-		int rgames = ni->amaf.playouts;
-		int rwins = ni->amaf.wins;
+		struct move_stats n = ni->u, r = ni->amaf;
 		if (p->uct->amaf_prior) {
-			rgames += ni->prior.playouts;
-			rwins += ni->prior.wins;
+			stats_merge(&r, &ni->prior);
 		} else {
-			ngames += ni->prior.playouts;
-			nwins += ni->prior.wins;
+			stats_merge(&n, &ni->prior);
 		}
 		if (tree_parity(tree, parity) < 0) {
-			nwins = ngames - nwins;
-			rwins = rgames - rwins;
+			stats_reverse_parity(&n);
+			stats_reverse_parity(&r);
 		}
-		float nval = 0, rval = 0;
-		if (ngames)
-			nval = (float) nwins / ngames;
-		if (rgames)
-			rval = (float) rwins / rgames;
 
 		float urgency;
-		if (ngames) {
-			if (rgames) {
+		if (n.playouts) {
+			if (r.playouts) {
 				/* At the beginning, beta is at 1 and RAVE is used.
 				 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
 				if (b->sylvain_rave)
-					beta = (float) rgames / (rgames + ngames + ngames * rgames / b->equiv_rave);
+					beta = (float) r.playouts / (r.playouts + n.playouts + n.playouts * r.playouts / b->equiv_rave);
 #if 0
 				//if (node->coord == 7*11+4) // D7
 				fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
 					beta, rgames, rgames, ngames, ngames * rgames / b->equiv_rave);
 #endif
-				urgency = beta * rval + (1.f - beta) * nval;
+				urgency = beta * r.value + (1.f - beta) * n.value;
 			} else {
-				urgency = nval;
+				urgency = n.value;
 			}
 
 			if (b->explore_p > 0)
-				urgency += b->explore_p * nconf / fast_sqrt(ngames);
-		} else if (rgames) {
-			urgency = rval;
+				urgency += b->explore_p * nconf / fast_sqrt(n.playouts);
+		} else if (r.playouts) {
+			urgency = r.value;
 		} else {
 			/* assert(!u->even_eqex); */
 			urgency = b->fpu;

@@ -18,6 +18,9 @@ static void stats_merge(struct move_stats *dest, struct move_stats *src);
 /* Recompute value based on wins/playouts. */
 static void stats_update_value(struct move_stats *s);
 
+/* Reverse stats parity. */
+static void stats_reverse_parity(struct move_stats *s);
+
 
 static inline void
 stats_update_value(struct move_stats *s)
@@ -40,6 +43,13 @@ stats_merge(struct move_stats *dest, struct move_stats *src)
 	dest->wins += src->wins;
 	if (likely(dest->playouts))
 		stats_update_value(dest);
+}
+
+static inline void
+stats_reverse_parity(struct move_stats *s)
+{
+	s->wins = s->playouts - s->wins;
+	s->value = 1 - s->value;
 }
 
 #endif
