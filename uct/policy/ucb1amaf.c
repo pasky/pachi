@@ -229,7 +229,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * to record the result unmodified; in that case,
 			 * we will correctly negate them at the descend phase. */
 
-			stats_add_result(&node->amaf, nres, 1);
+			stats_add_result(&ni->amaf, nres, 1);
 
 #if 0
 			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d %d => %d/%d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, player_color, child_color, result);
