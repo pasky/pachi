@@ -84,7 +84,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 {
 	struct ucb1_policy_amaf *b = p->data;
 	float beta = 0;
-	float nconf = 1.f, rconf = 1.f;
+	float nconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
 
@@ -118,14 +118,10 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 			rwins = rgames - rwins;
 		}
 		float nval = 0, rval = 0;
-		if (ngames) {
+		if (ngames)
 			nval = (float) nwins / ngames;
-			if (b->explore_p > 0)
-				nval += b->explore_p * nconf / fast_sqrt(ngames);
-		}
-		if (rgames) {
+		if (rgames)
 			rval = (float) rwins / rgames;
-		}
 
 		float urgency;
 		if (ngames) {
@@ -143,6 +139,9 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 			} else {
 				urgency = nval;
 			}
+
+			if (b->explore_p > 0)
+				urgency += b->explore_p * nconf / fast_sqrt(ngames);
 		} else if (rgames) {
 			urgency = rval;
 		} else {
