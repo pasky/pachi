@@ -299,15 +299,8 @@ next_di:
 	/* Priors should be constant. */
 	assert(dest->prior.playouts == src->prior.playouts && dest->prior.wins == src->prior.wins);
 
-	dest->amaf.playouts += src->amaf.playouts;
-	dest->amaf.wins += src->amaf.wins;
-	if (dest->amaf.playouts)
-		tree_node_update_value(dest, amaf);
-
-	dest->u.playouts += src->u.playouts;
-	dest->u.wins += src->u.wins;
-	if (dest->u.playouts)
-		tree_node_update_value(dest, u);
+	stats_merge(&dest->amaf, &src->amaf);
+	stats_merge(&dest->u, &src->u);
 }
 
 /* Merge two trees built upon the same board. Note that the operation is
