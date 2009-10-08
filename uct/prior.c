@@ -84,8 +84,7 @@ uct_prior_grandparent(struct uct *u, struct tree_node *node, struct prior_map *m
 			/* Be careful not to emphasize too random results. */
 			if (ni->coord == node->coord && ni->u.playouts > u->gp_eqex) {
 				/* We purposefuly ignore the parity. */
-				map->prior[c].playouts += u->gp_eqex;
-				map->prior[c].wins += u->gp_eqex * ni->u.wins / ni->u.playouts;
+				stats_add_result(&map->prior[c], ni->u.value, u->gp_eqex);
 			}
 		}
 	} foreach_point_end;
