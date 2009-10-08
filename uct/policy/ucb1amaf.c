@@ -184,22 +184,6 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 	return nbest[fast_random(nbests)];
 }
 
-static void
-update_node(struct uct_policy *p, struct tree_node *node, int result)
-{
-	node->u.playouts++;
-	node->u.wins += result;
-	tree_node_update_value(node, u);
-}
-
-static void
-update_node_amaf(struct uct_policy *p, struct tree_node *node, int result)
-{
-	node->amaf.playouts++;
-	node->amaf.wins += result;
-	tree_node_update_value(node, amaf);
-}
-
 void
 ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, int result)
 {
@@ -218,7 +202,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		if (node->parent == NULL)
 			assert(tree->root_color == stone_other(child_color));
 
-		update_node(p, node, result);
+		stats_add_result(&node->u, result, 1);
 		if (amaf_nakade(map->map[node->coord]))
 			amaf_op(map->map[node->coord], -);
 
@@ -255,7 +239,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * to record the result unmodified; in that case,
 			 * we will correctly negate them at the descend phase. */
 
-			update_node_amaf(p, ni, nres);
+			stats_add_result(&node->amaf, nres, 1);
 
 #if 0
 			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d %d => %d/%d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, player_color, child_color, result);
