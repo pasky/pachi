@@ -243,7 +243,7 @@ tree_copy(struct tree *tree)
 
 
 static void
-tree_node_merge(struct tree_node *dest, struct tree_node *src, bool amaf_prior)
+tree_node_merge(struct tree_node *dest, struct tree_node *src)
 {
 	/* Do not merge nodes that weren't touched at all. */
 	assert(dest->pamaf.playouts == src->pamaf.playouts);
@@ -279,7 +279,7 @@ tree_node_merge(struct tree_node *dest, struct tree_node *src, bool amaf_prior)
 			(*sref) = si;
 		}
 		/* Matching nodes - recurse... */
-		tree_node_merge(di, si, amaf_prior);
+		tree_node_merge(di, si);
 		/* ...and move on. */
 		sref = &si->sibling; si = si->sibling;
 next_di:
@@ -302,22 +302,22 @@ next_di:
 	dest->amaf.playouts += src->amaf.playouts;
 	dest->amaf.wins += src->amaf.wins;
 	if (dest->amaf.playouts)
-		tree_update_node_rvalue(dest, amaf_prior);
+		tree_update_node_rvalue(dest);
 
 	dest->u.playouts += src->u.playouts;
 	dest->u.wins += src->u.wins;
 	if (dest->u.playouts)
-		tree_update_node_value(dest, amaf_prior);
+		tree_update_node_value(dest);
 }
 
 /* Merge two trees built upon the same board. Note that the operation is
  * destructive on src. */
 void
-tree_merge(struct tree *dest, struct tree *src, bool amaf_prior)
+tree_merge(struct tree *dest, struct tree *src)
 {
 	if (src->max_depth > dest->max_depth)
 		dest->max_depth = src->max_depth;
-	tree_node_merge(dest->root, src->root, amaf_prior);
+	tree_node_merge(dest->root, src->root);
 }
 
 
@@ -390,12 +390,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
 	ni->prior = map.prior[pass];
-	if (ni->prior.playouts) {
-		if (u->amaf_prior)
-			tree_update_node_rvalue(ni, u->amaf_prior);
-		else
-			tree_update_node_value(ni, u->amaf_prior);
-	}
+	if (ni->prior.playouts)
+		tree_update_node_pvalue(ni);
 
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
@@ -425,12 +421,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			ni->prior = map.prior[c];
-			if (ni->prior.playouts) {
-				if (u->amaf_prior)
-					tree_update_node_rvalue(ni, u->amaf_prior);
-				else
-					tree_update_node_value(ni, u->amaf_prior);
-			}
+			if (ni->prior.playouts)
+				tree_update_node_pvalue(ni);
 		}
 	}
 }

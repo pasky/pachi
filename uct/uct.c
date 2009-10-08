@@ -417,7 +417,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 			pthread_join(threads[finish_thread], (void **) &ctx);
 			played_games += ctx->games;
 			joined++;
-			tree_merge(u->t, ctx->t, u->amaf_prior);
+			tree_merge(u->t, ctx->t);
 			tree_done(ctx->t);
 			free(ctx);
 			if (UDEBUGL(2))

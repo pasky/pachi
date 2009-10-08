@@ -62,7 +62,7 @@ void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
 void tree_load(struct tree *tree, struct board *b);
 struct tree *tree_copy(struct tree *tree);
-void tree_merge(struct tree *dest, struct tree *src, bool amaf_prior);
+void tree_merge(struct tree *dest, struct tree *src);
 void tree_normalize(struct tree *tree, int factor);
 
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct *u, int parity);
@@ -71,8 +71,9 @@ void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 
 static bool tree_leaf_node(struct tree_node *node);
-static void tree_update_node_value(struct tree_node *node, bool rave_prior);
-static void tree_update_node_rvalue(struct tree_node *node, bool rave_prior);
+static void tree_update_node_value(struct tree_node *node);
+static void tree_update_node_rvalue(struct tree_node *node);
+static void tree_update_node_pvalue(struct tree_node *node);
 
 /* Get black parity from parity within the tree. */
 #define tree_parity(tree, parity) \
@@ -91,17 +92,21 @@ tree_leaf_node(struct tree_node *node)
 }
 
 static inline void
-tree_update_node_value(struct tree_node *node, bool rave_prior)
+tree_update_node_value(struct tree_node *node)
 {
-	node->u.value = (float)(node->u.wins + (!rave_prior ? node->prior.wins : 0))
-			/ (node->u.playouts + (!rave_prior ? node->prior.playouts : 0));
+	node->u.value = (float)node->u.wins / node->u.playouts;
 }
 
 static inline void
-tree_update_node_rvalue(struct tree_node *node, bool rave_prior)
+tree_update_node_rvalue(struct tree_node *node)
 {
-	node->amaf.value = (float)(node->amaf.wins + (rave_prior ? node->prior.wins : 0))
-			/ (node->amaf.playouts + (rave_prior ? node->prior.playouts : 0));
+	node->amaf.value = (float)node->amaf.wins / node->amaf.playouts;
+}
+
+static inline void
+tree_update_node_pvalue(struct tree_node *node)
+{
+	node->prior.value = (float)node->prior.wins / node->prior.playouts;
 }
 
 #endif

@@ -71,7 +71,14 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 			continue;
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 
-		float urgency = uct_playouts ? tree_node_get_value(tree, ni, u, parity) + sqrt(xpl / uct_playouts) : b->fpu;
+		float urgency = b->fpu;
+		if (uct_playouts) {
+			/* prior-normal ratio. */
+			float alpha = ni->u.playouts / uct_playouts;
+			urgency = alpha * tree_node_get_value(tree, ni, u, parity)
+				+ (1 - alpha) * tree_node_get_value(tree, ni, prior, parity);
+			urgency += sqrt(xpl / uct_playouts);
+		}
 
 #if 0
 		{
@@ -108,7 +115,7 @@ ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enu
 	for (; node; node = node->parent) {
 		node->u.playouts++;
 		node->u.wins += result;
-		tree_update_node_value(node, false);
+		tree_update_node_value(node);
 	}
 }
 
