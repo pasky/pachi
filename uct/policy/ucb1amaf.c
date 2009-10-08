@@ -119,7 +119,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 				/* At the beginning, beta is at 1 and RAVE is used.
 				 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
 				if (b->sylvain_rave)
-					beta = (float) r.playouts / (r.playouts + n.playouts + n.playouts * r.playouts / b->equiv_rave);
+					beta = (float) r.playouts / (r.playouts + n.playouts + (float) n.playouts * r.playouts / b->equiv_rave);
 #if 0
 				//if (node->coord == 7*11+4) // D7
 				fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
