@@ -76,12 +76,11 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 		children++;
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
-	fprintf(stderr, "[%s] %f (%d/%d playouts [prior %d/%d amaf %d/%d]; hints %x; %d children) <%lld>\n",
+	fprintf(stderr, "[%s] %f %% %d [prior %f %% %d amaf %f %% %d]; hints %x; %d children <%lld>\n",
 		coord2sstr(node->coord, tree->board),
-		tree_node_get_value(tree, node, u, 1),
-		tree_node_get_wins(tree, node, u, 1), node->u.playouts,
-		tree_node_get_wins(tree, node, prior, 1), node->prior.playouts,
-		tree_node_get_wins(tree, node, amaf, 1), node->amaf.playouts,
+		tree_node_get_value(tree, node, u, 1), node->u.playouts,
+		tree_node_get_value(tree, node, prior, 1), node->prior.playouts,
+		tree_node_get_value(tree, node, amaf, 1), node->amaf.playouts,
 		node->hints, children, node->hash);
 
 	/* Print nodes sorted by #playouts. */
@@ -166,18 +165,12 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
 	       1, f);
 
-	/* Keep values in sane scale, otherwise we start overflowing.
-	 * We may go slow here but we must be careful about not getting
-	 * too huge integers.*/
+	/* Keep values in sane scale, otherwise we start overflowing. */
 #define MAX_PLAYOUTS	10000000
 	if (node->u.playouts > MAX_PLAYOUTS) {
-		int over = node->u.playouts - MAX_PLAYOUTS;
-		node->u.wins -= ((double) node->u.wins / node->u.playouts) * over;
 		node->u.playouts = MAX_PLAYOUTS;
 	}
 	if (node->amaf.playouts > MAX_PLAYOUTS) {
-		int over = node->amaf.playouts - MAX_PLAYOUTS;
-		node->amaf.wins -= ((double) node->amaf.wins / node->amaf.playouts) * over;
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
 
@@ -297,7 +290,7 @@ next_di:
 	}
 
 	/* Priors should be constant. */
-	assert(dest->prior.playouts == src->prior.playouts && dest->prior.wins == src->prior.wins);
+	assert(dest->prior.playouts == src->prior.playouts && dest->prior.value == src->prior.value);
 
 	stats_merge(&dest->amaf, &src->amaf);
 	stats_merge(&dest->u, &src->u);
@@ -322,11 +315,9 @@ tree_node_normalize(struct tree_node *node, int factor)
 
 #define normalize(s1, s2, t) node->s2.t = node->s1.t + (node->s2.t - node->s1.t) / factor;
 	normalize(pamaf, amaf, playouts);
-	normalize(pamaf, amaf, wins);
 	memcpy(&node->pamaf, &node->amaf, sizeof(node->amaf));
 
 	normalize(pu, u, playouts);
-	normalize(pu, u, wins);
 	memcpy(&node->pu, &node->u, sizeof(node->u));
 #undef normalize
 }
@@ -383,8 +374,6 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
 	ni->parent = node; node->children = ni;
 	ni->prior = map.prior[pass];
-	if (ni->prior.playouts)
-		stats_update_value(&ni->prior);
 
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
@@ -414,8 +403,6 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			ni->prior = map.prior[c];
-			if (ni->prior.playouts)
-				stats_update_value(&ni->prior);
 		}
 	}
 }

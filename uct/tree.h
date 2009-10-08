@@ -74,8 +74,6 @@ static bool tree_leaf_node(struct tree_node *node);
 /* Get a value to maximize; @parity is parity within the tree. */
 #define tree_node_get_value(tree, node, type, parity) \
 	(tree_parity(tree, parity) > 0 ? node->type.value : 1 - node->type.value)
-#define tree_node_get_wins(tree, node, type, parity) \
-	(tree_parity(tree, parity) > 0 ? node->type.wins : node->type.playouts - node->type.wins)
 
 static inline bool
 tree_leaf_node(struct tree_node *node)
