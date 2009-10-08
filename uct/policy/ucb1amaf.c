@@ -100,7 +100,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 		/* Do not consider passing early. */
-		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
+		if (unlikely(!allow_pass && is_pass(ni->coord)))
 			continue;
 
 		/* TODO: Exploration? */
