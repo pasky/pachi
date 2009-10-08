@@ -24,7 +24,6 @@ struct ucb1_policy_amaf {
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
 	int urg_randoma, urg_randomm;
-	float explore_p_rave;
 	int equiv_rave;
 	bool both_colors;
 	bool check_nakade;
@@ -88,8 +87,6 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 	float nconf = 1.f, rconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
-	if (b->explore_p_rave > 0 && node->amaf.playouts)
-		rconf = sqrt(log(node->amaf.playouts + node->prior.playouts));
 
 	if (!b->sylvain_rave)
 		beta = sqrt(b->equiv_rave / (3 * node->u.playouts + b->equiv_rave));
@@ -128,8 +125,6 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		}
 		if (rgames) {
 			rval = (float) rwins / rgames;
-			if (b->explore_p_rave > 0 && !is_pass(ni->coord))
-				rval += b->explore_p_rave * rconf / fast_sqrt(rgames);
 		}
 
 		float urgency;
@@ -290,7 +285,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 
 	// RAVE: 0.2vs0: 40% (+-7.3) 0.1vs0: 54.7% (+-3.5)
 	b->explore_p = 0.1;
-	b->explore_p_rave = 0.01;
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
 	b->check_nakade = true;
@@ -315,8 +309,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->urg_randoma = atoi(optval);
 			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
 				b->urg_randomm = atoi(optval);
-			} else if (!strcasecmp(optname, "explore_p_rave") && optval) {
-				b->explore_p_rave = atof(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "both_colors")) {
@@ -331,8 +323,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			}
 		}
 	}
-
-	if (b->explore_p_rave < 0) b->explore_p_rave = b->explore_p;
 
 	return p;
 }
