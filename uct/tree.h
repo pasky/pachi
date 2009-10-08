@@ -71,9 +71,6 @@ void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 
 static bool tree_leaf_node(struct tree_node *node);
-static void tree_update_node_value(struct tree_node *node);
-static void tree_update_node_rvalue(struct tree_node *node);
-static void tree_update_node_pvalue(struct tree_node *node);
 
 /* Get black parity from parity within the tree. */
 #define tree_parity(tree, parity) \
@@ -85,28 +82,14 @@ static void tree_update_node_pvalue(struct tree_node *node);
 #define tree_node_get_wins(tree, node, type, parity) \
 	(tree_parity(tree, parity) > 0 ? node->type.wins : node->type.playouts - node->type.wins)
 
+/* Recompute the value. */
+#define tree_node_update_value(node, type) \
+	((node)->type.value = (float)(node)->type.wins / (node)->type.playouts)
+
 static inline bool
 tree_leaf_node(struct tree_node *node)
 {
 	return !(node->children);
-}
-
-static inline void
-tree_update_node_value(struct tree_node *node)
-{
-	node->u.value = (float)node->u.wins / node->u.playouts;
-}
-
-static inline void
-tree_update_node_rvalue(struct tree_node *node)
-{
-	node->amaf.value = (float)node->amaf.wins / node->amaf.playouts;
-}
-
-static inline void
-tree_update_node_pvalue(struct tree_node *node)
-{
-	node->prior.value = (float)node->prior.wins / node->prior.playouts;
 }
 
 #endif
