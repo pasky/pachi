@@ -165,8 +165,8 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		}
 	}
 #if 0
-	struct board bb; bb.size = 11;
-	fprintf(stderr, "RESULT [%s %d: ", coord2sstr(node->coord, &bb), nbests);
+	struct board bb; bb.size = 21;
+	fprintf(stderr, "RESULT [%s<%lld> %d: ", coord2sstr(node->coord, &bb), node->hash, nbests);
 	for (int zz = 0; zz < nbests; zz++)
 		fprintf(stderr, "%s", coord2sstr(nbest[zz]->coord, &bb));
 	fprintf(stderr, "]\n");
