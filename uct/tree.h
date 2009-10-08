@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "move.h"
+#include "stats.h"
 
 struct board;
 struct uct;
@@ -20,12 +21,6 @@ struct uct;
  * | node | - | node |   | node | - | node |
  * +------+   +------+   +------+   +------+
  */
-
-struct move_stats {
-	int playouts; // # of playouts coming through this node
-	int wins; // # of BLACK wins coming through this node
-	float value; // wins/playouts
-};
 
 struct tree_node {
 	hash_t hash;
