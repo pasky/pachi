@@ -255,8 +255,17 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 	assert(n == t->root || n->parent);
-	if (result != 0)
-		u->policy->update(u->policy, t, n, node_color, player_color, amaf, result > 0);
+	if (result != 0) {
+		float rval = result > 0;
+		if (u->val_scale) {
+			float sval = (float) abs(result) / u->val_points;
+			sval = sval > 1 ? 1 : sval;
+			if (result < 0) sval = 1 - sval;
+			rval = (1 - u->val_scale) * rval + u->val_scale * sval;
+			// fprintf(stderr, "score %d => sval %f, rval %f\n", result, sval, rval);
+		}
+		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
+	}
 
 end:
 	if (amaf) {
@@ -609,6 +618,14 @@ uct_state_init(char *arg)
 				 * decreases to basic settings until move
 				 * #optval. */
 				u->dynkomi = optval ? atoi(optval) : 150;
+			} else if (!strcasecmp(optname, "val_scale") && optval) {
+				/* How much of the game result value should be
+				 * influenced by win size. */
+				u->val_scale = atof(optval);
+			} else if (!strcasecmp(optname, "val_points") && optval) {
+				/* Maximum size of win to be scaled into game
+				 * result value. */
+				u->val_points = atoi(optval) * 2; // result values are doubled
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 				exit(1);

@@ -30,6 +30,9 @@ struct uct {
 	bool no_book;
 	int dynkomi;
 
+	float val_scale;
+	int val_points;
+
 	struct uct_policy *policy;
 	struct tree *t;
 	struct playout_policy *playout;
