@@ -230,6 +230,7 @@ ba2e1	19ucb1amaf#+%2a	1% (+-0.7%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playo
 ba2e1	19ucb1amaf#+%2b	7.2% (+-1.4%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playouts=2000
 
 <pattern2=0, prior_cfgd=prior_b19=-1, etc.>
+<From now on, 19x19 always has % = prior=20>
 
 49208	9ucb1amaf	80% (+-2%)
 49208	9ucb1amaf&	76.8% (+-2.1%)	selfatarirate=0
