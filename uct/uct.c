@@ -509,8 +509,8 @@ uct_state_init(char *arg)
 	u->amaf_prior = true;
 
 	// gp: 14 vs 0: 44% (+-3.5)
-	u->gp_eqex = 0;
-	u->even_eqex = u->policy_eqex = u->b19_eqex = u->cfgd_eqex = -1;
+	u->gp_eqex = u->ko_eqex = 0;
+	u->even_eqex = u->policy_eqex = u->b19_eqex = u->cfgd_eqex = u->eye_eqex = -1;
 	u->eqex = 6; /* Even number! */
 
 	if (arg) {
@@ -597,6 +597,8 @@ uct_state_init(char *arg)
 				u->b19_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_cfgd") && optval) {
 				u->cfgd_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_eye") && optval) {
+				u->eye_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
 				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {

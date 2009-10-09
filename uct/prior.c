@@ -127,7 +127,8 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	if (u->even_eqex)
 		uct_prior_even(u, node, map);
-	uct_prior_eye(u, node, map);
+	if (u->eye_eqex)
+		uct_prior_eye(u, node, map);
 	if (u->b19_eqex)
 		uct_prior_b19(u, node, map);
 	if (u->gp_eqex)
