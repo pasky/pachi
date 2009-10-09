@@ -27,6 +27,7 @@ struct uct {
 	int threads;
 	int force_seed;
 	bool no_book;
+	int dynkomi;
 
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6

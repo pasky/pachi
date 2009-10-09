@@ -14,6 +14,7 @@
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "random.h"
+#include "tactics.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
@@ -35,6 +36,15 @@ can_pass(struct board *b, enum stone color)
 		score = -score;
 	//fprintf(stderr, "%d score %f\n", color, score);
 	return (score > 0);
+}
+
+static float
+get_extra_komi(struct uct *u, struct board *b, enum stone player_color)
+{
+	float extra_komi = board_effective_handicap(b) * (u->dynkomi - b->moves) / u->dynkomi;
+	if (player_color == S_WHITE)
+		extra_komi *= -1;
+	return extra_komi;
 }
 
 static void
@@ -222,6 +232,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			board_print(&b2, stderr);
 
 	} else { assert(tree_leaf_node(n));
+		if (u->dynkomi > b2.moves)
+			b2.komi += get_extra_komi(u, &b2, player_color);
 		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 	}
 
@@ -286,6 +298,8 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		tree_done(u->t);
 		u->t = tree_init(b, color);
 	}
+
+	u->t->extra_komi = get_extra_komi(u, b, color);
 }
 
 /* Set in main thread in case the playouts should stop. */
@@ -605,6 +619,11 @@ uct_state_init(char *arg)
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
 				u->no_book = true;
+			} else if (!strcasecmp(optname, "dynkomi")) {
+				/* Dynamic komi in handicap game; linearly
+				 * decreases to basic settings until move
+				 * #optval. */
+				u->dynkomi = optval ? atoi(optval) : 150;
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 				exit(1);
