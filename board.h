@@ -120,11 +120,14 @@ struct board {
 	/* Symmetry information */
 	struct board_symmetry symmetry;
 
-
-	/* --- PRIVATE DATA --- */
+	/* Last ko played on the board. */
+	struct move last_ko;
 
 	/* Basic ko check */
 	struct move ko;
+
+
+	/* --- PRIVATE DATA --- */
 
 	/* For superko check: */
 

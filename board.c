@@ -29,7 +29,7 @@ board_setup(struct board *b)
 	memset(b, 0, sizeof(*b));
 
 	struct move m = { pass, S_NONE };
-	b->last_move = b->last_move2 = b->ko = m;
+	b->last_move = b->last_move2 = b->last_ko = b->ko = m;
 }
 
 struct board *
@@ -832,6 +832,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				 * to check for that. */
 				ko.color = stone_other(color);
 				ko.coord = c;
+				board->last_ko = ko;
 				if (DEBUGL(5))
 					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord, board), coord_y(ko.coord, board));
 			}
