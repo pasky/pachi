@@ -210,6 +210,8 @@ uct_prior_init(char *arg)
 	if (p->policy_eqex < 0) p->policy_eqex = p->eqex;
 	if (p->b19_eqex < 0) p->b19_eqex = p->eqex;
 	if (p->cfgd_eqex < 0) p->cfgd_eqex = p->eqex;
+	if (p->eye_eqex < 0) p->eye_eqex = p->eqex;
+	if (p->ko_eqex < 0) p->ko_eqex = p->eqex;
 
 	return p;
 }
