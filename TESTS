@@ -259,5 +259,9 @@ a0f85	9ucb1amaf*3	40.2% (+-2.5%)	explore_p=0.6
 5524c	9ucb1amaf^2*	76.5% (+-2.1%)	fuego cfgd, 0.1 for pass, prior_cfgd=4
 5524c	9ucb1amaf!	81.2% (+-2%)	prior_even is 0.1 for pass
 
+2151a	9ucb1amaf	81.5% (+-1.9%)
+443e1	9ucb1amaf_1	72.5% (+-2.2%)	Priors just like in Fuego
+6c6cb	9ucb1amaf_2	70.5% (+-2.3%)	Priors just like in Fuego, including equivalent-best-move
+
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
