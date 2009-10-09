@@ -250,5 +250,13 @@ a0f85	9ucb1amaf*1	80.8% (+-2%)	explore_p=0
 a0f85	9ucb1amaf*2	81.2% (+-2%)	explore_p=0.01
 a0f85	9ucb1amaf*3	40.2% (+-2.5%)	explore_p=0.6
 
+<UCT value tracking>
+
+5524c	9ucb1amaf	84.2% (+-1.8%)
+5524c	9ucb1amaf^1	70.2% (+-3%)	fuego cfgd
+5524c	9ucb1amaf^2	77% (+-2.1%)	fuego cfgd, 0.1 for pass
+5524c	9ucb1amaf^2*	76.5% (+-2.1%)	fuego cfgd, 0.1 for pass, prior_cfgd=4
+5524c	9ucb1amaf!	81.2% (+-2%)	prior_even is 0.1 for pass
+
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
