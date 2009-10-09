@@ -599,6 +599,8 @@ uct_state_init(char *arg)
 				u->cfgd_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prior_eye") && optval) {
 				u->eye_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prior_ko") && optval) {
+				u->ko_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
 				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {

@@ -50,6 +50,17 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 void
+uct_prior_ko(struct uct *u, struct tree_node *node, struct prior_map *map)
+{
+	/* Favor fighting ko, if we took it le 10 moves ago. */
+	coord_t ko = map->b->last_ko.coord;
+	if (is_pass(ko) || map->b->moves - map->b->last_ko_age > 10 || !map->consider[ko])
+		return;
+	// fprintf(stderr, "prior ko-fight @ %s %s\n", stone2str(map->to_play), coord2sstr(ko, map->b));
+	add_prior_value(map, ko, 1, u->eqex);
+}
+
+void
 uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{b19} */
@@ -129,6 +140,8 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_even(u, node, map);
 	if (u->eye_eqex)
 		uct_prior_eye(u, node, map);
+	if (u->ko_eqex)
+		uct_prior_ko(u, node, map);
 	if (u->b19_eqex)
 		uct_prior_b19(u, node, map);
 	if (u->gp_eqex)
