@@ -122,6 +122,7 @@ struct board {
 
 	/* Last ko played on the board. */
 	struct move last_ko;
+	int last_ko_age;
 
 	/* Basic ko check */
 	struct move ko;
