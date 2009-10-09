@@ -833,8 +833,9 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				ko.color = stone_other(color);
 				ko.coord = c;
 				board->last_ko = ko;
+				board->last_ko_age = board->moves;
 				if (DEBUGL(5))
-					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord, board), coord_y(ko.coord, board));
+					fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord, board));
 			}
 		}
 	});
