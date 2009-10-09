@@ -229,9 +229,15 @@ ba2e1	19ucb1amaf#+%2_	23.5% (+-2.1%)	pattern2=0,prior_cfgd=prior_b19=prior=20,pr
 ba2e1	19ucb1amaf#+%2a	1% (+-0.7%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playouts=1000
 ba2e1	19ucb1amaf#+%2b	7.2% (+-1.4%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playouts=2000
 
+<pattern2=0, prior_cfgd=prior_b19=-1, etc.>
+
 49208	9ucb1amaf	80% (+-2%)
 49208	9ucb1amaf&	76.8% (+-2.1%)	selfatarirate=0
 49208	9ucb1amaf_	76.8% (+-2.1%)	can_capture_group() always true (really same rate)
+49208	19ucb1amaf%	25.4% (+-2.3%)
+49208	19ucb1amaf%&	18.8% (+-2%)	selfatarirate=0
+49208	19ucb1amaf%_	19.5% (+-2%)	can_capture_group() always true (really same rate)
+
 d11b1	9ucb1amaf	81.8% (+-1.9%)	
 d11b1	9ucb1amaf_	81.5% (+-1.9%)	investigate all nakade neis only in case of snapback (945e5)
 d11b1	9ucb1amaf*	81.2% (+-2%)	atarirate=0
