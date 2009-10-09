@@ -31,7 +31,7 @@ bool board_stone_radar(struct board *b, coord_t coord, int distance);
 void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
 
 /* Compute an extra komi describing the "effective handicap" black receives
- * (returns 0 for evne game with 7.5 komi). */
+ * (returns 0 for even game with 7.5 komi). */
 /* This is just an approximation since in reality, handicap seems to be usually
  * non-linear. */
 float board_effective_handicap(struct board *b);
