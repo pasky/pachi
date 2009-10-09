@@ -62,7 +62,7 @@ play_random:
 					if (DEBUGL(4))
 						board_print(b, stderr);
 				}
-				return -1;
+				return 0;
 			} else {
 				if (DEBUGL(6)) {
 					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
@@ -104,7 +104,7 @@ play_random:
 	}
 
 	float score = board_fast_score(b);
-	bool result = (starting_color == S_WHITE ? (score > 0) : (score < 0));
+	int result = (starting_color == S_WHITE ? score * 2 : - (score * 2));
 
 	if (DEBUGL(6)) {
 		fprintf(stderr, "Random playout result: %d (W %f)\n", result, score);

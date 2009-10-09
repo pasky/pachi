@@ -121,9 +121,9 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			tree_node_get_value(t, n, u, parity));
 
 	int result = play_random_game(b, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, NULL, u->playout);
-	if (next_color == S_WHITE && result >= 0) {
+	if (next_color == S_WHITE) {
 		/* We need the result from black's perspective. */
-		result = !result;
+		result = - result;
 	}
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n",
@@ -255,7 +255,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 	assert(n == t->root || n->parent);
-	if (result >= 0)
+	if (result != 0)
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, result);
 
 end:
@@ -316,7 +316,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	 * count based on number of playouts of best node? */
 	for (i = 0; i < games; i++) {
 		int result = uct_playout(u, b, color, t);
-		if (result < 0) {
+		if (result == 0) {
 			/* Tree descent has hit invalid move. */
 			continue;
 		}
@@ -479,7 +479,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 	int i;
 	for (i = 0; i < u->games; i++) {
 		int result = uct_playout(u, b, color, u->t);
-		if (result < 0) {
+		if (result == 0) {
 			/* Tree descent has hit invalid move. */
 			continue;
 		}

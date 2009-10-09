@@ -192,7 +192,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		if (node->parent == NULL)
 			assert(tree->root_color == stone_other(child_color));
 
-		stats_add_result(&node->u, result, 1);
+		stats_add_result(&node->u, result > 0, 1);
 		if (amaf_nakade(map->map[node->coord]))
 			amaf_op(map->map[node->coord], -);
 
@@ -223,13 +223,13 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			if (amaf_color != child_color) {
 				if (!b->both_colors)
 					continue;
-				nres = !nres;
+				nres = - nres;
 			}
 			/* For child_color != player_color, we still want
 			 * to record the result unmodified; in that case,
 			 * we will correctly negate them at the descend phase. */
 
-			stats_add_result(&ni->amaf, nres, 1);
+			stats_add_result(&ni->amaf, nres > 0, 1);
 
 #if 0
 			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d %d => %d/%d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, player_color, child_color, result);

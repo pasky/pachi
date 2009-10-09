@@ -114,7 +114,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 
 		board_done_noalloc(&b2);
 
-		if (result < 0) {
+		if (result == 0) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
 			if (unlikely(superko > 2 * mc->games)) {
@@ -138,8 +138,8 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		good_games++;
 		moves[pos].games++;
 
-		losses += result;
-		moves[pos].wins += 1 - result;
+		losses += result > 0;
+		moves[pos].wins += 1 - (result > 0);
 
 		if (unlikely(!losses && i == mc->loss_threshold)) {
 			/* We played out many games and didn't lose once yet.

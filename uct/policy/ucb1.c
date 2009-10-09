@@ -113,7 +113,7 @@ ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enu
 	 * they had to all occur in all branches, only in
 	 * different order. */
 	for (; node; node = node->parent) {
-		stats_add_result(&node->u, result, 1);
+		stats_add_result(&node->u, result > 0, 1);
 	}
 }
 
