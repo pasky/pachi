@@ -106,14 +106,14 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 }
 
 void
-ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, int result)
+ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, float result)
 {
 	/* It is enough to iterate by a single chain; we will
 	 * update all the preceding positions properly since
 	 * they had to all occur in all branches, only in
 	 * different order. */
 	for (; node; node = node->parent) {
-		stats_add_result(&node->u, result > 0, 1);
+		stats_add_result(&node->u, result, 1);
 	}
 }
 
