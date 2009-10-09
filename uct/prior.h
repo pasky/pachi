@@ -27,6 +27,9 @@ static void add_prior_value(struct prior_map *map, coord_t c, float value, int p
 
 void uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map);
 
+struct uct_prior;
+struct uct_prior *uct_prior_init(char *arg);
+
 
 static inline void
 add_prior_value(struct prior_map *map, coord_t c, float value, int playouts)

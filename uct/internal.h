@@ -8,6 +8,7 @@
 struct tree;
 struct tree_node;
 struct uct_policy;
+struct uct_prior;
 
 /* Internal UCT structures */
 
@@ -28,14 +29,10 @@ struct uct {
 	int force_seed;
 	bool no_book;
 
-	/* Equivalent experience for prior knowledge. MoGo paper recommends
-	 * 50 playouts per source; in practice, esp. with RAVE, about 6
-	 * playouts per source seems best. */
-	int eqex, even_eqex, gp_eqex, policy_eqex, b19_eqex, cfgd_eqex, eye_eqex, ko_eqex;
-
 	struct uct_policy *policy;
 	struct tree *t;
 	struct playout_policy *playout;
+	struct uct_prior *prior;
 };
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
