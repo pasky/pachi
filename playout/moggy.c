@@ -698,7 +698,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: 2lib %s\n", coord2sstr(coord, b));
 			int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games) / 2;
-			add_prior_value(map, coord, assess, assess);
+			add_prior_value(map, coord, 1, assess);
 		}
 		return;
 	}
@@ -727,7 +727,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			 * captures another group. */
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: ladder %s\n", coord2sstr(coord, b));
-			add_prior_value(map, coord, -games, games);
+			add_prior_value(map, coord, 0, games);
 			continue;
 		}
 
@@ -737,11 +737,11 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		if (PLDEBUGL(5))
 			fprintf(stderr, "1.0: atari %s\n", coord2sstr(coord, b));
 		int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games) * 2;
-		add_prior_value(map, coord, assess, assess);
+		add_prior_value(map, coord, 1, assess);
 	}
 }
 
-int
+void
 playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_t coord, int games)
 {
 	struct moggy_policy *pp = p->data;
@@ -757,7 +757,8 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 		if (is_bad_selfatari(b, map->to_play, coord)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: self-atari\n");
-			return -games;
+			add_prior_value(map, coord, 0, games);
+			return;
 		}
 	}
 
@@ -767,11 +768,12 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 		if (test_pattern3_here(&pp->patterns, b, &m)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
-			return assess_local_bonus(p, b, b->last_move.coord, coord, games);
+			int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games);
+			add_prior_value(map, coord, 1, assess);
 		}
 	}
 
-	return 0;
+	return;
 }
 
 void
@@ -791,12 +793,8 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 	if (!pp->patternrate && !pp->selfatarirate)
 		return;
 	foreach_point(map->b) {
-		if (!map->consider[c])
-			continue;
-		int assess = playout_moggy_assess_one(p, map, c, games);
-		if (!assess)
-			continue;
-		add_prior_value(map, c, assess, abs(assess));
+		if (map->consider[c])
+			playout_moggy_assess_one(p, map, c, games);
 	} foreach_point_end;
 }
 

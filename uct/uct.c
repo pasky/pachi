@@ -110,7 +110,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
 			tree_node_get_value(t, n, u, parity));
 
-	int result = play_random_game(b, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, u->playout);
+	int result = play_random_game(b, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, NULL, u->playout);
 	if (next_color == S_WHITE && result >= 0) {
 		/* We need the result from black's perspective. */
 		result = !result;
@@ -417,7 +417,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 			pthread_join(threads[finish_thread], (void **) &ctx);
 			played_games += ctx->games;
 			joined++;
-			tree_merge(u->t, ctx->t, u->amaf_prior);
+			tree_merge(u->t, ctx->t);
 			tree_done(ctx->t);
 			free(ctx);
 			if (UDEBUGL(2))

@@ -7,17 +7,20 @@
 use warnings;
 
 local $/ = undef; my $sgf = <>;
+my $size = ($sgf =~ /SZ\[(\d+)\]/)[0];
 
-print "boardsize " . ($sgf =~ /SZ\[(\d+)\]/)[0];
+print "boardsize " . $size;
 print "clear_board";
 print "komi " . ($sgf =~ /KM\[([\d.]+)\]/)[0];
+
+my $abcd = "abcdefghijklmnopqrstuvwxyz";
 
 my @m = split /;/, $sgf;
 foreach (@m) {
 	/^([BW])\[(\w\w)\]/ or next;
 	my ($color, $coord) = ($1, $2);
-	$coord =~ s/i/j/g;
 	my ($x, $y) = split //, $coord;
-	$y =~ tr/abcdefghj/987654321/;
+	($x ge 'i') and $x++;
+	$y = $size - index($abcd, $y);
 	print "play $color $x$y";
 }

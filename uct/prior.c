@@ -26,7 +26,7 @@ uct_prior_even(struct uct *u, struct tree_node *node, struct prior_map *map)
 	foreach_point_and_pass(map->b) {
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, u->even_eqex / 2, u->even_eqex);
+		add_prior_value(map, c, 0.5, u->even_eqex);
 	} foreach_point_end;
 }
 
@@ -45,7 +45,7 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 			continue;
 		if (!board_is_one_point_eye(map->b, &c, map->to_play))
 			continue;
-		add_prior_value(map, c, -u->eqex, u->eqex);
+		add_prior_value(map, c, 0, u->eqex);
 	} foreach_point_end;
 }
 
@@ -64,10 +64,9 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 		 * vincinity. */
 		if (board_stone_radar(map->b, c, 2))
 			continue;
-		/* First line: -eqex */
-		/* Third line: +eqex */
-		int v = d == 1 ? -1 : 1;
-		add_prior_value(map, c, v * u->b19_eqex, u->b19_eqex);
+		/* First line: 0 */
+		/* Third line: 1 */
+		add_prior_value(map, c, d == 3, u->b19_eqex);
 	} foreach_point_end;
 }
 
@@ -85,8 +84,7 @@ uct_prior_grandparent(struct uct *u, struct tree_node *node, struct prior_map *m
 			/* Be careful not to emphasize too random results. */
 			if (ni->coord == node->coord && ni->u.playouts > u->gp_eqex) {
 				/* We purposefuly ignore the parity. */
-				map->prior[c].playouts += u->gp_eqex;
-				map->prior[c].wins += u->gp_eqex * ni->u.wins / ni->u.playouts;
+				stats_add_result(&map->prior[c], ni->u.value, u->gp_eqex);
 			}
 		}
 	} foreach_point_end;
@@ -120,7 +118,7 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 		assert(distances[c] != 0);
 		int bonuses[] = { 0, u->cfgd_eqex, u->cfgd_eqex / 2, u->cfgd_eqex / 2 };
 		int bonus = bonuses[distances[c]];
-		add_prior_value(map, c, bonus, bonus);
+		add_prior_value(map, c, 1, bonus);
 	} foreach_point_end;
 }
 

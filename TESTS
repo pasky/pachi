@@ -2,6 +2,8 @@ Default settings, 5000 playouts.
 Opponent: gnugo --mode gtp --chinese-rules --capture-all-dead --level 10
 GNUGo 3.7.12
 
+gnugo 19x19 l10 vs l1:	71% (+-2.3%)
+
 Template:
 ../../gogui-1.1.10/bin/gogui-twogtp -black  'gnugo --mode gtp --chinese-rules --capture-all-dead --level 10' -white './zzgo-77d2d games=5000,policy=ucb1amaf,playout=moggy' -alternate -auto -verbose -size 9 -komi 7.5 -games 100 -sgffile f1-77d2d
 for i in *.dat; do ../../gogui-1.1.10/bin/gogui-twogtp -force -analyze $i; done
@@ -211,6 +213,51 @@ ba2e1	13ucb1amaf+	57% (+-2.5%)	prior_cfgd=6
 ba2e1	13ucb1amaf+%	51.2% (+-2.5%)	prior_cfgd=6,prior_b19=6
 ba2e1	13ucb1amaf#*+	54.8% (+-2.5%)	pattern2=0,atarirate=0,prior_cfgd=6
 
+ba2e1	19ucb1amaf+!	13.8% (+-1.7%)	prior_cfgd=6,fillboard
+ba2e1	19ucb1amaf+%2	21.2% (+-2%)	prior_cfgd=prior_b19=prior=20
+ba2e1	19ucb1amaf+%2!	20.5% (+-2%)	prior_cfgd=prior_b19=prior=20,fillboard
+ba2e1	19ucb1amaf+%3	20.8% (+-2%)	prior_cfgd=prior_b19=prior=30
+ba2e1	19ucb1amaf+%4	25.8% (+-2.2%)	prior_cfgd=prior_b19=prior=40
+ba2e1	19ucb1amaf+%5	23.2% (+-2.1%)	prior_cfgd=prior_b19=prior=50
+ba2e1	19ucb1amaf#*+%!	9.8% (+-1.5%)	pattern2=0,atarirate=0,prior_cfgd=prior_b19=6,fillboard
+ba2e1	19ucb1amaf#*+%2	25% (+-2.2%)	pattern2=0,atarirate=0,prior_cfgd=prior_b19=prior=20
+ba2e1	19ucb1amaf#+%2	26.5% (+-2.2%)	pattern2=0,prior_cfgd=prior_b19=prior=20
+ba2e1	19ucb1amaf#+%3	24% (+-2.2%)	pattern2=0,prior_cfgd=prior_b19=prior=30
+ba2e1	19ucb1amaf#+%4	27% (+-2.2%)	pattern2=0,prior_cfgd=prior_b19=prior=40
+ba2e1	19ucb1amaf#+%2!	22.5% (+-2.1%)	pattern2=0,prior_cfgd=prior_b19=prior=20,fillboard
+ba2e1	19ucb1amaf#+%2_	23.5% (+-2.1%)	pattern2=0,prior_cfgd=prior_b19=prior=20,prior_policy=10
+ba2e1	19ucb1amaf#+%2a	1% (+-0.7%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playouts=1000
+ba2e1	19ucb1amaf#+%2b	7.2% (+-1.4%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playouts=2000
+
+<pattern2=0, prior_cfgd=prior_b19=-1, etc.>
+<From now on, 19x19 always has % = prior=20>
+
+49208	9ucb1amaf	80% (+-2%)
+49208	9ucb1amaf&	76.8% (+-2.1%)	selfatarirate=0
+49208	9ucb1amaf_	76.8% (+-2.1%)	can_capture_group() always true (really same rate)
+49208	19ucb1amaf%	25.4% (+-2.3%)
+49208	19ucb1amaf%&	18.8% (+-2%)	selfatarirate=0
+49208	19ucb1amaf%_	19.5% (+-2%)	can_capture_group() always true (really same rate)
+
+d11b1	9ucb1amaf	81.8% (+-1.9%)	
+d11b1	9ucb1amaf_	81.5% (+-1.9%)	investigate all nakade neis only in case of snapback (945e5)
+d11b1	9ucb1amaf*	81.2% (+-2%)	atarirate=0
+d11b1	9ucb1amaf&	78.8% (+-2.1%)	explore_p_rave=0
+
+<d11b1_&, explore coefficient outside of RAVE>
+
+a0f85	9ucb1amaf	80.2% (+-2%)
+a0f85	9ucb1amaf*1	80.8% (+-2%)	explore_p=0
+a0f85	9ucb1amaf*2	81.2% (+-2%)	explore_p=0.01
+a0f85	9ucb1amaf*3	40.2% (+-2.5%)	explore_p=0.6
+
+<UCT value tracking>
+
+5524c	9ucb1amaf	84.2% (+-1.8%)
+5524c	9ucb1amaf^1	70.2% (+-3%)	fuego cfgd
+5524c	9ucb1amaf^2	77% (+-2.1%)	fuego cfgd, 0.1 for pass
+5524c	9ucb1amaf^2*	76.5% (+-2.1%)	fuego cfgd, 0.1 for pass, prior_cfgd=4
+5524c	9ucb1amaf!	81.2% (+-2%)	prior_even is 0.1 for pass
 
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2

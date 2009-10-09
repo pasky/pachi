@@ -29,7 +29,7 @@ board_setup(struct board *b)
 	memset(b, 0, sizeof(*b));
 
 	struct move m = { pass, S_NONE };
-	b->last_move = b->last_move2 = b->ko = m;
+	b->last_move = b->last_move2 = b->last_ko = b->ko = m;
 }
 
 struct board *
@@ -193,40 +193,84 @@ board_clear(struct board *board)
 }
 
 
+static void
+board_print_top(struct board *board, FILE *f, int c)
+{
+	for (int i = 0; i < c; i++) {
+		char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
+		fprintf(f, "      ");
+		for (int x = 1; x < board_size(board) - 1; x++)
+			fprintf(f, "%c ", asdf[x - 1]);
+		fprintf(f, " ");
+	}
+	fprintf(f, "\n");
+	for (int i = 0; i < c; i++) {
+		fprintf(f, "    +-");
+		for (int x = 1; x < board_size(board) - 1; x++)
+			fprintf(f, "--");
+		fprintf(f, "+");
+	}
+	fprintf(f, "\n");
+}
+
+static void
+board_print_bottom(struct board *board, FILE *f, int c)
+{
+	for (int i = 0; i < c; i++) {
+		fprintf(f, "    +-");
+		for (int x = 1; x < board_size(board) - 1; x++)
+			fprintf(f, "--");
+		fprintf(f, "+");
+	}
+	fprintf(f, "\n");
+}
+
+typedef void (*board_cprint)(struct board *b, coord_t c, FILE *f);
+
+static void
+board_print_row(struct board *board, int y, FILE *f, board_cprint cprint)
+{
+	fprintf(f, " %2d | ", y);
+	for (int x = 1; x < board_size(board) - 1; x++) {
+		if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
+			fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
+		else
+			fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
+	}
+	fprintf(f, "|");
+	if (cprint) {
+		fprintf(f, " %2d | ", y);
+		for (int x = 1; x < board_size(board) - 1; x++) {
+			cprint(board, coord_xy(board, x, y), f);
+		}
+		fprintf(f, "|");
+	}
+	fprintf(f, "\n");
+}
+
+static void
+board_print_x(struct board *board, FILE *f, board_cprint cprint)
+{
+	fprintf(f, "Move: % 3d  Komi: %2.1f  Captures B: %d W: %d\n",
+		board->moves, board->komi,
+		board->captures[S_BLACK], board->captures[S_WHITE]);
+	board_print_top(board, f, 1 + !!cprint);
+	for (int y = board_size(board) - 2; y >= 1; y--)
+		board_print_row(board, y, f, cprint);
+	board_print_bottom(board, f, 1 + !!cprint);
+	fprintf(f, "\n");
+}
+
+static void
+cprint_group(struct board *board, coord_t c, FILE *f)
+{
+	fprintf(f, "%d ", group_base(group_at(board, c)));
+}
+
 void
 board_print(struct board *board, FILE *f)
 {
-	fprintf(f, "Move: % 3d  Komi: %2.1f  Captures B: %d W: %d\n     ",
-		board->moves, board->komi,
-		board->captures[S_BLACK], board->captures[S_WHITE]);
-	int x, y;
-	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-	for (x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "%c ", asdf[x - 1]);
-	fprintf(f, "\n   +-");
-	for (x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "--");
-	fprintf(f, "+\n");
-	for (y = board_size(board) - 2; y >= 1; y--) {
-		fprintf(f, "%2d | ", y);
-		for (x = 1; x < board_size(board) - 1; x++) {
-			if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
-				fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
-			else
-				fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
-		}
-		if (DEBUGL(6)) {
-			fprintf(f, "| ");
-			for (x = 1; x < board_size(board) - 1; x++) {
-				fprintf(f, "%d ", group_base(group_atxy(board, x, y)));
-			}
-		}
-		fprintf(f, "|\n");
-	}
-	fprintf(f, "   +-");
-	for (x = 1; x < board_size(board) - 1; x++)
-		fprintf(f, "--");
-	fprintf(f, "+\n\n");
+	board_print_x(board, f, DEBUGL(6) ? cprint_group : NULL);
 }
 
 
@@ -788,6 +832,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				 * to check for that. */
 				ko.color = stone_other(color);
 				ko.coord = c;
+				board->last_ko = ko;
 				if (DEBUGL(5))
 					fprintf(stderr, "guarding ko at %d,%d,%d\n", ko.color, coord_x(ko.coord, board), coord_y(ko.coord, board));
 			}

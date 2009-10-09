@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include "move.h"
+#include "stats.h"
 
 struct board;
 struct uct;
@@ -20,12 +21,6 @@ struct uct;
  * | node | - | node |   | node | - | node |
  * +------+   +------+   +------+   +------+
  */
-
-struct move_stats {
-	int playouts; // # of playouts coming through this node
-	int wins; // # of BLACK wins coming through this node
-	float value; // wins/playouts
-};
 
 struct tree_node {
 	hash_t hash;
@@ -62,7 +57,7 @@ void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
 void tree_load(struct tree *tree, struct board *b);
 struct tree *tree_copy(struct tree *tree);
-void tree_merge(struct tree *dest, struct tree *src, bool amaf_prior);
+void tree_merge(struct tree *dest, struct tree *src);
 void tree_normalize(struct tree *tree, int factor);
 
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct *u, int parity);
@@ -71,8 +66,6 @@ void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 
 static bool tree_leaf_node(struct tree_node *node);
-static void tree_update_node_value(struct tree_node *node, bool rave_prior);
-static void tree_update_node_rvalue(struct tree_node *node, bool rave_prior);
 
 /* Get black parity from parity within the tree. */
 #define tree_parity(tree, parity) \
@@ -81,27 +74,11 @@ static void tree_update_node_rvalue(struct tree_node *node, bool rave_prior);
 /* Get a value to maximize; @parity is parity within the tree. */
 #define tree_node_get_value(tree, node, type, parity) \
 	(tree_parity(tree, parity) > 0 ? node->type.value : 1 - node->type.value)
-#define tree_node_get_wins(tree, node, type, parity) \
-	(tree_parity(tree, parity) > 0 ? node->type.wins : node->type.playouts - node->type.wins)
 
 static inline bool
 tree_leaf_node(struct tree_node *node)
 {
 	return !(node->children);
-}
-
-static inline void
-tree_update_node_value(struct tree_node *node, bool rave_prior)
-{
-	node->u.value = (float)(node->u.wins + (!rave_prior ? node->prior.wins : 0))
-			/ (node->u.playouts + (!rave_prior ? node->prior.playouts : 0));
-}
-
-static inline void
-tree_update_node_rvalue(struct tree_node *node, bool rave_prior)
-{
-	node->amaf.value = (float)(node->amaf.wins + (rave_prior ? node->prior.wins : 0))
-			/ (node->amaf.playouts + (rave_prior ? node->prior.playouts : 0));
 }
 
 #endif
