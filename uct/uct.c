@@ -308,7 +308,8 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		u->t = tree_init(b, color);
 	}
 
-	u->t->extra_komi = get_extra_komi(u, b, color);
+	if (u->dynkomi)
+		u->t->extra_komi = get_extra_komi(u, b, color);
 }
 
 /* Set in main thread in case the playouts should stop. */
