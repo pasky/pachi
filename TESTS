@@ -229,6 +229,7 @@ ba2e1	19ucb1amaf+%2!	20.5% (+-2%)	prior_cfgd=prior_b19=prior=20,fillboard
 ba2e1	19ucb1amaf+%3	20.8% (+-2%)	prior_cfgd=prior_b19=prior=30
 ba2e1	19ucb1amaf+%4	25.8% (+-2.2%)	prior_cfgd=prior_b19=prior=40
 ba2e1	19ucb1amaf+%5	23.2% (+-2.1%)	prior_cfgd=prior_b19=prior=50
+ba2e1	19ucb1amaf+%4	24.5% (+-2.2%)	prior_cfgd=prior_b19=prior=40,amaf_prior=0
 ba2e1	19ucb1amaf#*+%!	9.8% (+-1.5%)	pattern2=0,atarirate=0,prior_cfgd=prior_b19=6,fillboard
 ba2e1	19ucb1amaf#*+%2	25% (+-2.2%)	pattern2=0,atarirate=0,prior_cfgd=prior_b19=prior=20
 ba2e1	19ucb1amaf#+%2	26.5% (+-2.2%)	pattern2=0,prior_cfgd=prior_b19=prior=20
@@ -238,6 +239,7 @@ ba2e1	19ucb1amaf#+%2!	22.5% (+-2.1%)	pattern2=0,prior_cfgd=prior_b19=prior=20,fi
 ba2e1	19ucb1amaf#+%2_	23.5% (+-2.1%)	pattern2=0,prior_cfgd=prior_b19=prior=20,prior_policy=10
 ba2e1	19ucb1amaf#+%2a	1% (+-0.7%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playouts=1000
 ba2e1	19ucb1amaf#+%2b	7.2% (+-1.4%)	pattern2=0,prior_cfgd=prior_b19=prior=20,playouts=2000
+ba2e1	19ucb1amaf#+%2	28.2% (+-2.3%)	pattern2=0,prior_cfgd=prior_b19=prior=20,amaf_prior=0
 
 <pattern2=0, prior_cfgd=prior_b19=-1, etc.>
 <From now on, 19x19 always has % = prior=20>
