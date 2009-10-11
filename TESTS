@@ -271,14 +271,22 @@ a0f85	9ucb1amaf*3	40.2% (+-2.5%)	explore_p=0.6
 5524c	9ucb1amaf^2*	76.5% (+-2.1%)	fuego cfgd, 0.1 for pass, prior_cfgd=4
 5524c	9ucb1amaf!	81.2% (+-2%)	prior_even is 0.1 for pass
 
+5524c	19ucb1amaf%	19.8% (+-2%)
+5524c	19ucb1amaf%^1	13.2% (+-1.7%)	fuego cfgd
+5524c	19ucb1amaf%^2	12.5% (+-1.7%)	fuego cfgd, 0.1 for pass
+5524c	19ucb1amaf%^2*	16.2% (+-1.8%)	fuego cfgd, 0.1 for pass, prior_cfgd=5
+5524c	19ucb1amaf!	19.6% (+-2%)	prior_even is 0.3 for pass
+
 2151a	9ucb1amaf	81.5% (+-1.9%)
 443e1	9ucb1amaf_1	72.5% (+-2.2%)	Priors just like in Fuego
 6c6cb	9ucb1amaf_2	70.5% (+-2.3%)	Priors just like in Fuego, including equivalent-best-move
 
+03c36	19ucb1amaf%$	17.2% (+-1.9%)	ko=-1, without ko aging yet
+
 09368	9ucb1amaf	80.2% (+-2%)
-09368	9ucb1amaf%	80% (+-2%)	ko=-1
+09368	9ucb1amaf$	80% (+-2%)	ko=-1
 09368	9ucb1amaf^	79% (+-2%)	eye=0
-09368	9ucb1amaf%^	77.2% (+-2.1%)	ko=-1,eye=0
+09368	9ucb1amaf$^	77.2% (+-2.1%)	ko=-1,eye=0
 
 a1267	9ucb1amaf	80.1% (+-2%)
 a1267	9ucb1amaf~20	20.3% (+-2%)	val_scale=0.15,val_points=10
