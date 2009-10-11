@@ -2,7 +2,11 @@ Default settings, 5000 playouts.
 Opponent: gnugo --mode gtp --chinese-rules --capture-all-dead --level 10
 GNUGo 3.7.12
 
-gnugo 19x19 l10 vs l1:	71% (+-2.3%)
+gnugo 19x19 l1 vs l10 k 7.5:	29% (+-2.3%)
+gnugo 19x19 l1 vs l10 k 0.5:	42.2% (+-2.5%)
+gnugo 19x19 l1 vs l10 k -7.5:	52.5% (+-2.5%)
+gnugo 19x19 l1 vs l10 k -14.5:	62.2% (+-2.4%)
+
 
 Template:
 ../../gogui-1.1.10/bin/gogui-twogtp -black  'gnugo --mode gtp --chinese-rules --capture-all-dead --level 10' -white './zzgo-77d2d games=5000,policy=ucb1amaf,playout=moggy' -alternate -auto -verbose -size 9 -komi 7.5 -games 100 -sgffile f1-77d2d
