@@ -6,6 +6,12 @@ gnugo 19x19 l1 vs l10 k 7.5:	29% (+-2.3%)
 gnugo 19x19 l1 vs l10 k 0.5:	42.2% (+-2.5%)
 gnugo 19x19 l1 vs l10 k -7.5:	52.5% (+-2.5%)
 gnugo 19x19 l1 vs l10 k -14.5:	62.2% (+-2.4%)
+gnugo 19x19 l1 vs l10 handi 2:	56.7% (+-2.5%)
+
+
+Unfortunately, some early measurements use 95% confidence interval; all newer
+ones use the standard error (/1.96) instead, since that's what gogui-twogtp
+provides.
 
 
 Template:
