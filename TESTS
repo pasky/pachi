@@ -273,6 +273,11 @@ a0f85	9ucb1amaf*3	40.2% (+-2.5%)	explore_p=0.6
 443e1	9ucb1amaf_1	72.5% (+-2.2%)	Priors just like in Fuego
 6c6cb	9ucb1amaf_2	70.5% (+-2.3%)	Priors just like in Fuego, including equivalent-best-move
 
+09368	9ucb1amaf	80.2% (+-2%)
+09368	9ucb1amaf%	80% (+-2%)	ko=-1
+09368	9ucb1amaf^	79% (+-2%)	eye=0
+09368	9ucb1amaf%^	77.2% (+-2.1%)	ko=-1,eye=0
+
 a1267	9ucb1amaf	80.1% (+-2%)
 a1267	9ucb1amaf~20	20.3% (+-2%)	val_scale=0.15,val_points=10
 a1267	9ucb1amaf~21	6% (+-1.2%)	val_scale=0.15,val_points=20
