@@ -17,6 +17,7 @@ my $abcd = "abcdefghijklmnopqrstuvwxyz";
 
 my @m = split /;/, $sgf;
 foreach (@m) {
+	/^([BW])\[\]/ and print "play $1 pass";
 	/^([BW])\[(\w\w)\]/ or next;
 	my ($color, $coord) = ($1, $2);
 	my ($x, $y) = split //, $coord;
