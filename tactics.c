@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 
@@ -105,12 +106,14 @@ examine_enemy_groups(struct board *b, enum stone color, coord_t to, struct selfa
 
 	}
 
-	//fprintf(stderr, "no cap group\n");
+	if (DEBUGL(6))
+		fprintf(stderr, "no cap group\n");
 
 	if (!s->needs_more_lib && !can_capture && !s->groupcts[S_NONE]) {
 		/* We have no hope for more fancy tactics - this move is simply
 		 * a suicide, not even a self-atari. */
-		//fprintf(stderr, "suicide\n");
+		if (DEBUGL(6))
+			fprintf(stderr, "suicide\n");
 		return true;
 	}
 	/* XXX: I wonder if it makes sense to continue if we actually
@@ -291,7 +294,8 @@ check_throwin(struct board *b, enum stone color, coord_t to, struct selfatari_st
 bool
 is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 {
-	//fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
+	if (DEBUGL(5))
+		fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
 	/* Assess if we actually gain any liberties by this escape route.
 	 * Note that this is not 100% as we cannot check whether we are
 	 * connecting out or just to ourselves. */
@@ -312,25 +316,29 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 	if (d >= 0)
 		return d;
 
-	//fprintf(stderr, "no friendly group\n");
+	if (DEBUGL(6))
+		fprintf(stderr, "no friendly group\n");
 
 	d = examine_enemy_groups(b, color, to, &s);
 	if (d >= 0)
 		return d;
 
-	//fprintf(stderr, "no escape\n");
+	if (DEBUGL(6))
+		fprintf(stderr, "no escape\n");
 
 	d = setup_nakade_or_snapback(b, color, to, &s);
 	if (d >= 0)
 		return d;
 
-	//fprintf(stderr, "no nakade group\n");
+	if (DEBUGL(6))
+		fprintf(stderr, "no nakade group\n");
 
 	d = check_throwin(b, color, to, &s);
 	if (d >= 0)
 		return d;
 
-	//fprintf(stderr, "no throw-in group\n");
+	if (DEBUGL(6))
+		fprintf(stderr, "no throw-in group\n");
 
 	/* No way to pull out, no way to connect out. This really
 	 * is a bad self-atari! */
