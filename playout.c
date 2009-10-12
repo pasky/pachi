@@ -23,7 +23,7 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 	enum stone color = starting_color;
 	coord_t urgent;
 
-	int passes = is_pass(b->last_move.coord);
+	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	while (gamelen-- && passes < 2) {
 		urgent = policy->choose(policy, b, color);

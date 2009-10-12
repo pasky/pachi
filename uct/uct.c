@@ -153,7 +153,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	int result;
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
-	int passes = is_pass(b->last_move.coord);
+	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	/* debug */
 	int depth = 0;
