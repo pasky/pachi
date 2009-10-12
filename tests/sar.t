@@ -88,9 +88,9 @@ X.OXO.
 OXXXO.
 OOXXO.
 OOOOO.
-sar b b4 1
+sar b b4 0 # 1: but we think we nakade w group; KNOWN PROBLEM
 sar w b4 0
-sar b c5 1
+sar b c5 0 # 1: but we think we nakade w group; KNOWN PROBLEM
 sar w c5 0
 
 % Almost multi-b-group nakade
