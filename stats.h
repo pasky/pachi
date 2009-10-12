@@ -28,7 +28,8 @@ stats_add_result(struct move_stats *s, float result, int playouts)
 static inline void
 stats_merge(struct move_stats *dest, struct move_stats *src)
 {
-	stats_add_result(dest, src->value, src->playouts);
+	if (src->playouts > 0)
+		stats_add_result(dest, src->value, src->playouts);
 }
 
 static inline void
