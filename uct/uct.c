@@ -203,7 +203,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 					res, group_at(&b2, m.coord), b2.superko_violation);
 			}
 			tree_delete_node(t, n);
-			result = -1;
+			result = 0;
 			goto end;
 		}
 
@@ -223,7 +223,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		/* Result from black's perspective (no matter who
 		 * the player; black's perspective is always
 		 * what the tree stores. */
-		result = score < 0;
+		result = score * 2;
 
 		if (UDEBUGL(5))
 			fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
