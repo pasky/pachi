@@ -3,7 +3,7 @@
 # $1: path to test results
 # $2: board size
 
-(cd "$1" && ls *summ*dat) | sed 's/^f'$2'-//; s/[-.].*$//;' | xargs git log --pretty=oneline --no-walk | while read c s; do
+(cd "$1" && ls f$2*summ*dat) | sed 's/^f'$2'-//; s/[-.].*$//;' | xargs git log --pretty=oneline --no-walk | while read c s; do
 	echo
 	echo ================================================
 	git log -1 --pretty=medium $c
