@@ -231,32 +231,20 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return pass;
 
-	foreach_neighbor(b, m->coord, {
+	foreach_8neighbor(b, m->coord) {
 		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 		if (board_is_valid_move(b, &m2))
 			apply_pattern_here(p, b, &m2, &q);
-	});
-	foreach_diag_neighbor(b, m->coord) {
-		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
-		if (board_is_valid_move(b, &m2))
-			apply_pattern_here(p, b, &m2, &q);
-	} foreach_diag_neighbor_end;
+	} foreach_8neighbor_end;
 
 	if (mm) { /* Second move for pattern searching */
-		foreach_neighbor(b, mm->coord, {
+		foreach_8neighbor(b, mm->coord) {
 			if (coord_is_8adjecent(m->coord, c, b))
 				continue;
 			struct move m2; m2.coord = c; m2.color = stone_other(m->color);
 			if (board_is_valid_move(b, &m2))
 				apply_pattern_here(p, b, &m2, &q);
-		});
-		foreach_diag_neighbor(b, mm->coord) {
-			if (coord_is_8adjecent(m->coord, c, b))
-				continue;
-			struct move m2; m2.coord = c; m2.color = stone_other(m->color);
-			if (board_is_valid_move(b, &m2))
-				apply_pattern_here(p, b, &m2, &q);
-		} foreach_diag_neighbor_end;
+		} foreach_8neighbor_end;
 	}
 
 	if (PLDEBUGL(5))

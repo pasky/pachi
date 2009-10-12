@@ -262,6 +262,24 @@ float board_official_score(struct board *board);
 		coord_pos(c, coord_raw(coord__) + board_size(board__), (board__)); do { loop_body } while (0); \
 	} while (0)
 
+#define foreach_8neighbor(board_, coord_) \
+	do { \
+		coord_t q__[8]; int q__i = 0; \
+		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_) - 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_), (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_) + 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) - 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_) - 1, (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_), (board_)); \
+		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_) + 1, (board_)); \
+		int fn__i; \
+		for (fn__i = 0; fn__i < q__i; fn__i++) { \
+			coord_t c = q__[fn__i];
+#define foreach_8neighbor_end \
+		} \
+	} while (0)
+
 #define foreach_diag_neighbor(board_, coord_) \
 	do { \
 		coord_t q__[4]; int q__i = 0; \
