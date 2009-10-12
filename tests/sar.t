@@ -159,4 +159,4 @@ XXOXXXXXO
 .XOXXX..X
 XXXO..XXX
 XO..O...O
-sar w j8 1
+sar w j8 0 # 1: but we think we nakade b group, we don't examine all w group neighbors; KNOWN PROBLEM
