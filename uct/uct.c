@@ -218,6 +218,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		amaf->record_nakade = u->playout_amaf_nakade;
 	}
 
+	if (u->dynkomi > b2.moves)
+		b2.komi += get_extra_komi(u, &b2, player_color);
+
 	if (passes >= 2) {
 		float score = board_official_score(&b2);
 		/* Result from black's perspective (no matter who
@@ -232,8 +235,6 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			board_print(&b2, stderr);
 
 	} else { assert(tree_leaf_node(n));
-		if (u->dynkomi > b2.moves)
-			b2.komi += get_extra_komi(u, &b2, player_color);
 		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 	}
 
