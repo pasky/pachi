@@ -106,6 +106,19 @@ sar w b4 1
 sar b c5 0
 sar w c5 1
 
+% Almost multi-b-group nakade (mirrored)
+boardsize 6
+.OOOOO
+.OXX.O
+.OXXXO
+.OXO.X
+.OX.OX
+.OOXXX
+sar b d2 0
+sar w d2 1
+sar b e3 0
+sar w e3 1
+
 % Not-quite-snapback
 boardsize 5
 XXXXO
