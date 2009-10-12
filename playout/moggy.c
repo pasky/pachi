@@ -310,6 +310,8 @@ can_countercapture(struct playout_policy *p, struct board_state *s,
                    struct board *b, enum stone owner, group_t g,
 		   enum stone to_play, struct move_queue *q)
 {
+	if (b->clen < 2)
+		return false;
 	if (group_is_known(s, g) && group_trait_is_ready(s, g, to_play, can_countercapture)) {
 		/* We have already seen this group. */
 		assert(s->groups[g].status == G_ATARI);
