@@ -10,10 +10,12 @@
 #include "random.h"
 
 int debug_level = 1;
+static bool board_printed;
 
 void
 board_load(struct board *b, FILE *f, int size)
 {
+	board_printed = false;
 	board_resize(b, size);
 	board_clear(b);
 	for (int y = size - 1; y >= 0; y--) {
@@ -46,7 +48,7 @@ board_load(struct board *b, FILE *f, int size)
 			}
 		}
 	}
-	if (DEBUGL(0))
+	if (DEBUGL(2))
 		board_print(b, stderr);
 }
 
@@ -59,11 +61,22 @@ test_sar(struct board *b, char *arg)
 	coord_t c = *cc; coord_done(cc);
 	arg += strcspn(arg, " ") + 1;
 	int eres = atoi(arg);
-	printf("sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	if (DEBUGL(1))
+		printf("sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+
 	int rres = is_bad_selfatari(b, color, c);
+
 	if (rres == eres) {
-		printf("OK\n");
+		if (DEBUGL(1))
+			printf("OK\n");
 	} else {
+		if (debug_level <= 2) {
+			if (DEBUGL(0) && !board_printed) {
+				board_print(b, stderr);
+				board_printed = true;
+			}
+			printf("sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+		}
 		printf("FAILED (%d)\n", rres);
 	}
 
@@ -71,10 +84,13 @@ test_sar(struct board *b, char *arg)
 
 int main(int argc, char *argv[])
 {
-	if (argc != 2) {
-		fprintf(stderr, "Usage: %s TESTFILE\n", argv[0]);
+	if (argc < 2) {
+		fprintf(stderr, "Usage: %s TESTFILE [DEBUGLEVEL]\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
+
+	if (argc > 2)
+		debug_level = atoi(argv[2]);
 
 	FILE *f = fopen(argv[1], "r");
 	if (!f) {
