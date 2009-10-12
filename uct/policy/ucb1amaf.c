@@ -219,7 +219,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 				amaf_color = child_color;
 			}
 
-			int nres = result;
+			float nres = result;
 			if (amaf_color != child_color) {
 				if (!b->both_colors)
 					continue;
@@ -232,7 +232,11 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			stats_add_result(&ni->amaf, nres, 1);
 
 #if 0
-			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d %d => %d/%d]\n", coord2sstr(node->coord, &bb), node->hash, coord2sstr(ni->coord, &bb), ni->hash, player_color, child_color, result);
+			struct board bb; bb.size = 9+2;
+			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d/%f => %d/%f]\n",
+				coord2sstr(node->coord, &bb), node->hash,
+				coord2sstr(ni->coord, &bb), ni->hash,
+				player_color, result, child_color, nres);
 #endif
 		}
 
