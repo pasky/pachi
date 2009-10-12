@@ -17,6 +17,7 @@ provides.
 Template:
 ../../gogui-1.1.10/bin/gogui-twogtp -black  'gnugo --mode gtp --chinese-rules --capture-all-dead --level 10' -white './zzgo-77d2d games=5000,policy=ucb1amaf,playout=moggy' -alternate -auto -verbose -size 9 -komi 7.5 -games 100 -sgffile f1-77d2d
 for i in *.dat; do ../../gogui-1.1.10/bin/gogui-twogtp -force -analyze $i; done
+./test_in_context.sh <directory with results> 9
 
 ead8e	ucb1amaf	16.5% (+-4.5%)
 
