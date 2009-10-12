@@ -147,3 +147,16 @@ sar b b3 0
 sar w b3 0
 sar b d4 0
 sar w d4 1
+
+% Real game 1
+boardsize 9
+O.O..OXX.
+.O.O.OOX.
+OO..OOXXO
+XOOOOXOOO
+XXOXXXXXO
+.XOOOXXXX
+.XOXXX..X
+XXXO..XXX
+XO..O...O
+sar w j8 1
