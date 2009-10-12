@@ -388,7 +388,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	can_countercapture(p, s, b, color, group, to_play, q);
 
 	/* Do not suicide... */
-	if (!can_be_captured(p, s, b, group, color))
+	if (!can_be_captured(p, s, b, group, to_play))
 		return;
 	/* Do not remove group that cannot be saved by the opponent. */
 	if (to_play != color && !can_be_rescued(p, s, b, group, color))
