@@ -10,6 +10,6 @@
 	for t in $(cd "$1" && ls f$2-${c:0:5}*summ*); do
 		echo
 		echo $t
-		cat "$1/$t"
+		cat "$1/$t" | cut -f 1,2,7,8,12,13
 	done
 done
