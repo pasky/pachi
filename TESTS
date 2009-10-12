@@ -316,5 +316,9 @@ a1267	9ucb1amaf~a1	3.5% (+-0.9%)	val_scale=0.01,val_points=20
 a1267	9ucb1amaf~b1	6.8% (+-1.3%)	val_scale=0.02,val_points=20
 a1267	9ucb1amaf~bx	2.3% (+-0.7$)	val_scale=0.02,val_points=80
 
+2b830	9ucb1amaf	73% (+-2.2%)
+2b830	9ucb1amaf_	79% (+-2%)	global atari check picks moves across all atari groups
+2b830	9ucb1amaf~b1	3.8% (+-1%)	val_scale=0.02,val_points=20
+
 
 TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
