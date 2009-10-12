@@ -60,7 +60,7 @@ XXXXX
 sar b c3 0
 sar w c3 0
 sar b d3 1
-sar w d3 1
+sar w d3 0 # captures!
 
 % Multi-b-group nakade
 boardsize 5
