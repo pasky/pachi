@@ -223,7 +223,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		/* Result from black's perspective (no matter who
 		 * the player; black's perspective is always
 		 * what the tree stores. */
-		result = score * 2;
+		result = - (score * 2);
 
 		if (UDEBUGL(5))
 			fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
