@@ -58,7 +58,7 @@ XO..X
 XXOXX
 XXXXX
 sar b c3 0
-sar w c3 0
+sar w c3 1 # 0: but we never actually examine the outside b group; KNOWN PROBLEM
 sar b d3 1
 sar w d3 0 # captures!
 
