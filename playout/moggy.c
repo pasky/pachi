@@ -255,7 +255,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 
 
 static bool
-can_be_captured(struct playout_policy *p, struct board_state *s,
+can_play_on_lib(struct playout_policy *p, struct board_state *s,
                 struct board *b, group_t g, enum stone to_play)
 {
 	if (group_is_known(s, g) && group_trait_is_ready(s, g, to_play, capturable)) {
@@ -299,7 +299,7 @@ capturable_group(struct playout_policy *p, struct board_state *s,
 	           || board_group_info(b, g).libs > 1))
 		return false;
 
-	return can_be_captured(p, s, b, g, to_play);
+	return can_play_on_lib(p, s, b, g, to_play);
 }
 
 /* For given atari group @group owned by @owner, decide if @to_play
@@ -353,7 +353,7 @@ can_be_rescued(struct playout_policy *p, struct board_state *s,
                struct board *b, group_t group, enum stone color)
 {
 	/* Does playing on the liberty rescue the group? */
-	if (can_be_captured(p, s, b, group, color))
+	if (can_play_on_lib(p, s, b, group, color))
 		return true;
 
 	/* Then, maybe we can capture one of our neighbors? */
@@ -388,7 +388,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	can_countercapture(p, s, b, color, group, to_play, q);
 
 	/* Do not suicide... */
-	if (!can_be_captured(p, s, b, group, to_play))
+	if (!can_play_on_lib(p, s, b, group, to_play))
 		return;
 	/* Do not remove group that cannot be saved by the opponent. */
 	if (to_play != color && !can_be_rescued(p, s, b, group, color))
