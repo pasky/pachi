@@ -40,30 +40,26 @@ sar w a2 0
 
 % Real single-group nakade
 boardsize 5
-.XXX.
-XOOX.
+XXXXX
+XOOXX
 XO.XX
 XX.XX
-.XXXX
+XXXXX
 sar b c3 0
 sar w c3 0
-sar b c2 0
+sar b c2 1
 sar w c2 1
-sar b e4 0
-sar w e4 1
-sar b e5 0
-sar w e5 1
 
 % Real multi-w-group nakade
 boardsize 5
-.XXXX
+XXXXX
 XOOXX
 XO..X
 XXOXX
-.XXXX
+XXXXX
 sar b c3 0
 sar w c3 0
-sar b d3 0
+sar b d3 1
 sar w d3 1
 
 % Multi-b-group nakade
@@ -78,7 +74,7 @@ sar w c3 1
 sar b c2 0
 sar w c2 1
 sar b d5 0
-sar w d5 1
+sar w d5 0 # throw-in
 sar b e4 0
 sar w e4 1
 sar b e5 0
