@@ -33,13 +33,15 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o pattern3.o playout.o random.o stone.o tactics.o zzgo.o
+OBJS=board.o gtp.o move.o pattern3.o playout.o random.o stone.o tactics.o
 SUBDIRS=random montecarlo uct uct/policy playout
 
-all: all-recursive zzgo
+all: all-recursive zzgo test
 
 LOCALLIBS=random/random.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a
-zzgo: $(OBJS) $(LOCALLIBS)
+zzgo: $(OBJS) zzgo.o $(LOCALLIBS)
+	$(call cmd,link)
+test: $(OBJS) test.o $(LOCALLIBS)
 	$(call cmd,link)
 
 .PHONY: zzgo-profiled
