@@ -32,6 +32,7 @@ struct uct {
 
 	float val_scale;
 	int val_points;
+	bool val_extra;
 
 	struct uct_policy *policy;
 	struct tree *t;
