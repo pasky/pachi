@@ -39,11 +39,9 @@ can_pass(struct board *b, enum stone color)
 }
 
 static float
-get_extra_komi(struct uct *u, struct board *b, enum stone player_color)
+get_extra_komi(struct uct *u, struct board *b)
 {
 	float extra_komi = board_effective_handicap(b) * (u->dynkomi - b->moves) / u->dynkomi;
-	if (player_color == S_WHITE)
-		extra_komi *= -1;
 	return extra_komi;
 }
 
@@ -219,7 +217,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 	if (u->dynkomi > b2.moves)
-		b2.komi += get_extra_komi(u, &b2, player_color);
+		b2.komi += get_extra_komi(u, &b2);
 
 	if (passes >= 2) {
 		float score = board_official_score(&b2);
@@ -310,7 +308,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 	}
 
 	if (u->dynkomi)
-		u->t->extra_komi = get_extra_komi(u, b, color);
+		u->t->extra_komi = get_extra_komi(u, b);
 }
 
 /* Set in main thread in case the playouts should stop. */
