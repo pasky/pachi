@@ -200,6 +200,8 @@ void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_pe
 
 /* Returns true if given move can be played. */
 static bool board_is_valid_move(struct board *b, struct move *m);
+/* Returns true if ko was just taken. */
+static bool board_playing_ko_threat(struct board *b);
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
@@ -318,6 +320,12 @@ board_is_valid_move(struct board *board, struct move *m)
 		groups_in_atari += (board_group_info(board, g).libs == 1);
 	});
 	return !!groups_in_atari;
+}
+
+static inline bool
+board_playing_ko_threat(struct board *b)
+{
+	return !is_pass(b->ko.coord);
 }
 
 #endif
