@@ -251,8 +251,8 @@ board_print_row(struct board *board, int y, FILE *f, board_cprint cprint)
 static void
 board_print_x(struct board *board, FILE *f, board_cprint cprint)
 {
-	fprintf(f, "Move: % 3d  Komi: %2.1f  Captures B: %d W: %d\n",
-		board->moves, board->komi,
+	fprintf(f, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
+		board->moves, board->komi, board->handicap,
 		board->captures[S_BLACK], board->captures[S_WHITE]);
 	board_print_top(board, f, 1 + !!cprint);
 	for (int y = board_size(board) - 2; y >= 1; y--)
