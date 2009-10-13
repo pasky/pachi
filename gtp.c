@@ -180,6 +180,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 					fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 				gtp_error(id, "illegal move", NULL);
 			}
+			board->handicap++;
 			next_tok(arg);
 		} while (*arg);
 		if (DEBUGL(1))
