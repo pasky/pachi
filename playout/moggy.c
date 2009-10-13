@@ -502,20 +502,9 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 }
 
 static void
-group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
-                 struct move_queue *q, struct board_state *s)
+check_group_atari(struct board *b, group_t group, enum stone owner,
+		  enum stone to_play, struct move_queue *q)
 {
-	enum stone color = board_at(b, group_base(group));
-	assert(color != S_OFFBOARD && color != S_NONE);
-
-	if (PLDEBUGL(5))
-		fprintf(stderr, "[%s] 2lib check of color %d\n",
-			coord2sstr(group, b), color);
-
-	/* Do not try to atari groups that cannot be harmed. */
-	if (miai_2lib(b, group, color))
-		return;
-
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, group).lib[i];
 		assert(board_at(b, lib) == S_NONE);
@@ -532,23 +521,56 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 		 * .OO.....OX
 		 * XXXOOOOOOX */
 #if 0
-		if (neighbor_count_at(b, lib, stone_other(color)) + immediate_liberty_count(b, lib) < 2)
+		if (neighbor_count_at(b, lib, stone_other(owner)) + immediate_liberty_count(b, lib) < 2)
 			continue;
 #endif
 
 		/* If the owner can't play at the spot, we don't want
 		 * to bother either. */
-		if (is_bad_selfatari(b, color, lib))
+		if (is_bad_selfatari(b, owner, lib))
 			continue;
 
 		/* Of course we don't want to play bad selfatari
 		 * ourselves, if we are the attacker... */
-		if (to_play != color && is_bad_selfatari(b, to_play, lib))
+		if (to_play != owner && is_bad_selfatari(b, to_play, lib))
 			continue;
 
 		/* Tasty! Crispy! Good! */
 		mq_add(q, lib);
+		mq_nodup(q);
 	}
+}
+
+static void
+group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
+                 struct move_queue *q, struct board_state *s)
+{
+	enum stone color = board_at(b, group_base(group));
+	assert(color != S_OFFBOARD && color != S_NONE);
+
+	if (PLDEBUGL(5))
+		fprintf(stderr, "[%s] 2lib check of color %d\n",
+			coord2sstr(group, b), color);
+
+	/* Do not try to atari groups that cannot be harmed. */
+	if (miai_2lib(b, group, color))
+		return;
+
+	check_group_atari(b, group, color, to_play, q);
+
+	/* Can we counter-atari another group, if we are the defender? */
+	if (to_play != color)
+		return;
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			if (board_at(b, c) != stone_other(color))
+				continue;
+			group_t g2 = group_at(b, c);
+			if (board_group_info(b, g2).libs != 2)
+				continue;
+			check_group_atari(b, group, color, to_play, q);
+		});
+	} foreach_in_group_end;
 }
 
 static coord_t
