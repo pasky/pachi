@@ -310,7 +310,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		u->t = tree_init(b, color);
 	}
 
-	if (u->dynkomi)
+	if (u->dynkomi && u->dynkomi > b->moves)
 		u->t->extra_komi = get_extra_komi(u, b);
 }
 
