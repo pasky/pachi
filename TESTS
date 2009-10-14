@@ -341,9 +341,11 @@ e2a49	9ucb1amaf	81.2% (+-2%)
 e2a49	9ucb1amaf_	75.8% (+-2.1%)	liberal 2-liberty check (take even liberty where opponent can't play)
 e2a49	9ucb1amaf 2k	71.2% (+-2.3%)
 e2a49	9ucb1amaf 3k	65.5% (+-2.4%)
+e2a49	19ucb1amaf%	25% (+-2.3%)	??? suspicious bump in percentage
 
 f3603	9ucb1amaf	75.8% (+-2.1%)
 f3603	9ucb1amaf~b1	7% (+-1.3%)	val_scale=0.02,val_points=20
+f3603	19ucb1amaf%	19.4% (+-2.1%)
 
 <fixed non-integer results in AMAF>
 
