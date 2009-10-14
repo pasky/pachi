@@ -353,5 +353,5 @@ fba31	9ucb1amaf 40k	94.2% (+-1.2%)
 fba31	9ucb1amaf~b1	78% (+-2.1%)	val_scale=0.02,val_points=20
 fba31	9ucb1amaf~ax	80.8% (+-2%)	val_scale=0.01,val_points=80
 
-
-TODO: playout_amaf with weight 1/2, sibling_amaf with weight 1, 1/2
+c035e	9ucb1amaf	77.5% (+-2.1%)
+1d4f8	9ucb1amaf	77% (+-2.1%)
