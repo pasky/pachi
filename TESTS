@@ -6,9 +6,12 @@ gnugo 19x19 l1 vs l10 k 7.5:	29% (+-2.3%)
 gnugo 19x19 l1 vs l10 k 0.5:	42.2% (+-2.5%)
 gnugo 19x19 l1 vs l10 k -7.5:	52.5% (+-2.5%)
 gnugo 19x19 l1 vs l10 k -14.5:	62.2% (+-2.4%)
+gnugo 19x19 l1 vs l10 k -21.5:	71.5% (+-2.3%)
+gnugo 19x19 l1 vs l10 k -28.5:	78.2% (+-2.1%)
 gnugo 19x19 l1 vs l10 handi 2:	54.7% (+-2.1%)
 gnugo 19x19 l1 vs l10 handi 3:	71.9% (+-2.2%)
 gnugo 19x19 l1 vs l10 handi 4:	82.6% (+-1.9%)
+gnugo 19x19 l1 vs l10 handi 5:	88.9% (+-1.6%)
 
 
 Unfortunately, some early measurements use 95% confidence interval; all newer
