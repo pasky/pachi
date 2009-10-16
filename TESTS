@@ -362,6 +362,12 @@ fba31	19ucb1amaf%~a0	20.9% (+-2.2%)	val_scale=0.01,val_points=10
 fba31	19ucb1amaf%~ax	23.2% (+-2.1%)	val_scale=0.01,val_points=80
 fba31	19ucb1amaf%~b1	22.3% (+-2.2%)	val_scale=0.02,val_points=20
 
+3d0d9	19k-14.5 a%	29.5% (+-2.3%)
+3d0d9	19k-14.5 a%^0	29.9% (+-2.5%)	dynkomi=100
+3d0d9	19k-14.5 a%^1	37% (+-2.4%)	dynkomi=150
+3d0d9	19k-14.5 a%^2	38.6% (+-2.6%)	dynkomi=200
+3d0d9	19k-14.5 a%^3	34.7% (+-2.5%)	dynkomi=250
+
 c40e2	19h2 u1a%	36.2% (+-2.4%)
 c40e2	19h3 u1a%	43% (+-2.5%)
 c40e2	19h4 u1a%	50.7% (+-2.9%)
