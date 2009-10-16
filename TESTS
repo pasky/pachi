@@ -378,3 +378,6 @@ c035e	9ucb1amaf	77.5% (+-2.1%)
 1d4f8	9km0 u1a*3	61% (+-2.4%)	explore_p=0
 1d4f8	9km0 u1a%*1	65% (+-2.4%)	prior=eqex=20,explore_p=0.02
 1d4f8	9km0 u1a%*3	65.2% (+-2.4%)	prior=eqex=20,explore_p=0
+
+7b125	19u1a%		15.7% (+-2.4%)	<exploration bias moves back into the beta-term>
+16ac5	19u1a%		15.3% (+-4.7%)	<restored explore_p_rave bias term on top of 7b125>
