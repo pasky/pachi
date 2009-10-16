@@ -168,7 +168,7 @@ uct_prior_init(char *arg)
 	// gp: 14 vs 0: 44% (+-3.5)
 	p->gp_eqex = p->ko_eqex = 0;
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->cfgd_eqex = p->eye_eqex = -1;
-	p->eqex = 6; /* Even number! */
+	p->eqex = 40; /* Even number! */
 
 	if (arg) {
 		char *optspec, *next = arg;

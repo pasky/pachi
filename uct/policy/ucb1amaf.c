@@ -260,8 +260,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
 
-	// RAVE: 0.2vs0: 40% (+-7.3) 0.1vs0: 54.7% (+-3.5)
-	b->explore_p = 0.1;
+	b->explore_p = 0; // 0.02 can be also good on 19x19 with prior=eqex=40
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
 	b->check_nakade = true;
