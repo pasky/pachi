@@ -28,7 +28,9 @@ struct uct {
 	int threads;
 	int force_seed;
 	bool no_book;
+
 	int dynkomi;
+	int dynkomi_mask;
 
 	float val_scale;
 	int val_points;

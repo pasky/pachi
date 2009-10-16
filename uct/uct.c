@@ -216,7 +216,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		amaf->record_nakade = u->playout_amaf_nakade;
 	}
 
-	if (u->dynkomi > b2.moves)
+	if (u->dynkomi > b2.moves && (player_color & u->dynkomi_mask))
 		b2.komi += get_extra_komi(u, &b2);
 
 	if (passes >= 2) {
@@ -310,7 +310,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		u->t = tree_init(b, color);
 	}
 
-	if (u->dynkomi && u->dynkomi > b->moves)
+	if (u->dynkomi && u->dynkomi > b->moves && (color & u->dynkomi_mask))
 		u->t->extra_komi = get_extra_komi(u, b);
 }
 
@@ -533,6 +533,7 @@ uct_state_init(char *arg)
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = true;
+	u->dynkomi_mask = S_WHITE | S_BLACK;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -621,6 +622,12 @@ uct_state_init(char *arg)
 				 * decreases to basic settings until move
 				 * #optval. */
 				u->dynkomi = optval ? atoi(optval) : 150;
+			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
+				/* Bitmask of colors the player must be
+				 * for dynkomi be applied; you may want
+				 * to use dynkomi_mask=1 to limit dynkomi
+				 * only to games where Pachi is black. */
+				u->dynkomi_mask = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
 				 * influenced by win size. */
