@@ -44,8 +44,6 @@ is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 	/* More than one immediate liberty, thumbs up! */
 	if (immediate_liberty_count(b, to) > 1)
 		return false;
-	if (board_playing_ko_threat(b))
-		return false; // all is fair in a ko
 
 	return is_bad_selfatari_slow(b, color, to);
 }
@@ -56,9 +54,6 @@ static inline bool
 is_ladder(struct board *b, coord_t coord, group_t laddered,
           bool border_ladders, bool middle_ladders)
 {
-	if (board_playing_ko_threat(b))
-		return false; // all is fair in a ko
-
 	enum stone lcolor = board_at(b, group_base(laddered));
 
 	if (DEBUGL(6))

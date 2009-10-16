@@ -727,7 +727,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 
 		/* _Never_ play here if this move plays out
 		 * a caught ladder. */
-		if (coord == ladder) {
+		if (coord == ladder && !board_playing_ko_threat(b)) {
 			/* Note that the opposite is not guarded against;
 			 * we do not advise against capturing a laddered
 			 * group (but we don't encourage it either). Such
@@ -766,7 +766,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 
 	/* Is this move a self-atari? */
 	if (pp->selfatarirate) {
-		if (is_bad_selfatari(b, map->to_play, coord)) {
+		if (!board_playing_ko_threat(b) && is_bad_selfatari(b, map->to_play, coord)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: self-atari\n");
 			add_prior_value(map, coord, 0, games);
