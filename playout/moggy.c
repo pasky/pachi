@@ -568,7 +568,7 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 			group_t g2 = group_at(b, c);
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			check_group_atari(b, group, color, to_play, q);
+			check_group_atari(b, g2, color, to_play, q);
 		});
 	} foreach_in_group_end;
 }
