@@ -7,7 +7,7 @@
 #include "move.h"
 #include "random.h"
 
-#define MQL 64
+#define MQL 128
 struct move_queue {
 	int moves;
 	coord_t move[MQL];
