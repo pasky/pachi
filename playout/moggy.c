@@ -16,6 +16,10 @@
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
+/* Whether to avoid capturing/atariing doomed groups (this is big
+ * performance hit and may reduce playouts balance). */
+#define NO_DOOMED_GROUPS
+
 
 /* Note that the context can be shared by multiple threads! */
 
@@ -350,6 +354,7 @@ scan:;
 	return can;
 }
 
+#ifdef NO_DOOMED_GROUPS
 static bool
 can_be_rescued(struct playout_policy *p, struct board_state *s,
                struct board *b, group_t group, enum stone color)
@@ -361,6 +366,7 @@ can_be_rescued(struct playout_policy *p, struct board_state *s,
 	/* Then, maybe we can capture one of our neighbors? */
 	return can_countercapture(p, s, b, color, group, color, NULL);
 }
+#endif
 
 static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
@@ -392,9 +398,11 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	/* Do not suicide... */
 	if (!can_play_on_lib(p, s, b, group, to_play))
 		return;
+#ifdef NO_DOOMED_GROUPS
 	/* Do not remove group that cannot be saved by the opponent. */
 	if (to_play != color && !can_be_rescued(p, s, b, group, color))
 		return;
+#endif
 	if (PLDEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
 	
@@ -525,14 +533,20 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 			continue;
 #endif
 
+#ifdef NO_DOOMED_GROUPS
 		/* If the owner can't play at the spot, we don't want
 		 * to bother either. */
 		if (is_bad_selfatari(b, owner, lib))
 			continue;
+#endif
 
 		/* Of course we don't want to play bad selfatari
 		 * ourselves, if we are the attacker... */
-		if (to_play != owner && is_bad_selfatari(b, to_play, lib))
+		if (
+#ifdef NO_DOOMED_GROUPS
+		    to_play != owner &&
+#endif
+		    is_bad_selfatari(b, to_play, lib))
 			continue;
 
 		/* Tasty! Crispy! Good! */
