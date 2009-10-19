@@ -18,7 +18,7 @@
 
 /* Whether to avoid capturing/atariing doomed groups (this is big
  * performance hit and may reduce playouts balance). */
-#define NO_DOOMED_GROUPS
+//#define NO_DOOMED_GROUPS
 
 
 /* Note that the context can be shared by multiple threads! */
