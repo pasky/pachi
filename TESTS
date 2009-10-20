@@ -416,3 +416,28 @@ More dynkomi experiments:
 1d4f8	19h4ua%2*3~ax^2	66.8% (+-2.4%)	explore_p=0,prior=eqex=40,val_scale=0.01,val_points=80,dynkomi=200
 
 2e4fa	19u1a%*1	30.1% (+-2.3%)	explore_p=0.02
+
+<New defaults - explore_p=0,prior=eqex=40>
+
+d032a	9u1a		82.2% (+-1.9%)
+d032a	9u1a%1		85.2% (+-1.8%)	prior=eqex=20
+d032a	9k0u1a		66% (+-2.4%)
+d032a	9k0u1a@		62.2% (+-2.4%)	prior=ko=-1
+d032a	9k0u1a%1	64.8% (+-2.4%)	prior=eqex=20
+d032a	9k0u1a~a1	59.5% (+-2.5%)	val_scale=0.01,val_points=20
+d032a	9k0u1a~ax	67.8% (+-2.3%)	val_scale=0.01,val_points=80
+d032a	9k0u1a~b1	65.8% (+-2.4%)	val_scale=0.02,val_points=20
+d032a	9k0u1a~bx	65.5% (+-2.4%)	val_scale=0.02,val_points=80
+d032a	9k0u1a*1	64.2% (+-2.4%)	explore_p=0.02
+d032a	9k0u1a*1%1	67% (+-2.4%)	explore_p=0.02,prior=eqex=20
+d032a	9k0u1a^10	62.8% (+-2.4%)	dynkomi=10
+d032a	9k0u1a^20	64% (+-2.4%)	dynkomi=20
+d032a	9k0u1a^40	50.5% (+-2.5%)	dynkomi=40
+d032a	9k0u1a^60	25.3% (+-2.5%)	dynkomi=60
+d032a	19u1a		33% (+-3.2%)
+d032a	19u1a@		33.5% (+-3.3%)	prior=ko=-1
+d032a	19u1a*1%1	30% (+-3.1%)	explore_p=0.02,prior=eqex=20
+d032a	19u1a~a20	33% (+-2.8%)	val_scale=0.01,val_points=20
+d032a	19u1a~a80	31.2% (+-3.2%)	val_scale=0.01,val_points=80
+d032a	19u1a~a150	34.5% (+-2.8%)	val_scale=0.01,val_points=150
+d032a	19u1a~a360	33.2% (+-2.8%)	val_scale=0.01,val_points=360
