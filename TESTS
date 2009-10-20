@@ -396,7 +396,23 @@ c035e	9ucb1amaf	77.5% (+-2.1%)
 1d4f8	19u1a%*3	22.4% (+-2.9%)	explore_p=0
 1d4f8	19u1a%2*3	29.4% (+-3.2%)	explore_p=0,prior=eqex=40
 1d4f8-67561 19u1a%	10.6% (+-2.3%)	1d4f8 perspective - something deeply rotten, eh? ;)
-1d4f8-67561 19u1a%*1	41.7% (+-2.9%)	explore_p=0.02, 1d4f8 perspective - better, but still regression
+c035e-67561 19u1a%*1	44.1% (+-2.6%)	explore_p=0.02, c035e perspective
+1d4f8-67561 19u1a%*1	41.7% (+-2.9%)	explore_p=0.02, 1d4f8 perspective - better than old exp., but still regression
 
 7b125	19u1a%		15.7% (+-2.4%)	<exploration bias moves back into the beta-term>
 16ac5	19u1a%		15.3% (+-4.7%)	<restored explore_p_rave bias term on top of 7b125>
+
+More dynkomi experiments:
+1d4f8	19h2ua%*1~ax	31.8% (+-2.5%)	explore_p=0.02,val_scale=0.01,val_points=80
+1d4f8	19h2ua%*1~ax^2	38.4% (+-2.6%)	explore_p=0.02,val_scale=0.01,val_points=80,dynkomi=200
+1d4f8	19h4ua%*1	49.2% (+-2.5%)	explore_p=0.02
+1d4f8	19h4ua%*1^1	59.5% (+-2.5%)	explore_p=0.02,dynkomi=150
+1d4f8	19h4ua%*1^2	63.8% (+-2.4%)	explore_p=0.02,dynkomi=200
+1d4f8	19h4ua%*1~a1	52.2% (+-2.5%)	explore_p=0.02,val_scale=0.01,val_points=20
+1d4f8	19h4ua%*1~a1^1	58.5% (+-2.5%)	explore_p=0.02,val_scale=0.01,val_points=20,dynkomi=150
+1d4f8	19h4ua%*1~ax	51.5% (+-2.5%)	explore_p=0.02,val_scale=0.01,val_points=80
+1d4f8	19h4ua%*1~ax^1	58.7% (+-2.6%)	explore_p=0.02,val_scale=0.01,val_points=80,dynkomi=150
+1d4f8	19h4ua%*1~ax^2	63.5% (+-2.4%)	explore_p=0.02,val_scale=0.01,val_points=80,dynkomi=200
+1d4f8	19h4ua%2*3~ax^2	66.8% (+-2.4%)	explore_p=0,prior=eqex=40,val_scale=0.01,val_points=80,dynkomi=200
+
+2e4fa	19u1a%*1	30.1% (+-2.3%)	explore_p=0.02
