@@ -441,3 +441,15 @@ d032a	19u1a~a20	33% (+-2.8%)	val_scale=0.01,val_points=20
 d032a	19u1a~a80	31.2% (+-3.2%)	val_scale=0.01,val_points=80
 d032a	19u1a~a150	34.5% (+-2.8%)	val_scale=0.01,val_points=150
 d032a	19u1a~a360	33.2% (+-2.8%)	val_scale=0.01,val_points=360
+
+<Fix the counter-atari check to actuall work at all>
+
+8ce82	9u1a		85.2% (+-1.8%)
+8ce82	9k0u1a		30.2% (+-2.3%)
+
+<#define NO_DOOMED_GROUPS; this also pertains a speedup,
+ so we test with original 5k and 6.6k playouts (appropriate
+ for measured speedup on 19x19)>
+
+f4cb0	9u1a		83.2% (+-1.9%)
+f4cb0	9u1a$		87.5% (+-1.7%)	games=6666
