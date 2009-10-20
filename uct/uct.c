@@ -257,7 +257,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	if (result != 0) {
 		float rval = result > 0;
 		if (u->val_scale) {
-			float sval = (float) abs(result) / u->val_points;
+			int vp = u->val_points;
+			if (!vp) {
+				vp = board_size(b) - 1; vp *= vp;
+			}
+
+			float sval = (float) abs(result) / vp;
 			sval = sval > 1 ? 1 : sval;
 			if (result < 0) sval = 1 - sval;
 			if (u->val_extra)
@@ -535,6 +540,8 @@ uct_state_init(char *arg)
 	u->amaf_prior = true;
 	u->dynkomi_mask = S_WHITE | S_BLACK;
 
+	u->val_scale = 0.02; u->val_points = 0;
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -630,11 +637,11 @@ uct_state_init(char *arg)
 				u->dynkomi_mask = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
-				 * influenced by win size. */
+				 * influenced by win size. Zero means it isn't. */
 				u->val_scale = atof(optval);
 			} else if (!strcasecmp(optname, "val_points") && optval) {
 				/* Maximum size of win to be scaled into game
-				 * result value. */
+				 * result value. Zero means boardsize^2. */
 				u->val_points = atoi(optval) * 2; // result values are doubled
 			} else if (!strcasecmp(optname, "val_extra")) {
 				/* If false, the score coefficient will be simply
