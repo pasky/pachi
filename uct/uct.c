@@ -287,36 +287,38 @@ static void
 prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promote)
 {
 	struct uct *u = e->data;
+	struct uct_board *ub = b->es;
 
-	if (u->t && (!b->moves || color != stone_other(u->t->root_color))) {
-		/* Stale state from last game */
-		tree_done(u->t);
-		u->t = NULL;
-	}
+	if (ub) {
+		/* Verify that we don't have stale state from last game. */
+		assert(ub->t);
+		assert(b->moves && color == stone_other(ub->t->root_color));
 
-	if (!u->t) {
-		u->t = tree_init(b, color);
+	} else {
+		/* We need fresh state. */
+		b->es = ub = calloc(1, sizeof(*ub));
+		ub->t = tree_init(b, color);
 		if (u->force_seed)
 			fast_srandom(u->force_seed);
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
 		if (!u->no_book && b->moves < 2)
-			tree_load(u->t, b);
+			tree_load(ub->t, b);
 	}
 
 	/* XXX: We hope that the opponent didn't suddenly play
 	 * several moves in the row. */
-	if (!is_resign(promote) && !tree_promote_at(u->t, b, promote)) {
+	if (!is_resign(promote) && !tree_promote_at(ub->t, b, promote)) {
 		if (UDEBUGL(2))
 			fprintf(stderr, "<cannot find node to promote>\n");
 		/* Reset tree */
-		tree_done(u->t);
-		u->t = tree_init(b, color);
+		tree_done(ub->t);
+		ub->t = tree_init(b, color);
 	}
 
 	if (u->dynkomi && u->dynkomi > b->moves && (color & u->dynkomi_mask))
-		u->t->extra_komi = get_extra_komi(u, b);
+		ub->t->extra_komi = get_extra_komi(u, b);
 }
 
 /* Set in main thread in case the playouts should stop. */
@@ -394,6 +396,17 @@ spawn_helper(void *ctx_)
 	return ctx;
 }
 
+void
+uct_done_board_state(struct engine *e, struct board *b)
+{
+	struct uct_board *ub = b->es;
+	assert(ub);
+	assert(ub->t);
+	tree_done(ub->t);
+	free(ub);
+	b->es = NULL;
+}
+
 static void
 uct_notify_play(struct engine *e, struct board *b, struct move *m)
 {
@@ -407,6 +420,9 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* Seed the tree. */
 	prepare_move(e, b, color, resign);
+
+	struct uct_board *ub = b->es;
+	assert(ub);
 
 	if (b->superko_violation) {
 		fprintf(stderr, "!!! WARNING: SUPERKO VIOLATION OCCURED BEFORE THIS MOVE\n");
@@ -423,7 +439,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	int played_games = 0;
 	if (!u->threads) {
-		played_games = uct_playouts(u, b, color, u->t);
+		played_games = uct_playouts(u, b, color, ub->t);
 	} else {
 		pthread_t threads[u->threads];
 		int joined = 0;
@@ -433,7 +449,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		for (int ti = 0; ti < u->threads; ti++) {
 			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 			ctx->u = u; ctx->b = b; ctx->color = color;
-			ctx->t = tree_copy(u->t); ctx->tid = ti;
+			ctx->t = tree_copy(ub->t); ctx->tid = ti;
 			ctx->seed = fast_random(65536) + ti;
 			pthread_create(&threads[ti], NULL, spawn_helper, ctx);
 			if (UDEBUGL(2))
@@ -448,7 +464,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 			pthread_join(threads[finish_thread], (void **) &ctx);
 			played_games += ctx->games;
 			joined++;
-			tree_merge(u->t, ctx->t);
+			tree_merge(ub->t, ctx->t);
 			tree_done(ctx->t);
 			free(ctx);
 			if (UDEBUGL(2))
@@ -460,29 +476,29 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		}
 		pthread_mutex_unlock(&finish_mutex);
 
-		tree_normalize(u->t, u->threads);
+		tree_normalize(ub->t, u->threads);
 	}
 
 	if (UDEBUGL(2))
-		tree_dump(u->t, u->dumpthres);
+		tree_dump(ub->t, u->dumpthres);
 
-	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
+	struct tree_node *best = u->policy->choose(u->policy, ub->t->root, b, color);
 	if (!best) {
-		tree_done(u->t); u->t = NULL;
+		uct_done_board_state(e, b);
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(0))
-		progress_status(u, u->t, color, played_games);
+		progress_status(u, ub->t, color, played_games);
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
-			tree_node_get_value(u->t, best, u, 1),
-			best->u.playouts, u->t->root->u.playouts, played_games);
-	if (tree_node_get_value(u->t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
-		tree_done(u->t); u->t = NULL;
+			tree_node_get_value(ub->t, best, u, 1),
+			best->u.playouts, ub->t->root->u.playouts, played_games);
+	if (tree_node_get_value(ub->t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
+		uct_done_board_state(e, b);
 		return coord_copy(resign);
 	}
-	tree_promote_node(u->t, best);
+	tree_promote_node(ub->t, best);
 	return coord_copy(best->coord);
 }
 
@@ -490,26 +506,26 @@ bool
 uct_genbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
-	u->t = tree_init(b, color);
-	tree_load(u->t, b);
+	struct tree *t = tree_init(b, color);
+	tree_load(t, b);
 
 	int i;
 	for (i = 0; i < u->games; i++) {
-		int result = uct_playout(u, b, color, u->t);
+		int result = uct_playout(u, b, color, t);
 		if (result == 0) {
 			/* Tree descent has hit invalid move. */
 			continue;
 		}
 
 		if (i > 0 && !(i % 10000)) {
-			progress_status(u, u->t, color, i);
+			progress_status(u, t, color, i);
 		}
 	}
-	progress_status(u, u->t, color, i);
+	progress_status(u, t, color, i);
 
-	tree_save(u->t, b, u->games / 100);
+	tree_save(t, b, u->games / 100);
 
-	tree_done(u->t);
+	tree_done(t);
 
 	return true;
 }
@@ -517,11 +533,10 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 void
 uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
-	struct uct *u = e->data;
-	u->t = tree_init(b, color);
-	tree_load(u->t, b);
-	tree_dump(u->t, 0);
-	tree_done(u->t);
+	struct tree *t = tree_init(b, color);
+	tree_load(t, b);
+	tree_dump(t, 0);
+	tree_done(t);
 }
 
 
@@ -670,7 +685,6 @@ uct_state_init(char *arg)
 	return u;
 }
 
-
 struct engine *
 engine_uct_init(char *arg)
 {
@@ -680,6 +694,7 @@ engine_uct_init(char *arg)
 	e->comment = "I'm playing UCT. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please capture all dead stones before passing; it will not cost you points (area scoring is used).";
 	e->genmove = uct_genmove;
 	e->notify_play = uct_notify_play;
+	e->done_board_state = uct_done_board_state;
 	e->data = u;
 
 	return e;

@@ -37,7 +37,6 @@ struct uct {
 	bool val_extra;
 
 	struct uct_policy *policy;
-	struct tree *t;
 	struct playout_policy *playout;
 	struct uct_prior *prior;
 };
@@ -58,6 +57,10 @@ struct uct_policy {
 	uctp_prior prior;
 	bool wants_amaf;
 	void *data;
+};
+
+struct uct_board {
+	struct tree *t;
 };
 
 #endif
