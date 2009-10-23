@@ -446,6 +446,8 @@ d032a	19u1a~a360	33.2% (+-2.8%)	val_scale=0.01,val_points=360
 
 8ce82	9u1a		85.2% (+-1.8%)
 8ce82	9k0u1a		69.8% (+-2.3%)
+8ce82	9u1a$		89% (+-1.6%)	games=6666
+8ce82	9k0u1a$		72.8% (+-2.2%)	games=6666
 8ce82	19u1a		36.8% (+-2.4%)
 8ce82	19u1a@		34.5% (+-2.4%)	prior=ko=-1
 8ce82	19u1a~a361	36.8% (+-2.4%)	val_scale=0.01,val_points=361
@@ -467,8 +469,12 @@ f4cb0	19u1a$~b361	42.5% (+-2.5%)	games=6666,val_scale=0.02,val_points=361
 <Set default to val_scale=0.02,val_points=-1>
 
 7d1c7	9k0u1a		63.5% (+-2.4%)
-7d1c7	9k0u1a%		68.2% (+-2.3%)	games=6666
+7d1c7	9k0u1a$		68.2% (+-2.3%)	games=6666
 7d1c7	9k0u1a~x	61.8% (+-2.4%)	val_extra
 7d1c7	9k0u1a~10	68.2% (+-2.3%)	val_points=10
 7d1c7	9k0u1a~20	71.5% (+-2.3%)	val_points=20
+7d1c7	19u1a		30.5% (+-2.3%)
 7d1c7	19u1a$		40.2% (+-2.2%)	games=6666
+7d1c7	19u1a~x		31.2% (+-2.3%)	val_extra
+7d1c7	19u1a~10	30.2% (+-2.3%)	val_points=10
+7d1c7	19u1a~20	30.8% (+-2.3%)	val_points=20
