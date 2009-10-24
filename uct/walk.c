@@ -92,7 +92,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	int parity = (next_color == player_color ? 1 : -1);
 	if (n->u.playouts >= u->expand_p) {
 		// fprintf(stderr, "expanding %s (%p ^-%p)\n", coord2sstr(n->coord, b), n, n->parent);
-		tree_expand_node(t, n, b, next_color, u->radar_d, u, parity);
+		tree_expand_node(t, n, b, next_color, u, parity);
 	}
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",

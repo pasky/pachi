@@ -343,7 +343,7 @@ tree_normalize(struct tree *tree, int factor)
 
 
 void
-tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, int radar, struct uct *u, int parity)
+tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity)
 {
 	/* First, get a map of prior values to initialize the new
 	 * nodes with. */
@@ -361,9 +361,6 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	map.consider[pass] = true;
 	foreach_point(b) {
 		if (board_at(b, c) != S_NONE)
-			continue;
-		/* This looks very useful on large boards - weeds out huge amount of crufty moves. */
-		if (b->hash /* not empty board */ && radar && !board_stone_radar(b, c, radar))
 			continue;
 		pm.coord = c;
 		if (!board_is_valid_move(b, &pm))

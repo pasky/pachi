@@ -300,9 +300,6 @@ uct_state_init(char *arg)
 				u->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "expand_p") && optval) {
 				u->expand_p = atoi(optval);
-			} else if (!strcasecmp(optname, "radar_d") && optval) {
-				/* For 19x19, it is good idea to set this to 3. */
-				u->radar_d = atoi(optval);
 			} else if (!strcasecmp(optname, "dumpthres") && optval) {
 				u->dumpthres = atoi(optval);
 			} else if (!strcasecmp(optname, "playout_amaf")) {
