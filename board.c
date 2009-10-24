@@ -225,8 +225,6 @@ board_print_bottom(struct board *board, FILE *f, int c)
 	fprintf(f, "\n");
 }
 
-typedef void (*board_cprint)(struct board *b, coord_t c, FILE *f);
-
 static void
 board_print_row(struct board *board, int y, FILE *f, board_cprint cprint)
 {
@@ -248,8 +246,8 @@ board_print_row(struct board *board, int y, FILE *f, board_cprint cprint)
 	fprintf(f, "\n");
 }
 
-static void
-board_print_x(struct board *board, FILE *f, board_cprint cprint)
+void
+board_print_custom(struct board *board, FILE *f, board_cprint cprint)
 {
 	fprintf(f, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
 		board->moves, board->komi, board->handicap,
@@ -270,7 +268,7 @@ cprint_group(struct board *board, coord_t c, FILE *f)
 void
 board_print(struct board *board, FILE *f)
 {
-	board_print_x(board, f, DEBUGL(6) ? cprint_group : NULL);
+	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL);
 }
 
 
