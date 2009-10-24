@@ -29,13 +29,17 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 #define MC_GAMES	80000
 #define MC_GAMELEN	MAX_GAMELEN
 
+/* How big proportion of ownermap counts must be of one color to consider
+ * the point sure. */
+#define GJ_THRES	0.8
+
 
 void
 uct_done_board_state(struct engine *e, struct board *b)
 {
 	struct uct_board *ub = b->es;
 	assert(ub);
-	assert(ub->t);
+	assert(ub->t && ub->ownermap.map);
 	tree_done(ub->t);
 	free(ub->ownermap.map);
 	free(ub);
@@ -111,7 +115,7 @@ cprint_ownermap(struct board *board, coord_t c, FILE *f)
 	struct uct_board *ub = board->es;
 	if (!ub) return; // no UCT state; can happen e.g. after resign
 	char chr[] = ":XO,"; // dame, black, white, unclear
-	char ch = chr[playout_ownermap_judge_point(&ub->ownermap, c, 0.8)];
+	char ch = chr[playout_ownermap_judge_point(&ub->ownermap, c, GJ_THRES)];
 	fprintf(f, "%c ", ch);
 }
 
