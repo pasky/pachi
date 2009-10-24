@@ -22,7 +22,8 @@ struct uct_prior {
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6
 	 * playouts per source seems best. */
 	int eqex;
-	int even_eqex, gp_eqex, policy_eqex, b19_eqex, cfgd_eqex, eye_eqex, ko_eqex;
+	int even_eqex, gp_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex;
+	int cfgd1_eqex, cfgd2_eqex, cfgd3_eqex;
 };
 
 void
@@ -135,7 +136,7 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 		if (distances[c] > 3)
 			continue;
 		assert(distances[c] != 0);
-		int bonuses[] = { 0, u->prior->cfgd_eqex, u->prior->cfgd_eqex / 2, u->prior->cfgd_eqex / 2 };
+		int bonuses[] = { 0, u->prior->cfgd1_eqex, u->prior->cfgd2_eqex, u->prior->cfgd3_eqex };
 		int bonus = bonuses[distances[c]];
 		add_prior_value(map, c, 1, bonus);
 	} foreach_point_end;
@@ -167,7 +168,8 @@ uct_prior_init(char *arg)
 
 	// gp: 14 vs 0: 44% (+-3.5)
 	p->gp_eqex = p->ko_eqex = 0;
-	p->even_eqex = p->policy_eqex = p->b19_eqex = p->cfgd_eqex = p->eye_eqex = -1;
+	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = -1;
+	p->cfgd1_eqex = p->cfgd2_eqex = p->cfgd3_eqex = -1;
 	p->eqex = 40; /* Even number! */
 
 	if (arg) {
@@ -192,8 +194,12 @@ uct_prior_init(char *arg)
 				p->policy_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "b19") && optval) {
 				p->b19_eqex = atoi(optval);
-			} else if (!strcasecmp(optname, "cfgd") && optval) {
-				p->cfgd_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "cfgd1") && optval) {
+				p->cfgd1_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "cfgd2") && optval) {
+				p->cfgd2_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "cfgd3") && optval) {
+				p->cfgd3_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "eye") && optval) {
 				p->eye_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "ko") && optval) {
@@ -209,7 +215,9 @@ uct_prior_init(char *arg)
 	if (p->gp_eqex < 0) p->gp_eqex = p->eqex;
 	if (p->policy_eqex < 0) p->policy_eqex = p->eqex;
 	if (p->b19_eqex < 0) p->b19_eqex = p->eqex;
-	if (p->cfgd_eqex < 0) p->cfgd_eqex = p->eqex;
+	if (p->cfgd1_eqex < 0) p->cfgd1_eqex = p->eqex;
+	if (p->cfgd2_eqex < 0) p->cfgd2_eqex = p->eqex / 2;
+	if (p->cfgd3_eqex < 0) p->cfgd3_eqex = p->eqex / 2;
 	if (p->eye_eqex < 0) p->eye_eqex = p->eqex;
 	if (p->ko_eqex < 0) p->ko_eqex = p->eqex;
 
