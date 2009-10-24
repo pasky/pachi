@@ -115,7 +115,10 @@ play_random:
 	if (ownermap) {
 		ownermap->playouts++;
 		foreach_point(b) {
-			ownermap->map[c][board_at(b, c)]++;
+			enum stone color = board_at(b, c);
+			if (color == S_NONE)
+				color = board_get_one_point_eye(b, &c);
+			ownermap->map[c][color]++;
 		} foreach_point_end;
 	}
 
