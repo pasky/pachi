@@ -241,7 +241,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (u->val_scale) {
 			int vp = u->val_points;
 			if (!vp) {
-				vp = board_size(b) - 1; vp *= vp;
+				vp = board_size(b) - 1; vp *= vp; vp *= 2;
 			}
 
 			float sval = (float) abs(result) / vp;
