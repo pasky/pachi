@@ -523,8 +523,8 @@ engine_uct_init(char *arg)
 	e->done_board_state = uct_done_board_state;
 	e->data = u;
 
-	const char banner[] = "I'm playing UCT. I will resign when I lost, "
-		"or think I'm winning and play until you pass.";
+	const char banner[] = "I'm playing UCT. When I'm losing, I will resign, "
+		"if I think I win, I play until you pass.";
 	if (!u->banner) u->banner = "";
 	e->comment = malloc(sizeof(banner) + strlen(u->banner) + 1);
 	sprintf(e->comment, "%s %s", banner, u->banner);
