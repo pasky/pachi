@@ -14,6 +14,7 @@
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "random.h"
+#include "tactics.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"

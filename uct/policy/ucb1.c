@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "move.h"
 #include "random.h"
+#include "tactics.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 
