@@ -146,7 +146,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 }
 
 static void
-cprint_ownermap(struct board *board, coord_t c, FILE *f)
+uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
 {
 	struct uct_board *ub = board->es;
 	if (!ub) return; // no UCT state; can happen e.g. after resign
@@ -469,7 +469,7 @@ engine_uct_init(char *arg)
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "UCT Engine";
 	e->comment = "I'm playing UCT. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please capture all dead stones before passing; it will not cost you points (area scoring is used).";
-	e->printhook = cprint_ownermap;
+	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
 	e->genmove = uct_genmove;
 	e->dead_group_list = uct_dead_group_list;
