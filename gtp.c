@@ -162,8 +162,9 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		char *str = coord2str(*c, board);
 		if (DEBUGL(1))
 			fprintf(stderr, "playing move %s\n", str);
-		if (DEBUGL(1))
-			board_print(board, stderr);
+		if (DEBUGL(1)) {
+			board_print_custom(board, stderr, engine->printhook);
+		}
 		gtp_reply(id, str, NULL);
 		free(str); coord_done(c);
 
