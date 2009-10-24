@@ -39,44 +39,6 @@ can_pass(struct board *b, enum stone color)
 }
 
 
-static void
-prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promote)
-{
-	struct uct *u = e->data;
-	struct uct_board *ub = b->es;
-
-	if (ub) {
-		/* Verify that we don't have stale state from last game. */
-		assert(ub->t);
-		assert(b->moves && color == stone_other(ub->t->root_color));
-
-	} else {
-		/* We need fresh state. */
-		b->es = ub = calloc(1, sizeof(*ub));
-		ub->t = tree_init(b, color);
-		if (u->force_seed)
-			fast_srandom(u->force_seed);
-		if (UDEBUGL(0))
-			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
-		//board_print(b, stderr);
-		if (!u->no_book && b->moves < 2)
-			tree_load(ub->t, b);
-	}
-
-	/* XXX: We hope that the opponent didn't suddenly play
-	 * several moves in the row. */
-	if (is_resign(promote) || !tree_promote_at(ub->t, b, promote)) {
-		if (UDEBUGL(2))
-			fprintf(stderr, "<cannot find node to promote>\n");
-		/* Reset tree */
-		tree_done(ub->t);
-		ub->t = tree_init(b, color);
-	}
-
-	if (u->dynkomi && u->dynkomi > b->moves && (color & u->dynkomi_mask))
-		ub->t->extra_komi = uct_get_extra_komi(u, b);
-}
-
 void
 uct_done_board_state(struct engine *e, struct board *b)
 {
@@ -91,9 +53,61 @@ uct_done_board_state(struct engine *e, struct board *b)
 static void
 uct_notify_play(struct engine *e, struct board *b, struct move *m)
 {
-	prepare_move(e, b, m->color, m->coord);
+	struct uct *u = e->data;
+	struct uct_board *ub = b->es;
+	if (!ub) {
+		/* No state, no worry. */
+		return;
+	}
+
+	if (is_resign(m->coord)) {
+		/* Reset state. */
+		uct_done_board_state(e, b);
+		return;
+	}
+
+	/* Promote node of the appropriate move to the tree root. */
+	assert(ub->t->root);
+	if (!tree_promote_at(ub->t, b, m->coord)) {
+		if (UDEBUGL(0))
+			fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+		uct_done_board_state(e, b);
+		return;
+	}
 }
 
+
+static void
+prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promote)
+{
+	struct uct *u = e->data;
+	struct uct_board *ub = b->es;
+
+	if (ub) {
+		/* Verify that we don't have stale state from last game. */
+		assert(ub->t && b->moves);
+		if (color != stone_other(ub->t->root_color)) {
+			fprintf(stderr, "Fatal: Non-alternating play detected %d %d\n",
+				color, ub->t->root_color);
+			exit(1);
+		}
+
+	} else {
+		/* We need fresh state. */
+		b->es = ub = calloc(1, sizeof(*ub));
+		ub->t = tree_init(b, color);
+		if (u->force_seed)
+			fast_srandom(u->force_seed);
+		if (UDEBUGL(0))
+			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
+		//board_print(b, stderr);
+		if (!u->no_book && b->moves < 2)
+			tree_load(ub->t, b);
+	}
+
+	if (u->dynkomi && u->dynkomi > b->moves && (color & u->dynkomi_mask))
+		ub->t->extra_komi = uct_get_extra_komi(u, b);
+}
 
 /* Set in main thread in case the playouts should stop. */
 volatile sig_atomic_t uct_halt = 0;
