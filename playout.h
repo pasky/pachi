@@ -1,6 +1,8 @@
 #ifndef ZZGO_PLAYOUT_H
 #define ZZGO_PLAYOUT_H
 
+#include <signal.h> // sig_atomic_t
+
 #define MAX_GAMELEN 600
 
 struct board;
@@ -30,12 +32,15 @@ struct playout_policy {
 };
 
 struct playout_ownermap {
-	int playouts;
+	/* Map of final owners of all intersections on the board. */
+	/* This may be shared between multiple threads! */
+	/* XXX: We assume sig_atomic_t is thread-atomic. This may not
+	 * be true in pathological cases. */
+	sig_atomic_t playouts;
 	/* At the final board position, for each coordinate increase the
 	 * counter of appropriate color. */
-	int *map[S_MAX]; // [board_size2(b)]
+	sig_atomic_t *(map[S_MAX]); // [board_size2(b)]
 };
-
 
 struct playout_amafmap {
 	/* Record of the random playout - for each intersection:
@@ -81,5 +86,8 @@ int play_random_game(struct board *b, enum stone starting_color, int gamelen,
                      struct playout_amafmap *amafmap,
 		     struct playout_ownermap *ownermap,
 		     struct playout_policy *policy);
+
+/* Ownermap utility routines. */
+void playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_ownermap *src);
 
 #endif

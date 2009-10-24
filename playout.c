@@ -115,9 +115,18 @@ play_random:
 	if (ownermap) {
 		ownermap->playouts++;
 		foreach_point(b) {
-			ownermap->map[board_at(b, c)]++;
+			ownermap->map[c][board_at(b, c)]++;
 		} foreach_point_end;
 	}
 
 	return result;
+}
+
+void
+playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_ownermap *src)
+{
+	dst->playouts += src->playouts;
+	for (int i = 0; i < bsize2; i++)
+		for (int j = 0; j < S_MAX; j++)
+			dst->map[i][j] += src->map[i][j];
 }
