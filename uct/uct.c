@@ -151,6 +151,8 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
 	struct uct_board *ub = b->es;
+	bool mock_state = false;
+
 	if (!ub) {
 		/* No state, but we cannot just back out - we might
 		 * have passed earlier, only assuming some stones are
@@ -162,9 +164,17 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 		ub = b->es; assert(ub);
 		for (int i = 0; i < GJ_MINGAMES; i++)
 			uct_playout(u, b, S_BLACK, ub->t);
+		mock_state = true;
 	}
 
 	dead_group_list(u, b, mq);
+
+	if (mock_state) {
+		/* Clean up the mock state in case we will receive
+		 * a genmove; we could get a non-alternating-move
+		 * error from prepare_move() in that case otherwise. */
+		uct_done_board_state(e, b);
+	}
 }
 
 static void
