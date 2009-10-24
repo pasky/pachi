@@ -97,7 +97,7 @@ enum point_judgement {
 	PJ_DAME = S_NONE,
 	PJ_BLACK = S_BLACK,
 	PJ_WHITE = S_WHITE,
-	PJ_UNKNOWN = 4,
+	PJ_UNKNOWN = 3,
 };
 enum point_judgement playout_ownermap_judge_point(struct playout_ownermap *ownermap, coord_t c, float thres);
 
