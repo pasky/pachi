@@ -25,6 +25,7 @@
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
+static void uct_done_board_state(struct engine *e, struct board *b);
 
 
 #define MC_GAMES	80000
@@ -33,45 +34,6 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 /* How big proportion of ownermap counts must be of one color to consider
  * the point sure. */
 #define GJ_THRES	0.8
-
-
-void
-uct_done_board_state(struct engine *e, struct board *b)
-{
-	struct uct_board *ub = b->es;
-	assert(ub);
-	assert(ub->t && ub->ownermap.map);
-	tree_done(ub->t);
-	free(ub->ownermap.map);
-	free(ub);
-	b->es = NULL;
-}
-
-static void
-uct_notify_play(struct engine *e, struct board *b, struct move *m)
-{
-	struct uct *u = e->data;
-	struct uct_board *ub = b->es;
-	if (!ub) {
-		/* No state, no worry. */
-		return;
-	}
-
-	if (is_resign(m->coord)) {
-		/* Reset state. */
-		uct_done_board_state(e, b);
-		return;
-	}
-
-	/* Promote node of the appropriate move to the tree root. */
-	assert(ub->t->root);
-	if (!tree_promote_at(ub->t, b, m->coord)) {
-		if (UDEBUGL(0))
-			fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
-		uct_done_board_state(e, b);
-		return;
-	}
-}
 
 
 static void
@@ -112,6 +74,42 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 
 
 static void
+uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
+{
+	struct uct_board *ub = board->es;
+	if (!ub) return; // no UCT state; can happen e.g. after resign
+	char chr[] = ":XO,"; // dame, black, white, unclear
+	char ch = chr[playout_ownermap_judge_point(&ub->ownermap, c, GJ_THRES)];
+	fprintf(f, "%c ", ch);
+}
+
+static void
+uct_notify_play(struct engine *e, struct board *b, struct move *m)
+{
+	struct uct *u = e->data;
+	struct uct_board *ub = b->es;
+	if (!ub) {
+		/* No state, no worry. */
+		return;
+	}
+
+	if (is_resign(m->coord)) {
+		/* Reset state. */
+		uct_done_board_state(e, b);
+		return;
+	}
+
+	/* Promote node of the appropriate move to the tree root. */
+	assert(ub->t->root);
+	if (!tree_promote_at(ub->t, b, m->coord)) {
+		if (UDEBUGL(0))
+			fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+		uct_done_board_state(e, b);
+		return;
+	}
+}
+
+static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
@@ -146,13 +144,15 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 }
 
 static void
-uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
+uct_done_board_state(struct engine *e, struct board *b)
 {
-	struct uct_board *ub = board->es;
-	if (!ub) return; // no UCT state; can happen e.g. after resign
-	char chr[] = ":XO,"; // dame, black, white, unclear
-	char ch = chr[playout_ownermap_judge_point(&ub->ownermap, c, GJ_THRES)];
-	fprintf(f, "%c ", ch);
+	struct uct_board *ub = b->es;
+	assert(ub);
+	assert(ub->t && ub->ownermap.map);
+	tree_done(ub->t);
+	free(ub->ownermap.map);
+	free(ub);
+	b->es = NULL;
 }
 
 
