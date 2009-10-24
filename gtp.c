@@ -10,6 +10,7 @@
 #include "debug.h"
 #include "engine.h"
 #include "gtp.h"
+#include "mq.h"
 #include "uct/uct.h"
 #include "version.h"
 
@@ -23,6 +24,13 @@ gtp_prefix(char prefix, int id)
 }
 
 void
+gtp_flush(void)
+{
+	putchar('\n');
+	fflush(stdout);
+}
+
+void
 gtp_output(char prefix, int id, va_list params)
 {
 	gtp_prefix(prefix, id);
@@ -30,8 +38,8 @@ gtp_output(char prefix, int id, va_list params)
 	while ((s = va_arg(params, char *))) {
 		fputs(s, stdout);
 	}
-	putchar('\n'); putchar('\n');
-	fflush(stdout);
+	putchar('\n');
+	gtp_flush();
 }
 
 void
@@ -205,7 +213,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		board_handicap(board, stones, stdout);
 		if (DEBUGL(1))
 			board_print(board, stderr);
-		printf("\n\n"); fflush(stdout);
+		putchar('\n');
+		gtp_flush();
 
 	} else if (!strcasecmp(cmd, "final_score")) {
 		float score = board_official_score(board);
@@ -226,8 +235,46 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 	} else if (!strcasecmp(cmd, "final_status_list")) {
 		char *arg;
 		next_tok(arg);
-		assert(!strcasecmp(arg, "dead")); // yes, I know...
-		gtp_reply(id, "", NULL);
+		struct move_queue q = { .moves = 0 };
+		if (engine->dead_group_list)
+			engine->dead_group_list(engine, board, &q);
+		/* else we return empty list - i.e. engine not supporting
+		 * this assumes all stones alive at the game end. */
+		if (!strcasecmp(arg, "dead")) {
+			gtp_prefix('=', id);
+			for (int i = 0; i < q.moves; i++) {
+				foreach_in_group(board, q.move[i]) {
+					printf("%s ", coord2sstr(c, board));
+				} foreach_in_group_end;
+				putchar('\n');
+			}
+			if (!q.moves)
+				putchar('\n');
+			gtp_flush();
+		} else if (!strcasecmp(arg, "seki") || !strcasecmp(arg, "alive")) {
+			gtp_prefix('=', id);
+			bool printed_group = false;
+			foreach_point(board) { // foreach_group, effectively
+				group_t g = group_at(board, c);
+				if (!g || g != c) continue;
+
+				for (int i = 0; i < q.moves; i++) {
+					if (q.move[i] == g)
+						goto next_group;
+				}
+				foreach_in_group(board, g) {
+					printf("%s ", coord2sstr(c, board));
+				} foreach_in_group_end;
+				putchar('\n');
+				printed_group = true;
+next_group:;
+			} foreach_point_end;
+			if (!printed_group)
+				putchar('\n');
+			gtp_flush();
+		} else {
+			gtp_error(id, "illegal status specifier", NULL);
+		}
 
 	/* Custom commands for handling UCT opening book */
 	} else if (!strcasecmp(cmd, "uct_genbook")) {
