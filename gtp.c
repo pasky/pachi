@@ -109,6 +109,10 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "clear_board")) {
+		if (board->es) {
+			assert(engine->done_board_state);
+			engine->done_board_state(engine, board);
+		}
 		board_clear(board);
 		if (DEBUGL(1))
 			board_print(board, stderr);

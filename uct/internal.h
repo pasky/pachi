@@ -1,6 +1,8 @@
 #ifndef ZZGO_UCT_INTERNAL_H
 #define ZZGO_UCT_INTERNAL_H
 
+#include <signal.h> // sig_atomic_t
+
 #include "debug.h"
 #include "move.h"
 #include "playout.h"
@@ -37,12 +39,13 @@ struct uct {
 	bool val_extra;
 
 	struct uct_policy *policy;
-	struct tree *t;
 	struct playout_policy *playout;
 	struct uct_prior *prior;
 };
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
+
+extern volatile sig_atomic_t uct_halt;
 
 
 typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
@@ -58,6 +61,10 @@ struct uct_policy {
 	uctp_prior prior;
 	bool wants_amaf;
 	void *data;
+};
+
+struct uct_board {
+	struct tree *t;
 };
 
 #endif

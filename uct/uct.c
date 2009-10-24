@@ -14,11 +14,11 @@
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "random.h"
-#include "tactics.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
+#include "uct/walk.h"
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
@@ -38,329 +38,65 @@ can_pass(struct board *b, enum stone color)
 	return (score > 0);
 }
 
-static float
-get_extra_komi(struct uct *u, struct board *b)
-{
-	float extra_komi = board_effective_handicap(b) * (u->dynkomi - b->moves) / u->dynkomi;
-	return extra_komi;
-}
-
-static void
-progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
-{
-	if (!UDEBUGL(0))
-		return;
-
-	/* Best move */
-	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color);
-	if (!best) {
-		fprintf(stderr, "... No moves left\n");
-		return;
-	}
-	fprintf(stderr, "[%d] ", playouts);
-	fprintf(stderr, "best %f ", tree_node_get_value(t, best, u, 1));
-
-	/* Max depth */
-	fprintf(stderr, "deepest % 2d ", t->max_depth - t->root->depth);
-
-	/* Best sequence */
-	fprintf(stderr, "| seq ");
-	for (int depth = 0; depth < 6; depth++) {
-		if (best && best->u.playouts >= 25) {
-			fprintf(stderr, "%3s ", coord2sstr(best->coord, t->board));
-			best = u->policy->choose(u->policy, best, t->board, color);
-		} else {
-			fprintf(stderr, "    ");
-		}
-	}
-
-	/* Best candidates */
-	fprintf(stderr, "| can ");
-	int cans = 4;
-	struct tree_node *can[cans];
-	memset(can, 0, sizeof(can));
-	best = t->root->children;
-	while (best) {
-		int c = 0;
-		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
-		for (int d = 0; d < c; d++) can[d] = can[d + 1];
-		if (c > 0) can[c - 1] = best;
-		best = best->sibling;
-	}
-	while (--cans >= 0) {
-		if (can[cans]) {
-			fprintf(stderr, "%3s(%.3f) ",
-			        coord2sstr(can[cans]->coord, t->board),
-				tree_node_get_value(t, can[cans], u, 1));
-		} else {
-			fprintf(stderr, "           ");
-		}
-	}
-
-	fprintf(stderr, "\n");
-}
-
-
-static int
-uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
-              struct playout_amafmap *amaf,
-              struct tree *t, struct tree_node *n, enum stone node_color,
-	      char *spaces)
-{
-	enum stone next_color = stone_other(node_color);
-	int parity = (next_color == player_color ? 1 : -1);
-	if (n->u.playouts >= u->expand_p) {
-		// fprintf(stderr, "expanding %s (%p ^-%p)\n", coord2sstr(n->coord, b), n, n->parent);
-		tree_expand_node(t, n, b, next_color, u->radar_d, u, parity);
-	}
-	if (UDEBUGL(7))
-		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
-			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
-			tree_node_get_value(t, n, u, parity));
-
-	int result = play_random_game(b, next_color, u->gamelen, u->playout_amaf ? amaf : NULL, NULL, u->playout);
-	if (next_color == S_WHITE) {
-		/* We need the result from black's perspective. */
-		result = - result;
-	}
-	if (UDEBUGL(7))
-		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n",
-		        spaces, player_color, next_color, coord2sstr(n->coord, t->board), result);
-
-	return result;
-}
-
-static int
-uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
-{
-	struct board b2;
-	board_copy(&b2, b);
-
-	struct playout_amafmap *amaf = NULL;
-	if (u->policy->wants_amaf) {
-		amaf = calloc(1, sizeof(*amaf));
-		amaf->map = calloc(board_size2(&b2) + 1, sizeof(*amaf->map));
-		amaf->map++; // -1 is pass
-	}
-
-	/* Walk the tree until we find a leaf, then expand it and do
-	 * a random playout. */
-	struct tree_node *n = t->root;
-	enum stone node_color = stone_other(player_color);
-	assert(node_color == t->root_color);
-
-	int result;
-	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
-	int passes = is_pass(b->last_move.coord) && b->moves > 0;
-
-	/* debug */
-	int depth = 0;
-	static char spaces[] = "\0                                                      ";
-	/* /debug */
-	if (UDEBUGL(8))
-		fprintf(stderr, "--- UCT walk with color %d\n", player_color);
-
-	while (!tree_leaf_node(n) && passes < 2) {
-		spaces[depth++] = ' '; spaces[depth] = 0;
-
-		/* Parity is chosen already according to the child color, since
-		 * it is applied to children. */
-		node_color = stone_other(node_color);
-		int parity = (node_color == player_color ? 1 : -1);
-		n = u->policy->descend(u->policy, t, n, parity, pass_limit);
-
-		assert(n == t->root || n->parent);
-		if (UDEBUGL(7))
-			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
-			        spaces, coord2sstr(n->coord, t->board), n->coord,
-				tree_node_get_value(t, n, u, parity));
-
-		assert(n->coord >= -1);
-		if (amaf && !is_pass(n->coord)) {
-			if (amaf->map[n->coord] == S_NONE || amaf->map[n->coord] == node_color) {
-				amaf->map[n->coord] = node_color;
-			} else { // XXX: Respect amaf->record_nakade
-				amaf_op(amaf->map[n->coord], +);
-			}
-			amaf->game[amaf->gamelen].coord = n->coord;
-			amaf->game[amaf->gamelen].color = node_color;
-			amaf->gamelen++;
-			assert(amaf->gamelen < sizeof(amaf->game) / sizeof(amaf->game[0]));
-		}
-
-		struct move m = { n->coord, node_color };
-		int res = board_play(&b2, &m);
-
-		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
-		    || b2.superko_violation) {
-			if (UDEBUGL(3)) {
-				for (struct tree_node *ni = n; ni; ni = ni->parent)
-					fprintf(stderr, "%s<%lld> ", coord2sstr(ni->coord, t->board), ni->hash);
-				fprintf(stderr, "deleting invalid %s node %d,%d res %d group %d spk %d\n",
-				        stone2str(node_color), coord_x(n->coord,b), coord_y(n->coord,b),
-					res, group_at(&b2, m.coord), b2.superko_violation);
-			}
-			tree_delete_node(t, n);
-			result = 0;
-			goto end;
-		}
-
-		if (is_pass(n->coord))
-			passes++;
-		else
-			passes = 0;
-	}
-
-	if (amaf) {
-		amaf->game_baselen = amaf->gamelen;
-		amaf->record_nakade = u->playout_amaf_nakade;
-	}
-
-	if (u->dynkomi > b2.moves && (player_color & u->dynkomi_mask))
-		b2.komi += get_extra_komi(u, &b2);
-
-	if (passes >= 2) {
-		float score = board_official_score(&b2);
-		/* Result from black's perspective (no matter who
-		 * the player; black's perspective is always
-		 * what the tree stores. */
-		result = - (score * 2);
-
-		if (UDEBUGL(5))
-			fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
-				player_color, node_color, coord2sstr(n->coord, t->board), result, score);
-		if (UDEBUGL(6))
-			board_print(&b2, stderr);
-
-	} else { assert(tree_leaf_node(n));
-		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
-	}
-
-	if (amaf && u->playout_amaf_cutoff) {
-		int cutoff = amaf->game_baselen;
-		cutoff += (amaf->gamelen - amaf->game_baselen) * u->playout_amaf_cutoff / 100;
-		/* Now, reconstruct the amaf map. */
-		memset(amaf->map, 0, board_size2(&b2) * sizeof(*amaf->map));
-		for (int i = 0; i < cutoff; i++) {
-			coord_t coord = amaf->game[i].coord;
-			enum stone color = amaf->game[i].color;
-			if (amaf->map[coord] == S_NONE || amaf->map[coord] == color) {
-				amaf->map[coord] = color;
-			/* Nakade always recorded for in-tree part */
-			} else if (amaf->record_nakade || i <= amaf->game_baselen) {
-				amaf_op(amaf->map[n->coord], +);
-			}
-		}
-	}
-
-	assert(n == t->root || n->parent);
-	if (result != 0) {
-		float rval = result > 0;
-		if (u->val_scale) {
-			int vp = u->val_points;
-			if (!vp) {
-				vp = board_size(b) - 1; vp *= vp;
-			}
-
-			float sval = (float) abs(result) / vp;
-			sval = sval > 1 ? 1 : sval;
-			if (result < 0) sval = 1 - sval;
-			if (u->val_extra)
-				rval += u->val_scale * sval;
-			else
-				rval = (1 - u->val_scale) * rval + u->val_scale * sval;
-			// fprintf(stderr, "score %d => sval %f, rval %f\n", result, sval, rval);
-		}
-		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
-	}
-
-end:
-	if (amaf) {
-		free(amaf->map - 1);
-		free(amaf);
-	}
-	board_done_noalloc(&b2);
-	return result;
-}
 
 static void
 prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promote)
 {
 	struct uct *u = e->data;
+	struct uct_board *ub = b->es;
 
-	if (u->t && (!b->moves || color != stone_other(u->t->root_color))) {
-		/* Stale state from last game */
-		tree_done(u->t);
-		u->t = NULL;
-	}
+	if (ub) {
+		/* Verify that we don't have stale state from last game. */
+		assert(ub->t);
+		assert(b->moves && color == stone_other(ub->t->root_color));
 
-	if (!u->t) {
-		u->t = tree_init(b, color);
+	} else {
+		/* We need fresh state. */
+		b->es = ub = calloc(1, sizeof(*ub));
+		ub->t = tree_init(b, color);
 		if (u->force_seed)
 			fast_srandom(u->force_seed);
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
 		if (!u->no_book && b->moves < 2)
-			tree_load(u->t, b);
+			tree_load(ub->t, b);
 	}
 
 	/* XXX: We hope that the opponent didn't suddenly play
 	 * several moves in the row. */
-	if (!is_resign(promote) && !tree_promote_at(u->t, b, promote)) {
+	if (!is_resign(promote) && !tree_promote_at(ub->t, b, promote)) {
 		if (UDEBUGL(2))
 			fprintf(stderr, "<cannot find node to promote>\n");
 		/* Reset tree */
-		tree_done(u->t);
-		u->t = tree_init(b, color);
+		tree_done(ub->t);
+		ub->t = tree_init(b, color);
 	}
 
 	if (u->dynkomi && u->dynkomi > b->moves && (color & u->dynkomi_mask))
-		u->t->extra_komi = get_extra_komi(u, b);
+		ub->t->extra_komi = uct_get_extra_komi(u, b);
 }
+
+void
+uct_done_board_state(struct engine *e, struct board *b)
+{
+	struct uct_board *ub = b->es;
+	assert(ub);
+	assert(ub->t);
+	tree_done(ub->t);
+	free(ub);
+	b->es = NULL;
+}
+
+static void
+uct_notify_play(struct engine *e, struct board *b, struct move *m)
+{
+	prepare_move(e, b, m->color, m->coord);
+}
+
 
 /* Set in main thread in case the playouts should stop. */
-static volatile sig_atomic_t halt = 0;
-
-static int
-uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
-{
-	int i, games = u->games;
-	if (t->root->children)
-		games -= t->root->u.playouts / 1.5;
-	/* else this is highly read-out but dead-end branch of opening book;
-	 * we need to start from scratch; XXX: Maybe actually base the readout
-	 * count based on number of playouts of best node? */
-	for (i = 0; i < games; i++) {
-		int result = uct_playout(u, b, color, t);
-		if (result == 0) {
-			/* Tree descent has hit invalid move. */
-			continue;
-		}
-
-		if (i > 0 && !(i % 10000)) {
-			progress_status(u, t, color, i);
-		}
-
-		if (i > 0 && !(i % 500)) {
-			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
-			if (best && ((best->u.playouts >= 2000 && tree_node_get_value(t, best, u, 1) >= u->loss_threshold)
-			             || (best->u.playouts >= 500 && tree_node_get_value(t, best, u, 1) >= 0.95)))
-				break;
-		}
-
-		if (halt) {
-			if (UDEBUGL(2))
-				fprintf(stderr, "<halting early, %d games skipped>\n", games - i);
-			break;
-		}
-	}
-
-	progress_status(u, t, color, i);
-	if (UDEBUGL(3))
-		tree_dump(t, u->dumpthres);
-	return i;
-}
+volatile sig_atomic_t uct_halt = 0;
 
 static pthread_mutex_t finish_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
@@ -394,12 +130,6 @@ spawn_helper(void *ctx_)
 	return ctx;
 }
 
-static void
-uct_notify_play(struct engine *e, struct board *b, struct move *m)
-{
-	prepare_move(e, b, m->color, m->coord);
-}
-
 static coord_t *
 uct_genmove(struct engine *e, struct board *b, enum stone color)
 {
@@ -407,6 +137,9 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* Seed the tree. */
 	prepare_move(e, b, color, resign);
+
+	struct uct_board *ub = b->es;
+	assert(ub);
 
 	if (b->superko_violation) {
 		fprintf(stderr, "!!! WARNING: SUPERKO VIOLATION OCCURED BEFORE THIS MOVE\n");
@@ -423,17 +156,17 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	int played_games = 0;
 	if (!u->threads) {
-		played_games = uct_playouts(u, b, color, u->t);
+		played_games = uct_playouts(u, b, color, ub->t);
 	} else {
 		pthread_t threads[u->threads];
 		int joined = 0;
-		halt = 0;
+		uct_halt = 0;
 		pthread_mutex_lock(&finish_mutex);
 		/* Spawn threads... */
 		for (int ti = 0; ti < u->threads; ti++) {
 			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 			ctx->u = u; ctx->b = b; ctx->color = color;
-			ctx->t = tree_copy(u->t); ctx->tid = ti;
+			ctx->t = tree_copy(ub->t); ctx->tid = ti;
 			ctx->seed = fast_random(65536) + ti;
 			pthread_create(&threads[ti], NULL, spawn_helper, ctx);
 			if (UDEBUGL(2))
@@ -448,68 +181,69 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 			pthread_join(threads[finish_thread], (void **) &ctx);
 			played_games += ctx->games;
 			joined++;
-			tree_merge(u->t, ctx->t);
+			tree_merge(ub->t, ctx->t);
 			tree_done(ctx->t);
 			free(ctx);
 			if (UDEBUGL(2))
 				fprintf(stderr, "Joined thread %d\n", finish_thread);
 			/* Do not get stalled by slow threads. */
 			if (joined >= u->threads / 2)
-				halt = 1;
+				uct_halt = 1;
 			pthread_mutex_unlock(&finish_serializer);
 		}
 		pthread_mutex_unlock(&finish_mutex);
 
-		tree_normalize(u->t, u->threads);
+		tree_normalize(ub->t, u->threads);
 	}
 
 	if (UDEBUGL(2))
-		tree_dump(u->t, u->dumpthres);
+		tree_dump(ub->t, u->dumpthres);
 
-	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
+	struct tree_node *best = u->policy->choose(u->policy, ub->t->root, b, color);
 	if (!best) {
-		tree_done(u->t); u->t = NULL;
+		uct_done_board_state(e, b);
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(0))
-		progress_status(u, u->t, color, played_games);
+		uct_progress_status(u, ub->t, color, played_games);
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
-			tree_node_get_value(u->t, best, u, 1),
-			best->u.playouts, u->t->root->u.playouts, played_games);
-	if (tree_node_get_value(u->t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
-		tree_done(u->t); u->t = NULL;
+			tree_node_get_value(ub->t, best, u, 1),
+			best->u.playouts, ub->t->root->u.playouts, played_games);
+	if (tree_node_get_value(ub->t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
+		uct_done_board_state(e, b);
 		return coord_copy(resign);
 	}
-	tree_promote_node(u->t, best);
+	tree_promote_node(ub->t, best);
 	return coord_copy(best->coord);
 }
+
 
 bool
 uct_genbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
-	u->t = tree_init(b, color);
-	tree_load(u->t, b);
+	struct tree *t = tree_init(b, color);
+	tree_load(t, b);
 
 	int i;
 	for (i = 0; i < u->games; i++) {
-		int result = uct_playout(u, b, color, u->t);
+		int result = uct_playout(u, b, color, t);
 		if (result == 0) {
 			/* Tree descent has hit invalid move. */
 			continue;
 		}
 
 		if (i > 0 && !(i % 10000)) {
-			progress_status(u, u->t, color, i);
+			uct_progress_status(u, t, color, i);
 		}
 	}
-	progress_status(u, u->t, color, i);
+	uct_progress_status(u, t, color, i);
 
-	tree_save(u->t, b, u->games / 100);
+	tree_save(t, b, u->games / 100);
 
-	tree_done(u->t);
+	tree_done(t);
 
 	return true;
 }
@@ -517,11 +251,10 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 void
 uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
-	struct uct *u = e->data;
-	u->t = tree_init(b, color);
-	tree_load(u->t, b);
-	tree_dump(u->t, 0);
-	tree_done(u->t);
+	struct tree *t = tree_init(b, color);
+	tree_load(t, b);
+	tree_dump(t, 0);
+	tree_done(t);
 }
 
 
@@ -670,7 +403,6 @@ uct_state_init(char *arg)
 	return u;
 }
 
-
 struct engine *
 engine_uct_init(char *arg)
 {
@@ -680,6 +412,7 @@ engine_uct_init(char *arg)
 	e->comment = "I'm playing UCT. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please capture all dead stones before passing; it will not cost you points (area scoring is used).";
 	e->genmove = uct_genmove;
 	e->notify_play = uct_notify_play;
+	e->done_board_state = uct_done_board_state;
 	e->data = u;
 
 	return e;
