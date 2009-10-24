@@ -37,6 +37,8 @@ struct uct {
 	int val_points;
 	bool val_extra;
 
+	char *banner;
+
 	struct uct_policy *policy;
 	struct playout_policy *playout;
 	struct uct_prior *prior;

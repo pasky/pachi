@@ -478,6 +478,12 @@ uct_state_init(char *arg)
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
 				u->val_extra = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "banner") && optval) {
+				/* Additional banner string. This must come as the
+				 * last engine parameter. */
+				if (*next) *--next = ',';
+				u->banner = strdup(optval);
+				break;
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 				exit(1);
@@ -506,14 +512,18 @@ engine_uct_init(char *arg)
 	struct uct *u = uct_state_init(arg);
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "UCT Engine";
-	e->comment = "I'm playing UCT. I will resign when I lost, "
-		"or think I'm winning and play until you pass.";
 	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
 	e->genmove = uct_genmove;
 	e->dead_group_list = uct_dead_group_list;
 	e->done_board_state = uct_done_board_state;
 	e->data = u;
+
+	const char banner[] = "I'm playing UCT. I will resign when I lost, "
+		"or think I'm winning and play until you pass.";
+	if (!u->banner) u->banner = "";
+	e->comment = malloc(sizeof(banner) + strlen(u->banner) + 1);
+	sprintf(e->comment, "%s %s", banner, u->banner);
 
 	return e;
 }
