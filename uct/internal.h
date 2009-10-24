@@ -63,7 +63,10 @@ struct uct_policy {
 };
 
 struct uct_board {
+	/* Persistent over moves: */
 	struct tree *t;
+	/* Used internally within one genmove: */
+	struct playout_ownermap ownermap;
 };
 
 #endif

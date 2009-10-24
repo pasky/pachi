@@ -9,6 +9,7 @@
 
 #include "debug.h"
 #include "board.h"
+#include "gtp.h"
 #include "move.h"
 #include "playout.h"
 #include "playout/moggy.h"
@@ -36,6 +37,7 @@ uct_done_board_state(struct engine *e, struct board *b)
 	assert(ub);
 	assert(ub->t);
 	tree_done(ub->t);
+	free(ub->ownermap.map);
 	free(ub);
 	b->es = NULL;
 }
@@ -93,11 +95,38 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		//board_print(b, stderr);
 		if (!u->no_book && b->moves < 2)
 			tree_load(ub->t, b);
+		ub->ownermap.map = malloc(board_size2(b) * sizeof(ub->ownermap.map[0]));
 	}
 
 	if (u->dynkomi && u->dynkomi > b->moves && (color & u->dynkomi_mask))
 		ub->t->extra_komi = uct_get_extra_komi(u, b);
+
+	ub->ownermap.playouts = 0;
+	memset(ub->ownermap.map, 0, board_size2(b) * sizeof(ub->ownermap.map[0]));
 }
+
+static void
+cprint_ownermap(struct board *board, coord_t c, FILE *f)
+{
+	struct uct_board *ub = board->es;
+	if (!ub) return; // no UCT state; can happen e.g. after resign
+	assert(ub->ownermap.map);
+	int n = ub->ownermap.map[c][S_NONE];
+	int b = ub->ownermap.map[c][S_BLACK];
+	int w = ub->ownermap.map[c][S_WHITE];
+	int total = ub->ownermap.playouts;
+	char ch;
+	if (n >= total * 0.8)
+		ch = ':'; // dame
+	else if (n + b >= total * 0.8)
+		ch = 'X'; // black
+	else if (n + w >= total * 0.8)
+		ch = 'O'; // white
+	else
+		ch = ','; // unclear
+	fprintf(f, "%c ", ch);
+}
+
 
 /* Set in main thread in case the playouts should stop. */
 volatile sig_atomic_t uct_halt = 0;
@@ -208,8 +237,9 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		uct_done_board_state(e, b);
 		return coord_copy(pass);
 	}
-	if (UDEBUGL(0))
+	if (UDEBUGL(0)) {
 		uct_progress_status(u, ub->t, color, played_games);
+	}
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
@@ -411,8 +441,9 @@ engine_uct_init(char *arg)
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "UCT Engine";
 	e->comment = "I'm playing UCT. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please capture all dead stones before passing; it will not cost you points (area scoring is used).";
-	e->genmove = uct_genmove;
+	e->printhook = cprint_ownermap;
 	e->notify_play = uct_notify_play;
+	e->genmove = uct_genmove;
 	e->done_board_state = uct_done_board_state;
 	e->data = u;
 
