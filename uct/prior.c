@@ -22,7 +22,7 @@ struct uct_prior {
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6
 	 * playouts per source seems best. */
 	int eqex;
-	int even_eqex, gp_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex;
+	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex;
 	int cfgdn; int *cfgd_eqex;
 };
 
@@ -91,26 +91,6 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 void
-uct_prior_grandparent(struct uct *u, struct tree_node *node, struct prior_map *map)
-{
-	/* Q_{grandparent} */
-	foreach_point_and_pass(map->b) {
-		if (!map->consider[c])
-			continue;
-		if (!node->parent || !node->parent->parent)
-			continue;
-		struct tree_node *gpp = node->parent->parent;
-		for (struct tree_node *ni = gpp->children; ni; ni = ni->sibling) {
-			/* Be careful not to emphasize too random results. */
-			if (ni->coord == node->coord && ni->u.playouts > u->prior->gp_eqex) {
-				/* We purposefuly ignore the parity. */
-				stats_add_result(&map->prior[c], ni->u.value, u->prior->gp_eqex);
-			}
-		}
-	} foreach_point_end;
-}
-
-void
 uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{playout-policy} */
@@ -152,8 +132,6 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_ko(u, node, map);
 	if (u->prior->b19_eqex)
 		uct_prior_b19(u, node, map);
-	if (u->prior->gp_eqex)
-		uct_prior_grandparent(u, node, map);
 	if (u->prior->policy_eqex)
 		uct_prior_playout(u, node, map);
 	if (u->prior->cfgd_eqex)
@@ -165,8 +143,7 @@ uct_prior_init(char *arg)
 {
 	struct uct_prior *p = calloc(1, sizeof(struct uct_prior));
 
-	// gp: 14 vs 0: 44% (+-3.5)
-	p->gp_eqex = p->ko_eqex = 0;
+	p->ko_eqex = 0;
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = -1;
 	p->cfgdn = -1;
 	p->eqex = 40; /* Even number! */
@@ -187,8 +164,6 @@ uct_prior_init(char *arg)
 
 			} else if (!strcasecmp(optname, "even") && optval) {
 				p->even_eqex = atoi(optval);
-			} else if (!strcasecmp(optname, "gp") && optval) {
-				p->gp_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "policy") && optval) {
 				p->policy_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "b19") && optval) {
@@ -217,7 +192,6 @@ uct_prior_init(char *arg)
 	}
 
 	if (p->even_eqex < 0) p->even_eqex = p->eqex;
-	if (p->gp_eqex < 0) p->gp_eqex = p->eqex;
 	if (p->policy_eqex < 0) p->policy_eqex = p->eqex;
 	if (p->b19_eqex < 0) p->b19_eqex = p->eqex;
 	if (p->eye_eqex < 0) p->eye_eqex = p->eqex;
