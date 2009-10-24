@@ -535,6 +535,7 @@ board_stone_radar(struct board *b, coord_t coord, int distance)
 	return false;
 }
 
+
 void
 cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 {
@@ -584,6 +585,7 @@ cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 	} foreach_point_end;
 }
 
+
 float
 board_effective_handicap(struct board *b)
 {
@@ -592,4 +594,15 @@ board_effective_handicap(struct board *b)
 	float first_move = 7.5; // point value of move on empty board
 	assert(b->handicap != 1);
 	return (b->handicap ? b->handicap : 1) * first_move - b->komi;
+}
+
+
+bool
+pass_is_safe(struct board *b, enum stone color)
+{
+	float score = board_official_score(b);
+	if (color == S_BLACK)
+		score = -score;
+	//fprintf(stderr, "%d score %f\n", color, score);
+	return (score > 0);
 }

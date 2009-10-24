@@ -28,17 +28,6 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 #define MC_GAMELEN	MAX_GAMELEN
 
 
-static bool
-can_pass(struct board *b, enum stone color)
-{
-	float score = board_official_score(b);
-	if (color == S_BLACK)
-		score = -score;
-	//fprintf(stderr, "%d score %f\n", color, score);
-	return (score > 0);
-}
-
-
 void
 uct_done_board_state(struct engine *e, struct board *b)
 {
@@ -165,7 +154,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* If the opponent just passes and we win counting, just
 	 * pass as well. */
-	if (b->moves > 1 && is_pass(b->last_move.coord) && can_pass(b, color))
+	if (b->moves > 1 && is_pass(b->last_move.coord) && pass_is_safe(b, color))
 		return coord_copy(pass);
 
 	int played_games = 0;

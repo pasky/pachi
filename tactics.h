@@ -36,6 +36,9 @@ void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
  * non-linear. */
 float board_effective_handicap(struct board *b);
 
+/* Decide if the given player wins counting on the board. */
+bool pass_is_safe(struct board *b, enum stone color);
+
 
 bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
 static inline bool
