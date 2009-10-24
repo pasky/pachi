@@ -473,6 +473,8 @@ f4cb0	19u1a$~b361	42.5% (+-2.5%)	games=6666,val_scale=0.02,val_points=361
 7d1c7	9k0u1a~x	61.8% (+-2.4%)	val_extra
 7d1c7	9k0u1a~10	68.2% (+-2.3%)	val_points=10
 7d1c7	9k0u1a~20	71.5% (+-2.3%)	val_points=20
+7d1c7	9k0u1a%80	67.5% (+-2.3%)	rate=80
+7d1c7	9k0u1a%95	65.4% (+-2.3%)	rate=95
 7d1c7	19u1a		30.5% (+-2.3%)
 7d1c7	19u1a$		40.2% (+-2.2%)	games=6666
 7d1c7	19u1a~x		31.2% (+-2.3%)	val_extra
@@ -490,3 +492,8 @@ More dynkomi experiments:
 7d1c7	19h4u1a^	71.8% (+-2.4%)	dynkomi=200
 7d1c7	19h5u1a		69.3% (+-2.4%)
 7d1c7	19h5u1a^	80.4% (+-2.1%)	dynkomi=200
+
+a9249	9k0u1a		65.5% (+-2.4%)
+a9249	9k0u1a*1	64.5% (+-2.4%)	prior=cfgd=1%40
+a9249	9k0u1a*2	64.2% (+-2.4%)	prior=cfgd=2%40%20
+a9249	9k0u1a*3	63.5% (+-2.4%)	prior=cfgd=4%40%30%20%10
