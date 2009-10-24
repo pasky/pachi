@@ -151,3 +151,42 @@ playout_ownermap_judge_point(struct playout_ownermap *ownermap, coord_t c, float
 	else
 		return PJ_UNKNOWN;
 }
+
+void
+playout_ownermap_judge_group(struct board *b, struct playout_ownermap *ownermap, struct group_judgement *judge)
+{
+	assert(ownermap->map);
+	assert(judge->gs);
+	memset(judge->gs, GS_NONE, board_size2(b) * sizeof(judge->gs[0]));
+
+	foreach_point(b) {
+		enum stone color = board_at(b, c);
+		group_t g = group_at(b, c);
+		if (!g) continue;
+
+		enum point_judgement pj = playout_ownermap_judge_point(ownermap, c, judge->thres);
+		if (pj == PJ_UNKNOWN) {
+			/* Fate is uncertain. */
+			judge->gs[g] = GS_UNKNOWN;
+
+		} else if (judge->gs[g] != GS_UNKNOWN) {
+			/* Update group state. */
+			enum gj_state new;
+			if (pj == color) {
+				new = GS_ALIVE;
+			} else if (pj == stone_other(color)) {
+				new = GS_DEAD;
+			} else { assert(pj == PJ_DAME);
+				/* Exotic! */
+				new = GS_UNKNOWN;
+			}
+
+			if (judge->gs[g] == GS_NONE) {
+				judge->gs[g] = new;
+			} else if (judge->gs[g] != new) {
+				/* Contradiction. :( */
+				judge->gs[g] = GS_UNKNOWN;
+			}
+		}
+	} foreach_point_end;
+}

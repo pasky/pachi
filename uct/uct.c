@@ -11,6 +11,7 @@
 #include "board.h"
 #include "gtp.h"
 #include "move.h"
+#include "mq.h"
 #include "playout.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
@@ -107,6 +108,41 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 
 	ub->ownermap.playouts = 0;
 	memset(ub->ownermap.map, 0, board_size2(b) * sizeof(ub->ownermap.map[0]));
+}
+
+
+static void
+uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
+{
+	struct uct *u = e->data;
+	struct uct_board *ub = b->es;
+	if (!ub) {
+		/* No state, but we cannot just back out - we might
+		 * have passed earlier, only assuming some stones are
+		 * dead, and then re-connected, only to lose counting
+		 * when all stones are assumed alive. */
+		/* Mock up some state and seed the ownermap by few
+		 * simulations. */
+		prepare_move(e, b, S_BLACK, resign);
+		ub = b->es; assert(ub);
+		for (int i = 0; i < 500; i++)
+			uct_playout(u, b, S_BLACK, ub->t);
+	}
+
+	struct group_judgement gj;
+	gj.thres = GJ_THRES;
+	gj.gs = alloca(board_size2(b) * sizeof(gj.gs[0]));
+	playout_ownermap_judge_group(b, &ub->ownermap, &gj);
+
+	foreach_point(b) { /* foreach_group, effectively */
+		group_t g = group_at(b, c);
+		if (!g || g != c) continue;
+
+		assert(gj.gs[g] != GS_NONE);
+		if (gj.gs[g] == GS_DEAD)
+			mq_add(mq, g);
+		/* else we assume the worst - alive. */
+	} foreach_point_end;
 }
 
 static void
@@ -436,6 +472,7 @@ engine_uct_init(char *arg)
 	e->printhook = cprint_ownermap;
 	e->notify_play = uct_notify_play;
 	e->genmove = uct_genmove;
+	e->dead_group_list = uct_dead_group_list;
 	e->done_board_state = uct_done_board_state;
 	e->data = u;
 

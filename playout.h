@@ -92,12 +92,25 @@ int play_random_game(struct board *b, enum stone starting_color, int gamelen,
 
 void playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_ownermap *src);
 
+/* Estimate coord ownership based on ownermap stats. */
 enum point_judgement {
-	PJ_DAME,
-	PJ_BLACK,
-	PJ_WHITE,
-	PJ_UNKNOWN,
+	PJ_DAME = S_NONE,
+	PJ_BLACK = S_BLACK,
+	PJ_WHITE = S_WHITE,
+	PJ_UNKNOWN = 4,
 };
 enum point_judgement playout_ownermap_judge_point(struct playout_ownermap *ownermap, coord_t c, float thres);
+
+/* Estimate status of stones on board based on ownermap stats. */
+struct group_judgement {
+	float thres;
+	enum gj_state {
+		GS_NONE,
+		GS_DEAD,
+		GS_ALIVE,
+		GS_UNKNOWN,
+	} *gs; // [bsize2]
+};
+void playout_ownermap_judge_group(struct board *b, struct playout_ownermap *ownermap, struct group_judgement *judge);
 
 #endif
