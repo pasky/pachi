@@ -115,8 +115,12 @@ uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
 {
 	struct uct_board *ub = board->es;
 	if (!ub) return; // no UCT state; can happen e.g. after resign
-	char chr[] = ":XO,"; // dame, black, white, unclear
+	const char chr[] = ":XO,"; // dame, black, white, unclear
+	const char chm[] = ":xo,";
 	char ch = chr[playout_ownermap_judge_point(&ub->ownermap, c, GJ_THRES)];
+	if (ch == ',') { // less precise estimate then?
+		ch = chm[playout_ownermap_judge_point(&ub->ownermap, c, 0.67)];
+	}
 	fprintf(f, "%c ", ch);
 }
 
