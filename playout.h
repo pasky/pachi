@@ -39,7 +39,7 @@ struct playout_ownermap {
 	sig_atomic_t playouts;
 	/* At the final board position, for each coordinate increase the
 	 * counter of appropriate color. */
-	sig_atomic_t *(map[S_MAX]); // [board_size2(b)]
+	sig_atomic_t (*map)[S_MAX]; // [board_size2(b)]
 };
 
 struct playout_amafmap {
