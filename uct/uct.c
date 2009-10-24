@@ -65,7 +65,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 
 	/* XXX: We hope that the opponent didn't suddenly play
 	 * several moves in the row. */
-	if (!is_resign(promote) && !tree_promote_at(ub->t, b, promote)) {
+	if (is_resign(promote) || !tree_promote_at(ub->t, b, promote)) {
 		if (UDEBUGL(2))
 			fprintf(stderr, "<cannot find node to promote>\n");
 		/* Reset tree */
