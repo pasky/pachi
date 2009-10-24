@@ -103,7 +103,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		/* TODO: known_command */
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\nset_free_handicap\nplace_free_handicap\nfinal_status_list", NULL);
+		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\nset_free_handicap\nplace_free_handicap\nfinal_status_list\nkgs-chat", NULL);
 
 	} else if (!strcasecmp(cmd, "quit")) {
 		gtp_reply(id, NULL);
@@ -297,6 +297,21 @@ next_group:;
 		enum stone color = str2stone(arg);
 		uct_dumpbook(engine, board, color);
 		gtp_reply(id, NULL);
+
+	} else if (!strcasecmp(cmd, "kgs-chat")) {
+		char *loc;
+		next_tok(loc);
+		char *src;
+		next_tok(src);
+		char *msg;
+		next_tok(msg);
+		char *reply = NULL;
+		if (engine->chat)
+			reply = engine->chat(engine, board, msg);
+		if (reply)
+			gtp_reply(id, reply, NULL);
+		else
+			gtp_error(id, "unknown chat command", NULL);
 
 	} else {
 		gtp_error(id, "unknown command", NULL);

@@ -72,8 +72,8 @@ int main(int argc, char *argv[])
 
 	}
 
-	char buf[256];
-	while (fgets(buf, 256, stdin)) {
+	char buf[4096];
+	while (fgets(buf, 4096, stdin)) {
 		if (DEBUGL(1))
 			fprintf(stderr, "IN: %s", buf);
 		gtp_parse(b, e, buf);
