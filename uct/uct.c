@@ -287,7 +287,7 @@ uct_state_init(char *arg)
 	u->amaf_prior = true;
 	u->dynkomi_mask = S_WHITE | S_BLACK;
 
-	u->val_scale = 0.02; u->val_points = 0;
+	u->val_scale = 0.02; u->val_points = 20;
 
 	if (arg) {
 		char *optspec, *next = arg;
