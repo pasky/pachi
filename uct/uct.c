@@ -550,7 +550,7 @@ engine_uct_init(char *arg)
 
 	const char banner[] = "I'm playing UCT. When I'm losing, I will resign, "
 		"if I think I win, I play until you pass. "
-		"Send me 'winrate' command in private chat to get my assessment of the position.";
+		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
 	if (!u->banner) u->banner = "";
 	e->comment = malloc(sizeof(banner) + strlen(u->banner) + 1);
 	sprintf(e->comment, "%s %s", banner, u->banner);
