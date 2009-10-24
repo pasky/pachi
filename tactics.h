@@ -5,6 +5,8 @@
 
 #include "board.h"
 
+struct move_queue;
+
 /* Check if this move is undesirable self-atari (resulting group would have
  * only single liberty and not capture anything; ko is allowed); we mostly
  * want to avoid these moves. The function actually does a rather elaborate
@@ -36,8 +38,9 @@ void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
  * non-linear. */
 float board_effective_handicap(struct board *b);
 
-/* Decide if the given player wins counting on the board. */
-bool pass_is_safe(struct board *b, enum stone color);
+/* Decide if the given player wins counting on the board, considering
+ * that given groups are dead. */
+bool pass_is_safe(struct board *b, enum stone color, struct move_queue *mq);
 
 
 bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);

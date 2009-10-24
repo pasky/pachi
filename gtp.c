@@ -217,7 +217,10 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		gtp_flush();
 
 	} else if (!strcasecmp(cmd, "final_score")) {
-		float score = board_official_score(board);
+		struct move_queue q = { .moves = 0 };
+		if (engine->dead_group_list)
+			engine->dead_group_list(engine, board, &q);
+		float score = board_official_score(board, &q);
 		char str[64];
 		if (DEBUGL(1))
 			fprintf(stderr, "counted score %.1f\n", score);

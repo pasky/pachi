@@ -598,9 +598,9 @@ board_effective_handicap(struct board *b)
 
 
 bool
-pass_is_safe(struct board *b, enum stone color)
+pass_is_safe(struct board *b, enum stone color, struct move_queue *mq)
 {
-	float score = board_official_score(b);
+	float score = board_official_score(b, mq);
 	if (color == S_BLACK)
 		score = -score;
 	//fprintf(stderr, "%d score %f\n", color, score);

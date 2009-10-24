@@ -37,7 +37,7 @@ ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum 
 		// child; comparing values is more brittle
 		if (!nbest || ni->u.playouts > nbest->u.playouts) {
 			/* Play pass only if we can afford scoring */
-			if (is_pass(ni->coord) && !pass_is_safe(b, color))
+			if (is_pass(ni->coord) && !uct_pass_is_safe(p->uct, b, color))
 				continue;
 			nbest = ni;
 		}

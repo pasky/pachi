@@ -205,7 +205,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		b2.komi += uct_get_extra_komi(u, &b2);
 
 	if (passes >= 2) {
-		float score = board_official_score(&b2);
+		/* XXX: No dead groups support. */
+		float score = board_official_score(&b2, NULL);
 		/* Result from black's perspective (no matter who
 		 * the player; black's perspective is always
 		 * what the tree stores. */

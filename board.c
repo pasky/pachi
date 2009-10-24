@@ -6,6 +6,7 @@
 
 #include "board.h"
 #include "debug.h"
+#include "mq.h"
 #include "random.h"
 
 int board_group_capture(struct board *board, group_t group);
@@ -1048,7 +1049,7 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 
 /* Tromp-Taylor Counting */
 float
-board_official_score(struct board *board)
+board_official_score(struct board *board, struct move_queue *q)
 {
 
 	/* A point P, not colored C, is said to reach C, if there is a path of
@@ -1060,11 +1061,22 @@ board_official_score(struct board *board)
 
 	int ownermap[board_size2(board)];
 	int s[4] = {0};
+	const int o[4] = {0, 1, 2, 0};
 	foreach_point(board) {
-		int o[4] = {0, 1, 2, 0};
 		ownermap[c] = o[board_at(board, c)];
 		s[board_at(board, c)]++;
 	} foreach_point_end;
+
+	if (q) {
+		/* Process dead groups. */
+		for (int i = 0; i < q->moves; i++) {
+			foreach_in_group(board, q->move[i]) {
+				enum stone color = board_at(board, c);
+				ownermap[c] = o[stone_other(color)];
+				s[color]--; s[stone_other(color)]++;
+			} foreach_in_group_end;
+		}
+	}
 
 	/* We need to special-case empty board. */
 	if (!s[S_BLACK] && !s[S_WHITE])

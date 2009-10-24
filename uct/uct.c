@@ -34,6 +34,8 @@ static void uct_done_board_state(struct engine *e, struct board *b);
 /* How big proportion of ownermap counts must be of one color to consider
  * the point sure. */
 #define GJ_THRES	0.8
+/* How many games to consider at minimum before judging groups. */
+#define GJ_MINGAMES	500
 
 
 static void
@@ -70,6 +72,41 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 
 	ub->ownermap.playouts = 0;
 	memset(ub->ownermap.map, 0, board_size2(b) * sizeof(ub->ownermap.map[0]));
+}
+
+static void
+dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
+{
+	struct uct_board *ub = b->es;
+	assert(ub);
+
+	struct group_judgement gj;
+	gj.thres = GJ_THRES;
+	gj.gs = alloca(board_size2(b) * sizeof(gj.gs[0]));
+	playout_ownermap_judge_group(b, &ub->ownermap, &gj);
+
+	foreach_point(b) { /* foreach_group, effectively */
+		group_t g = group_at(b, c);
+		if (!g || g != c) continue;
+
+		assert(gj.gs[g] != GS_NONE);
+		if (gj.gs[g] == GS_DEAD)
+			mq_add(mq, g);
+		/* else we assume the worst - alive. */
+	} foreach_point_end;
+}
+
+bool
+uct_pass_is_safe(struct uct *u, struct board *b, enum stone color)
+{
+	struct uct_board *ub = b->es;
+	assert(ub);
+	if (ub->ownermap.playouts < GJ_MINGAMES)
+		return false;
+
+	struct move_queue mq = { .moves = 0 };
+	dead_group_list(u, b, &mq);
+	return pass_is_safe(b, color, &mq);
 }
 
 
@@ -123,24 +160,11 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 		 * simulations. */
 		prepare_move(e, b, S_BLACK, resign);
 		ub = b->es; assert(ub);
-		for (int i = 0; i < 500; i++)
+		for (int i = 0; i < GJ_MINGAMES; i++)
 			uct_playout(u, b, S_BLACK, ub->t);
 	}
 
-	struct group_judgement gj;
-	gj.thres = GJ_THRES;
-	gj.gs = alloca(board_size2(b) * sizeof(gj.gs[0]));
-	playout_ownermap_judge_group(b, &ub->ownermap, &gj);
-
-	foreach_point(b) { /* foreach_group, effectively */
-		group_t g = group_at(b, c);
-		if (!g || g != c) continue;
-
-		assert(gj.gs[g] != GS_NONE);
-		if (gj.gs[g] == GS_DEAD)
-			mq_add(mq, g);
-		/* else we assume the worst - alive. */
-	} foreach_point_end;
+	dead_group_list(u, b, mq);
 }
 
 static void
@@ -203,11 +227,6 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		fprintf(stderr, "some moves valid under this ruleset because of this.\n");
 		b->superko_violation = false;
 	}
-
-	/* If the opponent just passes and we win counting, just
-	 * pass as well. */
-	if (b->moves > 1 && is_pass(b->last_move.coord) && pass_is_safe(b, color))
-		return coord_copy(pass);
 
 	/* Seed the tree. */
 	prepare_move(e, b, color, resign);
@@ -277,6 +296,15 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		uct_done_board_state(e, b);
 		return coord_copy(resign);
 	}
+
+	/* If the opponent just passed and we win counting, always
+	 * pass as well. */
+	if (b->moves > 1 && is_pass(b->last_move.coord) && uct_pass_is_safe(u, b, color)) {
+		if (UDEBUGL(0))
+			fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
+		best->coord = pass;
+	}
+
 	tree_promote_node(ub->t, best);
 	return coord_copy(best->coord);
 }
@@ -468,7 +496,8 @@ engine_uct_init(char *arg)
 	struct uct *u = uct_state_init(arg);
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "UCT Engine";
-	e->comment = "I'm playing UCT. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please capture all dead stones before passing; it will not cost you points (area scoring is used).";
+	e->comment = "I'm playing UCT. I will resign when I lost, "
+		"or think I'm winning and play until you pass.";
 	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
 	e->genmove = uct_genmove;
