@@ -33,8 +33,6 @@ struct ucb1_policy_amaf {
 
 struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
 
-struct tree_node *ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
-
 
 static inline float fast_sqrt(int x)
 {
@@ -100,8 +98,6 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		if (unlikely(!allow_pass && is_pass(ni->coord)))
 			continue;
 
-		/* TODO: Exploration? */
-
 		struct move_stats n = ni->u, r = ni->amaf;
 		if (p->uct->amaf_prior) {
 			stats_merge(&r, &ni->prior);
@@ -119,7 +115,8 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 				/* At the beginning, beta is at 1 and RAVE is used.
 				 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
 				if (b->sylvain_rave)
-					beta = (float) r.playouts / (r.playouts + n.playouts + (float) n.playouts * r.playouts / b->equiv_rave);
+					beta = (float) r.playouts / (r.playouts + n.playouts
+						+ (float) n.playouts * r.playouts / b->equiv_rave);
 #if 0
 				//if (node->coord == 7*11+4) // D7
 				fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
@@ -294,7 +291,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			} else if (!strcasecmp(optname, "check_nakade")) {
 				b->check_nakade = !optval || *optval == '1';
 			} else {
-				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
+				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
+					optname);
 				exit(1);
 			}
 		}

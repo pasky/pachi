@@ -147,7 +147,8 @@ policy_ucb1_init(struct uct *u, char *arg)
 			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
 				b->urg_randomm = atoi(optval);
 			} else {
-				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n", optname);
+				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n",
+					optname);
 				exit(1);
 			}
 		}
