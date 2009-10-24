@@ -150,6 +150,30 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	}
 }
 
+static char *
+uct_chat(struct engine *e, struct board *b, char *cmd)
+{
+	static char reply[1024];
+	struct uct_board *ub = b->es;
+
+	cmd += strspn(cmd, " \n\t");
+	if (!strncasecmp(cmd, "winrate", 7)) {
+		if (!ub)
+			return "no game context (yet?)";
+		enum stone color = ub->t->root_color;
+		struct tree_node *n = ub->t->root;
+		snprintf(reply, 1024, "In %d playouts, %s %s can win with %.2f%% probability",
+			 n->u.playouts, stone2str(color), coord2sstr(n->coord, b), n->u.value * 100);
+		if (abs(ub->t->extra_komi) >= 0.5) {
+			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
+				ub->t->extra_komi);
+		}
+		strcat(reply, ".");
+		return reply;
+	}
+	return NULL;
+}
+
 static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
@@ -518,13 +542,15 @@ engine_uct_init(char *arg)
 	e->name = "UCT Engine";
 	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
+	e->chat = uct_chat;
 	e->genmove = uct_genmove;
 	e->dead_group_list = uct_dead_group_list;
 	e->done_board_state = uct_done_board_state;
 	e->data = u;
 
 	const char banner[] = "I'm playing UCT. When I'm losing, I will resign, "
-		"if I think I win, I play until you pass.";
+		"if I think I win, I play until you pass. "
+		"Type 'winrate' in the chat if you are interested what I think about the position.";
 	if (!u->banner) u->banner = "";
 	e->comment = malloc(sizeof(banner) + strlen(u->banner) + 1);
 	sprintf(e->comment, "%s %s", banner, u->banner);
