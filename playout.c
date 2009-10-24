@@ -130,3 +130,21 @@ playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_
 		for (int j = 0; j < S_MAX; j++)
 			dst->map[i][j] += src->map[i][j];
 }
+
+enum point_judgement
+playout_ownermap_judge_point(struct playout_ownermap *ownermap, coord_t c, float thres)
+{
+	assert(ownermap->map);
+	int n = ownermap->map[c][S_NONE];
+	int b = ownermap->map[c][S_BLACK];
+	int w = ownermap->map[c][S_WHITE];
+	int total = ownermap->playouts;
+	if (n >= total * thres)
+		return PJ_DAME;
+	else if (n + b >= total * thres)
+		return PJ_BLACK;
+	else if (n + w >= total * thres)
+		return PJ_WHITE;
+	else
+		return PJ_UNKNOWN;
+}

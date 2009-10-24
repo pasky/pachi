@@ -110,20 +110,8 @@ cprint_ownermap(struct board *board, coord_t c, FILE *f)
 {
 	struct uct_board *ub = board->es;
 	if (!ub) return; // no UCT state; can happen e.g. after resign
-	assert(ub->ownermap.map);
-	int n = ub->ownermap.map[c][S_NONE];
-	int b = ub->ownermap.map[c][S_BLACK];
-	int w = ub->ownermap.map[c][S_WHITE];
-	int total = ub->ownermap.playouts;
-	char ch;
-	if (n >= total * 0.8)
-		ch = ':'; // dame
-	else if (n + b >= total * 0.8)
-		ch = 'X'; // black
-	else if (n + w >= total * 0.8)
-		ch = 'O'; // white
-	else
-		ch = ','; // unclear
+	char chr[] = ":XO,"; // dame, black, white, unclear
+	char ch = chr[playout_ownermap_judge_point(&ub->ownermap, c, 0.8)];
 	fprintf(f, "%c ", ch);
 }
 

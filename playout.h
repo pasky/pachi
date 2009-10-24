@@ -87,7 +87,17 @@ int play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		     struct playout_ownermap *ownermap,
 		     struct playout_policy *policy);
 
-/* Ownermap utility routines. */
+
+/* Ownermap utility routines: */
+
 void playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_ownermap *src);
+
+enum point_judgement {
+	PJ_DAME,
+	PJ_BLACK,
+	PJ_WHITE,
+	PJ_UNKNOWN,
+};
+enum point_judgement playout_ownermap_judge_point(struct playout_ownermap *ownermap, coord_t c, float thres);
 
 #endif
