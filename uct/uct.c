@@ -163,7 +163,8 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 		enum stone color = ub->t->root_color;
 		struct tree_node *n = ub->t->root;
 		snprintf(reply, 1024, "In %d playouts, %s %s can win with %.2f%% probability",
-			 n->u.playouts, stone2str(color), coord2sstr(n->coord, b), n->u.value * 100);
+			 n->u.playouts, stone2str(color), coord2sstr(n->coord, b),
+			 tree_node_get_value(ub->t, n, u, -1) * 100);
 		if (abs(ub->t->extra_komi) >= 0.5) {
 			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
 				ub->t->extra_komi);
