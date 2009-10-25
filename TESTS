@@ -485,15 +485,20 @@ f4cb0	19u1a$~b361	42.5% (+-2.5%)	games=6666,val_scale=0.02,val_points=361
 
 More dynkomi experiments:
 7d1c7	19k0u1a		36.2% (+-2.4%)
-7d1c7	19k0u1a^	40.8% (+-2.5%)	dynkomi=200
+7d1c7	19k0u1a^	40.8% (+-2.5%)	dynkomi=200	extra komi is 7.5
+7d1c7	19k0u1a^_	40.2% (+-2.5%)	dynkomi=200	extra komi is 5.5
 7d1c7	19h2u1a		46.2% (+-2.5%)
-7d1c7	19h2u1a^	50.8% (+-2.5%)	dynkomi=200
+7d1c7	19h2u1a^	50.8% (+-2.5%)	dynkomi=200	extra komi is 15
+7d1c7	19h2u1a^_	47.5% (+-2.5%)	dynkomi=200	extra komi is 11.5
 7d1c7	19h3u1a		54% (+-2.5%)
-7d1c7	19h3u1a^	59.2% (+-2.5%)	dynkomi=200
+7d1c7	19h3u1a^	59.2% (+-2.5%)	dynkomi=200	extra komi is 22.5
+7d1c7	19h3u1a^_	61.5% (+-2.4%)	dynkomi=200	extra komi is 18.5
 7d1c7	19h4u1a		63% (+-2.4%)
-7d1c7	19h4u1a^	71.8% (+-2.4%)	dynkomi=200
+7d1c7	19h4u1a^	71.8% (+-2.4%)	dynkomi=200	extra komi is 30
+7d1c7	19h4u1a^_	67.5% (+-2.3%)	dynkomi=200	extra komi is 27.5
 7d1c7	19h5u1a		69.3% (+-2.4%)
-7d1c7	19h5u1a^	80.4% (+-2.1%)	dynkomi=200
+7d1c7	19h5u1a^	80.4% (+-2.1%)	dynkomi=200	extra komi is 37.5
+7d1c7	19h5u1a^_	81.5% (+-1.9%)	dynkomi=200	extra komi is 35.5
 
 a9249	9k0u1a		65.5% (+-2.4%)
 a9249	9k0u1a*1	64.5% (+-2.4%)	prior=cfgd=1%40
