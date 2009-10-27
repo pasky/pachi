@@ -23,7 +23,6 @@ struct ucb1_policy_amaf {
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
-	int urg_randoma, urg_randomm;
 	int equiv_rave;
 	bool both_colors;
 	bool check_nakade;
@@ -144,10 +143,6 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 			coord2sstr(ni->coord, &bb), ni->hash, urgency,
 			rwins, rgames, rval, nwins, ngames, nval);
 #endif
-		if (b->urg_randoma)
-			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
-		if (b->urg_randomm)
-			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
 
 		if (urgency - best_urgency > __FLT_EPSILON__) { // urgency > best_urgency
 			best_urgency = urgency; nbests = 0;
@@ -278,10 +273,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
-			} else if (!strcasecmp(optname, "urg_randoma") && optval) {
-				b->urg_randoma = atoi(optval);
-			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
-				b->urg_randomm = atoi(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "both_colors")) {
