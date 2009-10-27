@@ -86,15 +86,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 	if (!b->sylvain_rave)
 		beta = sqrt(b->equiv_rave / (3 * node->u.playouts + b->equiv_rave));
 
-	// XXX: Stack overflow danger on big boards?
-	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
-	float best_urgency = -9999;
-
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-		/* Do not consider passing early. */
-		if (unlikely(!allow_pass && is_pass(ni->coord)))
-			continue;
-
+	uctd_try_node_children(node, allow_pass, ni, urgency) {
 		struct move_stats n = ni->u, r = ni->amaf;
 		if (p->uct->amaf_prior) {
 			stats_merge(&r, &ni->prior);
@@ -106,7 +98,6 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 			stats_reverse_parity(&r);
 		}
 
-		float urgency;
 		if (n.playouts) {
 			if (r.playouts) {
 				/* At the beginning, beta is at 1 and RAVE is used.
@@ -141,19 +132,8 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 			coord2sstr(ni->coord, &bb), ni->hash, urgency,
 			rwins, rgames, rval, nwins, ngames, nval);
 #endif
+	} uctd_set_best_child(ni, urgency);
 
-		if (urgency - best_urgency > __FLT_EPSILON__) { // urgency > best_urgency
-			best_urgency = urgency; nbests = 0;
-		}
-		if (urgency - best_urgency > -__FLT_EPSILON__) { // urgency >= best_urgency
-			/* We want to always choose something else than a pass
-			 * in case of a tie. pass causes degenerative behaviour. */
-			if (nbests == 1 && is_pass(nbest[0]->coord)) {
-				nbests--;
-			}
-			nbest[nbests++] = ni;
-		}
-	}
 #if 0
 	struct board bb; bb.size = 21;
 	fprintf(stderr, "RESULT [%s<%lld> %d: ", coord2sstr(node->coord, &bb), node->hash, nbests);
@@ -161,11 +141,14 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		fprintf(stderr, "%s", coord2sstr(nbest[zz]->coord, &bb));
 	fprintf(stderr, "]\n");
 #endif
-	return nbest[fast_random(nbests)];
+	return uctd_get_best_child();
 }
 
+
 void
-ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, float result)
+ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
+		enum stone node_color, enum stone player_color,
+		struct playout_amafmap *map, float result)
 {
 	struct ucb1_policy_amaf *b = p->data;
 	enum stone child_color = stone_other(node_color);

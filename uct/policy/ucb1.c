@@ -38,23 +38,17 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 	struct ucb1_policy *b = p->data;
 	float xpl = log(node->u.playouts + node->prior.playouts) * b->explore_p;
 
-	// XXX: Stack overflow danger on big boards?
-	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
-	float best_urgency = -9999;
-
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-		/* Do not consider passing early. */
-		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
-			continue;
+	uctd_try_node_children(node, allow_pass, ni, urgency) {
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 
-		float urgency = b->fpu;
 		if (uct_playouts) {
 			/* prior-normal ratio. */
 			float alpha = ni->u.playouts / uct_playouts;
 			urgency = alpha * tree_node_get_value(tree, ni, u, parity)
 				+ (1 - alpha) * tree_node_get_value(tree, ni, prior, parity);
 			urgency += sqrt(xpl / uct_playouts);
+		} else {
+			urgency = b->fpu;
 		}
 
 #if 0
@@ -63,19 +57,8 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 			fprintf(stderr, "[%s -> %s] UCB1 urgency %f (%f + %f : %f)\n", coord2sstr(node->coord, &b2), coord2sstr(ni->coord, &b2), urgency, ni->u.value, sqrt(xpl / ni->u.playouts), b->fpu);
 		}
 #endif
-		if (urgency - best_urgency > __FLT_EPSILON__) { // urgency > best_urgency
-			best_urgency = urgency; nbests = 0;
-		}
-		if (urgency - best_urgency > -__FLT_EPSILON__) { // urgency >= best_urgency
-			/* We want to always choose something else than a pass
-			 * in case of a tie. pass causes degenerative behaviour. */
-			if (nbests == 1 && is_pass(nbest[0]->coord)) {
-				nbests--;
-			}
-			nbest[nbests++] = ni;
-		}
-	}
-	return nbest[fast_random(nbests)];
+	} uctd_set_best_child(ni, urgency);
+	return uctd_get_best_child();
 }
 
 void
