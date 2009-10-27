@@ -5,3 +5,10 @@ Modification of UCT with Patterns in Monte-Carlo Go
 
 Combining Online and Offline Knowledge in UCT
 	Sylvain Gelly, David Silver
+
+
+Pachi contains unpublished methods we claim we have invented
+independently and are preparing for publication:
+
+* The handicap-based linear dynamic komi feature.
+* The root heuristic feature.

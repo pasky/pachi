@@ -11,6 +11,7 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
+#include "probdist.h"
 #include "random.h"
 #include "tactics.h"
 #include "uct/internal.h"
@@ -258,6 +259,26 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			// fprintf(stderr, "score %d => sval %f, rval %f\n", result, sval, rval);
 		}
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
+
+		if (u->root_heuristic && n->parent) {
+			if (!t->chvals) {
+				t->chvals = calloc(board_size2(b), sizeof(t->chvals[0]));
+				t->chchvals = calloc(board_size2(b), sizeof(t->chchvals[0]));
+			}
+
+			struct tree_node *ni = n;
+			while (ni->parent->parent && ni->parent->parent->parent)
+				ni = ni->parent;
+			if (ni->parent->parent) {
+				if (likely(!is_pass(ni->coord)))
+					stats_add_result(&t->chchvals[ni->coord], rval, 1);
+				ni = ni->parent;
+			}
+			assert(ni->parent && !ni->parent->parent);
+
+			if (likely(!is_pass(ni->coord)))
+				stats_add_result(&t->chvals[ni->coord], rval, 1);
+		}
 	}
 
 end:

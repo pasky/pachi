@@ -28,6 +28,8 @@ struct ucb1_policy_amaf {
 	bool both_colors;
 	bool check_nakade;
 	bool sylvain_rave;
+	/* Coefficient of root values embedded in RAVE. */
+	float root_rave;
 };
 
 
@@ -92,6 +94,16 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		} else {
 			stats_merge(&n, &ni->prior);
 		}
+
+		/* Root heuristics, if we aren't actually near the root. */
+		if (tree->chvals && b->root_rave > 0 && likely(!is_pass(ni->coord))
+		    && ni->parent && ni->parent->parent && ni->parent->parent->parent) {
+			struct move_stats *rv = parity > 0 ? tree->chvals : tree->chchvals;
+			struct move_stats root = rv[ni->coord];
+			root.playouts *= b->root_rave;
+			stats_merge(&r, &root);
+		}
+
 		if (tree_parity(tree, parity) < 0) {
 			stats_reverse_parity(&n);
 			stats_reverse_parity(&r);
@@ -216,6 +228,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->fpu = INFINITY;
 	b->check_nakade = true;
 	b->sylvain_rave = true;
+	b->root_rave = 1.0f;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -240,6 +253,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->sylvain_rave = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "check_nakade")) {
 				b->check_nakade = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "root_rave") && optval) {
+				b->root_rave = atof(optval);
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);

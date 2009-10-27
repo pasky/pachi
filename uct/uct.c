@@ -508,6 +508,10 @@ uct_state_init(char *arg)
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
 				u->val_extra = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "root_heuristic")) {
+				/* Whether to bias exploration by root node values
+				 * (must be supported by the used policy). */
+				u->root_heuristic = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */

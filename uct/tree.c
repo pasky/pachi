@@ -63,6 +63,8 @@ void
 tree_done(struct tree *t)
 {
 	tree_done_node(t, t->root);
+	if (t->chchvals) free(t->chchvals);
+	if (t->chvals) free(t->chvals);
 	free(t);
 }
 
@@ -506,6 +508,8 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 	tree->root_color = stone_other(tree->root_color);
 	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
 	tree->max_depth--;
+	if (tree->chchvals) { free(tree->chchvals); tree->chchvals = NULL; }
+	if (tree->chvals) { free(tree->chvals); tree->chvals = NULL; }
 }
 
 bool
