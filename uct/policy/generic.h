@@ -25,6 +25,8 @@ struct tree_node *uctp_generic_choose(struct uct_policy *p, struct tree_node *no
 		if (unlikely(!allow_pass && is_pass(ni->coord))) \
 			continue;
 
+		/* ...your urgency computation code goes here... */
+
 #define uctd_set_best_child(ni, urgency) \
 		if (urgency - best_urgency > __FLT_EPSILON__) { /* urgency > best_urgency */ \
 			best_urgency = urgency; nbests = 0; \
