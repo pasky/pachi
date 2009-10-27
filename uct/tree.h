@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "move.h"
 #include "stats.h"
+#include "probdist.h"
 
 struct board;
 struct uct;
@@ -48,6 +49,12 @@ struct tree {
 	enum stone root_color;
 	float extra_komi;
 
+	// Probability distributions of good black, white moves in the tree
+	// XXX: Probabilities are based on black wins, no matter the color of
+	// the appropriate node levels.
+	struct move_stats *chvals; // [bsize2] root children
+	struct move_stats *chchvals; // [bsize2] root children's children
+
 	// Statistics
 	int max_depth;
 };
@@ -72,9 +79,9 @@ static bool tree_leaf_node(struct tree_node *node);
 #define tree_parity(tree, parity) \
 	(tree->root_color == S_WHITE ? (parity) : -1 * (parity))
 
-/* Get a value to maximize; @parity is parity within the tree. */
-#define tree_node_get_value(tree, node, type, parity) \
-	(tree_parity(tree, parity) > 0 ? node->type.value : 1 - node->type.value)
+/* Get a 0..1 value to maximize; @parity is parity within the tree. */
+#define tree_node_get_value(tree, parity, value) \
+	(tree_parity(tree, parity) > 0 ? value : 1 - value)
 
 static inline bool
 tree_leaf_node(struct tree_node *node)

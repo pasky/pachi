@@ -33,7 +33,7 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o pattern3.o playout.o random.o stone.o tactics.o
+OBJS=board.o gtp.o move.o pattern3.o playout.o probdist.o random.o stone.o tactics.o
 SUBDIRS=random montecarlo uct uct/policy playout
 
 all: all-recursive zzgo test

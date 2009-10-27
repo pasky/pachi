@@ -8,9 +8,9 @@
 #include "debug.h"
 #include "move.h"
 #include "random.h"
-#include "tactics.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
+#include "uct/policy/generic.h"
 
 /* This implements the basic UCB1 policy. */
 
@@ -24,25 +24,7 @@ struct ucb1_policy {
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
-	int urg_randoma, urg_randomm;
 };
-
-
-struct tree_node *
-ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color)
-{
-	struct tree_node *nbest = NULL;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
-		// we compare playouts and choose the best-explored
-		// child; comparing values is more brittle
-		if (!nbest || ni->u.playouts > nbest->u.playouts) {
-			/* Play pass only if we can afford scoring */
-			if (is_pass(ni->coord) && !uct_pass_is_safe(p->uct, b, color))
-				continue;
-			nbest = ni;
-		}
-	return nbest;
-}
 
 
 struct tree_node *
@@ -56,48 +38,20 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 	struct ucb1_policy *b = p->data;
 	float xpl = log(node->u.playouts + node->prior.playouts) * b->explore_p;
 
-	// XXX: Stack overflow danger on big boards?
-	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
-	float best_urgency = -9999;
-
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-		/* Do not consider passing early. */
-		if (likely(!allow_pass) && unlikely(is_pass(ni->coord)))
-			continue;
+	uctd_try_node_children(node, allow_pass, ni, urgency) {
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 
-		float urgency = b->fpu;
 		if (uct_playouts) {
 			/* prior-normal ratio. */
 			float alpha = ni->u.playouts / uct_playouts;
-			urgency = alpha * tree_node_get_value(tree, ni, u, parity)
-				+ (1 - alpha) * tree_node_get_value(tree, ni, prior, parity);
+			urgency = alpha * tree_node_get_value(tree, parity, ni->u.value)
+				+ (1 - alpha) * tree_node_get_value(tree, parity, ni->prior.value);
 			urgency += sqrt(xpl / uct_playouts);
+		} else {
+			urgency = b->fpu;
 		}
-
-#if 0
-		{
-			struct board b2; b2.size = 9+2;
-			fprintf(stderr, "[%s -> %s] UCB1 urgency %f (%f + %f : %f)\n", coord2sstr(node->coord, &b2), coord2sstr(ni->coord, &b2), urgency, ni->u.value, sqrt(xpl / ni->u.playouts), b->fpu);
-		}
-#endif
-		if (b->urg_randoma)
-			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
-		if (b->urg_randomm)
-			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
-		if (urgency - best_urgency > __FLT_EPSILON__) { // urgency > best_urgency
-			best_urgency = urgency; nbests = 0;
-		}
-		if (urgency - best_urgency > -__FLT_EPSILON__) { // urgency >= best_urgency
-			/* We want to always choose something else than a pass
-			 * in case of a tie. pass causes degenerative behaviour. */
-			if (nbests == 1 && is_pass(nbest[0]->coord)) {
-				nbests--;
-			}
-			nbest[nbests++] = ni;
-		}
-	}
-	return nbest[fast_random(nbests)];
+	} uctd_set_best_child(ni, urgency);
+	return uctd_get_best_child();
 }
 
 void
@@ -121,7 +75,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 	p->uct = u;
 	p->data = b;
 	p->descend = ucb1_descend;
-	p->choose = ucb1_choose;
+	p->choose = uctp_generic_choose;
 	p->update = ucb1_update;
 
 	b->explore_p = 0.2;
@@ -142,10 +96,6 @@ policy_ucb1_init(struct uct *u, char *arg)
 				b->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
-			} else if (!strcasecmp(optname, "urg_randoma") && optval) {
-				b->urg_randoma = atoi(optval);
-			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
-				b->urg_randomm = atoi(optval);
 			} else {
 				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n",
 					optname);

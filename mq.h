@@ -1,8 +1,10 @@
 #ifndef ZZGO_MQ_H
 #define ZZGO_MQ_H
 
-/* Move queues; in fact, they are more like move lists, used to accumulate
- * equally good move candidates, then choosing from them randomly. */
+/* Move queues; in fact, they are more like move lists, usually used
+ * to accumulate equally good move candidates, then choosing from them
+ * randomly. But they are also used to juggle group lists (using the
+ * fact that coord_t == group_t). */
 
 #include "move.h"
 #include "random.h"

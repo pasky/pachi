@@ -153,8 +153,9 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 static char *
 uct_chat(struct engine *e, struct board *b, char *cmd)
 {
-	static char reply[1024];
+	struct uct *u = e->data;
 	struct uct_board *ub = b->es;
+	static char reply[1024];
 
 	cmd += strspn(cmd, " \n\t");
 	if (!strncasecmp(cmd, "winrate", 7)) {
@@ -162,9 +163,9 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 			return "no game context (yet?)";
 		enum stone color = ub->t->root_color;
 		struct tree_node *n = ub->t->root;
-		snprintf(reply, 1024, "In %d playouts, %s %s can win with %.2f%% probability",
-			 n->u.playouts, stone2str(color), coord2sstr(n->coord, b),
-			 tree_node_get_value(ub->t, n, u, -1) * 100);
+		snprintf(reply, 1024, "In %d*%d playouts, %s %s can win with %.2f%% probability",
+			 n->u.playouts, u->threads, stone2str(color), coord2sstr(n->coord, b),
+			 tree_node_get_value(ub->t, -1, n->u.value) * 100);
 		if (abs(ub->t->extra_komi) >= 0.5) {
 			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
 				ub->t->extra_komi);
@@ -329,9 +330,9 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
-			tree_node_get_value(ub->t, best, u, 1),
+			tree_node_get_value(ub->t, 1, best->u.value),
 			best->u.playouts, ub->t->root->u.playouts, played_games);
-	if (tree_node_get_value(ub->t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
+	if (tree_node_get_value(ub->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)) {
 		uct_done_board_state(e, b);
 		return coord_copy(resign);
 	}
@@ -507,6 +508,10 @@ uct_state_init(char *arg)
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
 				u->val_extra = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "root_heuristic")) {
+				/* Whether to bias exploration by root node values
+				 * (must be supported by the used policy). */
+				u->root_heuristic = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */

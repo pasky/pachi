@@ -1,5 +1,5 @@
 INCLUDES=-I../..
-OBJS=ucb1.o ucb1amaf.o
+OBJS=generic.o ucb1.o ucb1amaf.o
 
 all: uctpolicy.a
 uctpolicy.a: $(OBJS)
