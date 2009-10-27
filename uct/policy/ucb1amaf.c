@@ -66,7 +66,6 @@ static inline float fast_sqrt(int x)
 		7.74596669241483377035, 7.81024967590665439412,
 		7.87400787401181101968, 7.93725393319377177150,
 	};
-	//printf("sqrt %d\n", x);
 	if (x < sizeof(table) / sizeof(*table)) {
 		return table[x];
 	} else {
@@ -105,11 +104,6 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 				if (b->sylvain_rave)
 					beta = (float) r.playouts / (r.playouts + n.playouts
 						+ (float) n.playouts * r.playouts / b->equiv_rave);
-#if 0
-				//if (node->coord == 7*11+4) // D7
-				fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
-					beta, rgames, rgames, ngames, ngames * rgames / b->equiv_rave);
-#endif
 				urgency = beta * r.value + (1.f - beta) * n.value;
 			} else {
 				urgency = n.value;
@@ -123,24 +117,8 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 			/* assert(!u->even_eqex); */
 			urgency = b->fpu;
 		}
-
-#if 0
-		struct board bb; bb.size = 11;
-		//if (node->coord == 7*11+4) // D7
-		fprintf(stderr, "%s<%lld>-%s<%lld> urgency %f (r %d / %d + e = %f, n %d / %d + e = %f)\n",
-			coord2sstr(ni->parent->coord, &bb), ni->parent->hash,
-			coord2sstr(ni->coord, &bb), ni->hash, urgency,
-			rwins, rgames, rval, nwins, ngames, nval);
-#endif
 	} uctd_set_best_child(ni, urgency);
 
-#if 0
-	struct board bb; bb.size = 21;
-	fprintf(stderr, "RESULT [%s<%lld> %d: ", coord2sstr(node->coord, &bb), node->hash, nbests);
-	for (int zz = 0; zz < nbests; zz++)
-		fprintf(stderr, "%s", coord2sstr(nbest[zz]->coord, &bb));
-	fprintf(stderr, "]\n");
-#endif
 	return uctd_get_best_child();
 }
 

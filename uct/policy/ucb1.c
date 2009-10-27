@@ -50,13 +50,6 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		} else {
 			urgency = b->fpu;
 		}
-
-#if 0
-		{
-			struct board b2; b2.size = 9+2;
-			fprintf(stderr, "[%s -> %s] UCB1 urgency %f (%f + %f : %f)\n", coord2sstr(node->coord, &b2), coord2sstr(ni->coord, &b2), urgency, ni->u.value, sqrt(xpl / ni->u.playouts), b->fpu);
-		}
-#endif
 	} uctd_set_best_child(ni, urgency);
 	return uctd_get_best_child();
 }
