@@ -27,6 +27,15 @@ probdist_add(struct probdist *pd, coord_t c, float val)
 	pd->total += val;
 }
 
+void
+probdist_punch(struct probdist *pd, coord_t c)
+{
+	assert(pd);
+	assert(c >= 0 && c < pd->bsize2);
+	pd->total -= pd->moves[c];
+	pd->moves[c] = 0;
+}
+
 coord_t
 probdist_pick(struct probdist *pd)
 {
