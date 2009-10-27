@@ -153,8 +153,9 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 static char *
 uct_chat(struct engine *e, struct board *b, char *cmd)
 {
-	static char reply[1024];
+	struct uct *u = e->data;
 	struct uct_board *ub = b->es;
+	static char reply[1024];
 
 	cmd += strspn(cmd, " \n\t");
 	if (!strncasecmp(cmd, "winrate", 7)) {
@@ -162,8 +163,8 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 			return "no game context (yet?)";
 		enum stone color = ub->t->root_color;
 		struct tree_node *n = ub->t->root;
-		snprintf(reply, 1024, "In %d playouts, %s %s can win with %.2f%% probability",
-			 n->u.playouts, stone2str(color), coord2sstr(n->coord, b),
+		snprintf(reply, 1024, "In %d*%d playouts, %s %s can win with %.2f%% probability",
+			 n->u.playouts, u->threads, stone2str(color), coord2sstr(n->coord, b),
 			 tree_node_get_value(ub->t, -1, n->u.value) * 100);
 		if (abs(ub->t->extra_komi) >= 0.5) {
 			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
