@@ -8,9 +8,9 @@
 #include "debug.h"
 #include "move.h"
 #include "random.h"
-#include "tactics.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
+#include "uct/policy/generic.h"
 
 /* This implements the basic UCB1 policy. */
 
@@ -25,23 +25,6 @@ struct ucb1_policy {
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
 };
-
-
-struct tree_node *
-ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color)
-{
-	struct tree_node *nbest = NULL;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
-		// we compare playouts and choose the best-explored
-		// child; comparing values is more brittle
-		if (!nbest || ni->u.playouts > nbest->u.playouts) {
-			/* Play pass only if we can afford scoring */
-			if (is_pass(ni->coord) && !uct_pass_is_safe(p->uct, b, color))
-				continue;
-			nbest = ni;
-		}
-	return nbest;
-}
 
 
 struct tree_node *
@@ -116,7 +99,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 	p->uct = u;
 	p->data = b;
 	p->descend = ucb1_descend;
-	p->choose = ucb1_choose;
+	p->choose = uctp_generic_choose;
 	p->update = ucb1_update;
 
 	b->explore_p = 0.2;

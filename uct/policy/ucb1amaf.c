@@ -10,6 +10,7 @@
 #include "random.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
+#include "uct/policy/generic.h"
 
 /* This implements the UCB1 policy with an extra AMAF heuristics. */
 
@@ -28,9 +29,6 @@ struct ucb1_policy_amaf {
 	bool check_nakade;
 	bool sylvain_rave;
 };
-
-
-struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
 
 
 static inline float fast_sqrt(int x)
@@ -248,7 +246,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	p->uct = u;
 	p->data = b;
 	p->descend = ucb1rave_descend;
-	p->choose = ucb1_choose;
+	p->choose = uctp_generic_choose;
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
 
