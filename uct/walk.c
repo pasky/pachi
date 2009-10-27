@@ -39,7 +39,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 		return;
 	}
 	fprintf(stderr, "[%d] ", playouts);
-	fprintf(stderr, "best %f ", tree_node_get_value(t, best, u, 1));
+	fprintf(stderr, "best %f ", tree_node_get_value(t, 1, best->u.value));
 
 	/* Max depth */
 	fprintf(stderr, "deepest % 2d ", t->max_depth - t->root->depth);
@@ -72,7 +72,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 		if (can[cans]) {
 			fprintf(stderr, "%3s(%.3f) ",
 			        coord2sstr(can[cans]->coord, t->board),
-				tree_node_get_value(t, can[cans], u, 1));
+				tree_node_get_value(t, 1, can[cans]->u.value));
 		} else {
 			fprintf(stderr, "           ");
 		}
@@ -97,7 +97,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
-			tree_node_get_value(t, n, u, parity));
+			tree_node_get_value(t, parity, n->u.value));
 
 	struct uct_board *ub = b->es; assert(ub);
 	int result = play_random_game(b, next_color, u->gamelen,
@@ -158,7 +158,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
 			        spaces, coord2sstr(n->coord, t->board), n->coord,
-				tree_node_get_value(t, n, u, parity));
+				tree_node_get_value(t, parity, n->u.value));
 
 		assert(n->coord >= -1);
 		if (amaf && !is_pass(n->coord)) {
@@ -291,8 +291,8 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 
 		if (i > 0 && !(i % 500)) {
 			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
-			if (best && ((best->u.playouts >= 2000 && tree_node_get_value(t, best, u, 1) >= u->loss_threshold)
-			             || (best->u.playouts >= 500 && tree_node_get_value(t, best, u, 1) >= 0.95)))
+			if (best && ((best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
+			             || (best->u.playouts >= 500 && tree_node_get_value(t, 1, best->u.value) >= 0.95)))
 				break;
 		}
 

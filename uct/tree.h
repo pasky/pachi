@@ -72,9 +72,9 @@ static bool tree_leaf_node(struct tree_node *node);
 #define tree_parity(tree, parity) \
 	(tree->root_color == S_WHITE ? (parity) : -1 * (parity))
 
-/* Get a value to maximize; @parity is parity within the tree. */
-#define tree_node_get_value(tree, node, type, parity) \
-	(tree_parity(tree, parity) > 0 ? node->type.value : 1 - node->type.value)
+/* Get a 0..1 value to maximize; @parity is parity within the tree. */
+#define tree_node_get_value(tree, parity, value) \
+	(tree_parity(tree, parity) > 0 ? value : 1 - value)
 
 static inline bool
 tree_leaf_node(struct tree_node *node)

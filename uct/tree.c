@@ -78,9 +78,9 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 	 * win probability of _us_, not the node color. */
 	fprintf(stderr, "[%s] %f %% %d [prior %f %% %d amaf %f %% %d]; hints %x; %d children <%lld>\n",
 		coord2sstr(node->coord, tree->board),
-		tree_node_get_value(tree, node, u, 1), node->u.playouts,
-		tree_node_get_value(tree, node, prior, 1), node->prior.playouts,
-		tree_node_get_value(tree, node, amaf, 1), node->amaf.playouts,
+		tree_node_get_value(tree, 1, node->u.value), node->u.playouts,
+		tree_node_get_value(tree, 1, node->prior.value), node->prior.playouts,
+		tree_node_get_value(tree, 1, node->amaf.value), node->amaf.playouts,
 		node->hints, children, node->hash);
 
 	/* Print nodes sorted by #playouts. */

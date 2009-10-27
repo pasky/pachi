@@ -44,8 +44,8 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, in
 		if (uct_playouts) {
 			/* prior-normal ratio. */
 			float alpha = ni->u.playouts / uct_playouts;
-			urgency = alpha * tree_node_get_value(tree, ni, u, parity)
-				+ (1 - alpha) * tree_node_get_value(tree, ni, prior, parity);
+			urgency = alpha * tree_node_get_value(tree, parity, ni->u.value)
+				+ (1 - alpha) * tree_node_get_value(tree, parity, ni->prior.value);
 			urgency += sqrt(xpl / uct_playouts);
 		} else {
 			urgency = b->fpu;

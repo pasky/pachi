@@ -164,7 +164,7 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 		struct tree_node *n = ub->t->root;
 		snprintf(reply, 1024, "In %d playouts, %s %s can win with %.2f%% probability",
 			 n->u.playouts, stone2str(color), coord2sstr(n->coord, b),
-			 tree_node_get_value(ub->t, n, u, -1) * 100);
+			 tree_node_get_value(ub->t, -1, n->u.value) * 100);
 		if (abs(ub->t->extra_komi) >= 0.5) {
 			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
 				ub->t->extra_komi);
@@ -329,9 +329,9 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
-			tree_node_get_value(ub->t, best, u, 1),
+			tree_node_get_value(ub->t, 1, best->u.value),
 			best->u.playouts, ub->t->root->u.playouts, played_games);
-	if (tree_node_get_value(ub->t, best, u, 1) < u->resign_ratio && !is_pass(best->coord)) {
+	if (tree_node_get_value(ub->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)) {
 		uct_done_board_state(e, b);
 		return coord_copy(resign);
 	}
