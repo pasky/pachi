@@ -339,10 +339,15 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* If the opponent just passed and we win counting, always
 	 * pass as well. */
-	if (b->moves > 1 && is_pass(b->last_move.coord) && uct_pass_is_safe(u, b, color)) {
-		if (UDEBUGL(0))
-			fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
-		best->coord = pass;
+	if (b->moves > 1 && is_pass(b->last_move.coord)) {
+		/* Make sure enough playouts are simulated. */
+		while (ub->ownermap.playouts < GJ_MINGAMES)
+			uct_playout(u, b, color, ub->t);
+		if (uct_pass_is_safe(u, b, color)) {
+			if (UDEBUGL(0))
+				fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
+			best->coord = pass;
+		}
 	}
 
 	tree_promote_node(ub->t, best);
