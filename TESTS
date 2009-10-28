@@ -476,12 +476,30 @@ f4cb0	19u1a$~b361	42.5% (+-2.5%)	games=6666,val_scale=0.02,val_points=361
 7d1c7	9k0u1a%95	64% (+-1.8%)	rate=95
 7d1c7	9k0u1a%80	65.8% (+-1.8%)	rate=80
 7d1c7	9k0u1a%70	67.1% (+-1.7%)	rate=70
-7d1c7	9k0u1a%65	68.9% (+-1.6%)	rate=65
+7d1c7	9k0u1a%65	68.5% (+-1.4%)	rate=65
+7d1c7	9k0u1a%60	66.4% (+-1.7%)	rate=60
+7d1c7	9k0u1a%55	65.8% (+-1.7%)	rate=55
+7d1c7	9k0u1a%50	63% (+-1.7%)	rate=50
+7d1c7	9k0u1a%45	57.6% (+-1.7%)	rate=45
+7d1c7	9k0u1a%65#80	64.7% (+-1.7%)	rate=65,patternrate=80
+7d1c7	9k0u1a%65&80	68.1% (+-1.6%)	rate=65,selfatarirate=80
+7d1c7	9k0u1a%65&95	64% (+-1.7%)	rate=65,selfatarirate=95
+7d1c7	9k0u1a%90!50	66.4% (+-1.7%)	rate=90,atarirate=50
+7d1c7	9k0u1a%90=50	64.2% (+-1.7%)	rate=90,capturerate=50
+7d1c7	9k0u1a^		63.8% (+-1.7%)	ladders=0
+7d1c7	9k0u1a+		61.6% (+-1.7%)	pattern2=0
+
 7d1c7	19u1a		30.5% (+-2.3%)
 7d1c7	19u1a$		40.2% (+-2.2%)	games=6666
 7d1c7	19u1a~x		31.2% (+-2.3%)	val_extra
 7d1c7	19u1a~10	30.2% (+-2.3%)	val_points=10
 7d1c7	19u1a~20	30.8% (+-2.3%)	val_points=20
+7d1c7	19u1a@		31.2% (+-2.3%)	prior=ko=-1
+7d1c7	19u1a%99	32.2% (+-2.4%)	rate=99
+7d1c7	19u1a%95	32.5% (+-2.3%)	rate=95
+7d1c7	19u1a%85	33% (+-2.4%)	rate=85
+7d1c7	19u1a%80	25.8% (+-2.1%)	rate=80
+7d1c7	19u1a%65	22.2% (+-2.2%)	rate=65
 
 More dynkomi experiments:
 7d1c7	19k0u1a		36.2% (+-2.4%)
