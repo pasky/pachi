@@ -405,7 +405,7 @@ uct_state_init(char *arg)
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
-	u->amaf_prior = true;
+	u->amaf_prior = false;
 	u->dynkomi_mask = S_WHITE | S_BLACK;
 
 	u->val_scale = 0.02; u->val_points = 20;
