@@ -487,7 +487,7 @@ f4cb0	19u1a$~b361	42.5% (+-2.5%)	games=6666,val_scale=0.02,val_points=361
 7d1c7	9k0u1a%90!50	66.4% (+-1.7%)	rate=90,atarirate=50
 7d1c7	9k0u1a%90=50	64.2% (+-1.7%)	rate=90,capturerate=50
 7d1c7	9k0u1a^		63.8% (+-1.7%)	ladders=0
-7d1c7	9k0u1a+		61.6% (+-1.7%)	pattern2=0
+7d1c7	9k0u1a+		61.6% (+-1.7%)	pattern2=1
 
 7d1c7	19u1a		30.5% (+-2.3%)
 7d1c7	19u1a$		40.2% (+-2.2%)	games=6666
@@ -538,3 +538,19 @@ a9249	19u1a*3		26.5% (+-2.2%)	prior=cfgd=3%40%10%10
 a9249	19u1a*4		23.2% (+-2.1%)	prior=cfgd=4%40%30%20%10
 a9249	19u1a*5		23% (+-2.1%)	prior=cfgd=4%40%30%30%5
 a9249	19u1a*6		25% (+-2.2%)	prior=cfgd=4%40%30%30%20
+
+44216	19u1a		30% (+-2.3%)
+44216	19u1a+		24% (+-2.1%)	pattern2=1
+44216	19u1a%60	26% (+-2.2%)	prior=eqex=60
+44216	19u1a!%10	29.8% (+-2.3%)	amaf_prior=0,prior=eqex=10
+44216	19u1a!%20	25% (+-2.4%)	amaf_prior=0,prior=eqex=20
+44216	19u1a!%30	32.5% (+-2.3%)	amaf_prior=0,prior=eqex=30
+44216	19u1a!		36.8% (+-2.4%)	amaf_prior=0,[prior=eqex=40]
+44216	19u1a!%50	27.8% (+-2.2%)	amaf_prior=0,prior=eqex=50
+44216	19u1a!%60	25.2% (+-2.2%)	amaf_prior=0,prior=eqex=60
+
+938a4	9k0u1a		65.5% (+-1.7%)
+938a4	9k0u1a~0	68.8% (+-2.3%)	val_points=0
+938a4	9k0u1a!%30	71.2% (+-2.3%)	amaf_prior=0,prior=eqex=30
+938a4	9k0u1a!		71% (+-2.3%)	amaf_prior=0,[prior=eqex=40]
+938a4	9k0u1a!%50	65% (+-2.4%)	amaf_prior=0,prior=eqex=50
