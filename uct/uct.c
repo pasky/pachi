@@ -353,26 +353,25 @@ bool
 uct_genbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
-	struct tree *t = tree_init(b, color);
-	tree_load(t, b);
+	if (!b->es)
+		prepare_move(e, b, color, resign);
+	struct uct_board *ub = b->es;
 
 	int i;
 	for (i = 0; i < u->games; i++) {
-		int result = uct_playout(u, b, color, t);
+		int result = uct_playout(u, b, color, ub->t);
 		if (result == 0) {
 			/* Tree descent has hit invalid move. */
 			continue;
 		}
 
 		if (i > 0 && !(i % 10000)) {
-			uct_progress_status(u, t, color, i);
+			uct_progress_status(u, ub->t, color, i);
 		}
 	}
-	uct_progress_status(u, t, color, i);
+	uct_progress_status(u, ub->t, color, i);
 
-	tree_save(t, b, u->games / 100);
-
-	tree_done(t);
+	tree_save(ub->t, b, u->games / 100);
 
 	return true;
 }
