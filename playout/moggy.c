@@ -17,7 +17,8 @@
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
 /* Whether to avoid capturing/atariing doomed groups (this is big
- * performance hit and may reduce playouts balance). */
+ * performance hit and may reduce playouts balance; it does increase
+ * the strength, but not quite proportionally to the performance). */
 //#define NO_DOOMED_GROUPS
 
 

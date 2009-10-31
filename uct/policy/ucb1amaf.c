@@ -10,6 +10,7 @@
 #include "random.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
+#include "uct/policy/generic.h"
 
 /* This implements the UCB1 policy with an extra AMAF heuristics. */
 
@@ -23,15 +24,13 @@ struct ucb1_policy_amaf {
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
-	int urg_randoma, urg_randomm;
 	int equiv_rave;
 	bool both_colors;
 	bool check_nakade;
 	bool sylvain_rave;
+	/* Coefficient of root values embedded in RAVE. */
+	float root_rave;
 };
-
-
-struct tree_node *ucb1_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
 
 
 static inline float fast_sqrt(int x)
@@ -69,7 +68,6 @@ static inline float fast_sqrt(int x)
 		7.74596669241483377035, 7.81024967590665439412,
 		7.87400787401181101968, 7.93725393319377177150,
 	};
-	//printf("sqrt %d\n", x);
 	if (x < sizeof(table) / sizeof(*table)) {
 		return table[x];
 	} else {
@@ -89,27 +87,28 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 	if (!b->sylvain_rave)
 		beta = sqrt(b->equiv_rave / (3 * node->u.playouts + b->equiv_rave));
 
-	// XXX: Stack overflow danger on big boards?
-	struct tree_node *nbest[512] = { node->children }; int nbests = 1;
-	float best_urgency = -9999;
-
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-		/* Do not consider passing early. */
-		if (unlikely(!allow_pass && is_pass(ni->coord)))
-			continue;
-
+	uctd_try_node_children(node, allow_pass, ni, urgency) {
 		struct move_stats n = ni->u, r = ni->amaf;
 		if (p->uct->amaf_prior) {
 			stats_merge(&r, &ni->prior);
 		} else {
 			stats_merge(&n, &ni->prior);
 		}
+
+		/* Root heuristics, if we aren't actually near the root. */
+		if (tree->chvals && b->root_rave > 0 && likely(!is_pass(ni->coord))
+		    && ni->parent && ni->parent->parent && ni->parent->parent->parent) {
+			struct move_stats *rv = parity > 0 ? tree->chvals : tree->chchvals;
+			struct move_stats root = rv[ni->coord];
+			root.playouts *= b->root_rave;
+			stats_merge(&r, &root);
+		}
+
 		if (tree_parity(tree, parity) < 0) {
 			stats_reverse_parity(&n);
 			stats_reverse_parity(&r);
 		}
 
-		float urgency;
 		if (n.playouts) {
 			if (r.playouts) {
 				/* At the beginning, beta is at 1 and RAVE is used.
@@ -117,11 +116,6 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 				if (b->sylvain_rave)
 					beta = (float) r.playouts / (r.playouts + n.playouts
 						+ (float) n.playouts * r.playouts / b->equiv_rave);
-#if 0
-				//if (node->coord == 7*11+4) // D7
-				fprintf(stderr, "[beta %f = %d / (%d + %d + %f)]\n",
-					beta, rgames, rgames, ngames, ngames * rgames / b->equiv_rave);
-#endif
 				urgency = beta * r.value + (1.f - beta) * n.value;
 			} else {
 				urgency = n.value;
@@ -135,44 +129,16 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 			/* assert(!u->even_eqex); */
 			urgency = b->fpu;
 		}
+	} uctd_set_best_child(ni, urgency);
 
-#if 0
-		struct board bb; bb.size = 11;
-		//if (node->coord == 7*11+4) // D7
-		fprintf(stderr, "%s<%lld>-%s<%lld> urgency %f (r %d / %d + e = %f, n %d / %d + e = %f)\n",
-			coord2sstr(ni->parent->coord, &bb), ni->parent->hash,
-			coord2sstr(ni->coord, &bb), ni->hash, urgency,
-			rwins, rgames, rval, nwins, ngames, nval);
-#endif
-		if (b->urg_randoma)
-			urgency += (float)(fast_random(b->urg_randoma) - b->urg_randoma / 2) / 1000;
-		if (b->urg_randomm)
-			urgency *= (float)(fast_random(b->urg_randomm) + 5) / b->urg_randomm;
-
-		if (urgency - best_urgency > __FLT_EPSILON__) { // urgency > best_urgency
-			best_urgency = urgency; nbests = 0;
-		}
-		if (urgency - best_urgency > -__FLT_EPSILON__) { // urgency >= best_urgency
-			/* We want to always choose something else than a pass
-			 * in case of a tie. pass causes degenerative behaviour. */
-			if (nbests == 1 && is_pass(nbest[0]->coord)) {
-				nbests--;
-			}
-			nbest[nbests++] = ni;
-		}
-	}
-#if 0
-	struct board bb; bb.size = 21;
-	fprintf(stderr, "RESULT [%s<%lld> %d: ", coord2sstr(node->coord, &bb), node->hash, nbests);
-	for (int zz = 0; zz < nbests; zz++)
-		fprintf(stderr, "%s", coord2sstr(nbest[zz]->coord, &bb));
-	fprintf(stderr, "]\n");
-#endif
-	return nbest[fast_random(nbests)];
+	return uctd_get_best_child();
 }
 
+
 void
-ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, float result)
+ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
+		enum stone node_color, enum stone player_color,
+		struct playout_amafmap *map, float result)
 {
 	struct ucb1_policy_amaf *b = p->data;
 	enum stone child_color = stone_other(node_color);
@@ -253,7 +219,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	p->uct = u;
 	p->data = b;
 	p->descend = ucb1rave_descend;
-	p->choose = ucb1_choose;
+	p->choose = uctp_generic_choose;
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
 
@@ -262,6 +228,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->fpu = INFINITY;
 	b->check_nakade = true;
 	b->sylvain_rave = true;
+	b->root_rave = 1.0f;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -278,10 +245,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
-			} else if (!strcasecmp(optname, "urg_randoma") && optval) {
-				b->urg_randoma = atoi(optval);
-			} else if (!strcasecmp(optname, "urg_randomm") && optval) {
-				b->urg_randomm = atoi(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "both_colors")) {
@@ -290,6 +253,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->sylvain_rave = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "check_nakade")) {
 				b->check_nakade = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "root_rave") && optval) {
+				b->root_rave = atof(optval);
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);

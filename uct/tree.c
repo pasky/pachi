@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -63,6 +64,8 @@ void
 tree_done(struct tree *t)
 {
 	tree_done_node(t, t->root);
+	if (t->chchvals) free(t->chchvals);
+	if (t->chvals) free(t->chvals);
 	free(t);
 }
 
@@ -78,9 +81,9 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 	 * win probability of _us_, not the node color. */
 	fprintf(stderr, "[%s] %f %% %d [prior %f %% %d amaf %f %% %d]; hints %x; %d children <%lld>\n",
 		coord2sstr(node->coord, tree->board),
-		tree_node_get_value(tree, node, u, 1), node->u.playouts,
-		tree_node_get_value(tree, node, prior, 1), node->prior.playouts,
-		tree_node_get_value(tree, node, amaf, 1), node->amaf.playouts,
+		tree_node_get_value(tree, 1, node->u.value), node->u.playouts,
+		tree_node_get_value(tree, 1, node->prior.value), node->prior.playouts,
+		tree_node_get_value(tree, 1, node->amaf.value), node->amaf.playouts,
 		node->hints, children, node->hash);
 
 	/* Print nodes sorted by #playouts. */
@@ -103,6 +106,18 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 }
 
 void
+tree_dump_chval(struct tree *tree, struct move_stats *v)
+{
+	for (int y = board_size(tree->board) - 2; y > 1; y--) {
+		for (int x = 1; x < board_size(tree->board) - 1; x++) {
+			coord_t c = coord_xy(tree->board, x, y);
+			fprintf(stderr, "%.2f%%%05d  ", v[c].value, v[c].playouts);
+		}
+		fprintf(stderr, "\n");
+	}
+}
+
+void
 tree_dump(struct tree *tree, int thres)
 {
 	if (thres && tree->root->u.playouts / thres > 100) {
@@ -113,6 +128,13 @@ tree_dump(struct tree *tree, int thres)
 	fprintf(stderr, "(UCT tree; root %s; extra komi %f)\n",
 	        stone2str(tree->root_color), tree->extra_komi);
 	tree_node_dump(tree, tree->root, 0, thres);
+
+	if (DEBUGL(3) && tree->chvals) {
+		fprintf(stderr, "children stats:\n");
+		tree_dump_chval(tree, tree->chvals);
+		fprintf(stderr, "grandchildren stats:\n");
+		tree_dump_chval(tree, tree->chchvals);
+	}
 }
 
 
@@ -462,7 +484,7 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 		}
 	}
 
-	if (UDEBUGL(4)) {
+	if (DEBUGL(4)) {
 		fprintf(stderr, "%s will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
 			coord2sstr(c, b), flip_horiz, flip_vert, flip_diag,
 			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
@@ -506,6 +528,8 @@ tree_promote_node(struct tree *tree, struct tree_node *node)
 	tree->root_color = stone_other(tree->root_color);
 	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
 	tree->max_depth--;
+	if (tree->chchvals) { free(tree->chchvals); tree->chchvals = NULL; }
+	if (tree->chvals) { free(tree->chvals); tree->chvals = NULL; }
 }
 
 bool

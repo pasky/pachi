@@ -90,6 +90,7 @@ int play_random_game(struct board *b, enum stone starting_color, int gamelen,
 
 /* Ownermap utility routines: */
 
+void playout_ownermap_fill(struct playout_ownermap *ownermap, struct board *b);
 void playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_ownermap *src);
 
 /* Estimate coord ownership based on ownermap stats. */

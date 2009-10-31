@@ -37,6 +37,8 @@ struct uct {
 	int val_points;
 	bool val_extra;
 
+	bool root_heuristic;
+
 	char *banner;
 
 	struct uct_policy *policy;
