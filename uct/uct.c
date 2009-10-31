@@ -405,7 +405,9 @@ uct_state_init(char *arg)
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
-	u->dynkomi_mask = S_WHITE | S_BLACK;
+
+	u->dynkomi = 200;
+	u->dynkomi_mask = S_BLACK;
 
 	u->val_scale = 0.02; u->val_points = 20;
 
@@ -496,8 +498,8 @@ uct_state_init(char *arg)
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; you may want
-				 * to use dynkomi_mask=1 to limit dynkomi
-				 * only to games where Pachi is black. */
+				 * to use dynkomi_mask=3 to allow dynkomi
+				 * even in games where Pachi is white. */
 				u->dynkomi_mask = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
