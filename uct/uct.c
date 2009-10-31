@@ -62,8 +62,14 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
-		if (!u->no_book && b->moves < 2)
+		if (!u->no_book && b->moves < 2) {
 			tree_load(ub->t, b);
+			if (b->moves == 1 && !is_pass(b->last_move.coord)) {
+				assert(color == S_WHITE);
+				bool promote_ok = tree_promote_at(ub->t, b, b->last_move.coord);
+				assert(promote_ok);
+			}
+		}
 		ub->ownermap.map = malloc(board_size2(b) * sizeof(ub->ownermap.map[0]));
 	}
 
