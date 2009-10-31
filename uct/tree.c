@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -105,6 +106,18 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 }
 
 void
+tree_dump_chval(struct tree *tree, struct move_stats *v)
+{
+	for (int y = board_size(tree->board) - 2; y > 1; y--) {
+		for (int x = 1; x < board_size(tree->board) - 1; x++) {
+			coord_t c = coord_xy(tree->board, x, y);
+			fprintf(stderr, "%.2f%%%05d  ", v[c].value, v[c].playouts);
+		}
+		fprintf(stderr, "\n");
+	}
+}
+
+void
 tree_dump(struct tree *tree, int thres)
 {
 	if (thres && tree->root->u.playouts / thres > 100) {
@@ -115,6 +128,13 @@ tree_dump(struct tree *tree, int thres)
 	fprintf(stderr, "(UCT tree; root %s; extra komi %f)\n",
 	        stone2str(tree->root_color), tree->extra_komi);
 	tree_node_dump(tree, tree->root, 0, thres);
+
+	if (DEBUGL(3) && tree->chvals) {
+		fprintf(stderr, "children stats:\n");
+		tree_dump_chval(tree, tree->chvals);
+		fprintf(stderr, "grandchildren stats:\n");
+		tree_dump_chval(tree, tree->chchvals);
+	}
 }
 
 
@@ -464,7 +484,7 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 		}
 	}
 
-	if (UDEBUGL(4)) {
+	if (DEBUGL(4)) {
 		fprintf(stderr, "%s will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
 			coord2sstr(c, b), flip_horiz, flip_vert, flip_diag,
 			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
