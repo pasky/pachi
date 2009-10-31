@@ -39,7 +39,7 @@ static void uct_done_board_state(struct engine *e, struct board *b);
 
 
 static void
-prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promote)
+prepare_move(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	struct uct_board *ub = b->es;
@@ -189,7 +189,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 		 * when all stones are assumed alive. */
 		/* Mock up some state and seed the ownermap by few
 		 * simulations. */
-		prepare_move(e, b, S_BLACK, resign);
+		prepare_move(e, b, S_BLACK);
 		ub = b->es; assert(ub);
 		for (int i = 0; i < GJ_MINGAMES; i++)
 			uct_playout(u, b, S_BLACK, ub->t);
@@ -268,7 +268,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	}
 
 	/* Seed the tree. */
-	prepare_move(e, b, color, resign);
+	prepare_move(e, b, color);
 
 	struct uct_board *ub = b->es;
 	assert(ub);
@@ -354,7 +354,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	if (!b->es)
-		prepare_move(e, b, color, resign);
+		prepare_move(e, b, color);
 	struct uct_board *ub = b->es;
 
 	int i;
