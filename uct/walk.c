@@ -302,6 +302,8 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	/* else this is highly read-out but dead-end branch of opening book;
 	 * we need to start from scratch; XXX: Maybe actually base the readout
 	 * count based on number of playouts of best node? */
+	if (games < u->games && UDEBUGL(2))
+		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
 	for (i = 0; i < games; i++) {
 		int result = uct_playout(u, b, color, t);
 		if (result == 0) {
