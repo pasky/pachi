@@ -68,6 +68,8 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 				assert(color == S_WHITE);
 				bool promote_ok = tree_promote_at(ub->t, b, b->last_move.coord);
 				assert(promote_ok);
+				/* Fix up root color mangled by tree_promote_at(). */
+				ub->t->root_color = stone_other(color);
 			}
 		}
 		ub->ownermap.map = malloc(board_size2(b) * sizeof(ub->ownermap.map[0]));
