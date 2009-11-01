@@ -485,8 +485,10 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 	}
 
 	if (DEBUGL(4)) {
-		fprintf(stderr, "%s will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
-			coord2sstr(c, b), flip_horiz, flip_vert, flip_diag,
+		fprintf(stderr, "%s [%d,%d -> %d,%d;%d,%d] will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
+			coord2sstr(c, b),
+			cx, cy, s->x1, s->y1, s->x2, s->y2,
+			flip_horiz, flip_vert, flip_diag,
 			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
 			s->type, s->d, b->symmetry.type, b->symmetry.d);
 	}
