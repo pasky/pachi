@@ -62,15 +62,9 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
-		if (!u->no_book && b->moves < 2) {
+		if (!u->no_book && b->moves == 0) {
+			assert(color == S_BLACK);
 			tree_load(ub->t, b);
-			if (b->moves == 1 && !is_pass(b->last_move.coord)) {
-				assert(color == S_WHITE);
-				bool promote_ok = tree_promote_at(ub->t, b, b->last_move.coord);
-				assert(promote_ok);
-				/* Fix up root color mangled by tree_promote_at(). */
-				ub->t->root_color = stone_other(color);
-			}
 		}
 		ub->ownermap.map = malloc(board_size2(b) * sizeof(ub->ownermap.map[0]));
 	}
@@ -138,8 +132,10 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	struct uct *u = e->data;
 	struct uct_board *ub = b->es;
 	if (!ub) {
-		/* No state, no worry. */
-		return;
+		/* No state, create one - this is probably game beginning
+		 * and we need to load the opening book right now. */
+		prepare_move(e, b, m->color);
+		assert(b->es); ub = b->es;
 	}
 
 	if (is_resign(m->coord)) {
