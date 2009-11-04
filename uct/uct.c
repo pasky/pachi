@@ -107,7 +107,8 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color)
 		return false;
 
 	struct move_queue mq = { .moves = 0 };
-	dead_group_list(u, b, &mq);
+	if (!u->pass_all_alive)
+		dead_group_list(u, b, &mq);
 	return pass_is_safe(b, color, &mq);
 }
 
@@ -184,6 +185,9 @@ static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
+	if (u->pass_all_alive)
+		return; // no dead groups
+
 	struct uct_board *ub = b->es;
 	bool mock_state = false;
 
@@ -523,6 +527,10 @@ uct_state_init(char *arg)
 				/* Whether to bias exploration by root node values
 				 * (must be supported by the used policy). */
 				u->root_heuristic = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "pass_all_alive")) {
+				/* Whether to consider all stones alive at the game
+				 * end instead of marking dead groupd. */
+				u->pass_all_alive = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
