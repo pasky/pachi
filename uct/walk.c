@@ -156,7 +156,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * it is applied to children. */
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
-		n = !u->random_ucb1 || fast_random(65536) % u->random_ucb1
+		n = !u->random_ucb1 || fast_random(u->random_ucb1)
 			? u->policy->descend(u->policy, t, n, parity, pass_limit)
 			: ucb1_descend(u->policy, t, n, parity, pass_limit);
 
