@@ -20,6 +20,9 @@
 #include "uct/walk.h"
 
 
+struct tree_node *ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
+
+
 float
 uct_get_extra_komi(struct uct *u, struct board *b)
 {
@@ -153,7 +156,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * it is applied to children. */
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
-		n = u->policy->descend(u->policy, t, n, parity, pass_limit);
+		n = !u->random_ucb1 || fast_random(65536) % u->random_ucb1
+			? u->policy->descend(u->policy, t, n, parity, pass_limit)
+			: ucb1_descend(u->policy, t, n, parity, pass_limit);
 
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))

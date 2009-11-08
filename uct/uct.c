@@ -531,6 +531,12 @@ uct_state_init(char *arg)
 				/* Whether to consider all stones alive at the game
 				 * end instead of marking dead groupd. */
 				u->pass_all_alive = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "random_ucb1") && optval) {
+				/* If specified (N), with probability 1/N, plain UCB1 policy
+				 * descend is used instead of specified policy descend; useful
+				 * if specified policy (e.g. UCB1AMAF) can make unduly biased
+				 * choices sometimes. */
+				u->random_ucb1 = atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
