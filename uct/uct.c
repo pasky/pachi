@@ -62,8 +62,10 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
-		if (!u->no_book && b->moves < 2)
+		if (!u->no_book && b->moves == 0) {
+			assert(color == S_BLACK);
 			tree_load(ub->t, b);
+		}
 		ub->ownermap.map = malloc(board_size2(b) * sizeof(ub->ownermap.map[0]));
 	}
 
@@ -105,7 +107,8 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color)
 		return false;
 
 	struct move_queue mq = { .moves = 0 };
-	dead_group_list(u, b, &mq);
+	if (!u->pass_all_alive)
+		dead_group_list(u, b, &mq);
 	return pass_is_safe(b, color, &mq);
 }
 
@@ -130,8 +133,10 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	struct uct *u = e->data;
 	struct uct_board *ub = b->es;
 	if (!ub) {
-		/* No state, no worry. */
-		return;
+		/* No state, create one - this is probably game beginning
+		 * and we need to load the opening book right now. */
+		prepare_move(e, b, m->color);
+		assert(b->es); ub = b->es;
 	}
 
 	if (is_resign(m->coord)) {
@@ -180,6 +185,9 @@ static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
+	if (u->pass_all_alive)
+		return; // no dead groups
+
 	struct uct_board *ub = b->es;
 	bool mock_state = false;
 
@@ -405,7 +413,10 @@ uct_state_init(char *arg)
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
-	u->dynkomi_mask = S_WHITE | S_BLACK;
+
+	// u->dynkomi = 200; - this is great on 19x19, but to enable it by default we must
+	// make sure it's not used on 9x9 where it's crap
+	u->dynkomi_mask = S_BLACK;
 
 	u->val_scale = 0.02; u->val_points = 20;
 
@@ -496,8 +507,8 @@ uct_state_init(char *arg)
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; you may want
-				 * to use dynkomi_mask=1 to limit dynkomi
-				 * only to games where Pachi is black. */
+				 * to use dynkomi_mask=3 to allow dynkomi
+				 * even in games where Pachi is white. */
 				u->dynkomi_mask = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
@@ -516,6 +527,10 @@ uct_state_init(char *arg)
 				/* Whether to bias exploration by root node values
 				 * (must be supported by the used policy). */
 				u->root_heuristic = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "pass_all_alive")) {
+				/* Whether to consider all stones alive at the game
+				 * end instead of marking dead groupd. */
+				u->pass_all_alive = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
