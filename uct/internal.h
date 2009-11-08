@@ -38,7 +38,7 @@ struct uct {
 	int val_points;
 	bool val_extra;
 
-	bool random_ucb1;
+	int random_ucb1;
 	bool root_heuristic;
 
 	char *banner;
