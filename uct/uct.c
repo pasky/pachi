@@ -467,14 +467,15 @@ uct_state_init(char *arg)
 				/* Keep only first N% of playout stage AMAF
 				 * information. */
 				u->playout_amaf_cutoff = atoi(optval);
-			} else if (!strcasecmp(optname, "policy") && optval) {
+			} else if ((!strcasecmp(optname, "policy") || !strcasecmp(optname, "random_policy")) && optval) {
 				char *policyarg = strchr(optval, ':');
+				struct uct_policy **p = !strcasecmp(optname, "policy") ? &u->policy : &u->random_policy;
 				if (policyarg)
 					*policyarg++ = 0;
 				if (!strcasecmp(optval, "ucb1")) {
-					u->policy = policy_ucb1_init(u, policyarg);
+					*p = policy_ucb1_init(u, policyarg);
 				} else if (!strcasecmp(optval, "ucb1amaf")) {
-					u->policy = policy_ucb1amaf_init(u, policyarg);
+					*p = policy_ucb1amaf_init(u, policyarg);
 				} else {
 					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
 				}
@@ -531,12 +532,13 @@ uct_state_init(char *arg)
 				/* Whether to consider all stones alive at the game
 				 * end instead of marking dead groupd. */
 				u->pass_all_alive = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "random_ucb1") && optval) {
-				/* If specified (N), with probability 1/N, plain UCB1 policy
-				 * descend is used instead of specified policy descend; useful
+			} else if (!strcasecmp(optname, "random_policy_chance") && optval) {
+				/* If specified (N), with probability 1/N, random_policy policy
+				 * descend is used instead of main policy descend; useful
 				 * if specified policy (e.g. UCB1AMAF) can make unduly biased
-				 * choices sometimes. */
-				u->random_ucb1 = atoi(optval);
+				 * choices sometimes, you can fall back to e.g.
+				 * random_policy=UCB1. */
+				u->random_policy_chance = atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
@@ -554,6 +556,11 @@ uct_state_init(char *arg)
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
+
+	if (!!u->random_policy_chance ^ !!u->random_policy) {
+		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
+		exit(1);
+	}
 
 	if (!u->prior)
 		u->prior = uct_prior_init(NULL);

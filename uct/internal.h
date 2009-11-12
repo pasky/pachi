@@ -38,12 +38,13 @@ struct uct {
 	int val_points;
 	bool val_extra;
 
-	int random_ucb1;
+	int random_policy_chance;
 	bool root_heuristic;
 
 	char *banner;
 
 	struct uct_policy *policy;
+	struct uct_policy *random_policy;
 	struct playout_policy *playout;
 	struct uct_prior *prior;
 };
