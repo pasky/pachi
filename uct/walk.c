@@ -155,7 +155,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		int parity = (node_color == player_color ? 1 : -1);
 		n = (!u->random_policy_chance || fast_random(u->random_policy_chance))
 			? u->policy->descend(u->policy, t, n, parity, pass_limit)
-			: u->random_policy->descend(u->policy, t, n, parity, pass_limit);
+			: u->random_policy->descend(u->random_policy, t, n, parity, pass_limit);
 
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
