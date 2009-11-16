@@ -599,3 +599,24 @@ a3010	19u1a#0.2	29% (+-2.3%)	root_heuristic,root_rave=0.2
 938a4	19u1a#0.05	29.2% (+-2.3%)	root_heuristic,root_rave=0.05
 938a4	19u1a#0.02	27.2% (+-2.2%)	root_heuristic,root_rave=0.02
 938a4	19u1a#0.005	33.8% (+-2.4%)	root_heuristic,root_rave=0.005
+
+4e89f	19u1		0%
+4e89f	19u1a		30.5% (+-2.3%)
+4e89f	19u1a#95	28.5% (+-2.3%)	rate=95
+4e89f	19u1a#100/95	32.5% (+-2.3%)	rate=100,selfatarirate=95
+4e89f	19u1a%02	1% (+-0.5%)	explore_p=0.2
+4e89f	19u1a%002	30.5% (+-2.3%)	explore_p=0.02
+
+4e89f	19u1a*10	22% (+-2.1%)	prior=cfgd=3%20%10%5
+4e89f	19u1a*11	25.5% (+-2.1%)	prior=cfgd=3%30%10%10
+4e89f	19u1a*12	26.5% (+-2.2%)	prior=cfgd=3%30%20%10
+4e89f	19u1a*13	25.5% (+-2.1%)	prior=cfgd=3%30%20%20
+4e89f	19u1a		28% (+-2.2%)	[prior=cfgd=3%40%20%20]
+4e89f	19u1a*15	19.8% (+-2%)	prior=cfgd=3%50%20%20
+4e89f	19u1a*16	21.5% (+-2.1%)	prior=cfgd=3%50%30%20
+4e89f	19u1a*17	25.5% (+-2.2%)	prior=cfgd=3%50%30%30
+4e89f	19u1a*18	25.2% (+-2.2%)	prior=cfgd=3%50%40%30
+4e89f	19u1a*19	24.5% (+-2.2%)	prior=cfgd=3%50%40%40
+4e89f	19u1a*1a	23% (+-2.1%)	prior=cfgd=3%60%30%10
+4e89f	19u1a*1b	25.8% (+-2.2%)	prior=cfgd=3%60%40%30
+4e89f	19u1a*1c	26.8% (+-2.2%)	prior=cfgd=3%60%50%40
