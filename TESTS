@@ -518,11 +518,17 @@ More dynkomi experiments:
 7d1c7	19h3u1a^_2	58.2% (+-2.5%)	dynkomi=200	extra komi is 22
 
 7d1c7	19h4u1a		63% (+-2.4%)
+7d1c7	19h4u1a^_20	62.5% (+-2.4%)	dynkomi=200	extra komi is 80
+7d1c7	19h4u1a^_16	67.5% (+-2.3%)	dynkomi=200	extra komi is 64
+7d1c7	19h4u1a^_12	74.5% (+-2.2%)	dynkomi=200	extra komi is 48
 7d1c7	19h4u1a^	71.8% (+-2.4%)	dynkomi=200	extra komi is 30
 7d1c7	19h4u1a^_1	67.5% (+-2.3%)	dynkomi=200	extra komi is 27.5
 7d1c7	19h4u1a^_2	71.5% (+-2.3%)	dynkomi=200	extra komi is 28
 
 7d1c7	19h5u1a		69.3% (+-2.4%)
+7d1c7	19h5u1a^_20	48.3% (+-2.5%)	dynkomi=200	extra komi is 100
+7d1c7	19h5u1a^_16	77.5% (+-2.1%)	dynkomi=200	extra komi is 80
+7d1c7	19h5u1a^_12	76.5% (+-2.1%)	dynkomi=200	extra komi is 60
 7d1c7	19h5u1a^	80.4% (+-2.1%)	dynkomi=200	extra komi is 37.5
 7d1c7	19h5u1a^_1	81.5% (+-1.9%)	dynkomi=200	extra komi is 35.5
 7d1c7	19h5u1a^_2	79.5% (+-2%)	dynkomi=200	extra komi is 34
