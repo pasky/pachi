@@ -32,6 +32,9 @@ struct tree_node {
 	int depth; // just for statistics
 
 	coord_t coord;
+	/* Common Fate Graph distance from parent, but at most TREE_NODE_D_MAX+1 */
+	int d;
+#define TREE_NODE_D_MAX 3
 
 	struct move_stats u;
 	struct move_stats prior;

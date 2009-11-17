@@ -367,12 +367,21 @@ tree_normalize(struct tree *tree, int factor)
 void
 tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity)
 {
-	/* First, get a map of prior values to initialize the new
-	 * nodes with. */
+	/* Get a Common Fate Graph distance map from parent node. */
+	int distances[board_size2(b)];
+	if (!is_pass(b->last_move.coord) && !is_resign(b->last_move.coord)) {
+		cfg_distances(b, node->coord, distances, TREE_NODE_D_MAX);
+	} else {
+		// Pass or resign - everything is too far.
+		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
+	}
+
+	/* Get a map of prior values to initialize the new nodes with. */
 	struct prior_map map = {
 		.b = b,
 		.to_play = color,
 		.parity = tree_parity(t, parity),
+		.distances = distances,
 	};
 	// Include pass in the prior map.
 	struct move_stats map_prior[board_size2(b) + 1]; map.prior = &map_prior[1];
@@ -424,6 +433,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			ni->prior = map.prior[c];
+			ni->d = distances[c];
 		}
 	}
 }
