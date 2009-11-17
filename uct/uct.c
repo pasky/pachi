@@ -524,7 +524,7 @@ uct_state_init(char *arg)
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
 				u->val_extra = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "root_heuristic")) {
+			} else if (!strcasecmp(optname, "root_heuristic") && optval) {
 				/* Whether to bias exploration by root node values
 				 * (must be supported by the used policy).
 				 * 0: Don't.
@@ -532,7 +532,7 @@ uct_state_init(char *arg)
 				 * Try to temper the result:
 				 * 2: Do, value = 0.5+(result-expected)/2.
 				 * 3: Do, value = 0.5+bzz((result-expected)^2). */
-				u->root_heuristic = !optval || atoi(optval);
+				u->root_heuristic = atoi(optval);
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider all stones alive at the game
 				 * end instead of marking dead groupd. */
