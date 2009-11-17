@@ -272,22 +272,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			}
 
 			/* Possibly transform the rval appropriately. */
-			float expd = rval - (1 - n->parent->u.value);
-			switch (u->root_heuristic) {
-				case 1: break;
-				case 2: /* 0.5+(result-expected)/2 */
-					rval = 0.5 + expd / 2;
-					break;
-				case 3: { /* 0.5+bzz((result-expected)^2) */
-					float nrval = expd * expd;
-					/* result = 1 expected = 0.8 : nrval = 0.04 rval = 0.54
-					 * result = 1 expected = 0.6 : nrval = 0.16 rval = 0.66
-					 * result = 1 expected = 0.3 : nrval = 0.49 rval = 0.99
-					 * result = 1 expected = 0.1 : nrval = 0.81 rval = 1.31 */
-					rval = 0.5 + (rval > 0.5 ? 1 : -1) * nrval;
-					break; }
-				default: assert(0); break;
-			}
+			rval = stats_temper_value(rval, n->parent->u.value, u->root_heuristic);
 
 			struct tree_node *ni = n;
 			while (ni->parent->parent && ni->parent->parent->parent)
