@@ -39,7 +39,7 @@ struct uct {
 	bool val_extra;
 
 	int random_policy_chance;
-	bool root_heuristic;
+	int root_heuristic;
 
 	char *banner;
 

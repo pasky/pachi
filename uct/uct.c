@@ -526,7 +526,12 @@ uct_state_init(char *arg)
 				u->val_extra = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "root_heuristic")) {
 				/* Whether to bias exploration by root node values
-				 * (must be supported by the used policy). */
+				 * (must be supported by the used policy).
+				 * 0: Don't.
+				 * 1: Do, value = result.
+				 * Try to temper the result:
+				 * 2: Do, value = 0.5+(result-expected)/2.
+				 * 3: Do, value = 0.5+bzz((result-expected)^2). */
 				u->root_heuristic = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider all stones alive at the game
