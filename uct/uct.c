@@ -267,9 +267,10 @@ static int
 uct_threaded_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
 	int played_games = 0;
-	if (!u->threads) {
+	if (u->thread_model == TM_NONE) {
 		played_games = uct_playouts(u, b, color, t);
-	} else {
+
+	} else { assert(u->thread_model == TM_ROOT); assert(u->threads > 0);
 		pthread_t threads[u->threads];
 		int joined = 0;
 		uct_halt = 0;
@@ -427,6 +428,8 @@ uct_state_init(char *arg)
 	// make sure it's not used on 9x9 where it's crap
 	u->dynkomi_mask = S_BLACK;
 
+	u->thread_model = TM_ROOT;
+
 	u->val_scale = 0.02; u->val_points = 20;
 
 	if (arg) {
@@ -507,6 +510,19 @@ uct_state_init(char *arg)
 				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {
 				u->threads = atoi(optval);
+			} else if (!strcasecmp(optname, "thread_model") && optval) {
+				if (!strcasecmp(optval, "none")) {
+					/* Turn off multi-threaded reading. */
+					u->thread_model = TM_NONE;
+				} else if (!strcasecmp(optval, "root")) {
+					/* Root parallelization - each thread
+					 * does independent search, trees are
+					 * merged at the end. */
+					u->thread_model = TM_ROOT;
+				} else {
+					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
@@ -572,6 +588,8 @@ uct_state_init(char *arg)
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
+	if (!u->threads)
+		u->thread_model = TM_NONE;
 
 	if (!!u->random_policy_chance ^ !!u->random_policy) {
 		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
