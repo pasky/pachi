@@ -332,13 +332,13 @@ end:
 }
 
 int
-uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
 	/* Should we print progress info? In case all threads work on the same
 	 * tree, only the first thread does. */
 	#define ok_to_talk (!u->parallel_tree || !thread_id)
 
-	int i, games = u->games;
+	int i;
 	if (t->root->children) {
 		int delta = t->root->u.playouts * 2 / 3;
 		if (u->parallel_tree) delta /= u->threads;

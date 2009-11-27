@@ -256,7 +256,7 @@ spawn_helper(void *ctx_)
 	fast_srandom(ctx->seed);
 	thread_id = ctx->tid;
 	/* Run */
-	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
+	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->games);
 	/* Finish */
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
@@ -267,7 +267,7 @@ spawn_helper(void *ctx_)
 }
 
 static int
-uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct tree *t, bool shared_tree)
+uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct tree *t, int games, bool shared_tree)
 {
 	assert(u->threads > 0);
 	assert(u->parallel_tree == shared_tree);
@@ -283,7 +283,7 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 		ctx->u = u; ctx->b = b; ctx->color = color;
 		ctx->t = shared_tree ? t : tree_copy(t);
-		ctx->tid = ti;
+		ctx->tid = ti; ctx->games = games;
 		ctx->seed = fast_random(65536) + ti;
 		pthread_create(&threads[ti], NULL, spawn_helper, ctx);
 		if (UDEBUGL(2))
@@ -321,24 +321,24 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 }
 
 
-typedef int (*uct_threaded_playouts)(struct uct *u, struct board *b, enum stone color, struct tree *t);
+typedef int (*uct_threaded_playouts)(struct uct *u, struct board *b, enum stone color, struct tree *t, int games);
 
 static int
-uct_playouts_none(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_playouts_none(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
-	return uct_playouts(u, b, color, t);
+	return uct_playouts(u, b, color, t, games);
 }
 
 static int
-uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
-	return uct_playouts_parallel(u, b, color, t, false);
+	return uct_playouts_parallel(u, b, color, t, games, false);
 }
 
 static int
-uct_playouts_tree(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_playouts_tree(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
-	return uct_playouts_parallel(u, b, color, t, true);
+	return uct_playouts_parallel(u, b, color, t, games, true);
 }
 
 
@@ -368,7 +368,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		uct_playouts_tree,
 	};
 	int played_games;
-	played_games = threaded_playouts[u->thread_model](u, b, color, ub->t);
+	played_games = threaded_playouts[u->thread_model](u, b, color, ub->t, u->games);
 
 	if (UDEBUGL(2))
 		tree_dump(ub->t, u->dumpthres);
