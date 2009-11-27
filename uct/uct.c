@@ -263,6 +263,63 @@ spawn_helper(void *ctx_)
 	return ctx;
 }
 
+
+typedef int (*uct_threaded_playouts)(struct uct *u, struct board *b, enum stone color, struct tree *t);
+
+static int
+uct_playouts_none(struct uct *u, struct board *b, enum stone color, struct tree *t)
+{
+	return uct_playouts(u, b, color, t);
+}
+
+static int
+uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree *t)
+{
+	assert(u->threads > 0);
+
+	int played_games = 0;
+	pthread_t threads[u->threads];
+	int joined = 0;
+
+	uct_halt = 0;
+	pthread_mutex_lock(&finish_mutex);
+	/* Spawn threads... */
+	for (int ti = 0; ti < u->threads; ti++) {
+		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
+		ctx->u = u; ctx->b = b; ctx->color = color;
+		ctx->t = tree_copy(t); ctx->tid = ti;
+		ctx->seed = fast_random(65536) + ti;
+		pthread_create(&threads[ti], NULL, spawn_helper, ctx);
+		if (UDEBUGL(2))
+			fprintf(stderr, "Spawned thread %d\n", ti);
+	}
+
+	/* ...and collect them back: */
+	while (joined < u->threads) {
+		/* Wait for some thread to finish... */
+		pthread_cond_wait(&finish_cond, &finish_mutex);
+		/* ...and gather its remnants. */
+		struct spawn_ctx *ctx;
+		pthread_join(threads[finish_thread], (void **) &ctx);
+		played_games += ctx->games;
+		joined++;
+		tree_merge(t, ctx->t);
+		tree_done(ctx->t);
+		free(ctx);
+		if (UDEBUGL(2))
+			fprintf(stderr, "Joined thread %d\n", finish_thread);
+		/* Do not get stalled by slow threads. */
+		if (joined >= u->threads / 2)
+			uct_halt = 1;
+		pthread_mutex_unlock(&finish_serializer);
+	}
+	pthread_mutex_unlock(&finish_mutex);
+
+	tree_normalize(t, u->threads);
+	return played_games;
+}
+
+
 static coord_t *
 uct_genmove(struct engine *e, struct board *b, enum stone color)
 {
@@ -278,55 +335,21 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* Seed the tree. */
 	prepare_move(e, b, color);
-
 	struct uct_board *ub = b->es;
 	assert(ub);
 
-	int played_games = 0;
-	if (!u->threads) {
-		played_games = uct_playouts(u, b, color, ub->t);
-	} else {
-		pthread_t threads[u->threads];
-		int joined = 0;
-		uct_halt = 0;
-		pthread_mutex_lock(&finish_mutex);
-		/* Spawn threads... */
-		for (int ti = 0; ti < u->threads; ti++) {
-			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
-			ctx->u = u; ctx->b = b; ctx->color = color;
-			ctx->t = tree_copy(ub->t); ctx->tid = ti;
-			ctx->seed = fast_random(65536) + ti;
-			pthread_create(&threads[ti], NULL, spawn_helper, ctx);
-			if (UDEBUGL(2))
-				fprintf(stderr, "Spawned thread %d\n", ti);
-		}
-		/* ...and collect them back: */
-		while (joined < u->threads) {
-			/* Wait for some thread to finish... */
-			pthread_cond_wait(&finish_cond, &finish_mutex);
-			/* ...and gather its remnants. */
-			struct spawn_ctx *ctx;
-			pthread_join(threads[finish_thread], (void **) &ctx);
-			played_games += ctx->games;
-			joined++;
-			tree_merge(ub->t, ctx->t);
-			tree_done(ctx->t);
-			free(ctx);
-			if (UDEBUGL(2))
-				fprintf(stderr, "Joined thread %d\n", finish_thread);
-			/* Do not get stalled by slow threads. */
-			if (joined >= u->threads / 2)
-				uct_halt = 1;
-			pthread_mutex_unlock(&finish_serializer);
-		}
-		pthread_mutex_unlock(&finish_mutex);
-
-		tree_normalize(ub->t, u->threads);
-	}
+	/* Run the simulations. */
+	uct_threaded_playouts threaded_playouts[] = {
+		uct_playouts_none,
+		uct_playouts_root,
+	};
+	int played_games;
+	played_games = threaded_playouts[u->thread_model](u, b, color, ub->t);
 
 	if (UDEBUGL(2))
 		tree_dump(ub->t, u->dumpthres);
 
+	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, ub->t->root, b, color);
 	if (!best) {
 		uct_done_board_state(e, b);
@@ -418,6 +441,8 @@ uct_state_init(char *arg)
 	// make sure it's not used on 9x9 where it's crap
 	u->dynkomi_mask = S_BLACK;
 
+	u->thread_model = TM_ROOT;
+
 	u->val_scale = 0.02; u->val_points = 20;
 
 	if (arg) {
@@ -478,6 +503,7 @@ uct_state_init(char *arg)
 					*p = policy_ucb1amaf_init(u, policyarg);
 				} else {
 					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
+					exit(1);
 				}
 			} else if (!strcasecmp(optname, "playout") && optval) {
 				char *playoutarg = strchr(optval, ':');
@@ -489,6 +515,7 @@ uct_state_init(char *arg)
 					u->playout = playout_light_init(playoutarg);
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
+					exit(1);
 				}
 			} else if (!strcasecmp(optname, "prior") && optval) {
 				u->prior = uct_prior_init(optval);
@@ -496,6 +523,19 @@ uct_state_init(char *arg)
 				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {
 				u->threads = atoi(optval);
+			} else if (!strcasecmp(optname, "thread_model") && optval) {
+				if (!strcasecmp(optval, "none")) {
+					/* Turn off multi-threaded reading. */
+					u->thread_model = TM_NONE;
+				} else if (!strcasecmp(optval, "root")) {
+					/* Root parallelization - each thread
+					 * does independent search, trees are
+					 * merged at the end. */
+					u->thread_model = TM_ROOT;
+				} else {
+					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
@@ -561,6 +601,8 @@ uct_state_init(char *arg)
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
+	if (!u->threads)
+		u->thread_model = TM_NONE;
 
 	if (!!u->random_policy_chance ^ !!u->random_policy) {
 		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");

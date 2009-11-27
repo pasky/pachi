@@ -27,10 +27,15 @@ struct uct {
 	bool amaf_prior;
 	int playout_amaf_cutoff;
 	int dumpthres;
-	int threads;
 	int force_seed;
 	bool no_book;
 	bool virtual_loss;
+
+	int threads;
+	enum uct_thread_model {
+		TM_NONE, /* <=> threads == 0 */
+		TM_ROOT, /* Root parallelization. */
+	} thread_model;
 
 	int dynkomi;
 	int dynkomi_mask;

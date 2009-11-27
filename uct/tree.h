@@ -52,9 +52,9 @@ struct tree {
 	enum stone root_color;
 	float extra_komi;
 
-	// Probability distributions of good black, white moves in the tree
-	struct move_stats *chvals; // [bsize2] root children, b's prob.
-	struct move_stats *chchvals; // [bsize2] root children's children, b's prob.
+	// Summary statistics of good black, white moves in the tree
+	struct move_stats *chvals; // [bsize2] root children
+	struct move_stats *chchvals; // [bsize2] root children's children
 
 	// Statistics
 	int max_depth;
