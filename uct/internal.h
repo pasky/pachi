@@ -59,6 +59,7 @@ struct uct {
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
 extern volatile sig_atomic_t uct_halt;
+extern __thread int thread_id;
 
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color);
 

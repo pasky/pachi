@@ -230,6 +230,8 @@ uct_done_board_state(struct engine *e, struct board *b)
 
 /* Set in main thread in case the playouts should stop. */
 volatile sig_atomic_t uct_halt = 0;
+/* ID of the running worker thread. */
+__thread int thread_id = -1;
 
 static pthread_mutex_t finish_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
@@ -252,6 +254,7 @@ spawn_helper(void *ctx_)
 	struct spawn_ctx *ctx = ctx_;
 	/* Setup */
 	fast_srandom(ctx->seed);
+	thread_id = ctx->tid;
 	/* Run */
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
 	/* Finish */
