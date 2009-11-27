@@ -638,8 +638,10 @@ uct_state_init(char *arg)
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
-	if (!u->threads)
+	if (!u->threads) {
 		u->thread_model = TM_NONE;
+		u->parallel_tree = false;
+	}
 
 	if (!!u->random_policy_chance ^ !!u->random_policy) {
 		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
