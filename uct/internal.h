@@ -29,13 +29,14 @@ struct uct {
 	int dumpthres;
 	int force_seed;
 	bool no_book;
-	bool virtual_loss;
 
 	int threads;
 	enum uct_thread_model {
 		TM_NONE, /* <=> threads == 0 */
 		TM_ROOT, /* Root parallelization. */
 	} thread_model;
+	bool parallel_tree;
+	bool virtual_loss;
 
 	int dynkomi;
 	int dynkomi_mask;

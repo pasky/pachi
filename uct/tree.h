@@ -2,6 +2,7 @@
 #define ZZGO_UCT_TREE_H
 
 #include <stdbool.h>
+#include <pthread.h>
 #include "move.h"
 #include "stats.h"
 #include "probdist.h"
@@ -53,6 +54,10 @@ struct tree {
 	struct board_symmetry root_symmetry;
 	enum stone root_color;
 	float extra_komi;
+
+	// In case multiple threads walk the tree, this mutex is used
+	// to prevent them from expanding the same node in parallel.
+	pthread_mutex_t expansion_mutex;
 
 	// Summary statistics of good black, white moves in the tree
 	struct move_stats *chvals; // [bsize2] root children
