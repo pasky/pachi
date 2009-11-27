@@ -319,6 +319,7 @@ end:
 		int parity = (node_color == player_color ? 1 : -1);
 		for (; n->parent; n = n->parent) {
 			stats_rm_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
+			parity = -parity;
 		}
 	}
 
