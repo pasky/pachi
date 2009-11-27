@@ -331,6 +331,10 @@ end:
 int
 uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
+	/* Should we print progress info? In case all threads work on the same
+	 * tree, only the first thread does. */
+	#define ok_to_talk (!u->parallel_tree || !thread_id)
+
 	int i, games = u->games;
 	if (t->root->children)
 		games -= t->root->u.playouts / 1.5;
@@ -346,7 +350,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			continue;
 		}
 
-		if (i > 0 && !(i % 10000)) {
+		if (unlikely(ok_to_talk && i > 0 && !(i % 10000))) {
 			uct_progress_status(u, t, color, i);
 		}
 
@@ -364,8 +368,10 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		}
 	}
 
-	uct_progress_status(u, t, color, i);
-	if (UDEBUGL(3))
-		tree_dump(t, u->dumpthres);
+	if (ok_to_talk) {
+		uct_progress_status(u, t, color, i);
+		if (UDEBUGL(3))
+			tree_dump(t, u->dumpthres);
+	}
 	return i;
 }
