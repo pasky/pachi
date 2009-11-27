@@ -42,6 +42,8 @@ struct tree_node {
 	struct move_stats amaf;
 	/* Stats before starting playout; used for multi-thread normalization. */
 	struct move_stats pu, pamaf;
+
+#define TREE_HINT_INVALID 1 // don't go to this node, invalid move
 	int hints;
 };
 
@@ -69,6 +71,7 @@ struct tree *tree_copy(struct tree *tree);
 void tree_merge(struct tree *dest, struct tree *src);
 void tree_normalize(struct tree *tree, int factor);
 
+/* Warning: All these functions are THREAD-UNSAFE! */
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity);
 void tree_delete_node(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node *node);

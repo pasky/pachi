@@ -22,7 +22,7 @@ struct tree_node *uctp_generic_choose(struct uct_policy *p, struct tree_node *no
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) { \
 		float urgency; \
 		/* Do not consider passing early. */ \
-		if (unlikely(!allow_pass && is_pass(ni->coord))) \
+		if (unlikely((!allow_pass && is_pass(ni->coord)) || (ni->hints & TREE_HINT_INVALID))) \
 			continue;
 
 		/* ...your urgency computation code goes here... */
@@ -32,7 +32,7 @@ struct tree_node *uctp_generic_choose(struct uct_policy *p, struct tree_node *no
 			best_urgency = urgency; nbests = 0; \
 		} \
 		if (urgency - best_urgency > -__FLT_EPSILON__) { /* urgency >= best_urgency */ \
-			/* We want to always choose something else than a pass
+			/* We want to always choose something else than a pass \
 			 * in case of a tie. pass causes degenerative behaviour. */ \
 			if (nbests == 1 && is_pass(nbest[0]->coord)) { \
 				nbests--; \

@@ -190,13 +190,11 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			if (UDEBUGL(3)) {
 				for (struct tree_node *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%lld> ", coord2sstr(ni->coord, t->board), ni->hash);
-				fprintf(stderr, "deleting invalid %s node %d,%d res %d group %d spk %d\n",
+				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
 				        stone2str(node_color), coord_x(n->coord,b), coord_y(n->coord,b),
 					res, group_at(&b2, m.coord), b2.superko_violation);
 			}
-			struct tree_node *np = n->parent;
-			tree_delete_node(t, n);
-			n = np;
+			n->hints |= TREE_HINT_INVALID;
 			result = 0;
 			goto end;
 		}
