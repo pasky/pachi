@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -105,6 +106,18 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 }
 
 void
+tree_dump_chval(struct tree *tree, struct move_stats *v)
+{
+	for (int y = board_size(tree->board) - 2; y > 1; y--) {
+		for (int x = 1; x < board_size(tree->board) - 1; x++) {
+			coord_t c = coord_xy(tree->board, x, y);
+			fprintf(stderr, "%.2f%%%05d  ", v[c].value, v[c].playouts);
+		}
+		fprintf(stderr, "\n");
+	}
+}
+
+void
 tree_dump(struct tree *tree, int thres)
 {
 	if (thres && tree->root->u.playouts / thres > 100) {
@@ -115,6 +128,13 @@ tree_dump(struct tree *tree, int thres)
 	fprintf(stderr, "(UCT tree; root %s; extra komi %f)\n",
 	        stone2str(tree->root_color), tree->extra_komi);
 	tree_node_dump(tree, tree->root, 0, thres);
+
+	if (DEBUGL(3) && tree->chvals) {
+		fprintf(stderr, "children stats:\n");
+		tree_dump_chval(tree, tree->chvals);
+		fprintf(stderr, "grandchildren stats:\n");
+		tree_dump_chval(tree, tree->chchvals);
+	}
 }
 
 
@@ -347,12 +367,21 @@ tree_normalize(struct tree *tree, int factor)
 void
 tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity)
 {
-	/* First, get a map of prior values to initialize the new
-	 * nodes with. */
+	/* Get a Common Fate Graph distance map from parent node. */
+	int distances[board_size2(b)];
+	if (!is_pass(b->last_move.coord) && !is_resign(b->last_move.coord)) {
+		cfg_distances(b, node->coord, distances, TREE_NODE_D_MAX);
+	} else {
+		// Pass or resign - everything is too far.
+		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
+	}
+
+	/* Get a map of prior values to initialize the new nodes with. */
 	struct prior_map map = {
 		.b = b,
 		.to_play = color,
 		.parity = tree_parity(t, parity),
+		.distances = distances,
 	};
 	// Include pass in the prior map.
 	struct move_stats map_prior[board_size2(b) + 1]; map.prior = &map_prior[1];
@@ -404,6 +433,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			ni->prior = map.prior[c];
+			ni->d = distances[c];
 		}
 	}
 }
@@ -464,9 +494,11 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 		}
 	}
 
-	if (UDEBUGL(4)) {
-		fprintf(stderr, "%s will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
-			coord2sstr(c, b), flip_horiz, flip_vert, flip_diag,
+	if (DEBUGL(4)) {
+		fprintf(stderr, "%s [%d,%d -> %d,%d;%d,%d] will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
+			coord2sstr(c, b),
+			cx, cy, s->x1, s->y1, s->x2, s->y2,
+			flip_horiz, flip_vert, flip_diag,
 			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
 			s->type, s->d, b->symmetry.type, b->symmetry.d);
 	}

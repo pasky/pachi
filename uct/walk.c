@@ -153,7 +153,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * it is applied to children. */
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
-		n = u->policy->descend(u->policy, t, n, parity, pass_limit);
+		n = (!u->random_policy_chance || fast_random(u->random_policy_chance))
+			? u->policy->descend(u->policy, t, n, parity, pass_limit)
+			: u->random_policy->descend(u->random_policy, t, n, parity, pass_limit);
 
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
@@ -219,6 +221,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (UDEBUGL(6))
 			board_print(&b2, stderr);
 
+		struct uct_board *ub = b->es; assert(ub);
+		playout_ownermap_fill(&ub->ownermap, &b2);
+
 	} else { assert(tree_leaf_node(n));
 		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 	}
@@ -266,6 +271,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 				t->chchvals = calloc(board_size2(b), sizeof(t->chchvals[0]));
 			}
 
+			/* Possibly transform the rval appropriately. */
+			rval = stats_temper_value(rval, n->parent->u.value, u->root_heuristic);
+
 			struct tree_node *ni = n;
 			while (ni->parent->parent && ni->parent->parent->parent)
 				ni = ni->parent;
@@ -299,6 +307,8 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	/* else this is highly read-out but dead-end branch of opening book;
 	 * we need to start from scratch; XXX: Maybe actually base the readout
 	 * count based on number of playouts of best node? */
+	if (games < u->games && UDEBUGL(2))
+		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
 	for (i = 0; i < games; i++) {
 		int result = uct_playout(u, b, color, t);
 		if (result == 0) {

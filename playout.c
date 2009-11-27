@@ -112,17 +112,22 @@ play_random:
 			board_print(b, stderr);
 	}
 
-	if (ownermap) {
-		ownermap->playouts++;
-		foreach_point(b) {
-			enum stone color = board_at(b, c);
-			if (color == S_NONE)
-				color = board_get_one_point_eye(b, &c);
-			ownermap->map[c][color]++;
-		} foreach_point_end;
-	}
+	if (ownermap)
+		playout_ownermap_fill(ownermap, b);
 
 	return result;
+}
+
+void
+playout_ownermap_fill(struct playout_ownermap *ownermap, struct board *b)
+{
+	ownermap->playouts++;
+	foreach_point(b) {
+		enum stone color = board_at(b, c);
+		if (color == S_NONE)
+			color = board_get_one_point_eye(b, &c);
+		ownermap->map[c][color]++;
+	} foreach_point_end;
 }
 
 void

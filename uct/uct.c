@@ -39,7 +39,7 @@ static void uct_done_board_state(struct engine *e, struct board *b);
 
 
 static void
-prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promote)
+prepare_move(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	struct uct_board *ub = b->es;
@@ -62,8 +62,10 @@ prepare_move(struct engine *e, struct board *b, enum stone color, coord_t promot
 		if (UDEBUGL(0))
 			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 		//board_print(b, stderr);
-		if (!u->no_book && b->moves < 2)
+		if (!u->no_book && b->moves == 0) {
+			assert(color == S_BLACK);
 			tree_load(ub->t, b);
+		}
 		ub->ownermap.map = malloc(board_size2(b) * sizeof(ub->ownermap.map[0]));
 	}
 
@@ -105,7 +107,8 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color)
 		return false;
 
 	struct move_queue mq = { .moves = 0 };
-	dead_group_list(u, b, &mq);
+	if (!u->pass_all_alive)
+		dead_group_list(u, b, &mq);
 	return pass_is_safe(b, color, &mq);
 }
 
@@ -130,8 +133,10 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	struct uct *u = e->data;
 	struct uct_board *ub = b->es;
 	if (!ub) {
-		/* No state, no worry. */
-		return;
+		/* No state, create one - this is probably game beginning
+		 * and we need to load the opening book right now. */
+		prepare_move(e, b, m->color);
+		assert(b->es); ub = b->es;
 	}
 
 	if (is_resign(m->coord)) {
@@ -180,6 +185,9 @@ static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
+	if (u->pass_all_alive)
+		return; // no dead groups
+
 	struct uct_board *ub = b->es;
 	bool mock_state = false;
 
@@ -190,7 +198,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 		 * when all stones are assumed alive. */
 		/* Mock up some state and seed the ownermap by few
 		 * simulations. */
-		prepare_move(e, b, S_BLACK, resign);
+		prepare_move(e, b, S_BLACK);
 		ub = b->es; assert(ub);
 		for (int i = 0; i < GJ_MINGAMES; i++)
 			uct_playout(u, b, S_BLACK, ub->t);
@@ -269,7 +277,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	}
 
 	/* Seed the tree. */
-	prepare_move(e, b, color, resign);
+	prepare_move(e, b, color);
 
 	struct uct_board *ub = b->es;
 	assert(ub);
@@ -339,10 +347,15 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* If the opponent just passed and we win counting, always
 	 * pass as well. */
-	if (b->moves > 1 && is_pass(b->last_move.coord) && uct_pass_is_safe(u, b, color)) {
-		if (UDEBUGL(0))
-			fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
-		best->coord = pass;
+	if (b->moves > 1 && is_pass(b->last_move.coord)) {
+		/* Make sure enough playouts are simulated. */
+		while (ub->ownermap.playouts < GJ_MINGAMES)
+			uct_playout(u, b, color, ub->t);
+		if (uct_pass_is_safe(u, b, color)) {
+			if (UDEBUGL(0))
+				fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
+			best->coord = pass;
+		}
 	}
 
 	tree_promote_node(ub->t, best);
@@ -354,26 +367,25 @@ bool
 uct_genbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
-	struct tree *t = tree_init(b, color);
-	tree_load(t, b);
+	if (!b->es)
+		prepare_move(e, b, color);
+	struct uct_board *ub = b->es;
 
 	int i;
 	for (i = 0; i < u->games; i++) {
-		int result = uct_playout(u, b, color, t);
+		int result = uct_playout(u, b, color, ub->t);
 		if (result == 0) {
 			/* Tree descent has hit invalid move. */
 			continue;
 		}
 
 		if (i > 0 && !(i % 10000)) {
-			uct_progress_status(u, t, color, i);
+			uct_progress_status(u, ub->t, color, i);
 		}
 	}
-	uct_progress_status(u, t, color, i);
+	uct_progress_status(u, ub->t, color, i);
 
-	tree_save(t, b, u->games / 100);
-
-	tree_done(t);
+	tree_save(ub->t, b, u->games / 100);
 
 	return true;
 }
@@ -400,8 +412,11 @@ uct_state_init(char *arg)
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
-	u->amaf_prior = true;
-	u->dynkomi_mask = S_WHITE | S_BLACK;
+	u->amaf_prior = false;
+
+	// u->dynkomi = 200; - this is great on 19x19, but to enable it by default we must
+	// make sure it's not used on 9x9 where it's crap
+	u->dynkomi_mask = S_BLACK;
 
 	u->val_scale = 0.02; u->val_points = 20;
 
@@ -452,14 +467,15 @@ uct_state_init(char *arg)
 				/* Keep only first N% of playout stage AMAF
 				 * information. */
 				u->playout_amaf_cutoff = atoi(optval);
-			} else if (!strcasecmp(optname, "policy") && optval) {
+			} else if ((!strcasecmp(optname, "policy") || !strcasecmp(optname, "random_policy")) && optval) {
 				char *policyarg = strchr(optval, ':');
+				struct uct_policy **p = !strcasecmp(optname, "policy") ? &u->policy : &u->random_policy;
 				if (policyarg)
 					*policyarg++ = 0;
 				if (!strcasecmp(optval, "ucb1")) {
-					u->policy = policy_ucb1_init(u, policyarg);
+					*p = policy_ucb1_init(u, policyarg);
 				} else if (!strcasecmp(optval, "ucb1amaf")) {
-					u->policy = policy_ucb1amaf_init(u, policyarg);
+					*p = policy_ucb1amaf_init(u, policyarg);
 				} else {
 					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
 				}
@@ -492,8 +508,8 @@ uct_state_init(char *arg)
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; you may want
-				 * to use dynkomi_mask=1 to limit dynkomi
-				 * only to games where Pachi is black. */
+				 * to use dynkomi_mask=3 to allow dynkomi
+				 * even in games where Pachi is white. */
 				u->dynkomi_mask = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
@@ -508,10 +524,26 @@ uct_state_init(char *arg)
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
 				u->val_extra = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "root_heuristic")) {
+			} else if (!strcasecmp(optname, "root_heuristic") && optval) {
 				/* Whether to bias exploration by root node values
-				 * (must be supported by the used policy). */
-				u->root_heuristic = !optval || atoi(optval);
+				 * (must be supported by the used policy).
+				 * 0: Don't.
+				 * 1: Do, value = result.
+				 * Try to temper the result:
+				 * 2: Do, value = 0.5+(result-expected)/2.
+				 * 3: Do, value = 0.5+bzz((result-expected)^2). */
+				u->root_heuristic = atoi(optval);
+			} else if (!strcasecmp(optname, "pass_all_alive")) {
+				/* Whether to consider all stones alive at the game
+				 * end instead of marking dead groupd. */
+				u->pass_all_alive = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "random_policy_chance") && optval) {
+				/* If specified (N), with probability 1/N, random_policy policy
+				 * descend is used instead of main policy descend; useful
+				 * if specified policy (e.g. UCB1AMAF) can make unduly biased
+				 * choices sometimes, you can fall back to e.g.
+				 * random_policy=UCB1. */
+				u->random_policy_chance = atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
@@ -529,6 +561,11 @@ uct_state_init(char *arg)
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
+
+	if (!!u->random_policy_chance ^ !!u->random_policy) {
+		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
+		exit(1);
+	}
 
 	if (!u->prior)
 		u->prior = uct_prior_init(NULL);

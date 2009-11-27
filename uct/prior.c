@@ -107,16 +107,13 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 	if (is_pass(map->b->last_move.coord) || is_resign(map->b->last_move.coord))
 		return;
 
-	int distances[board_size2(map->b)];
-	cfg_distances(map->b, map->b->last_move.coord, distances, u->prior->cfgdn);
 	foreach_point(map->b) {
 		if (!map->consider[c])
 			continue;
-		// fprintf(stderr, "distance %s-%s: %d\n", coord2sstr(map->b->last_move.coord, map->b), coord2sstr(c, map->b), distances[c]);
-		if (distances[c] > u->prior->cfgdn)
+		if (map->distances[c] > u->prior->cfgdn)
 			continue;
-		assert(distances[c] != 0);
-		int bonus = u->prior->cfgd_eqex[distances[c]];
+		assert(map->distances[c] != 0);
+		int bonus = u->prior->cfgd_eqex[map->distances[c]];
 		add_prior_value(map, c, 1, bonus);
 	} foreach_point_end;
 }
@@ -202,6 +199,10 @@ uct_prior_init(char *arg)
 		p->cfgdn = 3;
 		p->cfgd_eqex = calloc(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
 		memcpy(p->cfgd_eqex, bonuses, sizeof(bonuses));
+	}
+	if (p->cfgdn > TREE_NODE_D_MAX) {
+		fprintf(stderr, "uct: CFG distances only up to %d available\n", TREE_NODE_D_MAX);
+		exit(1);
 	}
 
 	return p;

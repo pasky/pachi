@@ -473,27 +473,150 @@ f4cb0	19u1a$~b361	42.5% (+-2.5%)	games=6666,val_scale=0.02,val_points=361
 7d1c7	9k0u1a~x	61.8% (+-2.4%)	val_extra
 7d1c7	9k0u1a~10	68.2% (+-2.3%)	val_points=10
 7d1c7	9k0u1a~20	71.5% (+-2.3%)	val_points=20
-7d1c7	9k0u1a%80	67.5% (+-2.3%)	rate=80
-7d1c7	9k0u1a%95	65.4% (+-2.3%)	rate=95
+7d1c7	9k0u1a^		63.8% (+-1.7%)	ladders=0
+7d1c7	9k0u1a+		61.6% (+-1.7%)	pattern2=1
+
 7d1c7	19u1a		30.5% (+-2.3%)
 7d1c7	19u1a$		40.2% (+-2.2%)	games=6666
 7d1c7	19u1a~x		31.2% (+-2.3%)	val_extra
 7d1c7	19u1a~10	30.2% (+-2.3%)	val_points=10
 7d1c7	19u1a~20	30.8% (+-2.3%)	val_points=20
+7d1c7	19u1a@		31.2% (+-2.3%)	prior=ko=-1
+
+Playout randomization experiments:
+7d1c7	9k0u1a%95	64% (+-1.8%)	rate=95
+7d1c7	9k0u1a%80	65.8% (+-1.8%)	rate=80
+7d1c7	9k0u1a%70	67.1% (+-1.7%)	rate=70
+7d1c7	9k0u1a%65	68.5% (+-1.4%)	rate=65
+7d1c7	9k0u1a%60	66.4% (+-1.7%)	rate=60
+7d1c7	9k0u1a%55	65.8% (+-1.7%)	rate=55
+7d1c7	9k0u1a%50	63% (+-1.7%)	rate=50
+7d1c7	9k0u1a%45	57.6% (+-1.7%)	rate=45
+7d1c7	9k0u1a%65#80	64.7% (+-1.7%)	rate=65,patternrate=80
+7d1c7	9k0u1a%65&80	68.1% (+-1.6%)	rate=65,selfatarirate=80
+7d1c7	9k0u1a%65&95	64% (+-1.7%)	rate=65,selfatarirate=95
+7d1c7	9k0u1a%90!50	66.4% (+-1.7%)	rate=90,atarirate=50
+7d1c7	9k0u1a%90=50	64.2% (+-1.7%)	rate=90,capturerate=50
+7d1c7	19u1a%99	32.2% (+-2.4%)	rate=99
+7d1c7	19u1a%95	32.5% (+-2.3%)	rate=95
+7d1c7	19u1a%85	33% (+-2.4%)	rate=85
+7d1c7	19u1a%80	25.8% (+-2.1%)	rate=80
+7d1c7	19u1a%65	22.2% (+-2.2%)	rate=65
+
+Even game heuristics experiments:
+</ == even prior is added to both normal and AMAF values>
+7d1c7	9k0u1a!		68.2% (+-1.6%)	amaf_prior=0
+7d1c7	9k0u1a!~10	65.8% (+-1.7%)	amaf_prior=0,prior=even=10
+7d1c7	9k0u1a/		55.7% (+-1.8%)
+7d1c7	9k0u1a/!	57% (+-1.8%)	amaf_prior=0
+7d1c7	9k0u1a/!~0	8.2% (+-1.4%)	amaf_prior=0,prior=even=0
+7d1c7	9k0u1a/!~2	66% (+-1.7%)	amaf_prior=0,prior=even=2
+7d1c7	9k0u1a/!~4	63.6% (+-1.7%)	amaf_prior=0,prior=even=4
+7d1c7	9k0u1a/!~6	61.8% (+-1.7%)	amaf_prior=0,prior=even=6
+7d1c7	9k0u1a/!~10	65.4% (+-1.7%)	amaf_prior=0,prior=even=10
+
+7d1c7	19u1a!~10	28.8% (+-2.3%)	amaf_prior=0,prior=even=10
+7d1c7	19u1a/		13.5% (+-1.7%)
+7d1c7	19u1a/!		17.2% (+-1.9%)	amaf_prior=0
+7d1c7	19u1a/!~0	0%		amaf_prior=0,prior=even=0
+7d1c7	19u1a/!~2	31% (+-2.3%)	amaf_prior=0,prior=even=2
+7d1c7	19u1a/!~4	32.8% (+-2.3%)	amaf_prior=0,prior=even=4
+7d1c7	19u1a/!~6	32.8% (+-2.3%)	amaf_prior=0,prior=even=6
+7d1c7	19u1a/!~10	33.8% (+-2.4%)	amaf_prior=0,prior=even=10
+7d1c7	19u1a/!~16	23.5% (+-2.1%)	amaf_prior=0,prior=even=16
 
 More dynkomi experiments:
 7d1c7	19k0u1a		36.2% (+-2.4%)
-7d1c7	19k0u1a^	40.8% (+-2.5%)	dynkomi=200
-7d1c7	19h2u1a		46.2% (+-2.5%)
-7d1c7	19h2u1a^	50.8% (+-2.5%)	dynkomi=200
-7d1c7	19h3u1a		54% (+-2.5%)
-7d1c7	19h3u1a^	59.2% (+-2.5%)	dynkomi=200
-7d1c7	19h4u1a		63% (+-2.4%)
-7d1c7	19h4u1a^	71.8% (+-2.4%)	dynkomi=200
-7d1c7	19h5u1a		69.3% (+-2.4%)
-7d1c7	19h5u1a^	80.4% (+-2.1%)	dynkomi=200
+7d1c7	19k0u1a^	40.8% (+-2.5%)	dynkomi=200	extra komi is 7.5
+7d1c7	19k0u1a^_1	40.2% (+-2.5%)	dynkomi=200	extra komi is 5.5
+7d1c7	19k0u1a^_2	40% (+-2.4%)	dynkomi=200	extra komi is 8
 
-a9249	9k0u1a		65.5% (+-2.4%)
+7d1c7	19h2u1a		46.2% (+-2.5%)
+7d1c7	19h2u1a^	50.8% (+-2.5%)	dynkomi=200	extra komi is 15
+7d1c7	19h2u1a^_1	47.5% (+-2.5%)	dynkomi=200	extra komi is 11.5
+7d1c7	19h2u1a^_2	50.5% (+-2.5%)	dynkomi=200	extra komi is 16
+
+7d1c7	19h3u1a		54% (+-2.5%)
+7d1c7	19h3u1a^	59.2% (+-2.5%)	dynkomi=200	extra komi is 22.5
+7d1c7	19h3u1a^_1	61.5% (+-2.4%)	dynkomi=200	extra komi is 18.5
+7d1c7	19h3u1a^_2	58.2% (+-2.5%)	dynkomi=200	extra komi is 22
+
+7d1c7	19h4u1a		63% (+-2.4%)
+7d1c7	19h4u1a^_20	62.5% (+-2.4%)	dynkomi=200	extra komi is 80
+7d1c7	19h4u1a^_16	67.5% (+-2.3%)	dynkomi=200	extra komi is 64
+7d1c7	19h4u1a^_12	74.5% (+-2.2%)	dynkomi=200	extra komi is 48
+7d1c7	19h4u1a^	71.8% (+-2.4%)	dynkomi=200	extra komi is 30
+7d1c7	19h4u1a^_1	67.5% (+-2.3%)	dynkomi=200	extra komi is 27.5
+7d1c7	19h4u1a^_2	71.5% (+-2.3%)	dynkomi=200	extra komi is 28
+
+7d1c7	19h5u1a		69.3% (+-2.4%)
+7d1c7	19h5u1a^_20	48.3% (+-2.5%)	dynkomi=200	extra komi is 100
+7d1c7	19h5u1a^_16	77.5% (+-2.1%)	dynkomi=200	extra komi is 80
+7d1c7	19h5u1a^_12	76.5% (+-2.1%)	dynkomi=200	extra komi is 60
+7d1c7	19h5u1a^	80.4% (+-2.1%)	dynkomi=200	extra komi is 37.5
+7d1c7	19h5u1a^_1	81.5% (+-1.9%)	dynkomi=200	extra komi is 35.5
+7d1c7	19h5u1a^_2	79.5% (+-2%)	dynkomi=200	extra komi is 34
+
+a9249	9k0u1a		65.5% (+-2.4%)	[prior=cfgd=3%40%20%20]
 a9249	9k0u1a*1	64.5% (+-2.4%)	prior=cfgd=1%40
 a9249	9k0u1a*2	64.2% (+-2.4%)	prior=cfgd=2%40%20
 a9249	9k0u1a*3	63.5% (+-2.4%)	prior=cfgd=4%40%30%20%10
+a9249	19u1a		30.5% (+-2.3%)	[prior=cfgd=3%40%20%20]
+a9249	19u1a*1		23.5% (+-2.1%)	prior=cfgd=1%40
+a9249	19u1a*2		25.8% (+-2.2%)	prior=cfgd=2%40%20
+a9249	19u1a*3		26.5% (+-2.2%)	prior=cfgd=3%40%10%10
+a9249	19u1a*4		23.2% (+-2.1%)	prior=cfgd=4%40%30%20%10
+a9249	19u1a*5		23% (+-2.1%)	prior=cfgd=4%40%30%30%5
+a9249	19u1a*6		25% (+-2.2%)	prior=cfgd=4%40%30%30%20
+
+44216	19u1a		30% (+-2.3%)
+44216	19u1a+		24% (+-2.1%)	pattern2=1
+44216	19u1a%60	26% (+-2.2%)	prior=eqex=60
+44216	19u1a!%10	29.8% (+-2.3%)	amaf_prior=0,prior=eqex=10
+44216	19u1a!%20	25% (+-2.4%)	amaf_prior=0,prior=eqex=20
+44216	19u1a!%30	32.5% (+-2.3%)	amaf_prior=0,prior=eqex=30
+44216	19u1a!		36.8% (+-2.4%)	amaf_prior=0,[prior=eqex=40]
+44216	19u1a!%50	27.8% (+-2.2%)	amaf_prior=0,prior=eqex=50
+44216	19u1a!%60	25.2% (+-2.2%)	amaf_prior=0,prior=eqex=60
+
+938a4	9k0u1a		65.5% (+-1.7%)
+938a4	9k0u1a~0	68.8% (+-2.3%)	val_points=0
+938a4	9k0u1a!%30	71.2% (+-2.3%)	amaf_prior=0,prior=eqex=30
+938a4	9k0u1a!		71% (+-2.3%)	amaf_prior=0,[prior=eqex=40]
+938a4	9k0u1a!%50	65% (+-2.4%)	amaf_prior=0,prior=eqex=50
+938a4	9k0u1a!%65	64% (+-2.4%)	amaf_prior=0,prior=eqex=65
+938a4	9k0u1a#1	20.5% (+-2%)	root_heuristic,root_rave=1
+938a4	9k0u1a#0.6	57.2% (+-2.5%)	root_heuristic,root_rave=0.6
+938a4	9k0u1a#0.2	63.2% (+-2.4%)	root_heuristic,root_rave=0.2
+938a4	9k0u1a#0.02	65.6% (+-2.4%)	root_heuristic,root_rave=0.02
+a3010	19u1a		30.2% (+-2.3%)
+938a4	19u1a		31.2% (+-2.3%)
+938a4	19u1a~10	31.2% (+-2.3%)	prior=even=10
+a3010	19u1a#1.6	23.5% (+-2.1%)	root_heuristic,root_rave=1.6
+a3010	19u1a#1		26% (+-2.2%)	root_heuristic,root_rave=1
+a3010	19u1a#0.6	28% (+-2.2%)	root_heuristic,root_rave=0.6
+a3010	19u1a#0.2	29% (+-2.3%)	root_heuristic,root_rave=0.2
+938a4	19u1a#0.05	29.2% (+-2.3%)	root_heuristic,root_rave=0.05
+938a4	19u1a#0.02	27.2% (+-2.2%)	root_heuristic,root_rave=0.02
+938a4	19u1a#0.005	33.8% (+-2.4%)	root_heuristic,root_rave=0.005
+
+4e89f	19u1		0%
+4e89f	19u1a		30.5% (+-2.3%)
+4e89f	19u1a#95	28.5% (+-2.3%)	rate=95
+4e89f	19u1a#100/95	32.5% (+-2.3%)	rate=100,selfatarirate=95
+4e89f	19u1a%02	1% (+-0.5%)	explore_p=0.2
+4e89f	19u1a%002	30.5% (+-2.3%)	explore_p=0.02
+
+4e89f	19u1a*10	22% (+-2.1%)	prior=cfgd=3%20%10%5
+4e89f	19u1a*11	25.5% (+-2.1%)	prior=cfgd=3%30%10%10
+4e89f	19u1a*12	26.5% (+-2.2%)	prior=cfgd=3%30%20%10
+4e89f	19u1a*13	25.5% (+-2.1%)	prior=cfgd=3%30%20%20
+4e89f	19u1a		28% (+-2.2%)	[prior=cfgd=3%40%20%20]
+4e89f	19u1a*15	19.8% (+-2%)	prior=cfgd=3%50%20%20
+4e89f	19u1a*16	21.5% (+-2.1%)	prior=cfgd=3%50%30%20
+4e89f	19u1a*17	25.5% (+-2.2%)	prior=cfgd=3%50%30%30
+4e89f	19u1a*18	25.2% (+-2.2%)	prior=cfgd=3%50%40%30
+4e89f	19u1a*19	24.5% (+-2.2%)	prior=cfgd=3%50%40%40
+4e89f	19u1a*1a	23% (+-2.1%)	prior=cfgd=3%60%30%10
+4e89f	19u1a*1b	25.8% (+-2.2%)	prior=cfgd=3%60%40%30
+4e89f	19u1a*1c	26.8% (+-2.2%)	prior=cfgd=3%60%50%40

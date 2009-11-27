@@ -75,57 +75,71 @@ static inline float fast_sqrt(int x)
 	}
 }
 
+float
+ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity)
+{
+	struct ucb1_policy_amaf *b = p->data;
+
+	struct move_stats n = node->u, r = node->amaf;
+	if (p->uct->amaf_prior) {
+		stats_merge(&r, &node->prior);
+	} else {
+		stats_merge(&n, &node->prior);
+	}
+
+	/* Root heuristics, if we aren't actually near the root. */
+	if (tree->chvals && b->root_rave > 0 && likely(!is_pass(node->coord))
+	    && node->parent && node->parent->parent && node->parent->parent->parent) {
+		struct move_stats *rv = parity > 0 ? tree->chvals : tree->chchvals;
+		struct move_stats root = rv[node->coord];
+		root.playouts *= b->root_rave;
+		stats_merge(&r, &root);
+	}
+
+	if (tree_parity(tree, parity) < 0) {
+		stats_reverse_parity(&n);
+		stats_reverse_parity(&r);
+	}
+
+	float value = 0;
+	if (n.playouts) {
+		if (r.playouts) {
+			/* At the beginning, beta is at 1 and RAVE is used.
+			 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
+			float beta;
+			if (b->sylvain_rave) {
+				beta = (float) r.playouts / (r.playouts + n.playouts
+					+ (float) n.playouts * r.playouts / b->equiv_rave);
+			} else {
+				/* XXX: This can be cached in descend; but we don't use this by default. */
+				beta = sqrt(b->equiv_rave / (3 * node->parent->u.playouts + b->equiv_rave));
+			}
+
+			value = beta * r.value + (1.f - beta) * n.value;
+		} else {
+			value = n.value;
+		}
+	} else if (r.playouts) {
+		value = r.value;
+	}
+	return value;
+}
+
 struct tree_node *
 ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	struct ucb1_policy_amaf *b = p->data;
-	float beta = 0;
 	float nconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
 
-	if (!b->sylvain_rave)
-		beta = sqrt(b->equiv_rave / (3 * node->u.playouts + b->equiv_rave));
-
 	uctd_try_node_children(node, allow_pass, ni, urgency) {
-		struct move_stats n = ni->u, r = ni->amaf;
-		if (p->uct->amaf_prior) {
-			stats_merge(&r, &ni->prior);
-		} else {
-			stats_merge(&n, &ni->prior);
-		}
+		urgency = ucb1rave_evaluate(p, tree, ni, parity);
 
-		/* Root heuristics, if we aren't actually near the root. */
-		if (tree->chvals && b->root_rave > 0 && likely(!is_pass(ni->coord))
-		    && ni->parent && ni->parent->parent && ni->parent->parent->parent) {
-			struct move_stats *rv = parity > 0 ? tree->chvals : tree->chchvals;
-			struct move_stats root = rv[ni->coord];
-			root.playouts *= b->root_rave;
-			stats_merge(&r, &root);
-		}
+		if (ni->u.playouts > 0 && b->explore_p > 0) {
+			urgency += b->explore_p * nconf / fast_sqrt(ni->u.playouts);
 
-		if (tree_parity(tree, parity) < 0) {
-			stats_reverse_parity(&n);
-			stats_reverse_parity(&r);
-		}
-
-		if (n.playouts) {
-			if (r.playouts) {
-				/* At the beginning, beta is at 1 and RAVE is used.
-				 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
-				if (b->sylvain_rave)
-					beta = (float) r.playouts / (r.playouts + n.playouts
-						+ (float) n.playouts * r.playouts / b->equiv_rave);
-				urgency = beta * r.value + (1.f - beta) * n.value;
-			} else {
-				urgency = n.value;
-			}
-
-			if (b->explore_p > 0)
-				urgency += b->explore_p * nconf / fast_sqrt(n.playouts);
-		} else if (r.playouts) {
-			urgency = r.value;
-		} else {
+		} else if (ni->u.playouts + ni->amaf.playouts + ni->prior.playouts == 0) {
 			/* assert(!u->even_eqex); */
 			urgency = b->fpu;
 		}
@@ -218,8 +232,9 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	struct ucb1_policy_amaf *b = calloc(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
-	p->descend = ucb1rave_descend;
 	p->choose = uctp_generic_choose;
+	p->evaluate = ucb1rave_evaluate;
+	p->descend = ucb1rave_descend;
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
 
