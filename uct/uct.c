@@ -361,6 +361,18 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	assert(ub);
 
 	/* Run the simulations. */
+	int games = u->games;
+	if (ub->t->root->children) {
+		int delta = ub->t->root->u.playouts * 2 / 3;
+		if (u->parallel_tree) delta /= u->threads;
+		games -= delta;
+	}
+	/* else this is highly read-out but dead-end branch of opening book;
+	 * we need to start from scratch; XXX: Maybe actually base the readout
+	 * count based on number of playouts of best node? */
+	if (games < u->games && UDEBUGL(2))
+		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
+
 	uct_threaded_playouts threaded_playouts[] = {
 		uct_playouts_none,
 		uct_playouts_root,
@@ -368,7 +380,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		uct_playouts_tree,
 	};
 	int played_games;
-	played_games = threaded_playouts[u->thread_model](u, b, color, ub->t, u->games);
+	played_games = threaded_playouts[u->thread_model](u, b, color, ub->t, games);
 
 	if (UDEBUGL(2))
 		tree_dump(ub->t, u->dumpthres);
