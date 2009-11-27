@@ -266,19 +266,11 @@ spawn_helper(void *ctx_)
 	return ctx;
 }
 
-
-typedef int (*uct_threaded_playouts)(struct uct *u, struct board *b, enum stone color, struct tree *t);
-
 static int
-uct_playouts_none(struct uct *u, struct board *b, enum stone color, struct tree *t)
-{
-	return uct_playouts(u, b, color, t);
-}
-
-static int
-uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct tree *t, bool shared_tree)
 {
 	assert(u->threads > 0);
+	assert(u->parallel_tree == shared_tree);
 
 	int played_games = 0;
 	pthread_t threads[u->threads];
@@ -290,7 +282,8 @@ uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree 
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 		ctx->u = u; ctx->b = b; ctx->color = color;
-		ctx->t = tree_copy(t); ctx->tid = ti;
+		ctx->t = shared_tree ? t : tree_copy(t);
+		ctx->tid = ti;
 		ctx->seed = fast_random(65536) + ti;
 		pthread_create(&threads[ti], NULL, spawn_helper, ctx);
 		if (UDEBUGL(2))
@@ -306,8 +299,10 @@ uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree 
 		pthread_join(threads[finish_thread], (void **) &ctx);
 		played_games += ctx->games;
 		joined++;
-		tree_merge(t, ctx->t);
-		tree_done(ctx->t);
+		if (!shared_tree) {
+			tree_merge(t, ctx->t);
+			tree_done(ctx->t);
+		}
 		free(ctx);
 		if (UDEBUGL(2))
 			fprintf(stderr, "Joined thread %d\n", finish_thread);
@@ -318,8 +313,32 @@ uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree 
 	}
 	pthread_mutex_unlock(&finish_mutex);
 
-	tree_normalize(t, u->threads);
+	if (!shared_tree) {
+		/* XXX: Should this be done in shared trees as well? */
+		tree_normalize(t, u->threads);
+	}
 	return played_games;
+}
+
+
+typedef int (*uct_threaded_playouts)(struct uct *u, struct board *b, enum stone color, struct tree *t);
+
+static int
+uct_playouts_none(struct uct *u, struct board *b, enum stone color, struct tree *t)
+{
+	return uct_playouts(u, b, color, t);
+}
+
+static int
+uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree *t)
+{
+	return uct_playouts_parallel(u, b, color, t, false);
+}
+
+static int
+uct_playouts_tree(struct uct *u, struct board *b, enum stone color, struct tree *t)
+{
+	return uct_playouts_parallel(u, b, color, t, true);
 }
 
 
@@ -345,6 +364,8 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	uct_threaded_playouts threaded_playouts[] = {
 		uct_playouts_none,
 		uct_playouts_root,
+		uct_playouts_tree,
+		uct_playouts_tree,
 	};
 	int played_games;
 	played_games = threaded_playouts[u->thread_model](u, b, color, ub->t);
@@ -535,6 +556,19 @@ uct_state_init(char *arg)
 					 * does independent search, trees are
 					 * merged at the end. */
 					u->thread_model = TM_ROOT;
+				} else if (!strcasecmp(optval, "tree")) {
+					/* Tree parallelization - all threads
+					 * grind on the same tree. */
+					u->thread_model = TM_TREE;
+					u->parallel_tree = true;
+				} else if (!strcasecmp(optval, "treevl")) {
+					/* Tree parallelization, but also
+					 * with virtual losses - this discou-
+					 * rages most threads choosing the
+					 * same tree branches to read. */
+					u->thread_model = TM_TREEVL;
+					u->parallel_tree = true;
+					u->virtual_loss = true;
 				} else {
 					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
 					exit(1);
