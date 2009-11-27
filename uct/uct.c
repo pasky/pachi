@@ -263,6 +263,53 @@ spawn_helper(void *ctx_)
 	return ctx;
 }
 
+static int
+uct_threaded_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
+{
+	int played_games = 0;
+	if (!u->threads) {
+		played_games = uct_playouts(u, b, color, t);
+	} else {
+		pthread_t threads[u->threads];
+		int joined = 0;
+		uct_halt = 0;
+		pthread_mutex_lock(&finish_mutex);
+		/* Spawn threads... */
+		for (int ti = 0; ti < u->threads; ti++) {
+			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
+			ctx->u = u; ctx->b = b; ctx->color = color;
+			ctx->t = tree_copy(t); ctx->tid = ti;
+			ctx->seed = fast_random(65536) + ti;
+			pthread_create(&threads[ti], NULL, spawn_helper, ctx);
+			if (UDEBUGL(2))
+				fprintf(stderr, "Spawned thread %d\n", ti);
+		}
+		/* ...and collect them back: */
+		while (joined < u->threads) {
+			/* Wait for some thread to finish... */
+			pthread_cond_wait(&finish_cond, &finish_mutex);
+			/* ...and gather its remnants. */
+			struct spawn_ctx *ctx;
+			pthread_join(threads[finish_thread], (void **) &ctx);
+			played_games += ctx->games;
+			joined++;
+			tree_merge(t, ctx->t);
+			tree_done(ctx->t);
+			free(ctx);
+			if (UDEBUGL(2))
+				fprintf(stderr, "Joined thread %d\n", finish_thread);
+			/* Do not get stalled by slow threads. */
+			if (joined >= u->threads / 2)
+				uct_halt = 1;
+			pthread_mutex_unlock(&finish_serializer);
+		}
+		pthread_mutex_unlock(&finish_mutex);
+
+		tree_normalize(t, u->threads);
+	}
+	return played_games;
+}
+
 static coord_t *
 uct_genmove(struct engine *e, struct board *b, enum stone color)
 {
@@ -278,55 +325,17 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 
 	/* Seed the tree. */
 	prepare_move(e, b, color);
-
 	struct uct_board *ub = b->es;
 	assert(ub);
 
-	int played_games = 0;
-	if (!u->threads) {
-		played_games = uct_playouts(u, b, color, ub->t);
-	} else {
-		pthread_t threads[u->threads];
-		int joined = 0;
-		uct_halt = 0;
-		pthread_mutex_lock(&finish_mutex);
-		/* Spawn threads... */
-		for (int ti = 0; ti < u->threads; ti++) {
-			struct spawn_ctx *ctx = malloc(sizeof(*ctx));
-			ctx->u = u; ctx->b = b; ctx->color = color;
-			ctx->t = tree_copy(ub->t); ctx->tid = ti;
-			ctx->seed = fast_random(65536) + ti;
-			pthread_create(&threads[ti], NULL, spawn_helper, ctx);
-			if (UDEBUGL(2))
-				fprintf(stderr, "Spawned thread %d\n", ti);
-		}
-		/* ...and collect them back: */
-		while (joined < u->threads) {
-			/* Wait for some thread to finish... */
-			pthread_cond_wait(&finish_cond, &finish_mutex);
-			/* ...and gather its remnants. */
-			struct spawn_ctx *ctx;
-			pthread_join(threads[finish_thread], (void **) &ctx);
-			played_games += ctx->games;
-			joined++;
-			tree_merge(ub->t, ctx->t);
-			tree_done(ctx->t);
-			free(ctx);
-			if (UDEBUGL(2))
-				fprintf(stderr, "Joined thread %d\n", finish_thread);
-			/* Do not get stalled by slow threads. */
-			if (joined >= u->threads / 2)
-				uct_halt = 1;
-			pthread_mutex_unlock(&finish_serializer);
-		}
-		pthread_mutex_unlock(&finish_mutex);
-
-		tree_normalize(ub->t, u->threads);
-	}
+	/* Run the simulations. */
+	int played_games;
+	played_games = uct_threaded_playouts(u, b, color, ub->t);
 
 	if (UDEBUGL(2))
 		tree_dump(ub->t, u->dumpthres);
 
+	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, ub->t->root, b, color);
 	if (!best) {
 		uct_done_board_state(e, b);
