@@ -15,6 +15,9 @@ struct move_stats {
 /* Add a result to the stats. */
 static void stats_add_result(struct move_stats *s, float result, int playouts);
 
+/* Remove a result from the stats. */
+static void stats_rm_result(struct move_stats *s, float result, int playouts);
+
 /* Merge two stats together. */
 static void stats_merge(struct move_stats *dest, struct move_stats *src);
 
@@ -51,6 +54,34 @@ stats_add_result(struct move_stats *s, float result, int playouts)
 	s->value = s_value;
 	__sync_synchronize(); /* full memory barrier */
 	s->playouts = s_playouts;
+}
+
+static inline void
+stats_rm_result(struct move_stats *s, float result, int playouts)
+{
+	if (s->playouts > playouts) {
+		int s_playouts = s->playouts;
+		float s_value = s->value;
+		/* Force the load, another thread can work on the
+		 * values in parallel. */
+		__sync_synchronize(); /* full memory barrier */
+
+		s_playouts -= playouts;
+		s_value += (s_value - result) * playouts / s_playouts;
+
+		/* We rely on the fact that these two assignments are atomic. */
+		s->value = s_value;
+		__sync_synchronize(); /* full memory barrier */
+		s->playouts = s_playouts;
+
+	} else {
+		/* We don't touch the value, since in parallel, another
+		 * thread can be adding a result, thus raising the
+		 * playouts count after we zero the value. Instead,
+		 * leaving the value as is with zero playouts should
+		 * not break anything. */
+		s->playouts = 0;
+	}
 }
 
 static inline void
