@@ -431,19 +431,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 		prepare_move(e, b, color);
 	struct uct_board *ub = b->es;
 
-	int i;
-	for (i = 0; i < u->games; i++) {
-		int result = uct_playout(u, b, color, ub->t);
-		if (result == 0) {
-			/* Tree descent has hit invalid move. */
-			continue;
-		}
-
-		if (i > 0 && !(i % 10000)) {
-			uct_progress_status(u, ub->t, color, i);
-		}
-	}
-	uct_progress_status(u, ub->t, color, i);
+	threaded_playouts[u->thread_model](u, b, color, ub->t, u->games);
 
 	tree_save(ub->t, b, u->games / 100);
 
