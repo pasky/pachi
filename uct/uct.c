@@ -341,6 +341,13 @@ uct_playouts_tree(struct uct *u, struct board *b, enum stone color, struct tree 
 	return uct_playouts_parallel(u, b, color, t, games, true);
 }
 
+static uct_threaded_playouts threaded_playouts[] = {
+	uct_playouts_none,
+	uct_playouts_root,
+	uct_playouts_tree,
+	uct_playouts_tree,
+};
+
 
 static coord_t *
 uct_genmove(struct engine *e, struct board *b, enum stone color)
@@ -373,12 +380,6 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 	if (games < u->games && UDEBUGL(2))
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
 
-	uct_threaded_playouts threaded_playouts[] = {
-		uct_playouts_none,
-		uct_playouts_root,
-		uct_playouts_tree,
-		uct_playouts_tree,
-	};
 	int played_games;
 	played_games = threaded_playouts[u->thread_model](u, b, color, ub->t, games);
 
