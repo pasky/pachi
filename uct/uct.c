@@ -487,6 +487,7 @@ uct_state_init(char *arg)
 					*p = policy_ucb1amaf_init(u, policyarg);
 				} else {
 					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
+					exit(1);
 				}
 			} else if (!strcasecmp(optname, "playout") && optval) {
 				char *playoutarg = strchr(optval, ':');
@@ -498,6 +499,7 @@ uct_state_init(char *arg)
 					u->playout = playout_light_init(playoutarg);
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
+					exit(1);
 				}
 			} else if (!strcasecmp(optname, "prior") && optval) {
 				u->prior = uct_prior_init(optval);
