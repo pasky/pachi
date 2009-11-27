@@ -163,6 +163,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			        spaces, coord2sstr(n->coord, t->board), n->coord,
 				tree_node_get_value(t, parity, n->u.value));
 
+		/* Add virtual loss if we need to; this is used to discourage
+		 * other threads from visiting this node in case of multiple
+		 * threads doing the tree search. */
+		if (u->virtual_loss)
+			stats_add_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
+
 		assert(n->coord >= -1);
 		if (amaf && !is_pass(n->coord)) {
 			if (amaf->map[n->coord] == S_NONE || amaf->map[n->coord] == node_color) {
@@ -188,7 +194,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 				        stone2str(node_color), coord_x(n->coord,b), coord_y(n->coord,b),
 					res, group_at(&b2, m.coord), b2.superko_violation);
 			}
+			struct tree_node *np = n->parent;
 			tree_delete_node(t, n);
+			n = np;
 			result = 0;
 			goto end;
 		}
@@ -290,6 +298,14 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 end:
+	/* We need to undo the virtual loss we added during descend. */
+	if (u->virtual_loss) {
+		int parity = (node_color == player_color ? 1 : -1);
+		for (; n->parent; n = n->parent) {
+			stats_rm_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
+		}
+	}
+
 	if (amaf) {
 		free(amaf->map - 1);
 		free(amaf);

@@ -30,6 +30,7 @@ struct uct {
 	int threads;
 	int force_seed;
 	bool no_book;
+	bool virtual_loss;
 
 	int dynkomi;
 	int dynkomi_mask;
