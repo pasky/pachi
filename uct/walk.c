@@ -338,8 +338,11 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 	#define ok_to_talk (!u->parallel_tree || !thread_id)
 
 	int i, games = u->games;
-	if (t->root->children)
-		games -= t->root->u.playouts / 1.5;
+	if (t->root->children) {
+		int delta = t->root->u.playouts * 2 / 3;
+		if (u->parallel_tree) delta /= u->threads;
+		games -= delta;
+	}
 	/* else this is highly read-out but dead-end branch of opening book;
 	 * we need to start from scratch; XXX: Maybe actually base the readout
 	 * count based on number of playouts of best node? */
