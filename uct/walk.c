@@ -93,7 +93,23 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	int parity = (next_color == player_color ? 1 : -1);
 	if (n->u.playouts >= u->expand_p) {
 		// fprintf(stderr, "expanding %s (%p ^-%p)\n", coord2sstr(n->coord, b), n, n->parent);
-		tree_expand_node(t, n, b, next_color, u, parity);
+		if (!u->parallel_tree) {
+			/* Single-threaded, life is easy. */
+			tree_expand_node(t, n, b, next_color, u, parity);
+		} else {
+			/* We need to make sure only one thread expands
+			 * the node. If we are unlucky enough for two
+			 * threads to meet in the same node, the latter
+			 * one will simply do another simulation from
+			 * the node itself, no big deal. */
+			pthread_mutex_lock(&t->expansion_mutex);
+			if (tree_leaf_node(n)) {
+				tree_expand_node(t, n, b, next_color, u, parity);
+			} else {
+				// fprintf(stderr, "cancelling expansion, thread collision\n");
+			}
+			pthread_mutex_unlock(&t->expansion_mutex);
+		}
 	}
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
@@ -165,6 +181,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			        spaces, coord2sstr(n->coord, t->board), n->coord,
 				tree_node_get_value(t, parity, n->u.value));
 
+		/* Add virtual loss if we need to; this is used to discourage
+		 * other threads from visiting this node in case of multiple
+		 * threads doing the tree search. */
+		if (u->virtual_loss)
+			stats_add_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
+
 		assert(n->coord >= -1);
 		if (amaf && !is_pass(n->coord)) {
 			if (amaf->map[n->coord] == S_NONE || amaf->map[n->coord] == node_color) {
@@ -186,11 +208,11 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			if (UDEBUGL(3)) {
 				for (struct tree_node *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%lld> ", coord2sstr(ni->coord, t->board), ni->hash);
-				fprintf(stderr, "deleting invalid %s node %d,%d res %d group %d spk %d\n",
+				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
 				        stone2str(node_color), coord_x(n->coord,b), coord_y(n->coord,b),
 					res, group_at(&b2, m.coord), b2.superko_violation);
 			}
-			tree_delete_node(t, n);
+			n->hints |= TREE_HINT_INVALID;
 			result = 0;
 			goto end;
 		}
@@ -226,7 +248,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		struct uct_board *ub = b->es; assert(ub);
 		playout_ownermap_fill(&ub->ownermap, &b2);
 
-	} else { assert(tree_leaf_node(n));
+	} else { assert(u->parallel_tree || tree_leaf_node(n));
+		/* In case of parallel tree search, the assertion might
+		 * not hold if two threads chew on the same node. */
 		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
 	}
 
@@ -292,6 +316,15 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 end:
+	/* We need to undo the virtual loss we added during descend. */
+	if (u->virtual_loss) {
+		int parity = (node_color == player_color ? 1 : -1);
+		for (; n->parent; n = n->parent) {
+			stats_rm_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
+			parity = -parity;
+		}
+	}
+
 	if (dstater) free(dstater);
 	if (dstate) free(dstate);
 	if (amaf) {
@@ -303,16 +336,13 @@ end:
 }
 
 int
-uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
-	int i, games = u->games;
-	if (t->root->children)
-		games -= t->root->u.playouts / 1.5;
-	/* else this is highly read-out but dead-end branch of opening book;
-	 * we need to start from scratch; XXX: Maybe actually base the readout
-	 * count based on number of playouts of best node? */
-	if (games < u->games && UDEBUGL(2))
-		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
+	/* Should we print progress info? In case all threads work on the same
+	 * tree, only the first thread does. */
+	#define ok_to_talk (!u->parallel_tree || !thread_id)
+
+	int i;
 	for (i = 0; i < games; i++) {
 		int result = uct_playout(u, b, color, t);
 		if (result == 0) {
@@ -320,7 +350,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 			continue;
 		}
 
-		if (i > 0 && !(i % 10000)) {
+		if (unlikely(ok_to_talk && i > 0 && !(i % 10000))) {
 			uct_progress_status(u, t, color, i);
 		}
 
@@ -338,8 +368,10 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 		}
 	}
 
-	uct_progress_status(u, t, color, i);
-	if (UDEBUGL(3))
-		tree_dump(t, u->dumpthres);
+	if (ok_to_talk) {
+		uct_progress_status(u, t, color, i);
+		if (UDEBUGL(3))
+			tree_dump(t, u->dumpthres);
+	}
 	return i;
 }

@@ -2,6 +2,7 @@
 #define ZZGO_UCT_TREE_H
 
 #include <stdbool.h>
+#include <pthread.h>
 #include "move.h"
 #include "stats.h"
 #include "probdist.h"
@@ -42,6 +43,8 @@ struct tree_node {
 	struct move_stats amaf;
 	/* Stats before starting playout; used for multi-thread normalization. */
 	struct move_stats pu, pamaf;
+
+#define TREE_HINT_INVALID 1 // don't go to this node, invalid move
 	int hints;
 };
 
@@ -52,9 +55,13 @@ struct tree {
 	enum stone root_color;
 	float extra_komi;
 
-	// Probability distributions of good black, white moves in the tree
-	struct move_stats *chvals; // [bsize2] root children, b's prob.
-	struct move_stats *chchvals; // [bsize2] root children's children, b's prob.
+	// In case multiple threads walk the tree, this mutex is used
+	// to prevent them from expanding the same node in parallel.
+	pthread_mutex_t expansion_mutex;
+
+	// Summary statistics of good black, white moves in the tree
+	struct move_stats *chvals; // [bsize2] root children
+	struct move_stats *chchvals; // [bsize2] root children's children
 
 	// Statistics
 	int max_depth;
@@ -69,6 +76,7 @@ struct tree *tree_copy(struct tree *tree);
 void tree_merge(struct tree *dest, struct tree *src);
 void tree_normalize(struct tree *tree, int factor);
 
+/* Warning: All these functions are THREAD-UNSAFE! */
 struct tree_node *tree_get_node(struct tree *tree, struct tree_node *node, coord_t c, bool create);
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity);
 void tree_delete_node(struct tree *tree, struct tree_node *node);

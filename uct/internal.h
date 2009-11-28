@@ -27,9 +27,18 @@ struct uct {
 	bool amaf_prior;
 	int playout_amaf_cutoff;
 	int dumpthres;
-	int threads;
 	int force_seed;
 	bool no_book;
+
+	int threads;
+	enum uct_thread_model {
+		TM_NONE, /* <=> threads == 0 */
+		TM_ROOT, /* Root parallelization. */
+		TM_TREE, /* Tree parallelization w/o virtual loss. */
+		TM_TREEVL, /* Tree parallelization with virtual loss. */
+	} thread_model;
+	bool parallel_tree;
+	bool virtual_loss;
 
 	int dynkomi;
 	int dynkomi_mask;
@@ -52,6 +61,7 @@ struct uct {
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
 extern volatile sig_atomic_t uct_halt;
+extern __thread int thread_id;
 
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color);
 

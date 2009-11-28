@@ -44,7 +44,7 @@ quiet_cmd_recmake = "[MAKE $$target]   $$subdir"
 ### Internal build rules
 
 unexport CFLAGS
-CFLAGS += $(CUSTOM_CFLAGS) $(XCFLAGS) $(INCLUDES) -I- $(SYS_CFLAGS)
+CFLAGS += $(CUSTOM_CFLAGS) $(XCFLAGS) $(INCLUDES) $(SYS_CFLAGS)
 COMPILE = $(CC) $(CFLAGS)
 LINK = $(CC) $(LDFLAGS) $(XLDFLAGS) $(LIBS)
 

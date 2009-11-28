@@ -7,9 +7,9 @@ popts="$3" # UCT policy options
 [ -z "$popts" ] || popts=":$popts"
 
 if [ "$size" -le 13 ]; then
-	games=1000000
+	games=400000
 else
-	games=500000
+	games=200000
 fi
 
 rm uctbook-$size-7.5.pachitree

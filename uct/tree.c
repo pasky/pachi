@@ -44,6 +44,7 @@ tree_init(struct board *board, enum stone color)
 	t->root = tree_init_node(t, pass, 0);
 	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
+	pthread_mutex_init(&t->expansion_mutex, NULL);
 	return t;
 }
 
