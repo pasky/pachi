@@ -364,6 +364,14 @@ tree_normalize(struct tree *tree, int factor)
 struct tree_node *
 tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 {
+	if (!parent->children) {
+		/* Special case: Completely empty parent. */
+		if (!create) return NULL;
+		struct tree_node *nn = tree_init_node(t, c, parent->depth + 1);
+		nn->parent = parent; parent->children = nn;
+		return nn;
+	}
+
 	struct tree_node *ni;
 	for (ni = parent->children; ni->sibling; ni = ni->sibling)
 		if (ni->sibling->coord >= c)
