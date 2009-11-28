@@ -28,7 +28,7 @@ struct ucb1_policy {
 
 
 struct tree_node *
-ucb1_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
+ucb1_descend(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	/* We want to count in the prior stats here after all. Otherwise,
 	 * nodes with positive prior will get explored _LESS_ since the

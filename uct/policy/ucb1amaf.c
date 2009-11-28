@@ -76,7 +76,7 @@ static inline float fast_sqrt(int x)
 }
 
 float
-ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity)
+ucb1rave_evaluate(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity)
 {
 	struct ucb1_policy_amaf *b = p->data;
 
@@ -126,7 +126,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct tree_node *nod
 }
 
 struct tree_node *
-ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
+ucb1rave_descend(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
 {
 	struct ucb1_policy_amaf *b = p->data;
 	float nconf = 1.f;
@@ -134,7 +134,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct tree_node *node
 		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
 
 	uctd_try_node_children(node, allow_pass, ni, urgency) {
-		urgency = ucb1rave_evaluate(p, tree, ni, parity);
+		urgency = ucb1rave_evaluate(p, state, tree, ni, parity);
 
 		if (ni->u.playouts > 0 && b->explore_p > 0) {
 			urgency += b->explore_p * nconf / fast_sqrt(ni->u.playouts);
