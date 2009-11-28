@@ -365,13 +365,20 @@ tree_normalize(struct tree *tree, int factor)
 struct tree_node *
 tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 {
-	if (!parent->children) {
-		/* Special case: Completely empty parent. */
-		if (!create) return NULL;
+	if (!parent->children || parent->children->coord >= c) {
+		/* Special case: Insertion at the beginning. */
+		if (parent->children && parent->children->coord == c)
+			return parent->children;
+		if (!create)
+			return NULL;
+
 		struct tree_node *nn = tree_init_node(t, c, parent->depth + 1);
-		nn->parent = parent; parent->children = nn;
+		nn->parent = parent; nn->sibling = parent->children;
+		parent->children = nn;
 		return nn;
 	}
+
+	/* No candidate at the beginning, look through all the children. */
 
 	struct tree_node *ni;
 	for (ni = parent->children; ni->sibling; ni = ni->sibling)
