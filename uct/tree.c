@@ -656,8 +656,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 				b->symmetry.x2, b->symmetry.y2,
 				b->symmetry.type, b->symmetry.d);
 	}
-	for (int i = b->symmetry.x1; i <= b->symmetry.x2; i++) {
-		for (int j = b->symmetry.y1; j <= b->symmetry.y2; j++) {
+	for (int j = b->symmetry.y1; j <= b->symmetry.y2; j++) {
+		for (int i = b->symmetry.x1; i <= b->symmetry.x2; i++) {
 			if (b->symmetry.d) {
 				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_size(b) - 1 - i : i;
 				if (x > j) {
