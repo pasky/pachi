@@ -131,6 +131,28 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	return result;
 }
 
+static float
+scale_value(struct uct *u, struct board *b, int result)
+{
+	float rval = result > 0;
+	if (u->val_scale) {
+		int vp = u->val_points;
+		if (!vp) {
+			vp = board_size(b) - 1; vp *= vp; vp *= 2;
+		}
+
+		float sval = (float) abs(result) / vp;
+		sval = sval > 1 ? 1 : sval;
+		if (result < 0) sval = 1 - sval;
+		if (u->val_extra)
+			rval += u->val_scale * sval;
+		else
+			rval = (1 - u->val_scale) * rval + u->val_scale * sval;
+		// fprintf(stderr, "score %d => sval %f, rval %f\n", result, sval, rval);
+	}
+	return rval;
+}
+
 
 int
 uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
@@ -273,22 +295,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	if (result != 0) {
-		float rval = result > 0;
-		if (u->val_scale) {
-			int vp = u->val_points;
-			if (!vp) {
-				vp = board_size(b) - 1; vp *= vp; vp *= 2;
-			}
+		float rval = scale_value(u, b, result);
 
-			float sval = (float) abs(result) / vp;
-			sval = sval > 1 ? 1 : sval;
-			if (result < 0) sval = 1 - sval;
-			if (u->val_extra)
-				rval += u->val_scale * sval;
-			else
-				rval = (1 - u->val_scale) * rval + u->val_scale * sval;
-			// fprintf(stderr, "score %d => sval %f, rval %f\n", result, sval, rval);
-		}
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
 
 		if (u->root_heuristic && n->parent) {
