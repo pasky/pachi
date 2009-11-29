@@ -101,7 +101,7 @@ static inline float
 stats_temper_value(float val, float pval, int mode)
 {
 	float tval = val;
-	float expd = val - (1 - pval);
+	float expd = val - pval;
 	switch (mode) {
 		case 1: /* no tempering */
 			tval = val;
