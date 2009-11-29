@@ -96,11 +96,6 @@ ucb1rave_evaluate(struct uct_policy *p, void **state, struct tree *tree, struct 
 		stats_merge(&r, &root);
 	}
 
-	if (tree_parity(tree, parity) < 0) {
-		stats_reverse_parity(&n);
-		stats_reverse_parity(&r);
-	}
-
 	float value = 0;
 	if (n.playouts) {
 		if (r.playouts) {
@@ -122,7 +117,7 @@ ucb1rave_evaluate(struct uct_policy *p, void **state, struct tree *tree, struct 
 	} else if (r.playouts) {
 		value = r.value;
 	}
-	return value;
+	return tree_node_get_value(tree, parity, value);
 }
 
 struct tree_node *
