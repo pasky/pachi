@@ -31,7 +31,7 @@ struct playout_policy {
 	void *data;
 };
 
-struct playout_ownermap {
+struct board_ownermap {
 	/* Map of final owners of all intersections on the board. */
 	/* This may be shared between multiple threads! */
 	/* XXX: We assume sig_atomic_t is thread-atomic. This may not
@@ -84,14 +84,14 @@ struct playout_amafmap {
  * 0: superko inside the game tree (XXX: jigo not handled) */
 int play_random_game(struct board *b, enum stone starting_color, int gamelen,
                      struct playout_amafmap *amafmap,
-		     struct playout_ownermap *ownermap,
+		     struct board_ownermap *ownermap,
 		     struct playout_policy *policy);
 
 
 /* Ownermap utility routines: */
 
-void playout_ownermap_fill(struct playout_ownermap *ownermap, struct board *b);
-void playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_ownermap *src);
+void board_ownermap_fill(struct board_ownermap *ownermap, struct board *b);
+void board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownermap *src);
 
 /* Estimate coord ownership based on ownermap stats. */
 enum point_judgement {
@@ -100,7 +100,7 @@ enum point_judgement {
 	PJ_WHITE = S_WHITE,
 	PJ_UNKNOWN = 3,
 };
-enum point_judgement playout_ownermap_judge_point(struct playout_ownermap *ownermap, coord_t c, float thres);
+enum point_judgement board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, float thres);
 
 /* Estimate status of stones on board based on ownermap stats. */
 struct group_judgement {
@@ -112,6 +112,6 @@ struct group_judgement {
 		GS_UNKNOWN,
 	} *gs; // [bsize2]
 };
-void playout_ownermap_judge_group(struct board *b, struct playout_ownermap *ownermap, struct group_judgement *judge);
+void board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge);
 
 #endif

@@ -87,7 +87,7 @@ struct uct_board {
 	/* Persistent over moves: */
 	struct tree *t;
 	/* Used internally within one genmove: */
-	struct playout_ownermap ownermap;
+	struct board_ownermap ownermap;
 };
 
 #endif

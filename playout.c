@@ -13,7 +13,7 @@
 int
 play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		 struct playout_amafmap *amafmap,
-		 struct playout_ownermap *ownermap,
+		 struct board_ownermap *ownermap,
 		 struct playout_policy *policy)
 {
 	gamelen = gamelen - b->moves;
@@ -113,13 +113,13 @@ play_random:
 	}
 
 	if (ownermap)
-		playout_ownermap_fill(ownermap, b);
+		board_ownermap_fill(ownermap, b);
 
 	return result;
 }
 
 void
-playout_ownermap_fill(struct playout_ownermap *ownermap, struct board *b)
+board_ownermap_fill(struct board_ownermap *ownermap, struct board *b)
 {
 	ownermap->playouts++;
 	foreach_point(b) {
@@ -131,7 +131,7 @@ playout_ownermap_fill(struct playout_ownermap *ownermap, struct board *b)
 }
 
 void
-playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_ownermap *src)
+board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownermap *src)
 {
 	dst->playouts += src->playouts;
 	for (int i = 0; i < bsize2; i++)
@@ -140,7 +140,7 @@ playout_ownermap_merge(int bsize2, struct playout_ownermap *dst, struct playout_
 }
 
 enum point_judgement
-playout_ownermap_judge_point(struct playout_ownermap *ownermap, coord_t c, float thres)
+board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, float thres)
 {
 	assert(ownermap->map);
 	int n = ownermap->map[c][S_NONE];
@@ -158,7 +158,7 @@ playout_ownermap_judge_point(struct playout_ownermap *ownermap, coord_t c, float
 }
 
 void
-playout_ownermap_judge_group(struct board *b, struct playout_ownermap *ownermap, struct group_judgement *judge)
+board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge)
 {
 	assert(ownermap->map);
 	assert(judge->gs);
@@ -169,7 +169,7 @@ playout_ownermap_judge_group(struct board *b, struct playout_ownermap *ownermap,
 		group_t g = group_at(b, c);
 		if (!g) continue;
 
-		enum point_judgement pj = playout_ownermap_judge_point(ownermap, c, judge->thres);
+		enum point_judgement pj = board_ownermap_judge_point(ownermap, c, judge->thres);
 		if (pj == PJ_UNKNOWN) {
 			/* Fate is uncertain. */
 			judge->gs[g] = GS_UNKNOWN;

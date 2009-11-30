@@ -268,7 +268,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			board_print(&b2, stderr);
 
 		struct uct_board *ub = b->es; assert(ub);
-		playout_ownermap_fill(&ub->ownermap, &b2);
+		board_ownermap_fill(&ub->ownermap, &b2);
 
 	} else { assert(u->parallel_tree || tree_leaf_node(n));
 		/* In case of parallel tree search, the assertion might
