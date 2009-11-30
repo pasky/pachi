@@ -22,7 +22,7 @@ try_probdist_move(struct board *b, enum stone color, struct playout_callback *ca
 	probdist_init(&pd, board_size2(b));
 
 	callback->probdist(callback, &pd, &b->last_move);
-	if (pd.moves[0] >= 1 - __FLT_EPSILON__)
+	if (pd.moves[0] >= pd.total - __FLT_EPSILON__)
 		return pass;
 
 	/* Remove obviously invalid points. */
