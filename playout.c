@@ -37,7 +37,7 @@ try_probdist_move(struct board *b, enum stone color, struct playout_callback *ca
 	probdist_done(&pd);
 
 	/* If the pick is invalid, defer to policy. */
-	if (!urgent)
+	if (!urgent || is_pass(urgent))
 		return pass;
 	struct move m = { .coord = urgent, .color = color };
 	if (!board_is_valid_move(b, &m))
