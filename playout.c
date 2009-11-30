@@ -62,14 +62,19 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 			urgent = try_probdist_move(b, color, callback);
 		}
 
-		if (!is_pass(urgent)) {
+		if (is_pass(urgent)) {
 			/* Defer to policy move choice. */
 			urgent = policy->choose(policy, b, color);
 		}
 
 		coord_t coord;
 
-		if (!is_pass(urgent)) {
+		if (is_pass(urgent)) {
+play_random:
+			/* Defer to uniformly random move choice. */
+			board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
+
+		} else {
 			struct move m;
 			m.coord = urgent; m.color = color;
 			if (board_play(b, &m) < 0) {
@@ -80,10 +85,6 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 				goto play_random;
 			}
 			coord = urgent;
-		} else {
-play_random:
-			/* Defer to uniformly random move choice. */
-			board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
 		}
 
 #if 0
