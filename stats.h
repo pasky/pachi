@@ -1,6 +1,8 @@
 #ifndef ZZGO_STATS_H
 #define ZZGO_STATS_H
 
+#include <math.h>
+
 /* Move statistics; we track how good value each move has. */
 /* These operations are supposed to be atomic - reasonably
  * safe to perform by multiple threads at once on the same stats.
@@ -120,6 +122,9 @@ stats_temper_value(float val, float pval, int mode)
 			 * val = 1 pval = 0.1 : ntval = 0.81 tval = 1.31 */
 			tval = 0.5 + (val > 0.5 ? 1 : -1) * ntval;
 			break; }
+		case 4: /* 0.5+sqrt(result-expected)/2 */
+			tval = 0.5 + copysignf(sqrt(fabs(expd)), expd) / 2;
+			break;
 		default: assert(0); break;
 	}
 	return tval;

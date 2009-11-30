@@ -1020,7 +1020,8 @@ uct_state_init(char *arg, struct board *b)
 				 * 1: Do, value = result.
 				 * Try to temper the result:
 				 * 2: Do, value = 0.5+(result-expected)/2.
-				 * 3: Do, value = 0.5+bzz((result-expected)^2). */
+				 * 3: Do, value = 0.5+bzz((result-expected)^2).
+				 * 4: Do, value = 0.5+sqrt(result-expected)/2. */
 				u->root_heuristic = atoi(optval);
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider all stones alive at the game
