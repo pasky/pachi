@@ -1,0 +1,9 @@
+#!/bin/sh
+rm *summ*
+brm="$1"
+[ -n "$brm" ] || brm="*dat"
+for i in $(ls $brm); do
+	printf "%-40s\t" "${i%.dat}.summary.dat";
+	../../gogui-1.1.10/bin/gogui-twogtp -force -analyze $i;
+	cat ${i%.dat}.summary.dat | cut -f 1,7,8 | tail -n +2
+done
