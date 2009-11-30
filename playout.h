@@ -37,12 +37,12 @@ struct playout_policy {
 
 struct playout_callback;
 struct probdist;
-/* Get probability distribution of next move to play, given the last move.
+/* Get probability distribution of next move to play, given the current board.
  * As a special protocol, pd[coord 0] is probability of defering to the policy
  * choice; if there is no probability distribution available, the callback
  * should simply set this to 1. */
 /* Note that this callback is guaranteed to be called on each move. */
-typedef void (*playoutc_probdist)(struct playout_callback *playout_callback, struct probdist *pd, struct move *m);
+typedef void (*playoutc_probdist)(struct playout_callback *playout_callback, struct probdist *pd, struct board *b);
 
 struct playout_callback {
 	playoutc_probdist probdist;
