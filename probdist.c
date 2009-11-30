@@ -51,3 +51,8 @@ probdist_pick(struct probdist *pd)
 	}
 	assert(0); /* wtf */
 }
+
+void
+probdist_done(struct probdist *pd) {
+	free(pd->moves);
+}

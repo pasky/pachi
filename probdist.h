@@ -15,5 +15,6 @@ struct probdist *probdist_init(struct probdist *pd, int bsize2);
 void probdist_add(struct probdist *pd, coord_t c, float val);
 void probdist_punch(struct probdist *pd, coord_t c); // Remove c from probability distribution
 coord_t probdist_pick(struct probdist *pd);
+void probdist_done(struct probdist *pd); // Doesn't free pd itself
 
 #endif
