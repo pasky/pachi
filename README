@@ -13,9 +13,8 @@ policy using 3x3 patterns and various tactical checks is used for
 the random Monte-Carlo playouts.
 
 The default engine plays by Chinese rules and should be about
-1d KGS strength on 9x9. It is not yet tuned for 19x19; running
-it on big board is possible, but it will play slowly and hardly
-be an opponent for someone stronger than about KGS 15k.
+2d KGS strength on 9x9. On 19x19, it might be about KGS 4k. Of couse,
+this assumes reasonable hardware, e.g. four-threaded Core2 machine.
 
 
 Framework
