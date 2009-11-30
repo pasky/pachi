@@ -1,0 +1,54 @@
+This is an 'autotest' framework for distributed play testing of Go-playing
+computer programs. You can run clients on as many computers as you want,
+to test many combinations in parallel, then display results of the pairings
+in an organized way.
+
+Basic usage: Create a networked (NFS or FUSE-sshfs) directory, copy
+the contents of this directory there, and customize the rc file. Then
+on each computer, change to this directory and run:
+
+	nice -n 18 ./autotest-client `hostname`-1
+
+where 1 should be 2, 3, 4, ... for further instances of autotest you would
+run on the same machine (no two instaces with the same id must be run).
+The `nice -n 18` prefix will make sure the client is being run with low
+priority, in case someone wants to use the computer for some real interaction.
+
+Leave cooking, stir time by time. ./autotest-client will basically simply
+keep spawning autotest-worker which will read the rc, pick a random pairing
+and play one game.
+
+You can start and stop clients as much as you wish on the fly, or edit
+the rc file to change pairings without need for restart.
+
+The clients will create a directory structure like:
+
+	c/drahokam-1/beacon	# when was the client last active
+	c/drahokam-1/log	# various events from client's life
+	c/drahokam-1/<pair_id>/game.dat
+	c/drahokam-1/<pair_id>/game-<N>.sgf
+
+...where <pair_id> is basically mangled version of `pairing` parameters.
+
+
+*** TODO: ***
+
+Time by time, you will of course want to view the results of pairings.
+First, you will want to run:
+
+	./autotest-collect
+
+It will go through all clients and rain down all pairing results to
+a single place:
+
+	r/<pair_id>.dat
+
+Then, simply call:
+
+	./autotest-show
+
+That will show results from all pairings.
+
+
+Copyright (c) Petr Baudis <pasky@ucw.cz>
+Licenced under GPLv2.

@@ -1,0 +1,17 @@
+# Library of common shell functions for the autotest framework.
+
+set -e # errors are fatal
+
+
+# Client helpers.  $clientid must be set.
+
+log() {
+	echo -e "$(date)\t$*" >>"c/$clientid/log"
+}
+
+
+# Generic functions.
+
+pairid() {
+	echo "$*" | tr ' ' '-'
+}

@@ -1,0 +1,19 @@
+#!/bin/sh
+# This is autotest Go-testing framework client. It runs on client
+# machines and spawns autotest-worker, which picks a random pairing
+# among the ones defined in the rc file, and plays a single game.
+
+clientid="$1"; shift
+. ./autotest-lib
+
+mkdir -p "c/$clientid"
+log "started client ($clientid)"
+
+while true; do
+	mkdir -p "c/$clientid"
+	date >"c/$clientid/beacon"
+	if ! ./autotest-worker "$clientid"; then
+		log "worker failed with error code $?"
+		sleep 1
+	fi
+done

@@ -1,0 +1,117 @@
+#!/bin/sh
+# This is autotest Go-testing framework worker. It picks a random
+# pairing among the ones defined in the rc file, and plays a single game.
+
+clientid="$1"; shift
+. ./autotest-lib
+
+
+# Load rc file. First, prepare functions for the endeavor:
+echo "Loading rc file..."
+
+player() {
+	playerid="$1"; shift
+	playerspec="$1"; shift
+	playerargc="$1"; shift
+
+	eval "${playerid}_spec='$playerspec'"
+	eval "${playerid}_argc='$playerargc'"
+}
+player_param() { # Accessor method
+	playerid="$1"; shift
+	playerattr="$1"; shift
+	playervar="${playerid}_${playerattr}"
+	# XXX: ${!...} is bash-specific?
+	eval "echo \$$playervar"
+}
+
+pairs=0
+pairing() {
+	eval "pair${pairs}_id='$(pairid "$@")'"
+	eval "pair${pairs}_bsize='$1'"; shift
+	eval "pair${pairs}_komi='$1'"; shift
+	eval "pair${pairs}_black='$1'"; shift
+
+	player="$1"; shift
+	args=""; argc=0
+	while [ "$argc" -lt "$(player_param $player argc)" ] && [ "$#" -gt 0 ]; do
+		args="$args $1"; shift
+	done
+	eval "pair${pairs}_player1='$player'"
+	eval "pair${pairs}_player1_args='$args'"
+
+	player="$1"; shift
+	args=""; argc=0
+	while [ "$argc" -lt "$(player_param $player argc)" ] && [ "$#" -gt 0 ]; do
+		args="$args $1"; shift
+	done
+	eval "pair${pairs}_player2='$player'"
+	eval "pair${pairs}_player2_args='$args'"
+
+	pairs=$((pairs+1))
+}
+pairing_param() { # Accessor method
+	pairid="$1"; shift
+	pairattr="$1"; shift
+	pairvar="pair${pairid}_${pairattr}"
+	# XXX: ${!...} is bash-specific?
+	eval "echo \$$pairvar"
+}
+
+. rc
+
+
+echo "Loaded $pairs pairings"
+
+pair="$((RANDOM % $pairs))"
+pairid="$(pairing_param $pair id)"
+echo "Picked pairing #$pair: $pairid"
+log "starting game with pairing #$pair: $pairid"
+
+
+# Assign players to final colors
+black="$(pairing_param ${pair} black)"
+[ "$black" != "a" ] || black="$((1 + RANDOM % 2))"
+white="$((1+2-black))"
+p_black="$(player_param $(pairing_param $pair player$black) spec)"; pa_black="$(pairing_param $pair player${black}_args)"
+p_white="$(player_param $(pairing_param $pair player$white) spec)"; pa_white="$(pairing_param $pair player${white}_args)"
+
+
+# Create player commandlines
+prun_get() {
+	name="$1"; shift
+	cmdline="$1"; shift
+	# Rest of arguments are in $1, $2, ...
+	eval "$name=\"$cmdline\""
+}
+prun_get prun_black "$p_black" $pa_black
+prun_get prun_white "$p_white" $pa_white
+
+
+# Run twogtp!
+rm -f "c/$clientid"/scratch*
+$twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi "$(pairing_param $pair komi)" -games 1 -sgffile "c/$clientid/scratch"
+
+# Get count of our game
+mkdir -p "c/$clientid/$pairid"
+if [ -s "c/$clientid/$pairid/game.dat" ]; then
+	gameno="$(($(tail -n 1 "c/$clientid/$pairid/game.dat" | cut -f 1) + 1))"
+else
+	gameno=0
+fi
+log "game over, storing as #$gameno; black=player$black (recording black=player2)"
+
+# Move result from scratchspace
+cat "c/$clientid"/scratch.dat | grep -v '^#' | {
+	read GAME   RES_B   RES_W   RES_R   ALT     DUP     LEN     TIME_B  TIME_W  CPU_B   CPU_W   ERR     ERR_MSG
+	GAME="$gameno"
+	if [ "$black" -ne 2 ]; then
+		# Reverse colors
+		_S="$RES_B"; RES_B="$(echo $RES_W | tr 'BW' 'WB')"; RES_W="$(echo $_S | tr 'BW' 'WB')"
+		ALT=1
+		_S="$TIME_B"; TIME_B="$TIME_W"; TIME_W="$_S"
+		_S="$CPU_B"; CPU_B="$CPU_W"; CPU_W="$_S"
+	fi
+	echo -e "$GAME\t$RES_B\t$RES_W\t$RES_R\t$ALT\t$DUP\t$LEN\t$TIME_B\t$TIME_W\t$CPU_B\t$CPU_W\t$ERR\t$ERR_MSG"
+} >>"c/$clientid/$pairid/game.dat"
+mv "c/$clientid/scratch-0.sgf" "c/$clientid/$pairid/game-$gameno.sgf"
