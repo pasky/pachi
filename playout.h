@@ -10,6 +10,8 @@ struct prior_map;
 struct board_ownermap;
 
 
+/** Playout policy interface: */
+
 struct playout_policy;
 typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone to_play);
 /* Set number of won (>0) or lost (<0) games for each considerable
@@ -29,6 +31,22 @@ struct playout_policy {
 	playoutp_permit permit;
 	void *data;
 };
+
+
+/** Playout engine callback interface: */
+
+struct playout_callback;
+struct probdist;
+/* Get probability distribution of next move to play, given the last move;
+ * false means no probability distribution available right now. Note that
+ * this callback is guaranteed to be called on each move. */
+typedef bool (*playoutc_probdist)(struct playout_callback *playout_callback, struct probdist *pd, struct move *m);
+
+struct playout_callback {
+	playoutc_probdist probdist;
+	void *data;
+};
+
 
 struct playout_amafmap {
 	/* Record of the random playout - for each intersection:
@@ -73,6 +91,7 @@ struct playout_amafmap {
 int play_random_game(struct board *b, enum stone starting_color, int gamelen,
                      struct playout_amafmap *amafmap,
 		     struct board_ownermap *ownermap,
-		     struct playout_policy *policy);
+		     struct playout_policy *policy,
+		     struct playout_callback *callback);
 
 #endif

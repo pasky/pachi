@@ -110,7 +110,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
 		if (DEBUGL(3))
 			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord, b), coord_y(coord, b), color);
 
-		int result = play_random_game(&b2, color, mc->gamelen, NULL, NULL, mc->playout);
+		int result = play_random_game(&b2, color, mc->gamelen, NULL, NULL, mc->playout, NULL);
 
 		board_done_noalloc(&b2);
 

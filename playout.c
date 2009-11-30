@@ -9,25 +9,52 @@
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
+#include "probdist.h"
 
 
 int
 play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		 struct playout_amafmap *amafmap,
 		 struct board_ownermap *ownermap,
-		 struct playout_policy *policy)
+		 struct playout_policy *policy,
+		 struct playout_callback *callback)
 {
 	gamelen = gamelen - b->moves;
 	if (gamelen < 10)
 		gamelen = 10;
 
 	enum stone color = starting_color;
-	coord_t urgent;
 
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	while (gamelen-- && passes < 2) {
-		urgent = policy->choose(policy, b, color);
+		coord_t urgent = pass;
+
+		if (callback && callback->probdist) {
+			/* First try probability distribution provided by
+			 * the engine for this move. */
+			struct probdist pd;
+			probdist_init(&pd, board_size2(b));
+			if (callback->probdist(callback, &pd, &b->last_move)) {
+				/* Remove obviously invalid points. */
+				foreach_point(b) {
+					if (board_at(b, c) != S_NONE)
+						probdist_punch(&pd, c);
+				} foreach_point_end;
+
+				urgent = probdist_pick(&pd);
+
+				/* If the pick is invalid, defer to policy. */
+				struct move m = { .coord = urgent, .color = color };
+				if (!board_is_valid_move(b, &m))
+					urgent = pass;
+			}
+		}
+
+		if (!is_pass(urgent)) {
+			/* Defer to policy move choice. */
+			urgent = policy->choose(policy, b, color);
+		}
 
 		coord_t coord;
 
@@ -44,6 +71,7 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 			coord = urgent;
 		} else {
 play_random:
+			/* Defer to uniformly random move choice. */
 			board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
 		}
 
