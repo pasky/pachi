@@ -39,7 +39,8 @@ void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
 float board_effective_handicap(struct board *b);
 
 /* Decide if the given player wins counting on the board, considering
- * that given groups are dead. */
+ * that given groups are dead. (To get the list of dead groups, use
+ * e.g. groups_of_status().) */
 bool pass_is_safe(struct board *b, enum stone color, struct move_queue *mq);
 
 

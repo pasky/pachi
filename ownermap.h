@@ -43,4 +43,8 @@ struct group_judgement {
 };
 void board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge);
 
+/* Add groups of given status to mq. */
+struct move_queue;
+void groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s, struct move_queue *mq);
+
 #endif

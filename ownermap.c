@@ -5,6 +5,7 @@
 #include "board.h"
 #include "debug.h"
 #include "move.h"
+#include "mq.h"
 #include "ownermap.h"
 
 
@@ -83,5 +84,18 @@ board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, str
 				judge->gs[g] = GS_UNKNOWN;
 			}
 		}
+	} foreach_point_end;
+}
+
+void
+groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s, struct move_queue *mq)
+{
+	foreach_point(b) { /* foreach_group, effectively */
+		group_t g = group_at(b, c);
+		if (!g || g != c) continue;
+
+		assert(judge->gs[g] != GS_NONE);
+		if (judge->gs[g] == s)
+			mq_add(mq, g);
 	} foreach_point_end;
 }

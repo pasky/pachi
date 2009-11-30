@@ -86,16 +86,7 @@ dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
 	gj.thres = GJ_THRES;
 	gj.gs = alloca(board_size2(b) * sizeof(gj.gs[0]));
 	board_ownermap_judge_group(b, &ub->ownermap, &gj);
-
-	foreach_point(b) { /* foreach_group, effectively */
-		group_t g = group_at(b, c);
-		if (!g || g != c) continue;
-
-		assert(gj.gs[g] != GS_NONE);
-		if (gj.gs[g] == GS_DEAD)
-			mq_add(mq, g);
-		/* else we assume the worst - alive. */
-	} foreach_point_end;
+	groups_of_status(b, &gj, GS_DEAD, mq);
 }
 
 bool
