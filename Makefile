@@ -36,12 +36,12 @@ INCLUDES=-I.
 OBJS=board.o gtp.o move.o ownermap.o pattern3.o playout.o probdist.o random.o stone.o tactics.o
 SUBDIRS=random montecarlo uct uct/policy playout
 
-all: all-recursive zzgo test
+all: all-recursive zzgo t-unit/test
 
 LOCALLIBS=random/random.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a
 zzgo: $(OBJS) zzgo.o $(LOCALLIBS)
 	$(call cmd,link)
-test: $(OBJS) test.o $(LOCALLIBS)
+t-unit/test: $(OBJS) test.o $(LOCALLIBS)
 	$(call cmd,link)
 
 .PHONY: zzgo-profiled
@@ -56,7 +56,7 @@ install:
 
 
 clean: clean-recursive
-	rm -f zzgo *.o
+	rm -f zzgo *.o t-unit/test t-unit/*.o
 
 clean-profiled: clean-profiled-recursive
 	rm -f *.gcda *.gcno
