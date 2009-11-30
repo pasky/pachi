@@ -39,7 +39,7 @@ probdist_punch(struct probdist *pd, coord_t c)
 coord_t
 probdist_pick(struct probdist *pd)
 {
-	assert(!(pd->total < 0));
+	assert(pd->total > -1); // -1..0 is rounding error
 	if (pd->total < __FLT_EPSILON__)
 		return pass;
 	float stab = (float) fast_random(65536) / 65536 * pd->total;
@@ -49,7 +49,11 @@ probdist_pick(struct probdist *pd)
 		if (stab < sum)
 			return c;
 	}
-	assert(0); /* wtf */
+	//fprintf(stderr, "overstab %f (total %f, sum %f)\n", stab, pd->total, sum);
+	// This can sometimes happen when also punching due to rounding errors,.
+	// Just assert that the difference is tiny.
+	assert(fabs(pd->total - stab) < 1);
+	return pass;
 }
 
 void
