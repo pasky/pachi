@@ -27,17 +27,17 @@ try_probdist_move(struct board *b, enum stone color, struct playout_callback *ca
 		return pass;
 	}
 
-	coord_t urgent = probdist_pick(&pd);
+	coord_t coord = probdist_pick(&pd);
 	probdist_done(&pd);
 
 	/* If the pick is invalid, defer to policy. */
-	if (!urgent || is_pass(urgent))
+	if (!coord || is_pass(coord))
 		return pass;
-	struct move m = { .coord = urgent, .color = color };
+	struct move m = { .coord = coord, .color = color };
 	if (!board_is_valid_move(b, &m))
 		return pass;
 
-	return urgent;
+	return coord;
 }
 
 int
@@ -56,35 +56,33 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	while (gamelen-- && passes < 2) {
-		coord_t urgent = pass;
+		coord_t coord = pass;
 
 		if (callback && callback->probdist) {
-			urgent = try_probdist_move(b, color, callback);
+			coord = try_probdist_move(b, color, callback);
 		}
 
-		if (is_pass(urgent)) {
+		if (is_pass(coord)) {
 			/* Defer to policy move choice. */
-			urgent = policy->choose(policy, b, color);
+			coord = policy->choose(policy, b, color);
 		}
 
-		coord_t coord;
-
-		if (is_pass(urgent)) {
+		if (is_pass(coord)) {
 play_random:
 			/* Defer to uniformly random move choice. */
 			board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
 
 		} else {
 			struct move m;
-			m.coord = urgent; m.color = color;
+			m.coord = coord; m.color = color;
 			if (board_play(b, &m) < 0) {
 				if (DEBUGL(8)) {
-					fprintf(stderr, "Urgent move %d,%d is ILLEGAL:\n", coord_x(urgent, b), coord_y(urgent, b));
+					fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n",
+						coord_x(coord, b), coord_y(coord, b));
 					board_print(b, stderr);
 				}
 				goto play_random;
 			}
-			coord = urgent;
 		}
 
 #if 0
