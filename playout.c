@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,36 @@
 #include "playout.h"
 #include "probdist.h"
 
+
+static coord_t
+try_probdist_move(struct board *b, enum stone color, struct playout_callback *callback)
+{
+	/* First try probability distribution provided by
+	 * the engine for this move. */
+	struct probdist pd;
+	probdist_init(&pd, board_size2(b));
+
+	callback->probdist(callback, &pd, &b->last_move);
+	if (pd.moves[0] >= 1 - __FLT_EPSILON__)
+		return pass;
+
+	/* Remove obviously invalid points. */
+	foreach_point(b) {
+		if (board_at(b, c) != S_NONE)
+			probdist_punch(&pd, c);
+	} foreach_point_end;
+
+	coord_t urgent = probdist_pick(&pd);
+
+	/* If the pick is invalid, defer to policy. */
+	if (!urgent)
+		return pass;
+	struct move m = { .coord = urgent, .color = color };
+	if (!board_is_valid_move(b, &m))
+		return pass;
+
+	return urgent;
+}
 
 int
 play_random_game(struct board *b, enum stone starting_color, int gamelen,
@@ -31,30 +62,7 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		coord_t urgent = pass;
 
 		if (callback && callback->probdist) {
-			/* First try probability distribution provided by
-			 * the engine for this move. */
-			struct probdist pd;
-			probdist_init(&pd, board_size2(b));
-
-			callback->probdist(callback, &pd, &b->last_move);
-			if (pd.moves[0] < 1) {
-				/* Remove obviously invalid points. */
-				foreach_point(b) {
-					if (board_at(b, c) != S_NONE)
-						probdist_punch(&pd, c);
-				} foreach_point_end;
-
-				urgent = probdist_pick(&pd);
-
-				/* If the pick is invalid, defer to policy. */
-				if (!urgent) {
-					urgent = pass;
-				} else {
-					struct move m = { .coord = urgent, .color = color };
-					if (!board_is_valid_move(b, &m))
-						urgent = pass;
-				}
-			}
+			urgent = try_probdist_move(b, color, callback);
 		}
 
 		if (!is_pass(urgent)) {
