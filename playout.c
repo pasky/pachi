@@ -35,7 +35,9 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 			 * the engine for this move. */
 			struct probdist pd;
 			probdist_init(&pd, board_size2(b));
-			if (callback->probdist(callback, &pd, &b->last_move)) {
+
+			callback->probdist(callback, &pd, &b->last_move);
+			if (pd.moves[0] < 1) {
 				/* Remove obviously invalid points. */
 				foreach_point(b) {
 					if (board_at(b, c) != S_NONE)
@@ -45,9 +47,13 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 				urgent = probdist_pick(&pd);
 
 				/* If the pick is invalid, defer to policy. */
-				struct move m = { .coord = urgent, .color = color };
-				if (!board_is_valid_move(b, &m))
+				if (!urgent) {
 					urgent = pass;
+				} else {
+					struct move m = { .coord = urgent, .color = color };
+					if (!board_is_valid_move(b, &m))
+						urgent = pass;
+				}
 			}
 		}
 
