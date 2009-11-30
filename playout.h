@@ -1,14 +1,13 @@
 #ifndef ZZGO_PLAYOUT_H
 #define ZZGO_PLAYOUT_H
 
-#include <signal.h> // sig_atomic_t
-
 #define MAX_GAMELEN 600
 
 struct board;
 struct move;
 enum stone;
 struct prior_map;
+struct board_ownermap;
 
 
 struct playout_policy;
@@ -29,17 +28,6 @@ struct playout_policy {
 	playoutp_assess assess;
 	playoutp_permit permit;
 	void *data;
-};
-
-struct board_ownermap {
-	/* Map of final owners of all intersections on the board. */
-	/* This may be shared between multiple threads! */
-	/* XXX: We assume sig_atomic_t is thread-atomic. This may not
-	 * be true in pathological cases. */
-	sig_atomic_t playouts;
-	/* At the final board position, for each coordinate increase the
-	 * counter of appropriate color. */
-	sig_atomic_t (*map)[S_MAX]; // [board_size2(b)]
 };
 
 struct playout_amafmap {
@@ -86,32 +74,5 @@ int play_random_game(struct board *b, enum stone starting_color, int gamelen,
                      struct playout_amafmap *amafmap,
 		     struct board_ownermap *ownermap,
 		     struct playout_policy *policy);
-
-
-/* Ownermap utility routines: */
-
-void board_ownermap_fill(struct board_ownermap *ownermap, struct board *b);
-void board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownermap *src);
-
-/* Estimate coord ownership based on ownermap stats. */
-enum point_judgement {
-	PJ_DAME = S_NONE,
-	PJ_BLACK = S_BLACK,
-	PJ_WHITE = S_WHITE,
-	PJ_UNKNOWN = 3,
-};
-enum point_judgement board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, float thres);
-
-/* Estimate status of stones on board based on ownermap stats. */
-struct group_judgement {
-	float thres;
-	enum gj_state {
-		GS_NONE,
-		GS_DEAD,
-		GS_ALIVE,
-		GS_UNKNOWN,
-	} *gs; // [bsize2]
-};
-void board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge);
 
 #endif

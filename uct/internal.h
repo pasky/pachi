@@ -5,6 +5,7 @@
 
 #include "debug.h"
 #include "move.h"
+#include "ownermap.h"
 #include "playout.h"
 
 struct tree;
