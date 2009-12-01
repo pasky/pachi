@@ -9,7 +9,7 @@ BASIC USAGE
 
 Create a networked (NFS or FUSE-sshfs) directory, copy the contents of this
 directory there, and customize the rc file - it is heavily commented and
-should be self-guiding.
+should be self-guiding. You will need the twogtp tool from gogui package.
 
 Then on each computer, change to this directory and run:
 
