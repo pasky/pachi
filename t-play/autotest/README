@@ -3,9 +3,15 @@ computer programs. You can run clients on as many computers as you want,
 to test many combinations in parallel, then display results of the pairings
 in an organized way.
 
-Basic usage: Create a networked (NFS or FUSE-sshfs) directory, copy
-the contents of this directory there, and customize the rc file. Then
-on each computer, change to this directory and run:
+
+BASIC USAGE
+-----------
+
+Create a networked (NFS or FUSE-sshfs) directory, copy the contents of this
+directory there, and customize the rc file - it is heavily commented and
+should be self-guiding.
+
+Then on each computer, change to this directory and run:
 
 	nice -n 18 ./autotest-client `hostname`-1
 
@@ -14,21 +20,9 @@ run on the same machine (no two instaces with the same id must be run).
 The `nice -n 18` prefix will make sure the client is being run with low
 priority, in case someone wants to use the computer for some real interaction.
 
-Leave cooking, stir time by time. ./autotest-client will basically simply
-keep spawning autotest-worker which will read the rc, pick a random pairing
-and play one game.
-
-You can start and stop clients as much as you wish on the fly, or edit
-the rc file to change pairings without need for restart.
-
-The clients will create a directory structure like:
-
-	c/drahokam-1/beacon	# when was the client last active
-	c/drahokam-1/log	# various events from client's life
-	c/drahokam-1/<pair_id>/game.dat
-	c/drahokam-1/<pair_id>/game-<N>.sgf
-
-...where <pair_id> is basically mangled version of `pairing` parameters.
+Leave cooking, stir time by time.  You can start and stop clients as much
+as you wish on the fly, or edit the rc file to change pairings without any
+need for restarting clients.
 
 
 Time by time, you will of course want to view the results of pairings.
@@ -36,12 +30,8 @@ First, you will want to run:
 
 	./autotest-gather
 
-It will go through all clients and rain down all pairing results to
-a single place:
-
-	r/<pair_id>.dat
-
-Then, simply call:
+This will collect the results all in one place. Then, you can repeatedly
+examine the results using:
 
 	./autotest-show
 
@@ -49,7 +39,60 @@ That will show results from all pairings. You can also use e.g.
 
 	./autotest-show 9-*
 
-to show only results of 9x9 pairings.
+to show only results of 9x9 pairings. To refresh the shown results, you
+will need to re-run autotest-gather; if you will always want to just see
+fresh results, combine the two commands:
+
+	./autotest-gather; ./autotest-show
+
+
+DISCONNECTED USAGE
+------------------
+
+If your clients don't share a single filesystem, you can still use autotest
+just fine, with two exceptions:
+
+* You will need to manually synchronize the 'rc' file between all your machines
+
+* You will need to manually copy over c/*/ directory tree from all your systems
+back to the central server (to the appropriate c/*/ directories) every time
+before running ./autotest-gather.
+
+
+TODO
+----
+
+Way to prune old pairings. :)
+
+
+IMPLEMENTATION
+--------------
+
+Autotest keeps all the state in plain files within the filesystem.
+
+./autotest-client will basically simply keep spawning `autotest-worker`
+which will read the rc file, pick a random pairing and use gogui-twogtp
+to play one game, then store the result in a dat file (and leave the sgf
+file archived for future inspection).
+
+The client workers will create a directory structure like:
+
+	c/drahokam-1/beacon	# when was the client last active
+	c/drahokam-1/log	# various events from client's life
+	c/drahokam-1/<pair_id>/game.dat
+	c/drahokam-1/<pair_id>/game-<N>.sgf
+
+...where drahokam-1 is the ./autotest-client parameter and <pair_id>
+is basically straightforwardly mangled version of `pairing` parameters.
+
+
+./autotest-gather will simply go through directories of all clients and rain
+down all pairing results to a single place:
+
+	r/<pair_id>.dat
+
+Then, ./autotest-show will call gogui-twogtp -analyze on the selected
+produced dat files.
 
 
 Copyright (c) Petr Baudis <pasky@ucw.cz>
