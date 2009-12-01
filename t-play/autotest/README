@@ -50,6 +50,13 @@ to get a 95%-confidence interval of the winrate, roughly double the S.D.
 value. E.g. WINRATE 30% S.D. 5% means that with 95% probability, the real
 winrate is 30% +-10%.
 
+To remove results of old pairings, use:
+
+	./autotest-prune pairing-name
+
+pairing-name can be either simply name of the pairing, or a mask matching
+many pairings (up to '*' for removing of all pairing results).
+
 
 DISCONNECTED USAGE
 ------------------
@@ -63,11 +70,7 @@ just fine, with two exceptions:
 back to the central server (to the appropriate c/*/ directories) every time
 before running ./autotest-gather.
 
-
-TODO
-----
-
-Way to prune old pairings. :)
+* You will manually need to remove old pairing results on the clients.
 
 
 IMPLEMENTATION
