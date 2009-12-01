@@ -108,6 +108,7 @@ cat "c/$clientid"/scratch.dat | grep -v '^#' | {
 	if [ "$black" -ne 2 ]; then
 		# Reverse colors
 		_S="$RES_B"; RES_B="$(echo $RES_W | tr 'BW' 'WB')"; RES_W="$(echo $_S | tr 'BW' 'WB')"
+		RES_R="$(echo "$RES_R" | tr 'BW' 'WB')"
 		ALT=1
 		_S="$TIME_B"; TIME_B="$TIME_W"; TIME_W="$_S"
 		_S="$CPU_B"; CPU_B="$CPU_W"; CPU_W="$_S"
