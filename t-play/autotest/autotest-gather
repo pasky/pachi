@@ -12,6 +12,7 @@ for d in c/*/*/game.dat; do
 	datfile="r/$(basename $(dirname "$d")).dat"
 
 	if [ ! -s "$datfile" ]; then
+		# Common datfile header, required for twogtp -analyze
 		{
 		echo "#"
 		echo -e "#GAME\tRES_B\tRES_W\tRES_R\tALT\tDUP\tLEN\tTIME_B\tTIME_W\tCPU_B\tCPU_W\tERR\tERR_MSG"
@@ -20,6 +21,9 @@ for d in c/*/*/game.dat; do
 	else
 		num="$(($(tail -n 1 "$datfile" | cut -f 1) + 1))"
 	fi
+	# We cannot simply concatenate all the datfiles because
+	# twogtp -analyze is pedantic about the games numbering;
+	# we need to renumber the games to a single sequence.
 	while read orignum line; do
 		echo -e "$num\t$line"
 		num=$((num+1))
