@@ -41,7 +41,8 @@ all: all-recursive zzgo t-unit/test
 LOCALLIBS=random/random.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a
 zzgo: $(OBJS) zzgo.o $(LOCALLIBS)
 	$(call cmd,link)
-t-unit/test: $(OBJS) test.o $(LOCALLIBS)
+t-unit/test: $(OBJS) t-unit/test.o $(LOCALLIBS)
+	ln test.o t-unit/test.o # XXX
 	$(call cmd,link)
 
 .PHONY: zzgo-profiled
