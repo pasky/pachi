@@ -13,6 +13,7 @@ while true; do
 	mkdir -p "c/$clientid"
 	date >"c/$clientid/beacon"
 	if ! ./autotest-worker "$clientid"; then
+		echo "*** WORKER FAILED ***"
 		log "worker failed with error code $?"
 		sleep 1
 	fi
