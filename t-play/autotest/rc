@@ -46,7 +46,9 @@ player zamafmoggy5k './zzgo-$1 games=5000,pass_all_alive,policy=ucb1amaf,playout
 #             Parameters must not contain whitespace.
 #
 # Win rates are always stored from PLAYER2 perspective, no matter
-# what the player colors are.
+# what the player colors are - we assume that PLAYER1 is your reference
+# player while PLAYER2 varies based on the particular configuration you
+# want to test.
 
 # You will be editing this all the time. :)
 
