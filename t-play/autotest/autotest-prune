@@ -13,5 +13,6 @@ if [ -z "$mask" ]; then
 fi
 . ./autotest-lib
 
+echo "Removing $(ls r/$mask.dat | wc -l) result pairs..."
 rm -f r/$mask.dat r/$mask.summary.dat r/$mask.html
 rm -rf c/*/$mask
