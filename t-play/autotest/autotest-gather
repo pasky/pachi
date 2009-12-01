@@ -8,8 +8,9 @@
 mkdir -p "r/"
 rm -f r/*
 
-for d in c/*/*/game.dat; do
-	datfile="r/$(basename $(dirname "$d")).dat"
+for dir in c/*/*/; do
+	pairing="${dir%/}"; pairing="${pairing#c/*/}"
+	datfile="r/$pairing.dat"
 
 	if [ ! -s "$datfile" ]; then
 		# Common datfile header, required for twogtp -analyze
@@ -19,7 +20,8 @@ for d in c/*/*/game.dat; do
 		} >"$datfile"
 		num=0
 	else
-		num="$(($(tail -n 1 "$datfile" | cut -f 1) + 1))"
+		lastgame="$(tail -n 1 "$datfile")"
+		num="$((${lastgame%%	*} + 1))"
 	fi
 	# We cannot simply concatenate all the datfiles because
 	# twogtp -analyze is pedantic about the games numbering;
@@ -27,5 +29,5 @@ for d in c/*/*/game.dat; do
 	while read orignum line; do
 		echo -e "$num\t$line"
 		num=$((num+1))
-	done <"$d" >>"$datfile"
+	done <"$dir/game.dat" >>"$datfile"
 done
