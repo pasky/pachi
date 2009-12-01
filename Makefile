@@ -42,7 +42,7 @@ LOCALLIBS=random/random.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy
 zzgo: $(OBJS) zzgo.o $(LOCALLIBS)
 	$(call cmd,link)
 t-unit/test: $(OBJS) t-unit/test.o $(LOCALLIBS)
-	ln test.o t-unit/test.o # XXX
+	ln -f test.o t-unit/test.o # XXX
 	$(call cmd,link)
 
 .PHONY: zzgo-profiled
