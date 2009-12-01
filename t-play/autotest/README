@@ -45,6 +45,11 @@ fresh results, combine the two commands:
 
 	./autotest-gather; ./autotest-show
 
+Note that the S.D. column is standard deviation of the shown winrate;
+to get a 95%-confidence interval of the winrate, roughly double the S.D.
+value. E.g. WINRATE 30% S.D. 5% means that with 95% probability, the real
+winrate is 30% +-10%.
+
 
 DISCONNECTED USAGE
 ------------------
