@@ -1,0 +1,27 @@
+#!/bin/sh
+# This is autotest gathering tool, collecting game result info from
+# all clients and putting it in single place (which is completely
+# wiped otherwise).
+
+. ./autotest-lib
+
+mkdir -p "r/"
+rm -f r/*
+
+for d in c/*/*/game.dat; do
+	datfile="r/$(basename $(dirname "$d")).dat"
+
+	if [ ! -s "$datfile" ]; then
+		{
+		echo "#"
+		echo -e "#GAME\tRES_B\tRES_W\tRES_R\tALT\tDUP\tLEN\tTIME_B\tTIME_W\tCPU_B\tCPU_W\tERR\tERR_MSG"
+		} >"$datfile"
+		num=0
+	else
+		num="$(($(tail -n 1 "$datfile" | cut -f 1) + 1))"
+	fi
+	while read orignum line; do
+		echo -e "$num\t$line"
+		num=$((num+1))
+	done <"$d" >>"$datfile"
+done

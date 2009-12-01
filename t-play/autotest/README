@@ -31,12 +31,10 @@ The clients will create a directory structure like:
 ...where <pair_id> is basically mangled version of `pairing` parameters.
 
 
-*** TODO: ***
-
 Time by time, you will of course want to view the results of pairings.
 First, you will want to run:
 
-	./autotest-collect
+	./autotest-gather
 
 It will go through all clients and rain down all pairing results to
 a single place:
@@ -47,7 +45,11 @@ Then, simply call:
 
 	./autotest-show
 
-That will show results from all pairings.
+That will show results from all pairings. You can also use e.g.
+
+	./autotest-show 9-*
+
+to show only results of 9x9 pairings.
 
 
 Copyright (c) Petr Baudis <pasky@ucw.cz>

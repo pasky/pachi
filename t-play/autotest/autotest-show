@@ -1,0 +1,26 @@
+#!/bin/sh
+# This is autotest display tool, showing gathered information in
+# a hopefully meaningful way.
+
+mask="$1"
+[ -n "$mask" ] || mask="*"
+. ./autotest-lib
+
+# Load rc quickly:
+player() { :; }
+pairing() { :; }
+. rc
+
+if [ ! -d "r" ]; then
+	echo "Did you run autotest-gather?" >&2
+	exit 1
+fi
+
+rm -f r/*.summary.dat r/*.html
+
+echo -e "GAMES\tWINRATE\tS.D.\tPAIRING"
+for datfile in r/$mask.dat; do
+	$twogtp_path -analyze "$datfile"
+	pairing="${datfile#r/}"; pairing="${pairing%.dat}"
+	echo -e "$(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)\t$pairing"
+done
