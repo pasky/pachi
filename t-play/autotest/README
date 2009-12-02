@@ -52,7 +52,7 @@ winrate is 30% +-10%. The meaning of the first 'S' column is:
 
 	x	errors reported by twogtp
 	?	unknown (not in rc) active pairing (OK if temporary)
-	-	unknown inactive pairing
+	/	unknown inactive pairing
 	!	known (in rc) inactive pairing (last refresh > 2 hours ago)
 	.	known active pairing (normal)
 

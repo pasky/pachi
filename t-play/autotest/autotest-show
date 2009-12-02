@@ -27,7 +27,7 @@ pairing_status() {
 	active=1; [ "$(cat "r/$pairing.beacon")" -ge "$(($(date +%s) - 60*60*2))" ] || active=0
 	case $known$active in
 		01) status="?";;
-		00) status="-";;
+		00) status="/";;
 		11) status=".";;
 		*) status="!";;
 	esac
