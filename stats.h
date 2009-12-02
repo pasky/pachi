@@ -18,7 +18,7 @@ static void stats_add_result(struct move_stats *s, float result, int playouts);
 /* Remove a result from the stats. */
 static void stats_rm_result(struct move_stats *s, float result, int playouts);
 
-/* Merge two stats together. */
+/* Merge two stats together. THIS IS NOT ATOMIC! */
 static void stats_merge(struct move_stats *dest, struct move_stats *src);
 
 /* Reverse stats parity. */
@@ -87,8 +87,11 @@ stats_rm_result(struct move_stats *s, float result, int playouts)
 static inline void
 stats_merge(struct move_stats *dest, struct move_stats *src)
 {
-	if (src->playouts > 0)
-		stats_add_result(dest, src->value, src->playouts);
+	/* In a sense, this is non-atomic version of stats_add_result(). */
+	if (src->playouts) {
+		dest->playouts += src->playouts;
+		dest->value += (src->value - dest->value) * src->playouts / dest->playouts;
+	}
 }
 
 static inline void
