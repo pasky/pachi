@@ -3,6 +3,10 @@ computer programs. You can run clients on as many computers as you want,
 to test many combinations in parallel, then display results of the pairings
 in an organized way.
 
+It should be easily adaptable for testing of performance of other stochastic
+programs against a reference "opponent", just replace twogtp invocations
+in the scripts with your own programs.
+
 
 BASIC USAGE
 -----------
