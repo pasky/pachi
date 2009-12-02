@@ -8,3 +8,6 @@
 * Nicer support for disconnected usage
 
 * Support for multi-core systems and multi-threaded players
+
+* Support for using different(ly optimized) binaries based
+  on host architecture / processor type
