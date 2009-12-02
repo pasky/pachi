@@ -19,12 +19,12 @@ pairing() { pknown="$pknown$(pairid "$@") "; }
 
 pairing_status() {
 	# See README for explanation of flags.
-	if [ "$(cat "r/$pairing.error")" -gt 0 ]; then
+	if [ -s "r/$pairing.error" ] && [ "$(cat "r/$pairing.error")" -gt 0 ]; then
 		status="x"
 		return
 	fi
 	known=1; [ "${pknown#* $pairing *}" != "$pknown" ] || known=0
-	active=1; [ "$(cat "r/$pairing.beacon")" -ge "$(($(date +%s) - 60*60*2))" ] || active=0
+	active=1; ([ -s "r/$pairing.beacon" ] && [ "$(cat "r/$pairing.beacon")" -ge "$(($(date +%s) - 60*60*2))" ]) || active=0
 	case $known$active in
 		01) status="?";;
 		00) status="/";;
@@ -36,9 +36,12 @@ pairing_status() {
 rm -f r/*.summary.dat r/*.html
 
 echo -e "S GAMES\tWINRATE\tS.D.\tPAIRING"
-for datfile in r/$mask.dat; do
-	$twogtp_path -analyze "$datfile"
-	pairing="${datfile#r/}"; pairing="${pairing%.dat}"
+for pairing in $((echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.dat$##') | sort | uniq); do
+	[ ! -s "r/$pairing.dat" ] || $twogtp_path -analyze "r/$pairing.dat"
 	pairing_status "$pairing" # sets status
-	echo -e "$status $(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)\t$pairing"
+	if [ -s "r/$pairing.summary.dat" ]; then
+		echo -e "$status $(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)\t$pairing"
+	else
+		echo -e "$status 0\t-\t-\t$pairing"
+	fi
 done
