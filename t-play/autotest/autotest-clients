@@ -1,0 +1,12 @@
+#!/bin/sh
+# This is autotest client lister.
+
+. ./autotest-lib
+
+echo -e "LAST ACTIVITY\t\t\tWFAIL#\tNAME"
+for c in c/*; do
+	client="${c#c/}"
+	beacon="$(date --rfc-3339=seconds -d "1970-01-01 $(cat "$c/beacon") seconds")"
+	fails="$(grep -c fail "$c/log" || :)"
+	echo -e "$beacon\t$fails\t$client"
+done

@@ -55,7 +55,13 @@ To remove results of old pairings, use:
 	./autotest-prune pairing-name
 
 pairing-name can be either simply name of the pairing, or a mask matching
-many pairings (up to '*' for removing of all pairing results).
+many pairings (up to '*' for removal of all pairing results).
+
+To show status of all known clients, use:
+
+	./autotest-clients
+
+(To remove a gone client, just remove its subdirectory in the c/ directory.)
 
 
 DISCONNECTED USAGE
