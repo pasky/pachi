@@ -210,7 +210,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 
 #if 0
 			struct board bb; bb.size = 9+2;
-			fprintf(stderr, "* %s<%lld> -> %s<%lld> [%d/%f => %d/%f]\n",
+			fprintf(stderr, "* %s<%"PRIhash"> -> %s<%"PRIhash"> [%d/%f => %d/%f]\n",
 				coord2sstr(node->coord, &bb), node->hash,
 				coord2sstr(ni->coord, &bb), ni->hash,
 				player_color, result, child_color, nres);

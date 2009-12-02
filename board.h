@@ -1,6 +1,7 @@
 #ifndef ZZGO_BOARD_H
 #define ZZGO_BOARD_H
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -45,6 +46,7 @@ struct board_symmetry {
 
 
 typedef uint64_t hash_t;
+#define PRIhash PRIx64
 
 
 /* Note that "group" is only chain of stones that is solidly

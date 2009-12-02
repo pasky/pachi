@@ -279,7 +279,7 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
 	board->hash ^= hash_at(board, coord, color);
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %llx -> %llx\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
+		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
 }
 
 /* Commit current board hash to history. */
@@ -287,7 +287,7 @@ static void profiling_noinline
 board_hash_commit(struct board *board)
 {
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_commit %llx\n", board->hash);
+		fprintf(stderr, "board_hash_commit %"PRIhash"\n", board->hash);
 	if (likely(board->history_hash[board->hash & history_hash_mask]) == 0) {
 		board->history_hash[board->hash & history_hash_mask] = board->hash;
 	} else {
