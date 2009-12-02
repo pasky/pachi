@@ -8,6 +8,8 @@
 mkdir -p "r/"
 rm -f r/*
 
+# First, gather pairing data:
+
 for dir in c/*/*/; do
 	pairing="${dir%/}"; pairing="${pairing#c/*/}"
 	datfile="r/$pairing.dat"
@@ -30,4 +32,17 @@ for dir in c/*/*/; do
 		echo -e "$num\t$line"
 		num=$((num+1))
 	done <"$dir/game.dat" >>"$datfile"
+done
+
+
+# Next, fill per-pairing metadata:
+
+for datfile in r/*.dat; do
+	pairing="${datfile%.dat}"; pairing="${pairing#r/}"
+
+	# Look at last change in pairing:
+	stat -c %Z "$(ls --sort=time c/*/"$pairing"/* | head -n 1)" >"r/$pairing.beacon"
+
+	# Check pairing for errors:
+	tail -n +3 "$datfile" | cut -f 12 | { grep -c -vF 0 >"r/$pairing.error" || :; }
 done

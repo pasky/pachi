@@ -6,21 +6,39 @@ mask="$1"
 [ -n "$mask" ] || mask="*"
 . ./autotest-lib
 
-# Load rc quickly:
-player() { :; }
-pairing() { :; }
-. rc
-
 if [ ! -d "r" ]; then
 	echo "Did you run autotest-gather?" >&2
 	exit 1
 fi
 
+# Load rc quickly:
+player() { :; }
+pknown=" "
+pairing() { pknown="$pknown$(pairid "$@") "; }
+. rc
+
+pairing_status() {
+	# See README for explanation of flags.
+	if [ "$(cat "r/$pairing.error")" -gt 0 ]; then
+		status="x"
+		return
+	fi
+	known=1; [ "${pknown#* $pairing *}" != "$pknown" ] || known=0
+	active=1; [ "$(cat "r/$pairing.beacon")" -ge "$(($(date +%s) - 60*60*2))" ] || active=0
+	case $known$active in
+		01) status="?";;
+		00) status="-";;
+		11) status=".";;
+		*) status="!";;
+	esac
+}
+
 rm -f r/*.summary.dat r/*.html
 
-echo -e "GAMES\tWINRATE\tS.D.\tPAIRING"
+echo -e "S GAMES\tWINRATE\tS.D.\tPAIRING"
 for datfile in r/$mask.dat; do
 	$twogtp_path -analyze "$datfile"
 	pairing="${datfile#r/}"; pairing="${pairing%.dat}"
-	echo -e "$(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)\t$pairing"
+	pairing_status "$pairing" # sets status
+	echo -e "$status $(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)\t$pairing"
 done

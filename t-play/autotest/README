@@ -48,7 +48,13 @@ fresh results, combine the two commands:
 Note that the S.D. column is standard deviation of the shown winrate;
 to get a 95%-confidence interval of the winrate, roughly double the S.D.
 value. E.g. WINRATE 30% S.D. 5% means that with 95% probability, the real
-winrate is 30% +-10%.
+winrate is 30% +-10%. The meaning of the first 'S' column is:
+
+	x	errors reported by twogtp
+	?	unknown (not in rc) active pairing (OK if temporary)
+	-	unknown inactive pairing
+	!	known (in rc) inactive pairing (last refresh > 2 hours ago)
+	.	known active pairing (normal)
 
 To remove results of old pairings, use:
 
@@ -104,6 +110,8 @@ is basically straightforwardly mangled version of `pairing` parameters.
 down all pairing results to a single place:
 
 	r/<pair_id>.dat
+	r/<pair_id>.beacon  # when was the pairing last active
+	r/<pair_id>.error  # number of games reporting error
 
 Then, ./autotest-show will call gogui-twogtp -analyze on the selected
 produced dat files.

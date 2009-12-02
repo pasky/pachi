@@ -14,5 +14,5 @@ fi
 . ./autotest-lib
 
 echo "Removing $(ls r/$mask.dat | wc -l) result pairs..."
-rm -f r/$mask.dat r/$mask.summary.dat r/$mask.html
+rm -f r/$mask.dat r/$mask.summary.dat r/$mask.html r/$mask.beacon r/$mask.error
 rm -rf c/*/$mask
