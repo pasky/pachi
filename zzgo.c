@@ -10,6 +10,7 @@
 #include "engine.h"
 #include "montecarlo/montecarlo.h"
 #include "random/random.h"
+#include "t-unit/test.h"
 #include "uct/uct.h"
 #include "gtp.h"
 #include "random.h"
@@ -22,11 +23,12 @@ int main(int argc, char *argv[])
 {
 	struct board *b = board_init();
 	enum { E_RANDOM, E_MONTECARLO, E_UCT } engine = E_UCT;
+	char *testfile = NULL;
 
 	seed = time(NULL);
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:s:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:s:t:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -46,9 +48,12 @@ int main(int argc, char *argv[])
 			case 's':
 				seed = atoi(optarg);
 				break;
+			case 't':
+				testfile = strdup(optarg);
+				break;
 			default: /* '?' */
 				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-				fprintf(stderr, "Usage: %s [-e random|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [ENGINE_ARGS]\n",
+				fprintf(stderr, "Usage: %s [-e random|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t FILENAME] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}
@@ -70,6 +75,11 @@ int main(int argc, char *argv[])
 		case E_UCT:
 			e = engine_uct_init(e_arg); break;
 
+	}
+
+	if (testfile) {
+		unittest(testfile);
+		return 0;
 	}
 
 	char buf[4096];

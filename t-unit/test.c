@@ -9,7 +9,6 @@
 #include "tactics.h"
 #include "random.h"
 
-int debug_level = 1;
 static bool board_printed;
 
 void
@@ -82,19 +81,12 @@ test_sar(struct board *b, char *arg)
 
 }
 
-int main(int argc, char *argv[])
+void
+unittest(char *filename)
 {
-	if (argc < 2) {
-		fprintf(stderr, "Usage: %s TESTFILE [DEBUGLEVEL]\n", argv[0]);
-		exit(EXIT_FAILURE);
-	}
-
-	if (argc > 2)
-		debug_level = atoi(argv[2]);
-
-	FILE *f = fopen(argv[1], "r");
+	FILE *f = fopen(filename, "r");
 	if (!f) {
-		perror(argv[1]);
+		perror(filename);
 		exit(EXIT_FAILURE);
 	}
 
@@ -117,5 +109,4 @@ int main(int argc, char *argv[])
 	}
 
 	fclose(f);
-	return 0;
 }
