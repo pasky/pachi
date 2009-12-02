@@ -75,7 +75,7 @@ static inline float fast_sqrt(int x)
 	}
 }
 
-float
+static float inline
 ucb1rave_evaluate(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity)
 {
 	struct ucb1_policy_amaf *b = p->data;
