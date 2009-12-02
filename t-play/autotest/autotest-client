@@ -4,6 +4,13 @@
 # among the ones defined in the rc file, and plays a single game.
 
 clientid="$1"; shift
+if [ -z "$clientid" ]; then
+	echo "Usage: $0 <clientid>" >&2
+	echo "At any time, only single client with the same client may run!" >&2
+	echo "You can use e.g. clientid \`hostname\`-1, increment 1 for" >&2
+	echo "further threads started on the host." >&2
+	exit 1
+fi
 . ./autotest-lib
 
 mkdir -p "c/$clientid"
