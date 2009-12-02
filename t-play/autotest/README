@@ -68,6 +68,9 @@ To show status of all known clients, use:
 	./autotest-clients
 
 (To remove a gone client, just remove its subdirectory in the c/ directory.)
+The WFAIL column shows number of worker failures recorded in the log; examine
+c/<clientid>/log for details, you can remove the log to reset the WFAIL
+number. Usually, worker failures will result from interrupting a client.
 
 
 DISCONNECTED USAGE
