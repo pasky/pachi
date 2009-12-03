@@ -91,10 +91,10 @@ struct playout_amafmap {
 /* >0: starting_color wins, <0: starting_color loses; the actual
  * number is a DOUBLE of the score difference
  * 0: superko inside the game tree (XXX: jigo not handled) */
-int play_random_game(struct board *b, enum stone starting_color, int gamelen,
+int play_random_game(struct playout_setup *setup,
+                     struct board *b, enum stone starting_color, int gamelen,
                      struct playout_amafmap *amafmap,
 		     struct board_ownermap *ownermap,
-		     struct playout_policy *policy,
-		     struct playout_setup *setup);
+		     struct playout_policy *policy);
 
 #endif

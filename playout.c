@@ -41,11 +41,11 @@ try_probdist_move(struct board *b, enum stone color, struct playout_setup *setup
 }
 
 int
-play_random_game(struct board *b, enum stone starting_color, int gamelen,
+play_random_game(struct playout_setup *setup,
+                 struct board *b, enum stone starting_color, int gamelen,
 		 struct playout_amafmap *amafmap,
 		 struct board_ownermap *ownermap,
-		 struct playout_policy *policy,
-		 struct playout_setup *setup)
+		 struct playout_policy *policy)
 {
 	gamelen = gamelen - b->moves;
 	if (gamelen < 10)
