@@ -31,7 +31,7 @@
 /* Note that the context can be shared by multiple threads! */
 
 struct elo_policy {
-	int nothing_is_here_yet;
+	float selfatari;
 };
 
 
@@ -41,6 +41,8 @@ struct elo_policy {
 void
 elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, struct probdist *pd)
 {
+	struct elo_policy *pp = p->data;
+
 	probdist_init(pd, board_size2(b));
 
 	/* First, assign per-point probabilities. */
@@ -62,8 +64,12 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 		/* Each valid move starts with gamma 1. */
 		probdist_add(pd, c, 1.f);
 
-		/* TODO: Some actual heuristics. Right now, we actually
-		 * produce the uniformly random heuristic... */
+		/* Some easy features: */
+
+		if (is_bad_selfatari(b, to_play, c))
+			probdist_mul(pd, c, pp->selfatari);
+
+		/* TODO: Some more actual heuristics! */
 	} foreach_point_end;
 
 	/* TODO: per-group probabilities. */
@@ -109,6 +115,9 @@ playout_elo_init(char *arg)
 	p->choose = playout_elo_choose;
 	p->assess = playout_elo_assess;
 
+	/* Some defaults based on the table in Remi Coulom's paper. */
+	pp->selfatari = 0.06;
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -120,8 +129,12 @@ playout_elo_init(char *arg)
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
-			fprintf(stderr, "playout-elo: Invalid policy argument %s or missing value\n", optname);
-			exit(1);
+			if (!strcasecmp(optname, "selfatari") && optval) {
+				pp->selfatari = atof(optval);
+			} else {
+				fprintf(stderr, "playout-elo: Invalid policy argument %s or missing value\n", optname);
+				exit(1);
+			}
 		}
 	}
 
