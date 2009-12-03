@@ -13,6 +13,7 @@
 #include "move.h"
 #include "mq.h"
 #include "playout.h"
+#include "playout/elo.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "random.h"
@@ -529,6 +530,8 @@ uct_state_init(char *arg)
 					u->playout = playout_moggy_init(playoutarg);
 				} else if (!strcasecmp(optval, "light")) {
 					u->playout = playout_light_init(playoutarg);
+				} else if (!strcasecmp(optval, "elo")) {
+					u->playout = playout_elo_init(playoutarg);
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 					exit(1);
