@@ -33,18 +33,19 @@ struct playout_policy {
 };
 
 
-/** Playout engine callback interface: */
+/** Playout engine interface: */
 
-struct playout_callback;
+struct playout_setup;
 struct probdist;
 /* Get probability distribution of next move to play, given the current board.
  * As a special protocol, pd[coord 0] is probability of defering to the policy
  * choice; if there is no probability distribution available, the callback
  * should simply set this to 1. */
 /* Note that this callback is guaranteed to be called on each move. */
-typedef void (*playoutc_probdist)(struct playout_callback *playout_callback, struct probdist *pd, struct board *b);
+typedef void (*playoutc_probdist)(struct playout_setup *playout_setup, struct probdist *pd, struct board *b);
 
-struct playout_callback {
+struct playout_setup {
+	/* Engine callback interface: */
 	playoutc_probdist probdist;
 	void *data;
 };
@@ -94,6 +95,6 @@ int play_random_game(struct board *b, enum stone starting_color, int gamelen,
                      struct playout_amafmap *amafmap,
 		     struct board_ownermap *ownermap,
 		     struct playout_policy *policy,
-		     struct playout_callback *callback);
+		     struct playout_setup *setup);
 
 #endif

@@ -14,14 +14,14 @@
 
 
 static coord_t
-try_probdist_move(struct board *b, enum stone color, struct playout_callback *callback)
+try_probdist_move(struct board *b, enum stone color, struct playout_setup *setup)
 {
 	/* First try probability distribution provided by
 	 * the engine for this move. */
 	struct probdist pd;
 	probdist_init(&pd, board_size2(b));
 
-	callback->probdist(callback, &pd, b);
+	setup->probdist(setup, &pd, b);
 	if (pd.moves[0] >= pd.total - __FLT_EPSILON__) {
 		probdist_done(&pd);
 		return pass;
@@ -45,7 +45,7 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 		 struct playout_amafmap *amafmap,
 		 struct board_ownermap *ownermap,
 		 struct playout_policy *policy,
-		 struct playout_callback *callback)
+		 struct playout_setup *setup)
 {
 	gamelen = gamelen - b->moves;
 	if (gamelen < 10)
@@ -58,8 +58,8 @@ play_random_game(struct board *b, enum stone starting_color, int gamelen,
 	while (gamelen-- && passes < 2) {
 		coord_t coord = pass;
 
-		if (callback && callback->probdist) {
-			coord = try_probdist_move(b, color, callback);
+		if (setup && setup->probdist) {
+			coord = try_probdist_move(b, color, setup);
 		}
 
 		if (is_pass(coord)) {
