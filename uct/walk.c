@@ -117,7 +117,8 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			tree_node_get_value(t, parity, n->u.value));
 
 	struct uct_board *ub = b->es; assert(ub);
-	int result = play_random_game(NULL, b, next_color, u->gamelen,
+	struct playout_setup ps = { .gamelen = u->gamelen };
+	int result = play_random_game(&ps, b, next_color,
 	                              u->playout_amaf ? amaf : NULL,
 				      &ub->ownermap, u->playout);
 	if (next_color == S_WHITE) {

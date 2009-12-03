@@ -45,6 +45,8 @@ struct probdist;
 typedef void (*playoutc_probdist)(struct playout_setup *playout_setup, struct probdist *pd, struct board *b);
 
 struct playout_setup {
+	int gamelen; /* Maximal # of moves in playout. */
+
 	/* Engine callback interface: */
 	playoutc_probdist probdist;
 	void *data;
@@ -92,7 +94,7 @@ struct playout_amafmap {
  * number is a DOUBLE of the score difference
  * 0: superko inside the game tree (XXX: jigo not handled) */
 int play_random_game(struct playout_setup *setup,
-                     struct board *b, enum stone starting_color, int gamelen,
+                     struct board *b, enum stone starting_color,
                      struct playout_amafmap *amafmap,
 		     struct board_ownermap *ownermap,
 		     struct playout_policy *policy);
