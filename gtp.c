@@ -147,7 +147,8 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 
 		if (DEBUGL(1))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
-		engine->notify_play(engine, board, &m);
+		if (engine->notify_play)
+			engine->notify_play(engine, board, &m);
 		if (board_play(board, &m) < 0) {
 			if (DEBUGL(0)) {
 				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
