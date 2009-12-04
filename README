@@ -63,8 +63,9 @@ to enforce the superko rule in your engine.
 
 
 Also, Pachi supports only few GTP commands now. Most importantly,
-it does not support the undo command, and its final_status_list command
-is only an empty stub.
+it does not support the undo command, its final_status_list command
+is only an empty stub for other engines than UCT, and it does not
+support time-keeping.
 
 
 To build Pachi, simply type:
