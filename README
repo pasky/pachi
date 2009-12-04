@@ -38,12 +38,15 @@ appropriate credits would be appreciated. Some of the bundled engines
 or policies are under a more restrictive licence (GPL).
 
 
-Currently, Pachi supports a simple idiotbot-like engine and an example
-MonteCarlo-player with bits of optional domain-specific knowledge.
-Also, example UCT engine is provided, reusing the same knowledge.
-The infrastructure is pretty fast and it should be quite easy to extend
-it to provide more facilities for your engine (but it should be at
-the same time kept as simple as possible).
+Currently, Pachi supports a simple idiotbot-like engine, an example
+MonteCarlo-player with bits of optional domain-specific knowledge
+("playout policy") and a simple "replay" engine that will simply play
+moves according to the playout policy suggestions.  Finally state-of-art
+UCT engine is provided, also using the pluggable playout policy.
+The infrastructure is pretty fast and it should be quite easy
+to extend it to provide more facilities for your engine (but it should
+be at the same time kept as simple as possible).
+
 
 Pachi uses New Zealand scoring, currently. That means, it simply counts
 the number of stones and one-point eyes of each color on the board,
