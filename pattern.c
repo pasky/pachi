@@ -54,7 +54,6 @@ void
 pattern_get(struct pattern *p, struct board *b, struct move *m)
 {
 	p->n = 0;
-	p->f = NULL;
 }
 
 char *

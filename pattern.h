@@ -89,7 +89,8 @@ struct feature {
 struct pattern {
 	/* Pattern (matched) is set of features. */
 	int n;
-	struct feature *f;
+#define FEATURES 32
+	struct feature f[FEATURES];
 };
 
 /* Append feature to string. */
