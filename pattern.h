@@ -93,7 +93,7 @@ struct pattern {
 };
 
 /* Append feature to string. */
-void feature2str(char *str, struct feature *f);
+char *feature2str(char *str, struct feature *f);
 /* Convert string to feature, return pointer after the featurespec. */
 char *str2feature(char *str, struct feature *f);
 

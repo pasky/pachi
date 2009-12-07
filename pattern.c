@@ -23,10 +23,10 @@ static const char *fnames[] = {
 	[FEAT_MCOWNER] = "mcowner",
 };
 
-void
+char *
 feature2str(char *str, struct feature *f)
 {
-	sprintf(str + strlen(str), "%s:%"PRIx64, fnames[f->id], f->payload);
+	return str + sprintf(str + strlen(str), "%s:%"PRIx64, fnames[f->id], f->payload);
 }
 
 char *
