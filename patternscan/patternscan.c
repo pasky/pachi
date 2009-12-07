@@ -5,6 +5,7 @@
 #include "engine.h"
 #include "move.h"
 #include "patternscan/patternscan.h"
+#include "pattern.h"
 
 
 static char *
@@ -13,9 +14,16 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	if (is_resign(m->coord))
 		return NULL;
 
-	/* Scan for various features now. */
-	/* TODO: So far, no features are supported. */
-	return NULL;
+	/* Scan for supported features. */
+	/* For specifiation of features and their payloads,
+	 * please refer to pattern.h. */
+	struct pattern p;
+	pattern_get(&p, b, m);
+
+	static char str[8192]; // XXX
+	*str = 0;
+	pattern2str(str, &p);
+	return str;
 }
 
 static coord_t *
