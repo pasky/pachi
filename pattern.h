@@ -3,6 +3,9 @@
 
 /* Matching of multi-featured patterns. */
 
+#include "board.h"
+#include "move.h"
+
 /* When someone says "pattern", you imagine a configuration of stones in given
  * area (e.g. as matched very efficiently by pattern3 in case of 3x3 area).
  * However, we use a richer definition of pattern, where this is merely one
@@ -83,9 +86,19 @@ struct feature {
 	uint64_t payload;
 };
 
+struct pattern {
+	/* Pattern (matched) is set of features. */
+	int n;
+	struct feature *f;
+};
+
 /* Append feature to string. */
 void feature2str(char *str, struct feature *f);
 /* Convert string to feature, return pointer after the featurespec. */
 char *str2feature(char *str, struct feature *f);
+
+/* Initialize p and fill it with features matched by the
+ * given board move. */
+void pattern_get(struct pattern *p, struct board *b, struct move *m);
 
 #endif
