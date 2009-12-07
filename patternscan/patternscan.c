@@ -7,15 +7,15 @@
 #include "patternscan/patternscan.h"
 
 
-static void
+static char *
 patternscan_play(struct engine *e, struct board *b, struct move *m)
 {
 	if (is_resign(m->coord))
-		return;
+		return NULL;
 
 	/* Scan for various features now. */
 	/* TODO: So far, no features are supported. */
-	return;
+	return NULL;
 }
 
 static coord_t *

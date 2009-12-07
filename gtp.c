@@ -144,11 +144,12 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		next_tok(arg);
 		coord_t *c = str2coord(arg, board_size(board));
 		m.coord = *c; coord_done(c);
+		char *reply = NULL;
 
 		if (DEBUGL(1))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 		if (engine->notify_play)
-			engine->notify_play(engine, board, &m);
+			reply = engine->notify_play(engine, board, &m);
 		if (board_play(board, &m) < 0) {
 			if (DEBUGL(0)) {
 				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
@@ -158,7 +159,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		} else {
 			if (DEBUGL(1))
 				board_print(board, stderr);
-			gtp_reply(id, NULL);
+			gtp_reply(id, reply, NULL);
 		}
 
 	} else if (!strcasecmp(cmd, "genmove")) {

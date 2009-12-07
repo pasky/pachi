@@ -7,7 +7,7 @@
 struct engine;
 struct move_queue;
 
-typedef void (*engine_notify_play)(struct engine *e, struct board *b, struct move *m);
+typedef char *(*engine_notify_play)(struct engine *e, struct board *b, struct move *m);
 typedef char *(*engine_chat)(struct engine *e, struct board *b, char *cmd);
 typedef coord_t *(*engine_genmove)(struct engine *e, struct board *b, enum stone color);
 /* One dead group per queued move (coord_t is (ab)used as group_t). */

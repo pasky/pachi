@@ -119,7 +119,7 @@ uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
 	fprintf(f, "%c ", ch);
 }
 
-static void
+static char *
 uct_notify_play(struct engine *e, struct board *b, struct move *m)
 {
 	struct uct *u = e->data;
@@ -134,7 +134,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	if (is_resign(m->coord)) {
 		/* Reset state. */
 		uct_done_board_state(e, b);
-		return;
+		return NULL;
 	}
 
 	/* Promote node of the appropriate move to the tree root. */
@@ -143,8 +143,10 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 		if (UDEBUGL(0))
 			fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
 		uct_done_board_state(e, b);
-		return;
+		return NULL;
 	}
+
+	return NULL;
 }
 
 static char *
