@@ -100,5 +100,7 @@ char *str2feature(char *str, struct feature *f);
 /* Initialize p and fill it with features matched by the
  * given board move. */
 void pattern_get(struct pattern *p, struct board *b, struct move *m);
+/* Append pattern as feature spec string. */
+char *pattern2str(char *str, struct pattern *p);
 
 #endif
