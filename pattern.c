@@ -127,9 +127,11 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 char *
 pattern2str(char *str, struct pattern *p)
 {
+	strcat(str++, "(");
 	for (int i = 0; i < p->n; i++) {
 		if (i > 0) strcat(str++, " ");
 		str = feature2str(str, &p->f[i]);
 	}
+	strcat(str++, ")");
 	return str;
 }
