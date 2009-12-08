@@ -23,15 +23,6 @@
 enum feature_id {
 	/* Implemented: */
 
-
-	/* Unimplemented - TODO: */
-
-	/* Spatial configuration of stones in certain board area. */
-	/* XXX: We don't actually care about area size, we simply
-	 * incrementally match up to certain radius. */
-	/* Payload: Zobrist hash of area */
-	FEAT_SPATIAL,
-
 	/* This is a pass. */
 	/* Payload: [bit0] Last move was also pass? */
 #define PF_PASS_LASTPASS	0
@@ -41,10 +32,19 @@ enum feature_id {
 	/* Payload: [bit0] Capturing laddered group? */
 #define PF_CAPTURE_LADDER	0
 	/*          [bit1] Re-capturing last move? */
-#define PF_CAPTURE_RECAPTURE	1
+#define PF_CAPTURE_RECAPTURE	1 /* TODO */
 	/*          [bit2] Enables our atari group get more libs? */
 #define PF_CAPTURE_ATARIDEF	2
 	FEAT_CAPTURE,
+
+
+	/* Unimplemented - TODO: */
+
+	/* Spatial configuration of stones in certain board area. */
+	/* XXX: We don't actually care about area size, we simply
+	 * incrementally match up to certain radius. */
+	/* Payload: Zobrist hash of area */
+	FEAT_SPATIAL,
 
 	/* Atari escape (extension). */
 	/* Payload: [bit0] Escaping with laddered group? */

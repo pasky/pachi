@@ -54,6 +54,69 @@ void
 pattern_get(struct pattern *p, struct board *b, struct move *m)
 {
 	p->n = 0;
+	struct feature *f = &p->f[0];
+
+	/* TODO: We should match pretty much all of these features
+	 * incrementally. */
+
+	/* FEAT_SPATIAL */
+	/* TODO */
+
+	/* FEAT_PASS */
+	if (is_pass(m->coord)) {
+		f->id = FEAT_PASS;
+		f->payload |= (b->moves > 0 && is_pass(b->last_move.coord)) << PF_PASS_LASTPASS;
+		f++, p->n++;
+	}
+
+	/* FEAT_CAPTURE */
+	{
+		foreach_neighbor(b, m->coord, {
+			group_t g = group_at(b, c);
+			if (!g || board_group_info(b, g).libs != 1)
+				continue;
+
+			/* Capture! */
+			f->id = FEAT_CAPTURE;
+
+			/* TODO: Ko capture flag */
+
+			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
+
+			/* TODO: PF_CAPTURE_RECAPTURE */
+
+			foreach_in_group(b, g) {
+				foreach_neighbor(b, c, {
+					if (board_at(b, c) != m->color) {
+						assert(board_at(b, c) == S_OFFBOARD);
+						continue;
+					}
+					group_t g = group_at(b, c);
+					if (!g || board_group_info(b, g).libs != 1)
+						continue;
+					/* A neighboring group of ours is in atari. */
+					f->payload |= 1 << PF_CAPTURE_ATARIDEF;
+				});
+			} foreach_in_group_end;
+
+			(f++, p->n++);
+		});
+	}
+
+
+	/* FEAT_AESCAPE */
+
+	/* FEAT_SELFATARI */
+
+	/* FEAT_ATARI */
+
+	/* FEAT_BORDER */
+
+	/* FEAT_LDIST */
+
+	/* FEAT_LLDIST */
+
+	/* FEAT_MCOWNER */
 }
 
 char *
