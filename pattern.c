@@ -119,10 +119,10 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 			if (!g || board_group_info(b, g).libs != 1)
 				continue;
 
-			/* Atari! */
+			/* In atari! */
 			f->id = FEAT_AESCAPE; f->payload = 0;
 
-			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
+			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
 			/* TODO: is_ladder() is too conservative in some
 			 * very obvious situations, look at complete.gtp. */
 
@@ -139,6 +139,27 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 	}
 
 	/* FEAT_ATARI */
+	{
+		foreach_neighbor(b, m->coord, {
+			if (board_at(b, c) != stone_other(m->color))
+				continue;
+			group_t g = group_at(b, c);
+			if (!g || board_group_info(b, g).libs != 2)
+				continue;
+
+			/* Can atari! */
+			f->id = FEAT_ATARI; f->payload = 0;
+
+			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_ATARI_LADDER;
+			/* TODO: is_ladder() is too conservative in some
+			 * very obvious situations, look at complete.gtp. */
+
+			if (!is_pass(b->ko.coord))
+				f->payload |= 1 << PF_CAPTURE_KO;
+
+			(f++, p->n++);
+		});
+	}
 
 	/* FEAT_BORDER */
 

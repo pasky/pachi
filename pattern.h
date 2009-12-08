@@ -49,6 +49,13 @@ enum feature_id {
 #define PF_SELFATARI_SMART	0 /* TODO: Non-smart */
 	FEAT_SELFATARI,
 
+	/* Atari move. */
+	/* Payload: [bit0] The atari'd group gets laddered? */
+#define PF_ATARI_LADDER		0
+	/*          [bit1] Playing ko? */
+#define PF_ATARI_KO		1
+	FEAT_ATARI,
+
 
 	/* Unimplemented - TODO: */
 
@@ -58,13 +65,6 @@ enum feature_id {
 	/* Payload: [top 4 bits]    Pattern radius (gridcular)
 	 *          [lower 60 bits] Zobrist hash of area */
 	FEAT_SPATIAL,
-
-	/* Atari move. */
-	/* Payload: [bit0] The atari'd group gets laddered? */
-#define PF_ATARI_LADDER		0
-	/*          [bit1] Playing ko? */
-#define PF_ATARI_KO		1
-	FEAT_ATARI,
 
 	/* Border distance. */
 	/* Payload: The distance - "line number". */
