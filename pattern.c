@@ -10,6 +10,14 @@
 #include "tactics.h"
 
 
+struct pattern_config DEFAULT_PATTERN_CONFIG = {
+	.spat_min = 0, .spat_max = 0, /* Unsupported. */
+	.bdist_max = 4,
+	.ldist_min = 0, .ldist_max = 0, /* Unsupported. */
+	.mcsims = 0, /* Unsupported. */
+};
+
+
 static const char *fnames[] = {
 	[FEAT_SPATIAL] = "s",
 	[FEAT_PASS] = "pass",
@@ -51,7 +59,7 @@ found:
 
 
 void
-pattern_get(struct pattern *p, struct board *b, struct move *m)
+pattern_get(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m)
 {
 	p->n = 0;
 	struct feature *f = &p->f[0];
@@ -61,6 +69,7 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 
 	/* FEAT_SPATIAL */
 	/* TODO */
+	assert(!pc->spat_max);
 
 	/* FEAT_PASS */
 	if (is_pass(m->coord)) {
@@ -163,17 +172,23 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 
 	/* FEAT_BORDER */
 	int bdist = coord_edge_distance(m->coord, b);
-	if (bdist <= 4) { /* TODO: Configurable threshold. */
+	if (bdist <= pc->bdist_max) {
 		f->id = FEAT_BORDER;
 		f->payload = bdist;
 		(f++, p->n++);
 	}
 
 	/* FEAT_LDIST */
+	/* TODO */
+	assert(!pc->ldist_max);
 
 	/* FEAT_LLDIST */
+	/* TODO */
+	assert(!pc->ldist_max);
 
 	/* FEAT_MCOWNER */
+	/* TODO */
+	assert(!pc->mcsims);
 }
 
 char *

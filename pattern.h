@@ -17,8 +17,6 @@
 
 /* This is heavily influenced by (Coulom, 2007), of course. */
 /* TODO: Try completely separate ko / no-ko features. */
-/* TODO: "Feature set" should encode common parameters - mainly
- * maximum spatial area radius. */
 
 enum feature_id {
 	/* Implemented: */
@@ -96,6 +94,19 @@ struct pattern {
 	struct feature f[FEATURES];
 };
 
+struct pattern_config {
+	/* FEAT_SPATIAL: Generate patterns only for these sizes (gridcular). */
+	int spat_min, spat_max;
+	/* FEAT_BORDER: Generate features only up to this board distance. */
+	int bdist_max;
+	/* FEAT_LDIST, FEAT_LLDIST: Generate features only for these move
+	 * distances. */
+	int ldist_min, ldist_max;
+	/* FEAT_MCOWNER: Generate feature after this number of simulations. */
+	int mcsims;
+};
+extern struct pattern_config DEFAULT_PATTERN_CONFIG;
+
 /* Append feature to string. */
 char *feature2str(char *str, struct feature *f);
 /* Convert string to feature, return pointer after the featurespec. */
@@ -103,7 +114,7 @@ char *str2feature(char *str, struct feature *f);
 
 /* Initialize p and fill it with features matched by the
  * given board move. */
-void pattern_get(struct pattern *p, struct board *b, struct move *m);
+void pattern_get(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m);
 /* Append pattern as feature spec string. */
 char *pattern2str(char *str, struct pattern *p);
 
