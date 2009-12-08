@@ -17,8 +17,8 @@
 
 /* This is heavily influenced by (Coulom, 2007), of course. */
 /* TODO: Try completely separate ko / no-ko features. */
-/* TODO: "Feature set" should encode common parameters - spatial area
- * radius and number of MC-owner playouts. */
+/* TODO: "Feature set" should encode common parameters - max spatial area
+ * radius. */
 
 enum feature_id {
 	/* Implemented: */
@@ -79,7 +79,7 @@ enum feature_id {
 
 	/* Monte-carlo owner. */
 	/* Payload: #of playouts owning this point at the final
-	 * position. All matchers must use the same total amount. */
+	 * position, scaled to 0..15 (lowest 4 bits). */
 	FEAT_MCOWNER,
 };
 
