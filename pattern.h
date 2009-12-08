@@ -39,6 +39,11 @@ enum feature_id {
 #define PF_CAPTURE_KO		3
 	FEAT_CAPTURE,
 
+	/* Atari escape (extension). */
+	/* Payload: [bit0] Escaping with laddered group? */
+#define PF_AESCAPE_LADDER	0
+	FEAT_AESCAPE,
+
 	/* Self-atari move. */
 	/* Payload: [bit0] Also using our complex definition? */
 #define PF_SELFATARI_SMART	0 /* TODO: Non-smart */
@@ -53,11 +58,6 @@ enum feature_id {
 	/* Payload: [top 4 bits]    Pattern radius (gridcular)
 	 *          [lower 60 bits] Zobrist hash of area */
 	FEAT_SPATIAL,
-
-	/* Atari escape (extension). */
-	/* Payload: [bit0] Escaping with laddered group? */
-#define PF_AESCAPE_LADDER	0
-	FEAT_AESCAPE,
 
 	/* Atari move. */
 	/* Payload: [bit0] The atari'd group gets laddered? */
