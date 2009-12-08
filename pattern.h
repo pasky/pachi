@@ -39,6 +39,11 @@ enum feature_id {
 #define PF_CAPTURE_KO		3
 	FEAT_CAPTURE,
 
+	/* Self-atari move. */
+	/* Payload: [bit0] Also using our complex definition? */
+#define PF_SELFATARI_SMART	0 /* TODO: Non-smart */
+	FEAT_SELFATARI,
+
 
 	/* Unimplemented - TODO: */
 
@@ -53,11 +58,6 @@ enum feature_id {
 	/* Payload: [bit0] Escaping with laddered group? */
 #define PF_AESCAPE_LADDER	0
 	FEAT_AESCAPE,
-
-	/* Self-atari move. */
-	/* Payload: [bit0] Also using our complex definition? */
-#define PF_SELFATARI_SMART	0
-	FEAT_SELFATARI,
 
 	/* Atari move. */
 	/* Payload: [bit0] The atari'd group gets laddered? */

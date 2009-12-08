@@ -113,6 +113,11 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 	/* FEAT_AESCAPE */
 
 	/* FEAT_SELFATARI */
+	if (is_bad_selfatari(b, m->color, m->coord)) {
+		f->id = FEAT_SELFATARI;
+		/* TODO: Dumb selfatari detection. */
+		f->payload = 1 << PF_SELFATARI_SMART;
+	}
 
 	/* FEAT_ATARI */
 
