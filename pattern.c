@@ -64,7 +64,7 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 
 	/* FEAT_PASS */
 	if (is_pass(m->coord)) {
-		f->id = FEAT_PASS;
+		f->id = FEAT_PASS; f->payload = 0;
 		f->payload |= (b->moves > 0 && is_pass(b->last_move.coord)) << PF_PASS_LASTPASS;
 		f++, p->n++;
 	}
@@ -77,12 +77,13 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 				continue;
 
 			/* Capture! */
-			f->id = FEAT_CAPTURE;
-			f->payload = 0;
+			f->id = FEAT_CAPTURE; f->payload = 0;
 
 			/* TODO: Ko capture flag */
 
 			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
+			/* TODO: is_ladder() is too conservative in some
+			 * very obvious situations, look at complete.gtp. */
 
 			/* TODO: PF_CAPTURE_RECAPTURE */
 
