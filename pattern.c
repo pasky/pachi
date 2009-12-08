@@ -162,6 +162,12 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 	}
 
 	/* FEAT_BORDER */
+	int bdist = coord_edge_distance(m->coord, b);
+	if (bdist <= 4) { /* TODO: Configurable threshold. */
+		f->id = FEAT_BORDER;
+		f->payload = bdist;
+		(f++, p->n++);
+	}
 
 	/* FEAT_LDIST */
 

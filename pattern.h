@@ -56,6 +56,10 @@ enum feature_id {
 #define PF_ATARI_KO		1
 	FEAT_ATARI,
 
+	/* Border distance. */
+	/* Payload: The distance - "line number". Only up to 4. */
+	FEAT_BORDER,
+
 
 	/* Unimplemented - TODO: */
 
@@ -65,10 +69,6 @@ enum feature_id {
 	/* Payload: [top 4 bits]    Pattern radius (gridcular)
 	 *          [lower 60 bits] Zobrist hash of area */
 	FEAT_SPATIAL,
-
-	/* Border distance. */
-	/* Payload: The distance - "line number". */
-	FEAT_BORDER,
 
 	/* Last move distance. */
 	/* Payload: The distance - gridcular metric (TODO). */
