@@ -58,6 +58,14 @@ enum feature_id {
 	/* Payload: The distance - "line number". Only up to 4. */
 	FEAT_BORDER,
 
+	/* Last move distance. */
+	/* Payload: The distance - gridcular metric. */
+	FEAT_LDIST,
+
+	/* Next-to-last move distance. */
+	/* Payload: The distance - gridcular metric. */
+	FEAT_LLDIST,
+
 
 	/* Unimplemented - TODO: */
 
@@ -67,14 +75,6 @@ enum feature_id {
 	/* Payload: [top 4 bits]    Pattern radius (gridcular)
 	 *          [lower 60 bits] Zobrist hash of area */
 	FEAT_SPATIAL,
-
-	/* Last move distance. */
-	/* Payload: The distance - gridcular metric. */
-	FEAT_LDIST,
-
-	/* Next-to-last move distance. */
-	/* Payload: The distance - gridcular metric. */
-	FEAT_LLDIST,
 
 	/* Monte-carlo owner. */
 	/* Payload: #of playouts owning this point at the final

@@ -13,7 +13,7 @@
 struct pattern_config DEFAULT_PATTERN_CONFIG = {
 	.spat_min = 0, .spat_max = 0, /* Unsupported. */
 	.bdist_max = 4,
-	.ldist_min = 0, .ldist_max = 0, /* Unsupported. */
+	.ldist_min = 0, .ldist_max = 256,
 	.mcsims = 0, /* Unsupported. */
 };
 
@@ -180,12 +180,24 @@ pattern_get(struct pattern_config *pc, struct pattern *p, struct board *b, struc
 	}
 
 	/* FEAT_LDIST */
-	/* TODO */
-	assert(!pc->ldist_max);
+	if (pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
+		int ldist = coord_gridcular_distance(m->coord, b->last_move.coord, b);
+		if (pc->ldist_min <= ldist && ldist <= pc->ldist_max) {
+			f->id = FEAT_LDIST;
+			f->payload = ldist;
+			(f++, p->n++);
+		}
+	}
 
 	/* FEAT_LLDIST */
-	/* TODO */
-	assert(!pc->ldist_max);
+	if (pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
+		int lldist = coord_gridcular_distance(m->coord, b->last_move2.coord, b);
+		if (pc->ldist_min <= lldist && lldist <= pc->ldist_max) {
+			f->id = FEAT_LLDIST;
+			f->payload = lldist;
+			(f++, p->n++);
+		}
+	}
 
 	/* FEAT_MCOWNER */
 	/* TODO */
