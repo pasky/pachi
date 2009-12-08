@@ -34,33 +34,33 @@ enum feature_id {
 
 	/* This is a pass. */
 	/* Payload: [bit0] Last move was also pass? */
-#define PF_PASS_LASTPASS	1
+#define PF_PASS_LASTPASS	0
 	FEAT_PASS,
 
 	/* Simple capture move. */
 	/* Payload: [bit0] Capturing laddered group? */
-#define PF_CAPTURE_LADDER	1
+#define PF_CAPTURE_LADDER	0
 	/*          [bit1] Re-capturing last move? */
-#define PF_CAPTURE_RECAPTURE	2
+#define PF_CAPTURE_RECAPTURE	1
 	/*          [bit2] Enables our atari group get more libs? */
-#define PF_CAPTURE_ATARIDEF	4
+#define PF_CAPTURE_ATARIDEF	2
 	FEAT_CAPTURE,
 
 	/* Atari escape (extension). */
 	/* Payload: [bit0] Escaping with laddered group? */
-#define PF_AESCAPE_LADDER	1
+#define PF_AESCAPE_LADDER	0
 	FEAT_AESCAPE,
 
 	/* Self-atari move. */
 	/* Payload: [bit0] Also using our complex definition? */
-#define PF_SELFATARI_SMART	1
+#define PF_SELFATARI_SMART	0
 	FEAT_SELFATARI,
 
 	/* Atari move. */
 	/* Payload: [bit0] The atari'd group gets laddered? */
-#define PF_ATARI_LADDER		1
+#define PF_ATARI_LADDER		0
 	/*          [bit1] Playing ko? */
-#define PF_ATARI_KO		2
+#define PF_ATARI_KO		1
 	FEAT_ATARI,
 
 	/* Border distance. */
