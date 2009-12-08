@@ -99,6 +99,11 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 				});
 			} foreach_in_group_end;
 
+			if (group_is_onestone(b, g)
+			    && neighbor_count_at(b, m->coord, stone_other(m->color))
+			       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
+				f->payload |= 1 << PF_CAPTURE_KO;
+
 			(f++, p->n++);
 		});
 	}

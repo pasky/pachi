@@ -35,6 +35,8 @@ enum feature_id {
 #define PF_CAPTURE_RECAPTURE	1 /* TODO */
 	/*          [bit2] Enables our atari group get more libs? */
 #define PF_CAPTURE_ATARIDEF	2
+	/*          [bit3] Capturing ko? */
+#define PF_CAPTURE_KO		3
 	FEAT_CAPTURE,
 
 
