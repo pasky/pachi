@@ -78,6 +78,7 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 
 			/* Capture! */
 			f->id = FEAT_CAPTURE;
+			f->payload = 0;
 
 			/* TODO: Ko capture flag */
 
@@ -87,10 +88,9 @@ pattern_get(struct pattern *p, struct board *b, struct move *m)
 
 			foreach_in_group(b, g) {
 				foreach_neighbor(b, c, {
-					if (board_at(b, c) != m->color) {
-						assert(board_at(b, c) == S_OFFBOARD);
+					assert(board_at(b, c) != S_NONE || c == m->coord);
+					if (board_at(b, c) != m->color)
 						continue;
-					}
 					group_t g = group_at(b, c);
 					if (!g || board_group_info(b, g).libs != 1)
 						continue;
