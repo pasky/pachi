@@ -17,8 +17,8 @@
 
 /* This is heavily influenced by (Coulom, 2007), of course. */
 /* TODO: Try completely separate ko / no-ko features. */
-/* TODO: "Feature set" should encode common parameters - max spatial area
- * radius. */
+/* TODO: "Feature set" should encode common parameters - mainly
+ * maximum spatial area radius. */
 
 enum feature_id {
 	/* Implemented: */
@@ -45,7 +45,8 @@ enum feature_id {
 	/* Spatial configuration of stones in certain board area. */
 	/* XXX: We don't actually care about area size, we simply
 	 * incrementally match up to certain radius. */
-	/* Payload: Zobrist hash of area */
+	/* Payload: [top 4 bits]    Pattern radius (gridcular)
+	 *          [lower 60 bits] Zobrist hash of area */
 	FEAT_SPATIAL,
 
 	/* Atari escape (extension). */
