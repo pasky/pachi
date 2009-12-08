@@ -75,7 +75,8 @@ pattern_get(struct pattern_config *pc, struct pattern *p, struct board *b, struc
 	if (is_pass(m->coord)) {
 		f->id = FEAT_PASS; f->payload = 0;
 		f->payload |= (b->moves > 0 && is_pass(b->last_move.coord)) << PF_PASS_LASTPASS;
-		f++, p->n++;
+		p->n++;
+		return;
 	}
 
 	/* FEAT_CAPTURE */
