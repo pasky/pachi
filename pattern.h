@@ -69,11 +69,11 @@ enum feature_id {
 	FEAT_SPATIAL,
 
 	/* Last move distance. */
-	/* Payload: The distance - gridcular metric (TODO). */
+	/* Payload: The distance - gridcular metric. */
 	FEAT_LDIST,
 
 	/* Next-to-last move distance. */
-	/* Payload: The distance - gridcular metric (TODO). */
+	/* Payload: The distance - gridcular metric. */
 	FEAT_LLDIST,
 
 	/* Monte-carlo owner. */

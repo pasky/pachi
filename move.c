@@ -58,3 +58,14 @@ coord_edge_distance(coord_t c, struct board *b)
 	int dy = y > board_size(b) / 2 ? board_size(b) - y : y;
 	return (dx < dy ? dx : dy) - 1 /* S_OFFBOARD */;
 }
+
+int
+coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b)
+{
+	/* Gridcular metric has nice property that it makes
+	 * circle-like structures on the square grid. */
+	int x1 = coord_x(c1, b), y1 = coord_y(c1, b);
+	int x2 = coord_x(c2, b), y2 = coord_y(c2, b);
+	int dx = abs(x1 - x2), dy = abs(y1 - y2);
+	return dx + dy + (dx > dy ? dx : dy);
+}

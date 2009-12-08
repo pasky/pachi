@@ -35,6 +35,7 @@ static void coord_done(coord_t *c);
 
 struct board;
 int coord_edge_distance(coord_t c, struct board *b);
+int coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b);
 char *coord2str(coord_t c, struct board *b);
 char *coord2sstr(coord_t c, struct board *b);
 coord_t *str2coord(char *str, int board_size);
