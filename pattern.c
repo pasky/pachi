@@ -10,6 +10,9 @@
 #include "tactics.h"
 
 
+/* Maximum spatial pattern diameter. */
+#define MAX_PATTERN_DIST 21
+
 struct pattern_config DEFAULT_PATTERN_CONFIG = {
 	.spat_min = 0, .spat_max = 0, /* Unsupported. */
 	.bdist_max = 4,
@@ -55,6 +58,79 @@ found:
 	str += flen + 1;
 	f->payload = strtoull(str, &str, 10);
 	return str;
+}
+
+
+/* Maximum number of points in spatial pattern (upper bound). */
+#define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
+
+/* Mapping from point sequence to coordinate offsets (to determine
+ * coordinates relative to pattern center). The array is ordered
+ * in the gridcular metric order so that we can go through it
+ * and incrementally match spatial features in nested circles.
+ * Within one circle, coordinates are ordered by rows to keep
+ * good cache behavior. */
+static struct { short x, y; } ptcoords[MAX_PATTERN_AREA];
+/* For each radius, starting index in ptcoords[]. */
+static int ptind[MAX_PATTERN_DIST + 1];
+static void __attribute__((constructor)) ptcoords_init(void)
+{
+	int i = 0; /* Indexing ptcoords[] */
+
+	/* First, center point. */
+	ptind[0] = ptind[1] = 0;
+	ptcoords[i].x = ptcoords[i].y = 0; i++;
+
+	for (int d = 2; d < MAX_PATTERN_DIST + 1; d++) {
+		ptind[d] = i;
+		/* For each y, examine all integer solutions
+		 * of d = |x| + |y| + max(|x|, |y|). */
+		/* TODO: (Stern, 2006) uses a hand-modified
+		 * circles that are finer for small d. */
+		for (short y = d / 2; y >= 0; y--) {
+			short x;
+			if (y * 2 > d / 2) {
+				/* max(|x|, |y|) = |y|, non-zero x */
+				x = d - y * 2;
+				if (x + y * 2 != d) continue;
+			} else {
+				/* max(|x|, |y|) = |x| */
+				/* Or, max(|x|, |y|) = |y| and x is zero */
+				x = (d - y) / 2;
+				if (x * 2 + y != d) continue;
+			}
+
+			ptcoords[i].x = x; ptcoords[i].y = y; i++;
+			if (x != 0) { ptcoords[i].x = -x; ptcoords[i].y = y; i++; }
+			if (y != 0) { ptcoords[i].x = x; ptcoords[i].y = -y; i++; }
+			if (x != 0 && y != 0) { ptcoords[i].x = -x; ptcoords[i].y = -y; i++; }
+		}
+	}
+	ptind[MAX_PATTERN_DIST] = i;
+
+#if 0
+	for (int d = 0; d < MAX_PATTERN_DIST; d++) {
+		fprintf(stderr, "d=%d (%d) ", d, ptind[d]);
+		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+			fprintf(stderr, "%d,%d ", ptcoords[j].x, ptcoords[j].y);
+		}
+		fprintf(stderr, "\n");
+	}
+#endif
+}
+
+/* Zobrist hashes used for black/white stones in patterns. */
+static hash_t pthashes[2][MAX_PATTERN_AREA];
+static void __attribute__((constructor)) pthashes_init(void)
+{
+	/* We need fixed hashes for all pattern-relative in
+	 * all pattern users! This is a simple way to generate
+	 * hopefully good ones. Park-Miller powa. :) */
+	hash_t h = 31;
+	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
+		pthashes[0][i] = (h *= 16807); // black
+		pthashes[1][i] = (h *= 16807); // white
+	}
 }
 
 
