@@ -72,8 +72,8 @@ enum feature_id {
 	/* Spatial configuration of stones in certain board area. */
 	/* XXX: We don't actually care about area size, we simply
 	 * incrementally match up to certain radius. */
-	/* Payload: [top 4 bits]    Pattern radius (gridcular)
-	 *          [lower 60 bits] Zobrist hash of area */
+	/* Payload: [top 8 bits]    Pattern radius (gridcular)
+	 *          [lower 54 bits] Zobrist hash of area */
 	FEAT_SPATIAL,
 
 	/* Monte-carlo owner. */

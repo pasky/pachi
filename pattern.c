@@ -14,7 +14,7 @@
 #define MAX_PATTERN_DIST 21
 
 struct pattern_config DEFAULT_PATTERN_CONFIG = {
-	.spat_min = 0, .spat_max = 0, /* Unsupported. */
+	.spat_min = 2, .spat_max = MAX_PATTERN_DIST, /* Unsupported. */
 	.bdist_max = 4,
 	.ldist_min = 0, .ldist_max = 256,
 	.mcsims = 0, /* Unsupported. */
@@ -120,7 +120,7 @@ static void __attribute__((constructor)) ptcoords_init(void)
 }
 
 /* Zobrist hashes used for black/white stones in patterns. */
-static hash_t pthashes[2][MAX_PATTERN_AREA];
+static hash_t pthashes[MAX_PATTERN_AREA][4];
 static void __attribute__((constructor)) pthashes_init(void)
 {
 	/* We need fixed hashes for all pattern-relative in
@@ -128,8 +128,10 @@ static void __attribute__((constructor)) pthashes_init(void)
 	 * hopefully good ones. Park-Miller powa. :) */
 	hash_t h = 31;
 	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
-		pthashes[0][i] = (h *= 16807); // black
-		pthashes[1][i] = (h *= 16807); // white
+		pthashes[i][S_NONE] = 0;
+		pthashes[i][S_BLACK] = (h *= 16807);
+		pthashes[i][S_WHITE] = (h *= 16807);
+		pthashes[i][S_OFFBOARD] = (h *= 16807);
 	}
 }
 
@@ -144,8 +146,23 @@ pattern_get(struct pattern_config *pc, struct pattern *p, struct board *b, struc
 	 * incrementally. */
 
 	/* FEAT_SPATIAL */
-	/* TODO */
-	assert(!pc->spat_max);
+	if (pc->spat_max > 0) {
+		assert(pc->spat_min > 0);
+		hash_t h = 0;
+		for (int d = pc->spat_min; d < pc->spat_max; d++) {
+			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+				int x = coord_x(m->coord, b) + ptcoords[j].x;
+				int y = coord_y(m->coord, b) + ptcoords[j].y;
+				if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
+				if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
+				h ^= pthashes[j][board_atxy(b, x, y)];
+			}
+			f->id = FEAT_SPATIAL;
+			f->payload = h & ((1ULL << 56) - 1);
+			f->payload |= (uint64_t)d << 56;
+			(f++, p->n++);
+		}
+	}
 
 	/* FEAT_PASS */
 	if (is_pass(m->coord)) {
