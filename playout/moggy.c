@@ -1,3 +1,7 @@
+/* Playout policy by stochastically applying a fixed set of decision
+ * rules in given order - modelled after the intelligent playouts
+ * in the Mogo engine. */
+
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
