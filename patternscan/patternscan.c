@@ -87,6 +87,7 @@ patternscan_state_init(char *arg)
 			}
 		}
 	}
+	ps->pc.spat_dict = spatial_dict_init(true);
 
 	return ps;
 }

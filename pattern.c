@@ -34,7 +34,7 @@ static const char *fnames[] = {
 char *
 feature2str(char *str, struct feature *f)
 {
-	return str + sprintf(str + strlen(str), "%s:%"PRIx64, fnames[f->id], f->payload);
+	return str + sprintf(str + strlen(str), "%s:%"PRIx32, fnames[f->id], f->payload);
 }
 
 char *
@@ -57,9 +57,6 @@ found:
 	return str;
 }
 
-
-/* Maximum number of points in spatial pattern (upper bound). */
-#define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). The array is ordered
@@ -114,22 +111,6 @@ static void __attribute__((constructor)) ptcoords_init(void)
 		fprintf(stderr, "\n");
 	}
 #endif
-}
-
-/* Zobrist hashes used for black/white stones in patterns. */
-static hash_t pthashes[MAX_PATTERN_AREA][4];
-static void __attribute__((constructor)) pthashes_init(void)
-{
-	/* We need fixed hashes for all pattern-relative in
-	 * all pattern users! This is a simple way to generate
-	 * hopefully good ones. Park-Miller powa. :) */
-	hash_t h = 31;
-	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
-		pthashes[i][S_NONE] = 0;
-		pthashes[i][S_BLACK] = (h *= 16807);
-		pthashes[i][S_WHITE] = (h *= 16807);
-		pthashes[i][S_OFFBOARD] = (h *= 16807);
-	}
 }
 
 
@@ -271,20 +252,27 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 	}
 
 	/* FEAT_SPATIAL */
-	if (pc->spat_max > 0) {
+	if (pc->spat_max > 0 && pc->spat_dict) {
 		assert(pc->spat_min > 0);
-		hash_t h = 0;
-		for (int d = pc->spat_min; d < pc->spat_max; d++) {
+
+		struct spatial s = { .points = {0} };
+		for (int d = 2; d < pc->spat_max; d++) {
+			/* Go through all points in given distance. */
 			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
 				int x = coord_x(m->coord, b) + ptcoords[j].x;
 				int y = coord_y(m->coord, b) + ptcoords[j].y;
 				if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
 				if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
-				h ^= pthashes[j][board_atxy(b, x, y)];
+				/* Append point. */
+				s.points[j / 4] |= board_atxy(b, x, y) << ((j % 4) * 2);
 			}
+			if (d < pc->spat_min)
+				continue;
+			/* Record spatial feature, one per distance. */
 			f->id = FEAT_SPATIAL;
-			f->payload = h & ((1ULL << 56) - 1);
-			f->payload |= (uint64_t)d << 56;
+			f->payload = (d << 24) | ((m->color == S_WHITE) << 23);
+			s.dist = d;
+			f->payload |= spatial_dict_get(pc->spat_dict, &s);
 			(f++, p->n++);
 		}
 	}
@@ -304,4 +292,192 @@ pattern2str(char *str, struct pattern *p)
 	}
 	strcat(str++, ")");
 	return str;
+}
+
+
+
+/*** Spatial patterns dictionary */
+
+/* Zobrist hashes used for black/white stones in patterns. */
+static hash_t pthashes[MAX_PATTERN_AREA][4];
+static void __attribute__((constructor)) pthashes_init(void)
+{
+	/* We need fixed hashes for all pattern-relative in
+	 * all pattern users! This is a simple way to generate
+	 * hopefully good ones. Park-Miller powa. :) */
+	hash_t h = 31;
+	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
+		pthashes[i][S_NONE] = 0;
+		pthashes[i][S_BLACK] = (h *= 16807);
+		pthashes[i][S_WHITE] = (h *= 16807);
+		pthashes[i][S_OFFBOARD] = (h *= 16807);
+	}
+}
+
+static hash_t
+spatial_hash(struct spatial *s)
+{
+	hash_t h = 0;
+	for (int i = 0; i < ptind[s->dist + 1]; i++) {
+		h ^= pthashes[i][spatial_point_at(*s, i)];
+	}
+	return h & spatial_hash_mask;
+}
+
+static int
+spatial_dict_addc(struct spatial_dict *dict, struct spatial *s)
+{
+	/* Allocate space in 1024 blocks. */
+#define SPATIALS_ALLOC 1024
+	if (!(dict->nspatials % SPATIALS_ALLOC)) {
+		dict->spatials = realloc(dict->spatials,
+				(dict->nspatials + SPATIALS_ALLOC)
+				* sizeof(*dict->spatials));
+	}
+	dict->spatials[dict->nspatials] = *s;
+	return dict->nspatials++;
+}
+
+static bool
+spatial_dict_addh(struct spatial_dict *dict, hash_t hash, int id)
+{
+	if (dict->hash[hash]) {
+		dict->collisions++;
+		/* Give up, not worth the trouble. */
+		return false;
+	}
+	dict->hash[hash] = id;
+	return true;
+}
+
+/* Spatial dictionary file format:
+ * /^#/ - comments
+ * INDEX RADIUS STONES HASH...
+ * INDEX: index in the spatial table
+ * RADIUS: @d of the pattern
+ * STONES: string of ".XO#" chars
+ * HASH...: space-separated 18bit hash-table indices for the pattern */
+
+static void
+spatial_dict_read(struct spatial_dict *dict, char *buf)
+{
+	/* XXX: We trust the data. Bad data will crash us. */
+	char *bufp = buf;
+
+	int index, radius;
+	index = strtol(bufp, &bufp, 10);
+	radius = strtol(bufp, &bufp, 10);
+	while (isspace(*bufp)) bufp++;
+
+	/* Load the stone configuration. */
+	struct spatial s = { .dist = radius };
+	int sl = 0;
+	while (!isspace(*bufp)) {
+		s.points[sl / 4] |= char2stone(*bufp++) << (sl % 4);
+		sl++;
+	}
+	while (isspace(*bufp)) bufp++;
+
+	/* Sanity check. */
+	if (sl != ptind[s.dist + 1]) {
+		fprintf(stderr, "Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n",
+			sl, ptind[radius + 1] - 1, buf);
+		exit(EXIT_FAILURE);
+	}
+
+	/* Add to collection. */
+	int id = spatial_dict_addc(dict, &s);
+
+	/* Add to specified hash places. */
+	while (*bufp) {
+		int hash = strtol(bufp, &bufp, 16);
+		while (isspace(*bufp)) bufp++;
+		spatial_dict_addh(dict, hash & spatial_hash_mask, id);
+	}
+}
+
+static void
+spatial_dict_write(struct spatial_dict *dict, int id, FILE *f)
+{
+	struct spatial *s = &dict->spatials[id];
+	fprintf(f, "%d %d ", id, s->dist);
+	for (int i = 0; i < ptind[s->dist + 1]; i++) {
+		fputc(stone2char(spatial_point_at(*s, i)), f);
+	}
+	/* TODO: Isomorphism! */
+	fprintf(f, " %"PRIhash"", spatial_hash(s));
+	fputc('\n', f);
+}
+
+static void
+spatial_dict_load(struct spatial_dict *dict, FILE *f)
+{
+	char buf[1024];
+	while (fgets(buf, sizeof(buf), f)) {
+		if (buf[0] == '#') continue;
+		spatial_dict_read(dict, buf);
+	}
+	if (DEBUGL(2))
+		fprintf(stderr, "Spatial dictionary: %d hash collisions\n", dict->collisions);
+}
+
+struct spatial_dict *
+spatial_dict_init(bool will_append)
+{
+	static const char *filename = "spatial.dict";
+	FILE *f = fopen(filename, "r");
+	if (!f && !will_append) {
+		if (DEBUGL(2))
+			fprintf(stderr, "No spatial dictionary, will not match spatial pattern features.\n");
+		return NULL;
+	}
+
+	struct spatial_dict *dict = calloc(1, sizeof(*dict));
+	/* We create a dummy record for index 0 that we will
+	 * never reference. This is so that hash value 0 can
+	 * represent "no value". */
+	struct spatial dummy = { .dist = 0 };
+	spatial_dict_addc(dict, &dummy);
+
+	if (f) {
+		/* Existing file. Load it up! */
+		spatial_dict_load(dict, f);
+		fclose(f); f = NULL;
+		if (will_append)
+			f = fopen(filename, "a");
+	} else {
+		assert(will_append);
+		f = fopen(filename, "a");
+		/* New file. First, create a comment describing order
+		 * of points in the array. This is just for purposes
+		 * of external tools, Pachi never interprets it itself. */
+		fprintf(f, "# Pachi spatial patterns dictionary v1.0 maxdist %d\n",
+			MAX_PATTERN_DIST);
+		for (int d = 0; d < MAX_PATTERN_DIST; d++) {
+			fprintf(f, "# Point order: d=%d ", d);
+			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+				fprintf(f, "%d,%d ", ptcoords[j].x, ptcoords[j].y);
+			}
+			fprintf(f, "\n");
+		}
+	}
+
+	dict->f = f;
+	return dict;
+}
+
+int
+spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
+{
+	hash_t hash = spatial_hash(s);
+	int id = dict->hash[hash];
+	if (id) return id;
+	if (!dict->f) return -1;
+
+	/* Add new pattern! */
+	id = spatial_dict_addc(dict, s);
+	/* TODO: Isomorphism! */
+	spatial_dict_addh(dict, hash, id);
+	spatial_dict_write(dict, id, dict->f);
+	return id;
 }

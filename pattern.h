@@ -12,7 +12,7 @@
  * pattern _feature_. Another features may be is-a-selfatari, is-a-capture,
  * number of liberties, distance from last move, etc. */
 
-/* Each feature is represented by its id and an optional 64-bit payload;
+/* Each feature is represented by its id and an optional 32-bit payload;
  * when matching, discrete (id,payload) pairs are considered. */
 
 /* This is heavily influenced by (Coulom, 2007), of course. */
@@ -67,19 +67,13 @@ enum feature_id {
 	FEAT_LLDIST,
 
 	/* Spatial configuration of stones in certain board area. */
-	/* Payload: [top 8 bits]    Pattern radius (gridcular)
-	 *          [lower 54 bits] Zobrist hash of area */
-	/* XXX: The current scheme has several problems:
-	 * * No distinction of color to play.
-	 * * No possibility of recognizing isomorph colorings
-	 *   (reversed colors, rotations) in existing payloads.
-	 * * No possibility of deriving stone configuration
-	 *   from existing payloads. */
-	/* TODO: Appendable external spatial patterns "dictionary",
-	 * payload would only index the dictionary. */
+	/* Payload: [bits 31-24] Pattern radius (gridcular) */
+#define PF_SPATIAL_RADIUS	(255 << 24)
+	/*          [bit 23]     Who to play? (1: White) */
+#define PF_SPATIAL_TOPLAY	(1 << 23)
+	/*          [other bits] Index in the spatial_dict. */
+#define PF_SPATIAL_INDEX	((1 << 23) - 1)
 	FEAT_SPATIAL,
-	/* Maximum spatial pattern diameter. */
-#define MAX_PATTERN_DIST 21
 
 
 	/* Unimplemented - TODO: */
@@ -92,7 +86,7 @@ enum feature_id {
 
 struct feature {
 	enum feature_id id;
-	uint64_t payload;
+	uint32_t payload;
 };
 
 struct pattern {
@@ -102,6 +96,7 @@ struct pattern {
 	struct feature f[FEATURES];
 };
 
+struct spatial_dict;
 struct pattern_config {
 	/* FEAT_SPATIAL: Generate patterns only for these sizes (gridcular). */
 	int spat_min, spat_max;
@@ -112,8 +107,12 @@ struct pattern_config {
 	int ldist_min, ldist_max;
 	/* FEAT_MCOWNER: Generate feature after this number of simulations. */
 	int mcsims;
+
+	/* The spatial patterns dictionary, used by FEAT_SPATIAL. */
+	struct spatial_dict *spat_dict;
 };
 extern struct pattern_config DEFAULT_PATTERN_CONFIG;
+
 
 /* Append feature to string. */
 char *feature2str(char *str, struct feature *f);
@@ -126,5 +125,85 @@ char *pattern2str(char *str, struct pattern *p);
 /* Initialize p and fill it with features matched by the
  * given board move. */
 void pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m);
+
+
+/* Spatial pattern dictionary. */
+
+/* For each encountered configuration of stones, we keep it "spelled out"
+ * in these records, index them and refer just the indices in the feature
+ * payloads. This achieves several things:
+ * * We can handle patterns of arbitrary length.
+ * * We can recognize isomorphous configurations (color reversions,
+ *   rotations) within the dataset.
+ * * We can visualise patterns corresponding to chosen features.
+ *
+ * Thus, it goes like this:
+ *
+ * +----------------+   +----------------+
+ * | struct pattern | - | struct feature |
+ * +----------------+   |  payload    id |
+ *                      +----------------+
+ *                            |       FEAT_SPATIAL
+ *                            |
+ *                            |   ,--<--.
+ *                            |   |     |
+ * +-----------------------------------------+
+ * | struct spatial_dict  spatials[]  hash[] |
+ * +-----------------------------------------+
+ *                            |
+ *                    +----------------+
+ *                    | struct spatial |
+ *                    +----------------+
+ */
+
+/* Maximum spatial pattern diameter. */
+#define MAX_PATTERN_DIST 21
+/* Maximum number of points in spatial pattern (upper bound).
+ * TODO: Better upper bound to save more data. */
+#define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
+
+/* Record for single stone configuration. */
+struct spatial {
+	/* Gridcular radius of matched pattern. */
+	uint16_t dist;
+	/* The points; each point is two bits, corresponding
+	 * to {enum stone}. Points are ordered in gridcular-defined
+	 * spiral from middle to the edge; the dictionary file has
+	 * a comment describing the ordering at the top. */
+	char points[MAX_PATTERN_AREA / 4];
+#define spatial_point_at(s, i) (((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3)
+};
+
+/* Collection of stone configurations, with two ways of lookup:
+ * (i) by index (ii) by hash of the configuration. */
+struct spatial_dict {
+	/* Indexed base store */
+	int nspatials; /* Number of records. */
+	struct spatial *spatials; /* Actual records. */
+
+	/* Hashed access; all isomorphous configurations
+	 * are also hashed */
+#define spatial_hash_bits 18
+#define spatial_hash_mask ((1 << spatial_hash_bits) - 1)
+	/* Maps to spatials[] indices. The hash function
+	 * used is zobrist hashing with fixed values. */
+	uint32_t hash[1 << spatial_hash_bits];
+	/* Auxiliary collision counter, for statistics. */
+	int collisions;
+
+	/* Backing store for appending patterns. */
+	FILE *f;
+};
+
+/* Initializes spatial dictionary, pre-loading existing records from
+ * default filename if exists. If will_append is true, it will open
+ * the file for appending. */
+struct spatial_dict *spatial_dict_init(bool will_append);
+
+/* Lookup specified spatial pattern in the dictionary; return index
+ * of the pattern. If the pattern is not found, in read-only mode
+ * -1 will be returned, in append mode it will be added both to the
+ * dictionary and its file. */
+int spatial_dict_get(struct spatial_dict *dict, struct spatial *s);
 
 #endif
