@@ -9,9 +9,6 @@
 #include "random.h"
 
 
-/* This file is licensed under the same way as Pachi base, not
- * under GPLv2+. */
-
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
 
