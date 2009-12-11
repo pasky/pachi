@@ -3,6 +3,9 @@
 
 /* Fast matching of simple 3x3 patterns. */
 
+/* (Note that this is completely independent from the general pattern
+ * matching infrastructure in pattern.[ch]. This is fast and simple.) */
+
 struct board;
 struct move;
 
