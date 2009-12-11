@@ -1,0 +1,142 @@
+This is brief developer-oriented overview in Pachi structure.
+
+Pachi is completely Go-specific (c.f. Fuego; though e.g. atari go support
+should be easy to add), but fairly modular. It has been built with focus
+on MonteCarlo-based play, but it can in principle be used for other
+play engines as well.
+
+
+Basic architecture
+==================
+
+Pachi consists of the following components:
+
+
+  +------+    +--------+    +---------+
+  | core | -- | engine | -- | playout |
+  +------+    +--------+    +---------+
+                     |        |
+                  +-------------+
+                  | aux library |
+                  +-------------+
+
+* "core" takes care of the program's lifetime, GTP interface and basic
+  fast Go board implementation
+
+	zzgo.c		global initialization and the main loop
+	version.h	current version information
+	debug.h		debugging infrastructure
+	random.[ch]	fast random number generator
+	gtp.[ch]	GTP protocol interface
+	stone.[ch]	one board point coloring definition
+	move.[ch]	one board move definition
+	board.[ch]	board definition and basic interface
+
+* "aux library" provides extra functions like static tactical evaluation
+  and pattern matching; it is somewhat interwound with "core" component
+
+	tactics.[ch]	extended interfaces for the go board
+	mq.h		"move queue" data structure
+	stats.h		"move statistics" data structure
+	probdist.[ch]	"probability distribution" data structure
+	ownermap.[ch]	simulation-based finalpos. "owner map" data structure
+	pattern3.[ch]	fast 3x3 spatial pattern matcher
+	pattern.[ch]	general multi-feature pattern matcher
+
+* "engine" receives notifications about opponent moves and is asked
+  to generate a move to play on given board
+
+	engine.h	abstract engine interface
+	random/		example "random move generator" engine
+	replay/		example "playout move generator" engine
+	montecarlo/	simple treeless Monte Carlo engine, quite bitrotten
+	uct/		the main UCT-player engine, see below
+	patternscan/	auxiliary engine for harvesting patterns from
+				existing games
+
+* "playout" policy is asked to generate moves to play during the Monte Carlo
+  simulations, and to provide rough evaluation of moves feasibility for
+  the engine
+
+	playout.[ch]	abstract playout policy interface,
+				Monte Carlo simulation execution
+	playout/light	uniformly random playout policy
+	playout/moggy	rule-based "Mogo-like" playout policy
+	playout/elo	probdist-based "CrazyStone-like" playout policy
+
+
+UCT architecture
+================
+
+The UCT engine has non-trivial structure by itself:
+
+  +-------------+    +-----+     +-------------------+
+  | node policy | -- | UCT | --- | node prior-hinter |
+  +-------------+    +-----+     +-------------------+
+                        |           |
+                   +---------+      |
+                   | playout | -----'
+                   +---------+
+
+* "UCT" is the core of the engine
+
+	uct.[ch]	engine initialization, public interface
+	internal.h	internal state and data structures
+	tree.[ch]	minimax move tree with success statistics
+	walk.[ch]	filling the tree by walking it many times
+				and running MC simulations from leaves
+
+* "node prior-hinter" assigns newly created nodes preliminary success
+  statistics ("prior values") to focus the search better
+
+	prior.[ch]	variety of methods for setting the priors
+
+* "node policy" mainly chooses the current node's child to descend
+  through during the tree walk, based on the already recorded statistics;
+  it must balance exploration and exploitation well during the selection
+
+	policy/ucb1	the old-school original simple policy
+	policy/ucb1amaf	the AMAF/RAVE-based policy gathering statistics rapidly
+
+
+Board Implementation
+====================
+
+The infrastructure is optimized for speed to make it well suited
+for bruteforce engines, however tradeoffs are made to make it useful
+for heavier MonteCarlo playouts as well (e.g. real liberties are
+tracked instead of pseudoliberties). If you are looking for raw
+light playout speed, libEGO is better choice.
+
+Ruleset
+-------
+
+While the Pachi engines generally play according to Chinese rules,
+internally, Pachi uses Tromp-Taylor rules because they are simple,
+fast and universal; they are very close to the New Zealand rules.
+That means, it simply counts the number of stones and one-point eyes
+of each color on the board, plus komi and handicap correction.
+
+Tromp-Taylor rules also mean that multi-stone suicide is allowed! If you
+do not like that (basically if you want to pretend it plays according
+to Chinese rules), you need to rule that out in your engine, currently.
+The provided engines DO avoid multi-stone suicide (but the UCT engine
+will never play it itself).
+
+Tromp-Taylor rules have positional superko; the board implementation
+will set a flag if it is violated, but play the move anyway. You need
+to enforce the superko rule in your engine.
+
+
+GTP Implementation
+==================
+
+...is a very sad hack. ENSURE that only trusted parties talk to Pachi's
+GTP interface, as it is totally non-resilient to any kind of overflow
+or bad input attacks and allowing arbitrary input to be entered within
+is a major security hole. Yes, this needs to be cleaned up. Also, currently
+engines cannot plug in their own commands and there is no GoGui interface.
+
+Pachi supports only few GTP commands now. Most importantly, it does not
+support the undo command and it does not support time-keeping.
+The final_status_list command requires engine support.

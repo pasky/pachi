@@ -16,35 +16,15 @@ The default engine plays by Chinese rules and should be about
 2d KGS strength on 9x9. On 19x19, it might be about KGS 4k. Of couse,
 this assumes reasonable hardware, e.g. four-threaded Core2 machine.
 
-
-Framework
----------
-
-The aim of the framework is to make it easy to plug your engine
-to the common infrastructure and implement your ideas while
-minimalizing the overhead of implementing the GTP, board tools, etc.
-Also, there are premade random playout and UCT tree engines, so that
-you can directly tweak only particular policies.
-
-The infrastructure is optimized for speed to make it well suited
-for bruteforce engines, however tradeoffs are made to make it useful
-for heavier MonteCarlo playouts as well (e.g. real liberties are
-tracked instead of pseudoliberties). If you are looking for raw
-light playout speed, libEGO is better choice.
-
-Pachi is under the MIT licence (almost public domain) so that as
-many people as possible can use it; if you use it to create your engine,
-appropriate credits would be appreciated. Some of the bundled engines
-or policies are under a more restrictive licence (GPL).
+At the same time, various other approaches and tricks are being tried
+and minor improvements have been achieved; they are enabled when they
+give an universal playing strength boosts.
 
 
-Currently, Pachi supports a simple idiotbot-like engine, an example
-MonteCarlo-player with bits of optional domain-specific knowledge
-("playout policy") and and finally state-of-art
-UCT engine is provided, also using the pluggable playout policy.
-The infrastructure is pretty fast and it should be quite easy
-to extend it to provide more facilities for your engine (but it should
-be at the same time kept as simple as possible).
+Except UCT, Pachi supports a simple idiotbot-like engine and an example
+treeless MonteCarlo-player. The MonteCarlo simulation ("playout")
+policies are also pluggable, by default we use one that makes use of
+heavy domain knowledge.
 
 Two special engines are also provided for development support:
 * a simple "replay" engine that will simply play moves according
@@ -55,24 +35,27 @@ Two special engines are also provided for development support:
   used for pattern-learning from games in cooperation with an external
   helper; no 'genmove' command support is provided
 
-Pachi uses New Zealand scoring, currently. That means, it simply counts
-the number of stones and one-point eyes of each color on the board,
-plus komi and handicap correction.
 
-New Zealand rules also mean that multi-stone suicide is allowed! If you
-do not like that (basically if you want to pretend it plays according
-to Chinese rules), you need to rule that out in your engine, currently.
-The provided engines DO avoid multi-stone suicide.
+Framework
+---------
 
-New Zealand rules have positional superko; the board implementation
-will set a flag if it is violated, but play the move anyway. You need
-to enforce the superko rule in your engine.
+The aim of the framework is to make it easy to plug your engine
+to the common infrastructure and implement your ideas while
+minimalizing the overhead of implementing the GTP, speed-optimized
+board tools, etc.  Also, there are premade random playout and UCT
+tree engines, so that you can directly tweak only particular policies.
+The infrastructure is pretty fast and it should be quite easy
+to extend it to provide more facilities for your engine (but it should
+be at the same time kept as simple as possible).
 
 
-Also, Pachi supports only few GTP commands now. Most importantly,
-it does not support the undo command, its final_status_list command
-is only an empty stub for other engines than UCT, and it does not
-support time-keeping.
+Licence
+-------
+
+Pachi is under the MIT licence (almost public domain) so that as
+many people as possible can use it; if you use it to create your engine,
+appropriate credits would be appreciated. Some of the bundled engines
+or policies are under a more restrictive licence (GPL).
 
 
 To build Pachi, simply type:
@@ -82,8 +65,13 @@ To build Pachi, simply type:
 Built zzgo binary (named that way from historical reasons) in the current
 directory is a GTP client; use your favorite Go client to connect to it
 (generally it should be possible to use it in place of GNU Go; the
-command-line usage is however different), or use kgsGtp to connect to KGS.
-The zzgo binary can take some parameters.
+command-line usage is however different), or use kgsGtp to connect to KGS;
+DO NOT make it accessible directly to enemy users since the parser is
+not secure - see the HACKING file for details.
+
+The zzgo binary can take many parameters, as well as the particular
+engine being used; the defaults should be fine for initial usage,
+you will have to consult the sources for fine-tuning the parameters.
 
 To build better optimized binary, type:
 

@@ -1,6 +1,5 @@
 Docs:
-* High-level architecture overview
-* Usage documentation
+* Manual page - full usage documentation
 * GTP interface documentation
 
 Base:
@@ -8,21 +7,26 @@ Base:
 * Clean up GTP interface, allow custom GTP commands for
   modules
 
+Patterns:
+* Support for pattern competition in patternscan
+* Infrastructure for feeding patterns to Remi Coulom's MM
+* Analyze feasibility of various other possible features
+
 Playouts:
-* Mercy rule
-* Separate prior-hinting class
-* Separate parameters for playout module
+* Finish the ELO-play policy
+* Mercy rule?
 * Split playout aspects to custom-stackable pieces
 * Possibly replay top-rated unplayed moves from the tree
   in the playout?
 
 UCT:
-* Resync threads periodically
+* Resync threads periodically in root parallelization mode
 * Ponder mode
-* In S.D., stop reading early if result cannot change
 * Time controls infrastructure
+* Outside of japanese byoyomi, stop reading early if result cannot change
+* Support for prior hinting based by custom externally linked
+  evaluation function
 
 UCB1AMAF:
-* Fix RAVE for good (still much weaker than light fuego)
-* Optimize the tree walk
-* Separate constants for prior and amaf elements
+* Fix RAVE for good (still noticeably weaker than fuego?)
+* Separate constants for prior and amaf elements?
