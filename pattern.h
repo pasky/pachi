@@ -67,10 +67,16 @@ enum feature_id {
 	FEAT_LLDIST,
 
 	/* Spatial configuration of stones in certain board area. */
-	/* XXX: We don't actually care about area size, we simply
-	 * incrementally match up to certain radius. */
 	/* Payload: [top 8 bits]    Pattern radius (gridcular)
 	 *          [lower 54 bits] Zobrist hash of area */
+	/* XXX: The current scheme has several problems:
+	 * * No distinction of color to play.
+	 * * No possibility of recognizing isomorph colorings
+	 *   (reversed colors, rotations) in existing payloads.
+	 * * No possibility of deriving stone configuration
+	 *   from existing payloads. */
+	/* TODO: Appendable external spatial patterns "dictionary",
+	 * payload would only index the dictionary. */
 	FEAT_SPATIAL,
 
 
