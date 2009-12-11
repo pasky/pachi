@@ -66,15 +66,15 @@ enum feature_id {
 	/* Payload: The distance - gridcular metric. */
 	FEAT_LLDIST,
 
-
-	/* Unimplemented - TODO: */
-
 	/* Spatial configuration of stones in certain board area. */
 	/* XXX: We don't actually care about area size, we simply
 	 * incrementally match up to certain radius. */
 	/* Payload: [top 8 bits]    Pattern radius (gridcular)
 	 *          [lower 54 bits] Zobrist hash of area */
 	FEAT_SPATIAL,
+
+
+	/* Unimplemented - TODO: */
 
 	/* Monte-carlo owner. */
 	/* Payload: #of playouts owning this point at the final

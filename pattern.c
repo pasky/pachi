@@ -145,25 +145,6 @@ pattern_get(struct pattern_config *pc, struct pattern *p, struct board *b, struc
 	/* TODO: We should match pretty much all of these features
 	 * incrementally. */
 
-	/* FEAT_SPATIAL */
-	if (pc->spat_max > 0) {
-		assert(pc->spat_min > 0);
-		hash_t h = 0;
-		for (int d = pc->spat_min; d < pc->spat_max; d++) {
-			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
-				int x = coord_x(m->coord, b) + ptcoords[j].x;
-				int y = coord_y(m->coord, b) + ptcoords[j].y;
-				if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
-				if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
-				h ^= pthashes[j][board_atxy(b, x, y)];
-			}
-			f->id = FEAT_SPATIAL;
-			f->payload = h & ((1ULL << 56) - 1);
-			f->payload |= (uint64_t)d << 56;
-			(f++, p->n++);
-		}
-	}
-
 	/* FEAT_PASS */
 	if (is_pass(m->coord)) {
 		f->id = FEAT_PASS; f->payload = 0;
@@ -288,6 +269,25 @@ pattern_get(struct pattern_config *pc, struct pattern *p, struct board *b, struc
 		if (pc->ldist_min <= lldist && lldist <= pc->ldist_max) {
 			f->id = FEAT_LLDIST;
 			f->payload = lldist;
+			(f++, p->n++);
+		}
+	}
+
+	/* FEAT_SPATIAL */
+	if (pc->spat_max > 0) {
+		assert(pc->spat_min > 0);
+		hash_t h = 0;
+		for (int d = pc->spat_min; d < pc->spat_max; d++) {
+			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+				int x = coord_x(m->coord, b) + ptcoords[j].x;
+				int y = coord_y(m->coord, b) + ptcoords[j].y;
+				if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
+				if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
+				h ^= pthashes[j][board_atxy(b, x, y)];
+			}
+			f->id = FEAT_SPATIAL;
+			f->payload = h & ((1ULL << 56) - 1);
+			f->payload |= (uint64_t)d << 56;
 			(f++, p->n++);
 		}
 	}
