@@ -10,11 +10,8 @@
 #include "tactics.h"
 
 
-/* Maximum spatial pattern diameter. */
-#define MAX_PATTERN_DIST 21
-
 struct pattern_config DEFAULT_PATTERN_CONFIG = {
-	.spat_min = 2, .spat_max = MAX_PATTERN_DIST, /* Unsupported. */
+	.spat_min = 2, .spat_max = MAX_PATTERN_DIST,
 	.bdist_max = 4,
 	.ldist_min = 0, .ldist_max = 256,
 	.mcsims = 0, /* Unsupported. */

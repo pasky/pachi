@@ -78,6 +78,8 @@ enum feature_id {
 	/* TODO: Appendable external spatial patterns "dictionary",
 	 * payload would only index the dictionary. */
 	FEAT_SPATIAL,
+	/* Maximum spatial pattern diameter. */
+#define MAX_PATTERN_DIST 21
 
 
 	/* Unimplemented - TODO: */
