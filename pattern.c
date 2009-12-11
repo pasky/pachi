@@ -310,7 +310,7 @@ static void __attribute__((constructor)) pthashes_init(void)
 	 * hopefully good ones. Park-Miller powa. :) */
 	hash_t h = 31;
 	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
-		pthashes[i][S_NONE] = 0;
+		pthashes[i][S_NONE] = (h *= 16807);
 		pthashes[i][S_BLACK] = (h *= 16807);
 		pthashes[i][S_WHITE] = (h *= 16807);
 		pthashes[i][S_OFFBOARD] = (h *= 16807);
