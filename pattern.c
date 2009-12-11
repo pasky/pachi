@@ -273,9 +273,9 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 				continue;
 			/* Record spatial feature, one per distance. */
 			f->id = FEAT_SPATIAL;
-			f->payload = (d << 24) | ((m->color == S_WHITE) << 23);
+			f->payload = (d << PF_SPATIAL_RADIUS) | ((m->color == S_WHITE) << 23);
 			s.dist = d;
-			f->payload |= spatial_dict_get(pc->spat_dict, &s);
+			f->payload |= spatial_dict_get(pc->spat_dict, &s) << PF_SPATIAL_INDEX;
 			(f++, p->n++);
 		}
 	}
