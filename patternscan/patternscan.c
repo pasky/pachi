@@ -27,7 +27,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	/* For specifiation of features and their payloads,
 	 * please refer to pattern.h. */
 	struct pattern p;
-	pattern_get(&ps->pc, &p, b, m);
+	pattern_match(&ps->pc, &p, b, m);
 
 	static char str[8192]; // XXX
 	*str = 0;

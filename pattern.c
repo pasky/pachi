@@ -137,7 +137,7 @@ static void __attribute__((constructor)) pthashes_init(void)
 
 
 void
-pattern_get(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m)
+pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m)
 {
 	p->n = 0;
 	struct feature *f = &p->f[0];
