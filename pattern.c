@@ -1,3 +1,4 @@
+#define DEBUG
 #include <assert.h>
 #include <ctype.h>
 #include <inttypes.h>
@@ -419,8 +420,6 @@ spatial_dict_load(struct spatial_dict *dict, FILE *f)
 		if (buf[0] == '#') continue;
 		spatial_dict_read(dict, buf);
 	}
-	if (DEBUGL(2))
-		fprintf(stderr, "Spatial dictionary: %d hash collisions\n", dict->collisions);
 }
 
 struct spatial_dict *
@@ -473,7 +472,20 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 {
 	hash_t hash = spatial_hash(s);
 	int id = dict->hash[hash];
-	if (id) return id;
+	if (id && dict->f) {
+		/* Check for collisions in append mode. */
+		if (dict->spatials[id].dist != s->dist ||
+		    memcmp(dict->spatials[id].points, s->points, ptind[s->dist + 1])) {
+			if (DEBUGL(2))
+				fprintf(stderr, "Collision %d vs %d (hash %"PRIhash")\n",
+					id, dict->nspatials, hash);
+			id = 0;
+			/* dict->collisions++; gets done by addh */
+		}
+	}
+	if (id) {
+		return id;
+	}
 	if (!dict->f) return -1;
 
 	/* Add new pattern! */
