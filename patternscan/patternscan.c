@@ -11,12 +11,15 @@
 /* Internal engine state. */
 struct patternscan {
 	int debug_level;
+	struct pattern_config pc;
 };
 
 
 static char *
 patternscan_play(struct engine *e, struct board *b, struct move *m)
 {
+	struct patternscan *ps = e->data;
+
 	if (is_resign(m->coord))
 		return NULL;
 
@@ -24,9 +27,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	/* For specifiation of features and their payloads,
 	 * please refer to pattern.h. */
 	struct pattern p;
-	/* TODO: Configurable pattern_config. */
-	struct pattern_config pc = DEFAULT_PATTERN_CONFIG;
-	pattern_get(&pc, &p, b, m);
+	pattern_get(&ps->pc, &p, b, m);
 
 	static char str[8192]; // XXX
 	*str = 0;
@@ -48,6 +49,7 @@ patternscan_state_init(char *arg)
 	struct patternscan *ps = calloc(1, sizeof(struct patternscan));
 
 	ps->debug_level = 1;
+	ps->pc = DEFAULT_PATTERN_CONFIG;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -65,8 +67,23 @@ patternscan_state_init(char *arg)
 					ps->debug_level = atoi(optval);
 				else
 					ps->debug_level++;
+			/* See pattern.h:pattern_config for description and
+			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values. */
+			} else if (!strcasecmp(optname, "spat_min") && optval) {
+				ps->pc.spat_min = atoi(optval);
+			} else if (!strcasecmp(optname, "spat_max") && optval) {
+				ps->pc.spat_max = atoi(optval);
+			} else if (!strcasecmp(optname, "bdist_max") && optval) {
+				ps->pc.bdist_max = atoi(optval);
+			} else if (!strcasecmp(optname, "ldist_min") && optval) {
+				ps->pc.ldist_min = atoi(optval);
+			} else if (!strcasecmp(optname, "ldist_max") && optval) {
+				ps->pc.ldist_max = atoi(optval);
+			} else if (!strcasecmp(optname, "mcsims") && optval) {
+				ps->pc.mcsims = atoi(optval);
 			} else {
 				fprintf(stderr, "patternscan: Invalid engine argument %s or missing value\n", optname);
+				exit(EXIT_FAILURE);
 			}
 		}
 	}
