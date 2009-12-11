@@ -14,6 +14,8 @@ while (<D>) {
 		# XXX: Distances must be in proper order!
 		s/ *$//;
 		push @ofs, map { [ split(/,/, $_) ] } split(/ /, $_);
+		# print "#### $_\n";
+		# print "[$d] ($#ofs) " . join(' ', map { $_->[0].",".$_->[1] } @ofs) . "\n";
 		next;
 	}
 	/^#/ and next;

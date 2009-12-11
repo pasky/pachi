@@ -83,7 +83,7 @@ static void __attribute__((constructor)) ptcoords_init(void)
 		 * circles that are finer for small d. */
 		for (short y = d / 2; y >= 0; y--) {
 			short x;
-			if (y * 2 > d / 2) {
+			if (y > d / 3) {
 				/* max(|x|, |y|) = |y|, non-zero x */
 				x = d - y * 2;
 				if (x + y * 2 != d) continue;
@@ -93,6 +93,8 @@ static void __attribute__((constructor)) ptcoords_init(void)
 				x = (d - y) / 2;
 				if (x * 2 + y != d) continue;
 			}
+
+			assert((x > y ? x : y) + x + y == d);
 
 			ptcoords[i].x = x; ptcoords[i].y = y; i++;
 			if (x != 0) { ptcoords[i].x = -x; ptcoords[i].y = y; i++; }
