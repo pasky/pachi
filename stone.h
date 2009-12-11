@@ -10,6 +10,7 @@ enum stone {
 };
 
 static char stone2char(enum stone s);
+static enum stone char2stone(char s);
 char *stone2str(enum stone s); /* static string */
 enum stone str2stone(char *str);
 
@@ -20,6 +21,18 @@ static inline char
 stone2char(enum stone s)
 {
 	return ".XO#"[s];
+}
+
+static inline enum stone
+char2stone(char s)
+{
+	switch (s) {
+		case '.': return S_NONE;
+		case 'X': return S_BLACK;
+		case 'O': return S_WHITE;
+		case '#': return S_OFFBOARD;
+	}
+	return S_NONE; // XXX
 }
 
 /* Curiously, gcc is reluctant to inline this; I have cofirmed
