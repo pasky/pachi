@@ -64,6 +64,13 @@ Pachi consists of the following components:
 	playout/moggy	rule-based "Mogo-like" playout policy
 	playout/elo	probdist-based "CrazyStone-like" playout policy
 
+* Also, several ways of testing Pachi are provided:
+
+	t-unit/		interface for writing unit-tests for specific
+				functionality, mainly tactics
+	t-play/		interface for testing performance by playing games
+				against a fixed opponent (e.g. GNUGo)
+
 
 UCT architecture
 ================
