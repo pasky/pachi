@@ -527,19 +527,21 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 	int id = dict->hash[hash];
 	if (id && dict->f) {
 		/* Check for collisions in append mode. */
-		/* Tough job, we simply try if all rotations
-		 * are also covered by the existing record. */
-		for (int r = 0; r < PTH__ROTATIONS; r++) {
-			hash_t rhash = spatial_hash(r, s);
-			int rid = dict->hash[rhash];
+		/* Tough job, we simply try if any other rotation
+		 * is also covered by the existing record. */
+		int r; hash_t rhash; int rid;
+		for (r = 1; r < PTH__ROTATIONS; r++) {
+			rhash = spatial_hash(r, s);
+			rid = dict->hash[rhash];
 			if (rid == id)
-				continue;
-			if (DEBUGL(1))
-				fprintf(stderr, "Collision %d vs %d (hash %d:%"PRIhash")\n",
-					rid, dict->nspatials, r, rhash);
-			id = 0;
-			/* dict->collisions++; gets done by addh */
+				goto no_collision;
 		}
+		if (DEBUGL(1))
+			fprintf(stderr, "Collision %d vs %d (hash %d:%"PRIhash")\n",
+				id, dict->nspatials, r, hash);
+		id = 0;
+		/* dict->collisions++; gets done by addh */
+no_collision:;
 	}
 	if (id) return id;
 	if (!dict->f) return -1;
