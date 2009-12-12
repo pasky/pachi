@@ -183,7 +183,7 @@ struct spatial_dict {
 
 	/* Hashed access; all isomorphous configurations
 	 * are also hashed */
-#define spatial_hash_bits 18
+#define spatial_hash_bits 24 // ~64mib array
 #define spatial_hash_mask ((1 << spatial_hash_bits) - 1)
 	/* Maps to spatials[] indices. The hash function
 	 * used is zobrist hashing with fixed values. */

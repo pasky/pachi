@@ -318,12 +318,13 @@ static void __attribute__((constructor)) pthashes_init(void)
 	hash_t pthboard[MAX_PATTERN_AREA][4];
 	int pthbc = MAX_PATTERN_AREA / 2; // tengen coord
 
-	hash_t h = 31;
+	/* The magic numbers are tuned for minimal collisions. */
+	hash_t h = 0x313131;
 	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
-		pthboard[i][S_NONE] = (h *= 16807);
-		pthboard[i][S_BLACK] = (h *= 16807);
-		pthboard[i][S_WHITE] = (h *= 16807);
-		pthboard[i][S_OFFBOARD] = (h *= 16807);
+		pthboard[i][S_NONE] = (h = h * 16803 - 7);
+		pthboard[i][S_BLACK] = (h = h * 16805 + 7);
+		pthboard[i][S_WHITE] = (h = h * 16807 + 3);
+		pthboard[i][S_OFFBOARD] = (h = h * 16809 - 3);
 	}
 
 	/* Virtual board with hashes created, now fill
@@ -537,7 +538,6 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 					rid, dict->nspatials, r, rhash);
 			id = 0;
 			/* dict->collisions++; gets done by addh */
-			break;
 		}
 	}
 	if (id) return id;
