@@ -13,6 +13,7 @@ struct patternscan {
 	int debug_level;
 	struct pattern_config pc;
 	bool fixed_dict;
+	bool competition;
 };
 
 
@@ -24,15 +25,31 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	if (is_resign(m->coord))
 		return NULL;
 
+	static char str[65536]; // XXX
+	char *strp;
+	*str = 0;
+
 	/* Scan for supported features. */
 	/* For specifiation of features and their payloads,
 	 * please refer to pattern.h. */
 	struct pattern p;
 	pattern_match(&ps->pc, &p, b, m);
+	strp = pattern2str(str, &p);
 
-	static char str[8192]; // XXX
-	*str = 0;
-	pattern2str(str, &p);
+	if (ps->competition) {
+		/* Look at other possible moves as well. */
+		for (int f = 0; f < b->flen; f++) {
+			struct move mo = { .coord = b->f[f], .color = m->color };
+			if (mo.coord == m->coord)
+				continue;
+			if (!board_is_valid_move(b, &mo))
+				continue;
+			*strp++ = ' ';
+			pattern_match(&ps->pc, &p, b, &mo);
+			strp = pattern2str(strp, &p);
+		}
+	}
+
 	return str;
 }
 
@@ -73,6 +90,12 @@ patternscan_state_init(char *arg)
 				 * to the dictionary, compute patterns only
 				 * from already recorded ones. */
 				ps->fixed_dict = !optval || atoi(optval);
+
+			} else if (!strcasecmp(optname, "competition")) {
+				/* In competition mode, first the played
+				 * pattern is printed, then all other patterns
+				 * that could be played but weren't. */
+				ps->competition = !optval || atoi(optval);
 
 			/* See pattern.h:pattern_config for description and
 			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values
