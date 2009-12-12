@@ -66,11 +66,10 @@ enum feature_id {
 	/* Payload: The distance - gridcular metric. */
 	FEAT_LLDIST,
 
-	/* Spatial configuration of stones in certain board area. */
+	/* Spatial configuration of stones in certain board area,
+	 * with black to play. */
 	/* Payload: [bits 31-24] Pattern radius (gridcular) */
 #define PF_SPATIAL_RADIUS	24
-	/*          [bit 23]     Who to play? (1: White) */
-#define PF_SPATIAL_TOPLAY	23
 	/*          [other bits] Index in the spatial_dict. */
 #define PF_SPATIAL_INDEX	0
 	FEAT_SPATIAL,

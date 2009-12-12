@@ -258,6 +258,13 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 	if (pc->spat_max > 0 && pc->spat_dict) {
 		assert(pc->spat_min > 0);
 
+		/* We record all spatial patterns black-to-play; simply
+		 * reverse all colors if we are white-to-play. */
+		enum stone bt[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
+		if (m->color == S_WHITE) {
+			bt[1] = S_WHITE; bt[2] = S_BLACK;
+		}
+
 		struct spatial s = { .points = {0} };
 		for (int d = 2; d < pc->spat_max; d++) {
 			/* Go through all points in given distance. */
@@ -267,13 +274,13 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 				if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
 				if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
 				/* Append point. */
-				s.points[j / 4] |= board_atxy(b, x, y) << ((j % 4) * 2);
+				s.points[j / 4] |= bt[board_atxy(b, x, y)] << ((j % 4) * 2);
 			}
 			if (d < pc->spat_min)
 				continue;
 			/* Record spatial feature, one per distance. */
 			f->id = FEAT_SPATIAL;
-			f->payload = (d << PF_SPATIAL_RADIUS) | ((m->color == S_WHITE) << 23);
+			f->payload = (d << PF_SPATIAL_RADIUS);
 			s.dist = d;
 			f->payload |= spatial_dict_get(pc->spat_dict, &s) << PF_SPATIAL_INDEX;
 			(f++, p->n++);
@@ -302,7 +309,7 @@ pattern2str(char *str, struct pattern *p)
 /*** Spatial patterns dictionary */
 
 /* Zobrist hashes used for black/white stones in patterns. */
-#define PTH__ROTATIONS	16
+#define PTH__ROTATIONS	8
 static hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][4];
 static void __attribute__((constructor)) pthashes_init(void)
 {
@@ -333,7 +340,6 @@ static void __attribute__((constructor)) pthashes_init(void)
 #define PTH_VMIRROR	1
 #define PTH_HMIRROR	2
 #define PTH_90ROT	4
-#define PTH_REVCOLOR	8
 	for (int r = 0; r < PTH__ROTATIONS; r++) {
 		for (int i = 0; i < MAX_PATTERN_AREA; i++) {
 			/* Rotate appropriately. */
@@ -348,13 +354,8 @@ static void __attribute__((constructor)) pthashes_init(void)
 
 			/* Copy info. */
 			pthashes[r][i][S_NONE] = pthboard[bi][S_NONE];
-			if (r & PTH_REVCOLOR) {
-				pthashes[r][i][S_WHITE] = pthboard[bi][S_BLACK];
-				pthashes[r][i][S_BLACK] = pthboard[bi][S_WHITE];
-			} else {
-				pthashes[r][i][S_BLACK] = pthboard[bi][S_BLACK];
-				pthashes[r][i][S_WHITE] = pthboard[bi][S_WHITE];
-			}
+			pthashes[r][i][S_BLACK] = pthboard[bi][S_BLACK];
+			pthashes[r][i][S_WHITE] = pthboard[bi][S_WHITE];
 			pthashes[r][i][S_OFFBOARD] = pthboard[bi][S_OFFBOARD];
 		}
 	}
