@@ -54,8 +54,8 @@ int
 coord_edge_distance(coord_t c, struct board *b)
 {
 	int x = coord_x(c, b), y = coord_y(c, b);
-	int dx = x > board_size(b) / 2 ? board_size(b) - x : x;
-	int dy = y > board_size(b) / 2 ? board_size(b) - y : y;
+	int dx = x > board_size(b) / 2 ? board_size(b) - 1 - x : x;
+	int dy = y > board_size(b) / 2 ? board_size(b) - 1 - y : y;
 	return (dx < dy ? dx : dy) - 1 /* S_OFFBOARD */;
 }
 
