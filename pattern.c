@@ -298,12 +298,12 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 char *
 pattern2str(char *str, struct pattern *p)
 {
-	strcat(str++, "(");
+	str = stpcpy(str, "(");
 	for (int i = 0; i < p->n; i++) {
-		if (i > 0) strcat(str++, " ");
+		if (i > 0) str = stpcpy(str, " ");
 		str = feature2str(str, &p->f[i]);
 	}
-	strcat(str++, ")");
+	str = stpcpy(str, ")");
 	return str;
 }
 
