@@ -68,11 +68,11 @@ enum feature_id {
 
 	/* Spatial configuration of stones in certain board area. */
 	/* Payload: [bits 31-24] Pattern radius (gridcular) */
-#define PF_SPATIAL_RADIUS	(255 << 24)
+#define PF_SPATIAL_RADIUS	24
 	/*          [bit 23]     Who to play? (1: White) */
-#define PF_SPATIAL_TOPLAY	(1 << 23)
+#define PF_SPATIAL_TOPLAY	23
 	/*          [other bits] Index in the spatial_dict. */
-#define PF_SPATIAL_INDEX	((1 << 23) - 1)
+#define PF_SPATIAL_INDEX	0
 	FEAT_SPATIAL,
 
 
