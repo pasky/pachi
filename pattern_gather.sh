@@ -33,7 +33,7 @@ sed -e '/^[^#]/Q' spatial.dict >/tmp/spatial.dict
 # join needs lexicographic order
 sort /tmp/pattern.pop >/tmp/pattern.filter
 grep -v '^#' spatial.dict | sort | join - /tmp/pattern.filter | # patterns with id in pattern.filter
-	sort -n | cut -d ' ' -f 2- | perl -ne 'print ++$a . " $_"' | # re-number patterns
+	sort -n | cut -d ' ' -f 2- | perl -pe '$_="$. $_"' | # re-number patterns
 	cat >>/tmp/spatial.dict
 
 echo -n "Counting hash collisions... "
