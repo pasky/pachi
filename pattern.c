@@ -302,27 +302,69 @@ pattern2str(char *str, struct pattern *p)
 /*** Spatial patterns dictionary */
 
 /* Zobrist hashes used for black/white stones in patterns. */
-static hash_t pthashes[MAX_PATTERN_AREA][4];
+#define PTH__ROTATIONS	16
+static hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][4];
 static void __attribute__((constructor)) pthashes_init(void)
 {
 	/* We need fixed hashes for all pattern-relative in
 	 * all pattern users! This is a simple way to generate
 	 * hopefully good ones. Park-Miller powa. :) */
+
+	/* We create a virtual board (centered at the sequence start),
+	 * plant the hashes there, then pick them up into the sequence
+	 * with correct coordinates. It would be possible to generate
+	 * the sequence point hashes directly, but the rotations would
+	 * make for enormous headaches. */
+	hash_t pthboard[MAX_PATTERN_AREA][4];
+	int pthbc = MAX_PATTERN_AREA / 2; // tengen coord
+
 	hash_t h = 31;
 	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
-		pthashes[i][S_NONE] = (h *= 16807);
-		pthashes[i][S_BLACK] = (h *= 16807);
-		pthashes[i][S_WHITE] = (h *= 16807);
-		pthashes[i][S_OFFBOARD] = (h *= 16807);
+		pthboard[i][S_NONE] = (h *= 16807);
+		pthboard[i][S_BLACK] = (h *= 16807);
+		pthboard[i][S_WHITE] = (h *= 16807);
+		pthboard[i][S_OFFBOARD] = (h *= 16807);
+	}
+
+	/* Virtual board with hashes created, now fill
+	 * pthashes[] with hashes for points in actual
+	 * sequences, also considering various rotations. */
+#define PTH_VMIRROR	1
+#define PTH_HMIRROR	2
+#define PTH_90ROT	4
+#define PTH_REVCOLOR	8
+	for (int r = 0; r < PTH__ROTATIONS; r++) {
+		for (int i = 0; i < MAX_PATTERN_AREA; i++) {
+			/* Rotate appropriately. */
+			int rx = ptcoords[i].x;
+			int ry = ptcoords[i].y;
+			if (r & PTH_VMIRROR) ry = -ry;
+			if (r & PTH_HMIRROR) rx = -rx;
+			if (r & PTH_90ROT) {
+				int rs = rx; rx = -ry; ry = rs;
+			}
+			int bi = pthbc + ry * MAX_PATTERN_DIST + rx;
+
+			/* Copy info. */
+			pthashes[r][i][S_NONE] = pthboard[bi][S_NONE];
+			if (r & PTH_REVCOLOR) {
+				pthashes[r][i][S_WHITE] = pthboard[bi][S_BLACK];
+				pthashes[r][i][S_BLACK] = pthboard[bi][S_WHITE];
+			} else {
+				pthashes[r][i][S_BLACK] = pthboard[bi][S_BLACK];
+				pthashes[r][i][S_WHITE] = pthboard[bi][S_WHITE];
+			}
+			pthashes[r][i][S_OFFBOARD] = pthboard[bi][S_OFFBOARD];
+		}
 	}
 }
 
 static hash_t
-spatial_hash(struct spatial *s)
+spatial_hash(int rotation, struct spatial *s)
 {
 	hash_t h = 0;
 	for (int i = 0; i < ptind[s->dist + 1]; i++) {
-		h ^= pthashes[i][spatial_point_at(*s, i)];
+		h ^= pthashes[rotation][i][spatial_point_at(*s, i)];
 	}
 	return h & spatial_hash_mask;
 }
@@ -399,16 +441,25 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	}
 }
 
+static char *
+spatial2str(struct spatial *s)
+{
+	static char buf[1024];
+	for (int i = 0; i < ptind[s->dist + 1]; i++) {
+		buf[i] = stone2char(spatial_point_at(*s, i));
+	}
+	buf[ptind[s->dist + 1]] = 0;
+	return buf;
+}
+
 static void
 spatial_dict_write(struct spatial_dict *dict, int id, FILE *f)
 {
 	struct spatial *s = &dict->spatials[id];
 	fprintf(f, "%d %d ", id, s->dist);
-	for (int i = 0; i < ptind[s->dist + 1]; i++) {
-		fputc(stone2char(spatial_point_at(*s, i)), f);
-	}
-	/* TODO: Isomorphism! */
-	fprintf(f, " %"PRIhash"", spatial_hash(s));
+	fputs(spatial2str(s), f);
+	for (int r = 0; r < PTH__ROTATIONS; r++)
+		fprintf(f, " %"PRIhash"", spatial_hash(r, s));
 	fputc('\n', f);
 }
 
@@ -470,28 +521,32 @@ spatial_dict_init(bool will_append)
 int
 spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 {
-	hash_t hash = spatial_hash(s);
+	hash_t hash = spatial_hash(0, s);
 	int id = dict->hash[hash];
 	if (id && dict->f) {
 		/* Check for collisions in append mode. */
-		if (dict->spatials[id].dist != s->dist ||
-		    memcmp(dict->spatials[id].points, s->points, ptind[s->dist + 1])) {
+		/* Tough job, we simply try if all rotations
+		 * are also covered by the existing record. */
+		for (int r = 0; r < PTH__ROTATIONS; r++) {
+			hash_t rhash = spatial_hash(r, s);
+			int rid = dict->hash[rhash];
+			if (rid == id)
+				continue;
 			if (DEBUGL(2))
-				fprintf(stderr, "Collision %d vs %d (hash %"PRIhash")\n",
-					id, dict->nspatials, hash);
+				fprintf(stderr, "Collision %d vs %d (hash %d:%"PRIhash")\n",
+					rid, dict->nspatials, r, rhash);
 			id = 0;
 			/* dict->collisions++; gets done by addh */
+			break;
 		}
 	}
-	if (id) {
-		return id;
-	}
+	if (id) return id;
 	if (!dict->f) return -1;
 
 	/* Add new pattern! */
 	id = spatial_dict_addc(dict, s);
-	/* TODO: Isomorphism! */
-	spatial_dict_addh(dict, hash, id);
+	for (int r = 0; r < PTH__ROTATIONS; r++)
+		spatial_dict_addh(dict, spatial_hash(r, s), id);
 	spatial_dict_write(dict, id, dict->f);
 	return id;
 }
