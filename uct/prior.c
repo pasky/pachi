@@ -78,7 +78,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 		if (!map->consider[c])
 			continue;
 		int d = coord_edge_distance(c, map->b);
-		if (d != 1 && d != 3)
+		if (d != 0 && d != 2)
 			continue;
 		/* The bonus applies only with no stones in immediate
 		 * vincinity. */
@@ -86,7 +86,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 			continue;
 		/* First line: 0 */
 		/* Third line: 1 */
-		add_prior_value(map, c, d == 3, u->prior->b19_eqex);
+		add_prior_value(map, c, d == 2, u->prior->b19_eqex);
 	} foreach_point_end;
 }
 
