@@ -18,6 +18,9 @@
 /* This is heavily influenced by (Coulom, 2007), of course. */
 /* TODO: Try completely separate ko / no-ko features. */
 
+/* See the HACKING file for another description of the pattern matcher and
+ * instructions on how to harvest and inspect patterns. */
+
 enum feature_id {
 	/* Implemented: */
 
