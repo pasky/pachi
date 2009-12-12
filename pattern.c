@@ -480,7 +480,7 @@ spatial_dict_init(bool will_append)
 	static const char *filename = "spatial.dict";
 	FILE *f = fopen(filename, "r");
 	if (!f && !will_append) {
-		if (DEBUGL(2))
+		if (DEBUGL(1))
 			fprintf(stderr, "No spatial dictionary, will not match spatial pattern features.\n");
 		return NULL;
 	}
@@ -533,7 +533,7 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 			int rid = dict->hash[rhash];
 			if (rid == id)
 				continue;
-			if (DEBUGL(2))
+			if (DEBUGL(1))
 				fprintf(stderr, "Collision %d vs %d (hash %d:%"PRIhash")\n",
 					rid, dict->nspatials, r, rhash);
 			id = 0;
