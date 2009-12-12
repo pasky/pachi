@@ -546,7 +546,15 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 		/* dict->collisions++; gets done by addh */
 no_collision:;
 	}
-	if (id) return id;
+	if (id) {
+		if (dict->spatials[id].dist != s->dist) {
+			if (DEBUGL(1))
+				fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
+					s->dist, dict->spatials[id].dist, id, hash);
+			return -1;
+		}
+		return id;
+	}
 	if (!dict->f) return -1;
 
 	/* Add new pattern! */
