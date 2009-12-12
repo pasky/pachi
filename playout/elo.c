@@ -47,8 +47,8 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 
 	/* First, assign per-point probabilities. */
 
-	foreach_point(b) {
-		struct move m = { .coord = c, .color = to_play };
+	for (int f = 0; f < b->flen; f++) {
+		struct move m = { .coord = b->f[f], .color = to_play };
 
 		/* Skip invalid moves. */
 		if (!board_is_valid_move(b, &m))
@@ -57,20 +57,20 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 		/* We shall never fill our own single-point eyes. */
 		/* XXX: In some rare situations, this prunes the best move:
 		 * Bulk-five nakade with eye at 1-1 point. */
-		if (board_is_one_point_eye(b, &c, to_play)) {
+		if (board_is_one_point_eye(b, &m.coord, to_play)) {
 			continue;
 		}
 
 		/* Each valid move starts with gamma 1. */
-		probdist_add(pd, c, 1.f);
+		probdist_add(pd, m.coord, 1.f);
 
 		/* Some easy features: */
 
-		if (is_bad_selfatari(b, to_play, c))
-			probdist_mul(pd, c, pp->selfatari);
+		if (is_bad_selfatari(b, to_play, m.coord))
+			probdist_mul(pd, m.coord, pp->selfatari);
 
 		/* TODO: Some more actual heuristics! */
-	} foreach_point_end;
+	}
 
 	/* TODO: per-group probabilities. */
 }
