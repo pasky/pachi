@@ -12,6 +12,7 @@
 struct patternscan {
 	int debug_level;
 	struct pattern_config pc;
+	bool fixed_dict;
 };
 
 
@@ -67,8 +68,15 @@ patternscan_state_init(char *arg)
 					ps->debug_level = atoi(optval);
 				else
 					ps->debug_level++;
+			} else if (!strcasecmp(optname, "fixed_dict")) {
+				/* If set, do not add new stone spatials
+				 * to the dictionary, compute patterns only
+				 * from already recorded ones. */
+				ps->fixed_dict = !optval || atoi(optval);
+
 			/* See pattern.h:pattern_config for description and
-			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values. */
+			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values
+			 * of the following options. */
 			} else if (!strcasecmp(optname, "spat_min") && optval) {
 				ps->pc.spat_min = atoi(optval);
 			} else if (!strcasecmp(optname, "spat_max") && optval) {
@@ -81,13 +89,14 @@ patternscan_state_init(char *arg)
 				ps->pc.ldist_max = atoi(optval);
 			} else if (!strcasecmp(optname, "mcsims") && optval) {
 				ps->pc.mcsims = atoi(optval);
+
 			} else {
 				fprintf(stderr, "patternscan: Invalid engine argument %s or missing value\n", optname);
 				exit(EXIT_FAILURE);
 			}
 		}
 	}
-	ps->pc.spat_dict = spatial_dict_init(true);
+	ps->pc.spat_dict = spatial_dict_init(!ps->fixed_dict);
 
 	return ps;
 }
