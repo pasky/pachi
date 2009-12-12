@@ -282,8 +282,11 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 			f->id = FEAT_SPATIAL;
 			f->payload = (d << PF_SPATIAL_RADIUS);
 			s.dist = d;
-			f->payload |= spatial_dict_get(pc->spat_dict, &s) << PF_SPATIAL_INDEX;
-			(f++, p->n++);
+			int sid = spatial_dict_get(pc->spat_dict, &s);
+			if (sid > 0) {
+				f->payload |= sid << PF_SPATIAL_INDEX;
+				(f++, p->n++);
+			} /* else not found, ignore */
 		}
 	}
 
