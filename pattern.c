@@ -201,6 +201,7 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 		f->id = FEAT_SELFATARI;
 		/* TODO: Dumb selfatari detection. */
 		f->payload = 1 << PF_SELFATARI_SMART;
+		(f++, p->n++);
 	}
 
 	/* FEAT_ATARI */
