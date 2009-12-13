@@ -11,11 +11,11 @@
 # During the conversion, you will need about 100M per ~100 games, after
 # it's over it will take much less.
 #
-# To get patterns in competitive mode (also get information about unplayed
+# To get patterns in competion mode (also get information about unplayed
 # patterns present at the board, not just the single played one per move),
 # run this script as:
 #
-#	PATARGS=",competitive" ./pattern_gather.sh ...
+#	PATARGS=",competition" ./pattern_gather.sh ...
 
 spatials=5000
 
