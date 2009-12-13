@@ -10,6 +10,12 @@
 # You really want to run this on a fast filesystem, not NFS or anything.
 # During the conversion, you will need about 100M per ~100 games, after
 # it's over it will take much less.
+#
+# To get patterns in competitive mode (also get information about unplayed
+# patterns present at the board, not just the single played one per move),
+# run this script as:
+#
+#	PATARGS=",competitive" ./pattern_gather.sh ...
 
 spatials=5000
 
@@ -47,7 +53,7 @@ rm /tmp/patterns /tmp/pattern.pop /tmp/pattern.filter
 # Now, re-scan patterns with limited dictionary!
 echo "Gathering patterns (2nd pass)..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
-	./zzgo -e patternscan fixed_dict >patterns
+	./zzgo -e patternscan fixed_dict$PATARGS >patterns
 
 echo "Gathered pattern data in .:"
 ls -l patterns spatial.dict
