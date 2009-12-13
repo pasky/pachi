@@ -19,7 +19,7 @@
 
 spatials=5000
 
-rm -f spatial.dict
+rm -f patterns.spat
 
 echo "Gathering patterns (1st pass)..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
@@ -33,20 +33,20 @@ cat /tmp/patterns | sed 's/ /\n/g' |
 	head -n $spatials | awk '{print$2}' | # take 5000 top ids
 	cat >/tmp/pattern.pop
 
-echo "Composing new spatial.dict..."
+echo "Composing new patterns.spat..."
 # Preserve top comments
-sed -e '/^[^#]/Q' spatial.dict >/tmp/spatial.dict
+sed -e '/^[^#]/Q' patterns.spat >/tmp/patterns.spat
 # join needs lexicographic order
 sort /tmp/pattern.pop >/tmp/pattern.filter
-grep -v '^#' spatial.dict | sort | join - /tmp/pattern.filter | # patterns with id in pattern.filter
+grep -v '^#' patterns.spat | sort | join - /tmp/pattern.filter | # patterns with id in pattern.filter
 	sort -n | cut -d ' ' -f 2- | perl -pe '$_="$. $_"' | # re-number patterns
-	cat >>/tmp/spatial.dict
+	cat >>/tmp/patterns.spat
 
 echo -n "Counting hash collisions... "
-perl -lne 'chomp; my ($id, $d, $p, @h) = split(/ /, $_); foreach (@h) { next if $h{$_} = $id; print "collision $id - $h{$_} ($_)" if $h{$_}; $h{$_}=$id; }' /tmp/spatial.dict | wc -l
+perl -lne 'chomp; my ($id, $d, $p, @h) = split(/ /, $_); foreach (@h) { next if $h{$_} = $id; print "collision $id - $h{$_} ($_)" if $h{$_}; $h{$_}=$id; }' /tmp/patterns.spat | wc -l
 
-echo "Deploying spatial.dict in final position..."
-mv /tmp/spatial.dict spatial.dict
+echo "Deploying patterns.spat in final position..."
+mv /tmp/patterns.spat patterns.spat
 rm /tmp/patterns /tmp/pattern.pop /tmp/pattern.filter
 
 
@@ -56,4 +56,4 @@ echo "Gathering patterns (2nd pass)..."
 	./zzgo -e patternscan fixed_dict$PATARGS >patterns
 
 echo "Gathered pattern data in .:"
-ls -l patterns spatial.dict
+ls -l patterns patterns.spat

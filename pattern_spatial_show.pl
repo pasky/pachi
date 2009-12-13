@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # pattern_spatial_show: Show given spatial dictionary entry on board
 
-my $f = "spatial.dict";
+my $f = "patterns.spat";
 my $id = $ARGV[0];
 
 my @ofs = ();

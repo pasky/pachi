@@ -482,7 +482,7 @@ spatial_dict_load(struct spatial_dict *dict, FILE *f)
 struct spatial_dict *
 spatial_dict_init(bool will_append)
 {
-	static const char *filename = "spatial.dict";
+	static const char *filename = "patterns.spat";
 	FILE *f = fopen(filename, "r");
 	if (!f && !will_append) {
 		if (DEBUGL(1))

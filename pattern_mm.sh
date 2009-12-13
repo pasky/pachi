@@ -9,7 +9,7 @@
 # It will scan a given SGF collection, collect patterns, and use the MM tool
 # to compute the relative strength of various features. The output will be
 #
-#	* spatial.dict: Dictionary of spatial feature positions
+#	* patterns.spat: Dictionary of spatial feature positions
 #	* patterns.gamma: Gamma values of pattern features
 #
 # If you run this on hundreds of games, be sure you are doing it on local
@@ -36,6 +36,6 @@ cat /tmp/patterns.mm | sed 's/  */ /; s/^ //;' | join -o 2.3,1.2 /tmp/patterns.m
 
 rm -f /tmp/patterns.enum /tmp/patterns.mm
 echo "Product:"
-ls -l patterns.gamma spatial.dict
+ls -l patterns.gamma patterns.spat
 echo "Leaving behind for analysis:"
 ls -l patterns.fdict mm-with-freq.dat
