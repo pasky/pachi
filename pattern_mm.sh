@@ -25,6 +25,7 @@ mkfifo patterns
 PATARGS=",competition" ./pattern_gather.sh "$@"
 wait
 rm -f patterns
+ls -l /tmp/patterns.enum
 
 # There must not be pipeline here, because of aux patterns.fdict file!
 
