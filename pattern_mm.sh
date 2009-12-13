@@ -34,8 +34,8 @@ cat /tmp/patterns.enum | ./pattern_mminput.pl | mm/mm >/tmp/patterns.mm
 echo "Associating gamma values..."
 cat /tmp/patterns.mm | sed 's/  */ /; s/^ //;' | join -o 2.3,1.2 /tmp/patterns.mm patterns.fdict | sed 's/^s\.[0-9]*:/s:/' >patterns.gamma
 
-rm -f /tmp/patterns.enum
+rm -f /tmp/patterns.enum /tmp/patterns.mm
 echo "Product:"
 ls -l patterns.gamma spatial.dict
 echo "Leaving behind for analysis:"
-ls -l patterns.fdict /tmp/patterns.mm mm-with-freq.dat
+ls -l patterns.fdict mm-with-freq.dat
