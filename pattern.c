@@ -603,7 +603,7 @@ no_collision:;
 	}
 	if (id) {
 		if (dict->spatials[id].dist != s->dist) {
-			if (DEBUGL(1))
+			if (DEBUGL(6))
 				fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
 					s->dist, dict->spatials[id].dist, id, hash);
 			return -1;
