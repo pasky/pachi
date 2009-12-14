@@ -139,14 +139,12 @@ struct features_gamma {
 	/* Indexed by feature and payload; each feature array is allocated for
 	 * all possible payloads to fit in. */
 	float *gamma[FEAT_MAX];
-	/* The spatial dictionary associated with the gammas; it influences
-	 * the size of gamma[FEAT_SPATIAL]. */
-	struct spatial_dict *spat_dict;
+	struct pattern_config *pc;
 };
 
 /* Initializes gamma values, pre-loading existing records from
  * default filename, falling back to gamma==1 for unspecified values. */
-struct features_gamma *features_gamma_init(struct spatial_dict *dict);
+struct features_gamma *features_gamma_init(struct pattern_config *pc);
 
 /* Look up gamma of given feature, or set one if gamma is not NULL. */
 float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);

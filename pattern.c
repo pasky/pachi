@@ -333,15 +333,15 @@ features_gamma_load(struct features_gamma *fg, char *filename)
 }
 
 struct features_gamma *
-features_gamma_init(struct spatial_dict *dict)
+features_gamma_init(struct pattern_config *pc)
 {
 	struct features_gamma *fg = calloc(1, sizeof(*fg));
-	fg->spat_dict = dict;
+	fg->pc = pc;
 	for (int i = 0; i < FEAT_MAX; i++) {
 		int n = features[i].payloads;
 		if (n <= 0) {
 			assert(i == FEAT_SPATIAL);
-			n = dict->nspatials;
+			n = pc->spat_dict->nspatials;
 		}
 		fg->gamma[i] = malloc(n * sizeof(float));
 		for (int j = 0; j < n; j++) {
