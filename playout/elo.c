@@ -182,5 +182,14 @@ playout_elo_init(char *arg)
 
 	pp->choose.pc = pc; memcpy(pp->choose.ps, PATTERN_SPEC_MATCHALL, sizeof(PATTERN_SPEC_MATCHALL));
 	pp->assess.pc = pc; memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(PATTERN_SPEC_MATCHALL));
+
+	/* In playouts, we need to operate with much smaller set of features
+	 * in order to keep reasonable speed. */
+	/* TODO: Configurable. */ /* TODO: Tune. */
+	pp->choose.pc.spat_max = 5;
+	/* By default, all is on. */
+	pp->choose.ps[FEAT_CAPTURE] &= ~(PF_CAPTURE_ATARIDEF|PF_CAPTURE_RECAPTURE);
+	pp->choose.ps[FEAT_SELFATARI] = 0;
+
 	return p;
 }
