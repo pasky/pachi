@@ -48,16 +48,16 @@ str2feature(char *str, struct feature *f)
 
 	int flen = strcspn(str, ":");
 	for (int i = 0; i < sizeof(features)/sizeof(features[0]); i++)
-		if (strlen(features[i].name) == flen && strncmp(features[i].name, str, flen)) {
+		if (strlen(features[i].name) == flen && !strncmp(features[i].name, str, flen)) {
 			f->id = i;
 			goto found;
 		}
-	fprintf(stderr, "invalid featurespec: %s\n", str);
+	fprintf(stderr, "invalid featurespec: %s[%d]\n", str, flen);
 	exit(EXIT_FAILURE);
 
 found:
 	str += flen + 1;
-	f->payload = strtoull(str, &str, 10);
+	f->payload = strtoull(str, &str, 16);
 	return str;
 }
 
