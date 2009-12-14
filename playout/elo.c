@@ -9,7 +9,13 @@
  * competition in ELO terms - each spot is represented by a team
  * of features appearing there; the team gamma is product of feature
  * gammas. The team gammas make for a probability distribution of
- * moves to be played. */
+ * moves to be played.
+ *
+ * We use the general pattern classifier that will find the features
+ * for us, and external datasets that can be harvested from a set
+ * of game records (see the HACKING file for details): patterns.spat
+ * as a dictionary of spatial stone configurations, and patterns.gamma
+ * with strengths of particular features. */
 
 #include <assert.h>
 #include <math.h>
@@ -19,6 +25,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "pattern.h"
 #include "playout.h"
 #include "playout/elo.h"
 #include "random.h"
@@ -32,6 +39,8 @@
 
 struct elo_policy {
 	float selfatari;
+	struct pattern_config pc;
+	struct features_gamma *fg;
 };
 
 
@@ -50,6 +59,11 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 	for (int f = 0; f < b->flen; f++) {
 		struct move m = { .coord = b->f[f], .color = to_play };
 
+		/* Skip pass (for now)? */
+		if (is_pass(m.coord))
+			continue;
+		//fprintf(stderr, "<%d> %s\n", f, coord2sstr(m.coord, b));
+
 		/* Skip invalid moves. */
 		if (!board_is_valid_move(b, &m))
 			continue;
@@ -65,14 +79,23 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 		probdist_add(pd, m.coord, 1.f);
 
 		/* Some easy features: */
-
+		/* XXX: We just disable them for now since we call the
+		 * pattern matcher; you need the gammas file. */
+#if 0
 		if (is_bad_selfatari(b, to_play, m.coord))
 			probdist_mul(pd, m.coord, pp->selfatari);
+#endif
 
-		/* TODO: Some more actual heuristics! */
+		/* Match pattern features: */
+		struct pattern p;
+		pattern_match(&pp->pc, &p, b, &m);
+		for (int i = 0; i < p.n; i++) {
+			/* Multiply together gammas of all pattern features. */
+			float gamma = feature_gamma(pp->fg, &p.f[i], NULL);
+			probdist_mul(pd, m.coord, gamma);
+		}
+		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->moves[m.coord]);
 	}
-
-	/* TODO: per-group probabilities. */
 }
 
 
@@ -117,6 +140,7 @@ playout_elo_init(char *arg)
 
 	/* Some defaults based on the table in Remi Coulom's paper. */
 	pp->selfatari = 0.06;
+	pp->pc = DEFAULT_PATTERN_CONFIG;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -137,6 +161,9 @@ playout_elo_init(char *arg)
 			}
 		}
 	}
+
+	pp->pc.spat_dict = spatial_dict_init(false);
+	pp->fg = features_gamma_init(&pp->pc);
 
 	return p;
 }
