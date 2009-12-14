@@ -29,8 +29,8 @@ static const struct feature_info {
 	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 2 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
 	[FEAT_BORDER] = { .name = "border", .payloads = 1 },
-	[FEAT_LDIST] = { .name = "ldist", .payloads = 1 },
-	[FEAT_LLDIST] = { .name = "lldist", .payloads = 1 },
+	[FEAT_LDIST] = { .name = "ldist", .payloads = -1 },
+	[FEAT_LLDIST] = { .name = "lldist", .payloads = -1 },
 	[FEAT_SPATIAL] = { .name = "s", .payloads = -1 },
 	[FEAT_MCOWNER] = { .name = "mcowner", .payloads = 16 },
 };
@@ -340,8 +340,15 @@ features_gamma_init(struct pattern_config *pc)
 	for (int i = 0; i < FEAT_MAX; i++) {
 		int n = features[i].payloads;
 		if (n <= 0) {
-			assert(i == FEAT_SPATIAL);
-			n = pc->spat_dict->nspatials;
+			switch (i) {
+				case FEAT_SPATIAL:
+					n = pc->spat_dict->nspatials; break;
+				case FEAT_LDIST:
+				case FEAT_LLDIST:
+					n = pc->ldist_max; break;
+				default:
+					assert(0);
+			}
 		}
 		fg->gamma[i] = malloc(n * sizeof(float));
 		for (int j = 0; j < n; j++) {
