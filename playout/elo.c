@@ -94,6 +94,8 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 		for (int i = 0; i < p.n; i++) {
 			/* Multiply together gammas of all pattern features. */
 			float gamma = feature_gamma(pp->fg, &p.f[i], NULL);
+			//char buf[256] = ""; feature2str(buf, &p.f[i]);
+			//fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
 			probdist_mul(pd, m.coord, gamma);
 		}
 		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->moves[m.coord]);
