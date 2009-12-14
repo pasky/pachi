@@ -38,6 +38,7 @@
 /* Note that the context can be shared by multiple threads! */
 
 struct patternset {
+	pattern_spec ps;
 	struct pattern_config pc;
 };
 
@@ -94,7 +95,7 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 
 		/* Match pattern features: */
 		struct pattern p;
-		pattern_match(&ps->pc, PATTERN_SPEC_MATCHALL, &p, b, &m);
+		pattern_match(&ps->pc, ps->ps, &p, b, &m);
 		for (int i = 0; i < p.n; i++) {
 			/* Multiply together gammas of all pattern features. */
 			float gamma = feature_gamma(pp->fg, &p.f[i], NULL);
@@ -115,7 +116,6 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	struct elo_policy *pp = p->data;
 	struct probdist pd;
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
-
 	return probdist_pick(&pd);
 }
 
@@ -180,8 +180,7 @@ playout_elo_init(char *arg)
 	pc.spat_dict = spatial_dict_init(false);
 	pp->fg = features_gamma_init(&pc);
 
-	pp->choose.pc = pc;
-	pp->assess.pc = pc;
-
+	pp->choose.pc = pc; memcpy(pp->choose.ps, PATTERN_SPEC_MATCHALL, sizeof(PATTERN_SPEC_MATCHALL));
+	pp->assess.pc = pc; memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(PATTERN_SPEC_MATCHALL));
 	return p;
 }
