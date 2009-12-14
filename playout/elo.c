@@ -116,7 +116,9 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	struct elo_policy *pp = p->data;
 	struct probdist pd;
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
-	return probdist_pick(&pd);
+	coord_t c = probdist_pick(&pd);
+	probdist_done(&pd);
+	return c;
 }
 
 void
