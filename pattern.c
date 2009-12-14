@@ -313,7 +313,11 @@ pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, str
 			f->id = FEAT_SPATIAL;
 			f->payload = (d << PF_SPATIAL_RADIUS);
 			s.dist = d;
-			int sid = spatial_dict_get(pc->spat_dict, &s);
+			int sid;
+			if (unlikely(!!pc->spat_dict->f))
+				sid = spatial_dict_put(pc->spat_dict, &s);
+			else
+				sid = spatial_dict_get(pc->spat_dict, &s);
 			if (sid > 0) {
 				f->payload |= sid << PF_SPATIAL_INDEX;
 				(f++, p->n++);
@@ -617,7 +621,21 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 {
 	hash_t hash = spatial_hash(0, s);
 	int id = dict->hash[hash];
-	if (id && dict->f) {
+	if (!id) return -1;
+	if (dict->spatials[id].dist != s->dist) {
+		if (DEBUGL(6))
+			fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
+				s->dist, dict->spatials[id].dist, id, hash);
+		return -1;
+	}
+	return id;
+}
+
+int
+spatial_dict_put(struct spatial_dict *dict, struct spatial *s)
+{
+	int id = spatial_dict_get(dict, s);
+	if (id > 0) {
 		/* Check for collisions in append mode. */
 		/* Tough job, we simply try if any other rotation
 		 * is also covered by the existing record. */
@@ -625,26 +643,19 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 		for (r = 1; r < PTH__ROTATIONS; r++) {
 			rhash = spatial_hash(r, s);
 			rid = dict->hash[rhash];
-			if (rid == id)
-				goto no_collision;
+			if (rid != id)
+				goto collision;
 		}
+		/* All rotations match, id is good to go! */
+		return id;
+
+collision:
 		if (DEBUGL(1))
 			fprintf(stderr, "Collision %d vs %d (hash %d:%"PRIhash")\n",
-				id, dict->nspatials, r, hash);
+				id, dict->nspatials, r, spatial_hash(0, s));
 		id = 0;
 		/* dict->collisions++; gets done by addh */
-no_collision:;
 	}
-	if (id) {
-		if (dict->spatials[id].dist != s->dist) {
-			if (DEBUGL(6))
-				fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
-					s->dist, dict->spatials[id].dist, id, hash);
-			return -1;
-		}
-		return id;
-	}
-	if (!dict->f) return -1;
 
 	/* Add new pattern! */
 	id = spatial_dict_addc(dict, s);

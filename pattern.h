@@ -233,9 +233,11 @@ struct spatial_dict {
 struct spatial_dict *spatial_dict_init(bool will_append);
 
 /* Lookup specified spatial pattern in the dictionary; return index
- * of the pattern. If the pattern is not found, in read-only mode
- * -1 will be returned, in append mode it will be added both to the
- * dictionary and its file. */
+ * of the pattern. If the pattern is not found, -1 will be returned. */
 int spatial_dict_get(struct spatial_dict *dict, struct spatial *s);
+
+/* Store specified spatial pattern (both in dictionary and the underlying
+ * file storage) if it is not known yet. Returns pattern id. */
+int spatial_dict_put(struct spatial_dict *dict, struct spatial *s);
 
 #endif
