@@ -236,6 +236,8 @@ pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
 	return f;
 }
 
+static inline hash_t spatial_hash_one(int rotation, int i, enum stone color);
+
 static struct feature *
 pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
@@ -261,6 +263,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 			if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
 			/* Append point. */
 			s.points[j / 4] |= bt[board_atxy(b, x, y)] << ((j % 4) * 2);
+			h ^= spatial_hash_one(0, j, bt[board_atxy(b, x, y)]);
 		}
 		if (d < pc->spat_min)
 			continue;
@@ -268,12 +271,11 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 		f->id = FEAT_SPATIAL;
 		f->payload = (d << PF_SPATIAL_RADIUS);
 		s.dist = d;
-		h ^= spatial_hash(0, &s, ptind[d]);
 		int sid;
 		if (unlikely(!!pc->spat_dict->f))
-			sid = spatial_dict_put(pc->spat_dict, &s, h);
+			sid = spatial_dict_put(pc->spat_dict, &s, h & spatial_hash_mask);
 		else
-			sid = spatial_dict_get(pc->spat_dict, &s, h);
+			sid = spatial_dict_get(pc->spat_dict, &s, h & spatial_hash_mask);
 		if (sid > 0) {
 			f->payload |= sid << PF_SPATIAL_INDEX;
 			(f++, p->n++);
@@ -484,6 +486,12 @@ static void __attribute__((constructor)) pthashes_init(void)
 			pthashes[r][i][S_OFFBOARD] = pthboard[bi][S_OFFBOARD];
 		}
 	}
+}
+
+static inline hash_t
+spatial_hash_one(int rotation, int i, enum stone color)
+{
+	return pthashes[rotation][i][color];
 }
 
 inline hash_t
