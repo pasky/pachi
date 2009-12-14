@@ -19,23 +19,25 @@ struct pattern_config DEFAULT_PATTERN_CONFIG = {
 };
 
 
-static const char *fnames[] = {
-	[FEAT_SPATIAL] = "s",
-	[FEAT_PASS] = "pass",
-	[FEAT_CAPTURE] = "capture",
-	[FEAT_AESCAPE] = "atariescape",
-	[FEAT_SELFATARI] = "selfatari",
-	[FEAT_ATARI] = "atari",
-	[FEAT_BORDER] = "border",
-	[FEAT_LDIST] = "ldist",
-	[FEAT_LLDIST] = "lldist",
-	[FEAT_MCOWNER] = "mcowner",
+static const struct feature_info {
+	char *name;
+} features[FEAT_MAX] = {
+	[FEAT_SPATIAL] = { .name = "s" },
+	[FEAT_PASS] = { .name = "pass" },
+	[FEAT_CAPTURE] = { .name = "capture" },
+	[FEAT_AESCAPE] = { .name = "atariescape" },
+	[FEAT_SELFATARI] = { .name = "selfatari" },
+	[FEAT_ATARI] = { .name = "atari" },
+	[FEAT_BORDER] = { .name = "border" },
+	[FEAT_LDIST] = { .name = "ldist" },
+	[FEAT_LLDIST] = { .name = "lldist" },
+	[FEAT_MCOWNER] = { .name = "mcowner" },
 };
 
 char *
 feature2str(char *str, struct feature *f)
 {
-	return str + sprintf(str + strlen(str), "%s:%"PRIx32, fnames[f->id], f->payload);
+	return str + sprintf(str + strlen(str), "%s:%"PRIx32, features[f->id].name, f->payload);
 }
 
 char *
@@ -44,8 +46,8 @@ str2feature(char *str, struct feature *f)
 	while (isspace(*str)) str++;
 
 	int flen = strcspn(str, ":");
-	for (int i = 0; i < sizeof(fnames)/sizeof(fnames[0]); i++)
-		if (strlen(fnames[i]) == flen && strncmp(fnames[i], str, flen)) {
+	for (int i = 0; i < sizeof(features)/sizeof(features[0]); i++)
+		if (strlen(features[i].name) == flen && strncmp(features[i].name, str, flen)) {
 			f->id = i;
 			goto found;
 		}
