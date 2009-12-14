@@ -224,7 +224,7 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 			 * very obvious situations, look at complete.gtp. */
 
 			if (!is_pass(b->ko.coord))
-				f->payload |= 1 << PF_CAPTURE_KO;
+				f->payload |= 1 << PF_ATARI_KO;
 
 			(f++, p->n++);
 		});
