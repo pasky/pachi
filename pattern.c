@@ -18,6 +18,18 @@ struct pattern_config DEFAULT_PATTERN_CONFIG = {
 	.mcsims = 0, /* Unsupported. */
 };
 
+pattern_spec PATTERN_SPEC_MATCHALL = {
+	[FEAT_PASS] = ~0,
+	[FEAT_CAPTURE] = ~0,
+	[FEAT_AESCAPE] = ~0,
+	[FEAT_SELFATARI] = ~0,
+	[FEAT_ATARI] = ~0,
+	[FEAT_BORDER] = ~0,
+	[FEAT_LDIST] = ~0,
+	[FEAT_LLDIST] = ~0,
+	[FEAT_SPATIAL] = ~0,
+	[FEAT_MCOWNER] = ~0,
+};
 
 static const struct feature_info {
 	char *name;
@@ -121,8 +133,11 @@ static void __attribute__((constructor)) ptcoords_init(void)
 
 
 void
-pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m)
+pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, struct board *b, struct move *m)
 {
+#define PS_ANY(F) (ps[FEAT_ ## F] & (1 << 31))
+#define PS_PF(F, P) (ps[FEAT_ ## F] & (PF_ ## F ## _ ## P))
+
 	p->n = 0;
 	struct feature *f = &p->f[0];
 
@@ -131,14 +146,17 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 
 	/* FEAT_PASS */
 	if (is_pass(m->coord)) {
-		f->id = FEAT_PASS; f->payload = 0;
-		f->payload |= (b->moves > 0 && is_pass(b->last_move.coord)) << PF_PASS_LASTPASS;
-		p->n++;
+		if (PS_ANY(PASS)) {
+			f->id = FEAT_PASS; f->payload = 0;
+			if (PS_PF(PASS, LASTPASS))
+				f->payload |= (b->moves > 0 && is_pass(b->last_move.coord)) << PF_PASS_LASTPASS;
+			p->n++;
+		}
 		return;
 	}
 
 	/* FEAT_CAPTURE */
-	{
+	if (PS_ANY(CAPTURE)) {
 		foreach_neighbor(b, m->coord, {
 			if (board_at(b, c) != stone_other(m->color))
 				continue;
@@ -149,12 +167,14 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 			/* Capture! */
 			f->id = FEAT_CAPTURE; f->payload = 0;
 
-			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
+			if (PS_PF(CAPTURE, LADDER))
+				f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
 			/* TODO: is_ladder() is too conservative in some
 			 * very obvious situations, look at complete.gtp. */
 
 			/* TODO: PF_CAPTURE_RECAPTURE */
 
+			if (PS_PF(CAPTURE, ATARIDEF))
 			foreach_in_group(b, g) {
 				foreach_neighbor(b, c, {
 					assert(board_at(b, c) != S_NONE || c == m->coord);
@@ -168,7 +188,8 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 				});
 			} foreach_in_group_end;
 
-			if (group_is_onestone(b, g)
+			if (PS_PF(CAPTURE, KO)
+			    && group_is_onestone(b, g)
 			    && neighbor_count_at(b, m->coord, stone_other(m->color))
 			       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
 				f->payload |= 1 << PF_CAPTURE_KO;
@@ -179,7 +200,7 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 
 
 	/* FEAT_AESCAPE */
-	{
+	if (PS_ANY(AESCAPE)) {
 		foreach_neighbor(b, m->coord, {
 			if (board_at(b, c) != m->color)
 				continue;
@@ -190,7 +211,8 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 			/* In atari! */
 			f->id = FEAT_AESCAPE; f->payload = 0;
 
-			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
+			if (PS_PF(AESCAPE, LADDER))
+				f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
 			/* TODO: is_ladder() is too conservative in some
 			 * very obvious situations, look at complete.gtp. */
 
@@ -200,15 +222,17 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 
 
 	/* FEAT_SELFATARI */
-	if (is_bad_selfatari(b, m->color, m->coord)) {
-		f->id = FEAT_SELFATARI;
-		/* TODO: Dumb selfatari detection. */
-		f->payload = 1 << PF_SELFATARI_SMART;
-		(f++, p->n++);
+	if (PS_ANY(SELFATARI)) {
+		if (is_bad_selfatari(b, m->color, m->coord)) {
+			f->id = FEAT_SELFATARI;
+			/* TODO: Dumb selfatari detection. */
+			f->payload = 1 << PF_SELFATARI_SMART;
+			(f++, p->n++);
+		}
 	}
 
 	/* FEAT_ATARI */
-	{
+	if (PS_ANY(ATARI)) {
 		foreach_neighbor(b, m->coord, {
 			if (board_at(b, c) != stone_other(m->color))
 				continue;
@@ -219,11 +243,12 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 			/* Can atari! */
 			f->id = FEAT_ATARI; f->payload = 0;
 
-			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_ATARI_LADDER;
+			if (PS_PF(ATARI, LADDER))
+				f->payload |= is_ladder(b, m->coord, g, true, true) << PF_ATARI_LADDER;
 			/* TODO: is_ladder() is too conservative in some
 			 * very obvious situations, look at complete.gtp. */
 
-			if (!is_pass(b->ko.coord))
+			if (PS_PF(ATARI, KO) && !is_pass(b->ko.coord))
 				f->payload |= 1 << PF_ATARI_KO;
 
 			(f++, p->n++);
@@ -231,15 +256,17 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 	}
 
 	/* FEAT_BORDER */
-	int bdist = coord_edge_distance(m->coord, b);
-	if (bdist <= pc->bdist_max) {
-		f->id = FEAT_BORDER;
-		f->payload = bdist;
-		(f++, p->n++);
+	if (PS_ANY(BORDER)) {
+		int bdist = coord_edge_distance(m->coord, b);
+		if (bdist <= pc->bdist_max) {
+			f->id = FEAT_BORDER;
+			f->payload = bdist;
+			(f++, p->n++);
+		}
 	}
 
 	/* FEAT_LDIST */
-	if (pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
+	if (PS_ANY(LDIST) && pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
 		int ldist = coord_gridcular_distance(m->coord, b->last_move.coord, b);
 		if (pc->ldist_min <= ldist && ldist <= pc->ldist_max) {
 			f->id = FEAT_LDIST;
@@ -249,7 +276,7 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 	}
 
 	/* FEAT_LLDIST */
-	if (pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
+	if (PS_ANY(LLDIST) && pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
 		int lldist = coord_gridcular_distance(m->coord, b->last_move2.coord, b);
 		if (pc->ldist_min <= lldist && lldist <= pc->ldist_max) {
 			f->id = FEAT_LLDIST;
@@ -259,7 +286,7 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, str
 	}
 
 	/* FEAT_SPATIAL */
-	if (pc->spat_max > 0 && pc->spat_dict) {
+	if (PS_ANY(SPATIAL) && pc->spat_max > 0 && pc->spat_dict) {
 		assert(pc->spat_min > 0);
 
 		/* We record all spatial patterns black-to-play; simply

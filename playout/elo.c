@@ -90,7 +90,7 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 
 		/* Match pattern features: */
 		struct pattern p;
-		pattern_match(&pp->pc, &p, b, &m);
+		pattern_match(&pp->pc, PATTERN_SPEC_MATCHALL, &p, b, &m);
 		for (int i = 0; i < p.n; i++) {
 			/* Multiply together gammas of all pattern features. */
 			float gamma = feature_gamma(pp->fg, &p.f[i], NULL);

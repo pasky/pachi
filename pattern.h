@@ -119,6 +119,15 @@ struct pattern_config {
 };
 extern struct pattern_config DEFAULT_PATTERN_CONFIG;
 
+/* The pattern_spec[] specifies which features to tests for;
+ * highest bit controls whether to test for the feature at all,
+ * then for bitmap features (except FEAT_SPATIAL) the rest
+ * of the bits controls various PF tests; for non-bitmap
+ * features, you will need to tweak the patternconfig to
+ * fine-tune them. */
+typedef uint32_t pattern_spec[FEAT_MAX];
+extern pattern_spec PATTERN_SPEC_MATCHALL;
+
 
 /* Append feature to string. */
 char *feature2str(char *str, struct feature *f);
@@ -130,7 +139,7 @@ char *pattern2str(char *str, struct pattern *p);
 
 /* Initialize p and fill it with features matched by the
  * given board move. */
-void pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m);
+void pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, struct board *b, struct move *m);
 
 
 /* Comparative strengths of all feature-payload pairs (initialized to 1 for
