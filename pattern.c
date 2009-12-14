@@ -132,96 +132,183 @@ static void __attribute__((constructor)) ptcoords_init(void)
 }
 
 
-void
-pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, struct board *b, struct move *m)
-{
+/* pattern_spec helpers */
 #define PS_ANY(F) (ps[FEAT_ ## F] & (1 << 31))
 #define PS_PF(F, P) (ps[FEAT_ ## F] & (PF_ ## F ## _ ## P))
 
+static struct feature *
+pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
+                      struct pattern *p, struct feature *f,
+                      struct board *b, struct move *m)
+{
+	foreach_neighbor(b, m->coord, {
+		if (board_at(b, c) != stone_other(m->color))
+			continue;
+		group_t g = group_at(b, c);
+		if (!g || board_group_info(b, g).libs != 1)
+			continue;
+
+		/* Capture! */
+		f->id = FEAT_CAPTURE; f->payload = 0;
+
+		if (PS_PF(CAPTURE, LADDER))
+			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
+		/* TODO: is_ladder() is too conservative in some
+		 * very obvious situations, look at complete.gtp. */
+
+		/* TODO: PF_CAPTURE_RECAPTURE */
+
+		if (PS_PF(CAPTURE, ATARIDEF))
+		foreach_in_group(b, g) {
+			foreach_neighbor(b, c, {
+				assert(board_at(b, c) != S_NONE || c == m->coord);
+				if (board_at(b, c) != m->color)
+					continue;
+				group_t g = group_at(b, c);
+				if (!g || board_group_info(b, g).libs != 1)
+					continue;
+				/* A neighboring group of ours is in atari. */
+				f->payload |= 1 << PF_CAPTURE_ATARIDEF;
+			});
+		} foreach_in_group_end;
+
+		if (PS_PF(CAPTURE, KO)
+		    && group_is_onestone(b, g)
+		    && neighbor_count_at(b, m->coord, stone_other(m->color))
+		       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
+			f->payload |= 1 << PF_CAPTURE_KO;
+
+		(f++, p->n++);
+	});
+	return f;
+}
+
+static struct feature *
+pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
+                      struct pattern *p, struct feature *f,
+		      struct board *b, struct move *m)
+{
+	foreach_neighbor(b, m->coord, {
+		if (board_at(b, c) != m->color)
+			continue;
+		group_t g = group_at(b, c);
+		if (!g || board_group_info(b, g).libs != 1)
+			continue;
+
+		/* In atari! */
+		f->id = FEAT_AESCAPE; f->payload = 0;
+
+		if (PS_PF(AESCAPE, LADDER))
+			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
+		/* TODO: is_ladder() is too conservative in some
+		 * very obvious situations, look at complete.gtp. */
+
+		(f++, p->n++);
+	});
+	return f;
+}
+
+static struct feature *
+pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
+                    struct pattern *p, struct feature *f,
+		    struct board *b, struct move *m)
+{
+	foreach_neighbor(b, m->coord, {
+		if (board_at(b, c) != stone_other(m->color))
+			continue;
+		group_t g = group_at(b, c);
+		if (!g || board_group_info(b, g).libs != 2)
+			continue;
+
+		/* Can atari! */
+		f->id = FEAT_ATARI; f->payload = 0;
+
+		if (PS_PF(ATARI, LADDER))
+			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_ATARI_LADDER;
+		/* TODO: is_ladder() is too conservative in some
+		 * very obvious situations, look at complete.gtp. */
+
+		if (PS_PF(ATARI, KO) && !is_pass(b->ko.coord))
+			f->payload |= 1 << PF_ATARI_KO;
+
+		(f++, p->n++);
+	});
+	return f;
+}
+
+static struct feature *
+pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
+                      struct pattern *p, struct feature *f,
+		      struct board *b, struct move *m)
+{
+	assert(pc->spat_min > 0);
+
+	/* We record all spatial patterns black-to-play; simply
+	 * reverse all colors if we are white-to-play. */
+	enum stone bt[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
+	if (m->color == S_WHITE) {
+		bt[1] = S_WHITE; bt[2] = S_BLACK;
+	}
+
+	struct spatial s = { .points = {0} };
+	for (int d = 2; d < pc->spat_max; d++) {
+		/* Go through all points in given distance. */
+		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+			int x = coord_x(m->coord, b) + ptcoords[j].x;
+			int y = coord_y(m->coord, b) + ptcoords[j].y;
+			if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
+			if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
+			/* Append point. */
+			s.points[j / 4] |= bt[board_atxy(b, x, y)] << ((j % 4) * 2);
+		}
+		if (d < pc->spat_min)
+			continue;
+		/* Record spatial feature, one per distance. */
+		f->id = FEAT_SPATIAL;
+		f->payload = (d << PF_SPATIAL_RADIUS);
+		s.dist = d;
+		int sid;
+		if (unlikely(!!pc->spat_dict->f))
+			sid = spatial_dict_put(pc->spat_dict, &s);
+		else
+			sid = spatial_dict_get(pc->spat_dict, &s);
+		if (sid > 0) {
+			f->payload |= sid << PF_SPATIAL_INDEX;
+			(f++, p->n++);
+		} /* else not found, ignore */
+	}
+	return f;
+}
+
+void
+pattern_match(struct pattern_config *pc, pattern_spec ps,
+              struct pattern *p, struct board *b, struct move *m)
+{
 	p->n = 0;
 	struct feature *f = &p->f[0];
 
 	/* TODO: We should match pretty much all of these features
 	 * incrementally. */
 
-	/* FEAT_PASS */
 	if (is_pass(m->coord)) {
 		if (PS_ANY(PASS)) {
 			f->id = FEAT_PASS; f->payload = 0;
 			if (PS_PF(PASS, LASTPASS))
-				f->payload |= (b->moves > 0 && is_pass(b->last_move.coord)) << PF_PASS_LASTPASS;
+				f->payload |= (b->moves > 0 && is_pass(b->last_move.coord))
+						<< PF_PASS_LASTPASS;
 			p->n++;
 		}
 		return;
 	}
 
-	/* FEAT_CAPTURE */
 	if (PS_ANY(CAPTURE)) {
-		foreach_neighbor(b, m->coord, {
-			if (board_at(b, c) != stone_other(m->color))
-				continue;
-			group_t g = group_at(b, c);
-			if (!g || board_group_info(b, g).libs != 1)
-				continue;
-
-			/* Capture! */
-			f->id = FEAT_CAPTURE; f->payload = 0;
-
-			if (PS_PF(CAPTURE, LADDER))
-				f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
-			/* TODO: is_ladder() is too conservative in some
-			 * very obvious situations, look at complete.gtp. */
-
-			/* TODO: PF_CAPTURE_RECAPTURE */
-
-			if (PS_PF(CAPTURE, ATARIDEF))
-			foreach_in_group(b, g) {
-				foreach_neighbor(b, c, {
-					assert(board_at(b, c) != S_NONE || c == m->coord);
-					if (board_at(b, c) != m->color)
-						continue;
-					group_t g = group_at(b, c);
-					if (!g || board_group_info(b, g).libs != 1)
-						continue;
-					/* A neighboring group of ours is in atari. */
-					f->payload |= 1 << PF_CAPTURE_ATARIDEF;
-				});
-			} foreach_in_group_end;
-
-			if (PS_PF(CAPTURE, KO)
-			    && group_is_onestone(b, g)
-			    && neighbor_count_at(b, m->coord, stone_other(m->color))
-			       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
-				f->payload |= 1 << PF_CAPTURE_KO;
-
-			(f++, p->n++);
-		});
+		f = pattern_match_capture(pc, ps, p, f, b, m);
 	}
 
-
-	/* FEAT_AESCAPE */
 	if (PS_ANY(AESCAPE)) {
-		foreach_neighbor(b, m->coord, {
-			if (board_at(b, c) != m->color)
-				continue;
-			group_t g = group_at(b, c);
-			if (!g || board_group_info(b, g).libs != 1)
-				continue;
-
-			/* In atari! */
-			f->id = FEAT_AESCAPE; f->payload = 0;
-
-			if (PS_PF(AESCAPE, LADDER))
-				f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
-			/* TODO: is_ladder() is too conservative in some
-			 * very obvious situations, look at complete.gtp. */
-
-			(f++, p->n++);
-		});
+		f = pattern_match_aescape(pc, ps, p, f, b, m);
 	}
 
-
-	/* FEAT_SELFATARI */
 	if (PS_ANY(SELFATARI)) {
 		if (is_bad_selfatari(b, m->color, m->coord)) {
 			f->id = FEAT_SELFATARI;
@@ -231,31 +318,10 @@ pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, str
 		}
 	}
 
-	/* FEAT_ATARI */
 	if (PS_ANY(ATARI)) {
-		foreach_neighbor(b, m->coord, {
-			if (board_at(b, c) != stone_other(m->color))
-				continue;
-			group_t g = group_at(b, c);
-			if (!g || board_group_info(b, g).libs != 2)
-				continue;
-
-			/* Can atari! */
-			f->id = FEAT_ATARI; f->payload = 0;
-
-			if (PS_PF(ATARI, LADDER))
-				f->payload |= is_ladder(b, m->coord, g, true, true) << PF_ATARI_LADDER;
-			/* TODO: is_ladder() is too conservative in some
-			 * very obvious situations, look at complete.gtp. */
-
-			if (PS_PF(ATARI, KO) && !is_pass(b->ko.coord))
-				f->payload |= 1 << PF_ATARI_KO;
-
-			(f++, p->n++);
-		});
+		f = pattern_match_atari(pc, ps, p, f, b, m);
 	}
 
-	/* FEAT_BORDER */
 	if (PS_ANY(BORDER)) {
 		int bdist = coord_edge_distance(m->coord, b);
 		if (bdist <= pc->bdist_max) {
@@ -265,7 +331,6 @@ pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, str
 		}
 	}
 
-	/* FEAT_LDIST */
 	if (PS_ANY(LDIST) && pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
 		int ldist = coord_gridcular_distance(m->coord, b->last_move.coord, b);
 		if (pc->ldist_min <= ldist && ldist <= pc->ldist_max) {
@@ -275,7 +340,6 @@ pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, str
 		}
 	}
 
-	/* FEAT_LLDIST */
 	if (PS_ANY(LLDIST) && pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
 		int lldist = coord_gridcular_distance(m->coord, b->last_move2.coord, b);
 		if (pc->ldist_min <= lldist && lldist <= pc->ldist_max) {
@@ -285,48 +349,11 @@ pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, str
 		}
 	}
 
-	/* FEAT_SPATIAL */
 	if (PS_ANY(SPATIAL) && pc->spat_max > 0 && pc->spat_dict) {
-		assert(pc->spat_min > 0);
-
-		/* We record all spatial patterns black-to-play; simply
-		 * reverse all colors if we are white-to-play. */
-		enum stone bt[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
-		if (m->color == S_WHITE) {
-			bt[1] = S_WHITE; bt[2] = S_BLACK;
-		}
-
-		struct spatial s = { .points = {0} };
-		for (int d = 2; d < pc->spat_max; d++) {
-			/* Go through all points in given distance. */
-			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
-				int x = coord_x(m->coord, b) + ptcoords[j].x;
-				int y = coord_y(m->coord, b) + ptcoords[j].y;
-				if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
-				if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
-				/* Append point. */
-				s.points[j / 4] |= bt[board_atxy(b, x, y)] << ((j % 4) * 2);
-			}
-			if (d < pc->spat_min)
-				continue;
-			/* Record spatial feature, one per distance. */
-			f->id = FEAT_SPATIAL;
-			f->payload = (d << PF_SPATIAL_RADIUS);
-			s.dist = d;
-			int sid;
-			if (unlikely(!!pc->spat_dict->f))
-				sid = spatial_dict_put(pc->spat_dict, &s);
-			else
-				sid = spatial_dict_get(pc->spat_dict, &s);
-			if (sid > 0) {
-				f->payload |= sid << PF_SPATIAL_INDEX;
-				(f++, p->n++);
-			} /* else not found, ignore */
-		}
+		f = pattern_match_spatial(pc, ps, p, f, b, m);
 	}
 
-	/* FEAT_MCOWNER */
-	/* TODO */
+	/* FEAT_MCOWNER: TODO */
 	assert(!pc->mcsims);
 }
 
