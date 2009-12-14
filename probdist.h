@@ -19,11 +19,17 @@ coord_t probdist_pick(struct probdist *pd);
 void probdist_done(struct probdist *pd); // Doesn't free pd itself
 
 
+/* We disable the assertions here since this is quite time-critical
+ * part of code, and also the compiler is reluctant to include the
+ * functions otherwise. */
+
 static inline void
 probdist_add(struct probdist *pd, coord_t c, float val)
 {
+#if 0
 	assert(c >= 0 && c < pd->bsize2);
 	assert(val >= 0);
+#endif
 	pd->moves[c] += val;
 	pd->total += val;
 }
@@ -31,8 +37,10 @@ probdist_add(struct probdist *pd, coord_t c, float val)
 static inline void
 probdist_mul(struct probdist *pd, coord_t c, float val)
 {
+#if 0
 	assert(c >= 0 && c < pd->bsize2);
 	assert(val >= 0);
+#endif
 	pd->total += (val - 1) * pd->moves[c];
 	pd->moves[c] *= val;
 }
