@@ -47,10 +47,11 @@ struct elo_policy {
 /* This is the core of the policy - initializes and constructs the
  * probability distribution over the move candidates. */
 
-void
+int
 elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, struct probdist *pd)
 {
 	struct elo_policy *pp = p->data;
+	int moves = 0;
 
 	probdist_init(pd, board_size2(b));
 
@@ -75,6 +76,7 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 			continue;
 		}
 
+		moves++;
 		/* Each valid move starts with gamma 1. */
 		probdist_add(pd, m.coord, 1.f);
 
@@ -96,6 +98,8 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 		}
 		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->moves[m.coord]);
 	}
+
+	return moves;
 }
 
 
@@ -112,18 +116,19 @@ void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct probdist pd;
-	elo_get_probdist(p, map->b, map->to_play, &pd);
+	int moves;
+	
+	moves = elo_get_probdist(p, map->b, map->to_play, &pd);
 
-	/* It is a question how to transform the gamma to won games;
-	 * we use a naive approach and just pass the gamma itself as
-	 * value. XXX: We hope nothing breaks, since often gamma>1. */
+	/* It is a question how to transform the gamma to won games; we use
+	 * a naive approach currently, but not sure how well it works. */
 	/* TODO: Try sqrt(p), atan(p)/pi*2. */
 
 	for (int f = 0; f < map->b->flen; f++) {
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, pd.moves[c], games);
+		add_prior_value(map, c, pd.moves[c] / pd.total, games);
 	}
 
 	probdist_done(&pd);
