@@ -33,9 +33,8 @@ probdist_mul(struct probdist *pd, coord_t c, float val)
 {
 	assert(c >= 0 && c < pd->bsize2);
 	assert(val >= 0);
-	float t = pd->total - pd->moves[c];
+	pd->total += (val - 1) * pd->moves[c];
 	pd->moves[c] *= val;
-	pd->total = t + pd->moves[c];
 }
 
 static inline void
