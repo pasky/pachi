@@ -24,6 +24,13 @@ static bool is_ladder(struct board *b, coord_t coord, group_t laddered,
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(struct board *b, coord_t coord, int distance);
 
+/* Measure various distances on the board: */
+/* Distance from the edge; on edge returns 0. */
+static int coord_edge_distance(coord_t c, struct board *b);
+/* Distance of two points in gridcular metric - this metric defines
+ * circle-like structures on the square grid. */
+static int coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b);
+
 /* Construct a "common fate graph" from given coordinate; that is, a weighted
  * graph of intersections where edges between all neighbors have weight 1,
  * but edges between neighbors of same color have weight 0. Thus, this is
@@ -78,6 +85,25 @@ is_ladder(struct board *b, coord_t coord, group_t laddered,
 		return is_middle_ladder(b, coord, lcolor);
 
 	return false;
+}
+
+
+static inline int
+coord_edge_distance(coord_t c, struct board *b)
+{
+	int x = coord_x(c, b), y = coord_y(c, b);
+	int dx = x > board_size(b) / 2 ? board_size(b) - 1 - x : x;
+	int dy = y > board_size(b) / 2 ? board_size(b) - 1 - y : y;
+	return (dx < dy ? dx : dy) - 1 /* S_OFFBOARD */;
+}
+
+static inline int
+coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b)
+{
+	int x1 = coord_x(c1, b), y1 = coord_y(c1, b);
+	int x2 = coord_x(c2, b), y2 = coord_y(c2, b);
+	int dx = abs(x1 - x2), dy = abs(y1 - y2);
+	return dx + dy + (dx > dy ? dx : dy);
 }
 
 #endif
