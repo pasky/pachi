@@ -21,6 +21,8 @@
 /* See the HACKING file for another description of the pattern matcher and
  * instructions on how to harvest and inspect patterns. */
 
+/* If you add a payload bit for a feature, don't forget to update the value
+ * in feature_info. */
 enum feature_id {
 	/* Implemented: */
 
@@ -84,6 +86,8 @@ enum feature_id {
 	/* Payload: #of playouts owning this point at the final
 	 * position, scaled to 0..15 (lowest 4 bits). */
 	FEAT_MCOWNER,
+
+	FEAT_MAX
 };
 
 struct feature {
@@ -127,6 +131,25 @@ char *pattern2str(char *str, struct pattern *p);
 /* Initialize p and fill it with features matched by the
  * given board move. */
 void pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m);
+
+
+/* Comparative strengths of all feature-payload pairs (initialized to 1 for
+ * unspecified pairs). */
+struct features_gamma {
+	/* Indexed by feature and payload; each feature array is allocated for
+	 * all possible payloads to fit in. */
+	float *gamma[FEAT_MAX];
+	/* The spatial dictionary associated with the gammas; it influences
+	 * the size of gamma[FEAT_SPATIAL]. */
+	struct spatial_dict *spat_dict;
+};
+
+/* Initializes gamma values, pre-loading existing records from
+ * default filename, falling back to gamma==1 for unspecified values. */
+struct features_gamma *features_gamma_init(struct spatial_dict *dict);
+
+/* Look up gamma of given feature, or set one if gamma is not NULL. */
+float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);
 
 
 /* Spatial pattern dictionary. */

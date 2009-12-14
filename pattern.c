@@ -21,17 +21,18 @@ struct pattern_config DEFAULT_PATTERN_CONFIG = {
 
 static const struct feature_info {
 	char *name;
+	int payloads;
 } features[FEAT_MAX] = {
-	[FEAT_SPATIAL] = { .name = "s" },
-	[FEAT_PASS] = { .name = "pass" },
-	[FEAT_CAPTURE] = { .name = "capture" },
-	[FEAT_AESCAPE] = { .name = "atariescape" },
-	[FEAT_SELFATARI] = { .name = "selfatari" },
-	[FEAT_ATARI] = { .name = "atari" },
-	[FEAT_BORDER] = { .name = "border" },
-	[FEAT_LDIST] = { .name = "ldist" },
-	[FEAT_LLDIST] = { .name = "lldist" },
-	[FEAT_MCOWNER] = { .name = "mcowner" },
+	[FEAT_PASS] = { .name = "pass", .payloads = 2 },
+	[FEAT_CAPTURE] = { .name = "capture", .payloads = 16 },
+	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 2 },
+	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 2 },
+	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
+	[FEAT_BORDER] = { .name = "border", .payloads = 1 },
+	[FEAT_LDIST] = { .name = "ldist", .payloads = 1 },
+	[FEAT_LLDIST] = { .name = "lldist", .payloads = 1 },
+	[FEAT_SPATIAL] = { .name = "s", .payloads = -1 },
+	[FEAT_MCOWNER] = { .name = "mcowner", .payloads = 16 },
 };
 
 char *
@@ -308,6 +309,57 @@ pattern2str(char *str, struct pattern *p)
 	}
 	str = stpcpy(str, ")");
 	return str;
+}
+
+
+
+/*** Features gamma set */
+
+static void
+features_gamma_load(struct features_gamma *fg, char *filename)
+{
+	FILE *f = fopen(filename, "r");
+	if (!f) return;
+	char buf[256];
+	while (fgets(buf, 256, f)) {
+		char *bufp = buf;
+		struct feature f;
+		bufp = str2feature(bufp, &f);
+		while (isspace(*bufp)) bufp++;
+		float gamma = strtof(bufp, &bufp);
+		feature_gamma(fg, &f, &gamma);
+	}
+	fclose(f);
+}
+
+struct features_gamma *
+features_gamma_init(struct spatial_dict *dict)
+{
+	struct features_gamma *fg = calloc(1, sizeof(*fg));
+	fg->spat_dict = dict;
+	for (int i = 0; i < FEAT_MAX; i++) {
+		int n = features[i].payloads;
+		if (n <= 0) {
+			assert(i == FEAT_SPATIAL);
+			n = dict->nspatials;
+		}
+		fg->gamma[i] = malloc(n * sizeof(float));
+		for (int j = 0; j < n; j++) {
+			fg->gamma[i][j] = 1.0f;
+		}
+	}
+	features_gamma_load(fg, "patterns.gamma");
+	return fg;
+}
+
+float
+feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma)
+{
+	/* XXX: We mask out spatial distance unconditionally since it shouldn't
+	 * affect any other feature. */
+	int payid = f->payload & ((1<<24)-1);
+	if (gamma) fg->gamma[f->id][payid] = *gamma;
+	return fg->gamma[f->id][payid];
 }
 
 
