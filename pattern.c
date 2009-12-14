@@ -486,7 +486,7 @@ static void __attribute__((constructor)) pthashes_init(void)
 	}
 }
 
-hash_t
+inline hash_t
 spatial_hash(int rotation, struct spatial *s, int ofs)
 {
 	hash_t h = 0;
