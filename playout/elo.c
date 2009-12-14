@@ -119,11 +119,12 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 	 * value. XXX: We hope nothing breaks, since often gamma>1. */
 	/* TODO: Try sqrt(p), atan(p)/pi*2. */
 
-	foreach_point(map->b) {
+	for (int f = 0; f < map->b->flen; f++) {
+		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
 		add_prior_value(map, c, pd.moves[c], games);
-	} foreach_point_end;
+	}
 
 	probdist_done(&pd);
 }
