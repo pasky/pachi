@@ -16,8 +16,11 @@
 # run this script as:
 #
 #	PATARGS=",competition" ./pattern_gather.sh ...
+#
+# Similarly, you can set SPATIALS to different number than 5000 to consider
+# more spatial patterns.
 
-spatials=5000
+[ -n "$SPATIALS" ] || SPATIALS=5000
 
 rm -f patterns.spat
 
@@ -25,12 +28,12 @@ echo "Gathering patterns (1st pass)..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
 	./zzgo -e patternscan >/tmp/patterns
 
-echo "Filtering population of $spatials most popular spatials..."
+echo "Filtering population of $SPATIALS most popular spatials..."
 cat /tmp/patterns | sed 's/ /\n/g' |
 	sed -ne 's/)//; s/^s:/0x/p; ' | # pick out spatial payloads
 	perl -nle 'print (((1<<24)-1) & hex $_)' | # convert to ids
 	sort -n | uniq -c | sort -rn | # sort by frequency
-	head -n $spatials | awk '{print$2}' | # take 5000 top ids
+	head -n $SPATIALS | awk '{print$2}' | # take N top ids
 	cat >/tmp/pattern.pop
 
 echo "Composing new patterns.spat..."
