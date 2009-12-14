@@ -232,12 +232,15 @@ struct spatial_dict {
  * the file for appending. */
 struct spatial_dict *spatial_dict_init(bool will_append);
 
+/* Compute hash of given pattern, starting at specified offset. */
+hash_t spatial_hash(int rotation, struct spatial *s, int ofs);
+
 /* Lookup specified spatial pattern in the dictionary; return index
  * of the pattern. If the pattern is not found, -1 will be returned. */
-int spatial_dict_get(struct spatial_dict *dict, struct spatial *s);
+int spatial_dict_get(struct spatial_dict *dict, struct spatial *s, hash_t h);
 
 /* Store specified spatial pattern (both in dictionary and the underlying
  * file storage) if it is not known yet. Returns pattern id. */
-int spatial_dict_put(struct spatial_dict *dict, struct spatial *s);
+int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
 
 #endif

@@ -251,6 +251,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 	}
 
 	struct spatial s = { .points = {0} };
+	hash_t h = 0;
 	for (int d = 2; d < pc->spat_max; d++) {
 		/* Go through all points in given distance. */
 		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
@@ -267,11 +268,12 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 		f->id = FEAT_SPATIAL;
 		f->payload = (d << PF_SPATIAL_RADIUS);
 		s.dist = d;
+		h ^= spatial_hash(0, &s, ptind[d]);
 		int sid;
 		if (unlikely(!!pc->spat_dict->f))
-			sid = spatial_dict_put(pc->spat_dict, &s);
+			sid = spatial_dict_put(pc->spat_dict, &s, h);
 		else
-			sid = spatial_dict_get(pc->spat_dict, &s);
+			sid = spatial_dict_get(pc->spat_dict, &s, h);
 		if (sid > 0) {
 			f->payload |= sid << PF_SPATIAL_INDEX;
 			(f++, p->n++);
@@ -484,11 +486,11 @@ static void __attribute__((constructor)) pthashes_init(void)
 	}
 }
 
-static hash_t
-spatial_hash(int rotation, struct spatial *s)
+hash_t
+spatial_hash(int rotation, struct spatial *s, int ofs)
 {
 	hash_t h = 0;
-	for (int i = 0; i < ptind[s->dist + 1]; i++) {
+	for (int i = ofs; i < ptind[s->dist + 1]; i++) {
 		h ^= pthashes[rotation][i][spatial_point_at(*s, i)];
 	}
 	return h & spatial_hash_mask;
@@ -584,7 +586,7 @@ spatial_dict_write(struct spatial_dict *dict, int id, FILE *f)
 	fprintf(f, "%d %d ", id, s->dist);
 	fputs(spatial2str(s), f);
 	for (int r = 0; r < PTH__ROTATIONS; r++)
-		fprintf(f, " %"PRIhash"", spatial_hash(r, s));
+		fprintf(f, " %"PRIhash"", spatial_hash(r, s, 0));
 	fputc('\n', f);
 }
 
@@ -644,9 +646,8 @@ spatial_dict_init(bool will_append)
 }
 
 int
-spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
+spatial_dict_get(struct spatial_dict *dict, struct spatial *s, hash_t hash)
 {
-	hash_t hash = spatial_hash(0, s);
 	int id = dict->hash[hash];
 	if (!id) return -1;
 	if (dict->spatials[id].dist != s->dist) {
@@ -659,16 +660,16 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s)
 }
 
 int
-spatial_dict_put(struct spatial_dict *dict, struct spatial *s)
+spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 {
-	int id = spatial_dict_get(dict, s);
+	int id = spatial_dict_get(dict, s, h);
 	if (id > 0) {
 		/* Check for collisions in append mode. */
 		/* Tough job, we simply try if any other rotation
 		 * is also covered by the existing record. */
 		int r; hash_t rhash; int rid;
 		for (r = 1; r < PTH__ROTATIONS; r++) {
-			rhash = spatial_hash(r, s);
+			rhash = spatial_hash(r, s, 0);
 			rid = dict->hash[rhash];
 			if (rid != id)
 				goto collision;
@@ -679,7 +680,7 @@ spatial_dict_put(struct spatial_dict *dict, struct spatial *s)
 collision:
 		if (DEBUGL(1))
 			fprintf(stderr, "Collision %d vs %d (hash %d:%"PRIhash")\n",
-				id, dict->nspatials, r, spatial_hash(0, s));
+				id, dict->nspatials, r, h);
 		id = 0;
 		/* dict->collisions++; gets done by addh */
 	}
@@ -687,7 +688,7 @@ collision:
 	/* Add new pattern! */
 	id = spatial_dict_addc(dict, s);
 	for (int r = 0; r < PTH__ROTATIONS; r++)
-		spatial_dict_addh(dict, spatial_hash(r, s), id);
+		spatial_dict_addh(dict, spatial_hash(r, s, 0), id);
 	spatial_dict_write(dict, id, dict->f);
 	return id;
 }
