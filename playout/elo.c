@@ -37,9 +37,13 @@
 
 /* Note that the context can be shared by multiple threads! */
 
+struct patternset {
+	struct pattern_config pc;
+};
+
 struct elo_policy {
 	float selfatari;
-	struct pattern_config pc;
+	struct patternset choose, assess;
 	struct features_gamma *fg;
 };
 
@@ -48,7 +52,7 @@ struct elo_policy {
  * probability distribution over the move candidates. */
 
 int
-elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, struct probdist *pd)
+elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *b, enum stone to_play, struct probdist *pd)
 {
 	struct elo_policy *pp = p->data;
 	int moves = 0;
@@ -90,7 +94,7 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 
 		/* Match pattern features: */
 		struct pattern p;
-		pattern_match(&pp->pc, PATTERN_SPEC_MATCHALL, &p, b, &m);
+		pattern_match(&ps->pc, PATTERN_SPEC_MATCHALL, &p, b, &m);
 		for (int i = 0; i < p.n; i++) {
 			/* Multiply together gammas of all pattern features. */
 			float gamma = feature_gamma(pp->fg, &p.f[i], NULL);
@@ -108,8 +112,9 @@ elo_get_probdist(struct playout_policy *p, struct board *b, enum stone to_play, 
 coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
+	struct elo_policy *pp = p->data;
 	struct probdist pd;
-	elo_get_probdist(p, b, to_play, &pd);
+	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 
 	return probdist_pick(&pd);
 }
@@ -117,10 +122,11 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
+	struct elo_policy *pp = p->data;
 	struct probdist pd;
 	int moves;
 	
-	moves = elo_get_probdist(p, map->b, map->to_play, &pd);
+	moves = elo_get_probdist(p, &pp->assess, map->b, map->to_play, &pd);
 
 	/* It is a question how to transform the gamma to won games; we use
 	 * a naive approach currently, but not sure how well it works. */
@@ -148,7 +154,8 @@ playout_elo_init(char *arg)
 
 	/* Some defaults based on the table in Remi Coulom's paper. */
 	pp->selfatari = 0.06;
-	pp->pc = DEFAULT_PATTERN_CONFIG;
+
+	struct pattern_config pc = DEFAULT_PATTERN_CONFIG;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -170,8 +177,11 @@ playout_elo_init(char *arg)
 		}
 	}
 
-	pp->pc.spat_dict = spatial_dict_init(false);
-	pp->fg = features_gamma_init(&pp->pc);
+	pc.spat_dict = spatial_dict_init(false);
+	pp->fg = features_gamma_init(&pc);
+
+	pp->choose.pc = pc;
+	pp->assess.pc = pc;
 
 	return p;
 }
