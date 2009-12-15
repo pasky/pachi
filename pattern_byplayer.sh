@@ -26,7 +26,7 @@ if [ -n "$handi" ] && [ "$handi" -gt 0 ]; then
 fi
 
 to_play=black
-./sgf2gtp.pl "$sgf" | ./zzgo -e patternscan "$@" |
+./sgf2gtp.pl "$sgf" | ./zzgo -e patternscan gen_spat_dict"$1" |
 	sed -n -e 's/^= //p' | grep -v '^ *$' | # skip irrelevant replies
 	while read pattern; do
 		if [ "$to_play" = black ]; then

@@ -26,7 +26,7 @@ rm -f patterns.spat
 
 echo "Gathering population of $SPATIALS most popular spatials..."
 (for i in "$@"; do echo $i >&2; ./sgf2gtp.pl $i; done) |
-	./zzgo -e patternscan $PATARGS |
+	./zzgo -e patternscan gen_spat_dict${PATARGS:+,$PATARGS} |
 	sed 's/ /\n/g' | sed -ne 's/)//; s/^s:/0x/p; ' | # pick out spatial payloads
 	perl -nle 'print (((1<<24)-1) & hex $_)' | # convert to ids
 	sort -n | uniq -c | sort -rn | # sort by frequency
@@ -53,7 +53,7 @@ rm /tmp/patterns /tmp/pattern.pop /tmp/pattern.filter
 # Now, re-scan patterns with limited dictionary!
 echo "Gathering patterns (2nd pass)..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
-	./zzgo -e patternscan fixed_dict${PATARGS:+,$PATARGS} >patterns
+	./zzgo -e patternscan >patterns
 
 echo "Gathered pattern data in .:"
 ls -l patterns patterns.spat

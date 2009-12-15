@@ -13,7 +13,7 @@ struct patternscan {
 	int debug_level;
 	struct pattern_config pc;
 	pattern_spec ps;
-	bool fixed_dict;
+	bool gen_spat_dict;
 	bool competition;
 };
 
@@ -87,11 +87,13 @@ patternscan_state_init(char *arg)
 					ps->debug_level = atoi(optval);
 				else
 					ps->debug_level++;
-			} else if (!strcasecmp(optname, "fixed_dict")) {
-				/* If set, do not add new stone spatials
-				 * to the dictionary, compute patterns only
-				 * from already recorded ones. */
-				ps->fixed_dict = !optval || atoi(optval);
+
+			} else if (!strcasecmp(optname, "gen_spat_dict")) {
+				/* If set, re-generate the spatial patterns
+				 * dictionary; you need to have a dictionary
+				 * of spatial stone configurations in order
+				 * to match any spatial features. */
+				ps->gen_spat_dict = !optval || atoi(optval);
 
 			} else if (!strcasecmp(optname, "competition")) {
 				/* In competition mode, first the played
@@ -127,7 +129,7 @@ patternscan_state_init(char *arg)
 			}
 		}
 	}
-	ps->pc.spat_dict = spatial_dict_init(!ps->fixed_dict);
+	ps->pc.spat_dict = spatial_dict_init(ps->gen_spat_dict);
 
 	return ps;
 }
