@@ -190,7 +190,7 @@ playout_elo_init(char *arg)
 	/* TODO: Configurable. */ /* TODO: Tune. */
 	pp->choose.pc.spat_max = 5;
 	/* By default, all is on. */
-	pp->choose.ps[FEAT_CAPTURE] &= ~(PF_CAPTURE_ATARIDEF|PF_CAPTURE_RECAPTURE);
+	pp->choose.ps[FEAT_CAPTURE] &= ~(1<<PF_CAPTURE_ATARIDEF)|~(1<<PF_CAPTURE_RECAPTURE);
 	pp->choose.ps[FEAT_SELFATARI] = 0;
 
 	return p;
