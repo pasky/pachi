@@ -25,6 +25,7 @@ probdist_pick(struct probdist *pd)
 		return pass;
 	float stab = (float) fast_random(65536) / 65536 * pd->total;
 	float sum = 0;
+	//fprintf(stderr, "stab %f / %f\n", stab, pd->total);
 	for (coord_t c = 0; c < pd->bsize2; c++) {
 		sum += pd->moves[c];
 		if (stab < sum)
