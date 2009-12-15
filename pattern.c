@@ -657,12 +657,11 @@ int
 spatial_dict_get(struct spatial_dict *dict, struct spatial *s, hash_t hash)
 {
 	int id = dict->hash[hash];
-	if (!id) return -1;
-	if (dict->spatials[id].dist != s->dist) {
+	if (id && dict->spatials[id].dist != s->dist) {
 		if (DEBUGL(6))
 			fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
 				s->dist, dict->spatials[id].dist, id, hash);
-		return -1;
+		return 0;
 	}
 	return id;
 }
