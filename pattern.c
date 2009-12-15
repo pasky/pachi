@@ -188,23 +188,38 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
 		      struct board *b, struct move *m)
 {
+	/* Find if a neighboring group of ours is in atari, AND that we provide
+	 * a liberty to connect out. XXX: No connect-and-die check. */
+	group_t in_atari = -1;
+	bool has_extra_lib = false;
+	int payload = 0;
+
 	foreach_neighbor(b, m->coord, {
-		if (board_at(b, c) != m->color)
+		if (board_at(b, c) != m->color) {
+			if (board_at(b, c) == S_NONE)
+				has_extra_lib = true; // free point
+			else if (board_at(b, c) == stone_other(m->color) && board_group_info(b, group_at(b, c)).libs == 1)
+				has_extra_lib = true; // capturable enemy group
 			continue;
-		group_t g = group_at(b, c);
-		if (!g || board_group_info(b, g).libs != 1)
+		}
+		group_t g = group_at(b, c); assert(g);
+		if (board_group_info(b, g).libs != 1) {
+			has_extra_lib = true;
 			continue;
+		}
 
 		/* In atari! */
-		f->id = FEAT_AESCAPE; f->payload = 0;
+		in_atari = g;
 
 		if (PS_PF(AESCAPE, LADDER))
-			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
+			payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
 		/* TODO: is_ladder() is too conservative in some
 		 * very obvious situations, look at complete.gtp. */
-
-		(f++, p->n++);
 	});
+	if (in_atari >= 0 && has_extra_lib) {
+		f->id = FEAT_AESCAPE; f->payload = payload;
+		(f++, p->n++);
+	}
 	return f;
 }
 
