@@ -26,7 +26,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	if (is_resign(m->coord))
 		return NULL;
 
-	static char str[65536]; // XXX
+	static char str[1048576]; // XXX
 	char *strp;
 	*str = 0;
 
