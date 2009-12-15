@@ -32,7 +32,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 	if (ps->gen_spat_dict) {
 		struct spatial s;
 		spatial_from_board(&ps->pc, &s, b, m);
-		spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s));
+		spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s) & spatial_hash_mask);
 	}
 
 	/* Now, match the pattern. */
