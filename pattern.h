@@ -236,6 +236,10 @@ struct spatial_dict {
  * the file for appending. */
 struct spatial_dict *spatial_dict_init(bool will_append);
 
+/* Fill up the spatial record from @m vincinity, up to full distance
+ * given by pattern config. */
+void spatial_from_board(struct pattern_config *pc, struct spatial *s, struct board *b, struct move *m);
+
 /* Compute hash of given pattern, starting at specified offset. */
 hash_t spatial_hash(int rotation, struct spatial *s, int ofs);
 

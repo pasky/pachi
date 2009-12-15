@@ -277,21 +277,24 @@ pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
 	return f;
 }
 
-static inline hash_t spatial_hash_one(int rotation, int i, enum stone color);
 
+/* We record all spatial patterns black-to-play; simply
+ * reverse all colors if we are white-to-play. */
+static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
+static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
+
+static inline hash_t spatial_hash_one(int rotation, int i, enum stone color);
 static struct feature *
 pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
 		      struct board *b, struct move *m)
 {
+	/* XXX: This is partially duplicated from spatial_from_board(), but
+	 * building a hash instead of spatial record. */
+
 	assert(pc->spat_min > 0);
 
-	/* We record all spatial patterns black-to-play; simply
-	 * reverse all colors if we are white-to-play. */
-	enum stone bt[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
-	if (m->color == S_WHITE) {
-		bt[1] = S_WHITE; bt[2] = S_BLACK;
-	}
+	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
 	struct spatial s = { .points = {0} };
 	hash_t h = spatial_hash_one(0, 0, S_NONE);
@@ -303,8 +306,8 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 			if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
 			if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
 			/* Append point. */
-			s.points[j / 4] |= bt[board_atxy(b, x, y)] << ((j % 4) * 2);
-			h ^= spatial_hash_one(0, j, bt[board_atxy(b, x, y)]);
+			s.points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
+			h ^= spatial_hash_one(0, j, (*bt)[board_atxy(b, x, y)]);
 		}
 		if (d < pc->spat_min)
 			continue;
@@ -312,11 +315,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 		f->id = FEAT_SPATIAL;
 		f->payload = (d << PF_SPATIAL_RADIUS);
 		s.dist = d;
-		int sid;
-		if (unlikely(!!pc->spat_dict->f))
-			sid = spatial_dict_put(pc->spat_dict, &s, h & spatial_hash_mask);
-		else
-			sid = spatial_dict_get(pc->spat_dict, &s, h & spatial_hash_mask);
+		int sid = spatial_dict_get(pc->spat_dict, &s, h & spatial_hash_mask);
 		if (sid > 0) {
 			f->payload |= sid << PF_SPATIAL_INDEX;
 			(f++, p->n++);
@@ -324,6 +323,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 	}
 	return f;
 }
+
 
 static bool
 is_simple_selfatari(struct board *b, enum stone color, coord_t coord)
@@ -722,6 +722,26 @@ spatial_dict_init(bool will_append)
 
 	dict->f = f;
 	return dict;
+}
+
+void
+spatial_from_board(struct pattern_config *pc, struct spatial *s,
+                   struct board *b, struct move *m)
+{
+	assert(pc->spat_min > 0);
+
+	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
+
+	for (int j = 0; j < ptind[pc->spat_max]; j++) {
+		/* Go through all points in given distance. */
+		int x = coord_x(m->coord, b) + ptcoords[j].x;
+		int y = coord_y(m->coord, b) + ptcoords[j].y;
+		if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
+		if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
+		/* Append point. */
+		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
+	}
+	s->dist = ptind[pc->spat_max];
 }
 
 int
