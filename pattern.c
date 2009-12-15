@@ -566,10 +566,10 @@ spatial_hash_one(int rotation, int i, enum stone color)
 }
 
 inline hash_t
-spatial_hash(int rotation, struct spatial *s, int ofs)
+spatial_hash(int rotation, struct spatial *s)
 {
 	hash_t h = 0;
-	for (int i = ofs; i < ptind[s->dist + 1]; i++) {
+	for (int i = 0; i < ptind[s->dist + 1]; i++) {
 		h ^= pthashes[rotation][i][spatial_point_at(*s, i)];
 	}
 	return h & spatial_hash_mask;
@@ -665,7 +665,7 @@ spatial_dict_write(struct spatial_dict *dict, int id, FILE *f)
 	fprintf(f, "%d %d ", id, s->dist);
 	fputs(spatial2str(s), f);
 	for (int r = 0; r < PTH__ROTATIONS; r++)
-		fprintf(f, " %"PRIhash"", spatial_hash(r, s, 0));
+		fprintf(f, " %"PRIhash"", spatial_hash(r, s));
 	fputc('\n', f);
 }
 
@@ -767,7 +767,7 @@ spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 		 * is also covered by the existing record. */
 		int r; hash_t rhash; int rid;
 		for (r = 1; r < PTH__ROTATIONS; r++) {
-			rhash = spatial_hash(r, s, 0);
+			rhash = spatial_hash(r, s);
 			rid = dict->hash[rhash];
 			if (rid != id)
 				goto collision;
@@ -786,7 +786,7 @@ collision:
 	/* Add new pattern! */
 	id = spatial_dict_addc(dict, s);
 	for (int r = 0; r < PTH__ROTATIONS; r++)
-		spatial_dict_addh(dict, spatial_hash(r, s, 0), id);
+		spatial_dict_addh(dict, spatial_hash(r, s), id);
 	spatial_dict_write(dict, id, dict->f);
 	return id;
 }
