@@ -18,6 +18,13 @@ struct pattern_config DEFAULT_PATTERN_CONFIG = {
 	.mcsims = 0, /* Unsupported. */
 };
 
+struct pattern_config FAST_PATTERN_CONFIG = {
+	.spat_min = 2, .spat_max = 5,
+	.bdist_max = 4,
+	.ldist_min = 0, .ldist_max = 256,
+	.mcsims = 0,
+};
+
 pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_PASS] = ~0,
 	[FEAT_CAPTURE] = ~0,

@@ -118,6 +118,7 @@ struct pattern_config {
 	struct spatial_dict *spat_dict;
 };
 extern struct pattern_config DEFAULT_PATTERN_CONFIG;
+extern struct pattern_config FAST_PATTERN_CONFIG;
 
 /* The pattern_spec[] specifies which features to tests for;
  * highest bit controls whether to test for the feature at all,

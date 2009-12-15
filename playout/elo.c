@@ -188,8 +188,8 @@ playout_elo_init(char *arg)
 	/* In playouts, we need to operate with much smaller set of features
 	 * in order to keep reasonable speed. */
 	/* TODO: Configurable. */ /* TODO: Tune. */
-	pp->choose.pc = pc;
-	pp->choose.pc.spat_max = 5;
+	pp->choose.pc = FAST_PATTERN_CONFIG;
+	pp->choose.pc.spat_dict = pc.spat_dict;
 	memcpy(pp->choose.ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
 
 	return p;
