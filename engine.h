@@ -13,6 +13,8 @@ typedef coord_t *(*engine_genmove)(struct engine *e, struct board *b, enum stone
 /* One dead group per queued move (coord_t is (ab)used as group_t). */
 typedef void (*engine_dead_group_list)(struct engine *e, struct board *b, struct move_queue *mq);
 typedef void (*engine_done_board_state)(struct engine *e, struct board *b);
+/* Pachi exit hook. */
+typedef void (*engine_finish)(struct engine *e);
 
 struct engine {
 	char *name;
@@ -23,6 +25,7 @@ struct engine {
 	engine_genmove genmove;
 	engine_dead_group_list dead_group_list;
 	engine_done_board_state done_board_state;
+	engine_finish finish;
 	void *data;
 };
 

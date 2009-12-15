@@ -98,5 +98,7 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "IN: %s", buf);
 		gtp_parse(b, e, buf);
 	}
+	if (e->finish)
+		e->finish(e);
 	return 0;
 }
