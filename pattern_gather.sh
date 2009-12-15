@@ -24,13 +24,10 @@
 
 rm -f patterns.spat
 
-echo "Gathering patterns (1st pass)..."
+echo "Gathering population of $SPATIALS most popular spatials..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
-	./zzgo -e patternscan >/tmp/patterns
-
-echo "Filtering population of $SPATIALS most popular spatials..."
-cat /tmp/patterns | sed 's/ /\n/g' |
-	sed -ne 's/)//; s/^s:/0x/p; ' | # pick out spatial payloads
+	./zzgo -e patternscan |
+	sed 's/ /\n/g' | sed -ne 's/)//; s/^s:/0x/p; ' | # pick out spatial payloads
 	perl -nle 'print (((1<<24)-1) & hex $_)' | # convert to ids
 	sort -n | uniq -c | sort -rn | # sort by frequency
 	head -n $SPATIALS | awk '{print$2}' | # take N top ids
