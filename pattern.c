@@ -296,7 +296,6 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
-	struct spatial s = { .points = {0} };
 	hash_t h = spatial_hash_one(0, 0, S_NONE);
 	for (int d = 2; d < pc->spat_max; d++) {
 		/* Go through all points in given distance. */
@@ -306,7 +305,6 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 			if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
 			if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
 			/* Append point. */
-			s.points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
 			h ^= spatial_hash_one(0, j, (*bt)[board_atxy(b, x, y)]);
 		}
 		if (d < pc->spat_min)
@@ -314,8 +312,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 		/* Record spatial feature, one per distance. */
 		f->id = FEAT_SPATIAL;
 		f->payload = (d << PF_SPATIAL_RADIUS);
-		s.dist = d;
-		int sid = spatial_dict_get(pc->spat_dict, &s, h & spatial_hash_mask);
+		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
 		if (sid > 0) {
 			f->payload |= sid << PF_SPATIAL_INDEX;
 			(f++, p->n++);
@@ -745,13 +742,13 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 }
 
 int
-spatial_dict_get(struct spatial_dict *dict, struct spatial *s, hash_t hash)
+spatial_dict_get(struct spatial_dict *dict, int dist, hash_t hash)
 {
 	int id = dict->hash[hash];
-	if (id && dict->spatials[id].dist != s->dist) {
+	if (id && dict->spatials[id].dist != dist) {
 		if (DEBUGL(6))
 			fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
-				s->dist, dict->spatials[id].dist, id, hash);
+				dist, dict->spatials[id].dist, id, hash);
 		return 0;
 	}
 	return id;
@@ -760,7 +757,7 @@ spatial_dict_get(struct spatial_dict *dict, struct spatial *s, hash_t hash)
 int
 spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 {
-	int id = spatial_dict_get(dict, s, h);
+	int id = spatial_dict_get(dict, s->dist, h);
 	if (id > 0) {
 		/* Check for collisions in append mode. */
 		/* Tough job, we simply try if any other rotation

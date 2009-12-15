@@ -245,7 +245,7 @@ hash_t spatial_hash(int rotation, struct spatial *s);
 
 /* Lookup specified spatial pattern in the dictionary; return index
  * of the pattern. If the pattern is not found, 0 will be returned. */
-int spatial_dict_get(struct spatial_dict *dict, struct spatial *s, hash_t h);
+int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
 
 /* Store specified spatial pattern (both in dictionary and the underlying
  * file storage) if it is not known yet. Returns pattern id. */
