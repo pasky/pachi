@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -11,10 +12,15 @@
 /* Internal engine state. */
 struct patternscan {
 	int debug_level;
+
 	struct pattern_config pc;
 	pattern_spec ps;
-	bool gen_spat_dict;
 	bool competition;
+
+	bool gen_spat_dict;
+	/* Number of loaded spatials; checkpoint for saving new sids
+	 * in case gen_spat_dict is enabled. */
+	int loaded_spatials;
 };
 
 
@@ -73,6 +79,21 @@ patternscan_genmove(struct engine *e, struct board *b, enum stone color)
 {
 	fprintf(stderr, "genmove command not available during patternscan!\n");
 	exit(EXIT_FAILURE);
+}
+
+void
+patternscan_finish(struct engine *e)
+{
+	struct patternscan *ps = e->data;
+	if (!ps->gen_spat_dict)
+		return;
+
+	/* Save newly found patterns. */
+
+	assert(ps->pc.spat_dict->f);
+	for (int i = ps->loaded_spatials; i < ps->pc.spat_dict->nspatials; i++) {
+		spatial_dict_write(ps->pc.spat_dict, i, ps->pc.spat_dict->f);
+	}
 }
 
 
@@ -144,6 +165,7 @@ patternscan_state_init(char *arg)
 		}
 	}
 	ps->pc.spat_dict = spatial_dict_init(ps->gen_spat_dict);
+	ps->loaded_spatials = ps->pc.spat_dict->nspatials;
 
 	return ps;
 }
@@ -157,6 +179,7 @@ engine_patternscan_init(char *arg)
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of games fed to it as GTP streams for various pattern features.";
 	e->genmove = patternscan_genmove;
 	e->notify_play = patternscan_play;
+	e->finish = patternscan_finish;
 	e->data = ps;
 
 	return e;

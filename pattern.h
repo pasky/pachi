@@ -232,8 +232,8 @@ struct spatial_dict {
 };
 
 /* Initializes spatial dictionary, pre-loading existing records from
- * default filename if exists. If will_append is true, it will open
- * the file for appending. */
+ * default filename if exists. If will_append is true, it will keep
+ * the file open for appending. */
 struct spatial_dict *spatial_dict_init(bool will_append);
 
 /* Fill up the spatial record from @m vincinity, up to full distance
@@ -247,8 +247,12 @@ hash_t spatial_hash(int rotation, struct spatial *s);
  * of the pattern. If the pattern is not found, 0 will be returned. */
 int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
 
-/* Store specified spatial pattern (both in dictionary and the underlying
- * file storage) if it is not known yet. Returns pattern id. */
+/* Store specified spatial pattern in the dictionary if it is not known yet.
+ * Returns pattern id. Note that the pattern is NOT written to the underlying
+ * file automatically. */
 int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
+
+/* Append specified spatial pattern to the given file. */
+void spatial_dict_write(struct spatial_dict *dict, int id, FILE *f);
 
 #endif

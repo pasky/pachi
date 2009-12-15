@@ -655,7 +655,7 @@ spatial2str(struct spatial *s)
 	return buf;
 }
 
-static void
+void
 spatial_dict_write(struct spatial_dict *dict, int id, FILE *f)
 {
 	struct spatial *s = &dict->spatials[id];
@@ -782,6 +782,5 @@ collision:
 	id = spatial_dict_addc(dict, s);
 	for (int r = 0; r < PTH__ROTATIONS; r++)
 		spatial_dict_addh(dict, spatial_hash(r, s), id);
-	spatial_dict_write(dict, id, dict->f);
 	return id;
 }
