@@ -18,6 +18,14 @@ struct patternscan {
 };
 
 
+static void
+process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **str)
+{
+	struct pattern p;
+	pattern_match(&ps->pc, ps->ps, &p, b, m);
+	*str = pattern2str(*str, &p);
+}
+
 static char *
 patternscan_play(struct engine *e, struct board *b, struct move *m)
 {
@@ -27,15 +35,13 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 		return NULL;
 
 	static char str[1048576]; // XXX
-	char *strp;
+	char *strp = str;
 	*str = 0;
 
 	/* Scan for supported features. */
 	/* For specifiation of features and their payloads,
 	 * please refer to pattern.h. */
-	struct pattern p;
-	pattern_match(&ps->pc, ps->ps, &p, b, m);
-	strp = pattern2str(str, &p);
+	process_pattern(ps, b, m, &strp);
 
 	if (ps->competition) {
 		/* Look at other possible moves as well. */
@@ -46,8 +52,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 			if (!board_is_valid_move(b, &mo))
 				continue;
 			*strp++ = ' ';
-			pattern_match(&ps->pc, ps->ps, &p, b, &mo);
-			strp = pattern2str(strp, &p);
+			process_pattern(ps, b, &mo, &strp);
 		}
 	}
 
