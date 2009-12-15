@@ -223,10 +223,14 @@ pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
 		/* Can atari! */
 		f->id = FEAT_ATARI; f->payload = 0;
 
-		if (PS_PF(ATARI, LADDER))
-			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_ATARI_LADDER;
-		/* TODO: is_ladder() is too conservative in some
-		 * very obvious situations, look at complete.gtp. */
+		if (PS_PF(ATARI, LADDER)) {
+			/* Opponent will escape by the other lib. */
+			coord_t lib = board_group_info(b, g).lib[0];
+			if (lib == m->coord) lib = board_group_info(b, g).lib[1];
+			/* TODO: is_ladder() is too conservative in some
+			 * very obvious situations, look at complete.gtp. */
+			f->payload |= is_ladder(b, lib, g, true, true) << PF_ATARI_LADDER;
+		}
 
 		if (PS_PF(ATARI, KO) && !is_pass(b->ko.coord))
 			f->payload |= 1 << PF_ATARI_KO;
