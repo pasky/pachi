@@ -25,7 +25,7 @@
 rm -f patterns.spat
 
 echo "Gathering population of $SPATIALS most popular spatials..."
-(for i in "$@"; do ./sgf2gtp.pl $i; done) |
+(for i in "$@"; do echo $i >&2; ./sgf2gtp.pl $i; done) |
 	./zzgo -e patternscan $PATARGS |
 	sed 's/ /\n/g' | sed -ne 's/)//; s/^s:/0x/p; ' | # pick out spatial payloads
 	perl -nle 'print (((1<<24)-1) & hex $_)' | # convert to ids
