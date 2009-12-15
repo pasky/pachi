@@ -31,6 +31,19 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_MCOWNER] = ~0,
 };
 
+pattern_spec PATTERN_SPEC_MATCHFAST = {
+	[FEAT_PASS] = ~0,
+	[FEAT_CAPTURE] = ~(1<<PF_CAPTURE_ATARIDEF)|~(1<<PF_CAPTURE_RECAPTURE),
+	[FEAT_AESCAPE] = ~0,
+	[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_SMART),
+	[FEAT_ATARI] = ~0,
+	[FEAT_BORDER] = ~0,
+	[FEAT_LDIST] = ~0,
+	[FEAT_LLDIST] = ~0,
+	[FEAT_SPATIAL] = ~0,
+	[FEAT_MCOWNER] = ~0,
+};
+
 static const struct feature_info {
 	char *name;
 	int payloads;

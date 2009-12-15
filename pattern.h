@@ -126,7 +126,10 @@ extern struct pattern_config DEFAULT_PATTERN_CONFIG;
  * features, you will need to tweak the patternconfig to
  * fine-tune them. */
 typedef uint32_t pattern_spec[FEAT_MAX];
+/* Match all supported features. */
 extern pattern_spec PATTERN_SPEC_MATCHALL;
+/* Match only "quick" features, suitable for MC simulations. */
+extern pattern_spec PATTERN_SPEC_MATCHFAST;
 
 
 /* Append feature to string. */

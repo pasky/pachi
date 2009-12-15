@@ -182,16 +182,15 @@ playout_elo_init(char *arg)
 	pc.spat_dict = spatial_dict_init(false);
 	pp->fg = features_gamma_init(&pc);
 
-	pp->choose.pc = pc; memcpy(pp->choose.ps, PATTERN_SPEC_MATCHALL, sizeof(PATTERN_SPEC_MATCHALL));
-	pp->assess.pc = pc; memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(PATTERN_SPEC_MATCHALL));
+	pp->assess.pc = pc;
+	memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
 
 	/* In playouts, we need to operate with much smaller set of features
 	 * in order to keep reasonable speed. */
 	/* TODO: Configurable. */ /* TODO: Tune. */
+	pp->choose.pc = pc;
 	pp->choose.pc.spat_max = 5;
-	/* By default, all is on. */
-	pp->choose.ps[FEAT_CAPTURE] &= ~(1<<PF_CAPTURE_ATARIDEF)|~(1<<PF_CAPTURE_RECAPTURE);
-	pp->choose.ps[FEAT_SELFATARI] &= ~(1<<PF_SELFATARI_SMART);
+	memcpy(pp->choose.ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
 
 	return p;
 }
