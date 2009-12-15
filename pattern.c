@@ -344,7 +344,7 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 		}
 	}
 
-	if (PS_ANY(LLDIST) && pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
+	if (PS_ANY(LLDIST) && pc->ldist_max > 0 && !is_pass(b->last_move2.coord)) {
 		int lldist = coord_gridcular_distance(m->coord, b->last_move2.coord, b);
 		if (pc->ldist_min <= lldist && lldist <= pc->ldist_max) {
 			f->id = FEAT_LLDIST;
