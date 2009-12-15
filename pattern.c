@@ -253,7 +253,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 	}
 
 	struct spatial s = { .points = {0} };
-	hash_t h = 0;
+	hash_t h = spatial_hash_one(0, 0, S_NONE);
 	for (int d = 2; d < pc->spat_max; d++) {
 		/* Go through all points in given distance. */
 		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
