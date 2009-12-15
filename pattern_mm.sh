@@ -22,7 +22,7 @@ echo "Gathering patterns..."
 rm -f patterns
 mkfifo patterns
 (cat patterns | sed -ne 's/^= //p' | grep -v '^$' | ./pattern_enumerate.pl >/tmp/patterns.enum) &
-PATARGS=",competition" ./pattern_gather.sh "$@"
+PATARGS="competition" ./pattern_gather.sh "$@"
 wait
 rm -f patterns
 ls -l /tmp/patterns.enum

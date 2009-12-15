@@ -15,7 +15,7 @@
 # patterns present at the board, not just the single played one per move),
 # run this script as:
 #
-#	PATARGS=",competition" ./pattern_gather.sh ...
+#	PATARGS="competition" ./pattern_gather.sh ...
 #
 # Similarly, you can set SPATIALS to different number than 5000 to consider
 # more spatial patterns.
@@ -53,7 +53,7 @@ rm /tmp/patterns /tmp/pattern.pop /tmp/pattern.filter
 # Now, re-scan patterns with limited dictionary!
 echo "Gathering patterns (2nd pass)..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
-	./zzgo -e patternscan fixed_dict$PATARGS >patterns
+	./zzgo -e patternscan fixed_dict${PATARGS:+,$PATARGS} >patterns
 
 echo "Gathered pattern data in .:"
 ls -l patterns patterns.spat
