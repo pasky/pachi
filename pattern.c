@@ -730,12 +730,10 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
 	for (int j = 0; j < ptind[pc->spat_max]; j++) {
-		/* Go through all points in given distance. */
 		int x = coord_x(m->coord, b) + ptcoords[j].x;
 		int y = coord_y(m->coord, b) + ptcoords[j].y;
 		if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
 		if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
-		/* Append point. */
 		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
 	}
 	s->dist = ptind[pc->spat_max];
