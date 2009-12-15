@@ -134,7 +134,7 @@ static void __attribute__((constructor)) ptcoords_init(void)
 
 /* pattern_spec helpers */
 #define PS_ANY(F) (ps[FEAT_ ## F] & (1 << 31))
-#define PS_PF(F, P) (ps[FEAT_ ## F] & (PF_ ## F ## _ ## P))
+#define PS_PF(F, P) (ps[FEAT_ ## F] & (1 << PF_ ## F ## _ ## P))
 
 static struct feature *
 pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
