@@ -363,7 +363,6 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 		bool thorough = false;
 		if (PS_PF(SELFATARI, SMART)) {
 			thorough = is_bad_selfatari(b, m->color, m->coord);
-			fprintf(stderr, "%x %d %d\n", ps[FEAT_SELFATARI], thorough, simple);
 		}
 		if (simple || thorough) {
 			f->id = FEAT_SELFATARI;
