@@ -303,6 +303,32 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 	return f;
 }
 
+static bool
+is_simple_selfatari(struct board *b, enum stone color, coord_t coord)
+{
+	/* Very rough check, no connect-and-die checks or other trickery. */
+	int libs = immediate_liberty_count(b, coord);
+	if (libs >= 2) return false; // open space
+
+	group_t seen = -1;
+	foreach_neighbor(b, coord, {
+		if (board_at(b, c) == stone_other(color) && board_group_info(b, group_at(b, c)).libs == 1) {
+			return false; // can capture
+
+		} else if (board_at(b, c) == color) {
+			// friendly group, does it have liberties?
+			group_t g = group_at(b, c);
+			if (board_group_info(b, g).libs == 1 || seen == g)
+				continue;
+			libs += board_group_info(b, g).libs - 1;
+			if (libs >= 2) return false;
+			// don't consider the same group twice
+			seen = g;
+		}
+	});
+	return true;
+}
+
 void
 pattern_match(struct pattern_config *pc, pattern_spec ps,
               struct pattern *p, struct board *b, struct move *m)
@@ -333,10 +359,15 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 	}
 
 	if (PS_ANY(SELFATARI)) {
-		if (is_bad_selfatari(b, m->color, m->coord)) {
+		bool simple = is_simple_selfatari(b, m->color, m->coord);
+		bool thorough = false;
+		if (PS_PF(SELFATARI, SMART)) {
+			thorough = is_bad_selfatari(b, m->color, m->coord);
+			fprintf(stderr, "%x %d %d\n", ps[FEAT_SELFATARI], thorough, simple);
+		}
+		if (simple || thorough) {
 			f->id = FEAT_SELFATARI;
-			/* TODO: Dumb selfatari detection. */
-			f->payload = 1 << PF_SELFATARI_SMART;
+			f->payload = thorough << PF_SELFATARI_SMART;
 			(f++, p->n++);
 		}
 	}

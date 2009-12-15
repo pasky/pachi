@@ -49,7 +49,7 @@ enum feature_id {
 
 	/* Self-atari move. */
 	/* Payload: [bit0] Also using our complex definition? */
-#define PF_SELFATARI_SMART	0 /* TODO: Non-smart */
+#define PF_SELFATARI_SMART	0
 	FEAT_SELFATARI,
 
 	/* Atari move. */
