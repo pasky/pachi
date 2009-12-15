@@ -12,6 +12,7 @@
 struct patternscan {
 	int debug_level;
 	struct pattern_config pc;
+	pattern_spec ps;
 	bool fixed_dict;
 	bool competition;
 };
@@ -33,7 +34,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	/* For specifiation of features and their payloads,
 	 * please refer to pattern.h. */
 	struct pattern p;
-	pattern_match(&ps->pc, PATTERN_SPEC_MATCHALL, &p, b, m);
+	pattern_match(&ps->pc, ps->ps, &p, b, m);
 	strp = pattern2str(str, &p);
 
 	if (ps->competition) {
@@ -45,7 +46,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 			if (!board_is_valid_move(b, &mo))
 				continue;
 			*strp++ = ' ';
-			pattern_match(&ps->pc, PATTERN_SPEC_MATCHALL, &p, b, &mo);
+			pattern_match(&ps->pc, ps->ps, &p, b, &mo);
 			strp = pattern2str(strp, &p);
 		}
 	}
@@ -68,6 +69,7 @@ patternscan_state_init(char *arg)
 
 	ps->debug_level = 1;
 	ps->pc = DEFAULT_PATTERN_CONFIG;
+	memcpy(&ps->ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -96,6 +98,12 @@ patternscan_state_init(char *arg)
 				 * pattern is printed, then all other patterns
 				 * that could be played but weren't. */
 				ps->competition = !optval || atoi(optval);
+
+			} else if (!strcasecmp(optname, "matchfast")) {
+				/* Limit the matched features only to the
+				 * set used in MC simulations. */
+				ps->pc = FAST_PATTERN_CONFIG;
+				memcpy(&ps->ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
 
 			/* See pattern.h:pattern_config for description and
 			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values
