@@ -21,6 +21,15 @@ struct patternscan {
 static void
 process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **str)
 {
+	/* First, store the spatial configuration in dictionary
+	 * if applicable. */
+	if (ps->gen_spat_dict) {
+		struct spatial s;
+		spatial_from_board(&ps->pc, &s, b, m);
+		spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s, 0));
+	}
+
+	/* Now, match the pattern. */
 	struct pattern p;
 	pattern_match(&ps->pc, ps->ps, &p, b, m);
 	*str = pattern2str(*str, &p);
