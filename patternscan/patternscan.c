@@ -34,7 +34,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 		struct spatial s;
 		spatial_from_board(&ps->pc, &s, b, m);
 		int dmax = s.dist;
-		for (int d = 2; d < dmax; d++) {
+		for (int d = 2; d <= dmax; d++) {
 			s.dist = d;
 			spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s) & spatial_hash_mask);
 		}
