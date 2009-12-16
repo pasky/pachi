@@ -17,6 +17,7 @@ struct patternscan {
 	pattern_spec ps;
 	bool competition;
 
+	bool no_pattern_match;
 	bool gen_spat_dict;
 	/* Number of loaded spatials; checkpoint for saving new sids
 	 * in case gen_spat_dict is enabled. */
@@ -40,9 +41,11 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 	}
 
 	/* Now, match the pattern. */
-	struct pattern p;
-	pattern_match(&ps->pc, ps->ps, &p, b, m);
-	*str = pattern2str(*str, &p);
+	if (!ps->no_pattern_match) {
+		struct pattern p;
+		pattern_match(&ps->pc, ps->ps, &p, b, m);
+		*str = pattern2str(*str, &p);
+	}
 }
 
 static char *
@@ -75,7 +78,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 		}
 	}
 
-	return str;
+	return ps->no_pattern_match ? NULL : str;
 }
 
 static coord_t *
@@ -133,6 +136,12 @@ patternscan_state_init(char *arg)
 				 * of spatial stone configurations in order
 				 * to match any spatial features. */
 				ps->gen_spat_dict = !optval || atoi(optval);
+
+			} else if (!strcasecmp(optname, "no_pattern_match")) {
+				/* If set, do not actually match patterns.
+				 * Useful only together with gen_spat_dict
+				 * when just building spatial dictionary. */
+				ps->no_pattern_match = !optval || atoi(optval);
 
 			} else if (!strcasecmp(optname, "competition")) {
 				/* In competition mode, first the played
