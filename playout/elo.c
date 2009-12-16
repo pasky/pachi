@@ -154,6 +154,7 @@ playout_elo_init(char *arg)
 	p->choose = playout_elo_choose;
 	p->assess = playout_elo_assess;
 
+	char *gammafile = NULL;
 	/* Some defaults based on the table in Remi Coulom's paper. */
 	pp->selfatari = 0.06;
 
@@ -172,6 +173,8 @@ playout_elo_init(char *arg)
 
 			if (!strcasecmp(optname, "selfatari") && optval) {
 				pp->selfatari = atof(optval);
+			} else if (!strcasecmp(optname, "gammafile") && optval) {
+				gammafile = strdup(optval);
 			} else {
 				fprintf(stderr, "playout-elo: Invalid policy argument %s or missing value\n", optname);
 				exit(1);
@@ -180,7 +183,7 @@ playout_elo_init(char *arg)
 	}
 
 	pc.spat_dict = spatial_dict_init(false);
-	pp->fg = features_gamma_init(&pc, NULL);
+	pp->fg = features_gamma_init(&pc, gammafile);
 
 	pp->assess.pc = pc;
 	memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
