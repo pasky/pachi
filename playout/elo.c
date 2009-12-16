@@ -180,7 +180,7 @@ playout_elo_init(char *arg)
 	}
 
 	pc.spat_dict = spatial_dict_init(false);
-	pp->fg = features_gamma_init(&pc);
+	pp->fg = features_gamma_init(&pc, NULL);
 
 	pp->assess.pc = pc;
 	memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));

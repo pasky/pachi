@@ -460,7 +460,7 @@ features_gamma_load(struct features_gamma *fg, char *filename)
 }
 
 struct features_gamma *
-features_gamma_init(struct pattern_config *pc)
+features_gamma_init(struct pattern_config *pc, char *file)
 {
 	struct features_gamma *fg = calloc(1, sizeof(*fg));
 	fg->pc = pc;
@@ -482,7 +482,7 @@ features_gamma_init(struct pattern_config *pc)
 			fg->gamma[i][j] = 1.0f;
 		}
 	}
-	features_gamma_load(fg, "patterns.gamma");
+	features_gamma_load(fg, file ? file : "patterns.gamma");
 	return fg;
 }
 
