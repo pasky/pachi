@@ -92,7 +92,7 @@ patternscan_finish(struct engine *e)
 
 	assert(ps->pc.spat_dict->f);
 	for (int i = ps->loaded_spatials; i < ps->pc.spat_dict->nspatials; i++) {
-		spatial_dict_write(ps->pc.spat_dict, i, ps->pc.spat_dict->f);
+		spatial_write(&ps->pc.spat_dict->spatials[i], i, ps->pc.spat_dict->f);
 	}
 }
 

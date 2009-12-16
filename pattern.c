@@ -656,9 +656,8 @@ spatial2str(struct spatial *s)
 }
 
 void
-spatial_dict_write(struct spatial_dict *dict, int id, FILE *f)
+spatial_write(struct spatial *s, int id, FILE *f)
 {
-	struct spatial *s = &dict->spatials[id];
 	fprintf(f, "%d %d ", id, s->dist);
 	fputs(spatial2str(s), f);
 	for (int r = 0; r < PTH__ROTATIONS; r++)

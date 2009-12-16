@@ -240,10 +240,12 @@ struct spatial_dict *spatial_dict_init(bool will_append);
  * given by pattern config. */
 void spatial_from_board(struct pattern_config *pc, struct spatial *s, struct board *b, struct move *m);
 
-/* Convert given spatial pattern to string. */
-char *spatial2str(struct spatial *s);
 /* Compute hash of given spatial pattern. */
 hash_t spatial_hash(int rotation, struct spatial *s);
+/* Convert given spatial pattern to string. */
+char *spatial2str(struct spatial *s);
+/* Append specified spatial pattern to the given file. */
+void spatial_write(struct spatial *s, int id, FILE *f);
 
 /* Lookup specified spatial pattern in the dictionary; return index
  * of the pattern. If the pattern is not found, 0 will be returned. */
@@ -253,8 +255,5 @@ int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
  * Returns pattern id. Note that the pattern is NOT written to the underlying
  * file automatically. */
 int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
-
-/* Append specified spatial pattern to the given file. */
-void spatial_dict_write(struct spatial_dict *dict, int id, FILE *f);
 
 #endif
