@@ -159,7 +159,7 @@ extern const char *features_gamma_filename;
 
 /* Initializes gamma values, pre-loading existing records from given file
  * (NULL for default), falling back to gamma==1 for unspecified values. */
-struct features_gamma *features_gamma_init(struct pattern_config *pc, char *file);
+struct features_gamma *features_gamma_init(struct pattern_config *pc, const char *file);
 
 /* Look up gamma of given feature, or set one if gamma is not NULL. */
 float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);

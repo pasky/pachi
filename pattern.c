@@ -443,7 +443,7 @@ pattern2str(char *str, struct pattern *p)
 /*** Features gamma set */
 
 static void
-features_gamma_load(struct features_gamma *fg, char *filename)
+features_gamma_load(struct features_gamma *fg, const char *filename)
 {
 	FILE *f = fopen(filename, "r");
 	if (!f) return;
@@ -462,7 +462,7 @@ features_gamma_load(struct features_gamma *fg, char *filename)
 const char *features_gamma_filename = "patterns.gamma";
 
 struct features_gamma *
-features_gamma_init(struct pattern_config *pc, char *file)
+features_gamma_init(struct pattern_config *pc, const char *file)
 {
 	struct features_gamma *fg = calloc(1, sizeof(*fg));
 	fg->pc = pc;
