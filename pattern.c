@@ -644,7 +644,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	}
 }
 
-static char *
+char *
 spatial2str(struct spatial *s)
 {
 	static char buf[1024];

@@ -240,7 +240,9 @@ struct spatial_dict *spatial_dict_init(bool will_append);
  * given by pattern config. */
 void spatial_from_board(struct pattern_config *pc, struct spatial *s, struct board *b, struct move *m);
 
-/* Compute hash of given pattern. */
+/* Convert given spatial pattern to string. */
+char *spatial2str(struct spatial *s);
+/* Compute hash of given spatial pattern. */
 hash_t spatial_hash(int rotation, struct spatial *s);
 
 /* Lookup specified spatial pattern in the dictionary; return index
