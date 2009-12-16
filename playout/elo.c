@@ -40,12 +40,12 @@
 struct patternset {
 	pattern_spec ps;
 	struct pattern_config pc;
+	struct features_gamma *fg;
 };
 
 struct elo_policy {
 	float selfatari;
 	struct patternset choose, assess;
-	struct features_gamma *fg;
 };
 
 
@@ -55,7 +55,7 @@ struct elo_policy {
 int
 elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *b, enum stone to_play, struct probdist *pd)
 {
-	struct elo_policy *pp = p->data;
+	//struct elo_policy *pp = p->data;
 	int moves = 0;
 
 	probdist_init(pd, board_size2(b));
@@ -98,7 +98,7 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 		pattern_match(&ps->pc, ps->ps, &p, b, &m);
 		for (int i = 0; i < p.n; i++) {
 			/* Multiply together gammas of all pattern features. */
-			float gamma = feature_gamma(pp->fg, &p.f[i], NULL);
+			float gamma = feature_gamma(ps->fg, &p.f[i], NULL);
 			//char buf[256] = ""; feature2str(buf, &p.f[i]);
 			//fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
 			probdist_mul(pd, m.coord, gamma);
@@ -154,7 +154,7 @@ playout_elo_init(char *arg)
 	p->choose = playout_elo_choose;
 	p->assess = playout_elo_assess;
 
-	char *gammafile = NULL;
+	const char *gammafile = features_gamma_filename;
 	/* Some defaults based on the table in Remi Coulom's paper. */
 	pp->selfatari = 0.06;
 
@@ -174,6 +174,9 @@ playout_elo_init(char *arg)
 			if (!strcasecmp(optname, "selfatari") && optval) {
 				pp->selfatari = atof(optval);
 			} else if (!strcasecmp(optname, "gammafile") && optval) {
+				/* patterns.gamma by default. We use this,
+				 * and need also ${gammafile}f (e.g.
+				 * patterns.gammaf) for fast (MC) features. */
 				gammafile = strdup(optval);
 			} else {
 				fprintf(stderr, "playout-elo: Invalid policy argument %s or missing value\n", optname);
@@ -183,15 +186,17 @@ playout_elo_init(char *arg)
 	}
 
 	pc.spat_dict = spatial_dict_init(false);
-	pp->fg = features_gamma_init(&pc, gammafile);
 
 	pp->assess.pc = pc;
+	pp->assess.fg = features_gamma_init(&pp->assess.pc, gammafile);
 	memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
 
 	/* In playouts, we need to operate with much smaller set of features
 	 * in order to keep reasonable speed. */
 	/* TODO: Configurable. */ /* TODO: Tune. */
 	pp->choose.pc = FAST_PATTERN_CONFIG;
+	char cgammafile[256]; strcpy(stpcpy(cgammafile, gammafile), "f");
+	pp->choose.fg = features_gamma_init(&pp->choose.pc, cgammafile);
 	pp->choose.pc.spat_dict = pc.spat_dict;
 	memcpy(pp->choose.ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
 
