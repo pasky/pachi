@@ -256,4 +256,8 @@ int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
  * file automatically. */
 int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
 
+/* Write comment lines describing the dictionary (e.g. point order
+ * in patterns) to given file. */
+void spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f);
+
 #endif

@@ -674,6 +674,23 @@ spatial_dict_load(struct spatial_dict *dict, FILE *f)
 	}
 }
 
+void
+spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f)
+{
+	/* New file. First, create a comment describing order
+	 * of points in the array. This is just for purposes
+	 * of external tools, Pachi never interprets it itself. */
+	fprintf(f, "# Pachi spatial patterns dictionary v1.0 maxdist %d\n",
+		MAX_PATTERN_DIST);
+	for (int d = 0; d < MAX_PATTERN_DIST; d++) {
+		fprintf(f, "# Point order: d=%d ", d);
+		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+			fprintf(f, "%d,%d ", ptcoords[j].x, ptcoords[j].y);
+		}
+		fprintf(f, "\n");
+	}
+}
+
 struct spatial_dict *
 spatial_dict_init(bool will_append)
 {
@@ -701,18 +718,7 @@ spatial_dict_init(bool will_append)
 	} else {
 		assert(will_append);
 		f = fopen(filename, "a");
-		/* New file. First, create a comment describing order
-		 * of points in the array. This is just for purposes
-		 * of external tools, Pachi never interprets it itself. */
-		fprintf(f, "# Pachi spatial patterns dictionary v1.0 maxdist %d\n",
-			MAX_PATTERN_DIST);
-		for (int d = 0; d < MAX_PATTERN_DIST; d++) {
-			fprintf(f, "# Point order: d=%d ", d);
-			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
-				fprintf(f, "%d,%d ", ptcoords[j].x, ptcoords[j].y);
-			}
-			fprintf(f, "\n");
-		}
+		spatial_dict_writeinfo(dict, f);
 	}
 
 	dict->f = f;
