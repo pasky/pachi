@@ -9,16 +9,17 @@
 # It will scan a given SGF collection, collect patterns, and use the MM tool
 # to compute the relative strength of various features. The output will be
 #
-#	* patterns.spat: Dictionary of spatial feature positions
 #	* patterns.gamma: Gamma values of pattern features
 #
+# If you haven't done so yet, you should first run ./pattern_spatial_gen.sh
+# (probably in the competition scan mode) to initialize the spatial patterns
+# dictionary for the collection.
+#
 # If you run this on hundreds of games, be sure you are doing it on local
-# filesystem, with some free memory (and few GB of free disk for temporary data),
-# and armed by a lot of patience - it can take long time (minutes, tens...).
+# filesystem, with some free memory (and few GB of free disk on both
+# local fs and in /tmp for temporary data), and armed by a lot of patience
+# - it can take long time (minutes, tens of minutes...).
 
-
-echo "Initializing spatial dictionary..."
-PATARGS="competition" ./pattern_spatial_gen.sh "$@"
 
 echo "Gathering patterns..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
