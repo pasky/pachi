@@ -97,10 +97,17 @@ patternscan_finish(struct engine *e)
 
 	/* Save newly found patterns. */
 
-	assert(ps->pc.spat_dict->f);
+	bool newfile = true;
+	FILE *f = fopen(spatial_dict_filename, "r");
+	if (f) { fclose(f); newfile = false; }
+	f = fopen(spatial_dict_filename, "a");
+	if (newfile)
+		spatial_dict_writeinfo(ps->pc.spat_dict, f);
+
 	for (int i = ps->loaded_spatials; i < ps->pc.spat_dict->nspatials; i++) {
-		spatial_write(&ps->pc.spat_dict->spatials[i], i, ps->pc.spat_dict->f);
+		spatial_write(&ps->pc.spat_dict->spatials[i], i, f);
 	}
+	fclose(f);
 }
 
 

@@ -691,11 +691,11 @@ spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f)
 	}
 }
 
+const char *spatial_dict_filename = "patterns.spat";
 struct spatial_dict *
 spatial_dict_init(bool will_append)
 {
-	static const char *filename = "patterns.spat";
-	FILE *f = fopen(filename, "r");
+	FILE *f = fopen(spatial_dict_filename, "r");
 	if (!f && !will_append) {
 		if (DEBUGL(1))
 			fprintf(stderr, "No spatial dictionary, will not match spatial pattern features.\n");
@@ -710,18 +710,12 @@ spatial_dict_init(bool will_append)
 	spatial_dict_addc(dict, &dummy);
 
 	if (f) {
-		/* Existing file. Load it up! */
 		spatial_dict_load(dict, f);
 		fclose(f); f = NULL;
-		if (will_append)
-			f = fopen(filename, "a");
 	} else {
 		assert(will_append);
-		f = fopen(filename, "a");
-		spatial_dict_writeinfo(dict, f);
 	}
 
-	dict->f = f;
 	return dict;
 }
 

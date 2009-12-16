@@ -226,14 +226,13 @@ struct spatial_dict {
 	uint32_t hash[1 << spatial_hash_bits];
 	/* Auxiliary collision counter, for statistics. */
 	int collisions;
-
-	/* Backing store for appending patterns. */
-	FILE *f;
 };
+/* Default spatial dict filename to use. */
+extern const char *spatial_dict_filename;
 
 /* Initializes spatial dictionary, pre-loading existing records from
- * default filename if exists. If will_append is true, it will keep
- * the file open for appending. */
+ * default filename if exists. If will_append is true, it will not
+ * complain about non-existing file and initialize the dictionary anyway. */
 struct spatial_dict *spatial_dict_init(bool will_append);
 
 /* Fill up the spatial record from @m vincinity, up to full distance
