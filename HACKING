@@ -168,9 +168,11 @@ configuration of stones in a circle around the move-to-play; each
 configuration has its own record in the dictionary and the spatial
 feature references only the id in the dictionary; so you need to keep
 both the patterns and the "patterns.spat" file.  Normally, 'patternscan'
-will append newly found spatial configurations to the file, but you
-can pass it "fixed_dict" so that it looks only for already saved
-spatial features.
+will only match already existing dictionary entries, but you
+can pass it "gen_spat_dict" so that it appends all newly found spatial
+features to the dictionary - use "spat_threshold" to limit recording
+only to frequently occuring spatial features; to start the dictionary
+from scratch, simply remove any existing "patterns.spat" file.
 
 There are few pre-made scripts to make the initialization of the pattern
 matcher easy:
