@@ -102,7 +102,7 @@ found:
  * good cache behavior. */
 static struct { short x, y; } ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
-static int ptind[MAX_PATTERN_DIST + 1];
+static int ptind[MAX_PATTERN_DIST + 2];
 static void __attribute__((constructor)) ptcoords_init(void)
 {
 	int i = 0; /* Indexing ptcoords[] */
@@ -111,7 +111,7 @@ static void __attribute__((constructor)) ptcoords_init(void)
 	ptind[0] = ptind[1] = 0;
 	ptcoords[i].x = ptcoords[i].y = 0; i++;
 
-	for (int d = 2; d < MAX_PATTERN_DIST + 1; d++) {
+	for (int d = 2; d <= MAX_PATTERN_DIST; d++) {
 		ptind[d] = i;
 		/* For each y, examine all integer solutions
 		 * of d = |x| + |y| + max(|x|, |y|). */
@@ -138,10 +138,10 @@ static void __attribute__((constructor)) ptcoords_init(void)
 			if (x != 0 && y != 0) { ptcoords[i].x = -x; ptcoords[i].y = -y; i++; }
 		}
 	}
-	ptind[MAX_PATTERN_DIST] = i;
+	ptind[MAX_PATTERN_DIST + 1] = i;
 
 #if 0
-	for (int d = 0; d < MAX_PATTERN_DIST; d++) {
+	for (int d = 0; d <= MAX_PATTERN_DIST; d++) {
 		fprintf(stderr, "d=%d (%d) ", d, ptind[d]);
 		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
 			fprintf(stderr, "%d,%d ", ptcoords[j].x, ptcoords[j].y);
@@ -680,7 +680,7 @@ spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f)
 	 * of external tools, Pachi never interprets it itself. */
 	fprintf(f, "# Pachi spatial patterns dictionary v1.0 maxdist %d\n",
 		MAX_PATTERN_DIST);
-	for (int d = 0; d < MAX_PATTERN_DIST; d++) {
+	for (int d = 0; d <= MAX_PATTERN_DIST; d++) {
 		fprintf(f, "# Point order: d=%d ", d);
 		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
 			fprintf(f, "%d,%d ", ptcoords[j].x, ptcoords[j].y);
