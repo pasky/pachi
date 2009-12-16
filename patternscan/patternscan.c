@@ -19,9 +19,15 @@ struct patternscan {
 
 	bool no_pattern_match;
 	bool gen_spat_dict;
+	/* Minimal number of occurences for spatial to be saved. */
+	int spat_threshold;
 	/* Number of loaded spatials; checkpoint for saving new sids
 	 * in case gen_spat_dict is enabled. */
 	int loaded_spatials;
+
+	/* Book-keeping of spatial occurence count. */
+	int nscounts;
+	int *scounts;
 };
 
 
@@ -36,7 +42,17 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 		int dmax = s.dist;
 		for (int d = 2; d <= dmax; d++) {
 			s.dist = d;
-			spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s) & spatial_hash_mask);
+			int sid = spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s));
+			assert(sid > 0);
+			/* Allocate space in 1024 blocks. */
+			#define SCOUNTS_ALLOC 1024
+			if (sid >= ps->nscounts) {
+				int newnsc = (sid / SCOUNTS_ALLOC + 1) * SCOUNTS_ALLOC;
+				ps->scounts = realloc(ps->scounts, newnsc * sizeof(*ps->scounts));
+				memset(&ps->scounts[ps->nscounts], 0, (newnsc - ps->nscounts) * sizeof(*ps->scounts));
+				ps->nscounts = newnsc;
+			}
+			ps->scounts[sid]++;
 		}
 	}
 
@@ -105,7 +121,10 @@ patternscan_finish(struct engine *e)
 		spatial_dict_writeinfo(ps->pc.spat_dict, f);
 
 	for (int i = ps->loaded_spatials; i < ps->pc.spat_dict->nspatials; i++) {
-		spatial_write(&ps->pc.spat_dict->spatials[i], i, f);
+		/* By default, threshold is 0 and condition is always true. */
+		assert(i < ps->nscounts && ps->scounts[i] > 0);
+		if (ps->scounts[i] >= ps->spat_threshold)
+			spatial_write(&ps->pc.spat_dict->spatials[i], i, f);
 	}
 	fclose(f);
 }
@@ -149,6 +168,14 @@ patternscan_state_init(char *arg)
 				 * Useful only together with gen_spat_dict
 				 * when just building spatial dictionary. */
 				ps->no_pattern_match = !optval || atoi(optval);
+
+			} else if (!strcasecmp(optname, "spat_threshold") && optval) {
+				/* Minimal number of times new spatial
+				 * feature must occur in this run (!) to
+				 * be included in the dictionary. Note that
+				 * this will produce discontinuous dictionary
+				 * that you should renumber. */
+				ps->spat_threshold = atoi(optval);
 
 			} else if (!strcasecmp(optname, "competition")) {
 				/* In competition mode, first the played
