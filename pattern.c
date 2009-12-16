@@ -735,7 +735,7 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 		if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
 		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
 	}
-	s->dist = ptind[pc->spat_max];
+	s->dist = pc->spat_max - 1;
 }
 
 int
