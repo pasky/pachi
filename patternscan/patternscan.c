@@ -40,7 +40,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 		struct spatial s;
 		spatial_from_board(&ps->pc, &s, b, m);
 		int dmax = s.dist;
-		for (int d = 2; d <= dmax; d++) {
+		for (int d = ps->pc.spat_min; d <= dmax; d++) {
 			s.dist = d;
 			int sid = spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s));
 			assert(sid > 0);
