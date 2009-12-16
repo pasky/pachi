@@ -201,7 +201,7 @@ float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);
 /* Record for single stone configuration. */
 struct spatial {
 	/* Gridcular radius of matched pattern. */
-	uint16_t dist;
+	char dist;
 	/* The points; each point is two bits, corresponding
 	 * to {enum stone}. Points are ordered in gridcular-defined
 	 * spiral from middle to the edge; the dictionary file has
