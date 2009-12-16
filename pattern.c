@@ -12,9 +12,7 @@
 
 
 struct pattern_config DEFAULT_PATTERN_CONFIG = {
-	/* 2..MAX_PATTERN_DIST are absolute spat limits, but according
-	 * to CrazyStone we use 3..10 instead to limit pattern amount. */
-	.spat_min = 3, .spat_max = 10 /*MAX_PATTERN_DIST*/,
+	.spat_min = 3, .spat_max = MAX_PATTERN_DIST,
 	.bdist_max = 4,
 	.ldist_min = 0, .ldist_max = 256,
 	.mcsims = 0, /* Unsupported. */

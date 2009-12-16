@@ -193,7 +193,7 @@ float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);
  */
 
 /* Maximum spatial pattern diameter. */
-#define MAX_PATTERN_DIST 21
+#define MAX_PATTERN_DIST 10
 /* Maximum number of points in spatial pattern (upper bound).
  * TODO: Better upper bound to save more data. */
 #define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
