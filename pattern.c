@@ -728,6 +728,7 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
+	memset(s, 0, sizeof(*s));
 	for (int j = 0; j < ptind[pc->spat_max]; j++) {
 		int x = coord_x(m->coord, b) + ptcoords[j].x;
 		int y = coord_y(m->coord, b) + ptcoords[j].y;
