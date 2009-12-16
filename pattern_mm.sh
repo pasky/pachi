@@ -25,6 +25,7 @@
 if [ -z "$mm_file" ]; then
 	mm_file=patterns.gamma mm_par= ./pattern_mm.sh "$@"
 	mm_file=patterns.gammaf mm_par=,matchfast ./pattern_mm.sh "$@"
+	exit
 fi
 
 echo "Gathering patterns..."
