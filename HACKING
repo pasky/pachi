@@ -187,16 +187,18 @@ matcher easy:
   to gather general pattern statistics while keeping the amount of spatial
   patterns manageable.
 
+* pattern_mm.sh: Combines our scripts and the MM tool (see below),
+  producing gamma values for harvested patterns.
+
+* pattern_spatial_show.sh ID: Shows spatial pattern of given id in 2D plane.
+
+These extra scripts are used internally by pattern_mm:
+
 * pattern_enumerate.pl: Numbers all patterns and possible payloads and
   produces numeric versions of patterns and a mapping file.
 
 * pattern_mminput.pl: Takes output of pattern_enumerate.pl and converts
   it to a format that can be directly pipelined to the MM tool (see below).
-
-* pattern_mm.sh: Combines last three scripts and the MM tool (see below),
-  producing gamma values for harvested patterns.
-
-* pattern_spatial_show.sh ID: Shows spatial pattern of given id in 2D plane.
 
 Minorization-majorization (CrazyStone patterns)
 -----------------------------------------------
