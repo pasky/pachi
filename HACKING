@@ -157,8 +157,23 @@ sets of features (spatial and others), inspired by the CrazyStone pattern
 model. Please see pattern.h for detailed description of the pattern concept
 and recognized features.
 
-To harvest patterns, use 'zzgo -e patternscan'. There are few pre-made
-scripts:
+To harvest patterns, use 'zzgo -e patternscan' (see patternscan/patternscan.c
+for available options).  The output of the pattern scanner are two data
+structures: The matched patterns
+
+	(feature1:payload feature2:payload ...)
+
+and spatial dictionary. "Spatial" feature represents a particular
+configuration of stones in a circle around the move-to-play; each
+configuration has its own record in the dictionary and the spatial
+feature references only the id in the dictionary; so you need to keep
+both the patterns and the "patterns.spat" file.  Normally, 'patternscan'
+will append newly found spatial configurations to the file, but you
+can pass it "fixed_dict" so that it looks only for already saved
+spatial features.
+
+There are few pre-made scripts to make the initialization of the pattern
+matcher easy:
 
 * pattern_byplayer.sh: Sorts out patterns from given SGF collection by
   player names, one player per file in a dedicated directory. This is
@@ -180,20 +195,6 @@ scripts:
   producing gamma values for harvested patterns.
 
 * pattern_spatial_show.sh ID: Shows spatial pattern of given id in 2D plane.
-
-The output of the pattern scanner are two data structures: The matched
-patterns
-
-	(feature1:payload feature2:payload ...)
-
-and spatial dictionary. "Spatial" feature represents a particular
-configuration of stones in a circle around the move-to-play; each
-configuration has its own record in the dictionary and the spatial
-feature references only the id in the dictionary; so you need to keep
-both the patterns and the "patterns.spat" file.  Normally, 'patternscan'
-will append newly found spatial configurations to the file, but you
-can pass it "fixed_dict" so that it looks only for already saved
-spatial features.
 
 Minorization-majorization (CrazyStone patterns)
 -----------------------------------------------
