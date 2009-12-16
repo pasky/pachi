@@ -154,6 +154,8 @@ struct features_gamma {
 	float *gamma[FEAT_MAX];
 	struct pattern_config *pc;
 };
+/* Default gamma filename to use. */
+extern const char *features_gamma_filename;
 
 /* Initializes gamma values, pre-loading existing records from given file
  * (NULL for default), falling back to gamma==1 for unspecified values. */

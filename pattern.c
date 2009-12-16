@@ -459,6 +459,8 @@ features_gamma_load(struct features_gamma *fg, char *filename)
 	fclose(f);
 }
 
+const char *features_gamma_filename = "patterns.gamma";
+
 struct features_gamma *
 features_gamma_init(struct pattern_config *pc, char *file)
 {
@@ -482,7 +484,7 @@ features_gamma_init(struct pattern_config *pc, char *file)
 			fg->gamma[i][j] = 1.0f;
 		}
 	}
-	features_gamma_load(fg, file ? file : "patterns.gamma");
+	features_gamma_load(fg, file ? file : features_gamma_filename);
 	return fg;
 }
 
