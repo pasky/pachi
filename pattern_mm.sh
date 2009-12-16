@@ -17,14 +17,14 @@
 # and armed by a lot of patience - it can take long time (minutes, tens...).
 
 
+echo "Initializing spatial dictionary..."
+PATARGS="competition" ./pattern_spatial_gen.sh "$@"
+
 echo "Gathering patterns..."
-# This is a poor man's UNIX pipe from pattern_gather to pattern_enumerate.
-rm -f patterns
-mkfifo patterns
-(cat patterns | sed -ne 's/^= //p' | grep -v '^$' | ./pattern_enumerate.pl >/tmp/patterns.enum) &
-PATARGS="competition" ./pattern_gather.sh "$@"
-wait
-rm -f patterns
+(for i in "$@"; do ./sgf2gtp.pl $i; done) |
+	./zzgo -e patternscan competition |
+	sed -ne 's/^= //p' | grep -v '^$' |
+	./pattern_enumerate.pl >/tmp/patterns.enum
 ls -l /tmp/patterns.enum
 
 # There must not be pipeline here, because of aux patterns.fdict file!
