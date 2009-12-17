@@ -195,9 +195,9 @@ playout_elo_init(char *arg)
 	 * in order to keep reasonable speed. */
 	/* TODO: Configurable. */ /* TODO: Tune. */
 	pp->choose.pc = FAST_PATTERN_CONFIG;
+	pp->choose.pc.spat_dict = pc.spat_dict;
 	char cgammafile[256]; strcpy(stpcpy(cgammafile, gammafile), "f");
 	pp->choose.fg = features_gamma_init(&pp->choose.pc, cgammafile);
-	pp->choose.pc.spat_dict = pc.spat_dict;
 	memcpy(pp->choose.ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
 
 	return p;
