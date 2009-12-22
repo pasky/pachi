@@ -16,12 +16,14 @@ struct playout_policy;
 /* Initialize policy data structures for new playout; subsequent choose calls
  * (but not assess/permit calls!) will all be made on the same board. */
 typedef void (*playoutp_setboard)(struct playout_policy *playout_policy, struct board *b);
+/* Pick the next playout simulation move. */
 typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone to_play);
 /* Set number of won (>0) or lost (<0) games for each considerable
  * move (usually a proportion of @games); can leave some untouched
  * if policy has no opinion. The number must have proper parity;
  * just use uct/prior.h:add_prior_value(). */
 typedef void (*playoutp_assess)(struct playout_policy *playout_policy, struct prior_map *map, int games);
+/* Allow play of randomly selected move. */
 typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m);
 
 struct playout_policy {
