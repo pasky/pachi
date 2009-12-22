@@ -40,21 +40,11 @@ struct playout_policy {
 
 /** Playout engine interface: */
 
-struct playout_setup;
-struct probdist;
-/* Get probability distribution of next move to play, given the current board.
- * As a special protocol, pd[coord 0] is probability of defering to the policy
- * choice; if there is no probability distribution available, the callback
- * should simply set this to 1. */
-/* Note that this callback is guaranteed to be called on each move. */
-typedef void (*playoutc_probdist)(struct playout_setup *playout_setup, struct probdist *pd, struct board *b);
-
 struct playout_setup {
 	int gamelen; /* Maximal # of moves in playout. */
 
-	/* Engine callback interface: */
-	playoutc_probdist probdist;
-	void *data;
+	/* XXX: We used to have more, perhaps we will again have more
+	 * in the future. */
 };
 
 

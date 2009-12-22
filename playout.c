@@ -11,35 +11,7 @@
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
-#include "probdist.h"
 
-
-static coord_t
-try_probdist_move(struct board *b, enum stone color, struct playout_setup *setup)
-{
-	/* First try probability distribution provided by
-	 * the engine for this move. */
-	struct probdist pd;
-	probdist_init(&pd, board_size2(b));
-
-	setup->probdist(setup, &pd, b);
-	if (pd.moves[0] >= pd.total - __FLT_EPSILON__) {
-		probdist_done(&pd);
-		return pass;
-	}
-
-	coord_t coord = probdist_pick(&pd);
-	probdist_done(&pd);
-
-	/* If the pick is invalid, defer to policy. */
-	if (!coord || is_pass(coord))
-		return pass;
-	struct move m = { .coord = coord, .color = color };
-	if (!board_is_valid_move(b, &m))
-		return pass;
-
-	return coord;
-}
 
 int
 play_random_game(struct playout_setup *setup,
@@ -62,16 +34,8 @@ play_random_game(struct playout_setup *setup,
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	while (gamelen-- && passes < 2) {
-		coord_t coord = pass;
-
-		if (setup->probdist) {
-			coord = try_probdist_move(b, color, setup);
-		}
-
-		if (is_pass(coord)) {
-			/* Defer to policy move choice. */
-			coord = policy->choose(policy, b, color);
-		}
+		coord_t coord;
+		coord = policy->choose(policy, b, color);
 
 		if (is_pass(coord)) {
 play_random:
