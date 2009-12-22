@@ -133,6 +133,11 @@ struct board {
 	 * is reset only at clear_board. */
 	void *es;
 
+	/* Playout-specific state; persistent through board development,
+	 * but its lifetime is maintained in play_random_game(); it should
+	 * not be set outside of it. */
+	void *ps;
+
 
 	/* --- PRIVATE DATA --- */
 

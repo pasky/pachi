@@ -127,5 +127,8 @@ play_random:
 	if (ownermap)
 		board_ownermap_fill(ownermap, b);
 
+	if (b->ps)
+		free(b->ps);
+
 	return result;
 }
