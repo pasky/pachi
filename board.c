@@ -9,8 +9,6 @@
 #include "mq.h"
 #include "random.h"
 
-int board_group_capture(struct board *board, group_t group);
-
 bool random_pass = false;
 
 
@@ -581,8 +579,7 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 
 
 /* This is a low-level routine that doesn't maintain consistency
- * of all the board data structures. Use board_group_capture() from
- * your code. */
+ * of all the board data structures. */
 static void
 board_remove_stone(struct board *board, coord_t c)
 {
@@ -603,6 +600,24 @@ board_remove_stone(struct board *board, coord_t c)
 	if (DEBUGL(6))
 		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
 	board->f[board->flen++] = coord_raw(c);
+}
+
+static int profiling_noinline
+board_group_capture(struct board *board, group_t group)
+{
+	int stones = 0;
+
+	foreach_in_group(board, group) {
+		board->captures[stone_other(board_at(board, c))]++;
+		board_remove_stone(board, c);
+		stones++;
+	} foreach_in_group_end;
+
+	if (board_group_info(board, group).libs == 1)
+		board_capturable_rm(board, group);
+	memset(&board_group_info(board, group), 0, sizeof(struct group));
+
+	return stones;
 }
 
 
@@ -962,25 +977,6 @@ board_get_one_point_eye(struct board *board, coord_t *coord)
 		return S_BLACK;
 	else
 		return S_NONE;
-}
-
-
-int profiling_noinline
-board_group_capture(struct board *board, group_t group)
-{
-	int stones = 0;
-
-	foreach_in_group(board, group) {
-		board->captures[stone_other(board_at(board, c))]++;
-		board_remove_stone(board, c);
-		stones++;
-	} foreach_in_group_end;
-
-	if (board_group_info(board, group).libs == 1)
-		board_capturable_rm(board, group);
-	memset(&board_group_info(board, group), 0, sizeof(struct group));
-
-	return stones;
 }
 
 
