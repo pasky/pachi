@@ -13,6 +13,9 @@ struct board_ownermap;
 /** Playout policy interface: */
 
 struct playout_policy;
+/* Initialize policy data structures for new playout; subsequent choose calls
+ * (but not assess/permit calls!) will all be made on the same board. */
+typedef void (*playoutp_setboard)(struct playout_policy *playout_policy, struct board *b);
 typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone to_play);
 /* Set number of won (>0) or lost (<0) games for each considerable
  * move (usually a proportion of @games); can leave some untouched
@@ -23,9 +26,11 @@ typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct bo
 
 struct playout_policy {
 	int debug_level;
-	/* We call choose when we ask policy about next move.
+	/* We call setboard when we start new playout.
+	 * We call choose when we ask policy about next move.
 	 * We call assess when we ask policy about how good given move is.
 	 * We call permit when we ask policy if we can make a randomly chosen move. */
+	playoutp_setboard setboard;
 	playoutp_choose choose;
 	playoutp_assess assess;
 	playoutp_permit permit;

@@ -54,6 +54,9 @@ play_random_game(struct playout_setup *setup,
 	if (gamelen < 10)
 		gamelen = 10;
 
+	if (policy->setboard)
+		policy->setboard(policy, b);
+
 	enum stone color = starting_color;
 
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
