@@ -40,6 +40,9 @@ play_random_game(struct playout_setup *setup,
 		if (is_pass(coord)) {
 play_random:
 			/* Defer to uniformly random move choice. */
+			/* This must never happen if the policy is tracking
+			 * internal board state, obviously. */
+			assert(!policy->setboard);
 			board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
 
 		} else {

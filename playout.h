@@ -14,7 +14,9 @@ struct board_ownermap;
 
 struct playout_policy;
 /* Initialize policy data structures for new playout; subsequent choose calls
- * (but not assess/permit calls!) will all be made on the same board. */
+ * (but not assess/permit calls!) will all be made on the same board; if
+ * setboard is used, it is guaranteed that choose will pick all moves played
+ * on the board subsequently. */
 typedef void (*playoutp_setboard)(struct playout_policy *playout_policy, struct board *b);
 /* Pick the next playout simulation move. */
 typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone to_play);
