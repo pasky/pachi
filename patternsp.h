@@ -77,6 +77,9 @@ char *spatial2str(struct spatial *s);
 struct ptcoord { short x, y; } ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
 int ptind[MAX_PATTERN_DIST + 2];
+/* Zobrist hashes used for points in patterns. */
+#define PTH__ROTATIONS	8
+hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 
 
 /* Spatial dictionary - collection of stone configurations. */

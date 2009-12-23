@@ -80,9 +80,8 @@ ptcoords_init(void)
 }
 
 
-/* Zobrist hashes used for black/white stones in patterns. */
-#define PTH__ROTATIONS	8
-static hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][4];
+/* Zobrist hashes used for points in patterns. */
+hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 
 static void __attribute__((constructor))
 pthashes_init(void)
