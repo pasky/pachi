@@ -131,12 +131,4 @@ void spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f);
 /* Append specified spatial pattern to the given file. */
 void spatial_write(struct spatial *s, int id, FILE *f);
 
-
-/* Pattern matcher interface. */
-
-/* Insert sequence of matched FEAT_SPAT records to the pattern. */
-struct feature *pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
-                      struct pattern *p, struct feature *f,
-		      struct board *b, struct move *m);
-
 #endif

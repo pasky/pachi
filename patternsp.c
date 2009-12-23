@@ -12,12 +12,6 @@
 #include "tactics.h"
 
 
-/* We record all spatial patterns black-to-play; simply
- * reverse all colors if we are white-to-play. */
-static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
-static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
-
-
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). The array is ordered
  * in the gridcular metric order so that we can go through it
@@ -161,6 +155,10 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 {
 	assert(pc->spat_min > 0);
 
+	/* We record all spatial patterns black-to-play; simply
+	 * reverse all colors if we are white-to-play. */
+	static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
+	static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
 	memset(s, 0, sizeof(*s));
@@ -358,43 +356,4 @@ collision:
 	for (int r = 0; r < PTH__ROTATIONS; r++)
 		spatial_dict_addh(dict, spatial_hash(r, s), id);
 	return id;
-}
-
-
-/* Filthy thing. */
-
-struct feature *
-pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
-                      struct pattern *p, struct feature *f,
-		      struct board *b, struct move *m)
-{
-	/* XXX: This is partially duplicated from spatial_from_board(), but
-	 * we build a hash instead of spatial record. */
-
-	assert(pc->spat_min > 0);
-
-	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
-
-	hash_t h = pthashes[0][0][S_NONE];
-	for (int d = 2; d <= pc->spat_max; d++) {
-		/* Go through all points in given distance. */
-		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
-			int x = coord_x(m->coord, b) + ptcoords[j].x;
-			int y = coord_y(m->coord, b) + ptcoords[j].y;
-			if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
-			if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
-			h ^= pthashes[0][j][(*bt)[board_atxy(b, x, y)]];
-		}
-		if (d < pc->spat_min)
-			continue;
-		/* Record spatial feature, one per distance. */
-		f->id = FEAT_SPATIAL;
-		f->payload = (d << PF_SPATIAL_RADIUS);
-		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
-		if (sid > 0) {
-			f->payload |= sid << PF_SPATIAL_INDEX;
-			(f++, p->n++);
-		} /* else not found, ignore */
-	}
-	return f;
 }
