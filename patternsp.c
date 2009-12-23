@@ -163,10 +163,7 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 
 	memset(s, 0, sizeof(*s));
 	for (int j = 0; j < ptind[pc->spat_max + 1]; j++) {
-		int x = coord_x(m->coord, b) + ptcoords[j].x;
-		int y = coord_y(m->coord, b) + ptcoords[j].y;
-		if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
-		if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
+		ptcoords_at(x, y, m->coord, b, j);
 		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
 	}
 	s->dist = pc->spat_max;

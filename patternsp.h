@@ -77,10 +77,16 @@ char *spatial2str(struct spatial *s);
 struct ptcoord { short x, y; } ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
 int ptind[MAX_PATTERN_DIST + 2];
+
 /* Zobrist hashes used for points in patterns. */
 #define PTH__ROTATIONS	8
 hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 
+#define ptcoords_at(x_, y_, c_, b_, j_) \
+	int x_ = coord_x((c_), (b_)) + ptcoords[j_].x; \
+	int y_ = coord_y((c_), (b_)) + ptcoords[j_].y; \
+	if (x_ >= board_size(b_)) x_ = board_size(b_) - 1; else if (x_ < 0) x_ = 0; \
+	if (y_ >= board_size(b_)) y_ = board_size(b_) - 1; else if (y_ < 0) y_ = 0;
 
 /* Spatial dictionary - collection of stone configurations. */
 

@@ -215,10 +215,7 @@ board_clear(struct board *board)
 	foreach_point(board) {
 		for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
 			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
-				int x = coord_x(c, board) + ptcoords[j].x;
-				int y = coord_y(c, board) + ptcoords[j].y;
-				if (x >= board_size(board)) x = board_size(board) - 1; else if (x < 0) x = 0;
-				if (y >= board_size(board)) y = board_size(board) - 1; else if (y < 0) y = 0;
+				ptcoords_at(x, y, c, board, j);
 				board->spathash[coord_xy(board, x, y)][d - 1] ^=
 					pthashes[0][j][board_at(board, c)];
 			}
@@ -320,10 +317,7 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 	 * of appropriate ditance in OUR circle. */
 	for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
 		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
-			int x = coord_x(coord, board) + ptcoords[j].x;
-			int y = coord_y(coord, board) + ptcoords[j].y;
-			if (x >= board_size(board)) x = board_size(board) - 1; else if (x < 0) x = 0;
-			if (y >= board_size(board)) y = board_size(board) - 1; else if (y < 0) y = 0;
+			ptcoords_at(x, y, coord, board, j);
 			/* We either changed from S_NONE to color
 			 * or vice versa; doesn't matter. */
 			board->spathash[coord_xy(board, x, y)][d - 1] ^=
