@@ -135,6 +135,7 @@ struct patternscan *
 patternscan_state_init(char *arg)
 {
 	struct patternscan *ps = calloc(1, sizeof(struct patternscan));
+	int xspat = -1;
 
 	ps->debug_level = 1;
 	ps->pc = DEFAULT_PATTERN_CONFIG;
@@ -190,6 +191,11 @@ patternscan_state_init(char *arg)
 				ps->pc = FAST_PATTERN_CONFIG;
 				memcpy(&ps->ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
 
+			} else if (!strcasecmp(optname, "xspat") && optval) {
+				/* xspat==0: don't match spatial features
+				 * xspat==1: match *only* spatial features */
+				xspat = atoi(optval);
+
 			/* See pattern.h:pattern_config for description and
 			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values
 			 * of the following options. */
@@ -212,6 +218,7 @@ patternscan_state_init(char *arg)
 			}
 		}
 	}
+	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) ps->ps[i] = 0;
 	ps->pc.spat_dict = spatial_dict_init(ps->gen_spat_dict);
 	ps->loaded_spatials = ps->pc.spat_dict->nspatials;
 
