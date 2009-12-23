@@ -159,6 +159,7 @@ playout_elo_init(char *arg)
 	pp->selfatari = 0.06;
 
 	struct pattern_config pc = DEFAULT_PATTERN_CONFIG;
+	int xspat = -1;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -178,6 +179,10 @@ playout_elo_init(char *arg)
 				 * and need also ${gammafile}f (e.g.
 				 * patterns.gammaf) for fast (MC) features. */
 				gammafile = strdup(optval);
+			} else if (!strcasecmp(optname, "xspat") && optval) {
+				/* xspat==0: don't match spatial features
+				 * xspat==1: match *only* spatial features */
+				xspat = atoi(optval);
 			} else {
 				fprintf(stderr, "playout-elo: Invalid policy argument %s or missing value\n", optname);
 				exit(1);
@@ -190,6 +195,7 @@ playout_elo_init(char *arg)
 	pp->assess.pc = pc;
 	pp->assess.fg = features_gamma_init(&pp->assess.pc, gammafile);
 	memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
+	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) pp->assess.ps[i] = 0;
 
 	/* In playouts, we need to operate with much smaller set of features
 	 * in order to keep reasonable speed. */
@@ -199,6 +205,7 @@ playout_elo_init(char *arg)
 	char cgammafile[256]; strcpy(stpcpy(cgammafile, gammafile), "f");
 	pp->choose.fg = features_gamma_init(&pp->choose.pc, cgammafile);
 	memcpy(pp->choose.ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
+	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) pp->choose.ps[i] = 0;
 
 	return p;
 }
