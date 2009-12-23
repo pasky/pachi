@@ -235,8 +235,28 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
 	hash_t h = pthashes[0][0][S_NONE];
-	for (int d = 2; d <= pc->spat_max; d++) {
-		/* Go through all points in given distance. */
+#ifdef BOARD_SPATHASH
+	for (int d = 2; d <= BOARD_SPATHASH_MAXD; d++) {
+		/* Reuse all incrementally matched data. */
+		h ^= b->spathash[m->coord][d - 1];
+		if (d < pc->spat_min)
+			continue;
+		/* Record spatial feature, one per distance. */
+		f->id = FEAT_SPATIAL;
+		f->payload = (d << PF_SPATIAL_RADIUS);
+		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
+		if (sid > 0) {
+			f->payload |= sid << PF_SPATIAL_INDEX;
+			(f++, p->n++);
+		} /* else not found, ignore */
+	}
+#else
+#undef BOARD_SPATHASH_MAXD
+#define BOARD_SPATHASH_MAXD 1
+#endif
+	for (int d = BOARD_SPATHASH_MAXD + 1; d <= pc->spat_max; d++) {
+		/* Recompute missing outer circles:
+		 * Go through all points in given distance. */
 		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
 			int x = coord_x(m->coord, b) + ptcoords[j].x;
 			int y = coord_y(m->coord, b) + ptcoords[j].y;
