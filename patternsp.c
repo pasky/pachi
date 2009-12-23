@@ -134,12 +134,6 @@ pthashes_init(void)
 	}
 }
 
-static inline hash_t
-spatial_hash_one(int rotation, int i, enum stone color)
-{
-	return pthashes[rotation][i][color];
-}
-
 inline hash_t
 spatial_hash(int rotation, struct spatial *s)
 {
@@ -381,7 +375,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
-	hash_t h = spatial_hash_one(0, 0, S_NONE);
+	hash_t h = pthashes[0][0][S_NONE];
 	for (int d = 2; d <= pc->spat_max; d++) {
 		/* Go through all points in given distance. */
 		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
@@ -389,7 +383,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 			int y = coord_y(m->coord, b) + ptcoords[j].y;
 			if (x >= board_size(b)) x = board_size(b) - 1; else if (x < 0) x = 0;
 			if (y >= board_size(b)) y = board_size(b) - 1; else if (y < 0) y = 0;
-			h ^= spatial_hash_one(0, j, (*bt)[board_atxy(b, x, y)]);
+			h ^= pthashes[0][j][(*bt)[board_atxy(b, x, y)]];
 		}
 		if (d < pc->spat_min)
 			continue;
