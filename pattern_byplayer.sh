@@ -4,6 +4,8 @@
 # Invoke this script for each played game, it will add patterns
 # to the database incrementally; each file in the database contains
 # patterns played by one player.
+#
+# You must already have a spatial dictionary generated.
 
 dbdir="$1"; shift
 sgf="$1"; shift
@@ -26,7 +28,7 @@ if [ -n "$handi" ] && [ "$handi" -gt 0 ]; then
 fi
 
 to_play=black
-./sgf2gtp.pl "$sgf" | ./zzgo -e patternscan gen_spat_dict"$1" |
+./sgf2gtp.pl "$sgf" | ./zzgo -e patternscan "$1" |
 	sed -n -e 's/^= //p' | grep -v '^ *$' | # skip irrelevant replies
 	while read pattern; do
 		if [ "$to_play" = black ]; then
