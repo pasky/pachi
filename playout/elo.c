@@ -26,6 +26,7 @@
 #include "board.h"
 #include "debug.h"
 #include "pattern.h"
+#include "patternsp.h"
 #include "playout.h"
 #include "playout/elo.h"
 #include "random.h"

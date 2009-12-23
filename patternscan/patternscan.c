@@ -7,6 +7,7 @@
 #include "move.h"
 #include "patternscan/patternscan.h"
 #include "pattern.h"
+#include "patternsp.h"
 
 
 /* Internal engine state. */
