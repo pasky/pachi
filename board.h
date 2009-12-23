@@ -14,8 +14,10 @@
 
 /* The board implementation has bunch of optional features.
  * Turn them on below: */
-#define WANT_BOARD_C // required by playout_moggy
+#define WANT_BOARD_C // capturable groups queue
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
+#define BOARD_SPATHASH // incremental patternsp.h hashes
+#define BOARD_SPATHASH_MAXD 5 // maximal diameter
 
 
 /* Allow board_play_random_move() to return pass even when
@@ -106,6 +108,11 @@ struct board {
 	struct neighbor_colors *n;
 	/* Zobrist hash for each position */
 	hash_t *h;
+#ifdef BOARD_SPATHASH
+	/* For spatial hashes, we use only 24 bits. */
+	/* [0] is d==1, we don't keep hash for d==0. */
+	uint32_t (*spathash)[BOARD_SPATHASH_MAXD];
+#endif
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
 	struct group *gi;

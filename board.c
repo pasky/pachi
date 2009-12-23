@@ -9,6 +9,10 @@
 #include "mq.h"
 #include "random.h"
 
+#ifdef BOARD_SPATHASH
+#include "patternsp.h"
+#endif
+
 bool random_pass = false;
 
 
@@ -61,8 +65,13 @@ board_copy(struct board *b2, struct board *b1)
 #else
 	int csize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize);
+#ifdef BOARD_SPATHASH
+	int ssize = board_size2(b2) * sizeof(*b2->spathash);
+#else
+	int ssize = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
@@ -72,6 +81,9 @@ board_copy(struct board *b2, struct board *b1)
 	b2->gi = x; x += gisize;
 #ifdef WANT_BOARD_C
 	b2->c = x; x += csize;
+#endif
+#ifdef BOARD_SPATHASH
+	b2->spathash = x; x += ssize;
 #endif
 
 	return b2;
@@ -114,8 +126,13 @@ board_resize(struct board *board, int size)
 #else
 	int csize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize);
+#ifdef BOARD_SPATHASH
+	int ssize = board_size2(board) * sizeof(*board->spathash);
+#else
+	int ssize = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -125,6 +142,9 @@ board_resize(struct board *board, int size)
 	board->gi = x; x += gisize;
 #ifdef WANT_BOARD_C
 	board->c = x; x += csize;
+#endif
+#ifdef BOARD_SPATHASH
+	board->spathash = x; x += ssize;
 #endif
 }
 
@@ -189,6 +209,22 @@ board_clear(struct board *board)
 		if (!board->h[coord_raw(c) * 2 + 1])
 			board->h[coord_raw(c) * 2 + 1] = 1;
 	} foreach_point_end;
+
+#ifdef BOARD_SPATHASH
+	/* Initialize spatial hashes. */
+	foreach_point(board) {
+		for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
+			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+				int x = coord_x(c, board) + ptcoords[j].x;
+				int y = coord_y(c, board) + ptcoords[j].y;
+				if (x >= board_size(board)) x = board_size(board) - 1; else if (x < 0) x = 0;
+				if (y >= board_size(board)) y = board_size(board) - 1; else if (y < 0) y = 0;
+				board->spathash[coord_xy(board, x, y)][d - 1] ^=
+					pthashes[0][j][board_at(board, c)];
+			}
+		}
+	} foreach_point_end;
+#endif
 }
 
 
@@ -278,6 +314,23 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 	board->hash ^= hash_at(board, coord, color);
 	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
+
+#ifdef BOARD_SPATHASH
+	/* Gridcular metric is reflective, so we update all hashes
+	 * of appropriate ditance in OUR circle. */
+	for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
+		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+			int x = coord_x(coord, board) + ptcoords[j].x;
+			int y = coord_y(coord, board) + ptcoords[j].y;
+			if (x >= board_size(board)) x = board_size(board) - 1; else if (x < 0) x = 0;
+			if (y >= board_size(board)) y = board_size(board) - 1; else if (y < 0) y = 0;
+			/* We either changed from S_NONE to color
+			 * or vice versa; doesn't matter. */
+			board->spathash[coord_xy(board, x, y)][d - 1] ^=
+				pthashes[0][j][color] ^ pthashes[0][j][S_NONE];
+		}
+	}
+#endif
 }
 
 /* Commit current board hash to history. */
