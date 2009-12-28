@@ -36,7 +36,7 @@ ucb1_descend(struct uct_policy *p, void **state, struct tree *tree, struct tree_
 	 * of the explore coefficient. */
 
 	struct ucb1_policy *b = p->data;
-	float xpl = log(node->u.playouts + node->prior.playouts) * b->explore_p;
+	float xpl = log(node->u.playouts + node->prior.playouts);
 
 	uctd_try_node_children(node, allow_pass, ni, urgency) {
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
@@ -46,7 +46,7 @@ ucb1_descend(struct uct_policy *p, void **state, struct tree *tree, struct tree_
 			float alpha = ni->u.playouts / uct_playouts;
 			urgency = alpha * tree_node_get_value(tree, parity, ni->u.value)
 				+ (1 - alpha) * tree_node_get_value(tree, parity, ni->prior.value);
-			urgency += sqrt(xpl / uct_playouts);
+			urgency += b->explore_p * sqrt(xpl / uct_playouts);
 		} else {
 			urgency = b->fpu;
 		}
