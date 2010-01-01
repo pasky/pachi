@@ -14,7 +14,6 @@ struct probdist {
 struct probdist *probdist_init(struct probdist *pd, int n);
 static void probdist_add(struct probdist *pd, int i, float val);
 static void probdist_mul(struct probdist *pd, int i, float val);
-static void probdist_punch(struct probdist *pd, int i); // Remove item from probability distribution
 int probdist_pick(struct probdist *pd);
 void probdist_done(struct probdist *pd); // Doesn't free pd itself
 
@@ -43,14 +42,6 @@ probdist_mul(struct probdist *pd, int i, float val)
 #endif
 	pd->total += (val - 1) * pd->items[i];
 	pd->items[i] *= val;
-}
-
-static inline void
-probdist_punch(struct probdist *pd, int i)
-{
-	assert(i >= 0 && i < pd->n);
-	pd->total -= pd->items[i];
-	pd->items[i] = 0;
 }
 
 #endif
