@@ -431,9 +431,9 @@ features_gamma_init(struct pattern_config *pc, const char *file)
 					n = pc->spat_dict->nspatials; break;
 				case FEAT_LDIST:
 				case FEAT_LLDIST:
-					n = pc->ldist_max; break;
+					n = pc->ldist_max + 1; break;
 				case FEAT_BORDER:
-					n = pc->bdist_max; break;
+					n = pc->bdist_max + 1; break;
 				default:
 					assert(0);
 			}
