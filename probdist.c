@@ -8,11 +8,11 @@
 #include "random.h"
 
 struct probdist *
-probdist_init(struct probdist *pd, int bsize2)
+probdist_init(struct probdist *pd, int n)
 {
 	if (!pd) pd = malloc(sizeof(*pd));
-	pd->bsize2 = bsize2;
-	pd->moves = calloc(bsize2, sizeof(pd->moves[0]));
+	pd->n = n;
+	pd->items = calloc(n, sizeof(pd->items[0]));
 	pd->total = 0;
 	return pd;
 }
@@ -26,10 +26,10 @@ probdist_pick(struct probdist *pd)
 	float stab = (float) fast_random(65536) / 65536 * pd->total;
 	float sum = 0;
 	//fprintf(stderr, "stab %f / %f\n", stab, pd->total);
-	for (coord_t c = 0; c < pd->bsize2; c++) {
-		sum += pd->moves[c];
+	for (int i = 0; i < pd->n; i++) {
+		sum += pd->items[i];
 		if (stab < sum)
-			return c;
+			return i;
 	}
 	//fprintf(stderr, "overstab %f (total %f, sum %f)\n", stab, pd->total, sum);
 	// This can sometimes happen when also punching due to rounding errors,.
@@ -40,5 +40,5 @@ probdist_pick(struct probdist *pd)
 
 void
 probdist_done(struct probdist *pd) {
-	free(pd->moves);
+	free(pd->items);
 }

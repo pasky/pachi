@@ -104,7 +104,7 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 			//fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
 			probdist_mul(pd, m.coord, gamma);
 		}
-		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->moves[m.coord]);
+		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->items[m.coord]);
 	}
 
 	return moves;
@@ -139,7 +139,7 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, pd.moves[c] / pd.total, games);
+		add_prior_value(map, c, pd.items[c] / pd.total, games);
 	}
 
 	probdist_done(&pd);
