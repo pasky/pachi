@@ -59,7 +59,7 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 	//struct elo_policy *pp = p->data;
 	int moves = 0;
 
-	probdist_init(pd, board_size2(b));
+	probdist_init(pd, b->flen);
 
 	/* First, assign per-point probabilities. */
 
@@ -84,14 +84,14 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 
 		moves++;
 		/* Each valid move starts with gamma 1. */
-		probdist_add(pd, m.coord, 1.f);
+		probdist_add(pd, f, 1.f);
 
 		/* Some easy features: */
 		/* XXX: We just disable them for now since we call the
 		 * pattern matcher; you need the gammas file. */
 #if 0
 		if (is_bad_selfatari(b, to_play, m.coord))
-			probdist_mul(pd, m.coord, pp->selfatari);
+			probdist_mul(pd, f, pp->selfatari);
 #endif
 
 		/* Match pattern features: */
@@ -102,7 +102,7 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 			float gamma = feature_gamma(ps->fg, &p.f[i], NULL);
 			//char buf[256] = ""; feature2str(buf, &p.f[i]);
 			//fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
-			probdist_mul(pd, m.coord, gamma);
+			probdist_mul(pd, f, gamma);
 		}
 		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->items[m.coord]);
 	}
@@ -117,9 +117,9 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	struct elo_policy *pp = p->data;
 	struct probdist pd;
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
-	coord_t c = probdist_pick(&pd);
+	int f = probdist_pick(&pd);
 	probdist_done(&pd);
-	return c;
+	return b->f[f];
 }
 
 void
@@ -139,7 +139,7 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, pd.items[c] / pd.total, games);
+		add_prior_value(map, c, pd.items[f] / pd.total, games);
 	}
 
 	probdist_done(&pd);
