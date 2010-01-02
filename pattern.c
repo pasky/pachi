@@ -20,7 +20,7 @@ struct pattern_config DEFAULT_PATTERN_CONFIG = {
 };
 
 struct pattern_config FAST_PATTERN_CONFIG = {
-	.spat_min = 3, .spat_max = 5,
+	.spat_min = 3, .spat_max = 3,
 	.bdist_max = 4,
 	.ldist_min = 0, .ldist_max = 256,
 	.mcsims = 0,
