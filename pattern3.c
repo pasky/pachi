@@ -164,6 +164,8 @@ pattern3s_init(struct pattern3s *p, char src[][11], int src_n)
 
 
 /* Check if we match any pattern centered on given move. */
+/* TODO: Make use of the incremental spatial matching infrastructure
+ * in board.h? */
 bool
 test_pattern3_here(struct pattern3s *p, struct board *b, struct move *m)
 {
