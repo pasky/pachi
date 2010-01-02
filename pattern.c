@@ -446,13 +446,3 @@ features_gamma_init(struct pattern_config *pc, const char *file)
 	features_gamma_load(fg, file ? file : features_gamma_filename);
 	return fg;
 }
-
-float
-feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma)
-{
-	/* XXX: We mask out spatial distance unconditionally since it shouldn't
-	 * affect any other feature. */
-	int payid = f->payload & ((1<<24)-1);
-	if (gamma) fg->gamma[f->id][payid] = *gamma;
-	return fg->gamma[f->id][payid];
-}

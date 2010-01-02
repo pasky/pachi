@@ -162,6 +162,17 @@ extern const char *features_gamma_filename;
 struct features_gamma *features_gamma_init(struct pattern_config *pc, const char *file);
 
 /* Look up gamma of given feature, or set one if gamma is not NULL. */
-float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);
+static float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);
+
+
+static inline float
+feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma)
+{
+	/* XXX: We mask out spatial distance unconditionally since it shouldn't
+	 * affect any other feature. */
+	int payid = f->payload & ((1<<24)-1);
+	if (gamma) fg->gamma[f->id][payid] = *gamma;
+	return fg->gamma[f->id][payid];
+}
 
 #endif
