@@ -94,7 +94,7 @@ enum feature_id {
 
 struct feature {
 	enum feature_id id;
-	uint32_t payload;
+	uint16_t payload;
 };
 
 struct pattern {
@@ -128,7 +128,7 @@ extern struct pattern_config FAST_PATTERN_CONFIG;
  * of the bits controls various PF tests; for non-bitmap
  * features, you will need to tweak the patternconfig to
  * fine-tune them. */
-typedef uint32_t pattern_spec[FEAT_MAX];
+typedef uint16_t pattern_spec[FEAT_MAX];
 /* Match all supported features. */
 extern pattern_spec PATTERN_SPEC_MATCHALL;
 /* Match only "quick" features, suitable for MC simulations. */
