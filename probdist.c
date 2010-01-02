@@ -13,29 +13,24 @@ probdist_init(struct probdist *pd, int n)
 	if (!pd) pd = malloc(sizeof(*pd));
 	pd->n = n;
 	pd->items = calloc(n, sizeof(pd->items[0]));
-	pd->total = 0;
+	pd->items[0] = 0; // probdist_set() requires [0] to be initialized
 	return pd;
 }
 
-coord_t
+int
 probdist_pick(struct probdist *pd)
 {
-	assert(pd->total > -1); // -1..0 is rounding error
-	if (pd->total < __FLT_EPSILON__)
-		return pass;
-	float stab = (float) fast_random(65536) / 65536 * pd->total;
-	float sum = 0;
-	//fprintf(stderr, "stab %f / %f\n", stab, pd->total);
+	assert(pd->items[pd->n - 1] >= 0);
+	/* TODO: float random */
+	float stab = (float) fast_random(65536) / 65536 * pd->items[pd->n - 1];
+	//fprintf(stderr, "stab %f / %f\n", stab, pd->items[pd->n - 1]);
 	for (int i = 0; i < pd->n; i++) {
-		sum += pd->items[i];
-		if (stab < sum)
+		if (stab <= pd->items[i])
 			return i;
 	}
-	//fprintf(stderr, "overstab %f (total %f, sum %f)\n", stab, pd->total, sum);
-	// This can sometimes happen when also punching due to rounding errors,.
-	// Just assert that the difference is tiny.
-	assert(fabs(pd->total - stab) < 1);
-	return pass;
+	//fprintf(stderr, "overstab %f (total %f, sum %f)\n", stab, pd->items[pd->n - 1], sum);
+	assert(0);
+	return -1;
 }
 
 void

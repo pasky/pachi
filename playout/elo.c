@@ -67,19 +67,22 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 		struct move m = { .coord = b->f[f], .color = to_play };
 
 		/* Skip pass (for now)? */
-		if (is_pass(m.coord))
+		if (is_pass(m.coord)) {
+skip_move:
+			probdist_set(pd, f, 0);
 			continue;
+		}
 		//fprintf(stderr, "<%d> %s\n", f, coord2sstr(m.coord, b));
 
 		/* Skip invalid moves. */
 		if (!board_is_valid_move(b, &m))
-			continue;
+			goto skip_move;
 
 		/* We shall never fill our own single-point eyes. */
 		/* XXX: In some rare situations, this prunes the best move:
 		 * Bulk-five nakade with eye at 1-1 point. */
 		if (board_is_one_point_eye(b, &m.coord, to_play)) {
-			continue;
+			goto skip_move;
 		}
 
 		moves++;
@@ -106,7 +109,7 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 		}
 
 		probdist_set(pd, f, g);
-		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->items[m.coord]);
+		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->items[f]);
 	}
 
 	return moves;
@@ -141,7 +144,8 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, pd.items[f] / pd.total, games);
+		float p = pd.items[f] - (likely(f > 0) ? pd.items[f - 1] : 0);
+		add_prior_value(map, c, p / pd.items[pd.n - 1], games);
 	}
 
 	probdist_done(&pd);
