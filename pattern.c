@@ -75,7 +75,7 @@ static const struct feature_info {
 char *
 feature2str(char *str, struct feature *f)
 {
-	return str + sprintf(str + strlen(str), "%s:%"PRIx32, features[f->id].name, f->payload);
+	return str + sprintf(str + strlen(str), "%s:%d", features[f->id].name, f->payload);
 }
 
 char *
@@ -94,7 +94,7 @@ str2feature(char *str, struct feature *f)
 
 found:
 	str += flen + 1;
-	f->payload = strtoull(str, &str, 16);
+	f->payload = strtoull(str, &str, 10);
 	return str;
 }
 
