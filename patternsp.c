@@ -310,19 +310,6 @@ spatial_dict_init(bool will_append)
 }
 
 int
-spatial_dict_get(struct spatial_dict *dict, int dist, hash_t hash)
-{
-	int id = dict->hash[hash];
-	if (id && dict->spatials[id].dist != dist) {
-		if (DEBUGL(6))
-			fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
-				dist, dict->spatials[id].dist, id, hash);
-		return 0;
-	}
-	return id;
-}
-
-int
 spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 {
 	int id = spatial_dict_get(dict, s->dist, h);
