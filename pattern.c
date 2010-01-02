@@ -222,43 +222,24 @@ pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
 	return f;
 }
 
+#ifndef BOARD_SPATHASH
+#undef BOARD_SPATHASH_MAXD
+#define BOARD_SPATHASH_MAXD 1
+#endif
+
+/* Match spatial features that are too distant to be pre-matched
+ * incrementally. */
 struct feature *
-pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
-                      struct pattern *p, struct feature *f,
-		      struct board *b, struct move *m)
+pattern_match_spatial_outer(struct pattern_config *pc, pattern_spec ps,
+                            struct pattern *p, struct feature *f,
+		            struct board *b, struct move *m, hash_t h)
 {
-	/* XXX: This is partially duplicated from spatial_from_board(), but
-	 * we build a hash instead of spatial record. */
-
-	assert(pc->spat_min > 0);
-
 	/* We record all spatial patterns black-to-play; simply
 	 * reverse all colors if we are white-to-play. */
 	static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
 	static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
-	bool w_to_play = m->color == S_WHITE;
-	enum stone (*bt)[4] = w_to_play ? &bt_white : &bt_black;
+	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
-	hash_t h = pthashes[0][0][S_NONE];
-#ifdef BOARD_SPATHASH
-	for (int d = 2; d <= BOARD_SPATHASH_MAXD; d++) {
-		/* Reuse all incrementally matched data. */
-		h ^= b->spathash[m->coord][d - 1][w_to_play];
-		if (d < pc->spat_min)
-			continue;
-		/* Record spatial feature, one per distance. */
-		f->id = FEAT_SPATIAL;
-		f->payload = (d << PF_SPATIAL_RADIUS);
-		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
-		if (sid > 0) {
-			f->payload |= sid << PF_SPATIAL_INDEX;
-			(f++, p->n++);
-		} /* else not found, ignore */
-	}
-#else
-#undef BOARD_SPATHASH_MAXD
-#define BOARD_SPATHASH_MAXD 1
-#endif
 	for (int d = BOARD_SPATHASH_MAXD + 1; d <= pc->spat_max; d++) {
 		/* Recompute missing outer circles:
 		 * Go through all points in given distance. */
@@ -277,6 +258,37 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 			(f++, p->n++);
 		} /* else not found, ignore */
 	}
+	return f;
+}
+
+struct feature *
+pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
+                      struct pattern *p, struct feature *f,
+		      struct board *b, struct move *m)
+{
+	/* XXX: This is partially duplicated from spatial_from_board(), but
+	 * we build a hash instead of spatial record. */
+
+	assert(pc->spat_min > 0);
+
+	bool w_to_play = m->color == S_WHITE;
+	hash_t h = pthashes[0][0][S_NONE];
+	for (int d = 2; d <= BOARD_SPATHASH_MAXD; d++) {
+		/* Reuse all incrementally matched data. */
+		h ^= b->spathash[m->coord][d - 1][w_to_play];
+		if (d < pc->spat_min)
+			continue;
+		/* Record spatial feature, one per distance. */
+		f->id = FEAT_SPATIAL;
+		f->payload = (d << PF_SPATIAL_RADIUS);
+		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
+		if (sid > 0) {
+			f->payload |= sid << PF_SPATIAL_INDEX;
+			(f++, p->n++);
+		} /* else not found, ignore */
+	}
+	if (unlikely(pc->spat_max > BOARD_SPATHASH_MAXD))
+		f = pattern_match_spatial_outer(pc, ps, p, f, b, m, h);
 	return f;
 }
 
