@@ -250,11 +250,10 @@ pattern_match_spatial_outer(struct pattern_config *pc, pattern_spec ps,
 		if (d < pc->spat_min)
 			continue;
 		/* Record spatial feature, one per distance. */
-		f->id = FEAT_SPATIAL;
-		f->payload = (d << PF_SPATIAL_RADIUS);
 		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
 		if (sid > 0) {
-			f->payload |= sid << PF_SPATIAL_INDEX;
+			f->id = FEAT_SPATIAL;
+			f->payload = sid;
 			(f++, p->n++);
 		} /* else not found, ignore */
 	}
@@ -279,11 +278,10 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 		if (d < pc->spat_min)
 			continue;
 		/* Record spatial feature, one per distance. */
-		f->id = FEAT_SPATIAL;
-		f->payload = (d << PF_SPATIAL_RADIUS);
 		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
 		if (sid > 0) {
-			f->payload |= sid << PF_SPATIAL_INDEX;
+			f->id = FEAT_SPATIAL;
+			f->payload = sid;
 			(f++, p->n++);
 		} /* else not found, ignore */
 	}

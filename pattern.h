@@ -78,10 +78,7 @@ enum feature_id {
 
 	/* Spatial configuration of stones in certain board area,
 	 * with black to play. */
-	/* Payload: [bits 31-24] Pattern radius (gridcular) */
-#define PF_SPATIAL_RADIUS	24
-	/*          [other bits] Index in the spatial_dict. */
-#define PF_SPATIAL_INDEX	0
+	/* Payload: [other bits] Index in the spatial_dict. */
 	FEAT_SPATIAL,
 
 
@@ -173,11 +170,8 @@ static float feature_gamma(struct features_gamma *fg, struct feature *f, float *
 static inline float
 feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma)
 {
-	/* XXX: We mask out spatial distance unconditionally since it shouldn't
-	 * affect any other feature. */
-	int payid = f->payload & ((1<<24)-1);
-	if (gamma) fg->gamma[f->id][payid] = *gamma;
-	return fg->gamma[f->id][payid];
+	if (gamma) fg->gamma[f->id][f->payload] = *gamma;
+	return fg->gamma[f->id][f->payload];
 }
 
 #endif
