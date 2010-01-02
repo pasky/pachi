@@ -35,6 +35,7 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_BORDER] = ~0,
 	[FEAT_LDIST] = ~0,
 	[FEAT_LLDIST] = ~0,
+	[FEAT_CONTIGUITY] = ~0,
 	[FEAT_SPATIAL] = ~0,
 	[FEAT_MCOWNER] = ~0,
 };
@@ -47,8 +48,9 @@ pattern_spec PATTERN_SPEC_MATCHFAST = {
 	[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_SMART),
 	[FEAT_ATARI] = ~(FAST_NO_LADDER<<PF_ATARI_LADDER),
 	[FEAT_BORDER] = 0,
-	[FEAT_LDIST] = ~0,
-	[FEAT_LLDIST] = ~0,
+	[FEAT_LDIST] = 0,
+	[FEAT_LLDIST] = 0,
+	[FEAT_CONTIGUITY] = ~0,
 	[FEAT_SPATIAL] = ~0,
 	[FEAT_MCOWNER] = ~0,
 };
@@ -65,6 +67,7 @@ static const struct feature_info {
 	[FEAT_BORDER] = { .name = "border", .payloads = -1 },
 	[FEAT_LDIST] = { .name = "ldist", .payloads = -1 },
 	[FEAT_LLDIST] = { .name = "lldist", .payloads = -1 },
+	[FEAT_CONTIGUITY] = { .name = "cont", .payloads = 2 },
 	[FEAT_SPATIAL] = { .name = "s", .payloads = -1 },
 	[FEAT_MCOWNER] = { .name = "mcowner", .payloads = 16 },
 };
@@ -366,6 +369,13 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 			f->payload = ldist;
 			(f++, p->n++);
 		}
+	}
+
+	if (PS_ANY(CONTIGUITY) && !is_pass(b->last_move.coord)
+	    && coord_is_8adjecent(m->coord, b->last_move.coord, b)) {
+		f->id = FEAT_CONTIGUITY;
+		f->payload = 1;
+		(f++, p->n++);
 	}
 
 	if (PS_ANY(LLDIST) && pc->ldist_max > 0 && !is_pass(b->last_move2.coord)) {

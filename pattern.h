@@ -71,6 +71,11 @@ enum feature_id {
 	/* Payload: The distance - gridcular metric. */
 	FEAT_LLDIST,
 
+	/* Continuity. */
+	/* Payload: [bit0] The move is in 8-neighborhood of last move (ldist<=3) */
+	/* This is a fast substitution to ldist/lldist. */
+	FEAT_CONTIGUITY,
+
 	/* Spatial configuration of stones in certain board area,
 	 * with black to play. */
 	/* Payload: [bits 31-24] Pattern radius (gridcular) */
