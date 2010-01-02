@@ -144,8 +144,7 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		float p = pd.items[f] - (likely(f > 0) ? pd.items[f - 1] : 0);
-		add_prior_value(map, c, p / pd.items[pd.n - 1], games);
+		add_prior_value(map, c, probdist_one(&pd, f) / probdist_total(&pd), games);
 	}
 
 	probdist_done(&pd);

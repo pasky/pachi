@@ -13,6 +13,8 @@ struct probdist {
 	int n;
 	float *items; // [n], probability pick<=i
 };
+#define probdist_total(pd) ((pd)->items[(pd)->n - 1])
+#define probdist_one(pd, i) ((pd)->items[i] - (__builtin_expect(i > 0, 1) ? (pd)->items[i - 1] : 0))
 
 struct probdist *probdist_init(struct probdist *pd, int n);
 /* You must call this for all items, *in sequence* (0, 1, ...).

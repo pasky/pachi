@@ -20,9 +20,9 @@ probdist_init(struct probdist *pd, int n)
 int
 probdist_pick(struct probdist *pd)
 {
-	assert(pd->items[pd->n - 1] >= 0);
+	assert(probdist_total(pd) >= 0);
 	/* TODO: float random */
-	float stab = (float) fast_random(65536) / 65536 * pd->items[pd->n - 1];
+	float stab = (float) fast_random(65536) / 65536 * probdist_total(pd);
 	//fprintf(stderr, "stab %f / %f\n", stab, pd->items[pd->n - 1]);
 	for (int i = 0; i < pd->n; i++) {
 		if (stab <= pd->items[i])
