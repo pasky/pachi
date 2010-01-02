@@ -98,6 +98,26 @@ found:
 	return str;
 }
 
+int
+feature_payloads(struct pattern_config *pc, enum feature_id f)
+{
+	switch (f) {
+		case FEAT_SPATIAL:
+			assert(features[f].payloads < 0);
+			return pc->spat_dict->nspatials;
+		case FEAT_LDIST:
+		case FEAT_LLDIST:
+			assert(features[f].payloads < 0);
+			return pc->ldist_max + 1;
+		case FEAT_BORDER:
+			assert(features[f].payloads < 0);
+			return pc->bdist_max + 1;
+		default:
+			assert(features[f].payloads > 0);
+			return features[f].payloads;
+	}
+}
+
 
 /* pattern_spec helpers */
 #define PS_ANY(F) (ps[FEAT_ ## F] & (1 << 31))
@@ -446,20 +466,7 @@ features_gamma_init(struct pattern_config *pc, const char *file)
 	struct features_gamma *fg = calloc(1, sizeof(*fg));
 	fg->pc = pc;
 	for (int i = 0; i < FEAT_MAX; i++) {
-		int n = features[i].payloads;
-		if (n <= 0) {
-			switch (i) {
-				case FEAT_SPATIAL:
-					n = pc->spat_dict->nspatials; break;
-				case FEAT_LDIST:
-				case FEAT_LLDIST:
-					n = pc->ldist_max + 1; break;
-				case FEAT_BORDER:
-					n = pc->bdist_max + 1; break;
-				default:
-					assert(0);
-			}
-		}
+		int n = feature_payloads(pc, i);
 		fg->gamma[i] = malloc(n * sizeof(float));
 		for (int j = 0; j < n; j++) {
 			fg->gamma[i][j] = 1.0f;
