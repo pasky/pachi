@@ -232,13 +232,14 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 	 * reverse all colors if we are white-to-play. */
 	static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
 	static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
-	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
+	bool w_to_play = m->color == S_WHITE;
+	enum stone (*bt)[4] = w_to_play ? &bt_white : &bt_black;
 
 	hash_t h = pthashes[0][0][S_NONE];
 #ifdef BOARD_SPATHASH
 	for (int d = 2; d <= BOARD_SPATHASH_MAXD; d++) {
 		/* Reuse all incrementally matched data. */
-		h ^= b->spathash[m->coord][d - 1];
+		h ^= b->spathash[m->coord][d - 1][w_to_play];
 		if (d < pc->spat_min)
 			continue;
 		/* Record spatial feature, one per distance. */

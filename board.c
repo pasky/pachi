@@ -216,8 +216,10 @@ board_clear(struct board *board)
 		for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
 			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
 				ptcoords_at(x, y, c, board, j);
-				board->spathash[coord_xy(board, x, y)][d - 1] ^=
+				board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
 					pthashes[0][j][board_at(board, c)];
+				board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
+					pthashes[0][j][stone_other(board_at(board, c))];
 			}
 		}
 	} foreach_point_end;
@@ -320,8 +322,10 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 			ptcoords_at(x, y, coord, board, j);
 			/* We either changed from S_NONE to color
 			 * or vice versa; doesn't matter. */
-			board->spathash[coord_xy(board, x, y)][d - 1] ^=
+			board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
 				pthashes[0][j][color] ^ pthashes[0][j][S_NONE];
+			board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
+				pthashes[0][j][stone_other(color)] ^ pthashes[0][j][S_NONE];
 		}
 	}
 #endif

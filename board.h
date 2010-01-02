@@ -109,7 +109,10 @@ struct board {
 #ifdef BOARD_SPATHASH
 	/* For spatial hashes, we use only 24 bits. */
 	/* [0] is d==1, we don't keep hash for d==0. */
-	uint32_t (*spathash)[BOARD_SPATHASH_MAXD];
+	/* We keep hashes for black-to-play ([][0]) and white-to-play
+	 * ([][1], reversed stone colors since we match all patterns as
+	 * black-to-play). */
+	uint32_t (*spathash)[BOARD_SPATHASH_MAXD][2];
 #endif
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
