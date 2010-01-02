@@ -7,9 +7,7 @@
 
 #include "stone.h"
 #include "move.h"
-
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect((x), 0)
+#include "util.h"
 
 
 /* The board implementation has bunch of optional features.

@@ -8,13 +8,14 @@
  * then multiple times an item picked randomly. */
 
 #include "move.h"
+#include "util.h"
 
 struct probdist {
 	int n;
 	float *items; // [n], probability pick<=i
 };
 #define probdist_total(pd) ((pd)->items[(pd)->n - 1])
-#define probdist_one(pd, i) ((pd)->items[i] - (__builtin_expect(i > 0, 1) ? (pd)->items[i - 1] : 0))
+#define probdist_one(pd, i) ((pd)->items[i] - (likely(i > 0) ? (pd)->items[i - 1] : 0))
 
 /* You must call this for all items, *in sequence* (0, 1, ...).
  * @val is probability of item @i (as opposed to items[i], which
@@ -35,8 +36,7 @@ probdist_set(struct probdist *pd, int i, float val)
 	assert(i >= 0 && i < pd->n);
 	assert(val >= 0);
 #endif
-	pd->items[i] = (__builtin_expect(i > 0, 1) ? pd->items[i - 1] : 0)
-	               + val;
+	pd->items[i] = (likely(i > 0) ? pd->items[i - 1] : 0) + val;
 }
 
 #endif
