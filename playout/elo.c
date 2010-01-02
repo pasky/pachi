@@ -107,7 +107,7 @@ skip_move:
 		}
 
 		probdist_set(pd, f, g);
-		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->items[f]);
+		//fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), probdist_one(pd, f), pd->items[f]);
 	}
 
 	return moves;
