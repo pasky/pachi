@@ -3,6 +3,10 @@
 
 /* Tools for picking an item according to a probability distribution. */
 
+/* The probability distribution structure is designed to be once
+ * initialized, then each item sequentially assigned a value one,
+ * then multiple times an item picked randomly. */
+
 #include "move.h"
 
 struct probdist {
@@ -12,8 +16,7 @@ struct probdist {
 };
 
 struct probdist *probdist_init(struct probdist *pd, int n);
-static void probdist_add(struct probdist *pd, int i, float val);
-static void probdist_mul(struct probdist *pd, int i, float val);
+static void probdist_set(struct probdist *pd, int i, float val);
 int probdist_pick(struct probdist *pd);
 void probdist_done(struct probdist *pd); // Doesn't free pd itself
 
@@ -23,25 +26,14 @@ void probdist_done(struct probdist *pd); // Doesn't free pd itself
  * functions otherwise. */
 
 static inline void
-probdist_add(struct probdist *pd, int i, float val)
+probdist_set(struct probdist *pd, int i, float val)
 {
 #if 0
 	assert(i >= 0 && i < pd->n);
 	assert(val >= 0);
 #endif
-	pd->items[i] += val;
+	pd->items[i] = val;
 	pd->total += val;
-}
-
-static inline void
-probdist_mul(struct probdist *pd, int i, float val)
-{
-#if 0
-	assert(i >= 0 && i < pd->n);
-	assert(val >= 0);
-#endif
-	pd->total += (val - 1) * pd->items[i];
-	pd->items[i] *= val;
 }
 
 #endif

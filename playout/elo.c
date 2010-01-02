@@ -84,14 +84,14 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 
 		moves++;
 		/* Each valid move starts with gamma 1. */
-		probdist_add(pd, f, 1.f);
+		float g = 1.f;
 
 		/* Some easy features: */
 		/* XXX: We just disable them for now since we call the
 		 * pattern matcher; you need the gammas file. */
 #if 0
 		if (is_bad_selfatari(b, to_play, m.coord))
-			probdist_mul(pd, f, pp->selfatari);
+			g *= pp->selfatari;
 #endif
 
 		/* Match pattern features: */
@@ -102,8 +102,10 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 			float gamma = feature_gamma(ps->fg, &p.f[i], NULL);
 			//char buf[256] = ""; feature2str(buf, &p.f[i]);
 			//fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
-			probdist_mul(pd, f, gamma);
+			g *= gamma;
 		}
+
+		probdist_set(pd, f, g);
 		//fprintf(stderr, "<%d> %s %f\n", f, coord2sstr(m.coord, b), pd->items[m.coord]);
 	}
 
