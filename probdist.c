@@ -7,16 +7,6 @@
 #include "probdist.h"
 #include "random.h"
 
-struct probdist *
-probdist_init(struct probdist *pd, int n)
-{
-	if (!pd) pd = malloc(sizeof(*pd));
-	pd->n = n;
-	pd->items = calloc(n, sizeof(pd->items[0]));
-	pd->items[0] = 0; // probdist_set() requires [0] to be initialized
-	return pd;
-}
-
 int
 probdist_pick(struct probdist *pd)
 {
@@ -31,9 +21,4 @@ probdist_pick(struct probdist *pd)
 	//fprintf(stderr, "overstab %f (total %f, sum %f)\n", stab, pd->items[pd->n - 1], sum);
 	assert(0);
 	return -1;
-}
-
-void
-probdist_done(struct probdist *pd) {
-	free(pd->items);
 }

@@ -59,8 +59,6 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 	//struct elo_policy *pp = p->data;
 	int moves = 0;
 
-	probdist_init(pd, b->flen);
-
 	/* First, assign per-point probabilities. */
 
 	for (int f = 0; f < b->flen; f++) {
@@ -120,10 +118,9 @@ coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct elo_policy *pp = p->data;
-	struct probdist pd;
+	float pdi[b->flen]; struct probdist pd = { .n = b->flen, .items = pdi };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	int f = probdist_pick(&pd);
-	probdist_done(&pd);
 	return b->f[f];
 }
 
@@ -131,9 +128,9 @@ void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct elo_policy *pp = p->data;
-	struct probdist pd;
+	float pdi[map->b->flen]; struct probdist pd = { .n = map->b->flen, .items = pdi };
+
 	int moves;
-	
 	moves = elo_get_probdist(p, &pp->assess, map->b, map->to_play, &pd);
 
 	/* It is a question how to transform the gamma to won games; we use
@@ -146,8 +143,6 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 			continue;
 		add_prior_value(map, c, probdist_one(&pd, f) / probdist_total(&pd), games);
 	}
-
-	probdist_done(&pd);
 }
 
 
