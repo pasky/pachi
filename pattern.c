@@ -120,7 +120,7 @@ feature_payloads(struct pattern_config *pc, enum feature_id f)
 
 
 /* pattern_spec helpers */
-#define PS_ANY(F) (ps[FEAT_ ## F] & (1 << 31))
+#define PS_ANY(F) (ps[FEAT_ ## F] & (1 << 15))
 #define PS_PF(F, P) (ps[FEAT_ ## F] & (1 << PF_ ## F ## _ ## P))
 
 static struct feature *
