@@ -98,6 +98,12 @@ found:
 	return str;
 }
 
+char *
+feature_name(enum feature_id f)
+{
+	return features[f].name;
+}
+
 int
 feature_payloads(struct pattern_config *pc, enum feature_id f)
 {

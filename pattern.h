@@ -139,6 +139,8 @@ extern pattern_spec PATTERN_SPEC_MATCHFAST;
 char *feature2str(char *str, struct feature *f);
 /* Convert string to feature, return pointer after the featurespec. */
 char *str2feature(char *str, struct feature *f);
+/* Get name of given feature. */
+char *feature_name(enum feature_id f);
 /* Get number of possible payload values associated with the feature. */
 int feature_payloads(struct pattern_config *pc, enum feature_id f);
 
