@@ -35,7 +35,7 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_BORDER] = ~0,
 	[FEAT_LDIST] = ~0,
 	[FEAT_LLDIST] = ~0,
-	[FEAT_CONTIGUITY] = ~0,
+	[FEAT_CONTIGUITY] = 0,
 	[FEAT_SPATIAL] = ~0,
 	[FEAT_MCOWNER] = ~0,
 };
