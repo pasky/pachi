@@ -28,22 +28,19 @@ if [ -z "$mm_file" ]; then
 	exit
 fi
 
-echo "Gathering patterns..."
+echo "Gathering patterns and feeding MM..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
-	./zzgo -e patternscan competition$mm_par |
-	sed -ne 's/^= //p' | grep -v '^$' |
-	./pattern_enumerate.pl >/tmp/patterns.enum
-ls -l /tmp/patterns.enum
+	./zzgo -e patternscan competition,mm$mm_par |
+	sed -e '/^= $/d; s/^= /#\n/' | grep -v '^$' |
+	mm/mm >/tmp/patterns.mm
+ls -l /tmp/patterns.mm
 
 # There must not be pipeline here, because of aux patterns.fdict file!
 
-echo "Invoking MM..."
-cat /tmp/patterns.enum | ./pattern_mminput.pl | mm/mm >/tmp/patterns.mm
-
 echo "Associating gamma values..."
-cat /tmp/patterns.mm | sed 's/  */ /; s/^ //;' | join -o 2.3,1.2 /tmp/patterns.mm patterns.fdict | sed 's/^s\.[0-9]*:/s:/' >$mm_file
+cat /tmp/patterns.mm | sed 's/  */ /; s/^ //;' | join -o 2.2,1.2 /tmp/patterns.mm patterns.fdict | sed 's/^s\.[0-9]*:/s:/' >$mm_file
 
-rm -f /tmp/patterns.enum /tmp/patterns.mm
+rm -f /tmp/patterns.mm
 echo "Product:"
 ls -l $mm_file
 echo "Leaving behind for analysis:"
