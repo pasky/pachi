@@ -167,8 +167,12 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 			struct move mo = { .coord = b->f[f], .color = m->color };
 			if (is_pass(mo.coord))
 				continue;
+#if 0
+			/* We want to list again the played move too. This is
+			 * required by the MM tool. */
 			if (mo.coord == m->coord)
 				continue;
+#endif
 			if (!board_is_valid_move(b, &mo))
 				continue;
 			if (!ps->mm) *strp++ = ' ';
@@ -262,8 +266,9 @@ patternscan_state_init(char *arg)
 
 			} else if (!strcasecmp(optname, "competition")) {
 				/* In competition mode, first the played
-				 * pattern is printed, then all other patterns
-				 * that could be played but weren't. */
+				 * pattern is printed, then all patterns
+				 * that could be played (including the played
+				 * one). */
 				ps->competition = !optval || atoi(optval);
 
 			} else if (!strcasecmp(optname, "matchfast")) {
