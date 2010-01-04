@@ -6,11 +6,14 @@ Base:
 * Further optimize board implementation, oprofile fun
 * Clean up GTP interface, allow custom GTP commands for
   modules
+* Implement parameter setup over GTP
+* gogui-friendly GTP interface
 
 Patterns:
-* Support for pattern competition in patternscan
-* Infrastructure for feeding patterns to Remi Coulom's MM
-* Analyze feasibility of various other possible features
+* Heavy optimization work
+* Analyze feasibility of various possible features
+* Use pattern3-type patterns for incremental board spatials matching
+  (should be much faster, and also usable for Moggy policy)
 
 Playouts:
 * Finish the ELO-play policy
@@ -20,12 +23,13 @@ Playouts:
   in the playout?
 
 UCT:
-* Resync threads periodically in root parallelization mode
 * Ponder mode
 * Time controls infrastructure
 * Outside of japanese byoyomi, stop reading early if result cannot change
+* Support for different default settings for various board sizes
 * Support for prior hinting based by custom externally linked
   evaluation function
+* Support for different float types when running with huge playout counts
 
 UCB1AMAF:
 * Fix RAVE for good (still noticeably weaker than fuego?)
