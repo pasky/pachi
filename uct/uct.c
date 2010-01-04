@@ -460,7 +460,9 @@ uct_state_init(char *arg)
 	// make sure it's not used on 9x9 where it's crap
 	u->dynkomi_mask = S_BLACK;
 
-	u->thread_model = TM_ROOT;
+	u->thread_model = TM_TREEVL;
+	u->parallel_tree = true;
+	u->virtual_loss = true;
 
 	u->val_scale = 0.02; u->val_points = 20;
 
@@ -553,11 +555,14 @@ uct_state_init(char *arg)
 					 * does independent search, trees are
 					 * merged at the end. */
 					u->thread_model = TM_ROOT;
+					u->parallel_tree = false;
+					u->virtual_loss = false;
 				} else if (!strcasecmp(optval, "tree")) {
 					/* Tree parallelization - all threads
 					 * grind on the same tree. */
 					u->thread_model = TM_TREE;
 					u->parallel_tree = true;
+					u->virtual_loss = false;
 				} else if (!strcasecmp(optval, "treevl")) {
 					/* Tree parallelization, but also
 					 * with virtual losses - this discou-
