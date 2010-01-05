@@ -21,10 +21,18 @@
 int debug_level = 1;
 int seed;
 
+enum engine_id {
+	E_RANDOM,
+	E_REPLAY,
+	E_PATTERNSCAN,
+	E_MONTECARLO,
+	E_UCT,
+};
+
 int main(int argc, char *argv[])
 {
 	struct board *b = board_init();
-	enum { E_RANDOM, E_REPLAY, E_PATTERNSCAN, E_MONTECARLO, E_UCT } engine = E_UCT;
+	enum engine_id engine = E_UCT;
 	char *testfile = NULL;
 
 	seed = time(NULL);
