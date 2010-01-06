@@ -1,4 +1,5 @@
 #define DEBUG
+#include <assert.h>
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,15 @@ enum engine_id {
 	E_PATTERNSCAN,
 	E_MONTECARLO,
 	E_UCT,
+	E_MAX,
+};
+
+static struct engine *(*engine_init[E_MAX])(char *arg) = {
+	engine_random_init,
+	engine_replay_init,
+	engine_patternscan_init,
+	engine_montecarlo_init,
+	engine_uct_init,
 };
 
 int main(int argc, char *argv[])
@@ -79,21 +89,8 @@ int main(int argc, char *argv[])
 	char *e_arg = NULL;
 	if (optind < argc)
 		e_arg = argv[optind];
-	struct engine *e;
-	switch (engine) {
-		case E_RANDOM:
-		default:
-			e = engine_random_init(e_arg); break;
-		case E_REPLAY:
-			e = engine_replay_init(e_arg); break;
-		case E_PATTERNSCAN:
-			e = engine_patternscan_init(e_arg); break;
-		case E_MONTECARLO:
-			e = engine_montecarlo_init(e_arg); break;
-		case E_UCT:
-			e = engine_uct_init(e_arg); break;
-
-	}
+	assert(engine < E_MAX);
+	struct engine *e = engine_init[engine](e_arg);
 
 	if (testfile) {
 		unittest(testfile);
