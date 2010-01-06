@@ -122,8 +122,10 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "IN: %s", buf);
 		gtp_parse(b, e, buf);
 		if (engine_reset) {
-			engine_done(e);
-			e = engine_init(engine, e_arg);
+			if (!e->keep_on_clear) {
+				engine_done(e);
+				e = engine_init(engine, e_arg);
+			}
 			engine_reset = false;
 		}
 	}

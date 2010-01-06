@@ -334,6 +334,8 @@ engine_patternscan_init(char *arg)
 	e->notify_play = patternscan_play;
 	e->finish = patternscan_finish;
 	e->data = ps;
+	// clear_board does not concern us, we like to work over many games
+	e->keep_on_clear = true;
 
 	return e;
 }

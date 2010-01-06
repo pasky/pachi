@@ -25,6 +25,10 @@ typedef void (*engine_finish)(struct engine *e);
 struct engine {
 	char *name;
 	char *comment;
+
+	/* If set, do not reset the engine state on clear_board. */
+	bool keep_on_clear;
+
 	board_cprint printhook;
 	engine_notify_play notify_play;
 	engine_chat chat;
