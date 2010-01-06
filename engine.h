@@ -4,6 +4,10 @@
 #include "board.h"
 #include "move.h"
 
+/* Used to signal the main loop that the engine structures need to be reset
+ * (for fresh board). */
+extern bool engine_reset;
+
 struct engine;
 struct move_queue;
 
@@ -16,6 +20,8 @@ typedef void (*engine_done_board_state)(struct engine *e, struct board *b);
 /* Pachi exit hook. */
 typedef void (*engine_finish)(struct engine *e);
 
+/* This is engine data structure. A new engine instance is spawned
+ * for each new game during the program lifetime. */
 struct engine {
 	char *name;
 	char *comment;

@@ -22,6 +22,7 @@
 int debug_level = 1;
 int seed;
 
+
 enum engine_id {
 	E_RANDOM,
 	E_REPLAY,
@@ -31,7 +32,7 @@ enum engine_id {
 	E_MAX,
 };
 
-static struct engine *(*engine_init[E_MAX])(char *arg) = {
+static struct engine *(*engine_init_h[E_MAX])(char *arg) = {
 	engine_random_init,
 	engine_replay_init,
 	engine_patternscan_init,
@@ -39,9 +40,26 @@ static struct engine *(*engine_init[E_MAX])(char *arg) = {
 	engine_uct_init,
 };
 
+struct engine *engine_init(enum engine_id engine, char *e_arg)
+{
+	char *arg = strdup(e_arg);
+	assert(engine < E_MAX);
+	struct engine *e = engine_init_h[engine](arg);
+	free(arg);
+	return e;
+}
+
+void engine_done(struct engine *e)
+{
+	if (e->data) free(e->data);
+	free(e);
+}
+
+bool engine_reset = false;
+
+
 int main(int argc, char *argv[])
 {
-	struct board *b = board_init();
 	enum engine_id engine = E_UCT;
 	char *testfile = NULL;
 
@@ -86,11 +104,12 @@ int main(int argc, char *argv[])
 	fast_srandom(seed);
 	fprintf(stderr, "Random seed: %d\n", seed);
 
+	struct board *b = board_init();
+
 	char *e_arg = NULL;
 	if (optind < argc)
 		e_arg = argv[optind];
-	assert(engine < E_MAX);
-	struct engine *e = engine_init[engine](e_arg);
+	struct engine *e = engine_init(engine, e_arg);
 
 	if (testfile) {
 		unittest(testfile);
@@ -102,6 +121,11 @@ int main(int argc, char *argv[])
 		if (DEBUGL(1))
 			fprintf(stderr, "IN: %s", buf);
 		gtp_parse(b, e, buf);
+		if (engine_reset) {
+			engine_done(e);
+			e = engine_init(engine, e_arg);
+			engine_reset = false;
+		}
 	}
 	if (e->finish)
 		e->finish(e);
