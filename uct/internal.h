@@ -58,7 +58,7 @@ struct uct {
 	struct playout_policy *playout;
 	struct uct_prior *prior;
 
-	/* Data completely specific for current game. */
+	/* Game state - maintained by setup_state(), reset_state(). */
 	/* Persistent over moves: */
 	struct tree *t;
 	/* Used internally within one genmove: */

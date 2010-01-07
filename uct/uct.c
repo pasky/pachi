@@ -39,6 +39,30 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 
 
 static void
+setup_state(struct uct *u, struct board *b, enum stone color)
+{
+	u->t = tree_init(b, color);
+	if (u->force_seed)
+		fast_srandom(u->force_seed);
+	if (UDEBUGL(0))
+		fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
+	//board_print(b, stderr);
+	if (!u->no_book && b->moves == 0) {
+		assert(color == S_BLACK);
+		tree_load(u->t, b);
+	}
+	u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
+}
+
+static void
+reset_state(struct uct *u)
+{
+	assert(u->t && u->ownermap.map);
+	tree_done(u->t); u->t = NULL;
+	free(u->ownermap.map); u->ownermap.map = NULL;
+}
+
+static void
 prepare_move(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
@@ -56,17 +80,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 	} else {
 		/* We need fresh state. */
 		b->es = u;
-		u->t = tree_init(b, color);
-		if (u->force_seed)
-			fast_srandom(u->force_seed);
-		if (UDEBUGL(0))
-			fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
-		//board_print(b, stderr);
-		if (!u->no_book && b->moves == 0) {
-			assert(color == S_BLACK);
-			tree_load(u->t, b);
-		}
-		u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
+		setup_state(u, b, color);
 	}
 
 	if (u->dynkomi && u->dynkomi > b->moves && (color & u->dynkomi_mask))
@@ -74,16 +88,6 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 
 	u->ownermap.playouts = 0;
 	memset(u->ownermap.map, 0, board_size2(b) * sizeof(u->ownermap.map[0]));
-}
-
-static void
-reset_state(struct uct *u)
-{
-	/* Here, we free up data structures that we have set up on
-	 * first prepare_move(). */
-	assert(u->t && u->ownermap.map);
-	tree_done(u->t); u->t = NULL;
-	free(u->ownermap.map); u->ownermap.map = NULL;
 }
 
 static void
@@ -666,6 +670,12 @@ uct_state_init(char *arg)
 	if (!u->playout)
 		u->playout = playout_moggy_init(NULL);
 	u->playout->debug_level = u->debug_level;
+
+	/* Some things remain uninitialized for now - the opening book
+	 * is not loaded and ownermap not allocated. */
+	/* This will be initialized in setup_state() at the first move
+	 * received/requested. This is because right now we are not aware
+	 * about any komi or handicap setup and such. */
 
 	return u;
 }
