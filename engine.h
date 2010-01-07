@@ -16,7 +16,6 @@ typedef char *(*engine_chat)(struct engine *e, struct board *b, char *cmd);
 typedef coord_t *(*engine_genmove)(struct engine *e, struct board *b, enum stone color);
 /* One dead group per queued move (coord_t is (ab)used as group_t). */
 typedef void (*engine_dead_group_list)(struct engine *e, struct board *b, struct move_queue *mq);
-typedef void (*engine_done_board_state)(struct engine *e, struct board *b);
 /* e->data and e will be free()d by caller afterwards. */
 typedef void (*engine_done)(struct engine *e);
 
@@ -34,7 +33,6 @@ struct engine {
 	engine_chat chat;
 	engine_genmove genmove;
 	engine_dead_group_list dead_group_list;
-	engine_done_board_state done_board_state;
 	engine_done done;
 	void *data;
 };

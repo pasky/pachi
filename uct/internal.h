@@ -57,6 +57,12 @@ struct uct {
 	struct uct_policy *random_policy;
 	struct playout_policy *playout;
 	struct uct_prior *prior;
+
+	/* Data completely specific for current game. */
+	/* Persistent over moves: */
+	struct tree *t;
+	/* Used internally within one genmove: */
+	struct board_ownermap ownermap;
 };
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
@@ -82,13 +88,6 @@ struct uct_policy {
 	uctp_prior prior;
 	bool wants_amaf;
 	void *data;
-};
-
-struct uct_board {
-	/* Persistent over moves: */
-	struct tree *t;
-	/* Used internally within one genmove: */
-	struct board_ownermap ownermap;
 };
 
 #endif

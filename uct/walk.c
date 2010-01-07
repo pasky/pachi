@@ -116,11 +116,11 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
 			tree_node_get_value(t, parity, n->u.value));
 
-	struct uct_board *ub = b->es; assert(ub);
+	assert(u->ownermap.map);
 	struct playout_setup ps = { .gamelen = u->gamelen };
 	int result = play_random_game(&ps, b, next_color,
 	                              u->playout_amaf ? amaf : NULL,
-				      &ub->ownermap, u->playout);
+				      &u->ownermap, u->playout);
 	if (next_color == S_WHITE) {
 		/* We need the result from black's perspective. */
 		result = - result;
@@ -268,8 +268,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (UDEBUGL(6))
 			board_print(&b2, stderr);
 
-		struct uct_board *ub = b->es; assert(ub);
-		board_ownermap_fill(&ub->ownermap, &b2);
+		assert(u->ownermap.map);
+		board_ownermap_fill(&u->ownermap, &b2);
 
 	} else { assert(u->parallel_tree || tree_leaf_node(n));
 		/* In case of parallel tree search, the assertion might

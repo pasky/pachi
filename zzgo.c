@@ -124,6 +124,7 @@ int main(int argc, char *argv[])
 		gtp_parse(b, e, buf);
 		if (engine_reset) {
 			if (!e->keep_on_clear) {
+				b->es = NULL;
 				done_engine(e);
 				e = init_engine(engine, e_arg);
 			}

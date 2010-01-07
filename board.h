@@ -200,7 +200,6 @@ void board_done_noalloc(struct board *board);
 void board_done(struct board *board);
 /* size here is without the S_OFFBOARD margin. */
 void board_resize(struct board *board, int size);
-/* The caller must take care of releasing board.es first. */
 void board_clear(struct board *board);
 
 struct FILE;
