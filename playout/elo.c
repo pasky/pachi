@@ -205,7 +205,9 @@ playout_elo_init(char *arg)
 	pp->assess.pc = pc;
 	pp->assess.fg = features_gamma_init(&pp->assess.pc, gammafile);
 	memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
-	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) pp->assess.ps[i] = 0;
+	for (int i = 0; i < FEAT_MAX; i++)
+		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
+			pp->assess.ps[i] = 0;
 
 	/* In playouts, we need to operate with much smaller set of features
 	 * in order to keep reasonable speed. */
@@ -215,7 +217,9 @@ playout_elo_init(char *arg)
 	char cgammafile[256]; strcpy(stpcpy(cgammafile, gammafile), "f");
 	pp->choose.fg = features_gamma_init(&pp->choose.pc, cgammafile);
 	memcpy(pp->choose.ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
-	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) pp->choose.ps[i] = 0;
+	for (int i = 0; i < FEAT_MAX; i++)
+		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
+			pp->choose.ps[i] = 0;
 
 	return p;
 }
