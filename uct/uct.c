@@ -467,8 +467,8 @@ uct_state_init(char *arg, struct board *b)
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
 
-	// u->dynkomi = 200; - this is great on 19x19, but to enable it by default we must
-	// make sure it's not used on 9x9 where it's crap
+	if (board_size(b) - 2 >= 19)
+		u->dynkomi = 200;
 	u->dynkomi_mask = S_BLACK;
 
 	u->thread_model = TM_TREEVL;
