@@ -32,7 +32,7 @@ enum engine_id {
 	E_MAX,
 };
 
-static struct engine *(*engine_init_h[E_MAX])(char *arg) = {
+static struct engine *(*engine_init[E_MAX])(char *arg) = {
 	engine_random_init,
 	engine_replay_init,
 	engine_patternscan_init,
@@ -40,17 +40,18 @@ static struct engine *(*engine_init_h[E_MAX])(char *arg) = {
 	engine_uct_init,
 };
 
-struct engine *engine_init(enum engine_id engine, char *e_arg)
+static struct engine *init_engine(enum engine_id engine, char *e_arg)
 {
 	char *arg = strdup(e_arg);
 	assert(engine < E_MAX);
-	struct engine *e = engine_init_h[engine](arg);
+	struct engine *e = engine_init[engine](arg);
 	free(arg);
 	return e;
 }
 
-void engine_done(struct engine *e)
+static void done_engine(struct engine *e)
 {
+	if (e->done) e->done(e);
 	if (e->data) free(e->data);
 	free(e);
 }
@@ -109,7 +110,7 @@ int main(int argc, char *argv[])
 	char *e_arg = NULL;
 	if (optind < argc)
 		e_arg = argv[optind];
-	struct engine *e = engine_init(engine, e_arg);
+	struct engine *e = init_engine(engine, e_arg);
 
 	if (testfile) {
 		unittest(testfile);
@@ -123,13 +124,12 @@ int main(int argc, char *argv[])
 		gtp_parse(b, e, buf);
 		if (engine_reset) {
 			if (!e->keep_on_clear) {
-				engine_done(e);
-				e = engine_init(engine, e_arg);
+				done_engine(e);
+				e = init_engine(engine, e_arg);
 			}
 			engine_reset = false;
 		}
 	}
-	if (e->finish)
-		e->finish(e);
+	done_engine(e);
 	return 0;
 }

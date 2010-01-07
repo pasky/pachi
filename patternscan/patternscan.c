@@ -191,7 +191,7 @@ patternscan_genmove(struct engine *e, struct board *b, enum stone color)
 }
 
 void
-patternscan_finish(struct engine *e)
+patternscan_done(struct engine *e)
 {
 	struct patternscan *ps = e->data;
 	if (!ps->gen_spat_dict)
@@ -332,7 +332,7 @@ engine_patternscan_init(char *arg)
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of games fed to it as GTP streams for various pattern features.";
 	e->genmove = patternscan_genmove;
 	e->notify_play = patternscan_play;
-	e->finish = patternscan_finish;
+	e->done = patternscan_done;
 	e->data = ps;
 	// clear_board does not concern us, we like to work over many games
 	e->keep_on_clear = true;
