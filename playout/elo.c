@@ -145,6 +145,13 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 	}
 }
 
+void
+playout_elo_done(struct playout_policy *p)
+{
+	freatures_gamma_done(p->choose.fg);
+	freatures_gamma_done(p->assess.fg);
+}
+
 
 struct playout_policy *
 playout_elo_init(char *arg)
@@ -154,6 +161,7 @@ playout_elo_init(char *arg)
 	p->data = pp;
 	p->choose = playout_elo_choose;
 	p->assess = playout_elo_assess;
+	p->done = playout_elo_done;
 
 	const char *gammafile = features_gamma_filename;
 	/* Some defaults based on the table in Remi Coulom's paper. */

@@ -29,6 +29,8 @@ typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct
 typedef void (*playoutp_assess)(struct playout_policy *playout_policy, struct prior_map *map, int games);
 /* Allow play of randomly selected move. */
 typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m);
+/* Tear down the policy state; policy and policy->data will be free()d by caller. */
+typedef void (*playoutp_done)(struct playout_policy *playout_policy);
 
 struct playout_policy {
 	int debug_level;
@@ -40,6 +42,7 @@ struct playout_policy {
 	playoutp_choose choose;
 	playoutp_assess assess;
 	playoutp_permit permit;
+	playoutp_done done;
 	/* Particular playout policy's internal data. */
 	void *data;
 };
