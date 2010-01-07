@@ -207,3 +207,11 @@ uct_prior_init(char *arg)
 
 	return p;
 }
+
+void
+uct_prior_done(struct uct_prior *p)
+{
+	assert(p->cfgd_eqex);
+	free(p->cfgd_eqex);
+	free(p);
+}

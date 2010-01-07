@@ -31,6 +31,7 @@ void uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map);
 
 struct uct_prior;
 struct uct_prior *uct_prior_init(char *arg);
+void uct_prior_done(struct uct_prior *p);
 
 
 static inline void
