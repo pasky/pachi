@@ -51,15 +51,13 @@ setup_state(struct uct *u, struct board *b, enum stone color)
 		assert(color == S_BLACK);
 		tree_load(u->t, b);
 	}
-	u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
 }
 
 static void
 reset_state(struct uct *u)
 {
-	assert(u->t && u->ownermap.map);
+	assert(u->t);
 	tree_done(u->t); u->t = NULL;
-	free(u->ownermap.map); u->ownermap.map = NULL;
 }
 
 static void
@@ -70,7 +68,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 	if (u->t) {
 		/* Verify that we have sane state. */
 		assert(b->es == u);
-		assert(u->t && u->ownermap.map && b->moves);
+		assert(u->t && b->moves);
 		if (color != stone_other(u->t->root_color)) {
 			fprintf(stderr, "Fatal: Non-alternating play detected %d %d\n",
 				color, u->t->root_color);
@@ -93,7 +91,6 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 static void
 dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
 {
-	assert(u->ownermap.map);
 	struct group_judgement gj;
 	gj.thres = GJ_THRES;
 	gj.gs = alloca(board_size2(b) * sizeof(gj.gs[0]));
@@ -104,7 +101,6 @@ dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
 bool
 uct_pass_is_safe(struct uct *u, struct board *b, enum stone color)
 {
-	assert(u->ownermap.map);
 	if (u->ownermap.playouts < GJ_MINGAMES)
 		return false;
 
@@ -120,7 +116,6 @@ uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
 {
 	struct uct *u = board->es;
 	assert(u);
-	if (!u->ownermap.map) return; // no UCT state; can happen e.g. after resign
 	const char chr[] = ":XO,"; // dame, black, white, unclear
 	const char chm[] = ":xo,";
 	char ch = chr[board_ownermap_judge_point(&u->ownermap, c, GJ_THRES)];
@@ -231,6 +226,8 @@ uct_done(struct engine *e)
 	 * is received and new game should begin. */
 	struct uct *u = e->data;
 	if (u->t) reset_state(u);
+	free(u->ownermap.map);
+
 	free(u->policy);
 	free(u->random_policy);
 	playout_policy_done(u->playout);
@@ -457,7 +454,7 @@ uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 
 
 struct uct *
-uct_state_init(char *arg)
+uct_state_init(char *arg, struct board *b)
 {
 	struct uct *u = calloc(1, sizeof(struct uct));
 
@@ -671,8 +668,10 @@ uct_state_init(char *arg)
 		u->playout = playout_moggy_init(NULL);
 	u->playout->debug_level = u->debug_level;
 
+	u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
+
 	/* Some things remain uninitialized for now - the opening book
-	 * is not loaded and ownermap not allocated. */
+	 * is not loaded and the tree not set up. */
 	/* This will be initialized in setup_state() at the first move
 	 * received/requested. This is because right now we are not aware
 	 * about any komi or handicap setup and such. */
@@ -683,7 +682,7 @@ uct_state_init(char *arg)
 struct engine *
 engine_uct_init(char *arg, struct board *b)
 {
-	struct uct *u = uct_state_init(arg);
+	struct uct *u = uct_state_init(arg, b);
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "UCT Engine";
 	e->printhook = uct_printhook_ownermap;

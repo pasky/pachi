@@ -58,11 +58,11 @@ struct uct {
 	struct playout_policy *playout;
 	struct uct_prior *prior;
 
-	/* Game state - maintained by setup_state(), reset_state(). */
-	/* Persistent over moves: */
-	struct tree *t;
-	/* Used internally within one genmove: */
+	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;
+
+	/* Game state - maintained by setup_state(), reset_state(). */
+	struct tree *t;
 };
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)

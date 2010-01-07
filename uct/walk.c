@@ -116,7 +116,6 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
 			tree_node_get_value(t, parity, n->u.value));
 
-	assert(u->ownermap.map);
 	struct playout_setup ps = { .gamelen = u->gamelen };
 	int result = play_random_game(&ps, b, next_color,
 	                              u->playout_amaf ? amaf : NULL,
@@ -268,7 +267,6 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (UDEBUGL(6))
 			board_print(&b2, stderr);
 
-		assert(u->ownermap.map);
 		board_ownermap_fill(&u->ownermap, &b2);
 
 	} else { assert(u->parallel_tree || tree_leaf_node(n));
