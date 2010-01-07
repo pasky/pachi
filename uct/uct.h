@@ -4,7 +4,7 @@
 #include "engine.h"
 #include "move.h"
 
-struct engine *engine_uct_init(char *arg);
+struct engine *engine_uct_init(char *arg, struct board *b);
 
 struct board;
 bool uct_genbook(struct engine *e, struct board *b, enum stone color);

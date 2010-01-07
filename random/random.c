@@ -21,7 +21,7 @@ random_genmove(struct engine *e, struct board *b, enum stone color)
 }
 
 struct engine *
-engine_random_init(char *arg)
+engine_random_init(char *arg, struct board *b)
 {
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "RandomMove Engine";

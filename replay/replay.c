@@ -103,7 +103,7 @@ replay_state_init(char *arg)
 }
 
 struct engine *
-engine_replay_init(char *arg)
+engine_replay_init(char *arg, struct board *b)
 {
 	struct replay *r = replay_state_init(arg);
 	struct engine *e = calloc(1, sizeof(struct engine));

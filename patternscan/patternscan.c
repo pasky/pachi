@@ -324,7 +324,7 @@ patternscan_state_init(char *arg)
 }
 
 struct engine *
-engine_patternscan_init(char *arg)
+engine_patternscan_init(char *arg, struct board *b)
 {
 	struct patternscan *ps = patternscan_state_init(arg);
 	struct engine *e = calloc(1, sizeof(struct engine));

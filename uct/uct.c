@@ -681,7 +681,7 @@ uct_state_init(char *arg)
 }
 
 struct engine *
-engine_uct_init(char *arg)
+engine_uct_init(char *arg, struct board *b)
 {
 	struct uct *u = uct_state_init(arg);
 	struct engine *e = calloc(1, sizeof(struct engine));

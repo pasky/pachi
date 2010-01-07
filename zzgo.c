@@ -32,7 +32,7 @@ enum engine_id {
 	E_MAX,
 };
 
-static struct engine *(*engine_init[E_MAX])(char *arg) = {
+static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 	engine_random_init,
 	engine_replay_init,
 	engine_patternscan_init,
@@ -40,11 +40,11 @@ static struct engine *(*engine_init[E_MAX])(char *arg) = {
 	engine_uct_init,
 };
 
-static struct engine *init_engine(enum engine_id engine, char *e_arg)
+static struct engine *init_engine(enum engine_id engine, char *e_arg, struct board *b)
 {
 	char *arg = strdup(e_arg);
 	assert(engine < E_MAX);
-	struct engine *e = engine_init[engine](arg);
+	struct engine *e = engine_init[engine](arg, b);
 	free(arg);
 	return e;
 }
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 	char *e_arg = NULL;
 	if (optind < argc)
 		e_arg = argv[optind];
-	struct engine *e = init_engine(engine, e_arg);
+	struct engine *e = init_engine(engine, e_arg, b);
 
 	if (testfile) {
 		unittest(testfile);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
 			if (!e->keep_on_clear) {
 				b->es = NULL;
 				done_engine(e);
-				e = init_engine(engine, e_arg);
+				e = init_engine(engine, e_arg, b);
 			}
 			engine_reset = false;
 		}
