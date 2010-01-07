@@ -481,3 +481,11 @@ features_gamma_init(struct pattern_config *pc, const char *file)
 	features_gamma_load(fg, file ? file : features_gamma_filename);
 	return fg;
 }
+
+void
+features_gamma_done(struct features_gamma *fg)
+{
+	for (int i = 0; i < FEAT_MAX; i++)
+		free(fg->gamma[i]);
+	free(fg);
+}

@@ -170,6 +170,9 @@ struct features_gamma *features_gamma_init(struct pattern_config *pc, const char
 /* Look up gamma of given feature, or set one if gamma is not NULL. */
 static float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);
 
+/* Destroy the structure. */
+void features_gamma_done(struct features_gamma *fg);
+
 
 static inline float
 feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma)
