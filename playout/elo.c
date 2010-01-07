@@ -148,8 +148,9 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 void
 playout_elo_done(struct playout_policy *p)
 {
-	freatures_gamma_done(p->choose.fg);
-	freatures_gamma_done(p->assess.fg);
+	struct elo_policy *pp = p->data;
+	features_gamma_done(pp->choose.fg);
+	features_gamma_done(pp->assess.fg);
 }
 
 
