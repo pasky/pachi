@@ -166,8 +166,9 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 			return "no game context (yet?)";
 		enum stone color = u->t->root_color;
 		struct tree_node *n = u->t->root;
-		snprintf(reply, 1024, "In %d*%d playouts, %s %s can win with %.2f%% probability",
-			 n->u.playouts, u->threads, stone2str(color), coord2sstr(n->coord, b),
+		snprintf(reply, 1024, "In %d playouts, %s %s can win with %.2f%% probability",
+			 n->u.playouts * (u->thread_model == TM_ROOT ? u->threads : 1),
+			 stone2str(color), coord2sstr(n->coord, b),
 			 tree_node_get_value(u->t, -1, n->u.value) * 100);
 		if (abs(u->t->extra_komi) >= 0.5) {
 			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
@@ -306,10 +307,12 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 		pthread_join(threads[finish_thread], (void **) &ctx);
 		played_games += ctx->games;
 		joined++;
+#ifdef ROOT_PARALLEL
 		if (!shared_tree) {
 			tree_merge(t, ctx->t);
 			tree_done(ctx->t);
 		}
+#endif
 		free(ctx);
 		if (UDEBUGL(2))
 			fprintf(stderr, "Joined thread %d\n", finish_thread);
@@ -320,10 +323,12 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 	}
 	pthread_mutex_unlock(&finish_mutex);
 
+#ifdef ROOT_PARALLEL
 	if (!shared_tree) {
 		/* XXX: Should this be done in shared trees as well? */
 		tree_normalize(t, u->threads);
 	}
+#endif
 	return played_games;
 }
 
@@ -561,6 +566,7 @@ uct_state_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "none")) {
 					/* Turn off multi-threaded reading. */
 					u->thread_model = TM_NONE;
+#ifdef ROOT_PARALLEL
 				} else if (!strcasecmp(optval, "root")) {
 					/* Root parallelization - each thread
 					 * does independent search, trees are
@@ -568,6 +574,7 @@ uct_state_init(char *arg, struct board *b)
 					u->thread_model = TM_ROOT;
 					u->parallel_tree = false;
 					u->virtual_loss = false;
+#endif
 				} else if (!strcasecmp(optval, "tree")) {
 					/* Tree parallelization - all threads
 					 * grind on the same tree. */
