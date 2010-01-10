@@ -99,13 +99,13 @@ dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
 }
 
 bool
-uct_pass_is_safe(struct uct *u, struct board *b, enum stone color)
+uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive)
 {
 	if (u->ownermap.playouts < GJ_MINGAMES)
 		return false;
 
 	struct move_queue mq = { .moves = 0 };
-	if (!u->pass_all_alive)
+	if (!pass_all_alive)
 		dead_group_list(u, b, &mq);
 	return pass_is_safe(b, color, &mq);
 }
@@ -357,7 +357,7 @@ static uct_threaded_playouts threaded_playouts[] = {
 
 
 static coord_t *
-uct_genmove(struct engine *e, struct board *b, enum stone color)
+uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_alive)
 {
 	struct uct *u = e->data;
 
@@ -417,7 +417,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color)
 		/* Make sure enough playouts are simulated. */
 		while (u->ownermap.playouts < GJ_MINGAMES)
 			uct_playout(u, b, color, u->t);
-		if (uct_pass_is_safe(u, b, color)) {
+		if (uct_pass_is_safe(u, b, color, u->pass_all_alive || pass_all_alive)) {
 			if (UDEBUGL(0))
 				fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
 			best->coord = pass;

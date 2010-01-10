@@ -184,7 +184,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 }
 
 static coord_t *
-patternscan_genmove(struct engine *e, struct board *b, enum stone color)
+patternscan_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_alive)
 {
 	fprintf(stderr, "genmove command not available during patternscan!\n");
 	exit(EXIT_FAILURE);

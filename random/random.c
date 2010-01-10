@@ -7,7 +7,7 @@
 #include "random/random.h"
 
 static coord_t *
-random_genmove(struct engine *e, struct board *b, enum stone color)
+random_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_alive)
 {
 	coord_t coord;
 	board_play_random(b, color, &coord, NULL, NULL);

@@ -20,7 +20,7 @@ struct replay {
 
 
 static coord_t *
-replay_genmove(struct engine *e, struct board *b, enum stone color)
+replay_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_alive)
 {
 	struct replay *r = e->data;
 

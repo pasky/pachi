@@ -103,7 +103,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		/* TODO: known_command */
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\nset_free_handicap\nplace_free_handicap\nfinal_status_list\nkgs-chat", NULL);
+		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\nkgs-genmove_cleanup\nset_free_handicap\nplace_free_handicap\nfinal_status_list\nkgs-chat", NULL);
 
 	} else if (!strcasecmp(cmd, "quit")) {
 		gtp_reply(id, NULL);
@@ -159,11 +159,11 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 			gtp_reply(id, reply, NULL);
 		}
 
-	} else if (!strcasecmp(cmd, "genmove")) {
+	} else if (!strcasecmp(cmd, "genmove") || !strcasecmp(cmd, "kgs-genmove_cleanup")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		coord_t *c = engine->genmove(engine, board, color);
+		coord_t *c = engine->genmove(engine, board, color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
 		struct move m = { *c, color };
 		board_play(board, &m);
 		char *str = coord2str(*c, board);

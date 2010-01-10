@@ -70,7 +70,7 @@ struct uct {
 extern volatile sig_atomic_t uct_halt;
 extern __thread int thread_id;
 
-bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color);
+bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
 
 
 typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);

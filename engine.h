@@ -13,7 +13,10 @@ struct move_queue;
 
 typedef char *(*engine_notify_play)(struct engine *e, struct board *b, struct move *m);
 typedef char *(*engine_chat)(struct engine *e, struct board *b, char *cmd);
-typedef coord_t *(*engine_genmove)(struct engine *e, struct board *b, enum stone color);
+/* Generate a move. If pass_all_alive is true, <pass> shall be generated only
+ * if all stones on the board can be considered alive, without regard to "dead"
+ * considered stones. */
+typedef coord_t *(*engine_genmove)(struct engine *e, struct board *b, enum stone color, bool pass_all_alive);
 /* One dead group per queued move (coord_t is (ab)used as group_t). */
 typedef void (*engine_dead_group_list)(struct engine *e, struct board *b, struct move_queue *mq);
 /* e->data and e will be free()d by caller afterwards. */

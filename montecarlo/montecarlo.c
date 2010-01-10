@@ -74,7 +74,7 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 
 
 static coord_t *
-montecarlo_genmove(struct engine *e, struct board *b, enum stone color)
+montecarlo_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_alive)
 {
 	struct montecarlo *mc = e->data;
 
