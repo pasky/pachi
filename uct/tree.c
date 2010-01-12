@@ -441,7 +441,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 
 	/* Now, create the nodes. */
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
-	ni->parent = node; node->children = ni;
+	struct tree_node *first_child = ni;
+	ni->parent = node;
 	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
 
 	/* The loop considers only the symmetry playground. */
@@ -475,6 +476,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			ni->d = distances[c];
 		}
 	}
+	node->children = first_child; // must be done at the end to avoid race
 }
 
 
