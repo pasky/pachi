@@ -19,8 +19,6 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 
-// This should become a dynamic parameter. 7G is suitable for 20k*23 threads.
-#define MAX_NODE_SIZES (7L*1024*1024*1024)
 
 float
 uct_get_extra_komi(struct uct *u, struct board *b)
@@ -41,7 +39,6 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 		fprintf(stderr, "... No moves left\n");
 		return;
 	}
-        fprintf(stderr, "node sizes %ldM\n", t->node_sizes/1000000);
 	fprintf(stderr, "[%d] ", playouts);
 	fprintf(stderr, "best %f ", tree_node_get_value(t, 1, best->u.value));
 
@@ -94,7 +91,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 {
 	enum stone next_color = stone_other(node_color);
 	int parity = (next_color == player_color ? 1 : -1);
-        if (n->u.playouts >= u->expand_p && t->node_sizes < MAX_NODE_SIZES) {
+	if (n->u.playouts >= u->expand_p) {
 		// fprintf(stderr, "expanding %s (%p ^-%p)\n", coord2sstr(n->coord, b), n, n->parent);
 		if (!u->parallel_tree) {
 			/* Single-threaded, life is easy. */
@@ -105,10 +102,13 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			 * threads to meet in the same node, the latter
 			 * one will simply do another simulation from
 			 * the node itself, no big deal. */
-                        if (!__sync_lock_test_and_set(&n->expansion_lock, 1) &&
-                            tree_leaf_node(n) && t->node_sizes < MAX_NODE_SIZES) {
-                                tree_expand_node(t, n, b, next_color, u, parity);
-                        }
+			pthread_mutex_lock(&t->expansion_mutex);
+			if (tree_leaf_node(n)) {
+				tree_expand_node(t, n, b, next_color, u, parity);
+			} else {
+				// fprintf(stderr, "cancelling expansion, thread collision\n");
+			}
+			pthread_mutex_unlock(&t->expansion_mutex);
 		}
 	}
 	if (UDEBUGL(7))

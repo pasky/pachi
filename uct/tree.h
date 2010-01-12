@@ -41,19 +41,11 @@ struct tree_node {
 	struct move_stats prior;
 	/* XXX: Should be way for policies to add their own stats */
 	struct move_stats amaf;
-#ifdef ROOT_PARALLEL
-	/* Stats before starting playout; used for multi-thread normalization.
-         * Commented by default to save memory, only needed for thread_model=root */
+	/* Stats before starting playout; used for multi-thread normalization. */
 	struct move_stats pu, pamaf;
-#endif
 
 #define TREE_HINT_INVALID 1 // don't go to this node, invalid move
 	int hints;
-
-	// In case multiple threads walk the tree, this lock is used
-	// to prevent them from expanding the same node in parallel.
-	// The first thread setting this lock expands the node.
-        int expansion_lock;
 };
 
 struct tree {
@@ -63,13 +55,16 @@ struct tree {
 	enum stone root_color;
 	float extra_komi;
 
+	// In case multiple threads walk the tree, this mutex is used
+	// to prevent them from expanding the same node in parallel.
+	pthread_mutex_t expansion_mutex;
+
 	// Summary statistics of good black, white moves in the tree
 	struct move_stats *chvals; // [bsize2] root children
 	struct move_stats *chchvals; // [bsize2] root children's children
 
 	// Statistics
 	int max_depth;
-        volatile long node_sizes; // byte size of all allocated nodes
 };
 
 struct tree *tree_init(struct board *board, enum stone color);
