@@ -102,13 +102,10 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			 * threads to meet in the same node, the latter
 			 * one will simply do another simulation from
 			 * the node itself, no big deal. */
-			pthread_mutex_lock(&t->expansion_mutex);
-			if (tree_leaf_node(n)) {
+			if (!__sync_lock_test_and_set(&n->is_expanded, 1)) {
+				assert(tree_leaf_node(n));
 				tree_expand_node(t, n, b, next_color, u, parity);
-			} else {
-				// fprintf(stderr, "cancelling expansion, thread collision\n");
 			}
-			pthread_mutex_unlock(&t->expansion_mutex);
 		}
 	}
 	if (UDEBUGL(7))

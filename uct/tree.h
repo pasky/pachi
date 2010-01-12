@@ -46,6 +46,14 @@ struct tree_node {
 
 #define TREE_HINT_INVALID 1 // don't go to this node, invalid move
 	int hints;
+
+	/* In case multiple threads walk the tree, is_expanded is set
+	 * atomically. Only the first thread setting it expands the node.
+	 * The node goes through 3 states:
+	 *   1) children == null, is_expanded == false: leaf node
+	 *   2) children == null, is_expanded == true: one thread currently expanding
+	 *   2) children != null, is_expanded == true: fully expanded node */
+	bool is_expanded;
 };
 
 struct tree {
@@ -54,10 +62,6 @@ struct tree {
 	struct board_symmetry root_symmetry;
 	enum stone root_color;
 	float extra_komi;
-
-	// In case multiple threads walk the tree, this mutex is used
-	// to prevent them from expanding the same node in parallel.
-	pthread_mutex_t expansion_mutex;
 
 	// Summary statistics of good black, white moves in the tree
 	struct move_stats *chvals; // [bsize2] root children
