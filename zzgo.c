@@ -42,10 +42,10 @@ static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 
 static struct engine *init_engine(enum engine_id engine, char *e_arg, struct board *b)
 {
-	char *arg = strdup(e_arg);
+	char *arg = e_arg? strdup(e_arg) : e_arg;
 	assert(engine < E_MAX);
 	struct engine *e = engine_init[engine](arg, b);
-	free(arg);
+	if (arg) free(arg);
 	return e;
 }
 
