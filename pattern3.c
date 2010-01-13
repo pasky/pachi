@@ -161,24 +161,3 @@ pattern3s_init(struct pattern3s *p, char src[][11], int src_n)
 
 	patterns_gen(p, nsrc, src_n);
 }
-
-
-/* Check if we match any pattern centered on given move. */
-/* TODO: Make use of the incremental spatial matching infrastructure
- * in board.h? */
-bool
-test_pattern3_here(struct pattern3s *p, struct board *b, struct move *m)
-{
-	int pat = 0;
-	int x = coord_x(m->coord, b), y = coord_y(m->coord, b);
-	pat |= (board_atxy(b, x - 1, y - 1) << 14)
-		| (board_atxy(b, x, y - 1) << 12)
-		| (board_atxy(b, x + 1, y - 1) << 10);
-	pat |= (board_atxy(b, x - 1, y) << 8)
-		| (board_atxy(b, x + 1, y) << 6);
-	pat |= (board_atxy(b, x - 1, y + 1) << 4)
-		| (board_atxy(b, x, y + 1) << 2)
-		| (board_atxy(b, x + 1, y + 1));
-	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, p->hash[pat]);
-	return (p->hash[pat] & m->color) && !is_bad_selfatari(b, m->color, m->coord);
-}
