@@ -18,6 +18,7 @@
 #include "uct/tree.h"
 
 
+/* This function may be called by multiple threads in parallel */
 static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth)
 {
@@ -28,8 +29,8 @@ tree_init_node(struct tree *t, coord_t coord, int depth)
 	}
 	n->coord = coord;
 	n->depth = depth;
-	static long c = 1000000;
-	n->hash = c++;
+	volatile static long c = 1000000;
+	n->hash = __sync_fetch_and_add(&c, 1);
 	if (depth > t->max_depth)
 		t->max_depth = depth;
 	return n;
