@@ -100,9 +100,7 @@ coord_edge_distance(coord_t c, struct board *b)
 static inline int
 coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b)
 {
-	int x1 = coord_x(c1, b), y1 = coord_y(c1, b);
-	int x2 = coord_x(c2, b), y2 = coord_y(c2, b);
-	int dx = abs(x1 - x2), dy = abs(y1 - y2);
+	int dx = abs(coord_dx(c1, c2, b)), dy = abs(coord_dy(c1, c2, b));
 	return dx + dy + (dx > dy ? dx : dy);
 }
 

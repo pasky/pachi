@@ -12,6 +12,9 @@ typedef int coord_t;
 #define coord_x(c, b) ((c) % board_size(b))
 #define coord_y(c, b) ((c) / board_size(b))
 #define coord_eq(c1, c2) ((c1) == (c2))
+/* TODO: Smarter way to do this? */
+#define coord_dx(c1, c2, b) (coord_x(c1, b) - coord_x(c2, b))
+#define coord_dy(c1, c2, b) (coord_y(c1, b) - coord_y(c2, b))
 
 static coord_t pass = -1;
 static coord_t resign = -2;
