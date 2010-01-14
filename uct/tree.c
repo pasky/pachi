@@ -59,6 +59,7 @@ tree_done_node(struct tree *t, struct tree_node *n)
 		tree_done_node(t, ni);
 		ni = nj;
 	}
+	t->node_sizes -= sizeof(*n); // atomic operation not needed here
 	free(n);
 }
 
