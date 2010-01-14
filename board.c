@@ -12,6 +12,9 @@
 #ifdef BOARD_SPATHASH
 #include "patternsp.h"
 #endif
+#ifdef BOARD_PAT3
+#include "pattern3.h"
+#endif
 
 bool random_pass = false;
 
@@ -70,8 +73,13 @@ board_copy(struct board *b2, struct board *b1)
 #else
 	int ssize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize);
+#ifdef BOARD_PAT3
+	int p3size = board_size2(b2) * sizeof(*b2->pat3);
+#else
+	int p3size = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
@@ -84,6 +92,9 @@ board_copy(struct board *b2, struct board *b1)
 #endif
 #ifdef BOARD_SPATHASH
 	b2->spathash = x; x += ssize;
+#endif
+#ifdef BOARD_SPATHASH
+	b2->pat3 = x; x += p3size;
 #endif
 
 	return b2;
@@ -131,8 +142,13 @@ board_resize(struct board *board, int size)
 #else
 	int ssize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize);
+#ifdef BOARD_PAT3
+	int p3size = board_size2(board) * sizeof(*board->pat3);
+#else
+	int p3size = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -145,6 +161,9 @@ board_resize(struct board *board, int size)
 #endif
 #ifdef BOARD_SPATHASH
 	board->spathash = x; x += ssize;
+#endif
+#ifdef BOARD_PAT3
+	board->pat3 = x; x += p3size;
 #endif
 }
 
@@ -222,6 +241,12 @@ board_clear(struct board *board)
 					pthashes[0][j][stone_other(board_at(board, c))];
 			}
 		}
+	} foreach_point_end;
+#endif
+#ifdef BOARD_PAT3
+	/* Initialize 3x3 pattern codes. */
+	foreach_point(board) {
+		board->pat3[c] = pattern3_hash(board, c);
 	} foreach_point_end;
 #endif
 }
@@ -328,6 +353,27 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 				pthashes[0][j][stone_other(color)] ^ pthashes[0][j][S_NONE];
 		}
 	}
+#endif
+
+#ifdef BOARD_PAT3
+	/* @color is not what we need in case of capture. */
+	enum stone new_color = board_at(board, coord);
+	foreach_8neighbor(board, coord) {
+		/* TODO: Update only pat3 for empty intersections? */
+		static const int shifts[] = { 14, 12, 10,  8, -1, 6,  4, 2, 0 };
+		int dx = coord_dx(coord, c, board);
+		int dy = coord_dy(coord, c, board);
+		int s = (1 + dy) * 3 + (1 + dx);
+		board->pat3[c] &= ~(3 << shifts[s]);
+		board->pat3[c] |= new_color << shifts[s];
+#if 0
+		if (board_at(board, c) != S_OFFBOARD && pattern3_hash(board, c) != board->pat3[c]) {
+			board_print(board, stderr);
+			fprintf(stderr, "%s->%s %x != %x (%d-%d:%d,%d,%d) %d\n", coord2sstr(coord, board), coord2sstr(c, board), pattern3_hash(board, c), board->pat3[c], coord,c,dx,dy,s, shifts[s]);
+			assert(0);
+		}
+#endif
+	} foreach_8neighbor_end;
 #endif
 }
 

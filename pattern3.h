@@ -3,6 +3,7 @@
 
 /* Fast matching of simple 3x3 patterns. */
 
+#include "board.h"
 #include "tactics.h"
 
 /* (Note that this is completely independent from the general pattern
@@ -56,7 +57,11 @@ pattern3_hash(struct board *b, coord_t c)
 static inline bool
 test_pattern3_here(struct pattern3s *p, struct board *b, struct move *m)
 {
+#ifdef BOARD_PAT3
+	int pat = b->pat3[m->coord];
+#else
 	int pat = pattern3_hash(b, m->coord);
+#endif
 	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, p->hash[pat]);
 	return (p->hash[pat] & m->color) && !is_bad_selfatari(b, m->color, m->coord);
 }

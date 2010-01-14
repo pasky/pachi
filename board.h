@@ -16,6 +16,7 @@
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
 #define BOARD_SPATHASH // incremental patternsp.h hashes
 #define BOARD_SPATHASH_MAXD 3 // maximal diameter
+#define BOARD_PAT3 // incremental 3x3 pattern codes
 
 
 /* Allow board_play_random_move() to return pass even when
@@ -113,6 +114,11 @@ struct board {
 	 * ([][1], reversed stone colors since we match all patterns as
 	 * black-to-play). */
 	uint32_t (*spathash)[BOARD_SPATHASH_MAXD][2];
+#endif
+#ifdef BOARD_PAT3
+	/* 3x3 pattern code for each position; see pattern3.h for encoding
+	 * specification. */
+	uint16_t *pat3;
 #endif
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
