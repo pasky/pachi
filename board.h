@@ -14,7 +14,7 @@
  * Turn them on below: */
 #define WANT_BOARD_C // capturable groups queue
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
-#define BOARD_SPATHASH // incremental patternsp.h hashes
+//#define BOARD_SPATHASH // incremental patternsp.h hashes
 #define BOARD_SPATHASH_MAXD 3 // maximal diameter
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
