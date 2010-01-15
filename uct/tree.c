@@ -18,6 +18,7 @@
 #include "uct/tree.h"
 
 
+/* This function may be called by multiple threads in parallel */
 static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth)
 {
@@ -26,10 +27,11 @@ tree_init_node(struct tree *t, coord_t coord, int depth)
 		fprintf(stderr, "tree_init_node(): OUT OF MEMORY\n");
 		exit(1);
 	}
+	__sync_fetch_and_add(&t->node_sizes, sizeof(*n));
 	n->coord = coord;
 	n->depth = depth;
-	static long c = 1000000;
-	n->hash = c++;
+	volatile static long c = 1000000;
+	n->hash = __sync_fetch_and_add(&c, 1);
 	if (depth > t->max_depth)
 		t->max_depth = depth;
 	return n;
@@ -44,7 +46,6 @@ tree_init(struct board *board, enum stone color)
 	t->root = tree_init_node(t, pass, 0);
 	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
-	pthread_mutex_init(&t->expansion_mutex, NULL);
 	return t;
 }
 
@@ -58,6 +59,7 @@ tree_done_node(struct tree *t, struct tree_node *n)
 		tree_done_node(t, ni);
 		ni = nj;
 	}
+	t->node_sizes -= sizeof(*n); // atomic operation not needed here
 	free(n);
 }
 
@@ -441,7 +443,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 
 	/* Now, create the nodes. */
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
-	ni->parent = node; node->children = ni;
+	struct tree_node *first_child = ni;
+	ni->parent = node;
 	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
 
 	/* The loop considers only the symmetry playground. */
@@ -475,6 +478,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			ni->d = distances[c];
 		}
 	}
+	node->children = first_child; // must be done at the end to avoid race
 }
 
 
