@@ -656,7 +656,9 @@ uct_state_init(char *arg, struct board *b)
 				u->random_policy_chance = atoi(optval);
 			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
 				/* Maximum amount of memory [MiB] consumed by the move tree.
-				 * Default is 3072 (3 GiB). */
+				 * Default is 3072 (3 GiB). Note that if you use TM_ROOT,
+				 * this limits size of only one of the trees, not all of them
+				 * together. */
 				u->max_tree_size = atol(optval) * 1048576;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
