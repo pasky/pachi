@@ -27,7 +27,7 @@ tree_init_node(struct tree *t, coord_t coord, int depth)
 		fprintf(stderr, "tree_init_node(): OUT OF MEMORY\n");
 		exit(1);
 	}
-	__sync_fetch_and_add(&t->node_sizes, sizeof(*n));
+	__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
 	n->coord = coord;
 	n->depth = depth;
 	volatile static long c = 1000000;
@@ -59,7 +59,7 @@ tree_done_node(struct tree *t, struct tree_node *n)
 		tree_done_node(t, ni);
 		ni = nj;
 	}
-	t->node_sizes -= sizeof(*n); // atomic operation not needed here
+	t->nodes_size -= sizeof(*n); // atomic operation not needed here
 	free(n);
 }
 
