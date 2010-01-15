@@ -461,6 +461,7 @@ uct_state_init(char *arg, struct board *b)
 	u->debug_level = 1;
 	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
+	u->mercymin = 0;
 	u->expand_p = 2;
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
@@ -496,6 +497,12 @@ uct_state_init(char *arg, struct board *b)
 					u->debug_level++;
 			} else if (!strcasecmp(optname, "games") && optval) {
 				u->games = atoi(optval);
+			} else if (!strcasecmp(optname, "mercy") && optval) {
+				/* Minimal difference of black/white captures
+				 * to stop playout - "Mercy Rule". Speeds up
+				 * hopeless playouts at the expense of some
+				 * accuracy. */
+				u->mercymin = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				u->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "expand_p") && optval) {

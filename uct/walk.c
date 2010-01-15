@@ -107,7 +107,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
 			tree_node_get_value(t, parity, n->u.value));
 
-	struct playout_setup ps = { .gamelen = u->gamelen };
+	struct playout_setup ps = { .gamelen = u->gamelen, .mercymin = u->mercymin };
 	int result = play_random_game(&ps, b, next_color,
 	                              u->playout_amaf ? amaf : NULL,
 				      &u->ownermap, u->playout);

@@ -31,6 +31,7 @@ struct uct {
 	int force_seed;
 	bool no_book;
 	unsigned long max_tree_size;
+	int mercymin;
 
 	int threads;
 	enum uct_thread_model {
