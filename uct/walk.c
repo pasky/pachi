@@ -93,24 +93,18 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 {
 	enum stone next_color = stone_other(node_color);
 	int parity = (next_color == player_color ? 1 : -1);
-	if (n->u.playouts >= u->expand_p && t->node_sizes < MAX_NODE_SIZES) {
-		// fprintf(stderr, "expanding %s (%p ^-%p)\n", coord2sstr(n->coord, b), n, n->parent);
-		if (!u->parallel_tree) {
-			/* Single-threaded, life is easy. */
-			tree_expand_node(t, n, b, next_color, u, parity);
-		} else {
-			/* We need to make sure only one thread expands
-			 * the node. If we are unlucky enough for two
-			 * threads to meet in the same node, the latter
-			 * one will simply do another simulation from
-			 * the node itself, no big deal. */
-			if (!__sync_lock_test_and_set(&n->is_expanded, 1) &&
-			    t->node_sizes < MAX_NODE_SIZES) {
-				assert(tree_leaf_node(n));
-				tree_expand_node(t, n, b, next_color, u, parity);
-			}
-		}
-	}
+
+	/* We need to make sure only one thread expands the node. If
+	 * we are unlucky enough for two threads to meet in the same
+	 * node, the latter one will simply do another simulation from
+	 * the node itself, no big deal. t->node_sizes may exceed
+	 * MAX_NODE_SIZES in multi-threaded case but not by much so it's ok.
+	 * The size test must be before the test&set not after, to allow
+	 * expansion of the node later if enough nodes have been freed. */
+	if (n->u.playouts >= u->expand_p && t->node_sizes < MAX_NODE_SIZES
+	    && !__sync_lock_test_and_set(&n->is_expanded, 1)) {
+		tree_expand_node(t, n, b, next_color, u, parity);
+        }
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
