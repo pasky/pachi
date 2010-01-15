@@ -553,7 +553,7 @@ uct_state_init(char *arg, struct board *b)
 					exit(1);
 				}
 			} else if (!strcasecmp(optname, "prior") && optval) {
-				u->prior = uct_prior_init(optval);
+				u->prior = uct_prior_init(optval, b);
 			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
 				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {
@@ -667,7 +667,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->prior)
-		u->prior = uct_prior_init(NULL);
+		u->prior = uct_prior_init(NULL, b);
 
 	if (!u->playout)
 		u->playout = playout_moggy_init(NULL);

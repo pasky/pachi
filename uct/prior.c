@@ -136,7 +136,7 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 struct uct_prior *
-uct_prior_init(char *arg)
+uct_prior_init(char *arg, struct board *b)
 {
 	struct uct_prior *p = calloc(1, sizeof(struct uct_prior));
 
