@@ -466,6 +466,7 @@ uct_state_init(char *arg, struct board *b)
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
+	u->max_tree_size = 3072ULL * 1048576;
 
 	if (board_size(b) - 2 >= 19)
 		u->dynkomi = 200;
@@ -634,6 +635,10 @@ uct_state_init(char *arg, struct board *b)
 				 * choices sometimes, you can fall back to e.g.
 				 * random_policy=UCB1. */
 				u->random_policy_chance = atoi(optval);
+			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
+				/* Maximum amount of memory [MiB] consumed by the move tree.
+				 * Default is 3072 (3 GiB). */
+				u->max_tree_size = atol(optval) * 1048576;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */

@@ -19,9 +19,6 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 
-// This should become a dynamic parameter. 7G is suitable for 20k*23 threads.
-#define MAX_NODES_SIZE (7L*1024*1024*1024)
-
 float
 uct_get_extra_komi(struct uct *u, struct board *b)
 {
@@ -98,10 +95,10 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	 * we are unlucky enough for two threads to meet in the same
 	 * node, the latter one will simply do another simulation from
 	 * the node itself, no big deal. t->nodes_size may exceed
-	 * MAX_NODES_SIZE in multi-threaded case but not by much so it's ok.
+	 * the maximum in multi-threaded case but not by much so it's ok.
 	 * The size test must be before the test&set not after, to allow
 	 * expansion of the node later if enough nodes have been freed. */
-	if (n->u.playouts >= u->expand_p && t->nodes_size < MAX_NODES_SIZE
+	if (n->u.playouts >= u->expand_p && t->nodes_size < u->max_tree_size
 	    && !__sync_lock_test_and_set(&n->is_expanded, 1)) {
 		tree_expand_node(t, n, b, next_color, u, parity);
         }
