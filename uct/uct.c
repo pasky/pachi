@@ -235,6 +235,18 @@ uct_done(struct engine *e)
 }
 
 
+/* Pachi threading structure (if uct_playouts_parallel() is used):
+ *
+ * main thread
+ *   |         main(), GTP communication, ...
+ *   |
+ * thread0
+ * thread1
+ * ...
+ * threadK
+ *             uct_playouts() loop, doing descend-playout N=games times
+ */
+
 /* Set in main thread in case the playouts should stop. */
 volatile sig_atomic_t uct_halt = 0;
 /* ID of the running worker thread. */
