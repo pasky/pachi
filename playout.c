@@ -112,6 +112,9 @@ play_random:
 			passes = 0;
 		}
 
+		if (setup->mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup->mercymin)
+			break;
+
 		color = stone_other(color);
 	}
 
