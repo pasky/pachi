@@ -179,6 +179,20 @@ board_clear(struct board *board)
 
 	board->komi = komi;
 
+	/* Setup neighborhood iterators */
+	board->nei8[0] = -size - 1; // (-1,-1)
+	board->nei8[1] = 1;
+	board->nei8[2] = 1;
+	board->nei8[3] = size - 2; // (-1,0)
+	board->nei8[4] = 2;
+	board->nei8[5] = size - 2; // (-1,1)
+	board->nei8[6] = 1;
+	board->nei8[7] = 1;
+	board->dnei[0] = -size - 1;
+	board->dnei[1] = 2;
+	board->dnei[2] = size*2 - 2;
+	board->dnei[3] = 2;
+
 	/* Setup initial symmetry */
 	board->symmetry.d = 1;
 	board->symmetry.x1 = board->symmetry.y1 = board_size(board) / 2;

@@ -84,6 +84,9 @@ struct board {
 	float komi;
 	int handicap;
 
+	/* Iterator offsets for foreach_neighbor*() */
+	int nei8[8], dnei[4];
+
 	int moves;
 	struct move last_move;
 	struct move last_move2; /* second-to-last move */
@@ -294,32 +297,20 @@ float board_official_score(struct board *board, struct move_queue *mq);
 
 #define foreach_8neighbor(board_, coord_) \
 	do { \
-		coord_t q__[8]; int q__i = 0; \
-		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_) - 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_), (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_) + 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) - 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_) - 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_), (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_) + 1, (board_)); \
 		int fn__i; \
-		for (fn__i = 0; fn__i < q__i; fn__i++) { \
-			coord_t c = q__[fn__i];
+		coord_t c = (coord_); \
+		for (fn__i = 0; fn__i < 8; fn__i++) { \
+			c += (board_)->nei8[fn__i];
 #define foreach_8neighbor_end \
 		} \
 	} while (0)
 
 #define foreach_diag_neighbor(board_, coord_) \
 	do { \
-		coord_t q__[4]; int q__i = 0; \
-		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_) - 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) - board_size(board_) + 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_) - 1, (board_)); \
-		coord_pos(q__[q__i++], coord_raw(coord_) + board_size(board_) + 1, (board_)); \
 		int fn__i; \
-		for (fn__i = 0; fn__i < q__i; fn__i++) { \
-			coord_t c = q__[fn__i];
+		coord_t c = (coord_); \
+		for (fn__i = 0; fn__i < 4; fn__i++) { \
+			c += (board_)->dnei[fn__i];
 #define foreach_diag_neighbor_end \
 		} \
 	} while (0)
