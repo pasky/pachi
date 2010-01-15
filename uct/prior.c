@@ -140,7 +140,7 @@ uct_prior_init(char *arg)
 {
 	struct uct_prior *p = calloc(1, sizeof(struct uct_prior));
 
-	p->ko_eqex = 0;
+	p->ko_eqex = -2;
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = -1;
 	p->cfgdn = -1;
 	p->eqex = 40; /* Even number! */
@@ -188,11 +188,11 @@ uct_prior_init(char *arg)
 		}
 	}
 
-	if (p->even_eqex < 0) p->even_eqex = p->eqex;
-	if (p->policy_eqex < 0) p->policy_eqex = p->eqex;
-	if (p->b19_eqex < 0) p->b19_eqex = p->eqex;
-	if (p->eye_eqex < 0) p->eye_eqex = p->eqex;
-	if (p->ko_eqex < 0) p->ko_eqex = p->eqex;
+	if (p->even_eqex < 0) p->even_eqex = p->eqex / -p->even_eqex;
+	if (p->policy_eqex < 0) p->policy_eqex = p->eqex / -p->policy_eqex;
+	if (p->b19_eqex < 0) p->b19_eqex = p->eqex / -p->b19_eqex;
+	if (p->eye_eqex < 0) p->eye_eqex = p->eqex / -p->eye_eqex;
+	if (p->ko_eqex < 0) p->ko_eqex = p->eqex / -p->ko_eqex;
 
 	if (p->cfgdn < 0) {
 		int bonuses[] = { 0, p->eqex, p->eqex / 2, p->eqex / 2 };
