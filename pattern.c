@@ -296,8 +296,9 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 
 	assert(pc->spat_min > 0);
 
-	bool w_to_play = m->color == S_WHITE;
 	hash_t h = pthashes[0][0][S_NONE];
+#ifdef BOARD_SPATHASH
+	bool w_to_play = m->color == S_WHITE;
 	for (int d = 2; d <= BOARD_SPATHASH_MAXD; d++) {
 		/* Reuse all incrementally matched data. */
 		h ^= b->spathash[m->coord][d - 1][w_to_play];
@@ -311,6 +312,9 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 			(f++, p->n++);
 		} /* else not found, ignore */
 	}
+#else
+	assert(BOARD_SPATHASH_MAXD < 2);
+#endif
 	if (unlikely(pc->spat_max > BOARD_SPATHASH_MAXD))
 		f = pattern_match_spatial_outer(pc, ps, p, f, b, m, h);
 	return f;
