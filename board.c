@@ -358,8 +358,11 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 #ifdef BOARD_PAT3
 	/* @color is not what we need in case of capture. */
 	enum stone new_color = board_at(board, coord);
+	if (new_color == S_NONE)
+		board->pat3[coord] = pattern3_hash(board, coord);
 	foreach_8neighbor(board, coord) {
-		/* TODO: Update only pat3 for empty intersections? */
+		if (board_at(board, c) != S_NONE)
+			continue;
 		static const int shifts[] = { 14, 12, 10,  8, -1, 6,  4, 2, 0 };
 		int dx = coord_dx(coord, c, board);
 		int dy = coord_dy(coord, c, board);

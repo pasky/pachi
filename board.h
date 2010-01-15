@@ -117,7 +117,7 @@ struct board {
 #endif
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
-	 * specification. */
+	 * specification. The information is only valid for empty points. */
 	uint16_t *pat3;
 #endif
 
