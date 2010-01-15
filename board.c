@@ -361,19 +361,15 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 	enum stone new_color = board_at(board, coord);
 	if (new_color == S_NONE)
 		board->pat3[coord] = pattern3_hash(board, coord);
-	foreach_8neighbor(board, coord) {
+	foreach_8neighbor(board, coord) { // internally, the loop uses fn__i=[0..7]
 		if (board_at(board, c) != S_NONE)
 			continue;
-		static const int shifts[] = { 14, 12, 10,  8, -1, 6,  4, 2, 0 };
-		int dx = coord_dx(coord, c, board);
-		int dy = coord_dy(coord, c, board);
-		int s = (1 + dy) * 3 + (1 + dx);
-		board->pat3[c] &= ~(3 << shifts[s]);
-		board->pat3[c] |= new_color << shifts[s];
+		board->pat3[c] &= ~(3 << (fn__i*2));
+		board->pat3[c] |= new_color << (fn__i*2);
 #if 0
 		if (board_at(board, c) != S_OFFBOARD && pattern3_hash(board, c) != board->pat3[c]) {
 			board_print(board, stderr);
-			fprintf(stderr, "%s->%s %x != %x (%d-%d:%d,%d,%d) %d\n", coord2sstr(coord, board), coord2sstr(c, board), pattern3_hash(board, c), board->pat3[c], coord,c,dx,dy,s, shifts[s]);
+			fprintf(stderr, "%s->%s %x != %x (%d-%d:%d)\n", coord2sstr(coord, board), coord2sstr(c, board), pattern3_hash(board, c), board->pat3[c], coord, c, fn__i);
 			assert(0);
 		}
 #endif
