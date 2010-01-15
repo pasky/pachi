@@ -93,7 +93,7 @@ board_copy(struct board *b2, struct board *b1)
 #ifdef BOARD_SPATHASH
 	b2->spathash = x; x += ssize;
 #endif
-#ifdef BOARD_SPATHASH
+#ifdef BOARD_PAT3
 	b2->pat3 = x; x += p3size;
 #endif
 
