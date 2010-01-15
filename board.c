@@ -246,7 +246,8 @@ board_clear(struct board *board)
 #ifdef BOARD_PAT3
 	/* Initialize 3x3 pattern codes. */
 	foreach_point(board) {
-		board->pat3[c] = pattern3_hash(board, c);
+		if (board_at(board, c) == S_NONE)
+			board->pat3[c] = pattern3_hash(board, c);
 	} foreach_point_end;
 #endif
 }
