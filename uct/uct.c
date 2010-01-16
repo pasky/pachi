@@ -318,7 +318,9 @@ spawn_thread_manager(void *ctx_)
 	pthread_t threads[u->threads];
 	int joined = 0;
 
+	pthread_mutex_lock(&finish_mutex);
 	uct_halt = 0;
+
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
@@ -358,6 +360,8 @@ spawn_thread_manager(void *ctx_)
 		pthread_mutex_unlock(&finish_serializer);
 	}
 
+	pthread_mutex_unlock(&finish_mutex);
+
 	if (!shared_tree)
 		tree_normalize(mctx->t, u->threads);
 
@@ -376,7 +380,6 @@ uct_pondering_start(struct uct *u, struct board *b0, enum stone color, struct tr
 
 	struct spawn_ctx ctx = { .u = u, .b = &b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
 	static struct spawn_ctx mctx; mctx = ctx;
-	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, &mctx);
 	thread_manager_running = true;
 }
@@ -389,7 +392,6 @@ uct_pondering_stop(void)
 	struct spawn_ctx *pctx;
 	thread_manager_running = false;
 	pthread_join(thread_manager, (void **) &pctx);
-	pthread_mutex_unlock(&finish_mutex);
 	return pctx->games;
 }
 
