@@ -288,6 +288,9 @@ spawn_worker(void *ctx_)
 	return ctx;
 }
 
+/* Thread manager, controlling worker threads. It must be called with
+ * finish_mutex lock held, and the finish_cond can be signalled for it
+ * to stop; in that case, the caller should set finish_thread = -1. */
 static void *
 spawn_thread_manager(void *ctx_)
 {
@@ -302,7 +305,6 @@ spawn_thread_manager(void *ctx_)
 	int joined = 0;
 
 	uct_halt = 0;
-	pthread_mutex_lock(&finish_mutex);
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
@@ -319,6 +321,11 @@ spawn_thread_manager(void *ctx_)
 	while (joined < u->threads) {
 		/* Wait for some thread to finish... */
 		pthread_cond_wait(&finish_cond, &finish_mutex);
+		if (finish_thread < 0) {
+			/* Stop-by-caller. Tell the workers to wrap up. */
+			uct_halt = 1;
+			continue;
+		}
 		/* ...and gather its remnants. */
 		struct spawn_ctx *ctx;
 		pthread_join(threads[finish_thread], (void **) &ctx);
@@ -336,7 +343,6 @@ spawn_thread_manager(void *ctx_)
 			uct_halt = 1;
 		pthread_mutex_unlock(&finish_serializer);
 	}
-	pthread_mutex_unlock(&finish_mutex);
 
 	if (!shared_tree)
 		tree_normalize(mctx->t, u->threads);
@@ -353,12 +359,14 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 
 	pthread_t manager;
 	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
+	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&manager, NULL, spawn_thread_manager, &ctx);
 
 	/* We just wait until the thread manager finishes. */
 
 	struct spawn_ctx *pctx;
 	pthread_join(manager, (void **) &pctx);
+	pthread_mutex_unlock(&finish_mutex);
 	return pctx->games;
 }
 
