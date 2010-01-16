@@ -240,6 +240,9 @@ uct_done(struct engine *e)
  * main thread
  *   |         main(), GTP communication, ...
  *   |
+ * thread_manager
+ *   |         spawns and manages worker threads
+ *   |
  * thread0
  * thread1
  * ...
@@ -285,11 +288,14 @@ spawn_helper(void *ctx_)
 	return ctx;
 }
 
-static int
-uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct tree *t, int games, bool shared_tree)
+static void *
+spawn_thread_manager(void *ctx_)
 {
-	assert(u->threads > 0);
-	assert(u->parallel_tree == shared_tree);
+	/* In thread_manager, we use only some of the ctx fields. */
+	struct spawn_ctx *mctx = ctx_;
+	struct uct *u = mctx->u;
+	bool shared_tree = u->parallel_tree;
+	fast_srandom(mctx->seed);
 
 	int played_games = 0;
 	pthread_t threads[u->threads];
@@ -300,9 +306,9 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
-		ctx->u = u; ctx->b = b; ctx->color = color;
-		ctx->t = shared_tree ? t : tree_copy(t);
-		ctx->tid = ti; ctx->games = games;
+		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
+		ctx->t = shared_tree ? mctx->t : tree_copy(mctx->t);
+		ctx->tid = ti; ctx->games = mctx->games;
 		ctx->seed = fast_random(65536) + ti;
 		pthread_create(&threads[ti], NULL, spawn_helper, ctx);
 		if (UDEBUGL(2))
@@ -319,7 +325,7 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 		played_games += ctx->games;
 		joined++;
 		if (!shared_tree) {
-			tree_merge(t, ctx->t);
+			tree_merge(mctx->t, ctx->t);
 			tree_done(ctx->t);
 		}
 		free(ctx);
@@ -332,11 +338,28 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 	}
 	pthread_mutex_unlock(&finish_mutex);
 
-	if (!shared_tree) {
-		/* XXX: Should this be done in shared trees as well? */
-		tree_normalize(t, u->threads);
-	}
-	return played_games;
+	if (!shared_tree)
+		tree_normalize(mctx->t, u->threads);
+
+	mctx->games = played_games;
+	return mctx;
+}
+
+static int
+uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct tree *t, int games, bool shared_tree)
+{
+	assert(u->threads > 0);
+	assert(u->parallel_tree == shared_tree);
+
+	pthread_t manager;
+	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
+	pthread_create(&manager, NULL, spawn_thread_manager, &ctx);
+
+	/* We just wait until the thread manager finishes. */
+
+	struct spawn_ctx *pctx;
+	pthread_join(manager, (void **) &pctx);
+	return pctx->games;
 }
 
 
