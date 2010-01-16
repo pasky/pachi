@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define DEBUG
 
@@ -37,6 +38,10 @@ static void uct_pondering_stop(struct uct *u);
 #define GJ_THRES	0.8
 /* How many games to consider at minimum before judging groups. */
 #define GJ_MINGAMES	500
+
+/* How often to inspect the tree from the main thread to check for playout
+ * stop, progress reports, etc. A (struct timespec) initializer. */
+#define TREE_BUSYWAIT_INTERVAL { .tv_sec = 0, .tv_nsec = 100*1000000 /* 100ms */ }
 
 
 static void
@@ -250,15 +255,16 @@ uct_done(struct engine *e)
  *
  * main thread
  *   |         main(), GTP communication, ...
+ *   |         starts and stops the search managed by thread_manager
  *   |
  * thread_manager
- *   |         spawns and manages worker threads
+ *   |         spawns and collects worker threads
  *   |
  * worker0
  * worker1
  * ...
  * workerK
- *             uct_playouts() loop, doing descend-playout N=games times
+ *             uct_playouts() loop, doing descend-playout until uct_halt
  */
 
 /* Set in thread manager in case the workers should stop. */
@@ -292,7 +298,7 @@ spawn_worker(void *ctx_)
 	fast_srandom(ctx->seed);
 	thread_id = ctx->tid;
 	/* Run */
-	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->games);
+	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
 	/* Finish */
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
@@ -331,8 +337,7 @@ spawn_thread_manager(void *ctx_)
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
 		mctx->t = ctx->t = shared_tree ? t : tree_copy(t);
-		ctx->tid = ti; ctx->games = mctx->games;
-		ctx->seed = fast_random(65536) + ti;
+		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
 		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
 		if (UDEBUGL(2))
 			fprintf(stderr, "Spawned worker %d\n", ti);
@@ -376,12 +381,12 @@ spawn_thread_manager(void *ctx_)
 }
 
 static struct spawn_ctx *
-uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
 
-	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
+	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
 	static struct spawn_ctx mctx; mctx = ctx;
 	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, &mctx);
@@ -394,6 +399,13 @@ uct_search_stop(void)
 {
 	assert(thread_manager_running);
 
+	/* Signal thread manager to stop the workers. */
+	pthread_mutex_lock(&finish_mutex);
+	finish_thread = -1;
+	pthread_cond_signal(&finish_cond);
+	pthread_mutex_unlock(&finish_mutex);
+
+	/* Collect the thread manager. */
 	struct spawn_ctx *pctx;
 	thread_manager_running = false;
 	pthread_join(thread_manager, (void **) &pctx);
@@ -405,9 +417,33 @@ uct_search_stop(void)
 static int
 uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
-	uct_search_start(u, b, color, t, games);
-	/* We just wait until the thread manager finishes. */
-	struct spawn_ctx *ctx = uct_search_stop();
+	/* Required games limit as to be seen in the tree root u.playouts. */
+	int ngames = games * (u->thread_model == TM_ROOT ? 1 : u->threads);
+	/* Number of already played games. */
+	int pgames = t->root->u.playouts;
+
+	struct spawn_ctx *ctx = uct_search_start(u, b, color, t);
+
+	/* The search tree is ctx->t. This is normally == t, but in case of
+	 * TM_ROOT, it is one of the trees belonging to the independent
+	 * workers. It is important to reference ctx->t directly since the
+	 * thread manager will swap the tree pointer asynchronously. */
+	/* XXX: This means TM_ROOT support is suboptimal since single stalled
+	 * thread can stall the others in case of limiting the search by game
+	 * count. However, TM_ROOT just does not deserve any more extra code
+	 * right now. */
+
+	/* We periodically poll the search tree and stop when we played enough
+	 * games. */
+	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
+	while (1) {
+		nanosleep(&busywait_interval, NULL);
+
+		if (ctx->t->root->u.playouts - pgames > ngames)
+			break;
+	}
+
+	ctx = uct_search_stop();
 	return ctx->games;
 }
 
@@ -427,8 +463,8 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	int res = board_play(b, &m);
 	assert(res >= 0);
 
-	/* Start MCTS manager thread with no games limit. */
-	uct_search_start(u, b, color, t, 0);
+	/* Start MCTS manager thread "headless". */
+	uct_search_start(u, b, color, t);
 }
 
 /* uct_search_stop() frontend for the pondering (non-genmove) mode. */
@@ -438,13 +474,7 @@ uct_pondering_stop(struct uct *u)
 	if (!thread_manager_running)
 		return;
 
-	/* Signal thread manager to stop the workers. */
-	pthread_mutex_lock(&finish_mutex);
-	finish_thread = -1;
-	pthread_cond_signal(&finish_cond);
-	pthread_mutex_unlock(&finish_mutex);
-
-	/* Collect thread manager. */
+	/* Stop the thread manager. */
 	struct spawn_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1))
 		fprintf(stderr, "Pondering yielded %d games\n", ctx->games);

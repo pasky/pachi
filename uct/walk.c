@@ -334,7 +334,7 @@ end:
 }
 
 int
-uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
 	/* Should we print progress info? In case all threads work on the same
 	 * tree, only the first thread does. */
@@ -342,7 +342,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, i
 	#define ok_to_talk (!u->parallel_tree || !thread_id)
 
 	int i;
-	for (i = 0; !uct_halt && (!games || i < games); i++) {
+	for (i = 0; !uct_halt; i++) {
 		int result = uct_playout(u, b, color, t);
 		if (result == 0) {
 			/* Tree descent has hit invalid move. */
