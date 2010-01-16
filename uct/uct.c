@@ -243,10 +243,10 @@ uct_done(struct engine *e)
  * thread_manager
  *   |         spawns and manages worker threads
  *   |
- * thread0
- * thread1
+ * worker0
+ * worker1
  * ...
- * threadK
+ * workerK
  *             uct_playouts() loop, doing descend-playout N=games times
  */
 
@@ -271,7 +271,7 @@ struct spawn_ctx {
 };
 
 static void *
-spawn_helper(void *ctx_)
+spawn_worker(void *ctx_)
 {
 	struct spawn_ctx *ctx = ctx_;
 	/* Setup */
@@ -310,9 +310,9 @@ spawn_thread_manager(void *ctx_)
 		ctx->t = shared_tree ? mctx->t : tree_copy(mctx->t);
 		ctx->tid = ti; ctx->games = mctx->games;
 		ctx->seed = fast_random(65536) + ti;
-		pthread_create(&threads[ti], NULL, spawn_helper, ctx);
+		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
 		if (UDEBUGL(2))
-			fprintf(stderr, "Spawned thread %d\n", ti);
+			fprintf(stderr, "Spawned worker %d\n", ti);
 	}
 
 	/* ...and collect them back: */
@@ -330,7 +330,7 @@ spawn_thread_manager(void *ctx_)
 		}
 		free(ctx);
 		if (UDEBUGL(2))
-			fprintf(stderr, "Joined thread %d\n", finish_thread);
+			fprintf(stderr, "Joined worker %d\n", finish_thread);
 		/* Do not get stalled by slow threads. */
 		if (joined >= u->threads / 2)
 			uct_halt = 1;
