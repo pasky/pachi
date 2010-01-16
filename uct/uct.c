@@ -189,6 +189,10 @@ static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
+
+	/* This means the game is probabl yover, no use pondering on. */
+	uct_pondering_finish(u);
+
 	if (u->pass_all_alive)
 		return; // no dead groups
 
