@@ -375,7 +375,7 @@ spawn_thread_manager(void *ctx_)
 	return mctx;
 }
 
-static void
+static struct spawn_ctx *
 uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
 	assert(u->threads > 0);
@@ -386,6 +386,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *
 	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, &mctx);
 	thread_manager_running = true;
+	return &mctx;
 }
 
 static struct spawn_ctx *
