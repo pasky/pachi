@@ -338,10 +338,11 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, i
 {
 	/* Should we print progress info? In case all threads work on the same
 	 * tree, only the first thread does. */
+	/* XXX: The thread manager should do things like this. */
 	#define ok_to_talk (!u->parallel_tree || !thread_id)
 
 	int i;
-	for (i = 0; i < games; i++) {
+	for (i = 0; !uct_halt && (!games || i < games); i++) {
 		int result = uct_playout(u, b, color, t);
 		if (result == 0) {
 			/* Tree descent has hit invalid move. */
@@ -357,12 +358,6 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, i
 			if (best && ((best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
 			             || (best->u.playouts >= 500 && tree_node_get_value(t, 1, best->u.value) >= 0.95)))
 				break;
-		}
-
-		if (uct_halt) {
-			if (UDEBUGL(2))
-				fprintf(stderr, "<halting early, %d games skipped>\n", games - i);
-			break;
 		}
 	}
 
