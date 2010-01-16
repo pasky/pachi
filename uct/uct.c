@@ -303,8 +303,10 @@ spawn_worker(void *ctx_)
 }
 
 /* Thread manager, controlling worker threads. It must be called with
- * finish_mutex lock held, and the finish_cond can be signalled for it
- * to stop; in that case, the caller should set finish_thread = -1. */
+ * finish_mutex lock held, but it will unlock it itself before exiting;
+ * this is necessary to be completely deadlock-free. */
+/* The finish_cond can be signalled for it to stop; in that case,
+ * the caller should set finish_thread = -1. */
 static void *
 spawn_thread_manager(void *ctx_)
 {
@@ -318,7 +320,6 @@ spawn_thread_manager(void *ctx_)
 	pthread_t threads[u->threads];
 	int joined = 0;
 
-	pthread_mutex_lock(&finish_mutex);
 	uct_halt = 0;
 
 	/* Spawn threads... */
@@ -380,6 +381,7 @@ uct_pondering_start(struct uct *u, struct board *b0, enum stone color, struct tr
 
 	struct spawn_ctx ctx = { .u = u, .b = &b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
 	static struct spawn_ctx mctx; mctx = ctx;
+	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, &mctx);
 	thread_manager_running = true;
 }
