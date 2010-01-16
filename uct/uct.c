@@ -371,13 +371,10 @@ spawn_thread_manager(void *ctx_)
 }
 
 static void
-uct_search_start(struct uct *u, struct board *b0, enum stone color, struct tree *t, int games)
+uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
-
-	/* *b0 can change in the meantime. */
-	struct board *b = malloc(sizeof(*b)); board_copy(b, b0);
 
 	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
 	static struct spawn_ctx mctx; mctx = ctx;
@@ -394,7 +391,6 @@ uct_search_stop(void)
 	struct spawn_ctx *pctx;
 	thread_manager_running = false;
 	pthread_join(thread_manager, (void **) &pctx);
-	free(pctx->b);
 	return pctx;
 }
 
@@ -412,10 +408,12 @@ uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct t
 
 /* Start pondering background with @color to play. */
 static void
-uct_pondering_start(struct uct *u, struct board *b, struct tree *t, enum stone color)
+uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color)
 {
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
+	/* We need a local board copy to ponder upon. */
+	struct board *b = malloc(sizeof(*b)); board_copy(b, b0);
 	uct_search_start(u, b, color, t, 0);
 }
 
@@ -436,6 +434,7 @@ uct_pondering_stop(struct uct *u)
 	struct spawn_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1))
 		fprintf(stderr, "Pondering yielded %d games\n", ctx->games);
+	free(ctx->b);
 }
 
 
