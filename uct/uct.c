@@ -398,6 +398,15 @@ uct_search_stop(void)
 	return pctx->games;
 }
 
+/* Start pondering background with @color to play. */
+static void
+uct_pondering_start(struct uct *u, struct board *b, struct tree *t, enum stone color)
+{
+	if (UDEBUGL(1))
+		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
+	uct_search_start(u, b, color, t, 0);
+}
+
 /* uct_search_stop() frontend for the pondering (non-genmove) mode. */
 static void
 uct_pondering_stop(struct uct *u)
@@ -502,9 +511,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */
 	if (u->pondering && !is_pass(best->coord)) {
-		if (UDEBUGL(1))
-			fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
-		uct_search_start(u, b, stone_other(color), u->t, 0);
+		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
 	return coord_copy(best->coord);
 }
