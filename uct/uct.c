@@ -307,6 +307,9 @@ spawn_worker(void *ctx_)
  * this is necessary to be completely deadlock-free. */
 /* The finish_cond can be signalled for it to stop; in that case,
  * the caller should set finish_thread = -1. */
+/* After it is started, it will update mctx->t to point at some tree
+ * used for the actual search (matters only for TM_ROOT), on return
+ * it will set mctx->games to the number of performed simulations. */
 static void *
 spawn_thread_manager(void *ctx_)
 {
@@ -327,7 +330,7 @@ spawn_thread_manager(void *ctx_)
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
-		ctx->t = shared_tree ? t : tree_copy(t);
+		mctx->t = ctx->t = shared_tree ? t : tree_copy(t);
 		ctx->tid = ti; ctx->games = mctx->games;
 		ctx->seed = fast_random(65536) + ti;
 		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
@@ -350,6 +353,7 @@ spawn_thread_manager(void *ctx_)
 		played_games += ctx->games;
 		joined++;
 		if (!shared_tree) {
+			if (ctx->t == mctx->t) mctx->t = t;
 			tree_merge(t, ctx->t);
 			tree_done(ctx->t);
 		}
