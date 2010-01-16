@@ -250,10 +250,13 @@ uct_done(struct engine *e)
  *             uct_playouts() loop, doing descend-playout N=games times
  */
 
-/* Set in main thread in case the playouts should stop. */
+/* Set in thread manager in case the workers should stop. */
 volatile sig_atomic_t uct_halt = 0;
 /* ID of the running worker thread. */
 __thread int thread_id = -1;
+/* ID of the thread manager. */
+static pthread_t thread_manager;
+static bool thread_manager_running;
 
 static pthread_mutex_t finish_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
@@ -351,22 +354,40 @@ spawn_thread_manager(void *ctx_)
 	return mctx;
 }
 
+static void
+uct_pondering_start(struct uct *u, struct board *b0, enum stone color, struct tree *t, int games)
+{
+	assert(u->threads > 0);
+	assert(!thread_manager_running);
+
+	/* *b0 can change in the meantime. */
+	struct board b; board_copy(&b, b0);
+
+	struct spawn_ctx ctx = { .u = u, .b = &b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
+	static struct spawn_ctx mctx; mctx = ctx;
+	pthread_mutex_lock(&finish_mutex);
+	pthread_create(&thread_manager, NULL, spawn_thread_manager, &mctx);
+	thread_manager_running = true;
+}
+
+static int
+uct_pondering_stop(void)
+{
+	assert(thread_manager_running);
+
+	struct spawn_ctx *pctx;
+	thread_manager_running = false;
+	pthread_join(thread_manager, (void **) &pctx);
+	pthread_mutex_unlock(&finish_mutex);
+	return pctx->games;
+}
+
 static int
 uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
-	assert(u->threads > 0);
-
-	pthread_t manager;
-	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
-	pthread_mutex_lock(&finish_mutex);
-	pthread_create(&manager, NULL, spawn_thread_manager, &ctx);
-
+	uct_pondering_start(u, b, color, t, games);
 	/* We just wait until the thread manager finishes. */
-
-	struct spawn_ctx *pctx;
-	pthread_join(manager, (void **) &pctx);
-	pthread_mutex_unlock(&finish_mutex);
-	return pctx->games;
+	return uct_pondering_stop();
 }
 
 
