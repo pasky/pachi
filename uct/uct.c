@@ -398,6 +398,17 @@ uct_search_stop(void)
 	return pctx->games;
 }
 
+
+/* Run time-limited MCTS search on foreground. */
+static int
+uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+{
+	uct_search_start(u, b, color, t, games);
+	/* We just wait until the thread manager finishes. */
+	return uct_search_stop();
+}
+
+
 /* Start pondering background with @color to play. */
 static void
 uct_pondering_start(struct uct *u, struct board *b, struct tree *t, enum stone color)
@@ -424,14 +435,6 @@ uct_pondering_stop(struct uct *u)
 	int games = uct_search_stop();
 	if (UDEBUGL(1))
 		fprintf(stderr, "Pondering yielded %d games\n", games);
-}
-
-static int
-uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
-{
-	uct_search_start(u, b, color, t, games);
-	/* We just wait until the thread manager finishes. */
-	return uct_search_stop();
 }
 
 
