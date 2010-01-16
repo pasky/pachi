@@ -412,8 +412,16 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 {
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
+
 	/* We need a local board copy to ponder upon. */
 	struct board *b = malloc(sizeof(*b)); board_copy(b, b0);
+
+	/* *b0 did not have the genmove'd move played yet. */
+	struct move m = { t->root->coord, t->root_color };
+	int res = board_play(b, &m);
+	assert(res >= 0);
+
+	/* Start MCTS manager thread with no games limit. */
 	uct_search_start(u, b, color, t, 0);
 }
 
