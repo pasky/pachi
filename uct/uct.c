@@ -371,7 +371,7 @@ spawn_thread_manager(void *ctx_)
 }
 
 static void
-uct_pondering_start(struct uct *u, struct board *b0, enum stone color, struct tree *t, int games)
+uct_search_start(struct uct *u, struct board *b0, enum stone color, struct tree *t, int games)
 {
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
@@ -387,7 +387,7 @@ uct_pondering_start(struct uct *u, struct board *b0, enum stone color, struct tr
 }
 
 static int
-uct_pondering_stop(void)
+uct_search_stop(void)
 {
 	assert(thread_manager_running);
 
@@ -398,7 +398,7 @@ uct_pondering_stop(void)
 	return pctx->games;
 }
 
-/* uct_pondering_stop() frontend for the pondering (non-genmove) mode. */
+/* uct_search_stop() frontend for the pondering (non-genmove) mode. */
 static void
 uct_pondering_finish(struct uct *u)
 {
@@ -412,7 +412,7 @@ uct_pondering_finish(struct uct *u)
 	pthread_mutex_unlock(&finish_mutex);
 
 	/* Collect thread manager. */
-	int games = uct_pondering_stop();
+	int games = uct_search_stop();
 	if (UDEBUGL(1))
 		fprintf(stderr, "Pondering yielded %d games\n", games);
 }
@@ -420,9 +420,9 @@ uct_pondering_finish(struct uct *u)
 static int
 uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
-	uct_pondering_start(u, b, color, t, games);
+	uct_search_start(u, b, color, t, games);
 	/* We just wait until the thread manager finishes. */
-	return uct_pondering_stop();
+	return uct_search_stop();
 }
 
 
@@ -504,7 +504,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	if (u->pondering && !is_pass(best->coord)) {
 		if (UDEBUGL(1))
 			fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
-		uct_pondering_start(u, b, stone_other(color), u->t, 0);
+		uct_search_start(u, b, stone_other(color), u->t, 0);
 	}
 	return coord_copy(best->coord);
 }
