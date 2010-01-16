@@ -377,9 +377,9 @@ uct_pondering_start(struct uct *u, struct board *b0, enum stone color, struct tr
 	assert(!thread_manager_running);
 
 	/* *b0 can change in the meantime. */
-	struct board b; board_copy(&b, b0);
+	struct board *b = malloc(sizeof(*b)); board_copy(b, b0);
 
-	struct spawn_ctx ctx = { .u = u, .b = &b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
+	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
 	static struct spawn_ctx mctx; mctx = ctx;
 	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, &mctx);
@@ -394,6 +394,7 @@ uct_pondering_stop(void)
 	struct spawn_ctx *pctx;
 	thread_manager_running = false;
 	pthread_join(thread_manager, (void **) &pctx);
+	free(pctx->b);
 	return pctx->games;
 }
 
