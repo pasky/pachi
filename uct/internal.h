@@ -41,6 +41,7 @@ struct uct {
 	} thread_model;
 	bool parallel_tree;
 	bool virtual_loss;
+	bool pondering;
 
 	int dynkomi;
 	int dynkomi_mask;

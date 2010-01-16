@@ -26,6 +26,7 @@
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
+static void uct_pondering_finish(struct uct *u);
 
 
 #define MC_GAMES	80000
@@ -136,6 +137,11 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 		assert(u->t);
 	}
 
+	/* Stop pondering. */
+	/* XXX: If we are about to receive multiple 'play' commands,
+	 * e.g. in a rengo, we will not ponder during the rest of them. */
+	uct_pondering_finish(u);
+
 	if (is_resign(m->coord)) {
 		/* Reset state. */
 		reset_state(u);
@@ -225,6 +231,7 @@ uct_done(struct engine *e)
 	/* This is called on engine reset, especially when clear_board
 	 * is received and new game should begin. */
 	struct uct *u = e->data;
+	uct_pondering_finish(u);
 	if (u->t) reset_state(u);
 	free(u->ownermap.map);
 
@@ -382,6 +389,25 @@ uct_pondering_stop(void)
 	return pctx->games;
 }
 
+/* uct_pondering_stop() frontend for the pondering (non-genmove) mode. */
+static void
+uct_pondering_finish(struct uct *u)
+{
+	if (!thread_manager_running)
+		return;
+
+	/* Signal thread manager to stop the workers. */
+	pthread_mutex_lock(&finish_mutex);
+	finish_thread = -1;
+	pthread_cond_signal(&finish_cond);
+	pthread_mutex_unlock(&finish_mutex);
+
+	/* Collect thread manager. */
+	int games = uct_pondering_stop();
+	if (UDEBUGL(1))
+		fprintf(stderr, "Pondering yielded %d games\n", games);
+}
+
 static int
 uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
@@ -405,6 +431,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	}
 
 	/* Seed the tree. */
+	uct_pondering_finish(u);
 	prepare_move(e, b, color);
 	assert(u->t);
 
@@ -460,6 +487,11 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	}
 
 	tree_promote_node(u->t, best);
+	if (u->pondering) {
+		if (UDEBUGL(1))
+			fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
+		uct_pondering_start(u, b, stone_other(color), u->t, 0);
+	}
 	return coord_copy(best->coord);
 }
 
@@ -629,6 +661,9 @@ uct_state_init(char *arg, struct board *b)
 					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
 					exit(1);
 				}
+			} else if (!strcasecmp(optname, "pondering")) {
+				/* Keep searching even during opponent's turn. */
+				u->pondering = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
