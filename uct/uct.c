@@ -313,6 +313,7 @@ spawn_thread_manager(void *ctx_)
 	/* In thread_manager, we use only some of the ctx fields. */
 	struct spawn_ctx *mctx = ctx_;
 	struct uct *u = mctx->u;
+	struct tree *t = mctx->t;
 	bool shared_tree = u->parallel_tree;
 	fast_srandom(mctx->seed);
 
@@ -326,7 +327,7 @@ spawn_thread_manager(void *ctx_)
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
-		ctx->t = shared_tree ? mctx->t : tree_copy(mctx->t);
+		ctx->t = shared_tree ? t : tree_copy(t);
 		ctx->tid = ti; ctx->games = mctx->games;
 		ctx->seed = fast_random(65536) + ti;
 		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
@@ -349,7 +350,7 @@ spawn_thread_manager(void *ctx_)
 		played_games += ctx->games;
 		joined++;
 		if (!shared_tree) {
-			tree_merge(mctx->t, ctx->t);
+			tree_merge(t, ctx->t);
 			tree_done(ctx->t);
 		}
 		free(ctx);
