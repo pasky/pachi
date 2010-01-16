@@ -386,7 +386,7 @@ uct_search_start(struct uct *u, struct board *b0, enum stone color, struct tree 
 	thread_manager_running = true;
 }
 
-static int
+static struct spawn_ctx *
 uct_search_stop(void)
 {
 	assert(thread_manager_running);
@@ -395,7 +395,7 @@ uct_search_stop(void)
 	thread_manager_running = false;
 	pthread_join(thread_manager, (void **) &pctx);
 	free(pctx->b);
-	return pctx->games;
+	return pctx;
 }
 
 
@@ -405,7 +405,8 @@ uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct t
 {
 	uct_search_start(u, b, color, t, games);
 	/* We just wait until the thread manager finishes. */
-	return uct_search_stop();
+	struct spawn_ctx *ctx = uct_search_stop();
+	return ctx->games;
 }
 
 
@@ -432,9 +433,9 @@ uct_pondering_stop(struct uct *u)
 	pthread_mutex_unlock(&finish_mutex);
 
 	/* Collect thread manager. */
-	int games = uct_search_stop();
+	struct spawn_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1))
-		fprintf(stderr, "Pondering yielded %d games\n", games);
+		fprintf(stderr, "Pondering yielded %d games\n", ctx->games);
 }
 
 
