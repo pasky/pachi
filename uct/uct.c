@@ -26,7 +26,7 @@
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
-static void uct_pondering_finish(struct uct *u);
+static void uct_pondering_stop(struct uct *u);
 
 
 #define MC_GAMES	80000
@@ -140,7 +140,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	/* Stop pondering. */
 	/* XXX: If we are about to receive multiple 'play' commands,
 	 * e.g. in a rengo, we will not ponder during the rest of them. */
-	uct_pondering_finish(u);
+	uct_pondering_stop(u);
 
 	if (is_resign(m->coord)) {
 		/* Reset state. */
@@ -191,7 +191,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	struct uct *u = e->data;
 
 	/* This means the game is probably over, no use pondering on. */
-	uct_pondering_finish(u);
+	uct_pondering_stop(u);
 
 	if (u->pass_all_alive)
 		return; // no dead groups
@@ -235,7 +235,7 @@ uct_done(struct engine *e)
 	/* This is called on engine reset, especially when clear_board
 	 * is received and new game should begin. */
 	struct uct *u = e->data;
-	uct_pondering_finish(u);
+	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
 	free(u->ownermap.map);
 
@@ -400,7 +400,7 @@ uct_search_stop(void)
 
 /* uct_search_stop() frontend for the pondering (non-genmove) mode. */
 static void
-uct_pondering_finish(struct uct *u)
+uct_pondering_stop(struct uct *u)
 {
 	if (!thread_manager_running)
 		return;
@@ -440,7 +440,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	}
 
 	/* Seed the tree. */
-	uct_pondering_finish(u);
+	uct_pondering_stop(u);
 	prepare_move(e, b, color);
 	assert(u->t);
 
