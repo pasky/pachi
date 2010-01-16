@@ -35,7 +35,6 @@ struct uct {
 
 	int threads;
 	enum uct_thread_model {
-		TM_NONE, /* <=> threads == 0 */
 		TM_ROOT, /* Root parallelization. */
 		TM_TREE, /* Tree parallelization w/o virtual loss. */
 		TM_TREEVL, /* Tree parallelization with virtual loss. */

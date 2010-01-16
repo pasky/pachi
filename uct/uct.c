@@ -352,10 +352,9 @@ spawn_thread_manager(void *ctx_)
 }
 
 static int
-uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct tree *t, int games, bool shared_tree)
+uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
 	assert(u->threads > 0);
-	assert(u->parallel_tree == shared_tree);
 
 	pthread_t manager;
 	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .games = games, .seed = fast_random(65536) };
@@ -369,34 +368,6 @@ uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct t
 	pthread_mutex_unlock(&finish_mutex);
 	return pctx->games;
 }
-
-
-typedef int (*uct_threaded_playouts)(struct uct *u, struct board *b, enum stone color, struct tree *t, int games);
-
-static int
-uct_playouts_none(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
-{
-	return uct_playouts(u, b, color, t, games);
-}
-
-static int
-uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
-{
-	return uct_playouts_parallel(u, b, color, t, games, false);
-}
-
-static int
-uct_playouts_tree(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
-{
-	return uct_playouts_parallel(u, b, color, t, games, true);
-}
-
-static uct_threaded_playouts threaded_playouts[] = {
-	uct_playouts_none,
-	uct_playouts_root,
-	uct_playouts_tree,
-	uct_playouts_tree,
-};
 
 
 static coord_t *
@@ -416,7 +387,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	prepare_move(e, b, color);
 	assert(u->t);
 
-	/* Run the simulations. */
+	/* Determine number of simulations. */
 	int games = u->games;
 	if (u->t->root->children) {
 		int delta = u->t->root->u.playouts * 2 / 3;
@@ -429,8 +400,8 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	if (games < u->games && UDEBUGL(2))
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
 
-	int played_games;
-	played_games = threaded_playouts[u->thread_model](u, b, color, u->t, games);
+	/* Perform the Monte Carlo Tree Search! */
+	int played_games = uct_playouts_threaded(u, b, color, u->t, games);
 
 	if (UDEBUGL(2))
 		tree_dump(u->t, u->dumpthres);
@@ -479,7 +450,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 	if (!u->t) prepare_move(e, b, color);
 	assert(u->t);
 
-	threaded_playouts[u->thread_model](u, b, color, u->t, u->games);
+	uct_playouts_threaded(u, b, color, u->t, u->games);
 
 	tree_save(u->t, b, u->games / 100);
 
@@ -516,6 +487,7 @@ uct_state_init(char *arg, struct board *b)
 		u->dynkomi = 200;
 	u->dynkomi_mask = S_BLACK;
 
+	u->threads = 1;
 	u->thread_model = TM_TREEVL;
 	u->parallel_tree = true;
 	u->virtual_loss = true;
@@ -607,12 +579,11 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
 				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {
+				/* By default, Pachi will run with only single
+				 * tree search thread! */
 				u->threads = atoi(optval);
 			} else if (!strcasecmp(optname, "thread_model") && optval) {
-				if (!strcasecmp(optval, "none")) {
-					/* Turn off multi-threaded reading. */
-					u->thread_model = TM_NONE;
-				} else if (!strcasecmp(optval, "root")) {
+				if (!strcasecmp(optval, "root")) {
 					/* Root parallelization - each thread
 					 * does independent search, trees are
 					 * merged at the end. */
@@ -708,10 +679,6 @@ uct_state_init(char *arg, struct board *b)
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
-	if (!u->threads) {
-		u->thread_model = TM_NONE;
-		u->parallel_tree = false;
-	}
 
 	if (!!u->random_policy_chance ^ !!u->random_policy) {
 		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
