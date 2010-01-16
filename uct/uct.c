@@ -190,7 +190,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
 
-	/* This means the game is probabl yover, no use pondering on. */
+	/* This means the game is probably over, no use pondering on. */
 	uct_pondering_finish(u);
 
 	if (u->pass_all_alive)
@@ -495,7 +495,12 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	}
 
 	tree_promote_node(u->t, best);
-	if (u->pondering) {
+	/* After a pass, pondering is harmful for two reasons:
+	 * (i) We might keep pondering even when the game is over.
+	 * Of course this is the case for opponent resign as well.
+	 * (ii) More importantly, the ownermap will get skewed since
+	 * the UCT will start cutting off any playouts. */
+	if (u->pondering && !is_pass(best->coord)) {
 		if (UDEBUGL(1))
 			fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
 		uct_pondering_start(u, b, stone_other(color), u->t, 0);
