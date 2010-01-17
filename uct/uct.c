@@ -179,7 +179,7 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 			return "no game context (yet?)";
 		enum stone color = u->t->root_color;
 		struct tree_node *n = u->t->root;
-		snprintf(reply, 1024, "In %d*%d playouts, %s %s can win with %.2f%% probability",
+		snprintf(reply, 1024, "In %d playouts at %d threads, %s %s can win with %.2f%% probability",
 			 n->u.playouts, u->threads, stone2str(color), coord2sstr(n->coord, b),
 			 tree_node_get_value(u->t, -1, n->u.value) * 100);
 		if (abs(u->t->extra_komi) >= 0.5) {
