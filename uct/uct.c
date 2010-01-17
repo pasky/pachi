@@ -449,9 +449,15 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, int
 	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
 	while (1) {
 		nanosleep(&busywait_interval, NULL);
+		int i = ctx->t->root->u.playouts - pgames;
+
+		/* Print progress? */
+		if (i - last_print > print_interval) {
+			last_print += print_interval; // keep the numbers tidy
+			uct_progress_status(u, ctx->t, color, last_print);
+		}
 
 		/* Did we play enough games? */
-		int i = ctx->t->root->u.playouts - pgames;
 		if (i > ngames)
 			break;
 		/* Won situation? */
@@ -459,16 +465,15 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, int
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
-
-		/* Print progress? */
-		if (i - last_print > print_interval) {
-			last_print += print_interval; // keep the numbers tidy
-			uct_progress_status(u, ctx->t, color, last_print);
-		}
 	}
 
 	ctx = uct_search_stop();
-	uct_progress_status(u, t, color, ctx->games);
+
+	if (UDEBUGL(2))
+		tree_dump(t, u->dumpthres);
+	if (UDEBUGL(0))
+		uct_progress_status(u, t, color, ctx->games);
+
 	return ctx->games;
 }
 
@@ -541,17 +546,11 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	/* Perform the Monte Carlo Tree Search! */
 	int played_games = uct_search(u, b, color, u->t, games);
 
-	if (UDEBUGL(2))
-		tree_dump(u->t, u->dumpthres);
-
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 	if (!best) {
 		reset_state(u);
 		return coord_copy(pass);
-	}
-	if (UDEBUGL(0)) {
-		uct_progress_status(u, u->t, color, played_games);
 	}
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n",
