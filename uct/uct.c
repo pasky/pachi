@@ -42,6 +42,8 @@ static void uct_pondering_stop(struct uct *u);
 /* How often to inspect the tree from the main thread to check for playout
  * stop, progress reports, etc. A (struct timespec) initializer. */
 #define TREE_BUSYWAIT_INTERVAL { .tv_sec = 0, .tv_nsec = 100*1000000 /* 100ms */ }
+/* Once per how many simulations to show a progress report line. */
+#define TREE_SIMPROGRESS_INTERVAL 10000
 
 
 static void
@@ -427,6 +429,8 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, int
 	int ngames = games * (u->thread_model == TM_ROOT ? 1 : u->threads);
 	/* Number of already played games. */
 	int pgames = t->root->u.playouts;
+	/* Number of last game with progress print. */
+	int last_print = 0;
 
 	struct spawn_ctx *ctx = uct_search_start(u, b, color, t);
 
@@ -445,16 +449,24 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, int
 		nanosleep(&busywait_interval, NULL);
 
 		/* Did we play enough games? */
-		if (ctx->t->root->u.playouts - pgames > ngames)
+		int i = ctx->t->root->u.playouts - pgames;
+		if (i > ngames)
 			break;
 		/* Won situation? */
 		struct tree_node *best = u->policy->choose(u->policy, ctx->t->root, b, color);
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
+
+		/* Print progress? */
+		if (i - last_print > TREE_SIMPROGRESS_INTERVAL) {
+			last_print += TREE_SIMPROGRESS_INTERVAL; // keep the numbers tidy
+			uct_progress_status(u, ctx->t, color, last_print);
+		}
 	}
 
 	ctx = uct_search_stop();
+	uct_progress_status(u, t, color, ctx->games);
 	return ctx->games;
 }
 
