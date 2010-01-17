@@ -269,7 +269,7 @@ uct_done(struct engine *e)
  * Another way to look at it is by functions (lines denote thread boundaries):
  *
  * | uct_genmove()
- * | uct_playouts_threaded()
+ * | uct_search()            (uct_search_start() .. uct_search_stop())
  * | -----------------------
  * | spawn_thread_manager()
  * | -----------------------
@@ -421,7 +421,7 @@ uct_search_stop(void)
 
 /* Run time-limited MCTS search on foreground. */
 static int
-uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
 {
 	/* Required games limit as to be seen in the tree root u.playouts. */
 	int ngames = games * (u->thread_model == TM_ROOT ? 1 : u->threads);
@@ -525,7 +525,7 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
 
 	/* Perform the Monte Carlo Tree Search! */
-	int played_games = uct_playouts_threaded(u, b, color, u->t, games);
+	int played_games = uct_search(u, b, color, u->t, games);
 
 	if (UDEBUGL(2))
 		tree_dump(u->t, u->dumpthres);
@@ -582,7 +582,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 	if (!u->t) prepare_move(e, b, color);
 	assert(u->t);
 
-	uct_playouts_threaded(u, b, color, u->t, u->games);
+	uct_search(u, b, color, u->t, u->games);
 
 	tree_save(u->t, b, u->games / 100);
 
