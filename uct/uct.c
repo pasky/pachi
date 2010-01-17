@@ -506,8 +506,10 @@ uct_pondering_stop(struct uct *u)
 
 	/* Stop the thread manager. */
 	struct spawn_ctx *ctx = uct_search_stop();
-	if (UDEBUGL(1))
-		fprintf(stderr, "Pondering yielded %d games\n", ctx->games);
+	if (UDEBUGL(1)) {
+		fprintf(stderr, "(pondering) ");
+		uct_progress_status(u, ctx->t, ctx->color, ctx->games);
+	}
 	free(ctx->b);
 }
 
