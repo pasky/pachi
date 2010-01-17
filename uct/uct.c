@@ -423,8 +423,23 @@ uct_search_stop(void)
 
 /* Run time-limited MCTS search on foreground. */
 static int
-uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, bool adjgames)
 {
+	int games = u->games;
+	if (adjgames) {
+		/* Determine number of simulations. */
+		if (u->t->root->children) {
+			int delta = u->t->root->u.playouts * 2 / 3;
+			if (u->parallel_tree) delta /= u->threads;
+			games -= delta;
+		}
+		/* else this is highly read-out but dead-end branch of opening book;
+		 * we need to start from scratch; XXX: Maybe actually base the readout
+		 * count based on number of playouts of best node? */
+		if (games < u->games && UDEBUGL(2))
+			fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
+	}
+
 	/* Required games limit as to be seen in the tree root u.playouts. */
 	int ngames = games * (u->thread_model == TM_ROOT ? 1 : u->threads);
 	/* Number of already played games. */
@@ -532,21 +547,8 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	prepare_move(e, b, color);
 	assert(u->t);
 
-	/* Determine number of simulations. */
-	int games = u->games;
-	if (u->t->root->children) {
-		int delta = u->t->root->u.playouts * 2 / 3;
-		if (u->parallel_tree) delta /= u->threads;
-		games -= delta;
-	}
-	/* else this is highly read-out but dead-end branch of opening book;
-	 * we need to start from scratch; XXX: Maybe actually base the readout
-	 * count based on number of playouts of best node? */
-	if (games < u->games && UDEBUGL(2))
-		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
-
 	/* Perform the Monte Carlo Tree Search! */
-	int played_games = uct_search(u, b, color, u->t, games);
+	int played_games = uct_search(u, b, color, u->t, true);
 
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
@@ -597,7 +599,7 @@ uct_genbook(struct engine *e, struct board *b, enum stone color)
 	if (!u->t) prepare_move(e, b, color);
 	assert(u->t);
 
-	uct_search(u, b, color, u->t, u->games);
+	uct_search(u, b, color, u->t, false);
 
 	tree_save(u->t, b, u->games / 100);
 
