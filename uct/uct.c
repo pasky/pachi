@@ -265,7 +265,16 @@ uct_done(struct engine *e)
  * ...
  * workerK
  *             uct_playouts() loop, doing descend-playout until uct_halt
- */
+ *
+ * Another way to look at it is by functions (lines denote thread boundaries):
+ *
+ * | uct_genmove()
+ * | uct_playouts_threaded()
+ * | -----------------------
+ * | spawn_thread_manager()
+ * | -----------------------
+ * | spawn_worker()
+ * V uct_playouts() */
 
 /* Set in thread manager in case the workers should stop. */
 volatile sig_atomic_t uct_halt = 0;
@@ -365,9 +374,6 @@ spawn_thread_manager(void *ctx_)
 		free(ctx);
 		if (UDEBUGL(2))
 			fprintf(stderr, "Joined worker %d\n", finish_thread);
-		/* Do not get stalled by slow threads. */
-		if (joined >= u->threads / 2)
-			uct_halt = 1;
 		pthread_mutex_unlock(&finish_serializer);
 	}
 
@@ -433,13 +439,18 @@ uct_playouts_threaded(struct uct *u, struct board *b, enum stone color, struct t
 	 * count. However, TM_ROOT just does not deserve any more extra code
 	 * right now. */
 
-	/* We periodically poll the search tree and stop when we played enough
-	 * games. */
+	/* Now, just periodically poll the search tree. */
 	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
 	while (1) {
 		nanosleep(&busywait_interval, NULL);
 
+		/* Did we play enough games? */
 		if (ctx->t->root->u.playouts - pgames > ngames)
+			break;
+		/* Won situation? */
+		struct tree_node *best = u->policy->choose(u->policy, ctx->t->root, b, color);
+		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
+			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
 	}
 
