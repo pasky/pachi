@@ -422,30 +422,25 @@ uct_search_stop(void)
 
 
 /* Run time-limited MCTS search on foreground. */
+/* If dyngames, just make sure the tree root has required number of simulations
+ * done (incl. inherited simulations). If !dyngames, full number of simulations
+ * is simulated in this search. */
 static int
-uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, bool adjgames)
+uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, bool dyngames)
 {
-	int games = u->games;
-	if (adjgames) {
-		/* Determine number of simulations. */
-		if (u->t->root->children) {
-			int delta = u->t->root->u.playouts * 2 / 3;
-			if (u->parallel_tree) delta /= u->threads;
-			games -= delta;
+	/* Required games limit as to be seen in the tree root u.playouts. */
+	int games = u->games * (u->thread_model == TM_ROOT ? 1 : u->threads);
+	if (u->t->root->u.playouts > 0) {
+		if (dyngames) {
+			if (UDEBUGL(2))
+				fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
+		} else {
+			games += u->t->root->u.playouts;
 		}
-		/* else this is highly read-out but dead-end branch of opening book;
-		 * we need to start from scratch; XXX: Maybe actually base the readout
-		 * count based on number of playouts of best node? */
-		if (games < u->games && UDEBUGL(2))
-			fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
 	}
 
-	/* Required games limit as to be seen in the tree root u.playouts. */
-	int ngames = games * (u->thread_model == TM_ROOT ? 1 : u->threads);
-	/* Number of already played games. */
-	int pgames = t->root->u.playouts;
 	/* Number of last game with progress print. */
-	int last_print = 0;
+	int last_print = t->root->u.playouts;
 	/* Number of simulations to wait before next print. */
 	int print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
 
@@ -464,7 +459,7 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, boo
 	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
 	while (1) {
 		nanosleep(&busywait_interval, NULL);
-		int i = ctx->t->root->u.playouts - pgames;
+		int i = ctx->t->root->u.playouts;
 
 		/* Print progress? */
 		if (i - last_print > print_interval) {
@@ -473,7 +468,7 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, boo
 		}
 
 		/* Did we play enough games? */
-		if (i > ngames)
+		if (i > games)
 			break;
 		/* Won situation? */
 		struct tree_node *best = u->policy->choose(u->policy, ctx->t->root, b, color);
