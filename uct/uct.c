@@ -42,7 +42,7 @@ static void uct_pondering_stop(struct uct *u);
 /* How often to inspect the tree from the main thread to check for playout
  * stop, progress reports, etc. A (struct timespec) initializer. */
 #define TREE_BUSYWAIT_INTERVAL { .tv_sec = 0, .tv_nsec = 100*1000000 /* 100ms */ }
-/* Once per how many simulations to show a progress report line. */
+/* Once per how many simulations (per thread) to show a progress report line. */
 #define TREE_SIMPROGRESS_INTERVAL 10000
 
 
@@ -431,6 +431,8 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, int
 	int pgames = t->root->u.playouts;
 	/* Number of last game with progress print. */
 	int last_print = 0;
+	/* Number of simulations to wait before next print. */
+	int print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
 
 	struct spawn_ctx *ctx = uct_search_start(u, b, color, t);
 
@@ -459,8 +461,8 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, int
 			break;
 
 		/* Print progress? */
-		if (i - last_print > TREE_SIMPROGRESS_INTERVAL) {
-			last_print += TREE_SIMPROGRESS_INTERVAL; // keep the numbers tidy
+		if (i - last_print > print_interval) {
+			last_print += print_interval; // keep the numbers tidy
 			uct_progress_status(u, ctx->t, color, last_print);
 		}
 	}
