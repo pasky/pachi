@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "board.h"
 #include "debug.h"
@@ -64,7 +65,7 @@ int main(int argc, char *argv[])
 	enum engine_id engine = E_UCT;
 	char *testfile = NULL;
 
-	seed = time(NULL);
+	seed = time(NULL) ^ getpid();
 
 	int opt;
 	while ((opt = getopt(argc, argv, "e:d:s:t:")) != -1) {
