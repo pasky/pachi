@@ -429,7 +429,7 @@ static int
 uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, bool dyngames)
 {
 	/* Required games limit as to be seen in the tree root u.playouts. */
-	int games = u->games * (u->thread_model == TM_ROOT ? 1 : u->threads);
+	int games = u->games;
 	if (u->t->root->u.playouts > 0) {
 		if (dyngames) {
 			if (UDEBUGL(2))
@@ -655,6 +655,9 @@ uct_state_init(char *arg, struct board *b)
 				else
 					u->debug_level++;
 			} else if (!strcasecmp(optname, "games") && optval) {
+				/* Number of simulations to perform per move.
+				 * Note that this is now in total over all
+				 * threads! (Unless TM_ROOT.) */
 				u->games = atoi(optval);
 			} else if (!strcasecmp(optname, "mercy") && optval) {
 				/* Minimal difference of black/white captures
