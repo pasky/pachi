@@ -69,7 +69,7 @@ struct tree {
 
 	// Statistics
 	int max_depth;
-	volatile long nodes_size; // byte size of all allocated nodes
+	volatile unsigned long nodes_size; // byte size of all allocated nodes
 };
 
 struct tree *tree_init(struct board *board, enum stone color);
