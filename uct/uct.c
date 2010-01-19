@@ -443,6 +443,8 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, boo
 	int last_print = t->root->u.playouts;
 	/* Number of simulations to wait before next print. */
 	int print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
+	/* Printed notification about full memory? */
+	bool print_fullmem = false;
 
 	struct spawn_ctx *ctx = uct_search_start(u, b, color, t);
 
@@ -465,6 +467,11 @@ uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, boo
 		if (i - last_print > print_interval) {
 			last_print += print_interval; // keep the numbers tidy
 			uct_progress_status(u, ctx->t, color, last_print);
+		}
+		if (!print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
+			if (UDEBUGL(2))
+				fprintf(stderr, "memory limit hit (%ld > %lu)\n", ctx->t->nodes_size, u->max_tree_size);
+			print_fullmem = true;
 		}
 
 		/* Did we play enough games? */
