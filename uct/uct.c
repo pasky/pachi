@@ -469,7 +469,10 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	struct timespec busywait_stop;
 	if (ti->dim == TD_WALLTIME) {
 		clock_gettime(CLOCK_REALTIME, &busywait_stop);
+		assert(ti->period == TT_MOVE);
+		/* TODO: TT_TOTAL - allocate /(5*(board_size(b)-2)) of total time. */
 		time_add(&busywait_stop, &ti->len.walltime);
+		/* TODO: Safety buffer (2s? but depend on available time if too small). */
 	}
 	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
 
@@ -507,6 +510,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
+		/* TODO: Early break if best->variance goes under threshold. */
+		/* TODO: Simulate longer if best of #sims != best of value. */
 	}
 
 	ctx = uct_search_stop();
