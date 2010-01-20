@@ -64,7 +64,7 @@ bool engine_reset = false;
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
-	struct time_info ti = { .period = TT_NULL };
+	struct time_info ti_default = { .period = TT_NULL };
 	char *testfile = NULL;
 
 	seed = time(NULL) ^ getpid();
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
 				 * time_left GTP commands are received). Please
 				 * see timeinfo.h:time_parse() description for
 				 * syntax details. */
-				if (!time_parse(&ti, optarg)) {
+				if (!time_parse(&ti_default, optarg)) {
 					fprintf(stderr, "%s: Invalid -t argument %s\n", argv[0], optarg);
 					exit(1);
 				}
@@ -119,6 +119,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init();
+	struct time_info ti = ti_default;
 
 	char *e_arg = NULL;
 	if (optind < argc)
@@ -140,6 +141,7 @@ int main(int argc, char *argv[])
 				b->es = NULL;
 				done_engine(e);
 				e = init_engine(engine, e_arg, b);
+				ti = ti_default;
 			}
 			engine_reset = false;
 		}
