@@ -28,3 +28,20 @@ time_parse(struct time_info *ti, char *s)
 	}
 	return true;
 }
+
+void
+time_add(struct timespec *when, struct timespec *len)
+{
+	when->tv_sec += len->tv_sec;
+	when->tv_nsec += len->tv_nsec;
+	if (when->tv_nsec > 1000000000)
+		when->tv_sec++, when->tv_nsec -= 1000000000;
+}
+
+bool
+time_passed(struct timespec *when)
+{
+	struct timespec now; clock_gettime(CLOCK_REALTIME, &now);
+
+	return now.tv_sec > when->tv_sec || (now.tv_sec == when->tv_sec && now.tv_nsec > when->tv_nsec);
+}

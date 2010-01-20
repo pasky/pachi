@@ -431,9 +431,6 @@ time_prep(struct time_info *ti)
 	if (ti->period == TT_TOTAL) {
 		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
 		ti->period = TT_NULL;
-	} else if (ti->dim == TD_WALLTIME) {
-		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
-		ti->period = TT_NULL;
 	}
 	if (ti->period == TT_NULL) {
 		ti->period = TT_MOVE;
@@ -468,8 +465,15 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * count. However, TM_ROOT just does not deserve any more extra code
 	 * right now. */
 
-	/* Now, just periodically poll the search tree. */
+	/* Set up the intervals and deadlines. */
+	struct timespec busywait_stop;
+	if (ti->dim == TD_WALLTIME) {
+		clock_gettime(CLOCK_REALTIME, &busywait_stop);
+		time_add(&busywait_stop, &ti->len.walltime);
+	}
 	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
+
+	/* Now, just periodically poll the search tree. */
 	while (1) {
 		nanosleep(&busywait_interval, NULL);
 		int i = ctx->t->root->u.playouts;
@@ -490,11 +494,10 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		assert(ti->period == TT_MOVE);
 		switch (ti->dim) {
 			case TD_WALLTIME:
-				assert(0);
+				stop = time_passed(&busywait_stop);
 				break;
 			case TD_GAMES:
-				if (i > ti->len.games)
-					stop = true;
+				stop = i > ti->len.games;
 				break;
 		}
 		if (stop) break;

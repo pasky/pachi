@@ -36,4 +36,10 @@ struct time_info {
  * Returns false on parse error.  */
 bool time_parse(struct time_info *ti, char *s);
 
+/* when += len */
+void time_add(struct timespec *when, struct timespec *len);
+
+/* Return whether @when deadline (absolute time) already passed. */
+bool time_passed(struct timespec *when);
+
 #endif

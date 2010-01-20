@@ -8,7 +8,7 @@ BINDIR=$(PREFIX)/bin
 # -ffast-math breaks us
 CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -frename-registers -pthread
 SYS_CFLAGS=
-LDFLAGS=-lm -pthread
+LDFLAGS=-lm -pthread -lrt
 
 # Profiling:
 ifdef PROFILING
