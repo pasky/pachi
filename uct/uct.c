@@ -429,17 +429,13 @@ uct_search_stop(void)
  * done (incl. inherited simulations). If !dyngames, full number of simulations
  * is simulated in this search. */
 static int
-uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool dyngames)
+uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
 	/* Required games limit as to be seen in the tree root u.playouts. */
 	int games = ti->len.games;
 	if (u->t->root->u.playouts > 0) {
-		if (dyngames) {
-			if (UDEBUGL(2))
-				fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
-		} else {
-			games += u->t->root->u.playouts;
-		}
+		if (UDEBUGL(2))
+			fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
 	}
 
 	/* Number of last game with progress print. */
@@ -572,7 +568,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	assert(u->t);
 
 	/* Perform the Monte Carlo Tree Search! */
-	int played_games = uct_search(u, b, ti, color, u->t, true);
+	int played_games = uct_search(u, b, ti, color, u->t);
 
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
@@ -625,7 +621,11 @@ uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	if (!u->t) prepare_move(e, b, color);
 	assert(u->t);
 
-	uct_search(u, b, ti, color, u->t, false);
+	if (ti->dim == TD_GAMES) {
+		/* Don't count in games that already went into the book. */
+		ti->len.games += u->t->root->u.playouts;
+	}
+	uct_search(u, b, ti, color, u->t);
 
 	assert(ti->dim == TD_GAMES);
 	tree_save(u->t, b, ti->len.games / 100);
