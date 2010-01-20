@@ -424,13 +424,29 @@ uct_search_stop(void)
 }
 
 
+/* Pre-process time_info for search control. */
+static void
+time_prep(struct time_info *ti)
+{
+	if (ti->period == TT_TOTAL) {
+		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
+		ti->period = TT_NULL;
+	} else if (ti->dim == TD_WALLTIME) {
+		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
+		ti->period = TT_NULL;
+	}
+	if (ti->period == TT_NULL) {
+		ti->period = TT_MOVE;
+		ti->dim = TD_GAMES;
+		ti->len.games = MC_GAMES;
+	}
+}
+
 /* Run time-limited MCTS search on foreground. */
-/* If dyngames, just make sure the tree root has required number of simulations
- * done (incl. inherited simulations). If !dyngames, full number of simulations
- * is simulated in this search. */
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
+	time_prep(ti);
 	if (UDEBUGL(2) && u->t->root->u.playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
 
@@ -537,23 +553,6 @@ uct_pondering_stop(struct uct *u)
 }
 
 
-void
-time_prep(struct time_info *ti)
-{
-	if (ti->period == TT_TOTAL) {
-		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
-		ti->period = TT_NULL;
-	} else if (ti->dim == TD_WALLTIME) {
-		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
-		ti->period = TT_NULL;
-	}
-	if (ti->period == TT_NULL) {
-		ti->period = TT_MOVE;
-		ti->dim = TD_GAMES;
-		ti->len.games = MC_GAMES;
-	}
-}
-
 static coord_t *
 uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
@@ -566,8 +565,6 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		fprintf(stderr, "some moves valid under this ruleset because of this.\n");
 		b->superko_violation = false;
 	}
-
-	time_prep(ti);
 
 	/* Seed the tree. */
 	uct_pondering_stop(u);
@@ -623,8 +620,6 @@ bool
 uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color)
 {
 	struct uct *u = e->data;
-	time_prep(ti);
-
 	if (!u->t) prepare_move(e, b, color);
 	assert(u->t);
 
