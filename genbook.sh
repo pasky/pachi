@@ -19,7 +19,7 @@ genbook1()
 	echo "[#$n:$1]"
 	n=$((n+1))
 	echo -e 'boardsize '$size'\nclear_board\nkomi 7.5\nuct_genbook b' |
-		./zzgo "games=$games,policy=ucb1amaf:explore_p=$1$popts$opts"
+		./zzgo -t =$games "policy=ucb1amaf:explore_p=$1$popts$opts"
 }
 genbook1 0.0
 genbook1 0.1
