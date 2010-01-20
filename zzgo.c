@@ -95,6 +95,10 @@ int main(int argc, char *argv[])
 				seed = atoi(optarg);
 				break;
 			case 't':
+				/* Time settings to follow by default (if no
+				 * time_left GTP commands are received). Please
+				 * see timeinfo.h:time_parse() description for
+				 * syntax details. */
 				if (!time_parse(&ti, optarg)) {
 					fprintf(stderr, "%s: Invalid -t argument %s\n", argv[0], optarg);
 					exit(1);
