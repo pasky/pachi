@@ -12,7 +12,7 @@ struct playout_policy;
 /* Internal engine state. */
 struct montecarlo {
 	int debug_level;
-	int games, gamelen;
+	int gamelen;
 	float resign_ratio;
 	int loss_threshold;
 	struct playout_policy *playout;

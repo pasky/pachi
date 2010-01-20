@@ -17,6 +17,7 @@
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "gtp.h"
+#include "timeinfo.h"
 #include "random.h"
 #include "version.h"
 
@@ -63,12 +64,13 @@ bool engine_reset = false;
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
+	struct time_info ti = { .period = TT_NULL };
 	char *testfile = NULL;
 
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:s:u:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:s:t:u:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -92,12 +94,18 @@ int main(int argc, char *argv[])
 			case 's':
 				seed = atoi(optarg);
 				break;
+			case 't':
+				if (!time_parse(&ti, optarg)) {
+					fprintf(stderr, "%s: Invalid -t argument %s\n", argv[0], optarg);
+					exit(1);
+				}
+				break;
 			case 'u':
 				testfile = strdup(optarg);
 				break;
 			default: /* '?' */
 				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-				fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-u TEST_FILENAME] [ENGINE_ARGS]\n",
+				fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}
@@ -122,7 +130,7 @@ int main(int argc, char *argv[])
 	while (fgets(buf, 4096, stdin)) {
 		if (DEBUGL(1))
 			fprintf(stderr, "IN: %s", buf);
-		gtp_parse(b, e, buf);
+		gtp_parse(b, e, &ti, buf);
 		if (engine_reset) {
 			if (!e->keep_on_clear) {
 				b->es = NULL;

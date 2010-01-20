@@ -13,6 +13,7 @@
 struct time_info {
 	/* For how long we can spend the time? */
 	enum time_period {
+		TT_NULL, // No time limit. Other structure elements are undef.
 		TT_MOVE, // Time for the next move.
 		TT_TOTAL, // Time for the rest of the game.
 	} period;

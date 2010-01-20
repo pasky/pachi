@@ -3,7 +3,8 @@
 
 struct board;
 struct engine;
+struct time_info;
 
-void gtp_parse(struct board *b, struct engine *e, char *buf);
+void gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf);
 
 #endif

@@ -7,7 +7,8 @@
 struct engine *engine_uct_init(char *arg, struct board *b);
 
 struct board;
-bool uct_genbook(struct engine *e, struct board *b, enum stone color);
+struct time_info;
+bool uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color);
 void uct_dumpbook(struct engine *e, struct board *b, enum stone color);
 
 #endif

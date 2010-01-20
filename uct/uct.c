@@ -18,6 +18,7 @@
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "random.h"
+#include "timeinfo.h"
 #include "tactics.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
@@ -30,6 +31,8 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 static void uct_pondering_stop(struct uct *u);
 
 
+/* Default number of simulations to perform per move.
+ * Note that this is now in total over all threads! (Unless TM_ROOT.) */
 #define MC_GAMES	80000
 #define MC_GAMELEN	MAX_GAMELEN
 
@@ -426,10 +429,10 @@ uct_search_stop(void)
  * done (incl. inherited simulations). If !dyngames, full number of simulations
  * is simulated in this search. */
 static int
-uct_search(struct uct *u, struct board *b, enum stone color, struct tree *t, bool dyngames)
+uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool dyngames)
 {
 	/* Required games limit as to be seen in the tree root u.playouts. */
-	int games = u->games;
+	int games = ti->len.games;
 	if (u->t->root->u.playouts > 0) {
 		if (dyngames) {
 			if (UDEBUGL(2))
@@ -531,8 +534,25 @@ uct_pondering_stop(struct uct *u)
 }
 
 
+void
+time_prep(struct time_info *ti)
+{
+	if (ti->period == TT_TOTAL) {
+		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
+		ti->period = TT_NULL;
+	} else if (ti->dim == TD_WALLTIME) {
+		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
+		ti->period = TT_NULL;
+	}
+	if (ti->period == TT_NULL) {
+		ti->period = TT_MOVE;
+		ti->dim = TD_GAMES;
+		ti->len.games = MC_GAMES;
+	}
+}
+
 static coord_t *
-uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_alive)
+uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct uct *u = e->data;
 
@@ -544,13 +564,15 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 		b->superko_violation = false;
 	}
 
+	time_prep(ti);
+
 	/* Seed the tree. */
 	uct_pondering_stop(u);
 	prepare_move(e, b, color);
 	assert(u->t);
 
 	/* Perform the Monte Carlo Tree Search! */
-	int played_games = uct_search(u, b, color, u->t, true);
+	int played_games = uct_search(u, b, ti, color, u->t, true);
 
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
@@ -595,15 +617,18 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 
 
 bool
-uct_genbook(struct engine *e, struct board *b, enum stone color)
+uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color)
 {
 	struct uct *u = e->data;
+	time_prep(ti);
+
 	if (!u->t) prepare_move(e, b, color);
 	assert(u->t);
 
-	uct_search(u, b, color, u->t, false);
+	uct_search(u, b, ti, color, u->t, false);
 
-	tree_save(u->t, b, u->games / 100);
+	assert(ti->dim == TD_GAMES);
+	tree_save(u->t, b, ti->len.games / 100);
 
 	return true;
 }
@@ -624,7 +649,6 @@ uct_state_init(char *arg, struct board *b)
 	struct uct *u = calloc(1, sizeof(struct uct));
 
 	u->debug_level = 1;
-	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
 	u->mercymin = 0;
 	u->expand_p = 2;
@@ -661,11 +685,6 @@ uct_state_init(char *arg, struct board *b)
 					u->debug_level = atoi(optval);
 				else
 					u->debug_level++;
-			} else if (!strcasecmp(optname, "games") && optval) {
-				/* Number of simulations to perform per move.
-				 * Note that this is now in total over all
-				 * threads! (Unless TM_ROOT.) */
-				u->games = atoi(optval);
 			} else if (!strcasecmp(optname, "mercy") && optval) {
 				/* Minimal difference of black/white captures
 				 * to stop playout - "Mercy Rule". Speeds up
