@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:s:t:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:s:u:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -92,12 +92,12 @@ int main(int argc, char *argv[])
 			case 's':
 				seed = atoi(optarg);
 				break;
-			case 't':
+			case 'u':
 				testfile = strdup(optarg);
 				break;
 			default: /* '?' */
 				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-				fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t FILENAME] [ENGINE_ARGS]\n",
+				fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-u TEST_FILENAME] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}

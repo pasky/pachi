@@ -2,7 +2,7 @@ This is a simple unit-testing framework where specific Pachi routines
 can be checked for proper result on given testcases (board pieces).
 Run the unit tests like:
 
-	./zzgo -t t-unit/sar.t
+	./zzgo -u t-unit/sar.t
 
 Currently, only few basic tests for the self-atari detector are
 available, but it is easy to add more.
