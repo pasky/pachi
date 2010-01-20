@@ -431,12 +431,8 @@ uct_search_stop(void)
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
-	/* Required games limit as to be seen in the tree root u.playouts. */
-	int games = ti->len.games;
-	if (u->t->root->u.playouts > 0) {
-		if (UDEBUGL(2))
-			fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
-	}
+	if (UDEBUGL(2) && u->t->root->u.playouts > 0)
+		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
 
 	/* Number of last game with progress print. */
 	int last_print = t->root->u.playouts;
@@ -473,10 +469,21 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			print_fullmem = true;
 		}
 
-		/* Did we play enough games? */
-		if (i > games)
-			break;
-		/* Won situation? */
+		/* Check against time settings. */
+		bool stop = false;
+		assert(ti->period == TT_MOVE);
+		switch (ti->dim) {
+			case TD_WALLTIME:
+				assert(0);
+				break;
+			case TD_GAMES:
+				if (i > ti->len.games)
+					stop = true;
+				break;
+		}
+		if (stop) break;
+
+		/* Early break in won situation. */
 		struct tree_node *best = u->policy->choose(u->policy, ctx->t->root, b, color);
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
