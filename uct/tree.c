@@ -156,14 +156,23 @@ tree_book_name(struct board *b)
 static void
 tree_node_save(FILE *f, struct tree_node *node, int thres)
 {
+	bool save_children = node->u.playouts >= thres;
+
+	if (!save_children)
+		node->is_expanded = 0;
+
 	fputc(1, f);
 	fwrite(((void *) node) + offsetof(struct tree_node, depth),
 	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
 	       1, f);
 
-	if (node->u.playouts >= thres)
+	if (save_children) {
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 			tree_node_save(f, ni, thres);
+	} else {
+		if (node->children)
+			node->is_expanded = 1;
+	}
 
 	fputc(0, f);
 }
