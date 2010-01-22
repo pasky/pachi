@@ -24,7 +24,7 @@ struct ptcoord ptcoords[MAX_PATTERN_AREA];
 int ptind[MAX_PATTERN_DIST + 2];
 
 /* ptcoords[], ptind[] setup */
-static void __attribute__((constructor))
+static void __attribute__((constructor(140)))
 ptcoords_init(void)
 {
 	int i = 0; /* Indexing ptcoords[] */
@@ -77,7 +77,7 @@ ptcoords_init(void)
 /* Zobrist hashes used for points in patterns. */
 hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 
-static void __attribute__((constructor))
+static void __attribute__((constructor(160)))
 pthashes_init(void)
 {
 	/* We need fixed hashes for all pattern-relative in
