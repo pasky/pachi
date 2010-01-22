@@ -142,7 +142,7 @@ static inline int
 spatial_dict_get(struct spatial_dict *dict, int dist, hash_t hash)
 {
 	int id = dict->hash[hash];
-#ifdef DEBUGL
+#ifdef DEBUG
 	if (id && dict->spatials[id].dist != dist) {
 		if (DEBUGL(6))
 			fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
