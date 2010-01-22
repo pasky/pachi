@@ -31,6 +31,7 @@ struct patternscan {
 	/* Book-keeping of spatial occurence count. */
 	int nscounts;
 	int *scounts;
+	/* TODO: The same for PATTERN3 occurences. */
 };
 
 
@@ -112,6 +113,25 @@ mm_pattern(struct patternscan *ps, char *str, struct pattern *p)
 }
 
 
+/* FEAT_PATTERN3-matched patterns do not account for rotations
+ * and transpositions, but we shold emit only pattern hashes
+ * in "canonical" form that is the same no matter the rotation.
+ * To achieve this, we use a trick - the canonical form is the
+ * one recorded in the spatial dictionary! The dictionary is
+ * already closed on rotation and transposition. */
+void
+pattern_p3_normalize(struct patternscan *ps, struct pattern *p)
+{
+	for (int i = 0; i < p->n; i++) {
+		if (p->f[i].id != FEAT_PATTERN3)
+			continue;
+		/* Normalize the pattern hash across rotation and
+		 * transposition space. */
+		p->f[i].payload = pattern3_by_spatial(ps->pc.spat_dict, p->f[i].payload);
+	}
+}
+
+
 static void
 process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **str)
 {
@@ -141,6 +161,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 	if (!ps->no_pattern_match) {
 		struct pattern p;
 		pattern_match(&ps->pc, ps->ps, &p, b, m);
+		pattern_p3_normalize(ps, &p);
 		*str = ps->mm ? mm_pattern(ps, *str, &p) : pattern2str(*str, &p);
 	}
 }

@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "pattern.h"
 #include "patternsp.h"
+#include "pattern3.h"
 #include "tactics.h"
 
 
@@ -37,6 +38,7 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_LLDIST] = ~0,
 	[FEAT_CONTIGUITY] = 0,
 	[FEAT_SPATIAL] = ~0,
+	[FEAT_PATTERN3] = 0,
 	[FEAT_MCOWNER] = ~0,
 };
 
@@ -51,8 +53,9 @@ pattern_spec PATTERN_SPEC_MATCHFAST = {
 	[FEAT_LDIST] = 0,
 	[FEAT_LLDIST] = 0,
 	[FEAT_CONTIGUITY] = ~0,
-	[FEAT_SPATIAL] = ~0,
-	[FEAT_MCOWNER] = ~0,
+	[FEAT_SPATIAL] = 0,
+	[FEAT_PATTERN3] = ~0,
+	[FEAT_MCOWNER] = 0,
 };
 
 static const struct feature_info {
@@ -69,6 +72,7 @@ static const struct feature_info {
 	[FEAT_LLDIST] = { .name = "lldist", .payloads = -1 },
 	[FEAT_CONTIGUITY] = { .name = "cont", .payloads = 2 },
 	[FEAT_SPATIAL] = { .name = "s", .payloads = -1 },
+	[FEAT_PATTERN3] = { .name = "p", .payloads = 2<<16 },
 	[FEAT_MCOWNER] = { .name = "mcowner", .payloads = 16 },
 };
 
@@ -431,6 +435,21 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 		f = pattern_match_spatial(pc, ps, p, f, b, m);
 	}
 
+	if (PS_ANY(PATTERN3) && !is_pass(m->coord)) {
+#ifdef BOARD_PAT3
+		int pat = b->pat3[m->coord];
+#else
+		int pat = pattern3_hash(b, m->coord);
+#endif
+		if (m->color == S_WHITE) {
+			/* We work with the pattern3s as black-to-play. */
+			pat = pattern3_reverse(pat);
+		}
+		f->id = FEAT_PATTERN3;
+		f->payload = pat;
+		(f++, p->n++);
+	}
+
 	/* FEAT_MCOWNER: TODO */
 	assert(!pc->mcsims);
 }
@@ -463,7 +482,19 @@ features_gamma_load(struct features_gamma *fg, const char *filename)
 		bufp = str2feature(bufp, &f);
 		while (isspace(*bufp)) bufp++;
 		float gamma = strtof(bufp, &bufp);
+		/* Record feature's gamma. */
 		feature_gamma(fg, &f, &gamma);
+		/* In case of 3x3 patterns, record gamma also
+		 * for all rotations and transpositions. */
+		if (f.id == FEAT_PATTERN3) {
+			int transp[8];
+			pattern3_transpose(f.payload, &transp);
+			for (int i = 1; i < 8; i++) {
+				f.payload = transp[i];
+				feature_gamma(fg, &f, &gamma);
+			}
+			f.payload = transp[0];
+		}
 	}
 	fclose(f);
 }

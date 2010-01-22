@@ -78,8 +78,18 @@ enum feature_id {
 
 	/* Spatial configuration of stones in certain board area,
 	 * with black to play. */
-	/* Payload: [other bits] Index in the spatial_dict. */
+	/* Payload: Index in the spatial_dict. */
 	FEAT_SPATIAL,
+
+	/* Spatial configuration of stones in fixed 3x3 square,
+	 * with black to play. */
+	/* This is a fast substitution to spatial. */
+	/* Payload: Pattern3 hash (see pattern3.h). */
+	/* Note that the hash describes only one particular rotation;
+	 * no normalization across rotations and transpositions is done
+	 * during the matching, only color normalization. The patternscan
+	 * and gamma machineries is taking care of the rotations. */
+	FEAT_PATTERN3,
 
 
 	/* Unimplemented - TODO: */
