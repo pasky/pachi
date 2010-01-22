@@ -341,3 +341,44 @@ collision:
 		spatial_dict_addh(dict, spatial_hash(r, s), id);
 	return id;
 }
+
+
+/** Pattern3 helpers */
+
+/* XXX: We have hard-coded this point order:
+ * # Point order: d=1 0,0
+ * # Point order: d=2 0,1 0,-1 1,0 -1,0
+ * # Point order: d=3 1,1 -1,1 1,-1 -1,-1
+ */
+/* p3bits describe location of given point in the
+ * pattern3 hash word. */
+static const int p3bits[] = { -1,  1, 6, 3, 4,  0, 2, 5, 7 };
+
+
+static hash_t
+pattern3_to_spatial(int pat3)
+{
+	hash_t h = pthashes[0][0][S_NONE];
+	for (int i = 1; i < 9; i++)
+		h ^= pthashes[0][i][(pat3 >> (p3bits[i] * 2)) & 0x3];
+	return h;
+}
+
+static int
+spatial_to_pattern3(struct spatial *s)
+{
+	assert(s->dist == 3);
+	int pat3 = 0;
+	for (int i = 1; i < 9; i++)
+		pat3 |= spatial_point_at(*s, i) << (p3bits[i] * 2);
+	return pat3;
+}
+
+int
+pattern3_by_spatial(struct spatial_dict *dict, int pat3)
+{
+	/* Just pull pat3 through the spatial database to generate
+	 * hash of its canonical form. */
+	int s = spatial_dict_get(dict, 3, pattern3_to_spatial(pat3));
+	return spatial_to_pattern3(&dict->spatials[s]);
+}
