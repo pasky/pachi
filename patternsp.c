@@ -380,5 +380,12 @@ pattern3_by_spatial(struct spatial_dict *dict, int pat3)
 	/* Just pull pat3 through the spatial database to generate
 	 * hash of its canonical form. */
 	int s = spatial_dict_get(dict, 3, pattern3_to_spatial(pat3));
+	/* XXX: We assume our spatial dictionary is _sane_, that is,
+	 * all valid 3x3 patterns we could encounter are in the
+	 * dictionary. If you hit this assert(), you probably
+	 * generated the spatial dict over too few games; it is best
+	 * to generate it over the same set of games as you match
+	 * patterns on afterwards. */
+	assert(s > 0);
 	return spatial_to_pattern3(&dict->spatials[s]);
 }
