@@ -221,7 +221,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	struct spatial s = { .dist = radius };
 	int sl = 0;
 	while (!isspace(*bufp)) {
-		s.points[sl / 4] |= char2stone(*bufp++) << (sl % 4);
+		s.points[sl / 4] |= char2stone(*bufp++) << ((sl % 4)*2);
 		sl++;
 	}
 	while (isspace(*bufp)) bufp++;
