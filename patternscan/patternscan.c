@@ -21,7 +21,8 @@ struct patternscan {
 
 	bool no_pattern_match;
 	bool gen_spat_dict;
-	/* Minimal number of occurences for spatial to be saved. */
+	/* Minimal number of occurences for spatial to be saved;
+	 * 3x3 spatials are always saved. */
 	int spat_threshold;
 	/* Number of loaded spatials; checkpoint for saving new sids
 	 * in case gen_spat_dict is enabled. */
@@ -209,7 +210,8 @@ patternscan_done(struct engine *e)
 	for (int i = ps->loaded_spatials; i < ps->pc.spat_dict->nspatials; i++) {
 		/* By default, threshold is 0 and condition is always true. */
 		assert(i < ps->nscounts && ps->scounts[i] > 0);
-		if (ps->scounts[i] >= ps->spat_threshold)
+		if (ps->scounts[i] >= ps->spat_threshold
+		    || ps->pc.spat_dict->spatials[i].dist == 3)
 			spatial_write(&ps->pc.spat_dict->spatials[i], i, f);
 	}
 	fclose(f);
@@ -261,7 +263,8 @@ patternscan_state_init(char *arg)
 				 * feature must occur in this run (!) to
 				 * be included in the dictionary. Note that
 				 * this will produce discontinuous dictionary
-				 * that you should renumber. */
+				 * that you should renumber. Also note that
+				 * 3x3 patterns are always saved. */
 				ps->spat_threshold = atoi(optval);
 
 			} else if (!strcasecmp(optname, "competition")) {
