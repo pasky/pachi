@@ -402,6 +402,13 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 		}
 	}
 
+	if (PS_ANY(CONTIGUITY) && !is_pass(b->last_move.coord)
+	    && coord_is_8adjecent(m->coord, b->last_move.coord, b)) {
+		f->id = FEAT_CONTIGUITY;
+		f->payload = 1;
+		(f++, p->n++);
+	}
+
 	if (PS_ANY(LDIST) && pc->ldist_max > 0 && !is_pass(b->last_move.coord)) {
 		int ldist = coord_gridcular_distance(m->coord, b->last_move.coord, b);
 		if (pc->ldist_min <= ldist && ldist <= pc->ldist_max) {
@@ -409,13 +416,6 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 			f->payload = ldist;
 			(f++, p->n++);
 		}
-	}
-
-	if (PS_ANY(CONTIGUITY) && !is_pass(b->last_move.coord)
-	    && coord_is_8adjecent(m->coord, b->last_move.coord, b)) {
-		f->id = FEAT_CONTIGUITY;
-		f->payload = 1;
-		(f++, p->n++);
 	}
 
 	if (PS_ANY(LLDIST) && pc->ldist_max > 0 && !is_pass(b->last_move2.coord)) {
