@@ -28,6 +28,7 @@ Pachi consists of the following components:
 	debug.h		debugging infrastructure
 	random.[ch]	fast random number generator
 	gtp.[ch]	GTP protocol interface
+	timeinfo.[ch]	Time-keeping information
 	stone.[ch]	one board point coloring definition
 	move.[ch]	one board move definition
 	board.[ch]	board definition and basic interface

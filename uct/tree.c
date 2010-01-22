@@ -27,7 +27,7 @@ tree_init_node(struct tree *t, coord_t coord, int depth)
 		fprintf(stderr, "tree_init_node(): OUT OF MEMORY\n");
 		exit(1);
 	}
-	__sync_fetch_and_add(&t->node_sizes, sizeof(*n));
+	__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
 	n->coord = coord;
 	n->depth = depth;
 	volatile static long c = 1000000;
@@ -59,7 +59,7 @@ tree_done_node(struct tree *t, struct tree_node *n)
 		tree_done_node(t, ni);
 		ni = nj;
 	}
-	t->node_sizes -= sizeof(*n); // atomic operation not needed here
+	t->nodes_size -= sizeof(*n); // atomic operation not needed here
 	free(n);
 }
 
@@ -156,14 +156,23 @@ tree_book_name(struct board *b)
 static void
 tree_node_save(FILE *f, struct tree_node *node, int thres)
 {
+	bool save_children = node->u.playouts >= thres;
+
+	if (!save_children)
+		node->is_expanded = 0;
+
 	fputc(1, f);
 	fwrite(((void *) node) + offsetof(struct tree_node, depth),
 	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
 	       1, f);
 
-	if (node->u.playouts >= thres)
+	if (save_children) {
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 			tree_node_save(f, ni, thres);
+	} else {
+		if (node->children)
+			node->is_expanded = 1;
+	}
 
 	fputc(0, f);
 }

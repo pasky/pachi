@@ -19,9 +19,6 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 
-// This should become a dynamic parameter. 7G is suitable for 20k*23 threads.
-#define MAX_NODE_SIZES (7L*1024*1024*1024)
-
 float
 uct_get_extra_komi(struct uct *u, struct board *b)
 {
@@ -97,11 +94,11 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	/* We need to make sure only one thread expands the node. If
 	 * we are unlucky enough for two threads to meet in the same
 	 * node, the latter one will simply do another simulation from
-	 * the node itself, no big deal. t->node_sizes may exceed
-	 * MAX_NODE_SIZES in multi-threaded case but not by much so it's ok.
+	 * the node itself, no big deal. t->nodes_size may exceed
+	 * the maximum in multi-threaded case but not by much so it's ok.
 	 * The size test must be before the test&set not after, to allow
 	 * expansion of the node later if enough nodes have been freed. */
-	if (n->u.playouts >= u->expand_p && t->node_sizes < MAX_NODE_SIZES
+	if (n->u.playouts >= u->expand_p && t->nodes_size < u->max_tree_size
 	    && !__sync_lock_test_and_set(&n->is_expanded, 1)) {
 		tree_expand_node(t, n, b, next_color, u, parity);
         }
@@ -110,7 +107,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
 			tree_node_get_value(t, parity, n->u.value));
 
-	struct playout_setup ps = { .gamelen = u->gamelen };
+	struct playout_setup ps = { .gamelen = u->gamelen, .mercymin = u->mercymin };
 	int result = play_random_game(&ps, b, next_color,
 	                              u->playout_amaf ? amaf : NULL,
 				      &u->ownermap, u->playout);
@@ -337,42 +334,10 @@ end:
 }
 
 int
-uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
 {
-	/* Should we print progress info? In case all threads work on the same
-	 * tree, only the first thread does. */
-	#define ok_to_talk (!u->parallel_tree || !thread_id)
-
 	int i;
-	for (i = 0; i < games; i++) {
-		int result = uct_playout(u, b, color, t);
-		if (result == 0) {
-			/* Tree descent has hit invalid move. */
-			continue;
-		}
-
-		if (unlikely(ok_to_talk && i > 0 && !(i % 10000))) {
-			uct_progress_status(u, t, color, i);
-		}
-
-		if (i > 0 && !(i % 500)) {
-			struct tree_node *best = u->policy->choose(u->policy, t->root, b, color);
-			if (best && ((best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
-			             || (best->u.playouts >= 500 && tree_node_get_value(t, 1, best->u.value) >= 0.95)))
-				break;
-		}
-
-		if (uct_halt) {
-			if (UDEBUGL(2))
-				fprintf(stderr, "<halting early, %d games skipped>\n", games - i);
-			break;
-		}
-	}
-
-	if (ok_to_talk) {
-		uct_progress_status(u, t, color, i);
-		if (UDEBUGL(3))
-			tree_dump(t, u->dumpthres);
-	}
+	for (i = 0; !uct_halt; i++)
+		uct_playout(u, b, color, t);
 	return i;
 }

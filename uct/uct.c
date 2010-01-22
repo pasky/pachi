@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define DEBUG
 
@@ -17,6 +18,7 @@
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "random.h"
+#include "timeinfo.h"
 #include "tactics.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
@@ -26,8 +28,11 @@
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
+static void uct_pondering_stop(struct uct *u);
 
 
+/* Default number of simulations to perform per move.
+ * Note that this is now in total over all threads! (Unless TM_ROOT.) */
 #define MC_GAMES	80000
 #define MC_GAMELEN	MAX_GAMELEN
 
@@ -36,6 +41,12 @@ struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 #define GJ_THRES	0.8
 /* How many games to consider at minimum before judging groups. */
 #define GJ_MINGAMES	500
+
+/* How often to inspect the tree from the main thread to check for playout
+ * stop, progress reports, etc. A (struct timespec) initializer. */
+#define TREE_BUSYWAIT_INTERVAL { .tv_sec = 0, .tv_nsec = 100*1000000 /* 100ms */ }
+/* Once per how many simulations (per thread) to show a progress report line. */
+#define TREE_SIMPROGRESS_INTERVAL 10000
 
 
 static void
@@ -136,6 +147,11 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 		assert(u->t);
 	}
 
+	/* Stop pondering. */
+	/* XXX: If we are about to receive multiple 'play' commands,
+	 * e.g. in a rengo, we will not ponder during the rest of them. */
+	uct_pondering_stop(u);
+
 	if (is_resign(m->coord)) {
 		/* Reset state. */
 		reset_state(u);
@@ -166,7 +182,7 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 			return "no game context (yet?)";
 		enum stone color = u->t->root_color;
 		struct tree_node *n = u->t->root;
-		snprintf(reply, 1024, "In %d*%d playouts, %s %s can win with %.2f%% probability",
+		snprintf(reply, 1024, "In %d playouts at %d threads, %s %s can win with %.2f%% probability",
 			 n->u.playouts, u->threads, stone2str(color), coord2sstr(n->coord, b),
 			 tree_node_get_value(u->t, -1, n->u.value) * 100);
 		if (abs(u->t->extra_komi) >= 0.5) {
@@ -183,6 +199,10 @@ static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
+
+	/* This means the game is probably over, no use pondering on. */
+	uct_pondering_stop(u);
+
 	if (u->pass_all_alive)
 		return; // no dead groups
 
@@ -225,6 +245,7 @@ uct_done(struct engine *e)
 	/* This is called on engine reset, especially when clear_board
 	 * is received and new game should begin. */
 	struct uct *u = e->data;
+	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
 	free(u->ownermap.map);
 
@@ -235,10 +256,38 @@ uct_done(struct engine *e)
 }
 
 
-/* Set in main thread in case the playouts should stop. */
+/* Pachi threading structure (if uct_playouts_parallel() is used):
+ *
+ * main thread
+ *   |         main(), GTP communication, ...
+ *   |         starts and stops the search managed by thread_manager
+ *   |
+ * thread_manager
+ *   |         spawns and collects worker threads
+ *   |
+ * worker0
+ * worker1
+ * ...
+ * workerK
+ *             uct_playouts() loop, doing descend-playout until uct_halt
+ *
+ * Another way to look at it is by functions (lines denote thread boundaries):
+ *
+ * | uct_genmove()
+ * | uct_search()            (uct_search_start() .. uct_search_stop())
+ * | -----------------------
+ * | spawn_thread_manager()
+ * | -----------------------
+ * | spawn_worker()
+ * V uct_playouts() */
+
+/* Set in thread manager in case the workers should stop. */
 volatile sig_atomic_t uct_halt = 0;
 /* ID of the running worker thread. */
 __thread int thread_id = -1;
+/* ID of the thread manager. */
+static pthread_t thread_manager;
+static bool thread_manager_running;
 
 static pthread_mutex_t finish_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
@@ -256,14 +305,14 @@ struct spawn_ctx {
 };
 
 static void *
-spawn_helper(void *ctx_)
+spawn_worker(void *ctx_)
 {
 	struct spawn_ctx *ctx = ctx_;
 	/* Setup */
 	fast_srandom(ctx->seed);
 	thread_id = ctx->tid;
 	/* Run */
-	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->games);
+	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
 	/* Finish */
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
@@ -273,91 +322,247 @@ spawn_helper(void *ctx_)
 	return ctx;
 }
 
-static int
-uct_playouts_parallel(struct uct *u, struct board *b, enum stone color, struct tree *t, int games, bool shared_tree)
+/* Thread manager, controlling worker threads. It must be called with
+ * finish_mutex lock held, but it will unlock it itself before exiting;
+ * this is necessary to be completely deadlock-free. */
+/* The finish_cond can be signalled for it to stop; in that case,
+ * the caller should set finish_thread = -1. */
+/* After it is started, it will update mctx->t to point at some tree
+ * used for the actual search (matters only for TM_ROOT), on return
+ * it will set mctx->games to the number of performed simulations. */
+static void *
+spawn_thread_manager(void *ctx_)
 {
-	assert(u->threads > 0);
-	assert(u->parallel_tree == shared_tree);
+	/* In thread_manager, we use only some of the ctx fields. */
+	struct spawn_ctx *mctx = ctx_;
+	struct uct *u = mctx->u;
+	struct tree *t = mctx->t;
+	bool shared_tree = u->parallel_tree;
+	fast_srandom(mctx->seed);
 
 	int played_games = 0;
 	pthread_t threads[u->threads];
 	int joined = 0;
 
 	uct_halt = 0;
-	pthread_mutex_lock(&finish_mutex);
+
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
-		ctx->u = u; ctx->b = b; ctx->color = color;
-		ctx->t = shared_tree ? t : tree_copy(t);
-		ctx->tid = ti; ctx->games = games;
-		ctx->seed = fast_random(65536) + ti;
-		pthread_create(&threads[ti], NULL, spawn_helper, ctx);
+		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
+		mctx->t = ctx->t = shared_tree ? t : tree_copy(t);
+		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
+		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
 		if (UDEBUGL(2))
-			fprintf(stderr, "Spawned thread %d\n", ti);
+			fprintf(stderr, "Spawned worker %d\n", ti);
 	}
 
 	/* ...and collect them back: */
 	while (joined < u->threads) {
 		/* Wait for some thread to finish... */
 		pthread_cond_wait(&finish_cond, &finish_mutex);
+		if (finish_thread < 0) {
+			/* Stop-by-caller. Tell the workers to wrap up. */
+			uct_halt = 1;
+			continue;
+		}
 		/* ...and gather its remnants. */
 		struct spawn_ctx *ctx;
 		pthread_join(threads[finish_thread], (void **) &ctx);
 		played_games += ctx->games;
 		joined++;
 		if (!shared_tree) {
+			if (ctx->t == mctx->t) mctx->t = t;
 			tree_merge(t, ctx->t);
 			tree_done(ctx->t);
 		}
 		free(ctx);
 		if (UDEBUGL(2))
-			fprintf(stderr, "Joined thread %d\n", finish_thread);
-		/* Do not get stalled by slow threads. */
-		if (joined >= u->threads / 2)
-			uct_halt = 1;
+			fprintf(stderr, "Joined worker %d\n", finish_thread);
 		pthread_mutex_unlock(&finish_serializer);
 	}
+
 	pthread_mutex_unlock(&finish_mutex);
 
-	if (!shared_tree) {
-		/* XXX: Should this be done in shared trees as well? */
-		tree_normalize(t, u->threads);
+	if (!shared_tree)
+		tree_normalize(mctx->t, u->threads);
+
+	mctx->games = played_games;
+	return mctx;
+}
+
+static struct spawn_ctx *
+uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t)
+{
+	assert(u->threads > 0);
+	assert(!thread_manager_running);
+
+	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
+	static struct spawn_ctx mctx; mctx = ctx;
+	pthread_mutex_lock(&finish_mutex);
+	pthread_create(&thread_manager, NULL, spawn_thread_manager, &mctx);
+	thread_manager_running = true;
+	return &mctx;
+}
+
+static struct spawn_ctx *
+uct_search_stop(void)
+{
+	assert(thread_manager_running);
+
+	/* Signal thread manager to stop the workers. */
+	pthread_mutex_lock(&finish_mutex);
+	finish_thread = -1;
+	pthread_cond_signal(&finish_cond);
+	pthread_mutex_unlock(&finish_mutex);
+
+	/* Collect the thread manager. */
+	struct spawn_ctx *pctx;
+	thread_manager_running = false;
+	pthread_join(thread_manager, (void **) &pctx);
+	return pctx;
+}
+
+
+/* Pre-process time_info for search control. */
+static void
+time_prep(struct time_info *ti)
+{
+	if (ti->period == TT_TOTAL) {
+		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
+		ti->period = TT_NULL;
 	}
-	return played_games;
+	if (ti->period == TT_NULL) {
+		ti->period = TT_MOVE;
+		ti->dim = TD_GAMES;
+		ti->len.games = MC_GAMES;
+	}
 }
 
-
-typedef int (*uct_threaded_playouts)(struct uct *u, struct board *b, enum stone color, struct tree *t, int games);
-
+/* Run time-limited MCTS search on foreground. */
 static int
-uct_playouts_none(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
-	return uct_playouts(u, b, color, t, games);
+	time_prep(ti);
+	if (UDEBUGL(2) && u->t->root->u.playouts > 0)
+		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
+
+	/* Number of last game with progress print. */
+	int last_print = t->root->u.playouts;
+	/* Number of simulations to wait before next print. */
+	int print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
+	/* Printed notification about full memory? */
+	bool print_fullmem = false;
+
+	struct spawn_ctx *ctx = uct_search_start(u, b, color, t);
+
+	/* The search tree is ctx->t. This is normally == t, but in case of
+	 * TM_ROOT, it is one of the trees belonging to the independent
+	 * workers. It is important to reference ctx->t directly since the
+	 * thread manager will swap the tree pointer asynchronously. */
+	/* XXX: This means TM_ROOT support is suboptimal since single stalled
+	 * thread can stall the others in case of limiting the search by game
+	 * count. However, TM_ROOT just does not deserve any more extra code
+	 * right now. */
+
+	/* Set up the intervals and deadlines. */
+	struct timespec busywait_stop;
+	if (ti->dim == TD_WALLTIME) {
+		clock_gettime(CLOCK_REALTIME, &busywait_stop);
+		assert(ti->period == TT_MOVE);
+		/* TODO: TT_TOTAL - allocate /(5*(board_size(b)-2)) of total time. */
+		time_add(&busywait_stop, &ti->len.walltime);
+		/* TODO: Safety buffer (2s? but depend on available time if too small). */
+	}
+	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
+
+	/* Now, just periodically poll the search tree. */
+	while (1) {
+		nanosleep(&busywait_interval, NULL);
+		int i = ctx->t->root->u.playouts;
+
+		/* Print progress? */
+		if (i - last_print > print_interval) {
+			last_print += print_interval; // keep the numbers tidy
+			uct_progress_status(u, ctx->t, color, last_print);
+		}
+		if (!print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
+			if (UDEBUGL(2))
+				fprintf(stderr, "memory limit hit (%ld > %lu)\n", ctx->t->nodes_size, u->max_tree_size);
+			print_fullmem = true;
+		}
+
+		/* Check against time settings. */
+		bool stop = false;
+		assert(ti->period == TT_MOVE);
+		switch (ti->dim) {
+			case TD_WALLTIME:
+				stop = time_passed(&busywait_stop);
+				break;
+			case TD_GAMES:
+				stop = i > ti->len.games;
+				break;
+		}
+		if (stop) break;
+
+		/* Early break in won situation. */
+		struct tree_node *best = u->policy->choose(u->policy, ctx->t->root, b, color);
+		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
+			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
+			break;
+		/* TODO: Early break if best->variance goes under threshold. */
+		/* TODO: Simulate longer if best of #sims != best of value. */
+	}
+
+	ctx = uct_search_stop();
+
+	if (UDEBUGL(2))
+		tree_dump(t, u->dumpthres);
+	if (UDEBUGL(0))
+		uct_progress_status(u, t, color, ctx->games);
+
+	return ctx->games;
 }
 
-static int
-uct_playouts_root(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+
+/* Start pondering background with @color to play. */
+static void
+uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color)
 {
-	return uct_playouts_parallel(u, b, color, t, games, false);
+	if (UDEBUGL(1))
+		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
+
+	/* We need a local board copy to ponder upon. */
+	struct board *b = malloc(sizeof(*b)); board_copy(b, b0);
+
+	/* *b0 did not have the genmove'd move played yet. */
+	struct move m = { t->root->coord, t->root_color };
+	int res = board_play(b, &m);
+	assert(res >= 0);
+
+	/* Start MCTS manager thread "headless". */
+	uct_search_start(u, b, color, t);
 }
 
-static int
-uct_playouts_tree(struct uct *u, struct board *b, enum stone color, struct tree *t, int games)
+/* uct_search_stop() frontend for the pondering (non-genmove) mode. */
+static void
+uct_pondering_stop(struct uct *u)
 {
-	return uct_playouts_parallel(u, b, color, t, games, true);
-}
+	if (!thread_manager_running)
+		return;
 
-static uct_threaded_playouts threaded_playouts[] = {
-	uct_playouts_none,
-	uct_playouts_root,
-	uct_playouts_tree,
-	uct_playouts_tree,
-};
+	/* Stop the thread manager. */
+	struct spawn_ctx *ctx = uct_search_stop();
+	if (UDEBUGL(1)) {
+		fprintf(stderr, "(pondering) ");
+		uct_progress_status(u, ctx->t, ctx->color, ctx->games);
+	}
+	free(ctx->b);
+}
 
 
 static coord_t *
-uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_alive)
+uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct uct *u = e->data;
 
@@ -370,36 +575,18 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	}
 
 	/* Seed the tree. */
+	uct_pondering_stop(u);
 	prepare_move(e, b, color);
 	assert(u->t);
 
-	/* Run the simulations. */
-	int games = u->games;
-	if (u->t->root->children) {
-		int delta = u->t->root->u.playouts * 2 / 3;
-		if (u->parallel_tree) delta /= u->threads;
-		games -= delta;
-	}
-	/* else this is highly read-out but dead-end branch of opening book;
-	 * we need to start from scratch; XXX: Maybe actually base the readout
-	 * count based on number of playouts of best node? */
-	if (games < u->games && UDEBUGL(2))
-		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->games - games);
-
-	int played_games;
-	played_games = threaded_playouts[u->thread_model](u, b, color, u->t, games);
-
-	if (UDEBUGL(2))
-		tree_dump(u->t, u->dumpthres);
+	/* Perform the Monte Carlo Tree Search! */
+	int played_games = uct_search(u, b, ti, color, u->t);
 
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
 	if (!best) {
 		reset_state(u);
 		return coord_copy(pass);
-	}
-	if (UDEBUGL(0)) {
-		uct_progress_status(u, u->t, color, played_games);
 	}
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d games)\n",
@@ -425,20 +612,33 @@ uct_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_a
 	}
 
 	tree_promote_node(u->t, best);
+	/* After a pass, pondering is harmful for two reasons:
+	 * (i) We might keep pondering even when the game is over.
+	 * Of course this is the case for opponent resign as well.
+	 * (ii) More importantly, the ownermap will get skewed since
+	 * the UCT will start cutting off any playouts. */
+	if (u->pondering && !is_pass(best->coord)) {
+		uct_pondering_start(u, b, u->t, stone_other(color));
+	}
 	return coord_copy(best->coord);
 }
 
 
 bool
-uct_genbook(struct engine *e, struct board *b, enum stone color)
+uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color)
 {
 	struct uct *u = e->data;
 	if (!u->t) prepare_move(e, b, color);
 	assert(u->t);
 
-	threaded_playouts[u->thread_model](u, b, color, u->t, u->games);
+	if (ti->dim == TD_GAMES) {
+		/* Don't count in games that already went into the book. */
+		ti->len.games += u->t->root->u.playouts;
+	}
+	uct_search(u, b, ti, color, u->t);
 
-	tree_save(u->t, b, u->games / 100);
+	assert(ti->dim == TD_GAMES);
+	tree_save(u->t, b, ti->len.games / 100);
 
 	return true;
 }
@@ -459,18 +659,20 @@ uct_state_init(char *arg, struct board *b)
 	struct uct *u = calloc(1, sizeof(struct uct));
 
 	u->debug_level = 1;
-	u->games = MC_GAMES;
 	u->gamelen = MC_GAMELEN;
+	u->mercymin = 0;
 	u->expand_p = 2;
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
+	u->max_tree_size = 3072ULL * 1048576;
 
 	if (board_size(b) - 2 >= 19)
 		u->dynkomi = 200;
 	u->dynkomi_mask = S_BLACK;
 
+	u->threads = 1;
 	u->thread_model = TM_TREEVL;
 	u->parallel_tree = true;
 	u->virtual_loss = true;
@@ -493,8 +695,12 @@ uct_state_init(char *arg, struct board *b)
 					u->debug_level = atoi(optval);
 				else
 					u->debug_level++;
-			} else if (!strcasecmp(optname, "games") && optval) {
-				u->games = atoi(optval);
+			} else if (!strcasecmp(optname, "mercy") && optval) {
+				/* Minimal difference of black/white captures
+				 * to stop playout - "Mercy Rule". Speeds up
+				 * hopeless playouts at the expense of some
+				 * accuracy. */
+				u->mercymin = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				u->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "expand_p") && optval) {
@@ -552,16 +758,15 @@ uct_state_init(char *arg, struct board *b)
 					exit(1);
 				}
 			} else if (!strcasecmp(optname, "prior") && optval) {
-				u->prior = uct_prior_init(optval);
+				u->prior = uct_prior_init(optval, b);
 			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
 				u->amaf_prior = atoi(optval);
 			} else if (!strcasecmp(optname, "threads") && optval) {
+				/* By default, Pachi will run with only single
+				 * tree search thread! */
 				u->threads = atoi(optval);
 			} else if (!strcasecmp(optname, "thread_model") && optval) {
-				if (!strcasecmp(optval, "none")) {
-					/* Turn off multi-threaded reading. */
-					u->thread_model = TM_NONE;
-				} else if (!strcasecmp(optval, "root")) {
+				if (!strcasecmp(optval, "root")) {
 					/* Root parallelization - each thread
 					 * does independent search, trees are
 					 * merged at the end. */
@@ -586,6 +791,9 @@ uct_state_init(char *arg, struct board *b)
 					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
 					exit(1);
 				}
+			} else if (!strcasecmp(optname, "pondering")) {
+				/* Keep searching even during opponent's turn. */
+				u->pondering = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
@@ -634,6 +842,12 @@ uct_state_init(char *arg, struct board *b)
 				 * choices sometimes, you can fall back to e.g.
 				 * random_policy=UCB1. */
 				u->random_policy_chance = atoi(optval);
+			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
+				/* Maximum amount of memory [MiB] consumed by the move tree.
+				 * Default is 3072 (3 GiB). Note that if you use TM_ROOT,
+				 * this limits size of only one of the trees, not all of them
+				 * together. */
+				u->max_tree_size = atol(optval) * 1048576;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
@@ -651,10 +865,6 @@ uct_state_init(char *arg, struct board *b)
 	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
-	if (!u->threads) {
-		u->thread_model = TM_NONE;
-		u->parallel_tree = false;
-	}
 
 	if (!!u->random_policy_chance ^ !!u->random_policy) {
 		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
@@ -662,7 +872,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->prior)
-		u->prior = uct_prior_init(NULL);
+		u->prior = uct_prior_init(NULL, b);
 
 	if (!u->playout)
 		u->playout = playout_moggy_init(NULL);

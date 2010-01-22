@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "board.h"
 #include "debug.h"
@@ -16,6 +17,7 @@
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "gtp.h"
+#include "timeinfo.h"
 #include "random.h"
 #include "version.h"
 
@@ -62,12 +64,13 @@ bool engine_reset = false;
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
+	struct time_info ti_default = { .period = TT_NULL };
 	char *testfile = NULL;
 
-	seed = time(NULL);
+	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:s:t:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:s:t:u:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -92,11 +95,21 @@ int main(int argc, char *argv[])
 				seed = atoi(optarg);
 				break;
 			case 't':
+				/* Time settings to follow by default (if no
+				 * time_left GTP commands are received). Please
+				 * see timeinfo.h:time_parse() description for
+				 * syntax details. */
+				if (!time_parse(&ti_default, optarg)) {
+					fprintf(stderr, "%s: Invalid -t argument %s\n", argv[0], optarg);
+					exit(1);
+				}
+				break;
+			case 'u':
 				testfile = strdup(optarg);
 				break;
 			default: /* '?' */
 				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-				fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t FILENAME] [ENGINE_ARGS]\n",
+				fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME] [ENGINE_ARGS]\n",
 						argv[0]);
 				exit(1);
 		}
@@ -106,6 +119,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init();
+	struct time_info ti = ti_default;
 
 	char *e_arg = NULL;
 	if (optind < argc)
@@ -121,12 +135,13 @@ int main(int argc, char *argv[])
 	while (fgets(buf, 4096, stdin)) {
 		if (DEBUGL(1))
 			fprintf(stderr, "IN: %s", buf);
-		gtp_parse(b, e, buf);
+		gtp_parse(b, e, &ti, buf);
 		if (engine_reset) {
 			if (!e->keep_on_clear) {
 				b->es = NULL;
 				done_engine(e);
 				e = init_engine(engine, e_arg, b);
+				ti = ti_default;
 			}
 			engine_reset = false;
 		}

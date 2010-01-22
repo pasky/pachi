@@ -30,16 +30,18 @@ struct uct {
 	int dumpthres;
 	int force_seed;
 	bool no_book;
+	unsigned long max_tree_size;
+	int mercymin;
 
 	int threads;
 	enum uct_thread_model {
-		TM_NONE, /* <=> threads == 0 */
 		TM_ROOT, /* Root parallelization. */
 		TM_TREE, /* Tree parallelization w/o virtual loss. */
 		TM_TREEVL, /* Tree parallelization with virtual loss. */
 	} thread_model;
 	bool parallel_tree;
 	bool virtual_loss;
+	bool pondering;
 
 	int dynkomi;
 	int dynkomi_mask;

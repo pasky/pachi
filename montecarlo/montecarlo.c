@@ -12,6 +12,7 @@
 #include "montecarlo/internal.h"
 #include "montecarlo/montecarlo.h"
 #include "playout.h"
+#include "timeinfo.h"
 
 
 /* This is simple monte-carlo engine. It plays MC_GAMES random games from the
@@ -74,9 +75,22 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 
 
 static coord_t *
-montecarlo_genmove(struct engine *e, struct board *b, enum stone color, bool pass_all_alive)
+montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct montecarlo *mc = e->data;
+
+	if (ti->period == TT_TOTAL) {
+		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
+		ti->period = TT_NULL;
+	} else if (ti->dim == TD_WALLTIME) {
+		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
+		ti->period = TT_NULL;
+	}
+	if (ti->period == TT_NULL) {
+		ti->period = TT_MOVE;
+		ti->dim = TD_GAMES;
+		ti->len.games = MC_GAMES;
+	}
 
 	/* resign when the hope for win vanishes */
 	coord_t top_coord = resign;
@@ -89,7 +103,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color, bool pas
 
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
-	for (i = 0; i < mc->games; i++) {
+	for (i = 0; i < ti->len.games; i++) {
 		assert(!b->superko_violation);
 
 		struct board b2;
@@ -119,7 +133,7 @@ montecarlo_genmove(struct engine *e, struct board *b, enum stone color, bool pas
 		if (result == 0) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
-			if (unlikely(superko > 2 * mc->games)) {
+			if (unlikely(superko > 2 * ti->len.games)) {
 				/* Uhh. Triple ko, or something? */
 				if (MCDEBUGL(0))
 					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
@@ -198,7 +212,6 @@ montecarlo_state_init(char *arg)
 	struct montecarlo *mc = calloc(1, sizeof(struct montecarlo));
 
 	mc->debug_level = 1;
-	mc->games = MC_GAMES;
 	mc->gamelen = MC_GAMELEN;
 
 	if (arg) {
@@ -217,8 +230,6 @@ montecarlo_state_init(char *arg)
 					mc->debug_level = atoi(optval);
 				else
 					mc->debug_level++;
-			} else if (!strcasecmp(optname, "games") && optval) {
-				mc->games = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
 				mc->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "playout") && optval) {
@@ -245,7 +256,7 @@ montecarlo_state_init(char *arg)
 	mc->playout->debug_level = mc->debug_level;
 
 	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
-	mc->loss_threshold = mc->games / 10; /* Stop reading if no loss encountered in first n games. */
+	mc->loss_threshold = 5000; /* Stop reading if no loss encountered in first 5000 games. */
 
 	return mc;
 }

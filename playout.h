@@ -52,6 +52,9 @@ struct playout_policy {
 
 struct playout_setup {
 	int gamelen; /* Maximal # of moves in playout. */
+	/* Minimal difference between captures to terminate the playout.
+	 * 0 means don't check. */
+	int mercymin;
 
 	/* XXX: We used to have more, perhaps we will again have more
 	 * in the future. */

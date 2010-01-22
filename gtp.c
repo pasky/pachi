@@ -65,7 +65,7 @@ gtp_error(int id, ...)
  * Even basic input checking is missing. */
 
 void
-gtp_parse(struct board *board, struct engine *engine, char *buf)
+gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char *buf)
 {
 #define next_tok(to_) \
 	to_ = next; \
@@ -163,7 +163,7 @@ gtp_parse(struct board *board, struct engine *engine, char *buf)
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		coord_t *c = engine->genmove(engine, board, color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
+		coord_t *c = engine->genmove(engine, board, ti, color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
 		struct move m = { *c, color };
 		board_play(board, &m);
 		char *str = coord2str(*c, board);
@@ -285,7 +285,7 @@ next_group:;
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		if (uct_genbook(engine, board, color))
+		if (uct_genbook(engine, board, ti, color))
 			gtp_reply(id, NULL);
 		else
 			gtp_error(id, "error generating book", NULL);
