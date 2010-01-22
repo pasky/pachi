@@ -39,6 +39,9 @@ static bool test_pattern3_here(struct pattern3s *p, struct board *b, struct move
  * int[8] array. */
 void pattern3_transpose(int pat, int (*transp)[8]);
 
+/* Reverse pattern to opposite color assignment. */
+static int pattern3_reverse(int pat);
+
 
 static inline int
 pattern3_hash(struct board *b, coord_t c)
@@ -68,6 +71,13 @@ test_pattern3_here(struct pattern3s *p, struct board *b, struct move *m)
 #endif
 	//fprintf(stderr, "(%d,%d) hashtable[%04x] = %d\n", x, y, pat, p->hash[pat]);
 	return (p->hash[pat] & m->color) && !is_bad_selfatari(b, m->color, m->coord);
+}
+
+static inline int
+pattern3_reverse(int pat)
+{
+	/* Reverse color assignment - achieved by swapping odd and even bits */
+	return ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1);
 }
 
 #endif

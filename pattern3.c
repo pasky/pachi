@@ -16,9 +16,8 @@ pattern_record(char *table, char *str, int pat, int fixed_color)
 	table[pat] = fixed_color ? fixed_color : 3;
 	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 
-	/* Reverse color assignment - achieved by swapping odd and even bits */
-	pat = ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1);
-	table[pat] = fixed_color ? 2 - (fixed_color == 2) : 3;
+	/* Reverse color assignment */
+	table[pattern3_reverse(pat)] = fixed_color ? 2 - (fixed_color == 2) : 3;
 	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 }
 
