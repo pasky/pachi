@@ -63,6 +63,20 @@ pat_90rot(int pat)
 	return p2;
 }
 
+void
+pattern3_transpose(int pat, int (*transp)[8])
+{
+	int i = 0;
+	(*transp)[i++] = pat;
+	(*transp)[i++] = pat_vmirror(pat);
+	(*transp)[i++] = pat_hmirror(pat);
+	(*transp)[i++] = pat_vmirror(pat_hmirror(pat));
+	(*transp)[i++] = pat_90rot(pat);
+	(*transp)[i++] = pat_90rot(pat_vmirror(pat));
+	(*transp)[i++] = pat_90rot(pat_hmirror(pat));
+	(*transp)[i++] = pat_90rot(pat_vmirror(pat_hmirror(pat)));
+}
+
 static void
 pattern_gen(struct pattern3s *p, int pat, char *src, int srclen, int fixed_color)
 {
@@ -98,14 +112,10 @@ pattern_gen(struct pattern3s *p, int pat, char *src, int srclen, int fixed_color
 	}
 
 	/* Original pattern, all transpositions and rotations */
-	pattern_record(p->hash, src - 9, pat, fixed_color);
-	pattern_record(p->hash, src - 9, pat_vmirror(pat), fixed_color);
-	pattern_record(p->hash, src - 9, pat_hmirror(pat), fixed_color);
-	pattern_record(p->hash, src - 9, pat_vmirror(pat_hmirror(pat)), fixed_color);
-	pattern_record(p->hash, src - 9, pat_90rot(pat), fixed_color);
-	pattern_record(p->hash, src - 9, pat_90rot(pat_vmirror(pat)), fixed_color);
-	pattern_record(p->hash, src - 9, pat_90rot(pat_hmirror(pat)), fixed_color);
-	pattern_record(p->hash, src - 9, pat_90rot(pat_vmirror(pat_hmirror(pat))), fixed_color);
+	int transp[8];
+	pattern3_transpose(pat, &transp);
+	for (int i = 0; i < 8; i++)
+		pattern_record(p->hash, src - 9, transp[i], fixed_color);
 }
 
 static void

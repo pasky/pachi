@@ -35,6 +35,10 @@ static int pattern3_hash(struct board *b, coord_t c);
  * self-atari test. */
 static bool test_pattern3_here(struct pattern3s *p, struct board *b, struct move *m);
 
+/* Generate all transpositions of given pattern, stored in an
+ * int[8] array. */
+void pattern3_transpose(int pat, int (*transp)[8]);
+
 
 static inline int
 pattern3_hash(struct board *b, coord_t c)
