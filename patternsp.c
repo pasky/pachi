@@ -361,7 +361,7 @@ pattern3_to_spatial(int pat3)
 	hash_t h = pthashes[0][0][S_NONE];
 	for (int i = 1; i < 9; i++)
 		h ^= pthashes[0][i][(pat3 >> (p3bits[i] * 2)) & 0x3];
-	return h;
+	return h & spatial_hash_mask;
 }
 
 static int
@@ -379,7 +379,8 @@ pattern3_by_spatial(struct spatial_dict *dict, int pat3)
 {
 	/* Just pull pat3 through the spatial database to generate
 	 * hash of its canonical form. */
-	int s = spatial_dict_get(dict, 3, pattern3_to_spatial(pat3));
+	hash_t h = pattern3_to_spatial(pat3);
+	int s = spatial_dict_get(dict, 3, h);
 	/* XXX: We assume our spatial dictionary is _sane_, that is,
 	 * all valid 3x3 patterns we could encounter are in the
 	 * dictionary. If you hit this assert(), you probably
