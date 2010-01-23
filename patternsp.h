@@ -15,7 +15,7 @@
  * feature implementation in the General Pattern Matcher (pattern.[ch]). */
 
 /* Maximum spatial pattern diameter. */
-#define MAX_PATTERN_DIST 10
+#define MAX_PATTERN_DIST 5
 /* Maximum number of points in spatial pattern (upper bound).
  * TODO: Better upper bound to save more data. */
 #define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
