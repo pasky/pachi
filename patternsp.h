@@ -121,9 +121,14 @@ static int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
  * file automatically. */
 int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
 
-/* Special helper for 3x3 patterns (pattern3.h) processing - return
- * canonical 3x3 pattern hash (from space of rotations and transpositions)
- * based on the appropriate master record in the spatial dictionary. */
+/* Special helpers for 3x3 patterns (pattern3.h) processing: */
+
+/* Return 3x3 pattern hash matching dist=3 spatial. */
+int spatial_to_pattern3(struct spatial *s);
+
+/* Return canonical 3x3 pattern hash (from space of rotations and
+ * transpositions) based on the appropriate master record in the spatial
+ * dictionary. */
 int pattern3_by_spatial(struct spatial_dict *dict, int pat3);
 
 

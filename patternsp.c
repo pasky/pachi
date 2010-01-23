@@ -364,7 +364,7 @@ pattern3_to_spatial(int pat3)
 	return h & spatial_hash_mask;
 }
 
-static int
+int
 spatial_to_pattern3(struct spatial *s)
 {
 	assert(s->dist == 3);
