@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "board.h"
+#include "debug.h"
 #include "engine.h"
 #include "move.h"
 #include "patternscan/patternscan.h"
@@ -152,6 +153,12 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 				ps->scounts = realloc(ps->scounts, newnsc * sizeof(*ps->scounts));
 				memset(&ps->scounts[ps->nscounts], 0, (newnsc - ps->nscounts) * sizeof(*ps->scounts));
 				ps->nscounts = newnsc;
+			}
+			if (DEBUGL(4) && !ps->scounts[sid]) {
+				fprintf(stderr, "new spat %d(%d) %s ", sid, s.dist, spatial2str(&s));
+				for (int r = 0; r < 8; r++)
+					fprintf(stderr,"[%"PRIhash"] ", spatial_hash(r, &s));
+				fprintf(stderr, "\n");
 			}
 			ps->scounts[sid]++;
 		}
