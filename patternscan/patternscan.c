@@ -31,7 +31,6 @@ struct patternscan {
 	/* Book-keeping of spatial occurence count. */
 	int nscounts;
 	int *scounts;
-	/* TODO: The same for PATTERN3 occurences. */
 };
 
 
@@ -39,6 +38,8 @@ struct patternscan {
 static int gammaid[FEAT_MAX + MAX_PATTERN_DIST + 1];
 /* For each spatial id, its gamma value. */
 static int spatg[65536];
+/* Pattern3 hashes sorted by their gamma. */
+static int pat3g[65536/8];
 
 /* Print MM-format header - summary of features. Also create patterns.fdict
  * containing mapping from gamma numbers to feature:payload pairs. */
@@ -59,6 +60,23 @@ mm_header(struct patternscan *ps)
 			gammaid[i + 1] = gammaid[i];
 			continue;
 		}
+		if (i == FEAT_PATTERN3) {
+			/* We need to dynamically allocate gamma numbers
+			 * of pattern3 hashes, 65536 extra gammas is
+			 * unbearable. */
+			for (int s = 0; s < ps->pc.spat_dict->nspatials; s++) {
+				if (ps->pc.spat_dict->spatials[s].dist != 3)
+					continue;
+				int pat = spatial_to_pattern3(&ps->pc.spat_dict->spatials[s]);
+				struct feature f = { .id = i, .payload = pat };
+				char buf[256] = ""; feature2str(buf, &f);
+				fprintf(fdict, "%d %s\n", g, buf);
+				pat3g[g++ - gammaid[i]] = pat;
+			}
+			gammaid[i + 1] = g;
+			continue;
+		}
+
 		gammaid[i + 1] = gammaid[i] + feature_payloads(&ps->pc, i);
 
 		for (int p = 0; p < feature_payloads(&ps->pc, i); p++) {
@@ -68,6 +86,8 @@ mm_header(struct patternscan *ps)
 		}
 		assert(g == gammaid[i + 1]);
 	}
+
+	/* XXX: We rely on pattern3 being last feature before FEAT_MAX. */
 
 	/* We need to break down spatials by their radius, since payloads
 	 * of single feature must be independent. */
@@ -91,7 +111,7 @@ mm_header(struct patternscan *ps)
 	for (int i = 0; i < FEAT_MAX; i++) {
 		if (i == FEAT_SPATIAL) continue;
 		// Number of gammas per feature.
-		printf("%d %s\n", feature_payloads(&ps->pc, i), feature_name(i));
+		printf("%d %s\n", gammaid[i + 1] - gammaid[i], feature_name(i));
 	}
 	for (int d = 0; d <= ps->pc.spat_max - ps->pc.spat_min; d++) {
 		printf("%d %s.%d\n", gammaid[FEAT_MAX + d + 1] - gammaid[FEAT_MAX + d], feature_name(FEAT_SPATIAL), ps->pc.spat_min + d);
@@ -104,10 +124,21 @@ mm_pattern(struct patternscan *ps, char *str, struct pattern *p)
 {
 	for (int i = 0; i < p->n; i++) {
 		if (i > 0) str = stpcpy(str, " ");
-		if (p->f[i].id != FEAT_SPATIAL)
-			str += sprintf(str, "%d", gammaid[p->f[i].id] + p->f[i].payload);
-		else
+		switch (p->f[i].id) {
+		case FEAT_SPATIAL:
 			str += sprintf(str, "%d", spatg[p->f[i].payload]);
+			break;
+		case FEAT_PATTERN3:
+			for (int g = 0; g < gammaid[FEAT_PATTERN3 + 1] - gammaid[FEAT_PATTERN3]; g++)
+				if (pat3g[g] == p->f[i].payload) {
+					str += sprintf(str, "%d", gammaid[p->f[i].id] + g);
+					break;
+				}
+			break;
+		default:
+			str += sprintf(str, "%d", gammaid[p->f[i].id] + p->f[i].payload);
+			break;
+		}
 	}
 	return stpcpy(str, "\n");
 }
