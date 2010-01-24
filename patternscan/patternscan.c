@@ -55,12 +55,23 @@ mm_header(struct patternscan *ps)
 
 	gammaid[0] = 0;
 	int g = 0;
+	int features = 0;
 	for (int i = 0; i < FEAT_MAX; i++) {
+		if (ps->ps[i] == 0) {
+			/* Feature disabled. */
+			/* XXX: Accurately account for payload count
+			 * of partially disabled features? */
+			gammaid[i + 1] = gammaid[i];
+			continue;
+		}
 		if (i == FEAT_SPATIAL) {
 			/* Special handling. */
 			gammaid[i + 1] = gammaid[i];
 			continue;
 		}
+
+		features++;
+
 		if (i == FEAT_PATTERN3) {
 			/* We need to dynamically allocate gamma numbers
 			 * of pattern3 hashes, 65536 extra gammas is
@@ -92,30 +103,36 @@ mm_header(struct patternscan *ps)
 
 	/* We need to break down spatials by their radius, since payloads
 	 * of single feature must be independent. */
-	for (int d = 0; d <= ps->pc.spat_max - ps->pc.spat_min; d++) {
-		for (int i = 0; i < ps->pc.spat_dict->nspatials; i++) {
-			if (ps->pc.spat_dict->spatials[i].dist != ps->pc.spat_min + d)
-				continue;
-			spatg[i] = g++;
-			struct feature f = { .id = FEAT_SPATIAL, .payload = i };
-			char buf[256] = ""; feature2str(buf, &f);
-			fprintf(fdict, "%d %s\n", spatg[i], buf);
+	if (ps->ps[FEAT_SPATIAL] != 0) {
+		for (int d = 0; d <= ps->pc.spat_max - ps->pc.spat_min; d++) {
+			for (int i = 0; i < ps->pc.spat_dict->nspatials; i++) {
+				if (ps->pc.spat_dict->spatials[i].dist != ps->pc.spat_min + d)
+					continue;
+				spatg[i] = g++;
+				struct feature f = { .id = FEAT_SPATIAL, .payload = i };
+				char buf[256] = ""; feature2str(buf, &f);
+				fprintf(fdict, "%d %s\n", spatg[i], buf);
+			}
+			features++;
+			gammaid[FEAT_MAX + d + 1] = g;
 		}
-		gammaid[FEAT_MAX + d + 1] = g;
 	}
 
 	fclose(fdict);
 
-	int features = FEAT_MAX + ps->pc.spat_max - ps->pc.spat_min + 1;
-	printf("! %d\n", gammaid[features]); // Number of gammas.
-	printf("%d\n", features - 1); // Number of features; we leave out FEAT_SPATIAL record.
+	printf("! %d\n", g); // Number of gammas.
+	printf("%d\n", features); // Number of features.
 	for (int i = 0; i < FEAT_MAX; i++) {
+		if (ps->ps[i] == 0) continue;
 		if (i == FEAT_SPATIAL) continue;
 		// Number of gammas per feature.
 		printf("%d %s\n", gammaid[i + 1] - gammaid[i], feature_name(i));
 	}
-	for (int d = 0; d <= ps->pc.spat_max - ps->pc.spat_min; d++) {
-		printf("%d %s.%d\n", gammaid[FEAT_MAX + d + 1] - gammaid[FEAT_MAX + d], feature_name(FEAT_SPATIAL), ps->pc.spat_min + d);
+	if (ps->ps[FEAT_SPATIAL] != 0) {
+		for (int d = 0; d <= ps->pc.spat_max - ps->pc.spat_min; d++) {
+			printf("%d %s.%d\n", gammaid[FEAT_MAX + d + 1] - gammaid[FEAT_MAX + d],
+					feature_name(FEAT_SPATIAL), ps->pc.spat_min + d);
+		}
 	}
 	printf("!\n");
 }
