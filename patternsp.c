@@ -169,6 +169,36 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 	s->dist = pc->spat_max;
 }
 
+/* Compare two spatials, allowing for differences up to isomorphism.
+ * True means the spatials are equivalent. */
+static bool
+spatial_cmp(struct spatial *s1, struct spatial *s2)
+{
+	/* Quick preliminary check. */
+	if (s1->dist != s2->dist)
+		return false;
+
+	/* We could create complex transposition tables, but it seems most
+	 * foolproof to just check if the sets of rotation hashes are the
+	 * same for both. */
+	hash_t s1r[PTH__ROTATIONS];
+	for (int r = 0; r < PTH__ROTATIONS; r++)
+		s1r[r] = spatial_hash(r, s1);
+	for (int r = 0; r < PTH__ROTATIONS; r++) {
+		hash_t s2r = spatial_hash(r, s2);
+		for (int p = 0; p < PTH__ROTATIONS; p++)
+			if (s2r == s1r[p])
+				goto found_rot;
+		/* Rotation hash s2r does not correspond to s1r. */
+		return false;
+found_rot:;
+	}
+
+	/* All rotation hashes of s2 occur in s1. Hopefully that
+	 * indicates something. */
+	return true;
+}
+
 
 /* Spatial dict manipulation. */
 
@@ -324,23 +354,13 @@ spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 {
 	int id = spatial_dict_get(dict, s->dist, h);
 	if (id > 0) {
-		/* Check for collisions in append mode. */
-		/* Tough job, we simply try if any other rotation
-		 * is also covered by the existing record. */
-		int r; hash_t rhash; int rid;
-		for (r = 1; r < PTH__ROTATIONS; r++) {
-			rhash = spatial_hash(r, s);
-			rid = dict->hash[rhash];
-			if (rid != id)
-				goto collision;
-		}
-		/* All rotations match, id is good to go! */
-		return id;
+		/* Is this the same or isomorphous spatial? */
+		if (spatial_cmp(s, &dict->spatials[id]))
+			return id;
 
-collision:
+		/* Different spatial, thus this is a collision. */
 		if (DEBUGL(1))
-			fprintf(stderr, "Collision %d vs %d (hash %d:%"PRIhash")\n",
-				id, dict->nspatials, r, h);
+			fprintf(stderr, "Collision %d vs %d\n", id, dict->nspatials);
 		id = 0;
 		/* dict->collisions++; gets done by addh */
 	}
