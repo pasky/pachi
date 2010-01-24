@@ -242,12 +242,25 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 }
 
 void
-spatial_write(struct spatial *s, int id, FILE *f)
+spatial_write(struct spatial_dict *dict, struct spatial *s, int id, FILE *f)
 {
 	fprintf(f, "%d %d ", id, s->dist);
 	fputs(spatial2str(s), f);
-	for (int r = 0; r < PTH__ROTATIONS; r++)
+	for (int r = 0; r < PTH__ROTATIONS; r++) {
+		hash_t rhash = spatial_hash(r, s);
+		int id2 = dict->hash[rhash];
+		if (id2 != id) {
+			/* This hash does not belong to us. Decide whether
+			 * we or the current owner is better owner. */
+			/* TODO: Compare also # of patternscan encounters? */
+			struct spatial *s2 = &dict->spatials[id2];
+			if (s2->dist < s->dist)
+				continue;
+			if (s2->dist == s->dist && id2 < id)
+				continue;
+		}
 		fprintf(f, " %"PRIhash"", spatial_hash(r, s));
+	}
 	fputc('\n', f);
 }
 

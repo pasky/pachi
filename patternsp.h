@@ -140,7 +140,7 @@ extern const char *spatial_dict_filename;
 void spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f);
 
 /* Append specified spatial pattern to the given file. */
-void spatial_write(struct spatial *s, int id, FILE *f);
+void spatial_write(struct spatial_dict *dict, struct spatial *s, int id, FILE *f);
 
 
 static inline int
