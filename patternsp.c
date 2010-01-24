@@ -219,7 +219,7 @@ spatial_dict_addc(struct spatial_dict *dict, struct spatial *s)
 static bool
 spatial_dict_addh(struct spatial_dict *dict, hash_t hash, int id)
 {
-	if (dict->hash[hash])
+	if (dict->hash[hash] && dict->hash[hash] != id)
 		dict->collisions++;
 	dict->hash[hash] = id;
 	return true;
@@ -352,13 +352,32 @@ spatial_dict_init(bool will_append)
 int
 spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 {
-	int id = spatial_dict_get(dict, s->dist, h);
+	/* We avoid spatial_dict_get() here, since we want to ignore radius
+	 * differences - we have custom collision detection. */
+	int id = dict->hash[h];
 	if (id > 0) {
 		/* Is this the same or isomorphous spatial? */
 		if (spatial_cmp(s, &dict->spatials[id]))
 			return id;
 
-		/* Different spatial, thus this is a collision. */
+		/* Look a bit harder - perhaps one of our rotations still
+		 * points at the correct spatial. */
+		for (int r = 0; r < PTH__ROTATIONS; r++) {
+			hash_t rhash = spatial_hash(r, s);
+			int rid = dict->hash[rhash];
+			/* No match means we definitely aren't stored yet. */
+			if (!rid)
+				break;
+			if (id != rid && spatial_cmp(s, &dict->spatials[rid])) {
+				/* Yay, this is us! */
+				if (DEBUGL(3))
+					fprintf(stderr, "Repeated collision %d vs %d\n", id, rid);
+				id = rid;
+				/* Point the hashes back to us. */
+				goto hash_store;
+			}
+		}
+
 		if (DEBUGL(1))
 			fprintf(stderr, "Collision %d vs %d\n", id, dict->nspatials);
 		id = 0;
@@ -367,15 +386,17 @@ spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 
 	/* Add new pattern! */
 	id = spatial_dict_addc(dict, s);
-	for (int r = 0; r < PTH__ROTATIONS; r++)
-		spatial_dict_addh(dict, spatial_hash(r, s), id);
-
 	if (DEBUGL(4)) {
-		fprintf(stderr, "new spat %d(%d) %s ", id, s->dist, spatial2str(s));
+		fprintf(stderr, "new spat %d(%d) %s <%"PRIhash"> ", id, s->dist, spatial2str(s), h);
 		for (int r = 0; r < 8; r++)
 			fprintf(stderr,"[%"PRIhash"] ", spatial_hash(r, s));
 		fprintf(stderr, "\n");
 	}
+
+	/* Store new pattern in the hash. */
+hash_store:
+	for (int r = 0; r < PTH__ROTATIONS; r++)
+		spatial_dict_addh(dict, spatial_hash(r, s), id);
 
 	return id;
 }
