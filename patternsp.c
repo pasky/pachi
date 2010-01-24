@@ -369,6 +369,14 @@ spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 	id = spatial_dict_addc(dict, s);
 	for (int r = 0; r < PTH__ROTATIONS; r++)
 		spatial_dict_addh(dict, spatial_hash(r, s), id);
+
+	if (DEBUGL(4)) {
+		fprintf(stderr, "new spat %d(%d) %s ", id, s->dist, spatial2str(s));
+		for (int r = 0; r < 8; r++)
+			fprintf(stderr,"[%"PRIhash"] ", spatial_hash(r, s));
+		fprintf(stderr, "\n");
+	}
+
 	return id;
 }
 
