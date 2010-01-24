@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "board.h"
+#include "debug.h"
 #include "engine.h"
 #include "move.h"
 #include "patternscan/patternscan.h"
@@ -264,7 +265,7 @@ patternscan_done(struct engine *e)
 		assert(i < ps->nscounts && ps->scounts[i] > 0);
 		if (ps->scounts[i] >= ps->spat_threshold
 		    || ps->pc.spat_dict->spatials[i].dist == 3)
-			spatial_write(&ps->pc.spat_dict->spatials[i], i, f);
+			spatial_write(ps->pc.spat_dict, &ps->pc.spat_dict->spatials[i], i, f);
 	}
 	fclose(f);
 }

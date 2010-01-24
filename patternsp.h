@@ -15,7 +15,7 @@
  * feature implementation in the General Pattern Matcher (pattern.[ch]). */
 
 /* Maximum spatial pattern diameter. */
-#define MAX_PATTERN_DIST 10
+#define MAX_PATTERN_DIST 5
 /* Maximum number of points in spatial pattern (upper bound).
  * TODO: Better upper bound to save more data. */
 #define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
@@ -145,7 +145,7 @@ extern const char *spatial_dict_filename;
 void spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f);
 
 /* Append specified spatial pattern to the given file. */
-void spatial_write(struct spatial *s, int id, FILE *f);
+void spatial_write(struct spatial_dict *dict, struct spatial *s, int id, FILE *f);
 
 
 static inline int
