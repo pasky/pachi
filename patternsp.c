@@ -189,11 +189,8 @@ spatial_dict_addc(struct spatial_dict *dict, struct spatial *s)
 static bool
 spatial_dict_addh(struct spatial_dict *dict, hash_t hash, int id)
 {
-	if (dict->hash[hash]) {
+	if (dict->hash[hash])
 		dict->collisions++;
-		/* Give up, not worth the trouble. */
-		return false;
-	}
 	dict->hash[hash] = id;
 	return true;
 }
