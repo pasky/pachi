@@ -11,8 +11,6 @@
 #include "patternsp.h"
 #include "tactics.h"
 
-static void pthashes_init(void);
-
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). The array is ordered
  * in the gridcular metric order so that we can go through it
@@ -24,8 +22,8 @@ struct ptcoord ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
 int ptind[MAX_PATTERN_DIST + 2];
 
-/* ptcoords[], ptind[], pthashes[] setup */
-static void __attribute__((constructor))
+/* ptcoords[], ptind[] setup */
+static void
 ptcoords_init(void)
 {
 	int i = 0; /* Indexing ptcoords[] */
@@ -72,8 +70,6 @@ ptcoords_init(void)
 		fprintf(stderr, "\n");
 	}
 #endif
-
-	pthashes_init();
 }
 
 
@@ -129,6 +125,15 @@ pthashes_init(void)
 			pthashes[r][i][S_OFFBOARD] = pthboard[bi][S_OFFBOARD];
 		}
 	}
+}
+
+static void __attribute__((constructor))
+spatial_init(void)
+{
+	/* Initialization of various static data structures for
+	 * fast pattern processing. */
+	ptcoords_init();
+	pthashes_init();
 }
 
 inline hash_t
