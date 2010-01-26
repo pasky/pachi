@@ -11,6 +11,7 @@
 #include "patternsp.h"
 #include "tactics.h"
 
+static void pthashes_init(void);
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). The array is ordered
@@ -23,8 +24,8 @@ struct ptcoord ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
 int ptind[MAX_PATTERN_DIST + 2];
 
-/* ptcoords[], ptind[] setup */
-static void __attribute__((constructor(140)))
+/* ptcoords[], ptind[], pthashes[] setup */
+static void __attribute__((constructor))
 ptcoords_init(void)
 {
 	int i = 0; /* Indexing ptcoords[] */
@@ -71,13 +72,15 @@ ptcoords_init(void)
 		fprintf(stderr, "\n");
 	}
 #endif
+
+	pthashes_init();
 }
 
 
 /* Zobrist hashes used for points in patterns. */
 hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 
-static void __attribute__((constructor(160)))
+static void
 pthashes_init(void)
 {
 	/* We need fixed hashes for all pattern-relative in
