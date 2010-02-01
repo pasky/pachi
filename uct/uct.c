@@ -43,8 +43,9 @@ static void uct_pondering_stop(struct uct *u);
 #define GJ_MINGAMES	500
 
 /* How often to inspect the tree from the main thread to check for playout
- * stop, progress reports, etc. A (struct timespec) initializer. */
-#define TREE_BUSYWAIT_INTERVAL { .tv_sec = 0, .tv_nsec = 100*1000000 /* 100ms */ }
+ * stop, progress reports, etc. (in seconds) */
+#define TREE_BUSYWAIT_INTERVAL 0.1 /* 100ms */
+
 /* Once per how many simulations (per thread) to show a progress report line. */
 #define TREE_SIMPROGRESS_INTERVAL 10000
 
@@ -466,19 +467,17 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * right now. */
 
 	/* Set up the intervals and deadlines. */
-	struct timespec busywait_stop;
+	double busywait_stop;
 	if (ti->dim == TD_WALLTIME) {
-		clock_gettime(CLOCK_REALTIME, &busywait_stop);
+		double start_time = time_now();
 		assert(ti->period == TT_MOVE);
-		/* TODO: TT_TOTAL - allocate /(5*(board_size(b)-2)) of total time. */
-		time_add(&busywait_stop, &ti->len.walltime);
-		/* TODO: Safety buffer (2s? but depend on available time if too small). */
+		busywait_stop = start_time + ti->len.t.recommended_time;
 	}
-	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
+	double busywait_interval = TREE_BUSYWAIT_INTERVAL;
 
 	/* Now, just periodically poll the search tree. */
 	while (1) {
-		nanosleep(&busywait_interval, NULL);
+		time_sleep(busywait_interval);
 		int i = ctx->t->root->u.playouts;
 
 		/* Print progress? */
@@ -493,25 +492,23 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		}
 
 		/* Check against time settings. */
-		bool stop = false;
-		assert(ti->period == TT_MOVE);
-		switch (ti->dim) {
-			case TD_WALLTIME:
-				stop = time_passed(&busywait_stop);
-				break;
-			case TD_GAMES:
-				stop = i > ti->len.games;
-				break;
+		if (ti->dim == TD_WALLTIME) {
+			double now = time_now();
+			if (now > busywait_stop) break;
+		} else {
+			assert(ti->dim == TD_GAMES);
+			if (i > ti->len.games) break;
 		}
-		if (stop) break;
 
 		/* Early break in won situation. */
 		struct tree_node *best = u->policy->choose(u->policy, ctx->t->root, b, color);
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
-		/* TODO: Early break if best->variance goes under threshold. */
+		/* TODO: Early break if best->variance goes under threshold and we already
+                 * have enough playouts (possibly thanks to book or to pondering). */
 		/* TODO: Simulate longer if best of #sims != best of value. */
+		/* TODO: Early break if second best has no chance to catch up. */
 	}
 
 	ctx = uct_search_stop();

@@ -2,7 +2,12 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include <time.h>
 
+#define DEBUG
+
+#include "debug.h"
 #include "timeinfo.h"
 
 
@@ -22,26 +27,28 @@ time_parse(struct time_info *ti, char *s)
 			if (!isdigit(s[0]))
 				return false;
 			ti->dim = TD_WALLTIME;
-			ti->len.walltime.tv_sec = atoi(s);
-			ti->len.walltime.tv_nsec = 0;
+			ti->len.t.recommended_time = atof(s);
 			break;
 	}
 	return true;
 }
 
-void
-time_add(struct timespec *when, struct timespec *len)
+/* Returns the current time. */
+double
+time_now(void)
 {
-	when->tv_sec += len->tv_sec;
-	when->tv_nsec += len->tv_nsec;
-	if (when->tv_nsec > 1000000000)
-		when->tv_sec++, when->tv_nsec -= 1000000000;
+	struct timespec now;
+	clock_gettime(CLOCK_REALTIME, &now);
+	return now.tv_sec + now.tv_nsec/1000000000.0;
 }
 
-bool
-time_passed(struct timespec *when)
+/* Sleep for a given interval (in seconds). Return immediately if interval < 0. */
+void
+time_sleep(double interval)
 {
-	struct timespec now; clock_gettime(CLOCK_REALTIME, &now);
-
-	return now.tv_sec > when->tv_sec || (now.tv_sec == when->tv_sec && now.tv_nsec > when->tv_nsec);
+	struct timespec ts;
+	double sec;
+	ts.tv_nsec = (int)(modf(interval, &sec)*1000000000.0);
+        ts.tv_sec = (int)sec;
+	nanosleep(&ts, NULL); /* ignore error if interval was < 0 */
 }

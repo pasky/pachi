@@ -8,7 +8,6 @@
  * with all engines. */
 
 #include <stdbool.h>
-#include <time.h>
 
 struct time_info {
 	/* For how long we can spend the time? */
@@ -24,22 +23,26 @@ struct time_info {
 	} dim;
 	union {
 		int games; // TD_GAMES
-		struct timespec walltime; // TD_WALLTIME
+		struct {   // TD_WALLTIME
+			/* Recommended wall time for next move or game (seconds). Does not
+			 * include net lag. Play asap if 0. */
+			double recommended_time;
+		} t;
 	} len;
 };
 
 /* Parse time information provided in custom format:
  *   =NUM - fixed number of simulations per move
- *   NUM - number of seconds to spend per move
+ *   NUM - number of seconds to spend per move (can be float)
  *   _NUM - number of seconds to spend per game
  *
  * Returns false on parse error.  */
 bool time_parse(struct time_info *ti, char *s);
 
-/* when += len */
-void time_add(struct timespec *when, struct timespec *len);
+/* Returns the current time. */
+double time_now(void);
 
-/* Return whether @when deadline (absolute time) already passed. */
-bool time_passed(struct timespec *when);
+/* Sleep for a given interval (in seconds). Return immediately if interval < 0. */
+void time_sleep(double interval);
 
 #endif
