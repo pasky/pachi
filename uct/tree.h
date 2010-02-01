@@ -84,7 +84,6 @@ void tree_normalize(struct tree *tree, int factor);
 /* Warning: All these functions are THREAD-UNSAFE! */
 struct tree_node *tree_get_node(struct tree *tree, struct tree_node *node, coord_t c, bool create);
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity);
-void tree_delete_node(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node *node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 
