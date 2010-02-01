@@ -673,7 +673,12 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
 			tree_node_get_value(u->t, 1, best->u.value),
 			best->u.playouts, u->t->root->u.playouts, played_games);
-	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)) {
+
+	/* Do not resign if we're so short of time that evaluation of best move is completely
+	 * unreliable, we might be winning actually. In this case best is almost random but
+	 * still better than resign. */
+	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)
+	    && best->u.playouts > GJ_MINGAMES) {
 		reset_state(u);
 		return coord_copy(resign);
 	}
