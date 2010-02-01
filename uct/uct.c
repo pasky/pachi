@@ -643,6 +643,7 @@ uct_pondering_stop(struct uct *u)
 static coord_t *
 uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
+	double start_time = time_now();
 	struct uct *u = e->data;
 
 	if (b->superko_violation) {
@@ -698,6 +699,11 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * the UCT will start cutting off any playouts. */
 	if (u->pondering && !is_pass(best->coord)) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
+	}
+	if (UDEBUGL(2)) {
+		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
+		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
+			time, (int)(played_games/time), (int)(played_games/time/u->threads));
 	}
 	return coord_copy(best->coord);
 }
