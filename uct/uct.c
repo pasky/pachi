@@ -46,6 +46,11 @@ static void uct_pondering_stop(struct uct *u);
  * stop, progress reports, etc. (in seconds) */
 #define TREE_BUSYWAIT_INTERVAL 0.1 /* 100ms */
 
+/* For safety, use at most 3 times the desired time on a single move
+ * in main time, and 1.1 times in byoyomi. */
+#define MAX_MAIN_TIME_EXTENSION 3.0
+#define MAX_BYOYOMI_TIME_EXTENSION 1.1
+
 /* Once per how many simulations (per thread) to show a progress report line. */
 #define TREE_SIMPROGRESS_INTERVAL 10000
 
@@ -425,18 +430,52 @@ uct_search_stop(void)
 }
 
 
-/* Pre-process time_info for search control. */
+/* Search stopping conditions */
+union stop_conditions {
+	struct { // TD_WALLTIME
+		double desired_stop; /* stop at that time if possible */
+		double worst_stop;   /* stop no later than this */
+	} t;
+	struct { // TD_GAMES
+		int desired_playouts;
+		int worst_playouts;
+	} p;
+};
+
+/* Pre-process time_info for search control and sets the desired stopping conditions. */
 static void
-time_prep(struct time_info *ti)
+time_prep(struct time_info *ti, struct uct *u, struct board *b, union stop_conditions *stop)
 {
-	if (ti->period == TT_TOTAL) {
-		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
-		ti->period = TT_NULL;
-	}
+	assert(ti->period != TT_TOTAL);
+
 	if (ti->period == TT_NULL) {
 		ti->period = TT_MOVE;
 		ti->dim = TD_GAMES;
 		ti->len.games = MC_GAMES;
+	}
+	if (ti->dim == TD_GAMES) {
+		stop->p.desired_playouts = ti->len.games;
+		stop->p.worst_playouts = ti->len.games * MAX_MAIN_TIME_EXTENSION;
+	} else {
+		double desired_time = ti->len.t.recommended_time;
+                double worst_time;
+		if (time_in_byoyomi(ti)) {
+			worst_time = desired_time * MAX_BYOYOMI_TIME_EXTENSION;
+			desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION); // make average(desired, worst) == recommended
+		} else {
+			worst_time = desired_time * MAX_MAIN_TIME_EXTENSION;
+		}
+		if (worst_time > ti->len.t.max_time)
+			worst_time = ti->len.t.max_time;
+		if (desired_time > worst_time)
+			desired_time = worst_time;
+
+		stop->t.desired_stop = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
+		stop->t.worst_stop = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
+		// Both stop points may be in the past if too much lag.
+
+		if (UDEBUGL(2))
+			fprintf(stderr, "desired time %.02f, worst %.02f\n", desired_time, worst_time);
 	}
 }
 
@@ -444,7 +483,8 @@ time_prep(struct time_info *ti)
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
-	time_prep(ti);
+	union stop_conditions stop;
+	time_prep(ti, u, b, &stop);
 	if (UDEBUGL(2) && u->t->root->u.playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
 
@@ -466,18 +506,18 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * count. However, TM_ROOT just does not deserve any more extra code
 	 * right now. */
 
-	/* Set up the intervals and deadlines. */
-	double busywait_stop;
-	if (ti->dim == TD_WALLTIME) {
-		double start_time = time_now();
-		assert(ti->period == TT_MOVE);
-		busywait_stop = start_time + ti->len.t.recommended_time;
-	}
+	struct tree_node *best = NULL, *prev_best;
+	struct tree_node *winner = NULL, *prev_winner;
+
 	double busywait_interval = TREE_BUSYWAIT_INTERVAL;
 
 	/* Now, just periodically poll the search tree. */
 	while (1) {
 		time_sleep(busywait_interval);
+		/* busywait_interval should never be less than desired time, or the
+		 * time control is broken. But if it happens to be less, we still search
+		 * at least 100ms otherwise the move is completely random. */
+
 		int i = ctx->t->root->u.playouts;
 
 		/* Print progress? */
@@ -492,22 +532,47 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		}
 
 		/* Check against time settings. */
+		bool desired_done = false;
 		if (ti->dim == TD_WALLTIME) {
 			double now = time_now();
-			if (now > busywait_stop) break;
+			if (now > stop.t.worst_stop) break;
+			desired_done = now > stop.t.desired_stop;
 		} else {
 			assert(ti->dim == TD_GAMES);
-			if (i > ti->len.games) break;
+			if (i > stop.p.worst_playouts) break;
+			desired_done = i > stop.p.desired_playouts;
 		}
 
 		/* Early break in won situation. */
-		struct tree_node *best = u->policy->choose(u->policy, ctx->t->root, b, color);
+		prev_best = best;
+		best = u->policy->choose(u->policy, ctx->t->root, b, color);
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
+
+		if (desired_done) {
+			if (!u->policy->winner || !u->policy->evaluate)
+				break;
+			/* Stop only if best explored has also highest value: */
+			prev_winner = winner;
+			winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
+			if (best && best == winner)
+				break;
+			if (UDEBUGL(3) && (best != prev_best || winner != prev_winner)) {
+				fprintf(stderr, "[%d] best", i);
+				if (best)
+					fprintf(stderr, " %3s [%d] %f", coord2sstr(best->coord, ctx->t->board),
+						best->u.playouts, tree_node_get_value(ctx->t, 1, best->u.value));
+				fprintf(stderr, " != winner");
+				if (winner)
+					fprintf(stderr, " %3s [%d] %f ", coord2sstr(winner->coord, ctx->t->board),
+						winner->u.playouts, tree_node_get_value(ctx->t, 1, winner->u.value));
+				fprintf(stderr, "\n");
+			}
+		}
+
 		/* TODO: Early break if best->variance goes under threshold and we already
                  * have enough playouts (possibly thanks to book or to pondering). */
-		/* TODO: Simulate longer if best of #sims != best of value. */
 		/* TODO: Early break if second best has no chance to catch up. */
 	}
 

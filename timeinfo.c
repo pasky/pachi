@@ -30,6 +30,7 @@ time_parse(struct time_info *ti, char *s)
 				return false;
 			ti->dim = TD_WALLTIME;
 			ti->len.t.recommended_time = atof(s);
+			ti->len.t.max_time = ti->len.t.recommended_time;
 			ti->len.t.net_lag = MAX_NET_LAG;
 			ti->len.t.timer_start = 0;
 			ti->len.t.byoyomi_time = 0.0;
@@ -175,6 +176,15 @@ time_start_timer(struct time_info *ti)
 {
 	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME)
 		ti->len.t.timer_start = time_now();
+}
+
+/* Returns true if we are in byoyomi (or should play as if in byo yomi
+ * because remaining time per move in main time is less than byoyomi time
+ * per move). */
+bool
+time_in_byoyomi(struct time_info *ti) {
+	return ti->period == TT_MOVE && ti->dim == TD_WALLTIME && ti->len.t.byoyomi_time > 0
+	       && ti->len.t.recommended_time <= ti->len.t.byoyomi_time + 0.001;
 }
 
 /* Returns the current time. */

@@ -77,6 +77,11 @@ void time_start_timer(struct time_info *ti);
  * always make it time per move for the engine. */
 void time_prepare_move(struct time_info *ti, struct board *board);
 
+/* Returns true if we are in byoyomi (or should play as if in byo yomi
+ * because remaining time per move in main time is less than byoyomi time
+ * per move). */
+bool time_in_byoyomi(struct time_info *ti);
+
 /* Returns the current time. */
 double time_now(void);
 
