@@ -2,7 +2,8 @@
 #define ZZGO_TIMEINFO_H
 
 /* Time-keeping information about time to spend on the next move and/or
- * rest of the game. */
+ * rest of the game. This is only a hint, an engine may decide to spend
+ * more or less time on a given move, provided it never forfeits on time. */
 
 /* Note that some ways of specifying time (TD_GAMES) may not make sense
  * with all engines. */
@@ -16,7 +17,7 @@ struct time_info {
 	enum time_period {
 		TT_NULL, // No time limit. Other structure elements are undef.
 		TT_MOVE, // Time for the next move.
-		TT_TOTAL, // Time for the rest of the game.
+		TT_TOTAL, // Time for the rest of the game. Never seen by engine.
 	} period;
 	/* How are we counting the time? */
 	enum time_dimension {
@@ -30,9 +31,26 @@ struct time_info {
 			 * include net lag. Play asap if 0. */
 			double recommended_time;
 
+			/* Maximum wall time for next move or game. Will lose on time
+			 * if exceeded. Does not include net lag. Play asap if 0. */
+			double max_time;
+
+			/* Minimum net lag (seconds) to be reserved by the engine. The engine
+			 * may use a larger safety margin. */
+			double net_lag;
+
 			/* Absolute time at which our timer started for current move, 0 if
 			 * not yet known. The engine always sees > 0. */
 			double timer_start;
+
+			/* --- PRIVATE DATA --- */
+			/* Byoyomi time per move (even for TT_TOTAL). This time must
+			 * be remembered to avoid rushing at the end of the main
+			 * period. 0 if no byoyomi.  An engine should only consider
+			 * recommended_time, the generic time control code always sets it to
+			 * the best option (play on main time or on byoyomi time). */
+			double byoyomi_time;
+			int byoyomi_periods; /* > 0 only for non-canadian byoyomi */
 		} t;
 	} len;
 };
@@ -44,6 +62,12 @@ struct time_info {
  *
  * Returns false on parse error.  */
 bool time_parse(struct time_info *ti, char *s);
+
+/* Update time settings according to gtp time_settings command: */
+void time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi_stones, int byoyomi_periods);
+
+/* Update time information according to gtp time_left command: */
+void time_left(struct time_info *ti, int time_left, int stones_left);
 
 /* Start our timer. kgs does this (correctly) on "play" not "genmove"
  * unless we are making the first move of the game. */
