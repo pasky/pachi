@@ -42,6 +42,8 @@ struct uct {
 	bool parallel_tree;
 	bool virtual_loss;
 	bool pondering;
+	int fuseki_end;
+	int yose_start;
 
 	int dynkomi;
 	int dynkomi_mask;
