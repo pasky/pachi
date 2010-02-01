@@ -13,6 +13,7 @@
 #include "mq.h"
 #include "uct/uct.h"
 #include "version.h"
+#include "timeinfo.h"
 
 void
 gtp_prefix(char prefix, int id)
@@ -145,6 +146,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 		if (DEBUGL(1))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
+
+		time_start_timer(&ti[stone_other(m.color)]); // This is where kgs starts our timer, not at coming genmove
 		if (engine->notify_play)
 			reply = engine->notify_play(engine, board, &m);
 		if (board_play(board, &m) < 0) {
@@ -163,6 +166,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
+		time_prepare_move(ti, board);
+
 		coord_t *c = engine->genmove(engine, board, ti, color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
 		struct move m = { *c, color };
 		board_play(board, &m);

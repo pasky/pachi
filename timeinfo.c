@@ -33,6 +33,29 @@ time_parse(struct time_info *ti, char *s)
 	return true;
 }
 
+/* Update the timer start if necessary (first move of the game).
+ * The board parameter will be used in the next commit. */
+void
+time_prepare_move(struct time_info *ti, struct board *board)
+{
+	if (ti->period == TT_NULL || ti->dim != TD_WALLTIME)
+		return;
+
+	double now = time_now();
+	if (!ti->len.t.timer_start) {
+		ti->len.t.timer_start = now; // we're playing the first game move
+	}
+}
+
+/* Start our timer. kgs does this (correctly) on "play" not "genmove"
+ * unless we are making the first move of the game. */
+void
+time_start_timer(struct time_info *ti)
+{
+	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME)
+		ti->len.t.timer_start = time_now();
+}
+
 /* Returns the current time. */
 double
 time_now(void)

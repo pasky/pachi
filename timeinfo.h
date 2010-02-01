@@ -9,6 +9,8 @@
 
 #include <stdbool.h>
 
+#include "board.h"
+
 struct time_info {
 	/* For how long we can spend the time? */
 	enum time_period {
@@ -27,6 +29,10 @@ struct time_info {
 			/* Recommended wall time for next move or game (seconds). Does not
 			 * include net lag. Play asap if 0. */
 			double recommended_time;
+
+			/* Absolute time at which our timer started for current move, 0 if
+			 * not yet known. The engine always sees > 0. */
+			double timer_start;
 		} t;
 	} len;
 };
@@ -38,6 +44,13 @@ struct time_info {
  *
  * Returns false on parse error.  */
 bool time_parse(struct time_info *ti, char *s);
+
+/* Start our timer. kgs does this (correctly) on "play" not "genmove"
+ * unless we are making the first move of the game. */
+void time_start_timer(struct time_info *ti);
+
+/* Update the timer start if necessary (first move of the game) */
+void time_prepare_move(struct time_info *ti, struct board *board);
 
 /* Returns the current time. */
 double time_now(void);
