@@ -49,7 +49,8 @@ bool time_parse(struct time_info *ti, char *s);
  * unless we are making the first move of the game. */
 void time_start_timer(struct time_info *ti);
 
-/* Update the timer start if necessary (first move of the game) */
+/* Set correct time information before making a move, and
+ * always make it time per move for the engine. */
 void time_prepare_move(struct time_info *ti, struct board *board);
 
 /* Returns the current time. */

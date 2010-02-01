@@ -33,17 +33,31 @@ time_parse(struct time_info *ti, char *s)
 	return true;
 }
 
-/* Update the timer start if necessary (first move of the game).
- * The board parameter will be used in the next commit. */
+/* Set correct time information before making a move, and
+ * always make it time per move for the engine. */
 void
 time_prepare_move(struct time_info *ti, struct board *board)
 {
+	int moves_left;
+
+	if (ti->period == TT_TOTAL) {
+		moves_left = board_estimated_moves_left(board);
+		assert(moves_left > 0);
+		if (ti->dim == TD_GAMES) {
+			ti->period = TT_MOVE;
+			ti->len.games /= moves_left;
+		}
+	}
 	if (ti->period == TT_NULL || ti->dim != TD_WALLTIME)
 		return;
 
 	double now = time_now();
 	if (!ti->len.t.timer_start) {
 		ti->len.t.timer_start = now; // we're playing the first game move
+	}
+	if (ti->period == TT_TOTAL) {
+		ti->period = TT_MOVE;
+		ti->len.t.recommended_time /= moves_left;
 	}
 }
 
