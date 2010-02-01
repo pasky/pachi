@@ -41,7 +41,8 @@ struct uct {
 	} thread_model;
 	bool parallel_tree;
 	bool virtual_loss;
-	bool pondering;
+	bool pondering_opt; /* User wants pondering */
+	bool pondering; /* Actually pondering now */
 	int fuseki_end;
 	int yose_start;
 

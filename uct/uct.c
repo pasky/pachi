@@ -610,6 +610,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 {
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
+	u->pondering = true;
 
 	/* We need a local board copy to ponder upon. */
 	struct board *b = malloc(sizeof(*b)); board_copy(b, b0);
@@ -627,6 +628,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 static void
 uct_pondering_stop(struct uct *u)
 {
+	u->pondering = false;
 	if (!thread_manager_running)
 		return;
 
@@ -702,7 +704,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * Of course this is the case for opponent resign as well.
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */
-	if (u->pondering && !is_pass(best->coord)) {
+	if (u->pondering_opt && !is_pass(best->coord)) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
 	if (UDEBUGL(2)) {
@@ -885,7 +887,7 @@ uct_state_init(char *arg, struct board *b)
 				}
 			} else if (!strcasecmp(optname, "pondering")) {
 				/* Keep searching even during opponent's turn. */
-				u->pondering = !optval || atoi(optval);
+				u->pondering_opt = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "fuseki_end") && optval) {
 				/* At the very beginning it's not worth thinking too long because the
 				 * playout evaluations are very noisy. So gradually increase the thinking
