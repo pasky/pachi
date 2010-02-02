@@ -50,7 +50,11 @@ tree_init(struct board *board, enum stone color)
 }
 
 
-static void
+/* This function may be called by multiple threads in parallel on the
+ * same tree, but not on node n. n may be detached from the tree but
+ * must have been created in this tree originally.
+ * It returns the remaining size of the tree after n has been freed. */
+static unsigned long
 tree_done_node(struct tree *t, struct tree_node *n)
 {
 	struct tree_node *ni = n->children;
@@ -59,17 +63,69 @@ tree_done_node(struct tree *t, struct tree_node *n)
 		tree_done_node(t, ni);
 		ni = nj;
 	}
-	t->nodes_size -= sizeof(*n); // atomic operation not needed here
 	free(n);
+	unsigned long old_size = __sync_fetch_and_sub(&t->nodes_size, sizeof(*n));
+	return old_size - sizeof(*n);
+}
+
+struct subtree_ctx {
+	struct tree *t;
+	struct tree_node *n;
+};
+
+/* Worker thread for tree_done_node_detached() */
+static void *
+tree_done_node_worker(void *ctx_)
+{
+	struct subtree_ctx *ctx = ctx_;
+	char *str = coord2str(ctx->n->coord, ctx->t->board);
+
+	unsigned long tree_size = tree_done_node(ctx->t, ctx->n);
+	if (!tree_size)
+		free(ctx->t);
+	if (DEBUGL(0)) // jlg: 0->3
+		fprintf(stderr, "done freeing node at %s, tree size %lu\n", str, tree_size);
+	free(str);
+	free(ctx);
+	return NULL;
+}
+
+/* Asynchronously free the subtree of nodes rooted at n. If the tree becomes
+ * empty free the tree also. */
+static void
+tree_done_node_detached(struct tree *t, struct tree_node *n)
+{
+	if (n->u.playouts < 1000) { // no thread for small tree
+		if (!tree_done_node(t, n))
+			free(t);
+		return;
+	}
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	pthread_t thread;
+	struct subtree_ctx *ctx = malloc(sizeof(struct subtree_ctx));
+	if (!ctx) {
+		fprintf(stderr, "tree_done_node_detached(): OUT OF MEMORY\n");
+		exit(1);
+	}
+	ctx->t = t;
+	ctx->n = n;
+	pthread_create(&thread, &attr, tree_done_node_worker, ctx);
+	pthread_attr_destroy(&attr);
 }
 
 void
 tree_done(struct tree *t)
 {
-	tree_done_node(t, t->root);
 	if (t->chchvals) free(t->chchvals);
 	if (t->chvals) free(t->chvals);
-	free(t);
+	if (!tree_done_node(t, t->root))
+	    free(t);
+	/* A tree_done_node_worker might still be running on this tree but
+	 * it will free the tree later. It is also freeing nodes faster than
+	 * we will create new ones. */
 }
 
 
@@ -209,7 +265,6 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 	if (node->amaf.playouts > MAX_PLAYOUTS) {
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
-
 	memcpy(&node->pamaf, &node->amaf, sizeof(node->amaf));
 	memcpy(&node->pu, &node->u, sizeof(node->u));
 
@@ -269,7 +324,6 @@ tree_copy(struct tree *tree)
 	t2->root = tree_node_copy(tree->root);
 	return t2;
 }
-
 
 static void
 tree_node_merge(struct tree_node *dest, struct tree_node *src)
@@ -576,18 +630,13 @@ tree_unlink_node(struct tree_node *node)
 }
 
 void
-tree_delete_node(struct tree *tree, struct tree_node *node)
-{
-	tree_unlink_node(node);
-	tree_done_node(tree, node);
-}
-
-void
 tree_promote_node(struct tree *tree, struct tree_node *node)
 {
 	assert(node->parent == tree->root);
 	tree_unlink_node(node);
-	tree_done_node(tree, tree->root);
+	/* Freeing the rest of the tree can take several seconds on large
+         * trees, so we must do it asynchronously: */
+	tree_done_node_detached(tree, tree->root);
 	tree->root = node;
 	tree->root_color = stone_other(tree->root_color);
 	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);

@@ -43,8 +43,14 @@ static void uct_pondering_stop(struct uct *u);
 #define GJ_MINGAMES	500
 
 /* How often to inspect the tree from the main thread to check for playout
- * stop, progress reports, etc. A (struct timespec) initializer. */
-#define TREE_BUSYWAIT_INTERVAL { .tv_sec = 0, .tv_nsec = 100*1000000 /* 100ms */ }
+ * stop, progress reports, etc. (in seconds) */
+#define TREE_BUSYWAIT_INTERVAL 0.1 /* 100ms */
+
+/* For safety, use at most 3 times the desired time on a single move
+ * in main time, and 1.1 times in byoyomi. */
+#define MAX_MAIN_TIME_EXTENSION 3.0
+#define MAX_BYOYOMI_TIME_EXTENSION 1.1
+
 /* Once per how many simulations (per thread) to show a progress report line. */
 #define TREE_SIMPROGRESS_INTERVAL 10000
 
@@ -424,18 +430,69 @@ uct_search_stop(void)
 }
 
 
-/* Pre-process time_info for search control. */
+/* Search stopping conditions */
+union stop_conditions {
+	struct { // TD_WALLTIME
+		double desired_stop; /* stop at that time if possible */
+		double worst_stop;   /* stop no later than this */
+	} t;
+	struct { // TD_GAMES
+		int desired_playouts;
+		int worst_playouts;
+	} p;
+};
+
+/* Pre-process time_info for search control and sets the desired stopping conditions. */
 static void
-time_prep(struct time_info *ti)
+time_prep(struct time_info *ti, struct uct *u, struct board *b, union stop_conditions *stop)
 {
-	if (ti->period == TT_TOTAL) {
-		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
-		ti->period = TT_NULL;
-	}
+	assert(ti->period != TT_TOTAL);
+
 	if (ti->period == TT_NULL) {
 		ti->period = TT_MOVE;
 		ti->dim = TD_GAMES;
 		ti->len.games = MC_GAMES;
+	}
+	if (ti->dim == TD_GAMES) {
+		stop->p.desired_playouts = ti->len.games;
+		stop->p.worst_playouts = ti->len.games * MAX_MAIN_TIME_EXTENSION;
+	} else {
+		double desired_time = ti->len.t.recommended_time;
+                double worst_time;
+		if (time_in_byoyomi(ti)) {
+			worst_time = desired_time * MAX_BYOYOMI_TIME_EXTENSION;
+			desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION); // make average(desired, worst) == recommended
+		} else {
+			int bsize = (board_size(b)-2)*(board_size(b)-2);
+			int fuseki_end = u->fuseki_end * bsize / 100; // move nb at fuseki end
+			int yose_start = u->yose_start * bsize / 100; // move nb at yose start
+
+			int left_at_yose_start = (b->moves - yose_start) / 2 + board_estimated_moves_left(b);
+			/* /2 because we only consider the moves we have to play ourselves */
+			if (left_at_yose_start < MIN_MOVES_LEFT)
+				left_at_yose_start = MIN_MOVES_LEFT;
+			double longest_time = ti->len.t.max_time / left_at_yose_start;
+			if (longest_time < desired_time) {
+				// Should rarely happen, but keep desired_time anyway
+			} else if (b->moves < fuseki_end) {
+				desired_time += ((longest_time - desired_time) * b->moves) / fuseki_end;
+				/* In this branch fuseki_end can't be 0 */
+			} else if (b->moves < yose_start) {
+				desired_time = longest_time;
+			}
+			worst_time = desired_time * MAX_MAIN_TIME_EXTENSION;
+		}
+		if (worst_time > ti->len.t.max_time)
+			worst_time = ti->len.t.max_time;
+		if (desired_time > worst_time)
+			desired_time = worst_time;
+
+		stop->t.desired_stop = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
+		stop->t.worst_stop = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
+		// Both stop points may be in the past if too much lag.
+
+		if (UDEBUGL(2))
+			fprintf(stderr, "desired time %.02f, worst %.02f\n", desired_time, worst_time);
 	}
 }
 
@@ -443,7 +500,8 @@ time_prep(struct time_info *ti)
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
-	time_prep(ti);
+	union stop_conditions stop;
+	time_prep(ti, u, b, &stop);
 	if (UDEBUGL(2) && u->t->root->u.playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
 
@@ -465,20 +523,18 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * count. However, TM_ROOT just does not deserve any more extra code
 	 * right now. */
 
-	/* Set up the intervals and deadlines. */
-	struct timespec busywait_stop;
-	if (ti->dim == TD_WALLTIME) {
-		clock_gettime(CLOCK_REALTIME, &busywait_stop);
-		assert(ti->period == TT_MOVE);
-		/* TODO: TT_TOTAL - allocate /(5*(board_size(b)-2)) of total time. */
-		time_add(&busywait_stop, &ti->len.walltime);
-		/* TODO: Safety buffer (2s? but depend on available time if too small). */
-	}
-	struct timespec busywait_interval = TREE_BUSYWAIT_INTERVAL;
+	struct tree_node *best = NULL, *prev_best;
+	struct tree_node *winner = NULL, *prev_winner;
+
+	double busywait_interval = TREE_BUSYWAIT_INTERVAL;
 
 	/* Now, just periodically poll the search tree. */
 	while (1) {
-		nanosleep(&busywait_interval, NULL);
+		time_sleep(busywait_interval);
+		/* busywait_interval should never be less than desired time, or the
+		 * time control is broken. But if it happens to be less, we still search
+		 * at least 100ms otherwise the move is completely random. */
+
 		int i = ctx->t->root->u.playouts;
 
 		/* Print progress? */
@@ -493,25 +549,48 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		}
 
 		/* Check against time settings. */
-		bool stop = false;
-		assert(ti->period == TT_MOVE);
-		switch (ti->dim) {
-			case TD_WALLTIME:
-				stop = time_passed(&busywait_stop);
-				break;
-			case TD_GAMES:
-				stop = i > ti->len.games;
-				break;
+		bool desired_done = false;
+		if (ti->dim == TD_WALLTIME) {
+			double now = time_now();
+			if (now > stop.t.worst_stop) break;
+			desired_done = now > stop.t.desired_stop;
+		} else {
+			assert(ti->dim == TD_GAMES);
+			if (i > stop.p.worst_playouts) break;
+			desired_done = i > stop.p.desired_playouts;
 		}
-		if (stop) break;
 
 		/* Early break in won situation. */
-		struct tree_node *best = u->policy->choose(u->policy, ctx->t->root, b, color);
+		prev_best = best;
+		best = u->policy->choose(u->policy, ctx->t->root, b, color);
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
-		/* TODO: Early break if best->variance goes under threshold. */
-		/* TODO: Simulate longer if best of #sims != best of value. */
+
+		if (desired_done) {
+			if (!u->policy->winner || !u->policy->evaluate)
+				break;
+			/* Stop only if best explored has also highest value: */
+			prev_winner = winner;
+			winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
+			if (best && best == winner)
+				break;
+			if (UDEBUGL(3) && (best != prev_best || winner != prev_winner)) {
+				fprintf(stderr, "[%d] best", i);
+				if (best)
+					fprintf(stderr, " %3s [%d] %f", coord2sstr(best->coord, ctx->t->board),
+						best->u.playouts, tree_node_get_value(ctx->t, 1, best->u.value));
+				fprintf(stderr, " != winner");
+				if (winner)
+					fprintf(stderr, " %3s [%d] %f ", coord2sstr(winner->coord, ctx->t->board),
+						winner->u.playouts, tree_node_get_value(ctx->t, 1, winner->u.value));
+				fprintf(stderr, "\n");
+			}
+		}
+
+		/* TODO: Early break if best->variance goes under threshold and we already
+                 * have enough playouts (possibly thanks to book or to pondering). */
+		/* TODO: Early break if second best has no chance to catch up. */
 	}
 
 	ctx = uct_search_stop();
@@ -531,6 +610,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 {
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
+	u->pondering = true;
 
 	/* We need a local board copy to ponder upon. */
 	struct board *b = malloc(sizeof(*b)); board_copy(b, b0);
@@ -548,6 +628,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 static void
 uct_pondering_stop(struct uct *u)
 {
+	u->pondering = false;
 	if (!thread_manager_running)
 		return;
 
@@ -564,6 +645,7 @@ uct_pondering_stop(struct uct *u)
 static coord_t *
 uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
+	double start_time = time_now();
 	struct uct *u = e->data;
 
 	if (b->superko_violation) {
@@ -593,7 +675,12 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
 			tree_node_get_value(u->t, 1, best->u.value),
 			best->u.playouts, u->t->root->u.playouts, played_games);
-	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)) {
+
+	/* Do not resign if we're so short of time that evaluation of best move is completely
+	 * unreliable, we might be winning actually. In this case best is almost random but
+	 * still better than resign. */
+	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)
+	    && best->u.playouts > GJ_MINGAMES) {
 		reset_state(u);
 		return coord_copy(resign);
 	}
@@ -617,8 +704,13 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * Of course this is the case for opponent resign as well.
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */
-	if (u->pondering && !is_pass(best->coord)) {
+	if (u->pondering_opt && !is_pass(best->coord)) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
+	}
+	if (UDEBUGL(2)) {
+		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
+		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
+			time, (int)(played_games/time), (int)(played_games/time/u->threads));
 	}
 	return coord_copy(best->coord);
 }
@@ -676,6 +768,8 @@ uct_state_init(char *arg, struct board *b)
 	u->thread_model = TM_TREEVL;
 	u->parallel_tree = true;
 	u->virtual_loss = true;
+	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
+	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
 
 	u->val_scale = 0.04; u->val_points = 40;
 
@@ -793,7 +887,21 @@ uct_state_init(char *arg, struct board *b)
 				}
 			} else if (!strcasecmp(optname, "pondering")) {
 				/* Keep searching even during opponent's turn. */
-				u->pondering = !optval || atoi(optval);
+				u->pondering_opt = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "fuseki_end") && optval) {
+				/* At the very beginning it's not worth thinking too long because the
+				 * playout evaluations are very noisy. So gradually increase the thinking
+				 * time up to maximum when fuseki_end percent of the board has been played.
+				 * This only applies if we are not in byoyomi. */
+				u->fuseki_end = atoi(optval);
+			} else if (!strcasecmp(optname, "yose_start") && optval) {
+				/* When yose_start percent of the board has been played, or if we are in
+				 * byoyomi, stop spending more time and spread the remaining time uniformly.
+				 * Between fuseki_end and yose_start, we spend on each move a constant
+				 * proportion of the remaining time. (yose_start should actually be much
+				 * earlier than when real yose start, but "yose" is a good short name to
+				 * convey the idea.) */
+				u->yose_start = atoi(optval);
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
