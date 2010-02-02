@@ -140,8 +140,7 @@ uct_prior_init(char *arg, struct board *b)
 {
 	struct uct_prior *p = calloc(1, sizeof(struct uct_prior));
 
-	p->ko_eqex = -2;
-	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = -1;
+	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = -1;
 	p->cfgdn = -1;
 
 	/* Even number! */
@@ -161,6 +160,9 @@ uct_prior_init(char *arg, struct board *b)
 			if (!strcasecmp(optname, "eqex") && optval) {
 				p->eqex = atoi(optval);
 
+			/* In the following settings, you can use -1 to
+			 * set the prior to default eqex, or -2 to set
+			 * it to the half of the default eqex. */
 			} else if (!strcasecmp(optname, "even") && optval) {
 				p->even_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "policy") && optval) {
