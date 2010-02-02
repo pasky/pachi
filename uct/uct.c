@@ -677,7 +677,7 @@ uct_state_init(char *arg, struct board *b)
 	u->parallel_tree = true;
 	u->virtual_loss = true;
 
-	u->val_scale = 0.02; u->val_points = 20;
+	u->val_scale = 0.04; u->val_points = 40;
 
 	if (arg) {
 		char *optspec, *next = arg;
