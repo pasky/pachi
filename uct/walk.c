@@ -192,8 +192,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
 		n = (!u->random_policy_chance || fast_random(u->random_policy_chance))
-			? u->policy->descend(u->policy, &dstate, t, n, parity, pass_limit)
-			: u->random_policy->descend(u->random_policy, &dstater, t, n, parity, pass_limit);
+			? u->policy->descend(u->policy, &dstate, t, n, parity, b->moves > pass_limit)
+			: u->random_policy->descend(u->random_policy, &dstater, t, n, parity, b->moves > pass_limit);
 
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
