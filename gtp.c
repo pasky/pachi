@@ -164,7 +164,9 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		if (DEBUGL(1))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 
-		time_start_timer(&ti[stone_other(m.color)]); // This is where kgs starts our timer, not at coming genmove
+		// This is where kgs starts our timer, not at coming genmove!
+		time_start_timer(&ti[stone_other(m.color)]);
+
 		if (engine->notify_play)
 			reply = engine->notify_play(engine, board, &m);
 		if (board_play(board, &m) < 0) {
@@ -353,7 +355,8 @@ next_group:;
 		if (!strcasecmp(cmd, "kgs-time_settings")) {
 			next_tok(time_system);
 			if (!strcasecmp(time_system, "none")) {
-				byoyomi_time = 1; // time > 0, stones 0 : convention for unlimited
+				// time > 0, stones 0: convention for unlimited
+				byoyomi_time = 1;
 				main_time = 0;
 			} else if (!strcasecmp(time_system, "absolute")) {
 				next_tok(arg);

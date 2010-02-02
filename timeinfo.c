@@ -116,7 +116,7 @@ time_prepare_move(struct time_info *ti, struct board *board)
 		// TODO: keep statistics to get good estimate of lag not just current move
 		ti->len.t.max_time -= lag; // can become < 0, taken into account below
 		ti->len.t.recommended_time -= lag;
-		if (DEBUGL(2) && lag > MAX_NET_LAG)
+		if (DEBUGL(1) && lag > MAX_NET_LAG)
 			fprintf(stderr, "lag %0.2f > max_net_lag %0.2f\n", lag, MAX_NET_LAG);
 	}
 	if (ti->period == TT_TOTAL) {
@@ -146,7 +146,7 @@ time_prepare_move(struct time_info *ti, struct board *board)
 			}
 		}
 		ti->period = TT_MOVE;
-		ti->len.t.recommended_time /= moves_left; // may be < 0 if too much lag
+		ti->len.t.recommended_time /= moves_left;
 	}
 	// To simplify the engine code, do not leave negative times:
 	if (ti->len.t.recommended_time < 0)

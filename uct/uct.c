@@ -456,19 +456,22 @@ time_prep(struct time_info *ti, struct uct *u, struct board *b, union stop_condi
 	if (ti->dim == TD_GAMES) {
 		stop->p.desired_playouts = ti->len.games;
 		stop->p.worst_playouts = ti->len.games * MAX_MAIN_TIME_EXTENSION;
+
 	} else {
 		double desired_time = ti->len.t.recommended_time;
                 double worst_time;
 		if (time_in_byoyomi(ti)) {
+			// make recommended == average(desired, worst)
 			worst_time = desired_time * MAX_BYOYOMI_TIME_EXTENSION;
-			desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION); // make average(desired, worst) == recommended
+			desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
+
 		} else {
 			int bsize = (board_size(b)-2)*(board_size(b)-2);
 			int fuseki_end = u->fuseki_end * bsize / 100; // move nb at fuseki end
 			int yose_start = u->yose_start * bsize / 100; // move nb at yose start
 
 			int left_at_yose_start = (b->moves - yose_start) / 2 + board_estimated_moves_left(b);
-			/* /2 because we only consider the moves we have to play ourselves */
+			// ^- /2 because we only consider the moves we have to play ourselves
 			if (left_at_yose_start < MIN_MOVES_LEFT)
 				left_at_yose_start = MIN_MOVES_LEFT;
 			double longest_time = ti->len.t.max_time / left_at_yose_start;
@@ -889,18 +892,24 @@ uct_state_init(char *arg, struct board *b)
 				/* Keep searching even during opponent's turn. */
 				u->pondering_opt = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "fuseki_end") && optval) {
-				/* At the very beginning it's not worth thinking too long because the
-				 * playout evaluations are very noisy. So gradually increase the thinking
-				 * time up to maximum when fuseki_end percent of the board has been played.
+				/* At the very beginning it's not worth thinking
+				 * too long because the playout evaluations are
+				 * very noisy. So gradually increase the thinking
+				 * time up to maximum when fuseki_end percent
+				 * of the board has been played.
 				 * This only applies if we are not in byoyomi. */
 				u->fuseki_end = atoi(optval);
 			} else if (!strcasecmp(optname, "yose_start") && optval) {
-				/* When yose_start percent of the board has been played, or if we are in
-				 * byoyomi, stop spending more time and spread the remaining time uniformly.
-				 * Between fuseki_end and yose_start, we spend on each move a constant
-				 * proportion of the remaining time. (yose_start should actually be much
-				 * earlier than when real yose start, but "yose" is a good short name to
-				 * convey the idea.) */
+				/* When yose_start percent of the board has been
+				 * played, or if we are in byoyomi, stop spending
+				 * more time and spread the remaining time
+				 * uniformly.
+				 * Between fuseki_end and yose_start, we spend
+				 * a constant proportion of the remaining time
+				 * on each move. (yose_start should actually
+				 * be much earlier than when real yose start,
+				 * but "yose" is a good short name to convey
+				 * the idea.) */
 				u->yose_start = atoi(optval);
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				u->force_seed = atoi(optval);

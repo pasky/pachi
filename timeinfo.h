@@ -27,20 +27,20 @@ struct time_info {
 	union {
 		int games; // TD_GAMES
 		struct {   // TD_WALLTIME
-			/* Recommended wall time for next move or game (seconds). Does not
-			 * include net lag. Play asap if 0. */
+			/* Recommended wall time for next move or game (seconds).
+			 * Does not include net lag. Play asap if 0. */
 			double recommended_time;
 
 			/* Maximum wall time for next move or game. Will lose on time
 			 * if exceeded. Does not include net lag. Play asap if 0. */
 			double max_time;
 
-			/* Minimum net lag (seconds) to be reserved by the engine. The engine
-			 * may use a larger safety margin. */
+			/* Minimum net lag (seconds) to be reserved by the engine.
+			 * The engine may use a larger safety margin. */
 			double net_lag;
 
-			/* Absolute time at which our timer started for current move, 0 if
-			 * not yet known. The engine always sees > 0. */
+			/* Absolute time at which our timer started for current move,
+			 * 0 if not yet known. The engine always sees > 0. */
 			double timer_start;
 
 			/* --- PRIVATE DATA --- */
@@ -63,10 +63,10 @@ struct time_info {
  * Returns false on parse error.  */
 bool time_parse(struct time_info *ti, char *s);
 
-/* Update time settings according to gtp time_settings command: */
+/* Update time settings according to gtp time_settings command. */
 void time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi_stones, int byoyomi_periods);
 
-/* Update time information according to gtp time_left command: */
+/* Update time information according to gtp time_left command. */
 void time_left(struct time_info *ti, int time_left, int stones_left);
 
 /* Start our timer. kgs does this (correctly) on "play" not "genmove"
