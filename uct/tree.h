@@ -1,6 +1,30 @@
 #ifndef ZZGO_UCT_TREE_H
 #define ZZGO_UCT_TREE_H
 
+/* Management of UCT trees. See diagram below for the node structure.
+ *
+ * Two allocation methods are supported for the tree nodes:
+ *
+ * - calloc/free: each node is allocated with one calloc.
+ *   After a move, all nodes except the subtree rooted at
+ *   the played move are freed one by one with free().
+ *   Since this can be very slow (seen 9s and loss on time because
+ *   of this) the nodes are freed in a background thread.
+ *   We still reserve enough memory for the next move in case
+ *   the background thread doesn't free nodes fast enough.
+ *
+ * - fast_alloc: a large buffer is allocated once, and each
+ *   node allocation takes some of this buffer. After a move
+ *   is played, no memory if freed if the buffer still has
+ *   enough free space. Otherwise the subtree rooted at the
+ *   played move is copied to a temporary buffer, pruning it
+ *   if necessary to fit in this small buffer. We copy by
+ *   preference nodes with largest number of playouts.
+ *   Then the temporary buffer is copied back to the original
+ *   buffer, which has now plenty of space.
+ *   Once the fast_alloc mode is proven reliable, the
+ *   calloc/free method will be removed. */
+
 #include <stdbool.h>
 #include <pthread.h>
 #include "move.h"
@@ -70,9 +94,12 @@ struct tree {
 	// Statistics
 	int max_depth;
 	volatile unsigned long nodes_size; // byte size of all allocated nodes
+	unsigned long max_tree_size; // maximum byte size for entire tree, > 0 only for fast_alloc
+	void *nodes; // nodes buffer, only for fast_alloc
 };
 
-struct tree *tree_init(struct board *board, enum stone color);
+/* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
+struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size);
 void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
@@ -81,9 +108,8 @@ struct tree *tree_copy(struct tree *tree);
 void tree_merge(struct tree *dest, struct tree *src);
 void tree_normalize(struct tree *tree, int factor);
 
-/* Warning: All these functions are THREAD-UNSAFE! */
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity);
-void tree_promote_node(struct tree *tree, struct tree_node *node);
+void tree_promote_node(struct tree *tree, struct tree_node **node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 
 static bool tree_leaf_node(struct tree_node *node);

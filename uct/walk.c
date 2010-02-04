@@ -93,9 +93,11 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 
 	/* If we don't anticipate well the opponent move during pondering
 	 * (the played move has few playouts) we still need more memory
-         * during genmove to explore the tree actually played. */
+         * during genmove to explore the tree actually played.
+	 * For fast_alloc, the tree compaction will free enough memory
+	 * immediately. */
 	unsigned long max_tree_size = u->max_tree_size;
-	if (u->pondering)
+	if (u->pondering && !u->fast_alloc)
 		max_tree_size = (max_tree_size * (100 - MIN_FREE_MEM_PERCENT)) / 100;
 
 	/* We need to make sure only one thread expands the node. If

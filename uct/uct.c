@@ -58,7 +58,7 @@ static void uct_pondering_stop(struct uct *u);
 static void
 setup_state(struct uct *u, struct board *b, enum stone color)
 {
-	u->t = tree_init(b, color);
+	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size: 0);
 	if (u->force_seed)
 		fast_srandom(u->force_seed);
 	if (UDEBUGL(0))
@@ -701,7 +701,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		}
 	}
 
-	tree_promote_node(u->t, best);
+	tree_promote_node(u->t, &best);
 	/* After a pass, pondering is harmful for two reasons:
 	 * (i) We might keep pondering even when the game is over.
 	 * Of course this is the case for opponent resign as well.
@@ -741,7 +741,8 @@ uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 void
 uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
-	struct tree *t = tree_init(b, color);
+	struct uct *u = e->data;
+	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size: 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -985,6 +986,11 @@ uct_state_init(char *arg, struct board *b)
 
 	if (!!u->random_policy_chance ^ !!u->random_policy) {
 		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
+		exit(1);
+	}
+
+	if (u->fast_alloc && !u->parallel_tree) {
+		fprintf(stderr, "fast_alloc not supported with root parallelization.\n");
 		exit(1);
 	}
 

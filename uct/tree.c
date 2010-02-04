@@ -18,16 +18,40 @@
 #include "uct/tree.h"
 
 
-/* This function may be called by multiple threads in parallel */
+/* Allocate one node in the fast_alloc mode. The returned node
+ * is _not_ initialized. Returns NULL if not enough memory.
+ * This function may be called by multiple threads in parallel. */
+static struct tree_node *
+tree_fast_alloc_node(struct tree *t)
+{
+	assert(t->nodes != NULL);
+	struct tree_node *n = NULL;
+	unsigned long old_size =__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
+
+	if (old_size + sizeof(*n) <= t->max_tree_size)
+		n = (struct tree_node *)(t->nodes + old_size);
+	return n;
+}
+
+/* Allocate and initialize a node. Returns NULL (fast_alloc mode)
+ * or exits the main program if not enough memory.
+ * This function may be called by multiple threads in parallel. */
 static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth)
 {
-	struct tree_node *n = calloc(1, sizeof(*n));
-	if (!n) {
-		fprintf(stderr, "tree_init_node(): OUT OF MEMORY\n");
-		exit(1);
+	struct tree_node *n;
+	if (t->nodes) {
+		n = tree_fast_alloc_node(t);
+		if (!n) return n;
+		memset(n, 0, sizeof(*n));
+	} else {
+		n = calloc(1, sizeof(*n));
+		if (!n) {
+			fprintf(stderr, "tree_init_node(): OUT OF MEMORY\n");
+			exit(1);
+		}
+		__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
 	}
-	__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
 	n->coord = coord;
 	n->depth = depth;
 	volatile static long c = 1000000;
@@ -37,11 +61,24 @@ tree_init_node(struct tree *t, coord_t coord, int depth)
 	return n;
 }
 
+/* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
 struct tree *
-tree_init(struct board *board, enum stone color)
+tree_init(struct board *board, enum stone color, unsigned long max_tree_size)
 {
 	struct tree *t = calloc(1, sizeof(*t));
 	t->board = board;
+	t->max_tree_size = max_tree_size;
+	if (max_tree_size != 0) {
+		/* Allocate one extra node, max_tree_size may not be multiple of node size. */
+		t->nodes = malloc(max_tree_size + sizeof(struct tree_node));
+		/* The nodes buffer doesn't need initialization. This is currently
+		 * done by tree_init_node to spread the load. Doing a memset for the
+		 * entire buffer here would be too slow for large trees (>10 GB). */
+		if (!t->nodes) {
+			fprintf(stderr, "tree_init(): OUT OF MEMORY\n");
+			exit(1);
+		}
+	}
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0);
 	t->root_symmetry = board->symmetry;
@@ -73,7 +110,7 @@ struct subtree_ctx {
 	struct tree_node *n;
 };
 
-/* Worker thread for tree_done_node_detached() */
+/* Worker thread for tree_done_node_detached(). Only for fast_alloc=false. */
 static void *
 tree_done_node_worker(void *ctx_)
 {
@@ -83,7 +120,7 @@ tree_done_node_worker(void *ctx_)
 	unsigned long tree_size = tree_done_node(ctx->t, ctx->n);
 	if (!tree_size)
 		free(ctx->t);
-	if (DEBUGL(0)) // jlg: 0->3
+	if (DEBUGL(2))
 		fprintf(stderr, "done freeing node at %s, tree size %lu\n", str, tree_size);
 	free(str);
 	free(ctx);
@@ -91,7 +128,7 @@ tree_done_node_worker(void *ctx_)
 }
 
 /* Asynchronously free the subtree of nodes rooted at n. If the tree becomes
- * empty free the tree also. */
+ * empty free the tree also.  Only for fast_alloc=false. */
 static void
 tree_done_node_detached(struct tree *t, struct tree_node *n)
 {
@@ -121,11 +158,15 @@ tree_done(struct tree *t)
 {
 	if (t->chchvals) free(t->chchvals);
 	if (t->chvals) free(t->chvals);
-	if (!tree_done_node(t, t->root))
-	    free(t);
-	/* A tree_done_node_worker might still be running on this tree but
-	 * it will free the tree later. It is also freeing nodes faster than
-	 * we will create new ones. */
+	if (t->nodes) {
+		free(t->nodes);
+		free(t);
+	} else if (!tree_done_node(t, t->root)) {
+		free(t);
+		/* A tree_done_node_worker might still be running on this tree but
+		 * it will free the tree later. It is also freeing nodes faster than
+		 * we will create new ones. */
+	}
 }
 
 
@@ -319,11 +360,88 @@ tree_node_copy(struct tree_node *node)
 struct tree *
 tree_copy(struct tree *tree)
 {
+	assert(!tree->nodes);
 	struct tree *t2 = malloc(sizeof(*t2));
 	*t2 = *tree;
 	t2->root = tree_node_copy(tree->root);
 	return t2;
 }
+
+/* Copy the subtree rooted at node, discarding nodes with less
+ * than min_playouts or more than max_playouts, until dest is
+ * full or we have copied all the subtree. Only for fast_alloc.
+ * The code is destructive on src, and the order of nodes is changed.
+ * Returns the copy of node in the destination tree, or NULL
+ * if we could not copy it. */
+static struct tree_node *
+tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
+	   int min_playouts, int max_playouts)
+{
+	assert(dest->nodes && node);
+	if (node->u.playouts < min_playouts || dest->nodes_size >= dest->max_tree_size)
+		return NULL;
+	struct tree_node *n2;
+	if (node->u.playouts > max_playouts) {
+		/* Node already copied but we must recurse on the children.
+		 * Here node->parent is the node copy. */
+		n2 = node->parent;
+		assert(n2 && n2->hash == node->hash);
+	} else {
+		n2 = tree_fast_alloc_node(dest);
+		assert(n2);
+		*n2 = *node;
+		if (n2->depth > dest->max_depth)
+			dest->max_depth = n2->depth;
+		n2->children = NULL;
+		n2->is_expanded = false;
+		// Misuse the parent field to remember the copy for future passses:
+		node->parent = n2;
+	}
+	struct tree_node *ni = node->children;
+	while (ni) {
+		struct tree_node *ni2 = tree_prune(dest, src, ni, min_playouts, max_playouts);
+		if (ni2 && ni2->u.playouts <= max_playouts) {
+			ni2->sibling = n2->children;
+			n2->children = ni2;
+			n2->is_expanded = true;
+			ni2->parent = n2;
+		}
+		ni = ni->sibling;
+	}
+	return n2;
+}
+
+/* Free all the tree, keeping only the subtree rooted at node.
+ * Prune the subtree if necessary to fit in max_size bytes.
+ * Returns the moved node. Only for fast_alloc. */
+static struct tree_node *
+tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node *node)
+{
+	assert(tree->nodes && !node->parent && !node->sibling);
+	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size);
+        struct tree_node *temp_node;
+	/* Copy the best (most played) nodes first. */
+	int min_playouts = node->u.playouts;
+	int max_playouts = min_playouts;
+	do {
+		temp_node = tree_prune(temp_tree, tree, node, min_playouts, max_playouts);
+		max_playouts = min_playouts - 1;
+		min_playouts /= 2;
+	} while (max_playouts >= 0 && temp_tree->nodes_size < temp_tree->max_tree_size);
+
+	if (DEBUGL(1))
+		fprintf(stderr, "tree pruned, max_size %lu, pruned size %lu, min_playouts %d\n",
+			max_size, temp_tree->nodes_size, max_playouts+1);
+
+	/* Now copy back to original tree. */
+	tree->nodes_size = 0;
+	tree->max_depth = 0;
+	assert(temp_node);
+	struct tree_node *new_node = tree_prune(tree, temp_tree, temp_node, 0, temp_node->u.playouts);
+	tree_done(temp_tree);
+	return new_node;
+}
+
 
 static void
 tree_node_merge(struct tree_node *dest, struct tree_node *src)
@@ -391,6 +509,9 @@ next_di:
 void
 tree_merge(struct tree *dest, struct tree *src)
 {
+	/* Not suitable for fast_alloc which reorders children. */
+	assert(!dest->nodes);
+
 	if (src->max_depth > dest->max_depth)
 		dest->max_depth = src->max_depth;
 	tree_node_merge(dest->root, src->root);
@@ -430,6 +551,7 @@ tree_normalize(struct tree *tree, int factor)
  * guidelines here. */
 
 
+/* This function must be thread safe, given that board b is only modified by the calling thread. */
 void
 tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity)
 {
@@ -468,6 +590,12 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 
 	/* Now, create the nodes. */
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
+	/* In fast_alloc mode we might temporarily run out of nodes but
+	 * this should be rare if MIN_FREE_MEM_PERCENT is set correctly. */
+	if (!ni) {
+		node->is_expanded = false;
+		return;
+	}
 	struct tree_node *first_child = ni;
 	ni->parent = node;
 	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
@@ -497,6 +625,10 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			assert(c != node->coord); // I have spotted "C3 C3" in some sequence...
 
 			struct tree_node *nj = tree_init_node(t, c, node->depth + 1);
+			if (!nj) {
+				node->is_expanded = false;
+				return;
+			}
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			ni->prior = map.prior[c];
@@ -591,18 +723,30 @@ tree_unlink_node(struct tree_node *node)
 	node->parent = NULL;
 }
 
+/* Promotes the given node as the root of the tree. In the fast_alloc
+ * mode, the node may be moved and some of its subtree may be pruned. */
 void
-tree_promote_node(struct tree *tree, struct tree_node *node)
+tree_promote_node(struct tree *tree, struct tree_node **node)
 {
-	assert(node->parent == tree->root);
-	tree_unlink_node(node);
-	/* Freeing the rest of the tree can take several seconds on large
-         * trees, so we must do it asynchronously: */
-	tree_done_node_detached(tree, tree->root);
-	tree->root = node;
+	assert((*node)->parent == tree->root);
+	tree_unlink_node(*node);
+	if (!tree->nodes) {
+		/* Freeing the rest of the tree can take several seconds on large
+		 * trees, so we must do it asynchronously: */
+		tree_done_node_detached(tree, tree->root);
+	} else {
+		unsigned long min_free_size = (MIN_FREE_MEM_PERCENT * tree->max_tree_size) / 100;
+		if (tree->nodes_size >= tree->max_tree_size - min_free_size)
+			*node = tree_garbage_collect(tree, min_free_size, *node);
+		/* If we still have enough free memory, we will free everything later. */
+	}
+	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);
-	board_symmetry_update(tree->board, &tree->root_symmetry, node->coord);
-	tree->max_depth--;
+	board_symmetry_update(tree->board, &tree->root_symmetry, (*node)->coord);
+	/* If the tree deepest node was under node, or if we called tree_garbage_collect,
+	 * tree->max_depth is correct. Otherwise we could traverse the tree
+         * to recompute max_depth but it's not worth it: it's just for debugging
+	 * and soon the tree will grow and max_depth will become correct again. */
 	if (tree->chchvals) { free(tree->chchvals); tree->chchvals = NULL; }
 	if (tree->chvals) { free(tree->chvals); tree->chvals = NULL; }
 }
@@ -614,7 +758,7 @@ tree_promote_at(struct tree *tree, struct board *b, coord_t c)
 
 	for (struct tree_node *ni = tree->root->children; ni; ni = ni->sibling) {
 		if (ni->coord == c) {
-			tree_promote_node(tree, ni);
+			tree_promote_node(tree, &ni);
 			return true;
 		}
 	}

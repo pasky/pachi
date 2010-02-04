@@ -30,6 +30,7 @@ struct uct {
 	int dumpthres;
 	int force_seed;
 	bool no_book;
+	bool fast_alloc;
 	unsigned long max_tree_size;
 	int mercymin;
 
