@@ -19,9 +19,6 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 
-/*Fill at most 90% of the tree when pondering: */
-#define PONDERING_MAX_MEM_PERCENT 90
-
 float
 uct_get_extra_komi(struct uct *u, struct board *b)
 {
@@ -94,9 +91,12 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	enum stone next_color = stone_other(node_color);
 	int parity = (next_color == player_color ? 1 : -1);
 
+	/* If we don't anticipate well the opponent move during pondering
+	 * (the played move has few playouts) we still need more memory
+         * during genmove to explore the tree actually played. */
 	unsigned long max_tree_size = u->max_tree_size;
 	if (u->pondering)
-		max_tree_size = (max_tree_size * PONDERING_MAX_MEM_PERCENT) / 100;
+		max_tree_size = (max_tree_size * (100 - MIN_FREE_MEM_PERCENT)) / 100;
 
 	/* We need to make sure only one thread expands the node. If
 	 * we are unlucky enough for two threads to meet in the same

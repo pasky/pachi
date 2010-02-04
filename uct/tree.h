@@ -103,4 +103,7 @@ tree_leaf_node(struct tree_node *node)
 	return !(node->children);
 }
 
+/* Leave always at least 10% memory free for the next move: */
+#define MIN_FREE_MEM_PERCENT 10
+
 #endif
