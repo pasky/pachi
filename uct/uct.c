@@ -455,7 +455,9 @@ time_prep(struct time_info *ti, struct uct *u, struct board *b, union stop_condi
 	}
 	if (ti->dim == TD_GAMES) {
 		stop->p.desired_playouts = ti->len.games;
-		stop->p.worst_playouts = ti->len.games * MAX_MAIN_TIME_EXTENSION;
+		/* We force worst == desired, so note that we will not loop
+		 * until best == winner. */
+		stop->p.worst_playouts = ti->len.games;
 
 	} else {
 		double desired_time = ti->len.t.recommended_time;
