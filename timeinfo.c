@@ -119,10 +119,10 @@ time_prepare_move(struct time_info *ti, struct board *board)
 			fprintf(stderr, "lag %0.2f > max_net_lag %0.2f\n", lag, MAX_NET_LAG);
 	}
 	if (ti->period == TT_TOTAL) {
-		/* For non-canadian byoyomi, we use all periods as main time, just making sure
-		 * to avoid running out of the last one. */
-		if (ti->len.t.byoyomi_periods > 1) {
-			ti->len.t.max_time += (ti->len.t.byoyomi_periods - 1) * ti->len.t.byoyomi_time;
+		/* For non-canadian byoyomi with N>1 periods, we use N-1 periods as main time,
+                 * keeping the last one as insurance against unexpected net lag. */
+		if (ti->len.t.byoyomi_periods > 2) {
+			ti->len.t.max_time += (ti->len.t.byoyomi_periods - 2) * ti->len.t.byoyomi_time;
 			// Will add 1 more byoyomi_time just below
 		}
 		if (ti->len.t.byoyomi_time > 0) {
@@ -132,7 +132,7 @@ time_prepare_move(struct time_info *ti, struct board *board)
 			/* Maximize the number of moves played uniformly in main time, while
 			 * not playing faster in main time than in byoyomi. At this point,
 			 * the main time remaining is ti->len.t.max_time and already includes
-			 * the first (canadian) or all byoyomi periods.
+			 * the first (canadian) or N-1 byoyomi periods.
 			 *    main_speed = max_time / main_moves >= byoyomi_time
                          * => main_moves <= max_time / byoyomi_time */
 			double actual_byoyomi = ti->len.t.byoyomi_time - MAX_NET_LAG;
