@@ -424,44 +424,6 @@ tree_normalize(struct tree *tree, int factor)
 }
 
 
-/* Get a node of given coordinate from within parent, possibly creating it
- * if necessary - in a very raw form (no .d, priors, ...). */
-/* FIXME: Adjust for board symmetry. */
-struct tree_node *
-tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
-{
-	if (!parent->children || parent->children->coord >= c) {
-		/* Special case: Insertion at the beginning. */
-		if (parent->children && parent->children->coord == c)
-			return parent->children;
-		if (!create)
-			return NULL;
-
-		struct tree_node *nn = tree_init_node(t, c, parent->depth + 1);
-		nn->parent = parent; nn->sibling = parent->children;
-		parent->children = nn;
-		return nn;
-	}
-
-	/* No candidate at the beginning, look through all the children. */
-
-	struct tree_node *ni;
-	for (ni = parent->children; ni->sibling; ni = ni->sibling)
-		if (ni->sibling->coord >= c)
-			break;
-
-	if (ni->sibling && ni->sibling->coord == c)
-		return ni->sibling;
-	assert(ni->coord < c);
-	if (!create)
-		return NULL;
-
-	struct tree_node *nn = tree_init_node(t, c, parent->depth + 1);
-	nn->parent = parent; nn->sibling = ni->sibling; ni->sibling = nn;
-	return nn;
-}
-
-
 /* Tree symmetry: When possible, we will localize the tree to a single part
  * of the board in tree_expand_node() and possibly flip along symmetry axes
  * to another part of the board in tree_promote_at(). We follow b->symmetry
