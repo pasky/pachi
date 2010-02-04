@@ -74,8 +74,7 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 		ti->len.t.byoyomi_periods = stones_left; // field misused by kgs
 		stones_left = 1;
 	}
-	/* For non-canadian byoyomi, we use all periods as main time. */
-	if (stones_left == 0 || ti->len.t.byoyomi_periods > 1) {
+	if (stones_left == 0) {
 		/* Main time */
 		ti->period = TT_TOTAL;
 		ti->len.t.recommended_time = ti->len.t.max_time;
