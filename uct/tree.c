@@ -28,7 +28,10 @@ tree_fast_alloc_node(struct tree *t)
 	struct tree_node *n = NULL;
 	unsigned long old_size =__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
 
-	if (old_size + sizeof(*n) <= t->max_tree_size)
+	/* The test below works even if max_tree_size is not a
+	 * multiple of the node size because tree_init() allocates
+	 * space for an extra node. */
+	if (old_size < t->max_tree_size)
 		n = (struct tree_node *)(t->nodes + old_size);
 	return n;
 }
