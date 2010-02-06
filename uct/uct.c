@@ -431,20 +431,22 @@ uct_search_stop(void)
 
 
 /* Search stopping conditions */
-union stop_conditions {
-	struct { // TD_WALLTIME
-		double desired_stop; /* stop at that time if possible */
-		double worst_stop;   /* stop no later than this */
-	} t;
-	struct { // TD_GAMES
-		int desired_playouts;
-		int worst_playouts;
-	} p;
+struct time_stop {
+	/* stop at that time if possible */
+	union {
+		double time; // TD_WALLTIME
+		int playouts; // TD_GAMES
+	} desired;
+	/* stop no later than this */
+	union {
+		double time; // TD_WALLTIME
+		int playouts; // TD_GAMES
+	} worst;
 };
 
 /* Pre-process time_info for search control and sets the desired stopping conditions. */
 static void
-time_prep(struct time_info *ti, struct uct *u, struct board *b, union stop_conditions *stop)
+time_prep(struct time_info *ti, struct uct *u, struct board *b, struct time_stop *stop)
 {
 	assert(ti->period != TT_TOTAL);
 
@@ -454,10 +456,10 @@ time_prep(struct time_info *ti, struct uct *u, struct board *b, union stop_condi
 		ti->len.games = MC_GAMES;
 	}
 	if (ti->dim == TD_GAMES) {
-		stop->p.desired_playouts = ti->len.games;
+		stop->desired.playouts = ti->len.games;
 		/* We force worst == desired, so note that we will not loop
 		 * until best == winner. */
-		stop->p.worst_playouts = ti->len.games;
+		stop->worst.playouts = ti->len.games;
 
 	} else {
 		double desired_time = ti->len.t.recommended_time;
@@ -492,8 +494,8 @@ time_prep(struct time_info *ti, struct uct *u, struct board *b, union stop_condi
 		if (desired_time > worst_time)
 			desired_time = worst_time;
 
-		stop->t.desired_stop = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
-		stop->t.worst_stop = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
+		stop->desired.time = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
+		stop->worst.time = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
 		// Both stop points may be in the past if too much lag.
 
 		if (UDEBUGL(2))
@@ -505,7 +507,7 @@ time_prep(struct time_info *ti, struct uct *u, struct board *b, union stop_condi
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
-	union stop_conditions stop;
+	struct time_stop stop;
 	time_prep(ti, u, b, &stop);
 	if (UDEBUGL(2) && u->t->root->u.playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
@@ -557,12 +559,12 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		bool desired_done = false;
 		if (ti->dim == TD_WALLTIME) {
 			double now = time_now();
-			if (now > stop.t.worst_stop) break;
-			desired_done = now > stop.t.desired_stop;
+			if (now > stop.worst.time) break;
+			desired_done = now > stop.desired.time;
 		} else {
 			assert(ti->dim == TD_GAMES);
-			if (i > stop.p.worst_playouts) break;
-			desired_done = i > stop.p.desired_playouts;
+			if (i > stop.worst.playouts) break;
+			desired_done = i > stop.desired.playouts;
 		}
 
 		/* Early break in won situation. */
