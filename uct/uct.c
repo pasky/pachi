@@ -35,6 +35,11 @@ static void uct_pondering_stop(struct uct *u);
  * Note that this is now in total over all threads! (Unless TM_ROOT.) */
 #define MC_GAMES	80000
 #define MC_GAMELEN	MAX_GAMELEN
+static const struct time_info default_ti = {
+	.period = TT_MOVE,
+	.dim = TD_GAMES,
+	.len = { .games = MC_GAMES },
+};
 
 /* How big proportion of ownermap counts must be of one color to consider
  * the point sure. */
@@ -45,11 +50,6 @@ static void uct_pondering_stop(struct uct *u);
 /* How often to inspect the tree from the main thread to check for playout
  * stop, progress reports, etc. (in seconds) */
 #define TREE_BUSYWAIT_INTERVAL 0.1 /* 100ms */
-
-/* For safety, use at most 3 times the desired time on a single move
- * in main time, and 1.1 times in byoyomi. */
-#define MAX_MAIN_TIME_EXTENSION 3.0
-#define MAX_BYOYOMI_TIME_EXTENSION 1.1
 
 /* Once per how many simulations (per thread) to show a progress report line. */
 #define TREE_SIMPROGRESS_INTERVAL 10000
@@ -430,87 +430,17 @@ uct_search_stop(void)
 }
 
 
-/* Search stopping conditions */
-struct time_stop {
-	/* stop at that time if possible */
-	union {
-		double time; // TD_WALLTIME
-		int playouts; // TD_GAMES
-	} desired;
-	/* stop no later than this */
-	union {
-		double time; // TD_WALLTIME
-		int playouts; // TD_GAMES
-	} worst;
-};
-
-/* Pre-process time_info for search control and sets the desired stopping conditions. */
-static void
-time_prep(struct time_info *ti, struct uct *u, struct board *b, struct time_stop *stop)
-{
-	assert(ti->period != TT_TOTAL);
-
-	if (ti->period == TT_NULL) {
-		ti->period = TT_MOVE;
-		ti->dim = TD_GAMES;
-		ti->len.games = MC_GAMES;
-	}
-	if (ti->dim == TD_GAMES) {
-		stop->desired.playouts = ti->len.games;
-		/* We force worst == desired, so note that we will not loop
-		 * until best == winner. */
-		stop->worst.playouts = ti->len.games;
-
-	} else {
-		double desired_time = ti->len.t.recommended_time;
-                double worst_time;
-		if (time_in_byoyomi(ti)) {
-			// make recommended == average(desired, worst)
-			worst_time = desired_time * MAX_BYOYOMI_TIME_EXTENSION;
-			desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
-
-		} else {
-			int bsize = (board_size(b)-2)*(board_size(b)-2);
-			int fuseki_end = u->fuseki_end * bsize / 100; // move nb at fuseki end
-			int yose_start = u->yose_start * bsize / 100; // move nb at yose start
-
-			int left_at_yose_start = (b->moves - yose_start) / 2 + board_estimated_moves_left(b);
-			// ^- /2 because we only consider the moves we have to play ourselves
-			if (left_at_yose_start < MIN_MOVES_LEFT)
-				left_at_yose_start = MIN_MOVES_LEFT;
-			double longest_time = ti->len.t.max_time / left_at_yose_start;
-			if (longest_time < desired_time) {
-				// Should rarely happen, but keep desired_time anyway
-			} else if (b->moves < fuseki_end) {
-				desired_time += ((longest_time - desired_time) * b->moves) / fuseki_end;
-				/* In this branch fuseki_end can't be 0 */
-			} else if (b->moves < yose_start) {
-				desired_time = longest_time;
-			}
-			worst_time = desired_time * MAX_MAIN_TIME_EXTENSION;
-		}
-		if (worst_time > ti->len.t.max_time)
-			worst_time = ti->len.t.max_time;
-		if (desired_time > worst_time)
-			desired_time = worst_time;
-
-		stop->desired.time = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
-		stop->worst.time = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
-		// Both stop points may be in the past if too much lag.
-
-		if (UDEBUGL(2))
-			fprintf(stderr, "desired time %.02f, worst %.02f\n", desired_time, worst_time);
-	}
-}
-
 /* Run time-limited MCTS search on foreground. */
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
-	struct time_stop stop;
-	time_prep(ti, u, b, &stop);
 	if (UDEBUGL(2) && u->t->root->u.playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
+
+	/* Set up time conditions. */
+	if (ti->period == TT_NULL) *ti = default_ti;
+	struct time_stop stop;
+	time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &stop);
 
 	/* Number of last game with progress print. */
 	int last_print = t->root->u.playouts;

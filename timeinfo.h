@@ -88,4 +88,24 @@ double time_now(void);
 /* Sleep for a given interval (in seconds). Return immediately if interval < 0. */
 void time_sleep(double interval);
 
+
+/* Based on existing time information, compute the optimal/maximal time
+ * to be spent on this move. */
+
+struct time_stop {
+	/* stop at that time if possible */
+	union {
+		double time; // TD_WALLTIME
+		int playouts; // TD_GAMES
+	} desired;
+	/* stop no later than this */
+	union {
+		double time; // TD_WALLTIME
+		int playouts; // TD_GAMES
+	} worst;
+};
+
+/* fuseki_end and yose_start are percentages of expected game length. */
+void time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop);
+
 #endif

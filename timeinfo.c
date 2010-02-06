@@ -13,6 +13,11 @@
 #define MAX_NET_LAG 2.0 /* Max net lag in seconds. TODO: estimate dynamically. */
 #define RESERVED_BYOYOMI_PERCENT 15 /* Reserve 15% of byoyomi time as safety margin if risk of losing on time */
 
+/* For safety, use at most 3 times the desired time on a single move
+ * in main time, and 1.1 times in byoyomi. */
+#define MAX_MAIN_TIME_EXTENSION 3.0
+#define MAX_BYOYOMI_TIME_EXTENSION 1.1
+
 bool
 time_parse(struct time_info *ti, char *s)
 {
@@ -204,4 +209,59 @@ time_sleep(double interval)
 	ts.tv_nsec = (int)(modf(interval, &sec)*1000000000.0);
         ts.tv_sec = (int)sec;
 	nanosleep(&ts, NULL); /* ignore error if interval was < 0 */
+}
+
+
+/* Pre-process time_info for search control and sets the desired stopping conditions. */
+void
+time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
+{
+	assert(ti->period == TT_MOVE);
+
+	if (ti->dim == TD_GAMES) {
+		stop->desired.playouts = ti->len.games;
+		/* We force worst == desired, so note that we will not loop
+		 * until best == winner. */
+		stop->worst.playouts = ti->len.games;
+
+	} else {
+		double desired_time = ti->len.t.recommended_time;
+                double worst_time;
+		if (time_in_byoyomi(ti)) {
+			// make recommended == average(desired, worst)
+			worst_time = desired_time * MAX_BYOYOMI_TIME_EXTENSION;
+			desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
+
+		} else {
+			int bsize = (board_size(b)-2)*(board_size(b)-2);
+			fuseki_end = fuseki_end * bsize / 100; // move nb at fuseki end
+			yose_start = yose_start * bsize / 100; // move nb at yose start
+
+			int left_at_yose_start = (b->moves - yose_start) / 2 + board_estimated_moves_left(b);
+			// ^- /2 because we only consider the moves we have to play ourselves
+			if (left_at_yose_start < MIN_MOVES_LEFT)
+				left_at_yose_start = MIN_MOVES_LEFT;
+			double longest_time = ti->len.t.max_time / left_at_yose_start;
+			if (longest_time < desired_time) {
+				// Should rarely happen, but keep desired_time anyway
+			} else if (b->moves < fuseki_end) {
+				desired_time += ((longest_time - desired_time) * b->moves) / fuseki_end;
+				/* In this branch fuseki_end can't be 0 */
+			} else if (b->moves < yose_start) {
+				desired_time = longest_time;
+			}
+			worst_time = desired_time * MAX_MAIN_TIME_EXTENSION;
+		}
+		if (worst_time > ti->len.t.max_time)
+			worst_time = ti->len.t.max_time;
+		if (desired_time > worst_time)
+			desired_time = worst_time;
+
+		stop->desired.time = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
+		stop->worst.time = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
+		// Both stop points may be in the past if too much lag.
+
+		if (DEBUGL(2))
+			fprintf(stderr, "desired time %.02f, worst %.02f\n", desired_time, worst_time);
+	}
 }
