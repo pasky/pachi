@@ -124,13 +124,13 @@ time_prepare_move(struct time_info *ti, struct board *board)
 			fprintf(stderr, "lag %0.2f > max_net_lag %0.2f\n", lag, MAX_NET_LAG);
 	}
 	if (ti->period == TT_TOTAL) {
-		/* For non-canadian byoyomi with N>1 periods, we use N-1 periods as main time,
-                 * keeping the last one as insurance against unexpected net lag. */
-		if (ti->len.t.byoyomi_periods > 2) {
-			ti->len.t.max_time += (ti->len.t.byoyomi_periods - 2) * ti->len.t.byoyomi_time;
-			// Will add 1 more byoyomi_time just below
-		}
 		if (ti->len.t.byoyomi_time > 0) {
+			/* For non-canadian byoyomi with N>1 periods, we use N-1 periods as main time,
+			 * keeping the last one as insurance against unexpected net lag. */
+			if (ti->len.t.byoyomi_periods > 2) {
+				ti->len.t.max_time += (ti->len.t.byoyomi_periods - 2) * ti->len.t.byoyomi_time;
+				// Will add 1 more byoyomi_time just below
+			}
 			ti->len.t.max_time += ti->len.t.byoyomi_time;
 			ti->len.t.recommended_time = ti->len.t.max_time;
 
