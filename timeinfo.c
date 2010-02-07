@@ -223,50 +223,50 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		/* We force worst == desired, so note that we will not loop
 		 * until best == winner. */
 		stop->worst.playouts = ti->len.games;
+		return;
+	}
+
+	double desired_time = ti->len.t.recommended_time;
+        double worst_time;
+	if (time_in_byoyomi(ti)) {
+		// make recommended == average(desired, worst)
+		worst_time = desired_time * MAX_BYOYOMI_TIME_EXTENSION;
+		desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
 
 	} else {
-		double desired_time = ti->len.t.recommended_time;
-                double worst_time;
-		if (time_in_byoyomi(ti)) {
-			// make recommended == average(desired, worst)
-			worst_time = desired_time * MAX_BYOYOMI_TIME_EXTENSION;
-			desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
+		int bsize = (board_size(b)-2)*(board_size(b)-2);
+		fuseki_end = fuseki_end * bsize / 100; // move nb at fuseki end
+		yose_start = yose_start * bsize / 100; // move nb at yose start
+		assert(fuseki_end < yose_start);
 
-		} else {
-			int bsize = (board_size(b)-2)*(board_size(b)-2);
-			fuseki_end = fuseki_end * bsize / 100; // move nb at fuseki end
-			yose_start = yose_start * bsize / 100; // move nb at yose start
-			assert(fuseki_end < yose_start);
-
-			/* Before yose, spend some extra. */
-			if (b->moves < yose_start) {
-				int moves_to_yose = (yose_start - b->moves) / 2;
-				// ^- /2 because we only consider the moves we have to play ourselves
-				int left_at_yose_start = board_estimated_moves_left(b) - moves_to_yose;
-				if (left_at_yose_start < MIN_MOVES_LEFT)
-					left_at_yose_start = MIN_MOVES_LEFT;
-				double longest_time = ti->len.t.max_time / left_at_yose_start;
-				if (longest_time < desired_time) {
-					// Should rarely happen, but keep desired_time anyway
-				} else if (b->moves < fuseki_end) {
-					assert(fuseki_end > 0);
-					desired_time += ((longest_time - desired_time) * b->moves) / fuseki_end;
-				} else { assert(b->moves < yose_start);
-					desired_time = longest_time;
-				}
+		/* Before yose, spend some extra. */
+		if (b->moves < yose_start) {
+			int moves_to_yose = (yose_start - b->moves) / 2;
+			// ^- /2 because we only consider the moves we have to play ourselves
+			int left_at_yose_start = board_estimated_moves_left(b) - moves_to_yose;
+			if (left_at_yose_start < MIN_MOVES_LEFT)
+				left_at_yose_start = MIN_MOVES_LEFT;
+			double longest_time = ti->len.t.max_time / left_at_yose_start;
+			if (longest_time < desired_time) {
+				// Should rarely happen, but keep desired_time anyway
+			} else if (b->moves < fuseki_end) {
+				assert(fuseki_end > 0);
+				desired_time += ((longest_time - desired_time) * b->moves) / fuseki_end;
+			} else { assert(b->moves < yose_start);
+				desired_time = longest_time;
 			}
-			worst_time = desired_time * MAX_MAIN_TIME_EXTENSION;
 		}
-		if (worst_time > ti->len.t.max_time)
-			worst_time = ti->len.t.max_time;
-		if (desired_time > worst_time)
-			desired_time = worst_time;
-
-		stop->desired.time = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
-		stop->worst.time = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
-		// Both stop points may be in the past if too much lag.
-
-		if (DEBUGL(2))
-			fprintf(stderr, "desired time %.02f, worst %.02f\n", desired_time, worst_time);
+		worst_time = desired_time * MAX_MAIN_TIME_EXTENSION;
 	}
+	if (worst_time > ti->len.t.max_time)
+		worst_time = ti->len.t.max_time;
+	if (desired_time > worst_time)
+		desired_time = worst_time;
+
+	stop->desired.time = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
+	stop->worst.time = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
+	// Both stop points may be in the past if too much lag.
+
+	if (DEBUGL(2))
+		fprintf(stderr, "desired time %.02f, worst %.02f\n", desired_time, worst_time);
 }
