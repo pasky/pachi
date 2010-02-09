@@ -78,12 +78,19 @@ is_ladder(struct board *b, coord_t coord, group_t laddered,
 	 * of ladders we actually meet and want to play. */
 	if (border_ladders
 	    && neighbor_count_at(b, coord, S_OFFBOARD) == 1
-	    && neighbor_count_at(b, coord, lcolor) == 1)
-		return is_border_ladder(b, coord, lcolor);
+	    && neighbor_count_at(b, coord, lcolor) == 1) {
+		bool l = is_border_ladder(b, coord, lcolor);
+		if (DEBUGL(6)) fprintf(stderr, "border ladder solution: %d\n", l);
+		return l;
+	}
 
-	if (middle_ladders)
-		return is_middle_ladder(b, coord, lcolor);
+	if (middle_ladders) {
+		bool l = is_middle_ladder(b, coord, lcolor);
+		if (DEBUGL(6)) fprintf(stderr, "middle ladder solution: %d\n", l);
+		return l;
+	}
 
+	if (DEBUGL(6)) fprintf(stderr, "no ladder to be checked\n");
 	return false;
 }
 
