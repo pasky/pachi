@@ -138,6 +138,24 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
                       struct board *b, struct move *m)
 {
+	f->id = FEAT_CAPTURE; f->payload = 0;
+#ifdef BOARD_TRAITS
+	if (!b->t[m->coord].cap)
+		return f;
+	/* Capturable! */
+	if (!(PS_PF(CAPTURE, LADDER)
+	      || PS_PF(CAPTURE, RECAPTURE)
+	      || PS_PF(CAPTURE, ATARIDEF)
+	      || PS_PF(CAPTURE, KO))) {
+		(f++, p->n++);
+		return f;
+	}
+#endif
+
+	/* Ok, we need to look at the neighbors anyway. */
+	/* Furthermore, we will now create one feature per capturable
+	 * neighbor. */
+	/* XXX: I'm not sure if this is really good idea. --pasky */
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != stone_other(m->color))
 			continue;
@@ -146,7 +164,6 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 			continue;
 
 		/* Capture! */
-		f->id = FEAT_CAPTURE; f->payload = 0;
 
 		if (PS_PF(CAPTURE, LADDER))
 			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
@@ -176,6 +193,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 			f->payload |= 1 << PF_CAPTURE_KO;
 
 		(f++, p->n++);
+		f->id = FEAT_CAPTURE; f->payload = 0;
 	});
 	return f;
 }

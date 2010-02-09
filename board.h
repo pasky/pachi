@@ -12,11 +12,17 @@
 
 /* The board implementation has bunch of optional features.
  * Turn them on below: */
+
 #define WANT_BOARD_C // capturable groups queue
+
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
+
 //#define BOARD_SPATHASH // incremental patternsp.h hashes
 #define BOARD_SPATHASH_MAXD 3 // maximal diameter
+
 #define BOARD_PAT3 // incremental 3x3 pattern codes
+
+//#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
 
 
 /* Allow board_play_random_move() to return pass even when
@@ -74,6 +80,17 @@ struct neighbor_colors {
 	char colors[S_MAX];
 };
 
+
+/* Point traits bitmap; we update this information incrementally,
+ * it can be used e.g. for fast pattern.h features matching. */
+struct btraits {
+	/* Number of neighbors we can capture. 0=this move is
+	 * not capturing, 1..4=this many neighbors we can capture
+	 * (can be multiple neighbors of same group). */
+	unsigned cap:3;
+};
+
+
 /* You should treat this struct as read-only. Always call functions below if
  * you want to change it. */
 
@@ -122,6 +139,11 @@ struct board {
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
 	uint16_t *pat3;
+#endif
+#ifdef BOARD_TRAITS
+	/* Incrementally matched point traits information. */
+	/* The information is only valid for empty points. */
+	struct btraits *t;
 #endif
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
