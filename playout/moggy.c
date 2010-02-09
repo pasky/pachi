@@ -221,10 +221,11 @@ static char moggy_patterns_src[][11] = {
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
 static inline bool
-test_pattern3_here(struct pattern3s *p, struct board *b, struct move *m)
+test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 {
+	struct moggy_policy *pp = p->data;
 	/* Check if 3x3 pattern is matched by given move... */
-	if (!pattern3_move_here(p, b, m))
+	if (!pattern3_move_here(&pp->patterns, b, m))
 		return false;
 	/* ...and the move is not obviously stupid. */
 	if (!is_bad_selfatari(b, m->color, m->coord))
@@ -236,8 +237,7 @@ static void
 apply_pattern_here(struct playout_policy *p,
 		struct board *b, struct move *m, struct move_queue *q)
 {
-	struct moggy_policy *pp = p->data;
-	if (test_pattern3_here(&pp->patterns, b, m))
+	if (test_pattern3_here(p, b, m))
 		mq_add(q, m->coord);
 }
 
@@ -808,7 +808,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 	/* Pattern check */
 	if (pp->patternrate) {
 		struct move m = { .color = map->to_play, .coord = coord };
-		if (test_pattern3_here(&pp->patterns, b, &m)) {
+		if (test_pattern3_here(p, b, &m)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
 			int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games);
