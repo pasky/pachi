@@ -234,11 +234,11 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 }
 
 static void
-apply_pattern_here(struct playout_policy *p,
-		struct board *b, struct move *m, struct move_queue *q)
+apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum stone color, struct move_queue *q)
 {
-	if (test_pattern3_here(p, b, m))
-		mq_add(q, m->coord);
+	struct move m2 = { .coord = c, .color = color };
+	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2))
+		mq_add(q, c);
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
@@ -253,18 +253,14 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 		return pass;
 
 	foreach_8neighbor(b, m->coord) {
-		struct move m2; m2.coord = c; m2.color = stone_other(m->color);
-		if (board_is_valid_move(b, &m2))
-			apply_pattern_here(p, b, &m2, &q);
+		apply_pattern_here(p, b, c, stone_other(m->color), &q);
 	} foreach_8neighbor_end;
 
 	if (mm) { /* Second move for pattern searching */
 		foreach_8neighbor(b, mm->coord) {
 			if (coord_is_8adjecent(m->coord, c, b))
 				continue;
-			struct move m2; m2.coord = c; m2.color = stone_other(m->color);
-			if (board_is_valid_move(b, &m2))
-				apply_pattern_here(p, b, &m2, &q);
+			apply_pattern_here(p, b, c, stone_other(m->color), &q);
 		} foreach_8neighbor_end;
 	}
 
