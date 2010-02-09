@@ -220,6 +220,18 @@ static char moggy_patterns_src[][11] = {
 };
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
+static inline bool
+test_pattern3_here(struct pattern3s *p, struct board *b, struct move *m)
+{
+	/* Check if 3x3 pattern is matched by given move... */
+	if (!pattern3_move_here(p, b, m))
+		return false;
+	/* ...and the move is not obviously stupid. */
+	if (!is_bad_selfatari(b, m->color, m->coord))
+		return false;
+	return true;
+}
+
 static void
 apply_pattern_here(struct playout_policy *p,
 		struct board *b, struct move *m, struct move_queue *q)
