@@ -37,7 +37,11 @@ static coord_t *coord_resign(void);
 static void coord_done(coord_t *c);
 
 struct board;
+/* Return coordinate string in a dynamically allocated buffer. Thread-safe. */
 char *coord2str(coord_t c, struct board *b);
+/* Return coordinate string in a static buffer; multiple buffers are shuffled
+ * to enable use for multiple printf() parameters, but it is NOT safe for
+ * anything but debugging - in particular, it is NOT thread-safe! */
 char *coord2sstr(coord_t c, struct board *b);
 coord_t *str2coord(char *str, int board_size);
 
