@@ -258,6 +258,8 @@ void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_pe
 static bool board_is_valid_move(struct board *b, struct move *m);
 /* Returns true if ko was just taken. */
 static bool board_playing_ko_threat(struct board *b);
+/* Returns 0 or ID of neighboring group in atari. */
+static group_t board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color);
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
@@ -373,6 +375,21 @@ static inline bool
 board_playing_ko_threat(struct board *b)
 {
 	return !is_pass(b->ko.coord);
+}
+
+static inline group_t
+board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
+{
+#ifdef BOARD_TRAITS
+	if (!b->t[coord].cap) return 0;
+#endif
+	foreach_neighbor(b, coord, {
+		group_t g = group_at(b, c);
+		if (g && board_at(b, c) == group_color && board_group_info(b, g).libs == 1)
+			return g;
+		/* We return first match. */
+	});
+	return 0;
 }
 
 #endif
