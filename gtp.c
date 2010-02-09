@@ -13,6 +13,7 @@
 #include "mq.h"
 #include "uct/uct.h"
 #include "version.h"
+#include "timeinfo.h"
 
 void
 gtp_prefix(char prefix, int id)
@@ -103,7 +104,24 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		/* TODO: known_command */
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		gtp_reply(id, "protocol_version\nname\nversion\nlist_commands\nquit\nboardsize\nclear_board\nkomi\nplay\ngenmove\nkgs-genmove_cleanup\nset_free_handicap\nplace_free_handicap\nfinal_status_list\nkgs-chat", NULL);
+		gtp_reply(id, "protocol_version\n"
+			      "name\n"
+			      "version\n"
+			      "list_commands\n"
+			      "quit\n"
+			      "boardsize\n"
+			      "clear_board\n"
+			      "komi\n"
+			      "play\n"
+			      "genmove\n"
+			      "kgs-genmove_cleanup\n"
+			      "set_free_handicap\n"
+			      "place_free_handicap\n"
+			      "final_status_list\n"
+			      "kgs-chat\n"
+			      "time_left\n"
+			      "time_settings\n"
+			      "kgs-time_settings", NULL);
 
 	} else if (!strcasecmp(cmd, "quit")) {
 		gtp_reply(id, NULL);
@@ -145,6 +163,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 		if (DEBUGL(1))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
+
+		// This is where kgs starts our timer, not at coming genmove!
+		time_start_timer(&ti[stone_other(m.color)]);
+
 		if (engine->notify_play)
 			reply = engine->notify_play(engine, board, &m);
 		if (board_play(board, &m) < 0) {
@@ -163,7 +185,9 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		coord_t *c = engine->genmove(engine, board, ti, color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
+		time_prepare_move(&ti[color], board);
+
+		coord_t *c = engine->genmove(engine, board, &ti[color], color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
 		struct move m = { *c, color };
 		board_play(board, &m);
 		char *str = coord2str(*c, board);
@@ -285,7 +309,7 @@ next_group:;
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		if (uct_genbook(engine, board, ti, color))
+		if (uct_genbook(engine, board, &ti[color], color))
 			gtp_reply(id, NULL);
 		else
 			gtp_error(id, "error generating book", NULL);
@@ -311,6 +335,57 @@ next_group:;
 			gtp_reply(id, reply, NULL);
 		else
 			gtp_error(id, "unknown chat command", NULL);
+
+	} else if (!strcasecmp(cmd, "time_left")) {
+		char *arg;
+		next_tok(arg);
+		enum stone color = str2stone(arg);
+		next_tok(arg);
+		int time = atoi(arg);
+		next_tok(arg);
+		int stones = atoi(arg);
+		time_left(&ti[color], time, stones);
+
+		gtp_reply(id, NULL);
+
+	} else if (!strcasecmp(cmd, "time_settings") || !strcasecmp(cmd, "kgs-time_settings")) {
+		char *time_system = "canadian";
+		char *arg;
+		int main_time = -1, byoyomi_time = 0, byoyomi_stones = 0, byoyomi_periods = 0;
+		if (!strcasecmp(cmd, "kgs-time_settings")) {
+			next_tok(time_system);
+			if (!strcasecmp(time_system, "none")) {
+				// time > 0, stones 0: convention for unlimited
+				byoyomi_time = 1;
+				main_time = 0;
+			} else if (!strcasecmp(time_system, "absolute")) {
+				next_tok(arg);
+				main_time = atoi(arg);
+			} else if (!strcasecmp(time_system, "byoyomi")) {
+				next_tok(arg);
+				main_time = atoi(arg);
+				next_tok(arg);
+				byoyomi_time = atoi(arg);
+				byoyomi_stones = 1;
+				next_tok(arg);
+				byoyomi_periods = atoi(arg);
+			}
+		}
+		if (main_time < 0) { // canadian time system
+			next_tok(arg);
+			main_time = atoi(arg);
+			next_tok(arg);
+			byoyomi_time = atoi(arg);
+			next_tok(arg);
+			byoyomi_stones = atoi(arg);
+		}
+		if (DEBUGL(1))
+			fprintf(stderr, "time_settings %d %d %d %d\n",
+				main_time, byoyomi_time, byoyomi_stones, byoyomi_periods);
+		time_settings(&ti[S_BLACK], main_time, byoyomi_time, byoyomi_stones, byoyomi_periods);
+		ti[S_WHITE] = ti[S_BLACK];
+
+		gtp_reply(id, NULL);
 
 	} else {
 		gtp_error(id, "unknown command", NULL);

@@ -64,7 +64,8 @@ bool engine_reset = false;
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
-	struct time_info ti_default = { .period = TT_NULL };
+	/* time_info for none(ignored), black, white: */
+	struct time_info ti_default[] = { { .period = TT_NULL }, { .period = TT_NULL }, { .period = TT_NULL }};
 	char *testfile = NULL;
 
 	seed = time(NULL) ^ getpid();
@@ -99,10 +100,11 @@ int main(int argc, char *argv[])
 				 * time_left GTP commands are received). Please
 				 * see timeinfo.h:time_parse() description for
 				 * syntax details. */
-				if (!time_parse(&ti_default, optarg)) {
+				if (!time_parse(&ti_default[S_BLACK], optarg)) {
 					fprintf(stderr, "%s: Invalid -t argument %s\n", argv[0], optarg);
 					exit(1);
 				}
+				ti_default[S_WHITE] = ti_default[S_BLACK];
 				break;
 			case 'u':
 				testfile = strdup(optarg);
@@ -119,7 +121,9 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init();
-	struct time_info ti = ti_default;
+	struct time_info ti[S_WHITE+1];
+	ti[S_BLACK] = ti_default[S_BLACK];
+	ti[S_WHITE] = ti_default[S_WHITE];
 
 	char *e_arg = NULL;
 	if (optind < argc)
@@ -135,13 +139,14 @@ int main(int argc, char *argv[])
 	while (fgets(buf, 4096, stdin)) {
 		if (DEBUGL(1))
 			fprintf(stderr, "IN: %s", buf);
-		gtp_parse(b, e, &ti, buf);
+		gtp_parse(b, e, ti, buf);
 		if (engine_reset) {
 			if (!e->keep_on_clear) {
 				b->es = NULL;
 				done_engine(e);
 				e = init_engine(engine, e_arg, b);
-				ti = ti_default;
+				ti[S_BLACK] = ti_default[S_BLACK];
+				ti[S_WHITE] = ti_default[S_WHITE];
 			}
 			engine_reset = false;
 		}

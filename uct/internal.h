@@ -30,6 +30,7 @@ struct uct {
 	int dumpthres;
 	int force_seed;
 	bool no_book;
+	bool fast_alloc;
 	unsigned long max_tree_size;
 	int mercymin;
 
@@ -41,7 +42,10 @@ struct uct {
 	} thread_model;
 	bool parallel_tree;
 	bool virtual_loss;
-	bool pondering;
+	bool pondering_opt; /* User wants pondering */
+	bool pondering; /* Actually pondering now */
+	int fuseki_end;
+	int yose_start;
 
 	int dynkomi;
 	int dynkomi_mask;
@@ -76,6 +80,7 @@ bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pas
 
 
 typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
+typedef struct tree_node *(*uctp_winner)(struct uct_policy *p, struct tree *tree, struct tree_node *node);
 typedef float (*uctp_evaluate)(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity);
 typedef struct tree_node *(*uctp_descend)(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
 typedef void (*uctp_prior)(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
@@ -84,6 +89,7 @@ typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree
 struct uct_policy {
 	struct uct *uct;
 	uctp_choose choose;
+	uctp_winner winner;
 	uctp_evaluate evaluate;
 	uctp_descend descend;
 	uctp_update update;

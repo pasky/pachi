@@ -233,6 +233,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	p->uct = u;
 	p->data = b;
 	p->choose = uctp_generic_choose;
+	p->winner = uctp_generic_winner;
 	p->evaluate = ucb1rave_evaluate;
 	p->descend = ucb1rave_descend;
 	p->update = ucb1amaf_update;
