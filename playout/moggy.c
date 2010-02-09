@@ -228,7 +228,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 	if (!pattern3_move_here(&pp->patterns, b, m))
 		return false;
 	/* ...and the move is not obviously stupid. */
-	if (!is_bad_selfatari(b, m->color, m->coord))
+	if (is_bad_selfatari(b, m->color, m->coord))
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
