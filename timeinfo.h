@@ -36,10 +36,6 @@ struct time_info {
 			 * if exceeded. Does not include net lag. Play asap if 0. */
 			double max_time;
 
-			/* Minimum net lag (seconds) to be reserved by the engine.
-			 * The engine may use a larger safety margin. */
-			double net_lag;
-
 			/* Absolute time at which our timer started for current move,
 			 * 0 if not yet known. The engine always sees > 0. */
 			double timer_start;

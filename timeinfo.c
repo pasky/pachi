@@ -36,7 +36,6 @@ time_parse(struct time_info *ti, char *s)
 			ti->dim = TD_WALLTIME;
 			ti->len.t.recommended_time = atof(s);
 			ti->len.t.max_time = ti->len.t.recommended_time;
-			ti->len.t.net_lag = MAX_NET_LAG;
 			ti->len.t.timer_start = 0;
 			ti->len.t.byoyomi_time = 0.0;
 			ti->len.t.byoyomi_periods = 0;
@@ -57,7 +56,6 @@ time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi
 		ti->len.t.max_time = (double) main_time; // byoyomi will be added at next genmove
 		ti->len.t.recommended_time = ti->len.t.max_time;
 		ti->len.t.timer_start = 0;
-		ti->len.t.net_lag = MAX_NET_LAG;
 		ti->len.t.byoyomi_time = (double) byoyomi_time;
 		if (byoyomi_stones > 0)
 			ti->len.t.byoyomi_time /= byoyomi_stones;
@@ -83,12 +81,11 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 		/* Main time */
 		ti->period = TT_TOTAL;
 		ti->len.t.recommended_time = ti->len.t.max_time;
-		/* byoyomi_time, net_lag & timer_start unchanged. */
+		/* byoyomi_time unchanged. */
 	} else {
 		ti->period = TT_MOVE;
 		ti->len.t.byoyomi_time = ((double)time_left)/stones_left;
 		ti->len.t.recommended_time = ti->len.t.byoyomi_time;
-		/* net_lag & timer_start unchanged. */
 	}
 }
 
@@ -135,6 +132,9 @@ time_sleep(double interval)
 void
 time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
 {
+	/* Minimum net lag (seconds) to be reserved in the time for move. */
+	double net_lag = MAX_NET_LAG;
+
 	/*** Transform @ti to TT_MOVE and set up recommended/max time and
 	 * net lag information. */
 
@@ -161,8 +161,8 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		// TODO: keep statistics to get good estimate of lag not just current move
 		ti->len.t.max_time -= lag; // can become < 0, taken into account below
 		ti->len.t.recommended_time -= lag;
-		if (DEBUGL(1) && lag > MAX_NET_LAG)
-			fprintf(stderr, "lag %0.2f > max_net_lag %0.2f\n", lag, MAX_NET_LAG);
+		if (DEBUGL(1) && lag > net_lag)
+			fprintf(stderr, "measured lag %0.2f > computed net_lag %0.2f\n", lag, net_lag);
 	}
 	if (ti->period == TT_TOTAL) {
 		if (ti->len.t.byoyomi_time > 0) {
@@ -181,7 +181,7 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			 * the first (canadian) or N-1 byoyomi periods.
 			 *    main_speed = max_time / main_moves >= byoyomi_time
                          * => main_moves <= max_time / byoyomi_time */
-			double actual_byoyomi = ti->len.t.byoyomi_time - MAX_NET_LAG;
+			double actual_byoyomi = ti->len.t.byoyomi_time - net_lag;
 			if (actual_byoyomi > 0) {
 				int main_moves = (int)(ti->len.t.max_time / actual_byoyomi);
 				if (moves_left > main_moves)
@@ -203,15 +203,13 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	/* Use a larger safety margin if we risk losing on time on this move: */
         double safe_margin = RESERVED_BYOYOMI_PERCENT * ti->len.t.byoyomi_time/100;
 	if (safe_margin > MAX_NET_LAG && ti->len.t.recommended_time >= ti->len.t.max_time - MAX_NET_LAG) {
-		ti->len.t.net_lag = safe_margin;
-	} else {
-		ti->len.t.net_lag = MAX_NET_LAG;
+		net_lag = safe_margin;
 	}
 
 	if (DEBUGL(1))
 		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f, lag %0.2f max %0.2f\n",
 			ti->len.t.recommended_time, ti->len.t.max_time, ti->len.t.byoyomi_time, lag,
-			ti->len.t.net_lag);
+			net_lag);
 
 
 	/*** Setup desired/worst time limits based on recommended/max time. */
@@ -264,8 +262,8 @@ setup_limits:
 	if (desired_time > worst_time)
 		desired_time = worst_time;
 
-	stop->desired.time = ti->len.t.timer_start + desired_time - ti->len.t.net_lag;
-	stop->worst.time = ti->len.t.timer_start + worst_time - ti->len.t.net_lag;
+	stop->desired.time = ti->len.t.timer_start + desired_time - net_lag;
+	stop->worst.time = ti->len.t.timer_start + worst_time - net_lag;
 	// Both stop points may be in the past if too much lag.
 
 	if (DEBUGL(2))
