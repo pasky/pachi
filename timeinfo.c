@@ -137,15 +137,12 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 
 	/* Minimum net lag (seconds) to be reserved in the time for move. */
 	double net_lag = MAX_NET_LAG;
-	/* Estimated number moves for us to make yet. */
-	int moves_left = board_estimated_moves_left(b);
-	assert(moves_left > 0);
 
 	/* Special-case limit by number of simulations. */
 	if (ti->dim == TD_GAMES) {
 		if (ti->period == TT_TOTAL) {
 			ti->period = TT_MOVE;
-			ti->len.games /= moves_left;
+			ti->len.games /= board_estimated_moves_left(b);
 		}
 
 		stop->desired.playouts = ti->len.games;
@@ -168,6 +165,7 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		// TODO: keep statistics to get good estimate of lag not just current move
 	}
 	if (ti->period == TT_TOTAL) {
+		int moves_left = board_estimated_moves_left(b);
 		if (ti->len.t.byoyomi_time > 0) {
 			/* For non-canadian byoyomi with N>1 periods, we use N-1 periods as main time,
 			 * keeping the last one as insurance against unexpected net lag. */
@@ -236,7 +234,7 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		if (b->moves < yose_start) {
 			int moves_to_yose = (yose_start - b->moves) / 2;
 			// ^- /2 because we only consider the moves we have to play ourselves
-			int left_at_yose_start = moves_left - moves_to_yose;
+			int left_at_yose_start = board_estimated_moves_left(b) - moves_to_yose;
 			if (left_at_yose_start < MIN_MOVES_LEFT)
 				left_at_yose_start = MIN_MOVES_LEFT;
 			double longest_time = ti->len.t.max_time / left_at_yose_start;
