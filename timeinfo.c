@@ -221,7 +221,7 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		/* We are in main time. */
 
 		assert(ti->len.t.main_time > 0);
-		max_time = recommended_time = ti->len.t.main_time;
+		max_time = ti->len.t.main_time;
 
 		int moves_left = board_estimated_moves_left(b);
 		/* If we have byoyomi available, plan to extend our thinking
@@ -237,8 +237,10 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 				max_time += (ti->len.t.byoyomi_periods - 2) * move_time;
 				// Will add 1 more byoyomi_time just below
 			}
+
+			/* In case of Canadian byoyomi, condier move that can
+			 * be spent on its first move. */
 			max_time += move_time;
-			recommended_time = max_time;
 
 			/* Maximize the number of moves played uniformly in main time, while
 			 * not playing faster in main time than in byoyomi. At this point,
@@ -257,7 +259,7 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		}
 
 		/* Allocate even slice of the remaining time for next move. */
-		recommended_time /= moves_left;
+		recommended_time = max_time / moves_left;
 		assert(recommended_time > 0 && max_time > 0);
 		assert(recommended_time <= max_time + 0.001);
 
