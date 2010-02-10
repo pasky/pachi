@@ -64,8 +64,7 @@ bool engine_reset = false;
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
-	/* time_info for none(ignored), black, white: */
-	struct time_info ti_default[] = { { .period = TT_NULL }, { .period = TT_NULL }, { .period = TT_NULL }};
+	struct time_info ti_default = { .period = TT_NULL };
 	char *testfile = NULL;
 
 	seed = time(NULL) ^ getpid();
@@ -104,12 +103,11 @@ int main(int argc, char *argv[])
 				 * by number of simulations in timed games. */
 				/* Please see timeinfo.h:time_parse()
 				 * description for syntax details. */
-				if (!time_parse(&ti_default[S_BLACK], optarg)) {
+				if (!time_parse(&ti_default, optarg)) {
 					fprintf(stderr, "%s: Invalid -t argument %s\n", argv[0], optarg);
 					exit(1);
 				}
-				ti_default[S_BLACK].ignore_gtp = true;
-				ti_default[S_WHITE] = ti_default[S_BLACK];
+				ti_default.ignore_gtp = true;
 				break;
 			case 'u':
 				testfile = strdup(optarg);
@@ -126,9 +124,9 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init();
-	struct time_info ti[S_WHITE+1];
-	ti[S_BLACK] = ti_default[S_BLACK];
-	ti[S_WHITE] = ti_default[S_WHITE];
+	struct time_info ti[S_MAX];
+	ti[S_BLACK] = ti_default;
+	ti[S_WHITE] = ti_default;
 
 	char *e_arg = NULL;
 	if (optind < argc)
@@ -150,8 +148,8 @@ int main(int argc, char *argv[])
 				b->es = NULL;
 				done_engine(e);
 				e = init_engine(engine, e_arg, b);
-				ti[S_BLACK] = ti_default[S_BLACK];
-				ti[S_WHITE] = ti_default[S_WHITE];
+				ti[S_BLACK] = ti_default;
+				ti[S_WHITE] = ti_default;
 			}
 			engine_reset = false;
 		}
