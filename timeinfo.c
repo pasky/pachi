@@ -96,8 +96,14 @@ time_left(struct time_info *ti, int time_left, int stones_left)
  * per move). */
 bool
 time_in_byoyomi(struct time_info *ti) {
-	return ti->period == TT_MOVE && ti->dim == TD_WALLTIME && ti->len.t.byoyomi_time > 0
-	       && ti->len.t.recommended_time <= ti->len.t.byoyomi_time + 0.001;
+	assert(ti->dim == TD_WALLTIME && ti->period == TT_MOVE);
+	if (!ti->len.t.byoyomi_time)
+		return false; // there is no byoyomi!
+	if (!ti->len.t.main_time)
+		return true; // we _are_ in byoyomi
+	if (ti->len.t.main_time <= ti->len.t.byoyomi_time + 0.001)
+		return true; // our basic time left is less than byoyomi period
+	return false;
 }
 
 /* Start our timer. kgs does this (correctly) on "play" not "genmove"
