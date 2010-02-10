@@ -21,7 +21,7 @@
 #include "random.h"
 #include "version.h"
 
-int debug_level = 1;
+int debug_level = 3;
 int seed;
 
 

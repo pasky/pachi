@@ -688,7 +688,7 @@ uct_state_init(char *arg, struct board *b)
 {
 	struct uct *u = calloc(1, sizeof(struct uct));
 
-	u->debug_level = 1;
+	u->debug_level = 3;
 	u->gamelen = MC_GAMELEN;
 	u->mercymin = 0;
 	u->expand_p = 2;
