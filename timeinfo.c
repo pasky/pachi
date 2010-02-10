@@ -34,10 +34,17 @@ time_parse(struct time_info *ti, char *s)
 			if (!isdigit(s[0]))
 				return false;
 			ti->dim = TD_WALLTIME;
-			ti->len.t.main_time = atof(s);
-			ti->len.t.byoyomi_time = 0.0;
-			ti->len.t.byoyomi_periods = 0;
-			ti->len.t.byoyomi_stones = 0;
+			if (ti->period == TT_TOTAL) {
+				ti->len.t.main_time = atof(s);
+				ti->len.t.byoyomi_time = 0.0;
+				ti->len.t.byoyomi_periods = 0;
+				ti->len.t.byoyomi_stones = 0;
+			} else { assert(ti->period == TT_MOVE);
+				ti->len.t.main_time = 0.0;
+				ti->len.t.byoyomi_time = atof(s);
+				ti->len.t.byoyomi_periods = 1;
+				ti->len.t.byoyomi_stones = 1;
+			}
 			ti->len.t.timer_start = 0;
 			break;
 	}
