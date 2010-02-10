@@ -33,14 +33,20 @@ struct time_info {
 			 * right-before-byoyomi cases). */
 			double main_time;
 
-			/* Byoyomi time per move (even for TT_TOTAL). This time must
-			 * be remembered to avoid rushing at the end of the main
-			 * period. 0 if no byoyomi. */
+			/* Byoyomi time. This time must be remembered to avoid
+			 * rushing at the end of the main period. If no byoyomi,
+			 * set to 0. Otherwise, both periods and stones are
+			 * larger than zero, and initially we have _periods
+			 * periods of length _time and have to play _stones
+			 * stones in each. If we play in canadian byoyomi,
+			 * _time will shrink until we play all stones of the
+			 * current period. */
+			/* (In normal time settings, one of _periods or _stones
+			 * is 1.) */
 			double byoyomi_time;
-			/* Number of byoyomi periods. 0 means canadian byoyomi
-			 * (byoyomi_time is not whole canadian byoyomi period but
-			 * time _per move_). */
 			int byoyomi_periods;
+			int byoyomi_stones;
+			bool canadian; // time_left field meaning changes
 
 			/* Absolute time at which our timer started for current move,
 			 * 0 if not yet known. The engine always sees > 0. */

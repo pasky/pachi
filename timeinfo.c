@@ -37,6 +37,7 @@ time_parse(struct time_info *ti, char *s)
 			ti->len.t.main_time = atof(s);
 			ti->len.t.byoyomi_time = 0.0;
 			ti->len.t.byoyomi_periods = 0;
+			ti->len.t.byoyomi_stones = 0;
 			ti->len.t.timer_start = 0;
 			break;
 	}
@@ -54,9 +55,9 @@ time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi
 		ti->dim = TD_WALLTIME;
 		ti->len.t.main_time = (double) main_time;
 		ti->len.t.byoyomi_time = (double) byoyomi_time;
-		if (byoyomi_stones > 0)
-			ti->len.t.byoyomi_time /= byoyomi_stones;
-		ti->len.t.byoyomi_periods = byoyomi_periods;
+		ti->len.t.byoyomi_periods = byoyomi_periods > 1 ? byoyomi_periods : 1;
+		ti->len.t.byoyomi_stones = byoyomi_stones > 1 ? byoyomi_stones : 1;
+		ti->len.t.canadian = byoyomi_stones > 0;
 		ti->len.t.timer_start = 0;
 	}
 }
@@ -70,10 +71,6 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 	assert(ti->period != TT_NULL);
 	ti->dim = TD_WALLTIME;
 
-	if (ti->len.t.byoyomi_periods > 0 && stones_left > 0) {
-		ti->len.t.byoyomi_periods = stones_left; // field misused by kgs
-		stones_left = 1;
-	}
 	if (stones_left == 0) {
 		/* Main time */
 		ti->period = TT_TOTAL;
@@ -83,11 +80,13 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 		/* Byoyomi */
 		ti->period = TT_MOVE;
 		ti->len.t.main_time = 0;
-		ti->len.t.byoyomi_time = ((double)time_left)/stones_left;
-		/* XXX: We need to keep stones_left info in time_info
-		 * to be able to deduce this in stop_conditions() instead. */
-		ti->len.t.max_time = time_left;
-		ti->len.t.recommended_time = ti->len.t.byoyomi_time;
+		ti->len.t.byoyomi_time = time_left;
+		if (ti->len.t.canadian) {
+			ti->len.t.byoyomi_stones = stones_left;
+		} else {
+			// field misused by kgs
+			ti->len.t.byoyomi_periods = stones_left;
+		}
 	}
 }
 
@@ -99,10 +98,11 @@ time_in_byoyomi(struct time_info *ti) {
 	assert(ti->dim == TD_WALLTIME);
 	if (!ti->len.t.byoyomi_time)
 		return false; // there is no byoyomi!
+	assert(ti->len.t.byoyomi_stones > 0);
 	if (!ti->len.t.main_time)
 		return true; // we _are_ in byoyomi
-	if (ti->len.t.main_time <= ti->len.t.byoyomi_time + 0.001)
-		return true; // our basic time left is less than byoyomi period
+	if (ti->len.t.main_time <= ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones + 0.001)
+		return true; // our basic time left is less than byoyomi time per move
 	return false;
 }
 
@@ -178,27 +178,35 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	/* Set up initial recommendations. */
 	if (ti->len.t.main_time) {
 		ti->len.t.max_time = ti->len.t.recommended_time = ti->len.t.main_time;
-	} // otherwise we have already set up max_, recommended_ in time_left().
+	} else {
+		ti->len.t.max_time = ti->len.t.byoyomi_time;
+		assert(ti->len.t.byoyomi_stones > 0);
+		ti->len.t.recommended_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
+	}
 
 	if (ti->period == TT_TOTAL) {
 		int moves_left = board_estimated_moves_left(b);
 		if (ti->len.t.byoyomi_time > 0) {
-			/* For non-canadian byoyomi with N>1 periods, we use N-1 periods as main time,
+			assert(ti->len.t.byoyomi_stones > 0);
+			/* Time for one move in byoyomi. */
+			double move_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
+
+			/* For Japanese byoyomi with N>1 periods, we use N-1 periods as main time,
 			 * keeping the last one as insurance against unexpected net lag. */
 			if (ti->len.t.byoyomi_periods > 2) {
-				ti->len.t.max_time += (ti->len.t.byoyomi_periods - 2) * ti->len.t.byoyomi_time;
+				ti->len.t.max_time += (ti->len.t.byoyomi_periods - 2) * move_time;
 				// Will add 1 more byoyomi_time just below
 			}
-			ti->len.t.max_time += ti->len.t.byoyomi_time;
+			ti->len.t.max_time += move_time;
 			ti->len.t.recommended_time = ti->len.t.max_time;
 
 			/* Maximize the number of moves played uniformly in main time, while
 			 * not playing faster in main time than in byoyomi. At this point,
 			 * the main time remaining is ti->len.t.max_time and already includes
 			 * the first (canadian) or N-1 byoyomi periods.
-			 *    main_speed = max_time / main_moves >= byoyomi_time
-                         * => main_moves <= max_time / byoyomi_time */
-			double actual_byoyomi = ti->len.t.byoyomi_time - net_lag;
+			 *    main_speed = max_time / main_moves >= move_time
+                         * => main_moves <= max_time / move_time */
+			double actual_byoyomi = move_time - net_lag;
 			if (actual_byoyomi > 0) {
 				int main_moves = (int)(ti->len.t.max_time / actual_byoyomi);
 				if (moves_left > main_moves)
@@ -219,13 +227,18 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 
 	/* Use a larger safety margin if we risk losing on time on this move: */
         double safe_margin = RESERVED_BYOYOMI_PERCENT * ti->len.t.byoyomi_time/100;
+	if (safe_margin > 0) {
+		assert(ti->len.t.byoyomi_stones > 0);
+		safe_margin /= ti->len.t.byoyomi_stones;
+	}
 	if (safe_margin > MAX_NET_LAG && ti->len.t.recommended_time >= ti->len.t.max_time - net_lag) {
 		net_lag = safe_margin;
 	}
 
 	if (DEBUGL(1))
-		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f, lag %0.2f max %0.2f\n",
-			ti->len.t.recommended_time, ti->len.t.max_time, ti->len.t.byoyomi_time, net_lag,
+		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f/%d, lag %0.2f\n",
+			ti->len.t.recommended_time, ti->len.t.max_time,
+			ti->len.t.byoyomi_time, ti->len.t.byoyomi_stones,
 			net_lag);
 
 
