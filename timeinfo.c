@@ -372,10 +372,11 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	}
 
 	if (DEBUGL(1))
-		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f/%d, lag %0.2f\n",
+		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, clock [%d] %0.2f + %0.2f/%d*%d, lag %0.2f\n",
 			recommended_time, max_time,
+			ti->dim, ti->len.t.main_time,
 			ti->len.t.byoyomi_time, ti->len.t.byoyomi_stones,
-			net_lag);
+			ti->len.t.byoyomi_periods, net_lag);
 
 	stop->desired.time = ti->len.t.timer_start + recommended_time - net_lag;
 	stop->worst.time = ti->len.t.timer_start + max_time - net_lag;
