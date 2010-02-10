@@ -377,7 +377,7 @@ next_group:;
 				main_time = atoi(arg);
 				next_tok(arg);
 				byoyomi_time = atoi(arg);
-				byoyomi_stones = 1;
+				byoyomi_stones = 0;
 				next_tok(arg);
 				byoyomi_periods = atoi(arg);
 			}
