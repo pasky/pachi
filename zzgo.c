@@ -108,6 +108,16 @@ int main(int argc, char *argv[])
 					exit(1);
 				}
 				ti_default.ignore_gtp = true;
+				/* Check for unsupported combinations. */
+				assert(ti_default.period != TT_NULL);
+				if (ti_default.dim == TD_GAMES && ti_default.period == TT_TOTAL) {
+					fprintf(stderr, "%s: Spreading fixed simulations# over the whole game is not supported\n", argv[0]);
+					exit(1);
+				}
+				if (ti_default.dim == TD_WALLTIME && ti_default.period == TT_TOTAL) {
+					fprintf(stderr, "%s: Spreading fixed time over the whole game without GTP time_left aid is not supported for now\n", argv[0]);
+					exit(1);
+				}
 				break;
 			case 'u':
 				testfile = strdup(optarg);
