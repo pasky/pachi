@@ -51,15 +51,6 @@ struct time_info {
 			/* Absolute time at which our timer started for current move,
 			 * 0 if not yet known. The engine always sees > 0. */
 			double timer_start;
-
-			/* --- PRIVATE DATA --- */
-			/* Recommended wall time for next move or game (seconds).
-			 * Does not include net lag. Play asap if 0. */
-			double recommended_time;
-
-			/* Maximum wall time for next move or game. Will lose on time
-			 * if exceeded. Does not include net lag. Play asap if 0. */
-			double max_time;
 		} t;
 	} len;
 	/* If true, this time info is independent from GTP time_left updates,
