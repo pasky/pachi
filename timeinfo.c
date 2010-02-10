@@ -231,8 +231,9 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			/* Time for one move in byoyomi. */
 			double move_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
 
-			/* For Japanese byoyomi with N>1 periods, we use N-1 periods as main time,
-			 * keeping the last one as insurance against unexpected net lag. */
+			/* For Japanese byoyomi with N>1 periods, we use N-1
+			 * periods as main time, keeping the last one as
+			 * insurance against unexpected net lag. */
 			if (ti->len.t.byoyomi_periods > 2) {
 				max_time += (ti->len.t.byoyomi_periods - 2) * move_time;
 				// Will add 1 more byoyomi_time just below
@@ -242,17 +243,19 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			 * be spent on its first move. */
 			max_time += move_time;
 
-			/* Maximize the number of moves played uniformly in main time, while
-			 * not playing faster in main time than in byoyomi. At this point,
-			 * the main time remaining is ti->len.t.max_time and already includes
-			 * the first (canadian) or N-1 byoyomi periods.
-			 *    main_speed = max_time / main_moves >= move_time
-                         * => main_moves <= max_time / move_time */
+			/* Maximize the number of moves played uniformly in
+			 * main time, while not playing faster in main time
+			 * than in byoyomi. At this point, the main time
+			 * remaining is max_time and already includes
+			 * the first (canadian) or N-1 byoyomi periods. */
 			double actual_byoyomi = move_time - net_lag;
 			if (actual_byoyomi > 0) {
-				int main_moves = (int)(max_time / actual_byoyomi);
-				if (moves_left > main_moves)
-					moves_left = main_moves; // will do the rest in byoyomi
+				int main_moves = max_time / actual_byoyomi;
+				if (moves_left > main_moves) {
+					/* We plan to do too many moves in
+					 * main time, do the rest in byoyomi. */
+					moves_left = main_moves;
+				}
 				if (moves_left <= 0) // possible if too much lag
 					moves_left = 1;
 			}
