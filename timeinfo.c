@@ -96,7 +96,7 @@ time_left(struct time_info *ti, int time_left, int stones_left)
  * per move). */
 bool
 time_in_byoyomi(struct time_info *ti) {
-	assert(ti->dim == TD_WALLTIME && ti->period == TT_MOVE);
+	assert(ti->dim == TD_WALLTIME);
 	if (!ti->len.t.byoyomi_time)
 		return false; // there is no byoyomi!
 	if (!ti->len.t.main_time)
