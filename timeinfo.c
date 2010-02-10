@@ -186,9 +186,9 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	/* Ideal/reasonable time to spend on the move. */
 	double recommended_time;
 
-	if (!ti->len.t.main_time) {
+	if (ti->period == TT_MOVE) {
 		/* We are in byoyomi! */
-		assert(ti->period == TT_MOVE);
+		assert(!ti->len.t.main_time);
 
 		max_time = ti->len.t.byoyomi_time;
 		assert(ti->len.t.byoyomi_stones > 0);
@@ -203,10 +203,10 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 				net_lag = safe_margin;
 		}
 
-	} else {
+	} else { assert(ti->period == TT_TOTAL);
 		/* We are in main time. */
-		assert(ti->period == TT_TOTAL);
 
+		assert(ti->len.t.main_time > 0);
 		max_time = recommended_time = ti->len.t.main_time;
 
 		int moves_left = board_estimated_moves_left(b);
