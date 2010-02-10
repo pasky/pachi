@@ -79,10 +79,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 {
 	struct montecarlo *mc = e->data;
 
-	if (ti->period == TT_TOTAL) {
-		fprintf(stderr, "Warning: TT_TOTAL time mode not supported, resetting to defaults.\n");
-		ti->period = TT_NULL;
-	} else if (ti->dim == TD_WALLTIME) {
+	if (ti->dim == TD_WALLTIME) {
 		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
 		ti->period = TT_NULL;
 	}
@@ -91,6 +88,8 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 		ti->dim = TD_GAMES;
 		ti->len.games = MC_GAMES;
 	}
+	struct time_stop stop;
+	time_stop_conditions(ti, b, 20, 40, &stop);
 
 	/* resign when the hope for win vanishes */
 	coord_t top_coord = resign;
@@ -103,7 +102,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 
 	int losses = 0;
 	int i, superko = 0, good_games = 0;
-	for (i = 0; i < ti->len.games; i++) {
+	for (i = 0; i < stop.desired.playouts; i++) {
 		assert(!b->superko_violation);
 
 		struct board b2;
@@ -133,7 +132,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 		if (result == 0) {
 			/* Superko. We just ignore this playout.
 			 * And play again. */
-			if (unlikely(superko > 2 * ti->len.games)) {
+			if (unlikely(superko > 2 * stop.desired.playouts)) {
 				/* Uhh. Triple ko, or something? */
 				if (MCDEBUGL(0))
 					fprintf(stderr, "SUPERKO LOOP. I will pass. Did we hit triple ko?\n");
