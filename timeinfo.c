@@ -132,21 +132,33 @@ time_sleep(double interval)
 void
 time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
 {
+	/* We must have _some_ limits by now, be it random default values! */
+	assert(ti->period != TT_NULL);
+
 	/* Minimum net lag (seconds) to be reserved in the time for move. */
 	double net_lag = MAX_NET_LAG;
-
-	/*** Transform @ti to TT_MOVE and set up recommended/max time and
-	 * net lag information. */
-
+	/* Estimated number moves for us to make yet. */
 	int moves_left = board_estimated_moves_left(b);
 	assert(moves_left > 0);
 
-	if (ti->period == TT_TOTAL && ti->dim == TD_GAMES) {
-		ti->period = TT_MOVE;
-		ti->len.games /= moves_left;
+	/* Special-case limit by number of simulations. */
+	if (ti->dim == TD_GAMES) {
+		if (ti->period == TT_TOTAL) {
+			ti->period = TT_MOVE;
+			ti->len.games /= moves_left;
+		}
+
+		stop->desired.playouts = ti->len.games;
+		/* We force worst == desired, so note that we will NOT loop
+		 * until best == winner. */
+		stop->worst.playouts = ti->len.games;
+		return;
 	}
-	if (ti->period == TT_NULL || ti->dim != TD_WALLTIME)
-		goto setup_limits;
+
+	assert(ti->dim == TD_WALLTIME);
+
+	/*** Transform @ti to TT_MOVE and set up recommended/max time and
+	 * net lag information. */
 
 	double now = time_now();
 	double lag;
@@ -211,16 +223,7 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 
 	/*** Setup desired/worst time limits based on recommended/max time. */
 
-setup_limits:
 	assert(ti->period == TT_MOVE);
-
-	if (ti->dim == TD_GAMES) {
-		stop->desired.playouts = ti->len.games;
-		/* We force worst == desired, so note that we will not loop
-		 * until best == winner. */
-		stop->worst.playouts = ti->len.games;
-		return;
-	}
 
 	double desired_time = ti->len.t.recommended_time;
         double worst_time;
