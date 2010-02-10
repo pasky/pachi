@@ -34,6 +34,7 @@ time_parse(struct time_info *ti, char *s)
 			if (!isdigit(s[0]))
 				return false;
 			ti->dim = TD_WALLTIME;
+			ti->len.t.timer_start = 0;
 			if (ti->period == TT_TOTAL) {
 				ti->len.t.main_time = atof(s);
 				ti->len.t.byoyomi_time = 0.0;
@@ -49,7 +50,6 @@ time_parse(struct time_info *ti, char *s)
 				ti->len.t.byoyomi_stones = 1;
 				ti->len.t.byoyomi_stones_max = 1;
 			}
-			ti->len.t.timer_start = 0;
 			break;
 	}
 	return true;
@@ -64,14 +64,26 @@ time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi
 	} else {
 		ti->period = TT_TOTAL;
 		ti->dim = TD_WALLTIME;
+		ti->len.t.timer_start = 0;
 		ti->len.t.main_time = (double) main_time;
 		ti->len.t.byoyomi_time = (double) byoyomi_time;
-		ti->len.t.byoyomi_time_max = ti->len.t.byoyomi_time;
-		ti->len.t.byoyomi_periods = byoyomi_periods > 1 ? byoyomi_periods : 1;
-		ti->len.t.byoyomi_stones = byoyomi_stones > 1 ? byoyomi_stones : 1;
-		ti->len.t.byoyomi_stones_max = ti->len.t.byoyomi_stones;
+		ti->len.t.byoyomi_periods = byoyomi_periods;
+		ti->len.t.byoyomi_stones = byoyomi_stones;
 		ti->len.t.canadian = byoyomi_stones > 0;
-		ti->len.t.timer_start = 0;
+		if (byoyomi_time > 0) {
+			/* Normally, only one of byoyomi_periods and
+			 * byoyomi_stones arguments will be > 0. However,
+			 * our data structure uses generalized byoyomi
+			 * specification that will assume "1 byoyomi period
+			 * of N stones" for Canadian byoyomi and "N byoyomi
+			 * periods of 1 stone" for Japanese byoyomi. */
+			if (ti->len.t.byoyomi_periods < 1)
+				ti->len.t.byoyomi_periods = 1;
+			if (ti->len.t.byoyomi_stones < 1)
+				ti->len.t.byoyomi_stones = 1;
+		}
+		ti->len.t.byoyomi_time_max = ti->len.t.byoyomi_time;
+		ti->len.t.byoyomi_stones_max = ti->len.t.byoyomi_stones;
 	}
 }
 
