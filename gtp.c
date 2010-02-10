@@ -185,7 +185,6 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		time_prepare_move(&ti[color], board);
 
 		coord_t *c = engine->genmove(engine, board, &ti[color], color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
 		struct move m = { *c, color };

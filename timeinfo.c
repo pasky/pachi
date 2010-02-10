@@ -92,15 +92,56 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 	}
 }
 
-/* Set correct time information before making a move, and
- * always make it time per move for the engine. */
+/* Start our timer. kgs does this (correctly) on "play" not "genmove"
+ * unless we are making the first move of the game. */
 void
-time_prepare_move(struct time_info *ti, struct board *board)
+time_start_timer(struct time_info *ti)
 {
+	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME)
+		ti->len.t.timer_start = time_now();
+}
+
+/* Returns true if we are in byoyomi (or should play as if in byo yomi
+ * because remaining time per move in main time is less than byoyomi time
+ * per move). */
+bool
+time_in_byoyomi(struct time_info *ti) {
+	return ti->period == TT_MOVE && ti->dim == TD_WALLTIME && ti->len.t.byoyomi_time > 0
+	       && ti->len.t.recommended_time <= ti->len.t.byoyomi_time + 0.001;
+}
+
+/* Returns the current time. */
+double
+time_now(void)
+{
+	struct timespec now;
+	clock_gettime(CLOCK_REALTIME, &now);
+	return now.tv_sec + now.tv_nsec/1000000000.0;
+}
+
+/* Sleep for a given interval (in seconds). Return immediately if interval < 0. */
+void
+time_sleep(double interval)
+{
+	struct timespec ts;
+	double sec;
+	ts.tv_nsec = (int)(modf(interval, &sec)*1000000000.0);
+        ts.tv_sec = (int)sec;
+	nanosleep(&ts, NULL); /* ignore error if interval was < 0 */
+}
+
+
+/* Pre-process time_info for search control and sets the desired stopping conditions. */
+void
+time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
+{
+	/*** Transform @ti to TT_MOVE and set up recommended/max time and
+	 * net lag information. */
+
 	int moves_left;
 
 	if (ti->period == TT_TOTAL) {
-		moves_left = board_estimated_moves_left(board);
+		moves_left = board_estimated_moves_left(b);
 		assert(moves_left > 0);
 		if (ti->dim == TD_GAMES) {
 			ti->period = TT_MOVE;
@@ -108,7 +149,7 @@ time_prepare_move(struct time_info *ti, struct board *board)
 		}
 	}
 	if (ti->period == TT_NULL || ti->dim != TD_WALLTIME)
-		return;
+		goto setup_limits;
 
 	double now = time_now();
 	double lag;
@@ -171,51 +212,11 @@ time_prepare_move(struct time_info *ti, struct board *board)
 		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f, lag %0.2f max %0.2f\n",
 			ti->len.t.recommended_time, ti->len.t.max_time, ti->len.t.byoyomi_time, lag,
 			ti->len.t.net_lag);
-}
-
-/* Start our timer. kgs does this (correctly) on "play" not "genmove"
- * unless we are making the first move of the game. */
-void
-time_start_timer(struct time_info *ti)
-{
-	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME)
-		ti->len.t.timer_start = time_now();
-}
-
-/* Returns true if we are in byoyomi (or should play as if in byo yomi
- * because remaining time per move in main time is less than byoyomi time
- * per move). */
-bool
-time_in_byoyomi(struct time_info *ti) {
-	return ti->period == TT_MOVE && ti->dim == TD_WALLTIME && ti->len.t.byoyomi_time > 0
-	       && ti->len.t.recommended_time <= ti->len.t.byoyomi_time + 0.001;
-}
-
-/* Returns the current time. */
-double
-time_now(void)
-{
-	struct timespec now;
-	clock_gettime(CLOCK_REALTIME, &now);
-	return now.tv_sec + now.tv_nsec/1000000000.0;
-}
-
-/* Sleep for a given interval (in seconds). Return immediately if interval < 0. */
-void
-time_sleep(double interval)
-{
-	struct timespec ts;
-	double sec;
-	ts.tv_nsec = (int)(modf(interval, &sec)*1000000000.0);
-        ts.tv_sec = (int)sec;
-	nanosleep(&ts, NULL); /* ignore error if interval was < 0 */
-}
 
 
-/* Pre-process time_info for search control and sets the desired stopping conditions. */
-void
-time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
-{
+	/*** Setup desired/worst time limits based on recommended/max time. */
+
+setup_limits:
 	assert(ti->period == TT_MOVE);
 
 	if (ti->dim == TD_GAMES) {

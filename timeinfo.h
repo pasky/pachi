@@ -78,10 +78,6 @@ void time_left(struct time_info *ti, int time_left, int stones_left);
  * unless we are making the first move of the game. */
 void time_start_timer(struct time_info *ti);
 
-/* Set correct time information before making a move, and
- * always make it time per move for the engine. */
-void time_prepare_move(struct time_info *ti, struct board *board);
-
 /* Returns true if we are in byoyomi (or should play as if in byo yomi
  * because remaining time per move in main time is less than byoyomi time
  * per move). */
