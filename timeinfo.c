@@ -378,7 +378,6 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			ti->len.t.byoyomi_time, ti->len.t.byoyomi_stones,
 			ti->len.t.byoyomi_periods, net_lag);
 
-	stop->desired.time = ti->len.t.timer_start + recommended_time - net_lag;
-	stop->worst.time = ti->len.t.timer_start + max_time - net_lag;
-	// Both stop points may be in the past if too much lag.
+	stop->desired.time = recommended_time - net_lag;
+	stop->worst.time = max_time - net_lag;
 }

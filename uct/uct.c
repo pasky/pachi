@@ -488,9 +488,9 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* Check against time settings. */
 		bool desired_done = false;
 		if (ti->dim == TD_WALLTIME) {
-			double now = time_now();
-			if (now > stop.worst.time) break;
-			desired_done = now > stop.desired.time;
+			double elapsed = time_now() - ti->len.t.timer_start;
+			if (elapsed > stop.worst.time) break;
+			desired_done = elapsed > stop.desired.time;
 		} else {
 			assert(ti->dim == TD_GAMES);
 			if (i > stop.worst.playouts) break;

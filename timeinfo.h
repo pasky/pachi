@@ -91,14 +91,17 @@ void time_sleep(double interval);
 
 /* Based on existing time information, compute the optimal/maximal time
  * to be spent on this move. */
+/* The values can be negative, indicating severe time shortage (less time
+ * available than netlag safety margin) and consequently need to choose
+ * a move ASAP. */
 
 struct time_stop {
-	/* stop at that time if possible */
+	/* spend this amount of time if possible */
 	union {
 		double time; // TD_WALLTIME
 		int playouts; // TD_GAMES
 	} desired;
-	/* stop no later than this */
+	/* spend no more than this time */
 	union {
 		double time; // TD_WALLTIME
 		int playouts; // TD_GAMES
