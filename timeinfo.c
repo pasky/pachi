@@ -62,7 +62,7 @@ time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi
 	if (byoyomi_time > 0 && byoyomi_stones == 0) {
 		ti->period = TT_NULL; // no time limit, rely on engine default
 	} else {
-		ti->period = TT_TOTAL;
+		ti->period = main_time > 0 ? TT_TOTAL : TT_MOVE;
 		ti->dim = TD_WALLTIME;
 		ti->len.t.timer_start = 0;
 		ti->len.t.main_time = (double) main_time;
