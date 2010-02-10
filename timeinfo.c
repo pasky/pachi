@@ -194,6 +194,15 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		assert(ti->len.t.byoyomi_stones > 0);
 		recommended_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
 
+		/* Use a larger safety margin if we risk losing on time on
+		 * this move; it makes no sense to have 30s byoyomi and wait
+		 * until 28s to play our move). */
+		if (recommended_time >= max_time - net_lag) {
+			double safe_margin = RESERVED_BYOYOMI_PERCENT * recommended_time / 100;
+			if (safe_margin > net_lag)
+				net_lag = safe_margin;
+		}
+
 	} else {
 		/* We are in main time. */
 		assert(ti->period == TT_TOTAL);
@@ -237,16 +246,6 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	}
 	assert(recommended_time > 0 && max_time > 0);
 	assert(recommended_time <= max_time + 0.001);
-
-	/* Use a larger safety margin if we risk losing on time on this move: */
-        double safe_margin = RESERVED_BYOYOMI_PERCENT * ti->len.t.byoyomi_time/100;
-	if (safe_margin > 0) {
-		assert(ti->len.t.byoyomi_stones > 0);
-		safe_margin /= ti->len.t.byoyomi_stones;
-	}
-	if (safe_margin > MAX_NET_LAG && recommended_time >= max_time - net_lag) {
-		net_lag = safe_margin;
-	}
 
 	if (DEBUGL(1))
 		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f/%d, lag %0.2f\n",
