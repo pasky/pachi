@@ -229,7 +229,6 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 
 	/* Minimum net lag (seconds) to be reserved in the time for move. */
 	double net_lag = MAX_NET_LAG;
-	/* Make sure timer_start is set up, adjust net_lag. */
 	if (!ti->len.t.timer_start) {
 		ti->len.t.timer_start = time_now(); // we're playing the first game move
 	} else {
@@ -246,11 +245,6 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	}
 
 
-	/* Absolute maximum time possible to spend on the move. */
-	double max_time;
-	/* Ideal/reasonable time to spend on the move. */
-	double recommended_time;
-
 	if (ti->period == TT_MOVE) {
 		/* We are in byoyomi, or almost! */
 
@@ -258,30 +252,30 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		 * time if we are just switching to byoyomi. */
 		double period_len = ti->len.t.byoyomi_time + ti->len.t.main_time;
 
-		max_time = period_len;
+		stop->worst.time = period_len;
 		assert(ti->len.t.byoyomi_stones > 0);
-		recommended_time = period_len / ti->len.t.byoyomi_stones;
+		stop->desired.time = period_len / ti->len.t.byoyomi_stones;
 
 		/* Use a larger safety margin if we risk losing on time on
 		 * this move; it makes no sense to have 30s byoyomi and wait
 		 * until 28s to play our move). */
-		if (recommended_time >= period_len - net_lag) {
-			double safe_margin = RESERVED_BYOYOMI_PERCENT * recommended_time / 100;
+		if (stop->desired.time >= period_len - net_lag) {
+			double safe_margin = RESERVED_BYOYOMI_PERCENT * stop->desired.time / 100;
 			if (safe_margin > net_lag)
 				net_lag = safe_margin;
 		}
 
 		/* Make recommended_old == average(recommended_new, max) */
-		double max_time2 = recommended_time * MAX_BYOYOMI_TIME_EXTENSION;
-		if (max_time2 < max_time)
-			max_time = max_time2;
-		recommended_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
+		double worst_time = stop->desired.time * MAX_BYOYOMI_TIME_EXTENSION;
+		if (worst_time < stop->worst.time)
+			stop->worst.time = worst_time;
+		stop->desired.time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
 
 	} else { assert(ti->period == TT_TOTAL);
 		/* We are in main time. */
 
 		assert(ti->len.t.main_time > 0);
-		max_time = ti->len.t.main_time;
+		stop->worst.time = ti->len.t.main_time;
 
 		int moves_left = board_estimated_moves_left(b);
 		/* If we have byoyomi available, plan to extend our thinking
@@ -295,22 +289,22 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			 * periods as main time, keeping the last one as
 			 * insurance against unexpected net lag. */
 			if (ti->len.t.byoyomi_periods > 2) {
-				max_time += (ti->len.t.byoyomi_periods - 2) * move_time;
+				stop->worst.time += (ti->len.t.byoyomi_periods - 2) * move_time;
 				// Will add 1 more byoyomi_time just below
 			}
 
 			/* In case of Canadian byoyomi, include time that can
 			 * be spent on its first move. */
-			max_time += move_time;
+			stop->worst.time += move_time;
 
 			/* Maximize the number of moves played uniformly in
 			 * main time, while not playing faster in main time
 			 * than in byoyomi. At this point, the main time
-			 * remaining is max_time and already includes
+			 * remaining is stop->worst.time and already includes
 			 * the first (canadian) or N-1 byoyomi periods. */
 			double actual_byoyomi = move_time - net_lag;
 			if (actual_byoyomi > 0) {
-				int main_moves = max_time / actual_byoyomi;
+				int main_moves = stop->worst.time / actual_byoyomi;
 				if (moves_left > main_moves) {
 					/* We plan to do too many moves in
 					 * main time, do the rest in byoyomi. */
@@ -322,9 +316,9 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		}
 
 		/* Allocate even slice of the remaining time for next move. */
-		recommended_time = max_time / moves_left;
-		assert(recommended_time > 0 && max_time > 0);
-		assert(recommended_time <= max_time + 0.001);
+		stop->desired.time = stop->worst.time / moves_left;
+		assert(stop->desired.time > 0 && stop->worst.time > 0);
+		assert(stop->desired.time <= stop->worst.time + 0.001);
 
 		/* Furthermore, tweak the slice based on the game phase. */
 
@@ -344,40 +338,41 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			/* This particular value of middlegame_time will
 			 * continuously converge to effective "yose_time"
 			 * value as we approach yose_start. */
-			double middlegame_time = max_time / left_at_yose_start;
+			double middlegame_time = stop->worst.time / left_at_yose_start;
 			// Usually, this condition will hold.
-			if (middlegame_time >= recommended_time) {
+			if (middlegame_time >= stop->desired.time) {
 				if (b->moves < fuseki_end) {
 					assert(fuseki_end > 0);
-					/* At the game start, use recommended_time
+					/* At the game start, use stop->desired.time
 					 * (rather conservative estimate),
 					 * then gradually prolong it. */
 					double beta = b->moves / fuseki_end;
-					recommended_time = middlegame_time * beta + recommended_time * (1 - beta);
+					stop->desired.time = middlegame_time * beta + stop->desired.time * (1 - beta);
 				} else { assert(b->moves < yose_start);
 					/* Middlegame, start with relatively
 					 * large value, then converge to the
 					 * uniform-timeslice yose value. */
-					recommended_time = middlegame_time;
+					stop->desired.time = middlegame_time;
 				}
 			}
 		}
 
 		/* Put final upper bound on maximal time spent on the move. */
-		double max_time2 = recommended_time * MAX_MAIN_TIME_EXTENSION;
-		if (max_time2 < max_time)
-			max_time = max_time2;
-		if (recommended_time > max_time)
-			recommended_time = max_time;
+		double worst_time = stop->desired.time * MAX_MAIN_TIME_EXTENSION;
+		if (worst_time < stop->worst.time)
+			stop->worst.time = worst_time;
+		if (stop->desired.time > stop->worst.time)
+			stop->desired.time = stop->worst.time;
 	}
 
 	if (DEBUGL(1))
-		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, clock [%d] %0.2f + %0.2f/%d*%d, lag %0.2f\n",
-			recommended_time, max_time,
+		fprintf(stderr, "desired %0.2f, worst %0.2f, clock [%d] %0.2f + %0.2f/%d*%d, lag %0.2f\n",
+			stop->desired.time, stop->worst.time,
 			ti->dim, ti->len.t.main_time,
 			ti->len.t.byoyomi_time, ti->len.t.byoyomi_stones,
 			ti->len.t.byoyomi_periods, net_lag);
 
-	stop->desired.time = recommended_time - net_lag;
-	stop->worst.time = max_time - net_lag;
+	/* Account for lag. */
+	stop->desired.time -= net_lag;
+	stop->worst.time -= net_lag;
 }
