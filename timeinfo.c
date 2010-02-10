@@ -96,11 +96,18 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 	assert(ti->period != TT_NULL);
 	ti->dim = TD_WALLTIME;
 
-	if (stones_left == 0) {
+	if (!time_left && !stones_left) {
+		/* Some GTP peers send time_left 0 0 at the end of main time. */
+		ti->period = TT_MOVE;
+		ti->len.t.main_time = 0;
+		/* byoyomi_time kept fully charged. */
+
+	} else if (!stones_left) {
 		/* Main time */
 		ti->period = TT_TOTAL;
 		ti->len.t.main_time = time_left;
 		/* byoyomi_time kept fully charged. */
+
 	} else {
 		/* Byoyomi */
 		ti->period = TT_MOVE;
