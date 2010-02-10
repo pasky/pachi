@@ -185,17 +185,24 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	double max_time;
 	/* Ideal/reasonable time to spend on the move. */
 	double recommended_time;
-	/* Set up initial recommendations. */
+
 	if (!ti->len.t.main_time) {
+		/* We are in byoyomi! */
+		assert(ti->period == TT_MOVE);
+
 		max_time = ti->len.t.byoyomi_time;
 		assert(ti->len.t.byoyomi_stones > 0);
 		recommended_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
-	} else {
-		max_time = recommended_time = ti->len.t.main_time;
-	}
 
-	if (ti->period == TT_TOTAL) {
+	} else {
+		/* We are in main time. */
+		assert(ti->period == TT_TOTAL);
+
+		max_time = recommended_time = ti->len.t.main_time;
+
 		int moves_left = board_estimated_moves_left(b);
+		/* If we have byoyomi available, plan to extend our thinking
+		 * time to make use of it. */
 		if (ti->len.t.byoyomi_time > 0) {
 			assert(ti->len.t.byoyomi_stones > 0);
 			/* Time for one move in byoyomi. */
@@ -225,14 +232,10 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 					moves_left = 1;
 			}
 		}
-		ti->period = TT_MOVE;
+
 		recommended_time /= moves_left;
 	}
-	// To simplify the engine code, do not leave negative times:
-	if (recommended_time < 0)
-		recommended_time = 0;
-	if (max_time < 0)
-		max_time = 0;
+	assert(recommended_time > 0 && max_time > 0);
 	assert(recommended_time <= max_time + 0.001);
 
 	/* Use a larger safety margin if we risk losing on time on this move: */
@@ -253,8 +256,6 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 
 
 	/*** Setup desired/worst time limits based on recommended/max time. */
-
-	assert(ti->period == TT_MOVE);
 
 	double desired_time = recommended_time;
         double worst_time;
