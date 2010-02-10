@@ -34,11 +34,10 @@ time_parse(struct time_info *ti, char *s)
 			if (!isdigit(s[0]))
 				return false;
 			ti->dim = TD_WALLTIME;
-			ti->len.t.recommended_time = atof(s);
-			ti->len.t.max_time = ti->len.t.recommended_time;
-			ti->len.t.timer_start = 0;
+			ti->len.t.main_time = atof(s);
 			ti->len.t.byoyomi_time = 0.0;
 			ti->len.t.byoyomi_periods = 0;
+			ti->len.t.timer_start = 0;
 			break;
 	}
 	return true;
@@ -53,25 +52,23 @@ time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi
 	} else {
 		ti->period = TT_TOTAL;
 		ti->dim = TD_WALLTIME;
-		ti->len.t.max_time = (double) main_time; // byoyomi will be added at next genmove
-		ti->len.t.recommended_time = ti->len.t.max_time;
-		ti->len.t.timer_start = 0;
+		ti->len.t.main_time = (double) main_time;
 		ti->len.t.byoyomi_time = (double) byoyomi_time;
 		if (byoyomi_stones > 0)
 			ti->len.t.byoyomi_time /= byoyomi_stones;
 		ti->len.t.byoyomi_periods = byoyomi_periods;
+		ti->len.t.timer_start = 0;
 	}
 }
 
 /* Update time information according to gtp time_left command.
  * kgs doesn't give time_left for the first move, so make sure
- * that just time_settings + time_select_best still work. */
+ * that just time_settings + time_stop_conditions still work. */
 void
 time_left(struct time_info *ti, int time_left, int stones_left)
 {
 	assert(ti->period != TT_NULL);
 	ti->dim = TD_WALLTIME;
-	ti->len.t.max_time = (double)time_left;
 
 	if (ti->len.t.byoyomi_periods > 0 && stones_left > 0) {
 		ti->len.t.byoyomi_periods = stones_left; // field misused by kgs
@@ -80,11 +77,16 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 	if (stones_left == 0) {
 		/* Main time */
 		ti->period = TT_TOTAL;
-		ti->len.t.recommended_time = ti->len.t.max_time;
-		/* byoyomi_time unchanged. */
+		ti->len.t.main_time = time_left;
+		/* byoyomi_time kept fully charged. */
 	} else {
+		/* Byoyomi */
 		ti->period = TT_MOVE;
+		ti->len.t.main_time = 0;
 		ti->len.t.byoyomi_time = ((double)time_left)/stones_left;
+		/* XXX: We need to keep stones_left info in time_info
+		 * to be able to deduce this in stop_conditions() instead. */
+		ti->len.t.max_time = time_left;
 		ti->len.t.recommended_time = ti->len.t.byoyomi_time;
 	}
 }
@@ -154,9 +156,11 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 
 	assert(ti->dim == TD_WALLTIME);
 
+
 	/*** Transform @ti to TT_MOVE and set up recommended/max time and
 	 * net lag information. */
 
+	/* Make sure timer_start is set up, adjust net_lag. */
 	double now = time_now();
 	if (!ti->len.t.timer_start) {
 		ti->len.t.timer_start = now; // we're playing the first game move
@@ -164,6 +168,12 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		net_lag += now - ti->len.t.timer_start;
 		// TODO: keep statistics to get good estimate of lag not just current move
 	}
+
+	/* Set up initial recommendations. */
+	if (ti->len.t.main_time) {
+		ti->len.t.max_time = ti->len.t.recommended_time = ti->len.t.main_time;
+	} // otherwise we have already set up max_, recommended_ in time_left().
+
 	if (ti->period == TT_TOTAL) {
 		int moves_left = board_estimated_moves_left(b);
 		if (ti->len.t.byoyomi_time > 0) {

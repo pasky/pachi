@@ -28,6 +28,25 @@ struct time_info {
 	union {
 		int games; // TD_GAMES
 		struct {   // TD_WALLTIME
+			/* Main thinking time. 0 if we are already completely
+			 * in byoyomi (but use time_in_byoyomi() to cover also
+			 * right-before-byoyomi cases). */
+			double main_time;
+
+			/* Byoyomi time per move (even for TT_TOTAL). This time must
+			 * be remembered to avoid rushing at the end of the main
+			 * period. 0 if no byoyomi. */
+			double byoyomi_time;
+			/* Number of byoyomi periods. 0 means canadian byoyomi
+			 * (byoyomi_time is not whole canadian byoyomi period but
+			 * time _per move_). */
+			int byoyomi_periods;
+
+			/* Absolute time at which our timer started for current move,
+			 * 0 if not yet known. The engine always sees > 0. */
+			double timer_start;
+
+			/* --- PRIVATE DATA --- */
 			/* Recommended wall time for next move or game (seconds).
 			 * Does not include net lag. Play asap if 0. */
 			double recommended_time;
@@ -35,19 +54,6 @@ struct time_info {
 			/* Maximum wall time for next move or game. Will lose on time
 			 * if exceeded. Does not include net lag. Play asap if 0. */
 			double max_time;
-
-			/* Absolute time at which our timer started for current move,
-			 * 0 if not yet known. The engine always sees > 0. */
-			double timer_start;
-
-			/* --- PRIVATE DATA --- */
-			/* Byoyomi time per move (even for TT_TOTAL). This time must
-			 * be remembered to avoid rushing at the end of the main
-			 * period. 0 if no byoyomi.  An engine should only consider
-			 * recommended_time, the generic time control code always sets it to
-			 * the best option (play on main time or on byoyomi time). */
-			double byoyomi_time;
-			int byoyomi_periods; /* > 0 only for non-canadian byoyomi */
 		} t;
 	} len;
 	/* If true, this time info is independent from GTP time_left updates,
