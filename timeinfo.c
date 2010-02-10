@@ -211,6 +211,12 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 				net_lag = safe_margin;
 		}
 
+		/* Make recommended_old == average(recommended_new, max) */
+		double max_time2 = recommended_time * MAX_BYOYOMI_TIME_EXTENSION;
+		if (max_time2 < max_time)
+			max_time = max_time2;
+		recommended_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
+
 	} else { assert(ti->period == TT_TOTAL);
 		/* We are in main time. */
 
@@ -250,28 +256,13 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			}
 		}
 
+		/* Allocate even slice of the remaining time for next move. */
 		recommended_time /= moves_left;
-	}
-	assert(recommended_time > 0 && max_time > 0);
-	assert(recommended_time <= max_time + 0.001);
+		assert(recommended_time > 0 && max_time > 0);
+		assert(recommended_time <= max_time + 0.001);
 
-	if (DEBUGL(1))
-		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f/%d, lag %0.2f\n",
-			recommended_time, max_time,
-			ti->len.t.byoyomi_time, ti->len.t.byoyomi_stones,
-			net_lag);
+		/* Furthermore, tweak the slice based on the game phase. */
 
-
-	/*** Setup desired/worst time limits based on recommended/max time. */
-
-	double desired_time = recommended_time;
-        double worst_time;
-	if (time_in_byoyomi(ti)) {
-		// make recommended == average(desired, worst)
-		worst_time = desired_time * MAX_BYOYOMI_TIME_EXTENSION;
-		desired_time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
-
-	} else {
 		int bsize = (board_size(b)-2)*(board_size(b)-2);
 		fuseki_end = fuseki_end * bsize / 100; // move nb at fuseki end
 		yose_start = yose_start * bsize / 100; // move nb at yose start
@@ -285,26 +276,31 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			if (left_at_yose_start < MIN_MOVES_LEFT)
 				left_at_yose_start = MIN_MOVES_LEFT;
 			double longest_time = max_time / left_at_yose_start;
-			if (longest_time < desired_time) {
-				// Should rarely happen, but keep desired_time anyway
+			if (longest_time < recommended_time) {
+				// Should rarely happen, but keep recommended_time anyway
 			} else if (b->moves < fuseki_end) {
 				assert(fuseki_end > 0);
-				desired_time += ((longest_time - desired_time) * b->moves) / fuseki_end;
+				recommended_time += ((longest_time - recommended_time) * b->moves) / fuseki_end;
 			} else { assert(b->moves < yose_start);
-				desired_time = longest_time;
+				recommended_time = longest_time;
 			}
 		}
-		worst_time = desired_time * MAX_MAIN_TIME_EXTENSION;
+
+		/* Put final upper bound on maximal time spent on the move. */
+		double max_time2 = recommended_time * MAX_MAIN_TIME_EXTENSION;
+		if (max_time2 < max_time)
+			max_time = max_time2;
+		if (recommended_time > max_time)
+			recommended_time = max_time;
 	}
-	if (worst_time > max_time)
-		worst_time = max_time;
-	if (desired_time > worst_time)
-		desired_time = worst_time;
 
-	stop->desired.time = ti->len.t.timer_start + desired_time - net_lag;
-	stop->worst.time = ti->len.t.timer_start + worst_time - net_lag;
+	if (DEBUGL(1))
+		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f/%d, lag %0.2f\n",
+			recommended_time, max_time,
+			ti->len.t.byoyomi_time, ti->len.t.byoyomi_stones,
+			net_lag);
+
+	stop->desired.time = ti->len.t.timer_start + recommended_time - net_lag;
+	stop->worst.time = ti->len.t.timer_start + max_time - net_lag;
 	// Both stop points may be in the past if too much lag.
-
-	if (DEBUGL(2))
-		fprintf(stderr, "desired time %.02f, worst %.02f\n", desired_time, worst_time);
 }
