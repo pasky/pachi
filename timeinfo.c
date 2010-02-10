@@ -280,14 +280,22 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			int left_at_yose_start = board_estimated_moves_left(b) - moves_to_yose;
 			if (left_at_yose_start < MIN_MOVES_LEFT)
 				left_at_yose_start = MIN_MOVES_LEFT;
-			double longest_time = max_time / left_at_yose_start;
-			if (longest_time < recommended_time) {
-				// Should rarely happen, but keep recommended_time anyway
-			} else if (b->moves < fuseki_end) {
-				assert(fuseki_end > 0);
-				recommended_time += ((longest_time - recommended_time) * b->moves) / fuseki_end;
-			} else { assert(b->moves < yose_start);
-				recommended_time = longest_time;
+
+			// XXX: Why set middlegame_time to _this_ in particular?
+			double middlegame_time = max_time / left_at_yose_start;
+			// Usually, this condition will hold.
+			if (middlegame_time >= recommended_time) {
+				if (b->moves < fuseki_end) {
+					assert(fuseki_end > 0);
+					/* At the game start, use recommended_time,
+					 * then gradually prolong it. */
+					double beta = b->moves / fuseki_end;
+					recommended_time = middlegame_time * beta + recommended_time * (1 - beta);
+				} else { assert(b->moves < yose_start);
+					/* Middlegame, spend uniformly long
+					 * time periods. */
+					recommended_time = middlegame_time;
+				}
 			}
 		}
 
