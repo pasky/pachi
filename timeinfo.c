@@ -299,7 +299,7 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 				// Will add 1 more byoyomi_time just below
 			}
 
-			/* In case of Canadian byoyomi, condier move that can
+			/* In case of Canadian byoyomi, include time that can
 			 * be spent on its first move. */
 			max_time += move_time;
 
