@@ -37,13 +37,17 @@ time_parse(struct time_info *ti, char *s)
 			if (ti->period == TT_TOTAL) {
 				ti->len.t.main_time = atof(s);
 				ti->len.t.byoyomi_time = 0.0;
+				ti->len.t.byoyomi_time_max = 0.0;
 				ti->len.t.byoyomi_periods = 0;
 				ti->len.t.byoyomi_stones = 0;
+				ti->len.t.byoyomi_stones_max = 0;
 			} else { assert(ti->period == TT_MOVE);
 				ti->len.t.main_time = 0.0;
 				ti->len.t.byoyomi_time = atof(s);
+				ti->len.t.byoyomi_time_max = ti->len.t.byoyomi_time;
 				ti->len.t.byoyomi_periods = 1;
 				ti->len.t.byoyomi_stones = 1;
+				ti->len.t.byoyomi_stones_max = 1;
 			}
 			ti->len.t.timer_start = 0;
 			break;
@@ -62,8 +66,10 @@ time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi
 		ti->dim = TD_WALLTIME;
 		ti->len.t.main_time = (double) main_time;
 		ti->len.t.byoyomi_time = (double) byoyomi_time;
+		ti->len.t.byoyomi_time_max = ti->len.t.byoyomi_time;
 		ti->len.t.byoyomi_periods = byoyomi_periods > 1 ? byoyomi_periods : 1;
 		ti->len.t.byoyomi_stones = byoyomi_stones > 1 ? byoyomi_stones : 1;
+		ti->len.t.byoyomi_stones_max = ti->len.t.byoyomi_stones;
 		ti->len.t.canadian = byoyomi_stones > 0;
 		ti->len.t.timer_start = 0;
 	}
@@ -120,6 +126,41 @@ time_start_timer(struct time_info *ti)
 {
 	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME)
 		ti->len.t.timer_start = time_now();
+}
+
+void
+time_sub(struct time_info *ti, double interval)
+{
+	assert(ti->dim == TD_WALLTIME && ti->period != TT_NULL);
+
+	if (ti->period == TT_TOTAL) {
+		ti->len.t.main_time -= interval;
+		if (ti->len.t.main_time >= 0)
+			return;
+		/* Fall-through to byoyomi. */
+		ti->period = TT_MOVE;
+		interval = -ti->len.t.main_time;
+		ti->len.t.main_time = 0;
+	}
+
+	ti->len.t.byoyomi_time -= interval;
+	if (ti->len.t.byoyomi_time < 0) {
+		/* Lost a period. */
+		if (--ti->len.t.byoyomi_periods < 1) {
+			fprintf(stderr, "*** LOST ON TIME internally! (%0.2f, spent %0.2fs on last move)\n",
+				ti->len.t.byoyomi_time, interval);
+			/* Well, what can we do? Pretend this didn't happen. */
+			ti->len.t.byoyomi_periods = 1;
+		}
+		ti->len.t.byoyomi_time = ti->len.t.byoyomi_time_max;
+		ti->len.t.byoyomi_stones = ti->len.t.byoyomi_stones_max;
+		return;
+	}
+	if (--ti->len.t.byoyomi_stones < 1) {
+		/* Finished a period. */
+		ti->len.t.byoyomi_time = ti->len.t.byoyomi_time_max;
+		ti->len.t.byoyomi_stones = ti->len.t.byoyomi_stones_max;
+	}
 }
 
 /* Returns the current time. */

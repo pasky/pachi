@@ -198,6 +198,14 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		gtp_reply(id, str, NULL);
 		free(str); coord_done(c);
 
+		/* Account for spent time. If our GTP peer keeps our clock, this will
+		 * be overriden by next time_left GTP command properly. */
+		/* (XXX: Except if we pass to byoyomi and the peer doesn't, but that
+		 * should be absolutely rare situation and we will just spend a little
+		 * less time than we could on next few moves.) */
+		if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
+			time_sub(&ti[color], time_now() - ti[color].len.t.timer_start);
+
 	} else if (!strcasecmp(cmd, "set_free_handicap")) {
 		struct move m;
 		m.color = S_BLACK;

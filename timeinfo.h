@@ -40,12 +40,15 @@ struct time_info {
 			 * periods of length _time and have to play _stones
 			 * stones in each. If we play in canadian byoyomi,
 			 * _time will shrink until we play all stones of the
-			 * current period. */
+			 * current period; _max always keeps period length
+			 * for reference. */
 			/* (In normal time settings, one of _periods or _stones
 			 * is 1.) */
 			double byoyomi_time;
 			int byoyomi_periods;
 			int byoyomi_stones;
+			double byoyomi_time_max;
+			int byoyomi_stones_max;
 			bool canadian; // time_left field meaning changes
 
 			/* Absolute time at which our timer started for current move,
@@ -81,6 +84,9 @@ bool time_in_byoyomi(struct time_info *ti);
 /* Start our timer. kgs does this (correctly) on "play" not "genmove"
  * unless we are making the first move of the game. */
 void time_start_timer(struct time_info *ti);
+
+/* Subtract given amount of elapsed time from time settings. */
+void time_sub(struct time_info *ti, double interval);
 
 /* Returns the current time. */
 double time_now(void);
