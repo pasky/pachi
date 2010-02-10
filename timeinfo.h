@@ -74,14 +74,14 @@ void time_settings(struct time_info *ti, int main_time, int byoyomi_time, int by
 /* Update time information according to gtp time_left command. */
 void time_left(struct time_info *ti, int time_left, int stones_left);
 
-/* Start our timer. kgs does this (correctly) on "play" not "genmove"
- * unless we are making the first move of the game. */
-void time_start_timer(struct time_info *ti);
-
 /* Returns true if we are in byoyomi (or should play as if in byo yomi
  * because remaining time per move in main time is less than byoyomi time
  * per move). */
 bool time_in_byoyomi(struct time_info *ti);
+
+/* Start our timer. kgs does this (correctly) on "play" not "genmove"
+ * unless we are making the first move of the game. */
+void time_start_timer(struct time_info *ti);
 
 /* Returns the current time. */
 double time_now(void);

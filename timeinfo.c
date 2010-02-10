@@ -92,15 +92,6 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 	}
 }
 
-/* Start our timer. kgs does this (correctly) on "play" not "genmove"
- * unless we are making the first move of the game. */
-void
-time_start_timer(struct time_info *ti)
-{
-	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME)
-		ti->len.t.timer_start = time_now();
-}
-
 /* Returns true if we are in byoyomi (or should play as if in byo yomi
  * because remaining time per move in main time is less than byoyomi time
  * per move). */
@@ -108,6 +99,15 @@ bool
 time_in_byoyomi(struct time_info *ti) {
 	return ti->period == TT_MOVE && ti->dim == TD_WALLTIME && ti->len.t.byoyomi_time > 0
 	       && ti->len.t.recommended_time <= ti->len.t.byoyomi_time + 0.001;
+}
+
+/* Start our timer. kgs does this (correctly) on "play" not "genmove"
+ * unless we are making the first move of the game. */
+void
+time_start_timer(struct time_info *ti)
+{
+	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME)
+		ti->len.t.timer_start = time_now();
 }
 
 /* Returns the current time. */
