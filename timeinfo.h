@@ -29,8 +29,7 @@ struct time_info {
 		int games; // TD_GAMES
 		struct {   // TD_WALLTIME
 			/* Main thinking time. 0 if we are already completely
-			 * in byoyomi (but use time_in_byoyomi() to cover also
-			 * right-before-byoyomi cases). */
+			 * in byoyomi. */
 			double main_time;
 
 			/* Byoyomi time. This time must be remembered to avoid
@@ -75,11 +74,6 @@ void time_settings(struct time_info *ti, int main_time, int byoyomi_time, int by
 
 /* Update time information according to gtp time_left command. */
 void time_left(struct time_info *ti, int time_left, int stones_left);
-
-/* Returns true if we are in byoyomi (or should play as if in byo yomi
- * because remaining time per move in main time is less than byoyomi time
- * per move). */
-bool time_in_byoyomi(struct time_info *ti);
 
 /* Start our timer. kgs does this (correctly) on "play" not "genmove"
  * unless we are making the first move of the game. */

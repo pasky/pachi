@@ -103,22 +103,6 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 	}
 }
 
-/* Returns true if we are in byoyomi (or should play as if in byo yomi
- * because remaining time per move in main time is less than byoyomi time
- * per move). */
-bool
-time_in_byoyomi(struct time_info *ti) {
-	assert(ti->dim == TD_WALLTIME);
-	if (!ti->len.t.byoyomi_time)
-		return false; // there is no byoyomi!
-	assert(ti->len.t.byoyomi_stones > 0);
-	if (!ti->len.t.main_time)
-		return true; // we _are_ in byoyomi
-	if (ti->len.t.main_time <= ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones + 0.001)
-		return true; // our basic time left is less than byoyomi time per move
-	return false;
-}
-
 /* Start our timer. kgs does this (correctly) on "play" not "genmove"
  * unless we are making the first move of the game. */
 void
@@ -181,6 +165,22 @@ time_sleep(double interval)
 	ts.tv_nsec = (int)(modf(interval, &sec)*1000000000.0);
         ts.tv_sec = (int)sec;
 	nanosleep(&ts, NULL); /* ignore error if interval was < 0 */
+}
+
+/* Returns true if we are in byoyomi (or should play as if in byo yomi
+ * because remaining time per move in main time is less than byoyomi time
+ * per move). */
+static bool
+time_in_byoyomi(struct time_info *ti) {
+	assert(ti->dim == TD_WALLTIME);
+	if (!ti->len.t.byoyomi_time)
+		return false; // there is no byoyomi!
+	assert(ti->len.t.byoyomi_stones > 0);
+	if (!ti->len.t.main_time)
+		return true; // we _are_ in byoyomi
+	if (ti->len.t.main_time <= ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones + 0.001)
+		return true; // our basic time left is less than byoyomi time per move
+	return false;
 }
 
 
