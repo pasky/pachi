@@ -143,13 +143,6 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	/* We must have _some_ limits by now, be it random default values! */
 	assert(ti->period != TT_NULL);
 
-	/* Minimum net lag (seconds) to be reserved in the time for move. */
-	double net_lag = MAX_NET_LAG;
-	/* Absolute maximum time possible to spend on the move. */
-	double max_time;
-	/* Ideal/reasonable time to spend on the move. */
-	double recommended_time;
-
 	/* Special-case limit by number of simulations. */
 	if (ti->dim == TD_GAMES) {
 		if (ti->period == TT_TOTAL) {
@@ -170,22 +163,28 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	/*** Transform @ti to TT_MOVE and set up recommended/max time and
 	 * net lag information. */
 
+
+	/* Minimum net lag (seconds) to be reserved in the time for move. */
+	double net_lag = MAX_NET_LAG;
 	/* Make sure timer_start is set up, adjust net_lag. */
-	double now = time_now();
 	if (!ti->len.t.timer_start) {
-		ti->len.t.timer_start = now; // we're playing the first game move
+		ti->len.t.timer_start = time_now(); // we're playing the first game move
 	} else {
-		net_lag += now - ti->len.t.timer_start;
+		net_lag += time_now() - ti->len.t.timer_start;
 		// TODO: keep statistics to get good estimate of lag not just current move
 	}
 
+	/* Absolute maximum time possible to spend on the move. */
+	double max_time;
+	/* Ideal/reasonable time to spend on the move. */
+	double recommended_time;
 	/* Set up initial recommendations. */
-	if (ti->len.t.main_time) {
-		max_time = recommended_time = ti->len.t.main_time;
-	} else {
+	if (!ti->len.t.main_time) {
 		max_time = ti->len.t.byoyomi_time;
 		assert(ti->len.t.byoyomi_stones > 0);
 		recommended_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
+	} else {
+		max_time = recommended_time = ti->len.t.main_time;
 	}
 
 	if (ti->period == TT_TOTAL) {
