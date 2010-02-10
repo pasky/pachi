@@ -344,7 +344,11 @@ next_group:;
 		int time = atoi(arg);
 		next_tok(arg);
 		int stones = atoi(arg);
-		time_left(&ti[color], time, stones);
+		if (!ti[color].ignore_gtp) {
+			time_left(&ti[color], time, stones);
+		} else {
+			if (DEBUGL(2)) fprintf(stderr, "ignored time info\n");
+		}
 
 		gtp_reply(id, NULL);
 
@@ -382,8 +386,12 @@ next_group:;
 		if (DEBUGL(1))
 			fprintf(stderr, "time_settings %d %d %d %d\n",
 				main_time, byoyomi_time, byoyomi_stones, byoyomi_periods);
-		time_settings(&ti[S_BLACK], main_time, byoyomi_time, byoyomi_stones, byoyomi_periods);
-		ti[S_WHITE] = ti[S_BLACK];
+		if (!ti[S_BLACK].ignore_gtp) {
+			time_settings(&ti[S_BLACK], main_time, byoyomi_time, byoyomi_stones, byoyomi_periods);
+			ti[S_WHITE] = ti[S_BLACK];
+		} else {
+			if (DEBUGL(1)) fprintf(stderr, "ignored time info\n");
+		}
 
 		gtp_reply(id, NULL);
 

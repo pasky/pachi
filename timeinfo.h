@@ -24,6 +24,7 @@ struct time_info {
 		TD_GAMES, // Fixed number of simulations to perform.
 		TD_WALLTIME, // Wall time to spend performing simulations.
 	} dim;
+	/* The actual time count. */
 	union {
 		int games; // TD_GAMES
 		struct {   // TD_WALLTIME
@@ -53,6 +54,10 @@ struct time_info {
 			int byoyomi_periods; /* > 0 only for non-canadian byoyomi */
 		} t;
 	} len;
+	/* If true, this time info is independent from GTP time_left updates,
+	 * which will be ignored. This is the case if the time settings were
+	 * forced on the command line. */
+	bool ignore_gtp;
 };
 
 /* Parse time information provided in custom format:
