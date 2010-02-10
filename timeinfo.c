@@ -161,17 +161,11 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	 * net lag information. */
 
 	double now = time_now();
-	double lag;
 	if (!ti->len.t.timer_start) {
 		ti->len.t.timer_start = now; // we're playing the first game move
-		lag = 0;
 	} else {
-		lag = now - ti->len.t.timer_start;
+		net_lag += now - ti->len.t.timer_start;
 		// TODO: keep statistics to get good estimate of lag not just current move
-		ti->len.t.max_time -= lag; // can become < 0, taken into account below
-		ti->len.t.recommended_time -= lag;
-		if (DEBUGL(1) && lag > net_lag)
-			fprintf(stderr, "measured lag %0.2f > computed net_lag %0.2f\n", lag, net_lag);
 	}
 	if (ti->period == TT_TOTAL) {
 		if (ti->len.t.byoyomi_time > 0) {
@@ -211,13 +205,13 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 
 	/* Use a larger safety margin if we risk losing on time on this move: */
         double safe_margin = RESERVED_BYOYOMI_PERCENT * ti->len.t.byoyomi_time/100;
-	if (safe_margin > MAX_NET_LAG && ti->len.t.recommended_time >= ti->len.t.max_time - MAX_NET_LAG) {
+	if (safe_margin > MAX_NET_LAG && ti->len.t.recommended_time >= ti->len.t.max_time - net_lag) {
 		net_lag = safe_margin;
 	}
 
 	if (DEBUGL(1))
 		fprintf(stderr, "recommended_time %0.2f, max_time %0.2f, byoyomi %0.2f, lag %0.2f max %0.2f\n",
-			ti->len.t.recommended_time, ti->len.t.max_time, ti->len.t.byoyomi_time, lag,
+			ti->len.t.recommended_time, ti->len.t.max_time, ti->len.t.byoyomi_time, net_lag,
 			net_lag);
 
 
