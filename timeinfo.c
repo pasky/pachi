@@ -167,10 +167,6 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	assert(ti->dim == TD_WALLTIME);
 
 
-	/*** Transform @ti to TT_MOVE and set up recommended/max time and
-	 * net lag information. */
-
-
 	/* Minimum net lag (seconds) to be reserved in the time for move. */
 	double net_lag = MAX_NET_LAG;
 	/* Make sure timer_start is set up, adjust net_lag. */
@@ -181,23 +177,35 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		// TODO: keep statistics to get good estimate of lag not just current move
 	}
 
+
+	if (ti->period == TT_TOTAL && time_in_byoyomi(ti)) {
+		/* Technically, we are still in main time, but we can
+		 * effectively switch to byoyomi scheduling since we
+		 * have less time available than one byoyomi move takes. */
+		ti->period = TT_MOVE;
+	}
+
+
 	/* Absolute maximum time possible to spend on the move. */
 	double max_time;
 	/* Ideal/reasonable time to spend on the move. */
 	double recommended_time;
 
 	if (ti->period == TT_MOVE) {
-		/* We are in byoyomi! */
-		assert(!ti->len.t.main_time);
+		/* We are in byoyomi, or almost! */
 
-		max_time = ti->len.t.byoyomi_time;
+		/* The period can still include some tiny remnant of main
+		 * time if we are just switching to byoyomi. */
+		double period_len = ti->len.t.byoyomi_time + ti->len.t.main_time;
+
+		max_time = period_len;
 		assert(ti->len.t.byoyomi_stones > 0);
-		recommended_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
+		recommended_time = period_len / ti->len.t.byoyomi_stones;
 
 		/* Use a larger safety margin if we risk losing on time on
 		 * this move; it makes no sense to have 30s byoyomi and wait
 		 * until 28s to play our move). */
-		if (recommended_time >= max_time - net_lag) {
+		if (recommended_time >= period_len - net_lag) {
 			double safe_margin = RESERVED_BYOYOMI_PERCENT * recommended_time / 100;
 			if (safe_margin > net_lag)
 				net_lag = safe_margin;
