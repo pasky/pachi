@@ -78,6 +78,15 @@ reset_state(struct uct *u)
 }
 
 static void
+setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
+{
+	if (u->dynkomi && u->dynkomi > b->moves && (to_play & u->dynkomi_mask))
+		u->t->extra_komi = uct_get_extra_komi(u, b);
+	else
+		u->t->extra_komi = 0;
+}
+
+static void
 prepare_move(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
@@ -97,9 +106,6 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 		b->es = u;
 		setup_state(u, b, color);
 	}
-
-	if (u->dynkomi && u->dynkomi > b->moves && (color & u->dynkomi_mask))
-		u->t->extra_komi = uct_get_extra_komi(u, b);
 
 	u->ownermap.playouts = 0;
 	memset(u->ownermap.map, 0, board_size2(b) * sizeof(u->ownermap.map[0]));
@@ -172,7 +178,9 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 		reset_state(u);
 		return NULL;
 	}
-
+	/* Setting up dynkomi is not necessary here, probably, but we
+	 * better do it anyway for consistency reasons. */
+	setup_dynkomi(u, b, stone_other(m->color));
 	return NULL;
 }
 
@@ -556,6 +564,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	struct move m = { t->root->coord, t->root_color };
 	int res = board_play(b, &m);
 	assert(res >= 0);
+	setup_dynkomi(u, b, stone_other(m.color));
 
 	/* Start MCTS manager thread "headless". */
 	uct_search_start(u, b, color, t);
@@ -597,6 +606,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	uct_pondering_stop(u);
 	prepare_move(e, b, color);
 	assert(u->t);
+	setup_dynkomi(u, b, color);
 
 	/* Perform the Monte Carlo Tree Search! */
 	int played_games = uct_search(u, b, ti, color, u->t);
