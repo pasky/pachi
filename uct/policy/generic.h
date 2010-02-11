@@ -9,7 +9,7 @@
 struct board;
 struct tree_node;
 
-struct tree_node *uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
+struct tree_node *uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude);
 struct tree_node *uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct tree_node *node);
 
 

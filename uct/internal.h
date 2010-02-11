@@ -79,7 +79,7 @@ extern __thread int thread_id;
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
 
 
-typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color);
+typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude);
 typedef struct tree_node *(*uctp_winner)(struct uct_policy *p, struct tree *tree, struct tree_node *node);
 typedef float (*uctp_evaluate)(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity);
 typedef struct tree_node *(*uctp_descend)(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);

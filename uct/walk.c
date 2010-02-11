@@ -33,7 +33,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 		return;
 
 	/* Best move */
-	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color);
+	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
 	if (!best) {
 		fprintf(stderr, "... No moves left\n");
 		return;
@@ -49,7 +49,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	for (int depth = 0; depth < 6; depth++) {
 		if (best && best->u.playouts >= 25) {
 			fprintf(stderr, "%3s ", coord2sstr(best->coord, t->board));
-			best = u->policy->choose(u->policy, best, t->board, color);
+			best = u->policy->choose(u->policy, best, t->board, color, resign);
 		} else {
 			fprintf(stderr, "    ");
 		}

@@ -13,7 +13,7 @@
 #include "uct/policy/generic.h"
 
 struct tree_node *
-uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color)
+uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude)
 {
 	struct tree_node *nbest = NULL;
 	/* This function is called while the tree is updated by other threads.
@@ -22,10 +22,12 @@ uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
 		if (!nbest || ni->u.playouts > nbest->u.playouts) {
-			/* Play pass only if we can afford scoring */
-			if (is_pass(ni->coord) && !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive))
+			if (ni->coord == exclude)
 				continue;
 			if (ni->hints & TREE_HINT_INVALID)
+				continue;
+			/* Play pass only if we can afford scoring */
+			if (is_pass(ni->coord) && !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive))
 				continue;
 			nbest = ni;
 		}

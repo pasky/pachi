@@ -507,7 +507,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 		/* Early break in won situation. */
 		prev_best = best;
-		best = u->policy->choose(u->policy, ctx->t->root, b, color);
+		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
@@ -617,7 +617,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	int played_games = uct_search(u, b, ti, color, u->t);
 
 	/* Choose the best move from the tree. */
-	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color);
+	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
 	if (!best) {
 		reset_state(u);
 		return coord_copy(pass);
