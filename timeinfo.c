@@ -59,7 +59,7 @@ time_parse(struct time_info *ti, char *s)
 void
 time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi_stones, int byoyomi_periods)
 {
-	if (byoyomi_time > 0 && byoyomi_stones == 0) {
+	if (main_time < 0) {
 		ti->period = TT_NULL; // no time limit, rely on engine default
 	} else {
 		ti->period = main_time > 0 ? TT_TOTAL : TT_MOVE;
@@ -81,6 +81,8 @@ time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi
 				ti->len.t.byoyomi_periods = 1;
 			if (ti->len.t.byoyomi_stones < 1)
 				ti->len.t.byoyomi_stones = 1;
+		} else {
+			assert(!ti->len.t.byoyomi_periods && !ti->len.t.byoyomi_stones);
 		}
 		ti->len.t.byoyomi_time_max = ti->len.t.byoyomi_time;
 		ti->len.t.byoyomi_stones_max = ti->len.t.byoyomi_stones;

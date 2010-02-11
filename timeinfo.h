@@ -69,7 +69,8 @@ struct time_info {
  * Returns false on parse error.  */
 bool time_parse(struct time_info *ti, char *s);
 
-/* Update time settings according to gtp time_settings command. */
+/* Update time settings according to gtp time_settings command.
+ * main_time < 0 implies no time limit. */
 void time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi_stones, int byoyomi_periods);
 
 /* Update time information according to gtp time_left command. */

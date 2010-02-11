@@ -360,29 +360,28 @@ next_group:;
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "time_settings") || !strcasecmp(cmd, "kgs-time_settings")) {
-		char *time_system = "canadian";
+		char *time_system;
 		char *arg;
-		int main_time = -1, byoyomi_time = 0, byoyomi_stones = 0, byoyomi_periods = 0;
 		if (!strcasecmp(cmd, "kgs-time_settings")) {
 			next_tok(time_system);
-			if (!strcasecmp(time_system, "none")) {
-				// time > 0, stones 0: convention for unlimited
-				byoyomi_time = 1;
-				main_time = 0;
-			} else if (!strcasecmp(time_system, "absolute")) {
-				next_tok(arg);
-				main_time = atoi(arg);
-			} else if (!strcasecmp(time_system, "byoyomi")) {
-				next_tok(arg);
-				main_time = atoi(arg);
-				next_tok(arg);
-				byoyomi_time = atoi(arg);
-				byoyomi_stones = 0;
-				next_tok(arg);
-				byoyomi_periods = atoi(arg);
-			}
+		} else {
+			time_system = "canadian";
 		}
-		if (main_time < 0) { // canadian time system
+
+		int main_time = 0, byoyomi_time = 0, byoyomi_stones = 0, byoyomi_periods = 0;
+		if (!strcasecmp(time_system, "none")) {
+			main_time = -1;
+		} else if (!strcasecmp(time_system, "absolute")) {
+			next_tok(arg);
+			main_time = atoi(arg);
+		} else if (!strcasecmp(time_system, "byoyomi")) {
+			next_tok(arg);
+			main_time = atoi(arg);
+			next_tok(arg);
+			byoyomi_time = atoi(arg);
+			next_tok(arg);
+			byoyomi_periods = atoi(arg);
+		} else if (!strcasecmp(time_system, "canadian")) {
 			next_tok(arg);
 			main_time = atoi(arg);
 			next_tok(arg);
@@ -390,8 +389,9 @@ next_group:;
 			next_tok(arg);
 			byoyomi_stones = atoi(arg);
 		}
+
 		if (DEBUGL(1))
-			fprintf(stderr, "time_settings %d %d %d %d\n",
+			fprintf(stderr, "time_settings %d %d/%d*%d\n",
 				main_time, byoyomi_time, byoyomi_stones, byoyomi_periods);
 		if (!ti[S_BLACK].ignore_gtp) {
 			time_settings(&ti[S_BLACK], main_time, byoyomi_time, byoyomi_stones, byoyomi_periods);
