@@ -512,8 +512,15 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
 
+		/* We want to stop simulating, but are willing to keep trying
+		 * if we aren't completely sure about the winner yet. */
 		if (desired_done) {
-			if (!best) continue;
+			if (!best) {
+				if (UDEBUGL(3))
+					fprintf(stderr, "Did not find best move, still trying...\n");
+				continue;
+			}
+
 			if (u->best2_ratio > 0) {
 				/* Get also second-best move and check their
 				 * simulations ratio. If the two best moves
@@ -529,24 +536,25 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 				}
 			}
 
-			/* Stop only if best explored has also highest value: */
-			if (!u->policy->winner || !u->policy->evaluate)
-				break;
-			prev_winner = winner;
-			winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
-			if (best && best == winner)
-				break;
-			if (UDEBUGL(3) && (best != prev_best || winner != prev_winner)) {
-				fprintf(stderr, "[%d] best", i);
-				if (best)
-					fprintf(stderr, " %3s [%d] %f", coord2sstr(best->coord, ctx->t->board),
-						best->u.playouts, tree_node_get_value(ctx->t, 1, best->u.value));
-				fprintf(stderr, " != winner");
-				if (winner)
-					fprintf(stderr, " %3s [%d] %f ", coord2sstr(winner->coord, ctx->t->board),
-						winner->u.playouts, tree_node_get_value(ctx->t, 1, winner->u.value));
-				fprintf(stderr, "\n");
+			if (u->policy->winner && u->policy->evaluate) {
+				prev_winner = winner;
+				winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
+				if (winner && winner != best) {
+					/* Keep simulating if best explored
+					 * does not have also highest value. */
+					if (UDEBUGL(3) && (best != prev_best || winner != prev_winner)) {
+						fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
+							coord2sstr(best->coord, ctx->t->board),
+							best->u.playouts, tree_node_get_value(ctx->t, 1, best->u.value),
+							coord2sstr(winner->coord, ctx->t->board),
+							winner->u.playouts, tree_node_get_value(ctx->t, 1, winner->u.value));
+					}
+					continue;
+				}
 			}
+
+			/* No reason to keep simulating, bye. */
+			break;
 		}
 
 		/* TODO: Early break if best->variance goes under threshold and we already
