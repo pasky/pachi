@@ -205,6 +205,56 @@ time_in_byoyomi(struct time_info *ti) {
 	return false;
 }
 
+/* Set worst.time to all available remaining time (main time plus usable
+ * byoyomi), to be spread over returned number of moves (expected game
+ * length minus moves to be played in final byoyomi - if we would not be
+ * able to spend more time on them in main time anyway). */
+static int
+time_stop_set_remaining(struct time_info *ti, struct board *b, double net_lag, struct time_stop *stop)
+{
+	int moves_left = board_estimated_moves_left(b);
+	stop->worst.time = ti->len.t.main_time;
+
+	/* If we have byoyomi available, plan to extend our thinking
+	 * time to make use of it. */
+	if (ti->len.t.byoyomi_time > 0) {
+		assert(ti->len.t.byoyomi_stones > 0);
+		/* Time for one move in byoyomi. */
+		double move_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
+
+		/* For Japanese byoyomi with N>1 periods, we use N-1
+		 * periods as main time, keeping the last one as
+		 * insurance against unexpected net lag. */
+		if (ti->len.t.byoyomi_periods > 2) {
+			stop->worst.time += (ti->len.t.byoyomi_periods - 2) * move_time;
+			// Will add 1 more byoyomi_time just below
+		}
+
+		/* In case of Canadian byoyomi, include time that can
+		 * be spent on its first move. */
+		stop->worst.time += move_time;
+
+		/* Maximize the number of moves played uniformly in
+		 * main time, while not playing faster in main time
+		 * than in byoyomi. At this point, the main time
+		 * remaining is stop->worst.time and already includes
+		 * the first (canadian) or N-1 byoyomi periods. */
+		double actual_byoyomi = move_time - net_lag;
+		if (actual_byoyomi > 0) {
+			int main_moves = stop->worst.time / actual_byoyomi;
+			if (moves_left > main_moves) {
+				/* We plan to do too many moves in
+				 * main time, do the rest in byoyomi. */
+				moves_left = main_moves;
+			}
+			if (moves_left <= 0) // possible if too much lag
+				moves_left = 1;
+		}
+	}
+
+	return moves_left;
+}
+
 /* Adjust the recommended per-move time based on the current game phase.
  * We expect stop->worst to be total time available, stop->desired the current
  * per-move time allocation, and set stop->desired to adjusted per-move time. */
@@ -317,45 +367,9 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		/* We are in main time. */
 
 		assert(ti->len.t.main_time > 0);
-		stop->worst.time = ti->len.t.main_time;
-
-		int moves_left = board_estimated_moves_left(b);
-		/* If we have byoyomi available, plan to extend our thinking
-		 * time to make use of it. */
-		if (ti->len.t.byoyomi_time > 0) {
-			assert(ti->len.t.byoyomi_stones > 0);
-			/* Time for one move in byoyomi. */
-			double move_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
-
-			/* For Japanese byoyomi with N>1 periods, we use N-1
-			 * periods as main time, keeping the last one as
-			 * insurance against unexpected net lag. */
-			if (ti->len.t.byoyomi_periods > 2) {
-				stop->worst.time += (ti->len.t.byoyomi_periods - 2) * move_time;
-				// Will add 1 more byoyomi_time just below
-			}
-
-			/* In case of Canadian byoyomi, include time that can
-			 * be spent on its first move. */
-			stop->worst.time += move_time;
-
-			/* Maximize the number of moves played uniformly in
-			 * main time, while not playing faster in main time
-			 * than in byoyomi. At this point, the main time
-			 * remaining is stop->worst.time and already includes
-			 * the first (canadian) or N-1 byoyomi periods. */
-			double actual_byoyomi = move_time - net_lag;
-			if (actual_byoyomi > 0) {
-				int main_moves = stop->worst.time / actual_byoyomi;
-				if (moves_left > main_moves) {
-					/* We plan to do too many moves in
-					 * main time, do the rest in byoyomi. */
-					moves_left = main_moves;
-				}
-				if (moves_left <= 0) // possible if too much lag
-					moves_left = 1;
-			}
-		}
+		/* Set worst.time to all available remaining time, to be spread
+		 * over returned number of moves. */
+		int moves_left = time_stop_set_remaining(ti, b, net_lag, stop);
 
 		/* Allocate even slice of the remaining time for next move. */
 		stop->desired.time = stop->worst.time / moves_left;
