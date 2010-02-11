@@ -513,9 +513,25 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			break;
 
 		if (desired_done) {
+			if (!best) continue;
+			if (u->best2_ratio > 0) {
+				/* Get also second-best move and check their
+				 * simulations ratio. If the two best moves
+				 * give very similar results, keep simulating. */
+				struct tree_node *best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
+				if (best2 && best2->u.playouts
+				    && (double)best->u.playouts / best2->u.playouts < u->best2_ratio) {
+					if (UDEBUGL(3))
+						fprintf(stderr, "Best2 ratio %f < threshold %f\n",
+							(double)best->u.playouts / best2->u.playouts,
+							u->best2_ratio);
+					continue;
+				}
+			}
+
+			/* Stop only if best explored has also highest value: */
 			if (!u->policy->winner || !u->policy->evaluate)
 				break;
-			/* Stop only if best explored has also highest value: */
 			prev_winner = winner;
 			winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
 			if (best && best == winner)
@@ -754,6 +770,11 @@ uct_state_init(char *arg, struct board *b)
 				u->expand_p = atoi(optval);
 			} else if (!strcasecmp(optname, "dumpthres") && optval) {
 				u->dumpthres = atoi(optval);
+			} else if (!strcasecmp(optname, "best2_ratio") && optval) {
+				/* If set, prolong simulating while
+				 * first_best/second_best playouts ratio
+				 * is less than best2_ratio. */
+				u->best2_ratio = atof(optval);
 			} else if (!strcasecmp(optname, "playout_amaf")) {
 				/* Whether to include random playout moves in
 				 * AMAF as well. (Otherwise, only tree moves

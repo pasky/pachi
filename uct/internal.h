@@ -22,6 +22,7 @@ struct uct {
 	int games, gamelen;
 	float resign_ratio;
 	float loss_threshold;
+	double best2_ratio;
 	bool pass_all_alive;
 	int expand_p;
 	bool playout_amaf, playout_amaf_nakade;
@@ -44,6 +45,7 @@ struct uct {
 	bool virtual_loss;
 	bool pondering_opt; /* User wants pondering */
 	bool pondering; /* Actually pondering now */
+
 	int fuseki_end;
 	int yose_start;
 
