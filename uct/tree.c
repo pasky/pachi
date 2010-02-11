@@ -13,6 +13,7 @@
 #include "move.h"
 #include "playout.h"
 #include "tactics.h"
+#include "timeinfo.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
@@ -370,77 +371,121 @@ tree_copy(struct tree *tree)
 	return t2;
 }
 
-/* Copy the subtree rooted at node, discarding nodes with less
- * than min_playouts or more than max_playouts, until dest is
- * full or we have copied all the subtree. Only for fast_alloc.
+/* Copy the subtree rooted at node: all nodes at or below depth
+ * or with at least threshold playouts. Only for fast_alloc.
  * The code is destructive on src, and the order of nodes is changed.
  * Returns the copy of node in the destination tree, or NULL
  * if we could not copy it. */
 static struct tree_node *
 tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
-	   int min_playouts, int max_playouts)
+	   int threshold, int depth)
 {
 	assert(dest->nodes && node);
-	if (node->u.playouts < min_playouts || dest->nodes_size >= dest->max_tree_size)
-		return NULL;
-	struct tree_node *n2;
-	if (node->u.playouts > max_playouts) {
-		/* Node already copied but we must recurse on the children.
-		 * Here node->parent is the node copy. */
-		n2 = node->parent;
-		assert(n2 && n2->hash == node->hash);
-	} else {
-		n2 = tree_fast_alloc_node(dest);
-		assert(n2);
-		*n2 = *node;
-		if (n2->depth > dest->max_depth)
-			dest->max_depth = n2->depth;
-		n2->children = NULL;
-		n2->is_expanded = false;
-		// Misuse the parent field to remember the copy for future passses:
-		node->parent = n2;
-	}
+	struct tree_node *n2 = tree_fast_alloc_node(dest);
+	assert(n2);
+	*n2 = *node;
+	if (n2->depth > dest->max_depth)
+		dest->max_depth = n2->depth;
+	n2->children = NULL;
+	n2->is_expanded = false;
+
+	if (node->depth >= depth && node->u.playouts < threshold)
+		return n2;
+	/* For deep nodes with many playouts, we must copy all children,
+	 * even those with zero playouts, because partially expanded
+	 * nodes are not supported. Considering them as fully expanded
+	 * would degrade the playing strength. The only exception is
+	 * when dest becomes full, but this should never happen in practice
+	 * if threshold is chosen to limit the number of nodes traversed. */
 	struct tree_node *ni = node->children;
-	while (ni) {
-		struct tree_node *ni2 = tree_prune(dest, src, ni, min_playouts, max_playouts);
-		if (ni2 && ni2->u.playouts <= max_playouts) {
-			ni2->sibling = n2->children;
-			n2->children = ni2;
-			n2->is_expanded = true;
-			ni2->parent = n2;
-		}
+	while (ni && unlikely(dest->nodes_size < dest->max_tree_size)) {
+		struct tree_node *ni2 = tree_prune(dest, src, ni, threshold, depth);
+		assert(ni2);
+		ni2->sibling = n2->children;
+		n2->children = ni2;
+		ni2->parent = n2;
 		ni = ni->sibling;
+	}
+	if (n2->children && !ni) {
+		n2->is_expanded = true;
+	} else {
+		n2->children = NULL; // avoid partially expanded nodes
 	}
 	return n2;
 }
 
+/* The following constants are used for garbage collection of nodes.
+ * A tree is considered large if the top node has >= 40K playouts.
+ * For such trees, we copy deep nodes only if they have >= 40 playouts.
+ * These constants define how much time we're willing to spend
+ * scanning the source tree when promoting a move. The values 40K
+ * and 40 makes worst case pruning in about 3s for 20 GB ram, and this
+ * is only for long thinking time (>1M playouts). For fast games the
+ * trees don't grow large. For small ram or fast game we copy the
+ * entire tree.  These values do not degrade playing strength and are
+ * necessary to avoid losing on time; increasing MIN_DEEP_PLAYOUTS
+ * or decreasing LARGE_TREE_PLAYOUTS will make the program faster but
+ * playing worse. */
+#define LARGE_TREE_PLAYOUTS 40000
+#define MIN_DEEP_PLAYOUTS 40
+
 /* Free all the tree, keeping only the subtree rooted at node.
- * Prune the subtree if necessary to fit in max_size bytes.
+ * Prune the subtree if necessary to fit in max_size bytes or
+ * to save time scanning the tree.
  * Returns the moved node. Only for fast_alloc. */
 static struct tree_node *
 tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node *node)
 {
 	assert(tree->nodes && !node->parent && !node->sibling);
-	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size);
-        struct tree_node *temp_node;
-	/* Copy the best (most played) nodes first. */
-	int min_playouts = node->u.playouts;
-	int max_playouts = min_playouts;
-	do {
-		temp_node = tree_prune(temp_tree, tree, node, min_playouts, max_playouts);
-		max_playouts = min_playouts - 1;
-		min_playouts /= 2;
-	} while (max_playouts >= 0 && temp_tree->nodes_size < temp_tree->max_tree_size);
+	double start_time = time_now();
 
-	if (DEBUGL(1))
-		fprintf(stderr, "tree pruned, max_size %lu, pruned size %lu, min_playouts %d\n",
-			max_size, temp_tree->nodes_size, max_playouts+1);
+	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size);
+	temp_tree->nodes_size = 0; // We do not want the dummy pass node
+        struct tree_node *temp_node;
+
+	/* Find the maximum depth at which we can copy all nodes. */
+	int max_nodes = 1;
+	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+		max_nodes++;
+	unsigned long nodes_size = max_nodes * sizeof(*node);
+	int max_depth = node->depth;
+	while (nodes_size < max_size && max_nodes > 1) {
+		max_nodes--;
+		nodes_size += max_nodes * nodes_size;
+		max_depth++;
+	}
+
+	/* Copy all nodes for small trees. For large trees, copy all nodes
+	 * with depth <= max_depth, and all nodes with at least MIN_DEEP_PLAYOUTS.
+	 * Avoiding going too deep (except for nodes with many playouts) is mostly
+	 * to save time scanning the source tree. It can take over 20s to traverse
+	 * completely a large source tree (20 GB) even without copying because
+	 * the traversal is not friendly at all with the memory cache. */
+	if (node->u.playouts < LARGE_TREE_PLAYOUTS) {
+		temp_node = tree_prune(temp_tree, tree, node, 0, max_depth + 20);
+	} else {
+		temp_node = tree_prune(temp_tree, tree, node, MIN_DEEP_PLAYOUTS, max_depth);
+	}
+	assert(temp_node);
 
 	/* Now copy back to original tree. */
 	tree->nodes_size = 0;
 	tree->max_depth = 0;
-	assert(temp_node);
-	struct tree_node *new_node = tree_prune(tree, temp_tree, temp_node, 0, temp_node->u.playouts);
+	struct tree_node *new_node = tree_prune(tree, temp_tree, temp_node, 0, temp_tree->max_depth);
+
+	if (DEBUGL(1)) {
+		double now = time_now();
+		static double prev_time;
+		if (!prev_time) prev_time = start_time;
+		fprintf(stderr,
+			"tree pruned in %0.6g s, prev %0.3g s ago, dest depth %d wanted %d,"
+			" max_size %lu, pruned size %lu, playouts %d\n",
+			now - start_time, start_time - prev_time, temp_tree->max_depth, max_depth,
+			max_size, temp_tree->nodes_size, new_node->u.playouts);
+		prev_time = start_time;
+	}
+	assert(tree->nodes_size == temp_tree->nodes_size);
+	assert(tree->max_depth == temp_tree->max_depth);
 	tree_done(temp_tree);
 	return new_node;
 }
