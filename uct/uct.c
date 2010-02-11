@@ -527,7 +527,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		if (best && best2 && ti->dim == TD_WALLTIME
 		    && (ti->len.t.main_time > 0 || ti->len.t.byoyomi_stones > 1)) {
 			double elapsed = time_now() - ti->len.t.timer_start;
-			double remaining = stop.desired.time - elapsed;
+			double remaining = stop.worst.time - elapsed;
 			double pps = ((double)i - base_playouts) / elapsed;
 			double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
 			if (best->u.playouts > best2->u.playouts + estplayouts) {
