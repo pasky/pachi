@@ -443,6 +443,40 @@ uct_search_stop(void)
 }
 
 
+/* Determine whether we should terminate the search early. */
+static bool
+uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
+		struct time_info *ti, struct time_stop *stop,
+		struct tree_node *best, struct tree_node *best2,
+		int base_playouts, int i)
+{
+	/* Early break in won situation. */
+	if (best && ((best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
+		     || (best->u.playouts >= 500 && tree_node_get_value(t, 1, best->u.value) >= 0.95)))
+		return true;
+
+	/* Break early if we estimate the second-best move cannot
+	 * catch up in assigned time anymore. We use all our time
+	 * if we are in byoyomi with single stone remaining in our
+	 * period, however. */
+	if (best && best2 && ti->dim == TD_WALLTIME
+	    && (ti->len.t.main_time > 0 || ti->len.t.byoyomi_stones > 1)) {
+		double elapsed = time_now() - ti->len.t.timer_start;
+		double remaining = stop->worst.time - elapsed;
+		double pps = ((double)i - base_playouts) / elapsed;
+		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
+		if (best->u.playouts > best2->u.playouts + estplayouts) {
+			if (UDEBUGL(2))
+				fprintf(stderr, "Early stop, result cannot change: "
+					"best %d, best2 %d, estimated %f simulations to go\n",
+					best->u.playouts, best2->u.playouts, estplayouts);
+			return true;
+		}
+	}
+
+	return false;
+}
+
 /* Run time-limited MCTS search on foreground. */
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
@@ -516,28 +550,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* Second-best move. */
 		struct tree_node *best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
 
-		/* Early break in won situation. */
-		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
-			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
+		if (uct_search_stop_early(u, ctx->t, b, ti, &stop, best, best2, base_playouts, i))
 			break;
-		/* Break early if we estimate the second-best move cannot
-		 * catch up in assigned time anymore. We use all our time
-		 * if we are in byoyomi with single stone remaining in our
-		 * period, however. */
-		if (best && best2 && ti->dim == TD_WALLTIME
-		    && (ti->len.t.main_time > 0 || ti->len.t.byoyomi_stones > 1)) {
-			double elapsed = time_now() - ti->len.t.timer_start;
-			double remaining = stop.worst.time - elapsed;
-			double pps = ((double)i - base_playouts) / elapsed;
-			double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
-			if (best->u.playouts > best2->u.playouts + estplayouts) {
-				if (UDEBUGL(2))
-					fprintf(stderr, "Early stop, result cannot change: "
-						"best %d, best2 %d, estimated %f simulations to go\n",
-						best->u.playouts, best2->u.playouts, estplayouts);
-				break;
-			}
-		}
 
 		/* We want to stop simulating, but are willing to keep trying
 		 * if we aren't completely sure about the winner yet. */
