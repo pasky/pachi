@@ -509,6 +509,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * right now. */
 
 	struct tree_node *best = NULL, *prev_best;
+	struct tree_node *best2 = NULL; // Second-best move.
 	struct tree_node *winner = NULL, *prev_winner;
 
 	double busywait_interval = TREE_BUSYWAIT_INTERVAL;
@@ -547,8 +548,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 		prev_best = best;
 		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
-		/* Second-best move. */
-		struct tree_node *best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
+		best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
 
 		if (uct_search_stop_early(u, ctx->t, b, ti, &stop, best, best2, base_playouts, i))
 			break;
