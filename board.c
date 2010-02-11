@@ -1294,16 +1294,3 @@ board_official_score(struct board *board, struct move_queue *q)
 
 	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
 }
-
-
-/* On average 25% of points remain empty at the end of a game */
-#define EXPECTED_FINAL_EMPTY_PERCENT 25
-
-/* Returns estimated number of remaining moves for one player until end of game. */
-int
-board_estimated_moves_left(struct board *b)
-{
-	int total_points = (board_size(b)-2)*(board_size(b)-2);
-	int moves_left = (b->flen - total_points*EXPECTED_FINAL_EMPTY_PERCENT/100)/2;
-	return moves_left > MIN_MOVES_LEFT ? moves_left : MIN_MOVES_LEFT;
-}

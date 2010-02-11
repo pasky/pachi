@@ -50,6 +50,13 @@ float board_effective_handicap(struct board *b);
  * e.g. groups_of_status().) */
 bool pass_is_safe(struct board *b, enum stone color, struct move_queue *mq);
 
+/* Returns estimated number of remaining moves for one player until end of game. */
+int board_estimated_moves_left(struct board *b);
+
+/* To avoid running out of time, assume we always have at least 10 more moves
+ * to play if we don't have more precise information from gtp time_left: */
+#define MIN_MOVES_LEFT 10
+
 
 bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
 static inline bool

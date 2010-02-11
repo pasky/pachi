@@ -5,6 +5,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "tactics.h"
 
 
 struct selfatari_state {
@@ -605,4 +606,17 @@ pass_is_safe(struct board *b, enum stone color, struct move_queue *mq)
 		score = -score;
 	//fprintf(stderr, "%d score %f\n", color, score);
 	return (score > 0);
+}
+
+
+/* On average 25% of points remain empty at the end of a game */
+#define EXPECTED_FINAL_EMPTY_PERCENT 25
+
+/* Returns estimated number of remaining moves for one player until end of game. */
+int
+board_estimated_moves_left(struct board *b)
+{
+	int total_points = (board_size(b)-2)*(board_size(b)-2);
+	int moves_left = (b->flen - total_points*EXPECTED_FINAL_EMPTY_PERCENT/100)/2;
+	return moves_left > MIN_MOVES_LEFT ? moves_left : MIN_MOVES_LEFT;
 }

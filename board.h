@@ -25,10 +25,6 @@
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
 
 
-/* To avoid running out of time, assume we always have at least 10 more moves to play
- * if we don't have more precise information from gtp time_left: */
-#define MIN_MOVES_LEFT 10
-
 /* Allow board_play_random_move() to return pass even when
  * there are other moves available. */
 extern bool random_pass;
@@ -284,9 +280,6 @@ float board_fast_score(struct board *board);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
 struct move_queue;
 float board_official_score(struct board *board, struct move_queue *mq);
-
-/* Returns estimated number of remaining moves for one player until end of game. */
-int board_estimated_moves_left(struct board *b);
 
 /** Iterators */
 

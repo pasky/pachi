@@ -8,6 +8,7 @@
 #define DEBUG
 
 #include "debug.h"
+#include "tactics.h"
 #include "timeinfo.h"
 
 #define MAX_NET_LAG 2.0 /* Max net lag in seconds. TODO: estimate dynamically. */
