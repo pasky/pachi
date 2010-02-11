@@ -54,6 +54,11 @@ static const struct time_info default_ti = {
 /* Once per how many simulations (per thread) to show a progress report line. */
 #define TREE_SIMPROGRESS_INTERVAL 10000
 
+/* When terminating uct_search() early, the safety margin to add to the
+ * remaining playout number estimate when deciding whether the result can
+ * still change. */
+#define PLAYOUT_DELTA_SAFEMARGIN 1000
+
 
 static void
 setup_state(struct uct *u, struct board *b, enum stone color)
@@ -442,8 +447,9 @@ uct_search_stop(void)
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
-	if (UDEBUGL(2) && u->t->root->u.playouts > 0)
-		fprintf(stderr, "<pre-simulated %d games skipped>\n", u->t->root->u.playouts);
+	int base_playouts = u->t->root->u.playouts;
+	if (UDEBUGL(2) && base_playouts > 0)
+		fprintf(stderr, "<pre-simulated %d games skipped>\n", base_playouts);
 
 	/* Set up time conditions. */
 	if (ti->period == TT_NULL) *ti = default_ti;
@@ -499,36 +505,56 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			double elapsed = time_now() - ti->len.t.timer_start;
 			if (elapsed > stop.worst.time) break;
 			desired_done = elapsed > stop.desired.time;
-		} else {
-			assert(ti->dim == TD_GAMES);
+
+		} else { assert(ti->dim == TD_GAMES);
 			if (i > stop.worst.playouts) break;
 			desired_done = i > stop.desired.playouts;
 		}
 
-		/* Early break in won situation. */
 		prev_best = best;
 		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
+		/* Second-best move. */
+		struct tree_node *best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
+
+		/* Early break in won situation. */
 		if (best && ((best->u.playouts >= 2000 && tree_node_get_value(ctx->t, 1, best->u.value) >= u->loss_threshold)
 			     || (best->u.playouts >= 500 && tree_node_get_value(ctx->t, 1, best->u.value) >= 0.95)))
 			break;
+		/* Break early if we estimate the second-best move cannot
+		 * catch up in assigned time anymore. We use all our time
+		 * if we are in byoyomi with single stone remaining in our
+		 * period, however. */
+		if (best && best2 && ti->dim == TD_WALLTIME
+		    && (ti->len.t.main_time > 0 || ti->len.t.byoyomi_stones > 1)) {
+			double elapsed = time_now() - ti->len.t.timer_start;
+			double remaining = stop.desired.time - elapsed;
+			double pps = ((double)i - base_playouts) / elapsed;
+			double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
+			if (best->u.playouts > best2->u.playouts + estplayouts) {
+				if (UDEBUGL(2))
+					fprintf(stderr, "Early stop, result cannot change: "
+						"best %d, best2 %d, estimated %f simulations to go\n",
+						best->u.playouts, best2->u.playouts, estplayouts);
+				break;
+			}
+		}
 
 		/* We want to stop simulating, but are willing to keep trying
 		 * if we aren't completely sure about the winner yet. */
 		if (desired_done) {
 			if (!best) {
-				if (UDEBUGL(3))
+				if (UDEBUGL(2))
 					fprintf(stderr, "Did not find best move, still trying...\n");
 				continue;
 			}
 
 			if (u->best2_ratio > 0) {
-				/* Get also second-best move and check their
-				 * simulations ratio. If the two best moves
-				 * give very similar results, keep simulating. */
-				struct tree_node *best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
+				/* Check best/best2 simulations ratio. If the
+				 * two best moves give very similar results,
+				 * keep simulating. */
 				if (best2 && best2->u.playouts
 				    && (double)best->u.playouts / best2->u.playouts < u->best2_ratio) {
-					if (UDEBUGL(3))
+					if (UDEBUGL(2))
 						fprintf(stderr, "Best2 ratio %f < threshold %f\n",
 							(double)best->u.playouts / best2->u.playouts,
 							u->best2_ratio);
@@ -542,7 +568,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 				if (winner && winner != best) {
 					/* Keep simulating if best explored
 					 * does not have also highest value. */
-					if (UDEBUGL(3) && (best != prev_best || winner != prev_winner)) {
+					if (UDEBUGL(2) && (best != prev_best || winner != prev_winner)) {
 						fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
 							coord2sstr(best->coord, ctx->t->board),
 							best->u.playouts, tree_node_get_value(ctx->t, 1, best->u.value),
@@ -558,8 +584,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		}
 
 		/* TODO: Early break if best->variance goes under threshold and we already
-                 * have enough playouts (possibly thanks to book or to pondering). */
-		/* TODO: Early break if second best has no chance to catch up. */
+                 * have enough playouts (possibly thanks to book or to pondering)? */
 	}
 
 	ctx = uct_search_stop();
