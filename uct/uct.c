@@ -80,7 +80,7 @@ reset_state(struct uct *u)
 static void
 setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
-	if (u->dynkomi && u->dynkomi > b->moves && (to_play & u->dynkomi_mask))
+	if (u->dynkomi > b->moves && u->t->use_extra_komi)
 		u->t->extra_komi = uct_get_extra_komi(u, b);
 	else
 		u->t->extra_komi = 0;
@@ -199,7 +199,7 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 		snprintf(reply, 1024, "In %d playouts at %d threads, %s %s can win with %.2f%% probability",
 			 n->u.playouts, u->threads, stone2str(color), coord2sstr(n->coord, b),
 			 tree_node_get_value(u->t, -1, n->u.value) * 100);
-		if (abs(u->t->extra_komi) >= 0.5) {
+		if (u->t->use_extra_komi && abs(u->t->extra_komi) >= 0.5) {
 			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
 				u->t->extra_komi);
 		}
@@ -606,6 +606,11 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	uct_pondering_stop(u);
 	prepare_move(e, b, color);
 	assert(u->t);
+
+	/* How to decide whether to use dynkomi in this game? Since we use
+	 * pondering, it's not simple "who-to-play" matter. Decide based on
+	 * the last genmove issued. */
+	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
 	setup_dynkomi(u, b, color);
 
 	/* Perform the Monte Carlo Tree Search! */

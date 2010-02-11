@@ -250,7 +250,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		amaf->record_nakade = u->playout_amaf_nakade;
 	}
 
-	if (u->dynkomi > b2.moves && (player_color & u->dynkomi_mask))
+	if (u->dynkomi > b2.moves && t->use_extra_komi)
 		b2.komi += uct_get_extra_komi(u, &b2);
 
 	if (passes >= 2) {
