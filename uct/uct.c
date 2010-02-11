@@ -969,6 +969,8 @@ uct_state_init(char *arg, struct board *b)
 				 * this limits size of only one of the trees, not all of them
 				 * together. */
 				u->max_tree_size = atol(optval) * 1048576;
+			} else if (!strcasecmp(optname, "fast_alloc")) {
+				u->fast_alloc = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
