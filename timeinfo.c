@@ -215,41 +215,43 @@ time_stop_set_remaining(struct time_info *ti, struct board *b, double net_lag, s
 	int moves_left = board_estimated_moves_left(b);
 	stop->worst.time = ti->len.t.main_time;
 
-	/* If we have byoyomi available, plan to extend our thinking
-	 * time to make use of it. */
-	if (ti->len.t.byoyomi_time > 0) {
-		assert(ti->len.t.byoyomi_stones > 0);
-		/* Time for one move in byoyomi. */
-		double move_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
+	if (!ti->len.t.byoyomi_time)
+		return moves_left;
 
-		/* For Japanese byoyomi with N>1 periods, we use N-1
-		 * periods as main time, keeping the last one as
-		 * insurance against unexpected net lag. */
-		if (ti->len.t.byoyomi_periods > 2) {
-			stop->worst.time += (ti->len.t.byoyomi_periods - 2) * move_time;
-			// Will add 1 more byoyomi_time just below
+	/* Time for one move in byoyomi. */
+	assert(ti->len.t.byoyomi_stones > 0);
+	double move_time = ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones;
+
+	/* (i) Plan to extend our thinking time to make use of byoyom. */
+
+	/* For Japanese byoyomi with N>1 periods, we use N-1 periods
+	 * as main time, keeping the last one as insurance against
+	 * unexpected net lag. */
+	if (ti->len.t.byoyomi_periods > 2) {
+		stop->worst.time += (ti->len.t.byoyomi_periods - 2) * move_time;
+		// Will add 1 more byoyomi_time just below
+	}
+
+	/* In case of Canadian byoyomi, include time that can be spent
+	 * on its first move. */
+	stop->worst.time += move_time;
+
+	/* (ii) Do not play faster in main time than we would in byoyomi. */
+
+	/* Maximize the number of moves played uniformly in main time,
+	 * while not playing faster in main time than in byoyomi.
+	 * At this point, the main time remaining is stop->worst.time and
+	 * already includes the first (canadian) or N-1 byoyomi periods. */
+	double real_move_time = move_time - net_lag;
+	if (real_move_time > 0) {
+		int main_moves = stop->worst.time / real_move_time;
+		if (moves_left > main_moves) {
+			/* We plan to do too many moves in main time,
+			 * do the rest in byoyomi. */
+			moves_left = main_moves;
 		}
-
-		/* In case of Canadian byoyomi, include time that can
-		 * be spent on its first move. */
-		stop->worst.time += move_time;
-
-		/* Maximize the number of moves played uniformly in
-		 * main time, while not playing faster in main time
-		 * than in byoyomi. At this point, the main time
-		 * remaining is stop->worst.time and already includes
-		 * the first (canadian) or N-1 byoyomi periods. */
-		double actual_byoyomi = move_time - net_lag;
-		if (actual_byoyomi > 0) {
-			int main_moves = stop->worst.time / actual_byoyomi;
-			if (moves_left > main_moves) {
-				/* We plan to do too many moves in
-				 * main time, do the rest in byoyomi. */
-				moves_left = main_moves;
-			}
-			if (moves_left <= 0) // possible if too much lag
-				moves_left = 1;
-		}
+		if (moves_left <= 0) // possible if too much lag
+			moves_left = 1;
 	}
 
 	return moves_left;
