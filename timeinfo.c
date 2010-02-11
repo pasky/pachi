@@ -188,6 +188,7 @@ time_sleep(double interval)
 	nanosleep(&ts, NULL); /* ignore error if interval was < 0 */
 }
 
+
 /* Returns true if we are in byoyomi (or should play as if in byo yomi
  * because remaining time per move in main time is less than byoyomi time
  * per move). */
@@ -202,6 +203,48 @@ time_in_byoyomi(struct time_info *ti) {
 	if (ti->len.t.main_time <= ti->len.t.byoyomi_time / ti->len.t.byoyomi_stones + 0.001)
 		return true; // our basic time left is less than byoyomi time per move
 	return false;
+}
+
+/* Adjust the recommended per-move time based on the current game phase.
+ * We expect stop->worst to be total time available, stop->desired the current
+ * per-move time allocation, and set stop->desired to adjusted per-move time. */
+static void
+time_stop_phase_adjust(struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
+{
+	int bsize = (board_size(b)-2)*(board_size(b)-2);
+	fuseki_end = fuseki_end * bsize / 100; // move nb at fuseki end
+	yose_start = yose_start * bsize / 100; // move nb at yose start
+	assert(fuseki_end < yose_start);
+
+	/* Before yose, spend some extra. */
+	if (b->moves < yose_start) {
+		int moves_to_yose = (yose_start - b->moves) / 2;
+		// ^- /2 because we only consider the moves we have to play ourselves
+		int left_at_yose_start = board_estimated_moves_left(b) - moves_to_yose;
+		if (left_at_yose_start < MIN_MOVES_LEFT)
+			left_at_yose_start = MIN_MOVES_LEFT;
+
+		/* This particular value of middlegame_time will
+		 * continuously converge to effective "yose_time"
+		 * value as we approach yose_start. */
+		double middlegame_time = stop->worst.time / left_at_yose_start;
+		// Usually, this condition will hold.
+		if (middlegame_time >= stop->desired.time) {
+			if (b->moves < fuseki_end) {
+				assert(fuseki_end > 0);
+				/* At the game start, use stop->desired.time
+				 * (rather conservative estimate),
+				 * then gradually prolong it. */
+				double beta = b->moves / fuseki_end;
+				stop->desired.time = middlegame_time * beta + stop->desired.time * (1 - beta);
+			} else { assert(b->moves < yose_start);
+				/* Middlegame, start with relatively
+				 * large value, then converge to the
+				 * uniform-timeslice yose value. */
+				stop->desired.time = middlegame_time;
+			}
+		}
+	}
 }
 
 
@@ -323,41 +366,7 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		assert(stop->desired.time <= stop->worst.time + 0.001);
 
 		/* Furthermore, tweak the slice based on the game phase. */
-
-		int bsize = (board_size(b)-2)*(board_size(b)-2);
-		fuseki_end = fuseki_end * bsize / 100; // move nb at fuseki end
-		yose_start = yose_start * bsize / 100; // move nb at yose start
-		assert(fuseki_end < yose_start);
-
-		/* Before yose, spend some extra. */
-		if (b->moves < yose_start) {
-			int moves_to_yose = (yose_start - b->moves) / 2;
-			// ^- /2 because we only consider the moves we have to play ourselves
-			int left_at_yose_start = board_estimated_moves_left(b) - moves_to_yose;
-			if (left_at_yose_start < MIN_MOVES_LEFT)
-				left_at_yose_start = MIN_MOVES_LEFT;
-
-			/* This particular value of middlegame_time will
-			 * continuously converge to effective "yose_time"
-			 * value as we approach yose_start. */
-			double middlegame_time = stop->worst.time / left_at_yose_start;
-			// Usually, this condition will hold.
-			if (middlegame_time >= stop->desired.time) {
-				if (b->moves < fuseki_end) {
-					assert(fuseki_end > 0);
-					/* At the game start, use stop->desired.time
-					 * (rather conservative estimate),
-					 * then gradually prolong it. */
-					double beta = b->moves / fuseki_end;
-					stop->desired.time = middlegame_time * beta + stop->desired.time * (1 - beta);
-				} else { assert(b->moves < yose_start);
-					/* Middlegame, start with relatively
-					 * large value, then converge to the
-					 * uniform-timeslice yose value. */
-					stop->desired.time = middlegame_time;
-				}
-			}
-		}
+		time_stop_phase_adjust(b, fuseki_end, yose_start, stop);
 
 		/* Put final upper bound on maximal time spent on the move. */
 		double worst_time = stop->desired.time * MAX_MAIN_TIME_EXTENSION;
