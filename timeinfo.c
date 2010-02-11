@@ -216,37 +216,34 @@ time_stop_phase_adjust(struct board *b, int fuseki_end, int yose_start, struct t
 	yose_start = yose_start * bsize / 100; // move nb at yose start
 	assert(fuseki_end < yose_start);
 
-	/* Before yose, spend some extra. */
-	if (b->moves < yose_start) {
-		int moves_to_yose = (yose_start - b->moves) / 2;
-		// ^- /2 because we only consider the moves we have to play ourselves
-		int left_at_yose_start = board_estimated_moves_left(b) - moves_to_yose;
-		if (left_at_yose_start < MIN_MOVES_LEFT)
-			left_at_yose_start = MIN_MOVES_LEFT;
+	/* No adjustments in yose. */
+	if (b->moves >= yose_start)
+		return;
+	int moves_to_yose = (yose_start - b->moves) / 2;
+	// ^- /2 because we only consider the moves we have to play ourselves
+	int left_at_yose_start = board_estimated_moves_left(b) - moves_to_yose;
+	if (left_at_yose_start < MIN_MOVES_LEFT)
+		left_at_yose_start = MIN_MOVES_LEFT;
 
-		/* This particular value of middlegame_time will
-		 * continuously converge to effective "yose_time"
-		 * value as we approach yose_start. */
-		double middlegame_time = stop->worst.time / left_at_yose_start;
-		// Usually, this condition will hold.
-		if (middlegame_time >= stop->desired.time) {
-			if (b->moves < fuseki_end) {
-				assert(fuseki_end > 0);
-				/* At the game start, use stop->desired.time
-				 * (rather conservative estimate),
-				 * then gradually prolong it. */
-				double beta = b->moves / fuseki_end;
-				stop->desired.time = middlegame_time * beta + stop->desired.time * (1 - beta);
-			} else { assert(b->moves < yose_start);
-				/* Middlegame, start with relatively
-				 * large value, then converge to the
-				 * uniform-timeslice yose value. */
-				stop->desired.time = middlegame_time;
-			}
-		}
+	/* This particular value of middlegame_time will continuously converge
+	 * to effective "yose_time" value as we approach yose_start. */
+	double middlegame_time = stop->worst.time / left_at_yose_start;
+	if (middlegame_time < stop->desired.time)
+		return;
+
+	if (b->moves < fuseki_end) {
+		assert(fuseki_end > 0);
+		/* At the game start, use stop->desired.time (rather
+		 * conservative estimate), then gradually prolong it. */
+		double beta = b->moves / fuseki_end;
+		stop->desired.time = middlegame_time * beta + stop->desired.time * (1 - beta);
+
+	} else { assert(b->moves < yose_start);
+		/* Middlegame, start with relatively large value, then
+		 * converge to the uniform-timeslice yose value. */
+		stop->desired.time = middlegame_time;
 	}
 }
-
 
 /* Pre-process time_info for search control and sets the desired stopping conditions. */
 void
