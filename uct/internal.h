@@ -22,7 +22,7 @@ struct uct {
 	int games, gamelen;
 	float resign_ratio;
 	float loss_threshold;
-	double best2_ratio;
+	double best2_ratio, bestr_ratio;
 	bool pass_all_alive;
 	int expand_p;
 	bool playout_amaf, playout_amaf_nakade;

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -483,7 +484,7 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 static bool
 uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		struct tree_node *best, struct tree_node *best2,
-		struct tree_node *winner, int i)
+		struct tree_node *bestr, struct tree_node *winner, int i)
 {
 	if (!best) {
 		if (UDEBUGL(2))
@@ -501,6 +502,20 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 				fprintf(stderr, "Best2 ratio %f < threshold %f\n",
 					(double)best->u.playouts / best2->u.playouts,
 					u->best2_ratio);
+			return true;
+		}
+	}
+
+	if (u->bestr_ratio > 0) {
+		/* Check best, best_best value difference. If the best move
+		 * and its best child do not give similar enough results,
+		 * keep simulating. */
+		if (bestr && bestr->u.playouts
+		    && fabs((double)best->u.value - bestr->u.value) > u->bestr_ratio) {
+			if (UDEBUGL(2))
+				fprintf(stderr, "Bestr delta %f > threshold %f\n",
+					fabs((double)best->u.value - bestr->u.value),
+					u->bestr_ratio);
 			return true;
 		}
 	}
@@ -554,6 +569,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 	struct tree_node *best = NULL;
 	struct tree_node *best2 = NULL; // Second-best move.
+	struct tree_node *bestr = NULL; // best's best child.
 	struct tree_node *winner = NULL;
 
 	double busywait_interval = TREE_BUSYWAIT_INTERVAL;
@@ -602,7 +618,9 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		if (desired_done) {
 			if (u->policy->winner && u->policy->evaluate)
 				winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
-			if (!uct_search_keep_looking(u, ctx->t, b, best, best2, winner, i))
+			if (best)
+				bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
+			if (!uct_search_keep_looking(u, ctx->t, b, best, best2, bestr, winner, i))
 				break;
 		}
 
@@ -831,6 +849,11 @@ uct_state_init(char *arg, struct board *b)
 				 * first_best/second_best playouts ratio
 				 * is less than best2_ratio. */
 				u->best2_ratio = atof(optval);
+			} else if (!strcasecmp(optname, "bestr_ratio") && optval) {
+				/* If set, prolong simulating while
+				 * best,best_best_child values delta
+				 * is more than bestr_ratio. */
+				u->bestr_ratio = atof(optval);
 			} else if (!strcasecmp(optname, "playout_amaf")) {
 				/* Whether to include random playout moves in
 				 * AMAF as well. (Otherwise, only tree moves
