@@ -451,16 +451,18 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 		int base_playouts, int i)
 {
 	/* Early break in won situation. */
-	if ((best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
-	    || (best->u.playouts >= 500 && tree_node_get_value(t, 1, best->u.value) >= 0.95))
+	if (best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
+		return true;
+	/* Earlier break in super-won situation. */
+	if (best->u.playouts >= 500 && tree_node_get_value(t, 1, best->u.value) >= 0.95)
 		return true;
 
 	/* Break early if we estimate the second-best move cannot
 	 * catch up in assigned time anymore. We use all our time
 	 * if we are in byoyomi with single stone remaining in our
-	 * period, however. */
-	if (best2 && ti->dim == TD_WALLTIME
-	    && (ti->len.t.main_time > 0 || ti->len.t.byoyomi_stones > 1)) {
+	 * period, however - it's better to pre-ponder. */
+	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
+	if (best2 && ti->dim == TD_WALLTIME && !time_indulgent) {
 		double elapsed = time_now() - ti->len.t.timer_start;
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)i - base_playouts) / elapsed;
