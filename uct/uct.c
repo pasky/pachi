@@ -578,6 +578,13 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			print_fullmem = true;
 		}
 
+		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
+		best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
+
+		/* Possibly stop search early if it's no use to try on. */
+		if (best && uct_search_stop_early(u, ctx->t, b, ti, &stop, best, best2, base_playouts, i))
+			break;
+
 		/* Check against time settings. */
 		bool desired_done = false;
 		if (ti->dim == TD_WALLTIME) {
@@ -589,12 +596,6 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			if (i > stop.worst.playouts) break;
 			desired_done = i > stop.desired.playouts;
 		}
-
-		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
-		best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
-
-		if (best && uct_search_stop_early(u, ctx->t, b, ti, &stop, best, best2, base_playouts, i))
-			break;
 
 		/* We want to stop simulating, but are willing to keep trying
 		 * if we aren't completely sure about the winner yet. */
