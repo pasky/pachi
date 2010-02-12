@@ -479,6 +479,51 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	return false;
 }
 
+/* Determine whether we should terminate the search later. */
+static bool
+uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
+		struct tree_node *best, struct tree_node *best2,
+		struct tree_node *winner,
+		struct tree_node *prev_best, struct tree_node *prev_winner,
+		int i)
+{
+	if (!best) {
+		if (UDEBUGL(2))
+			fprintf(stderr, "Did not find best move, still trying...\n");
+		return true;
+	}
+
+	if (u->best2_ratio > 0) {
+		/* Check best/best2 simulations ratio. If the
+		 * two best moves give very similar results,
+		 * keep simulating. */
+		if (best2 && best2->u.playouts
+		    && (double)best->u.playouts / best2->u.playouts < u->best2_ratio) {
+			if (UDEBUGL(2))
+				fprintf(stderr, "Best2 ratio %f < threshold %f\n",
+					(double)best->u.playouts / best2->u.playouts,
+					u->best2_ratio);
+			return true;
+		}
+	}
+
+	if (winner && winner != best) {
+		/* Keep simulating if best explored
+		 * does not have also highest value. */
+		if (UDEBUGL(2) && (best != prev_best || winner != prev_winner)) {
+			fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
+				coord2sstr(best->coord, t->board),
+				best->u.playouts, tree_node_get_value(t, 1, best->u.value),
+				coord2sstr(winner->coord, t->board),
+				winner->u.playouts, tree_node_get_value(t, 1, winner->u.value));
+		}
+		return true;
+	}
+
+	/* No reason to keep simulating, bye. */
+	return false;
+}
+
 /* Run time-limited MCTS search on foreground. */
 static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
@@ -512,7 +557,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 	struct tree_node *best = NULL, *prev_best;
 	struct tree_node *best2 = NULL; // Second-best move.
-	struct tree_node *winner = NULL, *prev_winner;
+	struct tree_node *winner = NULL, *prev_winner = NULL;
 
 	double busywait_interval = TREE_BUSYWAIT_INTERVAL;
 
@@ -558,45 +603,12 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* We want to stop simulating, but are willing to keep trying
 		 * if we aren't completely sure about the winner yet. */
 		if (desired_done) {
-			if (!best) {
-				if (UDEBUGL(2))
-					fprintf(stderr, "Did not find best move, still trying...\n");
-				continue;
-			}
-
-			if (u->best2_ratio > 0) {
-				/* Check best/best2 simulations ratio. If the
-				 * two best moves give very similar results,
-				 * keep simulating. */
-				if (best2 && best2->u.playouts
-				    && (double)best->u.playouts / best2->u.playouts < u->best2_ratio) {
-					if (UDEBUGL(2))
-						fprintf(stderr, "Best2 ratio %f < threshold %f\n",
-							(double)best->u.playouts / best2->u.playouts,
-							u->best2_ratio);
-					continue;
-				}
-			}
-
 			if (u->policy->winner && u->policy->evaluate) {
 				prev_winner = winner;
 				winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
-				if (winner && winner != best) {
-					/* Keep simulating if best explored
-					 * does not have also highest value. */
-					if (UDEBUGL(2) && (best != prev_best || winner != prev_winner)) {
-						fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
-							coord2sstr(best->coord, ctx->t->board),
-							best->u.playouts, tree_node_get_value(ctx->t, 1, best->u.value),
-							coord2sstr(winner->coord, ctx->t->board),
-							winner->u.playouts, tree_node_get_value(ctx->t, 1, winner->u.value));
-					}
-					continue;
-				}
 			}
-
-			/* No reason to keep simulating, bye. */
-			break;
+			if (!uct_search_keep_looking(u, ctx->t, b, best, best2, winner, prev_best, prev_winner, i))
+				break;
 		}
 
 		/* TODO: Early break if best->variance goes under threshold and we already
