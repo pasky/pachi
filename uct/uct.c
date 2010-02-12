@@ -483,9 +483,7 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 static bool
 uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		struct tree_node *best, struct tree_node *best2,
-		struct tree_node *winner,
-		struct tree_node *prev_best, struct tree_node *prev_winner,
-		int i)
+		struct tree_node *winner, int i)
 {
 	if (!best) {
 		if (UDEBUGL(2))
@@ -510,13 +508,12 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 	if (winner && winner != best) {
 		/* Keep simulating if best explored
 		 * does not have also highest value. */
-		if (UDEBUGL(2) && (best != prev_best || winner != prev_winner)) {
+		if (UDEBUGL(2))
 			fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
 				coord2sstr(best->coord, t->board),
 				best->u.playouts, tree_node_get_value(t, 1, best->u.value),
 				coord2sstr(winner->coord, t->board),
 				winner->u.playouts, tree_node_get_value(t, 1, winner->u.value));
-		}
 		return true;
 	}
 
@@ -555,9 +552,9 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * count. However, TM_ROOT just does not deserve any more extra code
 	 * right now. */
 
-	struct tree_node *best = NULL, *prev_best;
+	struct tree_node *best = NULL;
 	struct tree_node *best2 = NULL; // Second-best move.
-	struct tree_node *winner = NULL, *prev_winner = NULL;
+	struct tree_node *winner = NULL;
 
 	double busywait_interval = TREE_BUSYWAIT_INTERVAL;
 
@@ -593,7 +590,6 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			desired_done = i > stop.desired.playouts;
 		}
 
-		prev_best = best;
 		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
 		best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
 
@@ -603,11 +599,9 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* We want to stop simulating, but are willing to keep trying
 		 * if we aren't completely sure about the winner yet. */
 		if (desired_done) {
-			if (u->policy->winner && u->policy->evaluate) {
-				prev_winner = winner;
+			if (u->policy->winner && u->policy->evaluate)
 				winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
-			}
-			if (!uct_search_keep_looking(u, ctx->t, b, best, best2, winner, prev_best, prev_winner, i))
+			if (!uct_search_keep_looking(u, ctx->t, b, best, best2, winner, i))
 				break;
 		}
 
