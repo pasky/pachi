@@ -150,9 +150,10 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		(f++, p->n++);
 		return f;
 	}
+	/* We need to know details, so we still have to go through
+	 * the neighbors. */
 #endif
 
-	/* Ok, we need to look at the neighbors anyway. */
 	/* Furthermore, we will now create one feature per capturable
 	 * neighbor. */
 	/* XXX: I'm not sure if this is really good idea. --pasky */
@@ -203,6 +204,21 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
 		      struct board *b, struct move *m)
 {
+#ifdef BOARD_TRAITS
+	if (!trait_at(b, m->coord, stone_other(m->color)).cap
+	    || !trait_at(b, m->coord, m->color).safe)
+		return f;
+	/* Opponent can capture something and this move is safe
+	 * for us! */
+	if (!PS_PF(AESCAPE, LADDER)) {
+		f->id = FEAT_AESCAPE; f->payload = 0;
+		(f++, p->n++);
+		return f;
+	}
+	/* We need to know details, so we still have to go through
+	 * the neighbors. */
+#endif
+
 	/* Find if a neighboring group of ours is in atari, AND that we provide
 	 * a liberty to connect out. XXX: No connect-and-die check. */
 	group_t in_atari = -1;
@@ -346,6 +362,10 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 static bool
 is_simple_selfatari(struct board *b, enum stone color, coord_t coord)
 {
+#ifdef BOARD_TRAITS
+	return !trait_at(b, coord, color).safe;
+#endif
+
 	/* Very rough check, no connect-and-die checks or other trickery. */
 	int libs = immediate_liberty_count(b, coord);
 	if (libs >= 2) return false; // open space
