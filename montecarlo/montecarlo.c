@@ -206,7 +206,7 @@ move_found:
 
 
 struct montecarlo *
-montecarlo_state_init(char *arg)
+montecarlo_state_init(char *arg, struct board *b)
 {
 	struct montecarlo *mc = calloc(1, sizeof(struct montecarlo));
 
@@ -236,11 +236,11 @@ montecarlo_state_init(char *arg)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					mc->playout = playout_moggy_init(playoutarg);
+					mc->playout = playout_moggy_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "light")) {
-					mc->playout = playout_light_init(playoutarg);
+					mc->playout = playout_light_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "elo")) {
-					mc->playout = playout_elo_init(playoutarg);
+					mc->playout = playout_elo_init(playoutarg, b);
 				} else {
 					fprintf(stderr, "MonteCarlo: Invalid playout policy %s\n", optval);
 				}
@@ -251,7 +251,7 @@ montecarlo_state_init(char *arg)
 	}
 
 	if (!mc->playout)
-		mc->playout = playout_light_init(NULL);
+		mc->playout = playout_light_init(NULL, b);
 	mc->playout->debug_level = mc->debug_level;
 
 	mc->resign_ratio = 0.1; /* Resign when most games are lost. */
@@ -264,7 +264,7 @@ montecarlo_state_init(char *arg)
 struct engine *
 engine_montecarlo_init(char *arg, struct board *b)
 {
-	struct montecarlo *mc = montecarlo_state_init(arg);
+	struct montecarlo *mc = montecarlo_state_init(arg, b);
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "MonteCarlo Engine";
 	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";

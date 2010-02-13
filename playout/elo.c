@@ -157,7 +157,7 @@ playout_elo_done(struct playout_policy *p)
 
 
 struct playout_policy *
-playout_elo_init(char *arg)
+playout_elo_init(char *arg, struct board *b)
 {
 	struct playout_policy *p = calloc(1, sizeof(*p));
 	struct elo_policy *pp = calloc(1, sizeof(*pp));

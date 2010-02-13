@@ -864,7 +864,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 
 
 struct playout_policy *
-playout_moggy_init(char *arg)
+playout_moggy_init(char *arg, struct board *b)
 {
 	struct playout_policy *p = calloc(1, sizeof(*p));
 	struct moggy_policy *pp = calloc(1, sizeof(*pp));

@@ -20,7 +20,7 @@ playout_light_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 
 
 struct playout_policy *
-playout_light_init(char *arg)
+playout_light_init(char *arg, struct board *b)
 {
 	struct playout_policy *p = calloc(1, sizeof(*p));
 	p->choose = playout_light_choose;

@@ -895,11 +895,11 @@ uct_state_init(char *arg, struct board *b)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					u->playout = playout_moggy_init(playoutarg);
+					u->playout = playout_moggy_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "light")) {
-					u->playout = playout_light_init(playoutarg);
+					u->playout = playout_light_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "elo")) {
-					u->playout = playout_elo_init(playoutarg);
+					u->playout = playout_elo_init(playoutarg, b);
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 					exit(1);
@@ -1049,7 +1049,7 @@ uct_state_init(char *arg, struct board *b)
 		u->prior = uct_prior_init(NULL, b);
 
 	if (!u->playout)
-		u->playout = playout_moggy_init(NULL);
+		u->playout = playout_moggy_init(NULL, b);
 	u->playout->debug_level = u->debug_level;
 
 	u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
