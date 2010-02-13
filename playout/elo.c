@@ -118,6 +118,8 @@ coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 #ifdef BOARD_GAMMA
+	/* TODO: Make sure ko-prohibited move does not get picked. */
+	/* TODO: FEAT_CONTIGUITY support. */
 	return probdist_pick(&b->prob[to_play - 1]);
 #else
 	struct elo_policy *pp = p->data;

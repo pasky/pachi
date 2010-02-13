@@ -169,6 +169,10 @@ struct board {
 	 * multiplying gammas of the appropriate pattern features based on
 	 * pat3 and traits (see pattern.h). The probability distribution
 	 * is maintained over the full board grid. */
+	/* - Always invalid moves might have non-zero probability. (TODO)
+	 * - Self-eye-filling moves might have non-zero probability. (TODO)
+	 * - Ko-prohibited moves might have non-zero probability.
+	 * - FEAT_CONTIGUITY is not accounted for in the probability. */
 	struct probdist prob[2];
 #endif
 
