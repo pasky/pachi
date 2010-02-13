@@ -595,7 +595,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		}
 
 		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
-		best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
+		if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
 
 		/* Possibly stop search early if it's no use to try on. */
 		if (best && uct_search_stop_early(u, ctx->t, b, ti, &stop, best, best2, base_playouts, i))
