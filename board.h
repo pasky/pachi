@@ -88,6 +88,20 @@ struct btraits {
 	 * not capturing, 1..4=this many neighbors we can capture
 	 * (can be multiple neighbors of same group). */
 	unsigned cap:3;
+	/* Whether it is SAFE to play here. This is essentially just
+	 * cached result of the macro below. (Of course the concept
+	 * of "safety" is not perfect here, but it's the cheapest
+	 * reasonable thing we can do.) */
+	bool safe:1;
+#define board_safe_to_play(b_, coord_, color_) \
+		(( \
+		  /* number of free neighbors, except us */ \
+		  immediate_liberty_count(b_, coord_) - 1 \
+		  /* number of capturable enemy groups */ \
+		  + trait_at(b_, coord_, color_).cap \
+		  /* number of non-capturable friendly groups */ \
+		  + neighbor_count_at(b_, coord_, color_) - trait_at(b_, coord_, stone_other(color_)).cap \
+		 ) > 0)
 };
 
 

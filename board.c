@@ -280,8 +280,15 @@ board_clear(struct board *board)
 			board->pat3[c] = pattern3_hash(board, c);
 	} foreach_point_end;
 #endif
-	/* We don't need to initialize traits, they are all zero
-	 * by default. */
+#ifdef BOARD_TRAITS
+	/* Initialize traits. */
+	foreach_point(board) {
+		trait_at(board, c, S_BLACK).cap = 0;
+		trait_at(board, c, S_BLACK).safe = true;
+		trait_at(board, c, S_WHITE).cap = 0;
+		trait_at(board, c, S_WHITE).safe = true;
+	} foreach_point_end;
+#endif
 }
 
 
@@ -363,6 +370,23 @@ board_print(struct board *board, FILE *f)
 	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL);
 }
 
+
+/* Recompute some of the traits for given point from scratch. Note that
+ * some traits are updated incrementally elsewhere. */
+static void
+board_trait_recompute(struct board *board, coord_t coord)
+{
+#ifdef BOARD_TRAITS
+	trait_at(board, coord, S_BLACK).safe = board_safe_to_play(board, coord, S_BLACK);
+	trait_at(board, coord, S_WHITE).safe = board_safe_to_play(board, coord, S_WHITE);
+	if (DEBUGL(8)) {
+		fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d safe=%d) (white cap=%d safe=%d)\n",
+			coord2sstr(coord, board), stone2str(board_at(board, coord)), immediate_liberty_count(board, coord),
+			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).safe,
+			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).safe);
+	}
+#endif
+}
 
 /* Update board hash with given coordinate. */
 static void profiling_noinline
@@ -589,6 +613,7 @@ board_capturable_add(struct board *board, group_t group, coord_t lib)
 			fprintf(stderr, "%s[%d] %s cap bump bc of %s(%d) member %s\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, stone2str(capturing_color), coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
 		trait_at(board, lib, capturing_color).cap += (group_at(board, c) == group);
 	});
+	board_trait_recompute(board, lib);
 #endif
 
 #ifdef WANT_BOARD_C
@@ -611,6 +636,7 @@ board_capturable_rm(struct board *board, group_t group, coord_t lib)
 			fprintf(stderr, "%s[%d] cap dump bc of %s(%d) member %s\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
 		trait_at(board, lib, capturing_color).cap -= (group_at(board, c) == group);
 	});
+	board_trait_recompute(board, lib);
 #endif
 
 #ifdef WANT_BOARD_C
@@ -745,12 +771,18 @@ board_remove_stone(struct board *board, group_t group, coord_t c)
 	 * we will get incremented later in board_group_addlib(). */
 	trait_at(board, c, S_BLACK).cap = 0;
 	trait_at(board, c, S_WHITE).cap = 0;
+	/* However, we do decide safety statically; we might get
+	 * over-paranoid, but in that case the neighbor loop for
+	 * stones removed next will repair the flag. */
+	/* We must do this update after the loop when our neighbor count is correct. */
+	board_trait_recompute(board, c);
 #endif
 
 	/* Increase liberties of surrounding groups */
 	coord_t coord = c;
 	foreach_neighbor(board, coord, {
 		dec_neighbor_count_at(board, c, color);
+		board_trait_recompute(board, c);
 		group_t g = group_at(board, c);
 		if (g && g != group)
 			board_group_addlib(board, g, coord);
@@ -798,6 +830,7 @@ add_to_group(struct board *board, group_t group, coord_t prevstone, coord_t coor
 		if (coord_is_adjecent(lib, coord, board)) {
 			if (DEBUGL(8)) fprintf(stderr, "add_to_group %s: %s[%d] bump\n", coord2sstr(group, board), coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
 			trait_at(board, lib, capturing_color).cap++;
+			board_trait_recompute(board, lib);
 		}
 	}
 #endif
@@ -859,6 +892,7 @@ next_from_lib:;
 			if (DEBUGL(8) && group_at(board, c) == group_from) fprintf(stderr, "%s[%d] cap bump\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
 			trait_at(board, lib, capturing_color).cap += (group_at(board, c) == group_from);
 		});
+		board_trait_recompute(board, lib);
 	}
 #endif
 
@@ -914,6 +948,9 @@ play_one_neighbor(struct board *board,
 	group_t ngroup = group_at(board, c);
 
 	inc_neighbor_count_at(board, c, color);
+	/* We can be S_NONE, in that case we need to update the safety
+	 * trait since we might be left with only one liberty. */
+	board_trait_recompute(board, c);
 
 	if (!ngroup)
 		return group;
@@ -967,6 +1004,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 			a += g && (board_at(board, c) == other_color && board_group_info(board, g).libs == 1);
 		});
 		assert(a == trait_at(board, coord, color).cap);
+		assert(board_safe_to_play(board, coord, color) == trait_at(board, coord, color).safe);
 	}
 #endif
 	foreach_neighbor(board, coord, {
@@ -1030,6 +1068,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 #ifdef BOARD_TRAITS
 	/* We _will_ for sure capture something. */
 	assert(trait_at(board, coord, color).cap > 0);
+	assert(trait_at(board, coord, color).safe == board_safe_to_play(board, coord, color));
 #endif
 
 	board->f[f] = board->f[--board->flen];
@@ -1038,6 +1077,10 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	foreach_neighbor(board, coord, {
 		inc_neighbor_count_at(board, c, color);
+		/* Originally, this could not have changed any trait
+		 * since no neighbors were S_NONE, however by now some
+		 * of them might be removed from the board. */
+		board_trait_recompute(board, c);
 
 		group_t group = group_at(board, c);
 		if (!group)
