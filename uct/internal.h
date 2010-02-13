@@ -51,6 +51,7 @@ struct uct {
 
 	int dynkomi;
 	int dynkomi_mask;
+	int handicap_value;
 
 	float val_scale;
 	int val_points;

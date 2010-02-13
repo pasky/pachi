@@ -22,7 +22,7 @@
 float
 uct_get_extra_komi(struct uct *u, struct board *b)
 {
-	float extra_komi = board_effective_handicap(b) * (u->dynkomi - b->moves) / u->dynkomi;
+	float extra_komi = board_effective_handicap(b, u->handicap_value) * (u->dynkomi - b->moves) / u->dynkomi;
 	return extra_komi;
 }
 

@@ -40,10 +40,11 @@ static int coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b);
 void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
 
 /* Compute an extra komi describing the "effective handicap" black receives
- * (returns 0 for even game with 7.5 komi). */
+ * (returns 0 for even game with 7.5 komi). @stone_value is value of single
+ * handicap stone, 7 is a good default. */
 /* This is just an approximation since in reality, handicap seems to be usually
  * non-linear. */
-float board_effective_handicap(struct board *b);
+float board_effective_handicap(struct board *b, int first_move_value);
 
 /* Decide if the given player wins counting on the board, considering
  * that given groups are dead. (To get the list of dead groups, use

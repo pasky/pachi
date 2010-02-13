@@ -588,13 +588,10 @@ cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 
 
 float
-board_effective_handicap(struct board *b)
+board_effective_handicap(struct board *b, int first_move_value)
 {
-	/* For very small/very large boards, we might want
-	 * to account for different "base komi". */
-	float first_move = 7.5; // point value of move on empty board
 	assert(b->handicap != 1);
-	return (b->handicap ? b->handicap : 1) * first_move - b->komi;
+	return (b->handicap ? b->handicap : 1) * first_move_value + 0.5 - b->komi;
 }
 
 
