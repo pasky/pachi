@@ -970,7 +970,7 @@ uct_state_init(char *arg, struct board *b)
 				/* Dynamic komi in handicap game; linearly
 				 * decreases to basic settings until move
 				 * #optval. */
-				u->dynkomi = optval ? atoi(optval) : 150;
+				u->dynkomi = optval ? atoi(optval) : 200;
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; you may want
