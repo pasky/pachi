@@ -118,7 +118,8 @@ coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct elo_policy *pp = p->data;
-	float pdi[b->flen]; struct probdist pd = { .n = b->flen, .items = pdi };
+	float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
+	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	int f = probdist_pick(&pd);
 	return b->f[f];
@@ -128,7 +129,8 @@ void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct elo_policy *pp = p->data;
-	float pdi[map->b->flen]; struct probdist pd = { .n = map->b->flen, .items = pdi };
+	float pdi[map->b->flen]; memset(pdi, 0, sizeof(pdi));
+	struct probdist pd = { .n = map->b->flen, .items = pdi, .total = 0 };
 
 	int moves;
 	moves = elo_get_probdist(p, &pp->assess, map->b, map->to_play, &pd);
