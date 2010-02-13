@@ -396,7 +396,7 @@ board_print(struct board *board, FILE *f)
 
 
 /* Update the probability distribution we maintain incrementally. */
-static void
+void
 board_gamma_update(struct board *board, coord_t coord, enum stone color)
 {
 #ifdef BOARD_GAMMA

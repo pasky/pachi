@@ -297,6 +297,8 @@ static group_t board_get_atari_neighbor(struct board *b, coord_t coord, enum sto
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
+/* Force re-compute of a probability distribution item. */
+void board_gamma_update(struct board *b, coord_t coord, enum stone color);
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 static bool board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
