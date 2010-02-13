@@ -23,7 +23,7 @@ rm -f patterns.spat
 
 echo " Gathering population of spatials occuring more than $SPATMIN times..."
 (for i in "$@"; do echo $i >&2; ./sgf2gtp.pl $i; done) |
-	./zzgo -e patternscan gen_spat_dict,no_pattern_match,spat_threshold=$SPATMIN${PATARGS:+,$PATARGS} >/dev/null
+	./zzgo -d 0 -e patternscan gen_spat_dict,no_pattern_match,spat_threshold=$SPATMIN${PATARGS:+,$PATARGS} >/dev/null
 
 echo " Renumbering patterns.spat..."
 perl -i -pe '/^#/ and next; s/^\d+/++$a/e' patterns.spat

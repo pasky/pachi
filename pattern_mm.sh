@@ -30,7 +30,7 @@ fi
 
 echo "Gathering patterns and feeding MM..."
 (for i in "$@"; do ./sgf2gtp.pl $i; done) |
-	./zzgo -e patternscan competition,mm$mm_par |
+	./zzgo -d 0 -e patternscan competition,mm$mm_par |
 	sed -e '/^= $/d; s/^= /#\n/' | grep -v '^$' |
 	mm/mm >/tmp/patterns.mm
 ls -l /tmp/patterns.mm
