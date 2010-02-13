@@ -7,7 +7,10 @@
 
 #include "stone.h"
 #include "move.h"
+#include "probdist.h"
 #include "util.h"
+
+struct features_gamma;
 
 
 /* The board implementation has bunch of optional features.
@@ -23,6 +26,7 @@
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
+//#define BOARD_GAMMA 1 // incremental probability distribution (requires BOARD_TRAITS, BOARD_PAT3)
 
 
 /* Allow board_play_random_move() to return pass even when
@@ -160,6 +164,13 @@ struct board {
 	/* The information is only valid for empty points. */
 	struct btraits (*t)[2];
 #endif
+#ifdef BOARD_GAMMA
+	/* Relative probabilities of moves being played next, computed by
+	 * multiplying gammas of the appropriate pattern features based on
+	 * pat3 and traits (see pattern.h). The probability distribution
+	 * is maintained over the full board grid. */
+	struct probdist prob[2];
+#endif
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
 	struct group *gi;
@@ -191,6 +202,12 @@ struct board {
 	 * but its lifetime is maintained in play_random_game(); it should
 	 * not be set outside of it. */
 	void *ps;
+
+#ifdef BOARD_GAMMA
+	/* Gamma values for probability distribution; user must setup
+	 * this pointer before any move is played. */
+	struct features_gamma *gamma;
+#endif
 
 
 	/* --- PRIVATE DATA --- */

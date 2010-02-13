@@ -15,6 +15,9 @@
 #ifdef BOARD_PAT3
 #include "pattern3.h"
 #endif
+#ifdef BOARD_GAMMA
+#include "pattern.h"
+#endif
 
 bool random_pass = false;
 
@@ -83,8 +86,13 @@ board_copy(struct board *b2, struct board *b1)
 #else
 	int tsize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize);
+#ifdef BOARD_GAMMA
+	int pbsize = board_size2(b2) * sizeof(*b2->prob[0].items);
+#else
+	int pbsize = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
@@ -103,6 +111,10 @@ board_copy(struct board *b2, struct board *b1)
 #endif
 #ifdef BOARD_TRAITS
 	b2->t = x; x += tsize;
+#endif
+#ifdef BOARD_GAMMA
+	b2->prob[0].items = x; x += pbsize;
+	b2->prob[1].items = x; x += pbsize;
 #endif
 
 	return b2;
@@ -160,8 +172,13 @@ board_resize(struct board *board, int size)
 #else
 	int tsize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize);
+#ifdef BOARD_GAMMA
+	int pbsize = board_size2(board) * sizeof(*board->prob[0].items);
+#else
+	int pbsize = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -180,6 +197,10 @@ board_resize(struct board *board, int size)
 #endif
 #ifdef BOARD_TRAITS
 	board->t = x; x += tsize;
+#endif
+#ifdef BOARD_GAMMA
+	board->prob[0].items = x; x += pbsize;
+	board->prob[1].items = x; x += pbsize;
 #endif
 }
 
@@ -289,6 +310,9 @@ board_clear(struct board *board)
 		trait_at(board, c, S_WHITE).safe = true;
 	} foreach_point_end;
 #endif
+#ifdef BOARD_GAMMA
+	board->prob[0].n = board->prob[1].n = board_size2(board);
+#endif
 }
 
 
@@ -371,6 +395,26 @@ board_print(struct board *board, FILE *f)
 }
 
 
+/* Update the probability distribution we maintain incrementally. */
+static void
+board_gamma_update(struct board *board, coord_t coord, enum stone color)
+{
+#ifdef BOARD_GAMMA
+	assert(board->gamma);
+	float value = 1.0f;
+	/* We just quickly replicate the general pattern matcher stuff
+	 * here in the most bare-bone way. */
+	if (trait_at(board, coord, color).cap)
+		value *= board->gamma->gamma[FEAT_CAPTURE][0];
+	if (trait_at(board, coord, stone_other(color)).cap
+	    && trait_at(board, coord, color).safe)
+		value *= board->gamma->gamma[FEAT_AESCAPE][0];
+	if (!trait_at(board, coord, color).safe)
+		value *= board->gamma->gamma[FEAT_SELFATARI][0];
+	probdist_set(&board->prob[color], coord, value);
+#endif
+}
+
 /* Recompute some of the traits for given point from scratch. Note that
  * some traits are updated incrementally elsewhere. */
 static void
@@ -386,6 +430,8 @@ board_trait_recompute(struct board *board, coord_t coord)
 			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).safe);
 	}
 #endif
+	board_gamma_update(board, coord, S_BLACK);
+	board_gamma_update(board, coord, S_WHITE);
 }
 
 /* Update board hash with given coordinate. */
@@ -429,6 +475,8 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 			assert(0);
 		}
 #endif
+		board_gamma_update(board, c, S_BLACK);
+		board_gamma_update(board, c, S_WHITE);
 	} foreach_8neighbor_end;
 #endif
 }
