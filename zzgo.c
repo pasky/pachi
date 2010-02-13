@@ -122,7 +122,8 @@ int main(int argc, char *argv[])
 	}
 
 	fast_srandom(seed);
-	fprintf(stderr, "Random seed: %d\n", seed);
+	if (DEBUGL(0))
+		fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init();
 	struct time_info ti[S_MAX];
