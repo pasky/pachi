@@ -140,7 +140,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 {
 	f->id = FEAT_CAPTURE; f->payload = 0;
 #ifdef BOARD_TRAITS
-	if (!b->t[m->coord].cap)
+	if (!trait_at(b, m->coord, m->color).cap)
 		return f;
 	/* Capturable! */
 	if (!(PS_PF(CAPTURE, LADDER)

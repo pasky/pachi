@@ -141,9 +141,10 @@ struct board {
 	uint16_t *pat3;
 #endif
 #ifdef BOARD_TRAITS
-	/* Incrementally matched point traits information. */
+	/* Incrementally matched point traits information, black-to-play
+	 * ([][0]) and white-to-play ([][1]). */
 	/* The information is only valid for empty points. */
-	struct btraits *t;
+	struct btraits (*t)[2];
 #endif
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
@@ -214,6 +215,8 @@ struct board {
 #define inc_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)++)
 #define dec_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)--)
 #define immediate_liberty_count(b_, coord) (4 - neighbor_count_at(b_, coord, S_BLACK) - neighbor_count_at(b_, coord, S_WHITE) - neighbor_count_at(b_, coord, S_OFFBOARD))
+
+#define trait_at(b_, coord, color) (b_)->t[coord][(color) - 1]
 
 #define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + board_size(b_) * (y)])
@@ -374,7 +377,7 @@ static inline group_t
 board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 {
 #ifdef BOARD_TRAITS
-	if (!b->t[coord].cap) return 0;
+	if (!trait_at(b, coord, stone_other(group_color)).cap) return 0;
 #endif
 	foreach_neighbor(b, coord, {
 		group_t g = group_at(b, c);
