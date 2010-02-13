@@ -11,6 +11,8 @@
 # twogtp path - we need the gogui twogtp variant (the one that takes -black,
 # not --black as parameter)
 twogtp_path="/nfs/drahokam/pasky/gogui-1.1.10/bin/gogui-twogtp"
+# If you want handicap support, you will need a custom patch from:
+# https://sourceforge.net/tracker/?func=detail&atid=489966&aid=2878719&group_id=59117
 
 
 ### Players:
@@ -38,7 +40,7 @@ player zamafmoggy5k './zzgo-$1 games=5000,pass_all_alive,policy=ucb1amaf,playout
 #
 # pairing BOARDSIZE KOMI BLACK PLAYER1 PLAYER1ARGS PLAYER2 PLAYER2ARGS
 # BOARDSIZE: 9, 19, or whatever flavor you fancy...
-# KOMI: 7.5, 0.5, ... (TODO: Handicaps)
+# KOMI: 7.5, 0.5, ... OR h2, h6, ... (handicap amount, komi is forced to 0.5)
 # BLACK: 'a' - black is chosen randomly, useful only if komi is 7.5
 #	 '1' - black is PLAYER1,  '2' - black is PLAYER2
 # PLAYER: Name of the player as defined above.

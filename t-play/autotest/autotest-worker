@@ -86,11 +86,12 @@ prun_get() {
 }
 prun_get prun_black "$p_black" $pa_black
 prun_get prun_white "$p_white" $pa_white
+komi="$(pairing_param $pair komi | sed 's/^h/0.5 -handicap /')"
 
 
 # Run twogtp!
 rm -f "c/$clientid"/scratch*
-$twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi "$(pairing_param $pair komi)" -games 1 -sgffile "c/$clientid/scratch"
+$twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch"
 
 # Get count of our game
 mkdir -p "c/$clientid/$pairid"
