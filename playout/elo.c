@@ -117,12 +117,16 @@ skip_move:
 coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
+#ifdef BOARD_GAMMA
+	return probdist_pick(&b->prob[to_play - 1]);
+#else
 	struct elo_policy *pp = p->data;
 	float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
 	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	int f = probdist_pick(&pd);
 	return b->f[f];
+#endif
 }
 
 void
@@ -222,6 +226,10 @@ playout_elo_init(char *arg, struct board *b)
 	for (int i = 0; i < FEAT_MAX; i++)
 		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
 			pp->choose.ps[i] = 0;
+
+#ifdef BOARD_GAMMA
+	b->gamma = pp->choose.fg;
+#endif
 
 	return p;
 }

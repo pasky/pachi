@@ -42,6 +42,9 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_MCOWNER] = ~0,
 };
 
+/* !!! Note that in order for ELO playout policy to work correctly, this
+ * pattern specification MUST exactly match the features matched by the
+ * BOARD_GAMMA code! You cannot just tinker with this spec freely. */
 #define FAST_NO_LADDER 1 /* 1: Don't match ladders in fast playouts */
 pattern_spec PATTERN_SPEC_MATCHFAST = {
 	[FEAT_PASS] = ~0,
