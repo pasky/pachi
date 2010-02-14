@@ -312,6 +312,10 @@ board_clear(struct board *board)
 #endif
 #ifdef BOARD_GAMMA
 	board->prob[0].n = board->prob[1].n = board_size2(board);
+	foreach_point(board) {
+		probdist_set(&board->prob[0], c, (board_at(board, c) == S_NONE) * 1.0f);
+		probdist_set(&board->prob[1], c, (board_at(board, c) == S_NONE) * 1.0f);
+	} foreach_point_end;
 #endif
 }
 
