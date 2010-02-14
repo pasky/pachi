@@ -404,7 +404,9 @@ void
 board_gamma_update(struct board *board, coord_t coord, enum stone color)
 {
 #ifdef BOARD_GAMMA
-	assert(board->gamma);
+	if (!board->gamma)
+		return;
+
 	/* Punch out invalid moves and moves filling our own eyes. */
 	if (board_at(board, coord) != S_NONE
 	    || (board_is_eyelike(board, &coord, stone_other(color))
