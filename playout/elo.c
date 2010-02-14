@@ -146,6 +146,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
 	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
+	if (pd.total < PROBDIST_EPSILON)
+		return pass;
 	int f = probdist_pick(&pd);
 	return b->f[f];
 #endif
