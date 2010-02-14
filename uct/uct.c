@@ -703,6 +703,24 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
 	setup_dynkomi(u, b, color);
 
+	/* Make pessimistic assumption about komi for Japanese rules to
+	 * avoid losing by 0.5 when winning by 0.5 with Chinese rules.
+	 * The rules usually give the same winner if the integer part of komi
+	 * is odd so we adjust the komi only if it is even (for a board of
+	 * odd size). We are not trying  to get an exact evaluation for rare
+	 * cases of seki. For details see http://home.snafu.de/jasiek/parity.html
+
+	 * Further complication: kgs does not yet tell which rules are used.
+	 * So until the kgs-rules command is available, we assume that we
+	 * are playing with Japanese rules if not in tournament conditions.
+	 * TODO: remove this assumption once kgs-rules is available. */
+	if (!u->pass_all_alive && (((int)floor(b->komi) + b->size) & 1)) {
+		b->komi += (color == S_BLACK ? 1.0 : -1.0);
+		if (UDEBUGL(0))
+			fprintf(stderr, "Setting komi to %.1f assuming Japanese rules\n",
+				b->komi);
+	}
+
 	/* Perform the Monte Carlo Tree Search! */
 	int played_games = uct_search(u, b, ti, color, u->t);
 
