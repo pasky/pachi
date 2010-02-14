@@ -124,12 +124,22 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		assert(b->ko.color == to_play);
 		probdist_set(pd, b->ko.coord, 0);
 	}
-	/* TODO: FEAT_CONTIGUITY support. */
+	/* Contiguity detection. */
+	if (!is_pass(b->last_move.coord)) {
+		foreach_8neighbor(b, b->last_move.coord) {
+			probdist_set(pd, c, pd->items[c] * b->gamma->gamma[FEAT_CONTIGUITY][0]);
+		} foreach_8neighbor_end;
+	}
 	/* Pick a move. */
 	coord_t c = pd->total >= PROBDIST_EPSILON ? probdist_pick(pd) : pass;
 	/* Repair the damage. */
 	if (!is_pass(b->ko.coord))
 		board_gamma_update(b, b->ko.coord, to_play);
+	if (!is_pass(b->last_move.coord)) {
+		foreach_8neighbor(b, b->last_move.coord) {
+			board_gamma_update(b, c, to_play);
+		} foreach_8neighbor_end;
+	}
 	return c;
 #else
 	struct elo_policy *pp = p->data;
