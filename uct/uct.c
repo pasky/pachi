@@ -709,12 +709,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * is odd so we adjust the komi only if it is even (for a board of
 	 * odd size). We are not trying  to get an exact evaluation for rare
 	 * cases of seki. For details see http://home.snafu.de/jasiek/parity.html
-
-	 * Further complication: kgs does not yet tell which rules are used.
-	 * So until the kgs-rules command is available, we assume that we
-	 * are playing with Japanese rules if not in tournament conditions.
-	 * TODO: remove this assumption once kgs-rules is available. */
-	if (!u->pass_all_alive && (((int)floor(b->komi) + b->size) & 1)) {
+	 * TODO: Support the kgs-rules command once available. */
+	if (u->territory_scoring && (((int)floor(b->komi) + b->size) & 1)) {
 		b->komi += (color == S_BLACK ? 1.0 : -1.0);
 		if (UDEBUGL(0))
 			fprintf(stderr, "Setting komi to %.1f assuming Japanese rules\n",
@@ -1025,6 +1021,10 @@ uct_state_init(char *arg, struct board *b)
 				/* Whether to consider all stones alive at the game
 				 * end instead of marking dead groupd. */
 				u->pass_all_alive = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "territory_scoring")) {
+				/* Use territory scoring (default is area scoring).
+				 * An explicit kgs-rules command overrides this. */
+				u->territory_scoring = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "random_policy_chance") && optval) {
 				/* If specified (N), with probability 1/N, random_policy policy
 				 * descend is used instead of main policy descend; useful

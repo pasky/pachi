@@ -24,6 +24,7 @@ struct uct {
 	float loss_threshold;
 	double best2_ratio, bestr_ratio;
 	bool pass_all_alive;
+	bool territory_scoring;
 	int expand_p;
 	bool playout_amaf, playout_amaf_nakade;
 	bool amaf_prior;
