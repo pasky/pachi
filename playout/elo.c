@@ -117,18 +117,46 @@ skip_move:
 coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
+#ifdef BOARD_GAMMA
+	struct probdist *pd = &b->prob[to_play - 1];
+	/* Make sure ko-prohibited move does not get picked. */
+	if (!is_pass(b->ko.coord)) {
+		assert(b->ko.color == to_play);
+		probdist_set(pd, b->ko.coord, 0);
+	}
+	/* Contiguity detection. */
+	if (!is_pass(b->last_move.coord)) {
+		foreach_8neighbor(b, b->last_move.coord) {
+			probdist_set(pd, c, pd->items[c] * b->gamma->gamma[FEAT_CONTIGUITY][1]);
+		} foreach_8neighbor_end;
+	}
+	/* Pick a move. */
+	coord_t c = pd->total >= PROBDIST_EPSILON ? probdist_pick(pd) : pass;
+	/* Repair the damage. */
+	if (!is_pass(b->ko.coord))
+		board_gamma_update(b, b->ko.coord, to_play);
+	if (!is_pass(b->last_move.coord)) {
+		foreach_8neighbor(b, b->last_move.coord) {
+			board_gamma_update(b, c, to_play);
+		} foreach_8neighbor_end;
+	}
+	return c;
+#else
 	struct elo_policy *pp = p->data;
-	float pdi[b->flen]; struct probdist pd = { .n = b->flen, .items = pdi };
+	float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
+	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	int f = probdist_pick(&pd);
 	return b->f[f];
+#endif
 }
 
 void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct elo_policy *pp = p->data;
-	float pdi[map->b->flen]; struct probdist pd = { .n = map->b->flen, .items = pdi };
+	float pdi[map->b->flen]; memset(pdi, 0, sizeof(pdi));
+	struct probdist pd = { .n = map->b->flen, .items = pdi, .total = 0 };
 
 	int moves;
 	moves = elo_get_probdist(p, &pp->assess, map->b, map->to_play, &pd);
@@ -155,7 +183,7 @@ playout_elo_done(struct playout_policy *p)
 
 
 struct playout_policy *
-playout_elo_init(char *arg)
+playout_elo_init(char *arg, struct board *b)
 {
 	struct playout_policy *p = calloc(1, sizeof(*p));
 	struct elo_policy *pp = calloc(1, sizeof(*pp));
@@ -220,6 +248,10 @@ playout_elo_init(char *arg)
 	for (int i = 0; i < FEAT_MAX; i++)
 		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
 			pp->choose.ps[i] = 0;
+
+#ifdef BOARD_GAMMA
+	b->gamma = pp->choose.fg;
+#endif
 
 	return p;
 }

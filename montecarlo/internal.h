@@ -29,6 +29,4 @@ struct move_stat {
 
 void board_stats_print(struct board *board, struct move_stat *moves, FILE *f);
 
-struct montecarlo *montecarlo_state_init(char *arg);
-
 #endif

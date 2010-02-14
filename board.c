@@ -15,6 +15,9 @@
 #ifdef BOARD_PAT3
 #include "pattern3.h"
 #endif
+#ifdef BOARD_GAMMA
+#include "pattern.h"
+#endif
 
 bool random_pass = false;
 
@@ -83,8 +86,13 @@ board_copy(struct board *b2, struct board *b1)
 #else
 	int tsize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize);
+#ifdef BOARD_GAMMA
+	int pbsize = board_size2(b2) * sizeof(*b2->prob[0].items);
+#else
+	int pbsize = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
@@ -103,6 +111,10 @@ board_copy(struct board *b2, struct board *b1)
 #endif
 #ifdef BOARD_TRAITS
 	b2->t = x; x += tsize;
+#endif
+#ifdef BOARD_GAMMA
+	b2->prob[0].items = x; x += pbsize;
+	b2->prob[1].items = x; x += pbsize;
 #endif
 
 	return b2;
@@ -160,8 +172,13 @@ board_resize(struct board *board, int size)
 #else
 	int tsize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize);
+#ifdef BOARD_GAMMA
+	int pbsize = board_size2(board) * sizeof(*board->prob[0].items);
+#else
+	int pbsize = 0;
+#endif
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -180,6 +197,10 @@ board_resize(struct board *board, int size)
 #endif
 #ifdef BOARD_TRAITS
 	board->t = x; x += tsize;
+#endif
+#ifdef BOARD_GAMMA
+	board->prob[0].items = x; x += pbsize;
+	board->prob[1].items = x; x += pbsize;
 #endif
 }
 
@@ -280,8 +301,22 @@ board_clear(struct board *board)
 			board->pat3[c] = pattern3_hash(board, c);
 	} foreach_point_end;
 #endif
-	/* We don't need to initialize traits, they are all zero
-	 * by default. */
+#ifdef BOARD_TRAITS
+	/* Initialize traits. */
+	foreach_point(board) {
+		trait_at(board, c, S_BLACK).cap = 0;
+		trait_at(board, c, S_BLACK).safe = true;
+		trait_at(board, c, S_WHITE).cap = 0;
+		trait_at(board, c, S_WHITE).safe = true;
+	} foreach_point_end;
+#endif
+#ifdef BOARD_GAMMA
+	board->prob[0].n = board->prob[1].n = board_size2(board);
+	foreach_point(board) {
+		probdist_set(&board->prob[0], c, (board_at(board, c) == S_NONE) * 1.0f);
+		probdist_set(&board->prob[1], c, (board_at(board, c) == S_NONE) * 1.0f);
+	} foreach_point_end;
+#endif
 }
 
 
@@ -364,6 +399,54 @@ board_print(struct board *board, FILE *f)
 }
 
 
+/* Update the probability distribution we maintain incrementally. */
+void
+board_gamma_update(struct board *board, coord_t coord, enum stone color)
+{
+#ifdef BOARD_GAMMA
+	assert(board->gamma);
+	/* Punch out invalid moves and moves filling our own eyes. */
+	if (board_at(board, coord) != S_NONE
+	    || (board_is_eyelike(board, &coord, stone_other(color))
+	        && !trait_at(board, coord, color).cap)
+	    || (board_is_one_point_eye(board, &coord, color))) {
+		probdist_set(&board->prob[color - 1], coord, 0);
+		return;
+	}
+
+	/* We just quickly replicate the general pattern matcher stuff
+	 * here in the most bare-bone way. */
+	float value = board->gamma->gamma[FEAT_PATTERN3][board->pat3[coord]];
+	if (trait_at(board, coord, color).cap)
+		value *= board->gamma->gamma[FEAT_CAPTURE][0];
+	if (trait_at(board, coord, stone_other(color)).cap
+	    && trait_at(board, coord, color).safe)
+		value *= board->gamma->gamma[FEAT_AESCAPE][0];
+	if (!trait_at(board, coord, color).safe)
+		value *= board->gamma->gamma[FEAT_SELFATARI][0];
+	probdist_set(&board->prob[color - 1], coord, value);
+#endif
+}
+
+/* Recompute some of the traits for given point from scratch. Note that
+ * some traits are updated incrementally elsewhere. */
+static void
+board_trait_recompute(struct board *board, coord_t coord)
+{
+#ifdef BOARD_TRAITS
+	trait_at(board, coord, S_BLACK).safe = board_safe_to_play(board, coord, S_BLACK);
+	trait_at(board, coord, S_WHITE).safe = board_safe_to_play(board, coord, S_WHITE);
+	if (DEBUGL(8)) {
+		fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d safe=%d) (white cap=%d safe=%d)\n",
+			coord2sstr(coord, board), stone2str(board_at(board, coord)), immediate_liberty_count(board, coord),
+			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).safe,
+			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).safe);
+	}
+#endif
+	board_gamma_update(board, coord, S_BLACK);
+	board_gamma_update(board, coord, S_WHITE);
+}
+
 /* Update board hash with given coordinate. */
 static void profiling_noinline
 board_hash_update(struct board *board, coord_t coord, enum stone color)
@@ -405,6 +488,8 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 			assert(0);
 		}
 #endif
+		board_gamma_update(board, c, S_BLACK);
+		board_gamma_update(board, c, S_WHITE);
 	} foreach_8neighbor_end;
 #endif
 }
@@ -582,11 +667,14 @@ board_capturable_add(struct board *board, group_t group, coord_t lib)
 	//fprintf(stderr, "group %s cap %s\n", coord2sstr(group, board), coord2sstr(lib, boarD));
 #ifdef BOARD_TRAITS
 	/* Increase capturable count trait of my last lib. */
+	enum stone capturing_color = stone_other(board_at(board, group));
+	assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
 	foreach_neighbor(board, lib, {
 		if (DEBUGL(8) && group_at(board, c) == group)
-			fprintf(stderr, "%s[%d] cap bump bc of %s(%d) member %s\n", coord2sstr(lib, board), board->t[lib].cap, coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
-		board->t[lib].cap += (group_at(board, c) == group);
+			fprintf(stderr, "%s[%d] %s cap bump bc of %s(%d) member %s\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, stone2str(capturing_color), coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
+		trait_at(board, lib, capturing_color).cap += (group_at(board, c) == group);
 	});
+	board_trait_recompute(board, lib);
 #endif
 
 #ifdef WANT_BOARD_C
@@ -602,11 +690,14 @@ board_capturable_rm(struct board *board, group_t group, coord_t lib)
 	//fprintf(stderr, "group %s nocap %s\n", coord2sstr(group, board), coord2sstr(lib, board));
 #ifdef BOARD_TRAITS
 	/* Decrease capturable count trait of my previously-last lib. */
+	enum stone capturing_color = stone_other(board_at(board, group));
+	assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
 	foreach_neighbor(board, lib, {
 		if (DEBUGL(8) && group_at(board, c) == group)
-			fprintf(stderr, "%s[%d] cap dump bc of %s(%d) member %s\n", coord2sstr(lib, board), board->t[lib].cap, coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
-		board->t[lib].cap -= (group_at(board, c) == group);
+			fprintf(stderr, "%s[%d] cap dump bc of %s(%d) member %s\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
+		trait_at(board, lib, capturing_color).cap -= (group_at(board, c) == group);
 	});
+	board_trait_recompute(board, lib);
 #endif
 
 #ifdef WANT_BOARD_C
@@ -739,13 +830,20 @@ board_remove_stone(struct board *board, group_t group, coord_t c)
 #ifdef BOARD_TRAITS
 	/* We mark as cannot-capture now. If this is a ko/snapback,
 	 * we will get incremented later in board_group_addlib(). */
-	board->t[c].cap = 0;
+	trait_at(board, c, S_BLACK).cap = 0;
+	trait_at(board, c, S_WHITE).cap = 0;
+	/* However, we do decide safety statically; we might get
+	 * over-paranoid, but in that case the neighbor loop for
+	 * stones removed next will repair the flag. */
+	/* We must do this update after the loop when our neighbor count is correct. */
+	board_trait_recompute(board, c);
 #endif
 
 	/* Increase liberties of surrounding groups */
 	coord_t coord = c;
 	foreach_neighbor(board, coord, {
 		dec_neighbor_count_at(board, c, color);
+		board_trait_recompute(board, c);
 		group_t g = group_at(board, c);
 		if (g && g != group)
 			board_group_addlib(board, g, coord);
@@ -782,15 +880,18 @@ add_to_group(struct board *board, group_t group, coord_t prevstone, coord_t coor
 	groupnext_at(board, coord) = groupnext_at(board, prevstone);
 	groupnext_at(board, prevstone) = coord_raw(coord);
 
-#if defined(BOARD_TRAITS)
+#ifdef BOARD_TRAITS
 	if (board_group_info(board, group).libs == 1) {
 		/* Our group is temporarily in atari; make sure the capturable
 		 * counts also correspond to the newly added stone before we
 		 * start adding liberties again so bump-dump ops match. */
+		enum stone capturing_color = stone_other(board_at(board, group));
+		assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
 		coord_t lib = board_group_info(board, group).lib[0];
 		if (coord_is_adjecent(lib, coord, board)) {
-			if (DEBUGL(8)) fprintf(stderr, "add_to_group %s: %s[%d] bump\n", coord2sstr(group, board), coord2sstr(lib, board), board->t[lib].cap);
-			board->t[lib].cap++;
+			if (DEBUGL(8)) fprintf(stderr, "add_to_group %s: %s[%d] bump\n", coord2sstr(group, board), coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
+			trait_at(board, lib, capturing_color).cap++;
+			board_trait_recompute(board, lib);
 		}
 	}
 #endif
@@ -840,16 +941,19 @@ next_from_lib:;
 		}
 	}
 
-#if defined(BOARD_TRAITS)
+#ifdef BOARD_TRAITS
 	if (board_group_info(board, group_to).libs == 1) {
 		/* Our group is currently in atari; make sure we properly
 		 * count in even the neighbors from the other group in the
 		 * capturable counter. */
+		enum stone capturing_color = stone_other(board_at(board, group_to));
+		assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
 		coord_t lib = board_group_info(board, group_to).lib[0];
 		foreach_neighbor(board, lib, {
-			if (DEBUGL(8) && group_at(board, c) == group_from) fprintf(stderr, "%s[%d] cap bump\n", coord2sstr(lib, board), board->t[lib].cap);
-			board->t[lib].cap += (group_at(board, c) == group_from);
+			if (DEBUGL(8) && group_at(board, c) == group_from) fprintf(stderr, "%s[%d] cap bump\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
+			trait_at(board, lib, capturing_color).cap += (group_at(board, c) == group_from);
 		});
+		board_trait_recompute(board, lib);
 	}
 #endif
 
@@ -905,6 +1009,9 @@ play_one_neighbor(struct board *board,
 	group_t ngroup = group_at(board, c);
 
 	inc_neighbor_count_at(board, c, color);
+	/* We can be S_NONE, in that case we need to update the safety
+	 * trait since we might be left with only one liberty. */
+	board_trait_recompute(board, c);
 
 	if (!ngroup)
 		return group;
@@ -955,19 +1062,22 @@ board_play_outside(struct board *board, struct move *m, int f)
 		int a = 0;
 		foreach_neighbor(board, coord, {
 			group_t g = group_at(board, c);
-			a += g && (board_group_info(board, g).libs == 1);
+			a += g && (board_at(board, c) == other_color && board_group_info(board, g).libs == 1);
 		});
-		assert(a == board->t[coord].cap);
+		assert(a == trait_at(board, coord, color).cap);
+		assert(board_safe_to_play(board, coord, color) == trait_at(board, coord, color).safe);
 	}
 #endif
 	foreach_neighbor(board, coord, {
 		group = play_one_neighbor(board, coord, color, other_color, c, group);
 	});
 
+	board_at(board, coord) = color;
 	if (unlikely(!group))
 		group = new_group(board, coord);
+	board_gamma_update(board, coord, S_BLACK);
+	board_gamma_update(board, coord, S_WHITE);
 
-	board_at(board, coord) = color;
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
 	board->moves++;
@@ -1020,7 +1130,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	}
 #ifdef BOARD_TRAITS
 	/* We _will_ for sure capture something. */
-	assert(board->t[coord].cap > 0);
+	assert(trait_at(board, coord, color).cap > 0);
+	assert(trait_at(board, coord, color).safe == board_safe_to_play(board, coord, color));
 #endif
 
 	board->f[f] = board->f[--board->flen];
@@ -1029,6 +1140,10 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	foreach_neighbor(board, coord, {
 		inc_neighbor_count_at(board, c, color);
+		/* Originally, this could not have changed any trait
+		 * since no neighbors were S_NONE, however by now some
+		 * of them might be removed from the board. */
+		board_trait_recompute(board, c);
 
 		group_t group = group_at(board, c);
 		if (!group)
@@ -1056,6 +1171,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	board_at(board, coord) = color;
 	group_t group = new_group(board, coord);
+	board_gamma_update(board, coord, S_BLACK);
+	board_gamma_update(board, coord, S_WHITE);
 
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
@@ -1093,6 +1210,8 @@ int
 board_play(struct board *board, struct move *m)
 {
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
+		struct move nomove = { pass, S_NONE };
+		board->ko = nomove;
 		board->last_move2 = board->last_move;
 		board->last_move = *m;
 		return 0;
@@ -1141,6 +1260,8 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 			return;
 
 	*coord = pass;
+	struct move m = { pass, color };
+	board_play(b, &m);
 }
 
 

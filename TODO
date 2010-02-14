@@ -4,29 +4,23 @@ Docs:
 
 Base:
 * Further optimize board implementation, oprofile fun
-* Clean up GTP interface, allow custom GTP commands for
-  modules
+* Clean up GTP interface, allow custom GTP commands for modules
 * Implement parameter setup over GTP
 * gogui-friendly GTP interface
 
 Patterns:
 * Heavy optimization work
 * Analyze feasibility of various possible features
-* Use pattern3-type patterns for incremental board spatials matching
-  (should be much faster, and also usable for Moggy policy)
+* Incrementally match all features from fast set
+* Incrementally maintain probability distribution for ELO playouts
 
 Playouts:
 * Finish the ELO-play policy
-* Mercy rule?
 * Split playout aspects to custom-stackable pieces
 * Possibly replay top-rated unplayed moves from the tree
   in the playout?
 
 UCT:
-* Ponder mode
-* Time controls infrastructure
-* Outside of japanese byoyomi, stop reading early if result cannot change
-* Support for different default settings for various board sizes
 * Support for prior hinting based by custom externally linked
   evaluation function
 * Support for different float types when running with huge playout counts

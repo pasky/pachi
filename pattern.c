@@ -42,13 +42,16 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_MCOWNER] = ~0,
 };
 
+/* !!! Note that in order for ELO playout policy to work correctly, this
+ * pattern specification MUST exactly match the features matched by the
+ * BOARD_GAMMA code! You cannot just tinker with this spec freely. */
 #define FAST_NO_LADDER 1 /* 1: Don't match ladders in fast playouts */
 pattern_spec PATTERN_SPEC_MATCHFAST = {
 	[FEAT_PASS] = ~0,
 	[FEAT_CAPTURE] = ~(1<<PF_CAPTURE_ATARIDEF | 1<<PF_CAPTURE_RECAPTURE | FAST_NO_LADDER<<PF_CAPTURE_LADDER),
 	[FEAT_AESCAPE] = ~(FAST_NO_LADDER<<PF_AESCAPE_LADDER),
 	[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_SMART),
-	[FEAT_ATARI] = ~(FAST_NO_LADDER<<PF_ATARI_LADDER),
+	[FEAT_ATARI] = 0,
 	[FEAT_BORDER] = 0,
 	[FEAT_LDIST] = 0,
 	[FEAT_LLDIST] = 0,
@@ -140,7 +143,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 {
 	f->id = FEAT_CAPTURE; f->payload = 0;
 #ifdef BOARD_TRAITS
-	if (!b->t[m->coord].cap)
+	if (!trait_at(b, m->coord, m->color).cap)
 		return f;
 	/* Capturable! */
 	if (!(PS_PF(CAPTURE, LADDER)
@@ -150,9 +153,10 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		(f++, p->n++);
 		return f;
 	}
+	/* We need to know details, so we still have to go through
+	 * the neighbors. */
 #endif
 
-	/* Ok, we need to look at the neighbors anyway. */
 	/* Furthermore, we will now create one feature per capturable
 	 * neighbor. */
 	/* XXX: I'm not sure if this is really good idea. --pasky */
@@ -203,6 +207,21 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
 		      struct board *b, struct move *m)
 {
+#ifdef BOARD_TRAITS
+	if (!trait_at(b, m->coord, stone_other(m->color)).cap
+	    || !trait_at(b, m->coord, m->color).safe)
+		return f;
+	/* Opponent can capture something and this move is safe
+	 * for us! */
+	if (!PS_PF(AESCAPE, LADDER)) {
+		f->id = FEAT_AESCAPE; f->payload = 0;
+		(f++, p->n++);
+		return f;
+	}
+	/* We need to know details, so we still have to go through
+	 * the neighbors. */
+#endif
+
 	/* Find if a neighboring group of ours is in atari, AND that we provide
 	 * a liberty to connect out. XXX: No connect-and-die check. */
 	group_t in_atari = -1;
@@ -346,6 +365,10 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 static bool
 is_simple_selfatari(struct board *b, enum stone color, coord_t coord)
 {
+#ifdef BOARD_TRAITS
+	return !trait_at(b, coord, color).safe;
+#endif
+
 	/* Very rough check, no connect-and-die checks or other trickery. */
 	int libs = immediate_liberty_count(b, coord);
 	if (libs >= 2) return false; // open space

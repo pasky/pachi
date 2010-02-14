@@ -54,7 +54,7 @@ have_move:
 
 
 struct replay *
-replay_state_init(char *arg)
+replay_state_init(char *arg, struct board *b)
 {
 	struct replay *r = calloc(1, sizeof(struct replay));
 
@@ -81,11 +81,11 @@ replay_state_init(char *arg)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					r->playout = playout_moggy_init(playoutarg);
+					r->playout = playout_moggy_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "light")) {
-					r->playout = playout_light_init(playoutarg);
+					r->playout = playout_light_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "elo")) {
-					r->playout = playout_elo_init(playoutarg);
+					r->playout = playout_elo_init(playoutarg, b);
 				} else {
 					fprintf(stderr, "Replay: Invalid playout policy %s\n", optval);
 				}
@@ -96,7 +96,7 @@ replay_state_init(char *arg)
 	}
 
 	if (!r->playout)
-		r->playout = playout_light_init(NULL);
+		r->playout = playout_light_init(NULL, b);
 	r->playout->debug_level = r->debug_level;
 
 	return r;
@@ -105,7 +105,7 @@ replay_state_init(char *arg)
 struct engine *
 engine_replay_init(char *arg, struct board *b)
 {
-	struct replay *r = replay_state_init(arg);
+	struct replay *r = replay_state_init(arg, b);
 	struct engine *e = calloc(1, sizeof(struct engine));
 	e->name = "PlayoutReplay Engine";
 	e->comment = "I select moves blindly according to playout policy. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";

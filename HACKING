@@ -146,8 +146,8 @@ is a major security hole. Yes, this needs to be cleaned up. Also, currently
 engines cannot plug in their own commands and there is no GoGui interface.
 
 Pachi supports only few GTP commands now. Most importantly, it does not
-support the undo command and it does not support time-keeping.
-The final_status_list command requires engine support.
+support the undo command.  The final_status_list command requires engine
+support.
 
 
 General Pattern Matcher

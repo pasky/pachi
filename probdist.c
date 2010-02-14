@@ -6,19 +6,24 @@
 #include "move.h"
 #include "probdist.h"
 #include "random.h"
+#include "board.h"
 
 int
 probdist_pick(struct probdist *pd)
 {
-	assert(probdist_total(pd) >= 0);
+	float total = probdist_total(pd) - PROBDIST_EPSILON;
+	assert(total >= 0);
 	/* TODO: float random */
-	float stab = fast_frandom() * probdist_total(pd);
-	//fprintf(stderr, "stab %f / %f\n", stab, pd->items[pd->n - 1]);
+	double stab = fast_frandom() * total;
+	//fprintf(stderr, "stab %f / %f\n", stab, total);
 	for (int i = 0; i < pd->n; i++) {
+		//struct board b = { .size = 11 };
+		//fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(i, &b), pd->items[i], stab);
 		if (stab <= pd->items[i])
 			return i;
+		stab -= pd->items[i];
 	}
-	//fprintf(stderr, "overstab %f (total %f, sum %f)\n", stab, pd->items[pd->n - 1], sum);
+	fprintf(stderr, "overstab %f (total %f)\n", stab, total);
 	assert(0);
 	return -1;
 }

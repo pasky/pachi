@@ -12,6 +12,12 @@
  * pattern _feature_. Another features may be is-a-selfatari, is-a-capture,
  * number of liberties, distance from last move, etc. */
 
+/* ! NOTE NOTE NOTE ! We provide infrastructure for matching patterns, but we
+ * also replicate the most bare-bone part of it for tiny subset of features
+ * in board.c:board_gamma_update() for fast incremental probability
+ * distribution maintenance. Aside of using the constants defined here, that
+ * implementation is completely independent and does not call back here. */
+
 /* Each feature is represented by its id and an optional 32-bit payload;
  * when matching, discrete (id,payload) pairs are considered. */
 

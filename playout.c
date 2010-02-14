@@ -49,7 +49,7 @@ play_random:
 			struct move m;
 			m.coord = coord; m.color = color;
 			if (board_play(b, &m) < 0) {
-				if (DEBUGL(8)) {
+				if (DEBUGL(4)) {
 					fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n",
 						coord_x(coord, b), coord_y(coord, b));
 					board_print(b, stderr);

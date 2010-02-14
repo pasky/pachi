@@ -4,23 +4,26 @@
 /* Tools for picking an item according to a probability distribution. */
 
 /* The probability distribution structure is designed to be once
- * initialized, then each item sequentially assigned a value one,
- * then multiple times an item picked randomly. */
+ * initialized, then random items assigned a value repeatedly and
+ * random items picked repeatedly as well. */
 
 #include "move.h"
 #include "util.h"
 
+/* The interface looks a bit funny-wrapped since we used to switch
+ * between different probdist representations. */
+
 struct probdist {
 	int n;
-	float *items; // [n], probability pick<=i
+	float *items; // [n], items[i] = P(pick==i)
+	float total;
 };
-#define probdist_total(pd) ((pd)->items[(pd)->n - 1])
-#define probdist_one(pd, i) ((pd)->items[i] - (likely(i > 0) ? (pd)->items[i - 1] : 0))
+#define probdist_total(pd) ((pd)->total)
+#define probdist_one(pd, i) ((pd)->items[i])
+/* Probability so small that it's same as zero; used to compensate
+ * for probdist.total inaccuracies. */
+#define PROBDIST_EPSILON 0.01
 
-/* You must call this for all items, *in sequence* (0, 1, ...).
- * @val is probability of item @i (as opposed to items[i], which
- * is probability of item <=i, thus includes the sum of predecessors
- * as well). */
 static void probdist_set(struct probdist *pd, int i, float val);
 
 int probdist_pick(struct probdist *pd);
@@ -36,7 +39,8 @@ probdist_set(struct probdist *pd, int i, float val)
 	assert(i >= 0 && i < pd->n);
 	assert(val >= 0);
 #endif
-	pd->items[i] = (likely(i > 0) ? pd->items[i - 1] : 0) + val;
+	pd->total += val - pd->items[i];
+	pd->items[i] = val;
 }
 
 #endif

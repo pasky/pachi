@@ -7,7 +7,10 @@
 
 #include "stone.h"
 #include "move.h"
+#include "probdist.h"
 #include "util.h"
+
+struct features_gamma;
 
 
 /* The board implementation has bunch of optional features.
@@ -23,6 +26,7 @@
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
+//#define BOARD_GAMMA 1 // incremental probability distribution (requires BOARD_TRAITS, BOARD_PAT3)
 
 
 /* Allow board_play_random_move() to return pass even when
@@ -88,6 +92,20 @@ struct btraits {
 	 * not capturing, 1..4=this many neighbors we can capture
 	 * (can be multiple neighbors of same group). */
 	unsigned cap:3;
+	/* Whether it is SAFE to play here. This is essentially just
+	 * cached result of the macro below. (Of course the concept
+	 * of "safety" is not perfect here, but it's the cheapest
+	 * reasonable thing we can do.) */
+	bool safe:1;
+#define board_safe_to_play(b_, coord_, color_) \
+		(( \
+		  /* number of free neighbors, except us */ \
+		  immediate_liberty_count(b_, coord_) - 1 \
+		  /* number of capturable enemy groups */ \
+		  + trait_at(b_, coord_, color_).cap \
+		  /* number of non-capturable friendly groups */ \
+		  + neighbor_count_at(b_, coord_, color_) - trait_at(b_, coord_, stone_other(color_)).cap \
+		 ) > 0)
 };
 
 
@@ -141,9 +159,21 @@ struct board {
 	uint16_t *pat3;
 #endif
 #ifdef BOARD_TRAITS
-	/* Incrementally matched point traits information. */
+	/* Incrementally matched point traits information, black-to-play
+	 * ([][0]) and white-to-play ([][1]). */
 	/* The information is only valid for empty points. */
-	struct btraits *t;
+	struct btraits (*t)[2];
+#endif
+#ifdef BOARD_GAMMA
+	/* Relative probabilities of moves being played next, computed by
+	 * multiplying gammas of the appropriate pattern features based on
+	 * pat3 and traits (see pattern.h). The probability distribution
+	 * is maintained over the full board grid. */
+	/* - Always invalid moves are guaranteed to have zero probability.
+	 * - Self-eye-filling moves will always have zero probability.
+	 * - Ko-prohibited moves might have non-zero probability.
+	 * - FEAT_CONTIGUITY is not accounted for in the probability. */
+	struct probdist prob[2];
 #endif
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
@@ -176,6 +206,12 @@ struct board {
 	 * but its lifetime is maintained in play_random_game(); it should
 	 * not be set outside of it. */
 	void *ps;
+
+#ifdef BOARD_GAMMA
+	/* Gamma values for probability distribution; user must setup
+	 * this pointer before any move is played. */
+	struct features_gamma *gamma;
+#endif
 
 
 	/* --- PRIVATE DATA --- */
@@ -214,6 +250,8 @@ struct board {
 #define inc_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)++)
 #define dec_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)--)
 #define immediate_liberty_count(b_, coord) (4 - neighbor_count_at(b_, coord, S_BLACK) - neighbor_count_at(b_, coord, S_WHITE) - neighbor_count_at(b_, coord, S_OFFBOARD))
+
+#define trait_at(b_, coord, color) (b_)->t[coord][(color) - 1]
 
 #define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + board_size(b_) * (y)])
@@ -259,6 +297,8 @@ static group_t board_get_atari_neighbor(struct board *b, coord_t coord, enum sto
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
+/* Force re-compute of a probability distribution item. */
+void board_gamma_update(struct board *b, coord_t coord, enum stone color);
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 static bool board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
@@ -356,12 +396,17 @@ board_is_valid_move(struct board *board, struct move *m)
 	/* Play within {true,false} eye-ish formation */
 	if (board->ko.coord == m->coord && board->ko.color == m->color)
 		return false;
+#ifdef BOARD_TRAITS
+	/* XXX: Disallows suicide. */
+	return trait_at(board, m->coord, m->color).cap > 0;
+#else
 	int groups_in_atari = 0;
 	foreach_neighbor(board, m->coord, {
 		group_t g = group_at(board, c);
 		groups_in_atari += (board_group_info(board, g).libs == 1);
 	});
 	return !!groups_in_atari;
+#endif
 }
 
 static inline bool
@@ -374,7 +419,7 @@ static inline group_t
 board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 {
 #ifdef BOARD_TRAITS
-	if (!b->t[coord].cap) return 0;
+	if (!trait_at(b, coord, stone_other(group_color)).cap) return 0;
 #endif
 	foreach_neighbor(b, coord, {
 		group_t g = group_at(b, c);
