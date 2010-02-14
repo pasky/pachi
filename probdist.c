@@ -6,6 +6,7 @@
 #include "move.h"
 #include "probdist.h"
 #include "random.h"
+#include "board.h"
 
 int
 probdist_pick(struct probdist *pd)
@@ -16,6 +17,8 @@ probdist_pick(struct probdist *pd)
 	double stab = fast_frandom() * total;
 	//fprintf(stderr, "stab %f / %f\n", stab, total);
 	for (int i = 0; i < pd->n; i++) {
+		//struct board b = { .size = 11 };
+		//fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(i, &b), pd->items[i], stab);
 		if (stab <= pd->items[i])
 			return i;
 		stab -= pd->items[i];
