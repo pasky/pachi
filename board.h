@@ -396,12 +396,17 @@ board_is_valid_move(struct board *board, struct move *m)
 	/* Play within {true,false} eye-ish formation */
 	if (board->ko.coord == m->coord && board->ko.color == m->color)
 		return false;
+#ifdef BOARD_TRAITS
+	/* XXX: Disallows suicide. */
+	return trait_at(board, m->coord, m->color).cap > 0;
+#else
 	int groups_in_atari = 0;
 	foreach_neighbor(board, m->coord, {
 		group_t g = group_at(board, c);
 		groups_in_atari += (board_group_info(board, g).libs == 1);
 	});
 	return !!groups_in_atari;
+#endif
 }
 
 static inline bool
