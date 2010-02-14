@@ -401,9 +401,18 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 {
 #ifdef BOARD_GAMMA
 	assert(board->gamma);
-	float value = 1.0f;
+	/* Punch out invalid moves and moves filling our own eyes. */
+	if (board_at(board, coord) != S_NONE
+	    || (board_is_eyelike(board, &coord, stone_other(color))
+	        && !trait_at(board, coord, color).cap)
+	    || (board_is_one_point_eye(board, &coord, color))) {
+		probdist_set(&board->prob[color - 1], coord, 0);
+		return;
+	}
+
 	/* We just quickly replicate the general pattern matcher stuff
 	 * here in the most bare-bone way. */
+	float value = 1.0f;
 	if (trait_at(board, coord, color).cap)
 		value *= board->gamma->gamma[FEAT_CAPTURE][0];
 	if (trait_at(board, coord, stone_other(color)).cap
@@ -1062,6 +1071,8 @@ board_play_outside(struct board *board, struct move *m, int f)
 	board_at(board, coord) = color;
 	if (unlikely(!group))
 		group = new_group(board, coord);
+	board_gamma_update(board, coord, S_BLACK);
+	board_gamma_update(board, coord, S_WHITE);
 
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
@@ -1156,6 +1167,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	board_at(board, coord) = color;
 	group_t group = new_group(board, coord);
+	board_gamma_update(board, coord, S_BLACK);
+	board_gamma_update(board, coord, S_WHITE);
 
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
