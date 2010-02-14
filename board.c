@@ -1193,6 +1193,8 @@ int
 board_play(struct board *board, struct move *m)
 {
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
+		struct move nomove = { pass, S_NONE };
+		board->ko = nomove;
 		board->last_move2 = board->last_move;
 		board->last_move = *m;
 		return 0;
@@ -1241,6 +1243,8 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 			return;
 
 	*coord = pass;
+	struct move m = { pass, color };
+	board_play(b, &m);
 }
 
 
