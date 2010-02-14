@@ -126,7 +126,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	}
 	/* TODO: FEAT_CONTIGUITY support. */
 	/* Pick a move. */
-	coord_t c = probdist_pick(pd);
+	coord_t c = pd->total >= 0.01 ? probdist_pick(pd) : pass;
 	/* Repair the damage. */
 	if (!is_pass(b->ko.coord))
 		board_gamma_update(b, b->ko.coord, to_play);
