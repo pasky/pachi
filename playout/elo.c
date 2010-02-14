@@ -118,9 +118,19 @@ coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 #ifdef BOARD_GAMMA
-	/* TODO: Make sure ko-prohibited move does not get picked. */
+	struct probdist *pd = &b->prob[to_play - 1];
+	/* Make sure ko-prohibited move does not get picked. */
+	if (!is_pass(b->ko.coord)) {
+		assert(b->ko.color == to_play);
+		probdist_set(pd, b->ko.coord, 0);
+	}
 	/* TODO: FEAT_CONTIGUITY support. */
-	return probdist_pick(&b->prob[to_play - 1]);
+	/* Pick a move. */
+	coord_t c = probdist_pick(pd);
+	/* Repair the damage. */
+	if (!is_pass(b->ko.coord))
+		board_gamma_update(b, b->ko.coord, to_play);
+	return c;
 #else
 	struct elo_policy *pp = p->data;
 	float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
