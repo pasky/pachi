@@ -1,8 +1,8 @@
 #ifndef ZZGO_VERSION_H
 #define ZZGO_VERSION_H
 
-#define PACHI_VERNUM 4.99
-#define PACHI_VERNUMS "4.99"
+#define PACHI_VERNUM 5.00
+#define PACHI_VERNUMS "5.00"
 
 /* 00. Wang Zhi
  * 01. Sansa     Meijin  1612-1623
@@ -32,7 +32,7 @@
 #define PACHI_VERNAME "Dosaku"
 
 /* -devel except when tagged. */
-#define PACHI_VERDEV "-devel"
+#define PACHI_VERDEV ""
 
 #define PACHI_VERSION PACHI_VERNUMS " (" PACHI_VERNAME PACHI_VERDEV ")"
 
