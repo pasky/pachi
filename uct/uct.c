@@ -826,8 +826,13 @@ uct_state_init(char *arg, struct board *b)
 	u->thread_model = TM_TREEVL;
 	u->parallel_tree = true;
 	u->virtual_loss = true;
+
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
+	u->bestr_ratio = 0.02;
+	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
+	// TODO: Further tuning and experiments with better time allocation schemes.
+	u->best2_ratio = 2.5;
 
 	u->val_scale = 0.04; u->val_points = 40;
 
