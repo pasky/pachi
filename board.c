@@ -398,6 +398,19 @@ board_print(struct board *board, FILE *f)
 	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL);
 }
 
+void
+board_gamma_set(struct board *b, struct features_gamma *gamma)
+{
+#ifdef BOARD_GAMMA
+	b->gamma = gamma;
+	for (int i = 0; i < b->flen; i++) {
+		if (is_pass(b->f[i])) continue;
+		board_gamma_update(b, b->f[i], S_BLACK);
+		board_gamma_update(b, b->f[i], S_WHITE);
+	}
+#endif
+}
+
 
 /* Update the probability distribution we maintain incrementally. */
 void

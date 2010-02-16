@@ -250,10 +250,7 @@ playout_elo_init(char *arg, struct board *b)
 	for (int i = 0; i < FEAT_MAX; i++)
 		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
 			pp->choose.ps[i] = 0;
-
-#ifdef BOARD_GAMMA
-	b->gamma = pp->choose.fg;
-#endif
+	board_gamma_set(b, pp->choose.fg);
 
 	return p;
 }

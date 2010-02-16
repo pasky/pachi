@@ -209,7 +209,7 @@ struct board {
 
 #ifdef BOARD_GAMMA
 	/* Gamma values for probability distribution; user must setup
-	 * this pointer before any move is played. */
+	 * this pointer before any move is played, using board_gamma_set(). */
 	struct features_gamma *gamma;
 #endif
 
@@ -297,6 +297,8 @@ static group_t board_get_atari_neighbor(struct board *b, coord_t coord, enum sto
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
+/* Associate a set of feature gamma values (for pd building) with the board. */
+void board_gamma_set(struct board *b, struct features_gamma *gamma);
 /* Force re-compute of a probability distribution item. */
 void board_gamma_update(struct board *b, coord_t coord, enum stone color);
 
