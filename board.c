@@ -1058,7 +1058,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 
-#if defined(BOARD_TRAITS) && !defined(NDEBUG)
+#if defined(BOARD_TRAITS) && defined(DEBUG)
 	/* Sanity check that cap matches reality. */
 	{
 		int a = 0;
