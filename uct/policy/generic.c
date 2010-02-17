@@ -42,14 +42,13 @@ void
 uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_descent *descent)
 {
 	if (!p->evaluate)
-		return NULL;
+		return;
 	bool allow_pass = false; /* At worst forces some extra playouts at the end */
 	int parity = ((descent->node->depth ^ tree->root->depth) & 1) ? -1 : 1;
 
-	uctd_try_node_children(descent->node, allow_pass, ni, urgency) {
-		struct uct_descent di = { .node = ni };
+	uctd_try_node_children(tree, descent, allow_pass, di, urgency) {
 		urgency = p->evaluate(p, tree, &di, parity);
-	} uctd_set_best_child(ni, urgency);
+	} uctd_set_best_child(di, urgency);
 
 	uctd_get_best_child(descent);
 }

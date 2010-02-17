@@ -38,7 +38,8 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descen
 	struct ucb1_policy *b = p->data;
 	float xpl = log(descent->node->u.playouts + descent->node->prior.playouts);
 
-	uctd_try_node_children(descent->node, allow_pass, ni, urgency) {
+	uctd_try_node_children(tree, descent, allow_pass, di, urgency) {
+		struct tree_node *ni = di.node;
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 
 		if (uct_playouts) {
@@ -49,7 +50,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descen
 		} else {
 			urgency = b->fpu;
 		}
-	} uctd_set_best_child(ni, urgency);
+	} uctd_set_best_child(di, urgency);
 
 	uctd_get_best_child(descent);
 }

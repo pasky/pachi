@@ -129,8 +129,8 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 	if (b->explore_p > 0)
 		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
 
-	uctd_try_node_children(descent->node, allow_pass, ni, urgency) {
-		struct uct_descent di = { .node = ni };
+	uctd_try_node_children(tree, descent, allow_pass, di, urgency) {
+		struct tree_node *ni = di.node;
 		urgency = ucb1rave_evaluate(p, tree, &di, parity);
 
 		if (ni->u.playouts > 0 && b->explore_p > 0) {
@@ -140,7 +140,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 			/* assert(!u->even_eqex); */
 			urgency = b->fpu;
 		}
-	} uctd_set_best_child(ni, urgency);
+	} uctd_set_best_child(di, urgency);
 
 	uctd_get_best_child(descent);
 }

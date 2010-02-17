@@ -15,34 +15,35 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 
 /* Some generic stitching for tree descent. */
 
-#define uctd_try_node_children(node, allow_pass, ni, urgency) \
+#define uctd_try_node_children(tree, descent, allow_pass, di, urgency) \
 	/* XXX: Stack overflow danger on big boards? */ \
-	struct tree_node *nbest[512] = { node->children }; int nbests = 1; \
+	struct uct_descent dbest[512] = { { .node = descent->node->children } }; int dbests = 1; \
 	float best_urgency = -9999; \
+	struct uct_descent di = { .node = descent->node->children }; \
 	\
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) { \
+	for (; di.node; di.node = di.node->sibling) { \
 		float urgency; \
 		/* Do not consider passing early. */ \
-		if (unlikely((!allow_pass && is_pass(ni->coord)) || (ni->hints & TREE_HINT_INVALID))) \
+		if (unlikely((!allow_pass && is_pass(di.node->coord)) || (di.node->hints & TREE_HINT_INVALID))) \
 			continue;
 
 		/* ...your urgency computation code goes here... */
 
-#define uctd_set_best_child(ni, urgency) \
+#define uctd_set_best_child(di, urgency) \
 		if (urgency - best_urgency > __FLT_EPSILON__) { /* urgency > best_urgency */ \
-			best_urgency = urgency; nbests = 0; \
+			best_urgency = urgency; dbests = 0; \
 		} \
 		if (urgency - best_urgency > -__FLT_EPSILON__) { /* urgency >= best_urgency */ \
 			/* We want to always choose something else than a pass \
 			 * in case of a tie. pass causes degenerative behaviour. */ \
-			if (nbests == 1 && is_pass(nbest[0]->coord)) { \
-				nbests--; \
+			if (dbests == 1 && is_pass(dbest[0].node->coord)) { \
+				dbests--; \
 			} \
-			nbest[nbests++] = ni; \
+			dbest[dbests++] = di; \
 		} \
 	}
 
-#define uctd_get_best_child(descent) (descent)->node = nbest[fast_random(nbests)];
+#define uctd_get_best_child(descent) *(descent) = dbest[fast_random(dbests)];
 
 
 #endif
