@@ -76,9 +76,10 @@ static inline float fast_sqrt(int x)
 }
 
 static float inline
-ucb1rave_evaluate(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity)
+ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity)
 {
 	struct ucb1_policy_amaf *b = p->data;
+	struct tree_node *node = descent->node;
 
 	struct move_stats n = node->u, r = node->amaf;
 	if (p->uct->amaf_prior) {
@@ -120,16 +121,17 @@ ucb1rave_evaluate(struct uct_policy *p, void **state, struct tree *tree, struct 
 	return tree_node_get_value(tree, parity, value);
 }
 
-struct tree_node *
-ucb1rave_descend(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
+void
+ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass)
 {
 	struct ucb1_policy_amaf *b = p->data;
 	float nconf = 1.f;
 	if (b->explore_p > 0)
-		nconf = sqrt(log(node->u.playouts + node->prior.playouts));
+		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
 
-	uctd_try_node_children(node, allow_pass, ni, urgency) {
-		urgency = ucb1rave_evaluate(p, state, tree, ni, parity);
+	uctd_try_node_children(descent->node, allow_pass, ni, urgency) {
+		struct uct_descent di = { .node = ni };
+		urgency = ucb1rave_evaluate(p, tree, &di, parity);
 
 		if (ni->u.playouts > 0 && b->explore_p > 0) {
 			urgency += b->explore_p * nconf / fast_sqrt(ni->u.playouts);
@@ -140,7 +142,7 @@ ucb1rave_descend(struct uct_policy *p, void **state, struct tree *tree, struct t
 		}
 	} uctd_set_best_child(ni, urgency);
 
-	return uctd_get_best_child();
+	uctd_get_best_child(descent);
 }
 
 

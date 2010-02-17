@@ -38,18 +38,18 @@ uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *
  * value (using prior and possibly rave), because the raw value is meaningless for
  * nodes evaluated rarely.
  * This function is called while the tree is updated by other threads */
-struct tree_node *
-uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct tree_node *node)
+void
+uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_descent *descent)
 {
 	if (!p->evaluate)
 		return NULL;
 	bool allow_pass = false; /* At worst forces some extra playouts at the end */
-	void *state; /* TODO: remove this unused parameter. */
-	int parity = ((node->depth ^ tree->root->depth) & 1) ? -1 : 1;
+	int parity = ((descent->node->depth ^ tree->root->depth) & 1) ? -1 : 1;
 
-	uctd_try_node_children(node, allow_pass, ni, urgency) {
-		urgency = p->evaluate(p, state, tree, ni, parity);
+	uctd_try_node_children(descent->node, allow_pass, ni, urgency) {
+		struct uct_descent di = { .node = ni };
+		urgency = p->evaluate(p, tree, &di, parity);
 	} uctd_set_best_child(ni, urgency);
 
-	return uctd_get_best_child();
+	uctd_get_best_child(descent);
 }

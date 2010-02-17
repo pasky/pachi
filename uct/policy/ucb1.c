@@ -27,8 +27,8 @@ struct ucb1_policy {
 };
 
 
-struct tree_node *
-ucb1_descend(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity, bool allow_pass)
+void
+ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass)
 {
 	/* We want to count in the prior stats here after all. Otherwise,
 	 * nodes with positive prior will get explored _LESS_ since the
@@ -36,9 +36,9 @@ ucb1_descend(struct uct_policy *p, void **state, struct tree *tree, struct tree_
 	 * of the explore coefficient. */
 
 	struct ucb1_policy *b = p->data;
-	float xpl = log(node->u.playouts + node->prior.playouts);
+	float xpl = log(descent->node->u.playouts + descent->node->prior.playouts);
 
-	uctd_try_node_children(node, allow_pass, ni, urgency) {
+	uctd_try_node_children(descent->node, allow_pass, ni, urgency) {
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
 
 		if (uct_playouts) {
@@ -50,7 +50,8 @@ ucb1_descend(struct uct_policy *p, void **state, struct tree *tree, struct tree_
 			urgency = b->fpu;
 		}
 	} uctd_set_best_child(ni, urgency);
-	return uctd_get_best_child();
+
+	uctd_get_best_child(descent);
 }
 
 void

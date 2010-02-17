@@ -10,7 +10,7 @@ struct board;
 struct tree_node;
 
 struct tree_node *uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude);
-struct tree_node *uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct tree_node *node);
+void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_descent *descent);
 
 
 /* Some generic stitching for tree descent. */
@@ -42,7 +42,7 @@ struct tree_node *uctp_generic_winner(struct uct_policy *p, struct tree *tree, s
 		} \
 	}
 
-#define uctd_get_best_child() nbest[fast_random(nbests)]
+#define uctd_get_best_child(descent) (descent)->node = nbest[fast_random(nbests)];
 
 
 #endif

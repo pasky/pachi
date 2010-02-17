@@ -616,8 +616,11 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* We want to stop simulating, but are willing to keep trying
 		 * if we aren't completely sure about the winner yet. */
 		if (desired_done) {
-			if (u->policy->winner && u->policy->evaluate)
-				winner = u->policy->winner(u->policy, ctx->t, ctx->t->root);
+			if (u->policy->winner && u->policy->evaluate) {
+				struct uct_descent descent = { .node = ctx->t->root };
+				u->policy->winner(u->policy, ctx->t, &descent);
+				winner = descent.node;
+			}
 			if (best)
 				bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
 			if (!uct_search_keep_looking(u, ctx->t, b, best, best2, bestr, winner, i))

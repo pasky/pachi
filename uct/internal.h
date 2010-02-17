@@ -83,10 +83,23 @@ extern __thread int thread_id;
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
 
 
+/* This is the state used for descending the tree; we use this wrapper
+ * structure in order to be able to easily descend in multiple trees
+ * in parallel or compute cummulative "path value" throughout the tree
+ * descent.
+ *
+ * XXX: We don't actually do that now, but this infrastructure is vital
+ * for couple of my research patches that are kept external yet, so I'd
+ * very much like to keep it here to reduce my diff sizes. --pasky */
+struct uct_descent {
+	struct tree_node *node; /* Main tree. */
+};
+
+
 typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude);
-typedef struct tree_node *(*uctp_winner)(struct uct_policy *p, struct tree *tree, struct tree_node *node);
-typedef float (*uctp_evaluate)(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity);
-typedef struct tree_node *(*uctp_descend)(struct uct_policy *p, void **state, struct tree *tree, struct tree_node *node, int parity, bool allow_pass);
+typedef float (*uctp_evaluate)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity);
+typedef void (*uctp_descend)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass);
+typedef void (*uctp_winner)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent);
 typedef void (*uctp_prior)(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
 typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *amaf, float result);
 
