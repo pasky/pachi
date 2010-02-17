@@ -100,6 +100,8 @@ struct tree {
 	// Of course even in white tree, winrates are from b's perspective
 	// as anywhere else. ltree_white has white-first sequences as children.
 	struct tree_node *ltree_white;
+	// Aging factor; 2 means halve all playout values after each turn.
+	float ltree_aging;
 
 	// Statistics
 	int max_depth;
@@ -109,7 +111,7 @@ struct tree {
 };
 
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
-struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size);
+struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging);
 void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);

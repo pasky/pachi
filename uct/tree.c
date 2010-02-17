@@ -67,7 +67,7 @@ tree_init_node(struct tree *t, coord_t coord, int depth)
 
 /* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
 struct tree *
-tree_init(struct board *board, enum stone color, unsigned long max_tree_size)
+tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging)
 {
 	struct tree *t = calloc(1, sizeof(*t));
 	t->board = board;
@@ -90,6 +90,7 @@ tree_init(struct board *board, enum stone color, unsigned long max_tree_size)
 
 	t->ltree_black = tree_init_node(t, pass, 0);
 	t->ltree_white = tree_init_node(t, pass, 0);
+	t->ltree_aging = ltree_aging;
 	return t;
 }
 
@@ -430,7 +431,7 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	assert(tree->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
 
-	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size);
+	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size, tree->ltree_aging);
 	temp_tree->nodes_size = 0; // We do not want the dummy pass node
         struct tree_node *temp_node;
 
@@ -841,6 +842,26 @@ tree_unlink_node(struct tree_node *node)
 	node->parent = NULL;
 }
 
+/* Reduce weight of statistics on promotion. Remove nodes that
+ * get reduced to zero playouts; returns next node to consider
+ * in the children list (@node may get deleted). */
+static struct tree_node *
+tree_age_node(struct tree *tree, struct tree_node *node)
+{
+	node->u.playouts /= tree->ltree_aging;
+	if (node->parent && !node->u.playouts) {
+		struct tree_node *sibling = node->sibling;
+		/* Delete node, no playouts. */
+		tree_unlink_node(node);
+		tree_done_node(tree, node);
+		return sibling;
+	}
+
+	struct tree_node *ni = node->children;
+	while (ni) ni = tree_age_node(tree, ni);
+	return node->sibling;
+}
+
 /* Promotes the given node as the root of the tree. In the fast_alloc
  * mode, the node may be moved and some of its subtree may be pruned. */
 void
@@ -866,6 +887,9 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 	 * tree->max_depth is correct. Otherwise we could traverse the tree
          * to recompute max_depth but it's not worth it: it's just for debugging
 	 * and soon the tree will grow and max_depth will become correct again. */
+
+	tree_age_node(tree, tree->ltree_black);
+	tree_age_node(tree, tree->ltree_white);
 }
 
 bool

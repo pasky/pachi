@@ -62,6 +62,7 @@ struct uct {
 	int random_policy_chance;
 	int local_tree;
 	int tenuki_d;
+	float local_tree_aging;
 
 	char *banner;
 

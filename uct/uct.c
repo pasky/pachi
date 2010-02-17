@@ -64,7 +64,7 @@ static const struct time_info default_ti = {
 static void
 setup_state(struct uct *u, struct board *b, enum stone color)
 {
-	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size: 0);
+	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging);
 	if (u->force_seed)
 		fast_srandom(u->force_seed);
 	if (UDEBUGL(0))
@@ -798,7 +798,7 @@ void
 uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
-	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size: 0);
+	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -840,6 +840,7 @@ uct_state_init(char *arg, struct board *b)
 	u->val_scale = 0.04; u->val_points = 40;
 
 	u->tenuki_d = 4;
+	u->local_tree_aging = 2;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -1035,6 +1036,9 @@ uct_state_init(char *arg, struct board *b)
 					fprintf(stderr, "uct: tenuki_d must not be larger than TREE_NODE_D_MAX+1 %d\n", TREE_NODE_D_MAX + 1);
 					exit(1);
 				}
+			} else if (!strcasecmp(optname, "local_tree_aging") && optval) {
+				/* How much to reduce local tree values between moves. */
+				u->local_tree_aging = atof(optval);
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider all stones alive at the game
 				 * end instead of marking dead groupd. */
