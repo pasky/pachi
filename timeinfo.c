@@ -143,6 +143,14 @@ time_sub(struct time_info *ti, double interval)
 		ti->len.t.main_time -= interval;
 		if (ti->len.t.main_time >= 0)
 			return;
+		if (ti->len.t.byoyomi_time <= 0) {
+			/* No byoyomi to save us. */
+			fprintf(stderr, "*** LOST ON TIME internally! (%0.2f, spent %0.2fs on last move)\n",
+				ti->len.t.main_time, interval);
+			/* What can we do? Pretend this didn't happen. */
+			ti->len.t.main_time = 1.0f;
+			return;
+		}
 		/* Fall-through to byoyomi. */
 		ti->period = TT_MOVE;
 		interval = -ti->len.t.main_time;
