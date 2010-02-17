@@ -117,6 +117,7 @@ skip_move:
 coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
+	struct elo_policy *pp = p->data;
 #ifdef BOARD_GAMMA
 	struct probdist *pd = &b->prob[to_play - 1];
 	/* Make sure ko-prohibited move does not get picked. */
@@ -130,6 +131,23 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 			probdist_set(pd, c, pd->items[c] * b->gamma->gamma[FEAT_CONTIGUITY][1]);
 		} foreach_8neighbor_end;
 	}
+#if 0
+	/* Compare to the manually created distribution. */
+	if (pd->total >= PROBDIST_EPSILON) {
+		float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
+		struct probdist pdx = { .n = b->flen, .items = pdi, .total = 0 };
+		elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
+		for (int i = 0; i < pdx.n; i++) {
+			if (is_pass(b->f[i])) continue;
+			if (fabs(pdx.items[i] - pd->items[b->f[i]]) >= PROBDIST_EPSILON) {
+				printf("[%s %d] manual %f board %f ", coord2sstr(b->f[i], b), b->pat3[b->f[i]], pdx.items[i], pd->items[b->f[i]]);
+				board_gamma_update(b, b->f[i], to_play);
+				printf("plainboard %f\n", pd->items[b->f[i]]);
+				assert(0);
+			}
+		}
+	}
+#endif
 	/* Pick a move. */
 	coord_t c = pd->total >= PROBDIST_EPSILON ? probdist_pick(pd) : pass;
 	/* Repair the damage. */
@@ -141,8 +159,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		} foreach_8neighbor_end;
 	}
 	return c;
+
 #else
-	struct elo_policy *pp = p->data;
 	float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
 	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
