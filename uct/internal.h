@@ -63,6 +63,7 @@ struct uct {
 	int local_tree;
 	int tenuki_d;
 	float local_tree_aging;
+	bool local_tree_allseq;
 
 	char *banner;
 

@@ -1039,6 +1039,11 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "local_tree_aging") && optval) {
 				/* How much to reduce local tree values between moves. */
 				u->local_tree_aging = atof(optval);
+			} else if (!strcasecmp(optname, "local_tree_allseq")) {
+				/* By default, only complete sequences are stored
+				 * in the local tree. If this is on, also
+				 * subsequences starting at each move are stored. */
+				u->local_tree_allseq = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider all stones alive at the game
 				 * end instead of marking dead groupd. */

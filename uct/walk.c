@@ -381,6 +381,11 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			record_local_sequence(u, t, descent, dlen, 1, seq_color, rval);
 			seq_color = stone_other(seq_color);
 			for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
+				if (u->local_tree_allseq) {
+					/* We are configured to record all subsequences. */
+					record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval);
+					continue;
+				}
 				if (descent[dseqi].node->d >= u->tenuki_d) {
 					/* Tenuki! Record the fresh sequence. */
 					record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval);
