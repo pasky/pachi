@@ -87,6 +87,9 @@ tree_init(struct board *board, enum stone color, unsigned long max_tree_size)
 	t->root = tree_init_node(t, pass, 0);
 	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
+
+	t->ltree_black = tree_init_node(t, pass, 0);
+	t->ltree_white = tree_init_node(t, pass, 0);
 	return t;
 }
 
@@ -160,8 +163,8 @@ tree_done_node_detached(struct tree *t, struct tree_node *n)
 void
 tree_done(struct tree *t)
 {
-	if (t->chchvals) free(t->chchvals);
-	if (t->chvals) free(t->chvals);
+	tree_done_node(t, t->ltree_black);
+	tree_done_node(t, t->ltree_white);
 	if (t->nodes) {
 		free(t->nodes);
 		free(t);
@@ -210,18 +213,6 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 }
 
 void
-tree_dump_chval(struct tree *tree, struct move_stats *v)
-{
-	for (int y = board_size(tree->board) - 2; y > 1; y--) {
-		for (int x = 1; x < board_size(tree->board) - 1; x++) {
-			coord_t c = coord_xy(tree->board, x, y);
-			fprintf(stderr, "%.2f%%%05d  ", v[c].value, v[c].playouts);
-		}
-		fprintf(stderr, "\n");
-	}
-}
-
-void
 tree_dump(struct tree *tree, int thres)
 {
 	if (thres && tree->root->u.playouts / thres > 100) {
@@ -233,11 +224,11 @@ tree_dump(struct tree *tree, int thres)
 	        stone2str(tree->root_color), tree->extra_komi);
 	tree_node_dump(tree, tree->root, 0, thres);
 
-	if (DEBUGL(3) && tree->chvals) {
-		fprintf(stderr, "children stats:\n");
-		tree_dump_chval(tree, tree->chvals);
-		fprintf(stderr, "grandchildren stats:\n");
-		tree_dump_chval(tree, tree->chchvals);
+	if (DEBUGL(3) && tree->ltree_black) {
+		fprintf(stderr, "B local tree:\n");
+		tree_node_dump(tree, tree->ltree_black, 0, thres);
+		fprintf(stderr, "W local tree:\n");
+		tree_node_dump(tree, tree->ltree_white, 0, thres);
 	}
 }
 
@@ -630,6 +621,47 @@ tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 	return nn;
 }
 
+/* Get local tree node corresponding to given node, given local node child
+ * iterator @lni (which points either at the corresponding node, or at the
+ * nearest local tree node after @ni). */
+struct tree_node *
+tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *lni, int tenuki_d)
+{
+	/* Now set up lnode, which is the actual local node
+	 * corresponding to ni - either lni if it is an
+	 * exact match and ni is not tenuki, <pass> local
+	 * node if ni is tenuki, or NULL if there is no
+	 * corresponding node available. */
+
+	if (is_pass(ni->coord)) {
+		/* Also, for sanity reasons we never use local
+		 * tree for passes. (Maybe we could, but it's
+		 * too hard to think about.) */
+		return NULL;
+	}
+
+	if (lni->coord == ni->coord) {
+		/* We don't consider tenuki a sequence play
+		 * that we have in local tree even though
+		 * ni->d is too high; this can happen if this
+		 * occured in different board topology. */
+		return lni;
+	}
+
+	if (ni->d >= tenuki_d) {
+		/* Tenuki, pick a pass lsibling if available. */
+		assert(lni->parent && lni->parent->children);
+		if (is_pass(lni->parent->children->coord)) {
+			return lni->parent->children;
+		} else {
+			return NULL;
+		}
+	}
+
+	/* No corresponding local node, lnode stays NULL. */
+	return NULL;
+}
+
 
 /* Tree symmetry: When possible, we will localize the tree to a single part
  * of the board in tree_expand_node() and possibly flip along symmetry axes
@@ -829,12 +861,11 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);
 	board_symmetry_update(tree->board, &tree->root_symmetry, (*node)->coord);
+
 	/* If the tree deepest node was under node, or if we called tree_garbage_collect,
 	 * tree->max_depth is correct. Otherwise we could traverse the tree
          * to recompute max_depth but it's not worth it: it's just for debugging
 	 * and soon the tree will grow and max_depth will become correct again. */
-	if (tree->chchvals) { free(tree->chchvals); tree->chchvals = NULL; }
-	if (tree->chvals) { free(tree->chvals); tree->chvals = NULL; }
 }
 
 bool

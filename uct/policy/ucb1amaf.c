@@ -28,8 +28,8 @@ struct ucb1_policy_amaf {
 	bool both_colors;
 	bool check_nakade;
 	bool sylvain_rave;
-	/* Coefficient of root values embedded in RAVE. */
-	float root_rave;
+	/* Coefficient of local tree values embedded in RAVE. */
+	float ltree_rave;
 };
 
 
@@ -75,11 +75,13 @@ static inline float fast_sqrt(int x)
 	}
 }
 
+#define LTREE_DEBUG if (0)
 static float inline
 ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity)
 {
 	struct ucb1_policy_amaf *b = p->data;
 	struct tree_node *node = descent->node;
+	struct tree_node *lnode = descent->lnode;
 
 	struct move_stats n = node->u, r = node->amaf;
 	if (p->uct->amaf_prior) {
@@ -88,13 +90,14 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		stats_merge(&n, &node->prior);
 	}
 
-	/* Root heuristics, if we aren't actually near the root. */
-	if (tree->chvals && b->root_rave > 0 && likely(!is_pass(node->coord))
-	    && node->parent && node->parent->parent && node->parent->parent->parent) {
-		struct move_stats *rv = parity > 0 ? tree->chvals : tree->chchvals;
-		struct move_stats root = rv[node->coord];
-		root.playouts *= b->root_rave;
-		stats_merge(&r, &root);
+	/* Local tree heuristics. */
+	if (p->uct->local_tree && b->ltree_rave > 0 && lnode) {
+		struct move_stats l = lnode->u;
+		l.playouts *= b->ltree_rave;
+		LTREE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
+			coord2sstr(lnode->coord, tree->board), l.value, l.playouts,
+			coord2sstr(node->coord, tree->board), r.value, r.playouts);
+		stats_merge(&r, &l);
 	}
 
 	float value = 0;
@@ -118,6 +121,8 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	} else if (r.playouts) {
 		value = r.value;
 	}
+	descent->value.playouts = r.playouts + n.playouts;
+	descent->value.value = value;
 	return tree_node_get_value(tree, parity, value);
 }
 
@@ -129,7 +134,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 	if (b->explore_p > 0)
 		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
 
-	uctd_try_node_children(tree, descent, allow_pass, di, urgency) {
+	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
 		struct tree_node *ni = di.node;
 		urgency = ucb1rave_evaluate(p, tree, &di, parity);
 
@@ -241,7 +246,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->fpu = INFINITY;
 	b->check_nakade = true;
 	b->sylvain_rave = true;
-	b->root_rave = 1.0f;
+	b->ltree_rave = 1.0f;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -266,8 +271,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->sylvain_rave = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "check_nakade")) {
 				b->check_nakade = !optval || *optval == '1';
-			} else if (!strcasecmp(optname, "root_rave") && optval) {
-				b->root_rave = atof(optval);
+			} else if (!strcasecmp(optname, "ltree_rave") && optval) {
+				b->ltree_rave = atof(optval);
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);

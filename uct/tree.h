@@ -89,9 +89,17 @@ struct tree {
 	bool use_extra_komi;
 	float extra_komi;
 
-	// Summary statistics of good black, white moves in the tree
-	struct move_stats *chvals; // [bsize2] root children
-	struct move_stats *chchvals; // [bsize2] root children's children
+	/* We merge local (non-tenuki) sequences for both colors, occuring
+	 * anywhere in the tree; nodes are created on-demand, special 'pass'
+	 * nodes represent tenuki. Only u move_stats are used, prior and amaf
+	 * is ignored. Values in root node are ignored. */
+	/* The values in the tree can be either "raw" or "tempered"
+	 * (representing difference against parent node in the main tree),
+	 * controlled by local_tree setting. */
+	struct tree_node *ltree_black;
+	// Of course even in white tree, winrates are from b's perspective
+	// as anywhere else. ltree_white has white-first sequences as children.
+	struct tree_node *ltree_white;
 
 	// Statistics
 	int max_depth;
@@ -111,6 +119,7 @@ void tree_merge(struct tree *dest, struct tree *src);
 void tree_normalize(struct tree *tree, int factor);
 
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity);
+struct tree_node *tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *lni, int tenuki_d);
 
 /* Warning: All these functions are THREAD-UNSAFE! */
 struct tree_node *tree_get_node(struct tree *tree, struct tree_node *node, coord_t c, bool create);

@@ -839,6 +839,8 @@ uct_state_init(char *arg, struct board *b)
 
 	u->val_scale = 0.04; u->val_points = 40;
 
+	u->tenuki_d = 4;
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -1016,8 +1018,8 @@ uct_state_init(char *arg, struct board *b)
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
 				u->val_extra = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "root_heuristic") && optval) {
-				/* Whether to bias exploration by root node values
+			} else if (!strcasecmp(optname, "local_tree") && optval) {
+				/* Whether to bias exploration by local tree values
 				 * (must be supported by the used policy).
 				 * 0: Don't.
 				 * 1: Do, value = result.
@@ -1025,7 +1027,14 @@ uct_state_init(char *arg, struct board *b)
 				 * 2: Do, value = 0.5+(result-expected)/2.
 				 * 3: Do, value = 0.5+bzz((result-expected)^2).
 				 * 4: Do, value = 0.5+sqrt(result-expected)/2. */
-				u->root_heuristic = atoi(optval);
+				u->local_tree = atoi(optval);
+			} else if (!strcasecmp(optname, "tenuki_d") && optval) {
+				/* Tenuki distance at which to break the local tree. */
+				u->tenuki_d = atoi(optval);
+				if (u->tenuki_d > TREE_NODE_D_MAX + 1) {
+					fprintf(stderr, "uct: tenuki_d must not be larger than TREE_NODE_D_MAX+1 %d\n", TREE_NODE_D_MAX + 1);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider all stones alive at the game
 				 * end instead of marking dead groupd. */

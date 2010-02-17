@@ -38,9 +38,11 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descen
 	struct ucb1_policy *b = p->data;
 	float xpl = log(descent->node->u.playouts + descent->node->prior.playouts);
 
-	uctd_try_node_children(tree, descent, allow_pass, di, urgency) {
+	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
 		struct tree_node *ni = di.node;
 		int uct_playouts = ni->u.playouts + ni->prior.playouts;
+
+		/* XXX: We don't take local-tree information into account. */
 
 		if (uct_playouts) {
 			urgency = (ni->u.playouts * tree_node_get_value(tree, parity, ni->u.value)

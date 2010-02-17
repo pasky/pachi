@@ -15,17 +15,33 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 
 /* Some generic stitching for tree descent. */
 
-#define uctd_try_node_children(tree, descent, allow_pass, di, urgency) \
+#define uctd_try_node_children(tree, descent, allow_pass, parity, tenuki_d, di, urgency) \
+	/* Information abound best children. */ \
 	/* XXX: Stack overflow danger on big boards? */ \
-	struct uct_descent dbest[512] = { { .node = descent->node->children } }; int dbests = 1; \
+	struct uct_descent dbest[512] = { { .node = descent->node->children, .lnode = NULL } }; int dbests = 1; \
 	float best_urgency = -9999; \
-	struct uct_descent di = { .node = descent->node->children }; \
+	/* Descent children iterator. */ \
+	struct uct_descent dci = { .node = descent->node->children, .lnode = descent->lnode->children }; \
 	\
-	for (; di.node; di.node = di.node->sibling) { \
+	for (; dci.node; dci.node = dci.node->sibling) { \
 		float urgency; \
 		/* Do not consider passing early. */ \
-		if (unlikely((!allow_pass && is_pass(di.node->coord)) || (di.node->hints & TREE_HINT_INVALID))) \
-			continue;
+		if (unlikely((!allow_pass && is_pass(dci.node->coord)) || (dci.node->hints & TREE_HINT_INVALID))) \
+			continue; \
+		/* Position dci.lnode to point at or right after the local
+		 * node corresponding to dci.node. */ \
+		while (dci.lnode && dci.lnode->coord < dci.node->coord) \
+			dci.lnode = dci.lnode->sibling; \
+		/* Set up descent-further iterator. This is the public-accessible
+		 * one, and usually is similar to dci. However, in case of local
+		 * trees, we may keep next-candidate pointer in dci while storing
+		 * actual-specimen in di. */ \
+		struct uct_descent di = dci; \
+		if (dci.lnode) { \
+			/* Set lnode to local tree node corresponding
+			 * to node (dci.lnode, pass-lnode or NULL). */ \
+			di.lnode = tree_lnode_for_node(tree, dci.node, dci.lnode, tenuki_d); \
+		}
 
 		/* ...your urgency computation code goes here... */
 
@@ -39,7 +55,11 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 			if (dbests == 1 && is_pass(dbest[0].node->coord)) { \
 				dbests--; \
 			} \
-			dbest[dbests++] = di; \
+			struct uct_descent db = di; \
+			/* Make sure lnode information is meaningful. */ \
+			if (db.lnode && is_pass(db.lnode->coord)) \
+				db.lnode = NULL; \
+			dbest[dbests++] = db; \
 		} \
 	}
 

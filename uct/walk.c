@@ -153,6 +153,45 @@ scale_value(struct uct *u, struct board *b, int result)
 	return rval;
 }
 
+static void
+record_local_sequence(struct uct *u, struct tree *t,
+                      struct uct_descent *descent, int dlen, int di,
+		      enum stone seq_color, float rval)
+{
+	/* Ignore pass sequences. */
+	if (is_pass(descent[di].node->coord))
+		return;
+
+#define LTREE_DEBUG if (UDEBUGL(6))
+	LTREE_DEBUG fprintf(stderr, "recording result %f in local %s sequence: ",
+		rval, stone2str(seq_color));
+	int di0 = di;
+
+	/* Pick the right local tree root... */
+	struct tree_node *lnode = seq_color == S_BLACK ? t->ltree_black : t->ltree_white;
+	lnode->u.playouts++;
+
+	/* ...and record the sequence. */
+	while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
+		LTREE_DEBUG fprintf(stderr, "%s[%d] ",
+			coord2sstr(descent[di].node->coord, t->board),
+			descent[di].node->d);
+		lnode = tree_get_node(t, lnode, descent[di++].node->coord, true);
+		assert(lnode);
+		stats_add_result(&lnode->u, rval, 1);
+	}
+
+	/* Add lnode for tenuki (pass) if we descended further. */
+	if (di < dlen) {
+		LTREE_DEBUG fprintf(stderr, "pass ");
+		lnode = tree_get_node(t, lnode, pass, true);
+		assert(lnode);
+		stats_add_result(&lnode->u, rval, 1);
+	}
+	
+	LTREE_DEBUG fprintf(stderr, "\n");
+}
+
 
 int
 uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
@@ -173,7 +212,15 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	enum stone node_color = stone_other(player_color);
 	assert(node_color == t->root_color);
 
-	struct uct_descent descent = {.node = n };
+	/* Tree descent history. */
+	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
+	 * redundant. */
+	#define DLEN 512
+	struct uct_descent descent[DLEN];
+	descent[0].node = n; descent[0].lnode = NULL;
+	int dlen = 1;
+	/* Total value of the sequence. */
+	struct move_stats seq_value = { .playouts = 0 };
 
 	int result;
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
@@ -197,15 +244,26 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
 
+		assert(dlen < DLEN);
+		descent[dlen] = descent[dlen - 1];
+		if (!descent[dlen].lnode || descent[dlen].node->d >= u->tenuki_d) {
+			/* Start new local sequence. */
+			/* Remember that node_color already holds color of the
+			 * to-be-found child. */
+			descent[dlen].lnode = node_color == S_BLACK ? t->ltree_black : t->ltree_white;
+		}
+
 		if (!u->random_policy_chance || fast_random(u->random_policy_chance))
-			u->policy->descend(u->policy, t, &descent, parity, b2.moves > pass_limit);
+			u->policy->descend(u->policy, t, &descent[dlen], parity, b2.moves > pass_limit);
 		else
-			u->random_policy->descend(u->random_policy, t, &descent, parity, b2.moves > pass_limit);
+			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, b2.moves > pass_limit);
 
 
 		/*** Perform the descent: */
 
-		n = descent.node;
+		seq_value.playouts += descent[dlen].value.playouts;
+		seq_value.value += descent[dlen].value.value * descent[dlen].value.playouts;
+		n = descent[dlen++].node;
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
@@ -307,27 +365,33 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
 
-		if (u->root_heuristic && n->parent) {
-			if (!t->chvals) {
-				t->chvals = calloc(board_size2(b), sizeof(t->chvals[0]));
-				t->chchvals = calloc(board_size2(b), sizeof(t->chchvals[0]));
-			}
-
+		if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
 			/* Possibly transform the rval appropriately. */
-			rval = stats_temper_value(rval, n->parent->u.value, u->root_heuristic);
+			float expval = seq_value.value / seq_value.playouts;
+			rval = stats_temper_value(rval, expval, u->local_tree);
 
-			struct tree_node *ni = n;
-			while (ni->parent->parent && ni->parent->parent->parent)
-				ni = ni->parent;
-			if (ni->parent->parent) {
-				if (likely(!is_pass(ni->coord)))
-					stats_add_result(&t->chchvals[ni->coord], rval, 1);
-				ni = ni->parent;
-			}
-			assert(ni->parent && !ni->parent->parent);
-
-			if (likely(!is_pass(ni->coord)))
-				stats_add_result(&t->chvals[ni->coord], rval, 1);
+			/* Get the local sequences and record them in ltree. */
+			/* We will look for sequence starts in our descent
+			 * history, then run record_local_sequence() for each
+			 * found sequence start; record_local_sequence() may
+			 * pick longer sequences from descent history then,
+			 * which is expected as it will create new lnodes. */
+			enum stone seq_color = player_color;
+			/* First move always starts a sequence. */
+			record_local_sequence(u, t, descent, dlen, 1, seq_color, rval);
+			seq_color = stone_other(seq_color);
+			for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
+				if (descent[dseqi].node->d >= u->tenuki_d) {
+					/* Tenuki! Record the fresh sequence. */
+					record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval);
+					continue;
+				}
+				if (descent[dseqi].lnode && !descent[dseqi].lnode) {
+					/* Record result for in-descent picked sequence. */
+					record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval);
+					continue;
+				}
+ 			}
 		}
 	}
 

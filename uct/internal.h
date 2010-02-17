@@ -7,6 +7,7 @@
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
+#include "stats.h"
 
 struct tree;
 struct tree_node;
@@ -59,7 +60,8 @@ struct uct {
 	bool val_extra;
 
 	int random_policy_chance;
-	int root_heuristic;
+	int local_tree;
+	int tenuki_d;
 
 	char *banner;
 
@@ -85,14 +87,15 @@ bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pas
 
 /* This is the state used for descending the tree; we use this wrapper
  * structure in order to be able to easily descend in multiple trees
- * in parallel or compute cummulative "path value" throughout the tree
- * descent.
- *
- * XXX: We don't actually do that now, but this infrastructure is vital
- * for couple of my research patches that are kept external yet, so I'd
- * very much like to keep it here to reduce my diff sizes. --pasky */
+ * in parallel (e.g. main tree and local tree) or compute cummulative
+ * "path value" throughout the tree descent. */
 struct uct_descent {
+	/* Active tree nodes: */
 	struct tree_node *node; /* Main tree. */
+	struct tree_node *lnode; /* Local tree. */
+	/* Value of main tree node (with all value factors, but unbiased
+	 * - without exploration factor), from black's perspective. */
+	struct move_stats value;
 };
 
 
