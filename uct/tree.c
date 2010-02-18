@@ -392,6 +392,8 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 	 * when dest becomes full, but this should never happen in practice
 	 * if threshold is chosen to limit the number of nodes traversed. */
 	struct tree_node *ni = node->children;
+	if (!ni)
+		return n2;
 	struct tree_node **prev2 = &(n2->children);
 	while (ni) {
 		struct tree_node *ni2 = tree_prune(dest, src, ni, threshold, depth);
