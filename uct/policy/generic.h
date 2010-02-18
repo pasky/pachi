@@ -21,7 +21,7 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 	struct uct_descent dbest[512] = { { .node = descent->node->children, .lnode = NULL } }; int dbests = 1; \
 	float best_urgency = -9999; \
 	/* Descent children iterator. */ \
-	struct uct_descent dci = { .node = descent->node->children, .lnode = descent->lnode->children }; \
+	struct uct_descent dci = { .node = descent->node->children, .lnode = descent->lnode ? descent->lnode->children : NULL }; \
 	\
 	for (; dci.node; dci.node = dci.node->sibling) { \
 		float urgency; \
