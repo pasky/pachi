@@ -373,7 +373,7 @@ spawn_thread_manager(void *ctx_)
 		mctx->t = ctx->t = shared_tree ? t : tree_copy(t);
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
 		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
-		if (UDEBUGL(2))
+		if (UDEBUGL(3))
 			fprintf(stderr, "Spawned worker %d\n", ti);
 	}
 
@@ -397,7 +397,7 @@ spawn_thread_manager(void *ctx_)
 			tree_done(ctx->t);
 		}
 		free(ctx);
-		if (UDEBUGL(2))
+		if (UDEBUGL(3))
 			fprintf(stderr, "Joined worker %d\n", finish_thread);
 		pthread_mutex_unlock(&finish_serializer);
 	}
