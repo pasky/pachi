@@ -101,6 +101,7 @@ struct tree {
 	// as anywhere else. ltree_white has white-first sequences as children.
 	struct tree_node *ltree_white;
 	// Aging factor; 2 means halve all playout values after each turn.
+	// 1 means don't age at all.
 	float ltree_aging;
 
 	// Statistics

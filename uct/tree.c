@@ -888,8 +888,10 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
          * to recompute max_depth but it's not worth it: it's just for debugging
 	 * and soon the tree will grow and max_depth will become correct again. */
 
-	tree_age_node(tree, tree->ltree_black);
-	tree_age_node(tree, tree->ltree_white);
+	if (tree->ltree_aging != 1.0f) { // XXX: != should work here even with the float
+		tree_age_node(tree, tree->ltree_black);
+		tree_age_node(tree, tree->ltree_white);
+	}
 }
 
 bool

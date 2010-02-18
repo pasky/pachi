@@ -1090,6 +1090,11 @@ uct_state_init(char *arg, struct board *b)
 		exit(1);
 	}
 
+	if (!u->local_tree) {
+		/* No ltree aging. */
+		u->local_tree_aging = 1.0f;
+	}
+
 	if (u->fast_alloc && !u->parallel_tree) {
 		fprintf(stderr, "fast_alloc not supported with root parallelization.\n");
 		exit(1);
