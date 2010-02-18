@@ -365,7 +365,8 @@ tree_copy(struct tree *tree)
 
 /* Copy the subtree rooted at node: all nodes at or below depth
  * or with at least threshold playouts. Only for fast_alloc.
- * The code is destructive on src, and the order of nodes is changed.
+ * The code is destructive on src. The relative order of children of
+ * a given node is preserved (assumed by tree_get_node in particular).
  * Returns the copy of node in the destination tree, or NULL
  * if we could not copy it. */
 static struct tree_node *
@@ -374,7 +375,8 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 {
 	assert(dest->nodes && node);
 	struct tree_node *n2 = tree_fast_alloc_node(dest);
-	assert(n2);
+	if (!n2)
+		return NULL;
 	*n2 = *node;
 	if (n2->depth > dest->max_depth)
 		dest->max_depth = n2->depth;
@@ -390,15 +392,16 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 	 * when dest becomes full, but this should never happen in practice
 	 * if threshold is chosen to limit the number of nodes traversed. */
 	struct tree_node *ni = node->children;
-	while (ni && unlikely(dest->nodes_size < dest->max_tree_size)) {
+	struct tree_node **prev2 = &(n2->children);
+	while (ni) {
 		struct tree_node *ni2 = tree_prune(dest, src, ni, threshold, depth);
-		assert(ni2);
-		ni2->sibling = n2->children;
-		n2->children = ni2;
+		if (!ni2) break;
+		*prev2 = ni2;
+		prev2 = &(ni2->sibling);
 		ni2->parent = n2;
 		ni = ni->sibling;
 	}
-	if (n2->children && !ni) {
+	if (!ni) {
 		n2->is_expanded = true;
 	} else {
 		n2->children = NULL; // avoid partially expanded nodes
@@ -549,9 +552,6 @@ next_di:
 void
 tree_merge(struct tree *dest, struct tree *src)
 {
-	/* Not suitable for fast_alloc which reorders children. */
-	assert(!dest->nodes);
-
 	if (src->max_depth > dest->max_depth)
 		dest->max_depth = src->max_depth;
 	tree_node_merge(dest->root, src->root);
