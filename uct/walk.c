@@ -246,7 +246,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		assert(dlen < DLEN);
 		descent[dlen] = descent[dlen - 1];
-		if (!descent[dlen].lnode || descent[dlen].node->d >= u->tenuki_d) {
+		if (u->local_tree && (!descent[dlen].lnode || descent[dlen].node->d >= u->tenuki_d)) {
 			/* Start new local sequence. */
 			/* Remember that node_color already holds color of the
 			 * to-be-found child. */
