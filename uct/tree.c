@@ -41,10 +41,10 @@ tree_fast_alloc_node(struct tree *t)
  * or exits the main program if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static struct tree_node *
-tree_init_node(struct tree *t, coord_t coord, int depth)
+tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 {
 	struct tree_node *n;
-	if (t->nodes) {
+	if (fast_alloc) {
 		n = tree_fast_alloc_node(t);
 		if (!n) return n;
 		memset(n, 0, sizeof(*n));
@@ -84,12 +84,12 @@ tree_init(struct board *board, enum stone color, unsigned long max_tree_size, fl
 		}
 	}
 	/* The root PASS move is only virtual, we never play it. */
-	t->root = tree_init_node(t, pass, 0);
+	t->root = tree_init_node(t, pass, 0, t->nodes);
 	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
 
-	t->ltree_black = tree_init_node(t, pass, 0);
-	t->ltree_white = tree_init_node(t, pass, 0);
+	t->ltree_black = tree_init_node(t, pass, 0, false);
+	t->ltree_white = tree_init_node(t, pass, 0, false);
 	t->ltree_aging = ltree_aging;
 	return t;
 }
@@ -598,7 +598,7 @@ tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 		if (!create)
 			return NULL;
 
-		struct tree_node *nn = tree_init_node(t, c, parent->depth + 1);
+		struct tree_node *nn = tree_init_node(t, c, parent->depth + 1, false);
 		nn->parent = parent; nn->sibling = parent->children;
 		parent->children = nn;
 		return nn;
@@ -617,7 +617,7 @@ tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 	if (!create)
 		return NULL;
 
-	struct tree_node *nn = tree_init_node(t, c, parent->depth + 1);
+	struct tree_node *nn = tree_init_node(t, c, parent->depth + 1, false);
 	nn->parent = parent; nn->sibling = ni->sibling; ni->sibling = nn;
 	return nn;
 }
@@ -708,7 +708,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	uct_prior(u, node, &map);
 
 	/* Now, create the nodes. */
-	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1);
+	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1, t->nodes);
 	/* In fast_alloc mode we might temporarily run out of nodes but
 	 * this should be rare if MIN_FREE_MEM_PERCENT is set correctly. */
 	if (!ni) {
@@ -743,7 +743,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 				continue;
 			assert(c != node->coord); // I have spotted "C3 C3" in some sequence...
 
-			struct tree_node *nj = tree_init_node(t, c, node->depth + 1);
+			struct tree_node *nj = tree_init_node(t, c, node->depth + 1, t->nodes);
 			if (!nj) {
 				node->is_expanded = false;
 				return;
