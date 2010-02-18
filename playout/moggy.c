@@ -31,7 +31,7 @@
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders, assess_local;
 	int lcapturerate, atarirate, capturerate, patternrate, korate;
-	int selfatarirate;
+	int selfatarirate, alwaysccaprate;
 	int fillboardtries;
 	int koage;
 	/* Whether to look for patterns around second-to-last move. */
@@ -386,6 +386,7 @@ can_be_rescued(struct playout_policy *p, struct board_state *s,
 }
 #endif
 
+/* ladder != NULL implies to always enqueue all relevant moves. */
 static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
                   struct move_queue *q, coord_t *ladder, struct board_state *s)
@@ -411,7 +412,9 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		return;
 
 	/* Can we capture some neighbor? */
-	can_countercapture(p, s, b, color, group, to_play, q);
+	bool ccap = can_countercapture(p, s, b, color, group, to_play, q);
+	if (ccap && !ladder && pp->alwaysccaprate > fast_random(100))
+		return;
 
 	/* Do not suicide... */
 	if (!can_play_on_lib(p, s, b, group, to_play))
@@ -886,6 +889,7 @@ playout_moggy_init(char *arg, struct board *b)
 	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate = pp->selfatarirate
 			= -1;
 	pp->korate = 0; pp->koage = 4;
+	pp->alwaysccaprate = 0;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -912,6 +916,8 @@ playout_moggy_init(char *arg, struct board *b)
 				pp->selfatarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "korate") && optval) {
 				pp->korate = atoi(optval);
+			} else if (!strcasecmp(optname, "alwaysccaprate") && optval) {
+				pp->alwaysccaprate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
 				rate = atoi(optval);
 			} else if (!strcasecmp(optname, "fillboardtries")) {
@@ -940,6 +946,7 @@ playout_moggy_init(char *arg, struct board *b)
 	if (pp->patternrate == -1) pp->patternrate = rate;
 	if (pp->selfatarirate == -1) pp->selfatarirate = rate;
 	if (pp->korate == -1) pp->korate = rate;
+	if (pp->alwaysccaprate == -1) pp->alwaysccaprate = rate;
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
 
