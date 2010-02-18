@@ -479,8 +479,13 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 			max_size, temp_tree->nodes_size, new_node->u.playouts);
 		prev_time = start_time;
 	}
-	assert(tree->nodes_size == temp_tree->nodes_size);
-	assert(tree->max_depth == temp_tree->max_depth);
+	if (temp_tree->nodes_size >= temp_tree->max_tree_size) {
+		fprintf(stderr, "temp tree overflow, increase max_tree_size %lu or MIN_FREE_MEM_PERCENT %d\n",
+			tree->max_tree_size, MIN_FREE_MEM_PERCENT);
+	} else {
+		assert(tree->nodes_size == temp_tree->nodes_size);
+		assert(tree->max_depth == temp_tree->max_depth);
+	}
 	tree_done(temp_tree);
 	return new_node;
 }
