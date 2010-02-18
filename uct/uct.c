@@ -590,7 +590,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		}
 		if (!print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
 			if (UDEBUGL(2))
-				fprintf(stderr, "memory limit hit (%ld > %lu)\n", ctx->t->nodes_size, u->max_tree_size);
+				fprintf(stderr, "memory limit hit (%lu > %lu)\n", ctx->t->nodes_size, u->max_tree_size);
 			print_fullmem = true;
 		}
 
