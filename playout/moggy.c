@@ -30,9 +30,10 @@
 
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders, assess_local;
-	int lcapturerate, atarirate, capturerate, patternrate;
+	int lcapturerate, atarirate, capturerate, patternrate, korate;
 	int selfatarirate;
 	int fillboardtries;
+	int koage;
 	/* Whether to look for patterns around second-to-last move. */
 	bool pattern2;
 
@@ -648,6 +649,13 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
 
+	/* Ko fight check */
+	if (!is_pass(b->last_ko.coord) && pp->korate > fast_random(100)) {
+		if (b->moves - b->last_ko_age < pp->koage
+		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
+			return b->last_ko.coord;
+	}
+
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
@@ -875,7 +883,9 @@ playout_moggy_init(char *arg, struct board *b)
 
 	int rate = 90;
 
-	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate = pp->selfatarirate = -1;
+	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate = pp->selfatarirate
+			= -1;
+	pp->korate = 0; pp->koage = 4;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -900,10 +910,14 @@ playout_moggy_init(char *arg, struct board *b)
 				pp->patternrate = atoi(optval);
 			} else if (!strcasecmp(optname, "selfatarirate") && optval) {
 				pp->selfatarirate = atoi(optval);
+			} else if (!strcasecmp(optname, "korate") && optval) {
+				pp->korate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
 				rate = atoi(optval);
 			} else if (!strcasecmp(optname, "fillboardtries")) {
 				pp->fillboardtries = atoi(optval);
+			} else if (!strcasecmp(optname, "koage") && optval) {
+				pp->koage = atoi(optval);
 			} else if (!strcasecmp(optname, "ladders")) {
 				pp->ladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "borderladders")) {
@@ -925,6 +939,7 @@ playout_moggy_init(char *arg, struct board *b)
 	if (pp->capturerate == -1) pp->capturerate = rate;
 	if (pp->patternrate == -1) pp->patternrate = rate;
 	if (pp->selfatarirate == -1) pp->selfatarirate = rate;
+	if (pp->korate == -1) pp->korate = rate;
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
 
