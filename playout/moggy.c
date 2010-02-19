@@ -653,8 +653,11 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 		board_print(b, stderr);
 
 	/* Ko fight check */
-	if (!is_pass(b->last_ko.coord) && pp->korate > fast_random(100)) {
+	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
+	    && pp->korate > fast_random(100)) {
+		struct move pm = { .color = to_play, .coord = b->last_ko.coord };
 		if (b->moves - b->last_ko_age < pp->koage
+		    && board_is_valid_move(b, &pm)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
 			return b->last_ko.coord;
 	}
