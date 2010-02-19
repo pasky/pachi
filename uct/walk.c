@@ -11,6 +11,7 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
+#include "playout/elo.h"
 #include "probdist.h"
 #include "random.h"
 #include "tactics.h"
@@ -82,6 +83,61 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 }
 
 
+struct uct_playout_callback {
+	struct uct *uct;
+	struct tree *tree;
+	struct tree_node *lnode;
+};
+
+static void
+uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct probdist *pd)
+{
+	/* Create probability distribution according to found local tree
+	 * sequence. */
+	struct uct_playout_callback *upc = data;
+	assert(upc && upc->tree && pd && b);
+	coord_t c = b->last_move.coord;
+	enum stone color = b->last_move.color;
+
+	if (is_pass(c)) {
+		/* Break local sequence. */
+		upc->lnode = NULL;
+	} else if (upc->lnode) {
+		/* Try to follow local sequence. */
+		upc->lnode = tree_get_node(upc->tree, upc->lnode, c, false);
+	}
+
+	if (!upc->lnode || !upc->lnode->children) {
+		/* There's no local sequence, start new one! */
+		upc->lnode = color == S_BLACK ? upc->tree->ltree_black : upc->tree->ltree_white;
+		upc->lnode = tree_get_node(upc->tree, upc->lnode, c, false);
+	}
+
+	if (!upc->lnode || !upc->lnode->children) {
+		/* We have no local sequence and we cannot find any starting
+		 * by node corresponding to last move. */
+		return;
+	}
+
+	/* Construct probability distribution from lnode children. */
+	/* XXX: How to derive the appropriate gamma? */
+	#define li_value(color, li) (li->u.playouts * (color == S_BLACK ? li->u.value : (1 - li->u.value)))
+	#define li_gamma(color, li) (0.5 + li_value(color, li))
+	struct tree_node *li = upc->lnode->children;
+	assert(li);
+	if (is_pass(li->coord)) {
+		/* Tenuki. */
+		/* TODO: Spread tenuki gamma over all moves we don't touch. */
+		li = li->sibling;
+	}
+	for (; li; li = li->sibling) {
+		if (board_at(b, li->coord) != S_NONE)
+			continue;
+		probdist_set(pd, li->coord, pd->items[li->coord] * li_gamma(to_play, li));
+	}
+}
+
+
 static int
 uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
               struct playout_amafmap *amaf,
@@ -115,6 +171,14 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
 			tree_node_get_value(t, parity, n->u.value));
+
+	/* TODO: Don't necessarily restart the sequence walk when entering
+	 * playout. */
+	struct uct_playout_callback upc = { .uct = u, .tree = t, .lnode = NULL };
+	if (u->local_tree_playout) {
+		/* N.B.: We know this is ELO playout. */
+		playout_elo_callback(u->playout, uct_playout_probdist, &upc);
+	}
 
 	struct playout_setup ps = { .gamelen = u->gamelen, .mercymin = u->mercymin };
 	int result = play_random_game(&ps, b, next_color,

@@ -64,6 +64,8 @@ struct uct {
 	int tenuki_d;
 	float local_tree_aging;
 	bool local_tree_allseq;
+	/* Playout-localtree integration. */
+	bool local_tree_playout; // can be true only if ELO playout
 
 	char *banner;
 
