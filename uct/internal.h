@@ -66,6 +66,7 @@ struct uct {
 	bool local_tree_allseq;
 	/* Playout-localtree integration. */
 	bool local_tree_playout; // can be true only if ELO playout
+	bool local_tree_pseqroot;
 
 	char *banner;
 

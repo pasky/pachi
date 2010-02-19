@@ -1051,6 +1051,12 @@ uct_state_init(char *arg, struct board *b)
 				 * distributions according to matched localtree
 				 * information. */
 				u->local_tree_playout = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_pseqroot")) {
+				/* By default, when we have no sequence move
+				 * to suggest in-playout, we give up. If this
+				 * is on, we make probability distribution from
+				 * sequences first moves instead. */
+				u->local_tree_pseqroot = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider all stones alive at the game
 				 * end instead of marking dead groupd. */

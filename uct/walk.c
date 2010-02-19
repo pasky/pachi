@@ -116,7 +116,18 @@ uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct pro
 	if (!upc->lnode || !upc->lnode->children) {
 		/* We have no local sequence and we cannot find any starting
 		 * by node corresponding to last move. */
-		return;
+		if (!upc->uct->local_tree_pseqroot) {
+			/* Give up then, we have nothing to contribute. */
+			return;
+		}
+		/* Construct probability distribution from possible first
+		 * sequence move. Remember that @color is color of the
+		 * *last* move. */
+		upc->lnode = color == S_BLACK ? upc->tree->ltree_white : upc->tree->ltree_black;
+		if (!upc->lnode->children) {
+			/* We don't even have anything in our tree yet. */
+			return;
+		}
 	}
 
 	/* Construct probability distribution from lnode children. */
