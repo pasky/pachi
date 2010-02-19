@@ -47,6 +47,7 @@ struct patternset {
 struct elo_policy {
 	float selfatari;
 	struct patternset choose, assess;
+	playout_elo_callbackp callback; void *callback_data;
 };
 
 
@@ -148,9 +149,18 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		}
 	}
 #endif
+	/* The engine might want to adjust our probdist. */
+	if (pp->callback)
+		pp->callback(pp->callback_data, b, to_play, pd);
 	/* Pick a move. */
 	coord_t c = pd->total >= PROBDIST_EPSILON ? probdist_pick(pd) : pass;
 	/* Repair the damage. */
+	if (pp->callback) {
+		/* XXX: Do something less horribly inefficient
+		 * than just recomputing the whole pd. */
+		for (int i = 0; i < b->flen; i++)
+			board_gamma_update(b, b->f[i], to_play);
+	}
 	if (!is_pass(b->ko.coord))
 		board_gamma_update(b, b->ko.coord, to_play);
 	if (!is_pass(b->last_move.coord)) {
@@ -164,6 +174,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
 	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
+	if (pp->callback)
+		pp->callback(pp->callback_data, b, to_play, &pd);
 	if (pd.total < PROBDIST_EPSILON)
 		return pass;
 	int f = probdist_pick(&pd);
@@ -201,6 +213,14 @@ playout_elo_done(struct playout_policy *p)
 	features_gamma_done(pp->assess.fg);
 }
 
+
+void
+playout_elo_callback(struct playout_policy *p, playout_elo_callbackp callback, void *data)
+{
+	struct elo_policy *pp = p->data;
+	pp->callback = callback;
+	pp->callback_data = data;
+}
 
 struct playout_policy *
 playout_elo_init(char *arg, struct board *b)
