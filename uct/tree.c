@@ -702,13 +702,11 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	bool map_consider[board_size2(b) + 1]; map.consider = &map_consider[1];
 	memset(map_prior, 0, sizeof(map_prior));
 	memset(map_consider, 0, sizeof(map_consider));
-	struct move pm = { .color = color };
 	map.consider[pass] = true;
 	foreach_point(b) {
 		if (board_at(b, c) != S_NONE)
 			continue;
-		pm.coord = c;
-		if (!board_is_valid_move(b, &pm))
+		if (!board_is_valid_play(b, color, c))
 			continue;
 		map.consider[c] = true;
 	} foreach_point_end;

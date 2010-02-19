@@ -297,8 +297,8 @@ can_play_on_lib(struct playout_policy *p, struct board_state *s,
 		fprintf(stderr, "can capture group %d (%s)?\n",
 			g, coord2sstr(capture, b));
 	/* Does playing on the liberty usefully capture the group? */
-	struct move m; m.color = to_play; m.coord = capture;
-	if (board_is_valid_move(b, &m) && !is_bad_selfatari(b, to_play, capture)) {
+	if (board_is_valid_play(b, to_play, capture)
+	    && !is_bad_selfatari(b, to_play, capture)) {
 		group_trait_set(s, g, to_play, capturable, true);
 		return true;
 	}
@@ -537,8 +537,7 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, group).lib[i];
 		assert(board_at(b, lib) == S_NONE);
-		struct move m; m.color = to_play; m.coord = lib;
-		if (!board_is_valid_move(b, &m))
+		if (!board_is_valid_play(b, to_play, lib))
 			continue;
 
 		/* Don't play at the spot if it is extremely short
@@ -654,10 +653,9 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 
 	/* Ko fight check */
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
+	    && b->moves - b->last_ko_age < pp->koage
 	    && pp->korate > fast_random(100)) {
-		struct move pm = { .color = to_play, .coord = b->last_ko.coord };
-		if (b->moves - b->last_ko_age < pp->koage
-		    && board_is_valid_move(b, &pm)
+		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
 			return b->last_ko.coord;
 	}

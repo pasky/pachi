@@ -289,6 +289,7 @@ typedef bool (*ppr_permit)(void *data, struct board *b, struct move *m);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
 
 /* Returns true if given move can be played. */
+static bool board_is_valid_play(struct board *b, enum stone color, coord_t coord);
 static bool board_is_valid_move(struct board *b, struct move *m);
 /* Returns true if ko was just taken. */
 static bool board_playing_ko_threat(struct board *b);
@@ -389,26 +390,32 @@ board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
 }
 
 static inline bool
-board_is_valid_move(struct board *board, struct move *m)
+board_is_valid_play(struct board *board, enum stone color, coord_t coord)
 {
-	if (board_at(board, m->coord) != S_NONE)
+	if (board_at(board, coord) != S_NONE)
 		return false;
-	if (!board_is_eyelike(board, &m->coord, stone_other(m->color)))
+	if (!board_is_eyelike(board, &coord, stone_other(color)))
 		return true;
 	/* Play within {true,false} eye-ish formation */
-	if (board->ko.coord == m->coord && board->ko.color == m->color)
+	if (board->ko.coord == coord && board->ko.color == color)
 		return false;
 #ifdef BOARD_TRAITS
 	/* XXX: Disallows suicide. */
-	return trait_at(board, m->coord, m->color).cap > 0;
+	return trait_at(board, coord, color).cap > 0;
 #else
 	int groups_in_atari = 0;
-	foreach_neighbor(board, m->coord, {
+	foreach_neighbor(board, coord, {
 		group_t g = group_at(board, c);
 		groups_in_atari += (board_group_info(board, g).libs == 1);
 	});
 	return !!groups_in_atari;
 #endif
+}
+
+static inline bool
+board_is_valid_move(struct board *board, struct move *m)
+{
+	return board_is_valid_play(board, m->color, m->coord);
 }
 
 static inline bool
