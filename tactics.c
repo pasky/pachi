@@ -255,7 +255,7 @@ check_throwin(struct board *b, enum stone color, coord_t to, struct selfatari_st
 	if (neighbor_count_at(b, to, S_OFFBOARD) < 2
 	    && neighbor_count_at(b, to, stone_other(color))
 	       + neighbor_count_at(b, to, S_OFFBOARD) == 3
-	    && board_is_false_eyelike(b, &to, stone_other(color))) {
+	    && board_is_false_eyelike(b, to, stone_other(color))) {
 		assert(s->groupcts[color] <= 1);
 		/* Single-stone throw-in may be ok... */
 		if (s->groupcts[color] == 0) {

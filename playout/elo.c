@@ -80,7 +80,7 @@ skip_move:
 		/* We shall never fill our own single-point eyes. */
 		/* XXX: In some rare situations, this prunes the best move:
 		 * Bulk-five nakade with eye at 1-1 point. */
-		if (board_is_one_point_eye(b, &m.coord, to_play)) {
+		if (board_is_one_point_eye(b, m.coord, to_play)) {
 			goto skip_move;
 		}
 

@@ -52,7 +52,7 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 	foreach_point(map->b) {
 		if (!map->consider[c])
 			continue;
-		if (!board_is_one_point_eye(map->b, &c, map->to_play))
+		if (!board_is_one_point_eye(map->b, c, map->to_play))
 			continue;
 		add_prior_value(map, c, 0, u->prior->eye_eqex);
 	} foreach_point_end;

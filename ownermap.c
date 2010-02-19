@@ -16,7 +16,7 @@ board_ownermap_fill(struct board_ownermap *ownermap, struct board *b)
 	foreach_point(b) {
 		enum stone color = board_at(b, c);
 		if (color == S_NONE)
-			color = board_get_one_point_eye(b, &c);
+			color = board_get_one_point_eye(b, c);
 		ownermap->map[c][color]++;
 	} foreach_point_end;
 }

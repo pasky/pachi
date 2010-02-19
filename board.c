@@ -422,9 +422,9 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 
 	/* Punch out invalid moves and moves filling our own eyes. */
 	if (board_at(board, coord) != S_NONE
-	    || (board_is_eyelike(board, &coord, stone_other(color))
+	    || (board_is_eyelike(board, coord, stone_other(color))
 	        && !trait_at(board, coord, color).cap)
-	    || (board_is_one_point_eye(board, &coord, color))) {
+	    || (board_is_one_point_eye(board, coord, color))) {
 		probdist_set(&board->prob[color - 1], coord, 0);
 		return;
 	}
@@ -1212,7 +1212,7 @@ board_play_f(struct board *board, struct move *m, int f)
 	if (DEBUGL(7)) {
 		fprintf(stderr, "board_play(): ---- Playing %d,%d\n", coord_x(m->coord, board), coord_y(m->coord, board));
 	}
-	if (likely(!board_is_eyelike(board, &m->coord, stone_other(m->color)))) {
+	if (likely(!board_is_eyelike(board, m->coord, stone_other(m->color)))) {
 		/* NOT playing in an eye. Thus this move has to succeed. (This
 		 * is thanks to New Zealand rules. Otherwise, multi-stone
 		 * suicide might fail.) */
@@ -1258,7 +1258,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
-	return (likely(!board_is_one_point_eye(b, coord, color)) /* bad idea to play into one, usually */
+	return (likely(!board_is_one_point_eye(b, *coord, color)) /* bad idea to play into one, usually */
 		&& board_is_valid_move(b, &m)
 		&& (!permit || permit(permit_data, b, &m))
 	        && likely(board_play_f(b, &m, f) >= 0));
@@ -1287,14 +1287,14 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 
 
 bool
-board_is_false_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
+board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 {
 	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
 
 	/* XXX: We attempt false eye detection but we will yield false
 	 * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
 
-	foreach_diag_neighbor(board, *coord) {
+	foreach_diag_neighbor(board, coord) {
 		color_diag_libs[(enum stone) board_at(board, c)]++;
 	} foreach_diag_neighbor_end;
 	/* For false eye, we need two enemy stones diagonally in the
@@ -1305,14 +1305,14 @@ board_is_false_eyelike(struct board *board, coord_t *coord, enum stone eye_color
 }
 
 bool
-board_is_one_point_eye(struct board *board, coord_t *coord, enum stone eye_color)
+board_is_one_point_eye(struct board *board, coord_t coord, enum stone eye_color)
 {
 	return board_is_eyelike(board, coord, eye_color)
 		&& !board_is_false_eyelike(board, coord, eye_color);
 }
 
 enum stone
-board_get_one_point_eye(struct board *board, coord_t *coord)
+board_get_one_point_eye(struct board *board, coord_t coord)
 {
 	if (board_is_one_point_eye(board, coord, S_WHITE))
 		return S_WHITE;
@@ -1332,7 +1332,7 @@ board_fast_score(struct board *board)
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
 		if (color == S_NONE)
-			color = board_get_one_point_eye(board, &c);
+			color = board_get_one_point_eye(board, c);
 		scores[color]++;
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;

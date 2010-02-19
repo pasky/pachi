@@ -304,15 +304,15 @@ void board_gamma_set(struct board *b, struct features_gamma *gamma);
 void board_gamma_update(struct board *b, coord_t coord, enum stone color);
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
-static bool board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
+static bool board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color);
 /* Returns true if given coordinate could be a false eye; this check makes
  * sense only if you already know the coordinate is_eyelike(). */
-bool board_is_false_eyelike(struct board *board, coord_t *coord, enum stone eye_color);
+bool board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_color);
 /* Returns true if given coordinate is a 1-pt eye (checks against false eyes, or
  * at least tries to). */
-bool board_is_one_point_eye(struct board *board, coord_t *c, enum stone eye_color);
+bool board_is_one_point_eye(struct board *board, coord_t c, enum stone eye_color);
 /* Returns color of a 1pt eye owner, S_NONE if not an eye. */
-enum stone board_get_one_point_eye(struct board *board, coord_t *c);
+enum stone board_get_one_point_eye(struct board *board, coord_t c);
 
 /* board_official_score() is the scoring method for yielding score suitable
  * for external presentation. For fast scoring of entirely filled boards
@@ -383,10 +383,10 @@ float board_official_score(struct board *board, struct move_queue *mq);
 
 
 static inline bool
-board_is_eyelike(struct board *board, coord_t *coord, enum stone eye_color)
+board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 {
-	return (neighbor_count_at(board, *coord, eye_color)
-	        + neighbor_count_at(board, *coord, S_OFFBOARD)) == 4;
+	return (neighbor_count_at(board, coord, eye_color)
+	        + neighbor_count_at(board, coord, S_OFFBOARD)) == 4;
 }
 
 static inline bool
@@ -394,7 +394,7 @@ board_is_valid_play(struct board *board, enum stone color, coord_t coord)
 {
 	if (board_at(board, coord) != S_NONE)
 		return false;
-	if (!board_is_eyelike(board, &coord, stone_other(color)))
+	if (!board_is_eyelike(board, coord, stone_other(color)))
 		return true;
 	/* Play within {true,false} eye-ish formation */
 	if (board->ko.coord == coord && board->ko.color == color)
