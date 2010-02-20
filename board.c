@@ -756,6 +756,23 @@ board_capturable_rm(struct board *board, group_t group, coord_t lib)
 }
 
 static void
+board_atariable_add(struct board *board, group_t group, coord_t lib1, coord_t lib2)
+{
+#ifdef BOARD_TRAITS
+	board_trait_queue(board, lib1);
+	board_trait_queue(board, lib2);
+#endif
+}
+static void
+board_atariable_rm(struct board *board, group_t group, coord_t lib1, coord_t lib2)
+{
+#ifdef BOARD_TRAITS
+	board_trait_queue(board, lib1);
+	board_trait_queue(board, lib2);
+#endif
+}
+
+static void
 board_group_addlib(struct board *board, group_t group, coord_t coord)
 {
 	if (DEBUGL(7)) {
@@ -777,10 +794,14 @@ board_group_addlib(struct board *board, group_t group, coord_t coord)
 			if (unlikely(gi->lib[i] == coord))
 				return;
 		}
-		if (gi->libs == 0)
+		if (gi->libs == 0) {
 			board_capturable_add(board, group, coord);
-		else if (gi->libs == 1)
+		} else if (gi->libs == 1) {
 			board_capturable_rm(board, group, gi->lib[0]);
+			board_atariable_add(board, group, gi->lib[0], coord);
+		} else if (gi->libs == 2) {
+			board_atariable_rm(board, group, gi->lib[0], gi->lib[1]);
+		}
 		gi->lib[gi->libs++] = coord;
 	}
 
@@ -846,9 +867,12 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 		if (gi->libs == GROUP_REFILL_LIBS)
 			board_group_find_extra_libs(board, group, gi, coord);
 
-		if (gi->libs == 1)
+		if (gi->libs == 2) {
+			board_atariable_add(board, group, gi->lib[0], gi->lib[1]);
+		} else if (gi->libs == 1) {
 			board_capturable_add(board, group, gi->lib[0]);
-		else if (gi->libs == 0)
+			board_atariable_rm(board, group, gi->lib[0], lib);
+		} else if (gi->libs == 0)
 			board_capturable_rm(board, group, lib);
 		return;
 	}
@@ -903,9 +927,12 @@ board_group_capture(struct board *board, group_t group)
 		stones++;
 	} foreach_in_group_end;
 
-	if (board_group_info(board, group).libs == 1)
-		board_capturable_rm(board, group, board_group_info(board, group).lib[0]);
-	memset(&board_group_info(board, group), 0, sizeof(struct group));
+	struct group *gi = &board_group_info(board, group);
+	if (gi->libs == 2)
+		board_atariable_rm(board, group, gi->lib[0], gi->lib[1]);
+	else if (gi->libs == 1)
+		board_capturable_rm(board, group, gi->lib[0]);
+	memset(gi, 0, sizeof(*gi));
 
 	return stones;
 }
@@ -957,7 +984,9 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 	struct group *gi_to = &board_group_info(board, group_to);
 
 	/* We do this early before the group info is rewritten. */
-	if (gi_from->libs == 1)
+	if (gi_from->libs == 2)
+		board_atariable_rm(board, group_from, gi_from->lib[0], gi_from->lib[1]);
+	else if (gi_from->libs == 1)
 		board_capturable_rm(board, group_from, gi_from->lib[0]);
 
 	if (DEBUGL(7))
@@ -968,10 +997,14 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 			for (int j = 0; j < gi_to->libs; j++)
 				if (gi_to->lib[j] == gi_from->lib[i])
 					goto next_from_lib;
-			if (gi_to->libs == 0)
+			if (gi_to->libs == 0) {
 				board_capturable_add(board, group_to, gi_from->lib[i]);
-			else if (gi_to->libs == 1)
+			} else if (gi_to->libs == 1) {
 				board_capturable_rm(board, group_to, gi_to->lib[0]);
+				board_atariable_add(board, group_to, gi_to->lib[0], gi_from->lib[i]);
+			} else if (gi_to->libs == 2) {
+				board_atariable_rm(board, group_to, gi_to->lib[0], gi_to->lib[1]);
+			}
 			gi_to->lib[gi_to->libs++] = gi_from->lib[i];
 			if (gi_to->libs >= GROUP_KEEP_LIBS)
 				break;
@@ -1026,7 +1059,9 @@ new_group(struct board *board, coord_t coord)
 	group_at(board, coord) = group;
 	groupnext_at(board, coord) = 0;
 
-	if (gi->libs == 1)
+	if (gi->libs == 2)
+		board_atariable_add(board, group, gi->lib[0], gi->lib[1]);
+	else if (gi->libs == 1)
 		board_capturable_add(board, group, gi->lib[0]);
 	check_libs_consistency(board, group);
 
