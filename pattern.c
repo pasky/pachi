@@ -362,17 +362,6 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 }
 
 
-static bool
-is_simple_selfatari(struct board *b, enum stone color, coord_t coord)
-{
-#ifdef BOARD_TRAITS
-	/* Cached result of call in the #else branch. */
-	return !trait_at(b, coord, color).safe;
-#else
-	return !board_safe_to_play(b, coord, color);
-#endif
-}
-
 void
 pattern_match(struct pattern_config *pc, pattern_spec ps,
               struct pattern *p, struct board *b, struct move *m)
@@ -405,7 +394,11 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 	if (PS_ANY(SELFATARI)) {
 		bool simple = false;
 		if (PS_PF(SELFATARI, STUPID)) {
-			simple = is_simple_selfatari(b, m->color, m->coord);
+#ifdef BOARD_TRAITS
+			simple = !trait_at(b, m->coord, m->color).safe;
+#else
+			simple = !board_safe_to_play(b, m->coord, m->color);
+#endif
 		}
 		bool thorough = false;
 		if (PS_PF(SELFATARI, SMART)) {
