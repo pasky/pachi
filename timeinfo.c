@@ -11,8 +11,17 @@
 #include "tactics.h"
 #include "timeinfo.h"
 
-#define MAX_NET_LAG 2.0 /* Max net lag in seconds. TODO: estimate dynamically. */
-#define RESERVED_BYOYOMI_PERCENT 15 /* Reserve 15% of byoyomi time as safety margin if risk of losing on time */
+/* Max net lag in seconds. TODO: estimate dynamically. */
+#define MAX_NET_LAG 2.0
+/* Minimal thinking time; in case reserved time gets smaller than MAX_NET_LAG,
+ * this makes sure we play minimally sensible moves even in massive time
+ * pressure; we still keep MAX_NET_LAG-MIN_THINK_WITH_LAG safety margin.
+ * Note that this affects only lag adjustmnet - if reserved time *before*
+ * lag adjustment gets too small, we still respect it and don't apply
+ * MIN_THINK_WITH_LAG. */
+#define MIN_THINK_WITH_LAG (MAX_NET_LAG / 2)
+/* Reserve 15% of byoyomi time as safety margin if risk of losing on time */
+#define RESERVED_BYOYOMI_PERCENT 15
 
 /* For safety, use at most 3 times the desired time on a single move
  * in main time, and 1.1 times in byoyomi. */
@@ -306,6 +315,15 @@ time_stop_phase_adjust(struct board *b, int fuseki_end, int yose_start, struct t
 	}
 }
 
+void
+lag_adjust(double *time, double net_lag)
+{
+	double nolag_time = *time;
+	*time -= net_lag;
+	if (*time < MIN_THINK_WITH_LAG && nolag_time > MIN_THINK_WITH_LAG)
+		*time = MIN_THINK_WITH_LAG;
+}
+
 /* Pre-process time_info for search control and sets the desired stopping conditions. */
 void
 time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
@@ -406,6 +424,6 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 			ti->len.t.byoyomi_periods, net_lag);
 
 	/* Account for lag. */
-	stop->desired.time -= net_lag;
-	stop->worst.time -= net_lag;
+	lag_adjust(&stop->desired.time, net_lag);
+	lag_adjust(&stop->worst.time, net_lag);
 }
