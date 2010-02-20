@@ -395,13 +395,19 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 		bool simple = false;
 		if (PS_PF(SELFATARI, STUPID)) {
 #ifdef BOARD_TRAITS
-			simple = !trait_at(b, m->coord, m->color).safe;
-#else
-			simple = !board_safe_to_play(b, m->coord, m->color);
+			if (!b->precise_selfatari)
+				simple = !trait_at(b, m->coord, m->color).safe;
+			else
 #endif
+			simple = !board_safe_to_play(b, m->coord, m->color);
 		}
 		bool thorough = false;
 		if (PS_PF(SELFATARI, SMART)) {
+#ifdef BOARD_TRAITS
+			if (b->precise_selfatari)
+				thorough = !trait_at(b, m->coord, m->color).safe;
+			else
+#endif
 			thorough = is_bad_selfatari(b, m->color, m->coord);
 		}
 		if (simple || thorough) {
