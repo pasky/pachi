@@ -83,16 +83,18 @@ board_copy(struct board *b2, struct board *b1)
 #endif
 #ifdef BOARD_TRAITS
 	int tsize = board_size2(b2) * sizeof(*b2->t);
+	int tqsize = board_size2(b2) * sizeof(*b2->t);
 #else
 	int tsize = 0;
+	int tqsize = 0;
 #endif
 #ifdef BOARD_GAMMA
 	int pbsize = board_size2(b2) * sizeof(*b2->prob[0].items);
 #else
 	int pbsize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
@@ -111,6 +113,7 @@ board_copy(struct board *b2, struct board *b1)
 #endif
 #ifdef BOARD_TRAITS
 	b2->t = x; x += tsize;
+	b2->tq = x; x += tqsize;
 #endif
 #ifdef BOARD_GAMMA
 	b2->prob[0].items = x; x += pbsize;
@@ -169,16 +172,18 @@ board_resize(struct board *board, int size)
 #endif
 #ifdef BOARD_TRAITS
 	int tsize = board_size2(board) * sizeof(*board->t);
+	int tqsize = board_size2(board) * sizeof(*board->t);
 #else
 	int tsize = 0;
+	int tqsize = 0;
 #endif
 #ifdef BOARD_GAMMA
 	int pbsize = board_size2(board) * sizeof(*board->prob[0].items);
 #else
 	int pbsize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + pbsize * 2);
+	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -197,6 +202,7 @@ board_resize(struct board *board, int size)
 #endif
 #ifdef BOARD_TRAITS
 	board->t = x; x += tsize;
+	board->tq = x; x += tqsize;
 #endif
 #ifdef BOARD_GAMMA
 	board->prob[0].items = x; x += pbsize;
@@ -449,24 +455,38 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 #endif
 }
 
-/* Recompute some of the traits for given point from scratch. Note that
- * some traits are updated incrementally elsewhere. */
+/* Recompute traits for dirty points that we have previously touched
+ * somehow (libs of their neighbors changed or so). */
 static void
-board_trait_recompute(struct board *board, coord_t coord)
+board_traits_recompute(struct board *board)
 {
 #ifdef BOARD_TRAITS
-	trait_at(board, coord, S_BLACK).safe = board_safe_to_play(board, coord, S_BLACK);
-	trait_at(board, coord, S_WHITE).safe = board_safe_to_play(board, coord, S_WHITE);
-	if (DEBUGL(8)) {
-		fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d safe=%d) (white cap=%d safe=%d)\n",
-			coord2sstr(coord, board), stone2str(board_at(board, coord)), immediate_liberty_count(board, coord),
-			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).safe,
-			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).safe);
+	for (int i = 0; i < board->tqlen; i++) {
+		coord_t coord = board->tq[i];
+		trait_at(board, coord, S_BLACK).safe = board_safe_to_play(board, coord, S_BLACK);
+		trait_at(board, coord, S_WHITE).safe = board_safe_to_play(board, coord, S_WHITE);
+		if (DEBUGL(8)) {
+			fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d safe=%d) (white cap=%d safe=%d)\n",
+				coord2sstr(coord, board), stone2str(board_at(board, coord)), immediate_liberty_count(board, coord),
+				trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).safe,
+				trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).safe);
+		}
+		board_gamma_update(board, coord, S_BLACK);
+		board_gamma_update(board, coord, S_WHITE);
 	}
+	board->tqlen = 0;
 #endif
-	board_gamma_update(board, coord, S_BLACK);
-	board_gamma_update(board, coord, S_WHITE);
 }
+
+/* Queue traits of given point for recomputing. */
+static void
+board_trait_queue(struct board *board, coord_t coord)
+{
+#ifdef BOARD_TRAITS
+	board->tq[board->tqlen++] = coord;
+#endif
+}
+
 
 /* Update board hash with given coordinate. */
 static void profiling_noinline
@@ -695,7 +715,7 @@ board_capturable_add(struct board *board, group_t group, coord_t lib)
 			fprintf(stderr, "%s[%d] %s cap bump bc of %s(%d) member %s\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, stone2str(capturing_color), coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
 		trait_at(board, lib, capturing_color).cap += (group_at(board, c) == group);
 	});
-	board_trait_recompute(board, lib);
+	board_trait_queue(board, lib);
 #endif
 
 #ifdef WANT_BOARD_C
@@ -718,7 +738,7 @@ board_capturable_rm(struct board *board, group_t group, coord_t lib)
 			fprintf(stderr, "%s[%d] cap dump bc of %s(%d) member %s\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
 		trait_at(board, lib, capturing_color).cap -= (group_at(board, c) == group);
 	});
-	board_trait_recompute(board, lib);
+	board_trait_queue(board, lib);
 #endif
 
 #ifdef WANT_BOARD_C
@@ -853,18 +873,14 @@ board_remove_stone(struct board *board, group_t group, coord_t c)
 	 * we will get incremented later in board_group_addlib(). */
 	trait_at(board, c, S_BLACK).cap = 0;
 	trait_at(board, c, S_WHITE).cap = 0;
-	/* However, we do decide safety statically; we might get
-	 * over-paranoid, but in that case the neighbor loop for
-	 * stones removed next will repair the flag. */
-	/* We must do this update after the loop when our neighbor count is correct. */
-	board_trait_recompute(board, c);
+	board_trait_queue(board, c);
 #endif
 
 	/* Increase liberties of surrounding groups */
 	coord_t coord = c;
 	foreach_neighbor(board, coord, {
 		dec_neighbor_count_at(board, c, color);
-		board_trait_recompute(board, c);
+		board_trait_queue(board, c);
 		group_t g = group_at(board, c);
 		if (g && g != group)
 			board_group_addlib(board, g, coord);
@@ -912,7 +928,7 @@ add_to_group(struct board *board, group_t group, coord_t prevstone, coord_t coor
 		if (coord_is_adjecent(lib, coord, board)) {
 			if (DEBUGL(8)) fprintf(stderr, "add_to_group %s: %s[%d] bump\n", coord2sstr(group, board), coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
 			trait_at(board, lib, capturing_color).cap++;
-			board_trait_recompute(board, lib);
+			board_trait_queue(board, lib);
 		}
 	}
 #endif
@@ -974,7 +990,7 @@ next_from_lib:;
 			if (DEBUGL(8) && group_at(board, c) == group_from) fprintf(stderr, "%s[%d] cap bump\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
 			trait_at(board, lib, capturing_color).cap += (group_at(board, c) == group_from);
 		});
-		board_trait_recompute(board, lib);
+		board_trait_queue(board, lib);
 	}
 #endif
 
@@ -1032,7 +1048,7 @@ play_one_neighbor(struct board *board,
 	inc_neighbor_count_at(board, c, color);
 	/* We can be S_NONE, in that case we need to update the safety
 	 * trait since we might be left with only one liberty. */
-	board_trait_recompute(board, c);
+	board_trait_queue(board, c);
 
 	if (!ngroup)
 		return group;
@@ -1103,6 +1119,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 	board->last_move = *m;
 	board->moves++;
 	board_hash_update(board, coord, color);
+	board_traits_recompute(board);
 	board_symmetry_update(board, &board->symmetry, coord);
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
@@ -1164,7 +1181,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 		/* Originally, this could not have changed any trait
 		 * since no neighbors were S_NONE, however by now some
 		 * of them might be removed from the board. */
-		board_trait_recompute(board, c);
+		board_trait_queue(board, c);
 
 		group_t group = group_at(board, c);
 		if (!group)
@@ -1200,6 +1217,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	board->moves++;
 	board_hash_update(board, coord, color);
 	board_hash_commit(board);
+	board_traits_recompute(board);
 	board_symmetry_update(board, &board->symmetry, coord);
 	board->ko = ko;
 

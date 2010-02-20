@@ -179,6 +179,11 @@ struct board {
 	group_t *c; int clen;
 #endif
 
+#ifdef BOARD_TRAITS
+	/* Queue of positions that need their traits updated */
+	coord_t *tq; int tqlen;
+#endif
+
 	/* Symmetry information */
 	struct board_symmetry symmetry;
 
