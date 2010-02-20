@@ -241,6 +241,7 @@ playout_elo_init(char *arg, struct board *b)
 
 	struct pattern_config pc = DEFAULT_PATTERN_CONFIG;
 	int xspat = -1;
+	bool precise_selfatari = false;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -255,6 +256,10 @@ playout_elo_init(char *arg, struct board *b)
 
 			if (!strcasecmp(optname, "selfatari") && optval) {
 				pp->selfatari = atof(optval);
+			} else if (!strcasecmp(optname, "precisesa")) {
+				/* Use precise self-atari detection within
+				 * fast patterns. */
+				precise_selfatari = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "gammafile") && optval) {
 				/* patterns.gamma by default. We use this,
 				 * and need also ${gammafile}f (e.g.
@@ -291,7 +296,9 @@ playout_elo_init(char *arg, struct board *b)
 	for (int i = 0; i < FEAT_MAX; i++)
 		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
 			pp->choose.ps[i] = 0;
-	board_gamma_set(b, pp->choose.fg, false);
+	if (precise_selfatari)
+		pp->choose.ps[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_STUPID);
+	board_gamma_set(b, pp->choose.fg, precise_selfatari);
 
 	return p;
 }

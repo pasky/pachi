@@ -350,6 +350,12 @@ patternscan_state_init(char *arg)
 				ps->pc = FAST_PATTERN_CONFIG;
 				memcpy(&ps->ps, PATTERN_SPEC_MATCHFAST, sizeof(pattern_spec));
 
+			} else if (!strcasecmp(optname, "precisesa")) {
+				/* Use precise self-atari detection instead
+				 * of quick one; makes sense ONLY with
+				 * matchfast, otherwise we always do this. */
+				ps->ps[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_STUPID);
+
 			} else if (!strcasecmp(optname, "mm")) {
 				/* Generate output almost suitable for the
 				 * Remi Coulom's MM tool, and auxiliar file
