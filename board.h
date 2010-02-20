@@ -286,10 +286,8 @@ static bool board_is_valid_move(struct board *b, struct move *m);
 static bool board_playing_ko_threat(struct board *b);
 /* Returns 0 or ID of neighboring group in atari. */
 static group_t board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color);
-#ifdef BOARD_TRAITS
 /* Returns true if the move is not obvious self-atari. */
 static bool board_safe_to_play(struct board *b, coord_t coord, enum stone color);
-#endif
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
@@ -434,7 +432,6 @@ board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 	return 0;
 }
 
-#ifdef BOARD_TRAITS
 static inline bool
 board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 {
@@ -442,6 +439,8 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 	int libs = immediate_liberty_count(b, coord);
 	if (libs > 1)
 		return true;
+
+#ifdef BOARD_TRAITS
 	/* number of capturable enemy groups */
 	if (trait_at(b, coord, color).cap > 0)
 		return true; // XXX: We don't account for snapback.
@@ -449,10 +448,16 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 	int noncap_ours = neighbor_count_at(b, coord, color) - trait_at(b, coord, stone_other(color)).cap;
 	if (noncap_ours < 1)
 		return false;
+/*#else see below */
+#endif
 
 	/* ok, but we need to check if they don't have just two libs. */
 	coord_t onelib = -1;
 	foreach_neighbor(b, coord, {
+#ifndef BOARD_TRAITS
+		if (board_at(b, c) == stone_other(color) && board_group_info(b, group_at(b, c)).libs == 1)
+			return true; // can capture; no snapback check
+#endif
 		if (board_at(b, c) != color) continue;
 		group_t g = group_at(b, c);
 		if (board_group_info(b, g).libs == 1) continue; // in atari
@@ -474,6 +479,5 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 	// no good support group
 	return false;
 }
-#endif
 
 #endif

@@ -366,30 +366,11 @@ static bool
 is_simple_selfatari(struct board *b, enum stone color, coord_t coord)
 {
 #ifdef BOARD_TRAITS
+	/* Cached result of call in the #else branch. */
 	return !trait_at(b, coord, color).safe;
+#else
+	return !board_safe_to_play(b, coord, color);
 #endif
-
-	/* Very rough check, no connect-and-die checks or other trickery. */
-	int libs = immediate_liberty_count(b, coord);
-	if (libs >= 2) return false; // open space
-
-	group_t seen = -1;
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) == stone_other(color) && board_group_info(b, group_at(b, c)).libs == 1) {
-			return false; // can capture
-
-		} else if (board_at(b, c) == color) {
-			// friendly group, does it have liberties?
-			group_t g = group_at(b, c);
-			if (board_group_info(b, g).libs == 1 || seen == g)
-				continue;
-			libs += board_group_info(b, g).libs - 1;
-			if (libs >= 2) return false;
-			// don't consider the same group twice
-			seen = g;
-		}
-	});
-	return true;
 }
 
 void
