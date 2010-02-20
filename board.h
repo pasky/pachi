@@ -439,12 +439,40 @@ static inline bool
 board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 {
 	/* number of free neighbors */
-	int escape_routes = immediate_liberty_count(b, coord);
+	int libs = immediate_liberty_count(b, coord);
+	if (libs > 1)
+		return true;
 	/* number of capturable enemy groups */
-	int cap_enemy = trait_at(b, coord, color).cap;
+	if (trait_at(b, coord, color).cap > 0)
+		return true; // XXX: We don't account for snapback.
 	/* number of non-capturable friendly groups */
 	int noncap_ours = neighbor_count_at(b, coord, color) - trait_at(b, coord, stone_other(color)).cap;
-	return (escape_routes - 1 + cap_enemy + noncap_ours) > 0;
+	if (noncap_ours < 1)
+		return false;
+
+	/* ok, but we need to check if they don't have just two libs. */
+	coord_t onelib = -1;
+	foreach_neighbor(b, coord, {
+		if (board_at(b, c) != color) continue;
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs == 1) continue; // in atari
+		if (board_group_info(b, g).libs == 2) { // two liberties
+			if (libs > 0) return true; // we already have one real liberty
+			// get the other liberty
+			coord_t lib = board_group_info(b, g).lib[0];
+			if (lib == coord) lib = board_group_info(b, g).lib[0];
+			/* we might be connecting two 2-lib groups, which is ok;
+			 * so remember the other liberty and just make sure it's
+			 * not the same one */
+			if (onelib >= 0 && lib != onelib) return true;
+			onelib = lib;
+			continue;
+		}
+		// many liberties
+		return true;
+	});
+	// no good support group
+	return false;
 }
 #endif
 
