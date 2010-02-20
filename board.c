@@ -463,6 +463,7 @@ board_traits_recompute(struct board *board)
 #ifdef BOARD_TRAITS
 	for (int i = 0; i < board->tqlen; i++) {
 		coord_t coord = board->tq[i];
+		if (!trait_at(board, coord, S_BLACK).dirty) continue;
 		if (board_at(board, coord) != S_NONE) continue;
 		trait_at(board, coord, S_BLACK).safe = board_safe_to_play(board, coord, S_BLACK);
 		trait_at(board, coord, S_WHITE).safe = board_safe_to_play(board, coord, S_WHITE);
@@ -474,6 +475,7 @@ board_traits_recompute(struct board *board)
 		}
 		board_gamma_update(board, coord, S_BLACK);
 		board_gamma_update(board, coord, S_WHITE);
+		trait_at(board, coord, S_BLACK).dirty = false;
 	}
 	board->tqlen = 0;
 #endif
@@ -485,6 +487,7 @@ board_trait_queue(struct board *board, coord_t coord)
 {
 #ifdef BOARD_TRAITS
 	board->tq[board->tqlen++] = coord;
+	trait_at(board, coord, S_BLACK).dirty = true;
 #endif
 }
 

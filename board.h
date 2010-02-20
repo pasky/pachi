@@ -97,6 +97,9 @@ struct btraits {
 	 * of "safety" is not perfect here, but it's the cheapest
 	 * reasonable thing we can do.) */
 	bool safe:1;
+	/* Whether we need to re-compute this coordinate; used to
+	 * weed out duplicates. Maintained only for S_BLACK. */
+	bool dirty:1;
 };
 
 
