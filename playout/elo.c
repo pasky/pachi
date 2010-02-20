@@ -158,8 +158,11 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	if (pp->callback) {
 		/* XXX: Do something less horribly inefficient
 		 * than just recomputing the whole pd. */
-		for (int i = 0; i < b->flen; i++)
+		pd->total = 0;
+		for (int i = 0; i < b->flen; i++) {
+			pd->items[b->f[i]] = 0;
 			board_gamma_update(b, b->f[i], to_play);
+		}
 	}
 	if (!is_pass(b->ko.coord))
 		board_gamma_update(b, b->ko.coord, to_play);
