@@ -130,6 +130,11 @@ uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct pro
 		}
 	}
 
+	/* The probdist has the right structure only if BOARD_GAMMA is defined. */
+#ifndef BOARD_GAMMA
+	assert(0);
+#endif
+
 	/* Construct probability distribution from lnode children. */
 	/* XXX: How to derive the appropriate gamma? */
 	#define li_value(color, li) (li->u.playouts * (color == S_BLACK ? li->u.value : (1 - li->u.value)))
