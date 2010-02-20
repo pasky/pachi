@@ -22,7 +22,7 @@ struct probdist {
 #define probdist_one(pd, i) ((pd)->items[i])
 /* Probability so small that it's same as zero; used to compensate
  * for probdist.total inaccuracies. */
-#define PROBDIST_EPSILON 0.01
+#define PROBDIST_EPSILON 0.05
 
 static void probdist_set(struct probdist *pd, int i, float val);
 
