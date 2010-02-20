@@ -54,8 +54,10 @@ enum feature_id {
 	FEAT_AESCAPE,
 
 	/* Self-atari move. */
-	/* Payload: [bit0] Also using our complex definition? */
-#define PF_SELFATARI_SMART	0
+	/* Payload: [bit0] Matched by trivial definition? */
+	/*          [bit1] Matched by complex definition? (tries to be aware of nakade, throwins, ...) */
+#define PF_SELFATARI_STUPID	0
+#define PF_SELFATARI_SMART	1
 	FEAT_SELFATARI,
 
 	/* Atari move. */

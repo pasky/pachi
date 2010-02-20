@@ -450,7 +450,7 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 	    && trait_at(board, coord, color).safe)
 		value *= board->gamma->gamma[FEAT_AESCAPE][0];
 	if (!trait_at(board, coord, color).safe)
-		value *= board->gamma->gamma[FEAT_SELFATARI][0];
+		value *= board->gamma->gamma[FEAT_SELFATARI][1];
 	probdist_set(&board->prob[color - 1], coord, value);
 #endif
 }

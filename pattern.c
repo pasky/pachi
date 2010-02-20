@@ -68,7 +68,7 @@ static const struct feature_info {
 	[FEAT_PASS] = { .name = "pass", .payloads = 2 },
 	[FEAT_CAPTURE] = { .name = "capture", .payloads = 16 },
 	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 2 },
-	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 2 },
+	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
 	[FEAT_BORDER] = { .name = "border", .payloads = -1 },
 	[FEAT_LDIST] = { .name = "ldist", .payloads = -1 },
@@ -403,14 +403,18 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 	}
 
 	if (PS_ANY(SELFATARI)) {
-		bool simple = is_simple_selfatari(b, m->color, m->coord);
+		bool simple = false;
+		if (PS_PF(SELFATARI, STUPID)) {
+			simple = is_simple_selfatari(b, m->color, m->coord);
+		}
 		bool thorough = false;
 		if (PS_PF(SELFATARI, SMART)) {
 			thorough = is_bad_selfatari(b, m->color, m->coord);
 		}
 		if (simple || thorough) {
 			f->id = FEAT_SELFATARI;
-			f->payload = thorough << PF_SELFATARI_SMART;
+			f->payload = simple << PF_SELFATARI_STUPID;
+			f->payload |= thorough << PF_SELFATARI_SMART;
 			(f++, p->n++);
 		}
 	}
