@@ -438,14 +438,13 @@ board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 static inline bool
 board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 {
-	return (
-		  /* number of free neighbors, except us */
-		  immediate_liberty_count(b, coord) - 1
-		  /* number of capturable enemy groups */
-		  + trait_at(b, coord, color).cap
-		  /* number of non-capturable friendly groups */
-		  + neighbor_count_at(b, coord, color) - trait_at(b, coord, stone_other(color)).cap
-		 ) > 0;
+	/* number of free neighbors */
+	int escape_routes = immediate_liberty_count(b, coord);
+	/* number of capturable enemy groups */
+	int cap_enemy = trait_at(b, coord, color).cap;
+	/* number of non-capturable friendly groups */
+	int noncap_ours = neighbor_count_at(b, coord, color) - trait_at(b, coord, stone_other(color)).cap;
+	return (escape_routes - 1 + cap_enemy + noncap_ours) > 0;
 }
 #endif
 
