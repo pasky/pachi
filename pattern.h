@@ -173,7 +173,7 @@ void pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p
 struct features_gamma {
 	/* Indexed by feature and payload; each feature array is allocated for
 	 * all possible payloads to fit in. */
-	float *gamma[FEAT_MAX];
+	double *gamma[FEAT_MAX];
 	struct pattern_config *pc;
 };
 /* Default gamma filename to use. */
@@ -184,14 +184,14 @@ extern const char *features_gamma_filename;
 struct features_gamma *features_gamma_init(struct pattern_config *pc, const char *file);
 
 /* Look up gamma of given feature, or set one if gamma is not NULL. */
-static float feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma);
+static double feature_gamma(struct features_gamma *fg, struct feature *f, double *gamma);
 
 /* Destroy the structure. */
 void features_gamma_done(struct features_gamma *fg);
 
 
-static inline float
-feature_gamma(struct features_gamma *fg, struct feature *f, float *gamma)
+static inline double
+feature_gamma(struct features_gamma *fg, struct feature *f, double *gamma)
 {
 	if (gamma) fg->gamma[f->id][f->payload] = *gamma;
 	return fg->gamma[f->id][f->payload];

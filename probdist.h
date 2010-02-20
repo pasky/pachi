@@ -15,8 +15,8 @@
 
 struct probdist {
 	int n;
-	float *items; // [n], items[i] = P(pick==i)
-	float total;
+	double *items; // [n], items[i] = P(pick==i)
+	double total;
 };
 #define probdist_total(pd) ((pd)->total)
 #define probdist_one(pd, i) ((pd)->items[i])
@@ -24,7 +24,7 @@ struct probdist {
  * for probdist.total inaccuracies. */
 #define PROBDIST_EPSILON 0.05
 
-static void probdist_set(struct probdist *pd, int i, float val);
+static void probdist_set(struct probdist *pd, int i, double val);
 
 int probdist_pick(struct probdist *pd);
 
@@ -33,7 +33,7 @@ int probdist_pick(struct probdist *pd);
  * part of code, and also the compiler is reluctant to inline the
  * functions otherwise. */
 static inline void
-probdist_set(struct probdist *pd, int i, float val)
+probdist_set(struct probdist *pd, int i, double val)
 {
 #if 0
 	assert(i >= 0 && i < pd->n);

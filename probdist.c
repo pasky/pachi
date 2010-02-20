@@ -11,7 +11,7 @@
 int
 probdist_pick(struct probdist *pd)
 {
-	float total = probdist_total(pd) - PROBDIST_EPSILON;
+	double total = probdist_total(pd) - PROBDIST_EPSILON;
 	assert(total >= 0);
 	/* TODO: float random */
 	double stab = fast_frandom() * total;

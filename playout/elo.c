@@ -86,7 +86,7 @@ skip_move:
 
 		moves++;
 		/* Each valid move starts with gamma 1. */
-		float g = 1.f;
+		double g = 1.f;
 
 		/* Some easy features: */
 		/* XXX: We just disable them for now since we call the
@@ -101,7 +101,7 @@ skip_move:
 		pattern_match(&ps->pc, ps->ps, &p, b, &m);
 		for (int i = 0; i < p.n; i++) {
 			/* Multiply together gammas of all pattern features. */
-			float gamma = feature_gamma(ps->fg, &p.f[i], NULL);
+			double gamma = feature_gamma(ps->fg, &p.f[i], NULL);
 			//char buf[256] = ""; feature2str(buf, &p.f[i]);
 			//fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
 			g *= gamma;
@@ -135,7 +135,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 #if 0
 	/* Compare to the manually created distribution. */
 	if (pd->total >= PROBDIST_EPSILON) {
-		float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
+		double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
 		struct probdist pdx = { .n = b->flen, .items = pdi, .total = 0 };
 		elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
 		for (int i = 0; i < pdx.n; i++) {
@@ -174,7 +174,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	return c;
 
 #else
-	float pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
+	double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
 	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	if (pp->callback)
@@ -190,7 +190,7 @@ void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct elo_policy *pp = p->data;
-	float pdi[map->b->flen]; memset(pdi, 0, sizeof(pdi));
+	double pdi[map->b->flen]; memset(pdi, 0, sizeof(pdi));
 	struct probdist pd = { .n = map->b->flen, .items = pdi, .total = 0 };
 
 	int moves;

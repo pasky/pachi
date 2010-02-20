@@ -522,7 +522,7 @@ features_gamma_load(struct features_gamma *fg, const char *filename)
 		struct feature f;
 		bufp = str2feature(bufp, &f);
 		while (isspace(*bufp)) bufp++;
-		float gamma = strtof(bufp, &bufp);
+		double gamma = strtod(bufp, &bufp);
 		/* Record feature's gamma. */
 		feature_gamma(fg, &f, &gamma);
 		/* In case of 3x3 patterns, record gamma also
@@ -549,7 +549,7 @@ features_gamma_init(struct pattern_config *pc, const char *file)
 	fg->pc = pc;
 	for (int i = 0; i < FEAT_MAX; i++) {
 		int n = feature_payloads(pc, i);
-		fg->gamma[i] = malloc(n * sizeof(float));
+		fg->gamma[i] = malloc(n * sizeof(fg->gamma[0][0]));
 		for (int j = 0; j < n; j++) {
 			fg->gamma[i][j] = 1.0f;
 		}

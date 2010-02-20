@@ -437,7 +437,7 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 
 	/* We just quickly replicate the general pattern matcher stuff
 	 * here in the most bare-bone way. */
-	float value = board->gamma->gamma[FEAT_PATTERN3][pat];
+	double value = board->gamma->gamma[FEAT_PATTERN3][pat];
 	if (trait_at(board, coord, color).cap)
 		value *= board->gamma->gamma[FEAT_CAPTURE][0];
 	if (trait_at(board, coord, stone_other(color)).cap
