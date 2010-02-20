@@ -93,19 +93,10 @@ struct btraits {
 	 * (can be multiple neighbors of same group). */
 	unsigned cap:3;
 	/* Whether it is SAFE to play here. This is essentially just
-	 * cached result of the macro below. (Of course the concept
+	 * cached result of board_safe_to_play(). (Of course the concept
 	 * of "safety" is not perfect here, but it's the cheapest
 	 * reasonable thing we can do.) */
 	bool safe:1;
-#define board_safe_to_play(b_, coord_, color_) \
-		(( \
-		  /* number of free neighbors, except us */ \
-		  immediate_liberty_count(b_, coord_) - 1 \
-		  /* number of capturable enemy groups */ \
-		  + trait_at(b_, coord_, color_).cap \
-		  /* number of non-capturable friendly groups */ \
-		  + neighbor_count_at(b_, coord_, color_) - trait_at(b_, coord_, stone_other(color_)).cap \
-		 ) > 0)
 };
 
 
@@ -295,6 +286,10 @@ static bool board_is_valid_move(struct board *b, struct move *m);
 static bool board_playing_ko_threat(struct board *b);
 /* Returns 0 or ID of neighboring group in atari. */
 static group_t board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color);
+#ifdef BOARD_TRAITS
+/* Returns true if the move is not obvious self-atari. */
+static bool board_safe_to_play(struct board *b, coord_t coord, enum stone color);
+#endif
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
@@ -438,5 +433,20 @@ board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 	});
 	return 0;
 }
+
+#ifdef BOARD_TRAITS
+static inline bool
+board_safe_to_play(struct board *b, coord_t coord, enum stone color)
+{
+	return (
+		  /* number of free neighbors, except us */
+		  immediate_liberty_count(b, coord) - 1
+		  /* number of capturable enemy groups */
+		  + trait_at(b, coord, color).cap
+		  /* number of non-capturable friendly groups */
+		  + neighbor_count_at(b, coord, color) - trait_at(b, coord, stone_other(color)).cap
+		 ) > 0;
+}
+#endif
 
 #endif
