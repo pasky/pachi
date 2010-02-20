@@ -463,6 +463,7 @@ board_traits_recompute(struct board *board)
 #ifdef BOARD_TRAITS
 	for (int i = 0; i < board->tqlen; i++) {
 		coord_t coord = board->tq[i];
+		if (board_at(board, coord) != S_NONE) continue;
 		trait_at(board, coord, S_BLACK).safe = board_safe_to_play(board, coord, S_BLACK);
 		trait_at(board, coord, S_WHITE).safe = board_safe_to_play(board, coord, S_WHITE);
 		if (DEBUGL(8)) {
@@ -1119,7 +1120,6 @@ board_play_outside(struct board *board, struct move *m, int f)
 	board->last_move = *m;
 	board->moves++;
 	board_hash_update(board, coord, color);
-	board_traits_recompute(board);
 	board_symmetry_update(board, &board->symmetry, coord);
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
@@ -1239,6 +1239,7 @@ board_play_f(struct board *board, struct move *m, int f)
 			board_group_capture(board, group);
 		}
 		board_hash_commit(board);
+		board_traits_recompute(board);
 		return 0;
 	} else {
 		return board_play_in_eye(board, m, f);
