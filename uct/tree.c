@@ -435,7 +435,7 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
  * Prune the subtree if necessary to fit in max_size bytes or
  * to save time scanning the tree.
  * Returns the moved node. Only for fast_alloc. */
-static struct tree_node *
+struct tree_node *
 tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node *node)
 {
 	assert(tree->nodes && !node->parent && !node->sibling);

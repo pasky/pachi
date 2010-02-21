@@ -122,6 +122,7 @@ void tree_merge(struct tree *dest, struct tree *src);
 void tree_normalize(struct tree *tree, int factor);
 
 struct tree_node *tree_get_node(struct tree *tree, struct tree_node *node, coord_t c, bool create);
+struct tree_node *tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node **node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 

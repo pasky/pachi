@@ -366,6 +366,12 @@ spawn_thread_manager(void *ctx_)
 
 	uct_halt = 0;
 
+	/* Garbage collect the tree by preference when pondering. */
+	if (u->pondering && t->nodes && t->nodes_size > t->max_tree_size/2) {
+		unsigned long temp_size = (MIN_FREE_MEM_PERCENT * t->max_tree_size) / 100;
+		t->root = tree_garbage_collect(t, temp_size, t->root);
+	}
+
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
