@@ -426,6 +426,11 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 #define LARGE_TREE_PLAYOUTS 40000
 #define MIN_DEEP_PLAYOUTS 40
 
+/* Garbage collect the tree early if the top node has < 5K playouts,
+ * to avoid having to do it later on a large subtree.
+ * This guarantees garbage collection in < 1s. */
+#define SMALL_TREE_PLAYOUTS 5000
+
 /* Free all the tree, keeping only the subtree rooted at node.
  * Prune the subtree if necessary to fit in max_size bytes or
  * to save time scanning the tree.
@@ -879,10 +884,11 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 		 * trees, so we must do it asynchronously: */
 		tree_done_node_detached(tree, tree->root);
 	} else {
+		/* Garbage collect if we run out of memory, or it is cheap to do so now: */
 		unsigned long min_free_size = (MIN_FREE_MEM_PERCENT * tree->max_tree_size) / 100;
-		if (tree->nodes_size >= tree->max_tree_size - min_free_size)
+		if (tree->nodes_size >= tree->max_tree_size - min_free_size
+		    || (tree->nodes_size >= min_free_size && (*node)->u.playouts < SMALL_TREE_PLAYOUTS))
 			*node = tree_garbage_collect(tree, min_free_size, *node);
-		/* If we still have enough free memory, we will free everything later. */
 	}
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);
