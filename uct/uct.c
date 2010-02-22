@@ -1123,7 +1123,7 @@ uct_state_init(char *arg, struct board *b)
 		exit(1);
 	}
 	if (u->fast_alloc)
-		u->max_tree_size = (100 * u->max_tree_size) / (100 + MIN_FREE_MEM_PERCENT);
+		u->max_tree_size = (100ULL * u->max_tree_size) / (100 + MIN_FREE_MEM_PERCENT);
 
 	if (!u->prior)
 		u->prior = uct_prior_init(NULL, b);

@@ -146,6 +146,6 @@ tree_leaf_node(struct tree_node *node)
 }
 
 /* Leave always at least 10% memory free for the next move: */
-#define MIN_FREE_MEM_PERCENT 10
+#define MIN_FREE_MEM_PERCENT 10ULL
 
 #endif
