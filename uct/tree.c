@@ -463,11 +463,8 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	 * to save time scanning the source tree. It can take over 20s to traverse
 	 * completely a large source tree (20 GB) even without copying because
 	 * the traversal is not friendly at all with the memory cache. */
-	if (node->u.playouts < LARGE_TREE_PLAYOUTS) {
-		temp_node = tree_prune(temp_tree, tree, node, 0, max_depth + 20);
-	} else {
-		temp_node = tree_prune(temp_tree, tree, node, MIN_DEEP_PLAYOUTS, max_depth);
-	}
+	int threshold = node->u.playouts < LARGE_TREE_PLAYOUTS ? 0 : MIN_DEEP_PLAYOUTS;
+	temp_node = tree_prune(temp_tree, tree, node, threshold, max_depth);
 	assert(temp_node);
 
 	/* Now copy back to original tree. */
