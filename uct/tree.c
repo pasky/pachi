@@ -413,18 +413,19 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 
 /* The following constants are used for garbage collection of nodes.
  * A tree is considered large if the top node has >= 40K playouts.
- * For such trees, we copy deep nodes only if they have >= 40 playouts.
+ * For such trees, we copy deep nodes only if they have enough
+ * playouts, with a gradually increasing threshold up to 40.
  * These constants define how much time we're willing to spend
- * scanning the source tree when promoting a move. The values 40K
- * and 40 makes worst case pruning in about 3s for 20 GB ram, and this
+ * scanning the source tree when promoting a move. The chosen values
+ * make worst case pruning in about 3s for 20 GB ram, and this
  * is only for long thinking time (>1M playouts). For fast games the
  * trees don't grow large. For small ram or fast game we copy the
  * entire tree.  These values do not degrade playing strength and are
- * necessary to avoid losing on time; increasing MIN_DEEP_PLAYOUTS
+ * necessary to avoid losing on time; increasing DEEP_PLAYOUTS_THRESHOLD
  * or decreasing LARGE_TREE_PLAYOUTS will make the program faster but
  * playing worse. */
-#define LARGE_TREE_PLAYOUTS 40000
-#define MIN_DEEP_PLAYOUTS 40
+#define LARGE_TREE_PLAYOUTS 40000LL
+#define DEEP_PLAYOUTS_THRESHOLD 40
 
 /* Garbage collect the tree early if the top node has < 5K playouts,
  * to avoid having to do it later on a large subtree.
@@ -458,12 +459,14 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	}
 
 	/* Copy all nodes for small trees. For large trees, copy all nodes
-	 * with depth <= max_depth, and all nodes with at least MIN_DEEP_PLAYOUTS.
+	 * with depth <= max_depth, and all nodes with enough playouts.
 	 * Avoiding going too deep (except for nodes with many playouts) is mostly
 	 * to save time scanning the source tree. It can take over 20s to traverse
 	 * completely a large source tree (20 GB) even without copying because
 	 * the traversal is not friendly at all with the memory cache. */
-	int threshold = node->u.playouts < LARGE_TREE_PLAYOUTS ? 0 : MIN_DEEP_PLAYOUTS;
+	int threshold = (node->u.playouts - LARGE_TREE_PLAYOUTS) * DEEP_PLAYOUTS_THRESHOLD / LARGE_TREE_PLAYOUTS;
+	if (threshold < 0) threshold = 0;
+	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD; 
 	temp_node = tree_prune(temp_tree, tree, node, threshold, max_depth);
 	assert(temp_node);
 
