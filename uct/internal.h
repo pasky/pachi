@@ -51,7 +51,7 @@ struct uct {
 	int fuseki_end;
 	int yose_start;
 
-	int dynkomi;
+	int dynkomi_moves;
 	int dynkomi_mask;
 	int handicap_value;
 

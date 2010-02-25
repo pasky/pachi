@@ -23,7 +23,7 @@
 float
 uct_get_extra_komi(struct uct *u, struct board *b)
 {
-	float extra_komi = board_effective_handicap(b, u->handicap_value) * (u->dynkomi - b->moves) / u->dynkomi;
+	float extra_komi = board_effective_handicap(b, u->handicap_value) * (u->dynkomi_moves - b->moves) / u->dynkomi_moves;
 	return extra_komi;
 }
 
@@ -397,7 +397,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		amaf->record_nakade = u->playout_amaf_nakade;
 	}
 
-	if (u->dynkomi > b2.moves && t->use_extra_komi)
+	if (u->dynkomi_moves > b2.moves && t->use_extra_komi)
 		b2.komi += uct_get_extra_komi(u, &b2);
 
 	if (passes >= 2) {

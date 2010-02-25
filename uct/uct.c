@@ -86,7 +86,7 @@ reset_state(struct uct *u)
 static void
 setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
-	if (u->dynkomi > b->moves && u->t->use_extra_komi)
+	if (u->dynkomi_moves > b->moves && u->t->use_extra_komi)
 		u->t->extra_komi = uct_get_extra_komi(u, b);
 	else
 		u->t->extra_komi = 0;
@@ -823,7 +823,7 @@ uct_state_init(char *arg, struct board *b)
 	u->max_tree_size = 3072ULL * 1048576;
 
 	if (board_size(b) - 2 >= 19)
-		u->dynkomi = 200;
+		u->dynkomi_moves = 200;
 	u->dynkomi_mask = S_BLACK;
 	u->handicap_value = 7;
 
@@ -994,11 +994,11 @@ uct_state_init(char *arg, struct board *b)
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
 				u->no_book = true;
-			} else if (!strcasecmp(optname, "dynkomi")) {
+			} else if (!strcasecmp(optname, "dynkomi_moves")) {
 				/* Dynamic komi in handicap game; linearly
 				 * decreases to basic settings until move
 				 * #optval. */
-				u->dynkomi = optval ? atoi(optval) : 200;
+				u->dynkomi_moves = optval ? atoi(optval) : 200;
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; you may want
