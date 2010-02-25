@@ -7,7 +7,7 @@ struct tree;
 struct uct;
 struct board;
 
-float uct_get_extra_komi(struct uct *u, struct board *b);
+float uct_linear_dynkomi(struct uct *u, struct board *b);
 void uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts);
 
 int uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t);

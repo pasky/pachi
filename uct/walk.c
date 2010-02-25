@@ -21,7 +21,7 @@
 #include "uct/walk.h"
 
 float
-uct_get_extra_komi(struct uct *u, struct board *b)
+uct_linear_dynkomi(struct uct *u, struct board *b)
 {
 	float extra_komi = board_effective_handicap(b, u->handicap_value) * (u->dynkomi_moves - b->moves) / u->dynkomi_moves;
 	return extra_komi;
@@ -399,8 +399,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	if (t->use_extra_komi) {
 		assert(u->dynkomi == DYNKOMI_LINEAR);
-		if (u->dynkomi_moves > b2.moves)
-			b2.komi += uct_get_extra_komi(u, &b2);
+		if (b2.moves < u->dynkomi_moves)
+			b2.komi += uct_linear_dynkomi(u, &b2);
 	}
 
 	if (passes >= 2) {

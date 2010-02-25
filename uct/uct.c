@@ -88,8 +88,8 @@ setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
 	if (u->dynkomi != DYNKOMI_LINEAR)
 		return;
-	if (u->dynkomi_moves > b->moves && u->t->use_extra_komi)
-		u->t->extra_komi = uct_get_extra_komi(u, b);
+	if (b->moves < u->dynkomi_moves && u->t->use_extra_komi)
+		u->t->extra_komi = uct_linear_dynkomi(u, b);
 	else
 		u->t->extra_komi = 0;
 }
