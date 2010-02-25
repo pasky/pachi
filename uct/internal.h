@@ -51,8 +51,13 @@ struct uct {
 	int fuseki_end;
 	int yose_start;
 
-	int dynkomi_moves;
+	enum uct_dynkomi {
+		DYNKOMI_NONE,
+		DYNKOMI_LINEAR, // Linearly Decreasing Handicap Compensation
+	} dynkomi;
+	/* DYNKOMI_LINEAR. */
 	int dynkomi_mask;
+	int dynkomi_moves;
 	int handicap_value;
 
 	float val_scale;

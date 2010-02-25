@@ -86,6 +86,8 @@ reset_state(struct uct *u)
 static void
 setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
+	if (u->dynkomi != DYNKOMI_LINEAR)
+		return;
 	if (u->dynkomi_moves > b->moves && u->t->use_extra_komi)
 		u->t->extra_komi = uct_get_extra_komi(u, b);
 	else
@@ -703,7 +705,10 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	/* How to decide whether to use dynkomi in this game? Since we use
 	 * pondering, it's not simple "who-to-play" matter. Decide based on
 	 * the last genmove issued. */
-	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
+	if (u->dynkomi == DYNKOMI_LINEAR)
+		u->t->use_extra_komi = !!(u->dynkomi_mask & color);
+	else
+		u->t->use_extra_komi = u->dynkomi != DYNKOMI_NONE;
 	setup_dynkomi(u, b, color);
 
 	/* Make pessimistic assumption about komi for Japanese rules to
@@ -822,6 +827,7 @@ uct_state_init(char *arg, struct board *b)
 	u->amaf_prior = false;
 	u->max_tree_size = 3072ULL * 1048576;
 
+	u->dynkomi = DYNKOMI_LINEAR;
 	if (board_size(b) - 2 >= 19)
 		u->dynkomi_moves = 200;
 	u->dynkomi_mask = S_BLACK;
@@ -994,6 +1000,20 @@ uct_state_init(char *arg, struct board *b)
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
 				u->no_book = true;
+			} else if (!strcasecmp(optname, "dynkomi") && optval) {
+				/* Dynamic komi approach; there are multiple
+				 * ways to adjust komi dynamically throughout
+				 * play. We currently support two: */
+				if (!strcasecmp(optval, "none")) {
+					/* We play the whole game with fixed komi. */
+					u->dynkomi = DYNKOMI_NONE;
+				} else if (!strcasecmp(optval, "linear")) {
+					/* Linearly decreasing handicap compensation. */
+					u->dynkomi = DYNKOMI_LINEAR;
+				} else {
+					fprintf(stderr, "UCT: Invalid dynkomi mode %s\n", optval);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "dynkomi_moves")) {
 				/* Dynamic komi in handicap game; linearly
 				 * decreases to basic settings until move
