@@ -86,7 +86,13 @@ struct tree {
 	struct board_symmetry root_symmetry;
 	enum stone root_color;
 
+	/* Whether to use any extra komi during score counting. This is
+	 * tree-specific variable since this can arbitrarily change between
+	 * moves. */
 	bool use_extra_komi;
+	/* The value of applied extra komi. For DYNKOMI_LINEAR, this value
+	 * is only informative, the actual value is computed per simulation
+	 * based on leaf node depth. */
 	float extra_komi;
 
 	/* We merge local (non-tenuki) sequences for both colors, occuring
