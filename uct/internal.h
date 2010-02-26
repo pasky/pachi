@@ -54,9 +54,6 @@ struct uct {
 
 	int dynkomi_mask;
 	struct uct_dynkomi *dynkomi;
-	/* DYNKOMI_LINEAR. */
-	int dynkomi_moves;
-	int handicap_value;
 
 	float val_scale;
 	int val_points;
