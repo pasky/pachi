@@ -44,16 +44,22 @@ uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b)
 /* LINEAR dynkomi strategy - Linearly Decreasing Handicap Compensation. */
 /* At move 0, we impose extra komi of handicap_count*handicap_value, then
  * we linearly decrease this extra komi throughout the game down to 0
- * at dynkomi_moves moves. */
+ * at @moves moves. */
+
+struct dynkomi_linear {
+	int handicap_value;
+	int moves;
+};
 
 float
 uct_dynkomi_linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
-	if (b->moves >= d->uct->dynkomi_moves)
+	struct dynkomi_linear *l = d->data;
+	if (b->moves >= l->moves)
 		return 0;
 
-	float base_komi = board_effective_handicap(b, d->uct->handicap_value);
-	float extra_komi = base_komi * (d->uct->dynkomi_moves - b->moves) / d->uct->dynkomi_moves;
+	float base_komi = board_effective_handicap(b, l->handicap_value);
+	float extra_komi = base_komi * (l->moves - b->moves) / l->moves;
 	return extra_komi;
 }
 
@@ -75,11 +81,39 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	d->permove = uct_dynkomi_linear_permove;
 	d->persim = uct_dynkomi_linear_persim;
 	d->done = uct_dynkomi_generic_done;
-	d->data = NULL;
+
+	struct dynkomi_linear *l = calloc(1, sizeof(*l));
+	d->data = l;
+
+	if (board_size(b) - 2 >= 19)
+		l->moves = 200;
+	l->handicap_value = 7;
 
 	if (arg) {
-		fprintf(stderr, "uct: Dynkomi method linear accepts no arguments\n");
-		exit(1);
+		char *optspec, *next = arg;
+		while (*next) {
+			optspec = next;
+			next += strcspn(next, ":");
+			if (*next) { *next++ = 0; } else { *next = 0; }
+
+			char *optname = optspec;
+			char *optval = strchr(optspec, '=');
+			if (optval) *optval++ = 0;
+
+			if (!strcasecmp(optname, "moves") && optval) {
+				/* Dynamic komi in handicap game; linearly
+				 * decreases to basic settings until move
+				 * #optval. */
+				l->moves = atoi(optval);
+			} else if (!strcasecmp(optname, "handicap_value") && optval) {
+				/* Point value of single handicap stone,
+				 * for dynkomi computation. */
+				l->handicap_value = atoi(optval);
+			} else {
+				fprintf(stderr, "uct: Invalid dynkomi argument %s or missing value\n", optname);
+				exit(1);
+			}
+		}
 	}
 
 	return d;

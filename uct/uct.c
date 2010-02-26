@@ -821,10 +821,7 @@ uct_state_init(char *arg, struct board *b)
 	u->amaf_prior = false;
 	u->max_tree_size = 3072ULL * 1048576;
 
-	if (board_size(b) - 2 >= 19)
-		u->dynkomi_moves = 200;
 	u->dynkomi_mask = S_BLACK;
-	u->handicap_value = 7;
 
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
@@ -1008,21 +1005,12 @@ uct_state_init(char *arg, struct board *b)
 					fprintf(stderr, "UCT: Invalid dynkomi mode %s\n", optval);
 					exit(1);
 				}
-			} else if (!strcasecmp(optname, "dynkomi_moves")) {
-				/* Dynamic komi in handicap game; linearly
-				 * decreases to basic settings until move
-				 * #optval. */
-				u->dynkomi_moves = optval ? atoi(optval) : 200;
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; you may want
 				 * to use dynkomi_mask=3 to allow dynkomi
 				 * even in games where Pachi is white. */
 				u->dynkomi_mask = atoi(optval);
-			} else if (!strcasecmp(optname, "handicap_value") && optval) {
-				/* Point value of single handicap stone,
-				 * for dynkomi computation. */
-				u->handicap_value = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
 				 * influenced by win size. Zero means it isn't. */
