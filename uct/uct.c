@@ -365,6 +365,12 @@ spawn_thread_manager(void *ctx_)
 
 	uct_halt = 0;
 
+	/* Garbage collect the tree by preference when pondering. */
+	if (u->pondering && t->nodes && t->nodes_size > t->max_tree_size/2) {
+		unsigned long temp_size = (MIN_FREE_MEM_PERCENT * t->max_tree_size) / 100;
+		t->root = tree_garbage_collect(t, temp_size, t->root);
+	}
+
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
@@ -1077,6 +1083,7 @@ uct_state_init(char *arg, struct board *b)
 				u->random_policy_chance = atoi(optval);
 			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
 				/* Maximum amount of memory [MiB] consumed by the move tree.
+				 * For fast_alloc it includes the temp tree used for pruning.
 				 * Default is 3072 (3 GiB). Note that if you use TM_ROOT,
 				 * this limits size of only one of the trees, not all of them
 				 * together. */
@@ -1117,6 +1124,8 @@ uct_state_init(char *arg, struct board *b)
 		fprintf(stderr, "fast_alloc not supported with root parallelization.\n");
 		exit(1);
 	}
+	if (u->fast_alloc)
+		u->max_tree_size = (100ULL * u->max_tree_size) / (100 + MIN_FREE_MEM_PERCENT);
 
 	if (!u->prior)
 		u->prior = uct_prior_init(NULL, b);

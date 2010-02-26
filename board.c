@@ -15,6 +15,9 @@
 #ifdef BOARD_PAT3
 #include "pattern3.h"
 #endif
+#ifdef BOARD_TRAITS
+#include "tactics.h"
+#endif
 #ifdef BOARD_GAMMA
 #include "pattern.h"
 #endif
@@ -404,15 +407,16 @@ board_print(struct board *board, FILE *f)
 	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL);
 }
 
+static void board_trait_recompute(struct board *board, coord_t coord);
 void
-board_gamma_set(struct board *b, struct features_gamma *gamma)
+board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_selfatari)
 {
 #ifdef BOARD_GAMMA
 	b->gamma = gamma;
+	b->precise_selfatari = precise_selfatari;
 	for (int i = 0; i < b->flen; i++) {
 		if (is_pass(b->f[i])) continue;
-		board_gamma_update(b, b->f[i], S_BLACK);
-		board_gamma_update(b, b->f[i], S_WHITE);
+		board_trait_recompute(b, b->f[i]);
 	}
 #endif
 }
@@ -450,8 +454,37 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 	    && trait_at(board, coord, color).safe)
 		value *= board->gamma->gamma[FEAT_AESCAPE][0];
 	if (!trait_at(board, coord, color).safe)
-		value *= board->gamma->gamma[FEAT_SELFATARI][0];
+		value *= board->gamma->gamma[FEAT_SELFATARI][1 + board->precise_selfatari];
 	probdist_set(&board->prob[color - 1], coord, value);
+#endif
+}
+
+#ifdef BOARD_TRAITS
+static bool
+board_trait_safe(struct board *board, coord_t coord, enum stone color)
+{
+	/* sic! */
+	if (board->precise_selfatari)
+		return is_bad_selfatari(board, color, coord);
+	else
+		return board_safe_to_play(board, coord, color);
+}
+#endif
+
+static void
+board_trait_recompute(struct board *board, coord_t coord)
+{
+#ifdef BOARD_TRAITS
+	trait_at(board, coord, S_BLACK).safe = board_trait_safe(board, coord, S_BLACK);;
+	trait_at(board, coord, S_WHITE).safe = board_trait_safe(board, coord, S_WHITE);
+	if (DEBUGL(8)) {
+		fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d safe=%d) (white cap=%d safe=%d)\n",
+			coord2sstr(coord, board), stone2str(board_at(board, coord)), immediate_liberty_count(board, coord),
+			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).safe,
+			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).safe);
+	}
+	board_gamma_update(board, coord, S_BLACK);
+	board_gamma_update(board, coord, S_WHITE);
 #endif
 }
 
@@ -465,16 +498,7 @@ board_traits_recompute(struct board *board)
 		coord_t coord = board->tq[i];
 		if (!trait_at(board, coord, S_BLACK).dirty) continue;
 		if (board_at(board, coord) != S_NONE) continue;
-		trait_at(board, coord, S_BLACK).safe = board_safe_to_play(board, coord, S_BLACK);
-		trait_at(board, coord, S_WHITE).safe = board_safe_to_play(board, coord, S_WHITE);
-		if (DEBUGL(8)) {
-			fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d safe=%d) (white cap=%d safe=%d)\n",
-				coord2sstr(coord, board), stone2str(board_at(board, coord)), immediate_liberty_count(board, coord),
-				trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).safe,
-				trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).safe);
-		}
-		board_gamma_update(board, coord, S_BLACK);
-		board_gamma_update(board, coord, S_WHITE);
+		board_trait_recompute(board, coord);
 		trait_at(board, coord, S_BLACK).dirty = false;
 	}
 	board->tqlen = 0;
@@ -1141,7 +1165,7 @@ board_play_outside(struct board *board, struct move *m, int f)
 			a += g && (board_at(board, c) == other_color && board_group_info(board, g).libs == 1);
 		});
 		assert(a == trait_at(board, coord, color).cap);
-		assert(board_safe_to_play(board, coord, color) == trait_at(board, coord, color).safe);
+		assert(board_trait_safe(board, coord, color) == trait_at(board, coord, color).safe);
 	}
 #endif
 	foreach_neighbor(board, coord, {
@@ -1207,7 +1231,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 #ifdef BOARD_TRAITS
 	/* We _will_ for sure capture something. */
 	assert(trait_at(board, coord, color).cap > 0);
-	assert(trait_at(board, coord, color).safe == board_safe_to_play(board, coord, color));
+	assert(trait_at(board, coord, color).safe == board_trait_safe(board, coord, color));
 #endif
 
 	board->f[f] = board->f[--board->flen];

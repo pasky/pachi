@@ -413,24 +413,30 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 
 /* The following constants are used for garbage collection of nodes.
  * A tree is considered large if the top node has >= 40K playouts.
- * For such trees, we copy deep nodes only if they have >= 40 playouts.
+ * For such trees, we copy deep nodes only if they have enough
+ * playouts, with a gradually increasing threshold up to 40.
  * These constants define how much time we're willing to spend
- * scanning the source tree when promoting a move. The values 40K
- * and 40 makes worst case pruning in about 3s for 20 GB ram, and this
+ * scanning the source tree when promoting a move. The chosen values
+ * make worst case pruning in about 3s for 20 GB ram, and this
  * is only for long thinking time (>1M playouts). For fast games the
  * trees don't grow large. For small ram or fast game we copy the
  * entire tree.  These values do not degrade playing strength and are
- * necessary to avoid losing on time; increasing MIN_DEEP_PLAYOUTS
+ * necessary to avoid losing on time; increasing DEEP_PLAYOUTS_THRESHOLD
  * or decreasing LARGE_TREE_PLAYOUTS will make the program faster but
  * playing worse. */
-#define LARGE_TREE_PLAYOUTS 40000
-#define MIN_DEEP_PLAYOUTS 40
+#define LARGE_TREE_PLAYOUTS 40000LL
+#define DEEP_PLAYOUTS_THRESHOLD 40
+
+/* Garbage collect the tree early if the top node has < 5K playouts,
+ * to avoid having to do it later on a large subtree.
+ * This guarantees garbage collection in < 1s. */
+#define SMALL_TREE_PLAYOUTS 5000
 
 /* Free all the tree, keeping only the subtree rooted at node.
  * Prune the subtree if necessary to fit in max_size bytes or
  * to save time scanning the tree.
  * Returns the moved node. Only for fast_alloc. */
-static struct tree_node *
+struct tree_node *
 tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node *node)
 {
 	assert(tree->nodes && !node->parent && !node->sibling);
@@ -453,16 +459,15 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	}
 
 	/* Copy all nodes for small trees. For large trees, copy all nodes
-	 * with depth <= max_depth, and all nodes with at least MIN_DEEP_PLAYOUTS.
+	 * with depth <= max_depth, and all nodes with enough playouts.
 	 * Avoiding going too deep (except for nodes with many playouts) is mostly
 	 * to save time scanning the source tree. It can take over 20s to traverse
 	 * completely a large source tree (20 GB) even without copying because
 	 * the traversal is not friendly at all with the memory cache. */
-	if (node->u.playouts < LARGE_TREE_PLAYOUTS) {
-		temp_node = tree_prune(temp_tree, tree, node, 0, max_depth + 20);
-	} else {
-		temp_node = tree_prune(temp_tree, tree, node, MIN_DEEP_PLAYOUTS, max_depth);
-	}
+	int threshold = (node->u.playouts - LARGE_TREE_PLAYOUTS) * DEEP_PLAYOUTS_THRESHOLD / LARGE_TREE_PLAYOUTS;
+	if (threshold < 0) threshold = 0;
+	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD; 
+	temp_node = tree_prune(temp_tree, tree, node, threshold, max_depth);
 	assert(temp_node);
 
 	/* Now copy back to original tree. */
@@ -879,10 +884,11 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 		 * trees, so we must do it asynchronously: */
 		tree_done_node_detached(tree, tree->root);
 	} else {
+		/* Garbage collect if we run out of memory, or it is cheap to do so now: */
 		unsigned long min_free_size = (MIN_FREE_MEM_PERCENT * tree->max_tree_size) / 100;
-		if (tree->nodes_size >= tree->max_tree_size - min_free_size)
+		if (tree->nodes_size >= tree->max_tree_size - min_free_size
+		    || (tree->nodes_size >= min_free_size && (*node)->u.playouts < SMALL_TREE_PLAYOUTS))
 			*node = tree_garbage_collect(tree, min_free_size, *node);
-		/* If we still have enough free memory, we will free everything later. */
 	}
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);

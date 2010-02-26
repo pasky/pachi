@@ -210,6 +210,9 @@ struct board {
 	/* Gamma values for probability distribution; user must setup
 	 * this pointer before any move is played, using board_gamma_set(). */
 	struct features_gamma *gamma;
+	/* Whether to compute the 'safe' trait using board_safe_to_play()
+	 * (false) or is_bad_selfatari() (true, much slower). */
+	bool precise_selfatari;
 #endif
 
 
@@ -300,7 +303,7 @@ static bool board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
 /* Associate a set of feature gamma values (for pd building) with the board. */
-void board_gamma_set(struct board *b, struct features_gamma *gamma);
+void board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_selfatari);
 /* Force re-compute of a probability distribution item. */
 void board_gamma_update(struct board *b, coord_t coord, enum stone color);
 

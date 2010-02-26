@@ -423,11 +423,11 @@ static const int p3bits[] = { -1,  1, 6, 3, 4,  0, 2, 5, 7 };
 
 
 static hash_t
-pattern3_to_spatial(int pat3)
+pattern3_to_spatial(int r, int pat3)
 {
-	hash_t h = pthashes[0][0][S_NONE];
+	hash_t h = pthashes[r][0][S_NONE];
 	for (int i = 1; i < 9; i++)
-		h ^= pthashes[0][i][(pat3 >> (p3bits[i] * 2)) & 0x3];
+		h ^= pthashes[r][i][(pat3 >> (p3bits[i] * 2)) & 0x3];
 	return h & spatial_hash_mask;
 }
 
@@ -446,8 +446,14 @@ pattern3_by_spatial(struct spatial_dict *dict, int pat3)
 {
 	/* Just pull pat3 through the spatial database to generate
 	 * hash of its canonical form. */
-	hash_t h = pattern3_to_spatial(pat3);
-	int s = spatial_dict_get(dict, 3, h);
+	int s;
+	for (int r = 0; r < PTH__ROTATIONS; r++) {
+		hash_t h = pattern3_to_spatial(r, pat3);
+		s = spatial_dict_get(dict, 3, h);
+		if (s > 0) break;
+		/* We might need to try another rotation in case
+		 * of a collision. */
+	}
 	/* XXX: We assume our spatial dictionary is _sane_, that is,
 	 * all valid 3x3 patterns we could encounter are in the
 	 * dictionary. If you hit this assert(), you probably
