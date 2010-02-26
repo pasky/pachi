@@ -487,7 +487,7 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 		prev_time = start_time;
 	}
 	if (temp_tree->nodes_size >= temp_tree->max_tree_size) {
-		fprintf(stderr, "temp tree overflow, increase max_tree_size %lu or MIN_FREE_MEM_PERCENT %d\n",
+		fprintf(stderr, "temp tree overflow, increase max_tree_size %lu or MIN_FREE_MEM_PERCENT %llu\n",
 			tree->max_tree_size, MIN_FREE_MEM_PERCENT);
 	} else {
 		assert(tree->nodes_size == temp_tree->nodes_size);
