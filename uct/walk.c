@@ -14,19 +14,11 @@
 #include "playout/elo.h"
 #include "probdist.h"
 #include "random.h"
-#include "tactics.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
-
-float
-uct_linear_dynkomi(struct uct *u, struct board *b)
-{
-	float extra_komi = board_effective_handicap(b, u->handicap_value) * (u->dynkomi_moves - b->moves) / u->dynkomi_moves;
-	return extra_komi;
-}
 
 void
 uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)

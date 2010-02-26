@@ -6,10 +6,10 @@
 
 #include "board.h"
 #include "debug.h"
+#include "tactics.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
-#include "uct/walk.h"
 
 
 static void
@@ -51,7 +51,10 @@ uct_dynkomi_linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *
 {
 	if (b->moves >= d->uct->dynkomi_moves)
 		return 0;
-	return uct_linear_dynkomi(d->uct, b);
+
+	float base_komi = board_effective_handicap(b, d->uct->handicap_value);
+	float extra_komi = base_komi * (d->uct->dynkomi_moves - b->moves) / d->uct->dynkomi_moves;
+	return extra_komi;
 }
 
 float
