@@ -49,6 +49,7 @@ uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b)
 struct dynkomi_linear {
 	int handicap_value;
 	int moves;
+	bool rootbased;
 };
 
 float
@@ -66,6 +67,9 @@ uct_dynkomi_linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *
 float
 uct_dynkomi_linear_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node)
 {
+	struct dynkomi_linear *l = d->data;
+	if (l->rootbased)
+		return tree->extra_komi;
 	/* We don't reuse computed value from tree->extra_komi,
 	 * since we want to use value correct for this node depth.
 	 * This also means the values will stay correct after
@@ -109,6 +113,12 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 				/* Point value of single handicap stone,
 				 * for dynkomi computation. */
 				l->handicap_value = atoi(optval);
+			} else if (!strcasecmp(optname, "rootbased")) {
+				/* If set, the extra komi applied will be
+				 * the same for all simulations within a move,
+				 * instead of being same for all simulations
+				 * within the tree node. */
+				l->rootbased = !optval || atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid dynkomi argument %s or missing value\n", optname);
 				exit(1);
