@@ -21,6 +21,7 @@
 #include "random.h"
 #include "timeinfo.h"
 #include "tactics.h"
+#include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
@@ -86,12 +87,8 @@ reset_state(struct uct *u)
 static void
 setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
-	if (u->dynkomi != DYNKOMI_LINEAR)
-		return;
-	if (b->moves < u->dynkomi_moves && u->t->use_extra_komi)
-		u->t->extra_komi = uct_linear_dynkomi(u, b);
-	else
-		u->t->extra_komi = 0;
+	if (u->t->use_extra_komi && u->dynkomi->permove)
+		u->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, u->t);
 }
 
 static void
@@ -705,10 +702,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	/* How to decide whether to use dynkomi in this game? Since we use
 	 * pondering, it's not simple "who-to-play" matter. Decide based on
 	 * the last genmove issued. */
-	if (u->dynkomi == DYNKOMI_LINEAR)
-		u->t->use_extra_komi = !!(u->dynkomi_mask & color);
-	else
-		u->t->use_extra_komi = u->dynkomi != DYNKOMI_NONE;
+	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
 	setup_dynkomi(u, b, color);
 
 	/* Make pessimistic assumption about komi for Japanese rules to
@@ -827,7 +821,6 @@ uct_state_init(char *arg, struct board *b)
 	u->amaf_prior = false;
 	u->max_tree_size = 3072ULL * 1048576;
 
-	u->dynkomi = DYNKOMI_LINEAR;
 	if (board_size(b) - 2 >= 19)
 		u->dynkomi_moves = 200;
 	u->dynkomi_mask = S_BLACK;
@@ -1004,12 +997,13 @@ uct_state_init(char *arg, struct board *b)
 				/* Dynamic komi approach; there are multiple
 				 * ways to adjust komi dynamically throughout
 				 * play. We currently support two: */
+				char *dynkomiarg = strchr(optval, ':');
+				if (dynkomiarg)
+					*dynkomiarg++ = 0;
 				if (!strcasecmp(optval, "none")) {
-					/* We play the whole game with fixed komi. */
-					u->dynkomi = DYNKOMI_NONE;
+					u->dynkomi = uct_dynkomi_init_none(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "linear")) {
-					/* Linearly decreasing handicap compensation. */
-					u->dynkomi = DYNKOMI_LINEAR;
+					u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
 				} else {
 					fprintf(stderr, "UCT: Invalid dynkomi mode %s\n", optval);
 					exit(1);
@@ -1144,6 +1138,9 @@ uct_state_init(char *arg, struct board *b)
 	u->playout->debug_level = u->debug_level;
 
 	u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
+
+	if (!u->dynkomi)
+		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 
 	/* Some things remain uninitialized for now - the opening book
 	 * is not loaded and the tree not set up. */

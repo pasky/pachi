@@ -15,6 +15,7 @@
 #include "probdist.h"
 #include "random.h"
 #include "tactics.h"
+#include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
@@ -397,10 +398,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		amaf->record_nakade = u->playout_amaf_nakade;
 	}
 
-	if (t->use_extra_komi) {
-		assert(u->dynkomi == DYNKOMI_LINEAR);
-		if (b2.moves < u->dynkomi_moves)
-			b2.komi += uct_linear_dynkomi(u, &b2);
+	if (t->use_extra_komi && u->dynkomi->persim) {
+		b2.komi += u->dynkomi->persim(u->dynkomi, &b2, t, n);
 	}
 
 	if (passes >= 2) {

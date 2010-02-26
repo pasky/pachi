@@ -13,6 +13,7 @@ struct tree;
 struct tree_node;
 struct uct_policy;
 struct uct_prior;
+struct uct_dynkomi;
 
 /* Internal UCT structures */
 
@@ -51,12 +52,9 @@ struct uct {
 	int fuseki_end;
 	int yose_start;
 
-	enum uct_dynkomi {
-		DYNKOMI_NONE,
-		DYNKOMI_LINEAR, // Linearly Decreasing Handicap Compensation
-	} dynkomi;
-	/* DYNKOMI_LINEAR. */
 	int dynkomi_mask;
+	struct uct_dynkomi *dynkomi;
+	/* DYNKOMI_LINEAR. */
 	int dynkomi_moves;
 	int handicap_value;
 
