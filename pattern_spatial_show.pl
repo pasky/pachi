@@ -25,7 +25,7 @@ while (<D>) {
 		my @b;
 		my @pc = split (//, $pat);
 		for my $i (0 .. $#pc) {
-			print "$i: $pc[$i] -> $ofs[$i][1],$ofs[$i][0]\n";
+			# print "$i: $pc[$i] -> $ofs[$i][1],$ofs[$i][0]\n";
 			$b[$d + $ofs[$i][1]][$d + $ofs[$i][0]] = $pc[$i];
 		}
 		$b[$d][$d] = '_';
