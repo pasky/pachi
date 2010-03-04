@@ -149,6 +149,8 @@ struct dynkomi_adaptive {
 	 * (Instead, we consider the handicap-based komi provided
 	 * by linear dynkomi.) */
 	int lead_moves;
+	/* Maximum komi to pretend the opponent to give. */
+	float max_losing_komi;
 
 	float (*adapter)(struct dynkomi_adaptive *a, struct board *b);
 	float adapt_base; // [0,1)
@@ -201,6 +203,11 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 	if (tree->score.playouts < 200) // XXX
 		return tree->extra_komi;
 
+	/* Get lower bound on komi value so that we don't underperform
+	 * too much. XXX: We rely on the fact that we don't use dynkomi
+	 * as white for now. */
+	float min_komi = - a->max_losing_komi;
+
 	struct move_stats score = tree->score;
 	/* Almost-reset tree->score to gather fresh stats. */
 	tree->score.playouts = 1;
@@ -209,7 +216,8 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 	float p = a->adapter(a, b);
 	p = a->adapt_base + p * (1 - a->adapt_base);
 	if (p > 0.9) p = 0.9; // don't get too eager!
-	return tree->extra_komi + p * score.value;
+	float extra_komi = tree->extra_komi + p * score.value;
+	return extra_komi > min_komi ? extra_komi : min_komi;
 }
 
 float
@@ -234,6 +242,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 		a->lead_moves = 20;
 	else
 		a->lead_moves = 4; // XXX
+	a->max_losing_komi = 10;
 	a->adapter = adapter_sigmoid;
 	a->adapt_rate = 20;
 	a->adapt_phase = 0.5;
@@ -256,6 +265,9 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				/* Do not adjust komi adaptively for first
 				 * N moves. */
 				a->lead_moves = atoi(optval);
+			} else if (!strcasecmp(optname, "max_losing_komi") && optval) {
+				/* Adaptation base rate; see above. */
+				a->max_losing_komi = atof(optval);
 			} else if (!strcasecmp(optname, "adapter") && optval) {
 				/* Adaptatation method. */
 				if (!strcasecmp(optval, "sigmoid")) {
