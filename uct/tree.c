@@ -221,8 +221,9 @@ tree_dump(struct tree *tree, int thres)
 		 * huge dumps at first. */
 		thres = tree->root->u.playouts / 100 * (thres < 1000 ? 1 : thres / 1000);
 	}
-	fprintf(stderr, "(UCT tree; root %s; extra komi %f)\n",
-	        stone2str(tree->root_color), tree->extra_komi);
+	fprintf(stderr, "(UCT tree; root %s; extra komi %f; avg score %f/%d)\n",
+	        stone2str(tree->root_color), tree->extra_komi,
+		tree->score.value, tree->score.playouts);
 	tree_node_dump(tree, tree->root, 0, thres);
 
 	if (DEBUGL(3) && tree->ltree_black) {
@@ -892,7 +893,11 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 	}
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);
+
 	board_symmetry_update(tree->board, &tree->root_symmetry, (*node)->coord);
+	/* See tree.score description for explanation on why don't we zero
+	 * score on node promotion. */
+	// tree->score.playouts = 0;
 
 	/* If the tree deepest node was under node, or if we called tree_garbage_collect,
 	 * tree->max_depth is correct. Otherwise we could traverse the tree
