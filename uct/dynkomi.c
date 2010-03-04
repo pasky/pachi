@@ -149,10 +149,26 @@ struct dynkomi_adaptive {
 	 * (Instead, we consider the handicap-based komi provided
 	 * by linear dynkomi.) */
 	int lead_moves;
-	/* Adaptation rate function; see below for details. */
+
+	float (*adapter)(struct dynkomi_adaptive *a, struct board *b);
+	/* Sigmoid adaptation rate parameter; see below for details. */
 	float adapt_phase; // [0,1]
 	float adapt_rate; // [1,infty)
 };
+
+float
+adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
+{
+	/* Figure out how much to adjust the komi based on the game
+	 * stage. The adaptation rate is ~0.9 at the beginning,
+	 * at game stage a->adapt_phase crosses though 0.5 and
+	 * approaches 0 at the game end; the slope is controlled
+	 * by a->adapt_rate. */
+	int total_moves = b->moves + board_estimated_moves_left(b);
+	float game_portion = (float) b->moves / total_moves;
+	float l = -game_portion + a->adapt_phase;
+	return 1.0 / (1.0 + exp(-a->adapt_rate * l));
+}
 
 float
 uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
@@ -171,18 +187,9 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 	/* Almost-reset tree->score to gather fresh stats. */
 	tree->score.playouts = 1;
 
-	/* Figure out how much to adjust the komi based on the game
-	 * stage. The adaptation rate is ~0.9 at the beginning,
-	 * at game stage a->adapt_phase crosses though 0.5 and
-	 * approaches 0 at the game end; the slope is controlled
-	 * by a->adapt_rate. */
-	int total_moves = b->moves + board_estimated_moves_left(b);
-	float game_portion = (float) b->moves / total_moves;
-	float l = -game_portion + a->adapt_phase;
-	float p = 1.0 / (1.0 + exp(-a->adapt_rate * l));
-	if (p > 0.9) p = 0.9; // don't get too eager!
-
 	/* Look at average score and push extra_komi in that direction. */
+	float p = a->adapter(a, b);
+	if (p > 0.9) p = 0.9; // don't get too eager!
 	return tree->extra_komi + p * score.value;
 }
 
@@ -208,6 +215,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 		a->lead_moves = 20;
 	else
 		a->lead_moves = 4; // XXX
+	a->adapter = adapter_sigmoid;
 	a->adapt_rate = 20;
 	a->adapt_phase = 0.5;
 
@@ -226,6 +234,14 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				/* Do not adjust komi adaptively for first
 				 * N moves. */
 				a->lead_moves = atoi(optval);
+			} else if (!strcasecmp(optname, "adapter") && optval) {
+				/* Adaptatation method. */
+				if (!strcasecmp(optval, "sigmoid")) {
+					a->adapter = adapter_sigmoid;
+				} else {
+					fprintf(stderr, "UCT: Invalid adapter %s\n", optval);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "adapt_rate") && optval) {
 				/* Adaptation slope; see above. */
 				a->adapt_rate = atof(optval);
