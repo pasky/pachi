@@ -154,6 +154,9 @@ struct dynkomi_adaptive {
 	/* Sigmoid adaptation rate parameter; see below for details. */
 	float adapt_phase; // [0,1]
 	float adapt_rate; // [1,infty)
+	/* Linear adaptation rate parameter. */
+	int adapt_moves;
+	float adapt_dir; // [-1,1]
 };
 
 float
@@ -168,6 +171,20 @@ adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 	float game_portion = (float) b->moves / total_moves;
 	float l = -game_portion + a->adapt_phase;
 	return 1.0 / (1.0 + exp(-a->adapt_rate * l));
+}
+
+float
+adapter_linear(struct dynkomi_adaptive *a, struct board *b)
+{
+	/* Figure out how much to adjust the komi based on the game
+	 * stage. We just linearly increase/decrease the adaptation
+	 * rate for first N moves. */
+	if (b->moves > a->adapt_moves)
+		return 0;
+	if (a->adapt_dir < 0)
+		return 1 - (- a->adapt_dir) * b->moves / a->adapt_moves;
+	else
+		return a->adapt_dir * b->moves / a->adapt_moves;
 }
 
 float
@@ -218,6 +235,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->adapter = adapter_sigmoid;
 	a->adapt_rate = 20;
 	a->adapt_phase = 0.5;
+	a->adapt_moves = 200;
+	a->adapt_dir = -0.5;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -238,6 +257,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				/* Adaptatation method. */
 				if (!strcasecmp(optval, "sigmoid")) {
 					a->adapter = adapter_sigmoid;
+				} else if (!strcasecmp(optval, "linear")) {
+					a->adapter = adapter_linear;
 				} else {
 					fprintf(stderr, "UCT: Invalid adapter %s\n", optval);
 					exit(1);
@@ -248,6 +269,12 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "adapt_phase") && optval) {
 				/* Adaptation phase shift; see above. */
 				a->adapt_phase = atof(optval);
+			} else if (!strcasecmp(optname, "adapt_moves") && optval) {
+				/* Adaptation move amount; see above. */
+				a->adapt_moves = atoi(optval);
+			} else if (!strcasecmp(optname, "adapt_dir") && optval) {
+				/* Adaptation direction vector; see above. */
+				a->adapt_dir = atof(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid dynkomi argument %s or missing value\n", optname);
 				exit(1);
