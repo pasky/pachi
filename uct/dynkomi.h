@@ -46,5 +46,6 @@ struct uct_dynkomi {
 
 struct uct_dynkomi *uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b);
 struct uct_dynkomi *uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b);
+struct uct_dynkomi *uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b);
 
 #endif

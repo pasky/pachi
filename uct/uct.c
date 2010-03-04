@@ -1004,6 +1004,8 @@ uct_state_init(char *arg, struct board *b)
 					u->dynkomi = uct_dynkomi_init_none(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "linear")) {
 					u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
+				} else if (!strcasecmp(optval, "adaptive")) {
+					u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomiarg, b);
 				} else {
 					fprintf(stderr, "UCT: Invalid dynkomi mode %s\n", optval);
 					exit(1);

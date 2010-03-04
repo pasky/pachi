@@ -128,3 +128,116 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 
 	return d;
 }
+
+
+/* ADAPTIVE dynkomi strategy - Adaptive Situational Compensation */
+/* We adapt the komi based on current situation:
+ * (i) score-based: We maintain the average score outcome of our
+ * games and adjust the komi by a fractional step towards the expected
+ * score;
+ * (ii) value-based: While winrate is above given threshold, adjust
+ * the komi by a fixed step in the appropriate direction. [TODO]
+ * These adjustments can be
+ * (a) Move-stepped, new extra komi value is always set only at the
+ * beginning of the tree search for next move;
+ * (b) Continuous, new extra komi value is periodically re-determined
+ * and adjusted throughout a single tree search. [TODO] */
+
+struct dynkomi_adaptive {
+	/* Do not take measured average score into regard for
+	 * first @lead_moves - the variance is just too much.
+	 * (Instead, we consider the handicap-based komi provided
+	 * by linear dynkomi.) */
+	int lead_moves;
+	/* Adaptation rate function; see below for details. */
+	float adapt_phase; // [0,1]
+	float adapt_rate; // [1,infty)
+};
+
+float
+uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
+{
+	struct dynkomi_adaptive *a = d->data;
+	if (DEBUGL(3))
+		fprintf(stderr, "m %d/%d ekomi %f permove %f/%d\n",
+			b->moves, a->lead_moves, tree->extra_komi,
+			tree->score.value, tree->score.playouts);
+	if (b->moves <= a->lead_moves)
+		return board_effective_handicap(b, 7 /* XXX */);
+	if (tree->score.playouts < 200) // XXX
+		return tree->extra_komi;
+
+	struct move_stats score = tree->score;
+	/* Almost-reset tree->score to gather fresh stats. */
+	tree->score.playouts = 1;
+
+	/* Figure out how much to adjust the komi based on the game
+	 * stage. The adaptation rate is ~0.9 at the beginning,
+	 * at game stage a->adapt_phase crosses though 0.5 and
+	 * approaches 0 at the game end; the slope is controlled
+	 * by a->adapt_rate. */
+	int total_moves = b->moves + board_estimated_moves_left(b);
+	float game_portion = (float) b->moves / total_moves;
+	float l = -game_portion + a->adapt_phase;
+	float p = 1.0 / (1.0 + exp(-a->adapt_rate * l));
+	if (p > 0.9) p = 0.9; // don't get too eager!
+
+	/* Look at average score and push extra_komi in that direction. */
+	return tree->extra_komi + p * score.value;
+}
+
+float
+uct_dynkomi_adaptive_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node)
+{
+	return tree->extra_komi;
+}
+
+struct uct_dynkomi *
+uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
+{
+	struct uct_dynkomi *d = calloc(1, sizeof(*d));
+	d->uct = u;
+	d->permove = uct_dynkomi_adaptive_permove;
+	d->persim = uct_dynkomi_adaptive_persim;
+	d->done = uct_dynkomi_generic_done;
+
+	struct dynkomi_adaptive *a = calloc(1, sizeof(*a));
+	d->data = a;
+
+	if (board_size(b) - 2 >= 19)
+		a->lead_moves = 20;
+	else
+		a->lead_moves = 4; // XXX
+	a->adapt_rate = 20;
+	a->adapt_phase = 0.5;
+
+	if (arg) {
+		char *optspec, *next = arg;
+		while (*next) {
+			optspec = next;
+			next += strcspn(next, ":");
+			if (*next) { *next++ = 0; } else { *next = 0; }
+
+			char *optname = optspec;
+			char *optval = strchr(optspec, '=');
+			if (optval) *optval++ = 0;
+
+			if (!strcasecmp(optname, "lead_moves") && optval) {
+				/* Do not adjust komi adaptively for first
+				 * N moves. */
+				a->lead_moves = atoi(optval);
+			} else if (!strcasecmp(optname, "adapt_rate") && optval) {
+				/* Adaptation slope; see above. */
+				a->adapt_rate = atof(optval);
+			} else if (!strcasecmp(optname, "adapt_phase") && optval) {
+				/* Adaptation phase shift; see above. */
+				a->adapt_phase = atof(optval);
+			} else {
+				fprintf(stderr, "uct: Invalid dynkomi argument %s or missing value\n", optname);
+				exit(1);
+			}
+		}
+	}
+
+	return d;
+}
