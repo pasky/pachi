@@ -151,6 +151,7 @@ struct dynkomi_adaptive {
 	int lead_moves;
 
 	float (*adapter)(struct dynkomi_adaptive *a, struct board *b);
+	float adapt_base; // [0,1)
 	/* Sigmoid adaptation rate parameter; see below for details. */
 	float adapt_phase; // [0,1]
 	float adapt_rate; // [1,infty)
@@ -206,6 +207,7 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 
 	/* Look at average score and push extra_komi in that direction. */
 	float p = a->adapter(a, b);
+	p = a->adapt_base + p * (1 - a->adapt_base);
 	if (p > 0.9) p = 0.9; // don't get too eager!
 	return tree->extra_komi + p * score.value;
 }
@@ -237,6 +239,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->adapt_phase = 0.5;
 	a->adapt_moves = 200;
 	a->adapt_dir = -0.5;
+	a->adapt_base = 0.2;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -263,6 +266,9 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 					fprintf(stderr, "UCT: Invalid adapter %s\n", optval);
 					exit(1);
 				}
+			} else if (!strcasecmp(optname, "adapt_base") && optval) {
+				/* Adaptation base rate; see above. */
+				a->adapt_base = atof(optval);
 			} else if (!strcasecmp(optname, "adapt_rate") && optval) {
 				/* Adaptation slope; see above. */
 				a->adapt_rate = atof(optval);
