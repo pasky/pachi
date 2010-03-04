@@ -183,9 +183,6 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 		reset_state(u);
 		return NULL;
 	}
-	/* Setting up dynkomi is not necessary here, probably, but we
-	 * better do it anyway for consistency reasons. */
-	setup_dynkomi(u, b, stone_other(m->color));
 	return NULL;
 }
 
