@@ -21,6 +21,7 @@
 #include "random.h"
 #include "tactics.h"
 #include "timeinfo.h"
+#include "distributed/distributed.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
@@ -31,6 +32,7 @@
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 static void uct_pondering_stop(struct uct *u);
+static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color);
 
 
 /* Default number of simulations to perform per move.
@@ -138,6 +140,24 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	return pass_is_safe(b, color, &mq);
 }
 
+/* This function is called only when running as slave in the distributed version. */
+static enum parse_code
+uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply)
+{
+	struct uct *u = e->data;
+
+	/* Force resending the whole command history if we are out of sync
+	 * but do it only once, not if already getting the history. */
+	if (move_number(id) != b->moves && !reply_disabled(id) && !is_reset(cmd)) {
+		if (UDEBUGL(0))
+			fprintf(stderr, "Out of sync, id %d, move %d\n", id, b->moves);
+		static char buf[128];
+		snprintf(buf, sizeof(buf), "out of sync, move %d expected", b->moves);
+		*reply = buf;
+		return P_DONE_ERROR;
+	}
+	return reply_disabled(id) ? P_NOREPLY : P_OK;
+}
 
 static void
 uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
@@ -164,9 +184,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 		assert(u->t);
 	}
 
-	/* Stop pondering. */
-	/* XXX: If we are about to receive multiple 'play' commands,
-	 * e.g. in a rengo, we will not ponder during the rest of them. */
+	/* Stop pondering, required by tree_promote_at() */
 	uct_pondering_stop(u);
 
 	if (is_resign(m->coord)) {
@@ -183,6 +201,13 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 		reset_state(u);
 		return NULL;
 	}
+
+	/* If we are a slave in a distributed engine, start pondering once
+	 * we know which move we actually played. See uct_genmove() about
+	 * the check for pass. */
+	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord))
+		uct_pondering_start(u, b, u->t, stone_other(m->color));
+
 	return NULL;
 }
 
@@ -701,6 +726,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	uct_pondering_stop(u);
 	prepare_move(e, b, color);
 	assert(u->t);
+	u->my_color = color;
 
 	/* How to decide whether to use dynkomi in this game? Since we use
 	 * pondering, it's not simple "who-to-play" matter. Decide based on
@@ -760,14 +786,20 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		}
 	}
 
-	tree_promote_node(u->t, &best);
-	/* After a pass, pondering is harmful for two reasons:
-	 * (i) We might keep pondering even when the game is over.
-	 * Of course this is the case for opponent resign as well.
-	 * (ii) More importantly, the ownermap will get skewed since
-	 * the UCT will start cutting off any playouts. */
-	if (u->pondering_opt && !is_pass(best->coord)) {
-		uct_pondering_start(u, b, u->t, stone_other(color));
+	/* If we are a slave in the distributed engine, we'll soon get
+	 * a "play" command later telling us which move was chosen,
+	 * and pondering now will not gain much. */
+	if (!u->slave) {
+		tree_promote_node(u->t, &best);
+
+		/* After a pass, pondering is harmful for two reasons:
+		 * (i) We might keep pondering even when the game is over.
+		 * Of course this is the case for opponent resign as well.
+		 * (ii) More importantly, the ownermap will get skewed since
+		 * the UCT will start cutting off any playouts. */
+		if (u->pondering_opt && !is_pass(best->coord)) {
+			uct_pondering_start(u, b, u->t, stone_other(color));
+		}
 	}
 	if (UDEBUGL(2)) {
 		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
@@ -775,6 +807,42 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 			time, (int)(played_games/time), (int)(played_games/time/u->threads));
 	}
 	return coord_copy(best->coord);
+}
+
+
+static char *
+uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+{
+	struct uct *u = e->data;
+	assert(u->slave);
+
+	coord_t *c = uct_genmove(e, b, ti, color, pass_all_alive);
+
+	/* Return a buffer with one line "total_playouts threads" then a list of lines
+	 * "coord playouts value". Keep this code in sync with select_best_move(). */
+	static char reply[10240];
+	char *r = reply;
+	char *end = reply + sizeof(reply);
+	struct tree_node *root = u->t->root;
+	r += snprintf(r, end - r, "%d %d", root->u.playouts, u->threads);
+	int min_playouts = root->u.playouts / 100;
+
+	// Give a large weight to pass or resign, but still allow other moves.
+	if (is_pass(*c) || is_resign(*c))
+		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(*c, b), root->u.playouts,
+			      (float)is_pass(*c));
+	coord_done(c);
+
+	for (struct tree_node *ni = root->children; ni; ni = ni->sibling) {
+		if (ni->u.playouts <= min_playouts
+		    || ni->hints & TREE_HINT_INVALID
+		    || is_pass(ni->coord))
+			continue;
+		char *coord = coord2sstr(ni->coord, b);
+		// We return the values as stored in the tree, so from black's view.
+		r += snprintf(r, end - r, "\n%s %d %.7f", coord, ni->u.playouts, ni->u.value);
+	}
+	return reply;
 }
 
 
@@ -1089,6 +1157,10 @@ uct_state_init(char *arg, struct board *b)
 				u->max_tree_size = atol(optval) * 1048576;
 			} else if (!strcasecmp(optname, "fast_alloc")) {
 				u->fast_alloc = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "slave")) {
+				/* Act as slave for the distributed engine. */
+				u->slave = !optval || atoi(optval);
+				break;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
@@ -1157,9 +1229,12 @@ engine_uct_init(char *arg, struct board *b)
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;
 	e->genmove = uct_genmove;
+	e->genmoves = uct_genmoves;
 	e->dead_group_list = uct_dead_group_list;
 	e->done = uct_done;
 	e->data = u;
+	if (u->slave)
+		e->notify = uct_notify;
 
 	const char banner[] = "I'm playing UCT. When I'm losing, I will resign, "
 		"if I think I win, I play until you pass. "

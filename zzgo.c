@@ -16,10 +16,12 @@
 #include "patternscan/patternscan.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
+#include "distributed/distributed.h"
 #include "gtp.h"
 #include "timeinfo.h"
 #include "random.h"
 #include "version.h"
+#include "network.h"
 
 int debug_level = 3;
 int seed;
@@ -31,6 +33,7 @@ enum engine_id {
 	E_PATTERNSCAN,
 	E_MONTECARLO,
 	E_UCT,
+	E_DISTRIBUTED,
 	E_MAX,
 };
 
@@ -40,6 +43,7 @@ static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 	engine_patternscan_init,
 	engine_montecarlo_init,
 	engine_uct_init,
+	engine_distributed_init,
 };
 
 static struct engine *init_engine(enum engine_id engine, char *e_arg, struct board *b)
@@ -58,19 +62,27 @@ static void done_engine(struct engine *e)
 	free(e);
 }
 
-bool engine_reset = false;
-
+static void usage(char *name)
+{
+	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
+	fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct|distributed]\n"
+		" [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]"
+		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [ENGINE_ARGS]\n", name);
+}
 
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
 	struct time_info ti_default = { .period = TT_NULL };
 	char *testfile = NULL;
+	char *gtp_port = NULL;
+	char *log_port = NULL;
+	int gtp_sock = -1;
 
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:s:t:u:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:g:l:s:t:u:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -83,6 +95,8 @@ int main(int argc, char *argv[])
 					engine = E_MONTECARLO;
 				} else if (!strcasecmp(optarg, "uct")) {
 					engine = E_UCT;
+				} else if (!strcasecmp(optarg, "distributed")) {
+					engine = E_DISTRIBUTED;
 				} else {
 					fprintf(stderr, "%s: Invalid -e argument %s\n", argv[0], optarg);
 					exit(1);
@@ -90,6 +104,12 @@ int main(int argc, char *argv[])
 				break;
 			case 'd':
 				debug_level = atoi(optarg);
+				break;
+			case 'g':
+				gtp_port = strdup(optarg);
+				break;
+			case 'l':
+				log_port = strdup(optarg);
 				break;
 			case 's':
 				seed = atoi(optarg);
@@ -114,12 +134,13 @@ int main(int argc, char *argv[])
 				testfile = strdup(optarg);
 				break;
 			default: /* '?' */
-				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-				fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME] [ENGINE_ARGS]\n",
-						argv[0]);
+				usage(argv[0]);
 				exit(1);
 		}
 	}
+
+	if (log_port)
+		open_log_port(log_port);
 
 	fast_srandom(seed);
 	if (DEBUGL(0))
@@ -140,21 +161,31 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	char buf[4096];
-	while (fgets(buf, 4096, stdin)) {
-		if (DEBUGL(1))
-			fprintf(stderr, "IN: %s", buf);
-		gtp_parse(b, e, ti, buf);
-		if (engine_reset) {
-			if (!e->keep_on_clear) {
+	if (gtp_port) {
+		open_gtp_connection(&gtp_sock, gtp_port);
+	}
+
+	for (;;) {
+		char buf[4096];
+		while (fgets(buf, 4096, stdin)) {
+			if (DEBUGL(1))
+				fprintf(stderr, "IN: %s", buf);
+
+			enum parse_code c = gtp_parse(b, e, ti, buf);
+			if (c == P_ENGINE_RESET && !e->keep_on_clear) {
 				b->es = NULL;
 				done_engine(e);
 				e = init_engine(engine, e_arg, b);
 				ti[S_BLACK] = ti_default;
 				ti[S_WHITE] = ti_default;
+			} else if (c == P_UNKNOWN_COMMAND && gtp_port) {
+				/* The gtp command is a weak identity check,
+				 * close the connection with a wrong peer. */
+				break;
 			}
-			engine_reset = false;
 		}
+		if (!gtp_port) break;
+		open_gtp_connection(&gtp_sock, gtp_port);
 	}
 	done_engine(e);
 	return 0;
