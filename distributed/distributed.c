@@ -1,6 +1,7 @@
 /* This is a master for the "distributed" engine. It receives connections
  * from slave machines, sends them gtp commands, then aggregates the
- * results. The slave machines must run with engine "uct" (not "distributed").
+ * results. It can also act as a proxy for the logs of all slave machines.
+ * The slave machines must run with engine "uct" (not "distributed").
  * The master sends the pachi-genmoves gtp command to each slave,
  * gets as replies a list of candidate moves, their number of playouts
  * and their value. The master then picks the most popular move. */
@@ -20,15 +21,23 @@
  * slave_port=SLAVE_PORT  slaves connect to this port; this parameter is mandatory.
  * max_slaves=MAX_SLAVES  default 100
  * slaves_quit=0|1        quit gtp command also sent to slaves, default false.
+ * proxy_port=PROXY_PORT  slaves optionally send their logs to this port.
+ *    Warning: with proxy_port, the master stderr mixes the logs of all
+ *    machines but you can separate them again:
+ *      slave logs:  sed -n '/< .*:/s/.*< /< /p' logfile
+ *      master logs: perl -0777 -pe 's/<[ <].*:.*\n//g' logfile
  */
 
-/* A typical configuration would have one master run on masterhost as:
+/* A configuration without proxy would have one master run on masterhost as:
  *    zzgo -e distributed slave_port=1234
  * and N slaves running as:
  *    zzgo -e uct -g masterhost:1234 slave
+ * With log proxy:
+ *    zzgo -e distributed slave_port=1234,proxy_port=1235
+ *    zzgo -e uct -g masterhost:1234 -l masterhost:1235 slave
  * If the master itself runs on a machine other than that running gogui,
  * gogui-twogtp, kgsGtp or cgosGtp, it can redirect its gtp port:
- *    zzgo -e distributed -g 10000 slave_port=1234
+ *    zzgo -e distributed -g 10000 slave_port=1234,proxy_port=1235
  */
 
 #include <assert.h>
@@ -61,6 +70,7 @@
 /* Internal engine state. */
 struct distributed {
 	char *slave_port;
+	char *proxy_port;
 	int max_slaves;
 	bool slaves_quit;
 	struct move my_last_move;
@@ -122,6 +132,25 @@ logline(struct in_addr *client, char *prefix, char *s)
 	pthread_mutex_lock(&log_lock);
 	fprintf(stderr, "%s%s %9.3f: %s", prefix, addr, now - start_time, s);
 	pthread_mutex_unlock(&log_lock);
+}
+
+/* Thread opening a connection on the given socket and copying input
+ * from there to stderr. */
+static void *
+proxy_thread(void *arg)
+{
+	int proxy_sock = (long)arg;
+	assert(proxy_sock >= 0);
+	for (;;) {
+		struct in_addr client;
+		int conn = open_server_connection(proxy_sock, &client);
+		FILE *f = fdopen(conn, "r");
+		char buf[BSIZE];
+		while (fgets(buf, BSIZE, f)) {
+			logline(&client, "< ", buf);
+		}
+		fclose(f);
+	}
 }
 
 /* Main loop of a slave thread.
@@ -526,6 +555,8 @@ distributed_state_init(char *arg, struct board *b)
 
 			if (!strcasecmp(optname, "slave_port") && optval) {
 				dist->slave_port = strdup(optval);
+			} else if (!strcasecmp(optname, "proxy_port") && optval) {
+				dist->proxy_port = strdup(optval);
 			} else if (!strcasecmp(optname, "max_slaves") && optval) {
 				dist->max_slaves = atoi(optval);
 			} else if (!strcasecmp(optname, "slaves_quit")) {
@@ -546,6 +577,13 @@ distributed_state_init(char *arg, struct board *b)
 	pthread_t thread;
 	for (int id = 0; id < dist->max_slaves; id++) {
 		pthread_create(&thread, NULL, slave_thread, (void *)(long)slave_sock);
+	}
+
+	if (dist->proxy_port) {
+		int proxy_sock = port_listen(dist->proxy_port, dist->max_slaves);
+		for (int id = 0; id < dist->max_slaves; id++) {
+			pthread_create(&thread, NULL, proxy_thread, (void *)(long)proxy_sock);
+		}
 	}
 	return dist;
 }
