@@ -20,6 +20,7 @@
 #include "timeinfo.h"
 #include "random.h"
 #include "version.h"
+#include "network.h"
 
 int debug_level = 3;
 int seed;
@@ -58,6 +59,14 @@ static void done_engine(struct engine *e)
 	free(e);
 }
 
+static void usage(char *name)
+{
+	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
+	fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct]\n"
+		" [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]"
+		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [ENGINE_ARGS]\n", name);
+}
+
 bool engine_reset = false;
 
 
@@ -66,11 +75,14 @@ int main(int argc, char *argv[])
 	enum engine_id engine = E_UCT;
 	struct time_info ti_default = { .period = TT_NULL };
 	char *testfile = NULL;
+	char *gtp_port = NULL;
+	char *log_port = NULL;
+	int gtp_sock = -1;
 
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:s:t:u:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:g:l:s:t:u:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -90,6 +102,12 @@ int main(int argc, char *argv[])
 				break;
 			case 'd':
 				debug_level = atoi(optarg);
+				break;
+			case 'g':
+				gtp_port = strdup(optarg);
+				break;
+			case 'l':
+				log_port = strdup(optarg);
 				break;
 			case 's':
 				seed = atoi(optarg);
@@ -114,12 +132,13 @@ int main(int argc, char *argv[])
 				testfile = strdup(optarg);
 				break;
 			default: /* '?' */
-				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-				fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct] [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME] [ENGINE_ARGS]\n",
-						argv[0]);
+				usage(argv[0]);
 				exit(1);
 		}
 	}
+
+	if (log_port)
+		open_log_port(log_port);
 
 	fast_srandom(seed);
 	if (DEBUGL(0))
@@ -140,21 +159,29 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	char buf[4096];
-	while (fgets(buf, 4096, stdin)) {
-		if (DEBUGL(1))
-			fprintf(stderr, "IN: %s", buf);
-		gtp_parse(b, e, ti, buf);
-		if (engine_reset) {
-			if (!e->keep_on_clear) {
-				b->es = NULL;
-				done_engine(e);
-				e = init_engine(engine, e_arg, b);
-				ti[S_BLACK] = ti_default;
-				ti[S_WHITE] = ti_default;
+	if (gtp_port) {
+		open_gtp_connection(&gtp_sock, gtp_port);
+	}
+
+	for (;;) {
+		char buf[4096];
+		while (fgets(buf, 4096, stdin)) {
+			if (DEBUGL(1))
+				fprintf(stderr, "IN: %s", buf);
+			gtp_parse(b, e, ti, buf);
+			if (engine_reset) {
+				if (!e->keep_on_clear) {
+					b->es = NULL;
+					done_engine(e);
+					e = init_engine(engine, e_arg, b);
+					ti[S_BLACK] = ti_default;
+					ti[S_WHITE] = ti_default;
+				}
+				engine_reset = false;
 			}
-			engine_reset = false;
 		}
+		if (!gtp_port) break;
+		open_gtp_connection(&gtp_sock, gtp_port);
 	}
 	done_engine(e);
 	return 0;
