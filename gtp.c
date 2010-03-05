@@ -15,9 +15,12 @@
 #include "version.h"
 #include "timeinfo.h"
 
+#define NO_REPLY (-2)
+
 void
 gtp_prefix(char prefix, int id)
 {
+	if (id == NO_REPLY) return;
 	if (id >= 0)
 		printf("%c%d ", prefix, id);
 	else
@@ -34,6 +37,7 @@ gtp_flush(void)
 void
 gtp_output(char prefix, int id, va_list params)
 {
+	if (id == NO_REPLY) return;
 	gtp_prefix(prefix, id);
 	char *s;
 	while ((s = va_arg(params, char *))) {
@@ -65,7 +69,7 @@ gtp_error(int id, ...)
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
 
-void
+enum parse_code
 gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char *buf)
 {
 #define next_tok(to_) \
@@ -89,21 +93,27 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 	}
 
 	if (!*cmd)
-		return;
+		return P_OK;
 
 	if (!strcasecmp(cmd, "protocol_version")) {
 		gtp_reply(id, "2", NULL);
+		return P_OK;
 
 	} else if (!strcasecmp(cmd, "name")) {
 		/* KGS hack */
 		gtp_reply(id, "Pachi ", engine->name, NULL);
+		return P_OK;
 
 	} else if (!strcasecmp(cmd, "version")) {
 		gtp_reply(id, PACHI_VERSION, ": ", engine->comment, NULL);
+		return P_OK;
 
 		/* TODO: known_command */
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
+		/* The internal command pachi-genmoves is not exported,
+		 * it should only be used between master and slaves of
+		 * the distributed engine. */
 		gtp_reply(id, "protocol_version\n"
 			      "name\n"
 			      "version\n"
@@ -122,8 +132,24 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			      "time_left\n"
 			      "time_settings\n"
 			      "kgs-time_settings", NULL);
+		return P_OK;
+	}
 
-	} else if (!strcasecmp(cmd, "quit")) {
+	if (engine->notify) {
+		char *reply;
+		enum parse_code c = engine->notify(engine, board, id, cmd, next, &reply);
+		if (c == P_NOREPLY) {
+			id = NO_REPLY;
+		} else if (c == P_DONE_OK) {
+			gtp_reply(id, reply, NULL);
+		} else if (c == P_DONE_ERROR) {
+			gtp_error(id, reply, NULL);
+		} else if (c != P_OK) {
+			return c;
+		}
+	}
+	    
+	if (!strcasecmp(cmd, "quit")) {
 		gtp_reply(id, NULL);
 		exit(0);
 
@@ -136,10 +162,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 	} else if (!strcasecmp(cmd, "clear_board")) {
 		board_clear(board);
-		engine_reset = true;
 		if (DEBUGL(1))
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
+		return P_ENGINE_RESET;
 
 	} else if (!strcasecmp(cmd, "komi")) {
 		char *arg;
@@ -164,7 +190,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		if (DEBUGL(1))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 
-		// This is where kgs starts our timer, not at coming genmove!
+		// This is where kgs starts the timer, not at genmove!
 		time_start_timer(&ti[stone_other(m.color)]);
 
 		if (engine->notify_play)
@@ -206,6 +232,20 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
 			time_sub(&ti[color], time_now() - ti[color].len.t.timer_start);
 
+	} else if (!strcasecmp(cmd, "pachi-genmoves") || !strcasecmp(cmd, "pachi-genmoves_cleanup")) {
+		char *arg;
+		next_tok(arg);
+		enum stone color = str2stone(arg);
+
+		char *reply = engine->genmoves(engine, board, &ti[color], color, !strcasecmp(cmd, "pachi-genmoves_cleanup"));
+		if (DEBUGL(2))
+			fprintf(stderr, "proposing moves %s\n", reply);
+		gtp_reply(id, reply, NULL);
+
+		/* See "genmove" above about time management. */
+		if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
+			time_sub(&ti[color], time_now() - ti[color].len.t.timer_start);
+
 	} else if (!strcasecmp(cmd, "set_free_handicap")) {
 		struct move m;
 		m.color = S_BLACK;
@@ -240,9 +280,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		int stones = atoi(arg);
 
 		gtp_prefix('=', id);
-		board_handicap(board, stones, stdout);
+		board_handicap(board, stones, id == NO_REPLY ? NULL : stdout);
 		if (DEBUGL(1))
 			board_print(board, stderr);
+		if (id == NO_REPLY) return P_OK;
 		putchar('\n');
 		gtp_flush();
 
@@ -266,6 +307,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 	/* XXX: This is a huge hack. */
 	} else if (!strcasecmp(cmd, "final_status_list")) {
+		if (id == NO_REPLY) return P_OK;
 		char *arg;
 		next_tok(arg);
 		struct move_queue q = { .moves = 0 };
@@ -404,7 +446,9 @@ next_group:;
 
 	} else {
 		gtp_error(id, "unknown command", NULL);
+		return P_UNKNOWN_COMMAND;
 	}
+	return P_OK;
 
 #undef next_tok
 }

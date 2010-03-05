@@ -685,7 +685,7 @@ board_handicap_stone(struct board *board, int x, int y, FILE *f)
 	char *str = coord2str(m.coord, board);
 	if (DEBUGL(1))
 		fprintf(stderr, "choosing handicap %s (%d,%d)\n", str, x, y);
-	fprintf(f, "%s ", str);
+	if (f) fprintf(f, "%s ", str);
 	free(str);
 }
 

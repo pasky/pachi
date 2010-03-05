@@ -16,6 +16,7 @@
 #include "patternscan/patternscan.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
+#include "distributed/distributed.h"
 #include "gtp.h"
 #include "timeinfo.h"
 #include "random.h"
@@ -32,6 +33,7 @@ enum engine_id {
 	E_PATTERNSCAN,
 	E_MONTECARLO,
 	E_UCT,
+	E_DISTRIBUTED,
 	E_MAX,
 };
 
@@ -41,6 +43,7 @@ static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 	engine_patternscan_init,
 	engine_montecarlo_init,
 	engine_uct_init,
+	engine_distributed_init,
 };
 
 static struct engine *init_engine(enum engine_id engine, char *e_arg, struct board *b)
@@ -62,13 +65,10 @@ static void done_engine(struct engine *e)
 static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-	fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct]\n"
+	fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct|distributed]\n"
 		" [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]"
 		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [ENGINE_ARGS]\n", name);
 }
-
-bool engine_reset = false;
-
 
 int main(int argc, char *argv[])
 {
@@ -95,6 +95,8 @@ int main(int argc, char *argv[])
 					engine = E_MONTECARLO;
 				} else if (!strcasecmp(optarg, "uct")) {
 					engine = E_UCT;
+				} else if (!strcasecmp(optarg, "distributed")) {
+					engine = E_DISTRIBUTED;
 				} else {
 					fprintf(stderr, "%s: Invalid -e argument %s\n", argv[0], optarg);
 					exit(1);
@@ -168,16 +170,18 @@ int main(int argc, char *argv[])
 		while (fgets(buf, 4096, stdin)) {
 			if (DEBUGL(1))
 				fprintf(stderr, "IN: %s", buf);
-			gtp_parse(b, e, ti, buf);
-			if (engine_reset) {
-				if (!e->keep_on_clear) {
-					b->es = NULL;
-					done_engine(e);
-					e = init_engine(engine, e_arg, b);
-					ti[S_BLACK] = ti_default;
-					ti[S_WHITE] = ti_default;
-				}
-				engine_reset = false;
+
+			enum parse_code c = gtp_parse(b, e, ti, buf);
+			if (c == P_ENGINE_RESET && !e->keep_on_clear) {
+				b->es = NULL;
+				done_engine(e);
+				e = init_engine(engine, e_arg, b);
+				ti[S_BLACK] = ti_default;
+				ti[S_WHITE] = ti_default;
+			} else if (c == P_UNKNOWN_COMMAND && gtp_port) {
+				/* The gtp command is a weak identity check,
+				 * close the connection with a wrong peer. */
+				break;
 			}
 		}
 		if (!gtp_port) break;
