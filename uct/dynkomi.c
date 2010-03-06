@@ -178,9 +178,9 @@ adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 	 * at game stage a->adapt_phase crosses though 0.5 and
 	 * approaches 0 at the game end; the slope is controlled
 	 * by a->adapt_rate. */
-	int total_moves = b->moves + board_estimated_moves_left(b);
+	int total_moves = b->moves + 2 * board_estimated_moves_left(b);
 	float game_portion = (float) b->moves / total_moves;
-	float l = -game_portion + a->adapt_phase;
+	float l = a->adapt_phase - game_portion;
 	return 1.0 / (1.0 + exp(-a->adapt_rate * l));
 }
 
