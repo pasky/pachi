@@ -130,7 +130,7 @@ logline(struct in_addr *client, char *prefix, char *s)
 		addr[0] = '\0';
 	}
 	pthread_mutex_lock(&log_lock);
-	fprintf(stderr, "%s%s %9.3f: %s", prefix, addr, now - start_time, s);
+	fprintf(stderr, "%s%15s %9.3f: %s", prefix, addr, now - start_time, s);
 	pthread_mutex_unlock(&log_lock);
 }
 
