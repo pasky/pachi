@@ -53,6 +53,7 @@ struct uct {
 	int yose_start;
 
 	int dynkomi_mask;
+	int dynkomi_interval;
 	struct uct_dynkomi *dynkomi;
 
 	float val_scale;

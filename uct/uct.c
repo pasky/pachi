@@ -551,6 +551,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	struct time_stop stop;
 	time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &stop);
 
+	/* Number of last dynkomi adjustment. */
+	int last_dynkomi = t->root->u.playouts;
 	/* Number of last game with progress print. */
 	int last_print = t->root->u.playouts;
 	/* Number of simulations to wait before next print. */
@@ -584,6 +586,16 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		 * at least 100ms otherwise the move is completely random. */
 
 		int i = ctx->t->root->u.playouts;
+
+		/* Adjust dynkomi? */
+		if (ctx->t->use_extra_komi && u->dynkomi->permove
+		    && u->dynkomi_interval
+		    && i > last_dynkomi + u->dynkomi_interval) {
+			float old_dynkomi = ctx->t->extra_komi;
+			ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
+			if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
+				fprintf(stderr, "dynkomi adjusted (%f -> %f)\n", old_dynkomi, ctx->t->extra_komi);
+		}
 
 		/* Print progress? */
 		if (i - last_print > print_interval) {
@@ -1016,6 +1028,11 @@ uct_state_init(char *arg, struct board *b)
 				 * to use dynkomi_mask=3 to allow dynkomi
 				 * even in games where Pachi is white. */
 				u->dynkomi_mask = atoi(optval);
+			} else if (!strcasecmp(optname, "dynkomi_interval") && optval) {
+				/* If non-zero, re-adjust dynamic komi
+				 * throughout a single genmove reading,
+				 * roughly every N simulations. */
+				u->dynkomi_interval = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
 				 * influenced by win size. Zero means it isn't. */
