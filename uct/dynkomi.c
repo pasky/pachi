@@ -136,7 +136,7 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
  * games and adjust the komi by a fractional step towards the expected
  * score;
  * (ii) value-based: While winrate is above given threshold, adjust
- * the komi by a fixed step in the appropriate direction. [TODO]
+ * the komi by a fixed step in the appropriate direction.
  * These adjustments can be
  * (a) Move-stepped, new extra komi value is always set only at the
  * beginning of the tree search for next move;
@@ -152,6 +152,12 @@ struct dynkomi_adaptive {
 	/* Maximum komi to pretend the opponent to give. */
 	float max_losing_komi;
 
+	/* Value-based adaptation. */
+	bool value_based;
+	float zone_red, zone_green;
+	int score_step;
+	float komi_latch; // runtime, not configuration
+
 	float (*adapter)(struct dynkomi_adaptive *a, struct board *b);
 	float adapt_base; // [0,1)
 	/* Sigmoid adaptation rate parameter; see below for details. */
@@ -161,6 +167,7 @@ struct dynkomi_adaptive {
 	int adapt_moves;
 	float adapt_dir; // [-1,1]
 };
+#define TRUSTWORTHY_KOMI_PLAYOUTS 200
 
 float
 adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
@@ -200,13 +207,51 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 			tree->score.value, tree->score.playouts);
 	if (b->moves <= a->lead_moves)
 		return board_effective_handicap(b, 7 /* XXX */);
-	if (tree->score.playouts < 200) // XXX
-		return tree->extra_komi;
 
 	/* Get lower bound on komi value so that we don't underperform
 	 * too much. XXX: We rely on the fact that we don't use dynkomi
 	 * as white for now. */
 	float min_komi = - a->max_losing_komi;
+
+	/* Perhaps we are adaptive value-based, not score-based? */
+	if (a->value_based) {
+		/* In that case, we have three zones:
+		 * red zone | yellow zone | green zone
+		 *        ~45%           ~60%
+		 * red zone: reduce komi
+		 * yellow zone: do not touch komi
+		 * green zone: enlage komi.
+		 *
+		 * Also, at some point komi will be tuned in such way
+		 * that it will be in green zone but increasing it will
+		 * be unfeasible. Thus, we have a _latch_ - we will
+		 * remember the last komi that has put us into the
+		 * red zone, and not use it or go over it. We use the
+		 * latch only when giving extra komi, we always want
+		 * to try to reduce extra komi we take.
+		 *
+		 * TODO: Make the latch expire after a while. */
+		if (tree->root->u.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
+			return tree->extra_komi;
+		float value = tree->root->u.value;
+		float extra_komi = tree->extra_komi;
+		if (value < a->zone_red) {
+			/* Red zone. Take extra komi. */
+			if (extra_komi > 0) a->komi_latch = extra_komi;
+			extra_komi -= a->score_step; // XXX: we depend on being black
+			return extra_komi > min_komi ? extra_komi : min_komi;
+		} else if (value < a->zone_green) {
+			/* Yellow zone, do nothing. */
+			return extra_komi;
+		} else {
+			/* Green zone. Give extra komi. */
+			extra_komi += a->score_step; // XXX: we depend on being black
+			return extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
+		}
+	}
+
+	if (tree->score.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
+		return tree->extra_komi;
 
 	struct move_stats score = tree->score;
 	/* Almost-reset tree->score to gather fresh stats. */
@@ -250,6 +295,11 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->adapt_dir = -0.5;
 	a->adapt_base = 0.2;
 
+	a->zone_red = 0.45;
+	a->zone_green = 0.6;
+	a->score_step = 2;
+	a->komi_latch = -1000;
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -266,8 +316,17 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				 * N moves. */
 				a->lead_moves = atoi(optval);
 			} else if (!strcasecmp(optname, "max_losing_komi") && optval) {
-				/* Adaptation base rate; see above. */
 				a->max_losing_komi = atof(optval);
+
+			} else if (!strcasecmp(optname, "value_based")) {
+				a->value_based = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "zone_red") && optval) {
+				a->zone_red = atof(optval);
+			} else if (!strcasecmp(optname, "zone_green") && optval) {
+				a->zone_green = atof(optval);
+			} else if (!strcasecmp(optname, "score_step") && optval) {
+				a->score_step = atoi(optval);
+
 			} else if (!strcasecmp(optname, "adapter") && optval) {
 				/* Adaptatation method. */
 				if (!strcasecmp(optval, "sigmoid")) {
