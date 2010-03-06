@@ -97,10 +97,12 @@ open_client_connection(char *port_name)
 	assert(port);
 	*port++ = '\0';
 
+	struct hostent *host = gethostbyname(hostname);
+	if (!host)
+		return -1;
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == -1)
 		die("socket");
-	struct hostent *host = gethostbyname(hostname);
 	struct sockaddr_in sin;
 	memcpy(&sin.sin_addr.s_addr, host->h_addr, host->h_length);
 	sin.sin_family = AF_INET;
