@@ -1,3 +1,4 @@
+#define DEBUG
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -262,6 +263,9 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 	p = a->adapt_base + p * (1 - a->adapt_base);
 	if (p > 0.9) p = 0.9; // don't get too eager!
 	float extra_komi = tree->extra_komi + p * score.value;
+	if (DEBUGL(3))
+		fprintf(stderr, "mC %f + %f * %f = %f\n",
+			tree->extra_komi, p, score.value, extra_komi);
 	return extra_komi > min_komi ? extra_komi : min_komi;
 }
 
