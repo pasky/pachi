@@ -202,6 +202,7 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 		pthread_mutex_lock(&slave_lock);
 		if (*line != '\n') return;
 		if (reply_id == cmd_id && *buf == '=') {
+			resend = false;
 			gtp_replies[reply_count++] = buf;
 			pthread_cond_signal(&reply_cond);
 		} else {
