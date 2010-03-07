@@ -180,7 +180,7 @@ adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 	 * by a->adapt_rate. */
 	int total_moves = b->moves + 2 * board_estimated_moves_left(b);
 	float game_portion = (float) b->moves / total_moves;
-	float l = a->adapt_phase - game_portion;
+	float l = game_portion - a->adapt_phase;
 	return 1.0 / (1.0 + exp(-a->adapt_rate * l));
 }
 
