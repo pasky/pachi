@@ -613,7 +613,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		 * time pressure but the tree is going to be just too messed
 		 * up otherwise - we might even play invalid suicides or pass
 		 * when we mustn't. */
-		if (ctx->t->root->u.playouts < GJ_MINGAMES)
+		if (i < GJ_MINGAMES)
 			continue;
 
 		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
