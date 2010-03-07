@@ -201,6 +201,8 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 
 		pthread_mutex_lock(&slave_lock);
 		if (*line != '\n') return;
+		// Make sure we are still in sync:
+		cmd_id = atoi(gtp_cmd);
 		if (reply_id == cmd_id && *buf == '=') {
 			resend = false;
 			gtp_replies[reply_count++] = buf;
