@@ -750,11 +750,14 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 			tree_node_get_value(u->t, 1, best->u.value), best->u.playouts,
 			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games);
 
-	/* Do not resign if we're so short of time that evaluation of best move is completely
-	 * unreliable, we might be winning actually. In this case best is almost random but
-	 * still better than resign. */
-	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)
-	    && best->u.playouts > GJ_MINGAMES) {
+	/* Do not resign if we're so short of time that evaluation of best
+	 * move is completely unreliable, we might be winning actually.
+	 * In this case best is almost random but still better than resign.
+	 * Also do not resign if we are getting bad results while actually
+	 * giving away extra komi points (dynkomi). */
+	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
+	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
+	    && u->t->extra_komi <= 1 /* XXX we assume dynamic komi == we are black */) {
 		reset_state(u);
 		return coord_copy(resign);
 	}
