@@ -297,7 +297,6 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->adapt_phase = 0.5;
 	a->adapt_moves = 200;
 	a->adapt_dir = -0.5;
-	a->adapt_base = 0.2;
 
 	a->zone_red = 0.45;
 	a->zone_green = 0.6;
