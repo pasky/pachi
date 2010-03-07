@@ -745,10 +745,11 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games)\n",
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
 			tree_node_get_value(u->t, 1, best->u.value), best->u.playouts,
-			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games);
+			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games,
+			u->t->extra_komi);
 
 	/* Do not resign if we're so short of time that evaluation of best
 	 * move is completely unreliable, we might be winning actually.
