@@ -142,8 +142,12 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			id = NO_REPLY;
 		} else if (c == P_DONE_OK) {
 			gtp_reply(id, reply, NULL);
+			return P_OK;
 		} else if (c == P_DONE_ERROR) {
 			gtp_error(id, reply, NULL);
+			/* This is an internal error for the engine, but
+			 * it is still OK from main's point of view. */
+			return P_OK;
 		} else if (c != P_OK) {
 			return c;
 		}
