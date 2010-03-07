@@ -608,6 +608,14 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			print_fullmem = true;
 		}
 
+		/* Never consider stopping if we played too few simulations.
+		 * Maybe we risk losing on time when playing in super-extreme
+		 * time pressure but the tree is going to be just too messed
+		 * up otherwise - we might even play invalid suicides or pass
+		 * when we mustn't. */
+		if (ctx->t->root->u.playouts < GJ_MINGAMES)
+			continue;
+
 		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
 		if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
 
