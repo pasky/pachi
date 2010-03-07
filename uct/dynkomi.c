@@ -174,9 +174,9 @@ float
 adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 {
 	/* Figure out how much to adjust the komi based on the game
-	 * stage. The adaptation rate is ~0.9 at the beginning,
+	 * stage. The adaptation rate is 0 at the beginning,
 	 * at game stage a->adapt_phase crosses though 0.5 and
-	 * approaches 0 at the game end; the slope is controlled
+	 * approaches 1 at the game end; the slope is controlled
 	 * by a->adapt_rate. */
 	int total_moves = b->moves + 2 * board_estimated_moves_left(b);
 	float game_portion = (float) b->moves / total_moves;
