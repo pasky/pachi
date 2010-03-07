@@ -14,18 +14,11 @@
 #include "playout/elo.h"
 #include "probdist.h"
 #include "random.h"
-#include "tactics.h"
+#include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
-
-float
-uct_get_extra_komi(struct uct *u, struct board *b)
-{
-	float extra_komi = board_effective_handicap(b, u->handicap_value) * (u->dynkomi - b->moves) / u->dynkomi;
-	return extra_komi;
-}
 
 void
 uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
@@ -397,8 +390,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		amaf->record_nakade = u->playout_amaf_nakade;
 	}
 
-	if (u->dynkomi > b2.moves && t->use_extra_komi)
-		b2.komi += uct_get_extra_komi(u, &b2);
+	if (t->use_extra_komi && u->dynkomi->persim) {
+		b2.komi += u->dynkomi->persim(u->dynkomi, &b2, t, n);
+	}
 
 	if (passes >= 2) {
 		/* XXX: No dead groups support. */
@@ -441,8 +435,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	if (result != 0) {
-		float rval = scale_value(u, b, result);
+		stats_add_result(&t->score, result / 2, 1);
 
+		float rval = scale_value(u, b, result);
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
 
 		if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {

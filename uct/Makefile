@@ -1,5 +1,5 @@
 INCLUDES=-I..
-OBJS=tree.o uct.o prior.o walk.o
+OBJS=dynkomi.o tree.o uct.o prior.o walk.o
 
 all: uct.a
 uct.a: $(OBJS)

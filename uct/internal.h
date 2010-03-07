@@ -13,6 +13,7 @@ struct tree;
 struct tree_node;
 struct uct_policy;
 struct uct_prior;
+struct uct_dynkomi;
 
 /* Internal UCT structures */
 
@@ -51,9 +52,9 @@ struct uct {
 	int fuseki_end;
 	int yose_start;
 
-	int dynkomi;
 	int dynkomi_mask;
-	int handicap_value;
+	int dynkomi_interval;
+	struct uct_dynkomi *dynkomi;
 
 	float val_scale;
 	int val_points;

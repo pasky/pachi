@@ -221,8 +221,9 @@ tree_dump(struct tree *tree, int thres)
 		 * huge dumps at first. */
 		thres = tree->root->u.playouts / 100 * (thres < 1000 ? 1 : thres / 1000);
 	}
-	fprintf(stderr, "(UCT tree; root %s; extra komi %f)\n",
-	        stone2str(tree->root_color), tree->extra_komi);
+	fprintf(stderr, "(UCT tree; root %s; extra komi %f; avg score %f/%d)\n",
+	        stone2str(tree->root_color), tree->extra_komi,
+		tree->score.value, tree->score.playouts);
 	tree_node_dump(tree, tree->root, 0, thres);
 
 	if (DEBUGL(3) && tree->ltree_black) {
@@ -413,18 +414,19 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 
 /* The following constants are used for garbage collection of nodes.
  * A tree is considered large if the top node has >= 40K playouts.
- * For such trees, we copy deep nodes only if they have >= 40 playouts.
+ * For such trees, we copy deep nodes only if they have enough
+ * playouts, with a gradually increasing threshold up to 40.
  * These constants define how much time we're willing to spend
- * scanning the source tree when promoting a move. The values 40K
- * and 40 makes worst case pruning in about 3s for 20 GB ram, and this
+ * scanning the source tree when promoting a move. The chosen values
+ * make worst case pruning in about 3s for 20 GB ram, and this
  * is only for long thinking time (>1M playouts). For fast games the
  * trees don't grow large. For small ram or fast game we copy the
  * entire tree.  These values do not degrade playing strength and are
- * necessary to avoid losing on time; increasing MIN_DEEP_PLAYOUTS
+ * necessary to avoid losing on time; increasing DEEP_PLAYOUTS_THRESHOLD
  * or decreasing LARGE_TREE_PLAYOUTS will make the program faster but
  * playing worse. */
-#define LARGE_TREE_PLAYOUTS 40000
-#define MIN_DEEP_PLAYOUTS 40
+#define LARGE_TREE_PLAYOUTS 40000LL
+#define DEEP_PLAYOUTS_THRESHOLD 40
 
 /* Garbage collect the tree early if the top node has < 5K playouts,
  * to avoid having to do it later on a large subtree.
@@ -458,16 +460,15 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	}
 
 	/* Copy all nodes for small trees. For large trees, copy all nodes
-	 * with depth <= max_depth, and all nodes with at least MIN_DEEP_PLAYOUTS.
+	 * with depth <= max_depth, and all nodes with enough playouts.
 	 * Avoiding going too deep (except for nodes with many playouts) is mostly
 	 * to save time scanning the source tree. It can take over 20s to traverse
 	 * completely a large source tree (20 GB) even without copying because
 	 * the traversal is not friendly at all with the memory cache. */
-	if (node->u.playouts < LARGE_TREE_PLAYOUTS) {
-		temp_node = tree_prune(temp_tree, tree, node, 0, max_depth + 20);
-	} else {
-		temp_node = tree_prune(temp_tree, tree, node, MIN_DEEP_PLAYOUTS, max_depth);
-	}
+	int threshold = (node->u.playouts - LARGE_TREE_PLAYOUTS) * DEEP_PLAYOUTS_THRESHOLD / LARGE_TREE_PLAYOUTS;
+	if (threshold < 0) threshold = 0;
+	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD; 
+	temp_node = tree_prune(temp_tree, tree, node, threshold, max_depth);
 	assert(temp_node);
 
 	/* Now copy back to original tree. */
@@ -487,7 +488,7 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 		prev_time = start_time;
 	}
 	if (temp_tree->nodes_size >= temp_tree->max_tree_size) {
-		fprintf(stderr, "temp tree overflow, increase max_tree_size %lu or MIN_FREE_MEM_PERCENT %d\n",
+		fprintf(stderr, "temp tree overflow, increase max_tree_size %lu or MIN_FREE_MEM_PERCENT %llu\n",
 			tree->max_tree_size, MIN_FREE_MEM_PERCENT);
 	} else {
 		assert(tree->nodes_size == temp_tree->nodes_size);
@@ -892,7 +893,11 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 	}
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);
+
 	board_symmetry_update(tree->board, &tree->root_symmetry, (*node)->coord);
+	/* See tree.score description for explanation on why don't we zero
+	 * score on node promotion. */
+	// tree->score.playouts = 0;
 
 	/* If the tree deepest node was under node, or if we called tree_garbage_collect,
 	 * tree->max_depth is correct. Otherwise we could traverse the tree

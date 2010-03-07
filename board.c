@@ -16,6 +16,7 @@
 #include "pattern3.h"
 #endif
 #ifdef BOARD_TRAITS
+static void board_trait_recompute(struct board *board, coord_t coord);
 #include "tactics.h"
 #endif
 #ifdef BOARD_GAMMA
@@ -407,7 +408,6 @@ board_print(struct board *board, FILE *f)
 	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL);
 }
 
-static void board_trait_recompute(struct board *board, coord_t coord);
 void
 board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_selfatari)
 {
@@ -469,12 +469,10 @@ board_trait_safe(struct board *board, coord_t coord, enum stone color)
 	else
 		return board_safe_to_play(board, coord, color);
 }
-#endif
 
 static void
 board_trait_recompute(struct board *board, coord_t coord)
 {
-#ifdef BOARD_TRAITS
 	trait_at(board, coord, S_BLACK).safe = board_trait_safe(board, coord, S_BLACK);;
 	trait_at(board, coord, S_WHITE).safe = board_trait_safe(board, coord, S_WHITE);
 	if (DEBUGL(8)) {
@@ -485,8 +483,8 @@ board_trait_recompute(struct board *board, coord_t coord)
 	}
 	board_gamma_update(board, coord, S_BLACK);
 	board_gamma_update(board, coord, S_WHITE);
-#endif
 }
+#endif
 
 /* Recompute traits for dirty points that we have previously touched
  * somehow (libs of their neighbors changed or so). */

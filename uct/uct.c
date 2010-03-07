@@ -19,8 +19,9 @@
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "random.h"
-#include "timeinfo.h"
 #include "tactics.h"
+#include "timeinfo.h"
+#include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
@@ -86,10 +87,8 @@ reset_state(struct uct *u)
 static void
 setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
-	if (u->dynkomi > b->moves && u->t->use_extra_komi)
-		u->t->extra_komi = uct_get_extra_komi(u, b);
-	else
-		u->t->extra_komi = 0;
+	if (u->t->use_extra_komi && u->dynkomi->permove)
+		u->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, u->t);
 }
 
 static void
@@ -184,9 +183,6 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 		reset_state(u);
 		return NULL;
 	}
-	/* Setting up dynkomi is not necessary here, probably, but we
-	 * better do it anyway for consistency reasons. */
-	setup_dynkomi(u, b, stone_other(m->color));
 	return NULL;
 }
 
@@ -555,6 +551,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	struct time_stop stop;
 	time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &stop);
 
+	/* Number of last dynkomi adjustment. */
+	int last_dynkomi = t->root->u.playouts;
 	/* Number of last game with progress print. */
 	int last_print = t->root->u.playouts;
 	/* Number of simulations to wait before next print. */
@@ -588,6 +586,16 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		 * at least 100ms otherwise the move is completely random. */
 
 		int i = ctx->t->root->u.playouts;
+
+		/* Adjust dynkomi? */
+		if (ctx->t->use_extra_komi && u->dynkomi->permove
+		    && u->dynkomi_interval
+		    && i > last_dynkomi + u->dynkomi_interval) {
+			float old_dynkomi = ctx->t->extra_komi;
+			ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
+			if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
+				fprintf(stderr, "dynkomi adjusted (%f -> %f)\n", old_dynkomi, ctx->t->extra_komi);
+		}
 
 		/* Print progress? */
 		if (i - last_print > print_interval) {
@@ -737,16 +745,20 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games)\n",
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
 			tree_node_get_value(u->t, 1, best->u.value), best->u.playouts,
-			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games);
+			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games,
+			u->t->extra_komi);
 
-	/* Do not resign if we're so short of time that evaluation of best move is completely
-	 * unreliable, we might be winning actually. In this case best is almost random but
-	 * still better than resign. */
-	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)
-	    && best->u.playouts > GJ_MINGAMES) {
+	/* Do not resign if we're so short of time that evaluation of best
+	 * move is completely unreliable, we might be winning actually.
+	 * In this case best is almost random but still better than resign.
+	 * Also do not resign if we are getting bad results while actually
+	 * giving away extra komi points (dynkomi). */
+	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
+	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
+	    && u->t->extra_komi <= 1 /* XXX we assume dynamic komi == we are black */) {
 		reset_state(u);
 		return coord_copy(resign);
 	}
@@ -828,10 +840,7 @@ uct_state_init(char *arg, struct board *b)
 	u->amaf_prior = false;
 	u->max_tree_size = 3072ULL * 1048576;
 
-	if (board_size(b) - 2 >= 19)
-		u->dynkomi = 200;
 	u->dynkomi_mask = S_BLACK;
-	u->handicap_value = 7;
 
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
@@ -1000,21 +1009,34 @@ uct_state_init(char *arg, struct board *b)
 				u->force_seed = atoi(optval);
 			} else if (!strcasecmp(optname, "no_book")) {
 				u->no_book = true;
-			} else if (!strcasecmp(optname, "dynkomi")) {
-				/* Dynamic komi in handicap game; linearly
-				 * decreases to basic settings until move
-				 * #optval. */
-				u->dynkomi = optval ? atoi(optval) : 200;
+			} else if (!strcasecmp(optname, "dynkomi") && optval) {
+				/* Dynamic komi approach; there are multiple
+				 * ways to adjust komi dynamically throughout
+				 * play. We currently support two: */
+				char *dynkomiarg = strchr(optval, ':');
+				if (dynkomiarg)
+					*dynkomiarg++ = 0;
+				if (!strcasecmp(optval, "none")) {
+					u->dynkomi = uct_dynkomi_init_none(u, dynkomiarg, b);
+				} else if (!strcasecmp(optval, "linear")) {
+					u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
+				} else if (!strcasecmp(optval, "adaptive")) {
+					u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomiarg, b);
+				} else {
+					fprintf(stderr, "UCT: Invalid dynkomi mode %s\n", optval);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; you may want
 				 * to use dynkomi_mask=3 to allow dynkomi
 				 * even in games where Pachi is white. */
 				u->dynkomi_mask = atoi(optval);
-			} else if (!strcasecmp(optname, "handicap_value") && optval) {
-				/* Point value of single handicap stone,
-				 * for dynkomi computation. */
-				u->handicap_value = atoi(optval);
+			} else if (!strcasecmp(optname, "dynkomi_interval") && optval) {
+				/* If non-zero, re-adjust dynamic komi
+				 * throughout a single genmove reading,
+				 * roughly every N simulations. */
+				u->dynkomi_interval = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
 				 * influenced by win size. Zero means it isn't. */
@@ -1123,7 +1145,7 @@ uct_state_init(char *arg, struct board *b)
 		exit(1);
 	}
 	if (u->fast_alloc)
-		u->max_tree_size = (100 * u->max_tree_size) / (100 + MIN_FREE_MEM_PERCENT);
+		u->max_tree_size = (100ULL * u->max_tree_size) / (100 + MIN_FREE_MEM_PERCENT);
 
 	if (!u->prior)
 		u->prior = uct_prior_init(NULL, b);
@@ -1133,6 +1155,9 @@ uct_state_init(char *arg, struct board *b)
 	u->playout->debug_level = u->debug_level;
 
 	u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
+
+	if (!u->dynkomi)
+		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 
 	/* Some things remain uninitialized for now - the opening book
 	 * is not loaded and the tree not set up. */
