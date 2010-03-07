@@ -164,6 +164,7 @@ struct dynkomi_adaptive {
 	/* Sigmoid adaptation rate parameter; see below for details. */
 	float adapt_phase; // [0,1]
 	float adapt_rate; // [1,infty)
+	bool adapt_aport; // alternative game portion determination
 	/* Linear adaptation rate parameter. */
 	int adapt_moves;
 	float adapt_dir; // [-1,1]
@@ -178,8 +179,14 @@ adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 	 * at game stage a->adapt_phase crosses though 0.5 and
 	 * approaches 1 at the game end; the slope is controlled
 	 * by a->adapt_rate. */
-	int total_moves = b->moves + 2 * board_estimated_moves_left(b);
-	float game_portion = (float) b->moves / total_moves;
+	float game_portion;
+	if (!a->adapt_aport) {
+		int total_moves = b->moves + 2 * board_estimated_moves_left(b);
+		game_portion = (float) b->moves / total_moves;
+	} else {
+		int brsize = board_size(b) - 2;
+		game_portion = 1.0 - (float) b->flen / (brsize * brsize);
+	}
 	float l = game_portion - a->adapt_phase;
 	return 1.0 / (1.0 + exp(-a->adapt_rate * l));
 }
@@ -352,6 +359,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "adapt_moves") && optval) {
 				/* Adaptation move amount; see above. */
 				a->adapt_moves = atoi(optval);
+			} else if (!strcasecmp(optname, "adapt_aport")) {
+				a->adapt_aport = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "adapt_dir") && optval) {
 				/* Adaptation direction vector; see above. */
 				a->adapt_dir = atof(optval);
