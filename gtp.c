@@ -17,6 +17,9 @@
 
 #define NO_REPLY (-2)
 
+/* Sleep 5 seconds after a game ends to give time to kill the program. */
+#define GAME_OVER_SLEEP 5
+
 void
 gtp_prefix(char prefix, int id)
 {
@@ -121,6 +124,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			      "quit\n"
 			      "boardsize\n"
 			      "clear_board\n"
+			      "kgs-game_over\n"
 			      "komi\n"
 			      "play\n"
 			      "genmove\n"
@@ -164,10 +168,17 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 		gtp_reply(id, NULL);
 
-	} else if (!strcasecmp(cmd, "clear_board")) {
+	} else if (!strcasecmp(cmd, "clear_board") || !strcasecmp(cmd, "kgs-game_over")) {
 		board_clear(board);
 		if (DEBUGL(1))
 			board_print(board, stderr);
+		if (!strcasecmp(cmd, "kgs-game_over")) {
+			if (DEBUGL(0))
+				fprintf(stderr, "game is over\n");
+			/* Sleep before replying, so that kgs doesn't
+			 * start another game immediately. */
+			sleep(GAME_OVER_SLEEP);
+		}
 		gtp_reply(id, NULL);
 		return P_ENGINE_RESET;
 
