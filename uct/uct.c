@@ -761,7 +761,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * odd size). We are not trying  to get an exact evaluation for rare
 	 * cases of seki. For details see http://home.snafu.de/jasiek/parity.html
 	 * TODO: Support the kgs-rules command once available. */
-	if (u->territory_scoring && (((int)floor(b->komi) + b->size) & 1)) {
+	if (u->territory_scoring && (((int)floor(b->komi) + board_size(b)) & 1)) {
 		b->komi += (color == S_BLACK ? 1.0 : -1.0);
 		if (UDEBUGL(0))
 			fprintf(stderr, "Setting komi to %.1f assuming Japanese rules\n",
