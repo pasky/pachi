@@ -308,7 +308,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->zone_red = 0.45;
 	a->zone_green = 0.6;
 	a->score_step = 2;
-	a->komi_latch = -1000;
+	a->komi_latch = 1000;
 
 	if (arg) {
 		char *optspec, *next = arg;
