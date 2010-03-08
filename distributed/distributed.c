@@ -6,11 +6,14 @@
  * gets as replies a list of candidate moves, their number of playouts
  * and their value. The master then picks the most popular move. */
 
-/* The master trusts the majority of slaves for time control:
- * it picks the move when half the slaves have replied, except
+/* With time control, the master waits for all slaves, except
  * when the allowed time is already passed. In this case the
  * master picks among the available replies, or waits for just
- * one reply if there is none yet. */
+ * one reply if there is none yet.
+ * Without time control, the master waits until the desired
+ * number of games have been simulated. In this case the -t
+ * parameter for the master should be the sum of the parameters
+ * for all slaves. */
 
 /* This first version does not send tree updates between slaves,
  * but it has fault tolerance. If a slave is out of sync, the master
@@ -75,6 +78,18 @@ struct distributed {
 	bool slaves_quit;
 	struct move my_last_move;
 	struct move_stats my_last_stats;
+};
+
+static coord_t select_best_move(struct board *b, struct move_stats *best_stats,
+				int *total_playouts, int *total_threads);
+
+/* Default number of simulations to perform per move.
+ * Note that this is in total over all slaves! */
+#define DIST_GAMES	80000
+static const struct time_info default_ti = {
+	.period = TT_MOVE,
+	.dim = TD_GAMES,
+	.len = { .games = DIST_GAMES },
 };
 
 #define get_value(value, color) \
@@ -292,17 +307,15 @@ update_cmd(struct board *b, char *cmd, char *args)
 	reply_count = 0;
 }
 
-/* Wait for slave replies until we get at least 50% of the
- * slaves or the given absolute time (if non zero) is passed.
- * If we get 50% of the slaves, we wait another 0.5s to get
- * as many slaves as possible while not wasting time waiting
- * for stuck or dead slaves.
+/* If time_limit > 0, wait until all slaves have replied, or if the
+ * given absolute time is passed, wait for at least one reply.
+ * If time_limit == 0, wait until we get at least min_playouts games
+ * simulated in total by all the slaves, or until all slaves have replied.
  * The replies are returned in gtp_replies[0..reply_count-1]
  * slave_lock is held on entry and on return. */
 static void
-get_replies(double time_limit)
+get_replies(double time_limit, int min_playouts, struct board *b)
 {
-#define EXTRA_TIME 0.5
 	while (reply_count == 0 || reply_count < active_slaves) {
 		if (time_limit && reply_count > 0) {
 			struct timespec ts;
@@ -315,14 +328,21 @@ get_replies(double time_limit)
 		}
 		if (reply_count == 0) continue;
 		if (reply_count >= active_slaves) break;
-		double now = time_now();
-		if (time_limit && now >= time_limit) break;
-		if (reply_count >= active_slaves / 2
-		    && (!time_limit || now + EXTRA_TIME < time_limit))
-			time_limit = now + EXTRA_TIME;
+		if (time_limit) {
+			if (time_now() >= time_limit) break;
+		} else {
+			int playouts, threads;
+			struct move_stats s;
+			select_best_move(b, &s, &playouts, &threads);
+			if (playouts >= min_playouts) break;
+		}
 	}
 	assert(reply_count > 0);
 }
+
+/* Maximum time (seconds) to wait for answers to fast gtp commands
+ * (all commands except pachi-genmoves and final_status_list). */
+#define MAX_FAST_CMD_WAIT 1.0
 
 /* Dispatch a new gtp command to all slaves.
  * The slave lock must not be held upon entry and is released upon return.
@@ -376,7 +396,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	if (strcasecmp(cmd, "pachi-genmoves")
 	    && strcasecmp(cmd, "pachi-genmoves_cleanup")
 	    && strcasecmp(cmd, "final_status_list"))
-		get_replies(0);
+		get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
 
 	pthread_mutex_unlock(&slave_lock);
 	return P_OK;
@@ -437,17 +457,20 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	struct distributed *dist = e->data;
 	double start = time_now();
 
-	/* If we do not have time constraints we just wait for
-	 * slaves to reply as they have been configured by default. */
 	long time_limit = 0;
-	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME) {
-		struct time_stop stop;
-		time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, &stop);
+	int min_playouts = 0;
+
+	if (ti->period == TT_NULL) *ti = default_ti;
+	struct time_stop stop;
+	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, &stop);
+	if (ti->dim == TD_WALLTIME) {
 		time_limit = ti->len.t.timer_start + stop.worst.time;
+	} else {
+		min_playouts = stop.desired.playouts;
 	}
 
 	pthread_mutex_lock(&slave_lock);
-	get_replies(time_limit);
+	get_replies(time_limit, min_playouts, b);
 	int replies = reply_count;
 
 	int playouts, threads;
@@ -508,7 +531,7 @@ static void
 distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	pthread_mutex_lock(&slave_lock);
-	get_replies(0);
+	get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
 
 	/* Find the most popular reply. */
 	qsort(gtp_replies, reply_count, sizeof(char *), scmp);
