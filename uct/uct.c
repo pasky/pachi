@@ -633,6 +633,14 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			print_fullmem = true;
 		}
 
+		/* Never consider stopping if we played too few simulations.
+		 * Maybe we risk losing on time when playing in super-extreme
+		 * time pressure but the tree is going to be just too messed
+		 * up otherwise - we might even play invalid suicides or pass
+		 * when we mustn't. */
+		if (i < GJ_MINGAMES)
+			continue;
+
 		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
 		if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
 
@@ -771,16 +779,20 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games)\n",
+		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
 			tree_node_get_value(u->t, 1, best->u.value), best->u.playouts,
-			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games);
+			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games,
+			u->t->extra_komi);
 
-	/* Do not resign if we're so short of time that evaluation of best move is completely
-	 * unreliable, we might be winning actually. In this case best is almost random but
-	 * still better than resign. */
-	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio && !is_pass(best->coord)
-	    && best->u.playouts > GJ_MINGAMES) {
+	/* Do not resign if we're so short of time that evaluation of best
+	 * move is completely unreliable, we might be winning actually.
+	 * In this case best is almost random but still better than resign.
+	 * Also do not resign if we are getting bad results while actually
+	 * giving away extra komi points (dynkomi). */
+	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
+	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
+	    && u->t->extra_komi <= 1 /* XXX we assume dynamic komi == we are black */) {
 		reset_state(u);
 		return coord_copy(resign);
 	}

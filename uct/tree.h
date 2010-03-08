@@ -95,8 +95,8 @@ struct tree {
 	 * based on leaf node depth. */
 	float extra_komi;
 
-	/* Information on average score at the game end, white wins =>
-	 * positive. */
+	/* Information on average score at the game end (from black's
+	 * perspective). */
 	/* N.B.: Some users may need average score carried over from previous
 	 * move to initialize. Thus, this information is NOT zeroed on node
 	 * promotion, you are responsible for zeroing it for yourself if you

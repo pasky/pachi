@@ -391,7 +391,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 	if (t->use_extra_komi && u->dynkomi->persim) {
-		b2.komi += u->dynkomi->persim(u->dynkomi, &b2, t, n);
+		b2.komi += round(u->dynkomi->persim(u->dynkomi, &b2, t, n));
 	}
 
 	if (passes >= 2) {
@@ -435,7 +435,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	if (result != 0) {
-		stats_add_result(&t->score, result, 1);
+		stats_add_result(&t->score, result / 2, 1);
 
 		float rval = scale_value(u, b, result);
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
