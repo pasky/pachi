@@ -383,6 +383,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 		cmd = "pachi-genmoves_cleanup";
 	} else if (!strcasecmp(cmd, "final_score")) {
 		cmd = "final_status_list";
+		args = "dead";
 	}
 
 	// Let the slaves send the new gtp command:
