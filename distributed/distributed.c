@@ -316,6 +316,7 @@ update_cmd(struct board *b, char *cmd, char *args)
 static void
 get_replies(double time_limit, int min_playouts, struct board *b)
 {
+	double now;
 	while (reply_count == 0 || reply_count < active_slaves) {
 		if (time_limit && reply_count > 0) {
 			struct timespec ts;
@@ -327,15 +328,23 @@ get_replies(double time_limit, int min_playouts, struct board *b)
 			pthread_cond_wait(&reply_cond, &slave_lock);
 		}
 		if (reply_count == 0) continue;
-		if (reply_count >= active_slaves) break;
+		if (reply_count >= active_slaves) return;
 		if (time_limit) {
-			if (time_now() >= time_limit) break;
+			now = time_now();
+			if (now >= time_limit) break;
 		} else {
 			int playouts, threads;
 			struct move_stats s;
 			select_best_move(b, &s, &playouts, &threads);
-			if (playouts >= min_playouts) break;
+			if (playouts >= min_playouts) return;
 		}
+	}
+	if (DEBUGL(1)) {
+		char buf[1024];
+		snprintf(buf, sizeof(buf),
+			 "get_replies timeout %.3f >= %.3f, replies %d < active %d\n",
+			 now - start_time, time_limit - start_time, reply_count, active_slaves);
+		logline(NULL, "? ", buf);
 	}
 	assert(reply_count > 0);
 }
