@@ -107,6 +107,15 @@ char gtp_cmds[CMDS_SIZE];
 /* Latest gtp command sent to slaves. */
 char *gtp_cmd = NULL;
 
+/* Remember at most 3 gtp ids per move (time_left, genmoves, play).
+ * For move 0 there can be more than 3 commands
+ * but then we resend the whole history. */
+#define MAX_CMDS_PER_MOVE 3
+
+/* History of gtp commands sent for current game, indexed by move. */
+int id_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
+char *cmd_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
+
 /* Number of active slave machines working for this master. */
 int active_slaves = 0;
 
@@ -116,7 +125,8 @@ int reply_count = 0;
 /* All replies to latest gtp command are in gtp_replies[0..reply_count-1]. */
 char **gtp_replies;
 
-/* Mutex protecting gtp_cmds, gtp_cmd, active_slaves, reply_count & gtp_replies */
+/* Mutex protecting gtp_cmds, gtp_cmd, id_history, cmd_history,
+ * active_slaves, reply_count & gtp_replies */
 pthread_mutex_t slave_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* Condition signaled when a new gtp command is available. */
@@ -195,6 +205,14 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 		cmd_id = atoi(gtp_cmd);
 
 		pthread_mutex_unlock(&slave_lock);
+
+		if (DEBUGL(1) && resend) {
+			if (to_send == gtp_cmds) {
+				logline(&client, "? ", "Slave out-of-sync, resending all history\n");
+			} else {
+				logline(&client, "? ", "Slave behind, partial resend\n");
+			}
+		}
 		if (DEBUGL(2))
 			logline(&client, ">>", buf);
 		fputs(buf, f);
@@ -222,15 +240,26 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 			resend = false;
 			gtp_replies[reply_count++] = buf;
 			pthread_cond_signal(&reply_cond);
-		} else {
-			/* The slave was out of sync or had an incorrect board.
-			 * Send the whole command history without wait.
-			 * The slave will send a single reply with the
-			 * id of the last command. */
-			to_send = gtp_cmds;
-			resend = true;
-			if (DEBUGL(1))
-				logline(&client, "? ", "Resending all history\n");
+			continue;
+		}
+		resend = true;
+		to_send = gtp_cmds;
+		/* Resend everything if slave got latest command,
+		 *  but doesn't have a correct board. */
+		if (reply_id == cmd_id) continue;
+
+		/* The slave is ouf-of-sync. Check whether the last command
+		 * it received belongs to the current game. If so resend
+		 * starting at the last move known by slave, otherwise
+		 * resend the whole history. */
+		int reply_move = move_number(reply_id);
+		if (reply_move > move_number(cmd_id)) continue;
+
+		for (int slot = 0; slot < MAX_CMDS_PER_MOVE; slot++) {
+			if (reply_id == id_history[reply_move][slot]) {
+				to_send = cmd_history[reply_move][slot];
+				break;
+			}
 		}
 	}
 }
@@ -305,6 +334,13 @@ update_cmd(struct board *b, char *cmd, char *args)
 	snprintf(gtp_cmd, gtp_cmds + CMDS_SIZE - gtp_cmd, "%d %s %s",
 		 id, cmd, *args ? args : "\n");
 	reply_count = 0;
+
+	/* Remember history for out-of-sync slaves, at most 3 ids per move
+         * (time_left, genmoves, play). */
+	static int slot = 0;
+	slot = (slot + 1) % MAX_CMDS_PER_MOVE;
+	id_history[moves][slot] = id;
+	cmd_history[moves][slot] = gtp_cmd;
 }
 
 /* If time_limit > 0, wait until all slaves have replied, or if the
