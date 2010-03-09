@@ -17,7 +17,7 @@
 
 /* This first version does not send tree updates between slaves,
  * but it has fault tolerance. If a slave is out of sync, the master
- * sends it the whole command history. */
+ * sends it the appropriate command history. */
 
 /* Pass me arguments like a=b,c=d,...
  * Supported arguments:
@@ -180,7 +180,7 @@ proxy_thread(void *arg)
 
 /* Main loop of a slave thread.
  * Send the current command to the slave machine and wait for a reply.
- * Resend the whole command history if the slave machine is out of sync.
+ * Resend command history if the slave machine is out of sync.
  * Returns when the connection with the slave machine is cut.
  * slave_lock is held on both entry and exit of this function. */
 static void
@@ -199,7 +199,7 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 		}
 
 		/* Command available, send it to slave machine.
-		 * If slave was out of sync, send all the history. */
+		 * If slave was out of sync, send the history. */
 		assert(to_send && gtp_cmd);
 		strncpy(buf, to_send, CMDS_SIZE);
 		cmd_id = atoi(gtp_cmd);
@@ -438,7 +438,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	/* Wait for replies here except for specific commands
 	 * handled by the engine later. If we don't wait, we run
 	 * the risk of getting out of sync with most slaves and
-	 * sending complete command history too frequently. */
+	 * sending command history too frequently. */
 	if (strcasecmp(cmd, "pachi-genmoves")
 	    && strcasecmp(cmd, "pachi-genmoves_cleanup")
 	    && strcasecmp(cmd, "final_status_list"))
