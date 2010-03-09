@@ -341,6 +341,38 @@ update_cmd(struct board *b, char *cmd, char *args)
 	slot = (slot + 1) % MAX_CMDS_PER_MOVE;
 	id_history[moves][slot] = id;
 	cmd_history[moves][slot] = gtp_cmd;
+
+	// Notify the slave threads about the new command.
+	pthread_cond_broadcast(&cmd_cond);
+}
+
+/* Update the command history, then create a new gtp command
+ * for all slaves. The slave lock is held upon entry and
+ * upon return, so the command will actually be sent when the
+ * lock is released. cmd is a single word; args has all
+ * arguments and is empty or has a trailing \n */
+static void
+new_cmd(struct board *b, char *cmd, char *args)
+{
+	// Clear the history when a new game starts:
+	if (!gtp_cmd || is_gamestart(cmd)) {
+		gtp_cmd = gtp_cmds;
+	} else {
+		/* Preserve command history for new slaves.
+		 * To indicate that the slave should only reply to
+		 * the last command we force the id of previous
+		 * commands to be just the move number. */
+		int id = prevent_reply(atoi(gtp_cmd));
+		int len = strspn(gtp_cmd, "0123456789");
+		char buf[32];
+		snprintf(buf, sizeof(buf), "%0*d", len, id);
+		memcpy(gtp_cmd, buf, len);
+
+		gtp_cmd += strlen(gtp_cmd);
+	}
+
+	// Let the slave threads send the new gtp command:
+	update_cmd(b, cmd, args);
 }
 
 /* If time_limit > 0, wait until all slaves have replied, or if the
@@ -397,52 +429,28 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 {
 	struct distributed *dist = e->data;
 
+	/* Commands that should not be sent to slaves */
 	if ((!strcasecmp(cmd, "quit") && !dist->slaves_quit)
 	    || !strcasecmp(cmd, "uct_genbook")
 	    || !strcasecmp(cmd, "uct_dumpbook")
-	    || !strcasecmp(cmd, "kgs-chat"))
+	    || !strcasecmp(cmd, "kgs-chat")
+
+	    /* and commands that will be sent to slaves later */
+	    || !strcasecmp(cmd, "genmove")
+	    || !strcasecmp(cmd, "kgs-genmove_cleanup")
+	    || !strcasecmp(cmd, "final_score")
+	    || !strcasecmp(cmd, "final_status_list"))
 		return P_OK;
 
 	pthread_mutex_lock(&slave_lock);
 
-	// Clear the history when a new game starts:
-	if (!gtp_cmd || is_gamestart(cmd)) {
-		gtp_cmd = gtp_cmds;
-	} else {
-		/* Preserve command history for new slaves.
-		 * To indicate that the slave should only reply to
-		 * the last command we force the id of previous
-		 * commands to be just the move number. */
-		int id = prevent_reply(atoi(gtp_cmd));
-		int len = strspn(gtp_cmd, "0123456789");
-		char buf[32];
-		snprintf(buf, sizeof(buf), "%0*d", len, id);
-		memcpy(gtp_cmd, buf, len);
+	// Create a new command to be sent by the slave threads.
+	new_cmd(b, cmd, args);
 
-		gtp_cmd += strlen(gtp_cmd);
-	}
-
-	if (!strcasecmp(cmd, "genmove")) {
-		cmd = "pachi-genmoves";
-	} else if (!strcasecmp(cmd, "kgs-genmove_cleanup")) {
-		cmd = "pachi-genmoves_cleanup";
-	} else if (!strcasecmp(cmd, "final_score")) {
-		cmd = "final_status_list";
-		args = "dead";
-	}
-
-	// Let the slaves send the new gtp command:
-	update_cmd(b, cmd, args);
-	pthread_cond_broadcast(&cmd_cond);
-
-	/* Wait for replies here except for specific commands
-	 * handled by the engine later. If we don't wait, we run
-	 * the risk of getting out of sync with most slaves and
+	/* Wait for replies here. If we don't wait, we run the
+	 * risk of getting out of sync with most slaves and
 	 * sending command history too frequently. */
-	if (strcasecmp(cmd, "pachi-genmoves")
-	    && strcasecmp(cmd, "pachi-genmoves_cleanup")
-	    && strcasecmp(cmd, "final_status_list"))
-		get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
+	get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
 
 	pthread_mutex_unlock(&slave_lock);
 	return P_OK;
@@ -516,6 +524,12 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	}
 
 	pthread_mutex_lock(&slave_lock);
+
+	char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
+	char args[64];
+	snprintf(args, sizeof(args), "%s\n", stone2str(color));
+	new_cmd(b, cmd, args);
+
 	get_replies(time_limit, min_playouts, b);
 	int replies = reply_count;
 
@@ -525,11 +539,9 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	/* Tell the slaves to commit to the selected move, overwriting
 	 * the last "pachi-genmoves" in the command history. */
-	char args[64];
 	char *coord = coord2str(dist->my_last_move.coord, b);
 	snprintf(args, sizeof(args), "%s %s\n", stone2str(color), coord);
 	update_cmd(b, "play", args);
-	pthread_cond_broadcast(&cmd_cond);
 	pthread_mutex_unlock(&slave_lock);
 
 	if (DEBUGL(1)) {
@@ -577,6 +589,8 @@ static void
 distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	pthread_mutex_lock(&slave_lock);
+
+	new_cmd(b, "final_status_list", "dead");
 	get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
 
 	/* Find the most popular reply. */
