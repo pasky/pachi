@@ -590,7 +590,7 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 {
 	pthread_mutex_lock(&slave_lock);
 
-	new_cmd(b, "final_status_list", "dead");
+	new_cmd(b, "final_status_list", "dead\n");
 	get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
 
 	/* Find the most popular reply. */
