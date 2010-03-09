@@ -157,6 +157,7 @@ struct dynkomi_adaptive {
 	bool value_based;
 	float zone_red, zone_green;
 	int score_step;
+	bool use_komi_latch;
 	float komi_latch; // runtime, not configuration
 
 	float (*adapter)(struct dynkomi_adaptive *a, struct board *b);
@@ -254,7 +255,7 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 		} else {
 			/* Green zone. Give extra komi. */
 			extra_komi += a->score_step; // XXX: we depend on being black
-			return extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
+			return !a->use_komi_latch || extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
 		}
 	}
 
@@ -308,6 +309,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->zone_red = 0.45;
 	a->zone_green = 0.6;
 	a->score_step = 2;
+	a->use_komi_latch = true;
 	a->komi_latch = 1000;
 
 	if (arg) {
@@ -336,6 +338,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->zone_green = atof(optval);
 			} else if (!strcasecmp(optname, "score_step") && optval) {
 				a->score_step = atoi(optval);
+			} else if (!strcasecmp(optname, "use_komi_latch")) {
+				a->use_komi_latch = !optval || atoi(optval);
 
 			} else if (!strcasecmp(optname, "adapter") && optval) {
 				/* Adaptatation method. */
