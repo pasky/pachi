@@ -550,12 +550,13 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 		double time = time_now() - start + 0.000001; /* avoid divide by zero */
 		snprintf(buf, sizeof(buf),
 			 "GLOBAL WINNER is %s %s with score %1.4f (%d/%d games)\n"
-			 "genmove in %0.2fs (%d games/s, %d games/s/slave, %d games/s/thread)\n",
+			 "genmove in %0.2fs %d slaves %d threads (%d games/s,"
+			 " %d games/s/slave, %d games/s/thread)\n",
 			 stone2str(color), coord, get_value(dist->my_last_stats.value, color),
-			 dist->my_last_stats.playouts, playouts, time,
+			 dist->my_last_stats.playouts, playouts, time, replies, threads,
 			 (int)(playouts/time), (int)(playouts/time/replies),
 			 (int)(playouts/time/threads));
-		logline(NULL, "*** ", buf);
+		logline(NULL, "* ", buf);
 	}
 	free(coord);
 	return coord_copy(dist->my_last_move.coord);
