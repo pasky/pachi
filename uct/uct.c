@@ -479,6 +479,14 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 		struct tree_node *best, struct tree_node *best2,
 		int base_playouts, int i)
 {
+	/* Always use at least half the desired time. It is silly
+	 * to lose a won game because we played a bad move in 0.1s. */
+	double elapsed = 0;
+	if (ti->dim == TD_WALLTIME) {
+		elapsed = time_now() - ti->len.t.timer_start;
+		if (elapsed < 0.5 * stop->desired.time) return false;
+	}
+
 	/* Early break in won situation. */
 	if (best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
 		return true;
@@ -492,7 +500,6 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	 * period, however - it's better to pre-ponder. */
 	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
 	if (best2 && ti->dim == TD_WALLTIME && !time_indulgent) {
-		double elapsed = time_now() - ti->len.t.timer_start;
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)i - base_playouts) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
@@ -511,6 +518,7 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 /* Determine whether we should terminate the search later. */
 static bool
 uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
+		struct time_info *ti, struct time_stop *stop,
 		struct tree_node *best, struct tree_node *best2,
 		struct tree_node *bestr, struct tree_node *winner, int i)
 {
@@ -518,6 +526,15 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		if (UDEBUGL(2))
 			fprintf(stderr, "Did not find best move, still trying...\n");
 		return true;
+	}
+
+	/* Do not waste time if we are winning. Spend up to worst time if
+	 * we are unsure, but only desired time if we are sure of winning. */
+	float beta = 2 * (tree_node_get_value(t, 1, best->u.value) - 0.5);
+	if (ti->dim == TD_WALLTIME && beta > 0) {
+		double good_enough = stop->desired.time * beta + stop->worst.time * (1 - beta);
+		double elapsed = time_now() - ti->len.t.timer_start;
+		if (elapsed > good_enough) return false;
 	}
 
 	if (u->best2_ratio > 0) {
@@ -671,7 +688,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			}
 			if (best)
 				bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
-			if (!uct_search_keep_looking(u, ctx->t, b, best, best2, bestr, winner, i))
+			if (!uct_search_keep_looking(u, ctx->t, b, ti, &stop, best, best2, bestr, winner, i))
 				break;
 		}
 
@@ -1204,7 +1221,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
-	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
+	u->loss_threshold = 0.85; /* Stop reading if after at least 2000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
 
