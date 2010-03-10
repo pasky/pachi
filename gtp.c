@@ -255,6 +255,9 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *reply = engine->genmoves(engine, board, &ti[color], color, !strcasecmp(cmd, "pachi-genmoves_cleanup"));
 		if (DEBUGL(2))
 			fprintf(stderr, "proposing moves %s\n", reply);
+		if (DEBUGL(1)) {
+			board_print_custom(board, stderr, engine->printhook);
+		}
 		gtp_reply(id, reply, NULL);
 
 		/* See "genmove" above about time management. */
