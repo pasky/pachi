@@ -776,7 +776,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
 	if (!best) {
-		reset_state(u);
+		if (!u->slave) reset_state(u);
 		return coord_copy(pass);
 	}
 	if (UDEBUGL(1))
@@ -794,7 +794,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
 	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
 	    && u->t->extra_komi <= 1 /* XXX we assume dynamic komi == we are black */) {
-		reset_state(u);
+		if (!u->slave) reset_state(u);
 		return coord_copy(resign);
 	}
 
