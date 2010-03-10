@@ -453,6 +453,14 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 		struct tree_node *best, struct tree_node *best2,
 		int base_playouts, int i)
 {
+	/* Always use at least half the desired time. It is silly
+	 * to lose a won game because we played a bad move in 0.1s. */
+	double elapsed = 0;
+	if (ti->dim == TD_WALLTIME) {
+		elapsed = time_now() - ti->len.t.timer_start;
+		if (elapsed < 0.5 * stop->desired.time) return false;
+	}
+
 	/* Early break in won situation. */
 	if (best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
 		return true;
@@ -466,7 +474,6 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	 * period, however - it's better to pre-ponder. */
 	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
 	if (best2 && ti->dim == TD_WALLTIME && !time_indulgent) {
-		double elapsed = time_now() - ti->len.t.timer_start;
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)i - base_playouts) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
@@ -1132,7 +1139,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	u->resign_ratio = 0.2; /* Resign when most games are lost. */
-	u->loss_threshold = 0.85; /* Stop reading if after at least 5000 playouts this is best value. */
+	u->loss_threshold = 0.85; /* Stop reading if after at least 2000 playouts this is best value. */
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
 
