@@ -328,77 +328,83 @@ board_clear(struct board *board)
 #endif
 }
 
-
-static void
-board_print_top(struct board *board, FILE *f, int c)
+static char *
+board_print_top(struct board *board, char *s, char *end, int c)
 {
 	for (int i = 0; i < c; i++) {
 		char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-		fprintf(f, "      ");
+		s += snprintf(s, end - s, "      ");
 		for (int x = 1; x < board_size(board) - 1; x++)
-			fprintf(f, "%c ", asdf[x - 1]);
-		fprintf(f, " ");
+			s += snprintf(s, end - s, "%c ", asdf[x - 1]);
+		s += snprintf(s, end -s, " ");
 	}
-	fprintf(f, "\n");
+	s += snprintf(s, end - s, "\n");
 	for (int i = 0; i < c; i++) {
-		fprintf(f, "    +-");
+		s += snprintf(s, end - s, "    +-");
 		for (int x = 1; x < board_size(board) - 1; x++)
-			fprintf(f, "--");
-		fprintf(f, "+");
+			s += snprintf(s, end - s, "--");
+		s += snprintf(s, end - s, "+");
 	}
-	fprintf(f, "\n");
+	s += snprintf(s, end - s, "\n");
+	return s;
 }
 
-static void
-board_print_bottom(struct board *board, FILE *f, int c)
+static char *
+board_print_bottom(struct board *board, char *s, char *end, int c)
 {
 	for (int i = 0; i < c; i++) {
-		fprintf(f, "    +-");
+		s += snprintf(s, end - s, "    +-");
 		for (int x = 1; x < board_size(board) - 1; x++)
-			fprintf(f, "--");
-		fprintf(f, "+");
+			s += snprintf(s, end - s, "--");
+		s += snprintf(s, end - s, "+");
 	}
-	fprintf(f, "\n");
+	s += snprintf(s, end - s, "\n");
+	return s;
 }
 
-static void
-board_print_row(struct board *board, int y, FILE *f, board_cprint cprint)
+static char *
+board_print_row(struct board *board, int y, char *s, char *end, board_cprint cprint)
 {
-	fprintf(f, " %2d | ", y);
+	s += snprintf(s, end - s, " %2d | ", y);
 	for (int x = 1; x < board_size(board) - 1; x++) {
 		if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
-			fprintf(f, "%c)", stone2char(board_atxy(board, x, y)));
+			s += snprintf(s, end - s, "%c)", stone2char(board_atxy(board, x, y)));
 		else
-			fprintf(f, "%c ", stone2char(board_atxy(board, x, y)));
+			s += snprintf(s, end - s, "%c ", stone2char(board_atxy(board, x, y)));
 	}
-	fprintf(f, "|");
+	s += snprintf(s, end - s, "|");
 	if (cprint) {
-		fprintf(f, " %2d | ", y);
+		s += snprintf(s, end - s, " %2d | ", y);
 		for (int x = 1; x < board_size(board) - 1; x++) {
-			cprint(board, coord_xy(board, x, y), f);
+			s = cprint(board, coord_xy(board, x, y), s, end);
 		}
-		fprintf(f, "|");
+		s += snprintf(s, end - s, "|");
 	}
-	fprintf(f, "\n");
+	s += snprintf(s, end - s, "\n");
+	return s;
 }
 
 void
 board_print_custom(struct board *board, FILE *f, board_cprint cprint)
 {
-	fprintf(f, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
+	char buf[10240];
+	char *s = buf;
+	char *end = buf + sizeof(buf);
+	s += snprintf(s, end - s, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
 		board->moves, board->komi, board->handicap,
 		board->captures[S_BLACK], board->captures[S_WHITE]);
-	board_print_top(board, f, 1 + !!cprint);
+	s = board_print_top(board, s, end, 1 + !!cprint);
 	for (int y = board_size(board) - 2; y >= 1; y--)
-		board_print_row(board, y, f, cprint);
-	board_print_bottom(board, f, 1 + !!cprint);
-	fprintf(f, "\n");
+		s = board_print_row(board, y, s, end, cprint);
+	board_print_bottom(board, s, end, 1 + !!cprint);
+	fprintf(f, "%s\n", buf);
 }
 
-static void
-cprint_group(struct board *board, coord_t c, FILE *f)
+static char *
+cprint_group(struct board *board, coord_t c, char *s, char *end)
 {
-	fprintf(f, "%d ", group_base(group_at(board, c)));
+	s += snprintf(s, end - s, "%d ", group_base(group_at(board, c)));
+	return s;
 }
 
 void

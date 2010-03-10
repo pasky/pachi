@@ -160,8 +160,8 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 	return reply_disabled(id) ? P_NOREPLY : P_OK;
 }
 
-static void
-uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
+static char *
+uct_printhook_ownermap(struct board *board, coord_t c, char *s, char *end)
 {
 	struct uct *u = board->es;
 	assert(u);
@@ -171,7 +171,8 @@ uct_printhook_ownermap(struct board *board, coord_t c, FILE *f)
 	if (ch == ',') { // less precise estimate then?
 		ch = chm[board_ownermap_judge_point(&u->ownermap, c, 0.67)];
 	}
-	fprintf(f, "%c ", ch);
+	s += snprintf(s, end - s, "%c ", ch);
+	return s;
 }
 
 static char *
