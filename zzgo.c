@@ -172,12 +172,14 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "IN: %s", buf);
 
 			enum parse_code c = gtp_parse(b, e, ti, buf);
-			if (c == P_ENGINE_RESET && !e->keep_on_clear) {
-				b->es = NULL;
-				done_engine(e);
-				e = init_engine(engine, e_arg, b);
+			if (c == P_ENGINE_RESET) {
 				ti[S_BLACK] = ti_default;
 				ti[S_WHITE] = ti_default;
+				if (!e->keep_on_clear) {
+					b->es = NULL;
+					done_engine(e);
+					e = init_engine(engine, e_arg, b);
+				}
 			} else if (c == P_UNKNOWN_COMMAND && gtp_port) {
 				/* The gtp command is a weak identity check,
 				 * close the connection with a wrong peer. */
