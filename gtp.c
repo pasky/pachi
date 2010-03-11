@@ -252,18 +252,24 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
+		struct time_info *myti = &ti[color];
+		/* Get correct time from master. Keep this code in sync
+		 * with distributed_genmove(). */
+		if (myti->dim == TD_WALLTIME &&
+		    sscanf(next, "%lf %lf %d %d", &myti->len.t.main_time,
+			   &myti->len.t.byoyomi_time, &myti->len.t.byoyomi_periods,
+			   &myti->len.t.byoyomi_stones) != 4) {
+			gtp_error(id, "incorrect time info", NULL);
+			return P_OK;
+		}
 
-		char *reply = engine->genmoves(engine, board, &ti[color], color, !strcasecmp(cmd, "pachi-genmoves_cleanup"));
+		char *reply = engine->genmoves(engine, board, myti, color, !strcasecmp(cmd, "pachi-genmoves_cleanup"));
 		if (DEBUGL(2))
 			fprintf(stderr, "proposing moves %s\n", reply);
 		if (DEBUGL(1)) {
 			board_print_custom(board, stderr, engine->printhook);
 		}
 		gtp_reply(id, reply, NULL);
-
-		/* See "genmove" above about time management. */
-		if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
-			time_sub(&ti[color], time_now() - ti[color].len.t.timer_start);
 
 	} else if (!strcasecmp(cmd, "set_free_handicap")) {
 		struct move m;

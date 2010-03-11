@@ -514,20 +514,37 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	long time_limit = 0;
 	int min_playouts = 0;
 
+	char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
+	char args[128];
+
 	if (ti->period == TT_NULL) *ti = default_ti;
 	struct time_stop stop;
 	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, &stop);
+
 	if (ti->dim == TD_WALLTIME) {
 		time_limit = ti->len.t.timer_start + stop.worst.time;
+
+		/* Send time info to the slaves to make sure they all
+		 * reply in time, particularly if they were out of sync
+		 * and there are no time_left commands. We cannot send
+		 * the absolute time limit because slaves may have a
+		 * different system time.
+		 * Keep this code in sync with gtp_parse(). */
+		snprintf(args, sizeof(args), "%s %.3f %.3f %d %d\n",
+			 stone2str(color), ti->len.t.main_time,
+			 ti->len.t.byoyomi_time, ti->len.t.byoyomi_periods,
+			 ti->len.t.byoyomi_stones);
 	} else {
 		min_playouts = stop.desired.playouts;
+
+		/* For absolute number of simulations, slaves still
+		 * use their own -t =NUM parameter. (The master
+		 * needs to know the total number of simulations over
+		 * all slaves so it has a different -t parameter.) */
+		snprintf(args, sizeof(args), "%s\n", stone2str(color));
 	}
 
 	pthread_mutex_lock(&slave_lock);
-
-	char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
-	char args[64];
-	snprintf(args, sizeof(args), "%s\n", stone2str(color));
 	new_cmd(b, cmd, args);
 
 	get_replies(time_limit, min_playouts, b);
