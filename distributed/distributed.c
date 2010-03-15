@@ -15,6 +15,12 @@
  * parameter for the master should be the sum of the parameters
  * for all slaves. */
 
+/* To minimize the number of ignored replies because they arrive
+ * too late, slaves send temporary replies to the genmoves
+ * command, with the best moves so far. So when the master
+ * has to choose, it should have final replies from most
+ * slaves and at least temporary replies from all of them. */
+
 /* This first version does not send tree updates between slaves,
  * but it has fault tolerance. If a slave is out of sync, the master
  * sends it the appropriate command history. */
@@ -121,12 +127,13 @@ int active_slaves = 0;
 
 /* Number of replies to last gtp command already received. */
 int reply_count = 0;
+int final_reply_count = 0;
 
 /* All replies to latest gtp command are in gtp_replies[0..reply_count-1]. */
 char **gtp_replies;
 
 /* Mutex protecting gtp_cmds, gtp_cmd, id_history, cmd_history,
- * active_slaves, reply_count & gtp_replies */
+ * active_slaves, reply_count, final_reply_count & gtp_replies */
 pthread_mutex_t slave_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* Condition signaled when a new gtp command is available. */
@@ -178,6 +185,46 @@ proxy_thread(void *arg)
 	}
 }
 
+/* Get a reply to one gtp command. If we get a temporary
+ * reply, put it in gtp_replies[reply_slot], notify the main
+ * thread, and continue reading until we get a final reply.
+ * Return the gtp command id, or -1 if error.
+ * slave_buf and reply must have at least CMDS_SIZE bytes.
+ * slave_lock is not held on either entry or exit of this function. */
+static int
+get_reply(FILE *f, struct in_addr client, char *slave_buf, char *reply, int *reply_slot)
+{
+	int reply_id = -1;
+	*reply_slot = -1;
+	*reply = '\0';
+	char *line = reply;
+	while (fgets(line, reply + CMDS_SIZE - line, f) && *line != '\n') {
+		if (DEBUGL(2))
+			logline(&client, "<<", line);
+		if (reply_id < 0 && (*line == '=' || *line == '?') && isdigit(line[1]))
+			reply_id = atoi(line+1);
+		if (*line == '#') {
+			/* Temporary reply. */
+			line = reply;
+			pthread_mutex_lock(&slave_lock);
+			if (reply_id != atoi(gtp_cmd)) {
+				pthread_mutex_unlock(&slave_lock);
+				continue; // read and discard the rest
+			}
+			strncpy(slave_buf, reply, CMDS_SIZE);
+			if (*reply_slot < 0)
+				*reply_slot = reply_count++;
+			gtp_replies[*reply_slot] = slave_buf;
+			pthread_cond_signal(&reply_cond);
+			pthread_mutex_unlock(&slave_lock);
+		} else {
+			line += strlen(line);
+		}
+	}
+	if (*line != '\n') return -1;
+	return reply_id;
+}
+
 /* Main loop of a slave thread.
  * Send the current command to the slave machine and wait for a reply.
  * Resend command history if the slave machine is out of sync.
@@ -189,6 +236,7 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 	char *to_send = gtp_cmd;
 	int cmd_id = -1;
 	int reply_id = -1;
+	int reply_slot;
 	for (;;) {
 		while (cmd_id == reply_id && !resend) {
 			// Wait for a new gtp command.
@@ -221,24 +269,21 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 		/* Read the reply, which always ends with \n\n
 		 * The slave machine sends "=id reply" or "?id reply"
 		 * with id == cmd_id if it is in sync. */
-		*buf = '\0';
-		reply_id = -1;
-		char *line = buf;
-		while (fgets(line, buf + CMDS_SIZE - line, f) && *line != '\n') {
-			if (DEBUGL(2))
-				logline(&client, "<<", line);
-			if (reply_id < 0 && (*line == '=' || *line == '?') && isdigit(line[1]))
-				reply_id = atoi(line+1);
-			line += strlen(line);
-		}
+		char reply[CMDS_SIZE];
+		reply_id = get_reply(f, client, buf, reply, &reply_slot);
 
 		pthread_mutex_lock(&slave_lock);
-		if (*line != '\n') return;
+		if (reply_id == -1) return;
+
 		// Make sure we are still in sync:
 		cmd_id = atoi(gtp_cmd);
-		if (reply_id == cmd_id && *buf == '=') {
+		if (reply_id == cmd_id && *reply == '=') {
 			resend = false;
-			gtp_replies[reply_count++] = buf;
+			strncpy(buf, reply, CMDS_SIZE);
+			final_reply_count++;
+			if (reply_slot < 0)
+				reply_slot = reply_count++;
+			gtp_replies[reply_slot] = buf;
 			pthread_cond_signal(&reply_cond);
 			continue;
 		}
@@ -333,7 +378,7 @@ update_cmd(struct board *b, char *cmd, char *args)
 	gtp_id = id;
 	snprintf(gtp_cmd, gtp_cmds + CMDS_SIZE - gtp_cmd, "%d %s %s",
 		 id, cmd, *args ? args : "\n");
-	reply_count = 0;
+	reply_count = final_reply_count = 0;
 
 	/* Remember history for out-of-sync slaves, at most 3 ids per move
          * (time_left, genmoves, play). */
@@ -384,7 +429,7 @@ new_cmd(struct board *b, char *cmd, char *args)
 static void
 get_replies(double time_limit, int min_playouts, struct board *b)
 {
-	while (reply_count == 0 || reply_count < active_slaves) {
+	while (reply_count == 0 || final_reply_count < active_slaves) {
 		if (time_limit && reply_count > 0) {
 			struct timespec ts;
 			double sec;
@@ -395,7 +440,7 @@ get_replies(double time_limit, int min_playouts, struct board *b)
 			pthread_cond_wait(&reply_cond, &slave_lock);
 		}
 		if (reply_count == 0) continue;
-		if (reply_count >= active_slaves) return;
+		if (final_reply_count >= active_slaves) return;
 		if (time_limit) {
 			if (time_now() >= time_limit) break;
 		} else {
@@ -408,11 +453,12 @@ get_replies(double time_limit, int min_playouts, struct board *b)
 	if (DEBUGL(1)) {
 		char buf[1024];
 		snprintf(buf, sizeof(buf),
-			 "get_replies timeout %.3f >= %.3f, replies %d < active %d\n",
-			 time_now() - start_time, time_limit - start_time, reply_count, active_slaves);
+			 "get_replies timeout %.3f >= %.3f, final %d, temp %d, active %d\n",
+			 time_now() - start_time, time_limit - start_time,
+			 final_reply_count, reply_count, active_slaves);
 		logline(NULL, "? ", buf);
 	}
-	assert(reply_count > 0);
+	assert(reply_count > 0 && final_reply_count <= reply_count);
 }
 
 /* Maximum time (seconds) to wait for answers to fast gtp commands
