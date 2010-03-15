@@ -108,10 +108,10 @@ static const struct time_info default_ti = {
 #define CMDS_SIZE (40*MAX_GAMELEN)
 
 /* All gtp commands for current game separated by \n */
-char gtp_cmds[CMDS_SIZE];
+static char gtp_cmds[CMDS_SIZE];
 
 /* Latest gtp command sent to slaves. */
-char *gtp_cmd = NULL;
+static char *gtp_cmd = NULL;
 
 /* Remember at most 3 gtp ids per move (time_left, genmoves, play).
  * For move 0 there can be more than 3 commands
@@ -119,22 +119,22 @@ char *gtp_cmd = NULL;
 #define MAX_CMDS_PER_MOVE 3
 
 /* History of gtp commands sent for current game, indexed by move. */
-int id_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
-char *cmd_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
+static int id_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
+static char *cmd_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
 
 /* Number of active slave machines working for this master. */
-int active_slaves = 0;
+static int active_slaves = 0;
 
 /* Number of replies to last gtp command already received. */
-int reply_count = 0;
-int final_reply_count = 0;
+static int reply_count = 0;
+static int final_reply_count = 0;
 
 /* All replies to latest gtp command are in gtp_replies[0..reply_count-1]. */
-char **gtp_replies;
+static char **gtp_replies;
 
 /* Mutex protecting gtp_cmds, gtp_cmd, id_history, cmd_history,
  * active_slaves, reply_count, final_reply_count & gtp_replies */
-pthread_mutex_t slave_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t slave_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* Condition signaled when a new gtp command is available. */
 static pthread_cond_t cmd_cond = PTHREAD_COND_INITIALIZER;
@@ -143,11 +143,11 @@ static pthread_cond_t cmd_cond = PTHREAD_COND_INITIALIZER;
 static pthread_cond_t reply_cond = PTHREAD_COND_INITIALIZER;
 
 /* Mutex protecting stderr. Must not be held at same time as slave_lock. */
-pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* Absolute time when this program was started.
  * For debugging only. */
-double start_time;
+static double start_time;
 
 /* Write the time, client address, prefix, and string s to stderr atomically.
  * s should end with a \n */
