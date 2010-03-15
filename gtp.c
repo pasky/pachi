@@ -127,6 +127,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			      "clear_board\n"
 			      "kgs-game_over\n"
 			      "komi\n"
+			      "kgs-rules\n"
 			      "play\n"
 			      "genmove\n"
 			      "kgs-genmove_cleanup\n"
@@ -190,6 +191,23 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 		if (DEBUGL(1))
 			board_print(board, stderr);
+		gtp_reply(id, NULL);
+
+	} else if (!strcasecmp(cmd, "kgs-rules")) {
+		char *arg;
+		next_tok(arg);
+		if (!strcasecmp(arg, "japanese")) {
+			board->rules = RULES_JAPANESE;
+		} else if (!strcasecmp(arg, "chinese")) {
+			board->rules = RULES_CHINESE;
+		} else if (!strcasecmp(arg, "aga")) {
+			board->rules = RULES_AGA;
+		} else if (!strcasecmp(arg, "new_zealand")) {
+			board->rules = RULES_NEW_ZEALAND;
+		} else {
+			gtp_error(id, "unknown rules", NULL);
+			return P_OK;
+		}
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "play")) {

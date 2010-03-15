@@ -112,6 +112,12 @@ struct board {
 	int captures[S_MAX];
 	float komi;
 	int handicap;
+	enum {
+		RULES_AGA,
+		RULES_CHINESE,
+		RULES_NEW_ZEALAND,
+		RULES_JAPANESE,
+	} rules;
 
 	/* Iterator offsets for foreach_neighbor*() */
 	int nei8[8], dnei[4];
