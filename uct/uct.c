@@ -149,10 +149,12 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 {
 	struct uct *u = e->data;
 
+	static bool board_resized = false;
+	board_resized |= is_gamestart(cmd);
+
 	/* Force resending the whole command history if we are out of sync
 	 * but do it only once, not if already getting the history. */
-	if ((move_number(id) != b->moves || !b->size)
-	    && !reply_disabled(id) && !is_reset(cmd)) {
+	if ((move_number(id) != b->moves || !board_resized) && !reply_disabled(id)) {
 		if (UDEBUGL(0))
 			fprintf(stderr, "Out of sync, id %d, move %d\n", id, b->moves);
 		static char buf[128];
