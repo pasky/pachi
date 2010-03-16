@@ -154,7 +154,8 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 
 	/* Force resending the whole command history if we are out of sync
 	 * but do it only once, not if already getting the history. */
-	if ((move_number(id) != b->moves || !board_resized) && !reply_disabled(id)) {
+	if ((move_number(id) != b->moves || !board_resized)
+	    && !reply_disabled(id) && !is_reset(cmd)) {
 		if (UDEBUGL(0))
 			fprintf(stderr, "Out of sync, id %d, move %d\n", id, b->moves);
 		static char buf[128];
