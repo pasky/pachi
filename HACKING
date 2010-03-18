@@ -43,6 +43,7 @@ Pachi consists of the following components:
 	ownermap.[ch]	simulation-based finalpos. "owner map" data structure
 	pattern3.[ch]	fast 3x3 spatial pattern matcher
 	pattern.[ch]	general multi-feature pattern matcher
+	network.[ch]	Network interface (useful for distributed engine)
 
 * "engine" receives notifications about opponent moves and is asked
   to generate a move to play on given board
@@ -54,6 +55,8 @@ Pachi consists of the following components:
 	uct/		the main UCT-player engine, see below
 	patternscan/	auxiliary engine for harvesting patterns from
 				existing games
+	distributed/	"meta-engine" for distributed play by orchestrating
+				several UCT engines on different computers
 
 * "playout" policy is asked to generate moves to play during the Monte Carlo
   simulations, and to provide rough evaluation of moves feasibility for

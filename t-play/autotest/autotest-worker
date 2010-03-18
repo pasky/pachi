@@ -35,7 +35,7 @@ pairing() {
 	player="$1"; shift
 	args=""; argc=0
 	while [ "$argc" -lt "$(player_param $player argc)" ] && [ "$#" -gt 0 ]; do
-		args="$args $1"; shift
+		argc=$((argc+1)); args="$args $1"; shift
 	done
 	eval "pair${pairs}_player1='$player'"
 	eval "pair${pairs}_player1_args='$args'"
@@ -43,7 +43,7 @@ pairing() {
 	player="$1"; shift
 	args=""; argc=0
 	while [ "$argc" -lt "$(player_param $player argc)" ] && [ "$#" -gt 0 ]; do
-		args="$args $1"; shift
+		argc=$((argc+1)); args="$args $1"; shift
 	done
 	eval "pair${pairs}_player2='$player'"
 	eval "pair${pairs}_player2_args='$args'"
