@@ -24,8 +24,9 @@
 #define RESERVED_BYOYOMI_PERCENT 15
 
 /* For safety, use at most 3 times the desired time on a single move
- * in main time, and 1.1 times in byoyomi. */
+ * in main time, 2 times in sudden death and 1.1 times in byoyomi. */
 #define MAX_MAIN_TIME_EXTENSION 3.0
+#define MAX_SUDDEN_DEATH_EXTENSION 2.0
 #define MAX_BYOYOMI_TIME_EXTENSION 1.1
 
 bool
@@ -408,8 +409,14 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		/* Furthermore, tweak the slice based on the game phase. */
 		time_stop_phase_adjust(b, fuseki_end, yose_start, stop);
 
-		/* Put final upper bound on maximal time spent on the move. */
-		double worst_time = stop->desired.time * MAX_MAIN_TIME_EXTENSION;
+		/* Put final upper bound on maximal time spent on the move.
+		 * Keep enough time for sudden death (or near SD) games. */
+		double worst_time = stop->desired.time;
+		if (ti->len.t.byoyomi_time_max > ti->len.t.byoyomi_stones_max) {
+			worst_time *= MAX_MAIN_TIME_EXTENSION;
+		} else {
+			worst_time *= MAX_SUDDEN_DEATH_EXTENSION;
+		}
 		if (worst_time < stop->worst.time)
 			stop->worst.time = worst_time;
 		if (stop->desired.time > stop->worst.time)
