@@ -346,6 +346,8 @@ slave_thread(void *arg)
 
 		assert(active_slaves > 0);
 		active_slaves--;
+		// Unblock main thread if it was waiting for this slave.
+		pthread_cond_signal(&reply_cond);
 		pthread_mutex_unlock(&slave_lock);
 
 		resend = true;
