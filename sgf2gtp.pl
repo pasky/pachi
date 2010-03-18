@@ -8,6 +8,8 @@ use warnings;
 
 local $/ = undef; my $sgf = <>;
 my $size = ($sgf =~ /SZ\[(\d+)\]/)[0];
+$sgf =~ s/\bC\[.*?\]//gs; # no comments
+$sgf =~ s/\).*//gs; # cut at end of principal branch
 
 print "boardsize " . $size;
 print "clear_board";
