@@ -157,6 +157,7 @@ struct dynkomi_adaptive {
 	bool value_based;
 	float zone_red, zone_green;
 	int score_step;
+	bool use_komi_latch;
 	float komi_latch; // runtime, not configuration
 
 	float (*adapter)(struct dynkomi_adaptive *a, struct board *b);
@@ -164,6 +165,7 @@ struct dynkomi_adaptive {
 	/* Sigmoid adaptation rate parameter; see below for details. */
 	float adapt_phase; // [0,1]
 	float adapt_rate; // [1,infty)
+	bool adapt_aport; // alternative game portion determination
 	/* Linear adaptation rate parameter. */
 	int adapt_moves;
 	float adapt_dir; // [-1,1]
@@ -174,12 +176,18 @@ float
 adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 {
 	/* Figure out how much to adjust the komi based on the game
-	 * stage. The adaptation rate is ~0.9 at the beginning,
+	 * stage. The adaptation rate is 0 at the beginning,
 	 * at game stage a->adapt_phase crosses though 0.5 and
-	 * approaches 0 at the game end; the slope is controlled
+	 * approaches 1 at the game end; the slope is controlled
 	 * by a->adapt_rate. */
-	int total_moves = b->moves + 2 * board_estimated_moves_left(b);
-	float game_portion = (float) b->moves / total_moves;
+	float game_portion;
+	if (!a->adapt_aport) {
+		int total_moves = b->moves + 2 * board_estimated_moves_left(b);
+		game_portion = (float) b->moves / total_moves;
+	} else {
+		int brsize = board_size(b) - 2;
+		game_portion = 1.0 - (float) b->flen / (brsize * brsize);
+	}
 	float l = game_portion - a->adapt_phase;
 	return 1.0 / (1.0 + exp(-a->adapt_rate * l));
 }
@@ -247,7 +255,7 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 		} else {
 			/* Green zone. Give extra komi. */
 			extra_komi += a->score_step; // XXX: we depend on being black
-			return extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
+			return !a->use_komi_latch || extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
 		}
 	}
 
@@ -301,7 +309,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->zone_red = 0.45;
 	a->zone_green = 0.6;
 	a->score_step = 2;
-	a->komi_latch = -1000;
+	a->use_komi_latch = true;
+	a->komi_latch = 1000;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -329,6 +338,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->zone_green = atof(optval);
 			} else if (!strcasecmp(optname, "score_step") && optval) {
 				a->score_step = atoi(optval);
+			} else if (!strcasecmp(optname, "use_komi_latch")) {
+				a->use_komi_latch = !optval || atoi(optval);
 
 			} else if (!strcasecmp(optname, "adapter") && optval) {
 				/* Adaptatation method. */
@@ -352,6 +363,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "adapt_moves") && optval) {
 				/* Adaptation move amount; see above. */
 				a->adapt_moves = atoi(optval);
+			} else if (!strcasecmp(optname, "adapt_aport")) {
+				a->adapt_aport = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "adapt_dir") && optval) {
 				/* Adaptation direction vector; see above. */
 				a->adapt_dir = atof(optval);

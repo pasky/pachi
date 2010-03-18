@@ -54,9 +54,9 @@ bool pass_is_safe(struct board *b, enum stone color, struct move_queue *mq);
 /* Returns estimated number of remaining moves for one player until end of game. */
 int board_estimated_moves_left(struct board *b);
 
-/* To avoid running out of time, assume we always have at least 10 more moves
+/* To avoid running out of time, assume we always have at least 30 more moves
  * to play if we don't have more precise information from gtp time_left: */
-#define MIN_MOVES_LEFT 10
+#define MIN_MOVES_LEFT 30
 
 
 bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);

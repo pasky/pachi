@@ -112,6 +112,12 @@ struct board {
 	int captures[S_MAX];
 	float komi;
 	int handicap;
+	enum {
+		RULES_AGA,
+		RULES_CHINESE,
+		RULES_NEW_ZEALAND,
+		RULES_JAPANESE,
+	} rules;
 
 	/* Iterator offsets for foreach_neighbor*() */
 	int nei8[8], dnei[4];
@@ -274,7 +280,7 @@ void board_resize(struct board *board, int size);
 void board_clear(struct board *board);
 
 struct FILE;
-typedef void (*board_cprint)(struct board *b, coord_t c, FILE *f);
+typedef char *(*board_cprint)(struct board *b, coord_t c, char *s, char *end);
 void board_print(struct board *board, FILE *f);
 void board_print_custom(struct board *board, FILE *f, board_cprint cprint);
 

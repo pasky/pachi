@@ -48,6 +48,9 @@ struct uct {
 	bool virtual_loss;
 	bool pondering_opt; /* User wants pondering */
 	bool pondering; /* Actually pondering now */
+	bool slave; /* Act as slave in distributed engine. */
+	enum stone my_color;
+	int gtp_id; /* id of the last gtp command */
 
 	int fuseki_end;
 	int yose_start;

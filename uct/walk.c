@@ -391,7 +391,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	}
 
 	if (t->use_extra_komi && u->dynkomi->persim) {
-		b2.komi += u->dynkomi->persim(u->dynkomi, &b2, t, n);
+		b2.komi += round(u->dynkomi->persim(u->dynkomi, &b2, t, n));
 	}
 
 	if (passes >= 2) {
