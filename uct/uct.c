@@ -523,7 +523,7 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	return false;
 }
 
-/* Determine whether we should terminate the search later. */
+/* Determine whether we should terminate the search later than expected. */
 static bool
 uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		struct time_info *ti, struct time_stop *stop,
@@ -646,6 +646,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		if (ctx->t->use_extra_komi && u->dynkomi->permove
 		    && u->dynkomi_interval
 		    && i > last_dynkomi + u->dynkomi_interval) {
+			last_dynkomi += u->dynkomi_interval;
 			float old_dynkomi = ctx->t->extra_komi;
 			ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
 			if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
@@ -1168,6 +1169,8 @@ uct_state_init(char *arg, struct board *b)
 				/* If non-zero, re-adjust dynamic komi
 				 * throughout a single genmove reading,
 				 * roughly every N simulations. */
+				/* XXX: Does not work with tree
+				 * parallelization. */
 				u->dynkomi_interval = atoi(optval);
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
