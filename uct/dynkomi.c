@@ -142,7 +142,7 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
  * (a) Move-stepped, new extra komi value is always set only at the
  * beginning of the tree search for next move;
  * (b) Continuous, new extra komi value is periodically re-determined
- * and adjusted throughout a single tree search. [TODO] */
+ * and adjusted throughout a single tree search. */
 
 struct dynkomi_adaptive {
 	/* Do not take measured average score into regard for
@@ -160,6 +160,7 @@ struct dynkomi_adaptive {
 	bool use_komi_latch;
 	float komi_latch; // runtime, not configuration
 
+	/* Score-based adaptation. */
 	float (*adapter)(struct dynkomi_adaptive *a, struct board *b);
 	float adapt_base; // [0,1)
 	/* Sigmoid adaptation rate parameter; see below for details. */
@@ -207,58 +208,8 @@ adapter_linear(struct dynkomi_adaptive *a, struct board *b)
 }
 
 static float
-adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
+komi_by_score(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 {
-	struct dynkomi_adaptive *a = d->data;
-	if (DEBUGL(3))
-		fprintf(stderr, "m %d/%d ekomi %f permove %f/%d\n",
-			b->moves, a->lead_moves, tree->extra_komi,
-			tree->score.value, tree->score.playouts);
-	if (b->moves <= a->lead_moves)
-		return board_effective_handicap(b, 7 /* XXX */);
-
-	/* Get lower bound on komi value so that we don't underperform
-	 * too much. XXX: We rely on the fact that we don't use dynkomi
-	 * as white for now. */
-	float min_komi = - a->max_losing_komi;
-
-	/* Perhaps we are adaptive value-based, not score-based? */
-	if (a->value_based) {
-		/* In that case, we have three zones:
-		 * red zone | yellow zone | green zone
-		 *        ~45%           ~60%
-		 * red zone: reduce komi
-		 * yellow zone: do not touch komi
-		 * green zone: enlage komi.
-		 *
-		 * Also, at some point komi will be tuned in such way
-		 * that it will be in green zone but increasing it will
-		 * be unfeasible. Thus, we have a _latch_ - we will
-		 * remember the last komi that has put us into the
-		 * red zone, and not use it or go over it. We use the
-		 * latch only when giving extra komi, we always want
-		 * to try to reduce extra komi we take.
-		 *
-		 * TODO: Make the latch expire after a while. */
-		if (tree->root->u.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
-			return tree->extra_komi;
-		float value = tree->root->u.value;
-		float extra_komi = tree->extra_komi;
-		if (value < a->zone_red) {
-			/* Red zone. Take extra komi. */
-			if (extra_komi > 0) a->komi_latch = extra_komi;
-			extra_komi -= a->score_step; // XXX: we depend on being black
-			return extra_komi > min_komi ? extra_komi : min_komi;
-		} else if (value < a->zone_green) {
-			/* Yellow zone, do nothing. */
-			return extra_komi;
-		} else {
-			/* Green zone. Give extra komi. */
-			extra_komi += a->score_step; // XXX: we depend on being black
-			return !a->use_komi_latch || extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
-		}
-	}
-
 	if (tree->score.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
 		return tree->extra_komi;
 
@@ -274,7 +225,73 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	if (DEBUGL(3))
 		fprintf(stderr, "mC %f + %f * %f = %f\n",
 			tree->extra_komi, p, score.value, extra_komi);
-	return extra_komi > min_komi ? extra_komi : min_komi;
+	return extra_komi;
+}
+
+static float
+komi_by_value(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
+{
+	if (tree->root->u.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
+		return tree->extra_komi;
+
+	/* We have three "value zones":
+	 * red zone | yellow zone | green zone
+	 *        ~45%           ~60%
+	 * red zone: reduce komi
+	 * yellow zone: do not touch komi
+	 * green zone: enlage komi.
+	 *
+	 * Also, at some point komi will be tuned in such way
+	 * that it will be in green zone but increasing it will
+	 * be unfeasible. Thus, we have a _latch_ - we will
+	 * remember the last komi that has put us into the
+	 * red zone, and not use it or go over it. We use the
+	 * latch only when giving extra komi, we always want
+	 * to try to reduce extra komi we take.
+	 *
+	 * TODO: Make the latch expire after a while. */
+	float value = tree->root->u.value;
+	float extra_komi = tree->extra_komi;
+
+	if (value < a->zone_red) {
+		/* Red zone. Take extra komi. */
+		if (extra_komi > 0) a->komi_latch = extra_komi;
+		extra_komi -= a->score_step; // XXX: we depend on being black
+		return extra_komi;
+
+	} else if (value < a->zone_green) {
+		/* Yellow zone, do nothing. */
+		return extra_komi;
+
+	} else {
+		/* Green zone. Give extra komi. */
+		extra_komi += a->score_step; // XXX: we depend on being black
+		return !a->use_komi_latch || extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
+	}
+}
+
+static float
+adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
+{
+	struct dynkomi_adaptive *a = d->data;
+	if (DEBUGL(3))
+		fprintf(stderr, "m %d/%d ekomi %f permove %f/%d\n",
+			b->moves, a->lead_moves, tree->extra_komi,
+			tree->score.value, tree->score.playouts);
+	if (b->moves <= a->lead_moves)
+		return board_effective_handicap(b, 7 /* XXX */);
+
+	/* Get lower bound on komi value so that we don't underperform
+	 * too much. XXX: We rely on the fact that we don't use dynkomi
+	 * as white for now. */
+	float min_komi = - a->max_losing_komi;
+
+	float komi;
+	if (a->value_based)
+		komi = komi_by_value(a, b, tree);
+	else
+		komi = komi_by_score(a, b, tree);
+	return komi > min_komi ? komi : min_komi;
 }
 
 static float
