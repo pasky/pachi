@@ -223,8 +223,7 @@ komi_by_score(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 	if (p > 0.9) p = 0.9; // don't get too eager!
 	float extra_komi = tree->extra_komi + p * score.value;
 	if (DEBUGL(3))
-		fprintf(stderr, "mC %f + %f * %f = %f\n",
-			tree->extra_komi, p, score.value, extra_komi);
+		fprintf(stderr, "mC += %f * %f\n", p, score.value);
 	return extra_komi;
 }
 
@@ -255,6 +254,9 @@ komi_by_value(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 
 	if (value < a->zone_red) {
 		/* Red zone. Take extra komi. */
+		if (DEBUGL(3))
+			fprintf(stderr, "[red] %f, komi latch %f -> %f\n",
+				value, a->komi_latch, extra_komi);
 		if (extra_komi > 0) a->komi_latch = extra_komi;
 		extra_komi -= a->score_step; // XXX: we depend on being black
 		return extra_komi;
@@ -266,6 +268,9 @@ komi_by_value(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 	} else {
 		/* Green zone. Give extra komi. */
 		extra_komi += a->score_step; // XXX: we depend on being black
+		if (DEBUGL(3))
+			fprintf(stderr, "[green] %f, += %d | komi latch %f\n",
+				value, a->score_step, a->komi_latch);
 		return !a->use_komi_latch || extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
 	}
 }
@@ -287,6 +292,8 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	float min_komi = - a->max_losing_komi;
 
 	float komi = a->indicator(a, b, tree);
+	if (DEBUGL(3))
+		fprintf(stderr, "dynkomi: %f -> %f\n", tree->extra_komi, komi);
 	return komi > min_komi ? komi : min_komi;
 }
 
