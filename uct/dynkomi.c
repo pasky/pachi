@@ -14,7 +14,7 @@
 
 
 static void
-uct_dynkomi_generic_done(struct uct_dynkomi *d)
+generic_done(struct uct_dynkomi *d)
 {
 	if (d->data) free(d->data);
 	free(d);
@@ -30,7 +30,7 @@ uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b)
 	d->uct = u;
 	d->permove = NULL;
 	d->persim = NULL;
-	d->done = uct_dynkomi_generic_done;
+	d->done = generic_done;
 	d->data = NULL;
 
 	if (arg) {
@@ -53,8 +53,8 @@ struct dynkomi_linear {
 	bool rootbased;
 };
 
-float
-uct_dynkomi_linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
+static float
+linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_linear *l = d->data;
 	if (b->moves >= l->moves)
@@ -65,8 +65,8 @@ uct_dynkomi_linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *
 	return extra_komi;
 }
 
-float
-uct_dynkomi_linear_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node)
+static float
+linear_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node)
 {
 	struct dynkomi_linear *l = d->data;
 	if (l->rootbased)
@@ -75,7 +75,7 @@ uct_dynkomi_linear_persim(struct uct_dynkomi *d, struct board *b, struct tree *t
 	 * since we want to use value correct for this node depth.
 	 * This also means the values will stay correct after
 	 * node promotion. */
-	return uct_dynkomi_linear_permove(d, b, tree);
+	return linear_permove(d, b, tree);
 }
 
 struct uct_dynkomi *
@@ -83,9 +83,9 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 {
 	struct uct_dynkomi *d = calloc(1, sizeof(*d));
 	d->uct = u;
-	d->permove = uct_dynkomi_linear_permove;
-	d->persim = uct_dynkomi_linear_persim;
-	d->done = uct_dynkomi_generic_done;
+	d->permove = linear_permove;
+	d->persim = linear_persim;
+	d->done = generic_done;
 
 	struct dynkomi_linear *l = calloc(1, sizeof(*l));
 	d->data = l;
@@ -172,7 +172,7 @@ struct dynkomi_adaptive {
 };
 #define TRUSTWORTHY_KOMI_PLAYOUTS 200
 
-float
+static float
 adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 {
 	/* Figure out how much to adjust the komi based on the game
@@ -192,7 +192,7 @@ adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 	return 1.0 / (1.0 + exp(-a->adapt_rate * l));
 }
 
-float
+static float
 adapter_linear(struct dynkomi_adaptive *a, struct board *b)
 {
 	/* Figure out how much to adjust the komi based on the game
@@ -206,8 +206,8 @@ adapter_linear(struct dynkomi_adaptive *a, struct board *b)
 		return a->adapt_dir * b->moves / a->adapt_moves;
 }
 
-float
-uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
+static float
+adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_adaptive *a = d->data;
 	if (DEBUGL(3))
@@ -277,8 +277,8 @@ uct_dynkomi_adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree
 	return extra_komi > min_komi ? extra_komi : min_komi;
 }
 
-float
-uct_dynkomi_adaptive_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node)
+static float
+adaptive_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node)
 {
 	return tree->extra_komi;
 }
@@ -288,9 +288,9 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 {
 	struct uct_dynkomi *d = calloc(1, sizeof(*d));
 	d->uct = u;
-	d->permove = uct_dynkomi_adaptive_permove;
-	d->persim = uct_dynkomi_adaptive_persim;
-	d->done = uct_dynkomi_generic_done;
+	d->permove = adaptive_permove;
+	d->persim = adaptive_persim;
+	d->done = generic_done;
 
 	struct dynkomi_adaptive *a = calloc(1, sizeof(*a));
 	d->data = a;
