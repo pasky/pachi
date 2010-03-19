@@ -230,8 +230,12 @@ komi_by_score(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 static float
 komi_by_value(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 {
-	if (tree->root->u.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
+	if (tree->value.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
 		return tree->extra_komi;
+
+	struct move_stats value = tree->value;
+	/* Almost-reset tree->value to gather fresh stats. */
+	tree->value.playouts = 1;
 
 	/* We have three "value zones":
 	 * red zone | yellow zone | green zone
@@ -249,19 +253,18 @@ komi_by_value(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 	 * to try to reduce extra komi we take.
 	 *
 	 * TODO: Make the latch expire after a while. */
-	float value = tree->root->u.value;
 	float extra_komi = tree->extra_komi;
 
-	if (value < a->zone_red) {
+	if (value.value < a->zone_red) {
 		/* Red zone. Take extra komi. */
 		if (DEBUGL(3))
 			fprintf(stderr, "[red] %f, komi latch %f -> %f\n",
-				value, a->komi_latch, extra_komi);
+				value.value, a->komi_latch, extra_komi);
 		if (extra_komi > 0) a->komi_latch = extra_komi;
 		extra_komi -= a->score_step; // XXX: we depend on being black
 		return extra_komi;
 
-	} else if (value < a->zone_green) {
+	} else if (value.value < a->zone_green) {
 		/* Yellow zone, do nothing. */
 		return extra_komi;
 
@@ -270,7 +273,7 @@ komi_by_value(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 		extra_komi += a->score_step; // XXX: we depend on being black
 		if (DEBUGL(3))
 			fprintf(stderr, "[green] %f, += %d | komi latch %f\n",
-				value, a->score_step, a->komi_latch);
+				value.value, a->score_step, a->komi_latch);
 		return !a->use_komi_latch || extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
 	}
 }

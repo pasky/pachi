@@ -95,13 +95,13 @@ struct tree {
 	 * based on leaf node depth. */
 	float extra_komi;
 
-	/* Information on average score at the game end (from black's
-	 * perspective). */
-	/* N.B.: Some users may need average score carried over from previous
-	 * move to initialize. Thus, this information is NOT zeroed on node
-	 * promotion, you are responsible for zeroing it for yourself if you
-	 * use it. */
+	/*** Only for dynkomi use: */
+	/* Information on average score at the simulation end (black's
+	 * perspective) since last dynkomi adjustment. */
 	struct move_stats score;
+	/* Information on average winrate of simulations since last
+	 * dynkomi adjustment. */
+	struct move_stats value;
 
 	/* We merge local (non-tenuki) sequences for both colors, occuring
 	 * anywhere in the tree; nodes are created on-demand, special 'pass'
