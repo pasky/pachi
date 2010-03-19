@@ -152,9 +152,9 @@ struct dynkomi_adaptive {
 	int lead_moves;
 	/* Maximum komi to pretend the opponent to give. */
 	float max_losing_komi;
+	float (*indicator)(struct dynkomi_adaptive *a, struct board *b, struct tree *tree);
 
 	/* Value-based adaptation. */
-	bool value_based;
 	float zone_red, zone_green;
 	int score_step;
 	bool use_komi_latch;
@@ -286,11 +286,7 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	 * as white for now. */
 	float min_komi = - a->max_losing_komi;
 
-	float komi;
-	if (a->value_based)
-		komi = komi_by_value(a, b, tree);
-	else
-		komi = komi_by_score(a, b, tree);
+	float komi = a->indicator(a, b, tree);
 	return komi > min_komi ? komi : min_komi;
 }
 
@@ -317,6 +313,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	else
 		a->lead_moves = 4; // XXX
 	a->max_losing_komi = 10;
+	a->indicator = komi_by_score;
+
 	a->adapter = adapter_sigmoid;
 	a->adapt_rate = 20;
 	a->adapt_phase = 0.5;
@@ -346,9 +344,21 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->lead_moves = atoi(optval);
 			} else if (!strcasecmp(optname, "max_losing_komi") && optval) {
 				a->max_losing_komi = atof(optval);
+			} else if (!strcasecmp(optname, "indicator")) {
+				/* Adaptatation indicator - how to decide
+				 * the adaptation rate and direction. */
+				if (!strcasecmp(optval, "value")) {
+					/* Winrate w/ komi so far. */
+					a->indicator = komi_by_value;
+				} else if (!strcasecmp(optval, "score")) {
+					/* Expected score w/ current komi. */
+					a->indicator = komi_by_score;
+				} else {
+					fprintf(stderr, "UCT: Invalid indicator %s\n", optval);
+					exit(1);
+				}
 
-			} else if (!strcasecmp(optname, "value_based")) {
-				a->value_based = !optval || atoi(optval);
+				/* value indicator settings */
 			} else if (!strcasecmp(optname, "zone_red") && optval) {
 				a->zone_red = atof(optval);
 			} else if (!strcasecmp(optname, "zone_green") && optval) {
@@ -358,6 +368,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "use_komi_latch")) {
 				a->use_komi_latch = !optval || atoi(optval);
 
+				/* score indicator settings */
 			} else if (!strcasecmp(optname, "adapter") && optval) {
 				/* Adaptatation method. */
 				if (!strcasecmp(optval, "sigmoid")) {
@@ -385,6 +396,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "adapt_dir") && optval) {
 				/* Adaptation direction vector; see above. */
 				a->adapt_dir = atof(optval);
+
 			} else {
 				fprintf(stderr, "uct: Invalid dynkomi argument %s or missing value\n", optname);
 				exit(1);
