@@ -112,8 +112,13 @@ struct board {
 	int captures[S_MAX];
 	float komi;
 	int handicap;
+	/* The ruleset is currently almost never taken into account;
+	 * the board implementation is basically Chinese rules (handicap
+	 * stones compensation) w/ suicide (or you can look at it as
+	 * New Zealand w/o handi stones compensation), while the engine
+	 * enforces no-suicide, making for real Chinese rules. */
 	enum {
-		RULES_CHINESE,
+		RULES_CHINESE, /* default value */
 		RULES_AGA,
 		RULES_NEW_ZEALAND,
 		RULES_JAPANESE,
