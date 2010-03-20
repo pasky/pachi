@@ -113,8 +113,8 @@ struct board {
 	float komi;
 	int handicap;
 	enum {
-		RULES_AGA,
 		RULES_CHINESE,
+		RULES_AGA,
 		RULES_NEW_ZEALAND,
 		RULES_JAPANESE,
 	} rules;
