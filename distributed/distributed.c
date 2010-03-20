@@ -475,11 +475,14 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 {
 	struct distributed *dist = e->data;
 
-	/* Commands that should not be sent to slaves */
+	/* Commands that should not be sent to slaves.
+	 * time_left will be part of next pachi-genmoves,
+	 * we reduce latency by not forwarding it here. */
 	if ((!strcasecmp(cmd, "quit") && !dist->slaves_quit)
 	    || !strcasecmp(cmd, "uct_genbook")
 	    || !strcasecmp(cmd, "uct_dumpbook")
 	    || !strcasecmp(cmd, "kgs-chat")
+	    || !strcasecmp(cmd, "time_left")
 
 	    /* and commands that will be sent to slaves later */
 	    || !strcasecmp(cmd, "genmove")
