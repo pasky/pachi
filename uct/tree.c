@@ -221,9 +221,8 @@ tree_dump(struct tree *tree, int thres)
 		 * huge dumps at first. */
 		thres = tree->root->u.playouts / 100 * (thres < 1000 ? 1 : thres / 1000);
 	}
-	fprintf(stderr, "(UCT tree; root %s; extra komi %f; avg score %f/%d)\n",
-	        stone2str(tree->root_color), tree->extra_komi,
-		tree->score.value, tree->score.playouts);
+	fprintf(stderr, "(UCT tree; root %s; extra komi %f)\n",
+	        stone2str(tree->root_color), tree->extra_komi);
 	tree_node_dump(tree, tree->root, 0, thres);
 
 	if (DEBUGL(3) && tree->ltree_black) {

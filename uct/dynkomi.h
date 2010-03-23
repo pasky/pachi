@@ -42,6 +42,14 @@ struct uct_dynkomi {
 	uctd_persim persim;
 	uctd_done done;
 	void *data;
+
+	/* Game state for dynkomi use: */
+	/* Information on average score at the simulation end (black's
+	 * perspective) since last dynkomi adjustment. */
+	struct move_stats score;
+	/* Information on average winrate of simulations since last
+	 * dynkomi adjustment. */
+	struct move_stats value;
 };
 
 struct uct_dynkomi *uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b);

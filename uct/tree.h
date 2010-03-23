@@ -95,14 +95,6 @@ struct tree {
 	 * based on leaf node depth. */
 	float extra_komi;
 
-	/*** Only for dynkomi use: */
-	/* Information on average score at the simulation end (black's
-	 * perspective) since last dynkomi adjustment. */
-	struct move_stats score;
-	/* Information on average winrate of simulations since last
-	 * dynkomi adjustment. */
-	struct move_stats value;
-
 	/* We merge local (non-tenuki) sequences for both colors, occuring
 	 * anywhere in the tree; nodes are created on-demand, special 'pass'
 	 * nodes represent tenuki. Only u move_stats are used, prior and amaf

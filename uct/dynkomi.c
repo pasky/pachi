@@ -213,12 +213,12 @@ static float
 komi_by_score(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_adaptive *a = d->data;
-	if (tree->score.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
+	if (d->score.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
 		return tree->extra_komi;
 
-	struct move_stats score = tree->score;
+	struct move_stats score = d->score;
 	/* Almost-reset tree->score to gather fresh stats. */
-	tree->score.playouts = 1;
+	d->score.playouts = 1;
 
 	/* Look at average score and push extra_komi in that direction. */
 	float p = a->adapter(d, b);
@@ -234,12 +234,12 @@ static float
 komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_adaptive *a = d->data;
-	if (tree->value.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
+	if (d->value.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
 		return tree->extra_komi;
 
-	struct move_stats value = tree->value;
+	struct move_stats value = d->value;
 	/* Almost-reset tree->value to gather fresh stats. */
-	tree->value.playouts = 1;
+	d->value.playouts = 1;
 
 	/* We have three "value zones":
 	 * red zone | yellow zone | green zone
@@ -289,7 +289,7 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	if (DEBUGL(3))
 		fprintf(stderr, "m %d/%d ekomi %f permove %f/%d\n",
 			b->moves, a->lead_moves, tree->extra_komi,
-			tree->score.value, tree->score.playouts);
+			d->score.value, d->score.playouts);
 	if (b->moves <= a->lead_moves)
 		return board_effective_handicap(b, 7 /* XXX */);
 
