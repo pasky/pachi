@@ -152,7 +152,7 @@ struct dynkomi_adaptive {
 	int lead_moves;
 	/* Maximum komi to pretend the opponent to give. */
 	float max_losing_komi;
-	float (*indicator)(struct dynkomi_adaptive *a, struct board *b, struct tree *tree);
+	float (*indicator)(struct uct_dynkomi *d, struct board *b, struct tree *tree);
 
 	/* Value-based adaptation. */
 	float zone_red, zone_green;
@@ -161,7 +161,7 @@ struct dynkomi_adaptive {
 	float komi_latch; // runtime, not configuration
 
 	/* Score-based adaptation. */
-	float (*adapter)(struct dynkomi_adaptive *a, struct board *b);
+	float (*adapter)(struct uct_dynkomi *d, struct board *b);
 	float adapt_base; // [0,1)
 	/* Sigmoid adaptation rate parameter; see below for details. */
 	float adapt_phase; // [0,1]
@@ -174,8 +174,9 @@ struct dynkomi_adaptive {
 #define TRUSTWORTHY_KOMI_PLAYOUTS 200
 
 static float
-adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
+adapter_sigmoid(struct uct_dynkomi *d, struct board *b)
 {
+	struct dynkomi_adaptive *a = d->data;
 	/* Figure out how much to adjust the komi based on the game
 	 * stage. The adaptation rate is 0 at the beginning,
 	 * at game stage a->adapt_phase crosses though 0.5 and
@@ -194,8 +195,9 @@ adapter_sigmoid(struct dynkomi_adaptive *a, struct board *b)
 }
 
 static float
-adapter_linear(struct dynkomi_adaptive *a, struct board *b)
+adapter_linear(struct uct_dynkomi *d, struct board *b)
 {
+	struct dynkomi_adaptive *a = d->data;
 	/* Figure out how much to adjust the komi based on the game
 	 * stage. We just linearly increase/decrease the adaptation
 	 * rate for first N moves. */
@@ -208,8 +210,9 @@ adapter_linear(struct dynkomi_adaptive *a, struct board *b)
 }
 
 static float
-komi_by_score(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
+komi_by_score(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
+	struct dynkomi_adaptive *a = d->data;
 	if (tree->score.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
 		return tree->extra_komi;
 
@@ -218,7 +221,7 @@ komi_by_score(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 	tree->score.playouts = 1;
 
 	/* Look at average score and push extra_komi in that direction. */
-	float p = a->adapter(a, b);
+	float p = a->adapter(d, b);
 	p = a->adapt_base + p * (1 - a->adapt_base);
 	if (p > 0.9) p = 0.9; // don't get too eager!
 	float extra_komi = tree->extra_komi + p * score.value;
@@ -228,8 +231,9 @@ komi_by_score(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
 }
 
 static float
-komi_by_value(struct dynkomi_adaptive *a, struct board *b, struct tree *tree)
+komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
+	struct dynkomi_adaptive *a = d->data;
 	if (tree->value.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
 		return tree->extra_komi;
 
@@ -294,7 +298,7 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	 * as white for now. */
 	float min_komi = - a->max_losing_komi;
 
-	float komi = a->indicator(a, b, tree);
+	float komi = a->indicator(d, b, tree);
 	if (DEBUGL(3))
 		fprintf(stderr, "dynkomi: %f -> %f\n", tree->extra_komi, komi);
 	return komi > min_komi ? komi : min_komi;
