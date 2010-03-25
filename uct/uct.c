@@ -914,12 +914,21 @@ uct_getstats(struct uct *u, struct board *b, coord_t *c)
 }
 
 static char *
-uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+	     char *args, bool pass_all_alive)
 {
 	struct uct *u = e->data;
 	assert(u->slave);
 
 	coord_t *c = uct_genmove(e, b, ti, color, pass_all_alive);
+
+	/* Get correct time from master. Keep this code in sync with time_info(). */
+	if (ti->dim == TD_WALLTIME
+	    && sscanf(args, "%lf %lf %d %d", &ti->len.t.main_time,
+		      &ti->len.t.byoyomi_time, &ti->len.t.byoyomi_periods,
+		      &ti->len.t.byoyomi_stones) != 4) {
+		return NULL;
+	}
 
 	char *reply = uct_getstats(u, b, is_pass(*c) || is_resign(*c) ? c : NULL);
 	coord_done(c);
