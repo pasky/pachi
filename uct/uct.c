@@ -853,7 +853,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 			uct_playout(u, b, color, u->t);
 		if (uct_pass_is_safe(u, b, color, u->pass_all_alive || pass_all_alive)) {
 			if (UDEBUGL(0))
-				fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
+				fprintf(stderr, "<Will rather pass, looks safe enough; score %f>\n",
+					board_official_score(b, NULL) / 2);
 			best->coord = pass;
 		}
 	}
