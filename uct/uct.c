@@ -138,8 +138,9 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		return false;
 
 	struct move_queue mq = { .moves = 0 };
-	if (!pass_all_alive)
-		dead_group_list(u, b, &mq);
+	dead_group_list(u, b, &mq);
+	if (pass_all_alive && mq.moves > 0)
+		return false; // We need to remove some dead groups first.
 	return pass_is_safe(b, color, &mq);
 }
 
@@ -1227,8 +1228,10 @@ uct_state_init(char *arg, struct board *b)
 				 * sequences first moves instead. */
 				u->local_tree_pseqroot = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
-				/* Whether to consider all stones alive at the game
-				 * end instead of marking dead groupd. */
+				/* Whether to consider passing only after all
+				 * dead groups were removed from the board;
+				 * this is like all genmoves are in fact
+				 * kgs-genmove_cleanup. */
 				u->pass_all_alive = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "territory_scoring")) {
 				/* Use territory scoring (default is area scoring).
