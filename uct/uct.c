@@ -33,7 +33,6 @@ struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
 static void uct_pondering_stop(struct uct *u);
 static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color);
-static char *uct_getstats(struct uct *u, struct board *b, coord_t *c);
 
 /* Default number of simulations to perform per move.
  * Note that this is now in total over all threads! (Unless TM_ROOT.) */
@@ -59,6 +58,7 @@ static const struct time_info default_ti = {
 #define TREE_SIMPROGRESS_INTERVAL 10000
 
 /* How often to send stats updates for the distributed engine (in seconds). */
+/* (Update limited to time info in this version.) */
 #define STATS_SEND_INTERVAL 0.5
 
 /* When terminating uct_search() early, the safety margin to add to the
@@ -195,6 +195,8 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 
 	/* Stop pondering, required by tree_promote_at() */
 	uct_pondering_stop(u);
+	if (UDEBUGL(2) && u->slave)
+		tree_dump(u->t, u->dumpthres);
 
 	if (is_resign(m->coord)) {
 		/* Reset state. */
@@ -589,9 +591,12 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 	return false;
 }
 
-/* Run time-limited MCTS search on foreground. */
+/* Run time-limited MCTS search. For a slave in the distributed
+ * engine, the search is done in background and will be stopped at
+ * the next uct_notify_play(); keep_looking is advice for the master. */
 static int
-uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
+uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color,
+	   struct tree *t, bool *keep_looking)
 {
 	int base_playouts = u->t->root->u.playouts;
 	if (UDEBUGL(2) && base_playouts > 0)
@@ -602,6 +607,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	struct time_stop stop;
 	time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &stop);
 
+	*keep_looking = false;
+
 	/* Number of last dynkomi adjustment. */
 	int last_dynkomi = t->root->u.playouts;
 	/* Number of last game with progress print. */
@@ -610,12 +617,14 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	int print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
 	/* Printed notification about full memory? */
 	bool print_fullmem = false;
-	/* Absolute time of last distributed stats update. */
-	double last_stats_sent = time_now();
-	/* Interval between distributed stats updates. */
-	double stats_interval = STATS_SEND_INTERVAL;
 
-	struct spawn_ctx *ctx = uct_search_start(u, b, color, t);
+	static struct spawn_ctx *ctx;
+	if (!thread_manager_running) {
+		ctx = uct_search_start(u, b, color, t);
+	} else {
+		/* Keep the search running. */
+		assert(u->slave);
+	}
 
 	/* The search tree is ctx->t. This is normally == t, but in case of
 	 * TM_ROOT, it is one of the trees belonging to the independent
@@ -680,14 +689,13 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			break;
 
 		/* Check against time settings. */
-		bool desired_done = false;
-		double now = time_now();
-		if (ti->dim == TD_WALLTIME) {
-			double elapsed = now - ti->len.t.timer_start;
+		bool desired_done;
+		if (u->slave) {
+			desired_done = true;
+		} else if (ti->dim == TD_WALLTIME) {
+			double elapsed = time_now() - ti->len.t.timer_start;
 			if (elapsed > stop.worst.time) break;
 			desired_done = elapsed > stop.desired.time;
-			if (stats_interval < 0.1 * stop.desired.time)
-				stats_interval = 0.1 * stop.desired.time;
 
 		} else { assert(ti->dim == TD_GAMES);
 			if (i > stop.worst.playouts) break;
@@ -711,23 +719,27 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* TODO: Early break if best->variance goes under threshold and we already
                  * have enough playouts (possibly thanks to book or to pondering)? */
 
-		/* Send new stats for the distributed engine.
-		 * End with #\n (not \n\n) to indicate a temporary result. */
-		if (u->slave && now - last_stats_sent > stats_interval) {
-			printf("=%d %s\n#\n", u->gtp_id, uct_getstats(u, b, NULL));
-			fflush(stdout);
-			last_stats_sent = now;
+		/* If running as slave in the distributed engine,
+		 * let the search continue in background. */
+		if (u->slave) {
+			*keep_looking = true;
+			break;
 		}
 	}
 
-	ctx = uct_search_stop();
-
-	if (UDEBUGL(2))
-		tree_dump(t, u->dumpthres);
+	int games;
+	if (!u->slave) {
+		ctx = uct_search_stop();
+		games = ctx->games;
+		if (UDEBUGL(2)) tree_dump(t, u->dumpthres);
+	} else {
+		/* We can only return an estimate here. */
+		games = ctx->t->root->u.playouts - base_playouts;
+	}
 	if (UDEBUGL(0))
-		uct_progress_status(u, t, color, ctx->games);
+		uct_progress_status(u, t, color, games);
 
-	return ctx->games;
+	return games;
 }
 
 
@@ -752,26 +764,31 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	uct_search_start(u, b, color, t);
 }
 
-/* uct_search_stop() frontend for the pondering (non-genmove) mode. */
+/* uct_search_stop() frontend for the pondering (non-genmove) mode, and
+ * to stop the background search for a slave in the distributed engine. */
 static void
 uct_pondering_stop(struct uct *u)
 {
-	u->pondering = false;
 	if (!thread_manager_running)
 		return;
 
 	/* Stop the thread manager. */
 	struct spawn_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1)) {
-		fprintf(stderr, "(pondering) ");
+		if (u->pondering) fprintf(stderr, "(pondering) ");
 		uct_progress_status(u, ctx->t, ctx->color, ctx->games);
 	}
-	free(ctx->b);
+	if (u->pondering) {
+		free(ctx->b);
+		u->pondering = false;
+	}
 }
 
-
-static coord_t *
-uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+/* Common part of uct_genmove() and uct_genmoves().
+ * Returns the best node, or NULL if *best_coord is pass or resign. */
+static struct tree_node *
+uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+	     bool pass_all_alive, bool *keep_looking, coord_t *best_coord)
 {
 	double start_time = time_now();
 	struct uct *u = e->data;
@@ -784,9 +801,9 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		b->superko_violation = false;
 	}
 
-	/* Seed the tree. */
-	uct_pondering_stop(u);
-	prepare_move(e, b, color);
+	/* Seed the tree. If we are a slave in the distributed engine,
+	 * we keep thinking until the next "play" command. */
+	if (!thread_manager_running) prepare_move(e, b, color);
 	assert(u->t);
 	u->my_color = color;
 
@@ -813,15 +830,16 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	}
 
 	int base_playouts = u->t->root->u.playouts;
-	/* Perform the Monte Carlo Tree Search! */
-	int played_games = uct_search(u, b, ti, color, u->t);
+        /* Start or continue the Monte Carlo Tree Search! */
+        int played_games = uct_search(u, b, ti, color, u->t, keep_looking);
 
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
 	if (!best) {
-		if (!u->slave) reset_state(u);
-		return coord_copy(pass);
+		*best_coord = pass;
+		return NULL;
 	}
+	*best_coord = best->coord;
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
 			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
@@ -837,8 +855,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
 	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
 	    && u->t->extra_komi <= 1 /* XXX we assume dynamic komi == we are black */) {
-		if (!u->slave) reset_state(u);
-		return coord_copy(resign);
+		*best_coord = resign;
+		return NULL;
 	}
 
 	/* If the opponent just passed and we win counting, always
@@ -850,54 +868,67 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		if (uct_pass_is_safe(u, b, color, u->pass_all_alive || pass_all_alive)) {
 			if (UDEBUGL(0))
 				fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
-			best->coord = pass;
+			*best_coord = pass;
+			best = NULL;
 		}
 	}
 
-	/* If we are a slave in the distributed engine, we'll soon get
-	 * a "play" command later telling us which move was chosen,
-	 * and pondering now will not gain much. */
-	if (!u->slave) {
-		tree_promote_node(u->t, &best);
-
-		/* After a pass, pondering is harmful for two reasons:
-		 * (i) We might keep pondering even when the game is over.
-		 * Of course this is the case for opponent resign as well.
-		 * (ii) More importantly, the ownermap will get skewed since
-		 * the UCT will start cutting off any playouts. */
-		if (u->pondering_opt && !is_pass(best->coord)) {
-			uct_pondering_start(u, b, u->t, stone_other(color));
-		}
-	}
 	if (UDEBUGL(2)) {
 		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
 		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
 			time, (int)(played_games/time), (int)(played_games/time/u->threads));
 	}
-	return coord_copy(best->coord);
+	return best;
+}
+
+static coord_t *
+uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+{
+	struct uct *u = e->data;
+	uct_pondering_stop(u);
+
+	bool keep_looking;
+	coord_t best_coord;
+	struct tree_node *best;
+	best = uct_bestmove(e, b, ti, color, pass_all_alive, &keep_looking, &best_coord);
+	if (!best) {
+		reset_state(u);
+		return coord_copy(best_coord);
+	}
+	tree_promote_node(u->t, &best);
+
+	/* After a pass, pondering is harmful for two reasons:
+	 * (i) We might keep pondering even when the game is over.
+	 * Of course this is the case for opponent resign as well.
+	 * (ii) More importantly, the ownermap will get skewed since
+	 * the UCT will start cutting off any playouts. */
+	if (u->pondering_opt && !is_pass(best->coord)) {
+		uct_pondering_start(u, b, u->t, stone_other(color));
+	}
+	return coord_copy(best_coord);
 }
 
 /* Get stats updates for the distributed engine. Return a buffer
- * with one line "total_playouts threads" then a list of lines
+ * with one line "total_playouts threads keep_looking" then a list of lines
  * "coord playouts value". The last line must not end with \n.
- * If c is not null, add this move with root->playouts weight.
+ * If c is pass or resign, add this move with root->playouts weight.
  * This function is called only by the main thread, but may be
  * called while the tree is updated by the worker threads.
  * Keep this code in sync with select_best_move(). */
 static char *
-uct_getstats(struct uct *u, struct board *b, coord_t *c)
+uct_getstats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 {
 	static char reply[10240];
 	char *r = reply;
 	char *end = reply + sizeof(reply);
 	struct tree_node *root = u->t->root;
-	r += snprintf(r, end - r, "%d %d", root->u.playouts, u->threads);
+	r += snprintf(r, end - r, "%d %d %d", root->u.playouts, u->threads, keep_looking);
 	int min_playouts = root->u.playouts / 100;
 
 	// Give a large weight to pass or resign, but still allow other moves.
-	if (c)
-		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(*c, b), root->u.playouts,
-			      (float)is_pass(*c));
+	if (is_pass(c) || is_resign(c))
+		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c, b), root->u.playouts,
+			      (float)is_pass(c));
 
 	/* We rely on the fact that root->children is set only
 	 * after all children are created. */
@@ -907,12 +938,14 @@ uct_getstats(struct uct *u, struct board *b, coord_t *c)
 		    || is_pass(ni->coord))
 			continue;
 		char *coord = coord2sstr(ni->coord, b);
-		// We return the values as stored in the tree, so from black's view.
-		r += snprintf(r, end - r, "\n%s %d %.7f", coord, ni->u.playouts, ni->u.value);
+		/* We return the values as stored in the tree, so from black's view. */
+                r += snprintf(r, end - r, "\n%s %d %.7f", coord, ni->u.playouts, ni->u.value);
 	}
 	return reply;
 }
 
+/* genmoves returns a line "=id total_playouts threads keep_looking[ reserved]"
+ * then a list of lines "coord playouts value" terminated by \n\n. */
 static char *
 uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
 	     char *args, bool pass_all_alive)
@@ -920,18 +953,22 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	struct uct *u = e->data;
 	assert(u->slave);
 
-	coord_t *c = uct_genmove(e, b, ti, color, pass_all_alive);
-
-	/* Get correct time from master. Keep this code in sync with time_info(). */
-	if (ti->dim == TD_WALLTIME
-	    && sscanf(args, "%lf %lf %d %d", &ti->len.t.main_time,
-		      &ti->len.t.byoyomi_time, &ti->len.t.byoyomi_periods,
-		      &ti->len.t.byoyomi_stones) != 4) {
-		return NULL;
+	/* Get correct time from master. We must reset timer_start here
+	 * because we get a single "play" command then multiple genmoves.
+	 * Keep this code in sync with time_info(). */
+	if (ti->dim == TD_WALLTIME) {
+		if (sscanf(args, "%lf %lf %d %d", &ti->len.t.main_time,
+			   &ti->len.t.byoyomi_time, &ti->len.t.byoyomi_periods,
+			   &ti->len.t.byoyomi_stones) != 4)
+			return NULL;
+		time_start_timer(ti);
 	}
 
-	char *reply = uct_getstats(u, b, is_pass(*c) || is_resign(*c) ? c : NULL);
-	coord_done(c);
+	bool keep_looking;
+	coord_t best_coord;
+	uct_bestmove(e, b, ti, color, pass_all_alive, &keep_looking, &best_coord);
+
+	char *reply = uct_getstats(u, b, best_coord, keep_looking);
 	return reply;
 }
 
@@ -947,7 +984,8 @@ uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		/* Don't count in games that already went into the book. */
 		ti->len.games += u->t->root->u.playouts;
 	}
-	uct_search(u, b, ti, color, u->t);
+	bool keep_looking;
+	uct_search(u, b, ti, color, u->t, &keep_looking);
 
 	assert(ti->dim == TD_GAMES);
 	tree_save(u->t, b, ti->len.games / 100);

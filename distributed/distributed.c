@@ -2,7 +2,7 @@
  * from slave machines, sends them gtp commands, then aggregates the
  * results. It can also act as a proxy for the logs of all slave machines.
  * The slave machines must run with engine "uct" (not "distributed").
- * The master sends the pachi-genmoves gtp command to each slave,
+ * The master sends pachi-genmoves gtp commands regularly to each slave,
  * gets as replies a list of candidate moves, their number of playouts
  * and their value. The master then picks the most popular move. */
 
@@ -14,12 +14,6 @@
  * number of games have been simulated. In this case the -t
  * parameter for the master should be the sum of the parameters
  * for all slaves. */
-
-/* To minimize the number of ignored replies because they arrive
- * too late, slaves send temporary replies to the genmoves
- * command, with the best moves so far. So when the master
- * has to choose, it should have final replies from most
- * slaves and at least temporary replies from all of them. */
 
 /* This first version does not send tree updates between slaves,
  * but it has fault tolerance. If a slave is out of sync, the master
@@ -87,7 +81,7 @@ struct distributed {
 };
 
 static coord_t select_best_move(struct board *b, struct move_stats *best_stats,
-				int *total_playouts, int *total_threads);
+				int *total_playouts, int *total_threads, bool *keep_looking);
 
 /* Default number of simulations to perform per move.
  * Note that this is in total over all slaves! */
@@ -101,11 +95,13 @@ static const struct time_info default_ti = {
 #define get_value(value, color) \
 	((color) == S_BLACK ? (value) : 1 - (value))
 
-/* Max size for one reply or slave log. */
+/* Max size for one line of reply or slave log. */
 #define BSIZE 4096
 
-/* Max size of all gtp commands for one game */
-#define CMDS_SIZE (40*MAX_GAMELEN)
+/* Max size of all gtp commands for one game.
+ * 60 chars for the first line of genmoves plus 100 lines
+ * of 30 chars each for the stats at last move. */
+#define CMDS_SIZE (60*MAX_GAMELEN + 30*100)
 
 /* All gtp commands for current game separated by \n */
 static char gtp_cmds[CMDS_SIZE];
@@ -113,10 +109,10 @@ static char gtp_cmds[CMDS_SIZE];
 /* Latest gtp command sent to slaves. */
 static char *gtp_cmd = NULL;
 
-/* Remember at most 3 gtp ids per move (time_left, genmoves, play).
- * For move 0 there can be more than 3 commands
- * but then we resend the whole history. */
-#define MAX_CMDS_PER_MOVE 3
+/* Remember at most 12 gtp ids per move: play pass,
+ * 10 genmoves (1s), play pass.
+ * For move 0 we always resend the whole history. */
+#define MAX_CMDS_PER_MOVE 12
 
 /* History of gtp commands sent for current game, indexed by move. */
 static int id_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
@@ -382,8 +378,7 @@ update_cmd(struct board *b, char *cmd, char *args)
 		 id, cmd, *args ? args : "\n");
 	reply_count = final_reply_count = 0;
 
-	/* Remember history for out-of-sync slaves, at most 3 ids per move
-         * (time_left, genmoves, play). */
+	/* Remember history for out-of-sync slaves. */
 	static int slot = 0;
 	slot = (slot + 1) % MAX_CMDS_PER_MOVE;
 	id_history[moves][slot] = id;
@@ -446,9 +441,8 @@ get_replies(double time_limit, int min_playouts, struct board *b)
 		if (time_limit) {
 			if (time_now() >= time_limit) break;
 		} else {
-			int playouts, threads;
-			struct move_stats s;
-			select_best_move(b, &s, &playouts, &threads);
+			int playouts;
+			select_best_move(b, NULL, &playouts, NULL, NULL);
 			if (playouts >= min_playouts) return;
 		}
 	}
@@ -464,6 +458,13 @@ get_replies(double time_limit, int min_playouts, struct board *b)
 }
 
 /* Maximum time (seconds) to wait for answers to fast gtp commands
+ * (all commands except pachi-genmoves and final_status_list). */
+#define MAX_FAST_CMD_WAIT 1.0
+
+/* How often to send a stats update to slaves (seconds) */
+#define STATS_UPDATE_INTERVAL 0.1 /* 100ms */
+
+/* Maximum time (seconds) to wait between genmoves
  * (all commands except pachi-genmoves and final_status_list). */
 #define MAX_FAST_CMD_WAIT 1.0
 
@@ -505,13 +506,14 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	return P_OK;
 }
 
-/* pachi-genmoves returns a line "=id total_playouts threads[ reserved]" then a list of lines
- * "coord playouts value". Keep this function in sync with uct_notify().
- * Return the move with most playouts, its average value, and stats for debugging.
+/* genmoves returns a line "=id total_playouts threads keep_looking[ reserved]"
+ * then a list of lines "coord playouts value".
+ * Return the move with most playouts, and optional additional info.
+ * Keep this code in sync with uct_getstats().
  * slave_lock is held on entry and on return. */
 static coord_t
 select_best_move(struct board *b, struct move_stats *best_stats,
-		 int *total_playouts, int *total_threads)
+		 int *total_playouts, int *total_threads, bool *keep_looking)
 {
 	assert(reply_count > 0);
 
@@ -522,14 +524,17 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 
 	coord_t best_move = pass;
 	int best_playouts = -1;
-	*total_playouts = *total_threads = 0;
+	int playouts = 0;
+	int threads = 0;
+	int keep = 0;
 
 	for (int reply = 0; reply < reply_count; reply++) {
 		char *r = gtp_replies[reply];
-		int id, playouts, threads;
-		if (sscanf(r, "=%d %d %d", &id, &playouts, &threads) != 3) continue;
-		*total_playouts += playouts;
-		*total_threads += threads;
+		int id, p, t, k;
+		if (sscanf(r, "=%d %d %d %d", &id, &p, &t, &k) != 4) continue;
+		playouts += p;
+		threads += t;
+		keep += k;
 		// Skip the rest of the firt line if any (allow future extensions)
 		r = strchr(r, '\n');
 
@@ -541,12 +546,15 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 			if (stats[*c].playouts > best_playouts) {
 				best_playouts = stats[*c].playouts;
 				best_move = *c;
-			}			  
+			}
 			coord_done(c);
 			r = strchr(r, '\n');
 		}
 	}
-	*best_stats = stats[best_move];
+	if (best_stats) *best_stats = stats[best_move];
+	if (total_playouts) *total_playouts = playouts;
+	if (total_threads) *total_threads = threads;
+	if (keep_looking) *keep_looking = keep > reply_count / 2;
 	return best_move;
 }
 
@@ -558,74 +566,102 @@ static coord_t *
 distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct distributed *dist = e->data;
-	double start = time_now();
-
-	long time_limit = 0;
-	int min_playouts = 0;
+	double now = time_now();
+	double first = now;
 
 	char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
-	char args[128];
+	char args[CMDS_SIZE];
+	char *end = args + sizeof(args);
+
+	coord_t best;
+	int playouts, threads;
+	struct move_stats best_stats;
 
 	if (ti->period == TT_NULL) *ti = default_ti;
 	struct time_stop stop;
 	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, &stop);
+	struct time_info saved_ti = *ti;
 
+	/* Send the first genmoves. This is
+	 * a multi-line command ending with \n\n. */
+	char *col = args + snprintf(args, sizeof(args), "%s", stone2str(color));
+	char *s = col;
 	if (ti->dim == TD_WALLTIME) {
-		time_limit = ti->len.t.timer_start + stop.worst.time;
-
-		/* Send time info to the slaves to make sure they all
-		 * reply in time, particularly if they were out of sync
-		 * and there are no time_left commands. We cannot send
-		 * the absolute time limit because slaves may have a
-		 * different system time.
-		 * Keep this code in sync with gtp_parse(). */
-		snprintf(args, sizeof(args), "%s %.3f %.3f %d %d\n",
-			 stone2str(color), ti->len.t.main_time,
-			 ti->len.t.byoyomi_time, ti->len.t.byoyomi_periods,
-			 ti->len.t.byoyomi_stones);
-	} else {
-		min_playouts = stop.desired.playouts;
-
-		/* For absolute number of simulations, slaves still
-		 * use their own -t =NUM parameter. (The master
-		 * needs to know the total number of simulations over
-		 * all slaves so it has a different -t parameter.) */
-		snprintf(args, sizeof(args), "%s\n", stone2str(color));
+		s += snprintf(s, end - s, " %.3f %.3f %d %d",
+			      ti->len.t.main_time, ti->len.t.byoyomi_time,
+			      ti->len.t.byoyomi_periods, ti->len.t.byoyomi_stones);
 	}
+	s += snprintf(s, end - s, "\n\n");
 
 	pthread_mutex_lock(&slave_lock);
 	new_cmd(b, cmd, args);
 
-	get_replies(time_limit, min_playouts, b);
+	/* Loop until most slaves want to quit or time elapsed. */
+	for (;;) {
+		double start = now;
+		get_replies(now + STATS_UPDATE_INTERVAL, 0, b);
+		now = time_now();
+		s = col;
+		if (ti->dim == TD_WALLTIME) {
+			time_sub(ti, now - start);
+			s += snprintf(s, end - s, " %.3f %.3f %d %d",
+				      ti->len.t.main_time, ti->len.t.byoyomi_time,
+				      ti->len.t.byoyomi_periods, ti->len.t.byoyomi_stones);
+		}
+		s += snprintf(s, end - s, "\n");
+		bool keep_looking;
+		best = select_best_move(b, &best_stats, &playouts,
+					&threads, &keep_looking);
+
+		if (!keep_looking) break;
+		if (ti->dim == TD_WALLTIME) {
+			if (now - ti->len.t.timer_start >= stop.worst.time) break;
+		} else {
+			if (playouts >= stop.worst.playouts) break;
+		}
+		if (DEBUGL(2)) {
+			char buf[BSIZE];
+			char *coord = coord2sstr(best, b);
+			snprintf(buf, sizeof(buf),
+				 "temp winner is %s %s with score %1.4f (%d/%d games)"
+				 " %d slaves %d threads\n",
+				 stone2str(color), coord, get_value(best_stats.value, color),
+				 best_stats.playouts, playouts, reply_count, threads);
+			logline(NULL, "* ", buf);
+		}
+		update_cmd(b, cmd, args);
+	}
 	int replies = reply_count;
 
-	int playouts, threads;
+	/* Do not subtract time spent twice (see gtp_parse). */
+	*ti = saved_ti;
+
 	dist->my_last_move.color = color;
-	dist->my_last_move.coord = select_best_move(b, &dist->my_last_stats, &playouts, &threads);
+	dist->my_last_move.coord = best;
+	dist->my_last_stats = best_stats;
 
 	/* Tell the slaves to commit to the selected move, overwriting
 	 * the last "pachi-genmoves" in the command history. */
-	char *coord = coord2str(dist->my_last_move.coord, b);
+	char *coord = coord2str(best, b);
 	snprintf(args, sizeof(args), "%s %s\n", stone2str(color), coord);
 	update_cmd(b, "play", args);
 	pthread_mutex_unlock(&slave_lock);
 
 	if (DEBUGL(1)) {
 		char buf[BSIZE];
-		enum stone color = dist->my_last_move.color;
-		double time = time_now() - start + 0.000001; /* avoid divide by zero */
+		double time = now - first + 0.000001; /* avoid divide by zero */
 		snprintf(buf, sizeof(buf),
 			 "GLOBAL WINNER is %s %s with score %1.4f (%d/%d games)\n"
 			 "genmove in %0.2fs %d slaves %d threads (%d games/s,"
 			 " %d games/s/slave, %d games/s/thread)\n",
-			 stone2str(color), coord, get_value(dist->my_last_stats.value, color),
-			 dist->my_last_stats.playouts, playouts, time, replies, threads,
+			 stone2str(color), coord, get_value(best_stats.value, color),
+			 best_stats.playouts, playouts, time, replies, threads,
 			 (int)(playouts/time), (int)(playouts/time/replies),
 			 (int)(playouts/time/threads));
 		logline(NULL, "* ", buf);
 	}
 	free(coord);
-	return coord_copy(dist->my_last_move.coord);
+	return coord_copy(best);
 }
 
 static char *
