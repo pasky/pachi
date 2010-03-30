@@ -17,6 +17,12 @@ struct uct_dynkomi;
 
 /* Internal UCT structures */
 
+/* Stats for each child of the root node. */
+struct node_stats {
+	struct move_stats last_sent_own;
+	struct move_stats last_received_others;
+	struct tree_node *node;
+};
 
 /* Internal engine state. */
 struct uct {
@@ -81,6 +87,7 @@ struct uct {
 
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;
+	struct node_stats *stats;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
 	struct tree *t;

@@ -58,7 +58,6 @@ static const struct time_info default_ti = {
 #define TREE_SIMPROGRESS_INTERVAL 10000
 
 /* How often to send stats updates for the distributed engine (in seconds). */
-/* (Update limited to time info in this version.) */
 #define STATS_SEND_INTERVAL 0.5
 
 /* When terminating uct_search() early, the safety margin to add to the
@@ -119,6 +118,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 
 	u->ownermap.playouts = 0;
 	memset(u->ownermap.map, 0, board_size2(b) * sizeof(u->ownermap.map[0]));
+	memset(u->stats, 0, board_size2(b) * sizeof(u->stats[0]));
 }
 
 static void
@@ -300,6 +300,7 @@ uct_done(struct engine *e)
 	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
 	free(u->ownermap.map);
+	free(u->stats);
 
 	free(u->policy);
 	free(u->random_policy);
@@ -938,14 +939,38 @@ uct_getstats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 		    || is_pass(ni->coord))
 			continue;
 		char *coord = coord2sstr(ni->coord, b);
-		/* We return the values as stored in the tree, so from black's view. */
-                r += snprintf(r, end - r, "\n%s %d %.7f", coord, ni->u.playouts, ni->u.value);
+		/* We return the values as stored in the tree, so from black's view.
+		 * last_sent_own = total - last_received_others */
+		struct move_stats s = ni->u;
+		struct move_stats others = u->stats[ni->coord].last_received_others;
+		if (s.playouts - others.playouts <= min_playouts)
+			continue;
+		stats_rm_result(&s, others.value, others.playouts);
+
+		r += snprintf(r, end - r, "\n%s %d %.7f", coord, s.playouts, s.value);
+
+		u->stats[ni->coord].last_sent_own = s;
+		u->stats[ni->coord].node = ni;
+		/* If the master discards these values because this slave
+		 * is out of sync, u->stats will be reset anyway. */
 	}
 	return reply;
 }
 
+/* Set mapping from coordinates to children of the root node. */
+static void
+find_top_nodes(struct uct *u)
+{
+	for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling) {
+		if (!is_pass(ni->coord))
+		    u->stats[ni->coord].node = ni;
+	}
+}
+
 /* genmoves returns a line "=id total_playouts threads keep_looking[ reserved]"
- * then a list of lines "coord playouts value" terminated by \n\n. */
+ * then a list of lines "coord playouts value" terminated by \n\n.
+ * It also takes as input a list of lines "coord playouts value" to get stats
+ * of other slaves, except for the first call at a given move number. */
 static char *
 uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
 	     char *args, bool pass_all_alive)
@@ -962,6 +987,36 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 			   &ti->len.t.byoyomi_stones) != 4)
 			return NULL;
 		time_start_timer(ti);
+	}
+
+	/* Get the move stats if they are present. They are
+	 * coord-sorted but the code here doesn't depend on this.
+	 * Keep this code in sync with select_best_move(). */
+
+	char line[128];
+	while (fgets(line, sizeof(line), stdin) && *line != '\n') {
+		char move[64];
+		struct move_stats s;
+		if (sscanf(line, "%63s %d %f", move, &s.playouts, &s.value) != 3)
+			return NULL;
+		coord_t *c = str2coord(move, board_size(b));
+		assert(!is_pass(*c) && !is_resign(*c));
+
+		/* received_others = received_total - last_sent_own */
+		struct node_stats *ns = &u->stats[*c];
+		stats_rm_result(&s, ns->last_sent_own.value, ns->last_sent_own.playouts);
+
+		/* others_delta = received_others - last_received_others */
+		struct move_stats delta = s;
+		stats_rm_result(&delta, ns->last_received_others.value,
+				ns->last_received_others.playouts);
+
+		if (!ns->node) find_top_nodes(u);
+		assert(ns->node);
+		stats_add_result(&ns->node->u, delta.value, delta.playouts);
+
+		ns->last_received_others = s;
+		coord_done(c);
 	}
 
 	bool keep_looking;
@@ -1340,6 +1395,7 @@ uct_state_init(char *arg, struct board *b)
 	u->playout->debug_level = u->debug_level;
 
 	u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
+	u->stats = malloc(board_size2(b) * sizeof(u->stats[0]));
 
 	if (!u->dynkomi)
 		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);

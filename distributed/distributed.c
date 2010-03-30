@@ -15,9 +15,15 @@
  * parameter for the master should be the sum of the parameters
  * for all slaves. */
 
-/* This first version does not send tree updates between slaves,
- * but it has fault tolerance. If a slave is out of sync, the master
- * sends it the appropriate command history. */
+/* The master sends updated statistics for the best moves
+ * in each genmoves command. In this version only the
+ * children of the root node are updated. The slaves
+ * reply with just their own stats; they remember what was
+ * previously received from or sent to the master, to
+ * distinguish their own contribution from that of other slaves. */
+
+/* The master-slave protocol has has fault tolerance. If a slave is
+ * out of sync, the master sends it the appropriate command history. */
 
 /* Pass me arguments like a=b,c=d,...
  * Supported arguments:
@@ -81,7 +87,8 @@ struct distributed {
 };
 
 static coord_t select_best_move(struct board *b, struct move_stats *best_stats,
-				int *total_playouts, int *total_threads, bool *keep_looking);
+				int *total_playouts, int *total_threads,
+				char *all_stats, char *end, bool *keep_looking);
 
 /* Default number of simulations to perform per move.
  * Note that this is in total over all slaves! */
@@ -442,7 +449,7 @@ get_replies(double time_limit, int min_playouts, struct board *b)
 			if (time_now() >= time_limit) break;
 		} else {
 			int playouts;
-			select_best_move(b, NULL, &playouts, NULL, NULL);
+			select_best_move(b, NULL, &playouts, NULL, NULL, NULL, NULL);
 			if (playouts >= min_playouts) return;
 		}
 	}
@@ -509,11 +516,15 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 /* genmoves returns a line "=id total_playouts threads keep_looking[ reserved]"
  * then a list of lines "coord playouts value".
  * Return the move with most playouts, and optional additional info.
+ * If set, all_stats gathers the stats from all slaves except for
+ * pass and resign; it must have room up to end and upon return
+ * ends with an empty line.
  * Keep this code in sync with uct_getstats().
  * slave_lock is held on entry and on return. */
 static coord_t
 select_best_move(struct board *b, struct move_stats *best_stats,
-		 int *total_playouts, int *total_threads, bool *keep_looking)
+		 int *total_playouts, int *total_threads,
+		 char *all_stats, char *end, bool *keep_looking)
 {
 	assert(reply_count > 0);
 
@@ -551,6 +562,18 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 			r = strchr(r, '\n');
 		}
 	}
+	if (all_stats) {
+		char *s = all_stats;
+		int min_playouts = best_playouts /= 100;
+		/* Send stats for all moves except pass and resign. */
+		foreach_point(b) {
+			if (stats[c].playouts <= min_playouts) continue;
+			s += snprintf(s, end - s, "%s %d %.7f\n",
+				      coord2sstr(c, b),
+				      stats[c].playouts, stats[c].value);
+		} foreach_point_end;
+		s += snprintf(s, end - s, "\n");
+	}
 	if (best_stats) *best_stats = stats[best_move];
 	if (total_playouts) *total_playouts = playouts;
 	if (total_threads) *total_threads = threads;
@@ -582,8 +605,9 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, &stop);
 	struct time_info saved_ti = *ti;
 
-	/* Send the first genmoves. This is
-	 * a multi-line command ending with \n\n. */
+	/* Send the first genmoves without stats. This is
+	 * a multi-line command ending with \n\n.
+	 * Keep this code in sync with uct_genmoves(). */
 	char *col = args + snprintf(args, sizeof(args), "%s", stone2str(color));
 	char *s = col;
 	if (ti->dim == TD_WALLTIME) {
@@ -611,7 +635,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 		s += snprintf(s, end - s, "\n");
 		bool keep_looking;
 		best = select_best_move(b, &best_stats, &playouts,
-					&threads, &keep_looking);
+					&threads, s, end, &keep_looking);
 
 		if (!keep_looking) break;
 		if (ti->dim == TD_WALLTIME) {
