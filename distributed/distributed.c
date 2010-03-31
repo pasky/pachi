@@ -404,17 +404,15 @@ new_cmd(struct board *b, char *cmd, char *args)
 	update_cmd(b, cmd, args, true);
 }
 
-/* If time_limit > 0, wait until all slaves have replied, or if the
- * given absolute time is passed, wait for at least one reply.
- * If time_limit == 0, wait until we get at least min_playouts games
- * simulated in total by all the slaves, or until all slaves have replied.
+/* Wait for at least one new reply. Return when all slaves have
+ * replied, or when the given absolute time is passed.
  * The replies are returned in gtp_replies[0..reply_count-1]
  * slave_lock is held on entry and on return. */
 static void
-get_replies(double time_limit, int min_playouts, struct board *b)
+get_replies(double time_limit)
 {
-	while (reply_count == 0 || reply_count < active_slaves) {
-		if (time_limit && reply_count > 0) {
+	for (;;) {
+		if (reply_count > 0) {
 			struct timespec ts;
 			double sec;
 			ts.tv_nsec = (int)(modf(time_limit, &sec)*1000000000.0);
@@ -425,13 +423,7 @@ get_replies(double time_limit, int min_playouts, struct board *b)
 		}
 		if (reply_count == 0) continue;
 		if (reply_count >= active_slaves) return;
-		if (time_limit) {
-			if (time_now() >= time_limit) break;
-		} else {
-			int playouts;
-			select_best_move(b, NULL, &playouts, NULL, NULL, NULL, NULL);
-			if (playouts >= min_playouts) return;
-		}
+		if (time_now() >= time_limit) break;
 	}
 	if (DEBUGL(1)) {
 		char buf[1024];
@@ -487,7 +479,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	/* Wait for replies here. If we don't wait, we run the
 	 * risk of getting out of sync with most slaves and
 	 * sending command history too frequently. */
-	get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
+	get_replies(time_now() + MAX_FAST_CMD_WAIT);
 
 	pthread_mutex_unlock(&slave_lock);
 	return P_OK;
@@ -603,7 +595,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	/* Loop until most slaves want to quit or time elapsed. */
 	for (;;) {
 		double start = now;
-		get_replies(now + STATS_UPDATE_INTERVAL, 0, b);
+		get_replies(now + STATS_UPDATE_INTERVAL);
 		now = time_now();
 		s = col;
 		if (ti->dim == TD_WALLTIME) {
@@ -700,7 +692,7 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 	pthread_mutex_lock(&slave_lock);
 
 	new_cmd(b, "final_status_list", "dead\n");
-	get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
+	get_replies(time_now() + MAX_FAST_CMD_WAIT);
 
 	/* Find the most popular reply. */
 	qsort(gtp_replies, reply_count, sizeof(char *), scmp);
