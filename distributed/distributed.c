@@ -86,10 +86,6 @@ struct distributed {
 	struct move_stats my_last_stats;
 };
 
-static coord_t select_best_move(struct board *b, struct move_stats *best_stats,
-				int *total_playouts, int *total_threads,
-				char *all_stats, char *end, bool *keep_looking);
-
 /* Default number of simulations to perform per move.
  * Note that this is in total over all slaves! */
 #define DIST_GAMES	80000
@@ -487,8 +483,8 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 
 /* genmoves returns a line "=id total_playouts threads keep_looking[ reserved]"
  * then a list of lines "coord playouts value".
- * Return the move with most playouts, and optional additional info.
- * If set, all_stats gathers the stats from all slaves except for
+ * Return the move with most playouts, and additional stats.
+ * all_stats gathers the stats from all slaves except for
  * pass and resign; it must have room up to end and upon return
  * ends with an empty line.
  * Keep this code in sync with uct_getstats().
@@ -507,16 +503,16 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 
 	coord_t best_move = pass;
 	int best_playouts = -1;
-	int playouts = 0;
-	int threads = 0;
+	*total_playouts = 0;
+	*total_threads = 0;
 	int keep = 0;
 
 	for (int reply = 0; reply < reply_count; reply++) {
 		char *r = gtp_replies[reply];
 		int id, p, t, k;
 		if (sscanf(r, "=%d %d %d %d", &id, &p, &t, &k) != 4) continue;
-		playouts += p;
-		threads += t;
+		*total_playouts += p;
+		*total_threads += t;
 		keep += k;
 		// Skip the rest of the firt line if any (allow future extensions)
 		r = strchr(r, '\n');
@@ -534,22 +530,19 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 			r = strchr(r, '\n');
 		}
 	}
-	if (all_stats) {
-		char *s = all_stats;
-		int min_playouts = best_playouts / 100;
-		/* Send stats for all moves except pass and resign. */
-		foreach_point(b) {
-			if (stats[c].playouts <= min_playouts) continue;
-			s += snprintf(s, end - s, "%s %d %.7f\n",
-				      coord2sstr(c, b),
-				      stats[c].playouts, stats[c].value);
-		} foreach_point_end;
-		s += snprintf(s, end - s, "\n");
-	}
-	if (best_stats) *best_stats = stats[best_move];
-	if (total_playouts) *total_playouts = playouts;
-	if (total_threads) *total_threads = threads;
-	if (keep_looking) *keep_looking = keep > reply_count / 2;
+	char *s = all_stats;
+	int min_playouts = best_playouts / 100;
+	/* Send stats for all moves except pass and resign. */
+	foreach_point(b) {
+		if (stats[c].playouts <= min_playouts) continue;
+		s += snprintf(s, end - s, "%s %d %.7f\n",
+			      coord2sstr(c, b),
+			      stats[c].playouts, stats[c].value);
+	} foreach_point_end;
+	s += snprintf(s, end - s, "\n");
+
+	*best_stats = stats[best_move];
+	*keep_looking = keep > reply_count / 2;
 	return best_move;
 }
 
