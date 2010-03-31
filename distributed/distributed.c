@@ -267,6 +267,11 @@ slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 			last_reply_id = reply_id;
 
 			pthread_cond_signal(&reply_cond);
+
+			/* Force waiting for a new command. The next genmoves
+			 * stats we will send must include those just received
+			 * (this assumed by the slave). */
+			last_cmd_sent = cmd_count;
 			continue;
 		}
 		resend = true;
