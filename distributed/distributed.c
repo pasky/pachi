@@ -116,6 +116,9 @@ static char gtp_cmds[CMDS_SIZE];
 /* Latest gtp command sent to slaves. */
 static char *gtp_cmd = NULL;
 
+/* Slaves send gtp_cmd when cmd_count changes. */
+static int cmd_count = 0;
+
 /* Remember at most 12 gtp ids per move: play pass,
  * 10 genmoves (1s), play pass.
  * For move 0 we always resend the whole history. */
@@ -135,7 +138,7 @@ static int reply_count = 0;
 static char **gtp_replies;
 
 /* Mutex protecting gtp_cmds, gtp_cmd, id_history, cmd_history,
- * active_slaves, reply_count & gtp_replies */
+ * cmd_count, active_slaves, reply_count & gtp_replies */
 static pthread_mutex_t slave_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* Condition signaled when a new gtp command is available. */
@@ -213,25 +216,25 @@ get_reply(FILE *f, struct in_addr client, char *reply)
  * Returns when the connection with the slave machine is cut.
  * slave_lock is held on both entry and exit of this function. */
 static void
-slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
+slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 {
 	char *to_send = gtp_cmd;
-	int cmd_id = -1;
-	int reply_id = -1;
+	int last_cmd_sent = 0;
+	int last_reply_id = -1;
+	int reply_slot = -1;
 	for (;;) {
-		while (cmd_id == reply_id && !resend) {
+		while (last_cmd_sent == cmd_count && !resend) {
 			// Wait for a new gtp command.
 			pthread_cond_wait(&cmd_cond, &slave_lock);
-			if (gtp_cmd)
-				cmd_id = atoi(gtp_cmd);
 			to_send = gtp_cmd;
 		}
 
 		/* Command available, send it to slave machine.
 		 * If slave was out of sync, send the history. */
 		assert(to_send && gtp_cmd);
+		char buf[CMDS_SIZE];
 		strncpy(buf, to_send, CMDS_SIZE);
-		cmd_id = atoi(gtp_cmd);
+		last_cmd_sent = cmd_count;
 
 		pthread_mutex_unlock(&slave_lock);
 
@@ -250,18 +253,23 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 		/* Read the reply, which always ends with \n\n
 		 * The slave machine sends "=id reply" or "?id reply"
 		 * with id == cmd_id if it is in sync. */
-		char reply[CMDS_SIZE];
-		reply_id = get_reply(f, client, reply);
+		int reply_id = get_reply(f, client, buf);
 
 		pthread_mutex_lock(&slave_lock);
 		if (reply_id == -1) return;
 
-		// Make sure we are still in sync:
-		cmd_id = atoi(gtp_cmd);
-		if (reply_id == cmd_id && *reply == '=') {
+		/* Make sure we are still in sync. cmd_count may have
+		 * changed but the reply is valid as long as cmd_id didn't
+		 * change (this only occurs for consecutive genmoves). */
+		int cmd_id = atoi(gtp_cmd);
+		if (reply_id == cmd_id && *buf == '=') {
 			resend = false;
-			strncpy(buf, reply, CMDS_SIZE);
-			gtp_replies[reply_count++] = buf;
+			strncpy(reply_buf, buf, CMDS_SIZE);
+			if (reply_id != last_reply_id)
+				reply_slot = reply_count++;
+			gtp_replies[reply_slot] = reply_buf;
+			last_reply_id = reply_id;
+
 			pthread_cond_signal(&reply_cond);
 			continue;
 		}
@@ -295,7 +303,7 @@ slave_thread(void *arg)
 {
 	int slave_sock = (long)arg;
 	assert(slave_sock >= 0);
-	char slave_buf[CMDS_SIZE];
+	char reply_buf[CMDS_SIZE];
 	bool resend = false;
 
 	for (;;) {
@@ -309,10 +317,10 @@ slave_thread(void *arg)
 
 		/* Minimal check of the slave identity. */
 		fputs("name\n", f);
-		if (!fgets(slave_buf, sizeof(slave_buf), f)
-		    || strncasecmp(slave_buf, "= Pachi", 7)
-		    || !fgets(slave_buf, sizeof(slave_buf), f)
-		    || strcmp(slave_buf, "\n")) {
+		if (!fgets(reply_buf, sizeof(reply_buf), f)
+		    || strncasecmp(reply_buf, "= Pachi", 7)
+		    || !fgets(reply_buf, sizeof(reply_buf), f)
+		    || strcmp(reply_buf, "\n")) {
 			logline(&client, "? ", "bad slave\n");
 			fclose(f);
 			continue;
@@ -320,7 +328,7 @@ slave_thread(void *arg)
 
 		pthread_mutex_lock(&slave_lock);
 		active_slaves++;
-		slave_loop(f, client, slave_buf, resend);
+		slave_loop(f, client, reply_buf, resend);
 
 		assert(active_slaves > 0);
 		active_slaves--;
@@ -341,29 +349,26 @@ slave_thread(void *arg)
  * if gtp_cmd points to a non-empty string. cmd is a single word;
  * args has all arguments and is empty or has a trailing \n */
 static void
-update_cmd(struct board *b, char *cmd, char *args)
+update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 {
 	assert(gtp_cmd);
 	/* To make sure the slaves are in sync, we ignore the original id
-	 * and use the board number plus some random bits as gtp id.
-	 * Make sure the new command has a new id otherwise slaves
-	 * won't send it. */
+	 * and use the board number plus some random bits as gtp id. */
 	static int gtp_id = -1;
-	int id;
 	int moves = is_reset(cmd) ? 0 : b->moves;
-	do {
+	if (new_id) {
 	        /* fast_random() is 16-bit only so the multiplication can't overflow. */
-		id = force_reply(moves + fast_random(65535) * DIST_GAMELEN);
-	} while (id == gtp_id);
-	gtp_id = id;
+		gtp_id = force_reply(moves + fast_random(65535) * DIST_GAMELEN);
+		reply_count = 0;
+	}
 	snprintf(gtp_cmd, gtp_cmds + CMDS_SIZE - gtp_cmd, "%d %s %s",
-		 id, cmd, *args ? args : "\n");
-	reply_count = 0;
+		 gtp_id, cmd, *args ? args : "\n");
+	cmd_count++;
 
 	/* Remember history for out-of-sync slaves. */
 	static int slot = 0;
 	slot = (slot + 1) % MAX_CMDS_PER_MOVE;
-	id_history[moves][slot] = id;
+	id_history[moves][slot] = gtp_id;
 	cmd_history[moves][slot] = gtp_cmd;
 
 	// Notify the slave threads about the new command.
@@ -396,7 +401,7 @@ new_cmd(struct board *b, char *cmd, char *args)
 	}
 
 	// Let the slave threads send the new gtp command:
-	update_cmd(b, cmd, args);
+	update_cmd(b, cmd, args, true);
 }
 
 /* If time_limit > 0, wait until all slaves have replied, or if the
@@ -539,7 +544,7 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 	}
 	if (all_stats) {
 		char *s = all_stats;
-		int min_playouts = best_playouts /= 100;
+		int min_playouts = best_playouts / 100;
 		/* Send stats for all moves except pass and resign. */
 		foreach_point(b) {
 			if (stats[c].playouts <= min_playouts) continue;
@@ -628,7 +633,9 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 				 best_stats.playouts, playouts, reply_count, threads);
 			logline(NULL, "* ", buf);
 		}
-		update_cmd(b, cmd, args);
+		/* Send the command with the same gtp id, to avoid discarding
+		 * a reply to a previous genmoves at the same move. */
+		update_cmd(b, cmd, args, false);
 	}
 	int replies = reply_count;
 
@@ -643,7 +650,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	 * the last "pachi-genmoves" in the command history. */
 	char *coord = coord2str(best, b);
 	snprintf(args, sizeof(args), "%s %s\n", stone2str(color), coord);
-	update_cmd(b, "play", args);
+	update_cmd(b, "play", args, true);
 	pthread_mutex_unlock(&slave_lock);
 
 	if (DEBUGL(1)) {
