@@ -489,22 +489,16 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 /* genmoves returns a line "=id total_playouts threads keep_looking[ reserved]"
  * then a list of lines "coord playouts value".
  * Return the move with most playouts, and additional stats.
- * all_stats gathers the stats from all slaves except for
- * pass and resign; it must have room up to end and upon return
- * ends with an empty line.
  * Keep this code in sync with uct_getstats().
  * slave_lock is held on entry and on return. */
 static coord_t
-select_best_move(struct board *b, struct move_stats *best_stats,
-		 int *total_playouts, int *total_threads,
-		 char *all_stats, char *end, bool *keep_looking)
+select_best_move(struct board *b, struct move_stats *stats,
+		 int *total_playouts, int *total_threads, bool *keep_looking)
 {
 	assert(reply_count > 0);
 
-	/* +2 for pass and resign. */
-	struct move_stats *stats = alloca((board_size2(b)+2) * sizeof(struct move_stats));
-	memset(stats, 0, (board_size2(b)+2) * sizeof(*stats));
-	stats += 2;
+	/* +2 for pass and resign */
+	memset(stats-2, 0, (board_size2(b)+2) * sizeof(*stats));
 
 	coord_t best_move = pass;
 	int best_playouts = -1;
@@ -535,9 +529,16 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 			r = strchr(r, '\n');
 		}
 	}
-	char *s = all_stats;
-	int min_playouts = best_playouts / 100;
-	/* Send stats for all moves except pass and resign. */
+	*keep_looking = keep > reply_count / 2;
+	return best_move;
+}
+
+/* Write in s the stats from all slaves above min_playouts, except for pass and resign.
+ * s must have room up to end and upon return ends with an empty line.
+ * slave_lock is held on entry and on return. */
+static void
+write_stats(struct board *b, struct move_stats *stats, char *s, char *end, int min_playouts)
+{
 	foreach_point(b) {
 		if (stats[c].playouts <= min_playouts) continue;
 		s += snprintf(s, end - s, "%s %d %.7f\n",
@@ -545,10 +546,6 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 			      stats[c].playouts, stats[c].value);
 	} foreach_point_end;
 	s += snprintf(s, end - s, "\n");
-
-	*best_stats = stats[best_move];
-	*keep_looking = keep > reply_count / 2;
-	return best_move;
 }
 
 /* Time control is mostly done by the slaves, so we use default values here. */
@@ -568,7 +565,6 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	coord_t best;
 	int playouts, threads;
-	struct move_stats best_stats;
 
 	if (ti->period == TT_NULL) *ti = default_ti;
 	struct time_stop stop;
@@ -587,6 +583,11 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	}
 	s += snprintf(s, end - s, "\n\n");
 
+	/* Combined move stats from all slaves, only for children
+	 * of the root node, plus 2 for pass and resign. */
+	struct move_stats *stats = alloca((board_size2(b)+2) * sizeof(struct move_stats));
+	stats += 2;
+
 	pthread_mutex_lock(&slave_lock);
 	new_cmd(b, cmd, args);
 
@@ -604,8 +605,9 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 		}
 		s += snprintf(s, end - s, "\n");
 		bool keep_looking;
-		best = select_best_move(b, &best_stats, &playouts,
-					&threads, s, end, &keep_looking);
+		best = select_best_move(b, stats, &playouts, &threads, &keep_looking);
+
+		write_stats(b, stats, s, end, stats[best].playouts / 100);
 
 		if (!keep_looking) break;
 		if (ti->dim == TD_WALLTIME) {
@@ -619,8 +621,8 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 			snprintf(buf, sizeof(buf),
 				 "temp winner is %s %s with score %1.4f (%d/%d games)"
 				 " %d slaves %d threads\n",
-				 stone2str(color), coord, get_value(best_stats.value, color),
-				 best_stats.playouts, playouts, reply_count, threads);
+				 stone2str(color), coord, get_value(stats[best].value, color),
+				 stats[best].playouts, playouts, reply_count, threads);
 			logline(NULL, "* ", buf);
 		}
 		/* Send the command with the same gtp id, to avoid discarding
@@ -634,7 +636,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	dist->my_last_move.color = color;
 	dist->my_last_move.coord = best;
-	dist->my_last_stats = best_stats;
+	dist->my_last_stats = stats[best];
 
 	/* Tell the slaves to commit to the selected move, overwriting
 	 * the last "pachi-genmoves" in the command history. */
@@ -650,8 +652,8 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 			 "GLOBAL WINNER is %s %s with score %1.4f (%d/%d games)\n"
 			 "genmove in %0.2fs %d slaves %d threads (%d games/s,"
 			 " %d games/s/slave, %d games/s/thread)\n",
-			 stone2str(color), coord, get_value(best_stats.value, color),
-			 best_stats.playouts, playouts, time, replies, threads,
+			 stone2str(color), coord, get_value(stats[best].value, color),
+			 stats[best].playouts, playouts, time, replies, threads,
 			 (int)(playouts/time), (int)(playouts/time/replies),
 			 (int)(playouts/time/threads));
 		logline(NULL, "* ", buf);
