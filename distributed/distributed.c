@@ -196,7 +196,7 @@ get_reply(FILE *f, struct in_addr client, char *reply)
 	*reply = '\0';
 	char *line = reply;
 	while (fgets(line, reply + CMDS_SIZE - line, f) && *line != '\n') {
-		if (DEBUGL(2))
+		if (DEBUGL(3) || (DEBUGL(2) && line == reply))
 			logline(&client, "<<", line);
 		if (reply_id < 0 && (*line == '=' || *line == '?') && isdigit(line[1]))
 			reply_id = atoi(line+1);
@@ -241,10 +241,15 @@ slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 				logline(&client, "? ", "Slave behind, partial resend\n");
 			}
 		}
-		if (DEBUGL(2))
-			logline(&client, ">>", buf);
 		fputs(buf, f);
 		fflush(f);
+		if (DEBUGL(2)) {
+			if (!DEBUGL(3)) {
+				char *s = strchr(buf, '\n');
+				if (s) s[1] = '\0';
+			}
+			logline(&client, ">>", buf);
+		}
 
 		/* Read the reply, which always ends with \n\n
 		 * The slave machine sends "=id reply" or "?id reply"

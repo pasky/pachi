@@ -237,7 +237,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			gtp_error(id, "illegal move", NULL);
 		} else {
 			if (DEBUGL(1))
-				board_print(board, stderr);
+				board_print_custom(board, stderr, engine->printhook);
 			gtp_reply(id, reply, NULL);
 		}
 
@@ -277,11 +277,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			gtp_error(id, "genmoves error", NULL);
 			return P_OK;
 		}
-		if (DEBUGL(2))
+		if (DEBUGL(3))
 			fprintf(stderr, "proposing moves %s\n", reply);
-		if (DEBUGL(1)) {
+		if (DEBUGL(4))
 			board_print_custom(board, stderr, engine->printhook);
-		}
 		gtp_reply(id, reply, NULL);
 
 	} else if (!strcasecmp(cmd, "set_free_handicap")) {
