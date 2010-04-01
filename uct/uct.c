@@ -119,6 +119,7 @@ prepare_move(struct engine *e, struct board *b, enum stone color)
 	u->ownermap.playouts = 0;
 	memset(u->ownermap.map, 0, board_size2(b) * sizeof(u->ownermap.map[0]));
 	memset(u->stats, 0, board_size2(b) * sizeof(u->stats[0]));
+	u->played_own = u->played_all = 0;
 }
 
 static void
@@ -488,7 +489,7 @@ static bool
 uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 		struct time_info *ti, struct time_stop *stop,
 		struct tree_node *best, struct tree_node *best2,
-		int base_playouts, int i)
+		int played)
 {
 	/* Always use at least half the desired time. It is silly
 	 * to lose a won game because we played a bad move in 0.1s. */
@@ -512,7 +513,7 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
 	if (best2 && ti->dim == TD_WALLTIME && !time_indulgent) {
 		double remaining = stop->worst.time - elapsed;
-		double pps = ((double)i - base_playouts) / elapsed;
+		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
 		if (best->u.playouts > best2->u.playouts + estplayouts) {
 			if (UDEBUGL(2))
@@ -685,7 +686,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
 
 		/* Possibly stop search early if it's no use to try on. */
-		if (best && uct_search_stop_early(u, ctx->t, b, ti, &stop, best, best2, base_playouts, i))
+		int played = u->played_all + i - base_playouts;
+		if (best && uct_search_stop_early(u, ctx->t, b, ti, &stop, best, best2, played))
 			break;
 
 		/* Check against time settings. */
@@ -830,6 +832,7 @@ uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	int base_playouts = u->t->root->u.playouts;
         /* Start or continue the Monte Carlo Tree Search! */
         int played_games = uct_search(u, b, ti, color, u->t, keep_looking);
+	u->played_own += played_games;
 
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
@@ -920,7 +923,7 @@ uct_getstats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 	char *r = reply;
 	char *end = reply + sizeof(reply);
 	struct tree_node *root = u->t->root;
-	r += snprintf(r, end - r, "%d %d %d", root->u.playouts, u->threads, keep_looking);
+	r += snprintf(r, end - r, "%d %d %d %d", u->played_own, root->u.playouts, u->threads, keep_looking);
 	int min_playouts = root->u.playouts / 100;
 
 	// Give a large weight to pass or resign, but still allow other moves.
@@ -978,12 +981,14 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	struct uct *u = e->data;
 	assert(u->slave);
 
-	/* Get correct time from master.
+	/* Get playouts and time information from master.
 	 * Keep this code in sync with distributed_genmove(). */
-	if (ti->dim == TD_WALLTIME
-	    && sscanf(args, "%lf %lf %d %d", &ti->len.t.main_time,
-		      &ti->len.t.byoyomi_time, &ti->len.t.byoyomi_periods,
-		      &ti->len.t.byoyomi_stones) != 4) {
+	if ((ti->dim == TD_WALLTIME
+	     && sscanf(args, "%d %lf %lf %d %d", &u->played_all, &ti->len.t.main_time,
+		       &ti->len.t.byoyomi_time, &ti->len.t.byoyomi_periods,
+		       &ti->len.t.byoyomi_stones) != 5)
+
+	    || (ti->dim == TD_GAMES && sscanf(args, "%d", &u->played_all) != 1)) {
 		return NULL;
 	}
 

@@ -88,6 +88,8 @@ struct uct {
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;
 	struct node_stats *stats;
+	int played_own;
+	int played_all; /* games played by all slaves */
 
 	/* Game state - maintained by setup_state(), reset_state(). */
 	struct tree *t;

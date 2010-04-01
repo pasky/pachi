@@ -486,13 +486,13 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	return P_OK;
 }
 
-/* genmoves returns a line "=id total_playouts threads keep_looking[ reserved]"
+/* genmoves returns a line "=id played_own total_playouts threads keep_looking[ reserved]"
  * then a list of lines "coord playouts value".
  * Return the move with most playouts, and additional stats.
  * Keep this code in sync with uct_getstats().
  * slave_lock is held on entry and on return. */
 static coord_t
-select_best_move(struct board *b, struct move_stats *stats,
+select_best_move(struct board *b, struct move_stats *stats, int *played,
 		 int *total_playouts, int *total_threads, bool *keep_looking)
 {
 	assert(reply_count > 0);
@@ -502,14 +502,16 @@ select_best_move(struct board *b, struct move_stats *stats,
 
 	coord_t best_move = pass;
 	int best_playouts = -1;
+	*played = 0;
 	*total_playouts = 0;
 	*total_threads = 0;
 	int keep = 0;
 
 	for (int reply = 0; reply < reply_count; reply++) {
 		char *r = gtp_replies[reply];
-		int id, p, t, k;
-		if (sscanf(r, "=%d %d %d %d", &id, &p, &t, &k) != 4) continue;
+		int id, o, p, t, k;
+		if (sscanf(r, "=%d %d %d %d %d", &id, &o, &p, &t, &k) != 5) continue;
+		*played += o;
 		*total_playouts += p;
 		*total_threads += t;
 		keep += k;
@@ -533,18 +535,33 @@ select_best_move(struct board *b, struct move_stats *stats,
 	return best_move;
 }
 
-/* Write in s the stats from all slaves above min_playouts, except for pass and resign.
- * s must have room up to end and upon return ends with an empty line.
+/* Set the args for the genmoves command. If stats is not null,
+ * append the stats from all slaves above min_playouts, except
+ * for pass and resign. args must have CMDS_SIZE bytes and
+ * upon return ends with an empty line.
+ * Keep this code in sync with uct_genmoves().
  * slave_lock is held on entry and on return. */
 static void
-write_stats(struct board *b, struct move_stats *stats, char *s, char *end, int min_playouts)
+genmoves_args(char *args, struct board *b, enum stone color, int played,
+	      struct time_info *ti, struct move_stats *stats, int min_playouts)
 {
-	foreach_point(b) {
-		if (stats[c].playouts <= min_playouts) continue;
-		s += snprintf(s, end - s, "%s %d %.7f\n",
-			      coord2sstr(c, b),
-			      stats[c].playouts, stats[c].value);
-	} foreach_point_end;
+	char *end = args + CMDS_SIZE;
+	char *s = args + snprintf(args, CMDS_SIZE, "%s %d", stone2str(color), played);
+
+	if (ti->dim == TD_WALLTIME) {
+		s += snprintf(s, end - s, " %.3f %.3f %d %d",
+			      ti->len.t.main_time, ti->len.t.byoyomi_time,
+			      ti->len.t.byoyomi_periods, ti->len.t.byoyomi_stones);
+	}
+	s += snprintf(s, end - s, "\n");
+	if (stats) {
+		foreach_point(b) {
+			if (stats[c].playouts <= min_playouts) continue;
+			s += snprintf(s, end - s, "%s %d %.7f\n",
+				      coord2sstr(c, b),
+				      stats[c].playouts, stats[c].value);
+		} foreach_point_end;
+	}
 	s += snprintf(s, end - s, "\n");
 }
 
@@ -553,7 +570,8 @@ write_stats(struct board *b, struct move_stats *stats, char *s, char *end, int m
 #define YOSE_START 40
 
 static coord_t *
-distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
+		    enum stone color, bool pass_all_alive)
 {
 	struct distributed *dist = e->data;
 	double now = time_now();
@@ -561,27 +579,17 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
 	char args[CMDS_SIZE];
-	char *end = args + sizeof(args);
 
 	coord_t best;
-	int playouts, threads;
+	int played, playouts, threads;
 
 	if (ti->period == TT_NULL) *ti = default_ti;
 	struct time_stop stop;
 	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, &stop);
 	struct time_info saved_ti = *ti;
 
-	/* Send the first genmoves without stats. This is
-	 * a multi-line command ending with \n\n.
-	 * Keep this code in sync with uct_genmoves(). */
-	char *col = args + snprintf(args, sizeof(args), "%s", stone2str(color));
-	char *s = col;
-	if (ti->dim == TD_WALLTIME) {
-		s += snprintf(s, end - s, " %.3f %.3f %d %d",
-			      ti->len.t.main_time, ti->len.t.byoyomi_time,
-			      ti->len.t.byoyomi_periods, ti->len.t.byoyomi_stones);
-	}
-	s += snprintf(s, end - s, "\n\n");
+	/* Send the first genmoves without stats. */
+	genmoves_args(args, b, color, 0, ti, NULL, 0);
 
 	/* Combined move stats from all slaves, only for children
 	 * of the root node, plus 2 for pass and resign. */
@@ -596,24 +604,17 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 		double start = now;
 		get_replies(now + STATS_UPDATE_INTERVAL);
 		now = time_now();
-		s = col;
-		if (ti->dim == TD_WALLTIME) {
+		if (ti->dim == TD_WALLTIME)
 			time_sub(ti, now - start);
-			s += snprintf(s, end - s, " %.3f %.3f %d %d",
-				      ti->len.t.main_time, ti->len.t.byoyomi_time,
-				      ti->len.t.byoyomi_periods, ti->len.t.byoyomi_stones);
-		}
-		s += snprintf(s, end - s, "\n");
-		bool keep_looking;
-		best = select_best_move(b, stats, &playouts, &threads, &keep_looking);
 
-		write_stats(b, stats, s, end, stats[best].playouts / 100);
+		bool keep_looking;
+		best = select_best_move(b, stats, &played, &playouts, &threads, &keep_looking);
 
 		if (!keep_looking) break;
 		if (ti->dim == TD_WALLTIME) {
 			if (now - ti->len.t.timer_start >= stop.worst.time) break;
 		} else {
-			if (playouts >= stop.worst.playouts) break;
+			if (played >= stop.worst.playouts) break;
 		}
 		if (DEBUGL(2)) {
 			char buf[BSIZE];
@@ -627,6 +628,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 		}
 		/* Send the command with the same gtp id, to avoid discarding
 		 * a reply to a previous genmoves at the same move. */
+		genmoves_args(args, b, color, played, ti, stats, stats[best].playouts / 100);
 		update_cmd(b, cmd, args, false);
 	}
 	int replies = reply_count;
@@ -650,12 +652,12 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 		double time = now - first + 0.000001; /* avoid divide by zero */
 		snprintf(buf, sizeof(buf),
 			 "GLOBAL WINNER is %s %s with score %1.4f (%d/%d games)\n"
-			 "genmove in %0.2fs %d slaves %d threads (%d games/s,"
+			 "genmove %d games in %0.2fs %d slaves %d threads (%d games/s,"
 			 " %d games/s/slave, %d games/s/thread)\n",
 			 stone2str(color), coord, get_value(stats[best].value, color),
-			 stats[best].playouts, playouts, time, replies, threads,
-			 (int)(playouts/time), (int)(playouts/time/replies),
-			 (int)(playouts/time/threads));
+			 stats[best].playouts, playouts, played, time, replies, threads,
+			 (int)(played/time), (int)(played/time/replies),
+			 (int)(played/time/threads));
 		logline(NULL, "* ", buf);
 	}
 	free(coord);
