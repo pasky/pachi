@@ -931,23 +931,26 @@ uct_getstats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 	/* We rely on the fact that root->children is set only
 	 * after all children are created. */
 	for (struct tree_node *ni = root->children; ni; ni = ni->sibling) {
-		if (ni->u.playouts <= min_playouts
-		    || ni->hints & TREE_HINT_INVALID
-		    || is_pass(ni->coord))
+
+		if (is_pass(ni->coord)) continue;
+		struct node_stats *ns = &u->stats[ni->coord];
+		ns->last_sent_own.playouts = 0;
+		ns->node = ni;
+		if (ni->u.playouts <= min_playouts || ni->hints & TREE_HINT_INVALID)
 			continue;
+
 		char *coord = coord2sstr(ni->coord, b);
 		/* We return the values as stored in the tree, so from black's view.
-		 * last_sent_own = total - last_received_others */
+		 *   own = total_in_tree - added_from_others */
 		struct move_stats s = ni->u;
-		struct move_stats others = u->stats[ni->coord].last_received_others;
+		struct move_stats others = ns->added_from_others;
 		if (s.playouts - others.playouts <= min_playouts)
 			continue;
-		stats_rm_result(&s, others.value, others.playouts);
+		if (others.playouts)
+			stats_rm_result(&s, others.value, others.playouts);
 
 		r += snprintf(r, end - r, "\n%s %d %.7f", coord, s.playouts, s.value);
-
-		u->stats[ni->coord].last_sent_own = s;
-		u->stats[ni->coord].node = ni;
+		ns->last_sent_own = s;
 		/* If the master discards these values because this slave
 		 * is out of sync, u->stats will be reset anyway. */
 	}
@@ -997,20 +1000,30 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		coord_t *c = str2coord(move, board_size(b));
 		assert(!is_pass(*c) && !is_resign(*c));
 
-		/* received_others = received_total - last_sent_own */
+		/* The master may not send moves below a certain threshold,
+		 * but if it sends one it includes the contributions from
+		 * all slaves including ours (last_sent_own):
+		 *   received_others = received_total - last_sent_own  */
 		struct node_stats *ns = &u->stats[*c];
-		stats_rm_result(&s, ns->last_sent_own.value, ns->last_sent_own.playouts);
+		if (ns->last_sent_own.playouts)
+			stats_rm_result(&s, ns->last_sent_own.value,
+					ns->last_sent_own.playouts);
 
-		/* others_delta = received_others - last_received_others */
+		/* others_delta = received_others - added_from_others */
 		struct move_stats delta = s;
-		stats_rm_result(&delta, ns->last_received_others.value,
-				ns->last_received_others.playouts);
+		if (ns->added_from_others.playouts)
+			stats_rm_result(&delta, ns->added_from_others.value,
+					ns->added_from_others.playouts);
+		/* delta may be <= 0 if some slaves stopped sending this move
+		 * because it became below a playouts threshold. In this case
+		 * we just keep the old stats in our tree. */
+		if (delta.playouts <= 0) continue;
 
 		if (!ns->node) find_top_nodes(u);
 		assert(ns->node);
 		stats_add_result(&ns->node->u, delta.value, delta.playouts);
 
-		ns->last_received_others = s;
+		ns->added_from_others = s;
 		coord_done(c);
 	}
 

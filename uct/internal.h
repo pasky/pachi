@@ -20,7 +20,7 @@ struct uct_dynkomi;
 /* Stats for each child of the root node. */
 struct node_stats {
 	struct move_stats last_sent_own;
-	struct move_stats last_received_others;
+	struct move_stats added_from_others;
 	struct tree_node *node;
 };
 
