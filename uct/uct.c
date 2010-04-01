@@ -603,11 +603,6 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	if (UDEBUGL(2) && base_playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games skipped>\n", base_playouts);
 
-	/* Set up time conditions. */
-	if (ti->period == TT_NULL) *ti = default_ti;
-	struct time_stop stop;
-	time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &stop);
-
 	*keep_looking = false;
 
 	/* Number of last dynkomi adjustment. */
@@ -619,8 +614,12 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	/* Printed notification about full memory? */
 	bool print_fullmem = false;
 
+	static struct time_stop stop;
 	static struct spawn_ctx *ctx;
 	if (!thread_manager_running) {
+		if (ti->period == TT_NULL) *ti = default_ti;
+		time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &stop);
+
 		ctx = uct_search_start(u, b, color, t);
 	} else {
 		/* Keep the search running. */
@@ -691,9 +690,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 		/* Check against time settings. */
 		bool desired_done;
-		if (u->slave) {
-			desired_done = true;
-		} else if (ti->dim == TD_WALLTIME) {
+		if (ti->dim == TD_WALLTIME) {
 			double elapsed = time_now() - ti->len.t.timer_start;
 			if (elapsed > stop.worst.time) break;
 			desired_done = elapsed > stop.desired.time;
@@ -978,15 +975,13 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	struct uct *u = e->data;
 	assert(u->slave);
 
-	/* Get correct time from master. We must reset timer_start here
-	 * because we get a single "play" command then multiple genmoves.
-	 * Keep this code in sync with time_info(). */
-	if (ti->dim == TD_WALLTIME) {
-		if (sscanf(args, "%lf %lf %d %d", &ti->len.t.main_time,
-			   &ti->len.t.byoyomi_time, &ti->len.t.byoyomi_periods,
-			   &ti->len.t.byoyomi_stones) != 4)
-			return NULL;
-		time_start_timer(ti);
+	/* Get correct time from master.
+	 * Keep this code in sync with distributed_genmove(). */
+	if (ti->dim == TD_WALLTIME
+	    && sscanf(args, "%lf %lf %d %d", &ti->len.t.main_time,
+		      &ti->len.t.byoyomi_time, &ti->len.t.byoyomi_periods,
+		      &ti->len.t.byoyomi_stones) != 4) {
+		return NULL;
 	}
 
 	/* Get the move stats if they are present. They are
