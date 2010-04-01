@@ -1002,14 +1002,16 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		struct move_stats s;
 		if (sscanf(line, "%63s %d %f", move, &s.playouts, &s.value) != 3)
 			return NULL;
-		coord_t *c = str2coord(move, board_size(b));
-		assert(!is_pass(*c) && !is_resign(*c));
+		coord_t *c_ = str2coord(move, board_size(b));
+		coord_t c = *c_;
+		coord_done(c_);
+		assert(!is_pass(c) && !is_resign(c));
 
 		/* The master may not send moves below a certain threshold,
 		 * but if it sends one it includes the contributions from
 		 * all slaves including ours (last_sent_own):
 		 *   received_others = received_total - last_sent_own  */
-		struct node_stats *ns = &u->stats[*c];
+		struct node_stats *ns = &u->stats[c];
 		if (ns->last_sent_own.playouts)
 			stats_rm_result(&s, ns->last_sent_own.value,
 					ns->last_sent_own.playouts);
@@ -1027,9 +1029,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		if (!ns->node) find_top_nodes(u);
 		assert(ns->node);
 		stats_add_result(&ns->node->u, delta.value, delta.playouts);
-
 		ns->added_from_others = s;
-		coord_done(c);
 	}
 
 	bool keep_looking;
