@@ -70,6 +70,10 @@ struct tree *
 tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging)
 {
 	struct tree *t = calloc(1, sizeof(*t));
+	if (!t) {
+		fprintf(stderr, "tree_init(): OUT OF MEMORY\n");
+		exit(1);
+	}
 	t->board = board;
 	t->max_tree_size = max_tree_size;
 	if (max_tree_size != 0) {

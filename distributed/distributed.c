@@ -2,7 +2,7 @@
  * from slave machines, sends them gtp commands, then aggregates the
  * results. It can also act as a proxy for the logs of all slave machines.
  * The slave machines must run with engine "uct" (not "distributed").
- * The master sends the pachi-genmoves gtp command to each slave,
+ * The master sends pachi-genmoves gtp commands regularly to each slave,
  * gets as replies a list of candidate moves, their number of playouts
  * and their value. The master then picks the most popular move. */
 
@@ -15,15 +15,15 @@
  * parameter for the master should be the sum of the parameters
  * for all slaves. */
 
-/* To minimize the number of ignored replies because they arrive
- * too late, slaves send temporary replies to the genmoves
- * command, with the best moves so far. So when the master
- * has to choose, it should have final replies from most
- * slaves and at least temporary replies from all of them. */
+/* The master sends updated statistics for the best moves
+ * in each genmoves command. In this version only the
+ * children of the root node are updated. The slaves
+ * reply with just their own stats; they remember what was
+ * previously received from or sent to the master, to
+ * distinguish their own contribution from that of other slaves. */
 
-/* This first version does not send tree updates between slaves,
- * but it has fault tolerance. If a slave is out of sync, the master
- * sends it the appropriate command history. */
+/* The master-slave protocol has has fault tolerance. If a slave is
+ * out of sync, the master sends it the appropriate command history. */
 
 /* Pass me arguments like a=b,c=d,...
  * Supported arguments:
@@ -86,9 +86,6 @@ struct distributed {
 	struct move_stats my_last_stats;
 };
 
-static coord_t select_best_move(struct board *b, struct move_stats *best_stats,
-				int *total_playouts, int *total_threads);
-
 /* Default number of simulations to perform per move.
  * Note that this is in total over all slaves! */
 #define DIST_GAMES	80000
@@ -101,11 +98,13 @@ static const struct time_info default_ti = {
 #define get_value(value, color) \
 	((color) == S_BLACK ? (value) : 1 - (value))
 
-/* Max size for one reply or slave log. */
+/* Max size for one line of reply or slave log. */
 #define BSIZE 4096
 
-/* Max size of all gtp commands for one game */
-#define CMDS_SIZE (40*MAX_GAMELEN)
+/* Max size of all gtp commands for one game.
+ * 60 chars for the first line of genmoves plus 100 lines
+ * of 30 chars each for the stats at last move. */
+#define CMDS_SIZE (60*MAX_GAMELEN + 30*100)
 
 /* All gtp commands for current game separated by \n */
 static char gtp_cmds[CMDS_SIZE];
@@ -113,10 +112,13 @@ static char gtp_cmds[CMDS_SIZE];
 /* Latest gtp command sent to slaves. */
 static char *gtp_cmd = NULL;
 
-/* Remember at most 3 gtp ids per move (time_left, genmoves, play).
- * For move 0 there can be more than 3 commands
- * but then we resend the whole history. */
-#define MAX_CMDS_PER_MOVE 3
+/* Slaves send gtp_cmd when cmd_count changes. */
+static int cmd_count = 0;
+
+/* Remember at most 12 gtp ids per move: play pass,
+ * 10 genmoves (1s), play pass.
+ * For move 0 we always resend the whole history. */
+#define MAX_CMDS_PER_MOVE 12
 
 /* History of gtp commands sent for current game, indexed by move. */
 static int id_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
@@ -127,13 +129,12 @@ static int active_slaves = 0;
 
 /* Number of replies to last gtp command already received. */
 static int reply_count = 0;
-static int final_reply_count = 0;
 
 /* All replies to latest gtp command are in gtp_replies[0..reply_count-1]. */
 static char **gtp_replies;
 
 /* Mutex protecting gtp_cmds, gtp_cmd, id_history, cmd_history,
- * active_slaves, reply_count, final_reply_count & gtp_replies */
+ * cmd_count, active_slaves, reply_count & gtp_replies */
 static pthread_mutex_t slave_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* Condition signaled when a new gtp command is available. */
@@ -185,41 +186,21 @@ proxy_thread(void *arg)
 	}
 }
 
-/* Get a reply to one gtp command. If we get a temporary
- * reply, put it in gtp_replies[reply_slot], notify the main
- * thread, and continue reading until we get a final reply.
- * Return the gtp command id, or -1 if error.
- * slave_buf and reply must have at least CMDS_SIZE bytes.
+/* Get a reply to one gtp command. Return the gtp command id,
+ * or -1 if error. reply must have at least CMDS_SIZE bytes.
  * slave_lock is not held on either entry or exit of this function. */
 static int
-get_reply(FILE *f, struct in_addr client, char *slave_buf, char *reply, int *reply_slot)
+get_reply(FILE *f, struct in_addr client, char *reply)
 {
 	int reply_id = -1;
-	*reply_slot = -1;
 	*reply = '\0';
 	char *line = reply;
 	while (fgets(line, reply + CMDS_SIZE - line, f) && *line != '\n') {
-		if (DEBUGL(2))
+		if (DEBUGL(3) || (DEBUGL(2) && line == reply))
 			logline(&client, "<<", line);
 		if (reply_id < 0 && (*line == '=' || *line == '?') && isdigit(line[1]))
 			reply_id = atoi(line+1);
-		if (*line == '#') {
-			/* Temporary reply. */
-			line = reply;
-			pthread_mutex_lock(&slave_lock);
-			if (reply_id != atoi(gtp_cmd)) {
-				pthread_mutex_unlock(&slave_lock);
-				continue; // read and discard the rest
-			}
-			strncpy(slave_buf, reply, CMDS_SIZE);
-			if (*reply_slot < 0)
-				*reply_slot = reply_count++;
-			gtp_replies[*reply_slot] = slave_buf;
-			pthread_cond_signal(&reply_cond);
-			pthread_mutex_unlock(&slave_lock);
-		} else {
-			line += strlen(line);
-		}
+		line += strlen(line);
 	}
 	if (*line != '\n') return -1;
 	return reply_id;
@@ -231,26 +212,25 @@ get_reply(FILE *f, struct in_addr client, char *slave_buf, char *reply, int *rep
  * Returns when the connection with the slave machine is cut.
  * slave_lock is held on both entry and exit of this function. */
 static void
-slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
+slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 {
 	char *to_send = gtp_cmd;
-	int cmd_id = -1;
-	int reply_id = -1;
-	int reply_slot;
+	int last_cmd_sent = 0;
+	int last_reply_id = -1;
+	int reply_slot = -1;
 	for (;;) {
-		while (cmd_id == reply_id && !resend) {
+		while (last_cmd_sent == cmd_count && !resend) {
 			// Wait for a new gtp command.
 			pthread_cond_wait(&cmd_cond, &slave_lock);
-			if (gtp_cmd)
-				cmd_id = atoi(gtp_cmd);
 			to_send = gtp_cmd;
 		}
 
 		/* Command available, send it to slave machine.
 		 * If slave was out of sync, send the history. */
 		assert(to_send && gtp_cmd);
+		char buf[CMDS_SIZE];
 		strncpy(buf, to_send, CMDS_SIZE);
-		cmd_id = atoi(gtp_cmd);
+		last_cmd_sent = cmd_count;
 
 		pthread_mutex_unlock(&slave_lock);
 
@@ -261,30 +241,42 @@ slave_loop(FILE *f, struct in_addr client, char *buf, bool resend)
 				logline(&client, "? ", "Slave behind, partial resend\n");
 			}
 		}
-		if (DEBUGL(2))
-			logline(&client, ">>", buf);
 		fputs(buf, f);
 		fflush(f);
+		if (DEBUGL(2)) {
+			if (!DEBUGL(3)) {
+				char *s = strchr(buf, '\n');
+				if (s) s[1] = '\0';
+			}
+			logline(&client, ">>", buf);
+		}
 
 		/* Read the reply, which always ends with \n\n
 		 * The slave machine sends "=id reply" or "?id reply"
 		 * with id == cmd_id if it is in sync. */
-		char reply[CMDS_SIZE];
-		reply_id = get_reply(f, client, buf, reply, &reply_slot);
+		int reply_id = get_reply(f, client, buf);
 
 		pthread_mutex_lock(&slave_lock);
 		if (reply_id == -1) return;
 
-		// Make sure we are still in sync:
-		cmd_id = atoi(gtp_cmd);
-		if (reply_id == cmd_id && *reply == '=') {
+		/* Make sure we are still in sync. cmd_count may have
+		 * changed but the reply is valid as long as cmd_id didn't
+		 * change (this only occurs for consecutive genmoves). */
+		int cmd_id = atoi(gtp_cmd);
+		if (reply_id == cmd_id && *buf == '=') {
 			resend = false;
-			strncpy(buf, reply, CMDS_SIZE);
-			final_reply_count++;
-			if (reply_slot < 0)
+			strncpy(reply_buf, buf, CMDS_SIZE);
+			if (reply_id != last_reply_id)
 				reply_slot = reply_count++;
-			gtp_replies[reply_slot] = buf;
+			gtp_replies[reply_slot] = reply_buf;
+			last_reply_id = reply_id;
+
 			pthread_cond_signal(&reply_cond);
+
+			/* Force waiting for a new command. The next genmoves
+			 * stats we will send must include those just received
+			 * (this assumed by the slave). */
+			last_cmd_sent = cmd_count;
 			continue;
 		}
 		resend = true;
@@ -317,7 +309,7 @@ slave_thread(void *arg)
 {
 	int slave_sock = (long)arg;
 	assert(slave_sock >= 0);
-	char slave_buf[CMDS_SIZE];
+	char reply_buf[CMDS_SIZE];
 	bool resend = false;
 
 	for (;;) {
@@ -331,10 +323,10 @@ slave_thread(void *arg)
 
 		/* Minimal check of the slave identity. */
 		fputs("name\n", f);
-		if (!fgets(slave_buf, sizeof(slave_buf), f)
-		    || strncasecmp(slave_buf, "= Pachi", 7)
-		    || !fgets(slave_buf, sizeof(slave_buf), f)
-		    || strcmp(slave_buf, "\n")) {
+		if (!fgets(reply_buf, sizeof(reply_buf), f)
+		    || strncasecmp(reply_buf, "= Pachi", 7)
+		    || !fgets(reply_buf, sizeof(reply_buf), f)
+		    || strcmp(reply_buf, "\n")) {
 			logline(&client, "? ", "bad slave\n");
 			fclose(f);
 			continue;
@@ -342,7 +334,7 @@ slave_thread(void *arg)
 
 		pthread_mutex_lock(&slave_lock);
 		active_slaves++;
-		slave_loop(f, client, slave_buf, resend);
+		slave_loop(f, client, reply_buf, resend);
 
 		assert(active_slaves > 0);
 		active_slaves--;
@@ -363,30 +355,26 @@ slave_thread(void *arg)
  * if gtp_cmd points to a non-empty string. cmd is a single word;
  * args has all arguments and is empty or has a trailing \n */
 static void
-update_cmd(struct board *b, char *cmd, char *args)
+update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 {
 	assert(gtp_cmd);
 	/* To make sure the slaves are in sync, we ignore the original id
-	 * and use the board number plus some random bits as gtp id.
-	 * Make sure the new command has a new id otherwise slaves
-	 * won't send it. */
+	 * and use the board number plus some random bits as gtp id. */
 	static int gtp_id = -1;
-	int id;
 	int moves = is_reset(cmd) ? 0 : b->moves;
-	do {
+	if (new_id) {
 	        /* fast_random() is 16-bit only so the multiplication can't overflow. */
-		id = force_reply(moves + fast_random(65535) * DIST_GAMELEN);
-	} while (id == gtp_id);
-	gtp_id = id;
+		gtp_id = force_reply(moves + fast_random(65535) * DIST_GAMELEN);
+		reply_count = 0;
+	}
 	snprintf(gtp_cmd, gtp_cmds + CMDS_SIZE - gtp_cmd, "%d %s %s",
-		 id, cmd, *args ? args : "\n");
-	reply_count = final_reply_count = 0;
+		 gtp_id, cmd, *args ? args : "\n");
+	cmd_count++;
 
-	/* Remember history for out-of-sync slaves, at most 3 ids per move
-         * (time_left, genmoves, play). */
+	/* Remember history for out-of-sync slaves. */
 	static int slot = 0;
 	slot = (slot + 1) % MAX_CMDS_PER_MOVE;
-	id_history[moves][slot] = id;
+	id_history[moves][slot] = gtp_id;
 	cmd_history[moves][slot] = gtp_cmd;
 
 	// Notify the slave threads about the new command.
@@ -419,20 +407,18 @@ new_cmd(struct board *b, char *cmd, char *args)
 	}
 
 	// Let the slave threads send the new gtp command:
-	update_cmd(b, cmd, args);
+	update_cmd(b, cmd, args, true);
 }
 
-/* If time_limit > 0, wait until all slaves have replied, or if the
- * given absolute time is passed, wait for at least one reply.
- * If time_limit == 0, wait until we get at least min_playouts games
- * simulated in total by all the slaves, or until all slaves have replied.
+/* Wait for at least one new reply. Return when all slaves have
+ * replied, or when the given absolute time is passed.
  * The replies are returned in gtp_replies[0..reply_count-1]
  * slave_lock is held on entry and on return. */
 static void
-get_replies(double time_limit, int min_playouts, struct board *b)
+get_replies(double time_limit)
 {
-	while (reply_count == 0 || final_reply_count < active_slaves) {
-		if (time_limit && reply_count > 0) {
+	for (;;) {
+		if (reply_count > 0) {
 			struct timespec ts;
 			double sec;
 			ts.tv_nsec = (int)(modf(time_limit, &sec)*1000000000.0);
@@ -442,28 +428,28 @@ get_replies(double time_limit, int min_playouts, struct board *b)
 			pthread_cond_wait(&reply_cond, &slave_lock);
 		}
 		if (reply_count == 0) continue;
-		if (final_reply_count >= active_slaves) return;
-		if (time_limit) {
-			if (time_now() >= time_limit) break;
-		} else {
-			int playouts, threads;
-			struct move_stats s;
-			select_best_move(b, &s, &playouts, &threads);
-			if (playouts >= min_playouts) return;
-		}
+		if (reply_count >= active_slaves) return;
+		if (time_now() >= time_limit) break;
 	}
 	if (DEBUGL(1)) {
 		char buf[1024];
 		snprintf(buf, sizeof(buf),
-			 "get_replies timeout %.3f >= %.3f, final %d, temp %d, active %d\n",
+			 "get_replies timeout %.3f >= %.3f, replies %d < active %d\n",
 			 time_now() - start_time, time_limit - start_time,
-			 final_reply_count, reply_count, active_slaves);
+			 reply_count, active_slaves);
 		logline(NULL, "? ", buf);
 	}
-	assert(reply_count > 0 && final_reply_count <= reply_count);
+	assert(reply_count > 0);
 }
 
 /* Maximum time (seconds) to wait for answers to fast gtp commands
+ * (all commands except pachi-genmoves and final_status_list). */
+#define MAX_FAST_CMD_WAIT 1.0
+
+/* How often to send a stats update to slaves (seconds) */
+#define STATS_UPDATE_INTERVAL 0.1 /* 100ms */
+
+/* Maximum time (seconds) to wait between genmoves
  * (all commands except pachi-genmoves and final_status_list). */
 #define MAX_FAST_CMD_WAIT 1.0
 
@@ -499,37 +485,41 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	/* Wait for replies here. If we don't wait, we run the
 	 * risk of getting out of sync with most slaves and
 	 * sending command history too frequently. */
-	get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
+	get_replies(time_now() + MAX_FAST_CMD_WAIT);
 
 	pthread_mutex_unlock(&slave_lock);
 	return P_OK;
 }
 
-/* pachi-genmoves returns a line "=id total_playouts threads[ reserved]" then a list of lines
- * "coord playouts value". Keep this function in sync with uct_notify().
- * Return the move with most playouts, its average value, and stats for debugging.
+/* genmoves returns a line "=id played_own total_playouts threads keep_looking[ reserved]"
+ * then a list of lines "coord playouts value".
+ * Return the move with most playouts, and additional stats.
+ * Keep this code in sync with uct_getstats().
  * slave_lock is held on entry and on return. */
 static coord_t
-select_best_move(struct board *b, struct move_stats *best_stats,
-		 int *total_playouts, int *total_threads)
+select_best_move(struct board *b, struct move_stats *stats, int *played,
+		 int *total_playouts, int *total_threads, bool *keep_looking)
 {
 	assert(reply_count > 0);
 
-	/* +2 for pass and resign. */
-	struct move_stats *stats = alloca((board_size2(b)+2) * sizeof(struct move_stats));
-	memset(stats, 0, (board_size2(b)+2) * sizeof(*stats));
-	stats += 2;
+	/* +2 for pass and resign */
+	memset(stats-2, 0, (board_size2(b)+2) * sizeof(*stats));
 
 	coord_t best_move = pass;
 	int best_playouts = -1;
-	*total_playouts = *total_threads = 0;
+	*played = 0;
+	*total_playouts = 0;
+	*total_threads = 0;
+	int keep = 0;
 
 	for (int reply = 0; reply < reply_count; reply++) {
 		char *r = gtp_replies[reply];
-		int id, playouts, threads;
-		if (sscanf(r, "=%d %d %d", &id, &playouts, &threads) != 3) continue;
-		*total_playouts += playouts;
-		*total_threads += threads;
+		int id, o, p, t, k;
+		if (sscanf(r, "=%d %d %d %d %d", &id, &o, &p, &t, &k) != 5) continue;
+		*played += o;
+		*total_playouts += p;
+		*total_threads += t;
+		keep += k;
 		// Skip the rest of the firt line if any (allow future extensions)
 		r = strchr(r, '\n');
 
@@ -541,13 +531,43 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 			if (stats[*c].playouts > best_playouts) {
 				best_playouts = stats[*c].playouts;
 				best_move = *c;
-			}			  
+			}
 			coord_done(c);
 			r = strchr(r, '\n');
 		}
 	}
-	*best_stats = stats[best_move];
+	*keep_looking = keep > reply_count / 2;
 	return best_move;
+}
+
+/* Set the args for the genmoves command. If stats is not null,
+ * append the stats from all slaves above min_playouts, except
+ * for pass and resign. args must have CMDS_SIZE bytes and
+ * upon return ends with an empty line.
+ * Keep this code in sync with uct_genmoves().
+ * slave_lock is held on entry and on return. */
+static void
+genmoves_args(char *args, struct board *b, enum stone color, int played,
+	      struct time_info *ti, struct move_stats *stats, int min_playouts)
+{
+	char *end = args + CMDS_SIZE;
+	char *s = args + snprintf(args, CMDS_SIZE, "%s %d", stone2str(color), played);
+
+	if (ti->dim == TD_WALLTIME) {
+		s += snprintf(s, end - s, " %.3f %.3f %d %d",
+			      ti->len.t.main_time, ti->len.t.byoyomi_time,
+			      ti->len.t.byoyomi_periods, ti->len.t.byoyomi_stones);
+	}
+	s += snprintf(s, end - s, "\n");
+	if (stats) {
+		foreach_point(b) {
+			if (stats[c].playouts <= min_playouts) continue;
+			s += snprintf(s, end - s, "%s %d %.7f\n",
+				      coord2sstr(c, b),
+				      stats[c].playouts, stats[c].value);
+		} foreach_point_end;
+	}
+	s += snprintf(s, end - s, "\n");
 }
 
 /* Time control is mostly done by the slaves, so we use default values here. */
@@ -555,77 +575,98 @@ select_best_move(struct board *b, struct move_stats *best_stats,
 #define YOSE_START 40
 
 static coord_t *
-distributed_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
+		    enum stone color, bool pass_all_alive)
 {
 	struct distributed *dist = e->data;
-	double start = time_now();
-
-	long time_limit = 0;
-	int min_playouts = 0;
+	double now = time_now();
+	double first = now;
 
 	char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
-	char args[128];
+	char args[CMDS_SIZE];
+
+	coord_t best;
+	int played, playouts, threads;
 
 	if (ti->period == TT_NULL) *ti = default_ti;
 	struct time_stop stop;
 	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, &stop);
+	struct time_info saved_ti = *ti;
 
-	if (ti->dim == TD_WALLTIME) {
-		time_limit = ti->len.t.timer_start + stop.worst.time;
+	/* Send the first genmoves without stats. */
+	genmoves_args(args, b, color, 0, ti, NULL, 0);
 
-		/* Send time info to the slaves to make sure they all
-		 * reply in time, particularly if they were out of sync
-		 * and there are no time_left commands. We cannot send
-		 * the absolute time limit because slaves may have a
-		 * different system time.
-		 * Keep this code in sync with gtp_parse(). */
-		snprintf(args, sizeof(args), "%s %.3f %.3f %d %d\n",
-			 stone2str(color), ti->len.t.main_time,
-			 ti->len.t.byoyomi_time, ti->len.t.byoyomi_periods,
-			 ti->len.t.byoyomi_stones);
-	} else {
-		min_playouts = stop.desired.playouts;
-
-		/* For absolute number of simulations, slaves still
-		 * use their own -t =NUM parameter. (The master
-		 * needs to know the total number of simulations over
-		 * all slaves so it has a different -t parameter.) */
-		snprintf(args, sizeof(args), "%s\n", stone2str(color));
-	}
+	/* Combined move stats from all slaves, only for children
+	 * of the root node, plus 2 for pass and resign. */
+	struct move_stats *stats = alloca((board_size2(b)+2) * sizeof(struct move_stats));
+	stats += 2;
 
 	pthread_mutex_lock(&slave_lock);
 	new_cmd(b, cmd, args);
 
-	get_replies(time_limit, min_playouts, b);
+	/* Loop until most slaves want to quit or time elapsed. */
+	for (;;) {
+		double start = now;
+		get_replies(now + STATS_UPDATE_INTERVAL);
+		now = time_now();
+		if (ti->dim == TD_WALLTIME)
+			time_sub(ti, now - start);
+
+		bool keep_looking;
+		best = select_best_move(b, stats, &played, &playouts, &threads, &keep_looking);
+
+		if (!keep_looking) break;
+		if (ti->dim == TD_WALLTIME) {
+			if (now - ti->len.t.timer_start >= stop.worst.time) break;
+		} else {
+			if (played >= stop.worst.playouts) break;
+		}
+		if (DEBUGL(2)) {
+			char buf[BSIZE];
+			char *coord = coord2sstr(best, b);
+			snprintf(buf, sizeof(buf),
+				 "temp winner is %s %s with score %1.4f (%d/%d games)"
+				 " %d slaves %d threads\n",
+				 stone2str(color), coord, get_value(stats[best].value, color),
+				 stats[best].playouts, playouts, reply_count, threads);
+			logline(NULL, "* ", buf);
+		}
+		/* Send the command with the same gtp id, to avoid discarding
+		 * a reply to a previous genmoves at the same move. */
+		genmoves_args(args, b, color, played, ti, stats, stats[best].playouts / 100);
+		update_cmd(b, cmd, args, false);
+	}
 	int replies = reply_count;
 
-	int playouts, threads;
+	/* Do not subtract time spent twice (see gtp_parse). */
+	*ti = saved_ti;
+
 	dist->my_last_move.color = color;
-	dist->my_last_move.coord = select_best_move(b, &dist->my_last_stats, &playouts, &threads);
+	dist->my_last_move.coord = best;
+	dist->my_last_stats = stats[best];
 
 	/* Tell the slaves to commit to the selected move, overwriting
 	 * the last "pachi-genmoves" in the command history. */
-	char *coord = coord2str(dist->my_last_move.coord, b);
+	char *coord = coord2str(best, b);
 	snprintf(args, sizeof(args), "%s %s\n", stone2str(color), coord);
-	update_cmd(b, "play", args);
+	update_cmd(b, "play", args, true);
 	pthread_mutex_unlock(&slave_lock);
 
 	if (DEBUGL(1)) {
 		char buf[BSIZE];
-		enum stone color = dist->my_last_move.color;
-		double time = time_now() - start + 0.000001; /* avoid divide by zero */
+		double time = now - first + 0.000001; /* avoid divide by zero */
 		snprintf(buf, sizeof(buf),
 			 "GLOBAL WINNER is %s %s with score %1.4f (%d/%d games)\n"
-			 "genmove in %0.2fs %d slaves %d threads (%d games/s,"
+			 "genmove %d games in %0.2fs %d slaves %d threads (%d games/s,"
 			 " %d games/s/slave, %d games/s/thread)\n",
-			 stone2str(color), coord, get_value(dist->my_last_stats.value, color),
-			 dist->my_last_stats.playouts, playouts, time, replies, threads,
-			 (int)(playouts/time), (int)(playouts/time/replies),
-			 (int)(playouts/time/threads));
+			 stone2str(color), coord, get_value(stats[best].value, color),
+			 stats[best].playouts, playouts, played, time, replies, threads,
+			 (int)(played/time), (int)(played/time/replies),
+			 (int)(played/time/threads));
 		logline(NULL, "* ", buf);
 	}
 	free(coord);
-	return coord_copy(dist->my_last_move.coord);
+	return coord_copy(best);
 }
 
 static char *
@@ -658,7 +699,7 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 	pthread_mutex_lock(&slave_lock);
 
 	new_cmd(b, "final_status_list", "dead\n");
-	get_replies(time_now() + MAX_FAST_CMD_WAIT, 0, b);
+	get_replies(time_now() + MAX_FAST_CMD_WAIT);
 
 	/* Find the most popular reply. */
 	qsort(gtp_replies, reply_count, sizeof(char *), scmp);
