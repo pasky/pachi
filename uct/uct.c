@@ -164,7 +164,6 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 		*reply = buf;
 		return P_DONE_ERROR;
 	}
-	u->gtp_id = id;
 	return reply_disabled(id) ? P_NOREPLY : P_OK;
 }
 
