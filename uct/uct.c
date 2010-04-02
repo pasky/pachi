@@ -964,6 +964,8 @@ uct_getstats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 static void
 find_top_nodes(struct uct *u)
 {
+	if (!u->t || !u->t->root) return;
+
 	for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling) {
 		if (!is_pass(ni->coord))
 		    u->stats[ni->coord].node = ni;
@@ -1007,11 +1009,21 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		coord_done(c_);
 		assert(!is_pass(c) && !is_resign(c));
 
+		struct node_stats *ns = &u->stats[c];
+		if (!ns->node) find_top_nodes(u);
+		/* The node may not exist if this slave was behind
+		 * but this should be rare so it is not worth creating
+		 * the node here. */
+		if (!ns->node) {
+			if (DEBUGL(0))
+				fprintf(stderr, "can't find node %s %d\n", move, c);
+			continue;
+		}
+
 		/* The master may not send moves below a certain threshold,
 		 * but if it sends one it includes the contributions from
 		 * all slaves including ours (last_sent_own):
 		 *   received_others = received_total - last_sent_own  */
-		struct node_stats *ns = &u->stats[c];
 		if (ns->last_sent_own.playouts)
 			stats_rm_result(&s, ns->last_sent_own.value,
 					ns->last_sent_own.playouts);
@@ -1026,8 +1038,6 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		 * we just keep the old stats in our tree. */
 		if (delta.playouts <= 0) continue;
 
-		if (!ns->node) find_top_nodes(u);
-		assert(ns->node);
 		stats_add_result(&ns->node->u, delta.value, delta.playouts);
 		ns->added_from_others = s;
 	}
