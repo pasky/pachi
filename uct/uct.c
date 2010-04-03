@@ -804,9 +804,6 @@ uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		b->superko_violation = false;
 	}
 
-	/* Seed the tree. If we are a slave in the distributed engine,
-	 * we keep thinking until the next "play" command. */
-	if (!thread_manager_running) prepare_move(e, b, color);
 	assert(u->t);
 	u->my_color = color;
 
@@ -890,6 +887,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 {
 	struct uct *u = e->data;
 	uct_pondering_stop(u);
+	prepare_move(e, b, color);
 
 	bool keep_looking;
 	coord_t best_coord;
@@ -992,6 +990,9 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 {
 	struct uct *u = e->data;
 	assert(u->slave);
+
+	/* Seed the tree if the search is not already running. */
+	if (!thread_manager_running) prepare_move(e, b, color);
 
 	/* Get playouts and time information from master.
 	 * Keep this code in sync with distributed_genmove(). */
