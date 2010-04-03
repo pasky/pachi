@@ -640,12 +640,10 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	struct tree_node *bestr = NULL; // best's best child.
 	struct tree_node *winner = NULL;
 
-	double busywait_interval = TREE_BUSYWAIT_INTERVAL;
-
 	/* Now, just periodically poll the search tree. */
 	while (1) {
-		time_sleep(busywait_interval);
-		/* busywait_interval should never be less than desired time, or the
+		time_sleep(TREE_BUSYWAIT_INTERVAL);
+		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
 		 * time control is broken. But if it happens to be less, we still search
 		 * at least 100ms otherwise the move is completely random. */
 
