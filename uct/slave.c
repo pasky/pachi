@@ -104,7 +104,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 
 	/* Seed the tree if the search is not already running. */
 	if (!thread_manager_running) {
-		uct_prepare_move(e, b, color);
+		uct_prepare_move(u, b, color);
 		uct_search_setup(u, b, color);
 	}
 

@@ -97,10 +97,8 @@ setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 }
 
 void
-uct_prepare_move(struct engine *e, struct board *b, enum stone color)
+uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 {
-	struct uct *u = e->data;
-
 	if (u->t) {
 		/* Verify that we have sane state. */
 		assert(b->es == u);
@@ -190,7 +188,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	if (!u->t) {
 		/* No state, create one - this is probably game beginning
 		 * and we need to load the opening book right now. */
-		uct_prepare_move(e, b, m->color);
+		uct_prepare_move(u, b, m->color);
 		assert(u->t);
 	}
 
@@ -268,7 +266,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 		 * when all stones are assumed alive. */
 		/* Mock up some state and seed the ownermap by few
 		 * simulations. */
-		uct_prepare_move(e, b, S_BLACK); assert(u->t);
+		uct_prepare_move(u, b, S_BLACK); assert(u->t);
 		for (int i = 0; i < GJ_MINGAMES; i++)
 			uct_playout(u, b, S_BLACK, u->t);
 		mock_state = true;
@@ -901,7 +899,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 {
 	struct uct *u = e->data;
 	uct_pondering_stop(u);
-	uct_prepare_move(e, b, color);
+	uct_prepare_move(u, b, color);
 
 	bool keep_looking;
 	coord_t best_coord;
@@ -929,7 +927,7 @@ bool
 uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color)
 {
 	struct uct *u = e->data;
-	if (!u->t) uct_prepare_move(e, b, color);
+	if (!u->t) uct_prepare_move(u, b, color);
 	assert(u->t);
 
 	if (ti->dim == TD_GAMES) {

@@ -104,7 +104,7 @@ extern bool thread_manager_running;
 
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
 
-void uct_prepare_move(struct engine *e, struct board *b, enum stone color);
+void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
 void uct_search_setup(struct uct *u, struct board *b, enum stone color);
 int uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool *keep_looking);
 struct tree_node *uct_search_best(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, int played_games, int base_playouts, coord_t *best_coord);
