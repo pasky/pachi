@@ -635,11 +635,6 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * count. However, TM_ROOT just does not deserve any more extra code
 	 * right now. */
 
-	struct tree_node *best = NULL;
-	struct tree_node *best2 = NULL; // Second-best move.
-	struct tree_node *bestr = NULL; // best's best child.
-	struct tree_node *winner = NULL;
-
 	/* Now, just periodically poll the search tree. */
 	while (1) {
 		time_sleep(TREE_BUSYWAIT_INTERVAL);
@@ -678,6 +673,11 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		 * when we mustn't. */
 		if (i < GJ_MINGAMES)
 			continue;
+
+		struct tree_node *best = NULL;
+		struct tree_node *best2 = NULL; // Second-best move.
+		struct tree_node *bestr = NULL; // best's best child.
+		struct tree_node *winner = NULL;
 
 		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
 		if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
