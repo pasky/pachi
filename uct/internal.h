@@ -100,8 +100,12 @@ struct uct {
 
 extern volatile sig_atomic_t uct_halt;
 extern __thread int thread_id;
+extern bool thread_manager_running;
 
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
+
+void uct_prepare_move(struct engine *e, struct board *b, enum stone color);
+struct tree_node *uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive, bool *keep_looking, coord_t *best_coord);
 
 
 /* This is the state used for descending the tree; we use this wrapper
