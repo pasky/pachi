@@ -858,7 +858,7 @@ uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	 * giving away extra komi points (dynkomi). */
 	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
 	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
-	    && u->t->extra_komi <= 1 /* XXX we assume dynamic komi == we are black */) {
+	    && u->t->extra_komi < 0.5 /* XXX we assume dynamic komi == we are black */) {
 		*best_coord = resign;
 		return NULL;
 	}
