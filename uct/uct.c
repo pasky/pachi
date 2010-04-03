@@ -871,21 +871,22 @@ uct_search_best(struct uct *u, struct board *b, enum stone color,
 	return best;
 }
 
-/* Common part of uct_genmove() and uct_genmoves().
- * Returns the best node, or NULL if *best_coord is pass or resign. */
-static struct tree_node *
-uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
-	     bool pass_all_alive, bool *keep_looking, coord_t *best_coord)
+static coord_t *
+uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	double start_time = time_now();
 	struct uct *u = e->data;
-
+	uct_pondering_stop(u);
 	uct_search_setup(u, b, color);
 
-	int base_playouts = u->t->root->u.playouts;
         /* Start the Monte Carlo Tree Search! */
-        int played_games = uct_search(u, b, ti, color, u->t, keep_looking);
-	u->played_own += played_games;
+	bool keep_looking;
+	int base_playouts = u->t->root->u.playouts;
+	int played_games = uct_search(u, b, ti, color, u->t, &keep_looking);
+
+	coord_t best_coord;
+	struct tree_node *best;
+	best = uct_search_best(u, b, color, pass_all_alive, played_games, base_playouts, &best_coord);
 
 	if (UDEBUGL(2)) {
 		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
@@ -893,19 +894,6 @@ uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 			time, (int)(played_games/time), (int)(played_games/time/u->threads));
 	}
 
-	return uct_search_best(u, b, color, pass_all_alive, played_games, base_playouts, best_coord);
-}
-
-static coord_t *
-uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
-{
-	struct uct *u = e->data;
-	uct_pondering_stop(u);
-
-	bool keep_looking;
-	coord_t best_coord;
-	struct tree_node *best;
-	best = uct_bestmove(e, b, ti, color, pass_all_alive, &keep_looking, &best_coord);
 	if (!best) {
 		reset_state(u);
 		return coord_copy(best_coord);
