@@ -795,6 +795,8 @@ uct_search_setup(struct uct *u, struct board *b, enum stone color)
 		b->superko_violation = false;
 	}
 
+	uct_prepare_move(u, b, color);
+
 	assert(u->t);
 	u->my_color = color;
 
@@ -899,7 +901,6 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 {
 	struct uct *u = e->data;
 	uct_pondering_stop(u);
-	uct_prepare_move(u, b, color);
 
 	bool keep_looking;
 	coord_t best_coord;
