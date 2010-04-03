@@ -840,7 +840,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * giving away extra komi points (dynkomi). */
 	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
 	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
-	    && u->t->extra_komi <= 1 /* XXX we assume dynamic komi == we are black */) {
+	    && u->t->extra_komi < 0.5 /* XXX we assume dynamic komi == we are black */) {
 		if (!u->slave) reset_state(u);
 		return coord_copy(resign);
 	}
