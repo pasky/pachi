@@ -8,6 +8,7 @@
 #include "ownermap.h"
 #include "playout.h"
 #include "stats.h"
+#include "distributed/distributed.h"
 
 struct tree;
 struct tree_node;
@@ -19,8 +20,8 @@ struct uct_dynkomi;
 
 /* Stats for each child of the root node. */
 struct node_stats {
-	struct move_stats last_sent_own;
-	struct move_stats added_from_others;
+	struct move_stats2 last_sent_own;
+	struct move_stats2 added_from_others;
 	struct tree_node *node;
 };
 
