@@ -49,11 +49,7 @@ tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 		if (!n) return n;
 		memset(n, 0, sizeof(*n));
 	} else {
-		n = calloc(1, sizeof(*n));
-		if (!n) {
-			fprintf(stderr, "tree_init_node(): OUT OF MEMORY\n");
-			exit(1);
-		}
+		n = calloc2(1, sizeof(*n));
 		__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
 	}
 	n->coord = coord;
@@ -69,23 +65,15 @@ tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 struct tree *
 tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging)
 {
-	struct tree *t = calloc(1, sizeof(*t));
-	if (!t) {
-		fprintf(stderr, "tree_init(): OUT OF MEMORY\n");
-		exit(1);
-	}
+	struct tree *t = calloc2(1, sizeof(*t));
 	t->board = board;
 	t->max_tree_size = max_tree_size;
 	if (max_tree_size != 0) {
 		/* Allocate one extra node, max_tree_size may not be multiple of node size. */
-		t->nodes = malloc(max_tree_size + sizeof(struct tree_node));
+		t->nodes = malloc2(max_tree_size + sizeof(struct tree_node));
 		/* The nodes buffer doesn't need initialization. This is currently
 		 * done by tree_init_node to spread the load. Doing a memset for the
 		 * entire buffer here would be too slow for large trees (>10 GB). */
-		if (!t->nodes) {
-			fprintf(stderr, "tree_init(): OUT OF MEMORY\n");
-			exit(1);
-		}
 	}
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0, t->nodes);
@@ -154,11 +142,7 @@ tree_done_node_detached(struct tree *t, struct tree_node *n)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	pthread_t thread;
-	struct subtree_ctx *ctx = malloc(sizeof(struct subtree_ctx));
-	if (!ctx) {
-		fprintf(stderr, "tree_done_node_detached(): OUT OF MEMORY\n");
-		exit(1);
-	}
+	struct subtree_ctx *ctx = malloc2(sizeof(struct subtree_ctx));
 	ctx->t = t;
 	ctx->n = n;
 	pthread_create(&thread, &attr, tree_done_node_worker, ctx);
@@ -311,7 +295,7 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 
 	struct tree_node *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {
-		ni_prev = ni; ni = calloc(1, sizeof(*ni));
+		ni_prev = ni; ni = calloc2(1, sizeof(*ni));
 		if (!node->children)
 			node->children = ni;
 		else
@@ -343,7 +327,7 @@ tree_load(struct tree *tree, struct board *b)
 static struct tree_node *
 tree_node_copy(struct tree_node *node)
 {
-	struct tree_node *n2 = malloc(sizeof(*n2));
+	struct tree_node *n2 = malloc2(sizeof(*n2));
 	*n2 = *node;
 	if (!node->children)
 		return n2;
@@ -361,7 +345,7 @@ struct tree *
 tree_copy(struct tree *tree)
 {
 	assert(!tree->nodes);
-	struct tree *t2 = malloc(sizeof(*t2));
+	struct tree *t2 = malloc2(sizeof(*t2));
 	*t2 = *tree;
 	t2->root = tree_node_copy(tree->root);
 	return t2;

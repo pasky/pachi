@@ -123,10 +123,10 @@ board_state_init(struct board *b)
 #endif
 	}
 	if (!ss) {
-		ss = malloc(sizeof(*ss));
+		ss = malloc2(sizeof(*ss));
 		ss->bsize2 = board_size2(b);
-		ss->groups = malloc(board_size2(b) * sizeof(*ss->groups));
-		ss->groups_known = malloc(board_size2(b) / 8 + 1);
+		ss->groups = malloc2(board_size2(b) * sizeof(*ss->groups));
+		ss->groups_known = malloc2(board_size2(b) / 8 + 1);
 	}
 	ss->hash = b->hash;
 	memset(ss->groups_known, 0, board_size2(b) / 8 + 1);
@@ -878,8 +878,8 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 struct playout_policy *
 playout_moggy_init(char *arg, struct board *b)
 {
-	struct playout_policy *p = calloc(1, sizeof(*p));
-	struct moggy_policy *pp = calloc(1, sizeof(*pp));
+	struct playout_policy *p = calloc2(1, sizeof(*p));
+	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
 	p->choose = playout_moggy_choose;
 	p->assess = playout_moggy_assess;

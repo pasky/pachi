@@ -407,7 +407,7 @@ spawn_thread_manager(void *ctx_)
 
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
-		struct spawn_ctx *ctx = malloc(sizeof(*ctx));
+		struct spawn_ctx *ctx = malloc2(sizeof(*ctx));
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
 		mctx->t = ctx->t = shared_tree ? t : tree_copy(t);
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
@@ -755,7 +755,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	u->pondering = true;
 
 	/* We need a local board copy to ponder upon. */
-	struct board *b = malloc(sizeof(*b)); board_copy(b, b0);
+	struct board *b = malloc2(sizeof(*b)); board_copy(b, b0);
 
 	/* *b0 did not have the genmove'd move played yet. */
 	struct move m = { t->root->coord, t->root_color };
@@ -1088,7 +1088,7 @@ uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 struct uct *
 uct_state_init(char *arg, struct board *b)
 {
-	struct uct *u = calloc(1, sizeof(struct uct));
+	struct uct *u = calloc2(1, sizeof(struct uct));
 	bool using_elo = false;
 
 	u->debug_level = debug_level;
@@ -1420,8 +1420,8 @@ uct_state_init(char *arg, struct board *b)
 		u->playout = playout_moggy_init(NULL, b);
 	u->playout->debug_level = u->debug_level;
 
-	u->ownermap.map = malloc(board_size2(b) * sizeof(u->ownermap.map[0]));
-	u->stats = malloc(board_size2(b) * sizeof(u->stats[0]));
+	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));
+	u->stats = malloc2(board_size2(b) * sizeof(u->stats[0]));
 
 	if (!u->dynkomi)
 		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
@@ -1439,7 +1439,7 @@ struct engine *
 engine_uct_init(char *arg, struct board *b)
 {
 	struct uct *u = uct_state_init(arg, b);
-	struct engine *e = calloc(1, sizeof(struct engine));
+	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "UCT Engine";
 	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
@@ -1456,7 +1456,7 @@ engine_uct_init(char *arg, struct board *b)
 		"if I think I win, I play until you pass. "
 		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
 	if (!u->banner) u->banner = "";
-	e->comment = malloc(sizeof(banner) + strlen(u->banner) + 1);
+	e->comment = malloc2(sizeof(banner) + strlen(u->banner) + 1);
 	sprintf(e->comment, "%s %s", banner, u->banner);
 
 	return e;

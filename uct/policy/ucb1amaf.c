@@ -230,8 +230,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 struct uct_policy *
 policy_ucb1amaf_init(struct uct *u, char *arg)
 {
-	struct uct_policy *p = calloc(1, sizeof(*p));
-	struct ucb1_policy_amaf *b = calloc(1, sizeof(*b));
+	struct uct_policy *p = calloc2(1, sizeof(*p));
+	struct ucb1_policy_amaf *b = calloc2(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
 	p->choose = uctp_generic_choose;

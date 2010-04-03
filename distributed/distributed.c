@@ -733,7 +733,7 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 static struct distributed *
 distributed_state_init(char *arg, struct board *b)
 {
-	struct distributed *dist = calloc(1, sizeof(struct distributed));
+	struct distributed *dist = calloc2(1, sizeof(struct distributed));
 
 	dist->max_slaves = 100;
 	if (arg) {
@@ -761,7 +761,7 @@ distributed_state_init(char *arg, struct board *b)
 		}
 	}
 
-	gtp_replies = calloc(dist->max_slaves, sizeof(char *));
+	gtp_replies = calloc2(dist->max_slaves, sizeof(char *));
 
 	if (!dist->slave_port) {
 		fprintf(stderr, "distributed: missing slave_port\n");
@@ -787,7 +787,7 @@ engine_distributed_init(char *arg, struct board *b)
 {
 	start_time = time_now();
 	struct distributed *dist = distributed_state_init(arg, b);
-	struct engine *e = calloc(1, sizeof(struct engine));
+	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "Distributed Engine";
 	e->comment = "I'm playing the distributed engine. When I'm losing, I will resign, "
 		"if I think I win, I play until you pass. "

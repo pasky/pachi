@@ -529,11 +529,11 @@ const char *features_gamma_filename = "patterns.gamma";
 struct features_gamma *
 features_gamma_init(struct pattern_config *pc, const char *file)
 {
-	struct features_gamma *fg = calloc(1, sizeof(*fg));
+	struct features_gamma *fg = calloc2(1, sizeof(*fg));
 	fg->pc = pc;
 	for (int i = 0; i < FEAT_MAX; i++) {
 		int n = feature_payloads(pc, i);
-		fg->gamma[i] = malloc(n * sizeof(fg->gamma[0][0]));
+		fg->gamma[i] = malloc2(n * sizeof(fg->gamma[0][0]));
 		for (int j = 0; j < n; j++) {
 			fg->gamma[i][j] = 1.0f;
 		}

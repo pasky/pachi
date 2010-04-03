@@ -138,7 +138,7 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 struct uct_prior *
 uct_prior_init(char *arg, struct board *b)
 {
-	struct uct_prior *p = calloc(1, sizeof(struct uct_prior));
+	struct uct_prior *p = calloc2(1, sizeof(struct uct_prior));
 
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = -1;
 	p->cfgdn = -1;
@@ -175,7 +175,7 @@ uct_prior_init(char *arg, struct board *b)
 				 * 20 wins, 2nd-level neighbors 20 wins;
 				 * neighbors are group-transitive. */
 				p->cfgdn = atoi(optval); optval += strcspn(optval, ":");
-				p->cfgd_eqex = calloc(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
+				p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
 				p->cfgd_eqex[0] = 0;
 				for (int i = 1; *optval; i++, optval += strcspn(optval, ":")) {
 					optval++;
@@ -201,7 +201,7 @@ uct_prior_init(char *arg, struct board *b)
 	if (p->cfgdn < 0) {
 		int bonuses[] = { 0, p->eqex, p->eqex / 2, p->eqex / 2 };
 		p->cfgdn = 3;
-		p->cfgd_eqex = calloc(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
+		p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
 		memcpy(p->cfgd_eqex, bonuses, sizeof(bonuses));
 	}
 	if (p->cfgdn > TREE_NODE_D_MAX) {
