@@ -21,9 +21,6 @@
 
 /* UCT infrastructure for a distributed engine slave. */
 
-/* Get current MCTS search status - best move and whether we should consider
- * finishing the search. */
-
 /* Get stats updates for the distributed engine. Return a buffer with
  * one line "played_own root_playouts threads keep_looking" then a list
  * of lines "coord playouts value amaf_playouts amaf_value".
@@ -106,8 +103,10 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	assert(u->slave);
 
 	/* Seed the tree if the search is not already running. */
-	if (!thread_manager_running)
+	if (!thread_manager_running) {
 		uct_prepare_move(e, b, color);
+		uct_search_setup(u, b, color);
+	}
 
 	/* Get playouts and time information from master.
 	 * Keep this code in sync with distributed_genmove(). */
@@ -178,9 +177,13 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		ns->added_from_others = s;
 	}
 
+        /* Continue the Monte Carlo Tree Search. */
 	bool keep_looking;
 	coord_t best_coord;
-	uct_bestmove(e, b, ti, color, pass_all_alive, &keep_looking, &best_coord);
+	int base_playouts = u->t->root->u.playouts;
+        int played_games = uct_search(u, b, ti, color, u->t, &keep_looking);
+	u->played_own += played_games;
+	uct_search_best(u, b, color, pass_all_alive, played_games, base_playouts, &best_coord);
 
 	char *reply = uct_getstats(u, b, best_coord, keep_looking);
 	return reply;

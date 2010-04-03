@@ -596,7 +596,7 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 /* Run time-limited MCTS search. For a slave in the distributed
  * engine, the search is done in background and will be stopped at
  * the next uct_notify_play(); keep_looking is advice for the master. */
-static int
+int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color,
 	   struct tree *t, bool *keep_looking)
 {
@@ -873,7 +873,7 @@ uct_search_best(struct uct *u, struct board *b, enum stone color,
 
 /* Common part of uct_genmove() and uct_genmoves().
  * Returns the best node, or NULL if *best_coord is pass or resign. */
-struct tree_node *
+static struct tree_node *
 uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
 	     bool pass_all_alive, bool *keep_looking, coord_t *best_coord)
 {
@@ -883,7 +883,7 @@ uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	uct_search_setup(u, b, color);
 
 	int base_playouts = u->t->root->u.playouts;
-        /* Start or continue the Monte Carlo Tree Search! */
+        /* Start the Monte Carlo Tree Search! */
         int played_games = uct_search(u, b, ti, color, u->t, keep_looking);
 	u->played_own += played_games;
 
