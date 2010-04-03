@@ -739,6 +739,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	if (UDEBUGL(0))
 		uct_progress_status(u, t, color, games);
 
+	u->played_own += games;
 	return games;
 }
 

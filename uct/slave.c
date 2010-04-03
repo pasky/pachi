@@ -180,7 +180,6 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	bool keep_looking;
 	int base_playouts = u->t->root->u.playouts;
 	int played_games = uct_search(u, b, ti, color, u->t, &keep_looking);
-	u->played_own += played_games;
 
 	coord_t best_coord;
 	uct_search_best(u, b, color, pass_all_alive, played_games, base_playouts, &best_coord);
