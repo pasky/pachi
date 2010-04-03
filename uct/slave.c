@@ -21,6 +21,9 @@
 
 /* UCT infrastructure for a distributed engine slave. */
 
+/* Get current MCTS search status - best move and whether we should consider
+ * finishing the search. */
+
 /* Get stats updates for the distributed engine. Return a buffer with
  * one line "played_own root_playouts threads keep_looking" then a list
  * of lines "coord playouts value amaf_playouts amaf_value".
@@ -103,7 +106,8 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	assert(u->slave);
 
 	/* Seed the tree if the search is not already running. */
-	if (!thread_manager_running) uct_prepare_move(e, b, color);
+	if (!thread_manager_running)
+		uct_prepare_move(e, b, color);
 
 	/* Get playouts and time information from master.
 	 * Keep this code in sync with distributed_genmove(). */

@@ -786,15 +786,9 @@ uct_pondering_stop(struct uct *u)
 	}
 }
 
-/* Common part of uct_genmove() and uct_genmoves().
- * Returns the best node, or NULL if *best_coord is pass or resign. */
-struct tree_node *
-uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
-	     bool pass_all_alive, bool *keep_looking, coord_t *best_coord)
+void
+uct_search_setup(struct uct *u, struct board *b, enum stone color)
 {
-	double start_time = time_now();
-	struct uct *u = e->data;
-
 	if (b->superko_violation) {
 		fprintf(stderr, "!!! WARNING: SUPERKO VIOLATION OCCURED BEFORE THIS MOVE\n");
 		fprintf(stderr, "Maybe you play with situational instead of positional superko?\n");
@@ -827,12 +821,13 @@ uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 			fprintf(stderr, "Setting komi to %.1f assuming Japanese rules\n",
 				b->komi);
 	}
+}
 
-	int base_playouts = u->t->root->u.playouts;
-        /* Start or continue the Monte Carlo Tree Search! */
-        int played_games = uct_search(u, b, ti, color, u->t, keep_looking);
-	u->played_own += played_games;
-
+struct tree_node *
+uct_search_best(struct uct *u, struct board *b, enum stone color,
+		bool pass_all_alive, int played_games, int base_playouts,
+		coord_t *best_coord)
+{
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
 	if (!best) {
@@ -869,16 +864,36 @@ uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 			if (UDEBUGL(0))
 				fprintf(stderr, "<Will rather pass, looks safe enough.>\n");
 			*best_coord = pass;
-			best = NULL;
+			return NULL;
 		}
 	}
+	
+	return best;
+}
+
+/* Common part of uct_genmove() and uct_genmoves().
+ * Returns the best node, or NULL if *best_coord is pass or resign. */
+struct tree_node *
+uct_bestmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+	     bool pass_all_alive, bool *keep_looking, coord_t *best_coord)
+{
+	double start_time = time_now();
+	struct uct *u = e->data;
+
+	uct_search_setup(u, b, color);
+
+	int base_playouts = u->t->root->u.playouts;
+        /* Start or continue the Monte Carlo Tree Search! */
+        int played_games = uct_search(u, b, ti, color, u->t, keep_looking);
+	u->played_own += played_games;
 
 	if (UDEBUGL(2)) {
 		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
 		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
 			time, (int)(played_games/time), (int)(played_games/time/u->threads));
 	}
-	return best;
+
+	return uct_search_best(u, b, color, pass_all_alive, played_games, base_playouts, best_coord);
 }
 
 static coord_t *
