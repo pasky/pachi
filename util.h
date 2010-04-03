@@ -13,7 +13,7 @@ checked_malloc(size_t size, char *filename, unsigned int line, const char *func)
 {
 	void *p = malloc(size);
 	if (!p) {
-		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY malloc(%lu)\n",
+		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY malloc(%zu)\n",
 			filename, line, func, size);
 		exit(1);
 	}
@@ -25,7 +25,7 @@ checked_calloc(size_t nmemb, size_t size, char *filename, unsigned int line, con
 {
 	void *p = calloc(nmemb, size);
 	if (!p) {
-		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY calloc(%lu, %lu)\n",
+		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY calloc(%zu, %zu)\n",
 			filename, line, func, nmemb, size);
 		exit(1);
 	}
