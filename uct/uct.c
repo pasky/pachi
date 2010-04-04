@@ -467,7 +467,7 @@ struct uct_search_state {
 	bool print_fullmem;
 
 	struct time_stop stop;
-	struct spawn_ctx ctx;
+	struct spawn_ctx *ctx;
 };
 
 static void
@@ -491,9 +491,11 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	 * spawn the searching threads. */
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
-	s->ctx = (struct spawn_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
+	static struct spawn_ctx mctx;
+	mctx = (struct spawn_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
+	s->ctx = &mctx;
 	pthread_mutex_lock(&finish_mutex);
-	pthread_create(&thread_manager, NULL, spawn_thread_manager, &s->ctx);
+	pthread_create(&thread_manager, NULL, spawn_thread_manager, s->ctx);
 	thread_manager_running = true;
 }
 
@@ -521,7 +523,7 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 		    struct tree *t, struct time_info *ti,
 		    struct uct_search_state *s, int i)
 {
-	struct spawn_ctx *ctx = &s->ctx;
+	struct spawn_ctx *ctx = s->ctx;
 
 	/* Adjust dynkomi? */
 	if (ctx->t->use_extra_komi && u->dynkomi->permove
@@ -663,7 +665,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 		      struct tree *t, struct time_info *ti,
 		      struct uct_search_state *s, int i)
 {
-	struct spawn_ctx *ctx = &s->ctx;
+	struct spawn_ctx *ctx = s->ctx;
 
 	/* Never consider stopping if we played too few simulations.
 	 * Maybe we risk losing on time when playing in super-extreme
@@ -736,7 +738,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* Keep the search running. */
 		assert(u->slave);
 	}
-	struct spawn_ctx *ctx = &s.ctx;
+	struct spawn_ctx *ctx = s.ctx;
 
 	/* The search tree is ctx->t. This is normally == t, but in case of
 	 * TM_ROOT, it is one of the trees belonging to the independent
