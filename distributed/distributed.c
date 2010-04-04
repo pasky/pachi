@@ -494,7 +494,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 /* genmoves returns a line "=id played_own total_playouts threads keep_looking[ reserved]"
  * then a list of lines "coord playouts value amaf_playouts amaf_value".
  * Return the move with most playouts, and additional stats.
- * Keep this code in sync with uct_getstats().
+ * Keep this code in sync with uct/slave.c:report_stats().
  * slave_lock is held on entry and on return. */
 static coord_t
 select_best_move(struct board *b, struct move_stats2 *stats, int *played,

@@ -43,6 +43,81 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 	return reply_disabled(id) ? P_NOREPLY : P_OK;
 }
 
+
+/* Set mapping from coordinates to children of the root node. */
+static void
+find_top_nodes(struct uct *u)
+{
+	if (!u->t || !u->t->root) return;
+
+	for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling) {
+		if (!is_pass(ni->coord))
+		    u->stats[ni->coord].node = ni;
+	}
+}
+
+/* Get the move stats if they are present. They are
+ * coord-sorted but the code here doesn't depend on this.
+ * Keep this code in sync with select_best_move(). */
+static bool
+receive_stats(struct uct *u, struct board *b)
+{
+	char line[128];
+	while (fgets(line, sizeof(line), stdin) && *line != '\n') {
+		char move[64];
+		struct move_stats2 s;
+		if (sscanf(line, "%63s %d %f %d %f", move,
+			   &s.u.playouts, &s.u.value,
+			   &s.amaf.playouts, &s.amaf.value) != 5)
+			return false;
+		coord_t *c_ = str2coord(move, board_size(b));
+		coord_t c = *c_;
+		coord_done(c_);
+		assert(!is_pass(c) && !is_resign(c));
+
+		struct node_stats *ns = &u->stats[c];
+		if (!ns->node) find_top_nodes(u);
+		/* The node may not exist if this slave was behind
+		 * but this should be rare so it is not worth creating
+		 * the node here. */
+		if (!ns->node) {
+			if (DEBUGL(2))
+				fprintf(stderr, "can't find node %s %d\n", move, c);
+			continue;
+		}
+
+		/* The master may not send moves below a certain threshold,
+		 * but if it sends one it includes the contributions from
+		 * all slaves including ours (last_sent_own):
+		 *   received_others = received_total - last_sent_own  */
+		if (ns->last_sent_own.u.playouts)
+			stats_rm_result(&s.u, ns->last_sent_own.u.value,
+					ns->last_sent_own.u.playouts);
+		if (ns->last_sent_own.amaf.playouts)
+			stats_rm_result(&s.amaf, ns->last_sent_own.amaf.value,
+					ns->last_sent_own.amaf.playouts);
+
+		/* others_delta = received_others - added_from_others */
+		struct move_stats2 delta = s;
+		if (ns->added_from_others.u.playouts)
+			stats_rm_result(&delta.u, ns->added_from_others.u.value,
+					ns->added_from_others.u.playouts);
+		/* delta may be <= 0 if some slaves stopped sending this move
+		 * because it became below a playouts threshold. In this case
+		 * we just keep the old stats in our tree. */
+		if (delta.u.playouts <= 0) continue;
+
+		if (ns->added_from_others.amaf.playouts)
+			stats_rm_result(&delta.amaf, ns->added_from_others.amaf.value,
+					ns->added_from_others.amaf.playouts);
+
+		stats_add_result(&ns->node->u, delta.u.value, delta.u.playouts);
+		stats_add_result(&ns->node->amaf, delta.amaf.value, delta.amaf.playouts);
+		ns->added_from_others = s;
+	}
+	return true;
+}
+
 /* Get stats updates for the distributed engine. Return a buffer with
  * one line "played_own root_playouts threads keep_looking" then a list
  * of lines "coord playouts value amaf_playouts amaf_value".
@@ -52,7 +127,7 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
  * called while the tree is updated by the worker threads.
  * Keep this code in sync with select_best_move(). */
 static char *
-uct_getstats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
+report_stats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 {
 	static char reply[10240];
 	char *r = reply;
@@ -100,18 +175,6 @@ uct_getstats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 	return reply;
 }
 
-/* Set mapping from coordinates to children of the root node. */
-static void
-find_top_nodes(struct uct *u)
-{
-	if (!u->t || !u->t->root) return;
-
-	for (struct tree_node *ni = u->t->root->children; ni; ni = ni->sibling) {
-		if (!is_pass(ni->coord))
-		    u->stats[ni->coord].node = ni;
-	}
-}
-
 /* genmoves is issued by the distributed engine master to all slaves, to:
  * 1. Start a MCTS search if not running yet
  * 2. Report current move statistics of the on-going search.
@@ -145,63 +208,8 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		return NULL;
 	}
 
-	/* Get the move stats if they are present. They are
-	 * coord-sorted but the code here doesn't depend on this.
-	 * Keep this code in sync with select_best_move(). */
-
-	char line[128];
-	while (fgets(line, sizeof(line), stdin) && *line != '\n') {
-		char move[64];
-		struct move_stats2 s;
-		if (sscanf(line, "%63s %d %f %d %f", move,
-			   &s.u.playouts, &s.u.value,
-			   &s.amaf.playouts, &s.amaf.value) != 5)
-			return NULL;
-		coord_t *c_ = str2coord(move, board_size(b));
-		coord_t c = *c_;
-		coord_done(c_);
-		assert(!is_pass(c) && !is_resign(c));
-
-		struct node_stats *ns = &u->stats[c];
-		if (!ns->node) find_top_nodes(u);
-		/* The node may not exist if this slave was behind
-		 * but this should be rare so it is not worth creating
-		 * the node here. */
-		if (!ns->node) {
-			if (DEBUGL(2))
-				fprintf(stderr, "can't find node %s %d\n", move, c);
-			continue;
-		}
-
-		/* The master may not send moves below a certain threshold,
-		 * but if it sends one it includes the contributions from
-		 * all slaves including ours (last_sent_own):
-		 *   received_others = received_total - last_sent_own  */
-		if (ns->last_sent_own.u.playouts)
-			stats_rm_result(&s.u, ns->last_sent_own.u.value,
-					ns->last_sent_own.u.playouts);
-		if (ns->last_sent_own.amaf.playouts)
-			stats_rm_result(&s.amaf, ns->last_sent_own.amaf.value,
-					ns->last_sent_own.amaf.playouts);
-
-		/* others_delta = received_others - added_from_others */
-		struct move_stats2 delta = s;
-		if (ns->added_from_others.u.playouts)
-			stats_rm_result(&delta.u, ns->added_from_others.u.value,
-					ns->added_from_others.u.playouts);
-		/* delta may be <= 0 if some slaves stopped sending this move
-		 * because it became below a playouts threshold. In this case
-		 * we just keep the old stats in our tree. */
-		if (delta.u.playouts <= 0) continue;
-
-		if (ns->added_from_others.amaf.playouts)
-			stats_rm_result(&delta.amaf, ns->added_from_others.amaf.value,
-					ns->added_from_others.amaf.playouts);
-
-		stats_add_result(&ns->node->u, delta.u.value, delta.u.playouts);
-		stats_add_result(&ns->node->amaf, delta.amaf.value, delta.amaf.playouts);
-		ns->added_from_others = s;
-	}
+	if (!receive_stats(u, b))
+		return NULL;
 
 	static struct uct_search_state s;
 	if (!thread_manager_running) {
@@ -222,6 +230,6 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	coord_t best_coord;
 	uct_search_best(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
 
-	char *reply = uct_getstats(u, b, best_coord, keep_looking);
+	char *reply = report_stats(u, b, best_coord, keep_looking);
 	return reply;
 }
