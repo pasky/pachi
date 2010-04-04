@@ -470,15 +470,19 @@ struct uct_search_state {
 	struct spawn_ctx *ctx;
 };
 
+static int
+uct_search_games(struct uct_search_state *s)
+{
+	return s->ctx->t->root->u.playouts;
+}
+
 static void
 uct_search_start(struct uct *u, struct board *b, enum stone color,
 		 struct tree *t, struct time_info *ti,
 		 struct uct_search_state *s)
 {
 	/* Set up search state. */
-	s->base_playouts = t->root->u.playouts;
-	s->last_dynkomi = t->root->u.playouts;
-	s->last_print = t->root->u.playouts;
+	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
 	s->print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
 	s->print_fullmem = false;
 
@@ -756,7 +760,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		 * time control is broken. But if it happens to be less, we still search
 		 * at least 100ms otherwise the move is completely random. */
 
-		int i = ctx->t->root->u.playouts;
+		int i = uct_search_games(&s);
 		/* Print notifications etc. */
 		uct_search_progress(u, b, color, t, ti, &s, i);
 		/* Check if we should stop the search. */
@@ -778,7 +782,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		if (UDEBUGL(2)) tree_dump(t, u->dumpthres);
 	} else {
 		/* We can only return an estimate here. */
-		games = ctx->t->root->u.playouts - s.base_playouts;
+		games = uct_search_games(&s) - s.base_playouts;
 	}
 	if (UDEBUGL(2))
 		fprintf(stderr, "(avg score %f/%d value %f/%d)\n",
