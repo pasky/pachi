@@ -208,7 +208,7 @@ move_found:
 struct montecarlo *
 montecarlo_state_init(char *arg, struct board *b)
 {
-	struct montecarlo *mc = calloc(1, sizeof(struct montecarlo));
+	struct montecarlo *mc = calloc2(1, sizeof(struct montecarlo));
 
 	mc->debug_level = 1;
 	mc->gamelen = MC_GAMELEN;
@@ -265,7 +265,7 @@ struct engine *
 engine_montecarlo_init(char *arg, struct board *b)
 {
 	struct montecarlo *mc = montecarlo_state_init(arg, b);
-	struct engine *e = calloc(1, sizeof(struct engine));
+	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "MonteCarlo Engine";
 	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
 	e->genmove = montecarlo_genmove;

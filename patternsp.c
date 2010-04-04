@@ -340,7 +340,7 @@ spatial_dict_init(bool will_append)
 		return NULL;
 	}
 
-	struct spatial_dict *dict = calloc(1, sizeof(*dict));
+	struct spatial_dict *dict = calloc2(1, sizeof(*dict));
 	/* We create a dummy record for index 0 that we will
 	 * never reference. This is so that hash value 0 can
 	 * represent "no value". */

@@ -26,7 +26,7 @@ generic_done(struct uct_dynkomi *d)
 struct uct_dynkomi *
 uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b)
 {
-	struct uct_dynkomi *d = calloc(1, sizeof(*d));
+	struct uct_dynkomi *d = calloc2(1, sizeof(*d));
 	d->uct = u;
 	d->permove = NULL;
 	d->persim = NULL;
@@ -81,13 +81,13 @@ linear_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct 
 struct uct_dynkomi *
 uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 {
-	struct uct_dynkomi *d = calloc(1, sizeof(*d));
+	struct uct_dynkomi *d = calloc2(1, sizeof(*d));
 	d->uct = u;
 	d->permove = linear_permove;
 	d->persim = linear_persim;
 	d->done = generic_done;
 
-	struct dynkomi_linear *l = calloc(1, sizeof(*l));
+	struct dynkomi_linear *l = calloc2(1, sizeof(*l));
 	d->data = l;
 
 	if (board_size(b) - 2 >= 19)
@@ -313,13 +313,13 @@ adaptive_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struc
 struct uct_dynkomi *
 uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 {
-	struct uct_dynkomi *d = calloc(1, sizeof(*d));
+	struct uct_dynkomi *d = calloc2(1, sizeof(*d));
 	d->uct = u;
 	d->permove = adaptive_permove;
 	d->persim = adaptive_persim;
 	d->done = generic_done;
 
-	struct dynkomi_adaptive *a = calloc(1, sizeof(*a));
+	struct dynkomi_adaptive *a = calloc2(1, sizeof(*a));
 	d->data = a;
 
 	if (board_size(b) - 2 >= 19)

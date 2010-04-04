@@ -228,8 +228,8 @@ playout_elo_callback(struct playout_policy *p, playout_elo_callbackp callback, v
 struct playout_policy *
 playout_elo_init(char *arg, struct board *b)
 {
-	struct playout_policy *p = calloc(1, sizeof(*p));
-	struct elo_policy *pp = calloc(1, sizeof(*pp));
+	struct playout_policy *p = calloc2(1, sizeof(*p));
+	struct elo_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
 	p->choose = playout_elo_choose;
 	p->assess = playout_elo_assess;

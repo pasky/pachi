@@ -274,8 +274,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	struct playout_amafmap *amaf = NULL;
 	if (u->policy->wants_amaf) {
-		amaf = calloc(1, sizeof(*amaf));
-		amaf->map = calloc(board_size2(&b2) + 1, sizeof(*amaf->map));
+		amaf = calloc2(1, sizeof(*amaf));
+		amaf->map = calloc2(board_size2(&b2) + 1, sizeof(*amaf->map));
 		amaf->map++; // -1 is pass
 	}
 
@@ -438,8 +438,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		float rval = scale_value(u, b, result);
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
 
-		stats_add_result(&u->dynkomi->score, result / 2, 1);
-		stats_add_result(&u->dynkomi->value, rval, 1);
+		if (t->use_extra_komi) {
+			stats_add_result(&u->dynkomi->score, result / 2, 1);
+			stats_add_result(&u->dynkomi->value, rval, 1);
+		}
 
 		if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
 			/* Possibly transform the rval appropriately. */

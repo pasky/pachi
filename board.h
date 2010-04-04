@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "util.h"
 #include "stone.h"
 #include "move.h"
 #include "probdist.h"
-#include "util.h"
 
 struct features_gamma;
 

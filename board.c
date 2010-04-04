@@ -48,7 +48,7 @@ board_setup(struct board *b)
 struct board *
 board_init(void)
 {
-	struct board *b = malloc(sizeof(struct board));
+	struct board *b = malloc2(sizeof(struct board));
 	board_setup(b);
 
 	// Default setup
@@ -97,7 +97,7 @@ board_copy(struct board *b2, struct board *b1)
 #else
 	int pbsize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
+	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
 	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
@@ -185,7 +185,7 @@ board_resize(struct board *board, int size)
 #else
 	int pbsize = 0;
 #endif
-	void *x = malloc(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
+	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
 	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
