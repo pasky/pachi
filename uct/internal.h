@@ -8,6 +8,7 @@
 #include "ownermap.h"
 #include "playout.h"
 #include "stats.h"
+#include "timeinfo.h"
 #include "distributed/distributed.h"
 
 struct tree;
@@ -17,6 +18,10 @@ struct uct_prior;
 struct uct_dynkomi;
 
 /* Internal UCT structures */
+
+/* How often to inspect the tree from the main thread to check for playout
+ * stop, progress reports, etc. (in seconds) */
+#define TREE_BUSYWAIT_INTERVAL 0.1 /* 100ms */
 
 /* Distributed stats for each child of the root node. */
 struct node_stats {
@@ -106,7 +111,30 @@ bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pas
 
 void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
 void uct_search_setup(struct uct *u, struct board *b, enum stone color);
-int uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool *keep_looking);
+
+/* Progress information of the on-going MCTS search - when did we
+ * last adjusted dynkomi, printed out stuff, etc. */
+struct spawn_ctx;
+struct uct_search_state {
+	/* Number of games simulated for this simulation before
+	 * we started the search. (We have simulated them earlier.) */
+	int base_playouts;
+	/* Number of last dynkomi adjustment. */
+	int last_dynkomi;
+	/* Number of last game with progress print. */
+	int last_print;
+	/* Number of simulations to wait before next print. */
+	int print_interval;
+	/* Printed notification about full memory? */
+	bool print_fullmem;
+
+	struct time_stop stop;
+	struct spawn_ctx *ctx;
+};
+int uct_search_games(struct uct_search_state *s);
+void uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s);
+void uct_search_progress(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s, int i);
+bool uct_search_check_stop(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s, int i);
 struct tree_node *uct_search_best(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, int played_games, int base_playouts, coord_t *best_coord);
 
 

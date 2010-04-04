@@ -451,32 +451,13 @@ spawn_thread_manager(void *ctx_)
 }
 
 
-/* Progress information of the on-going MCTS search - when did we
- * last adjusted dynkomi, printed out stuff, etc. */
-struct uct_search_state {
-	/* Number of games simulated for this simulation before
-	 * we started the search. (We have simulated them earlier.) */
-	int base_playouts;
-	/* Number of last dynkomi adjustment. */
-	int last_dynkomi;
-	/* Number of last game with progress print. */
-	int last_print;
-	/* Number of simulations to wait before next print. */
-	int print_interval;
-	/* Printed notification about full memory? */
-	bool print_fullmem;
-
-	struct time_stop stop;
-	struct spawn_ctx *ctx;
-};
-
-static int
+int
 uct_search_games(struct uct_search_state *s)
 {
 	return s->ctx->t->root->u.playouts;
 }
 
-static void
+void
 uct_search_start(struct uct *u, struct board *b, enum stone color,
 		 struct tree *t, struct time_info *ti,
 		 struct uct_search_state *s)
@@ -503,7 +484,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	thread_manager_running = true;
 }
 
-static struct spawn_ctx *
+struct spawn_ctx *
 uct_search_stop(void)
 {
 	assert(thread_manager_running);
@@ -522,7 +503,7 @@ uct_search_stop(void)
 }
 
 
-static void
+void
 uct_search_progress(struct uct *u, struct board *b, enum stone color,
 		    struct tree *t, struct time_info *ti,
 		    struct uct_search_state *s, int i)
@@ -664,7 +645,7 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 	return false;
 }
 
-static bool
+bool
 uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 		      struct tree *t, struct time_info *ti,
 		      struct uct_search_state *s, int i)
@@ -727,7 +708,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 /* Run time-limited MCTS search. For a slave in the distributed
  * engine, the search is done in background and will be stopped at
  * the next uct_notify_play(); keep_looking is advice for the master. */
-int
+static int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color,
 	   struct tree *t, bool *keep_looking)
 {

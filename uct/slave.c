@@ -90,6 +90,12 @@ find_top_nodes(struct uct *u)
 	}
 }
 
+/* genmoves is issued by the distributed engine master to all slaves, to:
+ * 1. Start a MCTS search if not running yet
+ * 2. Report current move statistics of the on-going search.
+ * The MCTS search is left running on the background when uct_genmoves()
+ * returns. It is stopped by receiving a play GTP command, triggering
+ * uct_pondering_stop(). */
 /* genmoves gets in the args parameter
  * "played_games main_time byoyomi_time byoyomi_periods byoyomi_stones"
  * and reads a list of lines "coord playouts value amaf_playouts amaf_value"
@@ -103,9 +109,8 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	assert(u->slave);
 
 	/* Seed the tree if the search is not already running. */
-	if (!thread_manager_running) {
+	if (!thread_manager_running)
 		uct_search_setup(u, b, color);
-	}
 
 	/* Get playouts and time information from master.
 	 * Keep this code in sync with distributed_genmove(). */
@@ -176,13 +181,24 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		ns->added_from_others = s;
 	}
 
-        /* Continue the Monte Carlo Tree Search. */
-	bool keep_looking;
-	int base_playouts = u->t->root->u.playouts;
-	int played_games = uct_search(u, b, ti, color, u->t, &keep_looking);
+	static struct uct_search_state s;
+	if (!thread_manager_running) {
+		/* This is the first genmoves issue, start the MCTS. */
+		memset(&s, 0, sizeof(s));
+		uct_search_start(u, b, color, u->t, ti, &s);
+		/* ...wait a bit to populate the statistics minimally. */
+		time_sleep(TREE_BUSYWAIT_INTERVAL);
+	}
 
+	/* Check the state of the Monte Carlo Tree Search. */
+
+	int played_games = uct_search_games(&s);
+	uct_search_progress(u, b, color, u->t, ti, &s, played_games);
+	u->played_own = played_games;
+
+	bool keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, &s, played_games);
 	coord_t best_coord;
-	uct_search_best(u, b, color, pass_all_alive, played_games, base_playouts, &best_coord);
+	uct_search_best(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
 
 	char *reply = uct_getstats(u, b, best_coord, keep_looking);
 	return reply;
