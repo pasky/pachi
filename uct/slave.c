@@ -217,9 +217,10 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		/* This is the first genmoves issue, start the MCTS. */
 		memset(&s, 0, sizeof(s));
 		uct_search_start(u, b, color, u->t, ti, &s);
-		/* ...wait a bit to populate the statistics minimally. */
-		time_sleep(TREE_BUSYWAIT_INTERVAL);
 	}
+	/* Wait a bit to populate the statistics
+	 * and avoid a busy loop with the master. */
+	time_sleep(TREE_BUSYWAIT_INTERVAL);
 
 	/* Check the state of the Monte Carlo Tree Search. */
 
