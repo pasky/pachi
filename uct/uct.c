@@ -450,18 +450,47 @@ spawn_thread_manager(void *ctx_)
 	return mctx;
 }
 
-static struct spawn_ctx *
-uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t)
+
+/* Progress information of the on-going MCTS search - when did we
+ * last adjusted dynkomi, printed out stuff, etc. */
+struct uct_search_state {
+	/* Number of last dynkomi adjustment. */
+	int last_dynkomi;
+	/* Number of last game with progress print. */
+	int last_print;
+	/* Number of simulations to wait before next print. */
+	int print_interval;
+	/* Printed notification about full memory? */
+	bool print_fullmem;
+
+	struct time_stop stop;
+	struct spawn_ctx ctx;
+};
+
+static void
+uct_search_start(struct uct *u, struct board *b, enum stone color,
+		 struct tree *t, struct time_info *ti,
+		 struct uct_search_state *s)
 {
+	/* Set up search state. */
+	s->last_dynkomi = t->root->u.playouts;
+	s->last_print = t->root->u.playouts;
+	s->print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
+	s->print_fullmem = false;
+
+	if (ti) {
+		if (ti->period == TT_NULL) *ti = default_ti;
+		time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &s->stop);
+	}
+
+	/* Fire up the tree search thread manager, which will in turn
+	 * spawn the searching threads. */
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
-
-	struct spawn_ctx ctx = { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
-	static struct spawn_ctx mctx; mctx = ctx;
+	s->ctx = (struct spawn_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
 	pthread_mutex_lock(&finish_mutex);
-	pthread_create(&thread_manager, NULL, spawn_thread_manager, &mctx);
+	pthread_create(&thread_manager, NULL, spawn_thread_manager, &s->ctx);
 	thread_manager_running = true;
-	return &mctx;
 }
 
 static struct spawn_ctx *
@@ -605,26 +634,14 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 	*keep_looking = false;
 
-	/* Number of last dynkomi adjustment. */
-	int last_dynkomi = t->root->u.playouts;
-	/* Number of last game with progress print. */
-	int last_print = t->root->u.playouts;
-	/* Number of simulations to wait before next print. */
-	int print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
-	/* Printed notification about full memory? */
-	bool print_fullmem = false;
-
-	static struct time_stop stop;
-	static struct spawn_ctx *ctx;
+	struct uct_search_state s;
 	if (!thread_manager_running) {
-		if (ti->period == TT_NULL) *ti = default_ti;
-		time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &stop);
-
-		ctx = uct_search_start(u, b, color, t);
+		uct_search_start(u, b, color, t, ti, &s);
 	} else {
 		/* Keep the search running. */
 		assert(u->slave);
 	}
+	struct spawn_ctx *ctx = &s.ctx;
 
 	/* The search tree is ctx->t. This is normally == t, but in case of
 	 * TM_ROOT, it is one of the trees belonging to the independent
@@ -647,8 +664,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* Adjust dynkomi? */
 		if (ctx->t->use_extra_komi && u->dynkomi->permove
 		    && u->dynkomi_interval
-		    && i > last_dynkomi + u->dynkomi_interval) {
-			last_dynkomi += u->dynkomi_interval;
+		    && i > s.last_dynkomi + u->dynkomi_interval) {
+			s.last_dynkomi += u->dynkomi_interval;
 			float old_dynkomi = ctx->t->extra_komi;
 			ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
 			if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
@@ -656,14 +673,14 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		}
 
 		/* Print progress? */
-		if (i - last_print > print_interval) {
-			last_print += print_interval; // keep the numbers tidy
-			uct_progress_status(u, ctx->t, color, last_print);
+		if (i - s.last_print > s.print_interval) {
+			s.last_print += s.print_interval; // keep the numbers tidy
+			uct_progress_status(u, ctx->t, color, s.last_print);
 		}
-		if (!print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
+		if (!s.print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
 			if (UDEBUGL(2))
 				fprintf(stderr, "memory limit hit (%lu > %lu)\n", ctx->t->nodes_size, u->max_tree_size);
-			print_fullmem = true;
+			s.print_fullmem = true;
 		}
 
 		/* Never consider stopping if we played too few simulations.
@@ -684,19 +701,19 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 		/* Possibly stop search early if it's no use to try on. */
 		int played = u->played_all + i - base_playouts;
-		if (best && uct_search_stop_early(u, ctx->t, b, ti, &stop, best, best2, played))
+		if (best && uct_search_stop_early(u, ctx->t, b, ti, &s.stop, best, best2, played))
 			break;
 
 		/* Check against time settings. */
 		bool desired_done;
 		if (ti->dim == TD_WALLTIME) {
 			double elapsed = time_now() - ti->len.t.timer_start;
-			if (elapsed > stop.worst.time) break;
-			desired_done = elapsed > stop.desired.time;
+			if (elapsed > s.stop.worst.time) break;
+			desired_done = elapsed > s.stop.desired.time;
 
 		} else { assert(ti->dim == TD_GAMES);
-			if (i > stop.worst.playouts) break;
-			desired_done = i > stop.desired.playouts;
+			if (i > s.stop.worst.playouts) break;
+			desired_done = i > s.stop.desired.playouts;
 		}
 
 		/* We want to stop simulating, but are willing to keep trying
@@ -709,7 +726,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			}
 			if (best)
 				bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
-			if (!uct_search_keep_looking(u, ctx->t, b, ti, &stop, best, best2, bestr, winner, i))
+			if (!uct_search_keep_looking(u, ctx->t, b, ti, &s.stop, best, best2, bestr, winner, i))
 				break;
 		}
 
@@ -763,7 +780,8 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	setup_dynkomi(u, b, stone_other(m.color));
 
 	/* Start MCTS manager thread "headless". */
-	uct_search_start(u, b, color, t);
+	static struct uct_search_state s;
+	uct_search_start(u, b, color, t, NULL, &s);
 }
 
 /* uct_search_stop() frontend for the pondering (non-genmove) mode, and
