@@ -144,29 +144,6 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	return pass_is_safe(b, color, &mq);
 }
 
-/* This function is called only when running as slave in the distributed version. */
-static enum parse_code
-uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply)
-{
-	struct uct *u = e->data;
-
-	static bool board_resized = false;
-	board_resized |= is_gamestart(cmd);
-
-	/* Force resending the whole command history if we are out of sync
-	 * but do it only once, not if already getting the history. */
-	if ((move_number(id) != b->moves || !board_resized)
-	    && !reply_disabled(id) && !is_reset(cmd)) {
-		if (UDEBUGL(0))
-			fprintf(stderr, "Out of sync, id %d, move %d\n", id, b->moves);
-		static char buf[128];
-		snprintf(buf, sizeof(buf), "out of sync, move %d expected", b->moves);
-		*reply = buf;
-		return P_DONE_ERROR;
-	}
-	return reply_disabled(id) ? P_NOREPLY : P_OK;
-}
-
 static char *
 uct_printhook_ownermap(struct board *board, coord_t c, char *s, char *end)
 {

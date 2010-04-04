@@ -21,6 +21,28 @@
 
 /* UCT infrastructure for a distributed engine slave. */
 
+enum parse_code
+uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply)
+{
+	struct uct *u = e->data;
+
+	static bool board_resized = false;
+	board_resized |= is_gamestart(cmd);
+
+	/* Force resending the whole command history if we are out of sync
+	 * but do it only once, not if already getting the history. */
+	if ((move_number(id) != b->moves || !board_resized)
+	    && !reply_disabled(id) && !is_reset(cmd)) {
+		if (UDEBUGL(0))
+			fprintf(stderr, "Out of sync, id %d, move %d\n", id, b->moves);
+		static char buf[128];
+		snprintf(buf, sizeof(buf), "out of sync, move %d expected", b->moves);
+		*reply = buf;
+		return P_DONE_ERROR;
+	}
+	return reply_disabled(id) ? P_NOREPLY : P_OK;
+}
+
 /* Get stats updates for the distributed engine. Return a buffer with
  * one line "played_own root_playouts threads keep_looking" then a list
  * of lines "coord playouts value amaf_playouts amaf_value".
