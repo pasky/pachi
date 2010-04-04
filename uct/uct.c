@@ -454,6 +454,9 @@ spawn_thread_manager(void *ctx_)
 /* Progress information of the on-going MCTS search - when did we
  * last adjusted dynkomi, printed out stuff, etc. */
 struct uct_search_state {
+	/* Number of games simulated for this simulation before
+	 * we started the search. (We have simulated them earlier.) */
+	int base_playouts;
 	/* Number of last dynkomi adjustment. */
 	int last_dynkomi;
 	/* Number of last game with progress print. */
@@ -473,6 +476,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 		 struct uct_search_state *s)
 {
 	/* Set up search state. */
+	s->base_playouts = t->root->u.playouts;
 	s->last_dynkomi = t->root->u.playouts;
 	s->last_print = t->root->u.playouts;
 	s->print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
@@ -628,15 +632,13 @@ int
 uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color,
 	   struct tree *t, bool *keep_looking)
 {
-	int base_playouts = u->t->root->u.playouts;
-	if (UDEBUGL(2) && base_playouts > 0)
-		fprintf(stderr, "<pre-simulated %d games skipped>\n", base_playouts);
-
 	*keep_looking = false;
 
 	struct uct_search_state s;
 	if (!thread_manager_running) {
 		uct_search_start(u, b, color, t, ti, &s);
+		if (UDEBUGL(2) && s.base_playouts > 0)
+			fprintf(stderr, "<pre-simulated %d games>\n", s.base_playouts);
 	} else {
 		/* Keep the search running. */
 		assert(u->slave);
@@ -700,7 +702,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
 
 		/* Possibly stop search early if it's no use to try on. */
-		int played = u->played_all + i - base_playouts;
+		int played = u->played_all + i - s.base_playouts;
 		if (best && uct_search_stop_early(u, ctx->t, b, ti, &s.stop, best, best2, played))
 			break;
 
@@ -748,7 +750,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		if (UDEBUGL(2)) tree_dump(t, u->dumpthres);
 	} else {
 		/* We can only return an estimate here. */
-		games = ctx->t->root->u.playouts - base_playouts;
+		games = ctx->t->root->u.playouts - s.base_playouts;
 	}
 	if (UDEBUGL(2))
 		fprintf(stderr, "(avg score %f/%d value %f/%d)\n",
