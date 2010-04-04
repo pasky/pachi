@@ -19,6 +19,6 @@ void gtp_prefix(char prefix, int id);
 void gtp_flush(void);
 
 #define is_gamestart(cmd) (!strcasecmp((cmd), "boardsize"))
-#define is_reset(cmd) (is_gamestart(cmd) || !strcasecmp((cmd), "clear_board"))
+#define is_reset(cmd) (is_gamestart(cmd) || !strcasecmp((cmd), "clear_board") || !strcasecmp((cmd), "kgs-rules"))
 
 #endif
