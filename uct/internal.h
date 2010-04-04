@@ -18,7 +18,7 @@ struct uct_dynkomi;
 
 /* Internal UCT structures */
 
-/* Stats for each child of the root node. */
+/* Distributed stats for each child of the root node. */
 struct node_stats {
 	struct move_stats2 last_sent_own;
 	struct move_stats2 added_from_others;
@@ -87,6 +87,7 @@ struct uct {
 
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;
+	/* Used for coordination among slaves of the distributed engine. */
 	struct node_stats *stats;
 	int played_own;
 	int played_all; /* games played by all slaves */
@@ -99,8 +100,14 @@ struct uct {
 
 extern volatile sig_atomic_t uct_halt;
 extern __thread int thread_id;
+extern bool thread_manager_running;
 
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
+
+void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
+void uct_search_setup(struct uct *u, struct board *b, enum stone color);
+int uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool *keep_looking);
+struct tree_node *uct_search_best(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, int played_games, int base_playouts, coord_t *best_coord);
 
 
 /* This is the state used for descending the tree; we use this wrapper
