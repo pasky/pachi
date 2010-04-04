@@ -290,7 +290,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			break;
 	}
 
-	struct spawn_ctx *ctx = uct_search_stop();
+	struct uct_thread_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(2)) tree_dump(t, u->dumpthres);
 	if (UDEBUGL(2))
 		fprintf(stderr, "(avg score %f/%d value %f/%d)\n",
@@ -334,7 +334,7 @@ uct_pondering_stop(struct uct *u)
 		return;
 
 	/* Stop the thread manager. */
-	struct spawn_ctx *ctx = uct_search_stop();
+	struct uct_thread_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1)) {
 		if (u->pondering) fprintf(stderr, "(pondering) ");
 		uct_progress_status(u, ctx->t, ctx->color, ctx->games);

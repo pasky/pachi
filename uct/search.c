@@ -81,7 +81,7 @@ static pthread_mutex_t finish_serializer = PTHREAD_MUTEX_INITIALIZER;
 static void *
 spawn_worker(void *ctx_)
 {
-	struct spawn_ctx *ctx = ctx_;
+	struct uct_thread_ctx *ctx = ctx_;
 	/* Setup */
 	fast_srandom(ctx->seed);
 	thread_id = ctx->tid;
@@ -108,7 +108,7 @@ static void *
 spawn_thread_manager(void *ctx_)
 {
 	/* In thread_manager, we use only some of the ctx fields. */
-	struct spawn_ctx *mctx = ctx_;
+	struct uct_thread_ctx *mctx = ctx_;
 	struct uct *u = mctx->u;
 	struct tree *t = mctx->t;
 	bool shared_tree = u->parallel_tree;
@@ -128,7 +128,7 @@ spawn_thread_manager(void *ctx_)
 
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
-		struct spawn_ctx *ctx = malloc2(sizeof(*ctx));
+		struct uct_thread_ctx *ctx = malloc2(sizeof(*ctx));
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
 		mctx->t = ctx->t = shared_tree ? t : tree_copy(t);
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
@@ -147,7 +147,7 @@ spawn_thread_manager(void *ctx_)
 			continue;
 		}
 		/* ...and gather its remnants. */
-		struct spawn_ctx *ctx;
+		struct uct_thread_ctx *ctx;
 		pthread_join(threads[finish_thread], (void **) &ctx);
 		played_games += ctx->games;
 		joined++;
@@ -202,15 +202,15 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	 * spawn the searching threads. */
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
-	static struct spawn_ctx mctx;
-	mctx = (struct spawn_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
+	static struct uct_thread_ctx mctx;
+	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
 	s->ctx = &mctx;
 	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, s->ctx);
 	thread_manager_running = true;
 }
 
-struct spawn_ctx *
+struct uct_thread_ctx *
 uct_search_stop(void)
 {
 	assert(thread_manager_running);
@@ -222,7 +222,7 @@ uct_search_stop(void)
 	pthread_mutex_unlock(&finish_mutex);
 
 	/* Collect the thread manager. */
-	struct spawn_ctx *pctx;
+	struct uct_thread_ctx *pctx;
 	thread_manager_running = false;
 	pthread_join(thread_manager, (void **) &pctx);
 	return pctx;
@@ -234,7 +234,7 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 		    struct tree *t, struct time_info *ti,
 		    struct uct_search_state *s, int i)
 {
-	struct spawn_ctx *ctx = s->ctx;
+	struct uct_thread_ctx *ctx = s->ctx;
 
 	/* Adjust dynkomi? */
 	if (ctx->t->use_extra_komi && u->dynkomi->permove
@@ -377,7 +377,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 		      struct tree *t, struct time_info *ti,
 		      struct uct_search_state *s, int i)
 {
-	struct spawn_ctx *ctx = s->ctx;
+	struct uct_thread_ctx *ctx = s->ctx;
 
 	/* Never consider stopping if we played too few simulations.
 	 * Maybe we risk losing on time when playing in super-extreme

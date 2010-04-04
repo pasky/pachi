@@ -33,7 +33,7 @@ extern __thread int thread_id;
 extern bool thread_manager_running;
 
 /* Search thread context */
-struct spawn_ctx {
+struct uct_thread_ctx {
 	int tid;
 	struct uct *u;
 	struct board *b;
@@ -60,13 +60,13 @@ struct uct_search_state {
 	bool print_fullmem;
 
 	struct time_stop stop;
-	struct spawn_ctx *ctx;
+	struct uct_thread_ctx *ctx;
 };
 
 int uct_search_games(struct uct_search_state *s);
 
 void uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s);
-struct spawn_ctx *uct_search_stop(void);
+struct uct_thread_ctx *uct_search_stop(void);
 
 void uct_search_progress(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s, int i);
 
