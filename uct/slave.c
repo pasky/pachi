@@ -13,10 +13,9 @@
 #include "timeinfo.h"
 #include "distributed/distributed.h"
 #include "uct/internal.h"
+#include "uct/search.h"
 #include "uct/slave.h"
 #include "uct/tree.h"
-#include "uct/uct.h"
-#include "uct/walk.h"
 
 
 /* UCT infrastructure for a distributed engine slave. */

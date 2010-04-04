@@ -1,15 +1,14 @@
 #ifndef ZZGO_UCT_INTERNAL_H
 #define ZZGO_UCT_INTERNAL_H
 
-#include <signal.h> // sig_atomic_t
+/* Internal UCT structures */
 
 #include "debug.h"
+#include "distributed/distributed.h"
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
 #include "stats.h"
-#include "timeinfo.h"
-#include "distributed/distributed.h"
 
 struct tree;
 struct tree_node;
@@ -17,11 +16,11 @@ struct uct_policy;
 struct uct_prior;
 struct uct_dynkomi;
 
-/* Internal UCT structures */
-
-/* How often to inspect the tree from the main thread to check for playout
- * stop, progress reports, etc. (in seconds) */
-#define TREE_BUSYWAIT_INTERVAL 0.1 /* 100ms */
+/* How big proportion of ownermap counts must be of one color to consider
+ * the point sure. */
+#define GJ_THRES	0.8
+/* How many games to consider at minimum before judging groups. */
+#define GJ_MINGAMES	500
 
 /* Distributed stats for each child of the root node. */
 struct node_stats {
@@ -103,39 +102,10 @@ struct uct {
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
-extern volatile sig_atomic_t uct_halt;
-extern __thread int thread_id;
-extern bool thread_manager_running;
-
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
 
 void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
 void uct_genmove_setup(struct uct *u, struct board *b, enum stone color);
-
-/* Progress information of the on-going MCTS search - when did we
- * last adjusted dynkomi, printed out stuff, etc. */
-struct spawn_ctx;
-struct uct_search_state {
-	/* Number of games simulated for this simulation before
-	 * we started the search. (We have simulated them earlier.) */
-	int base_playouts;
-	/* Number of last dynkomi adjustment. */
-	int last_dynkomi;
-	/* Number of last game with progress print. */
-	int last_print;
-	/* Number of simulations to wait before next print. */
-	int print_interval;
-	/* Printed notification about full memory? */
-	bool print_fullmem;
-
-	struct time_stop stop;
-	struct spawn_ctx *ctx;
-};
-int uct_search_games(struct uct_search_state *s);
-void uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s);
-void uct_search_progress(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s, int i);
-bool uct_search_check_stop(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s, int i);
-struct tree_node *uct_search_best(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, int played_games, int base_playouts, coord_t *best_coord);
 
 
 /* This is the state used for descending the tree; we use this wrapper

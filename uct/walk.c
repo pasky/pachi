@@ -16,6 +16,7 @@
 #include "random.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
+#include "uct/search.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
