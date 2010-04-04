@@ -193,9 +193,11 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	struct uct *u = e->data;
 	assert(u->slave);
 
-	/* Seed the tree if the search is not already running. */
+	/* Prepare the state if the search is not already running.
+	 * We must do this first since we tweak the state below
+	 * based on instructions from the master. */
 	if (!thread_manager_running)
-		uct_search_setup(u, b, color);
+		uct_genmove_setup(u, b, color);
 
 	/* Get playouts and time information from master.
 	 * Keep this code in sync with distributed_genmove(). */

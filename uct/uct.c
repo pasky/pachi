@@ -774,7 +774,7 @@ uct_pondering_stop(struct uct *u)
 }
 
 void
-uct_search_setup(struct uct *u, struct board *b, enum stone color)
+uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 {
 	if (b->superko_violation) {
 		fprintf(stderr, "!!! WARNING: SUPERKO VIOLATION OCCURED BEFORE THIS MOVE\n");
@@ -867,7 +867,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	double start_time = time_now();
 	struct uct *u = e->data;
 	uct_pondering_stop(u);
-	uct_search_setup(u, b, color);
+	uct_genmove_setup(u, b, color);
 
         /* Start the Monte Carlo Tree Search! */
 	int base_playouts = u->t->root->u.playouts;

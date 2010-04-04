@@ -110,7 +110,7 @@ extern bool thread_manager_running;
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
 
 void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
-void uct_search_setup(struct uct *u, struct board *b, enum stone color);
+void uct_genmove_setup(struct uct *u, struct board *b, enum stone color);
 
 /* Progress information of the on-going MCTS search - when did we
  * last adjusted dynkomi, printed out stuff, etc. */
