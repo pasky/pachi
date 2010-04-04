@@ -516,6 +516,39 @@ uct_search_stop(void)
 }
 
 
+static void
+uct_search_progress(struct uct *u, struct board *b, enum stone color,
+		    struct tree *t, struct time_info *ti,
+		    struct uct_search_state *s, int i)
+{
+	struct spawn_ctx *ctx = &s->ctx;
+
+	/* Adjust dynkomi? */
+	if (ctx->t->use_extra_komi && u->dynkomi->permove
+	    && u->dynkomi_interval
+	    && i > s->last_dynkomi + u->dynkomi_interval) {
+		s->last_dynkomi += u->dynkomi_interval;
+		float old_dynkomi = ctx->t->extra_komi;
+		ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
+		if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
+			fprintf(stderr, "dynkomi adjusted (%f -> %f)\n",
+				old_dynkomi, ctx->t->extra_komi);
+	}
+
+	/* Print progress? */
+	if (i - s->last_print > s->print_interval) {
+		s->last_print += s->print_interval; // keep the numbers tidy
+		uct_progress_status(u, ctx->t, color, s->last_print);
+	}
+
+	if (!s->print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
+		if (UDEBUGL(2))
+			fprintf(stderr, "memory limit hit (%lu > %lu)\n",
+				ctx->t->nodes_size, u->max_tree_size);
+		s->print_fullmem = true;
+	}
+}
+
 /* Determine whether we should terminate the search early. */
 static bool
 uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
@@ -625,6 +658,66 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 	return false;
 }
 
+static bool
+uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
+		      struct tree *t, struct time_info *ti,
+		      struct uct_search_state *s, int i)
+{
+	struct spawn_ctx *ctx = &s->ctx;
+
+	/* Never consider stopping if we played too few simulations.
+	 * Maybe we risk losing on time when playing in super-extreme
+	 * time pressure but the tree is going to be just too messed
+	 * up otherwise - we might even play invalid suicides or pass
+	 * when we mustn't. */
+	if (i < GJ_MINGAMES)
+		return false;
+
+	struct tree_node *best = NULL;
+	struct tree_node *best2 = NULL; // Second-best move.
+	struct tree_node *bestr = NULL; // best's best child.
+	struct tree_node *winner = NULL;
+
+	best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
+	if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
+
+	/* Possibly stop search early if it's no use to try on. */
+	int played = u->played_all + i - s->base_playouts;
+	if (best && uct_search_stop_early(u, ctx->t, b, ti, &s->stop, best, best2, played))
+		return true;
+
+	/* Check against time settings. */
+	bool desired_done;
+	if (ti->dim == TD_WALLTIME) {
+		double elapsed = time_now() - ti->len.t.timer_start;
+		if (elapsed > s->stop.worst.time) return true;
+		desired_done = elapsed > s->stop.desired.time;
+
+	} else { assert(ti->dim == TD_GAMES);
+		if (i > s->stop.worst.playouts) return true;
+		desired_done = i > s->stop.desired.playouts;
+	}
+
+	/* We want to stop simulating, but are willing to keep trying
+	 * if we aren't completely sure about the winner yet. */
+	if (desired_done) {
+		if (u->policy->winner && u->policy->evaluate) {
+			struct uct_descent descent = { .node = ctx->t->root };
+			u->policy->winner(u->policy, ctx->t, &descent);
+			winner = descent.node;
+		}
+		if (best)
+			bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
+		if (!uct_search_keep_looking(u, ctx->t, b, ti, &s->stop, best, best2, bestr, winner, i))
+			return true;
+	}
+
+	/* TODO: Early break if best->variance goes under threshold
+	 * and we already have enough playouts (possibly thanks to book
+	 * or to pondering)? */
+	return false;
+}
+
 /* Run time-limited MCTS search. For a slave in the distributed
  * engine, the search is done in background and will be stopped at
  * the next uct_notify_play(); keep_looking is advice for the master. */
@@ -662,78 +755,11 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		 * at least 100ms otherwise the move is completely random. */
 
 		int i = ctx->t->root->u.playouts;
-
-		/* Adjust dynkomi? */
-		if (ctx->t->use_extra_komi && u->dynkomi->permove
-		    && u->dynkomi_interval
-		    && i > s.last_dynkomi + u->dynkomi_interval) {
-			s.last_dynkomi += u->dynkomi_interval;
-			float old_dynkomi = ctx->t->extra_komi;
-			ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
-			if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
-				fprintf(stderr, "dynkomi adjusted (%f -> %f)\n", old_dynkomi, ctx->t->extra_komi);
-		}
-
-		/* Print progress? */
-		if (i - s.last_print > s.print_interval) {
-			s.last_print += s.print_interval; // keep the numbers tidy
-			uct_progress_status(u, ctx->t, color, s.last_print);
-		}
-		if (!s.print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
-			if (UDEBUGL(2))
-				fprintf(stderr, "memory limit hit (%lu > %lu)\n", ctx->t->nodes_size, u->max_tree_size);
-			s.print_fullmem = true;
-		}
-
-		/* Never consider stopping if we played too few simulations.
-		 * Maybe we risk losing on time when playing in super-extreme
-		 * time pressure but the tree is going to be just too messed
-		 * up otherwise - we might even play invalid suicides or pass
-		 * when we mustn't. */
-		if (i < GJ_MINGAMES)
-			continue;
-
-		struct tree_node *best = NULL;
-		struct tree_node *best2 = NULL; // Second-best move.
-		struct tree_node *bestr = NULL; // best's best child.
-		struct tree_node *winner = NULL;
-
-		best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
-		if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
-
-		/* Possibly stop search early if it's no use to try on. */
-		int played = u->played_all + i - s.base_playouts;
-		if (best && uct_search_stop_early(u, ctx->t, b, ti, &s.stop, best, best2, played))
+		/* Print notifications etc. */
+		uct_search_progress(u, b, color, t, ti, &s, i);
+		/* Check if we should stop the search. */
+		if (uct_search_check_stop(u, b, color, t, ti, &s, i))
 			break;
-
-		/* Check against time settings. */
-		bool desired_done;
-		if (ti->dim == TD_WALLTIME) {
-			double elapsed = time_now() - ti->len.t.timer_start;
-			if (elapsed > s.stop.worst.time) break;
-			desired_done = elapsed > s.stop.desired.time;
-
-		} else { assert(ti->dim == TD_GAMES);
-			if (i > s.stop.worst.playouts) break;
-			desired_done = i > s.stop.desired.playouts;
-		}
-
-		/* We want to stop simulating, but are willing to keep trying
-		 * if we aren't completely sure about the winner yet. */
-		if (desired_done) {
-			if (u->policy->winner && u->policy->evaluate) {
-				struct uct_descent descent = { .node = ctx->t->root };
-				u->policy->winner(u->policy, ctx->t, &descent);
-				winner = descent.node;
-			}
-			if (best)
-				bestr = u->policy->choose(u->policy, best, b, stone_other(color), resign);
-			if (!uct_search_keep_looking(u, ctx->t, b, ti, &s.stop, best, best2, bestr, winner, i))
-				break;
-		}
-
-		/* TODO: Early break if best->variance goes under threshold and we already
-                 * have enough playouts (possibly thanks to book or to pondering)? */
 
 		/* If running as slave in the distributed engine,
 		 * let the search continue in background. */
