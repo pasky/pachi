@@ -399,7 +399,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
 	coord_t best_coord;
 	struct tree_node *best;
-	best = uct_search_best(u, b, color, pass_all_alive, played_games, base_playouts, &best_coord);
+	best = uct_search_result(u, b, color, pass_all_alive, played_games, base_playouts, &best_coord);
 
 	if (UDEBUGL(2)) {
 		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
@@ -408,6 +408,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	}
 
 	if (!best) {
+		/* Pass or resign. */
 		reset_state(u);
 		return coord_copy(best_coord);
 	}

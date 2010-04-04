@@ -434,9 +434,9 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 
 
 struct tree_node *
-uct_search_best(struct uct *u, struct board *b, enum stone color,
-		bool pass_all_alive, int played_games, int base_playouts,
-		coord_t *best_coord)
+uct_search_result(struct uct *u, struct board *b, enum stone color,
+		  bool pass_all_alive, int played_games, int base_playouts,
+		  coord_t *best_coord)
 {
 	/* Choose the best move from the tree. */
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);

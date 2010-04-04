@@ -229,7 +229,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 
 	bool keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, &s, played_games);
 	coord_t best_coord;
-	uct_search_best(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
+	uct_search_result(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
 
 	char *reply = report_stats(u, b, best_coord, keep_looking);
 	return reply;
