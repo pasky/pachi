@@ -682,24 +682,14 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	return false;
 }
 
-/* Run time-limited MCTS search. For a slave in the distributed
- * engine, the search is done in background and will be stopped at
- * the next uct_notify_play(); keep_looking is advice for the master. */
+/* Run time-limited MCTS search on foreground. */
 static int
-uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color,
-	   struct tree *t, bool *keep_looking)
+uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
 {
-	*keep_looking = false;
-
 	struct uct_search_state s;
-	if (!thread_manager_running) {
-		uct_search_start(u, b, color, t, ti, &s);
-		if (UDEBUGL(2) && s.base_playouts > 0)
-			fprintf(stderr, "<pre-simulated %d games>\n", s.base_playouts);
-	} else {
-		/* Keep the search running. */
-		assert(u->slave);
-	}
+	uct_search_start(u, b, color, t, ti, &s);
+	if (UDEBUGL(2) && s.base_playouts > 0)
+		fprintf(stderr, "<pre-simulated %d games>\n", s.base_playouts);
 	struct spawn_ctx *ctx = s.ctx;
 
 	/* The search tree is ctx->t. This is normally == t, but in case of
@@ -724,24 +714,11 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		/* Check if we should stop the search. */
 		if (uct_search_check_stop(u, b, color, t, ti, &s, i))
 			break;
-
-		/* If running as slave in the distributed engine,
-		 * let the search continue in background. */
-		if (u->slave) {
-			*keep_looking = true;
-			break;
-		}
 	}
 
-	int games;
-	if (!u->slave) {
-		ctx = uct_search_stop();
-		games = ctx->games;
-		if (UDEBUGL(2)) tree_dump(t, u->dumpthres);
-	} else {
-		/* We can only return an estimate here. */
-		games = uct_search_games(&s) - s.base_playouts;
-	}
+	ctx = uct_search_stop();
+	int games = ctx->games;
+	if (UDEBUGL(2)) tree_dump(t, u->dumpthres);
 	if (UDEBUGL(2))
 		fprintf(stderr, "(avg score %f/%d value %f/%d)\n",
 			u->dynkomi->score.value, u->dynkomi->score.playouts,
@@ -893,9 +870,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	uct_search_setup(u, b, color);
 
         /* Start the Monte Carlo Tree Search! */
-	bool keep_looking;
 	int base_playouts = u->t->root->u.playouts;
-	int played_games = uct_search(u, b, ti, color, u->t, &keep_looking);
+	int played_games = uct_search(u, b, ti, color, u->t);
 
 	coord_t best_coord;
 	struct tree_node *best;
@@ -936,8 +912,7 @@ uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		/* Don't count in games that already went into the book. */
 		ti->len.games += u->t->root->u.playouts;
 	}
-	bool keep_looking;
-	uct_search(u, b, ti, color, u->t, &keep_looking);
+	uct_search(u, b, ti, color, u->t);
 
 	assert(ti->dim == TD_GAMES);
 	tree_save(u->t, b, ti->len.games / 100);
