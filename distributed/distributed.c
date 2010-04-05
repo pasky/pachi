@@ -273,7 +273,13 @@ process_reply(int reply_id, char *reply, char *reply_buf,
 
 	for (int slot = 0; slot < MAX_CMDS_PER_MOVE; slot++) {
 		if (reply_id == id_history[reply_move][slot]) {
-			return cmd_history[reply_move][slot];
+			char *to_send = cmd_history[reply_move][slot];
+
+			/* Do not resend same cmd if done successfully. */
+			if (*reply != '=') return to_send;
+			to_send = strchr(to_send, '\n');
+			assert(to_send && to_send[1]);
+			return to_send+1;
 		}
 	}
 	return gtp_cmds;
