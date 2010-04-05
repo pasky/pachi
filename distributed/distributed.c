@@ -206,6 +206,38 @@ get_reply(FILE *f, struct in_addr client, char *reply)
 	return reply_id;
 }
 
+/* Send one gtp command and get a reply from the slave machine.
+ * Write the reply in buf which must have at least CMDS_SIZE bytes.
+ * Return the gtp command id, or -1 if error.
+ * slave_lock is held on both entry and exit of this function. */
+static int
+send_command(char *to_send, FILE *f, struct in_addr client, char *buf)
+{
+	assert(to_send && gtp_cmd);
+	strncpy(buf, to_send, CMDS_SIZE);
+	bool resend = to_send != gtp_cmd;
+
+	pthread_mutex_unlock(&slave_lock);
+
+	if (DEBUGL(1) && resend)
+		logline(&client, "? ",
+			to_send == gtp_cmds ? "resend all\n" : "partial resend\n");
+	fputs(buf, f);
+	fflush(f);
+	if (DEBUGL(2)) {
+		if (!DEBUGL(3)) {
+			char *s = strchr(buf, '\n');
+			if (s) s[1] = '\0';
+		}
+		logline(&client, ">>", buf);
+	}
+
+	int reply_id = get_reply(f, client, buf);
+
+	pthread_mutex_lock(&slave_lock);
+	return reply_id;
+}
+
 /* Main loop of a slave thread.
  * Send the current command to the slave machine and wait for a reply.
  * Resend command history if the slave machine is out of sync.
@@ -227,36 +259,13 @@ slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 
 		/* Command available, send it to slave machine.
 		 * If slave was out of sync, send the history. */
-		assert(to_send && gtp_cmd);
 		char buf[CMDS_SIZE];
-		strncpy(buf, to_send, CMDS_SIZE);
 		last_cmd_sent = cmd_count;
 
-		pthread_mutex_unlock(&slave_lock);
-
-		if (DEBUGL(1) && resend) {
-			if (to_send == gtp_cmds) {
-				logline(&client, "? ", "Slave out-of-sync, resending all history\n");
-			} else {
-				logline(&client, "? ", "Slave behind, partial resend\n");
-			}
-		}
-		fputs(buf, f);
-		fflush(f);
-		if (DEBUGL(2)) {
-			if (!DEBUGL(3)) {
-				char *s = strchr(buf, '\n');
-				if (s) s[1] = '\0';
-			}
-			logline(&client, ">>", buf);
-		}
-
-		/* Read the reply, which always ends with \n\n
+		/* Send the command and get the reply, which always ends with \n\n
 		 * The slave machine sends "=id reply" or "?id reply"
 		 * with id == cmd_id if it is in sync. */
-		int reply_id = get_reply(f, client, buf);
-
-		pthread_mutex_lock(&slave_lock);
+		int reply_id = send_command(to_send, f, client, buf);
 		if (reply_id == -1) return;
 
 		/* Make sure we are still in sync. cmd_count may have
