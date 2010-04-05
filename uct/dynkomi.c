@@ -152,7 +152,7 @@ struct dynkomi_adaptive {
 	int lead_moves;
 	/* Maximum komi to pretend the opponent to give. */
 	float max_losing_komi;
-	float (*indicator)(struct uct_dynkomi *d, struct board *b, struct tree *tree);
+	float (*indicator)(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color);
 
 	/* Value-based adaptation. */
 	float zone_red, zone_green;
@@ -210,7 +210,7 @@ adapter_linear(struct uct_dynkomi *d, struct board *b)
 }
 
 static float
-komi_by_score(struct uct_dynkomi *d, struct board *b, struct tree *tree)
+komi_by_score(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color)
 {
 	struct dynkomi_adaptive *a = d->data;
 	if (d->score.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
@@ -231,7 +231,7 @@ komi_by_score(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 }
 
 static float
-komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree)
+komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color)
 {
 	struct dynkomi_adaptive *a = d->data;
 	if (d->value.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
@@ -257,7 +257,10 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	 * to try to reduce extra komi we take.
 	 *
 	 * TODO: Make the latch expire after a while. */
-	float extra_komi = tree->extra_komi;
+	/* We use komi_by_color() first to normalize komi
+	 * additions/subtractions, then apply it again on
+	 * return value to restore original komi parity. */
+	float extra_komi = komi_by_color(tree->extra_komi, color);
 
 	if (value.value < a->zone_red) {
 		/* Red zone. Take extra komi. */
@@ -265,20 +268,22 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 			fprintf(stderr, "[red] %f, komi latch %f -> %f\n",
 				value.value, a->komi_latch, extra_komi);
 		if (extra_komi > 0) a->komi_latch = extra_komi;
-		extra_komi -= a->score_step; // XXX: we depend on being black
-		return extra_komi;
+		extra_komi -= a->score_step;
+		return komi_by_color(extra_komi, color);
 
 	} else if (value.value < a->zone_green) {
 		/* Yellow zone, do nothing. */
-		return extra_komi;
+		return komi_by_color(extra_komi, color);
 
 	} else {
 		/* Green zone. Give extra komi. */
-		extra_komi += a->score_step; // XXX: we depend on being black
+		extra_komi += a->score_step;
 		if (DEBUGL(3))
 			fprintf(stderr, "[green] %f, += %d | komi latch %f\n",
 				value.value, a->score_step, a->komi_latch);
-		return !a->use_komi_latch || extra_komi < a->komi_latch ? extra_komi : a->komi_latch - 1;
+		if (a->use_komi_latch && extra_komi >= a->komi_latch)
+			extra_komi = a->komi_latch - 1;
+		return komi_by_color(extra_komi, color);
 	}
 }
 
@@ -293,15 +298,15 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	if (b->moves <= a->lead_moves)
 		return board_effective_handicap(b, 7 /* XXX */);
 
-	/* Get lower bound on komi value so that we don't underperform
-	 * too much. XXX: We rely on the fact that we don't use dynkomi
-	 * as white for now. */
-	float min_komi = - a->max_losing_komi;
+	enum stone color = stone_other(tree->root_color);
+	/* Get lower bound on komi we take so that we don't underperform
+	 * too much. */
+	float min_komi = komi_by_color(- a->max_losing_komi, color);
 
-	float komi = a->indicator(d, b, tree);
+	float komi = a->indicator(d, b, tree, color);
 	if (DEBUGL(3))
 		fprintf(stderr, "dynkomi: %f -> %f\n", tree->extra_komi, komi);
-	return komi > min_komi ? komi : min_komi;
+	return komi_by_color(komi - min_komi, color) > 0 ? komi : min_komi;
 }
 
 static float

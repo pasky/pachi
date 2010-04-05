@@ -24,6 +24,10 @@ struct tree_node;
 struct uct;
 struct uct_dynkomi;
 
+/* Compute effective komi value for given color: Positive value
+ * means giving komi, negative value means taking komi. */
+#define komi_by_color(komi, color) ((color) == S_BLACK ? (komi) : -(komi))
+
 /* Determine base dynamic komi for this genmove run. The returned
  * value is stored in tree->extra_komi and by itself used just for
  * user information. */
