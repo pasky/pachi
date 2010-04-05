@@ -238,6 +238,47 @@ send_command(char *to_send, FILE *f, struct in_addr client, char *buf)
 	return reply_id;
 }
 
+/* Process the reply received from a slave machine.
+ * Copy it to reply_buf and return NULL if ok, or return
+ * the command to be sent again if the slave is out of sync.
+ * slave_lock is held on both entry and exit of this function. */
+static char *
+process_reply(int reply_id, char *reply, char *reply_buf,
+	      int *last_reply_id, int *reply_slot)
+{
+	/* Make sure we are still in sync. cmd_count may have
+	 * changed but the reply is valid as long as cmd_id didn't
+	 * change (this only occurs for consecutive genmoves). */
+	int cmd_id = atoi(gtp_cmd);
+	if (reply_id == cmd_id && *reply == '=') {
+		strncpy(reply_buf, reply, CMDS_SIZE);
+		if (reply_id != *last_reply_id)
+			*reply_slot = reply_count++;
+		gtp_replies[*reply_slot] = reply_buf;
+		*last_reply_id = reply_id;
+
+		pthread_cond_signal(&reply_cond);
+		return NULL;
+	}
+	/* Resend everything if slave got latest command,
+	 *  but doesn't have a correct board. */
+	if (reply_id == cmd_id) return gtp_cmds;
+
+	/* The slave is ouf-of-sync. Check whether the last command
+	 * it received belongs to the current game. If so resend
+	 * starting at the last move known by slave, otherwise
+	 * resend the whole history. */
+	int reply_move = move_number(reply_id);
+	if (reply_move > move_number(cmd_id)) return gtp_cmds;
+
+	for (int slot = 0; slot < MAX_CMDS_PER_MOVE; slot++) {
+		if (reply_id == id_history[reply_move][slot]) {
+			return cmd_history[reply_move][slot];
+		}
+	}
+	return gtp_cmds;
+}
+
 /* Main loop of a slave thread.
  * Send the current command to the slave machine and wait for a reply.
  * Resend command history if the slave machine is out of sync.
@@ -268,45 +309,17 @@ slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 		int reply_id = send_command(to_send, f, client, buf);
 		if (reply_id == -1) return;
 
-		/* Make sure we are still in sync. cmd_count may have
-		 * changed but the reply is valid as long as cmd_id didn't
-		 * change (this only occurs for consecutive genmoves). */
-		int cmd_id = atoi(gtp_cmd);
-		if (reply_id == cmd_id && *buf == '=') {
-			resend = false;
-			strncpy(reply_buf, buf, CMDS_SIZE);
-			if (reply_id != last_reply_id)
-				reply_slot = reply_count++;
-			gtp_replies[reply_slot] = reply_buf;
-			last_reply_id = reply_id;
-
-			pthread_cond_signal(&reply_cond);
-
-			/* Force waiting for a new command. The next genmoves
-			 * stats we will send must include those just received
-			 * (this assumed by the slave). */
+		to_send = process_reply(reply_id, buf, reply_buf,
+					&last_reply_id, &reply_slot);
+		if (!to_send) {
+			/* Good reply. Force waiting for a new command.
+			 * The next genmoves stats we send must include those
+			 * just received (this is assumed by the slave). */
 			last_cmd_sent = cmd_count;
+			resend = false;
 			continue;
 		}
 		resend = true;
-		to_send = gtp_cmds;
-		/* Resend everything if slave got latest command,
-		 *  but doesn't have a correct board. */
-		if (reply_id == cmd_id) continue;
-
-		/* The slave is ouf-of-sync. Check whether the last command
-		 * it received belongs to the current game. If so resend
-		 * starting at the last move known by slave, otherwise
-		 * resend the whole history. */
-		int reply_move = move_number(reply_id);
-		if (reply_move > move_number(cmd_id)) continue;
-
-		for (int slot = 0; slot < MAX_CMDS_PER_MOVE; slot++) {
-			if (reply_id == id_history[reply_move][slot]) {
-				to_send = cmd_history[reply_move][slot];
-				break;
-			}
-		}
 	}
 }
 
