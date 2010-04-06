@@ -115,10 +115,9 @@ static char *gtp_cmd = NULL;
 /* Slaves send gtp_cmd when cmd_count changes. */
 static int cmd_count = 0;
 
-/* Remember at most 12 gtp ids per move: play pass,
- * 10 genmoves (1s), play pass.
- * For move 0 we always resend the whole history. */
-#define MAX_CMDS_PER_MOVE 12
+/* Remember at most 10 gtp ids per move: kgs-rules, boardsize, clear_board,
+ * time_settings, komi, handicap, genmoves, play pass, play pass, final_status_list */
+#define MAX_CMDS_PER_MOVE 10
 
 /* History of gtp commands sent for current game, indexed by move. */
 static int id_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
@@ -271,18 +270,34 @@ process_reply(int reply_id, char *reply, char *reply_buf,
 	int reply_move = move_number(reply_id);
 	if (reply_move > move_number(cmd_id)) return gtp_cmds;
 
-	for (int slot = 0; slot < MAX_CMDS_PER_MOVE; slot++) {
-		if (reply_id == id_history[reply_move][slot]) {
-			char *to_send = cmd_history[reply_move][slot];
-
-			/* Do not resend same cmd if done successfully. */
-			if (*reply != '=') return to_send;
-			to_send = strchr(to_send, '\n');
-			assert(to_send && to_send[1]);
-			return to_send+1;
-		}
+	int slot;
+	for (slot = 0; slot < MAX_CMDS_PER_MOVE; slot++) {
+		if (reply_id == id_history[reply_move][slot]) break;
 	}
-	return gtp_cmds;
+	if (slot == MAX_CMDS_PER_MOVE) return gtp_cmds;
+
+	char *to_send = cmd_history[reply_move][slot];
+
+	/* Do not resend the same command if the slave did it
+	 * successfully and this was the last command at the
+	 * same move number. This avoids two "play" commands
+	 * in a row which forces the slave to clear the tree. */
+	if (*reply != '=') return to_send;
+	char *next = strchr(to_send, '\n');
+	assert(next);
+	if (!next[1]) return to_send;
+
+	/* If play has overwritten genmoves, send play. */
+	if (cmd_history[reply_move][slot+1] == to_send) return to_send;
+
+	/* At this point we know that that there was no overwrite,
+	 * and that the slave got the latest command at this move number.
+	 * This command cannot be a genmoves so it has a single line.
+	 * It is safe to send the next command. */
+	next++;
+	assert(cmd_history[reply_move][slot+1] == next
+	       || cmd_history[reply_move+1][slot+1] == next);
+	return next;
 }
 
 /* Main loop of a slave thread.
@@ -401,10 +416,11 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 
 	/* Remember history for out-of-sync slaves. */
 	static int slot = 0;
-	slot = (slot + 1) % MAX_CMDS_PER_MOVE;
-	id_history[moves][slot] = gtp_id;
-	cmd_history[moves][slot] = gtp_cmd;
-
+	if (new_id) {
+		slot = (slot + 1) % MAX_CMDS_PER_MOVE;
+		id_history[moves][slot] = gtp_id;
+		cmd_history[moves][slot] = gtp_cmd;
+	}
 	// Notify the slave threads about the new command.
 	pthread_cond_broadcast(&cmd_cond);
 }

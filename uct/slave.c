@@ -34,6 +34,14 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 	    && !reply_disabled(id) && !is_reset(cmd)) {
 		if (UDEBUGL(0))
 			fprintf(stderr, "Out of sync, id %d, move %d\n", id, b->moves);
+
+		/* Skip rest of multi-line command (genmoves only) */
+		if (!strcasecmp(cmd, "pachi-genmoves")
+		    || !strcasecmp(cmd, "pachi-genmoves_cleanup")) {
+			char line[128];
+			while (fgets(line, sizeof(line), stdin) && *line != '\n') ;
+		}
+
 		static char buf[128];
 		snprintf(buf, sizeof(buf), "out of sync, move %d expected", b->moves);
 		*reply = buf;
