@@ -240,6 +240,9 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	struct move_stats value = d->value;
 	/* Almost-reset tree->value to gather fresh stats. */
 	d->value.playouts = 1;
+	/* Correct color POV. */
+	if (color == S_WHITE)
+		value.value = 1 - value.value;
 
 	/* We have three "value zones":
 	 * red zone | yellow zone | green zone
