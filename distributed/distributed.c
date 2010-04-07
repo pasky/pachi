@@ -436,6 +436,7 @@ new_cmd(struct board *b, char *cmd, char *args)
 	// Clear the history when a new game starts:
 	if (!gtp_cmd || is_gamestart(cmd)) {
 		gtp_cmd = gtp_cmds;
+		memset(cmd_history, 0, sizeof(cmd_history));
 	} else {
 		/* Preserve command history for new slaves.
 		 * To indicate that the slave should only reply to
