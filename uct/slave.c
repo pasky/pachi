@@ -26,7 +26,10 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 	struct uct *u = e->data;
 
 	static bool board_resized = false;
-	board_resized |= is_gamestart(cmd);
+	if (is_gamestart(cmd)) {
+		board_resized = true;
+		uct_pondering_stop(u);
+	}
 
 	/* Force resending the whole command history if we are out of sync
 	 * but do it only once, not if already getting the history. */

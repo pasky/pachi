@@ -106,6 +106,7 @@ bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pas
 
 void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
 void uct_genmove_setup(struct uct *u, struct board *b, enum stone color);
+void uct_pondering_stop(struct uct *u);
 
 
 /* This is the state used for descending the tree; we use this wrapper
