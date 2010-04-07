@@ -123,6 +123,8 @@ static int cmd_count = 0;
 static int id_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
 static char *cmd_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
 
+#define next_slot(slot) (((slot) + 1) % MAX_CMDS_PER_MOVE)
+
 /* Number of active slave machines working for this master. */
 static int active_slaves = 0;
 
@@ -288,15 +290,16 @@ process_reply(int reply_id, char *reply, char *reply_buf,
 	if (!next[1]) return to_send;
 
 	/* If play has overwritten genmoves, send play. */
-	if (cmd_history[reply_move][slot+1] == to_send) return to_send;
+	if (cmd_history[reply_move][next_slot(slot)] == to_send)
+		return to_send;
 
 	/* At this point we know that that there was no overwrite,
 	 * and that the slave got the latest command at this move number.
 	 * This command cannot be a genmoves so it has a single line.
 	 * It is safe to send the next command. */
 	next++;
-	assert(cmd_history[reply_move][slot+1] == next
-	       || cmd_history[reply_move+1][slot+1] == next);
+	assert(cmd_history[reply_move][next_slot(slot)] == next
+	       || cmd_history[reply_move+1][next_slot(slot)] == next);
 	return next;
 }
 
@@ -417,7 +420,7 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 	/* Remember history for out-of-sync slaves. */
 	static int slot = 0;
 	if (new_id) {
-		slot = (slot + 1) % MAX_CMDS_PER_MOVE;
+		slot = next_slot(slot);
 		id_history[moves][slot] = gtp_id;
 		cmd_history[moves][slot] = gtp_cmd;
 	}
