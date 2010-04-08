@@ -26,7 +26,10 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 	struct uct *u = e->data;
 
 	static bool board_resized = false;
-	board_resized |= is_gamestart(cmd);
+	if (is_gamestart(cmd)) {
+		board_resized = true;
+		uct_pondering_stop(u);
+	}
 
 	/* Force resending the whole command history if we are out of sync
 	 * but do it only once, not if already getting the history. */
@@ -34,6 +37,14 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 	    && !reply_disabled(id) && !is_reset(cmd)) {
 		if (UDEBUGL(0))
 			fprintf(stderr, "Out of sync, id %d, move %d\n", id, b->moves);
+
+		/* Skip rest of multi-line command (genmoves only) */
+		if (!strcasecmp(cmd, "pachi-genmoves")
+		    || !strcasecmp(cmd, "pachi-genmoves_cleanup")) {
+			char line[128];
+			while (fgets(line, sizeof(line), stdin) && *line != '\n') ;
+		}
+
 		static char buf[128];
 		snprintf(buf, sizeof(buf), "out of sync, move %d expected", b->moves);
 		*reply = buf;
@@ -226,7 +237,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 
 	int played_games = uct_search_games(&s);
 	uct_search_progress(u, b, color, u->t, ti, &s, played_games);
-	u->played_own = played_games;
+	u->played_own = played_games - s.base_playouts;
 
 	bool keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, &s, played_games);
 	coord_t best_coord;
