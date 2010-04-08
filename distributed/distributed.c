@@ -120,10 +120,10 @@ static int cmd_count = 0;
 #define MAX_CMDS_PER_MOVE 10
 
 /* History of gtp commands sent for current game, indexed by move. */
-static int id_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
-static char *cmd_history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
-
-#define next_slot(slot) (((slot) + 1) % MAX_CMDS_PER_MOVE)
+struct cmd_history {
+	int gtp_id;
+	char *next_cmd;
+} history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
 
 /* Number of active slave machines working for this master. */
 static int active_slaves = 0;
@@ -134,7 +134,7 @@ static int reply_count = 0;
 /* All replies to latest gtp command are in gtp_replies[0..reply_count-1]. */
 static char **gtp_replies;
 
-/* Mutex protecting gtp_cmds, gtp_cmd, id_history, cmd_history,
+/* Mutex protecting gtp_cmds, gtp_cmd, history,
  * cmd_count, active_slaves, reply_count & gtp_replies */
 static pthread_mutex_t slave_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -239,68 +239,59 @@ send_command(char *to_send, FILE *f, struct in_addr client, char *buf)
 	return reply_id;
 }
 
-/* Process the reply received from a slave machine.
- * Copy it to reply_buf and return NULL if ok, or return
- * the command to be sent again if the slave is out of sync.
+/* Return the command sent after that with the given gtp id,
+ * or gtp_cmds if the id wasn't used in this game. If a play command
+ * has overwritten a genmoves command, return the play command.
  * slave_lock is held on both entry and exit of this function. */
 static char *
+next_command(int cmd_id)
+{
+	if (cmd_id == -1) return gtp_cmds;
+
+	int last_id = atoi(gtp_cmd);
+	int reply_move = move_number(cmd_id);
+	if (reply_move > move_number(last_id)) return gtp_cmds;
+
+	int slot;
+	for (slot = 0; slot < MAX_CMDS_PER_MOVE; slot++) {
+		if (cmd_id == history[reply_move][slot].gtp_id) break;
+	}
+	if (slot == MAX_CMDS_PER_MOVE) return gtp_cmds;
+
+	char *next = history[reply_move][slot].next_cmd;
+	assert(next);
+	return next;
+}
+
+/* Process the reply received from a slave machine.
+ * Copy it to reply_buf and return false if ok, or return
+ * true if the slave is out of sync.
+ * slave_lock is held on both entry and exit of this function. */
+static bool
 process_reply(int reply_id, char *reply, char *reply_buf,
 	      int *last_reply_id, int *reply_slot)
 {
+	bool resend = true;
+	/* For resend everything if slave returned an error. */
+	if (*reply != '=') {
+		*last_reply_id = -1;
+		return resend;
+	}
 	/* Make sure we are still in sync. cmd_count may have
 	 * changed but the reply is valid as long as cmd_id didn't
 	 * change (this only occurs for consecutive genmoves). */
 	int cmd_id = atoi(gtp_cmd);
-	if (reply_id == cmd_id && *reply == '=') {
+	if (reply_id == cmd_id) {
 		strncpy(reply_buf, reply, CMDS_SIZE);
 		if (reply_id != *last_reply_id)
 			*reply_slot = reply_count++;
 		gtp_replies[*reply_slot] = reply_buf;
-		*last_reply_id = reply_id;
 
 		pthread_cond_signal(&reply_cond);
-		return NULL;
+		resend = false;
 	}
-	/* Resend everything if slave got latest command,
-	 *  but doesn't have a correct board. */
-	if (reply_id == cmd_id) return gtp_cmds;
-
-	/* The slave is ouf-of-sync. Check whether the last command
-	 * it received belongs to the current game. If so resend
-	 * starting at the last move known by slave, otherwise
-	 * resend the whole history. */
-	int reply_move = move_number(reply_id);
-	if (reply_move > move_number(cmd_id)) return gtp_cmds;
-
-	int slot;
-	for (slot = 0; slot < MAX_CMDS_PER_MOVE; slot++) {
-		if (reply_id == id_history[reply_move][slot]) break;
-	}
-	if (slot == MAX_CMDS_PER_MOVE) return gtp_cmds;
-
-	char *to_send = cmd_history[reply_move][slot];
-
-	/* Do not resend the same command if the slave did it
-	 * successfully and this was the last command at the
-	 * same move number. This avoids two "play" commands
-	 * in a row which forces the slave to clear the tree. */
-	if (*reply != '=') return to_send;
-	char *next = strchr(to_send, '\n');
-	assert(next);
-	if (!next[1]) return to_send;
-
-	/* If play has overwritten genmoves, send play. */
-	if (cmd_history[reply_move][next_slot(slot)] == to_send)
-		return to_send;
-
-	/* At this point we know that that there was no overwrite,
-	 * and that the slave got the latest command at this move number.
-	 * This command cannot be a genmoves so it has a single line.
-	 * It is safe to send the next command. */
-	next++;
-	assert(cmd_history[reply_move][next_slot(slot)] == next
-	       || cmd_history[reply_move+1][next_slot(slot)] == next);
-	return next;
+	*last_reply_id = reply_id;
+	return resend;
 }
 
 /* Main loop of a slave thread.
@@ -311,14 +302,18 @@ process_reply(int reply_id, char *reply, char *reply_buf,
 static void
 slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 {
-	char *to_send = gtp_cmd;
+	char *to_send;
 	int last_cmd_sent = 0;
 	int last_reply_id = -1;
 	int reply_slot = -1;
 	for (;;) {
-		while (last_cmd_sent == cmd_count && !resend) {
-			// Wait for a new gtp command.
-			pthread_cond_wait(&cmd_cond, &slave_lock);
+		if (resend) {
+			/* Resend complete or partial history */
+			to_send = next_command(last_reply_id);
+		} else {
+			/* Wait for a new command. */
+			while (last_cmd_sent == cmd_count)
+				pthread_cond_wait(&cmd_cond, &slave_lock);
 			to_send = gtp_cmd;
 		}
 
@@ -333,17 +328,13 @@ slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 		int reply_id = send_command(to_send, f, client, buf);
 		if (reply_id == -1) return;
 
-		to_send = process_reply(reply_id, buf, reply_buf,
-					&last_reply_id, &reply_slot);
-		if (!to_send) {
+		resend = process_reply(reply_id, buf, reply_buf,
+				       &last_reply_id, &reply_slot);
+		if (!resend)
 			/* Good reply. Force waiting for a new command.
 			 * The next genmoves stats we send must include those
 			 * just received (this is assumed by the slave). */
 			last_cmd_sent = cmd_count;
-			resend = false;
-			continue;
-		}
-		resend = true;
 	}
 }
 
@@ -419,10 +410,13 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 
 	/* Remember history for out-of-sync slaves. */
 	static int slot = 0;
+	static struct cmd_history *last = NULL;
 	if (new_id) {
-		slot = next_slot(slot);
-		id_history[moves][slot] = gtp_id;
-		cmd_history[moves][slot] = gtp_cmd;
+		if (last) last->next_cmd = gtp_cmd;
+		slot = (slot + 1) % MAX_CMDS_PER_MOVE;
+		last = &history[moves][slot];
+		last->gtp_id = gtp_id;
+		last->next_cmd = NULL;
 	}
 	// Notify the slave threads about the new command.
 	pthread_cond_broadcast(&cmd_cond);
@@ -439,7 +433,7 @@ new_cmd(struct board *b, char *cmd, char *args)
 	// Clear the history when a new game starts:
 	if (!gtp_cmd || is_gamestart(cmd)) {
 		gtp_cmd = gtp_cmds;
-		memset(cmd_history, 0, sizeof(cmd_history));
+		memset(history, 0, sizeof(history));
 	} else {
 		/* Preserve command history for new slaves.
 		 * To indicate that the slave should only reply to
