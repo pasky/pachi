@@ -157,8 +157,8 @@ struct dynkomi_adaptive {
 	/* Value-based adaptation. */
 	float zone_red, zone_green;
 	int score_step;
-	bool use_komi_latch;
-	float komi_latch; // runtime, not configuration
+	bool use_komi_ratchet;
+	float komi_ratchet; // runtime, not configuration
 
 	/* Score-based adaptation. */
 	float (*adapter)(struct uct_dynkomi *d, struct board *b);
@@ -253,13 +253,13 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	 *
 	 * Also, at some point komi will be tuned in such way
 	 * that it will be in green zone but increasing it will
-	 * be unfeasible. Thus, we have a _latch_ - we will
+	 * be unfeasible. Thus, we have a _ratchet_ - we will
 	 * remember the last komi that has put us into the
 	 * red zone, and not use it or go over it. We use the
-	 * latch only when giving extra komi, we always want
+	 * ratchet only when giving extra komi, we always want
 	 * to try to reduce extra komi we take.
 	 *
-	 * TODO: Make the latch expire after a while. */
+	 * TODO: Make the ratchet expire after a while. */
 	/* We use komi_by_color() first to normalize komi
 	 * additions/subtractions, then apply it again on
 	 * return value to restore original komi parity. */
@@ -268,9 +268,9 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	if (value.value < a->zone_red) {
 		/* Red zone. Take extra komi. */
 		if (DEBUGL(3))
-			fprintf(stderr, "[red] %f, komi latch %f -> %f\n",
-				value.value, a->komi_latch, extra_komi);
-		if (extra_komi > 0) a->komi_latch = extra_komi;
+			fprintf(stderr, "[red] %f, komi ratchet %f -> %f\n",
+				value.value, a->komi_ratchet, extra_komi);
+		if (extra_komi > 0) a->komi_ratchet = extra_komi;
 		extra_komi -= a->score_step;
 		return komi_by_color(extra_komi, color);
 
@@ -282,10 +282,10 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 		/* Green zone. Give extra komi. */
 		extra_komi += a->score_step;
 		if (DEBUGL(3))
-			fprintf(stderr, "[green] %f, += %d | komi latch %f\n",
-				value.value, a->score_step, a->komi_latch);
-		if (a->use_komi_latch && extra_komi >= a->komi_latch)
-			extra_komi = a->komi_latch - 1;
+			fprintf(stderr, "[green] %f, += %d | komi ratchet %f\n",
+				value.value, a->score_step, a->komi_ratchet);
+		if (a->use_komi_ratchet && extra_komi >= a->komi_ratchet)
+			extra_komi = a->komi_ratchet - 1;
 		return komi_by_color(extra_komi, color);
 	}
 }
@@ -346,8 +346,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->zone_red = 0.45;
 	a->zone_green = 0.6;
 	a->score_step = 2;
-	a->use_komi_latch = true;
-	a->komi_latch = 1000;
+	a->use_komi_ratchet = true;
+	a->komi_ratchet = 1000;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -387,8 +387,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->zone_green = atof(optval);
 			} else if (!strcasecmp(optname, "score_step") && optval) {
 				a->score_step = atoi(optval);
-			} else if (!strcasecmp(optname, "use_komi_latch")) {
-				a->use_komi_latch = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "use_komi_ratchet")) {
+				a->use_komi_ratchet = !optval || atoi(optval);
 
 				/* score indicator settings */
 			} else if (!strcasecmp(optname, "adapter") && optval) {
