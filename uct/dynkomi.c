@@ -157,6 +157,7 @@ struct dynkomi_adaptive {
 	/* Value-based adaptation. */
 	float zone_red, zone_green;
 	int score_step;
+	float score_step_byavg; // use portion of average score as increment
 	bool use_komi_ratchet;
 	int komi_ratchet_maxage;
 	// runtime, not configuration:
@@ -267,14 +268,26 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	 * additions/subtractions, then apply it again on
 	 * return value to restore original komi parity. */
 	float extra_komi = komi_by_color(tree->extra_komi, color);
+	int score_step = a->score_step;
+
+	if (a->score_step_byavg != 0) {
+		struct move_stats score = d->score;
+		/* Almost-reset tree->score to gather fresh stats. */
+		d->score.playouts = 1;
+		/* Correct color POV. */
+		if (color == S_WHITE)
+			score.value = - score.value;
+		if (score.value >= 0)
+			score_step = round(score.value * a->score_step_byavg);
+	}
 
 	if (value.value < a->zone_red) {
 		/* Red zone. Take extra komi. */
 		if (DEBUGL(3))
-			fprintf(stderr, "[red] %f, komi ratchet %f -> %f\n",
-				value.value, a->komi_ratchet, extra_komi);
+			fprintf(stderr, "[red] %f, -= %d | komi ratchet %f -> %f\n",
+				value.value, score_step, a->komi_ratchet, extra_komi);
 		if (extra_komi > 0) a->komi_ratchet = extra_komi;
-		extra_komi -= a->score_step;
+		extra_komi -= score_step;
 		return komi_by_color(extra_komi, color);
 
 	} else if (value.value < a->zone_green) {
@@ -283,10 +296,10 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 
 	} else {
 		/* Green zone. Give extra komi. */
-		extra_komi += a->score_step;
+		extra_komi += score_step;
 		if (DEBUGL(3))
 			fprintf(stderr, "[green] %f, += %d | komi ratchet %f age %d\n",
-				value.value, a->score_step, a->komi_ratchet, a->komi_ratchet_age);
+				value.value, score_step, a->komi_ratchet, a->komi_ratchet_age);
 		if (a->komi_ratchet_maxage > 0 && a->komi_ratchet_age > a->komi_ratchet_maxage) {
 			a->komi_ratchet = 1000;
 			a->komi_ratchet_age = 0;
@@ -397,6 +410,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->zone_green = atof(optval);
 			} else if (!strcasecmp(optname, "score_step") && optval) {
 				a->score_step = atoi(optval);
+			} else if (!strcasecmp(optname, "score_step_byavg") && optval) {
+				a->score_step_byavg = atof(optval);
 			} else if (!strcasecmp(optname, "use_komi_ratchet")) {
 				a->use_komi_ratchet = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "komi_ratchet_age") && optval) {
