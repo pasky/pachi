@@ -38,7 +38,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 
 	/* Dynamic komi */
 	if (t->use_extra_komi)
-		fprintf(stderr, "komi %f ", t->extra_komi);
+		fprintf(stderr, "komi %.1f ", t->extra_komi);
 
 	/* Max depth */
 	fprintf(stderr, "deepest % 2d ", t->max_depth - t->root->depth);
