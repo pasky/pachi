@@ -61,7 +61,7 @@ reset_state(struct uct *u)
 static void
 setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
-	if (u->t->use_extra_komi && u->dynkomi->permove)
+	if (u->t->use_extra_komi && !u->pondering && u->dynkomi->permove)
 		u->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, u->t);
 }
 

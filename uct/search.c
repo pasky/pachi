@@ -238,7 +238,7 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 
 	/* Adjust dynkomi? */
 	if (ctx->t->use_extra_komi && u->dynkomi->permove
-	    && u->dynkomi_interval
+	    && !u->pondering && u->dynkomi_interval
 	    && i > s->last_dynkomi + u->dynkomi_interval) {
 		s->last_dynkomi += u->dynkomi_interval;
 		float old_dynkomi = ctx->t->extra_komi;
