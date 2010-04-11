@@ -39,6 +39,9 @@ static const struct time_info default_ti = {
  * still change. */
 #define PLAYOUT_DELTA_SAFEMARGIN 1000
 
+/* Minimal number of simulations to consider early break. */
+#define PLAYOUT_EARLY_BREAK_MIN 2500
+
 
 /* Pachi threading structure:
  *
@@ -270,27 +273,13 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 		struct tree_node *best, struct tree_node *best2,
 		int played)
 {
-	/* Always use at least half the desired time. It is silly
-	 * to lose a won game because we played a bad move in 0.1s. */
-	double elapsed = 0;
-	if (ti->dim == TD_WALLTIME) {
-		elapsed = time_now() - ti->len.t.timer_start;
-		if (elapsed < 0.5 * stop->desired.time) return false;
-	}
-
-	/* Early break in won situation. */
-	if (best->u.playouts >= 2000 && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold)
-		return true;
-	/* Earlier break in super-won situation. */
-	if (best->u.playouts >= 500 && tree_node_get_value(t, 1, best->u.value) >= 0.95)
-		return true;
-
 	/* Break early if we estimate the second-best move cannot
 	 * catch up in assigned time anymore. We use all our time
 	 * if we are in byoyomi with single stone remaining in our
 	 * period, however - it's better to pre-ponder. */
 	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
 	if (best2 && ti->dim == TD_WALLTIME && !time_indulgent) {
+		double elapsed = time_now() - ti->len.t.timer_start;
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
@@ -299,6 +288,21 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 				fprintf(stderr, "Early stop, result cannot change: "
 					"best %d, best2 %d, estimated %f simulations to go\n",
 					best->u.playouts, best2->u.playouts, estplayouts);
+			return true;
+		}
+	}
+
+	/* Early break in won situation. */
+	if (best->u.playouts >= PLAYOUT_EARLY_BREAK_MIN
+	    && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold) {
+		/* Still use at least half the desired time (top-bounded by
+		 * a reasonably confident number of simulations). It is silly
+		 * to lose a won game because we played a bad move in 0.1s. */
+		double elapsed = 0;
+		if (ti->dim == TD_WALLTIME) {
+			elapsed = time_now() - ti->len.t.timer_start;
+			return elapsed >= 0.5 * stop->desired.time;
+		} else {
 			return true;
 		}
 	}
