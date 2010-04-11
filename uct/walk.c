@@ -372,7 +372,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
 		    || b2.superko_violation) {
-			if (UDEBUGL(3)) {
+			if (UDEBUGL(4)) {
 				for (struct tree_node *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%"PRIhash"> ", coord2sstr(ni->coord, t->board), ni->hash);
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
