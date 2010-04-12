@@ -36,6 +36,10 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	fprintf(stderr, "[%d] ", playouts);
 	fprintf(stderr, "best %f ", tree_node_get_value(t, 1, best->u.value));
 
+	/* Dynamic komi */
+	if (t->use_extra_komi)
+		fprintf(stderr, "komi %.1f ", t->extra_komi);
+
 	/* Max depth */
 	fprintf(stderr, "deepest % 2d ", t->max_depth - t->root->depth);
 
@@ -368,7 +372,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
 		    || b2.superko_violation) {
-			if (UDEBUGL(3)) {
+			if (UDEBUGL(4)) {
 				for (struct tree_node *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%"PRIhash"> ", coord2sstr(ni->coord, t->board), ni->hash);
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",

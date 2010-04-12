@@ -30,7 +30,6 @@
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
-static void uct_pondering_stop(struct uct *u);
 static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color);
 
 /* Maximal simulation length. */
@@ -62,7 +61,7 @@ reset_state(struct uct *u)
 static void
 setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
-	if (u->t->use_extra_komi && u->dynkomi->permove)
+	if (u->t->use_extra_komi && !u->pondering && u->dynkomi->permove)
 		u->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, u->t);
 }
 
@@ -327,7 +326,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 
 /* uct_search_stop() frontend for the pondering (non-genmove) mode, and
  * to stop the background search for a slave in the distributed engine. */
-static void
+void
 uct_pondering_stop(struct uct *u)
 {
 	if (!thread_manager_running)
