@@ -336,7 +336,7 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 			d->score.value, d->score.playouts);
 
 	if (b->moves <= a->lead_moves)
-		return board_effective_handicap(b, 7 /* XXX */);
+		return bounded_komi(color, board_effective_handicap(b, 7 /* XXX */), a->max_losing_komi);
 
 	float komi = a->indicator(d, b, tree, color);
 	if (DEBUGL(3))
