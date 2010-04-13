@@ -502,7 +502,11 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 	bool can_connect = false, can_pull_out = false;
 	/* We have miai if we can either connect on both libs,
 	 * or connect on one lib and escape on another. (Just
-	 * having two escape routes can be risky.) */
+	 * having two escape routes can be risky.) We must make
+	 * sure that we don't consider following as miai:
+	 * X X X O
+	 * X . . O
+	 * O O X O - left dot would be pull-out, right dot connect */
 	foreach_neighbor(b, board_group_info(b, group).lib[0], {
 		enum stone cc = board_at(b, c);
 		if (cc == S_NONE && cc != board_group_info(b, group).lib[1]) {
@@ -517,7 +521,9 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 	});
 	foreach_neighbor(b, board_group_info(b, group).lib[1], {
 		enum stone cc = board_at(b, c);
-		if (cc == S_NONE && cc != board_group_info(b, group).lib[0] && can_connect) {
+		if (c == board_group_info(b, group).lib[0])
+			continue;
+		if (cc == S_NONE && can_connect) {
 			return true;
 		} else if (cc != color) {
 			continue;
