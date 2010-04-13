@@ -237,7 +237,7 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 next_group:	
 		/* Unless we are dealing with snapback setup, we don't need to look
 		 * further. */
-		if (!s->groupcts[color])
+		if (s->groupcts[color])
 			return -1;
 	}
 
