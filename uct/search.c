@@ -194,7 +194,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
 	s->print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
-	s->print_fullmem = false;
+	s->fullmem = false;
 
 	if (ti) {
 		if (ti->period == TT_NULL) *ti = default_ti;
@@ -257,11 +257,11 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 		uct_progress_status(u, ctx->t, color, s->last_print);
 	}
 
-	if (!s->print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
+	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
 		if (UDEBUGL(2))
 			fprintf(stderr, "memory limit hit (%lu > %lu)\n",
 				ctx->t->nodes_size, u->max_tree_size);
-		s->print_fullmem = true;
+		s->fullmem = true;
 	}
 }
 

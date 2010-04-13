@@ -57,7 +57,7 @@ struct uct_search_state {
 	/* Number of simulations to wait before next print. */
 	int print_interval;
 	/* Printed notification about full memory? */
-	bool print_fullmem;
+	bool fullmem;
 
 	struct time_stop stop;
 	struct uct_thread_ctx *ctx;
