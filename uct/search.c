@@ -194,7 +194,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
 	s->print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
-	s->print_fullmem = false;
+	s->fullmem = false;
 
 	if (ti) {
 		if (ti->period == TT_NULL) *ti = default_ti;
@@ -257,11 +257,11 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 		uct_progress_status(u, ctx->t, color, s->last_print);
 	}
 
-	if (!s->print_fullmem && ctx->t->nodes_size > u->max_tree_size) {
+	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
 		if (UDEBUGL(2))
 			fprintf(stderr, "memory limit hit (%lu > %lu)\n",
 				ctx->t->nodes_size, u->max_tree_size);
-		s->print_fullmem = true;
+		s->fullmem = true;
 	}
 }
 
@@ -271,8 +271,18 @@ static bool
 uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 		struct time_info *ti, struct time_stop *stop,
 		struct tree_node *best, struct tree_node *best2,
-		int played)
+		int played, bool fullmem)
 {
+	/* If the memory is full, stop immediately. Since the tree
+	 * cannot grow anymore, some non-well-expanded nodes will
+	 * quickly take over with extremely high ratio since the
+	 * counters are not properly simulated (just as if we use
+	 * non-UCT MonteCarlo). */
+	/* (XXX: A proper solution would be to prune the tree
+	 * on the spot.) */
+	if (fullmem)
+		return true;
+
 	/* Break early if we estimate the second-best move cannot
 	 * catch up in assigned time anymore. We use all our time
 	 * if we are in byoyomi with single stone remaining in our
@@ -401,7 +411,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 
 	/* Possibly stop search early if it's no use to try on. */
 	int played = u->played_all + i - s->base_playouts;
-	if (best && uct_search_stop_early(u, ctx->t, b, ti, &s->stop, best, best2, played))
+	if (best && uct_search_stop_early(u, ctx->t, b, ti, &s->stop, best, best2, played, s->fullmem))
 		return true;
 
 	/* Check against time settings. */

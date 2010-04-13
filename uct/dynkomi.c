@@ -313,25 +313,35 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 }
 
 static float
+bounded_komi(enum stone color, float komi, float max_losing_komi)
+{
+	/* Get lower bound on komi we take so that we don't underperform
+	 * too much. */
+	float min_komi = komi_by_color(- max_losing_komi, color);
+
+	if (komi_by_color(komi - min_komi, color) > 0)
+		return komi;
+	else
+		return min_komi;
+}
+
+static float
 adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_adaptive *a = d->data;
+	enum stone color = stone_other(tree->root_color);
 	if (DEBUGL(3))
 		fprintf(stderr, "m %d/%d ekomi %f permove %f/%d\n",
 			b->moves, a->lead_moves, tree->extra_komi,
 			d->score.value, d->score.playouts);
-	if (b->moves <= a->lead_moves)
-		return board_effective_handicap(b, 7 /* XXX */);
 
-	enum stone color = stone_other(tree->root_color);
-	/* Get lower bound on komi we take so that we don't underperform
-	 * too much. */
-	float min_komi = komi_by_color(- a->max_losing_komi, color);
+	if (b->moves <= a->lead_moves)
+		return bounded_komi(color, board_effective_handicap(b, 7 /* XXX */), a->max_losing_komi);
 
 	float komi = a->indicator(d, b, tree, color);
 	if (DEBUGL(3))
 		fprintf(stderr, "dynkomi: %f -> %f\n", tree->extra_komi, komi);
-	return komi_by_color(komi - min_komi, color) > 0 ? komi : min_komi;
+	return bounded_komi(color, komi, a->max_losing_komi);
 }
 
 static float
