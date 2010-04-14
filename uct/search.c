@@ -480,7 +480,9 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 				fprintf(stderr, "<Will rather pass, looks safe enough; score %f>\n",
 					board_official_score(b, NULL) / 2);
 			*best_coord = pass;
-			return NULL;
+			best = u->t->root->children; // pass is the first child
+			assert(is_pass(best->coord));
+			return best;
 		}
 	}
 	
