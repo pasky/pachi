@@ -268,7 +268,8 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	 * additions/subtractions, then apply it again on
 	 * return value to restore original komi parity. */
 	float extra_komi = komi_by_color(tree->extra_komi, color);
-	int score_step = a->score_step;
+	int score_step_red = -a->score_step;
+	int score_step_green = a->score_step;
 
 	if (a->score_step_byavg != 0) {
 		struct move_stats score = d->score;
@@ -277,17 +278,19 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 		/* Correct color POV. */
 		if (color == S_WHITE)
 			score.value = - score.value;
-		if (score.value >= 0)
-			score_step = round(score.value * a->score_step_byavg);
+		if (score.value > 0)
+			score_step_green = round(score.value * a->score_step_byavg);
+		else
+			score_step_red = round(-score.value * a->score_step_byavg);
 	}
 
 	if (value.value < a->zone_red) {
 		/* Red zone. Take extra komi. */
 		if (DEBUGL(3))
-			fprintf(stderr, "[red] %f, -= %d | komi ratchet %f -> %f\n",
-				value.value, score_step, a->komi_ratchet, extra_komi);
+			fprintf(stderr, "[red] %f, step %d | komi ratchet %f -> %f\n",
+				value.value, score_step_red, a->komi_ratchet, extra_komi);
 		if (extra_komi > 0) a->komi_ratchet = extra_komi;
-		extra_komi -= score_step;
+		extra_komi += score_step_red;
 		return komi_by_color(extra_komi, color);
 
 	} else if (value.value < a->zone_green) {
@@ -296,10 +299,10 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 
 	} else {
 		/* Green zone. Give extra komi. */
-		extra_komi += score_step;
+		extra_komi += score_step_green;
 		if (DEBUGL(3))
-			fprintf(stderr, "[green] %f, += %d | komi ratchet %f age %d\n",
-				value.value, score_step, a->komi_ratchet, a->komi_ratchet_age);
+			fprintf(stderr, "[green] %f, step %d | komi ratchet %f age %d\n",
+				value.value, score_step_green, a->komi_ratchet, a->komi_ratchet_age);
 		if (a->komi_ratchet_maxage > 0 && a->komi_ratchet_age > a->komi_ratchet_maxage) {
 			a->komi_ratchet = 1000;
 			a->komi_ratchet_age = 0;
