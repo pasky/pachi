@@ -40,7 +40,7 @@ static const struct time_info default_ti = {
 #define PLAYOUT_DELTA_SAFEMARGIN 1000
 
 /* Minimal number of simulations to consider early break. */
-#define PLAYOUT_EARLY_BREAK_MIN 2500
+#define PLAYOUT_EARLY_BREAK_MIN 5000
 
 
 /* Pachi threading structure:
@@ -305,16 +305,7 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	/* Early break in won situation. */
 	if (best->u.playouts >= PLAYOUT_EARLY_BREAK_MIN
 	    && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold) {
-		/* Still use at least half the desired time (top-bounded by
-		 * a reasonably confident number of simulations). It is silly
-		 * to lose a won game because we played a bad move in 0.1s. */
-		double elapsed = 0;
-		if (ti->dim == TD_WALLTIME) {
-			elapsed = time_now() - ti->len.t.timer_start;
-			return elapsed >= 0.5 * stop->desired.time;
-		} else {
-			return true;
-		}
+		return true;
 	}
 
 	return false;
