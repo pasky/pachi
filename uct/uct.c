@@ -211,13 +211,12 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 		 * have passed earlier, only assuming some stones are
 		 * dead, and then re-connected, only to lose counting
 		 * when all stones are assumed alive. */
-		/* Mock up some state and seed the ownermap by few
-		 * simulations. */
 		uct_prepare_move(u, b, S_BLACK); assert(u->t);
-		for (int i = 0; i < GJ_MINGAMES; i++)
-			uct_playout(u, b, S_BLACK, u->t);
 		mock_state = true;
 	}
+	/* Make sure the ownermap is well-seeded. */
+	while (u->ownermap.playouts < GJ_MINGAMES)
+		uct_playout(u, b, S_BLACK, u->t);
 
 	dead_group_list(u, b, mq);
 
