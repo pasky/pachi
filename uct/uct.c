@@ -217,6 +217,9 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	/* Make sure the ownermap is well-seeded. */
 	while (u->ownermap.playouts < GJ_MINGAMES)
 		uct_playout(u, b, S_BLACK, u->t);
+	/* Show the ownermap: */
+	if (DEBUGL(2))
+		board_print_custom(b, stderr, uct_printhook_ownermap);
 
 	dead_group_list(u, b, mq);
 
