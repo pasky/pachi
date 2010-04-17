@@ -294,7 +294,7 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 
 	/* Wear out the ratchet. */
 	if (a->use_komi_ratchet && a->komi_ratchet_maxage > 0) {
-		a->komi_ratchet_age++;
+		a->komi_ratchet_age += value.playouts;
 		if (a->komi_ratchet_age > a->komi_ratchet_maxage) {
 			a->komi_ratchet = 1000;
 			a->komi_ratchet_age = 0;
