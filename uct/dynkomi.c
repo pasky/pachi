@@ -286,6 +286,10 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 			score_step_green = round(score.value * a->score_step_byavg);
 		else
 			score_step_red = round(-score.value * a->score_step_byavg);
+		if (score_step_green < 0 || score_step_red > 0) {
+			/* The steps are in bad direction - keep still. */
+			return komi_by_color(extra_komi, color);
+		}
 	}
 
 	if (value.value < a->zone_red) {
@@ -307,10 +311,10 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 
 	} else {
 		/* Green zone. Give extra komi. */
-		extra_komi += score_step_green;
 		if (DEBUGL(3))
 			fprintf(stderr, "[green] %f, step %d | komi ratchet %f age %d/%d\n",
 				value.value, score_step_green, a->komi_ratchet, a->komi_ratchet_age, a->komi_ratchet_maxage);
+		extra_komi += score_step_green;
 		if (a->komi_ratchet_maxage > 0 && a->komi_ratchet_age > a->komi_ratchet_maxage) {
 			a->komi_ratchet = 1000;
 			a->komi_ratchet_age = 0;
