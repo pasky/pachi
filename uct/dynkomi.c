@@ -264,9 +264,13 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	 * to try to reduce extra komi we take.
 	 *
 	 * TODO: Make the ratchet expire after a while. */
+
 	/* We use komi_by_color() first to normalize komi
 	 * additions/subtractions, then apply it again on
 	 * return value to restore original komi parity. */
+	/* Positive extra_komi means that we are _giving_
+	 * komi (winning), negative extra_komi is _taking_
+	 * komi (losing). */
 	float extra_komi = komi_by_color(tree->extra_komi, color);
 	int score_step_red = -a->score_step;
 	int score_step_green = a->score_step;
@@ -289,7 +293,7 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 		if (DEBUGL(3))
 			fprintf(stderr, "[red] %f, step %d | komi ratchet %f age %d/%d -> %f\n",
 				value.value, score_step_red, a->komi_ratchet, a->komi_ratchet_age, a->komi_ratchet_maxage, extra_komi);
-		if (extra_komi > 0) {
+		if (extra_komi > 0) { // always strive to reduce losing komi
 			assert(extra_komi < a->komi_ratchet);
 			a->komi_ratchet = extra_komi;
 			a->komi_ratchet_age = 0;
