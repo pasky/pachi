@@ -292,6 +292,15 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 		}
 	}
 
+	/* Wear out the ratchet. */
+	if (a->use_komi_ratchet && a->komi_ratchet_maxage > 0) {
+		a->komi_ratchet_age++;
+		if (a->komi_ratchet_age > a->komi_ratchet_maxage) {
+			a->komi_ratchet = 1000;
+			a->komi_ratchet_age = 0;
+		}
+	}
+
 	if (value.value < a->zone_red) {
 		/* Red zone. Take extra komi. */
 		if (DEBUGL(3))
@@ -315,14 +324,8 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 			fprintf(stderr, "[green] %f, step %d | komi ratchet %f age %d/%d\n",
 				value.value, score_step_green, a->komi_ratchet, a->komi_ratchet_age, a->komi_ratchet_maxage);
 		extra_komi += score_step_green;
-		if (a->komi_ratchet_maxage > 0 && a->komi_ratchet_age > a->komi_ratchet_maxage) {
-			a->komi_ratchet = 1000;
-			a->komi_ratchet_age = 0;
-		}
-		if (a->use_komi_ratchet && extra_komi >= a->komi_ratchet) {
+		if (a->use_komi_ratchet && extra_komi >= a->komi_ratchet)
 			extra_komi = a->komi_ratchet - 1;
-			a->komi_ratchet_age++;
-		}
 		return komi_by_color(extra_komi, color);
 	}
 }
