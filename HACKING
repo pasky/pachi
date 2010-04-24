@@ -119,6 +119,12 @@ for heavier MonteCarlo playouts as well (e.g. real liberties are
 tracked instead of pseudoliberties). If you are looking for raw
 light playout speed, libEGO is better choice.
 
+In general, arbitrary board sizes are supported; however, board sizes
+smaller than 9x9 have not been tested and board sizes larger than 25x25
+are not supported by GTP - also, in theory some buffer overflows might
+happen with board sizes larger than 19x19. The engine parameters are
+primarily tuned for 19x19 play.
+
 Ruleset
 -------
 

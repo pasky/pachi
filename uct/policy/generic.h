@@ -17,8 +17,8 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 
 #define uctd_try_node_children(tree, descent, allow_pass, parity, tenuki_d, di, urgency) \
 	/* Information abound best children. */ \
-	/* XXX: Stack overflow danger on big boards? */ \
-	struct uct_descent dbest[512] = { { .node = descent->node->children, .lnode = NULL } }; int dbests = 1; \
+	/* XXX: We assume board <=25x25. */ \
+	struct uct_descent dbest[626] = { { .node = descent->node->children, .lnode = NULL } }; int dbests = 1; \
 	float best_urgency = -9999; \
 	/* Descent children iterator. */ \
 	struct uct_descent dci = { .node = descent->node->children, .lnode = descent->lnode ? descent->lnode->children : NULL }; \
