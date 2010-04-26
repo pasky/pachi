@@ -488,6 +488,9 @@ uct_state_init(char *arg, struct board *b)
 	u->best2_ratio = 2.5;
 
 	u->val_scale = 0.04; u->val_points = 40;
+	/* TODO: Adjust this by number of simulations - it's more important how
+	 * many times per move we do the adjustment. */
+	u->dynkomi_interval = 500;
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 2;
