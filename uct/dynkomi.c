@@ -152,6 +152,10 @@ struct dynkomi_adaptive {
 	int lead_moves;
 	/* Maximum komi to pretend the opponent to give. */
 	float max_losing_komi;
+	/* Game portion at which losing komi is not allowed anymore. */
+	float losing_komi_stop;
+	/* Alternative game portion determination. */
+	bool adapt_aport;
 	float (*indicator)(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color);
 
 	/* Value-based adaptation. */
@@ -171,7 +175,6 @@ struct dynkomi_adaptive {
 	/* Sigmoid adaptation rate parameter; see below for details. */
 	float adapt_phase; // [0,1]
 	float adapt_rate; // [1,infty)
-	bool adapt_aport; // alternative game portion determination
 	/* Linear adaptation rate parameter. */
 	int adapt_moves;
 	float adapt_dir; // [-1,1]
@@ -337,8 +340,14 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 }
 
 static float
-bounded_komi(enum stone color, float komi, float max_losing_komi)
+bounded_komi(struct dynkomi_adaptive *a, struct board *b,
+             enum stone color, float komi, float max_losing_komi)
 {
+	/* At the end of game, disallow losing komi. */
+	if (komi_by_color(komi, color) < 0
+	    && board_game_portion(a, b) > a->losing_komi_stop)
+		return 0;
+
 	/* Get lower bound on komi we take so that we don't underperform
 	 * too much. */
 	float min_komi = komi_by_color(- max_losing_komi, color);
@@ -360,12 +369,14 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 			d->score.value, d->score.playouts);
 
 	if (b->moves <= a->lead_moves)
-		return bounded_komi(color, board_effective_handicap(b, 7 /* XXX */), a->max_losing_komi);
+		return bounded_komi(a, b, color,
+		                    board_effective_handicap(b, 7 /* XXX */),
+		                    a->max_losing_komi);
 
 	float komi = a->indicator(d, b, tree, color);
 	if (DEBUGL(3))
 		fprintf(stderr, "dynkomi: %f -> %f\n", tree->extra_komi, komi);
-	return bounded_komi(color, komi, a->max_losing_komi);
+	return bounded_komi(a, b, color, komi, a->max_losing_komi);
 }
 
 static float
@@ -423,6 +434,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->lead_moves = atoi(optval);
 			} else if (!strcasecmp(optname, "max_losing_komi") && optval) {
 				a->max_losing_komi = atof(optval);
+			} else if (!strcasecmp(optname, "losing_komi_stop") && optval) {
+				a->losing_komi_stop = atof(optval);
 			} else if (!strcasecmp(optname, "indicator")) {
 				/* Adaptatation indicator - how to decide
 				 * the adaptation rate and direction. */
