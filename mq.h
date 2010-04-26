@@ -9,7 +9,7 @@
 #include "move.h"
 #include "random.h"
 
-#define MQL 256
+#define MQL 512 /* XXX: On larger board this might not be enough. */
 struct move_queue {
 	int moves;
 	coord_t move[MQL];
