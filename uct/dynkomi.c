@@ -159,6 +159,7 @@ struct dynkomi_adaptive {
 	int score_step;
 	float score_step_byavg; // use portion of average score as increment
 	bool use_komi_ratchet;
+	bool losing_komi_ratchet; // ratchet even losing komi
 	int komi_ratchet_maxage;
 	// runtime, not configuration:
 	int komi_ratchet_age;
@@ -306,7 +307,7 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 		if (DEBUGL(3))
 			fprintf(stderr, "[red] %f, step %d | komi ratchet %f age %d/%d -> %f\n",
 				value.value, score_step_red, a->komi_ratchet, a->komi_ratchet_age, a->komi_ratchet_maxage, extra_komi);
-		if (extra_komi > 0) { // always strive to reduce losing komi
+		if (a->losing_komi_ratchet || extra_komi > 0) {
 			assert(extra_komi < a->komi_ratchet);
 			a->komi_ratchet = extra_komi;
 			a->komi_ratchet_age = 0;
@@ -442,6 +443,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->score_step_byavg = atof(optval);
 			} else if (!strcasecmp(optname, "use_komi_ratchet")) {
 				a->use_komi_ratchet = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "losing_komi_ratchet")) {
+				a->losing_komi_ratchet = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "komi_ratchet_age") && optval) {
 				a->komi_ratchet_maxage = atoi(optval);
 
