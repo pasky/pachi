@@ -316,7 +316,10 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 			fprintf(stderr, "[red] %f, step %d | komi ratchet %f age %d/%d -> %f\n",
 				value.value, score_step_red, a->komi_ratchet, a->komi_ratchet_age, a->komi_ratchet_maxage, extra_komi);
 		if (a->losing_komi_ratchet || extra_komi > 0) {
-			assert(extra_komi < a->komi_ratchet);
+			/* extra_komi must be within existing bounds,
+			 * except when it has been reset to zero by
+			 * a * tree reset. */
+			assert(extra_komi < a->komi_ratchet || fabsf(extra_komi) < 1);
 			a->komi_ratchet = extra_komi;
 			a->komi_ratchet_age = 0;
 		}
