@@ -404,9 +404,9 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 		a->lead_moves = 20;
 	else
 		a->lead_moves = 4; // XXX
-	a->max_losing_komi = 0;
+	a->max_losing_komi = 100;
 	a->losing_komi_stop = 1.0f;
-	a->indicator = komi_by_score;
+	a->indicator = komi_by_value;
 
 	a->adapter = adapter_sigmoid;
 	a->adapt_rate = -18;
@@ -415,10 +415,10 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->adapt_dir = -0.5;
 
 	a->zone_red = 0.45;
-	a->zone_green = 0.55;
+	a->zone_green = 0.50;
 	a->score_step = 2;
 	a->use_komi_ratchet = true;
-	a->komi_ratchet_maxage = 0;
+	a->komi_ratchet_maxage = 25000;
 	a->komi_ratchet = 1000;
 
 	if (arg) {
