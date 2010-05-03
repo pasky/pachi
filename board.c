@@ -1352,7 +1352,7 @@ void
 board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
 {
 	int base = fast_random(b->flen);
-	coord_pos(*coord, base, b);
+	coord_pos(*coord, b->f[base], b);
 	if (likely(board_try_random_move(b, color, coord, base, permit, permit_data)))
 		return;
 
