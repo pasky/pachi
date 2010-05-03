@@ -260,8 +260,6 @@ board_clear(struct board *board)
 		} );
 	} foreach_point_end;
 
-	/* First, pass is always a free position. */
-	board->f[board->flen++] = pass;
 	/* All positions are free! Except the margin. */
 	for (i = board_size(board); i < (board_size(board) - 1) * board_size(board); i++)
 		if (i % board_size(board) != 0 && i % board_size(board) != board_size(board) - 1)
@@ -418,7 +416,6 @@ board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_self
 	b->gamma = gamma;
 	b->precise_selfatari = precise_selfatari;
 	for (int i = 0; i < b->flen; i++) {
-		if (is_pass(b->f[i])) continue;
 		board_trait_recompute(b, b->f[i]);
 	}
 #endif
@@ -1335,8 +1332,6 @@ static inline bool
 board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)
 {
 	*coord = b->f[f];
-	if (unlikely(is_pass(*coord)))
-		return false;
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
@@ -1349,6 +1344,9 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 void
 board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
 {
+	if (unlikely(b->flen == 0))
+		goto pass;
+
 	int base = fast_random(b->flen);
 	*coord = b->f[base];
 	if (likely(board_try_random_move(b, color, coord, base, permit, permit_data)))
@@ -1362,6 +1360,7 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 
+pass:
 	*coord = pass;
 	struct move m = { pass, color };
 	board_play(b, &m);

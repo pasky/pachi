@@ -180,7 +180,8 @@ struct board {
 	struct group *gi;
 
 	/* Positions of free positions - queue (not map) */
-	/* Note that free position here is any valid move; including single-point eyes! */
+	/* Note that free position here is any valid move; including single-point eyes!
+	 * However, pass is not included. */
 	coord_t *f; int flen;
 
 #ifdef WANT_BOARD_C
