@@ -1347,13 +1347,8 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 	if (unlikely(b->flen == 0))
 		goto pass;
 
-	int base = fast_random(b->flen);
-	*coord = b->f[base];
-	if (likely(board_try_random_move(b, color, coord, base, permit, permit_data)))
-		return;
-
-	int f;
-	for (f = base + 1; f < b->flen; f++)
+	int base = fast_random(b->flen), f;
+	for (f = base; f < b->flen; f++)
 		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 	for (f = 0; f < base; f++)
