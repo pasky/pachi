@@ -29,11 +29,6 @@ struct features_gamma;
 //#define BOARD_GAMMA 1 // incremental probability distribution (requires BOARD_TRAITS, BOARD_PAT3)
 
 
-/* Allow board_play_random_move() to return pass even when
- * there are other moves available. */
-extern bool random_pass;
-
-
 /* Some engines might normalize their reading and skip symmetrical
  * moves. We will tell them how can they do it. */
 struct board_symmetry {

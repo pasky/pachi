@@ -23,8 +23,6 @@ static void board_trait_recompute(struct board *board, coord_t coord);
 #include "pattern.h"
 #endif
 
-bool random_pass = false;
-
 
 #if 0
 #define profiling_noinline __attribute__((noinline))
@@ -1338,7 +1336,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 {
 	*coord = b->f[f];
 	if (unlikely(is_pass(*coord)))
-		return random_pass;
+		return false;
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
