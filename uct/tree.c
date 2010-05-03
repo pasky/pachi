@@ -736,7 +736,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 				}
 			}
 
-			coord_t c = coord_xy_otf(i, j, t->board);
+			coord_t c = coord_xy(t->board, i, j);
 			if (!map.consider[c]) // Filter out invalid moves
 				continue;
 			assert(c != node->coord); // I have spotted "C3 C3" in some sequence...
@@ -770,7 +770,7 @@ flip_coord(struct board *b, coord_t c,
 	if (flip_vert) {
 		y = board_size(b) - 1 - y;
 	}
-	return coord_xy_otf(x, y, b);
+	return coord_xy(b, x, y);
 }
 
 static void

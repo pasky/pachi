@@ -251,14 +251,14 @@ struct board {
 #define board_size2(b_) ((b_)->size2)
 #endif
 
-#define board_at(b_, c) ((b_)->b[coord_raw(c)])
+#define board_at(b_, c) ((b_)->b[c])
 #define board_atxy(b_, x, y) ((b_)->b[(x) + board_size(b_) * (y)])
 
-#define group_at(b_, c) ((b_)->g[coord_raw(c)])
+#define group_at(b_, c) ((b_)->g[c])
 #define group_atxy(b_, x, y) ((b_)->g[(x) + board_size(b_) * (y)])
 
 /* Warning! Neighbor count is kept up-to-date for S_NONE! */
-#define neighbor_count_at(b_, coord, color) ((b_)->n[coord_raw(coord)].colors[(enum stone) color])
+#define neighbor_count_at(b_, coord, color) ((b_)->n[coord].colors[(enum stone) color])
 #define set_neighbor_count_at(b_, coord, color, count) (neighbor_count_at(b_, coord, color) = (count))
 #define inc_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)++)
 #define dec_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)--)
@@ -266,7 +266,7 @@ struct board {
 
 #define trait_at(b_, coord, color) (b_)->t[coord][(color) - 1]
 
-#define groupnext_at(b_, c) ((b_)->p[coord_raw(c)])
+#define groupnext_at(b_, c) ((b_)->p[c])
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + board_size(b_) * (y)])
 
 #define group_base(g_) (g_)
@@ -274,7 +274,7 @@ struct board {
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
 #define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
 
-#define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord_raw(coord)])
+#define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
 
 struct board *board_init(void);
 struct board *board_copy(struct board *board2, struct board *board1);
@@ -343,12 +343,12 @@ float board_official_score(struct board *board, struct move_queue *mq);
 
 #define foreach_point(board_) \
 	do { \
-		coord_t c; coord_pos(c, 0, (board_)); \
-		for (; coord_raw(c) < board_size(board_) * board_size(board_); coord_raw(c)++)
+		coord_t c = 0; \
+		for (; c < board_size(board_) * board_size(board_); c++)
 #define foreach_point_and_pass(board_) \
 	do { \
-		coord_t c; coord_pos(c, -1, (board_)); \
-		for (; coord_raw(c) < board_size(board_) * board_size(board_); coord_raw(c)++)
+		coord_t c = pass; \
+		for (; c < board_size(board_) * board_size(board_); c++)
 #define foreach_point_end \
 	} while (0)
 
@@ -356,11 +356,11 @@ float board_official_score(struct board *board, struct move_queue *mq);
 	do { \
 		struct board *board__ = board_; \
 		coord_t c = group_base(group_); \
-		coord_t c2 = c; coord_raw(c2) = groupnext_at(board__, c2); \
+		coord_t c2 = c; c2 = groupnext_at(board__, c2); \
 		do {
 #define foreach_in_group_end \
-			c = c2; coord_raw(c2) = groupnext_at(board__, c2); \
-		} while (coord_raw(c) != 0); \
+			c = c2; c2 = groupnext_at(board__, c2); \
+		} while (c != 0); \
 	} while (0)
 
 /* NOT VALID inside of foreach_point() or another foreach_neighbor(), or rather
@@ -370,10 +370,10 @@ float board_official_score(struct board *board, struct move_queue *mq);
 		struct board *board__ = board_; \
 		coord_t coord__ = coord_; \
 		coord_t c; \
-		coord_pos(c, coord_raw(coord__) - 1, (board__)); do { loop_body } while (0); \
-		coord_pos(c, coord_raw(coord__) - board_size(board__), (board__)); do { loop_body } while (0); \
-		coord_pos(c, coord_raw(coord__) + 1, (board__)); do { loop_body } while (0); \
-		coord_pos(c, coord_raw(coord__) + board_size(board__), (board__)); do { loop_body } while (0); \
+		c = coord__ - 1; do { loop_body } while (0); \
+		c = coord__ - board_size(board__); do { loop_body } while (0); \
+		c = coord__ + 1; do { loop_body } while (0); \
+		c = coord__ + board_size(board__); do { loop_body } while (0); \
 	} while (0)
 
 #define foreach_8neighbor(board_, coord_) \

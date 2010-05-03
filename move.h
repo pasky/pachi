@@ -9,23 +9,17 @@
 
 typedef int coord_t;
 
-#define coord_raw(c) (c)
+#define coord_xy(board, x, y) ((x) + (y) * board_size(board))
 #define coord_x(c, b) ((c) % board_size(b))
 #define coord_y(c, b) ((c) / board_size(b))
-#define coord_eq(c1, c2) ((c1) == (c2))
 /* TODO: Smarter way to do this? */
 #define coord_dx(c1, c2, b) (coord_x(c1, b) - coord_x(c2, b))
 #define coord_dy(c1, c2, b) (coord_y(c1, b) - coord_y(c2, b))
 
 static coord_t pass = -1;
 static coord_t resign = -2;
-#define is_pass(c) (coord_eq(c, pass))
-#define is_resign(c) (coord_eq(c, resign))
-
-/* Initialize existing coord */
-#define coord_pos(coord, pos_, board) do { (coord) = (pos_); } while (0)
-#define coord_xy(board, x, y) ((x) + (y) * board_size(board))
-#define coord_xy_otf(x, y, board) coord_xy(board, x, y) // obsolete
+#define is_pass(c) (c == pass)
+#define is_resign(c) (c == resign)
 
 #define coord_is_adjecent(c1, c2, b) (abs(c1 - c2) == 1 || abs(c1 - c2) == board_size(b))
 #define coord_is_8adjecent(c1, c2, b) (abs(c1 - c2) == 1 || abs(abs(c1 - c2) - board_size(b)) < 2)
