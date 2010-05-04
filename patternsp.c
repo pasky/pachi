@@ -210,7 +210,7 @@ found_rot:;
 
 /* Spatial dict manipulation. */
 
-static int
+static unsigned int
 spatial_dict_addc(struct spatial_dict *dict, struct spatial *s)
 {
 	/* Allocate space in 1024 blocks. */
@@ -225,7 +225,7 @@ spatial_dict_addc(struct spatial_dict *dict, struct spatial *s)
 }
 
 static bool
-spatial_dict_addh(struct spatial_dict *dict, hash_t hash, int id)
+spatial_dict_addh(struct spatial_dict *dict, hash_t hash, unsigned int id)
 {
 	if (dict->hash[hash] && dict->hash[hash] != id)
 		dict->collisions++;
@@ -269,7 +269,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	}
 
 	/* Add to collection. */
-	int id = spatial_dict_addc(dict, &s);
+	unsigned int id = spatial_dict_addc(dict, &s);
 
 	/* Add to specified hash places. */
 	while (*bufp) {

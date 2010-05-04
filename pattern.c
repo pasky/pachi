@@ -90,8 +90,8 @@ str2feature(char *str, struct feature *f)
 {
 	while (isspace(*str)) str++;
 
-	int flen = strcspn(str, ":");
-	for (int i = 0; i < sizeof(features)/sizeof(features[0]); i++)
+	int unsigned flen = strcspn(str, ":");
+	for (unsigned int i = 0; i < sizeof(features)/sizeof(features[0]); i++)
 		if (strlen(features[i].name) == flen && !strncmp(features[i].name, str, flen)) {
 			f->id = i;
 			goto found;
