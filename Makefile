@@ -6,7 +6,7 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
 # -ffast-math breaks us
-CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -frename-registers -pthread -Wsign-compare
+CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
 SYS_CFLAGS=
 LDFLAGS=-lm -pthread -lrt
 
