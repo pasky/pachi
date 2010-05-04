@@ -1484,7 +1484,7 @@ board_official_score(struct board *board, struct move_queue *q)
 
 	if (q) {
 		/* Process dead groups. */
-		for (int i = 0; i < q->moves; i++) {
+		for (unsigned int i = 0; i < q->moves; i++) {
 			foreach_in_group(board, q->move[i]) {
 				enum stone color = board_at(board, c);
 				ownermap[c] = o[stone_other(color)];

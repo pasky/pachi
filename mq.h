@@ -11,7 +11,7 @@
 
 #define MQL 512 /* XXX: On larger board this might not be enough. */
 struct move_queue {
-	int moves;
+	unsigned int moves;
 	coord_t move[MQL];
 };
 
@@ -66,7 +66,7 @@ static inline void
 mq_print(struct move_queue *q, struct board *b, char *label)
 {
 	fprintf(stderr, "%s candidate moves: ", label);
-	for (int i = 0; i < q->moves; i++) {
+	for (unsigned int i = 0; i < q->moves; i++) {
 		fprintf(stderr, "%s ", coord2sstr(q->move[i], b));
 	}
 	fprintf(stderr, "\n");

@@ -352,7 +352,7 @@ can_countercapture(struct playout_policy *p, struct board_state *s,
 	group_trait_set(s, g, to_play, can_countercapture, true);
 
 scan:;
-	int qmoves_prev = q ? q->moves : 0;
+	unsigned int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, g) {
 		foreach_neighbor(b, c, {
