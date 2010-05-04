@@ -188,7 +188,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 					continue;
 				/* We don't care to implement both_colors
 				 * properly since it sucks anyway. */
-				int i;
+				unsigned int i;
 				for (i = map->game_baselen; i < map->gamelen; i++)
 					if (map->game[i].coord == ni->coord
 					    && map->game[i].color == child_color)
