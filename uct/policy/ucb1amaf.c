@@ -24,7 +24,7 @@ struct ucb1_policy_amaf {
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
-	int equiv_rave;
+	unsigned int equiv_rave;
 	bool both_colors;
 	bool check_nakade;
 	bool sylvain_rave;
@@ -33,7 +33,7 @@ struct ucb1_policy_amaf {
 };
 
 
-static inline float fast_sqrt(int x)
+static inline float fast_sqrt(unsigned int x)
 {
 	static const float table[] = {
 		0, 1, 1.41421356237309504880, 1.73205080756887729352,
@@ -188,7 +188,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 					continue;
 				/* We don't care to implement both_colors
 				 * properly since it sucks anyway. */
-				int i;
+				unsigned int i;
 				for (i = map->game_baselen; i < map->gamelen; i++)
 					if (map->game[i].coord == ni->coord
 					    && map->game[i].color == child_color)

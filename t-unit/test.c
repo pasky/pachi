@@ -12,12 +12,12 @@
 static bool board_printed;
 
 void
-board_load(struct board *b, FILE *f, int size)
+board_load(struct board *b, FILE *f, unsigned int size)
 {
 	board_printed = false;
 	board_resize(b, size);
 	board_clear(b);
-	for (int y = size - 1; y >= 0; y--) {
+	for (unsigned int y = size - 1; y >= 0; y--) {
 		char line[256];
 		if (!fgets(line, sizeof(line), f)) {
 			fprintf(stderr, "Premature EOF.\n");
@@ -28,7 +28,7 @@ board_load(struct board *b, FILE *f, int size)
 			fprintf(stderr, "Line not %d char long: %s\n", size, line);
 			exit(EXIT_FAILURE);
 		}
-		for (int x = 0; x < size; x++) {
+		for (unsigned int x = 0; x < size; x++) {
 			enum stone s;
 			switch (line[x]) {
 				case '.': s = S_NONE; break;

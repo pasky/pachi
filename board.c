@@ -23,8 +23,6 @@ static void board_trait_recompute(struct board *board, coord_t coord);
 #include "pattern.h"
 #endif
 
-bool random_pass = false;
-
 
 #if 0
 #define profiling_noinline __attribute__((noinline))
@@ -262,8 +260,6 @@ board_clear(struct board *board)
 		} );
 	} foreach_point_end;
 
-	/* First, pass is always a free position. */
-	board->f[board->flen++] = coord_raw(pass);
 	/* All positions are free! Except the margin. */
 	for (i = board_size(board); i < (board_size(board) - 1) * board_size(board); i++)
 		if (i % board_size(board) != 0 && i % board_size(board) != board_size(board) - 1)
@@ -273,20 +269,20 @@ board_clear(struct board *board)
 	foreach_point(board) {
 		int max = (sizeof(hash_t) << history_hash_bits);
 		/* fast_random() is 16-bit only */
-		board->h[coord_raw(c) * 2] = ((hash_t) fast_random(max))
+		board->h[c * 2] = ((hash_t) fast_random(max))
 				| ((hash_t) fast_random(max) << 16)
 				| ((hash_t) fast_random(max) << 32)
 				| ((hash_t) fast_random(max) << 48);
-		if (!board->h[coord_raw(c) * 2])
+		if (!board->h[c * 2])
 			/* Would be kinda "oops". */
-			board->h[coord_raw(c) * 2] = 1;
+			board->h[c * 2] = 1;
 		/* And once again for white */
-		board->h[coord_raw(c) * 2 + 1] = ((hash_t) fast_random(max))
+		board->h[c * 2 + 1] = ((hash_t) fast_random(max))
 				| ((hash_t) fast_random(max) << 16)
 				| ((hash_t) fast_random(max) << 32)
 				| ((hash_t) fast_random(max) << 48);
-		if (!board->h[coord_raw(c) * 2 + 1])
-			board->h[coord_raw(c) * 2 + 1] = 1;
+		if (!board->h[c * 2 + 1])
+			board->h[c * 2 + 1] = 1;
 	} foreach_point_end;
 
 #ifdef BOARD_SPATHASH
@@ -420,7 +416,6 @@ board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_self
 	b->gamma = gamma;
 	b->precise_selfatari = precise_selfatari;
 	for (int i = 0; i < b->flen; i++) {
-		if (is_pass(b->f[i])) continue;
 		board_trait_recompute(b, b->f[i]);
 	}
 #endif
@@ -844,8 +839,8 @@ board_group_find_extra_libs(struct board *board, group_t group, struct group *gi
 	/* Add extra liberty from the board to our liberty list. */
 	unsigned char watermark[board_size2(board) / 8];
 	memset(watermark, 0, sizeof(watermark));
-#define watermark_get(c)	(watermark[coord_raw(c) >> 3] & (1 << (coord_raw(c) & 7)))
-#define watermark_set(c)	watermark[coord_raw(c) >> 3] |= (1 << (coord_raw(c) & 7))
+#define watermark_get(c)	(watermark[c >> 3] & (1 << (c & 7)))
+#define watermark_set(c)	watermark[c >> 3] |= (1 << (c & 7))
 
 	for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++)
 		watermark_set(gi->lib[i]);
@@ -943,7 +938,7 @@ board_remove_stone(struct board *board, group_t group, coord_t c)
 
 	if (DEBUGL(6))
 		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
-	board->f[board->flen++] = coord_raw(c);
+	board->f[board->flen++] = c;
 }
 
 static int profiling_noinline
@@ -973,7 +968,7 @@ add_to_group(struct board *board, group_t group, coord_t prevstone, coord_t coor
 {
 	group_at(board, coord) = group;
 	groupnext_at(board, coord) = groupnext_at(board, prevstone);
-	groupnext_at(board, prevstone) = coord_raw(coord);
+	groupnext_at(board, prevstone) = coord;
 
 #ifdef BOARD_TRAITS
 	if (board_group_info(board, group).libs == 1) {
@@ -1075,7 +1070,7 @@ next_from_lib:;
 static group_t profiling_noinline
 new_group(struct board *board, coord_t coord)
 {
-	group_t group = coord_raw(coord);
+	group_t group = coord;
 	struct group *gi = &board_group_info(board, group);
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
@@ -1200,7 +1195,7 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	coord_t coord = m->coord;
 	enum stone color = m->color;
 	/* Check ko: Capture at a position of ko capture one move ago */
-	if (unlikely(color == board->ko.color && coord_eq(coord, board->ko.coord))) {
+	if (unlikely(color == board->ko.color && coord == board->ko.coord)) {
 		if (DEBUGL(5))
 			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord, board), coord_y(coord, board), color);
 		return -1;
@@ -1324,7 +1319,7 @@ board_play(struct board *board, struct move *m)
 
 	int f;
 	for (f = 0; f < board->flen; f++)
-		if (board->f[f] == coord_raw(m->coord))
+		if (board->f[f] == m->coord)
 			return board_play_f(board, m, f);
 
 	if (DEBUGL(7))
@@ -1336,9 +1331,7 @@ board_play(struct board *board, struct move *m)
 static inline bool
 board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)
 {
-	coord_raw(*coord) = b->f[f];
-	if (unlikely(is_pass(*coord)))
-		return random_pass;
+	*coord = b->f[f];
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
@@ -1351,19 +1344,18 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 void
 board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
 {
-	int base = fast_random(b->flen);
-	coord_pos(*coord, base, b);
-	if (likely(board_try_random_move(b, color, coord, base, permit, permit_data)))
-		return;
+	if (unlikely(b->flen == 0))
+		goto pass;
 
-	int f;
-	for (f = base + 1; f < b->flen; f++)
+	int base = fast_random(b->flen), f;
+	for (f = base; f < b->flen; f++)
 		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 	for (f = 0; f < base; f++)
 		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 
+pass:
 	*coord = pass;
 	struct move m = { pass, color };
 	board_play(b, &m);
@@ -1492,7 +1484,7 @@ board_official_score(struct board *board, struct move_queue *q)
 
 	if (q) {
 		/* Process dead groups. */
-		for (int i = 0; i < q->moves; i++) {
+		for (unsigned int i = 0; i < q->moves; i++) {
 			foreach_in_group(board, q->move[i]) {
 				enum stone color = board_at(board, c);
 				ownermap[c] = o[stone_other(color)];

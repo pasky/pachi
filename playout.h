@@ -51,10 +51,10 @@ struct playout_policy {
 /** Playout engine interface: */
 
 struct playout_setup {
-	int gamelen; /* Maximal # of moves in playout. */
+	unsigned int gamelen; /* Maximal # of moves in playout. */
 	/* Minimal difference between captures to terminate the playout.
 	 * 0 means don't check. */
-	int mercymin;
+	unsigned int mercymin;
 
 	/* XXX: We used to have more, perhaps we will again have more
 	 * in the future. */
@@ -85,10 +85,10 @@ struct playout_amafmap {
 	 * when reading some tactical positions in depth (even if
 	 * they are just one-stone-snapback). */
 	struct move game[MAX_GAMELEN + 1];
-	int gamelen;
+	unsigned int gamelen;
 	/* Our current position in the game sequence; in AMAF, we search
 	 * the range [game_baselen, gamelen]. */
-	int game_baselen;
+	unsigned int game_baselen;
 
 	/* Whether to record the nakade moves (true) or just completely
 	 * ignore them (false; just the first color on the intersection

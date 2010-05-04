@@ -148,7 +148,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 		if (MCDEBUGL(3))
 			fprintf(stderr, "\tresult for other player: %d\n", result);
 
-		int pos = is_pass(coord) ? 0 : coord_raw(coord);
+		int pos = is_pass(coord) ? 0 : coord;
 
 		good_games++;
 		moves[pos].games++;
@@ -184,12 +184,12 @@ pass_wins:
 				continue;
 		}
 
-		float ratio = (float) moves[coord_raw(c)].wins / moves[coord_raw(c)].games;
+		float ratio = (float) moves[c].wins / moves[c].games;
 		/* Since pass is [0,0], we will pass only when we have nothing
 		 * better to do. */
 		if (ratio >= top_ratio) {
 			top_ratio = ratio;
-			top_coord = coord_raw(c) == 0 ? pass : c;
+			top_coord = c == 0 ? pass : c;
 		}
 	} foreach_point_end;
 

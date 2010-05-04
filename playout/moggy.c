@@ -30,9 +30,9 @@
 
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders, assess_local;
-	int lcapturerate, atarirate, capturerate, patternrate, korate;
-	int selfatarirate, alwaysccaprate;
-	int fillboardtries;
+	unsigned int lcapturerate, atarirate, capturerate, patternrate, korate;
+	unsigned int selfatarirate, alwaysccaprate;
+	unsigned int fillboardtries;
 	int koage;
 	/* Whether to look for patterns around second-to-last move. */
 	bool pattern2;
@@ -352,7 +352,7 @@ can_countercapture(struct playout_policy *p, struct board_state *s,
 	group_trait_set(s, g, to_play, can_countercapture, true);
 
 scan:;
-	int qmoves_prev = q ? q->moves : 0;
+	unsigned int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, g) {
 		foreach_neighbor(b, c, {
@@ -515,7 +515,7 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 	 * O O X O - left dot would be pull-out, right dot connect */
 	foreach_neighbor(b, board_group_info(b, group).lib[0], {
 		enum stone cc = board_at(b, c);
-		if (cc == S_NONE && cc != board_group_info(b, group).lib[1]) {
+		if (cc == S_NONE && cc != board_at(b, board_group_info(b, group).lib[1])) {
 			can_pull_out = true;
 		} else if (cc != color) {
 			continue;
@@ -707,10 +707,10 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	}
 
 	/* Fill board */
-	int fbtries = b->flen / 8;
-	for (int i = 0; i < (fbtries < pp->fillboardtries ? fbtries : pp->fillboardtries); i++) {
+	unsigned int fbtries = b->flen / 8;
+	for (unsigned int i = 0; i < (fbtries < pp->fillboardtries ? fbtries : pp->fillboardtries); i++) {
 		coord_t coord = b->f[fast_random(b->flen)];
-		if (is_pass(coord) || immediate_liberty_count(b, coord) != 4)
+		if (immediate_liberty_count(b, coord) != 4)
 			continue;
 		foreach_diag_neighbor(b, coord) {
 			if (board_at(b, c) != S_NONE)
@@ -900,7 +900,7 @@ playout_moggy_init(char *arg, struct board *b)
 	int rate = 90;
 
 	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate = pp->selfatarirate
-			= -1;
+			= -1U;
 	pp->korate = 0; pp->koage = 4;
 	pp->alwaysccaprate = 0;
 	pp->ladders = pp->borderladders = true;
@@ -953,13 +953,13 @@ playout_moggy_init(char *arg, struct board *b)
 			}
 		}
 	}
-	if (pp->lcapturerate == -1) pp->lcapturerate = rate;
-	if (pp->atarirate == -1) pp->atarirate = rate;
-	if (pp->capturerate == -1) pp->capturerate = rate;
-	if (pp->patternrate == -1) pp->patternrate = rate;
-	if (pp->selfatarirate == -1) pp->selfatarirate = rate;
-	if (pp->korate == -1) pp->korate = rate;
-	if (pp->alwaysccaprate == -1) pp->alwaysccaprate = rate;
+	if (pp->lcapturerate == -1U) pp->lcapturerate = rate;
+	if (pp->atarirate == -1U) pp->atarirate = rate;
+	if (pp->capturerate == -1U) pp->capturerate = rate;
+	if (pp->patternrate == -1U) pp->patternrate = rate;
+	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
+	if (pp->korate == -1U) pp->korate = rate;
+	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
 

@@ -354,7 +354,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		 * this assumes all stones alive at the game end. */
 		if (!strcasecmp(arg, "dead")) {
 			gtp_prefix('=', id);
-			for (int i = 0; i < q.moves; i++) {
+			for (unsigned int i = 0; i < q.moves; i++) {
 				foreach_in_group(board, q.move[i]) {
 					printf("%s ", coord2sstr(c, board));
 				} foreach_in_group_end;
@@ -370,7 +370,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 				group_t g = group_at(board, c);
 				if (!g || g != c) continue;
 
-				for (int i = 0; i < q.moves; i++) {
+				for (unsigned int i = 0; i < q.moves; i++) {
 					if (q.move[i] == g)
 						goto next_group;
 				}
