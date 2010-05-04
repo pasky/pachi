@@ -175,6 +175,8 @@ struct board {
 	 * - FEAT_CONTIGUITY is not accounted for in the probability. */
 	struct probdist prob[2];
 #endif
+	/* Cached information on x-y coordinates so that we avoid division. */
+	uint8_t (*coord)[2];
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
 	struct group *gi;
