@@ -509,7 +509,7 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 	 * O O X O - left dot would be pull-out, right dot connect */
 	foreach_neighbor(b, board_group_info(b, group).lib[0], {
 		enum stone cc = board_at(b, c);
-		if (cc == S_NONE && cc != board_group_info(b, group).lib[1]) {
+		if (cc == S_NONE && cc != board_at(b, board_group_info(b, group).lib[1])) {
 			can_pull_out = true;
 		} else if (cc != color) {
 			continue;
