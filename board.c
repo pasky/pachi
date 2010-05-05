@@ -95,8 +95,9 @@ board_copy(struct board *b2, struct board *b1)
 #else
 	int pbsize = 0;
 #endif
-	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
+	int cdsize = board_size2(b2) * sizeof(*b2->coord);
+	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
@@ -121,6 +122,7 @@ board_copy(struct board *b2, struct board *b1)
 	b2->prob[0].items = x; x += pbsize;
 	b2->prob[1].items = x; x += pbsize;
 #endif
+	b2->coord = x; x += cdsize;
 
 	return b2;
 }
@@ -183,8 +185,9 @@ board_resize(struct board *board, int size)
 #else
 	int pbsize = 0;
 #endif
-	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2);
+	int cdsize = board_size2(board) * sizeof(*board->coord);
+	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -209,6 +212,7 @@ board_resize(struct board *board, int size)
 	board->prob[0].items = x; x += pbsize;
 	board->prob[1].items = x; x += pbsize;
 #endif
+	board->coord = x; x += cdsize;
 }
 
 void
@@ -242,6 +246,12 @@ board_clear(struct board *board)
 	board->symmetry.x1 = board->symmetry.y1 = board_size(board) / 2;
 	board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
 	board->symmetry.type = SYM_FULL;
+
+	/* Set up coordinate cache */
+	foreach_point(board) {
+		board->coord[c][0] = c % board_size(board);
+		board->coord[c][1] = c / board_size(board);
+	} foreach_point_end;
 
 	/* Draw the offboard margin */
 	int top_row = board_size2(board) - board_size(board);
