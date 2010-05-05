@@ -176,12 +176,12 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
+		assert(map->game_baselen >= 0);
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-			assert(map->map[ni->coord] != S_OFFBOARD);
-			if (map->map[ni->coord] == S_NONE)
-				continue;
-			assert(map->game_baselen >= 0);
 			enum stone amaf_color = map->map[ni->coord];
+			assert(amaf_color != S_OFFBOARD);
+			if (amaf_color == S_NONE)
+				continue;
 			if (amaf_nakade(map->map[ni->coord])) {
 				if (!b->check_nakade)
 					continue;
