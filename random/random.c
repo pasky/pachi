@@ -9,19 +9,27 @@
 static coord_t *
 random_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
-	struct board b2;
-	board_copy(&b2, b);
-
+	/* Play a random coordinate. However, we must also guard
+	 * against suicide moves; repeat playing while it's a suicide
+	 * unless we keep suiciding; in that case, we probably don't
+	 * have any other moves available and we pass. */
 	coord_t coord;
-	board_play_random(&b2, color, &coord, NULL, NULL);
-	if (!group_at(&b2, coord)) {
-		/* This was suicide. Just pass. */
-		/* XXX: We should check for non-suicide alternatives. */
-		return coord_pass();
-	}
+	int i = 0; bool suicide = false;
 
-	board_done_noalloc(&b2);
-	return coord_copy(coord);
+	do {
+		/* board_play_random() actually plays the move too;
+		 * this is desirable for MC simulations but not within
+		 * the genmove. Make a scratch new board for it. */
+		struct board b2;
+		board_copy(&b2, b);
+
+		board_play_random(&b2, color, &coord, NULL, NULL);
+
+		suicide = (coord != pass && !group_at(&b2, coord));
+		board_done_noalloc(&b2);
+	} while (suicide && i++ < 100);
+
+	return coord_copy(suicide ? pass : coord);
 }
 
 struct engine *
