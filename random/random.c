@@ -9,14 +9,18 @@
 static coord_t *
 random_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
+	struct board b2;
+	board_copy(&b2, b);
+
 	coord_t coord;
-	board_play_random(b, color, &coord, NULL, NULL);
-	if (!group_at(b, coord)) {
+	board_play_random(&b2, color, &coord, NULL, NULL);
+	if (!group_at(&b2, coord)) {
 		/* This was suicide. Just pass. */
 		/* XXX: We should check for non-suicide alternatives. */
 		return coord_pass();
 	}
 
+	board_done_noalloc(&b2);
 	return coord_copy(coord);
 }
 
