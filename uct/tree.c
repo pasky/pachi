@@ -19,14 +19,14 @@
 #include "uct/tree.h"
 
 
-/* Allocate one node. The returned node is _not_ initialized.
+/* Allocate tree node(s). The returned nodes are _not_ initialized.
  * Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static struct tree_node *
-tree_alloc_node(struct tree *t, bool fast_alloc)
+tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 {
 	struct tree_node *n = NULL;
-	size_t nsize = sizeof(*n);
+	size_t nsize = count * sizeof(*n);
 	unsigned long old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
 
 	if (fast_alloc) {
@@ -60,7 +60,7 @@ static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 {
 	struct tree_node *n;
-	n = tree_alloc_node(t, fast_alloc);
+	n = tree_alloc_node(t, 1, fast_alloc);
 	if (!n) return NULL;
 	volatile static long c = 1000000;
 	hash_t hash = __sync_fetch_and_add(&c, 1);
@@ -368,7 +368,7 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 	   int threshold, int depth)
 {
 	assert(dest->nodes && node);
-	struct tree_node *n2 = tree_alloc_node(dest, true);
+	struct tree_node *n2 = tree_alloc_node(dest, 1, true);
 	if (!n2)
 		return NULL;
 	*n2 = *node;
