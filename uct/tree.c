@@ -23,7 +23,7 @@
  * Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static struct tree_node *
-tree_alloc_node(struct tree *t, int count, bool fast_alloc)
+tree_alloc_node(struct tree *t, int count, bool fast_alloc, hash_t *hash)
 {
 	struct tree_node *n = NULL;
 	size_t nsize = count * sizeof(*n);
@@ -38,6 +38,12 @@ tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 	} else {
 		n = calloc2(1, sizeof(*n));
 	}
+
+	if (hash) {
+		volatile static long c = 1000000;
+		*hash = __sync_fetch_and_add(&c, count);
+	}
+
 	return n;
 }
 
@@ -60,10 +66,9 @@ static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 {
 	struct tree_node *n;
-	n = tree_alloc_node(t, 1, fast_alloc);
+	hash_t hash;
+	n = tree_alloc_node(t, 1, fast_alloc, &hash);
 	if (!n) return NULL;
-	volatile static long c = 1000000;
-	hash_t hash = __sync_fetch_and_add(&c, 1);
 	tree_setup_node(t, n, coord, depth, hash);
 	return n;
 }
@@ -368,7 +373,7 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 	   int threshold, int depth)
 {
 	assert(dest->nodes && node);
-	struct tree_node *n2 = tree_alloc_node(dest, 1, true);
+	struct tree_node *n2 = tree_alloc_node(dest, 1, true, NULL);
 	if (!n2)
 		return NULL;
 	*n2 = *node;
