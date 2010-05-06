@@ -23,17 +23,23 @@
  * is _not_ initialized. Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static struct tree_node *
-tree_fast_alloc_node(struct tree *t)
+tree_alloc_node(struct tree *t, bool fast_alloc)
 {
-	assert(t->nodes != NULL);
 	struct tree_node *n = NULL;
-	unsigned long old_size =__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
+	unsigned long old_size = __sync_fetch_and_add(&t->nodes_size, sizeof(*n));
 
-	/* The test below works even if max_tree_size is not a
-	 * multiple of the node size because tree_init() allocates
-	 * space for an extra node. */
-	if (old_size < t->max_tree_size)
+	if (fast_alloc) {
+		/* The test below works even if max_tree_size is not a
+		 * multiple of the node size because tree_init() allocates
+		 * space for an extra node. */
+		if (old_size >= t->max_tree_size)
+			return NULL;
+		assert(t->nodes != NULL);
 		n = (struct tree_node *)(t->nodes + old_size);
+		memset(n, 0, sizeof(*n));
+	} else {
+		n = calloc2(1, sizeof(*n));
+	}
 	return n;
 }
 
@@ -44,14 +50,9 @@ static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 {
 	struct tree_node *n;
-	if (fast_alloc) {
-		n = tree_fast_alloc_node(t);
-		if (!n) return n;
-		memset(n, 0, sizeof(*n));
-	} else {
-		n = calloc2(1, sizeof(*n));
-		__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
-	}
+	n = tree_alloc_node(t, fast_alloc);
+	if (!n)
+		return NULL;
 	n->coord = coord;
 	n->depth = depth;
 	volatile static long c = 1000000;
@@ -362,7 +363,7 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 	   int threshold, int depth)
 {
 	assert(dest->nodes && node);
-	struct tree_node *n2 = tree_fast_alloc_node(dest);
+	struct tree_node *n2 = tree_alloc_node(dest, true);
 	if (!n2)
 		return NULL;
 	*n2 = *node;
