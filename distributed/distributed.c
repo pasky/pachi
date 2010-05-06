@@ -97,12 +97,8 @@ static const struct time_info default_ti = {
  * (all commands except pachi-genmoves and final_status_list). */
 #define MAX_FAST_CMD_WAIT 1.0
 
-/* How often to send a stats update to slaves (seconds) */
-#define STATS_UPDATE_INTERVAL 0.1 /* 100ms */
-
-/* Maximum time (seconds) to wait between genmoves
- * (all commands except pachi-genmoves and final_status_list). */
-#define MAX_FAST_CMD_WAIT 1.0
+/* Maximum time (seconds) to wait for answers to genmoves. */
+#define MAX_GENMOVES_WAIT 0.1 /* 100 ms */
 
 /* Dispatch a new gtp command to all slaves.
  * The slave lock must not be held upon entry and is released upon return.
@@ -136,7 +132,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	/* Wait for replies here. If we don't wait, we run the
 	 * risk of getting out of sync with most slaves and
 	 * sending command history too frequently. */
-	get_replies(time_now() + MAX_FAST_CMD_WAIT);
+	get_replies(time_now() + MAX_FAST_CMD_WAIT, active_slaves);
 
 	protocol_unlock();
 	return P_OK;
@@ -262,7 +258,9 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 	/* Loop until most slaves want to quit or time elapsed. */
 	for (;;) {
 		double start = now;
-		get_replies(now + STATS_UPDATE_INTERVAL);
+		/* Wait for just one slave to get stats as fresh as possible,
+		 * or at most 100ms to check if we run out of time. */
+		get_replies(now + MAX_GENMOVES_WAIT, 1);
 		now = time_now();
 		if (ti->dim == TD_WALLTIME)
 			time_sub(ti, now - start, false);
@@ -354,7 +352,7 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 	protocol_lock();
 
 	new_cmd(b, "final_status_list", "dead\n");
-	get_replies(time_now() + MAX_FAST_CMD_WAIT);
+	get_replies(time_now() + MAX_FAST_CMD_WAIT, active_slaves);
 
 	/* Find the most popular reply. */
 	qsort(gtp_replies, reply_count, sizeof(char *), scmp);

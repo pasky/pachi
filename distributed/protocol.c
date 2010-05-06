@@ -379,12 +379,13 @@ new_cmd(struct board *b, char *cmd, char *args)
 	update_cmd(b, cmd, args, true);
 }
 
-/* Wait for at least one new reply. Return when all slaves have
- * replied, or when the given absolute time is passed.
+/* Wait for at least one new reply. Return when at least
+ * min_replies slaves have already replied, or when the
+ * given absolute time is passed.
  * The replies are returned in gtp_replies[0..reply_count-1]
  * slave_lock is held on entry and on return. */
 void
-get_replies(double time_limit)
+get_replies(double time_limit, int min_replies)
 {
 	for (;;) {
 		if (reply_count > 0) {
@@ -397,15 +398,15 @@ get_replies(double time_limit)
 			pthread_cond_wait(&reply_cond, &slave_lock);
 		}
 		if (reply_count == 0) continue;
-		if (reply_count >= active_slaves) return;
+		if (reply_count >= min_replies || reply_count >= active_slaves) return;
 		if (time_now() >= time_limit) break;
 	}
 	if (DEBUGL(1)) {
 		char buf[1024];
 		snprintf(buf, sizeof(buf),
-			 "get_replies timeout %.3f >= %.3f, replies %d < active %d\n",
+			 "get_replies timeout %.3f >= %.3f, replies %d < min %d, active %d\n",
 			 time_now() - start_time, time_limit - start_time,
-			 reply_count, active_slaves);
+			 reply_count, min_replies, active_slaves);
 		logline(NULL, "? ", buf);
 	}
 	assert(reply_count > 0);

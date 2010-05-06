@@ -13,7 +13,7 @@ void logline(struct in_addr *client, char *prefix, char *s);
 
 void update_cmd(struct board *b, char *cmd, char *args, bool new_id);
 void new_cmd(struct board *b, char *cmd, char *args);
-void get_replies(double time_limit);
+void get_replies(double time_limit, int min_replies);
 void protocol_init(char *slave_port, char *proxy_port, int max_slaves);
 
 extern int reply_count;
