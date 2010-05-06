@@ -19,6 +19,8 @@ Playouts:
 * Split playout aspects to custom-stackable pieces
 * Possibly replay top-rated unplayed moves from the tree
   in the playout?
+* [Mogo] Middle-of-three nakade modification
+* [Mogo] Connect-if-selfatari approach moves modification
 
 UCT:
 * Support for prior hinting based by custom externally linked
