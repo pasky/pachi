@@ -19,20 +19,18 @@
 #include "uct/tree.h"
 
 
-/* Allocate one node in the fast_alloc mode. The returned node
- * is _not_ initialized. Returns NULL if not enough memory.
+/* Allocate one node. The returned node is _not_ initialized.
+ * Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static struct tree_node *
 tree_alloc_node(struct tree *t, bool fast_alloc)
 {
 	struct tree_node *n = NULL;
-	unsigned long old_size = __sync_fetch_and_add(&t->nodes_size, sizeof(*n));
+	size_t nsize = sizeof(*n);
+	unsigned long old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
 
 	if (fast_alloc) {
-		/* The test below works even if max_tree_size is not a
-		 * multiple of the node size because tree_init() allocates
-		 * space for an extra node. */
-		if (old_size >= t->max_tree_size)
+		if (old_size + nsize > t->max_tree_size)
 			return NULL;
 		assert(t->nodes != NULL);
 		n = (struct tree_node *)(t->nodes + old_size);
@@ -78,8 +76,7 @@ tree_init(struct board *board, enum stone color, unsigned long max_tree_size, fl
 	t->board = board;
 	t->max_tree_size = max_tree_size;
 	if (max_tree_size != 0) {
-		/* Allocate one extra node, max_tree_size may not be multiple of node size. */
-		t->nodes = malloc2(max_tree_size + sizeof(struct tree_node));
+		t->nodes = malloc2(max_tree_size);
 		/* The nodes buffer doesn't need initialization. This is currently
 		 * done by tree_init_node to spread the load. Doing a memset for the
 		 * entire buffer here would be too slow for large trees (>10 GB). */
