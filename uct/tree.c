@@ -43,6 +43,18 @@ tree_alloc_node(struct tree *t, bool fast_alloc)
 	return n;
 }
 
+/* Initialize a node at a given place in memory.
+ * This function may be called by multiple threads in parallel. */
+static void
+tree_setup_node(struct tree *t, struct tree_node *n, coord_t coord, int depth, hash_t hash)
+{
+	n->coord = coord;
+	n->depth = depth;
+	n->hash = hash;
+	if (depth > t->max_depth)
+		t->max_depth = depth;
+}
+
 /* Allocate and initialize a node. Returns NULL (fast_alloc mode)
  * or exits the main program if not enough memory.
  * This function may be called by multiple threads in parallel. */
@@ -51,14 +63,10 @@ tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 {
 	struct tree_node *n;
 	n = tree_alloc_node(t, fast_alloc);
-	if (!n)
-		return NULL;
-	n->coord = coord;
-	n->depth = depth;
+	if (!n) return NULL;
 	volatile static long c = 1000000;
-	n->hash = __sync_fetch_and_add(&c, 1);
-	if (depth > t->max_depth)
-		t->max_depth = depth;
+	hash_t hash = __sync_fetch_and_add(&c, 1);
+	tree_setup_node(t, n, coord, depth, hash);
 	return n;
 }
 
