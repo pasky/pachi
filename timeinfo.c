@@ -145,7 +145,7 @@ time_start_timer(struct time_info *ti)
 }
 
 void
-time_sub(struct time_info *ti, double interval)
+time_sub(struct time_info *ti, double interval, bool new_move)
 {
 	assert(ti->dim == TD_WALLTIME && ti->period != TT_NULL);
 
@@ -180,7 +180,7 @@ time_sub(struct time_info *ti, double interval)
 		ti->len.t.byoyomi_stones = ti->len.t.byoyomi_stones_max;
 		return;
 	}
-	if (--ti->len.t.byoyomi_stones < 1) {
+	if (new_move && --ti->len.t.byoyomi_stones < 1) {
 		/* Finished a period. */
 		ti->len.t.byoyomi_time = ti->len.t.byoyomi_time_max;
 		ti->len.t.byoyomi_stones = ti->len.t.byoyomi_stones_max;

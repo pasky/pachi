@@ -265,7 +265,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 		get_replies(now + STATS_UPDATE_INTERVAL);
 		now = time_now();
 		if (ti->dim == TD_WALLTIME)
-			time_sub(ti, now - start);
+			time_sub(ti, now - start, false);
 
 		bool keep_looking;
 		best = select_best_move(b, stats, &played, &playouts, &threads, &keep_looking);
