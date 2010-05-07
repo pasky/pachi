@@ -1,8 +1,27 @@
 #ifndef ZZGO_DISTRIBUTED_DISTRIBUTED_H
 #define ZZGO_DISTRIBUTED_DISTRIBUTED_H
 
+#include <limits.h>
+
 #include "engine.h"
 #include "stats.h"
+
+/* A coord path encodes coordinates from root child to a given node:
+ * A1->B2->C3 is encoded as coord(A1)<<18 + coord(B2)<<9 + coord(C3)
+ * for 19x19. In this version the table is not a transposition table
+ * so A1->B2->C3 and C3->B2->A1 are different.
+ * The depth is limited to 7 for 19x19 (9 for 9x9) to fit in 64 bits.
+ * path_t is signed to include pass and resign. */
+typedef int64_t path_t;
+#define PRIpath PRIx64
+#define PATH_T_MAX INT64_MAX
+
+/* Stats exchanged between master and slave. They are always
+ * incremental values to be added to what was last sent. */
+struct incr_stats {
+	path_t coord_path;
+	struct move_stats incr;
+};
 
 #define DIST_GAMELEN 1000
 

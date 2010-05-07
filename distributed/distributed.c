@@ -286,7 +286,8 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 		}
 		/* Send the command with the same gtp id, to avoid discarding
 		 * a reply to a previous genmoves at the same move. */
-		genmoves_args(args, b, color, played, ti, stats, stats[best].u.playouts / 100);
+		/* Do not send ascii stats, slave now expects binary args. */
+		genmoves_args(args, b, color, played, ti, NULL, 0);
 		update_cmd(b, cmd, args, false);
 	}
 	int replies = reply_count;
