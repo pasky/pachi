@@ -264,7 +264,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		 * should be absolutely rare situation and we will just spend a little
 		 * less time than we could on next few moves.) */
 		if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
-			time_sub(&ti[color], time_now() - ti[color].len.t.timer_start);
+			time_sub(&ti[color], time_now() - ti[color].len.t.timer_start, true);
 
 	} else if (!strcasecmp(cmd, "pachi-genmoves") || !strcasecmp(cmd, "pachi-genmoves_cleanup")) {
 		char *arg;
