@@ -335,33 +335,6 @@ tree_load(struct tree *tree, struct board *b)
 }
 
 
-static struct tree_node *
-tree_node_copy(struct tree_node *node)
-{
-	struct tree_node *n2 = malloc2(sizeof(*n2));
-	*n2 = *node;
-	if (!node->children)
-		return n2;
-	struct tree_node *ni = node->children;
-	struct tree_node *ni2 = tree_node_copy(ni);
-	n2->children = ni2; ni2->parent = n2;
-	while ((ni = ni->sibling)) {
-		ni2->sibling = tree_node_copy(ni);
-		ni2 = ni2->sibling; ni2->parent = n2;
-	}
-	return n2;
-}
-
-struct tree *
-tree_copy(struct tree *tree)
-{
-	assert(!tree->nodes);
-	struct tree *t2 = malloc2(sizeof(*t2));
-	*t2 = *tree;
-	t2->root = tree_node_copy(tree->root);
-	return t2;
-}
-
 /* Copy the subtree rooted at node: all nodes at or below depth
  * or with at least threshold playouts. Only for fast_alloc.
  * The code is destructive on src. The relative order of children of
@@ -494,105 +467,6 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	}
 	tree_done(temp_tree);
 	return new_node;
-}
-
-
-static void
-tree_node_merge(struct tree_node *dest, struct tree_node *src)
-{
-	/* Do not merge nodes that weren't touched at all. */
-	assert(dest->pamaf.playouts == src->pamaf.playouts);
-	assert(dest->pu.playouts == src->pu.playouts);
-	if (src->amaf.playouts - src->pamaf.playouts == 0
-	    && src->u.playouts - src->pu.playouts == 0) {
-		return;
-	}
-
-	dest->hints |= src->hints;
-
-	/* Merge the children, both are coord-sorted lists. */
-	struct tree_node *di = dest->children, **dref = &dest->children;
-	struct tree_node *si = src->children, **sref = &src->children;
-	while (di && si) {
-		if (di->coord != si->coord) {
-			/* src has some extra items or misses di */
-			struct tree_node *si2 = si->sibling;
-			while (si2 && di->coord != si2->coord) {
-				si2 = si2->sibling;
-			}
-			if (!si2)
-				goto next_di; /* src misses di, move on */
-			/* chain the extra [si,si2) items before di */
-			(*dref) = si;
-			while (si->sibling != si2) {
-				si->parent = dest;
-				si = si->sibling;
-			}
-			si->parent = dest;
-			si->sibling = di;
-			si = si2;
-			(*sref) = si;
-		}
-		/* Matching nodes - recurse... */
-		tree_node_merge(di, si);
-		/* ...and move on. */
-		sref = &si->sibling; si = si->sibling;
-next_di:
-		dref = &di->sibling; di = di->sibling;
-	}
-	if (si) {
-		/* Some outstanding nodes are left on src side, rechain
-		 * them to dst. */
-		(*dref) = si;
-		while (si) {
-			si->parent = dest;
-			si = si->sibling;
-		}
-		(*sref) = NULL;
-	}
-
-	/* Priors should be constant. */
-	assert(dest->prior.playouts == src->prior.playouts && dest->prior.value == src->prior.value);
-
-	stats_merge(&dest->amaf, &src->amaf);
-	stats_merge(&dest->u, &src->u);
-}
-
-/* Merge two trees built upon the same board. Note that the operation is
- * destructive on src. */
-void
-tree_merge(struct tree *dest, struct tree *src)
-{
-	if (src->max_depth > dest->max_depth)
-		dest->max_depth = src->max_depth;
-	tree_node_merge(dest->root, src->root);
-}
-
-
-static void
-tree_node_normalize(struct tree_node *node, int factor)
-{
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
-		tree_node_normalize(ni, factor);
-
-#define normalize(s1, s2, t) node->s2.t = node->s1.t + (node->s2.t - node->s1.t) / factor;
-	normalize(pamaf, amaf, playouts);
-	memcpy(&node->pamaf, &node->amaf, sizeof(node->amaf));
-
-	normalize(pu, u, playouts);
-	memcpy(&node->pu, &node->u, sizeof(node->u));
-#undef normalize
-}
-
-/* Normalize a tree, dividing the amaf and u values by given
- * factor; otherwise, simulations run in independent threads
- * two trees built upon the same board. To correctly handle
- * results taken from previous simulation run, they are backed
- * up in tree. */
-void
-tree_normalize(struct tree *tree, int factor)
-{
-	tree_node_normalize(tree->root, factor);
 }
 
 

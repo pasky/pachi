@@ -51,11 +51,9 @@ struct uct {
 
 	int threads;
 	enum uct_thread_model {
-		TM_ROOT, /* Root parallelization. */
 		TM_TREE, /* Tree parallelization w/o virtual loss. */
 		TM_TREEVL, /* Tree parallelization with virtual loss. */
 	} thread_model;
-	bool parallel_tree;
 	bool virtual_loss;
 	bool pondering_opt; /* User wants pondering */
 	bool pondering; /* Actually pondering now */

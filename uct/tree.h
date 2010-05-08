@@ -123,9 +123,6 @@ void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
 void tree_load(struct tree *tree, struct board *b);
-struct tree *tree_copy(struct tree *tree);
-void tree_merge(struct tree *dest, struct tree *src);
-void tree_normalize(struct tree *tree, int factor);
 
 struct tree_node *tree_get_node(struct tree *tree, struct tree_node *node, coord_t c, bool create);
 struct tree_node *tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node *node);
