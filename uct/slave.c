@@ -88,14 +88,15 @@ receive_stats(struct uct *u, int size)
 	return true;
 }
 
-/* Get stats updates for the distributed engine. Return a buffer with
- * one line "played_own root_playouts threads keep_looking" then a list
- * of lines "coord playouts value amaf_playouts amaf_value".
- * The last line must not end with \n.
+/* Get stats for the distributed engine. Return a buffer with one
+ * line "played_own root_playouts threads keep_looking", then
+ * a list of lines "coord playouts value" with absolute counts for
+ * children of the root node (including contributions from other
+ * slaves). The last line must not end with \n.
  * If c is pass or resign, add this move with root->playouts weight.
  * This function is called only by the main thread, but may be
- * called while the tree is updated by the worker threads.
- * Keep this code in sync with select_best_move(). */
+ * called while the tree is updated by the worker threads. Keep this
+ * code in sync with distributed/distributed.c:select_best_move(). */
 static char *
 report_stats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 {
@@ -106,41 +107,24 @@ report_stats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
 	r += snprintf(r, end - r, "%d %d %d %d", u->played_own, root->u.playouts, u->threads, keep_looking);
 	int min_playouts = root->u.playouts / 100;
 
-	/* Give a large weight to pass or resign, but still allow other moves.
-	 * Only root->u.playouts will be used (majority vote) but send amaf
-	 * stats too for consistency. */
+	/* Give a large weight to pass or resign, but still allow other moves. */
 	if (is_pass(c) || is_resign(c))
-		r += snprintf(r, end - r, "\n%s %d %.1f %d %.1f", coord2sstr(c, b),
-			      root->u.playouts, 0.0, root->amaf.playouts, 0.0);
+		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c, b),
+			      root->u.playouts, 0.0);
 
 	/* We rely on the fact that root->children is set only
 	 * after all children are created. */
 	for (struct tree_node *ni = root->children; ni; ni = ni->sibling) {
 
 		if (is_pass(ni->coord)) continue;
-		struct node_stats *ns = &u->stats[ni->coord];
-		ns->last_sent_own.u.playouts = ns->last_sent_own.amaf.playouts = 0;
-		ns->node = ni;
 		if (ni->u.playouts <= min_playouts || ni->hints & TREE_HINT_INVALID)
 			continue;
 
-		char *coord = coord2sstr(ni->coord, b);
-		/* We return the values as stored in the tree, so from black's view.
-		 *   own = total_in_tree - added_from_others */
-		struct move_stats2 s = { .u = ni->u, .amaf = ni->amaf };
-		struct move_stats2 others = ns->added_from_others;
-		if (s.u.playouts - others.u.playouts <= min_playouts)
-			continue;
-		if (others.u.playouts)
-			stats_rm_result(&s.u, others.u.value, others.u.playouts);
-		if (others.amaf.playouts)
-			stats_rm_result(&s.amaf, others.amaf.value, others.amaf.playouts);
-
-		r += snprintf(r, end - r, "\n%s %d %.7f %d %.7f", coord,
-			      s.u.playouts, s.u.value, s.amaf.playouts, s.amaf.value);
-		ns->last_sent_own = s;
-		/* If the master discards these values because this slave
-		 * is out of sync, u->stats will be reset anyway. */
+		assert(ni->coord > 0 && ni->coord < board_size2(b));
+		char buf[4];
+		/* We return the values as stored in the tree, so from black's view. */
+		r += snprintf(r, end - r, "\n%s %d %.7f", coord2bstr(buf, ni->coord, b),
+			      ni->u.playouts, ni->u.value);
 	}
 	return reply;
 }
