@@ -16,6 +16,14 @@ typedef int64_t path_t;
 #define PRIpath PRIx64
 #define PATH_T_MAX INT64_MAX
 
+#define hash_mask(bits) ((1<<(bits))-1)
+
+/* parent_path() must never be used if path might be pass or resign. */
+#define parent_path(path, board) ((path) >> board_bits2(board))
+#define leaf_coord(path, board) ((path) & hash_mask(board_bits2(board)))
+#define append_child(path, c, board) (((path) << board_bits2(board)) | (c))
+
+
 /* Stats exchanged between master and slave. They are always
  * incremental values to be added to what was last sent. */
 struct incr_stats {
@@ -35,6 +43,7 @@ struct move_stats2 {
 	struct move_stats amaf;
 };
 
+char *path2sstr(path_t path, struct board *b);
 struct engine *engine_distributed_init(char *arg, struct board *b);
 
 #endif

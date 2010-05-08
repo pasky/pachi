@@ -76,8 +76,9 @@ receive_stats(struct uct *u, int size)
 			return false;
 
 		if (UDEBUGL(7))
-			fprintf(stderr, "read %5d/%d %6d %.3f %"PRIpath"\n", n, nodes,
-				is.incr.playouts, is.incr.value, is.coord_path);
+			fprintf(stderr, "read %5d/%d %6d %.3f %"PRIpath" %s\n", n, nodes,
+				is.incr.playouts, is.incr.value, is.coord_path,
+				path2sstr(is.coord_path, u->t->board));
 
 		/* TODO: update the stats in the tree. */
 	}

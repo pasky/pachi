@@ -100,6 +100,32 @@ static const struct time_info default_ti = {
 /* Maximum time (seconds) to wait for answers to genmoves. */
 #define MAX_GENMOVES_WAIT 0.1 /* 100 ms */
 
+
+/* Display a path as leaf<parent<grandparent...
+ * Returns the path string in a static buffer; it is NOT safe for
+ * anything but debugging - in particular, it is NOT thread-safe! */
+char *
+path2sstr(path_t path, struct board *b)
+{
+	/* Special case for pass and resign. */
+	if (path < 0) return coord2sstr((coord_t)path, b);
+
+	static char buf[16][64];
+	static int bi = 0;
+	char *b2;
+	b2 = buf[bi++ & 15];
+	*b2 = '\0';
+	char *s = b2;
+	char *end = b2 + 64;
+	coord_t leaf;
+	while ((leaf = leaf_coord(path, b)) != 0) {
+		s += snprintf(s, end - s, "%s<", coord2sstr(leaf, b));
+		path = parent_path(path, b);
+	}
+	if (s != b2) s[-1] = '\0';
+	return b2;
+}
+
 /* Dispatch a new gtp command to all slaves.
  * The slave lock must not be held upon entry and is released upon return.
  * args is empty or ends with '\n' */
