@@ -1,3 +1,31 @@
+/* This is the slave specific part of the distributed engine.
+ * See introduction at top of distributed/distributed.c.
+ * The slave maintains a hash table of nodes received from the
+ * master. When receiving stats the hash table gives a pointer to the
+ * tree node to update. When sending stats we remember in the tree
+ * what was previously sent so that only the incremental part has to
+ * be sent.  The incremental part is smaller and can be compressed.
+ * The compression is not yet done in this version. */
+
+/* Similarly the master only sends stats increments.
+ * They include only contributions from other slaves. */
+
+/* The keys for the hash table are coordinate paths from
+ * a root child to a given node. See distributed/distributed.h
+ * for the encoding of a path to a 64 bit integer. */
+
+/* To allow the master to select the best move, slaves also send
+ * absolute playout counts for the best top level nodes (children
+ * of the root node), including contributions from other slaves. */
+
+/* Pass me arguments like a=b,c=d,...
+ * Slave specific arguments (see uct.c for the other uct arguments
+ * and distributed.c for the port arguments) :
+ *  slave                   required to indicate slave mode
+ *  max_nodes=MAX_NODES     default 80K
+ *  stats_hbits=STATS_HBITS default 24. 2^stats_bits = hash table size
+ */
+
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -12,7 +40,6 @@
 #include "gtp.h"
 #include "move.h"
 #include "timeinfo.h"
-#include "distributed/distributed.h"
 #include "uct/internal.h"
 #include "uct/search.h"
 #include "uct/slave.h"
@@ -20,6 +47,109 @@
 
 
 /* UCT infrastructure for a distributed engine slave. */
+
+/* For debugging only. */
+static struct hash_counts h_counts;
+static long parent_not_found = 0;
+static long parent_leaf = 0;
+static long node_not_found = 0;
+
+/* Hash table entry mapping path to node. */
+struct tree_hash {
+	path_t coord_path;
+	struct tree_node *node;
+};
+
+void *
+uct_htable_alloc(int hbits)
+{
+	return calloc2(1 << hbits, sizeof(struct tree_hash));
+}
+
+/* Clear the hash table. Used only when running as slave for the distributed engine. */
+void uct_htable_reset(struct tree *t)
+{
+	if (!t->htable) return;
+	double start = time_now();
+	memset(t->htable, 0, (1 << t->hbits) * sizeof(t->htable[0]));
+	if (DEBUGL(3))
+		fprintf(stderr, "tree occupied %ld %.1f%% inserts %ld collisions %ld/%ld %.1f%% clear %.3fms\n"
+			"parent_not_found %.1f%% parent_leaf %.1f%% node_not_found %.1f%%\n",
+			h_counts.occupied, h_counts.occupied * 100.0 / (1 << t->hbits),
+			h_counts.inserts, h_counts.collisions, h_counts.lookups,
+			h_counts.collisions * 100.0 / (h_counts.lookups + 1),
+			(time_now() - start)*1000,
+			parent_not_found * 100.0 / (h_counts.lookups + 1),
+			parent_leaf * 100.0 / (h_counts.lookups + 1),
+			node_not_found * 100.0 / (h_counts.lookups + 1));
+	if (DEBUG_MODE) h_counts.occupied = 0;
+}
+
+/* Find a node given its coord path from root. Insert it in the
+ * hash table if it is not already there.
+ * Return the tree node, or NULL if the node cannot be found.
+ * The tree is modified in background while this function is running.
+ * prev is only used to optimize the tree search, given that calls to
+ * tree_find_node are made with sorted coordinates (increasing levels
+ * and increasing coord within a level). */
+static struct tree_node *
+tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
+{
+	assert(t && t->htable);
+	path_t path = is->coord_path;
+	/* pass and resign must never be inserted in the hash table. */
+	assert(path > 0);
+
+	int hash, parent_hash;
+	bool found;
+	find_hash(hash, t->htable, t->hbits, path, found, h_counts);
+	struct tree_hash *hnode = &t->htable[hash];
+
+	if (DEBUGVV(7))
+		fprintf(stderr,
+			"find_node %"PRIpath" %s found %d hash %d playouts %d node %p\n", path,
+			path2sstr(path, t->board), found, hash, is->incr.playouts, hnode->node);
+
+	if (found) return hnode->node;
+
+	/* The master sends parents before children so the parent should
+	 * already be in the hash table. */
+	path_t parent_p = parent_path(path, t->board);
+	struct tree_node *parent;
+	if (parent_p) {
+		find_hash(parent_hash, t->htable, t->hbits,
+			  parent_p, found, h_counts);
+		parent = t->htable[parent_hash].node;
+	} else {
+		parent = t->root;
+	}
+	struct tree_node *node = NULL;
+	if (parent) {
+		/* Search for the node in parent's children. */
+		coord_t leaf = leaf_coord(path, t->board);
+		node = (prev && prev->parent == parent ? prev->sibling : parent->children);
+		while (node && node->coord != leaf) node = node->sibling;
+
+		if (DEBUG_MODE) parent_leaf += !parent->is_expanded;
+	} else {
+		if (DEBUG_MODE) parent_not_found++;
+		if (DEBUGVV(7))
+			fprintf(stderr, "parent of %"PRIpath" %s not found\n",
+				path, path2sstr(path, t->board));
+	}
+
+	/* Insert the node in the hash table. */
+	hnode->node = node;
+	if (DEBUG_MODE) h_counts.inserts++, h_counts.occupied++;
+	if (DEBUGVV(7))
+		fprintf(stderr, "insert path %"PRIpath" %s hash %d playouts %d node %p\n",
+			path, path2sstr(path, t->board), hash, is->incr.playouts, node);
+
+	if (DEBUG_MODE && !node) node_not_found++;
+
+	hnode->coord_path = path;
+	return node;
+}
 
 enum parse_code
 uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply)
@@ -66,8 +196,11 @@ receive_stats(struct uct *u, int size)
 {
 	if (size % sizeof(struct incr_stats)) return false;
 	int nodes = size / sizeof(struct incr_stats);
+	if (nodes > (1 << u->stats_hbits)) return false;
 
-	assert(nodes);
+	struct tree *t = u->t;
+	assert(nodes && t->htable);
+	struct tree_node *prev = NULL;
 	double start_time = time_now();
 
 	for (int n = 0; n < nodes; n++) {
@@ -78,9 +211,18 @@ receive_stats(struct uct *u, int size)
 		if (UDEBUGL(7))
 			fprintf(stderr, "read %5d/%d %6d %.3f %"PRIpath" %s\n", n, nodes,
 				is.incr.playouts, is.incr.value, is.coord_path,
-				path2sstr(is.coord_path, u->t->board));
+				path2sstr(is.coord_path, t->board));
 
-		/* TODO: update the stats in the tree. */
+		struct tree_node *node = tree_find_node(t, &is, prev);
+		if (!node) continue;
+
+		/* node_total += others_incr */
+		stats_add_result(&node->u, is.incr.value, is.incr.playouts);
+
+		/* last_total += others_incr */
+		stats_add_result(&node->pu, is.incr.value, is.incr.playouts);
+
+		prev = node;
 	}
 	if (DEBUGVV(2))
 		fprintf(stderr, "read args for %d nodes in %.4fms\n", nodes,

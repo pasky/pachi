@@ -17,6 +17,7 @@
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
+#include "uct/slave.h"
 
 
 /* Allocate one node in the fast_alloc mode. The returned node
@@ -63,7 +64,7 @@ tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 
 /* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
 struct tree *
-tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging)
+tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging, int hbits)
 {
 	struct tree *t = calloc2(1, sizeof(*t));
 	t->board = board;
@@ -83,6 +84,9 @@ tree_init(struct board *board, enum stone color, unsigned long max_tree_size, fl
 	t->ltree_black = tree_init_node(t, pass, 0, false);
 	t->ltree_white = tree_init_node(t, pass, 0, false);
 	t->ltree_aging = ltree_aging;
+
+	t->hbits = hbits;
+	if (hbits) t->htable = uct_htable_alloc(hbits);
 	return t;
 }
 
@@ -154,6 +158,8 @@ tree_done(struct tree *t)
 {
 	tree_done_node(t, t->ltree_black);
 	tree_done_node(t, t->ltree_white);
+
+	if (t->htable) free(t->htable);
 	if (t->nodes) {
 		free(t->nodes);
 		free(t);
@@ -430,7 +436,7 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	assert(tree->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
 
-	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size, tree->ltree_aging);
+	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size, tree->ltree_aging, 0);
 	temp_tree->nodes_size = 0; // We do not want the dummy pass node
         struct tree_node *temp_node;
 

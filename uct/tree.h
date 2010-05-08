@@ -80,6 +80,8 @@ struct tree_node {
 	bool is_expanded;
 };
 
+struct tree_hash;
+
 struct tree {
 	struct board *board;
 	struct tree_node *root;
@@ -110,6 +112,11 @@ struct tree {
 	// 1 means don't age at all.
 	float ltree_aging;
 
+	/* Hash table used when working as slave for the distributed engine.
+	 * Maps coordinate path to tree node. */
+	struct tree_hash *htable;
+	int hbits;
+
 	// Statistics
 	int max_depth;
 	volatile unsigned long nodes_size; // byte size of all allocated nodes
@@ -118,7 +125,7 @@ struct tree {
 };
 
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
-struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging);
+struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging, int hbits);
 void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);

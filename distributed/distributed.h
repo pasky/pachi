@@ -24,12 +24,62 @@ typedef int64_t path_t;
 #define append_child(path, c, board) (((path) << board_bits2(board)) | (c))
 
 
+/* For debugging only */
+struct hash_counts {
+	long lookups;
+	long collisions;
+	long inserts;
+	long occupied;
+};
+
+/* Find a hash table entry given its coord path from root.
+ * Set found to false if the entry is empty.
+ * Abort if the table gets too full (should never happen).
+ * We use double hashing and coord_path = 0 for unused entries. */
+#define find_hash(hash, table, hash_bits, path, found, counts)	\
+	do { \
+		if (DEBUG_MODE) counts.lookups++; \
+		int mask = hash_mask(hash_bits); \
+		int delta = (int)((path) >> (hash_bits)) | 1; \
+		hash = ((int)(path) ^ delta ^ (delta >> (hash_bits))) & mask; \
+		path_t cp = (table)[hash].coord_path; \
+		found = (cp == path); \
+		if (found | !cp) break; \
+		int tries = 1 << ((hash_bits)-2); \
+		do { \
+			if (DEBUG_MODE) counts.collisions++; \
+			hash = (hash + delta) & mask; \
+			cp = (table)[hash].coord_path; \
+			found = (cp == path); \
+			if (found | !cp) break; \
+		} while (--tries); \
+		assert(tries); \
+	} while (0)
+
+
 /* Stats exchanged between master and slave. They are always
  * incremental values to be added to what was last sent. */
 struct incr_stats {
 	path_t coord_path;
 	struct move_stats incr;
 };
+
+/* A slave machine updates at most 7 (19x19) or 9 (9x9) nodes for each
+ * update of the root node. If we have at most 20 threads at 1500
+ * games/s each, a slave machine can do at most 30K games/s. */
+
+/* At 30K games/s a slave can output 270K nodes/s or 4.2 MB/s. The master
+ * with a 100 MB/s network can thus support at most 24 slaves. */
+#define DEFAULT_MAX_SLAVES 24
+
+/* In a 30s move at 270K nodes/s a slave can send and receive at most
+ * 8.1M nodes so at worst 23 bits are needed for the hash table in the
+ * slave and for the per-slave hash table in the master. However the
+ * same nodes are often sent so in practice 21 bits are sufficient.
+ * Larger hash tables are not desirable because it would take too much
+ * time to clear them at each move in the master. */
+#define DEFAULT_STATS_HBITS 21
+
 
 #define DIST_GAMELEN 1000
 
