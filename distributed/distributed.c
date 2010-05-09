@@ -46,6 +46,7 @@
  * Supported arguments:
  * slave_port=SLAVE_PORT     slaves connect to this port; this parameter is mandatory.
  * max_slaves=MAX_SLAVES     default 24
+ * shared_nodes=SHARED_NODES default 10K
  * slaves_quit=0|1           quit gtp command also sent to slaves, default false.
  * proxy_port=PROXY_PORT     slaves optionally send their logs to this port.
  *    Warning: with proxy_port, the master stderr mixes the logs of all
@@ -92,6 +93,7 @@ struct distributed {
 	char *slave_port;
 	char *proxy_port;
 	int max_slaves;
+	int shared_nodes;
 	bool slaves_quit;
 	struct move my_last_move;
 	struct move_stats my_last_stats;
@@ -439,7 +441,8 @@ distributed_state_init(char *arg, struct board *b)
 {
 	struct distributed *dist = calloc2(1, sizeof(struct distributed));
 
-	dist->max_slaves = 100;
+	dist->max_slaves = DEFAULT_MAX_SLAVES;
+	dist->shared_nodes = DEFAULT_SHARED_NODES;
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -457,6 +460,10 @@ distributed_state_init(char *arg, struct board *b)
 				dist->proxy_port = strdup(optval);
 			} else if (!strcasecmp(optname, "max_slaves") && optval) {
 				dist->max_slaves = atoi(optval);
+			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
+				/* Share at most shared_nodes between master and slave at each genmoves.
+				 * Must use the same value in master and slaves. */
+				dist->shared_nodes = atoi(optval);
 			} else if (!strcasecmp(optname, "slaves_quit")) {
 				dist->slaves_quit = !optval || atoi(optval);
 			} else {
@@ -471,7 +478,7 @@ distributed_state_init(char *arg, struct board *b)
 		fprintf(stderr, "distributed: missing slave_port\n");
 		exit(1);
 	}
-	protocol_init(dist->slave_port, dist->proxy_port, dist->max_slaves);
+	protocol_init(dist->slave_port, dist->proxy_port, dist->max_slaves, dist->shared_nodes);
 	return dist;
 }
 

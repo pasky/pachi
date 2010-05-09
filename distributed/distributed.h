@@ -80,6 +80,13 @@ struct incr_stats {
  * time to clear them at each move in the master. */
 #define DEFAULT_STATS_HBITS 21
 
+/* If we select a cycle of at most 40ms, a slave machine can update at
+ * most 10K different nodes per cycle. In practice the updates
+ * are biased so we update fewer nodes. As shorter cyle is preferable
+ * because the stats are more fresh. The cycle time does not affect
+ * the number of slaves and the hash table size. */
+#define DEFAULT_SHARED_NODES (10*1024)
+
 
 #define DIST_GAMELEN 1000
 

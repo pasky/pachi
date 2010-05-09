@@ -633,16 +633,30 @@ get_replies(double time_limit, int min_replies)
 	assert(reply_count > 0);
 }
 
-/* Create the slave and proxy threads. */
+/* In a 30s move with at least 5ms per genmoves we get at most
+ * 6000 genmoves per slave. */
+#define MAX_GENMOVES_PER_SLAVE 6000
+
+/* Allocate the receive queue, and create the slave and proxy threads. */
 void
-protocol_init(char *slave_port, char *proxy_port, int max_slaves)
+protocol_init(char *slave_port, char *proxy_port, int max_slaves, int shared_nodes)
 {
 	start_time = time_now();
 
-	int slave_sock = port_listen(slave_port, max_slaves);
+	queue_max_length = max_slaves * MAX_GENMOVES_PER_SLAVE;
+	receive_queue = calloc2(queue_max_length, sizeof(*receive_queue));
+
+	default_sstate.slave_sock = port_listen(slave_port, max_slaves);
+	default_sstate.max_buf_size = shared_nodes * sizeof(struct incr_stats);
+	default_sstate.last_processed = -1;
+
+	for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
+		default_sstate.b[n].queue_index = -1;
+	}
+
 	pthread_t thread;
 	for (int id = 0; id < max_slaves; id++) {
-		pthread_create(&thread, NULL, slave_thread, (void *)(long)slave_sock);
+		pthread_create(&thread, NULL, slave_thread, (void *)(long)id);
 	}
 
 	if (proxy_port) {
