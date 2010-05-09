@@ -3,8 +3,9 @@
  * results. It can also act as a proxy for the logs of all slave machines.
  * The slave machines must run with engine "uct" (not "distributed").
  * The master sends pachi-genmoves gtp commands regularly to each slave,
- * gets as replies a list of candidate moves, their number of playouts
- * and their value. The master then picks the most popular move. */
+ * gets as replies a list of nodes, their number of playouts
+ * and their value. The master then picks the most popular move
+ * among the top level nodes. */
 
 /* With time control, the master waits for all slaves, except
  * when the allowed time is already passed. In this case the
@@ -15,22 +16,38 @@
  * parameter for the master should be the sum of the parameters
  * for all slaves. */
 
-/* The master sends updated statistics for the best moves
- * in each genmoves command. In this version only the
- * children of the root node are updated. The slaves
- * reply with just their own stats; they remember what was
- * previously received from or sent to the master, to
- * distinguish their own contribution from that of other slaves. */
+/* The master sends updated statistics for the best nodes in each
+ * genmoves command. They are incremental updates from all other
+ * slaves (so they exclude contributions from the target slave).
+ * The slaves reply with just their own stats. So both master and
+ * slave remember what was previously sent. A slave remembers in
+ * the tree ("pu" field), which is stable across moves. The slave
+ * also has a temporary hash table to map received coord paths
+ * to tree nodes; the hash table is cleared at each new move.
+ * The master remembers stats in a queue of received buffers that
+ * are merged together, plus one hash table per slave. The master
+ * queue and the hash tables are cleared at each new move. */
+/* This version only has the slave receiving part, the rest
+ * comes in subsequent commits. */
 
-/* The master-slave protocol has has fault tolerance. If a slave is
+/* To allow the master to select the best move, slaves also send
+ * absolute playout counts for the best top level nodes (children
+ * of the root node), including contributions from other slaves.
+ * The master sums these counts and picks the best sum, which is
+ * equivalent to picking the best average. (The master cannot
+ * use the incremental stats sent in binary form because they
+ * are not maintained across moves, so playouts from previous
+ * moves would be lost.) */
+
+/* The master-slave protocol has fault tolerance. If a slave is
  * out of sync, the master sends it the appropriate command history. */
 
 /* Pass me arguments like a=b,c=d,...
  * Supported arguments:
- * slave_port=SLAVE_PORT  slaves connect to this port; this parameter is mandatory.
- * max_slaves=MAX_SLAVES  default 100
- * slaves_quit=0|1        quit gtp command also sent to slaves, default false.
- * proxy_port=PROXY_PORT  slaves optionally send their logs to this port.
+ * slave_port=SLAVE_PORT     slaves connect to this port; this parameter is mandatory.
+ * max_slaves=MAX_SLAVES     default 24
+ * slaves_quit=0|1           quit gtp command also sent to slaves, default false.
+ * proxy_port=PROXY_PORT     slaves optionally send their logs to this port.
  *    Warning: with proxy_port, the master stderr mixes the logs of all
  *    machines but you can separate them again:
  *      slave logs:  sed -n '/< .*:/s/.*< /< /p' logfile

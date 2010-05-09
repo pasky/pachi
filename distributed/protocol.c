@@ -32,7 +32,7 @@ static int cmd_count = 0;
 #define MAX_CMDS_PER_MOVE 10
 
 /* History of gtp commands sent for current game, indexed by move. */
-struct cmd_history {
+static struct cmd_history {
 	int gtp_id;
 	char *next_cmd;
 } history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
@@ -46,8 +46,21 @@ int reply_count = 0;
 /* All replies to latest gtp command are in gtp_replies[0..reply_count-1]. */
 char **gtp_replies;
 
-/* Mutex protecting gtp_cmds, gtp_cmd, history,
- * cmd_count, active_slaves, reply_count & gtp_replies */
+/* All binary buffers received from all slaves in current move are in
+ * receive_queue[0..queue_length-1] */
+static struct receive_buf {
+	volatile void *buf;
+	/* All buffers have the same physical size.
+	 * size is the number of valid bytes. */
+	int size;
+	/* id of the thread that received the buffer. */
+	int thread_id;
+} *receive_queue;
+volatile static int queue_length = 0;
+static int queue_max_length;
+
+/* Mutex protecting all variables above. receive_queue may be
+ * read without the lock but is only written with lock held. */
 static pthread_mutex_t slave_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /* Condition signaled when a new gtp command is available. */
@@ -62,6 +75,39 @@ static pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 /* Absolute time when this program was started.
  * For debugging only. */
 static double start_time;
+
+/* Each slave thread maintains a ring of 32 buffers holding
+ * incremental stats received from the slave. The oldest
+ * buffer is recycled to hold stats sent to the slave and
+ * received the next reply. */
+#define BUFFERS_PER_SLAVE_BITS 5
+#define BUFFERS_PER_SLAVE (1 << BUFFERS_PER_SLAVE_BITS)
+
+typedef void (*buffer_hook)(void *buf, int size);
+
+struct slave_state {
+	struct {
+		void *buf;
+		int size;
+		/* Index in received_queue, -1 if not there. */
+		int queue_index;
+	} b[BUFFERS_PER_SLAVE];
+	int max_buf_size;
+	int newest_buf;
+	buffer_hook insert_hook;
+
+	int thread_id;
+	int slave_sock;
+	struct in_addr client; // for debugging only
+
+	/* Index in received_queue of most recent processed
+	 * buffer, -1 if none processed yet. */
+	int last_processed;
+	/* Id of gtp command at time of last_processed. */
+	int last_cmd_id;
+};
+static struct slave_state default_sstate;
+
 
 /* Get exclusive access to the threads and commands state. */
 void
@@ -116,51 +162,102 @@ proxy_thread(void *arg)
 
 /* Get a reply to one gtp command. Return the gtp command id,
  * or -1 if error. reply must have at least CMDS_SIZE bytes.
+ * The ascii reply ends with an empty line; if the first line
+ * contains "@size", a binary reply of size bytes follows the
+ * empty line. @size is not standard gtp, it is only used
+ * internally by Pachi for the genmoves command; it must be the
+ * last parameter on the line.
+ * *bin_size is the maximum size upon entry, actual size on return.
  * slave_lock is not held on either entry or exit of this function. */
 static int
-get_reply(FILE *f, struct in_addr client, char *reply)
+get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin_size)
 {
 	int reply_id = -1;
 	*reply = '\0';
-	char *line = reply;
+	if (!fgets(reply, CMDS_SIZE, f)) return -1;
+
+	/* Check for binary reply. */
+	char *s = strchr(reply, '@');
+	int size = 0;
+	if (s) size = atoi(s+1);
+	assert(size <= *bin_size);
+	*bin_size = size;
+
+	if (DEBUGV(s, 2))
+		logline(&client, "<<", reply);
+	if ((*reply == '=' || *reply == '?') && isdigit(reply[1]))
+		reply_id = atoi(reply+1);
+
+	/* Read the rest of the ascii reply */
+	char *line = reply + strlen(reply);
 	while (fgets(line, reply + CMDS_SIZE - line, f) && *line != '\n') {
-		if (DEBUGL(3) || (DEBUGL(2) && line == reply))
+		if (DEBUGL(3))
 			logline(&client, "<<", line);
-		if (reply_id < 0 && (*line == '=' || *line == '?') && isdigit(line[1]))
-			reply_id = atoi(line+1);
 		line += strlen(line);
 	}
 	if (*line != '\n') return -1;
-	return reply_id;
+
+	/* Read the binary reply if any. */
+	double start = time_now();
+	int len;
+	while (size && (len = fread(bin_reply, 1, size, f)) > 0) {
+		bin_reply = (char *)bin_reply + len;
+		size -= len;
+	}
+	if (*bin_size && DEBUGVV(7)) {
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "read reply %d bytes in %.4fms\n", *bin_size,
+			 (time_now() - start)*1000);
+		logline(&client, "= ", buf);
+	}
+	return size ? -1 : reply_id;
 }
 
-/* Send one gtp command and get a reply from the slave machine.
+/* Send the gtp command to_send and get a reply from the slave machine.
  * Write the reply in buf which must have at least CMDS_SIZE bytes.
+ * If *bin_size > 0, send bin_buf after the gtp command.
+ * Return any binary reply in bin_buf and set its size in bin_size.
+ * bin_buf is private to the slave and need not be copied.
  * Return the gtp command id, or -1 if error.
  * slave_lock is held on both entry and exit of this function. */
 static int
-send_command(char *to_send, FILE *f, struct in_addr client, char *buf)
+send_command(char *to_send, void *bin_buf, int *bin_size,
+	     FILE *f, struct slave_state *sstate, char *buf)
 {
-	assert(to_send && gtp_cmd);
+	assert(to_send && gtp_cmd && bin_buf && bin_size);
 	strncpy(buf, to_send, CMDS_SIZE);
 	bool resend = to_send != gtp_cmd;
 
 	pthread_mutex_unlock(&slave_lock);
 
 	if (DEBUGL(1) && resend)
-		logline(&client, "? ",
+		logline(&sstate->client, "? ",
 			to_send == gtp_cmds ? "resend all\n" : "partial resend\n");
 	fputs(buf, f);
+
+	double start = time_now();
+	if (*bin_size)
+		fwrite(bin_buf, 1, *bin_size, f);
 	fflush(f);
-	if (DEBUGL(2)) {
+
+	if (DEBUGV(strchr(buf, '@'), 2)) {
+		double ms = (time_now() - start) * 1000.0;
 		if (!DEBUGL(3)) {
 			char *s = strchr(buf, '\n');
 			if (s) s[1] = '\0';
 		}
-		logline(&client, ">>", buf);
+		logline(&sstate->client, ">>", buf);
+		if (*bin_size) {
+			char b[1024];  // ??? remove
+			snprintf(b, sizeof(b),
+				 "sent args %d bytes in %.4fms\n", *bin_size, ms);
+			logline(&sstate->client, "= ", b);
+		}
 	}
 
-	int reply_id = get_reply(f, client, buf);
+	/* Reuse the buffers for the reply. */
+	*bin_size = sstate->max_buf_size;
+	int reply_id = get_reply(f, sstate->client, buf, bin_buf, bin_size);
 
 	pthread_mutex_lock(&slave_lock);
 	return reply_id;
@@ -190,35 +287,140 @@ next_command(int cmd_id)
 	return next;
 }
 
+/* Allocate buffers for a slave thread. The state should have been
+ * initialized already as a copy of the default slave state.
+ * slave_lock is not held on either entry or exit of this function. */
+static void
+slave_state_alloc(struct slave_state *sstate)
+{
+	for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
+		sstate->b[n].buf = malloc2(sstate->max_buf_size);
+	}
+}
+
+/* Get a free binary buffer, first invalidating it in the receive
+ * queue if necessary. In practice all buffers should be used
+ * before they are invalidated, if BUFFERS_PER_SLAVE is large enough.
+ * slave_lock is held on both entry and exit of this function. */
+static void *
+get_free_buf(struct slave_state *sstate, bool new_id)
+{
+	int newest = (sstate->newest_buf + 1) & (BUFFERS_PER_SLAVE - 1);
+	sstate->newest_buf = newest;
+	void *buf = sstate->b[newest].buf;
+
+	if (DEBUGVV(7)) {
+		char b[1024];
+		snprintf(b, sizeof(b), "get free %d index %d buf=%p qlength %d\n",
+			 newest, sstate->b[newest].queue_index, buf, queue_length);
+		logline(&sstate->client, "? ", b);
+	}
+
+	/* For a new command, previous indices in receive_queue
+	 * are now meaningless. In particular they may be
+	 * beyond the current queue_length. */
+	if (new_id) {
+		sstate->last_processed = -1;
+		for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
+			sstate->b[n].queue_index = -1;
+		}
+		return buf;
+	}
+
+	int index = sstate->b[newest].queue_index;
+	if (index >= 0) {
+		assert(receive_queue[index].thread_id == sstate->thread_id);
+		assert(receive_queue[index].buf == buf);
+		/* Invalidate the buffer. */
+		receive_queue[index].buf = NULL;
+		sstate->b[newest].queue_index = -1;
+	}
+	return buf;
+}
+
+/* Insert a buffer in the receive queue. It should be the most
+ * recent buffer allocated by the calling thread.
+ * slave_lock is held on both entry and exit of this function. */
+static void
+insert_buf(struct slave_state *sstate, void *buf, int size)
+{
+	assert(queue_length < queue_max_length);
+
+	int newest = sstate->newest_buf;
+	assert(buf == sstate->b[newest].buf);
+
+	/* Update the buffer if necessary before making it
+	 * available to other threads. */
+	if (sstate->insert_hook) sstate->insert_hook(buf, size);
+
+	if (DEBUGVV(7)) {
+		char b[1024];
+		snprintf(b, sizeof(b), "insert newest %d rq[%d]->%p\n",
+			 newest, queue_length, buf);
+			logline(&sstate->client, "? ", b);
+	}
+	receive_queue[queue_length].buf = buf;
+	receive_queue[queue_length].size = size;
+	receive_queue[queue_length].thread_id = sstate->thread_id;
+	sstate->b[newest].queue_index = queue_length;
+	queue_length++;
+}
+
 /* Process the reply received from a slave machine.
- * Copy it to reply_buf and return false if ok, or return
- * true if the slave is out of sync.
+ * Copy the ascii part to reply_buf and insert the binary part
+ * (if any) in the receive queue.
+ * Return false if ok, true if the slave is out of sync.
  * slave_lock is held on both entry and exit of this function. */
 static bool
 process_reply(int reply_id, char *reply, char *reply_buf,
-	      int *last_reply_id, int *reply_slot)
+	      void *bin_reply, int bin_size, int *last_reply_id,
+	      int *reply_slot, struct slave_state *sstate)
 {
-	bool resend = true;
-	/* For resend everything if slave returned an error. */
+	/* Resend everything if slave returned an error. */
 	if (*reply != '=') {
 		*last_reply_id = -1;
-		return resend;
+		return true;
 	}
 	/* Make sure we are still in sync. cmd_count may have
 	 * changed but the reply is valid as long as cmd_id didn't
 	 * change (this only occurs for consecutive genmoves). */
 	int cmd_id = atoi(gtp_cmd);
-	if (reply_id == cmd_id) {
-		strncpy(reply_buf, reply, CMDS_SIZE);
-		if (reply_id != *last_reply_id)
-			*reply_slot = reply_count++;
-		gtp_replies[*reply_slot] = reply_buf;
-
-		pthread_cond_signal(&reply_cond);
-		resend = false;
+	if (reply_id != cmd_id) {
+		*last_reply_id = reply_id;
+		return true;
 	}
+
+	strncpy(reply_buf, reply, CMDS_SIZE);
+	if (reply_id != *last_reply_id)
+		*reply_slot = reply_count++;
+	gtp_replies[*reply_slot] = reply_buf;
+
+	if (bin_size) insert_buf(sstate, bin_reply, bin_size);
+
+	pthread_cond_signal(&reply_cond);
 	*last_reply_id = reply_id;
-	return resend;
+	return false;
+}
+
+/* Get the binary arg for the given command, and update the command
+ * if necessary. For now, only genmoves has a binary argument, and
+ * we return the best stats increments from all other slaves.
+ * Set *bin_size to 0 if the command doesn't take binary arguments,
+ * but still return a buffer, to be used for the reply.
+ * Return NULL if the binary arg is obsolete by the time we have
+ * finished computing it, because a new command is available.
+ * This version only gets the buffer for the reply, to be completed
+ * in future commits.
+ * slave_lock is held on both entry and exit of this function. */
+void *
+get_binary_arg(struct slave_state *sstate, char *cmd, int cmd_size, int *bin_size)
+{
+	int cmd_id = atoi(gtp_cmd);
+	void *buf = get_free_buf(sstate, cmd_id != sstate->last_cmd_id);
+	sstate->last_cmd_id = cmd_id;
+
+	*bin_size = 0;
+	return buf;
 }
 
 /* Main loop of a slave thread.
@@ -227,10 +429,10 @@ process_reply(int reply_id, char *reply, char *reply_buf,
  * Returns when the connection with the slave machine is cut.
  * slave_lock is held on both entry and exit of this function. */
 static void
-slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
+slave_loop(FILE *f, char *reply_buf, struct slave_state *sstate, bool resend)
 {
 	char *to_send;
-	int last_cmd_sent = 0;
+	int last_cmd_count = 0;
 	int last_reply_id = -1;
 	int reply_slot = -1;
 	for (;;) {
@@ -239,51 +441,64 @@ slave_loop(FILE *f, struct in_addr client, char *reply_buf, bool resend)
 			to_send = next_command(last_reply_id);
 		} else {
 			/* Wait for a new command. */
-			while (last_cmd_sent == cmd_count)
+			while (last_cmd_count == cmd_count)
 				pthread_cond_wait(&cmd_cond, &slave_lock);
 			to_send = gtp_cmd;
 		}
 
 		/* Command available, send it to slave machine.
-		 * If slave was out of sync, send the history. */
-		char buf[CMDS_SIZE];
-		last_cmd_sent = cmd_count;
+		 * If slave was out of sync, send the history.
+		 * But first get binary arguments if necessary. */
+		int bin_size = 0;
+		void *bin_buf = get_binary_arg(sstate, gtp_cmd,
+					       gtp_cmds + CMDS_SIZE - gtp_cmd,
+					       &bin_size);
+		/* Check that the command is still valid. */
+		resend = true;
+		if (!bin_buf) continue;
 
 		/* Send the command and get the reply, which always ends with \n\n
 		 * The slave machine sends "=id reply" or "?id reply"
 		 * with id == cmd_id if it is in sync. */
-		int reply_id = send_command(to_send, f, client, buf);
+		last_cmd_count = cmd_count;
+		char buf[CMDS_SIZE];
+		int reply_id = send_command(to_send, bin_buf, &bin_size, f,
+					    sstate, buf);
 		if (reply_id == -1) return;
 
-		resend = process_reply(reply_id, buf, reply_buf,
-				       &last_reply_id, &reply_slot);
-		if (!resend)
-			/* Good reply. Force waiting for a new command.
-			 * The next genmoves stats we send must include those
-			 * just received (this is assumed by the slave). */
-			last_cmd_sent = cmd_count;
+		resend = process_reply(reply_id, buf, reply_buf, bin_buf, bin_size,
+				       &last_reply_id, &reply_slot, sstate);
 	}
 }
 
 /* Thread sending gtp commands to one slave machine, and
  * reading replies. If a slave machine dies, this thread waits
- * for a connection from another slave. */
+ * for a connection from another slave.
+ * The large buffers are allocated only once we get a first
+ * connection, to avoid wasting memory if max_slaves is too large.
+ * We do not invalidate the received buffers if a slave disconnects;
+ * they are still useful for other slaves. */
 static void *
 slave_thread(void *arg)
 {
-	int slave_sock = (long)arg;
-	assert(slave_sock >= 0);
+	struct slave_state sstate = default_sstate;
+	sstate.thread_id = (long)arg;
+
+	assert(sstate.slave_sock >= 0);
 	char reply_buf[CMDS_SIZE];
 	bool resend = false;
 
 	for (;;) {
 		/* Wait for a connection from any slave. */
 		struct in_addr client;
-		int conn = open_server_connection(slave_sock, &client);
+		int conn = open_server_connection(sstate.slave_sock, &client);
 
 		FILE *f = fdopen(conn, "r+");
-		if (DEBUGL(2))
-			logline(&client, "= ", "new slave\n");
+		if (DEBUGL(2)) {
+			snprintf(reply_buf, sizeof(reply_buf),
+				 "new slave, id %d\n", sstate.thread_id);
+			logline(&client, "= ", reply_buf);
+		}
 
 		/* Minimal check of the slave identity. */
 		fputs("name\n", f);
@@ -296,9 +511,12 @@ slave_thread(void *arg)
 			continue;
 		}
 
+		if (!resend) slave_state_alloc(&sstate);
+		sstate.client = client;
+
 		pthread_mutex_lock(&slave_lock);
 		active_slaves++;
-		slave_loop(f, client, reply_buf, resend);
+		slave_loop(f, reply_buf, &sstate, resend);
 
 		assert(active_slaves > 0);
 		active_slaves--;
