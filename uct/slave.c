@@ -151,6 +151,25 @@ tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
 	return node;
 }
 
+
+/* Read and discard any binary arguments. The number of
+ * bytes to be skipped is given by @size in the command. */
+static void
+discard_bin_args(char *args)
+{
+	char *s = strchr(args, '@');
+	int size = 0;
+	if (s) size = atoi(s+1);
+	while (size) {
+		char buf[64*1024];
+		int len = sizeof(buf);
+		if (len > size) len = size;
+		len = fread(buf, 1, len, stdin);
+		if (len <= 0) break;
+		size -= len;
+	}
+}
+
 enum parse_code
 uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply)
 {
@@ -168,13 +187,7 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 	    && !reply_disabled(id) && !is_reset(cmd)) {
 		if (UDEBUGL(0))
 			fprintf(stderr, "Out of sync, id %d, move %d\n", id, b->moves);
-
-		/* Skip rest of multi-line command (genmoves only) */
-		if (!strcasecmp(cmd, "pachi-genmoves")
-		    || !strcasecmp(cmd, "pachi-genmoves_cleanup")) {
-			char line[128];
-			while (fgets(line, sizeof(line), stdin) && *line != '\n') ;
-		}
+		discard_bin_args(args);
 
 		static char buf[128];
 		snprintf(buf, sizeof(buf), "out of sync, move %d expected", b->moves);
