@@ -47,6 +47,7 @@
  * slave_port=SLAVE_PORT     slaves connect to this port; this parameter is mandatory.
  * max_slaves=MAX_SLAVES     default 24
  * shared_nodes=SHARED_NODES default 10K
+ * stats_hbits=STATS_HBITS   default 21. 2^stats_bits = hash table size
  * slaves_quit=0|1           quit gtp command also sent to slaves, default false.
  * proxy_port=PROXY_PORT     slaves optionally send their logs to this port.
  *    Warning: with proxy_port, the master stderr mixes the logs of all
@@ -71,7 +72,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 #include <time.h>
 #include <alloca.h>
 #include <sys/types.h>
@@ -86,7 +86,7 @@
 #include "mq.h"
 #include "debug.h"
 #include "distributed/distributed.h"
-#include "distributed/protocol.h"
+#include "distributed/merge.h"
 
 /* Internal engine state. */
 struct distributed {
@@ -94,6 +94,7 @@ struct distributed {
 	char *proxy_port;
 	int max_slaves;
 	int shared_nodes;
+	int stats_hbits;
 	bool slaves_quit;
 	struct move my_last_move;
 	struct move_stats my_last_stats;
@@ -441,6 +442,7 @@ distributed_state_init(char *arg, struct board *b)
 {
 	struct distributed *dist = calloc2(1, sizeof(struct distributed));
 
+	dist->stats_hbits = DEFAULT_STATS_HBITS;
 	dist->max_slaves = DEFAULT_MAX_SLAVES;
 	dist->shared_nodes = DEFAULT_SHARED_NODES;
 	if (arg) {
@@ -464,6 +466,9 @@ distributed_state_init(char *arg, struct board *b)
 				/* Share at most shared_nodes between master and slave at each genmoves.
 				 * Must use the same value in master and slaves. */
 				dist->shared_nodes = atoi(optval);
+			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
+                                /* Set hash table size to 2^stats_hbits for the shared stats. */
+				dist->stats_hbits = atoi(optval);
 			} else if (!strcasecmp(optname, "slaves_quit")) {
 				dist->slaves_quit = !optval || atoi(optval);
 			} else {
@@ -478,7 +483,10 @@ distributed_state_init(char *arg, struct board *b)
 		fprintf(stderr, "distributed: missing slave_port\n");
 		exit(1);
 	}
-	protocol_init(dist->slave_port, dist->proxy_port, dist->max_slaves, dist->shared_nodes);
+
+	merge_init(&default_sstate, dist->shared_nodes, dist->stats_hbits, dist->max_slaves);
+	protocol_init(dist->slave_port, dist->proxy_port, dist->max_slaves);
+
 	return dist;
 }
 

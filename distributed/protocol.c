@@ -46,17 +46,9 @@ int reply_count = 0;
 /* All replies to latest gtp command are in gtp_replies[0..reply_count-1]. */
 char **gtp_replies;
 
-/* All binary buffers received from all slaves in current move are in
- * receive_queue[0..queue_length-1] */
-static struct receive_buf {
-	volatile void *buf;
-	/* All buffers have the same physical size.
-	 * size is the number of valid bytes. */
-	int size;
-	/* id of the thread that received the buffer. */
-	int thread_id;
-} *receive_queue;
-volatile static int queue_length = 0;
+
+struct receive_buf *receive_queue;
+int queue_length = 0;
 static int queue_max_length;
 
 /* Mutex protecting all variables above. receive_queue may be
@@ -76,37 +68,8 @@ static pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
  * For debugging only. */
 static double start_time;
 
-/* Each slave thread maintains a ring of 32 buffers holding
- * incremental stats received from the slave. The oldest
- * buffer is recycled to hold stats sent to the slave and
- * received the next reply. */
-#define BUFFERS_PER_SLAVE_BITS 5
-#define BUFFERS_PER_SLAVE (1 << BUFFERS_PER_SLAVE_BITS)
-
-typedef void (*buffer_hook)(void *buf, int size);
-
-struct slave_state {
-	struct {
-		void *buf;
-		int size;
-		/* Index in received_queue, -1 if not there. */
-		int queue_index;
-	} b[BUFFERS_PER_SLAVE];
-	int max_buf_size;
-	int newest_buf;
-	buffer_hook insert_hook;
-
-	int thread_id;
-	int slave_sock;
-	struct in_addr client; // for debugging only
-
-	/* Index in received_queue of most recent processed
-	 * buffer, -1 if none processed yet. */
-	int last_processed;
-	/* Id of gtp command at time of last_processed. */
-	int last_cmd_id;
-};
-static struct slave_state default_sstate;
+/* Default slave state. */
+struct slave_state default_sstate;
 
 
 /* Get exclusive access to the threads and commands state. */
@@ -296,6 +259,7 @@ slave_state_alloc(struct slave_state *sstate)
 	for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
 		sstate->b[n].buf = malloc2(sstate->max_buf_size);
 	}
+	if (sstate->alloc_hook) sstate->alloc_hook(sstate);
 }
 
 /* Get a free binary buffer, first invalidating it in the receive
@@ -637,9 +601,11 @@ get_replies(double time_limit, int min_replies)
  * 6000 genmoves per slave. */
 #define MAX_GENMOVES_PER_SLAVE 6000
 
-/* Allocate the receive queue, and create the slave and proxy threads. */
+/* Allocate the receive queue, and create the slave and proxy threads.
+ * max_buf_size and the merge-related fields of default_sstate must
+ * already be initialized. */
 void
-protocol_init(char *slave_port, char *proxy_port, int max_slaves, int shared_nodes)
+protocol_init(char *slave_port, char *proxy_port, int max_slaves)
 {
 	start_time = time_now();
 
@@ -647,7 +613,6 @@ protocol_init(char *slave_port, char *proxy_port, int max_slaves, int shared_nod
 	receive_queue = calloc2(queue_max_length, sizeof(*receive_queue));
 
 	default_sstate.slave_sock = port_listen(slave_port, max_slaves);
-	default_sstate.max_buf_size = shared_nodes * sizeof(struct incr_stats);
 	default_sstate.last_processed = -1;
 
 	for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {

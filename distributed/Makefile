@@ -1,5 +1,5 @@
 INCLUDES=-I..
-OBJS=distributed.o protocol.o
+OBJS=distributed.o protocol.o merge.o
 
 all: distributed.a
 distributed.a: $(OBJS)
