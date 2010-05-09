@@ -545,8 +545,11 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 	static int gtp_id = -1;
 	int moves = is_reset(cmd) ? 0 : b->moves;
 	if (new_id) {
-	        /* fast_random() is 16-bit only so the multiplication can't overflow. */
-		gtp_id = force_reply(moves + fast_random(65535) * DIST_GAMELEN);
+		int prev_id = gtp_id;
+		do {
+			/* fast_random() is 16-bit only so the multiplication can't overflow. */
+			gtp_id = force_reply(moves + fast_random(65535) * DIST_GAMELEN);
+		} while (gtp_id == prev_id);
 		reply_count = 0;
 	}
 	snprintf(gtp_cmd, gtp_cmds + CMDS_SIZE - gtp_cmd, "%d %s %s",
