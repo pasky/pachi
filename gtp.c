@@ -270,9 +270,12 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
+		void *stats;
+		int stats_size;
 
 		char *reply = engine->genmoves(engine, board, &ti[color], color, next,
-					       !strcasecmp(cmd, "pachi-genmoves_cleanup"));
+					       !strcasecmp(cmd, "pachi-genmoves_cleanup"),
+					       &stats, &stats_size);
 		if (!reply) {
 			gtp_error(id, "genmoves error", NULL);
 			return P_OK;
@@ -282,6 +285,14 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		if (DEBUGL(4))
 			board_print_custom(board, stderr, engine->printhook);
 		gtp_reply(id, reply, NULL);
+		if (stats_size > 0) {
+			double start = time_now();
+			fwrite(stats, 1, stats_size, stdout);
+			fflush(stdout);
+			if (DEBUGVV(2))
+				fprintf(stderr, "sent reply %d bytes in %.4fms\n",
+					stats_size, (time_now() - start)*1000);
+		}
 
 	} else if (!strcasecmp(cmd, "set_free_handicap")) {
 		struct move m;
