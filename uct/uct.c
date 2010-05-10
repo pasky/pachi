@@ -752,6 +752,13 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "slave")) {
 				/* Act as slave for the distributed engine. */
 				u->slave = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
+				/* Share at most shared_nodes between master and slave at each genmoves.
+				 * Must use the same value in master and slaves. */
+				u->shared_nodes = atoi(optval);
+			} else if (!strcasecmp(optname, "shared_levels") && optval) {
+				/* Share only nodes of level <= shared_levels. */
+				u->shared_levels = atoi(optval);
 			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
 				/* Set hash table size to 2^stats_hbits for the shared stats. */
 				u->stats_hbits = atoi(optval);
@@ -808,6 +815,9 @@ uct_state_init(char *arg, struct board *b)
 
 	if (u->slave) {
 		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
+		if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
+		if (!u->shared_levels) u->shared_levels = 1;
+		assert(u->shared_levels * board_bits2(b) <= 8 * sizeof(path_t));
 	}
 
 	if (!u->dynkomi)

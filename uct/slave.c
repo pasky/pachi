@@ -243,8 +243,181 @@ receive_stats(struct uct *u, int size)
 	return true;
 }
 
+/* A tree traversal fills this array, then the nodes with most increments are sent. */
+struct stats_candidate {
+	path_t coord_path;
+	int playout_incr;
+	struct tree_node *node;
+};
+
+/* We maintain counts per bucket to avoid sorting stats_queue.
+ * All nodes with n updates since last send go to bucket n.
+ * If we put all nodes above 1023 updates in the top bucket,
+ * we get at most 27 nodes in this bucket. So we can select
+ * exactly the best shared_nodes nodes if shared_nodes >= 27. */
+#define MAX_BUCKETS 1024
+static int bucket_count[MAX_BUCKETS];
+
+/* Traverse the tree rooted at node, and append incremental stats
+ * for children to stats_queue. start_path is the coordinate path
+ * for the top node. Stats for a node are only appended if enough playouts
+ * have been made since the last send, and the level is not too deep.
+ * Return the updated stats count. */
+static int
+append_stats(struct stats_candidate *stats_queue, struct tree_node *node, int stats_count,
+	     int max_count, path_t start_path, path_t max_path, int min_increment, struct board *b)
+{
+	/* The children field is set only after all children are created
+	 * so we can traverse the the tree while it is updated. */
+	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+
+		if (is_pass(ni->coord)) continue;
+		if (ni->hints & TREE_HINT_INVALID) continue;
+
+		int incr = ni->u.playouts - ni->pu.playouts;
+		if (incr < min_increment) continue;
+
+		/* min_increment should be tuned to avoid overflow. */
+		if (stats_count >= max_count) {
+			if (DEBUGL(0))
+				fprintf(stderr, "*** stats overflow %d nodes\n", stats_count);
+			return stats_count;
+		}
+		path_t child_path = append_child(start_path, ni->coord, b);
+		stats_queue[stats_count].playout_incr = incr;
+		stats_queue[stats_count].coord_path = child_path;
+		stats_queue[stats_count++].node = ni;
+
+		if (incr >= MAX_BUCKETS) incr = MAX_BUCKETS - 1;
+		bucket_count[incr]++;
+
+		/* Do not recurse if level deep enough. */
+		if (child_path >= max_path) continue;
+
+		stats_count = append_stats(stats_queue, ni, stats_count, max_count,
+					   child_path, max_path, min_increment, b);
+	}
+	return stats_count;
+}
+
+/* Used to sort by coord path the incremental stats to be sent. */
+static int
+coord_cmp(const void *p1, const void *p2)
+{
+	path_t diff = ((struct incr_stats *)p1)->coord_path
+		    - ((struct incr_stats *)p2)->coord_path;
+	return (int)(diff >> 32) | !!(int)diff;
+}
+
+/* Select from stats_queue at most shared_nodes candidates with
+ * biggest increments. Return a binary array sorted by coord path. */
+static struct incr_stats *
+select_best_stats(struct stats_candidate *stats_queue, int stats_count,
+		  int shared_nodes, int *byte_size)
+{
+	static struct incr_stats *out_stats = NULL;
+	if (!out_stats)
+		out_stats = malloc2(shared_nodes * sizeof(*out_stats));
+
+	/* Find the minimum increment to send. The bucket with minimum
+         * increment may be sent only partially. */
+	int out_count = 0;
+	int min_incr = MAX_BUCKETS;
+	do {
+		out_count += bucket_count[--min_incr];
+	} while (min_incr > 1 && out_count < shared_nodes);
+
+	/* Send all all increments > min_incr plus whatever we can at min_incr. */
+	int min_count = bucket_count[min_incr] - (out_count - shared_nodes);
+	struct incr_stats *os = out_stats;
+	out_count = 0;
+	for (int count = 0; count < stats_count; count++) {
+		int delta = stats_queue[count].playout_incr - min_incr;
+		if (delta < 0 || (delta == 0 && --min_count < 0)) continue;
+
+		struct tree_node *node = stats_queue[count].node;
+		os->incr = node->u;
+		stats_rm_result(&os->incr, node->pu.value, node->pu.playouts);
+
+		/* With virtual loss os->incr.playouts might be <= 0; we only
+		 * send positive increments to other slaves so a virtual loss
+		 * can be propagated to other machines (good). The undo of the
+		 * virtual loss will be propagated later when node->u gets
+		 * above node->pu. */
+		if (os->incr.playouts > 0) {
+			node->pu = node->u;
+			os->coord_path = stats_queue[count].coord_path;
+			assert(os->coord_path > 0);
+			os++;
+			out_count++;
+		}
+		assert (out_count <= shared_nodes);
+	}
+	*byte_size = (char *)os - (char *)out_stats;
+
+	/* Sort the increments by increasing coord path (required by master).
+	 * Can be done in linear time with radix sort if qsort is too slow. */
+	qsort(out_stats, out_count, sizeof(*os), coord_cmp);
+	return out_stats;
+}
+
+/* Get incremental stats updates for the distributed engine.
+ * Return a binary array of incr_stats structs in coordinate order
+ * (increasing levels and increasing coordinates within a level).
+ * This function is called only by the main thread, but may be
+ * called while the tree is updated by the worker threads. Keep this
+ * code in sync with distributed/distributed.c:select_best_move(). */
+static void *
+report_incr_stats(struct uct *u, int *stats_size)
+{
+	double start_time = time_now();
+
+	struct tree_node *root = u->t->root;
+	struct board *b = u->t->board;
+
+	/* The factor 3 below has experimentally been found to be
+	 * sufficient. At worst if we fill stats_queue we will
+	 * discard some stats updates but this is rare. */
+	int max_nodes = 3 * u->shared_nodes;
+	static struct stats_candidate *stats_queue = NULL;
+	if (!stats_queue) stats_queue = malloc2(max_nodes * sizeof(*stats_queue));
+
+	memset(bucket_count, 0, sizeof(bucket_count));
+
+	/* Try to fill the output buffer with the most important
+         * nodes (highest increments), while still traversing
+	 * as little of the tree as possible. If we set min_increment
+	 * too low we waste time. If we set it too high we can't
+	 * fill the output buffer with the desired number of nodes.
+	 * The best min_increment results in stats_count just above 
+	 * shared_nodes. However perfect tuning is not necessary:
+	 * if we send too few nodes we just send shorter buffers
+	 * more frequently. */
+	static int min_increment = 1;
+	static int stats_count = 0;
+	if (stats_count > 2 * u->shared_nodes) {
+		min_increment++;
+	} else if (stats_count < u->shared_nodes / 2 && min_increment > 1) {
+		min_increment--;
+	}
+
+	stats_count = append_stats(stats_queue, root, 0, max_nodes, 0,
+				   max_parent_path(u, b), min_increment, b);
+
+	void *buf = select_best_stats(stats_queue, stats_count, u->shared_nodes, stats_size);
+
+	if (DEBUGVV(2))
+		fprintf(stderr,
+			"min_incr %d games %d stats_queue %d/%d sending %d/%d in %.3fms\n",
+			min_increment, root->u.playouts - root->pu.playouts, stats_count,
+			max_nodes, *stats_size / (int)sizeof(struct incr_stats), u->shared_nodes,
+			(time_now() - start_time)*1000);
+	root->pu = root->u;
+	return buf;
+}
+
 /* Get stats for the distributed engine. Return a buffer with one
- * line "played_own root_playouts threads keep_looking", then
+ * line "played_own root_playouts threads keep_looking @size", then
  * a list of lines "coord playouts value" with absolute counts for
  * children of the root node (including contributions from other
  * slaves). The last line must not end with \n.
@@ -253,13 +426,15 @@ receive_stats(struct uct *u, int size)
  * called while the tree is updated by the worker threads. Keep this
  * code in sync with distributed/distributed.c:select_best_move(). */
 static char *
-report_stats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
+report_stats(struct uct *u, struct board *b, coord_t c,
+	     bool keep_looking, int bin_size)
 {
 	static char reply[10240];
 	char *r = reply;
 	char *end = reply + sizeof(reply);
 	struct tree_node *root = u->t->root;
-	r += snprintf(r, end - r, "%d %d %d %d", u->played_own, root->u.playouts, u->threads, keep_looking);
+	r += snprintf(r, end - r, "%d %d %d %d @%d", u->played_own, root->u.playouts,
+		      u->threads, keep_looking, bin_size);
 	int min_playouts = root->u.playouts / 100;
 
 	/* Give a large weight to pass or resign, but still allow other moves. */
@@ -301,7 +476,7 @@ report_stats(struct uct *u, struct board *b, coord_t c, bool keep_looking)
  * See report_stats() for the description of the return value. */
 char *
 uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
-	     char *args, bool pass_all_alive)
+	     char *args, bool pass_all_alive, void **stats_buf, int *stats_size)
 {
 	struct uct *u = e->data;
 	assert(u->slave);
@@ -352,6 +527,8 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	coord_t best_coord;
 	uct_search_result(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
 
-	char *reply = report_stats(u, b, best_coord, keep_looking);
+	*stats_buf = report_incr_stats(u, stats_size);
+
+	char *reply = report_stats(u, b, best_coord, keep_looking, *stats_size);
 	return reply;
 }

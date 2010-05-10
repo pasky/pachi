@@ -85,6 +85,8 @@ struct uct {
 	struct board_ownermap ownermap;
 	/* Used for coordination among slaves of the distributed engine. */
 	int stats_hbits;
+	int shared_nodes;
+	int shared_levels;
 	int played_own;
 	int played_all; /* games played by all slaves */
 

@@ -22,6 +22,7 @@ typedef int64_t path_t;
 #define parent_path(path, board) ((path) >> board_bits2(board))
 #define leaf_coord(path, board) ((path) & hash_mask(board_bits2(board)))
 #define append_child(path, c, board) (((path) << board_bits2(board)) | (c))
+#define max_parent_path(u, b) (((path_t)1) << (((u)->shared_levels - 1) * board_bits2(b)))
 
 
 /* For debugging only */
@@ -88,6 +89,7 @@ struct incr_stats {
 #define DEFAULT_SHARED_NODES (10*1024)
 
 
+/* Maximum game length. Power of 10 jut to ease debugging. */
 #define DIST_GAMELEN 1000
 
 #define force_reply(id)    ((id) + DIST_GAMELEN)
