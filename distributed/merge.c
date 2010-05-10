@@ -16,6 +16,22 @@
 /* We merge together debug stats for all hash tables. */
 static struct hash_counts h_counts;
 
+/* Display and reset hash statistics. For debugging only. */
+void
+merge_print_stats(int total_hnodes)
+{
+	if (DEBUGL(3)) {
+		char buf[BSIZE];
+		snprintf(buf, sizeof(buf),
+			 "stats occupied %ld %.1f%% inserts %ld collisions %ld/%ld %.1f%%\n",
+			 h_counts.occupied, h_counts.occupied * 100.0 / total_hnodes,
+			 h_counts.inserts, h_counts.collisions, h_counts.lookups,
+			 h_counts.collisions * 100.0 / (h_counts.lookups + 1));
+		logline(NULL, "* ", buf);
+	}
+	if (DEBUG_MODE) h_counts.occupied = 0;
+}
+
 /* We maintain counts per bucket to avoid sorting large arrays.
  * All nodes with n updates since last send go to bucket n.
  * We have at most max_merged_nodes = (max_slaves-1) * shared_nodes

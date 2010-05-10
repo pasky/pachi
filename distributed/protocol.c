@@ -330,6 +330,18 @@ insert_buf(struct slave_state *sstate, void *buf, int size)
 	queue_length++;
 }
 
+/* Clear the receive queue. The receive buffers are also invalidated
+ * so that slave threads scanning the queue notice it as soon as possible
+ * but this is only an optimization.
+ * slave_lock is held on both entry and exit of this function. */
+void
+clear_receive_queue(void)
+{
+	if (!queue_length) return;
+	memset(receive_queue, 0, queue_length * sizeof(receive_queue[0]));
+	queue_length = 0;
+}
+
 /* Process the reply received from a slave machine.
  * Copy the ascii part to reply_buf and insert the binary part
  * (if any) in the receive queue.

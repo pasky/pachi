@@ -97,11 +97,6 @@ struct incr_stats {
 #define move_number(id)    ((id) % DIST_GAMELEN)
 #define reply_disabled(id) ((id) < DIST_GAMELEN)
 
-struct move_stats2 {
-	struct move_stats u;
-	struct move_stats amaf;
-};
-
 char *path2sstr(path_t path, struct board *b);
 struct engine *engine_distributed_init(char *arg, struct board *b);
 
