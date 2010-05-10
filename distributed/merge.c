@@ -231,7 +231,7 @@ output_stats(struct incr_stats *buf, struct slave_state *sstate,
  * Return the byte size of the resulting buffer. The caller must
  * check that the result is still valid.
  * The slave lock is held on both entry and exit of this function. */
-int
+static int
 get_new_stats(struct incr_stats *buf, struct slave_state *sstate, int cmd_id)
 {
 	/* Process all valid buffers in receive_queue[min..max] */
@@ -310,6 +310,7 @@ merge_init(struct slave_state *sstate, int shared_nodes, int stats_hbits, int ma
 
 	sstate->insert_hook = (buffer_hook)merge_insert_hook;
 	sstate->alloc_hook = merge_state_alloc;
+	sstate->args_hook = (getargs_hook)get_new_stats;
 
 	/* At worst one late slave thread may have to merge up to
 	 *   shared_nodes * BUFFERS_PER_SLAVE * (max_slaves - 1)

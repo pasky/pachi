@@ -167,7 +167,7 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
 		bin_reply = (char *)bin_reply + len;
 		size -= len;
 	}
-	if (*bin_size && DEBUGVV(7)) {
+	if (*bin_size && DEBUGVV(2)) {
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "read reply %d bytes in %.4fms\n", *bin_size,
 			 (time_now() - start)*1000);
@@ -211,7 +211,7 @@ send_command(char *to_send, void *bin_buf, int *bin_size,
 		}
 		logline(&sstate->client, ">>", buf);
 		if (*bin_size) {
-			char b[1024];  // ??? remove
+			char b[1024];
 			snprintf(b, sizeof(b),
 				 "sent args %d bytes in %.4fms\n", *bin_size, ms);
 			logline(&sstate->client, "= ", b);
@@ -384,6 +384,20 @@ get_binary_arg(struct slave_state *sstate, char *cmd, int cmd_size, int *bin_siz
 	sstate->last_cmd_id = cmd_id;
 
 	*bin_size = 0;
+	char *s = strchr(cmd, '@');
+	if (!s || !sstate->args_hook) return buf;
+
+	int size = sstate->args_hook(buf, sstate, cmd_id);
+
+	/* Check that the command is still valid. */
+	if (atoi(gtp_cmd) != cmd_id) return NULL;
+
+	/* Set the correct binary size for this slave.
+	 * cmd may have been overwritten with new parameters. */
+	*bin_size = size;
+	s = strchr(cmd, '@');
+	assert(s);
+	snprintf(s, cmd + cmd_size - s, "@%d\n", size);
 	return buf;
 }
 

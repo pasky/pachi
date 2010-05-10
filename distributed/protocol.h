@@ -16,14 +16,16 @@
 
 struct slave_state;
 typedef void (*buffer_hook)(void *buf, int size);
-typedef void (*alloc_hook)(struct slave_state *sstate);
+typedef void (*state_alloc_hook)(struct slave_state *sstate);
+typedef int (*getargs_hook)(void *buf, struct slave_state *sstate, int cmd_id);
 
 struct slave_state {
 	int max_buf_size;
 	int thread_id;
 	struct in_addr client; // for debugging only
-	alloc_hook alloc_hook;
+	state_alloc_hook alloc_hook;
 	buffer_hook insert_hook;
+	getargs_hook args_hook;
 
 	/* Index in received_queue of most recent processed
 	 * buffer, -1 if none processed yet. */
