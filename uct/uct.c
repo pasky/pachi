@@ -18,7 +18,6 @@
 #include "playout/light.h"
 #include "tactics.h"
 #include "timeinfo.h"
-#include "distributed/distributed.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
@@ -39,7 +38,8 @@ static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t,
 static void
 setup_state(struct uct *u, struct board *b, enum stone color)
 {
-	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging);
+	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
+			 u->local_tree_aging, u->stats_hbits);
 	if (u->force_seed)
 		fast_srandom(u->force_seed);
 	if (UDEBUGL(0))
@@ -77,6 +77,7 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 				color, u->t->root_color);
 			exit(1);
 		}
+		uct_htable_reset(u->t);
 
 	} else {
 		/* We need fresh state. */
@@ -86,7 +87,6 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 
 	u->ownermap.playouts = 0;
 	memset(u->ownermap.map, 0, board_size2(b) * sizeof(u->ownermap.map[0]));
-	memset(u->stats, 0, board_size2(b) * sizeof(u->stats[0]));
 	u->played_own = u->played_all = 0;
 }
 
@@ -248,7 +248,6 @@ uct_done(struct engine *e)
 	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
 	free(u->ownermap.map);
-	free(u->stats);
 
 	free(u->policy);
 	free(u->random_policy);
@@ -445,7 +444,7 @@ void
 uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
-	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging);
+	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging, 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -736,6 +735,16 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "slave")) {
 				/* Act as slave for the distributed engine. */
 				u->slave = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
+				/* Share at most shared_nodes between master and slave at each genmoves.
+				 * Must use the same value in master and slaves. */
+				u->shared_nodes = atoi(optval);
+			} else if (!strcasecmp(optname, "shared_levels") && optval) {
+				/* Share only nodes of level <= shared_levels. */
+				u->shared_levels = atoi(optval);
+			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
+				/* Set hash table size to 2^stats_hbits for the shared stats. */
+				u->stats_hbits = atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
@@ -777,7 +786,13 @@ uct_state_init(char *arg, struct board *b)
 	u->playout->debug_level = u->debug_level;
 
 	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));
-	u->stats = malloc2(board_size2(b) * sizeof(u->stats[0]));
+
+	if (u->slave) {
+		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
+		if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
+		if (!u->shared_levels) u->shared_levels = 1;
+		assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
+	}
 
 	if (!u->dynkomi)
 		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);

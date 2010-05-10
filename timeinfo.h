@@ -81,7 +81,7 @@ void time_left(struct time_info *ti, int time_left, int stones_left);
 void time_start_timer(struct time_info *ti);
 
 /* Subtract given amount of elapsed time from time settings. */
-void time_sub(struct time_info *ti, double interval);
+void time_sub(struct time_info *ti, double interval, bool new_move);
 
 /* Returns the current time. */
 double time_now(void);

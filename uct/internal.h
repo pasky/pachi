@@ -4,7 +4,6 @@
 /* Internal UCT structures */
 
 #include "debug.h"
-#include "distributed/distributed.h"
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
@@ -21,13 +20,6 @@ struct uct_dynkomi;
 #define GJ_THRES	0.8
 /* How many games to consider at minimum before judging groups. */
 #define GJ_MINGAMES	500
-
-/* Distributed stats for each child of the root node. */
-struct node_stats {
-	struct move_stats2 last_sent_own;
-	struct move_stats2 added_from_others;
-	struct tree_node *node;
-};
 
 /* Internal engine state. */
 struct uct {
@@ -90,7 +82,9 @@ struct uct {
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;
 	/* Used for coordination among slaves of the distributed engine. */
-	struct node_stats *stats;
+	int stats_hbits;
+	int shared_nodes;
+	int shared_levels;
 	int played_own;
 	int played_all; /* games played by all slaves */
 

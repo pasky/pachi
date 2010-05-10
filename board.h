@@ -104,6 +104,7 @@ struct btraits {
 struct board {
 	int size; /* Including S_OFFBOARD margin - see below. */
 	int size2; /* size^2 */
+	int bits2; /* ceiling(log2(size2)) */
 	int captures[S_MAX];
 	float komi;
 	int handicap;
@@ -247,6 +248,16 @@ struct board {
 #else
 #define board_size(b_) ((b_)->size)
 #define board_size2(b_) ((b_)->size2)
+#endif
+
+#if BOARD_SIZE == 19
+#  define board_bits2(b_) 9
+#elif BOARD_SIZE == 13
+#  define board_bits2(b_) 8
+#elif BOARD_SIZE == 9
+#  define board_bits2(b_) 7
+#else
+#  define board_bits2(b_) ((b_)->bits2)
 #endif
 
 #define board_at(b_, c) ((b_)->b[c])

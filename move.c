@@ -11,7 +11,7 @@
 
 static char asdf[] = "abcdefghjklmnopqrstuvwxyz";
 
-static char *
+char *
 coord2bstr(char *buf, coord_t c, struct board *board)
 {
 	if (is_pass(c)) {
