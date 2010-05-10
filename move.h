@@ -1,6 +1,7 @@
 #ifndef ZZGO_MOVE_H
 #define ZZGO_MOVE_H
 
+#include <ctype.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -32,6 +33,7 @@ static coord_t *coord_resign(void);
 static void coord_done(coord_t *c);
 
 struct board;
+char *coord2bstr(char *buf, coord_t c, struct board *board);
 /* Return coordinate string in a dynamically allocated buffer. Thread-safe. */
 char *coord2str(coord_t c, struct board *b);
 /* Return coordinate string in a static buffer; multiple buffers are shuffled
@@ -74,6 +76,20 @@ static inline coord_t *
 coord_resign()
 {
 	return coord_copy(resign);
+}
+
+/* No sanity checking */
+static inline coord_t
+str2scoord(char *str, int size)
+{
+	if (!strcasecmp(str, "pass")) {
+		return pass;
+	} else if (!strcasecmp(str, "resign")) {
+		return resign;
+	} else {
+		char xc = tolower(str[0]);
+		return xc - 'a' - (xc > 'i') + 1 + atoi(str + 1) * size;
+	}
 }
 
 static inline void

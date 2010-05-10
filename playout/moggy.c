@@ -461,13 +461,19 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
 		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL, s);
-		if (q.moves > 0)
+		if (q.moves > 0) {
+			if (PLDEBUGL(5))
+				mq_print(&q, b, "Global atari");
 			return mq_pick(&q);
+		}
 	}
 	for (int g = 0; g < g_base; g++) {
 		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL, s);
-		if (q.moves > 0)
+		if (q.moves > 0) {
+			if (PLDEBUGL(5))
+				mq_print(&q, b, "Global atari");
 			return mq_pick(&q);
+		}
 	}
 	return pass;
 }

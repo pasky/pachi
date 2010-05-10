@@ -23,7 +23,7 @@
 
 
 /* Default number of simulations to perform per move.
- * Note that this is now in total over all threads! (Unless TM_ROOT.) */
+ * Note that this is now in total over all threads!. */
 #define MC_GAMES	80000
 static const struct time_info default_ti = {
 	.period = TT_MOVE,
@@ -105,7 +105,7 @@ spawn_worker(void *ctx_)
 /* The finish_cond can be signalled for it to stop; in that case,
  * the caller should set finish_thread = -1. */
 /* After it is started, it will update mctx->t to point at some tree
- * used for the actual search (matters only for TM_ROOT), on return
+ * used for the actual search, on return
  * it will set mctx->games to the number of performed simulations. */
 static void *
 spawn_thread_manager(void *ctx_)
@@ -114,7 +114,6 @@ spawn_thread_manager(void *ctx_)
 	struct uct_thread_ctx *mctx = ctx_;
 	struct uct *u = mctx->u;
 	struct tree *t = mctx->t;
-	bool shared_tree = u->parallel_tree;
 	fast_srandom(mctx->seed);
 
 	int played_games = 0;
@@ -133,7 +132,7 @@ spawn_thread_manager(void *ctx_)
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct uct_thread_ctx *ctx = malloc2(sizeof(*ctx));
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
-		mctx->t = ctx->t = shared_tree ? t : tree_copy(t);
+		mctx->t = ctx->t = t;
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
 		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
 		if (UDEBUGL(3))
@@ -154,11 +153,6 @@ spawn_thread_manager(void *ctx_)
 		pthread_join(threads[finish_thread], (void **) &ctx);
 		played_games += ctx->games;
 		joined++;
-		if (!shared_tree) {
-			if (ctx->t == mctx->t) mctx->t = t;
-			tree_merge(t, ctx->t);
-			tree_done(ctx->t);
-		}
 		free(ctx);
 		if (UDEBUGL(3))
 			fprintf(stderr, "Joined worker %d\n", finish_thread);
@@ -166,9 +160,6 @@ spawn_thread_manager(void *ctx_)
 	}
 
 	pthread_mutex_unlock(&finish_mutex);
-
-	if (!shared_tree)
-		tree_normalize(mctx->t, u->threads);
 
 	mctx->games = played_games;
 	return mctx;
@@ -193,7 +184,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 {
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
-	s->print_interval = TREE_SIMPROGRESS_INTERVAL * (u->thread_model == TM_ROOT ? 1 : u->threads);
+	s->print_interval = TREE_SIMPROGRESS_INTERVAL * u->threads;
 	s->fullmem = false;
 
 	if (ti) {

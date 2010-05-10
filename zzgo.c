@@ -24,6 +24,7 @@
 #include "network.h"
 
 int debug_level = 3;
+long verbose_logs = 0;
 int seed;
 
 

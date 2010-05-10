@@ -14,7 +14,8 @@ typedef char *(*engine_chat)(struct engine *e, struct board *b, char *cmd);
  * if all stones on the board can be considered alive, without regard to "dead"
  * considered stones. */
 typedef coord_t *(*engine_genmove)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive);
-typedef char *(*engine_genmoves)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, char *args, bool pass_all_alive);
+typedef char *(*engine_genmoves)(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+				 char *args, bool pass_all_alive, void **stats_buf, int *stats_size);
 /* One dead group per queued move (coord_t is (ab)used as group_t). */
 typedef void (*engine_dead_group_list)(struct engine *e, struct board *b, struct move_queue *mq);
 /* e->data and e will be free()d by caller afterwards. */

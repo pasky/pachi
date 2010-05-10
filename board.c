@@ -148,6 +148,10 @@ board_resize(struct board *board, int size)
 #endif
 	board->size = size + 2 /* S_OFFBOARD margin */;
 	board->size2 = board_size(board) * board_size(board);
+
+	board->bits2 = 1;
+	while ((1 << board->bits2) < board->size2) board->bits2++;
+
 	if (board->b)
 		free(board->b);
 
