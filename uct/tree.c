@@ -37,7 +37,7 @@ tree_alloc_node(struct tree *t, int count, bool fast_alloc, hash_t *hash)
 		n = (struct tree_node *)(t->nodes + old_size);
 		memset(n, 0, sizeof(*n));
 	} else {
-		n = calloc2(1, sizeof(*n));
+		n = calloc2(count, sizeof(*n));
 	}
 
 	if (hash) {
