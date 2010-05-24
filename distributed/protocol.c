@@ -144,6 +144,8 @@ proxy_thread(void *arg)
 static int
 get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin_size)
 {
+	double start = time_now();
+
 	int reply_id = -1;
 	*reply = '\0';
 	if (!fgets(reply, CMDS_SIZE, f)) return -1;
@@ -170,7 +172,6 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
 	if (*line != '\n') return -1;
 
 	/* Read the binary reply if any. */
-	double start = time_now();
 	int len;
 	while (size && (len = fread(bin_reply, 1, size, f)) > 0) {
 		bin_reply = (char *)bin_reply + len;
@@ -178,7 +179,8 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
 	}
 	if (*bin_size && DEBUGVV(2)) {
 		char buf[1024];
-		snprintf(buf, sizeof(buf), "read reply %d bytes in %.4fms\n", *bin_size,
+		snprintf(buf, sizeof(buf), "read reply %d+%d bytes in %.4fms\n",
+			 (int)strlen(reply), *bin_size,
 			 (time_now() - start)*1000);
 		logline(&client, "= ", buf);
 	}
@@ -205,9 +207,10 @@ send_command(char *to_send, void *bin_buf, int *bin_size,
 	if (DEBUGL(1) && resend)
 		logline(&sstate->client, "? ",
 			to_send == gtp_cmds ? "resend all\n" : "partial resend\n");
-	fputs(buf, f);
 
 	double start = time_now();
+	fputs(buf, f);
+
 	if (*bin_size)
 		fwrite(bin_buf, 1, *bin_size, f);
 	fflush(f);
@@ -222,7 +225,8 @@ send_command(char *to_send, void *bin_buf, int *bin_size,
 		if (*bin_size) {
 			char b[1024];
 			snprintf(b, sizeof(b),
-				 "sent args %d bytes in %.4fms\n", *bin_size, ms);
+				 "sent cmd %d+%d bytes in %.4fms\n",
+				 (int)strlen(buf), *bin_size, ms);
 			logline(&sstate->client, "= ", b);
 		}
 	}
