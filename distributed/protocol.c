@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #define DEBUG
 
@@ -466,6 +467,24 @@ slave_loop(FILE *f, char *reply_buf, struct slave_state *sstate, bool resend)
 	}
 }
 
+/* Minimimal check of slave identity. Close the file if error. */
+static bool
+is_pachi_slave(FILE *f, struct in_addr *client)
+{
+	char buf[1024];
+	fputs("name\n", f);
+	if (!fgets(buf, sizeof(buf), f)
+	    || strncasecmp(buf, "= Pachi", 7)
+	    || !fgets(buf, sizeof(buf), f)
+	    || strcmp(buf, "\n")) {
+		logline(client, "? ", "bad slave\n");
+		fclose(f);
+		sleep(1); // avoid busy loop if error
+		return false;
+	}
+	return true;
+}
+
 /* Thread sending gtp commands to one slave machine, and
  * reading replies. If a slave machine dies, this thread waits
  * for a connection from another slave.
@@ -494,17 +513,7 @@ slave_thread(void *arg)
 				 "new slave, id %d\n", sstate.thread_id);
 			logline(&client, "= ", reply_buf);
 		}
-
-		/* Minimal check of the slave identity. */
-		fputs("name\n", f);
-		if (!fgets(reply_buf, sizeof(reply_buf), f)
-		    || strncasecmp(reply_buf, "= Pachi", 7)
-		    || !fgets(reply_buf, sizeof(reply_buf), f)
-		    || strcmp(reply_buf, "\n")) {
-			logline(&client, "? ", "bad slave\n");
-			fclose(f);
-			continue;
-		}
+		if (!is_pachi_slave(f, &client)) continue;
 
 		if (!resend) slave_state_alloc(&sstate);
 		sstate.client = client;
