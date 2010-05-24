@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <limits.h>
 
+#define DEBUG
+
 #include "debug.h"
 #include "timeinfo.h"
 #include "distributed/distributed.h"
@@ -282,14 +284,18 @@ get_new_stats(struct incr_stats *buf, struct slave_state *sstate, int cmd_id)
 	int merge_count = merge_new_stats(sstate, min, max, bucket_count,
 					  &nodes_read, last_queue_age);
 
+	int missed = 0;
+	if (DEBUG_MODE)
+		for (int q = min; q <= max; q++) missed += !receive_queue[q];
+
 	/* Put the best increments in the output buffer. */
 	int output_nodes = output_stats(buf, sstate, bucket_count, merge_count);
 
 	if (DEBUGVV(2)) {
 		char b[1024];
-		snprintf(b, sizeof(b), "merged %d..%d  %d/%d nodes,"
+		snprintf(b, sizeof(b), "merged %d..%d missed %d %d/%d nodes,"
 			 " output %d/%d nodes in %.3fms (clear %.3fms)\n",
-			 min, max, merge_count, nodes_read, output_nodes,
+			 min, max, missed, merge_count, nodes_read, output_nodes,
 			 sstate->max_buf_size / (int)sizeof(*buf),
 			 (time_now() - start)*1000, clear_time*1000);
 		logline(&sstate->client, "= ", b);
