@@ -7,11 +7,11 @@
 #include "board.h"
 
 
-/* Each slave thread maintains a ring of 32 buffers holding
+/* Each slave thread maintains a ring of 256 buffers holding
  * incremental stats received from the slave. The oldest
  * buffer is recycled to hold stats sent to the slave and
  * received the next reply. */
-#define BUFFERS_PER_SLAVE_BITS 5
+#define BUFFERS_PER_SLAVE_BITS 8
 #define BUFFERS_PER_SLAVE (1 << BUFFERS_PER_SLAVE_BITS)
 
 struct slave_state;
