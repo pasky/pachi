@@ -69,6 +69,42 @@ gtp_error(int id, ...)
 	va_end(params);
 }
 
+/* List of known gtp commands. The internal command pachi-genmoves is not exported,
+ * it should only be used between master and slaves of the distributed engine. */
+static char *known_commands =
+	"protocol_version\n"
+	"name\n"
+	"version\n"
+	"list_commands\n"
+	"quit\n"
+	"boardsize\n"
+	"clear_board\n"
+	"kgs-game_over\n"
+	"komi\n"
+	"kgs-rules\n"
+	"play\n"
+	"genmove\n"
+	"kgs-genmove_cleanup\n"
+	"set_free_handicap\n"
+	"place_free_handicap\n"
+	"final_status_list\n"
+	"kgs-chat\n"
+	"time_left\n"
+	"time_settings\n"
+	"kgs-time_settings";
+
+
+/* Return true if cmd is a valid gtp command. */
+bool
+gtp_is_valid(char *cmd)
+{
+	if (!cmd || !*cmd) return false;
+	char *s = strcasestr(known_commands, cmd);
+	if (!s) return false;
+
+	int len = strlen(cmd);
+	return s[len] == '\0' || s[len] == '\n';
+}
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
@@ -112,32 +148,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		gtp_reply(id, PACHI_VERSION, ": ", engine->comment, NULL);
 		return P_OK;
 
-		/* TODO: known_command */
-
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		/* The internal command pachi-genmoves is not exported,
-		 * it should only be used between master and slaves of
-		 * the distributed engine. */
-		gtp_reply(id, "protocol_version\n"
-			      "name\n"
-			      "version\n"
-			      "list_commands\n"
-			      "quit\n"
-			      "boardsize\n"
-			      "clear_board\n"
-			      "kgs-game_over\n"
-			      "komi\n"
-			      "kgs-rules\n"
-			      "play\n"
-			      "genmove\n"
-			      "kgs-genmove_cleanup\n"
-			      "set_free_handicap\n"
-			      "place_free_handicap\n"
-			      "final_status_list\n"
-			      "kgs-chat\n"
-			      "time_left\n"
-			      "time_settings\n"
-			      "kgs-time_settings", NULL);
+		gtp_reply(id, known_commands, NULL);
 		return P_OK;
 	}
 
