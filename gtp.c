@@ -260,7 +260,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 		coord_t *c = engine->genmove(engine, board, &ti[color], color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
 		struct move m = { *c, color };
-		board_play(board, &m);
+		if (board_play(board, &m) < 0) {
+			fprintf(stderr, "Attempted to generate an illegal move: [%s, %s]\n", coord2sstr(m.coord, board), stone2str(m.color));
+			abort();
+		}
 		char *str = coord2str(*c, board);
 		if (DEBUGL(1))
 			fprintf(stderr, "playing move %s\n", str);
