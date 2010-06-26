@@ -231,10 +231,11 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 	struct uct_thread_ctx *ctx = s->ctx;
 
 	/* Adjust dynkomi? */
+	int di = u->dynkomi_interval * u->threads;
 	if (ctx->t->use_extra_komi && u->dynkomi->permove
-	    && !u->pondering && u->dynkomi_interval
-	    && i > s->last_dynkomi + u->dynkomi_interval) {
-		s->last_dynkomi += u->dynkomi_interval;
+	    && !u->pondering && di
+	    && i > s->last_dynkomi + di) {
+		s->last_dynkomi += di;
 		float old_dynkomi = ctx->t->extra_komi;
 		ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
 		if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
