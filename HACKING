@@ -96,6 +96,7 @@ The UCT engine has non-trivial structure by itself:
 	tree.[ch]	minimax move tree with success statistics
 	walk.[ch]	filling the tree by walking it many times
 				and running MC simulations from leaves
+	slave.[ch]	engine interface for the distributed engine
 
 * "node prior-hinter" assigns newly created nodes preliminary success
   statistics ("prior values") to focus the search better
@@ -108,6 +109,10 @@ The UCT engine has non-trivial structure by itself:
 
 	policy/ucb1	the old-school original simple policy
 	policy/ucb1amaf	the AMAF/RAVE-based policy gathering statistics rapidly
+
+* "dynkomi driver" dynamically determines self-imposed extra virtual komi
+
+	dynkomi.[ch]
 
 
 Board Implementation
