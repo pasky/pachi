@@ -115,6 +115,31 @@ skip_move:
 }
 
 
+static void
+elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play, struct probdist *pd)
+{
+#if 0
+	struct elo_policy *pp = p->data;
+	if (pd->total < PROBDIST_EPSILON)
+		return;
+
+	/* Compare to the manually created distribution. */
+
+	double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
+	struct probdist pdx = { .n = b->flen, .items = pdi, .total = 0 };
+	elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
+	for (int i = 0; i < pdx.n; i++) {
+		if (is_pass(b->f[i])) continue;
+		if (fabs(pdx.items[i] - pd->items[b->f[i]]) < PROBDIST_EPSILON)
+			continue;
+		printf("[%s %d] manual %f board %f ", coord2sstr(b->f[i], b), b->pat3[b->f[i]], pdx.items[i], pd->items[b->f[i]]);
+		board_gamma_update(b, b->f[i], to_play);
+		printf("plainboard %f\n", pd->items[b->f[i]]);
+		assert(0);
+	}
+#endif
+}
+
 coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
@@ -132,23 +157,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 			probdist_set(pd, c, pd->items[c] * b->gamma->gamma[FEAT_CONTIGUITY][1]);
 		} foreach_8neighbor_end;
 	}
-#if 0
-	/* Compare to the manually created distribution. */
-	if (pd->total >= PROBDIST_EPSILON) {
-		double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
-		struct probdist pdx = { .n = b->flen, .items = pdi, .total = 0 };
-		elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
-		for (int i = 0; i < pdx.n; i++) {
-			if (is_pass(b->f[i])) continue;
-			if (fabs(pdx.items[i] - pd->items[b->f[i]]) >= PROBDIST_EPSILON) {
-				printf("[%s %d] manual %f board %f ", coord2sstr(b->f[i], b), b->pat3[b->f[i]], pdx.items[i], pd->items[b->f[i]]);
-				board_gamma_update(b, b->f[i], to_play);
-				printf("plainboard %f\n", pd->items[b->f[i]]);
-				assert(0);
-			}
-		}
-	}
-#endif
+	elo_check_probdist(p, b, to_play, pd);
 	/* The engine might want to adjust our probdist. */
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, pd);
