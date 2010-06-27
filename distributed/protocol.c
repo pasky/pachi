@@ -3,10 +3,18 @@
  * of the gtp protocol. See the comments at the top of distributed.c
  * for a general introduction to the distributed engine. */
 
+/* The receive queue is an array of pointers to binary buffers.
+ * These pointers are invalidated in one of two ways when a buffer
+ * is recycled: (1) the queue age is increased when the queue is
+ * emptied at a new move, (2) the pointer itself is set to NULL
+ * immmediately, and stays so until at least the next queue age
+ * increment. */
+
 #include <assert.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #define DEBUG
 
@@ -47,8 +55,9 @@ int reply_count = 0;
 char **gtp_replies;
 
 
-struct receive_buf *receive_queue;
+struct buf_state **receive_queue;
 int queue_length = 0;
+int queue_age = 0;
 static int queue_max_length;
 
 /* Mutex protecting all variables above. receive_queue may be
@@ -135,6 +144,8 @@ proxy_thread(void *arg)
 static int
 get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin_size)
 {
+	double start = time_now();
+
 	int reply_id = -1;
 	*reply = '\0';
 	if (!fgets(reply, CMDS_SIZE, f)) return -1;
@@ -161,7 +172,6 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
 	if (*line != '\n') return -1;
 
 	/* Read the binary reply if any. */
-	double start = time_now();
 	int len;
 	while (size && (len = fread(bin_reply, 1, size, f)) > 0) {
 		bin_reply = (char *)bin_reply + len;
@@ -169,7 +179,8 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
 	}
 	if (*bin_size && DEBUGVV(2)) {
 		char buf[1024];
-		snprintf(buf, sizeof(buf), "read reply %d bytes in %.4fms\n", *bin_size,
+		snprintf(buf, sizeof(buf), "read reply %d+%d bytes in %.4fms\n",
+			 (int)strlen(reply), *bin_size,
 			 (time_now() - start)*1000);
 		logline(&client, "= ", buf);
 	}
@@ -196,9 +207,10 @@ send_command(char *to_send, void *bin_buf, int *bin_size,
 	if (DEBUGL(1) && resend)
 		logline(&sstate->client, "? ",
 			to_send == gtp_cmds ? "resend all\n" : "partial resend\n");
-	fputs(buf, f);
 
 	double start = time_now();
+	fputs(buf, f);
+
 	if (*bin_size)
 		fwrite(bin_buf, 1, *bin_size, f);
 	fflush(f);
@@ -213,7 +225,8 @@ send_command(char *to_send, void *bin_buf, int *bin_size,
 		if (*bin_size) {
 			char b[1024];
 			snprintf(b, sizeof(b),
-				 "sent args %d bytes in %.4fms\n", *bin_size, ms);
+				 "sent cmd %d+%d bytes in %.4fms\n",
+				 (int)strlen(buf), *bin_size, ms);
 			logline(&sstate->client, "= ", b);
 		}
 	}
@@ -258,6 +271,7 @@ slave_state_alloc(struct slave_state *sstate)
 {
 	for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
 		sstate->b[n].buf = malloc2(sstate->max_buf_size);
+		sstate->b[n].owner = sstate->thread_id;
 	}
 	if (sstate->alloc_hook) sstate->alloc_hook(sstate);
 }
@@ -267,7 +281,7 @@ slave_state_alloc(struct slave_state *sstate)
  * before they are invalidated, if BUFFERS_PER_SLAVE is large enough.
  * slave_lock is held on both entry and exit of this function. */
 static void *
-get_free_buf(struct slave_state *sstate, bool new_id)
+get_free_buf(struct slave_state *sstate)
 {
 	int newest = (sstate->newest_buf + 1) & (BUFFERS_PER_SLAVE - 1);
 	sstate->newest_buf = newest;
@@ -275,30 +289,23 @@ get_free_buf(struct slave_state *sstate, bool new_id)
 
 	if (DEBUGVV(7)) {
 		char b[1024];
-		snprintf(b, sizeof(b), "get free %d index %d buf=%p qlength %d\n",
-			 newest, sstate->b[newest].queue_index, buf, queue_length);
+		snprintf(b, sizeof(b),
+			 "get free %d index %d buf=%p age %d qlength %d\n", newest,
+			 sstate->b[newest].queue_index, buf, queue_age, queue_length);
 		logline(&sstate->client, "? ", b);
 	}
 
-	/* For a new command, previous indices in receive_queue
-	 * are now meaningless. In particular they may be
-	 * beyond the current queue_length. */
-	if (new_id) {
-		sstate->last_processed = -1;
-		for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
-			sstate->b[n].queue_index = -1;
-		}
-		return buf;
-	}
-
 	int index = sstate->b[newest].queue_index;
-	if (index >= 0) {
-		assert(receive_queue[index].thread_id == sstate->thread_id);
-		assert(receive_queue[index].buf == buf);
-		/* Invalidate the buffer. */
-		receive_queue[index].buf = NULL;
-		sstate->b[newest].queue_index = -1;
+	if (index < 0) return buf;
+
+	/* Invalidate the buffer if the calling thread still owns its previous
+	 * entry in the receive queue. The entry may have been overwritten by
+	 * another thread, but only after a new move which invalidates the
+	 * entire receive queue. */
+	if (receive_queue[index] && receive_queue[index]->owner == sstate->thread_id) {
+		receive_queue[index] = NULL;
 	}
+	sstate->b[newest].queue_index = -1;
 	return buf;
 }
 
@@ -319,27 +326,31 @@ insert_buf(struct slave_state *sstate, void *buf, int size)
 
 	if (DEBUGVV(7)) {
 		char b[1024];
-		snprintf(b, sizeof(b), "insert newest %d rq[%d]->%p\n",
-			 newest, queue_length, buf);
+		snprintf(b, sizeof(b),
+			 "insert newest %d age %d rq[%d]->%p owner %d\n",
+			 newest, queue_age, queue_length, buf, sstate->thread_id);
 			logline(&sstate->client, "? ", b);
 	}
-	receive_queue[queue_length].buf = buf;
-	receive_queue[queue_length].size = size;
-	receive_queue[queue_length].thread_id = sstate->thread_id;
-	sstate->b[newest].queue_index = queue_length;
+	receive_queue[queue_length] = &sstate->b[newest];
+	receive_queue[queue_length]->size = size;
+	receive_queue[queue_length]->queue_index = queue_length;
 	queue_length++;
 }
 
-/* Clear the receive queue. The receive buffers are also invalidated
- * so that slave threads scanning the queue notice it as soon as possible
- * but this is only an optimization.
+/* Clear the receive queue. The buffer pointers do not have to be cleared
+ * here, this is done as each buffer is recycled.
  * slave_lock is held on both entry and exit of this function. */
 void
 clear_receive_queue(void)
 {
-	if (!queue_length) return;
-	memset(receive_queue, 0, queue_length * sizeof(receive_queue[0]));
+	if (DEBUGL(3)) {
+		char buf[1024];
+		snprintf(buf, sizeof(buf), "clear queue, old length %d age %d\n",
+			 queue_length, queue_age);
+		logline(NULL, "? ", buf);
+	}
 	queue_length = 0;
+	queue_age++;
 }
 
 /* Process the reply received from a slave machine.
@@ -392,8 +403,7 @@ void *
 get_binary_arg(struct slave_state *sstate, char *cmd, int cmd_size, int *bin_size)
 {
 	int cmd_id = atoi(gtp_cmd);
-	void *buf = get_free_buf(sstate, cmd_id != sstate->last_cmd_id);
-	sstate->last_cmd_id = cmd_id;
+	void *buf = get_free_buf(sstate);
 
 	*bin_size = 0;
 	char *s = strchr(cmd, '@');
@@ -461,6 +471,24 @@ slave_loop(FILE *f, char *reply_buf, struct slave_state *sstate, bool resend)
 	}
 }
 
+/* Minimimal check of slave identity. Close the file if error. */
+static bool
+is_pachi_slave(FILE *f, struct in_addr *client)
+{
+	char buf[1024];
+	fputs("name\n", f);
+	if (!fgets(buf, sizeof(buf), f)
+	    || strncasecmp(buf, "= Pachi", 7)
+	    || !fgets(buf, sizeof(buf), f)
+	    || strcmp(buf, "\n")) {
+		logline(client, "? ", "bad slave\n");
+		fclose(f);
+		sleep(1); // avoid busy loop if error
+		return false;
+	}
+	return true;
+}
+
 /* Thread sending gtp commands to one slave machine, and
  * reading replies. If a slave machine dies, this thread waits
  * for a connection from another slave.
@@ -489,17 +517,7 @@ slave_thread(void *arg)
 				 "new slave, id %d\n", sstate.thread_id);
 			logline(&client, "= ", reply_buf);
 		}
-
-		/* Minimal check of the slave identity. */
-		fputs("name\n", f);
-		if (!fgets(reply_buf, sizeof(reply_buf), f)
-		    || strncasecmp(reply_buf, "= Pachi", 7)
-		    || !fgets(reply_buf, sizeof(reply_buf), f)
-		    || strcmp(reply_buf, "\n")) {
-			logline(&client, "? ", "bad slave\n");
-			fclose(f);
-			continue;
-		}
+		if (!is_pachi_slave(f, &client)) continue;
 
 		if (!resend) slave_state_alloc(&sstate);
 		sstate.client = client;

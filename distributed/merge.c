@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <limits.h>
 
+#define DEBUG
+
 #include "debug.h"
 #include "timeinfo.h"
 #include "distributed/distributed.h"
@@ -84,15 +86,15 @@ filter_buffers(struct slave_state *sstate, struct incr_stats **next,
 	int max_size = sstate->max_merged_nodes * sizeof(struct incr_stats);
  
 	for (int q = max; q >= *min; q--) {
-		if (!receive_queue[q].buf || receive_queue[q].thread_id == sstate->thread_id) {
+		if (!receive_queue[q] || receive_queue[q]->owner == sstate->thread_id) {
 			next[q] = &terminator;
-		} else if (size + receive_queue[q].size > max_size) {
+		} else if (size + receive_queue[q]->size > max_size) {
 			*min = q + 1;
 			assert(*min <= max);
 			break;
 		} else {
-			next[q] = (struct incr_stats*)receive_queue[q].buf;
-			size += receive_queue[q].size;
+			next[q] = (struct incr_stats *)receive_queue[q]->buf;
+			size += receive_queue[q]->size;
 		}
 	}
 	return size / sizeof(struct incr_stats);
@@ -130,12 +132,12 @@ min_coord(struct incr_stats **next, int min, int max)
  * This function does not modify the receive queue. */
 static int
 merge_new_stats(struct slave_state *sstate, int min, int max,
-		int *bucket_count, int *nodes_read)
+		int *bucket_count, int *nodes_read, int last_queue_age)
 {
 	*nodes_read = 0;
 	if (max < min) return 0;
 
-	/* next[q] is the next value to be checked in receive_queue[q].buf */
+	/* next[q] is the next value to be checked in receive_queue[q]->buf */
 	struct incr_stats *next_[max - min + 1];
 	struct incr_stats **next = next_ - min;
 	*nodes_read = filter_buffers(sstate, next, &min, max);
@@ -165,13 +167,14 @@ merge_new_stats(struct slave_state *sstate, int min, int max,
 			/* We check the buffer validity after s.coord has been checked
 			 * to avoid a race condition, and also to avoid multiple useless
 			 * checks for the same coord_path. */
-			if (unlikely(!receive_queue[q].buf)) {
+			if (unlikely(!receive_queue[q])) {
 				next[q] = &terminator;
-
-				/* No point in continuing if we have a new move. */
-				if (min >= queue_length) return 0;
 				continue;
 			}
+
+			/* Stop if we have a new move. If queue_age is incremented
+			 * after this check, the merged output will be discarded. */
+			if (unlikely(queue_age > last_queue_age)) return 0;
 
 			/* s.coord_path is valid here, so min_c is valid too.
 			 * (An invalid min_c would be < s.coord_path.) */
@@ -256,6 +259,7 @@ get_new_stats(struct incr_stats *buf, struct slave_state *sstate, int cmd_id)
 	if (max < min && cmd_id == sstate->stats_id) return 0;
 
 	sstate->last_processed = max;
+	int last_queue_age = queue_age;
 
 	/* It takes time to clear the hash table and merge the stats
 	 * so do this unlocked. */
@@ -277,16 +281,21 @@ get_new_stats(struct incr_stats *buf, struct slave_state *sstate, int cmd_id)
 	int bucket_count[MAX_BUCKETS];
 	memset(bucket_count, 0, sizeof(bucket_count));
 	int nodes_read;
-	int merge_count = merge_new_stats(sstate, min, max, bucket_count, &nodes_read);
+	int merge_count = merge_new_stats(sstate, min, max, bucket_count,
+					  &nodes_read, last_queue_age);
+
+	int missed = 0;
+	if (DEBUG_MODE)
+		for (int q = min; q <= max; q++) missed += !receive_queue[q];
 
 	/* Put the best increments in the output buffer. */
 	int output_nodes = output_stats(buf, sstate, bucket_count, merge_count);
 
 	if (DEBUGVV(2)) {
 		char b[1024];
-		snprintf(b, sizeof(b), "merged %d..%d  %d/%d nodes,"
+		snprintf(b, sizeof(b), "merged %d..%d missed %d %d/%d nodes,"
 			 " output %d/%d nodes in %.3fms (clear %.3fms)\n",
-			 min, max, merge_count, nodes_read, output_nodes,
+			 min, max, missed, merge_count, nodes_read, output_nodes,
 			 sstate->max_buf_size / (int)sizeof(*buf),
 			 (time_now() - start)*1000, clear_time*1000);
 		logline(&sstate->client, "= ", b);

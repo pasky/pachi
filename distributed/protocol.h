@@ -7,17 +7,27 @@
 #include "board.h"
 
 
-/* Each slave thread maintains a ring of 32 buffers holding
+/* Each slave thread maintains a ring of 256 buffers holding
  * incremental stats received from the slave. The oldest
  * buffer is recycled to hold stats sent to the slave and
  * received the next reply. */
-#define BUFFERS_PER_SLAVE_BITS 5
+#define BUFFERS_PER_SLAVE_BITS 8
 #define BUFFERS_PER_SLAVE (1 << BUFFERS_PER_SLAVE_BITS)
 
 struct slave_state;
 typedef void (*buffer_hook)(void *buf, int size);
 typedef void (*state_alloc_hook)(struct slave_state *sstate);
 typedef int (*getargs_hook)(void *buf, struct slave_state *sstate, int cmd_id);
+
+struct buf_state {
+	void *buf;
+	/* All buffers have the same physical size. size is the
+	 * number of valid bytes. It is set only when the buffer
+	 * is actually in the receive queueue. */
+	int size;
+	int queue_index;
+	int owner;
+};
 
 struct slave_state {
 	int max_buf_size;
@@ -33,18 +43,9 @@ struct slave_state {
 
 	/* --- PRIVATE DATA for protocol.c --- */
 
-	struct {
-		void *buf;
-		int size;
-		/* Index in received_queue, -1 if not there. */
-		int queue_index;
-	} b[BUFFERS_PER_SLAVE];
-
+	struct buf_state b[BUFFERS_PER_SLAVE];
 	int newest_buf;
 	int slave_sock;
-
-	/* Id of gtp command at time of last_processed. */
-	int last_cmd_id;
 
 	/* --- PRIVATE DATA for merge.c --- */
 
@@ -76,16 +77,10 @@ extern int active_slaves;
 
 /* All binary buffers received from all slaves in current move are in
  * receive_queue[0..queue_length-1] */
-struct receive_buf {
-	volatile void *buf;
-	/* All buffers have the same physical size.
-	 * size is the number of valid bytes. */
-	int size;
-	/* id of the thread that received the buffer. */
-	int thread_id;
-};
-extern struct receive_buf *receive_queue;
+extern struct buf_state **receive_queue;
 extern int queue_length;
+/* Queue age is incremented each time the queue is emptied. */
+extern int queue_age;
 
 /* Max size of all gtp commands for one game.
  * 60 chars for the first line of genmoves plus 100 lines
