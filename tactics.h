@@ -4,6 +4,7 @@
 /* Advanced tactical checks non-essential to the board implementation. */
 
 #include "board.h"
+#include "debug.h"
 
 struct move_queue;
 
