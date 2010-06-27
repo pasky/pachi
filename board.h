@@ -306,7 +306,8 @@ int board_play(struct board *board, struct move *m);
 /* Like above, but plays random move; the move coordinate is recorded
  * to *coord. This method will never fill your own eye. pass is played
  * when no move can be played. You can impose extra restrictions if you
- * supply your own permit function. */
+ * supply your own permit function; the permit function can also modify
+ * the move coordinate to redirect the move elsewhere. */
 typedef bool (*ppr_permit)(void *data, struct board *b, struct move *m);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
 
