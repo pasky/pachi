@@ -20,6 +20,7 @@
 #include "timeinfo.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
+#include "uct/plugins.h"
 #include "uct/prior.h"
 #include "uct/search.h"
 #include "uct/slave.h"
@@ -253,6 +254,7 @@ uct_done(struct engine *e)
 	free(u->random_policy);
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
+	pluginset_done(u->plugins);
 }
 
 
@@ -485,6 +487,8 @@ uct_state_init(char *arg, struct board *b)
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 2;
+
+	u->plugins = pluginset_init(b);
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -749,6 +753,13 @@ uct_state_init(char *arg, struct board *b)
 				if (*next) *--next = ',';
 				u->banner = strdup(optval);
 				break;
+			} else if (!strcasecmp(optname, "plugin") && optval) {
+				/* Load an external plugin; filename goes before the colon,
+				 * extra arguments after the colon. */
+				char *pluginarg = strchr(optval, ':');
+				if (pluginarg)
+					*pluginarg++ = 0;
+				plugin_load(u->plugins, optval, pluginarg);
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 				exit(1);

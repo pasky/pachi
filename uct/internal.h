@@ -14,6 +14,7 @@ struct tree_node;
 struct uct_policy;
 struct uct_prior;
 struct uct_dynkomi;
+struct uct_pluginset;
 
 /* How big proportion of ownermap counts must be of one color to consider
  * the point sure. */
@@ -78,6 +79,7 @@ struct uct {
 	struct uct_policy *random_policy;
 	struct playout_policy *playout;
 	struct uct_prior *prior;
+	struct uct_pluginset *plugins;
 
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;

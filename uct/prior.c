@@ -10,6 +10,7 @@
 #include "random.h"
 #include "tactics.h"
 #include "uct/internal.h"
+#include "uct/plugins.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
 
@@ -22,7 +23,7 @@ struct uct_prior {
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6
 	 * playouts per source seems best. */
 	int eqex;
-	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex;
+	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex;
 	int cfgdn; int *cfgd_eqex;
 };
 
@@ -133,6 +134,8 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_playout(u, node, map);
 	if (u->prior->cfgd_eqex)
 		uct_prior_cfgd(u, node, map);
+	if (u->prior->plugin_eqex)
+		plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
 }
 
 struct uct_prior *
@@ -140,7 +143,7 @@ uct_prior_init(char *arg, struct board *b)
 {
 	struct uct_prior *p = calloc2(1, sizeof(struct uct_prior));
 
-	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = -1;
+	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = p->plugin_eqex = -1;
 	p->cfgdn = -1;
 
 	/* Even number! */
@@ -185,6 +188,9 @@ uct_prior_init(char *arg, struct board *b)
 				p->eye_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "ko") && optval) {
 				p->ko_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "plugin") && optval) {
+				/* Unlike others, this is just a *recommendation*. */
+				p->plugin_eqex = atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid prior argument %s or missing value\n", optname);
 				exit(1);
@@ -197,6 +203,7 @@ uct_prior_init(char *arg, struct board *b)
 	if (p->b19_eqex < 0) p->b19_eqex = p->eqex / -p->b19_eqex;
 	if (p->eye_eqex < 0) p->eye_eqex = p->eqex / -p->eye_eqex;
 	if (p->ko_eqex < 0) p->ko_eqex = p->eqex / -p->ko_eqex;
+	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex / -p->plugin_eqex;
 
 	if (p->cfgdn < 0) {
 		int bonuses[] = { 0, p->eqex, p->eqex / 2, p->eqex / 2 };
