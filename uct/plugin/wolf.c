@@ -262,6 +262,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 	*bip = 0;
 
 	/* Seed the evaluation of the situation. */
+	// fprintf(stderr, "board desc: %s\n", bin);
 	ctx->EVALFUN1(bin, bout);
 	/* We do not care about bout. */
 
@@ -271,6 +272,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 	influ_board values;
 	byte_board *chaininfo;
 	ctx->FINDMOVE2(map->to_play == S_BLACK ? 1 : -1, &bestx, &besty, &bestval, &values, &chaininfo);
+	// fprintf(stderr, "best is (%d,%d)%s %f\n", bestx, besty, coord2sstr(coord_xy(b, bestx, besty), b), bestval);
 
 	foreach_point(map->b) {
 		if (!map->consider[c])
@@ -279,7 +281,8 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 		/* Take the value and normalize it somehow. */
 		/* Right now, we just do this by rescaling to [0,1] most
 		 * naively. */
-		float value = values[coord_x(c, b)][coord_y(c, b)];
+		float value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
+		// fprintf(stderr, "\t[%s %s] %f/%f\n", stone2str(map->to_play), coord2sstr(c, b), value, bestval);
 		value /= bestval;
 
 		add_prior_value(map, c, value, eqex);
