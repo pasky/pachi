@@ -28,8 +28,8 @@ struct probdist {
 
 /* Declare pd_ corresponding to board b_ in the local scope. */
 #define probdist_alloca(pd_, b_) \
-	double pd_ ## __pdi[board_size2(b_)]; memset(pd_ ## __pdi, 0, sizeof(pd_ ## __pdi)); \
-	double pd_ ## __pdr[board_size(b_)]; memset(pd_ ## __pdr, 0, sizeof(pd_ ## __pdr)); \
+	double pd_ ## __pdi[board_size2(b_)] __attribute__((aligned(32))); memset(pd_ ## __pdi, 0, sizeof(pd_ ## __pdi)); \
+	double pd_ ## __pdr[board_size(b_)] __attribute__((aligned(32))); memset(pd_ ## __pdr, 0, sizeof(pd_ ## __pdr)); \
 	struct probdist pd_ = { .b = b_, .items = pd_ ## __pdi, .rowtotals = pd_ ## __pdr, .total = 0 };
 
 /* Get the value of given item. */
