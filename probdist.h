@@ -19,11 +19,10 @@ struct probdist {
 	double *rowtotals; // [bsize], [i] = sum of items in row i
 	double total; // sum of all items
 };
-#define probdist_total(pd) ((pd)->total)
-#define probdist_one(pd, c) ((pd)->items[c])
 /* Probability so small that it's same as zero; used to compensate
  * for probdist.total inaccuracies. */
 #define PROBDIST_EPSILON 0.05
+
 
 /* Declare pd_ corresponding to board b_ in the local scope. */
 #define probdist_alloca(pd_, b_) \
@@ -31,7 +30,18 @@ struct probdist {
 	double pd_ ## __pdr[board_size(b_)]; memset(pd_ ## __pdr, 0, sizeof(pd_ ## __pdr)); \
 	struct probdist pd_ = { .n = board_size2(b_), .n1 = board_size(b_), .items = pd_ ## __pdi, .rowtotals = pd_ ## __pdr, .total = 0 };
 
+/* Get the value of given item. */
+#define probdist_one(pd, c) ((pd)->items[c])
+
+/* Get the cummulative probability value (normalizing constant). */
+#define probdist_total(pd) ((pd)->total)
+
+/* Set the value of given item. */
 static void probdist_set(struct probdist *pd, coord_t c, double val);
+
+/* Remove the item from the totals; this is used when you then
+ * pass it in the ignore list to probdist_pick(). Of course you
+ * must restore the totals afterwards. */
 static void probdist_mute(struct probdist *pd, coord_t c);
 
 /* Pick a random item. ignore is a pass-terminated sorted array of items
@@ -39,12 +49,12 @@ static void probdist_mute(struct probdist *pd, coord_t c);
 coord_t probdist_pick(struct probdist *pd, coord_t *ignore);
 
 
-/* We disable the assertions here since this is quite time-critical
- * part of code, and also the compiler is reluctant to inline the
- * functions otherwise. */
 static inline void
 probdist_set(struct probdist *pd, coord_t c, double val)
 {
+	/* We disable the assertions here since this is quite time-critical
+	 * part of code, and also the compiler is reluctant to inline the
+	 * functions otherwise. */
 #if 0
 	assert(c >= 0 && c < board_size2(pd->b));
 	assert(val >= 0);
@@ -54,9 +64,6 @@ probdist_set(struct probdist *pd, coord_t c, double val)
 	pd->items[c] = val;
 }
 
-/* Remove the item from the totals; this is used when you then
- * pass it in the ignore list to probdist_pick(). Of course you
- * must restore the totals afterwards. */
 static inline void
 probdist_mute(struct probdist *pd, coord_t c)
 {
