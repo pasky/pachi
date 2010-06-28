@@ -68,7 +68,7 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 		/* Skip pass (for now)? */
 		if (is_pass(m.coord)) {
 skip_move:
-			probdist_set(pd, f, 0);
+			probdist_set(pd, m.coord, 0);
 			continue;
 		}
 		//fprintf(stderr, "<%d> %s\n", f, coord2sstr(m.coord, b));
@@ -107,8 +107,8 @@ skip_move:
 			g *= gamma;
 		}
 
-		probdist_set(pd, f, g);
-		//fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), probdist_one(pd, f), pd->items[f]);
+		probdist_set(pd, m.coord, g);
+		//fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), probdist_one(pd, m.coord), pd->items[f]);
 	}
 
 	return moves;
@@ -136,10 +136,10 @@ elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play
 	/* Compare to the manually created distribution. */
 	/* XXX: This is now broken if callback is used. */
 
-	double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
-	struct probdist pdx = { .n = b->flen, .items = pdi, .total = 0 };
+	double pdi[board_size2(b)]; memset(pdi, 0, sizeof(pdi));
+	struct probdist pdx = { .n = board_size2(b), .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
-	for (int i = 0; i < pdx.n; i++) {
+	for (int i = 0; i < b->flen; i++) {
 		coord_t c = b->f[i];
 		if (is_pass(c)) continue;
 		// XXX: Hardcoded ignores[] structure
@@ -149,9 +149,9 @@ elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play
 			for (int j = 0; j < lpd->n; j++)
 				if (lpd->coords[j] == c)
 					val = lpd->items[j];
-		if (fabs(pdx.items[i] - val) < PROBDIST_EPSILON)
+		if (fabs(pdx.items[c] - val) < PROBDIST_EPSILON)
 			continue;
-		printf("[%s %d] manual %f board %f ", coord2sstr(c, b), b->pat3[c], pdx.items[i], pd->items[c]);
+		printf("[%s %d] manual %f board %f ", coord2sstr(c, b), b->pat3[c], pdx.items[c], pd->items[c]);
 		board_gamma_update(b, c, to_play);
 		printf("plainboard %f\n", pd->items[c]);
 		assert(0);
@@ -249,16 +249,16 @@ coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct elo_policy *pp = p->data;
-	double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
-	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
+	double pdi[board_size2(b)]; memset(pdi, 0, sizeof(pdi));
+	struct probdist pd = { .n = board_size2(b), .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, &pd);
 	if (pd.total < PROBDIST_EPSILON)
 		return pass;
 	int ignores[1] = { 0 };
-	int f = probdist_pick(&pd, ignores);
-	return b->f[f];
+	coord_t c = probdist_pick(&pd, ignores);
+	return c;
 }
 
 #endif
@@ -267,8 +267,8 @@ void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct elo_policy *pp = p->data;
-	double pdi[map->b->flen]; memset(pdi, 0, sizeof(pdi));
-	struct probdist pd = { .n = map->b->flen, .items = pdi, .total = 0 };
+	double pdi[board_size2(map->b)]; memset(pdi, 0, sizeof(pdi));
+	struct probdist pd = { .n = board_size2(map->b), .items = pdi, .total = 0 };
 
 	int moves;
 	moves = elo_get_probdist(p, &pp->assess, map->b, map->to_play, &pd);
@@ -281,7 +281,7 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, probdist_one(&pd, f) / probdist_total(&pd), games);
+		add_prior_value(map, c, probdist_one(&pd, c) / probdist_total(&pd), games);
 	}
 }
 
