@@ -63,6 +63,9 @@ struct tree_node {
 #define TREE_HINT_INVALID 1 // don't go to this node, invalid move
 	unsigned char hints;
 
+	/* coord is usually coord_t, but this is very space-sensitive. */
+	short coord;
+
 	/* In case multiple threads walk the tree, is_expanded is set
 	 * atomically. Only the first thread setting it expands the node.
 	 * The node goes through 3 states:
@@ -70,8 +73,6 @@ struct tree_node {
 	 *   2) children == null, is_expanded == true: one thread currently expanding
 	 *   2) children != null, is_expanded == true: fully expanded node */
 	bool is_expanded;
-
-	coord_t coord;
 
 	struct move_stats u;
 	struct move_stats prior;
