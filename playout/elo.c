@@ -179,14 +179,14 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	if (!is_pass(b->ko.coord)) {
 		assert(b->ko.color == to_play);
 		ignores[ignores_n++] = b->ko.coord;
-		pd->total -= probdist_one(pd, b->ko.coord);
+		probdist_mute(pd, b->ko.coord);
 	}
 
 	/* Contiguity detection. */
 	if (!is_pass(b->last_move.coord)) {
 		foreach_8neighbor(b, b->last_move.coord) {
 			ignores[ignores_n++] = c;
-			pd->total -= probdist_one(pd, c);
+			probdist_mute(pd, c);
 
 			double val = probdist_one(pd, c) * b->gamma->gamma[FEAT_CONTIGUITY][1];
 			lpd.coords[lpd.n] = c;

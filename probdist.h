@@ -25,6 +25,7 @@ struct probdist {
 #define PROBDIST_EPSILON 0.05
 
 static void probdist_set(struct probdist *pd, int i, double val);
+static void probdist_mute(struct probdist *pd, int i);
 
 /* Pick a random item. ignore is a zero-terminated sorted array of items
  * that are not to be considered (and whose values are not in @total). */
@@ -43,6 +44,14 @@ probdist_set(struct probdist *pd, int i, double val)
 #endif
 	pd->total += val - pd->items[i];
 	pd->items[i] = val;
+}
+
+/* Remove the item from the totals; this is used when you then
+ * pass it in the ignore list to probdist_pick(). */
+static inline void
+probdist_mute(struct probdist *pd, int i)
+{
+	pd->total -= pd->items[i];
 }
 
 #endif
