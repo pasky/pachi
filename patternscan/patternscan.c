@@ -40,7 +40,7 @@ static int gammaid[FEAT_MAX + MAX_PATTERN_DIST + 1];
 /* For each spatial id, its gamma value. */
 static int spatg[65536];
 /* Pattern3 hashes sorted by their gamma. */
-static int pat3g[65536/8];
+static hash3_t pat3g[65536/8];
 
 /* Print MM-format header - summary of features. Also create patterns.fdict
  * containing mapping from gamma numbers to feature:payload pairs. */
@@ -79,7 +79,7 @@ mm_header(struct patternscan *ps)
 			for (int s = 0; s < ps->pc.spat_dict->nspatials; s++) {
 				if (ps->pc.spat_dict->spatials[s].dist != 3)
 					continue;
-				int pat = spatial_to_pattern3(&ps->pc.spat_dict->spatials[s]);
+				hash3_t pat = spatial_to_pattern3(&ps->pc.spat_dict->spatials[s]);
 				struct feature f = { .id = i, .payload = pat };
 				char buf[256] = ""; feature2str(buf, &f);
 				fprintf(fdict, "%d %s\n", g, buf);

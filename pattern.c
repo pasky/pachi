@@ -462,9 +462,9 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 
 	if (PS_ANY(PATTERN3) && !is_pass(m->coord)) {
 #ifdef BOARD_PAT3
-		int pat = b->pat3[m->coord];
+		hash3_t pat = b->pat3[m->coord];
 #else
-		int pat = pattern3_hash(b, m->coord);
+		hash3_t pat = pattern3_hash(b, m->coord);
 #endif
 		if (m->color == S_WHITE) {
 			/* We work with the pattern3s as black-to-play. */
@@ -512,7 +512,7 @@ features_gamma_load(struct features_gamma *fg, const char *filename)
 		/* In case of 3x3 patterns, record gamma also
 		 * for all rotations and transpositions. */
 		if (f.id == FEAT_PATTERN3) {
-			int transp[8];
+			hash3_t transp[8];
 			pattern3_transpose(f.payload, &transp);
 			for (int i = 1; i < 8; i++) {
 				f.payload = transp[i];

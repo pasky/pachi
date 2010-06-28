@@ -19,6 +19,8 @@ struct pattern3s {
 	char hash[65536];
 };
 
+/* XXX: See <board.h> for hash3_t typedef. */
+
 /* Source pattern encoding:
  * X: black;  O: white;  .: empty;  #: edge
  * x: !black; o: !white; ?: any
@@ -29,23 +31,23 @@ struct pattern3s {
 void pattern3s_init(struct pattern3s *p, char src[][11], int src_n);
 
 /* Compute pattern3 hash at local position. */
-static int pattern3_hash(struct board *b, coord_t c);
+static hash3_t pattern3_hash(struct board *b, coord_t c);
 
 /* Check if we match any 3x3 pattern centered on given move. */
 static bool pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m);
 
 /* Generate all transpositions of given pattern, stored in an
- * int[8] array. */
-void pattern3_transpose(int pat, int (*transp)[8]);
+ * hash3_t[8] array. */
+void pattern3_transpose(hash3_t pat, hash3_t (*transp)[8]);
 
 /* Reverse pattern to opposite color assignment. */
-static int pattern3_reverse(int pat);
+static hash3_t pattern3_reverse(hash3_t pat);
 
 
-static inline int
+static inline hash3_t
 pattern3_hash(struct board *b, coord_t c)
 {
-	int pat = 0;
+	hash3_t pat = 0;
 	int x = coord_x(c, b), y = coord_y(c, b);
 	pat |= (board_atxy(b, x - 1, y - 1) << 14)
 		| (board_atxy(b, x, y - 1) << 12)
@@ -62,15 +64,15 @@ static inline bool
 pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m)
 {
 #ifdef BOARD_PAT3
-	int pat = b->pat3[m->coord];
+	hash3_t pat = b->pat3[m->coord];
 #else
-	int pat = pattern3_hash(b, m->coord);
+	hash3_t pat = pattern3_hash(b, m->coord);
 #endif
 	return (p->hash[pat] & m->color);
 }
 
-static inline int
-pattern3_reverse(int pat)
+static inline hash3_t
+pattern3_reverse(hash3_t pat)
 {
 	/* Reverse color assignment - achieved by swapping odd and even bits */
 	return ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1);

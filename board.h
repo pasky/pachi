@@ -57,6 +57,10 @@ struct board_symmetry {
 typedef uint64_t hash_t;
 #define PRIhash PRIx64
 
+/* XXX: This really belongs in pattern3.h, unfortunately that would mean
+ * a dependency hell. */
+typedef uint16_t hash3_t; // 3x3 pattern hash
+
 
 /* Note that "group" is only chain of stones that is solidly
  * connected for us. */
@@ -160,7 +164,7 @@ struct board {
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
-	uint16_t *pat3;
+	hash3_t *pat3;
 #endif
 #ifdef BOARD_TRAITS
 	/* Incrementally matched point traits information, black-to-play

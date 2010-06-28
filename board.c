@@ -412,7 +412,7 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 		return;
 	}
 
-	int pat = board->pat3[coord];
+	hash3_t pat = board->pat3[coord];
 	if (color == S_WHITE) {
 		/* We work with the pattern3s as black-to-play. */
 		pat = pattern3_reverse(pat);

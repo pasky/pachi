@@ -423,7 +423,7 @@ static const int p3bits[] = { -1,  1, 6, 3, 4,  0, 2, 5, 7 };
 
 
 static hash_t
-pattern3_to_spatial(int r, int pat3)
+pattern3_to_spatial(int r, hash3_t pat3)
 {
 	hash_t h = pthashes[r][0][S_NONE];
 	for (int i = 1; i < 9; i++)
@@ -431,7 +431,7 @@ pattern3_to_spatial(int r, int pat3)
 	return h & spatial_hash_mask;
 }
 
-int
+hash3_t
 spatial_to_pattern3(struct spatial *s)
 {
 	assert(s->dist == 3);
@@ -441,8 +441,8 @@ spatial_to_pattern3(struct spatial *s)
 	return pat3;
 }
 
-int
-pattern3_by_spatial(struct spatial_dict *dict, int pat3)
+hash3_t
+pattern3_by_spatial(struct spatial_dict *dict, hash3_t pat3)
 {
 	/* Just pull pat3 through the spatial database to generate
 	 * hash of its canonical form. */
