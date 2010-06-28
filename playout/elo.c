@@ -156,13 +156,11 @@ elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play
 	}
 #endif
 }
-#endif
 
 coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct elo_policy *pp = p->data;
-#ifdef BOARD_GAMMA
 	/* The base board probdist. */
 	struct probdist *pd = &b->prob[to_play - 1];
 	double pd_total = pd->total; // precision backup
@@ -241,8 +239,14 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		pd->total = pd_total;
 	}
 	return c;
+}
 
 #else
+
+coord_t
+playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
+{
+	struct elo_policy *pp = p->data;
 	double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
 	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
@@ -253,8 +257,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	int ignores[1] = { 0 };
 	int f = probdist_pick(&pd, ignores);
 	return b->f[f];
-#endif
 }
+#endif
 
 void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
