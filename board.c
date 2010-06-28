@@ -92,12 +92,14 @@ board_copy(struct board *b2, struct board *b1)
 #endif
 #ifdef BOARD_GAMMA
 	int pbsize = board_size2(b2) * sizeof(*b2->prob[0].items);
+	int rowpbsize = board_size(b2) * sizeof(*b2->prob[0].rowtotals);
 #else
 	int pbsize = 0;
+	int rowpbsize = 0;
 #endif
 	int cdsize = board_size2(b2) * sizeof(*b2->coord);
-	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
+	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + (pbsize + rowpbsize) * 2 + cdsize);
+	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + (pbsize + rowpbsize) * 2 + cdsize);
 	b2->b = x; x += bsize;
 	b2->g = x; x += gsize;
 	b2->f = x; x += fsize;
@@ -121,6 +123,8 @@ board_copy(struct board *b2, struct board *b1)
 #ifdef BOARD_GAMMA
 	b2->prob[0].items = x; x += pbsize;
 	b2->prob[1].items = x; x += pbsize;
+	b2->prob[0].rowtotals = x; x += rowpbsize;
+	b2->prob[1].rowtotals = x; x += rowpbsize;
 #endif
 	b2->coord = x; x += cdsize;
 
@@ -186,12 +190,14 @@ board_resize(struct board *board, int size)
 #endif
 #ifdef BOARD_GAMMA
 	int pbsize = board_size2(board) * sizeof(*board->prob[0].items);
+	int rowpbsize = board_size(board) * sizeof(*board->prob[0].rowtotals);
 #else
 	int pbsize = 0;
+	int rowpbsize = 0;
 #endif
 	int cdsize = board_size2(board) * sizeof(*board->coord);
-	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
+	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + (pbsize + rowpbsize) * 2 + cdsize);
+	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + (pbsize + rowpbsize) * 2 + cdsize);
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -215,6 +221,8 @@ board_resize(struct board *board, int size)
 #ifdef BOARD_GAMMA
 	board->prob[0].items = x; x += pbsize;
 	board->prob[1].items = x; x += pbsize;
+	board->prob[0].rowtotals = x; x += rowpbsize;
+	board->prob[1].rowtotals = x; x += rowpbsize;
 #endif
 	board->coord = x; x += cdsize;
 }
@@ -331,6 +339,7 @@ board_clear(struct board *board)
 #endif
 #ifdef BOARD_GAMMA
 	board->prob[0].n = board->prob[1].n = board_size2(board);
+	board->prob[0].n1 = board->prob[1].n1 = board_size(board);
 	foreach_point(board) {
 		probdist_set(&board->prob[0], c, (board_at(board, c) == S_NONE) * 1.0f);
 		probdist_set(&board->prob[1], c, (board_at(board, c) == S_NONE) * 1.0f);

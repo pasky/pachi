@@ -14,8 +14,9 @@
  * between different probdist representations. */
 
 struct probdist {
-	int n;
+	int n, n1;
 	double *items; // [n], items[i] = P(pick==i)
+	double *rowtotals; // [n1], [i] = sum of items in row i
 	double total;
 };
 #define probdist_total(pd) ((pd)->total)
@@ -43,6 +44,7 @@ probdist_set(struct probdist *pd, int i, double val)
 	assert(val >= 0);
 #endif
 	pd->total += val - pd->items[i];
+	pd->rowtotals[i / pd->n1] += val - pd->items[i];
 	pd->items[i] = val;
 }
 
@@ -52,6 +54,7 @@ static inline void
 probdist_mute(struct probdist *pd, int i)
 {
 	pd->total -= pd->items[i];
+	pd->rowtotals[i / pd->n1] -= pd->items[i];
 }
 
 #endif

@@ -121,6 +121,12 @@ struct lprobdist {
 	coord_t coords[LPD_MAX];
 	double items[LPD_MAX];
 	double total;
+	
+	/* Backups of original totals for restoring. */
+	double btotal;
+	double browtotals_v[10];
+	int browtotals_i[10];
+	int browtotals_n;
 };
 
 #ifdef BOARD_GAMMA
@@ -137,7 +143,8 @@ elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play
 	/* XXX: This is now broken if callback is used. */
 
 	double pdi[board_size2(b)]; memset(pdi, 0, sizeof(pdi));
-	struct probdist pdx = { .n = board_size2(b), .items = pdi, .total = 0 };
+	double pdr[board_size(b)]; memset(pdr, 0, sizeof(pdr));
+	struct probdist pdx = { .n = board_size2(b), .n1 = board_size(b), .items = pdi, .rowtotals = pdr, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
 	for (int i = 0; i < b->flen; i++) {
 		coord_t c = b->f[i];
@@ -165,28 +172,33 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	struct elo_policy *pp = p->data;
 	/* The base board probdist. */
 	struct probdist *pd = &b->prob[to_play - 1];
-	double pd_total = pd->total; // precision backup
 	/* The list of moves we do not consider in pd. */
 	int ignores[10]; int ignores_n = 0;
 	/* The list of local moves; we consider these separately. */
-	struct lprobdist lpd = { .n = 0, .total = 0 };
+	struct lprobdist lpd = { .n = 0, .total = 0, .btotal = pd->total, .browtotals_n = 0 };
 
 	/* The engine might want to adjust our probdist. */
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, pd);
 
+#define ignore_move(c_) do { \
+	ignores[ignores_n++] = c_; \
+	int rowi = c_ / pd->n1; \
+	lpd.browtotals_i[lpd.browtotals_n] = rowi; \
+	lpd.browtotals_v[lpd.browtotals_n++] = pd->rowtotals[rowi]; \
+	probdist_mute(pd, c_); \
+} while (0)
+
 	/* Make sure ko-prohibited move does not get picked. */
 	if (!is_pass(b->ko.coord)) {
 		assert(b->ko.color == to_play);
-		ignores[ignores_n++] = b->ko.coord;
-		probdist_mute(pd, b->ko.coord);
+		ignore_move(b->ko.coord);
 	}
 
 	/* Contiguity detection. */
 	if (!is_pass(b->last_move.coord)) {
 		foreach_8neighbor(b, b->last_move.coord) {
-			ignores[ignores_n++] = c;
-			probdist_mute(pd, c);
+			ignore_move(c);
 
 			double val = probdist_one(pd, c) * b->gamma->gamma[FEAT_CONTIGUITY][1];
 			lpd.coords[lpd.n] = c;
@@ -231,14 +243,21 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		/* XXX: Do something less horribly inefficient
 		 * than just recomputing the whole pd. */
 		pd->total = 0;
+		for (int i = 0; i < pd->n / pd->n1; i++)
+			pd->rowtotals[i] = 0;
 		for (int i = 0; i < b->flen; i++) {
 			pd->items[b->f[i]] = 0;
 			board_gamma_update(b, b->f[i], to_play);
 		}
-		assert(fabs(pd->total - pd_total) < PROBDIST_EPSILON);
+		assert(fabs(pd->total - lpd.btotal) < PROBDIST_EPSILON);
 
 	} else {
-		pd->total = pd_total;
+		pd->total = lpd.btotal;
+		/* If we touched a row multiple times (and we sure will),
+		 * the latter value is obsolete; but since we go through
+		 * the backups in reverse order, all is good. */
+		for (int j = lpd.browtotals_n - 1; j >= 0; j--)
+			pd->rowtotals[lpd.browtotals_i[j]] = lpd.browtotals_v[j];
 	}
 	return c;
 }
@@ -250,7 +269,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 {
 	struct elo_policy *pp = p->data;
 	double pdi[board_size2(b)]; memset(pdi, 0, sizeof(pdi));
-	struct probdist pd = { .n = board_size2(b), .items = pdi, .total = 0 };
+	double pdr[board_size(b)]; memset(pdr, 0, sizeof(pdr));
+	struct probdist pd = { .n = board_size2(b), .n1 = board_size(b), .items = pdi, .rowtotals = pdr, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, &pd);
@@ -268,7 +288,8 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct elo_policy *pp = p->data;
 	double pdi[board_size2(map->b)]; memset(pdi, 0, sizeof(pdi));
-	struct probdist pd = { .n = board_size2(map->b), .items = pdi, .total = 0 };
+	double pdr[board_size(map->b)]; memset(pdr, 0, sizeof(pdr));
+	struct probdist pd = { .n = board_size2(map->b), .n1 = board_size(map->b), .items = pdi, .rowtotals = pdr, .total = 0 };
 
 	int moves;
 	moves = elo_get_probdist(p, &pp->assess, map->b, map->to_play, &pd);

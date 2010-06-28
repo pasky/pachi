@@ -15,7 +15,14 @@ probdist_pick(struct probdist *pd, int *ignore)
 	assert(total >= 0);
 	double stab = fast_frandom() * total;
 	//fprintf(stderr, "stab %f / %f\n", stab, total);
-	for (int i = 0; i < pd->n; i++) {
+
+	int r = 0;
+	while (stab > pd->rowtotals[r] + PROBDIST_EPSILON) {
+		stab -= pd->rowtotals[r];
+		r++;
+		assert(r < pd->n1);
+	}
+	for (int i = r * pd->n1; i < pd->n; i++) {
 		//struct board b = { .size = 11 };
 		//fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(i, &b), pd->items[i], stab);
 		if (*ignore && i == *ignore) {
@@ -26,6 +33,7 @@ probdist_pick(struct probdist *pd, int *ignore)
 			return i;
 		stab -= pd->items[i];
 	}
+
 	fprintf(stderr, "overstab %f (total %f)\n", stab, total);
 	assert(0);
 	return -1;
