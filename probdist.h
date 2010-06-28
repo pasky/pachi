@@ -28,7 +28,7 @@ struct probdist {
 static void probdist_set(struct probdist *pd, coord_t c, double val);
 static void probdist_mute(struct probdist *pd, coord_t c);
 
-/* Pick a random item. ignore is a zero-terminated sorted array of items
+/* Pick a random item. ignore is a pass-terminated sorted array of items
  * that are not to be considered (and whose values are not in @total). */
 coord_t probdist_pick(struct probdist *pd, coord_t *ignore);
 

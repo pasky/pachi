@@ -25,7 +25,7 @@ probdist_pick(struct probdist *pd, coord_t *ignore)
 	for (coord_t c = r * pd->n1; c < pd->n; c++) {
 		//struct board b = { .size = 11 };
 		//fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(c, &b), pd->items[c], stab);
-		if (*ignore && c == *ignore) {
+		if (c == *ignore) {
 			ignore++;
 			continue;
 		}

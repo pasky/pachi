@@ -207,7 +207,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		} foreach_8neighbor_end;
 	}
 
-	ignores[ignores_n] = 0;
+	ignores[ignores_n] = pass;
 
 	/* Verify sanity, possibly. */
 	elo_check_probdist(p, b, to_play, pd, ignores, &lpd, b->last_move.coord);
@@ -276,7 +276,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		pp->callback(pp->callback_data, b, to_play, &pd);
 	if (pd.total < PROBDIST_EPSILON)
 		return pass;
-	int ignores[1] = { 0 };
+	int ignores[1] = { pass };
 	coord_t c = probdist_pick(&pd, ignores);
 	return c;
 }
