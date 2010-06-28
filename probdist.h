@@ -26,7 +26,9 @@ struct probdist {
 
 static void probdist_set(struct probdist *pd, int i, double val);
 
-int probdist_pick(struct probdist *pd);
+/* Pick a random item. ignore is a zero-terminated sorted array of items
+ * that are not to be considered (and whose values are not in @total). */
+int probdist_pick(struct probdist *pd, int *ignore);
 
 
 /* We disable the assertions here since this is quite time-critical
