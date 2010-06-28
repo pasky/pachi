@@ -17,6 +17,8 @@
 /* Applying heuristic values to the tree nodes, skewing the reading in
  * most interesting directions. */
 
+/* TODO: Introduce foreach_fpoint() to iterate only over non-occupied
+ * positions. */
 
 struct uct_prior {
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
