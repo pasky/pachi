@@ -183,6 +183,13 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 
 #define ignore_move(c_) do { \
 	ignores[ignores_n++] = c_; \
+	if (ignores_n > 1 && ignores[ignores_n - 1] < ignores[ignores_n - 2]) { \
+		/* Keep ignores[] sorted. We abuse the fact that we know \
+		 * only one item can be out-of-order. */ \
+		coord_t cc = ignores[ignores_n - 2]; \
+		ignores[ignores_n - 2] = ignores[ignores_n - 1]; \
+		ignores[ignores_n - 1] = cc; \
+	} \
 	int rowi = c_ / pd->n1; \
 	lpd.browtotals_i[lpd.browtotals_n] = rowi; \
 	lpd.browtotals_v[lpd.browtotals_n++] = pd->rowtotals[rowi]; \
