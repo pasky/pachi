@@ -124,6 +124,7 @@ struct lprobdist {
 };
 
 #ifdef BOARD_GAMMA
+
 static void
 elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play, struct probdist *pd, int *ignores, struct lprobdist *lpd, coord_t lc)
 {
@@ -139,19 +140,20 @@ elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play
 	struct probdist pdx = { .n = b->flen, .items = pdi, .total = 0 };
 	elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
 	for (int i = 0; i < pdx.n; i++) {
-		if (is_pass(b->f[i])) continue;
+		coord_t c = b->f[i];
+		if (is_pass(c)) continue;
 		// XXX: Hardcoded ignores[] structure
-		if (ignores[0] == b->f[i]) continue;
-		double val = pd->items[b->f[i]];
-		if (!is_pass(lc) && coord_is_8adjecent(lc, b->f[i], b))
+		if (ignores[0] == c) continue;
+		double val = pd->items[c];
+		if (!is_pass(lc) && coord_is_8adjecent(lc, c, b))
 			for (int j = 0; j < lpd->n; j++)
-				if (lpd->coords[j] == b->f[i])
+				if (lpd->coords[j] == c)
 					val = lpd->items[j];
 		if (fabs(pdx.items[i] - val) < PROBDIST_EPSILON)
 			continue;
-		printf("[%s %d] manual %f board %f ", coord2sstr(b->f[i], b), b->pat3[b->f[i]], pdx.items[i], pd->items[b->f[i]]);
-		board_gamma_update(b, b->f[i], to_play);
-		printf("plainboard %f\n", pd->items[b->f[i]]);
+		printf("[%s %d] manual %f board %f ", coord2sstr(c, b), b->pat3[c], pdx.items[i], pd->items[c]);
+		board_gamma_update(b, c, to_play);
+		printf("plainboard %f\n", pd->items[c]);
 		assert(0);
 	}
 #endif
@@ -258,6 +260,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	int f = probdist_pick(&pd, ignores);
 	return b->f[f];
 }
+
 #endif
 
 void
