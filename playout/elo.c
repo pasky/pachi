@@ -188,7 +188,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		ignores[ignores_n - 2] = ignores[ignores_n - 1]; \
 		ignores[ignores_n - 1] = cc; \
 	} \
-	int rowi = c_ / pd->n1; \
+	int rowi = coord_y(c_, pd->b); \
 	lpd.browtotals_i[lpd.browtotals_n] = rowi; \
 	lpd.browtotals_v[lpd.browtotals_n++] = pd->rowtotals[rowi]; \
 	probdist_mute(pd, c_); \
@@ -248,7 +248,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		/* XXX: Do something less horribly inefficient
 		 * than just recomputing the whole pd. */
 		pd->total = 0;
-		for (int i = 0; i < pd->n / pd->n1; i++)
+		for (int i = 0; i < board_size(pd->b); i++)
 			pd->rowtotals[i] = 0;
 		for (int i = 0; i < b->flen; i++) {
 			pd->items[b->f[i]] = 0;

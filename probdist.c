@@ -20,11 +20,10 @@ probdist_pick(struct probdist *pd, coord_t *ignore)
 	while (stab > pd->rowtotals[r] + PROBDIST_EPSILON) {
 		stab -= pd->rowtotals[r];
 		r++;
-		assert(r < pd->n1);
+		assert(r < board_size(pd->b));
 	}
-	for (coord_t c = r * pd->n1; c < pd->n; c++) {
-		//struct board b = { .size = 11 };
-		//fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(c, &b), pd->items[c], stab);
+	for (coord_t c = r * board_size(pd->b); c < board_size2(pd->b); c++) {
+		//fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(c, &pd->b), pd->items[c], stab);
 		if (c == *ignore) {
 			ignore++;
 			continue;

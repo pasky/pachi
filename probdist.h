@@ -10,11 +10,13 @@
 #include "move.h"
 #include "util.h"
 
+struct board;
+
 /* The interface looks a bit funny-wrapped since we used to switch
  * between different probdist representations. */
 
 struct probdist {
-	int n, n1;
+	struct board *b;
 	double *items; // [bsize2], [i] = P(pick==i)
 	double *rowtotals; // [bsize], [i] = sum of items in row i
 	double total; // sum of all items
@@ -28,7 +30,7 @@ struct probdist {
 #define probdist_alloca(pd_, b_) \
 	double pd_ ## __pdi[board_size2(b_)]; memset(pd_ ## __pdi, 0, sizeof(pd_ ## __pdi)); \
 	double pd_ ## __pdr[board_size(b_)]; memset(pd_ ## __pdr, 0, sizeof(pd_ ## __pdr)); \
-	struct probdist pd_ = { .n = board_size2(b_), .n1 = board_size(b_), .items = pd_ ## __pdi, .rowtotals = pd_ ## __pdr, .total = 0 };
+	struct probdist pd_ = { .b = b_, .items = pd_ ## __pdi, .rowtotals = pd_ ## __pdr, .total = 0 };
 
 /* Get the value of given item. */
 #define probdist_one(pd, c) ((pd)->items[c])
@@ -49,6 +51,11 @@ static void probdist_mute(struct probdist *pd, coord_t c);
 coord_t probdist_pick(struct probdist *pd, coord_t *ignore);
 
 
+/* Now, we do something horrible - include board.h for the inline helpers.
+ * Yay for us. */
+#include "board.h"
+
+
 static inline void
 probdist_set(struct probdist *pd, coord_t c, double val)
 {
@@ -60,7 +67,7 @@ probdist_set(struct probdist *pd, coord_t c, double val)
 	assert(val >= 0);
 #endif
 	pd->total += val - pd->items[c];
-	pd->rowtotals[c / pd->n1] += val - pd->items[c];
+	pd->rowtotals[coord_y(c, pd->b)] += val - pd->items[c];
 	pd->items[c] = val;
 }
 
@@ -68,7 +75,7 @@ static inline void
 probdist_mute(struct probdist *pd, coord_t c)
 {
 	pd->total -= pd->items[c];
-	pd->rowtotals[c / pd->n1] -= pd->items[c];
+	pd->rowtotals[coord_y(c, pd->b)] -= pd->items[c];
 }
 
 #endif
