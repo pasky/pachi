@@ -78,7 +78,7 @@ struct tree_node {
 	/* XXX: Should be way for policies to add their own stats */
 	struct move_stats amaf;
 	/* Stats before starting playout; used for distributed engine. */
-	struct move_stats pu, pamaf;
+	struct move_stats pu;
 };
 
 struct tree_hash;
