@@ -10,5 +10,16 @@ Combining Online and Offline Knowledge in UCT
 Pachi contains unpublished methods we claim we have invented
 independently and are preparing for publication:
 
-* The handicap-based linear dynamic komi feature.
-* The root heuristic feature.
+* The dynamic komi feature.
+* The local tree feature.
+
+
+These people have made significant contributions to the code:
+
+Petr Baudis
+	Pachi the Bot ;-)
+
+Jean-loup Gaily
+	Distributed engine
+	Time allocation algorithm
+	Efficient UCT memory allocator

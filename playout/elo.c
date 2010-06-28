@@ -68,7 +68,7 @@ elo_get_probdist(struct playout_policy *p, struct patternset *ps, struct board *
 		/* Skip pass (for now)? */
 		if (is_pass(m.coord)) {
 skip_move:
-			probdist_set(pd, f, 0);
+			probdist_set(pd, m.coord, 0);
 			continue;
 		}
 		//fprintf(stderr, "<%d> %s\n", f, coord2sstr(m.coord, b));
@@ -107,91 +107,190 @@ skip_move:
 			g *= gamma;
 		}
 
-		probdist_set(pd, f, g);
-		//fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), probdist_one(pd, f), pd->items[f]);
+		probdist_set(pd, m.coord, g);
+		//fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), probdist_one(pd, m.coord), pd->items[f]);
 	}
 
 	return moves;
 }
 
 
+struct lprobdist {
+	int n;
+#define LPD_MAX 8
+	coord_t coords[LPD_MAX];
+	double items[LPD_MAX];
+	double total;
+	
+	/* Backups of original totals for restoring. */
+	double btotal;
+	double browtotals_v[10];
+	int browtotals_i[10];
+	int browtotals_n;
+};
+
+#ifdef BOARD_GAMMA
+
+static void
+elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play, struct probdist *pd, int *ignores, struct lprobdist *lpd, coord_t lc)
+{
+#if 0
+	struct elo_policy *pp = p->data;
+	if (pd->total < PROBDIST_EPSILON)
+		return;
+
+	/* Compare to the manually created distribution. */
+	/* XXX: This is now broken if callback is used. */
+
+	probdist_alloca(pdx, b);
+	elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
+	for (int i = 0; i < b->flen; i++) {
+		coord_t c = b->f[i];
+		if (is_pass(c)) continue;
+		// XXX: Hardcoded ignores[] structure
+		if (ignores[0] == c) continue;
+		double val = pd->items[c];
+		if (!is_pass(lc) && coord_is_8adjecent(lc, c, b))
+			for (int j = 0; j < lpd->n; j++)
+				if (lpd->coords[j] == c)
+					val = lpd->items[j];
+		if (fabs(pdx.items[c] - val) < PROBDIST_EPSILON)
+			continue;
+		printf("[%s %d] manual %f board %f ", coord2sstr(c, b), b->pat3[c], pdx.items[c], pd->items[c]);
+		board_gamma_update(b, c, to_play);
+		printf("plainboard %f\n", pd->items[c]);
+		assert(0);
+	}
+#endif
+}
+
 coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct elo_policy *pp = p->data;
-#ifdef BOARD_GAMMA
+	/* The base board probdist. */
 	struct probdist *pd = &b->prob[to_play - 1];
-	/* Make sure ko-prohibited move does not get picked. */
-	if (!is_pass(b->ko.coord)) {
-		assert(b->ko.color == to_play);
-		probdist_set(pd, b->ko.coord, 0);
-	}
-	/* Contiguity detection. */
-	if (!is_pass(b->last_move.coord)) {
-		foreach_8neighbor(b, b->last_move.coord) {
-			probdist_set(pd, c, pd->items[c] * b->gamma->gamma[FEAT_CONTIGUITY][1]);
-		} foreach_8neighbor_end;
-	}
-#if 0
-	/* Compare to the manually created distribution. */
-	if (pd->total >= PROBDIST_EPSILON) {
-		double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
-		struct probdist pdx = { .n = b->flen, .items = pdi, .total = 0 };
-		elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
-		for (int i = 0; i < pdx.n; i++) {
-			if (is_pass(b->f[i])) continue;
-			if (fabs(pdx.items[i] - pd->items[b->f[i]]) >= PROBDIST_EPSILON) {
-				printf("[%s %d] manual %f board %f ", coord2sstr(b->f[i], b), b->pat3[b->f[i]], pdx.items[i], pd->items[b->f[i]]);
-				board_gamma_update(b, b->f[i], to_play);
-				printf("plainboard %f\n", pd->items[b->f[i]]);
-				assert(0);
-			}
-		}
-	}
-#endif
+	/* The list of moves we do not consider in pd. */
+	int ignores[10]; int ignores_n = 0;
+	/* The list of local moves; we consider these separately. */
+	struct lprobdist lpd = { .n = 0, .total = 0, .btotal = pd->total, .browtotals_n = 0 };
+
 	/* The engine might want to adjust our probdist. */
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, pd);
+
+#define ignore_move(c_) do { \
+	ignores[ignores_n++] = c_; \
+	if (ignores_n > 1 && ignores[ignores_n - 1] < ignores[ignores_n - 2]) { \
+		/* Keep ignores[] sorted. We abuse the fact that we know \
+		 * only one item can be out-of-order. */ \
+		coord_t cc = ignores[ignores_n - 2]; \
+		ignores[ignores_n - 2] = ignores[ignores_n - 1]; \
+		ignores[ignores_n - 1] = cc; \
+	} \
+	int rowi = coord_y(c_, pd->b); \
+	lpd.browtotals_i[lpd.browtotals_n] = rowi; \
+	lpd.browtotals_v[lpd.browtotals_n++] = pd->rowtotals[rowi]; \
+	probdist_mute(pd, c_); \
+} while (0)
+
+	/* Make sure ko-prohibited move does not get picked. */
+	if (!is_pass(b->ko.coord)) {
+		assert(b->ko.color == to_play);
+		ignore_move(b->ko.coord);
+	}
+
+	/* Contiguity detection. */
+	if (!is_pass(b->last_move.coord)) {
+		foreach_8neighbor(b, b->last_move.coord) {
+			ignore_move(c);
+
+			double val = probdist_one(pd, c) * b->gamma->gamma[FEAT_CONTIGUITY][1];
+			lpd.coords[lpd.n] = c;
+			lpd.items[lpd.n++] = val;
+			lpd.total += val;
+		} foreach_8neighbor_end;
+	}
+
+	ignores[ignores_n] = pass;
+
+	/* Verify sanity, possibly. */
+	elo_check_probdist(p, b, to_play, pd, ignores, &lpd, b->last_move.coord);
+
 	/* Pick a move. */
-	coord_t c = pd->total >= PROBDIST_EPSILON ? probdist_pick(pd) : pass;
+	coord_t c = pass;
+	double stab = fast_frandom() * (lpd.total + pd->total);
+	if (stab < lpd.total - PROBDIST_EPSILON) {
+		/* Local probdist. */
+		for (int i = 0; i < lpd.n; i++) {
+			if (stab <= lpd.items[i]) {
+				c = lpd.coords[i];
+				break;
+			}
+			stab -= lpd.items[i];
+		}
+		if (is_pass(c)) {
+			fprintf(stderr, "elo: local overstab [%lf]\n", stab);
+			abort();
+		}
+
+	} else if (pd->total >= PROBDIST_EPSILON) {
+		/* Global probdist. */
+		/* XXX: We re-stab inside. */
+		c = probdist_pick(pd, ignores);
+
+	} else {
+		c = pass;
+	}
+
 	/* Repair the damage. */
 	if (pp->callback) {
 		/* XXX: Do something less horribly inefficient
 		 * than just recomputing the whole pd. */
 		pd->total = 0;
+		for (int i = 0; i < board_size(pd->b); i++)
+			pd->rowtotals[i] = 0;
 		for (int i = 0; i < b->flen; i++) {
 			pd->items[b->f[i]] = 0;
 			board_gamma_update(b, b->f[i], to_play);
 		}
-	}
-	if (!is_pass(b->ko.coord))
-		board_gamma_update(b, b->ko.coord, to_play);
-	if (!is_pass(b->last_move.coord)) {
-		foreach_8neighbor(b, b->last_move.coord) {
-			board_gamma_update(b, c, to_play);
-		} foreach_8neighbor_end;
+		assert(fabs(pd->total - lpd.btotal) < PROBDIST_EPSILON);
+
+	} else {
+		pd->total = lpd.btotal;
+		/* If we touched a row multiple times (and we sure will),
+		 * the latter value is obsolete; but since we go through
+		 * the backups in reverse order, all is good. */
+		for (int j = lpd.browtotals_n - 1; j >= 0; j--)
+			pd->rowtotals[lpd.browtotals_i[j]] = lpd.browtotals_v[j];
 	}
 	return c;
+}
 
 #else
-	double pdi[b->flen]; memset(pdi, 0, sizeof(pdi));
-	struct probdist pd = { .n = b->flen, .items = pdi, .total = 0 };
+
+coord_t
+playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
+{
+	struct elo_policy *pp = p->data;
+	probdist_alloca(pd, b);
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, &pd);
 	if (pd.total < PROBDIST_EPSILON)
 		return pass;
-	int f = probdist_pick(&pd);
-	return b->f[f];
-#endif
+	int ignores[1] = { pass };
+	coord_t c = probdist_pick(&pd, ignores);
+	return c;
 }
+
+#endif
 
 void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct elo_policy *pp = p->data;
-	double pdi[map->b->flen]; memset(pdi, 0, sizeof(pdi));
-	struct probdist pd = { .n = map->b->flen, .items = pdi, .total = 0 };
+	probdist_alloca(pd, map->b);
 
 	int moves;
 	moves = elo_get_probdist(p, &pp->assess, map->b, map->to_play, &pd);
@@ -204,7 +303,7 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, probdist_one(&pd, f) / probdist_total(&pd), games);
+		add_prior_value(map, c, probdist_one(&pd, c) / probdist_total(&pd), games);
 	}
 }
 

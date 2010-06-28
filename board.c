@@ -56,100 +56,11 @@ board_init(void)
 	return b;
 }
 
-struct board *
-board_copy(struct board *b2, struct board *b1)
+static size_t
+board_alloc(struct board *board)
 {
-	memcpy(b2, b1, sizeof(struct board));
-
-	int bsize = board_size2(b2) * sizeof(*b2->b);
-	int gsize = board_size2(b2) * sizeof(*b2->g);
-	int fsize = board_size2(b2) * sizeof(*b2->f);
-	int nsize = board_size2(b2) * sizeof(*b2->n);
-	int psize = board_size2(b2) * sizeof(*b2->p);
-	int hsize = board_size2(b2) * 2 * sizeof(*b2->h);
-	int gisize = board_size2(b2) * sizeof(*b2->gi);
-#ifdef WANT_BOARD_C
-	int csize = board_size2(b2) * sizeof(*b2->c);
-#else
-	int csize = 0;
-#endif
-#ifdef BOARD_SPATHASH
-	int ssize = board_size2(b2) * sizeof(*b2->spathash);
-#else
-	int ssize = 0;
-#endif
-#ifdef BOARD_PAT3
-	int p3size = board_size2(b2) * sizeof(*b2->pat3);
-#else
-	int p3size = 0;
-#endif
-#ifdef BOARD_TRAITS
-	int tsize = board_size2(b2) * sizeof(*b2->t);
-	int tqsize = board_size2(b2) * sizeof(*b2->t);
-#else
-	int tsize = 0;
-	int tqsize = 0;
-#endif
-#ifdef BOARD_GAMMA
-	int pbsize = board_size2(b2) * sizeof(*b2->prob[0].items);
-#else
-	int pbsize = 0;
-#endif
-	int cdsize = board_size2(b2) * sizeof(*b2->coord);
-	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
-	memcpy(x, b1->b, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
-	b2->b = x; x += bsize;
-	b2->g = x; x += gsize;
-	b2->f = x; x += fsize;
-	b2->p = x; x += psize;
-	b2->n = x; x += nsize;
-	b2->h = x; x += hsize;
-	b2->gi = x; x += gisize;
-#ifdef WANT_BOARD_C
-	b2->c = x; x += csize;
-#endif
-#ifdef BOARD_SPATHASH
-	b2->spathash = x; x += ssize;
-#endif
-#ifdef BOARD_PAT3
-	b2->pat3 = x; x += p3size;
-#endif
-#ifdef BOARD_TRAITS
-	b2->t = x; x += tsize;
-	b2->tq = x; x += tqsize;
-#endif
-#ifdef BOARD_GAMMA
-	b2->prob[0].items = x; x += pbsize;
-	b2->prob[1].items = x; x += pbsize;
-#endif
-	b2->coord = x; x += cdsize;
-
-	return b2;
-}
-
-void
-board_done_noalloc(struct board *board)
-{
-	if (board->b) free(board->b);
-}
-
-void
-board_done(struct board *board)
-{
-	board_done_noalloc(board);
-	free(board);
-}
-
-void
-board_resize(struct board *board, int size)
-{
-#ifdef BOARD_SIZE
-	assert(board_size(board) == size + 2);
-#endif
-	board->size = size + 2 /* S_OFFBOARD margin */;
-	board->size2 = board_size(board) * board_size(board);
-	if (board->b)
-		free(board->b);
+	/* We do not allocate the board structure itself but we allocate
+	 * all the arrays with board contents. */
 
 	int bsize = board_size2(board) * sizeof(*board->b);
 	int gsize = board_size2(board) * sizeof(*board->g);
@@ -182,12 +93,17 @@ board_resize(struct board *board, int size)
 #endif
 #ifdef BOARD_GAMMA
 	int pbsize = board_size2(board) * sizeof(*board->prob[0].items);
+	int rowpbsize = board_size(board) * sizeof(*board->prob[0].rowtotals);
 #else
 	int pbsize = 0;
+	int rowpbsize = 0;
 #endif
 	int cdsize = board_size2(board) * sizeof(*board->coord);
-	void *x = malloc2(bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
-	memset(x, 0, bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + pbsize * 2 + cdsize);
+
+	size_t size = bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + (pbsize + rowpbsize) * 2 + cdsize;
+	void *x = malloc2(size);
+
+	/* board->b must come first */
 	board->b = x; x += bsize;
 	board->g = x; x += gsize;
 	board->f = x; x += fsize;
@@ -211,8 +127,55 @@ board_resize(struct board *board, int size)
 #ifdef BOARD_GAMMA
 	board->prob[0].items = x; x += pbsize;
 	board->prob[1].items = x; x += pbsize;
+	board->prob[0].rowtotals = x; x += rowpbsize;
+	board->prob[1].rowtotals = x; x += rowpbsize;
 #endif
 	board->coord = x; x += cdsize;
+
+	return size;
+}
+
+struct board *
+board_copy(struct board *b2, struct board *b1)
+{
+	memcpy(b2, b1, sizeof(struct board));
+
+	size_t size = board_alloc(b2);
+	memcpy(b2->b, b1->b, size);
+
+	return b2;
+}
+
+void
+board_done_noalloc(struct board *board)
+{
+	if (board->b) free(board->b);
+}
+
+void
+board_done(struct board *board)
+{
+	board_done_noalloc(board);
+	free(board);
+}
+
+void
+board_resize(struct board *board, int size)
+{
+#ifdef BOARD_SIZE
+	assert(board_size(board) == size + 2);
+#endif
+	board->size = size + 2 /* S_OFFBOARD margin */;
+	board->size2 = board_size(board) * board_size(board);
+
+	board->bits2 = 1;
+	while ((1 << board->bits2) < board->size2) board->bits2++;
+
+	if (board->b)
+		free(board->b);
+
+	size_t asize = board_alloc(board);
+	memset(board->b, 0, asize);
 }
 
 void
@@ -326,7 +289,7 @@ board_clear(struct board *board)
 	} foreach_point_end;
 #endif
 #ifdef BOARD_GAMMA
-	board->prob[0].n = board->prob[1].n = board_size2(board);
+	board->prob[0].b = board->prob[1].b = board;
 	foreach_point(board) {
 		probdist_set(&board->prob[0], c, (board_at(board, c) == S_NONE) * 1.0f);
 		probdist_set(&board->prob[1], c, (board_at(board, c) == S_NONE) * 1.0f);
@@ -449,7 +412,7 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 		return;
 	}
 
-	int pat = board->pat3[coord];
+	hash3_t pat = board->pat3[coord];
 	if (color == S_WHITE) {
 		/* We work with the pattern3s as black-to-play. */
 		pat = pattern3_reverse(pat);
@@ -1345,10 +1308,12 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
-	return (likely(!board_is_one_point_eye(b, *coord, color)) /* bad idea to play into one, usually */
-		&& board_is_valid_move(b, &m)
-		&& (!permit || permit(permit_data, b, &m))
-	        && likely(board_play_f(b, &m, f) >= 0));
+	if (unlikely(board_is_one_point_eye(b, *coord, color)) /* bad idea to play into one, usually */
+		|| !board_is_valid_move(b, &m)
+		|| (permit && !permit(permit_data, b, &m)))
+		return false;
+	*coord = m.coord; // permit might modify it
+	return likely(board_play_f(b, &m, f) >= 0);
 }
 
 void

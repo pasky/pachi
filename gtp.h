@@ -15,10 +15,11 @@ enum parse_code {
 };
 
 enum parse_code gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf);
-void gtp_prefix(char prefix, int id);
-void gtp_flush(void);
+void gtp_reply(int id, ...);
+bool gtp_is_valid(char *cmd);
 
 #define is_gamestart(cmd) (!strcasecmp((cmd), "boardsize"))
 #define is_reset(cmd) (is_gamestart(cmd) || !strcasecmp((cmd), "clear_board") || !strcasecmp((cmd), "kgs-rules"))
+#define is_repeated(cmd) (strstr((cmd), "pachi-genmoves"))
 
 #endif

@@ -8,21 +8,31 @@
 #include "random.h"
 #include "board.h"
 
-int
-probdist_pick(struct probdist *pd)
+coord_t
+probdist_pick(struct probdist *pd, coord_t *ignore)
 {
 	double total = probdist_total(pd) - PROBDIST_EPSILON;
 	assert(total >= 0);
-	/* TODO: float random */
 	double stab = fast_frandom() * total;
 	//fprintf(stderr, "stab %f / %f\n", stab, total);
-	for (int i = 0; i < pd->n; i++) {
-		//struct board b = { .size = 11 };
-		//fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(i, &b), pd->items[i], stab);
-		if (stab <= pd->items[i])
-			return i;
-		stab -= pd->items[i];
+
+	int r = 0;
+	while (stab > pd->rowtotals[r] + PROBDIST_EPSILON) {
+		stab -= pd->rowtotals[r];
+		r++;
+		assert(r < board_size(pd->b));
 	}
+	for (coord_t c = r * board_size(pd->b); c < board_size2(pd->b); c++) {
+		//fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(c, &pd->b), pd->items[c], stab);
+		if (c == *ignore) {
+			ignore++;
+			continue;
+		}
+		if (stab <= pd->items[c])
+			return c;
+		stab -= pd->items[c];
+	}
+
 	fprintf(stderr, "overstab %f (total %f)\n", stab, total);
 	assert(0);
 	return -1;

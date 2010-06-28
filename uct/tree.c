@@ -17,24 +17,47 @@
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
+#include "uct/slave.h"
 
 
-/* Allocate one node in the fast_alloc mode. The returned node
- * is _not_ initialized. Returns NULL if not enough memory.
+/* Allocate tree node(s). The returned nodes are _not_ initialized.
+ * Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static struct tree_node *
-tree_fast_alloc_node(struct tree *t)
+tree_alloc_node(struct tree *t, int count, bool fast_alloc, hash_t *hash)
 {
-	assert(t->nodes != NULL);
 	struct tree_node *n = NULL;
-	unsigned long old_size =__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
+	size_t nsize = count * sizeof(*n);
+	unsigned long old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
 
-	/* The test below works even if max_tree_size is not a
-	 * multiple of the node size because tree_init() allocates
-	 * space for an extra node. */
-	if (old_size < t->max_tree_size)
+	if (fast_alloc) {
+		if (old_size + nsize > t->max_tree_size)
+			return NULL;
+		assert(t->nodes != NULL);
 		n = (struct tree_node *)(t->nodes + old_size);
+		memset(n, 0, sizeof(*n));
+	} else {
+		n = calloc2(count, sizeof(*n));
+	}
+
+	if (hash) {
+		volatile static long c = 1000000;
+		*hash = __sync_fetch_and_add(&c, count);
+	}
+
 	return n;
+}
+
+/* Initialize a node at a given place in memory.
+ * This function may be called by multiple threads in parallel. */
+static void
+tree_setup_node(struct tree *t, struct tree_node *n, coord_t coord, int depth, hash_t hash)
+{
+	n->coord = coord;
+	n->depth = depth;
+	n->hash = hash;
+	if (depth > t->max_depth)
+		t->max_depth = depth;
 }
 
 /* Allocate and initialize a node. Returns NULL (fast_alloc mode)
@@ -44,33 +67,22 @@ static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 {
 	struct tree_node *n;
-	if (fast_alloc) {
-		n = tree_fast_alloc_node(t);
-		if (!n) return n;
-		memset(n, 0, sizeof(*n));
-	} else {
-		n = calloc2(1, sizeof(*n));
-		__sync_fetch_and_add(&t->nodes_size, sizeof(*n));
-	}
-	n->coord = coord;
-	n->depth = depth;
-	volatile static long c = 1000000;
-	n->hash = __sync_fetch_and_add(&c, 1);
-	if (depth > t->max_depth)
-		t->max_depth = depth;
+	hash_t hash;
+	n = tree_alloc_node(t, 1, fast_alloc, &hash);
+	if (!n) return NULL;
+	tree_setup_node(t, n, coord, depth, hash);
 	return n;
 }
 
 /* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
 struct tree *
-tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging)
+tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging, int hbits)
 {
 	struct tree *t = calloc2(1, sizeof(*t));
 	t->board = board;
 	t->max_tree_size = max_tree_size;
 	if (max_tree_size != 0) {
-		/* Allocate one extra node, max_tree_size may not be multiple of node size. */
-		t->nodes = malloc2(max_tree_size + sizeof(struct tree_node));
+		t->nodes = malloc2(max_tree_size);
 		/* The nodes buffer doesn't need initialization. This is currently
 		 * done by tree_init_node to spread the load. Doing a memset for the
 		 * entire buffer here would be too slow for large trees (>10 GB). */
@@ -83,6 +95,9 @@ tree_init(struct board *board, enum stone color, unsigned long max_tree_size, fl
 	t->ltree_black = tree_init_node(t, pass, 0, false);
 	t->ltree_white = tree_init_node(t, pass, 0, false);
 	t->ltree_aging = ltree_aging;
+
+	t->hbits = hbits;
+	if (hbits) t->htable = uct_htable_alloc(hbits);
 	return t;
 }
 
@@ -154,6 +169,8 @@ tree_done(struct tree *t)
 {
 	tree_done_node(t, t->ltree_black);
 	tree_done_node(t, t->ltree_white);
+
+	if (t->htable) free(t->htable);
 	if (t->nodes) {
 		free(t->nodes);
 		free(t);
@@ -324,33 +341,6 @@ tree_load(struct tree *tree, struct board *b)
 }
 
 
-static struct tree_node *
-tree_node_copy(struct tree_node *node)
-{
-	struct tree_node *n2 = malloc2(sizeof(*n2));
-	*n2 = *node;
-	if (!node->children)
-		return n2;
-	struct tree_node *ni = node->children;
-	struct tree_node *ni2 = tree_node_copy(ni);
-	n2->children = ni2; ni2->parent = n2;
-	while ((ni = ni->sibling)) {
-		ni2->sibling = tree_node_copy(ni);
-		ni2 = ni2->sibling; ni2->parent = n2;
-	}
-	return n2;
-}
-
-struct tree *
-tree_copy(struct tree *tree)
-{
-	assert(!tree->nodes);
-	struct tree *t2 = malloc2(sizeof(*t2));
-	*t2 = *tree;
-	t2->root = tree_node_copy(tree->root);
-	return t2;
-}
-
 /* Copy the subtree rooted at node: all nodes at or below depth
  * or with at least threshold playouts. Only for fast_alloc.
  * The code is destructive on src. The relative order of children of
@@ -362,7 +352,7 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 	   int threshold, int depth)
 {
 	assert(dest->nodes && node);
-	struct tree_node *n2 = tree_fast_alloc_node(dest);
+	struct tree_node *n2 = tree_alloc_node(dest, 1, true, NULL);
 	if (!n2)
 		return NULL;
 	*n2 = *node;
@@ -430,7 +420,7 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	assert(tree->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
 
-	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size, tree->ltree_aging);
+	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size, tree->ltree_aging, 0);
 	temp_tree->nodes_size = 0; // We do not want the dummy pass node
         struct tree_node *temp_node;
 
@@ -483,105 +473,6 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 	}
 	tree_done(temp_tree);
 	return new_node;
-}
-
-
-static void
-tree_node_merge(struct tree_node *dest, struct tree_node *src)
-{
-	/* Do not merge nodes that weren't touched at all. */
-	assert(dest->pamaf.playouts == src->pamaf.playouts);
-	assert(dest->pu.playouts == src->pu.playouts);
-	if (src->amaf.playouts - src->pamaf.playouts == 0
-	    && src->u.playouts - src->pu.playouts == 0) {
-		return;
-	}
-
-	dest->hints |= src->hints;
-
-	/* Merge the children, both are coord-sorted lists. */
-	struct tree_node *di = dest->children, **dref = &dest->children;
-	struct tree_node *si = src->children, **sref = &src->children;
-	while (di && si) {
-		if (di->coord != si->coord) {
-			/* src has some extra items or misses di */
-			struct tree_node *si2 = si->sibling;
-			while (si2 && di->coord != si2->coord) {
-				si2 = si2->sibling;
-			}
-			if (!si2)
-				goto next_di; /* src misses di, move on */
-			/* chain the extra [si,si2) items before di */
-			(*dref) = si;
-			while (si->sibling != si2) {
-				si->parent = dest;
-				si = si->sibling;
-			}
-			si->parent = dest;
-			si->sibling = di;
-			si = si2;
-			(*sref) = si;
-		}
-		/* Matching nodes - recurse... */
-		tree_node_merge(di, si);
-		/* ...and move on. */
-		sref = &si->sibling; si = si->sibling;
-next_di:
-		dref = &di->sibling; di = di->sibling;
-	}
-	if (si) {
-		/* Some outstanding nodes are left on src side, rechain
-		 * them to dst. */
-		(*dref) = si;
-		while (si) {
-			si->parent = dest;
-			si = si->sibling;
-		}
-		(*sref) = NULL;
-	}
-
-	/* Priors should be constant. */
-	assert(dest->prior.playouts == src->prior.playouts && dest->prior.value == src->prior.value);
-
-	stats_merge(&dest->amaf, &src->amaf);
-	stats_merge(&dest->u, &src->u);
-}
-
-/* Merge two trees built upon the same board. Note that the operation is
- * destructive on src. */
-void
-tree_merge(struct tree *dest, struct tree *src)
-{
-	if (src->max_depth > dest->max_depth)
-		dest->max_depth = src->max_depth;
-	tree_node_merge(dest->root, src->root);
-}
-
-
-static void
-tree_node_normalize(struct tree_node *node, int factor)
-{
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
-		tree_node_normalize(ni, factor);
-
-#define normalize(s1, s2, t) node->s2.t = node->s1.t + (node->s2.t - node->s1.t) / factor;
-	normalize(pamaf, amaf, playouts);
-	memcpy(&node->pamaf, &node->amaf, sizeof(node->amaf));
-
-	normalize(pu, u, playouts);
-	memcpy(&node->pu, &node->u, sizeof(node->u));
-#undef normalize
-}
-
-/* Normalize a tree, dividing the amaf and u values by given
- * factor; otherwise, simulations run in independent threads
- * two trees built upon the same board. To correctly handle
- * results taken from previous simulation run, they are backed
- * up in tree. */
-void
-tree_normalize(struct tree *tree, int factor)
-{
-	tree_node_normalize(tree->root, factor);
 }
 
 

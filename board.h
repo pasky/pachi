@@ -1,3 +1,7 @@
+/* probdist.h must be included before the include goard since we require
+ * proper including order. */
+#include "probdist.h"
+
 #ifndef ZZGO_BOARD_H
 #define ZZGO_BOARD_H
 
@@ -8,7 +12,6 @@
 #include "util.h"
 #include "stone.h"
 #include "move.h"
-#include "probdist.h"
 
 struct features_gamma;
 
@@ -53,6 +56,10 @@ struct board_symmetry {
 
 typedef uint64_t hash_t;
 #define PRIhash PRIx64
+
+/* XXX: This really belongs in pattern3.h, unfortunately that would mean
+ * a dependency hell. */
+typedef uint16_t hash3_t; // 3x3 pattern hash
 
 
 /* Note that "group" is only chain of stones that is solidly
@@ -104,6 +111,7 @@ struct btraits {
 struct board {
 	int size; /* Including S_OFFBOARD margin - see below. */
 	int size2; /* size^2 */
+	int bits2; /* ceiling(log2(size2)) */
 	int captures[S_MAX];
 	float komi;
 	int handicap;
@@ -156,7 +164,7 @@ struct board {
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
-	uint16_t *pat3;
+	hash3_t *pat3;
 #endif
 #ifdef BOARD_TRAITS
 	/* Incrementally matched point traits information, black-to-play
@@ -249,6 +257,16 @@ struct board {
 #define board_size2(b_) ((b_)->size2)
 #endif
 
+#if BOARD_SIZE == 19
+#  define board_bits2(b_) 9
+#elif BOARD_SIZE == 13
+#  define board_bits2(b_) 8
+#elif BOARD_SIZE == 9
+#  define board_bits2(b_) 7
+#else
+#  define board_bits2(b_) ((b_)->bits2)
+#endif
+
 #define board_at(b_, c) ((b_)->b[c])
 #define board_atxy(b_, x, y) ((b_)->b[(x) + board_size(b_) * (y)])
 
@@ -295,7 +313,8 @@ int board_play(struct board *board, struct move *m);
 /* Like above, but plays random move; the move coordinate is recorded
  * to *coord. This method will never fill your own eye. pass is played
  * when no move can be played. You can impose extra restrictions if you
- * supply your own permit function. */
+ * supply your own permit function; the permit function can also modify
+ * the move coordinate to redirect the move elsewhere. */
 typedef bool (*ppr_permit)(void *data, struct board *b, struct move *m);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
 

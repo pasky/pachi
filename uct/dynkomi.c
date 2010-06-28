@@ -412,9 +412,9 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 
 	a->zone_red = 0.45;
 	a->zone_green = 0.50;
-	a->score_step = 2;
+	a->score_step = 1;
 	a->use_komi_ratchet = true;
-	a->komi_ratchet_maxage = 25000;
+	a->komi_ratchet_maxage = 0;
 	a->komi_ratchet = 1000;
 
 	if (arg) {

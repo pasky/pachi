@@ -36,6 +36,9 @@ struct moggy_policy {
 	int koage;
 	/* Whether to look for patterns around second-to-last move. */
 	bool pattern2;
+	/* Whether, when self-atari attempt is detected, to play the other
+	 * group's liberty if that is non-self-atari. */
+	bool selfatari_other;
 
 	struct pattern3s patterns;
 };
@@ -461,13 +464,19 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
 		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL, s);
-		if (q.moves > 0)
+		if (q.moves > 0) {
+			if (PLDEBUGL(5))
+				mq_print(&q, b, "Global atari");
 			return mq_pick(&q);
+		}
 	}
 	for (int g = 0; g < g_base; g++) {
 		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL, s);
-		if (q.moves > 0)
+		if (q.moves > 0) {
+			if (PLDEBUGL(5))
+				mq_print(&q, b, "Global atari");
 			return mq_pick(&q);
+		}
 	}
 	return pass;
 }
@@ -718,6 +727,30 @@ next_try:;
 }
 
 
+static coord_t
+selfatari_cousin(struct board *b, enum stone color, coord_t coord)
+{
+	group_t groups[4]; int groups_n = 0;
+	foreach_neighbor(b, coord, {
+		enum stone s = board_at(b, c);
+		if (s != color) continue;
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs == 2)
+			groups[groups_n++] = g;
+	});
+
+	if (!groups_n)
+		return pass;
+	group_t group = groups[fast_random(groups_n)];
+
+	coord_t lib2 = board_group_info(b, group).lib[0];
+	if (lib2 == coord) lib2 = board_group_info(b, group).lib[1];
+
+	if (is_bad_selfatari(b, color, lib2))
+		return pass;
+	return lib2;
+}
+
 static int
 assess_local_bonus(struct playout_policy *p, struct board *board, coord_t a, coord_t b, int games)
 {
@@ -819,6 +852,16 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 			if (PLDEBUGL(5))
 				fprintf(stderr, "0.0: self-atari\n");
 			add_prior_value(map, coord, 0, games);
+			if (!pp->selfatari_other)
+				return;
+			/* If we can play on the other liberty of the
+			 * endangered group, do! */
+			coord = selfatari_cousin(b, map->to_play, coord);
+			if (is_pass(coord))
+				return;
+			if (PLDEBUGL(5))
+				fprintf(stderr, "1.0: self-atari redirect %s\n", coord2sstr(coord, b));
+			add_prior_value(map, coord, 1.0, games);
 			return;
 		}
 	}
@@ -874,10 +917,23 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 		return true;
 	}
 	bool selfatari = is_bad_selfatari(b, m->color, m->coord);
-	if (PLDEBUGL(5) && selfatari)
-		fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
-			stone2str(m->color), coord2sstr(m->coord, b));
-	return !selfatari;
+	if (selfatari) {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
+				stone2str(m->color), coord2sstr(m->coord, b));
+		if (pp->selfatari_other) {
+			/* Ok, try the other liberty of the atari'd group. */
+			coord_t c = selfatari_cousin(b, m->color, m->coord);
+			if (is_pass(c)) return false;
+			if (PLDEBUGL(5))
+				fprintf(stderr, "___ Redirecting to other lib %s\n",
+					coord2sstr(c, b));
+			m->coord = c;
+			return true;
+		}
+		return false;
+	}
+	return true;
 }
 
 
@@ -941,6 +997,8 @@ playout_moggy_init(char *arg, struct board *b)
 				pp->assess_local = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "pattern2")) {
 				pp->pattern2 = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "selfatari_other")) {
+				pp->selfatari_other = optval && *optval == '0' ? false : true;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 				exit(1);

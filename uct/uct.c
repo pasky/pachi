@@ -18,9 +18,9 @@
 #include "playout/light.h"
 #include "tactics.h"
 #include "timeinfo.h"
-#include "distributed/distributed.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
+#include "uct/plugins.h"
 #include "uct/prior.h"
 #include "uct/search.h"
 #include "uct/slave.h"
@@ -39,7 +39,8 @@ static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t,
 static void
 setup_state(struct uct *u, struct board *b, enum stone color)
 {
-	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging);
+	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
+			 u->local_tree_aging, u->stats_hbits);
 	if (u->force_seed)
 		fast_srandom(u->force_seed);
 	if (UDEBUGL(0))
@@ -77,6 +78,7 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 				color, u->t->root_color);
 			exit(1);
 		}
+		uct_htable_reset(u->t);
 
 	} else {
 		/* We need fresh state. */
@@ -86,7 +88,6 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 
 	u->ownermap.playouts = 0;
 	memset(u->ownermap.map, 0, board_size2(b) * sizeof(u->ownermap.map[0]));
-	memset(u->stats, 0, board_size2(b) * sizeof(u->stats[0]));
 	u->played_own = u->played_all = 0;
 }
 
@@ -248,12 +249,12 @@ uct_done(struct engine *e)
 	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
 	free(u->ownermap.map);
-	free(u->stats);
 
 	free(u->policy);
 	free(u->random_policy);
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
+	pluginset_done(u->plugins);
 }
 
 
@@ -267,14 +268,9 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	if (UDEBUGL(2) && s.base_playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games>\n", s.base_playouts);
 
-	/* The search tree is ctx->t. This is normally == t, but in case of
-	 * TM_ROOT, it is one of the trees belonging to the independent
-	 * workers. It is important to reference ctx->t directly since the
+	/* The search tree is ctx->t. This is currently == . It is important
+	 * to reference ctx->t directly since the
 	 * thread manager will swap the tree pointer asynchronously. */
-	/* XXX: This means TM_ROOT support is suboptimal since single stalled
-	 * thread can stall the others in case of limiting the search by game
-	 * count. However, TM_ROOT just does not deserve any more extra code
-	 * right now. */
 
 	/* Now, just periodically poll the search tree. */
 	while (1) {
@@ -450,7 +446,7 @@ void
 uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
-	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging);
+	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging, 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -477,7 +473,6 @@ uct_state_init(char *arg, struct board *b)
 
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
-	u->parallel_tree = true;
 	u->virtual_loss = true;
 
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
@@ -488,12 +483,12 @@ uct_state_init(char *arg, struct board *b)
 	u->best2_ratio = 2.5;
 
 	u->val_scale = 0.04; u->val_points = 40;
-	/* TODO: Adjust this by number of simulations - it's more important how
-	 * many times per move we do the adjustment. */
-	u->dynkomi_interval = 500;
+	u->dynkomi_interval = 250;
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 2;
+
+	u->plugins = pluginset_init(b);
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -593,18 +588,10 @@ uct_state_init(char *arg, struct board *b)
 				 * tree search thread! */
 				u->threads = atoi(optval);
 			} else if (!strcasecmp(optname, "thread_model") && optval) {
-				if (!strcasecmp(optval, "root")) {
-					/* Root parallelization - each thread
-					 * does independent search, trees are
-					 * merged at the end. */
-					u->thread_model = TM_ROOT;
-					u->parallel_tree = false;
-					u->virtual_loss = false;
-				} else if (!strcasecmp(optval, "tree")) {
+				if (!strcasecmp(optval, "tree")) {
 					/* Tree parallelization - all threads
 					 * grind on the same tree. */
 					u->thread_model = TM_TREE;
-					u->parallel_tree = true;
 					u->virtual_loss = false;
 				} else if (!strcasecmp(optval, "treevl")) {
 					/* Tree parallelization, but also
@@ -612,7 +599,6 @@ uct_state_init(char *arg, struct board *b)
 					 * rages most threads choosing the
 					 * same tree branches to read. */
 					u->thread_model = TM_TREEVL;
-					u->parallel_tree = true;
 					u->virtual_loss = true;
 				} else {
 					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
@@ -744,21 +730,36 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
 				/* Maximum amount of memory [MiB] consumed by the move tree.
 				 * For fast_alloc it includes the temp tree used for pruning.
-				 * Default is 3072 (3 GiB). Note that if you use TM_ROOT,
-				 * this limits size of only one of the trees, not all of them
-				 * together. */
+				 * Default is 3072 (3 GiB). */
 				u->max_tree_size = atol(optval) * 1048576;
 			} else if (!strcasecmp(optname, "fast_alloc")) {
 				u->fast_alloc = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "slave")) {
 				/* Act as slave for the distributed engine. */
 				u->slave = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
+				/* Share at most shared_nodes between master and slave at each genmoves.
+				 * Must use the same value in master and slaves. */
+				u->shared_nodes = atoi(optval);
+			} else if (!strcasecmp(optname, "shared_levels") && optval) {
+				/* Share only nodes of level <= shared_levels. */
+				u->shared_levels = atoi(optval);
+			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
+				/* Set hash table size to 2^stats_hbits for the shared stats. */
+				u->stats_hbits = atoi(optval);
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
 				if (*next) *--next = ',';
 				u->banner = strdup(optval);
 				break;
+			} else if (!strcasecmp(optname, "plugin") && optval) {
+				/* Load an external plugin; filename goes before the colon,
+				 * extra arguments after the colon. */
+				char *pluginarg = strchr(optval, ':');
+				if (pluginarg)
+					*pluginarg++ = 0;
+				plugin_load(u->plugins, optval, pluginarg);
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 				exit(1);
@@ -783,10 +784,6 @@ uct_state_init(char *arg, struct board *b)
 	if (!using_elo)
 		u->local_tree_playout = false;
 
-	if (u->fast_alloc && !u->parallel_tree) {
-		fprintf(stderr, "fast_alloc not supported with root parallelization.\n");
-		exit(1);
-	}
 	if (u->fast_alloc)
 		u->max_tree_size = (100ULL * u->max_tree_size) / (100 + MIN_FREE_MEM_PERCENT);
 
@@ -798,7 +795,13 @@ uct_state_init(char *arg, struct board *b)
 	u->playout->debug_level = u->debug_level;
 
 	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));
-	u->stats = malloc2(board_size2(b) * sizeof(u->stats[0]));
+
+	if (u->slave) {
+		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
+		if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
+		if (!u->shared_levels) u->shared_levels = 1;
+		assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
+	}
 
 	if (!u->dynkomi)
 		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);

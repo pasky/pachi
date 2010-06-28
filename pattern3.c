@@ -10,7 +10,7 @@
 
 
 static void
-pattern_record(char *table, char *str, int pat, int fixed_color)
+pattern_record(char *table, char *str, hash3_t pat, int fixed_color)
 {
 	/* Original color assignment */
 	table[pat] = fixed_color ? fixed_color : 3;
@@ -22,14 +22,14 @@ pattern_record(char *table, char *str, int pat, int fixed_color)
 }
 
 static int
-pat_vmirror(int pat)
+pat_vmirror(hash3_t pat)
 {
 	/* V mirror pattern; reverse order of 3-2-3 chunks */
 	return ((pat & 0xfc00) >> 10) | (pat & 0x03c0) | ((pat & 0x003f) << 10);
 }
 
 static int
-pat_hmirror(int pat)
+pat_hmirror(hash3_t pat)
 {
 	/* H mirror pattern; reverse order of 2-bit values within the chunks */
 #define rev3(p) ((p >> 4) | (p & 0xc) | ((p & 0x3) << 4))
@@ -42,7 +42,7 @@ pat_hmirror(int pat)
 }
 
 static int
-pat_90rot(int pat)
+pat_90rot(hash3_t pat)
 {
 	/* Rotate by 90 degrees:
 	 * 5 6 7    7 4 2
@@ -63,7 +63,7 @@ pat_90rot(int pat)
 }
 
 void
-pattern3_transpose(int pat, int (*transp)[8])
+pattern3_transpose(hash3_t pat, hash3_t (*transp)[8])
 {
 	int i = 0;
 	(*transp)[i++] = pat;
@@ -77,7 +77,7 @@ pattern3_transpose(int pat, int (*transp)[8])
 }
 
 static void
-pattern_gen(struct pattern3s *p, int pat, char *src, int srclen, int fixed_color)
+pattern_gen(struct pattern3s *p, hash3_t pat, char *src, int srclen, int fixed_color)
 {
 	for (; srclen > 0; src++, srclen--) {
 		if (srclen == 5)
@@ -111,7 +111,7 @@ pattern_gen(struct pattern3s *p, int pat, char *src, int srclen, int fixed_color
 	}
 
 	/* Original pattern, all transpositions and rotations */
-	int transp[8];
+	hash3_t transp[8];
 	pattern3_transpose(pat, &transp);
 	for (int i = 0; i < 8; i++)
 		pattern_record(p->hash, src - 9, transp[i], fixed_color);

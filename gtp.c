@@ -69,6 +69,42 @@ gtp_error(int id, ...)
 	va_end(params);
 }
 
+/* List of known gtp commands. The internal command pachi-genmoves is not exported,
+ * it should only be used between master and slaves of the distributed engine. */
+static char *known_commands =
+	"protocol_version\n"
+	"name\n"
+	"version\n"
+	"list_commands\n"
+	"quit\n"
+	"boardsize\n"
+	"clear_board\n"
+	"kgs-game_over\n"
+	"komi\n"
+	"kgs-rules\n"
+	"play\n"
+	"genmove\n"
+	"kgs-genmove_cleanup\n"
+	"set_free_handicap\n"
+	"place_free_handicap\n"
+	"final_status_list\n"
+	"kgs-chat\n"
+	"time_left\n"
+	"time_settings\n"
+	"kgs-time_settings";
+
+
+/* Return true if cmd is a valid gtp command. */
+bool
+gtp_is_valid(char *cmd)
+{
+	if (!cmd || !*cmd) return false;
+	char *s = strcasestr(known_commands, cmd);
+	if (!s) return false;
+
+	int len = strlen(cmd);
+	return s[len] == '\0' || s[len] == '\n';
+}
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
@@ -112,32 +148,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		gtp_reply(id, PACHI_VERSION, ": ", engine->comment, NULL);
 		return P_OK;
 
-		/* TODO: known_command */
-
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		/* The internal command pachi-genmoves is not exported,
-		 * it should only be used between master and slaves of
-		 * the distributed engine. */
-		gtp_reply(id, "protocol_version\n"
-			      "name\n"
-			      "version\n"
-			      "list_commands\n"
-			      "quit\n"
-			      "boardsize\n"
-			      "clear_board\n"
-			      "kgs-game_over\n"
-			      "komi\n"
-			      "kgs-rules\n"
-			      "play\n"
-			      "genmove\n"
-			      "kgs-genmove_cleanup\n"
-			      "set_free_handicap\n"
-			      "place_free_handicap\n"
-			      "final_status_list\n"
-			      "kgs-chat\n"
-			      "time_left\n"
-			      "time_settings\n"
-			      "kgs-time_settings", NULL);
+		gtp_reply(id, known_commands, NULL);
 		return P_OK;
 	}
 
@@ -248,7 +260,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 		coord_t *c = engine->genmove(engine, board, &ti[color], color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
 		struct move m = { *c, color };
-		board_play(board, &m);
+		if (board_play(board, &m) < 0) {
+			fprintf(stderr, "Attempted to generate an illegal move: [%s, %s]\n", coord2sstr(m.coord, board), stone2str(m.color));
+			abort();
+		}
 		char *str = coord2str(*c, board);
 		if (DEBUGL(1))
 			fprintf(stderr, "playing move %s\n", str);
@@ -264,15 +279,18 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		 * should be absolutely rare situation and we will just spend a little
 		 * less time than we could on next few moves.) */
 		if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
-			time_sub(&ti[color], time_now() - ti[color].len.t.timer_start);
+			time_sub(&ti[color], time_now() - ti[color].len.t.timer_start, true);
 
 	} else if (!strcasecmp(cmd, "pachi-genmoves") || !strcasecmp(cmd, "pachi-genmoves_cleanup")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
+		void *stats;
+		int stats_size;
 
 		char *reply = engine->genmoves(engine, board, &ti[color], color, next,
-					       !strcasecmp(cmd, "pachi-genmoves_cleanup"));
+					       !strcasecmp(cmd, "pachi-genmoves_cleanup"),
+					       &stats, &stats_size);
 		if (!reply) {
 			gtp_error(id, "genmoves error", NULL);
 			return P_OK;
@@ -282,6 +300,14 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		if (DEBUGL(4))
 			board_print_custom(board, stderr, engine->printhook);
 		gtp_reply(id, reply, NULL);
+		if (stats_size > 0) {
+			double start = time_now();
+			fwrite(stats, 1, stats_size, stdout);
+			fflush(stdout);
+			if (DEBUGVV(2))
+				fprintf(stderr, "sent reply %d bytes in %.4fms\n",
+					stats_size, (time_now() - start)*1000);
+		}
 
 	} else if (!strcasecmp(cmd, "set_free_handicap")) {
 		struct move m;

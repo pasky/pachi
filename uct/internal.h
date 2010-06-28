@@ -4,7 +4,6 @@
 /* Internal UCT structures */
 
 #include "debug.h"
-#include "distributed/distributed.h"
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
@@ -15,19 +14,13 @@ struct tree_node;
 struct uct_policy;
 struct uct_prior;
 struct uct_dynkomi;
+struct uct_pluginset;
 
 /* How big proportion of ownermap counts must be of one color to consider
  * the point sure. */
 #define GJ_THRES	0.8
 /* How many games to consider at minimum before judging groups. */
 #define GJ_MINGAMES	500
-
-/* Distributed stats for each child of the root node. */
-struct node_stats {
-	struct move_stats2 last_sent_own;
-	struct move_stats2 added_from_others;
-	struct tree_node *node;
-};
 
 /* Internal engine state. */
 struct uct {
@@ -51,11 +44,9 @@ struct uct {
 
 	int threads;
 	enum uct_thread_model {
-		TM_ROOT, /* Root parallelization. */
 		TM_TREE, /* Tree parallelization w/o virtual loss. */
 		TM_TREEVL, /* Tree parallelization with virtual loss. */
 	} thread_model;
-	bool parallel_tree;
 	bool virtual_loss;
 	bool pondering_opt; /* User wants pondering */
 	bool pondering; /* Actually pondering now */
@@ -88,11 +79,14 @@ struct uct {
 	struct uct_policy *random_policy;
 	struct playout_policy *playout;
 	struct uct_prior *prior;
+	struct uct_pluginset *plugins;
 
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;
 	/* Used for coordination among slaves of the distributed engine. */
-	struct node_stats *stats;
+	int stats_hbits;
+	int shared_nodes;
+	int shared_levels;
 	int played_own;
 	int played_all; /* games played by all slaves */
 
