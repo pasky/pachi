@@ -142,9 +142,7 @@ elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play
 	/* Compare to the manually created distribution. */
 	/* XXX: This is now broken if callback is used. */
 
-	double pdi[board_size2(b)]; memset(pdi, 0, sizeof(pdi));
-	double pdr[board_size(b)]; memset(pdr, 0, sizeof(pdr));
-	struct probdist pdx = { .n = board_size2(b), .n1 = board_size(b), .items = pdi, .rowtotals = pdr, .total = 0 };
+	probdist_alloca(pdx, b);
 	elo_get_probdist(p, &pp->choose, b, to_play, &pdx);
 	for (int i = 0; i < b->flen; i++) {
 		coord_t c = b->f[i];
@@ -275,9 +273,7 @@ coord_t
 playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct elo_policy *pp = p->data;
-	double pdi[board_size2(b)]; memset(pdi, 0, sizeof(pdi));
-	double pdr[board_size(b)]; memset(pdr, 0, sizeof(pdr));
-	struct probdist pd = { .n = board_size2(b), .n1 = board_size(b), .items = pdi, .rowtotals = pdr, .total = 0 };
+	probdist_alloca(pd, b);
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, &pd);
@@ -294,9 +290,7 @@ void
 playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct elo_policy *pp = p->data;
-	double pdi[board_size2(map->b)]; memset(pdi, 0, sizeof(pdi));
-	double pdr[board_size(map->b)]; memset(pdr, 0, sizeof(pdr));
-	struct probdist pd = { .n = board_size2(map->b), .n1 = board_size(map->b), .items = pdi, .rowtotals = pdr, .total = 0 };
+	probdist_alloca(pd, map->b);
 
 	int moves;
 	moves = elo_get_probdist(p, &pp->assess, map->b, map->to_play, &pd);

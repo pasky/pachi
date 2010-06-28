@@ -25,6 +25,12 @@ struct probdist {
  * for probdist.total inaccuracies. */
 #define PROBDIST_EPSILON 0.05
 
+/* Declare pd_ corresponding to board b_ in the local scope. */
+#define probdist_alloca(pd_, b_) \
+	double pd_ ## __pdi[board_size2(b_)]; memset(pd_ ## __pdi, 0, sizeof(pd_ ## __pdi)); \
+	double pd_ ## __pdr[board_size(b_)]; memset(pd_ ## __pdr, 0, sizeof(pd_ ## __pdr)); \
+	struct probdist pd_ = { .n = board_size2(b_), .n1 = board_size(b_), .items = pd_ ## __pdi, .rowtotals = pd_ ## __pdr, .total = 0 };
+
 static void probdist_set(struct probdist *pd, coord_t c, double val);
 static void probdist_mute(struct probdist *pd, coord_t c);
 
