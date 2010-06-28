@@ -48,6 +48,12 @@ struct uct;
  * +------+   +------+   +------+   +------+
  */
 
+/* TODO: Performance would benefit from a reorganization:
+ * (i) Allocate all children of a node within a single block.
+ * (ii) Keep all u stats together, and all amaf stats together.
+ * Currently, rave_update is top source of cache misses, and
+ * there is large memory overhead for having all nodes separate. */
+
 struct tree_node {
 	hash_t hash;
 	struct tree_node *parent, *sibling, *children;
