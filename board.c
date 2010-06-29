@@ -528,8 +528,7 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 			assert(0);
 		}
 #endif
-		board_gamma_update(board, c, S_BLACK);
-		board_gamma_update(board, c, S_WHITE);
+		board_trait_queue(board, c);
 	} foreach_8neighbor_end;
 #endif
 }
