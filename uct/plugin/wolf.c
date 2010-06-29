@@ -274,18 +274,32 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 	ctx->FINDMOVE2(map->to_play == S_BLACK ? 1 : -1, &bestx, &besty, &bestval, &values, &chaininfo);
 	// fprintf(stderr, "best is (%d,%d)%s %f\n", bestx, besty, coord2sstr(coord_xy(b, bestx, besty), b), bestval);
 
+	/* In the first pass, determine best and worst value. (Best value
+	 * reported by FINDMOVE2 is wrong.) In the second pass, we set the
+	 * priors by normalization based on the determined values. */
+	float best = -1000, worst = 1000;
+	foreach_point(map->b) {
+		if (!map->consider[c])
+			continue;
+		float value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
+		if (map->to_play == S_WHITE) value = -value;
+		if (value > best) best = value;
+		else if (value < worst) worst = value;
+	} foreach_point_end;
+
 	foreach_point(map->b) {
 		if (!map->consider[c])
 			continue;
 
 		/* Take the value and normalize it somehow. */
-		/* Right now, we just do this by rescaling to [0,1] most
-		 * naively. */
+		/* Right now, we just do this by linear rescaling from
+		 * [worst, best] to [0,1]. */
 		float value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
-		// fprintf(stderr, "\t[%s %s] %f/%f\n", stone2str(map->to_play), coord2sstr(c, b), value, bestval);
-		value /= bestval;
+		if (map->to_play == S_WHITE) value = -value;
+		value = (value - worst) / (best - worst);
+		// fprintf(stderr, "\t[%s %s] %f/%f\n", stone2str(map->to_play), coord2sstr(c, b), value, best);
 
-		add_prior_value(map, c, value, eqex);
+		add_prior_value(map, c, (value - worst) / best, eqex);
 	} foreach_point_end;
 }
 
