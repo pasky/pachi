@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "pattern.h"
@@ -179,6 +179,11 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, pd);
 
+	if (PLDEBUGL(5)) {
+		board_print(b, stderr);
+		fprintf(stderr, "pd total pre %lf lpd %lf\n", pd->total, lpd.total);
+	}
+
 #define ignore_move(c_) do { \
 	ignores[ignores_n++] = c_; \
 	if (ignores_n > 1 && ignores[ignores_n - 1] < ignores[ignores_n - 2]) { \
@@ -192,6 +197,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	lpd.browtotals_i[lpd.browtotals_n] = rowi; \
 	lpd.browtotals_v[lpd.browtotals_n++] = pd->rowtotals[rowi]; \
 	probdist_mute(pd, c_); \
+	if (PLDEBUGL(6)) \
+		fprintf(stderr, "ignored move %s(%lf) => tot pd %lf lpd %lf\n", coord2sstr(c_, pd->b), pd->items[c_], pd->total, lpd.total); \
 } while (0)
 
 	/* Make sure ko-prohibited move does not get picked. */
@@ -213,6 +220,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	}
 
 	ignores[ignores_n] = pass;
+	if (PLDEBUGL(5))
+		fprintf(stderr, "pd total post %lf lpd %lf\n", pd->total, lpd.total);
 
 	/* Verify sanity, possibly. */
 	elo_check_probdist(p, b, to_play, pd, ignores, &lpd, b->last_move.coord);
@@ -220,8 +229,22 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	/* Pick a move. */
 	coord_t c = pass;
 	double stab = fast_frandom() * (lpd.total + pd->total);
+	if (PLDEBUGL(5))
+		fprintf(stderr, "stab %lf / (%lf + %lf)\n", stab, lpd.total, pd->total);
 	if (stab < lpd.total - PROBDIST_EPSILON) {
 		/* Local probdist. */
+		if (PLDEBUGL(6)) {
+			/* Some debug prints. */
+			double tot = 0;
+			for (int i = 0; i < lpd.n; i++) {
+				tot += lpd.items[i];
+				struct pattern p;
+				struct move m = { .color = to_play, .coord = lpd.coords[i] };
+				pattern_match(&pp->choose.pc, pp->choose.ps, &p, b, &m);
+				char s[256] = ""; pattern2str(s, &p);
+				fprintf(stderr, "coord %s <%lf> [tot %lf] %s (p3:%d)\n", coord2sstr(lpd.coords[i], b), lpd.items[i], tot, s, pattern3_by_spatial(pp->choose.pc.spat_dict, b->pat3[lpd.coords[i]]));
+			}
+		}
 		for (int i = 0; i < lpd.n; i++) {
 			if (stab <= lpd.items[i]) {
 				c = lpd.coords[i];
@@ -240,6 +263,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		c = probdist_pick(pd, ignores);
 
 	} else {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "ding!\n");
 		c = pass;
 	}
 
