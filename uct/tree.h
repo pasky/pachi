@@ -60,22 +60,17 @@ struct tree_node {
 
 	/*** From here on, struct is saved/loaded from opening book */
 
-	int depth; // just for statistics
+	unsigned short depth; // just for statistics
 
-	coord_t coord;
 	/* Common Fate Graph distance from parent, but at most TREE_NODE_D_MAX+1 */
-	int d;
 #define TREE_NODE_D_MAX 3
-
-	struct move_stats u;
-	struct move_stats prior;
-	/* XXX: Should be way for policies to add their own stats */
-	struct move_stats amaf;
-	/* Stats before starting playout; used for multi-thread normalization. */
-	struct move_stats pu, pamaf;
+	unsigned char d;
 
 #define TREE_HINT_INVALID 1 // don't go to this node, invalid move
-	int hints;
+	unsigned char hints;
+
+	/* coord is usually coord_t, but this is very space-sensitive. */
+	short coord;
 
 	/* In case multiple threads walk the tree, is_expanded is set
 	 * atomically. Only the first thread setting it expands the node.
@@ -84,6 +79,13 @@ struct tree_node {
 	 *   2) children == null, is_expanded == true: one thread currently expanding
 	 *   2) children != null, is_expanded == true: fully expanded node */
 	bool is_expanded;
+
+	struct move_stats u;
+	struct move_stats prior;
+	/* XXX: Should be way for policies to add their own stats */
+	struct move_stats amaf;
+	/* Stats before starting playout; used for distributed engine. */
+	struct move_stats pu;
 };
 
 struct tree_hash;

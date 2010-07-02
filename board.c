@@ -436,9 +436,8 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 static bool
 board_trait_safe(struct board *board, coord_t coord, enum stone color)
 {
-	/* sic! */
 	if (board->precise_selfatari)
-		return is_bad_selfatari(board, color, coord);
+		return !is_bad_selfatari(board, color, coord);
 	else
 		return board_safe_to_play(board, coord, color);
 }
@@ -467,10 +466,10 @@ board_traits_recompute(struct board *board)
 #ifdef BOARD_TRAITS
 	for (int i = 0; i < board->tqlen; i++) {
 		coord_t coord = board->tq[i];
-		if (!trait_at(board, coord, S_BLACK).dirty) continue;
-		if (board_at(board, coord) != S_NONE) continue;
-		board_trait_recompute(board, coord);
 		trait_at(board, coord, S_BLACK).dirty = false;
+		if (board_at(board, coord) != S_NONE)
+			continue;
+		board_trait_recompute(board, coord);
 	}
 	board->tqlen = 0;
 #endif
@@ -481,6 +480,8 @@ static void
 board_trait_queue(struct board *board, coord_t coord)
 {
 #ifdef BOARD_TRAITS
+	if (trait_at(board, coord, S_BLACK).dirty)
+		return;
 	board->tq[board->tqlen++] = coord;
 	trait_at(board, coord, S_BLACK).dirty = true;
 #endif
@@ -528,8 +529,7 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 			assert(0);
 		}
 #endif
-		board_gamma_update(board, c, S_BLACK);
-		board_gamma_update(board, c, S_WHITE);
+		board_trait_queue(board, c);
 	} foreach_8neighbor_end;
 #endif
 }

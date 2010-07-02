@@ -25,7 +25,6 @@ struct ucb1_policy_amaf {
 	 * if none of the existing ones has higher urgency than fpu. */
 	float fpu;
 	unsigned int equiv_rave;
-	bool both_colors;
 	bool check_nakade;
 	bool sylvain_rave;
 	/* Coefficient of local tree values embedded in RAVE. */
@@ -177,17 +176,15 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
+		assert(map->game_baselen >= 0);
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-			assert(map->map[ni->coord] != S_OFFBOARD);
-			if (map->map[ni->coord] == S_NONE)
-				continue;
-			assert(map->game_baselen >= 0);
 			enum stone amaf_color = map->map[ni->coord];
+			assert(amaf_color != S_OFFBOARD);
+			if (amaf_color == S_NONE)
+				continue;
 			if (amaf_nakade(map->map[ni->coord])) {
 				if (!b->check_nakade)
 					continue;
-				/* We don't care to implement both_colors
-				 * properly since it sucks anyway. */
 				unsigned int i;
 				for (i = map->game_baselen; i < map->gamelen; i++)
 					if (map->game[i].coord == ni->coord
@@ -200,9 +197,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 
 			float nres = result;
 			if (amaf_color != child_color) {
-				if (!b->both_colors)
-					continue;
-				nres = 1 - nres;
+				continue;
 			}
 			/* For child_color != player_color, we still want
 			 * to record the result unmodified; in that case,
@@ -265,8 +260,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->fpu = atof(optval);
 			} else if (!strcasecmp(optname, "equiv_rave") && optval) {
 				b->equiv_rave = atof(optval);
-			} else if (!strcasecmp(optname, "both_colors")) {
-				b->both_colors = true;
 			} else if (!strcasecmp(optname, "sylvain_rave")) {
 				b->sylvain_rave = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "check_nakade")) {

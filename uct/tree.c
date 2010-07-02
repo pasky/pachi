@@ -307,7 +307,6 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 	if (node->amaf.playouts > MAX_PLAYOUTS) {
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
-	memcpy(&node->pamaf, &node->amaf, sizeof(node->amaf));
 	memcpy(&node->pu, &node->u, sizeof(node->u));
 
 	struct tree_node *ni = NULL, *ni_prev = NULL;
