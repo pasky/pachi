@@ -203,6 +203,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	/* Contiguity detection. */
 	if (!is_pass(b->last_move.coord)) {
 		foreach_8neighbor(b, b->last_move.coord) {
+			if (ignores_n > 0 && ignores[0] == c)
+				continue; // ko-prohibited
 			ignore_move(c);
 
 			double val = probdist_one(pd, c) * b->gamma->gamma[FEAT_CONTIGUITY][1];
