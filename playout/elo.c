@@ -180,7 +180,6 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		pp->callback(pp->callback_data, b, to_play, pd);
 
 	if (PLDEBUGL(5)) {
-		board_print(b, stderr);
 		fprintf(stderr, "pd total pre %lf lpd %lf\n", pd->total, lpd.total);
 	}
 
