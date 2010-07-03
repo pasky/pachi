@@ -19,7 +19,7 @@ fast_getseed(void)
 	return pmseed;
 }
 
-unsigned long
+uint16_t
 fast_random(unsigned int max)
 {
 	unsigned long hi, lo;
