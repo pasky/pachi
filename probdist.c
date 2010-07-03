@@ -18,8 +18,8 @@ probdist_pick(struct probdist *restrict pd, coord_t *restrict ignore)
 	if (DEBUGL(6))
 		fprintf(stderr, "stab %f / %f\n", fixp_to_double(stab), fixp_to_double(total));
 
-	int r = 0;
-	coord_t c = 0;
+	int r = 1;
+	coord_t c = board_size(pd->b) + 1;
 	while (stab > pd->rowtotals[r]) {
 		if (DEBUGL(6))
 			fprintf(stderr, "[%s] skipping row %f (%f)\n", coord2sstr(c, pd->b), fixp_to_double(pd->rowtotals[r]), fixp_to_double(stab));

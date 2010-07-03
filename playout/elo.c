@@ -223,6 +223,10 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 		foreach_8neighbor(b, b->last_move.coord) {
 			if (c == b->ko.coord)
 				continue; // already ignored
+			if (board_at(b, c) != S_NONE) {
+				assert(probdist_one(pd, c) == 0);
+				continue;
+			}
 			ignore_move(c);
 
 			fixp_t val = double_to_fixp(fixp_to_double(probdist_one(pd, c)) * b->gamma->gamma[FEAT_CONTIGUITY][1]);
