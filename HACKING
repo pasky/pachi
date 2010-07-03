@@ -142,8 +142,9 @@ of each color on the board, plus komi and handicap correction.
 Tromp-Taylor rules also mean that multi-stone suicide is allowed! If you
 do not like that (basically if you want to pretend it plays according
 to Chinese rules), you need to rule that out in your engine, currently.
-The provided engines DO avoid multi-stone suicide (but the UCT engine
-will never play it itself).
+The provided engines DO avoid multi-stone suicide, though it is allowed
+in the playouts for performance reasons (perhaps we should re-visit that
+decision in light of heavy playouts).
 
 Tromp-Taylor rules have positional superko; the board implementation
 will set a flag if it is violated, but play the move anyway. You need
