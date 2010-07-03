@@ -241,6 +241,10 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 				tot += lpd.items[i];
 				struct pattern p;
 				struct move m = { .color = to_play, .coord = lpd.coords[i] };
+				if (board_at(b, m.coord) != S_NONE) {
+					assert(lpd.items[i] == 0);
+					continue;
+				}
 				pattern_match(&pp->choose.pc, pp->choose.ps, &p, b, &m);
 				char s[256] = ""; pattern2str(s, &p);
 				fprintf(stderr, "coord %s <%lf> [tot %lf] %s (p3:%d)\n", coord2sstr(lpd.coords[i], b), lpd.items[i], tot, s, pattern3_by_spatial(pp->choose.pc.spat_dict, b->pat3[lpd.coords[i]]));
