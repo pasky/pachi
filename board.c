@@ -436,9 +436,8 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 static bool
 board_trait_safe(struct board *board, coord_t coord, enum stone color)
 {
-	/* sic! */
 	if (board->precise_selfatari)
-		return is_bad_selfatari(board, color, coord);
+		return !is_bad_selfatari(board, color, coord);
 	else
 		return board_safe_to_play(board, coord, color);
 }
