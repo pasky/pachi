@@ -1,5 +1,6 @@
 #include <alloca.h>
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -291,8 +292,8 @@ board_clear(struct board *board)
 #ifdef BOARD_GAMMA
 	board->prob[0].b = board->prob[1].b = board;
 	foreach_point(board) {
-		probdist_set(&board->prob[0], c, (board_at(board, c) == S_NONE) * 1.0f);
-		probdist_set(&board->prob[1], c, (board_at(board, c) == S_NONE) * 1.0f);
+		probdist_set(&board->prob[0], c, double_to_fixp((board_at(board, c) == S_NONE) * 1.0f));
+		probdist_set(&board->prob[1], c, double_to_fixp((board_at(board, c) == S_NONE) * 1.0f));
 	} foreach_point_end;
 #endif
 }
@@ -428,7 +429,7 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 		value *= board->gamma->gamma[FEAT_AESCAPE][0];
 	if (!trait_at(board, coord, color).safe)
 		value *= board->gamma->gamma[FEAT_SELFATARI][1 + board->precise_selfatari];
-	probdist_set(&board->prob[color - 1], coord, value);
+	probdist_set(&board->prob[color - 1], coord, double_to_fixp(value));
 #endif
 }
 

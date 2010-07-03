@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <math.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -147,7 +148,7 @@ uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct pro
 	for (; li; li = li->sibling) {
 		if (board_at(b, li->coord) != S_NONE)
 			continue;
-		probdist_set(pd, li->coord, pd->items[li->coord] * li_gamma(to_play, li));
+		probdist_set(pd, li->coord, double_to_fixp(pd->items[li->coord] * li_gamma(to_play, li)));
 	}
 }
 
