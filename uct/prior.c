@@ -35,11 +35,12 @@ uct_prior_even(struct uct *u, struct tree_node *node, struct prior_map *map)
 	/* Q_{even} */
 	/* This may be dubious for normal UCB1 but is essential for
 	 * reading stability of RAVE, it appears. */
-	foreach_point_and_pass(map->b) {
+	add_prior_value(map, pass, 0.5, u->prior->even_eqex);
+	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
 		add_prior_value(map, c, 0.5, u->prior->even_eqex);
-	} foreach_point_end;
+	} foreach_free_point_end;
 }
 
 void
@@ -52,13 +53,13 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 	 * XOOOXX#
 	 * X.OOOO#
 	 * .XXXX.# */
-	foreach_point(map->b) {
+	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
 		if (!board_is_one_point_eye(map->b, c, map->to_play))
 			continue;
 		add_prior_value(map, c, 0, u->prior->eye_eqex);
-	} foreach_point_end;
+	} foreach_free_point_end;
 }
 
 void
@@ -77,7 +78,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{b19} */
 	/* Specific hints for 19x19 board - priors for certain edge distances. */
-	foreach_point(map->b) {
+	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
 		int d = coord_edge_distance(c, map->b);
@@ -90,7 +91,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 		/* First line: 0 */
 		/* Third line: 1 */
 		add_prior_value(map, c, d == 2, u->prior->b19_eqex);
-	} foreach_point_end;
+	} foreach_free_point_end;
 }
 
 void
@@ -110,7 +111,7 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 	if (is_pass(map->b->last_move.coord) || is_resign(map->b->last_move.coord))
 		return;
 
-	foreach_point(map->b) {
+	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
 		if (map->distances[c] > u->prior->cfgdn)
@@ -118,7 +119,7 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 		assert(map->distances[c] != 0);
 		int bonus = u->prior->cfgd_eqex[map->distances[c]];
 		add_prior_value(map, c, 1, bonus);
-	} foreach_point_end;
+	} foreach_free_point_end;
 }
 
 void

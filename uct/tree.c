@@ -586,13 +586,12 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	memset(map_prior, 0, sizeof(map_prior));
 	memset(map_consider, 0, sizeof(map_consider));
 	map.consider[pass] = true;
-	foreach_point(b) {
-		if (board_at(b, c) != S_NONE)
-			continue;
+	foreach_free_point(b) {
+		assert(board_at(b, c) == S_NONE);
 		if (!board_is_valid_play(b, color, c))
 			continue;
 		map.consider[c] = true;
-	} foreach_point_end;
+	} foreach_free_point_end;
 	uct_prior(u, node, &map);
 
 	/* Now, create the nodes. */
