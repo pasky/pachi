@@ -743,9 +743,7 @@ selfatari_cousin(struct board *b, enum stone color, coord_t coord)
 		return pass;
 	group_t group = groups[fast_random(groups_n)];
 
-	coord_t lib2 = board_group_info(b, group).lib[0];
-	if (lib2 == coord) lib2 = board_group_info(b, group).lib[1];
-
+	coord_t lib2 = board_group_other_lib(b, group, coord);
 	if (is_bad_selfatari(b, color, lib2))
 		return pass;
 	return lib2;

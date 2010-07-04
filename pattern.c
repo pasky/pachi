@@ -314,8 +314,7 @@ pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
 
 		if (PS_PF(ATARI, LADDER)) {
 			/* Opponent will escape by the other lib. */
-			coord_t lib = board_group_info(b, g).lib[0];
-			if (lib == m->coord) lib = board_group_info(b, g).lib[1];
+			coord_t lib = board_group_other_lib(b, g, m->coord);
 			/* TODO: is_ladder() is too conservative in some
 			 * very obvious situations, look at complete.gtp. */
 			f->payload |= is_ladder(b, lib, g, true, true) << PF_ATARI_LADDER;

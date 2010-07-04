@@ -288,9 +288,11 @@ struct board {
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + board_size(b_) * (y)])
 
 #define group_base(g_) (g_)
+#define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
-#define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
+/* board_group_other_lib() makes sense only for groups with two liberties. */
+#define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
 #define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
 
@@ -514,8 +516,7 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 		if (board_group_info(b, g).libs == 2) { // two liberties
 			if (libs > 0) return true; // we already have one real liberty
 			// get the other liberty
-			coord_t lib = board_group_info(b, g).lib[0];
-			if (lib == coord) lib = board_group_info(b, g).lib[0];
+			coord_t lib = board_group_other_lib(b, g, coord);
 			/* we might be connecting two 2-lib groups, which is ok;
 			 * so remember the other liberty and just make sure it's
 			 * not the same one */

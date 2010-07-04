@@ -46,8 +46,7 @@ examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct se
 		/* We need to have another liberty, and
 		 * it must not be the other liberty of
 		 * the group. */
-		int lib2 = board_group_info(b, g).lib[0];
-		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+		int lib2 = board_group_other_lib(b, g, to);
 		/* Maybe we already looked at another
 		 * group providing one liberty? */
 		if (s->needs_more_lib && s->needs_more_lib != g
@@ -153,8 +152,7 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 		 * safety */
 
 		/* Let's look at the other liberty neighbors: */
-		int lib2 = board_group_info(b, g).lib[0];
-		if (lib2 == to) lib2 = board_group_info(b, g).lib[1];
+		int lib2 = board_group_other_lib(b, g, to);
 		foreach_neighbor(b, lib2, {
 			/* This neighbor of course does not contribute
 			 * anything to the enemy. */
