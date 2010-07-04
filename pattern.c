@@ -166,30 +166,27 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	/* XXX: I'm not sure if this is really good idea. --pasky */
 
 	/* Whether an escape move would be safe for the opponent. */
+	int captures = 0;
 	bool can_escape = false;
+	bool onestone = false, multistone = false;
+
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != stone_other(m->color)) {
 			if (board_at(b, c) == S_NONE)
 				can_escape = true; // free point
 			else if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1)
 				can_escape = true; // capturable our group
-
-		} else {
-			group_t g = group_at(b, c); assert(g);
-			if (board_group_info(b, g).libs != 1)
-				can_escape = true;
-		}
-	});
-
-	foreach_neighbor(b, m->coord, {
-		if (board_at(b, c) != stone_other(m->color))
 			continue;
+		}
 
 		group_t g = group_at(b, c); assert(g);
-		if (board_group_info(b, g).libs != 1)
+		if (board_group_info(b, g).libs != 1) {
+			can_escape = true;
 			continue;
+		}
 
 		/* Capture! */
+		captures++;
 
 		if (PS_PF(CAPTURE, LADDER))
 			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
@@ -218,15 +215,19 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
 			f->payload |= 1 << PF_CAPTURE_KO;
 
-		if (PS_PF(CAPTURE, 1STONE))
-			f->payload |= group_is_onestone(b, g) << PF_CAPTURE_1STONE;
+		if (group_is_onestone(b, g))
+			onestone = true;
+		else
+			multistone = true;
+	});
 
+	if (captures > 0) {
+		if (PS_PF(CAPTURE, 1STONE))
+			f->payload |= (onestone && !multistone) << PF_CAPTURE_1STONE;
 		if (PS_PF(CAPTURE, TRAPPED))
 			f->payload |= (!can_escape) << PF_CAPTURE_TRAPPED;
-
 		(f++, p->n++);
-		f->id = FEAT_CAPTURE; f->payload = 0;
-	});
+	}
 	return f;
 }
 
@@ -285,11 +286,12 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		else
 			multistone = true;
 	});
-	if (PS_PF(AESCAPE, 1STONE))
-		f->payload |= (onestone && !multistone) << PF_AESCAPE_1STONE;
-	if (PS_PF(AESCAPE, TRAPPED))
-		f->payload |= has_extra_lib << PF_AESCAPE_TRAPPED;
+
 	if (in_atari >= 0) {
+		if (PS_PF(AESCAPE, 1STONE))
+			f->payload |= (onestone && !multistone) << PF_AESCAPE_1STONE;
+		if (PS_PF(AESCAPE, TRAPPED))
+			f->payload |= has_extra_lib << PF_AESCAPE_TRAPPED;
 		(f++, p->n++);
 	}
 	return f;
