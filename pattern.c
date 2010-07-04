@@ -291,7 +291,7 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		if (PS_PF(AESCAPE, 1STONE))
 			f->payload |= (onestone && !multistone) << PF_AESCAPE_1STONE;
 		if (PS_PF(AESCAPE, TRAPPED))
-			f->payload |= has_extra_lib << PF_AESCAPE_TRAPPED;
+			f->payload |= (!has_extra_lib) << PF_AESCAPE_TRAPPED;
 		(f++, p->n++);
 	}
 	return f;
