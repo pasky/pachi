@@ -153,7 +153,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		if (PS_PF(CAPTURE, 1STONE))
 			f->payload |= (trait_at(b, m->coord, m->color).cap1 == trait_at(b, m->coord, m->color).cap) << PF_CAPTURE_1STONE;
 		if (PS_PF(CAPTURE, TRAPPED))
-			f->payload |= (!trait_at(b, m->coord, m->color).safe) << PF_CAPTURE_TRAPPED;
+			f->payload |= (!trait_at(b, m->coord, stone_other(m->color)).safe) << PF_CAPTURE_TRAPPED;
 		(f++, p->n++);
 		return f;
 	}
