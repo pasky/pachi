@@ -94,6 +94,8 @@ struct btraits {
 	 * not capturing, 1..4=this many neighbors we can capture
 	 * (can be multiple neighbors of same group). */
 	unsigned cap:3;
+	/* Number of 1-stone neighbors we can capture. */
+	unsigned cap1:3;
 	/* Whether it is SAFE to play here. This is essentially just
 	 * cached result of board_safe_to_play(). (Of course the concept
 	 * of "safety" is not perfect here, but it's the cheapest

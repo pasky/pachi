@@ -66,8 +66,8 @@ static const struct feature_info {
 	int payloads;
 } features[FEAT_MAX] = {
 	[FEAT_PASS] = { .name = "pass", .payloads = 2 },
-	[FEAT_CAPTURE] = { .name = "capture", .payloads = 16 },
-	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 2 },
+	[FEAT_CAPTURE] = { .name = "capture", .payloads = 32 },
+	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 4 },
 	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
 	[FEAT_BORDER] = { .name = "border", .payloads = -1 },
@@ -145,6 +145,8 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 #ifdef BOARD_TRAITS
 	if (!trait_at(b, m->coord, m->color).cap)
 		return f;
+	if (PS_PF(CAPTURE, 1STONE))
+		f->payload |= trait_at(b, m->coord, m->color).cap1 << PF_CAPTURE_1STONE;
 	/* Capturable! */
 	if (!(PS_PF(CAPTURE, LADDER)
 	      || PS_PF(CAPTURE, RECAPTURE)
@@ -196,6 +198,10 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
 			f->payload |= 1 << PF_CAPTURE_KO;
 
+		if (PS_PF(CAPTURE, 1STONE)
+		    && group_is_onestone(b, g))
+			f->payload |= 1 << PF_CAPTURE_1STONE;
+
 		(f++, p->n++);
 		f->id = FEAT_CAPTURE; f->payload = 0;
 	});
@@ -214,6 +220,8 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		return f;
 	/* Opponent can capture something and this move is safe
 	 * for us! */
+	if (PS_PF(AESCAPE, 1STONE))
+		f->payload |= trait_at(b, m->coord, stone_other(m->color)).cap1 << PF_AESCAPE_1STONE;
 	if (!PS_PF(AESCAPE, LADDER)) {
 		(f++, p->n++);
 		return f;
@@ -248,6 +256,10 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
 		/* TODO: is_ladder() is too conservative in some
 		 * very obvious situations, look at complete.gtp. */
+
+		if (PS_PF(AESCAPE, 1STONE)
+		    && group_is_onestone(b, g))
+			f->payload |= 1 << PF_AESCAPE_1STONE;
 	});
 	if (in_atari >= 0 && has_extra_lib) {
 		(f++, p->n++);
