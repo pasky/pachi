@@ -927,10 +927,7 @@ board_group_capture(struct board *board, group_t group)
 	} foreach_in_group_end;
 
 	struct group *gi = &board_group_info(board, group);
-	if (gi->libs == 2)
-		board_atariable_rm(board, group, gi->lib[0], gi->lib[1]);
-	else if (gi->libs == 1)
-		board_capturable_rm(board, group, gi->lib[0]);
+	assert(gi->libs == 0);
 	memset(gi, 0, sizeof(*gi));
 
 	return stones;
