@@ -72,7 +72,8 @@ skip_move:
 			probdist_set(pd, m.coord, 0);
 			continue;
 		}
-		//fprintf(stderr, "<%d> %s\n", f, coord2sstr(m.coord, b));
+		if (PLDEBUGL(7))
+			fprintf(stderr, "<%d> %s\n", f, coord2sstr(m.coord, b));
 
 		/* Skip invalid moves. */
 		if (!board_is_valid_move(b, &m))
@@ -103,13 +104,16 @@ skip_move:
 		for (int i = 0; i < p.n; i++) {
 			/* Multiply together gammas of all pattern features. */
 			double gamma = feature_gamma(ps->fg, &p.f[i], NULL);
-			//char buf[256] = ""; feature2str(buf, &p.f[i]);
-			//fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
+			if (PLDEBUGL(7)) {
+				char buf[256] = ""; feature2str(buf, &p.f[i]);
+				fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
+			}
 			g *= gamma;
 		}
 
 		probdist_set(pd, m.coord, double_to_fixp(g));
-		//fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), fixp_to_double(probdist_one(pd, m.coord)), pd->items[f]);
+		if (PLDEBUGL(7))
+			fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), fixp_to_double(probdist_one(pd, m.coord)), g);
 	}
 
 	return moves;
