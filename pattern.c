@@ -207,6 +207,7 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
 		      struct board *b, struct move *m)
 {
+	f->id = FEAT_AESCAPE; f->payload = 0;
 #ifdef BOARD_TRAITS
 	if (!trait_at(b, m->coord, stone_other(m->color)).cap
 	    || !trait_at(b, m->coord, m->color).safe)
@@ -214,7 +215,6 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 	/* Opponent can capture something and this move is safe
 	 * for us! */
 	if (!PS_PF(AESCAPE, LADDER)) {
-		f->id = FEAT_AESCAPE; f->payload = 0;
 		(f++, p->n++);
 		return f;
 	}
@@ -226,7 +226,6 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 	 * a liberty to connect out. XXX: No connect-and-die check. */
 	group_t in_atari = -1;
 	bool has_extra_lib = false;
-	int payload = 0;
 
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != m->color) {
@@ -246,12 +245,11 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		in_atari = g;
 
 		if (PS_PF(AESCAPE, LADDER))
-			payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
+			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
 		/* TODO: is_ladder() is too conservative in some
 		 * very obvious situations, look at complete.gtp. */
 	});
 	if (in_atari >= 0 && has_extra_lib) {
-		f->id = FEAT_AESCAPE; f->payload = payload;
 		(f++, p->n++);
 	}
 	return f;
