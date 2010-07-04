@@ -354,7 +354,8 @@ patternscan_state_init(char *arg)
 				/* Use precise self-atari detection instead
 				 * of quick one; makes sense ONLY with
 				 * matchfast, otherwise we always do this. */
-				ps->ps[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_STUPID);
+				ps->ps[FEAT_SELFATARI] &= ~(1<<PF_SELFATARI_STUPID);
+				ps->ps[FEAT_SELFATARI] |= (1<<PF_SELFATARI_SMART);
 
 			} else if (!strcasecmp(optname, "mm")) {
 				/* Generate output almost suitable for the

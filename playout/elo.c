@@ -448,8 +448,10 @@ playout_elo_init(char *arg, struct board *b)
 	for (int i = 0; i < FEAT_MAX; i++)
 		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
 			pp->choose.ps[i] = 0;
-	if (precise_selfatari)
-		pp->choose.ps[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_STUPID);
+	if (precise_selfatari) {
+		pp->choose.ps[FEAT_SELFATARI] &= ~(1<<PF_SELFATARI_STUPID);
+		pp->choose.ps[FEAT_SELFATARI] |= (1<<PF_SELFATARI_SMART);
+	}
 	board_gamma_set(b, pp->choose.fg, precise_selfatari);
 
 	return p;

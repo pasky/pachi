@@ -27,6 +27,8 @@ struct pattern_config FAST_PATTERN_CONFIG = {
 	.mcsims = 0,
 };
 
+#define PF_MATCH 15
+
 pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_PASS] = ~0,
 	[FEAT_CAPTURE] = ~0,
@@ -47,9 +49,9 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
  * BOARD_GAMMA code! You cannot just tinker with this spec freely. */
 pattern_spec PATTERN_SPEC_MATCHFAST = {
 	[FEAT_PASS] = 0,
-	[FEAT_CAPTURE] = (1<<PF_CAPTURE_1STONE | 1<<PF_CAPTURE_TRAPPED),
-	[FEAT_AESCAPE] = (1<<PF_AESCAPE_1STONE | 1<<PF_AESCAPE_TRAPPED),
-	[FEAT_SELFATARI] = (1<<PF_SELFATARI_STUPID),
+	[FEAT_CAPTURE] = (1<<PF_MATCH | 1<<PF_CAPTURE_1STONE | 1<<PF_CAPTURE_TRAPPED),
+	[FEAT_AESCAPE] = (1<<PF_MATCH | 1<<PF_AESCAPE_1STONE | 1<<PF_AESCAPE_TRAPPED),
+	[FEAT_SELFATARI] = (1<<PF_MATCH | 1<<PF_SELFATARI_STUPID),
 	[FEAT_ATARI] = 0,
 	[FEAT_BORDER] = 0,
 	[FEAT_LDIST] = 0,
@@ -132,7 +134,7 @@ feature_payloads(struct pattern_config *pc, enum feature_id f)
 
 
 /* pattern_spec helpers */
-#define PS_ANY(F) (ps[FEAT_ ## F] & (1 << 15))
+#define PS_ANY(F) (ps[FEAT_ ## F] & (1 << PF_MATCH))
 #define PS_PF(F, P) (ps[FEAT_ ## F] & (1 << PF_ ## F ## _ ## P))
 
 static struct feature *
