@@ -161,27 +161,45 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	 * the neighbors. */
 #endif
 
-	/* Furthermore, we will now create one feature per capturable
-	 * neighbor. */
-	/* XXX: I'm not sure if this is really good idea. --pasky */
+	/* We look at neighboring groups we could capture, and also if the
+	 * opponent could save them. */
+	/* This is very similar in spirit to board_safe_to_play(), and almost
+	 * a color inverse of pattern_match_aescape(). */
 
 	/* Whether an escape move would be safe for the opponent. */
 	int captures = 0;
-	bool can_escape = false;
+	coord_t onelib = -1;
+	int extra_libs = 0;
 	bool onestone = false, multistone = false;
 
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != stone_other(m->color)) {
 			if (board_at(b, c) == S_NONE)
-				can_escape = true; // free point
+				extra_libs++; // free point
 			else if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1)
-				can_escape = true; // capturable our group
+				extra_libs += 2; // capturable enemy group
 			continue;
 		}
 
 		group_t g = group_at(b, c); assert(g);
-		if (board_group_info(b, g).libs != 1) {
-			can_escape = true;
+		if (board_group_info(b, g).libs > 1) {
+			if (board_group_info(b, g).libs > 2) {
+				extra_libs += 2; // connected out
+			} else {
+				/* This is a bit tricky; we connect our 2-lib
+				 * group to another 2-lib group, which counts
+				 * as one liberty, but only if the other lib
+				 * is not shared too. */
+				if (onelib == -1) {
+					onelib = board_group_other_lib(b, g, c);
+					extra_libs++;
+				} else {
+					if (c == onelib)
+						extra_libs--; // take that back
+					else
+						extra_libs++;
+				}
+			}
 			continue;
 		}
 
@@ -225,7 +243,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		if (PS_PF(CAPTURE, 1STONE))
 			f->payload |= (onestone && !multistone) << PF_CAPTURE_1STONE;
 		if (PS_PF(CAPTURE, TRAPPED))
-			f->payload |= (!can_escape) << PF_CAPTURE_TRAPPED;
+			f->payload |= (extra_libs < 2) << PF_CAPTURE_TRAPPED;
 		(f++, p->n++);
 	}
 	return f;
@@ -255,21 +273,42 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 
 	/* Find if a neighboring group of ours is in atari, AND that we provide
 	 * a liberty to connect out. XXX: No connect-and-die check. */
+	/* This is very similar in spirit to board_safe_to_play(). */
 	group_t in_atari = -1;
-	bool has_extra_lib = false;
+	coord_t onelib = -1;
+	int extra_libs = 0;
 	bool onestone = false, multistone = false;
 
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != m->color) {
 			if (board_at(b, c) == S_NONE)
-				has_extra_lib = true; // free point
-			else if (board_at(b, c) == stone_other(m->color) && board_group_info(b, group_at(b, c)).libs == 1)
-				has_extra_lib = true; // capturable enemy group
+				extra_libs++; // free point
+			else if (board_at(b, c) == stone_other(m->color) && board_group_info(b, group_at(b, c)).libs == 1) {
+				extra_libs += 2; // capturable enemy group
+				/* XXX: We just consider this move safe
+				 * unconditionally. */
+			}
 			continue;
 		}
 		group_t g = group_at(b, c); assert(g);
-		if (board_group_info(b, g).libs != 1) {
-			has_extra_lib = true;
+		if (board_group_info(b, g).libs > 1) {
+			if (board_group_info(b, g).libs > 2) {
+				extra_libs += 2; // connected out
+			} else {
+				/* This is a bit tricky; we connect our 2-lib
+				 * group to another 2-lib group, which counts
+				 * as one liberty, but only if the other lib
+				 * is not shared too. */
+				if (onelib == -1) {
+					onelib = board_group_other_lib(b, g, c);
+					extra_libs++;
+				} else {
+					if (c == onelib)
+						extra_libs--; // take that back
+					else
+						extra_libs++;
+				}
+			}
 			continue;
 		}
 
@@ -291,7 +330,7 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		if (PS_PF(AESCAPE, 1STONE))
 			f->payload |= (onestone && !multistone) << PF_AESCAPE_1STONE;
 		if (PS_PF(AESCAPE, TRAPPED))
-			f->payload |= (!has_extra_lib) << PF_AESCAPE_TRAPPED;
+			f->payload |= (extra_libs < 2) << PF_AESCAPE_TRAPPED;
 		(f++, p->n++);
 	}
 	return f;
