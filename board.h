@@ -369,6 +369,15 @@ float board_official_score(struct board *board, struct move_queue *mq);
 #define foreach_point_end \
 	} while (0)
 
+#define foreach_free_point(board_) \
+	do { \
+		int fmax__ = (board_)->flen; \
+		for (int f__ = 0; f__ < fmax__; f__++) { \
+			coord_t c = (board_)->f[f__];
+#define foreach_free_point_end \
+		} \
+	} while (0)
+
 #define foreach_in_group(board_, group_) \
 	do { \
 		struct board *board__ = board_; \

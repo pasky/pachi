@@ -42,9 +42,9 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 	if (ctx->eqex >= 0)
 		eqex = ctx->eqex; // override Pachi default
 
-	/* foreach_point defines a variable @c corresponding
+	/* foreach_free_point defines a variable @c corresponding
 	 * to our current coordinate. */
-	foreach_point(map->b) {
+	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
 
@@ -96,7 +96,7 @@ set_prior:
 		 * (strongly favor). eqex is the number of simulations
 		 * the value is worth. */
 		add_prior_value(map, c, 1.0, eqex);
-	} foreach_point_end;
+	} foreach_free_point_end;
 }
 
 void *

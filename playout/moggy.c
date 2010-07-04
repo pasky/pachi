@@ -896,10 +896,10 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 	/* Then, assess individual moves. */
 	if (!pp->patternrate && !pp->selfatarirate)
 		return;
-	foreach_point(map->b) {
+	foreach_free_point(map->b) {
 		if (map->consider[c])
 			playout_moggy_assess_one(p, map, c, games);
-	} foreach_point_end;
+	} foreach_free_point_end;
 }
 
 bool

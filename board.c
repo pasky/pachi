@@ -1400,9 +1400,10 @@ static bool
 board_tromp_taylor_iter(struct board *board, int *ownermap)
 {
 	bool needs_update = false;
-	foreach_point(board) {
+	foreach_free_point(board) {
 		/* Ignore occupied and already-dame positions. */
-		if (board_at(board, c) != S_NONE || ownermap[c] == 3)
+		assert(board_at(board, c) == S_NONE);
+		if (ownermap[c] == 3)
 			continue;
 		/* Count neighbors. */
 		int nei[4] = {0};
@@ -1434,7 +1435,7 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 			needs_update = true;
 			continue;
 		}
-	} foreach_point_end;
+	} foreach_free_point_end;
 	return needs_update;
 }
 

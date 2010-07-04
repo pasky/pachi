@@ -274,7 +274,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 	ctx->FINDMOVE2(map->to_play == S_BLACK ? 1 : -1, &bestx, &besty, &bestval, &values, &chaininfo);
 	// fprintf(stderr, "best is (%d,%d)%s %f\n", bestx, besty, coord2sstr(coord_xy(b, bestx, besty), b), bestval);
 
-	foreach_point(map->b) {
+	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
 
@@ -286,7 +286,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 		value /= bestval;
 
 		add_prior_value(map, c, value, eqex);
-	} foreach_point_end;
+	} foreach_free_point_end;
 }
 
 
