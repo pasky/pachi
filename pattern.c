@@ -49,8 +49,8 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
  * BOARD_GAMMA code! You cannot just tinker with this spec freely. */
 pattern_spec PATTERN_SPEC_MATCHFAST = {
 	[FEAT_PASS] = 0,
-	[FEAT_CAPTURE] = (1<<PF_MATCH | 1<<PF_CAPTURE_1STONE | 1<<PF_CAPTURE_TRAPPED),
-	[FEAT_AESCAPE] = (1<<PF_MATCH | 1<<PF_AESCAPE_1STONE | 1<<PF_AESCAPE_TRAPPED),
+	[FEAT_CAPTURE] = (1<<PF_MATCH | 1<<PF_CAPTURE_1STONE | 1<<PF_CAPTURE_TRAPPED | 1<<PF_CAPTURE_CONNECTION),
+	[FEAT_AESCAPE] = (1<<PF_MATCH | 1<<PF_AESCAPE_1STONE | 1<<PF_AESCAPE_TRAPPED | 1<<PF_AESCAPE_CONNECTION),
 	[FEAT_SELFATARI] = (1<<PF_MATCH | 1<<PF_SELFATARI_STUPID),
 	[FEAT_ATARI] = 0,
 	[FEAT_BORDER] = 0,
@@ -67,8 +67,8 @@ static const struct feature_info {
 	int payloads;
 } features[FEAT_MAX] = {
 	[FEAT_PASS] = { .name = "pass", .payloads = 2 },
-	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 },
-	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 8 },
+	[FEAT_CAPTURE] = { .name = "capture", .payloads = 128 },
+	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 16 },
 	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
 	[FEAT_BORDER] = { .name = "border", .payloads = -1 },
@@ -137,6 +137,8 @@ feature_payloads(struct pattern_config *pc, enum feature_id f)
 #define PS_ANY(F) (ps[FEAT_ ## F] & (1 << PF_MATCH))
 #define PS_PF(F, P) (ps[FEAT_ ## F] & (1 << PF_ ## F ## _ ## P))
 
+//#undef BOARD_TRAITS // for cross-testing of pattern matchers - enable also elo_check_probdist()
+
 static struct feature *
 pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
@@ -152,6 +154,8 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 			f->payload |= (trait_at(b, m->coord, m->color).cap1 == trait_at(b, m->coord, m->color).cap) << PF_CAPTURE_1STONE;
 		if (PS_PF(CAPTURE, TRAPPED))
 			f->payload |= (!trait_at(b, m->coord, stone_other(m->color)).safe) << PF_CAPTURE_TRAPPED;
+		if (PS_PF(CAPTURE, CONNECTION))
+			f->payload |= (trait_at(b, m->coord, m->color).cap < neighbor_count_at(b, m->coord, stone_other(m->color))) << PF_CAPTURE_CONNECTION;
 		(f++, p->n++);
 		return f;
 	}
@@ -167,7 +171,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	/* Whether an escape move would be safe for the opponent. */
 	int captures = 0;
 	coord_t onelib = -1;
-	int extra_libs = 0;
+	int extra_libs = 0, connectable_groups = 0;
 	bool onestone = false, multistone = false;
 
 	foreach_neighbor(b, m->coord, {
@@ -181,6 +185,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 
 		group_t g = group_at(b, c); assert(g);
 		if (board_group_info(b, g).libs > 1) {
+			connectable_groups++;
 			if (board_group_info(b, g).libs > 2) {
 				extra_libs += 2; // connected out
 			} else {
@@ -242,6 +247,8 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 			f->payload |= (onestone && !multistone) << PF_CAPTURE_1STONE;
 		if (PS_PF(CAPTURE, TRAPPED))
 			f->payload |= (extra_libs < 2) << PF_CAPTURE_TRAPPED;
+		if (PS_PF(CAPTURE, CONNECTION))
+			f->payload |= (connectable_groups > 0) << PF_CAPTURE_CONNECTION;
 		(f++, p->n++);
 	}
 	return f;
@@ -262,6 +269,8 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap1 == trait_at(b, m->coord, stone_other(m->color)).cap) << PF_AESCAPE_1STONE;
 		if (PS_PF(AESCAPE, TRAPPED))
 			f->payload |= (!trait_at(b, m->coord, m->color).safe) << PF_AESCAPE_TRAPPED;
+		if (PS_PF(AESCAPE, CONNECTION))
+			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap < neighbor_count_at(b, m->coord, m->color)) << PF_AESCAPE_CONNECTION;
 		(f++, p->n++);
 		return f;
 	}
@@ -274,7 +283,7 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 	/* This is very similar in spirit to board_safe_to_play(). */
 	group_t in_atari = -1;
 	coord_t onelib = -1;
-	int extra_libs = 0;
+	int extra_libs = 0, connectable_groups = 0;
 	bool onestone = false, multistone = false;
 
 	foreach_neighbor(b, m->coord, {
@@ -290,6 +299,7 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		}
 		group_t g = group_at(b, c); assert(g);
 		if (board_group_info(b, g).libs > 1) {
+			connectable_groups++;
 			if (board_group_info(b, g).libs > 2) {
 				extra_libs += 2; // connected out
 			} else {
@@ -329,6 +339,8 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 			f->payload |= (onestone && !multistone) << PF_AESCAPE_1STONE;
 		if (PS_PF(AESCAPE, TRAPPED))
 			f->payload |= (extra_libs < 2) << PF_AESCAPE_TRAPPED;
+		if (PS_PF(AESCAPE, CONNECTION))
+			f->payload |= (connectable_groups > 0) << PF_AESCAPE_CONNECTION;
 		(f++, p->n++);
 	}
 	return f;
