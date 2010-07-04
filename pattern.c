@@ -151,7 +151,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	      || PS_PF(CAPTURE, ATARIDEF)
 	      || PS_PF(CAPTURE, KO))) {
 		if (PS_PF(CAPTURE, 1STONE))
-			f->payload |= (trait_at(b, m->coord, m->color).cap1 > 0) << PF_CAPTURE_1STONE;
+			f->payload |= (trait_at(b, m->coord, m->color).cap1 == trait_at(b, m->coord, m->color).cap) << PF_CAPTURE_1STONE;
 		if (PS_PF(CAPTURE, TRAPPED))
 			f->payload |= (!trait_at(b, m->coord, m->color).safe) << PF_CAPTURE_TRAPPED;
 		(f++, p->n++);
@@ -218,9 +218,8 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
 			f->payload |= 1 << PF_CAPTURE_KO;
 
-		if (PS_PF(CAPTURE, 1STONE)
-		    && group_is_onestone(b, g))
-			f->payload |= 1 << PF_CAPTURE_1STONE;
+		if (PS_PF(CAPTURE, 1STONE))
+			f->payload |= group_is_onestone(b, g) << PF_CAPTURE_1STONE;
 
 		if (PS_PF(CAPTURE, TRAPPED))
 			f->payload |= (!can_escape) << PF_CAPTURE_TRAPPED;
@@ -243,7 +242,7 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 	/* Opponent can capture something! */
 	if (!PS_PF(AESCAPE, LADDER)) {
 		if (PS_PF(AESCAPE, 1STONE))
-			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap1 > 0) << PF_AESCAPE_1STONE;
+			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap1 == trait_at(b, m->coord, stone_other(m->color)).cap) << PF_AESCAPE_1STONE;
 		if (PS_PF(CAPTURE, TRAPPED))
 			f->payload |= (!trait_at(b, m->coord, m->color).safe) << PF_AESCAPE_TRAPPED;
 		(f++, p->n++);
@@ -257,6 +256,7 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 	 * a liberty to connect out. XXX: No connect-and-die check. */
 	group_t in_atari = -1;
 	bool has_extra_lib = false;
+	bool onestone = false, multistone = false;
 
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != m->color) {
@@ -280,10 +280,13 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		/* TODO: is_ladder() is too conservative in some
 		 * very obvious situations, look at complete.gtp. */
 
-		if (PS_PF(AESCAPE, 1STONE)
-		    && group_is_onestone(b, g))
-			f->payload |= 1 << PF_AESCAPE_1STONE;
+		if (group_is_onestone(b, g))
+			onestone = true;
+		else
+			multistone = true;
 	});
+	if (PS_PF(AESCAPE, 1STONE))
+		f->payload |= (onestone && !multistone) << PF_AESCAPE_1STONE;
 	if (PS_PF(AESCAPE, TRAPPED))
 		f->payload |= has_extra_lib << PF_AESCAPE_TRAPPED;
 	if (in_atari >= 0) {
