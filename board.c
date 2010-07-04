@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "mq.h"
@@ -427,12 +428,14 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 	if (trait_at(board, coord, color).cap) {
 		int i = 0;
 		i |= (trait_at(board, coord, color).cap1 > 0) << PF_CAPTURE_1STONE;
+		i |= (!trait_at(board, coord, color).safe) << PF_CAPTURE_TRAPPED;
 		value *= board->gamma->gamma[FEAT_CAPTURE][i];
 	}
 	if (trait_at(board, coord, stone_other(color)).cap
 	    && trait_at(board, coord, color).safe) {
 		int i = 0;
 		i |= (trait_at(board, coord, stone_other(color)).cap1 > 0) << PF_AESCAPE_1STONE;
+		i |= (!trait_at(board, coord, stone_other(color)).safe) << PF_AESCAPE_TRAPPED;
 		value *= board->gamma->gamma[FEAT_AESCAPE][i];
 	}
 	if (!trait_at(board, coord, color).safe)

@@ -66,8 +66,8 @@ static const struct feature_info {
 	int payloads;
 } features[FEAT_MAX] = {
 	[FEAT_PASS] = { .name = "pass", .payloads = 2 },
-	[FEAT_CAPTURE] = { .name = "capture", .payloads = 32 },
-	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 4 },
+	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 },
+	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 8 },
 	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
 	[FEAT_BORDER] = { .name = "border", .payloads = -1 },
@@ -147,6 +147,8 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		return f;
 	if (PS_PF(CAPTURE, 1STONE))
 		f->payload |= trait_at(b, m->coord, m->color).cap1 << PF_CAPTURE_1STONE;
+	if (PS_PF(CAPTURE, TRAPPED))
+		f->payload |= (!trait_at(b, m->coord, m->color).safe) << PF_CAPTURE_TRAPPED;
 	/* Capturable! */
 	if (!(PS_PF(CAPTURE, LADDER)
 	      || PS_PF(CAPTURE, RECAPTURE)
@@ -162,11 +164,29 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	/* Furthermore, we will now create one feature per capturable
 	 * neighbor. */
 	/* XXX: I'm not sure if this is really good idea. --pasky */
+
+	/* Whether an escape move would be safe for the opponent. */
+	bool can_escape = false;
+	foreach_neighbor(b, m->coord, {
+		if (board_at(b, c) != stone_other(m->color)) {
+			if (board_at(b, c) == S_NONE)
+				can_escape = true; // free point
+			else if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1)
+				can_escape = true; // capturable our group
+
+		} else {
+			group_t g = group_at(b, c); assert(g);
+			if (board_group_info(b, g).libs != 1)
+				can_escape = true;
+		}
+	});
+
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != stone_other(m->color))
 			continue;
-		group_t g = group_at(b, c);
-		if (!g || board_group_info(b, g).libs != 1)
+
+		group_t g = group_at(b, c); assert(g);
+		if (board_group_info(b, g).libs != 1)
 			continue;
 
 		/* Capture! */
@@ -202,6 +222,9 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		    && group_is_onestone(b, g))
 			f->payload |= 1 << PF_CAPTURE_1STONE;
 
+		if (PS_PF(CAPTURE, TRAPPED))
+			f->payload |= (!can_escape) << PF_CAPTURE_TRAPPED;
+
 		(f++, p->n++);
 		f->id = FEAT_CAPTURE; f->payload = 0;
 	});
@@ -215,13 +238,14 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 {
 	f->id = FEAT_AESCAPE; f->payload = 0;
 #ifdef BOARD_TRAITS
-	if (!trait_at(b, m->coord, stone_other(m->color)).cap
-	    || !trait_at(b, m->coord, m->color).safe)
+	if (!trait_at(b, m->coord, stone_other(m->color)).cap)
 		return f;
 	/* Opponent can capture something and this move is safe
 	 * for us! */
 	if (PS_PF(AESCAPE, 1STONE))
 		f->payload |= trait_at(b, m->coord, stone_other(m->color)).cap1 << PF_AESCAPE_1STONE;
+	if (PS_PF(CAPTURE, TRAPPED))
+		f->payload |= (!trait_at(b, m->coord, m->color).safe) << PF_AESCAPE_TRAPPED;
 	if (!PS_PF(AESCAPE, LADDER)) {
 		(f++, p->n++);
 		return f;
@@ -261,7 +285,9 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		    && group_is_onestone(b, g))
 			f->payload |= 1 << PF_AESCAPE_1STONE;
 	});
-	if (in_atari >= 0 && has_extra_lib) {
+	if (PS_PF(AESCAPE, TRAPPED))
+		f->payload |= has_extra_lib << PF_AESCAPE_TRAPPED;
+	if (in_atari >= 0) {
 		(f++, p->n++);
 	}
 	return f;
