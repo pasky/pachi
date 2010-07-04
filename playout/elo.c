@@ -99,13 +99,13 @@ skip_move:
 #endif
 
 		/* Match pattern features: */
-		struct pattern p;
-		pattern_match(&ps->pc, ps->ps, &p, b, &m);
-		for (int i = 0; i < p.n; i++) {
+		struct pattern pat;
+		pattern_match(&ps->pc, ps->ps, &pat, b, &m);
+		for (int i = 0; i < pat.n; i++) {
 			/* Multiply together gammas of all pattern features. */
-			double gamma = feature_gamma(ps->fg, &p.f[i], NULL);
+			double gamma = feature_gamma(ps->fg, &pat.f[i], NULL);
 			if (PLDEBUGL(7)) {
-				char buf[256] = ""; feature2str(buf, &p.f[i]);
+				char buf[256] = ""; feature2str(buf, &pat.f[i]);
 				fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
 			}
 			g *= gamma;
