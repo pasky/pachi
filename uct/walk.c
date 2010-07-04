@@ -41,12 +41,9 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	if (t->use_extra_komi)
 		fprintf(stderr, "komi %.1f ", t->extra_komi);
 
-	/* Max depth */
-	fprintf(stderr, "deepest % 2d ", t->max_depth - t->root->depth);
-
 	/* Best sequence */
 	fprintf(stderr, "| seq ");
-	for (int depth = 0; depth < 6; depth++) {
+	for (int depth = 0; depth < 4; depth++) {
 		if (best && best->u.playouts >= 25) {
 			fprintf(stderr, "%3s ", coord2sstr(best->coord, t->board));
 			best = u->policy->choose(u->policy, best, t->board, color, resign);
