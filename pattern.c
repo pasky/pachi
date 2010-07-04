@@ -45,12 +45,11 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
 /* !!! Note that in order for ELO playout policy to work correctly, this
  * pattern specification MUST exactly match the features matched by the
  * BOARD_GAMMA code! You cannot just tinker with this spec freely. */
-#define FAST_NO_LADDER 1 /* 1: Don't match ladders in fast playouts */
 pattern_spec PATTERN_SPEC_MATCHFAST = {
-	[FEAT_PASS] = ~0,
-	[FEAT_CAPTURE] = ~(1<<PF_CAPTURE_ATARIDEF | 1<<PF_CAPTURE_RECAPTURE | FAST_NO_LADDER<<PF_CAPTURE_LADDER | 1<<PF_CAPTURE_KO),
-	[FEAT_AESCAPE] = ~(FAST_NO_LADDER<<PF_AESCAPE_LADDER),
-	[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_SMART),
+	[FEAT_PASS] = 0,
+	[FEAT_CAPTURE] = (1<<PF_CAPTURE_1STONE | 1<<PF_CAPTURE_TRAPPED),
+	[FEAT_AESCAPE] = (1<<PF_AESCAPE_1STONE | 1<<PF_AESCAPE_TRAPPED),
+	[FEAT_SELFATARI] = (1<<PF_SELFATARI_STUPID),
 	[FEAT_ATARI] = 0,
 	[FEAT_BORDER] = 0,
 	[FEAT_LDIST] = 0,
