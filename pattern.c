@@ -149,7 +149,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	if (!trait_at(b, m->coord, m->color).cap)
 		return f;
 	/* Capturable! */
-	if (!(ps[FEAT_CAPTURE] & ~PATTERN_SPEC_MATCHFAST[FEAT_CAPTURE])) {
+	if ((ps[FEAT_CAPTURE] & ~(1<<PF_CAPTURE_1STONE | 1<<PF_CAPTURE_TRAPPED | 1<<PF_CAPTURE_CONNECTION)) == 1<<PF_MATCH) {
 		if (PS_PF(CAPTURE, 1STONE))
 			f->payload |= (trait_at(b, m->coord, m->color).cap1 == trait_at(b, m->coord, m->color).cap) << PF_CAPTURE_1STONE;
 		if (PS_PF(CAPTURE, TRAPPED))
@@ -264,7 +264,7 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 	if (!trait_at(b, m->coord, stone_other(m->color)).cap)
 		return f;
 	/* Opponent can capture something! */
-	if (!(ps[FEAT_AESCAPE] & ~PATTERN_SPEC_MATCHFAST[FEAT_AESCAPE])) {
+	if ((ps[FEAT_AESCAPE] & ~(1<<PF_AESCAPE_1STONE | 1<<PF_AESCAPE_TRAPPED | 1<<PF_AESCAPE_CONNECTION)) == 1<<PF_MATCH) {
 		if (PS_PF(AESCAPE, 1STONE))
 			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap1 == trait_at(b, m->coord, stone_other(m->color)).cap) << PF_AESCAPE_1STONE;
 		if (PS_PF(AESCAPE, TRAPPED))
