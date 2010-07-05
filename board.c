@@ -167,6 +167,7 @@ board_resize(struct board *board, int size)
 #ifdef BOARD_SIZE
 	assert(board_size(board) == size + 2);
 #endif
+	assert(size <= BOARD_MAX_SIZE);
 	board->size = size + 2 /* S_OFFBOARD margin */;
 	board->size2 = board_size(board) * board_size(board);
 

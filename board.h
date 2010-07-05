@@ -16,6 +16,10 @@
 struct features_gamma;
 
 
+/* Maximum supported board size. (Without the S_OFFBOARD edges.) */
+#define BOARD_MAX_SIZE 19
+
+
 /* The board implementation has bunch of optional features.
  * Turn them on below: */
 
@@ -30,6 +34,10 @@ struct features_gamma;
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
 //#define BOARD_GAMMA 1 // incremental probability distribution (requires BOARD_TRAITS, BOARD_PAT3)
+
+
+#define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
+#define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE / 2)
 
 
 /* Some engines might normalize their reading and skip symmetrical
