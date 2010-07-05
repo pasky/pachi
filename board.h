@@ -518,8 +518,8 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 			/* we might be connecting two 2-lib groups, which is ok;
 			 * so remember the other liberty and just make sure it's
 			 * not the same one */
-			if (onelib >= 0 && coord != onelib) return true;
-			onelib = board_group_other_lib(b, g, coord);
+			if (onelib >= 0 && c != onelib) return true;
+			onelib = board_group_other_lib(b, g, c);
 			continue;
 		}
 		// many liberties
