@@ -17,7 +17,7 @@ typedef uint_fast32_t fixp_t;
 
 #define FIXP_SCALE (1<<FIXP_BITS)
 
-#define double_to_fixp(n) (nearbyint((n) * (FIXP_SCALE)))
+#define double_to_fixp(n) ((fixp_t) ((n) * (FIXP_SCALE)))
 #define fixp_to_double(n) ((double) (n) / FIXP_SCALE)
 
 #endif
