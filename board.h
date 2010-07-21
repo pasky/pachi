@@ -16,6 +16,10 @@
 struct features_gamma;
 
 
+/* Maximum supported board size. (Without the S_OFFBOARD edges.) */
+#define BOARD_MAX_SIZE 19
+
+
 /* The board implementation has bunch of optional features.
  * Turn them on below: */
 
@@ -30,6 +34,10 @@ struct features_gamma;
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
 //#define BOARD_GAMMA 1 // incremental probability distribution (requires BOARD_TRAITS, BOARD_PAT3)
+
+
+#define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
+#define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE / 2)
 
 
 /* Some engines might normalize their reading and skip symmetrical
@@ -94,6 +102,8 @@ struct btraits {
 	 * not capturing, 1..4=this many neighbors we can capture
 	 * (can be multiple neighbors of same group). */
 	unsigned cap:3;
+	/* Number of 1-stone neighbors we can capture. */
+	unsigned cap1:3;
 	/* Whether it is SAFE to play here. This is essentially just
 	 * cached result of board_safe_to_play(). (Of course the concept
 	 * of "safety" is not perfect here, but it's the cheapest
@@ -286,9 +296,11 @@ struct board {
 #define groupnext_atxy(b_, x, y) ((b_)->p[(x) + board_size(b_) * (y)])
 
 #define group_base(g_) (g_)
+#define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
 #define board_group_info(b_, g_) ((b_)->gi[(g_)])
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
-#define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
+/* board_group_other_lib() makes sense only for groups with two liberties. */
+#define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
 #define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
 
@@ -367,6 +379,15 @@ float board_official_score(struct board *board, struct move_queue *mq);
 		coord_t c = pass; \
 		for (; c < board_size(board_) * board_size(board_); c++)
 #define foreach_point_end \
+	} while (0)
+
+#define foreach_free_point(board_) \
+	do { \
+		int fmax__ = (board_)->flen; \
+		for (int f__ = 0; f__ < fmax__; f__++) { \
+			coord_t c = (board_)->f[f__];
+#define foreach_free_point_end \
+		} \
 	} while (0)
 
 #define foreach_in_group(board_, group_) \
@@ -502,14 +523,11 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 		if (board_group_info(b, g).libs == 1) continue; // in atari
 		if (board_group_info(b, g).libs == 2) { // two liberties
 			if (libs > 0) return true; // we already have one real liberty
-			// get the other liberty
-			coord_t lib = board_group_info(b, g).lib[0];
-			if (lib == coord) lib = board_group_info(b, g).lib[0];
 			/* we might be connecting two 2-lib groups, which is ok;
 			 * so remember the other liberty and just make sure it's
 			 * not the same one */
-			if (onelib >= 0 && lib != onelib) return true;
-			onelib = lib;
+			if (onelib >= 0 && c != onelib) return true;
+			onelib = board_group_other_lib(b, g, c);
 			continue;
 		}
 		// many liberties

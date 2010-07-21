@@ -27,6 +27,8 @@ struct pattern_config FAST_PATTERN_CONFIG = {
 	.mcsims = 0,
 };
 
+#define PF_MATCH 15
+
 pattern_spec PATTERN_SPEC_MATCHALL = {
 	[FEAT_PASS] = ~0,
 	[FEAT_CAPTURE] = ~0,
@@ -45,12 +47,11 @@ pattern_spec PATTERN_SPEC_MATCHALL = {
 /* !!! Note that in order for ELO playout policy to work correctly, this
  * pattern specification MUST exactly match the features matched by the
  * BOARD_GAMMA code! You cannot just tinker with this spec freely. */
-#define FAST_NO_LADDER 1 /* 1: Don't match ladders in fast playouts */
 pattern_spec PATTERN_SPEC_MATCHFAST = {
-	[FEAT_PASS] = ~0,
-	[FEAT_CAPTURE] = ~(1<<PF_CAPTURE_ATARIDEF | 1<<PF_CAPTURE_RECAPTURE | FAST_NO_LADDER<<PF_CAPTURE_LADDER | 1<<PF_CAPTURE_KO),
-	[FEAT_AESCAPE] = ~(FAST_NO_LADDER<<PF_AESCAPE_LADDER),
-	[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_SMART),
+	[FEAT_PASS] = 0,
+	[FEAT_CAPTURE] = (1<<PF_MATCH | 1<<PF_CAPTURE_1STONE | 1<<PF_CAPTURE_TRAPPED | 1<<PF_CAPTURE_CONNECTION),
+	[FEAT_AESCAPE] = (1<<PF_MATCH | 1<<PF_AESCAPE_1STONE | 1<<PF_AESCAPE_TRAPPED | 1<<PF_AESCAPE_CONNECTION),
+	[FEAT_SELFATARI] = (1<<PF_MATCH | 1<<PF_SELFATARI_STUPID),
 	[FEAT_ATARI] = 0,
 	[FEAT_BORDER] = 0,
 	[FEAT_LDIST] = 0,
@@ -66,8 +67,8 @@ static const struct feature_info {
 	int payloads;
 } features[FEAT_MAX] = {
 	[FEAT_PASS] = { .name = "pass", .payloads = 2 },
-	[FEAT_CAPTURE] = { .name = "capture", .payloads = 16 },
-	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 2 },
+	[FEAT_CAPTURE] = { .name = "capture", .payloads = 128 },
+	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 16 },
 	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
 	[FEAT_BORDER] = { .name = "border", .payloads = -1 },
@@ -133,8 +134,10 @@ feature_payloads(struct pattern_config *pc, enum feature_id f)
 
 
 /* pattern_spec helpers */
-#define PS_ANY(F) (ps[FEAT_ ## F] & (1 << 15))
+#define PS_ANY(F) (ps[FEAT_ ## F] & (1 << PF_MATCH))
 #define PS_PF(F, P) (ps[FEAT_ ## F] & (1 << PF_ ## F ## _ ## P))
+
+//#undef BOARD_TRAITS // for cross-testing of pattern matchers - enable also elo_check_probdist()
 
 static struct feature *
 pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
@@ -146,10 +149,13 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	if (!trait_at(b, m->coord, m->color).cap)
 		return f;
 	/* Capturable! */
-	if (!(PS_PF(CAPTURE, LADDER)
-	      || PS_PF(CAPTURE, RECAPTURE)
-	      || PS_PF(CAPTURE, ATARIDEF)
-	      || PS_PF(CAPTURE, KO))) {
+	if (!(ps[FEAT_CAPTURE] & ~PATTERN_SPEC_MATCHFAST[FEAT_CAPTURE])) {
+		if (PS_PF(CAPTURE, 1STONE))
+			f->payload |= (trait_at(b, m->coord, m->color).cap1 == trait_at(b, m->coord, m->color).cap) << PF_CAPTURE_1STONE;
+		if (PS_PF(CAPTURE, TRAPPED))
+			f->payload |= (!trait_at(b, m->coord, stone_other(m->color)).safe) << PF_CAPTURE_TRAPPED;
+		if (PS_PF(CAPTURE, CONNECTION))
+			f->payload |= (trait_at(b, m->coord, m->color).cap < neighbor_count_at(b, m->coord, stone_other(m->color))) << PF_CAPTURE_CONNECTION;
 		(f++, p->n++);
 		return f;
 	}
@@ -157,17 +163,51 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	 * the neighbors. */
 #endif
 
-	/* Furthermore, we will now create one feature per capturable
-	 * neighbor. */
-	/* XXX: I'm not sure if this is really good idea. --pasky */
+	/* We look at neighboring groups we could capture, and also if the
+	 * opponent could save them. */
+	/* This is very similar in spirit to board_safe_to_play(), and almost
+	 * a color inverse of pattern_match_aescape(). */
+
+	/* Whether an escape move would be safe for the opponent. */
+	int captures = 0;
+	coord_t onelib = -1;
+	int extra_libs = 0, connectable_groups = 0;
+	bool onestone = false, multistone = false;
+
 	foreach_neighbor(b, m->coord, {
-		if (board_at(b, c) != stone_other(m->color))
+		if (board_at(b, c) != stone_other(m->color)) {
+			if (board_at(b, c) == S_NONE)
+				extra_libs++; // free point
+			else if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1)
+				extra_libs += 2; // capturable enemy group
 			continue;
-		group_t g = group_at(b, c);
-		if (!g || board_group_info(b, g).libs != 1)
+		}
+
+		group_t g = group_at(b, c); assert(g);
+		if (board_group_info(b, g).libs > 1) {
+			connectable_groups++;
+			if (board_group_info(b, g).libs > 2) {
+				extra_libs += 2; // connected out
+			} else {
+				/* This is a bit tricky; we connect our 2-lib
+				 * group to another 2-lib group, which counts
+				 * as one liberty, but only if the other lib
+				 * is not shared too. */
+				if (onelib == -1) {
+					onelib = board_group_other_lib(b, g, c);
+					extra_libs++;
+				} else {
+					if (c == onelib)
+						extra_libs--; // take that back
+					else
+						extra_libs++;
+				}
+			}
 			continue;
+		}
 
 		/* Capture! */
+		captures++;
 
 		if (PS_PF(CAPTURE, LADDER))
 			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_CAPTURE_LADDER;
@@ -196,9 +236,21 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
 			f->payload |= 1 << PF_CAPTURE_KO;
 
-		(f++, p->n++);
-		f->id = FEAT_CAPTURE; f->payload = 0;
+		if (group_is_onestone(b, g))
+			onestone = true;
+		else
+			multistone = true;
 	});
+
+	if (captures > 0) {
+		if (PS_PF(CAPTURE, 1STONE))
+			f->payload |= (onestone && !multistone) << PF_CAPTURE_1STONE;
+		if (PS_PF(CAPTURE, TRAPPED))
+			f->payload |= (extra_libs < 2) << PF_CAPTURE_TRAPPED;
+		if (PS_PF(CAPTURE, CONNECTION))
+			f->payload |= (connectable_groups > 0) << PF_CAPTURE_CONNECTION;
+		(f++, p->n++);
+	}
 	return f;
 }
 
@@ -207,14 +259,18 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
                       struct pattern *p, struct feature *f,
 		      struct board *b, struct move *m)
 {
+	f->id = FEAT_AESCAPE; f->payload = 0;
 #ifdef BOARD_TRAITS
-	if (!trait_at(b, m->coord, stone_other(m->color)).cap
-	    || !trait_at(b, m->coord, m->color).safe)
+	if (!trait_at(b, m->coord, stone_other(m->color)).cap)
 		return f;
-	/* Opponent can capture something and this move is safe
-	 * for us! */
-	if (!PS_PF(AESCAPE, LADDER)) {
-		f->id = FEAT_AESCAPE; f->payload = 0;
+	/* Opponent can capture something! */
+	if (!(ps[FEAT_AESCAPE] & ~PATTERN_SPEC_MATCHFAST[FEAT_AESCAPE])) {
+		if (PS_PF(AESCAPE, 1STONE))
+			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap1 == trait_at(b, m->coord, stone_other(m->color)).cap) << PF_AESCAPE_1STONE;
+		if (PS_PF(AESCAPE, TRAPPED))
+			f->payload |= (!trait_at(b, m->coord, m->color).safe) << PF_AESCAPE_TRAPPED;
+		if (PS_PF(AESCAPE, CONNECTION))
+			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap < neighbor_count_at(b, m->coord, m->color)) << PF_AESCAPE_CONNECTION;
 		(f++, p->n++);
 		return f;
 	}
@@ -224,21 +280,43 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 
 	/* Find if a neighboring group of ours is in atari, AND that we provide
 	 * a liberty to connect out. XXX: No connect-and-die check. */
+	/* This is very similar in spirit to board_safe_to_play(). */
 	group_t in_atari = -1;
-	bool has_extra_lib = false;
-	int payload = 0;
+	coord_t onelib = -1;
+	int extra_libs = 0, connectable_groups = 0;
+	bool onestone = false, multistone = false;
 
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != m->color) {
 			if (board_at(b, c) == S_NONE)
-				has_extra_lib = true; // free point
-			else if (board_at(b, c) == stone_other(m->color) && board_group_info(b, group_at(b, c)).libs == 1)
-				has_extra_lib = true; // capturable enemy group
+				extra_libs++; // free point
+			else if (board_at(b, c) == stone_other(m->color) && board_group_info(b, group_at(b, c)).libs == 1) {
+				extra_libs += 2; // capturable enemy group
+				/* XXX: We just consider this move safe
+				 * unconditionally. */
+			}
 			continue;
 		}
 		group_t g = group_at(b, c); assert(g);
-		if (board_group_info(b, g).libs != 1) {
-			has_extra_lib = true;
+		if (board_group_info(b, g).libs > 1) {
+			connectable_groups++;
+			if (board_group_info(b, g).libs > 2) {
+				extra_libs += 2; // connected out
+			} else {
+				/* This is a bit tricky; we connect our 2-lib
+				 * group to another 2-lib group, which counts
+				 * as one liberty, but only if the other lib
+				 * is not shared too. */
+				if (onelib == -1) {
+					onelib = board_group_other_lib(b, g, c);
+					extra_libs++;
+				} else {
+					if (c == onelib)
+						extra_libs--; // take that back
+					else
+						extra_libs++;
+				}
+			}
 			continue;
 		}
 
@@ -246,12 +324,23 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		in_atari = g;
 
 		if (PS_PF(AESCAPE, LADDER))
-			payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
+			f->payload |= is_ladder(b, m->coord, g, true, true) << PF_AESCAPE_LADDER;
 		/* TODO: is_ladder() is too conservative in some
 		 * very obvious situations, look at complete.gtp. */
+
+		if (group_is_onestone(b, g))
+			onestone = true;
+		else
+			multistone = true;
 	});
-	if (in_atari >= 0 && has_extra_lib) {
-		f->id = FEAT_AESCAPE; f->payload = payload;
+
+	if (in_atari >= 0) {
+		if (PS_PF(AESCAPE, 1STONE))
+			f->payload |= (onestone && !multistone) << PF_AESCAPE_1STONE;
+		if (PS_PF(AESCAPE, TRAPPED))
+			f->payload |= (extra_libs < 2) << PF_AESCAPE_TRAPPED;
+		if (PS_PF(AESCAPE, CONNECTION))
+			f->payload |= (connectable_groups > 0) << PF_AESCAPE_CONNECTION;
 		(f++, p->n++);
 	}
 	return f;
@@ -274,8 +363,7 @@ pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
 
 		if (PS_PF(ATARI, LADDER)) {
 			/* Opponent will escape by the other lib. */
-			coord_t lib = board_group_info(b, g).lib[0];
-			if (lib == m->coord) lib = board_group_info(b, g).lib[1];
+			coord_t lib = board_group_other_lib(b, g, m->coord);
 			/* TODO: is_ladder() is too conservative in some
 			 * very obvious situations, look at complete.gtp. */
 			f->payload |= is_ladder(b, lib, g, true, true) << PF_ATARI_LADDER;

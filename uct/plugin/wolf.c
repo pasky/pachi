@@ -278,7 +278,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 	 * reported by FINDMOVE2 is wrong.) In the second pass, we set the
 	 * priors by normalization based on the determined values. */
 	float best = -1000, worst = 1000;
-	foreach_point(map->b) {
+	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
 		float value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
@@ -287,7 +287,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 		else if (value < worst) worst = value;
 	} foreach_point_end;
 
-	foreach_point(map->b) {
+	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
 
@@ -300,7 +300,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 		// fprintf(stderr, "\t[%s %s] %f/%f\n", stone2str(map->to_play), coord2sstr(c, b), value, best);
 
 		add_prior_value(map, c, (value - worst) / best, eqex);
-	} foreach_point_end;
+	} foreach_free_point_end;
 }
 
 

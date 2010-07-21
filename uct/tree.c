@@ -226,8 +226,9 @@ tree_dump(struct tree *tree, int thres)
 		 * huge dumps at first. */
 		thres = tree->root->u.playouts / 100 * (thres < 1000 ? 1 : thres / 1000);
 	}
-	fprintf(stderr, "(UCT tree; root %s; extra komi %f)\n",
-	        stone2str(tree->root_color), tree->extra_komi);
+	fprintf(stderr, "(UCT tree; root %s; extra komi %f; max depth %d)\n",
+	        stone2str(tree->root_color), tree->extra_komi,
+		tree->max_depth - tree->root->depth);
 	tree_node_dump(tree, tree->root, 0, thres);
 
 	if (DEBUGL(3) && tree->ltree_black) {
@@ -586,13 +587,12 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	memset(map_prior, 0, sizeof(map_prior));
 	memset(map_consider, 0, sizeof(map_consider));
 	map.consider[pass] = true;
-	foreach_point(b) {
-		if (board_at(b, c) != S_NONE)
-			continue;
+	foreach_free_point(b) {
+		assert(board_at(b, c) == S_NONE);
 		if (!board_is_valid_play(b, color, c))
 			continue;
 		map.consider[c] = true;
-	} foreach_point_end;
+	} foreach_free_point_end;
 	uct_prior(u, node, &map);
 
 	/* Now, create the nodes. */

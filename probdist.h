@@ -7,6 +7,7 @@
  * initialized, then random items assigned a value repeatedly and
  * random items picked repeatedly as well. */
 
+#include "fixp.h"
 #include "move.h"
 #include "util.h"
 
@@ -17,19 +18,16 @@ struct board;
 
 struct probdist {
 	struct board *b;
-	double *items; // [bsize2], [i] = P(pick==i)
-	double *rowtotals; // [bsize], [i] = sum of items in row i
-	double total; // sum of all items
+	fixp_t *items; // [bsize2], [i] = P(pick==i)
+	fixp_t *rowtotals; // [bsize], [i] = sum of items in row i
+	fixp_t total; // sum of all items
 };
-/* Probability so small that it's same as zero; used to compensate
- * for probdist.total inaccuracies. */
-#define PROBDIST_EPSILON 0.05
 
 
 /* Declare pd_ corresponding to board b_ in the local scope. */
 #define probdist_alloca(pd_, b_) \
-	double pd_ ## __pdi[board_size2(b_)] __attribute__((aligned(32))); memset(pd_ ## __pdi, 0, sizeof(pd_ ## __pdi)); \
-	double pd_ ## __pdr[board_size(b_)] __attribute__((aligned(32))); memset(pd_ ## __pdr, 0, sizeof(pd_ ## __pdr)); \
+	fixp_t pd_ ## __pdi[board_size2(b_)] __attribute__((aligned(32))); memset(pd_ ## __pdi, 0, sizeof(pd_ ## __pdi)); \
+	fixp_t pd_ ## __pdr[board_size(b_)] __attribute__((aligned(32))); memset(pd_ ## __pdr, 0, sizeof(pd_ ## __pdr)); \
 	struct probdist pd_ = { .b = b_, .items = pd_ ## __pdi, .rowtotals = pd_ ## __pdr, .total = 0 };
 
 /* Get the value of given item. */
@@ -39,7 +37,7 @@ struct probdist {
 #define probdist_total(pd) ((pd)->total)
 
 /* Set the value of given item. */
-static void probdist_set(struct probdist *pd, coord_t c, double val);
+static void probdist_set(struct probdist *pd, coord_t c, fixp_t val);
 
 /* Remove the item from the totals; this is used when you then
  * pass it in the ignore list to probdist_pick(). Of course you
@@ -57,7 +55,7 @@ coord_t probdist_pick(struct probdist *pd, coord_t *ignore);
 
 
 static inline void
-probdist_set(struct probdist *pd, coord_t c, double val)
+probdist_set(struct probdist *pd, coord_t c, fixp_t val)
 {
 	/* We disable the assertions here since this is quite time-critical
 	 * part of code, and also the compiler is reluctant to inline the

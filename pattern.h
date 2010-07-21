@@ -46,11 +46,23 @@ enum feature_id {
 #define PF_CAPTURE_ATARIDEF	2
 	/*          [bit3] Capturing ko? */
 #define PF_CAPTURE_KO		3
+	/*          [bit4] Single-stone group? */
+#define PF_CAPTURE_1STONE	4
+	/*          [bit5] Unsafe move for opponent? */
+#define PF_CAPTURE_TRAPPED	5
+	/*          [bit6] Preventing connection to an outside group. */
+#define PF_CAPTURE_CONNECTION	6
 	FEAT_CAPTURE,
 
 	/* Atari escape (extension). */
 	/* Payload: [bit0] Escaping with laddered group? */
 #define PF_AESCAPE_LADDER	0
+	/*          [bit1] Single-stone group? */
+#define PF_AESCAPE_1STONE	1
+	/*          [bit2] Unsafe move for us? */
+#define PF_AESCAPE_TRAPPED	2
+	/*          [bit3] Connecting out to an outside group. */
+#define PF_AESCAPE_CONNECTION	3
 	FEAT_AESCAPE,
 
 	/* Self-atari move. */

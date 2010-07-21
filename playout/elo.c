@@ -22,9 +22,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define DEBUG
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "fixp.h"
 #include "pattern.h"
 #include "patternsp.h"
 #include "playout.h"
@@ -71,7 +72,8 @@ skip_move:
 			probdist_set(pd, m.coord, 0);
 			continue;
 		}
-		//fprintf(stderr, "<%d> %s\n", f, coord2sstr(m.coord, b));
+		if (PLDEBUGL(7))
+			fprintf(stderr, "<%d> %s\n", f, coord2sstr(m.coord, b));
 
 		/* Skip invalid moves. */
 		if (!board_is_valid_move(b, &m))
@@ -97,18 +99,21 @@ skip_move:
 #endif
 
 		/* Match pattern features: */
-		struct pattern p;
-		pattern_match(&ps->pc, ps->ps, &p, b, &m);
-		for (int i = 0; i < p.n; i++) {
+		struct pattern pat;
+		pattern_match(&ps->pc, ps->ps, &pat, b, &m);
+		for (int i = 0; i < pat.n; i++) {
 			/* Multiply together gammas of all pattern features. */
-			double gamma = feature_gamma(ps->fg, &p.f[i], NULL);
-			//char buf[256] = ""; feature2str(buf, &p.f[i]);
-			//fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
+			double gamma = feature_gamma(ps->fg, &pat.f[i], NULL);
+			if (PLDEBUGL(7)) {
+				char buf[256] = ""; feature2str(buf, &pat.f[i]);
+				fprintf(stderr, "<%d> %s feat %s gamma %f\n", f, coord2sstr(m.coord, b), buf, gamma);
+			}
 			g *= gamma;
 		}
 
-		probdist_set(pd, m.coord, g);
-		//fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), probdist_one(pd, m.coord), pd->items[f]);
+		probdist_set(pd, m.coord, double_to_fixp(g));
+		if (PLDEBUGL(7))
+			fprintf(stderr, "<%d> %s %f (E %f)\n", f, coord2sstr(m.coord, b), fixp_to_double(probdist_one(pd, m.coord)), g);
 	}
 
 	return moves;
@@ -119,12 +124,12 @@ struct lprobdist {
 	int n;
 #define LPD_MAX 8
 	coord_t coords[LPD_MAX];
-	double items[LPD_MAX];
-	double total;
+	fixp_t items[LPD_MAX];
+	fixp_t total;
 	
 	/* Backups of original totals for restoring. */
-	double btotal;
-	double browtotals_v[10];
+	fixp_t btotal;
+	fixp_t browtotals_v[10];
 	int browtotals_i[10];
 	int browtotals_n;
 };
@@ -135,8 +140,9 @@ static void
 elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play, struct probdist *pd, int *ignores, struct lprobdist *lpd, coord_t lc)
 {
 #if 0
+#define PROBDIST_EPSILON double_to_fixp(0.01)
 	struct elo_policy *pp = p->data;
-	if (pd->total < PROBDIST_EPSILON)
+	if (pd->total == 0)
 		return;
 
 	/* Compare to the manually created distribution. */
@@ -147,20 +153,30 @@ elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play
 	for (int i = 0; i < b->flen; i++) {
 		coord_t c = b->f[i];
 		if (is_pass(c)) continue;
-		// XXX: Hardcoded ignores[] structure
-		if (ignores[0] == c) continue;
-		double val = pd->items[c];
+		if (c == b->ko.coord) continue;
+		fixp_t val = pd->items[c];
 		if (!is_pass(lc) && coord_is_8adjecent(lc, c, b))
 			for (int j = 0; j < lpd->n; j++)
-				if (lpd->coords[j] == c)
+				if (lpd->coords[j] == c) {
 					val = lpd->items[j];
-		if (fabs(pdx.items[c] - val) < PROBDIST_EPSILON)
+					probdist_mute(&pdx, c);
+
+				}
+		if (abs(pdx.items[c] - val) < PROBDIST_EPSILON)
 			continue;
-		printf("[%s %d] manual %f board %f ", coord2sstr(c, b), b->pat3[c], pdx.items[c], pd->items[c]);
+		printf("[%s %d] manual %f board %f (base %f) ", coord2sstr(c, b), b->pat3[c], fixp_to_double(pdx.items[c]), fixp_to_double(val), fixp_to_double(pd->items[c]));
 		board_gamma_update(b, c, to_play);
-		printf("plainboard %f\n", pd->items[c]);
+		printf("plainboard %f\n", fixp_to_double(pd->items[c]));
 		assert(0);
 	}
+	for (int r = 0; r < board_size(b); r++) {
+		if (abs(pdx.rowtotals[r] - pd->rowtotals[r]) < PROBDIST_EPSILON)
+			continue;
+		fprintf(stderr, "row %d: manual %f board %f\n", r, fixp_to_double(pdx.rowtotals[r]), fixp_to_double(pd->rowtotals[r]));
+		assert(0);
+	}
+	assert(abs(pdx.total - pd->total) < PROBDIST_EPSILON);
+#undef PROBDIST_EPSILON
 #endif
 }
 
@@ -179,6 +195,10 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, pd);
 
+	if (PLDEBUGL(5)) {
+		fprintf(stderr, "pd total pre %f lpd %f\n", fixp_to_double(pd->total), fixp_to_double(lpd.total));
+	}
+
 #define ignore_move(c_) do { \
 	ignores[ignores_n++] = c_; \
 	if (ignores_n > 1 && ignores[ignores_n - 1] < ignores[ignores_n - 2]) { \
@@ -192,6 +212,8 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	lpd.browtotals_i[lpd.browtotals_n] = rowi; \
 	lpd.browtotals_v[lpd.browtotals_n++] = pd->rowtotals[rowi]; \
 	probdist_mute(pd, c_); \
+	if (PLDEBUGL(6)) \
+		fprintf(stderr, "ignored move %s(%f) => tot pd %f lpd %f\n", coord2sstr(c_, pd->b), fixp_to_double(pd->items[c_]), fixp_to_double(pd->total), fixp_to_double(lpd.total)); \
 } while (0)
 
 	/* Make sure ko-prohibited move does not get picked. */
@@ -203,9 +225,15 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	/* Contiguity detection. */
 	if (!is_pass(b->last_move.coord)) {
 		foreach_8neighbor(b, b->last_move.coord) {
+			if (c == b->ko.coord)
+				continue; // already ignored
+			if (board_at(b, c) != S_NONE) {
+				assert(probdist_one(pd, c) == 0);
+				continue;
+			}
 			ignore_move(c);
 
-			double val = probdist_one(pd, c) * b->gamma->gamma[FEAT_CONTIGUITY][1];
+			fixp_t val = double_to_fixp(fixp_to_double(probdist_one(pd, c)) * b->gamma->gamma[FEAT_CONTIGUITY][1]);
 			lpd.coords[lpd.n] = c;
 			lpd.items[lpd.n++] = val;
 			lpd.total += val;
@@ -213,15 +241,38 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	}
 
 	ignores[ignores_n] = pass;
+	if (PLDEBUGL(5))
+		fprintf(stderr, "pd total post %f lpd %f\n", fixp_to_double(pd->total), fixp_to_double(lpd.total));
 
 	/* Verify sanity, possibly. */
 	elo_check_probdist(p, b, to_play, pd, ignores, &lpd, b->last_move.coord);
 
 	/* Pick a move. */
 	coord_t c = pass;
-	double stab = fast_frandom() * (lpd.total + pd->total);
-	if (stab < lpd.total - PROBDIST_EPSILON) {
+	fixp_t stab = fast_irandom(lpd.total + pd->total);
+	if (PLDEBUGL(5))
+		fprintf(stderr, "stab %f / (%f + %f)\n", fixp_to_double(stab), fixp_to_double(lpd.total), fixp_to_double(pd->total));
+	if (stab < lpd.total) {
 		/* Local probdist. */
+		if (PLDEBUGL(6)) {
+			/* Some debug prints. */
+			fixp_t tot = 0;
+			for (int i = 0; i < lpd.n; i++) {
+				tot += lpd.items[i];
+				struct pattern p;
+				struct move m = { .color = to_play, .coord = lpd.coords[i] };
+				if (board_at(b, m.coord) != S_NONE) {
+					assert(lpd.items[i] == 0);
+					continue;
+				}
+				pattern_match(&pp->choose.pc, pp->choose.ps, &p, b, &m);
+				char s[256] = ""; pattern2str(s, &p);
+				fprintf(stderr, "coord %s <%f> [tot %f] %s (p3:%d)\n",
+					coord2sstr(lpd.coords[i], b), fixp_to_double(lpd.items[i]),
+					fixp_to_double(tot), s,
+					pattern3_by_spatial(pp->choose.pc.spat_dict, b->pat3[lpd.coords[i]]));
+			}
+		}
 		for (int i = 0; i < lpd.n; i++) {
 			if (stab <= lpd.items[i]) {
 				c = lpd.coords[i];
@@ -230,16 +281,18 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 			stab -= lpd.items[i];
 		}
 		if (is_pass(c)) {
-			fprintf(stderr, "elo: local overstab [%lf]\n", stab);
+			fprintf(stderr, "elo: local overstab [%f]\n", fixp_to_double(stab));
 			abort();
 		}
 
-	} else if (pd->total >= PROBDIST_EPSILON) {
+	} else if (pd->total > 0) {
 		/* Global probdist. */
 		/* XXX: We re-stab inside. */
 		c = probdist_pick(pd, ignores);
 
 	} else {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "ding!\n");
 		c = pass;
 	}
 
@@ -254,7 +307,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 			pd->items[b->f[i]] = 0;
 			board_gamma_update(b, b->f[i], to_play);
 		}
-		assert(fabs(pd->total - lpd.btotal) < PROBDIST_EPSILON);
+		assert(pd->total == lpd.btotal);
 
 	} else {
 		pd->total = lpd.btotal;
@@ -277,7 +330,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 	elo_get_probdist(p, &pp->choose, b, to_play, &pd);
 	if (pp->callback)
 		pp->callback(pp->callback_data, b, to_play, &pd);
-	if (pd.total < PROBDIST_EPSILON)
+	if (pd.total == 0)
 		return pass;
 	int ignores[1] = { pass };
 	coord_t c = probdist_pick(&pd, ignores);
@@ -303,7 +356,7 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, probdist_one(&pd, c) / probdist_total(&pd), games);
+		add_prior_value(map, c, fixp_to_double(probdist_one(&pd, c)) / fixp_to_double(probdist_total(&pd)), games);
 	}
 }
 
@@ -395,8 +448,10 @@ playout_elo_init(char *arg, struct board *b)
 	for (int i = 0; i < FEAT_MAX; i++)
 		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
 			pp->choose.ps[i] = 0;
-	if (precise_selfatari)
-		pp->choose.ps[FEAT_SELFATARI] = ~(1<<PF_SELFATARI_STUPID);
+	if (precise_selfatari) {
+		pp->choose.ps[FEAT_SELFATARI] &= ~(1<<PF_SELFATARI_STUPID);
+		pp->choose.ps[FEAT_SELFATARI] |= (1<<PF_SELFATARI_SMART);
+	}
 	board_gamma_set(b, pp->choose.fg, precise_selfatari);
 
 	return p;

@@ -1,9 +1,11 @@
 #include <alloca.h>
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+//#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "mq.h"
@@ -165,6 +167,7 @@ board_resize(struct board *board, int size)
 #ifdef BOARD_SIZE
 	assert(board_size(board) == size + 2);
 #endif
+	assert(size <= BOARD_MAX_SIZE);
 	board->size = size + 2 /* S_OFFBOARD margin */;
 	board->size2 = board_size(board) * board_size(board);
 
@@ -283,16 +286,18 @@ board_clear(struct board *board)
 	/* Initialize traits. */
 	foreach_point(board) {
 		trait_at(board, c, S_BLACK).cap = 0;
+		trait_at(board, c, S_BLACK).cap1 = 0;
 		trait_at(board, c, S_BLACK).safe = true;
 		trait_at(board, c, S_WHITE).cap = 0;
+		trait_at(board, c, S_WHITE).cap1 = 0;
 		trait_at(board, c, S_WHITE).safe = true;
 	} foreach_point_end;
 #endif
 #ifdef BOARD_GAMMA
 	board->prob[0].b = board->prob[1].b = board;
 	foreach_point(board) {
-		probdist_set(&board->prob[0], c, (board_at(board, c) == S_NONE) * 1.0f);
-		probdist_set(&board->prob[1], c, (board_at(board, c) == S_NONE) * 1.0f);
+		probdist_set(&board->prob[0], c, double_to_fixp((board_at(board, c) == S_NONE) * 1.0f));
+		probdist_set(&board->prob[1], c, double_to_fixp((board_at(board, c) == S_NONE) * 1.0f));
 	} foreach_point_end;
 #endif
 }
@@ -421,14 +426,23 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 	/* We just quickly replicate the general pattern matcher stuff
 	 * here in the most bare-bone way. */
 	double value = board->gamma->gamma[FEAT_PATTERN3][pat];
-	if (trait_at(board, coord, color).cap)
-		value *= board->gamma->gamma[FEAT_CAPTURE][0];
-	if (trait_at(board, coord, stone_other(color)).cap
-	    && trait_at(board, coord, color).safe)
-		value *= board->gamma->gamma[FEAT_AESCAPE][0];
+	if (trait_at(board, coord, color).cap) {
+		int i = 0;
+		i |= (trait_at(board, coord, color).cap1 == trait_at(board, coord, color).cap) << PF_CAPTURE_1STONE;
+		i |= (!trait_at(board, coord, stone_other(color)).safe) << PF_CAPTURE_TRAPPED;
+		i |= (trait_at(board, coord, color).cap < neighbor_count_at(board, coord, stone_other(color))) << PF_CAPTURE_CONNECTION;
+		value *= board->gamma->gamma[FEAT_CAPTURE][i];
+	}
+	if (trait_at(board, coord, stone_other(color)).cap) {
+		int i = 0;
+		i |= (trait_at(board, coord, stone_other(color)).cap1 == trait_at(board, coord, stone_other(color)).cap) << PF_AESCAPE_1STONE;
+		i |= (!trait_at(board, coord, color).safe) << PF_AESCAPE_TRAPPED;
+		i |= (trait_at(board, coord, stone_other(color)).cap < neighbor_count_at(board, coord, color)) << PF_AESCAPE_CONNECTION;
+		value *= board->gamma->gamma[FEAT_AESCAPE][i];
+	}
 	if (!trait_at(board, coord, color).safe)
 		value *= board->gamma->gamma[FEAT_SELFATARI][1 + board->precise_selfatari];
-	probdist_set(&board->prob[color - 1], coord, value);
+	probdist_set(&board->prob[color - 1], coord, double_to_fixp(value));
 #endif
 }
 
@@ -436,9 +450,8 @@ board_gamma_update(struct board *board, coord_t coord, enum stone color)
 static bool
 board_trait_safe(struct board *board, coord_t coord, enum stone color)
 {
-	/* sic! */
 	if (board->precise_selfatari)
-		return is_bad_selfatari(board, color, coord);
+		return !is_bad_selfatari(board, color, coord);
 	else
 		return board_safe_to_play(board, coord, color);
 }
@@ -449,10 +462,10 @@ board_trait_recompute(struct board *board, coord_t coord)
 	trait_at(board, coord, S_BLACK).safe = board_trait_safe(board, coord, S_BLACK);;
 	trait_at(board, coord, S_WHITE).safe = board_trait_safe(board, coord, S_WHITE);
 	if (DEBUGL(8)) {
-		fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d safe=%d) (white cap=%d safe=%d)\n",
+		fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d cap1=%d safe=%d) (white cap=%d cap1=%d safe=%d)\n",
 			coord2sstr(coord, board), stone2str(board_at(board, coord)), immediate_liberty_count(board, coord),
-			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).safe,
-			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).safe);
+			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).cap1, trait_at(board, coord, S_BLACK).safe,
+			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).cap1, trait_at(board, coord, S_WHITE).safe);
 	}
 	board_gamma_update(board, coord, S_BLACK);
 	board_gamma_update(board, coord, S_WHITE);
@@ -467,10 +480,10 @@ board_traits_recompute(struct board *board)
 #ifdef BOARD_TRAITS
 	for (int i = 0; i < board->tqlen; i++) {
 		coord_t coord = board->tq[i];
-		if (!trait_at(board, coord, S_BLACK).dirty) continue;
-		if (board_at(board, coord) != S_NONE) continue;
-		board_trait_recompute(board, coord);
 		trait_at(board, coord, S_BLACK).dirty = false;
+		if (board_at(board, coord) != S_NONE)
+			continue;
+		board_trait_recompute(board, coord);
 	}
 	board->tqlen = 0;
 #endif
@@ -481,6 +494,8 @@ static void
 board_trait_queue(struct board *board, coord_t coord)
 {
 #ifdef BOARD_TRAITS
+	if (trait_at(board, coord, S_BLACK).dirty)
+		return;
 	board->tq[board->tqlen++] = coord;
 	trait_at(board, coord, S_BLACK).dirty = true;
 #endif
@@ -701,7 +716,7 @@ check_libs_consistency(struct board *board, group_t g)
 }
 
 static void
-board_capturable_add(struct board *board, group_t group, coord_t lib)
+board_capturable_add(struct board *board, group_t group, coord_t lib, bool onestone)
 {
 	//fprintf(stderr, "group %s cap %s\n", coord2sstr(group, board), coord2sstr(lib, boarD));
 #ifdef BOARD_TRAITS
@@ -710,8 +725,9 @@ board_capturable_add(struct board *board, group_t group, coord_t lib)
 	assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
 	foreach_neighbor(board, lib, {
 		if (DEBUGL(8) && group_at(board, c) == group)
-			fprintf(stderr, "%s[%d] %s cap bump bc of %s(%d) member %s\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, stone2str(capturing_color), coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
+			fprintf(stderr, "%s[%d] %s cap bump bc of %s(%d) member %s onestone %d\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, stone2str(capturing_color), coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board), onestone);
 		trait_at(board, lib, capturing_color).cap += (group_at(board, c) == group);
+		trait_at(board, lib, capturing_color).cap1 += (group_at(board, c) == group && onestone);
 	});
 	board_trait_queue(board, lib);
 #endif
@@ -724,7 +740,7 @@ board_capturable_add(struct board *board, group_t group, coord_t lib)
 #endif
 }
 static void
-board_capturable_rm(struct board *board, group_t group, coord_t lib)
+board_capturable_rm(struct board *board, group_t group, coord_t lib, bool onestone)
 {
 	//fprintf(stderr, "group %s nocap %s\n", coord2sstr(group, board), coord2sstr(lib, board));
 #ifdef BOARD_TRAITS
@@ -733,8 +749,9 @@ board_capturable_rm(struct board *board, group_t group, coord_t lib)
 	assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
 	foreach_neighbor(board, lib, {
 		if (DEBUGL(8) && group_at(board, c) == group)
-			fprintf(stderr, "%s[%d] cap dump bc of %s(%d) member %s\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board));
+			fprintf(stderr, "%s[%d] cap dump bc of %s(%d) member %s onestone %d\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap, coord2sstr(group, board), board_group_info(board, group).libs, coord2sstr(c, board), onestone);
 		trait_at(board, lib, capturing_color).cap -= (group_at(board, c) == group);
+		trait_at(board, lib, capturing_color).cap1 -= (group_at(board, c) == group && onestone);
 	});
 	board_trait_queue(board, lib);
 #endif
@@ -781,6 +798,7 @@ board_group_addlib(struct board *board, group_t group, coord_t coord)
 	check_libs_consistency(board, group);
 
 	struct group *gi = &board_group_info(board, group);
+	bool onestone = group_is_onestone(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
 		for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
 #if 0
@@ -792,9 +810,9 @@ board_group_addlib(struct board *board, group_t group, coord_t coord)
 				return;
 		}
 		if (gi->libs == 0) {
-			board_capturable_add(board, group, coord);
+			board_capturable_add(board, group, coord, onestone);
 		} else if (gi->libs == 1) {
-			board_capturable_rm(board, group, gi->lib[0]);
+			board_capturable_rm(board, group, gi->lib[0], onestone);
 			board_atariable_add(board, group, gi->lib[0], coord);
 		} else if (gi->libs == 2) {
 			board_atariable_rm(board, group, gi->lib[0], gi->lib[1]);
@@ -843,6 +861,7 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 	}
 
 	struct group *gi = &board_group_info(board, group);
+	bool onestone = group_is_onestone(board, group);
 	for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
 #if 0
 		/* Seems extra branch just slows it down */
@@ -867,10 +886,10 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord)
 		if (gi->libs == 2) {
 			board_atariable_add(board, group, gi->lib[0], gi->lib[1]);
 		} else if (gi->libs == 1) {
-			board_capturable_add(board, group, gi->lib[0]);
+			board_capturable_add(board, group, gi->lib[0], onestone);
 			board_atariable_rm(board, group, gi->lib[0], lib);
 		} else if (gi->libs == 0)
-			board_capturable_rm(board, group, lib);
+			board_capturable_rm(board, group, lib, onestone);
 		return;
 	}
 
@@ -893,8 +912,8 @@ board_remove_stone(struct board *board, group_t group, coord_t c)
 #ifdef BOARD_TRAITS
 	/* We mark as cannot-capture now. If this is a ko/snapback,
 	 * we will get incremented later in board_group_addlib(). */
-	trait_at(board, c, S_BLACK).cap = 0;
-	trait_at(board, c, S_WHITE).cap = 0;
+	trait_at(board, c, S_BLACK).cap = trait_at(board, c, S_BLACK).cap1 = 0;
+	trait_at(board, c, S_WHITE).cap = trait_at(board, c, S_WHITE).cap1 = 0;
 	board_trait_queue(board, c);
 #endif
 
@@ -925,10 +944,7 @@ board_group_capture(struct board *board, group_t group)
 	} foreach_in_group_end;
 
 	struct group *gi = &board_group_info(board, group);
-	if (gi->libs == 2)
-		board_atariable_rm(board, group, gi->lib[0], gi->lib[1]);
-	else if (gi->libs == 1)
-		board_capturable_rm(board, group, gi->lib[0]);
+	assert(gi->libs == 0);
 	memset(gi, 0, sizeof(*gi));
 
 	return stones;
@@ -938,25 +954,41 @@ board_group_capture(struct board *board, group_t group)
 static void profiling_noinline
 add_to_group(struct board *board, group_t group, coord_t prevstone, coord_t coord)
 {
-	group_at(board, coord) = group;
-	groupnext_at(board, coord) = groupnext_at(board, prevstone);
-	groupnext_at(board, prevstone) = coord;
-
 #ifdef BOARD_TRAITS
-	if (board_group_info(board, group).libs == 1) {
+	struct group *gi = &board_group_info(board, group);
+	bool onestone = group_is_onestone(board, group);
+
+	if (gi->libs == 1) {
 		/* Our group is temporarily in atari; make sure the capturable
 		 * counts also correspond to the newly added stone before we
 		 * start adding liberties again so bump-dump ops match. */
 		enum stone capturing_color = stone_other(board_at(board, group));
 		assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
+
 		coord_t lib = board_group_info(board, group).lib[0];
 		if (coord_is_adjecent(lib, coord, board)) {
-			if (DEBUGL(8)) fprintf(stderr, "add_to_group %s: %s[%d] bump\n", coord2sstr(group, board), coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
+			if (DEBUGL(8))
+				fprintf(stderr, "add_to_group %s: %s[%d] bump\n", coord2sstr(group, board), coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
 			trait_at(board, lib, capturing_color).cap++;
+			/* This is never a 1-stone group, obviously. */
 			board_trait_queue(board, lib);
+		}
+
+		if (onestone) {
+			/* We are not 1-stone group anymore, update the cap1
+			 * counter specifically. */
+			foreach_neighbor(board, group, {
+				if (board_at(board, c) != S_NONE) continue;
+				trait_at(board, c, capturing_color).cap1--;
+				board_trait_queue(board, c);
+			});
 		}
 	}
 #endif
+
+	group_at(board, coord) = group;
+	groupnext_at(board, coord) = groupnext_at(board, prevstone);
+	groupnext_at(board, prevstone) = coord;
 
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == S_NONE)
@@ -979,12 +1011,14 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 			group_base(group_from), group_base(group_to));
 	struct group *gi_from = &board_group_info(board, group_from);
 	struct group *gi_to = &board_group_info(board, group_to);
+	bool onestone_from = group_is_onestone(board, group_from);
+	bool onestone_to = group_is_onestone(board, group_to);
 
 	/* We do this early before the group info is rewritten. */
 	if (gi_from->libs == 2)
 		board_atariable_rm(board, group_from, gi_from->lib[0], gi_from->lib[1]);
 	else if (gi_from->libs == 1)
-		board_capturable_rm(board, group_from, gi_from->lib[0]);
+		board_capturable_rm(board, group_from, gi_from->lib[0], onestone_from);
 
 	if (DEBUGL(7))
 		fprintf(stderr,"---- (froml %d, tol %d)\n", gi_from->libs, gi_to->libs);
@@ -995,9 +1029,9 @@ merge_groups(struct board *board, group_t group_to, group_t group_from)
 				if (gi_to->lib[j] == gi_from->lib[i])
 					goto next_from_lib;
 			if (gi_to->libs == 0) {
-				board_capturable_add(board, group_to, gi_from->lib[i]);
+				board_capturable_add(board, group_to, gi_from->lib[i], onestone_to);
 			} else if (gi_to->libs == 1) {
-				board_capturable_rm(board, group_to, gi_to->lib[0]);
+				board_capturable_rm(board, group_to, gi_to->lib[0], onestone_to);
 				board_atariable_add(board, group_to, gi_to->lib[0], gi_from->lib[i]);
 			} else if (gi_to->libs == 2) {
 				board_atariable_rm(board, group_to, gi_to->lib[0], gi_to->lib[1]);
@@ -1010,18 +1044,31 @@ next_from_lib:;
 	}
 
 #ifdef BOARD_TRAITS
-	if (board_group_info(board, group_to).libs == 1) {
+	if (gi_to->libs == 1) {
+		enum stone capturing_color = stone_other(board_at(board, group_to));
+		assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
+
 		/* Our group is currently in atari; make sure we properly
 		 * count in even the neighbors from the other group in the
 		 * capturable counter. */
-		enum stone capturing_color = stone_other(board_at(board, group_to));
-		assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
 		coord_t lib = board_group_info(board, group_to).lib[0];
 		foreach_neighbor(board, lib, {
-			if (DEBUGL(8) && group_at(board, c) == group_from) fprintf(stderr, "%s[%d] cap bump\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
+			if (DEBUGL(8) && group_at(board, c) == group_from)
+				fprintf(stderr, "%s[%d] cap bump\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
 			trait_at(board, lib, capturing_color).cap += (group_at(board, c) == group_from);
+			/* This is never a 1-stone group, obviously. */
 		});
 		board_trait_queue(board, lib);
+
+		if (onestone_to) {
+			/* We are not 1-stone group anymore, update the cap1
+			 * counter specifically. */
+			foreach_neighbor(board, group_to, {
+				if (board_at(board, c) != S_NONE) continue;
+				trait_at(board, c, capturing_color).cap1--;
+				board_trait_queue(board, c);
+			});
+		}
 	}
 #endif
 
@@ -1059,7 +1106,7 @@ new_group(struct board *board, coord_t coord)
 	if (gi->libs == 2)
 		board_atariable_add(board, group, gi->lib[0], gi->lib[1]);
 	else if (gi->libs == 1)
-		board_capturable_add(board, group, gi->lib[0]);
+		board_capturable_add(board, group, gi->lib[0], true);
 	check_libs_consistency(board, group);
 
 	if (DEBUGL(8))
@@ -1129,12 +1176,14 @@ board_play_outside(struct board *board, struct move *m, int f)
 #if defined(BOARD_TRAITS) && defined(DEBUG)
 	/* Sanity check that cap matches reality. */
 	{
-		int a = 0;
+		int a = 0, b = 0;
 		foreach_neighbor(board, coord, {
 			group_t g = group_at(board, c);
 			a += g && (board_at(board, c) == other_color && board_group_info(board, g).libs == 1);
+			b += g && (board_at(board, c) == other_color && board_group_info(board, g).libs == 1) && group_is_onestone(board, g);
 		});
 		assert(a == trait_at(board, coord, color).cap);
+		assert(b == trait_at(board, coord, color).cap1);
 		assert(board_trait_safe(board, coord, color) == trait_at(board, coord, color).safe);
 	}
 #endif
@@ -1260,7 +1309,7 @@ static int __attribute__((flatten))
 board_play_f(struct board *board, struct move *m, int f)
 {
 	if (DEBUGL(7)) {
-		fprintf(stderr, "board_play(): ---- Playing %d,%d\n", coord_x(m->coord, board), coord_y(m->coord, board));
+		fprintf(stderr, "board_play(%s): ---- Playing %d,%d\n", coord2sstr(m->coord, board), coord_x(m->coord, board), coord_y(m->coord, board));
 	}
 	if (likely(!board_is_eyelike(board, m->coord, stone_other(m->color)))) {
 		/* NOT playing in an eye. Thus this move has to succeed. (This
@@ -1398,9 +1447,10 @@ static bool
 board_tromp_taylor_iter(struct board *board, int *ownermap)
 {
 	bool needs_update = false;
-	foreach_point(board) {
+	foreach_free_point(board) {
 		/* Ignore occupied and already-dame positions. */
-		if (board_at(board, c) != S_NONE || ownermap[c] == 3)
+		assert(board_at(board, c) == S_NONE);
+		if (ownermap[c] == 3)
 			continue;
 		/* Count neighbors. */
 		int nei[4] = {0};
@@ -1432,7 +1482,7 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 			needs_update = true;
 			continue;
 		}
-	} foreach_point_end;
+	} foreach_free_point_end;
 	return needs_update;
 }
 

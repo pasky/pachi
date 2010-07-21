@@ -178,8 +178,12 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 	} else if (!strcasecmp(cmd, "boardsize")) {
 		char *arg;
 		next_tok(arg);
-		board_resize(board, atoi(arg));
-
+		int size = atoi(arg);
+		if (size < 1 || size > BOARD_MAX_SIZE) {
+			gtp_error(id, "illegal board size", NULL);
+			return P_OK;
+		}
+		board_resize(board, size);
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "clear_board") || !strcasecmp(cmd, "kgs-game_over")) {
