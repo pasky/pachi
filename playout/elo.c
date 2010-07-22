@@ -49,6 +49,13 @@ struct elo_policy {
 	float selfatari;
 	struct patternset choose, assess;
 	playout_elo_callbackp callback; void *callback_data;
+
+	enum {
+		EAV_TOTAL,
+	} assess_eval;
+	enum {
+		EAT_LINEAR,
+	} assess_transform;
 };
 
 
@@ -352,11 +359,32 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 	 * a naive approach currently, but not sure how well it works. */
 	/* TODO: Try sqrt(p), atan(p)/pi*2. */
 
+	double pd_total = fixp_to_double(probdist_total(&pd));
+
 	for (int f = 0; f < map->b->flen; f++) {
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, fixp_to_double(probdist_one(&pd, c)) / fixp_to_double(probdist_total(&pd)), games);
+
+		double pd_one = fixp_to_double(probdist_one(&pd, c));
+		double val = 0;
+		switch (pp->assess_eval) {
+		case EAV_TOTAL:
+			val = pd_one / pd_total;
+			break;
+		default:
+			assert(0);
+		}
+
+		switch (pp->assess_transform) {
+		case EAT_LINEAR:
+			val = val;
+			break;
+		default:
+			assert(0);
+		}
+
+		add_prior_value(map, c, val, games);
 	}
 }
 
@@ -421,6 +449,26 @@ playout_elo_init(char *arg, struct board *b)
 				/* xspat==0: don't match spatial features
 				 * xspat==1: match *only* spatial features */
 				xspat = atoi(optval);
+			} else if (!strcasecmp(optname, "assess_eval") && optval) {
+				/* Evaluation method for prior node value
+				 * assessment. */
+				if (!strcasecmp(optval, "total")) {
+					/* Proportion prob/totprob. */
+					pp->assess_eval = EAV_TOTAL;
+				} else {
+					fprintf(stderr, "playout-elo: Invalid eval mode %s\n", optval);
+					exit(1);
+				}
+			} else if (!strcasecmp(optname, "assess_transform") && optval) {
+				/* Transformation of evaluation for prior
+				 * node value assessment. */
+				if (!strcasecmp(optval, "linear")) {
+					/* No additional transformation. */
+					pp->assess_transform = EAT_LINEAR;
+				} else {
+					fprintf(stderr, "playout-elo: Invalid eval mode %s\n", optval);
+					exit(1);
+				}
 			} else {
 				fprintf(stderr, "playout-elo: Invalid policy argument %s or missing value\n", optname);
 				exit(1);
