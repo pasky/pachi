@@ -46,6 +46,7 @@ struct patternset {
 };
 
 struct elo_policy {
+	bool assess_fastpat;
 	float selfatari;
 	struct patternset choose, assess;
 	playout_elo_callbackp callback; void *callback_data;
@@ -465,6 +466,10 @@ playout_elo_init(char *arg, struct board *b)
 				/* xspat==0: don't match spatial features
 				 * xspat==1: match *only* spatial features */
 				xspat = atoi(optval);
+			} else if (!strcasecmp(optname, "assess_fastpat")) {
+				/* Use just fast pattern set even for the
+				 * node prior value assessment. */
+				pp->assess_fastpat = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "assess_eval") && optval) {
 				/* Evaluation method for prior node value
 				 * assessment. */
@@ -501,13 +506,6 @@ playout_elo_init(char *arg, struct board *b)
 
 	pc.spat_dict = spatial_dict_init(false);
 
-	pp->assess.pc = pc;
-	pp->assess.fg = features_gamma_init(&pp->assess.pc, gammafile);
-	memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
-	for (int i = 0; i < FEAT_MAX; i++)
-		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
-			pp->assess.ps[i] = 0;
-
 	/* In playouts, we need to operate with much smaller set of features
 	 * in order to keep reasonable speed. */
 	/* TODO: Configurable. */ /* TODO: Tune. */
@@ -524,6 +522,19 @@ playout_elo_init(char *arg, struct board *b)
 		pp->choose.ps[FEAT_SELFATARI] |= (1<<PF_SELFATARI_SMART);
 	}
 	board_gamma_set(b, pp->choose.fg, precise_selfatari);
+
+	if (pp->assess_fastpat) {
+		pp->assess = pp->choose;
+		pp->assess.fg = features_gamma_init(&pp->assess.pc, cgammafile);
+	} else {
+		/* More detailed set of features. */
+		pp->assess.pc = pc;
+		pp->assess.fg = features_gamma_init(&pp->assess.pc, gammafile);
+		memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
+		for (int i = 0; i < FEAT_MAX; i++)
+			if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
+				pp->assess.ps[i] = 0;
+	}
 
 	return p;
 }
