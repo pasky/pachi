@@ -56,6 +56,7 @@ struct elo_policy {
 	} assess_eval;
 	enum {
 		EAT_LINEAR,
+		EAT_ATAN,
 	} assess_transform;
 };
 
@@ -392,6 +393,9 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		case EAT_LINEAR:
 			val = val;
 			break;
+		case EAT_ATAN:
+			val = atan(val)/M_PI;
+			break;
 		default:
 			assert(0);
 		}
@@ -480,6 +484,10 @@ playout_elo_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "linear")) {
 					/* No additional transformation. */
 					pp->assess_transform = EAT_LINEAR;
+				} else if (!strcasecmp(optval, "atan")) {
+					/* atan-shape transformation;
+					 * pumps up low values. */
+					pp->assess_transform = EAT_ATAN;
 				} else {
 					fprintf(stderr, "playout-elo: Invalid eval mode %s\n", optval);
 					exit(1);
