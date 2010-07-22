@@ -52,6 +52,7 @@ struct elo_policy {
 
 	enum {
 		EAV_TOTAL,
+		EAV_BEST,
 	} assess_eval;
 	enum {
 		EAT_LINEAR,
@@ -359,6 +360,14 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 	 * a naive approach currently, but not sure how well it works. */
 	/* TODO: Try sqrt(p), atan(p)/pi*2. */
 
+	double pd_best = 0;
+	if (pp->assess_eval == EAV_BEST) {
+		for (int f = 0; f < map->b->flen; f++) {
+			double pd_one = fixp_to_double(probdist_one(&pd, map->b->f[f]));
+			if (pd_one > pd_best)
+				pd_best = pd_one;
+		}
+	}
 	double pd_total = fixp_to_double(probdist_total(&pd));
 
 	for (int f = 0; f < map->b->flen; f++) {
@@ -371,6 +380,9 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		switch (pp->assess_eval) {
 		case EAV_TOTAL:
 			val = pd_one / pd_total;
+			break;
+		case EAV_BEST:
+			val = pd_one / pd_best;
 			break;
 		default:
 			assert(0);
@@ -455,6 +467,9 @@ playout_elo_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "total")) {
 					/* Proportion prob/totprob. */
 					pp->assess_eval = EAV_TOTAL;
+				} else if (!strcasecmp(optval, "best")) {
+					/* Proportion prob/bestprob. */
+					pp->assess_eval = EAV_BEST;
 				} else {
 					fprintf(stderr, "playout-elo: Invalid eval mode %s\n", optval);
 					exit(1);
