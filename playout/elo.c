@@ -58,7 +58,9 @@ struct elo_policy {
 	enum {
 		EAT_LINEAR,
 		EAT_ATAN,
+		EAT_SIGMOID,
 	} assess_transform;
+	double assess_sigmb;
 };
 
 
@@ -397,6 +399,9 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 		case EAT_ATAN:
 			val = atan(val)/M_PI;
 			break;
+		case EAT_SIGMOID:
+			val = 1.0 / (1.0 + exp(-pp->assess_sigmb * (val - 0.5)));
+			break;
 		default:
 			assert(0);
 		}
@@ -433,6 +438,7 @@ playout_elo_init(char *arg, struct board *b)
 	p->done = playout_elo_done;
 
 	const char *gammafile = features_gamma_filename;
+	pp->assess_sigmb = 10.0;
 	/* Some defaults based on the table in Remi Coulom's paper. */
 	pp->selfatari = 0.06;
 
@@ -470,6 +476,8 @@ playout_elo_init(char *arg, struct board *b)
 				/* Use just fast pattern set even for the
 				 * node prior value assessment. */
 				pp->assess_fastpat = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "assess_sigmb") && optval) {
+				pp->assess_sigmb = atof(optval);
 			} else if (!strcasecmp(optname, "assess_eval") && optval) {
 				/* Evaluation method for prior node value
 				 * assessment. */
@@ -493,6 +501,10 @@ playout_elo_init(char *arg, struct board *b)
 					/* atan-shape transformation;
 					 * pumps up low values. */
 					pp->assess_transform = EAT_ATAN;
+				} else if (!strcasecmp(optval, "sigmoid")) {
+					/* Sigmoid transformation
+					 * according to assess_sigmb. */
+					pp->assess_transform = EAT_SIGMOID;
 				} else {
 					fprintf(stderr, "playout-elo: Invalid eval mode %s\n", optval);
 					exit(1);
