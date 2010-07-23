@@ -46,9 +46,21 @@ struct patternset {
 };
 
 struct elo_policy {
+	bool assess_fastpat;
 	float selfatari;
 	struct patternset choose, assess;
 	playout_elo_callbackp callback; void *callback_data;
+
+	enum {
+		EAV_TOTAL,
+		EAV_BEST,
+	} assess_eval;
+	enum {
+		EAT_LINEAR,
+		EAT_ATAN,
+		EAT_SIGMOID,
+	} assess_transform;
+	double assess_sigmb;
 };
 
 
@@ -352,11 +364,49 @@ playout_elo_assess(struct playout_policy *p, struct prior_map *map, int games)
 	 * a naive approach currently, but not sure how well it works. */
 	/* TODO: Try sqrt(p), atan(p)/pi*2. */
 
+	double pd_best = 0;
+	if (pp->assess_eval == EAV_BEST) {
+		for (int f = 0; f < map->b->flen; f++) {
+			double pd_one = fixp_to_double(probdist_one(&pd, map->b->f[f]));
+			if (pd_one > pd_best)
+				pd_best = pd_one;
+		}
+	}
+	double pd_total = fixp_to_double(probdist_total(&pd));
+
 	for (int f = 0; f < map->b->flen; f++) {
 		coord_t c = map->b->f[f];
 		if (!map->consider[c])
 			continue;
-		add_prior_value(map, c, fixp_to_double(probdist_one(&pd, c)) / fixp_to_double(probdist_total(&pd)), games);
+
+		double pd_one = fixp_to_double(probdist_one(&pd, c));
+		double val = 0;
+		switch (pp->assess_eval) {
+		case EAV_TOTAL:
+			val = pd_one / pd_total;
+			break;
+		case EAV_BEST:
+			val = pd_one / pd_best;
+			break;
+		default:
+			assert(0);
+		}
+
+		switch (pp->assess_transform) {
+		case EAT_LINEAR:
+			val = val;
+			break;
+		case EAT_ATAN:
+			val = atan(val)/M_PI;
+			break;
+		case EAT_SIGMOID:
+			val = 1.0 / (1.0 + exp(-pp->assess_sigmb * (val - 0.5)));
+			break;
+		default:
+			assert(0);
+		}
+
+		add_prior_value(map, c, val, games);
 	}
 }
 
@@ -388,6 +438,7 @@ playout_elo_init(char *arg, struct board *b)
 	p->done = playout_elo_done;
 
 	const char *gammafile = features_gamma_filename;
+	pp->assess_sigmb = 10.0;
 	/* Some defaults based on the table in Remi Coulom's paper. */
 	pp->selfatari = 0.06;
 
@@ -421,6 +472,43 @@ playout_elo_init(char *arg, struct board *b)
 				/* xspat==0: don't match spatial features
 				 * xspat==1: match *only* spatial features */
 				xspat = atoi(optval);
+			} else if (!strcasecmp(optname, "assess_fastpat")) {
+				/* Use just fast pattern set even for the
+				 * node prior value assessment. */
+				pp->assess_fastpat = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "assess_sigmb") && optval) {
+				pp->assess_sigmb = atof(optval);
+			} else if (!strcasecmp(optname, "assess_eval") && optval) {
+				/* Evaluation method for prior node value
+				 * assessment. */
+				if (!strcasecmp(optval, "total")) {
+					/* Proportion prob/totprob. */
+					pp->assess_eval = EAV_TOTAL;
+				} else if (!strcasecmp(optval, "best")) {
+					/* Proportion prob/bestprob. */
+					pp->assess_eval = EAV_BEST;
+				} else {
+					fprintf(stderr, "playout-elo: Invalid eval mode %s\n", optval);
+					exit(1);
+				}
+			} else if (!strcasecmp(optname, "assess_transform") && optval) {
+				/* Transformation of evaluation for prior
+				 * node value assessment. */
+				if (!strcasecmp(optval, "linear")) {
+					/* No additional transformation. */
+					pp->assess_transform = EAT_LINEAR;
+				} else if (!strcasecmp(optval, "atan")) {
+					/* atan-shape transformation;
+					 * pumps up low values. */
+					pp->assess_transform = EAT_ATAN;
+				} else if (!strcasecmp(optval, "sigmoid")) {
+					/* Sigmoid transformation
+					 * according to assess_sigmb. */
+					pp->assess_transform = EAT_SIGMOID;
+				} else {
+					fprintf(stderr, "playout-elo: Invalid eval mode %s\n", optval);
+					exit(1);
+				}
 			} else {
 				fprintf(stderr, "playout-elo: Invalid policy argument %s or missing value\n", optname);
 				exit(1);
@@ -429,13 +517,6 @@ playout_elo_init(char *arg, struct board *b)
 	}
 
 	pc.spat_dict = spatial_dict_init(false);
-
-	pp->assess.pc = pc;
-	pp->assess.fg = features_gamma_init(&pp->assess.pc, gammafile);
-	memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
-	for (int i = 0; i < FEAT_MAX; i++)
-		if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
-			pp->assess.ps[i] = 0;
 
 	/* In playouts, we need to operate with much smaller set of features
 	 * in order to keep reasonable speed. */
@@ -453,6 +534,19 @@ playout_elo_init(char *arg, struct board *b)
 		pp->choose.ps[FEAT_SELFATARI] |= (1<<PF_SELFATARI_SMART);
 	}
 	board_gamma_set(b, pp->choose.fg, precise_selfatari);
+
+	if (pp->assess_fastpat) {
+		pp->assess = pp->choose;
+		pp->assess.fg = features_gamma_init(&pp->assess.pc, cgammafile);
+	} else {
+		/* More detailed set of features. */
+		pp->assess.pc = pc;
+		pp->assess.fg = features_gamma_init(&pp->assess.pc, gammafile);
+		memcpy(pp->assess.ps, PATTERN_SPEC_MATCHALL, sizeof(pattern_spec));
+		for (int i = 0; i < FEAT_MAX; i++)
+			if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL))
+				pp->assess.ps[i] = 0;
+	}
 
 	return p;
 }
