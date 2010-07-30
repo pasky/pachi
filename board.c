@@ -242,21 +242,16 @@ board_clear(struct board *board)
 			board->f[board->flen++] = i;
 
 	/* Initialize zobrist hashtable. */
+	/* We will need these to be stable across Pachi runs for
+	 * certain kinds of pattern matching, thus we do not use
+	 * fast_random() for this. */
+	hash_t hseed = 0x3121110101112131;
 	foreach_point(board) {
-		int max = (sizeof(hash_t) << history_hash_bits);
-		/* fast_random() is 16-bit only */
-		board->h[c * 2] = ((hash_t) fast_random(max))
-				| ((hash_t) fast_random(max) << 16)
-				| ((hash_t) fast_random(max) << 32)
-				| ((hash_t) fast_random(max) << 48);
+		board->h[c * 2] = (hseed *= 16807);
 		if (!board->h[c * 2])
-			/* Would be kinda "oops". */
 			board->h[c * 2] = 1;
 		/* And once again for white */
-		board->h[c * 2 + 1] = ((hash_t) fast_random(max))
-				| ((hash_t) fast_random(max) << 16)
-				| ((hash_t) fast_random(max) << 32)
-				| ((hash_t) fast_random(max) << 48);
+		board->h[c * 2 + 1] = (hseed *= 16807);
 		if (!board->h[c * 2 + 1])
 			board->h[c * 2 + 1] = 1;
 	} foreach_point_end;
