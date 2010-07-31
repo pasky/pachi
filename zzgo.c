@@ -14,6 +14,7 @@
 #include "montecarlo/montecarlo.h"
 #include "random/random.h"
 #include "patternscan/patternscan.h"
+#include "joseki/joseki.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "distributed/distributed.h"
@@ -35,6 +36,7 @@ enum engine_id {
 	E_MONTECARLO,
 	E_UCT,
 	E_DISTRIBUTED,
+	E_JOSEKI,
 	E_MAX,
 };
 
@@ -45,6 +47,7 @@ static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 	engine_montecarlo_init,
 	engine_uct_init,
 	engine_distributed_init,
+	engine_joseki_init,
 };
 
 static struct engine *init_engine(enum engine_id engine, char *e_arg, struct board *b)
@@ -98,6 +101,8 @@ int main(int argc, char *argv[])
 					engine = E_UCT;
 				} else if (!strcasecmp(optarg, "distributed")) {
 					engine = E_DISTRIBUTED;
+				} else if (!strcasecmp(optarg, "joseki")) {
+					engine = E_JOSEKI;
 				} else {
 					fprintf(stderr, "%s: Invalid -e argument %s\n", argv[0], optarg);
 					exit(1);

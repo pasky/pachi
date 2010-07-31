@@ -53,10 +53,11 @@ Pachi consists of the following components:
 	replay/		example "playout move generator" engine
 	montecarlo/	simple treeless Monte Carlo engine, quite bitrotten
 	uct/		the main UCT-player engine, see below
-	patternscan/	auxiliary engine for harvesting patterns from
-				existing games
 	distributed/	"meta-engine" for distributed play by orchestrating
 				several UCT engines on different computers
+	patternscan/	auxiliary engine for harvesting patterns from
+				existing games
+	joseki/		auxiliary engine for generating joseki patterns
 
 * "playout" policy is asked to generate moves to play during the Monte Carlo
   simulations, and to provide rough evaluation of moves feasibility for
@@ -240,3 +241,11 @@ The UCT engine allows external plugins to be loaded and provide external
 knowledge for various heuristics - currently just biasing the MCTS priors,
 but more can be added easily. The plugins should follow the API in
 <uct/plugin.h> - see that file for details.
+
+
+Joseki Patterns
+===============
+
+Joseki patterns can be generated from variations of a SGF file. Josekis
+are matched per-quadrant, no other move must be within the quadrant. See
+joseki/README for details on usage of the auxiliary engine.
