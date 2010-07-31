@@ -15,6 +15,7 @@
 #include "random/random.h"
 #include "patternscan/patternscan.h"
 #include "joseki/joseki.h"
+#include "joseki/base.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "distributed/distributed.h"
@@ -151,6 +152,8 @@ int main(int argc, char *argv[])
 	fast_srandom(seed);
 	if (DEBUGL(0))
 		fprintf(stderr, "Random seed: %d\n", seed);
+
+	joseki_load();
 
 	struct board *b = board_init();
 	struct time_info ti[S_MAX];

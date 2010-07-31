@@ -13,4 +13,6 @@ struct joseki {
 #define joseki_hash_mask ((1 << joseki_hash_bits) - 1)
 extern struct joseki joseki_pats[];
 
+void joseki_load(void);
+
 #endif
