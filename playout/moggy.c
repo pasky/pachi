@@ -10,6 +10,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "joseki/base.h"
 #include "mq.h"
 #include "pattern3.h"
 #include "playout.h"
@@ -30,7 +31,7 @@
 
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders, assess_local;
-	unsigned int lcapturerate, atarirate, capturerate, patternrate, korate;
+	unsigned int lcapturerate, atarirate, capturerate, patternrate, korate, josekirate;
 	unsigned int selfatarirate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
@@ -453,6 +454,32 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 }
 
 static coord_t
+joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s)
+{
+	struct move_queue q;
+	q.moves = 0;
+
+	for (int i = 0; i < 4; i++) {
+		hash_t h = b->qhash[i] & joseki_hash_mask;
+		coord_t *cc = joseki_pats[h].moves[to_play];
+		if (!cc) continue;
+		fprintf(stderr, "%"PRIhash" %d\n", h, i);
+		for (; !is_pass(*cc); cc++) {
+			if (coord_quadrant(*cc, b) != i)
+				continue;
+			mq_add(&q, *cc);
+		}
+	}
+
+	if (q.moves > 0) {
+		if (PLDEBUGL(5))
+			mq_print(&q, b, "Joseki");
+		return mq_pick(&q);
+	}
+	return pass;
+}
+
+static coord_t
 global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s)
 {
 	struct move_queue q;
@@ -709,6 +736,13 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 			return c;
 	}
 
+	/* Joseki moves? */
+	if (pp->josekirate > fast_random(100)) {
+		c = joseki_check(p, b, to_play, s);
+		if (!is_pass(c))
+			return c;
+	}
+
 	/* Fill board */
 	unsigned int fbtries = b->flen / 8;
 	for (unsigned int i = 0; i < (fbtries < pp->fillboardtries ? fbtries : pp->fillboardtries); i++) {
@@ -951,6 +985,7 @@ playout_moggy_init(char *arg, struct board *b)
 			= -1U;
 	pp->korate = 0; pp->koage = 4;
 	pp->alwaysccaprate = 0;
+	pp->josekirate = 0;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -977,6 +1012,8 @@ playout_moggy_init(char *arg, struct board *b)
 				pp->selfatarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "korate") && optval) {
 				pp->korate = atoi(optval);
+			} else if (!strcasecmp(optname, "josekirate") && optval) {
+				pp->josekirate = atoi(optval);
 			} else if (!strcasecmp(optname, "alwaysccaprate") && optval) {
 				pp->alwaysccaprate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
@@ -1009,6 +1046,7 @@ playout_moggy_init(char *arg, struct board *b)
 	if (pp->patternrate == -1U) pp->patternrate = rate;
 	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
 	if (pp->korate == -1U) pp->korate = rate;
+	if (pp->josekirate == -1U) pp->josekirate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
