@@ -502,6 +502,7 @@ static void profiling_noinline
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
 	board->hash ^= hash_at(board, coord, color);
+	board->qhash[coord_quadrant(coord, board)] ^= hash_at(board, coord, color);
 	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
 
