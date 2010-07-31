@@ -14,6 +14,7 @@
 struct joseki_engine {
 	int debug_level;
 	int size;
+	bool discard;
 
 	struct board *b[16]; // boards with reversed color, mirrored and rotated
 };
@@ -28,20 +29,32 @@ joseki_play(struct engine *e, struct board *b, struct move *m)
 	struct joseki_engine *j = e->data;
 
 	if (!b->moves) {
-		/* Reset boards. */
+		/* New game, reset state. */
 		j->size = board_size(b);
+		j->discard = false;
 		for (int i = 0; i < 16; i++) {
 			board_resize(j->b[i], j->size - 2);
 			board_clear(j->b[i]);
 		}
 	}
 
+	//printf("%s %d\n", coord2sstr(m->coord, b), coord_quadrant(m->coord, b));
+
 	assert(!is_resign(m->coord));
 	if (is_pass(m->coord))
 		return NULL;
-	//printf("%s %d\n", coord2sstr(m->coord, b), coord_quadrant(m->coord, b));
 	/* Ignore moves in different quadrants. */
 	if (coord_quadrant(m->coord, b) > 0)
+		return NULL;
+
+	if (coord_x(m->coord, b) == board_size(b) / 2 || coord_y(m->coord, b) == board_size(b) / 2) {
+		/* This is troublesome, since it cannot mirror properly:
+		 * it won't be hashed in some quadrants. Better just discard
+		 * the rest of the sequence for now. (TODO: Make quadrants
+		 * overlap.) */
+		j->discard = true;
+	}
+	if (j->discard)
 		return NULL;
 
 	//printf("%"PRIhash" %"PRIhash"\n", j->b[0]->qhash[0], b->qhash[0]);
@@ -81,14 +94,14 @@ joseki_play(struct engine *e, struct board *b, struct move *m)
 			for (coord_t *cc = *ccp; !is_pass(*cc); cc++) {
 				count++;
 				if (*cc == coord) {
-					//printf("(%"PRIhash", %d) !+ %s\n", j->b[i]->qhash[0], count, coord2sstr(coord, b));
+					//printf("%d,%d (%"PRIhash", %d) !+ %s\n", i, quadrant, j->b[i]->qhash[quadrant], count, coord2sstr(coord, b));
 					goto already_have;
 				}
 			}
 		}
 
+		//printf("%d,%d (%"PRIhash", %d) =+ %s\n", i, quadrant, j->b[i]->qhash[quadrant], count, coord2sstr(coord, b));
 		*ccp = realloc(*ccp, (count + 1) * sizeof(coord_t));
-		//printf("(%"PRIhash", %d) + %s\n", j->b[i]->qhash[quadrant], count, coord2sstr(coord, b));
 		(*ccp)[count - 1] = coord;
 		(*ccp)[count] = pass;
 
