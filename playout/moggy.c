@@ -463,7 +463,6 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 		hash_t h = b->qhash[i] & joseki_hash_mask;
 		coord_t *cc = joseki_pats[h].moves[to_play];
 		if (!cc) continue;
-		fprintf(stderr, "%"PRIhash" %d\n", h, i);
 		for (; !is_pass(*cc); cc++) {
 			if (coord_quadrant(*cc, b) != i)
 				continue;
