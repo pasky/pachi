@@ -204,9 +204,9 @@ static char moggy_patterns_src[][11] = {
 	"X.?"
 	"O.?"
 	"##?",
-	/* side pattern - weirdness (SUSPICIOUS) */
+	/* side pattern - block side extension */
 	"?X?"
-	"X.O"
+	"x.O"
 	"###",
 	/* side pattern - sagari (SUSPICIOUS) */
 	"?XO"
