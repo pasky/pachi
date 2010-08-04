@@ -363,6 +363,10 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 	 * pondering, it's not simple "who-to-play" matter. Decide based on
 	 * the last genmove issued. */
 	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
+	/* Moreover, we do not use extra komi at the game end - we are not
+	 * to fool ourselves at this point. */
+	if (board_estimated_moves_left(b) <= MIN_MOVES_LEFT)
+		u->t->use_extra_komi = false;
 	setup_dynkomi(u, b, color);
 
 	if (b->rules == RULES_JAPANESE)
