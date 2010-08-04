@@ -410,14 +410,14 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		        coord2sstr(group, b), coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
-	/* Do not bother with kos. */
-	if (group_is_onestone(b, group)
-	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4)
-		return;
-
 	/* Can we capture some neighbor? */
 	bool ccap = can_countercapture(p, s, b, color, group, to_play, q);
 	if (ccap && !ladder && pp->alwaysccaprate > fast_random(100))
+		return;
+
+	/* Otherwise, do not save kos. */
+	if (group_is_onestone(b, group)
+	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4)
 		return;
 
 	/* Do not suicide... */
