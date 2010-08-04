@@ -595,6 +595,14 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 			continue;
 #endif
 
+		/* If the move is too "lumpy", do not play it:
+		 *
+		 * #######
+		 * ..O.X.X <- always play the left one!
+		 * OXXXXXX */
+		if (neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) == 3)
+			continue;
+
 #ifdef NO_DOOMED_GROUPS
 		/* If the owner can't play at the spot, we don't want
 		 * to bother either. */
