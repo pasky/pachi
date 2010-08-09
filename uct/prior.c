@@ -6,6 +6,7 @@
 
 #include "board.h"
 #include "debug.h"
+#include "joseki/base.h"
 #include "move.h"
 #include "random.h"
 #include "tactics.h"
@@ -25,7 +26,7 @@ struct uct_prior {
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6
 	 * playouts per source seems best. */
 	int eqex;
-	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex;
+	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex, joseki_eqex;
 	int cfgdn; int *cfgd_eqex;
 };
 
@@ -123,6 +124,22 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 void
+uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
+{
+	/* Q_{joseki} */
+	for (int i = 0; i < 4; i++) {
+		hash_t h = map->b->qhash[i] & joseki_hash_mask;
+		coord_t *cc = joseki_pats[h].moves[map->to_play - 1];
+		if (!cc) continue;
+		for (; !is_pass(*cc); cc++) {
+			if (coord_quadrant(*cc, map->b) != i)
+				continue;
+			add_prior_value(map, *cc, 1.0, u->prior->joseki_eqex);
+		}
+	}
+}
+
+void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	if (u->prior->even_eqex)
@@ -137,6 +154,8 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_playout(u, node, map);
 	if (u->prior->cfgd_eqex)
 		uct_prior_cfgd(u, node, map);
+	if (u->prior->joseki_eqex)
+		uct_prior_joseki(u, node, map);
 	if (u->prior->plugin_eqex)
 		plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
 }
@@ -148,6 +167,7 @@ uct_prior_init(char *arg, struct board *b)
 
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = p->plugin_eqex = -1;
 	p->cfgdn = -1;
+	p->joseki_eqex = 0;
 
 	/* Even number! */
 	p->eqex = board_size(b)-2 >= 19 ? 20 : 14;
@@ -187,6 +207,8 @@ uct_prior_init(char *arg, struct board *b)
 					optval++;
 					p->cfgd_eqex[i] = atoi(optval);
 				}
+			} else if (!strcasecmp(optname, "joseki") && optval) {
+				p->joseki_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "eye") && optval) {
 				p->eye_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "ko") && optval) {
@@ -206,6 +228,7 @@ uct_prior_init(char *arg, struct board *b)
 	if (p->b19_eqex < 0) p->b19_eqex = p->eqex / -p->b19_eqex;
 	if (p->eye_eqex < 0) p->eye_eqex = p->eqex / -p->eye_eqex;
 	if (p->ko_eqex < 0) p->ko_eqex = p->eqex / -p->ko_eqex;
+	if (p->joseki_eqex < 0) p->joseki_eqex = p->eqex / -p->joseki_eqex;
 	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex / -p->plugin_eqex;
 
 	if (p->cfgdn < 0) {

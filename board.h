@@ -256,6 +256,8 @@ struct board {
 	hash_t history_hash[1 << history_hash_bits];
 	/* Hash of current board position. */
 	hash_t hash;
+	/* Hash of current board position quadrants. */
+	hash_t qhash[4];
 };
 
 #ifdef BOARD_SIZE

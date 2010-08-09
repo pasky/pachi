@@ -34,11 +34,11 @@ INCLUDES=-I.
 
 
 OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o playout.o probdist.o random.o stone.o tactics.o timeinfo.o network.o
-SUBDIRS=random replay patternscan montecarlo uct uct/policy playout t-unit distributed
+SUBDIRS=random replay patternscan joseki montecarlo uct uct/policy playout t-unit distributed
 
 all: all-recursive zzgo
 
-LOCALLIBS=random/random.a replay/replay.a patternscan/patternscan.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a t-unit/test.a distributed/distributed.a
+LOCALLIBS=random/random.a replay/replay.a patternscan/patternscan.a joseki/joseki.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a t-unit/test.a distributed/distributed.a
 zzgo: $(OBJS) zzgo.o $(LOCALLIBS)
 	$(call cmd,link)
 

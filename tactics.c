@@ -588,7 +588,9 @@ cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 float
 board_effective_handicap(struct board *b, int first_move_value)
 {
-	assert(b->handicap != 1);
+	/* This can happen if the opponent passes during handicap
+	 * placing phase. */
+	// assert(b->handicap != 1);
 	return (b->handicap ? b->handicap : 1) * first_move_value + 0.5 - b->komi;
 }
 

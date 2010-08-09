@@ -242,21 +242,16 @@ board_clear(struct board *board)
 			board->f[board->flen++] = i;
 
 	/* Initialize zobrist hashtable. */
+	/* We will need these to be stable across Pachi runs for
+	 * certain kinds of pattern matching, thus we do not use
+	 * fast_random() for this. */
+	hash_t hseed = 0x3121110101112131;
 	foreach_point(board) {
-		int max = (sizeof(hash_t) << history_hash_bits);
-		/* fast_random() is 16-bit only */
-		board->h[c * 2] = ((hash_t) fast_random(max))
-				| ((hash_t) fast_random(max) << 16)
-				| ((hash_t) fast_random(max) << 32)
-				| ((hash_t) fast_random(max) << 48);
+		board->h[c * 2] = (hseed *= 16807);
 		if (!board->h[c * 2])
-			/* Would be kinda "oops". */
 			board->h[c * 2] = 1;
 		/* And once again for white */
-		board->h[c * 2 + 1] = ((hash_t) fast_random(max))
-				| ((hash_t) fast_random(max) << 16)
-				| ((hash_t) fast_random(max) << 32)
-				| ((hash_t) fast_random(max) << 48);
+		board->h[c * 2 + 1] = (hseed *= 16807);
 		if (!board->h[c * 2 + 1])
 			board->h[c * 2 + 1] = 1;
 	} foreach_point_end;
@@ -507,6 +502,7 @@ static void profiling_noinline
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
 	board->hash ^= hash_at(board, coord, color);
+	board->qhash[coord_quadrant(coord, board)] ^= hash_at(board, coord, color);
 	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
 
@@ -1355,13 +1351,17 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 	*coord = b->f[f];
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
-		fprintf(stderr, "trying random move %d: %d,%d\n", f, coord_x(*coord, b), coord_y(*coord, b));
+		fprintf(stderr, "trying random move %d: %d,%d %s %d\n", f, coord_x(*coord, b), coord_y(*coord, b), coord2sstr(*coord, b), board_is_valid_move(b, &m));
 	if (unlikely(board_is_one_point_eye(b, *coord, color)) /* bad idea to play into one, usually */
 		|| !board_is_valid_move(b, &m)
 		|| (permit && !permit(permit_data, b, &m)))
 		return false;
-	*coord = m.coord; // permit might modify it
-	return likely(board_play_f(b, &m, f) >= 0);
+	if (m.coord == *coord) {
+		return likely(board_play_f(b, &m, f) >= 0);
+	} else {
+		*coord = m.coord; // permit modified the coordinate
+		return likely(board_play(b, &m) >= 0);
+	}
 }
 
 void

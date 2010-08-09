@@ -10,6 +10,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "joseki/base.h"
 #include "mq.h"
 #include "pattern3.h"
 #include "playout.h"
@@ -30,7 +31,7 @@
 
 struct moggy_policy {
 	bool ladders, ladderassess, borderladders, assess_local;
-	unsigned int lcapturerate, atarirate, capturerate, patternrate, korate;
+	unsigned int lcapturerate, atarirate, capturerate, patternrate, korate, josekirate;
 	unsigned int selfatarirate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
@@ -203,9 +204,13 @@ static char moggy_patterns_src[][11] = {
 	"X.?"
 	"O.?"
 	"##?",
-	/* side pattern - weirdness (SUSPICIOUS) */
-	"?X?"
+	/* side pattern - block side cut */
+	"OX?"
 	"X.O"
+	"###",
+	/* side pattern - block side connection */
+	"?X?"
+	"x.O"
 	"###",
 	/* side pattern - sagari (SUSPICIOUS) */
 	"?XO"
@@ -409,14 +414,14 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		        coord2sstr(group, b), coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
-	/* Do not bother with kos. */
-	if (group_is_onestone(b, group)
-	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4)
-		return;
-
 	/* Can we capture some neighbor? */
 	bool ccap = can_countercapture(p, s, b, color, group, to_play, q);
 	if (ccap && !ladder && pp->alwaysccaprate > fast_random(100))
+		return;
+
+	/* Otherwise, do not save kos. */
+	if (group_is_onestone(b, group)
+	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4)
 		return;
 
 	/* Do not suicide... */
@@ -450,6 +455,31 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 
 	mq_add(q, lib);
 	mq_nodup(q);
+}
+
+static coord_t
+joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s)
+{
+	struct move_queue q;
+	q.moves = 0;
+
+	for (int i = 0; i < 4; i++) {
+		hash_t h = b->qhash[i] & joseki_hash_mask;
+		coord_t *cc = joseki_pats[h].moves[to_play];
+		if (!cc) continue;
+		for (; !is_pass(*cc); cc++) {
+			if (coord_quadrant(*cc, b) != i)
+				continue;
+			mq_add(&q, *cc);
+		}
+	}
+
+	if (q.moves > 0) {
+		if (PLDEBUGL(5))
+			mq_print(&q, b, "Joseki");
+		return mq_pick(&q);
+	}
+	return pass;
 }
 
 static coord_t
@@ -567,6 +597,14 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 		if (neighbor_count_at(b, lib, stone_other(owner)) + immediate_liberty_count(b, lib) < 2)
 			continue;
 #endif
+
+		/* If the move is too "lumpy", do not play it:
+		 *
+		 * #######
+		 * ..O.X.X <- always play the left one!
+		 * OXXXXXX */
+		if (neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) == 3)
+			continue;
 
 #ifdef NO_DOOMED_GROUPS
 		/* If the owner can't play at the spot, we don't want
@@ -705,6 +743,13 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
 		c = global_atari_check(p, b, to_play, s);
+		if (!is_pass(c))
+			return c;
+	}
+
+	/* Joseki moves? */
+	if (pp->josekirate > fast_random(100)) {
+		c = joseki_check(p, b, to_play, s);
 		if (!is_pass(c))
 			return c;
 	}
@@ -951,6 +996,7 @@ playout_moggy_init(char *arg, struct board *b)
 			= -1U;
 	pp->korate = 0; pp->koage = 4;
 	pp->alwaysccaprate = 0;
+	pp->josekirate = 0;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 
@@ -977,6 +1023,8 @@ playout_moggy_init(char *arg, struct board *b)
 				pp->selfatarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "korate") && optval) {
 				pp->korate = atoi(optval);
+			} else if (!strcasecmp(optname, "josekirate") && optval) {
+				pp->josekirate = atoi(optval);
 			} else if (!strcasecmp(optname, "alwaysccaprate") && optval) {
 				pp->alwaysccaprate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
@@ -1009,6 +1057,7 @@ playout_moggy_init(char *arg, struct board *b)
 	if (pp->patternrate == -1U) pp->patternrate = rate;
 	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
 	if (pp->korate == -1U) pp->korate = rate;
+	if (pp->josekirate == -1U) pp->josekirate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);

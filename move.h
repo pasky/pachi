@@ -25,6 +25,12 @@ static coord_t resign = -2;
 #define coord_is_adjecent(c1, c2, b) (abs(c1 - c2) == 1 || abs(c1 - c2) == board_size(b))
 #define coord_is_8adjecent(c1, c2, b) (abs(c1 - c2) == 1 || abs(abs(c1 - c2) - board_size(b)) < 2)
 
+/* Quadrants:
+ * 0 1
+ * 2 3 (vertically reversed from board_print output, of course!)
+ * Middle coordinates are included in lower-valued quadrants. */
+#define coord_quadrant(c, b) ((coord_x(c, b) > board_size(b) / 2) + 2 * (coord_y(c, b) > board_size(b) / 2))
+
 /* dyn allocated */
 static coord_t *coord_init(int x, int y, int size);
 static coord_t *coord_copy(coord_t c);

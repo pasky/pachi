@@ -1,0 +1,18 @@
+This is a joseki pattern scanner. At the beginning, you should
+have a SGF file with various joseki as variations; they are assumed
+to be laid out in the upper right corner; only variations leading
+to a comment containing the word "GOOD" are considered. All variations
+should be tagged as real moves, not move placement.
+
+This pattern scanner works with the Kogo joseki dictionary. You need
+to just preprocess the file with this script:
+
+	perl -ple 's/\w+\[\]//g; s/PL\[\d\]//g;'
+
+Then, use the ./sgfvar2gtp.pl script to convert the SGF to a GTP stream,
+one game per good variation.
+
+Then, feed that GTP stream to ./zzgo -e joseki to get a pattern datafile
+on the output - the file contains list of quadrant positions (identified
+by their zobrist hashes) and the associated w-to-play and b-to-play
+joseki followups.
