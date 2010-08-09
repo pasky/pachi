@@ -204,7 +204,11 @@ static char moggy_patterns_src[][11] = {
 	"X.?"
 	"O.?"
 	"##?",
-	/* side pattern - block side extension */
+	/* side pattern - block side cut */
+	"OX?"
+	"X.O"
+	"###",
+	/* side pattern - block side connection */
 	"?X?"
 	"x.O"
 	"###",
