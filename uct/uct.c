@@ -473,8 +473,6 @@ uct_state_init(char *arg, struct board *b)
 	u->amaf_prior = false;
 	u->max_tree_size = 3072ULL * 1048576;
 
-	u->dynkomi_mask = S_BLACK;
-
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
 	u->virtual_loss = true;
@@ -488,6 +486,7 @@ uct_state_init(char *arg, struct board *b)
 
 	u->val_scale = 0.04; u->val_points = 40;
 	u->dynkomi_interval = 1000;
+	u->dynkomi_mask = S_BLACK | S_WHITE;
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 2;
@@ -645,8 +644,13 @@ uct_state_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "none")) {
 					u->dynkomi = uct_dynkomi_init_none(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "linear")) {
+					/* You should set dynkomi_mask=1
+					 * since this doesn't work well
+					 * for white handicaps! */
 					u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "adaptive")) {
+					/* There are many more knobs to
+					 * crank - see uct/dynkomi.c. */
 					u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomiarg, b);
 				} else {
 					fprintf(stderr, "UCT: Invalid dynkomi mode %s\n", optval);
@@ -808,7 +812,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->dynkomi)
-		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
+		u->dynkomi = uct_dynkomi_init_adaptive(u, NULL, b);
 
 	/* Some things remain uninitialized for now - the opening book
 	 * is not loaded and the tree not set up. */
