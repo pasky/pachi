@@ -73,6 +73,7 @@ gtp_error(int id, ...)
  * it should only be used between master and slaves of the distributed engine. */
 static char *known_commands =
 	"protocol_version\n"
+	"echo\n"
 	"name\n"
 	"version\n"
 	"list_commands\n"
@@ -143,6 +144,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 	} else if (!strcasecmp(cmd, "name")) {
 		/* KGS hack */
 		gtp_reply(id, "Pachi ", engine->name, NULL);
+		return P_OK;
+
+	} else if (!strcasecmp(cmd, "echo")) {
+		gtp_reply(id, next, NULL);
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "version")) {
