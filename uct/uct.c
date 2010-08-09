@@ -487,7 +487,7 @@ uct_state_init(char *arg, struct board *b)
 	u->best2_ratio = 2.5;
 
 	u->val_scale = 0.04; u->val_points = 40;
-	u->dynkomi_interval = 250;
+	u->dynkomi_interval = 1000;
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 2;
