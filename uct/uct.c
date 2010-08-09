@@ -170,6 +170,23 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 }
 
 static char *
+uct_result(struct engine *e, struct board *b)
+{
+	struct uct *u = e->data;
+	static char reply[1024];
+
+	if (!u->t)
+		return NULL;
+	enum stone color = u->t->root_color;
+	struct tree_node *n = u->t->root;
+	snprintf(reply, 1024, "%s %s %d %.2f %.1f",
+		 stone2str(color), coord2sstr(n->coord, b),
+		 n->u.playouts, tree_node_get_value(u->t, -1, n->u.value),
+		 u->t->use_extra_komi ? u->t->extra_komi : 0);
+	return reply;
+}
+
+static char *
 uct_chat(struct engine *e, struct board *b, char *cmd)
 {
 	struct uct *u = e->data;
@@ -832,6 +849,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;
+	e->result = uct_result;
 	e->genmove = uct_genmove;
 	e->genmoves = uct_genmoves;
 	e->dead_group_list = uct_dead_group_list;

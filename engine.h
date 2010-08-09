@@ -9,6 +9,7 @@ struct move_queue;
 
 typedef enum parse_code (*engine_notify)(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply);
 typedef char *(*engine_notify_play)(struct engine *e, struct board *b, struct move *m);
+typedef char *(*engine_result)(struct engine *e, struct board *b);
 typedef char *(*engine_chat)(struct engine *e, struct board *b, char *cmd);
 /* Generate a move. If pass_all_alive is true, <pass> shall be generated only
  * if all stones on the board can be considered alive, without regard to "dead"
@@ -34,6 +35,7 @@ struct engine {
 	board_cprint printhook;
 	engine_notify_play notify_play;
 	engine_chat chat;
+	engine_result result;
 	engine_genmove genmove;
 	engine_genmoves genmoves;
 	engine_dead_group_list dead_group_list;
