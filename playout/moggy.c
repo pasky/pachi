@@ -999,6 +999,7 @@ playout_moggy_init(char *arg, struct board *b)
 	pp->josekirate = 0;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
+	pp->selfatari_other = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
