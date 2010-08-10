@@ -119,6 +119,36 @@ sar w d2 1
 sar b e3 0
 sar w e3 1
 
+% Eyeshape-avoidance nakade 1
+boardsize 4
+XXXX
+XO.X
+XX.X
+XXXX
+sar w c3 0
+sar w c2 1
+
+% Eyeshape-avoidance nakade 2
+boardsize 4
+XXXX
+XO.O
+XX.X
+XXXX
+sar w c3 0
+sar w c2 1
+
+% False nakade
+boardsize 5
+X.XX.
+XOOXX
+XOOX.
+X.OXX
+XOOXX
+sar w b2 1
+sar b b2 1
+sar w b5 0 # We consider "splitting block-nakade" ok, since it should certainly destroy eyeshape anyway
+sar b b5 0
+
 % Not-quite-snapback
 boardsize 5
 XXXXO
@@ -159,4 +189,4 @@ XXOXXXXXO
 .XOXXX..X
 XXXO..XXX
 XO..O...O
-sar w j8 0 # 1: but we think we nakade b group, we don't examine all w group neighbors; KNOWN PROBLEM
+sar w j8 0 # 1: but we think we nakade b group, we don''t examine all w group neighbors; KNOWN PROBLEM

@@ -151,7 +151,7 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 		 * (ii) filling it to capture our group will not gain
 		 * safety */
 
-		/* Let's look at the other liberty neighbors: */
+		/* Let's look at neighbors of the other liberty: */
 		int lib2 = board_group_other_lib(b, g, to);
 		foreach_neighbor(b, lib2, {
 			/* This neighbor of course does not contribute
@@ -174,24 +174,21 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 
 			int g2 = group_at(b, c);
 			/* If the neighbor is of our color, it must
-			 * be our group; if it is a different group,
-			 * it must not be in atari. */
+			 * be also a 2-lib group. If it is more,
+			 * we CERTAINLY want that liberty to be played
+			 * first, what if it is an alive group? If it
+			 * is in atari, we want to extend from it to
+			 * prevent eye-making capture. However, if it
+			 * is 2-lib, it is selfatari connecting two
+			 * nakade'ing groups! */
 			/* X X X X  We will not allow play on 'a',
 			 * X X a X  because 'b' would capture two
 			 * X O b X  different groups, forming two
 			 * X X X X  eyes. */
 			if (board_at(b, c) == color) {
-				if (board_group_info(b, group_at(b, c)).libs > 1)
+				if (board_group_info(b, group_at(b, c)).libs == 2)
 					continue;
-				/* Our group == one of the groups
-				 * we (@to) are connected to. */
-				int j;
-				for (j = 0; j < 4; j++)
-					if (s->groupids[color][j] == g2)
-						break;
-				if (j == 4)
-					goto next_group;
-				continue;
+				goto next_group;
 			}
 
 			/* The neighbor is enemy color. It's ok if
