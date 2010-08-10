@@ -17,7 +17,7 @@ board_load(struct board *b, FILE *f, unsigned int size)
 	board_printed = false;
 	board_resize(b, size);
 	board_clear(b);
-	for (unsigned int y = size - 1; y >= 0; y--) {
+	for (int y = size - 1; y >= 0; y--) {
 		char line[256];
 		if (!fgets(line, sizeof(line), f)) {
 			fprintf(stderr, "Premature EOF.\n");
