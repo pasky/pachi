@@ -9,10 +9,19 @@ struct joseki_pattern {
 	coord_t *moves[2];
 };
 
+/* The joseki dictionary for given board size. */
+struct joseki_dict {
+	int bsize;
+
 #define joseki_hash_bits 20 // 8M w/ 32-bit pointers
 #define joseki_hash_mask ((1 << joseki_hash_bits) - 1)
-extern struct joseki_pattern joseki_pats[];
+	struct joseki_pattern *patterns;
+};
 
-void joseki_load(void);
+extern struct joseki_dict *jdict;
+
+struct joseki_dict *joseki_init(int bsize);
+struct joseki_dict *joseki_load(int bsize);
+void joseki_done(struct joseki_dict *);
 
 #endif

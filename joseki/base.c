@@ -8,13 +8,23 @@
 #include "joseki/base.h"
 
 
-struct joseki_pattern joseki_pats[1 << joseki_hash_bits];
+struct joseki_dict *jdict;
 
-void
-joseki_load(void)
+struct joseki_dict *
+joseki_init(int bsize)
 {
-	FILE *f = fopen("pachijoseki.dat", "r");
-	if (!f) return;
+	struct joseki_dict *jd = calloc(1, sizeof(*jd));
+	jd->bsize = bsize;
+	jd->patterns = calloc(1 << joseki_hash_bits, sizeof(jd->patterns[0]));
+	return jd;
+}
+
+struct joseki_dict *
+joseki_load(int bsize)
+{
+	FILE *f = fopen("pachijoseki.dat", "r"); // XXX: size-dependent
+	if (!f) return NULL;
+	struct joseki_dict *jd = joseki_init(bsize);
 
 	char linebuf[1024];
 	while (fgets(linebuf, 1024, f)) {
@@ -30,13 +40,13 @@ joseki_load(void)
 		*cs++ = 0;
 		int count = atoi(cs);
 		
-		coord_t **ccp = &joseki_pats[h].moves[color - 1];
+		coord_t **ccp = &jd->patterns[h].moves[color - 1];
 		assert(!*ccp);
 		*ccp = calloc2(count + 1, sizeof(coord_t));
 		coord_t *cc = *ccp;
 		while (*line) {
 			assert(cc - *ccp < count);
-			coord_t *c = str2coord(line, 21 /* XXX */);
+			coord_t *c = str2coord(line, bsize);
 			*cc++ = *c;
 			coord_done(c);
 			line += strcspn(line, " ");
@@ -46,4 +56,12 @@ joseki_load(void)
 	}
 
 	fclose(f);
+	return jd;
+}
+
+void
+joseki_done(struct joseki_dict *jd)
+{
+	free(jd->patterns);
+	free(jd);
 }

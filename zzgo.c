@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
 	if (DEBUGL(0))
 		fprintf(stderr, "Random seed: %d\n", seed);
 
-	joseki_load();
+	jdict = joseki_load(19 + 2); // XXX
 
 	struct board *b = board_init();
 	struct time_info ti[S_MAX];

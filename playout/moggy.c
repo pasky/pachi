@@ -465,7 +465,7 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 
 	for (int i = 0; i < 4; i++) {
 		hash_t h = b->qhash[i] & joseki_hash_mask;
-		coord_t *cc = joseki_pats[h].moves[to_play];
+		coord_t *cc = jdict->patterns[h].moves[to_play];
 		if (!cc) continue;
 		for (; !is_pass(*cc); cc++) {
 			if (coord_quadrant(*cc, b) != i)

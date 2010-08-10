@@ -20,7 +20,7 @@ struct joseki_engine {
 };
 
 /* We will record the joseki positions into incrementally-built
- * joseki_pats[]. */
+ * jdict->patterns[]. */
 
 
 static char *
@@ -31,6 +31,7 @@ joseki_play(struct engine *e, struct board *b, struct move *m)
 	if (!b->moves) {
 		/* New game, reset state. */
 		j->size = board_size(b);
+		assert(j->size == jdict->bsize);
 		j->discard = false;
 		for (int i = 0; i < 16; i++) {
 			board_resize(j->b[i], j->size - 2);
@@ -87,7 +88,7 @@ joseki_play(struct engine *e, struct board *b, struct move *m)
 		if (i & HASH_OCOLOR)
 			color = stone_other(color);
 
-		coord_t **ccp = &joseki_pats[j->b[i]->qhash[quadrant] & joseki_hash_mask].moves[color - 1];
+		coord_t **ccp = &jdict->patterns[j->b[i]->qhash[quadrant] & joseki_hash_mask].moves[color - 1];
 
 		int count = 1;
 		if (*ccp) {
@@ -122,7 +123,7 @@ joseki_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 }
 
 void
-joseki_done(struct engine *e)
+engine_joseki_done(struct engine *e)
 {
 	struct joseki_engine *j = e->data;
 	struct board *b = board_init();
@@ -132,10 +133,10 @@ joseki_done(struct engine *e)
 	for (hash_t i = 0; i < 1 << joseki_hash_bits; i++) {
 		for (int j = 0; j < 2; j++) {
 			static const char cs[] = "bw";
-			if (!joseki_pats[i].moves[j])
+			if (!jdict->patterns[i].moves[j])
 				continue;
 			printf("%" PRIhash " %c", i, cs[j]);
-			coord_t *cc = joseki_pats[i].moves[j];
+			coord_t *cc = jdict->patterns[i].moves[j];
 			int count = 0;
 			while (!is_pass(*cc)) {
 				printf(" %s", coord2sstr(*cc, b));
@@ -183,6 +184,10 @@ joseki_state_init(char *arg)
 		}
 	}
 
+	if (jdict)
+		joseki_done(jdict);
+	jdict = joseki_init(19 + 2); // XXX
+
 	return j;
 }
 
@@ -195,7 +200,7 @@ engine_joseki_init(char *arg, struct board *b)
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of joseki sequences fed to it within the GTP stream.";
 	e->genmove = joseki_genmove;
 	e->notify_play = joseki_play;
-	e->done = joseki_done;
+	e->done = engine_joseki_done;
 	e->data = j;
 	// clear_board does not concern us, we like to work over many games
 	e->keep_on_clear = true;
