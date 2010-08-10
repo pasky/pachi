@@ -8,7 +8,7 @@
 #include "joseki/base.h"
 
 
-struct joseki joseki_pats[1 << joseki_hash_bits];
+struct joseki_pattern joseki_pats[1 << joseki_hash_bits];
 
 void
 joseki_load(void)
