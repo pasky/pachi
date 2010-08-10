@@ -73,6 +73,7 @@ gtp_error(int id, ...)
  * it should only be used between master and slaves of the distributed engine. */
 static char *known_commands =
 	"protocol_version\n"
+	"echo\n"
 	"name\n"
 	"version\n"
 	"list_commands\n"
@@ -88,6 +89,7 @@ static char *known_commands =
 	"set_free_handicap\n"
 	"place_free_handicap\n"
 	"final_status_list\n"
+	"pachi-result\n"
 	"kgs-chat\n"
 	"time_left\n"
 	"time_settings\n"
@@ -142,6 +144,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 	} else if (!strcasecmp(cmd, "name")) {
 		/* KGS hack */
 		gtp_reply(id, "Pachi ", engine->name, NULL);
+		return P_OK;
+
+	} else if (!strcasecmp(cmd, "echo")) {
+		gtp_reply(id, next, NULL);
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "version")) {
@@ -437,6 +443,17 @@ next_group:;
 		uct_dumpbook(engine, board, color);
 		gtp_reply(id, NULL);
 
+	} else if (!strcasecmp(cmd, "pachi-result")) {
+		/* More detailed result of the last genmove. */
+		/* For UCT, the output format is: = color move playouts winrate dynkomi */
+		char *reply = NULL;
+		if (engine->result)
+			reply = engine->result(engine, board);
+		if (reply)
+			gtp_reply(id, reply, NULL);
+		else
+			gtp_error(id, "unknown pachi-result command", NULL);
+
 	} else if (!strcasecmp(cmd, "kgs-chat")) {
 		char *loc;
 		next_tok(loc);
@@ -450,7 +467,7 @@ next_group:;
 		if (reply)
 			gtp_reply(id, reply, NULL);
 		else
-			gtp_error(id, "unknown chat command", NULL);
+			gtp_error(id, "unknown kgs-chat command", NULL);
 
 	} else if (!strcasecmp(cmd, "time_left")) {
 		char *arg;

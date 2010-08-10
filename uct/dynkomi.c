@@ -400,7 +400,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 		a->lead_moves = 20;
 	else
 		a->lead_moves = 4; // XXX
-	a->max_losing_komi = 100;
+	a->max_losing_komi = 30;
 	a->losing_komi_stop = 1.0f;
 	a->indicator = komi_by_value;
 
