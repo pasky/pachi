@@ -999,11 +999,10 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 
 	int rate = 90;
 
-	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate = pp->selfatarirate
-			= -1U;
+	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate
+			= pp->selfatarirate = pp->josekirate = -1U;
 	pp->korate = 0; pp->koage = 4;
 	pp->alwaysccaprate = 0;
-	pp->josekirate = 0;
 	pp->ladders = pp->borderladders = true;
 	pp->ladderassess = true;
 	pp->selfatari_other = true;
