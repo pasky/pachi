@@ -23,7 +23,7 @@ joseki_load(int bsize)
 {
 	char fname[1024];
 	snprintf(fname, 1024, "joseki%d.pdict", bsize - 2);
-	FILE *f = fopen(fname, "r"); // XXX: size-dependent
+	FILE *f = fopen(fname, "r");
 	if (!f) {
 		if (DEBUGL(3))
 			perror(fname);
