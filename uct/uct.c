@@ -64,6 +64,8 @@ setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 {
 	if (u->t->use_extra_komi && !u->pondering && u->dynkomi->permove)
 		u->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, u->t);
+	else if (!u->t->use_extra_komi)
+		u->t->extra_komi = 0;
 }
 
 void
