@@ -21,10 +21,12 @@ joseki_init(int bsize)
 struct joseki_dict *
 joseki_load(int bsize)
 {
-	FILE *f = fopen("pachijoseki.dat", "r"); // XXX: size-dependent
+	char fname[1024];
+	snprintf(fname, 1024, "joseki%d.pdict", bsize - 2);
+	FILE *f = fopen(fname, "r"); // XXX: size-dependent
 	if (!f) {
 		if (DEBUGL(3))
-			perror("pachijoseki.dat");
+			perror(fname);
 		return NULL;
 	}
 	struct joseki_dict *jd = joseki_init(bsize);
