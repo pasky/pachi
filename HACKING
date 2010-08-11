@@ -248,4 +248,6 @@ Joseki Patterns
 
 Joseki patterns can be generated from variations of a SGF file. Josekis
 are matched per-quadrant, no other move must be within the quadrant. See
-joseki/README for details on usage of the auxiliary engine.
+joseki/README for details on usage of the auxiliary engine and a full
+recipe for making Pachi play according to joseki sequences extracted from
+the Kogo dictionary.
