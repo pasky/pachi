@@ -69,6 +69,7 @@ joseki_load(int bsize)
 void
 joseki_done(struct joseki_dict *jd)
 {
+	if (!jd) return;
 	free(jd->patterns);
 	free(jd);
 }

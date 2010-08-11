@@ -127,6 +127,8 @@ void
 uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{joseki} */
+	if (!u->jdict)
+		return;
 	for (int i = 0; i < 4; i++) {
 		hash_t h = map->b->qhash[i] & joseki_hash_mask;
 		coord_t *cc = u->jdict->patterns[h].moves[map->to_play - 1];

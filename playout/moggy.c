@@ -462,6 +462,9 @@ static coord_t
 joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s)
 {
 	struct moggy_policy *pp = p->data;
+	if (!pp->jdict)
+		return pass;
+
 	struct move_queue q;
 	q.moves = 0;
 
