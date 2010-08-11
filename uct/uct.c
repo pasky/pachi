@@ -12,6 +12,7 @@
 #include "gtp.h"
 #include "move.h"
 #include "mq.h"
+#include "joseki/base.h"
 #include "playout.h"
 #include "playout/elo.h"
 #include "playout/moggy.h"
@@ -271,6 +272,7 @@ uct_done(struct engine *e)
 	free(u->random_policy);
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
+	joseki_done(u->jdict);
 	pluginset_done(u->plugins);
 }
 
@@ -510,6 +512,8 @@ uct_state_init(char *arg, struct board *b)
 
 	u->plugins = pluginset_init(b);
 
+	u->jdict = joseki_load(b->size);
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -589,7 +593,7 @@ uct_state_init(char *arg, struct board *b)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					u->playout = playout_moggy_init(playoutarg, b);
+					u->playout = playout_moggy_init(playoutarg, b, u->jdict);
 				} else if (!strcasecmp(optval, "light")) {
 					u->playout = playout_light_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "elo")) {
@@ -816,7 +820,7 @@ uct_state_init(char *arg, struct board *b)
 		u->prior = uct_prior_init(NULL, b);
 
 	if (!u->playout)
-		u->playout = playout_moggy_init(NULL, b);
+		u->playout = playout_moggy_init(NULL, b, u->jdict);
 	u->playout->debug_level = u->debug_level;
 
 	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));

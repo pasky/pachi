@@ -4,6 +4,7 @@
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
+#include "joseki/base.h"
 #include "move.h"
 #include "playout.h"
 #include "playout/elo.h"
@@ -81,7 +82,7 @@ replay_state_init(char *arg, struct board *b)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					r->playout = playout_moggy_init(playoutarg, b);
+					r->playout = playout_moggy_init(playoutarg, b, joseki_load(b->size));
 				} else if (!strcasecmp(optval, "light")) {
 					r->playout = playout_light_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "elo")) {

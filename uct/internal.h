@@ -15,6 +15,7 @@ struct uct_policy;
 struct uct_prior;
 struct uct_dynkomi;
 struct uct_pluginset;
+struct joseki_dict;
 
 /* How big proportion of ownermap counts must be of one color to consider
  * the point sure. */
@@ -80,6 +81,7 @@ struct uct {
 	struct playout_policy *playout;
 	struct uct_prior *prior;
 	struct uct_pluginset *plugins;
+	struct joseki_dict *jdict;
 
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;

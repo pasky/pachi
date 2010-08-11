@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "engine.h"
+#include "joseki/base.h"
 #include "move.h"
 #include "playout/elo.h"
 #include "playout/moggy.h"
@@ -236,7 +237,7 @@ montecarlo_state_init(char *arg, struct board *b)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					mc->playout = playout_moggy_init(playoutarg, b);
+					mc->playout = playout_moggy_init(playoutarg, b, joseki_load(b->size));
 				} else if (!strcasecmp(optval, "light")) {
 					mc->playout = playout_light_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "elo")) {

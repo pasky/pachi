@@ -13,8 +13,10 @@
 /* Internal engine state. */
 struct joseki_engine {
 	int debug_level;
-	int size;
 	bool discard;
+
+	int size;
+	struct joseki_dict *jdict;
 
 	struct board *b[16]; // boards with reversed color, mirrored and rotated
 };
@@ -31,7 +33,10 @@ joseki_play(struct engine *e, struct board *b, struct move *m)
 	if (!b->moves) {
 		/* New game, reset state. */
 		j->size = board_size(b);
-		assert(j->size == jdict->bsize);
+		if (j->jdict)
+			assert(j->size == j->jdict->bsize);
+		else
+			j->jdict = joseki_init(j->size);
 		j->discard = false;
 		for (int i = 0; i < 16; i++) {
 			board_resize(j->b[i], j->size - 2);
@@ -88,7 +93,7 @@ joseki_play(struct engine *e, struct board *b, struct move *m)
 		if (i & HASH_OCOLOR)
 			color = stone_other(color);
 
-		coord_t **ccp = &jdict->patterns[j->b[i]->qhash[quadrant] & joseki_hash_mask].moves[color - 1];
+		coord_t **ccp = &j->jdict->patterns[j->b[i]->qhash[quadrant] & joseki_hash_mask].moves[color - 1];
 
 		int count = 1;
 		if (*ccp) {
@@ -131,12 +136,12 @@ engine_joseki_done(struct engine *e)
 	board_clear(b);
 
 	for (hash_t i = 0; i < 1 << joseki_hash_bits; i++) {
-		for (int j = 0; j < 2; j++) {
+		for (int s = 0; s < 2; s++) {
 			static const char cs[] = "bw";
-			if (!jdict->patterns[i].moves[j])
+			if (!j->jdict->patterns[i].moves[s])
 				continue;
-			printf("%" PRIhash " %c", i, cs[j]);
-			coord_t *cc = jdict->patterns[i].moves[j];
+			printf("%" PRIhash " %c", i, cs[s]);
+			coord_t *cc = j->jdict->patterns[i].moves[s];
 			int count = 0;
 			while (!is_pass(*cc)) {
 				printf(" %s", coord2sstr(*cc, b));
@@ -147,6 +152,8 @@ engine_joseki_done(struct engine *e)
 	}
 
 	board_done(b);
+
+	joseki_done(j->jdict);
 }
 
 
@@ -183,10 +190,6 @@ joseki_state_init(char *arg)
 			}
 		}
 	}
-
-	if (jdict)
-		joseki_done(jdict);
-	jdict = joseki_init(19 + 2); // XXX
 
 	return j;
 }

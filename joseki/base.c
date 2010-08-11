@@ -2,13 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "move.h"
 #include "joseki/base.h"
 
-
-struct joseki_dict *jdict;
 
 struct joseki_dict *
 joseki_init(int bsize)
@@ -23,7 +22,11 @@ struct joseki_dict *
 joseki_load(int bsize)
 {
 	FILE *f = fopen("pachijoseki.dat", "r"); // XXX: size-dependent
-	if (!f) return NULL;
+	if (!f) {
+		if (DEBUGL(3))
+			perror("pachijoseki.dat");
+		return NULL;
+	}
 	struct joseki_dict *jd = joseki_init(bsize);
 
 	char linebuf[1024];
@@ -56,6 +59,8 @@ joseki_load(int bsize)
 	}
 
 	fclose(f);
+	if (DEBUGL(2))
+		fprintf(stderr, "Joseki dictionary for board size %d loaded.\n", bsize - 2);
 	return jd;
 }
 

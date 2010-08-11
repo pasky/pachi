@@ -41,6 +41,7 @@ struct moggy_policy {
 	 * group's liberty if that is non-self-atari. */
 	bool selfatari_other;
 
+	struct joseki_dict *jdict;
 	struct pattern3s patterns;
 };
 
@@ -460,12 +461,13 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 static coord_t
 joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s)
 {
+	struct moggy_policy *pp = p->data;
 	struct move_queue q;
 	q.moves = 0;
 
 	for (int i = 0; i < 4; i++) {
 		hash_t h = b->qhash[i] & joseki_hash_mask;
-		coord_t *cc = jdict->patterns[h].moves[to_play];
+		coord_t *cc = pp->jdict->patterns[h].moves[to_play];
 		if (!cc) continue;
 		for (; !is_pass(*cc); cc++) {
 			if (coord_quadrant(*cc, b) != i)
@@ -981,7 +983,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 
 
 struct playout_policy *
-playout_moggy_init(char *arg, struct board *b)
+playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 {
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
@@ -989,6 +991,8 @@ playout_moggy_init(char *arg, struct board *b)
 	p->choose = playout_moggy_choose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
+
+	pp->jdict = jdict;
 
 	int rate = 90;
 

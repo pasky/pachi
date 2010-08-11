@@ -18,8 +18,6 @@ struct joseki_dict {
 	struct joseki_pattern *patterns;
 };
 
-extern struct joseki_dict *jdict;
-
 struct joseki_dict *joseki_init(int bsize);
 struct joseki_dict *joseki_load(int bsize);
 void joseki_done(struct joseki_dict *);
