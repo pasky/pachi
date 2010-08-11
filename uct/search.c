@@ -456,7 +456,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	 * giving away extra komi points (dynkomi). */
 	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
 	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
-	    && komi_by_color(u->t->extra_komi, color) < 0.5) {
+	    && (!u->t->use_extra_komi || komi_by_color(u->t->extra_komi, color) < 0.5)) {
 		*best_coord = resign;
 		return NULL;
 	}
