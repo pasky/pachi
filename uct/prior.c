@@ -167,7 +167,7 @@ uct_prior_init(char *arg, struct board *b)
 {
 	struct uct_prior *p = calloc2(1, sizeof(struct uct_prior));
 
-	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = p->plugin_eqex = -1;
+	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = p->plugin_eqex = -100;
 	p->cfgdn = -1;
 	p->joseki_eqex = 0;
 
@@ -188,9 +188,10 @@ uct_prior_init(char *arg, struct board *b)
 			if (!strcasecmp(optname, "eqex") && optval) {
 				p->eqex = atoi(optval);
 
-			/* In the following settings, you can use -1 to
-			 * set the prior to default eqex, or -2 to set
-			 * it to the half of the default eqex. */
+			/* In the following settings, you can use negative
+			 * numbers to give the hundredths of default eqex.
+			 * E.g. -100 is default eqex, -50 is half of the
+			 * default eqex, -200 is double the default eqex. */
 			} else if (!strcasecmp(optname, "even") && optval) {
 				p->even_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "policy") && optval) {
@@ -225,13 +226,13 @@ uct_prior_init(char *arg, struct board *b)
 		}
 	}
 
-	if (p->even_eqex < 0) p->even_eqex = p->eqex / -p->even_eqex;
-	if (p->policy_eqex < 0) p->policy_eqex = p->eqex / -p->policy_eqex;
-	if (p->b19_eqex < 0) p->b19_eqex = p->eqex / -p->b19_eqex;
-	if (p->eye_eqex < 0) p->eye_eqex = p->eqex / -p->eye_eqex;
-	if (p->ko_eqex < 0) p->ko_eqex = p->eqex / -p->ko_eqex;
-	if (p->joseki_eqex < 0) p->joseki_eqex = p->eqex / -p->joseki_eqex;
-	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex / -p->plugin_eqex;
+	if (p->even_eqex < 0) p->even_eqex = p->eqex * -p->even_eqex / 100;
+	if (p->policy_eqex < 0) p->policy_eqex = p->eqex * -p->policy_eqex / 100;
+	if (p->b19_eqex < 0) p->b19_eqex = p->eqex * -p->b19_eqex / 100;
+	if (p->eye_eqex < 0) p->eye_eqex = p->eqex * -p->eye_eqex / 100;
+	if (p->ko_eqex < 0) p->ko_eqex = p->eqex * -p->ko_eqex / 100;
+	if (p->joseki_eqex < 0) p->joseki_eqex = p->eqex * -p->joseki_eqex / 100;
+	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex * -p->plugin_eqex / 100;
 
 	if (p->cfgdn < 0) {
 		int bonuses[] = { 0, p->eqex, p->eqex / 2, p->eqex / 2 };
