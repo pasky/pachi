@@ -17,6 +17,9 @@
  * as a dictionary of spatial stone configurations, and patterns.gamma
  * with strengths of particular features. */
 
+/* TODO: Counter-captures are not appreciated properly. This seems to be
+ * a major strength problem. */
+
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
