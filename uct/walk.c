@@ -85,6 +85,14 @@ struct uct_playout_callback {
 	struct tree_node *lnode;
 };
 
+static double
+ltree_node_gamma(struct tree_node *li, enum stone color)
+{
+	/* TODO: How to do this? */
+	#define li_value(color, li) (li->u.playouts * (color == S_BLACK ? li->u.value : (1 - li->u.value)))
+	return 0.5 + li_value(color, li);
+}
+
 static void
 uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct probdist *pd)
 {
@@ -132,9 +140,6 @@ uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct pro
 #endif
 
 	/* Construct probability distribution from lnode children. */
-	/* XXX: How to derive the appropriate gamma? */
-	#define li_value(color, li) (li->u.playouts * (color == S_BLACK ? li->u.value : (1 - li->u.value)))
-	#define li_gamma(color, li) (0.5 + li_value(color, li))
 	struct tree_node *li = upc->lnode->children;
 	assert(li);
 	if (is_pass(li->coord)) {
@@ -145,7 +150,8 @@ uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct pro
 	for (; li; li = li->sibling) {
 		if (board_at(b, li->coord) != S_NONE)
 			continue;
-		probdist_set(pd, li->coord, double_to_fixp(pd->items[li->coord] * li_gamma(to_play, li)));
+		double gamma = fixp_to_double(pd->items[li->coord]) * ltree_node_gamma(li, to_play);
+		probdist_set(pd, li->coord, double_to_fixp(gamma));
 	}
 }
 
