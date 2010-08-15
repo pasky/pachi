@@ -1018,7 +1018,9 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
-			if (!strcasecmp(optname, "lcapturerate") && optval) {
+			if (!strcasecmp(optname, "debug") && optval) {
+				p->debug_level = atoi(optval);
+			} else if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atarirate = atoi(optval);

@@ -823,7 +823,8 @@ uct_state_init(char *arg, struct board *b)
 
 	if (!u->playout)
 		u->playout = playout_moggy_init(NULL, b, u->jdict);
-	u->playout->debug_level = u->debug_level;
+	if (!u->playout->debug_level)
+		u->playout->debug_level = u->debug_level;
 
 	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));
 

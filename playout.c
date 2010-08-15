@@ -12,6 +12,8 @@
 #include "ownermap.h"
 #include "playout.h"
 
+#define PLDEBUGL(n) DEBUGL_(policy->debug_level, n)
+
 
 int
 play_random_game(struct playout_setup *setup,
@@ -49,7 +51,7 @@ play_random:
 			struct move m;
 			m.coord = coord; m.color = color;
 			if (board_play(b, &m) < 0) {
-				if (DEBUGL(4)) {
+				if (PLDEBUGL(4)) {
 					fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n",
 						coord_x(coord, b), coord_y(coord, b));
 					board_print(b, stderr);
@@ -85,9 +87,9 @@ play_random:
 		}
 #endif
 
-		if (DEBUGL(7)) {
+		if (PLDEBUGL(7)) {
 			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord, b));
-			if (DEBUGL(8))
+			if (PLDEBUGL(8))
 				board_print(b, stderr);
 		}
 
