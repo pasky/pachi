@@ -51,6 +51,10 @@ sub one {
 		}
 	}
 
+	# Pass value is not interesting since Pachi might want
+	# to clarify some groups yet.
+	return if $realmove eq 'PASS';
+
 	# Generate summary line.
 	print join(', ', $move, $color, $realmove, $genmove, $winrate) . "\n";
 }
