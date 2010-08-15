@@ -12,6 +12,12 @@
 #include "ownermap.h"
 #include "playout.h"
 
+/* Whether to set global debug level to the same as the playout
+ * has, in case it is different. This can make sure e.g. tactical
+ * reading produces proper level of debug prints during simulations.
+ * But it is safe to enable this only in single-threaded instances! */
+//#define DEBUGL_BY_PLAYOUT
+
 #define PLDEBUGL(n) DEBUGL_(policy->debug_level, n)
 
 
@@ -30,6 +36,10 @@ play_random_game(struct playout_setup *setup,
 
 	if (policy->setboard)
 		policy->setboard(policy, b);
+#ifdef DEBUGL_BY_PLAYOUT
+	int debug_level_orig = debug_level;
+	debug_level = policy->debug_level;
+#endif
 
 	enum stone color = starting_color;
 
@@ -134,6 +144,10 @@ play_random:
 
 	if (b->ps)
 		free(b->ps);
+
+#ifdef DEBUGL_BY_PLAYOUT
+	debug_level = debug_level_orig;
+#endif
 
 	return result;
 }
