@@ -909,6 +909,13 @@ uct_state_init(char *arg, struct board *b)
 				 * is on, we make probability distribution from
 				 * sequences first moves instead. */
 				u->local_tree_pseqroot = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_rootseqval")) {
+				/* By default, expected node value is computed by
+				 * summing up values through the whole descent.
+				 * With this settings, expected node value for
+				 * each sequence is the value at the root of the
+				 * sequence. */
+				u->local_tree_rootseqval = !optval || atoi(optval);
 
 			/** Other heuristics */
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {

@@ -400,6 +400,13 @@ record_local_sequence(struct uct *u, struct tree *t,
 	if (is_pass(descent[di].node->coord))
 		return;
 
+	/* Transform the rval appropriately, based on the expected
+	 * result at the root of the sequence. */
+	if (u->local_tree_rootseqval) {
+		float expval = descent[di - 1].value.value;
+		rval = stats_temper_value(rval, expval, u->local_tree);
+	}
+
 #define LTREE_DEBUG if (UDEBUGL(6))
 	LTREE_DEBUG fprintf(stderr, "recording result %f in local %s sequence: ",
 		rval, stone2str(seq_color));
@@ -616,8 +623,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
 			/* Possibly transform the rval appropriately. */
-			floating_t expval = seq_value.value / seq_value.playouts;
-			rval = stats_temper_value(rval, expval, u->local_tree);
+			if (!u->local_tree_rootseqval) {
+				floating_t expval = seq_value.value / seq_value.playouts;
+				rval = stats_temper_value(rval, expval, u->local_tree);
+			}
 
 			/* Get the local sequences and record them in ltree. */
 			/* We will look for sequence starts in our descent
