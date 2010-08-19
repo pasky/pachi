@@ -20,7 +20,7 @@ fast_irandom(unsigned int max)
 {
 	if (max <= 65536)
 		return fast_random(max);
-	int himax = max / 65536;
+	int himax = (max - 1) / 65536;
 	uint16_t hi = fast_random(himax + 1);
 	return ((uint32_t)hi << 16) | fast_random(hi < himax ? 65536 : max % 65536);
 }
