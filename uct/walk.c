@@ -79,11 +79,19 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 }
 
 
-struct uct_playout_callback {
-	struct uct *uct;
-	struct tree *tree;
-	struct tree_node *lnode;
-};
+static void
+record_amaf_move(struct playout_amafmap *amaf, coord_t coord, enum stone color)
+{
+	if (amaf->map[coord] == S_NONE || amaf->map[coord] == color) {
+		amaf->map[coord] = color;
+	} else { // XXX: Respect amaf->record_nakade
+		amaf_op(amaf->map[coord], +);
+	}
+	amaf->game[amaf->gamelen].coord = coord;
+	amaf->game[amaf->gamelen].color = color;
+	amaf->gamelen++;
+	assert(amaf->gamelen < sizeof(amaf->game) / sizeof(amaf->game[0]));
+}
 
 static double
 ltree_node_gamma(struct tree_node *li, enum stone color)
@@ -92,6 +100,13 @@ ltree_node_gamma(struct tree_node *li, enum stone color)
 	#define li_value(color, li) (li->u.playouts * (color == S_BLACK ? li->u.value : (1 - li->u.value)))
 	return 0.5 + li_value(color, li);
 }
+
+
+struct uct_playout_callback {
+	struct uct *uct;
+	struct tree *tree;
+	struct tree_node *lnode;
+};
 
 static void
 uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct probdist *pd)
@@ -359,17 +374,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			stats_add_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
 
 		assert(n->coord >= -1);
-		if (amaf && !is_pass(n->coord)) {
-			if (amaf->map[n->coord] == S_NONE || amaf->map[n->coord] == node_color) {
-				amaf->map[n->coord] = node_color;
-			} else { // XXX: Respect amaf->record_nakade
-				amaf_op(amaf->map[n->coord], +);
-			}
-			amaf->game[amaf->gamelen].coord = n->coord;
-			amaf->game[amaf->gamelen].color = node_color;
-			amaf->gamelen++;
-			assert(amaf->gamelen < sizeof(amaf->game) / sizeof(amaf->game[0]));
-		}
+		if (amaf && !is_pass(n->coord))
+			record_amaf_move(amaf, n->coord, node_color);
 
 		struct move m = { n->coord, node_color };
 		int res = board_play(&b2, &m);
