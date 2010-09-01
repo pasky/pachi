@@ -798,8 +798,9 @@ uct_state_init(char *arg, struct board *b)
 		}
 	}
 
-	u->resign_ratio = 0.2; /* Resign when most games are lost. */
-	u->loss_threshold = 0.85; /* Stop reading if after at least 2000 playouts this is best value. */
+	u->resign_threshold = 0.2; /* Resign when most games are lost. */
+	/* Stop reading if after at least 2000 playouts this is best value. */
+	u->sure_win_threshold = 0.85;
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
 

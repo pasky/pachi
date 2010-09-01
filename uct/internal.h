@@ -27,8 +27,7 @@ struct joseki_dict;
 struct uct {
 	int debug_level;
 	int games, gamelen;
-	float resign_ratio;
-	float loss_threshold;
+	float resign_threshold, sure_win_threshold;
 	double best2_ratio, bestr_ratio;
 	bool pass_all_alive;
 	bool territory_scoring;

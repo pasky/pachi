@@ -296,7 +296,7 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 
 	/* Early break in won situation. */
 	if (best->u.playouts >= PLAYOUT_EARLY_BREAK_MIN
-	    && tree_node_get_value(t, 1, best->u.value) >= u->loss_threshold) {
+	    && tree_node_get_value(t, 1, best->u.value) >= u->sure_win_threshold) {
 		return true;
 	}
 
@@ -454,7 +454,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	 * In this case best is almost random but still better than resign.
 	 * Also do not resign if we are getting bad results while actually
 	 * giving away extra komi points (dynkomi). */
-	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_ratio
+	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_threshold
 	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
 	    && (!u->t->use_extra_komi || komi_by_color(u->t->extra_komi, color) < 0.5)) {
 		*best_coord = resign;
