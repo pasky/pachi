@@ -486,6 +486,8 @@ uct_state_init(char *arg, struct board *b)
 
 	u->debug_level = debug_level;
 	u->gamelen = MC_GAMELEN;
+	u->resign_threshold = 0.2;
+	u->sure_win_threshold = 0.85;
 	u->mercymin = 0;
 	u->expand_p = 2;
 	u->dumpthres = 1000;
@@ -532,6 +534,16 @@ uct_state_init(char *arg, struct board *b)
 					u->debug_level = atoi(optval);
 				else
 					u->debug_level++;
+			} else if (!strcasecmp(optname, "resign_threshold") && optval) {
+				/* Resign when this ratio of games is lost
+				 * after GJ_MINGAMES sample is taken. */
+				u->resign_threshold = atof(optval);
+			} else if (!strcasecmp(optname, "sure_win_threshold") && optval) {
+				/* Stop reading when this ratio of games is won
+				 * after PLAYOUT_EARLY_BREAK_MIN sample is
+				 * taken. (Prevents stupid time losses,
+				 * friendly to human opponents.) */
+				u->sure_win_threshold = atof(optval);
 			} else if (!strcasecmp(optname, "mercy") && optval) {
 				/* Minimal difference of black/white captures
 				 * to stop playout - "Mercy Rule". Speeds up
@@ -798,9 +810,6 @@ uct_state_init(char *arg, struct board *b)
 		}
 	}
 
-	u->resign_threshold = 0.2; /* Resign when most games are lost. */
-	/* Stop reading if after at least 2000 playouts this is best value. */
-	u->sure_win_threshold = 0.85;
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
 
