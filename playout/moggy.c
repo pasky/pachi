@@ -639,7 +639,6 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
-	int base_moves = q->moves;
 
 	if (PLDEBUGL(5))
 		fprintf(stderr, "[%s] 2lib check of color %d\n",
@@ -661,17 +660,8 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 			group_t g2 = group_at(b, c);
 			if (board_group_info(b, g2).libs == 1) {
 				/* We can capture a neighbor. */
-				if (group_is_onestone(b, g2)) {
-					mq_add(q, board_group_info(b, g2).lib[0]);
-					continue;
-				} else {
-					/* It is a large group! Forget
-					 * everything else and just
-					 * capture it now. */
-					q->moves = base_moves;
-					mq_add(q, board_group_info(b, g2).lib[0]);
-					return;
-				}
+				mq_add(q, board_group_info(b, g2).lib[0]);
+				continue;
 			}
 			if (board_group_info(b, g2).libs != 2)
 				continue;
