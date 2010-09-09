@@ -643,6 +643,7 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 			if (board_group_info(b, g2).libs == 1) {
 				/* We can capture a neighbor. */
 				mq_add(q, board_group_info(b, g2).lib[0], 0);
+				mq_nodup(q);
 				continue;
 			}
 			if (board_group_info(b, g2).libs != 2)
@@ -827,6 +828,14 @@ playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone t
 	if (pp->josekirate > fast_random(100)) {
 		joseki_check(p, b, to_play, s, &q);
 	}
+
+#if 0
+	/* Average length of the queue is 1.4 move. */
+	printf("MQL %d ", q.moves);
+	for (unsigned int i = 0; i < q.moves; i++)
+		printf("%s ", coord2sstr(q.move[i], b));
+	printf("\n");
+#endif
 
 	if (q.moves > 0)
 		return mq_pick(&q);
