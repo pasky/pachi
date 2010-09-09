@@ -681,6 +681,28 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 }
 
 coord_t
+fillboard_check(struct playout_policy *p, struct board *b)
+{
+	struct moggy_policy *pp = p->data;
+	unsigned int fbtries = b->flen / 8;
+	if (pp->fillboardtries < fbtries)
+		fbtries = pp->fillboardtries;
+
+	for (unsigned int i = 0; i < fbtries; i++) {
+		coord_t coord = b->f[fast_random(b->flen)];
+		if (immediate_liberty_count(b, coord) != 4)
+			continue;
+		foreach_diag_neighbor(b, coord) {
+			if (board_at(b, c) != S_NONE)
+				goto next_try;
+		} foreach_diag_neighbor_end;
+		return coord;
+next_try:;
+	}
+	return pass;
+}
+
+coord_t
 playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
@@ -746,17 +768,10 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	}
 
 	/* Fill board */
-	unsigned int fbtries = b->flen / 8;
-	for (unsigned int i = 0; i < (fbtries < pp->fillboardtries ? fbtries : pp->fillboardtries); i++) {
-		coord_t coord = b->f[fast_random(b->flen)];
-		if (immediate_liberty_count(b, coord) != 4)
-			continue;
-		foreach_diag_neighbor(b, coord) {
-			if (board_at(b, c) != S_NONE)
-				goto next_try;
-		} foreach_diag_neighbor_end;
-		return coord;
-next_try:;
+	if (pp->fillboardtries > 0) {
+		coord_t c = fillboard_check(p, b);
+		if (!is_pass(c))
+			return c;
 	}
 
 	return pass;
