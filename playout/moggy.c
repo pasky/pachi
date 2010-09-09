@@ -727,7 +727,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 		if (pp->lcapturerate > fast_random(100)) {
 			struct move_queue q = { .moves = 0 };
 			local_atari_check(p, b, &b->last_move, s, &q);
-			if (!q.moves > 0)
+			if (q.moves > 0)
 				return mq_pick(&q);
 		}
 
@@ -735,7 +735,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 		if (pp->atarirate > fast_random(100)) {
 			struct move_queue q = { .moves = 0 };
 			local_2lib_check(p, b, &b->last_move, s, &q);
-			if (!q.moves > 0)
+			if (q.moves > 0)
 				return mq_pick(&q);
 		}
 
@@ -745,7 +745,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 			apply_pattern(p, b, &b->last_move,
 			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
 					  &q);
-			if (!q.moves > 0)
+			if (q.moves > 0)
 				return mq_pick(&q);
 		}
 	}
@@ -756,7 +756,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 	if (pp->capturerate > fast_random(100)) {
 		struct move_queue q = { .moves = 0 };
 		global_atari_check(p, b, to_play, s, &q);
-		if (!q.moves > 0)
+		if (q.moves > 0)
 			return mq_pick(&q);
 	}
 
@@ -764,7 +764,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 	if (pp->josekirate > fast_random(100)) {
 		struct move_queue q = { .moves = 0 };
 		joseki_check(p, b, to_play, s, &q);
-		if (!q.moves > 0)
+		if (q.moves > 0)
 			return mq_pick(&q);
 	}
 
