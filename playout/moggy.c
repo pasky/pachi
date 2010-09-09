@@ -703,7 +703,7 @@ next_try:;
 }
 
 coord_t
-playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_play)
+playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
 	struct board_state *s = board_state_init(b);
@@ -766,6 +766,70 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 		if (!q.moves > 0)
 			return mq_pick(&q);
 	}
+
+	/* Fill board */
+	if (pp->fillboardtries > 0) {
+		coord_t c = fillboard_check(p, b);
+		if (!is_pass(c))
+			return c;
+	}
+
+	return pass;
+}
+
+coord_t
+playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone to_play)
+{
+	struct moggy_policy *pp = p->data;
+	struct board_state *s = board_state_init(b);
+	struct move_queue q = { .moves = 0 };
+
+	if (PLDEBUGL(5))
+		board_print(b, stderr);
+
+	/* Ko fight check */
+	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
+	    && b->moves - b->last_ko_age < pp->koage
+	    && pp->korate > fast_random(100)) {
+		if (board_is_valid_play(b, to_play, b->last_ko.coord)
+		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
+			mq_add(&q, b->last_ko.coord);
+	}
+
+	/* Local checks */
+	if (!is_pass(b->last_move.coord)) {
+		/* Local group in atari? */
+		if (pp->lcapturerate > fast_random(100)) {
+			local_atari_check(p, b, &b->last_move, s, &q);
+		}
+
+		/* Local group can be PUT in atari? */
+		if (pp->atarirate > fast_random(100)) {
+			local_2lib_check(p, b, &b->last_move, s, &q);
+		}
+
+		/* Check for patterns we know */
+		if (pp->patternrate > fast_random(100)) {
+			apply_pattern(p, b, &b->last_move,
+			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
+					  &q);
+		}
+	}
+
+	/* Global checks */
+
+	/* Any groups in atari? */
+	if (pp->capturerate > fast_random(100)) {
+		global_atari_check(p, b, to_play, s, &q);
+	}
+
+	/* Joseki moves? */
+	if (pp->josekirate > fast_random(100)) {
+		joseki_check(p, b, to_play, s, &q);
+	}
+
+	if (q.moves > 0)
+		return mq_pick(&q);
 
 	/* Fill board */
 	if (pp->fillboardtries > 0) {
@@ -992,7 +1056,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
-	p->choose = playout_moggy_choose;
+	p->choose = playout_moggy_partchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
 
@@ -1055,6 +1119,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->pattern2 = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "selfatari_other")) {
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "fullchoose")) {
+				p->choose = optval && *optval == '0' ? playout_moggy_partchoose : playout_moggy_fullchoose;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 				exit(1);
