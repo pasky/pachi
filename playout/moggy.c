@@ -252,7 +252,7 @@ apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum st
 {
 	struct move m2 = { .coord = c, .color = color };
 	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2))
-		mq_add(q, c);
+		mq_add(q, c, 0);
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
@@ -366,7 +366,7 @@ scan:;
 			if (!q) {
 				return true;
 			}
-			mq_add(q, board_group_info(b, group_at(b, c)).lib[0]);
+			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 0);
 			mq_nodup(q);
 		});
 	} foreach_in_group_end;
@@ -449,7 +449,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		q->moves = qmoves_prev;
 	}
 
-	mq_add(q, lib);
+	mq_add(q, lib, 0);
 	mq_nodup(q);
 }
 
@@ -467,7 +467,7 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 		for (; !is_pass(*cc); cc++) {
 			if (coord_quadrant(*cc, b) != i)
 				continue;
-			mq_add(q, *cc);
+			mq_add(q, *cc, 0);
 		}
 	}
 
@@ -610,7 +610,7 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 			continue;
 
 		/* Tasty! Crispy! Good! */
-		mq_add(q, lib);
+		mq_add(q, lib, 0);
 		mq_nodup(q);
 	}
 }
@@ -642,7 +642,8 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 			group_t g2 = group_at(b, c);
 			if (board_group_info(b, g2).libs == 1) {
 				/* We can capture a neighbor. */
-				mq_add(q, board_group_info(b, g2).lib[0]);
+				mq_add(q, board_group_info(b, g2).lib[0], 0);
+				mq_nodup(q);
 				continue;
 			}
 			if (board_group_info(b, g2).libs != 2)
@@ -726,7 +727,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 		if (pp->lcapturerate > fast_random(100)) {
 			struct move_queue q = { .moves = 0 };
 			local_atari_check(p, b, &b->last_move, s, &q);
-			if (!q.moves > 0)
+			if (q.moves > 0)
 				return mq_pick(&q);
 		}
 
@@ -734,7 +735,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 		if (pp->atarirate > fast_random(100)) {
 			struct move_queue q = { .moves = 0 };
 			local_2lib_check(p, b, &b->last_move, s, &q);
-			if (!q.moves > 0)
+			if (q.moves > 0)
 				return mq_pick(&q);
 		}
 
@@ -744,7 +745,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 			apply_pattern(p, b, &b->last_move,
 			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
 					  &q);
-			if (!q.moves > 0)
+			if (q.moves > 0)
 				return mq_pick(&q);
 		}
 	}
@@ -755,7 +756,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 	if (pp->capturerate > fast_random(100)) {
 		struct move_queue q = { .moves = 0 };
 		global_atari_check(p, b, to_play, s, &q);
-		if (!q.moves > 0)
+		if (q.moves > 0)
 			return mq_pick(&q);
 	}
 
@@ -763,7 +764,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 	if (pp->josekirate > fast_random(100)) {
 		struct move_queue q = { .moves = 0 };
 		joseki_check(p, b, to_play, s, &q);
-		if (!q.moves > 0)
+		if (q.moves > 0)
 			return mq_pick(&q);
 	}
 
@@ -793,7 +794,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone t
 	    && pp->korate > fast_random(100)) {
 		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
-			mq_add(&q, b->last_ko.coord);
+			mq_add(&q, b->last_ko.coord, 0);
 	}
 
 	/* Local checks */
@@ -827,6 +828,14 @@ playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone t
 	if (pp->josekirate > fast_random(100)) {
 		joseki_check(p, b, to_play, s, &q);
 	}
+
+#if 0
+	/* Average length of the queue is 1.4 move. */
+	printf("MQL %d ", q.moves);
+	for (unsigned int i = 0; i < q.moves; i++)
+		printf("%s ", coord2sstr(q.move[i], b));
+	printf("\n");
+#endif
 
 	if (q.moves > 0)
 		return mq_pick(&q);
