@@ -256,32 +256,27 @@ apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum st
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
-static coord_t
-apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *mm)
+static void
+apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *mm, struct move_queue *q)
 {
-	struct move_queue q;
-	q.moves = 0;
-
 	/* Suicides do not make any patterns and confuse us. */
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
-		return pass;
+		return;
 
 	foreach_8neighbor(b, m->coord) {
-		apply_pattern_here(p, b, c, stone_other(m->color), &q);
+		apply_pattern_here(p, b, c, stone_other(m->color), q);
 	} foreach_8neighbor_end;
 
 	if (mm) { /* Second move for pattern searching */
 		foreach_8neighbor(b, mm->coord) {
 			if (coord_is_8adjecent(m->coord, c, b))
 				continue;
-			apply_pattern_here(p, b, c, stone_other(m->color), &q);
+			apply_pattern_here(p, b, c, stone_other(m->color), q);
 		} foreach_8neighbor_end;
 	}
 
 	if (PLDEBUGL(5))
-		mq_print(&q, b, "Pattern");
-
-	return mq_pick(&q);
+		mq_print(q, b, "Pattern");
 }
 
 
@@ -458,15 +453,12 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	mq_nodup(q);
 }
 
-static coord_t
-joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s)
+static void
+joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
 	if (!pp->jdict)
-		return pass;
-
-	struct move_queue q;
-	q.moves = 0;
+		return;
 
 	for (int i = 0; i < 4; i++) {
 		hash_t h = b->qhash[i] & joseki_hash_mask;
@@ -475,69 +467,59 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 		for (; !is_pass(*cc); cc++) {
 			if (coord_quadrant(*cc, b) != i)
 				continue;
-			mq_add(&q, *cc);
+			mq_add(q, *cc);
 		}
 	}
 
-	if (q.moves > 0) {
-		if (PLDEBUGL(5))
-			mq_print(&q, b, "Joseki");
-		return mq_pick(&q);
-	}
-	return pass;
+	if (q->moves > 0 && PLDEBUGL(5))
+		mq_print(q, b, "Joseki");
 }
 
-static coord_t
-global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s)
+static void
+global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play, struct board_state *s, struct move_queue *q)
 {
-	struct move_queue q;
-	q.moves = 0;
-
 	if (b->clen == 0)
-		return pass;
+		return;
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL, s);
-		if (q.moves > 0) {
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, s);
+		if (q->moves > 0) {
+			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print(&q, b, "Global atari");
-			return mq_pick(&q);
+				mq_print(q, b, "Global atari");
+			return;
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, &q, NULL, s);
-		if (q.moves > 0) {
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, s);
+		if (q->moves > 0) {
+			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print(&q, b, "Global atari");
-			return mq_pick(&q);
+				mq_print(q, b, "Global atari");
+			return;
 		}
 	}
-	return pass;
+	return;
 }
 
-static coord_t
-local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct board_state *s)
+static void
+local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct board_state *s, struct move_queue *q)
 {
-	struct move_queue q;
-	q.moves = 0;
-
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), &q, NULL, s);
+		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), q, NULL, s);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(p, b, g, stone_other(m->color), &q, NULL, s);
+		group_atari_check(p, b, g, stone_other(m->color), q, NULL, s);
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(&q, b, "Local atari");
-
-	return mq_pick(&q);
+		mq_print(q, b, "Local atari");
 }
 
 static bool
@@ -670,22 +652,19 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 	} foreach_in_group_end;
 }
 
-static coord_t
-local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct board_state *s)
+static void
+local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct board_state *s, struct move_queue *q)
 {
-	struct move_queue q;
-	q.moves = 0;
-
 	/* Does the opponent have just two liberties? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 2) {
-		group_2lib_check(p, b, group_at(b, m->coord), stone_other(m->color), &q, s);
+		group_2lib_check(p, b, group_at(b, m->coord), stone_other(m->color), q, s);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
 		/* XXX: We aren't guaranteed to return to that group
 		 * later. */
-		if (q.moves)
-			return q.move[fast_random(q.moves)];
+		if (q->moves)
+			return q->move[fast_random(q->moves)];
 #endif
 	}
 
@@ -694,21 +673,39 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 2)
 			continue;
-		group_2lib_check(p, b, g, stone_other(m->color), &q, s);
+		group_2lib_check(p, b, g, stone_other(m->color), q, s);
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(&q, b, "Local 2lib");
-
-	return mq_pick(&q);
+		mq_print(q, b, "Local 2lib");
 }
 
 coord_t
-playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_play)
+fillboard_check(struct playout_policy *p, struct board *b)
 {
 	struct moggy_policy *pp = p->data;
-	coord_t c;
+	unsigned int fbtries = b->flen / 8;
+	if (pp->fillboardtries < fbtries)
+		fbtries = pp->fillboardtries;
 
+	for (unsigned int i = 0; i < fbtries; i++) {
+		coord_t coord = b->f[fast_random(b->flen)];
+		if (immediate_liberty_count(b, coord) != 4)
+			continue;
+		foreach_diag_neighbor(b, coord) {
+			if (board_at(b, c) != S_NONE)
+				goto next_try;
+		} foreach_diag_neighbor_end;
+		return coord;
+next_try:;
+	}
+	return pass;
+}
+
+coord_t
+playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone to_play)
+{
+	struct moggy_policy *pp = p->data;
 	struct board_state *s = board_state_init(b);
 
 	if (PLDEBUGL(5))
@@ -727,24 +724,28 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			c = local_atari_check(p, b, &b->last_move, s);
-			if (!is_pass(c))
-				return c;
+			struct move_queue q = { .moves = 0 };
+			local_atari_check(p, b, &b->last_move, s, &q);
+			if (!q.moves > 0)
+				return mq_pick(&q);
 		}
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
-			c = local_2lib_check(p, b, &b->last_move, s);
-			if (!is_pass(c))
-				return c;
+			struct move_queue q = { .moves = 0 };
+			local_2lib_check(p, b, &b->last_move, s, &q);
+			if (!q.moves > 0)
+				return mq_pick(&q);
 		}
 
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
-			c = apply_pattern(p, b, &b->last_move,
-			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL);
-			if (!is_pass(c))
-				return c;
+			struct move_queue q = { .moves = 0 };
+			apply_pattern(p, b, &b->last_move,
+			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
+					  &q);
+			if (!q.moves > 0)
+				return mq_pick(&q);
 		}
 	}
 
@@ -752,30 +753,89 @@ playout_moggy_choose(struct playout_policy *p, struct board *b, enum stone to_pl
 
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
-		c = global_atari_check(p, b, to_play, s);
-		if (!is_pass(c))
-			return c;
+		struct move_queue q = { .moves = 0 };
+		global_atari_check(p, b, to_play, s, &q);
+		if (!q.moves > 0)
+			return mq_pick(&q);
 	}
 
 	/* Joseki moves? */
 	if (pp->josekirate > fast_random(100)) {
-		c = joseki_check(p, b, to_play, s);
+		struct move_queue q = { .moves = 0 };
+		joseki_check(p, b, to_play, s, &q);
+		if (!q.moves > 0)
+			return mq_pick(&q);
+	}
+
+	/* Fill board */
+	if (pp->fillboardtries > 0) {
+		coord_t c = fillboard_check(p, b);
 		if (!is_pass(c))
 			return c;
 	}
 
+	return pass;
+}
+
+coord_t
+playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone to_play)
+{
+	struct moggy_policy *pp = p->data;
+	struct board_state *s = board_state_init(b);
+	struct move_queue q = { .moves = 0 };
+
+	if (PLDEBUGL(5))
+		board_print(b, stderr);
+
+	/* Ko fight check */
+	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
+	    && b->moves - b->last_ko_age < pp->koage
+	    && pp->korate > fast_random(100)) {
+		if (board_is_valid_play(b, to_play, b->last_ko.coord)
+		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
+			mq_add(&q, b->last_ko.coord);
+	}
+
+	/* Local checks */
+	if (!is_pass(b->last_move.coord)) {
+		/* Local group in atari? */
+		if (pp->lcapturerate > fast_random(100)) {
+			local_atari_check(p, b, &b->last_move, s, &q);
+		}
+
+		/* Local group can be PUT in atari? */
+		if (pp->atarirate > fast_random(100)) {
+			local_2lib_check(p, b, &b->last_move, s, &q);
+		}
+
+		/* Check for patterns we know */
+		if (pp->patternrate > fast_random(100)) {
+			apply_pattern(p, b, &b->last_move,
+			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
+					  &q);
+		}
+	}
+
+	/* Global checks */
+
+	/* Any groups in atari? */
+	if (pp->capturerate > fast_random(100)) {
+		global_atari_check(p, b, to_play, s, &q);
+	}
+
+	/* Joseki moves? */
+	if (pp->josekirate > fast_random(100)) {
+		joseki_check(p, b, to_play, s, &q);
+	}
+
+	if (q.moves > 0)
+		return mq_pick(&q);
+
 	/* Fill board */
-	unsigned int fbtries = b->flen / 8;
-	for (unsigned int i = 0; i < (fbtries < pp->fillboardtries ? fbtries : pp->fillboardtries); i++) {
-		coord_t coord = b->f[fast_random(b->flen)];
-		if (immediate_liberty_count(b, coord) != 4)
-			continue;
-		foreach_diag_neighbor(b, coord) {
-			if (board_at(b, c) != S_NONE)
-				goto next_try;
-		} foreach_diag_neighbor_end;
-		return coord;
-next_try:;
+	if (pp->fillboardtries > 0) {
+		coord_t c = fillboard_check(p, b);
+		if (!is_pass(c))
+			return c;
 	}
 
 	return pass;
@@ -996,7 +1056,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
-	p->choose = playout_moggy_choose;
+	p->choose = playout_moggy_partchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
 
@@ -1059,6 +1119,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->pattern2 = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "selfatari_other")) {
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "fullchoose")) {
+				p->choose = optval && *optval == '0' ? playout_moggy_partchoose : playout_moggy_fullchoose;
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 				exit(1);
