@@ -61,10 +61,15 @@ mq_append(struct move_queue *qd, struct move_queue *qs)
 static inline void
 mq_nodup(struct move_queue *q)
 {
-	if ((q->moves > 1 && q->move[q->moves - 2] == q->move[q->moves - 1])
-	    || (q->moves > 2 && q->move[q->moves - 3] == q->move[q->moves - 1])
-	    || (q->moves > 3 && q->move[q->moves - 4] == q->move[q->moves - 1]))
-		q->moves--;
+	for (unsigned int i = 1; i < 4; i++) {
+		if (q->moves <= i)
+			return;
+		if (q->move[q->moves - 1 - i] == q->move[q->moves - 1]) {
+			q->tag[q->moves - 1 - i] |= q->tag[q->moves - 1];
+			q->moves--;
+			return;
+		}
+	}
 }
 
 static inline void
