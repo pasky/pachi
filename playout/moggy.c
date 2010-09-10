@@ -790,6 +790,57 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 	return pass;
 }
 
+/* Pick a move from queue q, giving different likelihoods to moves
+ * based on their tags. */
+coord_t
+mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
+{
+	/* First, merge all entries for a move. */
+	/* We use a naive O(N^2) since the average length of the queue
+	 * is about 1.4. */
+	for (unsigned int i = 0; i < q->moves; i++) {
+		for (unsigned int j = i + 1; j < q->moves; j++) {
+			if (q->move[i] != q->move[j])
+				continue;
+			q->tag[i] |= q->tag[j];
+			q->tag[j] = q->tag[q->moves - 1];
+			q->move[j] = q->move[q->moves--];
+		}
+	}
+
+	/* Probabilities. */ /* XXX: Tune. */
+	double prob[MQ_MAX] = {
+		[MQ_KO] = 6.0,
+		[MQ_LATARI] = 5.0,
+		[MQ_L2LIB] = 4.0,
+		[MQ_PAT3] = 3.0,
+		[MQ_GATARI] = 2.0,
+		[MQ_JOSEKI] = 1.0,
+	};
+
+	/* Now, construct a probdist. */
+	fixp_t total = 0;
+	fixp_t pd[q->moves];
+	for (unsigned int i = 0; i < q->moves; i++) {
+		double val = 1.0;
+		assert(q->tag[i] != 0);
+		for (int j = 1; j < MQ_MAX; j++)
+			if (q->tag[i] & (1<<j))
+				val *= prob[j];
+		pd[i] = double_to_fixp(val);
+		total += pd[i];
+	}
+
+	/* Finally, pick a move! */
+	fixp_t stab = fast_irandom(total);
+	for (unsigned int i = 0; i < q->moves; i++) {
+		if (stab < pd[i])
+			return q->move[i];
+		stab -= pd[i];
+	}
+	assert(0);
+}
+
 coord_t
 playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
@@ -850,7 +901,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone t
 #endif
 
 	if (q.moves > 0)
-		return mq_pick(&q);
+		return mq_tagged_choose(p, b, to_play, &q);
 
 	/* Fill board */
 	if (pp->fillboardtries > 0) {
