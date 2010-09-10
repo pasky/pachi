@@ -46,6 +46,15 @@ struct moggy_policy {
 };
 
 
+/* Move queue tags: */
+#define MQ_KO		1
+#define MQ_LATARI	2
+#define MQ_L2LIB	3
+#define MQ_PAT3		4
+#define MQ_GATARI	5
+#define MQ_JOSEKI	6
+
+
 struct group_state {
 	enum {
 		G_ATARI,
@@ -252,7 +261,7 @@ apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum st
 {
 	struct move m2 = { .coord = c, .color = color };
 	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2))
-		mq_add(q, c, 0);
+		mq_add(q, c, 1<<MQ_PAT3);
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
@@ -334,7 +343,7 @@ capturable_group(struct playout_policy *p, struct board_state *s,
 static bool
 can_countercapture(struct playout_policy *p, struct board_state *s,
                    struct board *b, enum stone owner, group_t g,
-		   enum stone to_play, struct move_queue *q)
+		   enum stone to_play, struct move_queue *q, int tag)
 {
 	if (b->clen < 2)
 		return false;
@@ -366,7 +375,7 @@ scan:;
 			if (!q) {
 				return true;
 			}
-			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 0);
+			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 1<<tag);
 			mq_nodup(q);
 		});
 	} foreach_in_group_end;
@@ -379,21 +388,21 @@ scan:;
 #ifdef NO_DOOMED_GROUPS
 static bool
 can_be_rescued(struct playout_policy *p, struct board_state *s,
-               struct board *b, group_t group, enum stone color)
+               struct board *b, group_t group, enum stone color, int tag)
 {
 	/* Does playing on the liberty rescue the group? */
 	if (can_play_on_lib(p, s, b, group, color))
 		return true;
 
 	/* Then, maybe we can capture one of our neighbors? */
-	return can_countercapture(p, s, b, color, group, color, NULL);
+	return can_countercapture(p, s, b, color, group, color, NULL, tag);
 }
 #endif
 
 /* ladder != NULL implies to always enqueue all relevant moves. */
 static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
-                  struct move_queue *q, coord_t *ladder, struct board_state *s)
+                  struct move_queue *q, coord_t *ladder, struct board_state *s, int tag)
 {
 	struct moggy_policy *pp = p->data;
 	int qmoves_prev = q->moves;
@@ -411,7 +420,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	assert(board_at(b, lib) == S_NONE);
 
 	/* Can we capture some neighbor? */
-	bool ccap = can_countercapture(p, s, b, color, group, to_play, q);
+	bool ccap = can_countercapture(p, s, b, color, group, to_play, q, tag);
 	if (ccap && !ladder && pp->alwaysccaprate > fast_random(100))
 		return;
 
@@ -425,7 +434,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		return;
 #ifdef NO_DOOMED_GROUPS
 	/* Do not remove group that cannot be saved by the opponent. */
-	if (to_play != color && !can_be_rescued(p, s, b, group, color))
+	if (to_play != color && !can_be_rescued(p, s, b, group, color, tag))
 		return;
 #endif
 	if (PLDEBUGL(6))
@@ -449,7 +458,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		q->moves = qmoves_prev;
 	}
 
-	mq_add(q, lib, 0);
+	mq_add(q, lib, 1<<tag);
 	mq_nodup(q);
 }
 
@@ -467,7 +476,7 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 		for (; !is_pass(*cc); cc++) {
 			if (coord_quadrant(*cc, b) != i)
 				continue;
-			mq_add(q, *cc, 0);
+			mq_add(q, *cc, 1<<MQ_JOSEKI);
 		}
 	}
 
@@ -483,7 +492,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, s);
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, s, MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -492,7 +501,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, s);
+		group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, s, MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -508,14 +517,14 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 {
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), q, NULL, s);
+		group_atari_check(p, b, group_at(b, m->coord), stone_other(m->color), q, NULL, s, MQ_LATARI);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(p, b, g, stone_other(m->color), q, NULL, s);
+		group_atari_check(p, b, g, stone_other(m->color), q, NULL, s, MQ_LATARI);
 	});
 
 	if (PLDEBUGL(5))
@@ -610,7 +619,7 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 			continue;
 
 		/* Tasty! Crispy! Good! */
-		mq_add(q, lib, 0);
+		mq_add(q, lib, 1<<MQ_L2LIB);
 		mq_nodup(q);
 	}
 }
@@ -642,7 +651,7 @@ group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum 
 			group_t g2 = group_at(b, c);
 			if (board_group_info(b, g2).libs == 1) {
 				/* We can capture a neighbor. */
-				mq_add(q, board_group_info(b, g2).lib[0], 0);
+				mq_add(q, board_group_info(b, g2).lib[0], 1<<MQ_L2LIB);
 				mq_nodup(q);
 				continue;
 			}
@@ -794,7 +803,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone t
 	    && pp->korate > fast_random(100)) {
 		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
-			mq_add(&q, b->last_ko.coord, 0);
+			mq_add(&q, b->last_ko.coord, 1<<MQ_KO);
 	}
 
 	/* Local checks */
@@ -925,7 +934,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		return;
 
 	coord_t ladder = pass;
-	group_atari_check(p, b, g, map->to_play, &q, &ladder, s);
+	group_atari_check(p, b, g, map->to_play, &q, &ladder, s, 0);
 	while (q.moves--) {
 		coord_t coord = q.move[q.moves];
 
