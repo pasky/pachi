@@ -70,8 +70,6 @@ static const struct time_info default_ti = {
 
 /* Set in thread manager in case the workers should stop. */
 volatile sig_atomic_t uct_halt = 0;
-/* ID of the running worker thread. */
-__thread int thread_id = -1;
 /* ID of the thread manager. */
 static pthread_t thread_manager;
 bool thread_manager_running;
@@ -87,7 +85,6 @@ spawn_worker(void *ctx_)
 	struct uct_thread_ctx *ctx = ctx_;
 	/* Setup */
 	fast_srandom(ctx->seed);
-	thread_id = ctx->tid;
 	/* Run */
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
 	/* Finish */

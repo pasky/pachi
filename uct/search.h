@@ -29,7 +29,6 @@ struct tree_node;
 
 /* Thread manager state */
 extern volatile sig_atomic_t uct_halt;
-extern __thread int thread_id;
 extern bool thread_manager_running;
 
 /* Search thread context */
