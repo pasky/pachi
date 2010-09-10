@@ -47,12 +47,15 @@ struct moggy_policy {
 
 
 /* Move queue tags: */
-#define MQ_KO		1
-#define MQ_LATARI	2
-#define MQ_L2LIB	3
-#define MQ_PAT3		4
-#define MQ_GATARI	5
-#define MQ_JOSEKI	6
+enum mq_tag {
+	MQ_KO = 1,
+	MQ_LATARI,
+	MQ_L2LIB,
+	MQ_PAT3,
+	MQ_GATARI,
+	MQ_JOSEKI,
+	MQ_MAX
+};
 
 
 struct group_state {
@@ -343,7 +346,7 @@ capturable_group(struct playout_policy *p, struct board_state *s,
 static bool
 can_countercapture(struct playout_policy *p, struct board_state *s,
                    struct board *b, enum stone owner, group_t g,
-		   enum stone to_play, struct move_queue *q, int tag)
+		   enum stone to_play, struct move_queue *q, enum mq_tag tag)
 {
 	if (b->clen < 2)
 		return false;
@@ -388,7 +391,7 @@ scan:;
 #ifdef NO_DOOMED_GROUPS
 static bool
 can_be_rescued(struct playout_policy *p, struct board_state *s,
-               struct board *b, group_t group, enum stone color, int tag)
+               struct board *b, group_t group, enum stone color, enum mq_tag tag)
 {
 	/* Does playing on the liberty rescue the group? */
 	if (can_play_on_lib(p, s, b, group, color))
@@ -402,7 +405,7 @@ can_be_rescued(struct playout_policy *p, struct board_state *s,
 /* ladder != NULL implies to always enqueue all relevant moves. */
 static void
 group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
-                  struct move_queue *q, coord_t *ladder, struct board_state *s, int tag)
+                  struct move_queue *q, coord_t *ladder, struct board_state *s, enum mq_tag tag)
 {
 	struct moggy_policy *pp = p->data;
 	int qmoves_prev = q->moves;
