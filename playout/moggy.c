@@ -27,6 +27,18 @@
 //#define NO_DOOMED_GROUPS
 
 
+/* Move queue tags: */
+enum mq_tag {
+	MQ_KO = 1,
+	MQ_LATARI,
+	MQ_L2LIB,
+	MQ_PAT3,
+	MQ_GATARI,
+	MQ_JOSEKI,
+	MQ_MAX
+};
+
+
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
@@ -43,18 +55,10 @@ struct moggy_policy {
 
 	struct joseki_dict *jdict;
 	struct pattern3s patterns;
-};
 
-
-/* Move queue tags: */
-enum mq_tag {
-	MQ_KO = 1,
-	MQ_LATARI,
-	MQ_L2LIB,
-	MQ_PAT3,
-	MQ_GATARI,
-	MQ_JOSEKI,
-	MQ_MAX
+	/* Gamma values for queue tags - correspond to probabilities. */
+	/* XXX: Tune. */
+	double mq_prob[MQ_MAX];
 };
 
 
@@ -795,6 +799,8 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 coord_t
 mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
 {
+	struct moggy_policy *pp = p->data;
+
 	/* First, merge all entries for a move. */
 	/* We use a naive O(N^2) since the average length of the queue
 	 * is about 1.4. */
@@ -808,16 +814,6 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 		}
 	}
 
-	/* Probabilities. */ /* XXX: Tune. */
-	double prob[MQ_MAX] = {
-		[MQ_KO] = 6.0,
-		[MQ_LATARI] = 5.0,
-		[MQ_L2LIB] = 4.0,
-		[MQ_PAT3] = 3.0,
-		[MQ_GATARI] = 2.0,
-		[MQ_JOSEKI] = 1.0,
-	};
-
 	/* Now, construct a probdist. */
 	fixp_t total = 0;
 	fixp_t pd[q->moves];
@@ -826,7 +822,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 		assert(q->tag[i] != 0);
 		for (int j = 1; j < MQ_MAX; j++)
 			if (q->tag[i] & (1<<j))
-				val *= prob[j];
+				val *= pp->mq_prob[j];
 		pd[i] = double_to_fixp(val);
 		total += pd[i];
 	}
@@ -1144,6 +1140,17 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->ladderassess = true;
 	pp->selfatari_other = true;
 
+	/* C is stupid. */
+	double mq_prob_default[MQ_MAX] = {
+		[MQ_KO] = 6.0,
+		[MQ_LATARI] = 5.0,
+		[MQ_L2LIB] = 4.0,
+		[MQ_PAT3] = 3.0,
+		[MQ_GATARI] = 2.0,
+		[MQ_JOSEKI] = 1.0,
+	};
+	memcpy(pp->mq_prob, mq_prob_default, sizeof(pp->mq_prob));
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -1193,6 +1200,12 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
 				p->choose = optval && *optval == '0' ? playout_moggy_partchoose : playout_moggy_fullchoose;
+			} else if (!strcasecmp(optname, "mqprob") && optval) {
+				/* KO%LATARI%L2LIB%PAT3%GATARI%JOSEKI */
+				for (int i = 1; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
+					optval++;
+					pp->mq_prob[i] = atof(optval);
+				}
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 				exit(1);
