@@ -52,6 +52,9 @@ struct moggy_policy {
 	/* Whether, when self-atari attempt is detected, to play the other
 	 * group's liberty if that is non-self-atari. */
 	bool selfatari_other;
+	/* Whether to always pick from moves capturing all groups in
+	 * global_atari_check(). */
+	bool capcheckall;
 
 	struct joseki_dict *jdict;
 	struct pattern3s patterns;
@@ -496,6 +499,15 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 {
 	if (b->clen == 0)
 		return;
+
+	struct moggy_policy *pp = p->data;
+	if (pp->capcheckall) {
+		for (int g = 0; g < b->clen; g++)
+			group_atari_check(p, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, s, MQ_GATARI);
+		if (PLDEBUGL(5))
+			mq_print(q, b, "Global atari");
+		return;
+	}
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
@@ -1206,6 +1218,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->pattern2 = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "selfatari_other")) {
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "capcheckall")) {
+				pp->capcheckall = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
 				p->choose = optval && *optval == '0' ? playout_moggy_partchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
