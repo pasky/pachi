@@ -58,7 +58,7 @@ struct moggy_policy {
 
 	/* Gamma values for queue tags - correspond to probabilities. */
 	/* XXX: Tune. */
-	double mq_prob[MQ_MAX];
+	double mq_prob[MQ_MAX], tenuki_prob;
 };
 
 
@@ -829,6 +829,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 		pd[i] = double_to_fixp(val);
 		total += pd[i];
 	}
+	total += double_to_fixp(pp->tenuki_prob);
 
 	/* Finally, pick a move! */
 	fixp_t stab = fast_irandom(total);
@@ -838,7 +839,10 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 			return q->move[i];
 		stab -= pd[i];
 	}
-	assert(0);
+
+	/* Tenuki. */
+	assert(stab < double_to_fixp(pp->tenuki_prob));
+	return pass;
 }
 
 coord_t
@@ -1210,6 +1214,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 					optval++;
 					pp->mq_prob[i] = atof(optval);
 				}
+			} else if (!strcasecmp(optname, "tenukiprob") && optval) {
+				pp->tenuki_prob = atof(optval);
 			} else {
 				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
 				exit(1);
