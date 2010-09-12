@@ -809,8 +809,9 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 			if (q->move[i] != q->move[j])
 				continue;
 			q->tag[i] |= q->tag[j];
-			q->tag[j] = q->tag[q->moves - 1];
-			q->move[j] = q->move[q->moves--];
+			q->moves--;
+			q->tag[j] = q->tag[q->moves];
+			q->move[j] = q->move[q->moves];
 		}
 	}
 
