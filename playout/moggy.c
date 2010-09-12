@@ -822,8 +822,10 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 		double val = 1.0;
 		assert(q->tag[i] != 0);
 		for (int j = 1; j < MQ_MAX; j++)
-			if (q->tag[i] & (1<<j))
+			if (q->tag[i] & (1<<j)) {
+				//fprintf(stderr, "%s(%x) %d %f *= %f\n", coord2sstr(q->move[i], b), q->tag[i], j, val, pp->mq_prob[j]);
 				val *= pp->mq_prob[j];
+			}
 		pd[i] = double_to_fixp(val);
 		total += pd[i];
 	}
@@ -831,6 +833,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 	/* Finally, pick a move! */
 	fixp_t stab = fast_irandom(total);
 	for (unsigned int i = 0; i < q->moves; i++) {
+		//fprintf(stderr, "%s(%x) %f (%f/%f)\n", coord2sstr(q->move[i], b), q->tag[i], fixp_to_double(stab), fixp_to_double(pd[i]), fixp_to_double(total));
 		if (stab < pd[i])
 			return q->move[i];
 		stab -= pd[i];
