@@ -8,14 +8,16 @@ Base:
 * Implement parameter setup over GTP
 * gogui-friendly GTP interface
 
-Patterns:
-* Heavy optimization work
-* Analyze feasibility of various possible features
-* Incrementally match all features from fast set
-* Incrementally maintain probability distribution for ELO playouts
+General improvements:
+* Opening book
+* Criticality
+* Killer moves
+* MM local-based patterns
+* Balanced local-based patterns?
+* Local tree forcing
 
 Playouts:
-* Finish the ELO-play policy
+* Remove the unsuccessful attempt at ELO-play policy
 * Split playout aspects to custom-stackable pieces
 * Possibly replay top-rated unplayed moves from the tree
   in the playout?
@@ -23,8 +25,6 @@ Playouts:
 * [Mogo] Connect-if-selfatari approach moves modification
 
 UCT:
-* Support for prior hinting based by custom externally linked
-  evaluation function
 * Support for different float types when running with huge playout counts
 
 UCB1AMAF:
