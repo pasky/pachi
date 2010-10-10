@@ -10,15 +10,13 @@
  * a simple ladder. */
 /* Two ways of ladder reading can be enabled separately; simple first-line
  * ladders and trivial middle-board ladders. */
-static bool is_ladder(struct board *b, coord_t coord, group_t laddered,
-                      bool border_ladders, bool middle_ladders);
+static bool is_ladder(struct board *b, coord_t coord, group_t laddered);
 
 
 bool is_border_ladder(struct board *b, coord_t coord, enum stone lcolor);
 bool is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor);
 static inline bool
-is_ladder(struct board *b, coord_t coord, group_t laddered,
-          bool border_ladders, bool middle_ladders)
+is_ladder(struct board *b, coord_t coord, group_t laddered)
 {
 	enum stone lcolor = board_at(b, group_base(laddered));
 
@@ -28,22 +26,16 @@ is_ladder(struct board *b, coord_t coord, group_t laddered,
 
 	/* First, special-case first-line "ladders". This is a huge chunk
 	 * of ladders we actually meet and want to play. */
-	if (border_ladders
-	    && neighbor_count_at(b, coord, S_OFFBOARD) == 1
+	if (neighbor_count_at(b, coord, S_OFFBOARD) == 1
 	    && neighbor_count_at(b, coord, lcolor) == 1) {
 		bool l = is_border_ladder(b, coord, lcolor);
 		if (DEBUGL(6)) fprintf(stderr, "border ladder solution: %d\n", l);
 		return l;
 	}
 
-	if (middle_ladders) {
-		bool l = is_middle_ladder(b, coord, lcolor);
-		if (DEBUGL(6)) fprintf(stderr, "middle ladder solution: %d\n", l);
-		return l;
-	}
-
-	if (DEBUGL(6)) fprintf(stderr, "no ladder to be checked\n");
-	return false;
+	bool l = is_middle_ladder(b, coord, lcolor);
+	if (DEBUGL(6)) fprintf(stderr, "middle ladder solution: %d\n", l);
+	return l;
 }
 
 #endif

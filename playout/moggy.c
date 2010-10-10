@@ -143,7 +143,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, true, true))
+	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor))
 		return false;
 	return true;
 }
@@ -297,7 +297,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
-	if (is_ladder(b, lib, group, true, true)) {
+	if (is_ladder(b, lib, group)) {
 		/* Sometimes we want to keep the ladder move in the
 		 * queue in order to discourage it. */
 		if (!ladder)
