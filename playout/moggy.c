@@ -183,11 +183,10 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 
 
 static bool
-can_play_on_lib(struct playout_policy *p,
-                struct board *b, group_t g, enum stone to_play)
+can_play_on_lib(struct board *b, group_t g, enum stone to_play)
 {
 	coord_t capture = board_group_info(b, g).lib[0];
-	if (PLDEBUGL(6))
+	if (DEBUGL(6))
 		fprintf(stderr, "can capture group %d (%s)?\n",
 			g, coord2sstr(capture, b));
 	/* Does playing on the liberty usefully capture the group? */
@@ -204,8 +203,7 @@ can_play_on_lib(struct playout_policy *p,
 /* Note that @to_play is important; e.g. consider snapback, it's good
  * to play at the last liberty by attacker, but not defender. */
 static __attribute__((always_inline)) bool
-capturable_group(struct playout_policy *p,
-                 struct board *b, enum stone capturer, coord_t c,
+capturable_group(struct board *b, enum stone capturer, coord_t c,
 		 enum stone to_play)
 {
 	group_t g = group_at(b, c);
@@ -213,15 +211,14 @@ capturable_group(struct playout_policy *p,
 	           || board_group_info(b, g).libs > 1))
 		return false;
 
-	return can_play_on_lib(p, b, g, to_play);
+	return can_play_on_lib(b, g, to_play);
 }
 
 /* For given atari group @group owned by @owner, decide if @to_play
  * can save it / keep it in danger by dealing with one of the
  * neighboring groups. */
 static bool
-can_countercapture(struct playout_policy *p,
-                   struct board *b, enum stone owner, group_t g,
+can_countercapture(struct board *b, enum stone owner, group_t g,
 		   enum stone to_play, struct move_queue *q, enum mq_tag tag)
 {
 	if (b->clen < 2)
@@ -231,7 +228,7 @@ can_countercapture(struct playout_policy *p,
 
 	foreach_in_group(b, g) {
 		foreach_neighbor(b, c, {
-			if (!capturable_group(p, b, owner, c, to_play))
+			if (!capturable_group(b, owner, c, to_play))
 				continue;
 
 			if (!q) {
@@ -248,15 +245,14 @@ can_countercapture(struct playout_policy *p,
 
 #ifdef NO_DOOMED_GROUPS
 static bool
-can_be_rescued(struct playout_policy *p,
-               struct board *b, group_t group, enum stone color, enum mq_tag tag)
+can_be_rescued(struct board *b, group_t group, enum stone color, enum mq_tag tag)
 {
 	/* Does playing on the liberty rescue the group? */
-	if (can_play_on_lib(p, b, group, color))
+	if (can_play_on_lib(b, group, color))
 		return true;
 
 	/* Then, maybe we can capture one of our neighbors? */
-	return can_countercapture(p, b, color, group, color, NULL, tag);
+	return can_countercapture(b, color, group, color, NULL, tag);
 }
 #endif
 
@@ -281,7 +277,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 	assert(board_at(b, lib) == S_NONE);
 
 	/* Can we capture some neighbor? */
-	bool ccap = can_countercapture(p, b, color, group, to_play, q, tag);
+	bool ccap = can_countercapture(b, color, group, to_play, q, tag);
 	if (ccap && !ladder && pp->alwaysccaprate > fast_random(100))
 		return;
 
@@ -291,11 +287,11 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		return;
 
 	/* Do not suicide... */
-	if (!can_play_on_lib(p, b, group, to_play))
+	if (!can_play_on_lib(b, group, to_play))
 		return;
 #ifdef NO_DOOMED_GROUPS
 	/* Do not remove group that cannot be saved by the opponent. */
-	if (to_play != color && !can_be_rescued(p, b, group, color, tag))
+	if (to_play != color && !can_be_rescued(b, group, color, tag))
 		return;
 #endif
 	if (PLDEBUGL(6))
