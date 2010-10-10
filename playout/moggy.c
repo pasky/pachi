@@ -43,7 +43,6 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	bool ladders, ladderassess, borderladders;
 	unsigned int lcapturerate, atarirate, capturerate, patternrate, korate, josekirate;
 	unsigned int selfatarirate, alwaysccaprate;
 	unsigned int fillboardtries;
@@ -144,7 +143,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, pp->borderladders, pp->ladders))
+	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, true, true))
 		return false;
 	return true;
 }
@@ -298,7 +297,7 @@ group_atari_check(struct playout_policy *p, struct board *b, group_t group, enum
 		fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders. */
-	if (is_ladder(b, lib, group, pp->borderladders, pp->ladders)) {
+	if (is_ladder(b, lib, group, true, true)) {
 		/* Sometimes we want to keep the ladder move in the
 		 * queue in order to discourage it. */
 		if (!ladder)
@@ -828,9 +827,6 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 
 	/* This group, sir, is in atari! */
 
-	if (!pp->capturerate && !pp->lcapturerate && !pp->ladderassess)
-		return;
-
 	coord_t ladder = pass;
 	group_atari_check(p, b, g, map->to_play, &q, &ladder, 0);
 	while (q.moves--) {
@@ -844,7 +840,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			 * group (but we don't encourage it either). Such
 			 * a move can simplify tactical situations if we
 			 * can afford it. */
-			if (!pp->ladderassess || map->to_play != board_at(b, g))
+			if (map->to_play != board_at(b, g))
 				continue;
 			/* FIXME: We give the malus even if this move
 			 * captures another group. */
@@ -914,10 +910,9 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 	struct moggy_policy *pp = p->data;
 
 	/* First, go through all endangered groups. */
-	if (pp->lcapturerate || pp->capturerate || pp->atarirate || pp->ladderassess)
-		for (group_t g = 1; g < board_size2(map->b); g++)
-			if (group_at(map->b, g) == g)
-				playout_moggy_assess_group(p, map, g, games);
+	for (group_t g = 1; g < board_size2(map->b); g++)
+		if (group_at(map->b, g) == g)
+			playout_moggy_assess_group(p, map, g, games);
 
 	/* Then, assess individual moves. */
 	if (!pp->patternrate && !pp->selfatarirate)
@@ -981,8 +976,6 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			= pp->selfatarirate = pp->josekirate = -1U;
 	pp->korate = 0; pp->koage = 4;
 	pp->alwaysccaprate = 0;
-	pp->ladders = pp->borderladders = true;
-	pp->ladderassess = true;
 	pp->selfatari_other = true;
 
 	/* C is stupid. */
@@ -1031,12 +1024,6 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->fillboardtries = atoi(optval);
 			} else if (!strcasecmp(optname, "koage") && optval) {
 				pp->koage = atoi(optval);
-			} else if (!strcasecmp(optname, "ladders")) {
-				pp->ladders = optval && *optval == '0' ? false : true;
-			} else if (!strcasecmp(optname, "borderladders")) {
-				pp->borderladders = optval && *optval == '0' ? false : true;
-			} else if (!strcasecmp(optname, "ladderassess")) {
-				pp->ladderassess = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "pattern2")) {
 				pp->pattern2 = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "selfatari_other")) {
