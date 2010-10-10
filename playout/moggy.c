@@ -43,7 +43,7 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	bool ladders, ladderassess, borderladders, assess_local;
+	bool ladders, ladderassess, borderladders;
 	unsigned int lcapturerate, atarirate, capturerate, patternrate, korate, josekirate;
 	unsigned int selfatarirate, alwaysccaprate;
 	unsigned int fillboardtries;
@@ -797,22 +797,6 @@ selfatari_cousin(struct board *b, enum stone color, coord_t coord)
 	return lib2;
 }
 
-static int
-assess_local_bonus(struct playout_policy *p, struct board *board, coord_t a, coord_t b, int games)
-{
-	struct moggy_policy *pp = p->data;
-	if (!pp->assess_local)
-		return games;
-
-	int dx = abs(coord_x(a, board) - coord_x(b, board));
-	int dy = abs(coord_y(a, board) - coord_y(b, board));
-	/* adjecent move, directly or diagonally? */
-	if (dx + dy <= 1 + (dx && dy))
-		return games;
-	else
-		return games / 2;
-}
-
 void
 playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, group_t g, int games)
 {
@@ -836,7 +820,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: 2lib %s\n", coord2sstr(coord, b));
-			int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games) / 2;
+			int assess = games / 2;
 			add_prior_value(map, coord, 1, assess);
 		}
 		return;
@@ -875,7 +859,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 
 		if (PLDEBUGL(5))
 			fprintf(stderr, "1.0: atari %s\n", coord2sstr(coord, b));
-		int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games) * 2;
+		int assess = games * 2;
 		add_prior_value(map, coord, 1, assess);
 	}
 }
@@ -917,8 +901,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 		if (test_pattern3_here(p, b, &m)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
-			int assess = assess_local_bonus(p, b, b->last_move.coord, coord, games);
-			add_prior_value(map, coord, 1, assess);
+			add_prior_value(map, coord, 1, games);
 		}
 	}
 
@@ -1054,8 +1037,6 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->borderladders = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "ladderassess")) {
 				pp->ladderassess = optval && *optval == '0' ? false : true;
-			} else if (!strcasecmp(optname, "assess_local")) {
-				pp->assess_local = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "pattern2")) {
 				pp->pattern2 = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "selfatari_other")) {
