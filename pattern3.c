@@ -6,7 +6,7 @@
 #include "board.h"
 #include "debug.h"
 #include "pattern3.h"
-#include "tactics.h"
+#include "tactics/util.h"
 
 
 static void

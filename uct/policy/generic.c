@@ -6,7 +6,7 @@
 #include "board.h"
 #include "debug.h"
 #include "move.h"
-#include "tactics.h"
+#include "tactics/util.h"
 #include "random.h"
 #include "uct/internal.h"
 #include "uct/tree.h"

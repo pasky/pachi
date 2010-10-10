@@ -1,5 +1,5 @@
-#ifndef ZZGO_TACTICS_H
-#define ZZGO_TACTICS_H
+#ifndef ZZGO_TACTICS_UTIL_H
+#define ZZGO_TACTICS_UTIL_H
 
 /* Advanced tactical checks non-essential to the board implementation. */
 

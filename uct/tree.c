@@ -12,7 +12,7 @@
 #include "engine.h"
 #include "move.h"
 #include "playout.h"
-#include "tactics.h"
+#include "tactics/util.h"
 #include "timeinfo.h"
 #include "uct/internal.h"
 #include "uct/prior.h"

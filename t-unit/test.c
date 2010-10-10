@@ -6,7 +6,7 @@
 
 #include "board.h"
 #include "debug.h"
-#include "tactics.h"
+#include "tactics/util.h"
 #include "random.h"
 
 static bool board_printed;

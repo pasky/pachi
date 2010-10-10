@@ -36,7 +36,6 @@ Pachi consists of the following components:
 * "aux library" provides extra functions like static tactical evaluation
   and pattern matching; it is somewhat interwound with "core" component
 
-	tactics.[ch]	extended interfaces for the go board
 	mq.h		"move queue" data structure
 	stats.h		"move statistics" data structure
 	probdist.[ch]	"probability distribution" data structure
@@ -44,6 +43,11 @@ Pachi consists of the following components:
 	pattern3.[ch]	fast 3x3 spatial pattern matcher
 	pattern.[ch]	general multi-feature pattern matcher
 	network.[ch]	Network interface (useful for distributed engine)
+
+* "tactical library" provides extended interfaces for the go board,
+  most important non-trivial tactical information
+
+	util.[ch]	the universal catch-all for extended board interfaces
 
 * "engine" receives notifications about opponent moves and is asked
   to generate a move to play on given board

@@ -9,7 +9,7 @@
 #include "joseki/base.h"
 #include "move.h"
 #include "random.h"
-#include "tactics.h"
+#include "tactics/util.h"
 #include "uct/internal.h"
 #include "uct/plugins.h"
 #include "uct/prior.h"

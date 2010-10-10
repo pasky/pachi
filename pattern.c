@@ -10,7 +10,7 @@
 #include "pattern.h"
 #include "patternsp.h"
 #include "pattern3.h"
-#include "tactics.h"
+#include "tactics/util.h"
 
 
 struct pattern_config DEFAULT_PATTERN_CONFIG = {

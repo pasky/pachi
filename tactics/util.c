@@ -5,7 +5,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "tactics.h"
+#include "tactics/util.h"
 
 
 struct selfatari_state {

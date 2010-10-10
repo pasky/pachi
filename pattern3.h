@@ -4,7 +4,7 @@
 /* Fast matching of simple 3x3 patterns. */
 
 #include "board.h"
-#include "tactics.h"
+#include "tactics/util.h"
 
 /* (Note that this is completely independent from the general pattern
  * matching infrastructure in pattern.[ch]. This is fast and simple.) */

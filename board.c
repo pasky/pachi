@@ -19,7 +19,7 @@
 #endif
 #ifdef BOARD_TRAITS
 static void board_trait_recompute(struct board *board, coord_t coord);
-#include "tactics.h"
+#include "tactics/util.h"
 #endif
 #ifdef BOARD_GAMMA
 #include "pattern.h"

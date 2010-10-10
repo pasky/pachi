@@ -17,7 +17,7 @@
 #include "playout/elo.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
-#include "tactics.h"
+#include "tactics/util.h"
 #include "timeinfo.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
