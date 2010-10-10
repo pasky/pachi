@@ -149,7 +149,7 @@ struct lprobdist {
 	int browtotals_n;
 };
 
-#ifdef BOARD_GAMMA
+#if defined(BOARD_GAMMA) && defined(BOARD_TRAITS)
 
 static void
 elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play, struct probdist *pd, int *ignores, struct lprobdist *lpd, coord_t lc)

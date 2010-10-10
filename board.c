@@ -388,9 +388,11 @@ board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_self
 #ifdef BOARD_GAMMA
 	b->gamma = gamma;
 	b->precise_selfatari = precise_selfatari;
+#ifdef BOARD_TRAITS
 	for (int i = 0; i < b->flen; i++) {
 		board_trait_recompute(b, b->f[i]);
 	}
+#endif
 #endif
 }
 
@@ -399,7 +401,7 @@ board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_self
 void
 board_gamma_update(struct board *board, coord_t coord, enum stone color)
 {
-#ifdef BOARD_GAMMA
+#if defined(BOARD_GAMMA) && defined(BOARD_TRAITS)
 	if (!board->gamma)
 		return;
 
@@ -539,7 +541,16 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 			assert(0);
 		}
 #endif
+#if defined(BOARD_TRAITS)
 		board_trait_queue(board, c);
+#elif defined(BOARD_GAMMA)
+		if (board->gamma) {
+			hash3_t pat = board->pat3[c];
+			if (color == S_WHITE) pat = pattern3_reverse(pat);
+			double value = board->gamma->gamma[FEAT_PATTERN3][pat];
+			probdist_set(&board->prob[color - 1], c, double_to_fixp(value));
+		}
+#endif
 	} foreach_8neighbor_end;
 #endif
 }
