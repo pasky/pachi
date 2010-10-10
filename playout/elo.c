@@ -34,7 +34,6 @@
 #include "playout.h"
 #include "playout/elo.h"
 #include "random.h"
-#include "tactics/util.h"
 #include "uct/prior.h"
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)

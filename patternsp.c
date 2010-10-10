@@ -9,7 +9,6 @@
 #include "debug.h"
 #include "pattern.h"
 #include "patternsp.h"
-#include "tactics/util.h"
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). The array is ordered

@@ -8,20 +8,6 @@
 
 struct move_queue;
 
-/* Check if this move is undesirable self-atari (resulting group would have
- * only single liberty and not capture anything; ko is allowed); we mostly
- * want to avoid these moves. The function actually does a rather elaborate
- * tactical check, allowing self-atari moves that are nakade, eye falsification
- * or throw-ins. */
-static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
-
-/* Check if escaping on this liberty by given group in atari would play out
- * a simple ladder. */
-/* Two ways of ladder reading can be enabled separately; simple first-line
- * ladders and trivial middle-board ladders. */
-static bool is_ladder(struct board *b, coord_t coord, group_t laddered,
-                      bool border_ladders, bool middle_ladders);
-
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(struct board *b, coord_t coord, int distance);
 
@@ -58,50 +44,6 @@ int board_estimated_moves_left(struct board *b);
 /* To avoid running out of time, assume we always have at least 30 more moves
  * to play if we don't have more precise information from gtp time_left: */
 #define MIN_MOVES_LEFT 30
-
-
-bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
-static inline bool
-is_bad_selfatari(struct board *b, enum stone color, coord_t to)
-{
-	/* More than one immediate liberty, thumbs up! */
-	if (immediate_liberty_count(b, to) > 1)
-		return false;
-
-	return is_bad_selfatari_slow(b, color, to);
-}
-
-bool is_border_ladder(struct board *b, coord_t coord, enum stone lcolor);
-bool is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor);
-static inline bool
-is_ladder(struct board *b, coord_t coord, group_t laddered,
-          bool border_ladders, bool middle_ladders)
-{
-	enum stone lcolor = board_at(b, group_base(laddered));
-
-	if (DEBUGL(6))
-		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
-			coord2sstr(coord, b), stone2str(lcolor), coord2sstr(laddered, b));
-
-	/* First, special-case first-line "ladders". This is a huge chunk
-	 * of ladders we actually meet and want to play. */
-	if (border_ladders
-	    && neighbor_count_at(b, coord, S_OFFBOARD) == 1
-	    && neighbor_count_at(b, coord, lcolor) == 1) {
-		bool l = is_border_ladder(b, coord, lcolor);
-		if (DEBUGL(6)) fprintf(stderr, "border ladder solution: %d\n", l);
-		return l;
-	}
-
-	if (middle_ladders) {
-		bool l = is_middle_ladder(b, coord, lcolor);
-		if (DEBUGL(6)) fprintf(stderr, "middle ladder solution: %d\n", l);
-		return l;
-	}
-
-	if (DEBUGL(6)) fprintf(stderr, "no ladder to be checked\n");
-	return false;
-}
 
 
 static inline int

@@ -10,6 +10,8 @@
 #include "pattern.h"
 #include "patternsp.h"
 #include "pattern3.h"
+#include "tactics/ladder.h"
+#include "tactics/selfatari.h"
 #include "tactics/util.h"
 
 

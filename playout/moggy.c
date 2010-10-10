@@ -16,7 +16,8 @@
 #include "playout.h"
 #include "playout/moggy.h"
 #include "random.h"
-#include "tactics/util.h"
+#include "tactics/ladder.h"
+#include "tactics/selfatari.h"
 #include "uct/prior.h"
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)

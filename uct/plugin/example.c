@@ -25,7 +25,7 @@
 /* The basic plugin interface. */
 #include "uct/plugin.h"
 /* The tactical reading tools, for selfatari testing. */
-#include "tactics/util.h"
+#include "tactics/selfatari.h"
 
 /* Our context structure. */
 struct context {
