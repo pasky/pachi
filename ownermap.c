@@ -96,6 +96,6 @@ groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s
 
 		assert(judge->gs[g] != GS_NONE);
 		if (judge->gs[g] == s)
-			mq_add(mq, g);
+			mq_add(mq, g, 0);
 	} foreach_point_end;
 }

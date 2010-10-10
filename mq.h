@@ -13,13 +13,16 @@
 struct move_queue {
 	unsigned int moves;
 	coord_t move[MQL];
+	/* Each move can have an optional tag or set of tags.
+	 * The usage of these is user-dependent. */
+	unsigned char tag[MQL];
 };
 
 /* Pick a random move from the queue. */
 static coord_t mq_pick(struct move_queue *q);
 
 /* Add a move to the queue. */
-static void mq_add(struct move_queue *q, coord_t c);
+static void mq_add(struct move_queue *q, coord_t c, unsigned char tag);
 
 /* Cat two queues together. */
 static void mq_append(struct move_queue *qd, struct move_queue *qs);
@@ -39,9 +42,10 @@ mq_pick(struct move_queue *q)
 }
 
 static inline void
-mq_add(struct move_queue *q, coord_t c)
+mq_add(struct move_queue *q, coord_t c, unsigned char tag)
 {
 	assert(q->moves < MQL);
+	q->tag[q->moves] = tag;
 	q->move[q->moves++] = c;
 }
 
@@ -49,6 +53,7 @@ static inline void
 mq_append(struct move_queue *qd, struct move_queue *qs)
 {
 	assert(qd->moves + qs->moves < MQL);
+	memcpy(&qd->tag[qd->moves], qs->tag, qs->moves * sizeof(*qs->tag));
 	memcpy(&qd->move[qd->moves], qs->move, qs->moves * sizeof(*qs->move));
 	qd->moves += qs->moves;
 }
@@ -56,10 +61,15 @@ mq_append(struct move_queue *qd, struct move_queue *qs)
 static inline void
 mq_nodup(struct move_queue *q)
 {
-	if ((q->moves > 1 && q->move[q->moves - 2] == q->move[q->moves - 1])
-	    || (q->moves > 2 && q->move[q->moves - 3] == q->move[q->moves - 1])
-	    || (q->moves > 3 && q->move[q->moves - 4] == q->move[q->moves - 1]))
-		q->moves--;
+	for (unsigned int i = 1; i < 4; i++) {
+		if (q->moves <= i)
+			return;
+		if (q->move[q->moves - 1 - i] == q->move[q->moves - 1]) {
+			q->tag[q->moves - 1 - i] |= q->tag[q->moves - 1];
+			q->moves--;
+			return;
+		}
+	}
 }
 
 static inline void

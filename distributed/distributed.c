@@ -425,7 +425,7 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 	char *dead = gtp_replies[best_reply];
 	dead = strchr(dead, ' '); // skip "id "
 	while (dead && *++dead != '\n') {
-		mq_add(mq, str2scoord(dead, board_size(b)));
+		mq_add(mq, str2scoord(dead, board_size(b)), 0);
 		dead = strchr(dead, '\n');
 	}
 	protocol_unlock();

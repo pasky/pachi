@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <sys/time.h>
 
 #define DEBUG
 
@@ -191,9 +192,15 @@ time_sub(struct time_info *ti, double interval, bool new_move)
 double
 time_now(void)
 {
+#if _POSIX_TIMERS > 0
 	struct timespec now;
 	clock_gettime(CLOCK_REALTIME, &now);
 	return now.tv_sec + now.tv_nsec/1000000000.0;
+#else
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	return now.tv_sec + now.tv_usec/1000000.0;
+#endif
 }
 
 /* Sleep for a given interval (in seconds). Return immediately if interval < 0. */

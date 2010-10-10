@@ -6,9 +6,14 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
 # -ffast-math breaks us
-CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -march=native -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
-SYS_CFLAGS=
-LDFLAGS=-lm -pthread -lrt -ldl -rdynamic
+CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
+ifdef MAC
+	SYS_CFLAGS=-DNO_THREAD_LOCAL
+	LDFLAGS=-lm -pthread -ldl -rdynamic
+else
+	SYS_CFLAGS=-march=native
+	LDFLAGS=-lm -pthread -lrt -ldl -rdynamic
+endif
 
 # Profiling:
 ifdef PROFILING
