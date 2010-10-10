@@ -33,7 +33,7 @@ struct features_gamma;
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
-//#define BOARD_GAMMA 1 // incremental probability distribution; either defined with BOARD_TRAITS, or keeping just pat3 stuff with BOARD_PAT3
+#define BOARD_GAMMA 1 // incremental probability distribution; either defined with BOARD_TRAITS, or keeping just pat3 stuff with BOARD_PAT3
 
 
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
