@@ -753,7 +753,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			struct move_queue q = { .moves = 0 };
+			struct move_queue q;  q.moves = 0;
 			local_atari_check(p, b, &b->last_move, s, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -761,7 +761,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
-			struct move_queue q = { .moves = 0 };
+			struct move_queue q; q.moves = 0;
 			local_2lib_check(p, b, &b->last_move, s, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -769,7 +769,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
-			struct move_queue q = { .moves = 0 };
+			struct move_queue q; q.moves = 0;
 			apply_pattern(p, b, &b->last_move,
 			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
 					  &q);
@@ -782,7 +782,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
-		struct move_queue q = { .moves = 0 };
+		struct move_queue q; q.moves = 0;
 		global_atari_check(p, b, to_play, s, &q);
 		if (q.moves > 0)
 			return mq_pick(&q);
@@ -790,7 +790,7 @@ playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone t
 
 	/* Joseki moves? */
 	if (pp->josekirate > fast_random(100)) {
-		struct move_queue q = { .moves = 0 };
+		struct move_queue q; q.moves = 0;
 		joseki_check(p, b, to_play, s, &q);
 		if (q.moves > 0)
 			return mq_pick(&q);
@@ -862,7 +862,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone t
 {
 	struct moggy_policy *pp = p->data;
 	struct board_state *s = board_state_init(b);
-	struct move_queue q = { .moves = 0 };
+	struct move_queue q; q.moves = 0;
 
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
