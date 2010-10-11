@@ -218,7 +218,7 @@ capturable_group(struct board *b, enum stone capturer, coord_t c,
  * neighboring groups. */
 static bool
 can_countercapture(struct board *b, enum stone owner, group_t g,
-		   enum stone to_play, struct move_queue *q, enum mq_tag tag)
+		   enum stone to_play, struct move_queue *q, int tag)
 {
 	if (b->clen < 2)
 		return false;
@@ -233,7 +233,7 @@ can_countercapture(struct board *b, enum stone owner, group_t g,
 			if (!q) {
 				return true;
 			}
-			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 1<<tag);
+			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], tag);
 			mq_nodup(q);
 		});
 	} foreach_in_group_end;
@@ -244,7 +244,7 @@ can_countercapture(struct board *b, enum stone owner, group_t g,
 
 #ifdef NO_DOOMED_GROUPS
 static bool
-can_be_rescued(struct board *b, group_t group, enum stone color, enum mq_tag tag)
+can_be_rescued(struct board *b, group_t group, enum stone color, int tag)
 {
 	/* Does playing on the liberty rescue the group? */
 	if (can_play_on_lib(b, group, color))
@@ -258,7 +258,7 @@ can_be_rescued(struct board *b, group_t group, enum stone color, enum mq_tag tag
 /* ladder != NULL implies to always enqueue all relevant moves. */
 static void
 group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, enum stone to_play,
-                  struct move_queue *q, coord_t *ladder, enum mq_tag tag)
+                  struct move_queue *q, coord_t *ladder, int tag)
 {
 	int qmoves_prev = q->moves;
 
@@ -313,7 +313,7 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 		q->moves = qmoves_prev;
 	}
 
-	mq_add(q, lib, 1<<tag);
+	mq_add(q, lib, tag);
 	mq_nodup(q);
 }
 
@@ -348,7 +348,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 	struct moggy_policy *pp = p->data;
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
-			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, MQ_GATARI);
+			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
 			mq_print(q, b, "Global atari");
 		return;
@@ -356,7 +356,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, MQ_GATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -365,7 +365,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, MQ_GATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -383,14 +383,14 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, MQ_LATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, 1<<MQ_LATARI);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, MQ_LATARI);
+		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, 1<<MQ_LATARI);
 	});
 
 	if (PLDEBUGL(5))
