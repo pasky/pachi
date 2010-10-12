@@ -129,18 +129,21 @@ struct tree {
 	int max_depth;
 	volatile unsigned long nodes_size; // byte size of all allocated nodes
 	unsigned long max_tree_size; // maximum byte size for entire tree, > 0 only for fast_alloc
+	unsigned long max_pruned_size;
+	unsigned long pruning_threshold;
 	void *nodes; // nodes buffer, only for fast_alloc
 };
 
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
-struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging, int hbits);
+struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size,
+		       unsigned long max_pruned_size, unsigned long pruning_threshold, float ltree_aging, int hbits);
 void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree, int thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
 void tree_load(struct tree *tree, struct board *b);
 
 struct tree_node *tree_get_node(struct tree *tree, struct tree_node *node, coord_t c, bool create);
-struct tree_node *tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node *node);
+struct tree_node *tree_garbage_collect(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node **node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
 
@@ -162,8 +165,5 @@ tree_leaf_node(struct tree_node *node)
 {
 	return !(node->children);
 }
-
-/* Leave always at least 10% memory free for the next move: */
-#define MIN_FREE_MEM_PERCENT 10ULL
 
 #endif

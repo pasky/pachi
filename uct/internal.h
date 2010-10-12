@@ -40,6 +40,8 @@ struct uct {
 	bool no_book;
 	bool fast_alloc;
 	unsigned long max_tree_size;
+	unsigned long max_pruned_size;
+	unsigned long pruning_threshold;
 	int mercymin;
 
 	int threads;

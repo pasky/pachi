@@ -76,11 +76,14 @@ tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 
 /* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
 struct tree *
-tree_init(struct board *board, enum stone color, unsigned long max_tree_size, float ltree_aging, int hbits)
+tree_init(struct board *board, enum stone color, unsigned long max_tree_size,
+	  unsigned long max_pruned_size, unsigned long pruning_threshold, float ltree_aging, int hbits)
 {
 	struct tree *t = calloc2(1, sizeof(*t));
 	t->board = board;
 	t->max_tree_size = max_tree_size;
+	t->max_pruned_size = max_pruned_size;
+	t->pruning_threshold = pruning_threshold;
 	if (max_tree_size != 0) {
 		t->nodes = malloc2(max_tree_size);
 		/* The nodes buffer doesn't need initialization. This is currently
@@ -411,16 +414,18 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 #define SMALL_TREE_PLAYOUTS 5000
 
 /* Free all the tree, keeping only the subtree rooted at node.
- * Prune the subtree if necessary to fit in max_size bytes or
+ * Prune the subtree if necessary to fit in memory or
  * to save time scanning the tree.
  * Returns the moved node. Only for fast_alloc. */
 struct tree_node *
-tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node *node)
+tree_garbage_collect(struct tree *tree, struct tree_node *node)
 {
 	assert(tree->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
+	unsigned long orig_size = tree->nodes_size;
 
-	struct tree *temp_tree = tree_init(tree->board,  tree->root_color, max_size, tree->ltree_aging, 0);
+	struct tree *temp_tree = tree_init(tree->board,  tree->root_color,
+					   tree->max_pruned_size, 0, 0, tree->ltree_aging, 0);
 	temp_tree->nodes_size = 0; // We do not want the dummy pass node
         struct tree_node *temp_node;
 
@@ -430,7 +435,7 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 		max_nodes++;
 	unsigned long nodes_size = max_nodes * sizeof(*node);
 	int max_depth = node->depth;
-	while (nodes_size < max_size && max_nodes > 1) {
+	while (nodes_size < tree->max_pruned_size && max_nodes > 1) {
 		max_nodes--;
 		nodes_size += max_nodes * nodes_size;
 		max_depth++;
@@ -459,14 +464,16 @@ tree_garbage_collect(struct tree *tree, unsigned long max_size, struct tree_node
 		if (!prev_time) prev_time = start_time;
 		fprintf(stderr,
 			"tree pruned in %0.6g s, prev %0.3g s ago, dest depth %d wanted %d,"
-			" max_size %lu, pruned size %lu, playouts %d\n",
+			" size %lu->%lu/%lu, playouts %d\n",
 			now - start_time, start_time - prev_time, temp_tree->max_depth, max_depth,
-			max_size, temp_tree->nodes_size, new_node->u.playouts);
+			orig_size, temp_tree->nodes_size, tree->max_pruned_size, new_node->u.playouts);
 		prev_time = start_time;
 	}
 	if (temp_tree->nodes_size >= temp_tree->max_tree_size) {
-		fprintf(stderr, "temp tree overflow, increase max_tree_size %lu or MIN_FREE_MEM_PERCENT %llu\n",
-			tree->max_tree_size, MIN_FREE_MEM_PERCENT);
+		fprintf(stderr, "temp tree overflow, max_tree_size %lu, pruning_threshold %lu\n",
+			tree->max_tree_size, tree->pruning_threshold);
+		/* This is not a serious problem, we will simply recompute the discarded nodes
+		 * at the next move if necessary. This is better than frequently wasting memory. */
 	} else {
 		assert(tree->nodes_size == temp_tree->nodes_size);
 		assert(tree->max_depth == temp_tree->max_depth);
@@ -597,8 +604,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 
 	/* Now, create the nodes. */
 	struct tree_node *ni = tree_init_node(t, pass, node->depth + 1, t->nodes);
-	/* In fast_alloc mode we might temporarily run out of nodes but
-	 * this should be rare if MIN_FREE_MEM_PERCENT is set correctly. */
+	/* In fast_alloc mode we might temporarily run out of nodes but this should be rare. */
 	if (!ni) {
 		node->is_expanded = false;
 		return;
@@ -763,10 +769,9 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 		tree_done_node_detached(tree, tree->root);
 	} else {
 		/* Garbage collect if we run out of memory, or it is cheap to do so now: */
-		unsigned long min_free_size = (MIN_FREE_MEM_PERCENT * tree->max_tree_size) / 100;
-		if (tree->nodes_size >= tree->max_tree_size - min_free_size
-		    || (tree->nodes_size >= min_free_size && (*node)->u.playouts < SMALL_TREE_PLAYOUTS))
-			*node = tree_garbage_collect(tree, min_free_size, *node);
+		if (tree->nodes_size >= tree->pruning_threshold
+		    || (tree->nodes_size >= tree->max_tree_size / 10 && (*node)->u.playouts < SMALL_TREE_PLAYOUTS))
+			*node = tree_garbage_collect(tree, *node);
 	}
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);

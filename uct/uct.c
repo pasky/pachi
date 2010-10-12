@@ -41,7 +41,7 @@ static void
 setup_state(struct uct *u, struct board *b, enum stone color)
 {
 	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
-			 u->local_tree_aging, u->stats_hbits);
+			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, u->stats_hbits);
 	if (u->force_seed)
 		fast_srandom(u->force_seed);
 	if (UDEBUGL(0))
@@ -471,7 +471,8 @@ void
 uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
-	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0, u->local_tree_aging, 0);
+	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
+			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -495,6 +496,7 @@ uct_state_init(char *arg, struct board *b)
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
 	u->max_tree_size = 3072ULL * 1048576;
+	u->pruning_threshold = u->max_tree_size / 10;
 
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
@@ -775,6 +777,12 @@ uct_state_init(char *arg, struct board *b)
 				 * For fast_alloc it includes the temp tree used for pruning.
 				 * Default is 3072 (3 GiB). */
 				u->max_tree_size = atol(optval) * 1048576;
+			} else if (!strcasecmp(optname, "pruning_threshold") && optval) {
+				/* Force pruning at beginning of a move if the tree consumes
+				 * more than this [MiB]. Default is 10% of max_tree_size.
+				 * Increase to reduce pruning time overhead if memory is plentiful.
+				 * This option is meaningful only for fast_alloc. */
+				u->pruning_threshold = atol(optval) * 1048576;
 			} else if (!strcasecmp(optname, "fast_alloc")) {
 				u->fast_alloc = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "slave")) {
@@ -825,8 +833,21 @@ uct_state_init(char *arg, struct board *b)
 	if (!using_elo)
 		u->local_tree_playout = false;
 
-	if (u->fast_alloc)
-		u->max_tree_size = (100ULL * u->max_tree_size) / (100 + MIN_FREE_MEM_PERCENT);
+	if (u->fast_alloc) {
+		if (u->pruning_threshold > u->max_tree_size / 2)
+			u->pruning_threshold = u->max_tree_size / 2;
+		if (u->pruning_threshold < u->max_tree_size / 10)
+			u->pruning_threshold = u->max_tree_size / 10;
+
+		/* Limit pruning temp space to 20% of memory. Beyond this we discard
+		 * the nodes and recompute them at the next move if necessary. */
+		u->max_pruned_size = u->max_tree_size / 5;
+		u->max_tree_size -= u->max_pruned_size;
+	} else {
+		/* Reserve 5% memory in case the background free() are slower
+		 * than the concurrent allocations. */
+		u->max_tree_size -= u->max_tree_size / 20;
+	}
 
 	if (!u->prior)
 		u->prior = uct_prior_init(NULL, b);
