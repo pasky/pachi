@@ -356,13 +356,12 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 }
 
 static void
-group_2lib_check(struct playout_policy *p, struct board *b, group_t group, enum stone to_play,
-                 struct move_queue *q)
+group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
 
-	if (PLDEBUGL(5))
+	if (DEBUGL(5))
 		fprintf(stderr, "[%s] 2lib check of color %d\n",
 			coord2sstr(group, b), color);
 
@@ -398,7 +397,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 {
 	/* Does the opponent have just two liberties? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 2) {
-		group_2lib_check(p, b, group_at(b, m->coord), stone_other(m->color), q);
+		group_2lib_check(b, group_at(b, m->coord), stone_other(m->color), q);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
@@ -414,7 +413,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 2)
 			continue;
-		group_2lib_check(p, b, g, stone_other(m->color), q);
+		group_2lib_check(b, g, stone_other(m->color), q);
 	});
 
 	if (PLDEBUGL(5))
@@ -680,7 +679,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	if (board_group_info(b, g).libs == 2) {
 		if (!pp->atarirate)
 			return;
-		group_2lib_check(p, b, g, map->to_play, &q);
+		group_2lib_check(b, g, map->to_play, &q);
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
