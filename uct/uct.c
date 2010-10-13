@@ -496,7 +496,7 @@ uct_state_init(char *arg, struct board *b)
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
 	u->max_tree_size = 3072ULL * 1048576;
-	u->pruning_threshold = u->max_tree_size / 10;
+	u->pruning_threshold = 0;
 
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
@@ -834,10 +834,10 @@ uct_state_init(char *arg, struct board *b)
 		u->local_tree_playout = false;
 
 	if (u->fast_alloc) {
-		if (u->pruning_threshold > u->max_tree_size / 2)
-			u->pruning_threshold = u->max_tree_size / 2;
 		if (u->pruning_threshold < u->max_tree_size / 10)
 			u->pruning_threshold = u->max_tree_size / 10;
+		if (u->pruning_threshold > u->max_tree_size / 2)
+			u->pruning_threshold = u->max_tree_size / 2;
 
 		/* Limit pruning temp space to 20% of memory. Beyond this we discard
 		 * the nodes and recompute them at the next move if necessary. */
