@@ -304,7 +304,7 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 
 static void
 check_group_atari(struct board *b, group_t group, enum stone owner,
-		  enum stone to_play, struct move_queue *q)
+		  enum stone to_play, struct move_queue *q, int tag)
 {
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, group).lib[i];
@@ -350,13 +350,13 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 			continue;
 
 		/* Tasty! Crispy! Good! */
-		mq_add(q, lib, 1<<MQ_L2LIB);
+		mq_add(q, lib, tag);
 		mq_nodup(q);
 	}
 }
 
 static void
-group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q)
+group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -369,7 +369,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 	if (miai_2lib(b, group, color))
 		return;
 
-	check_group_atari(b, group, color, to_play, q);
+	check_group_atari(b, group, color, to_play, q, tag);
 
 	/* Can we counter-atari another group, if we are the defender? */
 	if (to_play != color)
@@ -381,13 +381,13 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 			group_t g2 = group_at(b, c);
 			if (board_group_info(b, g2).libs == 1) {
 				/* We can capture a neighbor. */
-				mq_add(q, board_group_info(b, g2).lib[0], 1<<MQ_L2LIB);
+				mq_add(q, board_group_info(b, g2).lib[0], tag);
 				mq_nodup(q);
 				continue;
 			}
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			check_group_atari(b, g2, color, to_play, q);
+			check_group_atari(b, g2, color, to_play, q, tag);
 		});
 	} foreach_in_group_end;
 }
@@ -397,7 +397,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 {
 	/* Does the opponent have just two liberties? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 2) {
-		group_2lib_check(b, group_at(b, m->coord), stone_other(m->color), q);
+		group_2lib_check(b, group_at(b, m->coord), stone_other(m->color), q, 1<<MQ_L2LIB);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
@@ -413,7 +413,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 2)
 			continue;
-		group_2lib_check(b, g, stone_other(m->color), q);
+		group_2lib_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB);
 	});
 
 	if (PLDEBUGL(5))
@@ -679,7 +679,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	if (board_group_info(b, g).libs == 2) {
 		if (!pp->atarirate)
 			return;
-		group_2lib_check(b, g, map->to_play, &q);
+		group_2lib_check(b, g, map->to_play, &q, 0);
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
