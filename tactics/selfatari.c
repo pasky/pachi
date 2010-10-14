@@ -5,6 +5,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "random.h"
 #include "tactics/selfatari.h"
 
 
@@ -354,4 +355,27 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 	/* No way to pull out, no way to connect out. This really
 	 * is a bad self-atari! */
 	return true;
+}
+
+
+coord_t
+selfatari_cousin(struct board *b, enum stone color, coord_t coord)
+{
+	group_t groups[4]; int groups_n = 0;
+	foreach_neighbor(b, coord, {
+		enum stone s = board_at(b, c);
+		if (s != color) continue;
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs == 2)
+			groups[groups_n++] = g;
+	});
+
+	if (!groups_n)
+		return pass;
+	group_t group = groups[fast_random(groups_n)];
+
+	coord_t lib2 = board_group_other_lib(b, group, coord);
+	if (is_bad_selfatari(b, color, lib2))
+		return pass;
+	return lib2;
 }
