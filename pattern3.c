@@ -11,12 +11,7 @@
 static void
 pattern_record(struct pattern3s *p, char *str, hash3_t pat, int fixed_color)
 {
-	/* Original color assignment */
 	p->hash[pat] = fixed_color ? fixed_color : 3;
-	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
-
-	/* Reverse color assignment */
-	p->hash[pattern3_reverse(pat)] = fixed_color ? 2 - (fixed_color == 2) : 3;
 	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 }
 
@@ -112,8 +107,14 @@ pattern_gen(struct pattern3s *p, hash3_t pat, char *src, int srclen, int fixed_c
 	/* Original pattern, all transpositions and rotations */
 	hash3_t transp[8];
 	pattern3_transpose(pat, &transp);
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++) {
+		/* Original color assignment */
 		pattern_record(p, src - 9, transp[i], fixed_color);
+		/* Reverse color assignment */
+		if (fixed_color)
+			fixed_color = 2 - (fixed_color == 2);
+		pattern_record(p, src - 9, pattern3_reverse(transp[i]), fixed_color);
+	}
 }
 
 static void
