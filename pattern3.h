@@ -11,14 +11,27 @@
 struct board;
 struct move;
 
-struct pattern3s {
-	/* Hashtable: 2*8 bits (ignore middle point, 2 bits per intersection) */
-	/* Value: 0: no pattern, 1: black pattern,
-	 * 2: white pattern, 3: both patterns */
-	char hash[65536];
-};
+/* hash3_t pattern: 8*2 bits
+ * (ignore middle point, 2 bits (color) per intersection) */
+/* Value bit 0: black pattern; bit 1: white pattern */
 
 /* XXX: See <board.h> for hash3_t typedef. */
+
+struct pattern2p {
+	hash3_t pattern;
+	char value;
+};
+
+struct pattern3s {
+	/* Right now, the hash is of just the right size, but this
+	 * is going to change very soon! */
+	/* In case of a collision, following hash entries are
+	 * used. value==0 indicated an unoccupied hash entry. */
+#define pattern3_hash_bits 16
+#define pattern3_hash_size (1 << pattern3_hash_bits)
+#define pattern3_hash_mask (pattern3_hash_size - 1)
+	struct pattern2p hash[pattern3_hash_size];
+};
 
 /* Source pattern encoding:
  * X: black;  O: white;  .: empty;  #: edge
@@ -67,7 +80,10 @@ pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m)
 #else
 	hash3_t pat = pattern3_hash(b, m->coord);
 #endif
-	return (p->hash[pat] & m->color);
+	while (p->hash[pat & pattern3_hash_mask].pattern != pat
+	       && p->hash[pat & pattern3_hash_mask].value != 0)
+		pat++;
+	return (p->hash[pat & pattern3_hash_mask].value & m->color);
 }
 
 static inline hash3_t

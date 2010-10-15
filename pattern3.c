@@ -11,7 +11,12 @@
 static void
 pattern_record(struct pattern3s *p, char *str, hash3_t pat, int fixed_color)
 {
-	p->hash[pat] = fixed_color ? fixed_color : 3;
+	hash3_t hpat = pat;
+	while (p->hash[hpat & pattern3_hash_mask].pattern != pat
+	       && p->hash[hpat & pattern3_hash_mask].value != 0)
+		hpat++;
+	p->hash[hpat & pattern3_hash_mask].pattern = pat;
+	p->hash[hpat & pattern3_hash_mask].value = fixed_color ? fixed_color : 3;
 	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 }
 
