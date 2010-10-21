@@ -684,8 +684,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 
 	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate
 			= pp->selfatarirate = pp->josekirate = -1U;
-	pp->korate = 0; pp->koage = 4;
-	pp->alwaysccaprate = 0;
+	pp->korate = 20; pp->koage = 4;
+	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
 
 	/* C is stupid. */
