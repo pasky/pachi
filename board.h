@@ -67,7 +67,7 @@ typedef uint64_t hash_t;
 
 /* XXX: This really belongs in pattern3.h, unfortunately that would mean
  * a dependency hell. */
-typedef uint16_t hash3_t; // 3x3 pattern hash
+typedef uint32_t hash3_t; // 3x3 pattern hash
 
 
 /* Note that "group" is only chain of stones that is solidly

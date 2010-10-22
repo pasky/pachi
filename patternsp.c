@@ -421,6 +421,10 @@ hash_store:
 static const int p3bits[] = { -1,  1, 6, 3, 4,  0, 2, 5, 7 };
 
 
+/* XXX: Spatial patterns do not carry the atari informations;
+ * we just ignore it when converting to spatial, and assume "no atari"
+ * when converting from spatial. */
+
 static hash_t
 pattern3_to_spatial(int r, hash3_t pat3)
 {

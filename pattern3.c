@@ -23,19 +23,25 @@ pattern_record(struct pattern3s *p, char *str, hash3_t pat, int fixed_color)
 static int
 pat_vmirror(hash3_t pat)
 {
-	/* V mirror pattern; reverse order of 3-2-3 chunks */
-	return ((pat & 0xfc00) >> 10) | (pat & 0x03c0) | ((pat & 0x003f) << 10);
+	/* V mirror pattern; reverse order of 3-2-3 color chunks and
+	 * 1-2-1 atari chunks */
+	return ((pat & 0xfc00) >> 10) | (pat & 0x03c0) | ((pat & 0x003f) << 10)
+		| ((pat & 0x80000) >> 3) | (pat & 0x60000) | ((pat & 0x10000) << 3);
 }
 
 static int
 pat_hmirror(hash3_t pat)
 {
-	/* H mirror pattern; reverse order of 2-bit values within the chunks */
+	/* H mirror pattern; reverse order of 2-bit values within the chunks,
+	 * and the 2-bit middle atari chunk. */
 #define rev3(p) ((p >> 4) | (p & 0xc) | ((p & 0x3) << 4))
 #define rev2(p) ((p >> 2) | ((p & 0x3) << 2))
 	return (rev3((pat & 0xfc00) >> 10) << 10)
 		| (rev2((pat & 0x03c0) >> 6) << 6)
-		| rev3((pat & 0x003f));
+		| rev3((pat & 0x003f))
+		| ((pat & 0x20000) << 1)
+		| ((pat & 0x40000) >> 1)
+		| (pat & 0x90000);
 #undef rev3
 #undef rev2
 }
@@ -44,10 +50,14 @@ static int
 pat_90rot(hash3_t pat)
 {
 	/* Rotate by 90 degrees:
-	 * 5 6 7    7 4 2
-	 * 3   4 -> 6   1
-	 * 0 1 2    5 3 0 */
+	 * 5 6 7  3     7 4 2     2
+	 * 3   4 1 2 -> 6   1 -> 3 0
+	 * 0 1 2  0     5 3 0     1  */
 	/* I'm too lazy to optimize this :) */
+
+	int p2 = 0;
+
+	/* Stone info */
 	int vals[8];
 	for (int i = 0; i < 8; i++)
 		vals[i] = (pat >> (i * 2)) & 0x3;
@@ -55,9 +65,20 @@ pat_90rot(hash3_t pat)
 	vals2[0] = vals[5]; vals2[1] = vals[3]; vals2[2] = vals[0];
 	vals2[3] = vals[6];                     vals2[4] = vals[1];
 	vals2[5] = vals[7]; vals2[6] = vals[4]; vals2[7] = vals[2];
-	int p2 = 0;
 	for (int i = 0; i < 8; i++)
 		p2 |= vals2[i] << (i * 2);
+
+	/* Atari info */
+	int avals[4];
+	for (int i = 0; i < 4; i++)
+		vals[i] = (pat >> (16 + i)) & 0x1;
+	int avals2[4];
+	avals2[3] = avals[2];
+	avals2[1] = avals[3]; avals2[2] = avals[0];
+	avals2[0] = avals[1];
+	for (int i = 0; i < 4; i++)
+		p2 |= avals2[i] << (16 + i);
+
 	return p2;
 }
 
@@ -81,8 +102,10 @@ pattern_gen(struct pattern3s *p, hash3_t pat, char *src, int srclen, int fixed_c
 	for (; srclen > 0; src++, srclen--) {
 		if (srclen == 5)
 			continue;
+		static const int ataribits[] = { -1, 0, -1, 1, 2, -1, 3, -1 };
 		int patofs = (srclen > 5 ? srclen - 1 : srclen) - 1;
 		switch (*src) {
+			/* Wildcards. */
 			case '?':
 				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
 				*src = 'X'; pattern_gen(p, pat, src, srclen, fixed_color);
@@ -102,9 +125,60 @@ pattern_gen(struct pattern3s *p, hash3_t pat, char *src, int srclen, int fixed_c
 				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
 				*src = 'o'; // for future recursions
 				return;
+
+			case 'X':
+				*src = 'Y'; pattern_gen(p, pat, src, srclen, fixed_color);
+				if (ataribits[patofs] >= 0)
+					*src = '|'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'X'; // for future recursions
+				return;
+			case 'O':
+				*src = 'Q'; pattern_gen(p, pat, src, srclen, fixed_color);
+				if (ataribits[patofs] >= 0)
+					*src = '@'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'O'; // for future recursions
+				return;
+
+			case 'y':
+				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '|'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'O'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'y'; // for future recursions
+				return;
+			case 'q':
+				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '@'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'X'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'q'; // for future recursions
+				return;
+
+			case '=':
+				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'Y'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'O'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '='; // for future recursions
+				return;
+			case '0':
+				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'Q'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'X'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '0'; // for future recursions
+				return;
+
+			/* Atoms. */
 			case '.': /* 0 */ break;
-			case 'X': pat |= S_BLACK << (patofs * 2); break;
-			case 'O': pat |= S_WHITE << (patofs * 2); break;
+			case 'Y': pat |= S_BLACK << (patofs * 2); break;
+			case 'Q': pat |= S_WHITE << (patofs * 2); break;
+			case '|': assert(ataribits[patofs] >= 0);
+				  pat |= (S_BLACK << (patofs * 2)) | (1 << (16 + ataribits[patofs]));
+				  break;
+			case '@': assert(ataribits[patofs] >= 0);
+				  pat |= (S_WHITE << (patofs * 2)) | (1 << (16 + ataribits[patofs]));
+				  break;
 			case '#': pat |= S_OFFBOARD << (patofs * 2); break;
 		}
 	}

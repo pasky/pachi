@@ -526,21 +526,27 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */
+	static const int ataribits[8] = { -1, 0, -1, 1, 2, -1, 3, -1 };
 	enum stone new_color = board_at(board, coord);
-	if (new_color == S_NONE)
+	bool in_atari = false;
+	if (new_color == S_NONE) {
 		board->pat3[coord] = pattern3_hash(board, coord);
-	foreach_8neighbor(board, coord) { // internally, the loop uses fn__i=[0..7]
+	} else {
+		in_atari = (board_group_info(board, group_at(board, coord)).libs == 1);
+	}
+	foreach_8neighbor(board, coord) {
+		/* Internally, the loop uses fn__i=[0..7]. We can use
+		 * it directly to address bits within the bitmap of the
+		 * neighbors since the bitmap order is reverse to the
+		 * loop order. */
 		if (board_at(board, c) != S_NONE)
 			continue;
 		board->pat3[c] &= ~(3 << (fn__i*2));
 		board->pat3[c] |= new_color << (fn__i*2);
-#if 0
-		if (board_at(board, c) != S_OFFBOARD && pattern3_hash(board, c) != board->pat3[c]) {
-			board_print(board, stderr);
-			fprintf(stderr, "%s->%s %x != %x (%d-%d:%d)\n", coord2sstr(coord, board), coord2sstr(c, board), pattern3_hash(board, c), board->pat3[c], coord, c, fn__i);
-			assert(0);
+		if (ataribits[fn__i] >= 0) {
+			board->pat3[c] &= ~(1 << (16 + ataribits[fn__i]));
+			board->pat3[c] |= in_atari << (16 + ataribits[fn__i]);
 		}
-#endif
 #if defined(BOARD_TRAITS)
 		board_trait_queue(board, c);
 #elif defined(BOARD_GAMMA)
@@ -723,6 +729,20 @@ check_libs_consistency(struct board *board, group_t g)
 }
 
 static void
+check_pat3_consistency(struct board *board, coord_t coord)
+{
+#ifdef DEBUG
+	foreach_8neighbor(board, coord) {
+		if (board_at(board, c) == S_NONE && pattern3_hash(board, c) != board->pat3[c]) {
+			board_print(board, stderr);
+			fprintf(stderr, "%s(%d)->%s(%d) computed %x != stored %x (%d)\n", coord2sstr(coord, board), coord, coord2sstr(c, board), c, pattern3_hash(board, c), board->pat3[c], fn__i);
+			assert(0);
+		}
+	} foreach_8neighbor_end;
+#endif
+}
+
+static void
 board_capturable_add(struct board *board, group_t group, coord_t lib, bool onestone)
 {
 	//fprintf(stderr, "group %s cap %s\n", coord2sstr(group, board), coord2sstr(lib, boarD));
@@ -737,6 +757,14 @@ board_capturable_add(struct board *board, group_t group, coord_t lib, bool onest
 		trait_at(board, lib, capturing_color).cap1 += (group_at(board, c) == group && onestone);
 	});
 	board_trait_queue(board, lib);
+#endif
+
+#ifdef BOARD_PAT3
+	int fn__i = 0;
+	foreach_neighbor(board, lib, {
+		board->pat3[lib] |= (group_at(board, c) == group) << (16 + 3 - fn__i);
+		fn__i++;
+	});
 #endif
 
 #ifdef WANT_BOARD_C
@@ -761,6 +789,14 @@ board_capturable_rm(struct board *board, group_t group, coord_t lib, bool onesto
 		trait_at(board, lib, capturing_color).cap1 -= (group_at(board, c) == group && onestone);
 	});
 	board_trait_queue(board, lib);
+#endif
+
+#ifdef BOARD_PAT3
+	int fn__i = 0;
+	foreach_neighbor(board, lib, {
+		board->pat3[lib] &= ~((group_at(board, c) == group) << (16 + 3 - fn__i));
+		fn__i++;
+	});
 #endif
 
 #ifdef WANT_BOARD_C
@@ -934,6 +970,13 @@ board_remove_stone(struct board *board, group_t group, coord_t c)
 			board_group_addlib(board, g, coord);
 	});
 
+#ifdef BOARD_PAT3
+	/* board_hash_update() might have seen the freed up point as able
+	 * to capture another group in atari that only after the loop
+	 * above gained enough liberties. Reset pat3 again. */
+	board->pat3[c] = pattern3_hash(board, c);
+#endif
+
 	if (DEBUGL(6))
 		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
 	board->f[board->flen++] = c;
@@ -1050,15 +1093,15 @@ next_from_lib:;
 		}
 	}
 
-#ifdef BOARD_TRAITS
 	if (gi_to->libs == 1) {
+		coord_t lib = board_group_info(board, group_to).lib[0];
+#ifdef BOARD_TRAITS
 		enum stone capturing_color = stone_other(board_at(board, group_to));
 		assert(capturing_color == S_BLACK || capturing_color == S_WHITE);
 
 		/* Our group is currently in atari; make sure we properly
 		 * count in even the neighbors from the other group in the
 		 * capturable counter. */
-		coord_t lib = board_group_info(board, group_to).lib[0];
 		foreach_neighbor(board, lib, {
 			if (DEBUGL(8) && group_at(board, c) == group_from)
 				fprintf(stderr, "%s[%d] cap bump\n", coord2sstr(lib, board), trait_at(board, lib, capturing_color).cap);
@@ -1076,8 +1119,21 @@ next_from_lib:;
 				board_trait_queue(board, c);
 			});
 		}
-	}
 #endif
+#ifdef BOARD_PAT3
+		if (gi_from->libs == 1) {
+			/* We removed group_from from capturable groups,
+			 * therefore switching the atari flag off.
+			 * We need to set it again since group_to is also
+			 * capturable. */
+			int fn__i = 0;
+			foreach_neighbor(board, lib, {
+				board->pat3[lib] |= (group_at(board, c) == group_from) << (16 + 3 - fn__i);
+				fn__i++;
+			});
+		}
+#endif
+	}
 
 	coord_t last_in_group;
 	foreach_in_group(board, group_from) {
@@ -1212,6 +1268,8 @@ board_play_outside(struct board *board, struct move *m, int f)
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
 
+	check_pat3_consistency(board, coord);
+
 	return group;
 }
 
@@ -1308,6 +1366,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	board_traits_recompute(board);
 	board_symmetry_update(board, &board->symmetry, coord);
 	board->ko = ko;
+
+	check_pat3_consistency(board, coord);
 
 	return !!group;
 }

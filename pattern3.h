@@ -11,8 +11,11 @@
 struct board;
 struct move;
 
-/* hash3_t pattern: 8*2 bits
- * (ignore middle point, 2 bits (color) per intersection) */
+/* hash3_t pattern: ignore middle point, 2 bits per intersection (color)
+ * plus 1 bit per each direct neighbor => 8*2 + 4 bits. Bitmap point order:
+ * 7 6 5    b
+ * 4   3  a   9
+ * 2 1 0    8   */
 /* Value bit 0: black pattern; bit 1: white pattern */
 
 /* XXX: See <board.h> for hash3_t typedef. */
@@ -27,7 +30,7 @@ struct pattern3s {
 	 * is going to change very soon! */
 	/* In case of a collision, following hash entries are
 	 * used. value==0 indicated an unoccupied hash entry. */
-#define pattern3_hash_bits 16
+#define pattern3_hash_bits 19
 #define pattern3_hash_size (1 << pattern3_hash_bits)
 #define pattern3_hash_mask (pattern3_hash_size - 1)
 	struct pattern2p hash[pattern3_hash_size];
@@ -36,6 +39,10 @@ struct pattern3s {
 /* Source pattern encoding:
  * X: black;  O: white;  .: empty;  #: edge
  * x: !black; o: !white; ?: any
+ *
+ * |/=: black in atari/anything but black in atari
+ * @/0: white in atari
+ * Y/y: black notin atari; Q/q: white notin atari
  *
  * extra X: pattern valid only for one side;
  * middle point ignored. */
@@ -61,6 +68,7 @@ pattern3_hash(struct board *b, coord_t c)
 {
 	hash3_t pat = 0;
 	int x = coord_x(c, b), y = coord_y(c, b);
+	/* Stone info. */
 	pat |= (board_atxy(b, x - 1, y - 1) << 14)
 		| (board_atxy(b, x, y - 1) << 12)
 		| (board_atxy(b, x + 1, y - 1) << 10);
@@ -69,6 +77,13 @@ pattern3_hash(struct board *b, coord_t c)
 	pat |= (board_atxy(b, x - 1, y + 1) << 4)
 		| (board_atxy(b, x, y + 1) << 2)
 		| (board_atxy(b, x + 1, y + 1));
+	/* Atari info. */
+#define atari_atxy(b, x, y) (group_atxy(b, x, y) && board_group_info(b, group_atxy(b, x, y)).libs == 1)
+	pat |= (atari_atxy(b, x, y - 1) << 19);
+	pat |= (atari_atxy(b, x - 1, y) << 18)
+		| (atari_atxy(b, x + 1, y) << 17);
+	pat |= (atari_atxy(b, x, y + 1) << 16);
+#undef atari_atxy
 	return pat;
 }
 
@@ -90,7 +105,7 @@ static inline hash3_t
 pattern3_reverse(hash3_t pat)
 {
 	/* Reverse color assignment - achieved by swapping odd and even bits */
-	return ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1);
+	return ((pat >> 1) & 0x5555) | ((pat & 0x5555) << 1) | (pat & 0xf0000);
 }
 
 #endif
