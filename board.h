@@ -410,8 +410,8 @@ float board_official_score(struct board *board, struct move_queue *mq);
 		struct board *board__ = board_; \
 		coord_t coord__ = coord_; \
 		coord_t c; \
-		c = coord__ - 1; do { loop_body } while (0); \
 		c = coord__ - board_size(board__); do { loop_body } while (0); \
+		c = coord__ - 1; do { loop_body } while (0); \
 		c = coord__ + 1; do { loop_body } while (0); \
 		c = coord__ + board_size(board__); do { loop_body } while (0); \
 	} while (0)
