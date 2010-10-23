@@ -26,15 +26,18 @@ struct pattern2p {
 };
 
 struct pattern3s {
-	/* Right now, the hash is of just the right size, but this
-	 * is going to change very soon! */
 	/* In case of a collision, following hash entries are
-	 * used. value==0 indicated an unoccupied hash entry. */
+	 * used. value==0 indicates an unoccupied hash entry. */
+	/* The hash indices are zobrist hashes based on p3hashes. */
 #define pattern3_hash_bits 19
 #define pattern3_hash_size (1 << pattern3_hash_bits)
 #define pattern3_hash_mask (pattern3_hash_size - 1)
 	struct pattern2p hash[pattern3_hash_size];
 };
+
+/* Zobrist hashes for the various 3x3 points. */
+/* [point][is_atari][color] */
+hash_t p3hashes[8][2][S_MAX];
 
 /* Source pattern encoding:
  * X: black;  O: white;  .: empty;  #: edge
@@ -87,6 +90,17 @@ pattern3_hash(struct board *b, coord_t c)
 	return pat;
 }
 
+static inline __attribute__((const)) hash_t
+hash3_to_hash(hash3_t pat)
+{
+	hash_t h = 0;
+	static const int ataribits[8] = { -1, 0, -1, 1, 2, -1, 3, -1 };
+	for (int i = 0; i < 8; i++) {
+		h ^= p3hashes[i][ataribits[i] >= 0 ? (pat >> (16 + ataribits[i])) & 1 : 0][(pat >> (i*2)) & 3];
+	}
+	return h;
+}
+
 static inline bool
 pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m)
 {
@@ -95,10 +109,11 @@ pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m)
 #else
 	hash3_t pat = pattern3_hash(b, m->coord);
 #endif
-	while (p->hash[pat & pattern3_hash_mask].pattern != pat
-	       && p->hash[pat & pattern3_hash_mask].value != 0)
-		pat++;
-	return (p->hash[pat & pattern3_hash_mask].value & m->color);
+	hash_t h = hash3_to_hash(pat);
+	while (p->hash[h & pattern3_hash_mask].pattern != pat
+	       && p->hash[h & pattern3_hash_mask].value != 0)
+		h++;
+	return (p->hash[h & pattern3_hash_mask].value & m->color);
 }
 
 static inline hash3_t

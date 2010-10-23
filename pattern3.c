@@ -11,12 +11,16 @@
 static void
 pattern_record(struct pattern3s *p, char *str, hash3_t pat, int fixed_color)
 {
-	hash3_t hpat = pat;
-	while (p->hash[hpat & pattern3_hash_mask].pattern != pat
-	       && p->hash[hpat & pattern3_hash_mask].value != 0)
-		hpat++;
-	p->hash[hpat & pattern3_hash_mask].pattern = pat;
-	p->hash[hpat & pattern3_hash_mask].value = fixed_color ? fixed_color : 3;
+	hash_t h = hash3_to_hash(pat);
+	while (p->hash[h & pattern3_hash_mask].pattern != pat
+	       && p->hash[h & pattern3_hash_mask].value != 0)
+		h++;
+#if 0
+	if (h != hash3_to_hash(pat) && p->hash[h & pattern3_hash_mask].pattern != pat)
+		fprintf(stderr, "collision of %06x: %llx(%x)\n", pat, hash3_to_hash(pat)&pattern3_hash_mask, p->hash[hash3_to_hash(pat)&pattern3_hash_mask].pattern);
+#endif
+	p->hash[h & pattern3_hash_mask].pattern = pat;
+	p->hash[h & pattern3_hash_mask].value = fixed_color ? fixed_color : 3;
 	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 }
 
@@ -248,4 +252,21 @@ pattern3s_init(struct pattern3s *p, char src[][11], int src_n)
 	}
 
 	patterns_gen(p, nsrc, src_n);
+}
+
+
+static __attribute__((constructor)) void
+p3hashes_init(void)
+{
+	/* tuned for 11482 collisions */
+	/* XXX: tune better */
+	hash_t h = 0x35373c;
+	for (int i = 0; i < 8; i++) {
+		for (int a = 0; a < 2; a++) {
+			p3hashes[i][a][S_NONE] = (h = h * 16803-7);
+			p3hashes[i][a][S_BLACK] = (h = h * 16805-2);
+			p3hashes[i][a][S_WHITE] = (h = h * 16807-11);
+			p3hashes[i][a][S_OFFBOARD] = (h = h * 16809+7);
+		}
+	}
 }
