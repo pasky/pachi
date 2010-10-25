@@ -68,7 +68,7 @@ static char moggy_patterns_src[][11] = {
 	"..."
 	"???",
 	/* hane pattern - non-cutting hane */
-	"XO."
+	"YO."
 	"..."
 	"?.?",
 	/* hane pattern - magari */
@@ -80,8 +80,8 @@ static char moggy_patterns_src[][11] = {
 	"..."
 	"?.?" "X",
 	/* generic pattern - katatsuke or diagonal attachment; similar to magari */
-	".O."
-	"X.."
+	".Q."
+	"Y.."
 	"...",
 	/* cut1 pattern (kiri) - unprotected cut */
 	"XO?"
@@ -112,7 +112,7 @@ static char moggy_patterns_src[][11] = {
 	"x.O"
 	"###",
 	/* side pattern - sagari (SUSPICIOUS) */
-	"?XO"
+	"?XQ"
 	"x.x" /* Mogo has "x.?" */
 	"###" /* Mogo has "X" */,
 	/* side pattern - throw-in (SUSPICIOUS) */
@@ -122,8 +122,8 @@ static char moggy_patterns_src[][11] = {
 	"?##" "X",
 #endif
 	/* side pattern - cut (SUSPICIOUS) */
-	"?OX"
-	"X.O"
+	"?OY"
+	"Y.O"
 	"###" /* Mogo has "X" */,
 };
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
