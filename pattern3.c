@@ -75,7 +75,7 @@ pat_90rot(hash3_t pat)
 	/* Atari info */
 	int avals[4];
 	for (int i = 0; i < 4; i++)
-		vals[i] = (pat >> (16 + i)) & 0x1;
+		avals[i] = (pat >> (16 + i)) & 0x1;
 	int avals2[4];
 	avals2[3] = avals[2];
 	avals2[1] = avals[3]; avals2[2] = avals[0];
