@@ -27,6 +27,9 @@
 /* See the HACKING file for another description of the pattern matcher and
  * instructions on how to harvest and inspect patterns. */
 
+/* XXX: FEAT_PATTERN3 and therefore all the pattern code is currently broken
+ * after hash3_t atari bit extension!!! */
+
 /* If you add a payload bit for a feature, don't forget to update the value
  * in feature_info. */
 enum feature_id {
