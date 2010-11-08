@@ -310,7 +310,7 @@ next_try:;
 }
 
 coord_t
-playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone to_play)
+playout_moggy_seqchoose(struct playout_policy *p, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
 
@@ -674,7 +674,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
-	p->choose = playout_moggy_partchoose;
+	p->choose = playout_moggy_seqchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
 
@@ -741,7 +741,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			} else if (!strcasecmp(optname, "capcheckall")) {
 				pp->capcheckall = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
-				p->choose = optval && *optval == '0' ? playout_moggy_partchoose : playout_moggy_fullchoose;
+				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
 				/* KO%LATARI%L2LIB%PAT3%GATARI%JOSEKI */
 				for (int i = 1; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
