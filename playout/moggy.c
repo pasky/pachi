@@ -36,7 +36,7 @@
  * receive a penalty; penalty tags should be used only when it is
  * certain the move would be considered anyway. */
 enum mq_tag {
-	MQ_KO = 1,
+	MQ_KO = 0,
 	MQ_LATARI,
 	MQ_L2LIB,
 	MQ_PAT3,
@@ -419,7 +419,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 	for (unsigned int i = 0; i < q->moves; i++) {
 		double val = 1.0;
 		assert(q->tag[i] != 0);
-		for (int j = 1; j < MQ_MAX; j++)
+		for (int j = 0; j < MQ_MAX; j++)
 			if (q->tag[i] & (1<<j)) {
 				//fprintf(stderr, "%s(%x) %d %f *= %f\n", coord2sstr(q->move[i], b), q->tag[i], j, val, pp->mq_prob[j]);
 				val *= pp->mq_prob[j];
@@ -742,7 +742,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
 				/* KO%LATARI%L2LIB%PAT3%GATARI%JOSEKI */
-				for (int i = 1; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
+				for (int i = 0; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
 					optval++;
 					pp->mq_prob[i] = atof(optval);
 				}
