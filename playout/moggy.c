@@ -1,6 +1,5 @@
-/* Playout policy by stochastically applying a fixed set of decision
- * rules in given order - modelled after the intelligent playouts
- * in the Mogo engine. */
+/* Heuristical playout (and tree prior) policy modelled primarily after
+ * the description of the Mogo engine. */
 
 #include <assert.h>
 #include <math.h>
@@ -25,7 +24,17 @@
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
 
-/* Move queue tags: */
+/* In case "seqchoose" move picker is enabled (i.e. no "fullchoose"
+ * parameter passed), we stochastically apply fixed set of decision
+ * rules in given order.
+ *
+ * In "fullchoose" mode, we instead build a move queue of variously
+ * tagged candidates, then consider a probability distribution over
+ * them and pick a move from that. */
+
+/* Move queue tags. Some may be even undesirable - these moves then
+ * receive a penalty; penalty tags should be used only when it is
+ * certain the move would be considered anyway. */
 enum mq_tag {
 	MQ_KO = 1,
 	MQ_LATARI,
