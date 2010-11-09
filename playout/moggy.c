@@ -445,8 +445,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone t
 
 	/* Ko fight check */
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
-	    && b->moves - b->last_ko_age < pp->koage
-	    && pp->korate > fast_random(100)) {
+	    && b->moves - b->last_ko_age < pp->koage) {
 		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
 			mq_add(&q, b->last_ko.coord, 1<<MQ_KO);
@@ -455,34 +454,24 @@ playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone t
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
-		if (pp->lcapturerate > fast_random(100)) {
-			local_atari_check(p, b, &b->last_move, &q);
-		}
+		local_atari_check(p, b, &b->last_move, &q);
 
 		/* Local group can be PUT in atari? */
-		if (pp->atarirate > fast_random(100)) {
-			local_2lib_check(p, b, &b->last_move, &q);
-		}
+		local_2lib_check(p, b, &b->last_move, &q);
 
 		/* Check for patterns we know */
-		if (pp->patternrate > fast_random(100)) {
-			apply_pattern(p, b, &b->last_move,
-			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
-					  &q);
-		}
+		apply_pattern(p, b, &b->last_move,
+				pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
+				&q);
 	}
 
 	/* Global checks */
 
 	/* Any groups in atari? */
-	if (pp->capturerate > fast_random(100)) {
-		global_atari_check(p, b, to_play, &q);
-	}
+	global_atari_check(p, b, to_play, &q);
 
 	/* Joseki moves? */
-	if (pp->josekirate > fast_random(100)) {
-		joseki_check(p, b, to_play, &q);
-	}
+	joseki_check(p, b, to_play, &q);
 
 #if 0
 	/* Average length of the queue is 1.4 move. */
