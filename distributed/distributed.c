@@ -118,6 +118,9 @@ static const struct time_info default_ti = {
 /* Maximum time (seconds) to wait for answers to genmoves. */
 #define MAX_GENMOVES_WAIT 0.1 /* 100 ms */
 
+/* Minimum time (seconds) to wait before we stop early. This should
+ * ensure that most slaves have replied at least once. */
+#define MIN_EARLY_STOP_WAIT 0.3 /* 300 ms */
 
 /* Display a path as leaf<parent<grandparent...
  * Returns the path string in a static buffer; it is NOT safe for
@@ -188,6 +191,8 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
  * To simplify the code, we assume that master and slave have the same architecture
  * (store values identically).
  * Return the move with most playouts, and additional stats.
+ * keep_looking is set from a majority vote of the slaves seen so far for this
+ * move but should not be trusted if too few slaves have been seen.
  * Keep this code in sync with uct/slave.c:report_stats().
  * slave_lock is held on entry and on return. */
 static coord_t
@@ -314,11 +319,11 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 		bool keep_looking;
 		best = select_best_move(b, stats, &played, &playouts, &threads, &keep_looking);
 
-		if (!keep_looking) break;
 		if (ti->dim == TD_WALLTIME) {
 			if (now - ti->len.t.timer_start >= stop.worst.time) break;
+			if (!keep_looking && now - first >= MIN_EARLY_STOP_WAIT) break;
 		} else {
-			if (played >= stop.worst.playouts) break;
+			if (!keep_looking || played >= stop.worst.playouts) break;
 		}
 		if (DEBUGVV(2)) {
 			char *coord = coord2sstr(best, b);
