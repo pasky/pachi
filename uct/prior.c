@@ -203,13 +203,19 @@ uct_prior_init(char *arg, struct board *b)
 				 * of last move => 40 wins, their neighbors
 				 * 20 wins, 2nd-level neighbors 20 wins;
 				 * neighbors are group-transitive. */
-				p->cfgdn = atoi(optval); optval += strcspn(optval, ":");
+				p->cfgdn = atoi(optval); optval += strcspn(optval, "%");
 				p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
 				p->cfgd_eqex[0] = 0;
-				for (int i = 1; *optval; i++, optval += strcspn(optval, ":")) {
+				int i;
+				for (i = 1; *optval; i++, optval += strcspn(optval, "%")) {
 					optval++;
 					p->cfgd_eqex[i] = atoi(optval);
 				}
+				if (i != p->cfgdn + 1) {
+					fprintf(stderr, "uct: Missing prior cfdn level %d/%d\n", i, p->cfgdn);
+					exit(1);
+				}
+
 			} else if (!strcasecmp(optname, "joseki") && optval) {
 				p->joseki_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "eye") && optval) {
