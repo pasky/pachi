@@ -271,13 +271,20 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	if (fullmem)
 		return true;
 
+	/* Think at least 100ms to avoid a random move. This is particularly
+	 * important in distributed mode, where this function is called frequently. */
+	double elapsed = 0.0;
+	if (ti->dim == TD_WALLTIME) {
+		elapsed = time_now() - ti->len.t.timer_start;
+		if (elapsed < TREE_BUSYWAIT_INTERVAL) return false;
+	}
+
 	/* Break early if we estimate the second-best move cannot
 	 * catch up in assigned time anymore. We use all our time
 	 * if we are in byoyomi with single stone remaining in our
 	 * period, however - it's better to pre-ponder. */
 	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
 	if (best2 && ti->dim == TD_WALLTIME && !time_indulgent) {
-		double elapsed = time_now() - ti->len.t.timer_start;
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
