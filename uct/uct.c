@@ -862,7 +862,6 @@ uct_state_init(char *arg, struct board *b)
 	if (u->slave) {
 		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
 		if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
-		if (!u->shared_levels) u->shared_levels = 1;
 		assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
 	}
 

@@ -529,8 +529,11 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	coord_t best_coord;
 	uct_search_result(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
 
-	*stats_buf = report_incr_stats(u, stats_size);
-
+	if (u->shared_levels) {
+		*stats_buf = report_incr_stats(u, stats_size);
+	} else {
+		*stats_size = 0;
+	}
 	char *reply = report_stats(u, b, best_coord, keep_looking, *stats_size);
 	return reply;
 }
