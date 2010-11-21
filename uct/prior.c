@@ -241,7 +241,7 @@ uct_prior_init(char *arg, struct board *b)
 	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex * -p->plugin_eqex / 100;
 
 	if (p->cfgdn < 0) {
-		int bonuses[] = { 0, p->eqex, p->eqex / 2, p->eqex / 2 };
+		int bonuses[] = { 0, 2*p->eqex, p->eqex, p->eqex };
 		p->cfgdn = 3;
 		p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
 		memcpy(p->cfgd_eqex, bonuses, sizeof(bonuses));
