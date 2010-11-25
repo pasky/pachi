@@ -36,6 +36,52 @@ Two special engines are also provided for development support:
   helper; no 'genmove' command support is provided
 
 
+Analysis
+--------
+
+Pachi can also help you analyze your games, by being able to provide
+its opinion on various positions. The user interface is very rudimentary,
+but the ability is certainly there.
+
+There are currently two Pachi interfaces for this purpose. One
+possibility is to evaluate all moves within a given game and show how
+the winrates for both players evolved - i.e. who was winning at which
+game stage. This is implemented using the `sgf-analyse.pl` script. See
+the comment on top of the script about its usage.
+
+Alternatively, Pachi can evaluate all available moves in a given situation
+and for each give a value between 0 and 1 representing perceived
+likelihood of winning the game if one would play that move. I.e. it can
+suggest which moves would be good and bad in a single given situation.
+
+To achieve the latter, follow few simple steps:
+
+1. Take an SGF record of your game and generate a GTP file from it:
+
+	./sgf2gtp.pl <file.sgf >file.gtp
+
+2. Open the file.gtp in your favorite plaintext editor and trim it after
+(remove all lines following) the move producing the situation you wish
+to analyze.
+
+3. Instead, add the following line at the bottom of file.gtp:
+
+	0 uct_evaluate black
+
+(replace `black` with `white` if it is white to play).
+
+4. Run Pachi as follows:
+
+	./zzgo -t =500 -d 0 <file.gtp | sed -n '/^=0/,${s/^=0 //;p}'
+
+If you want to know more details on what is Pachi thinking about the
+various moves, remove the `-d 0` and `| sed -n ...` parts. To improve
+the accuracy of values (at the expense of run time), raise the value
+of 500 (try 2000 or 10000; 100000 will usually already take couple of
+hours). The values will be most useful in the middle game; in fuseki
+and most yose situations, expect a lot of noise.
+
+
 Framework
 ---------
 

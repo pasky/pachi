@@ -11,4 +11,8 @@ struct time_info;
 bool uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color);
 void uct_dumpbook(struct engine *e, struct board *b, enum stone color);
 
+/* Evaluate feasibility of player @color playing at @c. Will simulate
+ * this move for time @ti, then return 1-max(opponent_win_likelihood). */
+float uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, coord_t c, enum stone color);
+
 #endif

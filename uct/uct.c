@@ -479,6 +479,38 @@ uct_dumpbook(struct engine *e, struct board *b, enum stone color)
 }
 
 
+float
+uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, coord_t c, enum stone color)
+{
+	struct uct *u = e->data;
+
+	struct board b2;
+	board_copy(&b2, b);
+	struct move m = { c, color };
+	int res = board_play(&b2, &m);
+	if (res < 0)
+		return NAN;
+	color = stone_other(color);
+
+	if (u->t) reset_state(u);
+	uct_prepare_move(u, &b2, color);
+	assert(u->t);
+
+	float bestval;
+	uct_search(u, &b2, ti, color, u->t);
+	struct tree_node *best = u->policy->choose(u->policy, u->t->root, &b2, color, resign);
+	if (!best) {
+		bestval = NAN; // the opponent has no reply!
+	} else {
+		bestval = tree_node_get_value(u->t, 1, best->u.value);
+	}
+
+	reset_state(u); // clean our junk
+
+	return isnan(bestval) ? NAN : 1.0f - bestval;
+}
+
+
 struct uct *
 uct_state_init(char *arg, struct board *b)
 {

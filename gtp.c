@@ -1,6 +1,7 @@
 #define DEBUG
 #include <assert.h>
 #include <ctype.h>
+#include <math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -442,6 +443,20 @@ next_group:;
 		enum stone color = str2stone(arg);
 		uct_dumpbook(engine, board, color);
 		gtp_reply(id, NULL);
+
+	} else if (!strcasecmp(cmd, "uct_evaluate")) {
+		char *arg;
+		next_tok(arg);
+		enum stone color = str2stone(arg);
+
+		gtp_prefix('=', id);
+		for (int i = 0; i < board->flen; i++) {
+			float val = uct_evaluate(engine, board, &ti[color], board->f[i], color);
+			if (isnan(val))
+				continue;
+			printf("%s %1.3f\n", coord2sstr(board->f[i], board), (double) val);
+		}
+		gtp_flush();
 
 	} else if (!strcasecmp(cmd, "pachi-result")) {
 		/* More detailed result of the last genmove. */
