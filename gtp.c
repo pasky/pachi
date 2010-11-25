@@ -450,6 +450,9 @@ next_group:;
 		enum stone color = str2stone(arg);
 
 		gtp_prefix('=', id);
+		/* Iterate through the list of all free coordinates
+		 * and call uct_evaluate() for each.  uct_evaluate()
+		 * will throw NAN in case of invalid moves and such. */
 		for (int i = 0; i < board->flen; i++) {
 			float val = uct_evaluate(engine, board, &ti[color], board->f[i], color);
 			if (isnan(val))
