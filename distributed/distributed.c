@@ -159,8 +159,8 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	 * time_left will be part of next pachi-genmoves,
 	 * we reduce latency by not forwarding it here. */
 	if ((!strcasecmp(cmd, "quit") && !dist->slaves_quit)
-	    || !strcasecmp(cmd, "uct_genbook")
-	    || !strcasecmp(cmd, "uct_dumpbook")
+	    || !strcasecmp(cmd, "uct_gentbook")
+	    || !strcasecmp(cmd, "uct_dumptbook")
 	    || !strcasecmp(cmd, "kgs-chat")
 	    || !strcasecmp(cmd, "time_left")
 

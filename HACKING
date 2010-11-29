@@ -255,3 +255,15 @@ are matched per-quadrant, no other move must be within the quadrant. See
 joseki/README for details on usage of the auxiliary engine and a full
 recipe for making Pachi play according to joseki sequences extracted from
 the Kogo dictionary.
+
+
+Opening Book
+============
+
+So far, there is no explicit support for opening book.
+
+However, the UCT engine can "pre-read" the starting board position and
+dump the core of the built tree to a file, loading it later. This is
+called a 'tbook' (as in "tree book") and can be generated using the
+./gentbook.sh script. The newly generated file is automatically used
+by the UCT engine when found.

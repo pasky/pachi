@@ -58,7 +58,7 @@ struct tree_node {
 	hash_t hash;
 	struct tree_node *parent, *sibling, *children;
 
-	/*** From here on, struct is saved/loaded from opening book */
+	/*** From here on, struct is saved/loaded from opening tbook */
 
 	unsigned short depth; // just for statistics
 

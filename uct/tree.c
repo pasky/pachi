@@ -225,7 +225,7 @@ void
 tree_dump(struct tree *tree, int thres)
 {
 	if (thres && tree->root->u.playouts / thres > 100) {
-		/* Be a bit sensible about this; the opening book can create
+		/* Be a bit sensible about this; the opening tbook can create
 		 * huge dumps at first. */
 		thres = tree->root->u.playouts / 100 * (thres < 1000 ? 1 : thres / 1000);
 	}
@@ -248,9 +248,9 @@ tree_book_name(struct board *b)
 {
 	static char buf[256];
 	if (b->handicap > 0) {
-		sprintf(buf, "uctbook-%d-%02.01f-h%d.pachitree", b->size - 2, b->komi, b->handicap);
+		sprintf(buf, "ucttbook-%d-%02.01f-h%d.pachitree", b->size - 2, b->komi, b->handicap);
 	} else {
-		sprintf(buf, "uctbook-%d-%02.01f.pachitree", b->size - 2, b->komi);
+		sprintf(buf, "ucttbook-%d-%02.01f.pachitree", b->size - 2, b->komi);
 	}
 	return buf;
 }
@@ -333,7 +333,7 @@ tree_load(struct tree *tree, struct board *b)
 	if (!f)
 		return;
 
-	fprintf(stderr, "Loading opening book %s...\n", filename);
+	fprintf(stderr, "Loading opening tbook %s...\n", filename);
 
 	int num = 0;
 	if (fgetc(f))

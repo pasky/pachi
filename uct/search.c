@@ -427,7 +427,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	}
 
 	/* TODO: Early break if best->variance goes under threshold
-	 * and we already have enough playouts (possibly thanks to book
+	 * and we already have enough playouts (possibly thanks to tbook
 	 * or to pondering)? */
 	return false;
 }

@@ -8,8 +8,8 @@ struct engine *engine_uct_init(char *arg, struct board *b);
 
 struct board;
 struct time_info;
-bool uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color);
-void uct_dumpbook(struct engine *e, struct board *b, enum stone color);
+bool uct_gentbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color);
+void uct_dumptbook(struct engine *e, struct board *b, enum stone color);
 
 /* Evaluate feasibility of player @color playing at @c. Will simulate
  * this move for time @ti, then return 1-max(opponent_win_likelihood). */

@@ -425,23 +425,23 @@ next_group:;
 			gtp_error(id, "illegal status specifier", NULL);
 		}
 
-	/* Custom commands for handling UCT opening book */
-	} else if (!strcasecmp(cmd, "uct_genbook")) {
+	/* Custom commands for handling UCT opening tbook */
+	} else if (!strcasecmp(cmd, "uct_gentbook")) {
 		/* Board must be initialized properly, as if for genmove;
-		 * makes sense only as 'uct_genbook b'. */
+		 * makes sense only as 'uct_gentbook b'. */
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		if (uct_genbook(engine, board, &ti[color], color))
+		if (uct_gentbook(engine, board, &ti[color], color))
 			gtp_reply(id, NULL);
 		else
-			gtp_error(id, "error generating book", NULL);
+			gtp_error(id, "error generating tbook", NULL);
 
-	} else if (!strcasecmp(cmd, "uct_dumpbook")) {
+	} else if (!strcasecmp(cmd, "uct_dumptbook")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		uct_dumpbook(engine, board, color);
+		uct_dumptbook(engine, board, color);
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "uct_evaluate")) {

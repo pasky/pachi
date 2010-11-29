@@ -47,7 +47,7 @@ setup_state(struct uct *u, struct board *b, enum stone color)
 	if (UDEBUGL(0))
 		fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 	//board_print(b, stderr);
-	if (!u->no_book && b->moves == 0) {
+	if (!u->no_tbook && b->moves == 0) {
 		assert(color == S_BLACK);
 		tree_load(u->t, b);
 	}
@@ -138,7 +138,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	struct uct *u = e->data;
 	if (!u->t) {
 		/* No state, create one - this is probably game beginning
-		 * and we need to load the opening book right now. */
+		 * and we need to load the opening tbook right now. */
 		uct_prepare_move(u, b, m->color);
 		assert(u->t);
 	}
@@ -449,14 +449,14 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
 
 bool
-uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color)
+uct_gentbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color)
 {
 	struct uct *u = e->data;
 	if (!u->t) uct_prepare_move(u, b, color);
 	assert(u->t);
 
 	if (ti->dim == TD_GAMES) {
-		/* Don't count in games that already went into the book. */
+		/* Don't count in games that already went into the tbook. */
 		ti->len.games += u->t->root->u.playouts;
 	}
 	uct_search(u, b, ti, color, u->t);
@@ -468,7 +468,7 @@ uct_genbook(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 }
 
 void
-uct_dumpbook(struct engine *e, struct board *b, enum stone color)
+uct_dumptbook(struct engine *e, struct board *b, enum stone color)
 {
 	struct uct *u = e->data;
 	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
@@ -589,9 +589,9 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "force_seed") && optval) {
 				/* Set RNG seed at the tree setup. */
 				u->force_seed = atoi(optval);
-			} else if (!strcasecmp(optname, "no_book")) {
-				/* Disable UCT opening book. */
-				u->no_book = true;
+			} else if (!strcasecmp(optname, "no_tbook")) {
+				/* Disable UCT opening tbook. */
+				u->no_tbook = true;
 			} else if (!strcasecmp(optname, "pass_all_alive")) {
 				/* Whether to consider passing only after all
 				 * dead groups were removed from the board;
@@ -963,7 +963,7 @@ uct_state_init(char *arg, struct board *b)
 	if (!u->dynkomi)
 		u->dynkomi = uct_dynkomi_init_adaptive(u, NULL, b);
 
-	/* Some things remain uninitialized for now - the opening book
+	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
 	/* This will be initialized in setup_state() at the first move
 	 * received/requested. This is because right now we are not aware

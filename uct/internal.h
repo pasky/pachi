@@ -37,7 +37,7 @@ struct uct {
 	int playout_amaf_cutoff;
 	int dumpthres;
 	int force_seed;
-	bool no_book;
+	bool no_tbook;
 	bool fast_alloc;
 	unsigned long max_tree_size;
 	unsigned long max_pruned_size;
