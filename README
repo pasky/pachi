@@ -21,6 +21,39 @@ and minor improvements have been achieved; they are enabled when they
 give an universal playing strength boosts.
 
 
+By default, Pachi will run on a single CPU core, taking up to 3GiB
+of memory, not pondering, etc. You can adjust these parameters by
+passing it extra command-line options:
+
+	./zzgo -t _1200 threads=8,max_tree_size=500,fast_alloc
+
+This will make Pachi play with time settings 20:00 S.D. (unless it
+gets told otherwise over GTP), with 8 threads, taking up to 500MiB
+of memory (+ several tens MiB as a constant overhead). 'fast_alloc'
+is just a good idea to do in case of memory-sensitive runs (will become
+default soon).
+
+For now, there is no comprehensive documentation, but you can get
+a pretty good idea by looking at the uct_state_init() function in
+uct/uct.c - you will find the list of UCT engine options there, each
+with a description.
+
+Pachi can be used as a test opponent for development of other go-playing
+programs. For example, to get the "plainest UCT" player, use:
+
+	./zzgo -t =5000 policy=ucb1,playout=light,prior=eqex=0,dynkomi=none
+
+This will fix the number of playouts per move to 5000, switch the node
+selection policy from ucb1amaf to ucb1 (i.e. disable RAVE), switch the
+playouts from heuristic-heavy moggy to uniformly random light, stop
+prioring the node values heuristically, and turn off dynamic komi.
+
+You can of course selectively re-enable various features or tweak this
+further. But please note that using Pachi in this mode is not tested
+extensively, so check its performance in whatever version you test
+before you use it as a reference.
+
+
 Except UCT, Pachi supports a simple idiotbot-like engine and an example
 treeless MonteCarlo-player. The MonteCarlo simulation ("playout")
 policies are also pluggable, by default we use one that makes use of
@@ -111,6 +144,9 @@ One exception is the Autotest framework, which is licenced under the
 terms of the MIT licence (close to public domain) - you are free to
 use it any way you wish.
 
+
+Installation
+------------
 
 To build Pachi, simply type:
 
