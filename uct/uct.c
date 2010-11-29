@@ -563,11 +563,19 @@ uct_state_init(char *arg, struct board *b)
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
+			/** Basic options */
+
 			if (!strcasecmp(optname, "debug")) {
 				if (optval)
 					u->debug_level = atoi(optval);
 				else
 					u->debug_level++;
+			} else if (!strcasecmp(optname, "dumpthres") && optval) {
+				/* When dumping the UCT tree on output, include
+				 * nodes with at least this many playouts.
+				 * (This value is re-scaled "intelligently"
+				 * in case of very large trees.) */
+				u->dumpthres = atoi(optval);
 			} else if (!strcasecmp(optname, "resign_threshold") && optval) {
 				/* Resign when this ratio of games is lost
 				 * after GJ_MINGAMES sample is taken. */
@@ -578,6 +586,87 @@ uct_state_init(char *arg, struct board *b)
 				 * taken. (Prevents stupid time losses,
 				 * friendly to human opponents.) */
 				u->sure_win_threshold = atof(optval);
+			} else if (!strcasecmp(optname, "force_seed") && optval) {
+				/* Set RNG seed at the tree setup. */
+				u->force_seed = atoi(optval);
+			} else if (!strcasecmp(optname, "no_book")) {
+				/* Disable UCT opening book. */
+				u->no_book = true;
+			} else if (!strcasecmp(optname, "pass_all_alive")) {
+				/* Whether to consider passing only after all
+				 * dead groups were removed from the board;
+				 * this is like all genmoves are in fact
+				 * kgs-genmove_cleanup. */
+				u->pass_all_alive = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "territory_scoring")) {
+				/* Use territory scoring (default is area scoring).
+				 * An explicit kgs-rules command overrides this. */
+				u->territory_scoring = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "banner") && optval) {
+				/* Additional banner string. This must come as the
+				 * last engine parameter. */
+				if (*next) *--next = ',';
+				u->banner = strdup(optval);
+				break;
+			} else if (!strcasecmp(optname, "plugin") && optval) {
+				/* Load an external plugin; filename goes before the colon,
+				 * extra arguments after the colon. */
+				char *pluginarg = strchr(optval, ':');
+				if (pluginarg)
+					*pluginarg++ = 0;
+				plugin_load(u->plugins, optval, pluginarg);
+
+			/** UCT behavior and policies */
+
+			} else if ((!strcasecmp(optname, "policy")
+				/* Node selection policy. ucb1amaf is the
+				 * default policy implementing RAVE, while
+				 * ucb1 is the simple exploration/exploitation
+				 * policy. Policies can take further extra
+				 * options. */
+			            || !strcasecmp(optname, "random_policy")) && optval) {
+				/* A policy to be used randomly with small
+				 * chance instead of the default policy. */
+				char *policyarg = strchr(optval, ':');
+				struct uct_policy **p = !strcasecmp(optname, "policy") ? &u->policy : &u->random_policy;
+				if (policyarg)
+					*policyarg++ = 0;
+				if (!strcasecmp(optval, "ucb1")) {
+					*p = policy_ucb1_init(u, policyarg);
+				} else if (!strcasecmp(optval, "ucb1amaf")) {
+					*p = policy_ucb1amaf_init(u, policyarg);
+				} else {
+					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
+					exit(1);
+				}
+			} else if (!strcasecmp(optname, "playout") && optval) {
+				/* Random simulation (playout) policy.
+				 * moggy is the default policy with large
+				 * amount of domain-specific knowledge and
+				 * heuristics. light is a simple uniformly
+				 * random move selection policy. */
+				char *playoutarg = strchr(optval, ':');
+				if (playoutarg)
+					*playoutarg++ = 0;
+				if (!strcasecmp(optval, "moggy")) {
+					u->playout = playout_moggy_init(playoutarg, b, u->jdict);
+				} else if (!strcasecmp(optval, "light")) {
+					u->playout = playout_light_init(playoutarg, b);
+				} else if (!strcasecmp(optval, "elo")) {
+					u->playout = playout_elo_init(playoutarg, b);
+					using_elo = true;
+				} else {
+					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
+					exit(1);
+				}
+			} else if (!strcasecmp(optname, "prior") && optval) {
+				/* Node priors policy. When expanding a node,
+				 * it will seed node values heuristically
+				 * (most importantly, based on playout policy
+				 * opinion, but also with regard to other
+				 * things). See uct/prior.c for details.
+				 * Use prior=eqex=0 to disable priors. */
+				u->prior = uct_prior_init(optval, b);
 			} else if (!strcasecmp(optname, "mercy") && optval) {
 				/* Minimal difference of black/white captures
 				 * to stop playout - "Mercy Rule". Speeds up
@@ -585,21 +674,26 @@ uct_state_init(char *arg, struct board *b)
 				 * accuracy. */
 				u->mercymin = atoi(optval);
 			} else if (!strcasecmp(optname, "gamelen") && optval) {
+				/* Maximum length of single simulation
+				 * in moves. */
 				u->gamelen = atoi(optval);
 			} else if (!strcasecmp(optname, "expand_p") && optval) {
+				/* Expand UCT nodes after it has been
+				 * visited this many times. */
 				u->expand_p = atoi(optval);
-			} else if (!strcasecmp(optname, "dumpthres") && optval) {
-				u->dumpthres = atoi(optval);
-			} else if (!strcasecmp(optname, "best2_ratio") && optval) {
-				/* If set, prolong simulating while
-				 * first_best/second_best playouts ratio
-				 * is less than best2_ratio. */
-				u->best2_ratio = atof(optval);
-			} else if (!strcasecmp(optname, "bestr_ratio") && optval) {
-				/* If set, prolong simulating while
-				 * best,best_best_child values delta
-				 * is more than bestr_ratio. */
-				u->bestr_ratio = atof(optval);
+			} else if (!strcasecmp(optname, "random_policy_chance") && optval) {
+				/* If specified (N), with probability 1/N, random_policy policy
+				 * descend is used instead of main policy descend; useful
+				 * if specified policy (e.g. UCB1AMAF) can make unduly biased
+				 * choices sometimes, you can fall back to e.g.
+				 * random_policy=UCB1. */
+				u->random_policy_chance = atoi(optval);
+
+			/** General AMAF behavior */
+			/* (Only relevant if the policy supports AMAF.
+			 * More variables can be tuned as policy
+			 * parameters.) */
+
 			} else if (!strcasecmp(optname, "playout_amaf")) {
 				/* Whether to include random playout moves in
 				 * AMAF as well. (Otherwise, only tree moves
@@ -623,38 +717,14 @@ uct_state_init(char *arg, struct board *b)
 				/* Keep only first N% of playout stage AMAF
 				 * information. */
 				u->playout_amaf_cutoff = atoi(optval);
-			} else if ((!strcasecmp(optname, "policy") || !strcasecmp(optname, "random_policy")) && optval) {
-				char *policyarg = strchr(optval, ':');
-				struct uct_policy **p = !strcasecmp(optname, "policy") ? &u->policy : &u->random_policy;
-				if (policyarg)
-					*policyarg++ = 0;
-				if (!strcasecmp(optval, "ucb1")) {
-					*p = policy_ucb1_init(u, policyarg);
-				} else if (!strcasecmp(optval, "ucb1amaf")) {
-					*p = policy_ucb1amaf_init(u, policyarg);
-				} else {
-					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
-					exit(1);
-				}
-			} else if (!strcasecmp(optname, "playout") && optval) {
-				char *playoutarg = strchr(optval, ':');
-				if (playoutarg)
-					*playoutarg++ = 0;
-				if (!strcasecmp(optval, "moggy")) {
-					u->playout = playout_moggy_init(playoutarg, b, u->jdict);
-				} else if (!strcasecmp(optval, "light")) {
-					u->playout = playout_light_init(playoutarg, b);
-				} else if (!strcasecmp(optval, "elo")) {
-					u->playout = playout_elo_init(playoutarg, b);
-					using_elo = true;
-				} else {
-					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
-					exit(1);
-				}
-			} else if (!strcasecmp(optname, "prior") && optval) {
-				u->prior = uct_prior_init(optval, b);
 			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
+				/* In node policy, consider prior values
+				 * part of the real result term or part
+				 * of the AMAF term? */
 				u->amaf_prior = atoi(optval);
+
+			/** Performance and memory management */
+
 			} else if (!strcasecmp(optname, "threads") && optval) {
 				/* By default, Pachi will run with only single
 				 * tree search thread! */
@@ -679,6 +749,32 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "pondering")) {
 				/* Keep searching even during opponent's turn. */
 				u->pondering_opt = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
+				/* Maximum amount of memory [MiB] consumed by the move tree.
+				 * For fast_alloc it includes the temp tree used for pruning.
+				 * Default is 3072 (3 GiB). */
+				u->max_tree_size = atol(optval) * 1048576;
+			} else if (!strcasecmp(optname, "fast_alloc")) {
+				u->fast_alloc = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "pruning_threshold") && optval) {
+				/* Force pruning at beginning of a move if the tree consumes
+				 * more than this [MiB]. Default is 10% of max_tree_size.
+				 * Increase to reduce pruning time overhead if memory is plentiful.
+				 * This option is meaningful only for fast_alloc. */
+				u->pruning_threshold = atol(optval) * 1048576;
+
+			/** Time control */
+
+			} else if (!strcasecmp(optname, "best2_ratio") && optval) {
+				/* If set, prolong simulating while
+				 * first_best/second_best playouts ratio
+				 * is less than best2_ratio. */
+				u->best2_ratio = atof(optval);
+			} else if (!strcasecmp(optname, "bestr_ratio") && optval) {
+				/* If set, prolong simulating while
+				 * best,best_best_child values delta
+				 * is more than bestr_ratio. */
+				u->bestr_ratio = atof(optval);
 			} else if (!strcasecmp(optname, "fuseki_end") && optval) {
 				/* At the very beginning it's not worth thinking
 				 * too long because the playout evaluations are
@@ -699,10 +795,9 @@ uct_state_init(char *arg, struct board *b)
 				 * but "yose" is a good short name to convey
 				 * the idea.) */
 				u->yose_start = atoi(optval);
-			} else if (!strcasecmp(optname, "force_seed") && optval) {
-				u->force_seed = atoi(optval);
-			} else if (!strcasecmp(optname, "no_book")) {
-				u->no_book = true;
+
+			/** Dynamic komi */
+
 			} else if (!strcasecmp(optname, "dynkomi") && optval) {
 				/* Dynamic komi approach; there are multiple
 				 * ways to adjust komi dynamically throughout
@@ -738,6 +833,9 @@ uct_state_init(char *arg, struct board *b)
 				/* XXX: Does not work with tree
 				 * parallelization. */
 				u->dynkomi_interval = atoi(optval);
+
+			/** Node value result scaling */
+
 			} else if (!strcasecmp(optname, "val_scale") && optval) {
 				/* How much of the game result value should be
 				 * influenced by win size. Zero means it isn't. */
@@ -751,6 +849,10 @@ uct_state_init(char *arg, struct board *b)
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
 				u->val_extra = !optval || atoi(optval);
+
+			/** Local trees */
+			/* (Purely experimental. Does not work - yet!) */
+
 			} else if (!strcasecmp(optname, "local_tree") && optval) {
 				/* Whether to bias exploration by local tree values
 				 * (must be supported by the used policy).
@@ -787,36 +889,9 @@ uct_state_init(char *arg, struct board *b)
 				 * is on, we make probability distribution from
 				 * sequences first moves instead. */
 				u->local_tree_pseqroot = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "pass_all_alive")) {
-				/* Whether to consider passing only after all
-				 * dead groups were removed from the board;
-				 * this is like all genmoves are in fact
-				 * kgs-genmove_cleanup. */
-				u->pass_all_alive = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "territory_scoring")) {
-				/* Use territory scoring (default is area scoring).
-				 * An explicit kgs-rules command overrides this. */
-				u->territory_scoring = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "random_policy_chance") && optval) {
-				/* If specified (N), with probability 1/N, random_policy policy
-				 * descend is used instead of main policy descend; useful
-				 * if specified policy (e.g. UCB1AMAF) can make unduly biased
-				 * choices sometimes, you can fall back to e.g.
-				 * random_policy=UCB1. */
-				u->random_policy_chance = atoi(optval);
-			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
-				/* Maximum amount of memory [MiB] consumed by the move tree.
-				 * For fast_alloc it includes the temp tree used for pruning.
-				 * Default is 3072 (3 GiB). */
-				u->max_tree_size = atol(optval) * 1048576;
-			} else if (!strcasecmp(optname, "pruning_threshold") && optval) {
-				/* Force pruning at beginning of a move if the tree consumes
-				 * more than this [MiB]. Default is 10% of max_tree_size.
-				 * Increase to reduce pruning time overhead if memory is plentiful.
-				 * This option is meaningful only for fast_alloc. */
-				u->pruning_threshold = atol(optval) * 1048576;
-			} else if (!strcasecmp(optname, "fast_alloc")) {
-				u->fast_alloc = !optval || atoi(optval);
+
+			/** Distributed engine slaves setup */
+
 			} else if (!strcasecmp(optname, "slave")) {
 				/* Act as slave for the distributed engine. */
 				u->slave = !optval || atoi(optval);
@@ -830,19 +905,7 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
 				/* Set hash table size to 2^stats_hbits for the shared stats. */
 				u->stats_hbits = atoi(optval);
-			} else if (!strcasecmp(optname, "banner") && optval) {
-				/* Additional banner string. This must come as the
-				 * last engine parameter. */
-				if (*next) *--next = ',';
-				u->banner = strdup(optval);
-				break;
-			} else if (!strcasecmp(optname, "plugin") && optval) {
-				/* Load an external plugin; filename goes before the colon,
-				 * extra arguments after the colon. */
-				char *pluginarg = strchr(optval, ':');
-				if (pluginarg)
-					*pluginarg++ = 0;
-				plugin_load(u->plugins, optval, pluginarg);
+
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 				exit(1);
