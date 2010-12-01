@@ -14,6 +14,7 @@
 #include "move.h"
 
 struct features_gamma;
+struct fbook;
 
 
 /* Maximum supported board size. (Without the S_OFFBOARD edges.) */
@@ -136,6 +137,9 @@ struct board {
 		RULES_NEW_ZEALAND,
 		RULES_JAPANESE,
 	} rules;
+
+	char *fbookfile;
+	struct fbook *fbook;
 
 	/* Iterator offsets for foreach_neighbor*() */
 	int nei8[8], dnei[4];
@@ -306,7 +310,7 @@ struct board {
 
 #define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
 
-struct board *board_init(void);
+struct board *board_init(char *fbookfile);
 struct board *board_copy(struct board *board2, struct board *board1);
 void board_done_noalloc(struct board *board);
 void board_done(struct board *board);

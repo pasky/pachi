@@ -1,0 +1,24 @@
+#ifndef ZZGO_FBOOK_H
+#define ZZGO_FBOOK_H
+
+#include "move.h"
+
+struct board;
+
+/* Opening book (fbook as in "forcing book" since the move is just
+ * played unconditionally if found, or possibly "fuseki book"). */
+
+struct fbook {
+	int bsize;
+	int handicap;
+
+#define fbook_hash_bits 19 // 4M w/ 32-bit coord_t
+#define fbook_hash_mask ((1 << fbook_hash_bits) - 1)
+	/* pass == no move in this position */
+	coord_t moves[1<<fbook_hash_bits];
+};
+
+struct fbook *fbook_init(char *filename, struct board *b);
+void fbook_done(struct fbook *fbook);
+
+#endif

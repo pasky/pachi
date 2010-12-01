@@ -70,8 +70,8 @@ static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 	fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct|distributed]\n"
-		" [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]"
-		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [ENGINE_ARGS]\n", name);
+		" [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
+		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [-f FBOOKFILE] [ENGINE_ARGS]\n", name);
 }
 
 int main(int argc, char *argv[])
@@ -82,11 +82,12 @@ int main(int argc, char *argv[])
 	char *gtp_port = NULL;
 	char *log_port = NULL;
 	int gtp_sock = -1;
+	char *fbookfile = NULL;
 
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:g:l:s:t:u:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:f:g:l:s:t:u:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -110,6 +111,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'd':
 				debug_level = atoi(optarg);
+				break;
+			case 'f':
+				fbookfile = strdup(optarg);
 				break;
 			case 'g':
 				gtp_port = strdup(optarg);
@@ -152,7 +156,7 @@ int main(int argc, char *argv[])
 	if (DEBUGL(0))
 		fprintf(stderr, "Random seed: %d\n", seed);
 
-	struct board *b = board_init();
+	struct board *b = board_init(fbookfile);
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
 	ti[S_WHITE] = ti_default;

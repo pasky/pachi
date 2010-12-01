@@ -131,7 +131,7 @@ void
 engine_joseki_done(struct engine *e)
 {
 	struct joseki_engine *j = e->data;
-	struct board *b = board_init();
+	struct board *b = board_init(NULL);
 	board_resize(b, j->size - 2);
 	board_clear(b);
 
@@ -163,7 +163,7 @@ joseki_state_init(char *arg)
 	struct joseki_engine *j = calloc2(1, sizeof(struct joseki_engine));
 
 	for (int i = 0; i < 16; i++)
-		j->b[i] = board_init();
+		j->b[i] = board_init(NULL);
 
 	j->debug_level = 1;
 

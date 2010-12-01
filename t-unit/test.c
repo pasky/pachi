@@ -90,7 +90,7 @@ unittest(char *filename)
 		exit(EXIT_FAILURE);
 	}
 
-	struct board *b = board_init();
+	struct board *b = board_init(NULL);
 	char line[256];
 	while (fgets(line, sizeof(line), f)) {
 		line[strlen(line) - 1] = 0; // chomp

@@ -8,6 +8,7 @@
 //#define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "fbook.h"
 #include "mq.h"
 #include "random.h"
 
@@ -39,17 +40,23 @@ static void board_trait_recompute(struct board *board, coord_t coord);
 static void
 board_setup(struct board *b)
 {
+	char *fbookfile = b->fbookfile;
+
 	memset(b, 0, sizeof(*b));
+
+	b->fbookfile = fbookfile;
 
 	struct move m = { pass, S_NONE };
 	b->last_move = b->last_move2 = b->last_ko = b->ko = m;
 }
 
 struct board *
-board_init(void)
+board_init(char *fbookfile)
 {
 	struct board *b = malloc2(sizeof(struct board));
 	board_setup(b);
+
+	b->fbookfile = fbookfile;
 
 	// Default setup
 	b->size = 9 + 2;
@@ -152,6 +159,7 @@ void
 board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
+	if (board->fbook) fbook_done(board->fbook);
 }
 
 void
@@ -295,6 +303,10 @@ board_clear(struct board *board)
 		probdist_set(&board->prob[1], c, double_to_fixp((board_at(board, c) == S_NONE) * 1.0f));
 	} foreach_point_end;
 #endif
+
+	if (board->fbookfile) {
+		board->fbook = fbook_init(board->fbookfile, board);
+	}
 }
 
 static char *

@@ -121,7 +121,10 @@ static char *
 uct_printhook_ownermap(struct board *board, coord_t c, char *s, char *end)
 {
 	struct uct *u = board->es;
-	assert(u);
+	if (!u) {
+		strcat(s, ". ");
+		return s + 2;
+	}
 	const char chr[] = ":XO,"; // dame, black, white, unclear
 	const char chm[] = ":xo,";
 	char ch = chr[board_ownermap_judge_point(&u->ownermap, c, GJ_THRES)];

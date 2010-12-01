@@ -11,6 +11,7 @@
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
+#include "fbook.h"
 #include "gtp.h"
 #include "mq.h"
 #include "uct/uct.h"
@@ -268,8 +269,21 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
+		coord_t *c = NULL;
 
-		coord_t *c = engine->genmove(engine, board, &ti[color], color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
+		if (board->fbook) {
+			/* We have an fbook, check if we cannot make
+			 * a move along it right away. */
+			coord_t cf = board->fbook->moves[board->hash & fbook_hash_mask];
+			if (!is_pass(cf)) {
+				if (DEBUGL(1))
+					fprintf(stderr, "fbook match\n");
+				c = coord_copy(cf);
+			}
+		}
+
+		if (!c) c = engine->genmove(engine, board, &ti[color], color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
+
 		struct move m = { *c, color };
 		if (board_play(board, &m) < 0) {
 			fprintf(stderr, "Attempted to generate an illegal move: [%s, %s]\n", coord2sstr(m.coord, board), stone2str(m.color));
