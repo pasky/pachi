@@ -279,6 +279,11 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 				if (DEBUGL(1))
 					fprintf(stderr, "fbook match\n");
 				c = coord_copy(cf);
+			} else {
+				/* No match, also prevent further fbook usage
+				 * until the next clear_board. */
+				fbook_done(board->fbook);
+				board->fbook = NULL;
 			}
 		}
 
