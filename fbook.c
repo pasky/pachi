@@ -6,6 +6,7 @@
 #include "board.h"
 #include "debug.h"
 #include "fbook.h"
+#include "random.h"
 
 
 static coord_t
@@ -90,6 +91,14 @@ fbook_init(char *filename, struct board *b)
 
 		line++;
 		while (isspace(*line)) line++;
+
+		/* In case of multiple candidates, pick one with
+		 * exponentially decreasing likelihood. */
+		while (strchr(line, ' ') && fast_random(2)) {
+			line = strchr(line, ' ');
+			while (isspace(*line)) line++;
+			// fprintf(stderr, "<%s> skip to %s\n", linebuf, line);
+		}
 
 		coord_t *c = str2coord(line, fbook->bsize);
 		for (int i = 0; i < 8; i++) {
