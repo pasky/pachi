@@ -295,6 +295,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			} else {
 				/* No match, also prevent further fbook usage
 				 * until the next clear_board. */
+				if (DEBUGL(4))
+					fprintf(stderr, "fbook out %"PRIhash":%"PRIhash"\n", board->hash, board->hash & fbook_hash_mask);
 				fbook_done(board->fbook);
 				board->fbook = NULL;
 			}
