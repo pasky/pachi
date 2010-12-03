@@ -86,11 +86,26 @@ fbook_init(char *filename, struct board *b)
 		coord_t *c = str2coord(line, fbook->bsize);
 		for (int i = 0; i < 8; i++) {
 #if 0
-			fprintf(stderr, "%c %"PRIhash" (<%d> %s)\n",
-			        is_pass(fbook->moves[bs[i]->hash & fbook_hash_mask]) ? '+' : 'C',
+			char conflict = is_pass(fbook->moves[bs[i]->hash & fbook_hash_mask]) ? '+' : 'C';
+			if (conflict == 'C')
+				for (int j = 0; j < i; j++)
+					if (bs[i]->hash == bs[j]->hash)
+						conflict = '+';
+			if (conflict == 'C') {
+				hash_t hi = bs[i]->hash;
+				while (!is_pass(fbook->moves[hi & fbook_hash_mask]) && fbook->hashes[hi & fbook_hash_mask] != bs[i]->hash)
+					hi++;
+				if (fbook->hashes[hi & fbook_hash_mask] == bs[i]->hash)
+					hi = 'c';
+			}
+			fprintf(stderr, "%c %"PRIhash" (<%d> %s)\n", conflict,
 			        bs[i]->hash & fbook_hash_mask, i, linebuf);
 #endif
-			fbook->moves[bs[i]->hash & fbook_hash_mask] = *c;
+			hash_t hi = bs[i]->hash;
+			while (!is_pass(fbook->moves[hi & fbook_hash_mask]) && fbook->hashes[hi & fbook_hash_mask] != bs[i]->hash)
+				hi++;
+			fbook->moves[hi & fbook_hash_mask] = *c;
+			fbook->hashes[hi & fbook_hash_mask] = bs[i]->hash;
 		}
 		coord_done(c);
 	}
