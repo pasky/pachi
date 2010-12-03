@@ -270,6 +270,11 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 		coord_t *c = NULL;
+		
+		if (!ti[color].len.t.timer_start) {
+			/* First game move. */
+			time_start_timer(&ti[color]);
+		}
 
 		if (board->fbook) {
 			/* We have an fbook, check if we cannot make
