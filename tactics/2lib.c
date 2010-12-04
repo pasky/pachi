@@ -84,19 +84,22 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 		 * #######
 		 * ..O.X.X <- always play the left one!
 		 * OXXXXXX */
-		if (neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) == 3)
+		if (neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
 			continue;
 
+		/* If we are the defender not connecting out, do not
+		 * escape with moves that do not gain liberties anyway
+		 * - either the new extension has just single extra
+		 * liberty, or the "gained" liberties are shared. */
 		/* XXX: We do not check connecting to a short-on-liberty
-		 * group. */
-
-		/* If we are the defender, do not escape with moves
-		 * that do not gain liberties anyway since one of the
-		 * "gained" liberties is shared. */
-		if (to_play == owner
-		    && neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) == 2
-		    && coord_is_adjecent(lib, board_group_info(b, group).lib[1 - i], b))
-			continue;
+		 * group (e.g. ourselves). */
+		if (to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
+			if (immediate_liberty_count(b, lib) == 1)
+				continue;
+			if (immediate_liberty_count(b, lib) == 2
+			    && coord_is_adjecent(lib, board_group_info(b, group).lib[1 - i], b))
+				continue;
+		}
 
 #ifdef NO_DOOMED_GROUPS
 		/* If the owner can't play at the spot, we don't want
