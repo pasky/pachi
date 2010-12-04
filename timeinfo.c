@@ -358,12 +358,8 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 
 	/* Minimum net lag (seconds) to be reserved in the time for move. */
 	double net_lag = MAX_NET_LAG;
-	if (!ti->len.t.timer_start) {
-		ti->len.t.timer_start = time_now(); // we're playing the first game move
-	} else {
-		net_lag += time_now() - ti->len.t.timer_start;
-		// TODO: keep statistics to get good estimate of lag not just current move
-	}
+	net_lag += time_now() - ti->len.t.timer_start;
+	// TODO: keep statistics to get good estimate of lag not just current move
 
 
 	if (ti->period == TT_TOTAL && time_in_byoyomi(ti)) {

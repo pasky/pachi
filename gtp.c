@@ -270,15 +270,35 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 		coord_t *c = NULL;
+		
+		if (!ti[color].len.t.timer_start) {
+			/* First game move. */
+			time_start_timer(&ti[color]);
+		}
 
 		if (board->fbook) {
 			/* We have an fbook, check if we cannot make
 			 * a move along it right away. */
-			coord_t cf = board->fbook->moves[board->hash & fbook_hash_mask];
+			hash_t hi = board->hash;
+			coord_t cf = pass;
+			while (!is_pass(board->fbook->moves[hi & fbook_hash_mask])) {
+				if (board->fbook->hashes[hi & fbook_hash_mask] == board->hash) {
+					cf = board->fbook->moves[hi & fbook_hash_mask];
+					break;
+				}
+				hi++;
+			}
 			if (!is_pass(cf)) {
 				if (DEBUGL(1))
-					fprintf(stderr, "fbook match\n");
+					fprintf(stderr, "fbook match %"PRIhash":%"PRIhash"\n", board->hash, board->hash & fbook_hash_mask);
 				c = coord_copy(cf);
+			} else {
+				/* No match, also prevent further fbook usage
+				 * until the next clear_board. */
+				if (DEBUGL(4))
+					fprintf(stderr, "fbook out %"PRIhash":%"PRIhash"\n", board->hash, board->hash & fbook_hash_mask);
+				fbook_done(board->fbook);
+				board->fbook = NULL;
 			}
 		}
 

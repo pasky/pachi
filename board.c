@@ -152,6 +152,9 @@ board_copy(struct board *b2, struct board *b1)
 	size_t size = board_alloc(b2);
 	memcpy(b2->b, b1->b, size);
 
+	// XXX: Special semantics.
+	b2->fbook = NULL;
+
 	return b2;
 }
 

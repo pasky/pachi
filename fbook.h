@@ -12,10 +12,11 @@ struct fbook {
 	int bsize;
 	int handicap;
 
-#define fbook_hash_bits 19 // 4M w/ 32-bit coord_t
+#define fbook_hash_bits 16 // 1M w/ 32-bit coord_t
 #define fbook_hash_mask ((1 << fbook_hash_bits) - 1)
 	/* pass == no move in this position */
 	coord_t moves[1<<fbook_hash_bits];
+	hash_t hashes[1<<fbook_hash_bits];
 };
 
 struct fbook *fbook_init(char *filename, struct board *b);

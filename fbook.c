@@ -6,6 +6,27 @@
 #include "board.h"
 #include "debug.h"
 #include "fbook.h"
+#include "random.h"
+
+
+static coord_t
+coord_transform(struct board *b, coord_t coord, int i)
+{
+#define HASH_VMIRROR     1
+#define HASH_HMIRROR     2
+#define HASH_XYFLIP      4
+	if (i & HASH_VMIRROR) {
+		coord = coord_xy(b, coord_x(coord, b), board_size(b) - 1 - coord_y(coord, b));
+	}
+	if (i & HASH_HMIRROR) {
+		coord = coord_xy(b, board_size(b) - 1 - coord_x(coord, b), coord_y(coord, b));
+	}
+	if (i & HASH_XYFLIP) {
+		coord = coord_xy(b, coord_y(coord, b), coord_x(coord, b));
+	}
+	return coord;
+}
+
 
 struct fbook *
 fbook_init(char *filename, struct board *b)
@@ -57,19 +78,7 @@ fbook_init(char *filename, struct board *b)
 			coord_t *c = str2coord(line, fbook->bsize);
 
 			for (int i = 0; i < 8; i++) {
-#define HASH_VMIRROR     1
-#define HASH_HMIRROR     2
-#define HASH_XYFLIP      4
-				coord_t coord = *c;
-				if (i & HASH_VMIRROR) {
-					coord = coord_xy(b, coord_x(coord, b), board_size(b) - 1 - coord_y(coord, b));
-				}
-				if (i & HASH_HMIRROR) {
-					coord = coord_xy(b, board_size(b) - 1 - coord_x(coord, b), coord_y(coord, b));
-				}
-				if (i & HASH_XYFLIP) {
-					coord = coord_xy(b, coord_y(coord, b), coord_x(coord, b));
-				}
+				coord_t coord = coord_transform(b, *c, i);
 				struct move m = { .coord = coord, .color = stone_other(bs[i]->last_move.color) };
 				int ret = board_play(bs[i], &m);
 				assert(ret >= 0);
@@ -83,14 +92,38 @@ fbook_init(char *filename, struct board *b)
 		line++;
 		while (isspace(*line)) line++;
 
+		/* In case of multiple candidates, pick one with
+		 * exponentially decreasing likelihood. */
+		while (strchr(line, ' ') && fast_random(2)) {
+			line = strchr(line, ' ');
+			while (isspace(*line)) line++;
+			// fprintf(stderr, "<%s> skip to %s\n", linebuf, line);
+		}
+
 		coord_t *c = str2coord(line, fbook->bsize);
 		for (int i = 0; i < 8; i++) {
+			coord_t coord = coord_transform(b, *c, i);
 #if 0
-			fprintf(stderr, "%c %"PRIhash" (<%d> %s)\n",
-			        is_pass(fbook->moves[bs[i]->hash & fbook_hash_mask]) ? '+' : 'C',
-			        bs[i]->hash & fbook_hash_mask, i, linebuf);
+			char conflict = is_pass(fbook->moves[bs[i]->hash & fbook_hash_mask]) ? '+' : 'C';
+			if (conflict == 'C')
+				for (int j = 0; j < i; j++)
+					if (bs[i]->hash == bs[j]->hash)
+						conflict = '+';
+			if (conflict == 'C') {
+				hash_t hi = bs[i]->hash;
+				while (!is_pass(fbook->moves[hi & fbook_hash_mask]) && fbook->hashes[hi & fbook_hash_mask] != bs[i]->hash)
+					hi++;
+				if (fbook->hashes[hi & fbook_hash_mask] == bs[i]->hash)
+					hi = 'c';
+			}
+			fprintf(stderr, "%c %"PRIhash":%"PRIhash" (<%d> %s)\n", conflict,
+			        bs[i]->hash & fbook_hash_mask, bs[i]->hash, i, linebuf);
 #endif
-			fbook->moves[bs[i]->hash & fbook_hash_mask] = *c;
+			hash_t hi = bs[i]->hash;
+			while (!is_pass(fbook->moves[hi & fbook_hash_mask]) && fbook->hashes[hi & fbook_hash_mask] != bs[i]->hash)
+				hi++;
+			fbook->moves[hi & fbook_hash_mask] = coord;
+			fbook->hashes[hi & fbook_hash_mask] = bs[i]->hash;
 		}
 		coord_done(c);
 	}
