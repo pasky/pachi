@@ -27,6 +27,35 @@ coord_transform(struct board *b, coord_t coord, int i)
 	return coord;
 }
 
+/* Check if we can make a move along the fbook right away.
+ * Otherwise return pass. */
+coord_t
+fbook_check(struct board *board)
+{
+	if (!board->fbook) return pass;
+
+	hash_t hi = board->hash;
+	coord_t cf = pass;
+	while (!is_pass(board->fbook->moves[hi & fbook_hash_mask])) {
+		if (board->fbook->hashes[hi & fbook_hash_mask] == board->hash) {
+			cf = board->fbook->moves[hi & fbook_hash_mask];
+			break;
+		}
+		hi++;
+	}
+	if (!is_pass(cf)) {
+		if (DEBUGL(1))
+			fprintf(stderr, "fbook match %"PRIhash":%"PRIhash"\n", board->hash, board->hash & fbook_hash_mask);
+	} else {
+		/* No match, also prevent further fbook usage
+		 * until the next clear_board. */
+		if (DEBUGL(4))
+			fprintf(stderr, "fbook out %"PRIhash":%"PRIhash"\n", board->hash, board->hash & fbook_hash_mask);
+		fbook_done(board->fbook);
+		board->fbook = NULL;
+	}
+	return cf;
+}
 
 struct fbook *
 fbook_init(char *filename, struct board *b)
