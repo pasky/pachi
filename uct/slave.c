@@ -37,6 +37,7 @@
 
 #include "debug.h"
 #include "board.h"
+#include "fbook.h"
 #include "gtp.h"
 #include "move.h"
 #include "timeinfo.h"
@@ -525,14 +526,18 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	uct_search_progress(u, b, color, u->t, ti, &s, played_games);
 	u->played_own = played_games - s.base_playouts;
 
-	bool keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, &s, played_games);
-	coord_t best_coord;
-	uct_search_result(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
+	*stats_size = 0;
+	bool keep_looking = false;
+	coord_t best_coord = pass;
+	if (b->fbook)
+		best_coord = fbook_check(b);
+	if (best_coord == pass) {
+		keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, &s, played_games);
+		uct_search_result(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
 
-	if (u->shared_levels) {
-		*stats_buf = report_incr_stats(u, stats_size);
-	} else {
-		*stats_size = 0;
+		if (u->shared_levels) {
+			*stats_buf = report_incr_stats(u, stats_size);
+		}
 	}
 	char *reply = report_stats(u, b, best_coord, keep_looking, *stats_size);
 	return reply;

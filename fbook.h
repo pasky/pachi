@@ -19,6 +19,7 @@ struct fbook {
 	hash_t hashes[1<<fbook_hash_bits];
 };
 
+coord_t fbook_check(struct board *board);
 struct fbook *fbook_init(char *filename, struct board *b);
 void fbook_done(struct fbook *fbook);
 
