@@ -23,3 +23,7 @@ Jean-loup Gaily
 	Distributed engine
 	Time allocation algorithm
 	Efficient UCT memory allocator
+
+
+Pachi uses data extracted from the Kogo joseki dictionary as its
+joseki database: http://waterfire.us/joseki.htm
