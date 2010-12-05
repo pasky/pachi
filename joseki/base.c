@@ -35,6 +35,9 @@ joseki_load(int bsize)
 	while (fgets(linebuf, 1024, f)) {
 		char *line = linebuf;
 
+		while (isspace(*line)) line++;
+		if (*line == '#')
+			continue;
 		hash_t h = strtoull(line, &line, 16);
 		while (isspace(*line)) line++;
 		enum stone color = *line++ == 'b' ? S_BLACK : S_WHITE;
