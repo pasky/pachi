@@ -46,8 +46,16 @@ play_random_game(struct playout_setup *setup,
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	while (gamelen-- && passes < 2) {
-		coord_t coord;
-		coord = policy->choose(policy, setup, b, color);
+		coord_t coord = pass;
+
+		if (setup->prepolicy_hook)
+			coord = setup->prepolicy_hook(policy, setup, b, color);
+
+		if (is_pass(coord))
+			coord = policy->choose(policy, setup, b, color);
+
+		if (is_pass(coord) && setup->postpolicy_hook)
+			coord = setup->postpolicy_hook(policy, setup, b, color);
 
 		if (is_pass(coord)) {
 play_random:
