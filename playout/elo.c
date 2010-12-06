@@ -195,7 +195,7 @@ elo_check_probdist(struct playout_policy *p, struct board *b, enum stone to_play
 }
 
 coord_t
-playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
+playout_elo_choose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct elo_policy *pp = p->data;
 	/* The base board probdist. */
@@ -337,7 +337,7 @@ playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play
 #else
 
 coord_t
-playout_elo_choose(struct playout_policy *p, struct board *b, enum stone to_play)
+playout_elo_choose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct elo_policy *pp = p->data;
 	probdist_alloca(pd, b);

@@ -47,7 +47,7 @@ play_random_game(struct playout_setup *setup,
 
 	while (gamelen-- && passes < 2) {
 		coord_t coord;
-		coord = policy->choose(policy, b, color);
+		coord = policy->choose(policy, setup, b, color);
 
 		if (is_pass(coord)) {
 play_random:

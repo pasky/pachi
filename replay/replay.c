@@ -24,8 +24,9 @@ static coord_t *
 replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct replay *r = e->data;
+	struct playout_setup s; memset(&s, 0, sizeof(s));
 
-	coord_t coord = r->playout->choose(r->playout, b, color);
+	coord_t coord = r->playout->choose(r->playout, &s, b, color);
 
 	if (!is_pass(coord)) {
 		struct move m;

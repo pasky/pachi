@@ -310,7 +310,7 @@ next_try:;
 }
 
 coord_t
-playout_moggy_partchoose(struct playout_policy *p, struct board *b, enum stone to_play)
+playout_moggy_partchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
 
@@ -435,7 +435,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 }
 
 coord_t
-playout_moggy_fullchoose(struct playout_policy *p, struct board *b, enum stone to_play)
+playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
 	struct move_queue q; q.moves = 0;

@@ -13,6 +13,8 @@ struct board_ownermap;
 /** Playout policy interface: */
 
 struct playout_policy;
+struct playout_setup;
+
 /* Initialize policy data structures for new playout; subsequent choose calls
  * (but not assess/permit calls!) will all be made on the same board; if
  * setboard is used, it is guaranteed that choose will pick all moves played
@@ -20,15 +22,19 @@ struct playout_policy;
  * with internal data. At the playout end, b->ps will be simply free()d,
  * so make sure all data is within single allocated block. */
 typedef void (*playoutp_setboard)(struct playout_policy *playout_policy, struct board *b);
+
 /* Pick the next playout simulation move. */
-typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct board *b, enum stone to_play);
+typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct playout_setup *playout_setup, struct board *b, enum stone to_play);
+
 /* Set number of won (>0) or lost (<0) games for each considerable
  * move (usually a proportion of @games); can leave some untouched
  * if policy has no opinion. The number must have proper parity;
  * just use uct/prior.h:add_prior_value(). */
 typedef void (*playoutp_assess)(struct playout_policy *playout_policy, struct prior_map *map, int games);
+
 /* Allow play of randomly selected move. */
 typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m);
+
 /* Tear down the policy state; policy and policy->data will be free()d by caller. */
 typedef void (*playoutp_done)(struct playout_policy *playout_policy);
 
