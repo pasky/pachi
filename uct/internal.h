@@ -43,6 +43,7 @@ struct uct {
 	unsigned long max_pruned_size;
 	unsigned long pruning_threshold;
 	int mercymin;
+	int significant_threshold;
 
 	int threads;
 	enum uct_thread_model {
@@ -117,6 +118,10 @@ struct uct_descent {
 	/* Value of main tree node (with all value factors, but unbiased
 	 * - without exploration factor), from black's perspective. */
 	struct move_stats value;
+	/* The last "significant" node along the descent (i.e. node
+	 * with higher than configured number of playouts). */
+	struct tree_node *significant;
+	enum stone significant_color; // color of the significant node
 };
 
 

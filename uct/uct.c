@@ -525,6 +525,7 @@ uct_state_init(char *arg, struct board *b)
 	u->resign_threshold = 0.2;
 	u->sure_win_threshold = 0.85;
 	u->mercymin = 0;
+	u->significant_threshold = 50;
 	u->expand_p = 2;
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
@@ -892,6 +893,16 @@ uct_state_init(char *arg, struct board *b)
 				 * is on, we make probability distribution from
 				 * sequences first moves instead. */
 				u->local_tree_pseqroot = !optval || atoi(optval);
+
+			/** Other heuristics */
+			} else if (!strcasecmp(optname, "significant_threshold") && optval) {
+				/* Some heuristics (XXX: so far, none) rely
+				 * on the knowledge of the last "significant"
+				 * node in the descent. Such a node is
+				 * considered reasonably trustworthy to carry
+				 * some meaningful information in the values
+				 * of the node and its children. */
+				u->significant_threshold = atoi(optval);
 
 			/** Distributed engine slaves setup */
 

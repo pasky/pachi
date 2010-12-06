@@ -306,6 +306,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	#define DLEN 512
 	struct uct_descent descent[DLEN];
 	descent[0].node = n; descent[0].lnode = NULL;
+	descent[0].significant = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
 	struct move_stats seq_value = { .playouts = 0 };
@@ -348,6 +349,11 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 
 		/*** Perform the descent: */
+
+		if (descent[dlen].node->playouts >= u->significant_threshold) {
+			descent[dlen].significant = n;
+			descent[dlen].significant_color = node_color;
+		}
 
 		seq_value.playouts += descent[dlen].value.playouts;
 		seq_value.value += descent[dlen].value.value * descent[dlen].value.playouts;
