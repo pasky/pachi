@@ -297,6 +297,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * thread manager will swap the tree pointer asynchronously. */
 
 	/* Now, just periodically poll the search tree. */
+	/* Note that in case of TD_GAMES, threads will terminate independently
+	 * of the uct_search_check_stop() signalization. */
 	while (1) {
 		time_sleep(TREE_BUSYWAIT_INTERVAL);
 		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the

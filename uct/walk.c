@@ -503,10 +503,15 @@ end:
 }
 
 int
-uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t)
+uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti)
 {
 	int i;
-	for (i = 0; !uct_halt; i++)
-		uct_playout(u, b, color, t);
+	if (ti->dim == TD_GAMES) {
+		for (i = 0; t->root->u.playouts <= ti->len.games; i++)
+			uct_playout(u, b, color, t);
+	} else {
+		for (i = 0; !uct_halt; i++)
+			uct_playout(u, b, color, t);
+	}
 	return i;
 }

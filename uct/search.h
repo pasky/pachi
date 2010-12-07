@@ -40,6 +40,7 @@ struct uct_thread_ctx {
 	struct tree *t;
 	unsigned long seed;
 	int games;
+	struct time_info *ti;
 };
 
 
