@@ -53,6 +53,12 @@ further. But please note that using Pachi in this mode is not tested
 extensively, so check its performance in whatever version you test
 before you use it as a reference.
 
+Note that even in this "basic UCT" mode, Pachi optimizes tree search
+by considering board symmetries at the beginning. Currently, there's no
+easy option to turn that off. The easiest way is to tweak board.c so
+that board_symmetry_update() has goto break_symmetry at the beginning
+and board_clear has board->symmetry.type = SYM_NONE.
+
 
 Except UCT, Pachi supports a simple idiotbot-like engine and an example
 treeless MonteCarlo-player. The MonteCarlo simulation ("playout")

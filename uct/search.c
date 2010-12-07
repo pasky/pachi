@@ -86,7 +86,7 @@ spawn_worker(void *ctx_)
 	/* Setup */
 	fast_srandom(ctx->seed);
 	/* Run */
-	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t);
+	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->ti);
 	/* Finish */
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
@@ -130,6 +130,7 @@ spawn_thread_manager(void *ctx_)
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
 		mctx->t = ctx->t = t;
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
+		ctx->ti = mctx->ti;
 		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
 		if (UDEBUGL(3))
 			fprintf(stderr, "Spawned worker %d\n", ti);
@@ -193,7 +194,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
 	static struct uct_thread_ctx mctx;
-	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536) };
+	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti };
 	s->ctx = &mctx;
 	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, s->ctx);
@@ -384,6 +385,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	 * time pressure but the tree is going to be just too messed
 	 * up otherwise - we might even play invalid suicides or pass
 	 * when we mustn't. */
+	assert(!(ti->dim == TD_GAMES && ti->len.games < GJ_MINGAMES));
 	if (i < GJ_MINGAMES)
 		return false;
 
