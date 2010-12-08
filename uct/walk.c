@@ -350,7 +350,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		/*** Perform the descent: */
 
-		if (descent[dlen].node->playouts >= u->significant_threshold) {
+		if (descent[dlen].node->u.playouts >= u->significant_threshold) {
 			descent[dlen].significant = n;
 			descent[dlen].significant_color = node_color;
 		}
