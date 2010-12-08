@@ -171,6 +171,28 @@ uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct pro
 }
 
 
+static coord_t
+uct_playout_hook(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color, int mode)
+{
+	struct uct_playout_callback *upc = setup->hook_data;
+
+	/* TODO: Fill me. */
+	return pass;
+}
+
+static coord_t
+uct_playout_prepolicy(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color)
+{
+	return uct_playout_hook(playout, setup, b, color, 0);
+}
+
+static coord_t
+uct_playout_postpolicy(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color)
+{
+	return uct_playout_hook(playout, setup, b, color, 1);
+}
+
+
 static int
 uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
               struct playout_amafmap *amaf,
@@ -204,7 +226,13 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 		playout_elo_callback(u->playout, uct_playout_probdist, &upc);
 	}
 
-	struct playout_setup ps = { .gamelen = u->gamelen, .mercymin = u->mercymin };
+	struct playout_setup ps = {
+		.gamelen = u->gamelen,
+		.mercymin = u->mercymin,
+		.prepolicy_hook = uct_playout_prepolicy,
+		.postpolicy_hook = uct_playout_postpolicy,
+		.hook_data = &upc,
+	};
 	int result = play_random_game(&ps, b, next_color,
 	                              u->playout_amaf ? amaf : NULL,
 				      &u->ownermap, u->playout);
