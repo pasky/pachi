@@ -119,9 +119,9 @@ struct uct_descent {
 	 * - without exploration factor), from black's perspective. */
 	struct move_stats value;
 	/* The last "significant" node along the descent (i.e. node
-	 * with higher than configured number of playouts). */
-	struct tree_node *significant;
-	enum stone significant_color; // color of the significant node
+	 * with higher than configured number of playouts). For black
+	 * and white. */
+	struct tree_node *significant[2];
 };
 
 

@@ -334,7 +334,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	#define DLEN 512
 	struct uct_descent descent[DLEN];
 	descent[0].node = n; descent[0].lnode = NULL;
-	descent[0].significant = NULL;
+	descent[0].significant[0] = descent[0].significant[1] = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
 	struct move_stats seq_value = { .playouts = 0 };
@@ -379,8 +379,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		/*** Perform the descent: */
 
 		if (descent[dlen].node->u.playouts >= u->significant_threshold) {
-			descent[dlen].significant = n;
-			descent[dlen].significant_color = node_color;
+			descent[dlen].significant[node_color - 1] = n;
 		}
 
 		seq_value.playouts += descent[dlen].value.playouts;
@@ -453,7 +452,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	} else { // assert(tree_leaf_node(n));
 		/* In case of parallel tree search, the assertion might
 		 * not hold if two threads chew on the same node. */
-		result = uct_leaf_node(u, &b2, player_color, amaf, t, n, node_color, spaces);
+		result = uct_leaf_node(u, &b2, player_color, amaf, &descent[dlen - 1], t, n, node_color, spaces);
 	}
 
 	if (amaf && u->playout_amaf_cutoff) {
