@@ -1,6 +1,5 @@
-/* Playout policy by stochastically applying a fixed set of decision
- * rules in given order - modelled after the intelligent playouts
- * in the Mogo engine. */
+/* Heuristical playout (and tree prior) policy modelled primarily after
+ * the description of the Mogo engine. */
 
 #include <assert.h>
 #include <math.h>
@@ -25,9 +24,19 @@
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
 
-/* Move queue tags: */
+/* In case "seqchoose" move picker is enabled (i.e. no "fullchoose"
+ * parameter passed), we stochastically apply fixed set of decision
+ * rules in given order.
+ *
+ * In "fullchoose" mode, we instead build a move queue of variously
+ * tagged candidates, then consider a probability distribution over
+ * them and pick a move from that. */
+
+/* Move queue tags. Some may be even undesirable - these moves then
+ * receive a penalty; penalty tags should be used only when it is
+ * certain the move would be considered anyway. */
 enum mq_tag {
-	MQ_KO = 1,
+	MQ_KO = 0,
 	MQ_LATARI,
 	MQ_L2LIB,
 	MQ_PAT3,
@@ -310,7 +319,7 @@ next_try:;
 }
 
 coord_t
-playout_moggy_partchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
+playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
 
@@ -410,7 +419,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 	for (unsigned int i = 0; i < q->moves; i++) {
 		double val = 1.0;
 		assert(q->tag[i] != 0);
-		for (int j = 1; j < MQ_MAX; j++)
+		for (int j = 0; j < MQ_MAX; j++)
 			if (q->tag[i] & (1<<j)) {
 				//fprintf(stderr, "%s(%x) %d %f *= %f\n", coord2sstr(q->move[i], b), q->tag[i], j, val, pp->mq_prob[j]);
 				val *= pp->mq_prob[j];
@@ -445,8 +454,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 
 	/* Ko fight check */
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
-	    && b->moves - b->last_ko_age < pp->koage
-	    && pp->korate > fast_random(100)) {
+	    && b->moves - b->last_ko_age < pp->koage) {
 		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
 			mq_add(&q, b->last_ko.coord, 1<<MQ_KO);
@@ -455,34 +463,24 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
-		if (pp->lcapturerate > fast_random(100)) {
-			local_atari_check(p, b, &b->last_move, &q);
-		}
+		local_atari_check(p, b, &b->last_move, &q);
 
 		/* Local group can be PUT in atari? */
-		if (pp->atarirate > fast_random(100)) {
-			local_2lib_check(p, b, &b->last_move, &q);
-		}
+		local_2lib_check(p, b, &b->last_move, &q);
 
 		/* Check for patterns we know */
-		if (pp->patternrate > fast_random(100)) {
-			apply_pattern(p, b, &b->last_move,
-			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
-					  &q);
-		}
+		apply_pattern(p, b, &b->last_move,
+				pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
+				&q);
 	}
 
 	/* Global checks */
 
 	/* Any groups in atari? */
-	if (pp->capturerate > fast_random(100)) {
-		global_atari_check(p, b, to_play, &q);
-	}
+	global_atari_check(p, b, to_play, &q);
 
 	/* Joseki moves? */
-	if (pp->josekirate > fast_random(100)) {
-		joseki_check(p, b, to_play, &q);
-	}
+	joseki_check(p, b, to_play, &q);
 
 #if 0
 	/* Average length of the queue is 1.4 move. */
@@ -674,7 +672,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
-	p->choose = playout_moggy_partchoose;
+	p->choose = playout_moggy_seqchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
 
@@ -741,10 +739,10 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			} else if (!strcasecmp(optname, "capcheckall")) {
 				pp->capcheckall = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
-				p->choose = optval && *optval == '0' ? playout_moggy_partchoose : playout_moggy_fullchoose;
+				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
 				/* KO%LATARI%L2LIB%PAT3%GATARI%JOSEKI */
-				for (int i = 1; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
+				for (int i = 0; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
 					optval++;
 					pp->mq_prob[i] = atof(optval);
 				}
