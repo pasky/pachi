@@ -35,7 +35,8 @@ pairing() {
 	player="$1"; shift
 	args=""; argc=0
 	while [ "$argc" -lt "$(player_param $player argc)" ] && [ "$#" -gt 0 ]; do
-		argc=$((argc+1)); args="$args $1"; shift
+		argc=$((argc+1))
+		args="$args $1"; shift
 	done
 	eval "pair${pairs}_player1='$player'"
 	eval "pair${pairs}_player1_args='$args'"
@@ -43,7 +44,8 @@ pairing() {
 	player="$1"; shift
 	args=""; argc=0
 	while [ "$argc" -lt "$(player_param $player argc)" ] && [ "$#" -gt 0 ]; do
-		argc=$((argc+1)); args="$args $1"; shift
+		argc=$((argc+1))
+		args="$args $1"; shift
 	done
 	eval "pair${pairs}_player2='$player'"
 	eval "pair${pairs}_player2_args='$args'"
@@ -66,6 +68,7 @@ echo "Loaded $pairs pairings"
 pair="$((RANDOM % $pairs))"
 pairid="$(pairing_param $pair id)"
 echo "Picked pairing #$pair: $pairid"
+
 log "starting game with pairing #$pair: $pairid"
 
 
@@ -91,6 +94,7 @@ komi="$(pairing_param $pair komi | sed 's/^h/0.5 -handicap /')"
 
 # Run twogtp!
 rm -f "c/$clientid"/scratch*
+echo $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch"
 $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch"
 
 # Get count of our game
