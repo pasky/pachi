@@ -17,19 +17,26 @@ pknown=" "
 pairing() { pknown="$pknown$(pairid "$@") "; }
 . rc
 
+color_stale="\033[33m"
+color_bad="\033[31m"
+color_fresh="\033[1m"
+color_stop="\033[0m"
+
 pairing_status() {
 	# See README for explanation of flags.
+	error=0;
 	if [ -s "r/$pairing.error" ] && [ "$(cat "r/$pairing.error")" -gt 0 ]; then
-		status="x"
-		return
+		error=1;
 	fi
 	known=1; [ "${pknown#* $pairing *}" != "$pknown" ] || known=0
 	active=1; ([ -s "r/$pairing.beacon" ] && [ "$(cat "r/$pairing.beacon")" -ge "$(($(date +%s) - 60*60*2))" ]) || active=0
-	case $known$active in
-		01) status="?";;
-		00) status="/";;
-		11) status=".";;
-		*) status="!";;
+	case $error$known$active in
+		001) status="${color_stale}?";;
+		000) status="${color_stale}/";;
+		011) status="${color_fresh}.";;
+		010) status="${color_fresh}${color_bad}!";;
+		1*0) status="${color_bad}x";;
+		1*1) status="${color_fresh}${color_bad}X";;
 	esac
 }
 
@@ -40,8 +47,8 @@ for pairing in $((echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.d
 	[ ! -s "r/$pairing.dat" ] || $twogtp_path -analyze "r/$pairing.dat"
 	pairing_status "$pairing" # sets status
 	if [ -s "r/$pairing.summary.dat" ]; then
-		echo -e "$status $(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)\t$pairing"
+		echo -e "$status $(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)\t$pairing$color_stop"
 	else
-		echo -e "$status 0\t-\t-\t$pairing"
+		echo -e "$status 0\t-\t-\t$pairing$color_stop"
 	fi
 done
