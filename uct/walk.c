@@ -106,6 +106,9 @@ struct uct_playout_callback {
 	struct uct *uct;
 	struct tree *tree;
 	struct tree_node *lnode;
+
+	coord_t *treepool[2];
+	int treepool_n[2];
 };
 
 static void
@@ -176,7 +179,12 @@ uct_playout_hook(struct playout_policy *playout, struct playout_setup *setup, st
 {
 	struct uct_playout_callback *upc = setup->hook_data;
 
-	/* TODO: Fill me. */
+	if (upc->uct->treepool_chance[mode] > fast_random(100) && upc->treepool[color - 1]) {
+		assert(upc->treepool_n[color - 1] > 0);
+		coord_t treepool_move = upc->treepool[color - 1][fast_random(upc->treepool_n[color - 1])];
+		if (board_is_valid_play(b, treepool_move, color))
+			return treepool_move;
+	}
 	return pass;
 }
 
@@ -192,10 +200,71 @@ uct_playout_postpolicy(struct playout_policy *playout, struct playout_setup *set
 	return uct_playout_hook(playout, setup, b, color, 1);
 }
 
+double
+treepool_node_value(struct uct *u, struct tree *tree, int parity, struct tree_node *node)
+{
+	/* XXX: Playouts get cast to double */
+	switch (u->treepool_type) {
+		case UTT_RAVE_PLAYOUTS:
+			return node->amaf.playouts;
+		case UTT_RAVE_VALUE:
+			return tree_node_get_value(tree, parity, node->amaf.value);
+		case UTT_UCT_PLAYOUTS:
+			return node->u.playouts;
+		case UTT_UCT_VALUE:
+			return tree_node_get_value(tree, parity, node->u.value);
+		case UTT_EVALUATE:
+		{
+			struct uct_descent d = { .node = node };
+			assert(u->policy->evaluate);
+			return u->policy->evaluate(u->policy, tree, &d, parity);
+		}
+		default: assert(0);
+	}
+	return -1;
+}
+
+static void
+treepool_setup(struct uct_playout_callback *upc, struct tree_node *node, int color)
+{
+	struct uct *u = upc->uct;
+	int parity = ((node->depth ^ upc->tree->root->depth) & 1) ? -1 : 1;
+
+	/* XXX: Naive O(N^2) way. */
+	for (int i = 0; i < u->treepool_size; i++) {
+		/* For each item, find the highest
+		 * node not in the pool yet. */
+		struct tree_node *best = NULL;
+		double best_val = -1;
+
+		// first comes pass which we skip
+		for (struct tree_node *ni = node->children->sibling; ni; ni = ni->sibling) {
+			/* Do we already have it? */
+			bool have = false;
+			for (int j = 0; j < upc->treepool_n[color]; j++)
+				if (upc->treepool[color][j] == ni->coord) {
+					have = true;
+					break;
+				}
+			if (have)
+				continue;
+
+			double i_val = treepool_node_value(u, upc->tree, parity, ni);
+			if (i_val > best_val) {
+				best = node;
+				best_val = i_val;
+			}
+		}
+
+		if (!best) break;
+		upc->treepool[color][upc->treepool_n[color]++] = best->coord;
+	}
+}
+
 
 static int
 uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
-              struct playout_amafmap *amaf,
+              struct playout_amafmap *amaf, struct uct_descent *descent,
               struct tree *t, struct tree_node *n, enum stone node_color,
 	      char *spaces)
 {
@@ -218,12 +287,37 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
 			tree_node_get_value(t, parity, n->u.value));
 
-	/* TODO: Don't necessarily restart the sequence walk when entering
-	 * playout. */
-	struct uct_playout_callback upc = { .uct = u, .tree = t, .lnode = NULL };
+	struct uct_playout_callback upc = {
+		.uct = u,
+		.tree = t,
+		/* TODO: Don't necessarily restart the sequence walk when
+		 * entering playout. */
+		.lnode = NULL,
+	};
+
 	if (u->local_tree_playout) {
 		/* N.B.: We know this is ELO playout. */
 		playout_elo_callback(u->playout, uct_playout_probdist, &upc);
+	}
+
+	coord_t pool[2][u->treepool_size];
+	if (u->treepool_chance[0] + u->treepool_chance[1] > 0) {
+		for (int color = 0; color < 2; color++) {
+			/* Prepare tree-based pool of moves to try forcing
+			 * during the playout. */
+			/* We consider the children of the last significant
+			 * node, picking top N choices. */
+			struct tree_node *n = descent->significant[color];
+			if (!n || !n->children || !n->children->sibling) {
+				/* No significant node, or it's childless or has
+				 * only pass as its child. */
+				upc.treepool[color] = NULL;
+				upc.treepool_n[color] = 0;
+			} else {
+				upc.treepool[color] = (coord_t *) &pool[color];
+				treepool_setup(&upc, n, color);
+			}
+		}
 	}
 
 	struct playout_setup ps = {
