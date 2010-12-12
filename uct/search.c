@@ -141,8 +141,14 @@ spawn_thread_manager(void *ctx_)
 		/* Wait for some thread to finish... */
 		pthread_cond_wait(&finish_cond, &finish_mutex);
 		if (finish_thread < 0) {
-			/* Stop-by-caller. Tell the workers to wrap up. */
+			/* Stop-by-caller. Tell the workers to wrap up
+			 * and unblock them from terminating. */
 			uct_halt = 1;
+			/* We need to make sure the workers do not complete
+			 * the termination sequence before we get officially
+			 * stopped - their wake and the stop wake could get
+			 * coalesced. */
+			pthread_mutex_unlock(&finish_serializer);
 			continue;
 		}
 		/* ...and gather its remnants. */
@@ -196,6 +202,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	static struct uct_thread_ctx mctx;
 	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti };
 	s->ctx = &mctx;
+	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, s->ctx);
 	thread_manager_running = true;
