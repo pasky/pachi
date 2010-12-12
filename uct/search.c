@@ -285,15 +285,16 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	 * if we are in byoyomi with single stone remaining in our
 	 * period, however - it's better to pre-ponder. */
 	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
-	if (best2 && ti->dim == TD_WALLTIME && !time_indulgent) {
+	if (best2 && ti->dim == TD_WALLTIME
+	    && played >= PLAYOUT_EARLY_BREAK_MIN && !time_indulgent) {
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
 		if (best->u.playouts > best2->u.playouts + estplayouts) {
 			if (UDEBUGL(2))
 				fprintf(stderr, "Early stop, result cannot change: "
-					"best %d, best2 %d, estimated %f simulations to go\n",
-					best->u.playouts, best2->u.playouts, estplayouts);
+					"best %d, best2 %d, estimated %f simulations to go (%d/%f=%f pps)\n",
+					best->u.playouts, best2->u.playouts, estplayouts, played, elapsed, pps);
 			return true;
 		}
 	}
