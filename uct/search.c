@@ -141,8 +141,14 @@ spawn_thread_manager(void *ctx_)
 		/* Wait for some thread to finish... */
 		pthread_cond_wait(&finish_cond, &finish_mutex);
 		if (finish_thread < 0) {
-			/* Stop-by-caller. Tell the workers to wrap up. */
+			/* Stop-by-caller. Tell the workers to wrap up
+			 * and unblock them from terminating. */
 			uct_halt = 1;
+			/* We need to make sure the workers do not complete
+			 * the termination sequence before we get officially
+			 * stopped - their wake and the stop wake could get
+			 * coalesced. */
+			pthread_mutex_unlock(&finish_serializer);
 			continue;
 		}
 		/* ...and gather its remnants. */
@@ -196,6 +202,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	static struct uct_thread_ctx mctx;
 	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti };
 	s->ctx = &mctx;
+	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
 	pthread_create(&thread_manager, NULL, spawn_thread_manager, s->ctx);
 	thread_manager_running = true;
@@ -285,15 +292,16 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 	 * if we are in byoyomi with single stone remaining in our
 	 * period, however - it's better to pre-ponder. */
 	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
-	if (best2 && ti->dim == TD_WALLTIME && !time_indulgent) {
+	if (best2 && ti->dim == TD_WALLTIME
+	    && played >= PLAYOUT_EARLY_BREAK_MIN && !time_indulgent) {
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
 		if (best->u.playouts > best2->u.playouts + estplayouts) {
 			if (UDEBUGL(2))
 				fprintf(stderr, "Early stop, result cannot change: "
-					"best %d, best2 %d, estimated %f simulations to go\n",
-					best->u.playouts, best2->u.playouts, estplayouts);
+					"best %d, best2 %d, estimated %f simulations to go (%d/%f=%f pps)\n",
+					best->u.playouts, best2->u.playouts, estplayouts, played, elapsed, pps);
 			return true;
 		}
 	}
