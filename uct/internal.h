@@ -76,6 +76,7 @@ struct uct {
 		UTT_UCT_VALUE,
 		UTT_EVALUATE,
 	} treepool_type;
+	int treepool_pickfactor;
 
 	int random_policy_chance;
 	int local_tree;

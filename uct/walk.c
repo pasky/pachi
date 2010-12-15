@@ -182,17 +182,32 @@ uct_playout_hook(struct playout_policy *playout, struct playout_setup *setup, st
 
 	if (UDEBUGL(8))
 		fprintf(stderr, "treepool check [%d] %d, %p,%p\n", mode, u->treepool_chance[mode], upc->treepool[0], upc->treepool[1]);
+
 	if (u->treepool_chance[mode] > fast_random(100) && upc->treepool[color - 1]) {
 		assert(upc->treepool_n[color - 1] > 0);
-		coord_t treepool_move = upc->treepool[color - 1][fast_random(upc->treepool_n[color - 1])];
 		if (UDEBUGL(8)) {
 			fprintf(stderr, "Treepool: ");
 			for (int i = 0; i < upc->treepool_n[color - 1]; i++)
 				fprintf(stderr, "%s ", coord2sstr(upc->treepool[color - 1][i], b));
 			fprintf(stderr, "\n");
 		}
+
+		coord_t treepool_move = pass;
+		if (u->treepool_pickfactor) {
+			/* With pickfactor=10, we get uniform distribution. */
+			int prob = 1000 * u->treepool_pickfactor / (upc->treepool_n[color - 1] * 10);
+			for (int i = 0; i < upc->treepool_n[color - 1]; i++) {
+				treepool_move = upc->treepool[color - 1][i];
+				if (prob > fast_random(1000)) break;
+			}
+		} else {
+			treepool_move = upc->treepool[color - 1][fast_random(upc->treepool_n[color - 1])];
+		}
 		if (UDEBUGL(7))
-			fprintf(stderr, "Treepool pick <%d> %s,%s\n", upc->treepool_n[color - 1], stone2str(color), coord2sstr(treepool_move, b));
+			fprintf(stderr, "Treepool pick <%d> %s,%s\n",
+				upc->treepool_n[color - 1],
+				stone2str(color), coord2sstr(treepool_move, b));
+
 		if (board_is_valid_play(b, color, treepool_move))
 			return treepool_move;
 	}

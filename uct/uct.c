@@ -949,6 +949,16 @@ uct_state_init(char *arg, struct board *b)
 					fprintf(stderr, "uct: unknown treepool_type %s\n", optval);
 					exit(1);
 				}
+			} else if (!strcasecmp(optname, "treepool_pickfactor") && optval) {
+				/* Pick factor influencing children choice.
+				 * By default (if this is 0 or 10), coords
+				 * have uniform probability to be chosen;
+				 * otherwise, children are tried from best
+				 * to worst, each picked with probability
+				 * (1/n * pickfactor/10).
+				 * I.e., better children may be preferred
+				 * if pickfactor > 10. */
+				u->treepool_pickfactor = atoi(optval);
 
 			/** Distributed engine slaves setup */
 
