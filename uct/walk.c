@@ -178,11 +178,12 @@ static coord_t
 uct_playout_hook(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color, int mode)
 {
 	struct uct_playout_callback *upc = setup->hook_data;
+	struct uct *u = upc->uct;
 
-	if (upc->uct->treepool_chance[mode] > fast_random(100) && upc->treepool[color - 1]) {
+	if (u->treepool_chance[mode] > fast_random(100) && upc->treepool[color - 1]) {
 		assert(upc->treepool_n[color - 1] > 0);
 		coord_t treepool_move = upc->treepool[color - 1][fast_random(upc->treepool_n[color - 1])];
-		if (board_is_valid_play(b, treepool_move, color))
+		if (board_is_valid_play(b, color, treepool_move))
 			return treepool_move;
 	}
 	return pass;
