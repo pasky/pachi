@@ -277,6 +277,7 @@ treepool_setup(struct uct_playout_callback *upc, struct board *b, struct tree_no
 static int
 uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
               struct playout_amafmap *amaf, struct uct_descent *descent,
+	      struct tree_node *significant[2],
               struct tree *t, struct tree_node *n, enum stone node_color,
 	      char *spaces)
 {
@@ -319,7 +320,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			 * during the playout. */
 			/* We consider the children of the last significant
 			 * node, picking top N choices. */
-			struct tree_node *n = descent->significant[color];
+			struct tree_node *n = significant[color];
 			if (!n || !n->children || !n->children->sibling) {
 				/* No significant node, or it's childless or has
 				 * only pass as its child. */
@@ -440,10 +441,15 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	#define DLEN 512
 	struct uct_descent descent[DLEN];
 	descent[0].node = n; descent[0].lnode = NULL;
-	descent[0].significant[0] = descent[0].significant[1] = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
 	struct move_stats seq_value = { .playouts = 0 };
+	/* The last "significant" node along the descent (i.e. node
+	 * with higher than configured number of playouts). For black
+	 * and white. */
+	struct tree_node *significant[2] = { NULL, NULL };
+	if (n->u.playouts >= u->significant_threshold)
+		significant[node_color - 1] = n;
 
 	int result;
 	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
@@ -485,7 +491,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		/*** Perform the descent: */
 
 		if (descent[dlen].node->u.playouts >= u->significant_threshold) {
-			descent[dlen].significant[node_color - 1] = n;
+			significant[node_color - 1] = descent[dlen].node;
 		}
 
 		seq_value.playouts += descent[dlen].value.playouts;
@@ -559,7 +565,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	} else { // assert(tree_leaf_node(n));
 		/* In case of parallel tree search, the assertion might
 		 * not hold if two threads chew on the same node. */
-		result = uct_leaf_node(u, &b2, player_color, amaf, &descent[dlen - 1], t, n, node_color, spaces);
+		result = uct_leaf_node(u, &b2, player_color, amaf, &descent[dlen - 1], significant, t, n, node_color, spaces);
 	}
 
 	if (amaf && u->playout_amaf_cutoff) {

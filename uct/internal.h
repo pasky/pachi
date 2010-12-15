@@ -128,10 +128,6 @@ struct uct_descent {
 	/* Value of main tree node (with all value factors, but unbiased
 	 * - without exploration factor), from black's perspective. */
 	struct move_stats value;
-	/* The last "significant" node along the descent (i.e. node
-	 * with higher than configured number of playouts). For black
-	 * and white. */
-	struct tree_node *significant[2];
 };
 
 
