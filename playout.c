@@ -48,14 +48,20 @@ play_random_game(struct playout_setup *setup,
 	while (gamelen-- && passes < 2) {
 		coord_t coord = pass;
 
-		if (setup->prepolicy_hook)
+		if (setup->prepolicy_hook) {
 			coord = setup->prepolicy_hook(policy, setup, b, color);
+			// fprintf(stderr, "prehook: %s\n", coord2sstr(coord, b));
+		}
 
-		if (is_pass(coord))
+		if (is_pass(coord)) {
 			coord = policy->choose(policy, setup, b, color);
+			// fprintf(stderr, "policy: %s\n", coord2sstr(coord, b));
+		}
 
-		if (is_pass(coord) && setup->postpolicy_hook)
+		if (is_pass(coord) && setup->postpolicy_hook) {
 			coord = setup->postpolicy_hook(policy, setup, b, color);
+			// fprintf(stderr, "posthook: %s\n", coord2sstr(coord, b));
+		}
 
 		if (is_pass(coord)) {
 play_random:

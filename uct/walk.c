@@ -180,9 +180,19 @@ uct_playout_hook(struct playout_policy *playout, struct playout_setup *setup, st
 	struct uct_playout_callback *upc = setup->hook_data;
 	struct uct *u = upc->uct;
 
+	if (UDEBUGL(8))
+		fprintf(stderr, "treepool check [%d] %d, %p,%p\n", mode, u->treepool_chance[mode], upc->treepool[0], upc->treepool[1]);
 	if (u->treepool_chance[mode] > fast_random(100) && upc->treepool[color - 1]) {
 		assert(upc->treepool_n[color - 1] > 0);
 		coord_t treepool_move = upc->treepool[color - 1][fast_random(upc->treepool_n[color - 1])];
+		if (UDEBUGL(8)) {
+			fprintf(stderr, "Treepool: ");
+			for (int i = 0; i < upc->treepool_n[color - 1]; i++)
+				fprintf(stderr, "%s ", coord2sstr(upc->treepool[color - 1][i], b));
+			fprintf(stderr, "\n");
+		}
+		if (UDEBUGL(7))
+			fprintf(stderr, "Treepool pick <%d> %s,%s\n", upc->treepool_n[color - 1], stone2str(color), coord2sstr(treepool_move, b));
 		if (board_is_valid_play(b, color, treepool_move))
 			return treepool_move;
 	}
@@ -226,7 +236,7 @@ treepool_node_value(struct uct *u, struct tree *tree, int parity, struct tree_no
 }
 
 static void
-treepool_setup(struct uct_playout_callback *upc, struct tree_node *node, int color)
+treepool_setup(struct uct_playout_callback *upc, struct board *b, struct tree_node *node, int color)
 {
 	struct uct *u = upc->uct;
 	int parity = ((node->depth ^ upc->tree->root->depth) & 1) ? -1 : 1;
@@ -238,15 +248,16 @@ treepool_setup(struct uct_playout_callback *upc, struct tree_node *node, int col
 		struct tree_node *best = NULL;
 		double best_val = -1;
 
-		// first comes pass which we skip
+		assert(node->children && is_pass(node->children->coord));
 		for (struct tree_node *ni = node->children->sibling; ni; ni = ni->sibling) {
 			/* Do we already have it? */
 			bool have = false;
-			for (int j = 0; j < upc->treepool_n[color]; j++)
+			for (int j = 0; j < upc->treepool_n[color]; j++) {
 				if (upc->treepool[color][j] == ni->coord) {
 					have = true;
 					break;
 				}
+			}
 			if (have)
 				continue;
 
@@ -316,7 +327,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 				upc.treepool_n[color] = 0;
 			} else {
 				upc.treepool[color] = (coord_t *) &pool[color];
-				treepool_setup(&upc, n, color);
+				treepool_setup(&upc, b, n, color);
 			}
 		}
 	}
@@ -482,8 +493,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		n = descent[dlen++].node;
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
-			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %f\n",
-			        spaces, coord2sstr(n->coord, t->board), n->coord,
+			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %d,%f\n",
+			        spaces, coord2sstr(n->coord, t->board),
+				n->coord, n->u.playouts,
 				tree_node_get_value(t, parity, n->u.value));
 
 		/* Add virtual loss if we need to; this is used to discourage
