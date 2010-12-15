@@ -263,7 +263,7 @@ treepool_setup(struct uct_playout_callback *upc, struct board *b, struct tree_no
 
 			double i_val = treepool_node_value(u, upc->tree, parity, ni);
 			if (i_val > best_val) {
-				best = node;
+				best = ni;
 				best_val = i_val;
 			}
 		}
