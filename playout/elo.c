@@ -49,7 +49,7 @@ struct patternset {
 
 struct elo_policy {
 	bool assess_fastpat;
-	float selfatari;
+	floating_t selfatari;
 	struct patternset choose, assess;
 	playout_elo_callbackp callback; void *callback_data;
 

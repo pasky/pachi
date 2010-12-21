@@ -19,11 +19,11 @@ struct ucb1_policy {
 	 * paper calls 'p'. Original UCB has this on 2, but this seems to
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
-	float explore_p;
+	floating_t explore_p;
 	/* First Play Urgency - if set to less than infinity (the MoGo paper
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
-	float fpu;
+	floating_t fpu;
 };
 
 
@@ -36,7 +36,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descen
 	 * of the explore coefficient. */
 
 	struct ucb1_policy *b = p->data;
-	float xpl = log(descent->node->u.playouts + descent->node->prior.playouts);
+	floating_t xpl = log(descent->node->u.playouts + descent->node->prior.playouts);
 
 	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
 		struct tree_node *ni = di.node;
@@ -58,7 +58,7 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descen
 }
 
 void
-ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, float result)
+ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, floating_t result)
 {
 	/* It is enough to iterate by a single chain; we will
 	 * update all the preceding positions properly since

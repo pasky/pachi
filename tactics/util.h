@@ -31,7 +31,7 @@ void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
  * handicap stone, 7 is a good default. */
 /* This is just an approximation since in reality, handicap seems to be usually
  * non-linear. */
-float board_effective_handicap(struct board *b, int first_move_value);
+floating_t board_effective_handicap(struct board *b, int first_move_value);
 
 /* Decide if the given player wins counting on the board, considering
  * that given groups are dead. (To get the list of dead groups, use

@@ -15,6 +15,10 @@ else
 	LDFLAGS=-lm -pthread -lrt -ldl -rdynamic
 endif
 
+ifdef DOUBLE
+	CUSTOM_CFLAGS+=-Dfloating_t=double
+endif
+
 # Profiling:
 ifdef PROFILING
 	LDFLAGS+=-pg

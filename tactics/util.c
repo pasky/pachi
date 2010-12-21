@@ -84,7 +84,7 @@ cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 }
 
 
-float
+floating_t
 board_effective_handicap(struct board *b, int first_move_value)
 {
 	/* This can happen if the opponent passes during handicap
@@ -97,7 +97,7 @@ board_effective_handicap(struct board *b, int first_move_value)
 bool
 pass_is_safe(struct board *b, enum stone color, struct move_queue *mq)
 {
-	float score = board_official_score(b, mq);
+	floating_t score = board_official_score(b, mq);
 	if (color == S_BLACK)
 		score = -score;
 	//fprintf(stderr, "%d score %f\n", color, score);

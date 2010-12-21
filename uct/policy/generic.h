@@ -20,12 +20,12 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 	/* Information abound best children. */ \
 	/* XXX: We assume board <=25x25. */ \
 	struct uct_descent dbest[BOARD_MAX_MOVES + 1] = { { .node = descent->node->children, .lnode = NULL } }; int dbests = 1; \
-	float best_urgency = -9999; \
+	floating_t best_urgency = -9999; \
 	/* Descent children iterator. */ \
 	struct uct_descent dci = { .node = descent->node->children, .lnode = descent->lnode ? descent->lnode->children : NULL }; \
 	\
 	for (; dci.node; dci.node = dci.node->sibling) { \
-		float urgency; \
+		floating_t urgency; \
 		/* Do not consider passing early. */ \
 		if (unlikely((!allow_pass && is_pass(dci.node->coord)) || (dci.node->hints & TREE_HINT_INVALID))) \
 			continue; \

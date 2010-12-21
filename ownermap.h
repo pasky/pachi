@@ -28,12 +28,12 @@ enum point_judgement {
 	PJ_WHITE = S_WHITE,
 	PJ_UNKNOWN = 3,
 };
-enum point_judgement board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, float thres);
+enum point_judgement board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_t thres);
 
 
 /* Estimate status of stones on board based on ownermap stats. */
 struct group_judgement {
-	float thres;
+	floating_t thres;
 	enum gj_state {
 		GS_NONE,
 		GS_DEAD,

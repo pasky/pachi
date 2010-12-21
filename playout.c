@@ -144,7 +144,7 @@ play_random:
 		color = stone_other(color);
 	}
 
-	float score = board_fast_score(b);
+	floating_t score = board_fast_score(b);
 	int result = (starting_color == S_WHITE ? score * 2 : - (score * 2));
 
 	if (DEBUGL(6)) {

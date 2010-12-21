@@ -484,7 +484,7 @@ uct_dumptbook(struct engine *e, struct board *b, enum stone color)
 }
 
 
-float
+floating_t
 uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, coord_t c, enum stone color)
 {
 	struct uct *u = e->data;
@@ -501,7 +501,7 @@ uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, coord_t c,
 	uct_prepare_move(u, &b2, color);
 	assert(u->t);
 
-	float bestval;
+	floating_t bestval;
 	uct_search(u, &b2, ti, color, u->t);
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, &b2, color, resign);
 	if (!best) {

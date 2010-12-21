@@ -196,7 +196,7 @@ void
 board_clear(struct board *board)
 {
 	int size = board_size(board);
-	float komi = board->komi;
+	floating_t komi = board->komi;
 
 	board_done_noalloc(board);
 	board_setup(board);
@@ -1508,7 +1508,7 @@ board_get_one_point_eye(struct board *board, coord_t coord)
 }
 
 
-float
+floating_t
 board_fast_score(struct board *board)
 {
 	int scores[S_MAX];
@@ -1573,7 +1573,7 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 }
 
 /* Tromp-Taylor Counting */
-float
+floating_t
 board_official_score(struct board *board, struct move_queue *q)
 {
 

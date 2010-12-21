@@ -11,14 +11,14 @@
 
 struct move_stats {
 	int playouts; // # of playouts
-	float value; // BLACK wins/playouts
+	floating_t value; // BLACK wins/playouts
 };
 
 /* Add a result to the stats. */
-static void stats_add_result(struct move_stats *s, float result, int playouts);
+static void stats_add_result(struct move_stats *s, floating_t result, int playouts);
 
 /* Remove a result from the stats. */
-static void stats_rm_result(struct move_stats *s, float result, int playouts);
+static void stats_rm_result(struct move_stats *s, floating_t result, int playouts);
 
 /* Merge two stats together. THIS IS NOT ATOMIC! */
 static void stats_merge(struct move_stats *dest, struct move_stats *src);
@@ -28,11 +28,11 @@ static void stats_reverse_parity(struct move_stats *s);
 
 /* Temper value based on parent value in specified way - the value should be
  * usable standalone then, representing an improvement against parent value. */
-static float stats_temper_value(float val, float pval, int mode);
+static floating_t stats_temper_value(floating_t val, floating_t pval, int mode);
 
 
 /* We actually do the atomicity in a pretty hackish way - we simply
- * rely on the fact that int,float operations should be atomic with
+ * rely on the fact that int,floating_t operations should be atomic with
  * reasonable compilers (gcc) on reasonable architectures (i386,
  * x86_64). */
 /* There is a write order dependency - when we bump the playouts,
@@ -41,10 +41,10 @@ static float stats_temper_value(float val, float pval, int mode);
  * current s->playouts is zero. */
 
 static inline void
-stats_add_result(struct move_stats *s, float result, int playouts)
+stats_add_result(struct move_stats *s, floating_t result, int playouts)
 {
 	int s_playouts = s->playouts;
-	float s_value = s->value;
+	floating_t s_value = s->value;
 	/* Force the load, another thread can work on the
 	 * values in parallel. */
 	__sync_synchronize(); /* full memory barrier */
@@ -59,11 +59,11 @@ stats_add_result(struct move_stats *s, float result, int playouts)
 }
 
 static inline void
-stats_rm_result(struct move_stats *s, float result, int playouts)
+stats_rm_result(struct move_stats *s, floating_t result, int playouts)
 {
 	if (s->playouts > playouts) {
 		int s_playouts = s->playouts;
-		float s_value = s->value;
+		floating_t s_value = s->value;
 		/* Force the load, another thread can work on the
 		 * values in parallel. */
 		__sync_synchronize(); /* full memory barrier */
@@ -102,11 +102,11 @@ stats_reverse_parity(struct move_stats *s)
 	s->value = 1 - s->value;
 }
 
-static inline float
-stats_temper_value(float val, float pval, int mode)
+static inline floating_t
+stats_temper_value(floating_t val, floating_t pval, int mode)
 {
-	float tval = val;
-	float expd = val - pval;
+	floating_t tval = val;
+	floating_t expd = val - pval;
 	switch (mode) {
 		case 1: /* no tempering */
 			tval = val;
@@ -115,7 +115,7 @@ stats_temper_value(float val, float pval, int mode)
 			tval = 0.5 + expd / 2;
 			break;
 		case 3: { /* 0.5+bzz((result-expected)^2) */
-			float ntval = expd * expd;
+			floating_t ntval = expd * expd;
 			/* val = 1 pval = 0.8 : ntval = 0.04 tval = 0.54
 			 * val = 1 pval = 0.6 : ntval = 0.16 tval = 0.66
 			 * val = 1 pval = 0.3 : ntval = 0.49 tval = 0.99

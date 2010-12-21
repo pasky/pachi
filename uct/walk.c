@@ -369,17 +369,17 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	return result;
 }
 
-static float
+static floating_t
 scale_value(struct uct *u, struct board *b, int result)
 {
-	float rval = result > 0;
+	floating_t rval = result > 0;
 	if (u->val_scale) {
 		int vp = u->val_points;
 		if (!vp) {
 			vp = board_size(b) - 1; vp *= vp; vp *= 2;
 		}
 
-		float sval = (float) abs(result) / vp;
+		floating_t sval = (floating_t) abs(result) / vp;
 		sval = sval > 1 ? 1 : sval;
 		if (result < 0) sval = 1 - sval;
 		if (u->val_extra)
@@ -394,7 +394,7 @@ scale_value(struct uct *u, struct board *b, int result)
 static void
 record_local_sequence(struct uct *u, struct tree *t,
                       struct uct_descent *descent, int dlen, int di,
-		      enum stone seq_color, float rval)
+		      enum stone seq_color, floating_t rval)
 {
 	/* Ignore pass sequences. */
 	if (is_pass(descent[di].node->coord))
@@ -563,7 +563,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	if (passes >= 2) {
 		/* XXX: No dead groups support. */
-		float score = board_official_score(&b2, NULL);
+		floating_t score = board_official_score(&b2, NULL);
 		/* Result from black's perspective (no matter who
 		 * the player; black's perspective is always
 		 * what the tree stores. */
@@ -602,7 +602,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	if (result != 0) {
-		float rval = scale_value(u, b, result);
+		floating_t rval = scale_value(u, b, result);
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
 
 		if (t->use_extra_komi) {
@@ -612,7 +612,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
 			/* Possibly transform the rval appropriately. */
-			float expval = seq_value.value / seq_value.playouts;
+			floating_t expval = seq_value.value / seq_value.playouts;
 			rval = stats_temper_value(rval, expval, u->local_tree);
 
 			/* Get the local sequences and record them in ltree. */

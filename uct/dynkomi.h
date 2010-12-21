@@ -31,12 +31,12 @@ struct uct_dynkomi;
 /* Determine base dynamic komi for this genmove run. The returned
  * value is stored in tree->extra_komi and by itself used just for
  * user information. */
-typedef float (*uctd_permove)(struct uct_dynkomi *d, struct board *b, struct tree *tree);
+typedef floating_t (*uctd_permove)(struct uct_dynkomi *d, struct board *b, struct tree *tree);
 /* Determine actual dynamic komi for this simulation (run on board @b
  * from node @node). In some cases, this function will just return
  * tree->extra_komi, in other cases it might want to adjust the komi
  * according to the actual move depth. */
-typedef float (*uctd_persim)(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node);
+typedef floating_t (*uctd_persim)(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node);
 /* Destroy the uct_dynkomi structure. */
 typedef void (*uctd_done)(struct uct_dynkomi *d);
 

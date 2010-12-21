@@ -240,7 +240,7 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 	    && !u->pondering && di
 	    && i > s->last_dynkomi + di) {
 		s->last_dynkomi += di;
-		float old_dynkomi = ctx->t->extra_komi;
+		floating_t old_dynkomi = ctx->t->extra_komi;
 		ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
 		if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
 			fprintf(stderr, "dynkomi adjusted (%f -> %f)\n",
@@ -330,7 +330,7 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 
 	/* Do not waste time if we are winning. Spend up to worst time if
 	 * we are unsure, but only desired time if we are sure of winning. */
-	float beta = 2 * (tree_node_get_value(t, 1, best->u.value) - 0.5);
+	floating_t beta = 2 * (tree_node_get_value(t, 1, best->u.value) - 0.5);
 	if (ti->dim == TD_WALLTIME && beta > 0) {
 		double good_enough = stop->desired.time * beta + stop->worst.time * (1 - beta);
 		double elapsed = time_now() - ti->len.t.timer_start;

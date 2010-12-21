@@ -5,6 +5,12 @@
 
 /* Misc. definitions. */
 
+/* Use make -Dfloating_t=double in large configurations with counts > 1M,
+ * where 24 bits of floating_t mantissa become insufficient. */
+#ifndef floating_t
+#  define floating_t float
+#endif
+
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
 

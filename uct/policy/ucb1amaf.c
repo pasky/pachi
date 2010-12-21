@@ -19,22 +19,22 @@ struct ucb1_policy_amaf {
 	 * paper calls 'p'. Original UCB has this on 2, but this seems to
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
-	float explore_p;
+	floating_t explore_p;
 	/* First Play Urgency - if set to less than infinity (the MoGo paper
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
-	float fpu;
+	floating_t fpu;
 	unsigned int equiv_rave;
 	bool check_nakade;
 	bool sylvain_rave;
 	/* Coefficient of local tree values embedded in RAVE. */
-	float ltree_rave;
+	floating_t ltree_rave;
 };
 
 
-static inline float fast_sqrt(unsigned int x)
+static inline floating_t fast_sqrt(unsigned int x)
 {
-	static const float table[] = {
+	static const floating_t table[] = {
 		0, 1, 1.41421356237309504880, 1.73205080756887729352,
 		2.00000000000000000000, 2.23606797749978969640,
 		2.44948974278317809819, 2.64575131106459059050,
@@ -75,7 +75,7 @@ static inline float fast_sqrt(unsigned int x)
 }
 
 #define LTREE_DEBUG if (0)
-static float inline
+static floating_t inline
 ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity)
 {
 	struct ucb1_policy_amaf *b = p->data;
@@ -99,15 +99,15 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		stats_merge(&r, &l);
 	}
 
-	float value = 0;
+	floating_t value = 0;
 	if (n.playouts) {
 		if (r.playouts) {
 			/* At the beginning, beta is at 1 and RAVE is used.
 			 * At b->equiv_rate, beta is at 1/3 and gets steeper on. */
-			float beta;
+			floating_t beta;
 			if (b->sylvain_rave) {
-				beta = (float) r.playouts / (r.playouts + n.playouts
-					+ (float) n.playouts * r.playouts / b->equiv_rave);
+				beta = (floating_t) r.playouts / (r.playouts + n.playouts
+					+ (floating_t) n.playouts * r.playouts / b->equiv_rave);
 			} else {
 				/* XXX: This can be cached in descend; but we don't use this by default. */
 				beta = sqrt(b->equiv_rave / (3 * node->parent->u.playouts + b->equiv_rave));
@@ -129,7 +129,7 @@ void
 ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass)
 {
 	struct ucb1_policy_amaf *b = p->data;
-	float nconf = 1.f;
+	floating_t nconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
 
@@ -153,7 +153,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 void
 ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		enum stone node_color, enum stone player_color,
-		struct playout_amafmap *map, float result)
+		struct playout_amafmap *map, floating_t result)
 {
 	struct ucb1_policy_amaf *b = p->data;
 	enum stone child_color = stone_other(node_color);
@@ -195,7 +195,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 				amaf_color = child_color;
 			}
 
-			float nres = result;
+			floating_t nres = result;
 			if (amaf_color != child_color) {
 				continue;
 			}

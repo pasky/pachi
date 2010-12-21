@@ -27,7 +27,7 @@ struct joseki_dict;
 struct uct {
 	int debug_level;
 	int games, gamelen;
-	float resign_threshold, sure_win_threshold;
+	floating_t resign_threshold, sure_win_threshold;
 	double best2_ratio, bestr_ratio;
 	bool pass_all_alive;
 	bool territory_scoring;
@@ -63,7 +63,7 @@ struct uct {
 	int dynkomi_interval;
 	struct uct_dynkomi *dynkomi;
 
-	float val_scale;
+	floating_t val_scale;
 	int val_points;
 	bool val_extra;
 
@@ -81,7 +81,7 @@ struct uct {
 	int random_policy_chance;
 	int local_tree;
 	int tenuki_d;
-	float local_tree_aging;
+	floating_t local_tree_aging;
 	bool local_tree_allseq;
 	/* Playout-localtree integration. */
 	bool local_tree_playout; // can be true only if ELO playout
@@ -133,11 +133,11 @@ struct uct_descent {
 
 
 typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude);
-typedef float (*uctp_evaluate)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity);
+typedef floating_t (*uctp_evaluate)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity);
 typedef void (*uctp_descend)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass);
 typedef void (*uctp_winner)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent);
 typedef void (*uctp_prior)(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
-typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *amaf, float result);
+typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *amaf, floating_t result);
 
 struct uct_policy {
 	struct uct *uct;

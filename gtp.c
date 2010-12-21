@@ -379,7 +379,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		struct move_queue q = { .moves = 0 };
 		if (engine->dead_group_list)
 			engine->dead_group_list(engine, board, &q);
-		float score = board_official_score(board, &q);
+		floating_t score = board_official_score(board, &q);
 		char str[64];
 		if (DEBUGL(1))
 			fprintf(stderr, "counted score %.1f\n", score);
@@ -468,7 +468,7 @@ next_group:;
 		 * and call uct_evaluate() for each.  uct_evaluate()
 		 * will throw NAN in case of invalid moves and such. */
 		for (int i = 0; i < board->flen; i++) {
-			float val = uct_evaluate(engine, board, &ti[color], board->f[i], color);
+			floating_t val = uct_evaluate(engine, board, &ti[color], board->f[i], color);
 			if (isnan(val))
 				continue;
 			printf("%s %1.3f\n", coord2sstr(board->f[i], board), (double) val);

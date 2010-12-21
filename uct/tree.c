@@ -77,7 +77,7 @@ tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 /* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
 struct tree *
 tree_init(struct board *board, enum stone color, unsigned long max_tree_size,
-	  unsigned long max_pruned_size, unsigned long pruning_threshold, float ltree_aging, int hbits)
+	  unsigned long max_pruned_size, unsigned long pruning_threshold, floating_t ltree_aging, int hbits)
 {
 	struct tree *t = calloc2(1, sizeof(*t));
 	t->board = board;
@@ -786,7 +786,7 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
          * to recompute max_depth but it's not worth it: it's just for debugging
 	 * and soon the tree will grow and max_depth will become correct again. */
 
-	if (tree->ltree_aging != 1.0f) { // XXX: != should work here even with the float
+	if (tree->ltree_aging != 1.0f) { // XXX: != should work here even with the floating_t
 		tree_age_node(tree, tree->ltree_black);
 		tree_age_node(tree, tree->ltree_white);
 	}

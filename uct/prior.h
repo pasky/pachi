@@ -25,7 +25,7 @@ struct prior_map {
 };
 
 /* @value is the value, @playouts is its weight. */
-static void add_prior_value(struct prior_map *map, coord_t c, float value, int playouts);
+static void add_prior_value(struct prior_map *map, coord_t c, floating_t value, int playouts);
 
 void uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map);
 
@@ -35,9 +35,9 @@ void uct_prior_done(struct uct_prior *p);
 
 
 static inline void
-add_prior_value(struct prior_map *map, coord_t c, float value, int playouts)
+add_prior_value(struct prior_map *map, coord_t c, floating_t value, int playouts)
 {
-	float v = map->parity > 0 ? value : 1 - value;
+	floating_t v = map->parity > 0 ? value : 1 - value;
 	/* We don't need atomicity: */
 	struct move_stats s = { .playouts = playouts, .value = v };
 	stats_merge(&map->prior[c], &s);

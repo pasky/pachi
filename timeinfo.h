@@ -63,7 +63,7 @@ struct time_info {
 
 /* Parse time information provided in custom format:
  *   =NUM - fixed number of simulations per move
- *   NUM - number of seconds to spend per move (can be float)
+ *   NUM - number of seconds to spend per move (can be floating_t)
  *   _NUM - number of seconds to spend per game
  *
  * Returns false on parse error.  */
