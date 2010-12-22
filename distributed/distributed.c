@@ -224,7 +224,7 @@ select_best_move(struct board *b, struct move_stats *stats, int *played,
 
 		char move[64];
 		struct move_stats s;
-		while (r && sscanf(++r, "%63s %d %f", move, &s.playouts, &s.value) == 3) {
+		while (r && sscanf(++r, "%63s %d " PRIfloating, move, &s.playouts, &s.value) == 3) {
 			coord_t c = str2scoord(move, board_size(b));
 			assert (c >= resign && c < board_size2(b) && s.playouts >= 0);
 

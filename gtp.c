@@ -211,7 +211,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 	} else if (!strcasecmp(cmd, "komi")) {
 		char *arg;
 		next_tok(arg);
-		sscanf(arg, "%f", &board->komi);
+		sscanf(arg, PRIfloating, &board->komi);
 
 		if (DEBUGL(1))
 			board_print(board, stderr);
