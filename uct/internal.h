@@ -82,6 +82,8 @@ struct uct {
 	int local_tree;
 	int tenuki_d;
 	float local_tree_aging;
+#define LTREE_PLAYOUTS_MULTIPLIER 100
+	float local_tree_depth_decay;
 	bool local_tree_allseq;
 	/* Playout-localtree integration. */
 	bool local_tree_playout; // can be true only if ELO playout
