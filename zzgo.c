@@ -25,6 +25,7 @@
 #include "network.h"
 
 int debug_level = 3;
+bool debug_boardprint = true;
 long verbose_logs = 0;
 int seed;
 
@@ -70,7 +71,7 @@ static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 	fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct|distributed]\n"
-		" [-d DEBUG_LEVEL] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
+		" [-d DEBUG_LEVEL] [-D] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
 		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [-f FBOOKFILE] [ENGINE_ARGS]\n", name);
 }
 
@@ -87,7 +88,7 @@ int main(int argc, char *argv[])
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:f:g:l:s:t:u:")) != -1) {
+	while ((opt = getopt(argc, argv, "e:d:Df:g:l:s:t:u:")) != -1) {
 		switch (opt) {
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
@@ -111,6 +112,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'd':
 				debug_level = atoi(optarg);
+				break;
+			case 'D':
+				debug_boardprint = false;
 				break;
 			case 'f':
 				fbookfile = strdup(optarg);

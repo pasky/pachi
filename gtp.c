@@ -196,7 +196,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 	} else if (!strcasecmp(cmd, "clear_board") || !strcasecmp(cmd, "kgs-game_over")) {
 		board_clear(board);
-		if (DEBUGL(1))
+		if (DEBUGL(1) && debug_boardprint)
 			board_print(board, stderr);
 		if (!strcasecmp(cmd, "kgs-game_over")) {
 			if (DEBUGL(0))
@@ -213,7 +213,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		sscanf(arg, "%f", &board->komi);
 
-		if (DEBUGL(1))
+		if (DEBUGL(1 && debug_boardprint))
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
 
@@ -260,7 +260,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			}
 			gtp_error(id, "illegal move", NULL);
 		} else {
-			if (DEBUGL(1))
+			if (DEBUGL(1) && debug_boardprint)
 				board_print_custom(board, stderr, engine->printhook);
 			gtp_reply(id, reply, NULL);
 		}
@@ -292,7 +292,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *str = coord2str(*c, board);
 		if (DEBUGL(1))
 			fprintf(stderr, "playing move %s\n", str);
-		if (DEBUGL(1)) {
+		if (DEBUGL(1) && debug_boardprint) {
 			board_print_custom(board, stderr, engine->printhook);
 		}
 		gtp_reply(id, str, NULL);
@@ -322,7 +322,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		}
 		if (DEBUGL(3))
 			fprintf(stderr, "proposing moves %s\n", reply);
-		if (DEBUGL(4))
+		if (DEBUGL(4) && debug_boardprint)
 			board_print_custom(board, stderr, engine->printhook);
 		gtp_reply(id, reply, NULL);
 		if (stats_size > 0) {
@@ -354,7 +354,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			board->handicap++;
 			next_tok(arg);
 		} while (*arg);
-		if (DEBUGL(1))
+		if (DEBUGL(1) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
 
@@ -369,7 +369,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 		gtp_prefix('=', id);
 		board_handicap(board, stones, id == NO_REPLY ? NULL : stdout);
-		if (DEBUGL(1))
+		if (DEBUGL(1) && debug_boardprint)
 			board_print(board, stderr);
 		if (id == NO_REPLY) return P_OK;
 		putchar('\n');

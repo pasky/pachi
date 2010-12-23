@@ -1,6 +1,8 @@
 #ifndef ZZGO_DEBUG_H
 #define ZZGO_DEBUG_H
 
+#include <stdbool.h>
+
 #ifdef DEBUG
 #define DEBUGL_(l, n) (unlikely((l) > (n)))
 #define DEBUG_MODE (true)
@@ -10,6 +12,7 @@
 #endif
 
 extern int debug_level;
+extern bool debug_boardprint;
 
 #define DEBUGL(n) DEBUGL_(debug_level, n)
 
