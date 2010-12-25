@@ -879,6 +879,13 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "local_tree_aging") && optval) {
 				/* How much to reduce local tree values between moves. */
 				u->local_tree_aging = atof(optval);
+			} else if (!strcasecmp(optname, "local_tree_depth_decay") && optval) {
+				/* With value x>0, during the descent the node
+				 * contributes 1/x^depth playouts in
+				 * the local tree. I.e., with x>1, nodes more
+				 * distant from local situation contribute more
+				 * than nodes near the root. */
+				u->local_tree_depth_decay = atof(optval);
 			} else if (!strcasecmp(optname, "local_tree_allseq")) {
 				/* By default, only complete sequences are stored
 				 * in the local tree. If this is on, also
