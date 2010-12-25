@@ -641,9 +641,9 @@ get_replies(double time_limit, int min_replies)
 	assert(reply_count > 0);
 }
 
-/* In a 30s move with at least 5ms per genmoves we get at most
- * 6000 genmoves per slave. */
-#define MAX_GENMOVES_PER_SLAVE 6000
+/* In a 5mn move with at least 5ms per genmoves we get at most
+ * 300*200=60000 genmoves per slave. */
+#define MAX_GENMOVES_PER_SLAVE 60000
 
 /* Allocate the receive queue, and create the slave and proxy threads.
  * max_buf_size and the merge-related fields of default_sstate must
