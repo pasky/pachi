@@ -90,7 +90,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 		ti->len.games = MC_GAMES;
 	}
 	struct time_stop stop;
-	time_stop_conditions(ti, b, 20, 40, &stop);
+	time_stop_conditions(ti, b, 20, 40, 3.0, &stop);
 
 	/* resign when the hope for win vanishes */
 	coord_t top_coord = resign;

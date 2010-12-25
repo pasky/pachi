@@ -266,6 +266,7 @@ genmoves_args(char *args, enum stone color, int played,
 /* Time control is mostly done by the slaves, so we use default values here. */
 #define FUSEKI_END 20
 #define YOSE_START 40
+#define MAX_MAINTIME_RATIO 3.0
 
 /* In the ascii reply to genmoves, each slave sends absolute counts
  * including contributions from other slaves. For human display
@@ -290,7 +291,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 
 	if (ti->period == TT_NULL) *ti = default_ti;
 	struct time_stop stop;
-	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, &stop);
+	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, MAX_MAINTIME_RATIO, &stop);
 	struct time_info saved_ti = *ti;
 
 	/* Combined move stats from all slaves, only for children

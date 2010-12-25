@@ -546,6 +546,7 @@ uct_state_init(char *arg, struct board *b)
 	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
 	// TODO: Further tuning and experiments with better time allocation schemes.
 	u->best2_ratio = 2.5;
+	u->max_maintime_ratio = 3.0;
 
 	u->val_scale = 0.04; u->val_points = 40;
 	u->dynkomi_interval = 1000;
@@ -781,6 +782,10 @@ uct_state_init(char *arg, struct board *b)
 				 * best,best_best_child values delta
 				 * is more than bestr_ratio. */
 				u->bestr_ratio = atof(optval);
+			} else if (!strcasecmp(optname, "max_maintime_ratio") && optval) {
+				/* If set and while not in byoyomi, prolong simulating no more than
+				 * max_maintime_ratio times the normal desired thinking time. */
+				u->max_maintime_ratio = atof(optval);
 			} else if (!strcasecmp(optname, "fuseki_end") && optval) {
 				/* At the very beginning it's not worth thinking
 				 * too long because the playout evaluations are

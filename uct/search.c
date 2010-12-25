@@ -192,7 +192,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 
 	if (ti) {
 		if (ti->period == TT_NULL) *ti = default_ti;
-		time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, &s->stop);
+		time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, u->max_maintime_ratio, &s->stop);
 	}
 
 	/* Fire up the tree search thread manager, which will in turn

@@ -110,6 +110,7 @@ struct time_stop {
 };
 
 /* fuseki_end and yose_start are percentages of expected game length. */
-void time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop);
+void time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start,
+			  floating_t max_maintime_ratio, struct time_stop *stop);
 
 #endif
