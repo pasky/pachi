@@ -523,7 +523,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * other threads from visiting this node in case of multiple
 		 * threads doing the tree search. */
 		if (u->virtual_loss)
-			stats_add_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
+			stats_add_result(&n->u, node_color == S_BLACK ? 0.0 : 1.0, u->virtual_loss);
 
 		assert(n->coord >= -1);
 		if (amaf && !is_pass(n->coord))
@@ -652,10 +652,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 end:
 	/* We need to undo the virtual loss we added during descend. */
 	if (u->virtual_loss) {
-		int parity = (node_color == player_color ? 1 : -1);
+		floating_t loss = node_color == S_BLACK ? 0.0 : 1.0;
 		for (; n->parent; n = n->parent) {
-			stats_rm_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
-			parity = -parity;
+			stats_rm_result(&n->u, loss, u->virtual_loss);
+			loss = 1.0 - loss;
 		}
 	}
 

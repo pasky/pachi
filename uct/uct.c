@@ -538,7 +538,7 @@ uct_state_init(char *arg, struct board *b)
 
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
-	u->virtual_loss = true;
+	u->virtual_loss = 1;
 
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
@@ -741,18 +741,20 @@ uct_state_init(char *arg, struct board *b)
 					/* Tree parallelization - all threads
 					 * grind on the same tree. */
 					u->thread_model = TM_TREE;
-					u->virtual_loss = false;
+					u->virtual_loss = 0;
 				} else if (!strcasecmp(optval, "treevl")) {
 					/* Tree parallelization, but also
 					 * with virtual losses - this discou-
 					 * rages most threads choosing the
 					 * same tree branches to read. */
 					u->thread_model = TM_TREEVL;
-					u->virtual_loss = true;
 				} else {
 					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
 					exit(1);
 				}
+			} else if (!strcasecmp(optname, "virtual_loss")) {
+				/* Number of virtual losses added before evaluating a node. */
+				u->virtual_loss = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "pondering")) {
 				/* Keep searching even during opponent's turn. */
 				u->pondering_opt = !optval || atoi(optval);

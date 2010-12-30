@@ -51,7 +51,7 @@ struct uct {
 		TM_TREE, /* Tree parallelization w/o virtual loss. */
 		TM_TREEVL, /* Tree parallelization with virtual loss. */
 	} thread_model;
-	bool virtual_loss;
+	int virtual_loss;
 	bool pondering_opt; /* User wants pondering */
 	bool pondering; /* Actually pondering now */
 	bool slave; /* Act as slave in distributed engine. */
