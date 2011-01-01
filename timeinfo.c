@@ -24,11 +24,10 @@
 /* Reserve 15% of byoyomi time as safety margin if risk of losing on time */
 #define RESERVED_BYOYOMI_PERCENT 15
 
-/* For safety, use at most 3 times the desired time on a single move
- * in main time, 2 times in sudden death and 1.1 times in byoyomi. */
-#define MAX_MAIN_TIME_EXTENSION 3.0
-#define MAX_SUDDEN_DEATH_EXTENSION 2.0
-#define MAX_BYOYOMI_TIME_EXTENSION 1.1
+/* For safety, use at most 2 times the desired time on a single move
+ * in sudden death and 1.1 times in byoyomi. */
+#define MAX_SUDDEN_DEATH_RATIO 2.0
+#define MAX_BYOYOMI_TIME_RATIO 1.1
 
 bool
 time_parse(struct time_info *ti, char *s)
@@ -334,7 +333,8 @@ lag_adjust(double *time, double net_lag)
 
 /* Pre-process time_info for search control and sets the desired stopping conditions. */
 void
-time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
+time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start,
+		     floating_t max_maintime_ratio, struct time_stop *stop)
 {
 	/* We must have _some_ limits by now, be it random default values! */
 	assert(ti->period != TT_NULL);
@@ -391,10 +391,10 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		}
 
 		/* Make recommended_old == average(recommended_new, max) */
-		double worst_time = stop->desired.time * MAX_BYOYOMI_TIME_EXTENSION;
+		double worst_time = stop->desired.time * MAX_BYOYOMI_TIME_RATIO;
 		if (worst_time < stop->worst.time)
 			stop->worst.time = worst_time;
-		stop->desired.time *= (2 - MAX_BYOYOMI_TIME_EXTENSION);
+		stop->desired.time *= (2 - MAX_BYOYOMI_TIME_RATIO);
 
 	} else { assert(ti->period == TT_TOTAL);
 		/* We are in main time. */
@@ -416,9 +416,9 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		 * Keep enough time for sudden death (or near SD) games. */
 		double worst_time = stop->desired.time;
 		if (ti->len.t.byoyomi_time_max > ti->len.t.byoyomi_stones_max) {
-			worst_time *= MAX_MAIN_TIME_EXTENSION;
+			worst_time *= max_maintime_ratio;
 		} else {
-			worst_time *= MAX_SUDDEN_DEATH_EXTENSION;
+			worst_time *= MAX_SUDDEN_DEATH_RATIO;
 		}
 		if (worst_time < stop->worst.time)
 			stop->worst.time = worst_time;

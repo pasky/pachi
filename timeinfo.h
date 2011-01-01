@@ -63,7 +63,7 @@ struct time_info {
 
 /* Parse time information provided in custom format:
  *   =NUM - fixed number of simulations per move
- *   NUM - number of seconds to spend per move (can be float)
+ *   NUM - number of seconds to spend per move (can be floating_t)
  *   _NUM - number of seconds to spend per game
  *
  * Returns false on parse error.  */
@@ -110,6 +110,7 @@ struct time_stop {
 };
 
 /* fuseki_end and yose_start are percentages of expected game length. */
-void time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start, struct time_stop *stop);
+void time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start,
+			  floating_t max_maintime_ratio, struct time_stop *stop);
 
 #endif

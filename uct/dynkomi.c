@@ -53,19 +53,19 @@ struct dynkomi_linear {
 	bool rootbased;
 };
 
-static float
+static floating_t
 linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_linear *l = d->data;
 	if (b->moves >= l->moves)
 		return 0;
 
-	float base_komi = board_effective_handicap(b, l->handicap_value);
-	float extra_komi = base_komi * (l->moves - b->moves) / l->moves;
+	floating_t base_komi = board_effective_handicap(b, l->handicap_value);
+	floating_t extra_komi = base_komi * (l->moves - b->moves) / l->moves;
 	return extra_komi;
 }
 
-static float
+static floating_t
 linear_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node)
 {
 	struct dynkomi_linear *l = d->data;
@@ -151,49 +151,49 @@ struct dynkomi_adaptive {
 	 * by linear dynkomi.) */
 	int lead_moves;
 	/* Maximum komi to pretend the opponent to give. */
-	float max_losing_komi;
+	floating_t max_losing_komi;
 	/* Game portion at which losing komi is not allowed anymore. */
-	float losing_komi_stop;
+	floating_t losing_komi_stop;
 	/* Alternative game portion determination. */
 	bool adapt_aport;
-	float (*indicator)(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color);
+	floating_t (*indicator)(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color);
 
 	/* Value-based adaptation. */
-	float zone_red, zone_green;
+	floating_t zone_red, zone_green;
 	int score_step;
-	float score_step_byavg; // use portion of average score as increment
+	floating_t score_step_byavg; // use portion of average score as increment
 	bool use_komi_ratchet;
 	bool losing_komi_ratchet; // ratchet even losing komi
 	int komi_ratchet_maxage;
 	// runtime, not configuration:
 	int komi_ratchet_age;
-	float komi_ratchet;
+	floating_t komi_ratchet;
 
 	/* Score-based adaptation. */
-	float (*adapter)(struct uct_dynkomi *d, struct board *b);
-	float adapt_base; // [0,1)
+	floating_t (*adapter)(struct uct_dynkomi *d, struct board *b);
+	floating_t adapt_base; // [0,1)
 	/* Sigmoid adaptation rate parameter; see below for details. */
-	float adapt_phase; // [0,1]
-	float adapt_rate; // [1,infty)
+	floating_t adapt_phase; // [0,1]
+	floating_t adapt_rate; // [1,infty)
 	/* Linear adaptation rate parameter. */
 	int adapt_moves;
-	float adapt_dir; // [-1,1]
+	floating_t adapt_dir; // [-1,1]
 };
 #define TRUSTWORTHY_KOMI_PLAYOUTS 200
 
-static float
+static floating_t
 board_game_portion(struct dynkomi_adaptive *a, struct board *b)
 {
 	if (!a->adapt_aport) {
 		int total_moves = b->moves + 2 * board_estimated_moves_left(b);
-		return (float) b->moves / total_moves;
+		return (floating_t) b->moves / total_moves;
 	} else {
 		int brsize = board_size(b) - 2;
-		return 1.0 - (float) b->flen / (brsize * brsize);
+		return 1.0 - (floating_t) b->flen / (brsize * brsize);
 	}
 }
 
-static float
+static floating_t
 adapter_sigmoid(struct uct_dynkomi *d, struct board *b)
 {
 	struct dynkomi_adaptive *a = d->data;
@@ -202,12 +202,12 @@ adapter_sigmoid(struct uct_dynkomi *d, struct board *b)
 	 * at game stage a->adapt_phase crosses though 0.5 and
 	 * approaches 1 at the game end; the slope is controlled
 	 * by a->adapt_rate. */
-	float game_portion = board_game_portion(a, b);
-	float l = game_portion - a->adapt_phase;
+	floating_t game_portion = board_game_portion(a, b);
+	floating_t l = game_portion - a->adapt_phase;
 	return 1.0 / (1.0 + exp(-a->adapt_rate * l));
 }
 
-static float
+static floating_t
 adapter_linear(struct uct_dynkomi *d, struct board *b)
 {
 	struct dynkomi_adaptive *a = d->data;
@@ -222,7 +222,7 @@ adapter_linear(struct uct_dynkomi *d, struct board *b)
 		return a->adapt_dir * b->moves / a->adapt_moves;
 }
 
-static float
+static floating_t
 komi_by_score(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color)
 {
 	struct dynkomi_adaptive *a = d->data;
@@ -234,16 +234,16 @@ komi_by_score(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	d->score.playouts = 1;
 
 	/* Look at average score and push extra_komi in that direction. */
-	float p = a->adapter(d, b);
+	floating_t p = a->adapter(d, b);
 	p = a->adapt_base + p * (1 - a->adapt_base);
 	if (p > 0.9) p = 0.9; // don't get too eager!
-	float extra_komi = tree->extra_komi + p * score.value;
+	floating_t extra_komi = tree->extra_komi + p * score.value;
 	if (DEBUGL(3))
 		fprintf(stderr, "mC += %f * %f\n", p, score.value);
 	return extra_komi;
 }
 
-static float
+static floating_t
 komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color)
 {
 	struct dynkomi_adaptive *a = d->data;
@@ -280,7 +280,7 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	/* Positive extra_komi means that we are _giving_
 	 * komi (winning), negative extra_komi is _taking_
 	 * komi (losing). */
-	float extra_komi = komi_by_color(tree->extra_komi, color);
+	floating_t extra_komi = komi_by_color(tree->extra_komi, color);
 	int score_step_red = -a->score_step;
 	int score_step_green = a->score_step;
 
@@ -338,9 +338,9 @@ komi_by_value(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum st
 	}
 }
 
-static float
+static floating_t
 bounded_komi(struct dynkomi_adaptive *a, struct board *b,
-             enum stone color, float komi, float max_losing_komi)
+             enum stone color, floating_t komi, floating_t max_losing_komi)
 {
 	/* At the end of game, disallow losing komi. */
 	if (komi_by_color(komi, color) < 0
@@ -349,7 +349,7 @@ bounded_komi(struct dynkomi_adaptive *a, struct board *b,
 
 	/* Get lower bound on komi we take so that we don't underperform
 	 * too much. */
-	float min_komi = komi_by_color(- max_losing_komi, color);
+	floating_t min_komi = komi_by_color(- max_losing_komi, color);
 
 	if (komi_by_color(komi - min_komi, color) > 0)
 		return komi;
@@ -357,7 +357,7 @@ bounded_komi(struct dynkomi_adaptive *a, struct board *b,
 		return min_komi;
 }
 
-static float
+static floating_t
 adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_adaptive *a = d->data;
@@ -372,13 +372,13 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 		                    board_effective_handicap(b, 7 /* XXX */),
 		                    a->max_losing_komi);
 
-	float komi = a->indicator(d, b, tree, color);
+	floating_t komi = a->indicator(d, b, tree, color);
 	if (DEBUGL(3))
 		fprintf(stderr, "dynkomi: %f -> %f\n", tree->extra_komi, komi);
 	return bounded_komi(a, b, color, komi, a->max_losing_komi);
 }
 
-static float
+static floating_t
 adaptive_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node)
 {
 	return tree->extra_komi;

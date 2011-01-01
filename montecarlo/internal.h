@@ -13,7 +13,7 @@ struct playout_policy;
 struct montecarlo {
 	int debug_level;
 	int gamelen;
-	float resign_ratio;
+	floating_t resign_ratio;
 	int loss_threshold;
 	struct playout_policy *playout;
 };

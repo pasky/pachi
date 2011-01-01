@@ -456,7 +456,7 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 		assert(ni->coord > 0 && ni->coord < board_size2(b));
 		char buf[4];
 		/* We return the values as stored in the tree, so from black's view. */
-		r += snprintf(r, end - r, "\n%s %d %.7f", coord2bstr(buf, ni->coord, b),
+		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, ni->coord, b),
 			      ni->u.playouts, ni->u.value);
 	}
 	return reply;

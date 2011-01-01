@@ -31,7 +31,7 @@ board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownerm
 }
 
 enum point_judgement
-board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, float thres)
+board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_t thres)
 {
 	assert(ownermap->map);
 	int n = ownermap->map[c][S_NONE];

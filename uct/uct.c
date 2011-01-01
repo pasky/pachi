@@ -484,7 +484,7 @@ uct_dumptbook(struct engine *e, struct board *b, enum stone color)
 }
 
 
-float
+floating_t
 uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, coord_t c, enum stone color)
 {
 	struct uct *u = e->data;
@@ -501,7 +501,7 @@ uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, coord_t c,
 	uct_prepare_move(u, &b2, color);
 	assert(u->t);
 
-	float bestval;
+	floating_t bestval;
 	uct_search(u, &b2, ti, color, u->t);
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, &b2, color, resign);
 	if (!best) {
@@ -538,7 +538,7 @@ uct_state_init(char *arg, struct board *b)
 
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
-	u->virtual_loss = true;
+	u->virtual_loss = 1;
 
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
@@ -546,6 +546,7 @@ uct_state_init(char *arg, struct board *b)
 	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
 	// TODO: Further tuning and experiments with better time allocation schemes.
 	u->best2_ratio = 2.5;
+	u->max_maintime_ratio = 3.0;
 
 	u->val_scale = 0.04; u->val_points = 40;
 	u->dynkomi_interval = 1000;
@@ -740,18 +741,20 @@ uct_state_init(char *arg, struct board *b)
 					/* Tree parallelization - all threads
 					 * grind on the same tree. */
 					u->thread_model = TM_TREE;
-					u->virtual_loss = false;
+					u->virtual_loss = 0;
 				} else if (!strcasecmp(optval, "treevl")) {
 					/* Tree parallelization, but also
 					 * with virtual losses - this discou-
 					 * rages most threads choosing the
 					 * same tree branches to read. */
 					u->thread_model = TM_TREEVL;
-					u->virtual_loss = true;
 				} else {
 					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
 					exit(1);
 				}
+			} else if (!strcasecmp(optname, "virtual_loss")) {
+				/* Number of virtual losses added before evaluating a node. */
+				u->virtual_loss = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "pondering")) {
 				/* Keep searching even during opponent's turn. */
 				u->pondering_opt = !optval || atoi(optval);
@@ -781,6 +784,10 @@ uct_state_init(char *arg, struct board *b)
 				 * best,best_best_child values delta
 				 * is more than bestr_ratio. */
 				u->bestr_ratio = atof(optval);
+			} else if (!strcasecmp(optname, "max_maintime_ratio") && optval) {
+				/* If set and while not in byoyomi, prolong simulating no more than
+				 * max_maintime_ratio times the normal desired thinking time. */
+				u->max_maintime_ratio = atof(optval);
 			} else if (!strcasecmp(optname, "fuseki_end") && optval) {
 				/* At the very beginning it's not worth thinking
 				 * too long because the playout evaluations are

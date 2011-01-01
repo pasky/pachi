@@ -369,17 +369,17 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	return result;
 }
 
-static float
+static floating_t
 scale_value(struct uct *u, struct board *b, int result)
 {
-	float rval = result > 0;
+	floating_t rval = result > 0;
 	if (u->val_scale) {
 		int vp = u->val_points;
 		if (!vp) {
 			vp = board_size(b) - 1; vp *= vp; vp *= 2;
 		}
 
-		float sval = (float) abs(result) / vp;
+		floating_t sval = (floating_t) abs(result) / vp;
 		sval = sval > 1 ? 1 : sval;
 		if (result < 0) sval = 1 - sval;
 		if (u->val_extra)
@@ -394,7 +394,7 @@ scale_value(struct uct *u, struct board *b, int result)
 static void
 record_local_sequence(struct uct *u, struct tree *t,
                       struct uct_descent *descent, int dlen, int di,
-		      enum stone seq_color, float rval, int pval)
+		      enum stone seq_color, floating_t rval, int pval)
 {
 	/* Ignore pass sequences. */
 	if (is_pass(descent[di].node->coord))
@@ -523,7 +523,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * other threads from visiting this node in case of multiple
 		 * threads doing the tree search. */
 		if (u->virtual_loss)
-			stats_add_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
+			stats_add_result(&n->u, node_color == S_BLACK ? 0.0 : 1.0, u->virtual_loss);
 
 		assert(n->coord >= -1);
 		if (amaf && !is_pass(n->coord))
@@ -563,7 +563,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	if (passes >= 2) {
 		/* XXX: No dead groups support. */
-		float score = board_official_score(&b2, NULL);
+		floating_t score = board_official_score(&b2, NULL);
 		/* Result from black's perspective (no matter who
 		 * the player; black's perspective is always
 		 * what the tree stores. */
@@ -602,12 +602,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	if (result != 0) {
-		float rval = scale_value(u, b, result);
+		floating_t rval = scale_value(u, b, result);
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
 
 		int pval = LTREE_PLAYOUTS_MULTIPLIER;
 		if (u->local_tree_depth_decay > 0)
-			pval = ((float) pval) / pow(u->local_tree_depth_decay, depth);
+			pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, depth);
 
 		if (t->use_extra_komi) {
 			stats_add_result(&u->dynkomi->score, result / 2, 1);
@@ -616,7 +616,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
 			/* Possibly transform the rval appropriately. */
-			float expval = seq_value.value / seq_value.playouts;
+			floating_t expval = seq_value.value / seq_value.playouts;
 			rval = stats_temper_value(rval, expval, u->local_tree);
 
 			/* Get the local sequences and record them in ltree. */
@@ -652,10 +652,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 end:
 	/* We need to undo the virtual loss we added during descend. */
 	if (u->virtual_loss) {
-		int parity = (node_color == player_color ? 1 : -1);
+		floating_t loss = node_color == S_BLACK ? 0.0 : 1.0;
 		for (; n->parent; n = n->parent) {
-			stats_rm_result(&n->u, tree_parity(t, parity) > 0 ? 0 : 1, 1);
-			parity = -parity;
+			stats_rm_result(&n->u, loss, u->virtual_loss);
+			loss = 1.0 - loss;
 		}
 	}
 

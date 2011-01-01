@@ -194,7 +194,7 @@ update mode.
 /* The API types: */
 #define MAXBOARDSIZE 19
 typedef char byte_board[MAXBOARDSIZE+2][MAXBOARDSIZE+2]; // The array indices are 1-based!
-typedef float influ_board[MAXBOARDSIZE][MAXBOARDSIZE];
+typedef floating_t influ_board[MAXBOARDSIZE][MAXBOARDSIZE];
 
 /* Our context structure. */
 struct context {
@@ -203,7 +203,7 @@ struct context {
 	void *dlh;
 	void (*SETPARAM)(double sv, double omega, uint16_t mi);
 	void (*EVALFUN1)(char *javp, char *InfluField);
-	void (*FINDMOVE2)(int fa, char *mi, char *mj, float *mxscore, influ_board *SB, byte_board **PChainNo);
+	void (*FINDMOVE2)(int fa, char *mi, char *mj, floating_t *mxscore, influ_board *SB, byte_board **PChainNo);
 };
 
 
@@ -268,7 +268,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 
 	/* Retrieve values of moves. */
 	char bestx, besty;
-	float bestval;
+	floating_t bestval;
 	influ_board values;
 	byte_board *chaininfo;
 	ctx->FINDMOVE2(map->to_play == S_BLACK ? 1 : -1, &bestx, &besty, &bestval, &values, &chaininfo);
@@ -277,11 +277,11 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 	/* In the first pass, determine best and worst value. (Best value
 	 * reported by FINDMOVE2 is wrong.) In the second pass, we set the
 	 * priors by normalization based on the determined values. */
-	float best = -1000, worst = 1000;
+	floating_t best = -1000, worst = 1000;
 	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
-		float value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
+		floating_t value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
 		if (map->to_play == S_WHITE) value = -value;
 		if (value > best) best = value;
 		else if (value < worst) worst = value;
@@ -294,7 +294,7 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 		/* Take the value and normalize it somehow. */
 		/* Right now, we just do this by linear rescaling from
 		 * [worst, best] to [0,1]. */
-		float value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
+		floating_t value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
 		if (map->to_play == S_WHITE) value = -value;
 		value = (value - worst) / (best - worst);
 		// fprintf(stderr, "\t[%s %s] %f/%f\n", stone2str(map->to_play), coord2sstr(c, b), value, best);
@@ -311,7 +311,7 @@ pachi_plugin_init(char *arg, struct board *b, int seed)
 
 	/* Initialize ctx defaults here. */
 	char *file = NULL;
-	float overrelax = 1.0, threshold = 0.001;
+	floating_t overrelax = 1.0, threshold = 0.001;
 	int iterations = 13;
 	ctx->eqex = -1;
 

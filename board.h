@@ -124,7 +124,7 @@ struct board {
 	int size2; /* size^2 */
 	int bits2; /* ceiling(log2(size2)) */
 	int captures[S_MAX];
-	float komi;
+	floating_t komi;
 	int handicap;
 	/* The ruleset is currently almost never taken into account;
 	 * the board implementation is basically Chinese rules (handicap
@@ -369,10 +369,10 @@ enum stone board_get_one_point_eye(struct board *board, coord_t c);
  * (e.g. playouts), use board_fast_score(). */
 /* Positive: W wins */
 /* Compare number of stones + 1pt eyes. */
-float board_fast_score(struct board *board);
+floating_t board_fast_score(struct board *board);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
 struct move_queue;
-float board_official_score(struct board *board, struct move_queue *mq);
+floating_t board_official_score(struct board *board, struct move_queue *mq);
 
 /** Iterators */
 

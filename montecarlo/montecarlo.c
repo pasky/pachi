@@ -60,7 +60,7 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 		fprintf(f, "%2d | ", y);
 		for (x = 1; x < board_size(board) - 1; x++)
 			if (moves[y * board_size(board) + x].games)
-				fprintf(f, "%0.2f ", (float) moves[y * board_size(board) + x].wins / moves[y * board_size(board) + x].games);
+				fprintf(f, "%0.2f ", (floating_t) moves[y * board_size(board) + x].wins / moves[y * board_size(board) + x].games);
 			else
 				fprintf(f, "---- ");
 		fprintf(f, "| ");
@@ -90,11 +90,11 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 		ti->len.games = MC_GAMES;
 	}
 	struct time_stop stop;
-	time_stop_conditions(ti, b, 20, 40, &stop);
+	time_stop_conditions(ti, b, 20, 40, 3.0, &stop);
 
 	/* resign when the hope for win vanishes */
 	coord_t top_coord = resign;
-	float top_ratio = mc->resign_ratio;
+	floating_t top_ratio = mc->resign_ratio;
 
 	/* We use [0] for pass. Normally, this is an inaccessible corner
 	 * of board margin. */
@@ -185,7 +185,7 @@ pass_wins:
 				continue;
 		}
 
-		float ratio = (float) moves[c].wins / moves[c].games;
+		floating_t ratio = (floating_t) moves[c].wins / moves[c].games;
 		/* Since pass is [0,0], we will pass only when we have nothing
 		 * better to do. */
 		if (ratio >= top_ratio) {

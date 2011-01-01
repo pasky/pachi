@@ -15,6 +15,12 @@ else
 	LDFLAGS=-lm -pthread -lrt -ldl -rdynamic
 endif
 
+# Use make DOUBLE=1 in large configurations with counts > 1M
+# where 24 bits of floating_t mantissa become insufficient.
+ifdef DOUBLE
+	CUSTOM_CFLAGS+=-DDOUBLE
+endif
+
 # Profiling:
 ifdef PROFILING
 	LDFLAGS+=-pg

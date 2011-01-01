@@ -5,6 +5,16 @@
 
 /* Misc. definitions. */
 
+/* Use make DOUBLE=1 in large configurations with counts > 1M
+ * where 24 bits of floating_t mantissa become insufficient. */
+#ifdef DOUBLE
+#  define floating_t double
+#  define PRIfloating "%lf"
+#else
+#  define floating_t float
+#  define PRIfloating "%f"
+#endif
+
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
 

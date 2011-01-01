@@ -33,12 +33,12 @@ fast_random(unsigned int max)
 	return ((pmseed & 0xffff) * max) >> 16;
 }
 
-float
+floating_t
 fast_frandom(void)
 {
-	/* Construct (1,2) IEEE float from our random integer */
+	/* Construct (1,2) IEEE floating_t from our random integer */
 	/* http://rgba.org/articles/sfrand/sfrand.htm */
-	union { unsigned long ul; float f; } p;
+	union { unsigned long ul; floating_t f; } p;
 	p.ul = (((pmseed *= 16807) & 0x007fffff) - 1) | 0x3f800000;
 	return p.f - 1.0f;
 }
@@ -85,14 +85,14 @@ fast_random(unsigned int max)
 	return ((pmseed & 0xffff) * max) >> 16;
 }
 
-float
+floating_t
 fast_frandom(void)
 {
-	/* Construct (1,2) IEEE float from our random integer */
+	/* Construct (1,2) IEEE floating_t from our random integer */
 	/* http://rgba.org/articles/sfrand/sfrand.htm */
 	unsigned long pmseed = (unsigned long)pthread_getspecific(seed_key);
 	pmseed *= 16807;
-	union { unsigned long ul; float f; } p;
+	union { unsigned long ul; floating_t f; } p;
 	p.ul = ((pmseed & 0x007fffff) - 1) | 0x3f800000;
 	pthread_setspecific(seed_key, (void *)pmseed);
 	return p.f - 1.0f;

@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "util.h"
+
 void fast_srandom(unsigned long seed);
 unsigned long fast_getseed(void);
 
@@ -12,7 +14,7 @@ uint16_t fast_random(unsigned int max);
 static uint32_t fast_irandom(unsigned int max);
 
 /* Get random number in [0..1] range. */
-float fast_frandom();
+floating_t fast_frandom();
 
 
 static inline uint32_t
