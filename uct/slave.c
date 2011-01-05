@@ -205,7 +205,7 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
  * incr_stats structs. The stats come sorted by increasing coord path.
  * To simplify the code, we assume that master and slave have the same
  * architecture (store values identically).
- * Keep this code in sync with distributed/distributed.c:select_best_move().
+ * Keep this code in sync with distributed/merge.c:output_stats()
  * Return true if ok, false if error. */
 static bool
 receive_stats(struct uct *u, int size)
@@ -369,7 +369,7 @@ select_best_stats(struct stats_candidate *stats_queue, int stats_count,
  * (increasing levels and increasing coordinates within a level).
  * This function is called only by the main thread, but may be
  * called while the tree is updated by the worker threads. Keep this
- * code in sync with distributed/distributed.c:select_best_move(). */
+ * code in sync with distributed/merge.c:merge_new_stats(). */
 static void *
 report_incr_stats(struct uct *u, int *stats_size)
 {
@@ -424,7 +424,7 @@ report_incr_stats(struct uct *u, int *stats_size)
  * a list of lines "coord playouts value" with absolute counts for
  * children of the root node (including contributions from other
  * slaves). The last line must not end with \n.
- * If c is pass or resign, add this move with root->playouts weight.
+ * If c is pass or resign, add this move with a large weight.
  * This function is called only by the main thread, but may be
  * called while the tree is updated by the worker threads. Keep this
  * code in sync with distributed/distributed.c:select_best_move(). */
@@ -439,17 +439,15 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 	r += snprintf(r, end - r, "%d %d %d %d @%d", u->played_own, root->u.playouts,
 		      u->threads, keep_looking, bin_size);
 	int min_playouts = root->u.playouts / 100;
-
-	/* Give a large weight to pass or resign, but still allow other moves. */
-	if (is_pass(c) || is_resign(c))
-		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c, b),
-			      root->u.playouts, 0.0);
+	int max_playouts = 1;
 
 	/* We rely on the fact that root->children is set only
 	 * after all children are created. */
 	for (struct tree_node *ni = root->children; ni; ni = ni->sibling) {
 
 		if (is_pass(ni->coord)) continue;
+		if (ni->u.playouts > max_playouts)
+			max_playouts = ni->u.playouts;
 		if (ni->u.playouts <= min_playouts || ni->hints & TREE_HINT_INVALID)
 			continue;
 
@@ -458,6 +456,14 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 		/* We return the values as stored in the tree, so from black's view. */
 		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, ni->coord, b),
 			      ni->u.playouts, ni->u.value);
+	}
+	/* Give a large but not infinite weight to pass or resign, to avoid forcing
+	 * resign if other slaves don't like it. */
+	if (is_pass(c) || is_resign(c)) {
+		double resign_value = u->t->root_color == S_WHITE ? 0.0 : 1.0;
+		double c_value = is_resign(c) ? resign_value : 1.0 - resign_value;
+		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c, b),
+			      2 * max_playouts, c_value);
 	}
 	return reply;
 }
