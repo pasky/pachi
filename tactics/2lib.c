@@ -58,7 +58,8 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 
 void
 check_group_atari(struct board *b, group_t group, enum stone owner,
-		  enum stone to_play, struct move_queue *q, int tag)
+		  enum stone to_play, struct move_queue *q,
+		  int tag, bool use_def_no_hopeless)
 {
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, group).lib[i];
@@ -93,7 +94,7 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 		 * liberty, or the "gained" liberties are shared. */
 		/* XXX: We do not check connecting to a short-on-liberty
 		 * group (e.g. ourselves). */
-		if (to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
+		if (use_def_no_hopeless && to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
 			if (immediate_liberty_count(b, lib) == 1)
 				continue;
 			if (immediate_liberty_count(b, lib) == 2
@@ -124,7 +125,7 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 }
 
 void
-group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag)
+group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -134,10 +135,10 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 			coord2sstr(group, b), color);
 
 	/* Do not try to atari groups that cannot be harmed. */
-	if (miai_2lib(b, group, color))
+	if (use_miaisafe && miai_2lib(b, group, color))
 		return;
 
-	check_group_atari(b, group, color, to_play, q, tag);
+	check_group_atari(b, group, color, to_play, q, tag, use_def_no_hopeless);
 
 	/* Can we counter-atari another group, if we are the defender? */
 	if (to_play != color)
@@ -155,7 +156,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 			}
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			check_group_atari(b, g2, color, to_play, q, tag);
+			check_group_atari(b, g2, color, to_play, q, tag, use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }

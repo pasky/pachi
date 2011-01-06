@@ -61,6 +61,9 @@ struct moggy_policy {
 	/* Whether to always pick from moves capturing all groups in
 	 * global_atari_check(). */
 	bool capcheckall;
+	/* 2lib settings: */
+	bool atari_def_no_hopeless;
+	bool atari_miaisafe;
 
 	struct joseki_dict *jdict;
 	struct pattern3s patterns;
@@ -271,9 +274,11 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 static void
 local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
 {
+	struct moggy_policy *pp = p->data;
+
 	/* Does the opponent have just two liberties? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 2) {
-		group_2lib_check(b, group_at(b, m->coord), stone_other(m->color), q, 1<<MQ_L2LIB);
+		group_2lib_check(b, group_at(b, m->coord), stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
@@ -289,7 +294,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 2)
 			continue;
-		group_2lib_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB);
+		group_2lib_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 	});
 
 	if (PLDEBUGL(5))
@@ -522,7 +527,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	if (board_group_info(b, g).libs == 2) {
 		if (!pp->atarirate)
 			return;
-		group_2lib_check(b, g, map->to_play, &q, 0);
+		group_2lib_check(b, g, map->to_play, &q, 0, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
@@ -685,6 +690,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
+	pp->atari_def_no_hopeless = true;
+	pp->atari_miaisafe = true;
 
 	/* C is stupid. */
 	double mq_prob_default[MQ_MAX] = {
@@ -738,6 +745,10 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "capcheckall")) {
 				pp->capcheckall = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "atari_miaisafe")) {
+				pp->atari_miaisafe = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "atari_def_no_hopeless")) {
+				pp->atari_def_no_hopeless = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
