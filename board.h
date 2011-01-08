@@ -13,7 +13,6 @@
 #include "stone.h"
 #include "move.h"
 
-struct features_gamma;
 struct fbook;
 
 
@@ -28,13 +27,9 @@ struct fbook;
 
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
 
-//#define BOARD_SPATHASH // incremental patternsp.h hashes
-#define BOARD_SPATHASH_MAXD 3 // maximal diameter
-
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
-//#define BOARD_GAMMA 1 // incremental probability distribution; either defined with BOARD_TRAITS, or keeping just pat3 stuff with BOARD_PAT3
 
 
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
@@ -97,7 +92,7 @@ struct neighbor_colors {
 
 
 /* Point traits bitmap; we update this information incrementally,
- * it can be used e.g. for fast pattern.h features matching. */
+ * it can be used e.g. for fast pattern features matching. */
 struct btraits {
 	/* Number of neighbors we can capture. 0=this move is
 	 * not capturing, 1..4=this many neighbors we can capture
@@ -167,14 +162,6 @@ struct board {
 	struct neighbor_colors *n;
 	/* Zobrist hash for each position */
 	hash_t *h;
-#ifdef BOARD_SPATHASH
-	/* For spatial hashes, we use only 24 bits. */
-	/* [0] is d==1, we don't keep hash for d==0. */
-	/* We keep hashes for black-to-play ([][0]) and white-to-play
-	 * ([][1], reversed stone colors since we match all patterns as
-	 * black-to-play). */
-	uint32_t (*spathash)[BOARD_SPATHASH_MAXD][2];
-#endif
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
@@ -185,17 +172,6 @@ struct board {
 	 * ([][0]) and white-to-play ([][1]). */
 	/* The information is only valid for empty points. */
 	struct btraits (*t)[2];
-#endif
-#ifdef BOARD_GAMMA
-	/* Relative probabilities of moves being played next, computed by
-	 * multiplying gammas of the appropriate pattern features based on
-	 * pat3 and traits (see pattern.h). The probability distribution
-	 * is maintained over the full board grid. */
-	/* - Always invalid moves are guaranteed to have zero probability.
-	 * - Self-eye-filling moves will always have zero probability.
-	 * - Ko-prohibited moves might have non-zero probability.
-	 * - FEAT_CONTIGUITY is not accounted for in the probability. */
-	struct probdist prob[2];
 #endif
 	/* Cached information on x-y coordinates so that we avoid division. */
 	uint8_t (*coord)[2];
@@ -236,15 +212,6 @@ struct board {
 	 * but its lifetime is maintained in play_random_game(); it should
 	 * not be set outside of it. */
 	void *ps;
-
-#ifdef BOARD_GAMMA
-	/* Gamma values for probability distribution; user must setup
-	 * this pointer before any move is played, using board_gamma_set(). */
-	struct features_gamma *gamma;
-	/* Whether to compute the 'safe' trait using board_safe_to_play()
-	 * (false) or is_bad_selfatari() (true, much slower). */
-	bool precise_selfatari;
-#endif
 
 
 	/* --- PRIVATE DATA --- */
@@ -348,10 +315,6 @@ static bool board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
-/* Associate a set of feature gamma values (for pd building) with the board. */
-void board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_selfatari);
-/* Force re-compute of a probability distribution item. */
-void board_gamma_update(struct board *b, coord_t coord, enum stone color);
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 static bool board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color);

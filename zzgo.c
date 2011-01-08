@@ -13,7 +13,6 @@
 #include "replay/replay.h"
 #include "montecarlo/montecarlo.h"
 #include "random/random.h"
-#include "patternscan/patternscan.h"
 #include "joseki/joseki.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
@@ -33,7 +32,6 @@ int seed;
 enum engine_id {
 	E_RANDOM,
 	E_REPLAY,
-	E_PATTERNSCAN,
 	E_MONTECARLO,
 	E_UCT,
 	E_DISTRIBUTED,
@@ -44,7 +42,6 @@ enum engine_id {
 static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 	engine_random_init,
 	engine_replay_init,
-	engine_patternscan_init,
 	engine_montecarlo_init,
 	engine_uct_init,
 	engine_distributed_init,
@@ -70,7 +67,7 @@ static void done_engine(struct engine *e)
 static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-	fprintf(stderr, "Usage: %s [-e random|replay|patternscan|montecarlo|uct|distributed]\n"
+	fprintf(stderr, "Usage: %s [-e random|replay|montecarlo|uct|distributed]\n"
 		" [-d DEBUG_LEVEL] [-D] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
 		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [-f FBOOKFILE] [ENGINE_ARGS]\n", name);
 }
@@ -93,8 +90,6 @@ int main(int argc, char *argv[])
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
 					engine = E_RANDOM;
-				} else if (!strcasecmp(optarg, "patternscan")) {
-					engine = E_PATTERNSCAN;
 				} else if (!strcasecmp(optarg, "replay")) {
 					engine = E_REPLAY;
 				} else if (!strcasecmp(optarg, "montecarlo")) {

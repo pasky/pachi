@@ -65,14 +65,9 @@ treeless MonteCarlo-player. The MonteCarlo simulation ("playout")
 policies are also pluggable, by default we use one that makes use of
 heavy domain knowledge.
 
-Two special engines are also provided for development support:
+Special engines are also provided for development support:
 * a simple "replay" engine that will simply play moves according
   to the playout policy suggestions
-* a special "patternscan" engine that will respond to 'play' commands
-  by iteratively matching various pattern features on each move and
-  outputting them as response to the command; it is intended to be
-  used for pattern-learning from games in cooperation with an external
-  helper; no 'genmove' command support is provided
 
 
 Analysis

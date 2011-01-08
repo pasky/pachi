@@ -14,7 +14,6 @@
 #include "mq.h"
 #include "joseki/base.h"
 #include "playout.h"
-#include "playout/elo.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "tactics/util.h"
@@ -520,7 +519,6 @@ struct uct *
 uct_state_init(char *arg, struct board *b)
 {
 	struct uct *u = calloc2(1, sizeof(struct uct));
-	bool using_elo = false;
 
 	u->debug_level = debug_level;
 	u->gamelen = MC_GAMELEN;
@@ -662,9 +660,6 @@ uct_state_init(char *arg, struct board *b)
 					u->playout = playout_moggy_init(playoutarg, b, u->jdict);
 				} else if (!strcasecmp(optval, "light")) {
 					u->playout = playout_light_init(playoutarg, b);
-				} else if (!strcasecmp(optval, "elo")) {
-					u->playout = playout_elo_init(playoutarg, b);
-					using_elo = true;
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 					exit(1);
@@ -901,11 +896,6 @@ uct_state_init(char *arg, struct board *b)
 				 * in the local tree. If this is on, also
 				 * subsequences starting at each move are stored. */
 				u->local_tree_allseq = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_playout")) {
-				/* Whether to adjust ELO playout probability
-				 * distributions according to matched localtree
-				 * information. */
-				u->local_tree_playout = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "local_tree_pseqroot")) {
 				/* By default, when we have no sequence move
 				 * to suggest in-playout, we give up. If this
@@ -1019,8 +1009,6 @@ uct_state_init(char *arg, struct board *b)
 		/* No ltree aging. */
 		u->local_tree_aging = 1.0f;
 	}
-	if (!using_elo)
-		u->local_tree_playout = false;
 
 	if (u->fast_alloc) {
 		if (u->pruning_threshold < u->max_tree_size / 10)

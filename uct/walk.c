@@ -12,7 +12,6 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
-#include "playout/elo.h"
 #include "probdist.h"
 #include "random.h"
 #include "uct/dynkomi.h"
@@ -93,14 +92,6 @@ record_amaf_move(struct playout_amafmap *amaf, coord_t coord, enum stone color)
 	assert(amaf->gamelen < sizeof(amaf->game) / sizeof(amaf->game[0]));
 }
 
-static double
-ltree_node_gamma(struct tree_node *li, enum stone color)
-{
-	/* TODO: How to do this? */
-	#define li_value(color, li) (li->u.playouts * (color == S_BLACK ? li->u.value : (1 - li->u.value)))
-	return 0.5 + li_value(color, li);
-}
-
 
 struct uct_playout_callback {
 	struct uct *uct;
@@ -110,68 +101,6 @@ struct uct_playout_callback {
 	coord_t *treepool[2];
 	int treepool_n[2];
 };
-
-static void
-uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct probdist *pd)
-{
-	/* Create probability distribution according to found local tree
-	 * sequence. */
-	struct uct_playout_callback *upc = data;
-	assert(upc && upc->tree && pd && b);
-	coord_t c = b->last_move.coord;
-	enum stone color = b->last_move.color;
-
-	if (is_pass(c)) {
-		/* Break local sequence. */
-		upc->lnode = NULL;
-	} else if (upc->lnode) {
-		/* Try to follow local sequence. */
-		upc->lnode = tree_get_node(upc->tree, upc->lnode, c, false);
-	}
-
-	if (!upc->lnode || !upc->lnode->children) {
-		/* There's no local sequence, start new one! */
-		upc->lnode = color == S_BLACK ? upc->tree->ltree_black : upc->tree->ltree_white;
-		upc->lnode = tree_get_node(upc->tree, upc->lnode, c, false);
-	}
-
-	if (!upc->lnode || !upc->lnode->children) {
-		/* We have no local sequence and we cannot find any starting
-		 * by node corresponding to last move. */
-		if (!upc->uct->local_tree_pseqroot) {
-			/* Give up then, we have nothing to contribute. */
-			return;
-		}
-		/* Construct probability distribution from possible first
-		 * sequence move. Remember that @color is color of the
-		 * *last* move. */
-		upc->lnode = color == S_BLACK ? upc->tree->ltree_white : upc->tree->ltree_black;
-		if (!upc->lnode->children) {
-			/* We don't even have anything in our tree yet. */
-			return;
-		}
-	}
-
-	/* The probdist has the right structure only if BOARD_GAMMA is defined. */
-#ifndef BOARD_GAMMA
-	assert(0);
-#endif
-
-	/* Construct probability distribution from lnode children. */
-	struct tree_node *li = upc->lnode->children;
-	assert(li);
-	if (is_pass(li->coord)) {
-		/* Tenuki. */
-		/* TODO: Spread tenuki gamma over all moves we don't touch. */
-		li = li->sibling;
-	}
-	for (; li; li = li->sibling) {
-		if (board_at(b, li->coord) != S_NONE)
-			continue;
-		double gamma = fixp_to_double(pd->items[li->coord]) * ltree_node_gamma(li, to_play);
-		probdist_set(pd, li->coord, double_to_fixp(gamma));
-	}
-}
 
 
 static coord_t
@@ -322,11 +251,6 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 		 * entering playout. */
 		.lnode = NULL,
 	};
-
-	if (u->local_tree_playout) {
-		/* N.B.: We know this is ELO playout. */
-		playout_elo_callback(u->playout, uct_playout_probdist, &upc);
-	}
 
 	coord_t pool[2][u->treepool_size];
 	if (u->treepool_chance[0] + u->treepool_chance[1] > 0) {

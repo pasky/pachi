@@ -7,7 +7,6 @@
 #include "engine.h"
 #include "joseki/base.h"
 #include "move.h"
-#include "playout/elo.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "montecarlo/internal.h"
@@ -28,7 +27,7 @@
  * debug[=DEBUG_LEVEL]		1 is the default; more means more debugging prints
  * games=MC_GAMES		number of random games to play
  * gamelen=MC_GAMELEN		maximal length of played random game
- * playout={light,moggy,elo}[:playout_params]
+ * playout={light,moggy}[:playout_params]
  */
 
 
@@ -240,8 +239,6 @@ montecarlo_state_init(char *arg, struct board *b)
 					mc->playout = playout_moggy_init(playoutarg, b, joseki_load(b->size));
 				} else if (!strcasecmp(optval, "light")) {
 					mc->playout = playout_light_init(playoutarg, b);
-				} else if (!strcasecmp(optval, "elo")) {
-					mc->playout = playout_elo_init(playoutarg, b);
 				} else {
 					fprintf(stderr, "MonteCarlo: Invalid playout policy %s\n", optval);
 				}
