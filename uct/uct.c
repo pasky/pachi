@@ -553,7 +553,10 @@ uct_state_init(char *arg, struct board *b)
 	u->dynkomi_mask = S_BLACK | S_WHITE;
 
 	u->tenuki_d = 4;
-	u->local_tree_aging = 2;
+	u->local_tree_aging = 80;
+	u->local_tree_allseq = 1;
+	u->local_tree_rootseqval = 1;
+	u->local_tree_depth_decay = 1.5;
 
 	u->plugins = pluginset_init(b);
 
@@ -894,7 +897,7 @@ uct_state_init(char *arg, struct board *b)
 				 * than nodes near the root. */
 				u->local_tree_depth_decay = atof(optval);
 			} else if (!strcasecmp(optname, "local_tree_allseq")) {
-				/* By default, only complete sequences are stored
+				/* If disabled, only complete sequences are stored
 				 * in the local tree. If this is on, also
 				 * subsequences starting at each move are stored. */
 				u->local_tree_allseq = !optval || atoi(optval);
@@ -910,9 +913,9 @@ uct_state_init(char *arg, struct board *b)
 				 * sequences first moves instead. */
 				u->local_tree_pseqroot = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "local_tree_rootseqval")) {
-				/* By default, expected node value is computed by
+				/* If disabled, expected node value is computed by
 				 * summing up values through the whole descent.
-				 * With this settings, expected node value for
+				 * If enabled, expected node value for
 				 * each sequence is the value at the root of the
 				 * sequence. */
 				u->local_tree_rootseqval = !optval || atoi(optval);
