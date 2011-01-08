@@ -137,6 +137,16 @@ static char moggy_patterns_src[][11] = {
 	"?OY"
 	"Y.O"
 	"###" /* Mogo has "X" */,
+	/* side pattern - eye piercing:
+	 * # O O O .
+	 * # O . O .
+	 * # . . . .
+	 * # # # # # */
+#if 0
+	"Oxx"
+	"..."
+	"###",
+#endif
 };
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
