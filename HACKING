@@ -198,3 +198,34 @@ Alternatively, there is a support for directly used opening book
 (so-called fbook, a.k.a. "forced book" or "fuseki book"). The book
 is stored in a text file in Fuego-compatible format and can be loaded
 using the ./zzgo -f parameter.
+
+
+Local Trees
+===========
+
+This is a mostly unique idea in Pachi, currently in development;
+it does not work too well yet, but Pasky has great hopes for it in
+the future.
+
+A local tree is a tree comprising of (CFG-topologically) local
+sequences, built in parallel with the real game tree; there is
+a separate tree for black-first and white-first sequences. E.g if
+the game tree (on empty board) consists of D4-C6-D6-Q16-O17-D7,
+the coresponding local tree sequences are (black) D4-C6-D6, (white)
+Q16-O17 and (white) D7. The simulation result is then recorded as
+usual in the game tree, but also in the corresponding local trees.
+
+The goal of this is to dynamically build a cache of various
+resolutions of local situations. This is to overcome cases where
+the proper resolution of a given situation is easily found in
+the tree, but improper heuristical bisaes keep muddying the
+evaluation down.
+
+The local trees are descended in parallel with the main tree.
+The values stored in local trees are added to the RAVE term
+from the main tree during node selection. We also wish to use
+the information from local trees in the simulations, but this is
+still subject to research.
+
+To enable local trees usage, pass local_tree=1 to the UCT engine.
+There are many further knobs to twiddle, too.
