@@ -185,6 +185,21 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	return P_OK;
 }
 
+/* The playouts sent by slaves for the children of the root node
+ * include contributions from other slaves. To avoid 32-bit overflow on
+ * large configurations with many slaves we must average the playouts. */
+struct large_stats {
+	long playouts; // # of playouts
+	floating_t value; // BLACK wins/playouts
+};
+
+static void
+large_stats_add_result(struct large_stats *s, floating_t result, long playouts)
+{
+	s->playouts += playouts;
+	s->value += (result - s->value) * playouts / s->playouts;
+}
+
 /* genmoves returns "=id played_own total_playouts threads keep_looking @size"
  * then a list of lines "coord playouts value" with absolute counts for
  * children of the root node, then a binary array of incr_stats structs.
@@ -196,7 +211,7 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
  * Keep this code in sync with uct/slave.c:report_stats().
  * slave_lock is held on entry and on return. */
 static coord_t
-select_best_move(struct board *b, struct move_stats *stats, int *played,
+select_best_move(struct board *b, struct large_stats *stats, int *played,
 		 int *total_playouts, int *total_threads, bool *keep_looking)
 {
 	assert(reply_count > 0);
@@ -205,7 +220,7 @@ select_best_move(struct board *b, struct move_stats *stats, int *played,
 	memset(stats-2, 0, (board_size2(b)+2) * sizeof(*stats));
 
 	coord_t best_move = pass;
-	int best_playouts = -1;
+	long best_playouts = -1;
 	*played = 0;
 	*total_playouts = 0;
 	*total_threads = 0;
@@ -228,7 +243,7 @@ select_best_move(struct board *b, struct move_stats *stats, int *played,
 			coord_t c = str2scoord(move, board_size(b));
 			assert (c >= resign && c < board_size2(b) && s.playouts >= 0);
 
-			stats_add_result(&stats[c], s.value, s.playouts);
+			large_stats_add_result(&stats[c], s.value, (long)s.playouts);
 
 			if (stats[c].playouts > best_playouts) {
 				best_playouts = stats[c].playouts;
@@ -237,6 +252,8 @@ select_best_move(struct board *b, struct move_stats *stats, int *played,
 			r = strchr(r, '\n');
 		}
 	}
+	for (coord_t c = resign; c < board_size2(b); c++)
+		stats[c].playouts /= reply_count;
 	*keep_looking = keep > reply_count / 2;
 	return best_move;
 }
@@ -268,11 +285,6 @@ genmoves_args(char *args, enum stone color, int played,
 #define YOSE_START 40
 #define MAX_MAINTIME_RATIO 3.0
 
-/* In the ascii reply to genmoves, each slave sends absolute counts
- * including contributions from other slaves. For human display
- * reduce the sum to an average. */
-#define stats_average(playouts) ((playouts) / reply_count)
-
 /* Regularly send genmoves command to the slaves, and select the best move. */
 static coord_t *
 distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
@@ -296,7 +308,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 
 	/* Combined move stats from all slaves, only for children
 	 * of the root node, plus 2 for pass and resign. */
-	struct move_stats *stats = alloca((board_size2(b)+2) * sizeof(struct move_stats));
+	struct large_stats *stats = alloca((board_size2(b)+2) * sizeof(struct large_stats));
 	stats += 2;
 
 	protocol_lock();
@@ -332,7 +344,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 				 "temp winner is %s %s with score %1.4f (%d/%d games)"
 				 " %d slaves %d threads\n",
 				 stone2str(color), coord, get_value(stats[best].value, color),
-				 stats_average(stats[best].playouts), playouts, reply_count, threads);
+				 (int)stats[best].playouts, playouts, reply_count, threads);
 			logline(NULL, "* ", buf);
 		}
 		/* Send the command with the same gtp id, to avoid discarding
@@ -348,7 +360,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 	dist->my_last_move.color = color;
 	dist->my_last_move.coord = best;
 	dist->my_last_stats.value = stats[best].value;
-	dist->my_last_stats.playouts = stats_average(stats[best].playouts);
+	dist->my_last_stats.playouts = (int)stats[best].playouts;
 
 	/* Tell the slaves to commit to the selected move, overwriting
 	 * the last "pachi-genmoves" in the command history. */
@@ -366,7 +378,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 			 "genmove %d games in %0.2fs %d slaves %d threads (%d games/s,"
 			 " %d games/s/slave, %d games/s/thread, %.3f ms/iter)\n",
 			 stone2str(color), coord, get_value(stats[best].value, color),
-			 stats[best].playouts, playouts, played, time, replies, threads,
+			 (int)stats[best].playouts, playouts, played, time, replies, threads,
 			 (int)(played/time), (int)(played/time/replies),
 			 (int)(played/time/threads), 1000*time/iterations);
 		logline(NULL, "* ", buf);
