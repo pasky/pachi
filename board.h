@@ -321,6 +321,9 @@ static group_t board_get_atari_neighbor(struct board *b, coord_t coord, enum sto
 /* Returns true if the move is not obvious self-atari. */
 static bool board_safe_to_play(struct board *b, coord_t coord, enum stone color);
 
+/* Determine number of stones in a group, up to @max stones. */
+static int group_stone_count(struct board *b, group_t group, int max);
+
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
 
@@ -512,6 +515,17 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 	});
 	// no good support group
 	return false;
+}
+
+static inline int
+group_stone_count(struct board *b, group_t group, int max)
+{
+	int n = 0;
+	foreach_in_group(b, group) {
+		n++;
+		if (n >= max) return max;
+	} foreach_in_group_end;
+	return n;
 }
 
 #endif
