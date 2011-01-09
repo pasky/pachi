@@ -21,6 +21,8 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 
+#define DESCENT_DLEN 512
+
 void
 uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
 {
@@ -220,7 +222,8 @@ treepool_setup(struct uct_playout_callback *upc, struct board *b, struct tree_no
 
 static int
 uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
-              struct playout_amafmap *amaf, struct uct_descent *descent,
+              struct playout_amafmap *amaf,
+	      struct uct_descent *descent, int *dlen,
 	      struct tree_node *significant[2],
               struct tree *t, struct tree_node *n, enum stone node_color,
 	      char *spaces)
@@ -384,8 +387,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* Tree descent history. */
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
-	#define DLEN 512
-	struct uct_descent descent[DLEN];
+	struct uct_descent descent[DESCENT_DLEN];
 	descent[0].node = n; descent[0].lnode = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
@@ -419,7 +421,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
 
-		assert(dlen < DLEN);
+		assert(dlen < DESCENT_DLEN);
 		descent[dlen] = descent[dlen - 1];
 		if (u->local_tree && (!descent[dlen].lnode || descent[dlen].node->d >= u->tenuki_d)) {
 			/* Start new local sequence. */
@@ -511,7 +513,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	} else { // assert(tree_leaf_node(n));
 		/* In case of parallel tree search, the assertion might
 		 * not hold if two threads chew on the same node. */
-		result = uct_leaf_node(u, &b2, player_color, amaf, &descent[dlen - 1], significant, t, n, node_color, spaces);
+		result = uct_leaf_node(u, &b2, player_color, amaf, descent, &dlen, significant, t, n, node_color, spaces);
 	}
 
 	if (amaf && u->playout_amaf_cutoff) {
