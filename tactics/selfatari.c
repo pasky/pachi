@@ -239,9 +239,6 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 		group_t g = s->groupids[stone_other(color)][i];
 		if (board_group_info(b, g).libs != 2)
 			goto next_group;
-		/* Simple check not to re-examine the same group. */
-		if (i > 0 && s->groupids[stone_other(color)][i] == s->groupids[stone_other(color)][i - 1])
-			continue;
 
 		/* We must make sure the other liberty of that group:
 		 * (i) is an internal liberty
@@ -414,7 +411,16 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 
 	foreach_neighbor(b, to, {
 		enum stone color = board_at(b, c);
-		s.groupids[color][s.groupcts[color]++] = group_at(b, c);
+		group_t group = group_at(b, c);
+		bool dup = false;
+		for (int i = 0; i < s.groupcts[color]; i++)
+			if (s.groupids[color][i] == group) {
+				dup = true;
+				break;
+			}
+		if (!dup) {
+			s.groupids[color][s.groupcts[color]++] = group_at(b, c);
+		}
 	});
 
 	/* We have shortage of liberties; that's the point. */
