@@ -12,6 +12,7 @@
 struct selfatari_state {
 	int groupcts[S_MAX];
 	group_t groupids[S_MAX][4];
+	coord_t groupneis[S_MAX][4];
 
 	/* This is set if this move puts a group out of _all_
 	 * liberties; we need to watch out for snapback then. */
@@ -419,6 +420,7 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 				break;
 			}
 		if (!dup) {
+			s.groupneis[color][s.groupcts[color]] = c;
 			s.groupids[color][s.groupcts[color]++] = group_at(b, c);
 		}
 	});
