@@ -19,6 +19,7 @@
 #include "tactics/2lib.h"
 #include "tactics/nlib.h"
 #include "tactics/ladder.h"
+#include "tactics/nakade.h"
 #include "tactics/selfatari.h"
 #include "uct/prior.h"
 
@@ -44,6 +45,7 @@ enum mq_tag {
 	MQ_PAT3,
 	MQ_GATARI,
 	MQ_JOSEKI,
+	MQ_NAKADE,
 	MQ_MAX
 };
 
@@ -51,7 +53,7 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	unsigned int lcapturerate, atarirate, nlibrate, capturerate, patternrate, korate, josekirate;
+	unsigned int lcapturerate, atarirate, nlibrate, capturerate, patternrate, korate, josekirate, nakaderate;
 	unsigned int selfatarirate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
@@ -364,6 +366,31 @@ local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 		mq_print(q, b, "Local nlib");
 }
 
+static coord_t
+nakade_check(struct playout_policy *p, struct board *b, struct move *m, enum stone to_play)
+{
+	coord_t empty = pass;
+	foreach_neighbor(b, m->coord, {
+		if (board_at(b, c) != S_NONE)
+			continue;
+		if (is_pass(empty)) {
+			empty = c;
+			continue;
+		}
+		if (!coord_is_8adjecent(c, empty, b)) {
+			/* Seems like impossible nakade
+			 * shape! */
+			return pass;
+		}
+	});
+	assert(!is_pass(empty));
+
+	coord_t nakade = nakade_point(b, empty, stone_other(to_play));
+	if (PLDEBUGL(5) && !is_pass(nakade))
+		fprintf(stderr, "Nakade: %s\n", coord2sstr(nakade, b));
+	return nakade;
+}
+
 coord_t
 fillboard_check(struct playout_policy *p, struct board *b)
 {
@@ -381,7 +408,8 @@ fillboard_check(struct playout_policy *p, struct board *b)
 				goto next_try;
 		} foreach_diag_neighbor_end;
 		return coord;
-next_try:;
+next_try:
+		;
 	}
 	return pass;
 }
@@ -405,6 +433,14 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
+		/* Nakade check */
+		if (pp->nakaderate > fast_random(100)
+		    && immediate_liberty_count(b, b->last_move.coord) > 0) {
+			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
+			if (!is_pass(nakade))
+				return nakade;
+		}
+
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
 			struct move_queue q;  q.moves = 0;
@@ -538,6 +574,13 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
+		/* Nakade check */
+		if (immediate_liberty_count(b, b->last_move.coord) > 0) {
+			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
+			if (!is_pass(nakade))
+				mq_add(&q, nakade, 1<<MQ_NAKADE);
+		}
+
 		/* Local group in atari? */
 		local_atari_check(p, b, &b->last_move, &q);
 
@@ -833,6 +876,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->korate = atoi(optval);
 			} else if (!strcasecmp(optname, "josekirate") && optval) {
 				pp->josekirate = atoi(optval);
+			} else if (!strcasecmp(optname, "nakaderate") && optval) {
+				pp->nakaderate = atoi(optval);
 			} else if (!strcasecmp(optname, "alwaysccaprate") && optval) {
 				pp->alwaysccaprate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
@@ -876,6 +921,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
 	if (pp->korate == -1U) pp->korate = rate;
 	if (pp->josekirate == -1U) pp->josekirate = rate;
+	if (pp->nakaderate == -1U) pp->nakaderate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
