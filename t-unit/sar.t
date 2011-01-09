@@ -28,17 +28,61 @@ sar w b2 1
 sar b a2 0
 sar w a2 1
 
-% Nakade
+% Bulky-five / tetris-four nakade
 boardsize 3
 OOO
 ..X
 XXX
 sar b b2 0
 sar w b2 0
-sar b a2 0
-sar w a2 0
+sar b a2 1
+sar w a2 1
 
-% Real single-group nakade
+% Rabbity six nakade 1
+boardsize 4
+XXOO
+.X.O
+OXOO
+OOOO
+sar w a3 1
+sar b a3 0
+sar w c3 1
+sar b c3 1
+
+% Rabbity six nakade 2 - seki
+boardsize 4
+X.OO
+.XXO
+OXOO
+OOOO
+sar w a3 1
+sar b a3 1
+sar w b4 1
+sar b b4 1
+
+% Rabbity six nakade 3
+boardsize 4
+XXOO
+XX.O
+O.OO
+OOOO
+sar w b2 1
+sar b b2 0
+sar w c3 1
+sar b c3 0
+
+% Weird three nakade
+boardsize 4
+XXX.
+XOOO
+X.XX
+XXXX
+sar w b2 1
+sar b b2 1
+sar w d4 1
+sar b d4 1
+
+% Bulky five nakade
 boardsize 5
 XXXXX
 XOOXX
@@ -50,7 +94,7 @@ sar w c3 0
 sar b c2 1
 sar w c2 1
 
-% Real multi-w-group nakade
+% Bulky five multi-w-group nakade
 boardsize 5
 XXXXX
 XOOXX
@@ -58,7 +102,7 @@ XO..X
 XXOXX
 XXXXX
 sar b c3 0
-sar w c3 1 # 0: but we never actually examine the outside b group; KNOWN PROBLEM
+sar w c3 1 # technically, this is 0, but since black is in atari, we misevaluate (it is ok!)
 sar b d3 1
 sar w d3 0 # captures!
 
@@ -88,9 +132,9 @@ X.OXO.
 OXXXO.
 OOXXO.
 OOOOO.
-sar b b4 0 # 1: but we think we nakade w group; KNOWN PROBLEM
+sar b b4 1
 sar w b4 0
-sar b c5 0 # 1: but we think we nakade w group; KNOWN PROBLEM
+sar b c5 1
 sar w c5 0
 
 % Almost multi-b-group nakade
@@ -146,7 +190,7 @@ X.OXX
 XOOXX
 sar w b2 1
 sar b b2 1
-sar w b5 0 # We consider "splitting block-nakade" ok, since it should certainly destroy eyeshape anyway
+sar w b5 1
 sar b b5 0
 
 % Not-quite-snapback
@@ -189,4 +233,5 @@ XXOXXXXXO
 .XOXXX..X
 XXXO..XXX
 XO..O...O
-sar w j8 0 # 1: but we think we nakade b group, we don''t examine all w group neighbors; KNOWN PROBLEM
+sar w j8 1
+sar b j8 0

@@ -326,6 +326,7 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 		/* We would create more than 2-stone group; in that
 		 * case, the liberty of our result must be lib2,
 		 * indicating this really is a nakade. */
+		int stones = 0;
 		for (int j = 0; j < s->groupcts[color]; j++) {
 			group_t g2 = s->groupids[color][j];
 			assert(board_group_info(b, g2).libs <= 2);
@@ -336,9 +337,51 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 			} else {
 				assert(board_group_info(b, g2).lib[0] == to);
 			}
+			/* See below: */
+			stones += group_stone_count(b, g2, 6);
+			// fprintf(stderr, "%d (%d,%d) %d,%d\n", __LINE__, j, g2, stones);
+			if (stones > 5)
+				return true;
 		}
 
-		return false;
+		/* It also remains to be seen whether it is nakade
+		 * and not seki destruction. To do this properly, we
+		 * would have to look at the group shape. But we can
+		 * cheat too! Brett Combs helps to introduce a static
+		 * rule that should in fact cover *all* cases:
+		 * 1. Total number of pre-selfatari nakade stones must
+		 *    be 5 or smaller. (See above for that.)
+		 * 2. If the selfatari is 8-touching all nakade stones,
+		 *    it is proper nakade.
+		 * 3. Otherwise, there must be only a single nakade
+		 *    group, it must be at least 4-stone and its other
+		 *    liberty must be 8-touching the same number of
+		 *    stones as us. */
+		int touch8 = neighbor_count_at(b, to, color);
+		foreach_diag_neighbor(b, to) {
+			if (board_at(b, c) != color) continue;
+			/* Consider only internal stones. Otherwise, e.g.
+			 * X O . X
+			 * X . O X  can make trouble, bottom O is
+			 * O X X X  irrelevant. */
+			if (board_group_info(b, group_at(b, c)).lib[0] == to
+			    || board_group_info(b, group_at(b, c)).lib[1] == to)
+				touch8++;
+		} foreach_diag_neighbor_end;
+		if (touch8 == stones)
+			return false;
+
+		if (s->groupcts[color] > 1 || stones < 4)
+			return true;
+		int ltouch8 = neighbor_count_at(b, lib2, color);
+		foreach_diag_neighbor(b, lib2) {
+			if (board_at(b, c) != color) continue;
+			if (board_group_info(b, group_at(b, c)).lib[0] == to
+			    || board_group_info(b, group_at(b, c)).lib[1] == to)
+				ltouch8++;
+		} foreach_diag_neighbor_end;
+		return ltouch8 != touch8;
+
 next_group:	
 		/* Unless we are dealing with snapback setup, we don't need to look
 		 * further. */
