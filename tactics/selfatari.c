@@ -236,160 +236,165 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 
 	/* This branch also covers snapback, which is kind of special
 	 * nakade case. ;-) */
+
+	/* Look at the enemy groups and determine the other contended
+	 * liberty. We must make sure the liberty:
+	 * (i) is an internal liberty
+	 * (ii) filling it to capture our group will not gain safety */
+	coord_t lib2 = pass;
 	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
 		group_t g = s->groupids[stone_other(color)][i];
 		if (board_group_info(b, g).libs != 2)
-			goto next_group;
+			continue;
 
-		/* We must make sure the other liberty of that group:
-		 * (i) is an internal liberty
-		 * (ii) filling it to capture our group will not gain
-		 * safety */
-
-		/* Let's look at neighbors of the other liberty: */
-		int lib2 = board_group_other_lib(b, g, to);
-		foreach_neighbor(b, lib2, {
-			/* This neighbor of course does not contribute
-			 * anything to the enemy. */
-			if (board_at(b, c) == S_OFFBOARD)
-				continue;
-
-			/* If the other liberty has empty neighbor,
-			 * it must be the original liberty; otherwise,
-			 * since the whole group has only 2 liberties,
-			 * the other liberty may not be internal and
-			 * we are nakade'ing eyeless group from outside,
-			 * which is stupid. */
-			if (board_at(b, c) == S_NONE) {
-				if (c == to)
-					continue;
-				else
-					goto next_group;
-			}
-
-			int g2 = group_at(b, c);
-			/* If the neighbor is of our color, it must
-			 * be also a 2-lib group. If it is more,
-			 * we CERTAINLY want that liberty to be played
-			 * first, what if it is an alive group? If it
-			 * is in atari, we want to extend from it to
-			 * prevent eye-making capture. However, if it
-			 * is 2-lib, it is selfatari connecting two
-			 * nakade'ing groups! */
-			/* X X X X  We will not allow play on 'a',
-			 * X X a X  because 'b' would capture two
-			 * X O b X  different groups, forming two
-			 * X X X X  eyes. */
-			if (board_at(b, c) == color) {
-				if (board_group_info(b, group_at(b, c)).libs == 2)
-					continue;
-				goto next_group;
-			}
-
-			/* The neighbor is enemy color. It's ok if
-			 * it's still the same group or this is its
-			 * only liberty. */
-			if (g == g2 || board_group_info(b, g2).libs == 1)
-				continue;
-			/* Otherwise, it must have the exact same
-			 * liberties as the original enemy group. */
-			if (board_group_info(b, g2).libs == 2
-			    && (board_group_info(b, g2).lib[0] == to
-			        || board_group_info(b, g2).lib[1] == to))
-				continue;
-
-			goto next_group;
-		});
-
-		/* Now, we must distinguish between nakade and eye
-		 * falsification; we must not falsify an eye by more
-		 * than two stones. */
-		if (s->groupcts[color] < 1)
-			return false; // simple throw-in
-		if (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0])) {
-			/* More complex throw-in - we are in one of
-			 * three situations:
-			 * a O O O O X  b O O O X  c O O O X
-			 *   O . X . O    O X . .    O . X .
-			 *   # # # # #    # # # #    # # # #
-			 * b is desirable here (since maybe O has no
-			 * backup two eyes); a may be desirable, but
-			 * is tested next in check_throwin(). c is
-			 * never desirable. */
-			group_t g2 = s->groupids[color][0];
-			assert(board_group_info(b, g2).libs <= 2);
-			if (board_group_info(b, g2).libs == 1)
-				return false; // b
-			goto next_group; // a or c
-		}
-
-		/* We would create more than 2-stone group; in that
-		 * case, the liberty of our result must be lib2,
-		 * indicating this really is a nakade. */
-		int stones = 0;
-		for (int j = 0; j < s->groupcts[color]; j++) {
-			group_t g2 = s->groupids[color][j];
-			assert(board_group_info(b, g2).libs <= 2);
-			if (board_group_info(b, g2).libs == 2) {
-				if (board_group_info(b, g2).lib[0] != lib2
-				    && board_group_info(b, g2).lib[1] != lib2)
-					goto next_group;
-			} else {
-				assert(board_group_info(b, g2).lib[0] == to);
-			}
-			/* See below: */
-			stones += group_stone_count(b, g2, 6);
-			// fprintf(stderr, "%d (%d,%d) %d,%d\n", __LINE__, j, g2, stones);
-			if (stones > 5)
-				return true;
-		}
-
-		/* It also remains to be seen whether it is nakade
-		 * and not seki destruction. To do this properly, we
-		 * would have to look at the group shape. But we can
-		 * cheat too! Brett Combs helps to introduce a static
-		 * rule that should in fact cover *all* cases:
-		 * 1. Total number of pre-selfatari nakade stones must
-		 *    be 5 or smaller. (See above for that.)
-		 * 2. If the selfatari is 8-touching all nakade stones,
-		 *    it is proper nakade.
-		 * 3. Otherwise, there must be only a single nakade
-		 *    group, it must be at least 4-stone and its other
-		 *    liberty must be 8-touching the same number of
-		 *    stones as us. */
-		int touch8 = neighbor_count_at(b, to, color);
-		foreach_diag_neighbor(b, to) {
-			if (board_at(b, c) != color) continue;
-			/* Consider only internal stones. Otherwise, e.g.
-			 * X O . X
-			 * X . O X  can make trouble, bottom O is
-			 * O X X X  irrelevant. */
-			if (board_group_info(b, group_at(b, c)).lib[0] == to
-			    || board_group_info(b, group_at(b, c)).lib[1] == to)
-				touch8++;
-		} foreach_diag_neighbor_end;
-		if (touch8 == stones)
-			return false;
-
-		if (s->groupcts[color] > 1 || stones < 4)
-			return true;
-		int ltouch8 = neighbor_count_at(b, lib2, color);
-		foreach_diag_neighbor(b, lib2) {
-			if (board_at(b, c) != color) continue;
-			if (board_group_info(b, group_at(b, c)).lib[0] == to
-			    || board_group_info(b, group_at(b, c)).lib[1] == to)
-				ltouch8++;
-		} foreach_diag_neighbor_end;
-		return ltouch8 != touch8;
-
-next_group:	
-		/* Unless we are dealing with snapback setup, we don't need to look
-		 * further. */
-		if (s->groupcts[color])
+		coord_t this_lib2 = board_group_other_lib(b, g, to);
+		if (is_pass(lib2))
+			lib2 = this_lib2;
+		else if (this_lib2 != lib2) {
+			/* If we have two neighboring groups that do
+			 * not share the other liberty, this for sure
+			 * is not a good nakade. */
 			return -1;
+		}
+	}
+	if (is_pass(lib2)) {
+		/* Not putting any group in atari. Therefore, this
+		 * self-atari is not nakade or snapback. */
+		return -1;
 	}
 
-	return -1;
+	/* Let's look at neighbors of the other liberty: */
+	foreach_neighbor(b, lib2, {
+		/* This neighbor of course does not contribute
+		 * anything to the enemy. */
+		if (board_at(b, c) == S_OFFBOARD)
+			continue;
+
+		/* If the other liberty has empty neighbor,
+		 * it must be the original liberty; otherwise,
+		 * since the whole group has only 2 liberties,
+		 * the other liberty may not be internal and
+		 * we are nakade'ing eyeless group from outside,
+		 * which is stupid. */
+		if (board_at(b, c) == S_NONE) {
+			if (c == to)
+				continue;
+			else
+				return -1;
+		}
+
+		int g2 = group_at(b, c);
+		/* If the neighbor is of our color, it must
+		 * be also a 2-lib group. If it is more,
+		 * we CERTAINLY want that liberty to be played
+		 * first, what if it is an alive group? If it
+		 * is in atari, we want to extend from it to
+		 * prevent eye-making capture. However, if it
+		 * is 2-lib, it is selfatari connecting two
+		 * nakade'ing groups! */
+		/* X X X X  We will not allow play on 'a',
+		 * X X a X  because 'b' would capture two
+		 * X O b X  different groups, forming two
+		 * X X X X  eyes. */
+		if (board_at(b, c) == color) {
+			if (board_group_info(b, group_at(b, c)).libs == 2)
+				continue;
+			return -1;
+		}
+
+		/* The neighbor is enemy color. It's ok if this is its
+		 * only liberty or it's one of our neighbor groups. */
+		if (board_group_info(b, g2).libs == 1)
+			continue;
+		if (board_group_info(b, g2).libs == 2
+		    && (board_group_info(b, g2).lib[0] == to
+		        || board_group_info(b, g2).lib[1] == to))
+			continue;
+
+		/* Stronger enemy group. No nakade. */
+		return -1;
+	});
+
+	/* Now, we must distinguish between nakade and eye
+	 * falsification; we must not falsify an eye by more
+	 * than two stones. */
+	if (s->groupcts[color] < 1)
+		return false; // simple throw-in
+	if (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0])) {
+		/* More complex throw-in - we are in one of
+		 * three situations:
+		 * a O O O O X  b O O O X  c O O O X
+		 *   O . X . O    O X . .    O . X .
+		 *   # # # # #    # # # #    # # # #
+		 * b is desirable here (since maybe O has no
+		 * backup two eyes); a may be desirable, but
+		 * is tested next in check_throwin(). c is
+		 * never desirable. */
+		group_t g2 = s->groupids[color][0];
+		assert(board_group_info(b, g2).libs <= 2);
+		if (board_group_info(b, g2).libs == 1)
+			return false; // b
+		return -1; // a or c
+	}
+
+	/* We would create more than 2-stone group; in that
+	 * case, the liberty of our result must be lib2,
+	 * indicating this really is a nakade. */
+	int stones = 0;
+	for (int j = 0; j < s->groupcts[color]; j++) {
+		group_t g2 = s->groupids[color][j];
+		assert(board_group_info(b, g2).libs <= 2);
+		if (board_group_info(b, g2).libs == 2) {
+			if (board_group_info(b, g2).lib[0] != lib2
+			    && board_group_info(b, g2).lib[1] != lib2)
+				return -1;
+		} else {
+			assert(board_group_info(b, g2).lib[0] == to);
+		}
+		/* See below: */
+		stones += group_stone_count(b, g2, 6);
+		// fprintf(stderr, "%d (%d,%d) %d,%d\n", __LINE__, j, g2, stones);
+		if (stones > 5)
+			return true;
+	}
+
+	/* It also remains to be seen whether it is nakade
+	 * and not seki destruction. To do this properly, we
+	 * would have to look at the group shape. But we can
+	 * cheat too! Brett Combs helps to introduce a static
+	 * rule that should in fact cover *all* cases:
+	 * 1. Total number of pre-selfatari nakade stones must
+	 *    be 5 or smaller. (See above for that.)
+	 * 2. If the selfatari is 8-touching all nakade stones,
+	 *    it is proper nakade.
+	 * 3. Otherwise, there must be only a single nakade
+	 *    group, it must be at least 4-stone and its other
+	 *    liberty must be 8-touching the same number of
+	 *    stones as us. */
+	int touch8 = neighbor_count_at(b, to, color);
+	foreach_diag_neighbor(b, to) {
+		if (board_at(b, c) != color) continue;
+		/* Consider only internal stones. Otherwise, e.g.
+		 * X O . X
+		 * X . O X  can make trouble, bottom O is
+		 * O X X X  irrelevant. */
+		if (board_group_info(b, group_at(b, c)).lib[0] == to
+		    || board_group_info(b, group_at(b, c)).lib[1] == to)
+			touch8++;
+	} foreach_diag_neighbor_end;
+	if (touch8 == stones)
+		return false;
+
+	if (s->groupcts[color] > 1 || stones < 4)
+		return true;
+	int ltouch8 = neighbor_count_at(b, lib2, color);
+	foreach_diag_neighbor(b, lib2) {
+		if (board_at(b, c) != color) continue;
+		if (board_group_info(b, group_at(b, c)).lib[0] == to
+		    || board_group_info(b, group_at(b, c)).lib[1] == to)
+			ltouch8++;
+	} foreach_diag_neighbor_end;
+	return ltouch8 != touch8;
 }
 
 static int
