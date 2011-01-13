@@ -127,7 +127,9 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		 * #######
 		 * ..O.X.X <- always play the left one!
 		 * OXXXXXX */
-		if (neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
+		/* XXX: Isn't this superseded by the 3-liberty group
+		 * selfatari check now? */
+		if (neighbor_count_at(b, lib, owner) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
 			preference[i] = false;
 
 		if (DEBUGL(6))
@@ -185,7 +187,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 			}
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			can_atari_group(b, g2, color, to_play, q, tag, use_def_no_hopeless);
+			can_atari_group(b, g2, stone_other(color), to_play, q, tag, use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }
