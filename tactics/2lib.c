@@ -61,11 +61,19 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 		  enum stone to_play, struct move_queue *q,
 		  int tag, bool use_def_no_hopeless)
 {
+	bool have[2] = { false, false };
+	bool preference[2] = { true, true };
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, group).lib[i];
 		assert(board_at(b, lib) == S_NONE);
 		if (!board_is_valid_play(b, to_play, lib))
 			continue;
+
+		if (DEBUGL(6))
+			fprintf(stderr, "checking liberty %s of %s %s, filled by %s\n",
+				coord2sstr(lib, b),
+				stone2str(owner), coord2sstr(group, b),
+				stone2str(to_play));
 
 		/* Don't play at the spot if it is extremely short
 		 * of liberties... */
@@ -79,14 +87,6 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 		if (neighbor_count_at(b, lib, stone_other(owner)) + immediate_liberty_count(b, lib) < 2)
 			continue;
 #endif
-
-		/* If the move is too "lumpy", do not play it:
-		 *
-		 * #######
-		 * ..O.X.X <- always play the left one!
-		 * OXXXXXX */
-		if (neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
-			continue;
 
 		/* If we are the defender not connecting out, do not
 		 * escape with moves that do not gain liberties anyway
@@ -117,6 +117,35 @@ check_group_atari(struct board *b, group_t group, enum stone owner,
 #endif
 		    is_bad_selfatari(b, to_play, lib))
 			continue;
+
+		/* By now, we must be decided we add the move to the
+		 * queue! */
+		have[i] = true;
+
+		/* If the move is too "lumpy", prefer the alternative:
+		 *
+		 * #######
+		 * ..O.X.X <- always play the left one!
+		 * OXXXXXX */
+		if (neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
+			preference[i] = false;
+
+		if (DEBUGL(6))
+			fprintf(stderr, "liberty %s ready with preference %d\n", coord2sstr(lib, b), preference[i]);
+
+		/* If we prefer only one of the moves, pick that one. */
+		if (i == 1 && have[0] && preference[0] != preference[1]) {
+			if (!preference[0]) {
+				if (q->move[q->moves - 1] == board_group_info(b, group).lib[0])
+					q->moves--;
+				/* ...else{ may happen, since we call
+				 * mq_nodup() and the move might have
+				 * been there earlier. */
+			} else {
+				assert(!preference[1]);
+				continue;
+			}
+		}
 
 		/* Tasty! Crispy! Good! */
 		mq_add(q, lib, tag);
