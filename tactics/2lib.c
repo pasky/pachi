@@ -115,11 +115,22 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 #ifdef NO_DOOMED_GROUPS
 		    to_play != owner &&
 #endif
-		    is_bad_selfatari(b, to_play, lib))
-			continue;
+		    is_bad_selfatari(b, to_play, lib)) {
+			/* Okay! But maybe we just need to connect a false
+			 * eye before atari - this is very common in the
+			 * corner. */
+			coord_t coord = selfatari_cousin(b, to_play, lib);
+			if (is_pass(coord))
+				continue;
+			/* Ok, connect, but prefer not to. */
+			lib = coord;
+			preference[i] = false;
 
 		/* By now, we must be decided we add the move to the
-		 * queue! */
+		 * queue!  [comment intentionally misindented] */
+
+		}
+
 		have[i] = true;
 
 		/* If the move is too "lumpy", prefer the alternative:
