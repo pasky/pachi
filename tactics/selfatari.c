@@ -25,6 +25,91 @@ struct selfatari_state {
 	coord_t needs_more_lib_except;
 };
 
+static bool
+three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, struct selfatari_state *s)
+{
+	/* If a group has three liberties, by playing on one of
+	 * them it is possible to kill the group clumsily. Check
+	 * against that condition: "After our move, the opponent
+	 * can unconditionally capture the group."
+	 *
+	 * Examples:
+	 *
+	 * O O O O O O O   X X O O O O O O     v-v- ladder
+	 * O X X X X X O   . O X X X X X O   . . . O O
+	 * O X ! . ! X O   . O X ! . ! O .   O X X . O
+	 * O X X X X X O   # # # # # # # #   O O O O O */
+
+	/* Extract the other two liberties. */
+	coord_t other_libs[2];
+	bool other_libs_adj[2];
+	for (int i = 0, j = 0; i < 3; i++) {
+		coord_t lib = board_group_info(b, g).lib[i];
+		if (lib != to) {
+			other_libs_adj[j] = coord_is_adjecent(lib, to, b);
+			other_libs[j++] = lib;
+		}
+	}
+
+	/* Make sure this move is not useful by gaining liberties,
+	 * splitting the other two liberties (quite possibly splitting
+	 * 3-eyespace!) or connecting to a different group. */
+	if (immediate_liberty_count(b, to) - (other_libs_adj[0] || other_libs_adj[1]) > 0)
+		return false;
+	assert(!(other_libs_adj[0] && other_libs_adj[1]));
+	if (s->groupcts[color] > 1)
+		return false;
+
+	/* Playing on the third liberty might be useful if it enables
+	 * capturing some group. */
+	for (int i = 0; i < s->groupcts[stone_other(color)]; i++)
+		if (board_group_info(b, s->groupids[stone_other(color)][i]).libs <= 2)
+			return false;
+
+
+	/* Okay. This looks like a pretty dangerous situation. The
+	 * move looks useless, it definitely converts us to a 2-lib
+	 * group. But we still want to play it e.g. if it takes off
+	 * liberties of some unconspicous enemy group, and of course
+	 * also at the game end to leave just single-point eyes. */
+
+	if (DEBUGL(6))
+		fprintf(stderr, "3-lib danger\n");
+
+	/* Therefore, the final suicidal test is: (After filling this
+	 * liberty,) when opponent fills liberty [0], playing liberty
+	 * [1] will not help the group, or vice versa. */
+	bool other_libs_neighbors = coord_is_adjecent(other_libs[0], other_libs[1], b);
+	for (int i = 0; i < 2; i++) {
+		int null_libs = other_libs_neighbors + other_libs_adj[i];
+		if (immediate_liberty_count(b, other_libs[i]) - null_libs > 1) {
+			/* Gains liberties. */
+			/* TODO: Check for ladder! */
+next_lib:
+			continue;
+		}
+		foreach_neighbor(b, other_libs[i], {
+			if (board_at(b, c) == color
+			    && group_at(b, c) != g
+			    && board_group_info(b, group_at(b, c)).libs > 1) {
+				/* Can connect to a friend. */
+				/* TODO: > 2? But maybe the group can capture
+				 * a neighbor! But then better let it do that
+				 * first? */
+				goto next_lib;
+			}
+		});
+		/* If we can capture a neighbor, better do it now
+		 * before wasting a liberty. So no need to check. */
+		/* Ok, the last liberty has no way to get out. */
+		if (DEBUGL(6))
+			fprintf(stderr, "3-lib dangerous: %s\n", coord2sstr(other_libs[i], b));
+		return true;
+	}
+
+	return false;
+}
+
 static int
 examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
 {
@@ -41,8 +126,12 @@ examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct se
 		}
 
 		/* Could we self-atari the group here? */
-		if (board_group_info(b, g).libs > 2)
+		if (board_group_info(b, g).libs > 2) {
+			if (board_group_info(b, g).libs == 3
+			    && three_liberty_suicide(b, g, color, to, s))
+				return true;
 			return false;
+		}
 
 		/* We need to have another liberty, and
 		 * it must not be the other liberty of
