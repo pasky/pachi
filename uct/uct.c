@@ -544,7 +544,7 @@ uct_state_init(char *arg, struct board *b)
 	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
 	// TODO: Further tuning and experiments with better time allocation schemes.
 	u->best2_ratio = 2.5;
-	u->max_maintime_ratio = 3.0;
+	u->max_maintime_ratio = 8.0;
 
 	u->val_scale = 0.04; u->val_points = 40;
 	u->dynkomi_interval = 1000;
