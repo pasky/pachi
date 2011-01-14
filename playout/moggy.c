@@ -291,10 +291,11 @@ static void
 local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
+	group_t group = group_at(b, m->coord), group2 = 0;
 
 	/* Does the opponent have just two liberties? */
-	if (board_group_info(b, group_at(b, m->coord)).libs == 2) {
-		group_2lib_check(b, group_at(b, m->coord), stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+	if (board_group_info(b, group).libs == 2) {
+		group_2lib_check(b, group, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
@@ -308,9 +309,10 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 	/* Then he took a third liberty from neighboring chain? */
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
-		if (!g || board_group_info(b, g).libs != 2)
+		if (!g || g == group || g == group2 || board_group_info(b, g).libs != 2)
 			continue;
 		group_2lib_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+		group2 = g; // prevent trivial repeated checks
 	});
 
 	if (PLDEBUGL(5))
