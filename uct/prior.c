@@ -172,7 +172,7 @@ uct_prior_init(char *arg, struct board *b)
 	p->cfgdn = -1;
 
 	/* Even number! */
-	p->eqex = board_size(b)-2 >= 19 ? 20 : 14;
+	p->eqex = board_large(b) ? 20 : 14;
 
 	if (arg) {
 		char *optspec, *next = arg;

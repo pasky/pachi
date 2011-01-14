@@ -240,6 +240,14 @@ struct board {
 #define board_size2(b_) ((b_)->size2)
 #endif
 
+/* This is a shortcut for taking different action on smaller
+ * and large boards (e.g. picking different variable defaults).
+ * This is of course less optimal than fine-tuning dependency
+ * function of values on board size, but that is difficult and
+ * possibly not very rewarding if you are interested just in
+ * 9x9 and 19x19. */
+#define board_large(b_) (board_size(b_)-2 >= 15)
+
 #if BOARD_SIZE == 19
 #  define board_bits2(b_) 9
 #elif BOARD_SIZE == 13
