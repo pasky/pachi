@@ -838,6 +838,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	/* C is stupid. */
 	double mq_prob_default[MQ_MAX] = {
 		[MQ_KO] = 6.0,
+		[MQ_NAKADE] = 5.5,
 		[MQ_LATARI] = 5.0,
 		[MQ_L2LIB] = 4.0,
 		[MQ_LNLIB] = 3.5,
@@ -901,7 +902,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			} else if (!strcasecmp(optname, "fullchoose")) {
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
-				/* KO%LATARI%L2LIB%LNLIB%PAT3%GATARI%JOSEKI */
+				/* KO%LATARI%L2LIB%LNLIB%PAT3%GATARI%JOSEKI%NAKADE */
 				for (int i = 0; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
 					optval++;
 					pp->mq_prob[i] = atof(optval);
