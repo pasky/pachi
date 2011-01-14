@@ -693,10 +693,17 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 
 	pp->jdict = jdict;
 
-	int rate = 90;
+	/* These settings are tuned for 19x19 play with several threads
+	 * on reasonable time limits (i.e., rather large number of playouts).
+	 * XXX: no 9x9 tuning has been done recently. */
+	int rate = board_large(b) ? 80 : 90;
 
 	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate
 			= pp->selfatarirate = pp->josekirate = -1U;
+	if (board_large(b)) {
+		pp->capturerate = 0;
+		pp->lcapturerate = pp->patternrate = 100;
+	}
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
