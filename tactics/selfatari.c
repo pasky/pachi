@@ -82,6 +82,13 @@ three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, 
 	bool other_libs_neighbors = coord_is_adjecent(other_libs[0], other_libs[1], b);
 	for (int i = 0; i < 2; i++) {
 		int null_libs = other_libs_neighbors + other_libs_adj[i];
+		if (board_is_one_point_eye(b, other_libs[1 - i], color)) {
+			/* The other liberty is an eye, happily go ahead.
+			 * There are of course situations where this will
+			 * take off semeai liberties, but without this check,
+			 * many terminal endgame plays will be messed up. */
+			return false;
+		}
 		if (immediate_liberty_count(b, other_libs[i]) - null_libs > 1) {
 			/* Gains liberties. */
 			/* TODO: Check for ladder! */
