@@ -201,46 +201,6 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 
 
 static void
-ko_check(struct playout_policy *p, struct board *b, struct move *m, enum stone to_play, struct move_queue *q)
-{
-	if (!board_is_valid_play(b, to_play, m->coord)) {
-		/* The opponent has closed the ko. */
-		return;
-	}
-
-	if (!is_bad_selfatari(b, to_play, m->coord))
-		mq_add(q, m->coord, 1<<MQ_KO);
-
-	/* If we are not re-taking the ko, aside of connecting it,
-	 * it may be also good idea to close it by capturing something
-	 * else. Look for our stones that play the ko. */
-	coord_t ko[4]; int ko_n = 0;
-	foreach_neighbor(b, m->coord, {
-		group_t g = group_at(b, c);
-		if (board_at(b, c) != to_play || board_group_info(b, g).libs != 1)
-			continue;
-		ko[ko_n++] = c;
-	});
-
-	/* Try to counter-capture a neighbor of our ko stone. */
-	for (int i = 0; i < ko_n; i++) {
-		foreach_neighbor(b, ko[i], {
-			group_t g = group_at(b, c);
-			if (board_at(b, c) != stone_other(to_play) || board_group_info(b, g).libs != 1)
-				continue;
-			coord_t lib = board_group_info(b, g).lib[0];
-			if (!is_bad_selfatari(b, to_play, lib)) {
-				mq_add(q, lib, 1<<MQ_KO);
-				mq_nodup(q);
-			}
-		});
-	}
-
-	if (PLDEBUGL(5))
-		mq_print(q, b, "Ko");
-}
-
-static void
 joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
@@ -385,10 +345,9 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
 	    && b->moves - b->last_ko_age < pp->koage
 	    && pp->korate > fast_random(100)) {
-		struct move_queue q;  q.moves = 0;
-		ko_check(p, b, &b->last_ko, to_play, &q);
-		if (q.moves > 0)
-			return mq_pick(&q);
+		if (board_is_valid_play(b, to_play, b->last_ko.coord)
+		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
+			return b->last_ko.coord;
 	}
 
 	/* Local checks */
@@ -511,7 +470,9 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 	/* Ko fight check */
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
 	    && b->moves - b->last_ko_age < pp->koage) {
-		ko_check(p, b, &b->last_ko, to_play, &q);
+		if (board_is_valid_play(b, to_play, b->last_ko.coord)
+		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
+			mq_add(&q, b->last_ko.coord, 1<<MQ_KO);
 	}
 
 	/* Local checks */
