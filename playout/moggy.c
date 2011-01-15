@@ -350,7 +350,7 @@ local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 	 * or wasted moves around alive groups. */
 
 	group_t group2 = 0;
-	foreach_neighbor(b, m->coord, {
+	foreach_8neighbor(b, m->coord) {
 		group_t g = group_at(b, c);
 		if (!g || group2 == g || board_at(b, c) != color)
 			continue;
@@ -358,7 +358,7 @@ local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 			continue;
 		group_nlib_defense_check(b, g, color, q, 1<<MQ_LNLIB);
 		group2 = g; // prevent trivial repeated checks
-	});
+	} foreach_8neighbor_end;
 
 	if (PLDEBUGL(5))
 		mq_print(q, b, "Local nlib");
