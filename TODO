@@ -24,9 +24,6 @@ Playouts:
 * [Mogo] Middle-of-three nakade modification
 * [Mogo] Connect-if-selfatari approach moves modification
 
-UCT:
-* Support for different float types when running with huge playout counts
-
 UCB1AMAF:
 * Fix RAVE for good (still noticeably weaker than fuego?)
 * Separate constants for prior and amaf elements?
