@@ -241,7 +241,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->fpu = INFINITY;
 	b->check_nakade = true;
 	b->sylvain_rave = true;
-	b->ltree_rave = 1.0f;
+	b->ltree_rave = 0.75f;
 
 	if (arg) {
 		char *optspec, *next = arg;

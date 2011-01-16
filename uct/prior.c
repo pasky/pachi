@@ -172,7 +172,7 @@ uct_prior_init(char *arg, struct board *b)
 	p->cfgdn = -1;
 
 	/* Even number! */
-	p->eqex = board_size(b)-2 >= 19 ? 20 : 14;
+	p->eqex = board_large(b) ? 20 : 14;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -241,7 +241,9 @@ uct_prior_init(char *arg, struct board *b)
 	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex * -p->plugin_eqex / 100;
 
 	if (p->cfgdn < 0) {
-		int bonuses[] = { 0, 2*p->eqex, p->eqex, p->eqex };
+		const int near = p->eqex*2;
+		const int far = board_large(b) ? p->eqex*3/4 : p->eqex;
+		int bonuses[] = { 0, near, far, far };
 		p->cfgdn = 3;
 		p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
 		memcpy(p->cfgd_eqex, bonuses, sizeof(bonuses));

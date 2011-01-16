@@ -12,7 +12,6 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
-#include "playout/elo.h"
 #include "probdist.h"
 #include "random.h"
 #include "uct/dynkomi.h"
@@ -21,6 +20,8 @@
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
+
+#define DESCENT_DLEN 512
 
 void
 uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
@@ -93,14 +94,6 @@ record_amaf_move(struct playout_amafmap *amaf, coord_t coord, enum stone color)
 	assert(amaf->gamelen < sizeof(amaf->game) / sizeof(amaf->game[0]));
 }
 
-static double
-ltree_node_gamma(struct tree_node *li, enum stone color)
-{
-	/* TODO: How to do this? */
-	#define li_value(color, li) (li->u.playouts * (color == S_BLACK ? li->u.value : (1 - li->u.value)))
-	return 0.5 + li_value(color, li);
-}
-
 
 struct uct_playout_callback {
 	struct uct *uct;
@@ -110,68 +103,6 @@ struct uct_playout_callback {
 	coord_t *treepool[2];
 	int treepool_n[2];
 };
-
-static void
-uct_playout_probdist(void *data, struct board *b, enum stone to_play, struct probdist *pd)
-{
-	/* Create probability distribution according to found local tree
-	 * sequence. */
-	struct uct_playout_callback *upc = data;
-	assert(upc && upc->tree && pd && b);
-	coord_t c = b->last_move.coord;
-	enum stone color = b->last_move.color;
-
-	if (is_pass(c)) {
-		/* Break local sequence. */
-		upc->lnode = NULL;
-	} else if (upc->lnode) {
-		/* Try to follow local sequence. */
-		upc->lnode = tree_get_node(upc->tree, upc->lnode, c, false);
-	}
-
-	if (!upc->lnode || !upc->lnode->children) {
-		/* There's no local sequence, start new one! */
-		upc->lnode = color == S_BLACK ? upc->tree->ltree_black : upc->tree->ltree_white;
-		upc->lnode = tree_get_node(upc->tree, upc->lnode, c, false);
-	}
-
-	if (!upc->lnode || !upc->lnode->children) {
-		/* We have no local sequence and we cannot find any starting
-		 * by node corresponding to last move. */
-		if (!upc->uct->local_tree_pseqroot) {
-			/* Give up then, we have nothing to contribute. */
-			return;
-		}
-		/* Construct probability distribution from possible first
-		 * sequence move. Remember that @color is color of the
-		 * *last* move. */
-		upc->lnode = color == S_BLACK ? upc->tree->ltree_white : upc->tree->ltree_black;
-		if (!upc->lnode->children) {
-			/* We don't even have anything in our tree yet. */
-			return;
-		}
-	}
-
-	/* The probdist has the right structure only if BOARD_GAMMA is defined. */
-#ifndef BOARD_GAMMA
-	assert(0);
-#endif
-
-	/* Construct probability distribution from lnode children. */
-	struct tree_node *li = upc->lnode->children;
-	assert(li);
-	if (is_pass(li->coord)) {
-		/* Tenuki. */
-		/* TODO: Spread tenuki gamma over all moves we don't touch. */
-		li = li->sibling;
-	}
-	for (; li; li = li->sibling) {
-		if (board_at(b, li->coord) != S_NONE)
-			continue;
-		double gamma = fixp_to_double(pd->items[li->coord]) * ltree_node_gamma(li, to_play);
-		probdist_set(pd, li->coord, double_to_fixp(gamma));
-	}
-}
 
 
 static coord_t
@@ -291,7 +222,8 @@ treepool_setup(struct uct_playout_callback *upc, struct board *b, struct tree_no
 
 static int
 uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
-              struct playout_amafmap *amaf, struct uct_descent *descent,
+              struct playout_amafmap *amaf,
+	      struct uct_descent *descent, int *dlen,
 	      struct tree_node *significant[2],
               struct tree *t, struct tree_node *n, enum stone node_color,
 	      char *spaces)
@@ -322,11 +254,6 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 		 * entering playout. */
 		.lnode = NULL,
 	};
-
-	if (u->local_tree_playout) {
-		/* N.B.: We know this is ELO playout. */
-		playout_elo_callback(u->playout, uct_playout_probdist, &upc);
-	}
 
 	coord_t pool[2][u->treepool_size];
 	if (u->treepool_chance[0] + u->treepool_chance[1] > 0) {
@@ -400,6 +327,13 @@ record_local_sequence(struct uct *u, struct tree *t,
 	if (is_pass(descent[di].node->coord))
 		return;
 
+	/* Transform the rval appropriately, based on the expected
+	 * result at the root of the sequence. */
+	if (u->local_tree_rootseqval) {
+		float expval = descent[di - 1].value.value;
+		rval = stats_temper_value(rval, expval, u->local_tree);
+	}
+
 #define LTREE_DEBUG if (UDEBUGL(6))
 	LTREE_DEBUG fprintf(stderr, "recording result %f in local %s sequence: ",
 		rval, stone2str(seq_color));
@@ -453,8 +387,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* Tree descent history. */
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
-	#define DLEN 512
-	struct uct_descent descent[DLEN];
+	struct uct_descent descent[DESCENT_DLEN];
 	descent[0].node = n; descent[0].lnode = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
@@ -488,7 +421,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
 
-		assert(dlen < DLEN);
+		assert(dlen < DESCENT_DLEN);
 		descent[dlen] = descent[dlen - 1];
 		if (u->local_tree && (!descent[dlen].lnode || descent[dlen].node->d >= u->tenuki_d)) {
 			/* Start new local sequence. */
@@ -580,7 +513,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	} else { // assert(tree_leaf_node(n));
 		/* In case of parallel tree search, the assertion might
 		 * not hold if two threads chew on the same node. */
-		result = uct_leaf_node(u, &b2, player_color, amaf, &descent[dlen - 1], significant, t, n, node_color, spaces);
+		result = uct_leaf_node(u, &b2, player_color, amaf, descent, &dlen, significant, t, n, node_color, spaces);
 	}
 
 	if (amaf && u->playout_amaf_cutoff) {
@@ -616,8 +549,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
 			/* Possibly transform the rval appropriately. */
-			floating_t expval = seq_value.value / seq_value.playouts;
-			rval = stats_temper_value(rval, expval, u->local_tree);
+			if (!u->local_tree_rootseqval) {
+				floating_t expval = seq_value.value / seq_value.playouts;
+				rval = stats_temper_value(rval, expval, u->local_tree);
+			}
 
 			/* Get the local sequences and record them in ltree. */
 			/* We will look for sequence starts in our descent

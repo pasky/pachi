@@ -7,7 +7,6 @@
 #include "joseki/base.h"
 #include "move.h"
 #include "playout.h"
-#include "playout/elo.h"
 #include "playout/light.h"
 #include "playout/moggy.h"
 #include "replay/replay.h"
@@ -86,8 +85,6 @@ replay_state_init(char *arg, struct board *b)
 					r->playout = playout_moggy_init(playoutarg, b, joseki_load(b->size));
 				} else if (!strcasecmp(optval, "light")) {
 					r->playout = playout_light_init(playoutarg, b);
-				} else if (!strcasecmp(optval, "elo")) {
-					r->playout = playout_elo_init(playoutarg, b);
 				} else {
 					fprintf(stderr, "Replay: Invalid playout policy %s\n", optval);
 				}

@@ -90,7 +90,7 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	struct dynkomi_linear *l = calloc2(1, sizeof(*l));
 	d->data = l;
 
-	if (board_size(b) - 2 >= 19)
+	if (board_large(b))
 		l->moves = 200;
 	l->handicap_value = 7;
 
@@ -396,10 +396,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	struct dynkomi_adaptive *a = calloc2(1, sizeof(*a));
 	d->data = a;
 
-	if (board_size(b) - 2 >= 19)
-		a->lead_moves = 20;
-	else
-		a->lead_moves = 4; // XXX
+	a->lead_moves = board_large(b) ? 20 : 4; // XXX
 	a->max_losing_komi = 30;
 	a->losing_komi_stop = 1.0f;
 	a->indicator = komi_by_value;

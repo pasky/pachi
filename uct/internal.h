@@ -87,8 +87,8 @@ struct uct {
 	floating_t local_tree_depth_decay;
 	bool local_tree_allseq;
 	/* Playout-localtree integration. */
-	bool local_tree_playout; // can be true only if ELO playout
 	bool local_tree_pseqroot;
+	bool local_tree_rootseqval;
 
 	char *banner;
 

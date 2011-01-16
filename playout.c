@@ -21,6 +21,52 @@
 #define PLDEBUGL(n) DEBUGL_(policy->debug_level, n)
 
 
+coord_t
+play_random_move(struct playout_setup *setup,
+		 struct board *b, enum stone color,
+		 struct playout_policy *policy)
+{
+	coord_t coord = pass;
+
+	if (setup->prepolicy_hook) {
+		coord = setup->prepolicy_hook(policy, setup, b, color);
+		// fprintf(stderr, "prehook: %s\n", coord2sstr(coord, b));
+	}
+
+	if (is_pass(coord)) {
+		coord = policy->choose(policy, setup, b, color);
+		// fprintf(stderr, "policy: %s\n", coord2sstr(coord, b));
+	}
+
+	if (is_pass(coord) && setup->postpolicy_hook) {
+		coord = setup->postpolicy_hook(policy, setup, b, color);
+		// fprintf(stderr, "posthook: %s\n", coord2sstr(coord, b));
+	}
+
+	if (is_pass(coord)) {
+play_random:
+		/* Defer to uniformly random move choice. */
+		/* This must never happen if the policy is tracking
+		 * internal board state, obviously. */
+		assert(!policy->setboard);
+		board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
+
+	} else {
+		struct move m;
+		m.coord = coord; m.color = color;
+		if (board_play(b, &m) < 0) {
+			if (PLDEBUGL(4)) {
+				fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n",
+					coord_x(coord, b), coord_y(coord, b));
+				board_print(b, stderr);
+			}
+			goto play_random;
+		}
+	}
+
+	return coord;
+}
+
 int
 play_random_game(struct playout_setup *setup,
                  struct board *b, enum stone starting_color,
@@ -46,43 +92,7 @@ play_random_game(struct playout_setup *setup,
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	while (gamelen-- && passes < 2) {
-		coord_t coord = pass;
-
-		if (setup->prepolicy_hook) {
-			coord = setup->prepolicy_hook(policy, setup, b, color);
-			// fprintf(stderr, "prehook: %s\n", coord2sstr(coord, b));
-		}
-
-		if (is_pass(coord)) {
-			coord = policy->choose(policy, setup, b, color);
-			// fprintf(stderr, "policy: %s\n", coord2sstr(coord, b));
-		}
-
-		if (is_pass(coord) && setup->postpolicy_hook) {
-			coord = setup->postpolicy_hook(policy, setup, b, color);
-			// fprintf(stderr, "posthook: %s\n", coord2sstr(coord, b));
-		}
-
-		if (is_pass(coord)) {
-play_random:
-			/* Defer to uniformly random move choice. */
-			/* This must never happen if the policy is tracking
-			 * internal board state, obviously. */
-			assert(!policy->setboard);
-			board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
-
-		} else {
-			struct move m;
-			m.coord = coord; m.color = color;
-			if (board_play(b, &m) < 0) {
-				if (PLDEBUGL(4)) {
-					fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n",
-						coord_x(coord, b), coord_y(coord, b));
-					board_print(b, stderr);
-				}
-				goto play_random;
-			}
-		}
+		coord_t coord = play_random_move(setup, b, color, policy);
 
 #if 0
 		/* For UCT, superko test here is downright harmful since

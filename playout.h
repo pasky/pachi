@@ -123,4 +123,8 @@ int play_random_game(struct playout_setup *setup,
 		     struct board_ownermap *ownermap,
 		     struct playout_policy *policy);
 
+coord_t play_random_move(struct playout_setup *setup,
+		         struct board *b, enum stone color,
+		         struct playout_policy *policy);
+
 #endif

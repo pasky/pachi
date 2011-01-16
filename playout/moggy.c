@@ -61,6 +61,9 @@ struct moggy_policy {
 	/* Whether to always pick from moves capturing all groups in
 	 * global_atari_check(). */
 	bool capcheckall;
+	/* 2lib settings: */
+	bool atari_def_no_hopeless;
+	bool atari_miaisafe;
 
 	struct joseki_dict *jdict;
 	struct pattern3s patterns;
@@ -134,6 +137,16 @@ static char moggy_patterns_src[][11] = {
 	"?OY"
 	"Y.O"
 	"###" /* Mogo has "X" */,
+	/* side pattern - eye piercing:
+	 * # O O O .
+	 * # O . O .
+	 * # . . . .
+	 * # # # # # */
+#if 0
+	"Oxx"
+	"..."
+	"###",
+#endif
 };
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
@@ -186,6 +199,46 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 		mq_print(q, b, "Pattern");
 }
 
+
+static void
+ko_check(struct playout_policy *p, struct board *b, struct move *m, enum stone to_play, struct move_queue *q)
+{
+	if (!board_is_valid_play(b, to_play, m->coord)) {
+		/* The opponent has closed the ko. */
+		return;
+	}
+
+	if (!is_bad_selfatari(b, to_play, m->coord))
+		mq_add(q, m->coord, 1<<MQ_KO);
+
+	/* If we are not re-taking the ko, aside of connecting it,
+	 * it may be also good idea to close it by capturing something
+	 * else. Look for our stones that play the ko. */
+	coord_t ko[4]; int ko_n = 0;
+	foreach_neighbor(b, m->coord, {
+		group_t g = group_at(b, c);
+		if (board_at(b, c) != to_play || board_group_info(b, g).libs != 1)
+			continue;
+		ko[ko_n++] = c;
+	});
+
+	/* Try to counter-capture a neighbor of our ko stone. */
+	for (int i = 0; i < ko_n; i++) {
+		foreach_neighbor(b, ko[i], {
+			group_t g = group_at(b, c);
+			if (board_at(b, c) != stone_other(to_play) || board_group_info(b, g).libs != 1)
+				continue;
+			coord_t lib = board_group_info(b, g).lib[0];
+			if (!is_bad_selfatari(b, to_play, lib)) {
+				mq_add(q, lib, 1<<MQ_KO);
+				mq_nodup(q);
+			}
+		});
+	}
+
+	if (PLDEBUGL(5))
+		mq_print(q, b, "Ko");
+}
 
 static void
 joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
@@ -271,9 +324,11 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 static void
 local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
 {
+	struct moggy_policy *pp = p->data;
+
 	/* Does the opponent have just two liberties? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 2) {
-		group_2lib_check(b, group_at(b, m->coord), stone_other(m->color), q, 1<<MQ_L2LIB);
+		group_2lib_check(b, group_at(b, m->coord), stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 #if 0
 		/* We always prefer to take off an enemy chain liberty
 		 * before pulling out ourselves. */
@@ -289,7 +344,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 2)
 			continue;
-		group_2lib_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB);
+		group_2lib_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 	});
 
 	if (PLDEBUGL(5))
@@ -330,9 +385,10 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
 	    && b->moves - b->last_ko_age < pp->koage
 	    && pp->korate > fast_random(100)) {
-		if (board_is_valid_play(b, to_play, b->last_ko.coord)
-		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
-			return b->last_ko.coord;
+		struct move_queue q;  q.moves = 0;
+		ko_check(p, b, &b->last_ko, to_play, &q);
+		if (q.moves > 0)
+			return mq_pick(&q);
 	}
 
 	/* Local checks */
@@ -455,9 +511,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 	/* Ko fight check */
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
 	    && b->moves - b->last_ko_age < pp->koage) {
-		if (board_is_valid_play(b, to_play, b->last_ko.coord)
-		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
-			mq_add(&q, b->last_ko.coord, 1<<MQ_KO);
+		ko_check(p, b, &b->last_ko, to_play, &q);
 	}
 
 	/* Local checks */
@@ -522,7 +576,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	if (board_group_info(b, g).libs == 2) {
 		if (!pp->atarirate)
 			return;
-		group_2lib_check(b, g, map->to_play, &q, 0);
+		group_2lib_check(b, g, map->to_play, &q, 0, pp->atari_miaisafe, pp->atari_def_no_hopeless);
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
@@ -678,13 +732,22 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 
 	pp->jdict = jdict;
 
-	int rate = 90;
+	/* These settings are tuned for 19x19 play with several threads
+	 * on reasonable time limits (i.e., rather large number of playouts).
+	 * XXX: no 9x9 tuning has been done recently. */
+	int rate = board_large(b) ? 80 : 90;
 
-	pp->lcapturerate = pp->atarirate = pp->capturerate = pp->patternrate
+	pp->lcapturerate = pp->atarirate = pp->patternrate
 			= pp->selfatarirate = pp->josekirate = -1U;
+	if (board_large(b)) {
+		pp->lcapturerate = pp->patternrate = 100;
+		pp->pattern2 = true;
+	}
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
+	pp->atari_def_no_hopeless = true;
+	pp->atari_miaisafe = true;
 
 	/* C is stupid. */
 	double mq_prob_default[MQ_MAX] = {
@@ -738,6 +801,10 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "capcheckall")) {
 				pp->capcheckall = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "atari_miaisafe")) {
+				pp->atari_miaisafe = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "atari_def_no_hopeless")) {
+				pp->atari_def_no_hopeless = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {

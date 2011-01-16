@@ -14,7 +14,6 @@
 #include "mq.h"
 #include "joseki/base.h"
 #include "playout.h"
-#include "playout/elo.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "tactics/util.h"
@@ -520,7 +519,6 @@ struct uct *
 uct_state_init(char *arg, struct board *b)
 {
 	struct uct *u = calloc2(1, sizeof(struct uct));
-	bool using_elo = false;
 
 	u->debug_level = debug_level;
 	u->gamelen = MC_GAMELEN;
@@ -546,14 +544,17 @@ uct_state_init(char *arg, struct board *b)
 	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
 	// TODO: Further tuning and experiments with better time allocation schemes.
 	u->best2_ratio = 2.5;
-	u->max_maintime_ratio = 3.0;
+	u->max_maintime_ratio = 8.0;
 
 	u->val_scale = 0.04; u->val_points = 40;
 	u->dynkomi_interval = 1000;
 	u->dynkomi_mask = S_BLACK | S_WHITE;
 
 	u->tenuki_d = 4;
-	u->local_tree_aging = 2;
+	u->local_tree_aging = 80;
+	u->local_tree_allseq = 1;
+	u->local_tree_rootseqval = 1;
+	u->local_tree_depth_decay = 1.5;
 
 	u->plugins = pluginset_init(b);
 
@@ -659,9 +660,6 @@ uct_state_init(char *arg, struct board *b)
 					u->playout = playout_moggy_init(playoutarg, b, u->jdict);
 				} else if (!strcasecmp(optval, "light")) {
 					u->playout = playout_light_init(playoutarg, b);
-				} else if (!strcasecmp(optval, "elo")) {
-					u->playout = playout_elo_init(playoutarg, b);
-					using_elo = true;
 				} else {
 					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
 					exit(1);
@@ -894,21 +892,23 @@ uct_state_init(char *arg, struct board *b)
 				 * than nodes near the root. */
 				u->local_tree_depth_decay = atof(optval);
 			} else if (!strcasecmp(optname, "local_tree_allseq")) {
-				/* By default, only complete sequences are stored
+				/* If disabled, only complete sequences are stored
 				 * in the local tree. If this is on, also
 				 * subsequences starting at each move are stored. */
 				u->local_tree_allseq = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_playout")) {
-				/* Whether to adjust ELO playout probability
-				 * distributions according to matched localtree
-				 * information. */
-				u->local_tree_playout = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "local_tree_pseqroot")) {
 				/* By default, when we have no sequence move
 				 * to suggest in-playout, we give up. If this
 				 * is on, we make probability distribution from
 				 * sequences first moves instead. */
 				u->local_tree_pseqroot = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_rootseqval")) {
+				/* If disabled, expected node value is computed by
+				 * summing up values through the whole descent.
+				 * If enabled, expected node value for
+				 * each sequence is the value at the root of the
+				 * sequence. */
+				u->local_tree_rootseqval = !optval || atoi(optval);
 
 			/** Other heuristics */
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {
@@ -1009,8 +1009,6 @@ uct_state_init(char *arg, struct board *b)
 		/* No ltree aging. */
 		u->local_tree_aging = 1.0f;
 	}
-	if (!using_elo)
-		u->local_tree_playout = false;
 
 	if (u->fast_alloc) {
 		if (u->pruning_threshold < u->max_tree_size / 10)

@@ -12,18 +12,12 @@
 #include "mq.h"
 #include "random.h"
 
-#ifdef BOARD_SPATHASH
-#include "patternsp.h"
-#endif
 #ifdef BOARD_PAT3
 #include "pattern3.h"
 #endif
 #ifdef BOARD_TRAITS
 static void board_trait_recompute(struct board *board, coord_t coord);
 #include "tactics/selfatari.h"
-#endif
-#ifdef BOARD_GAMMA
-#include "pattern.h"
 #endif
 
 
@@ -83,11 +77,6 @@ board_alloc(struct board *board)
 #else
 	int csize = 0;
 #endif
-#ifdef BOARD_SPATHASH
-	int ssize = board_size2(board) * sizeof(*board->spathash);
-#else
-	int ssize = 0;
-#endif
 #ifdef BOARD_PAT3
 	int p3size = board_size2(board) * sizeof(*board->pat3);
 #else
@@ -100,16 +89,9 @@ board_alloc(struct board *board)
 	int tsize = 0;
 	int tqsize = 0;
 #endif
-#ifdef BOARD_GAMMA
-	int pbsize = board_size2(board) * sizeof(*board->prob[0].items);
-	int rowpbsize = board_size(board) * sizeof(*board->prob[0].rowtotals);
-#else
-	int pbsize = 0;
-	int rowpbsize = 0;
-#endif
 	int cdsize = board_size2(board) * sizeof(*board->coord);
 
-	size_t size = bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + (pbsize + rowpbsize) * 2 + cdsize;
+	size_t size = bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + p3size + tsize + tqsize + cdsize;
 	void *x = malloc2(size);
 
 	/* board->b must come first */
@@ -123,21 +105,12 @@ board_alloc(struct board *board)
 #ifdef WANT_BOARD_C
 	board->c = x; x += csize;
 #endif
-#ifdef BOARD_SPATHASH
-	board->spathash = x; x += ssize;
-#endif
 #ifdef BOARD_PAT3
 	board->pat3 = x; x += p3size;
 #endif
 #ifdef BOARD_TRAITS
 	board->t = x; x += tsize;
 	board->tq = x; x += tqsize;
-#endif
-#ifdef BOARD_GAMMA
-	board->prob[0].items = x; x += pbsize;
-	board->prob[1].items = x; x += pbsize;
-	board->prob[0].rowtotals = x; x += rowpbsize;
-	board->prob[1].rowtotals = x; x += rowpbsize;
 #endif
 	board->coord = x; x += cdsize;
 
@@ -267,20 +240,6 @@ board_clear(struct board *board)
 			board->h[c * 2 + 1] = 1;
 	} foreach_point_end;
 
-#ifdef BOARD_SPATHASH
-	/* Initialize spatial hashes. */
-	foreach_point(board) {
-		for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
-			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
-				ptcoords_at(x, y, c, board, j);
-				board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
-					pthashes[0][j][board_at(board, c)];
-				board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
-					pthashes[0][j][stone_other(board_at(board, c))];
-			}
-		}
-	} foreach_point_end;
-#endif
 #ifdef BOARD_PAT3
 	/* Initialize 3x3 pattern codes. */
 	foreach_point(board) {
@@ -297,13 +256,6 @@ board_clear(struct board *board)
 		trait_at(board, c, S_WHITE).cap = 0;
 		trait_at(board, c, S_WHITE).cap1 = 0;
 		trait_at(board, c, S_WHITE).safe = true;
-	} foreach_point_end;
-#endif
-#ifdef BOARD_GAMMA
-	board->prob[0].b = board->prob[1].b = board;
-	foreach_point(board) {
-		probdist_set(&board->prob[0], c, double_to_fixp((board_at(board, c) == S_NONE) * 1.0f));
-		probdist_set(&board->prob[1], c, double_to_fixp((board_at(board, c) == S_NONE) * 1.0f));
 	} foreach_point_end;
 #endif
 
@@ -397,66 +349,6 @@ board_print(struct board *board, FILE *f)
 	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL);
 }
 
-void
-board_gamma_set(struct board *b, struct features_gamma *gamma, bool precise_selfatari)
-{
-#ifdef BOARD_GAMMA
-	b->gamma = gamma;
-	b->precise_selfatari = precise_selfatari;
-#ifdef BOARD_TRAITS
-	for (int i = 0; i < b->flen; i++) {
-		board_trait_recompute(b, b->f[i]);
-	}
-#endif
-#endif
-}
-
-
-/* Update the probability distribution we maintain incrementally. */
-void
-board_gamma_update(struct board *board, coord_t coord, enum stone color)
-{
-#if defined(BOARD_GAMMA) && defined(BOARD_TRAITS)
-	if (!board->gamma)
-		return;
-
-	/* Punch out invalid moves and moves filling our own eyes. */
-	if (board_at(board, coord) != S_NONE
-	    || (board_is_eyelike(board, coord, stone_other(color))
-	        && !trait_at(board, coord, color).cap)
-	    || (board_is_one_point_eye(board, coord, color))) {
-		probdist_set(&board->prob[color - 1], coord, 0);
-		return;
-	}
-
-	hash3_t pat = board->pat3[coord];
-	if (color == S_WHITE) {
-		/* We work with the pattern3s as black-to-play. */
-		pat = pattern3_reverse(pat);
-	}
-
-	/* We just quickly replicate the general pattern matcher stuff
-	 * here in the most bare-bone way. */
-	double value = board->gamma->gamma[FEAT_PATTERN3][pat];
-	if (trait_at(board, coord, color).cap) {
-		int i = 0;
-		i |= (trait_at(board, coord, color).cap1 == trait_at(board, coord, color).cap) << PF_CAPTURE_1STONE;
-		i |= (!trait_at(board, coord, stone_other(color)).safe) << PF_CAPTURE_TRAPPED;
-		i |= (trait_at(board, coord, color).cap < neighbor_count_at(board, coord, stone_other(color))) << PF_CAPTURE_CONNECTION;
-		value *= board->gamma->gamma[FEAT_CAPTURE][i];
-	}
-	if (trait_at(board, coord, stone_other(color)).cap) {
-		int i = 0;
-		i |= (trait_at(board, coord, stone_other(color)).cap1 == trait_at(board, coord, stone_other(color)).cap) << PF_AESCAPE_1STONE;
-		i |= (!trait_at(board, coord, color).safe) << PF_AESCAPE_TRAPPED;
-		i |= (trait_at(board, coord, stone_other(color)).cap < neighbor_count_at(board, coord, color)) << PF_AESCAPE_CONNECTION;
-		value *= board->gamma->gamma[FEAT_AESCAPE][i];
-	}
-	if (!trait_at(board, coord, color).safe)
-		value *= board->gamma->gamma[FEAT_SELFATARI][1 + board->precise_selfatari];
-	probdist_set(&board->prob[color - 1], coord, double_to_fixp(value));
-#endif
-}
 
 #ifdef BOARD_TRAITS
 static bool
@@ -479,8 +371,6 @@ board_trait_recompute(struct board *board, coord_t coord)
 			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).cap1, trait_at(board, coord, S_BLACK).safe,
 			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).cap1, trait_at(board, coord, S_WHITE).safe);
 	}
-	board_gamma_update(board, coord, S_BLACK);
-	board_gamma_update(board, coord, S_WHITE);
 }
 #endif
 
@@ -523,22 +413,6 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
 
-#ifdef BOARD_SPATHASH
-	/* Gridcular metric is reflective, so we update all hashes
-	 * of appropriate ditance in OUR circle. */
-	for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
-		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
-			ptcoords_at(x, y, coord, board, j);
-			/* We either changed from S_NONE to color
-			 * or vice versa; doesn't matter. */
-			board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
-				pthashes[0][j][color] ^ pthashes[0][j][S_NONE];
-			board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
-				pthashes[0][j][stone_other(color)] ^ pthashes[0][j][S_NONE];
-		}
-	}
-#endif
-
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */
 	static const int ataribits[8] = { -1, 0, -1, 1, 2, -1, 3, -1 };
@@ -564,13 +438,6 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 		}
 #if defined(BOARD_TRAITS)
 		board_trait_queue(board, c);
-#elif defined(BOARD_GAMMA)
-		if (board->gamma) {
-			hash3_t pat = board->pat3[c];
-			if (color == S_WHITE) pat = pattern3_reverse(pat);
-			double value = board->gamma->gamma[FEAT_PATTERN3][pat];
-			probdist_set(&board->prob[color - 1], c, double_to_fixp(value));
-		}
 #endif
 	} foreach_8neighbor_end;
 #endif
@@ -1272,8 +1139,6 @@ board_play_outside(struct board *board, struct move *m, int f)
 	board_at(board, coord) = color;
 	if (unlikely(!group))
 		group = new_group(board, coord);
-	board_gamma_update(board, coord, S_BLACK);
-	board_gamma_update(board, coord, S_WHITE);
 
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
@@ -1370,8 +1235,6 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	board_at(board, coord) = color;
 	group_t group = new_group(board, coord);
-	board_gamma_update(board, coord, S_BLACK);
-	board_gamma_update(board, coord, S_WHITE);
 
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
