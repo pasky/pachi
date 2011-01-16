@@ -194,19 +194,26 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		board_resize(board, size);
 		gtp_reply(id, NULL);
 
-	} else if (!strcasecmp(cmd, "clear_board") || !strcasecmp(cmd, "kgs-game_over")) {
+	} else if (!strcasecmp(cmd, "clear_board")) {
 		board_clear(board);
 		if (DEBUGL(1) && debug_boardprint)
 			board_print(board, stderr);
-		if (!strcasecmp(cmd, "kgs-game_over")) {
-			if (DEBUGL(0))
-				fprintf(stderr, "game is over\n");
-			/* Sleep before replying, so that kgs doesn't
-			 * start another game immediately. */
-			sleep(GAME_OVER_SLEEP);
-		}
 		gtp_reply(id, NULL);
 		return P_ENGINE_RESET;
+
+	} else if (!strcasecmp(cmd, "kgs-game_over")) {
+		/* The game may not be really over, just adjourned.
+		 * Do not clear the board to avoid illegal moves
+		 * if the game is resumed immediately after. KGS
+		 * may start directly with genmove on resumption. */
+		if (DEBUGL(1)) {
+			fprintf(stderr, "game is over\n");
+			fflush(stderr);
+		}
+		/* Sleep before replying, so that kgs doesn't
+		 * start another game immediately. */
+		sleep(GAME_OVER_SLEEP);
+		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "komi")) {
 		char *arg;
