@@ -161,7 +161,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		return P_OK;
 	}
 
-	if (engine->notify) {
+	if (engine->notify && gtp_is_valid(cmd)) {
 		char *reply;
 		enum parse_code c = engine->notify(engine, board, id, cmd, next, &reply);
 		if (c == P_NOREPLY) {
