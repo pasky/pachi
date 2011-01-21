@@ -1,5 +1,5 @@
 INCLUDES=-I..
-OBJS=1lib.o 2lib.o ladder.o selfatari.o util.o
+OBJS=1lib.o 2lib.o nlib.o ladder.o selfatari.o util.o
 
 all: tactics.a
 tactics.a: $(OBJS)

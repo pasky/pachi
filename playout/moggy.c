@@ -17,6 +17,7 @@
 #include "random.h"
 #include "tactics/1lib.h"
 #include "tactics/2lib.h"
+#include "tactics/nlib.h"
 #include "tactics/ladder.h"
 #include "tactics/selfatari.h"
 #include "uct/prior.h"
@@ -39,6 +40,7 @@ enum mq_tag {
 	MQ_KO = 0,
 	MQ_LATARI,
 	MQ_L2LIB,
+	MQ_LNLIB,
 	MQ_PAT3,
 	MQ_GATARI,
 	MQ_JOSEKI,
@@ -49,7 +51,7 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	unsigned int lcapturerate, atarirate, capturerate, patternrate, korate, josekirate;
+	unsigned int lcapturerate, atarirate, nlibrate, capturerate, patternrate, korate, josekirate;
 	unsigned int selfatarirate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
@@ -64,6 +66,8 @@ struct moggy_policy {
 	/* 2lib settings: */
 	bool atari_def_no_hopeless;
 	bool atari_miaisafe;
+	/* nlib settings: */
+	int nlib_count;
 
 	struct joseki_dict *jdict;
 	struct pattern3s patterns;
@@ -311,6 +315,55 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 		mq_print(q, b, "Local 2lib");
 }
 
+static void
+local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+{
+	struct moggy_policy *pp = p->data;
+	enum stone color = stone_other(m->color);
+
+	/* Attacking N-liberty groups in general is probably
+	 * not feasible. What we are primarily concerned about is
+	 * counter-attacking groups that have two physical liberties,
+	 * but three effective liberties:
+	 *
+	 * . O . . . . #
+	 * O O X X X X #
+	 * . X O O X . #
+	 * . X O . O X #
+	 * . X O O . X #
+	 * # # # # # # #
+	 *
+	 * The time for this to come is when the opponent took a liberty
+	 * of ours, making a few-liberty group. Therefore, we focus
+	 * purely on defense.
+	 *
+	 * There is a tradeoff - down to how many liberties we need to
+	 * be to start looking? nlib_count=3 will work for the left black
+	 * group (2lib-solver will suggest connecting the false eye), but
+	 * not for top black group (it is too late to start playing 3-3
+	 * capturing race). Also, we cannot prevent stupidly taking an
+	 * outside liberty ourselves; the higher nlib_count, the higher
+	 * the chance we withstand this.
+	 *
+	 * However, higher nlib_count means that we will waste more time
+	 * checking non-urgent or alive groups, and we will play silly
+	 * or wasted moves around alive groups. */
+
+	group_t group2 = 0;
+	foreach_neighbor(b, m->coord, {
+		group_t g = group_at(b, c);
+		if (!g || group2 == g || board_at(b, c) != color)
+			continue;
+		if (board_group_info(b, g).libs < 3 || board_group_info(b, g).libs > pp->nlib_count)
+			continue;
+		group_nlib_defense_check(b, g, color, q, 1<<MQ_LNLIB);
+		group2 = g; // prevent trivial repeated checks
+	});
+
+	if (PLDEBUGL(5))
+		mq_print(q, b, "Local nlib");
+}
+
 coord_t
 fillboard_check(struct playout_policy *p, struct board *b)
 {
@@ -364,6 +417,14 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		if (pp->atarirate > fast_random(100)) {
 			struct move_queue q; q.moves = 0;
 			local_2lib_check(p, b, &b->last_move, &q);
+			if (q.moves > 0)
+				return mq_pick(&q);
+		}
+
+		/* Local group reduced some of our groups to 3 libs? */
+		if (pp->nlibrate > fast_random(100)) {
+			struct move_queue q; q.moves = 0;
+			local_nlib_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
@@ -483,6 +544,9 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 		/* Local group can be PUT in atari? */
 		local_2lib_check(p, b, &b->last_move, &q);
 
+		/* Local group reduced some of our groups to 3 libs? */
+		local_nlib_check(p, b, &b->last_move, &q);
+
 		/* Check for patterns we know */
 		apply_pattern(p, b, &b->last_move,
 				pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
@@ -526,12 +590,28 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	struct board *b = map->b;
 	struct move_queue q; q.moves = 0;
 
-	if (board_group_info(b, g).libs > 2)
+	if (board_group_info(b, g).libs > pp->nlib_count)
 		return;
 
 	if (PLDEBUGL(5)) {
 		fprintf(stderr, "ASSESS of group %s:\n", coord2sstr(g, b));
 		board_print(b, stderr);
+	}
+
+	if (board_group_info(b, g).libs > 2) {
+		if (!pp->nlibrate)
+			return;
+		if (board_at(b, g) != map->to_play)
+			return; // we do only defense
+		group_nlib_defense_check(b, g, map->to_play, &q, 0);
+		while (q.moves--) {
+			coord_t coord = q.move[q.moves];
+			if (PLDEBUGL(5))
+				fprintf(stderr, "1.0: nlib %s\n", coord2sstr(coord, b));
+			int assess = games / 2;
+			add_prior_value(map, coord, 1, assess);
+		}
+		return;
 	}
 
 	if (board_group_info(b, g).libs == 2) {
@@ -698,7 +778,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	 * XXX: no 9x9 tuning has been done recently. */
 	int rate = board_large(b) ? 80 : 90;
 
-	pp->lcapturerate = pp->atarirate = pp->patternrate
+	pp->lcapturerate = pp->atarirate = pp->nlibrate = pp->patternrate
 			= pp->selfatarirate = pp->josekirate = -1U;
 	if (board_large(b)) {
 		pp->lcapturerate = pp->patternrate = 100;
@@ -709,12 +789,14 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->selfatari_other = true;
 	pp->atari_def_no_hopeless = !board_large(b);
 	pp->atari_miaisafe = true;
+	pp->nlib_count = 4;
 
 	/* C is stupid. */
 	double mq_prob_default[MQ_MAX] = {
 		[MQ_KO] = 6.0,
 		[MQ_LATARI] = 5.0,
 		[MQ_L2LIB] = 4.0,
+		[MQ_LNLIB] = 3.5,
 		[MQ_PAT3] = 3.0,
 		[MQ_GATARI] = 2.0,
 		[MQ_JOSEKI] = 1.0,
@@ -738,6 +820,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->lcapturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atarirate = atoi(optval);
+			} else if (!strcasecmp(optname, "nlibrate") && optval) {
+				pp->nlibrate = atoi(optval);
 			} else if (!strcasecmp(optname, "capturerate") && optval) {
 				pp->capturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "patternrate") && optval) {
@@ -766,10 +850,12 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->atari_miaisafe = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "atari_def_no_hopeless")) {
 				pp->atari_def_no_hopeless = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "nlib_count") && optval) {
+				pp->nlib_count = atoi(optval);
 			} else if (!strcasecmp(optname, "fullchoose")) {
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
-				/* KO%LATARI%L2LIB%PAT3%GATARI%JOSEKI */
+				/* KO%LATARI%L2LIB%LNLIB%PAT3%GATARI%JOSEKI */
 				for (int i = 0; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
 					optval++;
 					pp->mq_prob[i] = atof(optval);
