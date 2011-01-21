@@ -57,7 +57,7 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 }
 
 void
-check_group_atari(struct board *b, group_t group, enum stone owner,
+can_atari_group(struct board *b, group_t group, enum stone owner,
 		  enum stone to_play, struct move_queue *q,
 		  int tag, bool use_def_no_hopeless)
 {
@@ -167,7 +167,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 	if (use_miaisafe && miai_2lib(b, group, color))
 		return;
 
-	check_group_atari(b, group, color, to_play, q, tag, use_def_no_hopeless);
+	can_atari_group(b, group, color, to_play, q, tag, use_def_no_hopeless);
 
 	/* Can we counter-atari another group, if we are the defender? */
 	if (to_play != color)
@@ -185,7 +185,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 			}
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			check_group_atari(b, g2, color, to_play, q, tag, use_def_no_hopeless);
+			can_atari_group(b, g2, color, to_play, q, tag, use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }
