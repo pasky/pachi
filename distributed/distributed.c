@@ -72,6 +72,7 @@
 #include <string.h>
 #include <time.h>
 #include <alloca.h>
+#include <unistd.h>
 #include <sys/types.h>
 
 #define DEBUG
@@ -182,6 +183,9 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 	get_replies(time_now() + MAX_FAST_CMD_WAIT, active_slaves);
 
 	protocol_unlock();
+
+	// At the beginning wait even more for late slaves.
+	if (b->moves == 0) sleep(1);
 	return P_OK;
 }
 
