@@ -782,6 +782,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			= pp->selfatarirate = pp->josekirate = -1U;
 	if (board_large(b)) {
 		pp->lcapturerate = pp->patternrate = 100;
+		pp->nlibrate = 20;
 		pp->pattern2 = true;
 	}
 	pp->korate = 20; pp->koage = 4;
