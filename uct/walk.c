@@ -539,7 +539,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
 
 		int pval = LTREE_PLAYOUTS_MULTIPLIER;
-		if (u->local_tree_depth_decay > 0)
+		if (u->local_tree && u->local_tree_depth_decay > 0)
 			pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, depth);
 
 		if (t->use_extra_komi) {

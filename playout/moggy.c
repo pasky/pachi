@@ -707,7 +707,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
-	pp->atari_def_no_hopeless = true;
+	pp->atari_def_no_hopeless = !board_large(b);
 	pp->atari_miaisafe = true;
 
 	/* C is stupid. */

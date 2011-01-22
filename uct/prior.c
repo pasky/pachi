@@ -242,7 +242,7 @@ uct_prior_init(char *arg, struct board *b)
 
 	if (p->cfgdn < 0) {
 		const int near = p->eqex*2;
-		const int far = board_large(b) ? p->eqex*3/4 : p->eqex;
+		const int far = board_large(b) ? p->eqex*3/2 : p->eqex;
 		int bonuses[] = { 0, near, far, far };
 		p->cfgdn = 3;
 		p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
