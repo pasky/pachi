@@ -299,8 +299,8 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 static floating_t
 scale_value(struct uct *u, struct board *b, int result)
 {
-	floating_t rval = result > 0;
-	if (u->val_scale) {
+	floating_t rval = result > 0 ? 1.0 : result < 0 ? 0.0 : 0.5;
+	if (u->val_scale && result != 0) {
 		int vp = u->val_points;
 		if (!vp) {
 			vp = board_size(b) - 1; vp *= vp; vp *= 2;
@@ -533,54 +533,54 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		}
 	}
 
+	/* Record the result. */
+
 	assert(n == t->root || n->parent);
-	if (result != 0) {
-		floating_t rval = scale_value(u, b, result);
-		u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
+	floating_t rval = scale_value(u, b, result);
+	u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
 
-		int pval = LTREE_PLAYOUTS_MULTIPLIER;
-		if (u->local_tree && u->local_tree_depth_decay > 0)
-			pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, depth);
+	int pval = LTREE_PLAYOUTS_MULTIPLIER;
+	if (u->local_tree && u->local_tree_depth_decay > 0)
+		pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, depth);
 
-		if (t->use_extra_komi) {
-			stats_add_result(&u->dynkomi->score, result / 2, 1);
-			stats_add_result(&u->dynkomi->value, rval, 1);
+	if (t->use_extra_komi) {
+		stats_add_result(&u->dynkomi->score, result / 2, 1);
+		stats_add_result(&u->dynkomi->value, rval, 1);
+	}
+
+	if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
+		/* Possibly transform the rval appropriately. */
+		if (!u->local_tree_rootseqval) {
+			floating_t expval = seq_value.value / seq_value.playouts;
+			rval = stats_temper_value(rval, expval, u->local_tree);
 		}
 
-		if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
-			/* Possibly transform the rval appropriately. */
-			if (!u->local_tree_rootseqval) {
-				floating_t expval = seq_value.value / seq_value.playouts;
-				rval = stats_temper_value(rval, expval, u->local_tree);
+		/* Get the local sequences and record them in ltree. */
+		/* We will look for sequence starts in our descent
+		 * history, then run record_local_sequence() for each
+		 * found sequence start; record_local_sequence() may
+		 * pick longer sequences from descent history then,
+		 * which is expected as it will create new lnodes. */
+		enum stone seq_color = player_color;
+		/* First move always starts a sequence. */
+		record_local_sequence(u, t, descent, dlen, 1, seq_color, rval, pval);
+		seq_color = stone_other(seq_color);
+		for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
+			if (u->local_tree_allseq) {
+				/* We are configured to record all subsequences. */
+				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
+				continue;
 			}
-
-			/* Get the local sequences and record them in ltree. */
-			/* We will look for sequence starts in our descent
-			 * history, then run record_local_sequence() for each
-			 * found sequence start; record_local_sequence() may
-			 * pick longer sequences from descent history then,
-			 * which is expected as it will create new lnodes. */
-			enum stone seq_color = player_color;
-			/* First move always starts a sequence. */
-			record_local_sequence(u, t, descent, dlen, 1, seq_color, rval, pval);
-			seq_color = stone_other(seq_color);
-			for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
-				if (u->local_tree_allseq) {
-					/* We are configured to record all subsequences. */
-					record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
-					continue;
-				}
-				if (descent[dseqi].node->d >= u->tenuki_d) {
-					/* Tenuki! Record the fresh sequence. */
-					record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
-					continue;
-				}
-				if (descent[dseqi].lnode && !descent[dseqi].lnode) {
-					/* Record result for in-descent picked sequence. */
-					record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
-					continue;
-				}
- 			}
+			if (descent[dseqi].node->d >= u->tenuki_d) {
+				/* Tenuki! Record the fresh sequence. */
+				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
+				continue;
+			}
+			if (descent[dseqi].lnode && !descent[dseqi].lnode) {
+				/* Record result for in-descent picked sequence. */
+				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
+				continue;
+			}
 		}
 	}
 
