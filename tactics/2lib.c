@@ -115,11 +115,22 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 #ifdef NO_DOOMED_GROUPS
 		    to_play != owner &&
 #endif
-		    is_bad_selfatari(b, to_play, lib))
-			continue;
+		    is_bad_selfatari(b, to_play, lib)) {
+			/* Okay! But maybe we just need to connect a false
+			 * eye before atari - this is very common in the
+			 * corner. */
+			coord_t coord = selfatari_cousin(b, to_play, lib);
+			if (is_pass(coord))
+				continue;
+			/* Ok, connect, but prefer not to. */
+			lib = coord;
+			preference[i] = false;
 
 		/* By now, we must be decided we add the move to the
-		 * queue! */
+		 * queue!  [comment intentionally misindented] */
+
+		}
+
 		have[i] = true;
 
 		/* If the move is too "lumpy", prefer the alternative:
@@ -127,8 +138,18 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		 * #######
 		 * ..O.X.X <- always play the left one!
 		 * OXXXXXX */
-		if (neighbor_count_at(b, lib, stone_other(owner)) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
-			preference[i] = false;
+		if (neighbor_count_at(b, lib, to_play) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3) {
+			/* However, the counter-example is connecting to
+			 * a different group [along the edge]. */
+			bool connection = false;
+			foreach_neighbor(b, lib, {
+				if (board_at(b, c) == to_play
+				    && group_at(b, c) != group)
+					connection = true;
+			});
+			if (!connection)
+				preference[i] = false;
+		}
 
 		if (DEBUGL(6))
 			fprintf(stderr, "liberty %s ready with preference %d\n", coord2sstr(lib, b), preference[i]);
@@ -185,7 +206,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 			}
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			can_atari_group(b, g2, color, to_play, q, tag, use_def_no_hopeless);
+			can_atari_group(b, g2, stone_other(color), to_play, q, tag, use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }
