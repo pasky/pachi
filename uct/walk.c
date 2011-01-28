@@ -99,49 +99,13 @@ struct uct_playout_callback {
 	struct uct *uct;
 	struct tree *tree;
 	struct tree_node *lnode;
-
-	coord_t *treepool[2];
-	int treepool_n[2];
 };
 
 
 static coord_t
 uct_playout_hook(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color, int mode)
 {
-	struct uct_playout_callback *upc = setup->hook_data;
-	struct uct *u = upc->uct;
-
-	if (UDEBUGL(8))
-		fprintf(stderr, "treepool check [%d] %d, %p,%p\n", mode, u->treepool_chance[mode], upc->treepool[0], upc->treepool[1]);
-
-	if (u->treepool_chance[mode] > fast_random(100) && upc->treepool[color - 1]) {
-		assert(upc->treepool_n[color - 1] > 0);
-		if (UDEBUGL(8)) {
-			fprintf(stderr, "Treepool: ");
-			for (int i = 0; i < upc->treepool_n[color - 1]; i++)
-				fprintf(stderr, "%s ", coord2sstr(upc->treepool[color - 1][i], b));
-			fprintf(stderr, "\n");
-		}
-
-		coord_t treepool_move = pass;
-		if (u->treepool_pickfactor) {
-			/* With pickfactor=10, we get uniform distribution. */
-			int prob = 1000 * u->treepool_pickfactor / (upc->treepool_n[color - 1] * 10);
-			for (int i = 0; i < upc->treepool_n[color - 1]; i++) {
-				treepool_move = upc->treepool[color - 1][i];
-				if (prob > fast_random(1000)) break;
-			}
-		} else {
-			treepool_move = upc->treepool[color - 1][fast_random(upc->treepool_n[color - 1])];
-		}
-		if (UDEBUGL(7))
-			fprintf(stderr, "Treepool pick <%d> %s,%s\n",
-				upc->treepool_n[color - 1],
-				stone2str(color), coord2sstr(treepool_move, b));
-
-		if (board_is_valid_play(b, color, treepool_move))
-			return treepool_move;
-	}
+	/* XXX: This is used in some non-master branches. */
 	return pass;
 }
 
@@ -155,68 +119,6 @@ static coord_t
 uct_playout_postpolicy(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color)
 {
 	return uct_playout_hook(playout, setup, b, color, 1);
-}
-
-double
-treepool_node_value(struct uct *u, struct tree *tree, int parity, struct tree_node *node)
-{
-	/* XXX: Playouts get cast to double */
-	switch (u->treepool_type) {
-		case UTT_RAVE_PLAYOUTS:
-			return node->amaf.playouts;
-		case UTT_RAVE_VALUE:
-			return tree_node_get_value(tree, parity, node->amaf.value);
-		case UTT_UCT_PLAYOUTS:
-			return node->u.playouts;
-		case UTT_UCT_VALUE:
-			return tree_node_get_value(tree, parity, node->u.value);
-		case UTT_EVALUATE:
-		{
-			struct uct_descent d = { .node = node };
-			assert(u->policy->evaluate);
-			return u->policy->evaluate(u->policy, tree, &d, parity);
-		}
-		default: assert(0);
-	}
-	return -1;
-}
-
-static void
-treepool_setup(struct uct_playout_callback *upc, struct board *b, struct tree_node *node, int color)
-{
-	struct uct *u = upc->uct;
-	int parity = ((node->depth ^ upc->tree->root->depth) & 1) ? -1 : 1;
-
-	/* XXX: Naive O(N^2) way. */
-	for (int i = 0; i < u->treepool_size; i++) {
-		/* For each item, find the highest
-		 * node not in the pool yet. */
-		struct tree_node *best = NULL;
-		double best_val = -1;
-
-		assert(node->children && is_pass(node->children->coord));
-		for (struct tree_node *ni = node->children->sibling; ni; ni = ni->sibling) {
-			/* Do we already have it? */
-			bool have = false;
-			for (int j = 0; j < upc->treepool_n[color]; j++) {
-				if (upc->treepool[color][j] == ni->coord) {
-					have = true;
-					break;
-				}
-			}
-			if (have)
-				continue;
-
-			double i_val = treepool_node_value(u, upc->tree, parity, ni);
-			if (i_val > best_val) {
-				best = ni;
-				best_val = i_val;
-			}
-		}
-
-		if (!best) break;
-		upc->treepool[color][upc->treepool_n[color]++] = best->coord;
-	}
 }
 
 
@@ -254,26 +156,6 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 		 * entering playout. */
 		.lnode = NULL,
 	};
-
-	coord_t pool[2][u->treepool_size];
-	if (u->treepool_chance[0] + u->treepool_chance[1] > 0) {
-		for (int color = 0; color < 2; color++) {
-			/* Prepare tree-based pool of moves to try forcing
-			 * during the playout. */
-			/* We consider the children of the last significant
-			 * node, picking top N choices. */
-			struct tree_node *n = significant[color];
-			if (!n || !n->children || !n->children->sibling) {
-				/* No significant node, or it's childless or has
-				 * only pass as its child. */
-				upc.treepool[color] = NULL;
-				upc.treepool_n[color] = 0;
-			} else {
-				upc.treepool[color] = (coord_t *) &pool[color];
-				treepool_setup(&upc, b, n, color);
-			}
-		}
-	}
 
 	struct playout_setup ps = {
 		.gamelen = u->gamelen,

@@ -912,67 +912,13 @@ uct_state_init(char *arg, struct board *b)
 
 			/** Other heuristics */
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {
-				/* Some heuristics (treepool) rely
+				/* Some heuristics (XXX: none in mainline) rely
 				 * on the knowledge of the last "significant"
 				 * node in the descent. Such a node is
 				 * considered reasonably trustworthy to carry
 				 * some meaningful information in the values
 				 * of the node and its children. */
 				u->significant_threshold = atoi(optval);
-			} else if (!strcasecmp(optname, "treepool_chance") && optval) {
-				/* Chance of applying the treepool heuristic:
-				 * one of the best N children of the last
-				 * significant node is tried on each turn
-				 * of the simulation. */
-				/* This is in form of two numbers:
-				 * PREMOVE:POSTMOVE. Each is percentage
-				 * value, one is the chance of the move
-				 * tried before playout policy, one is the
-				 * chance of it being applied if the policy
-				 * has not picked anymove. */
-				char *optval2 = strchr(optval, ':');
-				if (!optval2) {
-					fprintf(stderr, "uct: treepool_chance takes two comma-separated numbers\n");
-					exit(1);
-				}
-				u->treepool_chance[0] = atoi(optval);
-				optval = ++optval2;
-				u->treepool_chance[1] = atoi(optval);
-			} else if (!strcasecmp(optname, "treepool_size") && optval) {
-				/* Number of top significant children
-				 * to pick from. Too low means low effect,
-				 * too high means even lousy moves are
-				 * played. */
-				u->treepool_size = atoi(optval);
-			} else if (!strcasecmp(optname, "treepool_type") && optval) {
-				/* How to sort the children. */
-				if (!strcasecmp(optval, "rave_playouts"))
-					u->treepool_type = UTT_RAVE_PLAYOUTS;
-				else if (!strcasecmp(optval, "rave_value"))
-					u->treepool_type = UTT_RAVE_VALUE;
-				else if (!strcasecmp(optval, "uct_playouts"))
-					u->treepool_type = UTT_UCT_PLAYOUTS;
-				else if (!strcasecmp(optval, "uct_value"))
-					u->treepool_type = UTT_UCT_VALUE;
-				else if (!strcasecmp(optval, "evaluate"))
-					/* The proper combination of RAVE,
-					 * UCT and prior, as used through
-					 * descent. */
-					u->treepool_type = UTT_EVALUATE;
-				else {
-					fprintf(stderr, "uct: unknown treepool_type %s\n", optval);
-					exit(1);
-				}
-			} else if (!strcasecmp(optname, "treepool_pickfactor") && optval) {
-				/* Pick factor influencing children choice.
-				 * By default (if this is 0 or 10), coords
-				 * have uniform probability to be chosen;
-				 * otherwise, children are tried from best
-				 * to worst, each picked with probability
-				 * (1/n * pickfactor/10).
-				 * I.e., better children may be preferred
-				 * if pickfactor > 10. */
-				u->treepool_pickfactor = atoi(optval);
 
 			/** Distributed engine slaves setup */
 

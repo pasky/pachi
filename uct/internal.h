@@ -68,17 +68,6 @@ struct uct {
 	int val_points;
 	bool val_extra;
 
-	int treepool_chance[2];
-	int treepool_size;
-	enum treepool_type {
-		UTT_RAVE_PLAYOUTS,
-		UTT_RAVE_VALUE,
-		UTT_UCT_PLAYOUTS,
-		UTT_UCT_VALUE,
-		UTT_EVALUATE,
-	} treepool_type;
-	int treepool_pickfactor;
-
 	int random_policy_chance;
 	int local_tree;
 	int tenuki_d;
