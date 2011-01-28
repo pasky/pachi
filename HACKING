@@ -191,8 +191,8 @@ Opening Book
 The UCT engine can "pre-read" the starting board position and
 dump the core of the built tree to a file, loading it later. This is
 called a 'tbook' (as in "tree book") and can be generated using the
-./gentbook.sh script. The newly generated file is automatically used
-by the UCT engine when found.
+tools/gentbook.sh script. The newly generated file is automatically
+used by the UCT engine when found.
 
 Alternatively, there is a support for directly used opening book
 (so-called fbook, a.k.a. "forced book" or "fuseki book"). The book

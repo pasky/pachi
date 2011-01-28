@@ -56,7 +56,7 @@ zzgo: $(OBJS) zzgo.o $(LOCALLIBS)
 .PHONY: zzgo-profiled
 zzgo-profiled:
 	@make clean all XLDFLAGS=-fprofile-generate XCFLAGS="-fprofile-generate -fomit-frame-pointer -frename-registers"
-	./zzgo -t =5000 no_tbook <genmove19.gtp
+	./zzgo -t =5000 no_tbook <tools/genmove19.gtp
 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
 
 # install-recursive?

@@ -3,7 +3,7 @@
 # Pachi will analyse each move in the SGF and suggest the winrate
 # for either player and winrate it estimated for in-game followup.
 #
-# Usage: ./sgf-analyse.pl COLOR SGF PACHIARGS...
+# Usage: tools/sgf-analyse.pl COLOR SGF PACHIARGS...
 #
 # Note that this script assumes dynkomi=none and does not show
 # dynamic komi information. (Would be trivial to add but it's tricky
@@ -11,7 +11,7 @@
 #
 # This script is dirty and insecure for untrusted input!
 #
-# Example: ./sgf-analyse.pl W progame.sgf -t =2000 -d 0 dynkomi=none
+# Example: tools/sgf-analyse.pl W progame.sgf -t =2000 -d 0 dynkomi=none
 # ...to get 2000 simulations per move, and winrates from white perspective.
 #
 # To plot the output in gnuplot:
@@ -36,7 +36,7 @@ sub one {
 	# included.
 	my $line = $move + 3; # board_size, clearboard, komi
 	my $rest = $line + 1;
-	open my $g, "./sgf2gtp.pl \"$sgf\" | sed -e '$line s/play \\(.*\\) \\(.*\\)/1 echo \\1 \\2\\n2 genmove \\1\\n3 pachi-result/' -e '$rest,\$ d' | ./zzgo @ARGV |" or die $!;
+	open my $g, "tools/sgf2gtp.pl \"$sgf\" | sed -e '$line s/play \\(.*\\) \\(.*\\)/1 echo \\1 \\2\\n2 genmove \\1\\n3 pachi-result/' -e '$rest,\$ d' | ./zzgo @ARGV |" or die $!;
 
 	# Parse the GTP output.
 	my ($color, $realmove, $genmove, $winrate) = @_;
@@ -61,5 +61,5 @@ sub one {
 
 print "# $sgf @ARGV\n";
 
-my $moves = `./sgf2gtp.pl \"$sgf\" | wc -l` - 3;
+my $moves = `tools/sgf2gtp.pl \"$sgf\" | wc -l` - 3;
 one($_) for (1 .. $moves);

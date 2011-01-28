@@ -80,8 +80,8 @@ but the ability is certainly there.
 There are currently two Pachi interfaces for this purpose. One
 possibility is to evaluate all moves within a given game and show how
 the winrates for both players evolved - i.e. who was winning at which
-game stage. This is implemented using the `sgf-analyse.pl` script. See
-the comment on top of the script about its usage.
+game stage. This is implemented using the `tools/sgf-analyse.pl` script.
+See the comment on top of the script about its usage.
 
 Alternatively, Pachi can evaluate all available moves in a given situation
 and for each give a value between 0 and 1 representing perceived
@@ -92,7 +92,7 @@ To achieve the latter, follow few simple steps:
 
 1. Take an SGF record of your game and generate a GTP file from it:
 
-	./sgf2gtp.pl <file.sgf >file.gtp
+	tools/sgf2gtp.pl <file.sgf >file.gtp
 
 2. Open the file.gtp in your favorite plaintext editor and trim it after
 (remove all lines following) the move producing the situation you wish
