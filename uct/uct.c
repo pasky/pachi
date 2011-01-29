@@ -553,7 +553,6 @@ uct_state_init(char *arg, struct board *b)
 	u->tenuki_d = 4;
 	u->local_tree_aging = 80;
 	u->local_tree_allseq = 1;
-	u->local_tree_rootseqval = 1;
 	u->local_tree_depth_decay = 1.5;
 
 	u->plugins = pluginset_init(b);
@@ -896,13 +895,11 @@ uct_state_init(char *arg, struct board *b)
 				 * in the local tree. If this is on, also
 				 * subsequences starting at each move are stored. */
 				u->local_tree_allseq = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_rootseqval")) {
-				/* If disabled, expected node value is computed by
-				 * summing up values through the whole descent.
-				 * If enabled, expected node value for
-				 * each sequence is the value at the root of the
-				 * sequence. */
-				u->local_tree_rootseqval = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_neival")) {
+				/* If disabled, local node value is not
+				 * computed just based on terminal status
+				 * of the coordinate, but also its neighbors. */
+				u->local_tree_neival = !optval || atoi(optval);
 
 			/** Other heuristics */
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {

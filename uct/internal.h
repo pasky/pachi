@@ -75,7 +75,7 @@ struct uct {
 #define LTREE_PLAYOUTS_MULTIPLIER 100
 	floating_t local_tree_depth_decay;
 	bool local_tree_allseq;
-	bool local_tree_rootseqval;
+	bool local_tree_neival;
 
 	char *banner;
 
