@@ -896,12 +896,6 @@ uct_state_init(char *arg, struct board *b)
 				 * in the local tree. If this is on, also
 				 * subsequences starting at each move are stored. */
 				u->local_tree_allseq = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_pseqroot")) {
-				/* By default, when we have no sequence move
-				 * to suggest in-playout, we give up. If this
-				 * is on, we make probability distribution from
-				 * sequences first moves instead. */
-				u->local_tree_pseqroot = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "local_tree_rootseqval")) {
 				/* If disabled, expected node value is computed by
 				 * summing up values through the whole descent.
