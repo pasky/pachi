@@ -44,7 +44,7 @@ uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_descent 
 	if (!p->evaluate)
 		return;
 	bool allow_pass = false; /* At worst forces some extra playouts at the end */
-	int parity = ((descent->node->depth ^ tree->root->depth) & 1) ? -1 : 1;
+	int parity = tree_node_parity(tree, descent->node);
 
 	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
 		urgency = p->evaluate(p, tree, &di, parity);
