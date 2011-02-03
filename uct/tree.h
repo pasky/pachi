@@ -152,6 +152,9 @@ struct tree_node *tree_lnode_for_node(struct tree *tree, struct tree_node *ni, s
 
 static bool tree_leaf_node(struct tree_node *node);
 
+#define tree_node_parity(tree, node) \
+	((((node)->depth ^ (tree)->root->depth) & 1) ? -1 : 1)
+
 /* Get black parity from parity within the tree. */
 #define tree_parity(tree, parity) \
 	(tree->root_color == S_WHITE ? (parity) : -1 * (parity))
