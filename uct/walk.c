@@ -419,7 +419,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	floating_t rval = scale_value(u, b, result);
-	u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
+	u->policy->update(u->policy, t, n, node_color, player_color, amaf, &b2, rval);
 
 	int pval = LTREE_PLAYOUTS_MULTIPLIER;
 	if (u->local_tree && u->local_tree_depth_decay > 0)

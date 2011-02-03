@@ -153,9 +153,11 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 void
 ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		enum stone node_color, enum stone player_color,
-		struct playout_amafmap *map, floating_t result)
+		struct playout_amafmap *map, struct board *final_board,
+		floating_t result)
 {
 	struct ucb1_policy_amaf *b = p->data;
+	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
 	enum stone child_color = stone_other(node_color);
 
 #if 0
@@ -173,6 +175,9 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		stats_add_result(&node->u, result, 1);
 		if (amaf_nakade(map->map[node->coord]))
 			amaf_op(map->map[node->coord], -);
+
+		stats_add_result(&node->winner_owner, board_at(final_board, node->coord) == winner_color ? 1.0 : 0.0, 1);
+		stats_add_result(&node->black_owner, board_at(final_board, node->coord) == S_BLACK ? 1.0 : 0.0, 1);
 
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */

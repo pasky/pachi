@@ -127,7 +127,7 @@ typedef floating_t (*uctp_evaluate)(struct uct_policy *p, struct tree *tree, str
 typedef void (*uctp_descend)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass);
 typedef void (*uctp_winner)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent);
 typedef void (*uctp_prior)(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
-typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *amaf, floating_t result);
+typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *amaf, struct board *final_board, floating_t result);
 
 struct uct_policy {
 	struct uct *uct;
