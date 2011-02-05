@@ -94,7 +94,8 @@ board_effective_handicap(struct board *b, int first_move_value)
 	/* Always return 0 for even games, in particular if
 	 * first_move_value is set on purpose to a value different
 	 * from the correct theoretical value (2*komi). */
-	if (!b->handicap) return 0;
+	if (!b->handicap)
+		return 7.5 - b->komi;
 	return b->handicap * first_move_value + 0.5 - b->komi;
 }
 
