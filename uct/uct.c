@@ -175,6 +175,17 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 }
 
 static char *
+uct_undo(struct engine *e, struct board *b)
+{
+	struct uct *u = e->data;
+
+	if (!u->t) return NULL;
+	uct_pondering_stop(u);
+	reset_state(u);
+	return NULL;
+}
+
+static char *
 uct_result(struct engine *e, struct board *b)
 {
 	struct uct *u = e->data;
@@ -1003,6 +1014,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;
+	e->undo = uct_undo;
 	e->result = uct_result;
 	e->genmove = uct_genmove;
 	e->genmoves = uct_genmoves;
