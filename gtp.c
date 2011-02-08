@@ -91,6 +91,7 @@ static char *known_commands =
 	"set_free_handicap\n"
 	"place_free_handicap\n"
 	"final_status_list\n"
+	"undo\n"
 	"pachi-result\n"
 	"kgs-chat\n"
 	"time_left\n"
@@ -445,6 +446,22 @@ next_group:;
 		} else {
 			gtp_error(id, "illegal status specifier", NULL);
 		}
+
+	} else if (!strcasecmp(cmd, "undo")) {
+		if (board_undo(board) < 0) {
+			if (DEBUGL(1)) {
+				fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(board->last_move.coord, board));
+				board_print(board, stderr);
+			}
+			gtp_error(id, "cannot undo", NULL);
+			return P_OK;
+		}
+		char *reply = NULL;
+		if (engine->undo)
+			reply = engine->undo(engine, board);
+		if (DEBUGL(1) && debug_boardprint)
+			board_print(board, stderr);
+		gtp_reply(id, reply, NULL);
 
 	/* Custom commands for handling UCT opening tbook */
 	} else if (!strcasecmp(cmd, "uct_gentbook")) {

@@ -95,11 +95,6 @@ void
 group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, enum stone to_play,
                   struct move_queue *q, coord_t *ladder, int tag)
 {
-	int qmoves_prev = q->moves;
-
-	/* We don't use @to_play almost anywhere since any moves here are good
-	 * for both defender and attacker. */
-
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
 
@@ -108,6 +103,21 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 		fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n",
 		        coord2sstr(group, b), coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
+
+	if (to_play != color) {
+		/* We are the attacker! In that case, do not try defending
+		 * our group, since we can capture the culprit. */
+#ifdef NO_DOOMED_GROUPS
+		/* Do not remove group that cannot be saved by the opponent. */
+		if (!can_be_rescued(b, group, color, tag))
+			return;
+#endif
+		if (can_play_on_lib(b, group, to_play)) {
+			mq_add(q, lib, tag);
+			mq_nodup(q);
+		}
+		return;
+	}
 
 	/* Can we capture some neighbor? */
 	bool ccap = can_countercapture(b, color, group, to_play, q, tag);
@@ -122,11 +132,6 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 	/* Do not suicide... */
 	if (!can_play_on_lib(b, group, to_play))
 		return;
-#ifdef NO_DOOMED_GROUPS
-	/* Do not remove group that cannot be saved by the opponent. */
-	if (to_play != color && !can_be_rescued(b, group, color, tag))
-		return;
-#endif
 	if (DEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
 	
@@ -141,12 +146,6 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 	}
 	if (DEBUGL(6))
 		fprintf(stderr, "...no ladder\n");
-
-	if (to_play != color) {
-		/* We are the attacker! In that case, throw away the moves
-		 * that defend our groups, since we can capture the culprit. */
-		q->moves = qmoves_prev;
-	}
 
 	mq_add(q, lib, tag);
 	mq_nodup(q);
