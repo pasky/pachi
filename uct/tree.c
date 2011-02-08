@@ -195,11 +195,12 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 		children++;
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
-	fprintf(stderr, "[%s] %f %% %d [prior %f %% %d amaf %f %% %d]; hints %x; %d children <%"PRIhash">\n",
+	fprintf(stderr, "[%s] %f %% %d [prior %f %% %d amaf %f %% %d crit %f]; hints %x; %d children <%"PRIhash">\n",
 		coord2sstr(node->coord, tree->board),
 		tree_node_get_value(tree, 1, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, 1, node->prior.value), node->prior.playouts,
 		tree_node_get_value(tree, 1, node->amaf.value), node->amaf.playouts,
+		tree_node_criticality(tree, node),
 		node->hints, children, node->hash);
 
 	/* Print nodes sorted by #playouts. */
