@@ -69,7 +69,7 @@ struct uct {
 	bool val_extra;
 
 	int random_policy_chance;
-	int local_tree;
+	bool local_tree;
 	int tenuki_d;
 	floating_t local_tree_aging;
 #define LTREE_PLAYOUTS_MULTIPLIER 100

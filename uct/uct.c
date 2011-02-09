@@ -874,16 +874,9 @@ uct_state_init(char *arg, struct board *b)
 			/** Local trees */
 			/* (Purely experimental. Does not work - yet!) */
 
-			} else if (!strcasecmp(optname, "local_tree") && optval) {
-				/* Whether to bias exploration by local tree values
-				 * (must be supported by the used policy).
-				 * 0: Don't.
-				 * 1: Do, value = result.
-				 * Try to temper the result:
-				 * 2: Do, value = 0.5+(result-expected)/2.
-				 * 3: Do, value = 0.5+bzz((result-expected)^2).
-				 * 4: Do, value = 0.5+sqrt(result-expected)/2. */
-				u->local_tree = atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree")) {
+				/* Whether to bias exploration by local tree values. */
+				u->local_tree = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "tenuki_d") && optval) {
 				/* Tenuki distance at which to break the local tree. */
 				u->tenuki_d = atoi(optval);
