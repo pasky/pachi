@@ -109,12 +109,14 @@ struct tree {
 	 * anywhere in the tree; nodes are created on-demand, special 'pass'
 	 * nodes represent tenuki. Only u move_stats are used, prior and amaf
 	 * is ignored. Values in root node are ignored. */
+	/* The value corresponds to "local tactical utility" of the node.
+	 * Higher is better! The values are true minimax, _not_ "black
+	 * perspective" as in normal tree. */
 	struct tree_node *ltree_black;
-	// Of course even in white tree, winrates are from b's perspective
-	// as anywhere else. ltree_white has white-first sequences as children.
+	/* ltree_white has white-first sequences as children. */
 	struct tree_node *ltree_white;
-	// Aging factor; 2 means halve all playout values after each turn.
-	// 1 means don't age at all.
+	/* Aging factor; 2 means halve all playout values after each turn.
+	 * 1 means don't age at all. */
 	floating_t ltree_aging;
 
 	/* Hash table used when working as slave for the distributed engine.
