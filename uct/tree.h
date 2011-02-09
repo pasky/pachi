@@ -109,9 +109,6 @@ struct tree {
 	 * anywhere in the tree; nodes are created on-demand, special 'pass'
 	 * nodes represent tenuki. Only u move_stats are used, prior and amaf
 	 * is ignored. Values in root node are ignored. */
-	/* The values in the tree can be either "raw" or "tempered"
-	 * (representing difference against parent node in the main tree),
-	 * controlled by local_tree setting. */
 	struct tree_node *ltree_black;
 	// Of course even in white tree, winrates are from b's perspective
 	// as anywhere else. ltree_white has white-first sequences as children.
