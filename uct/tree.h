@@ -109,9 +109,8 @@ struct tree {
 	 * anywhere in the tree; nodes are created on-demand, special 'pass'
 	 * nodes represent tenuki. Only u move_stats are used, prior and amaf
 	 * is ignored. Values in root node are ignored. */
-	/* The value corresponds to "local tactical utility" of the node.
-	 * Higher is better! The values are true minimax, _not_ "black
-	 * perspective" as in normal tree. */
+	/* The value corresponds to black-to-play as usual; i.e. if white
+	 * succeeds in its replies, the values will be low. */
 	struct tree_node *ltree_black;
 	/* ltree_white has white-first sequences as children. */
 	struct tree_node *ltree_white;

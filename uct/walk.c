@@ -236,6 +236,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
 		enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
 		double rval = local_value(u, endb, descent[di].node->coord, color);
+		if (color == S_WHITE) rval = 1.0 - rval;
 		LTREE_DEBUG fprintf(stderr, "%s[%s %1.3f][%d] ",
 			coord2sstr(descent[di].node->coord, t->board),
 			stone2str(color), rval, descent[di].node->d);

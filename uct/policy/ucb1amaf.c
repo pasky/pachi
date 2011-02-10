@@ -92,9 +92,6 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	/* Local tree heuristics. */
 	if (p->uct->local_tree && b->ltree_rave > 0 && lnode) {
 		struct move_stats l = lnode->u;
-		/* l.value is for color-to-play; convert to black-to-play
-		 * to match the rest of the statistics. */
-		l.value = tree_node_get_value(tree, parity, l.value);
 		l.playouts = ((floating_t) l.playouts) * b->ltree_rave / LTREE_PLAYOUTS_MULTIPLIER;
 		LTREE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
 			coord2sstr(lnode->coord, tree->board), l.value, l.playouts,
