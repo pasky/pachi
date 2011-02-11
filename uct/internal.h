@@ -77,6 +77,7 @@ struct uct {
 	bool local_tree_allseq;
 	bool local_tree_neival;
 	bool local_tree_rootgoal;
+	bool local_tree_rootchoose;
 
 	char *banner;
 

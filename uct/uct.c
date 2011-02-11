@@ -563,8 +563,9 @@ uct_state_init(char *arg, struct board *b)
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 80;
-	u->local_tree_allseq = 1;
+	u->local_tree_allseq = true;
 	u->local_tree_depth_decay = 1.5;
+	u->local_tree_rootchoose = true;
 
 	u->plugins = pluginset_init(b);
 
@@ -910,6 +911,17 @@ uct_state_init(char *arg, struct board *b)
 				 * tachtical goal of making the first move
 				 * in the branch survive. */
 				u->local_tree_rootgoal = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_rootchoose")) {
+				/* If disabled, only moves within the local
+				 * tree branch are considered; the values
+				 * of the branch roots (i.e. root children)
+				 * are ignored. This may make sense together
+				 * with "rootgoal", we consider only moves
+				 * that influence the goal, not the "rating"
+				 * of the goal itself. (The real solution
+				 * will be probably using criticality to pick
+				 * local tree branches.) */
+				u->local_tree_rootchoose = !optval || atoi(optval);
 
 			/** Other heuristics */
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {

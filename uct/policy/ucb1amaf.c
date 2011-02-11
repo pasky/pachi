@@ -90,7 +90,9 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	}
 
 	/* Local tree heuristics. */
-	if (p->uct->local_tree && b->ltree_rave > 0 && lnode) {
+	assert(!lnode || lnode->parent);
+	if (p->uct->local_tree && b->ltree_rave > 0 && lnode
+	    && (p->uct->local_tree_rootchoose || lnode->parent->parent)) {
 		struct move_stats l = lnode->u;
 		l.playouts = ((floating_t) l.playouts) * b->ltree_rave / LTREE_PLAYOUTS_MULTIPLIER;
 		LTREE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
