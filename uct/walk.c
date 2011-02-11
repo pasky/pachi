@@ -208,10 +208,12 @@ local_value(struct uct *u, struct board *b, coord_t coord, enum stone color)
 	 * if the resulting group stays on board until the game end. */
 	/* We can also take into account surrounding stones, e.g. to
 	 * encourage taking off external liberties during a semeai. */
+	double val;
 	if (u->local_tree_neival)
-		return (double) (2 * (board_at(b, coord) == color) + neighbor_count_at(b, coord, color) + neighbor_count_at(b, coord, S_OFFBOARD)) / 6.f;
+		val = (double) (2 * (board_at(b, coord) == color) + neighbor_count_at(b, coord, color) + neighbor_count_at(b, coord, S_OFFBOARD)) / 6.f;
 	else
-		return (board_at(b, coord) == color) ? 1.f : 0.f;
+		val = (board_at(b, coord) == color) ? 1.f : 0.f;
+	return (color == S_WHITE) ? 1.f - val : val;
 }
 
 static void
@@ -224,6 +226,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 		return;
 
 #define LTREE_DEBUG if (UDEBUGL(6))
+	LTREE_DEBUG board_print(endb, stderr);
 	LTREE_DEBUG fprintf(stderr, "recording local %s sequence: ",
 		stone2str(seq_color));
 	int di0 = di;
@@ -233,8 +236,12 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	lnode->u.playouts++;
 
 	double sval = 0.5;
-	if (u->local_tree_rootgoal)
+	if (u->local_tree_rootgoal) {
 		sval = local_value(u, endb, descent[di].node->coord, seq_color);
+		LTREE_DEBUG fprintf(stderr, "(goal %s[%s %1.3f][%d]) ",
+			coord2sstr(descent[di].node->coord, t->board),
+			stone2str(seq_color), sval, descent[di].node->d);
+	}
 
 	/* ...and record the sequence. */
 	while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
@@ -244,7 +251,6 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 			rval = sval;
 		else
 			rval = local_value(u, endb, descent[di].node->coord, color);
-		if (color == S_WHITE) rval = 1.0 - rval;
 		LTREE_DEBUG fprintf(stderr, "%s[%s %1.3f][%d] ",
 			coord2sstr(descent[di].node->coord, t->board),
 			stone2str(color), rval, descent[di].node->d);
@@ -255,12 +261,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 
 	/* Add lnode for tenuki (pass) if we descended further. */
 	if (di < dlen) {
-		double rval = 0.5;
-		if (u->local_tree_rootgoal) {
-			rval = sval;
-			enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
-			if (color == S_WHITE) rval = 1.0 - rval;
-		}
+		double rval = u->local_tree_rootgoal ? sval : 0.5;
 		LTREE_DEBUG fprintf(stderr, "pass ");
 		lnode = tree_get_node(t, lnode, pass, true);
 		assert(lnode);
