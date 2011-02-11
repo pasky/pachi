@@ -232,10 +232,18 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	struct tree_node *lnode = seq_color == S_BLACK ? t->ltree_black : t->ltree_white;
 	lnode->u.playouts++;
 
+	double sval = 0.5;
+	if (u->local_tree_rootgoal)
+		sval = local_value(u, endb, descent[di].node->coord, seq_color);
+
 	/* ...and record the sequence. */
 	while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
 		enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
-		double rval = local_value(u, endb, descent[di].node->coord, color);
+		double rval;
+		if (u->local_tree_rootgoal)
+			rval = sval;
+		else
+			rval = local_value(u, endb, descent[di].node->coord, color);
 		if (color == S_WHITE) rval = 1.0 - rval;
 		LTREE_DEBUG fprintf(stderr, "%s[%s %1.3f][%d] ",
 			coord2sstr(descent[di].node->coord, t->board),
@@ -247,10 +255,16 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 
 	/* Add lnode for tenuki (pass) if we descended further. */
 	if (di < dlen) {
+		double rval = 0.5;
+		if (u->local_tree_rootgoal) {
+			rval = sval;
+			enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
+			if (color == S_WHITE) rval = 1.0 - rval;
+		}
 		LTREE_DEBUG fprintf(stderr, "pass ");
 		lnode = tree_get_node(t, lnode, pass, true);
 		assert(lnode);
-		stats_add_result(&lnode->u, 0.5, pval);
+		stats_add_result(&lnode->u, rval, pval);
 	}
 	
 	LTREE_DEBUG fprintf(stderr, "\n");

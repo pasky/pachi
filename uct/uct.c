@@ -904,6 +904,12 @@ uct_state_init(char *arg, struct board *b)
 				 * computed just based on terminal status
 				 * of the coordinate, but also its neighbors. */
 				u->local_tree_neival = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_rootgoal")) {
+				/* If enabled, all moves within a tree branch
+				 * are considered wrt. their merit reaching
+				 * tachtical goal of making the first move
+				 * in the branch survive. */
+				u->local_tree_rootgoal = !optval || atoi(optval);
 
 			/** Other heuristics */
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {

@@ -76,6 +76,7 @@ struct uct {
 	floating_t local_tree_depth_decay;
 	bool local_tree_allseq;
 	bool local_tree_neival;
+	bool local_tree_rootgoal;
 
 	char *banner;
 
