@@ -286,14 +286,13 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	/* debug */
-	int depth = 0;
 	static char spaces[] = "\0                                                      ";
 	/* /debug */
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk with color %d\n", player_color);
 
 	while (!tree_leaf_node(n) && passes < 2) {
-		spaces[depth++] = ' '; spaces[depth] = 0;
+		spaces[dlen - 1] = ' '; spaces[dlen] = 0;
 
 
 		/*** Choose a node to descend to: */
@@ -423,7 +422,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	int pval = LTREE_PLAYOUTS_MULTIPLIER;
 	if (u->local_tree && u->local_tree_depth_decay > 0)
-		pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, depth);
+		pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, dlen);
 
 	if (t->use_extra_komi) {
 		stats_add_result(&u->dynkomi->score, result / 2, 1);
