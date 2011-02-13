@@ -563,9 +563,9 @@ uct_state_init(char *arg, struct board *b)
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 80;
-	u->local_tree_allseq = true;
 	u->local_tree_depth_decay = 1.5;
-	u->local_tree_rootchoose = true;
+	u->local_tree_rootgoal = true;
+	u->local_tree_neival = true;
 
 	u->plugins = pluginset_init(b);
 
