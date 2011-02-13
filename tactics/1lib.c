@@ -143,8 +143,7 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 			return;
 		else
 			*ladder = lib;
-	}
-	if (DEBUGL(6))
+	} else if (DEBUGL(6))
 		fprintf(stderr, "...no ladder\n");
 
 	mq_add(q, lib, tag);
