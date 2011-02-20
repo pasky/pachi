@@ -114,7 +114,7 @@ static const struct time_info default_ti = {
 
 /* Maximum time (seconds) to wait for answers to fast gtp commands
  * (all commands except pachi-genmoves and final_status_list). */
-#define MAX_FAST_CMD_WAIT 1.0
+#define MAX_FAST_CMD_WAIT 0.5
 
 /* Maximum time (seconds) to wait for answers to genmoves. */
 #define MAX_GENMOVES_WAIT 0.1 /* 100 ms */
@@ -179,8 +179,11 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 
 	/* Wait for replies here. If we don't wait, we run the
 	 * risk of getting out of sync with most slaves and
-	 * sending command history too frequently. */
-	get_replies(time_now() + MAX_FAST_CMD_WAIT, active_slaves);
+	 * sending command history too frequently. But don't wait
+	 * for all slaves otherwise we can lose on time because of
+	 * a single slow slave when replaying a whole game. */
+	int min_slaves = active_slaves > 1 ? 3 * active_slaves / 4 : 1;
+	get_replies(time_now() + MAX_FAST_CMD_WAIT, min_slaves);
 
 	protocol_unlock();
 

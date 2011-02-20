@@ -15,7 +15,7 @@ fi
 player() { :; }
 pknown=" "
 pairing() { pknown="$pknown$(pairid "$@") "; }
-. rc
+. ./rc
 
 color_stale="\033[33m"
 color_bad="\033[31m"
