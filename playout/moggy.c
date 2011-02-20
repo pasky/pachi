@@ -41,6 +41,7 @@ enum mq_tag {
 	MQ_KO = 0,
 	MQ_LATARI,
 	MQ_L2LIB,
+#define MQ_LADDER MQ_L2LIB /* XXX: We want to fit in char still! */
 	MQ_LNLIB,
 	MQ_PAT3,
 	MQ_GATARI,
@@ -53,7 +54,7 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	unsigned int lcapturerate, atarirate, nlibrate, capturerate, patternrate, korate, josekirate, nakaderate;
+	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate;
 	unsigned int selfatarirate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
@@ -288,6 +289,26 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 
 
 static void
+local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+{
+	group_t group = group_at(b, m->coord);
+
+	if (board_group_info(b, group).libs != 2)
+		return;
+
+	for (int i = 0; i < 2; i++) {
+		coord_t chase = board_group_info(b, group).lib[i];
+		coord_t escape = board_group_info(b, group).lib[1 - i];
+		if (wouldbe_ladder(b, escape, chase, board_at(b, group)))
+			mq_add(q, chase, 1<<MQ_LADDER);
+	}
+
+	if (q->moves > 0 && PLDEBUGL(5))
+		mq_print(q, b, "Ladder");
+}
+
+
+static void
 local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
@@ -451,6 +472,14 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 				return mq_pick(&q);
 		}
 
+		/* Local group trying to escape ladder? */
+		if (pp->ladderrate > fast_random(100)) {
+			struct move_queue q; q.moves = 0;
+			local_ladder_check(p, b, &b->last_move, &q);
+			if (q.moves > 0)
+				return mq_pick(&q);
+		}
+
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
 			struct move_queue q; q.moves = 0;
@@ -586,6 +615,9 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 		/* Local group in atari? */
 		local_atari_check(p, b, &b->last_move, &q);
 
+		/* Local group trying to escape ladder? */
+		local_ladder_check(p, b, &b->last_move, &q);
+
 		/* Local group can be PUT in atari? */
 		local_2lib_check(p, b, &b->last_move, &q);
 
@@ -660,6 +692,22 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	}
 
 	if (board_group_info(b, g).libs == 2) {
+		if (pp->ladderrate) {
+			/* Make sure to play the correct liberty in case
+			 * this is a group that can be caught in a ladder. */
+			bool ladderable = false;
+			for (int i = 0; i < 2; i++) {
+				coord_t chase = board_group_info(b, g).lib[i];
+				coord_t escape = board_group_info(b, g).lib[1 - i];
+				if (wouldbe_ladder(b, escape, chase, board_at(b, g))) {
+					add_prior_value(map, chase, 1, games);
+					ladderable = true;
+				}
+			}
+			if (ladderable)
+				return; // do not suggest the other lib at all
+		}
+
 		if (!pp->atarirate)
 			return;
 		group_2lib_check(b, g, map->to_play, &q, 0, pp->atari_miaisafe, pp->atari_def_no_hopeless);
@@ -823,8 +871,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	 * XXX: no 9x9 tuning has been done recently. */
 	int rate = board_large(b) ? 80 : 90;
 
-	pp->lcapturerate = pp->atarirate = pp->nlibrate = pp->patternrate
-			= pp->selfatarirate = pp->josekirate = -1U;
+	pp->lcapturerate = pp->ladderrate = pp->atarirate = pp->nlibrate
+			= pp->patternrate = pp->selfatarirate = pp->josekirate = -1U;
 	if (board_large(b)) {
 		pp->lcapturerate = 90;
 		pp->patternrate = 100;
@@ -866,6 +914,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				p->debug_level = atoi(optval);
 			} else if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
+			} else if (!strcasecmp(optname, "ladderrate") && optval) {
+				pp->ladderrate = atoi(optval);
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "nlibrate") && optval) {

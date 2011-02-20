@@ -12,6 +12,10 @@
  * ladders and trivial middle-board ladders. */
 static bool is_ladder(struct board *b, coord_t coord, group_t laddered);
 
+/* Check if a 2-lib group of color @lcolor escaping at @escapelib would be
+ * caught in a ladder given opponent stone at @chaselib.  */
+bool wouldbe_ladder(struct board *b, coord_t escapelib, coord_t chaselib, enum stone lcolor);
+
 
 bool is_border_ladder(struct board *b, coord_t coord, enum stone lcolor);
 bool is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor);
