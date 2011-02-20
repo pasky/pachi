@@ -98,7 +98,10 @@ middle_ladder_walk(struct board *b, enum stone lcolor, int x, int y, int xd, int
 		} \
 		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
 		if (s2 == lcolor) return false; \
-		if (neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) \
+		/* Then, can X actually "play" 1 in the ladder? Of course,
+		 * if we had already hit the edge, no need. */ \
+		if (neighbor_count_at(b, c, S_OFFBOARD) == 0 \
+		    && neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) \
 			return false; /* It would be self-atari! */ \
 	}
 #define ladder_horiz	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d horiz step (%d,%d)\n", x, y, xd, yd); x += xd; ladder_check(xd, 0, -2 * xd, yd, 0, yd); } while (0)
