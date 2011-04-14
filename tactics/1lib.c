@@ -49,10 +49,7 @@ capturable_group(struct board *b, enum stone capturer, coord_t c,
 	return can_play_on_lib(b, g, to_play);
 }
 
-/* For given atari group @group owned by @owner, decide if @to_play
- * can save it / keep it in danger by dealing with one of the
- * neighboring groups. */
-static bool
+bool
 can_countercapture(struct board *b, enum stone owner, group_t g,
 		   enum stone to_play, struct move_queue *q, int tag)
 {
