@@ -132,16 +132,18 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 	if (DEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
 	
-	/* ...or play out ladders. */
-	if (is_ladder(b, lib, group)) {
-		/* Sometimes we want to keep the ladder move in the
-		 * queue in order to discourage it. */
-		if (!ladder)
-			return;
-		else
-			*ladder = lib;
-	} else if (DEBUGL(6))
-		fprintf(stderr, "...no ladder\n");
+	/* ...or play out ladders (unless we can counter-capture anytime). */
+	if (!ccap) {
+		if (is_ladder(b, lib, group)) {
+			/* Sometimes we want to keep the ladder move in the
+			 * queue in order to discourage it. */
+			if (!ladder)
+				return;
+			else
+				*ladder = lib;
+		} else if (DEBUGL(6))
+			fprintf(stderr, "...no ladder\n");
+	}
 
 	mq_add(q, lib, tag);
 	mq_nodup(q);

@@ -168,7 +168,9 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor))
+	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor)
+	    && !can_countercapture(b, board_at(b, group_base(atari_neighbor)),
+                                   atari_neighbor, m->color, NULL, 0))
 		return false;
 	return true;
 }
