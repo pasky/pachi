@@ -62,12 +62,20 @@ struct moggy_policy {
 	/* Whether, when self-atari attempt is detected, to play the other
 	 * group's liberty if that is non-self-atari. */
 	bool selfatari_other;
+
+	/* 1lib settings: */
 	/* Whether to always pick from moves capturing all groups in
 	 * global_atari_check(). */
 	bool capcheckall;
+	/* Prior stone weighting. Weight of each stone between
+	 * cap_stone_min and cap_stone_max is (assess*100)/cap_stone_denom. */
+	int cap_stone_min, cap_stone_max;
+	int cap_stone_denom;
+
 	/* 2lib settings: */
 	bool atari_def_no_hopeless;
 	bool atari_miaisafe;
+
 	/* nlib settings: */
 	int nlib_count;
 
@@ -703,9 +711,10 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		if (!pp->capturerate && !pp->lcapturerate)
 			continue;
 
+		int stones = group_stone_count(b, g, pp->cap_stone_max) - (pp->cap_stone_min-1);
+		int assess = games * 2 + (stones > 0 ? stones : 0) * games * 100 / pp->cap_stone_denom;
 		if (PLDEBUGL(5))
-			fprintf(stderr, "1.0: atari %s\n", coord2sstr(coord, b));
-		int assess = games * 2;
+			fprintf(stderr, "1.0 (%d): atari %s\n", assess, coord2sstr(coord, b));
 		add_prior_value(map, coord, 1, assess);
 	}
 }
@@ -836,6 +845,13 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
+
+	pp->cap_stone_min = 2;
+	pp->cap_stone_max = 10;
+	/* By default, stone weighing is turned off. Try values like 300
+	 * or 200 for each stone weighing games/3 to games/2. */
+	pp->cap_stone_denom = 0;
+
 	pp->atari_def_no_hopeless = !board_large(b);
 	pp->atari_miaisafe = true;
 	pp->nlib_count = 4;
@@ -898,6 +914,12 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "capcheckall")) {
 				pp->capcheckall = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "cap_stone_min") && optval) {
+				pp->cap_stone_min = atoi(optval);
+			} else if (!strcasecmp(optname, "cap_stone_max") && optval) {
+				pp->cap_stone_max = atoi(optval);
+			} else if (!strcasecmp(optname, "cap_stone_denom") && optval) {
+				pp->cap_stone_denom = atoi(optval);
 			} else if (!strcasecmp(optname, "atari_miaisafe")) {
 				pp->atari_miaisafe = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "atari_def_no_hopeless")) {
