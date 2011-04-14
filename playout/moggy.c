@@ -711,8 +711,11 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		if (!pp->capturerate && !pp->lcapturerate)
 			continue;
 
-		int stones = group_stone_count(b, g, pp->cap_stone_max) - (pp->cap_stone_min-1);
-		int assess = games * 2 + (stones > 0 ? stones : 0) * games * 100 / pp->cap_stone_denom;
+		int assess = games * 2;
+		if (pp->cap_stone_denom > 0) {
+			int stones = group_stone_count(b, g, pp->cap_stone_max) - (pp->cap_stone_min-1);
+			assess += (stones > 0 ? stones : 0) * games * 100 / pp->cap_stone_denom;
+		}
 		if (PLDEBUGL(5))
 			fprintf(stderr, "1.0 (%d): atari %s\n", assess, coord2sstr(coord, b));
 		add_prior_value(map, coord, 1, assess);
