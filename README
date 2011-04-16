@@ -52,14 +52,12 @@ By default, Pachi will run on a single CPU core, taking up to 3GiB
 of memory, not pondering, etc. You can adjust these parameters by
 passing it extra command-line options:
 
-	./zzgo -t _1200 threads=8,max_tree_size=500,fast_alloc,pondering
+	./zzgo -t _1200 threads=8,max_tree_size=500,pondering
 
 This will make Pachi play with time settings 20:00 S.D. (unless it
 gets told otherwise over GTP), with 8 threads, taking up to 500MiB
-of memory (+ several tens MiB as a constant overhead). 'fast_alloc'
-is just a good idea to do in case of memory-sensitive runs (will become
-default soon). 'pondering' will make Pachi keep thinking during the
-opponent's turn.
+of memory (+ several tens MiB as a constant overhead) and thinking
+during the opponent's turn as well.
 
 For now, there is no comprehensive documentation of options, but you
 can get a pretty good idea by looking at the uct_state_init() function

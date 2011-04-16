@@ -543,6 +543,7 @@ uct_state_init(char *arg, struct board *b)
 	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
 	u->max_tree_size = 3072ULL * 1048576;
+	u->fast_alloc = true;
 	u->pruning_threshold = 0;
 
 	u->threads = 1;
