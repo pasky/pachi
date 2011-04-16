@@ -164,6 +164,10 @@ The zzgo binary can take many parameters, as well as the particular
 engine being used; the defaults should be fine for initial usage,
 you will have to consult the sources for fine-tuning the parameters.
 
+In case you hit compilation issues (e.g. when building on a MacOS/X)
+or want to change the build configuration, check the user configurable
+section at the top of the Makefile.
+
 To build better optimized binary, type:
 
 	make zzgo-profiled

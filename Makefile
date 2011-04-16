@@ -1,12 +1,48 @@
 #### CONFIGURATION
 
+# Uncomment one of the options below to change the way Pachi is built.
+# Alternatively, you can pass the option to make itself, like:
+# 	make MAC=1 DOUBLE=1
+
+
+# Do you compile on MacOS/X instead of Linux? Please note that the
+# performance may not be optimal.
+# (XXX: We are looking for volunteers contributing support for other
+# targets, like mingw/Windows.)
+
+# MAC=1
+
+# By default, Pachi uses low-precision numbers within the game tree to
+# conserve memory. This can become an issue with playout counts >1M,
+# e.g. with extremely long thinking times or massive parallelization;
+# 24 bits of floating_t mantissa become insufficient then.
+
+# DOUBLE=1
+
+# Enable performance profiling using gprof. Note that this also disables
+# inlining, which allows more fine-grained profile, but may also distort
+# it somewhat.
+
 # PROFILING=1
 
+
+# Target directories when running `make install`. Note that this is NOT
+# quite supported yet - Pachi will work fine, but will always look for
+# extra data files (such as pattern, joseki or fuseki database) only
+# in the current directory, bundled database files will not be installed
+# in a system directory or loaded from there.
 PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 
-# -ffast-math breaks us
+# Generic compiler options. You probably do not really want to twiddle
+# any of this.
+# (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
+# unless PROFILING=1.)
 CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
+
+### CONFIGURATION END
+
+
 ifdef MAC
 	SYS_CFLAGS=-DNO_THREAD_LOCAL
 	LDFLAGS=-lm -pthread -ldl -rdynamic
@@ -15,13 +51,10 @@ else
 	LDFLAGS=-lm -pthread -lrt -ldl -rdynamic
 endif
 
-# Use make DOUBLE=1 in large configurations with counts > 1M
-# where 24 bits of floating_t mantissa become insufficient.
 ifdef DOUBLE
 	CUSTOM_CFLAGS+=-DDOUBLE
 endif
 
-# Profiling:
 ifdef PROFILING
 	LDFLAGS+=-pg
 	CUSTOM_CFLAGS+=-pg -fno-inline
@@ -30,10 +63,13 @@ else
 	CUSTOM_CFLAGS+=-fomit-frame-pointer
 endif
 
+ifndef LD
 LD=ld
-AR=ar
+endif
 
-### CONFIGURATION END
+ifndef AR
+AR=ar
+endif
 
 ifndef INSTALL
 INSTALL=/usr/bin/install
