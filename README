@@ -3,6 +3,28 @@ the game of Go/Weiqi/Baduk, and a reasonably strong engine built
 within this framework.
 
 
+Installation
+------------
+
+To build Pachi, simply type:
+
+	make
+
+The resulting binary program `zzgo` (named that way from historical
+reasons) is a GTP client; connect to it using your favorite Go program
+interface (e.g. gogui or qgo), or use kgsGtp to connect it to KGS.
+(DO NOT make the GTP interface accessible directly to untrusted users
+since the parser is not secure - see the HACKING file for details.)
+
+The zzgo binary can take many parameters, as well as the particular
+engine being used; the defaults should be fine for initial usage,
+see below for some more tips.
+
+In case you hit compilation issues (e.g. when building on MacOS/X)
+or want to change the build configuration, check the user configurable
+section at the top of the Makefile.
+
+
 Engine
 ------
 
@@ -156,25 +178,3 @@ to the public, you need to release the source code as well.
 One exception is the Autotest framework, which is licenced under the
 terms of the MIT licence (close to public domain) - you are free to
 use it any way you wish.
-
-
-Installation
-------------
-
-To build Pachi, simply type:
-
-	make
-
-The resulting binary program `zzgo` (named that way from historical
-reasons) is a GTP client; connect to it using your favorite Go program
-interface (e.g. gogui or qgo), or use kgsGtp to connect it to KGS.
-(DO NOT make the GTP interface accessible directly to untrusted users
-since the parser is not secure - see the HACKING file for details.)
-
-The zzgo binary can take many parameters, as well as the particular
-engine being used; the defaults should be fine for initial usage,
-see above for some more tips.
-
-In case you hit compilation issues (e.g. when building on MacOS/X)
-or want to change the build configuration, check the user configurable
-section at the top of the Makefile.
