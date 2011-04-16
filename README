@@ -32,8 +32,8 @@ The default engine plays by Chinese rules and should be about
 3d KGS strength on 9x9. On 19x19, it might be about KGS 2k, assuming
 reasonable hardware, e.g. two-core Athlon64 machine.  On a higher-end
 (e.g. six-way Intel i7) machine, it can hold a solid KGS 1d rank.
-When using a large cluster (64 machines, 20 cores each), it will
-maintain KGS 3d and has won a 7-stone handicap against Zhou Junxun 9p.
+When using a large cluster (64 machines, 20 cores each), it maintains
+KGS 3d and has won a 7-stone handicap game against Zhou Junxun 9p.
 
 By default, Pachi currently uses the UCT engine that combines
 Monte Carlo approach with tree search; UCB1AMAF tree policy using
