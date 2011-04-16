@@ -80,7 +80,8 @@ Pachi consists of the following components:
 UCT architecture
 ================
 
-The UCT engine has non-trivial structure by itself:
+The UCT engine (the proper name should be MCTS as it does not have that
+much common with classic UCT now) has non-trivial structure by itself:
 
   +-------------+    +-----+     +-------------------+
   | node policy | -- | UCT | --- | node prior-hinter |
