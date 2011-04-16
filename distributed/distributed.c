@@ -55,15 +55,15 @@
  */
 
 /* A configuration without proxy would have one master run on masterhost as:
- *    zzgo -e distributed slave_port=1234
+ *    pachi -e distributed slave_port=1234
  * and N slaves running as:
- *    zzgo -e uct -g masterhost:1234 slave
+ *    pachi -e uct -g masterhost:1234 slave
  * With log proxy:
- *    zzgo -e distributed slave_port=1234,proxy_port=1235
- *    zzgo -e uct -g masterhost:1234 -l masterhost:1235 slave
+ *    pachi -e distributed slave_port=1234,proxy_port=1235
+ *    pachi -e uct -g masterhost:1234 -l masterhost:1235 slave
  * If the master itself runs on a machine other than that running gogui,
  * gogui-twogtp, kgsGtp or cgosGtp, it can redirect its gtp port:
- *    zzgo -e distributed -g 10000 slave_port=1234,proxy_port=1235
+ *    pachi -e distributed -g 10000 slave_port=1234,proxy_port=1235
  */
 
 #include <assert.h>

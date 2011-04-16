@@ -10,13 +10,13 @@ To build Pachi, simply type:
 
 	make
 
-The resulting binary program `zzgo` (named that way from historical
-reasons) is a GTP client; connect to it using your favorite Go program
-interface (e.g. gogui or qgo), or use kgsGtp to connect it to KGS.
-(DO NOT make the GTP interface accessible directly to untrusted users
-since the parser is not secure - see the HACKING file for details.)
+The resulting binary program `pachi` is a GTP client; connect to it
+with your favorite Go program interface (e.g. gogui or qgo), or use
+kgsGtp to connect it to KGS.  (DO NOT make the GTP interface accessible
+directly to untrusted users since the parser is not secure - see the
+HACKING file for details.)
 
-The zzgo binary can take many parameters, as well as the particular
+The pachi program can take many parameters, as well as the particular
 engine being used; the defaults should be fine for initial usage,
 see below for some more tips.
 
@@ -53,7 +53,7 @@ of memory, not pondering and taking completely arbitrary amount of time
 per turn. You can adjust these parameters by passing it extra command
 line options:
 
-	./zzgo -t _1200 threads=8,max_tree_size=3072,pondering
+	./pachi -t _1200 threads=8,max_tree_size=3072,pondering
 
 This will make Pachi play with time settings 20:00 S.D. (unless it
 gets told otherwise over GTP), with 8 threads, taking up to 3GiB
@@ -83,7 +83,7 @@ Other special engines are also provided:
 Pachi can be used as a test opponent for development of other go-playing
 programs. For example, to get the "plainest UCT" player, use:
 
-	./zzgo -t =5000 policy=ucb1,playout=light,prior=eqex=0,dynkomi=none
+	./pachi -t =5000 policy=ucb1,playout=light,prior=eqex=0,dynkomi=none
 
 This will fix the number of playouts per move to 5000, switch the node
 selection policy from ucb1amaf to ucb1 (i.e. disable RAVE), switch the
@@ -138,7 +138,7 @@ to analyze.
 
 4. Run Pachi as follows:
 
-	./zzgo -t =500 -d 0 <file.gtp | sed -n '/^=0/,${s/^=0 //;p}'
+	./pachi -t =500 -d 0 <file.gtp | sed -n '/^=0/,${s/^=0 //;p}'
 
 If you want to know more details on what is Pachi thinking about the
 various moves, remove the `-d 0` and `| sed -n ...` parts. To improve
