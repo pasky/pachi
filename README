@@ -173,16 +173,8 @@ since the parser is not secure - see the HACKING file for details.)
 
 The zzgo binary can take many parameters, as well as the particular
 engine being used; the defaults should be fine for initial usage,
-see above for some tips.
+see above for some more tips.
 
 In case you hit compilation issues (e.g. when building on MacOS/X)
 or want to change the build configuration, check the user configurable
 section at the top of the Makefile.
-
-To build better optimized binary, type:
-
-	make zzgo-profiled
-
-This will also create binary zzgo, but while the build will take
-more time (probably less than a minute anyway), the resulting binary
-will be about 1/4 to 1/5 faster.

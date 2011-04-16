@@ -89,6 +89,8 @@ LOCALLIBS=random/random.a replay/replay.a joseki/joseki.a montecarlo/montecarlo.
 zzgo: $(OBJS) zzgo.o $(LOCALLIBS)
 	$(call cmd,link)
 
+# Use runtime gcc profiling for extra optimization. This used to be a large
+# bonus but nowadays, it's rarely worth the trouble.
 .PHONY: zzgo-profiled
 zzgo-profiled:
 	@make clean all XLDFLAGS=-fprofile-generate XCFLAGS="-fprofile-generate -fomit-frame-pointer -frename-registers"
