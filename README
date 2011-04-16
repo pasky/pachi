@@ -48,21 +48,23 @@ features and enable them by default only when they give a universal
 strength boost.
 
 
-By default, Pachi will run on a single CPU core, taking up to 3GiB
-of memory, not pondering, etc. You can adjust these parameters by
-passing it extra command-line options:
+By default, Pachi will run on a single CPU core, taking up to 1.4GiB
+of memory, not pondering and taking completely arbitrary amount of time
+per turn. You can adjust these parameters by passing it extra command
+line options:
 
-	./zzgo -t _1200 threads=8,max_tree_size=500,pondering
+	./zzgo -t _1200 threads=8,max_tree_size=3072,pondering
 
 This will make Pachi play with time settings 20:00 S.D. (unless it
-gets told otherwise over GTP), with 8 threads, taking up to 500MiB
+gets told otherwise over GTP), with 8 threads, taking up to 3GiB
 of memory (+ several tens MiB as a constant overhead) and thinking
 during the opponent's turn as well.
 
 For now, there is no comprehensive documentation of options, but you
 can get a pretty good idea by looking at the uct_state_init() function
 in uct/uct.c - you will find the list of UCT engine options there, each
-with a description.
+with a description. At any rate, usually the three options above are
+the only ones you really want to tweak.
 
 
 Except UCT, Pachi supports a simple idiotbot-like engine and an example
