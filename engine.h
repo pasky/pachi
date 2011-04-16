@@ -1,5 +1,5 @@
-#ifndef ZZGO_ENGINE_H
-#define ZZGO_ENGINE_H
+#ifndef PACHI_ENGINE_H
+#define PACHI_ENGINE_H
 
 #include "board.h"
 #include "move.h"

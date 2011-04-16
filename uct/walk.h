@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_WALK_H
-#define ZZGO_UCT_WALK_H
+#ifndef PACHI_UCT_WALK_H
+#define PACHI_UCT_WALK_H
 
 #include "move.h"
 

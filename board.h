@@ -2,8 +2,8 @@
  * proper including order. */
 #include "probdist.h"
 
-#ifndef ZZGO_BOARD_H
-#define ZZGO_BOARD_H
+#ifndef PACHI_BOARD_H
+#define PACHI_BOARD_H
 
 #include <inttypes.h>
 #include <stdbool.h>

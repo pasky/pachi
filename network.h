@@ -1,5 +1,5 @@
-#ifndef ZZGO_NETWORK_H
-#define ZZGO_NETWORK_H
+#ifndef PACHI_NETWORK_H
+#define PACHI_NETWORK_H
 
 #include <netinet/in.h>
 

@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_UCT_H
-#define ZZGO_UCT_UCT_H
+#ifndef PACHI_UCT_UCT_H
+#define PACHI_UCT_UCT_H
 
 #include "engine.h"
 #include "move.h"

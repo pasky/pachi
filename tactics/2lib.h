@@ -1,5 +1,5 @@
-#ifndef ZZGO_TACTICS_2LIB_H
-#define ZZGO_TACTICS_2LIB_H
+#ifndef PACHI_TACTICS_2LIB_H
+#define PACHI_TACTICS_2LIB_H
 
 /* Two-liberty tactical checks (i.e. dealing with two-step capturing races,
  * preventing atari). */

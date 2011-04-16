@@ -1,5 +1,5 @@
-#ifndef ZZGO_TIMEINFO_H
-#define ZZGO_TIMEINFO_H
+#ifndef PACHI_TIMEINFO_H
+#define PACHI_TIMEINFO_H
 
 /* Time-keeping information about time to spend on the next move and/or
  * rest of the game. This is only a hint, an engine may decide to spend

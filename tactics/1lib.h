@@ -1,5 +1,5 @@
-#ifndef ZZGO_TACTICS_1LIB_H
-#define ZZGO_TACTICS_1LIB_H
+#ifndef PACHI_TACTICS_1LIB_H
+#define PACHI_TACTICS_1LIB_H
 
 /* One-liberty tactical checks (i.e. dealing with atari situations). */
 

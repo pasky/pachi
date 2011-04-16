@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_DYNKOMI_H
-#define ZZGO_UCT_DYNKOMI_H
+#ifndef PACHI_UCT_DYNKOMI_H
+#define PACHI_UCT_DYNKOMI_H
 
 /* Dynamic computation of artificial komi values to stabilize the MCTS. */
 

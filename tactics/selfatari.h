@@ -1,5 +1,5 @@
-#ifndef ZZGO_TACTICS_SELFATARI_H
-#define ZZGO_TACTICS_SELFATARI_H
+#ifndef PACHI_TACTICS_SELFATARI_H
+#define PACHI_TACTICS_SELFATARI_H
 
 /* A fairly reliable elf-atari detector. */
 

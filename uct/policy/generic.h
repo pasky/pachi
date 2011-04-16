@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_POLICY_GENERIC_H
-#define ZZGO_UCT_POLICY_GENERIC_H
+#ifndef PACHI_UCT_POLICY_GENERIC_H
+#define PACHI_UCT_POLICY_GENERIC_H
 
 /* Some default policy routines and templates. */
 

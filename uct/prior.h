@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_PRIOR_H
-#define ZZGO_UCT_PRIOR_H
+#ifndef PACHI_UCT_PRIOR_H
+#define PACHI_UCT_PRIOR_H
 
 #include "move.h"
 #include "uct/tree.h"

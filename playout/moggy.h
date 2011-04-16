@@ -1,5 +1,5 @@
-#ifndef ZZGO_PLAYOUT_MOGGY_H
-#define ZZGO_PLAYOUT_MOGGY_H
+#ifndef PACHI_PLAYOUT_MOGGY_H
+#define PACHI_PLAYOUT_MOGGY_H
 
 struct board;
 struct playout_policy;

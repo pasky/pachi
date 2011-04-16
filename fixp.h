@@ -1,5 +1,5 @@
-#ifndef ZZGO_FIXP_H
-#define ZZGO_FIXP_H
+#ifndef PACHI_FIXP_H
+#define PACHI_FIXP_H
 
 /* Tools for counting fixed-point numbers. */
 

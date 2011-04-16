@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_TREE_H
-#define ZZGO_UCT_TREE_H
+#ifndef PACHI_UCT_TREE_H
+#define PACHI_UCT_TREE_H
 
 /* Management of UCT trees. See diagram below for the node structure.
  *

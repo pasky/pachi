@@ -1,5 +1,5 @@
-#ifndef ZZGO_TACTICS_LADDER_H
-#define ZZGO_TACTICS_LADDER_H
+#ifndef PACHI_TACTICS_LADDER_H
+#define PACHI_TACTICS_LADDER_H
 
 /* Reading ladders. */
 

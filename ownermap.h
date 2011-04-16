@@ -1,5 +1,5 @@
-#ifndef ZZGO_OWNERMAP_H
-#define ZZGO_OWNERMAP_H
+#ifndef PACHI_OWNERMAP_H
+#define PACHI_OWNERMAP_H
 
 /* Map of board intersection owners, and devices to derive group status
  * information from the map. */

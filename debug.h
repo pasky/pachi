@@ -1,5 +1,5 @@
-#ifndef ZZGO_DEBUG_H
-#define ZZGO_DEBUG_H
+#ifndef PACHI_DEBUG_H
+#define PACHI_DEBUG_H
 
 #include <stdbool.h>
 

@@ -1,5 +1,5 @@
-#ifndef ZZGO_DISTRIBUTED_PROTOCOL_H
-#define ZZGO_DISTRIBUTED_PROTOCOL_H
+#ifndef PACHI_DISTRIBUTED_PROTOCOL_H
+#define PACHI_DISTRIBUTED_PROTOCOL_H
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
