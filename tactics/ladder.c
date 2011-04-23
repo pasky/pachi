@@ -181,3 +181,55 @@ is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor)
 	
 	return middle_ladder_walk(b, lcolor, x, y, xd, yd);
 }
+
+bool
+wouldbe_ladder(struct board *b, coord_t escapelib, coord_t chaselib, enum stone lcolor)
+{
+	if (DEBUGL(6))
+		fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
+			stone2str(lcolor), coord2sstr(escapelib, b), coord2sstr(chaselib, b));
+
+	if (!coord_is_8adjecent(escapelib, chaselib, b)) {
+		if (DEBUGL(5))
+			fprintf(stderr, "cannot determine ladder for remote simulated stone\n");
+		return false;
+	}
+
+	if (neighbor_count_at(b, chaselib, lcolor) != 1 || immediate_liberty_count(b, chaselib) != 2) {
+		if (DEBUGL(5))
+			fprintf(stderr, "overly trivial for a ladder\n");
+		return false;
+	}
+
+	int x = coord_x(escapelib, b), y = coord_y(escapelib, b);
+	int cx = coord_x(chaselib, b), cy = coord_y(chaselib, b);
+
+	/* Figure out the ladder direction */
+	int xd, yd;
+	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
+	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : board_atxy(b, x, y - 1) == S_NONE ? -1 : 0;
+
+	if (board_atxy(b, x + 1, y) == board_atxy(b, x - 1, y)
+	    || board_atxy(b, x, y + 1) == board_atxy(b, x, y - 1)) {
+		if (DEBUGL(5))
+			fprintf(stderr, "no ladder, distorted space\n");
+		return false;
+	}
+
+	/* The ladder may be
+	 * . c .        . e X
+	 * e O X   or   c O X
+	 * X X X        . X X */
+	bool horiz_first = cx + xd == x;
+	bool vert_first = cy + yd == y;
+	//fprintf(stderr, "esc %d,%d chase %d,%d xd %d yd %d\n", x,y, cx,cy, xd, yd);
+	if (horiz_first == vert_first) {
+		/* TODO: In case of basic non-simple ladder, play out both variants. */
+		if (DEBUGL(5))
+			fprintf(stderr, "non-simple ladder\n");
+		return false;
+	}
+
+	/* We skip the atari check, obviously. */
+	return middle_ladder_walk(b, lcolor, x, y, xd, yd);
+}
