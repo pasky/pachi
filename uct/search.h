@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_SEARCH_H
-#define ZZGO_UCT_SEARCH_H
+#ifndef PACHI_UCT_SEARCH_H
+#define PACHI_UCT_SEARCH_H
 
 /* MCTS Search infrastructure. We juggle the search threads and
  * control search duration. */

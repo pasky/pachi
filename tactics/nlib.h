@@ -1,5 +1,5 @@
-#ifndef ZZGO_TACTICS_NLIB_H
-#define ZZGO_TACTICS_NLIB_H
+#ifndef PACHI_TACTICS_NLIB_H
+#define PACHI_TACTICS_NLIB_H
 
 /* N-liberty semeai defense tactical checks. */
 

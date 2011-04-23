@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_PLUGINS_H
-#define ZZGO_UCT_PLUGINS_H
+#ifndef PACHI_UCT_PLUGINS_H
+#define PACHI_UCT_PLUGINS_H
 
 struct tree_node;
 struct board;

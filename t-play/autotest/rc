@@ -32,7 +32,7 @@ player gnugo10 'gnugo --mode gtp --chinese-rules --capture-all-dead --level 10' 
 # revision and specific parameters in the pairings.
 # ${2:+,$2} means that if second parameter is passed, it will be inserted here,
 # comma-prepended, otherwise nothing will be inserted.
-player zamafmoggy5k './zzgo-$1 games=5000,pass_all_alive,policy=ucb1amaf,playout=moggy${2:+,$2}' 2
+player zamafmoggy5k './pachi-$1 games=5000,pass_all_alive,policy=ucb1amaf,playout=moggy${2:+,$2}' 2
 
 
 ### Pairings:

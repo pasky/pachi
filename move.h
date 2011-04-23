@@ -1,5 +1,5 @@
-#ifndef ZZGO_MOVE_H
-#define ZZGO_MOVE_H
+#ifndef PACHI_MOVE_H
+#define PACHI_MOVE_H
 
 #include <ctype.h>
 #include <stdint.h>

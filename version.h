@@ -1,5 +1,5 @@
-#ifndef ZZGO_VERSION_H
-#define ZZGO_VERSION_H
+#ifndef PACHI_VERSION_H
+#define PACHI_VERSION_H
 
 #define PACHI_VERNUM 7.99
 #define PACHI_VERNUMS "7.99"

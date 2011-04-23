@@ -49,10 +49,7 @@ capturable_group(struct board *b, enum stone capturer, coord_t c,
 	return can_play_on_lib(b, g, to_play);
 }
 
-/* For given atari group @group owned by @owner, decide if @to_play
- * can save it / keep it in danger by dealing with one of the
- * neighboring groups. */
-static bool
+bool
 can_countercapture(struct board *b, enum stone owner, group_t g,
 		   enum stone to_play, struct move_queue *q, int tag)
 {
@@ -135,16 +132,18 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 	if (DEBUGL(6))
 		fprintf(stderr, "...escape route valid\n");
 	
-	/* ...or play out ladders. */
-	if (is_ladder(b, lib, group)) {
-		/* Sometimes we want to keep the ladder move in the
-		 * queue in order to discourage it. */
-		if (!ladder)
-			return;
-		else
-			*ladder = lib;
-	} else if (DEBUGL(6))
-		fprintf(stderr, "...no ladder\n");
+	/* ...or play out ladders (unless we can counter-capture anytime). */
+	if (!ccap) {
+		if (is_ladder(b, lib, group)) {
+			/* Sometimes we want to keep the ladder move in the
+			 * queue in order to discourage it. */
+			if (!ladder)
+				return;
+			else
+				*ladder = lib;
+		} else if (DEBUGL(6))
+			fprintf(stderr, "...no ladder\n");
+	}
 
 	mq_add(q, lib, tag);
 	mq_nodup(q);

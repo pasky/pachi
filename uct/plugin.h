@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_PLUGIN_H
-#define ZZGO_UCT_PLUGIN_H
+#ifndef PACHI_UCT_PLUGIN_H
+#define PACHI_UCT_PLUGIN_H
 
 /* This is the public API for external Pachi UCT plugins. */
 /* Unlike the rest of Pachi, this file is available for anyone for

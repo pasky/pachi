@@ -1,5 +1,5 @@
-#ifndef ZZGO_UTIL_H
-#define ZZGO_UTIL_H
+#ifndef PACHI_UTIL_H
+#define PACHI_UTIL_H
 
 #include <stdlib.h>
 

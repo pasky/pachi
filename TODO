@@ -17,13 +17,9 @@ General improvements:
 * Local tree forcing
 
 Playouts:
-* Remove the unsuccessful attempt at ELO-play policy
 * Split playout aspects to custom-stackable pieces
 * Possibly replay top-rated unplayed moves from the tree
   in the playout?
-* 2-liberty handler should pick the move that follows/breaks ladder;
-  this should significantly improve Pachi's tendency to play out
-  ladders or try to ladder non-laddered groups.
 
 UCB1AMAF:
 * Fix RAVE for good (still noticeably weaker than fuego?)

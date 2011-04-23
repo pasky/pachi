@@ -1,5 +1,5 @@
-#ifndef ZZGO_DISTRIBUTED_MERGE_H
-#define ZZGO_DISTRIBUTED_MERGE_H
+#ifndef PACHI_DISTRIBUTED_MERGE_H
+#define PACHI_DISTRIBUTED_MERGE_H
 
 #include "distributed/protocol.h"
 

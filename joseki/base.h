@@ -1,5 +1,5 @@
-#ifndef ZZGO_JOSEKI_BASE_H
-#define ZZGO_JOSEKI_BASE_H
+#ifndef PACHI_JOSEKI_BASE_H
+#define PACHI_JOSEKI_BASE_H
 
 #include "board.h"
 

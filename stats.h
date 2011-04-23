@@ -1,5 +1,5 @@
-#ifndef ZZGO_STATS_H
-#define ZZGO_STATS_H
+#ifndef PACHI_STATS_H
+#define PACHI_STATS_H
 
 #include <math.h>
 

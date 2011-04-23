@@ -1,5 +1,5 @@
-#ifndef ZZGO_REPLAY_REPLAY_H
-#define ZZGO_REPLAY_REPLAY_H
+#ifndef PACHI_REPLAY_REPLAY_H
+#define PACHI_REPLAY_REPLAY_H
 
 #include "engine.h"
 

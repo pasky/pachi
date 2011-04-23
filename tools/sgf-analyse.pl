@@ -31,12 +31,12 @@ sub one {
 	# Move of the other color - supposedly.
 	return if ($move % 2 == ($mcolor eq 'B' ? 0 : 1));
 
-	# Get zzgo output from GTP stream that contains the SGF up to
+	# Get pachi output from GTP stream that contains the SGF up to
 	# given move, with information about the originally made move
 	# included.
 	my $line = $move + 3; # board_size, clearboard, komi
 	my $rest = $line + 1;
-	open my $g, "tools/sgf2gtp.pl \"$sgf\" | sed -e '$line s/play \\(.*\\) \\(.*\\)/1 echo \\1 \\2\\n2 genmove \\1\\n3 pachi-result/' -e '$rest,\$ d' | ./zzgo @ARGV |" or die $!;
+	open my $g, "tools/sgf2gtp.pl \"$sgf\" | sed -e '$line s/play \\(.*\\) \\(.*\\)/1 echo \\1 \\2\\n2 genmove \\1\\n3 pachi-result/' -e '$rest,\$ d' | ./pachi @ARGV |" or die $!;
 
 	# Parse the GTP output.
 	my ($color, $realmove, $genmove, $winrate) = @_;
