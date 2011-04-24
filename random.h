@@ -1,5 +1,5 @@
-#ifndef ZZGO_RANDOM_H
-#define ZZGO_RANDOM_H
+#ifndef PACHI_RANDOM_H
+#define PACHI_RANDOM_H
 
 #include <stdint.h>
 

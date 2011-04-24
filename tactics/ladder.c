@@ -58,11 +58,63 @@ is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
 	return true;
 }
 
+
 /* This is very trivial and gets a lot of corner cases wrong.
  * We need this to be just very fast. One important point is
  * that we sometimes might not notice a ladder but if we do,
  * it should always work; thus we can use this for strong
  * negative hinting safely. */
+
+static bool
+middle_ladder_walk(struct board *b, enum stone lcolor, int x, int y, int xd, int yd)
+{
+#define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
+	if (board_atxy(b, x, y) != S_NONE) { \
+		/* Did we hit a stone when playing out ladder? */ \
+		if (ladder_catcher(b, x, y, lcolor)) \
+			return true; /* ladder works */ \
+		if (board_group_info(b, group_atxy(b, x, y)).lib[0] > 0) \
+			return false; /* friend that's not in atari himself */ \
+	} else { \
+		/* No. So we are at new position. \
+		 * We need to check indirect ladder breakers. */ \
+		/* . 2 x 3 . \
+		 * . x o O 1 <- only at O we can check for o at 2 \
+		 * x o o x .    otherwise x at O would be still deadly \
+		 * o o x . . \
+		 * We check for o and x at 1, these are vital. \
+		 * We check only for o at 2; x at 2 would mean we \
+		 * need to fork (one step earlier). */ \
+		coord_t c = coord_xy(b, x, y); \
+		coord_t c1 = coord_xy(b, x + (xd1_), y + (yd1_)); \
+		enum stone s1 = board_at(b, c1); \
+		if (s1 == lcolor) return false; \
+		if (s1 == stone_other(lcolor)) { \
+			/* One more thing - if the position at 3 is \
+			 * friendly and safe, we escaped anyway! */ \
+			coord_t c3 = coord_xy(b, x + (xd3_), y + (yd3_)); \
+			return board_at(b, c3) != lcolor \
+			       || board_group_info(b, group_at(b, c3)).libs < 2; \
+		} \
+		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
+		if (s2 == lcolor) return false; \
+		/* Then, can X actually "play" 1 in the ladder? Of course,
+		 * if we had already hit the edge, no need. */ \
+		if (neighbor_count_at(b, c, S_OFFBOARD) == 0 \
+		    && neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) \
+			return false; /* It would be self-atari! */ \
+	}
+#define ladder_horiz	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d horiz step (%d,%d)\n", x, y, xd, yd); x += xd; ladder_check(xd, 0, -2 * xd, yd, 0, yd); } while (0)
+#define ladder_vert	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d vert step of (%d,%d)\n", x, y, xd, yd); y += yd; ladder_check(0, yd, xd, -2 * yd, xd, 0); } while (0)
+
+	if (ladder_catcher(b, x - xd, y, lcolor))
+		ladder_horiz;
+	do {
+		ladder_vert;
+		ladder_horiz;
+	} while (1);
+}
+
 bool
 is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor)
 {
@@ -126,47 +178,58 @@ is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor)
 	}
 #undef check_catcher_danger
 #endif
+	
+	return middle_ladder_walk(b, lcolor, x, y, xd, yd);
+}
 
-#define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
-	if (board_atxy(b, x, y) != S_NONE) { \
-		/* Did we hit a stone when playing out ladder? */ \
-		if (ladder_catcher(b, x, y, lcolor)) \
-			return true; /* ladder works */ \
-		if (board_group_info(b, group_atxy(b, x, y)).lib[0] > 0) \
-			return false; /* friend that's not in atari himself */ \
-	} else { \
-		/* No. So we are at new position. \
-		 * We need to check indirect ladder breakers. */ \
-		/* . 2 x 3 . \
-		 * . x o O 1 <- only at O we can check for o at 2 \
-		 * x o o x .    otherwise x at O would be still deadly \
-		 * o o x . . \
-		 * We check for o and x at 1, these are vital. \
-		 * We check only for o at 2; x at 2 would mean we \
-		 * need to fork (one step earlier). */ \
-		coord_t c1 = coord_xy(b, x + (xd1_), y + (yd1_)); \
-		enum stone s1 = board_at(b, c1); \
-		if (s1 == lcolor) return false; \
-		if (s1 == stone_other(lcolor)) { \
-			/* One more thing - if the position at 3 is \
-			 * friendly and safe, we escaped anyway! */ \
-			coord_t c3 = coord_xy(b, x + (xd3_), y + (yd3_)); \
-			return board_at(b, c3) != lcolor \
-			       || board_group_info(b, group_at(b, c3)).libs < 2; \
-		} \
-		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
-		if (s2 == lcolor) return false; \
-		/* Then, can X actually "play" 1 in the ladder? */ \
-		if (neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) \
-			return false; /* It would be self-atari! */ \
+bool
+wouldbe_ladder(struct board *b, coord_t escapelib, coord_t chaselib, enum stone lcolor)
+{
+	if (DEBUGL(6))
+		fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
+			stone2str(lcolor), coord2sstr(escapelib, b), coord2sstr(chaselib, b));
+
+	if (!coord_is_8adjecent(escapelib, chaselib, b)) {
+		if (DEBUGL(5))
+			fprintf(stderr, "cannot determine ladder for remote simulated stone\n");
+		return false;
 	}
-#define ladder_horiz	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d horiz step (%d,%d)\n", x, y, xd, yd); x += xd; ladder_check(xd, 0, -2 * xd, yd, 0, yd); } while (0)
-#define ladder_vert	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d vert step of (%d,%d)\n", x, y, xd, yd); y += yd; ladder_check(0, yd, xd, -2 * yd, xd, 0); } while (0)
 
-	if (ladder_catcher(b, x - xd, y, lcolor))
-		ladder_horiz;
-	do {
-		ladder_vert;
-		ladder_horiz;
-	} while (1);
+	if (neighbor_count_at(b, chaselib, lcolor) != 1 || immediate_liberty_count(b, chaselib) != 2) {
+		if (DEBUGL(5))
+			fprintf(stderr, "overly trivial for a ladder\n");
+		return false;
+	}
+
+	int x = coord_x(escapelib, b), y = coord_y(escapelib, b);
+	int cx = coord_x(chaselib, b), cy = coord_y(chaselib, b);
+
+	/* Figure out the ladder direction */
+	int xd, yd;
+	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
+	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : board_atxy(b, x, y - 1) == S_NONE ? -1 : 0;
+
+	if (board_atxy(b, x + 1, y) == board_atxy(b, x - 1, y)
+	    || board_atxy(b, x, y + 1) == board_atxy(b, x, y - 1)) {
+		if (DEBUGL(5))
+			fprintf(stderr, "no ladder, distorted space\n");
+		return false;
+	}
+
+	/* The ladder may be
+	 * . c .        . e X
+	 * e O X   or   c O X
+	 * X X X        . X X */
+	bool horiz_first = cx + xd == x;
+	bool vert_first = cy + yd == y;
+	//fprintf(stderr, "esc %d,%d chase %d,%d xd %d yd %d\n", x,y, cx,cy, xd, yd);
+	if (horiz_first == vert_first) {
+		/* TODO: In case of basic non-simple ladder, play out both variants. */
+		if (DEBUGL(5))
+			fprintf(stderr, "non-simple ladder\n");
+		return false;
+	}
+
+	/* We skip the atari check, obviously. */
+	return middle_ladder_walk(b, lcolor, x, y, xd, yd);
 }

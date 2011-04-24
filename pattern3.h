@@ -1,5 +1,5 @@
-#ifndef ZZGO_PATTERN3_H
-#define ZZGO_PATTERN3_H
+#ifndef PACHI_PATTERN3_H
+#define PACHI_PATTERN3_H
 
 /* Fast matching of simple 3x3 patterns. */
 

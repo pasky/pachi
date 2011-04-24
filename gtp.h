@@ -1,5 +1,5 @@
-#ifndef ZZGO_GTP_H
-#define ZZGO_GTP_H
+#ifndef PACHI_GTP_H
+#define PACHI_GTP_H
 
 struct board;
 struct engine;

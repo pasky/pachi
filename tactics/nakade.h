@@ -1,5 +1,5 @@
-#ifndef ZZGO_TACTICS_NAKADE_H
-#define ZZGO_TACTICS_NAKADE_H
+#ifndef PACHI_TACTICS_NAKADE_H
+#define PACHI_TACTICS_NAKADE_H
 
 /* Piercing eyes. */
 

@@ -48,8 +48,8 @@ uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b)
  * at @moves moves. */
 
 struct dynkomi_linear {
-	int handicap_value;
-	int moves;
+	int handicap_value[S_MAX];
+	int moves[S_MAX];
 	bool rootbased;
 };
 
@@ -57,11 +57,13 @@ static floating_t
 linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_linear *l = d->data;
-	if (b->moves >= l->moves)
+	enum stone color = stone_other(tree->root_color);
+	int lmoves = l->moves[color];
+	if (b->moves >= lmoves)
 		return 0;
 
-	floating_t base_komi = board_effective_handicap(b, l->handicap_value);
-	floating_t extra_komi = base_komi * (l->moves - b->moves) / l->moves;
+	floating_t base_komi = board_effective_handicap(b, l->handicap_value[color]);
+	floating_t extra_komi = base_komi * (lmoves - b->moves) / lmoves;
 	return extra_komi;
 }
 
@@ -90,9 +92,19 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	struct dynkomi_linear *l = calloc2(1, sizeof(*l));
 	d->data = l;
 
-	if (board_large(b))
-		l->moves = 200;
-	l->handicap_value = 7;
+	/* Force white to feel behind and try harder, but not to the
+	 * point of resigning immediately in high handicap games.
+	 * By move 100 white should still be behind but should have
+	 * caught up enough to avoid resigning. */
+	if (board_large(b)) {
+		l->moves[S_BLACK] = 200;
+		l->moves[S_WHITE] = 100;
+	}
+	/* The real value of one stone is twice the komi so about 15 points.
+	 * But use a lower value to avoid being too pessimistic as black
+	 * or too optimistic as white. */
+	l->handicap_value[S_BLACK] = 7;
+	l->handicap_value[S_WHITE] = 5;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -108,12 +120,18 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 			if (!strcasecmp(optname, "moves") && optval) {
 				/* Dynamic komi in handicap game; linearly
 				 * decreases to basic settings until move
-				 * #optval. */
-				l->moves = atoi(optval);
+				 * #optval. moves=blackmoves%whitemoves */
+				for (int i = S_BLACK; *optval && i <= S_WHITE; i++, optval += strcspn(optval, "%")) {
+					optval++;
+					l->moves[i] = atoi(optval);
+				}
 			} else if (!strcasecmp(optname, "handicap_value") && optval) {
 				/* Point value of single handicap stone,
 				 * for dynkomi computation. */
-				l->handicap_value = atoi(optval);
+				for (int i = S_BLACK; *optval && i <= S_WHITE; i++, optval += strcspn(optval, "%")) {
+					optval++;
+					l->handicap_value[i] = atoi(optval);
+				}
 			} else if (!strcasecmp(optname, "rootbased")) {
 				/* If set, the extra komi applied will be
 				 * the same for all simulations within a move,

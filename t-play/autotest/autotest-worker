@@ -60,7 +60,7 @@ pairing_param() { # Accessor method
 	eval "echo \$$pairvar"
 }
 
-. rc
+. ./rc
 
 
 echo "Loaded $pairs pairings"

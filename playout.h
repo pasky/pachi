@@ -1,5 +1,5 @@
-#ifndef ZZGO_PLAYOUT_H
-#define ZZGO_PLAYOUT_H
+#ifndef PACHI_PLAYOUT_H
+#define PACHI_PLAYOUT_H
 
 #define MAX_GAMELEN 600
 

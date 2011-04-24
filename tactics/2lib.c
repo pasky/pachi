@@ -138,18 +138,8 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		 * #######
 		 * ..O.X.X <- always play the left one!
 		 * OXXXXXX */
-		if (neighbor_count_at(b, lib, to_play) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3) {
-			/* However, the counter-example is connecting to
-			 * a different group [along the edge]. */
-			bool connection = false;
-			foreach_neighbor(b, lib, {
-				if (board_at(b, c) == to_play
-				    && group_at(b, c) != group)
-					connection = true;
-			});
-			if (!connection)
-				preference[i] = false;
-		}
+		if (neighbor_count_at(b, lib, to_play) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
+			preference[i] = false;
 
 		if (DEBUGL(6))
 			fprintf(stderr, "liberty %s ready with preference %d\n", coord2sstr(lib, b), preference[i]);

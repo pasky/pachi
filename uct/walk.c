@@ -203,8 +203,10 @@ scale_value(struct uct *u, struct board *b, int result)
 static void
 record_local_sequence(struct uct *u, struct tree *t,
                       struct uct_descent *descent, int dlen, int di,
-		      enum stone seq_color, floating_t rval, int pval)
+		      enum stone seq_color, floating_t rval)
 {
+#define LTREE_DEBUG if (UDEBUGL(6))
+
 	/* Ignore pass sequences. */
 	if (is_pass(descent[di].node->coord))
 		return;
@@ -216,16 +218,24 @@ record_local_sequence(struct uct *u, struct tree *t,
 		rval = stats_temper_value(rval, expval, u->local_tree);
 	}
 
-#define LTREE_DEBUG if (UDEBUGL(6))
 	LTREE_DEBUG fprintf(stderr, "recording result %f in local %s sequence: ",
 		rval, stone2str(seq_color));
-	int di0 = di;
+
+	/* Sequences starting deeper are less relevant in general. */
+	int pval = LTREE_PLAYOUTS_MULTIPLIER;
+	if (u->local_tree && u->local_tree_depth_decay > 0)
+		pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, di - 1);
+	if (!pval) {
+		LTREE_DEBUG fprintf(stderr, "too deep @%d\n", di);
+		return;
+	}
 
 	/* Pick the right local tree root... */
 	struct tree_node *lnode = seq_color == S_BLACK ? t->ltree_black : t->ltree_white;
 	lnode->u.playouts++;
 
 	/* ...and record the sequence. */
+	int di0 = di;
 	while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
 		LTREE_DEBUG fprintf(stderr, "%s[%d] ",
 			coord2sstr(descent[di].node->coord, t->board),
@@ -286,14 +296,13 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	/* debug */
-	int depth = 0;
 	static char spaces[] = "\0                                                      ";
 	/* /debug */
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- UCT walk with color %d\n", player_color);
 
 	while (!tree_leaf_node(n) && passes < 2) {
-		spaces[depth++] = ' '; spaces[depth] = 0;
+		spaces[dlen - 1] = ' '; spaces[dlen] = 0;
 
 
 		/*** Choose a node to descend to: */
@@ -421,10 +430,6 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	floating_t rval = scale_value(u, b, result);
 	u->policy->update(u->policy, t, n, node_color, player_color, amaf, &b2, rval);
 
-	int pval = LTREE_PLAYOUTS_MULTIPLIER;
-	if (u->local_tree && u->local_tree_depth_decay > 0)
-		pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, depth);
-
 	if (t->use_extra_komi) {
 		stats_add_result(&u->dynkomi->score, result / 2, 1);
 		stats_add_result(&u->dynkomi->value, rval, 1);
@@ -445,22 +450,22 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * which is expected as it will create new lnodes. */
 		enum stone seq_color = player_color;
 		/* First move always starts a sequence. */
-		record_local_sequence(u, t, descent, dlen, 1, seq_color, rval, pval);
+		record_local_sequence(u, t, descent, dlen, 1, seq_color, rval);
 		seq_color = stone_other(seq_color);
 		for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
 			if (u->local_tree_allseq) {
 				/* We are configured to record all subsequences. */
-				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
+				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval);
 				continue;
 			}
 			if (descent[dseqi].node->d >= u->tenuki_d) {
 				/* Tenuki! Record the fresh sequence. */
-				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
+				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval);
 				continue;
 			}
 			if (descent[dseqi].lnode && !descent[dseqi].lnode) {
 				/* Record result for in-descent picked sequence. */
-				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval, pval);
+				record_local_sequence(u, t, descent, dlen, dseqi, seq_color, rval);
 				continue;
 			}
 		}

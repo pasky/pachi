@@ -1,5 +1,5 @@
-#ifndef ZZGO_STONE_H
-#define ZZGO_STONE_H
+#ifndef PACHI_STONE_H
+#define PACHI_STONE_H
 
 enum stone {
 	S_NONE,

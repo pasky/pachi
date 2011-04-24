@@ -1,5 +1,5 @@
-#ifndef ZZGO_FBOOK_H
-#define ZZGO_FBOOK_H
+#ifndef PACHI_FBOOK_H
+#define PACHI_FBOOK_H
 
 #include "move.h"
 

@@ -12,7 +12,7 @@ to just preprocess the file with this script:
 Then, use the ./sgfvar2gtp.pl script to convert the SGF to a GTP stream,
 one game per good variation.
 
-Then, feed that GTP stream to ./zzgo -e joseki to get a pattern datafile
+Then, feed that GTP stream to ./pachi -e joseki to get a pattern datafile
 on the output - the file contains list of quadrant positions (identified
 by their zobrist hashes) and the associated w-to-play and b-to-play
 joseki followups.
@@ -29,4 +29,4 @@ from the Kogo is:
 	unzip 071012_KJD.zip
 	cat Kogo\'s\ Joseki\ Dictionary.sgf | perl -ple 's/\w+\[\]//g; s/PL\[\d\]//g;' >kogo.sgf
 	perl joseki/sgfvar2gtp.pl kogo.sgf >kogo.gtp
-	cat kogo.gtp | ./zzgo -e joseki -d 0 | grep -v ^= | grep -v '^$' >joseki19.pdict
+	cat kogo.gtp | ./pachi -e joseki -d 0 | grep -v ^= | grep -v '^$' >joseki19.pdict

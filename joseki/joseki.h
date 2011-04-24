@@ -1,5 +1,5 @@
-#ifndef ZZGO_JOSEKI_JOSEKI_H
-#define ZZGO_JOSEKI_JOSEKI_H
+#ifndef PACHI_JOSEKI_JOSEKI_H
+#define PACHI_JOSEKI_JOSEKI_H
 
 #include "engine.h"
 

@@ -2,8 +2,8 @@
  * proper including order. */
 #include "probdist.h"
 
-#ifndef ZZGO_BOARD_H
-#define ZZGO_BOARD_H
+#ifndef PACHI_BOARD_H
+#define PACHI_BOARD_H
 
 #include <inttypes.h>
 #include <stdbool.h>
@@ -142,6 +142,8 @@ struct board {
 	int moves;
 	struct move last_move;
 	struct move last_move2; /* second-to-last move */
+	struct move last_move3; /* just before last_move2, only set if last_move is pass */
+	struct move last_move4; /* just before last_move3, only set if last_move & last_move2 are pass */
 	/* Whether we tried to add a hash twice; board_play*() can
 	 * set this, but it will still carry out the move as well! */
 	bool superko_violation;
@@ -310,6 +312,9 @@ int board_play(struct board *board, struct move *m);
  * the move coordinate to redirect the move elsewhere. */
 typedef bool (*ppr_permit)(void *data, struct board *b, struct move *m);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
+
+/*Undo, supported only for pass moves. Returns -1 on error, 0 otherwise. */
+int board_undo(struct board *board);
 
 /* Returns true if given move can be played. */
 static bool board_is_valid_play(struct board *b, enum stone color, coord_t coord);

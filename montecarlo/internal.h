@@ -1,5 +1,5 @@
-#ifndef ZZGO_MONTECARLO_INTERNAL_H
-#define ZZGO_MONTECARLO_INTERNAL_H
+#ifndef PACHI_MONTECARLO_INTERNAL_H
+#define PACHI_MONTECARLO_INTERNAL_H
 
 #include "debug.h"
 #include "move.h"

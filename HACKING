@@ -23,7 +23,7 @@ Pachi consists of the following components:
 * "core" takes care of the program's lifetime, GTP interface and basic
   fast Go board implementation
 
-	zzgo.c		global initialization and the main loop
+	pachi.c		global initialization and the main loop
 	version.h	current version information
 	debug.h		debugging infrastructure
 	random.[ch]	fast random number generator
@@ -80,7 +80,8 @@ Pachi consists of the following components:
 UCT architecture
 ================
 
-The UCT engine has non-trivial structure by itself:
+The UCT engine (the proper name should be MCTS as it does not have that
+much common with classic UCT now) has non-trivial structure by itself:
 
   +-------------+    +-----+     +-------------------+
   | node policy | -- | UCT | --- | node prior-hinter |
@@ -197,7 +198,7 @@ used by the UCT engine when found.
 Alternatively, there is a support for directly used opening book
 (so-called fbook, a.k.a. "forced book" or "fuseki book"). The book
 is stored in a text file in Fuego-compatible format and can be loaded
-using the ./zzgo -f parameter.
+using the ./pachi -f parameter.
 
 
 Local Trees

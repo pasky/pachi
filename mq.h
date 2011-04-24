@@ -1,5 +1,5 @@
-#ifndef ZZGO_MQ_H
-#define ZZGO_MQ_H
+#ifndef PACHI_MQ_H
+#define PACHI_MQ_H
 
 /* Move queues; in fact, they are more like move lists, usually used
  * to accumulate equally good move candidates, then choosing from them

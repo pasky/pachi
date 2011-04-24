@@ -55,15 +55,15 @@
  */
 
 /* A configuration without proxy would have one master run on masterhost as:
- *    zzgo -e distributed slave_port=1234
+ *    pachi -e distributed slave_port=1234
  * and N slaves running as:
- *    zzgo -e uct -g masterhost:1234 slave
+ *    pachi -e uct -g masterhost:1234 slave
  * With log proxy:
- *    zzgo -e distributed slave_port=1234,proxy_port=1235
- *    zzgo -e uct -g masterhost:1234 -l masterhost:1235 slave
+ *    pachi -e distributed slave_port=1234,proxy_port=1235
+ *    pachi -e uct -g masterhost:1234 -l masterhost:1235 slave
  * If the master itself runs on a machine other than that running gogui,
  * gogui-twogtp, kgsGtp or cgosGtp, it can redirect its gtp port:
- *    zzgo -e distributed -g 10000 slave_port=1234,proxy_port=1235
+ *    pachi -e distributed -g 10000 slave_port=1234,proxy_port=1235
  */
 
 #include <assert.h>
@@ -114,7 +114,7 @@ static const struct time_info default_ti = {
 
 /* Maximum time (seconds) to wait for answers to fast gtp commands
  * (all commands except pachi-genmoves and final_status_list). */
-#define MAX_FAST_CMD_WAIT 1.0
+#define MAX_FAST_CMD_WAIT 0.5
 
 /* Maximum time (seconds) to wait for answers to genmoves. */
 #define MAX_GENMOVES_WAIT 0.1 /* 100 ms */
@@ -179,8 +179,11 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 
 	/* Wait for replies here. If we don't wait, we run the
 	 * risk of getting out of sync with most slaves and
-	 * sending command history too frequently. */
-	get_replies(time_now() + MAX_FAST_CMD_WAIT, active_slaves);
+	 * sending command history too frequently. But don't wait
+	 * for all slaves otherwise we can lose on time because of
+	 * a single slow slave when replaying a whole game. */
+	int min_slaves = active_slaves > 1 ? 3 * active_slaves / 4 : 1;
+	get_replies(time_now() + MAX_FAST_CMD_WAIT, min_slaves);
 
 	protocol_unlock();
 

@@ -41,7 +41,7 @@ board_setup(struct board *b)
 	b->fbookfile = fbookfile;
 
 	struct move m = { pass, S_NONE };
-	b->last_move = b->last_move2 = b->last_ko = b->ko = m;
+	b->last_move = b->last_move2 = b->last_move3 = b->last_move4 = b->last_ko = b->ko = m;
 }
 
 struct board *
@@ -1278,6 +1278,8 @@ board_play(struct board *board, struct move *m)
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
 		struct move nomove = { pass, S_NONE };
 		board->ko = nomove;
+		board->last_move4 = board->last_move3;
+		board->last_move3 = board->last_move2;
 		board->last_move2 = board->last_move;
 		board->last_move = *m;
 		return 0;
@@ -1293,6 +1295,20 @@ board_play(struct board *board, struct move *m)
 	return -1;
 }
 
+/* Undo, supported only for pass moves. This form of undo is required by KGS
+ * to settle disputes on dead groups. (Undo of real moves would be more complex
+ * particularly for capturing moves.) */
+int board_undo(struct board *board)
+{
+	if (!is_pass(board->last_move.coord))
+		return -1;
+	board->last_move = board->last_move2;
+	board->last_move2 = board->last_move3;
+	board->last_move3 = board->last_move4;
+	if (board->last_ko_age == board->moves)
+		board->ko = board->last_ko;
+	return 0;
+}
 
 static inline bool
 board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)

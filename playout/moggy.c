@@ -41,6 +41,7 @@ enum mq_tag {
 	MQ_KO = 0,
 	MQ_LATARI,
 	MQ_L2LIB,
+#define MQ_LADDER MQ_L2LIB /* XXX: We want to fit in char still! */
 	MQ_LNLIB,
 	MQ_PAT3,
 	MQ_GATARI,
@@ -53,7 +54,7 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	unsigned int lcapturerate, atarirate, nlibrate, capturerate, patternrate, korate, josekirate, nakaderate;
+	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate;
 	unsigned int selfatarirate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
@@ -62,12 +63,20 @@ struct moggy_policy {
 	/* Whether, when self-atari attempt is detected, to play the other
 	 * group's liberty if that is non-self-atari. */
 	bool selfatari_other;
+
+	/* 1lib settings: */
 	/* Whether to always pick from moves capturing all groups in
 	 * global_atari_check(). */
 	bool capcheckall;
+	/* Prior stone weighting. Weight of each stone between
+	 * cap_stone_min and cap_stone_max is (assess*100)/cap_stone_denom. */
+	int cap_stone_min, cap_stone_max;
+	int cap_stone_denom;
+
 	/* 2lib settings: */
 	bool atari_def_no_hopeless;
 	bool atari_miaisafe;
+
 	/* nlib settings: */
 	int nlib_count;
 
@@ -168,7 +177,9 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor))
+	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor)
+	    && !can_countercapture(b, board_at(b, group_base(atari_neighbor)),
+                                   atari_neighbor, m->color, NULL, 0))
 		return false;
 	return true;
 }
@@ -284,6 +295,26 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 
 	if (PLDEBUGL(5))
 		mq_print(q, b, "Local atari");
+}
+
+
+static void
+local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+{
+	group_t group = group_at(b, m->coord);
+
+	if (board_group_info(b, group).libs != 2)
+		return;
+
+	for (int i = 0; i < 2; i++) {
+		coord_t chase = board_group_info(b, group).lib[i];
+		coord_t escape = board_group_info(b, group).lib[1 - i];
+		if (wouldbe_ladder(b, escape, chase, board_at(b, group)))
+			mq_add(q, chase, 1<<MQ_LADDER);
+	}
+
+	if (q->moves > 0 && PLDEBUGL(5))
+		mq_print(q, b, "Ladder");
 }
 
 
@@ -451,6 +482,14 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 				return mq_pick(&q);
 		}
 
+		/* Local group trying to escape ladder? */
+		if (pp->ladderrate > fast_random(100)) {
+			struct move_queue q; q.moves = 0;
+			local_ladder_check(p, b, &b->last_move, &q);
+			if (q.moves > 0)
+				return mq_pick(&q);
+		}
+
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
 			struct move_queue q; q.moves = 0;
@@ -586,6 +625,9 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 		/* Local group in atari? */
 		local_atari_check(p, b, &b->last_move, &q);
 
+		/* Local group trying to escape ladder? */
+		local_ladder_check(p, b, &b->last_move, &q);
+
 		/* Local group can be PUT in atari? */
 		local_2lib_check(p, b, &b->last_move, &q);
 
@@ -660,6 +702,22 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	}
 
 	if (board_group_info(b, g).libs == 2) {
+		if (pp->ladderrate) {
+			/* Make sure to play the correct liberty in case
+			 * this is a group that can be caught in a ladder. */
+			bool ladderable = false;
+			for (int i = 0; i < 2; i++) {
+				coord_t chase = board_group_info(b, g).lib[i];
+				coord_t escape = board_group_info(b, g).lib[1 - i];
+				if (wouldbe_ladder(b, escape, chase, board_at(b, g))) {
+					add_prior_value(map, chase, 1, games);
+					ladderable = true;
+				}
+			}
+			if (ladderable)
+				return; // do not suggest the other lib at all
+		}
+
 		if (!pp->atarirate)
 			return;
 		group_2lib_check(b, g, map->to_play, &q, 0, pp->atari_miaisafe, pp->atari_def_no_hopeless);
@@ -701,9 +759,13 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		if (!pp->capturerate && !pp->lcapturerate)
 			continue;
 
-		if (PLDEBUGL(5))
-			fprintf(stderr, "1.0: atari %s\n", coord2sstr(coord, b));
 		int assess = games * 2;
+		if (pp->cap_stone_denom > 0) {
+			int stones = group_stone_count(b, g, pp->cap_stone_max) - (pp->cap_stone_min-1);
+			assess += (stones > 0 ? stones : 0) * games * 100 / pp->cap_stone_denom;
+		}
+		if (PLDEBUGL(5))
+			fprintf(stderr, "1.0 (%d): atari %s\n", assess, coord2sstr(coord, b));
 		add_prior_value(map, coord, 1, assess);
 	}
 }
@@ -823,16 +885,24 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	 * XXX: no 9x9 tuning has been done recently. */
 	int rate = board_large(b) ? 80 : 90;
 
-	pp->lcapturerate = pp->atarirate = pp->nlibrate = pp->patternrate
-			= pp->selfatarirate = pp->josekirate = -1U;
+	pp->lcapturerate = pp->atarirate = pp->nlibrate
+			= pp->patternrate = pp->selfatarirate = pp->josekirate = -1U;
 	if (board_large(b)) {
-		pp->lcapturerate = pp->patternrate = 100;
+		pp->lcapturerate = 90;
+		pp->patternrate = 100;
 		pp->nlibrate = 20;
 		pp->pattern2 = true;
 	}
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
+
+	pp->cap_stone_min = 2;
+	pp->cap_stone_max = 10;
+	/* By default, stone weighing is turned off. Try values like 300
+	 * or 200 for each stone weighing games/3 to games/2. */
+	pp->cap_stone_denom = 0;
+
 	pp->atari_def_no_hopeless = !board_large(b);
 	pp->atari_miaisafe = true;
 	pp->nlib_count = 4;
@@ -865,6 +935,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				p->debug_level = atoi(optval);
 			} else if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
+			} else if (!strcasecmp(optname, "ladderrate") && optval) {
+				pp->ladderrate = atoi(optval);
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atarirate = atoi(optval);
 			} else if (!strcasecmp(optname, "nlibrate") && optval) {
@@ -895,6 +967,12 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->selfatari_other = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "capcheckall")) {
 				pp->capcheckall = optval && *optval == '0' ? false : true;
+			} else if (!strcasecmp(optname, "cap_stone_min") && optval) {
+				pp->cap_stone_min = atoi(optval);
+			} else if (!strcasecmp(optname, "cap_stone_max") && optval) {
+				pp->cap_stone_max = atoi(optval);
+			} else if (!strcasecmp(optname, "cap_stone_denom") && optval) {
+				pp->cap_stone_denom = atoi(optval);
 			} else if (!strcasecmp(optname, "atari_miaisafe")) {
 				pp->atari_miaisafe = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "atari_def_no_hopeless")) {

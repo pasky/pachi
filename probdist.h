@@ -1,5 +1,5 @@
-#ifndef ZZGO_PROBDIST_H
-#define ZZGO_PROBDIST_H
+#ifndef PACHI_PROBDIST_H
+#define PACHI_PROBDIST_H
 
 /* Tools for picking an item according to a probability distribution. */
 

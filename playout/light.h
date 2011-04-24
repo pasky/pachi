@@ -1,5 +1,5 @@
-#ifndef ZZGO_PLAYOUT_LIGHT_H
-#define ZZGO_PLAYOUT_LIGHT_H
+#ifndef PACHI_PLAYOUT_LIGHT_H
+#define PACHI_PLAYOUT_LIGHT_H
 
 struct board;
 struct playout_policy;

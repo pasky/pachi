@@ -1,5 +1,5 @@
-#ifndef ZZGO_UCT_SLAVE_H
-#define ZZGO_UCT_SLAVE_H
+#ifndef PACHI_UCT_SLAVE_H
+#define PACHI_UCT_SLAVE_H
 
 #include "move.h"
 #include "distributed/distributed.h"
