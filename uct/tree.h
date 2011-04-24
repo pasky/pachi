@@ -177,6 +177,9 @@ static inline floating_t
 tree_node_criticality(struct tree *t, struct tree_node *node)
 {
 	/* cov(player_gets, player_wins) =
+	 * [The argument: If 'gets' and 'wins' is uncorrelated, b_gets * b_wins
+	 * is valid way to obtain winner_gets. The more correlated it is, the
+	 * more distorted the result.]
 	 * = winner_gets - (b_gets * b_wins + w_gets * w_wins)
 	 * = winner_gets - (b_gets * b_wins + (1 - b_gets) * (1 - b_wins))
 	 * = winner_gets - (b_gets * b_wins + 1 - b_gets - b_wins + b_gets * b_wins)
