@@ -173,7 +173,7 @@ tree_leaf_node(struct tree_node *node)
 	return !(node->children);
 }
 
-static inline double
+static inline floating_t
 tree_node_criticality(struct tree *t, struct tree_node *node)
 {
 	/* cov(player_gets, player_wins) =
