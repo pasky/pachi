@@ -273,10 +273,11 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->check_nakade = true;
 	b->sylvain_rave = true;
 	b->ltree_rave = 0.75f;
-	b->crit_rave = 2.0f;
-	b->crit_min_playouts = 32;
-	b->crit_negative = 1;
-	b->crit_amaf = 1;
+
+	b->crit_rave = 0.5f;
+	b->crit_min_playouts = 192;
+	b->crit_negative = 0;
+	b->crit_amaf = 0;
 
 	if (arg) {
 		char *optspec, *next = arg;
