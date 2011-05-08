@@ -69,6 +69,8 @@ fbook_init(char *filename, struct board *b)
 	struct fbook *fbook = calloc(1, sizeof(*fbook));
 	fbook->bsize = board_size(b);
 	fbook->handicap = b->handicap;
+	if (!b->handicap && b->komi < 1)
+		fbook->handicap = 1;
 	for (int i = 0; i < 1<<fbook_hash_bits; i++)
 		fbook->moves[i] = pass;
 
@@ -90,11 +92,19 @@ fbook_init(char *filename, struct board *b)
 
 		/* Format of line is:
 		 * BSIZE COORD COORD COORD... | COORD
+		 * BSIZE/HANDI COORD COORD COORD... | COORD
 		 * We descend up to |, then add the new node
 		 * with value minimax(1000), forcing UCT to
 		 * always pick that node immediately. */
 		int bsize = strtol(line, &line, 10);
 		if (bsize != fbook->bsize - 2)
+			continue;
+		int handi = 0;
+		if (*line == '/') {
+			line++;
+			handi = strtol(line, &line, 10);
+		}
+		if (handi != fbook->handicap)
 			continue;
 		while (isspace(*line)) line++;
 
