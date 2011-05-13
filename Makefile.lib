@@ -73,7 +73,7 @@ endif
 
 .PHONY: all-recursive clean-recursive clean-profiles-recursive
 all-recursive clean-recursive clean-profiled-recursive:
-	@target=`echo $@ | sed s/-recursive//`; \
+	+@target=`echo $@ | sed s/-recursive//`; \
 	for subdir in $(SUBDIRS); do \
 		$(call ncmd,recmake) || exit 1; \
 	done
