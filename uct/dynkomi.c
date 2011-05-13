@@ -121,16 +121,18 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 				/* Dynamic komi in handicap game; linearly
 				 * decreases to basic settings until move
 				 * #optval. moves=blackmoves%whitemoves */
-				for (int i = S_BLACK; *optval && i <= S_WHITE; i++, optval += strcspn(optval, "%")) {
-					optval++;
+				for (int i = S_BLACK; *optval && i <= S_WHITE; i++) {
 					l->moves[i] = atoi(optval);
+					optval += strcspn(optval, "%");
+					if (*optval) optval++;
 				}
 			} else if (!strcasecmp(optname, "handicap_value") && optval) {
 				/* Point value of single handicap stone,
 				 * for dynkomi computation. */
-				for (int i = S_BLACK; *optval && i <= S_WHITE; i++, optval += strcspn(optval, "%")) {
-					optval++;
+				for (int i = S_BLACK; *optval && i <= S_WHITE; i++) {
 					l->handicap_value[i] = atoi(optval);
+					optval += strcspn(optval, "%");
+					if (*optval) optval++;
 				}
 			} else if (!strcasecmp(optname, "rootbased")) {
 				/* If set, the extra komi applied will be

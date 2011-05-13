@@ -982,9 +982,10 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
 				/* KO%LATARI%L2LIB%LNLIB%PAT3%GATARI%JOSEKI%NAKADE */
-				for (int i = 0; *optval && i < MQ_MAX; i++, optval += strcspn(optval, "%")) {
-					optval++;
+				for (int i = 0; *optval && i < MQ_MAX; i++) {
 					pp->mq_prob[i] = atof(optval);
+					optval += strcspn(optval, "%");
+					if (*optval) optval++;
 				}
 			} else if (!strcasecmp(optname, "tenukiprob") && optval) {
 				pp->tenuki_prob = atof(optval);
