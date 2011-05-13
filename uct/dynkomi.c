@@ -57,7 +57,7 @@ static floating_t
 linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_linear *l = d->data;
-	enum stone color = stone_other(tree->root_color);
+	enum stone color = d->uct->pondering ? tree->root_color : stone_other(tree->root_color);
 	int lmoves = l->moves[color];
 	if (b->moves >= lmoves)
 		return 0;
