@@ -885,8 +885,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	 * XXX: no 9x9 tuning has been done recently. */
 	int rate = board_large(b) ? 80 : 90;
 
-	pp->lcapturerate = pp->atarirate = pp->nlibrate
-			= pp->patternrate = pp->selfatarirate = pp->josekirate = -1U;
+	pp->lcapturerate = pp->atarirate = pp->nlibrate = pp->patternrate
+		= pp->selfatarirate = pp->josekirate = pp->ladderrate = -1U;
 	if (board_large(b)) {
 		pp->lcapturerate = 90;
 		pp->patternrate = 100;
@@ -900,7 +900,6 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->cap_stone_min = 2;
 	pp->cap_stone_max = 15;
 	pp->cap_stone_denom = 200;
-	pp->ladderrate = 40;
 
 	pp->atari_def_no_hopeless = !board_large(b);
 	pp->atari_miaisafe = true;
