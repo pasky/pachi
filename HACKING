@@ -222,6 +222,13 @@ the proper resolution of a given situation is easily found in
 the tree, but improper heuristical bisaes keep muddying the
 evaluation down.
 
+Exactly what kind of values to store in the local tree nodes is
+still an open question. The original approach has been to simply
+use simulation results directly or biased on base "value temperature";
+now, we are experimenting with survival rate of the "base stone"
+of the branch (the first move in the branch sequence). We also intend
+to integrate criticality information with local tree data.
+
 The local trees are descended in parallel with the main tree.
 The values stored in local trees are added to the RAVE term
 from the main tree during node selection. We also wish to use
