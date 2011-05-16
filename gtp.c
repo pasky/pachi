@@ -79,6 +79,7 @@ static char *known_commands =
 	"name\n"
 	"version\n"
 	"list_commands\n"
+	"known_command\n"
 	"quit\n"
 	"boardsize\n"
 	"clear_board\n"
@@ -90,6 +91,7 @@ static char *known_commands =
 	"kgs-genmove_cleanup\n"
 	"set_free_handicap\n"
 	"place_free_handicap\n"
+	"final_score\n"
 	"final_status_list\n"
 	"undo\n"
 	"pachi-result\n"
@@ -106,6 +108,7 @@ gtp_is_valid(char *cmd)
 	if (!cmd || !*cmd) return false;
 	char *s = strcasestr(known_commands, cmd);
 	if (!s) return false;
+	if (s != known_commands && s[-1] != '\n') return false;
 
 	int len = strlen(cmd);
 	return s[len] == '\0' || s[len] == '\n';
@@ -159,6 +162,16 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
 		gtp_reply(id, known_commands, NULL);
+		return P_OK;
+
+	} else if (!strcasecmp(cmd, "known_command")) {
+		char *arg;
+		next_tok(arg);
+		if (gtp_is_valid(arg)) {
+			gtp_reply(id, "true", NULL);
+		} else {
+			gtp_reply(id, "false", NULL);
+		}
 		return P_OK;
 	}
 
