@@ -460,7 +460,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	floating_t rval = scale_value(u, b, result);
-	u->policy->update(u->policy, t, n, node_color, player_color, amaf, rval);
+	u->policy->update(u->policy, t, n, node_color, player_color, amaf, &b2, rval);
 
 	if (t->use_extra_komi) {
 		stats_add_result(&u->dynkomi->score, result / 2, 1);

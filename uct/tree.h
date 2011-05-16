@@ -86,6 +86,10 @@ struct tree_node {
 	struct move_stats amaf;
 	/* Stats before starting playout; used for distributed engine. */
 	struct move_stats pu;
+	/* Criticality information; information about final board owner
+	 * of the tree coordinate corresponding to the node */
+	struct move_stats winner_owner; // owner == winner
+	struct move_stats black_owner; // owner == black
 };
 
 struct tree_hash;
@@ -165,6 +169,22 @@ static inline bool
 tree_leaf_node(struct tree_node *node)
 {
 	return !(node->children);
+}
+
+static inline floating_t
+tree_node_criticality(struct tree *t, struct tree_node *node)
+{
+	/* cov(player_gets, player_wins) =
+	 * [The argument: If 'gets' and 'wins' is uncorrelated, b_gets * b_wins
+	 * is valid way to obtain winner_gets. The more correlated it is, the
+	 * more distorted the result.]
+	 * = winner_gets - (b_gets * b_wins + w_gets * w_wins)
+	 * = winner_gets - (b_gets * b_wins + (1 - b_gets) * (1 - b_wins))
+	 * = winner_gets - (b_gets * b_wins + 1 - b_gets - b_wins + b_gets * b_wins)
+	 * = winner_gets - (2 * b_gets * b_wins - b_gets - b_wins + 1) */
+	return node->winner_owner.value
+		- (2 * node->black_owner.value * node->u.value
+		   - node->black_owner.value - node->u.value + 1);
 }
 
 #endif

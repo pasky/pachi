@@ -898,10 +898,9 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->selfatari_other = true;
 
 	pp->cap_stone_min = 2;
-	pp->cap_stone_max = 10;
-	/* By default, stone weighing is turned off. Try values like 300
-	 * or 200 for each stone weighing games/3 to games/2. */
-	pp->cap_stone_denom = 0;
+	pp->cap_stone_max = 15;
+	pp->cap_stone_denom = 200;
+	pp->ladderrate = 40;
 
 	pp->atari_def_no_hopeless = !board_large(b);
 	pp->atari_miaisafe = true;

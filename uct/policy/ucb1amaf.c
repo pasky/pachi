@@ -29,6 +29,11 @@ struct ucb1_policy_amaf {
 	bool sylvain_rave;
 	/* Coefficient of local tree values embedded in RAVE. */
 	floating_t ltree_rave;
+	/* Coefficient of criticality embedded in RAVE. */
+	floating_t crit_rave;
+	int crit_min_playouts;
+	bool crit_negative;
+	bool crit_amaf;
 };
 
 
@@ -101,6 +106,22 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		stats_merge(&r, &l);
 	}
 
+	/* Criticality heuristics. */
+	if (b->crit_rave > 0 && node->u.playouts > b->crit_min_playouts) {
+		floating_t crit = tree_node_criticality(tree, node);
+		if (b->crit_negative || crit > 0) {
+			struct move_stats c = {
+				.value = tree_node_get_value(tree, parity, 1.0f),
+				.playouts = crit * r.playouts * b->crit_rave
+			};
+			LTREE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
+				c.value, c.playouts,
+				coord2sstr(node->coord, tree->board), r.value, r.playouts);
+			stats_merge(&r, &c);
+		}
+	}
+
+
 	floating_t value = 0;
 	if (n.playouts) {
 		if (r.playouts) {
@@ -155,9 +176,11 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 void
 ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		enum stone node_color, enum stone player_color,
-		struct playout_amafmap *map, floating_t result)
+		struct playout_amafmap *map, struct board *final_board,
+		floating_t result)
 {
 	struct ucb1_policy_amaf *b = p->data;
+	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
 	enum stone child_color = stone_other(node_color);
 
 #if 0
@@ -172,6 +195,10 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		if (node->parent == NULL)
 			assert(tree->root_color == stone_other(child_color));
 
+		if (!b->crit_amaf) {
+			stats_add_result(&node->winner_owner, board_at(final_board, node->coord) == winner_color ? 1.0 : 0.0, 1);
+			stats_add_result(&node->black_owner, board_at(final_board, node->coord) == S_BLACK ? 1.0 : 0.0, 1);
+		}
 		stats_add_result(&node->u, result, 1);
 		if (amaf_nakade(map->map[node->coord]))
 			amaf_op(map->map[node->coord], -);
@@ -205,6 +232,10 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * to record the result unmodified; in that case,
 			 * we will correctly negate them at the descend phase. */
 
+			if (b->crit_amaf) {
+				stats_add_result(&ni->winner_owner, board_at(final_board, ni->coord) == winner_color ? 1.0 : 0.0, 1);
+				stats_add_result(&ni->black_owner, board_at(final_board, ni->coord) == S_BLACK ? 1.0 : 0.0, 1);
+			}
 			stats_add_result(&ni->amaf, nres, 1);
 
 #if 0
@@ -245,6 +276,11 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->sylvain_rave = true;
 	b->ltree_rave = 0.75f;
 
+	b->crit_rave = 0.5f;
+	b->crit_min_playouts = 192;
+	b->crit_negative = 0;
+	b->crit_amaf = 0;
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -268,6 +304,14 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->check_nakade = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "ltree_rave") && optval) {
 				b->ltree_rave = atof(optval);
+			} else if (!strcasecmp(optname, "crit_rave") && optval) {
+				b->crit_rave = atof(optval);
+			} else if (!strcasecmp(optname, "crit_min_playouts") && optval) {
+				b->crit_min_playouts = atoi(optval);
+			} else if (!strcasecmp(optname, "crit_negative")) {
+				b->crit_negative = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "crit_amaf")) {
+				b->crit_amaf = !optval || *optval == '1';
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);

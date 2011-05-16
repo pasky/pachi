@@ -58,14 +58,17 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descen
 }
 
 void
-ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, floating_t result)
+ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, struct board *final_board, floating_t result)
 {
 	/* It is enough to iterate by a single chain; we will
 	 * update all the preceding positions properly since
 	 * they had to all occur in all branches, only in
 	 * different order. */
+	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
 	for (; node; node = node->parent) {
 		stats_add_result(&node->u, result, 1);
+		stats_add_result(&node->winner_owner, board_at(final_board, node->coord) == winner_color ? 1.0 : 0.0, 1);
+		stats_add_result(&node->black_owner, board_at(final_board, node->coord) == S_BLACK ? 1.0 : 0.0, 1);
 	}
 }
 
