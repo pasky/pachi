@@ -69,8 +69,8 @@ fbook_init(char *filename, struct board *b)
 	struct fbook *fbook = calloc(1, sizeof(*fbook));
 	fbook->bsize = board_size(b);
 	fbook->handicap = b->handicap;
-	if (!b->handicap && b->komi < 1 && b->komi > -1)
-		fbook->handicap = 1;
+	/* We do not set handicap=1 in case of too low komi on purpose;
+	 * we want to go with the no-handicap fbook for now. */
 	for (int i = 0; i < 1<<fbook_hash_bits; i++)
 		fbook->moves[i] = pass;
 
