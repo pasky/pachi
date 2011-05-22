@@ -86,6 +86,8 @@ SUBDIRS=random replay joseki montecarlo uct uct/policy playout tactics t-unit di
 all: all-recursive pachi
 
 LOCALLIBS=random/random.a replay/replay.a joseki/joseki.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a tactics/tactics.a t-unit/test.a distributed/distributed.a
+$(LOCALLIBS): all-recursive
+	@
 pachi: $(OBJS) pachi.o $(LOCALLIBS)
 	$(call cmd,link)
 
