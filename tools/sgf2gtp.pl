@@ -3,8 +3,17 @@
 # format so that you can feed them to Pachi, insert genmove at
 # the right places etc. Might not work on obscure SGF files,
 # and of course there must be no variations.
+#
+# When called with a filename argument, it will create the output
+# file with .gtp extension instead of .sgf.
 
 use warnings;
+
+if ($ARGV[0]) {
+	open STDIN, "$ARGV[0]" or die "$ARGV[0]: $!";
+	my $ofile = $ARGV[0]; $ofile =~ s/sgf$//i; $ofile .= 'gtp';
+	open STDOUT, ">$ofile" or die "$ofile: $!";
+}
 
 local $/ = undef; my $sgf = <>;
 my $size = ($sgf =~ /SZ\[(\d+)\]/)[0];
