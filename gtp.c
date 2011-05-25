@@ -91,6 +91,7 @@ static char *known_commands =
 	"kgs-genmove_cleanup\n"
 	"set_free_handicap\n"
 	"place_free_handicap\n"
+	"fixed_handicap\n"
 	"final_score\n"
 	"final_status_list\n"
 	"undo\n"
