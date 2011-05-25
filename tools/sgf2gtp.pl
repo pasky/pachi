@@ -23,6 +23,9 @@ $sgf =~ s/\bC\[.*?\]//gs; # no comments
 print "boardsize " . $size;
 print "clear_board";
 print "komi " . ($sgf =~ /KM\[([\d.]+)\]/)[0];
+if ($sgf =~ s/\bHA\[(\d+)\]//gs and $1 > 0) {
+	print "fixed_handicap $1";
+}
 
 my $abcd = "abcdefghijklmnopqrstuvwxyz";
 
