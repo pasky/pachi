@@ -29,6 +29,7 @@ struct uct {
 	enum uct_reporting {
 		UR_TEXT,
 		UR_JSON,
+		UR_JSON_BIG,
 	} reporting;
 
 	int games, gamelen;

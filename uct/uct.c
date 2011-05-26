@@ -600,6 +600,11 @@ uct_state_init(char *arg, struct board *b)
 					/* JSON output. Implies debug=0. */
 					u->reporting = UR_JSON;
 					u->debug_level = 0;
+				} else if (!strcasecmp(optval, "jsonbig")) {
+					/* JSON output, but much more detailed.
+					 * Implies debug=0. */
+					u->reporting = UR_JSON_BIG;
+					u->debug_level = 0;
 				} else {
 					fprintf(stderr, "UCT: Invalid reporting format %s\n", optval);
 					exit(1);

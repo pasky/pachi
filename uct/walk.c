@@ -81,7 +81,7 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts,
 }
 
 void
-uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
+uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts, bool final, bool big)
 {
 	/* Prefix indicating JSON line. */
 	fprintf(stderr, "/**/ {\"%s\": {", final ? "final" : "interm");
@@ -133,6 +133,50 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 	}
 	fprintf(stderr, "]");
 
+	if (big) {
+		/* Ownership statistics. {"b":val,"w":val,"d":val}
+		 * where each val is in range [0,1] describes likelihood
+		 * of this point becoming black, white and dame.
+		 * If dame rate would be 0, only black rate is sent and
+		 * white rate can be computed as 1-blackrate. */
+		fprintf(stderr, ", \"ownage\": [");
+		int f = 0;
+		foreach_point(t->board) {
+			if (board_at(t->board, c) != S_NONE) continue;
+			fprintf(stderr, "%s{\"%s\":{", f++ > 0 ? "," : "",
+				coord2sstr(c, t->board));
+			floating_t drate = (floating_t) u->ownermap.map[c][S_NONE] / u->ownermap.playouts;
+			bool p = false;
+#define print_rate(color,letter) \
+			if (drate >= 0.001 || color == S_BLACK) { \
+				floating_t rate = (floating_t) u->ownermap.map[c][color] / u->ownermap.playouts; \
+				fprintf(stderr, "%s\"%c\":%.3f", p ? "," : "", letter, rate); \
+				p = true; \
+			}
+			print_rate(S_BLACK, 'b');
+			print_rate(S_WHITE, 'w');
+			print_rate(S_NONE, 'd');
+			fprintf(stderr, "}}");
+		} foreach_point_end;
+		fprintf(stderr, "]");
+
+		/* Chain status statistics. Each chain is identified
+		 * by some stone within, and bound to a value in range
+		 * [0,1] describing likelihood of survival. */
+		fprintf(stderr, ", \"chainstatus\": [");
+		f = 0;
+		foreach_point(t->board) {
+			group_t g = group_at(t->board, c);
+			if (!g || groupnext_at(t->board, c)) continue;
+			/* Last stone in some group. */
+			fprintf(stderr, "%s{\"%s\":%.3f}",
+				f++ > 0 ? "," : "",
+				coord2sstr(c, t->board),
+				(floating_t) u->ownermap.map[c][board_at(t->board, c)] / u->ownermap.playouts);
+		} foreach_point_end;
+		fprintf(stderr, "]");
+	}
+
 	fprintf(stderr, "}}\n");
 }
 
@@ -144,7 +188,9 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 			uct_progress_text(u, t, color, playouts, final);
 			break;
 		case UR_JSON:
-			uct_progress_json(u, t, color, playouts, final);
+		case UR_JSON_BIG:
+			uct_progress_json(u, t, color, playouts, final,
+			                  u->reporting == UR_JSON_BIG);
 			break;
 		default: assert(0);
 	}
