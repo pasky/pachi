@@ -139,7 +139,7 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 		 * of this point becoming black, white and dame.
 		 * If dame rate would be 0, only black rate is sent and
 		 * white rate can be computed as 1-blackrate. */
-		fprintf(stderr, ", \"ownage\": [");
+		fprintf(stderr, ", \"territstatus\": [");
 		int f = 0;
 		foreach_point(t->board) {
 			if (board_at(t->board, c) != S_NONE) continue;
