@@ -24,7 +24,7 @@
 #define DESCENT_DLEN 512
 
 void
-uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
 {
 	if (!UDEBUGL(0))
 		return;

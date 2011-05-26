@@ -329,8 +329,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		fprintf(stderr, "(avg score %f/%d value %f/%d)\n",
 			u->dynkomi->score.value, u->dynkomi->score.playouts,
 			u->dynkomi->value.value, u->dynkomi->value.playouts);
-	if (UDEBUGL(0))
-		uct_progress_status(u, t, color, ctx->games);
+	uct_progress_status(u, t, color, ctx->games, true);
 
 	u->played_own += ctx->games;
 	return ctx->games;
@@ -370,7 +369,7 @@ uct_pondering_stop(struct uct *u)
 	struct uct_thread_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1)) {
 		if (u->pondering) fprintf(stderr, "(pondering) ");
-		uct_progress_status(u, ctx->t, ctx->color, ctx->games);
+		uct_progress_status(u, ctx->t, ctx->color, ctx->games, true);
 	}
 	if (u->pondering) {
 		free(ctx->b);
