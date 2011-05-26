@@ -589,6 +589,17 @@ uct_state_init(char *arg, struct board *b)
 					u->debug_level = atoi(optval);
 				else
 					u->debug_level++;
+			} else if (!strcasecmp(optname, "reporting") && optval) {
+				/* The format of output for detailed progress
+				 * information (such as current best move and
+				 * its value, etc.). */
+				if (!strcasecmp(optval, "text")) {
+					/* Plaintext traditional output. */
+					u->reporting = UR_TEXT;
+				} else {
+					fprintf(stderr, "UCT: Invalid reporting format %s\n", optval);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "dumpthres") && optval) {
 				/* When dumping the UCT tree on output, include
 				 * nodes with at least this many playouts.

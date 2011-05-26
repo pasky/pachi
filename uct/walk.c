@@ -23,8 +23,9 @@
 
 #define DESCENT_DLEN 512
 
+
 void
-uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
+uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
 {
 	if (!UDEBUGL(0))
 		return;
@@ -77,6 +78,17 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	}
 
 	fprintf(stderr, "\n");
+}
+
+void
+uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
+{
+	switch (u->reporting) {
+		case UR_TEXT:
+			uct_progress_text(u, t, color, playouts, final);
+			break;
+		default: assert(0);
+	}
 }
 
 

@@ -26,6 +26,10 @@ struct joseki_dict;
 /* Internal engine state. */
 struct uct {
 	int debug_level;
+	enum uct_reporting {
+		UR_TEXT,
+	} reporting;
+
 	int games, gamelen;
 	floating_t resign_threshold, sure_win_threshold;
 	double best2_ratio, bestr_ratio;
