@@ -28,6 +28,7 @@ struct uct {
 	int debug_level;
 	enum uct_reporting {
 		UR_TEXT,
+		UR_JSON,
 	} reporting;
 
 	int games, gamelen;

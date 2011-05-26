@@ -596,6 +596,10 @@ uct_state_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "text")) {
 					/* Plaintext traditional output. */
 					u->reporting = UR_TEXT;
+				} else if (!strcasecmp(optval, "json")) {
+					/* JSON output. Implies debug=0. */
+					u->reporting = UR_JSON;
+					u->debug_level = 0;
 				} else {
 					fprintf(stderr, "UCT: Invalid reporting format %s\n", optval);
 					exit(1);
