@@ -99,7 +99,7 @@ dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
 	struct group_judgement gj;
 	gj.thres = GJ_THRES;
 	gj.gs = alloca(board_size2(b) * sizeof(gj.gs[0]));
-	board_ownermap_judge_group(b, &u->ownermap, &gj);
+	board_ownermap_judge_groups(b, &u->ownermap, &gj);
 	groups_of_status(b, &gj, GS_DEAD, mq);
 }
 
