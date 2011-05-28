@@ -70,7 +70,7 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 			continue;
 
 		if (DEBUGL(6))
-			fprintf(stderr, "checking liberty %s of %s %s, filled by %s\n",
+			fprintf(stderr, "- checking liberty %s of %s %s, filled by %s\n",
 				coord2sstr(lib, b),
 				stone2str(owner), coord2sstr(group, b),
 				stone2str(to_play));
@@ -94,6 +94,11 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		 * liberty, or the "gained" liberties are shared. */
 		/* XXX: We do not check connecting to a short-on-liberty
 		 * group (e.g. ourselves). */
+		if (DEBUGL(7))
+			fprintf(stderr, "\tif_check %d and defending %d and uscount %d ilcount %d\n",
+				use_def_no_hopeless, to_play == owner,
+				neighbor_count_at(b, lib, owner),
+				immediate_liberty_count(b, lib));
 		if (use_def_no_hopeless && to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
 			if (immediate_liberty_count(b, lib) == 1)
 				continue;
@@ -116,13 +121,20 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		    to_play != owner &&
 #endif
 		    is_bad_selfatari(b, to_play, lib)) {
-			/* Okay! But maybe we just need to connect a false
-			 * eye before atari - this is very common in the
-			 * corner. */
-			coord_t coord = selfatari_cousin(b, to_play, lib);
+			if (DEBUGL(7))
+				fprintf(stderr, "\tliberty is selfatari\n");
+			coord_t coord = pass;
+			if (to_play != owner) {
+				/* Okay! We are attacker; maybe we just need
+				 * to connect a false eye before atari - this
+				 * is very common in the corner. */
+				coord = selfatari_cousin(b, to_play, lib);
+			}
 			if (is_pass(coord))
 				continue;
 			/* Ok, connect, but prefer not to. */
+			if (DEBUGL(7))
+				fprintf(stderr, "\treluctantly switching to cousin %s\n", coord2sstr(coord, b)),
 			lib = coord;
 			preference[i] = false;
 
@@ -138,11 +150,16 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		 * #######
 		 * ..O.X.X <- always play the left one!
 		 * OXXXXXX */
-		if (neighbor_count_at(b, lib, to_play) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
+		if (neighbor_count_at(b, lib, to_play) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3) {
+			if (DEBUGL(7))
+				fprintf(stderr, "\tlumpy: mine %d + edge %d\n",
+					neighbor_count_at(b, lib, to_play),
+					neighbor_count_at(b, lib, S_OFFBOARD));
 			preference[i] = false;
+		}
 
 		if (DEBUGL(6))
-			fprintf(stderr, "liberty %s ready with preference %d\n", coord2sstr(lib, b), preference[i]);
+			fprintf(stderr, "+ liberty %s ready with preference %d\n", coord2sstr(lib, b), preference[i]);
 
 		/* If we prefer only one of the moves, pick that one. */
 		if (i == 1 && have[0] && preference[0] != preference[1]) {
@@ -161,6 +178,14 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		/* Tasty! Crispy! Good! */
 		mq_add(q, lib, tag);
 		mq_nodup(q);
+	}
+
+	if (DEBUGL(7)) {
+		char label[256];
+		snprintf(label, 256, "= final %s %s liberties to play by %s",
+			stone2str(owner), coord2sstr(group, b),
+			stone2str(to_play));
+		mq_print(q, b, label);
 	}
 }
 
