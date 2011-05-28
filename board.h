@@ -14,6 +14,7 @@
 #include "move.h"
 
 struct fbook;
+struct libmap_hash;
 
 
 /* Maximum supported board size. (Without the S_OFFBOARD edges.) */
@@ -135,6 +136,7 @@ struct board {
 
 	char *fbookfile;
 	struct fbook *fbook;
+	struct libmap_hash *libmap;
 
 	/* Iterator offsets for foreach_neighbor*() */
 	int nei8[8], dnei[4];

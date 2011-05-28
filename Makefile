@@ -80,7 +80,7 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o ownermap.o pattern3.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o
+OBJS=board.o gtp.o move.o ownermap.o pattern3.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o libmap.o
 SUBDIRS=random replay joseki montecarlo uct uct/policy playout tactics t-unit distributed
 
 all: all-recursive pachi

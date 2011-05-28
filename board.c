@@ -9,6 +9,7 @@
 #include "board.h"
 #include "debug.h"
 #include "fbook.h"
+#include "libmap.h"
 #include "mq.h"
 #include "random.h"
 
@@ -127,6 +128,7 @@ board_copy(struct board *b2, struct board *b1)
 
 	// XXX: Special semantics.
 	b2->fbook = NULL;
+	if (b2->libmap) b2->libmap->refcount++;
 
 	return b2;
 }
@@ -136,6 +138,7 @@ board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
 	if (board->fbook) fbook_done(board->fbook);
+	if (board->libmap) libmap_put(board->libmap);
 }
 
 void
@@ -261,6 +264,10 @@ board_clear(struct board *board)
 
 	if (board->fbookfile) {
 		board->fbook = fbook_init(board->fbookfile, board);
+	}
+	if (board->libmap) {
+		libmap_put(board->libmap);
+		board->libmap = NULL;
 	}
 }
 
