@@ -56,6 +56,34 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 	return false;
 }
 
+static bool
+defense_is_hopeless(struct board *b, group_t group, enum stone owner,
+			enum stone to_play, coord_t lib, coord_t otherlib,
+			bool use)
+{
+	/* If we are the defender not connecting out, do not
+	 * escape with moves that do not gain liberties anyway
+	 * - either the new extension has just single extra
+	 * liberty, or the "gained" liberties are shared. */
+	/* XXX: We do not check connecting to a short-on-liberty
+	 * group (e.g. ourselves). */
+	if (DEBUGL(7))
+		fprintf(stderr, "\tif_check %d and defending %d and uscount %d ilcount %d\n",
+			use, to_play == owner,
+			neighbor_count_at(b, lib, owner),
+			immediate_liberty_count(b, lib));
+	if (!use)
+		return false;
+	if (to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
+		if (immediate_liberty_count(b, lib) == 1)
+			return true;
+		if (immediate_liberty_count(b, lib) == 2
+		    && coord_is_adjecent(lib, otherlib, b))
+			return true;
+	}
+	return false;
+}
+
 void
 can_atari_group(struct board *b, group_t group, enum stone owner,
 		  enum stone to_play, struct move_queue *q,
@@ -88,24 +116,11 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 			continue;
 #endif
 
-		/* If we are the defender not connecting out, do not
-		 * escape with moves that do not gain liberties anyway
-		 * - either the new extension has just single extra
-		 * liberty, or the "gained" liberties are shared. */
-		/* XXX: We do not check connecting to a short-on-liberty
-		 * group (e.g. ourselves). */
-		if (DEBUGL(7))
-			fprintf(stderr, "\tif_check %d and defending %d and uscount %d ilcount %d\n",
-				use_def_no_hopeless, to_play == owner,
-				neighbor_count_at(b, lib, owner),
-				immediate_liberty_count(b, lib));
-		if (use_def_no_hopeless && to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
-			if (immediate_liberty_count(b, lib) == 1)
-				continue;
-			if (immediate_liberty_count(b, lib) == 2
-			    && coord_is_adjecent(lib, board_group_info(b, group).lib[1 - i], b))
-				continue;
-		}
+		/* Prevent hopeless escape attempts. */
+		if (defense_is_hopeless(b, group, owner, to_play, lib,
+					board_group_info(b, group).lib[1 - i],
+					use_def_no_hopeless))
+			continue;
 
 #ifdef NO_DOOMED_GROUPS
 		/* If the owner can't play at the spot, we don't want
