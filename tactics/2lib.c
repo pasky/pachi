@@ -139,17 +139,26 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 			if (DEBUGL(7))
 				fprintf(stderr, "\tliberty is selfatari\n");
 			coord_t coord = pass;
+			group_t bygroup = 0;
 			if (to_play != owner) {
 				/* Okay! We are attacker; maybe we just need
 				 * to connect a false eye before atari - this
 				 * is very common in the corner. */
-				coord = selfatari_cousin(b, to_play, lib, NULL);
+				coord = selfatari_cousin(b, to_play, lib, &bygroup);
 			}
 			if (is_pass(coord))
 				continue;
 			/* Ok, connect, but prefer not to. */
+			enum stone byowner = board_at(b, bygroup);
 			if (DEBUGL(7))
-				fprintf(stderr, "\treluctantly switching to cousin %s\n", coord2sstr(coord, b)),
+				fprintf(stderr, "\treluctantly switching to cousin %s (group %s %s)\n",
+					coord2sstr(coord, b), coord2sstr(bygroup, b), stone2str(byowner));
+			/* One more thing - is the cousin sensible defense
+			 * for the other group? */
+			if (defense_is_hopeless(b, bygroup, byowner, to_play,
+						coord, lib,
+						use_def_no_hopeless))
+				continue;
 			lib = coord;
 			preference[i] = false;
 
