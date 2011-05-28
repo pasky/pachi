@@ -15,10 +15,11 @@ static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
 
 /* Move (color, coord) is a selfatari; this means that it puts a group of
  * ours in atari; i.e., the group has two liberties now. Return the other
- * liberty of such a troublesome group if that one is not a self-atari.
+ * liberty of such a troublesome group (optionally stored at *bygroup)
+ * if that one is not a self-atari.
  * (In case (color, coord) is a multi-selfatari, consider a randomly chosen
  * candidate.) */
-coord_t selfatari_cousin(struct board *b, enum stone color, coord_t coord);
+coord_t selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygroup);
 
 
 bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);

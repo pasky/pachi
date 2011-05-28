@@ -143,7 +143,7 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 				/* Okay! We are attacker; maybe we just need
 				 * to connect a false eye before atari - this
 				 * is very common in the corner. */
-				coord = selfatari_cousin(b, to_play, lib);
+				coord = selfatari_cousin(b, to_play, lib, NULL);
 			}
 			if (is_pass(coord))
 				continue;
