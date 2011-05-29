@@ -165,17 +165,13 @@ board_resize(struct board *board, int size)
 	memset(board->b, 0, asize);
 }
 
-void
-board_clear(struct board *board)
+static void
+board_init_data(struct board *board)
 {
 	int size = board_size(board);
-	floating_t komi = board->komi;
 
-	board_done_noalloc(board);
 	board_setup(board);
 	board_resize(board, size - 2 /* S_OFFBOARD margin */);
-
-	board->komi = komi;
 
 	/* Setup neighborhood iterators */
 	board->nei8[0] = -size - 1; // (-1,-1)
@@ -258,6 +254,18 @@ board_clear(struct board *board)
 		trait_at(board, c, S_WHITE).safe = true;
 	} foreach_point_end;
 #endif
+}
+
+void
+board_clear(struct board *board)
+{
+	int size = board_size(board);
+	floating_t komi = board->komi;
+
+	board_done_noalloc(board);
+
+	board->komi = komi;
+	board_init_data(board);
 
 	if (board->fbookfile) {
 		board->fbook = fbook_init(board->fbookfile, board);
