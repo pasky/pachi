@@ -169,6 +169,7 @@ fbook_init(char *filename, struct board *b)
 				hi++;
 			fbook->moves[hi & fbook_hash_mask] = coord;
 			fbook->hashes[hi & fbook_hash_mask] = bs[i]->hash;
+			fbook->movecnt++;
 		}
 		coord_done(c);
 	}
@@ -178,6 +179,12 @@ fbook_init(char *filename, struct board *b)
 	}
 
 	fclose(f);
+
+	if (!fbook->movecnt) {
+		/* Empty book is not worth the hassle. */
+		fbook_done(fbook);
+		return NULL;
+	}
 
 	struct fbook *fbold = fbcache;
 	fbcache = fbook;

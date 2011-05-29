@@ -12,6 +12,8 @@ struct fbook {
 	int bsize;
 	int handicap;
 
+	int movecnt;
+
 #define fbook_hash_bits 20 // 12M w/ 32-bit coord_t
 #define fbook_hash_mask ((1 << fbook_hash_bits) - 1)
 	/* pass == no move in this position */
