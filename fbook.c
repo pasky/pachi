@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
+
 #include "board.h"
 #include "debug.h"
 #include "fbook.h"
