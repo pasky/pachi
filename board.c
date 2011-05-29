@@ -126,9 +126,14 @@ board_copy(struct board *b2, struct board *b1)
 	size_t size = board_alloc(b2);
 	memcpy(b2->b, b1->b, size);
 
-	// XXX: Special semantics.
-	b2->fbook = NULL;
-	if (b2->libmap) b2->libmap->refcount++;
+	b2->fbook = NULL; // XXX: Special semantics.
+	if (b2->libmap) {
+		/* This is not 100% correct, but we can do away without
+		 * locking as libmap cannot go away in the course of
+		 * copy - b1 will still keep holding refcount at 1
+		 * at least. */
+		__sync_fetch_and_add(&b2->libmap->refcount, 1);
+	}
 
 	return b2;
 }

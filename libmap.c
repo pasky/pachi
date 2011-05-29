@@ -46,7 +46,7 @@ libmap_init(struct board *b)
 void
 libmap_put(struct libmap_hash *lm)
 {
-	if (--lm->refcount > 0)
+	if (__sync_sub_and_fetch(&lm->refcount, 1) > 0)
 		return;
 	free(lm);
 }
