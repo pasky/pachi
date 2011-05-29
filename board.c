@@ -34,11 +34,7 @@ static void board_trait_recompute(struct board *board, coord_t coord);
 static void
 board_setup(struct board *b)
 {
-	char *fbookfile = b->fbookfile;
-
 	memset(b, 0, sizeof(*b));
-
-	b->fbookfile = fbookfile;
 
 	struct move m = { pass, S_NONE };
 	b->last_move = b->last_move2 = b->last_move3 = b->last_move4 = b->last_ko = b->ko = m;
@@ -261,11 +257,21 @@ board_clear(struct board *board)
 {
 	int size = board_size(board);
 	floating_t komi = board->komi;
+	char *fbookfile = board->fbookfile;
 
 	board_done_noalloc(board);
 
+	static struct board bcache[BOARD_MAX_SIZE + 2];
+	assert(size > 0 && size <= BOARD_MAX_SIZE + 2);
+	if (bcache[size - 1].size == size) {
+		board_copy(board, &bcache[size - 1]);
+	} else {
+		board_init_data(board);
+		board_copy(&bcache[size - 1], board);
+	}
+
 	board->komi = komi;
-	board_init_data(board);
+	board->fbookfile = fbookfile;
 
 	if (board->fbookfile) {
 		board->fbook = fbook_init(board->fbookfile, board);
