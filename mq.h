@@ -6,6 +6,9 @@
  * randomly. But they are also used to juggle group lists (using the
  * fact that coord_t == group_t). */
 
+/* Warning: move_queue is further specialized upon in libmap_mq.
+ * Take care of that when doing any changes here. */
+
 #include "move.h"
 #include "random.h"
 

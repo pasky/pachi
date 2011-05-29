@@ -52,6 +52,19 @@ libmap_put(struct libmap_hash *lm)
 }
 
 void
+libmap_queue_process(struct libmap_hash *lm, struct board *b)
+{
+	assert(lm->queue.mq.moves <= MQL);
+	for (unsigned int i = 0; i < lm->queue.mq.moves; i++) {
+		struct libmap_group *g = &lm->queue.group[i];
+		struct move m = { .coord = lm->queue.mq.move[i], .color = lm->queue.color[i] };
+		floating_t val = board_at(b, g->group) == g->goal ? 1.0 : 0.0;
+		libmap_add_result(lm, g->hash, m, val, 1);
+	}
+	lm->queue.mq.moves = 0;
+}
+
+void
 libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move,
                   floating_t result, int playouts)
 {
