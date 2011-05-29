@@ -57,9 +57,15 @@ fbook_check(struct board *board)
 	return cf;
 }
 
+static struct fbook *fbcache;
+
 struct fbook *
 fbook_init(char *filename, struct board *b)
 {
+	if (fbcache && fbcache->bsize == board_size(b)
+	    && fbcache->handicap == b->handicap)
+		return fbcache;
+
 	FILE *f = fopen(filename, "r");
 	if (!f) {
 		perror(filename);
@@ -173,10 +179,16 @@ fbook_init(char *filename, struct board *b)
 
 	fclose(f);
 
+	struct fbook *fbold = fbcache;
+	fbcache = fbook;
+	if (fbold)
+		fbook_done(fbold);
+
 	return fbook;
 }
 
 void fbook_done(struct fbook *fbook)
 {
-	free(fbook);
+	if (fbook != fbcache)
+		free(fbook);
 }
