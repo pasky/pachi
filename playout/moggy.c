@@ -791,7 +791,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 				return;
 			/* If we can play on the other liberty of the
 			 * endangered group, do! */
-			coord = selfatari_cousin(b, map->to_play, coord);
+			coord = selfatari_cousin(b, map->to_play, coord, NULL);
 			if (is_pass(coord))
 				return;
 			if (PLDEBUGL(5))
@@ -854,7 +854,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 				stone2str(m->color), coord2sstr(m->coord, b));
 		if (pp->selfatari_other) {
 			/* Ok, try the other liberty of the atari'd group. */
-			coord_t c = selfatari_cousin(b, m->color, m->coord);
+			coord_t c = selfatari_cousin(b, m->color, m->coord, NULL);
 			if (is_pass(c)) return false;
 			if (PLDEBUGL(5))
 				fprintf(stderr, "___ Redirecting to other lib %s\n",
