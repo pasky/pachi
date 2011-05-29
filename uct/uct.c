@@ -10,6 +10,7 @@
 #include "debug.h"
 #include "board.h"
 #include "gtp.h"
+#include "libmap.h"
 #include "move.h"
 #include "mq.h"
 #include "joseki/base.h"
@@ -1024,6 +1025,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->data = u;
 	if (u->slave)
 		e->notify = uct_notify;
+	libmap_init(b);
 
 	const char banner[] = "I'm playing UCT. When I'm losing, I will resign, "
 		"if I think I win, I play until you pass. "

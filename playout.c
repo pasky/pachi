@@ -8,6 +8,7 @@
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
+#include "libmap.h"
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
@@ -165,6 +166,8 @@ play_random_game(struct playout_setup *setup,
 
 	if (ownermap)
 		board_ownermap_fill(ownermap, b);
+	if (b->libmap)
+		libmap_queue_process(b->libmap, b);
 
 	if (b->ps)
 		free(b->ps);
