@@ -193,7 +193,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		if (node->parent == NULL)
 			assert(tree->root_color == stone_other(child_color));
 
-		if (!b->crit_amaf) {
+		if (!b->crit_amaf && !is_pass(node->coord)) {
 			stats_add_result(&node->winner_owner, board_at(final_board, node->coord) == winner_color ? 1.0 : 0.0, 1);
 			stats_add_result(&node->black_owner, board_at(final_board, node->coord) == S_BLACK ? 1.0 : 0.0, 1);
 		}
@@ -230,7 +230,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * to record the result unmodified; in that case,
 			 * we will correctly negate them at the descend phase. */
 
-			if (b->crit_amaf) {
+			if (b->crit_amaf && !is_pass(node->coord)) {
 				stats_add_result(&ni->winner_owner, board_at(final_board, ni->coord) == winner_color ? 1.0 : 0.0, 1);
 				stats_add_result(&ni->black_owner, board_at(final_board, ni->coord) == S_BLACK ? 1.0 : 0.0, 1);
 			}
