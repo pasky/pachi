@@ -68,14 +68,37 @@ void
 libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move,
                   floating_t result, int playouts)
 {
-	while (lm->hash[hash & libmap_hash_mask].hash != hash) {
-		if (lm->hash[hash & libmap_hash_mask].moves == 0) {
-			lm->hash[hash & libmap_hash_mask].hash = hash;
+	/* If hash line is full, replacement strategy is naive - pick the
+	 * move with minimum move[0].stats.playouts; resolve each tie
+	 * randomly. */
+	unsigned int min_playouts = INT_MAX; hash_t min_hash = hash;
+	hash_t ih;
+	for (ih = hash; lm->hash[ih & libmap_hash_mask].hash != hash; ih++) {
+		// fprintf(stderr, "%"PRIhash": check %"PRIhash" (%d)\n", hash & libmap_hash_mask, ih & libmap_hash_mask, lm->hash[ih & libmap_hash_mask].moves);
+		if (lm->hash[ih & libmap_hash_mask].moves == 0) {
+			lm->hash[ih & libmap_hash_mask].hash = hash;
 			break;
 		}
-		hash++;
+		if (ih >= hash + libmap_hash_maxline) {
+			/* Snatch the least used bucket. */
+			ih = min_hash;
+			// fprintf(stderr, "clear %"PRIhash"\n", ih & libmap_hash_mask);
+			memset(&lm->hash[ih & libmap_hash_mask], 0, sizeof(lm->hash[0]));
+			lm->hash[ih & libmap_hash_mask].hash = hash;
+			break;
+		}
+
+		/* Keep track of least used bucket. */
+		assert(lm->hash[ih & libmap_hash_mask].moves > 0);
+		unsigned int hp = lm->hash[ih & libmap_hash_mask].move[0].stats.playouts;
+		if (hp < min_playouts || (hp == min_playouts && fast_random(2))) {
+			min_playouts = hp;
+			min_hash = ih;
+		}
 	}
-	struct libmap_context *lc = &lm->hash[hash & libmap_hash_mask];
+
+	// fprintf(stderr, "%"PRIhash": use %"PRIhash" (%d)\n", hash & libmap_hash_mask, ih & libmap_hash_mask, lm->hash[ih & libmap_hash_mask].moves);
+	struct libmap_context *lc = &lm->hash[ih & libmap_hash_mask];
 	for (int i = 0; i < lc->moves; i++) {
 		if (lc->move[i].move.coord == move.coord
 		    && lc->move[i].move.color == move.color) {
@@ -83,6 +106,7 @@ libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move,
 			return;
 		}
 	}
+
 	int moves = lc->moves; // to preserve atomicity
 	if (moves >= GROUP_REFILL_LIBS) {
 		if (DEBUGL(5))

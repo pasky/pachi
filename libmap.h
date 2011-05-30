@@ -50,8 +50,8 @@ struct libmap_move {
 
 struct libmap_context {
 	hash_t hash;
-	/* We add moves in multiple threads. But at most, we will end up
-	 * with tiny misappropriated playouts in case of conflict. */
+	/* We add moves in multiple threads. But at most, on conflict we will
+	 * end up with tiny amount of misappropriated playouts. */
 	int moves;
 	struct libmap_move move[GROUP_REFILL_LIBS];
 };
@@ -64,9 +64,14 @@ struct libmap_hash {
 	struct libmap_mq queue;
 
 	/* Stored statistics. */
+	/* We store statistics in a hash table without separated chains;
+	 * if bucket is occupied, we look into the following ones,
+	 * allowing up to libmap_hash_maxline subsequent checks. */
+	/* XXX: We mishandle hashes >= UINT64_MAX - libmap_hash_maxline. */
 #define libmap_hash_bits 19
 #define libmap_hash_size (1 << libmap_hash_bits)
 #define libmap_hash_mask (libmap_hash_size - 1)
+#define libmap_hash_maxline 32
 	struct libmap_context hash[libmap_hash_size];
 };
 
@@ -165,12 +170,14 @@ pick:;
 static inline struct move_stats *
 libmap_move_stats(struct libmap_hash *lm, hash_t hash, struct move move)
 {
-	while (lm->hash[hash & libmap_hash_mask].hash != hash) {
-		if (lm->hash[hash & libmap_hash_mask].moves == 0)
+	hash_t ih;
+	for (ih = hash; lm->hash[ih & libmap_hash_mask].hash != hash; ih++) {
+		if (lm->hash[ih & libmap_hash_mask].moves == 0)
 			return NULL;
-		hash++;
+		if (hash >= ih + libmap_hash_maxline)
+			return NULL;
 	}
-	struct libmap_context *lc = &lm->hash[hash & libmap_hash_mask];
+	struct libmap_context *lc = &lm->hash[ih & libmap_hash_mask];
 	for (int i = 0; i < lc->moves; i++) {
 		if (lc->move[i].move.coord == move.coord
 		    && lc->move[i].move.color == move.color)
