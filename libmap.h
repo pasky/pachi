@@ -64,7 +64,7 @@ struct libmap_hash {
 	struct libmap_mq queue;
 
 	/* Stored statistics. */
-#define libmap_hash_bits 17
+#define libmap_hash_bits 19
 #define libmap_hash_size (1 << libmap_hash_bits)
 #define libmap_hash_mask (libmap_hash_size - 1)
 	struct libmap_context hash[libmap_hash_size];
