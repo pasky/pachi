@@ -90,6 +90,6 @@ libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move,
 		return;
 	}
 	lc->move[moves].move = move;
-	lc->moves = ++moves;
 	stats_add_result(&lc->move[moves].stats, result, playouts);
+	lc->moves = ++moves;
 }
