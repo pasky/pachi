@@ -591,7 +591,7 @@ board_handicap(struct board *board, int stones, FILE *f)
 	int mid = board_size(board) / 2;
 	int max = board_size(board) - 1 - margin;
 	const int places[][2] = {
-		{ min, min }, { max, max }, { max, min }, { min, max },
+		{ min, min }, { max, max }, { min, max }, { max, min },
 		{ min, mid }, { max, mid },
 		{ mid, min }, { mid, max },
 		{ mid, mid },
