@@ -67,7 +67,7 @@ struct libmap_hash {
 #define libmap_hash_bits 17
 #define libmap_hash_size (1 << libmap_hash_bits)
 #define libmap_hash_mask (libmap_hash_size - 1)
-	struct libmap_context hash[libmap_hash_bits];
+	struct libmap_context hash[libmap_hash_size];
 };
 
 /* Get a new libmap. */
