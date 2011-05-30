@@ -137,9 +137,25 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 {
 	if (!q->mq.moves)
 		return pass; // nothing to do
-	int p = fast_random(q->mq.moves);
+	unsigned int p = 0, pp;
+	if (q->mq.moves == 1)
+		goto pick;
+
+	/* Pick random move, up to a simple check - if a move has tactical
+	 * rating <0.5, prefer another. (FIXME: Up to epsilon?) */
+	p = pp = fast_random(q->mq.moves);
+	do {
+		int pm = p % q->mq.moves;
+		struct move m = { .coord = q->mq.move[pm], .color = q->color[pm] };
+		struct move_stats *ms = libmap_move_stats(lm, q->group[pm].hash, m);
+		if (!ms || ms->value >= 0.5) break;
+	} while (++p % q->mq.moves < pp);
+	p %= q->mq.moves;
+
+pick:;
 	struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
 	libmap_mq_add(&lm->queue, m, q->mq.tag[p], q->group[p]);
+
 	return q->mq.move[p];
 }
 
