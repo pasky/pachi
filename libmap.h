@@ -105,7 +105,9 @@ libmap_mq_nodup(struct libmap_mq *q)
 			return;
 		if (q->mq.move[q->mq.moves - 1 - i] == q->mq.move[q->mq.moves - 1]
 #ifdef LIBMAP_MQ_GROUP_EXCL
-		    && !memcmp(&q->group[q->mq.moves - 1 - i], &q->group[q->mq.moves - 1], sizeof(q->group[0]))
+		    && q->group[q->mq.moves - 1 - i].group == q->group[q->mq.moves - 1].group
+		    && q->group[q->mq.moves - 1 - i].hash == q->group[q->mq.moves - 1].hash
+		    && q->group[q->mq.moves - 1 - i].goal == q->group[q->mq.moves - 1].goal
 #endif
 			) {
 			q->mq.tag[q->mq.moves - 1 - i] |= q->mq.tag[q->mq.moves - 1];
