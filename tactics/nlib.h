@@ -8,6 +8,6 @@
 
 struct move_queue;
 
-void group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag);
+void group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, struct libmap_mq *q, int tag);
 
 #endif
