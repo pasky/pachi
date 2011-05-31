@@ -174,7 +174,7 @@ libmap_move_stats(struct libmap_hash *lm, hash_t hash, struct move move)
 	for (ih = hash; lm->hash[ih & libmap_hash_mask].hash != hash; ih++) {
 		if (lm->hash[ih & libmap_hash_mask].moves == 0)
 			return NULL;
-		if (hash >= ih + libmap_hash_maxline)
+		if (ih >= hash + libmap_hash_maxline)
 			return NULL;
 	}
 	struct libmap_context *lc = &lm->hash[ih & libmap_hash_mask];
