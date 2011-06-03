@@ -926,7 +926,7 @@ uct_state_init(char *arg, struct board *b)
 				 * some meaningful information in the values
 				 * of the node and its children. */
 				u->significant_threshold = atoi(optval);
-			} else if (!strcasecmp(optname, "libmap") && optval) {
+			} else if (!strcasecmp(optname, "libmap")) {
 				/* Online learning of move tactical ratings by
 				 * liberty maps. */
 				libmap_setup(optval);
