@@ -6,6 +6,7 @@
 
 #include "board.h"
 #include "debug.h"
+#include "libmap.h"
 #include "move.h"
 #include "random.h"
 #include "uct/internal.h"
@@ -34,6 +35,8 @@ struct ucb1_policy_amaf {
 	int crit_min_playouts;
 	bool crit_negative;
 	bool crit_amaf;
+	/* Coefficient of tactical rating embedded in RAVE. */
+	floating_t libmap_rave;
 };
 
 
@@ -116,6 +119,26 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 				c.value, c.playouts,
 				coord2sstr(node->coord, tree->board), r.value, r.playouts);
 			stats_merge(&r, &c);
+		}
+	}
+
+	/* Tactical rating (liberty map) heuristics. */
+	if (b->libmap_rave > 0 && tree->board->libmap) {
+		/* We look at tactical rating of a move relative to
+		 * all neighbors. */
+		/* XXX: We should rather record hashes pertaining this move
+		 * in the tree. We entirely miss counter-atari information. */
+		enum stone color = tree_node_color(tree, node);
+		struct move m = { .coord = node->coord, .color = color };
+		struct move_stats l = libmap_board_move_stats(descent->board->libmap, descent->board, m);
+		if (l.playouts > 0) {
+			l.value = tree_node_get_value(tree, parity, l.value);
+			l.playouts *= b->libmap_rave;
+
+			LTREE_DEBUG fprintf(stderr, "[libmap] adding %f%%%d to [%s %s] RAVE %f%%%d\n",
+				l.value, l.playouts, stone2str(color),
+				coord2sstr(node->coord, descent->board), r.value, r.playouts);
+			stats_merge(&r, &l);
 		}
 	}
 
@@ -310,6 +333,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->crit_negative = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_amaf")) {
 				b->crit_amaf = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "libmap_rave") && optval) {
+				b->libmap_rave = atof(optval);
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);
