@@ -33,6 +33,39 @@ group_to_libmap(struct board *b, group_t group)
 }
 
 
+struct libmap_config libmap_config = {
+	.pick_threshold = 0.5,
+	.pick_epsilon = 20,
+};
+
+void
+libmap_setup(char *arg)
+{
+	if (!arg)
+		return;
+
+	char *optspec, *next = arg;
+	while (*next) {
+		optspec = next;
+		next += strcspn(next, ":");
+		if (*next) { *next++ = 0; } else { *next = 0; }
+
+		char *optname = optspec;
+		char *optval = strchr(optspec, '=');
+		if (optval) *optval++ = 0;
+
+		if (!strcasecmp(optname, "pick_threshold") && optval) {
+			libmap_config.pick_threshold = atof(optval);
+		} else if (!strcasecmp(optname, "pick_epsilon") && optval) {
+			libmap_config.pick_epsilon = atoi(optval);
+		} else {
+			fprintf(stderr, "Invalid libmap argument %s or missing value\n", optname);
+			exit(1);
+		}
+	}
+}
+
+
 struct libmap_hash *
 libmap_init(struct board *b)
 {
