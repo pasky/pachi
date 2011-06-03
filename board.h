@@ -287,6 +287,15 @@ struct board {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
+#define neighboring_groups_list(b_, filter_, coord_, groups, groups_n) \
+	group_t groups[4]; int groups_n = 0; \
+	foreach_neighbor((b_), (coord_), { \
+		if (!(filter_)) continue; \
+		group_t g_ = group_at((b_), c); \
+		if (board_group_info((b_), g_).libs == 2) \
+			groups[groups_n++] = g_; \
+	});
+
 #define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
 
 struct board *board_init(char *fbookfile);
