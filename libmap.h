@@ -5,6 +5,8 @@
  * The idea is that we can track local tactical effectivity of various moves
  * within the particular liberty structure context. */
 
+#include <stdbool.h>
+
 #include "board.h"
 #include "mq.h"
 #include "stats.h"
@@ -21,6 +23,9 @@ extern struct libmap_config {
 	/* In given percentage of cases, pick move regardless of its
 	 * tactical rating.*/
 	int pick_epsilon;
+	/* Whether to merge records for the same move taking care
+	 * of different groups within the move queue. */
+	bool mq_merge_groups;
 } libmap_config;
 
 void libmap_setup(char *arg);
@@ -49,10 +54,6 @@ struct libmap_mq {
 static void libmap_mq_add(struct libmap_mq *q, struct move m, unsigned char tag, struct libmap_group group);
 static void libmap_mq_nodup(struct libmap_mq *q);
 static void libmap_mq_print(struct libmap_mq *q, struct board *b, char *label);
-
-/* Is the same move that is in queue with differing group information
- * supposed to stay multiple times in the queue? */
-#define LIBMAP_MQ_GROUP_EXCL
 
 
 /* Tactical application - hash structure storing info about move effectivity. */
@@ -123,16 +124,12 @@ libmap_mq_nodup(struct libmap_mq *q)
 		if (q->mq.moves <= i)
 			return;
 		if (q->mq.move[q->mq.moves - 1 - i] == q->mq.move[q->mq.moves - 1]
-#ifdef LIBMAP_MQ_GROUP_EXCL
-		    && q->group[q->mq.moves - 1 - i].group == q->group[q->mq.moves - 1].group
-		    && q->group[q->mq.moves - 1 - i].hash == q->group[q->mq.moves - 1].hash
-		    && q->group[q->mq.moves - 1 - i].goal == q->group[q->mq.moves - 1].goal
-#endif
-			) {
+		    && (libmap_config.mq_merge_groups
+		        || (q->group[q->mq.moves - 1 - i].group == q->group[q->mq.moves - 1].group
+		            && q->group[q->mq.moves - 1 - i].hash == q->group[q->mq.moves - 1].hash
+		            && q->group[q->mq.moves - 1 - i].goal == q->group[q->mq.moves - 1].goal))) {
 			q->mq.tag[q->mq.moves - 1 - i] |= q->mq.tag[q->mq.moves - 1];
 			assert(q->color[q->mq.moves - 1 - i] == q->color[q->mq.moves - 1]);
-			/* ifndef LIBMAP_MQ_GROUP_EXCL, original group info
-			 * survives. */
 			q->mq.moves--;
 			return;
 		}

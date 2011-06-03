@@ -36,6 +36,7 @@ group_to_libmap(struct board *b, group_t group)
 struct libmap_config libmap_config = {
 	.pick_threshold = 0.7,
 	.pick_epsilon = 25,
+	.mq_merge_groups = false,
 };
 
 void
@@ -58,6 +59,8 @@ libmap_setup(char *arg)
 			libmap_config.pick_threshold = atof(optval);
 		} else if (!strcasecmp(optname, "pick_epsilon") && optval) {
 			libmap_config.pick_epsilon = atoi(optval);
+		} else if (!strcasecmp(optname, "mq_merge_groups")) {
+			libmap_config.mq_merge_groups = !optval || atoi(optval);
 		} else {
 			fprintf(stderr, "Invalid libmap argument %s or missing value\n", optname);
 			exit(1);
