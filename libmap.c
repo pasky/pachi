@@ -168,3 +168,20 @@ libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move,
 	stats_add_result(&lc->move[moves].stats, result, playouts);
 	lc->moves = ++moves;
 }
+
+struct move_stats
+libmap_board_move_stats(struct libmap_hash *lm, struct board *b, struct move move)
+{
+	struct move_stats tot = { .playouts = 0, .value = 0 };
+
+	neighboring_groups_list(b, board_at(b, c) == S_BLACK || board_at(b, c) == S_WHITE,
+			move.coord, groups, groups_n);
+	for (int i = 0; i < groups_n; i++) {
+		hash_t hash = group_to_libmap(b, groups[i]);
+		struct move_stats *lp = libmap_move_stats(b->libmap, hash, move);
+		if (!lp) continue;
+		stats_merge(&tot, lp);
+	}
+
+	return tot;
+}

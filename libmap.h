@@ -113,6 +113,10 @@ void libmap_queue_process(struct libmap_hash *lm, struct board *b);
 void libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move, floating_t result, int playouts);
 /* Get statistics of particular move in given libmap structure. */
 static struct move_stats *libmap_move_stats(struct libmap_hash *lm, hash_t hash, struct move move);
+/* Get statistics of particular move on given board. */
+/* (Note that this is inherently imperfect as it does not take into account
+ * counter-atari moves.) */
+struct move_stats libmap_board_move_stats(struct libmap_hash *lm, struct board *b, struct move move);
 
 
 
