@@ -172,7 +172,7 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 	/* Pick random move, up to a simple check - if a move has tactical
 	 * rating lower than threshold, prefer another. */
 	p = pp = fast_random(q->mq.moves);
-	if (fast_random(100) >= libmap_config.pick_epsilon) do {
+	if (lm && fast_random(100) >= libmap_config.pick_epsilon) do {
 		int pm = p % q->mq.moves;
 		struct move m = { .coord = q->mq.move[pm], .color = q->color[pm] };
 		struct move_stats *ms = libmap_move_stats(lm, q->group[pm].hash, m);
@@ -180,9 +180,11 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 	} while (++p % q->mq.moves < pp);
 	p %= q->mq.moves;
 
-pick:;
-	struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
-	libmap_mq_add(&lm->queue, m, q->mq.tag[p], q->group[p]);
+pick:
+	if (lm) {
+		struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
+		libmap_mq_add(&lm->queue, m, q->mq.tag[p], q->group[p]);
+	}
 
 	return q->mq.move[p];
 }

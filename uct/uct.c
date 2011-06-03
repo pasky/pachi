@@ -928,9 +928,9 @@ uct_state_init(char *arg, struct board *b)
 				u->significant_threshold = atoi(optval);
 			} else if (!strcasecmp(optname, "libmap") && optval) {
 				/* Online learning of move tactical ratings by
-				 * liberty maps. XXX: Used with default values
-				 * even if this is not passed. */
+				 * liberty maps. */
 				libmap_setup(optval);
+				libmap_init(b);
 
 			/** Distributed engine slaves setup */
 
@@ -1002,8 +1002,6 @@ uct_state_init(char *arg, struct board *b)
 
 	if (!u->dynkomi)
 		u->dynkomi = uct_dynkomi_init_adaptive(u, NULL, b);
-
-	libmap_init(b);
 
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
