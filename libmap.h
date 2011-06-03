@@ -5,6 +5,7 @@
  * The idea is that we can track local tactical effectivity of various moves
  * within the particular liberty structure context. */
 
+#include <assert.h>
 #include <stdbool.h>
 
 #include "board.h"
@@ -12,6 +13,8 @@
 #include "stats.h"
 
 hash_t group_to_libmap(struct board *b, group_t group);
+
+static hash_t counterattack_libmap(group_t defender, group_t attacked);
 
 
 /* Setup of everything libmap-related. */
@@ -26,6 +29,13 @@ extern struct libmap_config {
 	/* Whether to merge records for the same move taking care
 	 * of different groups within the move queue. */
 	bool mq_merge_groups;
+	/* When checking move X, defending group A by counter-attacking
+	 * group B, whether to use A, B or A^B as liberty map. */
+	enum {
+		LMC_DEFENSE_ONLY,
+		LMC_ATTACK_ONLY,
+		LMC_DEFENSE_ATTACK,
+	} counterattack;
 } libmap_config;
 
 void libmap_setup(char *arg);
@@ -105,6 +115,17 @@ void libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move, fl
 static struct move_stats *libmap_move_stats(struct libmap_hash *lm, hash_t hash, struct move move);
 
 
+
+static inline hash_t
+counterattack_libmap(group_t defender, group_t attacked)
+{
+	switch (libmap_config.counterattack) {
+		case LMC_DEFENSE_ONLY: return defender;
+		case LMC_ATTACK_ONLY: return attacked;
+		case LMC_DEFENSE_ATTACK: return defender ^ attacked;
+		default: assert(0);
+	}
+}
 
 static inline void
 libmap_mq_add(struct libmap_mq *q, struct move m, unsigned char tag, struct libmap_group group)

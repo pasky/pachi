@@ -204,7 +204,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libm
 				continue;
 			/* libhash: Liberty info for both original and
 			 * counter-atari group. */
-			lmg.hash = libhash ^ group_to_libmap(b, g2);
+			lmg.hash = counterattack_libmap(libhash, group_to_libmap(b, g2));
 			can_atari_group(b, g2, stone_other(color), to_play, q, tag, lmg, use_def_no_hopeless);
 		});
 	} foreach_in_group_end;

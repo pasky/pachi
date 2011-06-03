@@ -37,6 +37,7 @@ struct libmap_config libmap_config = {
 	.pick_threshold = 0.7,
 	.pick_epsilon = 25,
 	.mq_merge_groups = false,
+	.counterattack = LMC_DEFENSE_ATTACK,
 };
 
 void
@@ -61,6 +62,17 @@ libmap_setup(char *arg)
 			libmap_config.pick_epsilon = atoi(optval);
 		} else if (!strcasecmp(optname, "mq_merge_groups")) {
 			libmap_config.mq_merge_groups = !optval || atoi(optval);
+		} else if (!strcasecmp(optname, "counterattack") && optval) {
+			if (!strcasecmp(optval, "defense_only")) {
+				libmap_config.counterattack = LMC_DEFENSE_ONLY;
+			} else if (!strcasecmp(optval, "attack_only")) {
+				libmap_config.counterattack = LMC_ATTACK_ONLY;
+			} else if (!strcasecmp(optval, "defense_attack")) {
+				libmap_config.counterattack = LMC_DEFENSE_ATTACK;
+			} else {
+				fprintf(stderr, "libmap: Invalid counterattack mode %s\n", optval);
+				exit(1);
+			}
 		} else {
 			fprintf(stderr, "Invalid libmap argument %s or missing value\n", optname);
 			exit(1);
