@@ -130,10 +130,11 @@ libmap_mq_print(struct libmap_mq *q, struct board *b, char *label)
 {
 	fprintf(stderr, "%s candidate moves: ", label);
 	for (unsigned int i = 0; i < q->mq.moves; i++) {
-		fprintf(stderr, "%s[%c:%s]", coord2sstr(q->mq.move[i], b),
+		fprintf(stderr, "%s[%c:%s %"PRIhash"]", coord2sstr(q->mq.move[i], b),
 			/* attacker / defender */
 			board_at(b, q->group[i].group) == q->group[i].goal ? 'd' : 'a',
-			coord2sstr(q->group[i].group, b));
+			coord2sstr(q->group[i].group, b),
+			q->group[i].hash & libmap_hash_mask);
 		struct move m = { .coord = q->mq.move[i], .color = q->color[i] };
 		struct move_stats *ms = libmap_move_stats(b->libmap, q->group[i].hash, m);
 		if (ms) {
