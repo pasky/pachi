@@ -37,7 +37,7 @@ struct libmap_config libmap_config = {
 	.pick_threshold = 0.7,
 	.pick_epsilon = 25,
 	.mq_merge_groups = false,
-	.counterattack = LMC_DEFENSE_ATTACK,
+	.counterattack = LMC_DEFENSE | LMC_ATTACK | LMC_DEFENSE_ATTACK,
 };
 
 void
@@ -63,16 +63,17 @@ libmap_setup(char *arg)
 		} else if (!strcasecmp(optname, "mq_merge_groups")) {
 			libmap_config.mq_merge_groups = !optval || atoi(optval);
 		} else if (!strcasecmp(optname, "counterattack") && optval) {
-			if (!strcasecmp(optval, "defense_only")) {
-				libmap_config.counterattack = LMC_DEFENSE_ONLY;
-			} else if (!strcasecmp(optval, "attack_only")) {
-				libmap_config.counterattack = LMC_ATTACK_ONLY;
-			} else if (!strcasecmp(optval, "defense_attack")) {
-				libmap_config.counterattack = LMC_DEFENSE_ATTACK;
-			} else {
-				fprintf(stderr, "libmap: Invalid counterattack mode %s\n", optval);
-				exit(1);
-			}
+			/* Combination of letters d, a, x (both), these kinds
+			 * of hashes are going to be recorded. */
+			/* Note that using multiple letters makes no sense
+			 * if mq_merge_groups is set. */
+			libmap_config.counterattack = 0;
+			if (strchr(optval, 'd'))
+				libmap_config.counterattack |= LMC_DEFENSE;
+			if (strchr(optval, 'a'))
+				libmap_config.counterattack |= LMC_ATTACK;
+			if (strchr(optval, 'x'))
+				libmap_config.counterattack |= LMC_DEFENSE_ATTACK;
 		} else {
 			fprintf(stderr, "Invalid libmap argument %s or missing value\n", optname);
 			exit(1);

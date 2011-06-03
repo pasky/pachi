@@ -14,8 +14,6 @@
 
 hash_t group_to_libmap(struct board *b, group_t group);
 
-static hash_t counterattack_libmap(group_t defender, group_t attacked);
-
 
 /* Setup of everything libmap-related. */
 
@@ -32,9 +30,9 @@ extern struct libmap_config {
 	/* When checking move X, defending group A by counter-attacking
 	 * group B, whether to use A, B or A^B as liberty map. */
 	enum {
-		LMC_DEFENSE_ONLY,
-		LMC_ATTACK_ONLY,
-		LMC_DEFENSE_ATTACK,
+		LMC_DEFENSE = 1,
+		LMC_ATTACK = 2,
+		LMC_DEFENSE_ATTACK = 4,
 	} counterattack;
 } libmap_config;
 
@@ -119,17 +117,6 @@ static struct move_stats *libmap_move_stats(struct libmap_hash *lm, hash_t hash,
 struct move_stats libmap_board_move_stats(struct libmap_hash *lm, struct board *b, struct move move);
 
 
-
-static inline hash_t
-counterattack_libmap(group_t defender, group_t attacked)
-{
-	switch (libmap_config.counterattack) {
-		case LMC_DEFENSE_ONLY: return defender;
-		case LMC_ATTACK_ONLY: return attacked;
-		case LMC_DEFENSE_ATTACK: return defender ^ attacked;
-		default: assert(0);
-	}
-}
 
 static inline void
 libmap_mq_add(struct libmap_mq *q, struct move m, unsigned char tag, struct libmap_group group)

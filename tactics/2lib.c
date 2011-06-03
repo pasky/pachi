@@ -60,7 +60,8 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 void
 can_atari_group(struct board *b, group_t group, enum stone owner,
 		  enum stone to_play, struct libmap_mq *q,
-		  int tag, struct libmap_group lmg, bool use_def_no_hopeless)
+		  int tag, struct libmap_group lmg, hash_t ca_hash,
+		  bool use_def_no_hopeless)
 {
 	bool have[2] = { false, false };
 	bool preference[2] = { true, true };
@@ -161,8 +162,20 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 
 		/* Tasty! Crispy! Good! */
 		struct move m = { .coord = lib, .color = to_play };
-		libmap_mq_add(q, m, tag, lmg);
-		libmap_mq_nodup(q);
+		if (libmap_config.counterattack & LMC_DEFENSE) {
+			libmap_mq_add(q, m, tag, lmg);
+			libmap_mq_nodup(q);
+		}
+		if (libmap_config.counterattack & LMC_ATTACK && ca_hash) {
+			struct libmap_group lmgx = lmg; lmgx.hash = ca_hash;
+			libmap_mq_add(q, m, tag, lmgx);
+			libmap_mq_nodup(q);
+		}
+		if (libmap_config.counterattack & LMC_DEFENSE_ATTACK && ca_hash) {
+			struct libmap_group lmgx = lmg; lmgx.hash ^= ca_hash;
+			libmap_mq_add(q, m, tag, lmgx);
+			libmap_mq_nodup(q);
+		}
 	}
 }
 
@@ -182,7 +195,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libm
 
 	hash_t libhash = group_to_libmap(b, group);
 	struct libmap_group lmg = { .group = group, .hash = libhash, .goal = to_play };
-	can_atari_group(b, group, color, to_play, q, tag, lmg, use_def_no_hopeless);
+	can_atari_group(b, group, color, to_play, q, tag, lmg, 0, use_def_no_hopeless);
 
 	/* Can we counter-atari another group, if we are the defender? */
 	if (to_play != color)
@@ -204,8 +217,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libm
 				continue;
 			/* libhash: Liberty info for both original and
 			 * counter-atari group. */
-			lmg.hash = counterattack_libmap(libhash, group_to_libmap(b, g2));
-			can_atari_group(b, g2, stone_other(color), to_play, q, tag, lmg, use_def_no_hopeless);
+			can_atari_group(b, g2, stone_other(color), to_play, q, tag, lmg, group_to_libmap(b, g2), use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }
