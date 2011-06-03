@@ -34,8 +34,8 @@ group_to_libmap(struct board *b, group_t group)
 
 
 struct libmap_config libmap_config = {
-	.pick_threshold = 0.5,
-	.pick_epsilon = 20,
+	.pick_threshold = 0.7,
+	.pick_epsilon = 25,
 };
 
 void
