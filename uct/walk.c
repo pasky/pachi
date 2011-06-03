@@ -280,7 +280,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
 	struct uct_descent descent[DESCENT_DLEN];
-	descent[0].node = n; descent[0].lnode = NULL;
+	descent[0].node = n; descent[0].lnode = NULL; descent[0].board = &b2;
 	int dlen = 1;
 	/* Total value of the sequence. */
 	struct move_stats seq_value = { .playouts = 0 };
