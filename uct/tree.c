@@ -198,7 +198,9 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 	/* FIXME: libmap info is correct only at root node!!! */
 	enum stone color = tree_node_color(tree, node);
 	struct move m = { .coord = node->coord, .color = color };
-	struct move_stats lm = libmap_board_move_stats(tree->board->libmap, tree->board, m);
+	struct move_stats lm = { .playouts = -1, .value = 0 };
+	if (tree->board->libmap)
+		lm = libmap_board_move_stats(tree->board->libmap, tree->board, m);
 
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
