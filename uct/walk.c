@@ -84,7 +84,7 @@ void
 uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts, bool final, bool big)
 {
 	/* Prefix indicating JSON line. */
-	fprintf(stderr, "/**/ {\"%s\": {", final ? "final" : "interm");
+	fprintf(stderr, "{\"%s\": {", final ? "final" : "interm");
 
 	/* Plaout count */
 	fprintf(stderr, "\"playouts\": %d", playouts);
