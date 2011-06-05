@@ -143,20 +143,9 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 		int f = 0;
 		foreach_point(t->board) {
 			if (board_at(t->board, c) != S_NONE) continue;
-			fprintf(stderr, "%s{\"%s\":{", f++ > 0 ? "," : "",
-				coord2sstr(c, t->board));
-			floating_t drate = (floating_t) u->ownermap.map[c][S_NONE] / u->ownermap.playouts;
-			bool p = false;
-#define print_rate(color,letter) \
-			if (drate >= 0.001 || color == S_BLACK) { \
-				floating_t rate = (floating_t) u->ownermap.map[c][color] / u->ownermap.playouts; \
-				fprintf(stderr, "%s\"%c\":%.3f", p ? "," : "", letter, rate); \
-				p = true; \
-			}
-			print_rate(S_BLACK, 'b');
-			print_rate(S_WHITE, 'w');
-			print_rate(S_NONE, 'd');
-			fprintf(stderr, "}}");
+			int rate = u->ownermap.map[c][S_BLACK] * 1000 / u->ownermap.playouts;
+			int drate = u->ownermap.map[c][S_NONE] * 1000 / u->ownermap.playouts;
+			fprintf(stderr, "%s[%d,%d]", f++ > 0 ? "," : "", rate, drate);
 		} foreach_point_end;
 		fprintf(stderr, "]");
 
