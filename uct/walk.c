@@ -134,36 +134,19 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 	fprintf(stderr, "]");
 
 	if (big) {
-		/* Ownership statistics. {"b":val,"w":val,"d":val}
-		 * where each val is in range [0,1] describes likelihood
-		 * of this point becoming black, white and dame.
-		 * If dame rate would be 0, only black rate is sent and
-		 * white rate can be computed as 1-blackrate. */
-		fprintf(stderr, ", \"territstatus\": [");
+		/* Ownership statistics. Value (0..1000) for each possible
+		 * point describes likelihood of this point becoming black.
+		 * Normally, white rate is 1000-value; exception are possible
+		 * seki points, but these should be rare. */
+		fprintf(stderr, ", \"boards\": {\"territory\": [");
 		int f = 0;
 		foreach_point(t->board) {
 			if (board_at(t->board, c) != S_NONE) continue;
 			int rate = u->ownermap.map[c][S_BLACK] * 1000 / u->ownermap.playouts;
-			int drate = u->ownermap.map[c][S_NONE] * 1000 / u->ownermap.playouts;
-			fprintf(stderr, "%s[%d,%d]", f++ > 0 ? "," : "", rate, drate);
+			fprintf(stderr, "%s%d", f++ > 0 ? "," : "", rate);
 		} foreach_point_end;
-		fprintf(stderr, "]");
+		fprintf(stderr, "]}");
 
-		/* Chain status statistics. Each chain is identified
-		 * by some stone within, and bound to a value in range
-		 * [0,1] describing likelihood of survival. */
-		fprintf(stderr, ", \"chainstatus\": [");
-		f = 0;
-		foreach_point(t->board) {
-			group_t g = group_at(t->board, c);
-			if (!g || groupnext_at(t->board, c)) continue;
-			/* Last stone in some group. */
-			fprintf(stderr, "%s{\"%s\":%.3f}",
-				f++ > 0 ? "," : "",
-				coord2sstr(c, t->board),
-				(floating_t) u->ownermap.map[c][board_at(t->board, c)] / u->ownermap.playouts);
-		} foreach_point_end;
-		fprintf(stderr, "]");
 	}
 
 	fprintf(stderr, "}}\n");
