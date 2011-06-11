@@ -141,7 +141,7 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 		fprintf(stderr, ", \"boards\": {\"territory\": [");
 		int f = 0;
 		foreach_point(t->board) {
-			if (board_at(t->board, c) != S_NONE) continue;
+			if (board_at(t->board, c) == S_OFFBOARD) continue;
 			int rate = u->ownermap.map[c][S_BLACK] * 1000 / u->ownermap.playouts;
 			fprintf(stderr, "%s%d", f++ > 0 ? "," : "", rate);
 		} foreach_point_end;
