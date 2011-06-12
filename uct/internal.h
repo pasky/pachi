@@ -31,6 +31,7 @@ struct uct {
 		UR_JSON,
 		UR_JSON_BIG,
 	} reporting;
+	int reportfreq;
 
 	int games, gamelen;
 	floating_t resign_threshold, sure_win_threshold;

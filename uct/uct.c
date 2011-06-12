@@ -531,6 +531,7 @@ uct_state_init(char *arg, struct board *b)
 	struct uct *u = calloc2(1, sizeof(struct uct));
 
 	u->debug_level = debug_level;
+	u->reportfreq = 10000;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
 	u->sure_win_threshold = 0.85;
@@ -609,6 +610,10 @@ uct_state_init(char *arg, struct board *b)
 					fprintf(stderr, "UCT: Invalid reporting format %s\n", optval);
 					exit(1);
 				}
+			} else if (!strcasecmp(optname, "reportfreq") && optval) {
+				/* The progress information line will be shown
+				 * every <reportfreq> simulations. */
+				u->reportfreq = atoi(optval);
 			} else if (!strcasecmp(optname, "dumpthres") && optval) {
 				/* When dumping the UCT tree on output, include
 				 * nodes with at least this many playouts.
