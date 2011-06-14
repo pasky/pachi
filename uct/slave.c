@@ -468,10 +468,6 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 	return reply;
 }
 
-/* How long to wait in slave for initial stats to build up before
- * replying to the genmoves command (in seconds) */
-#define MIN_STATS_INTERVAL 0.05 /* 50ms */
-
 /* genmoves is issued by the distributed engine master to all slaves, to:
  * 1. Start a MCTS search if not running yet
  * 2. Report current move statistics of the on-going search.
@@ -521,7 +517,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	char *sizep = strchr(args, '@');
 	if (sizep) size = atoi(sizep+1);
 	if (!size) {
-		time_sleep(MIN_STATS_INTERVAL);
+		time_sleep(u->stats_delay);
 	} else if (!receive_stats(u, size)) {
 		return NULL;
 	}

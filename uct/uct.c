@@ -568,6 +568,8 @@ uct_state_init(char *arg, struct board *b)
 	u->local_tree_rootseqval = 1;
 	u->local_tree_depth_decay = 1.5;
 
+	u->stats_delay = 0.001; // 1 ms
+
 	u->plugins = pluginset_init(b);
 
 	u->jdict = joseki_load(b->size);
@@ -941,6 +943,10 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
 				/* Set hash table size to 2^stats_hbits for the shared stats. */
 				u->stats_hbits = atoi(optval);
+			} else if (!strcasecmp(optname, "stats_delay") && optval) {
+				/* How long to wait in slave for initial stats to build up before
+				 * replying to the genmoves command (in ms) */
+				u->stats_delay = 0.001 * atof(optval);
 
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
