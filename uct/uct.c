@@ -568,7 +568,7 @@ uct_state_init(char *arg, struct board *b)
 	u->local_tree_rootseqval = 1;
 	u->local_tree_depth_decay = 1.5;
 
-	u->stats_delay = 0.001; // 1 ms
+	u->stats_delay = 0.01; // 10 ms
 
 	u->plugins = pluginset_init(b);
 
