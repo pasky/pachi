@@ -20,11 +20,11 @@
 #include "uct/slave.h"
 
 
-/* Allocate tree node(s). The returned nodes are _not_ initialized.
+/* Allocate tree node(s). The returned nodes are initialized with zeroes.
  * Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static struct tree_node *
-tree_alloc_node(struct tree *t, int count, bool fast_alloc, hash_t *hash)
+tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 {
 	struct tree_node *n = NULL;
 	size_t nsize = count * sizeof(*n);
@@ -39,23 +39,21 @@ tree_alloc_node(struct tree *t, int count, bool fast_alloc, hash_t *hash)
 	} else {
 		n = calloc2(count, sizeof(*n));
 	}
-
-	if (hash) {
-		volatile static long c = 1000000;
-		*hash = __sync_fetch_and_add(&c, count);
-	}
-
 	return n;
 }
 
 /* Initialize a node at a given place in memory.
  * This function may be called by multiple threads in parallel. */
 static void
-tree_setup_node(struct tree *t, struct tree_node *n, coord_t coord, int depth, hash_t hash)
+tree_setup_node(struct tree *t, struct tree_node *n, coord_t coord, int depth)
 {
+	volatile static unsigned int hash = 0;
 	n->coord = coord;
 	n->depth = depth;
-	n->hash = hash;
+	/* n->hash is used only for debugging. It is very likely (but not
+	 * guaranteed) to be unique. */
+	hash_t h = n - (struct tree_node *)0;
+	n->hash = (h << 32) + (hash++ & 0xffffffff);
 	if (depth > t->max_depth)
 		t->max_depth = depth;
 }
@@ -67,10 +65,9 @@ static struct tree_node *
 tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 {
 	struct tree_node *n;
-	hash_t hash;
-	n = tree_alloc_node(t, 1, fast_alloc, &hash);
+	n = tree_alloc_node(t, 1, fast_alloc);
 	if (!n) return NULL;
-	tree_setup_node(t, n, coord, depth, hash);
+	tree_setup_node(t, n, coord, depth);
 	return n;
 }
 
@@ -356,7 +353,7 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 	   int threshold, int depth)
 {
 	assert(dest->nodes && node);
-	struct tree_node *n2 = tree_alloc_node(dest, 1, true, NULL);
+	struct tree_node *n2 = tree_alloc_node(dest, 1, true);
 	if (!n2)
 		return NULL;
 	*n2 = *node;
