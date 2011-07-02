@@ -113,13 +113,15 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 		/* Some GTP peers send time_left 0 0 at the end of main time. */
 		ti->period = TT_MOVE;
 		ti->len.t.main_time = 0;
-		/* byoyomi_time kept fully charged. */
+		ti->len.t.byoyomi_time = ti->len.t.byoyomi_time_max;
+		ti->len.t.byoyomi_stones = ti->len.t.byoyomi_stones_max;
 
 	} else if (!stones_left) {
 		/* Main time */
 		ti->period = TT_TOTAL;
 		ti->len.t.main_time = time_left;
-		/* byoyomi_time kept fully charged. */
+		ti->len.t.byoyomi_time = ti->len.t.byoyomi_time_max;
+		ti->len.t.byoyomi_stones = ti->len.t.byoyomi_stones_max;
 
 	} else {
 		/* Byoyomi */
