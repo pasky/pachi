@@ -113,15 +113,13 @@ struct tree {
 	 * anywhere in the tree; nodes are created on-demand, special 'pass'
 	 * nodes represent tenuki. Only u move_stats are used, prior and amaf
 	 * is ignored. Values in root node are ignored. */
-	/* The values in the tree can be either "raw" or "tempered"
-	 * (representing difference against parent node in the main tree),
-	 * controlled by local_tree setting. */
+	/* The value corresponds to black-to-play as usual; i.e. if white
+	 * succeeds in its replies, the values will be low. */
 	struct tree_node *ltree_black;
-	// Of course even in white tree, winrates are from b's perspective
-	// as anywhere else. ltree_white has white-first sequences as children.
+	/* ltree_white has white-first sequences as children. */
 	struct tree_node *ltree_white;
-	// Aging factor; 2 means halve all playout values after each turn.
-	// 1 means don't age at all.
+	/* Aging factor; 2 means halve all playout values after each turn.
+	 * 1 means don't age at all. */
 	floating_t ltree_aging;
 
 	/* Hash table used when working as slave for the distributed engine.
