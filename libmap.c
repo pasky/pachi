@@ -35,8 +35,8 @@ group_to_libmap(struct board *b, group_t group)
 
 struct libmap_config libmap_config = {
 	.pick_threshold = 0.7,
-	.pick_epsilon = 25,
-	.mq_merge_groups = false,
+	.pick_epsilon = 10,
+	.mq_merge_groups = true,
 	.counterattack = LMC_DEFENSE | LMC_ATTACK | LMC_DEFENSE_ATTACK,
 };
 
