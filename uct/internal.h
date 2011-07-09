@@ -92,6 +92,7 @@ struct uct {
 	int stats_hbits;
 	int shared_nodes;
 	int shared_levels;
+	double stats_delay; /* stored in seconds */
 	int played_own;
 	int played_all; /* games played by all slaves */
 

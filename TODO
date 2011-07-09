@@ -17,6 +17,12 @@ General improvements:
 * MM local-based patterns
 * Balanced local-based patterns?
 * Local tree forcing
+* Liberty maps
+* Reverse status learning
+	Run on game corpus. Start at final position, watch development
+	of status of all stones. The moment the final status and expected
+	status changes, analyze, especially if move choice differs. Use
+	learnt status-fixing moves in simulations somehow.
 
 Playouts:
 * Split playout aspects to custom-stackable pieces

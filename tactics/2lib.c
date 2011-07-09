@@ -57,6 +57,34 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 	return false;
 }
 
+static bool
+defense_is_hopeless(struct board *b, group_t group, enum stone owner,
+			enum stone to_play, coord_t lib, coord_t otherlib,
+			bool use)
+{
+	/* If we are the defender not connecting out, do not
+	 * escape with moves that do not gain liberties anyway
+	 * - either the new extension has just single extra
+	 * liberty, or the "gained" liberties are shared. */
+	/* XXX: We do not check connecting to a short-on-liberty
+	 * group (e.g. ourselves). */
+	if (DEBUGL(7))
+		fprintf(stderr, "\tif_check %d and defending %d and uscount %d ilcount %d\n",
+			use, to_play == owner,
+			neighbor_count_at(b, lib, owner),
+			immediate_liberty_count(b, lib));
+	if (!use)
+		return false;
+	if (to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
+		if (immediate_liberty_count(b, lib) == 1)
+			return true;
+		if (immediate_liberty_count(b, lib) == 2
+		    && coord_is_adjecent(lib, otherlib, b))
+			return true;
+	}
+	return false;
+}
+
 void
 can_atari_group(struct board *b, group_t group, enum stone owner,
 		  enum stone to_play, struct libmap_mq *q,
@@ -72,7 +100,7 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 			continue;
 
 		if (DEBUGL(6))
-			fprintf(stderr, "checking liberty %s of %s %s, filled by %s\n",
+			fprintf(stderr, "- checking liberty %s of %s %s, filled by %s\n",
 				coord2sstr(lib, b),
 				stone2str(owner), coord2sstr(group, b),
 				stone2str(to_play));
@@ -90,19 +118,11 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 			continue;
 #endif
 
-		/* If we are the defender not connecting out, do not
-		 * escape with moves that do not gain liberties anyway
-		 * - either the new extension has just single extra
-		 * liberty, or the "gained" liberties are shared. */
-		/* XXX: We do not check connecting to a short-on-liberty
-		 * group (e.g. ourselves). */
-		if (use_def_no_hopeless && to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
-			if (immediate_liberty_count(b, lib) == 1)
-				continue;
-			if (immediate_liberty_count(b, lib) == 2
-			    && coord_is_adjecent(lib, board_group_info(b, group).lib[1 - i], b))
-				continue;
-		}
+		/* Prevent hopeless escape attempts. */
+		if (defense_is_hopeless(b, group, owner, to_play, lib,
+					board_group_info(b, group).lib[1 - i],
+					use_def_no_hopeless))
+			continue;
 
 #ifdef NO_DOOMED_GROUPS
 		/* If the owner can't play at the spot, we don't want
@@ -118,13 +138,29 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		    to_play != owner &&
 #endif
 		    is_bad_selfatari(b, to_play, lib)) {
-			/* Okay! But maybe we just need to connect a false
-			 * eye before atari - this is very common in the
-			 * corner. */
-			coord_t coord = selfatari_cousin(b, to_play, lib);
+			if (DEBUGL(7))
+				fprintf(stderr, "\tliberty is selfatari\n");
+			coord_t coord = pass;
+			group_t bygroup = 0;
+			if (to_play != owner) {
+				/* Okay! We are attacker; maybe we just need
+				 * to connect a false eye before atari - this
+				 * is very common in the corner. */
+				coord = selfatari_cousin(b, to_play, lib, &bygroup);
+			}
 			if (is_pass(coord))
 				continue;
 			/* Ok, connect, but prefer not to. */
+			enum stone byowner = board_at(b, bygroup);
+			if (DEBUGL(7))
+				fprintf(stderr, "\treluctantly switching to cousin %s (group %s %s)\n",
+					coord2sstr(coord, b), coord2sstr(bygroup, b), stone2str(byowner));
+			/* One more thing - is the cousin sensible defense
+			 * for the other group? */
+			if (defense_is_hopeless(b, bygroup, byowner, to_play,
+						coord, lib,
+						use_def_no_hopeless))
+				continue;
 			lib = coord;
 			preference[i] = false;
 
@@ -140,11 +176,16 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		 * #######
 		 * ..O.X.X <- always play the left one!
 		 * OXXXXXX */
-		if (neighbor_count_at(b, lib, to_play) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3)
+		if (neighbor_count_at(b, lib, to_play) + neighbor_count_at(b, lib, S_OFFBOARD) >= 3) {
+			if (DEBUGL(7))
+				fprintf(stderr, "\tlumpy: mine %d + edge %d\n",
+					neighbor_count_at(b, lib, to_play),
+					neighbor_count_at(b, lib, S_OFFBOARD));
 			preference[i] = false;
+		}
 
 		if (DEBUGL(6))
-			fprintf(stderr, "liberty %s ready with preference %d\n", coord2sstr(lib, b), preference[i]);
+			fprintf(stderr, "+ liberty %s ready with preference %d\n", coord2sstr(lib, b), preference[i]);
 
 		/* If we prefer only one of the moves, pick that one. */
 		if (i == 1 && have[0] && preference[0] != preference[1]) {
@@ -176,6 +217,14 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 			libmap_mq_add(q, m, tag, lmgx);
 			libmap_mq_nodup(q);
 		}
+	}
+
+	if (DEBUGL(7)) {
+		char label[256];
+		snprintf(label, 256, "= final %s %s liberties to play by %s",
+			stone2str(owner), coord2sstr(group, b),
+			stone2str(to_play));
+		mq_print(q, b, label);
 	}
 }
 

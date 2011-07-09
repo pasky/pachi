@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
+
 #include "board.h"
 #include "debug.h"
 #include "fbook.h"
@@ -57,9 +59,15 @@ fbook_check(struct board *board)
 	return cf;
 }
 
+static struct fbook *fbcache;
+
 struct fbook *
 fbook_init(char *filename, struct board *b)
 {
+	if (fbcache && fbcache->bsize == board_size(b)
+	    && fbcache->handicap == b->handicap)
+		return fbcache;
+
 	FILE *f = fopen(filename, "r");
 	if (!f) {
 		perror(filename);
@@ -163,6 +171,7 @@ fbook_init(char *filename, struct board *b)
 				hi++;
 			fbook->moves[hi & fbook_hash_mask] = coord;
 			fbook->hashes[hi & fbook_hash_mask] = bs[i]->hash;
+			fbook->movecnt++;
 		}
 		coord_done(c);
 	}
@@ -173,10 +182,22 @@ fbook_init(char *filename, struct board *b)
 
 	fclose(f);
 
+	if (!fbook->movecnt) {
+		/* Empty book is not worth the hassle. */
+		fbook_done(fbook);
+		return NULL;
+	}
+
+	struct fbook *fbold = fbcache;
+	fbcache = fbook;
+	if (fbold)
+		fbook_done(fbold);
+
 	return fbook;
 }
 
 void fbook_done(struct fbook *fbook)
 {
-	free(fbook);
+	if (fbook != fbcache)
+		free(fbook);
 }

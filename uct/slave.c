@@ -424,7 +424,7 @@ report_incr_stats(struct uct *u, int *stats_size)
  * a list of lines "coord playouts value" with absolute counts for
  * children of the root node (including contributions from other
  * slaves). The last line must not end with \n.
- * If c is pass or resign, add this move with a large weight.
+ * If c is non-zero, add this move with a large weight.
  * This function is called only by the main thread, but may be
  * called while the tree is updated by the worker threads. Keep this
  * code in sync with distributed/distributed.c:select_best_move(). */
@@ -446,20 +446,23 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 	for (struct tree_node *ni = root->children; ni; ni = ni->sibling) {
 
 		if (is_pass(ni->coord)) continue;
+		assert(ni->coord > 0 && ni->coord < board_size2(b));
+
 		if (ni->u.playouts > max_playouts)
 			max_playouts = ni->u.playouts;
 		if (ni->u.playouts <= min_playouts || ni->hints & TREE_HINT_INVALID)
 			continue;
+		/* A book move is only added at the end: */
+		if (ni->coord == c) continue;
 
-		assert(ni->coord > 0 && ni->coord < board_size2(b));
 		char buf[4];
 		/* We return the values as stored in the tree, so from black's view. */
 		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, ni->coord, b),
 			      ni->u.playouts, ni->u.value);
 	}
-	/* Give a large but not infinite weight to pass or resign, to avoid forcing
-	 * resign if other slaves don't like it. */
-	if (is_pass(c) || is_resign(c)) {
+	/* Give a large but not infinite weight to pass, resign or book move, to avoid
+	 * forcing resign if other slaves don't like it. */
+	if (c) {
 		double resign_value = u->t->root_color == S_WHITE ? 0.0 : 1.0;
 		double c_value = is_resign(c) ? resign_value : 1.0 - resign_value;
 		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c, b),
@@ -467,10 +470,6 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 	}
 	return reply;
 }
-
-/* How long to wait in slave for initial stats to build up before
- * replying to the genmoves command (in seconds) */
-#define MIN_STATS_INTERVAL 0.05 /* 50ms */
 
 /* genmoves is issued by the distributed engine master to all slaves, to:
  * 1. Start a MCTS search if not running yet
@@ -521,7 +520,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	char *sizep = strchr(args, '@');
 	if (sizep) size = atoi(sizep+1);
 	if (!size) {
-		time_sleep(MIN_STATS_INTERVAL);
+		time_sleep(u->stats_delay);
 	} else if (!receive_stats(u, size)) {
 		return NULL;
 	}
@@ -540,6 +539,8 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	if (best_coord == pass) {
 		keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, &s, played_games);
 		uct_search_result(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
+		/* Give heavy weight only to pass, resign and book move: */
+		if (best_coord > 0) best_coord = 0; 
 
 		if (u->shared_levels) {
 			*stats_buf = report_incr_stats(u, stats_size);

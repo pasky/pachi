@@ -62,9 +62,9 @@ three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, 
 		return false;
 
 	/* Playing on the third liberty might be useful if it enables
-	 * capturing some group. */
+	 * capturing some group (are we doing nakade or semeai?). */
 	for (int i = 0; i < s->groupcts[stone_other(color)]; i++)
-		if (board_group_info(b, s->groupids[stone_other(color)][i]).libs <= 2)
+		if (board_group_info(b, s->groupids[stone_other(color)][i]).libs <= 3)
 			return false;
 
 
@@ -511,7 +511,7 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 
 
 coord_t
-selfatari_cousin(struct board *b, enum stone color, coord_t coord)
+selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygroup)
 {
 	neighboring_groups_list(b, board_at(b, c) == color, coord, groups, groups_n);
 
@@ -522,5 +522,7 @@ selfatari_cousin(struct board *b, enum stone color, coord_t coord)
 	coord_t lib2 = board_group_other_lib(b, group, coord);
 	if (is_bad_selfatari(b, color, lib2))
 		return pass;
+	if (bygroup)
+		*bygroup = group;
 	return lib2;
 }
