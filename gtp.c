@@ -207,6 +207,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			return P_OK;
 		}
 		board_resize(board, size);
+		board_clear(board);
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "clear_board")) {
@@ -506,6 +507,8 @@ next_group:;
 		 * and call uct_evaluate() for each.  uct_evaluate()
 		 * will throw NAN in case of invalid moves and such. */
 		for (int i = 0; i < board->flen; i++) {
+			if (!board_coord_in_symmetry(board, board->f[i]))
+				continue;
 			floating_t val = uct_evaluate(engine, board, &ti[color], board->f[i], color);
 			if (isnan(val))
 				continue;
