@@ -184,7 +184,7 @@ tree_done(struct tree *t)
 
 
 static void
-tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
+tree_node_dump(struct tree *tree, struct tree_node *node, int treeparity, int l, int thres)
 {
 	for (int i = 0; i < l; i++) fputc(' ', stderr);
 	int children = 0;
@@ -194,9 +194,9 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 	 * win probability of _us_, not the node color. */
 	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f] h=%x c#=%d <%"PRIhash">\n",
 		coord2sstr(node->coord, tree->board),
-		tree_node_get_value(tree, 1, node->u.value), node->u.playouts,
-		tree_node_get_value(tree, 1, node->prior.value), node->prior.playouts,
-		tree_node_get_value(tree, 1, node->amaf.value), node->amaf.playouts,
+		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
+		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
+		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
 		tree_node_criticality(tree, node),
 		node->hints, children, node->hash);
 
@@ -214,7 +214,7 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int l, int thres)
 				best = i;
 		if (best < 0)
 			break;
-		tree_node_dump(tree, nbox[best], l + 1, /* node->u.value < 0.1 ? 0 : */ thres);
+		tree_node_dump(tree, nbox[best], treeparity, l + 1, /* node->u.value < 0.1 ? 0 : */ thres);
 		nbox[best] = NULL;
 	}
 }
@@ -230,13 +230,13 @@ tree_dump(struct tree *tree, int thres)
 	fprintf(stderr, "(UCT tree; root %s; extra komi %f; max depth %d)\n",
 	        stone2str(tree->root_color), tree->extra_komi,
 		tree->max_depth - tree->root->depth);
-	tree_node_dump(tree, tree->root, 0, thres);
+	tree_node_dump(tree, tree->root, 1, 0, thres);
 
 	if (DEBUGL(3) && tree->ltree_black) {
 		fprintf(stderr, "B local tree:\n");
-		tree_node_dump(tree, tree->ltree_black, 0, thres);
+		tree_node_dump(tree, tree->ltree_black, tree->root_color == S_WHITE ? 1 : -1, 0, thres);
 		fprintf(stderr, "W local tree:\n");
-		tree_node_dump(tree, tree->ltree_white, 0, thres);
+		tree_node_dump(tree, tree->ltree_white, tree->root_color == S_BLACK ? 1 : -1, 0, thres);
 	}
 }
 

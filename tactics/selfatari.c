@@ -62,9 +62,9 @@ three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, 
 		return false;
 
 	/* Playing on the third liberty might be useful if it enables
-	 * capturing some group. */
+	 * capturing some group (are we doing nakade or semeai?). */
 	for (int i = 0; i < s->groupcts[stone_other(color)]; i++)
-		if (board_group_info(b, s->groupids[stone_other(color)][i]).libs <= 2)
+		if (board_group_info(b, s->groupids[stone_other(color)][i]).libs <= 3)
 			return false;
 
 
