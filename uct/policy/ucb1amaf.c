@@ -20,6 +20,11 @@ struct ucb1_policy_amaf {
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
 	floating_t explore_p;
+	/* In distributed mode, encourage different slaves to work on different
+	 * parts of the tree by adding virtual wins to different nodes. */
+	int virtual_win;
+	int root_virtual_win;
+	int vwin_min_playouts;
 	/* First Play Urgency - if set to less than infinity (the MoGo paper
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
@@ -155,10 +160,21 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 	floating_t nconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
+	struct uct *u = p->uct;
+	int vwin = 0;
+	if (u->max_slaves > 0 && u->slave_index >= 0)
+		vwin = descent->node == tree->root ? b->root_virtual_win : b->virtual_win;
+	int child = 0;
 
-	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
+	uctd_try_node_children(tree, descent, allow_pass, parity, u->tenuki_d, di, urgency) {
 		struct tree_node *ni = di.node;
 		urgency = ucb1rave_evaluate(p, tree, &di, parity);
+
+		/* In distributed mode, encourage different slaves to work on different
+		 * parts of the tree. We rely on the fact that children (if they exist)
+		 * are the same and in the same order in all slaves. */
+		if (vwin > 0 && ni->u.playouts > b->vwin_min_playouts && (child - u->slave_index) % u->max_slaves == 0)
+			urgency += vwin / (ni->u.playouts + vwin);
 
 		if (ni->u.playouts > 0 && b->explore_p > 0) {
 			urgency += b->explore_p * nconf / fast_sqrt(ni->u.playouts);
@@ -281,6 +297,9 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->crit_negative = 1;
 	b->crit_amaf = 0;
 
+	b->root_virtual_win = -1;
+	b->vwin_min_playouts = 1000;
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -312,6 +331,12 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->crit_negative = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_amaf")) {
 				b->crit_amaf = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "virtual_win") && optval) {
+				b->virtual_win = atoi(optval);
+			} else if (!strcasecmp(optname, "root_virtual_win") && optval) {
+				b->root_virtual_win = atoi(optval);
+			} else if (!strcasecmp(optname, "vwin_min_playouts") && optval) {
+				b->vwin_min_playouts = atoi(optval);
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);
@@ -319,6 +344,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 			}
 		}
 	}
+	if (b->root_virtual_win < 0)
+		b->root_virtual_win = b->virtual_win;
 
 	return p;
 }

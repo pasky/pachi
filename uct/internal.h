@@ -55,6 +55,8 @@ struct uct {
 	bool pondering_opt; /* User wants pondering */
 	bool pondering; /* Actually pondering now */
 	bool slave; /* Act as slave in distributed engine. */
+	int max_slaves; /* Optional, -1 if not set */
+	int slave_index; /* 0..max_slaves-1, or -1 if not set */
 	enum stone my_color;
 
 	int fuseki_end;

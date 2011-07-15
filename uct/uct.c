@@ -568,6 +568,8 @@ uct_state_init(char *arg, struct board *b)
 	u->local_tree_rootgoal = true;
 	u->local_tree_neival = true;
 
+	u->max_slaves = -1;
+	u->slave_index = -1;
 	u->stats_delay = 0.01; // 10 ms
 
 	u->plugins = pluginset_init(b);
@@ -941,6 +943,12 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "slave")) {
 				/* Act as slave for the distributed engine. */
 				u->slave = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "slave_index") && optval) {
+				/* Optional index if per-slave behavior is desired.
+				 * Must be given as index/max */
+				u->slave_index = atoi(optval);
+				char *p = strchr(optval, '/');
+				if (p) u->max_slaves = atoi(++p);
 			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
 				/* Share at most shared_nodes between master and slave at each genmoves.
 				 * Must use the same value in master and slaves. */
