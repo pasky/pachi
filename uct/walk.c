@@ -133,17 +133,6 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	enum stone next_color = stone_other(node_color);
 	int parity = (next_color == player_color ? 1 : -1);
 
-	/* We need to make sure only one thread expands the node. If
-	 * we are unlucky enough for two threads to meet in the same
-	 * node, the latter one will simply do another simulation from
-	 * the node itself, no big deal. t->nodes_size may exceed
-	 * the maximum in multi-threaded case but not by much so it's ok.
-	 * The size test must be before the test&set not after, to allow
-	 * expansion of the node later if enough nodes have been freed. */
-	if (n->u.playouts >= u->expand_p && t->nodes_size < u->max_tree_size
-	    && !__sync_lock_test_and_set(&n->is_expanded, 1)) {
-		tree_expand_node(t, n, b, next_color, u, parity);
-        }
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
 			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
@@ -308,6 +297,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	enum stone node_color = stone_other(player_color);
 	assert(node_color == t->root_color);
 
+	/* Make sure the root node is expanded. */
+	if (!__sync_lock_test_and_set(&n->is_expanded, 1))
+		tree_expand_node(t, n, &b2, player_color, u, 1);
+
 	/* Tree descent history. */
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
@@ -406,6 +399,18 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			passes++;
 		else
 			passes = 0;
+
+		enum stone next_color = stone_other(node_color);
+		/* We need to make sure only one thread expands the node. If
+		 * we are unlucky enough for two threads to meet in the same
+		 * node, the latter one will simply do another simulation from
+		 * the node itself, no big deal. t->nodes_size may exceed
+		 * the maximum in multi-threaded case but not by much so it's ok.
+		 * The size test must be before the test&set not after, to allow
+		 * expansion of the node later if enough nodes have been freed. */
+		if (n->u.playouts >= u->expand_p && t->nodes_size < u->max_tree_size
+		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
+			tree_expand_node(t, n, &b2, next_color, u, -parity);
 	}
 
 	if (amaf) {
