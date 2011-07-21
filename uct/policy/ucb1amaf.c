@@ -137,11 +137,17 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 			}
 
 			value = beta * r.value + (1.f - beta) * n.value;
+			URAVE_DEBUG fprintf(stderr, "\t%s value = %f * %f + (1 - %f) * %f (prior %f)\n",
+			        coord2sstr(node->coord, tree->board), beta, r.value, beta, n.value, node->prior.value);
 		} else {
 			value = n.value;
+			URAVE_DEBUG fprintf(stderr, "\t%s value = %f (prior %f)\n",
+			        coord2sstr(node->coord, tree->board), n.value, node->prior.value);
 		}
 	} else if (r.playouts) {
 		value = r.value;
+		URAVE_DEBUG fprintf(stderr, "\t%s value = rave %f (prior %f)\n",
+			coord2sstr(node->coord, tree->board), r.value, node->prior.value);
 	}
 	descent->value.playouts = r.playouts + n.playouts;
 	descent->value.value = value;
