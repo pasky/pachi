@@ -184,10 +184,19 @@ board_init_data(struct board *board)
 	board->dnei[3] = 2;
 
 	/* Setup initial symmetry */
-	board->symmetry.d = 1;
-	board->symmetry.x1 = board->symmetry.y1 = board_size(board) / 2;
-	board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
-	board->symmetry.type = SYM_FULL;
+	if (size % 2) {
+		board->symmetry.d = 1;
+		board->symmetry.x1 = board->symmetry.y1 = board_size(board) / 2;
+		board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
+		board->symmetry.type = SYM_FULL;
+	} else {
+		/* TODO: We do not handle board symmetry on boards
+		 * with no tengen yet. */
+		board->symmetry.d = 0;
+		board->symmetry.x1 = board->symmetry.y1 = 1;
+		board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
+		board->symmetry.type = SYM_NONE;
+	}
 
 	/* Set up coordinate cache */
 	foreach_point(board) {
