@@ -565,9 +565,9 @@ uct_state_init(char *arg, struct board *b)
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 80;
-	u->local_tree_allseq = 1;
-	u->local_tree_rootseqval = 1;
 	u->local_tree_depth_decay = 1.5;
+	u->local_tree_rootgoal = true;
+	u->local_tree_neival = true;
 
 	u->stats_delay = 0.01; // 10 ms
 
@@ -879,16 +879,9 @@ uct_state_init(char *arg, struct board *b)
 			/** Local trees */
 			/* (Purely experimental. Does not work - yet!) */
 
-			} else if (!strcasecmp(optname, "local_tree") && optval) {
-				/* Whether to bias exploration by local tree values
-				 * (must be supported by the used policy).
-				 * 0: Don't.
-				 * 1: Do, value = result.
-				 * Try to temper the result:
-				 * 2: Do, value = 0.5+(result-expected)/2.
-				 * 3: Do, value = 0.5+bzz((result-expected)^2).
-				 * 4: Do, value = 0.5+sqrt(result-expected)/2. */
-				u->local_tree = atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree")) {
+				/* Whether to bias exploration by local tree values. */
+				u->local_tree = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "tenuki_d") && optval) {
 				/* Tenuki distance at which to break the local tree. */
 				u->tenuki_d = atoi(optval);
@@ -911,13 +904,28 @@ uct_state_init(char *arg, struct board *b)
 				 * in the local tree. If this is on, also
 				 * subsequences starting at each move are stored. */
 				u->local_tree_allseq = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_rootseqval")) {
-				/* If disabled, expected node value is computed by
-				 * summing up values through the whole descent.
-				 * If enabled, expected node value for
-				 * each sequence is the value at the root of the
-				 * sequence. */
-				u->local_tree_rootseqval = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_neival")) {
+				/* If disabled, local node value is not
+				 * computed just based on terminal status
+				 * of the coordinate, but also its neighbors. */
+				u->local_tree_neival = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_rootgoal")) {
+				/* If enabled, all moves within a tree branch
+				 * are considered wrt. their merit reaching
+				 * tachtical goal of making the first move
+				 * in the branch survive. */
+				u->local_tree_rootgoal = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_rootchoose")) {
+				/* If disabled, only moves within the local
+				 * tree branch are considered; the values
+				 * of the branch roots (i.e. root children)
+				 * are ignored. This may make sense together
+				 * with "rootgoal", we consider only moves
+				 * that influence the goal, not the "rating"
+				 * of the goal itself. (The real solution
+				 * will be probably using criticality to pick
+				 * local tree branches.) */
+				u->local_tree_rootchoose = !optval || atoi(optval);
 
 			/** Other heuristics */
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {

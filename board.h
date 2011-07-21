@@ -342,6 +342,9 @@ static int group_stone_count(struct board *b, group_t group, int max);
 
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
+/* Check if coordinates are within symmetry base. (If false, they can
+ * be derived from the base.) */
+static bool board_coord_in_symmetry(struct board *b, coord_t c);
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 static bool board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color);
@@ -542,6 +545,24 @@ group_stone_count(struct board *b, group_t group, int max)
 		if (n >= max) return max;
 	} foreach_in_group_end;
 	return n;
+}
+
+static inline bool
+board_coord_in_symmetry(struct board *b, coord_t c)
+{
+	if (coord_y(c, b) < b->symmetry.y1 || coord_y(c, b) > b->symmetry.y2)
+		return false;
+	if (coord_x(c, b) < b->symmetry.x1 || coord_x(c, b) > b->symmetry.x2)
+		return false;
+	if (b->symmetry.d) {
+		int x = coord_x(c, b);
+		if (b->symmetry.type == SYM_DIAG_DOWN)
+			x = board_size(b) - 1 - x;
+		if (x > coord_y(c, b))
+			return false;
+	}
+	return true;
+
 }
 
 #endif
