@@ -526,7 +526,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, s
 {
 	int i;
 	if (ti && ti->dim == TD_GAMES) {
-		for (i = 0; t->root->u.playouts <= ti->len.games; i++)
+		for (i = 0; t->root->u.playouts <= ti->len.games && !uct_halt; i++)
 			uct_playout(u, b, color, t);
 	} else {
 		for (i = 0; !uct_halt; i++)
