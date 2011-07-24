@@ -70,6 +70,7 @@ struct tree_node {
 	unsigned char hints;
 
 	/* coord is usually coord_t, but this is very space-sensitive. */
+#define node_coord(n) ((int) (n)->coord)
 	short coord;
 
 	/* In case multiple threads walk the tree, is_expanded is set

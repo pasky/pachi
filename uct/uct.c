@@ -196,7 +196,7 @@ uct_result(struct engine *e, struct board *b)
 	enum stone color = u->t->root_color;
 	struct tree_node *n = u->t->root;
 	snprintf(reply, 1024, "%s %s %d %.2f %.1f",
-		 stone2str(color), coord2sstr(n->coord, b),
+		 stone2str(color), coord2sstr(node_coord(n), b),
 		 n->u.playouts, tree_node_get_value(u->t, -1, n->u.value),
 		 u->t->use_extra_komi ? u->t->extra_komi : 0);
 	return reply;
@@ -215,7 +215,7 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 		enum stone color = u->t->root_color;
 		struct tree_node *n = u->t->root;
 		snprintf(reply, 1024, "In %d playouts at %d threads, %s %s can win with %.2f%% probability",
-			 n->u.playouts, u->threads, stone2str(color), coord2sstr(n->coord, b),
+			 n->u.playouts, u->threads, stone2str(color), coord2sstr(node_coord(n), b),
 			 tree_node_get_value(u->t, -1, n->u.value) * 100);
 		if (u->t->use_extra_komi && abs(u->t->extra_komi) >= 0.5) {
 			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
@@ -348,7 +348,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	struct board *b = malloc2(sizeof(*b)); board_copy(b, b0);
 
 	/* *b0 did not have the genmove'd move played yet. */
-	struct move m = { t->root->coord, t->root_color };
+	struct move m = { node_coord(t->root), t->root_color };
 	int res = board_play(b, &m);
 	assert(res >= 0);
 	setup_dynkomi(u, b, stone_other(m.color));
@@ -456,7 +456,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * Of course this is the case for opponent resign as well.
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */
-	if (u->pondering_opt && !is_pass(best->coord)) {
+	if (u->pondering_opt && !is_pass(node_coord(best))) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
 	return coord_copy(best_coord);
