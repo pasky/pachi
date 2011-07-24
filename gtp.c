@@ -236,7 +236,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		sscanf(arg, PRIfloating, &board->komi);
 
-		if (DEBUGL(1 && debug_boardprint))
+		if (DEBUGL(1) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
 
