@@ -506,14 +506,14 @@ next_group:;
 		/* Iterate through the list of all free coordinates
 		 * and call uct_evaluate() for each.  uct_evaluate()
 		 * will throw NAN in case of invalid moves and such. */
-		for (int i = 0; i < board->flen; i++) {
-			if (!board_coord_in_symmetry(board, board->f[i]))
+		foreach_free_point(board) {
+			if (!board_coord_in_symmetry(board, c))
 				continue;
-			floating_t val = uct_evaluate(engine, board, &ti[color], board->f[i], color);
+			floating_t val = uct_evaluate(engine, board, &ti[color], c, color);
 			if (isnan(val))
 				continue;
-			printf("%s %1.3f\n", coord2sstr(board->f[i], board), (double) val);
-		}
+			printf("%s %1.3f\n", coord2sstr(c, board), (double) val);
+		} foreach_free_point_end;
 		gtp_flush();
 
 	} else if (!strcasecmp(cmd, "pachi-result")) {
