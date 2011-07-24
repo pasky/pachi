@@ -202,7 +202,7 @@ local_value(struct uct *u, struct board *b, coord_t coord, enum stone color)
 		int friends = neighbor_count_at(b, coord, color) + neighbor_count_at(b, coord, S_OFFBOARD);
 		if (immediate_liberty_count(b, coord) > 0) {
 			foreach_neighbor(b, coord, {
-				friends += board_is_one_point_eye(b, coord, color);
+				friends += board_is_one_point_eye(b, c, color);
 			});
 		}
 		val = (double) (2 * (board_at(b, coord) == color) + friends) / 6.f;
