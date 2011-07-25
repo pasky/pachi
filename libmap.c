@@ -174,6 +174,9 @@ struct move_stats
 libmap_board_move_stats(struct libmap_hash *lm, struct board *b, struct move move)
 {
 	struct move_stats tot = { .playouts = 0, .value = 0 };
+	if (is_pass(move.coord))
+		return tot;
+	assert(board_at(b, move.coord) != S_OFFBOARD);
 
 	neighboring_groups_list(b, board_at(b, c) == S_BLACK || board_at(b, c) == S_WHITE,
 			move.coord, groups, groups_n);
