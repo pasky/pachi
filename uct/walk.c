@@ -14,6 +14,7 @@
 #include "playout.h"
 #include "probdist.h"
 #include "random.h"
+#include "tactics/util.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/search.h"
@@ -197,18 +198,7 @@ local_value(struct uct *u, struct board *b, coord_t coord, enum stone color)
 	 * if the resulting group stays on board until the game end. */
 	/* We can also take into account surrounding stones, e.g. to
 	 * encourage taking off external liberties during a semeai. */
-	double val;
-	if (u->local_tree_neival) {
-		int friends = neighbor_count_at(b, coord, color) + neighbor_count_at(b, coord, S_OFFBOARD);
-		if (immediate_liberty_count(b, coord) > 0) {
-			foreach_neighbor(b, coord, {
-				friends += board_is_one_point_eye(b, c, color);
-			});
-		}
-		val = (double) (2 * (board_at(b, coord) == color) + friends) / 6.f;
-	} else {
-		val = (board_at(b, coord) == color) ? 1.f : 0.f;
-	}
+	double val = board_local_value(u->local_tree_neival, b, coord, color);
 	return (color == S_WHITE) ? 1.f - val : val;
 }
 
