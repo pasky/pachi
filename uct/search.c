@@ -42,6 +42,9 @@ static const struct time_info default_ti = {
 /* Minimal number of simulations to consider early break. */
 #define PLAYOUT_EARLY_BREAK_MIN 5000
 
+/* Minimal time to consider early break (in seconds). */
+#define TIME_EARLY_BREAK_MIN 1.0
+
 
 /* Pachi threading structure:
  *
@@ -308,6 +311,7 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 
 	/* Early break in won situation. */
 	if (best->u.playouts >= PLAYOUT_EARLY_BREAK_MIN
+	    && (ti->dim != TD_WALLTIME || elapsed > TIME_EARLY_BREAK_MIN)
 	    && tree_node_get_value(t, 1, best->u.value) >= u->sure_win_threshold) {
 		return true;
 	}

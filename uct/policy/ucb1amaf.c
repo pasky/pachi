@@ -84,7 +84,7 @@ static inline floating_t fast_sqrt(unsigned int x)
 	}
 }
 
-#define LTREE_DEBUG if (0)
+#define URAVE_DEBUG if (0)
 static floating_t inline
 ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity)
 {
@@ -105,7 +105,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	    && (p->uct->local_tree_rootchoose || lnode->parent->parent)) {
 		struct move_stats l = lnode->u;
 		l.playouts = ((floating_t) l.playouts) * b->ltree_rave / LTREE_PLAYOUTS_MULTIPLIER;
-		LTREE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
+		URAVE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
 			coord2sstr(lnode->coord, tree->board), l.value, l.playouts,
 			coord2sstr(node->coord, tree->board), r.value, r.playouts);
 		stats_merge(&r, &l);
@@ -119,7 +119,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 				.value = tree_node_get_value(tree, parity, 1.0f),
 				.playouts = crit * r.playouts * b->crit_rave
 			};
-			LTREE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
+			URAVE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
 				c.value, c.playouts,
 				coord2sstr(node->coord, tree->board), r.value, r.playouts);
 			stats_merge(&r, &c);
@@ -142,11 +142,17 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 			}
 
 			value = beta * r.value + (1.f - beta) * n.value;
+			URAVE_DEBUG fprintf(stderr, "\t%s value = %f * %f + (1 - %f) * %f (prior %f)\n",
+			        coord2sstr(node->coord, tree->board), beta, r.value, beta, n.value, node->prior.value);
 		} else {
 			value = n.value;
+			URAVE_DEBUG fprintf(stderr, "\t%s value = %f (prior %f)\n",
+			        coord2sstr(node->coord, tree->board), n.value, node->prior.value);
 		}
 	} else if (r.playouts) {
 		value = r.value;
+		URAVE_DEBUG fprintf(stderr, "\t%s value = rave %f (prior %f)\n",
+			coord2sstr(node->coord, tree->board), r.value, node->prior.value);
 	}
 	descent->value.playouts = r.playouts + n.playouts;
 	descent->value.value = value;

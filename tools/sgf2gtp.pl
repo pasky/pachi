@@ -17,12 +17,15 @@ if ($ARGV[0]) {
 
 local $/ = undef; my $sgf = <>;
 my $size = ($sgf =~ /SZ\[(\d+)\]/)[0];
+$size ||= 19;
 $sgf =~ s/\bC\[.*?\]//gs; # no comments
 #$sgf =~ s/\).*//gs; # cut at end of principal branch
 
 print "boardsize " . $size;
 print "clear_board";
-print "komi " . ($sgf =~ /KM\[([\d.]+)\]/)[0];
+if ($sgf =~ s/\bKM\[([\d.]+)\]//gs) {
+	print "komi $1";
+}
 if ($sgf =~ s/\bHA\[(\d+)\]//gs and $1 > 0) {
 	print "fixed_handicap $1";
 }
