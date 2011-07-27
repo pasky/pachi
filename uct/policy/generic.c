@@ -22,12 +22,12 @@ uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
 		if (!nbest || ni->u.playouts > nbest->u.playouts) {
-			if (ni->coord == exclude)
+			if (node_coord(ni) == exclude)
 				continue;
 			if (ni->hints & TREE_HINT_INVALID)
 				continue;
 			/* Play pass only if we can afford scoring */
-			if (is_pass(ni->coord) && !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive))
+			if (is_pass(node_coord(ni)) && !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive))
 				continue;
 			nbest = ni;
 		}

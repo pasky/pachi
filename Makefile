@@ -23,7 +23,13 @@
 # inlining, which allows more fine-grained profile, but may also distort
 # it somewhat.
 
-# PROFILING=1
+# PROFILING=gprof
+
+# Enable performance profiling using google-perftools. This is much
+# more accurate, fine-grained and nicer than gprof and does not change
+# the way the actual binary is compiled and runs.
+
+# PROFILING=perftools
 
 
 # Target directories when running `make install`. Note that this is NOT
@@ -37,7 +43,7 @@ BINDIR=$(PREFIX)/bin
 # Generic compiler options. You probably do not really want to twiddle
 # any of this.
 # (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
-# unless PROFILING=1.)
+# unless PROFILING=gprof.)
 CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
 
 ### CONFIGURATION END
@@ -55,12 +61,15 @@ ifdef DOUBLE
 	CUSTOM_CFLAGS+=-DDOUBLE
 endif
 
-ifdef PROFILING
+ifeq ($(PROFILING), gprof)
 	LDFLAGS+=-pg
 	CUSTOM_CFLAGS+=-pg -fno-inline
 else
 	# Whee, an extra register!
 	CUSTOM_CFLAGS+=-fomit-frame-pointer
+ifeq ($(PROFILING), perftools)
+	LDFLAGS+=-lprofiler
+endif
 endif
 
 ifndef LD

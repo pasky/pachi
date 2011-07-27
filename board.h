@@ -30,6 +30,8 @@ struct fbook;
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
+//#define BOARD_TRAIT_SAFE 1 // include btraits.safe (rather expensive, unused)
+//#define BOARD_TRAIT_SAFE 2 // include btraits.safe based on full is_bad_selfatari()
 
 
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
@@ -100,11 +102,13 @@ struct btraits {
 	unsigned cap:3;
 	/* Number of 1-stone neighbors we can capture. */
 	unsigned cap1:3;
+#ifdef BOARD_TRAIT_SAFE
 	/* Whether it is SAFE to play here. This is essentially just
 	 * cached result of board_safe_to_play(). (Of course the concept
 	 * of "safety" is not perfect here, but it's the cheapest
 	 * reasonable thing we can do.) */
 	bool safe:1;
+#endif
 	/* Whether we need to re-compute this coordinate; used to
 	 * weed out duplicates. Maintained only for S_BLACK. */
 	bool dirty:1;

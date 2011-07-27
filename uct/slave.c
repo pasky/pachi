@@ -129,7 +129,7 @@ tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
 		/* Search for the node in parent's children. */
 		coord_t leaf = leaf_coord(path, t->board);
 		node = (prev && prev->parent == parent ? prev->sibling : parent->children);
-		while (node && node->coord != leaf) node = node->sibling;
+		while (node && node_coord(node) != leaf) node = node->sibling;
 
 		if (DEBUG_MODE) parent_leaf += !parent->is_expanded;
 	} else {
@@ -274,7 +274,7 @@ append_stats(struct stats_candidate *stats_queue, struct tree_node *node, int st
 	 * so we can traverse the the tree while it is updated. */
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
 
-		if (is_pass(ni->coord)) continue;
+		if (is_pass(node_coord(ni))) continue;
 		if (ni->hints & TREE_HINT_INVALID) continue;
 
 		int incr = ni->u.playouts - ni->pu.playouts;
@@ -286,7 +286,7 @@ append_stats(struct stats_candidate *stats_queue, struct tree_node *node, int st
 				fprintf(stderr, "*** stats overflow %d nodes\n", stats_count);
 			return stats_count;
 		}
-		path_t child_path = append_child(start_path, ni->coord, b);
+		path_t child_path = append_child(start_path, node_coord(ni), b);
 		stats_queue[stats_count].playout_incr = incr;
 		stats_queue[stats_count].coord_path = child_path;
 		stats_queue[stats_count++].node = ni;
@@ -445,19 +445,19 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 	 * after all children are created. */
 	for (struct tree_node *ni = root->children; ni; ni = ni->sibling) {
 
-		if (is_pass(ni->coord)) continue;
-		assert(ni->coord > 0 && ni->coord < board_size2(b));
+		if (is_pass(node_coord(ni))) continue;
+		assert(node_coord(ni) > 0 && node_coord(ni) < board_size2(b));
 
 		if (ni->u.playouts > max_playouts)
 			max_playouts = ni->u.playouts;
 		if (ni->u.playouts <= min_playouts || ni->hints & TREE_HINT_INVALID)
 			continue;
 		/* A book move is only added at the end: */
-		if (ni->coord == c) continue;
+		if (node_coord(ni) == c) continue;
 
 		char buf[4];
 		/* We return the values as stored in the tree, so from black's view. */
-		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, ni->coord, b),
+		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, node_coord(ni), b),
 			      ni->u.playouts, ni->u.value);
 	}
 	/* Give a large but not infinite weight to pass, resign or book move, to avoid
