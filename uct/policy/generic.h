@@ -16,6 +16,12 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 
 /* Some generic stitching for tree descent. */
 
+#if 0
+#define uctd_debug(fmt...) fprintf(stderr, fmt);
+#else
+#define uctd_debug(fmt...)
+#endif
+
 #define uctd_try_node_children(tree, descent, allow_pass, parity, tenuki_d, di, urgency) \
 	/* Information abound best children. */ \
 	/* XXX: We assume board <=25x25. */ \
@@ -27,11 +33,11 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 	for (; dci.node; dci.node = dci.node->sibling) { \
 		floating_t urgency; \
 		/* Do not consider passing early. */ \
-		if (unlikely((!allow_pass && is_pass(dci.node->coord)) || (dci.node->hints & TREE_HINT_INVALID))) \
+		if (unlikely((!allow_pass && is_pass(node_coord(dci.node))) || (dci.node->hints & TREE_HINT_INVALID))) \
 			continue; \
 		/* Position dci.lnode to point at or right after the local
 		 * node corresponding to dci.node. */ \
-		while (dci.lnode && dci.lnode->coord < dci.node->coord) \
+		while (dci.lnode && node_coord(dci.lnode) < node_coord(dci.node)) \
 			dci.lnode = dci.lnode->sibling; \
 		/* Set up descent-further iterator. This is the public-accessible
 		 * one, and usually is similar to dci. However, in case of local
@@ -47,18 +53,21 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 		/* ...your urgency computation code goes here... */
 
 #define uctd_set_best_child(di, urgency) \
+		uctd_debug("(%s) %f\n", coord2sstr(node_coord(di.node), tree->board), urgency); \
 		if (urgency - best_urgency > __FLT_EPSILON__) { /* urgency > best_urgency */ \
+			uctd_debug("new best\n"); \
 			best_urgency = urgency; dbests = 0; \
 		} \
 		if (urgency - best_urgency > -__FLT_EPSILON__) { /* urgency >= best_urgency */ \
+			uctd_debug("another best\n"); \
 			/* We want to always choose something else than a pass \
 			 * in case of a tie. pass causes degenerative behaviour. */ \
-			if (dbests == 1 && is_pass(dbest[0].node->coord)) { \
+			if (dbests == 1 && is_pass(node_coord(dbest[0].node))) { \
 				dbests--; \
 			} \
 			struct uct_descent db = di; \
 			/* Make sure lnode information is meaningful. */ \
-			if (db.lnode && is_pass(db.lnode->coord)) \
+			if (db.lnode && is_pass(node_coord(db.lnode))) \
 				db.lnode = NULL; \
 			dbest[dbests++] = db; \
 		} \

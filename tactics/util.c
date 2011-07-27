@@ -107,7 +107,7 @@ pass_is_safe(struct board *b, enum stone color, struct move_queue *mq)
 	if (color == S_BLACK)
 		score = -score;
 	//fprintf(stderr, "%d score %f\n", color, score);
-	return (score > 0);
+	return (score >= 0);
 }
 
 

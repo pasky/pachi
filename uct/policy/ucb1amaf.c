@@ -79,7 +79,7 @@ static inline floating_t fast_sqrt(unsigned int x)
 	}
 }
 
-#define LTREE_DEBUG if (0)
+#define URAVE_DEBUG if (0)
 static floating_t inline
 ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity)
 {
@@ -100,9 +100,9 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	    && (p->uct->local_tree_rootchoose || lnode->parent->parent)) {
 		struct move_stats l = lnode->u;
 		l.playouts = ((floating_t) l.playouts) * b->ltree_rave / LTREE_PLAYOUTS_MULTIPLIER;
-		LTREE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
-			coord2sstr(lnode->coord, tree->board), l.value, l.playouts,
-			coord2sstr(node->coord, tree->board), r.value, r.playouts);
+		URAVE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
+			coord2sstr(node_coord(lnode), tree->board), l.value, l.playouts,
+			coord2sstr(node_coord(node), tree->board), r.value, r.playouts);
 		stats_merge(&r, &l);
 	}
 
@@ -114,9 +114,9 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 				.value = tree_node_get_value(tree, parity, 1.0f),
 				.playouts = crit * r.playouts * b->crit_rave
 			};
-			LTREE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
+			URAVE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
 				c.value, c.playouts,
-				coord2sstr(node->coord, tree->board), r.value, r.playouts);
+				coord2sstr(node_coord(node), tree->board), r.value, r.playouts);
 			stats_merge(&r, &c);
 		}
 	}
@@ -137,11 +137,17 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 			}
 
 			value = beta * r.value + (1.f - beta) * n.value;
+			URAVE_DEBUG fprintf(stderr, "\t%s value = %f * %f + (1 - %f) * %f (prior %f)\n",
+			        coord2sstr(node_coord(node), tree->board), beta, r.value, beta, n.value, node->prior.value);
 		} else {
 			value = n.value;
+			URAVE_DEBUG fprintf(stderr, "\t%s value = %f (prior %f)\n",
+			        coord2sstr(node_coord(node), tree->board), n.value, node->prior.value);
 		}
 	} else if (r.playouts) {
 		value = r.value;
+		URAVE_DEBUG fprintf(stderr, "\t%s value = rave %f (prior %f)\n",
+			coord2sstr(node_coord(node), tree->board), r.value, node->prior.value);
 	}
 	descent->value.playouts = r.playouts + n.playouts;
 	descent->value.value = value;
@@ -186,7 +192,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 #if 0
 	struct board bb; bb.size = 9+2;
 	for (struct tree_node *ni = node; ni; ni = ni->parent)
-		fprintf(stderr, "%s ", coord2sstr(ni->coord, &bb));
+		fprintf(stderr, "%s ", coord2sstr(node_coord(ni), &bb));
 	fprintf(stderr, "[color %d] update result %d (color %d)\n",
 			node_color, result, player_color);
 #endif
@@ -195,28 +201,28 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		if (node->parent == NULL)
 			assert(tree->root_color == stone_other(child_color));
 
-		if (!b->crit_amaf && !is_pass(node->coord)) {
-			stats_add_result(&node->winner_owner, board_at(final_board, node->coord) == winner_color ? 1.0 : 0.0, 1);
-			stats_add_result(&node->black_owner, board_at(final_board, node->coord) == S_BLACK ? 1.0 : 0.0, 1);
+		if (!b->crit_amaf && !is_pass(node_coord(node))) {
+			stats_add_result(&node->winner_owner, board_at(final_board, node_coord(node)) == winner_color ? 1.0 : 0.0, 1);
+			stats_add_result(&node->black_owner, board_at(final_board, node_coord(node)) == S_BLACK ? 1.0 : 0.0, 1);
 		}
 		stats_add_result(&node->u, result, 1);
-		if (amaf_nakade(map->map[node->coord]))
-			amaf_op(map->map[node->coord], -);
+		if (!is_pass(node_coord(node)) && amaf_nakade(map->map[node_coord(node)]))
+			amaf_op(map->map[node_coord(node)], -);
 
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
 		assert(map->game_baselen >= 0);
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-			enum stone amaf_color = map->map[ni->coord];
+			enum stone amaf_color = map->map[node_coord(ni)];
 			assert(amaf_color != S_OFFBOARD);
 			if (amaf_color == S_NONE)
 				continue;
-			if (amaf_nakade(map->map[ni->coord])) {
+			if (amaf_nakade(map->map[node_coord(ni)])) {
 				if (!b->check_nakade)
 					continue;
 				unsigned int i;
 				for (i = map->game_baselen; i < map->gamelen; i++)
-					if (map->game[i].coord == ni->coord
+					if (map->game[i].coord == node_coord(ni)
 					    && map->game[i].color == child_color)
 						break;
 				if (i == map->gamelen)
@@ -232,22 +238,22 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * to record the result unmodified; in that case,
 			 * we will correctly negate them at the descend phase. */
 
-			if (b->crit_amaf && !is_pass(node->coord)) {
-				stats_add_result(&ni->winner_owner, board_at(final_board, ni->coord) == winner_color ? 1.0 : 0.0, 1);
-				stats_add_result(&ni->black_owner, board_at(final_board, ni->coord) == S_BLACK ? 1.0 : 0.0, 1);
+			if (b->crit_amaf && !is_pass(node_coord(node))) {
+				stats_add_result(&ni->winner_owner, board_at(final_board, node_coord(ni)) == winner_color ? 1.0 : 0.0, 1);
+				stats_add_result(&ni->black_owner, board_at(final_board, node_coord(ni)) == S_BLACK ? 1.0 : 0.0, 1);
 			}
 			stats_add_result(&ni->amaf, nres, 1);
 
 #if 0
 			struct board bb; bb.size = 9+2;
 			fprintf(stderr, "* %s<%"PRIhash"> -> %s<%"PRIhash"> [%d/%f => %d/%f]\n",
-				coord2sstr(node->coord, &bb), node->hash,
-				coord2sstr(ni->coord, &bb), ni->hash,
+				coord2sstr(node_coord(node), &bb), node->hash,
+				coord2sstr(node_coord(ni), &bb), ni->hash,
 				player_color, result, child_color, nres);
 #endif
 		}
 
-		if (!is_pass(node->coord)) {
+		if (!is_pass(node_coord(node))) {
 			map->game_baselen--;
 		}
 		node = node->parent; child_color = stone_other(child_color);

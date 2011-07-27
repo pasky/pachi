@@ -45,12 +45,25 @@ uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b)
 /* LINEAR dynkomi strategy - Linearly Decreasing Handicap Compensation. */
 /* At move 0, we impose extra komi of handicap_count*handicap_value, then
  * we linearly decrease this extra komi throughout the game down to 0
- * at @moves moves. */
+ * at @moves moves. Towards the end of the game the linear compensation
+ * becomes zero but we increase the extra komi when winning big. This reduces
+ * the number of point-wasting moves and makes the game more enjoyable for humans. */
 
 struct dynkomi_linear {
 	int handicap_value[S_MAX];
 	int moves[S_MAX];
 	bool rootbased;
+	/* Increase the extra komi if my win ratio  > green_zone but always
+	 * keep extra_komi <= komi_ratchet. komi_ratchet starts infinite but decreases
+	 * when we give too much extra komi and this puts us back < orange_zone.
+	 * This is meant only to increase the territory margin when playing against
+	 * weaker opponents. We never take negative komi when losing. The ratchet helps
+	 * avoiding oscillations and keeping us above orange_zone.
+	 * To disable the adaptive phase, set green_zone=2. */
+	floating_t komi_ratchet;
+	floating_t green_zone;
+	floating_t orange_zone;
+	floating_t drop_step;
 };
 
 static floating_t
@@ -59,12 +72,41 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	struct dynkomi_linear *l = d->data;
 	enum stone color = d->uct->pondering ? tree->root_color : stone_other(tree->root_color);
 	int lmoves = l->moves[color];
-	if (b->moves >= lmoves)
-		return 0;
+	if (b->moves < lmoves) {
+		floating_t base_komi = board_effective_handicap(b, l->handicap_value[color]);
+		return base_komi * (lmoves - b->moves) / lmoves;
+	}
+	/* Force a transition to extra_komi 0 before the adaptive phase. */
+        if (b->moves <= lmoves + 1) return 0;
 
-	floating_t base_komi = board_effective_handicap(b, l->handicap_value[color]);
-	floating_t extra_komi = base_komi * (lmoves - b->moves) / lmoves;
-	return extra_komi;
+	/* Do not take decisions on unstable value. */
+        if (tree->root->u.playouts < GJ_MINGAMES) return tree->extra_komi;
+
+	floating_t my_value = tree_node_get_value(tree, 1, tree->root->u.value);
+	/*  We normalize komi as in komi_by_value(), > 0 when winning. */
+	floating_t extra_komi = komi_by_color(tree->extra_komi, color);
+	assert(extra_komi >= 0);
+
+	if (my_value < 0.5 && l->komi_ratchet > 0 && l->komi_ratchet != INFINITY) {
+		if (DEBUGL(0))
+			fprintf(stderr, "losing %f extra %.1f ratchet %.1f -> 0\n",
+				my_value, extra_komi, l->komi_ratchet);
+		/* Disable dynkomi completely, too dangerous in this game. */
+		extra_komi = l->komi_ratchet = 0;
+
+	} else if (my_value < l->orange_zone && extra_komi > 0) {
+		extra_komi = l->komi_ratchet  = fmax(extra_komi - l->drop_step, 0.0);
+		if (DEBUGL(3))
+			fprintf(stderr, "dropping to %f ratchet -> %.1f\n",
+				my_value, extra_komi);
+
+	} else if (my_value > l->green_zone && extra_komi +1 <= l->komi_ratchet) {
+		extra_komi += 1;
+		if (DEBUGL(3))
+			fprintf(stderr, "winning %f extra_komi -> %.1f, ratchet %.1f\n",
+				my_value, extra_komi, l->komi_ratchet);
+	}
+	return komi_by_color(extra_komi, color);
 }
 
 static floating_t
@@ -97,14 +139,19 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	 * By move 100 white should still be behind but should have
 	 * caught up enough to avoid resigning. */
 	if (board_large(b)) {
-		l->moves[S_BLACK] = 200;
+		l->moves[S_BLACK] = 150;
 		l->moves[S_WHITE] = 100;
 	}
 	/* The real value of one stone is twice the komi so about 15 points.
 	 * But use a lower value to avoid being too pessimistic as black
 	 * or too optimistic as white. */
-	l->handicap_value[S_BLACK] = 7;
-	l->handicap_value[S_WHITE] = 5;
+	l->handicap_value[S_BLACK] = 8;
+	l->handicap_value[S_WHITE] = 2;
+
+	l->komi_ratchet = INFINITY;
+	l->green_zone = 0.85;
+	l->orange_zone = 0.8;
+	l->drop_step = 4.0;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -140,6 +187,15 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 				 * instead of being same for all simulations
 				 * within the tree node. */
 				l->rootbased = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "green_zone") && optval) {
+				/* Increase komi when win ratio is above green_zone */
+				l->green_zone = atof(optval);
+			} else if (!strcasecmp(optname, "orange_zone") && optval) {
+				/* Decrease komi when > 0 and win ratio is below orange_zone */
+				l->orange_zone = atof(optval);
+			} else if (!strcasecmp(optname, "drop_step") && optval) {
+				/* Decrease komi by drop_step points */
+				l->drop_step = atof(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid dynkomi argument %s or missing value\n", optname);
 				exit(1);
@@ -380,6 +436,12 @@ bounded_komi(struct dynkomi_adaptive *a, struct board *b,
 static floating_t
 adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
+	/* We do not use extra komi at the game end - we are not
+	 * to fool ourselves at this point. */
+	if (board_estimated_moves_left(b) <= MIN_MOVES_LEFT) {
+		tree->use_extra_komi = false;
+		return 0;
+	}
 	struct dynkomi_adaptive *a = d->data;
 	enum stone color = stone_other(tree->root_color);
 	if (DEBUGL(3))
