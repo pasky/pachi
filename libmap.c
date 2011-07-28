@@ -85,7 +85,7 @@ libmap_setup(char *arg)
 struct libmap_hash *
 libmap_init(struct board *b)
 {
-	struct libmap_hash *lm = calloc(1, sizeof(*lm));
+	struct libmap_hash *lm = calloc2(1, sizeof(*lm));
 	lm->b = b;
 	b->libmap = lm;
 	lm->refcount = 1;
