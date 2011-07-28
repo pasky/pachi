@@ -224,7 +224,7 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		snprintf(label, 256, "= final %s %s liberties to play by %s",
 			stone2str(owner), coord2sstr(group, b),
 			stone2str(to_play));
-		mq_print(q, b, label);
+		libmap_mq_print(q, b, label);
 	}
 }
 
