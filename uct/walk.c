@@ -14,6 +14,7 @@
 #include "playout.h"
 #include "probdist.h"
 #include "random.h"
+#include "tactics/util.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/search.h"
@@ -46,7 +47,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	fprintf(stderr, "| seq ");
 	for (int depth = 0; depth < 4; depth++) {
 		if (best && best->u.playouts >= 25) {
-			fprintf(stderr, "%3s ", coord2sstr(best->coord, t->board));
+			fprintf(stderr, "%3s ", coord2sstr(node_coord(best), t->board));
 			best = u->policy->choose(u->policy, best, t->board, color, resign);
 		} else {
 			fprintf(stderr, "    ");
@@ -69,7 +70,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	while (--cans >= 0) {
 		if (can[cans]) {
 			fprintf(stderr, "%3s(%.3f) ",
-			        coord2sstr(can[cans]->coord, t->board),
+			        coord2sstr(node_coord(can[cans]), t->board),
 				tree_node_get_value(t, 1, can[cans]->u.value));
 		} else {
 			fprintf(stderr, "           ");
@@ -135,7 +136,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
-			spaces, n->u.playouts, coord2sstr(n->coord, t->board),
+			spaces, n->u.playouts, coord2sstr(node_coord(n), t->board),
 			tree_node_get_value(t, parity, n->u.value));
 
 	struct uct_playout_callback upc = {
@@ -162,7 +163,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	}
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n",
-		        spaces, player_color, next_color, coord2sstr(n->coord, t->board), result);
+		        spaces, player_color, next_color, coord2sstr(node_coord(n), t->board), result);
 
 	return result;
 }
@@ -197,18 +198,7 @@ local_value(struct uct *u, struct board *b, coord_t coord, enum stone color)
 	 * if the resulting group stays on board until the game end. */
 	/* We can also take into account surrounding stones, e.g. to
 	 * encourage taking off external liberties during a semeai. */
-	double val;
-	if (u->local_tree_neival) {
-		int friends = neighbor_count_at(b, coord, color) + neighbor_count_at(b, coord, S_OFFBOARD);
-		if (immediate_liberty_count(b, coord) > 0) {
-			foreach_neighbor(b, coord, {
-				friends += board_is_one_point_eye(b, coord, color);
-			});
-		}
-		val = (double) (2 * (board_at(b, coord) == color) + friends) / 6.f;
-	} else {
-		val = (board_at(b, coord) == color) ? 1.f : 0.f;
-	}
+	double val = board_local_value(u->local_tree_neival, b, coord, color);
 	return (color == S_WHITE) ? 1.f - val : val;
 }
 
@@ -220,7 +210,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 #define LTREE_DEBUG if (UDEBUGL(6))
 
 	/* Ignore pass sequences. */
-	if (is_pass(descent[di].node->coord))
+	if (is_pass(node_coord(descent[di].node)))
 		return;
 
 	LTREE_DEBUG board_print(endb, stderr);
@@ -242,9 +232,9 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 
 	double sval = 0.5;
 	if (u->local_tree_rootgoal) {
-		sval = local_value(u, endb, descent[di].node->coord, seq_color);
+		sval = local_value(u, endb, node_coord(descent[di].node), seq_color);
 		LTREE_DEBUG fprintf(stderr, "(goal %s[%s %1.3f][%d]) ",
-			coord2sstr(descent[di].node->coord, t->board),
+			coord2sstr(node_coord(descent[di].node), t->board),
 			stone2str(seq_color), sval, descent[di].node->d);
 	}
 
@@ -256,11 +246,11 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 		if (u->local_tree_rootgoal)
 			rval = sval;
 		else
-			rval = local_value(u, endb, descent[di].node->coord, color);
+			rval = local_value(u, endb, node_coord(descent[di].node), color);
 		LTREE_DEBUG fprintf(stderr, "%s[%s %1.3f][%d] ",
-			coord2sstr(descent[di].node->coord, t->board),
+			coord2sstr(node_coord(descent[di].node), t->board),
 			stone2str(color), rval, descent[di].node->d);
-		lnode = tree_get_node(t, lnode, descent[di++].node->coord, true);
+		lnode = tree_get_node(t, lnode, node_coord(descent[di++].node), true);
 		assert(lnode);
 		stats_add_result(&lnode->u, rval, pval);
 	}
@@ -298,7 +288,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	assert(node_color == t->root_color);
 
 	/* Make sure the root node is expanded. */
-	if (!__sync_lock_test_and_set(&n->is_expanded, 1))
+	if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
 		tree_expand_node(t, n, &b2, player_color, u, 1);
 
 	/* Tree descent history. */
@@ -364,8 +354,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %d,%f\n",
-			        spaces, coord2sstr(n->coord, t->board),
-				n->coord, n->u.playouts,
+			        spaces, coord2sstr(node_coord(n), t->board),
+				node_coord(n), n->u.playouts,
 				tree_node_get_value(t, parity, n->u.value));
 
 		/* Add virtual loss if we need to; this is used to discourage
@@ -374,20 +364,20 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (u->virtual_loss)
 			stats_add_result(&n->u, node_color == S_BLACK ? 0.0 : 1.0, u->virtual_loss);
 
-		assert(n->coord >= -1);
-		if (amaf && !is_pass(n->coord))
-			record_amaf_move(amaf, n->coord, node_color);
+		assert(node_coord(n) >= -1);
+		if (amaf && !is_pass(node_coord(n)))
+			record_amaf_move(amaf, node_coord(n), node_color);
 
-		struct move m = { n->coord, node_color };
+		struct move m = { node_coord(n), node_color };
 		int res = board_play(&b2, &m);
 
 		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
 		    || b2.superko_violation) {
 			if (UDEBUGL(4)) {
 				for (struct tree_node *ni = n; ni; ni = ni->parent)
-					fprintf(stderr, "%s<%"PRIhash"> ", coord2sstr(ni->coord, t->board), ni->hash);
+					fprintf(stderr, "%s<%"PRIhash"> ", coord2sstr(node_coord(ni), t->board), ni->hash);
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
-				        stone2str(node_color), coord_x(n->coord,b), coord_y(n->coord,b),
+				        stone2str(node_color), coord_x(node_coord(n),b), coord_y(node_coord(n),b),
 					res, group_at(&b2, m.coord), b2.superko_violation);
 			}
 			n->hints |= TREE_HINT_INVALID;
@@ -395,7 +385,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			goto end;
 		}
 
-		if (is_pass(n->coord))
+		if (is_pass(node_coord(n)))
 			passes++;
 		else
 			passes = 0;
@@ -408,7 +398,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * the maximum in multi-threaded case but not by much so it's ok.
 		 * The size test must be before the test&set not after, to allow
 		 * expansion of the node later if enough nodes have been freed. */
-		if (n->u.playouts >= u->expand_p && t->nodes_size < u->max_tree_size
+		if (tree_leaf_node(n)
+		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < u->max_tree_size
 		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
 			tree_expand_node(t, n, &b2, next_color, u, -parity);
 	}
@@ -432,7 +423,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 		if (UDEBUGL(5))
 			fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
-				player_color, node_color, coord2sstr(n->coord, t->board), result, score);
+				player_color, node_color, coord2sstr(node_coord(n), t->board), result, score);
 		if (UDEBUGL(6))
 			board_print(&b2, stderr);
 
@@ -456,7 +447,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 				amaf->map[coord] = color;
 			/* Nakade always recorded for in-tree part */
 			} else if (amaf->record_nakade || i <= amaf->game_baselen) {
-				amaf_op(amaf->map[n->coord], +);
+				amaf_op(amaf->map[node_coord(n)], +);
 			}
 		}
 	}
@@ -472,7 +463,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		stats_add_result(&u->dynkomi->value, rval, 1);
 	}
 
-	if (u->local_tree && n->parent && !is_pass(n->coord) && dlen > 0) {
+	if (u->local_tree && n->parent && !is_pass(node_coord(n)) && dlen > 0) {
 		/* Get the local sequences and record them in ltree. */
 		/* We will look for sequence starts in our descent
 		 * history, then run record_local_sequence() for each
@@ -525,7 +516,7 @@ uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, s
 {
 	int i;
 	if (ti && ti->dim == TD_GAMES) {
-		for (i = 0; t->root->u.playouts <= ti->len.games; i++)
+		for (i = 0; t->root->u.playouts <= ti->len.games && !uct_halt; i++)
 			uct_playout(u, b, color, t);
 	} else {
 		for (i = 0; !uct_halt; i++)

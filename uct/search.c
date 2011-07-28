@@ -374,9 +374,9 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		 * does not have also highest value. */
 		if (UDEBUGL(2))
 			fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
-				coord2sstr(best->coord, t->board),
+				coord2sstr(node_coord(best), t->board),
 				best->u.playouts, tree_node_get_value(t, 1, best->u.value),
-				coord2sstr(winner->coord, t->board),
+				coord2sstr(node_coord(winner), t->board),
 				winner->u.playouts, tree_node_get_value(t, 1, winner->u.value));
 		return true;
 	}
@@ -407,7 +407,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	struct tree_node *winner = NULL;
 
 	best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
-	if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, best->coord);
+	if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, node_coord(best));
 
 	/* Possibly stop search early if it's no use to try on. */
 	int played = u->played_all + i - s->base_playouts;
@@ -458,10 +458,10 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 		*best_coord = pass;
 		return NULL;
 	}
-	*best_coord = best->coord;
+	*best_coord = node_coord(best);
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
-			coord2sstr(best->coord, b), coord_x(best->coord, b), coord_y(best->coord, b),
+			coord2sstr(node_coord(best), b), coord_x(node_coord(best), b), coord_y(node_coord(best), b),
 			tree_node_get_value(u->t, 1, best->u.value), best->u.playouts,
 			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games,
 			u->t->extra_komi);
@@ -472,7 +472,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	 * Also do not resign if we are getting bad results while actually
 	 * giving away extra komi points (dynkomi). */
 	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_threshold
-	    && !is_pass(best->coord) && best->u.playouts > GJ_MINGAMES
+	    && !is_pass(node_coord(best)) && best->u.playouts > GJ_MINGAMES
 	    && (!u->t->use_extra_komi || komi_by_color(u->t->extra_komi, color) < 0.5)) {
 		*best_coord = resign;
 		return NULL;
@@ -490,7 +490,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 					board_official_score(b, NULL) / 2);
 			*best_coord = pass;
 			best = u->t->root->children; // pass is the first child
-			assert(is_pass(best->coord));
+			assert(is_pass(node_coord(best)));
 			return best;
 		}
 	}

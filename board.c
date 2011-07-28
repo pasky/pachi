@@ -260,11 +260,13 @@ board_init_data(struct board *board)
 	/* Initialize traits. */
 	foreach_point(board) {
 		trait_at(board, c, S_BLACK).cap = 0;
-		trait_at(board, c, S_BLACK).cap1 = 0;
-		trait_at(board, c, S_BLACK).safe = true;
 		trait_at(board, c, S_WHITE).cap = 0;
+		trait_at(board, c, S_BLACK).cap1 = 0;
 		trait_at(board, c, S_WHITE).cap1 = 0;
+#ifdef BOARD_TRAIT_SAFE
+		trait_at(board, c, S_BLACK).safe = true;
 		trait_at(board, c, S_WHITE).safe = true;
+#endif
 	} foreach_point_end;
 #endif
 }
@@ -386,25 +388,34 @@ board_print(struct board *board, FILE *f)
 
 
 #ifdef BOARD_TRAITS
+
+#if BOARD_TRAIT_SAFE == 1
 static bool
 board_trait_safe(struct board *board, coord_t coord, enum stone color)
 {
-	if (board->precise_selfatari)
-		return !is_bad_selfatari(board, color, coord);
-	else
-		return board_safe_to_play(board, coord, color);
+	return board_safe_to_play(board, coord, color);
 }
+#elif BOARD_TRAIT_SAFE == 2
+static bool
+board_trait_safe(struct board *board, coord_t coord, enum stone color)
+{
+	return !is_bad_selfatari(board, color, coord);
+}
+#endif
 
 static void
 board_trait_recompute(struct board *board, coord_t coord)
 {
-	trait_at(board, coord, S_BLACK).safe = board_trait_safe(board, coord, S_BLACK);;
-	trait_at(board, coord, S_WHITE).safe = board_trait_safe(board, coord, S_WHITE);
+	int sfb = -1, sfw = -1;
+#ifdef BOARD_TRAIT_SAFE
+	sfb = trait_at(board, coord, S_BLACK).safe = board_trait_safe(board, coord, S_BLACK);
+	sfw = trait_at(board, coord, S_WHITE).safe = board_trait_safe(board, coord, S_WHITE);
+#endif
 	if (DEBUGL(8)) {
 		fprintf(stderr, "traits[%s:%s lib=%d] (black cap=%d cap1=%d safe=%d) (white cap=%d cap1=%d safe=%d)\n",
 			coord2sstr(coord, board), stone2str(board_at(board, coord)), immediate_liberty_count(board, coord),
-			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).cap1, trait_at(board, coord, S_BLACK).safe,
-			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).cap1, trait_at(board, coord, S_WHITE).safe);
+			trait_at(board, coord, S_BLACK).cap, trait_at(board, coord, S_BLACK).cap1, sfb,
+			trait_at(board, coord, S_WHITE).cap, trait_at(board, coord, S_WHITE).cap1, sfw);
 	}
 }
 #endif
@@ -1164,7 +1175,9 @@ board_play_outside(struct board *board, struct move *m, int f)
 		});
 		assert(a == trait_at(board, coord, color).cap);
 		assert(b == trait_at(board, coord, color).cap1);
+#ifdef BOARD_TRAIT_SAFE
 		assert(board_trait_safe(board, coord, color) == trait_at(board, coord, color).safe);
+#endif
 	}
 #endif
 	foreach_neighbor(board, coord, {
@@ -1230,7 +1243,9 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 #ifdef BOARD_TRAITS
 	/* We _will_ for sure capture something. */
 	assert(trait_at(board, coord, color).cap > 0);
+#ifdef BOARD_TRAIT_SAFE
 	assert(trait_at(board, coord, color).safe == board_trait_safe(board, coord, color));
+#endif
 #endif
 
 	board->f[f] = board->f[--board->flen];

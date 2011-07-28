@@ -197,7 +197,7 @@ uct_result(struct engine *e, struct board *b)
 	enum stone color = u->t->root_color;
 	struct tree_node *n = u->t->root;
 	snprintf(reply, 1024, "%s %s %d %.2f %.1f",
-		 stone2str(color), coord2sstr(n->coord, b),
+		 stone2str(color), coord2sstr(node_coord(n), b),
 		 n->u.playouts, tree_node_get_value(u->t, -1, n->u.value),
 		 u->t->use_extra_komi ? u->t->extra_komi : 0);
 	return reply;
@@ -216,7 +216,7 @@ uct_chat(struct engine *e, struct board *b, char *cmd)
 		enum stone color = u->t->root_color;
 		struct tree_node *n = u->t->root;
 		snprintf(reply, 1024, "In %d playouts at %d threads, %s %s can win with %.2f%% probability",
-			 n->u.playouts, u->threads, stone2str(color), coord2sstr(n->coord, b),
+			 n->u.playouts, u->threads, stone2str(color), coord2sstr(node_coord(n), b),
 			 tree_node_get_value(u->t, -1, n->u.value) * 100);
 		if (u->t->use_extra_komi && abs(u->t->extra_komi) >= 0.5) {
 			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
@@ -308,8 +308,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	 * thread manager will swap the tree pointer asynchronously. */
 
 	/* Now, just periodically poll the search tree. */
-	/* Note that in case of TD_GAMES, threads will terminate independently
-	 * of the uct_search_check_stop() signalization. */
+	/* Note that in case of TD_GAMES, threads will not wait for
+	 * the uct_search_check_stop() signalization. */
 	while (1) {
 		time_sleep(TREE_BUSYWAIT_INTERVAL);
 		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
@@ -349,7 +349,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	struct board *b = malloc2(sizeof(*b)); board_copy(b, b0);
 
 	/* *b0 did not have the genmove'd move played yet. */
-	struct move m = { t->root->coord, t->root_color };
+	struct move m = { node_coord(t->root), t->root_color };
 	int res = board_play(b, &m);
 	assert(res >= 0);
 	setup_dynkomi(u, b, stone_other(m.color));
@@ -400,10 +400,6 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 	 * pondering, it's not simple "who-to-play" matter. Decide based on
 	 * the last genmove issued. */
 	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
-	/* Moreover, we do not use extra komi at the game end - we are not
-	 * to fool ourselves at this point. */
-	if (board_estimated_moves_left(b) <= MIN_MOVES_LEFT)
-		u->t->use_extra_komi = false;
 	setup_dynkomi(u, b, color);
 
 	if (b->rules == RULES_JAPANESE)
@@ -457,7 +453,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	 * Of course this is the case for opponent resign as well.
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */
-	if (u->pondering_opt && !is_pass(best->coord)) {
+	if (u->pondering_opt && !is_pass(node_coord(best))) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
 	return coord_copy(best_coord);
@@ -557,7 +553,7 @@ uct_state_init(char *arg, struct board *b)
 	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
 	// TODO: Further tuning and experiments with better time allocation schemes.
 	u->best2_ratio = 2.5;
-	u->max_maintime_ratio = 8.0;
+	u->max_maintime_ratio = 3.0;
 
 	u->val_scale = 0.04; u->val_points = 40;
 	u->dynkomi_interval = 1000;

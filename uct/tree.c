@@ -134,7 +134,7 @@ static void *
 tree_done_node_worker(void *ctx_)
 {
 	struct subtree_ctx *ctx = ctx_;
-	char *str = coord2str(ctx->n->coord, ctx->t->board);
+	char *str = coord2str(node_coord(ctx->n), ctx->t->board);
 
 	unsigned long tree_size = tree_done_node(ctx->t, ctx->n);
 	if (!tree_size)
@@ -205,7 +205,7 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int treeparity, int l,
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
 	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f libmap %.3f/%d] h=%x c#=%d <%"PRIhash">\n",
-		coord2sstr(node->coord, tree->board),
+		coord2sstr(node_coord(node), tree->board),
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
 		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
@@ -500,9 +500,9 @@ tree_garbage_collect(struct tree *tree, struct tree_node *node)
 struct tree_node *
 tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 {
-	if (!parent->children || parent->children->coord >= c) {
+	if (!parent->children || node_coord(parent->children) >= c) {
 		/* Special case: Insertion at the beginning. */
-		if (parent->children && parent->children->coord == c)
+		if (parent->children && node_coord(parent->children) == c)
 			return parent->children;
 		if (!create)
 			return NULL;
@@ -517,12 +517,12 @@ tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 
 	struct tree_node *ni;
 	for (ni = parent->children; ni->sibling; ni = ni->sibling)
-		if (ni->sibling->coord >= c)
+		if (node_coord(ni->sibling) >= c)
 			break;
 
-	if (ni->sibling && ni->sibling->coord == c)
+	if (ni->sibling && node_coord(ni->sibling) == c)
 		return ni->sibling;
-	assert(ni->coord < c);
+	assert(node_coord(ni) < c);
 	if (!create)
 		return NULL;
 
@@ -543,14 +543,14 @@ tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *l
 	 * node if ni is tenuki, or NULL if there is no
 	 * corresponding node available. */
 
-	if (is_pass(ni->coord)) {
+	if (is_pass(node_coord(ni))) {
 		/* Also, for sanity reasons we never use local
 		 * tree for passes. (Maybe we could, but it's
 		 * too hard to think about.) */
 		return NULL;
 	}
 
-	if (lni->coord == ni->coord) {
+	if (node_coord(lni) == node_coord(ni)) {
 		/* We don't consider tenuki a sequence play
 		 * that we have in local tree even though
 		 * ni->d is too high; this can happen if this
@@ -561,7 +561,7 @@ tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *l
 	if (ni->d >= tenuki_d) {
 		/* Tenuki, pick a pass lsibling if available. */
 		assert(lni->parent && lni->parent->children);
-		if (is_pass(lni->parent->children->coord)) {
+		if (is_pass(node_coord(lni->parent->children))) {
 			return lni->parent->children;
 		} else {
 			return NULL;
@@ -586,7 +586,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	/* Get a Common Fate Graph distance map from parent node. */
 	int distances[board_size2(b)];
 	if (!is_pass(b->last_move.coord) && !is_resign(b->last_move.coord)) {
-		cfg_distances(b, node->coord, distances, TREE_NODE_D_MAX);
+		cfg_distances(b, node_coord(node), distances, TREE_NODE_D_MAX);
 	} else {
 		// Pass or resign - everything is too far.
 		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
@@ -627,7 +627,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
 		fprintf(stderr, "expanding %s within [%d,%d],[%d,%d] %d-%d\n",
-				coord2sstr(node->coord, b),
+				coord2sstr(node_coord(node), b),
 				b->symmetry.x1, b->symmetry.y1,
 				b->symmetry.x2, b->symmetry.y2,
 				b->symmetry.type, b->symmetry.d);
@@ -646,7 +646,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 			coord_t c = coord_xy(t->board, i, j);
 			if (!map.consider[c]) // Filter out invalid moves
 				continue;
-			assert(c != node->coord); // I have spotted "C3 C3" in some sequence...
+			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
 
 			struct tree_node *nj = tree_init_node(t, c, node->depth + 1, t->nodes);
 			if (!nj) {
@@ -684,8 +684,8 @@ static void
 tree_fix_node_symmetry(struct board *b, struct tree_node *node,
                        bool flip_horiz, bool flip_vert, int flip_diag)
 {
-	if (!is_pass(node->coord))
-		node->coord = flip_coord(b, node->coord, flip_horiz, flip_vert, flip_diag);
+	if (!is_pass(node_coord(node)))
+		node->coord = flip_coord(b, node_coord(node), flip_horiz, flip_vert, flip_diag);
 
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		tree_fix_node_symmetry(b, ni, flip_horiz, flip_vert, flip_diag);
@@ -787,7 +787,7 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);
 
-	board_symmetry_update(tree->board, &tree->root_symmetry, (*node)->coord);
+	board_symmetry_update(tree->board, &tree->root_symmetry, node_coord(*node));
 	/* See tree.score description for explanation on why don't we zero
 	 * score on node promotion. */
 	// tree->score.playouts = 0;
@@ -809,7 +809,7 @@ tree_promote_at(struct tree *tree, struct board *b, coord_t c)
 	tree_fix_symmetry(tree, b, c);
 
 	for (struct tree_node *ni = tree->root->children; ni; ni = ni->sibling) {
-		if (ni->coord == c) {
+		if (node_coord(ni) == c) {
 			tree_promote_node(tree, &ni);
 			return true;
 		}
