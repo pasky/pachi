@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "move.h"
 #include "random.h"
+#include "tactics/util.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/policy/generic.h"
@@ -34,6 +35,7 @@ struct ucb1_policy_amaf {
 	int crit_min_playouts;
 	bool crit_negative;
 	bool crit_amaf;
+	bool crit_lvalue;
 };
 
 
@@ -202,8 +204,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			assert(tree->root_color == stone_other(child_color));
 
 		if (!b->crit_amaf && !is_pass(node_coord(node))) {
-			stats_add_result(&node->winner_owner, board_at(final_board, node_coord(node)) == winner_color ? 1.0 : 0.0, 1);
-			stats_add_result(&node->black_owner, board_at(final_board, node_coord(node)) == S_BLACK ? 1.0 : 0.0, 1);
+			stats_add_result(&node->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
+			stats_add_result(&node->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), S_BLACK), 1);
 		}
 		stats_add_result(&node->u, result, 1);
 		if (!is_pass(node_coord(node)) && amaf_nakade(map->map[node_coord(node)]))
@@ -239,8 +241,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * we will correctly negate them at the descend phase. */
 
 			if (b->crit_amaf && !is_pass(node_coord(node))) {
-				stats_add_result(&ni->winner_owner, board_at(final_board, node_coord(ni)) == winner_color ? 1.0 : 0.0, 1);
-				stats_add_result(&ni->black_owner, board_at(final_board, node_coord(ni)) == S_BLACK ? 1.0 : 0.0, 1);
+				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
+				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
 			}
 			stats_add_result(&ni->amaf, nres, 1);
 
@@ -318,6 +320,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->crit_negative = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_amaf")) {
 				b->crit_amaf = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "crit_lvalue")) {
+				b->crit_lvalue = !optval || *optval == '1';
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);
