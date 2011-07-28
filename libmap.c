@@ -7,6 +7,7 @@
 #include "debug.h"
 #include "libmap.h"
 #include "move.h"
+#include "tactics/util.h"
 
 
 hash_t
@@ -38,6 +39,7 @@ struct libmap_config libmap_config = {
 	.pick_epsilon = 10,
 	.mq_merge_groups = true,
 	.counterattack = LMC_DEFENSE | LMC_ATTACK | LMC_DEFENSE_ATTACK,
+	.eval = LME_LOCAL,
 };
 
 void
@@ -74,6 +76,15 @@ libmap_setup(char *arg)
 				libmap_config.counterattack |= LMC_ATTACK;
 			if (strchr(optval, 'x'))
 				libmap_config.counterattack |= LMC_DEFENSE_ATTACK;
+		} else if (!strcasecmp(optname, "eval") && optval) {
+			if (strcasecmp(optval, "local")) {
+				libmap_config.eval = LME_LOCAL;
+			} else if (strcasecmp(optval, "global")) {
+				libmap_config.eval = LME_GLOBAL;
+			} else {
+				fprintf(stderr, "Invalid libmap:eval value %s\n", optval);
+				exit(1);
+			}
 		} else {
 			fprintf(stderr, "Invalid libmap argument %s or missing value\n", optname);
 			exit(1);
@@ -101,16 +112,22 @@ libmap_put(struct libmap_hash *lm)
 }
 
 void
-libmap_queue_process(struct libmap_hash *lm, struct board *b)
+libmap_queue_process(struct libmap_hash *lm, struct board *b, enum stone winner)
 {
 	assert(lm->queue.mq.moves <= MQL);
 	for (unsigned int i = 0; i < lm->queue.mq.moves; i++) {
 		struct libmap_group *g = &lm->queue.group[i];
 		struct move m = { .coord = lm->queue.mq.move[i], .color = lm->queue.color[i] };
-		enum stone color = board_at(b, g->group);
-		if (color == S_NONE)
-			color = board_get_one_point_eye(b, g->group);
-		floating_t val = color == g->goal ? 1.0 : 0.0;
+		floating_t val;
+		if (libmap_config.eval == LME_LOCAL) {
+			enum stone color = board_at(b, g->group);
+			if (color == S_NONE)
+				color = board_get_one_point_eye(b, g->group);
+			val = color == g->goal ? 1.0 : 0.0;
+
+		} else { assert(libmap_config.eval == LME_GLOBAL);
+			val = winner == g->goal ? 1.0 : 0.0;
+		}
 		libmap_add_result(lm, g->hash, m, val, 1);
 	}
 	lm->queue.mq.moves = 0;

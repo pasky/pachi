@@ -34,6 +34,11 @@ extern struct libmap_config {
 		LMC_ATTACK = 2,
 		LMC_DEFENSE_ATTACK = 4,
 	} counterattack;
+	/* Whether to evaluate based on local or global result. */
+	enum {
+		LME_LOCAL,
+		LME_GLOBAL,
+	} eval;
 } libmap_config;
 
 void libmap_setup(char *arg);
@@ -109,8 +114,8 @@ void libmap_put(struct libmap_hash *lm);
 
 /* Pick a move from @q, enqueue it in lm.queue and return its coordinate. */
 static coord_t libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q);
-/* Record queued moves in the hashtable based on final position of b. */
-void libmap_queue_process(struct libmap_hash *lm, struct board *b);
+/* Record queued moves in the hashtable based on final position of b and winner's color. */
+void libmap_queue_process(struct libmap_hash *lm, struct board *b, enum stone winner);
 /* Add a result to the hashed statistics. */
 void libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move, floating_t result, int playouts);
 /* Get statistics of particular move in given libmap structure. */

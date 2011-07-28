@@ -167,7 +167,7 @@ play_random_game(struct playout_setup *setup,
 	if (ownermap)
 		board_ownermap_fill(ownermap, b);
 	if (b->libmap)
-		libmap_queue_process(b->libmap, b);
+		libmap_queue_process(b->libmap, b, score > 0 ? S_WHITE : S_BLACK);
 
 	if (b->ps)
 		free(b->ps);
