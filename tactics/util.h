@@ -73,6 +73,10 @@ coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b)
 static inline double
 board_local_value(bool scan_neis, struct board *b, coord_t coord, enum stone color)
 {
+	enum stone mcolor = board_at(b, coord);
+	if (unlikely(mcolor == S_NONE))
+		mcolor = board_get_one_point_eye(b, coord);
+
 	if (scan_neis) {
 		/* Count surrounding friendly stones... */
 		int friends = neighbor_count_at(b, coord, color) + neighbor_count_at(b, coord, S_OFFBOARD);
@@ -82,9 +86,9 @@ board_local_value(bool scan_neis, struct board *b, coord_t coord, enum stone col
 				friends += board_is_one_point_eye(b, c, color);
 			});
 		}
-		return (double) (2 * (board_at(b, coord) == color) + friends) / 6.f;
+		return (double) (2 * (mcolor == color) + friends) / 6.f;
 	} else {
-		return (board_at(b, coord) == color) ? 1.f : 0.f;
+		return (mcolor == color) ? 1.f : 0.f;
 	}
 }
 
