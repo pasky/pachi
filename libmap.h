@@ -81,6 +81,10 @@ struct libmap_context {
 
 struct libmap_hash {
 	struct board *b;
+	/* Multiple board instances may share the same libmap hash;
+	 * on board_copy(), libmap is shared by default, so that all
+	 * playouts reuse libmap of the master board. refcount keeps
+	 * track of all the libmap uses in multi-thread environment. */
 	int refcount;
 
 	/* Queue of moves to store at the game end. */
