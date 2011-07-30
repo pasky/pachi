@@ -39,7 +39,7 @@ struct libmap_config libmap_config = {
 	.pick_epsilon = 10,
 	.mq_merge_groups = true,
 	.counterattack = LMC_DEFENSE | LMC_ATTACK | LMC_DEFENSE_ATTACK,
-	.eval = LME_LOCAL,
+	.eval = LME_LVALUE,
 };
 
 void
