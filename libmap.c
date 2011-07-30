@@ -62,6 +62,8 @@ libmap_setup(char *arg)
 			libmap_config.pick_threshold = atof(optval);
 		} else if (!strcasecmp(optname, "pick_epsilon") && optval) {
 			libmap_config.pick_epsilon = atoi(optval);
+		} else if (!strcasecmp(optname, "avoid_bad")) {
+			libmap_config.avoid_bad = !optval || atoi(optval);
 		} else if (!strcasecmp(optname, "mq_merge_groups")) {
 			libmap_config.mq_merge_groups = !optval || atoi(optval);
 		} else if (!strcasecmp(optname, "counterattack") && optval) {
