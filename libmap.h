@@ -37,6 +37,7 @@ extern struct libmap_config {
 	/* Whether to evaluate based on local or global result. */
 	enum {
 		LME_LOCAL,
+		LME_LVALUE,
 		LME_GLOBAL,
 	} eval;
 } libmap_config;

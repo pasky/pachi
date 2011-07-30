@@ -79,6 +79,8 @@ libmap_setup(char *arg)
 		} else if (!strcasecmp(optname, "eval") && optval) {
 			if (strcasecmp(optval, "local")) {
 				libmap_config.eval = LME_LOCAL;
+			} else if (strcasecmp(optval, "lvalue")) {
+				libmap_config.eval = LME_LVALUE;
 			} else if (strcasecmp(optval, "global")) {
 				libmap_config.eval = LME_GLOBAL;
 			} else {
@@ -119,11 +121,8 @@ libmap_queue_process(struct libmap_hash *lm, struct board *b, enum stone winner)
 		struct libmap_group *g = &lm->queue.group[i];
 		struct move m = { .coord = lm->queue.mq.move[i], .color = lm->queue.color[i] };
 		floating_t val;
-		if (libmap_config.eval == LME_LOCAL) {
-			enum stone color = board_at(b, g->group);
-			if (color == S_NONE)
-				color = board_get_one_point_eye(b, g->group);
-			val = color == g->goal ? 1.0 : 0.0;
+		if (libmap_config.eval == LME_LOCAL || libmap_config.eval == LME_LVALUE) {
+			val = board_local_value(libmap_config.eval == LME_LVALUE, b, g->group, g->goal);
 
 		} else { assert(libmap_config.eval == LME_GLOBAL);
 			val = winner == g->goal ? 1.0 : 0.0;
