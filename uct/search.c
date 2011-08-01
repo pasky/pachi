@@ -480,7 +480,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 
 	/* If the opponent just passed and we win counting, always
 	 * pass as well. */
-	if (b->moves > 1 && is_pass(b->last_move.coord)) {
+	if (b->moves > 1 && is_pass(b->last_move.coord) && b->rules != RULES_STONES_ONLY) {
 		/* Make sure enough playouts are simulated. */
 		while (u->ownermap.playouts < GJ_MINGAMES)
 			uct_playout(u, b, color, u->t);
