@@ -622,6 +622,11 @@ uct_state_init(char *arg, struct board *b)
 				/* Use territory scoring (default is area scoring).
 				 * An explicit kgs-rules command overrides this. */
 				u->territory_scoring = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "stones_only")) {
+				/* Do not count eyes. Nice to teach go to kids.
+				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
+				b->rules = RULES_STONES_ONLY;
+				u->pass_all_alive = true;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
