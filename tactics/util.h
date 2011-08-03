@@ -45,6 +45,14 @@ int board_estimated_moves_left(struct board *b);
  * to play if we don't have more precise information from gtp time_left: */
 #define MIN_MOVES_LEFT 30
 
+/* Tactical evaluation of move @coord by color @color, given
+ * simulation end position @b. I.e., a move is tactically good
+ * if the resulting group stays on board until the game end.
+ * The value is normalized to [0,1]. */
+/* We can also take into account surrounding stones, e.g. to
+ * encourage taking off external liberties during a semeai. */
+static double board_local_value(bool scan_neis, struct board *b, coord_t coord, enum stone color);
+
 
 static inline int
 coord_edge_distance(coord_t c, struct board *b)
@@ -60,6 +68,24 @@ coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b)
 {
 	int dx = abs(coord_dx(c1, c2, b)), dy = abs(coord_dy(c1, c2, b));
 	return dx + dy + (dx > dy ? dx : dy);
+}
+
+static inline double
+board_local_value(bool scan_neis, struct board *b, coord_t coord, enum stone color)
+{
+	if (scan_neis) {
+		/* Count surrounding friendly stones... */
+		int friends = neighbor_count_at(b, coord, color) + neighbor_count_at(b, coord, S_OFFBOARD);
+		/* ...and also our eyes. */
+		if (immediate_liberty_count(b, coord) > 0) {
+			foreach_neighbor(b, coord, {
+				friends += board_is_one_point_eye(b, c, color);
+			});
+		}
+		return (double) (2 * (board_at(b, coord) == color) + friends) / 6.f;
+	} else {
+		return (board_at(b, coord) == color) ? 1.f : 0.f;
+	}
 }
 
 #endif
