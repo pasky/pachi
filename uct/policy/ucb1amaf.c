@@ -8,6 +8,7 @@
 #include "debug.h"
 #include "move.h"
 #include "random.h"
+#include "tactics/util.h"
 #include "uct/internal.h"
 #include "uct/tree.h"
 #include "uct/policy/generic.h"
@@ -33,7 +34,9 @@ struct ucb1_policy_amaf {
 	floating_t crit_rave;
 	int crit_min_playouts;
 	bool crit_negative;
+	bool crit_negflip;
 	bool crit_amaf;
+	bool crit_lvalue;
 };
 
 
@@ -110,8 +113,13 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	if (b->crit_rave > 0 && node->u.playouts > b->crit_min_playouts) {
 		floating_t crit = tree_node_criticality(tree, node);
 		if (b->crit_negative || crit > 0) {
+			floating_t val = 1.0f;
+			if (b->crit_negflip && crit < 0) {
+				val = 0;
+				crit = -crit;
+			}
 			struct move_stats c = {
-				.value = tree_node_get_value(tree, parity, 1.0f),
+				.value = tree_node_get_value(tree, parity, val),
 				.playouts = crit * r.playouts * b->crit_rave
 			};
 			URAVE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
@@ -202,8 +210,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			assert(tree->root_color == stone_other(child_color));
 
 		if (!b->crit_amaf && !is_pass(node_coord(node))) {
-			stats_add_result(&node->winner_owner, board_at(final_board, node_coord(node)) == winner_color ? 1.0 : 0.0, 1);
-			stats_add_result(&node->black_owner, board_at(final_board, node_coord(node)) == S_BLACK ? 1.0 : 0.0, 1);
+			stats_add_result(&node->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
+			stats_add_result(&node->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), S_BLACK), 1);
 		}
 		stats_add_result(&node->u, result, 1);
 		if (!is_pass(node_coord(node)) && amaf_nakade(map->map[node_coord(node)]))
@@ -239,8 +247,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			 * we will correctly negate them at the descend phase. */
 
 			if (b->crit_amaf && !is_pass(node_coord(node))) {
-				stats_add_result(&ni->winner_owner, board_at(final_board, node_coord(ni)) == winner_color ? 1.0 : 0.0, 1);
-				stats_add_result(&ni->black_owner, board_at(final_board, node_coord(ni)) == S_BLACK ? 1.0 : 0.0, 1);
+				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
+				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
 			}
 			stats_add_result(&ni->amaf, nres, 1);
 
@@ -316,8 +324,12 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->crit_min_playouts = atoi(optval);
 			} else if (!strcasecmp(optname, "crit_negative")) {
 				b->crit_negative = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "crit_negflip")) {
+				b->crit_negflip = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_amaf")) {
 				b->crit_amaf = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "crit_lvalue")) {
+				b->crit_lvalue = !optval || *optval == '1';
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);
