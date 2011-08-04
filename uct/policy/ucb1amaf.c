@@ -27,7 +27,6 @@ struct ucb1_policy_amaf {
 	 * if none of the existing ones has higher urgency than fpu. */
 	floating_t fpu;
 	unsigned int equiv_rave;
-	bool check_nakade;
 	bool sylvain_rave;
 	/* Coefficient of local tree values embedded in RAVE. */
 	floating_t ltree_rave;
@@ -276,7 +275,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->explore_p = 0; // 0.02 can be also good on 19x19 with prior=eqex=40
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
-	b->check_nakade = true;
 	b->sylvain_rave = true;
 	b->ltree_rave = 0.75f;
 
@@ -304,8 +302,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "sylvain_rave")) {
 				b->sylvain_rave = !optval || *optval == '1';
-			} else if (!strcasecmp(optname, "check_nakade")) {
-				b->check_nakade = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "ltree_rave") && optval) {
 				b->ltree_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_rave") && optval) {
