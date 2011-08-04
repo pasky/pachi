@@ -230,12 +230,14 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		 * matter only at a point when AMAF doesn't help much. */
 		assert(map->game_baselen >= 0);
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+			if (is_pass(node_coord(ni))) continue;
+
 			/* Use the child move only if it was first played by the same color. */
 			int first = first_move[node_coord(ni)];
 			if (first == INT_MAX || (first & 1) == (move & 1))
 				continue;
 
-			if (b->crit_amaf && !is_pass(node_coord(node))) {
+			if (b->crit_amaf) {
 				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
 				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
 			}
