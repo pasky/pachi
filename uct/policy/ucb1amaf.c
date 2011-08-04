@@ -28,6 +28,8 @@ struct ucb1_policy_amaf {
 	floating_t fpu;
 	unsigned int equiv_rave;
 	bool sylvain_rave;
+        /* Give more weight to moves played earlier. */
+	int distance_rave;
 	/* Coefficient of local tree values embedded in RAVE. */
 	floating_t ltree_rave;
 	/* Coefficient of criticality embedded in RAVE. */
@@ -234,24 +236,32 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 
 			/* Use the child move only if it was first played by the same color. */
 			int first = first_move[node_coord(ni)];
-			if (first == INT_MAX || (first & 1) == (move & 1))
-				continue;
+			if (first == INT_MAX) continue;
+			assert(first > move && first < map->gamelen);
+			int distance = first - (move + 1);
+			if (distance & 1) continue;
+
+			/* Give more weight to moves played earlier */
+			int weight = 1;
+			if (b->distance_rave != 0) {
+				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - move);
+			}
+			stats_add_result(&ni->amaf, result, weight);
 
 			if (b->crit_amaf) {
 				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
 				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
 			}
-			stats_add_result(&ni->amaf, result, 1);
 #if 0
 			struct board bb; bb.size = 9+2;
 			fprintf(stderr, "* %s<%"PRIhash"> -> %s<%"PRIhash"> [%d/%f => %d/%f]\n",
 				coord2sstr(node_coord(node), &bb), node->hash,
 				coord2sstr(node_coord(ni), &bb), ni->hash,
-				player_color, result, move, result);
+				player_color, result, move, res);
 #endif
 		}
 		if (node->parent) {
-			assert(move >= 0 && map->game[move] == node_coord(node));
+			assert(move >= 0 && map->game[move] == node_coord(node) && first_move[node_coord(node)] > move);
 			first_move[node_coord(node)] = move;
 			move--;
 		}
@@ -304,6 +314,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "sylvain_rave")) {
 				b->sylvain_rave = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "distance_rave") && optval) {
+				b->distance_rave = atoi(optval);
 			} else if (!strcasecmp(optname, "ltree_rave") && optval) {
 				b->ltree_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_rave") && optval) {
