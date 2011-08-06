@@ -484,7 +484,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 		/* Make sure enough playouts are simulated. */
 		while (u->ownermap.playouts < GJ_MINGAMES)
 			uct_playout(u, b, color, u->t);
-		if (uct_pass_is_safe(u, b, color, u->pass_all_alive || pass_all_alive)) {
+		if (uct_pass_is_safe(u, b, color, pass_all_alive)) {
 			if (UDEBUGL(0))
 				fprintf(stderr, "<Will rather pass, looks safe enough; score %f>\n",
 					board_official_score(b, NULL) / 2);

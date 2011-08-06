@@ -423,6 +423,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 {
 	double start_time = time_now();
 	struct uct *u = e->data;
+	u->pass_all_alive |= pass_all_alive;
 	uct_pondering_stop(u);
 	uct_genmove_setup(u, b, color);
 
@@ -432,7 +433,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
 	coord_t best_coord;
 	struct tree_node *best;
-	best = uct_search_result(u, b, color, pass_all_alive, played_games, base_playouts, &best_coord);
+	best = uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, &best_coord);
 
 	if (UDEBUGL(2)) {
 		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
@@ -615,7 +616,7 @@ uct_state_init(char *arg, struct board *b)
 				 * dead groups were removed from the board;
 				 * this is like all genmoves are in fact
 				 * kgs-genmove_cleanup. */
-				u->pass_all_alive = !optval || atoi(optval);
+				u->pass_all_alive_opt = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "territory_scoring")) {
 				/* Use territory scoring (default is area scoring).
 				 * An explicit kgs-rules command overrides this. */
@@ -624,7 +625,7 @@ uct_state_init(char *arg, struct board *b)
 				/* Do not count eyes. Nice to teach go to kids.
 				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
 				b->rules = RULES_STONES_ONLY;
-				u->pass_all_alive = true;
+				u->pass_all_alive_opt = true;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
@@ -963,6 +964,8 @@ uct_state_init(char *arg, struct board *b)
 			}
 		}
 	}
+
+	u->pass_all_alive = u->pass_all_alive_opt;
 
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);

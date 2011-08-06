@@ -488,6 +488,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 {
 	struct uct *u = e->data;
 	assert(u->slave);
+	u->pass_all_alive |= pass_all_alive;
 
 	/* Prepare the state if the search is not already running.
 	 * We must do this first since we tweak the state below
@@ -538,7 +539,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		best_coord = fbook_check(b);
 	if (best_coord == pass) {
 		keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, &s, played_games);
-		uct_search_result(u, b, color, pass_all_alive, played_games, s.base_playouts, &best_coord);
+		uct_search_result(u, b, color, u->pass_all_alive, played_games, s.base_playouts, &best_coord);
 		/* Give heavy weight only to pass, resign and book move: */
 		if (best_coord > 0) best_coord = 0; 
 
