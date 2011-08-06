@@ -106,8 +106,9 @@ dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
 bool
 uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive)
 {
-	if (u->ownermap.playouts < GJ_MINGAMES)
-		return false;
+	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
+	while (u->ownermap.playouts < GJ_MINGAMES)
+		uct_playout(u, b, color, u->t);
 
 	struct move_queue mq = { .moves = 0 };
 	dead_group_list(u, b, &mq);
