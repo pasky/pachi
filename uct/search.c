@@ -479,20 +479,17 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	}
 
 	/* If the opponent just passed and we win counting, always
-	 * pass as well. */
-	if (b->moves > 1 && is_pass(b->last_move.coord)) {
-		/* Make sure enough playouts are simulated. */
-		while (u->ownermap.playouts < GJ_MINGAMES)
-			uct_playout(u, b, color, u->t);
-		if (uct_pass_is_safe(u, b, color, u->pass_all_alive || pass_all_alive)) {
-			if (UDEBUGL(0))
-				fprintf(stderr, "<Will rather pass, looks safe enough; score %f>\n",
-					board_official_score(b, NULL) / 2);
-			*best_coord = pass;
-			best = u->t->root->children; // pass is the first child
-			assert(is_pass(node_coord(best)));
-			return best;
-		}
+	 * pass as well. For option stones_only, we pass only when there
+	 * there is nothing else to do, to show how to maximize score. */
+	if (b->moves > 1 && is_pass(b->last_move.coord) && b->rules != RULES_STONES_ONLY
+	    && uct_pass_is_safe(u, b, color, pass_all_alive)) {
+		if (UDEBUGL(0))
+			fprintf(stderr, "<Will rather pass, looks safe enough; score %f>\n",
+				board_official_score(b, NULL) / 2);
+		*best_coord = pass;
+		best = u->t->root->children; // pass is the first child
+		assert(is_pass(node_coord(best)));
+		return best;
 	}
 	
 	return best;
