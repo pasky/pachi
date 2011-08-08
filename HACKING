@@ -12,9 +12,9 @@ Basic architecture
 Pachi consists of the following components:
 
 
-  +------+    +--------+    +---------+
-  | core | -- | engine | -- | playout |
-  +------+    +--------+    +---------+
+  +------+    +--------+    +---------+    +------------------+
+  | core | -- | engine | -- | playout | -- | tactical library |
+  +------+    +--------+    +---------+    +------------------+
                      |        |
                   +-------------+
                   | aux library |
@@ -46,7 +46,7 @@ Pachi consists of the following components:
 * "tactical library" provides extended interfaces for the go board,
   most important non-trivial tactical information
 
-	util.[ch]	the universal catch-all for extended board interfaces
+	tactics/
 
 * "engine" receives notifications about opponent moves and is asked
   to generate a move to play on given board
