@@ -34,7 +34,9 @@ struct ucb1_policy_amaf {
 	/* Coefficient of criticality embedded in RAVE. */
 	floating_t crit_rave;
 	int crit_min_playouts;
+	floating_t crit_plthres_coef;
 	bool crit_negative;
+	bool crit_negflip;
 	bool crit_amaf;
 	bool crit_lvalue;
 	/* Coefficient of tactical rating embedded in RAVE. */
@@ -112,11 +114,18 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	}
 
 	/* Criticality heuristics. */
-	if (b->crit_rave > 0 && node->u.playouts > b->crit_min_playouts) {
+	if (b->crit_rave > 0 && (b->crit_plthres_coef > 0
+				 ? node->u.playouts > tree->root->u.playouts * b->crit_plthres_coef
+				 : node->u.playouts > b->crit_min_playouts)) {
 		floating_t crit = tree_node_criticality(tree, node);
 		if (b->crit_negative || crit > 0) {
+			floating_t val = 1.0f;
+			if (b->crit_negflip && crit < 0) {
+				val = 0;
+				crit = -crit;
+			}
 			struct move_stats c = {
-				.value = tree_node_get_value(tree, parity, 1.0f),
+				.value = tree_node_get_value(tree, parity, val),
 				.playouts = crit * r.playouts * b->crit_rave
 			};
 			URAVE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
@@ -339,8 +348,12 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->crit_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_min_playouts") && optval) {
 				b->crit_min_playouts = atoi(optval);
+			} else if (!strcasecmp(optname, "crit_plthres_coef") && optval) {
+				b->crit_plthres_coef = atof(optval);
 			} else if (!strcasecmp(optname, "crit_negative")) {
 				b->crit_negative = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "crit_negflip")) {
+				b->crit_negflip = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_amaf")) {
 				b->crit_amaf = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_lvalue")) {

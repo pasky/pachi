@@ -1445,7 +1445,7 @@ board_fast_score(struct board *board)
 
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
-		if (color == S_NONE)
+		if (color == S_NONE && board->rules != RULES_STONES_ONLY)
 			color = board_get_one_point_eye(board, c);
 		scores[color]++;
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
@@ -1465,6 +1465,8 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 	foreach_free_point(board) {
 		/* Ignore occupied and already-dame positions. */
 		assert(board_at(board, c) == S_NONE);
+		if (board->rules == RULES_STONES_ONLY)
+		    ownermap[c] = 3;
 		if (ownermap[c] == 3)
 			continue;
 		/* Count neighbors. */

@@ -12,9 +12,9 @@ Basic architecture
 Pachi consists of the following components:
 
 
-  +------+    +--------+    +---------+
-  | core | -- | engine | -- | playout |
-  +------+    +--------+    +---------+
+  +------+    +--------+    +---------+    +------------------+
+  | core | -- | engine | -- | playout | -- | tactical library |
+  +------+    +--------+    +---------+    +------------------+
                      |        |
                   +-------------+
                   | aux library |
@@ -28,6 +28,7 @@ Pachi consists of the following components:
 	debug.h		debugging infrastructure
 	random.[ch]	fast random number generator
 	gtp.[ch]	GTP protocol interface
+	network.[ch]	Network interface (useful for distributed engine)
 	timeinfo.[ch]	Time-keeping information
 	stone.[ch]	one board point coloring definition
 	move.[ch]	one board move definition
@@ -41,12 +42,11 @@ Pachi consists of the following components:
 	probdist.[ch]	"probability distribution" data structure
 	ownermap.[ch]	simulation-based finalpos. "owner map" data structure
 	pattern3.[ch]	fast 3x3 spatial pattern matcher
-	network.[ch]	Network interface (useful for distributed engine)
 
 * "tactical library" provides extended interfaces for the go board,
   most important non-trivial tactical information
 
-	util.[ch]	the universal catch-all for extended board interfaces
+	tactics/
 
 * "engine" receives notifications about opponent moves and is asked
   to generate a move to play on given board

@@ -107,8 +107,9 @@ dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
 bool
 uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive)
 {
-	if (u->ownermap.playouts < GJ_MINGAMES)
-		return false;
+	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
+	while (u->ownermap.playouts < GJ_MINGAMES)
+		uct_playout(u, b, color, u->t);
 
 	struct move_queue mq = { .moves = 0 };
 	dead_group_list(u, b, &mq);
@@ -424,6 +425,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 {
 	double start_time = time_now();
 	struct uct *u = e->data;
+	u->pass_all_alive |= pass_all_alive;
 	uct_pondering_stop(u);
 	uct_genmove_setup(u, b, color);
 
@@ -433,7 +435,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
 	coord_t best_coord;
 	struct tree_node *best;
-	best = uct_search_result(u, b, color, pass_all_alive, played_games, base_playouts, &best_coord);
+	best = uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, &best_coord);
 
 	if (UDEBUGL(2)) {
 		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
@@ -621,6 +623,11 @@ uct_state_init(char *arg, struct board *b)
 				/* Use territory scoring (default is area scoring).
 				 * An explicit kgs-rules command overrides this. */
 				u->territory_scoring = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "stones_only")) {
+				/* Do not count eyes. Nice to teach go to kids.
+				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
+				b->rules = RULES_STONES_ONLY;
+				u->pass_all_alive = true;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */

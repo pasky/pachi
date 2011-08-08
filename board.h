@@ -136,6 +136,7 @@ struct board {
 		RULES_AGA,
 		RULES_NEW_ZEALAND,
 		RULES_JAPANESE,
+		RULES_STONES_ONLY, /* do not count eyes */
 	} rules;
 
 	char *fbookfile;
