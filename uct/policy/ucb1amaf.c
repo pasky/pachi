@@ -306,7 +306,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->sylvain_rave = true;
 	b->ltree_rave = 0.75f;
 
-	b->crit_rave = 1.0f;
+	b->crit_rave = 1.1f;
 	b->crit_min_playouts = 2000;
 	b->crit_negative = 1;
 	b->crit_amaf = 0;

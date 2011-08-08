@@ -535,7 +535,7 @@ uct_state_init(char *arg, struct board *b)
 	u->sure_win_threshold = 0.85;
 	u->mercymin = 0;
 	u->significant_threshold = 50;
-	u->expand_p = 2;
+	u->expand_p = 8;
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
 	u->playout_amaf_nakade = false;
