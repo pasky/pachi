@@ -30,7 +30,8 @@ struct uct {
 	floating_t resign_threshold, sure_win_threshold;
 	double best2_ratio, bestr_ratio;
 	floating_t max_maintime_ratio;
-	bool pass_all_alive;
+	bool pass_all_alive_opt; /* User option */
+	bool pass_all_alive; /* Current value */
 	bool territory_scoring;
 	int expand_p;
 	bool playout_amaf, playout_amaf_nakade;
