@@ -81,18 +81,11 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 }
 
 
-static void
-record_amaf_move(struct playout_amafmap *amaf, coord_t coord, enum stone color)
+static inline void
+record_amaf_move(struct playout_amafmap *amaf, coord_t coord)
 {
-	if (amaf->map[coord] == S_NONE || amaf->map[coord] == color) {
-		amaf->map[coord] = color;
-	} else { // XXX: Respect amaf->record_nakade
-		amaf_op(amaf->map[coord], +);
-	}
-	amaf->game[amaf->gamelen].coord = coord;
-	amaf->game[amaf->gamelen].color = color;
-	amaf->gamelen++;
-	assert(amaf->gamelen < sizeof(amaf->game) / sizeof(amaf->game[0]));
+	assert(amaf->gamelen < MAX_GAMELEN);
+	amaf->game[amaf->gamelen++] = coord;
 }
 
 
@@ -274,12 +267,8 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	struct board b2;
 	board_copy(&b2, b);
 
-	struct playout_amafmap *amaf = NULL;
-	if (u->policy->wants_amaf) {
-		amaf = calloc2(1, sizeof(*amaf));
-		amaf->map = calloc2(board_size2(&b2) + 1, sizeof(*amaf->map));
-		amaf->map++; // -1 is pass
-	}
+	struct playout_amafmap amaf;
+	amaf.gamelen = amaf.game_baselen = 0;
 
 	/* Walk the tree until we find a leaf, then expand it and do
 	 * a random playout. */
@@ -365,8 +354,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			stats_add_result(&n->u, node_color == S_BLACK ? 0.0 : 1.0, u->virtual_loss);
 
 		assert(node_coord(n) >= -1);
-		if (amaf && !is_pass(node_coord(n)))
-			record_amaf_move(amaf, node_coord(n), node_color);
+		record_amaf_move(&amaf, node_coord(n));
 
 		struct move m = { node_coord(n), node_color };
 		int res = board_play(&b2, &m);
@@ -404,10 +392,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			tree_expand_node(t, n, &b2, next_color, u, -parity);
 	}
 
-	if (amaf) {
-		amaf->game_baselen = amaf->gamelen;
-		amaf->record_nakade = u->playout_amaf_nakade;
-	}
+	amaf.game_baselen = amaf.gamelen;
 
 	if (t->use_extra_komi && u->dynkomi->persim) {
 		b2.komi += round(u->dynkomi->persim(u->dynkomi, &b2, t, n));
@@ -432,31 +417,20 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	} else { // assert(tree_leaf_node(n));
 		/* In case of parallel tree search, the assertion might
 		 * not hold if two threads chew on the same node. */
-		result = uct_leaf_node(u, &b2, player_color, amaf, descent, &dlen, significant, t, n, node_color, spaces);
+		result = uct_leaf_node(u, &b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
 	}
 
-	if (amaf && u->playout_amaf_cutoff) {
-		unsigned int cutoff = amaf->game_baselen;
-		cutoff += (amaf->gamelen - amaf->game_baselen) * u->playout_amaf_cutoff / 100;
-		/* Now, reconstruct the amaf map. */
-		memset(amaf->map, 0, board_size2(&b2) * sizeof(*amaf->map));
-		for (unsigned int i = 0; i < cutoff; i++) {
-			coord_t coord = amaf->game[i].coord;
-			enum stone color = amaf->game[i].color;
-			if (amaf->map[coord] == S_NONE || amaf->map[coord] == color) {
-				amaf->map[coord] = color;
-			/* Nakade always recorded for in-tree part */
-			} else if (amaf->record_nakade || i <= amaf->game_baselen) {
-				amaf_op(amaf->map[node_coord(n)], +);
-			}
-		}
+	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
+		unsigned int cutoff = amaf.game_baselen;
+		cutoff += (amaf.gamelen - amaf.game_baselen) * u->playout_amaf_cutoff / 100;
+		amaf.gamelen = cutoff;
 	}
 
 	/* Record the result. */
 
 	assert(n == t->root || n->parent);
 	floating_t rval = scale_value(u, b, result);
-	u->policy->update(u->policy, t, n, node_color, player_color, amaf, &b2, rval);
+	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, &b2, rval);
 
 	if (t->use_extra_komi) {
 		stats_add_result(&u->dynkomi->score, result / 2, 1);
@@ -503,10 +477,6 @@ end:
 		}
 	}
 
-	if (amaf) {
-		free(amaf->map - 1);
-		free(amaf);
-	}
 	board_done_noalloc(&b2);
 	return result;
 }

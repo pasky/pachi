@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,8 +32,9 @@ struct ucb1_policy_amaf {
 	 * if none of the existing ones has higher urgency than fpu. */
 	floating_t fpu;
 	unsigned int equiv_rave;
-	bool check_nakade;
 	bool sylvain_rave;
+        /* Give more weight to moves played earlier. */
+	int distance_rave;
 	/* Coefficient of local tree values embedded in RAVE. */
 	floating_t ltree_rave;
 	/* Coefficient of criticality embedded in RAVE. */
@@ -211,7 +213,14 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 {
 	struct ucb1_policy_amaf *b = p->data;
 	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
-	enum stone child_color = stone_other(node_color);
+
+	/* Record of the random playout - for each intersection coord,
+	 * first_move[coord] is the index map->game of the first move
+	 * at this coordinate, or INT_MAX if the move was not played.
+	 * The parity gives the color of this move.
+	 */
+	int first_map[board_size2(final_board)+1];
+	int *first_move = &first_map[1]; // +1 for pass
 
 #if 0
 	struct board bb; bb.size = 9+2;
@@ -221,66 +230,58 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			node_color, result, player_color);
 #endif
 
-	while (node) {
-		if (node->parent == NULL)
-			assert(tree->root_color == stone_other(child_color));
+	/* Initialize first_move */
+	for (int i = pass; i < board_size2(final_board); i++) first_move[i] = INT_MAX;
+	int move;
+	assert(map->gamelen > 0);
+	for (move = map->gamelen - 1; move >= map->game_baselen; move--)
+		first_move[map->game[move]] = move;
 
+	while (node) {
 		if (!b->crit_amaf && !is_pass(node_coord(node))) {
 			stats_add_result(&node->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
 			stats_add_result(&node->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), S_BLACK), 1);
 		}
 		stats_add_result(&node->u, result, 1);
-		if (!is_pass(node_coord(node)) && amaf_nakade(map->map[node_coord(node)]))
-			amaf_op(map->map[node_coord(node)], -);
 
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
 		assert(map->game_baselen >= 0);
 		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
-			enum stone amaf_color = map->map[node_coord(ni)];
-			assert(amaf_color != S_OFFBOARD);
-			if (amaf_color == S_NONE)
-				continue;
-			if (amaf_nakade(map->map[node_coord(ni)])) {
-				if (!b->check_nakade)
-					continue;
-				unsigned int i;
-				for (i = map->game_baselen; i < map->gamelen; i++)
-					if (map->game[i].coord == node_coord(ni)
-					    && map->game[i].color == child_color)
-						break;
-				if (i == map->gamelen)
-					continue;
-				amaf_color = child_color;
-			}
+			if (is_pass(node_coord(ni))) continue;
 
-			floating_t nres = result;
-			if (amaf_color != child_color) {
-				continue;
-			}
-			/* For child_color != player_color, we still want
-			 * to record the result unmodified; in that case,
-			 * we will correctly negate them at the descend phase. */
+			/* Use the child move only if it was first played by the same color. */
+			int first = first_move[node_coord(ni)];
+			if (first == INT_MAX) continue;
+			assert(first > move && first < map->gamelen);
+			int distance = first - (move + 1);
+			if (distance & 1) continue;
 
-			if (b->crit_amaf && !is_pass(node_coord(node))) {
+			/* Give more weight to moves played earlier */
+			int weight = 1;
+			if (b->distance_rave != 0) {
+				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - move);
+			}
+			stats_add_result(&ni->amaf, result, weight);
+
+			if (b->crit_amaf) {
 				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
 				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
 			}
-			stats_add_result(&ni->amaf, nres, 1);
-
 #if 0
 			struct board bb; bb.size = 9+2;
 			fprintf(stderr, "* %s<%"PRIhash"> -> %s<%"PRIhash"> [%d/%f => %d/%f]\n",
 				coord2sstr(node_coord(node), &bb), node->hash,
 				coord2sstr(node_coord(ni), &bb), ni->hash,
-				player_color, result, child_color, nres);
+				player_color, result, move, res);
 #endif
 		}
-
-		if (!is_pass(node_coord(node))) {
-			map->game_baselen--;
+		if (node->parent) {
+			assert(move >= 0 && map->game[move] == node_coord(node) && first_move[node_coord(node)] > move);
+			first_move[node_coord(node)] = move;
+			move--;
 		}
-		node = node->parent; child_color = stone_other(child_color);
+		node = node->parent;
 	}
 }
 
@@ -302,7 +303,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	b->explore_p = 0; // 0.02 can be also good on 19x19 with prior=eqex=40
 	b->equiv_rave = 3000;
 	b->fpu = INFINITY;
-	b->check_nakade = true;
 	b->sylvain_rave = true;
 	b->ltree_rave = 0.75f;
 
@@ -333,8 +333,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 				b->equiv_rave = atof(optval);
 			} else if (!strcasecmp(optname, "sylvain_rave")) {
 				b->sylvain_rave = !optval || *optval == '1';
-			} else if (!strcasecmp(optname, "check_nakade")) {
-				b->check_nakade = !optval || *optval == '1';
+			} else if (!strcasecmp(optname, "distance_rave") && optval) {
+				b->distance_rave = atoi(optval);
 			} else if (!strcasecmp(optname, "ltree_rave") && optval) {
 				b->ltree_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_rave") && optval) {
