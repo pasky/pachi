@@ -10,9 +10,6 @@ Base:
 
 General improvements:
 * Opening book
-* Criticality
-	Further use in search. Experiment with crit_min_playouts adaptively
-	adjusting based on number of simulations so far.
 * Killer moves
 * MM local-based patterns
 * Balanced local-based patterns?
