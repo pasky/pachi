@@ -15,22 +15,27 @@
 struct tree_node *
 uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude)
 {
-	struct tree_node *nbest = NULL;
+	struct tree_node *nbest = node->children;
+	if (!nbest) return NULL;
+	struct tree_node *nbest2 = NULL;
+
 	/* This function is called while the tree is updated by other threads.
 	 * We rely on node->children being set only after the node has been fully expanded. */
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+	for (struct tree_node *ni = nbest->sibling; ni; ni = ni->sibling)
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
-		if (!nbest || ni->u.playouts > nbest->u.playouts) {
+		if (ni->u.playouts > nbest->u.playouts) {
 			if (node_coord(ni) == exclude)
 				continue;
 			if (ni->hints & TREE_HINT_INVALID)
 				continue;
-			/* Play pass only if we can afford scoring */
-			if (is_pass(node_coord(ni)) && !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive))
-				continue;
+			nbest2 = nbest;
 			nbest = ni;
 		}
+	/* Play pass only if we can afford scoring. Call expensive uct_pass_is_safe() only if
+	 * pass is indeed the best move. */
+	if (is_pass(node_coord(nbest)) && !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive))
+		return nbest2;
 	return nbest;
 }
 
