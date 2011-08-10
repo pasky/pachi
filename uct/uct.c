@@ -619,7 +619,7 @@ uct_state_init(char *arg, struct board *b)
 				 * dead groups were removed from the board;
 				 * this is like all genmoves are in fact
 				 * kgs-genmove_cleanup. */
-				u->pass_all_alive_opt = !optval || atoi(optval);
+				u->pass_all_alive = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "territory_scoring")) {
 				/* Use territory scoring (default is area scoring).
 				 * An explicit kgs-rules command overrides this. */
@@ -628,7 +628,7 @@ uct_state_init(char *arg, struct board *b)
 				/* Do not count eyes. Nice to teach go to kids.
 				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
 				b->rules = RULES_STONES_ONLY;
-				u->pass_all_alive_opt = true;
+				u->pass_all_alive = true;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. */
@@ -973,8 +973,6 @@ uct_state_init(char *arg, struct board *b)
 			}
 		}
 	}
-
-	u->pass_all_alive = u->pass_all_alive_opt;
 
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL);
