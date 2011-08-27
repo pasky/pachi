@@ -538,7 +538,6 @@ uct_state_init(char *arg, struct board *b)
 	u->expand_p = 8;
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
-	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
 	u->max_tree_size = 1408ULL * 1048576;
 	u->fast_alloc = true;
@@ -728,15 +727,6 @@ uct_state_init(char *arg, struct board *b)
 					u->playout_amaf = false;
 				else
 					u->playout_amaf = true;
-			} else if (!strcasecmp(optname, "playout_amaf_nakade")) {
-				/* Whether to include nakade moves from playouts
-				 * in the AMAF statistics; this tends to nullify
-				 * the playout_amaf effect by adding too much
-				 * noise. */
-				if (optval && *optval == '0')
-					u->playout_amaf_nakade = false;
-				else
-					u->playout_amaf_nakade = true;
 			} else if (!strcasecmp(optname, "playout_amaf_cutoff") && optval) {
 				/* Keep only first N% of playout stage AMAF
 				 * information. */

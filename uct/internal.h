@@ -33,7 +33,7 @@ struct uct {
 	bool pass_all_alive; /* Current value */
 	bool territory_scoring;
 	int expand_p;
-	bool playout_amaf, playout_amaf_nakade;
+	bool playout_amaf;
 	bool amaf_prior;
 	int playout_amaf_cutoff;
 	int dumpthres;
