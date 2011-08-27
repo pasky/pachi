@@ -29,7 +29,7 @@
 #include "uct/walk.h"
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
-struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
+struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board);
 static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color);
 
 /* Maximal simulation length. */
@@ -660,7 +660,7 @@ uct_state_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "ucb1")) {
 					*p = policy_ucb1_init(u, policyarg);
 				} else if (!strcasecmp(optval, "ucb1amaf")) {
-					*p = policy_ucb1amaf_init(u, policyarg);
+					*p = policy_ucb1amaf_init(u, policyarg, b);
 				} else {
 					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
 					exit(1);
@@ -963,7 +963,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->policy)
-		u->policy = policy_ucb1amaf_init(u, NULL);
+		u->policy = policy_ucb1amaf_init(u, NULL, b);
 
 	if (!!u->random_policy_chance ^ !!u->random_policy) {
 		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");

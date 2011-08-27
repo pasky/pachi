@@ -290,7 +290,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 
 
 struct uct_policy *
-policy_ucb1amaf_init(struct uct *u, char *arg)
+policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 {
 	struct uct_policy *p = calloc2(1, sizeof(*p));
 	struct ucb1_policy_amaf *b = calloc2(1, sizeof(*b));
@@ -303,10 +303,11 @@ policy_ucb1amaf_init(struct uct *u, char *arg)
 	p->update = ucb1amaf_update;
 	p->wants_amaf = true;
 
-	b->explore_p = 0; // 0.02 can be also good on 19x19 with prior=eqex=40
-	b->equiv_rave = 3000;
+	b->explore_p = 0;
+	b->equiv_rave = board_large(board) ? 4000 : 3000;
 	b->fpu = INFINITY;
 	b->sylvain_rave = true;
+	b->distance_rave = 3;
 	b->ltree_rave = 0.75f;
 
 	b->crit_rave = 1.1f;
