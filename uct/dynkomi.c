@@ -139,14 +139,14 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	 * By move 100 white should still be behind but should have
 	 * caught up enough to avoid resigning. */
 	if (board_large(b)) {
-		l->moves[S_BLACK] = 150;
-		l->moves[S_WHITE] = 100;
+		l->moves[S_BLACK] = 100;
+		l->moves[S_WHITE] = 50;
 	}
 	/* The real value of one stone is twice the komi so about 15 points.
 	 * But use a lower value to avoid being too pessimistic as black
 	 * or too optimistic as white. */
 	l->handicap_value[S_BLACK] = 8;
-	l->handicap_value[S_WHITE] = 2;
+	l->handicap_value[S_WHITE] = 1;
 
 	l->komi_ratchet = INFINITY;
 	l->green_zone = 0.85;

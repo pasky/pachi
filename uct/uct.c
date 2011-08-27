@@ -532,7 +532,7 @@ uct_state_init(char *arg, struct board *b)
 	u->debug_level = debug_level;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
-	u->sure_win_threshold = 0.85;
+	u->sure_win_threshold = 0.9;
 	u->mercymin = 0;
 	u->significant_threshold = 50;
 	u->expand_p = 8;
@@ -555,7 +555,7 @@ uct_state_init(char *arg, struct board *b)
 	u->best2_ratio = 2.5;
 	u->max_maintime_ratio = 3.0;
 
-	u->val_scale = 0.04; u->val_points = 40;
+	u->val_scale = 0; u->val_points = 40;
 	u->dynkomi_interval = 1000;
 	u->dynkomi_mask = S_BLACK | S_WHITE;
 
@@ -828,9 +828,8 @@ uct_state_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "none")) {
 					u->dynkomi = uct_dynkomi_init_none(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "linear")) {
-					/* You should set dynkomi_mask=1
-					 * since this doesn't work well
-					 * for white handicaps! */
+					/* You should set dynkomi_mask=1 or a very low
+					 * handicap_value for white. */
 					u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "adaptive")) {
 					/* There are many more knobs to
@@ -842,9 +841,8 @@ uct_state_init(char *arg, struct board *b)
 				}
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
-				 * for dynkomi be applied; you may want
-				 * to use dynkomi_mask=3 to allow dynkomi
-				 * even in games where Pachi is white. */
+				 * for dynkomi be applied; the default dynkomi_mask=3 allows
+				 * dynkomi even in games where Pachi is white. */
 				u->dynkomi_mask = atoi(optval);
 			} else if (!strcasecmp(optname, "dynkomi_interval") && optval) {
 				/* If non-zero, re-adjust dynamic komi
@@ -1010,7 +1008,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->dynkomi)
-		u->dynkomi = uct_dynkomi_init_adaptive(u, NULL, b);
+		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
