@@ -162,6 +162,11 @@ your engine.
 
 See the HACKING file for a more detailed developer's view of Pachi.
 
+Also, if you are interested about Pachi's architecture, algorithms
+etc., consider taking a look at Petr Baudis' Master's Thesis:
+
+	http://pasky.or.cz/go/prace.pdf
+
 
 Licence
 -------
