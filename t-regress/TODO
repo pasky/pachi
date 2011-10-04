@@ -1,17 +1,21 @@
-Here is my current list of good candidates to put in a regression suite.
+A list of games to put in the regression suite.
+
+This list can be processed automatically:
+
+	sed -ne 's/^\* //p' <TODO | while read r; do echo wget -O $(echo "$r" | sed 's#.*games/##' | tr / - | sed 's/-\([^-]\)-/-0\1-/g') "$r"; done
 
 * http://files.gokgs.com/games/2011/6/7/fidibus-pachi30s.sgf
       move 91 T3 useless, wastes ko threat
       move 189 B15 even worse
 
-* http://files.gokgs.com/games/2011/6/6/tyzef-pachi30s.sgf
+* http://files.gokgs.com/games/2011/6/6/tyzef-pachi30s.sgf ladder
   pachi tries to run away from a losing ladder against a 7k in even
   game. The 7k, disgusted, passed then resigned.
 
-* http://files.gokgs.com/games/2011/6/5/pachi2-SimpleBot.sgf
+* http://files.gokgs.com/games/2011/6/5/pachi2-SimpleBot.sgf ladder
   pachi shouldn't play the broken ladders up to move 53
 
-* http://files.gokgs.com/games/2011/6/5/Zen19-pachi2.sgf
+* http://files.gokgs.com/games/2011/6/5/Zen19-pachi2.sgf semeai
   should have won
  . move 185 S15 very dubious
 
@@ -26,7 +30,7 @@ Here is my current list of good candidates to put in a regression suite.
     will become an illegal move so pachi will evaluate this group
     100% alive and won't play at T2 such stupid move.
 
-* http://files.gokgs.com/games/2011/6/5/tazaki-pachi30s.sgf
+* http://files.gokgs.com/games/2011/6/5/tazaki-pachi30s.sgf semeai
   pachi doesn't see even one move ahead in a semeai, it expects
   an answer outside the semeai. The score drops from 0.625 to 0.337:
 
@@ -78,7 +82,7 @@ kills above)
 * http://files.gokgs.com/games/2011/2/20/ramesses2-pachi2.sgf
   good example of losing a won game.
 
-* http://files.gokgs.com/games/2011/1/11/llopl-pachi2.sgf
+* http://files.gokgs.com/games/2011/1/11/llopl-pachi2.sgf ladder
   terrible ladder bug
 
 * http://files.gokgs.com/games/2010/12/5/pachi-CzechBot.sgf
@@ -93,25 +97,25 @@ kills above)
     i.e. with capturerate=90, white is much more likely to come back
     to the situation later even when playing tenuki first.
 
-* http://files.gokgs.com/games/2011/1/15/pachi2-rollingon.sgf
+* http://files.gokgs.com/games/2011/1/15/pachi2-rollingon.sgf semeai
   big semeai with easy counting of liberties misjuged
   move 169 0.7322 -> move 171  0.2600
 
-* http://files.gokgs.com/games/2011/2/18/pachi2-tf-3.sgf
+* http://files.gokgs.com/games/2011/2/18/pachi2-tf-3.sgf seki
   lost because of unrecognized seki
 
-* http://files.gokgs.com/games/2011/6/9/botkiller2-pachi30s.sgf
+* http://files.gokgs.com/games/2011/6/9/botkiller2-pachi30s.sgf tsumego0
   threw away a won game. pachi thought until the end that top left
   white group was dead, so it made silly moves elsewhere.
   The playouts must be prevented from filling the eye at A17.
 
-* http://files.gokgs.com/games/2011/6/10/pachi30s-samba-2.sgf
+* http://files.gokgs.com/games/2011/6/10/pachi30s-samba-2.sgf tsumego0
   exactly the same problem as botkiller2-pachi30s.sgf:
   pachi considers the top left black group as unsettled
   although it is clearly alive. So it makes silly moves
   elsewhere. We have to fix this bug, it is too frequent.
 
-* http://files.gokgs.com/games/2011/6/9/jinen-pachi30s-2.sgf
+* http://files.gokgs.com/games/2011/6/9/jinen-pachi30s-2.sgf ko
   move 165 G5 again playing the ko threat before the ko.
   move 187 R18 is not a ko threat
   move 215:
@@ -123,14 +127,14 @@ kills above)
   pachi doesn't see that bent four in top left corner is dead.
   Still thinks it is winning 79% at move 250 G4.
 
-* http://files.gokgs.com/games/2011/6/14/pachi2-cdocdo-3.sgf
+* http://files.gokgs.com/games/2011/6/14/pachi2-cdocdo-3.sgf semeai
   pachi loses every semai by a large number of liberties
   but still considers itself winning 57% up to move 222 G16.
 
-* http://files.gokgs.com/games/2011/6/13/pachi30s-Jep.sgf
+* http://files.gokgs.com/games/2011/6/13/pachi30s-Jep.sgf ladder
   moves 102..108 playing a broken ladder
 
-* http://files.gokgs.com/games/2011/6/18/dorabon-pachi2-4.sgf
+* http://files.gokgs.com/games/2011/6/18/dorabon-pachi2-4.sgf semeai tsumego0
   pachi considers the bottom left semeai won by black (but black
   loses it) and the bottom right as undecided (white is clearly
   alive). At move 270 L4 it still thinks it is leading by 80%
@@ -144,10 +148,10 @@ kills above)
   pachi was winning up to move 230 Q14 big mistake. Win ratio dropped
   from 60% to 25% at next move.
 
-* http://files.gokgs.com/games/2011/6/18/akkannbee-pachi2.sgf
+* http://files.gokgs.com/games/2011/6/18/akkannbee-pachi2.sgf seki
   pachi totally confused by very simple seki.
 
-* http://files.gokgs.com/games/2011/7/6/xiaosugi-pachi2.sgf
+* http://files.gokgs.com/games/2011/7/6/xiaosugi-pachi2.sgf seki
   pachi thinks until the end that it wins by 80% because it
   doesn't understand the seki in lower right. It should have lost
   by 42.5 points but white mistakenly agreed to treat the seki as dead.
@@ -175,12 +179,12 @@ kills above)
   W 292 A17 50%, W 294 R6 37% shows that top left was not
     evaluated correctly.
 
-* http://files.gokgs.com/games/2011/7/28/pachi2-pkunzip-2.sgf
+* http://files.gokgs.com/games/2011/7/28/pachi2-pkunzip-2.sgf ladder
   W 132 C9, W 134 B8, W 136 A8 plays a broken ladder but win ratio 52%
   so it should not play desperate moves.
   Pachi thought it was winning 72% at W 198 M3 but lost the game.
 
-* http://files.gokgs.com/games/2011/7/16/ihatebots-pachi2.sgf
+* http://files.gokgs.com/games/2011/7/16/ihatebots-pachi2.sgf semeai
   pachi threw away the game because it didn't evaluate the
   semeai in bottom left correctly.
 
@@ -188,22 +192,22 @@ kills above)
   B 28 H4 should be at F1 or G1 to save E2 & E3 and the game.
   Pachi usually finds this so I'm surprised it didn't get it here.
 
-* http://files.gokgs.com/games/2011/8/9/pachi2-BlueSpark.sgf
+* http://files.gokgs.com/games/2011/8/9/pachi2-BlueSpark.sgf ladder
   move 150 R19: pachi extends a losing ladder
 
-* http://files.gokgs.com/games/2011/8/8/Dallas-pachi2-2.sgf
+* http://files.gokgs.com/games/2011/8/8/Dallas-pachi2-2.sgf ladder
   move 121 L19: pachi extends a losing ladder
 
-* http://files.gokgs.com/games/2011/8/9/somrak-pachi2-2.sgf
+* http://files.gokgs.com/games/2011/8/9/somrak-pachi2-2.sgf ladder
   move 143 N19: pachi extends a losing ladder
   This ladder bug seems more frequent since e9df2b6 (even though
   this change made Pachi 40 elo stronger).
 
-* http://files.gokgs.com/games/2011/8/10/jerryfish-pachi2.sgf
+* http://files.gokgs.com/games/2011/8/10/jerryfish-pachi2.sgf semeai
   lost even game against 3k. Win ratio drops from 61% at 117 N1
   to 49% at the next move. So pachi didn't evaluate the semai correctly.
 
-* http://files.gokgs.com/games/2011/8/12/xiaosugi-pachi2.sgf
+* http://files.gokgs.com/games/2011/8/12/xiaosugi-pachi2.sgf tsumego0
   Pachi hallucinated again on bottom right corner.
   This is the same problem as
     http://files.gokgs.com/games/2011/6/18/dorabon-pachi2-4.sgf
@@ -211,7 +215,7 @@ kills above)
     http://files.gokgs.com/games/2011/6/9/botkiller2-pachi30s.sgf
   This corner shape is very frequent and pachi always gets it wrong.
 
-* http://files.gokgs.com/games/2011/8/24/StoneGrid-pachi2.sgf
+* http://files.gokgs.com/games/2011/8/24/StoneGrid-pachi2.sgf ladder
   Move 51 onwards: pachi plays a broken ladder, which almost cost the game.
   This might be the same bug as
     http://files.gokgs.com/games/2011/8/9/somrak-pachi2-2.sgf
@@ -223,7 +227,7 @@ kills above)
     http://files.gokgs.com/games/2011/6/5/pachi2-SimpleBot.sgf
     http://files.gokgs.com/games/2011/1/11/llopl-pachi2.sgf
 
-* http://files.gokgs.com/games/2011/9/4/pachi2-stv.sgf
+* http://files.gokgs.com/games/2011/9/4/pachi2-stv.sgf ladder
   Move 48 onwards: pachi plays a broken ladder, which cost not
   just the game but also the first place in the tournament.
   See also broken ladders in
