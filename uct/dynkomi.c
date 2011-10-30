@@ -72,19 +72,24 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	struct dynkomi_linear *l = d->data;
 	enum stone color = d->uct->pondering ? tree->root_color : stone_other(tree->root_color);
 	int lmoves = l->moves[color];
+	floating_t extra_komi;
+
 	if (b->moves < lmoves) {
 		floating_t base_komi = board_effective_handicap(b, l->handicap_value[color]);
-		return base_komi * (lmoves - b->moves) / lmoves;
+		extra_komi = base_komi * (lmoves - b->moves) / lmoves;
+	} else {
+		extra_komi = 0;
 	}
-	/* Force a transition to extra_komi 0 before the adaptive phase. */
-        if (b->moves <= lmoves + 1) return 0;
+
+	/* Do not adjust values in the game beginning. */
+	if (b->moves < lmoves) return extra_komi;
 
 	/* Do not take decisions on unstable value. */
-        if (tree->root->u.playouts < GJ_MINGAMES) return tree->extra_komi;
+        if (tree->root->u.playouts < GJ_MINGAMES) return extra_komi;
 
 	floating_t my_value = tree_node_get_value(tree, 1, tree->root->u.value);
 	/*  We normalize komi as in komi_by_value(), > 0 when winning. */
-	floating_t extra_komi = komi_by_color(tree->extra_komi, color);
+	extra_komi = komi_by_color(extra_komi, color);
 	assert(extra_komi >= 0);
 
 	if (my_value < 0.5 && l->komi_ratchet > 0 && l->komi_ratchet != INFINITY) {
