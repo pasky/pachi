@@ -78,7 +78,10 @@ struct uct {
 	floating_t local_tree_depth_decay;
 	bool local_tree_allseq;
 	bool local_tree_neival;
-	bool local_tree_rootgoal;
+	enum {
+		LTE_ROOT,
+		LTE_EACH,
+	} local_tree_eval;
 	bool local_tree_rootchoose;
 
 	char *banner;

@@ -224,7 +224,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	lnode->u.playouts++;
 
 	double sval = 0.5;
-	if (u->local_tree_rootgoal) {
+	if (u->local_tree_eval != LTE_EACH) {
 		sval = local_value(u, endb, node_coord(descent[di].node), seq_color);
 		LTREE_DEBUG fprintf(stderr, "(goal %s[%s %1.3f][%d]) ",
 			coord2sstr(node_coord(descent[di].node), t->board),
@@ -236,7 +236,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
 		enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
 		double rval;
-		if (u->local_tree_rootgoal)
+		if (u->local_tree_eval != LTE_EACH)
 			rval = sval;
 		else
 			rval = local_value(u, endb, node_coord(descent[di].node), color);
@@ -250,7 +250,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 
 	/* Add lnode for tenuki (pass) if we descended further. */
 	if (di < dlen) {
-		double rval = u->local_tree_rootgoal ? sval : 0.5;
+		double rval = u->local_tree_eval != LTE_EACH ? sval : 0.5;
 		LTREE_DEBUG fprintf(stderr, "pass ");
 		lnode = tree_get_node(t, lnode, pass, true);
 		assert(lnode);

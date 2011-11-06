@@ -562,7 +562,7 @@ uct_state_init(char *arg, struct board *b)
 	u->tenuki_d = 4;
 	u->local_tree_aging = 80;
 	u->local_tree_depth_decay = 1.5;
-	u->local_tree_rootgoal = true;
+	u->local_tree_eval = LTE_ROOT;
 	u->local_tree_neival = true;
 
 	u->max_slaves = -1;
@@ -901,18 +901,30 @@ uct_state_init(char *arg, struct board *b)
 				 * computed just based on terminal status
 				 * of the coordinate, but also its neighbors. */
 				u->local_tree_neival = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_rootgoal")) {
-				/* If enabled, all moves within a tree branch
-				 * are considered wrt. their merit reaching
-				 * tachtical goal of making the first move
-				 * in the branch survive. */
-				u->local_tree_rootgoal = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_eval")) {
+				/* How is the value inserted in the local tree
+				 * determined. */
+				if (!strcasecmp(optval, "root"))
+					/* All moves within a tree branch are
+					 * considered wrt. their merit
+					 * reaching tachtical goal of making
+					 * the first move in the branch
+					 * survive. */
+					u->local_tree_eval = LTE_ROOT;
+				else if (!strcasecmp(optval, "each"))
+					/* Each move is considered wrt.
+					 * its own survival. */
+					u->local_tree_eval = LTE_EACH;
+				else {
+					fprintf(stderr, "uct: unknown local_tree_eval %s\n", optval);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "local_tree_rootchoose")) {
 				/* If disabled, only moves within the local
 				 * tree branch are considered; the values
 				 * of the branch roots (i.e. root children)
 				 * are ignored. This may make sense together
-				 * with "rootgoal", we consider only moves
+				 * with eval!=each, we consider only moves
 				 * that influence the goal, not the "rating"
 				 * of the goal itself. (The real solution
 				 * will be probably using criticality to pick
