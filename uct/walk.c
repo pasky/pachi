@@ -223,12 +223,27 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	struct tree_node *lnode = seq_color == S_BLACK ? t->ltree_black : t->ltree_white;
 	lnode->u.playouts++;
 
+	/* ...determine the sequence value... */
 	double sval = 0.5;
 	if (u->local_tree_eval != LTE_EACH) {
 		sval = local_value(u, endb, node_coord(descent[di].node), seq_color);
 		LTREE_DEBUG fprintf(stderr, "(goal %s[%s %1.3f][%d]) ",
 			coord2sstr(node_coord(descent[di].node), t->board),
 			stone2str(seq_color), sval, descent[di].node->d);
+
+		if (u->local_tree_eval == LTE_TOTAL) {
+			int di0 = di;
+			while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
+				enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
+				double rval = local_value(u, endb, node_coord(descent[di].node), color);
+				if ((di - di0) % 2)
+					rval = 1 - rval;
+				sval += rval;
+				di++;
+			}
+			sval /= (di - di0 + 1);
+			di = di0;
+		}
 	}
 
 	/* ...and record the sequence. */

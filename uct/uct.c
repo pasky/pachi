@@ -915,6 +915,13 @@ uct_state_init(char *arg, struct board *b)
 					/* Each move is considered wrt.
 					 * its own survival. */
 					u->local_tree_eval = LTE_EACH;
+				else if (!strcasecmp(optval, "total"))
+					/* The tactical goal is the survival
+					 * of all the moves of my color and
+					 * non-survival of all the opponent
+					 * moves. Local values (and their
+					 * inverses) are averaged. */
+					u->local_tree_eval = LTE_TOTAL;
 				else {
 					fprintf(stderr, "uct: unknown local_tree_eval %s\n", optval);
 					exit(1);

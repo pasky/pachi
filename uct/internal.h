@@ -81,6 +81,7 @@ struct uct {
 	enum {
 		LTE_ROOT,
 		LTE_EACH,
+		LTE_TOTAL,
 	} local_tree_eval;
 	bool local_tree_rootchoose;
 
