@@ -19,8 +19,13 @@ moves and how they should be tested, one move per line, using this syntax:
 			no whitespaces
 	comment: Ignored by the testsuite.
 
-These classifications are available:
+These classifications are available for now:
 
 	bad	This move should not be chosen as the next move.
 	bad!	This move is so useless that it should not be in the top
 		considered moves. (This is a bit feeble class.)
+
+Example:
+
+	40 C3:bad non-working invasion
+	41 B2:bad,A1:bad makes C3 alive
