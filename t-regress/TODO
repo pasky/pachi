@@ -11,7 +11,7 @@ This list can be processed automatically:
 * http://files.gokgs.com/games/2011/6/5/pachi2-SimpleBot.sgf ladder
   pachi shouldn't play the broken ladders up to move 53
 
-* http://files.gokgs.com/games/2011/6/5/Zen19-pachi2.sgf semeai
+* http://files.gokgs.com/games/2011/6/5/Zen19-pachi2.sgf semeai falseeye
   should have won
  . move 185 S15 very dubious
 
@@ -26,7 +26,7 @@ This list can be processed automatically:
     will become an illegal move so pachi will evaluate this group
     100% alive and won't play at T2 such stupid move.
 
-* http://files.gokgs.com/games/2011/6/5/tazaki-pachi30s.sgf semeai
+* http://files.gokgs.com/games/2011/6/5/tazaki-pachi30s.sgf semeai falseeye
   pachi doesn't see even one move ahead in a semeai, it expects
   an answer outside the semeai. The score drops from 0.625 to 0.337:
 
@@ -100,12 +100,12 @@ kills above)
 * http://files.gokgs.com/games/2011/2/18/pachi2-tf-3.sgf seki
   lost because of unrecognized seki
 
-* http://files.gokgs.com/games/2011/6/9/botkiller2-pachi30s.sgf tsumego0
+* http://files.gokgs.com/games/2011/6/9/botkiller2-pachi30s.sgf falseeye
   threw away a won game. pachi thought until the end that top left
   white group was dead, so it made silly moves elsewhere.
   The playouts must be prevented from filling the eye at A17.
 
-* http://files.gokgs.com/games/2011/6/10/pachi30s-samba-2.sgf tsumego0
+* http://files.gokgs.com/games/2011/6/10/pachi30s-samba-2.sgf falseeye
   exactly the same problem as botkiller2-pachi30s.sgf:
   pachi considers the top left black group as unsettled
   although it is clearly alive. So it makes silly moves
@@ -130,7 +130,7 @@ kills above)
 * http://files.gokgs.com/games/2011/6/13/pachi30s-Jep.sgf ladder
   moves 102..108 playing a broken ladder
 
-* http://files.gokgs.com/games/2011/6/18/dorabon-pachi2-4.sgf semeai tsumego0
+* http://files.gokgs.com/games/2011/6/18/dorabon-pachi2-4.sgf semeai falseeye
   pachi considers the bottom left semeai won by black (but black
   loses it) and the bottom right as undecided (white is clearly
   alive). At move 270 L4 it still thinks it is leading by 80%
@@ -163,7 +163,7 @@ kills above)
 * http://files.gokgs.com/games/2011/7/3/pachi2-oasis7.sgf
   Passed even though a dead opponent group was marked alive.
 
-* http://files.gokgs.com/games/2011/7/28/pachi2-Novicer.sgf
+* http://files.gokgs.com/games/2011/7/28/pachi2-Novicer.sgf falseeye
   Pachi makes many stupid moves because it thinks the top left
   corner is unsettled although it is clearly alive. This shape
   (4 in a row) is so simple that it should get it right.
@@ -174,6 +174,7 @@ kills above)
   W 268 T9 should be T8
   W 292 A17 50%, W 294 R6 37% shows that top left was not
     evaluated correctly.
+  Also false eye evaluation problem in bottom left.
 
 * http://files.gokgs.com/games/2011/7/28/pachi2-pkunzip-2.sgf ladder
   W 132 C9, W 134 B8, W 136 A8 plays a broken ladder but win ratio 52%
@@ -203,7 +204,7 @@ kills above)
   lost even game against 3k. Win ratio drops from 61% at 117 N1
   to 49% at the next move. So pachi didn't evaluate the semai correctly.
 
-* http://files.gokgs.com/games/2011/8/12/xiaosugi-pachi2.sgf tsumego0
+* http://files.gokgs.com/games/2011/8/12/xiaosugi-pachi2.sgf falseeye
   Pachi hallucinated again on bottom right corner.
   This is the same problem as
     http://files.gokgs.com/games/2011/6/18/dorabon-pachi2-4.sgf
