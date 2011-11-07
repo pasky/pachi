@@ -2,7 +2,7 @@
 #
 # sgf2gtp - Convert SGF game record to GTP command stream
 #
-# Usage: sgf2gtp [FILENAME]
+# Usage: sgf2gtp [-n MOVENUM] [FILENAME]
 #
 # This is a naive Perl script that will convert SGF files to GTP
 # format so that you can feed them to Pachi, insert genmove at
@@ -11,8 +11,16 @@
 #
 # When called with a filename argument, it will create the output
 # file with .gtp extension instead of .sgf.
+#
+# -n MOVENUM: Output at most first MOVENUM moves.
 
 use warnings;
+
+my $maxmoves;
+if ($ARGV[0] and $ARGV[0] eq '-n') {
+	shift @ARGV;
+	$maxmoves = shift @ARGV;
+}
 
 if ($ARGV[0]) {
 	open STDIN, "$ARGV[0]" or die "$ARGV[0]: $!";
@@ -36,11 +44,22 @@ if ($sgf =~ s/\bHA\[(\d+)\]//gs and $1 > 0) {
 }
 
 my $abcd = "abcdefghijklmnopqrstuvwxyz";
+my $movenum = 0;
 
 my @m = split /;/, $sgf;
 foreach (@m) {
-	/^([BW])\[\]/ and print "play $1 pass";
-	/^([BW])\[(\w\w)\]/ or next;
+	$maxmoves and $movenum >= $maxmoves and last;
+
+	if (/^([BW])\[\]/) {
+		$movenum++;
+		print "play $1 pass";
+		next;
+	}
+	unless (/^([BW])\[(\w\w)\]/) {
+		next;
+	}
+	$movenum++;
+
 	my ($color, $coord) = ($1, $2);
 	my ($x, $y) = split //, $coord;
 	($x ge 'i') and $x++;
