@@ -4,10 +4,6 @@ This list can be processed automatically:
 
 	sed -ne 's/^\* //p' <TODO | while read r; do echo wget -O $(echo "$r" | sed 's#.*games/##' | tr / - | sed 's/-\([^-]\)-/-0\1-/g') "$r"; done
 
-* http://files.gokgs.com/games/2011/6/7/fidibus-pachi30s.sgf
-      move 91 T3 useless, wastes ko threat
-      move 189 B15 even worse
-
 * http://files.gokgs.com/games/2011/6/6/tyzef-pachi30s.sgf ladder
   pachi tries to run away from a losing ladder against a 7k in even
   game. The 7k, disgusted, passed then resigned.
