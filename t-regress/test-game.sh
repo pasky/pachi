@@ -10,10 +10,8 @@
 sgf="$1"
 
 sed -ne '/GC\[/,/\]/{ s/.*GC\[//; s/\].*//; p; }' <"$sgf" |
-	while read move class desc; do
-		moven="${move%:*}"
-		movec="${move#*:}"
-		echo "Move $moven ($movec)"
-		tools/sgf2gtp.pl -g -n $((moven-1)) <"$sgf" | ./pachi -d 4 -t =20000
-		echo "$class: $movec"
+	while read moven cases desc; do
+		echo "Examining move $moven"
+		tools/sgf2gtp.pl -g -n $((moven-1)) <"$sgf" | ./pachi -t =20000
+		echo "Testcases: $cases"
 	done

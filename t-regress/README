@@ -11,10 +11,10 @@ a GC[] tag ("game comment") describing the test-case in a manner that is
 both human-readable and machine-readable. The description lists specific
 moves and how they should be tested, one move per line, using this syntax:
 
-	<movenumber>@<movepos> <classification>[,<classification>,...] <comment>
+	<movenumber> <movepos>:<classification>[,<movepos>:<classification>,...] <comment>
 
 	movenumber: Number of the tested move
-	movepos: The original move coordinate (just for consistency)
+	movepos: A move coordinate (just for consistency)
 	classification: Comma-separated list of move classifications,
 			no whitespaces
 	comment: Ignored by the testsuite.
