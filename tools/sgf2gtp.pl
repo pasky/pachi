@@ -1,4 +1,9 @@
 #!/usr/bin/perl -l
+#
+# sgf2gtp - Convert SGF game record to GTP command stream
+#
+# Usage: sgf2gtp [FILENAME]
+#
 # This is a naive Perl script that will convert SGF files to GTP
 # format so that you can feed them to Pachi, insert genmove at
 # the right places etc. Might not work on obscure SGF files,
