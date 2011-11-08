@@ -248,7 +248,8 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 
 	/* ...and record the sequence. */
 	int di0 = di;
-	while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
+	while (di < dlen && !is_pass(node_coord(descent[di].node))
+	       && (di == di0 || descent[di].node->d < u->tenuki_d)) {
 		enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
 		double rval;
 		if (u->local_tree_eval != LTE_EACH)
