@@ -173,7 +173,7 @@ tree_leaf_node(struct tree_node *node)
 }
 
 static inline floating_t
-tree_node_criticality(struct tree *t, struct tree_node *node)
+tree_node_criticality(const struct tree *t, const struct tree_node *node)
 {
 	/* cov(player_gets, player_wins) =
 	 * [The argument: If 'gets' and 'wins' is uncorrelated, b_gets * b_wins
