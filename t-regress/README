@@ -1,0 +1,31 @@
+This is Pachi's regression suite. It contains SGF game records that can
+be automatically probed with current Pachi version for particular
+behavior (usually observed in older Pachi versions). We do not anticipate
+that Pachi would pass all of the tests - when it will, it will be probably
+pro strength. ;-) The goal is simply to steadily reduce these and verify
+that modifications do not reintroduce bad behavior.
+
+The game SGF records are in the games/ subdirectory, and also cross-linked
+in by-*/ subdirectories based on categories. Each SGF record must contain
+a GC[] tag ("game comment") describing the test-case in a manner that is
+both human-readable and machine-readable. The description lists specific
+moves and how they should be tested, one move per line, using this syntax:
+
+	<movenumber> <movepos>:<classification>[,<movepos>:<classification>,...] <comment>
+
+	movenumber: Number of the tested move
+	movepos: A move coordinate (just for consistency)
+	classification: Comma-separated list of move classifications,
+			no whitespaces
+	comment: Ignored by the testsuite.
+
+These classifications are available for now:
+
+	bad	This move should not be chosen as the next move.
+	bad!	This move is so useless that it should not be in the top
+		considered moves. (This is a bit feeble class.)
+
+Example:
+
+	40 C3:bad non-working invasion
+	41 B2:bad,A1:bad makes C3 alive

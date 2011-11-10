@@ -131,22 +131,11 @@ play_random_game(struct playout_setup *setup,
 		if (unlikely(is_pass(coord))) {
 			passes++;
 		} else {
-			/* We don't care about nakade counters, since we want
-			 * to avoid taking pre-nakade moves into account only
-			 * if they happenned in the tree before nakade nodes;
-			 * but this is always out of the tree. */
-			if (amafmap) {
-				if (amafmap->map[coord] == S_NONE || amafmap->map[coord] == color)
-					amafmap->map[coord] = color;
-				else if (amafmap->record_nakade)
-					amaf_op(amafmap->map[coord], +);
-				amafmap->game[amafmap->gamelen].coord = coord;
-				amafmap->game[amafmap->gamelen].color = color;
-				amafmap->gamelen++;
-				assert(amafmap->gamelen < sizeof(amafmap->game) / sizeof(amafmap->game[0]));
-			}
-
 			passes = 0;
+		}
+		if (amafmap) {
+			assert(amafmap->gamelen < MAX_GAMELEN);
+			amafmap->game[amafmap->gamelen++] = coord;
 		}
 
 		if (setup->mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup->mercymin)

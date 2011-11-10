@@ -78,14 +78,11 @@ board_local_value(bool scan_neis, struct board *b, coord_t coord, enum stone col
 		mcolor = board_get_one_point_eye(b, coord);
 
 	if (scan_neis) {
-		/* Count surrounding friendly stones... */
-		int friends = neighbor_count_at(b, coord, color) + neighbor_count_at(b, coord, S_OFFBOARD);
-		/* ...and also our eyes. */
-		if (immediate_liberty_count(b, coord) > 0) {
-			foreach_neighbor(b, coord, {
-				friends += board_is_one_point_eye(b, c, color);
-			});
-		}
+		/* Count surrounding friendly stones and our eyes. */
+		int friends = 0;
+		foreach_neighbor(b, coord, {
+			friends += board_at(b, c) == color || board_at(b, c) == S_OFFBOARD || board_is_one_point_eye(b, c, color);
+		});
 		return (double) (2 * (mcolor == color) + friends) / 6.f;
 	} else {
 		return (mcolor == color) ? 1.f : 0.f;

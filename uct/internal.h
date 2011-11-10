@@ -33,7 +33,7 @@ struct uct {
 	bool pass_all_alive; /* Current value */
 	bool territory_scoring;
 	int expand_p;
-	bool playout_amaf, playout_amaf_nakade;
+	bool playout_amaf;
 	bool amaf_prior;
 	int playout_amaf_cutoff;
 	int dumpthres;
@@ -55,6 +55,8 @@ struct uct {
 	bool pondering_opt; /* User wants pondering */
 	bool pondering; /* Actually pondering now */
 	bool slave; /* Act as slave in distributed engine. */
+	int max_slaves; /* Optional, -1 if not set */
+	int slave_index; /* 0..max_slaves-1, or -1 if not set */
 	enum stone my_color;
 
 	int fuseki_end;
@@ -76,7 +78,11 @@ struct uct {
 	floating_t local_tree_depth_decay;
 	bool local_tree_allseq;
 	bool local_tree_neival;
-	bool local_tree_rootgoal;
+	enum {
+		LTE_ROOT,
+		LTE_EACH,
+		LTE_TOTAL,
+	} local_tree_eval;
 	bool local_tree_rootchoose;
 
 	char *banner;

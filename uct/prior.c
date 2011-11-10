@@ -241,12 +241,11 @@ uct_prior_init(char *arg, struct board *b)
 	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex * -p->plugin_eqex / 100;
 
 	if (p->cfgdn < 0) {
-		const int near = p->eqex*2;
-		const int far = board_large(b) ? p->eqex*3/2 : p->eqex;
-		int bonuses[] = { 0, near, far, far };
+		static int large_bonuses[] = { 0, 55, 50, 15 };
+		static int small_bonuses[] = { 0, 45, 40, 15 };
 		p->cfgdn = 3;
 		p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
-		memcpy(p->cfgd_eqex, bonuses, sizeof(bonuses));
+		memcpy(p->cfgd_eqex, board_large(b) ? large_bonuses : small_bonuses, sizeof(large_bonuses));
 	}
 	if (p->cfgdn > TREE_NODE_D_MAX) {
 		fprintf(stderr, "uct: CFG distances only up to %d available\n", TREE_NODE_D_MAX);

@@ -1,4 +1,9 @@
 #!/usr/bin/perl -l
+#
+# sgf2gtp - Convert SGF game record to GTP command stream
+#
+# Usage: sgf2gtp [-g] [-n MOVENUM] [FILENAME]
+#
 # This is a naive Perl script that will convert SGF files to GTP
 # format so that you can feed them to Pachi, insert genmove at
 # the right places etc. Might not work on obscure SGF files,
@@ -6,8 +11,23 @@
 #
 # When called with a filename argument, it will create the output
 # file with .gtp extension instead of .sgf.
+#
+# -g: Automatically append genmove command for the other color.
+# -n MOVENUM: Output at most first MOVENUM moves.
 
 use warnings;
+
+my $genmove;
+if ($ARGV[0] and $ARGV[0] eq '-g') {
+	shift @ARGV;
+	$genmove = 1;
+}
+
+my $maxmoves;
+if ($ARGV[0] and $ARGV[0] eq '-n') {
+	shift @ARGV;
+	$maxmoves = shift @ARGV;
+}
 
 if ($ARGV[0]) {
 	open STDIN, "$ARGV[0]" or die "$ARGV[0]: $!";
@@ -31,14 +51,33 @@ if ($sgf =~ s/\bHA\[(\d+)\]//gs and $1 > 0) {
 }
 
 my $abcd = "abcdefghijklmnopqrstuvwxyz";
+my $movenum = 0;
+my $last_color = 'w';
 
 my @m = split /;/, $sgf;
 foreach (@m) {
-	/^([BW])\[\]/ and print "play $1 pass";
-	/^([BW])\[(\w\w)\]/ or next;
+	$maxmoves and $movenum >= $maxmoves and last;
+
+	if (/^([BW])\[\]/) {
+		$last_color = $1;
+		$movenum++;
+		print "play $1 pass";
+		next;
+	}
+	unless (/^([BW])\[(\w\w)\]/) {
+		next;
+	}
+
 	my ($color, $coord) = ($1, $2);
 	my ($x, $y) = split //, $coord;
 	($x ge 'i') and $x++;
 	$y = $size - index($abcd, $y);
+
+	$last_color = $color;
+	$movenum++;
 	print "play $color $x$y";
+}
+
+if ($genmove) {
+	print "genmove ".(uc $last_color eq 'W' ? 'B' : 'W');
 }

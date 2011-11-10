@@ -30,7 +30,7 @@
 #include "uct/walk.h"
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
-struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg);
+struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board);
 static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color);
 
 /* Maximal simulation length. */
@@ -533,13 +533,12 @@ uct_state_init(char *arg, struct board *b)
 	u->debug_level = debug_level;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
-	u->sure_win_threshold = 0.85;
+	u->sure_win_threshold = 0.9;
 	u->mercymin = 0;
 	u->significant_threshold = 50;
-	u->expand_p = 2;
+	u->expand_p = 8;
 	u->dumpthres = 1000;
 	u->playout_amaf = true;
-	u->playout_amaf_nakade = false;
 	u->amaf_prior = false;
 	u->max_tree_size = 1408ULL * 1048576;
 	u->fast_alloc = true;
@@ -557,16 +556,18 @@ uct_state_init(char *arg, struct board *b)
 	u->best2_ratio = 2.5;
 	u->max_maintime_ratio = 3.0;
 
-	u->val_scale = 0.04; u->val_points = 40;
+	u->val_scale = 0; u->val_points = 40;
 	u->dynkomi_interval = 1000;
 	u->dynkomi_mask = S_BLACK | S_WHITE;
 
 	u->tenuki_d = 4;
 	u->local_tree_aging = 80;
 	u->local_tree_depth_decay = 1.5;
-	u->local_tree_rootgoal = true;
+	u->local_tree_eval = LTE_ROOT;
 	u->local_tree_neival = true;
 
+	u->max_slaves = -1;
+	u->slave_index = -1;
 	u->stats_delay = 0.01; // 10 ms
 
 	u->plugins = pluginset_init(b);
@@ -660,7 +661,7 @@ uct_state_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "ucb1")) {
 					*p = policy_ucb1_init(u, policyarg);
 				} else if (!strcasecmp(optval, "ucb1amaf")) {
-					*p = policy_ucb1amaf_init(u, policyarg);
+					*p = policy_ucb1amaf_init(u, policyarg, b);
 				} else {
 					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
 					exit(1);
@@ -727,15 +728,6 @@ uct_state_init(char *arg, struct board *b)
 					u->playout_amaf = false;
 				else
 					u->playout_amaf = true;
-			} else if (!strcasecmp(optname, "playout_amaf_nakade")) {
-				/* Whether to include nakade moves from playouts
-				 * in the AMAF statistics; this tends to nullify
-				 * the playout_amaf effect by adding too much
-				 * noise. */
-				if (optval && *optval == '0')
-					u->playout_amaf_nakade = false;
-				else
-					u->playout_amaf_nakade = true;
 			} else if (!strcasecmp(optname, "playout_amaf_cutoff") && optval) {
 				/* Keep only first N% of playout stage AMAF
 				 * information. */
@@ -837,9 +829,8 @@ uct_state_init(char *arg, struct board *b)
 				if (!strcasecmp(optval, "none")) {
 					u->dynkomi = uct_dynkomi_init_none(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "linear")) {
-					/* You should set dynkomi_mask=1
-					 * since this doesn't work well
-					 * for white handicaps! */
+					/* You should set dynkomi_mask=1 or a very low
+					 * handicap_value for white. */
 					u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
 				} else if (!strcasecmp(optval, "adaptive")) {
 					/* There are many more knobs to
@@ -851,9 +842,8 @@ uct_state_init(char *arg, struct board *b)
 				}
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
-				 * for dynkomi be applied; you may want
-				 * to use dynkomi_mask=3 to allow dynkomi
-				 * even in games where Pachi is white. */
+				 * for dynkomi be applied; the default dynkomi_mask=3 allows
+				 * dynkomi even in games where Pachi is white. */
 				u->dynkomi_mask = atoi(optval);
 			} else if (!strcasecmp(optname, "dynkomi_interval") && optval) {
 				/* If non-zero, re-adjust dynamic komi
@@ -912,18 +902,37 @@ uct_state_init(char *arg, struct board *b)
 				 * computed just based on terminal status
 				 * of the coordinate, but also its neighbors. */
 				u->local_tree_neival = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_rootgoal")) {
-				/* If enabled, all moves within a tree branch
-				 * are considered wrt. their merit reaching
-				 * tachtical goal of making the first move
-				 * in the branch survive. */
-				u->local_tree_rootgoal = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "local_tree_eval")) {
+				/* How is the value inserted in the local tree
+				 * determined. */
+				if (!strcasecmp(optval, "root"))
+					/* All moves within a tree branch are
+					 * considered wrt. their merit
+					 * reaching tachtical goal of making
+					 * the first move in the branch
+					 * survive. */
+					u->local_tree_eval = LTE_ROOT;
+				else if (!strcasecmp(optval, "each"))
+					/* Each move is considered wrt.
+					 * its own survival. */
+					u->local_tree_eval = LTE_EACH;
+				else if (!strcasecmp(optval, "total"))
+					/* The tactical goal is the survival
+					 * of all the moves of my color and
+					 * non-survival of all the opponent
+					 * moves. Local values (and their
+					 * inverses) are averaged. */
+					u->local_tree_eval = LTE_TOTAL;
+				else {
+					fprintf(stderr, "uct: unknown local_tree_eval %s\n", optval);
+					exit(1);
+				}
 			} else if (!strcasecmp(optname, "local_tree_rootchoose")) {
 				/* If disabled, only moves within the local
 				 * tree branch are considered; the values
 				 * of the branch roots (i.e. root children)
 				 * are ignored. This may make sense together
-				 * with "rootgoal", we consider only moves
+				 * with eval!=each, we consider only moves
 				 * that influence the goal, not the "rating"
 				 * of the goal itself. (The real solution
 				 * will be probably using criticality to pick
@@ -950,6 +959,12 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "slave")) {
 				/* Act as slave for the distributed engine. */
 				u->slave = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "slave_index") && optval) {
+				/* Optional index if per-slave behavior is desired.
+				 * Must be given as index/max */
+				u->slave_index = atoi(optval);
+				char *p = strchr(optval, '/');
+				if (p) u->max_slaves = atoi(++p);
 			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
 				/* Share at most shared_nodes between master and slave at each genmoves.
 				 * Must use the same value in master and slaves. */
@@ -973,7 +988,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->policy)
-		u->policy = policy_ucb1amaf_init(u, NULL);
+		u->policy = policy_ucb1amaf_init(u, NULL, b);
 
 	if (!!u->random_policy_chance ^ !!u->random_policy) {
 		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
@@ -1018,7 +1033,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->dynkomi)
-		u->dynkomi = uct_dynkomi_init_adaptive(u, NULL, b);
+		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */

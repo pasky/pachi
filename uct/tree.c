@@ -612,8 +612,8 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	} foreach_free_point_end;
 	uct_prior(u, node, &map);
 
-	/* Now, create the nodes. */
-	struct tree_node *ni = tree_alloc_node(t, child_count, t->nodes);
+	/* Now, create the nodes (all at once if fast_alloc) */
+	struct tree_node *ni = t->nodes ? tree_alloc_node(t, child_count, true) : tree_alloc_node(t, 1, false);
 	/* In fast_alloc mode we might temporarily run out of nodes but this should be rare. */
 	if (!ni) {
 		node->is_expanded = false;
@@ -650,17 +650,13 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 				continue;
 			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
 
-			struct tree_node *nj = first_child + child++;
+			struct tree_node *nj = t->nodes ? first_child + child++ : tree_alloc_node(t, 1, false);
 			tree_setup_node(t, nj, c, node->depth + 1);
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
 			ni->prior = map.prior[c];
 			ni->d = distances[c];
 		}
-	}
-	if (b->symmetry.type == SYM_NONE && child != child_count) {
-		fprintf(stderr, "child %d child_count %d\n", child, child_count);
-		assert(child == child_count);
 	}
 	node->children = first_child; // must be done at the end to avoid race
 }
