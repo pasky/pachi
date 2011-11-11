@@ -182,18 +182,12 @@ libmap_mq_print(struct libmap_mq *q, struct board *b, char *label)
 }
 
 
-static inline coord_t
-libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
+static inline int
+libmap_queue_mqpick_threshold(struct libmap_hash *lm, struct libmap_mq *q)
 {
-	if (!q->mq.moves)
-		return pass; // nothing to do
-	unsigned int p = 0;
-	if (q->mq.moves == 1)
-		goto pick;
-
 	/* Pick random move, up to a simple check - if a move has tactical
 	 * rating lower than threshold, prefer another. */
-	p = fast_random(q->mq.moves);
+	int p = fast_random(q->mq.moves);
 	if (lm && fast_random(100) >= libmap_config.pick_epsilon) {
 		bool found = false;
 		unsigned int pp = p;
@@ -208,10 +202,22 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 		} while (++p % q->mq.moves < pp);
 		p %= q->mq.moves;
 		if (!found && libmap_config.avoid_bad)
-			return pass;
+			return -1;
 	}
+	return p;
+}
 
-pick:
+static inline coord_t
+libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
+{
+	if (!q->mq.moves)
+		return pass; // nothing to do
+	unsigned int p = 0;
+	if (q->mq.moves > 1)
+		p = libmap_queue_mqpick_threshold(lm, q);
+	if (p < 0)
+		return pass;
+
 	if (lm) {
 		struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
 		libmap_mq_add(&lm->queue, m, q->mq.tag[p], q->group[p]);
