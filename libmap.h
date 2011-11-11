@@ -122,6 +122,8 @@ static coord_t libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q);
 void libmap_queue_process(struct libmap_hash *lm, struct board *b, enum stone winner);
 /* Add a result to the hashed statistics. */
 void libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move, floating_t result, int playouts);
+/* Get libmap context of a given group. */
+static struct libmap_context *libmap_group_context(struct libmap_hash *lm, hash_t hash);
 /* Get statistics of particular move in given libmap structure. */
 static struct move_stats *libmap_move_stats(struct libmap_hash *lm, hash_t hash, struct move move);
 /* Get statistics of particular move on given board. */
@@ -232,9 +234,8 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 	return q->mq.move[p];
 }
 
-
-static inline struct move_stats *
-libmap_move_stats(struct libmap_hash *lm, hash_t hash, struct move move)
+static inline struct libmap_context *
+libmap_group_context(struct libmap_hash *lm, hash_t hash)
 {
 	hash_t ih;
 	for (ih = hash; lm->hash[ih & libmap_hash_mask].hash != hash; ih++) {
@@ -243,7 +244,14 @@ libmap_move_stats(struct libmap_hash *lm, hash_t hash, struct move move)
 		if (ih >= hash + libmap_hash_maxline)
 			return NULL;
 	}
-	struct libmap_context *lc = &lm->hash[ih & libmap_hash_mask];
+	return &lm->hash[ih & libmap_hash_mask];
+}
+
+static inline struct move_stats *
+libmap_move_stats(struct libmap_hash *lm, hash_t hash, struct move move)
+{
+	struct libmap_context *lc = libmap_group_context(lm, hash);
+	if (!lc) return NULL;
 	for (int i = 0; i < lc->moves; i++) {
 		if (lc->move[i].move.coord == move.coord
 		    && lc->move[i].move.color == move.color)
