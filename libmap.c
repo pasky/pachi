@@ -79,11 +79,11 @@ libmap_setup(char *arg)
 			if (strchr(optval, 'x'))
 				libmap_config.counterattack |= LMC_DEFENSE_ATTACK;
 		} else if (!strcasecmp(optname, "eval") && optval) {
-			if (strcasecmp(optval, "local")) {
+			if (!strcasecmp(optval, "local")) {
 				libmap_config.eval = LME_LOCAL;
-			} else if (strcasecmp(optval, "lvalue")) {
+			} else if (!strcasecmp(optval, "lvalue")) {
 				libmap_config.eval = LME_LVALUE;
-			} else if (strcasecmp(optval, "global")) {
+			} else if (!strcasecmp(optval, "global")) {
 				libmap_config.eval = LME_GLOBAL;
 			} else {
 				fprintf(stderr, "Invalid libmap:eval value %s\n", optval);
