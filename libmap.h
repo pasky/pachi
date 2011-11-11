@@ -40,7 +40,7 @@ extern struct libmap_config {
 	/* Exploration coefficient for the bandit. */
 	floating_t explore_p;
 	/* Default prior for considered moves. */
-	struct move_stats prior;
+	struct move_stats prior, tenuki_prior;
 
 	/* Whether to merge records for the same move taking care
 	 * of different groups within the move queue. */
@@ -240,7 +240,7 @@ libmap_queue_mqpick_ucb(struct libmap_hash *lm, struct libmap_mq *q)
 		/* TODO: Consider all moves of this group,
 		 * not just mq contents. */
 		struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
-		struct move_stats s = libmap_config.prior;
+		struct move_stats s = !is_pass(m.coord) ? libmap_config.prior : libmap_config.tenuki_prior;
 		struct move_stats *ms = libmap_move_stats(lm, q->group[p].hash, m);
 		if (ms) stats_merge(&s, ms);
 

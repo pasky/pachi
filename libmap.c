@@ -41,6 +41,7 @@ struct libmap_config libmap_config = {
 
 	.explore_p = 0.2,
 	.prior = { .value = 0.5, .playouts = 1 },
+	.tenuki_prior = { .value = 0.4, .playouts = 1 },
 
 	.mq_merge_groups = true,
 	.counterattack = LMC_DEFENSE | LMC_ATTACK | LMC_DEFENSE_ATTACK,
@@ -86,6 +87,10 @@ libmap_setup(char *arg)
 			libmap_config.prior.value = atof(optval);
 			optval += strcspn(optval, "x") + 1;
 			libmap_config.prior.playouts = atoi(optval);
+		} else if (!strcasecmp(optname, "tenuki_prior") && optval && strchr(optval, 'x')) {
+			libmap_config.tenuki_prior.value = atof(optval);
+			optval += strcspn(optval, "x") + 1;
+			libmap_config.tenuki_prior.playouts = atoi(optval);
 
 		} else if (!strcasecmp(optname, "mq_merge_groups")) {
 			libmap_config.mq_merge_groups = !optval || atoi(optval);
