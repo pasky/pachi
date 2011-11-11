@@ -58,6 +58,8 @@ extern struct libmap_config {
 		LME_LVALUE,
 		LME_GLOBAL,
 	} eval;
+	/* Whether to also try and track tenuki moves. */
+	bool tenuki;
 } libmap_config;
 
 void libmap_setup(char *arg);
@@ -263,6 +265,28 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 {
 	if (!q->mq.moves)
 		return pass; // nothing to do
+
+	/* Create a list of groups involved in the MQ. */
+	struct libmap_group *groups[MQL];
+	unsigned int groups_n = 0;
+	if (libmap_config.tenuki) {
+		for (unsigned int i = 0; i < q->mq.moves; i++) {
+			for (unsigned int j = 0; j < groups_n; j++)
+				if (q->group[i].hash == groups[j]->hash)
+					goto g_next_move;
+			groups[groups_n++] = &q->group[i];
+g_next_move:;
+		}
+	}
+
+	/* Add tenuki move for each libmap group to the list of candidates. */
+	/* XXX: Can the color vary within the queue? */
+	if (libmap_config.tenuki) {
+		struct move tenuki = { .coord = pass, .color = q->color[0] };
+		for (unsigned int i = 0; i < groups_n; i++)
+			libmap_mq_add(q, tenuki, 0 /* XXX */, *groups[i]);
+	}
+
 	unsigned int p = 0;
 	if (q->mq.moves > 1) {
 		if (lm) {

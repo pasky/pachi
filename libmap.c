@@ -112,6 +112,8 @@ libmap_setup(char *arg)
 				fprintf(stderr, "Invalid libmap:eval value %s\n", optval);
 				exit(1);
 			}
+		} else if (!strcasecmp(optname, "tenuki")) {
+			libmap_config.tenuki = !optval || atoi(optval);
 		} else {
 			fprintf(stderr, "Invalid libmap argument %s or missing value\n", optname);
 			exit(1);
