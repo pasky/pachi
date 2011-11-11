@@ -188,22 +188,23 @@ libmap_queue_mqpick_threshold(struct libmap_hash *lm, struct libmap_mq *q)
 	/* Pick random move, up to a simple check - if a move has tactical
 	 * rating lower than threshold, prefer another. */
 	int p = fast_random(q->mq.moves);
-	if (lm && fast_random(100) >= libmap_config.pick_epsilon) {
-		bool found = false;
-		unsigned int pp = p;
-		do {
-			int pm = p % q->mq.moves;
-			struct move m = { .coord = q->mq.move[pm], .color = q->color[pm] };
-			struct move_stats *ms = libmap_move_stats(lm, q->group[pm].hash, m);
-			if (!ms || ms->value >= libmap_config.pick_threshold) {
-				found = true;
-				break;
-			}
-		} while (++p % q->mq.moves < pp);
-		p %= q->mq.moves;
-		if (!found && libmap_config.avoid_bad)
-			return -1;
-	}
+	if (fast_random(100) < libmap_config.pick_epsilon)
+		return p;
+
+	bool found = false;
+	unsigned int pp = p;
+	do {
+		int pm = p % q->mq.moves;
+		struct move m = { .coord = q->mq.move[pm], .color = q->color[pm] };
+		struct move_stats *ms = libmap_move_stats(lm, q->group[pm].hash, m);
+		if (!ms || ms->value >= libmap_config.pick_threshold) {
+			found = true;
+			break;
+		}
+	} while (++p % q->mq.moves < pp);
+	p %= q->mq.moves;
+	if (!found && libmap_config.avoid_bad)
+		return -1;
 	return p;
 }
 
@@ -213,8 +214,13 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 	if (!q->mq.moves)
 		return pass; // nothing to do
 	unsigned int p = 0;
-	if (q->mq.moves > 1)
-		p = libmap_queue_mqpick_threshold(lm, q);
+	if (q->mq.moves > 1) {
+		if (lm) {
+			p = libmap_queue_mqpick_threshold(lm, q);
+		} else {
+			p = fast_random(q->mq.moves);
+		}
+	}
 	if (p < 0)
 		return pass;
 
