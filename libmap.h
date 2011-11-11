@@ -12,12 +12,20 @@
 #include "mq.h"
 #include "stats.h"
 
+#define LM_DEBUG if (0)
+
 hash_t group_to_libmap(struct board *b, group_t group);
 
 
 /* Setup of everything libmap-related. */
 
 extern struct libmap_config {
+	enum {
+		LMP_THRESHOLD,
+		LMP_UCB,
+	} pick_mode;
+
+	/* LMP_THRESHOLD: */
 	/* Preference for moves of tactical rating over this threshold
 	 * (...or unrated moves). */
 	floating_t pick_threshold;
@@ -27,6 +35,13 @@ extern struct libmap_config {
 	/* Whether to rather skip this heuristic altogether than play
 	 * badly performing move. */
 	bool avoid_bad;
+
+	/* LMP_UCB: */
+	/* Exploration coefficient for the bandit. */
+	floating_t explore_p;
+	/* Default prior for considered moves. */
+	struct move_stats prior;
+
 	/* Whether to merge records for the same move taking care
 	 * of different groups within the move queue. */
 	bool mq_merge_groups;
@@ -210,6 +225,39 @@ libmap_queue_mqpick_threshold(struct libmap_hash *lm, struct libmap_mq *q)
 	return p;
 }
 
+static inline int
+libmap_queue_mqpick_ucb(struct libmap_hash *lm, struct libmap_mq *q)
+{
+	int best_p = -1;
+	floating_t best_urgency = -9999;
+	LM_DEBUG fprintf(stderr, "\tBandit: ");
+
+	for (unsigned int p = 0; p < q->mq.moves; p++) {
+		struct libmap_context *lc = libmap_group_context(lm, q->group[p].hash);
+
+		/* TODO: Consider all moves of this group,
+		 * not just mq contents. */
+		struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
+		struct move_stats s = libmap_config.prior;
+		struct move_stats *ms = libmap_move_stats(lm, q->group[p].hash, m);
+		if (ms) stats_merge(&s, ms);
+
+		int group_moves = s.playouts;
+		if (lc) group_moves += lc->moves;
+
+		floating_t urgency = s.value + libmap_config.explore_p * sqrt(log(group_moves) / s.playouts);
+		LM_DEBUG fprintf(stderr, "%s[%.3f=%.3fx(%d/%d)] ", coord2sstr(m.coord, lm->b), urgency, s.value, group_moves, s.playouts);
+		if (urgency > best_urgency) {
+			best_p = (int) p;
+			best_urgency = urgency;
+		}
+	}
+
+	assert(best_p >= 0);
+	LM_DEBUG fprintf(stderr, "\t=> %s\n", coord2sstr(q->mq.move[best_p], lm->b));
+	return best_p;
+}
+
 static inline coord_t
 libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 {
@@ -218,7 +266,14 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
 	unsigned int p = 0;
 	if (q->mq.moves > 1) {
 		if (lm) {
-			p = libmap_queue_mqpick_threshold(lm, q);
+			switch (libmap_config.pick_mode) {
+			case LMP_THRESHOLD:
+				p = libmap_queue_mqpick_threshold(lm, q);
+				break;
+			case LMP_UCB:
+				p = libmap_queue_mqpick_ucb(lm, q);
+				break;
+			}
 		} else {
 			p = fast_random(q->mq.moves);
 		}

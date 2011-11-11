@@ -35,8 +35,13 @@ group_to_libmap(struct board *b, group_t group)
 
 
 struct libmap_config libmap_config = {
+	.pick_mode = LMP_THRESHOLD,
 	.pick_threshold = 0.7,
 	.pick_epsilon = 10,
+
+	.explore_p = 0.2,
+	.prior = { .value = 0.5, .playouts = 1 },
+
 	.mq_merge_groups = true,
 	.counterattack = LMC_DEFENSE | LMC_ATTACK | LMC_DEFENSE_ATTACK,
 	.eval = LME_LVALUE,
@@ -58,12 +63,30 @@ libmap_setup(char *arg)
 		char *optval = strchr(optspec, '=');
 		if (optval) *optval++ = 0;
 
-		if (!strcasecmp(optname, "pick_threshold") && optval) {
+		if (!strcasecmp(optname, "pick_mode") && optval) {
+			if (!strcasecmp(optval, "threshold")) {
+				libmap_config.pick_mode = LMP_THRESHOLD;
+			} else if (!strcasecmp(optval, "ucb")) {
+				libmap_config.pick_mode = LMP_UCB;
+			} else {
+				fprintf(stderr, "Invalid libmap:pick_mode value %s\n", optval);
+				exit(1);
+			}
+
+		} else if (!strcasecmp(optname, "pick_threshold") && optval) {
 			libmap_config.pick_threshold = atof(optval);
 		} else if (!strcasecmp(optname, "pick_epsilon") && optval) {
 			libmap_config.pick_epsilon = atoi(optval);
 		} else if (!strcasecmp(optname, "avoid_bad")) {
 			libmap_config.avoid_bad = !optval || atoi(optval);
+
+		} else if (!strcasecmp(optname, "explore_p") && optval) {
+			libmap_config.explore_p = atof(optval);
+		} else if (!strcasecmp(optname, "prior") && optval && strchr(optval, 'x')) {
+			libmap_config.prior.value = atof(optval);
+			optval += strcspn(optval, "x") + 1;
+			libmap_config.prior.playouts = atoi(optval);
+
 		} else if (!strcasecmp(optname, "mq_merge_groups")) {
 			libmap_config.mq_merge_groups = !optval || atoi(optval);
 		} else if (!strcasecmp(optname, "counterattack") && optval) {
