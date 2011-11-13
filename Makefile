@@ -51,10 +51,12 @@ CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-com
 
 ifdef MAC
 	SYS_CFLAGS=-DNO_THREAD_LOCAL
-	LDFLAGS=-lm -pthread -ldl -rdynamic
+	LDFLAGS=-pthread -rdynamic
+	LIBS=-lm -ldl
 else
 	SYS_CFLAGS=-march=native
-	LDFLAGS=-lm -pthread -lrt -ldl -rdynamic
+	LDFLAGS=-pthread -rdynamic
+	LIBS=-lm -lrt -ldl
 endif
 
 ifdef DOUBLE
@@ -68,7 +70,7 @@ else
 	# Whee, an extra register!
 	CUSTOM_CFLAGS+=-fomit-frame-pointer
 ifeq ($(PROFILING), perftools)
-	LDFLAGS+=-lprofiler
+	LIBS+=-lprofiler
 endif
 endif
 
