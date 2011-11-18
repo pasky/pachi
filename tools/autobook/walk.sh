@@ -4,9 +4,9 @@
 
 # Config:
 # After how many visits (including prior_sims!) a node is expanded.
-expand_sims=18
+expand_sims=26
 # Virtual loss
-vloss=8
+vloss=4
 # Twogtp path
 twogtp_path=/home/pasky/gogui-1.3.2/bin/gogui-twogtp
 

@@ -10,7 +10,7 @@ export SEQDIR=$(mktemp -d)
 
 if [ ! -d "$3" ]; then
 	mkdir "$3"
-	{ echo 8; echo 16; } >"$3"/stats
+	{ echo 12; echo 24; } >"$3"/stats
 fi
 
 while true; do

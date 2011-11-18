@@ -4,7 +4,7 @@
 
 # Config:
 # Prior value weight:
-priorsims=16
+priorsims=24
 
 # Expected env:
 # $CMDDIR
