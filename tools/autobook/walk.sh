@@ -18,7 +18,7 @@ pachi="$1"; shift
 opponent="$1"
 
 seq=""
-color=B
+color=W
 while true; do
 	{ read wins; read sims; } <stats
 	xsims=$((sims+vloss))
@@ -42,14 +42,14 @@ while true; do
 
 	move=$("$CMDDIR"/eval.sh)
 
-	sgfmove=$(echo "$move" | perl -nle 'my ($x,$y) = /(.)(.)/; $x=lc($x); $x=chr(ord($x)-1) if ord(lc $x) > ord("i"); $y = chr(96+10-$y); print "$x$y"')
-	seq="$seq;${color}[$sgfmove]"
-
 	cd "$move"
 	case $color in
 		B) color=W;;
 		W) color=B;;
 	esac
+
+	sgfmove=$(echo "$move" | perl -nle 'my ($x,$y) = /(.)(.)/; $x=lc($x); $x=chr(ord($x)-1) if ord(lc $x) > ord("i"); $y = chr(96+10-$y); print "$x$y"')
+	seq="$seq;${color}[$sgfmove]"
 done
 
 echo "   *** Sequence: $seq"
