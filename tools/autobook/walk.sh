@@ -52,7 +52,7 @@ while true; do
 	esac
 done
 
-echo "*** Sequence: $seq"
+echo "   *** Sequence: $seq"
 echo "(;FF[4]GM[1]CA[UTF-8]RU[Chinese]SZ[9]HA[0]KM[7.5]PW[white]PB[black]$seq)" >"$SEQDIR/a.sgf"
 rm -f "$SEQDIR"/r*
 
@@ -69,12 +69,15 @@ case $wincolor in
 	B) result=1;;
 	W) result=0;;
 esac
+echo "   *** Result: $wincolor wins => $result"
+pwd; ls
 
 while [ -e stats ]; do
 	case $color in
 		B) nresult=$result;;
 		W) nresult=$((1-result));
 	esac
+	echo "    + Recording $nresult .. $(pwd) color $color"
 
 	{ read wins; read sims; } <stats
 	wins=$((${wins%.*}+nresult))
