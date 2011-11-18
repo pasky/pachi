@@ -27,5 +27,3 @@ The built autobook can be converted to an opening book in the fbook
 format (on the most-simulated basis) using:
 
 	autobook2fbook.sh BOOKDIR
-
-(TODO)
