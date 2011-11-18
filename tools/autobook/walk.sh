@@ -56,13 +56,16 @@ echo "   *** Sequence: $seq"
 echo "(;FF[4]GM[1]CA[UTF-8]RU[Chinese]SZ[9]HA[0]KM[7.5]PW[white]PB[black]$seq)" >"$SEQDIR/a.sgf"
 rm -f "$SEQDIR"/r*
 
-if [ $((RANDOM%2)) = 1 ]; then
-	black="$pachi"
-	white="$opponent"
-else
-	black="$opponent"
-	white="$pachi"
-fi
+# last move has been... - we want to simulate this being _our_ move yet,
+# i.e. start the simulation with the opponent to play
+case $color in
+	B)
+		black="$pachi"
+		white="$opponent";;
+	W)
+		black="$opponent"
+		white="$pachi";;
+esac
 $twogtp_path -black "$black" -white "$white" -auto -verbose -size 9 -komi 7.5 -sgffile "$SEQDIR/r" -games 1 -openings "$SEQDIR"
 wincolor=$(cat "$SEQDIR"/r-0.sgf | sed -ne 's/.*RE\[\(.\).*/\1/p')
 case $wincolor in
