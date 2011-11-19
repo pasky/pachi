@@ -55,7 +55,7 @@ enum mq_tag {
 
 struct moggy_policy {
 	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate;
-	unsigned int selfatarirate, alwaysccaprate;
+	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
 	/* Whether to look for patterns around second-to-last move. */
@@ -845,7 +845,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	if (fast_random(100) >= pp->selfatarirate) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping sar test\n");
-		return true;
+		goto sar_skip;
 	}
 	bool selfatari = is_bad_selfatari(b, m->color, m->coord);
 	if (selfatari) {
@@ -864,6 +864,35 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 		}
 		return false;
 	}
+sar_skip:
+
+	/* Check if we don't seem to be filling our eye. This should
+	 * happen only for false eyes, but some of them are in fact
+	 * real eyes with diagonal filled by a dead stone. Prefer
+	 * to counter-capture in that case. */
+	if (fast_random(100) >= pp->eyefillrate) {
+		if (PLDEBUGL(5))
+			fprintf(stderr, "skipping eyefill test\n");
+		goto eyefill_skip;
+	}
+	bool eyefill = board_is_eyelike(b, m->coord, m->color);
+	if (eyefill) {
+		foreach_diag_neighbor(b, m->coord) {
+			if (board_at(b, c) != stone_other(m->color))
+				continue;
+			if (board_group_info(b, group_at(b, c)).libs != 1)
+				continue;
+			/* Capture! */
+			c = board_group_info(b, group_at(b, c)).lib[0];
+			if (PLDEBUGL(5))
+				fprintf(stderr, "___ Redirecting to capture %s\n",
+					coord2sstr(c, b));
+			m->coord = c;
+			return true;
+		} foreach_diag_neighbor_end;
+	}
+
+eyefill_skip:
 	return true;
 }
 
@@ -886,7 +915,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	int rate = board_large(b) ? 80 : 90;
 
 	pp->lcapturerate = pp->atarirate = pp->nlibrate = pp->patternrate
-		= pp->selfatarirate = pp->josekirate = pp->ladderrate = -1U;
+		= pp->selfatarirate = pp->eyefillrate = pp->josekirate = pp->ladderrate = -1U;
 	if (board_large(b)) {
 		pp->lcapturerate = 90;
 		pp->patternrate = 100;
@@ -946,6 +975,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->patternrate = atoi(optval);
 			} else if (!strcasecmp(optname, "selfatarirate") && optval) {
 				pp->selfatarirate = atoi(optval);
+			} else if (!strcasecmp(optname, "eyefillrate") && optval) {
+				pp->eyefillrate = atoi(optval);
 			} else if (!strcasecmp(optname, "korate") && optval) {
 				pp->korate = atoi(optval);
 			} else if (!strcasecmp(optname, "josekirate") && optval) {
@@ -1001,6 +1032,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	if (pp->capturerate == -1U) pp->capturerate = rate;
 	if (pp->patternrate == -1U) pp->patternrate = rate;
 	if (pp->selfatarirate == -1U) pp->selfatarirate = rate;
+	if (pp->eyefillrate == -1U) pp->eyefillrate = rate;
 	if (pp->korate == -1U) pp->korate = rate;
 	if (pp->josekirate == -1U) pp->josekirate = rate;
 	if (pp->ladderrate == -1U) pp->ladderrate = rate;
