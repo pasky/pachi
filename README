@@ -60,6 +60,12 @@ gets told otherwise over GTP), with 8 threads, taking up to 3GiB
 of memory (+ several tens MiB as a constant overhead) and thinking
 during the opponent's turn as well.
 
+Pachi can use an opening book in a Fuego-compatible format - you can
+obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
+with the -f parameter:
+
+	./pachi -f book.dat ...
+
 For now, there is no comprehensive documentation of options, but you
 can get a pretty good idea by looking at the uct_state_init() function
 in uct/uct.c - you will find the list of UCT engine options there, each
