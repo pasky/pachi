@@ -77,12 +77,10 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	if (b->moves < lmoves) {
 		floating_t base_komi = board_effective_handicap(b, l->handicap_value[color]);
 		extra_komi = base_komi * (lmoves - b->moves) / lmoves;
+		return extra_komi;
 	} else {
-		extra_komi = 0;
+		extra_komi = floor(tree->extra_komi);
 	}
-
-	/* Do not adjust values in the game beginning. */
-	if (b->moves < lmoves) return extra_komi;
 
 	/* Do not take decisions on unstable value. */
         if (tree->root->u.playouts < GJ_MINGAMES) return extra_komi;
