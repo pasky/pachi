@@ -59,7 +59,6 @@ port_listen(char *port, int max_connections)
 static bool
 is_private(struct in_addr *in)
 {
-	return true;
 	return (ntohl(in->s_addr) & 0xff000000) >> 24 == 10
 	    || (ntohl(in->s_addr) & 0xfff00000) >> 16 == 172 * 256 + 16
 	    || (ntohl(in->s_addr) & 0xffff0000) >> 16 == 192 * 256 + 168;
