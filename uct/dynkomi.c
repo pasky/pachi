@@ -89,6 +89,7 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	/*  We normalize komi as in komi_by_value(), > 0 when winning. */
 	extra_komi = komi_by_color(extra_komi, color);
 	assert(extra_komi >= 0);
+	floating_t orig_komi = extra_komi;
 
 	if (my_value < 0.5 && l->komi_ratchet > 0 && l->komi_ratchet != INFINITY) {
 		if (DEBUGL(0))
@@ -99,13 +100,13 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 
 	} else if (my_value < l->orange_zone && extra_komi > 0) {
 		extra_komi = l->komi_ratchet  = fmax(extra_komi - l->drop_step, 0.0);
-		if (DEBUGL(3))
+		if (extra_komi != orig_komi && DEBUGL(3))
 			fprintf(stderr, "dropping to %f ratchet -> %.1f\n",
 				my_value, extra_komi);
 
 	} else if (my_value > l->green_zone && extra_komi +1 <= l->komi_ratchet) {
 		extra_komi += 1;
-		if (DEBUGL(3))
+		if (extra_komi != orig_komi && DEBUGL(3))
 			fprintf(stderr, "winning %f extra_komi -> %.1f, ratchet %.1f\n",
 				my_value, extra_komi, l->komi_ratchet);
 	}
