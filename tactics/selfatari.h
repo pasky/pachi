@@ -26,6 +26,9 @@ bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
 static inline bool
 is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 {
+	/* Ko threats fear no self atari! */
+	if (board_playing_ko_threat(b))
+		return false;
 	/* More than one immediate liberty, thumbs up! */
 	if (immediate_liberty_count(b, to) > 1)
 		return false;
