@@ -1240,6 +1240,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 
+	int ko_caps = 0;
+	coord_t cap_at = pass;
 	foreach_neighbor(board, coord, {
 		inc_neighbor_count_at(board, c, color);
 		/* Originally, this could not have changed any trait
@@ -1257,19 +1259,18 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				group_base(group));
 
 		if (board_group_captured(board, group)) {
-			if (board_group_capture(board, group) == 1) {
-				/* If we captured multiple groups at once,
-				 * we can't be fighting ko so we don't need
-				 * to check for that. */
-				ko.color = stone_other(color);
-				ko.coord = c;
-				board->last_ko = ko;
-				board->last_ko_age = board->moves;
-				if (DEBUGL(5))
-					fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord, board));
-			}
+			ko_caps += board_group_capture(board, group);
+			cap_at = c;
 		}
 	});
+	if (ko_caps == 1) {
+		ko.color = stone_other(color);
+		ko.coord = cap_at; // unique
+		board->last_ko = ko;
+		board->last_ko_age = board->moves;
+		if (DEBUGL(5))
+			fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord, board));
+	}
 
 	board_at(board, coord) = color;
 	group_t group = new_group(board, coord);
