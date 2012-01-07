@@ -333,10 +333,17 @@ spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f)
 	}
 }
 
+/* We try to avoid needlessly reloading spatial dictionary
+ * since it may take rather long time. */
+static struct spatial_dict *cached_dict;
+
 const char *spatial_dict_filename = "patterns.spat";
 struct spatial_dict *
 spatial_dict_init(bool will_append)
 {
+	if (cached_dict && !will_append)
+		return cached_dict;
+
 	FILE *f = fopen(spatial_dict_filename, "r");
 	if (!f && !will_append) {
 		if (DEBUGL(1))
@@ -358,6 +365,7 @@ spatial_dict_init(bool will_append)
 		assert(will_append);
 	}
 
+	cached_dict = dict;
 	return dict;
 }
 

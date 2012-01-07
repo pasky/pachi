@@ -11,9 +11,16 @@
 #include "patternprob.h"
 
 
+/* We try to avoid needlessly reloading probability dictionary
+ * since it may take rather long time. */
+static struct pattern_pdict *cached_dict;
+
 struct pattern_pdict *
 pattern_pdict_init(char *filename, struct pattern_config *pc)
 {
+	if (cached_dict)
+		return cached_dict;
+
 	if (!filename)
 		filename = "patterns.prob";
 	FILE *f = fopen(filename, "r");
@@ -27,6 +34,7 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 	dict->pc = pc;
 	dict->table = calloc2(pc->spat_dict->nspatials + 1, sizeof(*dict->table));
 
+	int i = 0;
 	char sbuf[1024];
 	while (fgets(sbuf, sizeof(sbuf), f)) {
 		struct pattern_prob *pb = calloc2(1, sizeof(*pb));
@@ -52,8 +60,12 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 			while (ppb->next) ppb = ppb->next;
 			ppb->next = pb;
 		}
+		i++;
 	}
 
 	fclose(f);
+	if (DEBUGL(1))
+		fprintf(stderr, "Loaded %d pattern-probability pairs.\n", i);
+	cached_dict = dict;
 	return dict;
 }
