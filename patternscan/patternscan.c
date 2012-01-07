@@ -47,8 +47,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 			s.dist = d;
 			int sid = spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s));
 			assert(sid > 0);
-			/* Allocate space in 1024 blocks. */
-			#define SCOUNTS_ALLOC 1024
+			#define SCOUNTS_ALLOC 1048576 // Allocate space in 1M*4 blocks.
 			if (sid >= ps->nscounts) {
 				int newnsc = (sid / SCOUNTS_ALLOC + 1) * SCOUNTS_ALLOC;
 				ps->scounts = realloc(ps->scounts, newnsc * sizeof(*ps->scounts));
