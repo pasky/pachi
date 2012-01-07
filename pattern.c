@@ -384,6 +384,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 	 * we build a hash instead of spatial record. */
 
 	assert(pc->spat_min > 0);
+	f->id = -1;
 
 	hash_t h = pthashes[0][0][S_NONE];
 #ifdef BOARD_SPATHASH
@@ -419,7 +420,6 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 {
 	p->n = 0;
 	struct feature *f = &p->f[0];
-	f->id = -1;
 
 	/* TODO: We should match pretty much all of these features
 	 * incrementally. */
