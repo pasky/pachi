@@ -21,7 +21,7 @@
 			for (keys %counts) {
 				$p{$_} = $choices{$_} / $counts{$_};
 			}
-			for (sort { $p{$b} <=> $p{$a} } keys %p) {
+			for (sort { $counts{$b} <=> $counts{$a} } keys %p) {
 				printf("%.3f %d %d %s\n", $p{$_}, $choices{$_}, $counts{$_}, $_);
 			}
 		}'
