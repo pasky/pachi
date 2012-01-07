@@ -2,7 +2,7 @@
 # pattern_spatial_gen: Initialize spatial dictionary from a SGF collection
 #
 # We will first gather all spatial features from the SGF collection
-# (we take files as arguments) and store these occuring more than 650 times
+# (we take files as arguments) and store these occuring more than 4 times
 # in a freshly created spatial dictionary; afterwards, you will probably want
 # to do standard pattern-matching.
 #
@@ -14,10 +14,10 @@
 #
 #	PATARGS="competition" ./pattern_spatial_gen.sh ...
 #
-# Similarly, you can set SPATMIN to different number than 650 to include
-# spatial features with lower number of occurences.
+# Similarly, you can set SPATMIN to different number than 4 to include
+# spatial features with other number of occurences.
 
-[ -n "$SPATMIN" ] || SPATMIN=650
+[ -n "$SPATMIN" ] || SPATMIN=4
 
 rm -f patterns.spat
 
