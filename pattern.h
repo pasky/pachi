@@ -108,6 +108,9 @@ struct pattern_config {
 	 * TODO: Special-case high values to match larger areas or the
 	 * whole board. */
 	int spat_min, spat_max;
+	/* Produce only a single spatial feature per pattern, corresponding
+	 * to the largest matched spatial pattern. */
+	bool spat_largest;
 	/* The spatial patterns dictionary used by FEAT_SPATIAL. */
 	struct spatial_dict *spat_dict;
 };

@@ -16,8 +16,10 @@
 
 
 struct pattern_config DEFAULT_PATTERN_CONFIG = {
-	.spat_min = 3, .spat_max = MAX_PATTERN_DIST,
 	.bdist_max = 4,
+
+	.spat_min = 3, .spat_max = MAX_PATTERN_DIST,
+	.spat_largest = true,
 };
 
 #define PF_MATCH 15
@@ -366,7 +368,8 @@ pattern_match_spatial_outer(struct pattern_config *pc, pattern_spec ps,
 		if (sid > 0) {
 			f->id = FEAT_SPATIAL;
 			f->payload = sid;
-			(f++, p->n++);
+			if (!pc->spat_largest)
+				(f++, p->n++);
 		} /* else not found, ignore */
 	}
 	return f;
@@ -395,7 +398,8 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 		if (sid > 0) {
 			f->id = FEAT_SPATIAL;
 			f->payload = sid;
-			(f++, p->n++);
+			if (!pc->spat_largest)
+				(f++, p->n++);
 		} /* else not found, ignore */
 	}
 #else
@@ -403,6 +407,8 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 #endif
 	if (unlikely(pc->spat_max > BOARD_SPATHASH_MAXD))
 		f = pattern_match_spatial_outer(pc, ps, p, f, b, m, h);
+	if (pc->spat_largest && f->id == FEAT_SPATIAL)
+		(f++, p->n++);
 	return f;
 }
 
@@ -413,6 +419,7 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 {
 	p->n = 0;
 	struct feature *f = &p->f[0];
+	f->id = -1;
 
 	/* TODO: We should match pretty much all of these features
 	 * incrementally. */

@@ -315,6 +315,8 @@ patternscan_state_init(char *arg)
 				ps->pc.spat_min = atoi(optval);
 			} else if (!strcasecmp(optname, "spat_max") && optval) {
 				ps->pc.spat_max = atoi(optval);
+			} else if (!strcasecmp(optname, "spat_largest")) {
+				ps->pc.spat_largest = !optval || atoi(optval);
 
 			} else {
 				fprintf(stderr, "patternscan: Invalid engine argument %s or missing value\n", optname);
