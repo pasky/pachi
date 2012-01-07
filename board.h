@@ -27,6 +27,9 @@ struct fbook;
 
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
 
+//#define BOARD_SPATHASH // incremental patternsp.h hashes
+#define BOARD_SPATHASH_MAXD 3 // maximal diameter
+
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
@@ -169,6 +172,14 @@ struct board {
 	struct neighbor_colors *n;
 	/* Zobrist hash for each position */
 	hash_t *h;
+#ifdef BOARD_SPATHASH
+	/* For spatial hashes, we use only 24 bits. */
+	/* [0] is d==1, we don't keep hash for d==0. */
+	/* We keep hashes for black-to-play ([][0]) and white-to-play
+	 * ([][1], reversed stone colors since we match all patterns as
+	 * black-to-play). */
+	uint32_t (*spathash)[BOARD_SPATHASH_MAXD][2];
+#endif
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
