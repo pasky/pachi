@@ -140,9 +140,22 @@ int feature_payloads(struct pattern_config *pc, enum feature_id f);
 char *pattern2str(char *str, struct pattern *p);
 /* Convert string to pattern, return pointer after the patternspec. */
 char *str2pattern(char *str, struct pattern *p);
+/* Compare two patterns for equality. Assumes fixed feature order. */
+static bool pattern_eq(struct pattern *p1, struct pattern *p2);
 
 /* Initialize p and fill it with features matched by the
  * given board move. */
 void pattern_match(struct pattern_config *pc, pattern_spec ps, struct pattern *p, struct board *b, struct move *m);
+
+
+static inline bool
+pattern_eq(struct pattern *p1, struct pattern *p2)
+{
+	if (p1->n != p2->n) return false;
+	for (int i = 0; i < p1->n; i++)
+		if (p1->f[i].id != p2->f[i].id || p1->f[i].payload != p2->f[i].payload)
+			return false;
+	return true;
+}
 
 #endif
