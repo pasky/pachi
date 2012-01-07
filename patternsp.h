@@ -114,7 +114,7 @@ struct spatial_dict *spatial_dict_init(bool will_append);
 
 /* Lookup specified spatial pattern in the dictionary; return index
  * of the pattern. If the pattern is not found, 0 will be returned. */
-static int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
+static unsigned int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
 
 /* Store specified spatial pattern in the dictionary if it is not known yet.
  * Returns pattern id. Note that the pattern is NOT written to the underlying
@@ -138,10 +138,10 @@ void spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f);
 void spatial_write(struct spatial_dict *dict, struct spatial *s, int id, FILE *f);
 
 
-static inline int
+static inline unsigned int
 spatial_dict_get(struct spatial_dict *dict, int dist, hash_t hash)
 {
-	int id = dict->hash[hash];
+	unsigned int id = dict->hash[hash];
 #ifdef DEBUG
 	if (id && dict->spatials[id].dist != dist) {
 		if (DEBUGL(6))
