@@ -22,8 +22,7 @@ struct patternscan {
 
 	bool no_pattern_match;
 	bool gen_spat_dict;
-	/* Minimal number of occurences for spatial to be saved;
-	 * 3x3 spatials are always saved. */
+	/* Minimal number of occurences for spatial to be saved. */
 	int spat_threshold;
 	/* Number of loaded spatials; checkpoint for saving new sids
 	 * in case gen_spat_dict is enabled. */
@@ -226,8 +225,7 @@ patternscan_done(struct engine *e)
 	for (int i = ps->loaded_spatials; i < ps->pc.spat_dict->nspatials; i++) {
 		/* By default, threshold is 0 and condition is always true. */
 		assert(i < ps->nscounts && ps->scounts[i] > 0);
-		if (ps->scounts[i] >= ps->spat_threshold
-		    || ps->pc.spat_dict->spatials[i].dist == 3)
+		if (ps->scounts[i] >= ps->spat_threshold)
 			spatial_write(ps->pc.spat_dict, &ps->pc.spat_dict->spatials[i], i, f);
 	}
 	fclose(f);
