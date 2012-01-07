@@ -495,3 +495,21 @@ pattern2str(char *str, struct pattern *p)
 	str = stpcpy(str, ")");
 	return str;
 }
+
+char *
+str2pattern(char *str, struct pattern *p)
+{
+	p->n = 0;
+	while (isspace(*str)) str++;
+	if (*str++ != '(') {
+		fprintf(stderr, "invalid patternspec: %s\n", str);
+		exit(EXIT_FAILURE);
+	}
+
+	while (*str != ')') {
+		str = str2feature(str, &p->f[p->n++]);
+	}
+
+	str++;
+	return str;
+}

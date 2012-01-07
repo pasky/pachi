@@ -138,6 +138,8 @@ int feature_payloads(struct pattern_config *pc, enum feature_id f);
 
 /* Append pattern as feature spec string. */
 char *pattern2str(char *str, struct pattern *p);
+/* Convert string to pattern, return pointer after the patternspec. */
+char *str2pattern(char *str, struct pattern *p);
 
 /* Initialize p and fill it with features matched by the
  * given board move. */
