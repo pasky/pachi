@@ -212,6 +212,10 @@ matcher easy:
 * tools/pattern_spatial_show.pl ID: Shows spatial pattern of given id
   in 2D plane.
 
+* tools/pattern_bayes_gen.sh: Generates a Bayesian probability table
+  for each pattern in a SGF collection. The computed number is the empiric
+  probability of playing a given pattern when it is available on board.
+
 
 Plugin API
 ==========
