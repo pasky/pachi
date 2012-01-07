@@ -92,12 +92,15 @@ pthashes_init(void)
 	int pthbc = MAX_PATTERN_AREA / 2; // tengen coord
 
 	/* The magic numbers are tuned for minimal collisions. */
-	hash_t h = 0x313131;
+	hash_t h1 = 0xd6d6d6d1;
+	hash_t h2 = 0xd6d6d6d2;
+	hash_t h3 = 0xd6d6d6d3;
+	hash_t h4 = 0xd6d6d6d4;
 	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
-		pthboard[i][S_NONE] = (h = h * 16803 - 7);
-		pthboard[i][S_BLACK] = (h = h * 16805 + 7);
-		pthboard[i][S_WHITE] = (h = h * 16807 + 3);
-		pthboard[i][S_OFFBOARD] = (h = h * 16809 - 3);
+		pthboard[i][S_NONE] = (h1 = h1 * 16787);
+		pthboard[i][S_BLACK] = (h2 = h2 * 16823);
+		pthboard[i][S_WHITE] = (h3 = h3 * 16811 - 13);
+		pthboard[i][S_OFFBOARD] = (h4 = h4 * 16811);
 	}
 
 	/* Virtual board with hashes created, now fill
@@ -272,11 +275,8 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	unsigned int id = spatial_dict_addc(dict, &s);
 
 	/* Add to specified hash places. */
-	while (*bufp) {
-		int hash = strtol(bufp, &bufp, 16);
-		while (isspace(*bufp)) bufp++;
-		spatial_dict_addh(dict, hash & spatial_hash_mask, id);
-	}
+	for (int r = 0; r < PTH__ROTATIONS; r++)
+		spatial_dict_addh(dict, spatial_hash(r, &s), id);
 }
 
 void
