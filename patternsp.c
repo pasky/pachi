@@ -310,6 +310,10 @@ spatial_dict_load(struct spatial_dict *dict, FILE *f)
 		if (buf[0] == '#') continue;
 		spatial_dict_read(dict, buf);
 	}
+	if (DEBUGL(1))
+		fprintf(stderr, "Loaded spatial dictionary of %d patterns (hash: %d coll., %d effective, %.2f%% fill rate).\n",
+			dict->nspatials, dict->collisions, dict->collisions / PTH__ROTATIONS,
+			(double) dict->nspatials * 100 / (sizeof(dict->hash) / sizeof(dict->hash[0])));
 }
 
 void
