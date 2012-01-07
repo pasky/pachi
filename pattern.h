@@ -89,7 +89,7 @@ enum feature_id {
 
 struct feature {
 	enum feature_id id;
-	uint16_t payload;
+	uint32_t payload;
 };
 
 struct pattern {

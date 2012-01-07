@@ -362,7 +362,7 @@ pattern_match_spatial_outer(struct pattern_config *pc, pattern_spec ps,
 		if (d < pc->spat_min)
 			continue;
 		/* Record spatial feature, one per distance. */
-		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
+		unsigned int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
 		if (sid > 0) {
 			f->id = FEAT_SPATIAL;
 			f->payload = sid;
@@ -391,7 +391,7 @@ pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
 		if (d < pc->spat_min)
 			continue;
 		/* Record spatial feature, one per distance. */
-		int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
+		unsigned int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
 		if (sid > 0) {
 			f->id = FEAT_SPATIAL;
 			f->payload = sid;
