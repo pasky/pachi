@@ -19,7 +19,6 @@ struct patternscan {
 	struct pattern_config pc;
 	pattern_spec ps;
 	bool competition;
-	bool mm;
 
 	bool no_pattern_match;
 	bool gen_spat_dict;
@@ -33,105 +32,6 @@ struct patternscan {
 	int nscounts;
 	int *scounts;
 };
-
-
-/* Starting gamma number of each feature. */
-static int gammaid[FEAT_MAX + MAX_PATTERN_DIST + 1];
-/* For each spatial id, its gamma value. */
-static int spatg[65536];
-
-/* Print MM-format header - summary of features. Also create patterns.fdict
- * containing mapping from gamma numbers to feature:payload pairs. */
-static void
-mm_header(struct patternscan *ps)
-{
-	FILE *fdict = fopen("patterns.fdict", "w");
-	if (!fdict) {
-		perror("patterns.fdict");
-		exit(EXIT_FAILURE);
-	}
-
-	gammaid[0] = 0;
-	int g = 0;
-	int features = 0;
-	for (int i = 0; i < FEAT_MAX; i++) {
-		if (ps->ps[i] == 0) {
-			/* Feature disabled. */
-			/* XXX: Accurately account for payload count
-			 * of partially disabled features? */
-			gammaid[i + 1] = gammaid[i];
-			continue;
-		}
-		if (i == FEAT_SPATIAL) {
-			/* Special handling. */
-			gammaid[i + 1] = gammaid[i];
-			continue;
-		}
-
-		features++;
-
-		gammaid[i + 1] = gammaid[i] + feature_payloads(&ps->pc, i);
-
-		for (int p = 0; p < feature_payloads(&ps->pc, i); p++) {
-			struct feature f = { .id = i, .payload = p };
-			char buf[256] = ""; feature2str(buf, &f);
-			fprintf(fdict, "%d %s\n", g++, buf);
-		}
-		assert(g == gammaid[i + 1]);
-	}
-
-	/* We need to break down spatials by their radius, since payloads
-	 * of single feature must be independent. */
-	if (ps->ps[FEAT_SPATIAL] != 0) {
-		for (int d = 0; d <= ps->pc.spat_max - ps->pc.spat_min; d++) {
-			for (int i = 0; i < ps->pc.spat_dict->nspatials; i++) {
-				if (ps->pc.spat_dict->spatials[i].dist != ps->pc.spat_min + d)
-					continue;
-				spatg[i] = g++;
-				struct feature f = { .id = FEAT_SPATIAL, .payload = i };
-				char buf[256] = ""; feature2str(buf, &f);
-				fprintf(fdict, "%d %s\n", spatg[i], buf);
-			}
-			features++;
-			gammaid[FEAT_MAX + d + 1] = g;
-		}
-	}
-
-	fclose(fdict);
-
-	printf("! %d\n", g); // Number of gammas.
-	printf("%d\n", features); // Number of features.
-	for (int i = 0; i < FEAT_MAX; i++) {
-		if (ps->ps[i] == 0) continue;
-		if (i == FEAT_SPATIAL) continue;
-		// Number of gammas per feature.
-		printf("%d %s\n", gammaid[i + 1] - gammaid[i], feature_name(i));
-	}
-	if (ps->ps[FEAT_SPATIAL] != 0) {
-		for (int d = 0; d <= ps->pc.spat_max - ps->pc.spat_min; d++) {
-			printf("%d %s.%d\n", gammaid[FEAT_MAX + d + 1] - gammaid[FEAT_MAX + d],
-					feature_name(FEAT_SPATIAL), ps->pc.spat_min + d);
-		}
-	}
-	printf("!\n");
-}
-
-static char *
-mm_pattern(struct patternscan *ps, char *str, struct pattern *p)
-{
-	for (int i = 0; i < p->n; i++) {
-		if (i > 0) str = stpcpy(str, " ");
-		switch (p->f[i].id) {
-		case FEAT_SPATIAL:
-			str += sprintf(str, "%d", spatg[p->f[i].payload]);
-			break;
-		default:
-			str += sprintf(str, "%d", gammaid[p->f[i].id] + p->f[i].payload);
-			break;
-		}
-	}
-	return stpcpy(str, "\n");
-}
 
 
 static void
@@ -166,7 +66,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 	if (!ps->no_pattern_match) {
 		struct pattern p;
 		pattern_match(&ps->pc, ps->ps, &p, b, m);
-		*str = ps->mm ? mm_pattern(ps, *str, &p) : pattern2str(*str, &p);
+		*str = pattern2str(*str, &p);
 	}
 }
 
@@ -195,7 +95,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 				continue;
 			if (!board_is_valid_move(b, &mo))
 				continue;
-			if (!ps->mm) *strp++ = ' ';
+			*strp++ = ' ';
 			process_pattern(ps, b, &mo, &strp);
 		}
 	}
@@ -292,15 +192,6 @@ patternscan_state_init(char *arg)
 				 * one). */
 				ps->competition = !optval || atoi(optval);
 
-			} else if (!strcasecmp(optname, "mm")) {
-				/* Generate output almost suitable for the
-				 * Remi Coulom's MM tool, and auxiliar file
-				 * "patterns.fdict" with mapping from gamma ids
-				 * back to feature,payload pairs. You will need
-				 * to post-process the output, substituting
-				 * s/\n\n= /#\n/. */
-				ps->mm = !optval || atoi(optval);
-
 			} else if (!strcasecmp(optname, "xspat") && optval) {
 				/* xspat==0: don't match spatial features
 				 * xspat==1: match *only* spatial features */
@@ -327,9 +218,6 @@ patternscan_state_init(char *arg)
 	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) ps->ps[i] = 0;
 	ps->pc.spat_dict = spatial_dict_init(ps->gen_spat_dict);
 	ps->loaded_spatials = ps->pc.spat_dict->nspatials;
-
-	if (ps->mm)
-		mm_header(ps);
 
 	return ps;
 }
