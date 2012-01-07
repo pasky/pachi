@@ -29,8 +29,10 @@ struct patternscan {
 	int loaded_spatials;
 
 	/* Book-keeping of spatial occurence count. */
+	int gameno;
 	int nscounts;
 	int *scounts;
+	int *sgameno;
 };
 
 
@@ -52,12 +54,17 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 				int newnsc = (sid / SCOUNTS_ALLOC + 1) * SCOUNTS_ALLOC;
 				ps->scounts = realloc(ps->scounts, newnsc * sizeof(*ps->scounts));
 				memset(&ps->scounts[ps->nscounts], 0, (newnsc - ps->nscounts) * sizeof(*ps->scounts));
+				ps->sgameno = realloc(ps->sgameno, newnsc * sizeof(*ps->sgameno));
+				memset(&ps->sgameno[ps->nscounts], 0, (newnsc - ps->nscounts) * sizeof(*ps->sgameno));
 				ps->nscounts = newnsc;
 			}
 			if (ps->debug_level > 1 && !fast_random(65536) && !fast_random(32)) {
 				fprintf(stderr, "%d spatials, %d collisions\n", ps->pc.spat_dict->nspatials, ps->pc.spat_dict->collisions);
 			}
-			ps->scounts[sid]++;
+			if (ps->sgameno[sid] != ps->gameno) {
+				ps->scounts[sid]++;
+				ps->sgameno[sid] = ps->gameno;
+			}
 		}
 	}
 
@@ -76,6 +83,9 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 
 	if (is_resign(m->coord))
 		return NULL;
+
+	if (b->moves == 1)
+		ps->gameno++;
 
 	static char str[1048576]; // XXX
 	char *strp = str;
