@@ -9,6 +9,7 @@
 #include "patternscan/patternscan.h"
 #include "pattern.h"
 #include "patternsp.h"
+#include "random.h"
 
 
 /* Internal engine state. */
@@ -154,6 +155,9 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 				ps->scounts = realloc(ps->scounts, newnsc * sizeof(*ps->scounts));
 				memset(&ps->scounts[ps->nscounts], 0, (newnsc - ps->nscounts) * sizeof(*ps->scounts));
 				ps->nscounts = newnsc;
+			}
+			if (ps->debug_level > 1 && !fast_random(65536) && !fast_random(32)) {
+				fprintf(stderr, "%d spatials, %d collisions\n", ps->pc.spat_dict->nspatials, ps->pc.spat_dict->collisions);
 			}
 			ps->scounts[sid]++;
 		}
