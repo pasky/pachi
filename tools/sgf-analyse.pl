@@ -36,7 +36,7 @@ sub one {
 	# included.
 	my $line = $move + 3; # board_size, clearboard, komi
 	my $rest = $line + 1;
-	open my $g, "tools/sgf2gtp.pl \"$sgf\" | sed -e '$line s/play \\(.*\\) \\(.*\\)/1 echo \\1 \\2\\n2 genmove \\1\\n3 pachi-result/' -e '$rest,\$ d' | ./pachi @ARGV |" or die $!;
+	open my $g, "tools/sgf2gtp.pl < \"$sgf\" | sed -e '$line s/play \\(.*\\) \\(.*\\)/1 echo \\1 \\2\\n2 genmove \\1\\n3 pachi-result/' -e '$rest,\$ d' | ./pachi @ARGV |" or die $!;
 
 	# Parse the GTP output.
 	my ($color, $realmove, $genmove, $winrate) = @_;
@@ -61,5 +61,5 @@ sub one {
 
 print "# $sgf @ARGV\n";
 
-my $moves = `tools/sgf2gtp.pl \"$sgf\" | wc -l` - 3;
+my $moves = `tools/sgf2gtp.pl < \"$sgf\" | wc -l` - 3;
 one($_) for (1 .. $moves);
