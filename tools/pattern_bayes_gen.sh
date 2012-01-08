@@ -2,7 +2,7 @@
 # pattern_bayes_gen: Generate pattern probability table from a SGF collection
 
 (for i in "$@"; do echo $i >&2; tools/sgf2gtp.pl <$i; done) |
-	./pachi -d 0 -e patternscan competition |
+	./pachi -d 0 -e patternscan competition,spat_split_sizes |
 	perl -nle '
 		BEGIN { use List::MoreUtils qw(uniq); }
 

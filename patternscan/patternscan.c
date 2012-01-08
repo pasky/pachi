@@ -22,6 +22,8 @@
  * 	[(winpattern)]
  *   but with competition=1 it is
  * 	[(winpattern)] [(witnesspattern0) (witnesspattern1) ...]
+ *   and with spat_split_sizes=1 even
+ * 	[(winpattern0) (winpattern1) ...] [(witpattern0) (witpattern1) ...]
  */
 
 
@@ -32,6 +34,7 @@ struct patternscan {
 	struct pattern_config pc;
 	pattern_spec ps;
 	bool competition;
+	bool spat_split_sizes;
 
 	bool no_pattern_match;
 	bool gen_spat_dict;
@@ -85,7 +88,32 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 	if (!ps->no_pattern_match) {
 		struct pattern p;
 		pattern_match(&ps->pc, ps->ps, &p, b, m);
-		*str = pattern2str(*str, &p);
+
+		if (!ps->spat_split_sizes) {
+			*str = pattern2str(*str, &p);
+		} else {
+			/* XXX: We assume that FEAT_SPATIAL items
+			 * are at the end. */
+			struct pattern p2;
+			int i = 0;
+			while (i < p.n && p.f[i].id != FEAT_SPATIAL) {
+				p2.f[i] = p.f[i];
+				i++;
+			}
+			if (i == p.n) {
+				p2.n = i;
+				*str = pattern2str(*str, &p2);
+			} else {
+				p2.n = i + 1;
+				for (int j = i; j < p.n; j++) {
+					assert(p.f[j].id == FEAT_SPATIAL);
+					p2.f[i] = p.f[j];
+					if ((*str)[-1] == ')')
+						*(*str)++ = ' ';
+					*str = pattern2str(*str, &p2);
+				}
+			}
+		}
 	}
 }
 
@@ -223,6 +251,15 @@ patternscan_state_init(char *arg)
 				 * that could be played (including the played
 				 * one). */
 				ps->competition = !optval || atoi(optval);
+
+			} else if (!strcasecmp(optname, "spat_split_sizes")) {
+				/* Generate a separate pattern for each
+				 * spatial size. This is important to
+				 * preserve good generalization in unknown
+				 * situations where the largest pattern
+				 * might not match. */
+				ps->spat_split_sizes = 1;
+				ps->pc.spat_largest = 0;
 
 			} else if (!strcasecmp(optname, "xspat") && optval) {
 				/* xspat==0: don't match spatial features
