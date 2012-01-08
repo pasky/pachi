@@ -152,11 +152,19 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 	struct pattern pats[b->flen];
 	floating_t probs[b->flen];
 	pattern_rate_moves(&u->pat.pc, &u->pat.ps, u->pat.pd, b, map->to_play, pats, probs);
+	if (UDEBUGL(5)) {
+		fprintf(stderr, "Pattern prior at node %s\n", coord2sstr(node->coord, b));
+		board_print(b, stderr);
+	}
 
 	for (int f = 0; f < b->flen; f++) {
-		if (isnan(probs[f]))
+		if (isnan(probs[f]) || probs[f] < 0.001)
 			continue;
 		assert(!is_pass(b->f[f]));
+		if (UDEBUGL(5)) {
+			char s[256]; pattern2str(s, &pats[f]);
+			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), probs[f], s);
+		}
 		add_prior_value(map, b->f[f], 1.0, sqrt(probs[f]) * u->prior->pattern_eqex);
 	}
 }
