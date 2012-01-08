@@ -18,8 +18,10 @@ static struct pattern_pdict *cached_dict;
 struct pattern_pdict *
 pattern_pdict_init(char *filename, struct pattern_config *pc)
 {
-	if (cached_dict)
+	if (cached_dict) {
+		cached_dict->pc = pc;
 		return cached_dict;
+	}
 
 	if (!filename)
 		filename = "patterns.prob";
