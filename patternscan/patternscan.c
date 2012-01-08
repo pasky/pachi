@@ -12,6 +12,19 @@
 #include "random.h"
 
 
+/* The engine has two modes:
+ *
+ * * gen_spat_dict=1: patterns.spat file is generated with a list of all
+ *   encountered spatials
+ *
+ * * gen_spat_dict=0,no_pattern_match=1: all encountered patterns are
+ *   listed on output on each move; the general format is
+ * 	[(winpattern)]
+ *   but with competition=1 it is
+ * 	[(winpattern)] [(witnesspattern0) (witnesspattern1) ...]
+ */
+
+
 /* Internal engine state. */
 struct patternscan {
 	int debug_level;
@@ -97,20 +110,27 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	/* Scan for supported features. */
 	/* For specifiation of features and their payloads,
 	 * please refer to pattern.h. */
+	*strp++ = '[';
 	process_pattern(ps, b, m, &strp);
+	*strp++ = ']';
 
 	if (ps->competition) {
 		/* Look at other possible moves as well. */
+		*strp++ = ' ';
+		*strp++ = '[';
 		for (int f = 0; f < b->flen; f++) {
 			struct move mo = { .coord = b->f[f], .color = m->color };
 			if (is_pass(mo.coord))
 				continue;
 			if (!board_is_valid_move(b, &mo))
 				continue;
-			*strp++ = ' ';
+			if (strp[-1] != '[')
+				*strp++ = ' ';
 			process_pattern(ps, b, &mo, &strp);
 		}
+		*strp++ = ']';
 	}
+	*strp++ = 0;
 
 	return ps->no_pattern_match ? NULL : str;
 }

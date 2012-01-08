@@ -8,12 +8,14 @@
 
 		s/^= // or next;
 		chomp;
-		s/\) \(/),(/g;
-		@a = split(/,/);
+		my ($winner, $witness) = (/^\[(.*)\] \[(.*)\]$/);
 
-		$win = shift @a;
-		$choices{$win}++;
-		for (uniq @a) {
+		sub parse { $_ = $_[0]; s/\) \(/),(/g; return split(/,/); }
+
+		for (uniq(parse($winner))) {
+			$choices{$_}++;
+		}
+		for (uniq(parse($witness))) {
 			$counts{$_}++;
 		}
 
