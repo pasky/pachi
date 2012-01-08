@@ -53,10 +53,12 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 	struct pattern pats[b->flen];
 	floating_t total = pattern_rate_moves(&pp->pc, &pp->ps, pp->pd, b, color, pats, vals);
 
+#if 0
 	/* Rescale properly. */
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] /= total;
 	}
+#endif
 
 	if (pp->debug_level >= 4) {
 		for (int f = 0; f < b->flen; f++) {
