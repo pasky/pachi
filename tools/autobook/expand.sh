@@ -13,7 +13,7 @@ priorsims=24
 pachi="$1"
 
 cat "$SEQDIR/a.sgf" | "$CMDDIR/../sgf2gtp.pl" -g |
-	sed -e 's/genmove/uct_evaluate/' |
+	sed -e 's/genmove/pachi-evaluate/' |
 	$pachi |
 	sed -ne '/^=/,${s/^= //;/./p}' |
 	while read move val; do

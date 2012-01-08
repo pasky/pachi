@@ -89,13 +89,18 @@ static char *known_commands =
 	"play\n"
 	"genmove\n"
 	"kgs-genmove_cleanup\n"
+	"pachi-genmoves\n"
+	"pachi-genmoves_cleanup\n"
 	"set_free_handicap\n"
 	"place_free_handicap\n"
 	"fixed_handicap\n"
 	"final_score\n"
 	"final_status_list\n"
 	"undo\n"
+	"pachi-evaluate\n"
 	"pachi-result\n"
+	"pachi-gentbook\n"
+	"pachi-dumptbook\n"
 	"kgs-chat\n"
 	"time_left\n"
 	"time_settings\n"
@@ -478,8 +483,8 @@ next_group:;
 			board_print(board, stderr);
 		gtp_reply(id, reply, NULL);
 
-	/* Custom commands for handling UCT opening tbook */
-	} else if (!strcasecmp(cmd, "uct_gentbook")) {
+	/* Custom commands for handling the tree opening tbook */
+	} else if (!strcasecmp(cmd, "pachi-gentbook")) {
 		/* Board must be initialized properly, as if for genmove;
 		 * makes sense only as 'uct_gentbook b'. */
 		char *arg;
@@ -490,14 +495,14 @@ next_group:;
 		else
 			gtp_error(id, "error generating tbook", NULL);
 
-	} else if (!strcasecmp(cmd, "uct_dumptbook")) {
+	} else if (!strcasecmp(cmd, "pachi-dumptbook")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 		uct_dumptbook(engine, board, color);
 		gtp_reply(id, NULL);
 
-	} else if (!strcasecmp(cmd, "uct_evaluate")) {
+	} else if (!strcasecmp(cmd, "pachi-evaluate")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
