@@ -6,6 +6,9 @@
 #include "debug.h"
 #include "move.h"
 #include "ownermap.h"
+#include "pattern.h"
+#include "patternsp.h"
+#include "patternprob.h"
 #include "playout.h"
 #include "stats.h"
 
@@ -15,6 +18,7 @@ struct uct_policy;
 struct uct_prior;
 struct uct_dynkomi;
 struct uct_pluginset;
+struct uct_pattern;
 struct joseki_dict;
 
 /* How big proportion of ownermap counts must be of one color to consider
@@ -22,6 +26,13 @@ struct joseki_dict;
 #define GJ_THRES	0.8
 /* How many games to consider at minimum before judging groups. */
 #define GJ_MINGAMES	500
+
+/* TODO: Generalize this for other engines too. */
+struct uct_pattern {
+	struct pattern_config pc;
+	pattern_spec ps;
+	struct pattern_pdict *pd;
+};
 
 /* Internal engine state. */
 struct uct {
@@ -93,6 +104,7 @@ struct uct {
 	struct uct_prior *prior;
 	struct uct_pluginset *plugins;
 	struct joseki_dict *jdict;
+	struct uct_pattern pat;
 
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;
