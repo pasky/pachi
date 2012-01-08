@@ -700,7 +700,7 @@ uct_state_init(char *arg, struct board *b)
 				 * opinion, but also with regard to other
 				 * things). See uct/prior.c for details.
 				 * Use prior=eqex=0 to disable priors. */
-				u->prior = uct_prior_init(optval, b);
+				u->prior = uct_prior_init(optval, b, u);
 			} else if (!strcasecmp(optname, "mercy") && optval) {
 				/* Minimal difference of black/white captures
 				 * to stop playout - "Mercy Rule". Speeds up
@@ -1022,7 +1022,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->prior)
-		u->prior = uct_prior_init(NULL, b);
+		u->prior = uct_prior_init(NULL, b, u);
 
 	if (!u->playout)
 		u->playout = playout_moggy_init(NULL, b, u->jdict);
