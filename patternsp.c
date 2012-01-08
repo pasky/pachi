@@ -88,15 +88,16 @@ pthashes_init(void)
 	 * with correct coordinates. It would be possible to generate
 	 * the sequence point hashes directly, but the rotations would
 	 * make for enormous headaches. */
-	hash_t pthboard[MAX_PATTERN_AREA][4];
-	int pthbc = MAX_PATTERN_AREA / 2; // tengen coord
+#define PATTERN_BOARD_SIZE ((MAX_PATTERN_DIST + 1) * (MAX_PATTERN_DIST + 1))
+	hash_t pthboard[PATTERN_BOARD_SIZE][4];
+	int pthbc = PATTERN_BOARD_SIZE / 2; // tengen coord
 
 	/* The magic numbers are tuned for minimal collisions. */
 	hash_t h1 = 0xd6d6d6d1;
 	hash_t h2 = 0xd6d6d6d2;
 	hash_t h3 = 0xd6d6d6d3;
 	hash_t h4 = 0xd6d6d6d4;
-	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
+	for (int i = 0; i < PATTERN_BOARD_SIZE; i++) {
 		pthboard[i][S_NONE] = (h1 = h1 * 16787);
 		pthboard[i][S_BLACK] = (h2 = h2 * 16823);
 		pthboard[i][S_WHITE] = (h3 = h3 * 16811 - 13);
@@ -119,7 +120,7 @@ pthashes_init(void)
 			if (r & PTH_90ROT) {
 				int rs = rx; rx = -ry; ry = rs;
 			}
-			int bi = pthbc + ry * MAX_PATTERN_DIST + rx;
+			int bi = pthbc + ry * (MAX_PATTERN_DIST + 1) + rx;
 
 			/* Copy info. */
 			pthashes[r][i][S_NONE] = pthboard[bi][S_NONE];
