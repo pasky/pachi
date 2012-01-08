@@ -251,9 +251,9 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	/* XXX: We trust the data. Bad data will crash us. */
 	char *bufp = buf;
 
-	int index, radius;
-	index = strtol(bufp, &bufp, 10);
-	radius = strtol(bufp, &bufp, 10);
+	unsigned int index, radius;
+	index = strtoul(bufp, &bufp, 10);
+	radius = strtoul(bufp, &bufp, 10);
 	while (isspace(*bufp)) bufp++;
 
 	/* Load the stone configuration. */
@@ -274,6 +274,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 
 	/* Add to collection. */
 	unsigned int id = spatial_dict_addc(dict, &s);
+	assert(id == index);
 
 	/* Add to specified hash places. */
 	for (int r = 0; r < PTH__ROTATIONS; r++)
