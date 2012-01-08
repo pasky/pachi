@@ -95,7 +95,9 @@ struct feature {
 struct pattern {
 	/* Pattern (matched) is set of features. */
 	int n;
-#define FEATURES 32
+	/* XXX: Should be at least 6 + spat_max-spat_min if spat_largest
+	 * is false! However, this has large effect on consumed memory. */
+#define FEATURES 8
 	struct feature f[FEATURES];
 };
 
