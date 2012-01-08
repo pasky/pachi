@@ -104,7 +104,7 @@ patternplay_state_init(char *arg)
 
 	pp->debug_level = debug_level;
 	pp->pc = DEFAULT_PATTERN_CONFIG;
-	pp->pc.spat_dict = spatial_dict_init(false);
+	pp->pc.spat_dict = spatial_dict_init(false, false);
 	memcpy(&pp->ps, PATTERN_SPEC_MATCH_DEFAULT, sizeof(pattern_spec));
 
 	if (arg) {

@@ -109,8 +109,10 @@ struct spatial_dict {
 
 /* Initializes spatial dictionary, pre-loading existing records from
  * default filename if exists. If will_append is true, it will not
- * complain about non-existing file and initialize the dictionary anyway. */
-struct spatial_dict *spatial_dict_init(bool will_append);
+ * complain about non-existing file and initialize the dictionary anyway.
+ * If hash is true, loaded spatials will be added to the hashtable;
+ * use false if this is to be done later (e.g. by patternprob). */
+struct spatial_dict *spatial_dict_init(bool will_append, bool hash);
 
 /* Lookup specified spatial pattern in the dictionary; return index
  * of the pattern. If the pattern is not found, 0 will be returned. */
@@ -120,6 +122,13 @@ static unsigned int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t
  * Returns pattern id. Note that the pattern is NOT written to the underlying
  * file automatically. */
 int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
+
+/* Readds given rotation of given pattern to the hash. This is useful only
+ * if you want to tweak hash priority of various patterns. */
+bool spatial_dict_addh(struct spatial_dict *dict, hash_t hash, unsigned int id);
+
+/* Print stats about the hash to stderr. Companion to spatial_dict_addh(). */
+void spatial_dict_hashstats(struct spatial_dict *dict);
 
 
 /* Spatial dictionary file manipulation. */

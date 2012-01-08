@@ -34,6 +34,9 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 	dict->pc = pc;
 	dict->table = calloc2(pc->spat_dict->nspatials + 1, sizeof(*dict->table));
 
+	char *sphcachehit = malloc(pc->spat_dict->nspatials);
+	hash_t (*sphcache)[PTH__ROTATIONS] = malloc(pc->spat_dict->nspatials * sizeof(sphcache[0]));
+
 	int i = 0;
 	char sbuf[1024];
 	while (fgets(sbuf, sizeof(sbuf), f)) {
@@ -55,8 +58,25 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 		uint32_t spi = pattern2spatial(dict, &pb->p);
 		pb->next = dict->table[spi];
 		dict->table[spi] = pb;
+
+		/* We rehash spatials in the order of loaded patterns. This way
+		 * we make sure that the most popular patterns will be hashed
+		 * last and therefore take priority. */
+		if (!sphcachehit[spi]) {
+			sphcachehit[spi] = 1;
+			for (int r = 0; r < PTH__ROTATIONS; r++)
+				sphcache[spi][r] = spatial_hash(r, &pc->spat_dict->spatials[spi]);
+		}
+		for (int r = 0; r < PTH__ROTATIONS; r++)
+			spatial_dict_addh(pc->spat_dict, sphcache[spi][r], spi);
+
 		i++;
 	}
+
+	free(sphcache);
+	free(sphcachehit);
+	if (DEBUGL(3))
+		spatial_dict_hashstats(pc->spat_dict);
 
 	fclose(f);
 	if (DEBUGL(1))
