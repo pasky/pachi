@@ -88,8 +88,8 @@ enum feature_id {
 };
 
 struct feature {
-	enum feature_id id;
-	uint32_t payload;
+	enum feature_id id:8;
+	unsigned int payload:24;
 };
 
 struct pattern {
@@ -97,7 +97,7 @@ struct pattern {
 	int n;
 	/* XXX: Should be at least 6 + spat_max-spat_min if spat_largest
 	 * is false! However, this has large effect on consumed memory. */
-#define FEATURES 8
+#define FEATURES 18 // XXX: can be just 8 if spat_largest is true
 	struct feature f[FEATURES];
 };
 
