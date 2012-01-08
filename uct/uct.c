@@ -1051,6 +1051,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->result = uct_result;
 	e->genmove = uct_genmove;
 	e->genmoves = uct_genmoves;
+	e->evaluate = uct_evaluate;
 	e->dead_group_list = uct_dead_group_list;
 	e->done = uct_done;
 	e->data = u;
