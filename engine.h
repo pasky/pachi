@@ -18,6 +18,10 @@ typedef char *(*engine_chat)(struct engine *e, struct board *b, char *cmd);
 typedef coord_t *(*engine_genmove)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive);
 typedef char *(*engine_genmoves)(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
 				 char *args, bool pass_all_alive, void **stats_buf, int *stats_size);
+/* Evaluate feasibility of player @color playing at all free moves. Will
+ * simulate each move from b->f[i] for time @ti, then set
+ * 1-max(opponent_win_likelihood) in vals[i]. */
+typedef void (*engine_evaluate)(struct engine *e, struct board *b, struct time_info *ti, floating_t *vals, enum stone color);
 /* One dead group per queued move (coord_t is (ab)used as group_t). */
 typedef void (*engine_dead_group_list)(struct engine *e, struct board *b, struct move_queue *mq);
 /* e->data and e will be free()d by caller afterwards. */
@@ -40,6 +44,7 @@ struct engine {
 	engine_result result;
 	engine_genmove genmove;
 	engine_genmoves genmoves;
+	engine_evaluate evaluate;
 	engine_dead_group_list dead_group_list;
 	engine_done done;
 	void *data;

@@ -18,7 +18,7 @@ gentbook1()
 {
 	echo "[#$n:$1]"
 	n=$((n+1))
-	echo -e 'boardsize '$size'\nclear_board\nkomi 7.5\nuct_gentbook b' |
+	echo -e 'boardsize '$size'\nclear_board\nkomi 7.5\npachi-gentbook b' |
 		./pachi -t =$games "policy=ucb1amaf:explore_p=$1$popts$opts"
 }
 gentbook1 0.0

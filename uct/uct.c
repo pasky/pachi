@@ -493,7 +493,7 @@ uct_dumptbook(struct engine *e, struct board *b, enum stone color)
 
 
 floating_t
-uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, coord_t c, enum stone color)
+uct_evaluate_one(struct engine *e, struct board *b, struct time_info *ti, coord_t c, enum stone color)
 {
 	struct uct *u = e->data;
 
@@ -521,6 +521,17 @@ uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, coord_t c,
 	reset_state(u); // clean our junk
 
 	return isnan(bestval) ? NAN : 1.0f - bestval;
+}
+
+void
+uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, floating_t *vals, enum stone color)
+{
+	for (int i = 0; i < b->flen; i++) {
+		if (is_pass(b->f[i]))
+			vals[i] = NAN;
+		else
+			vals[i] = uct_evaluate_one(e, b, ti, b->f[i], color);
+	}
 }
 
 
@@ -1051,6 +1062,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->result = uct_result;
 	e->genmove = uct_genmove;
 	e->genmoves = uct_genmoves;
+	e->evaluate = uct_evaluate;
 	e->dead_group_list = uct_dead_group_list;
 	e->done = uct_done;
 	e->data = u;

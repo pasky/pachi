@@ -89,13 +89,18 @@ static char *known_commands =
 	"play\n"
 	"genmove\n"
 	"kgs-genmove_cleanup\n"
+	"pachi-genmoves\n"
+	"pachi-genmoves_cleanup\n"
 	"set_free_handicap\n"
 	"place_free_handicap\n"
 	"fixed_handicap\n"
 	"final_score\n"
 	"final_status_list\n"
 	"undo\n"
+	"pachi-evaluate\n"
 	"pachi-result\n"
+	"pachi-gentbook\n"
+	"pachi-dumptbook\n"
 	"kgs-chat\n"
 	"time_left\n"
 	"time_settings\n"
@@ -478,8 +483,8 @@ next_group:;
 			board_print(board, stderr);
 		gtp_reply(id, reply, NULL);
 
-	/* Custom commands for handling UCT opening tbook */
-	} else if (!strcasecmp(cmd, "uct_gentbook")) {
+	/* Custom commands for handling the tree opening tbook */
+	} else if (!strcasecmp(cmd, "pachi-gentbook")) {
 		/* Board must be initialized properly, as if for genmove;
 		 * makes sense only as 'uct_gentbook b'. */
 		char *arg;
@@ -490,31 +495,32 @@ next_group:;
 		else
 			gtp_error(id, "error generating tbook", NULL);
 
-	} else if (!strcasecmp(cmd, "uct_dumptbook")) {
+	} else if (!strcasecmp(cmd, "pachi-dumptbook")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 		uct_dumptbook(engine, board, color);
 		gtp_reply(id, NULL);
 
-	} else if (!strcasecmp(cmd, "uct_evaluate")) {
+	} else if (!strcasecmp(cmd, "pachi-evaluate")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 
-		gtp_prefix('=', id);
-		/* Iterate through the list of all free coordinates
-		 * and call uct_evaluate() for each.  uct_evaluate()
-		 * will throw NAN in case of invalid moves and such. */
-		foreach_free_point(board) {
-			if (!board_coord_in_symmetry(board, c))
-				continue;
-			floating_t val = uct_evaluate(engine, board, &ti[color], c, color);
-			if (isnan(val))
-				continue;
-			printf("%s %1.3f\n", coord2sstr(c, board), (double) val);
-		} foreach_free_point_end;
-		gtp_flush();
+		if (!engine->evaluate) {
+			gtp_error(id, "pachi-evaluate not supported by engine", NULL);
+		} else {
+			gtp_prefix('=', id);
+			floating_t vals[board->flen];
+			engine->evaluate(engine, board, &ti[color], vals, color);
+			for (int i = 0; i < board->flen; i++) {
+				if (!board_coord_in_symmetry(board, board->f[i])
+				    || isnan(vals[i]))
+					continue;
+				printf("%s %1.3f\n", coord2sstr(board->f[i], board), (double) vals[i]);
+			}
+			gtp_flush();
+		}
 
 	} else if (!strcasecmp(cmd, "pachi-result")) {
 		/* More detailed result of the last genmove. */
