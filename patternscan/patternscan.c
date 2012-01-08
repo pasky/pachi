@@ -83,6 +83,9 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 
 	if (is_resign(m->coord))
 		return NULL;
+	/* Deal with broken game records that sometimes get fed in. */
+	if (board_at(b, m->coord) != S_NONE)
+		return NULL;
 
 	if (b->moves == 1)
 		ps->gameno++;
