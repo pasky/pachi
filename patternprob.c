@@ -84,3 +84,29 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 	cached_dict = dict;
 	return dict;
 }
+
+floating_t
+pattern_rate_moves(struct pattern_config *pc, pattern_spec *ps, struct pattern_pdict *pd,
+                   struct board *b, enum stone color,
+                   struct pattern *pats, floating_t *probs)
+{
+	floating_t total = 0;
+	for (int f = 0; f < b->flen; f++) {
+		probs[f] = NAN;
+
+		struct move mo = { .coord = b->f[f], .color = color };
+		if (is_pass(mo.coord))
+			continue;
+		if (!board_is_valid_move(b, &mo))
+			continue;
+
+		pattern_match(pc, *ps, &pats[f], b, &mo);
+		floating_t prob = pattern_prob(pd, &pats[f]);
+		if (!isnan(prob)) {
+			probs[f] = prob;
+			total += prob;
+		}
+	}
+	return total;
+}
+

@@ -39,6 +39,14 @@ struct pattern_pdict *pattern_pdict_init(char *filename, struct pattern_config *
  * the pattern cannot be found. */
 static floating_t pattern_prob(struct pattern_pdict *dict, struct pattern *p);
 
+/* Evaluate patterns for all available moves. Stores found patterns
+ * to pats[b->flen] and NON-normalized probability of each pattern
+ * (or NaN in case of no match) to probs[b->flen]. Returns the sum
+ * of all probabilities that can be used for normalization. */
+floating_t pattern_rate_moves(struct pattern_config *pc, pattern_spec *ps, struct pattern_pdict *pd,
+                        struct board *b, enum stone color,
+                        struct pattern *pats, floating_t *probs);
+
 /* Utility function - extract spatial id from a pattern. If the pattern
  * has no spatial feature, it is represented by the highest spatial id
  * plus one. */

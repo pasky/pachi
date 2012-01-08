@@ -23,39 +23,6 @@ struct patternplay {
 };
 
 
-/* Evaluate patterns for all available moves. Stores found patterns
- * to pats[b->flen] and normalized probability of each pattern (or NaN
- * in case of no match) to probs[b->flen]. */
-static void
-rate_moves(struct pattern_config *pc, pattern_spec *ps, struct pattern_pdict *pd,
-           struct board *b, enum stone color,
-           struct pattern *pats, floating_t *probs)
-{
-	/* First pass: Gather probabilities. */
-	floating_t total = 0;
-	for (int f = 0; f < b->flen; f++) {
-		probs[f] = NAN;
-
-		struct move mo = { .coord = b->f[f], .color = color };
-		if (is_pass(mo.coord))
-			continue;
-		if (!board_is_valid_move(b, &mo))
-			continue;
-
-		pattern_match(pc, *ps, &pats[f], b, &mo);
-		floating_t prob = pattern_prob(pd, &pats[f]);
-		if (!isnan(prob)) {
-			probs[f] = prob;
-			total += prob;
-		}
-	}
-
-	/* Second pass: Rescale. */
-	for (int f = 0; f < b->flen; f++) {
-		probs[f] /= total;
-	}
-}
-
 static coord_t *
 patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
@@ -63,7 +30,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	struct pattern pats[b->flen];
 	floating_t probs[b->flen];
-	rate_moves(&pp->pc, &pp->ps, pp->pd, b, color, pats, probs);
+	pattern_rate_moves(&pp->pc, &pp->ps, pp->pd, b, color, pats, probs);
 
 	int best = 0;
 	for (int f = 0; f < b->flen; f++) {
@@ -84,7 +51,12 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 	struct patternplay *pp = e->data;
 
 	struct pattern pats[b->flen];
-	rate_moves(&pp->pc, &pp->ps, pp->pd, b, color, pats, vals);
+	floating_t total = pattern_rate_moves(&pp->pc, &pp->ps, pp->pd, b, color, pats, vals);
+
+	/* Rescale properly. */
+	for (int f = 0; f < b->flen; f++) {
+		probs[f] /= total;
+	}
 
 	if (pp->debug_level >= 4) {
 		for (int f = 0; f < b->flen; f++) {
