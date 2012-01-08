@@ -53,13 +53,8 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 		str2pattern(buf, &pb->p);
 
 		uint32_t spi = pattern2spatial(dict, &pb->p);
-		if (!dict->table[spi]) {
-			dict->table[spi] = pb;
-		} else {
-			struct pattern_prob *ppb = dict->table[spi];
-			while (ppb->next) ppb = ppb->next;
-			ppb->next = pb;
-		}
+		pb->next = dict->table[spi];
+		dict->table[spi] = pb;
 		i++;
 	}
 
