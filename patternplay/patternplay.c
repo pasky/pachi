@@ -67,7 +67,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	int best = 0;
 	for (int f = 0; f < b->flen; f++) {
-		if (pp->debug_level >= 5 && probs[f] > 0) {
+		if (pp->debug_level >= 5 && probs[f] >= 0.001) {
 			char s[256]; pattern2str(s, &pats[f]);
 			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), probs[f], s);
 		}
@@ -88,7 +88,7 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 
 	if (pp->debug_level >= 4) {
 		for (int f = 0; f < b->flen; f++) {
-			if (vals[f] > 0) {
+			if (vals[f] >= 0.001) {
 				char s[256]; pattern2str(s, &pats[f]);
 				fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), vals[f], s);
 			}
@@ -104,7 +104,7 @@ patternplay_state_init(char *arg)
 
 	pp->debug_level = debug_level;
 	pp->pc = DEFAULT_PATTERN_CONFIG;
-	pp->pc.spat_dict = spatial_dict_init(false);
+	pp->pc.spat_dict = spatial_dict_init(false, false);
 	memcpy(&pp->ps, PATTERN_SPEC_MATCH_DEFAULT, sizeof(pattern_spec));
 
 	if (arg) {

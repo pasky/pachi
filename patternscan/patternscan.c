@@ -228,7 +228,7 @@ patternscan_state_init(char *arg)
 		}
 	}
 	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) ps->ps[i] = 0;
-	ps->pc.spat_dict = spatial_dict_init(ps->gen_spat_dict);
+	ps->pc.spat_dict = spatial_dict_init(ps->gen_spat_dict, true);
 	ps->loaded_spatials = ps->pc.spat_dict->nspatials;
 
 	return ps;

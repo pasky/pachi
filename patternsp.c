@@ -88,15 +88,16 @@ pthashes_init(void)
 	 * with correct coordinates. It would be possible to generate
 	 * the sequence point hashes directly, but the rotations would
 	 * make for enormous headaches. */
-	hash_t pthboard[MAX_PATTERN_AREA][4];
-	int pthbc = MAX_PATTERN_AREA / 2; // tengen coord
+#define PATTERN_BOARD_SIZE ((MAX_PATTERN_DIST + 1) * (MAX_PATTERN_DIST + 1))
+	hash_t pthboard[PATTERN_BOARD_SIZE][4];
+	int pthbc = PATTERN_BOARD_SIZE / 2; // tengen coord
 
 	/* The magic numbers are tuned for minimal collisions. */
 	hash_t h1 = 0xd6d6d6d1;
 	hash_t h2 = 0xd6d6d6d2;
 	hash_t h3 = 0xd6d6d6d3;
 	hash_t h4 = 0xd6d6d6d4;
-	for (int i = 0; i < MAX_PATTERN_AREA; i++) {
+	for (int i = 0; i < PATTERN_BOARD_SIZE; i++) {
 		pthboard[i][S_NONE] = (h1 = h1 * 16787);
 		pthboard[i][S_BLACK] = (h2 = h2 * 16823);
 		pthboard[i][S_WHITE] = (h3 = h3 * 16811 - 13);
@@ -119,7 +120,7 @@ pthashes_init(void)
 			if (r & PTH_90ROT) {
 				int rs = rx; rx = -ry; ry = rs;
 			}
-			int bi = pthbc + ry * MAX_PATTERN_DIST + rx;
+			int bi = pthbc + ry * (MAX_PATTERN_DIST + 1) + rx;
 
 			/* Copy info. */
 			pthashes[r][i][S_NONE] = pthboard[bi][S_NONE];
@@ -227,7 +228,7 @@ spatial_dict_addc(struct spatial_dict *dict, struct spatial *s)
 	return dict->nspatials++;
 }
 
-static bool
+bool
 spatial_dict_addh(struct spatial_dict *dict, hash_t hash, unsigned int id)
 {
 	if (dict->hash[hash] && dict->hash[hash] != id)
@@ -245,14 +246,14 @@ spatial_dict_addh(struct spatial_dict *dict, hash_t hash, unsigned int id)
  * HASH...: space-separated 18bit hash-table indices for the pattern */
 
 static void
-spatial_dict_read(struct spatial_dict *dict, char *buf)
+spatial_dict_read(struct spatial_dict *dict, char *buf, bool hash)
 {
 	/* XXX: We trust the data. Bad data will crash us. */
 	char *bufp = buf;
 
-	int index, radius;
-	index = strtol(bufp, &bufp, 10);
-	radius = strtol(bufp, &bufp, 10);
+	unsigned int index, radius;
+	index = strtoul(bufp, &bufp, 10);
+	radius = strtoul(bufp, &bufp, 10);
 	while (isspace(*bufp)) bufp++;
 
 	/* Load the stone configuration. */
@@ -273,10 +274,12 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 
 	/* Add to collection. */
 	unsigned int id = spatial_dict_addc(dict, &s);
+	assert(id == index);
 
 	/* Add to specified hash places. */
-	for (int r = 0; r < PTH__ROTATIONS; r++)
-		spatial_dict_addh(dict, spatial_hash(r, &s), id);
+	if (hash)
+		for (int r = 0; r < PTH__ROTATIONS; r++)
+			spatial_dict_addh(dict, spatial_hash(r, &s), id);
 }
 
 void
@@ -303,16 +306,25 @@ spatial_write(struct spatial_dict *dict, struct spatial *s, int id, FILE *f)
 }
 
 static void
-spatial_dict_load(struct spatial_dict *dict, FILE *f)
+spatial_dict_load(struct spatial_dict *dict, FILE *f, bool hash)
 {
 	char buf[1024];
 	while (fgets(buf, sizeof(buf), f)) {
 		if (buf[0] == '#') continue;
-		spatial_dict_read(dict, buf);
+		spatial_dict_read(dict, buf, hash);
 	}
-	if (DEBUGL(1))
-		fprintf(stderr, "Loaded spatial dictionary of %d patterns (hash: %d coll., %d effective, %.2f%% fill rate).\n",
-			dict->nspatials, dict->collisions, dict->collisions / PTH__ROTATIONS,
+	if (DEBUGL(1)) {
+		fprintf(stderr, "Loaded spatial dictionary of %d patterns.\n", dict->nspatials);
+		if (hash)
+			spatial_dict_hashstats(dict);
+	}
+}
+
+void
+spatial_dict_hashstats(struct spatial_dict *dict)
+{
+	fprintf(stderr, "\t(Spatial dictionary hash: %d coll., %d effective - still inflated, %.2f%% fill rate).\n",
+			dict->collisions, dict->collisions / PTH__ROTATIONS,
 			(double) dict->nspatials * 100 / (sizeof(dict->hash) / sizeof(dict->hash[0])));
 }
 
@@ -339,7 +351,7 @@ static struct spatial_dict *cached_dict;
 
 const char *spatial_dict_filename = "patterns.spat";
 struct spatial_dict *
-spatial_dict_init(bool will_append)
+spatial_dict_init(bool will_append, bool hash)
 {
 	if (cached_dict && !will_append)
 		return cached_dict;
@@ -359,7 +371,7 @@ spatial_dict_init(bool will_append)
 	spatial_dict_addc(dict, &dummy);
 
 	if (f) {
-		spatial_dict_load(dict, f);
+		spatial_dict_load(dict, f, hash);
 		fclose(f); f = NULL;
 	} else {
 		assert(will_append);
