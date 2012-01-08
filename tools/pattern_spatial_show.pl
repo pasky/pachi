@@ -32,8 +32,10 @@ while (<D>) {
 		for my $y (0 .. 2 * $d) {
 			for my $x (0 .. 2 * $d) {
 				print $b[2 * $d - $y][$x] || ' ';
+				print ' ';
 			}
 			print "\n";
 		}
+		last;
 	}
 }
