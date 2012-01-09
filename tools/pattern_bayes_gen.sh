@@ -24,6 +24,7 @@
 				$p{$_} = $choices{$_} / $counts{$_};
 			}
 			for (sort { $counts{$a} <=> $counts{$b} } keys %p) {
+				next if ($counts{$_} < 2);
 				printf("%.3f %d %d %s\n", $p{$_}, $choices{$_}, $counts{$_}, $_);
 			}
 		}'
