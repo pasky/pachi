@@ -214,6 +214,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		board_resize(board, size);
 		board_clear(board);
 		gtp_reply(id, NULL);
+		return P_ENGINE_RESET;
 
 	} else if (!strcasecmp(cmd, "clear_board")) {
 		board_clear(board);
