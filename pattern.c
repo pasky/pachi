@@ -99,6 +99,8 @@ feature_payloads(struct pattern_config *pc, enum feature_id f)
 void
 patterns_init(struct pattern_setup *pat, char *arg, bool will_append, bool load_prob)
 {
+	char *pdict_file = NULL;
+
 	memset(pat, 0, sizeof(*pat));
 
 	pat->pc = DEFAULT_PATTERN_CONFIG;
@@ -129,6 +131,9 @@ patterns_init(struct pattern_setup *pat, char *arg, bool will_append, bool load_
 			} else if (!strcasecmp(optname, "spat_largest")) {
 				pat->pc.spat_largest = !optval || atoi(optval);
 
+			} else if (!strcasecmp(optname, "pdict_file") && optval) {
+				pdict_file = optval;
+
 			} else {
 				fprintf(stderr, "patterns: Invalid argument %s or missing value\n", optname);
 				exit(EXIT_FAILURE);
@@ -137,7 +142,7 @@ patterns_init(struct pattern_setup *pat, char *arg, bool will_append, bool load_
 	}
 
 	if (load_prob && pat->pc.spat_dict) {
-		pat->pd = pattern_pdict_init(NULL, &pat->pc);
+		pat->pd = pattern_pdict_init(pdict_file, &pat->pc);
 	}
 }
 
