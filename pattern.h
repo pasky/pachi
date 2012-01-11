@@ -129,6 +129,18 @@ typedef uint16_t pattern_spec[FEAT_MAX];
 extern pattern_spec PATTERN_SPEC_MATCH_DEFAULT;
 
 
+/* General structure describing a loaded pattern configuration
+ * with all its attributes. */
+struct pattern_pdict;
+struct pattern_setup {
+	struct pattern_config pc;
+	pattern_spec ps;
+	struct pattern_pdict *pd;
+};
+
+void patterns_init(struct pattern_setup *pat, bool will_append, bool load_prob);
+
+
 /* Append feature to string. */
 char *feature2str(char *str, struct feature *f);
 /* Convert string to feature, return pointer after the featurespec. */

@@ -290,12 +290,7 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	}
 
 	if (p->pattern_eqex) {
-		u->pat.pc = DEFAULT_PATTERN_CONFIG;
-		u->pat.pc.spat_dict = spatial_dict_init(false, false);
-		memcpy(&u->pat.ps, PATTERN_SPEC_MATCH_DEFAULT, sizeof(pattern_spec));
-		if (u->pat.pc.spat_dict) {
-			u->pat.pd = pattern_pdict_init(NULL, &u->pat.pc);
-		}
+		patterns_init(&u->pat, false, true);
 	}
 
 	return p;

@@ -9,7 +9,7 @@
 #include "debug.h"
 #include "pattern.h"
 #include "patternsp.h"
-#include "pattern3.h"
+#include "patternprob.h"
 #include "tactics/ladder.h"
 #include "tactics/selfatari.h"
 #include "tactics/util.h"
@@ -92,6 +92,22 @@ feature_payloads(struct pattern_config *pc, enum feature_id f)
 		default:
 			assert(features[f].payloads > 0);
 			return features[f].payloads;
+	}
+}
+
+
+void
+patterns_init(struct pattern_setup *pat, bool will_append, bool load_prob)
+{
+	memset(pat, 0, sizeof(*pat));
+
+	pat->pc = DEFAULT_PATTERN_CONFIG;
+	pat->pc.spat_dict = spatial_dict_init(will_append, !load_prob);
+
+	memcpy(&pat->ps, PATTERN_SPEC_MATCH_DEFAULT, sizeof(pattern_spec));
+
+	if (load_prob && pat->pc.spat_dict) {
+		pat->pd = pattern_pdict_init(NULL, &pat->pc);
 	}
 }
 
