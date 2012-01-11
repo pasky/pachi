@@ -43,7 +43,7 @@ static floating_t pattern_prob(struct pattern_pdict *dict, struct pattern *p);
  * to pats[b->flen] and NON-normalized probability of each pattern
  * (or NaN in case of no match) to probs[b->flen]. Returns the sum
  * of all probabilities that can be used for normalization. */
-floating_t pattern_rate_moves(struct pattern_config *pc, pattern_spec *ps, struct pattern_pdict *pd,
+floating_t pattern_rate_moves(struct pattern_setup *pat,
                         struct board *b, enum stone color,
                         struct pattern *pats, floating_t *probs);
 

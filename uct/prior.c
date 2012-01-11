@@ -151,7 +151,7 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 	struct board *b = map->b;
 	struct pattern pats[b->flen];
 	floating_t probs[b->flen];
-	pattern_rate_moves(&u->pat.pc, &u->pat.ps, u->pat.pd, b, map->to_play, pats, probs);
+	pattern_rate_moves(&u->pat, b, map->to_play, pats, probs);
 	if (UDEBUGL(5)) {
 		fprintf(stderr, "Pattern prior at node %s\n", coord2sstr(node->coord, b));
 		board_print(b, stderr);
@@ -290,7 +290,7 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	}
 
 	if (p->pattern_eqex) {
-		patterns_init(&u->pat, false, true);
+		patterns_init(&u->pat, NULL, false, true);
 	}
 
 	return p;

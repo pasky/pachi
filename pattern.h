@@ -138,7 +138,7 @@ struct pattern_setup {
 	struct pattern_pdict *pd;
 };
 
-void patterns_init(struct pattern_setup *pat, bool will_append, bool load_prob);
+void patterns_init(struct pattern_setup *pat, char *arg, bool will_append, bool load_prob);
 
 
 /* Append feature to string. */

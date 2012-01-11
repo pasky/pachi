@@ -97,7 +97,7 @@ feature_payloads(struct pattern_config *pc, enum feature_id f)
 
 
 void
-patterns_init(struct pattern_setup *pat, bool will_append, bool load_prob)
+patterns_init(struct pattern_setup *pat, char *arg, bool will_append, bool load_prob)
 {
 	memset(pat, 0, sizeof(*pat));
 
@@ -105,6 +105,36 @@ patterns_init(struct pattern_setup *pat, bool will_append, bool load_prob)
 	pat->pc.spat_dict = spatial_dict_init(will_append, !load_prob);
 
 	memcpy(&pat->ps, PATTERN_SPEC_MATCH_DEFAULT, sizeof(pattern_spec));
+
+	if (arg) {
+		char *optspec, *next = arg;
+		while (*next) {
+			optspec = next;
+			next += strcspn(next, ":");
+			if (*next) { *next++ = 0; } else { *next = 0; }
+
+			char *optname = optspec;
+			char *optval = strchr(optspec, '=');
+			if (optval) *optval++ = 0;
+
+			/* See pattern.h:pattern_config for description and
+			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values
+			 * of the following options. */
+			if (!strcasecmp(optname, "bdist_max") && optval) {
+				pat->pc.bdist_max = atoi(optval);
+			} else if (!strcasecmp(optname, "spat_min") && optval) {
+				pat->pc.spat_min = atoi(optval);
+			} else if (!strcasecmp(optname, "spat_max") && optval) {
+				pat->pc.spat_max = atoi(optval);
+			} else if (!strcasecmp(optname, "spat_largest")) {
+				pat->pc.spat_largest = !optval || atoi(optval);
+
+			} else {
+				fprintf(stderr, "patterns: Invalid argument %s or missing value\n", optname);
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
 
 	if (load_prob && pat->pc.spat_dict) {
 		pat->pd = pattern_pdict_init(NULL, &pat->pc);

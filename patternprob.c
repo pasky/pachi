@@ -88,7 +88,7 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 }
 
 floating_t
-pattern_rate_moves(struct pattern_config *pc, pattern_spec *ps, struct pattern_pdict *pd,
+pattern_rate_moves(struct pattern_setup *pat,
                    struct board *b, enum stone color,
                    struct pattern *pats, floating_t *probs)
 {
@@ -102,8 +102,8 @@ pattern_rate_moves(struct pattern_config *pc, pattern_spec *ps, struct pattern_p
 		if (!board_is_valid_move(b, &mo))
 			continue;
 
-		pattern_match(pc, *ps, &pats[f], b, &mo);
-		floating_t prob = pattern_prob(pd, &pats[f]);
+		pattern_match(&pat->pc, pat->ps, &pats[f], b, &mo);
+		floating_t prob = pattern_prob(pat->pd, &pats[f]);
 		if (!isnan(prob)) {
 			probs[f] = prob;
 			total += prob;

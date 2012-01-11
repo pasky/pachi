@@ -17,9 +17,7 @@
 struct patternplay {
 	int debug_level;
 
-	struct pattern_config pc;
-	pattern_spec ps;
-	struct pattern_pdict *pd;
+	struct pattern_setup pat;
 };
 
 
@@ -30,7 +28,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	struct pattern pats[b->flen];
 	floating_t probs[b->flen];
-	pattern_rate_moves(&pp->pc, &pp->ps, pp->pd, b, color, pats, probs);
+	pattern_rate_moves(&pp->pat, b, color, pats, probs);
 
 	int best = 0;
 	for (int f = 0; f < b->flen; f++) {
@@ -51,7 +49,7 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 	struct patternplay *pp = e->data;
 
 	struct pattern pats[b->flen];
-	floating_t total = pattern_rate_moves(&pp->pc, &pp->ps, pp->pd, b, color, pats, vals);
+	floating_t total = pattern_rate_moves(&pp->pat, b, color, pats, vals);
 
 #if 0
 	/* Rescale properly. */
@@ -75,11 +73,9 @@ struct patternplay *
 patternplay_state_init(char *arg)
 {
 	struct patternplay *pp = calloc2(1, sizeof(struct patternplay));
+	bool pat_setup = false;
 
 	pp->debug_level = debug_level;
-	pp->pc = DEFAULT_PATTERN_CONFIG;
-	pp->pc.spat_dict = spatial_dict_init(false, false);
-	memcpy(&pp->ps, PATTERN_SPEC_MATCH_DEFAULT, sizeof(pattern_spec));
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -98,17 +94,9 @@ patternplay_state_init(char *arg)
 				else
 					pp->debug_level++;
 
-			/* See pattern.h:pattern_config for description and
-			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values
-			 * of the following options. */
-			} else if (!strcasecmp(optname, "bdist_max") && optval) {
-				pp->pc.bdist_max = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_min") && optval) {
-				pp->pc.spat_min = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_max") && optval) {
-				pp->pc.spat_max = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_largest")) {
-				pp->pc.spat_largest = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "patterns") && optval) {
+				patterns_init(&pp->pat, optval, false, true);
+				pat_setup = true;
 
 			} else {
 				fprintf(stderr, "patternplay: Invalid engine argument %s or missing value\n", optname);
@@ -117,7 +105,8 @@ patternplay_state_init(char *arg)
 		}
 	}
 
-	pp->pd = pattern_pdict_init(NULL, &pp->pc);
+	if (!pat_setup)
+		patterns_init(&pp->pat, NULL, false, true);
 
 	return pp;
 }
