@@ -127,7 +127,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	if (board_at(b, m->coord) != S_NONE)
 		return NULL;
 
-	if (b->moves == 1)
+	if (b->moves == (b->handicap ? b->handicap * 2 : 1))
 		ps->gameno++;
 
 	static char str[1048576]; // XXX
