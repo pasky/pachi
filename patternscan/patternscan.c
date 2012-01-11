@@ -31,8 +31,7 @@
 struct patternscan {
 	int debug_level;
 
-	struct pattern_config pc;
-	pattern_spec ps;
+	struct pattern_setup pat;
 	bool competition;
 	bool spat_split_sizes;
 
@@ -59,11 +58,11 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 	 * if applicable. */
 	if (ps->gen_spat_dict && !is_pass(m->coord)) {
 		struct spatial s;
-		spatial_from_board(&ps->pc, &s, b, m);
+		spatial_from_board(&ps->pat.pc, &s, b, m);
 		int dmax = s.dist;
-		for (int d = ps->pc.spat_min; d <= dmax; d++) {
+		for (int d = ps->pat.pc.spat_min; d <= dmax; d++) {
 			s.dist = d;
-			int sid = spatial_dict_put(ps->pc.spat_dict, &s, spatial_hash(0, &s));
+			int sid = spatial_dict_put(ps->pat.pc.spat_dict, &s, spatial_hash(0, &s));
 			assert(sid > 0);
 			#define SCOUNTS_ALLOC 1048576 // Allocate space in 1M*4 blocks.
 			if (sid >= ps->nscounts) {
@@ -75,7 +74,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 				ps->nscounts = newnsc;
 			}
 			if (ps->debug_level > 1 && !fast_random(65536) && !fast_random(32)) {
-				fprintf(stderr, "%d spatials, %d collisions\n", ps->pc.spat_dict->nspatials, ps->pc.spat_dict->collisions);
+				fprintf(stderr, "%d spatials, %d collisions\n", ps->pat.pc.spat_dict->nspatials, ps->pat.pc.spat_dict->collisions);
 			}
 			if (ps->sgameno[sid] != ps->gameno) {
 				ps->scounts[sid]++;
@@ -87,7 +86,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 	/* Now, match the pattern. */
 	if (!ps->no_pattern_match) {
 		struct pattern p;
-		pattern_match(&ps->pc, ps->ps, &p, b, m);
+		pattern_match(&ps->pat.pc, ps->pat.ps, &p, b, m);
 
 		if (!ps->spat_split_sizes) {
 			*str = pattern2str(*str, &p);
@@ -184,13 +183,13 @@ patternscan_done(struct engine *e)
 	if (f) { fclose(f); newfile = false; }
 	f = fopen(spatial_dict_filename, "a");
 	if (newfile)
-		spatial_dict_writeinfo(ps->pc.spat_dict, f);
+		spatial_dict_writeinfo(ps->pat.pc.spat_dict, f);
 
-	for (int i = ps->loaded_spatials; i < ps->pc.spat_dict->nspatials; i++) {
+	for (int i = ps->loaded_spatials; i < ps->pat.pc.spat_dict->nspatials; i++) {
 		/* By default, threshold is 0 and condition is always true. */
 		assert(i < ps->nscounts && ps->scounts[i] > 0);
 		if (ps->scounts[i] >= ps->spat_threshold)
-			spatial_write(ps->pc.spat_dict, &ps->pc.spat_dict->spatials[i], i, f);
+			spatial_write(ps->pat.pc.spat_dict, &ps->pat.pc.spat_dict->spatials[i], i, f);
 	}
 	fclose(f);
 }
@@ -200,11 +199,10 @@ struct patternscan *
 patternscan_state_init(char *arg)
 {
 	struct patternscan *ps = calloc2(1, sizeof(struct patternscan));
+	bool pat_setup = false;
 	int xspat = -1;
 
 	ps->debug_level = 1;
-	ps->pc = DEFAULT_PATTERN_CONFIG;
-	memcpy(&ps->ps, PATTERN_SPEC_MATCH_DEFAULT, sizeof(pattern_spec));
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -228,6 +226,8 @@ patternscan_state_init(char *arg)
 				 * dictionary; you need to have a dictionary
 				 * of spatial stone configurations in order
 				 * to match any spatial features. */
+				/* XXX: If you specify the 'patterns' option,
+				 * this must come first! */
 				ps->gen_spat_dict = !optval || atoi(optval);
 
 			} else if (!strcasecmp(optname, "no_pattern_match")) {
@@ -259,24 +259,15 @@ patternscan_state_init(char *arg)
 				 * situations where the largest pattern
 				 * might not match. */
 				ps->spat_split_sizes = 1;
-				ps->pc.spat_largest = 0;
 
 			} else if (!strcasecmp(optname, "xspat") && optval) {
 				/* xspat==0: don't match spatial features
 				 * xspat==1: match *only* spatial features */
 				xspat = atoi(optval);
 
-			/* See pattern.h:pattern_config for description and
-			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values
-			 * of the following options. */
-			} else if (!strcasecmp(optname, "bdist_max") && optval) {
-				ps->pc.bdist_max = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_min") && optval) {
-				ps->pc.spat_min = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_max") && optval) {
-				ps->pc.spat_max = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_largest")) {
-				ps->pc.spat_largest = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "patterns") && optval) {
+				patterns_init(&ps->pat, optval, ps->gen_spat_dict, false);
+				pat_setup = true;
 
 			} else {
 				fprintf(stderr, "patternscan: Invalid engine argument %s or missing value\n", optname);
@@ -284,9 +275,14 @@ patternscan_state_init(char *arg)
 			}
 		}
 	}
-	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) ps->ps[i] = 0;
-	ps->pc.spat_dict = spatial_dict_init(ps->gen_spat_dict, true);
-	ps->loaded_spatials = ps->pc.spat_dict->nspatials;
+
+	if (!pat_setup)
+		patterns_init(&ps->pat, NULL, ps->gen_spat_dict, false);
+	if (ps->spat_split_sizes)
+		ps->pat.pc.spat_largest = 0;
+
+	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) ps->pat.ps[i] = 0;
+	ps->loaded_spatials = ps->pat.pc.spat_dict->nspatials;
 
 	return ps;
 }
