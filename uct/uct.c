@@ -539,6 +539,7 @@ struct uct *
 uct_state_init(char *arg, struct board *b)
 {
 	struct uct *u = calloc2(1, sizeof(struct uct));
+	bool pat_setup = false;
 
 	u->debug_level = debug_level;
 	u->gamelen = MC_GAMELEN;
@@ -950,6 +951,15 @@ uct_state_init(char *arg, struct board *b)
 				u->local_tree_rootchoose = !optval || atoi(optval);
 
 			/** Other heuristics */
+			} else if (!strcasecmp(optname, "patterns")) {
+				/* Load pattern database. Various modules
+				 * (priors, policies etc.) may make use
+				 * of this database. They will request
+				 * it automatically in that case, but you
+				 * can use this option to tweak the pattern
+				 * parameters. */
+				patterns_init(&u->pat, optval, false, true);
+				u->want_pat = pat_setup = true;
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {
 				/* Some heuristics (XXX: none in mainline) rely
 				 * on the knowledge of the last "significant"
@@ -1028,6 +1038,9 @@ uct_state_init(char *arg, struct board *b)
 		u->playout = playout_moggy_init(NULL, b, u->jdict);
 	if (!u->playout->debug_level)
 		u->playout->debug_level = u->debug_level;
+
+	if (u->want_pat && !pat_setup)
+		patterns_init(&u->pat, NULL, false, true);
 
 	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));
 

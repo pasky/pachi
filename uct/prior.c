@@ -289,9 +289,8 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 		exit(1);
 	}
 
-	if (p->pattern_eqex) {
-		patterns_init(&u->pat, NULL, false, true);
-	}
+	if (p->pattern_eqex)
+		u->want_pat = true;
 
 	return p;
 }

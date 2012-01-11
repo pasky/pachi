@@ -96,7 +96,11 @@ struct uct {
 	struct uct_prior *prior;
 	struct uct_pluginset *plugins;
 	struct joseki_dict *jdict;
+
 	struct pattern_setup pat;
+	/* Various modules (prior, policy, ...) set this if they want pattern
+	 * database to be loaded. */
+	bool want_pat;
 
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;
