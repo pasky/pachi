@@ -34,6 +34,7 @@ struct patternscan {
 	struct pattern_setup pat;
 	bool competition;
 	bool spat_split_sizes;
+	int color_mask;
 
 	bool no_pattern_match;
 	bool gen_spat_dict;
@@ -130,6 +131,9 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 	if (b->moves == (b->handicap ? b->handicap * 2 : 1))
 		ps->gameno++;
 
+	if (!(m->color & ps->color_mask))
+		return NULL;
+
 	static char str[1048576]; // XXX
 	char *strp = str;
 	*str = 0;
@@ -203,6 +207,7 @@ patternscan_state_init(char *arg)
 	int xspat = -1;
 
 	ps->debug_level = 1;
+	ps->color_mask = S_BLACK | S_WHITE;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -259,6 +264,13 @@ patternscan_state_init(char *arg)
 				 * situations where the largest pattern
 				 * might not match. */
 				ps->spat_split_sizes = 1;
+
+			} else if (!strcasecmp(optname, "color_mask") && optval) {
+				/* Bitmask of move colors to match. Set this
+				 * to 2 if you want to match only white moves,
+				 * for example. (Useful for processing
+				 * handicap games.) */
+				ps->color_mask = atoi(optval);
 
 			} else if (!strcasecmp(optname, "xspat") && optval) {
 				/* xspat==0: don't match spatial features
