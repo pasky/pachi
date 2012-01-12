@@ -216,6 +216,11 @@ matcher easy:
   for each pattern in a SGF collection. The computed number is the empiric
   probability of playing a given pattern when it is available on board.
 
+* tools/pattern_bayes_merge.sh: Merges Bayesian probability tables
+  of patterns. This is useful for parallel pattern mining - run multiple
+  pattern_bayes_gen (perhaps remove the counts >= 2 test) and then merge
+  the generated tables.
+
 
 Plugin API
 ==========
