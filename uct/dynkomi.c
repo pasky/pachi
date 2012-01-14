@@ -93,7 +93,7 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 
 	if (my_value < 0.5 && l->komi_ratchet > 0 && l->komi_ratchet != INFINITY) {
 		if (DEBUGL(0))
-			fprintf(stderr, "losing %f extra %.1f ratchet %.1f -> 0\n",
+			fprintf(stderr, "losing %f extra komi %.1f ratchet %.1f -> 0\n",
 				my_value, extra_komi, l->komi_ratchet);
 		/* Disable dynkomi completely, too dangerous in this game. */
 		extra_komi = l->komi_ratchet = 0;
@@ -101,14 +101,14 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	} else if (my_value < l->orange_zone && extra_komi > 0) {
 		extra_komi = l->komi_ratchet  = fmax(extra_komi - l->drop_step, 0.0);
 		if (extra_komi != orig_komi && DEBUGL(3))
-			fprintf(stderr, "dropping to %f ratchet -> %.1f\n",
-				my_value, extra_komi);
+			fprintf(stderr, "dropping to %f, extra komi %.1f -> ratchet %.1f\n",
+				my_value, orig_komi, extra_komi);
 
-	} else if (my_value > l->green_zone && extra_komi +1 <= l->komi_ratchet) {
+	} else if (my_value > l->green_zone && extra_komi + 1 <= l->komi_ratchet) {
 		extra_komi += 1;
 		if (extra_komi != orig_komi && DEBUGL(3))
-			fprintf(stderr, "winning %f extra_komi -> %.1f, ratchet %.1f\n",
-				my_value, extra_komi, l->komi_ratchet);
+			fprintf(stderr, "winning %f extra_komi %.1f -> %.1f, ratchet %.1f\n",
+				my_value, orig_komi, extra_komi, l->komi_ratchet);
 	}
 	return komi_by_color(extra_komi, color);
 }
