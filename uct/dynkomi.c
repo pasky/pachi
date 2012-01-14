@@ -88,7 +88,9 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	floating_t my_value = tree_node_get_value(tree, 1, tree->root->u.value);
 	/*  We normalize komi as in komi_by_value(), > 0 when winning. */
 	extra_komi = komi_by_color(extra_komi, color);
-	assert(extra_komi >= 0);
+	if (extra_komi < 0 && DEBUGL(3))
+		fprintf(stderr, "XXX: extra_komi %.3f < 0 (color %s tree ek %.3f)\n", extra_komi, stone2str(color), tree->extra_komi);
+	// assert(extra_komi >= 0);
 	floating_t orig_komi = extra_komi;
 
 	if (my_value < 0.5 && l->komi_ratchet > 0 && l->komi_ratchet != INFINITY) {
