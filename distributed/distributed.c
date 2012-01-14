@@ -515,8 +515,8 @@ engine_distributed_init(char *arg, struct board *b)
 	struct distributed *dist = distributed_state_init(arg, b);
 	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "Distributed";
-	e->comment = "I'm playing the distributed engine. When I'm losing, I will resign, "
-		"if I think I win, I play until you pass. "
+	e->comment = "If you believe you have won but I am still playing, "
+		"please help me understand by capturing all dead stones. "
 		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
 	e->notify = distributed_notify;
 	e->genmove = distributed_genmove;

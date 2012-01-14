@@ -1069,8 +1069,8 @@ engine_uct_init(char *arg, struct board *b)
 	if (u->slave)
 		e->notify = uct_notify;
 
-	const char banner[] = "I'm playing UCT. When I'm losing, I will resign, "
-		"if I think I win, I play until you pass. "
+	const char banner[] = "If you believe you have won but I am still playing, "
+		"please help me understand by capturing all dead stones. "
 		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
 	if (!u->banner) u->banner = "";
 	e->comment = malloc2(sizeof(banner) + strlen(u->banner) + 1);
