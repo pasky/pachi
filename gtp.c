@@ -163,7 +163,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "version")) {
-		gtp_reply(id, PACHI_VERSION, ": ", engine->comment, NULL);
+		gtp_reply(id, PACHI_VERSION, ": ", engine->comment, " Have a nice game!", NULL);
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
