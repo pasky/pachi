@@ -106,7 +106,7 @@ engine_replay_init(char *arg, struct board *b)
 {
 	struct replay *r = replay_state_init(arg, b);
 	struct engine *e = calloc2(1, sizeof(struct engine));
-	e->name = "PlayoutReplay Engine";
+	e->name = "PlayoutReplay";
 	e->comment = "I select moves blindly according to playout policy. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = replay_genmove;
 	e->data = r;

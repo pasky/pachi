@@ -1054,7 +1054,7 @@ engine_uct_init(char *arg, struct board *b)
 {
 	struct uct *u = uct_state_init(arg, b);
 	struct engine *e = calloc2(1, sizeof(struct engine));
-	e->name = "UCT Engine";
+	e->name = "UCT";
 	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;

@@ -514,7 +514,7 @@ engine_distributed_init(char *arg, struct board *b)
 {
 	struct distributed *dist = distributed_state_init(arg, b);
 	struct engine *e = calloc2(1, sizeof(struct engine));
-	e->name = "Distributed Engine";
+	e->name = "Distributed";
 	e->comment = "I'm playing the distributed engine. When I'm losing, I will resign, "
 		"if I think I win, I play until you pass. "
 		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
