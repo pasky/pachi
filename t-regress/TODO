@@ -7,32 +7,6 @@ This list can be processed automatically:
 * http://files.gokgs.com/games/2011/6/5/pachi2-SimpleBot.sgf ladder
   pachi shouldn't play the broken ladders up to move 53
 
-* http://files.gokgs.com/games/2011/6/5/tazaki-pachi30s.sgf semeai falseeye
-  pachi doesn't see even one move ahead in a semeai, it expects
-  an answer outside the semeai. The score drops from 0.625 to 0.337:
-
-  move 194:
-    [880000] best 0.624794 komi 0.4 | seq L19 G12 F11 P11 | can L19(0.625)
-O19(0.623) N19(0.469) P11(0.523)
-    FINEST: Got successful response to command "genmove b": = L19
-    FINEST: Got successful response to command "play w j16": =
-  move 196:
-    FINEST: Queued command sent to engine: genmove b
-    [1026644] best 0.336825 komi 0.2 | seq P11  T8  R3  M9 | can P11(0.337)
-O11(0.336) O19(0.334) N19(0.340)
-    FINEST: Got successful response to command "genmove b": = P11
-
-  The game was lost already but pachi should have known this before.
-
-  move 244: T13 doesn't make sense. This is due to wrong estimate of
-  white's right group:
-    [1922010] best 0.492722 | seq T13  T4  D5  M6 | can T13(0.493)
-S18(0.493)  L4(0.493)  E6(0.491)
-    FINEST: Got successful response to command "genmove b": = T13
-
-  At move 282 pachi still thinks white's group is undecided.
-  We must find a way of not filling the S7 eye in the playouts.
-
 * http://files.gokgs.com/games/2011/5/29/snowmen-pachi2.sgf
     169 B5 seems to be the losing move. This move doesn't make sense.
   Pachi has been wrongly evaluating both bottom group around S4 (it's just
