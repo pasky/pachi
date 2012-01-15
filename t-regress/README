@@ -33,9 +33,9 @@ Classifications may be prefixed by various letters:
 	/	An intermittent issue that happens only in case of some
 		(mis)fortune in the search.
 
-Classifications may be postfixed by tag name in square brackets.
+Classifications may be postfixed by category name in {curly brackets}.
 
 Example:
 
 	40 C3:bad non-working invasion
-	41 B2:bad[tsumego],+A1:bad[tsumego] makes C3 alive
+	41 B2:bad{tsumego},+A1:bad{tsumego} makes C3 alive

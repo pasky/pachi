@@ -1,7 +1,7 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]HA[2]KM[0.50]TM[1800]OT[5x30 byo-yomi]
-PW[tazaki]PB[pachi30s]WR[1k]DT[2011-06-05]GC[195 J16:must[semeai] pachi doesn't see even one move ahead in a semeai, it expects an answer outside the semeai.
-244 S8:alive[falseeye] T13 doesn't make sense. This is due to wrong estimate of white's right group.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi30s [-\]: GTP Engine for pachi30s (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+PW[tazaki]PB[pachi30s]WR[1k]DT[2011-06-05]GC[195 J16:must{semeai} pachi doesn't see even one move ahead in a semeai, it expects an answer outside the semeai.
+244 S8:alive{falseeye} T13 doesn't make sense. This is due to wrong estimate of white's right group.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi30s [-\]: GTP Engine for pachi30s (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 ]RE[W+Resign]
 ;B[dp]BL[1795.911]
 ;B[pd]BL[1795.696]
