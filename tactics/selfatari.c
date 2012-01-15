@@ -545,6 +545,8 @@ selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygr
 	group_t group = groups[gn];
 
 	coord_t lib2 = board_group_other_lib(b, group, coord);
+	if (board_is_one_point_eye(b, lib2, board_at(b, group)))
+		return pass;
 	if (is_bad_selfatari(b, color, lib2))
 		return pass;
 	if (bygroup)
