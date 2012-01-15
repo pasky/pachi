@@ -1067,7 +1067,7 @@ engine_uct_init(char *arg, struct board *b)
 {
 	struct uct *u = uct_state_init(arg, b);
 	struct engine *e = calloc2(1, sizeof(struct engine));
-	e->name = "UCT Engine";
+	e->name = "UCT";
 	e->printhook = uct_printhook_ownermap;
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;
@@ -1082,8 +1082,8 @@ engine_uct_init(char *arg, struct board *b)
 	if (u->slave)
 		e->notify = uct_notify;
 
-	const char banner[] = "I'm playing UCT. When I'm losing, I will resign, "
-		"if I think I win, I play until you pass. "
+	const char banner[] = "If you believe you have won but I am still playing, "
+		"please help me understand by capturing all dead stones. "
 		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
 	if (!u->banner) u->banner = "";
 	e->comment = malloc2(sizeof(banner) + strlen(u->banner) + 1);
