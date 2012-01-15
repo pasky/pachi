@@ -880,15 +880,26 @@ sar_skip:
 		foreach_diag_neighbor(b, m->coord) {
 			if (board_at(b, c) != stone_other(m->color))
 				continue;
-			if (board_group_info(b, group_at(b, c)).libs != 1)
-				continue;
-			/* Capture! */
-			c = board_group_info(b, group_at(b, c)).lib[0];
-			if (PLDEBUGL(5))
-				fprintf(stderr, "___ Redirecting to capture %s\n",
-					coord2sstr(c, b));
-			m->coord = c;
-			return true;
+			switch (board_group_info(b, group_at(b, c)).libs) {
+			case 1: /* Capture! */
+				c = board_group_info(b, group_at(b, c)).lib[0];
+				if (PLDEBUGL(5))
+					fprintf(stderr, "___ Redirecting to capture %s\n",
+						coord2sstr(c, b));
+				m->coord = c;
+				return true;
+			case 2: /* Try to switch to some 2-lib neighbor. */
+				for (int i = 0; i < 2; i++) {
+					coord_t l = board_group_info(b, group_at(b, c)).lib[i];
+					if (board_is_one_point_eye(b, l, board_at(b, c)))
+						continue;
+					if (is_bad_selfatari(b, m->color, l))
+						continue;
+					m->coord = l;
+					return true;
+				}
+				break;
+			}
 		} foreach_diag_neighbor_end;
 	}
 
