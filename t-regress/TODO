@@ -4,10 +4,6 @@ This list can be processed automatically:
 
 	sed -ne 's/^\* //p' <TODO | while read r c; do echo wget -O $(echo "$r" | sed 's#.*games/##' | tr / - | sed 's/-\([^-]\)-/-0\1-/g;s/-\([^-]\)-/-0\1-/') "$r"; done
 
-* http://files.gokgs.com/games/2011/6/6/tyzef-pachi30s.sgf ladder
-  pachi tries to run away from a losing ladder against a 7k in even
-  game. The 7k, disgusted, passed then resigned.
-
 * http://files.gokgs.com/games/2011/6/5/pachi2-SimpleBot.sgf ladder
   pachi shouldn't play the broken ladders up to move 53
 
