@@ -43,9 +43,8 @@ setup_state(struct uct *u, struct board *b, enum stone color)
 			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, u->stats_hbits);
 	if (u->force_seed)
 		fast_srandom(u->force_seed);
-	if (UDEBUGL(0))
+	if (UDEBUGL(3))
 		fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
-	//board_print(b, stderr);
 	if (!u->no_tbook && b->moves == 0) {
 		assert(color == S_BLACK);
 		tree_load(u->t, b);
@@ -160,7 +159,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m)
 	/* Promote node of the appropriate move to the tree root. */
 	assert(u->t->root);
 	if (!tree_promote_at(u->t, b, m->coord)) {
-		if (UDEBUGL(0))
+		if (UDEBUGL(3))
 			fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
 		reset_state(u);
 		return NULL;
