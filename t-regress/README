@@ -24,6 +24,8 @@ These classifications are available for now:
 	bad	This move should not be chosen as the next move.
 	bad!	This move is so useless that it should not be in the top
 		considered moves. (This is a bit feeble class.)
+	must	This move is essential and must be made immediately.
+	alive	This group should be considered alive.
 
 Classifications may be prefixed by various letters:
 
