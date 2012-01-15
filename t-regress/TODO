@@ -33,9 +33,6 @@ kills above)
 * http://files.gokgs.com/games/2011/2/20/ramesses2-pachi2.sgf
   good example of losing a won game.
 
-* http://files.gokgs.com/games/2011/1/11/llopl-pachi2.sgf ladder
-  terrible ladder bug
-
 * http://files.gokgs.com/games/2010/12/5/pachi-CzechBot.sgf
   big mistake at F9 didn't see snapback. Pasky comments:
     The "does not seen snapback" bug is nasty.  The problem is that
