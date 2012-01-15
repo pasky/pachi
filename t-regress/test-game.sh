@@ -9,7 +9,7 @@
 
 sgf="$1"
 
-sed -ne '/GC\[/,/\]/{ s/.*GC\[//; s/\].*//; p; }' <"$sgf" |
+sed -ne '/GC\[.*\]/{s/.*GC\[\([^]]*\)\].*/\1/p; q;}; /GC\[/,/\]/{ s/.*GC\[//; s/\].*//; p; }' <"$sgf" |
 	while read moven cases desc; do
 		echo "Examining move $moven"; sleep 1
 		tools/sgf2gtp.pl -g -n $((moven-1)) <"$sgf" | ./pachi -t =20000
