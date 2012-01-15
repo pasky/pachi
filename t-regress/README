@@ -25,6 +25,12 @@ These classifications are available for now:
 	bad!	This move is so useless that it should not be in the top
 		considered moves. (This is a bit feeble class.)
 
+Classifications may be prefixed by various letters:
+
+	+	An issue that is already supposed to be fixed.
+	/	An intermittent issue that happens only in case of some
+		(mis)fortune in the search.
+
 Example:
 
 	40 C3:bad non-working invasion
