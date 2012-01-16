@@ -75,11 +75,6 @@ kills above)
 * http://files.gokgs.com/games/2011/7/3/pachi2-oasis7.sgf
   Passed even though a dead opponent group was marked alive.
 
-* http://files.gokgs.com/games/2011/7/28/pachi2-pkunzip-2.sgf ladder
-  W 132 C9, W 134 B8, W 136 A8 plays a broken ladder but win ratio 52%
-  so it should not play desperate moves.
-  Pachi thought it was winning 72% at W 198 M3 but lost the game.
-
 * http://files.gokgs.com/games/2011/7/16/ihatebots-pachi2.sgf semeai
   pachi threw away the game because it didn't evaluate the
   semeai in bottom left correctly.
