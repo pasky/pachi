@@ -126,14 +126,6 @@ kills above)
   lost even game against 3k. Win ratio drops from 61% at 117 N1
   to 49% at the next move. So pachi didn't evaluate the semai correctly.
 
-* http://files.gokgs.com/games/2011/8/12/xiaosugi-pachi2.sgf falseeye
-  Pachi hallucinated again on bottom right corner.
-  This is the same problem as
-    http://files.gokgs.com/games/2011/6/18/dorabon-pachi2-4.sgf
-    http://files.gokgs.com/games/2011/6/10/pachi30s-samba-2.sgf
-    http://files.gokgs.com/games/2011/6/9/botkiller2-pachi30s.sgf
-  This corner shape is very frequent and pachi always gets it wrong.
-
 * http://files.gokgs.com/games/2011/8/24/StoneGrid-pachi2.sgf ladder
   Move 51 onwards: pachi plays a broken ladder, which almost cost the game.
   This might be the same bug as
