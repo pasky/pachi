@@ -70,6 +70,10 @@ You may wish to append some custom Pachi opening book lines to book.dat;
 take them from the book.dat.extra file. If using the default Fuego book,
 you may want to remove the lines listed in book.dat.bad.
 
+Pachi can also use a pattern database to improve its playing performance.
+You can get it at http://pachi.or.cz/pat/ - you will also find further
+instructions there.
+
 For now, there is no comprehensive documentation of options, but you
 can get a pretty good idea by looking at the uct_state_init() function
 in uct/uct.c - you will find the list of UCT engine options there, each
