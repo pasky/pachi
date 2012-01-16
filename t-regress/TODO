@@ -36,12 +36,6 @@ kills above)
 * http://files.gokgs.com/games/2011/2/18/pachi2-tf-3.sgf seki
   lost because of unrecognized seki
 
-* http://files.gokgs.com/games/2011/6/10/pachi30s-samba-2.sgf falseeye
-  exactly the same problem as botkiller2-pachi30s.sgf:
-  pachi considers the top left black group as unsettled
-  although it is clearly alive. So it makes silly moves
-  elsewhere. We have to fix this bug, it is too frequent.
-
 * http://files.gokgs.com/games/2011/6/9/jinen-pachi30s-2.sgf ko
   move 165 G5 again playing the ko threat before the ko.
   move 187 R18 is not a ko threat
