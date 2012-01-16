@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]KM[0.50]TM[1800]OT[5x30 byo-yomi]
-PW[pachi30s]PB[samba]WR[1d]BR[1k]DT[2011-06-10]GC[258 C18:alive{falseeye} pachi considers the top left black group as unsettled although it is clearly alive. So it makes silly moves elsewhere.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi30s [1d\]: GTP Engine for pachi30s (white): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+PW[pachi30s]PB[samba]WR[1d]BR[1k]DT[2011-06-10]GC[258 +C18:alive{falseeye} pachi considers the top left black group as unsettled although it is clearly alive. So it makes silly moves elsewhere.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi30s [1d\]: GTP Engine for pachi30s (white): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 ]RE[B+Resign]
 ;B[pd]BL[1798.278]
 ;W[mc]WL[1796.021]

@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]HA[4]KM[0.50]TM[0]OT[5x15 byo-yomi]
-PW[dorabon]PB[pachi2]WR[5d]BR[3d]DT[2011-06-18]GC[222 B1:dead{semeai},R2:alive{falseeye} pachi considers the bottom left semeai won by black (but black loses it) and the bottom right as undecided (white is clearly alive).
+PW[dorabon]PB[pachi2]WR[5d]BR[3d]DT[2011-06-18]GC[222 B1:dead{semeai},+R2:alive{falseeye} pachi considers the bottom left semeai won by black (but black loses it) and the bottom right as undecided (white is clearly alive).
 At move 270 L4 it still thinks it is leading by 80% although the game is lost.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 ]RE[W+Resign]
 ;B[dp]BL[15]OB[5]

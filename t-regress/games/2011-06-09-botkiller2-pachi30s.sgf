@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]KM[0.50]TM[1800]OT[5x30 byo-yomi]
-PW[botkiller2]PB[pachi30s]WR[3d]BR[2d]DT[2011-06-09]GC[177 A15:alive{falseeye} threw away a won game. pachi thought until the end that top left white group was dead, so it made silly moves elsewhere.  The playouts must be prevented from filling the eye at A17.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi30s [2d\]: GTP Engine for pachi30s (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+PW[botkiller2]PB[pachi30s]WR[3d]BR[2d]DT[2011-06-09]GC[177 +A15:alive{falseeye} threw away a won game. pachi thought until the end that top left white group was dead, so it made silly moves elsewhere.  The playouts must be prevented from filling the eye at A17.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi30s [2d\]: GTP Engine for pachi30s (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 ]RE[W+Resign]
 ;B[oc]BL[1795.834]
 ;W[po]WL[1797.078]
