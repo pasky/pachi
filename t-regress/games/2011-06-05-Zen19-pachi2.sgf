@@ -2,7 +2,8 @@
 RU[Chinese]SZ[19]KM[7.50]TM[1740]OT[10/30 Canadian]
 PW[Zen19]PB[pachi2]WR[4d]BR[3d]DT[2011-06-05]GC[185 /S15:bad should just connect at T13
 211 T18:bad!{semeai} useless, pachi still thinks the semeai is undecided but white has a lot more liberties. How can the playouts not see this?
-217 +S3:bad!{falseeye} pachi must not hope white will end up with a semi-false eye and fill it instead of capturing the cutting stone]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+217 +S3:bad!{falseeye} pachi must not hope white will end up with a semi-false eye and fill it instead of capturing the cutting stone
+219 +S2:alive{falseeye} another verification of the S3 bug above]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 Zen19 [4d\]: GTP Engine for Zen19 (white): Zen version 7.7
 ]RE[W+Resign]
 ;B[oc]BL[1739.323]
