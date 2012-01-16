@@ -70,7 +70,8 @@ middle_ladder_walk(struct board *b, enum stone lcolor, int x, int y, int xd, int
 {
 #define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
 	if (board_atxy(b, x, y) != S_NONE) { \
-		/* Did we hit a stone when playing out ladder? */ \
+		/* We have hit a stone when playing out ladder? */ \
+		if (DEBUGL(6)) fprintf(stderr, "hit %s @ %s\n", stone2str(board_atxy(b, x, y)), coord2sstr(coord_xy(b, x, y), b)); \
 		if (ladder_catcher(b, x, y, lcolor)) \
 			return true; /* ladder works */ \
 		if (board_group_info(b, group_atxy(b, x, y)).lib[0] > 0) \
@@ -88,21 +89,31 @@ middle_ladder_walk(struct board *b, enum stone lcolor, int x, int y, int xd, int
 		coord_t c = coord_xy(b, x, y); \
 		coord_t c1 = coord_xy(b, x + (xd1_), y + (yd1_)); \
 		enum stone s1 = board_at(b, c1); \
-		if (s1 == lcolor) return false; \
+		if (s1 == lcolor) { \
+			if (DEBUGL(6)) fprintf(stderr, "hit c1 %s @ %s\n", stone2str(s1), coord2sstr(c1, b)); \
+			return false; \
+		} \
 		if (s1 == stone_other(lcolor)) { \
 			/* One more thing - if the position at 3 is \
 			 * friendly and safe, we escaped anyway! */ \
 			coord_t c3 = coord_xy(b, x + (xd3_), y + (yd3_)); \
+			if (DEBUGL(6)) fprintf(stderr, "hit c1 %s @ %s, c3 %s @ %s\n", stone2str(s1), coord2sstr(c1, b), stone2str(board_at(b, c3)), coord2sstr(c3, b)); \
 			return board_at(b, c3) != lcolor \
 			       || board_group_info(b, group_at(b, c3)).libs < 2; \
 		} \
-		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
-		if (s2 == lcolor) return false; \
+		coord_t c2 = coord_xy(b, x + (xd2_), y + (yd2_));\
+		enum stone s2 = board_at(b, c2); \
+		if (s2 == lcolor) { \
+			if (DEBUGL(6)) fprintf(stderr, "hit c2 %s @ %s\n", stone2str(s2), coord2sstr(c2, b)); \
+			return false; \
+		} \
 		/* Then, can X actually "play" 1 in the ladder? Of course,
 		 * if we had already hit the edge, no need. */ \
 		if (neighbor_count_at(b, c, S_OFFBOARD) == 0 \
-		    && neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) \
+		    && neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) { \
+			if (DEBUGL(6)) fprintf(stderr, "hit selfatari at c1 %s\n", coord2sstr(c1, b)); \
 			return false; /* It would be self-atari! */ \
+		} \
 	}
 #define ladder_horiz	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d horiz step (%d,%d)\n", x, y, xd, yd); x += xd; ladder_check(xd, 0, -2 * xd, yd, 0, yd); } while (0)
 #define ladder_vert	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d vert step of (%d,%d)\n", x, y, xd, yd); y += yd; ladder_check(0, yd, xd, -2 * yd, xd, 0); } while (0)
