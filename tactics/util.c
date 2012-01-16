@@ -111,8 +111,8 @@ pass_is_safe(struct board *b, enum stone color, struct move_queue *mq)
 }
 
 
-/* On average 25% of points remain empty at the end of a game */
-#define EXPECTED_FINAL_EMPTY_PERCENT 25
+/* On average 20% of points remain empty at the end of a game */
+#define EXPECTED_FINAL_EMPTY_PERCENT 20
 
 /* Returns estimated number of remaining moves for one player until end of game. */
 int

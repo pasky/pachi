@@ -1,0 +1,429 @@
+(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
+RU[Chinese]SZ[19]KM[7.50]TM[1740]OT[10/30 Canadian]
+PW[Zen19]PB[pachi2]WR[4d]BR[3d]DT[2011-06-05]GC[185 /S15:bad should just connect at T13
+211 T18:bad!{semeai} useless, pachi still thinks the semeai is undecided but white has a lot more liberties. How can the playouts not see this?
+217 +S3:bad!{falseeye} pachi must not hope white will end up with a semi-false eye and fill it instead of capturing the cutting stone
+219 +S2:alive{falseeye} another verification of the S3 bug above]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+Zen19 [4d\]: GTP Engine for Zen19 (white): Zen version 7.7
+]RE[W+Resign]
+;B[oc]BL[1739.323]
+;W[pp]WL[1722.852]
+;B[pn]BL[1738.474]
+;W[np]WL[1714.566]
+;B[qk]BL[1726.189]
+;W[dd]WL[1697.475]
+;B[co]BL[1688.04]
+;W[dq]WL[1680.439]
+;B[ep]BL[1665.598]
+;W[eq]WL[1672.315]
+;B[fp]BL[1653.635]
+;W[gq]WL[1663.862]
+;B[fc]BL[1616.76]
+;W[cf]WL[1647.203]
+;B[ch]BL[1581.562]
+;W[qc]WL[1639.882]
+;B[gp]BL[1547.708]
+;W[hq]WL[1624.675]
+;B[hp]BL[1514.792]
+;W[pe]WL[1616.61]
+;B[iq]BL[1503.413]
+;W[lc]WL[1599.754]
+;B[jc]BL[1468.749]
+;W[eg]WL[1582.984]
+;B[md]BL[1455.95]
+;W[ld]WL[1568.011]
+;B[le]BL[1444.971]
+;W[jd]WL[1551.555]
+;B[id]BL[1433.958]
+;W[ke]WL[1541.906]
+;B[mc]BL[1423.011]
+;W[lf]WL[1528.974]
+;B[me]BL[1411.757]
+;W[lb]WL[1521.223]
+;B[kf]BL[1399.469]
+;W[jf]WL[1510.346]
+;B[kg]BL[1388.745]
+;W[jg]WL[1502.247]
+;B[kh]BL[1357.129]
+;W[jh]WL[1485.818]C[CCY [8k\]: is this a game in a tournament?
+]
+;B[ki]BL[1346.522]
+;W[ic]WL[1478.305]C[NOTA [6k\]: ZvP
+ajahuang [6d\]: pachi's opening is good now
+]
+;B[hc]BL[1319.763]
+;W[ib]WL[1463.995]
+;B[ie]BL[1309.263]C[Pinguschaf [?\]: j15?
+Pinguschaf [?\]: this is gonna be interesting
+]
+;W[hb]WL[1449.091]
+;B[je]BL[1297.716]
+;W[kd]WL[1435.253]
+;B[hg]BL[1280.962]C[Pinguschaf [?\]: this fight looks better for black
+]
+;W[ji]WL[1425.213]C[Pinguschaf [?\]: with the thickness waiting on lower side
+]
+;B[jj]BL[1270.483]
+;W[gc]WL[1409.738]
+;B[gd]BL[1254.169]
+;W[hd]WL[1395.36]C[ajahuang [6d\]: ya black is better
+]
+;B[he]BL[1243.888]
+;W[kj]WL[1387.793]C[DaniPerrin [2k\]: black is fighting well
+]
+;B[mh]BL[1213.093]C[Pinguschaf [?\]: but im not sure if positional judgement by humans matters at all
+]
+;W[ij]WL[1379.924]
+;B[jk]BL[1202.542]
+;W[gh]WL[1371.967]C[dsmic [13k?\]: to bad winrate not working during tournament
+]
+;B[dg]BL[1171.017]C[jlg [-\]: 53% for black
+ajahuang [6d\]: things changed
+]
+;W[df]WL[1355.899]C[ajahuang [6d\]: L10 was good
+dsmic [13k?\]: thx
+]
+;B[eh]BL[1160.642]
+;W[fh]WL[1348.45]C[Bogin [-\]: looks like Zen enters its famous "kill mode" and sets its eye on J15...
+]
+;B[ef]BL[1131.513]
+;W[fg]WL[1334.522]
+;B[ik]BL[1119.765]
+;W[ei]WL[1320.716]C[ajahuang [6d\]: suddenly pachi is losing
+guxxan [6d\]: zEN -> kill mode
+DaniPerrin [2k\]: but zen not knows mercy
+guxxan [6d\]: cool
+]
+;B[cj]BL[1088.326]
+;W[hh]WL[1313.571]
+;B[fe]BL[1059.185]C[Meepy [-\]: h12 didn't look necessary
+]
+;W[dk]WL[1297.852]C[guxxan [6d\]: yeah, h12 is a waste move
+]
+;B[gb]BL[1015.543]
+;W[hc]WL[1284.494]
+;B[cc]BL[979.374]C[DaniPerrin [2k\]: black will live
+]
+;W[dh]WL[1268.938]C[CCY [8k\]: state of the art tenuki
+]
+;B[cg]BL[964.824]
+;W[dc]WL[1254.751]C[Meepy [-\]: lol
+]
+;B[eb]BL[950.552]
+;W[gf]WL[1243.208]C[guxxan [6d\]: Human does tenuki 
+]
+;B[ge]BL[936.456]
+;W[ga]WL[1227.968]
+;B[db]BL[922.721]C[CCY [8k\]: well, im just finding a chance to tell this joke :|
+Meepy [-\]: whoops
+]
+;W[fb]WL[1212.781]
+;B[ec]BL[909.462]C[DaniPerrin [2k\]: stupid not to connect
+ajahuang [6d\]: oh
+]
+;W[hk]WL[1197.657]C[ajahuang [6d\]: what is zen doing?
+Bogin [-\]: dying :(
+]
+;B[ii]BL[896.302]C[Meepy [-\]: everything swings around, this is fun :)
+]
+;W[hj]WL[1182.711]C[jlg [-\]: 57% for black
+k81 [4d\]: well - this zen runs on mac so... :)
+guxxan [6d\]: oooooooooo
+]
+;B[ih]BL[883.293]
+;W[ck]WL[1175.028]C[Pinguschaf [?\]: maybe zen will win by time :)
+]
+;B[dj]BL[869.746]C[DaniPerrin [2k\]: zen should resign
+]
+;W[ej]WL[1160.136]C[CCY [8k\]: winrate?
+Bogin [-\]: nah, Zen will kill C12 ;)
+]
+;B[bi]BL[849.026]C[jlg [-\]: don't understimate the ability of pachi to lose won games
+]
+;W[il]WL[1153.591]C[ZenAuthor [-\]: 44%
+]
+;B[jl]BL[836.752]C[CCY [8k\]: thx
+]
+;W[jm]WL[1139.155]
+;B[im]BL[824.962]C[ajahuang [6d\]: Zen was winning to moon
+ajahuang [6d\]: now it is losing
+]
+;W[hl]WL[1125.38]
+;B[if]BL[813.419]C[LexC [3k\]: what was the wrong move?
+]
+;W[kl]WL[1110.935]C[CCY [8k\]: too many state of the art move lol
+]
+;B[ig]BL[801.95]C[dsmic [13k?\]: f18?
+]
+;W[kk]WL[1102.327]C[ajahuang [6d\]: D9 was wrong
+]
+;B[ji]BL[791.102]C[ajahuang [6d\]: should played one more move in the corner
+]
+;W[bk]WL[1095.355]
+;B[lp]BL[760.402]C[Pinguschaf [?\]: hehe
+Pinguschaf [?\]: b13
+]
+;W[ir]WL[1081.697]
+;B[jr]BL[730.747]
+;W[in]WL[1067.461]
+;B[km]BL[720.614]
+;W[jn]WL[1053.351]
+;B[jp]BL[710.773]
+;W[bg]WL[1043.716]C[DaniPerrin [2k\]: zen found b13
+]
+;B[mn]BL[684.29]
+;W[nn]WL[1037.198]C[jlg [-\]: pachi expected b13 next when playing k4
+]
+;B[mo]BL[674.874]
+;W[on]WL[1030.818]
+;B[bh]BL[664.895]
+;W[bf]WL[1017.719]C[CCY [8k\]: how do you know? are there any logs shown this information?
+guxxan [6d\]: I have a question, why bots like to play in one place, then jump to another place, then jump back?
+]
+;B[pl]BL[639.486]C[me12k: guxxan, because of move "value"
+]
+;W[lm]WL[1003.871]
+;B[mm]BL[628.683]C[guxxan [6d\]: yes, A->B->A
+]
+;W[qi]WL[991.577]C[guxxan [6d\]: after play B, A value becomes big again?
+]
+;B[ph]BL[604.8]C[Nickless [-\]: so like
+Nickless [-\]: a = 12 points
+]
+;W[qh]WL[978.931]C[Nickless [-\]: b = 11 points
+DaniPerrin [2k\]: because, urgency of these moves alternates globaly
+me12k: yes, that's how good bots are made
+Nickless [-\]: a2 = 10 points
+Nickless [-\]: so it plays a then b then a2
+]
+;B[qg]BL[583.629]C[guxxan [6d\]: I see
+]
+;W[pg]WL[966.328]
+;B[rg]BL[561.639]
+;W[qf]WL[953.978]
+;B[og]BL[552.566]C[Bogin [-\]: or could it be that they are similarly big and because of randomness in the playouts it switches back and forth?
+DaniPerrin [2k\]: but us, human, we focus too much on local fight
+]
+;W[pf]WL[941.717]
+;B[pi]BL[551.374]
+;W[qq]WL[929.951]C[me12k: bogin, not all bots use playouts, but they all associate a "value" to a move
+]
+;B[ri]BL[530.308]
+;W[rf]WL[917.888]C[Bogin [-\]: I see, I was focussing on MC bots
+]
+;B[kn]BL[510.064]
+;W[bq]WL[912.075]C[me12k: MC are the most common, but not all
+Bogin [-\]: bots with score-based evaluation functions behave differently of course
+]
+;B[nr]BL[490.463]
+;W[mq]WL[900.848]C[quicksand [1d\]: zen is wrapping up the game
+]
+;B[fq]BL[471.751]C[DaniPerrin [2k\]: who is winning now ?
+]
+;W[fr]WL[888.916]
+;B[er]BL[464.511]C[CCY [8k\]: there still have points on MC bots. the move with the most playouts will be played
+]
+;W[gr]WL[877.268]C[quicksand [1d\]: w
+me12k: white seems to be winning (but my 12k specticles might be wrong)
+CCY [8k\]: the number of playouts is the value of moves
+]
+;B[lr]BL[446.863]
+;W[qn]WL[869.344]
+;B[qm]BL[440.96]C[ajahuang [6d\]: pachi played too many small moves
+Meepy [-\]: c2 works?
+]
+;W[rn]WL[857.592]C[guxxan [6d\]: so so
+]
+;B[cr]BL[425.51]C[me12k: let's see
+]
+;W[dr]WL[845.541]
+;B[cq]BL[424.381]
+;W[dp]WL[832.611]C[Nickless [-\]: zen shouldve played c3
+]
+;B[cp]BL[418.522]C[ajahuang [6d\]: Zen should connect C3
+]
+;W[do]WL[824.074]
+;B[dn]BL[412.613]
+;W[cs]WL[818.245]C[Nickless [-\]: it was onlly capturing j2 sente then
+]
+;B[po]BL[404.317]
+;W[qo]WL[805.567]
+;B[oq]BL[391.568]C[DaniPerrin [2k\]: zen will cut at c6
+]
+;W[oo]WL[794.774]
+;B[eo]BL[385.759]
+;W[es]WL[783.321]
+;B[pm]BL[371.955]
+;W[br]WL[770.879]C[Meepy [-\]: more back and forth
+]
+;B[op]BL[357.997]C[guxxan [6d\]: ooo, exchange
+guxxan [6d\]: exiciting
+]
+;W[en]WL[759.065]
+;B[pq]BL[348.693]
+;W[qp]WL[748.048]C[ajahuang [6d\]: w is good
+]
+;B[gm]BL[335.269]
+;W[em]WL[736.177]
+;B[mb]BL[330.112]
+;W[ee]WL[724.049]
+;B[kb]BL[324.716]
+;W[la]WL[717.082]
+;B[ma]BL[318.817]C[LexC [3k\]: :)
+]
+;W[bc]WL[710.286]
+;B[cd]BL[303.605]C[Nickless [-\]: zen doesnt see snapback ?
+]
+;W[bd]WL[698.183]
+;B[rh]BL[288.783]C[Pinguschaf [?\]: he doesnt "see" anything
+]
+;W[gn]WL[686.269]C[Nickless [-\]: oh you smartass
+]
+;B[sf]BL[275.326]C[Pinguschaf [?\]: :)
+Pinguschaf [?\]: but i think he played it because of j19
+]
+;W[ko]WL[674.295]C[Pinguschaf [?\]: to avoid Ko
+]
+;B[ln]BL[270.491]
+;W[kq]WL[668.802]
+;B[jq]BL[256.103]
+;W[se]WL[661.466]C[DaniPerrin [2k\]: this game is really confusing
+ajahuang [6d\]: strange
+me12k: zen might be stronger, but pachi has a nice pic
+]
+;B[re]BL[242.121]C[Nickless [-\]: im wondering why he played off after n18
+]
+;W[sg]WL[655.879]C[ajahuang [6d\]: wow pachi
+]
+;B[bb]BL[229.109]
+;W[mr]WL[645.037]
+;B[qr]BL[224.751]
+;W[rr]WL[635.098]
+;B[pr]BL[224.05]C[Imp20 [3k\]: zen gonna win in the end game with moves like s15
+]
+;W[rs]WL[624.907]
+;B[hm]BL[211.128]
+;W[hn]WL[618.964]C[Pinguschaf [?\]: maybe s15 is preparing amazing endgame for black :)
+]
+;B[rc]BL[201.786]
+;W[pc]WL[609.27]
+;B[qd]BL[195.989]C[Meepy [-\]: guess pachi lost
+me12k: doubt it, pachi seems disperate
+]
+;W[kp]WL[599.018]
+;B[lq]BL[191.922]C[ajahuang [6d\]: interesting
+]
+;W[pd]WL[592.962]C[jlg [-\]: no pachi stil thinks it is winning 62%
+]
+;B[qb]BL[187.816]
+;W[pb]WL[587.694]
+;B[rb]BL[186.803]
+;W[sd]WL[582.258]
+;B[fn]BL[175.017]
+;W[fm]WL[574.431]
+;B[rd]BL[171.025]C[ajahuang [6d\]: pachi should play T16 first
+]
+;W[qa]WL[569.25]
+;B[ra]BL[170.004]
+;W[pa]WL[560.013]
+;B[sb]BL[165.451]
+;W[kr]WL[554.906]
+;B[ks]BL[161.27]C[me12k: pachi seems to loose with 80% acc
+]
+;W[qe]WL[549.875]
+;B[bs]BL[153.781]
+;W[as]WL[544.846]
+;B[rq]BL[146.855]C[Imp20 [3k\]: what was b1
+]
+;W[ff]WL[535.255]
+;B[ka]BL[135.861]
+;W[jb]WL[529.751]C[CCY [8k\]: zen is in cleanup mode
+me12k: b1 was: please ignore this move so I can win
+]
+;B[rp]BL[125.496]C[ajahuang [6d\]: seems pachi misevaluates the top-right group
+]
+;W[ro]WL[524.61]
+;B[sr]BL[114.857]C[DaniPerrin [2k\]: k5 is big
+]
+;W[sp]WL[519.656]C[me12k: he failed to count libs
+]
+;B[qs]BL[107.776]
+;W[sq]WL[512.927]
+;B[rq]BL[106.606]
+;W[rp]WL[507.952]C[CCY [8k\]: T18 is temporally not dead, so it maybe wrongly evaluate winrate
+]
+;B[sm]BL[96.962]
+;W[ja]WL[502.583]
+;B[kc]BL[90.713]
+;W[jo]WL[497.408]C[me12k: w+res ?
+]
+;B[ha]BL[82.474]
+;W[fa]WL[492.245]
+;B[el]BL[75.003]
+;W[dm]WL[487.181]
+;B[dl]BL[68.233]C[ajahuang [6d\]: this game is over
+]
+;W[cm]WL[480.37]
+;B[cl]BL[62.191]
+;W[bl]WL[471.868]
+;B[be]BL[56.739]
+;W[ce]WL[463.689]
+;B[ac]BL[51.795]
+;W[cb]WL[457.424]
+;B[hs]BL[47.063]
+;W[is]WL[448.059]
+;B[js]BL[43.134]
+;W[hr]WL[443.298]C[Imp20 [3k\]: b lost in end game
+]
+;B[ca]BL[38.204]
+;W[ob]WL[438.812]
+;B[oe]BL[33.159]
+;W[of]WL[428.918]
+;B[ls]BL[28.38]
+;W[od]WL[424.501]
+;B[gl]BL[24.064]
+;W[nc]WL[420.147]C[me12k: ,-)
+]
+;B[fl]BL[19.822]
+;W[fo]WL[415.82]
+;B[hi]BL[17.742]
+;W[gj]WL[411.471]
+;B[gi]BL[16.91]
+;W[fi]WL[407.105]
+;B[bm]BL[12.213]C[jlg [-\]: yes pachi didn't evaluate top right correctly
+]
+;W[bn]WL[402.688]
+;B[gk]BL[7.498]
+;W[fj]WL[398.423]
+;B[cn]BL[2.49]
+;W[am]WL[394.105]
+;B[go]BL[29.89]OB[9]
+;W[fn]WL[389.853]
+;B[nd]BL[27.379]OB[8]
+;W[nb]WL[385.616]
+;B[na]BL[25.068]OB[7]
+;W[nf]WL[381.454]
+;B[ne]BL[23.188]OB[6]
+;W[mf]WL[377.21]
+;B[bj]BL[19.865]OB[5]
+;W[di]WL[373.114]
+;B[cc]BL[16.473]OB[4]
+;W[ed]WL[369.063]
+;B[ad]BL[13.179]OB[3]
+;W[ae]WL[364.887]
+;B[cd]BL[9.436]OB[2]
+;W[cb]WL[360.771]
+;B[sn]BL[5.37]OB[1]
+;W[cc]WL[356.726]
+;B[lg]BL[30]OB[10]
+;W[fd]WL[352.645]
+;B[mg]BL[27.985]OB[9]
+;W[da]WL[348.52]
+;B[sh]BL[26.196]OB[8]
+;W[sf]WL[344.297]
+;B[ng]BL[25.365]OB[7]
+;W[sc]WL[340.217]C[me12k: no res yet?
+jlg [-\]: thanks for the game
+ZenAuthor [-\]: thanks for the game
+DaniPerrin [2k\]: incredible game
+])

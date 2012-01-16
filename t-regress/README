@@ -24,8 +24,19 @@ These classifications are available for now:
 	bad	This move should not be chosen as the next move.
 	bad!	This move is so useless that it should not be in the top
 		considered moves. (This is a bit feeble class.)
+	must	This move is essential and must be made immediately.
+	alive	This group should be considered alive.
+	dead	This group should be considered dead.
+
+Classifications may be prefixed by various letters:
+
+	+	An issue that is already supposed to be fixed.
+	/	An intermittent issue that happens only in case of some
+		(mis)fortune in the search.
+
+Classifications may be postfixed by category name in {curly brackets}.
 
 Example:
 
 	40 C3:bad non-working invasion
-	41 B2:bad,A1:bad makes C3 alive
+	41 B2:bad{tsumego},+A1:bad{tsumego} makes C3 alive

@@ -89,8 +89,6 @@ static char *known_commands =
 	"play\n"
 	"genmove\n"
 	"kgs-genmove_cleanup\n"
-	"pachi-genmoves\n"
-	"pachi-genmoves_cleanup\n"
 	"set_free_handicap\n"
 	"place_free_handicap\n"
 	"fixed_handicap\n"
@@ -218,7 +216,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 	} else if (!strcasecmp(cmd, "clear_board")) {
 		board_clear(board);
-		if (DEBUGL(1) && debug_boardprint)
+		if (DEBUGL(3) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
 		return P_ENGINE_RESET;
@@ -242,7 +240,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		sscanf(arg, PRIfloating, &board->komi);
 
-		if (DEBUGL(1) && debug_boardprint)
+		if (DEBUGL(3) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
 
@@ -274,7 +272,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		m.coord = *c; coord_done(c);
 		char *reply = NULL;
 
-		if (DEBUGL(1))
+		if (DEBUGL(5))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 
 		// This is where kgs starts the timer, not at genmove!
@@ -289,7 +287,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			}
 			gtp_error(id, "illegal move", NULL);
 		} else {
-			if (DEBUGL(1) && debug_boardprint)
+			if (DEBUGL(4) && debug_boardprint)
 				board_print_custom(board, stderr, engine->printhook);
 			gtp_reply(id, reply, NULL);
 		}
@@ -299,6 +297,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 		coord_t *c = NULL;
+		if (DEBUGL(2) && debug_boardprint)
+			board_print_custom(board, stderr, engine->printhook);
 		
 		if (!ti[color].len.t.timer_start) {
 			/* First game move. */
@@ -319,7 +319,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			abort();
 		}
 		char *str = coord2str(*c, board);
-		if (DEBUGL(1))
+		if (DEBUGL(4))
 			fprintf(stderr, "playing move %s\n", str);
 		if (DEBUGL(1) && debug_boardprint) {
 			board_print_custom(board, stderr, engine->printhook);
@@ -372,7 +372,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		do {
 			coord_t *c = str2coord(arg, board_size(board));
 			m.coord = *c; coord_done(c);
-			if (DEBUGL(1))
+			if (DEBUGL(4))
 				fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord, board), coord_y(m.coord, board));
 
 			if (board_play(board, &m) < 0) {
@@ -480,7 +480,7 @@ next_group:;
 		char *reply = NULL;
 		if (engine->undo)
 			reply = engine->undo(engine, board);
-		if (DEBUGL(1) && debug_boardprint)
+		if (DEBUGL(3) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, reply, NULL);
 
