@@ -63,6 +63,9 @@ struct moggy_policy {
 	/* Whether, when self-atari attempt is detected, to play the other
 	 * group's liberty if that is non-self-atari. */
 	bool selfatari_other;
+	/* Whether to read out ladders elsewhere than near the board
+	 * in the playouts. */
+	bool middle_ladder;
 
 	/* 1lib settings: */
 	/* Whether to always pick from moves capturing all groups in
@@ -177,7 +180,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor)
+	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, pp->middle_ladder)
 	    && !can_countercapture(b, board_at(b, group_base(atari_neighbor)),
                                    atari_neighbor, m->color, NULL, 0))
 		return false;
@@ -248,7 +251,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 	struct moggy_policy *pp = p->data;
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
-			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
+			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
 			mq_print(q, b, "Global atari");
 		return;
@@ -256,7 +259,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -265,7 +268,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -283,14 +286,14 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, 1<<MQ_LATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, 1<<MQ_LATARI);
+		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
 	});
 
 	if (PLDEBUGL(5))
@@ -734,7 +737,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	/* This group, sir, is in atari! */
 
 	coord_t ladder = pass;
-	group_atari_check(pp->alwaysccaprate, b, g, map->to_play, &q, &ladder, 0);
+	group_atari_check(pp->alwaysccaprate, b, g, map->to_play, &q, &ladder, true, 0);
 	while (q.moves--) {
 		coord_t coord = q.move[q.moves];
 
@@ -937,6 +940,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
+	pp->middle_ladder = true;
 
 	pp->cap_stone_min = 2;
 	pp->cap_stone_max = 15;
@@ -1020,6 +1024,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->atari_def_no_hopeless = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "nlib_count") && optval) {
 				pp->nlib_count = atoi(optval);
+			} else if (!strcasecmp(optname, "middle_ladder")) {
+				pp->middle_ladder = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
