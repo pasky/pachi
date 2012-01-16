@@ -33,18 +33,6 @@ kills above)
 * http://files.gokgs.com/games/2011/2/20/ramesses2-pachi2.sgf
   good example of losing a won game.
 
-* http://files.gokgs.com/games/2010/12/5/pachi-CzechBot.sgf
-  big mistake at F9 didn't see snapback. Pasky comments:
-    The "does not seen snapback" bug is nasty.  The problem is that
-    there is also a "global capture heuristic" if there're no fun
-    local moves, it looks for groups to capture and if white tenukis
-    and does not capture immediately, this heuristic kicks in.  But
-    there is no "global atari heuristic" that would drive black
-    similarly to play at F1 and create the snapback if I test with
-    playout=moggy:capturerate=0, it reliably destroys the snapback
-    i.e. with capturerate=90, white is much more likely to come back
-    to the situation later even when playing tenuki first.
-
 * http://files.gokgs.com/games/2011/1/15/pachi2-rollingon.sgf semeai
   big semeai with easy counting of liberties misjuged
   move 169 0.7322 -> move 171  0.2600
