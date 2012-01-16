@@ -85,19 +85,6 @@ kills above)
 * http://files.gokgs.com/games/2011/7/3/pachi2-oasis7.sgf
   Passed even though a dead opponent group was marked alive.
 
-* http://files.gokgs.com/games/2011/7/28/pachi2-Novicer.sgf falseeye
-  Pachi makes many stupid moves because it thinks the top left
-  corner is unsettled although it is clearly alive. This shape
-  (4 in a row) is so simple that it should get it right.
-  W 252 S11 bad
-  W 256 T12 bad
-  W 264 E19 doesn't make sense, but still 69%
-  W 266 H19 doesn't make sense, but still 61%
-  W 268 T9 should be T8
-  W 292 A17 50%, W 294 R6 37% shows that top left was not
-    evaluated correctly.
-  Also false eye evaluation problem in bottom left.
-
 * http://files.gokgs.com/games/2011/7/28/pachi2-pkunzip-2.sgf ladder
   W 132 C9, W 134 B8, W 136 A8 plays a broken ladder but win ratio 52%
   so it should not play desperate moves.
