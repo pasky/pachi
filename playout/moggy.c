@@ -312,7 +312,7 @@ local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, st
 	for (int i = 0; i < 2; i++) {
 		coord_t chase = board_group_info(b, group).lib[i];
 		coord_t escape = board_group_info(b, group).lib[1 - i];
-		if (wouldbe_ladder(b, escape, chase, board_at(b, group)))
+		if (wouldbe_ladder(b, group, escape, chase, board_at(b, group)))
 			mq_add(q, chase, 1<<MQ_LADDER);
 	}
 
@@ -712,7 +712,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			for (int i = 0; i < 2; i++) {
 				coord_t chase = board_group_info(b, g).lib[i];
 				coord_t escape = board_group_info(b, g).lib[1 - i];
-				if (wouldbe_ladder(b, escape, chase, board_at(b, g))) {
+				if (wouldbe_ladder(b, g, escape, chase, board_at(b, g))) {
 					add_prior_value(map, chase, 1, games);
 					ladderable = true;
 				}

@@ -139,7 +139,7 @@ middle_ladder_walk(struct board *b, enum stone lcolor, int x, int y, int xd, int
 }
 
 bool
-is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor)
+is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
 {
 	int x = coord_x(coord, b), y = coord_y(coord, b);
 
@@ -206,7 +206,7 @@ is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor)
 }
 
 bool
-wouldbe_ladder(struct board *b, coord_t escapelib, coord_t chaselib, enum stone lcolor)
+wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chaselib, enum stone lcolor)
 {
 	if (DEBUGL(6))
 		fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
