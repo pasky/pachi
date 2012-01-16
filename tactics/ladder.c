@@ -110,7 +110,19 @@ middle_ladder_walk(struct board *b, enum stone lcolor, int x, int y, int xd, int
 	if (ladder_catcher(b, x - xd, y, lcolor))
 		ladder_horiz;
 	do {
+		/* Terminate early if we got near the board edge
+		 * and can force sagari:
+		 * | . O . .
+		 * | . 1 x .  2 would be expected by our ladder reader but we
+		 * | 2 o o x  essentially opt for 1 by explicit edge check
+		 * | . x o x  */
+		if (board_atxy(b, x + 2 * xd, y) == S_OFFBOARD
+		    && board_atxy(b, x + xd, y - 1) == S_NONE && board_atxy(b, x + xd, y + 1) == S_NONE)
+			return true;
 		ladder_vert;
+		if (board_atxy(b, x, y + 2 * yd) == S_OFFBOARD
+		    && board_atxy(b, x + 1, y + yd) == S_NONE && board_atxy(b, x - 1, y + yd) == S_NONE)
+			return true;
 		ladder_horiz;
 	} while (1);
 }
