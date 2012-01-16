@@ -52,16 +52,6 @@ kills above)
   pachi loses every semai by a large number of liberties
   but still considers itself winning 57% up to move 222 G16.
 
-* http://files.gokgs.com/games/2011/6/18/dorabon-pachi2-4.sgf semeai falseeye
-  pachi considers the bottom left semeai won by black (but black
-  loses it) and the bottom right as undecided (white is clearly
-  alive). At move 270 L4 it still thinks it is leading by 80%
-  although the game is lost.
-  The bottom right is the same problem as
-  http://files.gokgs.com/games/2011/6/10/pachi30s-samba-2.sgf
-  and http://files.gokgs.com/games/2011/6/9/botkiller2-pachi30s.sgf
-  This corner shape is very frequent and pachi always gets it wrong.
-
 * http://files.gokgs.com/games/2011/6/18/pachi2-ultimakang-4.sgf
   pachi was winning up to move 230 Q14 big mistake. Win ratio dropped
   from 60% to 25% at next move.
