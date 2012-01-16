@@ -89,8 +89,6 @@ static char *known_commands =
 	"play\n"
 	"genmove\n"
 	"kgs-genmove_cleanup\n"
-	"pachi-genmoves\n"
-	"pachi-genmoves_cleanup\n"
 	"set_free_handicap\n"
 	"place_free_handicap\n"
 	"fixed_handicap\n"
