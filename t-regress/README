@@ -26,6 +26,7 @@ These classifications are available for now:
 		considered moves. (This is a bit feeble class.)
 	must	This move is essential and must be made immediately.
 	alive	This group should be considered alive.
+	dead	This group should be considered dead.
 
 Classifications may be prefixed by various letters:
 
