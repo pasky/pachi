@@ -88,9 +88,6 @@ kills above)
   B 28 H4 should be at F1 or G1 to save E2 & E3 and the game.
   Pachi usually finds this so I'm surprised it didn't get it here.
 
-* http://files.gokgs.com/games/2011/8/9/pachi2-BlueSpark.sgf ladder
-  move 150 R19: pachi extends a losing ladder
-
 * http://files.gokgs.com/games/2011/8/10/jerryfish-pachi2.sgf semeai
   lost even game against 3k. Win ratio drops from 61% at 117 N1
   to 49% at the next move. So pachi didn't evaluate the semai correctly.
