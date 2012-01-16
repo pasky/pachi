@@ -12,6 +12,9 @@
 #include "mq.h"
 #include "random.h"
 
+#ifdef BOARD_SPATHASH
+#include "patternsp.h"
+#endif
 #ifdef BOARD_PAT3
 #include "pattern3.h"
 #endif
@@ -73,6 +76,11 @@ board_alloc(struct board *board)
 #else
 	int csize = 0;
 #endif
+#ifdef BOARD_SPATHASH
+	int ssize = board_size2(board) * sizeof(*board->spathash);
+#else
+	int ssize = 0;
+#endif
 #ifdef BOARD_PAT3
 	int p3size = board_size2(board) * sizeof(*board->pat3);
 #else
@@ -87,7 +95,7 @@ board_alloc(struct board *board)
 #endif
 	int cdsize = board_size2(board) * sizeof(*board->coord);
 
-	size_t size = bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + p3size + tsize + tqsize + cdsize;
+	size_t size = bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + cdsize;
 	void *x = malloc2(size);
 
 	/* board->b must come first */
@@ -100,6 +108,9 @@ board_alloc(struct board *board)
 	board->gi = x; x += gisize;
 #ifdef WANT_BOARD_C
 	board->c = x; x += csize;
+#endif
+#ifdef BOARD_SPATHASH
+	board->spathash = x; x += ssize;
 #endif
 #ifdef BOARD_PAT3
 	board->pat3 = x; x += p3size;
@@ -241,6 +252,20 @@ board_init_data(struct board *board)
 			board->h[c * 2 + 1] = 1;
 	} foreach_point_end;
 
+#ifdef BOARD_SPATHASH
+	/* Initialize spatial hashes. */
+	foreach_point(board) {
+		for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
+			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+				ptcoords_at(x, y, c, board, j);
+				board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
+					pthashes[0][j][board_at(board, c)];
+				board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
+					pthashes[0][j][stone_other(board_at(board, c))];
+			}
+		}
+	} foreach_point_end;
+#endif
 #ifdef BOARD_PAT3
 	/* Initialize 3x3 pattern codes. */
 	foreach_point(board) {
@@ -446,6 +471,22 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 	board->qhash[coord_quadrant(coord, board)] ^= hash_at(board, coord, color);
 	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
+
+#ifdef BOARD_SPATHASH
+	/* Gridcular metric is reflective, so we update all hashes
+	 * of appropriate ditance in OUR circle. */
+	for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
+		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+			ptcoords_at(x, y, coord, board, j);
+			/* We either changed from S_NONE to color
+			 * or vice versa; doesn't matter. */
+			board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
+				pthashes[0][j][color] ^ pthashes[0][j][S_NONE];
+			board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
+				pthashes[0][j][stone_other(color)] ^ pthashes[0][j][S_NONE];
+		}
+	}
+#endif
 
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */

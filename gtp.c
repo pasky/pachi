@@ -516,9 +516,9 @@ next_group:;
 			engine->evaluate(engine, board, &ti[color], vals, color);
 			for (int i = 0; i < board->flen; i++) {
 				if (!board_coord_in_symmetry(board, board->f[i])
-				    || isnan(vals[i]))
+				    || isnan(vals[i]) || vals[i] < 0.001)
 					continue;
-				printf("%s %1.3f\n", coord2sstr(board->f[i], board), (double) vals[i]);
+				printf("%s %.3f\n", coord2sstr(board->f[i], board), (double) vals[i]);
 			}
 			gtp_flush();
 		}

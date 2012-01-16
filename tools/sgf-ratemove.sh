@@ -28,4 +28,4 @@ tools/sgf2gtp.pl -g -n $movenum <"$sgf" |
 	sed -e 's/genmove/0 pachi-evaluate/' |
 	./pachi "$@" |
 	sed -ne '/^=0/,${s/^=0 //;p}' |
-	sort -n -t ' ' -k 2
+	sort -r -n -t ' ' -k 2

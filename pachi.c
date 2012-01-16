@@ -13,6 +13,8 @@
 #include "replay/replay.h"
 #include "montecarlo/montecarlo.h"
 #include "random/random.h"
+#include "patternscan/patternscan.h"
+#include "patternplay/patternplay.h"
 #include "joseki/joseki.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
@@ -32,6 +34,8 @@ int seed;
 enum engine_id {
 	E_RANDOM,
 	E_REPLAY,
+	E_PATTERNSCAN,
+	E_PATTERNPLAY,
 	E_MONTECARLO,
 	E_UCT,
 	E_DISTRIBUTED,
@@ -42,6 +46,8 @@ enum engine_id {
 static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 	engine_random_init,
 	engine_replay_init,
+	engine_patternscan_init,
+	engine_patternplay_init,
 	engine_montecarlo_init,
 	engine_uct_init,
 	engine_distributed_init,
@@ -98,6 +104,10 @@ int main(int argc, char *argv[])
 					engine = E_UCT;
 				} else if (!strcasecmp(optarg, "distributed")) {
 					engine = E_DISTRIBUTED;
+				} else if (!strcasecmp(optarg, "patternscan")) {
+					engine = E_PATTERNSCAN;
+				} else if (!strcasecmp(optarg, "patternplay")) {
+					engine = E_PATTERNPLAY;
 				} else if (!strcasecmp(optarg, "joseki")) {
 					engine = E_JOSEKI;
 				} else {
