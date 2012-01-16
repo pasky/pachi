@@ -198,7 +198,10 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	struct uct_prior *p = calloc2(1, sizeof(struct uct_prior));
 
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = p->plugin_eqex = -100;
-	p->pattern_eqex = -1000;
+	/* FIXME: Optimal pattern_eqex is about -1000 with small playout counts
+	 * but only -400 on a cluster. We need a better way to set the default
+	 * here. */
+	p->pattern_eqex = -400;
 	p->joseki_eqex = -200;
 	p->cfgdn = -1;
 
