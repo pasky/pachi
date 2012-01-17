@@ -376,7 +376,7 @@ pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
 			coord_t lib = board_group_other_lib(b, g, m->coord);
 			/* TODO: is_ladder() is too conservative in some
 			 * very obvious situations, look at complete.gtp. */
-			f->payload |= is_ladder(b, lib, g, true) << PF_ATARI_LADDER;
+			f->payload |= wouldbe_ladder(b, g, lib, m->coord, stone_other(m->color)) << PF_ATARI_LADDER;
 		}
 
 		if (PS_PF(ATARI, KO) && !is_pass(b->ko.coord))

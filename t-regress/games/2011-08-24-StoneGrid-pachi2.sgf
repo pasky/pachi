@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]KM[7.50]TM[14400]
-PW[StoneGrid]PB[pachi2]BR[3d]DT[2011-08-24]GC[51 E14:bad!{ladder} pachi plays a broken ladder, which almost cost the game]PC[The KGS Go Server at http://www.gokgs.com/]C[StoneGrid [-\]: GTP Engine for StoneGrid (white): stonegrid version 0.3.4 48
+PW[StoneGrid]PB[pachi2]BR[3d]DT[2011-08-24]GC[51 /E14:bad!{ladder} pachi plays a broken ladder, which almost cost the game]PC[The KGS Go Server at http://www.gokgs.com/]C[StoneGrid [-\]: GTP Engine for StoneGrid (white): stonegrid version 0.3.4 48
 pachi2 [3d\]: GTP Engine for pachi2 (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 ]RE[B+Resign]
 ;B[pp]BL[14399.379]C[maproomad [-\]: pachi2: In 2367711 playouts at 64 machines, white M10 can win with 96.89% probability.
