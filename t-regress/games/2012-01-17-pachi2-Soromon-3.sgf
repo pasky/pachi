@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]HA[2]KM[0.50]TM[0]OT[5x15 byo-yomi]
-PW[pachi2]PB[Soromon]WR[3d]BR[1d]DT[2012-01-17]GC[248 S14:alive,C3:dead pachi has two problems - black t10-t9-notconnecting and white t10-notconnecting; C3 is missing pattern issue]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (white): Pachi Distributed version 9.99 (Satsugen-devel): If you believe you have won but I am still playing, please help me understand by capturing all dead stones. Anyone can send me 'winrate' in private chat to get my assessment of the position. Have a nice game!
+PW[pachi2]PB[Soromon]WR[3d]BR[1d]DT[2012-01-17]GC[248 /S14:alive,C3:dead pachi has two problems - black t10-t9-notconnecting and white t10-notconnecting; C3 is missing pattern issue]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (white): Pachi Distributed version 9.99 (Satsugen-devel): If you believe you have won but I am still playing, please help me understand by capturing all dead stones. Anyone can send me 'winrate' in private chat to get my assessment of the position. Have a nice game!
 ]RE[B+Resign]
 ;B[ji]BL[15]OB[5]
 ;B[jk]BL[15]OB[5]
