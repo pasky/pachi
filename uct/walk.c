@@ -138,19 +138,29 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 		/* Average score. */
 		if (t->avg_score.playouts > 0)
 			fprintf(stderr, ", \"avg\": {\"score\": %.3f}", t->avg_score.value);
+		/* Per-intersection information. */
+		fprintf(stderr, ", \"boards\": {");
+		/* Position coloring information. */
+		fprintf(stderr, "\"colors\": [");
+		int f = 0;
+		foreach_point(t->board) {
+			if (board_at(t->board, c) == S_OFFBOARD) continue;
+			fprintf(stderr, "%s%d", f++ > 0 ? "," : "", board_at(t->board, c));
+		} foreach_point_end;
+		fprintf(stderr, "]");
 		/* Ownership statistics. Value (0..1000) for each possible
 		 * point describes likelihood of this point becoming black.
 		 * Normally, white rate is 1000-value; exception are possible
 		 * seki points, but these should be rare. */
-		fprintf(stderr, ", \"boards\": {\"territory\": [");
-		int f = 0;
+		fprintf(stderr, ", \"territory\": [");
+		f = 0;
 		foreach_point(t->board) {
 			if (board_at(t->board, c) == S_OFFBOARD) continue;
 			int rate = u->ownermap.map[c][S_BLACK] * 1000 / u->ownermap.playouts;
 			fprintf(stderr, "%s%d", f++ > 0 ? "," : "", rate);
 		} foreach_point_end;
-		fprintf(stderr, "]}");
-
+		fprintf(stderr, "]");
+		fprintf(stderr, "}");
 	}
 
 	fprintf(stderr, "}}\n");
