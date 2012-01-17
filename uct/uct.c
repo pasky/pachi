@@ -326,7 +326,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	struct uct_thread_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(2)) tree_dump(t, u->dumpthres);
 	if (UDEBUGL(2))
-		fprintf(stderr, "(avg score %f/%d value %f/%d)\n",
+		fprintf(stderr, "(avg score %f/%d; dynkomi's %f/%d value %f/%d)\n",
+			t->avg_score.value, t->avg_score.playouts,
 			u->dynkomi->score.value, u->dynkomi->score.playouts,
 			u->dynkomi->value.value, u->dynkomi->value.playouts);
 	uct_progress_status(u, t, color, ctx->games, true);

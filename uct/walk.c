@@ -135,6 +135,9 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 	fprintf(stderr, "]");
 
 	if (big) {
+		/* Average score. */
+		if (t->avg_score.playouts > 0)
+			fprintf(stderr, ", \"avg\": {\"score\": %.3f}", t->avg_score.value);
 		/* Ownership statistics. Value (0..1000) for each possible
 		 * point describes likelihood of this point becoming black.
 		 * Normally, white rate is 1000-value; exception are possible
@@ -537,6 +540,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	floating_t rval = scale_value(u, b, result);
 	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, &b2, rval);
 
+	stats_add_result(&t->avg_score, result / 2, 1);
 	if (t->use_extra_komi) {
 		stats_add_result(&u->dynkomi->score, result / 2, 1);
 		stats_add_result(&u->dynkomi->value, rval, 1);
