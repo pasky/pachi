@@ -9,6 +9,7 @@
 #include "joseki/base.h"
 #include "move.h"
 #include "random.h"
+#include "tactics/ladder.h"
 #include "tactics/util.h"
 #include "uct/internal.h"
 #include "uct/plugins.h"
@@ -28,6 +29,7 @@ struct uct_prior {
 	int eqex;
 	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex, joseki_eqex, pattern_eqex;
 	int cfgdn; int *cfgd_eqex;
+	bool prune_ladders;
 };
 
 void
@@ -172,6 +174,16 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
+	if (u->prior->prune_ladders) {
+		foreach_free_point(map->b) {
+			if (!map->consider[c])
+				continue;
+			group_t atari_neighbor = board_get_atari_neighbor(map->b, c, map->to_play);
+			if (atari_neighbor && is_ladder(map->b, c, atari_neighbor, true))
+				map->consider[c] = false;
+		} foreach_free_point_end;
+	}
+
 	if (u->prior->even_eqex)
 		uct_prior_even(u, node, map);
 	if (u->prior->eye_eqex)
@@ -265,6 +277,8 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 			} else if (!strcasecmp(optname, "plugin") && optval) {
 				/* Unlike others, this is just a *recommendation*. */
 				p->plugin_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prune_ladders")) {
+				p->prune_ladders = !optval || atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid prior argument %s or missing value\n", optname);
 				exit(1);
