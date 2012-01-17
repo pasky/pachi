@@ -49,7 +49,7 @@ board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_
 }
 
 void
-board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge)
+board_ownermap_judge_groups(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge)
 {
 	assert(ownermap->map);
 	assert(judge->gs);

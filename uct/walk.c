@@ -24,8 +24,9 @@
 
 #define DESCENT_DLEN 512
 
+
 void
-uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
 {
 	if (!UDEBUGL(0))
 		return;
@@ -78,6 +79,94 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	}
 
 	fprintf(stderr, "\n");
+}
+
+void
+uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts, bool final, bool big)
+{
+	/* Prefix indicating JSON line. */
+	fprintf(stderr, "{\"%s\": {", final ? "move" : "frame");
+
+	/* Plaout count */
+	fprintf(stderr, "\"playouts\": %d", playouts);
+
+	/* Dynamic komi */
+	if (t->use_extra_komi)
+		fprintf(stderr, ", \"extrakomi\": %.1f", t->extra_komi);
+
+	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+	if (best) {
+		/* Best move */
+		fprintf(stderr, ", \"best\": {\"%s\": %f}",
+			coord2sstr(best->coord, t->board),
+			tree_node_get_value(t, 1, best->u.value));
+
+		/* Best sequence */
+		fprintf(stderr, ", \"seq\": [");
+		for (int depth = 0; depth < 4; depth++) {
+			if (!best || best->u.playouts < 25) break;
+			fprintf(stderr, "%s\"%s\"", depth > 0 ? "," : "",
+				coord2sstr(best->coord, t->board));
+			best = u->policy->choose(u->policy, best, t->board, color, resign);
+		}
+		fprintf(stderr, "]");
+	}
+
+	/* Best candidates */
+	int cans = 4;
+	struct tree_node *can[cans];
+	memset(can, 0, sizeof(can));
+	best = t->root->children;
+	while (best) {
+		int c = 0;
+		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
+		for (int d = 0; d < c; d++) can[d] = can[d + 1];
+		if (c > 0) can[c - 1] = best;
+		best = best->sibling;
+	}
+	fprintf(stderr, ", \"can\": [");
+	while (--cans >= 0) {
+		if (!can[cans]) break;
+		fprintf(stderr, "%s{\"%s\":%.3f}",
+			cans < 3 ? "," : "",
+			coord2sstr(can[cans]->coord, t->board),
+			tree_node_get_value(t, 1, can[cans]->u.value));
+	}
+	fprintf(stderr, "]");
+
+	if (big) {
+		/* Ownership statistics. Value (0..1000) for each possible
+		 * point describes likelihood of this point becoming black.
+		 * Normally, white rate is 1000-value; exception are possible
+		 * seki points, but these should be rare. */
+		fprintf(stderr, ", \"boards\": {\"territory\": [");
+		int f = 0;
+		foreach_point(t->board) {
+			if (board_at(t->board, c) == S_OFFBOARD) continue;
+			int rate = u->ownermap.map[c][S_BLACK] * 1000 / u->ownermap.playouts;
+			fprintf(stderr, "%s%d", f++ > 0 ? "," : "", rate);
+		} foreach_point_end;
+		fprintf(stderr, "]}");
+
+	}
+
+	fprintf(stderr, "}}\n");
+}
+
+void
+uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
+{
+	switch (u->reporting) {
+		case UR_TEXT:
+			uct_progress_text(u, t, color, playouts, final);
+			break;
+		case UR_JSON:
+		case UR_JSON_BIG:
+			uct_progress_json(u, t, color, playouts, final,
+			                  u->reporting == UR_JSON_BIG);
+			break;
+		default: assert(0);
+	}
 }
 
 

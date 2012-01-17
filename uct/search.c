@@ -31,9 +31,6 @@ static const struct time_info default_ti = {
 	.len = { .games = MC_GAMES },
 };
 
-/* Once per how many simulations (per thread) to show a progress report line. */
-#define TREE_SIMPROGRESS_INTERVAL 10000
-
 /* When terminating UCT search early, the safety margin to add to the
  * remaining playout number estimate when deciding whether the result can
  * still change. */
@@ -190,7 +187,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 {
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
-	s->print_interval = TREE_SIMPROGRESS_INTERVAL * u->threads;
+	s->print_interval = u->reportfreq * u->threads;
 	s->fullmem = false;
 
 	if (ti) {
@@ -253,7 +250,7 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 	/* Print progress? */
 	if (i - s->last_print > s->print_interval) {
 		s->last_print += s->print_interval; // keep the numbers tidy
-		uct_progress_status(u, ctx->t, color, s->last_print);
+		uct_progress_status(u, ctx->t, color, s->last_print, false);
 	}
 
 	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {

@@ -98,7 +98,7 @@ dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
 	struct group_judgement gj;
 	gj.thres = GJ_THRES;
 	gj.gs = alloca(board_size2(b) * sizeof(gj.gs[0]));
-	board_ownermap_judge_group(b, &u->ownermap, &gj);
+	board_ownermap_judge_groups(b, &u->ownermap, &gj);
 	groups_of_status(b, &gj, GS_DEAD, mq);
 }
 
@@ -329,8 +329,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		fprintf(stderr, "(avg score %f/%d value %f/%d)\n",
 			u->dynkomi->score.value, u->dynkomi->score.playouts,
 			u->dynkomi->value.value, u->dynkomi->value.playouts);
-	if (UDEBUGL(0))
-		uct_progress_status(u, t, color, ctx->games);
+	uct_progress_status(u, t, color, ctx->games, true);
 
 	u->played_own += ctx->games;
 	return ctx->games;
@@ -370,7 +369,7 @@ uct_pondering_stop(struct uct *u)
 	struct uct_thread_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1)) {
 		if (u->pondering) fprintf(stderr, "(pondering) ");
-		uct_progress_status(u, ctx->t, ctx->color, ctx->games);
+		uct_progress_status(u, ctx->t, ctx->color, ctx->games, true);
 	}
 	if (u->pondering) {
 		free(ctx->b);
@@ -541,6 +540,7 @@ uct_state_init(char *arg, struct board *b)
 	bool pat_setup = false;
 
 	u->debug_level = debug_level;
+	u->reportfreq = 10000;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
 	u->sure_win_threshold = 0.9;
@@ -602,6 +602,30 @@ uct_state_init(char *arg, struct board *b)
 					u->debug_level = atoi(optval);
 				else
 					u->debug_level++;
+			} else if (!strcasecmp(optname, "reporting") && optval) {
+				/* The format of output for detailed progress
+				 * information (such as current best move and
+				 * its value, etc.). */
+				if (!strcasecmp(optval, "text")) {
+					/* Plaintext traditional output. */
+					u->reporting = UR_TEXT;
+				} else if (!strcasecmp(optval, "json")) {
+					/* JSON output. Implies debug=0. */
+					u->reporting = UR_JSON;
+					u->debug_level = 0;
+				} else if (!strcasecmp(optval, "jsonbig")) {
+					/* JSON output, but much more detailed.
+					 * Implies debug=0. */
+					u->reporting = UR_JSON_BIG;
+					u->debug_level = 0;
+				} else {
+					fprintf(stderr, "UCT: Invalid reporting format %s\n", optval);
+					exit(1);
+				}
+			} else if (!strcasecmp(optname, "reportfreq") && optval) {
+				/* The progress information line will be shown
+				 * every <reportfreq> simulations. */
+				u->reportfreq = atoi(optval);
 			} else if (!strcasecmp(optname, "dumpthres") && optval) {
 				/* When dumping the UCT tree on output, include
 				 * nodes with at least this many playouts.
