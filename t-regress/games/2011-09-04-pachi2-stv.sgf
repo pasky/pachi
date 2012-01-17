@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]KM[7.50]TM[1740]OT[10/30 Canadian]
-PW[pachi2]PB[stv]WR[3d]DT[2011-09-04]GC[48 H8:bad!{ladder} pachi plays a broken ladder, which cost not just the game but also the first place in the tournament. This is a more complex ladder than usual, though.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (white): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+PW[pachi2]PB[stv]WR[3d]DT[2011-09-04]GC[48 /H8:bad!{ladder} pachi plays a broken ladder, which cost not just the game but also the first place in the tournament. This is a more complex ladder than usual, though.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (white): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 stv [-\]: GTP Engine for stv (black): Steenvreter version r105
 ]RE[B+Resign]
 ;B[pp]BL[1739.65]
