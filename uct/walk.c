@@ -100,16 +100,6 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 		fprintf(stderr, ", \"best\": {\"%s\": %f}",
 			coord2sstr(best->coord, t->board),
 			tree_node_get_value(t, 1, best->u.value));
-
-		/* Best sequence */
-		fprintf(stderr, ", \"seq\": [");
-		for (int depth = 0; depth < 4; depth++) {
-			if (!best || best->u.playouts < 25) break;
-			fprintf(stderr, "%s\"%s\"", depth > 0 ? "," : "",
-				coord2sstr(best->coord, t->board));
-			best = u->policy->choose(u->policy, best, t->board, color, resign);
-		}
-		fprintf(stderr, "]");
 	}
 
 	/* Best candidates */
@@ -127,10 +117,17 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 	fprintf(stderr, ", \"can\": [");
 	while (--cans >= 0) {
 		if (!can[cans]) break;
-		fprintf(stderr, "%s{\"%s\":%.3f}",
-			cans < 3 ? "," : "",
-			coord2sstr(can[cans]->coord, t->board),
-			tree_node_get_value(t, 1, can[cans]->u.value));
+		/* Best sequence */
+		fprintf(stderr, "%s[", cans < 3 ? ", " : "");
+		best = can[cans];
+		for (int depth = 0; depth < 4; depth++) {
+			if (!best || best->u.playouts < 25) break;
+			fprintf(stderr, "%s{\"%s\":%.3f}", depth > 0 ? "," : "",
+				coord2sstr(best->coord, t->board),
+				tree_node_get_value(t, 1, best->u.value));
+			best = u->policy->choose(u->policy, best, t->board, color, resign);
+		}
+		fprintf(stderr, "]");
 	}
 	fprintf(stderr, "]");
 
