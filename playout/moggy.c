@@ -169,7 +169,7 @@ static char moggy_patterns_src[][11] = {
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
 static inline bool
-test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
+test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bool middle_ladder)
 {
 	struct moggy_policy *pp = p->data;
 	/* Check if 3x3 pattern is matched by given move... */
@@ -180,7 +180,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, pp->middle_ladder)
+	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, middle_ladder)
 	    && !can_countercapture(b, board_at(b, group_base(atari_neighbor)),
                                    atari_neighbor, m->color, NULL, 0))
 		return false;
@@ -190,8 +190,9 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 static void
 apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum stone color, struct move_queue *q)
 {
+	struct moggy_policy *pp = p->data;
 	struct move m2 = { .coord = c, .color = color };
-	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2))
+	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder))
 		mq_add(q, c, 1<<MQ_PAT3);
 }
 
@@ -807,7 +808,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 	/* Pattern check */
 	if (pp->patternrate) {
 		struct move m = { .color = map->to_play, .coord = coord };
-		if (test_pattern3_here(p, b, &m)) {
+		if (test_pattern3_here(p, b, &m, true)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
 			add_prior_value(map, coord, 1, games);
