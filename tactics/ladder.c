@@ -60,14 +60,14 @@ is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
  * gain three liberties). */
 
 static bool
-middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor)
+middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum stone lcolor)
 {
 	assert(board_group_info(b, laddered).libs == 1);
 
 	/* First, escape. */
 	if (DEBUGL(6))
-		fprintf(stderr, "  ladder escape %s\n", coord2sstr(board_group_info(b, laddered).lib[0], b));
-	struct move m = { board_group_info(b, laddered).lib[0], lcolor };
+		fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove, b));
+	struct move m = { nextmove, lcolor };
 	int res = board_play(b, &m);
 	laddered = group_at(b, laddered);
 	assert(res >= 0);
@@ -132,7 +132,7 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor)
 		if (DEBUGL(6))
 			fprintf(stderr, "(%d=%d) ladder atari %s (%d libs)\n", i, res, coord2sstr(ataristone, b2), board_group_info(b2, group_at(b2, ataristone)).libs);
 		if (res >= 0 && board_group_info(b2, group_at(b2, ataristone)).libs > 1)
-			is_ladder = middle_ladder_walk(b2, laddered, lcolor);
+			is_ladder = middle_ladder_walk(b2, laddered, board_group_info(b2, laddered).lib[0], lcolor);
 
 		if (i != libs - 1) {
 			board_done_noalloc(&b2s);
@@ -164,7 +164,7 @@ is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	 * board and start selective 2-liberty search. */
 	struct board b2;
 	board_copy(&b2, b);
-	bool is_ladder = middle_ladder_walk(&b2, laddered, lcolor);
+	bool is_ladder = middle_ladder_walk(&b2, laddered, board_group_info(&b2, laddered).lib[0], lcolor);
 	board_done_noalloc(&b2);
 	return is_ladder;
 }
@@ -198,7 +198,7 @@ wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chasel
 	struct move m = { chaselib, stone_other(lcolor) };
 	int res = board_play(&b2, &m);
 	if (res >= 0)
-		is_ladder = middle_ladder_walk(&b2, group, lcolor);
+		is_ladder = middle_ladder_walk(&b2, group, board_group_info(&b2, group).lib[0], lcolor);
 
 	board_done_noalloc(&b2);
 	return is_ladder;
