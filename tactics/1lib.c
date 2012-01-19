@@ -123,8 +123,18 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 
 	/* Otherwise, do not save kos. */
 	if (group_is_onestone(b, group)
-	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4)
-		return;
+	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4) {
+		/* Except when the ko is for an eye! */
+		bool eyeconnect = false;
+		foreach_diag_neighbor(b, lib) {
+			if (board_at(b, c) == S_NONE && neighbor_count_at(b, c, color) + neighbor_count_at(b, c, S_OFFBOARD) == 4) {
+				eyeconnect = true;
+				break;
+			}
+		} foreach_diag_neighbor_end;
+		if (!eyeconnect)
+			return;
+	}
 
 	/* Do not suicide... */
 	if (!can_play_on_lib(b, group, to_play))

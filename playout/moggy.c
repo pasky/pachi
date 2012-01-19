@@ -160,6 +160,10 @@ static char moggy_patterns_src[][11] = {
 	 * # O . O .
 	 * # . . . .
 	 * # # # # # */
+	/* side pattern - make eye */
+	"?X."
+	"Q.X"
+	"###",
 #if 0
 	"Oxx"
 	"..."
