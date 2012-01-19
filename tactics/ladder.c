@@ -5,6 +5,8 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "mq.h"
+#include "tactics/1lib.h"
 #include "tactics/ladder.h"
 
 
@@ -162,6 +164,22 @@ is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	/* A fair chance for a ladder. Group in atari, with some but limited
 	 * space to escape. Time for the expensive stuff - set up a temporary
 	 * board and start selective 2-liberty search. */
+
+	struct move_queue ccq = { .moves = 0 };
+	if (can_countercapture(b, lcolor, laddered, lcolor, &ccq, 0)) {
+		/* We could escape by countercapturing a group.
+		 * Investigate. */
+		assert(ccq.moves > 0);
+		for (unsigned int i = 0; i < ccq.moves; i++) {
+			struct board b2;
+			board_copy(&b2, b);
+			bool is_ladder = middle_ladder_walk(&b2, laddered, ccq.move[i], lcolor);
+			board_done_noalloc(&b2);
+			if (!is_ladder)
+				return false;
+		}
+	}
+
 	struct board b2;
 	board_copy(&b2, b);
 	bool is_ladder = middle_ladder_walk(&b2, laddered, board_group_info(&b2, laddered).lib[0], lcolor);
