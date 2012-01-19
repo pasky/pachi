@@ -41,7 +41,7 @@ is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
 	int libs2 = board_group_info(b, group_atxy(b, x - xd - yd * dd, y - yd - xd * dd)).libs;
 	if (DEBUGL(6))
 		fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);
-	if (libs1 < 2 && libs2 < 2)
+	if (libs1 < 2 || libs2 < 2)
 		return false;
 	if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor && libs1 < 3)
 		return false;
