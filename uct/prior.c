@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "joseki/base.h"
@@ -174,13 +175,16 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
-	if (u->prior->prune_ladders) {
+	if (u->prior->prune_ladders && !board_playing_ko_threat(map->b)) {
 		foreach_free_point(map->b) {
 			if (!map->consider[c])
 				continue;
 			group_t atari_neighbor = board_get_atari_neighbor(map->b, c, map->to_play);
-			if (atari_neighbor && is_ladder(map->b, c, atari_neighbor, true))
+			if (atari_neighbor && is_ladder(map->b, c, atari_neighbor, true)) {
+				if (UDEBUGL(5))
+					fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c, map->b));
 				map->consider[c] = false;
+			}
 		} foreach_free_point_end;
 	}
 
