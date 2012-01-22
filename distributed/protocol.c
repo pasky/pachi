@@ -104,7 +104,11 @@ logline(struct in_addr *client, char *prefix, char *s)
 
 	char addr[INET_ADDRSTRLEN];
 	if (client) {
+#ifdef _WIN32
+		strcpy(addr, inet_ntoa(*client));
+#else
 		inet_ntop(AF_INET, client, addr, sizeof(addr));
+#endif
 	} else {
 		addr[0] = '\0';
 	}
