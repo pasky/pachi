@@ -11,6 +11,23 @@
 #define sleep(seconds) Sleep((seconds) * 1000)
 #define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((unsigned long *) (ap), (b));
 #define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((unsigned long *) (ap), -(b));
+
+#include <ctype.h>
+static inline const char *
+strcasestr(const char *haystack, const char *needle)
+{
+	for (const char *p = haystack; *p; p++) {
+		for (int ni = 0; needle[ni]; ni++) {
+			if (!p[ni])
+				return NULL;
+			if (toupper(p[ni]) != toupper(needle[ni]))
+				goto more_hay;
+		}
+		return p;
+more_hay:;
+	}
+	return NULL;
+}
 #endif
 
 /* Misc. definitions. */
