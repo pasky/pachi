@@ -3,6 +3,16 @@
 
 #include <stdlib.h>
 
+/* Portability definitions. */
+
+#ifdef _WIN32
+#include <windows.h>
+
+#define sleep(seconds) Sleep((seconds) * 1000)
+#define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((unsigned long *) (ap), (b));
+#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((unsigned long *) (ap), -(b));
+#endif
+
 /* Misc. definitions. */
 
 /* Use make DOUBLE=1 in large configurations with counts > 1M
