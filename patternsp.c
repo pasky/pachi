@@ -231,8 +231,12 @@ spatial_dict_addc(struct spatial_dict *dict, struct spatial *s)
 bool
 spatial_dict_addh(struct spatial_dict *dict, hash_t hash, unsigned int id)
 {
-	if (dict->hash[hash] && dict->hash[hash] != id)
-		dict->collisions++;
+	if (dict->hash[hash]) {
+		if (dict->hash[hash] != id)
+			dict->collisions++;
+	} else {
+		dict->fills++;
+	}
 	dict->hash[hash] = id;
 	return true;
 }
@@ -323,9 +327,35 @@ spatial_dict_load(struct spatial_dict *dict, FILE *f, bool hash)
 void
 spatial_dict_hashstats(struct spatial_dict *dict)
 {
-	fprintf(stderr, "\t(Spatial dictionary hash: %d coll., %d effective - still inflated, %.2f%% fill rate).\n",
-			dict->collisions, dict->collisions / PTH__ROTATIONS,
-			(double) dict->nspatials * 100 / (sizeof(dict->hash) / sizeof(dict->hash[0])));
+	/* m hash size, n number of patterns; is zobrist universal hash?
+	 *
+	 * Not so rigorous analysis, but it should give a good approximation:
+	 * Probability of empty bucket is (1-1/m)^n ~ e^(-n/m)
+	 * Probability of non-empty bucket is 1-e^(-n/m)
+	 * Expected number of non-empty buckets is m*(1-e^(-n/m))
+	 * Number of collisions is n-m*(1-e^(-n/m)). */
+
+	/* The result: Reality matches these expectations pretty well!
+	 *
+	 * Actual:
+	 * 	Loaded spatial dictionary of 1064482 patterns.
+	 * 	(Spatial dictionary hash: 513997 collisions (incl. repetitions), 11.88% (7970033/67108864) fill rate).
+	 *
+	 * Theoretical:
+	 * 	m = 2^26
+	 * 	n <= 8*1064482 (some patterns may have some identical rotations)
+	 * 	n = 513997+7970033 = 8484030 should be the correct number
+	 * 	n-m*(1-e^(-n/m)) = 514381
+	 *
+	 * To verify, make sure to turn patternprob off (e.g. use
+	 * -e patternscan), since it will insert a pattern multiple times,
+	 * multiplying the reported number of collisions. */
+
+	unsigned long buckets = (sizeof(dict->hash) / sizeof(dict->hash[0]));
+	fprintf(stderr, "\t(Spatial dictionary hash: %d collisions (incl. repetitions), %.2f%% (%d/%lu) fill rate).\n",
+			dict->collisions,
+			(double) dict->fills * 100 / buckets,
+			dict->fills, buckets);
 }
 
 void
