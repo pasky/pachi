@@ -36,7 +36,7 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 	dict->pc = pc;
 	dict->table = calloc2(pc->spat_dict->nspatials + 1, sizeof(*dict->table));
 
-	char *sphcachehit = malloc(pc->spat_dict->nspatials);
+	char *sphcachehit = calloc2(pc->spat_dict->nspatials, 1);
 	hash_t (*sphcache)[PTH__ROTATIONS] = malloc(pc->spat_dict->nspatials * sizeof(sphcache[0]));
 
 	int i = 0;
