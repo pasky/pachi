@@ -103,8 +103,8 @@ struct spatial_dict {
 	/* Maps to spatials[] indices. The hash function
 	 * used is zobrist hashing with fixed values. */
 	uint32_t hash[1 << spatial_hash_bits];
-	/* Auxiliary collision counter, for statistics. */
-	int collisions;
+	/* Auxiliary counters for statistics. */
+	int fills, collisions;
 };
 
 /* Initializes spatial dictionary, pre-loading existing records from

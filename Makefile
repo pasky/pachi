@@ -5,6 +5,13 @@
 # 	make MAC=1 DOUBLE=1
 
 
+# Do you compile on Windows instead of Linux? Please note that the
+# performance may not be optimal.
+# (XXX: For now, only the mingw target is supported on Windows.
+# Patches for others are welcome!)
+
+# WIN=1
+
 # Do you compile on MacOS/X instead of Linux? Please note that the
 # performance may not be optimal.
 # (XXX: We are looking for volunteers contributing support for other
@@ -49,6 +56,11 @@ CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-com
 ### CONFIGURATION END
 
 
+ifdef WIN
+	SYS_CFLAGS=
+	LDFLAGS=-pthread
+	LIBS=-lm -lws2_32
+else
 ifdef MAC
 	SYS_CFLAGS=-DNO_THREAD_LOCAL
 	LDFLAGS=-pthread -rdynamic
@@ -57,6 +69,7 @@ else
 	SYS_CFLAGS=-march=native
 	LDFLAGS=-pthread -rdynamic
 	LIBS=-lm -lrt -ldl
+endif
 endif
 
 ifdef DOUBLE

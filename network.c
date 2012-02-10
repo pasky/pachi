@@ -10,8 +10,14 @@
 #include <errno.h>
 #include <pthread.h>
 #include <sys/types.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/socket.h>
 #include <netdb.h>
+#endif
 
 #include "debug.h"
 #include "util.h"
