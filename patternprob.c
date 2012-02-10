@@ -61,16 +61,20 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 		pb->next = dict->table[spi];
 		dict->table[spi] = pb;
 
-		/* We rehash spatials in the order of loaded patterns. This way
-		 * we make sure that the most popular patterns will be hashed
-		 * last and therefore take priority. */
-		if (!sphcachehit[spi]) {
-			sphcachehit[spi] = 1;
-			for (int r = 0; r < PTH__ROTATIONS; r++)
-				sphcache[spi][r] = spatial_hash(r, &pc->spat_dict->spatials[spi]);
+		/* Some spatials may not have been loaded if they correspond
+		 * to a radius larger than supported. */
+		if (pc->spat_dict->spatials[spi].dist > 0) {
+			/* We rehash spatials in the order of loaded patterns. This way
+			 * we make sure that the most popular patterns will be hashed
+			 * last and therefore take priority. */
+			if (!sphcachehit[spi]) {
+				sphcachehit[spi] = 1;
+				for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
+					sphcache[spi][r] = spatial_hash(r, &pc->spat_dict->spatials[spi]);
+			}
+			for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
+				spatial_dict_addh(pc->spat_dict, sphcache[spi][r], spi);
 		}
-		for (int r = 0; r < PTH__ROTATIONS; r++)
-			spatial_dict_addh(pc->spat_dict, sphcache[spi][r], spi);
 
 		i++;
 	}

@@ -256,6 +256,14 @@ spatial_dict_read(struct spatial_dict *dict, char *buf, bool hash)
 	radius = strtoul(bufp, &bufp, 10);
 	while (isspace(*bufp)) bufp++;
 
+	if (radius > MAX_PATTERN_DIST) {
+		/* Too large spatial, skip. */
+		struct spatial s = { .dist = 0 };
+		unsigned int id = spatial_dict_addc(dict, &s);
+		assert(id == index);
+		return;
+	}
+
 	/* Load the stone configuration. */
 	struct spatial s = { .dist = radius };
 	unsigned int sl = 0;
