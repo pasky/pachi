@@ -52,12 +52,12 @@
 
 struct spatial {
 	/* Gridcular radius of matched pattern. */
-	char dist;
+	unsigned char dist;
 	/* The points; each point is two bits, corresponding
 	 * to {enum stone}. Points are ordered in gridcular-defined
 	 * spiral from middle to the edge; the dictionary file has
 	 * a comment describing the ordering at the top. */
-	char points[MAX_PATTERN_AREA / 4];
+	unsigned char points[MAX_PATTERN_AREA / 4];
 #define spatial_point_at(s, i) (((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3)
 };
 
@@ -67,7 +67,7 @@ struct pattern_config;
 void spatial_from_board(struct pattern_config *pc, struct spatial *s, struct board *b, struct move *m);
 
 /* Compute hash of given spatial pattern. */
-hash_t spatial_hash(int rotation, struct spatial *s);
+hash_t spatial_hash(unsigned int rotation, struct spatial *s);
 
 /* Convert given spatial pattern to string. */
 char *spatial2str(struct spatial *s);
@@ -76,7 +76,7 @@ char *spatial2str(struct spatial *s);
  * coordinates relative to pattern center). */
 struct ptcoord { short x, y; } ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
-int ptind[MAX_PATTERN_DIST + 2];
+unsigned int ptind[MAX_PATTERN_DIST + 2];
 
 /* Zobrist hashes used for points in patterns. */
 #define PTH__ROTATIONS	8
@@ -93,7 +93,7 @@ hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 /* Two ways of lookup: (i) by index (ii) by hash of the configuration. */
 struct spatial_dict {
 	/* Indexed base store */
-	int nspatials; /* Number of records. */
+	unsigned int nspatials; /* Number of records. */
 	struct spatial *spatials; /* Actual records. */
 
 	/* Hashed access; all isomorphous configurations
@@ -121,7 +121,7 @@ static unsigned int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t
 /* Store specified spatial pattern in the dictionary if it is not known yet.
  * Returns pattern id. Note that the pattern is NOT written to the underlying
  * file automatically. */
-int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
+unsigned int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
 
 /* Readds given rotation of given pattern to the hash. This is useful only
  * if you want to tweak hash priority of various patterns. */
@@ -144,7 +144,7 @@ extern const char *spatial_dict_filename;
 void spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f);
 
 /* Append specified spatial pattern to the given file. */
-void spatial_write(struct spatial_dict *dict, struct spatial *s, int id, FILE *f);
+void spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id, FILE *f);
 
 
 static inline unsigned int

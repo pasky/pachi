@@ -104,12 +104,12 @@ struct pattern {
 struct spatial_dict;
 struct pattern_config {
 	/* FEAT_BORDER: Generate features only up to this board distance. */
-	int bdist_max;
+	unsigned int bdist_max;
 
 	/* FEAT_SPATIAL: Generate patterns only for these sizes (gridcular).
 	 * TODO: Special-case high values to match larger areas or the
 	 * whole board. */
-	int spat_min, spat_max;
+	unsigned int spat_min, spat_max;
 	/* Produce only a single spatial feature per pattern, corresponding
 	 * to the largest matched spatial pattern. */
 	bool spat_largest;

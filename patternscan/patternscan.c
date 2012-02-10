@@ -46,7 +46,7 @@ struct patternscan {
 
 	/* Book-keeping of spatial occurence count. */
 	int gameno;
-	int nscounts;
+	unsigned int nscounts;
 	int *scounts;
 	int *sgameno;
 };
@@ -63,7 +63,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 		int dmax = s.dist;
 		for (int d = ps->pat.pc.spat_min; d <= dmax; d++) {
 			s.dist = d;
-			int sid = spatial_dict_put(ps->pat.pc.spat_dict, &s, spatial_hash(0, &s));
+			unsigned int sid = spatial_dict_put(ps->pat.pc.spat_dict, &s, spatial_hash(0, &s));
 			assert(sid > 0);
 			#define SCOUNTS_ALLOC 1048576 // Allocate space in 1M*4 blocks.
 			if (sid >= ps->nscounts) {
@@ -189,7 +189,7 @@ patternscan_done(struct engine *e)
 	if (newfile)
 		spatial_dict_writeinfo(ps->pat.pc.spat_dict, f);
 
-	for (int i = ps->loaded_spatials; i < ps->pat.pc.spat_dict->nspatials; i++) {
+	for (unsigned int i = ps->loaded_spatials; i < ps->pat.pc.spat_dict->nspatials; i++) {
 		/* By default, threshold is 0 and condition is always true. */
 		assert(i < ps->nscounts && ps->scounts[i] > 0);
 		if (ps->scounts[i] >= ps->spat_threshold)

@@ -405,10 +405,10 @@ pattern_match_spatial_outer(struct pattern_config *pc, pattern_spec ps,
 	static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
-	for (int d = BOARD_SPATHASH_MAXD + 1; d <= pc->spat_max; d++) {
+	for (unsigned int d = BOARD_SPATHASH_MAXD + 1; d <= pc->spat_max; d++) {
 		/* Recompute missing outer circles:
 		 * Go through all points in given distance. */
-		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+		for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
 			ptcoords_at(x, y, m->coord, b, j);
 			h ^= pthashes[0][j][(*bt)[board_atxy(b, x, y)]];
 		}
@@ -515,7 +515,7 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 	}
 
 	if (PS_ANY(BORDER)) {
-		int bdist = coord_edge_distance(m->coord, b);
+		unsigned int bdist = coord_edge_distance(m->coord, b);
 		if (bdist <= pc->bdist_max) {
 			f->id = FEAT_BORDER;
 			f->payload = bdist;

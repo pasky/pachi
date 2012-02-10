@@ -19,7 +19,7 @@
 struct ptcoord ptcoords[MAX_PATTERN_AREA];
 
 /* For each radius, starting index in ptcoords[]. */
-int ptind[MAX_PATTERN_DIST + 2];
+unsigned int ptind[MAX_PATTERN_DIST + 2];
 
 /* ptcoords[], ptind[] setup */
 static void
@@ -141,10 +141,10 @@ spatial_init(void)
 }
 
 inline hash_t
-spatial_hash(int rotation, struct spatial *s)
+spatial_hash(unsigned int rotation, struct spatial *s)
 {
 	hash_t h = 0;
-	for (int i = 0; i < ptind[s->dist + 1]; i++) {
+	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
 		h ^= pthashes[rotation][i][spatial_point_at(*s, i)];
 	}
 	return h & spatial_hash_mask;
@@ -154,7 +154,7 @@ char *
 spatial2str(struct spatial *s)
 {
 	static char buf[1024];
-	for (int i = 0; i < ptind[s->dist + 1]; i++) {
+	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
 		buf[i] = stone2char(spatial_point_at(*s, i));
 	}
 	buf[ptind[s->dist + 1]] = 0;
@@ -174,7 +174,7 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
 	memset(s, 0, sizeof(*s));
-	for (int j = 0; j < ptind[pc->spat_max + 1]; j++) {
+	for (unsigned int j = 0; j < ptind[pc->spat_max + 1]; j++) {
 		ptcoords_at(x, y, m->coord, b, j);
 		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
 	}
@@ -194,11 +194,11 @@ spatial_cmp(struct spatial *s1, struct spatial *s2)
 	 * foolproof to just check if the sets of rotation hashes are the
 	 * same for both. */
 	hash_t s1r[PTH__ROTATIONS];
-	for (int r = 0; r < PTH__ROTATIONS; r++)
+	for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
 		s1r[r] = spatial_hash(r, s1);
-	for (int r = 0; r < PTH__ROTATIONS; r++) {
+	for (unsigned int r = 0; r < PTH__ROTATIONS; r++) {
 		hash_t s2r = spatial_hash(r, s2);
-		for (int p = 0; p < PTH__ROTATIONS; p++)
+		for (unsigned int p = 0; p < PTH__ROTATIONS; p++)
 			if (s2r == s1r[p])
 				goto found_rot;
 		/* Rotation hash s2r does not correspond to s1r. */
@@ -258,7 +258,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf, bool hash)
 
 	/* Load the stone configuration. */
 	struct spatial s = { .dist = radius };
-	int sl = 0;
+	unsigned int sl = 0;
 	while (!isspace(*bufp)) {
 		s.points[sl / 4] |= char2stone(*bufp++) << ((sl % 4)*2);
 		sl++;
@@ -278,18 +278,18 @@ spatial_dict_read(struct spatial_dict *dict, char *buf, bool hash)
 
 	/* Add to specified hash places. */
 	if (hash)
-		for (int r = 0; r < PTH__ROTATIONS; r++)
+		for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
 			spatial_dict_addh(dict, spatial_hash(r, &s), id);
 }
 
 void
-spatial_write(struct spatial_dict *dict, struct spatial *s, int id, FILE *f)
+spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id, FILE *f)
 {
 	fprintf(f, "%d %d ", id, s->dist);
 	fputs(spatial2str(s), f);
-	for (int r = 0; r < PTH__ROTATIONS; r++) {
+	for (unsigned int r = 0; r < PTH__ROTATIONS; r++) {
 		hash_t rhash = spatial_hash(r, s);
-		int id2 = dict->hash[rhash];
+		unsigned int id2 = dict->hash[rhash];
 		if (id2 != id) {
 			/* This hash does not belong to us. Decide whether
 			 * we or the current owner is better owner. */
@@ -336,9 +336,9 @@ spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f)
 	 * of external tools, Pachi never interprets it itself. */
 	fprintf(f, "# Pachi spatial patterns dictionary v1.0 maxdist %d\n",
 		MAX_PATTERN_DIST);
-	for (int d = 0; d <= MAX_PATTERN_DIST; d++) {
+	for (unsigned int d = 0; d <= MAX_PATTERN_DIST; d++) {
 		fprintf(f, "# Point order: d=%d ", d);
-		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+		for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
 			fprintf(f, "%d,%d ", ptcoords[j].x, ptcoords[j].y);
 		}
 		fprintf(f, "\n");
@@ -381,12 +381,12 @@ spatial_dict_init(bool will_append, bool hash)
 	return dict;
 }
 
-int
+unsigned int
 spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 {
 	/* We avoid spatial_dict_get() here, since we want to ignore radius
 	 * differences - we have custom collision detection. */
-	int id = dict->hash[h];
+	unsigned int id = dict->hash[h];
 	if (id > 0) {
 		/* Is this the same or isomorphous spatial? */
 		if (spatial_cmp(s, &dict->spatials[id]))
@@ -394,9 +394,9 @@ spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 
 		/* Look a bit harder - perhaps one of our rotations still
 		 * points at the correct spatial. */
-		for (int r = 0; r < PTH__ROTATIONS; r++) {
+		for (unsigned int r = 0; r < PTH__ROTATIONS; r++) {
 			hash_t rhash = spatial_hash(r, s);
-			int rid = dict->hash[rhash];
+			unsigned int rid = dict->hash[rhash];
 			/* No match means we definitely aren't stored yet. */
 			if (!rid)
 				break;
@@ -420,14 +420,14 @@ spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
 	id = spatial_dict_addc(dict, s);
 	if (DEBUGL(4)) {
 		fprintf(stderr, "new spat %d(%d) %s <%"PRIhash"> ", id, s->dist, spatial2str(s), h);
-		for (int r = 0; r < 8; r++)
+		for (unsigned int r = 0; r < 8; r++)
 			fprintf(stderr,"[%"PRIhash"] ", spatial_hash(r, s));
 		fprintf(stderr, "\n");
 	}
 
 	/* Store new pattern in the hash. */
 hash_store:
-	for (int r = 0; r < PTH__ROTATIONS; r++)
+	for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
 		spatial_dict_addh(dict, spatial_hash(r, s), id);
 
 	return id;
