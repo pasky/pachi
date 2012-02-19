@@ -133,6 +133,10 @@ patternscan_play(struct engine *e, struct board *b, struct move *m, char *engine
 
 	if (!(m->color & ps->color_mask))
 		return NULL;
+	/* The user can request this play to be "silent", to get patterns
+	 * only for a single specific situation. */
+	if (enginearg && *enginearg == '0')
+		return NULL;
 
 	static char str[1048576]; // XXX
 	char *strp = str;
