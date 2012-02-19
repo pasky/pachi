@@ -8,7 +8,7 @@
 struct move_queue;
 
 typedef enum parse_code (*engine_notify)(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply);
-typedef char *(*engine_notify_play)(struct engine *e, struct board *b, struct move *m);
+typedef char *(*engine_notify_play)(struct engine *e, struct board *b, struct move *m, char *enginearg);
 typedef char *(*engine_undo)(struct engine *e, struct board *b);
 typedef char *(*engine_result)(struct engine *e, struct board *b);
 typedef char *(*engine_chat)(struct engine *e, struct board *b, char *cmd);

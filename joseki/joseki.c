@@ -26,7 +26,7 @@ struct joseki_engine {
 
 
 static char *
-joseki_play(struct engine *e, struct board *b, struct move *m)
+joseki_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {
 	struct joseki_engine *j = e->data;
 

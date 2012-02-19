@@ -134,7 +134,7 @@ uct_printhook_ownermap(struct board *board, coord_t c, char *s, char *end)
 }
 
 static char *
-uct_notify_play(struct engine *e, struct board *b, struct move *m)
+uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {
 	struct uct *u = e->data;
 	if (!u->t) {

@@ -118,7 +118,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 }
 
 static char *
-patternscan_play(struct engine *e, struct board *b, struct move *m)
+patternscan_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {
 	struct patternscan *ps = e->data;
 

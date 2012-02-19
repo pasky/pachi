@@ -270,6 +270,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		coord_t *c = str2coord(arg, board_size(board));
 		m.coord = *c; coord_done(c);
+		next_tok(arg);
+		char *enginearg = arg;
 		char *reply = NULL;
 
 		if (DEBUGL(5))
@@ -279,7 +281,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		time_start_timer(&ti[stone_other(m.color)]);
 
 		if (engine->notify_play)
-			reply = engine->notify_play(engine, board, &m);
+			reply = engine->notify_play(engine, board, &m, enginearg);
 		if (board_play(board, &m) < 0) {
 			if (DEBUGL(0)) {
 				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
