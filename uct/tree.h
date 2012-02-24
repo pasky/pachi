@@ -109,6 +109,9 @@ struct tree {
 	 * is only informative, the actual value is computed per simulation
 	 * based on leaf node depth. */
 	floating_t extra_komi;
+	/* Score in simulations, averaged over all branches, in the last
+	 * search episode. */
+	struct move_stats avg_score;
 
 	/* We merge local (non-tenuki) sequences for both colors, occuring
 	 * anywhere in the tree; nodes are created on-demand, special 'pass'

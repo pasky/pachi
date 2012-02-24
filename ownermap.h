@@ -41,7 +41,7 @@ struct group_judgement {
 		GS_UNKNOWN,
 	} *gs; // [bsize2]
 };
-void board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge);
+void board_ownermap_judge_groups(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge);
 
 /* Add groups of given status to mq. */
 struct move_queue;

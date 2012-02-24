@@ -29,6 +29,13 @@ struct joseki_dict;
 /* Internal engine state. */
 struct uct {
 	int debug_level;
+	enum uct_reporting {
+		UR_TEXT,
+		UR_JSON,
+		UR_JSON_BIG,
+	} reporting;
+	int reportfreq;
+
 	int games, gamelen;
 	floating_t resign_threshold, sure_win_threshold;
 	double best2_ratio, bestr_ratio;

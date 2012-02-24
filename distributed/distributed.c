@@ -71,7 +71,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <alloca.h>
 #include <unistd.h>
 #include <sys/types.h>
 
@@ -315,8 +314,8 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 
 	/* Combined move stats from all slaves, only for children
 	 * of the root node, plus 2 for pass and resign. */
-	struct large_stats *stats = alloca((board_size2(b)+2) * sizeof(struct large_stats));
-	stats += 2;
+	struct large_stats stats_array[board_size2(b) + 2], *stats;
+	stats = &stats_array[2];
 
 	protocol_lock();
 	clear_receive_queue();

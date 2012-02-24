@@ -1,8 +1,13 @@
 #ifndef PACHI_DISTRIBUTED_PROTOCOL_H
 #define PACHI_DISTRIBUTED_PROTOCOL_H
 
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#endif
 
 #include "board.h"
 
