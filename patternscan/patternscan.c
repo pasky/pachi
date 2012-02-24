@@ -118,7 +118,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m, char **
 }
 
 static char *
-patternscan_play(struct engine *e, struct board *b, struct move *m)
+patternscan_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {
 	struct patternscan *ps = e->data;
 
@@ -132,6 +132,10 @@ patternscan_play(struct engine *e, struct board *b, struct move *m)
 		ps->gameno++;
 
 	if (!(m->color & ps->color_mask))
+		return NULL;
+	/* The user can request this play to be "silent", to get patterns
+	 * only for a single specific situation. */
+	if (enginearg && *enginearg == '0')
 		return NULL;
 
 	static char str[1048576]; // XXX

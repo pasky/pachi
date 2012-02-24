@@ -221,6 +221,16 @@ matcher easy:
   pattern_bayes_gen (perhaps remove the counts >= 2 test) and then merge
   the generated tables.
 
+* tools/pattern_getdrops.pl: Processes game logs to determine moves that
+  lead to large drop in Pachi's evaluation and extracts patterns that
+  represent these moves. This might allow Pachi to "learn from its past
+  mistakes" and recognize these moves in the future. A full pipeline
+  for this might be:
+
+	cat kgsGtp.log | tools/kgslog2gtp.pl |
+		tools/pattern_getdrops.pl | tools/pattern_bayes_gen.sh - |
+		tools/pattern_bayes_merge.sh patterns.prob - >patterns.prob2
+
 
 Plugin API
 ==========
