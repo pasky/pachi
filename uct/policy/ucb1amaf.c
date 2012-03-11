@@ -36,7 +36,7 @@ struct ucb1_policy_amaf {
         /* Give more weight to moves played earlier. */
 	int distance_rave;
 	/* Give 0 or negative rave bonus to ko threats before taking the ko.
-	   0=no bonus, 1=invert rave bonus, 2=double penalty, etc... */
+	   1=normal bonus, 0=no bonus, -1=invert rave bonus, -2=double penalty... */
 	int threat_rave;
 	/* Coefficient of local tree values embedded in RAVE. */
 	floating_t ltree_rave;
@@ -211,6 +211,22 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 }
 
 
+/* Return the length of the current ko (number of moves up to to the last ko capture),
+ * 0 if the sequence is empty or doesn't start with a ko capture.
+ *   B captures a ko
+ *   W plays a ko threat
+ *   B answers ko threat
+ *   W re-captures the ko  <- return 4
+ *   B plays a ko threat
+ *   W connects the ko */
+static inline int ko_length(bool *ko_capture_map, int map_length)
+{
+	if (map_length <= 0 || !ko_capture_map[0]) return 0;
+	int length = 1;
+	while (length + 2 < map_length && ko_capture_map[length + 2]) length += 3;
+	return length;
+}
+
 void
 ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		enum stone node_color, enum stone player_color,
@@ -250,7 +266,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		}
 		stats_add_result(&node->u, result, 1);
 
-		bool capturing_ko = move + 1 < map->gamelen && map->is_ko_capture[move+1];
+		bool *ko_capture_map = &map->is_ko_capture[move+1];
+		int max_threat_dist = b->threat_rave <= 0 ? ko_length(ko_capture_map, map->gamelen - (move+1)) : -1;
 
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
@@ -270,15 +287,9 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 
 			/* Don't give amaf bonus to a ko threat before taking the ko.
 			 * http://www.grappa.univ-lille3.fr/~coulom/Aja_PhD_Thesis.pdf
-			 * move+1: B captures a ko
-			 * move+2: W plays a ko threat
-			 * move+3: B answers ko threat
-			 * move+4: W re-captures the ko
-			 * move+5: B plays a ko threat
-			 * then do not give a amaf bonus to this threat at level move+1, prefer taking ko.
 			 */
-			if (capturing_ko && distance == 4 && map->is_ko_capture[move+4]) {
-				weight = b->threat_rave;
+			if (distance <= max_threat_dist && distance % 6 == 4) {
+				weight = - b->threat_rave;
 				res = 1.0 - res;
 			} else if (b->distance_rave != 0) {
 				/* Give more weight to moves played earlier */
