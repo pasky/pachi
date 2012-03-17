@@ -224,6 +224,8 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	/* Even number! */
 	p->eqex = board_large(b) ? 20 : 14;
 
+	p->prune_ladders = true;
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {

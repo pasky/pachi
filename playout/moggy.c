@@ -64,7 +64,8 @@ struct moggy_policy {
 	 * group's liberty if that is non-self-atari. */
 	bool selfatari_other;
 	/* Whether to read out ladders elsewhere than near the board
-	 * in the playouts. */
+	 * in the playouts. Note that such ladder testing is currently
+	 * a fairly expensive operation. */
 	bool middle_ladder;
 
 	/* 1lib settings: */
@@ -934,7 +935,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	int rate = board_large(b) ? 80 : 90;
 
 	pp->lcapturerate = pp->atarirate = pp->nlibrate = pp->patternrate
-		= pp->selfatarirate = pp->eyefillrate = pp->josekirate = pp->ladderrate = -1U;
+		= pp->selfatarirate = pp->eyefillrate = pp->josekirate = -1U;
 	if (board_large(b)) {
 		pp->lcapturerate = 90;
 		pp->patternrate = 100;
@@ -945,7 +946,6 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 20;
 	pp->selfatari_other = true;
-	pp->middle_ladder = true;
 
 	pp->cap_stone_min = 2;
 	pp->cap_stone_max = 15;
