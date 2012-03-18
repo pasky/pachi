@@ -90,7 +90,7 @@ can_be_rescued(struct board *b, group_t group, enum stone color, int tag)
 
 void
 group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, enum stone to_play,
-                  struct move_queue *q, coord_t *ladder, int tag)
+                  struct move_queue *q, coord_t *ladder, bool middle_ladder, int tag)
 {
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
@@ -144,7 +144,7 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 	
 	/* ...or play out ladders (unless we can counter-capture anytime). */
 	if (!ccap) {
-		if (is_ladder(b, lib, group)) {
+		if (is_ladder(b, lib, group, middle_ladder)) {
 			/* Sometimes we want to keep the ladder move in the
 			 * queue in order to discourage it. */
 			if (!ladder)
