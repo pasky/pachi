@@ -19,7 +19,7 @@ sgf_attr() {
 
     # Not a big problem, since usually the player name is just
     # [a-zA-Z0-9]*
-	sed -n 's/^.*'$1'\[\([^]]*\)\].*$/\1/p' $sgf
+	sed -n 's/^.*'$1'\[\([^]]*\)\].*$/\1/p' "$sgf"
 }
 
 black="$(sgf_attr PB)"
