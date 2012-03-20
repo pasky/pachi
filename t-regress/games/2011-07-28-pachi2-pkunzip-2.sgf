@@ -1,7 +1,7 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]KM[7.50]TM[0]OT[5x15 byo-yomi]
 PW[pachi2]PB[pkunzip]BR[3d]DT[2011-07-28]GC[132 /C9:bad!{ladder} the group can be caught
-134 B8:bad!{ladder} straightforward ladder
+134 +B8:bad!{ladder} straightforward ladder
 Pachi thought it was winning 72% at W 198 M3 but lost the game. (Seems like just a purely bad endgame play.)]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [-\]: GTP Engine for pachi2 (white): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 ]RE[B+Resign]
 ;B[pd]BL[15]OB[5]

@@ -134,6 +134,7 @@ play_random_game(struct playout_setup *setup,
 		}
 		if (amafmap) {
 			assert(amafmap->gamelen < MAX_GAMELEN);
+			amafmap->is_ko_capture[amafmap->gamelen] = board_playing_ko_threat(b);
 			amafmap->game[amafmap->gamelen++] = coord;
 		}
 

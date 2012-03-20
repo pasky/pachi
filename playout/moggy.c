@@ -63,6 +63,10 @@ struct moggy_policy {
 	/* Whether, when self-atari attempt is detected, to play the other
 	 * group's liberty if that is non-self-atari. */
 	bool selfatari_other;
+	/* Whether to read out ladders elsewhere than near the board
+	 * in the playouts. Note that such ladder testing is currently
+	 * a fairly expensive operation. */
+	bool middle_ladder;
 
 	/* 1lib settings: */
 	/* Whether to always pick from moves capturing all groups in
@@ -170,7 +174,7 @@ static char moggy_patterns_src[][11] = {
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
 static inline bool
-test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
+test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bool middle_ladder)
 {
 	struct moggy_policy *pp = p->data;
 	/* Check if 3x3 pattern is matched by given move... */
@@ -181,7 +185,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor)
+	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, middle_ladder)
 	    && !can_countercapture(b, board_at(b, group_base(atari_neighbor)),
                                    atari_neighbor, m->color, NULL, 0))
 		return false;
@@ -191,8 +195,9 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m)
 static void
 apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum stone color, struct move_queue *q)
 {
+	struct moggy_policy *pp = p->data;
 	struct move m2 = { .coord = c, .color = color };
-	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2))
+	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder))
 		mq_add(q, c, 1<<MQ_PAT3);
 }
 
@@ -252,7 +257,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 	struct moggy_policy *pp = p->data;
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
-			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
+			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
 			mq_print(q, b, "Global atari");
 		return;
@@ -260,7 +265,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -269,7 +274,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, 1<<MQ_GATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -287,14 +292,14 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, 1<<MQ_LATARI);
+		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, 1<<MQ_LATARI);
+		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
 	});
 
 	if (PLDEBUGL(5))
@@ -313,7 +318,7 @@ local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, st
 	for (int i = 0; i < 2; i++) {
 		coord_t chase = board_group_info(b, group).lib[i];
 		coord_t escape = board_group_info(b, group).lib[1 - i];
-		if (wouldbe_ladder(b, escape, chase, board_at(b, group)))
+		if (wouldbe_ladder(b, group, escape, chase, board_at(b, group)))
 			mq_add(q, chase, 1<<MQ_LADDER);
 	}
 
@@ -713,7 +718,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			for (int i = 0; i < 2; i++) {
 				coord_t chase = board_group_info(b, g).lib[i];
 				coord_t escape = board_group_info(b, g).lib[1 - i];
-				if (wouldbe_ladder(b, escape, chase, board_at(b, g))) {
+				if (wouldbe_ladder(b, g, escape, chase, board_at(b, g))) {
 					add_prior_value(map, chase, 1, games);
 					ladderable = true;
 				}
@@ -738,7 +743,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	/* This group, sir, is in atari! */
 
 	coord_t ladder = pass;
-	group_atari_check(pp->alwaysccaprate, b, g, map->to_play, &q, &ladder, 0);
+	group_atari_check(pp->alwaysccaprate, b, g, map->to_play, &q, &ladder, true, 0);
 	while (q.moves--) {
 		coord_t coord = q.move[q.moves];
 
@@ -808,7 +813,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 	/* Pattern check */
 	if (pp->patternrate) {
 		struct move m = { .color = map->to_play, .coord = coord };
-		if (test_pattern3_here(p, b, &m)) {
+		if (test_pattern3_here(p, b, &m, true)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
 			add_prior_value(map, coord, 1, games);
@@ -930,7 +935,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	int rate = board_large(b) ? 80 : 90;
 
 	pp->lcapturerate = pp->atarirate = pp->nlibrate = pp->patternrate
-		= pp->selfatarirate = pp->eyefillrate = pp->josekirate = pp->ladderrate = -1U;
+		= pp->selfatarirate = pp->eyefillrate = pp->josekirate = -1U;
 	if (board_large(b)) {
 		pp->lcapturerate = 90;
 		pp->patternrate = 100;
@@ -1024,6 +1029,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->atari_def_no_hopeless = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "nlib_count") && optval) {
 				pp->nlib_count = atoi(optval);
+			} else if (!strcasecmp(optname, "middle_ladder")) {
+				pp->middle_ladder = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {

@@ -181,9 +181,10 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 
 
 static inline void
-record_amaf_move(struct playout_amafmap *amaf, coord_t coord)
+record_amaf_move(struct playout_amafmap *amaf, coord_t coord, bool is_ko_capture)
 {
 	assert(amaf->gamelen < MAX_GAMELEN);
+	amaf->is_ko_capture[amaf->gamelen] = is_ko_capture;
 	amaf->game[amaf->gamelen++] = coord;
 }
 
@@ -468,9 +469,6 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (u->virtual_loss)
 			stats_add_result(&n->u, node_color == S_BLACK ? 0.0 : 1.0, u->virtual_loss);
 
-		assert(node_coord(n) >= -1);
-		record_amaf_move(&amaf, node_coord(n));
-
 		struct move m = { node_coord(n), node_color };
 		int res = board_play(&b2, &m);
 
@@ -487,6 +485,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			result = 0;
 			goto end;
 		}
+
+		assert(node_coord(n) >= -1);
+		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(&b2));
 
 		if (is_pass(node_coord(n)))
 			passes++;

@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]KM[7.50]TM[0]OT[5x15 byo-yomi]
-PW[somrak]PB[pachi2]WR[2d]DT[2011-08-09]GC[101 Q14:bad!{ladder} pachi extends a losing ladder]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [-\]: GTP Engine for pachi2 (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+PW[somrak]PB[pachi2]WR[2d]DT[2011-08-09]GC[101 +Q14:bad!{ladder} pachi extends a losing ladder]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [-\]: GTP Engine for pachi2 (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 ]RE[B+1.50]
 ;B[pp]BL[15]OB[5]
 ;W[qc]WL[15]OW[5]
