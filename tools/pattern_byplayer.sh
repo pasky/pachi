@@ -12,13 +12,11 @@ sgf="$1"; shift
 # rest of parameters is passed to the patternscan engine
 
 sgf_attr() {
-    # TODO
-    # Does not work correctly for attributes containing escaped ]
-    # e.g. "PB[Tony \[Killer\] Nowak]" gets cropped to
-    # "Tony \[Killer"
+	# TODO: Does not work correctly for attributes containing escaped ]
+	# e.g. "PB[Tony \[Killer\] Nowak]" gets cropped to "Tony \[Killer"
+	# Not a big problem, since usually the player name is just
+	# [a-zA-Z0-9]*
 
-    # Not a big problem, since usually the player name is just
-    # [a-zA-Z0-9]*
 	sed -n 's/^.*'$1'\[\([^]]*\)\].*$/\1/p' "$sgf"
 }
 
