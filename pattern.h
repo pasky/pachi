@@ -32,16 +32,20 @@ enum feature_id {
 	/* Simple capture move. */
 	/* Payload: [bit0] Capturing laddered group? */
 #define PF_CAPTURE_LADDER	0
-	/*          [bit2] Enables our atari group get more libs? */
+	/*          [bit1] Enables our atari group get more libs? */
 #define PF_CAPTURE_ATARIDEF	1
-	/*          [bit3] Capturing ko? */
+	/*          [bit2] Capturing ko? */
 #define PF_CAPTURE_KO		2
-	/*          [bit4] Single-stone group? */
+	/*          [bit3] Single-stone group? */
 #define PF_CAPTURE_1STONE	3
-	/*          [bit5] Unsafe move for opponent? */
+	/*          [bit4] Unsafe move for opponent? */
 #define PF_CAPTURE_TRAPPED	4
-	/*          [bit6] Preventing connection to an outside group. */
+	/*          [bit5] Preventing connection to an outside group. */
 #define PF_CAPTURE_CONNECTION	5
+	/*          [bit6] Are we counting captured stones? */
+#define PF_CAPTURE_COUNTSTONES	6
+	/* How many bits of payload are used for counting captured stones. */
+#define CAPTURE_COUNTSTONES_PAYLOAD_SIZE 4  		/* that is, payload bits 6,7,8,9 */
 	FEAT_CAPTURE,
 
 	/* Atari escape (extension). */

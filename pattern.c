@@ -38,7 +38,7 @@ static const struct feature_info {
 	char *name;
 	int payloads;
 } features[FEAT_MAX] = {
-	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 },
+	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 * 1 << CAPTURE_COUNTSTONES_PAYLOAD_SIZE },
 	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 16 },
 	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
@@ -185,6 +185,7 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 	coord_t onelib = -1;
 	int extra_libs = 0, connectable_groups = 0;
 	bool onestone = false, multistone = false;
+	int captured_stones = 0;
 
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != stone_other(m->color)) {
@@ -246,6 +247,10 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 		       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
 			f->payload |= 1 << PF_CAPTURE_KO;
 
+		if (PS_PF(CAPTURE, COUNTSTONES)
+		    && captured_stones < (1 << CAPTURE_COUNTSTONES_PAYLOAD_SIZE) - 1)
+			captured_stones += group_stone_count(b, g, (1 << CAPTURE_COUNTSTONES_PAYLOAD_SIZE) - 1 - captured_stones);
+
 		if (group_is_onestone(b, g))
 			onestone = true;
 		else
@@ -259,6 +264,8 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 			f->payload |= (extra_libs < 2) << PF_CAPTURE_TRAPPED;
 		if (PS_PF(CAPTURE, CONNECTION))
 			f->payload |= (connectable_groups > 0) << PF_CAPTURE_CONNECTION;
+		if (PS_PF(CAPTURE, COUNTSTONES))
+			f->payload |= captured_stones << PF_CAPTURE_COUNTSTONES;
 		(f++, p->n++);
 	}
 	return f;
