@@ -40,7 +40,7 @@ static const struct feature_info {
 	char *name;
 	int payloads;
 } features[FEAT_MAX] = {
-	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 * (CAPTURE_COUNTSTONES_MAX + 1) },
+	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 },
 	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 16 },
 	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
@@ -85,6 +85,11 @@ int
 feature_payloads(struct pattern_setup *pat, enum feature_id f)
 {
 	switch (f) {
+		case FEAT_CAPTURE:
+			int payloads = features[f].payloads;
+			if (pat->ps[FEAT_CAPTURE] & (1<<PF_CAPTURE_COUNTSTONES))
+				payloads *= CAPTURE_COUNTSTONES_MAX + 1;
+			return payloads;
 		case FEAT_SPATIAL:
 			assert(features[f].payloads < 0);
 			return pat->pc.spat_dict->nspatials;
