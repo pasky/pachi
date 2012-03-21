@@ -8,19 +8,28 @@ from sgflib import SGFParser
 
 DEBUG = False
 
-parser = argparse.ArgumentParser(description="""
+parser = argparse.ArgumentParser( formatter_class=argparse.RawDescriptionHelpFormatter,
+description="""
 This script converts SGF files to GTP format so that you can feed them
 to Pachi, insert genmove at the right places etc. Might not work on
 obscure SGF files.
 
-When called with FILENAMES argument, it will create according output files
-with .gtp extension instead of .sgf, unless --no-gtp option is specified.
-""")
+When called with FILENAMES argument, it will create according output
+files with .gtp extension instead of .sgf, unless --no-gtp option is
+specified.
 
-parser.add_argument('FILENAMES', help='List of sgf games.', nargs='*', default=[])
+Otherwise the games are read from standard input. Note that the stdin
+in this case is read in at once, so for very large collections, it is
+better to run this script separately for each sgf file.
+
+example:
+	cat *.sgf | %s -g -n 5
+"""%(sys.argv[0]))
+
+parser.add_argument('FILENAMES', help='List of sgf games to process.', nargs='*', default=[])
 parser.add_argument('-g', help='Automatically append genmove command for the other color.', action='store_true')
 parser.add_argument('-n', help='Output at most first MOVENUM moves.', metavar='MOVENUM', type=int, default=10**10)
-parser.add_argument('--no-gtp', help='Do not create the .gtp files.', action='store_true')
+parser.add_argument('--stdout-only', help='Do not create the .gtp files from FILENAMES, print everything to stdout.', action='store_true')
 args = vars(parser.parse_args())
 
 class UnknownNode(Exception):
@@ -121,7 +130,7 @@ if __name__ == "__main__":
 		process_sgf_file(sys.stdin, sys.stdout)
 	else:
 		for in_filename in args['FILENAMES']:
-			if args['no_gtp']:
+			if args['stdout_only']:
 				fout = sys.stdout
 			else:
 				if re.search('sgf$', in_filename):
@@ -138,6 +147,6 @@ if __name__ == "__main__":
 			process_sgf_file(fin, fout)
 
 			fin.close()
-			if not args['no_gtp']:
+			if not args['stdout_only']:
 				fout.close()
 
