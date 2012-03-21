@@ -300,6 +300,8 @@ patternscan_state_init(char *arg)
 	for (int i = 0; i < FEAT_MAX; i++) if ((xspat == 0 && i == FEAT_SPATIAL) || (xspat == 1 && i != FEAT_SPATIAL)) ps->pat.ps[i] = 0;
 	ps->loaded_spatials = ps->pat.pc.spat_dict->nspatials;
 
+	ps->gameno = 1;
+
 	return ps;
 }
 
