@@ -152,7 +152,7 @@ char *str2feature(char *str, struct feature *f);
 /* Get name of given feature. */
 char *feature_name(enum feature_id f);
 /* Get number of possible payload values associated with the feature. */
-int feature_payloads(struct pattern_config *pc, enum feature_id f);
+int feature_payloads(struct pattern_setup *pat, enum feature_id f);
 
 /* Append pattern as feature spec string. */
 char *pattern2str(char *str, struct pattern *p);

@@ -82,15 +82,15 @@ feature_name(enum feature_id f)
 }
 
 int
-feature_payloads(struct pattern_config *pc, enum feature_id f)
+feature_payloads(struct pattern_setup *pat, enum feature_id f)
 {
 	switch (f) {
 		case FEAT_SPATIAL:
 			assert(features[f].payloads < 0);
-			return pc->spat_dict->nspatials;
+			return pat->pc.spat_dict->nspatials;
 		case FEAT_BORDER:
 			assert(features[f].payloads < 0);
-			return pc->bdist_max + 1;
+			return pat->pc.bdist_max + 1;
 		default:
 			assert(features[f].payloads > 0);
 			return features[f].payloads;
