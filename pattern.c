@@ -14,6 +14,8 @@
 #include "tactics/selfatari.h"
 #include "tactics/util.h"
 
+#define CAPTURE_COUNTSTONES_MAX ((1 << CAPTURE_COUNTSTONES_PAYLOAD_SIZE) - 1)
+
 
 struct pattern_config DEFAULT_PATTERN_CONFIG = {
 	.bdist_max = 4,
@@ -38,7 +40,7 @@ static const struct feature_info {
 	char *name;
 	int payloads;
 } features[FEAT_MAX] = {
-	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 * 1 << CAPTURE_COUNTSTONES_PAYLOAD_SIZE },
+	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 * (CAPTURE_COUNTSTONES_MAX + 1) },
 	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 16 },
 	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
 	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
@@ -248,8 +250,8 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
 			f->payload |= 1 << PF_CAPTURE_KO;
 
 		if (PS_PF(CAPTURE, COUNTSTONES)
-		    && captured_stones < (1 << CAPTURE_COUNTSTONES_PAYLOAD_SIZE) - 1)
-			captured_stones += group_stone_count(b, g, (1 << CAPTURE_COUNTSTONES_PAYLOAD_SIZE) - 1 - captured_stones);
+		    && captured_stones < CAPTURE_COUNTSTONES_MAX)
+			captured_stones += group_stone_count(b, g, CAPTURE_COUNTSTONES_MAX - captured_stones);
 
 		if (group_is_onestone(b, g))
 			onestone = true;
