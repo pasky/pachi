@@ -85,8 +85,9 @@ int
 feature_payloads(struct pattern_setup *pat, enum feature_id f)
 {
 	switch (f) {
+		int payloads;
 		case FEAT_CAPTURE:
-			int payloads = features[f].payloads;
+			payloads = features[f].payloads;
 			if (pat->ps[FEAT_CAPTURE] & (1<<PF_CAPTURE_COUNTSTONES))
 				payloads *= CAPTURE_COUNTSTONES_MAX + 1;
 			return payloads;
