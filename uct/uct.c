@@ -110,8 +110,14 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 
 	struct move_queue mq = { .moves = 0 };
 	dead_group_list(u, b, &mq);
-	if (pass_all_alive && mq.moves > 0)
-		return false; // We need to remove some dead groups first.
+	if (pass_all_alive) {
+		for (unsigned int i = 0; i < mq.moves; i++) {
+			if (board_at(b, mq.move[i]) == stone_other(color)) {
+				return false; // We need to remove opponent dead groups first.
+			}
+		}
+		mq.moves = 0; // our dead stones are alive when pass_all_alive is true
+	}
 	return pass_is_safe(b, color, &mq);
 }
 
