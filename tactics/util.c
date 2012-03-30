@@ -95,7 +95,7 @@ board_effective_handicap(struct board *b, int first_move_value)
 	 * first_move_value is set on purpose to a value different
 	 * from the correct theoretical value (2*komi). */
 	if (!b->handicap)
-		return 7.5 - b->komi;
+		return b->komi == 0.5 ? 0.5 * first_move_value : 7.5 - b->komi;
 	return b->handicap * first_move_value + 0.5 - b->komi;
 }
 
