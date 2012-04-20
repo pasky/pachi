@@ -226,7 +226,7 @@ select_best_move(struct board *b, struct large_stats *stats, int *played,
 	memset(stats-2, 0, (board_size2(b)+2) * sizeof(*stats));
 
 	coord_t best_move = pass;
-	long best_playouts = -1;
+	long best_playouts = 0;
 	*played = 0;
 	*total_playouts = 0;
 	*total_threads = 0;
