@@ -46,8 +46,11 @@ setup_state(struct uct *u, struct board *b, enum stone color)
 	if (UDEBUGL(3))
 		fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
 	if (!u->no_tbook && b->moves == 0) {
-		assert(color == S_BLACK);
-		tree_load(u->t, b);
+		if (color == S_BLACK) {
+			tree_load(u->t, b);
+		} else if (DEBUGL(0)) {
+			fprintf(stderr, "Warning: First move appears to be white\n");
+		}
 	}
 }
 
