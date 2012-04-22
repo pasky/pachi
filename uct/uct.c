@@ -10,6 +10,7 @@
 #include "debug.h"
 #include "board.h"
 #include "gtp.h"
+#include "chat.h"
 #include "move.h"
 #include "mq.h"
 #include "joseki/base.h"
@@ -211,28 +212,19 @@ uct_result(struct engine *e, struct board *b)
 }
 
 static char *
-uct_chat(struct engine *e, struct board *b, char *cmd)
+uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd)
 {
 	struct uct *u = e->data;
-	static char reply[1024];
 
-	cmd += strspn(cmd, " \n\t");
-	if (!strncasecmp(cmd, "winrate", 7)) {
-		if (!u->t)
-			return "no game context (yet?)";
-		enum stone color = u->t->root_color;
-		struct tree_node *n = u->t->root;
-		snprintf(reply, 1024, "In %d playouts at %d threads, %s %s can win with %.2f%% probability",
-			 n->u.playouts, u->threads, stone2str(color), coord2sstr(node_coord(n), b),
-			 tree_node_get_value(u->t, -1, n->u.value) * 100);
-		if (u->t->use_extra_komi && abs(u->t->extra_komi) >= 0.5) {
-			sprintf(reply + strlen(reply), ", while self-imposing extra komi %.1f",
-				u->t->extra_komi);
-		}
-		strcat(reply, ".");
-		return reply;
-	}
-	return NULL;
+	if (!u->t)
+		return generic_chat(b, opponent, from, cmd, S_NONE, pass, 0, 1, u->threads, 0.0, 0.0);
+
+	struct tree_node *n = u->t->root;
+	double winrate = tree_node_get_value(u->t, -1, n->u.value);
+	double extra_komi = u->t->use_extra_komi && abs(u->t->extra_komi) >= 0.5 ? u->t->extra_komi : 0;
+
+	return generic_chat(b, opponent, from, cmd, u->t->root_color, node_coord(n), n->u.playouts, 1,
+			    u->threads, winrate, extra_komi);
 }
 
 static void
