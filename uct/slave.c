@@ -439,6 +439,8 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 	r += snprintf(r, end - r, "%d %d %d %d @%d", u->played_own, root->u.playouts,
 		      u->threads, keep_looking, bin_size);
 	int min_playouts = root->u.playouts / 100;
+	if (min_playouts < GJ_MINGAMES)
+		min_playouts = GJ_MINGAMES;
 	int max_playouts = 1;
 
 	/* We rely on the fact that root->children is set only

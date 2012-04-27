@@ -83,6 +83,7 @@
 #include "stats.h"
 #include "mq.h"
 #include "debug.h"
+#include "chat.h"
 #include "distributed/distributed.h"
 #include "distributed/merge.h"
 
@@ -96,6 +97,8 @@ struct distributed {
 	bool slaves_quit;
 	struct move my_last_move;
 	struct move_stats my_last_stats;
+	int slaves;
+	int threads;
 };
 
 /* Default number of simulations to perform per move.
@@ -226,7 +229,7 @@ select_best_move(struct board *b, struct large_stats *stats, int *played,
 	memset(stats-2, 0, (board_size2(b)+2) * sizeof(*stats));
 
 	coord_t best_move = pass;
-	long best_playouts = -1;
+	long best_playouts = 0;
 	*played = 0;
 	*total_playouts = 0;
 	*total_threads = 0;
@@ -367,6 +370,8 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 	dist->my_last_move.coord = best;
 	dist->my_last_stats.value = stats[best].value;
 	dist->my_last_stats.playouts = (int)stats[best].playouts;
+	dist->slaves = reply_count;
+	dist->threads = threads;
 
 	/* Tell the slaves to commit to the selected move, overwriting
 	 * the last "pachi-genmoves" in the command history. */
@@ -397,21 +402,13 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 }
 
 static char *
-distributed_chat(struct engine *e, struct board *b, char *cmd)
+distributed_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd)
 {
 	struct distributed *dist = e->data;
-	static char reply[BSIZE];
+	double winrate = get_value(dist->my_last_stats.value, dist->my_last_move.color);
 
-	cmd += strspn(cmd, " \n\t");
-	if (!strncasecmp(cmd, "winrate", 7)) {
-		enum stone color = dist->my_last_move.color;
-		snprintf(reply, BSIZE, "In %d playouts at %d machines, %s %s can win with %.2f%% probability.",
-			 dist->my_last_stats.playouts, active_slaves, stone2str(color),
-			 coord2sstr(dist->my_last_move.coord, b),
-			 100 * get_value(dist->my_last_stats.value, color));
-		return reply;
-	}
-	return NULL;
+	return generic_chat(b, opponent, from, cmd, dist->my_last_move.color, dist->my_last_move.coord,
+			    dist->my_last_stats.playouts, dist->slaves, dist->threads, winrate, 0.0);
 }
 
 static int

@@ -539,13 +539,17 @@ next_group:;
 	} else if (!strcasecmp(cmd, "kgs-chat")) {
 		char *loc;
 		next_tok(loc);
-		char *src;
-		next_tok(src);
-		char *msg;
-		next_tok(msg);
+		bool opponent = !strcasecmp(loc, "game");
+		char *from;
+		next_tok(from);
+		char *msg = next;
+		msg += strspn(msg, " \n\t");
+		char *end = index(msg, '\n');
+		if (end) *end = '\0';
 		char *reply = NULL;
-		if (engine->chat)
-			reply = engine->chat(engine, board, msg);
+		if (engine->chat) {
+			reply = engine->chat(engine, board, opponent, from, msg);
+		}
 		if (reply)
 			gtp_reply(id, reply, NULL);
 		else

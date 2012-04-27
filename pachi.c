@@ -20,6 +20,7 @@
 #include "uct/uct.h"
 #include "distributed/distributed.h"
 #include "gtp.h"
+#include "chat.h"
 #include "timeinfo.h"
 #include "random.h"
 #include "version.h"
@@ -86,13 +87,17 @@ int main(int argc, char *argv[])
 	char *gtp_port = NULL;
 	char *log_port = NULL;
 	int gtp_sock = -1;
+	char *chatfile = NULL;
 	char *fbookfile = NULL;
 
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:Df:g:l:s:t:u:")) != -1) {
+	while ((opt = getopt(argc, argv, "c:e:d:Df:g:l:s:t:u:")) != -1) {
 		switch (opt) {
+			case 'c':
+				chatfile = strdup(optarg);
+				break;
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
 					engine = E_RANDOM;
@@ -170,6 +175,8 @@ int main(int argc, char *argv[])
 	ti[S_BLACK] = ti_default;
 	ti[S_WHITE] = ti_default;
 
+	chat_init(chatfile);
+
 	char *e_arg = NULL;
 	if (optind < argc)
 		e_arg = argv[optind];
@@ -209,5 +216,6 @@ int main(int argc, char *argv[])
 		open_gtp_connection(&gtp_sock, gtp_port);
 	}
 	done_engine(e);
+	chat_done();
 	return 0;
 }
