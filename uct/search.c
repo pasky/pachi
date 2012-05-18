@@ -250,7 +250,7 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 	/* Print progress? */
 	if (i - s->last_print > s->print_interval) {
 		s->last_print += s->print_interval; // keep the numbers tidy
-		uct_progress_status(u, ctx->t, color, s->last_print, false);
+		uct_progress_status(u, ctx->t, color, s->last_print, NULL);
 	}
 
 	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {

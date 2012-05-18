@@ -295,7 +295,7 @@ uct_done(struct engine *e)
 
 /* Run time-limited MCTS search on foreground. */
 static int
-uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t)
+uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool print_progress)
 {
 	struct uct_search_state s;
 	uct_search_start(u, b, color, t, ti, &s);
@@ -330,7 +330,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			t->avg_score.value, t->avg_score.playouts,
 			u->dynkomi->score.value, u->dynkomi->score.playouts,
 			u->dynkomi->value.value, u->dynkomi->value.playouts);
-	uct_progress_status(u, t, color, ctx->games, true);
+	if (print_progress)
+		uct_progress_status(u, t, color, ctx->games, NULL);
 
 	u->played_own += ctx->games;
 	return ctx->games;
@@ -370,7 +371,7 @@ uct_pondering_stop(struct uct *u)
 	struct uct_thread_ctx *ctx = uct_search_stop();
 	if (UDEBUGL(1)) {
 		if (u->pondering) fprintf(stderr, "(pondering) ");
-		uct_progress_status(u, ctx->t, ctx->color, ctx->games, true);
+		uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
 	}
 	if (u->pondering) {
 		free(ctx->b);
@@ -429,7 +430,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
         /* Start the Monte Carlo Tree Search! */
 	int base_playouts = u->t->root->u.playouts;
-	int played_games = uct_search(u, b, ti, color, u->t);
+	int played_games = uct_search(u, b, ti, color, u->t, false);
 
 	coord_t best_coord;
 	struct tree_node *best;
@@ -440,6 +441,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
 			time, (int)(played_games/time), (int)(played_games/time/u->threads));
 	}
+
+	uct_progress_status(u, u->t, color, played_games, &best_coord);
 
 	if (!best) {
 		/* Pass or resign. */
@@ -471,7 +474,7 @@ uct_gentbook(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		/* Don't count in games that already went into the tbook. */
 		ti->len.games += u->t->root->u.playouts;
 	}
-	uct_search(u, b, ti, color, u->t);
+	uct_search(u, b, ti, color, u->t, true);
 
 	assert(ti->dim == TD_GAMES);
 	tree_save(u->t, b, ti->len.games / 100);
@@ -509,7 +512,7 @@ uct_evaluate_one(struct engine *e, struct board *b, struct time_info *ti, coord_
 	assert(u->t);
 
 	floating_t bestval;
-	uct_search(u, &b2, ti, color, u->t);
+	uct_search(u, &b2, ti, color, u->t, true);
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, &b2, color, resign);
 	if (!best) {
 		bestval = NAN; // the opponent has no reply!

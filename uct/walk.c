@@ -26,7 +26,7 @@
 
 
 void
-uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
+uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 {
 	if (!UDEBUGL(0))
 		return;
@@ -82,7 +82,7 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts,
 }
 
 void
-uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts, bool final, bool big)
+uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts, coord_t *final, bool big)
 {
 	/* Prefix indicating JSON line. */
 	fprintf(stderr, "{\"%s\": {", final ? "move" : "frame");
@@ -94,19 +94,25 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 	if (t->use_extra_komi)
 		fprintf(stderr, ", \"extrakomi\": %.1f", t->extra_komi);
 
-	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
-	if (best) {
-		/* Best move */
-		fprintf(stderr, ", \"best\": {\"%s\": %f}",
-			coord2sstr(best->coord, t->board),
-			tree_node_get_value(t, 1, best->u.value));
+	if (final) {
+		/* Final move choice */
+		fprintf(stderr, ", \"choice\": {\"%s\"}",
+			coord2sstr(*final, t->board));
+	} else {
+		struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+		if (best) {
+			/* Best move */
+			fprintf(stderr, ", \"best\": {\"%s\": %f}",
+				coord2sstr(best->coord, t->board),
+				tree_node_get_value(t, 1, best->u.value));
+		}
 	}
 
 	/* Best candidates */
 	int cans = 4;
 	struct tree_node *can[cans];
 	memset(can, 0, sizeof(can));
-	best = t->root->children;
+	struct tree_node *best = t->root->children;
 	while (best) {
 		int c = 0;
 		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
@@ -164,11 +170,11 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 }
 
 void
-uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts, bool final)
+uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts, coord_t *final)
 {
 	switch (u->reporting) {
 		case UR_TEXT:
-			uct_progress_text(u, t, color, playouts, final);
+			uct_progress_text(u, t, color, playouts);
 			break;
 		case UR_JSON:
 		case UR_JSON_BIG:
