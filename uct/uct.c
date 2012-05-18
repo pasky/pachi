@@ -444,7 +444,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	if (!best) {
 		/* Pass or resign. */
 		reset_state(u);
-		goto best_coord;
+		return coord_copy(best_coord);
 	}
 	tree_promote_node(u->t, &best);
 
@@ -456,10 +456,6 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	if (u->pondering_opt && !is_pass(node_coord(best))) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
-best_coord:
-	if (u->reporting == UR_JSON || u->reporting == UR_JSON_BIG)
-		fprintf(stderr, "{\"final_decision\": \"%s\"}\n",
-		                coord2sstr(best_coord, b));
 	return coord_copy(best_coord);
 }
 
