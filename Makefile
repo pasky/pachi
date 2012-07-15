@@ -59,7 +59,7 @@ CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-com
 ifdef WIN
 	SYS_CFLAGS=
 	LDFLAGS=-pthread
-	LIBS=-lm -lws2_32
+	LIBS=-lm -lws2_32 -lregex
 else
 ifdef MAC
 	SYS_CFLAGS=-DNO_THREAD_LOCAL

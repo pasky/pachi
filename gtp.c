@@ -544,7 +544,7 @@ next_group:;
 		next_tok(from);
 		char *msg = next;
 		msg += strspn(msg, " \n\t");
-		char *end = index(msg, '\n');
+		char *end = strchr(msg, '\n');
 		if (end) *end = '\0';
 		char *reply = NULL;
 		if (engine->chat) {
