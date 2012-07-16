@@ -69,9 +69,11 @@ board_ownermap_judge_groups(struct board *b, struct board_ownermap *ownermap, st
 		} else if (judge->gs[g] != GS_UNKNOWN) {
 			/* Update group state. */
 			enum gj_state new;
-			if (pj == color) {
+
+			// Comparing enum types, casting (int) avoids compiler warnings
+			if ((int)pj == (int)color) { 
 				new = GS_ALIVE;
-			} else if (pj == stone_other(color)) {
+			} else if ((int)pj == (int)stone_other(color)) {
 				new = GS_DEAD;
 			} else { assert(pj == PJ_DAME);
 				/* Exotic! */

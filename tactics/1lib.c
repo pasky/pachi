@@ -37,7 +37,7 @@ can_play_on_lib(struct board *b, group_t g, enum stone to_play)
  * liberty to either capture or escape). */
 /* Note that @to_play is important; e.g. consider snapback, it's good
  * to play at the last liberty by attacker, but not defender. */
-static __attribute__((always_inline)) bool
+static inline __attribute__((always_inline)) bool
 capturable_group(struct board *b, enum stone capturer, coord_t c,
 		 enum stone to_play)
 {

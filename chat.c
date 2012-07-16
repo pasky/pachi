@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <regex.h>
+#include <stdint.h>
 
 #define DEBUG
 
@@ -58,10 +59,10 @@ void chat_init(char *chat_file) {
 		}
 	}
 	if (!feof(f))
-		fprintf(stderr, "syntax error around line %ld in %s\n", entry - chat_table, chat_file);
+		fprintf(stderr, "syntax error around line %u in %s\n", (uintptr_t)(entry - chat_table), chat_file);
 	fclose(f);
 	if (DEBUGL(1))
-		fprintf(stderr, "Loaded %ld chat entries from %s\n", entry - chat_table, chat_file);
+		fprintf(stderr, "Loaded %u chat entries from %s\n", (uintptr_t)(entry - chat_table), chat_file);
 }
 
 void chat_done() {

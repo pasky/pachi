@@ -9,8 +9,8 @@
 #include <windows.h>
 
 #define sleep(seconds) Sleep((seconds) * 1000)
-#define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((unsigned long *) (ap), (b));
-#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((unsigned long *) (ap), -(b));
+#define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
+#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -(b));
 
 #include <ctype.h>
 static inline const char *

@@ -107,10 +107,10 @@ static char *known_commands =
 
 /* Return true if cmd is a valid gtp command. */
 bool
-gtp_is_valid(char *cmd)
+gtp_is_valid(const char *cmd)
 {
 	if (!cmd || !*cmd) return false;
-	char *s = strcasestr(known_commands, cmd);
+	const char *s = strcasestr(known_commands, cmd);
 	if (!s) return false;
 	if (s != known_commands && s[-1] != '\n') return false;
 

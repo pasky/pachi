@@ -49,9 +49,11 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 	struct patternplay *pp = e->data;
 
 	struct pattern pats[b->flen];
-	floating_t total = pattern_rate_moves(&pp->pat, b, color, pats, vals);
+	pattern_rate_moves(&pp->pat, b, color, pats, vals);
 
 #if 0
+	// unused variable 'total' in above call to pattern_rate_moves()
+	floating_t total = pattern_rate_moves(&pp->pat, b, color, pats, vals);
 	/* Rescale properly. */
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] /= total;
