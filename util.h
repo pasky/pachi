@@ -12,6 +12,9 @@
 #define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
 #define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -(b));
 
+/* MinGW gcc, no function prototype for built-in function stpcpy() */ 
+char *stpcpy (char *dest, const char *src);
+
 #include <ctype.h>
 static inline const char *
 strcasestr(const char *haystack, const char *needle)
