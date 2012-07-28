@@ -3,5 +3,7 @@
 *.o
 *.a
 pachi
-test
+tags
 book.dat
+patterns.prob
+patterns.spat
