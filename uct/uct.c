@@ -906,6 +906,11 @@ uct_state_init(char *arg, struct board *b)
 				 * added to the value, instead of scaling the result
 				 * coefficient because of it. */
 				u->val_extra = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "val_byavg")) {
+				/* If true, the score included in the value will
+				 * be relative to average score in the current
+				 * search episode inst. of jigo. */
+				u->val_byavg = !optval || atoi(optval);
 
 			/** Local trees */
 			/* (Purely experimental. Does not work - yet!) */

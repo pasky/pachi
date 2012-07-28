@@ -272,6 +272,12 @@ scale_value(struct uct *u, struct board *b, int result)
 {
 	floating_t rval = result > 0 ? 1.0 : result < 0 ? 0.0 : 0.5;
 	if (u->val_scale && result != 0) {
+		if (u->val_byavg) {
+			if (u->t->avg_score.playouts < 50)
+				return rval;
+			result -= u->t->avg_score.value * 2;
+		}
+
 		int vp = u->val_points;
 		if (!vp) {
 			vp = board_size(b) - 1; vp *= vp; vp *= 2;

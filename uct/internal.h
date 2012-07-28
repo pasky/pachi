@@ -79,6 +79,7 @@ struct uct {
 	floating_t val_scale;
 	int val_points;
 	bool val_extra;
+	bool val_byavg;
 
 	int random_policy_chance;
 	bool local_tree;
