@@ -80,6 +80,8 @@ struct uct {
 	int val_points;
 	bool val_extra;
 	bool val_byavg;
+	bool val_bytemp;
+	floating_t val_bytemp_min;
 
 	int random_policy_chance;
 	bool local_tree;

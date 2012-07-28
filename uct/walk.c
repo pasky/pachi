@@ -268,7 +268,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 }
 
 static floating_t
-scale_value(struct uct *u, struct board *b, int result)
+scale_value(struct uct *u, struct board *b, enum stone node_color, struct tree_node *significant[2], int result)
 {
 	floating_t rval = result > 0 ? 1.0 : result < 0 ? 0.0 : 0.5;
 	if (u->val_scale && result != 0) {
@@ -276,6 +276,14 @@ scale_value(struct uct *u, struct board *b, int result)
 			if (u->t->avg_score.playouts < 50)
 				return rval;
 			result -= u->t->avg_score.value * 2;
+		}
+
+		double scale = u->val_scale;
+		if (u->val_bytemp) {
+			/* xvalue is 0 at 0.5, 1 at 0 or 1 */
+			/* No correction for parity necessary. */
+			double xvalue = significant[node_color] ? fabs(significant[node_color]->u.value - 0.5) * 2 : 0;
+			scale = u->val_bytemp_min + (u->val_scale - u->val_bytemp_min) * xvalue;
 		}
 
 		int vp = u->val_points;
@@ -287,9 +295,9 @@ scale_value(struct uct *u, struct board *b, int result)
 		sval = sval > 1 ? 1 : sval;
 		if (result < 0) sval = 1 - sval;
 		if (u->val_extra)
-			rval += u->val_scale * sval;
+			rval += scale * sval;
 		else
-			rval = (1 - u->val_scale) * rval + u->val_scale * sval;
+			rval = (1 - scale) * rval + scale * sval;
 		// fprintf(stderr, "score %d => sval %f, rval %f\n", result, sval, rval);
 	}
 	return rval;
@@ -557,7 +565,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* Record the result. */
 
 	assert(n == t->root || n->parent);
-	floating_t rval = scale_value(u, b, result);
+	floating_t rval = scale_value(u, b, node_color, significant, result);
 	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, &b2, rval);
 
 	stats_add_result(&t->avg_score, result / 2, 1);

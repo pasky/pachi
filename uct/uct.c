@@ -911,6 +911,15 @@ uct_state_init(char *arg, struct board *b)
 				 * be relative to average score in the current
 				 * search episode inst. of jigo. */
 				u->val_byavg = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "val_bytemp")) {
+				/* If true, the value scaling coefficient
+				 * is different based on value extremity
+				 * (dist. from 0.5), linear between
+				 * val_bytemp_min, val_scale. */
+				u->val_bytemp = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "val_bytemp_min") && optval) {
+				/* Minimum val_scale in case of val_bytemp. */
+				u->val_bytemp_min = atof(optval);
 
 			/** Local trees */
 			/* (Purely experimental. Does not work - yet!) */
