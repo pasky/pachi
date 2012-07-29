@@ -122,6 +122,18 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		}
 		mq.moves = 0; // our dead stones are alive when pass_all_alive is true
 	}
+	if (u->allow_losing_pass) {
+		foreach_point(b) {
+			if (board_at(b, c) == S_OFFBOARD)
+				continue;
+			if (board_ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN) {
+				if (UDEBUGL(3))
+					fprintf(stderr, "uct_pass_is_safe fails at %s[%d]\n", coord2sstr(c, b), c);
+				return false; // Unclear point, clarify first.
+			}
+		} foreach_point_end;
+		return true;
+	}
 	return pass_is_safe(b, color, &mq);
 }
 
@@ -658,6 +670,11 @@ uct_state_init(char *arg, struct board *b)
 				 * this is like all genmoves are in fact
 				 * kgs-genmove_cleanup. */
 				u->pass_all_alive = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "allow_losing_pass")) {
+				/* Whether to consider passing in a clear
+				 * but losing situation, to be scored as a loss
+				 * for us. */
+				u->allow_losing_pass = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "territory_scoring")) {
 				/* Use territory scoring (default is area scoring).
 				 * An explicit kgs-rules command overrides this. */

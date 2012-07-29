@@ -41,6 +41,7 @@ struct uct {
 	double best2_ratio, bestr_ratio;
 	floating_t max_maintime_ratio;
 	bool pass_all_alive; /* Current value */
+	bool allow_losing_pass;
 	bool territory_scoring;
 	int expand_p;
 	bool playout_amaf;
