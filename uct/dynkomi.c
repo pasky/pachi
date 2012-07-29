@@ -236,6 +236,9 @@ struct dynkomi_adaptive {
 	floating_t max_losing_komi;
 	/* Game portion at which losing komi is not allowed anymore. */
 	floating_t losing_komi_stop;
+	/* Turn off dynkomi at the (perceived) closing of the game
+	 * (last few moves). */
+	bool no_komi_at_game_end;
 	/* Alternative game portion determination. */
 	bool adapt_aport;
 	floating_t (*indicator)(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color);
@@ -442,14 +445,16 @@ bounded_komi(struct dynkomi_adaptive *a, struct board *b,
 static floating_t
 adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
+	struct dynkomi_adaptive *a = d->data;
+	enum stone color = stone_other(tree->root_color);
+
 	/* We do not use extra komi at the game end - we are not
 	 * to fool ourselves at this point. */
-	if (board_estimated_moves_left(b) <= MIN_MOVES_LEFT) {
+	if (a->no_komi_at_game_end && board_estimated_moves_left(b) <= MIN_MOVES_LEFT) {
 		tree->use_extra_komi = false;
 		return 0;
 	}
-	struct dynkomi_adaptive *a = d->data;
-	enum stone color = stone_other(tree->root_color);
+
 	if (DEBUGL(3))
 		fprintf(stderr, "m %d/%d ekomi %f permove %f/%d\n",
 			b->moves, a->lead_moves, tree->extra_komi,
@@ -487,6 +492,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->lead_moves = board_large(b) ? 20 : 4; // XXX
 	a->max_losing_komi = 30;
 	a->losing_komi_stop = 1.0f;
+	a->no_komi_at_game_end = true;
 	a->indicator = komi_by_value;
 
 	a->adapter = adapter_sigmoid;
@@ -521,6 +527,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->max_losing_komi = atof(optval);
 			} else if (!strcasecmp(optname, "losing_komi_stop") && optval) {
 				a->losing_komi_stop = atof(optval);
+			} else if (!strcasecmp(optname, "no_komi_at_game_end")) {
+				a->no_komi_at_game_end = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "indicator")) {
 				/* Adaptatation indicator - how to decide
 				 * the adaptation rate and direction. */
