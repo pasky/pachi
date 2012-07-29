@@ -282,7 +282,7 @@ scale_value(struct uct *u, struct board *b, enum stone node_color, struct tree_n
 		if (u->val_bytemp) {
 			/* xvalue is 0 at 0.5, 1 at 0 or 1 */
 			/* No correction for parity necessary. */
-			double xvalue = significant[node_color] ? fabs(significant[node_color]->u.value - 0.5) * 2 : 0;
+			double xvalue = significant[node_color - 1] ? fabs(significant[node_color - 1]->u.value - 0.5) * 2 : 0;
 			scale = u->val_bytemp_min + (u->val_scale - u->val_bytemp_min) * xvalue;
 		}
 
