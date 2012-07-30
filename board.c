@@ -1388,6 +1388,10 @@ int board_undo(struct board *board)
 {
 	if (!is_pass(board->last_move.coord))
 		return -1;
+	if (board->rules == RULES_PASS_STONES) {
+		/* Return pass stone to the passing player. */
+		board->captures[stone_other(board->last_move.color)]--;
+	}
 	board->last_move = board->last_move2;
 	board->last_move2 = board->last_move3;
 	board->last_move3 = board->last_move4;
