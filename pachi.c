@@ -75,7 +75,7 @@ static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 	fprintf(stderr, "Usage: %s [-e random|replay|montecarlo|uct|distributed]\n"
-		" [-d DEBUG_LEVEL] [-D] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
+		" [-d DEBUG_LEVEL] [-D] [-r RULESET] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
 		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [-f FBOOKFILE] [ENGINE_ARGS]\n", name);
 }
 
@@ -89,11 +89,12 @@ int main(int argc, char *argv[])
 	int gtp_sock = -1;
 	char *chatfile = NULL;
 	char *fbookfile = NULL;
+	char *ruleset = NULL;
 
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "c:e:d:Df:g:l:s:t:u:")) != -1) {
+	while ((opt = getopt(argc, argv, "c:e:d:Df:g:l:r:s:t:u:")) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
@@ -135,6 +136,9 @@ int main(int argc, char *argv[])
 			case 'l':
 				log_port = strdup(optarg);
 				break;
+			case 'r':
+				ruleset = strdup(optarg);
+				break;
 			case 's':
 				seed = atoi(optarg);
 				break;
@@ -171,6 +175,13 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init(fbookfile);
+	if (ruleset) {
+		if (!board_set_rules(b, ruleset)) {
+			fprintf(stderr, "Unknown ruleset: %s\n", ruleset);
+			exit(1);
+		}
+	}
+
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
 	ti[S_WHITE] = ti_default;
