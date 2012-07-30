@@ -47,6 +47,8 @@ improvements have been already achieved. We rigorously play-test new
 features and enable them by default only when they give a universal
 strength boost.
 
+How to run
+~~~~~~~~~~
 
 By default, Pachi will run on a single CPU core, taking up to 1.4GiB
 of memory, not pondering and taking completely arbitrary amount of time
@@ -80,6 +82,31 @@ in uct/uct.c - you will find the list of UCT engine options there, each
 with a description. At any rate, usually the three options above are
 the only ones you really want to tweak.
 
+Greedy Pachi
+~~~~~~~~~~~~
+
+Normally, Pachi cares only for win or loss and does not take into
+account the point amount. This means that it will play slack endgame
+when winning and crazy moves followed with a resign when losing.
+
+It may give you a more pleasurable playing experience if Pachi
+_does_ take into account the point size, strives for a maximum
+(reasonable) win margin when winning and minimal point loss when
+losing. This is possible by using the maximize_score parameter, e.g.:
+
+	./pachi -t _1200 threads=8,pondering,maximize_score
+
+This enables an aggressive dynamic komi usage and end result margin
+is included in node values aside of winrate. Pachi will also enter
+scoring even when losing (normally, Pachi will never pass in that case).
+Note that if you pass any 'dynkomi' parameter to Pachi, you will reset
+the values set by 'maximize_score'.
+
+Note that Pachi in this mode may be slightly weaker, and result margin
+should not be taken into account when judging either player's strength.
+
+Experiments and Testing
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Except UCT, Pachi supports a simple idiotbot-like engine and an example
 treeless MonteCarlo-player. The MonteCarlo simulation ("playout")
@@ -94,7 +121,6 @@ Other special engines are also provided:
 * a simple "patternplay" engine that will play moves according to the
   learned patterns
 * few other purely for development usage
-
 
 Pachi can be used as a test opponent for development of other go-playing
 programs. For example, to get the "plainest UCT" player, use:

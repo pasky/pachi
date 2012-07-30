@@ -1053,6 +1053,40 @@ uct_state_init(char *arg, struct board *b)
 				 * replying to the genmoves command (in ms) */
 				u->stats_delay = 0.001 * atof(optval);
 
+			/** Presets */
+
+			} else if (!strcasecmp(optname, "maximize_score")) {
+				/* A combination of settings that will make
+				 * Pachi try to maximize his points (instead
+				 * of playing slack yose) or minimize his loss
+				 * (and proceed to counting even when losing). */
+				/* Please note that this preset might be
+				 * somewhat weaker than normal Pachi, and the
+				 * score maximization is approximate; point size
+				 * of win/loss still should not be used to judge
+				 * strength of Pachi or the opponent. */
+				/* See README for some further notes. */
+				if (!optval || atoi(optval)) {
+					/* Allow scoring a lost game. */
+					u->allow_losing_pass = true;
+					/* Make Pachi keep his calm when losing
+					 * and/or maintain winning marging. */
+					/* Do not play games that are losing
+					 * by too much. */
+					/* XXX: komi_ratchet_age=40000 is necessary
+					 * with losing_komi_ratchet, but 40000
+					 * is somewhat arbitrary value. */
+					char dynkomi_args[] = "losing_komi_ratchet:komi_ratchet_age=60000:no_komi_at_game_end=0:max_losing_komi=30";
+					u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomi_args, b);
+					/* XXX: Values arbitrary so far. */
+					/* XXX: Also, is bytemp sensible when
+					 * combined with dynamic komi?! */
+					u->val_scale = 0.01;
+					u->val_bytemp = true;
+					u->val_bytemp_min = 0.001;
+					u->val_byavg = true;
+				}
+
 			} else {
 				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
 				exit(1);
