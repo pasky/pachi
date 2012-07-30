@@ -1357,7 +1357,7 @@ int
 board_play(struct board *board, struct move *m)
 {
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
-		if (is_pass(m->coord) && board->rules == RULES_PASS_STONES) {
+		if (is_pass(m->coord) && board->rules == RULES_SIMING) {
 			/* On pass, the player gives a pass stone
 			 * to the opponent. */
 			board->captures[stone_other(m->color)]++;
@@ -1388,7 +1388,7 @@ int board_undo(struct board *board)
 {
 	if (!is_pass(board->last_move.coord))
 		return -1;
-	if (board->rules == RULES_PASS_STONES) {
+	if (board->rules == RULES_SIMING) {
 		/* Return pass stone to the passing player. */
 		board->captures[stone_other(board->last_move.color)]--;
 	}
@@ -1491,7 +1491,7 @@ board_fast_score(struct board *board)
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
 
-	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
+	return board->komi + (board->rules != RULES_SIMING ? board->handicap : 0) + scores[S_WHITE] - scores[S_BLACK];
 }
 
 /* Owner map: 0: undecided; 1: black; 2: white; 3: dame */
@@ -1576,7 +1576,7 @@ board_official_score(struct board *board, struct move_queue *q)
 
 	/* We need to special-case empty board. */
 	if (!s[S_BLACK] && !s[S_WHITE])
-		return board->komi + board->handicap;
+		return board->komi;
 
 	while (board_tromp_taylor_iter(board, ownermap))
 		/* Flood-fill... */;
@@ -1591,7 +1591,7 @@ board_official_score(struct board *board, struct move_queue *q)
 		scores[ownermap[c]]++;
 	} foreach_point_end;
 
-	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
+	return board->komi + (board->rules != RULES_SIMING ? board->handicap : 0) + scores[S_WHITE] - scores[S_BLACK];
 }
 
 bool
@@ -1605,8 +1605,8 @@ board_set_rules(struct board *board, char *name)
 		board->rules = RULES_AGA;
 	} else if (!strcasecmp(name, "new_zealand")) {
 		board->rules = RULES_NEW_ZEALAND;
-	} else if (!strcasecmp(name, "pass_stones")) {
-		board->rules = RULES_PASS_STONES;
+	} else if (!strcasecmp(name, "siming") || !strcasecmp(name, "simplified_ing")) {
+		board->rules = RULES_SIMING;
 	} else {
 		return false;
 	}

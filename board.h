@@ -142,7 +142,17 @@ struct board {
 		RULES_NEW_ZEALAND,
 		RULES_JAPANESE,
 		RULES_STONES_ONLY, /* do not count eyes */
-		RULES_PASS_STONES, /* RULES_CHINESE + pass stones */
+		/* http://home.snafu.de/jasiek/siming.html */
+		/* Simplified ING rules - RULES_CHINESE with handicaps
+		 * counting as points and pass stones. Also should
+		 * allow suicide, but Pachi will never suicide
+		 * nevertheless. */
+		/* XXX: I couldn't find the point about pass stones
+		 * in the rule text, but it is Robert Jasiek's
+		 * interpretation of them... These rules were
+		 * used e.g. at the EGC2012 13x13 tournament.
+		 * They are not supported by KGS. */
+		RULES_SIMING,
 	} rules;
 
 	char *fbookfile;
