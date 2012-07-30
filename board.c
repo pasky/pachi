@@ -293,6 +293,7 @@ board_clear(struct board *board)
 	int size = board_size(board);
 	floating_t komi = board->komi;
 	char *fbookfile = board->fbookfile;
+	enum go_ruleset rules = board->rules;
 
 	board_done_noalloc(board);
 
@@ -307,6 +308,7 @@ board_clear(struct board *board)
 
 	board->komi = komi;
 	board->fbookfile = fbookfile;
+	board->rules = rules;
 
 	if (board->fbookfile) {
 		board->fbook = fbook_init(board->fbookfile, board);

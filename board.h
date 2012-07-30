@@ -136,7 +136,7 @@ struct board {
 	 * However, we accept suicide moves by the opponent, so we
 	 * should work with rules allowing suicide, just not taking
 	 * full advantage of them. */
-	enum {
+	enum go_ruleset {
 		RULES_CHINESE, /* default value */
 		RULES_AGA,
 		RULES_NEW_ZEALAND,
