@@ -372,6 +372,10 @@ floating_t board_fast_score(struct board *board);
 struct move_queue;
 floating_t board_official_score(struct board *board, struct move_queue *mq);
 
+/* Set board rules according to given string. Returns false in case
+ * of unknown ruleset name. */
+bool board_set_rules(struct board *board, char *name);
+
 /** Iterators */
 
 #define foreach_point(board_) \

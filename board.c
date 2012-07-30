@@ -1582,3 +1582,20 @@ board_official_score(struct board *board, struct move_queue *q)
 
 	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
 }
+
+bool
+board_set_rules(struct board *board, char *name)
+{
+	if (!strcasecmp(name, "japanese")) {
+		board->rules = RULES_JAPANESE;
+	} else if (!strcasecmp(name, "chinese")) {
+		board->rules = RULES_CHINESE;
+	} else if (!strcasecmp(name, "aga")) {
+		board->rules = RULES_AGA;
+	} else if (!strcasecmp(name, "new_zealand")) {
+		board->rules = RULES_NEW_ZEALAND;
+	} else {
+		return false;
+	}
+	return true;
+}
