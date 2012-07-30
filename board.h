@@ -132,13 +132,17 @@ struct board {
 	 * the board implementation is basically Chinese rules (handicap
 	 * stones compensation) w/ suicide (or you can look at it as
 	 * New Zealand w/o handi stones compensation), while the engine
-	 * enforces no-suicide, making for real Chinese rules. */
+	 * enforces no-suicide, making for real Chinese rules.
+	 * However, we accept suicide moves by the opponent, so we
+	 * should work with rules allowing suicide, just not taking
+	 * full advantage of them. */
 	enum {
 		RULES_CHINESE, /* default value */
 		RULES_AGA,
 		RULES_NEW_ZEALAND,
 		RULES_JAPANESE,
 		RULES_STONES_ONLY, /* do not count eyes */
+		RULES_PASS_STONES, /* RULES_CHINESE + pass stones */
 	} rules;
 
 	char *fbookfile;

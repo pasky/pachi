@@ -1355,6 +1355,11 @@ int
 board_play(struct board *board, struct move *m)
 {
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
+		if (is_pass(m->coord) && board->rules == RULES_PASS_STONES) {
+			/* On pass, the player gives a pass stone
+			 * to the opponent. */
+			board->captures[stone_other(m->color)]++;
+		}
 		struct move nomove = { pass, S_NONE };
 		board->ko = nomove;
 		board->last_move4 = board->last_move3;
@@ -1594,6 +1599,8 @@ board_set_rules(struct board *board, char *name)
 		board->rules = RULES_AGA;
 	} else if (!strcasecmp(name, "new_zealand")) {
 		board->rules = RULES_NEW_ZEALAND;
+	} else if (!strcasecmp(name, "pass_stones")) {
+		board->rules = RULES_PASS_STONES;
 	} else {
 		return false;
 	}
