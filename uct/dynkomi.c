@@ -455,7 +455,7 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 		return 0;
 	}
 
-	if (DEBUGL(3))
+	if (DEBUGL(4))
 		fprintf(stderr, "m %d/%d ekomi %f permove %f/%d\n",
 			b->moves, a->lead_moves, tree->extra_komi,
 			d->score.value, d->score.playouts);
@@ -466,7 +466,7 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 		                    a->max_losing_komi);
 
 	floating_t komi = a->indicator(d, b, tree, color);
-	if (DEBUGL(3))
+	if (DEBUGL(4))
 		fprintf(stderr, "dynkomi: %f -> %f\n", tree->extra_komi, komi);
 	return bounded_komi(a, b, color, komi, a->max_losing_komi);
 }
