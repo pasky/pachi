@@ -39,7 +39,8 @@ By default, Pachi currently uses the UCT engine that combines
 Monte Carlo approach with tree search; UCB1AMAF tree policy using
 the RAVE method is used for tree search, while the Moggy playout
 policy using 3x3 patterns and various tactical checks is used for
-the semi-random Monte Carlo playouts.
+the semi-random Monte Carlo playouts.  Large-scale board patterns
+are used in the tree search.
 
 At the same time, we keep trying a wide variety of other approaches
 and enhancements. Pachi is an active research platform and quite a few
