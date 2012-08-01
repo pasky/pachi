@@ -118,10 +118,9 @@ middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum sto
 	bool is_ladder = false;
 	for (int i = 0; !is_ladder && i < libs; i++) {
 		struct board *b2 = b;
-		struct board b2s;
 		if (i != libs - 1) {
-			board_copy(&b2s, b);
-			b2 = &b2s;
+			b2 = alloca(sizeof(*b2));
+			board_copy(b2, b);
 		}
 
 		coord_t ataristone = board_group_info(b2, laddered).lib[liblist[i]];
@@ -137,7 +136,7 @@ middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum sto
 			is_ladder = middle_ladder_walk(b2, laddered, board_group_info(b2, laddered).lib[0], lcolor);
 
 		if (i != libs - 1) {
-			board_done_noalloc(&b2s);
+			board_done_noalloc(b2);
 		}
 	}
 	if (DEBUGL(6))
