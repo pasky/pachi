@@ -104,6 +104,8 @@ the values set by 'maximize_score'.
 
 Note that Pachi in this mode may be slightly weaker, and result margin
 should not be taken into account when judging either player's strength.
+During the game, the winning/losing margin can be approximated from
+Pachi's "extra komi" or "xkomi" reporting in the progress messages.
 
 Experiments and Testing
 ~~~~~~~~~~~~~~~~~~~~~~~
