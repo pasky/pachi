@@ -42,7 +42,7 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 
 	/* Dynamic komi */
 	if (t->use_extra_komi)
-		fprintf(stderr, "komi %.1f ", t->extra_komi);
+		fprintf(stderr, "xkomi %.1f ", t->extra_komi);
 
 	/* Best sequence */
 	fprintf(stderr, "| seq ");
