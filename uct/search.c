@@ -131,7 +131,10 @@ spawn_thread_manager(void *ctx_)
 		mctx->t = ctx->t = t;
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
 		ctx->ti = mctx->ti;
-		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
+		pthread_attr_t a;
+		pthread_attr_init(&a);
+		pthread_attr_setstacksize(&a, 1048576);
+		pthread_create(&threads[ti], &a, spawn_worker, ctx);
 		if (UDEBUGL(3))
 			fprintf(stderr, "Spawned worker %d\n", ti);
 	}
