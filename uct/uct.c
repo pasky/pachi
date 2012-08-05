@@ -42,6 +42,8 @@ setup_state(struct uct *u, struct board *b, enum stone color)
 {
 	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
 			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, u->stats_hbits);
+	if (u->initial_extra_komi)
+		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
 		fast_srandom(u->force_seed);
 	if (UDEBUGL(3))
@@ -182,6 +184,8 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 	if (!tree_promote_at(u->t, b, m->coord)) {
 		if (UDEBUGL(3))
 			fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+		/* Preserve dynamic komi information, though, that is important. */
+		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
 		return NULL;
 	}
@@ -202,6 +206,7 @@ uct_undo(struct engine *e, struct board *b)
 
 	if (!u->t) return NULL;
 	uct_pondering_stop(u);
+	u->initial_extra_komi = u->t->extra_komi;
 	reset_state(u);
 	return NULL;
 }
@@ -458,6 +463,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
 	if (!best) {
 		/* Pass or resign. */
+		if (is_pass(best_coord))
+			u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
 		return coord_copy(best_coord);
 	}
@@ -907,6 +914,15 @@ uct_state_init(char *arg, struct board *b)
 				/* XXX: Does not work with tree
 				 * parallelization. */
 				u->dynkomi_interval = atoi(optval);
+			} else if (!strcasecmp(optname, "extra_komi") && optval) {
+				/* Initial dynamic komi settings. This
+				 * is useful for the adaptive dynkomi
+				 * policy as the value to start with
+				 * (this is NOT kept fixed) in case
+				 * there is not enough time in the search
+				 * to adjust the value properly (e.g. the
+				 * game was interrupted). */
+				u->initial_extra_komi = atof(optval);
 
 			/** Node value result scaling */
 
