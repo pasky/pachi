@@ -513,16 +513,39 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 coord_t
 selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygroup)
 {
-	neighboring_groups_list(b, board_at(b, c) == color, coord, groups, groups_n);
+	neighboring_groups_list(b, 1, coord, groups, groups_n, groupsbycolor);
 
 	if (!groups_n)
 		return pass;
-	group_t group = groups[fast_random(groups_n)];
 
-	coord_t lib2 = board_group_other_lib(b, group, coord);
-	if (is_bad_selfatari(b, color, lib2))
-		return pass;
-	if (bygroup)
-		*bygroup = group;
-	return lib2;
+	int gn;
+	if (groupsbycolor[stone_other(color)]) {
+		/* Prefer to fill the other liberty of an opponent
+		 * group to filling own approach liberties. */
+		int gl = fast_random(groups_n);
+		for (gn = gl; gn < groups_n; gn++)
+			if (board_at(b, groups[gn]) == stone_other(color))
+				goto found;
+		for (gn = 0; gn < gl; gn++)
+			if (board_at(b, groups[gn]) == stone_other(color))
+				goto found;
+found:;
+	} else {
+		gn = fast_random(groups_n);
+	}
+	int gl = gn;
+	for (; gn - gl < groups_n; gn++) {
+		int gnm = gn % groups_n;
+		group_t group = groups[gnm];
+
+		coord_t lib2 = board_group_other_lib(b, group, coord);
+		if (board_is_one_point_eye(b, lib2, board_at(b, group)))
+			continue;
+		if (is_bad_selfatari(b, color, lib2))
+			continue;
+		if (bygroup)
+			*bygroup = group;
+		return lib2;
+	}
+	return pass;
 }

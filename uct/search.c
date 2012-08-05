@@ -31,9 +31,6 @@ static const struct time_info default_ti = {
 	.len = { .games = MC_GAMES },
 };
 
-/* Once per how many simulations (per thread) to show a progress report line. */
-#define TREE_SIMPROGRESS_INTERVAL 10000
-
 /* When terminating UCT search early, the safety margin to add to the
  * remaining playout number estimate when deciding whether the result can
  * still change. */
@@ -134,7 +131,10 @@ spawn_thread_manager(void *ctx_)
 		mctx->t = ctx->t = t;
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
 		ctx->ti = mctx->ti;
-		pthread_create(&threads[ti], NULL, spawn_worker, ctx);
+		pthread_attr_t a;
+		pthread_attr_init(&a);
+		pthread_attr_setstacksize(&a, 1048576);
+		pthread_create(&threads[ti], &a, spawn_worker, ctx);
 		if (UDEBUGL(3))
 			fprintf(stderr, "Spawned worker %d\n", ti);
 	}
@@ -190,7 +190,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 {
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
-	s->print_interval = TREE_SIMPROGRESS_INTERVAL * u->threads;
+	s->print_interval = u->reportfreq * u->threads;
 	s->fullmem = false;
 
 	if (ti) {
@@ -253,7 +253,7 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 	/* Print progress? */
 	if (i - s->last_print > s->print_interval) {
 		s->last_print += s->print_interval; // keep the numbers tidy
-		uct_progress_status(u, ctx->t, color, s->last_print);
+		uct_progress_status(u, ctx->t, color, s->last_print, NULL);
 	}
 
 	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
@@ -481,15 +481,21 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	/* If the opponent just passed and we win counting, always
 	 * pass as well. For option stones_only, we pass only when there
 	 * there is nothing else to do, to show how to maximize score. */
-	if (b->moves > 1 && is_pass(b->last_move.coord) && b->rules != RULES_STONES_ONLY
-	    && uct_pass_is_safe(u, b, color, pass_all_alive)) {
-		if (UDEBUGL(0))
-			fprintf(stderr, "<Will rather pass, looks safe enough; score %f>\n",
-				board_official_score(b, NULL) / 2);
-		*best_coord = pass;
-		best = u->t->root->children; // pass is the first child
-		assert(is_pass(node_coord(best)));
-		return best;
+	if (b->moves > 1 && is_pass(b->last_move.coord) && b->rules != RULES_STONES_ONLY) {
+		if (uct_pass_is_safe(u, b, color, pass_all_alive)) {
+			if (UDEBUGL(0))
+				fprintf(stderr, "<Will rather pass, looks safe enough; score %f>\n",
+					board_official_score(b, NULL) / 2);
+			*best_coord = pass;
+			best = u->t->root->children; // pass is the first child
+			assert(is_pass(node_coord(best)));
+			return best;
+		} else {
+			if (UDEBUGL(3))
+				fprintf(stderr, "Refusing to pass, unsafe; pass_all_alive %d, ownermap #playouts %d, raw score %f\n",
+				        pass_all_alive, u->ownermap.playouts,
+					board_official_score(b, NULL) / 2);
+		}
 	}
 	
 	return best;

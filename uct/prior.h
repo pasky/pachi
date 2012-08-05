@@ -30,7 +30,7 @@ static void add_prior_value(struct prior_map *map, coord_t c, floating_t value, 
 void uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map);
 
 struct uct_prior;
-struct uct_prior *uct_prior_init(char *arg, struct board *b);
+struct uct_prior *uct_prior_init(char *arg, struct board *b, struct uct *u);
 void uct_prior_done(struct uct_prior *p);
 
 

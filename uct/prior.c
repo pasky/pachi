@@ -4,11 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "joseki/base.h"
 #include "move.h"
 #include "random.h"
+#include "tactics/ladder.h"
 #include "tactics/util.h"
 #include "uct/internal.h"
 #include "uct/plugins.h"
@@ -26,8 +28,9 @@ struct uct_prior {
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6
 	 * playouts per source seems best. */
 	int eqex;
-	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex, joseki_eqex;
+	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex, joseki_eqex, pattern_eqex;
 	int cfgdn; int *cfgd_eqex;
+	bool prune_ladders;
 };
 
 void
@@ -142,8 +145,49 @@ uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 void
+uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
+{
+	/* Q_{pattern} */
+	if (!u->pat.pd)
+		return;
+
+	struct board *b = map->b;
+	struct pattern pats[b->flen];
+	floating_t probs[b->flen];
+	pattern_rate_moves(&u->pat, b, map->to_play, pats, probs);
+	if (UDEBUGL(5)) {
+		fprintf(stderr, "Pattern prior at node %s\n", coord2sstr(node->coord, b));
+		board_print(b, stderr);
+	}
+
+	for (int f = 0; f < b->flen; f++) {
+		if (isnan(probs[f]) || probs[f] < 0.001)
+			continue;
+		assert(!is_pass(b->f[f]));
+		if (UDEBUGL(5)) {
+			char s[256]; pattern2str(s, &pats[f]);
+			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), probs[f], s);
+		}
+		add_prior_value(map, b->f[f], 1.0, sqrt(probs[f]) * u->prior->pattern_eqex);
+	}
+}
+
+void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
+	if (u->prior->prune_ladders && !board_playing_ko_threat(map->b)) {
+		foreach_free_point(map->b) {
+			if (!map->consider[c])
+				continue;
+			group_t atari_neighbor = board_get_atari_neighbor(map->b, c, map->to_play);
+			if (atari_neighbor && is_ladder(map->b, c, atari_neighbor, true)) {
+				if (UDEBUGL(5))
+					fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c, map->b));
+				map->consider[c] = false;
+			}
+		} foreach_free_point_end;
+	}
+
 	if (u->prior->even_eqex)
 		uct_prior_even(u, node, map);
 	if (u->prior->eye_eqex)
@@ -158,21 +202,29 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_cfgd(u, node, map);
 	if (u->prior->joseki_eqex)
 		uct_prior_joseki(u, node, map);
+	if (u->prior->pattern_eqex)
+		uct_prior_pattern(u, node, map);
 	if (u->prior->plugin_eqex)
 		plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
 }
 
 struct uct_prior *
-uct_prior_init(char *arg, struct board *b)
+uct_prior_init(char *arg, struct board *b, struct uct *u)
 {
 	struct uct_prior *p = calloc2(1, sizeof(struct uct_prior));
 
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = p->plugin_eqex = -100;
+	/* FIXME: Optimal pattern_eqex is about -1000 with small playout counts
+	 * but only -400 on a cluster. We need a better way to set the default
+	 * here. */
+	p->pattern_eqex = -400;
 	p->joseki_eqex = -200;
 	p->cfgdn = -1;
 
 	/* Even number! */
 	p->eqex = board_large(b) ? 20 : 14;
+
+	p->prune_ladders = true;
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -222,9 +274,17 @@ uct_prior_init(char *arg, struct board *b)
 				p->eye_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "ko") && optval) {
 				p->ko_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "pattern") && optval) {
+				/* Pattern-based prior eqex. */
+				/* Note that this prior is still going to be
+				 * used only if you have downloaded or
+				 * generated the pattern files! */
+				p->pattern_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "plugin") && optval) {
 				/* Unlike others, this is just a *recommendation*. */
 				p->plugin_eqex = atoi(optval);
+			} else if (!strcasecmp(optname, "prune_ladders")) {
+				p->prune_ladders = !optval || atoi(optval);
 			} else {
 				fprintf(stderr, "uct: Invalid prior argument %s or missing value\n", optname);
 				exit(1);
@@ -238,6 +298,7 @@ uct_prior_init(char *arg, struct board *b)
 	if (p->eye_eqex < 0) p->eye_eqex = p->eqex * -p->eye_eqex / 100;
 	if (p->ko_eqex < 0) p->ko_eqex = p->eqex * -p->ko_eqex / 100;
 	if (p->joseki_eqex < 0) p->joseki_eqex = p->eqex * -p->joseki_eqex / 100;
+	if (p->pattern_eqex < 0) p->pattern_eqex = p->eqex * -p->pattern_eqex / 100;
 	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex * -p->plugin_eqex / 100;
 
 	if (p->cfgdn < 0) {
@@ -251,6 +312,9 @@ uct_prior_init(char *arg, struct board *b)
 		fprintf(stderr, "uct: CFG distances only up to %d available\n", TREE_NODE_D_MAX);
 		exit(1);
 	}
+
+	if (p->pattern_eqex)
+		u->want_pat = true;
 
 	return p;
 }

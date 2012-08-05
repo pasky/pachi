@@ -95,7 +95,7 @@ board_effective_handicap(struct board *b, int first_move_value)
 	 * first_move_value is set on purpose to a value different
 	 * from the correct theoretical value (2*komi). */
 	if (!b->handicap)
-		return 7.5 - b->komi;
+		return b->komi == 0.5 ? 0.5 * first_move_value : 7.5 - b->komi;
 	return b->handicap * first_move_value + 0.5 - b->komi;
 }
 
@@ -111,8 +111,8 @@ pass_is_safe(struct board *b, enum stone color, struct move_queue *mq)
 }
 
 
-/* On average 25% of points remain empty at the end of a game */
-#define EXPECTED_FINAL_EMPTY_PERCENT 25
+/* On average 20% of points remain empty at the end of a game */
+#define EXPECTED_FINAL_EMPTY_PERCENT 20
 
 /* Returns estimated number of remaining moves for one player until end of game. */
 int

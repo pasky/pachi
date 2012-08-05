@@ -19,6 +19,6 @@ bool can_countercapture(struct board *b, enum stone owner, group_t g,
  * @to_play to deal with it (rescuing or capturing it). */
 /* ladder != NULL implies to always enqueue all relevant moves. */
 void group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, enum stone to_play,
-                       struct move_queue *q, coord_t *ladder, int tag);
+                       struct move_queue *q, coord_t *ladder, bool middle_ladder, int tag);
 
 #endif

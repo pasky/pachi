@@ -33,7 +33,7 @@ fast_random(unsigned int max)
 	return ((pmseed & 0xffff) * max) >> 16;
 }
 
-floating_t
+float
 fast_frandom(void)
 {
 	/* Construct (1,2) IEEE floating_t from our random integer */
@@ -85,7 +85,7 @@ fast_random(unsigned int max)
 	return ((pmseed & 0xffff) * max) >> 16;
 }
 
-floating_t
+float
 fast_frandom(void)
 {
 	/* Construct (1,2) IEEE floating_t from our random integer */

@@ -1,0 +1,29 @@
+This is a shell-based UCT implementation. ;-)
+
+From another perspective, this is a tool for automated opening book
+construction. The book is based on UCT tree with large exploration
+coefficient and fed with results from games against a compenent
+opponent.
+
+The UCT tree is stored in a directory tree, directories are nodes,
+UCT statistics are stored in the 'stats' file of each directory
+(first line is # of wins, second is # of playouts).  Start the book
+building by running the
+
+	autobook.sh PACHI_CMD OPPONENT_CMD BOOKDIR
+
+script, specifying complete Pachi and opponent's invocation details
+in the two parameters. If BOOKDIR exists, autobook.sh will continue
+an existing opening book build; multiple autobook.sh scripts may
+be running too. Just break it (Ctrl-C) when you want to stop.
+
+These helper scripts are used by autobook.sh:
+
+	walk.sh		A single iteration of the algorithm
+	eval.sh		Choose next move to choose in the current directory (node)
+	expand.sh	Create subdirectories (followup nodes) in the cwd
+
+The built autobook can be converted to an opening book in the fbook
+format (on the most-simulated basis) using:
+
+	autobook2fbook.sh BOOKDIR

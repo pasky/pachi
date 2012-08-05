@@ -5,6 +5,13 @@
 # 	make MAC=1 DOUBLE=1
 
 
+# Do you compile on Windows instead of Linux? Please note that the
+# performance may not be optimal.
+# (XXX: For now, only the mingw target is supported on Windows.
+# Patches for others are welcome!)
+
+# WIN=1
+
 # Do you compile on MacOS/X instead of Linux? Please note that the
 # performance may not be optimal.
 # (XXX: We are looking for volunteers contributing support for other
@@ -49,12 +56,20 @@ CUSTOM_CFLAGS=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-com
 ### CONFIGURATION END
 
 
+ifdef WIN
+	SYS_CFLAGS=
+	LDFLAGS=-pthread
+	LIBS=-lm -lws2_32 -lregex
+else
 ifdef MAC
 	SYS_CFLAGS=-DNO_THREAD_LOCAL
-	LDFLAGS=-lm -pthread -ldl -rdynamic
+	LDFLAGS=-pthread -rdynamic
+	LIBS=-lm -ldl
 else
 	SYS_CFLAGS=-march=native
-	LDFLAGS=-lm -pthread -lrt -ldl -rdynamic
+	LDFLAGS=-pthread -rdynamic
+	LIBS=-lm -lrt -ldl
+endif
 endif
 
 ifdef DOUBLE
@@ -68,7 +83,7 @@ else
 	# Whee, an extra register!
 	CUSTOM_CFLAGS+=-fomit-frame-pointer
 ifeq ($(PROFILING), perftools)
-	LDFLAGS+=-lprofiler
+	LIBS+=-lprofiler
 endif
 endif
 
@@ -89,12 +104,12 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o ownermap.o pattern3.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o libmap.o
-SUBDIRS=random replay joseki montecarlo uct uct/policy playout tactics t-unit distributed
+OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o libmap.o
+SUBDIRS=random replay patternscan patternplay joseki montecarlo uct uct/policy playout tactics t-unit distributed
 
 all: all-recursive pachi
 
-LOCALLIBS=random/random.a replay/replay.a joseki/joseki.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a tactics/tactics.a t-unit/test.a distributed/distributed.a
+LOCALLIBS=random/random.a replay/replay.a patternscan/patternscan.a patternplay/patternplay.a joseki/joseki.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a tactics/tactics.a t-unit/test.a distributed/distributed.a
 $(LOCALLIBS): all-recursive
 	@
 pachi: $(OBJS) pachi.o $(LOCALLIBS)

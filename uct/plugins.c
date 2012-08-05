@@ -1,5 +1,7 @@
 #include <assert.h>
+#ifndef WIN32
 #include <dlfcn.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,6 +37,33 @@ struct uct_pluginset {
 	struct board *b;
 };
 
+
+#ifdef WIN32
+
+/* We do not support plugins on Windows. Minimal dummy stubs. */
+
+struct uct_pluginset *
+pluginset_init(struct board *b)
+{
+	return NULL;
+}
+void
+pluginset_done(struct uct_pluginset *ps)
+{
+	assert(!ps);
+}
+void
+plugin_load(struct uct_pluginset *ps, char *path, char *args)
+{
+	assert(!ps);
+}
+void
+plugin_prior(struct uct_pluginset *ps, struct tree_node *node, struct prior_map *map, int eqex)
+{
+	assert(!ps);
+}
+
+#else
 
 struct uct_pluginset *
 pluginset_init(struct board *b)
@@ -93,3 +122,5 @@ plugin_prior(struct uct_pluginset *ps, struct tree_node *node, struct prior_map 
 		p->prior(p->data, node, map, eqex);
 	}
 }
+
+#endif

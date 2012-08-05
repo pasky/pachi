@@ -77,12 +77,10 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	if (b->moves < lmoves) {
 		floating_t base_komi = board_effective_handicap(b, l->handicap_value[color]);
 		extra_komi = base_komi * (lmoves - b->moves) / lmoves;
+		return extra_komi;
 	} else {
-		extra_komi = 0;
+		extra_komi = floor(tree->extra_komi);
 	}
-
-	/* Do not adjust values in the game beginning. */
-	if (b->moves < lmoves) return extra_komi;
 
 	/* Do not take decisions on unstable value. */
         if (tree->root->u.playouts < GJ_MINGAMES) return extra_komi;
@@ -90,26 +88,29 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	floating_t my_value = tree_node_get_value(tree, 1, tree->root->u.value);
 	/*  We normalize komi as in komi_by_value(), > 0 when winning. */
 	extra_komi = komi_by_color(extra_komi, color);
-	assert(extra_komi >= 0);
+	if (extra_komi < 0 && DEBUGL(3))
+		fprintf(stderr, "XXX: extra_komi %.3f < 0 (color %s tree ek %.3f)\n", extra_komi, stone2str(color), tree->extra_komi);
+	// assert(extra_komi >= 0);
+	floating_t orig_komi = extra_komi;
 
 	if (my_value < 0.5 && l->komi_ratchet > 0 && l->komi_ratchet != INFINITY) {
 		if (DEBUGL(0))
-			fprintf(stderr, "losing %f extra %.1f ratchet %.1f -> 0\n",
+			fprintf(stderr, "losing %f extra komi %.1f ratchet %.1f -> 0\n",
 				my_value, extra_komi, l->komi_ratchet);
 		/* Disable dynkomi completely, too dangerous in this game. */
 		extra_komi = l->komi_ratchet = 0;
 
 	} else if (my_value < l->orange_zone && extra_komi > 0) {
 		extra_komi = l->komi_ratchet  = fmax(extra_komi - l->drop_step, 0.0);
-		if (DEBUGL(3))
-			fprintf(stderr, "dropping to %f ratchet -> %.1f\n",
-				my_value, extra_komi);
+		if (extra_komi != orig_komi && DEBUGL(3))
+			fprintf(stderr, "dropping to %f, extra komi %.1f -> ratchet %.1f\n",
+				my_value, orig_komi, extra_komi);
 
-	} else if (my_value > l->green_zone && extra_komi +1 <= l->komi_ratchet) {
+	} else if (my_value > l->green_zone && extra_komi + 1 <= l->komi_ratchet) {
 		extra_komi += 1;
-		if (DEBUGL(3))
-			fprintf(stderr, "winning %f extra_komi -> %.1f, ratchet %.1f\n",
-				my_value, extra_komi, l->komi_ratchet);
+		if (extra_komi != orig_komi && DEBUGL(3))
+			fprintf(stderr, "winning %f extra_komi %.1f -> %.1f, ratchet %.1f\n",
+				my_value, orig_komi, extra_komi, l->komi_ratchet);
 	}
 	return komi_by_color(extra_komi, color);
 }
@@ -235,6 +236,9 @@ struct dynkomi_adaptive {
 	floating_t max_losing_komi;
 	/* Game portion at which losing komi is not allowed anymore. */
 	floating_t losing_komi_stop;
+	/* Turn off dynkomi at the (perceived) closing of the game
+	 * (last few moves). */
+	bool no_komi_at_game_end;
 	/* Alternative game portion determination. */
 	bool adapt_aport;
 	floating_t (*indicator)(struct uct_dynkomi *d, struct board *b, struct tree *tree, enum stone color);
@@ -441,15 +445,17 @@ bounded_komi(struct dynkomi_adaptive *a, struct board *b,
 static floating_t
 adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
+	struct dynkomi_adaptive *a = d->data;
+	enum stone color = stone_other(tree->root_color);
+
 	/* We do not use extra komi at the game end - we are not
 	 * to fool ourselves at this point. */
-	if (board_estimated_moves_left(b) <= MIN_MOVES_LEFT) {
+	if (a->no_komi_at_game_end && board_estimated_moves_left(b) <= MIN_MOVES_LEFT) {
 		tree->use_extra_komi = false;
 		return 0;
 	}
-	struct dynkomi_adaptive *a = d->data;
-	enum stone color = stone_other(tree->root_color);
-	if (DEBUGL(3))
+
+	if (DEBUGL(4))
 		fprintf(stderr, "m %d/%d ekomi %f permove %f/%d\n",
 			b->moves, a->lead_moves, tree->extra_komi,
 			d->score.value, d->score.playouts);
@@ -460,7 +466,7 @@ adaptive_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 		                    a->max_losing_komi);
 
 	floating_t komi = a->indicator(d, b, tree, color);
-	if (DEBUGL(3))
+	if (DEBUGL(4))
 		fprintf(stderr, "dynkomi: %f -> %f\n", tree->extra_komi, komi);
 	return bounded_komi(a, b, color, komi, a->max_losing_komi);
 }
@@ -486,6 +492,7 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 	a->lead_moves = board_large(b) ? 20 : 4; // XXX
 	a->max_losing_komi = 30;
 	a->losing_komi_stop = 1.0f;
+	a->no_komi_at_game_end = true;
 	a->indicator = komi_by_value;
 
 	a->adapter = adapter_sigmoid;
@@ -520,6 +527,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				a->max_losing_komi = atof(optval);
 			} else if (!strcasecmp(optname, "losing_komi_stop") && optval) {
 				a->losing_komi_stop = atof(optval);
+			} else if (!strcasecmp(optname, "no_komi_at_game_end")) {
+				a->no_komi_at_game_end = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "indicator")) {
 				/* Adaptatation indicator - how to decide
 				 * the adaptation rate and direction. */

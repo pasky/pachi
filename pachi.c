@@ -13,11 +13,14 @@
 #include "replay/replay.h"
 #include "montecarlo/montecarlo.h"
 #include "random/random.h"
+#include "patternscan/patternscan.h"
+#include "patternplay/patternplay.h"
 #include "joseki/joseki.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "distributed/distributed.h"
 #include "gtp.h"
+#include "chat.h"
 #include "timeinfo.h"
 #include "random.h"
 #include "version.h"
@@ -32,6 +35,8 @@ int seed;
 enum engine_id {
 	E_RANDOM,
 	E_REPLAY,
+	E_PATTERNSCAN,
+	E_PATTERNPLAY,
 	E_MONTECARLO,
 	E_UCT,
 	E_DISTRIBUTED,
@@ -42,6 +47,8 @@ enum engine_id {
 static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 	engine_random_init,
 	engine_replay_init,
+	engine_patternscan_init,
+	engine_patternplay_init,
 	engine_montecarlo_init,
 	engine_uct_init,
 	engine_distributed_init,
@@ -68,7 +75,7 @@ static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 	fprintf(stderr, "Usage: %s [-e random|replay|montecarlo|uct|distributed]\n"
-		" [-d DEBUG_LEVEL] [-D] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
+		" [-d DEBUG_LEVEL] [-D] [-r RULESET] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
 		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [-f FBOOKFILE] [ENGINE_ARGS]\n", name);
 }
 
@@ -80,13 +87,18 @@ int main(int argc, char *argv[])
 	char *gtp_port = NULL;
 	char *log_port = NULL;
 	int gtp_sock = -1;
+	char *chatfile = NULL;
 	char *fbookfile = NULL;
+	char *ruleset = NULL;
 
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "e:d:Df:g:l:s:t:u:")) != -1) {
+	while ((opt = getopt(argc, argv, "c:e:d:Df:g:l:r:s:t:u:")) != -1) {
 		switch (opt) {
+			case 'c':
+				chatfile = strdup(optarg);
+				break;
 			case 'e':
 				if (!strcasecmp(optarg, "random")) {
 					engine = E_RANDOM;
@@ -98,6 +110,10 @@ int main(int argc, char *argv[])
 					engine = E_UCT;
 				} else if (!strcasecmp(optarg, "distributed")) {
 					engine = E_DISTRIBUTED;
+				} else if (!strcasecmp(optarg, "patternscan")) {
+					engine = E_PATTERNSCAN;
+				} else if (!strcasecmp(optarg, "patternplay")) {
+					engine = E_PATTERNPLAY;
 				} else if (!strcasecmp(optarg, "joseki")) {
 					engine = E_JOSEKI;
 				} else {
@@ -119,6 +135,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'l':
 				log_port = strdup(optarg);
+				break;
+			case 'r':
+				ruleset = strdup(optarg);
 				break;
 			case 's':
 				seed = atoi(optarg);
@@ -156,9 +175,18 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init(fbookfile);
+	if (ruleset) {
+		if (!board_set_rules(b, ruleset)) {
+			fprintf(stderr, "Unknown ruleset: %s\n", ruleset);
+			exit(1);
+		}
+	}
+
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
 	ti[S_WHITE] = ti_default;
+
+	chat_init(chatfile);
 
 	char *e_arg = NULL;
 	if (optind < argc)
@@ -199,5 +227,6 @@ int main(int argc, char *argv[])
 		open_gtp_connection(&gtp_sock, gtp_port);
 	}
 	done_engine(e);
+	chat_done();
 	return 0;
 }

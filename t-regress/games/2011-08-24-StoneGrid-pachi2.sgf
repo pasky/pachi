@@ -1,0 +1,391 @@
+(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
+RU[Chinese]SZ[19]KM[7.50]TM[14400]
+PW[StoneGrid]PB[pachi2]BR[3d]DT[2011-08-24]GC[51 +E14:bad!{ladder} pachi plays a broken ladder, which almost cost the game]PC[The KGS Go Server at http://www.gokgs.com/]C[StoneGrid [-\]: GTP Engine for StoneGrid (white): stonegrid version 0.3.4 48
+pachi2 [3d\]: GTP Engine for pachi2 (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+]RE[B+Resign]
+;B[pp]BL[14399.379]C[maproomad [-\]: pachi2: In 2367711 playouts at 64 machines, white M10 can win with 96.89% probability.
+maproomad [-\]: I guess that is left over from the previous round
+maproomad [-\]: pachi2: In 10750 playouts at 64 machines, black Q4 can win with 100.00% probability.
+maproomad [-\]: maybe not
+]
+;W[mg]WL[14246.492]C[BinX [-\]: black q4 can win with a 100% probability ? kind of a divine first move ?
+]
+;B[cj]BL[14189.181]C[BinX [-\]: oh :)
+BinX [-\]: fun game.
+]
+;W[no]WL[14092.666]
+;B[pm]BL[14083.262]
+;W[op]WL[13940.553]
+;B[pq]BL[13977.422]C[maproomad [-\]: pachi2: In 125164015 playouts at 64 machines, black Q3 can win with 48.70% probability.
+]
+;W[cq]WL[13788.393]
+;B[co]BL[13775.243]C[uurtamo [-\]: but pachi2 could have checked each of the 6-ply inbetween then. :)
+]
+;W[dn]WL[13637.551]C[goIngo [-\]: is this avantgarde go?
+uurtamo [-\]: it's curious.
+BinX [-\]: oh, pachi lose confidence with q3 already :o
+]
+;B[cn]BL[13669.876]C[uurtamo [-\]: yes, to go from 100% to 48.7% in a sequence of moves all of which could be explored, means something isn't right. :)
+blob [5k\]: sure, n13, to hell with joseki
+uurtamo [-\]: i don't understand n13 well enough to say whether it's joseki or not.
+]
+;W[do]WL[13486.901]C[blob [5k\]: n13 of course, is not joseki
+blob [5k\]: not yet anyway.......
+uurtamo [-\]: joseki isn't about what is in a book, it's about what makes the board equal.
+blob [5k\]: uh, no
+blob [5k\]: it's what has the historical concensus of being a solid move
+BinX [-\]: ?
+]
+;B[dm]BL[13564.821]C[uurtamo [-\]: it's what has the historical concensus of giving a fair outcome for both players.
+blob [5k\]: which n13 hasn't
+uurtamo [-\]: fair enough.
+uurtamo [-\]: however, it might give a fair outcome for both players. all i'm saying.
+blob [5k\]: "might".... which is why i said "not yet anyway"
+]
+;W[cm]WL[13336.94]
+;B[em]BL[13457.786]C[uurtamo [-\]: you're fixated on the "historical concensus" and i'm fixated on the "fair outcome". no biggie.
+blob [5k\]: sure, but you just misunderstand the meaning of joseki apparently
+uurtamo [-\]: could very well be the case.
+]
+;W[cp]WL[13186.961]C[blob [5k\]: the jo in joseki means "established" (among other things)
+blob [5k\]: i.o.w., an established move
+]
+;B[bm]BL[13363.95]C[blob [5k\]: ....why do these bots get so much time?
+uurtamo [-\]: because it's the "slow play tournament"
+blob [5k\]: it sort of rewards brute force approaches to machine go, which i think isn't really desirable
+]
+;W[cc]WL[13039.78]C[uurtamo [-\]: isn't desirable in what sense?
+blob [5k\]: is there a fast tournament?
+uurtamo [-\]: have you ever tried to write a machine go program?
+blob [5k\]: i've started one yes
+uurtamo [-\]: there are tournaments every month, and a server where programs are continuously playing one another
+blob [5k\]: by not desirable i mean that i find efficiency in computation intuitively more "human"
+blob [5k\]: than monte carlo-esque stuff anyway
+uurtamo [-\]: http://www.weddslist.com/kgs
+blob [5k\]: thanks for that
+]
+;B[kq]BL[13166.445]C[uurtamo [-\]: i think that you want computation to be a certain way that it might not be.
+blob [5k\]: look, the status quo is that humans are stronger than machines at go, yet use less resources (energy wise)
+blob [5k\]: i think it's natural to learn by that example somehow
+uurtamo [-\]: that idea was very popular in the 70's.
+blob [5k\]: so?
+uurtamo [-\]: i'm just suggesting that other approaches have been quite a bit more successful, not just in computer go, but machine learning in general and that you ought not discount their success.
+uurtamo [-\]: there's a mistake in being fixated on what "seems natural"
+uurtamo [-\]: computers aren't all that natural and neither is computation.
+blob [5k\]: i am familiar with ai techniques
+]
+;W[ko]WL[12892.264]C[uurtamo [-\]: there's a mailing list about computer go if you're interested in seeing what people think about.
+blob [5k\]: i'm saying that it seems that human level of higher abstraction can lead to significant gains in efficiency
+blob [5k\]: i know what's out there already.....
+]
+;B[hq]BL[12958.564]C[blob [5k\]: there's a huge gain to be had over mere monte carlo, by clustering and classifying patterns dynamically
+uurtamo [-\]: well, the easiest way to test your ideas is on CGOS.
+uurtamo [-\]: http://cgos.boardspace.net
+blob [5k\]: yeah, as soon as i get some more time on my hands ):
+blob [5k\]: i will :)
+uurtamo [-\]: because otherwise you are simply fantasizing.
+uurtamo [-\]: also, "mere monte carlo" has developed quite a bit.
+blob [5k\]: i already have a working ML go prototype
+uurtamo [-\]: great. you can probably hook it into cgos with very little trouble, then.
+]
+;W[jp]WL[12747.122]C[blob [5k\]: probably, but i want to work on it more first
+blob [5k\]: it's still weak
+uurtamo [-\]: cgos will let you see its level exactly compared with other programs.
+blob [5k\]: i'll keep that in mind, thanks
+]
+;B[jq]BL[12854.702]C[maproomad [-\]: pachi2: In 76190780 playouts at 64 machines, black K3 can win with 50.28% probability.
+blob [5k\]: btw, any existing go bots that use machine learning out there?
+uurtamo [-\]: yes, and they all get crushed by the monte carlo bots. which is why everyone is studying that now.
+uurtamo [-\]: just teasing.
+blob [5k\]: hah
+]
+;W[hp]WL[12601.969]C[uurtamo [-\]: there are bots that implement some kinds of machine learning, but they usually also have a very strong monte-carlo component.
+blob [5k\]: that's good news for me
+uurtamo [-\]: because otherwise they get absolutely crushed.
+uurtamo [-\]: but you should ask on the computer go mailing list. there are lots of helpful ideas there and people there.
+blob [5k\]: they probably rely on monte carlo so much because their board evaluation sucks
+blob [5k\]: and have to play out very far
+uurtamo [-\]: be careful with your estimate of other programs you haven't written.
+]
+;B[gp]BL[12750.975]C[uurtamo [-\]: the only thing you can be sure of is what you've already written.
+blob [5k\]: ok :p
+blob [5k\]: have you written a bot?
+uurtamo [-\]: for instance, many faces of go, which is very strong, not uses some MC, but didn't before.
+uurtamo [-\]: nope, i just started writing one.
+uurtamo [-\]: *now uses
+uurtamo [-\]: i've written a board evaluator, but never turned it into a bot.
+blob [5k\]: evaluation is crucial though, so that should take you a long way
+uurtamo [-\]: or not.
+uurtamo [-\]: words like "should" require deep experience.
+]
+;W[iq]WL[12457.681]C[blob [5k\]: whatever, either agree or don't
+]
+;B[ir]BL[12647.293]C[goIngo [-\]: nick, can you give pachi %?
+maproomad [-\]: The more people know about computer Go, the less they pontificate about it  :)
+maproomad [-\]: ok
+maproomad [-\]: pachi2: In 130351958 playouts at 64 machines, black J2 can win with 51.04% probability.
+goIngo [-\]: thx
+klausP [3d?\]: i prefer black here
+blob [5k\]: very few ppl "know" about computer go
+]
+;W[ip]WL[12313.346]
+;B[gq]BL[12553.873]C[blob [5k\]: too slow for me.... good nigh
+uurtamo [-\]: zen has a bye?
+]
+;W[lq]WL[12220.093]C[maproomad [-\]: yes - Zen has a bye at last.  gghideki will use the time to isntall its new hardware
+]
+;B[lr]BL[12449.955]C[maproomad [-\]: pachi2: In 115171212 playouts at 64 machines, black M2 can win with 52.80% probability.
+uurtamo [-\]: cool, new hardware.
+]
+;W[jr]WL[12076.655]
+;B[kr]BL[12346.161]
+;W[qh]WL[11934.434]
+;B[lm]BL[12148.375]
+;W[ln]WL[11793.194]
+;B[mm]BL[11950.846]
+;W[go]WL[11653.706]C[uurtamo [-\]: do you know what the hardware is?
+]
+;B[fo]BL[11785.708]
+;W[km]WL[11513.825]
+;B[kl]BL[11660.557]
+;W[jm]WL[11373.958]
+;B[ce]BL[11471.174]C[GoRoGoRo [9k\]: Zen still playing in its old clothes
+]
+;W[de]WL[11235.322]
+;B[df]BL[11370.351]
+;W[cf]WL[11098.126]C[goIngo [-\]: why to buy new ones, when the old fit?
+]
+;B[dd]BL[11269.657]
+;W[ee]WL[10960.807]
+;B[cd]BL[11184.929]C[maproomad [-\]: pachi2: In 178944910 playouts at 64 machines, black C16 can win with 56.76% probability.
+]
+;W[dg]WL[10855.87]
+;B[ef]BL[11084.087]
+;W[ff]WL[10719.349]
+;B[eg]BL[10983.134]C[maproomad [-\]: e13 looks like a losing ladder
+uurtamo [-\]: everyone wants to look stylin'.
+maproomad [-\]: pachi2: In 126328940 playouts at 64 machines, black E13 can win with 57.39% probability.
+]
+;W[eh]WL[10584.286]C[uurtamo [-\]: oh, this could be a game ender.
+uurtamo [-\]: i wonder how far into the ladder pachi2 will notice and tenuki.
+]
+;B[fg]BL[10862.716]C[maproomad [-\]: pachi2: In 148112137 playouts at 64 machines, black F13 can win with 55.81% probability.
+uurtamo [-\]: i guess not yet, then. :)
+]
+;W[gg]WL[10448.687]C[ARPAnet [?\]: cool, lee sedol's ladder game :)
+]
+;B[fh]BL[10727.682]C[maproomad [-\]: pachi2: In 164712506 playouts at 64 machines, black F12 can win with 51.06% probability.
+]
+;W[fi]WL[10313.704]
+;B[mo]BL[10544.165]C[maproomad [-\]: pachi2: In 170439444 playouts at 64 machines, black N5 can win with 44.51% probability.
+uurtamo [-\]: doh!
+]
+;W[mn]WL[10180.199]
+;B[nm]BL[10357.779]
+;W[dc]WL[10057.33]
+;B[gh]BL[10162.79]C[maproomad [-\]: pachi2: In 82988479 playouts at 64 machines, black G12 can win with 40.76% probability.
+goIngo [-\]: hmm, pachi in downfall?
+]
+;W[hh]WL[9923.536]C[klausP [4d?\]: jup
+]
+;B[gn]BL[10004.306]C[maproomad [-\]: pachi2: In 122189851 playouts at 64 machines, black G6 can win with 38.62% probability.
+]
+;W[gi]WL[9793.004]
+;B[ed]BL[9835.3]
+;W[ec]WL[9667.99]
+;B[fc]BL[9656.224]
+;W[fd]WL[9543.048]
+;B[gd]BL[9484.417]C[maproomad [-\]: pachi2: In 71631949 playouts at 64 machines, black G16 can win with 38.29% probability.
+]
+;W[fe]WL[9418.831]
+;B[pg]BL[9335.446]C[klausP [3d?\]: poor pachi
+]
+;W[qe]WL[9293.787]
+;B[qg]BL[9194.786]
+;W[ph]WL[9171.43]
+;B[oh]BL[8952.401]
+;W[og]WL[9048.793]
+;B[rh]BL[8814.474]
+;W[ri]WL[8927.703]
+;B[rf]BL[8681.749]
+;W[oi]WL[8805.411]
+;B[nh]BL[8551.044]
+;W[ng]WL[8685.1]
+;B[qi]BL[8422.3]
+;W[pi]WL[8564.827]
+;B[qj]BL[8323.697]
+;W[sh]WL[8533.921]
+;B[rg]BL[8198.341]C[maproomad [-\]: pachi2: In 169314007 playouts at 64 machines, black S13 can win with 42.44% probability.
+]
+;W[qk]WL[8451.774]
+;B[pj]BL[8074.903]C[klausP [3d?\]: pachi fighting for a comeback, so is gomorra
+maproomad [-\]: pachi2: In 142840643 playouts at 64 machines, black Q10 can win with 43.64% probability.
+]
+;W[rj]WL[8383.772]
+;B[pk]BL[7955.361]
+;W[hr]WL[8268.369]
+;B[js]BL[7835.596]C[maproomad [-\]: pachi2: In 157538848 playouts at 64 machines, black K1 can win with 44.47% probability.
+maproomad [-\]: creeping back towards 50%
+]
+;W[ni]WL[8150.466]
+;B[mh]BL[7719.925]C[goIngo [-\]: unbelievable
+]
+;W[mi]WL[8035.124]
+;B[lh]BL[7613.401]
+;W[lg]WL[7944.056]C[goIngo [-\]: pachi %, please
+]
+;B[li]BL[7500.636]C[maproomad [-\]: pachi2: In 141731142 playouts at 64 machines, black M11 can win with 47.00% probability.
+goIngo [-\]: thx
+maproomad [-\]: if I don't res[pond, it's probably becasue I am not here
+goIngo [-\]: ok
+]
+;W[ok]WL[7830.385]C[HYamashita [3k\]: pachi ran from ladder... if StoneGrid lose, 66th G11 is maybe lose move :-)
+]
+;B[pl]BL[7314.172]C[goIngo [-\]: KlausP also thought so
+maproomad [-\]: pachi2: In 175825257 playouts at 64 machines, black Q8 can win with 48.13% probability.
+]
+;W[lj]WL[7716.828]
+;B[kj]BL[7205.826]
+;W[lk]WL[7604.161]
+;B[oj]BL[7099.234]C[maproomad [-\]: pachi2: In 156331002 playouts at 64 machines, black P10 can win with 50.68% probability.
+]
+;W[mj]WL[7490.738]
+;B[kk]BL[6994.124]
+;W[re]WL[7408.672]
+;B[pf]BL[6816.718]
+;W[pe]WL[7298.225]
+;B[of]BL[6715.798]
+;W[ne]WL[7188.132]
+;B[cl]BL[6616.812]C[maproomad [-\]: pachi2: In 87049581 playouts at 64 machines, black C8 can win with 54.53% probability.
+]
+;W[po]WL[7078.102]C[goIngo [-\]: wow, turning the table
+maproomad [-\]: seems optimistic - W has a huge top, and B's central group is weak
+]
+;B[qo]BL[6432.123]C[maproomad [-\]: pachi2: In 136842147 playouts at 64 machines, black R5 can win with 54.94% probability.
+]
+;W[fr]WL[6970.775]
+;B[gr]BL[6337.334]
+;W[qp]WL[6863.532]
+;B[pn]BL[6166.407]
+;W[qq]WL[6758.457]
+;B[oo]BL[6075.173]
+;W[pr]WL[6653.682]
+;B[oq]BL[5988.859]
+;W[ro]WL[6548.985]
+;B[jh]BL[5901.625]
+;W[kg]WL[6446.203]
+;B[rn]BL[5808.541]
+;W[jg]WL[6343.276]
+;B[ji]BL[5656.431]
+;W[ik]WL[6242.372]
+;B[jc]BL[5510.951]
+;W[lc]WL[6140.836]
+;B[fb]BL[5431.115]
+;W[kh]WL[6041.661]
+;B[ki]BL[5351.976]
+;W[gc]WL[5942.788]
+;B[hc]BL[5274.008]
+;W[eb]WL[5844.746]
+;B[gb]BL[5197.281]
+;W[ib]WL[5747.462]
+;B[jb]BL[5121.653]
+;W[kb]WL[5651.079]
+;B[kc]BL[4999.996]
+;W[hd]WL[5553.721]
+;B[he]BL[4882.043]
+;W[kd]WL[5458.66]
+;B[id]BL[4768.85]
+;W[jd]WL[5365.841]
+;B[lb]BL[4697.354]
+;W[ic]WL[5273.326]
+;B[ka]BL[4625.948]
+;W[ia]WL[5180.722]
+;B[mc]BL[4543.569]
+;W[ld]WL[5089.09]
+;B[hb]BL[4472.629]
+;W[nb]WL[4999.019]
+;B[nc]BL[4374.154]
+;W[oc]WL[4909.481]
+;B[od]BL[4276.269]C[maproomad [-\]: pachi2: In 45121745 playouts at 64 machines, black P16 can win with 81.12% probability.
+maproomad [-\]: maybe it thinks the bottom left is dead
+]
+;W[ll]WL[4819.899]
+;B[mk]BL[4182.18]
+;W[oe]WL[4731.432]C[GoRoGoRo [9k\]: isn't it?
+GoRoGoRo [9k\]: well ... W d2 may be a start?
+maproomad [-\]: W d2?
+GoRoGoRo [9k\]: thx
+]
+;B[ob]BL[4090.913]
+;W[is]WL[4645.672]
+;B[hs]BL[4021.198]
+;W[pc]WL[4558.392]
+;B[eq]BL[3931.121]C[maproomad [-\]: pachi2: In 66792603 playouts at 64 machines, black E3 can win with 83.32% probability.
+]
+;W[so]WL[4473.459]
+;B[rq]BL[3841.046]C[maproomad [-\]: pachi2: In 53617646 playouts at 64 machines, black S3 can win with 84.08% probability.
+]
+;W[qr]WL[4389.52]
+;B[rp]BL[3751.411]
+;W[mp]WL[4306.146]
+;B[rr]BL[3662.657]C[maproomad [-\]: pachi2: In 53837927 playouts at 64 machines, black S2 can win with 84.37% probability.
+]
+;W[ie]WL[4224.887]
+;B[hd]BL[3595.694]C[maproomad [-\]:  pachi2: In 112272634 playouts at 64 machines, black H16 can win with 82.43% probability.
+]
+;W[nq]WL[4143.842]
+;B[np]BL[3529.095]
+;W[qm]WL[4062.431]
+;B[nn]BL[3441.868]
+;W[qn]WL[3983.645]
+;B[po]BL[3439.797]
+;W[rm]WL[3905.712]
+;B[rl]BL[3368.682]
+;W[rs]WL[3828.818]
+;B[bg]BL[3281.343]
+;W[sr]WL[3751.145]
+;B[hj]BL[3194.22]
+;W[bh]WL[3673.258]
+;B[bf]BL[3128.416]
+;W[nk]WL[3597.054]
+;B[ch]BL[3042.792]
+;W[ml]WL[3523.668]
+;B[nl]BL[2960.247]C[maproomad [-\]: pachi2: In 93360296 playouts at 64 machines, black O8 can win with 85.51% probability.
+jlg [-\]: I should also report the dynamic komi. pachi is currently giving 26 points komi
+]
+;W[ci]WL[3448.2]
+;B[bi]BL[2895.557]
+;W[ai]WL[3375.882]
+;B[di]BL[2814.737]
+;W[bd]WL[3305.694]
+;B[il]BL[2734.352]
+;W[fl]WL[3232.07]
+;B[or]BL[2655.689]
+;W[fm]WL[3159.724]C[Winnetou [?\]: The moves are very strange. After pachi lost the ladder the game was terrible.
+]
+;B[ps]BL[2579.106]C[jlg [-\]: yes this is a known ladder bug indeed awful. But now pachi is trying to maximize the score (komi 35 points)
+]
+;W[jk]WL[3088.298]C[Winnetou [?\]: It seems that it is not pachi who maximizes the win but Stonegrid who maximizes the loss ;)
+]
+;B[be]BL[2503.785]C[maproomad [-\]: pachi2: In 93549867 playouts at 64 machines, black B15 can win with 89.42% probability.
+]
+;W[na]WL[3018.609]C[reticent [5k\]: go seigen would either love or shake his head at the fuseki in this game
+reticent [5k\]: not nearly strong enough to know which
+]
+;B[ho]BL[2432.144]C[reticent [5k\]: and what the hell was the ladder pachi2 played out?
+jlg [-\]: known ladder bug
+reticent [5k\]: right
+reticent [5k\]: anyway, looks like pachi2 spotted stonegrid fifty points and went on to win anyway
+]
+;W[dp]WL[2948.142]
+;B[md]BL[2362.29]
+;W[nd]WL[2879.078]
+;B[bc]BL[2293.487]C[jlg [-\]: 92%, komi 54
+]
+;W[bb]WL[2813.878]
+;B[nj]BL[2291.855]
+;W[mb]WL[2747.406]
+;B[ql]BL[2222.578]
+;W[sn]WL[2682.776]
+;B[mk]BL[2221.186]C[salty [2d\]: i hope w isn`t planing to win that ^
+])

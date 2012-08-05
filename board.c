@@ -1,4 +1,3 @@
-#include <alloca.h>
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -13,6 +12,9 @@
 #include "mq.h"
 #include "random.h"
 
+#ifdef BOARD_SPATHASH
+#include "patternsp.h"
+#endif
 #ifdef BOARD_PAT3
 #include "pattern3.h"
 #endif
@@ -74,6 +76,11 @@ board_alloc(struct board *board)
 #else
 	int csize = 0;
 #endif
+#ifdef BOARD_SPATHASH
+	int ssize = board_size2(board) * sizeof(*board->spathash);
+#else
+	int ssize = 0;
+#endif
 #ifdef BOARD_PAT3
 	int p3size = board_size2(board) * sizeof(*board->pat3);
 #else
@@ -88,7 +95,7 @@ board_alloc(struct board *board)
 #endif
 	int cdsize = board_size2(board) * sizeof(*board->coord);
 
-	size_t size = bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + p3size + tsize + tqsize + cdsize;
+	size_t size = bsize + gsize + fsize + psize + nsize + hsize + gisize + csize + ssize + p3size + tsize + tqsize + cdsize;
 	void *x = malloc2(size);
 
 	/* board->b must come first */
@@ -101,6 +108,9 @@ board_alloc(struct board *board)
 	board->gi = x; x += gisize;
 #ifdef WANT_BOARD_C
 	board->c = x; x += csize;
+#endif
+#ifdef BOARD_SPATHASH
+	board->spathash = x; x += ssize;
 #endif
 #ifdef BOARD_PAT3
 	board->pat3 = x; x += p3size;
@@ -249,6 +259,20 @@ board_init_data(struct board *board)
 			board->h[c * 2 + 1] = 1;
 	} foreach_point_end;
 
+#ifdef BOARD_SPATHASH
+	/* Initialize spatial hashes. */
+	foreach_point(board) {
+		for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
+			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+				ptcoords_at(x, y, c, board, j);
+				board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
+					pthashes[0][j][board_at(board, c)];
+				board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
+					pthashes[0][j][stone_other(board_at(board, c))];
+			}
+		}
+	} foreach_point_end;
+#endif
 #ifdef BOARD_PAT3
 	/* Initialize 3x3 pattern codes. */
 	foreach_point(board) {
@@ -277,6 +301,7 @@ board_clear(struct board *board)
 	int size = board_size(board);
 	floating_t komi = board->komi;
 	char *fbookfile = board->fbookfile;
+	enum go_ruleset rules = board->rules;
 
 	board_done_noalloc(board);
 
@@ -291,6 +316,7 @@ board_clear(struct board *board)
 
 	board->komi = komi;
 	board->fbookfile = fbookfile;
+	board->rules = rules;
 
 	if (board->fbookfile) {
 		board->fbook = fbook_init(board->fbookfile, board);
@@ -458,6 +484,22 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 	board->qhash[coord_quadrant(coord, board)] ^= hash_at(board, coord, color);
 	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
+
+#ifdef BOARD_SPATHASH
+	/* Gridcular metric is reflective, so we update all hashes
+	 * of appropriate ditance in OUR circle. */
+	for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
+		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+			ptcoords_at(x, y, coord, board, j);
+			/* We either changed from S_NONE to color
+			 * or vice versa; doesn't matter. */
+			board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
+				pthashes[0][j][color] ^ pthashes[0][j][S_NONE];
+			board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
+				pthashes[0][j][stone_other(color)] ^ pthashes[0][j][S_NONE];
+		}
+	}
+#endif
 
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */
@@ -1252,6 +1294,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	if (DEBUGL(6))
 		fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 
+	int ko_caps = 0;
+	coord_t cap_at = pass;
 	foreach_neighbor(board, coord, {
 		inc_neighbor_count_at(board, c, color);
 		/* Originally, this could not have changed any trait
@@ -1269,19 +1313,18 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 				group_base(group));
 
 		if (board_group_captured(board, group)) {
-			if (board_group_capture(board, group) == 1) {
-				/* If we captured multiple groups at once,
-				 * we can't be fighting ko so we don't need
-				 * to check for that. */
-				ko.color = stone_other(color);
-				ko.coord = c;
-				board->last_ko = ko;
-				board->last_ko_age = board->moves;
-				if (DEBUGL(5))
-					fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord, board));
-			}
+			ko_caps += board_group_capture(board, group);
+			cap_at = c;
 		}
 	});
+	if (ko_caps == 1) {
+		ko.color = stone_other(color);
+		ko.coord = cap_at; // unique
+		board->last_ko = ko;
+		board->last_ko_age = board->moves;
+		if (DEBUGL(5))
+			fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord, board));
+	}
 
 	board_at(board, coord) = color;
 	group_t group = new_group(board, coord);
@@ -1326,6 +1369,11 @@ int
 board_play(struct board *board, struct move *m)
 {
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
+		if (is_pass(m->coord) && board->rules == RULES_SIMING) {
+			/* On pass, the player gives a pass stone
+			 * to the opponent. */
+			board->captures[stone_other(m->color)]++;
+		}
 		struct move nomove = { pass, S_NONE };
 		board->ko = nomove;
 		board->last_move4 = board->last_move3;
@@ -1352,6 +1400,10 @@ int board_undo(struct board *board)
 {
 	if (!is_pass(board->last_move.coord))
 		return -1;
+	if (board->rules == RULES_SIMING) {
+		/* Return pass stone to the passing player. */
+		board->captures[stone_other(board->last_move.color)]--;
+	}
 	board->last_move = board->last_move2;
 	board->last_move2 = board->last_move3;
 	board->last_move3 = board->last_move4;
@@ -1451,7 +1503,7 @@ board_fast_score(struct board *board)
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
 
-	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
+	return board->komi + (board->rules != RULES_SIMING ? board->handicap : 0) + scores[S_WHITE] - scores[S_BLACK];
 }
 
 /* Owner map: 0: undecided; 1: black; 2: white; 3: dame */
@@ -1536,7 +1588,7 @@ board_official_score(struct board *board, struct move_queue *q)
 
 	/* We need to special-case empty board. */
 	if (!s[S_BLACK] && !s[S_WHITE])
-		return board->komi + board->handicap;
+		return board->komi;
 
 	while (board_tromp_taylor_iter(board, ownermap))
 		/* Flood-fill... */;
@@ -1551,5 +1603,24 @@ board_official_score(struct board *board, struct move_queue *q)
 		scores[ownermap[c]]++;
 	} foreach_point_end;
 
-	return board->komi + board->handicap + scores[S_WHITE] - scores[S_BLACK];
+	return board->komi + (board->rules != RULES_SIMING ? board->handicap : 0) + scores[S_WHITE] - scores[S_BLACK];
+}
+
+bool
+board_set_rules(struct board *board, char *name)
+{
+	if (!strcasecmp(name, "japanese")) {
+		board->rules = RULES_JAPANESE;
+	} else if (!strcasecmp(name, "chinese")) {
+		board->rules = RULES_CHINESE;
+	} else if (!strcasecmp(name, "aga")) {
+		board->rules = RULES_AGA;
+	} else if (!strcasecmp(name, "new_zealand")) {
+		board->rules = RULES_NEW_ZEALAND;
+	} else if (!strcasecmp(name, "siming") || !strcasecmp(name, "simplified_ing")) {
+		board->rules = RULES_SIMING;
+	} else {
+		return false;
+	}
+	return true;
 }

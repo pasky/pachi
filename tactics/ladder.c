@@ -5,16 +5,10 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "mq.h"
+#include "tactics/1lib.h"
 #include "tactics/ladder.h"
 
-
-/* Is this ladder breaker friendly for the one who catches ladder. */
-static bool
-ladder_catcher(struct board *b, int x, int y, enum stone laddered)
-{
-	enum stone breaker = board_atxy(b, x, y);
-	return breaker == stone_other(laddered) || breaker == S_OFFBOARD;
-}
 
 bool
 is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
@@ -49,7 +43,7 @@ is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
 	int libs2 = board_group_info(b, group_atxy(b, x - xd - yd * dd, y - yd - xd * dd)).libs;
 	if (DEBUGL(6))
 		fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);
-	if (libs1 < 2 && libs2 < 2)
+	if (libs1 < 2 || libs2 < 2)
 		return false;
 	if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor && libs1 < 3)
 		return false;
@@ -59,132 +53,145 @@ is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
 }
 
 
-/* This is very trivial and gets a lot of corner cases wrong.
- * We need this to be just very fast. One important point is
- * that we sometimes might not notice a ladder but if we do,
- * it should always work; thus we can use this for strong
- * negative hinting safely. */
+/* This is a rather expensive ladder reader. It can read out any sequences
+ * where laddered group should be kept at two liberties. The recursion
+ * always makes a "to-be-laddered" move and then considers the chaser's
+ * two alternatives (usually, one of them is trivially refutable). The
+ * function returns true if there is a branch that ends up with laddered
+ * group captured, false if not (i.e. for each branch, laddered group can
+ * gain three liberties). */
 
 static bool
-middle_ladder_walk(struct board *b, enum stone lcolor, int x, int y, int xd, int yd)
+middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum stone lcolor)
 {
-#define ladder_check(xd1_, yd1_, xd2_, yd2_, xd3_, yd3_)	\
-	if (board_atxy(b, x, y) != S_NONE) { \
-		/* Did we hit a stone when playing out ladder? */ \
-		if (ladder_catcher(b, x, y, lcolor)) \
-			return true; /* ladder works */ \
-		if (board_group_info(b, group_atxy(b, x, y)).lib[0] > 0) \
-			return false; /* friend that's not in atari himself */ \
-	} else { \
-		/* No. So we are at new position. \
-		 * We need to check indirect ladder breakers. */ \
-		/* . 2 x 3 . \
-		 * . x o O 1 <- only at O we can check for o at 2 \
-		 * x o o x .    otherwise x at O would be still deadly \
-		 * o o x . . \
-		 * We check for o and x at 1, these are vital. \
-		 * We check only for o at 2; x at 2 would mean we \
-		 * need to fork (one step earlier). */ \
-		coord_t c = coord_xy(b, x, y); \
-		coord_t c1 = coord_xy(b, x + (xd1_), y + (yd1_)); \
-		enum stone s1 = board_at(b, c1); \
-		if (s1 == lcolor) return false; \
-		if (s1 == stone_other(lcolor)) { \
-			/* One more thing - if the position at 3 is \
-			 * friendly and safe, we escaped anyway! */ \
-			coord_t c3 = coord_xy(b, x + (xd3_), y + (yd3_)); \
-			return board_at(b, c3) != lcolor \
-			       || board_group_info(b, group_at(b, c3)).libs < 2; \
-		} \
-		enum stone s2 = board_atxy(b, x + (xd2_), y + (yd2_)); \
-		if (s2 == lcolor) return false; \
-		/* Then, can X actually "play" 1 in the ladder? Of course,
-		 * if we had already hit the edge, no need. */ \
-		if (neighbor_count_at(b, c, S_OFFBOARD) == 0 \
-		    && neighbor_count_at(b, c1, lcolor) + neighbor_count_at(b, c1, S_OFFBOARD) >= 2) \
-			return false; /* It would be self-atari! */ \
+	assert(board_group_info(b, laddered).libs == 1);
+
+	/* First, escape. */
+	if (DEBUGL(6))
+		fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove, b));
+	struct move m = { nextmove, lcolor };
+	int res = board_play(b, &m);
+	laddered = group_at(b, laddered);
+	assert(res >= 0);
+	if (DEBUGL(8)) {
+		board_print(b, stderr);
+		fprintf(stderr, "%s c %d\n", coord2sstr(laddered, b), board_group_info(b, laddered).libs);
 	}
-#define ladder_horiz	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d horiz step (%d,%d)\n", x, y, xd, yd); x += xd; ladder_check(xd, 0, -2 * xd, yd, 0, yd); } while (0)
-#define ladder_vert	do { if (DEBUGL(6)) fprintf(stderr, "%d,%d vert step of (%d,%d)\n", x, y, xd, yd); y += yd; ladder_check(0, yd, xd, -2 * yd, xd, 0); } while (0)
 
-	if (ladder_catcher(b, x - xd, y, lcolor))
-		ladder_horiz;
-	do {
-		ladder_vert;
-		ladder_horiz;
-	} while (1);
-}
-
-bool
-is_middle_ladder(struct board *b, coord_t coord, enum stone lcolor)
-{
-	int x = coord_x(coord, b), y = coord_y(coord, b);
-
-	/* Figure out the ladder direction */
-	int xd, yd;
-	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
-	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : board_atxy(b, x, y - 1) == S_NONE ? -1 : 0;
-
-	if (!xd || !yd) {
-		if (DEBUGL(5))
-			fprintf(stderr, "no ladder, too little space; self-atari?\n");
+	if (board_group_info(b, laddered).libs == 1) {
+		if (DEBUGL(6))
+			fprintf(stderr, "* we can capture now\n");
+		return true;
+	}
+	if (board_group_info(b, laddered).libs > 2) {
+		if (DEBUGL(6))
+			fprintf(stderr, "* we are free now\n");
 		return false;
 	}
 
-	/* For given (xd,yd), we have two possibilities where to move
-	 * next. Consider (-1,-1):
-	 * n X .   n c X
-	 * c O X   X O #
-	 * X # #   . X #
-	 */
-	bool horiz_first = ladder_catcher(b, x, y - yd, lcolor); // left case
-	bool vert_first = ladder_catcher(b, x - xd, y, lcolor); // right case
+	foreach_neighbor(b, m.coord, {
+		if (board_at(b, c) == stone_other(lcolor) && board_group_info(b, group_at(b, c)).libs == 1) {
+			/* We can capture one of the ladder stones
+			 * anytime later. */
+			/* XXX: If we were very lucky, capturing
+			 * this stone will not help us escape.
+			 * That should be pretty rate. */
+			if (DEBUGL(6))
+				fprintf(stderr, "* can capture chaser\n");
+			return false;
+		}
+	});
 
-	/* We don't have to look at the other 'X' in the position - if it
-	 * wouldn't be there, the group wouldn't be in atari. */
-
-	/* We do only tight ladders, not loose ladders. Furthermore,
-	 * the ladders need to be simple:
-	 * . X .             . . X
-	 * c O X supported   . c O unsupported
-	 * X # #             X O #
-	 */
-	assert(!(horiz_first && vert_first));
-	if (!horiz_first && !vert_first) {
-		/* TODO: In case of basic non-simple ladder, play out both variants. */
-		if (DEBUGL(5))
-			fprintf(stderr, "non-simple ladder\n");
-		return false;
+	/* Now, consider alternatives. */
+	int liblist[2], libs = 0;
+	for (int i = 0; i < 2; i++) {
+		coord_t ataristone = board_group_info(b, laddered).lib[i];
+		coord_t escape = board_group_info(b, laddered).lib[1 - i];
+		if (immediate_liberty_count(b, escape) > 2 + coord_is_adjecent(ataristone, escape, b)) {
+			/* Too much free space, ignore. */
+			continue;
+		}
+		liblist[libs++] = i;
 	}
 
-	/* We do that below for further moves, but now initially - check
-	 * that at 'c', we aren't putting any of the catching stones
-	 * in atari. */
-#if 1 // this might be broken?
-#define check_catcher_danger(b, x_, y_) do { \
-	if (board_atxy(b, (x_), (y_)) != S_OFFBOARD \
-	    && board_group_info(b, group_atxy(b, (x_), (y_))).libs <= 2) { \
-		if (DEBUGL(5)) \
-			fprintf(stderr, "ladder failed - atari at the beginning\n"); \
-		return false; \
-	} } while (0)
+	/* Try out the alternatives. */
+	bool is_ladder = false;
+	for (int i = 0; !is_ladder && i < libs; i++) {
+		struct board *b2 = b;
+		if (i != libs - 1) {
+			b2 = alloca(sizeof(*b2));
+			board_copy(b2, b);
+		}
 
-	if (horiz_first) {
-		check_catcher_danger(b, x, y - yd);
-		check_catcher_danger(b, x - xd, y + yd);
-	} else {
-		check_catcher_danger(b, x - xd, y);
-		check_catcher_danger(b, x + xd, y - yd);
+		coord_t ataristone = board_group_info(b2, laddered).lib[liblist[i]];
+		// coord_t escape = board_group_info(b2, laddered).lib[1 - liblist[i]];
+		struct move m = { ataristone, stone_other(lcolor) };
+		int res = board_play(b2, &m);
+		/* If we just played self-atari, abandon ship. */
+		/* XXX: If we were very lucky, capturing this stone will
+		 * not help us escape. That should be pretty rate. */
+		if (DEBUGL(6))
+			fprintf(stderr, "(%d=%d) ladder atari %s (%d libs)\n", i, res, coord2sstr(ataristone, b2), board_group_info(b2, group_at(b2, ataristone)).libs);
+		if (res >= 0 && board_group_info(b2, group_at(b2, ataristone)).libs > 1)
+			is_ladder = middle_ladder_walk(b2, laddered, board_group_info(b2, laddered).lib[0], lcolor);
+
+		if (i != libs - 1) {
+			board_done_noalloc(b2);
+		}
 	}
-#undef check_catcher_danger
-#endif
-	
-	return middle_ladder_walk(b, lcolor, x, y, xd, yd);
+	if (DEBUGL(6))
+		fprintf(stderr, "propagating %d\n", is_ladder);
+	return is_ladder;
 }
 
 bool
-wouldbe_ladder(struct board *b, coord_t escapelib, coord_t chaselib, enum stone lcolor)
+is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
 {
+	/* TODO: Remove the redundant parameters. */
+	assert(board_group_info(b, laddered).libs == 1);
+	assert(board_group_info(b, laddered).lib[0] == coord);
+	assert(board_at(b, laddered) == lcolor);
+
+	/* If we can move into empty space or do not have enough space
+	 * to escape, this is obviously not a ladder. */
+	if (immediate_liberty_count(b, coord) != 2) {
+		if (DEBUGL(5))
+			fprintf(stderr, "no ladder, wrong free space\n");
+		return false;
+	}
+
+	/* A fair chance for a ladder. Group in atari, with some but limited
+	 * space to escape. Time for the expensive stuff - set up a temporary
+	 * board and start selective 2-liberty search. */
+
+	struct move_queue ccq = { .moves = 0 };
+	if (can_countercapture(b, lcolor, laddered, lcolor, &ccq, 0)) {
+		/* We could escape by countercapturing a group.
+		 * Investigate. */
+		assert(ccq.moves > 0);
+		for (unsigned int i = 0; i < ccq.moves; i++) {
+			struct board b2;
+			board_copy(&b2, b);
+			bool is_ladder = middle_ladder_walk(&b2, laddered, ccq.move[i], lcolor);
+			board_done_noalloc(&b2);
+			if (!is_ladder)
+				return false;
+		}
+	}
+
+	struct board b2;
+	board_copy(&b2, b);
+	bool is_ladder = middle_ladder_walk(&b2, laddered, board_group_info(&b2, laddered).lib[0], lcolor);
+	board_done_noalloc(&b2);
+	return is_ladder;
+}
+
+bool
+wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chaselib, enum stone lcolor)
+{
+	assert(board_group_info(b, group).libs == 2);
+	assert(board_at(b, group) == lcolor);
+
 	if (DEBUGL(6))
 		fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
 			stone2str(lcolor), coord2sstr(escapelib, b), coord2sstr(chaselib, b));
@@ -201,35 +208,15 @@ wouldbe_ladder(struct board *b, coord_t escapelib, coord_t chaselib, enum stone 
 		return false;
 	}
 
-	int x = coord_x(escapelib, b), y = coord_y(escapelib, b);
-	int cx = coord_x(chaselib, b), cy = coord_y(chaselib, b);
+	bool is_ladder = false;
+	struct board b2;
+	board_copy(&b2, b);
 
-	/* Figure out the ladder direction */
-	int xd, yd;
-	xd = board_atxy(b, x + 1, y) == S_NONE ? 1 : board_atxy(b, x - 1, y) == S_NONE ? -1 : 0;
-	yd = board_atxy(b, x, y + 1) == S_NONE ? 1 : board_atxy(b, x, y - 1) == S_NONE ? -1 : 0;
+	struct move m = { chaselib, stone_other(lcolor) };
+	int res = board_play(&b2, &m);
+	if (res >= 0)
+		is_ladder = middle_ladder_walk(&b2, group, board_group_info(&b2, group).lib[0], lcolor);
 
-	if (board_atxy(b, x + 1, y) == board_atxy(b, x - 1, y)
-	    || board_atxy(b, x, y + 1) == board_atxy(b, x, y - 1)) {
-		if (DEBUGL(5))
-			fprintf(stderr, "no ladder, distorted space\n");
-		return false;
-	}
-
-	/* The ladder may be
-	 * . c .        . e X
-	 * e O X   or   c O X
-	 * X X X        . X X */
-	bool horiz_first = cx + xd == x;
-	bool vert_first = cy + yd == y;
-	//fprintf(stderr, "esc %d,%d chase %d,%d xd %d yd %d\n", x,y, cx,cy, xd, yd);
-	if (horiz_first == vert_first) {
-		/* TODO: In case of basic non-simple ladder, play out both variants. */
-		if (DEBUGL(5))
-			fprintf(stderr, "non-simple ladder\n");
-		return false;
-	}
-
-	/* We skip the atari check, obviously. */
-	return middle_ladder_walk(b, lcolor, x, y, xd, yd);
+	board_done_noalloc(&b2);
+	return is_ladder;
 }

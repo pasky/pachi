@@ -29,17 +29,18 @@ Engine
 ------
 
 The default engine plays by Chinese rules and should be about
-3d KGS strength on 9x9. On 19x19, it might be about KGS 2k, assuming
+7d KGS strength on 9x9. On 19x19, it might be about KGS 1k, assuming
 reasonable hardware, e.g. two-core Athlon64 machine.  On a higher-end
-(e.g. six-way Intel i7) machine, it can hold a solid KGS 1d rank.
+(e.g. six-way Intel i7) machine, it can hold a solid KGS 2d rank.
 When using a large cluster (64 machines, 20 cores each), it maintains
-KGS 3d and has won a 7-stone handicap game against Zhou Junxun 9p.
+KGS 4d and has won e.g. a 7-stone handicap game against Zhou Junxun 9p.
 
 By default, Pachi currently uses the UCT engine that combines
 Monte Carlo approach with tree search; UCB1AMAF tree policy using
 the RAVE method is used for tree search, while the Moggy playout
 policy using 3x3 patterns and various tactical checks is used for
-the semi-random Monte Carlo playouts.
+the semi-random Monte Carlo playouts.  Large-scale board patterns
+are used in the tree search.
 
 At the same time, we keep trying a wide variety of other approaches
 and enhancements. Pachi is an active research platform and quite a few
@@ -47,6 +48,8 @@ improvements have been already achieved. We rigorously play-test new
 features and enable them by default only when they give a universal
 strength boost.
 
+How to run
+~~~~~~~~~~
 
 By default, Pachi will run on a single CPU core, taking up to 1.4GiB
 of memory, not pondering and taking completely arbitrary amount of time
@@ -60,12 +63,53 @@ gets told otherwise over GTP), with 8 threads, taking up to 3GiB
 of memory (+ several tens MiB as a constant overhead) and thinking
 during the opponent's turn as well.
 
+Pachi can use an opening book in a Fuego-compatible format - you can
+obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
+with the -f parameter:
+
+	./pachi -f book.dat ...
+
+You may wish to append some custom Pachi opening book lines to book.dat;
+take them from the book.dat.extra file. If using the default Fuego book,
+you may want to remove the lines listed in book.dat.bad.
+
+Pachi can also use a pattern database to improve its playing performance.
+You can get it at http://pachi.or.cz/pat/ - you will also find further
+instructions there.
+
 For now, there is no comprehensive documentation of options, but you
 can get a pretty good idea by looking at the uct_state_init() function
 in uct/uct.c - you will find the list of UCT engine options there, each
 with a description. At any rate, usually the three options above are
 the only ones you really want to tweak.
 
+Greedy Pachi
+~~~~~~~~~~~~
+
+Normally, Pachi cares only for win or loss and does not take into
+account the point amount. This means that it will play slack endgame
+when winning and crazy moves followed with a resign when losing.
+
+It may give you a more pleasurable playing experience if Pachi
+_does_ take into account the point size, strives for a maximum
+(reasonable) win margin when winning and minimal point loss when
+losing. This is possible by using the maximize_score parameter, e.g.:
+
+	./pachi -t _1200 threads=8,pondering,maximize_score
+
+This enables an aggressive dynamic komi usage and end result margin
+is included in node values aside of winrate. Pachi will also enter
+scoring even when losing (normally, Pachi will never pass in that case).
+Note that if you pass any 'dynkomi' parameter to Pachi, you will reset
+the values set by 'maximize_score'.
+
+Note that Pachi in this mode may be slightly weaker, and result margin
+should not be taken into account when judging either player's strength.
+During the game, the winning/losing margin can be approximated from
+Pachi's "extra komi" or "xkomi" reporting in the progress messages.
+
+Experiments and Testing
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Except UCT, Pachi supports a simple idiotbot-like engine and an example
 treeless MonteCarlo-player. The MonteCarlo simulation ("playout")
@@ -77,8 +121,9 @@ Other special engines are also provided:
   distributed/distributed.c should provide all the guidance
 * a simple "replay" engine that will simply play moves according
   to the playout policy suggestions
+* a simple "patternplay" engine that will play moves according to the
+  learned patterns
 * few other purely for development usage
-
 
 Pachi can be used as a test opponent for development of other go-playing
 programs. For example, to get the "plainest UCT" player, use:
@@ -109,43 +154,35 @@ Pachi can also help you analyze your games by being able to provide
 its opinion on various positions. The user interface is very rudimentary,
 but the ability is certainly there.
 
-There are currently two Pachi interfaces provided for this purpose. One
-possibility is to evaluate all moves within a given game and show how
+There are currently several Pachi interfaces provided for this purpose.
+
+Winrate Development
+~~~~~~~~~~~~~~~~~~~
+
+Pachi can evaluate all moves within a given game and show how
 the winrates for both players evolved - i.e. who was winning at which
 game stage. This is implemented using the `tools/sgf-analyse.pl` script.
 See the comment on top of the script about its usage.
 
-Alternatively, Pachi can evaluate all available moves in a given situation
+Move Ranking
+~~~~~~~~~~~~
+
+Pachi can evaluate all available moves in a given situation
 and for each give a value between 0 and 1 representing perceived
 likelihood of winning the game if one would play that move. I.e. it can
 suggest which moves would be good and bad in a single given situation.
 
-To achieve the latter, follow few simple steps:
+To achieve the latter, note the number of move at the situation you
+want to evaluate and run the `tools/sgf-ratemove.sh` script.
+See the comment on top of the script about its usage.
 
-1. Take an SGF record of your game and generate a GTP file from it:
+Pattern Move Hinting
+~~~~~~~~~~~~~~~~~~~~
 
-	tools/sgf2gtp.pl <file.sgf >file.gtp
-
-2. Open the file.gtp in your favorite plaintext editor and trim it after
-(remove all lines following) the move producing the situation you wish
-to analyze.
-
-3. Instead, add the following line at the bottom of file.gtp:
-
-	0 uct_evaluate black
-
-(replace `black` with `white` if it is white to play).
-
-4. Run Pachi as follows:
-
-	./pachi -t =500 -d 0 <file.gtp | sed -n '/^=0/,${s/^=0 //;p}'
-
-If you want to know more details on what is Pachi thinking about the
-various moves, remove the `-d 0` and `| sed -n ...` parts. To improve
-the accuracy of values (at the expense of run time), raise the value
-of 500 (try 2000 or 10000; 100000 will usually already take couple of
-hours). The values will be most useful in the middle game; in fuseki
-and most yose situations, expect a lot of noise.
+Pachi can show instantenous pattern-based move suggestions very much
+like for example Moyo Go Studio (though of course without a GUI).
+You can use the Move Ranking method above (tools/sgf-ratemove.sh),
+but pass it an extra parameter '-e patternplay'.
 
 
 Framework

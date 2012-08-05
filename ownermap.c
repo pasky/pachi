@@ -49,7 +49,7 @@ board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_
 }
 
 void
-board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge)
+board_ownermap_judge_groups(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge)
 {
 	assert(ownermap->map);
 	assert(judge->gs);
@@ -61,6 +61,7 @@ board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, str
 		if (!g) continue;
 
 		enum point_judgement pj = board_ownermap_judge_point(ownermap, c, judge->thres);
+		// assert(judge->gs[g] == GS_NONE || judge->gs[g] == pj);
 		if (pj == PJ_UNKNOWN) {
 			/* Fate is uncertain. */
 			judge->gs[g] = GS_UNKNOWN;
@@ -68,9 +69,11 @@ board_ownermap_judge_group(struct board *b, struct board_ownermap *ownermap, str
 		} else if (judge->gs[g] != GS_UNKNOWN) {
 			/* Update group state. */
 			enum gj_state new;
-			if (pj == color) {
+
+			// Comparing enum types, casting (int) avoids compiler warnings
+			if ((int)pj == (int)color) { 
 				new = GS_ALIVE;
-			} else if (pj == stone_other(color)) {
+			} else if ((int)pj == (int)stone_other(color)) {
 				new = GS_DEAD;
 			} else { assert(pj == PJ_DAME);
 				/* Exotic! */

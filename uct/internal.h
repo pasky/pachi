@@ -6,6 +6,9 @@
 #include "debug.h"
 #include "move.h"
 #include "ownermap.h"
+#include "pattern.h"
+#include "patternsp.h"
+#include "patternprob.h"
 #include "playout.h"
 #include "stats.h"
 
@@ -26,11 +29,19 @@ struct joseki_dict;
 /* Internal engine state. */
 struct uct {
 	int debug_level;
+	enum uct_reporting {
+		UR_TEXT,
+		UR_JSON,
+		UR_JSON_BIG,
+	} reporting;
+	int reportfreq;
+
 	int games, gamelen;
 	floating_t resign_threshold, sure_win_threshold;
 	double best2_ratio, bestr_ratio;
 	floating_t max_maintime_ratio;
 	bool pass_all_alive; /* Current value */
+	bool allow_losing_pass;
 	bool territory_scoring;
 	int expand_p;
 	bool playout_amaf;
@@ -69,6 +80,9 @@ struct uct {
 	floating_t val_scale;
 	int val_points;
 	bool val_extra;
+	bool val_byavg;
+	bool val_bytemp;
+	floating_t val_bytemp_min;
 
 	int random_policy_chance;
 	bool local_tree;
@@ -93,6 +107,11 @@ struct uct {
 	struct uct_prior *prior;
 	struct uct_pluginset *plugins;
 	struct joseki_dict *jdict;
+
+	struct pattern_setup pat;
+	/* Various modules (prior, policy, ...) set this if they want pattern
+	 * database to be loaded. */
+	bool want_pat;
 
 	/* Used within frame of single genmove. */
 	struct board_ownermap ownermap;

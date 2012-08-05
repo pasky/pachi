@@ -1,0 +1,123 @@
+(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
+RU[Chinese]SZ[19]KM[7.50]TM[1740]OT[10/30 Canadian]
+PW[pachi2]PB[stv]WR[3d]DT[2011-09-04]GC[48 +H8:bad!{ladder} pachi plays a broken ladder, which cost not just the game but also the first place in the tournament. This is a more complex ladder than usual, though.]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [3d\]: GTP Engine for pachi2 (white): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
+stv [-\]: GTP Engine for stv (black): Steenvreter version r105
+]RE[B+Resign]
+;B[pp]BL[1739.65]
+;W[dd]WL[1738.268]
+;B[dp]BL[1739.324]
+;W[qd]WL[1737.439]
+;B[jp]BL[1739.047]
+;W[qn]WL[1736.614]
+;B[ql]BL[1738.772]
+;W[qq]WL[1735.768]
+;B[pq]BL[1738.481]
+;W[qp]WL[1734.863]
+;B[po]BL[1738.19]
+;W[rn]WL[1734.045]
+;B[om]BL[1737.901]
+;W[cn]WL[1733.151]
+;B[cl]BL[1737.629]
+;W[en]WL[1732.354]
+;B[dm]BL[1721.75]
+;W[dn]WL[1719.5]
+;B[fl]BL[1705.918]
+;W[ci]WL[1706.552]
+;B[fp]BL[1690.129]
+;W[fm]WL[1683.483]
+;B[gm]BL[1674.386]
+;W[gl]WL[1670.697]
+;B[hm]BL[1658.697]
+;W[el]WL[1657.592]
+;B[fk]BL[1643.046]
+;W[dk]WL[1644.69]
+;B[ck]BL[1627.478]
+;W[dj]WL[1631.927]
+;B[em]BL[1611.97]
+;W[fn]WL[1619.185]
+;B[gk]BL[1581.375]
+;W[go]WL[1606.577]
+;B[dl]BL[1566.113]
+;W[ek]WL[1593.74]
+;B[bi]BL[1550.93]
+;W[bh]WL[1581.154]
+;B[nc]BL[1535.803]
+;W[io]WL[1560.391]
+;B[bj]BL[1520.715]
+;W[ch]WL[1547.637]
+;B[bm]BL[1505.691]
+;W[bn]WL[1527.846]
+;B[jo]BL[1490.705]
+;W[in]WL[1504.5]
+;B[hq]BL[1475.244]
+;W[hl]WL[1491.885]
+;B[il]BL[1460.337]
+;W[hk]WL[1479.253]
+;B[hj]BL[1445.523]
+;W[ik]WL[1466.785]
+;B[jk]BL[1430.746]
+;W[ij]WL[1454.189]C[jlg [-\]: 61% for pachi
+]
+;B[ii]BL[1416.054]
+;W[jj]WL[1441.464]
+;B[kj]BL[1401.437]
+;W[ji]WL[1428.837]
+;B[jh]BL[1386.857]
+;W[ki]WL[1416.175]
+;B[li]BL[1372.288]
+;W[kh]WL[1403.36]
+;B[kg]BL[1357.764]C[evdw [-\]: one must be wrong here...
+]
+;W[lh]WL[1388.117]
+;B[mh]BL[1343.306]C[jlg [-\]: pachi has a know bug for ladders but this time I'm glad it is right :-)
+]
+;W[lg]WL[1372.638]
+;B[lf]BL[1328.966]
+;W[mg]WL[1357.012]
+;B[ng]BL[1314.64]C[evdw [-\]: is it?
+]
+;W[gp]WL[1332.229]C[jlg [-\]: oops
+]
+;B[gq]BL[1300.372]C[maproomad [-\]: pachi2: In 18629996 playouts at 64 machines, white G4 can win with 31.08% probability.
+jlg [-\]: the ladder doesn't work
+]
+;W[iq]WL[1307.691]C[evdw [-\]: stv is at 65%
+]
+;B[ip]BL[1286.171]
+;W[ir]WL[1287.816]
+;B[hp]BL[1272]C[jlg [-\]: I can't believe it. pachi agrees with stv
+jlg [-\]: I can't see how the ladder works
+]
+;W[ep]WL[1260.255]
+;B[eq]BL[1257.895]C[liquido [4k\]: it does
+evdw [-\]: it slides one along the black stone
+liquido [4k\]: clone the board and play it out
+evdw [-\]: its tricky...
+]
+;W[mf]WL[1227.852]C[jlg [-\]: ah then we did hit the known ladder bug :-)
+]
+;B[me]BL[1243.866]C[liquido [4k\]: well, if you just continue to atari, then its not so tricky
+]
+;W[fr]WL[1195.368]
+;B[fq]BL[1229.853]
+;W[cq]WL[1177.02]C[jlg [-\]: this ladder is costing the first place in the tournament :-(
+]
+;B[cp]BL[1215.901]
+;W[bp]WL[1156.858]C[evdw [-\]: sorry about that
+]
+;B[bo]BL[1202.007]C[jlg [-\]: don't be sorry. we just have to fix the known bug.
+]
+;W[dq]WL[1125.857]
+;B[bq]BL[1188.194]
+;W[do]WL[1109.106]
+;B[ap]BL[1174.503]
+;W[co]WL[1092.487]
+;B[eo]BL[1160.846]
+;W[nf]WL[1073.718]
+;B[of]BL[1147.33]
+;W[bl]WL[1049.87]
+;B[bk]BL[1133.849]
+;W[cm]WL[1032.886]
+;B[al]BL[1120.451]C[jlg [-\]: thanks for the game
+evdw [-\]: thank you
+])

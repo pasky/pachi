@@ -84,6 +84,7 @@ struct playout_amafmap {
 	 * when reading some tactical positions in depth (even if
 	 * they are just one-stone-snapback). */
 	coord_t game[MAX_GAMELEN];
+	bool is_ko_capture[MAX_GAMELEN];
 	int gamelen;
 	/* Our current position in the game sequence; in AMAF, we search
 	 * the range [game_baselen, gamelen[ */

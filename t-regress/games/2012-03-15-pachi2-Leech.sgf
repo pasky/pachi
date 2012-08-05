@@ -1,0 +1,247 @@
+(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
+RU[Chinese]SZ[19]HA[3]KM[0.50]TM[0]OT[5x15 byo-yomi]
+PW[pachi2]PB[Leech]WR[4d]BR[1d]DT[2012-03-15]GC[104 L10:bad{semeai} white loses the semeai by many moves, this move is essentially death in gote]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi2 [4d\]: GTP Engine for pachi2 (white): Pachi Distributed version 9.99 (Satsugen-devel): If you believe you have won but I am still playing, please help me understand by capturing all dead stones. Anyone can send me 'winrate' in private chat to get my assessment of the position. Have a nice game!
+]RE[B+Resign]
+;B[pd]BL[15]OB[5]
+;B[dd]BL[15]OB[5]
+;B[dp]BL[15]OB[5]
+;W[qg]WL[15]OW[5]C[Leech [1d\]: hello mister pachi
+]
+;B[qi]BL[15]OB[5]
+;W[hc]WL[15]OW[5]
+;B[qp]BL[15]OB[5]
+;W[po]WL[15]OW[5]
+;B[pp]BL[15]OB[5]C[fluidistic [6k\]: pachi is close to poland, will be tough game
+]
+;W[oo]WL[15]OW[5]
+;B[rn]BL[15]OB[5]
+;W[qo]WL[15]OW[5]
+;B[ro]BL[15]OB[5]
+;W[qm]WL[15]OW[5]
+;B[oi]BL[15]OB[5]
+;W[op]WL[15]OW[5]
+;B[og]BL[15]OB[5]
+;W[cm]WL[15]OW[5]
+;B[jq]BL[15]OB[5]
+;W[ip]WL[15]OW[5]
+;B[jp]BL[15]OB[5]
+;W[io]WL[15]OW[5]
+;B[kn]BL[15]OB[5]
+;W[iq]WL[15]OW[5]
+;B[om]BL[15]OB[5]
+;W[jo]WL[15]OW[5]
+;B[ko]BL[15]OB[5]
+;W[lq]WL[15]OW[5]
+;B[kp]BL[15]OB[5]
+;W[mn]WL[15]OW[5]
+;B[gp]BL[15]OB[5]
+;W[go]WL[15]OW[5]
+;B[fo]BL[15]OB[5]
+;W[gn]WL[15]OW[5]C[sztanguo [2k\]: hellow,jlg,how do it setup param pachi on gogui is good?my pc is i72600,i want pachi within 5sec per move?
+]
+;B[kl]BL[15]OB[5]
+;W[ml]WL[15]OW[5]
+;B[ok]BL[15]OB[5]
+;W[kk]WL[15]OW[5]
+;B[il]BL[15]OB[5]
+;W[jm]WL[15]OW[5]
+;B[km]BL[15]OB[5]C[jlg [-\]: I told you yesterday :-)
+]
+;W[jl]WL[15]OW[5]
+;B[lk]BL[15]OB[5]
+;W[jk]WL[15]OW[5]C[sztanguo [2k\]: but it is too weak 
+]
+;B[ll]BL[15]OB[5]
+;W[oq]WL[15]OW[5]
+;B[pr]BL[15]OB[5]C[jlg [-\]: buy more cores or give it a handicap :-)
+]
+;W[jr]WL[15]OW[5]
+;B[kr]BL[15]OB[5]C[sztanguo [2k\]: how to handicap?
+]
+;W[hr]WL[15]OW[5]
+;B[js]BL[15]OB[5]
+;W[qr]WL[15]OW[5]
+;B[pq]BL[15]OB[5]C[sztanguo [2k\]:  ok ,i find it
+]
+;W[or]WL[15]OW[5]
+;B[qn]BL[15]OB[5]C[jlg [-\]: Gogui -> Help
+]
+;W[ps]WL[15]OW[5]
+;B[rq]BL[15]OB[5]
+;W[nl]WL[15]OW[5]
+;B[ol]BL[15]OB[5]
+;W[nj]WL[15]OW[5]
+;B[nk]BL[15]OB[5]C[sztanguo [2k\]: thx
+]
+;W[mk]WL[15]OW[5]
+;B[mm]BL[15]OB[5]
+;W[sp]WL[15]OW[5]
+;B[rp]BL[15]OB[5]
+;W[nm]WL[15]OW[5]
+;B[mj]BL[15]OB[5]
+;W[nn]WL[15]OW[5]
+;B[lj]BL[15]OB[5]
+;W[ni]WL[15]OW[5]
+;B[oh]BL[15]OB[5]
+;W[pn]WL[15]OW[5]
+;B[pm]BL[15]OB[5]
+;W[ir]WL[15]OW[5]
+;B[kq]BL[15]OB[5]
+;W[lr]WL[15]OW[5]
+;B[mo]BL[15]OB[4]
+;W[mp]WL[15]OW[5]
+;B[lo]BL[15]OB[4]
+;W[mh]WL[15]OW[5]
+;B[no]BL[15]OB[4]C[sztanguo [2k\]: i have setup:pachi -t _1200 threads=8,max_tree_size=3072,pondering.  can i add book at the same time?and how ?
+]
+;W[on]WL[15]OW[5]
+;B[np]BL[15]OB[4]C[jlg [-\]: do you have 8 cores? 
+]
+;W[kh]WL[15]OW[5]C[sztanguo [2k\]: yes
+]
+;B[nq]BL[15]OB[4]
+;W[nr]WL[15]OW[5]
+;B[mq]BL[15]OB[4]
+;W[mr]WL[15]OW[5]
+;B[os]BL[15]OB[4]C[jlg [-\]: to add book just add -f book.dat as I told you yesterday
+]
+;W[ls]WL[15]OW[5]
+;B[ks]BL[15]OB[4]
+;W[oj]WL[15]OW[5]
+;B[ql]BL[15]OB[4]
+;W[ln]WL[15]OW[5]
+;B[ns]BL[15]OB[4]C[yoyoma [2d\]: So this pachi is running >1000 cores?  They're connected just by ethernet or... ?
+]
+;W[lm]WL[15]OW[5]
+;B[qs]BL[15]OB[4]
+;W[pk]WL[15]OW[5]
+;B[rm]BL[15]OB[4]
+;W[pi]WL[15]OW[5]
+;B[ph]BL[15]OB[4]C[sztanguo [2k\]: pachi -f book.dat,-t_1200 threads=8,max_size=3072,pondering       is this ok?
+]
+;W[pl]WL[15]OW[5]
+;B[qm]BL[15]OB[4]
+;W[kj]WL[15]OW[5]C[jlg [-\]: no, space instead of , after book.dat
+]
+;B[pj]BL[15]OB[3]
+;W[jn]WL[15]OW[5]
+;B[ps]BL[15]OB[3]
+;W[de]WL[15]OW[5]
+;B[ce]BL[15]OB[3]C[jlg [-\]: yoyoma: see http://pasky.or.cz/go/pachi-tr.pdf
+]
+;W[cf]WL[15]OW[5]
+;B[cd]BL[15]OB[3]
+;W[cq]WL[15]OW[5]
+;B[cp]BL[15]OB[3]
+;W[ed]WL[15]OW[5]
+;B[df]BL[15]OB[3]
+;W[dg]WL[15]OW[5]
+;B[ee]BL[15]OB[3]
+;W[ef]WL[15]OW[5]
+;B[dq]BL[15]OB[3]
+;W[bp]WL[15]OW[5]
+;B[bo]BL[15]OB[3]
+;W[br]WL[15]OW[5]
+;B[ap]BL[15]OB[3]
+;W[bq]WL[15]OW[5]
+;B[cn]BL[15]OB[3]
+;W[dr]WL[15]OW[5]
+;B[bm]BL[15]OB[3]
+;W[bl]WL[15]OW[5]
+;B[cl]BL[15]OB[3]
+;W[dm]WL[15]OW[5]
+;B[bk]BL[15]OB[3]
+;W[ck]WL[15]OW[5]
+;B[dl]BL[15]OB[3]
+;W[el]WL[15]OW[5]
+;B[dk]BL[15]OB[3]
+;W[dj]WL[15]OW[5]
+;B[ek]BL[15]OB[3]
+;W[fk]WL[15]OW[5]
+;B[cj]BL[15]OB[3]
+;W[ej]WL[15]OW[5]
+;B[al]BL[15]OB[3]
+;W[pe]WL[15]OW[5]C[yoyoma [2d\]: thx
+]
+;B[fe]BL[15]OB[3]
+;W[li]WL[15]OW[5]
+;B[ms]BL[15]OB[3]
+;W[ec]WL[15]OW[5]
+;B[eg]BL[15]OB[3]
+;W[de]WL[15]OW[5]
+;B[ff]BL[15]OB[3]
+;W[df]WL[15]OW[5]
+;B[dh]BL[15]OB[3]
+;W[eh]WL[15]OW[5]
+;B[bf]BL[15]OB[3]
+;W[fg]WL[15]OW[5]
+;B[cg]BL[15]OB[3]
+;W[eg]WL[15]OW[5]
+;B[ch]BL[15]OB[3]
+;W[bg]WL[15]OW[5]
+;B[be]BL[15]OB[3]
+;W[od]WL[15]OW[5]
+;B[oc]BL[15]OB[3]
+;W[bh]WL[15]OW[5]
+;B[ci]BL[15]OB[3]
+;W[pc]WL[15]OW[5]
+;B[qd]BL[15]OB[3]
+;W[nc]WL[15]OW[5]
+;B[ob]BL[15]OB[3]
+;W[qc]WL[15]OW[5]C[Naphthalin [9k?\]: how is "pachi" pronounced?
+]
+;B[nd]BL[15]OB[3]
+;W[oe]WL[15]OW[5]
+;B[mc]BL[15]OB[3]
+;W[nb]WL[15]OW[5]
+;B[mb]BL[15]OB[3]C[pasky [-\]: like how a japanese person would produce it (at least i hope they'd pronounce it like i think they would :)
+pasky [-\]: s/produce/pronounce/
+]
+;W[na]WL[15]OW[5]
+;B[ma]BL[15]OB[3]C[Naphthalin [9k?\]: and in german?
+Naphthalin [9k?\]: or czech
+]
+;W[md]WL[15]OW[5]C[Naphthalin [9k?\]: or english?
+]
+;B[oa]BL[15]OB[3]C[pasky [-\]: pachi in big trouble in this game :(
+]
+;W[kb]WL[15]OW[5]C[pasky [-\]: naphthalin: i think you misunderstood :(
+]
+;B[rd]BL[15]OB[3]C[yoyoma [2d\]: I believe the English pronounciation of Pachi should be the same as Japanese
+Naphthalin [9k?\]: no, i just don't speak japanese
+]
+;W[rc]WL[15]OW[5]C[yoyoma [2d\]: pa-chi
+]
+;B[sb]BL[15]OB[3]C[Naphthalin [9k?\]: and asked for a written name which is in english pronounced as pachi should
+Leech [1d\]: misclick :(
+jlg [-\]: pasky: you can add move 104 L10 to the semai category in t-regress. the semeai was already lost there
+]
+;W[re]WL[15]OW[5]
+;B[ld]BL[15]OB[3]
+;W[me]WL[15]OW[5]C[yoyoma [2d\]: oh googletalk is using wrong type of "a" vowel when I use it for english
+]
+;B[qb]BL[15]OB[3]C[pasky [-\]: yes i'd say in english it's slightly different
+Naphthalin [9k?\]: like pudgee?
+]
+;W[rb]WL[15]OW[5]C[Naphthalin [9k?\]: or pachi?
+]
+;B[pb]BL[15]OB[3]C[pasky [-\]: naphthalin: I think the "pa" is like in "parkinson"
+Leech [1d\]: lucky leech
+]
+;W[qe]WL[15]OW[5]C[Naphthalin [9k?\]: and the "ch"?
+]
+;B[kc]BL[15]OB[3]
+;W[qa]WL[15]OW[5]
+;B[jb]BL[15]OB[3]C[pasky [-\]: like in "chick"
+yoyoma [2d\]: go to http://translate.google.com/
+Naphthalin [9k?\]: ah ok
+Naphthalin [9k?\]: thx :)
+]
+;W[jc]WL[15]OW[5]C[yoyoma [2d\]: and enter パチ
+Naphthalin [9k?\]: so in the way i thought
+]
+;B[jd]BL[15]OB[3]C[yoyoma [2d\]: There should be way for me to give direct link to google TTS of it...
+jlg [-\]: thanks for the game
+pasky [-\]: thanks for the game
+Leech [1d\]: thanks
+])

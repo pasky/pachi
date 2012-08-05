@@ -10,8 +10,14 @@
 #include <errno.h>
 #include <pthread.h>
 #include <sys/types.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/socket.h>
 #include <netdb.h>
+#endif
 
 #include "debug.h"
 #include "util.h"
@@ -45,7 +51,7 @@ port_listen(char *port, int max_connections)
 	server_addr.sin_port = htons(atoi(port));     
 	server_addr.sin_addr.s_addr = INADDR_ANY; 
 
-	int val = 1;
+	const char val = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)))
 		die("setsockopt");
 	if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)

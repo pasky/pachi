@@ -227,7 +227,7 @@ libmap_board_move_stats(struct libmap_hash *lm, struct board *b, struct move mov
 	assert(board_at(b, move.coord) != S_OFFBOARD);
 
 	neighboring_groups_list(b, board_at(b, c) == S_BLACK || board_at(b, c) == S_WHITE,
-			move.coord, groups, groups_n);
+			move.coord, groups, groups_n, groupsbycolor_xxunused);
 	for (int i = 0; i < groups_n; i++) {
 		hash_t hash = group_to_libmap(b, groups[i]);
 		struct move_stats *lp = libmap_move_stats(b->libmap, hash, move);

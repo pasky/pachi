@@ -14,7 +14,7 @@ uint16_t fast_random(unsigned int max);
 static uint32_t fast_irandom(unsigned int max);
 
 /* Get random number in [0..1] range. */
-floating_t fast_frandom();
+float fast_frandom();
 
 
 static inline uint32_t

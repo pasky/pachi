@@ -26,7 +26,7 @@ struct joseki_engine {
 
 
 static char *
-joseki_play(struct engine *e, struct board *b, struct move *m)
+joseki_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {
 	struct joseki_engine *j = e->data;
 
@@ -199,7 +199,7 @@ engine_joseki_init(char *arg, struct board *b)
 {
 	struct joseki_engine *j = joseki_state_init(arg);
 	struct engine *e = calloc2(1, sizeof(struct engine));
-	e->name = "Joseki Engine";
+	e->name = "Joseki";
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of joseki sequences fed to it within the GTP stream.";
 	e->genmove = joseki_genmove;
 	e->notify_play = joseki_play;

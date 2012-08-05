@@ -28,6 +28,9 @@ struct libmap_hash;
 
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
 
+//#define BOARD_SPATHASH // incremental patternsp.h hashes
+#define BOARD_SPATHASH_MAXD 3 // maximal diameter
+
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
 //#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
@@ -130,13 +133,27 @@ struct board {
 	 * the board implementation is basically Chinese rules (handicap
 	 * stones compensation) w/ suicide (or you can look at it as
 	 * New Zealand w/o handi stones compensation), while the engine
-	 * enforces no-suicide, making for real Chinese rules. */
-	enum {
+	 * enforces no-suicide, making for real Chinese rules.
+	 * However, we accept suicide moves by the opponent, so we
+	 * should work with rules allowing suicide, just not taking
+	 * full advantage of them. */
+	enum go_ruleset {
 		RULES_CHINESE, /* default value */
 		RULES_AGA,
 		RULES_NEW_ZEALAND,
 		RULES_JAPANESE,
 		RULES_STONES_ONLY, /* do not count eyes */
+		/* http://home.snafu.de/jasiek/siming.html */
+		/* Simplified ING rules - RULES_CHINESE with handicaps
+		 * counting as points and pass stones. Also should
+		 * allow suicide, but Pachi will never suicide
+		 * nevertheless. */
+		/* XXX: I couldn't find the point about pass stones
+		 * in the rule text, but it is Robert Jasiek's
+		 * interpretation of them... These rules were
+		 * used e.g. at the EGC2012 13x13 tournament.
+		 * They are not supported by KGS. */
+		RULES_SIMING,
 	} rules;
 
 	char *fbookfile;
@@ -171,6 +188,14 @@ struct board {
 	struct neighbor_colors *n;
 	/* Zobrist hash for each position */
 	hash_t *h;
+#ifdef BOARD_SPATHASH
+	/* For spatial hashes, we use only 24 bits. */
+	/* [0] is d==1, we don't keep hash for d==0. */
+	/* We keep hashes for black-to-play ([][0]) and white-to-play
+	 * ([][1], reversed stone colors since we match all patterns as
+	 * black-to-play). */
+	uint32_t (*spathash)[BOARD_SPATHASH_MAXD][2];
+#endif
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
@@ -292,13 +317,17 @@ struct board {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
-#define neighboring_groups_list(b_, filter_, coord_, groups, groups_n) \
+#define neighboring_groups_list(b_, filter_, coord_, groups, groups_n, groupsbycolor) \
 	group_t groups[4]; int groups_n = 0; \
+	int groupsbycolor[S_MAX] = {0, 0, 0, 0}; \
 	foreach_neighbor((b_), (coord_), { \
 		if (!(filter_)) continue; \
+		enum stone s = board_at(b, c); \
 		group_t g_ = group_at((b_), c); \
-		if (board_group_info((b_), g_).libs == 2) \
+		if (board_group_info((b_), g_).libs == 2) { \
 			groups[groups_n++] = g_; \
+			groupsbycolor[s]++; \
+		} \
 	});
 
 #define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
@@ -371,6 +400,10 @@ floating_t board_fast_score(struct board *board);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
 struct move_queue;
 floating_t board_official_score(struct board *board, struct move_queue *mq);
+
+/* Set board rules according to given string. Returns false in case
+ * of unknown ruleset name. */
+bool board_set_rules(struct board *board, char *name);
 
 /** Iterators */
 

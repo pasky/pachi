@@ -36,6 +36,9 @@ struct ucb1_policy_amaf {
 	bool sylvain_rave;
         /* Give more weight to moves played earlier. */
 	int distance_rave;
+	/* Give 0 or negative rave bonus to ko threats before taking the ko.
+	   1=normal bonus, 0=no bonus, -1=invert rave bonus, -2=double penalty... */
+	int threat_rave;
 	/* Coefficient of local tree values embedded in RAVE. */
 	floating_t ltree_rave;
 	/* Coefficient of criticality embedded in RAVE. */
@@ -231,6 +234,22 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 }
 
 
+/* Return the length of the current ko (number of moves up to to the last ko capture),
+ * 0 if the sequence is empty or doesn't start with a ko capture.
+ *   B captures a ko
+ *   W plays a ko threat
+ *   B answers ko threat
+ *   W re-captures the ko  <- return 4
+ *   B plays a ko threat
+ *   W connects the ko */
+static inline int ko_length(bool *ko_capture_map, int map_length)
+{
+	if (map_length <= 0 || !ko_capture_map[0]) return 0;
+	int length = 1;
+	while (length + 2 < map_length && ko_capture_map[length + 2]) length += 3;
+	return length;
+}
+
 void
 ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		enum stone node_color, enum stone player_color,
@@ -270,6 +289,9 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		}
 		stats_add_result(&node->u, result, 1);
 
+		bool *ko_capture_map = &map->is_ko_capture[move+1];
+		int max_threat_dist = b->threat_rave <= 0 ? ko_length(ko_capture_map, map->gamelen - (move+1)) : -1;
+
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
 		assert(map->game_baselen >= 0);
@@ -283,12 +305,20 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 			int distance = first - (move + 1);
 			if (distance & 1) continue;
 
-			/* Give more weight to moves played earlier */
 			int weight = 1;
-			if (b->distance_rave != 0) {
+			floating_t res = result;
+
+			/* Don't give amaf bonus to a ko threat before taking the ko.
+			 * http://www.grappa.univ-lille3.fr/~coulom/Aja_PhD_Thesis.pdf
+			 */
+			if (distance <= max_threat_dist && distance % 6 == 4) {
+				weight = - b->threat_rave;
+				res = 1.0 - res;
+			} else if (b->distance_rave != 0) {
+				/* Give more weight to moves played earlier */
 				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - move);
 			}
-			stats_add_result(&ni->amaf, result, weight);
+			stats_add_result(&ni->amaf, res, weight);
 
 			if (b->crit_amaf) {
 				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
@@ -331,6 +361,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 	b->fpu = INFINITY;
 	b->sylvain_rave = true;
 	b->distance_rave = 3;
+	b->threat_rave = 0;
 	b->ltree_rave = 0.75f;
 
 	b->crit_rave = 1.1f;
@@ -362,6 +393,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 				b->sylvain_rave = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "distance_rave") && optval) {
 				b->distance_rave = atoi(optval);
+			} else if (!strcasecmp(optname, "threat_rave") && optval) {
+				b->threat_rave = atoi(optval);
 			} else if (!strcasecmp(optname, "ltree_rave") && optval) {
 				b->ltree_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_rave") && optval) {

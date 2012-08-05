@@ -95,7 +95,10 @@ static char *known_commands =
 	"final_score\n"
 	"final_status_list\n"
 	"undo\n"
+	"pachi-evaluate\n"
 	"pachi-result\n"
+	"pachi-gentbook\n"
+	"pachi-dumptbook\n"
 	"kgs-chat\n"
 	"time_left\n"
 	"time_settings\n"
@@ -104,10 +107,10 @@ static char *known_commands =
 
 /* Return true if cmd is a valid gtp command. */
 bool
-gtp_is_valid(char *cmd)
+gtp_is_valid(const char *cmd)
 {
 	if (!cmd || !*cmd) return false;
-	char *s = strcasestr(known_commands, cmd);
+	const char *s = strcasestr(known_commands, cmd);
 	if (!s) return false;
 	if (s != known_commands && s[-1] != '\n') return false;
 
@@ -158,7 +161,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "version")) {
-		gtp_reply(id, PACHI_VERSION, ": ", engine->comment, NULL);
+		gtp_reply(id, PACHI_VERSION, ": ", engine->comment, " Have a nice game!", NULL);
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
@@ -209,10 +212,11 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		board_resize(board, size);
 		board_clear(board);
 		gtp_reply(id, NULL);
+		return P_ENGINE_RESET;
 
 	} else if (!strcasecmp(cmd, "clear_board")) {
 		board_clear(board);
-		if (DEBUGL(1) && debug_boardprint)
+		if (DEBUGL(3) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
 		return P_ENGINE_RESET;
@@ -236,22 +240,14 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		sscanf(arg, PRIfloating, &board->komi);
 
-		if (DEBUGL(1) && debug_boardprint)
+		if (DEBUGL(3) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
 
 	} else if (!strcasecmp(cmd, "kgs-rules")) {
 		char *arg;
 		next_tok(arg);
-		if (!strcasecmp(arg, "japanese")) {
-			board->rules = RULES_JAPANESE;
-		} else if (!strcasecmp(arg, "chinese")) {
-			board->rules = RULES_CHINESE;
-		} else if (!strcasecmp(arg, "aga")) {
-			board->rules = RULES_AGA;
-		} else if (!strcasecmp(arg, "new_zealand")) {
-			board->rules = RULES_NEW_ZEALAND;
-		} else {
+		if (!board_set_rules(board, arg)) {
 			gtp_error(id, "unknown rules", NULL);
 			return P_OK;
 		}
@@ -266,16 +262,18 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		coord_t *c = str2coord(arg, board_size(board));
 		m.coord = *c; coord_done(c);
+		next_tok(arg);
+		char *enginearg = arg;
 		char *reply = NULL;
 
-		if (DEBUGL(1))
+		if (DEBUGL(5))
 			fprintf(stderr, "got move %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
 
 		// This is where kgs starts the timer, not at genmove!
 		time_start_timer(&ti[stone_other(m.color)]);
 
 		if (engine->notify_play)
-			reply = engine->notify_play(engine, board, &m);
+			reply = engine->notify_play(engine, board, &m, enginearg);
 		if (board_play(board, &m) < 0) {
 			if (DEBUGL(0)) {
 				fprintf(stderr, "! ILLEGAL MOVE %d,%d,%d\n", m.color, coord_x(m.coord, board), coord_y(m.coord, board));
@@ -283,7 +281,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			}
 			gtp_error(id, "illegal move", NULL);
 		} else {
-			if (DEBUGL(1) && debug_boardprint)
+			if (DEBUGL(4) && debug_boardprint)
 				board_print_custom(board, stderr, engine->printhook);
 			gtp_reply(id, reply, NULL);
 		}
@@ -293,6 +291,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 		coord_t *c = NULL;
+		if (DEBUGL(2) && debug_boardprint)
+			board_print_custom(board, stderr, engine->printhook);
 		
 		if (!ti[color].len.t.timer_start) {
 			/* First game move. */
@@ -313,7 +313,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			abort();
 		}
 		char *str = coord2str(*c, board);
-		if (DEBUGL(1))
+		if (DEBUGL(4))
 			fprintf(stderr, "playing move %s\n", str);
 		if (DEBUGL(1) && debug_boardprint) {
 			board_print_custom(board, stderr, engine->printhook);
@@ -366,7 +366,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		do {
 			coord_t *c = str2coord(arg, board_size(board));
 			m.coord = *c; coord_done(c);
-			if (DEBUGL(1))
+			if (DEBUGL(4))
 				fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord, board), coord_y(m.coord, board));
 
 			if (board_play(board, &m) < 0) {
@@ -474,12 +474,12 @@ next_group:;
 		char *reply = NULL;
 		if (engine->undo)
 			reply = engine->undo(engine, board);
-		if (DEBUGL(1) && debug_boardprint)
+		if (DEBUGL(3) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, reply, NULL);
 
-	/* Custom commands for handling UCT opening tbook */
-	} else if (!strcasecmp(cmd, "uct_gentbook")) {
+	/* Custom commands for handling the tree opening tbook */
+	} else if (!strcasecmp(cmd, "pachi-gentbook")) {
 		/* Board must be initialized properly, as if for genmove;
 		 * makes sense only as 'uct_gentbook b'. */
 		char *arg;
@@ -490,31 +490,32 @@ next_group:;
 		else
 			gtp_error(id, "error generating tbook", NULL);
 
-	} else if (!strcasecmp(cmd, "uct_dumptbook")) {
+	} else if (!strcasecmp(cmd, "pachi-dumptbook")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 		uct_dumptbook(engine, board, color);
 		gtp_reply(id, NULL);
 
-	} else if (!strcasecmp(cmd, "uct_evaluate")) {
+	} else if (!strcasecmp(cmd, "pachi-evaluate")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
 
-		gtp_prefix('=', id);
-		/* Iterate through the list of all free coordinates
-		 * and call uct_evaluate() for each.  uct_evaluate()
-		 * will throw NAN in case of invalid moves and such. */
-		foreach_free_point(board) {
-			if (!board_coord_in_symmetry(board, c))
-				continue;
-			floating_t val = uct_evaluate(engine, board, &ti[color], c, color);
-			if (isnan(val))
-				continue;
-			printf("%s %1.3f\n", coord2sstr(c, board), (double) val);
-		} foreach_free_point_end;
-		gtp_flush();
+		if (!engine->evaluate) {
+			gtp_error(id, "pachi-evaluate not supported by engine", NULL);
+		} else {
+			gtp_prefix('=', id);
+			floating_t vals[board->flen];
+			engine->evaluate(engine, board, &ti[color], vals, color);
+			for (int i = 0; i < board->flen; i++) {
+				if (!board_coord_in_symmetry(board, board->f[i])
+				    || isnan(vals[i]) || vals[i] < 0.001)
+					continue;
+				printf("%s %.3f\n", coord2sstr(board->f[i], board), (double) vals[i]);
+			}
+			gtp_flush();
+		}
 
 	} else if (!strcasecmp(cmd, "pachi-result")) {
 		/* More detailed result of the last genmove. */
@@ -530,13 +531,17 @@ next_group:;
 	} else if (!strcasecmp(cmd, "kgs-chat")) {
 		char *loc;
 		next_tok(loc);
-		char *src;
-		next_tok(src);
-		char *msg;
-		next_tok(msg);
+		bool opponent = !strcasecmp(loc, "game");
+		char *from;
+		next_tok(from);
+		char *msg = next;
+		msg += strspn(msg, " \n\t");
+		char *end = strchr(msg, '\n');
+		if (end) *end = '\0';
 		char *reply = NULL;
-		if (engine->chat)
-			reply = engine->chat(engine, board, msg);
+		if (engine->chat) {
+			reply = engine->chat(engine, board, opponent, from, msg);
+		}
 		if (reply)
 			gtp_reply(id, reply, NULL);
 		else

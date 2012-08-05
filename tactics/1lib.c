@@ -37,7 +37,7 @@ can_play_on_lib(struct board *b, group_t g, enum stone to_play)
  * liberty to either capture or escape). */
 /* Note that @to_play is important; e.g. consider snapback, it's good
  * to play at the last liberty by attacker, but not defender. */
-static __attribute__((always_inline)) bool
+static inline __attribute__((always_inline)) bool
 capturable_group(struct board *b, enum stone capturer, coord_t c,
 		 enum stone to_play)
 {
@@ -90,7 +90,7 @@ can_be_rescued(struct board *b, group_t group, enum stone color, int tag)
 
 void
 group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, enum stone to_play,
-                  struct move_queue *q, coord_t *ladder, int tag)
+                  struct move_queue *q, coord_t *ladder, bool middle_ladder, int tag)
 {
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];
@@ -123,8 +123,18 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 
 	/* Otherwise, do not save kos. */
 	if (group_is_onestone(b, group)
-	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4)
-		return;
+	    && neighbor_count_at(b, lib, color) + neighbor_count_at(b, lib, S_OFFBOARD) == 4) {
+		/* Except when the ko is for an eye! */
+		bool eyeconnect = false;
+		foreach_diag_neighbor(b, lib) {
+			if (board_at(b, c) == S_NONE && neighbor_count_at(b, c, color) + neighbor_count_at(b, c, S_OFFBOARD) == 4) {
+				eyeconnect = true;
+				break;
+			}
+		} foreach_diag_neighbor_end;
+		if (!eyeconnect)
+			return;
+	}
 
 	/* Do not suicide... */
 	if (!can_play_on_lib(b, group, to_play))
@@ -134,7 +144,7 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 	
 	/* ...or play out ladders (unless we can counter-capture anytime). */
 	if (!ccap) {
-		if (is_ladder(b, lib, group)) {
+		if (is_ladder(b, lib, group, middle_ladder)) {
 			/* Sometimes we want to keep the ladder move in the
 			 * queue in order to discourage it. */
 			if (!ladder)

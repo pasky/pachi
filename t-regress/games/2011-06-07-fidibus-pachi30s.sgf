@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Chinese]SZ[19]KM[7.50]TM[1800]OT[5x30 byo-yomi]
-PW[fidibus]PB[pachi30s]WR[2d]BR[2d]DT[2011-06-07]GC[91 T3:bad useless move (wastes ko threat)
+PW[fidibus]PB[pachi30s]WR[2d]BR[2d]DT[2011-06-07]GC[91 /T3:bad useless move (wastes ko threat)
 189 B15:bad! useless move (and totally gote)]PC[The KGS Go Server at http://www.gokgs.com/]C[pachi30s [2d\]: GTP Engine for pachi30s (black): Pachi Distributed Engine version 8.99 (Hakugen-devel): I'm playing the distributed engine. When I'm losing, I will resign, if I think I win, I play until you pass. Anyone can send me 'winrate' in private chat to get my assessment of the position.
 ]RE[W+Resign]
 ;B[pc]BL[1796.354]

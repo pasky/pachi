@@ -208,11 +208,16 @@ time_now(void)
 void
 time_sleep(double interval)
 {
+#ifdef _WIN32
+	unsigned int t = interval * 1000.0;
+	Sleep(t);
+#else
 	struct timespec ts;
 	double sec;
 	ts.tv_nsec = (int)(modf(interval, &sec)*1000000000.0);
         ts.tv_sec = (int)sec;
 	nanosleep(&ts, NULL); /* ignore error if interval was < 0 */
+#endif
 }
 
 
