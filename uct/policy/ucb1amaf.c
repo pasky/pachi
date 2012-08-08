@@ -94,7 +94,7 @@ static inline floating_t fast_sqrt(unsigned int x)
 }
 
 #define URAVE_DEBUG if (0)
-static floating_t inline
+static inline floating_t
 ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity)
 {
 	struct ucb1_policy_amaf *b = p->data;
