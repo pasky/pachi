@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <math.h>
 #include <pthread.h>
 #include <signal.h>
@@ -22,13 +23,23 @@
 #include "uct/walk.h"
 
 
-/* Default time settings for the UCT engine. */
+/* Default time settings for the UCT engine. In distributed mode, slaves are
+ * unlimited by default and all control is done on the master, either in time
+ * or with total number of playouts over all slaves. (It is also possible but
+ * not recommended to limit only the slaves; the master then decides the move
+ * when a majority of slaves have made their choice.) */
 static struct time_info default_ti;
 static __attribute__((constructor)) void
 default_ti_init(void)
 {
 	time_parse(&default_ti, "15");
 }
+
+static const struct time_info unlimited_ti = {
+	.period = TT_MOVE,
+	.dim = TD_GAMES,
+	.len = { .games = INT_MAX },
+};
 
 /* When terminating UCT search early, the safety margin to add to the
  * remaining playout number estimate when deciding whether the result can
@@ -194,8 +205,12 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 
 	if (ti) {
 		if (ti->period == TT_NULL) {
-			*ti = default_ti;
-			time_start_timer(ti);
+			if (u->slave) {
+				*ti = unlimited_ti;
+			} else {
+				*ti = default_ti;
+				time_start_timer(ti);
+			}
 		}
 		time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, u->max_maintime_ratio, &s->stop);
 	}
