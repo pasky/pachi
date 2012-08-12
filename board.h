@@ -279,6 +279,7 @@ struct board {
  * possibly not very rewarding if you are interested just in
  * 9x9 and 19x19. */
 #define board_large(b_) (board_size(b_)-2 >= 15)
+#define board_small(b_) (board_size(b_)-2 <= 9)
 
 #if BOARD_SIZE == 19
 #  define board_bits2(b_) 9

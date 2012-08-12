@@ -346,7 +346,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 	b->crit_negative = 1;
 	b->crit_amaf = 0;
 
-	b->root_virtual_win = -1;
+	b->virtual_win = 5;
+	b->root_virtual_win = 30;
 	b->vwin_min_playouts = 1000;
 
 	if (arg) {
@@ -401,8 +402,6 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 			}
 		}
 	}
-	if (b->root_virtual_win < 0)
-		b->root_virtual_win = b->virtual_win;
 
 	return p;
 }

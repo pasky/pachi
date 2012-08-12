@@ -144,10 +144,12 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	 * point of resigning immediately in high handicap games.
 	 * By move 100 white should still be behind but should have
 	 * caught up enough to avoid resigning. */
-	if (board_large(b)) {
-		l->moves[S_BLACK] = 100;
-		l->moves[S_WHITE] = 50;
+	int moves = board_large(b) ? 100 : 50;
+	if (!board_small(b)) {
+		l->moves[S_BLACK] = moves;
+		l->moves[S_WHITE] = moves;
 	}
+
 	/* The real value of one stone is twice the komi so about 15 points.
 	 * But use a lower value to avoid being too pessimistic as black
 	 * or too optimistic as white. */

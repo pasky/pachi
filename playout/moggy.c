@@ -934,17 +934,16 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	 * XXX: no 9x9 tuning has been done recently. */
 	int rate = board_large(b) ? 80 : 90;
 
-	pp->lcapturerate = pp->atarirate = pp->nlibrate = pp->patternrate
-		= pp->selfatarirate = pp->eyefillrate = pp->josekirate = -1U;
-	if (board_large(b)) {
-		pp->lcapturerate = 90;
-		pp->patternrate = 100;
-		pp->nlibrate = 20;
-		pp->nakaderate = 20;
-		pp->pattern2 = true;
-	}
+	pp->lcapturerate = pp->atarirate = pp->nlibrate
+		= pp->selfatarirate = pp->josekirate = -1U;
+	pp->patternrate = 100;
+	pp->nlibrate = 20;
+	pp->nakaderate = 20;
+	pp->pattern2 = true;
+	pp->lcapturerate = 90;
 	pp->korate = 20; pp->koage = 4;
-	pp->alwaysccaprate = 20;
+	pp->alwaysccaprate = 40;
+	pp->eyefillrate = 60;
 	pp->selfatari_other = true;
 
 	pp->cap_stone_min = 2;

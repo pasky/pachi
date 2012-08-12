@@ -566,7 +566,7 @@ uct_state_init(char *arg, struct board *b)
 	u->reportfreq = 10000;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
-	u->sure_win_threshold = 0.9;
+	u->sure_win_threshold = 0.95;
 	u->mercymin = 0;
 	u->significant_threshold = 50;
 	u->expand_p = 8;
@@ -579,7 +579,7 @@ uct_state_init(char *arg, struct board *b)
 
 	u->threads = 1;
 	u->thread_model = TM_TREEVL;
-	u->virtual_loss = 1;
+	u->virtual_loss = -1;
 
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
@@ -587,7 +587,8 @@ uct_state_init(char *arg, struct board *b)
 	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
 	// TODO: Further tuning and experiments with better time allocation schemes.
 	u->best2_ratio = 2.5;
-	u->max_maintime_ratio = 3.0;
+	// Higher values of max_maintime_ratio sometimes cause severe time trouble in tournaments
+	u->max_maintime_ratio = 1.5;
 
 	u->val_scale = 0; u->val_points = 40;
 	u->dynkomi_interval = 1000;
@@ -602,6 +603,7 @@ uct_state_init(char *arg, struct board *b)
 	u->max_slaves = -1;
 	u->slave_index = -1;
 	u->stats_delay = 0.01; // 10 ms
+	u->shared_levels = 1;
 
 	u->plugins = pluginset_init(b);
 
@@ -1157,9 +1159,12 @@ uct_state_init(char *arg, struct board *b)
 		if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
 		assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
 	}
+	if (u->virtual_loss == -1)
+		u->virtual_loss = u->threads >= 4 ? 4 : u->threads;
 
 	if (!u->dynkomi)
-		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
+		u->dynkomi = board_small(b) ? uct_dynkomi_init_none(u, NULL, b)
+			: uct_dynkomi_init_linear(u, NULL, b);
 
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
