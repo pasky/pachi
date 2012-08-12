@@ -588,7 +588,8 @@ uct_state_init(char *arg, struct board *b)
 	// TODO: Further tuning and experiments with better time allocation schemes.
 	u->best2_ratio = 2.5;
 	// Higher values of max_maintime_ratio sometimes cause severe time trouble in tournaments
-	u->max_maintime_ratio = 1.5;
+	// It might be necessary to reduce it to 1.5 on large board, but more tuning is needed.
+	u->max_maintime_ratio = 2.0;
 
 	u->val_scale = 0; u->val_points = 40;
 	u->dynkomi_interval = 1000;
