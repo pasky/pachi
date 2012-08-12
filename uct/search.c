@@ -22,14 +22,13 @@
 #include "uct/walk.h"
 
 
-/* Default number of simulations to perform per move.
- * Note that this is now in total over all threads!. */
-#define MC_GAMES	80000
-static const struct time_info default_ti = {
-	.period = TT_MOVE,
-	.dim = TD_GAMES,
-	.len = { .games = MC_GAMES },
-};
+/* Default time settings for the UCT engine. */
+static struct time_info default_ti;
+static __attribute__((constructor)) void
+default_ti_init(void)
+{
+	time_parse(&default_ti, "15");
+}
 
 /* When terminating UCT search early, the safety margin to add to the
  * remaining playout number estimate when deciding whether the result can
@@ -194,7 +193,10 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	s->fullmem = false;
 
 	if (ti) {
-		if (ti->period == TT_NULL) *ti = default_ti;
+		if (ti->period == TT_NULL) {
+			*ti = default_ti;
+			time_start_timer(ti);
+		}
 		time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, u->max_maintime_ratio, &s->stop);
 	}
 
