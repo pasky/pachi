@@ -236,7 +236,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
 			spaces, n->u.playouts, coord2sstr(node_coord(n), t->board),
-			tree_node_get_value(t, parity, n->u.value));
+			tree_node_get_value(t, -parity, n->u.value));
 
 	struct uct_playout_callback upc = {
 		.uct = u,
