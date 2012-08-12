@@ -581,6 +581,8 @@ uct_state_init(char *arg, struct board *b)
 	u->thread_model = TM_TREEVL;
 	u->virtual_loss = 1;
 
+	u->pondering_opt = true;
+
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
 	u->bestr_ratio = 0.02;

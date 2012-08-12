@@ -52,11 +52,11 @@ How to run
 ~~~~~~~~~~
 
 By default, Pachi will run on a single CPU core, taking up to 1.4GiB
-of memory, not pondering and taking completely arbitrary amount of time
-per turn. You can adjust these parameters by passing it extra command
+of memory and taking completely arbitrary amount of time per turn.
+You can adjust these parameters by passing it extra command
 line options:
 
-	./pachi -t _1200 threads=8,max_tree_size=3072,pondering
+	./pachi -t _1200 threads=8,max_tree_size=3072
 
 This will make Pachi play with time settings 20:00 S.D. (unless it
 gets told otherwise over GTP), with 8 threads, taking up to 3GiB
@@ -95,7 +95,7 @@ _does_ take into account the point size, strives for a maximum
 (reasonable) win margin when winning and minimal point loss when
 losing. This is possible by using the maximize_score parameter, e.g.:
 
-	./pachi -t _1200 threads=8,pondering,maximize_score
+	./pachi -t _1200 threads=8,maximize_score
 
 This enables an aggressive dynamic komi usage and end result margin
 is included in node values aside of winrate. Pachi will also enter
