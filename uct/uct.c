@@ -824,9 +824,9 @@ uct_state_init(char *arg, struct board *b)
 					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
 					exit(1);
 				}
-			} else if (!strcasecmp(optname, "virtual_loss")) {
+			} else if (!strcasecmp(optname, "virtual_loss") && optval) {
 				/* Number of virtual losses added before evaluating a node. */
-				u->virtual_loss = !optval || atoi(optval);
+				u->virtual_loss = atoi(optval);
 			} else if (!strcasecmp(optname, "pondering")) {
 				/* Keep searching even during opponent's turn. */
 				u->pondering_opt = !optval || atoi(optval);
