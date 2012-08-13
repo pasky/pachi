@@ -96,7 +96,7 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 
 	if (final) {
 		/* Final move choice */
-		fprintf(stderr, ", \"choice\": {\"%s\"}",
+		fprintf(stderr, ", \"choice\": \"%s\"",
 			coord2sstr(*final, t->board));
 	} else {
 		struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
