@@ -41,6 +41,12 @@ def get_atr(node, atr):
     except KeyError:
         return None
 
+def get_setup(node, atr):
+    try:
+        return node.data[atr].data[:]
+    except KeyError:
+        return None
+
 def col2num(column, board_size):
     a, o, z = map(ord, ['a', column, 'z'])
     if a <= o <= z:
@@ -62,6 +68,8 @@ def process_gametree(gametree, fout):
     board_size = int(get_atr(header, 'SZ'))
     komi = get_atr(header, 'KM')
     player_next, player_other = "B", "W"
+    setup_black = get_setup(header, 'AB')
+    setup_white = get_setup(header, 'AW')
 
     print >>fout, "boardsize", board_size
     print >>fout, "clear_board"
@@ -70,6 +78,18 @@ def process_gametree(gametree, fout):
     if handicap and handicap != '0':
         print >>fout, "fixed_handicap", handicap
         player_next, player_other = player_other, player_next
+    for item in setup_black:
+        x, y = item
+        if x >= 'i':
+            x = chr(ord(x)+1)
+        y = str(col2num(y, board_size))
+        print >>fout, "play B", x+y
+    for item in setup_white:
+        x, y = item
+        if x >= 'i':
+            x = chr(ord(x)+1)
+        y = str(col2num(y, board_size))
+        print >>fout, "play W", x+y
 
     def print_game_step(coord):
         if is_pass_move(coord, board_size):
