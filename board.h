@@ -15,6 +15,7 @@
 
 struct fbook;
 struct libmap_hash;
+struct libmap_mq;
 
 
 /* Maximum supported board size. (Without the S_OFFBOARD edges.) */
@@ -159,6 +160,9 @@ struct board {
 	char *fbookfile;
 	struct fbook *fbook;
 	struct libmap_hash *libmap;
+	/* Queue of moves to store in libmap_hash with their goal value
+	 * at the game end. */
+	struct libmap_mq *lmqueue;
 
 	/* Iterator offsets for foreach_neighbor*() */
 	int nei8[8], dnei[4];

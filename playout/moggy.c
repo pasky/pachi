@@ -504,7 +504,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		if (pp->atarirate > fast_random(100)) {
 			struct libmap_mq q;  q.mq.moves = 0;
 			local_2lib_check(p, b, &b->last_move, &q);
-			coord_t c = libmap_queue_mqpick(b->libmap, &q);
+			coord_t c = libmap_queue_mqpick(b->libmap, b->lmqueue, &q);
 			if (!is_pass(c))
 				return c;
 		}
@@ -513,7 +513,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		if (pp->nlibrate > fast_random(100)) {
 			struct libmap_mq q;  q.mq.moves = 0;
 			local_nlib_check(p, b, &b->last_move, &q);
-			coord_t c = libmap_queue_mqpick(b->libmap, &q);
+			coord_t c = libmap_queue_mqpick(b->libmap, b->lmqueue, &q);
 			if (!is_pass(c))
 				return c;
 		}

@@ -113,9 +113,6 @@ struct libmap_hash {
 	 * track of all the libmap uses in multi-thread environment. */
 	int refcount;
 
-	/* Queue of moves to store at the game end. */
-	struct libmap_mq queue;
-
 	/* Stored statistics. */
 	/* We store statistics in a hash table without separated chains;
 	 * if bucket is occupied, we look into the following ones,
@@ -133,10 +130,10 @@ struct libmap_hash *libmap_init(struct board *b);
 /* Release libmap. Based on refcount, this will free it. */
 void libmap_put(struct libmap_hash *lm);
 
-/* Pick a move from @q, enqueue it in lm.queue and return its coordinate. */
-static coord_t libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q);
+/* Pick a move from @q, enqueue it in lmqueue and return its coordinate. */
+static coord_t libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *lmqueue, struct libmap_mq *q);
 /* Record queued moves in the hashtable based on final position of b and winner's color. */
-void libmap_queue_process(struct libmap_hash *lm, struct board *b, enum stone winner);
+void libmap_queue_process(struct libmap_hash *lm, struct libmap_mq *lmqueue, struct board *b, enum stone winner);
 /* Add a result to the hashed statistics. */
 void libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move, floating_t result, int playouts);
 /* Get libmap context of a given group. */
@@ -261,7 +258,7 @@ libmap_queue_mqpick_ucb(struct libmap_hash *lm, struct libmap_mq *q)
 }
 
 static inline coord_t
-libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *q)
+libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *lmqueue, struct libmap_mq *q)
 {
 	if (!q->mq.moves)
 		return pass; // nothing to do
@@ -307,7 +304,7 @@ g_next_move:;
 
 	if (lm) {
 		struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
-		libmap_mq_add(&lm->queue, m, q->mq.tag[p], q->group[p]);
+		libmap_mq_add(lmqueue, m, q->mq.tag[p], q->group[p]);
 	}
 
 	return q->mq.move[p];

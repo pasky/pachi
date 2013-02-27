@@ -140,6 +140,7 @@ board_copy(struct board *b2, struct board *b1)
 		 * at least. */
 		__sync_fetch_and_add(&b2->libmap->refcount, 1);
 	}
+	b2->lmqueue = NULL;
 
 	return b2;
 }
@@ -325,6 +326,7 @@ board_clear(struct board *board)
 		libmap_put(board->libmap);
 		board->libmap = NULL;
 	}
+	board->lmqueue = NULL;
 }
 
 static char *
