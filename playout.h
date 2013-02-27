@@ -69,7 +69,7 @@ struct playout_setup {
 	unsigned int gamelen; /* Maximal # of moves in playout. */
 	/* Minimal difference between captures to terminate the playout.
 	 * 0 means don't check. */
-	unsigned int mercymin;
+	int mercymin;
 
 	void *hook_data; // for hook to reference its state
 	playouth_prepolicy prepolicy_hook;

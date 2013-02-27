@@ -76,6 +76,7 @@ struct uct {
 	int dynkomi_mask;
 	int dynkomi_interval;
 	struct uct_dynkomi *dynkomi;
+	floating_t initial_extra_komi;
 
 	floating_t val_scale;
 	int val_points;

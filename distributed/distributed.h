@@ -78,15 +78,16 @@ struct incr_stats {
  * slave and for the per-slave hash table in the master. However the
  * same nodes are often sent so in practice 21 bits are sufficient.
  * Larger hash tables are not desirable because it would take too much
- * time to clear them at each move in the master. */
-#define DEFAULT_STATS_HBITS 21
+ * time to clear them at each move in the master. For the default
+ * shared_levels=1, 18 bits are enough. */
+#define DEFAULT_STATS_HBITS 18
 
 /* If we select a cycle of at most 40ms, a slave machine can update at
  * most 10K different nodes per cycle. In practice the updates are
  * biased so we update much fewer nodes. As shorter cyle is preferable
  * because the stats are more fresh. The cycle time does not affect
  * the number of slaves and the hash table size. */
-#define DEFAULT_SHARED_NODES 1024
+#define DEFAULT_SHARED_NODES 10240
 
 
 /* Maximum game length. Power of 10 jut to ease debugging. */

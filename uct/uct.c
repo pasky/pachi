@@ -43,6 +43,8 @@ setup_state(struct uct *u, struct board *b, enum stone color)
 {
 	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
 			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, u->stats_hbits);
+	if (u->initial_extra_komi)
+		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
 		fast_srandom(u->force_seed);
 	if (UDEBUGL(3))
@@ -183,6 +185,8 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 	if (!tree_promote_at(u->t, b, m->coord)) {
 		if (UDEBUGL(3))
 			fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+		/* Preserve dynamic komi information, though, that is important. */
+		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
 		return NULL;
 	}
@@ -203,6 +207,7 @@ uct_undo(struct engine *e, struct board *b)
 
 	if (!u->t) return NULL;
 	uct_pondering_stop(u);
+	u->initial_extra_komi = u->t->extra_komi;
 	reset_state(u);
 	return NULL;
 }
@@ -459,6 +464,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
 	if (!best) {
 		/* Pass or resign. */
+		if (is_pass(best_coord))
+			u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
 		return coord_copy(best_coord);
 	}
@@ -560,7 +567,7 @@ uct_state_init(char *arg, struct board *b)
 	u->reportfreq = 10000;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
-	u->sure_win_threshold = 0.9;
+	u->sure_win_threshold = 0.95;
 	u->mercymin = 0;
 	u->significant_threshold = 50;
 	u->expand_p = 8;
@@ -575,13 +582,17 @@ uct_state_init(char *arg, struct board *b)
 	u->thread_model = TM_TREEVL;
 	u->virtual_loss = 1;
 
+	u->pondering_opt = true;
+
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
 	u->bestr_ratio = 0.02;
 	// 2.5 is clearly too much, but seems to compensate well for overly stern time allocations.
 	// TODO: Further tuning and experiments with better time allocation schemes.
 	u->best2_ratio = 2.5;
-	u->max_maintime_ratio = 3.0;
+	// Higher values of max_maintime_ratio sometimes cause severe time trouble in tournaments
+	// It might be necessary to reduce it to 1.5 on large board, but more tuning is needed.
+	u->max_maintime_ratio = 2.0;
 
 	u->val_scale = 0; u->val_points = 40;
 	u->dynkomi_interval = 1000;
@@ -596,6 +607,7 @@ uct_state_init(char *arg, struct board *b)
 	u->max_slaves = -1;
 	u->slave_index = -1;
 	u->stats_delay = 0.01; // 10 ms
+	u->shared_levels = 1;
 
 	u->plugins = pluginset_init(b);
 
@@ -816,9 +828,9 @@ uct_state_init(char *arg, struct board *b)
 					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
 					exit(1);
 				}
-			} else if (!strcasecmp(optname, "virtual_loss")) {
+			} else if (!strcasecmp(optname, "virtual_loss") && optval) {
 				/* Number of virtual losses added before evaluating a node. */
-				u->virtual_loss = !optval || atoi(optval);
+				u->virtual_loss = atoi(optval);
 			} else if (!strcasecmp(optname, "pondering")) {
 				/* Keep searching even during opponent's turn. */
 				u->pondering_opt = !optval || atoi(optval);
@@ -908,6 +920,15 @@ uct_state_init(char *arg, struct board *b)
 				/* XXX: Does not work with tree
 				 * parallelization. */
 				u->dynkomi_interval = atoi(optval);
+			} else if (!strcasecmp(optname, "extra_komi") && optval) {
+				/* Initial dynamic komi settings. This
+				 * is useful for the adaptive dynkomi
+				 * policy as the value to start with
+				 * (this is NOT kept fixed) in case
+				 * there is not enough time in the search
+				 * to adjust the value properly (e.g. the
+				 * game was interrupted). */
+				u->initial_extra_komi = atof(optval);
 
 			/** Node value result scaling */
 
@@ -1149,7 +1170,8 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->dynkomi)
-		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
+		u->dynkomi = board_small(b) ? uct_dynkomi_init_none(u, NULL, b)
+			: uct_dynkomi_init_linear(u, NULL, b);
 
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */

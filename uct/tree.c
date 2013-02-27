@@ -48,7 +48,7 @@ tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 static void
 tree_setup_node(struct tree *t, struct tree_node *n, coord_t coord, int depth)
 {
-	volatile static unsigned int hash = 0;
+	static volatile unsigned int hash = 0;
 	n->coord = coord;
 	n->depth = depth;
 	/* n->hash is used only for debugging. It is very likely (but not

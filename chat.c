@@ -59,10 +59,10 @@ void chat_init(char *chat_file) {
 		}
 	}
 	if (!feof(f))
-		fprintf(stderr, "syntax error around line %u in %s\n", (uintptr_t)(entry - chat_table), chat_file);
+		fprintf(stderr, "syntax error around line %tu in %s\n", entry - chat_table, chat_file);
 	fclose(f);
 	if (DEBUGL(1))
-		fprintf(stderr, "Loaded %u chat entries from %s\n", (uintptr_t)(entry - chat_table), chat_file);
+		fprintf(stderr, "Loaded %tu chat entries from %s\n", entry - chat_table, chat_file);
 }
 
 void chat_done() {

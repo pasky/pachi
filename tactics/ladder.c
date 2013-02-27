@@ -62,7 +62,7 @@ is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
  * gain three liberties). */
 
 static bool
-middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum stone lcolor)
+middle_ladder_walk(struct board *b, struct board *bset, group_t laddered, coord_t nextmove, enum stone lcolor)
 {
 	assert(board_group_info(b, laddered).libs == 1);
 
@@ -119,7 +119,7 @@ middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum sto
 	for (int i = 0; !is_ladder && i < libs; i++) {
 		struct board *b2 = b;
 		if (i != libs - 1) {
-			b2 = alloca(sizeof(*b2));
+			b2 = bset++;
 			board_copy(b2, b);
 		}
 
@@ -133,7 +133,7 @@ middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum sto
 		if (DEBUGL(6))
 			fprintf(stderr, "(%d=%d) ladder atari %s (%d libs)\n", i, res, coord2sstr(ataristone, b2), board_group_info(b2, group_at(b2, ataristone)).libs);
 		if (res >= 0 && board_group_info(b2, group_at(b2, ataristone)).libs > 1)
-			is_ladder = middle_ladder_walk(b2, laddered, board_group_info(b2, laddered).lib[0], lcolor);
+			is_ladder = middle_ladder_walk(b2, bset, laddered, board_group_info(b2, laddered).lib[0], lcolor);
 
 		if (i != libs - 1) {
 			board_done_noalloc(b2);
@@ -164,6 +164,8 @@ is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	 * space to escape. Time for the expensive stuff - set up a temporary
 	 * board and start selective 2-liberty search. */
 
+	struct board *bset = malloc2(BOARD_MAX_SIZE * 2 * sizeof(struct board));
+
 	struct move_queue ccq = { .moves = 0 };
 	if (can_countercapture(b, lcolor, laddered, lcolor, &ccq, 0)) {
 		/* We could escape by countercapturing a group.
@@ -172,17 +174,20 @@ is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 		for (unsigned int i = 0; i < ccq.moves; i++) {
 			struct board b2;
 			board_copy(&b2, b);
-			bool is_ladder = middle_ladder_walk(&b2, laddered, ccq.move[i], lcolor);
+			bool is_ladder = middle_ladder_walk(&b2, bset, laddered, ccq.move[i], lcolor);
 			board_done_noalloc(&b2);
-			if (!is_ladder)
+			if (!is_ladder) {
+				free(bset);
 				return false;
+			}
 		}
 	}
 
 	struct board b2;
 	board_copy(&b2, b);
-	bool is_ladder = middle_ladder_walk(&b2, laddered, board_group_info(&b2, laddered).lib[0], lcolor);
+	bool is_ladder = middle_ladder_walk(&b2, bset, laddered, board_group_info(&b2, laddered).lib[0], lcolor);
 	board_done_noalloc(&b2);
+	free(bset);
 	return is_ladder;
 }
 
@@ -209,14 +214,16 @@ wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chasel
 	}
 
 	bool is_ladder = false;
+	struct board *bset = malloc2(BOARD_MAX_SIZE * 2 * sizeof(struct board));
 	struct board b2;
 	board_copy(&b2, b);
 
 	struct move m = { chaselib, stone_other(lcolor) };
 	int res = board_play(&b2, &m);
 	if (res >= 0)
-		is_ladder = middle_ladder_walk(&b2, group, board_group_info(&b2, group).lib[0], lcolor);
+		is_ladder = middle_ladder_walk(&b2, bset, group, board_group_info(&b2, group).lib[0], lcolor);
 
 	board_done_noalloc(&b2);
+	free(bset);
 	return is_ladder;
 }

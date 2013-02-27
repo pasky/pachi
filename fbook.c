@@ -100,10 +100,7 @@ fbook_init(char *filename, struct board *b)
 
 		/* Format of line is:
 		 * BSIZE COORD COORD COORD... | COORD
-		 * BSIZE/HANDI COORD COORD COORD... | COORD
-		 * We descend up to |, then add the new node
-		 * with value minimax(1000), forcing UCT to
-		 * always pick that node immediately. */
+		 * BSIZE/HANDI COORD COORD COORD... | COORD */
 		int bsize = strtol(line, &line, 10);
 		if (bsize != fbook->bsize - 2)
 			continue;
