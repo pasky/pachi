@@ -199,6 +199,8 @@ libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move,
 
 	// fprintf(stderr, "%"PRIhash": use %"PRIhash" (%d)\n", hash & libmap_hash_mask, ih & libmap_hash_mask, lm->hash[ih & libmap_hash_mask].moves);
 	struct libmap_context *lc = &lm->hash[ih & libmap_hash_mask];
+	lc->visits++;
+
 	for (int i = 0; i < lc->moves; i++) {
 		if (lc->move[i].move.coord == move.coord
 		    && lc->move[i].move.color == move.color) {

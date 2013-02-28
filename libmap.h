@@ -99,6 +99,7 @@ struct libmap_move {
 
 struct libmap_context {
 	hash_t hash;
+	int visits;
 	/* We add moves in multiple threads. But at most, on conflict we will
 	 * end up with tiny amount of misappropriated playouts. */
 	int moves;
@@ -238,14 +239,12 @@ libmap_queue_mqpick_ucb(struct libmap_hash *lm, struct libmap_mq *q)
 		 * not just mq contents. */
 		struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
 		struct move_stats s = !is_pass(m.coord) ? libmap_config.prior : libmap_config.tenuki_prior;
+		int group_visits = (lc ? lc->visits : 0) + s.playouts;
 		struct move_stats *ms = libmap_move_stats(lm, q->group[p].hash, m);
 		if (ms) stats_merge(&s, ms);
 
-		int group_moves = s.playouts;
-		if (lc) group_moves += lc->moves;
-
-		floating_t urgency = s.value + libmap_config.explore_p * sqrt(log(group_moves) / s.playouts);
-		LM_DEBUG fprintf(stderr, "%s[%.3f=%.3fx(%d/%d)] ", coord2sstr(m.coord, lm->b), urgency, s.value, group_moves, s.playouts);
+		floating_t urgency = s.value + libmap_config.explore_p * sqrt(log(group_visits) / s.playouts);
+		LM_DEBUG fprintf(stderr, "%s[%.3f=%.3fx(%d/%d)] ", coord2sstr(m.coord, lm->b), urgency, s.value, group_visits, s.playouts);
 		if (urgency > best_urgency) {
 			best_p = (int) p;
 			best_urgency = urgency;
