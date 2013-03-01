@@ -228,7 +228,7 @@ libmap_queue_mqpick_threshold(struct libmap_hash *lm, struct libmap_mq *q)
 static inline int
 libmap_queue_mqpick_ucb(struct libmap_hash *lm, struct libmap_mq *q)
 {
-	int best_p = -1;
+	int best_pa[BOARD_MAX_MOVES + 1], best_pn = 1;
 	floating_t best_urgency = -9999;
 	LM_DEBUG fprintf(stderr, "\tBandit: ");
 
@@ -246,13 +246,18 @@ libmap_queue_mqpick_ucb(struct libmap_hash *lm, struct libmap_mq *q)
 		floating_t urgency = s.value + libmap_config.explore_p * sqrt(log(group_visits) / s.playouts);
 		LM_DEBUG fprintf(stderr, "%s[%.3f=%.3fx(%d/%d)] ", coord2sstr(m.coord, lm->b), urgency, s.value, group_visits, s.playouts);
 		if (urgency > best_urgency) {
-			best_p = (int) p;
+			best_pn = 1;
+			best_pa[0] = (int) p;
 			best_urgency = urgency;
+
+		} else if (urgency == best_urgency) {
+			best_pa[best_pn++] = (int) p;
 		}
 	}
 
+	int best_p = best_pa[fast_random(best_pn)];
 	assert(best_p >= 0);
-	LM_DEBUG fprintf(stderr, "\t=> %s\n", coord2sstr(q->mq.move[best_p], lm->b));
+	LM_DEBUG fprintf(stderr, "\t=[%d]> %s\n", best_pn, coord2sstr(q->mq.move[best_p], lm->b));
 	return best_p;
 }
 
