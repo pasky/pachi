@@ -145,7 +145,7 @@ spawn_thread_manager(void *ctx_)
 		pthread_attr_init(&a);
 		pthread_attr_setstacksize(&a, 1048576);
 		pthread_create(&threads[ti], &a, spawn_worker, ctx);
-		if (UDEBUGL(3))
+		if (UDEBUGL(4))
 			fprintf(stderr, "Spawned worker %d\n", ti);
 	}
 
@@ -170,7 +170,7 @@ spawn_thread_manager(void *ctx_)
 		played_games += ctx->games;
 		joined++;
 		free(ctx);
-		if (UDEBUGL(3))
+		if (UDEBUGL(4))
 			fprintf(stderr, "Joined worker %d\n", finish_thread);
 		pthread_mutex_unlock(&finish_serializer);
 	}
