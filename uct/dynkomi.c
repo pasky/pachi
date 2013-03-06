@@ -67,23 +67,30 @@ struct dynkomi_linear {
 };
 
 static floating_t
+linear_simple(struct dynkomi_linear *l, struct board *b, enum stone color)
+{
+	int lmoves = l->moves[color];
+	floating_t base_komi = board_effective_handicap(b, l->handicap_value[color]);
+	return base_komi * (lmoves - b->moves) / lmoves;
+}
+
+static floating_t
 linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 {
 	struct dynkomi_linear *l = d->data;
 	enum stone color = d->uct->pondering ? tree->root_color : stone_other(tree->root_color);
 	int lmoves = l->moves[color];
-	floating_t extra_komi;
 
-	if (b->moves < lmoves) {
-		floating_t base_komi = board_effective_handicap(b, l->handicap_value[color]);
-		extra_komi = base_komi * (lmoves - b->moves) / lmoves;
-		return extra_komi;
-	} else {
-		extra_komi = floor(tree->extra_komi);
-	}
+	if (b->moves < lmoves)
+		return linear_simple(l, b, color);
+
+	/* Allow simple adaptation in extreme endgame situations. */
+
+	floating_t extra_komi = floor(tree->extra_komi);
 
 	/* Do not take decisions on unstable value. */
-        if (tree->root->u.playouts < GJ_MINGAMES) return extra_komi;
+        if (tree->root->u.playouts < GJ_MINGAMES)
+		return extra_komi;
 
 	floating_t my_value = tree_node_get_value(tree, 1, tree->root->u.value);
 	/*  We normalize komi as in komi_by_value(), > 0 when winning. */
@@ -103,7 +110,7 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 	} else if (my_value < l->orange_zone && extra_komi > 0) {
 		extra_komi = l->komi_ratchet  = fmax(extra_komi - l->drop_step, 0.0);
 		if (extra_komi != orig_komi && DEBUGL(3))
-			fprintf(stderr, "dropping to %f, extra komi %.1f -> ratchet %.1f\n",
+			fprintf(stderr, "dropping to %f, extra komi %.1f -> %.1f\n",
 				my_value, orig_komi, extra_komi);
 
 	} else if (my_value > l->green_zone && extra_komi + 1 <= l->komi_ratchet) {
