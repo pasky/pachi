@@ -128,11 +128,17 @@ linear_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct 
 	struct dynkomi_linear *l = d->data;
 	if (l->rootbased)
 		return tree->extra_komi;
+
 	/* We don't reuse computed value from tree->extra_komi,
 	 * since we want to use value correct for this node depth.
 	 * This also means the values will stay correct after
 	 * node promotion. */
-	return linear_permove(d, b, tree);
+
+	enum stone color = d->uct->pondering ? tree->root_color : stone_other(tree->root_color);
+	int lmoves = l->moves[color];
+	if (b->moves < lmoves)
+		return linear_simple(l, b, color);
+	return tree->extra_komi;
 }
 
 struct uct_dynkomi *
