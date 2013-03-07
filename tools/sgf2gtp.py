@@ -78,18 +78,20 @@ def process_gametree(gametree, fout):
     if handicap and handicap != '0':
         print >>fout, "fixed_handicap", handicap
         player_next, player_other = player_other, player_next
-    for item in setup_black:
-        x, y = item
-        if x >= 'i':
-            x = chr(ord(x)+1)
-        y = str(col2num(y, board_size))
-        print >>fout, "play B", x+y
-    for item in setup_white:
-        x, y = item
-        if x >= 'i':
-            x = chr(ord(x)+1)
-        y = str(col2num(y, board_size))
-        print >>fout, "play W", x+y
+    if setup_black:
+	for item in setup_black:
+	    x, y = item
+	    if x >= 'i':
+		x = chr(ord(x)+1)
+	    y = str(col2num(y, board_size))
+	    print >>fout, "play B", x+y
+    if setup_white:
+	for item in setup_white:
+	    x, y = item
+	    if x >= 'i':
+		x = chr(ord(x)+1)
+	    y = str(col2num(y, board_size))
+	    print >>fout, "play W", x+y
 
     def print_game_step(coord):
         if is_pass_move(coord, board_size):
