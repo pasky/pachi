@@ -618,7 +618,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 		board_print(b, stderr);
 
 	/* Ko fight check */
-	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
+	if (pp->korate > 0 && !is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
 	    && b->moves - b->last_ko_age < pp->koage) {
 		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
@@ -628,37 +628,44 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
 		/* Nakade check */
-		if (immediate_liberty_count(b, b->last_move.coord) > 0) {
+		if (pp->nakaderate > 0 && immediate_liberty_count(b, b->last_move.coord) > 0) {
 			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
 			if (!is_pass(nakade))
 				mq_add(&q, nakade, 1<<MQ_NAKADE);
 		}
 
 		/* Local group in atari? */
-		local_atari_check(p, b, &b->last_move, &q);
+		if (pp->lcapturerate > 0)
+			local_atari_check(p, b, &b->last_move, &q);
 
 		/* Local group trying to escape ladder? */
-		local_ladder_check(p, b, &b->last_move, &q);
+		if (pp->ladderrate > 0)
+			local_ladder_check(p, b, &b->last_move, &q);
 
 		/* Local group can be PUT in atari? */
-		local_2lib_check(p, b, &b->last_move, &q);
+		if (pp->atarirate > 0)
+			local_2lib_check(p, b, &b->last_move, &q);
 
 		/* Local group reduced some of our groups to 3 libs? */
-		local_nlib_check(p, b, &b->last_move, &q);
+		if (pp->nlibrate > 0)
+			local_nlib_check(p, b, &b->last_move, &q);
 
 		/* Check for patterns we know */
-		apply_pattern(p, b, &b->last_move,
-				pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
-				&q);
+		if (pp->patternrate > 0)
+			apply_pattern(p, b, &b->last_move,
+					pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
+					&q);
 	}
 
 	/* Global checks */
 
 	/* Any groups in atari? */
-	global_atari_check(p, b, to_play, &q);
+	if (pp->capturerate > 0)
+		global_atari_check(p, b, to_play, &q);
 
 	/* Joseki moves? */
-	joseki_check(p, b, to_play, &q);
+	if (pp->josekirate > 0)
+		joseki_check(p, b, to_play, &q);
 
 #if 0
 	/* Average length of the queue is 1.4 move. */
