@@ -127,16 +127,16 @@ libmap_queue_process(struct libmap_hash *lm, struct libmap_mq *lmqueue, struct b
 {
 	assert(lmqueue->mq.moves <= MQL);
 	for (unsigned int i = 0; i < lmqueue->mq.moves; i++) {
-		struct libmap_group *g = &lmqueue->group[i];
+		struct libmap_move_groupinfo *gi = &lmqueue->gi[i];
 		struct move m = { .coord = lmqueue->mq.move[i], .color = lmqueue->color[i] };
 		floating_t val;
 		if (libmap_config.eval == LME_LOCAL || libmap_config.eval == LME_LVALUE) {
-			val = board_local_value(libmap_config.eval == LME_LVALUE, b, g->group, g->goal);
+			val = board_local_value(libmap_config.eval == LME_LVALUE, b, gi->group, gi->goal);
 
 		} else { assert(libmap_config.eval == LME_GLOBAL);
-			val = winner == g->goal ? 1.0 : 0.0;
+			val = winner == gi->goal ? 1.0 : 0.0;
 		}
-		libmap_add_result(lm, g->hash, m, val, 1);
+		libmap_add_result(lm, gi->hash, m, val, 1);
 	}
 	lmqueue->mq.moves = 0;
 }

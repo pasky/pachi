@@ -58,7 +58,7 @@ void libmap_setup(char *arg);
  * (using libmap_mq functions below), then add that one to libmap_hash's
  * global move queue, processed at the end of the whole playout. */
 
-struct libmap_group {
+struct libmap_move_groupinfo {
 	/* Group-relative tactical description of a move. */
 	group_t group;
 	hash_t hash;
@@ -68,12 +68,12 @@ struct libmap_group {
 struct libmap_mq {
 	struct move_queue mq;
 	enum stone color[MQL]; // complements mq.move
-	struct libmap_group group[MQL];
+	struct libmap_move_groupinfo gi[MQL];
 };
 
 /* libmap_mq_pick() would be simple fast_random(mq.moves), but c.f.
  * libmap_queue_mqpick() below. */
-static void libmap_mq_add(struct libmap_mq *q, struct move m, unsigned char tag, struct libmap_group group);
+static void libmap_mq_add(struct libmap_mq *q, struct move m, unsigned char tag, struct libmap_move_groupinfo lmgi);
 static void libmap_mq_nodup(struct libmap_mq *q);
 static void libmap_mq_print(struct libmap_mq *q, struct board *b, char *label);
 
@@ -123,13 +123,13 @@ struct move_stats libmap_board_move_stats(struct libmap_hash *lm, struct board *
 
 
 static inline void
-libmap_mq_add(struct libmap_mq *q, struct move m, unsigned char tag, struct libmap_group group)
+libmap_mq_add(struct libmap_mq *q, struct move m, unsigned char tag, struct libmap_move_groupinfo lmgi)
 {
 	assert(q->mq.moves < MQL);
 	q->mq.tag[q->mq.moves] = tag;
 	q->mq.move[q->mq.moves] = m.coord;
 	q->color[q->mq.moves] = m.color;
-	q->group[q->mq.moves] = group;
+	q->gi[q->mq.moves] = lmgi;
 	q->mq.moves++;
 }
 
@@ -141,9 +141,9 @@ libmap_mq_nodup(struct libmap_mq *q)
 			return;
 		if (q->mq.move[q->mq.moves - 1 - i] == q->mq.move[q->mq.moves - 1]
 		    && (libmap_config.mq_merge_groups
-		        || (q->group[q->mq.moves - 1 - i].group == q->group[q->mq.moves - 1].group
-		            && q->group[q->mq.moves - 1 - i].hash == q->group[q->mq.moves - 1].hash
-		            && q->group[q->mq.moves - 1 - i].goal == q->group[q->mq.moves - 1].goal))) {
+		        || (q->gi[q->mq.moves - 1 - i].group == q->gi[q->mq.moves - 1].group
+		            && q->gi[q->mq.moves - 1 - i].hash == q->gi[q->mq.moves - 1].hash
+		            && q->gi[q->mq.moves - 1 - i].goal == q->gi[q->mq.moves - 1].goal))) {
 			q->mq.tag[q->mq.moves - 1 - i] |= q->mq.tag[q->mq.moves - 1];
 			assert(q->color[q->mq.moves - 1 - i] == q->color[q->mq.moves - 1]);
 			q->mq.moves--;
@@ -159,11 +159,11 @@ libmap_mq_print(struct libmap_mq *q, struct board *b, char *label)
 	for (unsigned int i = 0; i < q->mq.moves; i++) {
 		fprintf(stderr, "%s[%c:%s %"PRIhash"]", coord2sstr(q->mq.move[i], b),
 			/* attacker / defender */
-			board_at(b, q->group[i].group) == q->group[i].goal ? 'd' : 'a',
-			coord2sstr(q->group[i].group, b),
-			q->group[i].hash & libmap_hash_mask);
+			board_at(b, q->gi[i].group) == q->gi[i].goal ? 'd' : 'a',
+			coord2sstr(q->gi[i].group, b),
+			q->gi[i].hash & libmap_hash_mask);
 		struct move m = { .coord = q->mq.move[i], .color = q->color[i] };
-		struct move_stats *ms = libmap_move_stats(b->libmap, q->group[i].hash, m);
+		struct move_stats *ms = libmap_move_stats(b->libmap, q->gi[i].hash, m);
 		if (ms) {
 			fprintf(stderr, "(%.3f/%d)", ms->value, ms->playouts);
 		}
@@ -187,7 +187,7 @@ libmap_queue_mqpick_threshold(struct libmap_hash *lm, struct libmap_mq *q)
 	do {
 		int pm = p % q->mq.moves;
 		struct move m = { .coord = q->mq.move[pm], .color = q->color[pm] };
-		struct move_stats *ms = libmap_move_stats(lm, q->group[pm].hash, m);
+		struct move_stats *ms = libmap_move_stats(lm, q->gi[pm].hash, m);
 		if (!ms || ms->value >= libmap_config.pick_threshold) {
 			found = true;
 			break;
@@ -207,14 +207,14 @@ libmap_queue_mqpick_ucb(struct libmap_hash *lm, struct libmap_mq *q)
 	LM_DEBUG fprintf(stderr, "\tBandit: ");
 
 	for (unsigned int p = 0; p < q->mq.moves; p++) {
-		struct libmap_context *lc = libmap_group_context(lm, q->group[p].hash);
+		struct libmap_context *lc = libmap_group_context(lm, q->gi[p].hash);
 
 		/* TODO: Consider all moves of this group,
 		 * not just mq contents. */
 		struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
 		struct move_stats s = !is_pass(m.coord) ? libmap_config.prior : libmap_config.tenuki_prior;
 		int group_visits = (lc ? lc->visits : 0) + s.playouts;
-		struct move_stats *ms = libmap_move_stats(lm, q->group[p].hash, m);
+		struct move_stats *ms = libmap_move_stats(lm, q->gi[p].hash, m);
 		if (ms) stats_merge(&s, ms);
 
 		floating_t urgency = s.value + libmap_config.explore_p * sqrt(log(group_visits) / s.playouts);
@@ -242,14 +242,14 @@ libmap_queue_mqpick(struct libmap_hash *lm, struct libmap_mq *lmqueue, struct li
 		return pass; // nothing to do
 
 	/* Create a list of groups involved in the MQ. */
-	struct libmap_group *groups[MQL];
-	unsigned int groups_n = 0;
+	struct libmap_move_groupinfo *lmgi[MQL];
+	unsigned int lmgi_n = 0;
 	if (libmap_config.tenuki) {
 		for (unsigned int i = 0; i < q->mq.moves; i++) {
-			for (unsigned int j = 0; j < groups_n; j++)
-				if (q->group[i].hash == groups[j]->hash)
+			for (unsigned int j = 0; j < lmgi_n; j++)
+				if (q->gi[i].hash == lmgi[j]->hash)
 					goto g_next_move;
-			groups[groups_n++] = &q->group[i];
+			lmgi[lmgi_n++] = &q->gi[i];
 g_next_move:;
 		}
 	}
@@ -258,8 +258,8 @@ g_next_move:;
 	/* XXX: Can the color vary within the queue? */
 	if (libmap_config.tenuki) {
 		struct move tenuki = { .coord = pass, .color = q->color[0] };
-		for (unsigned int i = 0; i < groups_n; i++)
-			libmap_mq_add(q, tenuki, 0 /* XXX */, *groups[i]);
+		for (unsigned int i = 0; i < lmgi_n; i++)
+			libmap_mq_add(q, tenuki, 0 /* XXX */, *lmgi[i]);
 	}
 
 	unsigned int p = 0;
@@ -282,7 +282,7 @@ g_next_move:;
 
 	if (lm) {
 		struct move m = { .coord = q->mq.move[p], .color = q->color[p] };
-		libmap_mq_add(lmqueue, m, q->mq.tag[p], q->group[p]);
+		libmap_mq_add(lmqueue, m, q->mq.tag[p], q->gi[p]);
 	}
 
 	return q->mq.move[p];

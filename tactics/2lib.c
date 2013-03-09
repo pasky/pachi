@@ -88,7 +88,7 @@ defense_is_hopeless(struct board *b, group_t group, enum stone owner,
 void
 can_atari_group(struct board *b, group_t group, enum stone owner,
 		  enum stone to_play, struct libmap_mq *q,
-		  int tag, struct libmap_group lmg, hash_t ca_hash,
+		  int tag, struct libmap_move_groupinfo lmgi, hash_t ca_hash,
 		  bool use_def_no_hopeless)
 {
 	bool have[2] = { false, false };
@@ -204,16 +204,16 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		/* Tasty! Crispy! Good! */
 		struct move m = { .coord = lib, .color = to_play };
 		if (libmap_config.counterattack & LMC_DEFENSE) {
-			libmap_mq_add(q, m, tag, lmg);
+			libmap_mq_add(q, m, tag, lmgi);
 			libmap_mq_nodup(q);
 		}
 		if (libmap_config.counterattack & LMC_ATTACK && ca_hash) {
-			struct libmap_group lmgx = lmg; lmgx.hash = ca_hash;
+			struct libmap_move_groupinfo lmgx = lmgi; lmgx.hash = ca_hash;
 			libmap_mq_add(q, m, tag, lmgx);
 			libmap_mq_nodup(q);
 		}
 		if (libmap_config.counterattack & LMC_DEFENSE_ATTACK && ca_hash) {
-			struct libmap_group lmgx = lmg; lmgx.hash ^= ca_hash;
+			struct libmap_move_groupinfo lmgx = lmgi; lmgx.hash ^= ca_hash;
 			libmap_mq_add(q, m, tag, lmgx);
 			libmap_mq_nodup(q);
 		}
@@ -243,8 +243,8 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libm
 		return;
 
 	hash_t libhash = group_to_libmap(b, group);
-	struct libmap_group lmg = { .group = group, .hash = libhash, .goal = to_play };
-	can_atari_group(b, group, color, to_play, q, tag, lmg, 0, use_def_no_hopeless);
+	struct libmap_move_groupinfo lmgi = { .group = group, .hash = libhash, .goal = to_play };
+	can_atari_group(b, group, color, to_play, q, tag, lmgi, 0, use_def_no_hopeless);
 
 	/* Can we counter-atari another group, if we are the defender? */
 	if (to_play != color)
@@ -257,8 +257,8 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libm
 			if (board_group_info(b, g2).libs == 1) {
 				/* We can capture a neighbor. */
 				struct move m; m.coord = board_group_info(b, g2).lib[0]; m.color = to_play;
-				struct libmap_group lmg; lmg.group = group; lmg.hash = libhash; lmg.goal = to_play;
-				libmap_mq_add(q, m, tag, lmg);
+				struct libmap_move_groupinfo lmgi; lmgi.group = group; lmgi.hash = libhash; lmgi.goal = to_play;
+				libmap_mq_add(q, m, tag, lmgi);
 				libmap_mq_nodup(q);
 				continue;
 			}
@@ -266,7 +266,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libm
 				continue;
 			/* libhash: Liberty info for both original and
 			 * counter-atari group. */
-			can_atari_group(b, g2, stone_other(color), to_play, q, tag, lmg, group_to_libmap(b, g2), use_def_no_hopeless);
+			can_atari_group(b, g2, stone_other(color), to_play, q, tag, lmgi, group_to_libmap(b, g2), use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }
