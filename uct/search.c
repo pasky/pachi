@@ -447,7 +447,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	 * if we aren't completely sure about the winner yet. */
 	if (desired_done) {
 		if (u->policy->winner && u->policy->evaluate) {
-			struct uct_descent descent = { .node = ctx->t->root };
+			struct uct_descent descent = { .node = ctx->t->root, .board = b };
 			u->policy->winner(u->policy, ctx->t, &descent);
 			winner = descent.node;
 		}

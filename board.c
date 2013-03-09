@@ -8,6 +8,7 @@
 #include "board.h"
 #include "debug.h"
 #include "fbook.h"
+#include "libmap.h"
 #include "mq.h"
 #include "random.h"
 
@@ -131,8 +132,15 @@ board_copy(struct board *b2, struct board *b1)
 	size_t size = board_alloc(b2);
 	memcpy(b2->b, b1->b, size);
 
-	// XXX: Special semantics.
-	b2->fbook = NULL;
+	b2->fbook = NULL; // XXX: Special semantics.
+	if (b2->libmap) {
+		/* This is not 100% correct, but we can do away without
+		 * locking as libmap cannot go away in the course of
+		 * copy - b1 will still keep holding refcount at 1
+		 * at least. */
+		__sync_fetch_and_add(&b2->libmap->refcount, 1);
+	}
+	b2->lmqueue = NULL;
 
 	return b2;
 }
@@ -142,6 +150,7 @@ board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
 	if (board->fbook) fbook_done(board->fbook);
+	if (board->libmap) libmap_put(board->libmap);
 }
 
 void
@@ -313,6 +322,11 @@ board_clear(struct board *board)
 	if (board->fbookfile) {
 		board->fbook = fbook_init(board->fbookfile, board);
 	}
+	if (board->libmap) {
+		libmap_put(board->libmap);
+		board->libmap = NULL;
+	}
+	board->lmqueue = NULL;
 }
 
 static char *

@@ -8,6 +8,7 @@
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
+#include "libmap.h"
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
@@ -79,6 +80,10 @@ play_random_game(struct playout_setup *setup,
 	int gamelen = setup->gamelen - b->moves;
 	if (gamelen < 10)
 		gamelen = 10;
+
+	struct libmap_mq lmqueue = {{0}};
+	if (b->libmap)
+		b->lmqueue = &lmqueue;
 
 	if (policy->setboard)
 		policy->setboard(policy, b);
@@ -155,6 +160,10 @@ play_random_game(struct playout_setup *setup,
 
 	if (ownermap)
 		board_ownermap_fill(ownermap, b);
+	if (b->libmap) {
+		libmap_queue_process(b->libmap, b->lmqueue, b, score > 0 ? S_WHITE : S_BLACK);
+		b->lmqueue = NULL;
+	}
 
 	if (b->ps)
 		free(b->ps);

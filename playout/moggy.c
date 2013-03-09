@@ -10,6 +10,7 @@
 #include "board.h"
 #include "debug.h"
 #include "joseki/base.h"
+#include "libmap.h"
 #include "mq.h"
 #include "pattern3.h"
 #include "playout.h"
@@ -331,7 +332,7 @@ local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, st
 
 
 static void
-local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct libmap_mq *q)
 {
 	struct moggy_policy *pp = p->data;
 	group_t group = group_at(b, m->coord), group2 = 0;
@@ -359,11 +360,11 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local 2lib");
+		libmap_mq_print(q, b, "Local 2lib");
 }
 
 static void
-local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, struct libmap_mq *q)
 {
 	struct moggy_policy *pp = p->data;
 	enum stone color = stone_other(m->color);
@@ -408,7 +409,7 @@ local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 	} foreach_8neighbor_end;
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local nlib");
+		libmap_mq_print(q, b, "Local nlib");
 }
 
 static coord_t
@@ -488,7 +489,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
-			struct move_queue q;  q.moves = 0;
+			struct move_queue q; q.moves = 0;
 			local_atari_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -504,18 +505,20 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
-			struct move_queue q; q.moves = 0;
+			struct libmap_mq q;  q.mq.moves = 0;
 			local_2lib_check(p, b, &b->last_move, &q);
-			if (q.moves > 0)
-				return mq_pick(&q);
+			coord_t c = libmap_queue_mqpick(b->libmap, b->lmqueue, &q);
+			if (!is_pass(c))
+				return c;
 		}
 
 		/* Local group reduced some of our groups to 3 libs? */
 		if (pp->nlibrate > fast_random(100)) {
-			struct move_queue q; q.moves = 0;
+			struct libmap_mq q;  q.mq.moves = 0;
 			local_nlib_check(p, b, &b->last_move, &q);
-			if (q.moves > 0)
-				return mq_pick(&q);
+			coord_t c = libmap_queue_mqpick(b->libmap, b->lmqueue, &q);
+			if (!is_pass(c))
+				return c;
 		}
 
 		/* Check for patterns we know */
@@ -649,13 +652,17 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 		if (pp->ladderrate > 0)
 			local_ladder_check(p, b, &b->last_move, &q);
 
+		struct libmap_mq lmq = { .mq = { .moves = 0 } };
+
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > 0)
-			local_2lib_check(p, b, &b->last_move, &q);
+			local_2lib_check(p, b, &b->last_move, &lmq);
 
 		/* Local group reduced some of our groups to 3 libs? */
 		if (pp->nlibrate > 0)
-			local_nlib_check(p, b, &b->last_move, &q);
+			local_nlib_check(p, b, &b->last_move, &lmq);
+
+		mq_append(&q, &lmq.mq);
 
 		/* Check for patterns we know */
 		if (pp->patternrate > 0)
@@ -701,7 +708,6 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 {
 	struct moggy_policy *pp = p->data;
 	struct board *b = map->b;
-	struct move_queue q; q.moves = 0;
 
 	if (board_group_info(b, g).libs > pp->nlib_count)
 		return;
@@ -716,9 +722,11 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			return;
 		if (board_at(b, g) != map->to_play)
 			return; // we do only defense
+		/* TODO: Tie libmap info into tree search. */
+		struct libmap_mq q; q.mq.moves = 0;
 		group_nlib_defense_check(b, g, map->to_play, &q, 0);
-		while (q.moves--) {
-			coord_t coord = q.move[q.moves];
+		while (q.mq.moves--) {
+			coord_t coord = q.mq.move[q.mq.moves];
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: nlib %s\n", coord2sstr(coord, b));
 			int assess = games / 2;
@@ -746,9 +754,10 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 
 		if (!pp->atarirate)
 			return;
+		struct libmap_mq q; q.mq.moves = 0;
 		group_2lib_check(b, g, map->to_play, &q, 0, pp->atari_miaisafe, pp->atari_def_no_hopeless);
-		while (q.moves--) {
-			coord_t coord = q.move[q.moves];
+		while (q.mq.moves--) {
+			coord_t coord = q.mq.move[q.mq.moves];
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: 2lib %s\n", coord2sstr(coord, b));
 			int assess = games / 2;
@@ -759,6 +768,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 
 	/* This group, sir, is in atari! */
 
+	struct move_queue q; q.moves = 0;
 	coord_t ladder = pass;
 	group_atari_check(pp->alwaysccaprate, b, g, map->to_play, &q, &ladder, true, 0);
 	while (q.moves--) {

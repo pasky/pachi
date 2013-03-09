@@ -148,6 +148,8 @@ struct uct_descent {
 	/* Value of main tree node (with all value factors, but unbiased
 	 * - without exploration factor), from black's perspective. */
 	struct move_stats value;
+	/* Board representing current descent state. */
+	struct board *board;
 };
 
 

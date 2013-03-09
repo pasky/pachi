@@ -28,7 +28,7 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 	struct uct_descent dbest[BOARD_MAX_MOVES + 1] = { { .node = descent->node->children, .lnode = NULL } }; int dbests = 1; \
 	floating_t best_urgency = -9999; \
 	/* Descent children iterator. */ \
-	struct uct_descent dci = { .node = descent->node->children, .lnode = descent->lnode ? descent->lnode->children : NULL }; \
+	struct uct_descent dci = { .node = descent->node->children, .lnode = descent->lnode ? descent->lnode->children : NULL, .board = descent->board }; \
 	\
 	for (; dci.node; dci.node = dci.node->sibling) { \
 		floating_t urgency; \

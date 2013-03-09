@@ -14,6 +14,8 @@
 #include "move.h"
 
 struct fbook;
+struct libmap_hash;
+struct libmap_mq;
 
 
 /* Maximum supported board size. (Without the S_OFFBOARD edges.) */
@@ -157,6 +159,10 @@ struct board {
 
 	char *fbookfile;
 	struct fbook *fbook;
+	struct libmap_hash *libmap;
+	/* Queue of moves to store in libmap_hash with their goal value
+	 * at the game end. */
+	struct libmap_mq *lmqueue;
 
 	/* Iterator offsets for foreach_neighbor*() */
 	int nei8[8], dnei[4];
@@ -315,6 +321,19 @@ struct board {
 #define board_group_captured(b_, g_) (board_group_info(b_, g_).libs == 0)
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
+
+#define neighboring_groups_list(b_, filter_, coord_, groups, groups_n, groupsbycolor) \
+	group_t groups[4]; int groups_n = 0; \
+	int groupsbycolor[S_MAX] = {0, 0, 0, 0}; \
+	foreach_neighbor((b_), (coord_), { \
+		if (!(filter_)) continue; \
+		enum stone s = board_at(b, c); \
+		group_t g_ = group_at((b_), c); \
+		if (board_group_info((b_), g_).libs == 2) { \
+			groups[groups_n++] = g_; \
+			groupsbycolor[s]++; \
+		} \
+	});
 
 #define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
 

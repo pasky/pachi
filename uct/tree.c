@@ -10,6 +10,7 @@
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
+#include "libmap.h"
 #include "move.h"
 #include "playout.h"
 #include "tactics/util.h"
@@ -190,14 +191,23 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int treeparity, int l,
 	int children = 0;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		children++;
+
+	/* FIXME: libmap info is correct only at root node!!! */
+	enum stone color = tree_node_color(tree, node);
+	struct move m = { .coord = node->coord, .color = color };
+	struct move_stats lm = { .playouts = -1, .value = 0 };
+	if (tree->board->libmap)
+		lm = libmap_board_move_stats(tree->board->libmap, tree->board, m);
+
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
-	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f] h=%x c#=%d <%"PRIhash">\n",
+	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f libmap %.3f/%d] h=%x c#=%d <%"PRIhash">\n",
 		coord2sstr(node_coord(node), tree->board),
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
 		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
 		tree_node_criticality(tree, node),
+		tree_node_get_value(tree, 1, lm.value), lm.playouts,
 		node->hints, children, node->hash);
 
 	/* Print nodes sorted by #playouts. */

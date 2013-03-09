@@ -11,6 +11,7 @@
 #include "board.h"
 #include "gtp.h"
 #include "chat.h"
+#include "libmap.h"
 #include "move.h"
 #include "mq.h"
 #include "joseki/base.h"
@@ -1047,6 +1048,11 @@ uct_state_init(char *arg, struct board *b)
 				 * some meaningful information in the values
 				 * of the node and its children. */
 				u->significant_threshold = atoi(optval);
+			} else if (!strcasecmp(optname, "libmap")) {
+				/* Online learning of move tactical ratings by
+				 * liberty maps. */
+				libmap_setup(optval);
+				libmap_init(b);
 
 			/** Distributed engine slaves setup */
 

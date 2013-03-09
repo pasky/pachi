@@ -513,22 +513,7 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to)
 coord_t
 selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygroup)
 {
-	group_t groups[4]; int groups_n = 0;
-	int groupsbycolor[4] = {0, 0, 0, 0};
-	if (DEBUGL(6))
-		fprintf(stderr, "cousin group search: ");
-	foreach_neighbor(b, coord, {
-		enum stone s = board_at(b, c);
-		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs == 2) {
-			groups[groups_n++] = g;
-			groupsbycolor[s]++;
-			if (DEBUGL(6))
-				fprintf(stderr, "%s(%s) ", coord2sstr(c, b), stone2str(s));
-		}
-	});
-	if (DEBUGL(6))
-		fprintf(stderr, "\n");
+	neighboring_groups_list(b, 1, coord, groups, groups_n, groupsbycolor);
 
 	if (!groups_n)
 		return pass;

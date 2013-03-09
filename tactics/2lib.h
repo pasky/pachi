@@ -5,11 +5,9 @@
  * preventing atari). */
 
 #include "board.h"
-#include "debug.h"
+#include "libmap.h"
 
-struct move_queue;
-
-void can_atari_group(struct board *b, group_t group, enum stone owner, enum stone to_play, struct move_queue *q, int tag, bool use_def_no_hopeless);
-void group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag, bool use_miaisafe, bool use_def_no_hopeless);
+void can_atari_group(struct board *b, group_t group, enum stone owner, enum stone to_play, struct libmap_mq *q, int tag, struct libmap_group lmg, hash_t ca_hash, bool use_def_no_hopeless);
+void group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libmap_mq *q, int tag, bool use_miaisafe, bool use_def_no_hopeless);
 
 #endif

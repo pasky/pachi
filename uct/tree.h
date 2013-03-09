@@ -161,6 +161,9 @@ static bool tree_leaf_node(struct tree_node *node);
 #define tree_node_parity(tree, node) \
 	((((node)->depth ^ (tree)->root->depth) & 1) ? -1 : 1)
 
+#define tree_node_color(tree, node) \
+	(tree_node_parity(tree, node) > 0 ? (tree)->root_color : stone_other((tree)->root_color))
+
 /* Get black parity from parity within the tree. */
 #define tree_parity(tree, parity) \
 	(tree->root_color == S_WHITE ? (parity) : -1 * (parity))

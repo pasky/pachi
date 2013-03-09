@@ -5,6 +5,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "libmap.h"
 #include "mq.h"
 #include "tactics/2lib.h"
 #include "tactics/nlib.h"
@@ -12,7 +13,7 @@
 
 
 void
-group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag)
+group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, struct libmap_mq *q, int tag)
 {
 	enum stone color = to_play;
 	assert(color != S_OFFBOARD && color != S_NONE
@@ -81,7 +82,11 @@ group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, str
 			group_t g2 = group_at(b, c);
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			can_atari_group(b, g2, stone_other(color), to_play, q, tag, true /* XXX */);
+			struct libmap_group lmg;
+			lmg.group = group;
+			lmg.hash = group_to_libmap(b, group);
+			lmg.goal = to_play;
+			can_atari_group(b, g2, stone_other(color), to_play, q, tag, lmg, group_to_libmap(b, g2), true /* XXX */);
 		});
 	} foreach_in_group_end;
 }

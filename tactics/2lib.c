@@ -5,6 +5,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "libmap.h"
 #include "mq.h"
 #include "tactics/2lib.h"
 #include "tactics/selfatari.h"
@@ -86,8 +87,9 @@ defense_is_hopeless(struct board *b, group_t group, enum stone owner,
 
 void
 can_atari_group(struct board *b, group_t group, enum stone owner,
-		  enum stone to_play, struct move_queue *q,
-		  int tag, bool use_def_no_hopeless)
+		  enum stone to_play, struct libmap_mq *q,
+		  int tag, struct libmap_group lmg, hash_t ca_hash,
+		  bool use_def_no_hopeless)
 {
 	bool have[2] = { false, false };
 	bool preference[2] = { true, true };
@@ -188,8 +190,8 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		/* If we prefer only one of the moves, pick that one. */
 		if (i == 1 && have[0] && preference[0] != preference[1]) {
 			if (!preference[0]) {
-				if (q->move[q->moves - 1] == board_group_info(b, group).lib[0])
-					q->moves--;
+				if (q->mq.move[q->mq.moves - 1] == board_group_info(b, group).lib[0])
+					q->mq.moves--;
 				/* ...else{ may happen, since we call
 				 * mq_nodup() and the move might have
 				 * been there earlier. */
@@ -200,8 +202,21 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		}
 
 		/* Tasty! Crispy! Good! */
-		mq_add(q, lib, tag);
-		mq_nodup(q);
+		struct move m = { .coord = lib, .color = to_play };
+		if (libmap_config.counterattack & LMC_DEFENSE) {
+			libmap_mq_add(q, m, tag, lmg);
+			libmap_mq_nodup(q);
+		}
+		if (libmap_config.counterattack & LMC_ATTACK && ca_hash) {
+			struct libmap_group lmgx = lmg; lmgx.hash = ca_hash;
+			libmap_mq_add(q, m, tag, lmgx);
+			libmap_mq_nodup(q);
+		}
+		if (libmap_config.counterattack & LMC_DEFENSE_ATTACK && ca_hash) {
+			struct libmap_group lmgx = lmg; lmgx.hash ^= ca_hash;
+			libmap_mq_add(q, m, tag, lmgx);
+			libmap_mq_nodup(q);
+		}
 	}
 
 	if (DEBUGL(7)) {
@@ -209,12 +224,12 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		snprintf(label, 256, "= final %s %s liberties to play by %s",
 			stone2str(owner), coord2sstr(group, b),
 			stone2str(to_play));
-		mq_print(q, b, label);
+		libmap_mq_print(q, b, label);
 	}
 }
 
 void
-group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libmap_mq *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -227,7 +242,9 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 	if (use_miaisafe && miai_2lib(b, group, color))
 		return;
 
-	can_atari_group(b, group, color, to_play, q, tag, use_def_no_hopeless);
+	hash_t libhash = group_to_libmap(b, group);
+	struct libmap_group lmg = { .group = group, .hash = libhash, .goal = to_play };
+	can_atari_group(b, group, color, to_play, q, tag, lmg, 0, use_def_no_hopeless);
 
 	/* Can we counter-atari another group, if we are the defender? */
 	if (to_play != color)
@@ -239,13 +256,17 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 			group_t g2 = group_at(b, c);
 			if (board_group_info(b, g2).libs == 1) {
 				/* We can capture a neighbor. */
-				mq_add(q, board_group_info(b, g2).lib[0], tag);
-				mq_nodup(q);
+				struct move m; m.coord = board_group_info(b, g2).lib[0]; m.color = to_play;
+				struct libmap_group lmg; lmg.group = group; lmg.hash = libhash; lmg.goal = to_play;
+				libmap_mq_add(q, m, tag, lmg);
+				libmap_mq_nodup(q);
 				continue;
 			}
 			if (board_group_info(b, g2).libs != 2)
 				continue;
-			can_atari_group(b, g2, stone_other(color), to_play, q, tag, use_def_no_hopeless);
+			/* libhash: Liberty info for both original and
+			 * counter-atari group. */
+			can_atari_group(b, g2, stone_other(color), to_play, q, tag, lmg, group_to_libmap(b, g2), use_def_no_hopeless);
 		});
 	} foreach_in_group_end;
 }
