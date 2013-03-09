@@ -596,6 +596,13 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 
 	/* Finally, pick a move! */
 	fixp_t stab = fast_irandom(total);
+	if (PLDEBUGL(5)) {
+		fprintf(stderr, "Pick (total %.3f stab %.3f): ", fixp_to_double(total), fixp_to_double(stab));
+		for (unsigned int i = 0; i < q->moves; i++) {
+			fprintf(stderr, "%s(%x:%.3f) ", coord2sstr(q->move[i], b), q->tag[i], fixp_to_double(pd[i]));
+		}
+		fprintf(stderr, "\n");
+	}
 	for (unsigned int i = 0; i < q->moves; i++) {
 		//fprintf(stderr, "%s(%x) %f (%f/%f)\n", coord2sstr(q->move[i], b), q->tag[i], fixp_to_double(stab), fixp_to_double(pd[i]), fixp_to_double(total));
 		if (stab < pd[i])
