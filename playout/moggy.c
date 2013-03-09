@@ -89,6 +89,7 @@ struct moggy_policy {
 
 	/* Gamma values for queue tags - correspond to probabilities. */
 	/* XXX: Tune. */
+	bool fullchoose;
 	double mq_prob[MQ_MAX], tenuki_prob;
 };
 
@@ -260,7 +261,8 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
 			mq_print(q, b, "Global atari");
-		return;
+		if (pp->fullchoose)
+			return;
 	}
 
 	int g_base = fast_random(b->clen);
@@ -270,7 +272,8 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
 				mq_print(q, b, "Global atari");
-			return;
+			if (pp->fullchoose)
+				return;
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
@@ -279,10 +282,10 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
 				mq_print(q, b, "Global atari");
-			return;
+			if (pp->fullchoose)
+				return;
 		}
 	}
-	return;
 }
 
 static void
@@ -1031,6 +1034,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			} else if (!strcasecmp(optname, "middle_ladder")) {
 				pp->middle_ladder = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fullchoose")) {
+				pp->fullchoose = true;
 				p->choose = optval && *optval == '0' ? playout_moggy_seqchoose : playout_moggy_fullchoose;
 			} else if (!strcasecmp(optname, "mqprob") && optval) {
 				/* KO%LATARI%L2LIB%LNLIB%PAT3%GATARI%JOSEKI%NAKADE */
