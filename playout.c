@@ -8,10 +8,10 @@
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
-#include "libmap.h"
 #include "move.h"
 #include "ownermap.h"
 #include "playout.h"
+#include "tactics/goals.h"
 
 /* Whether to set global debug level to the same as the playout
  * has, in case it is different. This can make sure e.g. tactical

@@ -10,7 +10,6 @@
 #include "board.h"
 #include "debug.h"
 #include "joseki/base.h"
-#include "libmap.h"
 #include "mq.h"
 #include "pattern3.h"
 #include "playout.h"
@@ -22,6 +21,7 @@
 #include "tactics/ladder.h"
 #include "tactics/nakade.h"
 #include "tactics/selfatari.h"
+#include "tactics/goals.h"
 #include "uct/prior.h"
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)

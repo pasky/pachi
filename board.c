@@ -8,7 +8,7 @@
 #include "board.h"
 #include "debug.h"
 #include "fbook.h"
-#include "libmap.h"
+#include "tactics/goals.h"
 #include "mq.h"
 #include "random.h"
 

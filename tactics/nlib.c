@@ -5,11 +5,11 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "libmap.h"
 #include "mq.h"
 #include "tactics/2lib.h"
 #include "tactics/nlib.h"
 #include "tactics/selfatari.h"
+#include "tactics/goals.h"
 
 
 void

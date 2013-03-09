@@ -7,9 +7,9 @@
 
 #include "board.h"
 #include "debug.h"
-#include "libmap.h"
 #include "move.h"
 #include "random.h"
+#include "tactics/goals.h"
 #include "tactics/util.h"
 #include "uct/internal.h"
 #include "uct/tree.h"

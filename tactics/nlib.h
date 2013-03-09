@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "debug.h"
+#include "tactics/goals.h"
 
 struct move_queue;
 

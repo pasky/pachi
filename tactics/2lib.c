@@ -5,10 +5,10 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "libmap.h"
 #include "mq.h"
 #include "tactics/2lib.h"
 #include "tactics/selfatari.h"
+#include "tactics/goals.h"
 
 
 /* Whether to avoid capturing/atariing doomed groups (this is big
