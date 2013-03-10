@@ -84,6 +84,7 @@ group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, str
 				continue;
 			struct libmap_move_groupinfo lmgi;
 			lmgi.group = group;
+			lmgi.color = color;
 			lmgi.hash = group_to_libmap(b, group);
 			lmgi.goal = to_play;
 			can_atari_group(b, g2, stone_other(color), to_play, q, tag, lmgi, group_to_libmap(b, g2), true /* XXX */);

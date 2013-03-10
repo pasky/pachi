@@ -163,6 +163,11 @@ board_done(struct board *board)
 void
 board_resize(struct board *board, int size)
 {
+	if (board->libmap) {
+		libmap_put(board->libmap);
+		board->libmap = NULL;
+	}
+
 #ifdef BOARD_SIZE
 	assert(board_size(board) == size + 2);
 #endif
@@ -294,6 +299,8 @@ board_init_data(struct board *board)
 #endif
 	} foreach_point_end;
 #endif
+
+	board->libmap_init_groups = true;
 }
 
 void
@@ -1229,8 +1236,13 @@ board_play_outside(struct board *board, struct move *m, int f)
 	});
 
 	board_at(board, coord) = color;
-	if (unlikely(!group))
+	if (unlikely(!group)) {
 		group = new_group(board, coord);
+
+		/* Make sure the new group has a libmap entry. */
+		if (board->libmap && board->libmap_init_groups)
+			libmap_group_init(board->libmap, board, coord, color);
+	}
 
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
@@ -1330,6 +1342,10 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 
 	board_at(board, coord) = color;
 	group_t group = new_group(board, coord);
+
+	/* Make sure the new group has a libmap entry. */
+	if (board->libmap && board->libmap_init_groups)
+		libmap_group_init(board->libmap, board, coord, color);
 
 	board->last_move2 = board->last_move;
 	board->last_move = *m;

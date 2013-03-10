@@ -243,7 +243,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libm
 		return;
 
 	hash_t libhash = group_to_libmap(b, group);
-	struct libmap_move_groupinfo lmgi = { .group = group, .hash = libhash, .goal = to_play };
+	struct libmap_move_groupinfo lmgi = { .group = group, .color = color, .hash = libhash, .goal = to_play };
 	can_atari_group(b, group, color, to_play, q, tag, lmgi, 0, use_def_no_hopeless);
 
 	/* Can we counter-atari another group, if we are the defender? */
@@ -257,7 +257,6 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct libm
 			if (board_group_info(b, g2).libs == 1) {
 				/* We can capture a neighbor. */
 				struct move m; m.coord = board_group_info(b, g2).lib[0]; m.color = to_play;
-				struct libmap_move_groupinfo lmgi; lmgi.group = group; lmgi.hash = libhash; lmgi.goal = to_play;
 				libmap_mq_add(q, m, tag, lmgi);
 				libmap_mq_nodup(q);
 				continue;

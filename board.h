@@ -160,6 +160,8 @@ struct board {
 	char *fbookfile;
 	struct fbook *fbook;
 	struct libmap_hash *libmap;
+	/* Whether to add new groups to the libmap as they pop up. */
+	bool libmap_init_groups;
 	/* Queue of moves to store in libmap_hash with their goal value
 	 * at the game end. */
 	struct libmap_mq *lmqueue;

@@ -111,6 +111,13 @@ libmap_init(struct board *b)
 	lm->b = b;
 	b->libmap = lm;
 	lm->refcount = 1;
+
+	lm->groups[0] = calloc2(board_size2(b), sizeof(*lm->groups[0]));
+	lm->groups[1] = calloc2(board_size2(b), sizeof(*lm->groups[1]));
+	for (group_t g = 1; g < board_size2(b); g++) // foreach_group
+		if (group_at(b, g) == g)
+			libmap_group_init(lm, b, g, board_at(b, g));
+
 	return lm;
 }
 
@@ -119,16 +126,41 @@ libmap_put(struct libmap_hash *lm)
 {
 	if (__sync_sub_and_fetch(&lm->refcount, 1) > 0)
 		return;
+	for (group_t g = 0; g < board_size2(lm->b); g++) {
+		if (lm->groups[0][g])
+			free(lm->groups[0][g]);
+		if (lm->groups[1][g])
+			free(lm->groups[1][g]);
+	}
+	free(lm->groups[0]);
+	free(lm->groups[1]);
 	free(lm);
 }
 
 void
-libmap_queue_process(struct libmap_hash *lm, struct libmap_mq *lmqueue, struct board *b, enum stone winner)
+libmap_group_init(struct libmap_hash *lm, struct board *b, group_t g, enum stone color)
 {
+	assert(color == S_BLACK || color == S_WHITE);
+	if (lm->groups[color - 1][g])
+		return;
+
+	struct libmap_group *lmg = calloc2(1, sizeof(*lmg));
+	lmg->group = g;
+	lmg->color = color;
+	lm->groups[color - 1][g] = lmg;
+}
+
+
+void
+libmap_queue_process(struct board *b, enum stone winner)
+{
+	struct libmap_mq *lmqueue = b->lmqueue;
 	assert(lmqueue->mq.moves <= MQL);
 	for (unsigned int i = 0; i < lmqueue->mq.moves; i++) {
 		struct libmap_move_groupinfo *gi = &lmqueue->gi[i];
 		struct move m = { .coord = lmqueue->mq.move[i], .color = lmqueue->color[i] };
+		struct libmap_group *lg = b->libmap->groups[gi->color - 1][gi->group];
+		if (!lg) continue;
 		floating_t val;
 		if (libmap_config.eval == LME_LOCAL || libmap_config.eval == LME_LVALUE) {
 			val = board_local_value(libmap_config.eval == LME_LVALUE, b, gi->group, gi->goal);
@@ -136,13 +168,13 @@ libmap_queue_process(struct libmap_hash *lm, struct libmap_mq *lmqueue, struct b
 		} else { assert(libmap_config.eval == LME_GLOBAL);
 			val = winner == gi->goal ? 1.0 : 0.0;
 		}
-		libmap_add_result(lm, gi->hash, m, val, 1);
+		libmap_add_result(b->libmap, lg, gi->hash, m, val, 1);
 	}
 	lmqueue->mq.moves = 0;
 }
 
 void
-libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move,
+libmap_add_result(struct libmap_hash *lm, struct libmap_group *lg, hash_t hash, struct move move,
                   floating_t result, int playouts)
 {
 	/* If hash line is full, replacement strategy is naive - pick the
@@ -150,32 +182,32 @@ libmap_add_result(struct libmap_hash *lm, hash_t hash, struct move move,
 	 * randomly. */
 	unsigned int min_playouts = INT_MAX; hash_t min_hash = hash;
 	hash_t ih;
-	for (ih = hash; lm->hash[ih & libmap_hash_mask].hash != hash; ih++) {
-		// fprintf(stderr, "%"PRIhash": check %"PRIhash" (%d)\n", hash & libmap_hash_mask, ih & libmap_hash_mask, lm->hash[ih & libmap_hash_mask].moves);
-		if (lm->hash[ih & libmap_hash_mask].moves == 0) {
-			lm->hash[ih & libmap_hash_mask].hash = hash;
+	for (ih = hash; lg->hash[ih & libmap_hash_mask].hash != hash; ih++) {
+		// fprintf(stderr, "%"PRIhash": check %"PRIhash" (%d)\n", hash & libmap_hash_mask, ih & libmap_hash_mask, lg->hash[ih & libmap_hash_mask].moves);
+		if (lg->hash[ih & libmap_hash_mask].moves == 0) {
+			lg->hash[ih & libmap_hash_mask].hash = hash;
 			break;
 		}
 		if (ih >= hash + libmap_hash_maxline) {
 			/* Snatch the least used bucket. */
 			ih = min_hash;
 			// fprintf(stderr, "clear %"PRIhash"\n", ih & libmap_hash_mask);
-			memset(&lm->hash[ih & libmap_hash_mask], 0, sizeof(lm->hash[0]));
-			lm->hash[ih & libmap_hash_mask].hash = hash;
+			memset(&lg->hash[ih & libmap_hash_mask], 0, sizeof(lg->hash[0]));
+			lg->hash[ih & libmap_hash_mask].hash = hash;
 			break;
 		}
 
 		/* Keep track of least used bucket. */
-		assert(lm->hash[ih & libmap_hash_mask].moves > 0);
-		unsigned int hp = lm->hash[ih & libmap_hash_mask].move[0].stats.playouts;
+		assert(lg->hash[ih & libmap_hash_mask].moves > 0);
+		unsigned int hp = lg->hash[ih & libmap_hash_mask].move[0].stats.playouts;
 		if (hp < min_playouts || (hp == min_playouts && fast_random(2))) {
 			min_playouts = hp;
 			min_hash = ih;
 		}
 	}
 
-	// fprintf(stderr, "%"PRIhash": use %"PRIhash" (%d)\n", hash & libmap_hash_mask, ih & libmap_hash_mask, lm->hash[ih & libmap_hash_mask].moves);
-	struct libmap_context *lc = &lm->hash[ih & libmap_hash_mask];
+	// fprintf(stderr, "%"PRIhash": use %"PRIhash" (%d)\n", hash & libmap_hash_mask, ih & libmap_hash_mask, lg->hash[ih & libmap_hash_mask].moves);
+	struct libmap_context *lc = &lg->hash[ih & libmap_hash_mask];
 	lc->visits++;
 
 	for (int i = 0; i < lc->moves; i++) {
@@ -208,8 +240,10 @@ libmap_board_move_stats(struct libmap_hash *lm, struct board *b, struct move mov
 	neighboring_groups_list(b, board_at(b, c) == S_BLACK || board_at(b, c) == S_WHITE,
 			move.coord, groups, groups_n, groupsbycolor_xxunused);
 	for (int i = 0; i < groups_n; i++) {
+		struct libmap_group *lg = lm->groups[board_at(b, groups[i]) - 1][groups[i]];
+		if (!lg) continue;
 		hash_t hash = group_to_libmap(b, groups[i]);
-		struct move_stats *lp = libmap_move_stats(b->libmap, hash, move);
+		struct move_stats *lp = libmap_move_stats(b->libmap, lg, hash, move);
 		if (!lp) continue;
 		stats_merge(&tot, lp);
 	}
