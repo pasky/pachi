@@ -38,4 +38,20 @@ struct libmap_context {
 	struct libmap_move move[GROUP_REFILL_LIBS];
 };
 
+/* Get statistics of particular move in given libmap structure. */
+static struct move_stats *libmap_move_stats(struct libmap_context *lc, struct move move);
+
+
+static inline struct move_stats *
+libmap_move_stats(struct libmap_context *lc, struct move move)
+{
+	if (!lc) return NULL;
+	for (int i = 0; i < lc->moves; i++) {
+		if (lc->move[i].move.coord == move.coord
+		    && lc->move[i].move.color == move.color)
+			return &lc->move[i].stats;
+	}
+	return NULL;
+}
+
 #endif

@@ -135,8 +135,6 @@ void libmap_queue_process(struct board *b, enum stone winner);
 void libmap_add_result(struct libmap_hash *lm, struct libmap_group *lg, hash_t hash, struct move move, floating_t result, int playouts);
 /* Get libmap context of a given group. */
 static struct libmap_context *libmap_group_context(struct libmap_hash *lm, struct libmap_group *lg, hash_t hash);
-/* Get statistics of particular move in given libmap structure. */
-static struct move_stats *libmap_move_stats(struct libmap_hash *lm, struct libmap_group *lg, hash_t hash, struct move move);
 /* Get statistics of particular move on given board. */
 /* (Note that this is inherently imperfect as it does not take into account
  * counter-atari moves.) */
@@ -186,7 +184,7 @@ libmap_mq_print(struct libmap_mq *q, struct board *b, char *label)
 			q->gi[i].hash & libmap_hash_mask);
 		struct move m = { .coord = q->mq.move[i], .color = q->color[i] };
 		struct libmap_group *lg = b->libmap->groups[q->gi[i].color - 1][q->gi[i].group];
-		struct move_stats *ms = libmap_move_stats(b->libmap, lg, q->gi[i].hash, m);
+		struct move_stats *ms = libmap_move_stats(libmap_group_context(b->libmap, lg, q->gi[i].hash), m);
 		if (ms) {
 			fprintf(stderr, "(%.3f/%d)", ms->value, ms->playouts);
 		}
@@ -211,7 +209,7 @@ libmap_queue_mqpick_threshold(struct libmap_hash *lm, struct board *b, struct li
 		int pm = p % q->mq.moves;
 		struct move m = { .coord = q->mq.move[pm], .color = q->color[pm] };
 		struct libmap_group *lg = lm->groups[q->gi[pm].color - 1][q->gi[pm].group];
-		struct move_stats *ms = libmap_move_stats(lm, lg, q->gi[pm].hash, m);
+		struct move_stats *ms = libmap_move_stats(libmap_group_context(lm, lg, q->gi[pm].hash), m);
 		if (!ms || ms->value >= libmap_config.pick_threshold) {
 			found = true;
 			break;
@@ -240,7 +238,7 @@ libmap_queue_mqpick_ucb(struct libmap_hash *lm, struct board *b, struct libmap_m
 
 		struct move_stats s = !is_pass(m.coord) ? libmap_config.prior : libmap_config.tenuki_prior;
 		int group_visits = (lc ? lc->visits : 0) + s.playouts;
-		struct move_stats *ms = libmap_move_stats(lm, lg, q->gi[p].hash, m);
+		struct move_stats *ms = libmap_move_stats(lc, m);
 		if (ms) stats_merge(&s, ms);
 
 		floating_t urgency = s.value + libmap_config.explore_p * sqrt(log(group_visits) / s.playouts);
@@ -326,19 +324,6 @@ libmap_group_context(struct libmap_hash *lm, struct libmap_group *lg, hash_t has
 			return NULL;
 	}
 	return &lg->hash[ih & libmap_hash_mask];
-}
-
-static inline struct move_stats *
-libmap_move_stats(struct libmap_hash *lm, struct libmap_group *lg, hash_t hash, struct move move)
-{
-	struct libmap_context *lc = libmap_group_context(lm, lg, hash);
-	if (!lc) return NULL;
-	for (int i = 0; i < lc->moves; i++) {
-		if (lc->move[i].move.coord == move.coord
-		    && lc->move[i].move.color == move.color)
-			return &lc->move[i].stats;
-	}
-	return NULL;
 }
 
 #endif

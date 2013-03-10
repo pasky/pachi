@@ -243,7 +243,7 @@ libmap_board_move_stats(struct libmap_hash *lm, struct board *b, struct move mov
 		struct libmap_group *lg = lm->groups[board_at(b, groups[i]) - 1][groups[i]];
 		if (!lg) continue;
 		hash_t hash = group_to_libmap(b, groups[i]);
-		struct move_stats *lp = libmap_move_stats(b->libmap, lg, hash, move);
+		struct move_stats *lp = libmap_move_stats(libmap_group_context(b->libmap, lg, hash), move);
 		if (!lp) continue;
 		stats_merge(&tot, lp);
 	}
