@@ -534,6 +534,12 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		b2.komi += round(u->dynkomi->persim(u->dynkomi, &b2, t, n));
 	}
 
+	/* !!! !!! !!!
+	 * ALERT: The "result" number is extremely confusing. In some parts
+	 * of the code, it is from white's perspective, but here positive
+	 * number is black's win! Be VERY CAREFUL.
+	 * !!! !!! !!! */
+
 	if (passes >= 2) {
 		/* XXX: No dead groups support. */
 		floating_t score = board_official_score(&b2, NULL);
