@@ -241,6 +241,8 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 		for (; !is_pass(*cc); cc++) {
 			if (coord_quadrant(*cc, b) != i)
 				continue;
+			if (board_is_valid_play(b, to_play, *cc))
+				continue;
 			mq_add(q, *cc, 1<<MQ_JOSEKI);
 		}
 	}
