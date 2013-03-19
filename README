@@ -126,12 +126,15 @@ Other special engines are also provided:
 Pachi can be used as a test opponent for development of other go-playing
 programs. For example, to get the "plainest UCT" player, use:
 
-	./pachi -t =5000 policy=ucb1,playout=light,prior=eqex=0,dynkomi=none
+	./pachi -t =5000 policy=ucb1,playout=light,prior=eqex=0,dynkomi=none,pondering=0,pass_all_alive
 
 This will fix the number of playouts per move to 5000, switch the node
 selection policy from ucb1amaf to ucb1 (i.e. disable RAVE), switch the
 playouts from heuristic-heavy moggy to uniformly random light, stop
-prioring the node values heuristically, and turn off dynamic komi.
+prioring the node values heuristically, turn off dynamic komi, disable
+thinking on the opponent's time and make sure Pachi passes only when
+just 10% alive stones remain on the board (to avoid disputes during
+counting).
 
 You can of course selectively re-enable various features or tweak this
 further. But please note that using Pachi in this mode is not tested
