@@ -439,7 +439,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	static char spaces[] = "\0                                                      ";
 	/* /debug */
 	if (UDEBUGL(8))
-		fprintf(stderr, "--- UCT walk with color %d\n", player_color);
+		fprintf(stderr, "--- (#%d) UCT walk with color %d\n", t->root->u.playouts, player_color);
 
 	while (!tree_leaf_node(n) && passes < 2) {
 		spaces[dlen - 1] = ' '; spaces[dlen] = 0;
