@@ -51,6 +51,8 @@ enum mq_tag {
 };
 
 
+#define PAT3_N 15
+
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
@@ -87,6 +89,8 @@ struct moggy_policy {
 	struct joseki_dict *jdict;
 	struct pattern3s patterns;
 
+	double pat3_gammas[PAT3_N];
+
 	/* Gamma values for queue tags - correspond to probabilities. */
 	/* XXX: Tune. */
 	bool fullchoose;
@@ -94,7 +98,7 @@ struct moggy_policy {
 };
 
 
-static char moggy_patterns_src[][11] = {
+static char moggy_patterns_src[PAT3_N][11] = {
 	/* hane pattern - enclosing hane */
 	"XOX"
 	"..."
@@ -175,11 +179,12 @@ static char moggy_patterns_src[][11] = {
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
 static inline bool
-test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bool middle_ladder)
+test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bool middle_ladder, double *gamma)
 {
 	struct moggy_policy *pp = p->data;
 	/* Check if 3x3 pattern is matched by given move... */
-	if (!pattern3_move_here(&pp->patterns, b, m))
+	char pi = -1;
+	if (!pattern3_move_here(&pp->patterns, b, m, &pi))
 		return false;
 	/* ...and the move is not obviously stupid. */
 	if (is_bad_selfatari(b, m->color, m->coord))
@@ -190,40 +195,45 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bo
 	    && !can_countercapture(b, board_at(b, group_base(atari_neighbor)),
                                    atari_neighbor, m->color, NULL, 0))
 		return false;
+	fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord, b), (int) pi, pp->pat3_gammas[(int) pi]);
+	if (gamma)
+		*gamma = pp->pat3_gammas[(int) pi];
 	return true;
 }
 
 static void
-apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum stone color, struct move_queue *q)
+apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum stone color, struct move_queue *q, fixp_t *gammas)
 {
 	struct moggy_policy *pp = p->data;
 	struct move m2 = { .coord = c, .color = color };
-	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder))
-		mq_add(q, c, 1<<MQ_PAT3);
+	double gamma;
+	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder, &gamma)) {
+		mq_gamma_add(q, gammas, c, gamma, 1<<MQ_PAT3);
+	}
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
 static void
-apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *mm, struct move_queue *q)
+apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *mm, struct move_queue *q, fixp_t *gammas)
 {
 	/* Suicides do not make any patterns and confuse us. */
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return;
 
 	foreach_8neighbor(b, m->coord) {
-		apply_pattern_here(p, b, c, stone_other(m->color), q);
+		apply_pattern_here(p, b, c, stone_other(m->color), q, gammas);
 	} foreach_8neighbor_end;
 
 	if (mm) { /* Second move for pattern searching */
 		foreach_8neighbor(b, mm->coord) {
 			if (coord_is_8adjecent(m->coord, c, b))
 				continue;
-			apply_pattern_here(p, b, c, stone_other(m->color), q);
+			apply_pattern_here(p, b, c, stone_other(m->color), q, gammas);
 		} foreach_8neighbor_end;
 	}
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Pattern");
+		mq_gamma_print(q, gammas, b, "Pattern");
 }
 
 
@@ -523,11 +533,12 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
 			struct move_queue q; q.moves = 0;
+			fixp_t gammas[MQL];
 			apply_pattern(p, b, &b->last_move,
 			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
-					  &q);
+					  &q, gammas);
 			if (q.moves > 0)
-				return mq_pick(&q);
+				return mq_gamma_pick(&q, gammas);
 		}
 	}
 
@@ -660,10 +671,13 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 			local_nlib_check(p, b, &b->last_move, &q);
 
 		/* Check for patterns we know */
-		if (pp->patternrate > 0)
+		if (pp->patternrate > 0) {
+			fixp_t gammas[MQL];
 			apply_pattern(p, b, &b->last_move,
 					pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
-					&q);
+					&q, gammas);
+			/* FIXME: Use the gammas. */
+		}
 	}
 
 	/* Global checks */
@@ -831,8 +845,9 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 
 	/* Pattern check */
 	if (pp->patternrate) {
+		// XXX: Use gamma value?
 		struct move m = { .color = map->to_play, .coord = coord };
-		if (test_pattern3_here(p, b, &m, true)) {
+		if (test_pattern3_here(p, b, &m, true, NULL)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
 			add_prior_value(map, coord, 1, games);
@@ -986,6 +1001,10 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	};
 	memcpy(pp->mq_prob, mq_prob_default, sizeof(pp->mq_prob));
 
+	/* By default, 3x3 pattern gammas are all equal. */
+	for (int i = 0; i < PAT3_N; i++)
+		pp->pat3_gammas[i] = 1.0;
+
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -1056,6 +1075,13 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				/* KO%LATARI%L2LIB%LNLIB%PAT3%GATARI%JOSEKI%NAKADE */
 				for (int i = 0; *optval && i < MQ_MAX; i++) {
 					pp->mq_prob[i] = atof(optval);
+					optval += strcspn(optval, "%");
+					if (*optval) optval++;
+				}
+			} else if (!strcasecmp(optname, "pat3gammas") && optval) {
+				/* PAT3_N %-separated floating point values */
+				for (int i = 0; *optval && i < PAT3_N; i++) {
+					pp->pat3_gammas[i] = atof(optval);
 					optval += strcspn(optval, "%");
 					if (*optval) optval++;
 				}
