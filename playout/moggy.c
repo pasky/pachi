@@ -54,7 +54,7 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate;
+	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate, eyefixrate;
 	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
@@ -438,6 +438,88 @@ nakade_check(struct playout_policy *p, struct board *b, struct move *m, enum sto
 	return nakade;
 }
 
+static void
+eye_fix_check(struct playout_policy *p, struct board *b, struct move *m, enum stone to_play, struct move_queue *q)
+{
+	/* The opponent could have filled an approach liberty for
+	 * falsifying an eye like these:
+	 *
+	 * # # # # # #    X . X X O O  last_move == 1
+	 * X X 2 O 1 O    X X 2 O 1 O  => suggest 2
+	 * X . X X O .    X . X X O .
+	 * X X O O . .    X X O O . O
+	 *
+	 * This case seems pretty common (e.g. Zen-Ishida game). */
+
+	/* Iterator for walking coordinates in a clockwise fashion
+	 * (nei8 jumps "over" the middle point, inst. of "around). */
+	int size = board_size(b);
+	int nei8_clockwise[10] = { -size-1, 1, 1, size, size, -1, -1, -size, -size, 1 };
+
+	/* This is sort of like a cross between foreach_diag_neighbor
+	 * and foreach_8neighbor. */
+	coord_t c = m->coord;
+	for (int dni = 0; dni < 8; dni += 2) {
+		// one diagonal neighbor
+		coord_t c0 = c + nei8_clockwise[dni];
+		// adjecent staight neighbor
+		coord_t c1 = c0 + nei8_clockwise[dni + 1];
+		// and adjecent another diagonal neighbor
+		coord_t c2 = c1 + nei8_clockwise[dni + 2];
+
+		/* The last move must have a pair of unfriendly diagonal
+		 * neighbors separated by a friendly stone. */
+		//fprintf(stderr, "inv. %s(%s)-%s(%s)-%s(%s), imm. libcount %d\n", coord2sstr(c0, b), stone2str(board_at(b, c0)), coord2sstr(c1, b), stone2str(board_at(b, c1)), coord2sstr(c2, b), stone2str(board_at(b, c2)), immediate_liberty_count(b, c1));
+		if ((board_at(b, c0) == to_play || board_at(b, c0) == S_OFFBOARD)
+		    && board_at(b, c1) == m->color
+		    && (board_at(b, c2) == to_play || board_at(b, c2) == S_OFFBOARD)
+		    /* The friendly stone then must have an empty neighbor... */
+		    /* XXX: This works only for single stone, not e.g. for two
+		     * stones in a row */
+		    && immediate_liberty_count(b, c1) > 0) {
+			foreach_neighbor(b, c1, {
+				if (c == m->coord || board_at(b, c) != S_NONE)
+					continue;
+				/* ...and the neighbor must potentially falsify
+				 * an eye. */
+				coord_t falsifying = c;
+				foreach_diag_neighbor(b, falsifying) {
+					if (board_at(b, c) != S_NONE)
+						continue;
+					if (!board_is_eyelike(b, c, to_play))
+						continue;
+					/* We don't care about eyes that already
+					 * _are_ false (board_is_false_eyelike())
+					 * but that can become false. Therefore,
+					 * either ==1 diagonal neighbor is
+					 * opponent's (except in atari) or ==2
+					 * are board edge. */
+					coord_t falsified = c;
+					int color_diag_libs[S_MAX] = {0};
+					foreach_diag_neighbor(b, falsified) {
+						if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1) {
+							/* Suggest capturing a falsifying stone in atari. */
+							mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 0);
+						} else {
+							color_diag_libs[board_at(b, c)]++;
+						}
+					} foreach_diag_neighbor_end;
+					if (color_diag_libs[m->color] == 1 || (color_diag_libs[m->color] == 0 && color_diag_libs[S_OFFBOARD] == 2)) {
+						/* That's it. Fill the falsifying
+						 * liberty before it's too late! */
+						mq_add(q, falsifying, 0);
+					}
+				} foreach_diag_neighbor_end;
+			});
+		}
+
+		c = c1;
+	}
+
+	if (q->moves > 0 && PLDEBUGL(5))
+		mq_print(q, b, "Eye fix");
+}
+
 coord_t
 fillboard_check(struct playout_policy *p, struct board *b)
 {
@@ -516,6 +598,14 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		if (pp->nlibrate > fast_random(100)) {
 			struct move_queue q; q.moves = 0;
 			local_nlib_check(p, b, &b->last_move, &q);
+			if (q.moves > 0)
+				return mq_pick(&q);
+		}
+
+		/* Some other semeai-ish shape checks */
+		if (pp->eyefixrate > fast_random(100)) {
+			struct move_queue q; q.moves = 0;
+			eye_fix_check(p, b, &b->last_move, to_play, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
@@ -658,6 +748,10 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 		/* Local group reduced some of our groups to 3 libs? */
 		if (pp->nlibrate > 0)
 			local_nlib_check(p, b, &b->last_move, &q);
+
+		/* Some other semeai-ish shape checks */
+		if (pp->eyefixrate > 0)
+			eye_fix_check(p, b, &b->last_move, to_play, &q);
 
 		/* Check for patterns we know */
 		if (pp->patternrate > 0)
@@ -1021,6 +1115,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->josekirate = atoi(optval);
 			} else if (!strcasecmp(optname, "nakaderate") && optval) {
 				pp->nakaderate = atoi(optval);
+			} else if (!strcasecmp(optname, "eyefixrate") && optval) {
+				pp->eyefixrate = atoi(optval);
 			} else if (!strcasecmp(optname, "alwaysccaprate") && optval) {
 				pp->alwaysccaprate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
@@ -1078,6 +1174,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	if (pp->josekirate == -1U) pp->josekirate = rate;
 	if (pp->ladderrate == -1U) pp->ladderrate = rate;
 	if (pp->nakaderate == -1U) pp->nakaderate = rate;
+	if (pp->eyefixrate == -1U) pp->eyefixrate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
