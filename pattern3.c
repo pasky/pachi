@@ -9,7 +9,7 @@
 
 
 static void
-pattern_record(struct pattern3s *p, char *str, hash3_t pat, int fixed_color)
+pattern_record(struct pattern3s *p, int pi, char *str, hash3_t pat, int fixed_color)
 {
 	hash_t h = hash3_to_hash(pat);
 	while (p->hash[h & pattern3_hash_mask].pattern != pat
@@ -20,7 +20,7 @@ pattern_record(struct pattern3s *p, char *str, hash3_t pat, int fixed_color)
 		fprintf(stderr, "collision of %06x: %llx(%x)\n", pat, hash3_to_hash(pat)&pattern3_hash_mask, p->hash[hash3_to_hash(pat)&pattern3_hash_mask].pattern);
 #endif
 	p->hash[h & pattern3_hash_mask].pattern = pat;
-	p->hash[h & pattern3_hash_mask].value = fixed_color ? fixed_color : 3;
+	p->hash[h & pattern3_hash_mask].value = (fixed_color ? fixed_color : 3) | (pi << 2);
 	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
 }
 
@@ -101,7 +101,7 @@ pattern3_transpose(hash3_t pat, hash3_t (*transp)[8])
 }
 
 static void
-pattern_gen(struct pattern3s *p, hash3_t pat, char *src, int srclen, int fixed_color)
+pattern_gen(struct pattern3s *p, int pi, hash3_t pat, char *src, int srclen, int fixed_color)
 {
 	for (; srclen > 0; src++, srclen--) {
 		if (srclen == 5)
@@ -111,65 +111,65 @@ pattern_gen(struct pattern3s *p, hash3_t pat, char *src, int srclen, int fixed_c
 		switch (*src) {
 			/* Wildcards. */
 			case '?':
-				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'X'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'O'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'X'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'O'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = '?'; // for future recursions
 				return;
 			case 'x':
-				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'O'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'O'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = 'x'; // for future recursions
 				return;
 			case 'o':
-				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'X'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'X'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = 'o'; // for future recursions
 				return;
 
 			case 'X':
-				*src = 'Y'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'Y'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				if (ataribits[patofs] >= 0)
-					*src = '|'; pattern_gen(p, pat, src, srclen, fixed_color);
+					*src = '|'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = 'X'; // for future recursions
 				return;
 			case 'O':
-				*src = 'Q'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = 'Q'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				if (ataribits[patofs] >= 0)
-					*src = '@'; pattern_gen(p, pat, src, srclen, fixed_color);
+					*src = '@'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = 'O'; // for future recursions
 				return;
 
 			case 'y':
-				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '|'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'O'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '|'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'O'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = 'y'; // for future recursions
 				return;
 			case 'q':
-				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '@'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'X'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '@'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'X'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = 'q'; // for future recursions
 				return;
 
 			case '=':
-				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'Y'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'O'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'Y'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'O'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = '='; // for future recursions
 				return;
 			case '0':
-				*src = '.'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'Q'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = 'X'; pattern_gen(p, pat, src, srclen, fixed_color);
-				*src = '#'; pattern_gen(p, pat, src, srclen, fixed_color);
+				*src = '.'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'Q'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = 'X'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				*src = '#'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
 				*src = '0'; // for future recursions
 				return;
 
@@ -192,11 +192,11 @@ pattern_gen(struct pattern3s *p, hash3_t pat, char *src, int srclen, int fixed_c
 	pattern3_transpose(pat, &transp);
 	for (int i = 0; i < 8; i++) {
 		/* Original color assignment */
-		pattern_record(p, src - 9, transp[i], fixed_color);
+		pattern_record(p, pi, src - 9, transp[i], fixed_color);
 		/* Reverse color assignment */
 		if (fixed_color)
 			fixed_color = 2 - (fixed_color == 2);
-		pattern_record(p, src - 9, pattern3_reverse(transp[i]), fixed_color);
+		pattern_record(p, pi, src - 9, pattern3_reverse(transp[i]), fixed_color);
 	}
 }
 
@@ -211,7 +211,7 @@ patterns_gen(struct pattern3s *p, char src[][11], int src_n)
 			case 'O': fixed_color = S_WHITE; break;
 		}
 		//fprintf(stderr, "** %s **\n", src[i]);
-		pattern_gen(p, 0, src[i], 9, fixed_color);
+		pattern_gen(p, i, 0, src[i], 9, fixed_color);
 	}
 }
 
