@@ -195,7 +195,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bo
 	    && !can_countercapture(b, board_at(b, group_base(atari_neighbor)),
                                    atari_neighbor, m->color, NULL, 0))
 		return false;
-	fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord, b), (int) pi, pp->pat3_gammas[(int) pi]);
+	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord, b), (int) pi, pp->pat3_gammas[(int) pi]);
 	if (gamma)
 		*gamma = pp->pat3_gammas[(int) pi];
 	return true;
