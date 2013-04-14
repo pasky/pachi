@@ -99,65 +99,65 @@ struct moggy_policy {
 
 
 static char moggy_patterns_src[PAT3_N][11] = {
-	/* hane pattern - enclosing hane */
+	/* hane pattern - enclosing hane */	/* 0.52 */
 	"XOX"
 	"..."
 	"???",
-	/* hane pattern - non-cutting hane */
+	/* hane pattern - non-cutting hane */	/* 0.53 */
 	"YO."
 	"..."
 	"?.?",
-	/* hane pattern - magari */
+	/* hane pattern - magari */		/* 0.32 */
 	"XO?"
 	"X.."
 	"x.?",
-	/* hane pattern - thin hane */
+	/* hane pattern - thin hane */		/* 0.22 */
 	"XOO"
 	"..."
 	"?.?" "X",
-	/* generic pattern - katatsuke or diagonal attachment; similar to magari */
+	/* generic pattern - katatsuke or diagonal attachment; similar to magari */	/* 0.37 */
 	".Q."
 	"Y.."
 	"...",
-	/* cut1 pattern (kiri) - unprotected cut */
+	/* cut1 pattern (kiri) - unprotected cut */	/* 0.28 */
 	"XO?"
 	"O.o"
 	"?o?",
-	/* cut1 pattern (kiri) - peeped cut */
+	/* cut1 pattern (kiri) - peeped cut */	/* 0.21 */
 	"XO?"
 	"O.X"
 	"???",
-	/* cut2 pattern (de) */
+	/* cut2 pattern (de) */			/* 0.19 */
 	"?X?"
 	"O.O"
 	"ooo",
-	/* cut keima (not in Mogo) */
+	/* cut keima (not in Mogo) */		/* 0.82 */
 	"OX?"
 	"o.O"
 	"???", /* o?? has some pathological tsumego cases */
-	/* side pattern - chase */
+	/* side pattern - chase */		/* 0.12 */
 	"X.?"
 	"O.?"
 	"##?",
-	/* side pattern - block side cut */
+	/* side pattern - block side cut */	/* 0.20 */
 	"OX?"
 	"X.O"
 	"###",
-	/* side pattern - block side connection */
+	/* side pattern - block side connection */	/* 0.11 */
 	"?X?"
 	"x.O"
 	"###",
-	/* side pattern - sagari (SUSPICIOUS) */
+	/* side pattern - sagari (SUSPICIOUS) */	/* 0.16 */
 	"?XQ"
 	"x.x" /* Mogo has "x.?" */
 	"###" /* Mogo has "X" */,
-	/* side pattern - throw-in (SUSPICIOUS) */
 #if 0
+	/* side pattern - throw-in (SUSPICIOUS) */
 	"?OX"
 	"o.O"
 	"?##" "X",
 #endif
-	/* side pattern - cut (SUSPICIOUS) */
+	/* side pattern - cut (SUSPICIOUS) */	/* 0.57 */
 	"?OY"
 	"Y.O"
 	"###" /* Mogo has "X" */,
@@ -166,7 +166,7 @@ static char moggy_patterns_src[PAT3_N][11] = {
 	 * # O . O .
 	 * # . . . .
 	 * # # # # # */
-	/* side pattern - make eye */
+	/* side pattern - make eye */		/* 0.44 */
 	"?X."
 	"Q.X"
 	"###",
@@ -1095,9 +1095,13 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	};
 	memcpy(pp->mq_prob, mq_prob_default, sizeof(pp->mq_prob));
 
-	/* By default, 3x3 pattern gammas are all equal. */
-	for (int i = 0; i < PAT3_N; i++)
-		pp->pat3_gammas[i] = 1.0;
+	/* Default 3x3 pattern gammas tuned on 15x15 with 500s/game on
+	 * i7-3770 single thread using 40000 CLOP games. */
+	double pat3_gammas_default[PAT3_N] = {
+		0.52, 0.53, 0.32, 0.22, 0.37, 0.28, 0.21, 0.19, 0.82,
+		0.12, 0.20, 0.11, 0.16, 0.57, 0.44
+	};
+	memcpy(pp->pat3_gammas, pat3_gammas_default, sizeof(pp->pat3_gammas));
 
 	if (arg) {
 		char *optspec, *next = arg;
