@@ -698,9 +698,13 @@ uct_state_init(char *arg, struct board *b)
 				u->pass_all_alive = true;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
-				 * last engine parameter. */
+				 * last engine parameter. You can use '+' instead
+				 * of ' ' if you are wrestling with kgsGtp. */
 				if (*next) *--next = ',';
 				u->banner = strdup(optval);
+				for (char *b = u->banner; *b; b++) {
+					if (*b == '+') *b = ' ';
+				}
 				break;
 			} else if (!strcasecmp(optname, "plugin") && optval) {
 				/* Load an external plugin; filename goes before the colon,
