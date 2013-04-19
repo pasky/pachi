@@ -489,7 +489,11 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	 * Also do not resign if we are getting bad results while actually
 	 * giving away extra komi points (dynkomi). */
 	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_threshold
-	    && !is_pass(node_coord(best)) && best->u.playouts > GJ_MINGAMES
+	    && !is_pass(node_coord(best))
+	    // If only simulated node has been a pass and no other node has
+	    // been simulated but pass won't win, an unsimulated node has
+	    // been returned; test therefore also for #simulations at root.
+	    && (best->u.playouts > GJ_MINGAMES || u->t->root->u.playouts > GJ_MINGAMES * 2)
 	    && (!u->t->use_extra_komi || komi_by_color(u->t->extra_komi, color) < 0.5)) {
 		*best_coord = resign;
 		return NULL;
