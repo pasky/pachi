@@ -291,6 +291,16 @@ playout_policy_done(struct playout_policy *p)
 }
 
 static void
+uct_stop(struct engine *e)
+{
+	/* This is called on game over notification. However, an undo
+	 * and game resume can follow, so don't panic yet and just
+	 * relax and stop thinking so that we don't waste CPU. */
+	struct uct *u = e->data;
+	uct_pondering_stop(u);
+}
+
+static void
 uct_done(struct engine *e)
 {
 	/* This is called on engine reset, especially when clear_board
@@ -1195,6 +1205,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->genmoves = uct_genmoves;
 	e->evaluate = uct_evaluate;
 	e->dead_group_list = uct_dead_group_list;
+	e->stop = uct_stop;
 	e->done = uct_done;
 	e->data = u;
 	if (u->slave)

@@ -230,6 +230,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			fprintf(stderr, "game is over\n");
 			fflush(stderr);
 		}
+		if (engine->stop)
+			engine->stop(engine);
 		/* Sleep before replying, so that kgs doesn't
 		 * start another game immediately. */
 		sleep(GAME_OVER_SLEEP);

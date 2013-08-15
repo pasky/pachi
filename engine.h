@@ -24,6 +24,9 @@ typedef char *(*engine_genmoves)(struct engine *e, struct board *b, struct time_
 typedef void (*engine_evaluate)(struct engine *e, struct board *b, struct time_info *ti, floating_t *vals, enum stone color);
 /* One dead group per queued move (coord_t is (ab)used as group_t). */
 typedef void (*engine_dead_group_list)(struct engine *e, struct board *b, struct move_queue *mq);
+/* Pause any background thinking being done, but do not tear down
+ * any data structures yet. */
+typedef void (*engine_stop)(struct engine *e);
 /* e->data and e will be free()d by caller afterwards. */
 typedef void (*engine_done)(struct engine *e);
 
@@ -46,6 +49,7 @@ struct engine {
 	engine_genmoves genmoves;
 	engine_evaluate evaluate;
 	engine_dead_group_list dead_group_list;
+	engine_stop stop;
 	engine_done done;
 	void *data;
 };
