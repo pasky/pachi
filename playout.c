@@ -77,8 +77,6 @@ play_random_game(struct playout_setup *setup,
 	assert(setup && policy);
 
 	int gamelen = setup->gamelen - b->moves;
-	if (gamelen < 10)
-		gamelen = 10;
 
 	if (policy->setboard)
 		policy->setboard(policy, b);
