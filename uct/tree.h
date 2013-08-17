@@ -69,6 +69,10 @@ struct tree_node {
 #define TREE_HINT_INVALID 1 // don't go to this node, invalid move
 	unsigned char hints;
 
+	/* Number of parallel descents going through this node at the moment.
+	 * Used for virtual loss computation. */
+	signed char descents;
+
 	/* coord is usually coord_t, but this is very space-sensitive. */
 #define node_coord(n) ((int) (n)->coord)
 	short coord;

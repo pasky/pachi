@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+//#define DEBUG
+
 #include "board.h"
 #include "debug.h"
 #include "move.h"
@@ -108,6 +110,14 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		stats_merge(&n, &node->prior);
 	}
 
+	if (p->uct->virtual_loss) {
+		/* Add virtual loss if we need to; this is used to discourage
+		 * other threads from visiting this node in case of multiple
+		 * threads doing the tree search. */
+		struct move_stats c = { .value = parity > 0 ? 0. : 1., .playouts = node->descents };
+		stats_merge(&n, &c);
+	}
+
 	/* Local tree heuristics. */
 	assert(!lnode || lnode->parent);
 	if (p->uct->local_tree && b->ltree_rave > 0 && lnode
@@ -142,7 +152,6 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		}
 	}
 
-
 	floating_t value = 0;
 	if (n.playouts) {
 		if (r.playouts) {
@@ -172,6 +181,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	}
 	descent->value.playouts = r.playouts + n.playouts;
 	descent->value.value = value;
+
 	return tree_node_get_value(tree, parity, value);
 }
 
