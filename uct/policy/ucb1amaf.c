@@ -24,6 +24,12 @@ struct ucb1_policy_amaf {
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
 	floating_t explore_p;
+	/* Rescale virtual loss value to square root of #threads. This mitigates
+	 * the number of virtual losses added in case of a large amount of
+	 * threads; it seems that with linear virtual losses, overly diverse
+	 * exploration caused by this may cause a wrong mean value computed
+	 * for the parent node. */
+	bool vloss_sqrt;
 	/* In distributed mode, encourage different slaves to work on different
 	 * parts of the tree by adding virtual wins to different nodes. */
 	int virtual_win;
@@ -114,7 +120,8 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		/* Add virtual loss if we need to; this is used to discourage
 		 * other threads from visiting this node in case of multiple
 		 * threads doing the tree search. */
-		struct move_stats c = { .value = parity > 0 ? 0. : 1., .playouts = node->descents };
+		floating_t vloss_coeff = b->vloss_sqrt ? sqrt(p->uct->threads) / p->uct->threads : 1.;
+		struct move_stats c = { .value = parity > 0 ? 0. : 1., .playouts = node->descents * vloss_coeff };
 		stats_merge(&n, &c);
 	}
 
@@ -405,6 +412,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 				b->root_virtual_win = atoi(optval);
 			} else if (!strcasecmp(optname, "vwin_min_playouts") && optval) {
 				b->vwin_min_playouts = atoi(optval);
+			} else if (!strcasecmp(optname, "vloss_sqrt")) {
+				b->vloss_sqrt = !optval || *optval == '1';
 			} else {
 				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
 					optname);
