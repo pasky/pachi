@@ -363,6 +363,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 	b->crit_negative = 1;
 	b->crit_amaf = 0;
 
+	b->vloss_sqrt = true;
+
 	b->virtual_win = 5;
 	b->root_virtual_win = 30;
 	b->vwin_min_playouts = 1000;
