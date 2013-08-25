@@ -1063,7 +1063,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	int rate = board_large(b) ? 80 : 90;
 
 	pp->lcapturerate = pp->atarirate = pp->nlibrate
-		= pp->selfatarirate = pp->josekirate = -1U;
+		= pp->josekirate = -1U;
 	pp->patternrate = pp->eyefixrate = 100;
 	pp->nlibrate = 20;
 	pp->nakaderate = 20;
@@ -1072,6 +1072,14 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 40;
 	pp->eyefillrate = 60;
+
+	/* selfatarirate is slightly special, since to avoid playing some
+	 * silly move that stays on the board, it needs to block it many
+	 * times during a simulation - we'd like that to happen in most
+	 * simulations, so we try to use a very high selfatarirate.
+	 * XXX: Perhaps it would be better to permanently ban moves in
+	 * the current simulation after testing them once. */
+	pp->selfatarirate = 95;
 	pp->selfatari_other = true;
 
 	pp->cap_stone_min = 2;
