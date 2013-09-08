@@ -78,8 +78,6 @@ play_random_game(struct playout_setup *setup,
 	assert(setup && policy);
 
 	int gamelen = setup->gamelen - b->moves;
-	if (gamelen < 10)
-		gamelen = 10;
 
 	struct libmap_mq lmqueue = {{0}};
 	if (b->libmap) {

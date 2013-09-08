@@ -22,7 +22,7 @@ struct move;
 
 struct pattern2p {
 	hash3_t pattern;
-	char value;
+	unsigned char value;
 };
 
 struct pattern3s {
@@ -56,7 +56,7 @@ void pattern3s_init(struct pattern3s *p, char src[][11], int src_n);
 static hash3_t pattern3_hash(struct board *b, coord_t c);
 
 /* Check if we match any 3x3 pattern centered on given move. */
-static bool pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m);
+static bool pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m, char *idx);
 
 /* Generate all transpositions of given pattern, stored in an
  * hash3_t[8] array. */
@@ -102,7 +102,7 @@ hash3_to_hash(hash3_t pat)
 }
 
 static inline bool
-pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m)
+pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m, char *idx)
 {
 #ifdef BOARD_PAT3
 	hash3_t pat = b->pat3[m->coord];
@@ -113,7 +113,12 @@ pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m)
 	while (p->hash[h & pattern3_hash_mask].pattern != pat
 	       && p->hash[h & pattern3_hash_mask].value != 0)
 		h++;
-	return (p->hash[h & pattern3_hash_mask].value & m->color);
+	if (p->hash[h & pattern3_hash_mask].value & m->color) {
+		*idx = p->hash[h & pattern3_hash_mask].value >> 2;
+		return true;
+	} else {
+		return false;
+	}
 }
 
 static inline hash3_t

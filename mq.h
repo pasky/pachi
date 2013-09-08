@@ -38,6 +38,17 @@ static void mq_nodup(struct move_queue *q);
 static void mq_print(struct move_queue *q, struct board *b, char *label);
 
 
+/* Variations of the above that allow move weighting. */
+/* XXX: The "kinds of move queue" issue (it's even worse in some other
+ * branches) is one of the few good arguments for C++ in Pachi...
+ * At least rewrite it to be less hacky and maybe make a move_gamma_queue
+ * that encapsulates move_queue. */
+
+static coord_t mq_gamma_pick(struct move_queue *q, fixp_t *gammas);
+static void mq_gamma_add(struct move_queue *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag);
+static void mq_gamma_print(struct move_queue *q, fixp_t *gammas, struct board *b, char *label);
+
+
 static inline coord_t
 mq_pick(struct move_queue *q)
 {
@@ -81,6 +92,44 @@ mq_print(struct move_queue *q, struct board *b, char *label)
 	fprintf(stderr, "%s candidate moves: ", label);
 	for (unsigned int i = 0; i < q->moves; i++) {
 		fprintf(stderr, "%s ", coord2sstr(q->move[i], b));
+	}
+	fprintf(stderr, "\n");
+}
+
+static inline coord_t
+mq_gamma_pick(struct move_queue *q, fixp_t *gammas)
+{
+	if (!q->moves)
+		return pass;
+	fixp_t total = 0;
+	for (unsigned int i = 0; i < q->moves; i++) {
+		total += gammas[i];
+	}
+	if (!total)
+		return pass;
+	fixp_t stab = fast_irandom(total);
+	for (unsigned int i = 0; i < q->moves; i++) {
+		if (stab < gammas[i])
+			return q->move[i];
+		stab -= gammas[i];
+	}
+	assert(0);
+	return pass;
+}
+
+static inline void
+mq_gamma_add(struct move_queue *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag)
+{
+	mq_add(q, c, tag);
+	gammas[q->moves - 1] = double_to_fixp(gamma);
+}
+
+static inline void
+mq_gamma_print(struct move_queue *q, fixp_t *gammas, struct board *b, char *label)
+{
+	fprintf(stderr, "%s candidate moves: ", label);
+	for (unsigned int i = 0; i < q->moves; i++) {
+		fprintf(stderr, "%s(%.3f) ", coord2sstr(q->move[i], b), fixp_to_double(gammas[i]));
 	}
 	fprintf(stderr, "\n");
 }

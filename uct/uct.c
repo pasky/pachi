@@ -292,6 +292,16 @@ playout_policy_done(struct playout_policy *p)
 }
 
 static void
+uct_stop(struct engine *e)
+{
+	/* This is called on game over notification. However, an undo
+	 * and game resume can follow, so don't panic yet and just
+	 * relax and stop thinking so that we don't waste CPU. */
+	struct uct *u = e->data;
+	uct_pondering_stop(u);
+}
+
+static void
 uct_done(struct engine *e)
 {
 	/* This is called on engine reset, especially when clear_board
@@ -699,9 +709,13 @@ uct_state_init(char *arg, struct board *b)
 				u->pass_all_alive = true;
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
-				 * last engine parameter. */
+				 * last engine parameter. You can use '+' instead
+				 * of ' ' if you are wrestling with kgsGtp. */
 				if (*next) *--next = ',';
 				u->banner = strdup(optval);
+				for (char *b = u->banner; *b; b++) {
+					if (*b == '+') *b = ' ';
+				}
 				break;
 			} else if (!strcasecmp(optname, "plugin") && optval) {
 				/* Load an external plugin; filename goes before the colon,
@@ -1197,6 +1211,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->genmoves = uct_genmoves;
 	e->evaluate = uct_evaluate;
 	e->dead_group_list = uct_dead_group_list;
+	e->stop = uct_stop;
 	e->done = uct_done;
 	e->data = u;
 	if (u->slave)

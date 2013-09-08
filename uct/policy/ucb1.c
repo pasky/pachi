@@ -40,13 +40,14 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descen
 
 	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
 		struct tree_node *ni = di.node;
-		int uct_playouts = ni->u.playouts + ni->prior.playouts;
+		int uct_playouts = ni->u.playouts + ni->prior.playouts + ni->descents;
 
 		/* XXX: We don't take local-tree information into account. */
 
 		if (uct_playouts) {
 			urgency = (ni->u.playouts * tree_node_get_value(tree, parity, ni->u.value)
 				   + ni->prior.playouts * tree_node_get_value(tree, parity, ni->prior.value))
+				   + (parity > 0 ? 0 : ni->descents)
 				  / uct_playouts;
 			urgency += b->explore_p * sqrt(xpl / uct_playouts);
 		} else {
@@ -65,8 +66,10 @@ ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enu
 	 * they had to all occur in all branches, only in
 	 * different order. */
 	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
+
 	for (; node; node = node->parent) {
 		stats_add_result(&node->u, result, 1);
+
 		if (!is_pass(node_coord(node))) {
 			stats_add_result(&node->winner_owner, board_at(final_board, node_coord(node)) == winner_color ? 1.0 : 0.0, 1);
 			stats_add_result(&node->black_owner, board_at(final_board, node_coord(node)) == S_BLACK ? 1.0 : 0.0, 1);

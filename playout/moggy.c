@@ -52,10 +52,12 @@ enum mq_tag {
 };
 
 
+#define PAT3_N 15
+
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
-	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate;
+	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate, eyefixrate;
 	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
 	unsigned int fillboardtries;
 	int koage;
@@ -88,6 +90,8 @@ struct moggy_policy {
 	struct joseki_dict *jdict;
 	struct pattern3s patterns;
 
+	double pat3_gammas[PAT3_N];
+
 	/* Gamma values for queue tags - correspond to probabilities. */
 	/* XXX: Tune. */
 	bool fullchoose;
@@ -95,66 +99,66 @@ struct moggy_policy {
 };
 
 
-static char moggy_patterns_src[][11] = {
-	/* hane pattern - enclosing hane */
+static char moggy_patterns_src[PAT3_N][11] = {
+	/* hane pattern - enclosing hane */	/* 0.52 */
 	"XOX"
 	"..."
 	"???",
-	/* hane pattern - non-cutting hane */
+	/* hane pattern - non-cutting hane */	/* 0.53 */
 	"YO."
 	"..."
 	"?.?",
-	/* hane pattern - magari */
+	/* hane pattern - magari */		/* 0.32 */
 	"XO?"
 	"X.."
 	"x.?",
-	/* hane pattern - thin hane */
+	/* hane pattern - thin hane */		/* 0.22 */
 	"XOO"
 	"..."
 	"?.?" "X",
-	/* generic pattern - katatsuke or diagonal attachment; similar to magari */
+	/* generic pattern - katatsuke or diagonal attachment; similar to magari */	/* 0.37 */
 	".Q."
 	"Y.."
 	"...",
-	/* cut1 pattern (kiri) - unprotected cut */
+	/* cut1 pattern (kiri) - unprotected cut */	/* 0.28 */
 	"XO?"
 	"O.o"
 	"?o?",
-	/* cut1 pattern (kiri) - peeped cut */
+	/* cut1 pattern (kiri) - peeped cut */	/* 0.21 */
 	"XO?"
 	"O.X"
 	"???",
-	/* cut2 pattern (de) */
+	/* cut2 pattern (de) */			/* 0.19 */
 	"?X?"
 	"O.O"
 	"ooo",
-	/* cut keima (not in Mogo) */
+	/* cut keima (not in Mogo) */		/* 0.82 */
 	"OX?"
 	"o.O"
 	"???", /* o?? has some pathological tsumego cases */
-	/* side pattern - chase */
+	/* side pattern - chase */		/* 0.12 */
 	"X.?"
 	"O.?"
 	"##?",
-	/* side pattern - block side cut */
+	/* side pattern - block side cut */	/* 0.20 */
 	"OX?"
 	"X.O"
 	"###",
-	/* side pattern - block side connection */
+	/* side pattern - block side connection */	/* 0.11 */
 	"?X?"
 	"x.O"
 	"###",
-	/* side pattern - sagari (SUSPICIOUS) */
+	/* side pattern - sagari (SUSPICIOUS) */	/* 0.16 */
 	"?XQ"
 	"x.x" /* Mogo has "x.?" */
 	"###" /* Mogo has "X" */,
-	/* side pattern - throw-in (SUSPICIOUS) */
 #if 0
+	/* side pattern - throw-in (SUSPICIOUS) */
 	"?OX"
 	"o.O"
 	"?##" "X",
 #endif
-	/* side pattern - cut (SUSPICIOUS) */
+	/* side pattern - cut (SUSPICIOUS) */	/* 0.57 */
 	"?OY"
 	"Y.O"
 	"###" /* Mogo has "X" */,
@@ -163,7 +167,7 @@ static char moggy_patterns_src[][11] = {
 	 * # O . O .
 	 * # . . . .
 	 * # # # # # */
-	/* side pattern - make eye */
+	/* side pattern - make eye */		/* 0.44 */
 	"?X."
 	"Q.X"
 	"###",
@@ -176,11 +180,12 @@ static char moggy_patterns_src[][11] = {
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
 static inline bool
-test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bool middle_ladder)
+test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bool middle_ladder, double *gamma)
 {
 	struct moggy_policy *pp = p->data;
 	/* Check if 3x3 pattern is matched by given move... */
-	if (!pattern3_move_here(&pp->patterns, b, m))
+	char pi = -1;
+	if (!pattern3_move_here(&pp->patterns, b, m, &pi))
 		return false;
 	/* ...and the move is not obviously stupid. */
 	if (is_bad_selfatari(b, m->color, m->coord))
@@ -191,40 +196,45 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bo
 	    && !can_countercapture(b, board_at(b, group_base(atari_neighbor)),
                                    atari_neighbor, m->color, NULL, 0))
 		return false;
+	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord, b), (int) pi, pp->pat3_gammas[(int) pi]);
+	if (gamma)
+		*gamma = pp->pat3_gammas[(int) pi];
 	return true;
 }
 
 static void
-apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum stone color, struct move_queue *q)
+apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum stone color, struct move_queue *q, fixp_t *gammas)
 {
 	struct moggy_policy *pp = p->data;
 	struct move m2 = { .coord = c, .color = color };
-	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder))
-		mq_add(q, c, 1<<MQ_PAT3);
+	double gamma;
+	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder, &gamma)) {
+		mq_gamma_add(q, gammas, c, gamma, 1<<MQ_PAT3);
+	}
 }
 
 /* Check if we match any pattern around given move (with the other color to play). */
 static void
-apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *mm, struct move_queue *q)
+apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *mm, struct move_queue *q, fixp_t *gammas)
 {
 	/* Suicides do not make any patterns and confuse us. */
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
 		return;
 
 	foreach_8neighbor(b, m->coord) {
-		apply_pattern_here(p, b, c, stone_other(m->color), q);
+		apply_pattern_here(p, b, c, stone_other(m->color), q, gammas);
 	} foreach_8neighbor_end;
 
 	if (mm) { /* Second move for pattern searching */
 		foreach_8neighbor(b, mm->coord) {
 			if (coord_is_8adjecent(m->coord, c, b))
 				continue;
-			apply_pattern_here(p, b, c, stone_other(m->color), q);
+			apply_pattern_here(p, b, c, stone_other(m->color), q, gammas);
 		} foreach_8neighbor_end;
 	}
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Pattern");
+		mq_gamma_print(q, gammas, b, "Pattern");
 }
 
 
@@ -241,6 +251,8 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 		if (!cc) continue;
 		for (; !is_pass(*cc); cc++) {
 			if (coord_quadrant(*cc, b) != i)
+				continue;
+			if (board_is_valid_play(b, to_play, *cc))
 				continue;
 			mq_add(q, *cc, 1<<MQ_JOSEKI);
 		}
@@ -437,6 +449,88 @@ nakade_check(struct playout_policy *p, struct board *b, struct move *m, enum sto
 	return nakade;
 }
 
+static void
+eye_fix_check(struct playout_policy *p, struct board *b, struct move *m, enum stone to_play, struct move_queue *q)
+{
+	/* The opponent could have filled an approach liberty for
+	 * falsifying an eye like these:
+	 *
+	 * # # # # # #    X . X X O O  last_move == 1
+	 * X X 2 O 1 O    X X 2 O 1 O  => suggest 2
+	 * X . X X O .    X . X X O .
+	 * X X O O . .    X X O O . O
+	 *
+	 * This case seems pretty common (e.g. Zen-Ishida game). */
+
+	/* Iterator for walking coordinates in a clockwise fashion
+	 * (nei8 jumps "over" the middle point, inst. of "around). */
+	int size = board_size(b);
+	int nei8_clockwise[10] = { -size-1, 1, 1, size, size, -1, -1, -size, -size, 1 };
+
+	/* This is sort of like a cross between foreach_diag_neighbor
+	 * and foreach_8neighbor. */
+	coord_t c = m->coord;
+	for (int dni = 0; dni < 8; dni += 2) {
+		// one diagonal neighbor
+		coord_t c0 = c + nei8_clockwise[dni];
+		// adjecent staight neighbor
+		coord_t c1 = c0 + nei8_clockwise[dni + 1];
+		// and adjecent another diagonal neighbor
+		coord_t c2 = c1 + nei8_clockwise[dni + 2];
+
+		/* The last move must have a pair of unfriendly diagonal
+		 * neighbors separated by a friendly stone. */
+		//fprintf(stderr, "inv. %s(%s)-%s(%s)-%s(%s), imm. libcount %d\n", coord2sstr(c0, b), stone2str(board_at(b, c0)), coord2sstr(c1, b), stone2str(board_at(b, c1)), coord2sstr(c2, b), stone2str(board_at(b, c2)), immediate_liberty_count(b, c1));
+		if ((board_at(b, c0) == to_play || board_at(b, c0) == S_OFFBOARD)
+		    && board_at(b, c1) == m->color
+		    && (board_at(b, c2) == to_play || board_at(b, c2) == S_OFFBOARD)
+		    /* The friendly stone then must have an empty neighbor... */
+		    /* XXX: This works only for single stone, not e.g. for two
+		     * stones in a row */
+		    && immediate_liberty_count(b, c1) > 0) {
+			foreach_neighbor(b, c1, {
+				if (c == m->coord || board_at(b, c) != S_NONE)
+					continue;
+				/* ...and the neighbor must potentially falsify
+				 * an eye. */
+				coord_t falsifying = c;
+				foreach_diag_neighbor(b, falsifying) {
+					if (board_at(b, c) != S_NONE)
+						continue;
+					if (!board_is_eyelike(b, c, to_play))
+						continue;
+					/* We don't care about eyes that already
+					 * _are_ false (board_is_false_eyelike())
+					 * but that can become false. Therefore,
+					 * either ==1 diagonal neighbor is
+					 * opponent's (except in atari) or ==2
+					 * are board edge. */
+					coord_t falsified = c;
+					int color_diag_libs[S_MAX] = {0};
+					foreach_diag_neighbor(b, falsified) {
+						if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1) {
+							/* Suggest capturing a falsifying stone in atari. */
+							mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 0);
+						} else {
+							color_diag_libs[board_at(b, c)]++;
+						}
+					} foreach_diag_neighbor_end;
+					if (color_diag_libs[m->color] == 1 || (color_diag_libs[m->color] == 0 && color_diag_libs[S_OFFBOARD] == 2)) {
+						/* That's it. Fill the falsifying
+						 * liberty before it's too late! */
+						mq_add(q, falsifying, 0);
+					}
+				} foreach_diag_neighbor_end;
+			});
+		}
+
+		c = c1;
+	}
+
+	if (q->moves > 0 && PLDEBUGL(5))
+		mq_print(q, b, "Eye fix");
+}
+
 coord_t
 fillboard_check(struct playout_policy *p, struct board *b)
 {
@@ -521,14 +615,23 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 				return c;
 		}
 
+		/* Some other semeai-ish shape checks */
+		if (pp->eyefixrate > fast_random(100)) {
+			struct move_queue q; q.moves = 0;
+			eye_fix_check(p, b, &b->last_move, to_play, &q);
+			if (q.moves > 0)
+				return mq_pick(&q);
+		}
+
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
 			struct move_queue q; q.moves = 0;
+			fixp_t gammas[MQL];
 			apply_pattern(p, b, &b->last_move,
 			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
-					  &q);
+					  &q, gammas);
 			if (q.moves > 0)
-				return mq_pick(&q);
+				return mq_gamma_pick(&q, gammas);
 		}
 	}
 
@@ -664,11 +767,18 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 
 		mq_append(&q, &lmq.mq);
 
+		/* Some other semeai-ish shape checks */
+		if (pp->eyefixrate > 0)
+			eye_fix_check(p, b, &b->last_move, to_play, &q);
+
 		/* Check for patterns we know */
-		if (pp->patternrate > 0)
+		if (pp->patternrate > 0) {
+			fixp_t gammas[MQL];
 			apply_pattern(p, b, &b->last_move,
 					pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
-					&q);
+					&q, gammas);
+			/* FIXME: Use the gammas. */
+		}
 	}
 
 	/* Global checks */
@@ -839,8 +949,9 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 
 	/* Pattern check */
 	if (pp->patternrate) {
+		// XXX: Use gamma value?
 		struct move m = { .color = map->to_play, .coord = coord };
-		if (test_pattern3_here(p, b, &m, true)) {
+		if (test_pattern3_here(p, b, &m, true, NULL)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
 			add_prior_value(map, coord, 1, games);
@@ -962,8 +1073,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	int rate = board_large(b) ? 80 : 90;
 
 	pp->lcapturerate = pp->atarirate = pp->nlibrate
-		= pp->selfatarirate = pp->josekirate = -1U;
-	pp->patternrate = 100;
+		= pp->josekirate = -1U;
+	pp->patternrate = pp->eyefixrate = 100;
 	pp->nlibrate = 20;
 	pp->nakaderate = 20;
 	pp->pattern2 = true;
@@ -971,6 +1082,14 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->korate = 20; pp->koage = 4;
 	pp->alwaysccaprate = 40;
 	pp->eyefillrate = 60;
+
+	/* selfatarirate is slightly special, since to avoid playing some
+	 * silly move that stays on the board, it needs to block it many
+	 * times during a simulation - we'd like that to happen in most
+	 * simulations, so we try to use a very high selfatarirate.
+	 * XXX: Perhaps it would be better to permanently ban moves in
+	 * the current simulation after testing them once. */
+	pp->selfatarirate = 95;
 	pp->selfatari_other = true;
 
 	pp->cap_stone_min = 2;
@@ -993,6 +1112,14 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 		[MQ_JOSEKI] = 1.0,
 	};
 	memcpy(pp->mq_prob, mq_prob_default, sizeof(pp->mq_prob));
+
+	/* Default 3x3 pattern gammas tuned on 15x15 with 500s/game on
+	 * i7-3770 single thread using 40000 CLOP games. */
+	double pat3_gammas_default[PAT3_N] = {
+		0.52, 0.53, 0.32, 0.22, 0.37, 0.28, 0.21, 0.19, 0.82,
+		0.12, 0.20, 0.11, 0.16, 0.57, 0.44
+	};
+	memcpy(pp->pat3_gammas, pat3_gammas_default, sizeof(pp->pat3_gammas));
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -1029,6 +1156,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->josekirate = atoi(optval);
 			} else if (!strcasecmp(optname, "nakaderate") && optval) {
 				pp->nakaderate = atoi(optval);
+			} else if (!strcasecmp(optname, "eyefixrate") && optval) {
+				pp->eyefixrate = atoi(optval);
 			} else if (!strcasecmp(optname, "alwaysccaprate") && optval) {
 				pp->alwaysccaprate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
@@ -1067,6 +1196,13 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 					optval += strcspn(optval, "%");
 					if (*optval) optval++;
 				}
+			} else if (!strcasecmp(optname, "pat3gammas") && optval) {
+				/* PAT3_N %-separated floating point values */
+				for (int i = 0; *optval && i < PAT3_N; i++) {
+					pp->pat3_gammas[i] = atof(optval);
+					optval += strcspn(optval, "%");
+					if (*optval) optval++;
+				}
 			} else if (!strcasecmp(optname, "tenukiprob") && optval) {
 				pp->tenuki_prob = atof(optval);
 			} else {
@@ -1086,6 +1222,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	if (pp->josekirate == -1U) pp->josekirate = rate;
 	if (pp->ladderrate == -1U) pp->ladderrate = rate;
 	if (pp->nakaderate == -1U) pp->nakaderate = rate;
+	if (pp->eyefixrate == -1U) pp->eyefixrate = rate;
 	if (pp->alwaysccaprate == -1U) pp->alwaysccaprate = rate;
 
 	pattern3s_init(&pp->patterns, moggy_patterns_src, moggy_patterns_src_n);
