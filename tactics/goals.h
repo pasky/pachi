@@ -182,11 +182,13 @@ libmap_mq_print(struct libmap_mq *q, struct board *b, char *label)
 			board_at(b, q->gi[i].group) == q->gi[i].goal ? 'd' : 'a',
 			coord2sstr(q->gi[i].group, b),
 			q->gi[i].hash & libmap_hash_mask);
-		struct move m = { .coord = q->mq.move[i], .color = q->color[i] };
-		struct libmap_group *lg = b->libmap->groups[q->gi[i].color - 1][q->gi[i].group];
-		struct move_stats *ms = libmap_move_stats(libmap_group_context(b->libmap, lg, q->gi[i].hash), m);
-		if (ms) {
-			fprintf(stderr, "(%.3f/%d)", ms->value, ms->playouts);
+		if (b->libmap) {
+			struct move m = { .coord = q->mq.move[i], .color = q->color[i] };
+			struct libmap_group *lg = b->libmap->groups[q->gi[i].color - 1][q->gi[i].group];
+			struct move_stats *ms = libmap_move_stats(libmap_group_context(b->libmap, lg, q->gi[i].hash), m);
+			if (ms) {
+				fprintf(stderr, "(%.3f/%d)", ms->value, ms->playouts);
+			}
 		}
 		fputc(' ', stderr);
 	}
