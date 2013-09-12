@@ -133,8 +133,8 @@ static char moggy_patterns_src[PAT3_N][11] = {
 	"ooo",
 	/* cut keima (not in Mogo) */		/* 0.82 */
 	"OX?"
-	"o.O"
-	"???", /* o?? has some pathological tsumego cases */
+	"?.O"
+	"?o?", /* oo? has some pathological tsumego cases */
 	/* side pattern - chase */		/* 0.12 */
 	"X.?"
 	"O.?"
