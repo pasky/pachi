@@ -56,7 +56,7 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	}
 
 	/* Best candidates */
-	fprintf(stderr, "| can %c", color == S_BLACK ? 'b' : 'w');
+	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
 	int cans = 4;
 	struct tree_node *can[cans];
 	memset(can, 0, sizeof(can));
