@@ -1,0 +1,8 @@
+#!/bin/false
+# To compile pachi for android phone, use the following or similar command:
+
+make \
+    CC=arm-linux-androideabi-gcc \
+    SYS_CFLAGS='-march=armv7-a -isysroot/opt/android-ndk/platforms/android-16/arch-arm' \
+    LIBS='-lc -ldl -lm' \
+    LDFLAGS='-pthread -B/opt/android-ndk/platforms/android-16/arch-arm/usr/lib/'
