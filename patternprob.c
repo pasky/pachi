@@ -96,7 +96,7 @@ pattern_rate_moves(struct pattern_setup *pat,
                    struct board *b, enum stone color,
                    struct pattern *pats, floating_t *probs)
 {
-	floating_t total = 0;
+	double total = 0;
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] = NAN;
 
