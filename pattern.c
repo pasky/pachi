@@ -27,7 +27,7 @@ struct pattern_config DEFAULT_PATTERN_CONFIG = {
 #define PF_MATCH 15
 
 pattern_spec PATTERN_SPEC_MATCH_DEFAULT = {
-	[FEAT_CAPTURE] = ~0,
+	[FEAT_CAPTURE] = ~(1 << PF_CAPTURE_COUNTSTONES),
 	[FEAT_AESCAPE] = ~0,
 	[FEAT_SELFATARI] = ~0,
 	[FEAT_ATARI] = ~0,
