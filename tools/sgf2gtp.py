@@ -65,7 +65,7 @@ def process_gametree(gametree, fout):
     header = c.node
 
     handicap = get_atr(header, 'HA')
-    board_size = int(get_atr(header, 'SZ'))
+    board_size = int(get_atr(header, 'SZ') or 19)
     komi = get_atr(header, 'KM')
     player_next, player_other = "B", "W"
     setup_black = get_setup(header, 'AB')
