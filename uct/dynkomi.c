@@ -106,12 +106,15 @@ linear_permove(struct uct_dynkomi *d, struct board *b, struct tree *tree)
 				my_value, extra_komi, l->komi_ratchet);
 		/* Disable dynkomi completely, too dangerous in this game. */
 		extra_komi = l->komi_ratchet = 0;
+		tree->untrustworthy_tree = true;
 
 	} else if (my_value < l->orange_zone && extra_komi > 0) {
 		extra_komi = l->komi_ratchet  = fmax(extra_komi - l->drop_step, 0.0);
-		if (extra_komi != orig_komi && DEBUGL(3))
+		if (extra_komi != orig_komi && DEBUGL(3)) {
 			fprintf(stderr, "dropping to %f, extra komi %.1f -> %.1f\n",
 				my_value, orig_komi, extra_komi);
+			tree->untrustworthy_tree = true;
+		}
 
 	} else if (my_value > l->green_zone && extra_komi + 1 <= l->komi_ratchet) {
 		extra_komi += 1;

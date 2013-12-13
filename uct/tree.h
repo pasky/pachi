@@ -109,6 +109,11 @@ struct tree {
 	 * tree-specific variable since this can arbitrarily change between
 	 * moves. */
 	bool use_extra_komi;
+	/* A single-move-valid flag that marks a tree that is potentially
+	 * badly skewed and should be used with care. Currently, we never
+	 * resign on untrustworthy_tree and do not reuse the tree on next
+	 * move. */
+	bool untrustworthy_tree;
 	/* The value of applied extra komi. For DYNKOMI_LINEAR, this value
 	 * is only informative, the actual value is computed per simulation
 	 * based on leaf node depth. */

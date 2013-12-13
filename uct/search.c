@@ -494,7 +494,8 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	    // been simulated but pass won't win, an unsimulated node has
 	    // been returned; test therefore also for #simulations at root.
 	    && (best->u.playouts > GJ_MINGAMES || u->t->root->u.playouts > GJ_MINGAMES * 2)
-	    && (!u->t->use_extra_komi || komi_by_color(u->t->extra_komi, color) < 0.5)) {
+	    && (!u->t->use_extra_komi || komi_by_color(u->t->extra_komi, color) < 0.5)
+	    && !u->t->untrustworthy_tree) {
 		*best_coord = resign;
 		return NULL;
 	}

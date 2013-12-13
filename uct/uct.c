@@ -181,9 +181,13 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 
 	/* Promote node of the appropriate move to the tree root. */
 	assert(u->t->root);
-	if (!tree_promote_at(u->t, b, m->coord)) {
-		if (UDEBUGL(3))
-			fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+	if (u->t->untrustworthy_tree | !tree_promote_at(u->t, b, m->coord)) {
+		if (UDEBUGL(3)) {
+			if (u->t->untrustworthy_tree)
+				fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
+			else
+				fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+		}
 		/* Preserve dynamic komi information, though, that is important. */
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
@@ -478,14 +482,22 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		reset_state(u);
 		return coord_copy(best_coord);
 	}
-	tree_promote_node(u->t, &best);
+
+	if (!u->t->untrustworthy_tree) {
+		tree_promote_node(u->t, &best);
+	} else {
+		/* Throw away an untrustworthy tree. */
+		/* Preserve dynamic komi information, though, that is important. */
+		u->initial_extra_komi = u->t->extra_komi;
+		reset_state(u);
+	}
 
 	/* After a pass, pondering is harmful for two reasons:
 	 * (i) We might keep pondering even when the game is over.
 	 * Of course this is the case for opponent resign as well.
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */
-	if (u->pondering_opt && !is_pass(node_coord(best))) {
+	if (u->pondering_opt && u->t && !is_pass(node_coord(best))) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
 	return coord_copy(best_coord);
