@@ -54,6 +54,7 @@ General improvements:
 * Expanding and tagging the regression suite
 	Even better, create a nice UI for our users to contribute and
 	crowdsource!
+	What about drawing testcases from GNUGo's regression suite?
 * Implement Pachi support to fishtest
 	http://tests.stockfishchess.org/tests would allow crowdsourcing
 	Pachi parameter tuning.
@@ -61,6 +62,7 @@ General improvements:
 * Port to Intel Phi (if we get the hardware :)
 
 Some heuristics to test:
+* Try to adapt and reuse GNUGo's pattern matching code/database
 * Local trees (work in progress, no luck so far)
 * Liberty maps (work in progress)
 * Implement a tsumego solver and apply it once per playout (stv insp.,
