@@ -3,29 +3,59 @@ Docs:
 * GTP interface documentation
 
 Base:
-* Further optimize board implementation, oprofile fun
+* Further optimize board implementation, profiling fun
 * Clean up GTP interface, allow custom GTP commands for modules
-* Implement parameter setup over GTP
 * gogui-friendly GTP interface
+* Implement parameter setup over GTP (less important)
+* Fix the build system to allow fully parallel build
+	However, revamp to something like cmake (or, ugh, autotools)
+	is not guaranteed to be appreciated.
+
+Self-contained tasks:
+* Try to disable the bsize pattern feature
+	It just fudges the pattern evaluation since for most tactical
+	patterns fourth line vs. fifth line just doesn't matter. Maybe
+	its max should be 2 and maybe it should just be gone, needs
+	regenerating the pattern database and benchmarking.
+* Develop dedicated playout handling for few common tactical situations
+	Monkey jump (and its followup sequences!), bent four in the
+	corner, ...
+* Fix seki recognition to be stable
+	Try to research and fix most cases harmed by selfatarirate=100
+	or find another way to fix seki.
+* Try to avoid using a hash table for 3x3 patterns
+	Instead autogenerate procedural matching code; may be more
+	efficient (the near-guaranteed L1 cache miss is fairly expensive).
+* Optimizing our tree implementation for cache-efficiency
+	Statistics of all children of a parent node shall be contained
+	in an array of the parent node so that move evaluation during
+	the descent can access them sequentially in memory, instead
+	of walking a linked list. Pasky already tried once but it's
+	somewhat arduous and dull work.
 
 General improvements:
-* Opening book
-* Killer moves
-* MM local-based patterns
+* Automated building of opening book
+* Expanding and tagging the regression suite
+	Even better, create a nice UI for our users to contribute and
+	crowdsource!
+* Implement Pachi support to fishtest
+	http://tests.stockfishchess.org/tests would allow crowdsourcing
+	Pachi parameter tuning.
+* Split playout aspects to custom-stackable pieces?
+* Port to Intel Phi (if we get the hardware :)
+
+Some heuristics to test:
+* Local trees (work in progress, no luck so far)
+* Liberty maps (work in progress)
+* Implement a tsumego solver and apply it once per playout (stv insp.,
+  see Eric van der Werf's PhD thesis?)
+* MM local-based patterns in playouts (work in progress, no luck so far)
 * Balanced local-based patterns?
-* Local tree forcing
-* Liberty maps
+* Killer moves (redundant to RAVE?)
 * Reverse status learning
 	Run on game corpus. Start at final position, watch development
 	of status of all stones. The moment the final status and expected
 	status changes, analyze, especially if move choice differs. Use
 	learnt status-fixing moves in simulations somehow.
-
-Playouts:
-* Split playout aspects to custom-stackable pieces
-* Possibly replay top-rated unplayed moves from the tree
-  in the playout?
-
-UCB1AMAF:
-* Fix RAVE for good (still noticeably weaker than fuego?)
-* Separate constants for prior and amaf elements?
+	Tried to do this on Pachi-played games; no measurable effect
+	(maybe too small sample).
