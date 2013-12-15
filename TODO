@@ -32,6 +32,9 @@ Self-contained tasks:
 	the descent can access them sequentially in memory, instead
 	of walking a linked list. Pasky already tried once but it's
 	somewhat arduous and dull work.
+* Clean up the is_private() hack in the distributed engine
+	We should simply check against a proper IP range ACL specified
+	as a parameter instead.
 
 General improvements:
 * Automated building of opening book
