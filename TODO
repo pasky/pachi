@@ -12,6 +12,14 @@ Base:
 	is not guaranteed to be appreciated.
 
 Self-contained tasks:
+* Improving Pachi's game analysis features
+	We provide just a few user-unfriendly proof-of-concept scripts
+	but it should be fairly easy to upgrade them to something
+	that creates a nice webpage with move-by-move statistics,
+	winrate evolution, pattern moves andwhatnot. CrazyStone stats
+	output may be used for inspiration, but we can take it further!
+	This could be done even if you are afraid of Pachi's codebase,
+	just using Pachi's output.
 * Try to disable the bsize pattern feature
 	It just fudges the pattern evaluation since for most tactical
 	patterns fourth line vs. fifth line just doesn't matter. Maybe
@@ -37,6 +45,11 @@ Self-contained tasks:
 	as a parameter instead.
 
 General improvements:
+* Online Pachi game analysis/dump features
+	Make Pachi generate a webpage with *lots* of details after each
+	move while playing a game. This can provide game analysis info
+	for observer or casual opponent, but could also help with
+	debugging when just dumping stuff on stderr is intractable.
 * Automated building of opening book
 * Expanding and tagging the regression suite
 	Even better, create a nice UI for our users to contribute and
@@ -60,5 +73,5 @@ Some heuristics to test:
 	of status of all stones. The moment the final status and expected
 	status changes, analyze, especially if move choice differs. Use
 	learnt status-fixing moves in simulations somehow.
-	Tried to do this on Pachi-played games; no measurable effect
+	Tried to do this on Pachi-played KGS games; no measurable effect
 	(maybe too small sample).
