@@ -297,7 +297,7 @@ struct board {
 #define group_at(b_, c) ((b_)->g[c])
 #define group_atxy(b_, x, y) ((b_)->g[(x) + board_size(b_) * (y)])
 
-/* Warning! Neighbor count is kept up-to-date for S_NONE! */
+/* Warning! Neighbor count is not kept up-to-date for S_NONE! */
 #define neighbor_count_at(b_, coord, color) ((b_)->n[coord].colors[(enum stone) color])
 #define set_neighbor_count_at(b_, coord, color, count) (neighbor_count_at(b_, coord, color) = (count))
 #define inc_neighbor_count_at(b_, coord, color) (neighbor_count_at(b_, coord, color)++)
