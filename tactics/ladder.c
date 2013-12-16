@@ -37,17 +37,24 @@ is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
 	if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor
 	    && board_atxy(b, x - xd * 2, y - yd * 2) == lcolor)
 		return false;
+
 	/* ...or can't block where we need because of shortage
 	 * of liberties. */
-	int libs1 = board_group_info(b, group_atxy(b, x + xd - yd * dd, y + yd - xd * dd)).libs;
-	int libs2 = board_group_info(b, group_atxy(b, x - xd - yd * dd, y - yd - xd * dd)).libs;
+	group_t g1 = group_atxy(b, x + xd - yd * dd, y + yd - xd * dd);
+	int libs1 = board_group_info(b, g1).libs;
+	group_t g2 = group_atxy(b, x - xd - yd * dd, y - yd - xd * dd);
+	int libs2 = board_group_info(b, g2).libs;
 	if (DEBUGL(6))
 		fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);
+	/* Already in atari? */
 	if (libs1 < 2 || libs2 < 2)
 		return false;
-	if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor && libs1 < 3)
+	/* Would be self-atari? */
+	if (libs1 < 3 && (board_atxy(b, x + xd * 2, y + yd * 2) != S_NONE
+			  || coord_is_adjecent(board_group_info(b, g1).lib[0], board_group_info(b, g1).lib[1], b)))
 		return false;
-	if (board_atxy(b, x - xd * 2, y - yd * 2) == lcolor && libs2 < 3)
+	if (libs2 < 3 && (board_atxy(b, x - xd * 2, y - yd * 2) != S_NONE
+			  || coord_is_adjecent(board_group_info(b, g2).lib[0], board_group_info(b, g2).lib[1], b)))
 		return false;
 	return true;
 }
