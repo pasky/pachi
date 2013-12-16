@@ -33,7 +33,7 @@ quiet_cmd_archive = '[AR]   $@'
       cmd_archive = $(AR) r $@ $^
 
    quiet_cmd_link = '[LINK] $@'
-         cmd_link = $(LINK) -o $@ $^ $(LIBS)
+         cmd_link = $(LINK) -o $@ $^ $(LIBS) $(SYS_LIBS)
 
 # Recursive make
 quiet_cmd_recmake = "[MAKE $$target]   $$subdir"
@@ -45,8 +45,10 @@ quiet_cmd_recmake = "[MAKE $$target]   $$subdir"
 
 unexport CFLAGS
 CFLAGS += $(CUSTOM_CFLAGS) $(XCFLAGS) $(INCLUDES) $(SYS_CFLAGS)
+unexport LDFLAGS
+LDFLAGS += $(CUSTOM_LDFLAGS) $(XLDFLAGS) $(SYS_LDFLAGS)
 COMPILE = $(CC) $(CFLAGS)
-LINK = $(CC) $(LDFLAGS) $(XLDFLAGS)
+LINK = $(CC) $(LDFLAGS)
 
 DEP_FILES_1 = $(foreach src,$(OBJS),.deps/$(src))
 DEP_FILES = $(DEP_FILES_1:%.o=%.P)

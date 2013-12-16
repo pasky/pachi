@@ -58,17 +58,17 @@ CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-co
 
 ifdef WIN
 	SYS_CFLAGS?=
-	LDFLAGS?=-pthread
-	LIBS=-lm -lws2_32 -lregex $(CUSTOM_LIBS)
+	SYS_LDFLAGS?=-pthread
+	SYS_LIBS?=-lm -lws2_32 -lregex
 else
 ifdef MAC
 	SYS_CFLAGS?=-DNO_THREAD_LOCAL
-	LDFLAGS?=-pthread -rdynamic
-	LIBS=-lm -ldl $(CUSTOM_LIBS)
+	SYS_LDFLAGS?=-pthread -rdynamic
+	SYS_LIBS?=-lm -ldl
 else
 	SYS_CFLAGS?=-march=native
-	LDFLAGS?=-pthread -rdynamic
-	LIBS?=-lm -lrt -ldl $(CUSTOM_LIBS)
+	SYS_LDFLAGS?=-pthread -rdynamic
+	SYS_LIBS?=-lm -lrt -ldl
 endif
 endif
 
@@ -77,13 +77,13 @@ ifdef DOUBLE
 endif
 
 ifeq ($(PROFILING), gprof)
-	LDFLAGS+=-pg
+	CUSTOM_LDFLAGS+=-pg
 	CUSTOM_CFLAGS+=-pg -fno-inline
 else
 	# Whee, an extra register!
 	CUSTOM_CFLAGS+=-fomit-frame-pointer
 ifeq ($(PROFILING), perftools)
-	LIBS+=-lprofiler
+	SYS_LIBS+=-lprofiler
 endif
 endif
 
