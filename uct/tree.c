@@ -220,23 +220,19 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int treeparity, int l,
 }
 
 void
-tree_dump(struct tree *tree, int thres)
+tree_dump(struct tree *tree, double thres)
 {
-	if (thres && tree->root->u.playouts / thres > 100) {
-		/* Be a bit sensible about this; the opening tbook can create
-		 * huge dumps at first. */
-		thres = tree->root->u.playouts / 100 * (thres < 1000 ? 1 : thres / 1000);
-	}
+	int thres_abs = thres > 0 ? tree->root->u.playouts * thres : thres;
 	fprintf(stderr, "(UCT tree; root %s; extra komi %f; max depth %d)\n",
 	        stone2str(tree->root_color), tree->extra_komi,
 		tree->max_depth - tree->root->depth);
-	tree_node_dump(tree, tree->root, 1, 0, thres);
+	tree_node_dump(tree, tree->root, 1, 0, thres_abs);
 
 	if (DEBUGL(3) && tree->ltree_black) {
 		fprintf(stderr, "B local tree:\n");
-		tree_node_dump(tree, tree->ltree_black, tree->root_color == S_WHITE ? 1 : -1, 0, thres);
+		tree_node_dump(tree, tree->ltree_black, tree->root_color == S_WHITE ? 1 : -1, 0, thres_abs);
 		fprintf(stderr, "W local tree:\n");
-		tree_node_dump(tree, tree->ltree_white, tree->root_color == S_BLACK ? 1 : -1, 0, thres);
+		tree_node_dump(tree, tree->ltree_white, tree->root_color == S_BLACK ? 1 : -1, 0, thres_abs);
 	}
 }
 

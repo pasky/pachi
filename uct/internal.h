@@ -47,7 +47,7 @@ struct uct {
 	bool playout_amaf;
 	bool amaf_prior;
 	int playout_amaf_cutoff;
-	int dumpthres;
+	double dumpthres;
 	int force_seed;
 	bool no_tbook;
 	bool fast_alloc;

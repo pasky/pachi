@@ -153,7 +153,7 @@ struct tree {
 struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size,
 		       unsigned long max_pruned_size, unsigned long pruning_threshold, floating_t ltree_aging, int hbits);
 void tree_done(struct tree *tree);
-void tree_dump(struct tree *tree, int thres);
+void tree_dump(struct tree *tree, double thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
 void tree_load(struct tree *tree, struct board *b);
 

@@ -619,7 +619,7 @@ uct_state_init(char *arg, struct board *b)
 	u->mercymin = 0;
 	u->significant_threshold = 50;
 	u->expand_p = 8;
-	u->dumpthres = 1000;
+	u->dumpthres = 0.01;
 	u->playout_amaf = true;
 	u->amaf_prior = false;
 	u->max_tree_size = 1408ULL * 1048576;
@@ -706,9 +706,11 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "dumpthres") && optval) {
 				/* When dumping the UCT tree on output, include
 				 * nodes with at least this many playouts.
-				 * (This value is re-scaled "intelligently"
-				 * in case of very large trees.) */
-				u->dumpthres = atoi(optval);
+				 * (A fraction of the total # of playouts at the
+				 * tree root.) */
+				/* Use 0 to list all nodes with at least one
+				 * simulation, and -1 to list _all_ nodes. */
+				u->dumpthres = atof(optval);
 			} else if (!strcasecmp(optname, "resign_threshold") && optval) {
 				/* Resign when this ratio of games is lost
 				 * after GJ_MINGAMES sample is taken. */
