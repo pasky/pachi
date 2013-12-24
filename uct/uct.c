@@ -364,6 +364,33 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	if (print_progress)
 		uct_progress_status(u, t, color, ctx->games, NULL);
 
+	if (u->debug_after.playouts > 0) {
+		/* Now, start an additional run of playouts, single threaded. */
+		struct time_info debug_ti = {
+			.period = TT_MOVE,
+			.dim = TD_GAMES,
+		};
+		debug_ti.len.games = t->root->u.playouts + u->debug_after.playouts;
+
+		fprintf(stderr, "--8<-- UCT debug post-run begin (%d:%d) --8<--\n", u->debug_after.level, u->debug_after.playouts);
+
+		int debug_level_save = debug_level;
+		int u_debug_level_save = u->debug_level;
+		int p_debug_level_save = u->playout->debug_level;
+		debug_level = u->debug_after.level;
+		u->debug_level = u->debug_after.level;
+		u->playout->debug_level = u->debug_after.level;
+		uct_halt = false;
+
+		uct_playouts(u, b, color, t, &debug_ti);
+		tree_dump(t, u->dumpthres);
+
+		uct_halt = true;
+		debug_level = debug_level_save;
+		u->debug_level = u_debug_level_save;
+		u->playout->debug_level = p_debug_level_save;
+	}
+
 	u->played_own += ctx->games;
 	return ctx->games;
 }
@@ -718,6 +745,24 @@ uct_state_init(char *arg, struct board *b)
 				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
 				b->rules = RULES_STONES_ONLY;
 				u->pass_all_alive = true;
+			} else if (!strcasecmp(optname, "debug_after")) {
+				/* debug_after=9:1000 will make Pachi think under
+				 * the normal conditions, but at the point when
+				 * a move is to be chosen, the tree is dumped and
+				 * another 1000 simulations are run single-threaded
+				 * with debug level 9, allowing inspection of Pachi's
+				 * behavior after it has thought a lot. */
+				if (optval) {
+					u->debug_after.level = atoi(optval);
+					char *playouts = strchr(optval, ':');
+					if (playouts)
+						u->debug_after.playouts = atoi(playouts+1);
+					else
+						u->debug_after.playouts = 1000;
+				} else {
+					u->debug_after.level = 9;
+					u->debug_after.playouts = 1000;
+				}
 			} else if (!strcasecmp(optname, "banner") && optval) {
 				/* Additional banner string. This must come as the
 				 * last engine parameter. You can use '+' instead

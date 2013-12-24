@@ -100,6 +100,11 @@ struct uct {
 	} local_tree_eval;
 	bool local_tree_rootchoose;
 
+	struct {
+		int level;
+		int playouts;
+	} debug_after;
+
 	char *banner;
 
 	struct uct_policy *policy;
