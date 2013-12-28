@@ -372,6 +372,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		};
 		debug_ti.len.games = t->root->u.playouts + u->debug_after.playouts;
 
+		board_print_custom(b, stderr, uct_printhook_ownermap);
 		fprintf(stderr, "--8<-- UCT debug post-run begin (%d:%d) --8<--\n", u->debug_after.level, u->debug_after.playouts);
 
 		int debug_level_save = debug_level;
@@ -389,6 +390,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		debug_level = debug_level_save;
 		u->debug_level = u_debug_level_save;
 		u->playout->debug_level = p_debug_level_save;
+
+		fprintf(stderr, "--8<-- UCT debug post-run finished --8<--\n");
 	}
 
 	u->played_own += ctx->games;
