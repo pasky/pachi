@@ -1,6 +1,15 @@
 #!/bin/sh
 # This is autotest display tool, showing gathered information in
 # a hopefully meaningful way.
+#
+# Usage: ./autotest-show [-e] [MASK]
+# Use -e to display winrates in terms of Elo points.
+
+do_elo=
+if [ "$1" = -e ]; then
+	do_elo=1
+	shift
+fi
 
 mask="$1"
 [ -n "$mask" ] || mask="*"
@@ -40,14 +49,36 @@ pairing_status() {
 	esac
 }
 
+prob2elo() {
+	echo "400*l(10*$1/(1-$1))/l(10)" | bc -l
+}
+
+elo_stats() {
+	ref=0.5
+	refelo=$(prob2elo $ref); wrelo=$(prob2elo $winrate);
+	wrelo_d=$(prob2elo "($winrate-$sd)"); wrelo_u=$(prob2elo "($winrate+$sd)")
+	delo=$((${wrelo%.*}-${refelo%.*})); delo_u=$((${wrelo_u%.*}-${refelo%.*})); delo_d=$((${wrelo_d%.*}-${refelo%.*}))
+	stats="$games\t$delo_d\t$delo\t$delo_u"
+}
+
 rm -f r/*.summary.dat r/*.html
 
-echo -e "S GAMES\tWINRATE\tS.D.\tPAIRING"
-for pairing in $((echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.dat$##') | sort | uniq); do
+if [ -n "$do_elo" ]; then
+	echo -e "S GAMES\tWR -/0/+ (S.D.)\t\tPAIRING"
+else
+	echo -e "S GAMES\tWINRATE\tS.D.\tPAIRING"
+fi
+for pairing in $( (echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.dat$##') | sort | uniq); do
 	[ ! -s "r/$pairing.dat" ] || $twogtp_path -analyze "r/$pairing.dat"
 	pairing_status "$pairing" # sets status
 	if [ -s "r/$pairing.summary.dat" ]; then
-		echo -e "$status $(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)\t$pairing$color_stop"
+		read games winrate sd <<<$(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)
+		if [ -n "$do_elo" ]; then
+			elo_stats
+		else
+			stats="$games\t$winrate\t$sd"
+		fi
+		echo -e "$status $stats\t$pairing$color_stop"
 	else
 		echo -e "$status 0\t-\t-\t$pairing$color_stop"
 	fi
