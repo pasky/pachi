@@ -572,14 +572,6 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
-		/* Nakade check */
-		if (pp->nakaderate > fast_random(100)
-		    && immediate_liberty_count(b, b->last_move.coord) > 0) {
-			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
-			if (!is_pass(nakade))
-				return nakade;
-		}
-
 		/* Local group in atari? */
 		if (pp->lcapturerate > fast_random(100)) {
 			struct move_queue q;  q.moves = 0;
@@ -618,6 +610,14 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 			eye_fix_check(p, b, &b->last_move, to_play, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
+		}
+
+		/* Nakade check */
+		if (pp->nakaderate > fast_random(100)
+		    && immediate_liberty_count(b, b->last_move.coord) > 0) {
+			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
+			if (!is_pass(nakade))
+				return nakade;
 		}
 
 		/* Check for patterns we know */
@@ -737,13 +737,6 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
-		/* Nakade check */
-		if (pp->nakaderate > 0 && immediate_liberty_count(b, b->last_move.coord) > 0) {
-			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
-			if (!is_pass(nakade))
-				mq_add(&q, nakade, 1<<MQ_NAKADE);
-		}
-
 		/* Local group in atari? */
 		if (pp->lcapturerate > 0)
 			local_atari_check(p, b, &b->last_move, &q);
@@ -763,6 +756,13 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 		/* Some other semeai-ish shape checks */
 		if (pp->eyefixrate > 0)
 			eye_fix_check(p, b, &b->last_move, to_play, &q);
+
+		/* Nakade check */
+		if (pp->nakaderate > 0 && immediate_liberty_count(b, b->last_move.coord) > 0) {
+			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
+			if (!is_pass(nakade))
+				mq_add(&q, nakade, 1<<MQ_NAKADE);
+		}
 
 		/* Check for patterns we know */
 		if (pp->patternrate > 0) {
