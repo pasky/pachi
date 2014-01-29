@@ -1065,12 +1065,13 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->lcapturerate = pp->atarirate = pp->nlibrate
 		= pp->josekirate = pp->nakaderate = -1U;
 	pp->patternrate = pp->eyefixrate = 100;
-	pp->nlibrate = 20;
+	pp->nlibrate = 25;
+	pp->nakaderate = 60;
 	pp->pattern2 = true;
 	pp->lcapturerate = 90;
-	pp->korate = 20; pp->koage = 4;
+	pp->korate = 40; pp->koage = 4;
 	pp->alwaysccaprate = 40;
-	pp->eyefillrate = 60;
+	pp->eyefillrate = 40;
 
 	/* selfatarirate is slightly special, since to avoid playing some
 	 * silly move that stays on the board, it needs to block it many
