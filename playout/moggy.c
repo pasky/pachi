@@ -97,6 +97,11 @@ struct moggy_policy {
 	double mq_prob[MQ_MAX], tenuki_prob;
 };
 
+struct moggy_playoutconf {
+	bool lcapture, atari, nlib, ladder, capture, pattern, ko, joseki, nakade, eyefix;
+	bool selfatari, eyefill, alwaysccap;
+};
+
 
 static char moggy_patterns_src[PAT3_N][11] = {
 	/* hane pattern - enclosing hane */	/* 0.52 */
@@ -268,9 +273,12 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		return;
 
 	struct moggy_policy *pp = p->data;
+	struct moggy_playoutconf *pc = b->ps;
+	int alwaysccaprate = pc->alwaysccap ? 100 : 0;
+
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
-			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
+			group_atari_check(alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
 			mq_print(q, b, "Global atari");
 		if (pp->fullchoose)
@@ -279,7 +287,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 
 	int g_base = fast_random(b->clen);
 	for (int g = g_base; g < b->clen; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
+		group_atari_check(alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -289,7 +297,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		}
 	}
 	for (int g = 0; g < g_base; g++) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
+		group_atari_check(alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
@@ -304,17 +312,19 @@ static void
 local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
+	struct moggy_playoutconf *pc = b->ps;
+	int alwaysccaprate = pc->alwaysccap ? 100 : 0;
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
-		group_atari_check(pp->alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
+		group_atari_check(alwaysccaprate, b, group_at(b, m->coord), stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
 	}
 
 	foreach_neighbor(b, m->coord, {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
+		group_atari_check(alwaysccaprate, b, g, stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
 	});
 
 	if (PLDEBUGL(5))
@@ -553,10 +563,36 @@ next_try:
 	return pass;
 }
 
+
+void
+playout_moggy_setboard(struct playout_policy *p, struct board *b)
+{
+	struct moggy_policy *pp = p->data;
+	struct moggy_playoutconf *pc = calloc(1, sizeof(*pc));
+	b->ps = pc;
+
+#define PICKFLAG(flag_) pc->flag_ = pp->flag_ ## rate > fast_random(100);
+	PICKFLAG(lcapture);
+	PICKFLAG(atari);
+	PICKFLAG(nlib);
+	PICKFLAG(ladder);
+	PICKFLAG(capture);
+	PICKFLAG(pattern);
+	PICKFLAG(ko);
+	PICKFLAG(joseki);
+	PICKFLAG(nakade);
+	PICKFLAG(eyefix);
+	PICKFLAG(selfatari);
+	PICKFLAG(eyefill);
+	PICKFLAG(alwaysccap);
+#undef PICKFLAG
+}
+
 coord_t
 playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
+	struct moggy_playoutconf *pc = b->ps;
 
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
@@ -564,7 +600,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	/* Ko fight check */
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
 	    && b->moves - b->last_ko_age < pp->koage
-	    && pp->korate > fast_random(100)) {
+	    && pc->ko) {
 		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
 			return b->last_ko.coord;
@@ -573,7 +609,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
-		if (pp->lcapturerate > fast_random(100)) {
+		if (pc->lcapture) {
 			struct move_queue q;  q.moves = 0;
 			local_atari_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
@@ -581,7 +617,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Local group trying to escape ladder? */
-		if (pp->ladderrate > fast_random(100)) {
+		if (pc->ladder) {
 			struct move_queue q; q.moves = 0;
 			local_ladder_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
@@ -589,7 +625,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Local group can be PUT in atari? */
-		if (pp->atarirate > fast_random(100)) {
+		if (pc->atari) {
 			struct move_queue q; q.moves = 0;
 			local_2lib_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
@@ -597,7 +633,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Local group reduced some of our groups to 3 libs? */
-		if (pp->nlibrate > fast_random(100)) {
+		if (pc->nlib) {
 			struct move_queue q; q.moves = 0;
 			local_nlib_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
@@ -605,7 +641,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Some other semeai-ish shape checks */
-		if (pp->eyefixrate > fast_random(100)) {
+		if (pc->eyefix) {
 			struct move_queue q; q.moves = 0;
 			eye_fix_check(p, b, &b->last_move, to_play, &q);
 			if (q.moves > 0)
@@ -613,7 +649,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Nakade check */
-		if (pp->nakaderate > fast_random(100)
+		if (pc->nakade
 		    && immediate_liberty_count(b, b->last_move.coord) > 0) {
 			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
 			if (!is_pass(nakade))
@@ -621,7 +657,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Check for patterns we know */
-		if (pp->patternrate > fast_random(100)) {
+		if (pc->pattern) {
 			struct move_queue q; q.moves = 0;
 			fixp_t gammas[MQL];
 			apply_pattern(p, b, &b->last_move,
@@ -635,7 +671,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	/* Global checks */
 
 	/* Any groups in atari? */
-	if (pp->capturerate > fast_random(100)) {
+	if (pc->capture) {
 		struct move_queue q; q.moves = 0;
 		global_atari_check(p, b, to_play, &q);
 		if (q.moves > 0)
@@ -643,7 +679,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	}
 
 	/* Joseki moves? */
-	if (pp->josekirate > fast_random(100)) {
+	if (pc->joseki) {
 		struct move_queue q; q.moves = 0;
 		joseki_check(p, b, to_play, &q);
 		if (q.moves > 0)
@@ -974,12 +1010,13 @@ bool
 playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 {
 	struct moggy_policy *pp = p->data;
+	struct moggy_playoutconf *pc = b->ps;
 
 	/* The idea is simple for now - never allow self-atari moves.
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 
-	if (fast_random(100) >= pp->selfatarirate) {
+	if (pc->selfatari) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping sar test\n");
 		goto sar_skip;
@@ -1007,7 +1044,7 @@ sar_skip:
 	 * happen only for false eyes, but some of them are in fact
 	 * real eyes with diagonal filled by a dead stone. Prefer
 	 * to counter-capture in that case. */
-	if (fast_random(100) >= pp->eyefillrate) {
+	if (pc->eyefill) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping eyefill test\n");
 		goto eyefill_skip;
@@ -1051,9 +1088,11 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
+	p->setboard = playout_moggy_setboard;
 	p->choose = playout_moggy_seqchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
+	p->setboard_randomok = true; // it's ok if we don't know about all the moves made
 
 	pp->jdict = jdict;
 
