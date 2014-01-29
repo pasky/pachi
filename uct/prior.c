@@ -217,7 +217,7 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	/* FIXME: Optimal pattern_eqex is about -1000 with small playout counts
 	 * but only -400 on a cluster. We need a better way to set the default
 	 * here. */
-	p->pattern_eqex = -400;
+	p->pattern_eqex = -800;
 	p->joseki_eqex = -200;
 	p->cfgdn = -1;
 
