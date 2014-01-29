@@ -49,6 +49,12 @@ struct playout_policy {
 	playoutp_assess assess;
 	playoutp_permit permit;
 	playoutp_done done;
+	/* By default, with setboard set we will refuse to make (random)
+	 * moves outside of the *choose routine in order not to mess up
+	 * state tracking. If you use *setboard but do not track state
+	 * (e.g. you just initialize some per-playout data, like the Moggy
+	 * policy), set setboard_randomok too. */
+	bool setboard_randomok;
 	/* Particular playout policy's internal data. */
 	void *data;
 };
