@@ -56,8 +56,13 @@ enum mq_tag {
 /* Note that the context can be shared by multiple threads! */
 
 struct moggy_policy {
+	/* XXX: Convert this to an array or something, this is awful! */
 	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate, eyefixrate;
 	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
+	/* Whether to choose whether to apply each heuristic globally
+	 * for the whole playout instead of individually in every move. */
+	bool per_playout;
+
 	unsigned int fillboardtries;
 	int koage;
 	/* Whether to look for patterns around second-to-last move. */
@@ -97,10 +102,14 @@ struct moggy_policy {
 	double mq_prob[MQ_MAX], tenuki_prob;
 };
 
+
 struct moggy_playoutconf {
 	bool lcapture, atari, nlib, ladder, capture, pattern, ko, joseki, nakade, eyefix;
 	bool selfatari, eyefill, alwaysccap;
 };
+
+#define test_heuristic_apply(pp_, pc_, name_) \
+	((pp_)->per_playout ? (pc_)->name_ : (pp_)->name_ ## rate > fast_random(100))
 
 
 static char moggy_patterns_src[PAT3_N][11] = {
@@ -274,7 +283,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 
 	struct moggy_policy *pp = p->data;
 	struct moggy_playoutconf *pc = b->ps;
-	int alwaysccaprate = pc->alwaysccap ? 100 : 0;
+	unsigned int alwaysccaprate = pp->per_playout ? (pc->alwaysccap * 100U) : pp->alwaysccaprate;
 
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
@@ -313,7 +322,7 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 {
 	struct moggy_policy *pp = p->data;
 	struct moggy_playoutconf *pc = b->ps;
-	int alwaysccaprate = pc->alwaysccap ? 100 : 0;
+	unsigned int alwaysccaprate = pp->per_playout ? (pc->alwaysccap * 100U) : pp->alwaysccaprate;
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
@@ -568,6 +577,11 @@ void
 playout_moggy_setboard(struct playout_policy *p, struct board *b)
 {
 	struct moggy_policy *pp = p->data;
+	if (!pp->per_playout) {
+		b->ps = NULL; // make double-sure we segfault if we try anything
+		return;
+	}
+
 	struct moggy_playoutconf *pc = calloc(1, sizeof(*pc));
 	b->ps = pc;
 
@@ -604,7 +618,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	/* Ko fight check */
 	if (!is_pass(b->last_ko.coord) && is_pass(b->ko.coord)
 	    && b->moves - b->last_ko_age < pp->koage
-	    && pc->ko) {
+	    && test_heuristic_apply(pp, pc, ko)) {
 		if (board_is_valid_play(b, to_play, b->last_ko.coord)
 		    && !is_bad_selfatari(b, to_play, b->last_ko.coord))
 			return b->last_ko.coord;
@@ -613,7 +627,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
-		if (pc->lcapture) {
+		if (test_heuristic_apply(pp, pc, lcapture)) {
 			struct move_queue q;  q.moves = 0;
 			local_atari_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
@@ -621,7 +635,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Local group trying to escape ladder? */
-		if (pc->ladder) {
+		if (test_heuristic_apply(pp, pc, ladder)) {
 			struct move_queue q; q.moves = 0;
 			local_ladder_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
@@ -629,7 +643,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Local group can be PUT in atari? */
-		if (pc->atari) {
+		if (test_heuristic_apply(pp, pc, atari)) {
 			struct move_queue q; q.moves = 0;
 			local_2lib_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
@@ -637,7 +651,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Local group reduced some of our groups to 3 libs? */
-		if (pc->nlib) {
+		if (test_heuristic_apply(pp, pc, nlib)) {
 			struct move_queue q; q.moves = 0;
 			local_nlib_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
@@ -645,7 +659,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Some other semeai-ish shape checks */
-		if (pc->eyefix) {
+		if (test_heuristic_apply(pp, pc, eyefix)) {
 			struct move_queue q; q.moves = 0;
 			eye_fix_check(p, b, &b->last_move, to_play, &q);
 			if (q.moves > 0)
@@ -653,7 +667,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Nakade check */
-		if (pc->nakade
+		if (test_heuristic_apply(pp, pc, nakade)
 		    && immediate_liberty_count(b, b->last_move.coord) > 0) {
 			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
 			if (!is_pass(nakade))
@@ -661,7 +675,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		}
 
 		/* Check for patterns we know */
-		if (pc->pattern) {
+		if (test_heuristic_apply(pp, pc, pattern)) {
 			struct move_queue q; q.moves = 0;
 			fixp_t gammas[MQL];
 			apply_pattern(p, b, &b->last_move,
@@ -675,7 +689,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	/* Global checks */
 
 	/* Any groups in atari? */
-	if (pc->capture) {
+	if (test_heuristic_apply(pp, pc, capture)) {
 		struct move_queue q; q.moves = 0;
 		global_atari_check(p, b, to_play, &q);
 		if (q.moves > 0)
@@ -683,7 +697,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	}
 
 	/* Joseki moves? */
-	if (pc->joseki) {
+	if (test_heuristic_apply(pp, pc, joseki)) {
 		struct move_queue q; q.moves = 0;
 		joseki_check(p, b, to_play, &q);
 		if (q.moves > 0)
@@ -1020,7 +1034,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 
-	if (pc->selfatari) {
+	if (test_heuristic_apply(pp, pc, selfatari)) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping sar test\n");
 		goto sar_skip;
@@ -1048,7 +1062,7 @@ sar_skip:
 	 * happen only for false eyes, but some of them are in fact
 	 * real eyes with diagonal filled by a dead stone. Prefer
 	 * to counter-capture in that case. */
-	if (pc->eyefill) {
+	if (test_heuristic_apply(pp, pc, eyefill)) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping eyefill test\n");
 		goto eyefill_skip;
@@ -1195,6 +1209,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				pp->alwaysccaprate = atoi(optval);
 			} else if (!strcasecmp(optname, "rate") && optval) {
 				rate = atoi(optval);
+			} else if (!strcasecmp(optname, "per_playout")) {
+				pp->per_playout = optval && *optval == '0' ? false : true;
 			} else if (!strcasecmp(optname, "fillboardtries")) {
 				pp->fillboardtries = atoi(optval);
 			} else if (!strcasecmp(optname, "koage") && optval) {
