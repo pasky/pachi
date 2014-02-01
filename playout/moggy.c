@@ -1127,6 +1127,9 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			} else if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladderrate") && optval) {
+				/* Note that ladderrate is considered obsolete;
+				 * it is ineffective and superseded by the
+				 * prune_ladders prior. */
 				pp->ladderrate = atoi(optval);
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atarirate = atoi(optval);
