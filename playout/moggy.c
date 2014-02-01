@@ -571,7 +571,11 @@ playout_moggy_setboard(struct playout_policy *p, struct board *b)
 	struct moggy_playoutconf *pc = calloc(1, sizeof(*pc));
 	b->ps = pc;
 
-#define PICKFLAG(flag_) pc->flag_ = pp->flag_ ## rate > fast_random(100);
+#define PICKFLAG(flag_) do { \
+		pc->flag_ = pp->flag_ ## rate > fast_random(100); \
+		if (PLDEBUGL(5)) \
+			fprintf(stderr, "Heuristic %s roll: %d\n", #flag_, pc->flag_); \
+	} while (0)
 	PICKFLAG(lcapture);
 	PICKFLAG(atari);
 	PICKFLAG(nlib);
