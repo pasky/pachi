@@ -1119,16 +1119,14 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	 * XXX: no 9x9 tuning has been done recently. */
 	int rate = board_large(b) ? 80 : 90;
 
-	pp->lcapturerate = pp->atarirate = pp->nlibrate
-		= pp->josekirate = pp->nakaderate = -1U;
 	pp->patternrate = pp->eyefixrate = 100;
-	pp->nlibrate = 25;
-	pp->nakaderate = 60;
-	pp->pattern2 = true;
 	pp->lcapturerate = 90;
+	pp->atarirate = pp->josekirate = -1U;
+	pp->nakaderate = 60;
 	pp->korate = 40; pp->koage = 4;
 	pp->alwaysccaprate = 40;
 	pp->eyefillrate = 40;
+	pp->nlibrate = 25;
 
 	/* selfatarirate is slightly special, since to avoid playing some
 	 * silly move that stays on the board, it needs to block it many
@@ -1138,6 +1136,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	 * the current simulation after testing them once. */
 	pp->selfatarirate = 95;
 	pp->selfatari_other = true;
+
+	pp->pattern2 = true;
 
 	pp->cap_stone_min = 2;
 	pp->cap_stone_max = 15;
@@ -1184,6 +1184,9 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 			} else if (!strcasecmp(optname, "lcapturerate") && optval) {
 				pp->lcapturerate = atoi(optval);
 			} else if (!strcasecmp(optname, "ladderrate") && optval) {
+				/* Note that ladderrate is considered obsolete;
+				 * it is ineffective and superseded by the
+				 * prune_ladders prior. */
 				pp->ladderrate = atoi(optval);
 			} else if (!strcasecmp(optname, "atarirate") && optval) {
 				pp->atarirate = atoi(optval);
