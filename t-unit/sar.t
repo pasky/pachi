@@ -134,6 +134,16 @@ sar b b3 0
 sar w b2 1
 sar b b2 0
 
+% Eye falsification nakade
+boardsize 3
+OOO
+..X
+OOO
+sar w a2 1
+sar b a2 1
+sar w b2 0
+sar b b2 0
+
 % Bulky five multi-w-group nakade
 boardsize 5
 XXXXX
