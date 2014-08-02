@@ -316,24 +316,27 @@ setup_nakade_or_snapback(struct board *b, enum stone color, coord_t to, struct s
 	});
 
 	/* Now, we must distinguish between nakade and eye
-	 * falsification; we must not falsify an eye by more
-	 * than two stones. */
+	 * falsification; moreover, we must not falsify an eye
+	 * by more than two stones. */
+
 	if (s->groupcts[color] < 1)
-		return false; // simple throw-in
+		return false; // simple throw-in, an easy case
+
 	if (s->groupcts[color] == 1 && group_is_onestone(b, s->groupids[color][0])) {
-		/* More complex throw-in - we are in one of
-		 * three situations:
-		 * a O O O O X  b O O O X  c O O O X
-		 *   O . X . O    O X . .    O . X .
-		 *   # # # # #    # # # #    # # # #
+		/* More complex throw-in, or in-progress capture from
+		 * the inside - we are in one of several situations:
+		 * a O O O O X  b O O O X  c O O O X  d O O O O O
+		 *   O . X . O    O X . .    O . X .    O . X . O
+		 *   # # # # #    # # # #    # # # #    # # # # #
 		 * b is desirable here (since maybe O has no
 		 * backup two eyes); a may be desirable, but
 		 * is tested next in check_throwin(). c is
-		 * never desirable. */
+		 * never desirable.  d is desirable (otherwise
+		 * we would never capture a single-eyed group). */
 		group_t g2 = s->groupids[color][0];
 		assert(board_group_info(b, g2).libs <= 2);
-		if (board_group_info(b, g2).libs == 1)
-			return false; // b
+		if (board_group_info(b, g2).libs >= 1)
+			return false; // b or d
 		return -1; // a or c
 	}
 

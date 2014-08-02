@@ -94,6 +94,46 @@ sar w c3 0
 sar b c2 1
 sar w c2 1
 
+% Capture-from-within 2pt-eye nakade
+boardsize 3
+OOO
+O..
+OOO
+sar w b2 1
+sar b b2 0
+sar w c2 1
+sar b c2 0
+
+% Capture-from-within 3pt-eye (straight) nakade
+boardsize 3
+OOO
+.X.
+OOO
+sar w a2 1
+sar b a2 0
+sar w c2 1
+sar b c2 0
+
+% Capture-from-within 3pt-eye (bent) nakade
+boardsize 3
+O.O
+OX.
+OOO
+sar w b3 1
+sar b b3 0
+sar w c2 1
+sar b c2 0
+
+% Capture-from-within 4pt-eye (square) nakade
+boardsize 3
+O.X
+O.X
+OOO
+sar w b3 1
+sar b b3 0
+sar w b2 1
+sar b b2 0
+
 % Bulky five multi-w-group nakade
 boardsize 5
 XXXXX
