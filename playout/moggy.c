@@ -1034,7 +1034,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 
-	if (test_heuristic_apply(pp, pc, selfatari)) {
+	if (!test_heuristic_apply(pp, pc, selfatari)) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping sar test\n");
 		goto sar_skip;
@@ -1062,7 +1062,7 @@ sar_skip:
 	 * happen only for false eyes, but some of them are in fact
 	 * real eyes with diagonal filled by a dead stone. Prefer
 	 * to counter-capture in that case. */
-	if (test_heuristic_apply(pp, pc, eyefill)) {
+	if (!test_heuristic_apply(pp, pc, eyefill)) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping eyefill test\n");
 		goto eyefill_skip;
