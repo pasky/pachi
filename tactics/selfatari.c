@@ -5,7 +5,9 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
+#include "mq.h"
 #include "random.h"
+#include "tactics/1lib.h"
 #include "tactics/selfatari.h"
 
 
@@ -556,11 +558,19 @@ found:;
 		int gnm = gn % groups_n;
 		group_t group = groups[gnm];
 
-		coord_t lib2 = board_group_other_lib(b, group, coord);
-		if (board_is_one_point_eye(b, lib2, board_at(b, group)))
-			continue;
-		if (is_bad_selfatari(b, color, lib2))
-			continue;
+		coord_t lib2;
+		/* Can we get liberties by capturing a neighbor? */
+		struct move_queue ccq; ccq.moves = 0;
+		if (can_countercapture(b, color, group, color, &ccq, 0)) {
+			lib2 = mq_pick(&ccq);
+
+		} else {
+			lib2 = board_group_other_lib(b, group, coord);
+			if (board_is_one_point_eye(b, lib2, board_at(b, group)))
+				continue;
+			if (is_bad_selfatari(b, color, lib2))
+				continue;
+		}
 		if (bygroup)
 			*bygroup = group;
 		return lib2;
