@@ -1068,7 +1068,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->nakaderate = 60;
 	pp->korate = 40; pp->koage = 4;
 	pp->alwaysccaprate = 40;
-	pp->eyefillrate = 40;
+	pp->eyefillrate = 60;
 	pp->nlibrate = 25;
 
 	/* selfatarirate is slightly special, since to avoid playing some
