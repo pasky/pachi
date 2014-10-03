@@ -7,6 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "network.h"
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -24,7 +25,6 @@
 #include "timeinfo.h"
 #include "random.h"
 #include "version.h"
-#include "network.h"
 
 int debug_level = 3;
 bool debug_boardprint = true;
