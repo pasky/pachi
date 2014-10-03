@@ -676,7 +676,7 @@ uct_state_init(char *arg, struct board *b)
 			if (optval) *optval++ = 0;
 
 			/** Basic options */
-
+			/* XXX make an offsetof+funptr table outta these -sh 20141003 */
 			if (!strcasecmp(optname, "debug")) {
 				if (optval)
 					u->debug_level = atoi(optval);

@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
 		while (fgets(buf, 4096, stdin)) {
 			if (DEBUGL(1))
 				fprintf(stderr, "IN: %s", buf);
-
+			/* XXX uct assumes no genmove after game finished -sh 20141003 */
 			enum parse_code c = gtp_parse(b, e, ti, buf);
 			if (c == P_ENGINE_RESET) {
 				ti[S_BLACK] = ti_default;
