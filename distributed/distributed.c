@@ -200,12 +200,12 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
  * include contributions from other slaves. To avoid 32-bit overflow on
  * large configurations with many slaves we must average the playouts. */
 struct large_stats {
-	long playouts; // # of playouts
+	integral_s playouts; // # of playouts
 	floating_t value; // BLACK wins/playouts
 };
 
 static void
-large_stats_add_result(struct large_stats *s, floating_t result, long playouts)
+large_stats_add_result(struct large_stats *s, floating_t result, integral_s playouts)
 {
 	s->playouts += playouts;
 	s->value += (result - s->value) * playouts / s->playouts;
@@ -231,7 +231,7 @@ select_best_move(struct board *b, struct large_stats *stats, int *played,
 	memset(stats-2, 0, (board_size2(b)+2) * sizeof(*stats));
 
 	coord_t best_move = pass;
-	long best_playouts = 0;
+	integral_s best_playouts = 0;
 	*played = 0;
 	*total_playouts = 0;
 	*total_threads = 0;
@@ -254,7 +254,7 @@ select_best_move(struct board *b, struct large_stats *stats, int *played,
 			coord_t c = str2scoord(move, board_size(b));
 			assert (c >= resign && c < board_size2(b) && s.playouts >= 0);
 
-			large_stats_add_result(&stats[c], s.value, (long)s.playouts);
+			large_stats_add_result(&stats[c], s.value, s.playouts);
 
 			if (stats[c].playouts > best_playouts) {
 				best_playouts = stats[c].playouts;

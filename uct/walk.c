@@ -520,7 +520,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * The size test must be before the test&set not after, to allow
 		 * expansion of the node later if enough nodes have been freed. */
 		if (tree_leaf_node(n)
-		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < u->max_tree_size
+		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < (integral_u)u->max_tree_size
 		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
 			tree_expand_node(t, n, &b2, next_color, u, -parity);
 	}

@@ -273,7 +273,7 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 		uct_progress_status(u, ctx->t, color, s->last_print, NULL);
 	}
 
-	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
+	if (!s->fullmem && ctx->t->nodes_size > (integral_u)u->max_tree_size) {
 		if (UDEBUGL(2))
 			fprintf(stderr, "memory limit hit (%lu > %lu)\n",
 				ctx->t->nodes_size, u->max_tree_size);

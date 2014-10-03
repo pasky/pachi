@@ -28,7 +28,7 @@ tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 {
 	struct tree_node *n = NULL;
 	size_t nsize = count * sizeof(*n);
-	unsigned long old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
+	integral_u old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
 
 	if (fast_alloc) {
 		if (old_size + nsize > t->max_tree_size)
@@ -73,8 +73,8 @@ tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 
 /* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
 struct tree *
-tree_init(struct board *board, enum stone color, unsigned long max_tree_size,
-	  unsigned long max_pruned_size, unsigned long pruning_threshold, floating_t ltree_aging, int hbits)
+tree_init(struct board *board, enum stone color, integral_u max_tree_size,
+	  integral_u max_pruned_size, integral_u pruning_threshold, floating_t ltree_aging, int hbits)
 {
 	struct tree *t = calloc2(1, sizeof(*t));
 	t->board = board;
@@ -106,7 +106,7 @@ tree_init(struct board *board, enum stone color, unsigned long max_tree_size,
  * same tree, but not on node n. n may be detached from the tree but
  * must have been created in this tree originally.
  * It returns the remaining size of the tree after n has been freed. */
-static unsigned long
+static integral_u
 tree_done_node(struct tree *t, struct tree_node *n)
 {
 	struct tree_node *ni = n->children;
@@ -116,7 +116,7 @@ tree_done_node(struct tree *t, struct tree_node *n)
 		ni = nj;
 	}
 	free(n);
-	unsigned long old_size = __sync_fetch_and_sub(&t->nodes_size, sizeof(*n));
+	integral_u old_size = __sync_fetch_and_sub(&t->nodes_size, sizeof(*n));
 	return old_size - sizeof(*n);
 }
 
@@ -132,7 +132,7 @@ tree_done_node_worker(void *ctx_)
 	struct subtree_ctx *ctx = ctx_;
 	char *str = coord2str(node_coord(ctx->n), ctx->t->board);
 
-	unsigned long tree_size = tree_done_node(ctx->t, ctx->n);
+	integral_u tree_size = tree_done_node(ctx->t, ctx->n);
 	if (!tree_size)
 		free(ctx->t);
 	if (DEBUGL(2))
@@ -416,7 +416,7 @@ tree_garbage_collect(struct tree *tree, struct tree_node *node)
 {
 	assert(tree->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
-	unsigned long orig_size = tree->nodes_size;
+	integral_u orig_size = tree->nodes_size;
 
 	struct tree *temp_tree = tree_init(tree->board,  tree->root_color,
 					   tree->max_pruned_size, 0, 0, tree->ltree_aging, 0);
@@ -427,7 +427,7 @@ tree_garbage_collect(struct tree *tree, struct tree_node *node)
 	int max_nodes = 1;
 	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
 		max_nodes++;
-	unsigned long nodes_size = max_nodes * sizeof(*node);
+	integral_u nodes_size = max_nodes * sizeof(*node);
 	int max_depth = node->depth;
 	while (nodes_size < tree->max_pruned_size && max_nodes > 1) {
 		max_nodes--;

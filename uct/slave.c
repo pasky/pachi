@@ -51,9 +51,9 @@
 
 /* For debugging only. */
 static struct hash_counts h_counts;
-static long parent_not_found = 0;
-static long parent_leaf = 0;
-static long node_not_found = 0;
+static integral_s parent_not_found = 0;
+static integral_s parent_leaf = 0;
+static integral_s node_not_found = 0;
 
 /* Hash table entry mapping path to node. */
 struct tree_hash {
