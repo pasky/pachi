@@ -2,8 +2,13 @@
 #include <math.h>
 #include <stdio.h>
 #include <sys/types.h>
-#include <regex.h>
 #include <stdint.h>
+
+#if defined(__MINGW32__)
+#   include "regex-stubs.h"
+#else
+#   include <regex.h>
+#endif
 
 #define DEBUG
 
