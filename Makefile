@@ -5,8 +5,7 @@
 # 	make MAC=1 DOUBLE=1
 
 
-# Do you compile on Windows instead of Linux? Please note that the
-# performance may not be optimal.
+# Do you compile on Windows instead of Linux?
 # (XXX: For now, only the mingw target is supported on Windows.
 # Patches for others are welcome!)
 
