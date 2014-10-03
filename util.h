@@ -9,8 +9,10 @@
 #include <windows.h>
 
 #define sleep(seconds) Sleep((seconds) * 1000)
-#define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
-#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -(b));
+#ifndef __GNUC__
+#   define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
+#   define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -(b));
+#endif
 
 /* MinGW gcc, no function prototype for built-in function stpcpy() */ 
 char *stpcpy (char *dest, const char *src);
