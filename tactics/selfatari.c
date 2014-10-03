@@ -530,6 +530,7 @@ selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygr
 				fprintf(stderr, "%s(%s) ", coord2sstr(c, b), stone2str(s));
 		}
 	});
+	assert(groups_n <= 4);
 	if (DEBUGL(6))
 		fprintf(stderr, "\n");
 
