@@ -669,7 +669,7 @@ uct_state_init(char *arg, struct board *b)
 		while (*next) {
 			optspec = next;
 			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
+			if (*next) { *next++ = 0; }
 
 			char *optname = optspec;
 			char *optval = strchr(optspec, '=');
