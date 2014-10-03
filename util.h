@@ -37,6 +37,11 @@ more_hay:;
 
 /* Misc. definitions. */
 
+/* used for value ranges that can overflow */
+#include <inttypes.h>
+typedef uintmax_t integral_u;
+typedef intmax_t integral_s;
+
 /* Use make DOUBLE=1 in large configurations with counts > 1M
  * where 24 bits of floating_t mantissa become insufficient. */
 #ifdef DOUBLE
