@@ -11,9 +11,10 @@
 #define DEBUG
 
 #include "debug.h"
-#include "timeinfo.h"
+#include "distributed/protocol.h"
 #include "distributed/distributed.h"
 #include "distributed/merge.h"
+#include "timeinfo.h"
 
 /* We merge together debug stats for all hash tables. */
 static struct hash_counts h_counts;

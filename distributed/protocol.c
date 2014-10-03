@@ -18,13 +18,13 @@
 
 #define DEBUG
 
+#include "distributed/protocol.h"
 #include "random.h"
 #include "timeinfo.h"
 #include "playout.h"
 #include "network.h"
 #include "debug.h"
 #include "distributed/distributed.h"
-#include "distributed/protocol.h"
 
 /* All gtp commands for current game separated by \n */
 static char gtp_cmds[CMDS_SIZE];

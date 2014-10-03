@@ -76,6 +76,8 @@
 
 #define DEBUG
 
+#include "distributed/protocol.h"
+
 #include "engine.h"
 #include "move.h"
 #include "timeinfo.h"
