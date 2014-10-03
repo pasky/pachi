@@ -191,6 +191,11 @@ int main(int argc, char *argv[])
 	char *e_arg = NULL;
 	if (optind < argc)
 		e_arg = argv[optind];
+        if (optind + 1 < argc)
+            fprintf(stderr,
+                    "warning: too many args, %d expected; first needless is %s\n"
+                    "info: separate engine params by commas, hyphen-prefixed ones go before\n",
+                    optind + 1, argv[optind+1]);
 	struct engine *e = init_engine(engine, e_arg, b);
 
 	if (testfile) {
