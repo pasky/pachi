@@ -1076,8 +1076,11 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	 * times during a simulation - we'd like that to happen in most
 	 * simulations, so we try to use a very high selfatarirate.
 	 * XXX: Perhaps it would be better to permanently ban moves in
-	 * the current simulation after testing them once. */
-	pp->selfatarirate = 95;
+	 * the current simulation after testing them once.
+	 * XXX: We would expect the above to be the case, but since some
+	 * unclear point, selfatari 95 -> 60 gives a +~50Elo boost against
+	 * GNUGo.  This might be indicative of some bug, FIXME bisect? */
+	pp->selfatarirate = 60;
 	pp->selfatari_other = true;
 
 	pp->pattern2 = true;
