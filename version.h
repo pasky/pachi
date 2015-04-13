@@ -1,8 +1,8 @@
 #ifndef PACHI_VERSION_H
 #define PACHI_VERSION_H
 
-#define PACHI_VERNUM 11.00
-#define PACHI_VERNUMS "11.00"
+#define PACHI_VERNUM 11.99
+#define PACHI_VERNUMS "11.99"
 
 /* 00. Wang Zhi
  * 01. Sansa     Meijin  1612-1623
@@ -29,10 +29,10 @@
  * 19. Shuei     Meijin  1887-1907
  * 20. Shugen    6-Dan   1907-1908
  * 21. Shusai    Meijin  1908-1940 */
-#define PACHI_VERNAME "Retsugen"
+#define PACHI_VERNAME "Genjo"
 
 /* -devel except when tagged. */
-#define PACHI_VERDEV ""
+#define PACHI_VERDEV "-devel"
 
 #define PACHI_VERSION PACHI_VERNUMS " (" PACHI_VERNAME PACHI_VERDEV ")"
 
