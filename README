@@ -28,12 +28,11 @@ section at the top of the Makefile.
 Engine
 ------
 
-The default engine plays by Chinese rules and should be about
-7d KGS strength on 9x9. On 19x19, it might be about KGS 1k, assuming
-reasonable hardware, e.g. two-core Athlon64 machine.  On a higher-end
-(e.g. six-way Intel i7) machine, it can hold a solid KGS 2d rank.
-When using a large cluster (64 machines, 20 cores each), it maintains
-KGS 4d and has won e.g. a 7-stone handicap game against Zhou Junxun 9p.
+The default engine plays by Chinese rules and should be about 7d KGS
+strength on 9x9. On 19x19 (using e.g. six-way Intel i7), it can hold
+a solid KGS 2d rank.  When using a large cluster (64 machines,
+20 cores each), it maintains KGS 3d to 4d and has won e.g. a 7-stone
+handicap game against Zhou Junxun 9p.
 
 By default, Pachi currently uses the UCT engine that combines
 Monte Carlo approach with tree search; UCB1AMAF tree policy using
@@ -204,6 +203,10 @@ Also, if you are interested about Pachi's architecture, algorithms
 etc., consider taking a look at Petr Baudis' Master's Thesis:
 
 	http://pasky.or.cz/go/prace.pdf
+
+...or a slightly newer scientific paper on Pachi:
+
+	http://pasky.or.cz/go/pachi-tr.pdf
 
 
 Licence
