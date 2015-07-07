@@ -176,7 +176,7 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
 {
 	struct uct *u = e->data;
 
-	static bool board_resized = false;
+	static bool board_resized = true;
 	if (is_gamestart(cmd)) {
 		board_resized = true;
 		uct_pondering_stop(u);
