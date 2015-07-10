@@ -314,6 +314,7 @@ uct_done(struct engine *e)
 	struct uct *u = e->data;
 	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
+	if (u->dynkomi) u->dynkomi->done(u->dynkomi);
 	free(u->ownermap.map);
 
 	free(u->policy);
