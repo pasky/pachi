@@ -317,8 +317,8 @@ uct_done(struct engine *e)
 	if (u->dynkomi) u->dynkomi->done(u->dynkomi);
 	free(u->ownermap.map);
 
-	free(u->policy);
-	free(u->random_policy);
+	if (u->policy) u->policy->done(u->policy);
+	if (u->random_policy) u->random_policy->done(u->policy);
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
 	joseki_done(u->jdict);

@@ -335,6 +335,13 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 	}
 }
 
+void
+ucb1amaf_done(struct uct_policy *p)
+{
+	free(p->data);
+	free(p);
+}
+
 
 struct uct_policy *
 policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
@@ -343,6 +350,7 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 	struct ucb1_policy_amaf *b = calloc2(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
+	p->done = ucb1amaf_done;
 	p->choose = uctp_generic_choose;
 	p->winner = uctp_generic_winner;
 	p->evaluate = ucb1rave_evaluate;
