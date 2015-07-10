@@ -309,6 +309,8 @@ uct_done(struct engine *e)
 {
 	/* This is called on engine reset, especially when clear_board
 	 * is received and new game should begin. */
+	free(e->comment);
+
 	struct uct *u = e->data;
 	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
