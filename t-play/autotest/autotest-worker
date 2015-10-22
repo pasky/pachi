@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This is autotest Go-testing framework worker. It picks a random
 # pairing among the ones defined in the rc file, and plays a single game.
 
@@ -65,6 +65,7 @@ pairing_param() { # Accessor method
 
 echo "Loaded $pairs pairings"
 
+# XXX RANDOM is bash-specific
 pair="$((RANDOM % $pairs))"
 pairid="$(pairing_param $pair id)"
 echo "Picked pairing #$pair: $pairid"
@@ -74,6 +75,7 @@ log "starting game with pairing #$pair: $pairid"
 
 # Assign players to final colors
 black="$(pairing_param ${pair} black)"
+# XXX RANDOM is bash-specific
 [ "$black" != "a" ] || black="$((1 + RANDOM % 2))"
 white="$((1+2-black))"
 p_black="$(player_param $(pairing_param $pair player$black) spec)"; pa_black="$(pairing_param $pair player${black}_args)"
