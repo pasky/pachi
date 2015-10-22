@@ -72,13 +72,16 @@ for pairing in $( (echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.
 	[ ! -s "r/$pairing.dat" ] || $twogtp_path -analyze "r/$pairing.dat"
 	pairing_status "$pairing" # sets status
 	if [ -s "r/$pairing.summary.dat" ]; then
-		read games winrate sd <<<$(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)
-		if [ -n "$do_elo" ]; then
-			elo_stats
-		else
-			stats="$games\t$winrate\t$sd"
-		fi
-		printf "$status $stats\t$pairing$color_stop\n"
+		cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2 | \
+		while read games winrate sd ; do
+			if [ -n "$do_elo" ]; then
+				elo_stats
+			else
+				stats="$games\t$winrate\t$sd"
+			fi
+			printf "$status $stats\t$pairing$color_stop\n"
+			break
+		done
 	else
 		printf "$status 0\t-\t-\t$pairing$color_stop\n"
 	fi
