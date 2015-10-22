@@ -118,6 +118,6 @@ cat "c/$clientid"/scratch.dat | grep -v '^#' | {
 		_S="$TIME_B"; TIME_B="$TIME_W"; TIME_W="$_S"
 		_S="$CPU_B"; CPU_B="$CPU_W"; CPU_W="$_S"
 	fi
-	echo -e "$GAME\t$RES_B\t$RES_W\t$RES_R\t$ALT\t$DUP\t$LEN\t$TIME_B\t$TIME_W\t$CPU_B\t$CPU_W\t$ERR\t$ERR_MSG"
+	printf "$GAME\t$RES_B\t$RES_W\t$RES_R\t$ALT\t$DUP\t$LEN\t$TIME_B\t$TIME_W\t$CPU_B\t$CPU_W\t$ERR\t$ERR_MSG\n"
 } >>"c/$clientid/$pairid/game.dat"
 mv "c/$clientid/scratch-0.sgf" "c/$clientid/$pairid/game-$gameno.sgf"
