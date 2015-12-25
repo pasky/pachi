@@ -162,6 +162,7 @@ typedef void (*uctp_descend)(struct uct_policy *p, struct tree *tree, struct uct
 typedef void (*uctp_winner)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent);
 typedef void (*uctp_prior)(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
 typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *amaf, struct board *final_board, floating_t result);
+typedef void (*uctp_done)(struct uct_policy *p);
 
 struct uct_policy {
 	struct uct *uct;
@@ -171,6 +172,7 @@ struct uct_policy {
 	uctp_descend descend;
 	uctp_update update;
 	uctp_prior prior;
+	uctp_done done;
 	bool wants_amaf;
 	void *data;
 };

@@ -6,7 +6,7 @@ set -e # errors are fatal
 # Client helpers.  $clientid must be set.
 
 log() {
-	echo -e "$(date)\t$*" >>"c/$clientid/log"
+	printf "$(date)\t$*\n" >>"c/$clientid/log"
 }
 
 

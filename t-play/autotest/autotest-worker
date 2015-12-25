@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This is autotest Go-testing framework worker. It picks a random
 # pairing among the ones defined in the rc file, and plays a single game.
 
@@ -65,6 +65,7 @@ pairing_param() { # Accessor method
 
 echo "Loaded $pairs pairings"
 
+# XXX RANDOM is bash-specific
 pair="$((RANDOM % $pairs))"
 pairid="$(pairing_param $pair id)"
 echo "Picked pairing #$pair: $pairid"
@@ -74,6 +75,7 @@ log "starting game with pairing #$pair: $pairid"
 
 # Assign players to final colors
 black="$(pairing_param ${pair} black)"
+# XXX RANDOM is bash-specific
 [ "$black" != "a" ] || black="$((1 + RANDOM % 2))"
 white="$((1+2-black))"
 p_black="$(player_param $(pairing_param $pair player$black) spec)"; pa_black="$(pairing_param $pair player${black}_args)"
@@ -118,6 +120,6 @@ cat "c/$clientid"/scratch.dat | grep -v '^#' | {
 		_S="$TIME_B"; TIME_B="$TIME_W"; TIME_W="$_S"
 		_S="$CPU_B"; CPU_B="$CPU_W"; CPU_W="$_S"
 	fi
-	echo -e "$GAME\t$RES_B\t$RES_W\t$RES_R\t$ALT\t$DUP\t$LEN\t$TIME_B\t$TIME_W\t$CPU_B\t$CPU_W\t$ERR\t$ERR_MSG"
+	printf "$GAME\t$RES_B\t$RES_W\t$RES_R\t$ALT\t$DUP\t$LEN\t$TIME_B\t$TIME_W\t$CPU_B\t$CPU_W\t$ERR\t$ERR_MSG\n"
 } >>"c/$clientid/$pairid/game.dat"
 mv "c/$clientid/scratch-0.sgf" "c/$clientid/$pairid/game-$gameno.sgf"

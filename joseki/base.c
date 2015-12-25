@@ -73,6 +73,10 @@ void
 joseki_done(struct joseki_dict *jd)
 {
 	if (!jd) return;
+	for( unsigned long pid = 0; pid < 1<<joseki_hash_bits ; pid++){
+		free(jd->patterns[pid].moves[0]);
+		free(jd->patterns[pid].moves[1]);
+	}
 	free(jd->patterns);
 	free(jd);
 }

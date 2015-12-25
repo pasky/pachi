@@ -309,13 +309,16 @@ uct_done(struct engine *e)
 {
 	/* This is called on engine reset, especially when clear_board
 	 * is received and new game should begin. */
+	free(e->comment);
+
 	struct uct *u = e->data;
 	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
+	if (u->dynkomi) u->dynkomi->done(u->dynkomi);
 	free(u->ownermap.map);
 
-	free(u->policy);
-	free(u->random_policy);
+	if (u->policy) u->policy->done(u->policy);
+	if (u->random_policy) u->random_policy->done(u->random_policy);
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
 	joseki_done(u->jdict);

@@ -228,5 +228,11 @@ int main(int argc, char *argv[])
 	}
 	done_engine(e);
 	chat_done();
+	free(testfile);
+	free(gtp_port);
+	free(log_port);
+	free(chatfile);
+	free(fbookfile);
+	free(ruleset);
 	return 0;
 }
