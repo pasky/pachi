@@ -3,10 +3,10 @@
 
 . ./autotest-lib
 
-echo -e "LAST ACTIVITY\t\t\tWFAIL#\tNAME"
+printf "LAST ACTIVITY\t\t\tWFAIL#\tNAME\n"
 for c in c/*; do
 	client="${c#c/}"
 	beacon="$(date --rfc-3339=seconds -d "1970-01-01 $(cat "$c/beacon") seconds")"
 	fails="$(grep -c fail "$c/log" || :)"
-	echo -e "$beacon\t$fails\t$client"
+	printf "$beacon\t$fails\t$client\n"
 done

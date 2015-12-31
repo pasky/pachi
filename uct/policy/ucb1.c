@@ -77,6 +77,12 @@ ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enu
 	}
 }
 
+void
+ucb1_done(struct uct_policy *p)
+{
+	free(p->data);
+	free(p);
+}
 
 struct uct_policy *
 policy_ucb1_init(struct uct *u, char *arg)
@@ -85,6 +91,7 @@ policy_ucb1_init(struct uct *u, char *arg)
 	struct ucb1_policy *b = calloc2(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
+	p->done = ucb1_done;
 	p->descend = ucb1_descend;
 	p->choose = uctp_generic_choose;
 	p->update = ucb1_update;

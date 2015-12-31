@@ -18,7 +18,7 @@ for dir in c/*/*/; do
 		# Common datfile header, required for twogtp -analyze
 		{
 		echo "#"
-		echo -e "#GAME\tRES_B\tRES_W\tRES_R\tALT\tDUP\tLEN\tTIME_B\tTIME_W\tCPU_B\tCPU_W\tERR\tERR_MSG"
+		printf "#GAME\tRES_B\tRES_W\tRES_R\tALT\tDUP\tLEN\tTIME_B\tTIME_W\tCPU_B\tCPU_W\tERR\tERR_MSG\n"
 		} >"$datfile"
 		num=0
 	else
@@ -29,7 +29,7 @@ for dir in c/*/*/; do
 	# twogtp -analyze is pedantic about the games numbering;
 	# we need to renumber the games to a single sequence.
 	while read orignum line; do
-		echo -e "$num\t$line"
+		printf "$num\t$line\n"
 		num=$((num+1))
 	done <"$dir/game.dat" >>"$datfile"
 done

@@ -64,22 +64,25 @@ elo_stats() {
 rm -f r/*.summary.dat r/*.html
 
 if [ -n "$do_elo" ]; then
-	echo -e "S GAMES\tWR -/0/+ (S.D.)\t\tPAIRING"
+	printf "S GAMES\tWR -/0/+ (S.D.)\t\tPAIRING\n"
 else
-	echo -e "S GAMES\tWINRATE\tS.D.\tPAIRING"
+	printf "S GAMES\tWINRATE\tS.D.\tPAIRING\n"
 fi
 for pairing in $( (echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.dat$##') | sort | uniq); do
 	[ ! -s "r/$pairing.dat" ] || $twogtp_path -analyze "r/$pairing.dat"
 	pairing_status "$pairing" # sets status
 	if [ -s "r/$pairing.summary.dat" ]; then
-		read games winrate sd <<<$(cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2)
-		if [ -n "$do_elo" ]; then
-			elo_stats
-		else
-			stats="$games\t$winrate\t$sd"
-		fi
-		echo -e "$status $stats\t$pairing$color_stop"
+		cat "r/${pairing}".summary.dat | cut -f 1,7,8 | tail -n +2 | \
+		while read games winrate sd ; do
+			if [ -n "$do_elo" ]; then
+				elo_stats
+			else
+				stats="$games\t$winrate\t$sd"
+			fi
+			printf "$status $stats\t$pairing$color_stop\n"
+			break
+		done
 	else
-		echo -e "$status 0\t-\t-\t$pairing$color_stop"
+		printf "$status 0\t-\t-\t$pairing$color_stop\n"
 	fi
 done

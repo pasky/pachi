@@ -368,6 +368,9 @@ process_reply(int reply_id, char *reply, char *reply_buf,
 	      int *reply_slot, struct slave_state *sstate)
 {
 	/* Resend everything if slave returned an error. */
+	/* FIXME: this often results in infinite loops on errors
+	 * not caused by syncing. These should be reported from
+	 * the distributed engine. */
 	if (*reply != '=') {
 		*last_reply_id = -1;
 		return true;
