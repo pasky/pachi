@@ -38,6 +38,8 @@ This will collect the results all in one place. Then, you can repeatedly
 examine the results using:
 
 	./autotest-show
+or
+	./autotest-show-diagram
 
 That will show results from all pairings. You can also use e.g.
 
