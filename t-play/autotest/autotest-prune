@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This is autotest pruning tool, removing info about specified old
 # pairings. Note that this removes only pairing results, you need
 # to adjust the rc file manually if you haven't removed the pairing

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This is autotest display tool, showing gathered information in
 # a hopefully meaningful way.
 #

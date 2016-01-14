@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # This is autotest gathering tool, collecting game result info from
 # all clients and putting it in single place (which is completely
 # wiped otherwise).
