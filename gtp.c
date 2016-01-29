@@ -17,6 +17,7 @@
 #include "uct/uct.h"
 #include "version.h"
 #include "timeinfo.h"
+#include "gogui.h"
 
 #define NO_REPLY (-2)
 
@@ -120,6 +121,34 @@ static char *known_commands =
 	"time_left\n"
 	"time_settings\n"
 	"kgs-time_settings";
+
+char gogui_gfx_buf[5000];
+enum gogui_reporting gogui_live_gfx = 0;
+
+static void
+gogui_set_live_gfx(struct engine *engine, char *arg)
+{
+	if (!strcmp(arg, "best_moves"))
+		gogui_live_gfx = UR_GOGUI_CAN;
+	if (!strcmp(arg, "best_seq"))
+		gogui_live_gfx = UR_GOGUI_SEQ;	
+	if (!strcmp(arg, "winrates"))
+		gogui_live_gfx = UR_GOGUI_WR;
+	engine->live_gfx_hook(engine);
+}
+
+static char *
+gogui_best_moves(struct board *b, struct engine *engine, char *arg, bool winrates)
+{
+	enum stone color = str2stone(arg);
+	assert(color != S_NONE);	
+	enum gogui_reporting prev = gogui_live_gfx;
+	gogui_set_live_gfx(engine, (winrates ? "winrates" : "best_moves"));
+	gogui_gfx_buf[0] = 0;
+	engine->best_moves(engine, b, color);
+	gogui_live_gfx = prev;
+	return gogui_gfx_buf;
+}
 
 /* XXX Completely unsafe if reply buffer is not big enough */
 static void
@@ -654,6 +683,11 @@ next_group:;
 	} else if (!strcasecmp(cmd, "gogui-owner_map")) {
 		char reply[5000];
 		gogui_owner_map(board, engine, reply);
+		gtp_reply(id, reply, NULL);
+	} else if (!strcasecmp(cmd, "gogui-best_moves")) {
+		char *arg;
+		next_tok(arg);
+		char *reply = gogui_best_moves(board, engine, arg, false);
 		gtp_reply(id, reply, NULL);
 
 	} else {

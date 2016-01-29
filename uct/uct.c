@@ -490,6 +490,43 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 	}
 }
 
+static void
+uct_live_gfx_hook(struct engine *e)
+{
+	struct uct *u = e->data;
+	/* Hack: Override reportfreq to get decent update rates in GoGui */
+	u->reportfreq = 1000;
+}
+
+/* Kindof like uct_genmove() but just find the best candidates */
+static void
+uct_best_moves(struct engine *e, struct board *b, enum stone color)
+{
+	struct time_info ti = { .period = TT_NULL };
+	double start_time = time_now();
+	struct uct *u = e->data;
+	uct_pondering_stop(u);
+	if (u->t)
+		reset_state(u);
+	uct_genmove_setup(u, b, color);
+
+        /* Start the Monte Carlo Tree Search! */
+	int base_playouts = u->t->root->u.playouts;
+	int played_games = uct_search(u, b, &ti, color, u->t, false);
+
+	coord_t best_coord;
+	uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, &best_coord);
+
+	if (UDEBUGL(2)) {
+		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
+		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
+			time, (int)(played_games/time), (int)(played_games/time/u->threads));
+	}
+
+	uct_progress_status(u, u->t, color, played_games, &best_coord);
+	reset_state(u);
+}
+
 static coord_t *
 uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
@@ -1280,6 +1317,8 @@ engine_uct_init(char *arg, struct board *b)
 	e->stop = uct_stop;
 	e->done = uct_done;
 	e->owner_map = uct_owner_map;
+	e->best_moves = uct_best_moves;
+	e->live_gfx_hook = uct_live_gfx_hook;
 	e->data = u;
 	if (u->slave)
 		e->notify = uct_notify;

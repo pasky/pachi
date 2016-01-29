@@ -21,6 +21,7 @@
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
+#include "gogui.h"
 
 #define DESCENT_DLEN 512
 
@@ -79,6 +80,46 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	}
 
 	fprintf(stderr, "\n");
+}
+
+/* Display best moves graphically in GoGui.
+ * gfx commands printed on stderr are for live gfx,
+ * and the last run is kept in a buffer in case we need a gtp reply.
+ */
+static void
+uct_progress_gogui_candidates(struct uct *u, struct tree *t, enum stone color, int playouts)
+{
+	struct tree_node *best = t->root->children;
+	int cans = GOGUI_CANDIDATES;
+	struct tree_node *can[cans];
+	memset(can, 0, sizeof(can));
+	while (best) {
+		int c = 0;
+		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
+		for (int d = 0; d < c; d++) can[d] = can[d + 1];
+		if (c > 0) can[c - 1] = best;
+		best = best->sibling;
+	}
+
+	fprintf(stderr, "gogui-gfx:\n");
+	char *buf = gogui_gfx_buf;
+	if (--cans >= 0)
+		if (can[cans]) {
+			sprintf(buf, "VAR %s %s\n", 
+				(color == S_WHITE ? "w" : "b"),
+				coord2sstr(node_coord(can[cans]), t->board) );
+			fprintf(stderr, "%s", buf);
+			buf += strlen(buf);
+		}
+	while (--cans >= 0)
+		if (can[cans]) {
+			sprintf(buf, "LABEL %s %i\n", 
+				coord2sstr(node_coord(can[cans]), t->board),
+				GOGUI_CANDIDATES - cans);
+			fprintf(stderr, "%s", buf);
+			buf += strlen(buf);
+		}
+	fprintf(stderr, "\n");	
 }
 
 void
@@ -183,8 +224,16 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 			break;
 		default: assert(0);
 	}
-}
 
+	if (!gogui_live_gfx)
+		return;
+	switch(gogui_live_gfx) {
+		case UR_GOGUI_CAN:
+			uct_progress_gogui_candidates(u, t, color, playouts);
+			break;
+		default: assert(0);
+	}
+}
 
 static inline void
 record_amaf_move(struct playout_amafmap *amaf, coord_t coord, bool is_ko_capture)

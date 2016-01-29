@@ -32,6 +32,8 @@ typedef void (*engine_done)(struct engine *e);
 
 /* GoGui hooks */
 typedef float (*engine_owner_map)(struct engine *e, struct board *b, coord_t c);
+typedef void (*engine_best_moves)(struct engine *e, struct board *b, enum stone color);
+typedef void (*engine_live_gfx_hook)(struct engine *e);
 
 /* This is engine data structure. A new engine instance is spawned
  * for each new game during the program lifetime. */
@@ -55,6 +57,8 @@ struct engine {
 	engine_stop stop;
 	engine_done done;
 	engine_owner_map owner_map;
+	engine_best_moves best_moves;
+	engine_live_gfx_hook live_gfx_hook;
 	void *data;
 };
 
