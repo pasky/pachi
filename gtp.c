@@ -689,6 +689,11 @@ next_group:;
 		next_tok(arg);
 		char *reply = gogui_best_moves(board, engine, arg, false);
 		gtp_reply(id, reply, NULL);
+	} else if (!strcasecmp(cmd, "gogui-winrates")) {
+		char *arg;
+		next_tok(arg);
+		char *reply = gogui_best_moves(board, engine, arg, true);
+		gtp_reply(id, reply, NULL);
 
 	} else {
 		gtp_error(id, "unknown command", NULL);
