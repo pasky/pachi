@@ -680,6 +680,11 @@ next_group:;
 
 		gtp_reply(id, NULL);
 
+	} else if (!strcasecmp(cmd, "gogui-live_gfx")) {
+		char *arg;
+		next_tok(arg);
+		gogui_set_live_gfx(engine, arg);
+		gtp_reply(id, NULL);
 	} else if (!strcasecmp(cmd, "gogui-owner_map")) {
 		char reply[5000];
 		gogui_owner_map(board, engine, reply);

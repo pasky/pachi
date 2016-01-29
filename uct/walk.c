@@ -82,6 +82,30 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	fprintf(stderr, "\n");
 }
 
+/* Live gfx: show best sequence in GoGui */
+static void
+uct_progress_gogui_sequence(struct uct *u, struct tree *t, enum stone color, int playouts)
+{
+	/* Best move */
+	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+	if (!best) {
+		fprintf(stderr, "... No moves left\n");
+		return;
+	}
+	
+	fprintf(stderr, "gogui-gfx: VAR ");
+	char *col = "bw";
+	for (int depth = 0; depth < 4; depth++) {
+		if (best && best->u.playouts >= 25) {
+			fprintf(stderr, "%c %3s ", 
+				col[(depth + (color == S_WHITE)) % 2],
+				coord2sstr(node_coord(best), t->board));
+			best = u->policy->choose(u->policy, best, t->board, color, resign);
+		}
+	}
+	fprintf(stderr, "\n");	
+}
+
 /* Display best moves graphically in GoGui.
  * gfx commands printed on stderr are for live gfx,
  * and the last run is kept in a buffer in case we need a gtp reply.
@@ -272,6 +296,9 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	switch(gogui_live_gfx) {
 		case UR_GOGUI_CAN:
 			uct_progress_gogui_candidates(u, t, color, playouts);
+			break;
+		case UR_GOGUI_SEQ:
+			uct_progress_gogui_sequence(u, t, color, playouts);
 			break;
 		case UR_GOGUI_WR:
 			uct_progress_gogui_winrates(u, t, color, playouts);
