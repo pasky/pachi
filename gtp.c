@@ -91,7 +91,7 @@ gtp_final_score(struct board *board, struct engine *engine, char *reply, int len
 
 /* List of known gtp commands. The internal command pachi-genmoves is not exported,
  * it should only be used between master and slaves of the distributed engine. */
-static char *known_commands =
+static char *known_commands_base =
 	"protocol_version\n"
 	"echo\n"
 	"name\n"
@@ -121,6 +121,32 @@ static char *known_commands =
 	"time_left\n"
 	"time_settings\n"
 	"kgs-time_settings";
+
+static char*
+known_commands(struct engine *engine)
+{
+	static char *str = 0;
+	if (str)
+		return str;
+	if (strcmp(engine->name, "UCT"))  /* Not uct ? */
+		return known_commands_base;
+	/* For now only uct supports gogui-analyze_commands */
+	str = malloc(strlen(known_commands_base) + 32);
+	sprintf(str, "%s\ngogui-analyze_commands", known_commands_base);
+	return str;
+}
+
+static char *gogui_analyze_commands =
+	"string/          Final Score/final_score\n"
+	"gfx/gfx   Best Moves B/gogui-best_moves b\n"
+	"gfx/gfx   Best Moves W/gogui-best_moves w\n"
+	"gfx/gfx   Winrates B/gogui-winrates b\n"
+	"gfx/gfx   Winrates W/gogui-winrates w\n"
+	"gfx/gfx   Owner Map/gogui-owner_map\n"
+	"gfx/Live gfx = Best Moves/gogui-live_gfx best_moves\n"
+	"gfx/Live gfx = Best Sequence/gogui-live_gfx best_seq\n"
+	"gfx/Live gfx = Winrates/gogui-live_gfx winrates\n";
+
 
 char gogui_gfx_buf[5000];
 enum gogui_reporting gogui_live_gfx = 0;
@@ -189,15 +215,14 @@ gogui_owner_map(struct board *b, struct engine *engine, char *reply)
 	strcat(reply, str2);
 }
 
-
 /* Return true if cmd is a valid gtp command. */
 bool
-gtp_is_valid(const char *cmd)
+gtp_is_valid(struct engine *e, const char *cmd)
 {
 	if (!cmd || !*cmd) return false;
-	const char *s = strcasestr(known_commands, cmd);
+	const char *s = strcasestr(known_commands(e), cmd);
 	if (!s) return false;
-	if (s != known_commands && s[-1] != '\n') return false;
+	if (s != known_commands(e) && s[-1] != '\n') return false;
 
 	int len = strlen(cmd);
 	return s[len] == '\0' || s[len] == '\n';
@@ -250,13 +275,13 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		gtp_reply(id, known_commands, NULL);
+		gtp_reply(id, known_commands(engine), NULL);
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "known_command")) {
 		char *arg;
 		next_tok(arg);
-		if (gtp_is_valid(arg)) {
+		if (gtp_is_valid(engine, arg)) {
 			gtp_reply(id, "true", NULL);
 		} else {
 			gtp_reply(id, "false", NULL);
@@ -264,7 +289,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		return P_OK;
 	}
 
-	if (engine->notify && gtp_is_valid(cmd)) {
+	if (engine->notify && gtp_is_valid(engine, cmd)) {
 		char *reply;
 		enum parse_code c = engine->notify(engine, board, id, cmd, next, &reply);
 		if (c == P_NOREPLY) {
@@ -680,6 +705,8 @@ next_group:;
 
 		gtp_reply(id, NULL);
 
+	} else if (!strcasecmp(cmd, "gogui-analyze_commands")) {
+		gtp_reply(id, gogui_analyze_commands, NULL);
 	} else if (!strcasecmp(cmd, "gogui-live_gfx")) {
 		char *arg;
 		next_tok(arg);
