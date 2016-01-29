@@ -157,6 +157,13 @@ uct_printhook_ownermap(struct board *board, coord_t c, char *s, char *end)
 	return s;
 }
 
+static float
+uct_owner_map(struct engine *e, struct board *b, coord_t c)
+{
+	struct uct *u = b->es;
+	return board_ownermap_estimate_point(&u->ownermap, c);
+}
+
 static char *
 uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {
@@ -1272,6 +1279,7 @@ engine_uct_init(char *arg, struct board *b)
 	e->dead_group_list = uct_dead_group_list;
 	e->stop = uct_stop;
 	e->done = uct_done;
+	e->owner_map = uct_owner_map;
 	e->data = u;
 	if (u->slave)
 		e->notify = uct_notify;

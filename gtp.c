@@ -71,6 +71,23 @@ gtp_error(int id, ...)
 	va_end(params);
 }
 
+static void
+gtp_final_score(struct board *board, struct engine *engine, char *reply, int len)
+{
+	struct move_queue q = { .moves = 0 };
+	if (engine->dead_group_list)
+		engine->dead_group_list(engine, board, &q);
+	floating_t score = board_official_score(board, &q);
+	if (DEBUGL(1))
+		fprintf(stderr, "counted score %.1f\n", score);
+	if (score == 0)
+		snprintf(reply, len, "0");
+	else if (score > 0) 
+		snprintf(reply, len, "W+%.1f", score);
+	else 
+		snprintf(reply, len, "B+%.1f", -score);
+}
+
 /* List of known gtp commands. The internal command pachi-genmoves is not exported,
  * it should only be used between master and slaves of the distributed engine. */
 static char *known_commands =
@@ -103,6 +120,45 @@ static char *known_commands =
 	"time_left\n"
 	"time_settings\n"
 	"kgs-time_settings";
+
+/* XXX Completely unsafe if reply buffer is not big enough */
+static void
+gogui_owner_map(struct board *b, struct engine *engine, char *reply)
+{
+	char str2[32];
+	reply[0] = 0;
+	if (!engine->owner_map)
+		return;
+	
+	sprintf(reply, "INFLUENCE");
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)
+			continue;
+		float p = engine->owner_map(engine, b, c);
+
+		// p = -1 for WHITE, 1 for BLACK absolute ownership of point i                                      
+		if (p < -.8)
+			p = -1.0;
+		else if (p < -.5)
+			p = -0.7;
+		else if (p < -.2)
+			p = -0.4;
+		else if (p < 0.2)
+			p = 0.0;
+		else if (p < 0.5)
+			p = 0.4;
+		else if (p < 0.8)
+			p = 0.7;
+		else
+			p = 1.0;
+		sprintf(str2, " %3s %.1lf", coord2sstr(c, b), p);
+		strcat(reply, str2);
+	} foreach_point_end;
+
+	strcat(reply, "\nTEXT Score Est: ");
+	gtp_final_score(b, engine, str2, sizeof(str2));
+	strcat(reply, str2);
+}
 
 
 /* Return true if cmd is a valid gtp command. */
@@ -401,23 +457,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		gtp_flush();
 
 	} else if (!strcasecmp(cmd, "final_score")) {
-		struct move_queue q = { .moves = 0 };
-		if (engine->dead_group_list)
-			engine->dead_group_list(engine, board, &q);
-		floating_t score = board_official_score(board, &q);
 		char str[64];
-		if (DEBUGL(1))
-			fprintf(stderr, "counted score %.1f\n", score);
-		if (score == 0) {
-			gtp_reply(id, "0", NULL);
-		} else if (score > 0) {
-			snprintf(str, 64, "W+%.1f", score);
-			gtp_reply(id, str, NULL);
-		} else {
-			snprintf(str, 64, "B+%.1f", -score);
-			gtp_reply(id, str, NULL);
-		}
-
+		gtp_final_score(board, engine, str, sizeof(str));
+		gtp_reply(id, str, NULL);
+		
 	/* XXX: This is a huge hack. */
 	} else if (!strcasecmp(cmd, "final_status_list")) {
 		if (id == NO_REPLY) return P_OK;
@@ -607,6 +650,11 @@ next_group:;
 		}
 
 		gtp_reply(id, NULL);
+
+	} else if (!strcasecmp(cmd, "gogui-owner_map")) {
+		char reply[5000];
+		gogui_owner_map(board, engine, reply);
+		gtp_reply(id, reply, NULL);
 
 	} else {
 		gtp_error(id, "unknown command", NULL);
