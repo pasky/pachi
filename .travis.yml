@@ -1,0 +1,18 @@
+# http://docs.travis-ci.com/user/languages/c/
+# start from https://github.com/rubinius/rubinius/blob/master/.travis.yml
+language: c
+sudo: false
+
+compiler:
+  - clang
+  - gcc
+os:
+  - linux
+
+# https://blog.lukaspradel.com/continuous-integration-for-cmake-projects-using-travis-ci/  
+script:
+  - make -j2 && ./pachi -u t-unit/sar.t
+
+matrix:
+  allow_failures:
+    - compiler: clang 
