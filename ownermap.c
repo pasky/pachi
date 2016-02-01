@@ -30,6 +30,16 @@ board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownerm
 			dst->map[i][j] += src->map[i][j];
 }
 
+float
+board_ownermap_estimate_point(struct board_ownermap *ownermap, coord_t c)
+{
+	assert(ownermap->map);
+	int b = ownermap->map[c][S_BLACK];
+	int w = ownermap->map[c][S_WHITE];
+	int total = ownermap->playouts;
+	return 1.0 * (b - w) / total;
+}
+
 enum point_judgement
 board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_t thres)
 {

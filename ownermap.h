@@ -29,6 +29,7 @@ enum point_judgement {
 	PJ_UNKNOWN = 3,
 };
 enum point_judgement board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_t thres);
+float board_ownermap_estimate_point(struct board_ownermap *ownermap, coord_t c);
 
 
 /* Estimate status of stones on board based on ownermap stats. */

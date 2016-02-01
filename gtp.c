@@ -17,6 +17,7 @@
 #include "uct/uct.h"
 #include "version.h"
 #include "timeinfo.h"
+#include "gogui.h"
 
 #define NO_REPLY (-2)
 
@@ -71,9 +72,26 @@ gtp_error(int id, ...)
 	va_end(params);
 }
 
+static void
+gtp_final_score(struct board *board, struct engine *engine, char *reply, int len)
+{
+	struct move_queue q = { .moves = 0 };
+	if (engine->dead_group_list)
+		engine->dead_group_list(engine, board, &q);
+	floating_t score = board_official_score(board, &q);
+	if (DEBUGL(1))
+		fprintf(stderr, "counted score %.1f\n", score);
+	if (score == 0)
+		snprintf(reply, len, "0");
+	else if (score > 0) 
+		snprintf(reply, len, "W+%.1f", score);
+	else 
+		snprintf(reply, len, "B+%.1f", -score);
+}
+
 /* List of known gtp commands. The internal command pachi-genmoves is not exported,
  * it should only be used between master and slaves of the distributed engine. */
-static char *known_commands =
+static char *known_commands_base =
 	"protocol_version\n"
 	"echo\n"
 	"name\n"
@@ -104,15 +122,107 @@ static char *known_commands =
 	"time_settings\n"
 	"kgs-time_settings";
 
+static char*
+known_commands(struct engine *engine)
+{
+	static char *str = 0;
+	if (str)
+		return str;
+	if (strcmp(engine->name, "UCT"))  /* Not uct ? */
+		return known_commands_base;
+	/* For now only uct supports gogui-analyze_commands */
+	str = malloc(strlen(known_commands_base) + 32);
+	sprintf(str, "%s\ngogui-analyze_commands", known_commands_base);
+	return str;
+}
+
+static char *gogui_analyze_commands =
+	"string/          Final Score/final_score\n"
+	"gfx/gfx   Best Moves B/gogui-best_moves b\n"
+	"gfx/gfx   Best Moves W/gogui-best_moves w\n"
+	"gfx/gfx   Winrates B/gogui-winrates b\n"
+	"gfx/gfx   Winrates W/gogui-winrates w\n"
+	"gfx/gfx   Owner Map/gogui-owner_map\n"
+	"gfx/Live gfx = Best Moves/gogui-live_gfx best_moves\n"
+	"gfx/Live gfx = Best Sequence/gogui-live_gfx best_seq\n"
+	"gfx/Live gfx = Winrates/gogui-live_gfx winrates\n";
+
+
+char gogui_gfx_buf[5000];
+enum gogui_reporting gogui_live_gfx = 0;
+
+static void
+gogui_set_live_gfx(struct engine *engine, char *arg)
+{
+	if (!strcmp(arg, "best_moves"))
+		gogui_live_gfx = UR_GOGUI_CAN;
+	if (!strcmp(arg, "best_seq"))
+		gogui_live_gfx = UR_GOGUI_SEQ;	
+	if (!strcmp(arg, "winrates"))
+		gogui_live_gfx = UR_GOGUI_WR;
+	engine->live_gfx_hook(engine);
+}
+
+static char *
+gogui_best_moves(struct board *b, struct engine *engine, char *arg, bool winrates)
+{
+	enum stone color = str2stone(arg);
+	assert(color != S_NONE);	
+	enum gogui_reporting prev = gogui_live_gfx;
+	gogui_set_live_gfx(engine, (winrates ? "winrates" : "best_moves"));
+	gogui_gfx_buf[0] = 0;
+	engine->best_moves(engine, b, color);
+	gogui_live_gfx = prev;
+	return gogui_gfx_buf;
+}
+
+/* XXX Completely unsafe if reply buffer is not big enough */
+static void
+gogui_owner_map(struct board *b, struct engine *engine, char *reply)
+{
+	char str2[32];
+	reply[0] = 0;
+	if (!engine->owner_map)
+		return;
+	
+	sprintf(reply, "INFLUENCE");
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)
+			continue;
+		float p = engine->owner_map(engine, b, c);
+
+		// p = -1 for WHITE, 1 for BLACK absolute ownership of point i                                      
+		if (p < -.8)
+			p = -1.0;
+		else if (p < -.5)
+			p = -0.7;
+		else if (p < -.2)
+			p = -0.4;
+		else if (p < 0.2)
+			p = 0.0;
+		else if (p < 0.5)
+			p = 0.4;
+		else if (p < 0.8)
+			p = 0.7;
+		else
+			p = 1.0;
+		sprintf(str2, " %3s %.1lf", coord2sstr(c, b), p);
+		strcat(reply, str2);
+	} foreach_point_end;
+
+	strcat(reply, "\nTEXT Score Est: ");
+	gtp_final_score(b, engine, str2, sizeof(str2));
+	strcat(reply, str2);
+}
 
 /* Return true if cmd is a valid gtp command. */
 bool
-gtp_is_valid(const char *cmd)
+gtp_is_valid(struct engine *e, const char *cmd)
 {
 	if (!cmd || !*cmd) return false;
-	const char *s = strcasestr(known_commands, cmd);
+	const char *s = strcasestr(known_commands(e), cmd);
 	if (!s) return false;
-	if (s != known_commands && s[-1] != '\n') return false;
+	if (s != known_commands(e) && s[-1] != '\n') return false;
 
 	int len = strlen(cmd);
 	return s[len] == '\0' || s[len] == '\n';
@@ -165,13 +275,13 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "list_commands")) {
-		gtp_reply(id, known_commands, NULL);
+		gtp_reply(id, known_commands(engine), NULL);
 		return P_OK;
 
 	} else if (!strcasecmp(cmd, "known_command")) {
 		char *arg;
 		next_tok(arg);
-		if (gtp_is_valid(arg)) {
+		if (gtp_is_valid(engine, arg)) {
 			gtp_reply(id, "true", NULL);
 		} else {
 			gtp_reply(id, "false", NULL);
@@ -179,7 +289,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		return P_OK;
 	}
 
-	if (engine->notify && gtp_is_valid(cmd)) {
+	if (engine->notify && gtp_is_valid(engine, cmd)) {
 		char *reply;
 		enum parse_code c = engine->notify(engine, board, id, cmd, next, &reply);
 		if (c == P_NOREPLY) {
@@ -401,23 +511,10 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		gtp_flush();
 
 	} else if (!strcasecmp(cmd, "final_score")) {
-		struct move_queue q = { .moves = 0 };
-		if (engine->dead_group_list)
-			engine->dead_group_list(engine, board, &q);
-		floating_t score = board_official_score(board, &q);
 		char str[64];
-		if (DEBUGL(1))
-			fprintf(stderr, "counted score %.1f\n", score);
-		if (score == 0) {
-			gtp_reply(id, "0", NULL);
-		} else if (score > 0) {
-			snprintf(str, 64, "W+%.1f", score);
-			gtp_reply(id, str, NULL);
-		} else {
-			snprintf(str, 64, "B+%.1f", -score);
-			gtp_reply(id, str, NULL);
-		}
-
+		gtp_final_score(board, engine, str, sizeof(str));
+		gtp_reply(id, str, NULL);
+		
 	/* XXX: This is a huge hack. */
 	} else if (!strcasecmp(cmd, "final_status_list")) {
 		if (id == NO_REPLY) return P_OK;
@@ -607,6 +704,28 @@ next_group:;
 		}
 
 		gtp_reply(id, NULL);
+
+	} else if (!strcasecmp(cmd, "gogui-analyze_commands")) {
+		gtp_reply(id, gogui_analyze_commands, NULL);
+	} else if (!strcasecmp(cmd, "gogui-live_gfx")) {
+		char *arg;
+		next_tok(arg);
+		gogui_set_live_gfx(engine, arg);
+		gtp_reply(id, NULL);
+	} else if (!strcasecmp(cmd, "gogui-owner_map")) {
+		char reply[5000];
+		gogui_owner_map(board, engine, reply);
+		gtp_reply(id, reply, NULL);
+	} else if (!strcasecmp(cmd, "gogui-best_moves")) {
+		char *arg;
+		next_tok(arg);
+		char *reply = gogui_best_moves(board, engine, arg, false);
+		gtp_reply(id, reply, NULL);
+	} else if (!strcasecmp(cmd, "gogui-winrates")) {
+		char *arg;
+		next_tok(arg);
+		char *reply = gogui_best_moves(board, engine, arg, true);
+		gtp_reply(id, reply, NULL);
 
 	} else {
 		gtp_error(id, "unknown command", NULL);
