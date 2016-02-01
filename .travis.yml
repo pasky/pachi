@@ -9,10 +9,28 @@ compiler:
 os:
   - linux
 
+# This will install newer versions of GCC and Clang. Default GCC works fine,
+# therefore its lines are commented out. Default clang does not know
+# one of the compilation switches and it fails, so it must be updated.
+
+# http://stackoverflow.com/a/30925448/1047788
+# https://github.com/travis-ci/travis-ci/issues/3478
+install:
+  - if [ "$CC" = "clang" ]; then export CXX="clang++-3.7" CC="clang-3.7"; fi
+#  - if [ "$CC" = "gcc" ]; then export CXX="g++-4.8" CC="gcc-4.8"; fi
+
+# http://docs.travis-ci.com/user/apt/
+addons:
+  apt:
+    sources:
+      - llvm-toolchain-precise-3.7
+      - ubuntu-toolchain-r-test
+    packages: 
+      - clang-3.7
+#      - gcc-4.8
+#      - g++-4.8
+
+  
 # https://blog.lukaspradel.com/continuous-integration-for-cmake-projects-using-travis-ci/  
 script:
   - make -j2 && ./pachi -u t-unit/sar.t
-
-matrix:
-  allow_failures:
-    - compiler: clang 
