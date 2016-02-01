@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+# Display confidence diagrams
+# Usage: ./autotest-show-diagram [pairing-pattern]
+# Make sure you run ./autotest-gather first !
+
+my $mask = $ARGV[0];
+
+my $confidence = 95;
+#my $confidence = 67;
+
+my $ratio;
+if    ($confidence == 95)
+{      $ratio = 1.96;     }
+elsif ($confidence == 67)
+{      $ratio = 1;        }
+else
+{      die "fixme";       }
+print "Confidence level: $confidence%\n";
+
+open(IN, "./autotest-show | ");
+my $spaces = "                                                                                                ";
+my $hashes = "################################################################################################";
+while (my $str = <IN>)
+{
+    if ($str =~ m/$mask/ &&
+	$str =~ m/([0-9]+)\t([0-9.]+)\t([0-9.]+)\t(.*)/)
+    {
+	my ($games, $wr, $sd, $name) = ($1, $2, $3, $4);
+	if (!$games)
+	{   continue;   }
+	$wr = $wr * 100;
+	$sd = $sd * 100;
+	$min = $wr - $ratio * $sd;
+	$max = $wr + $ratio * $sd;
+	$min_int = int($min + 0.5);  # Don't use this for < 0 numbers !
+	$max_int = int($max + 0.5);
+	
+	printf("%4i %-40s  [%i%%-%i%%] ", $games, "$name", $min_int, $max_int);
+	my $shift_left = 20;
+	printf("%.*s[%.*s]\n", $min_int - 1 - $shift_left, "$spaces", $max_int - $min_int - 1, "$hashes");
+    }
+}
+
