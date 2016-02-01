@@ -160,8 +160,8 @@ XXOOO
 XOO..
 XOOOO
 XXXXX
-sar b d3 0	# Gosh, sometimes bad moves are good
-sar b e3 0
+! sar b d3 0	# Gosh, sometimes bad moves are good
+! sar b e3 0
 
 % Capture-from-within 3pt-eye (straight) nakade
 boardsize 3

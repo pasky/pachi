@@ -90,6 +90,7 @@ unittest(char *filename)
 		exit(EXIT_FAILURE);
 	}
 
+	int skipped = 0;
 	bool passed = true;
 
 	struct board *b = board_init(NULL);
@@ -98,6 +99,7 @@ unittest(char *filename)
 		line[strlen(line) - 1] = 0; // chomp
 		switch (line[0]) {
 			case '%': printf("\n%s\n", line); continue;
+			case '!': printf("%s...\tSKIPPED\n", line); skipped++; continue;
 			case 0: continue;
 		}
 		if (!strncmp(line, "boardsize ", 10)) {
@@ -111,10 +113,14 @@ unittest(char *filename)
 	}
 
 	fclose(f);
-        if (passed) {
-		printf("\nAll tests PASSED\n");
-        } else {
-		printf("\nSome tests FAILED\n");
+ 	if (passed) {
+		printf("\nAll tests PASSED");
+	} else {
+		printf("\nSome tests FAILED");
 		exit(EXIT_FAILURE);
-        }
+	}
+	if (skipped > 0) {
+		printf(", %d test(s) SKIPPED", skipped);
+	}
+	printf("\n");
 }
