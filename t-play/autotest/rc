@@ -12,7 +12,7 @@
 # not --black as parameter)
 twogtp_path="/nfs/drahokam/pasky/gogui-1.1.10/bin/gogui-twogtp"
 # If you want handicap support, you will need a custom patch from:
-# https://sourceforge.net/tracker/?func=detail&atid=489966&aid=2878719&group_id=59117
+# http://pasky.or.cz/dev/pachi/gogui-handicap.diff
 
 
 ### Players:
