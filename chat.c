@@ -2,13 +2,15 @@
 #include <math.h>
 #include <stdio.h>
 #include <sys/types.h>
-#include <regex.h>
 #include <stdint.h>
+#include "chat.h"
+
+#ifndef HAVE_NO_REGEX_SUPPORT
+#include <regex.h>
 
 #define DEBUG
 
 #include "debug.h"
-#include "chat.h"
 #include "random.h"
 
 #define MAX_CHAT_PATTERNS 500
@@ -59,10 +61,10 @@ void chat_init(char *chat_file) {
 		}
 	}
 	if (!feof(f))
-		fprintf(stderr, "syntax error around line %tu in %s\n", entry - chat_table, chat_file);
+		fprintf(stderr, "syntax error around line %u in %s\n", entry - chat_table, chat_file);
 	fclose(f);
 	if (DEBUGL(1))
-		fprintf(stderr, "Loaded %tu chat entries from %s\n", entry - chat_table, chat_file);
+		fprintf(stderr, "Loaded %u chat entries from %s\n", entry - chat_table, chat_file);
 }
 
 void chat_done() {
@@ -121,3 +123,15 @@ char
 	assert(0);
 	return NULL;
 }
+#else
+void chat_init(char *) {}
+
+void chat_done() {}
+
+char
+*generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
+	      int playouts, int machines, int threads, double winrate, double extra_komi) {
+	static char reply[1024] = { '.', '\0' };
+	return reply;
+}
+#endif
