@@ -2,6 +2,7 @@
 #define PACHI_UTIL_H
 
 #include <stdlib.h>
+#include <stdio.h>
 
 /* Portability definitions. */
 
