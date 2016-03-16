@@ -88,6 +88,7 @@ nakade_point_(coord_t *area, int area_n, int *neighbors, int *ptbynei)
 			return pass; // anything else
 		default: assert(0);
 	}
+	assert(0);
 }
 
 coord_t
