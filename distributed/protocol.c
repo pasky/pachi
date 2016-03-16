@@ -122,7 +122,7 @@ logline(struct in_addr *client, char *prefix, char *s)
 static void *
 proxy_thread(void *arg)
 {
-	int proxy_sock = (long)arg;
+	int proxy_sock = (intptr_t)arg;
 	assert(proxy_sock >= 0);
 	for (;;) {
 		struct in_addr client;
@@ -507,7 +507,7 @@ static void *
 slave_thread(void *arg)
 {
 	struct slave_state sstate = default_sstate;
-	sstate.thread_id = (long)arg;
+	sstate.thread_id = (intptr_t)arg;
 
 	assert(sstate.slave_sock >= 0);
 	char reply_buf[CMDS_SIZE];
@@ -672,13 +672,13 @@ protocol_init(char *slave_port, char *proxy_port, int max_slaves)
 
 	pthread_t thread;
 	for (int id = 0; id < max_slaves; id++) {
-		pthread_create(&thread, NULL, slave_thread, (void *)(long)id);
+		pthread_create(&thread, NULL, slave_thread, (void *)(intptr_t)id);
 	}
 
 	if (proxy_port) {
 		int proxy_sock = port_listen(proxy_port, max_slaves);
 		for (int id = 0; id < max_slaves; id++) {
-			pthread_create(&thread, NULL, proxy_thread, (void *)(long)proxy_sock);
+			pthread_create(&thread, NULL, proxy_thread, (void *)(intptr_t)proxy_sock);
 		}
 	}
 }
