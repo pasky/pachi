@@ -591,7 +591,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	int child_count = 1; // for pass
 	foreach_free_point(b) {
 		assert(board_at(b, c) == S_NONE);
-		if (!board_is_valid_play(b, color, c))
+		if (!board_is_valid_play_no_suicide(b, color, c))
 			continue;
 		map.consider[c] = true;
 		child_count++;
