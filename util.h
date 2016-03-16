@@ -6,6 +6,13 @@
 /* Portability definitions. */
 
 #ifdef _WIN32
+
+/*
+ * sometimes we use winsock and like to avoid a warning to include
+ * windows.h only after winsock2.h
+*/
+#include <winsock2.h>
+
 #include <windows.h>
 
 #define sleep(seconds) Sleep((seconds) * 1000)
