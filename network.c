@@ -178,7 +178,7 @@ open_log_connection(struct port_info *info)
  * It also echoes its input, which can be used to check if the
  * program is alive. As a weak identity check, in server mode the input
  * must start with "Pachi" (without the quotes). */
-static void *
+static void * __attribute__((noreturn))
 log_thread(void *arg)
 {
 	struct port_info *info = arg;
