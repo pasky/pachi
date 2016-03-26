@@ -249,7 +249,7 @@ uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd
 
 	struct tree_node *n = u->t->root;
 	double winrate = tree_node_get_value(u->t, -1, n->u.value);
-	double extra_komi = u->t->use_extra_komi && abs(u->t->extra_komi) >= 0.5 ? u->t->extra_komi : 0;
+	double extra_komi = u->t->use_extra_komi && fabs(u->t->extra_komi) >= 0.5 ? u->t->extra_komi : 0;
 
 	return generic_chat(b, opponent, from, cmd, u->t->root_color, node_coord(n), n->u.playouts, 1,
 			    u->threads, winrate, extra_komi);

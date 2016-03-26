@@ -197,6 +197,7 @@ log_thread(void *arg)
 		fflush(stderr);
 		open_log_connection(info);
 	}
+	pthread_exit(NULL);
 }
 
 /* Open the log connection on the given port, redirect stderr to it,

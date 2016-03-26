@@ -134,6 +134,7 @@ proxy_thread(void *arg)
 		}
 		fclose(f);
 	}
+	pthread_exit(NULL);
 }
 
 /* Get a reply to one gtp command. Return the gtp command id,
@@ -544,6 +545,7 @@ slave_thread(void *arg)
 			logline(&client, "= ", "lost slave\n");
 		fclose(f);
 	}
+	pthread_exit(NULL);
 }
 
 /* Create a new gtp command for all slaves. The slave lock is held

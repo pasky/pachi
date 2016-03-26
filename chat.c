@@ -86,7 +86,7 @@ char
 
 		snprintf(reply, 512, "In %d playouts at %d threads, %s %s can win with %.1f%% probability",
 			 playouts, threads, stone2str(color), coord2sstr(move, b), 100*winrate);
-		if (abs(extra_komi) >= 0.5) {
+		if (fabs(extra_komi) >= 0.5) {
 			snprintf(reply + strlen(reply), 510, ", while self-imposing extra komi %.1f", extra_komi);
 		}
 		strcat(reply, ".");
