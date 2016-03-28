@@ -40,6 +40,15 @@ struct fbook;
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
 #define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE / 2)
 
+enum e_sym {
+		SYM_FULL,
+		SYM_DIAG_UP,
+		SYM_DIAG_DOWN,
+		SYM_HORIZ,
+		SYM_VERT,
+		SYM_NONE
+};
+
 
 /* Some engines might normalize their reading and skip symmetrical
  * moves. We will tell them how can they do it. */
@@ -52,14 +61,7 @@ struct board_symmetry {
 	/* General symmetry type. */
 	/* Note that the above is redundant to this, but just provided
 	 * for easier usage. */
-	enum {
-		SYM_FULL,
-		SYM_DIAG_UP,
-		SYM_DIAG_DOWN,
-		SYM_HORIZ,
-		SYM_VERT,
-		SYM_NONE
-	} type;
+	enum e_sym type;
 };
 
 
@@ -326,7 +328,6 @@ void board_done(struct board *board);
 void board_resize(struct board *board, int size);
 void board_clear(struct board *board);
 
-struct FILE;
 typedef char *(*board_cprint)(struct board *b, coord_t c, char *s, char *end);
 void board_print(struct board *board, FILE *f);
 void board_print_custom(struct board *board, FILE *f, board_cprint cprint);

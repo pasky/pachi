@@ -61,7 +61,7 @@ checked_malloc(size_t size, char *filename, unsigned int line, const char *func)
 }
 
 static inline void *
-checked_calloc(size_t nmemb, size_t size, char *filename, unsigned int line, const char *func)
+checked_calloc(size_t nmemb, size_t size, const char *filename, unsigned int line, const char *func)
 {
 	void *p = calloc(nmemb, size);
 	if (!p) {
