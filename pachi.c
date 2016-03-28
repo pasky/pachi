@@ -25,6 +25,7 @@
 #include "random.h"
 #include "version.h"
 #include "network.h"
+#include "dcnn.h"
 
 int debug_level = 3;
 bool debug_boardprint = true;
@@ -167,6 +168,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	dcnn_quiet_caffe(argc, argv);
 	if (log_port)
 		open_log_port(log_port);
 

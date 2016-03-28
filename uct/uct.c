@@ -13,6 +13,7 @@
 #include "chat.h"
 #include "move.h"
 #include "mq.h"
+#include "dcnn.h"
 #include "joseki/base.h"
 #include "playout.h"
 #include "playout/moggy.h"
@@ -1277,6 +1278,7 @@ uct_state_init(char *arg, struct board *b)
 
 	if (u->want_pat && !pat_setup)
 		patterns_init(&u->pat, NULL, false, true);
+	dcnn_init();
 
 	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));
 
