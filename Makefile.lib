@@ -29,6 +29,10 @@ quiet_cmd_compile = '[CC]   $<'
  masq_cmd_compile = $(COMPILE) -c $<
       cmd_compile = $(COMPILE) -Wp,-MD,.deps/$(*F).pp -c $<
 
+quiet_cmd_compilexx = '[CXX]   $<'
+ masq_cmd_compilexx = $(COMPILEXX) -c $<
+      cmd_compilexx = $(COMPILEXX) -Wp,-MD,.deps/$(*F).pp -c $<
+
 quiet_cmd_archive = '[AR]   $@'
       cmd_archive = $(AR) r $@ $^
 
@@ -45,9 +49,12 @@ quiet_cmd_recmake = "[MAKE $$target]   $$subdir"
 
 unexport CFLAGS
 CFLAGS += $(CUSTOM_CFLAGS) $(XCFLAGS) $(INCLUDES) $(SYS_CFLAGS)
+unexport CXXFLAGS
+CXXFLAGS += $(CUSTOM_CXXFLAGS) $(XCFLAGS) $(INCLUDES) $(SYS_CXXFLAGS)
 unexport LDFLAGS
 LDFLAGS += $(CUSTOM_LDFLAGS) $(XLDFLAGS) $(SYS_LDFLAGS)
 COMPILE = $(CC) $(CFLAGS)
+COMPILEXX = $(CXX) $(CXXFLAGS)
 LINK = $(CC) $(LDFLAGS)
 
 DEP_FILES_1 = $(foreach src,$(OBJS),.deps/$(src))
@@ -61,6 +68,14 @@ endif
 
 %.o: %.c
 	$(call mcmd,compile)
+	@-cp .deps/$(*F).pp .deps/$(*F).P; \
+		tr ' ' '\012' < .deps/$(*F).pp \
+			| sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
+			>> .deps/$(*F).P; \
+		rm .deps/$(*F).pp
+
+%.o: %.cpp
+	$(call mcmd,compilexx)
 	@-cp .deps/$(*F).pp .deps/$(*F).P; \
 		tr ' ' '\012' < .deps/$(*F).pp \
 			| sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
