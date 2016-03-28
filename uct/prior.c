@@ -10,6 +10,7 @@
 #include "joseki/base.h"
 #include "move.h"
 #include "random.h"
+#include "dcnn.h"
 #include "tactics/ladder.h"
 #include "tactics/util.h"
 #include "uct/internal.h"
@@ -29,6 +30,7 @@ struct uct_prior {
 	 * playouts per source seems best. */
 	int eqex;
 	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex, joseki_eqex, pattern_eqex;
+	int dcnn_eqex;
 	int cfgdn; int *cfgd_eqex;
 	bool prune_ladders;
 };
@@ -65,6 +67,82 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 		add_prior_value(map, c, 0, u->prior->eye_eqex);
 	} foreach_free_point_end;
 }
+
+#ifdef DCNN
+
+#define DCNN_BEST_N 5
+
+static void
+find_dcnn_best_moves(struct prior_map *map, float *r, coord_t *best, float *best_r)
+{
+        struct board *b = map->b;
+
+	for (int i = 0; i < DCNN_BEST_N; i++)
+		best[i] = pass;
+        
+        foreach_free_point(b) {
+                if (!map->consider[c])
+                        continue;
+
+                int k = (coord_x(c, b) - 1) * 19 + (coord_y(c, b) - 1);
+                for (int i = 0; i < DCNN_BEST_N; i++)
+                        if (r[k] > best_r[i]) {
+                                for (int j = DCNN_BEST_N - 1; j > i; j--) { // shift
+                                        best_r[j] = best_r[j - 1];
+                                        best[j] = best[j - 1];
+                                }
+                                best_r[i] = r[k];
+                                best[i] = c;
+                                break;
+                        }
+        } foreach_free_point_end;
+}
+
+static void
+print_dcnn_best_moves(struct tree_node *node, struct prior_map *map,
+		      coord_t *best, float *best_r)
+{
+        fprintf(stderr, "dcnn best: [ ");
+        for (int i = 0; i < DCNN_BEST_N; i++)
+                fprintf(stderr, "%s ", coord2sstr(best[i], map->b));
+        fprintf(stderr, "]      ");	
+	
+	fprintf(stderr, "[ ");
+        for (int i = 0; i < DCNN_BEST_N; i++)
+                fprintf(stderr, "%.2f ", best_r[i]);
+        fprintf(stderr, "]\n");	
+}
+
+static void
+uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
+{
+	float r[19 * 19];
+	float best_r[DCNN_BEST_N] = { 0.0, };
+	coord_t best_moves[DCNN_BEST_N];
+	dcnn_get_moves(map->b, map->to_play, r);
+	find_dcnn_best_moves(map, r, best_moves, best_r);
+	print_dcnn_best_moves(node, map, best_moves, best_r);
+	
+	foreach_free_point(map->b) {
+		if (!map->consider[c])
+			continue;
+		
+		int i = coord_x(c, map->b) - 1;
+		int j = coord_y(c, map->b) - 1;
+		assert(i >= 0 && i < 19);
+		assert(j >= 0 && j < 19);
+		float val = r[i * 19 + j];
+		if (isnan(val) || val < 0.001)
+			continue;
+		assert(val >= 0.0 && val <= 1.0);
+		add_prior_value(map, c, 1, sqrt(val) * u->prior->dcnn_eqex);
+	} foreach_free_point_end;
+}
+
+#else
+#define uct_prior_dcnn(u, node, map)  
+#endif /* DCNN */
+
 
 void
 uct_prior_ko(struct uct *u, struct tree_node *node, struct prior_map *map)
@@ -196,6 +274,11 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_ko(u, node, map);
 	if (u->prior->b19_eqex)
 		uct_prior_b19(u, node, map);
+	
+	if (!node->parent)  // Use dcnn for root priors
+		if (u->prior->dcnn_eqex)
+			uct_prior_dcnn(u, node, map);
+	
 	if (u->prior->policy_eqex)
 		uct_prior_playout(u, node, map);
 	if (u->prior->cfgd_eqex)
@@ -218,6 +301,10 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	 * but only -400 on a cluster. We need a better way to set the default
 	 * here. */
 	p->pattern_eqex = -800;
+	/* Best value for dcnn_eqex so far seems to be 1300 with ~88% winrate
+	 * against regular pachi. Below 1200 is bad (50% winrate and worse), more
+	 * gives diminishing returns (1500 -> 78%, 2000 -> 70% ...) */
+	p->dcnn_eqex    = 1300;
 	p->joseki_eqex = -200;
 	p->cfgdn = -1;
 
@@ -285,6 +372,10 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 				p->plugin_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "prune_ladders")) {
 				p->prune_ladders = !optval || atoi(optval);
+#ifdef DCNN
+			} else if (!strcasecmp(optname, "dcnn") && optval) {
+				p->dcnn_eqex = atoi(optval);
+#endif
 			} else {
 				fprintf(stderr, "uct: Invalid prior argument %s or missing value\n", optname);
 				exit(1);
@@ -300,7 +391,11 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	if (p->joseki_eqex < 0) p->joseki_eqex = p->eqex * -p->joseki_eqex / 100;
 	if (p->pattern_eqex < 0) p->pattern_eqex = p->eqex * -p->pattern_eqex / 100;
 	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex * -p->plugin_eqex / 100;
+	if (p->dcnn_eqex < 0) p->dcnn_eqex = p->eqex * -p->dcnn_eqex / 100;
 
+	if (!using_dcnn(b))
+		p->dcnn_eqex = 0;
+	
 	if (p->cfgdn < 0) {
 		static int large_bonuses[] = { 0, 55, 50, 15 };
 		static int small_bonuses[] = { 0, 45, 40, 15 };

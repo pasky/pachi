@@ -535,6 +535,16 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	struct uct *u = e->data;
 	u->pass_all_alive |= pass_all_alive;
 	uct_pondering_stop(u);
+
+	if (using_dcnn(b)) {
+		// dcnn hack: reset state to make dcnn priors kick in.
+		// FIXME this makes pondering useless when using dcnn ...
+		if (u->t) {
+			u->initial_extra_komi = u->t->extra_komi;
+			reset_state(u);
+		}
+	}
+
 	uct_genmove_setup(u, b, color);
 
         /* Start the Monte Carlo Tree Search! */
