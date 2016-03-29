@@ -258,8 +258,8 @@ tree_node_save(FILE *f, struct tree_node *node, int thres)
 		node->is_expanded = 0;
 
 	fputc(1, f);
-	fwrite(((void *) node) + offsetof(struct tree_node, depth),
-	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
+	fwrite(((void *) node) + offsetof(struct tree_node, u),
+	       sizeof(struct tree_node) - offsetof(struct tree_node, u),
 	       1, f);
 
 	if (save_children) {
@@ -293,9 +293,9 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 {
 	(*num)++;
 
-	fread(((void *) node) + offsetof(struct tree_node, depth),
-	       sizeof(struct tree_node) - offsetof(struct tree_node, depth),
-	       1, f);
+	fread(((void *) node) + offsetof(struct tree_node, u),
+	      sizeof(struct tree_node) - offsetof(struct tree_node, u),
+	      1, f);
 
 	/* Keep values in sane scale, otherwise we start overflowing. */
 #define MAX_PLAYOUTS	10000000

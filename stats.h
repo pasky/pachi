@@ -10,8 +10,8 @@
  * slightly wrong, but not drastically corrupted. */
 
 struct move_stats {
-	int playouts; // # of playouts
 	floating_t value; // BLACK wins/playouts
+	int playouts; // # of playouts
 };
 
 /* Add a result to the stats. */

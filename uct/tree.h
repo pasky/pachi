@@ -60,31 +60,6 @@ struct tree_node {
 
 	/*** From here on, struct is saved/loaded from opening tbook */
 
-	unsigned short depth; // just for statistics
-
-	/* Common Fate Graph distance from parent, but at most TREE_NODE_D_MAX+1 */
-#define TREE_NODE_D_MAX 3
-	unsigned char d;
-
-#define TREE_HINT_INVALID 1 // don't go to this node, invalid move
-	unsigned char hints;
-
-	/* Number of parallel descents going through this node at the moment.
-	 * Used for virtual loss computation. */
-	signed char descents;
-
-	/* coord is usually coord_t, but this is very space-sensitive. */
-#define node_coord(n) ((int) (n)->coord)
-	short coord;
-
-	/* In case multiple threads walk the tree, is_expanded is set
-	 * atomically. Only the first thread setting it expands the node.
-	 * The node goes through 3 states:
-	 *   1) children == null, is_expanded == false: leaf node
-	 *   2) children == null, is_expanded == true: one thread currently expanding
-	 *   2) children != null, is_expanded == true: fully expanded node */
-	bool is_expanded;
-
 	struct move_stats u;
 	struct move_stats prior;
 	/* XXX: Should be way for policies to add their own stats */
@@ -95,6 +70,31 @@ struct tree_node {
 	 * of the tree coordinate corresponding to the node */
 	struct move_stats winner_owner; // owner == winner
 	struct move_stats black_owner; // owner == black
+
+	/* coord is usually coord_t, but this is very space-sensitive. */
+#define node_coord(n) ((int) (n)->coord)
+	short coord;
+
+	unsigned short depth; // just for statistics
+
+	/* Number of parallel descents going through this node at the moment.
+	* Used for virtual loss computation. */
+	signed char descents;
+
+	/* Common Fate Graph distance from parent, but at most TREE_NODE_D_MAX+1 */
+#define TREE_NODE_D_MAX 3
+	unsigned char d;
+
+#define TREE_HINT_INVALID 1 // don't go to this node, invalid move
+	unsigned char hints;
+
+	/* In case multiple threads walk the tree, is_expanded is set
+	* atomically. Only the first thread setting it expands the node.
+	* The node goes through 3 states:
+	*   1) children == null, is_expanded == false: leaf node
+	*   2) children == null, is_expanded == true: one thread currently expanding
+	*   2) children != null, is_expanded == true: fully expanded node */
+	bool is_expanded;
 };
 
 struct tree_hash;
