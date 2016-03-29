@@ -80,6 +80,30 @@ in uct/uct.c - you will find the list of UCT engine options there, each
 with a description. At any rate, usually the three options above are
 the only ones you really want to tweak.
 
+DCNN support
+~~~~~~~~~~~~
+
+Pachi can use a neural network as source of good moves to consider.
+Currently this makes it about 1 stone stronger and tends to make the games
+more pretty.
+
+First, build Pachi with DCNN support:
+- Install Caffe library (http://caffe.berkeleyvision.org)
+  CPU only build is fine, no need for GPU, cuda or the other optional
+  dependencies.
+- Edit Makefile, set DCNN=1, point it to where caffe is installed and build.
+
+Install dcnn files in current directory where pachi will run.
+Detlef Schmicker's 54% dcnn can be found at:  
+  http://physik.de/net.tgz  
+
+If you want to use a network with different inputs you'll have to tweak
+dcnn.cpp to accomodate it. Pachi will check for "movepredict.prototxt" and
+"movepredict.caffemodel" files on startup and use them if present when
+playing on 19x19. For now dcnn and pondering can't be used together
+(pondering data is thrown away).
+
+
 Greedy Pachi
 ~~~~~~~~~~~~
 
