@@ -465,6 +465,7 @@ board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 	        + neighbor_count_at(board, coord, S_OFFBOARD)) == 4;
 }
 
+/* Group suicides allowed */
 static inline bool
 board_is_valid_play(struct board *board, enum stone color, coord_t coord)
 {
@@ -487,6 +488,42 @@ board_is_valid_play(struct board *board, enum stone color, coord_t coord)
 	return !!groups_in_atari;
 #endif
 }
+
+/* Check group suicides, slower than board_is_valid_play() */
+static inline bool
+board_is_valid_play_no_suicide(struct board *board, enum stone color, coord_t coord)
+{
+	if (board_at(board, coord) != S_NONE)
+		return false;
+	if (immediate_liberty_count(board, coord) >= 1)
+		return true;
+	if (board_is_eyelike(board, coord, stone_other(color)) &&
+	    board->ko.coord == coord && board->ko.color == color)
+			return false;
+
+	// Capturing something ?
+#ifdef BOARD_TRAITS
+	/* XXX: Disallows suicide. */
+	if (trait_at(board, coord, color).cap > 0)
+		return true;
+#else
+	foreach_neighbor(board, coord, {
+		if (board_at(board, c) == stone_other(color) &&
+		    board_group_info(board, group_at(board, c)).libs == 1)
+			return true;
+	});
+#endif
+
+	// Neighbour with 2 libs ?
+	foreach_neighbor(board, coord, {
+		if (board_at(board, c) == color &&
+		    board_group_info(board, group_at(board, c)).libs > 1)
+			return true;
+	});
+
+	return false;  // Suicide
+}
+
 
 static inline bool
 board_is_valid_move(struct board *board, struct move *m)
