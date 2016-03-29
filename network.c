@@ -52,7 +52,7 @@ port_listen(char *port, int max_connections)
 	server_addr.sin_port = htons(atoi(port));     
 	server_addr.sin_addr.s_addr = INADDR_ANY; 
 
-	const int val = 1;
+	const char val = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)))
 		die("setsockopt");
 	if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
@@ -178,7 +178,7 @@ open_log_connection(struct port_info *info)
  * It also echoes its input, which can be used to check if the
  * program is alive. As a weak identity check, in server mode the input
  * must start with "Pachi" (without the quotes). */
-static void *
+static void * __attribute__((noreturn))
 log_thread(void *arg)
 {
 	struct port_info *info = arg;

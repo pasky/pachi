@@ -2,15 +2,23 @@
 #define PACHI_UTIL_H
 
 #include <stdlib.h>
+#include <stdio.h>
 
 /* Portability definitions. */
 
 #ifdef _WIN32
+
+/*
+ * sometimes we use winsock and like to avoid a warning to include
+ * windows.h only after winsock2.h
+*/
+#include <winsock2.h>
+
 #include <windows.h>
 
 #define sleep(seconds) Sleep((seconds) * 1000)
 #define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
-#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -(b));
+#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -((LONG)b));
 
 /* MinGW gcc, no function prototype for built-in function stpcpy() */ 
 char *stpcpy (char *dest, const char *src);
@@ -53,8 +61,8 @@ checked_malloc(size_t size, char *filename, unsigned int line, const char *func)
 {
 	void *p = malloc(size);
 	if (!p) {
-		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY malloc(%zu)\n",
-			filename, line, func, size);
+		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY malloc(%u)\n",
+			filename, line, func, (unsigned) size);
 		exit(1);
 	}
 	return p;
@@ -65,8 +73,8 @@ checked_calloc(size_t nmemb, size_t size, char *filename, unsigned int line, con
 {
 	void *p = calloc(nmemb, size);
 	if (!p) {
-		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY calloc(%zu, %zu)\n",
-			filename, line, func, nmemb, size);
+		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY calloc(%u, %u)\n",
+			filename, line, func, (unsigned) nmemb, (unsigned) size);
 		exit(1);
 	}
 	return p;
