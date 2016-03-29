@@ -59,7 +59,7 @@ struct move {
 static inline coord_t *
 coord_init(int x, int y, int size)
 {
-	coord_t *c = calloc2(1, sizeof(coord_t));
+	coord_t *c = (coord_t*)calloc2(1, sizeof(coord_t));
 	*c = x + y * size;
 	return c;
 }
@@ -67,7 +67,7 @@ coord_init(int x, int y, int size)
 static inline coord_t *
 coord_copy(coord_t c)
 {
-	coord_t *c2 = calloc2(1, sizeof(coord_t));
+	coord_t *c2 = (coord_t*)calloc2(1, sizeof(coord_t));
 	memcpy(c2, &c, sizeof(c));
 	return c2;
 }

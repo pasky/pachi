@@ -13,6 +13,7 @@
 #include "chat.h"
 #include "move.h"
 #include "mq.h"
+#include "dcnn.h"
 #include "joseki/base.h"
 #include "playout.h"
 #include "playout/moggy.h"
@@ -534,6 +535,16 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	struct uct *u = e->data;
 	u->pass_all_alive |= pass_all_alive;
 	uct_pondering_stop(u);
+
+	if (using_dcnn(b)) {
+		// dcnn hack: reset state to make dcnn priors kick in.
+		// FIXME this makes pondering useless when using dcnn ...
+		if (u->t) {
+			u->initial_extra_komi = u->t->extra_komi;
+			reset_state(u);
+		}
+	}
+
 	uct_genmove_setup(u, b, color);
 
         /* Start the Monte Carlo Tree Search! */
@@ -1277,6 +1288,7 @@ uct_state_init(char *arg, struct board *b)
 
 	if (u->want_pat && !pat_setup)
 		patterns_init(&u->pat, NULL, false, true);
+	dcnn_init();
 
 	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));
 
