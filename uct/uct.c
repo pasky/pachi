@@ -716,14 +716,14 @@ uct_state_init(char *arg, struct board *b)
 		while (*next) {
 			optspec = next;
 			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
+			if (*next) { *next++ = 0; }
 
 			char *optname = optspec;
 			char *optval = strchr(optspec, '=');
 			if (optval) *optval++ = 0;
 
 			/** Basic options */
-
+			/* XXX make an offsetof+funptr table outta these -sh 20141003 */
 			if (!strcasecmp(optname, "debug")) {
 				if (optval)
 					u->debug_level = atoi(optval);
@@ -960,7 +960,7 @@ uct_state_init(char *arg, struct board *b)
 				/* Maximum amount of memory [MiB] consumed by the move tree.
 				 * For fast_alloc it includes the temp tree used for pruning.
 				 * Default is 3072 (3 GiB). */
-				u->max_tree_size = atol(optval) * 1048576;
+				u->max_tree_size = atol(optval) * (1ULL << 20);
 			} else if (!strcasecmp(optname, "fast_alloc")) {
 				u->fast_alloc = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "pruning_threshold") && optval) {

@@ -359,7 +359,7 @@ spatial_dict_hashstats(struct spatial_dict *dict)
 	 * -e patternscan), since it will insert a pattern multiple times,
 	 * multiplying the reported number of collisions. */
 
-	unsigned long buckets = (sizeof(dict->hash) / sizeof(dict->hash[0]));
+	integral_u buckets = (sizeof(dict->hash) / sizeof(dict->hash[0]));
 	fprintf(stderr, "\t(Spatial dictionary hash: %d collisions (incl. repetitions), %.2f%% (%d/%lu) fill rate).\n",
 			dict->collisions,
 			(double) dict->fills * 100 / buckets,

@@ -142,16 +142,16 @@ struct tree {
 
 	// Statistics
 	int max_depth;
-	volatile unsigned long nodes_size; // byte size of all allocated nodes
-	unsigned long max_tree_size; // maximum byte size for entire tree, > 0 only for fast_alloc
-	unsigned long max_pruned_size;
-	unsigned long pruning_threshold;
+	volatile integral_u nodes_size; // byte size of all allocated nodes
+	integral_u max_tree_size; // maximum byte size for entire tree, > 0 only for fast_alloc
+	integral_u max_pruned_size;
+	integral_u pruning_threshold;
 	void *nodes; // nodes buffer, only for fast_alloc
 };
 
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
-struct tree *tree_init(struct board *board, enum stone color, unsigned long max_tree_size,
-		       unsigned long max_pruned_size, unsigned long pruning_threshold, floating_t ltree_aging, int hbits);
+struct tree *tree_init(struct board *board, enum stone color, integral_u max_tree_size,
+		       integral_u max_pruned_size, integral_u pruning_threshold, floating_t ltree_aging, int hbits);
 void tree_done(struct tree *tree);
 void tree_dump(struct tree *tree, double thres);
 void tree_save(struct tree *tree, struct board *b, int thres);

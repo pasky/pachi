@@ -36,7 +36,7 @@ struct buf_state {
 
 struct slave_state {
 	int max_buf_size;
-	int thread_id;
+	intptr_t thread_id;
 	struct in_addr client; // for debugging only
 	state_alloc_hook alloc_hook;
 	buffer_hook insert_hook;

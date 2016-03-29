@@ -53,7 +53,7 @@ port_listen(char *port, int max_connections)
 	server_addr.sin_addr.s_addr = INADDR_ANY; 
 
 	const int val = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)))
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char*) &val, sizeof(val)))
 		die("setsockopt");
 	if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
 		die("bind");

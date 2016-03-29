@@ -9,8 +9,10 @@
 #include <windows.h>
 
 #define sleep(seconds) Sleep((seconds) * 1000)
-#define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
-#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -(b));
+#ifndef __GNUC__
+#   define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
+#   define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -(b));
+#endif
 
 /* MinGW gcc, no function prototype for built-in function stpcpy() */ 
 char *stpcpy (char *dest, const char *src);
@@ -34,6 +36,11 @@ more_hay:;
 #endif
 
 /* Misc. definitions. */
+
+/* used for value ranges that can overflow */
+#include <inttypes.h>
+typedef uintmax_t integral_u;
+typedef intmax_t integral_s;
 
 /* Use make DOUBLE=1 in large configurations with counts > 1M
  * where 24 bits of floating_t mantissa become insufficient. */

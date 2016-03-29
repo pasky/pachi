@@ -7,6 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "network.h"
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -24,7 +25,6 @@
 #include "timeinfo.h"
 #include "random.h"
 #include "version.h"
-#include "network.h"
 
 int debug_level = 3;
 bool debug_boardprint = true;
@@ -191,6 +191,11 @@ int main(int argc, char *argv[])
 	char *e_arg = NULL;
 	if (optind < argc)
 		e_arg = argv[optind];
+        if (optind + 1 < argc)
+            fprintf(stderr,
+                    "warning: too many args, %d expected; first needless is %s\n"
+                    "info: separate engine params by commas, hyphen-prefixed ones go before\n",
+                    optind + 1, argv[optind+1]);
 	struct engine *e = init_engine(engine, e_arg, b);
 
 	if (testfile) {
@@ -207,7 +212,7 @@ int main(int argc, char *argv[])
 		while (fgets(buf, 4096, stdin)) {
 			if (DEBUGL(1))
 				fprintf(stderr, "IN: %s", buf);
-
+			/* XXX uct assumes no genmove after game finished -sh 20141003 */
 			enum parse_code c = gtp_parse(b, e, ti, buf);
 			if (c == P_ENGINE_RESET) {
 				ti[S_BLACK] = ti_default;

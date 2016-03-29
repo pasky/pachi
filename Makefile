@@ -5,8 +5,7 @@
 # 	make MAC=1 DOUBLE=1
 
 
-# Do you compile on Windows instead of Linux? Please note that the
-# performance may not be optimal.
+# Do you compile on Windows instead of Linux?
 # (XXX: For now, only the mingw target is supported on Windows.
 # Patches for others are welcome!)
 
@@ -57,9 +56,10 @@ CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-co
 
 
 ifdef WIN
-	SYS_CFLAGS?=
+	# XXX printf %z all over the place annoys GNU cc -sh 20141003
+	SYS_CFLAGS?=-Wno-format
 	SYS_LDFLAGS?=-pthread
-	SYS_LIBS?=-lm -lws2_32 -lregex
+	SYS_LIBS?=-lm -lws2_32
 else
 ifdef MAC
 	SYS_CFLAGS?=-DNO_THREAD_LOCAL

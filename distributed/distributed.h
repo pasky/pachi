@@ -27,10 +27,10 @@ typedef int64_t path_t;
 
 /* For debugging only */
 struct hash_counts {
-	long lookups;
-	long collisions;
-	long inserts;
-	long occupied;
+	integral_s lookups;
+	integral_s collisions;
+	integral_s inserts;
+	integral_s occupied;
 };
 
 /* Find a hash table entry given its coord path from root.
