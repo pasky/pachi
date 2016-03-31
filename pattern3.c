@@ -132,14 +132,16 @@ pattern_gen(struct pattern3s *p, int pi, hash3_t pat, char *src, int srclen, int
 
 			case 'X':
 				*src = 'Y'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
-				if (ataribits[patofs] >= 0)
+				if (ataribits[patofs] >= 0) {
 					*src = '|'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				}
 				*src = 'X'; // for future recursions
 				return;
 			case 'O':
 				*src = 'Q'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
-				if (ataribits[patofs] >= 0)
+				if (ataribits[patofs] >= 0) {
 					*src = '@'; pattern_gen(p, pi, pat, src, srclen, fixed_color);
+				}
 				*src = 'O'; // for future recursions
 				return;
 
