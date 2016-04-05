@@ -64,33 +64,9 @@ dcnn_init()
 }
 
 void
-dcnn_get_moves(struct board *b, enum stone color, float result[])
+dcnn_get_moves(float *data, float result[])
 {
-	assert(real_board_size(b) == 19);
-	int size = 19;
-	float *data = new float[2 * size * size];
-	
-	if (color == S_BLACK)
-		for (int j = 0; j < size; j++)
-			for (int k = 0; k < size; k++) {
-				coord_t c = coord_xy(b, j + 1, k + 1);
-				int offsetb = j * size + k;
-				int offsetw = size * size + size * j + k;
-				data[offsetb] = (board_at(b, c) == S_BLACK ? 1.0 : 0.0);
-				data[offsetw] = (board_at(b, c) == S_WHITE ? 1.0 : 0.0);
-			}
-	
-	if (color == S_WHITE) {
-		for (int j = 0; j < size; j++)
-			for (int k = 0; k < size; k++) {
-				coord_t c = coord_xy(b, j + 1, k + 1);
-				int offsetb = j * size + k;
-				int offsetw = size * size + size * j + k;
-				data[offsetb] = (board_at(b, c) == S_WHITE ? 1.0 : 0.0);
-				data[offsetw] = (board_at(b, c) == S_BLACK ? 1.0 : 0.0);
-			}
-	}
-	
+  int size = 19;
 	Blob<float> *blob = new Blob<float>(1,2,size,size);
 	blob->set_cpu_data(data);
 	vector<Blob<float>*> bottom;
@@ -103,7 +79,6 @@ dcnn_get_moves(struct board *b, enum stone color, float result[])
 		if (result[i] < 0.00001)
 			result[i] = 0.00001;
 	}
-	delete[] data;
 	delete blob;
 }
 	

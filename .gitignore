@@ -1,3 +1,8 @@
+caffe
+*.caffemodel
+*.prob
+*.spat
+*.prototxt
 .deps
 .*.swp
 *.o

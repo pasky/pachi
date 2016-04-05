@@ -17,13 +17,13 @@
 # (XXX: We are looking for volunteers contributing support for other
 # targets, like mingw/Windows.)
 
-# MAC=1
+MAC=1
 
 # Compile Pachi with dcnn support ?
 # You'll need to install Boost and Caffe libraries.
 # If Caffe is in a custom directory you can set it here.
 
-#DCNN=1
+DCNN=1
 #CAFFE_LIB=/usr/local/lib
 
 # By default, Pachi uses low-precision numbers within the game tree to
@@ -31,7 +31,7 @@
 # e.g. with extremely long thinking times or massive parallelization;
 # 24 bits of floating_t mantissa become insufficient then.
 
-# DOUBLE=1
+DOUBLE=1
 
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
@@ -58,7 +58,7 @@ BINDIR=$(PREFIX)/bin
 # any of this.
 # (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
 # unless PROFILING=gprof.)
-CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
+CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -g -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
 CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3
 
 ### CONFIGURATION END
