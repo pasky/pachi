@@ -124,7 +124,7 @@ char
 	return NULL;
 }
 #else
-void chat_init(char *) {}
+void chat_init(char *chat_file) {}
 
 void chat_done() {}
 
