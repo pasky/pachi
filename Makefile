@@ -24,7 +24,7 @@ MAC=1
 # If Caffe is in a custom directory you can set it here.
 
 DCNN=1
-#CAFFE_LIB=/usr/local/lib
+CAFFE_LIB=/usr/local/lib
 
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
@@ -58,7 +58,7 @@ BINDIR=$(PREFIX)/bin
 # any of this.
 # (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
 # unless PROFILING=gprof.)
-CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -g -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
+CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
 CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3
 
 ### CONFIGURATION END
@@ -126,7 +126,7 @@ endif
 
 export
 unexport INCLUDES
-INCLUDES=-I.
+INCLUDES=-I. -I/Users/xiangliang/Code/caffe/distribute/include -I/usr/local/opt/openblas/include
 
 
 OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o

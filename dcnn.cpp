@@ -64,10 +64,10 @@ dcnn_init()
 }
 
 void
-dcnn_get_moves(float *data, float result[])
+dcnn_get_moves(float *data, int channel, float result[])
 {
-  int size = 19;
-	Blob<float> *blob = new Blob<float>(1,2,size,size);
+  	int size = 19;
+	Blob<float> *blob = new Blob<float>(1,channel,size,size);
 	blob->set_cpu_data(data);
 	vector<Blob<float>*> bottom;
 	bottom.push_back(blob);

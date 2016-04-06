@@ -114,6 +114,45 @@ print_dcnn_best_moves(struct tree_node *node, struct prior_map *map,
 }
 
 static float*
+dcnn2_get_moves_data(struct board *b, enum stone color)
+{
+	assert(real_board_size(b) == 19);
+	int size = 19;
+	int dsize = 13 * size * size;
+	float *data = (float *)malloc(dsize * sizeof(float));
+	for (int i = 0; i < dsize; i++) {
+		data[i] = 0.0;
+	}
+	for (int j = 0; j < size; j++) {
+		for(int k = 0; k < size; k++) {
+			int p = size * j + k;
+			coord_t c = coord_xy(b, j+1, k+1);
+			struct group g = board_group_info(b, group_at(b, c));
+			enum stone bc = board_at(b, c);
+			int libs = g.libs - 1;
+			if (libs > 3) libs = 3;
+			if(bc == S_NONE) {
+				data[8*size*size + p] = 1.0;
+			} else if (bc == color) {
+				data[(0+libs)*size*size + p]=1.0;
+			} else if (bc == stone_other(color)) {
+				data[(4+libs)*size*size + p]=1.0;
+			}
+			if(c == b->last_move.coord) {
+				data[9*size*size + p] = 1.0;
+			} else if (c == b->last_move2.coord) {
+				data[10*size*size + p] = 1.0;
+			} else if (c == b->last_move3.coord) {
+				data[11*size*size + p] = 1.0;
+			} else if (c == b->last_move4.coord) {
+				data[12*size*size + p] = 1.0;
+			}
+		}
+	}
+	return data;
+}
+
+static float*
 dcnn_get_moves_data(struct board *b, enum stone color)
 {
 	assert(real_board_size(b) == 19);
@@ -152,8 +191,8 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 	float r[19 * 19];
 	float best_r[DCNN_BEST_N] = { 0.0, };
 	coord_t best_moves[DCNN_BEST_N];
-	float *data = dcnn_get_moves_data(map->b, map->to_play);
-	dcnn_get_moves(data, r);
+	float *data = dcnn2_get_moves_data(map->b, map->to_play);
+	dcnn_get_moves(data, 13, r);
 	free(data);
 	find_dcnn_best_moves(map, r, best_moves, best_r);
 	print_dcnn_best_moves(node, map, best_moves, best_r);
