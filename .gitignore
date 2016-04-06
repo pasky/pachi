@@ -1,4 +1,4 @@
-caffe
+*.bak
 *.caffemodel
 *.prob
 *.spat
