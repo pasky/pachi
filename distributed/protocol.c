@@ -119,7 +119,7 @@ logline(struct in_addr *client, char *prefix, char *s)
 
 /* Thread opening a connection on the given socket and copying input
  * from there to stderr. */
-static void *
+static void * __attribute__((noreturn))
 proxy_thread(void *arg)
 {
 	int proxy_sock = (intptr_t)arg;
@@ -504,7 +504,7 @@ is_pachi_slave(FILE *f, struct in_addr *client)
  * connection, to avoid wasting memory if max_slaves is too large.
  * We do not invalidate the received buffers if a slave disconnects;
  * they are still useful for other slaves. */
-static void *
+static void * __attribute__((noreturn))
 slave_thread(void *arg)
 {
 	struct slave_state sstate = default_sstate;
