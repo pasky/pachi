@@ -114,7 +114,7 @@ print_dcnn_best_moves(struct tree_node *node, struct prior_map *map,
 }
 
 static float*
-dcnn2_get_moves_data(struct board *b, enum stone color)
+dcnn_get_moves_data(struct board *b, enum stone color)
 {
 	assert(real_board_size(b) == 19);
 	int size = 19;
@@ -152,46 +152,13 @@ dcnn2_get_moves_data(struct board *b, enum stone color)
 	return data;
 }
 
-static float*
-dcnn_get_moves_data(struct board *b, enum stone color)
-{
-	assert(real_board_size(b) == 19);
-	int size = 19;
-	float *data = (float *)malloc(2 * size * size * sizeof(float));
-	
-	if (color == S_BLACK)
-		for (int j = 0; j < size; j++)
-			for (int k = 0; k < size; k++) {
-				coord_t c = coord_xy(b, j + 1, k + 1);
-				int offsetb = j * size + k;
-				int offsetw = size * size + size * j + k;
-				fprintf(stderr, "board_at %d : %d\n", c, board_at(b, c));
-				data[offsetb] = (board_at(b, c) == S_BLACK ? 1.0 : 0.0);
-				data[offsetw] = (board_at(b, c) == S_WHITE ? 1.0 : 0.0);
-			}
-	
-	if (color == S_WHITE) {
-		for (int j = 0; j < size; j++)
-			for (int k = 0; k < size; k++) {
-				coord_t c = coord_xy(b, j + 1, k + 1);
-				int offsetb = j * size + k;
-				int offsetw = size * size + size * j + k;
-				fprintf(stderr, "board_at %d : %d\n", c, board_at(b, c));
-				data[offsetb] = (board_at(b, c) == S_WHITE ? 1.0 : 0.0);
-				data[offsetw] = (board_at(b, c) == S_BLACK ? 1.0 : 0.0);
-			}
-	}
-
-	return data;
-}
-
 static void
 uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	float r[19 * 19];
 	float best_r[DCNN_BEST_N] = { 0.0, };
 	coord_t best_moves[DCNN_BEST_N];
-	float *data = dcnn2_get_moves_data(map->b, map->to_play);
+	float *data = dcnn_get_moves_data(map->b, map->to_play);
 	dcnn_get_moves(data, 13, r);
 	free(data);
 	find_dcnn_best_moves(map, r, best_moves, best_r);
