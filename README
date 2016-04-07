@@ -95,7 +95,10 @@ First, build Pachi with DCNN support:
 
 Install dcnn files in current directory where pachi will run.
 Detlef Schmicker's 54% dcnn can be found at:  
-  http://physik.de/net.tgz  
+  http://physik.de/CNNlast.tar.gz
+
+Detail information of this cnn can be found at:
+  http://computer-go.org/pipermail/computer-go/2015-December/008324.html
 
 If you want to use a network with different inputs you'll have to tweak
 dcnn.cpp to accomodate it. Pachi will check for "movepredict.prototxt" and
