@@ -1,3 +1,8 @@
+*.bak
+*.caffemodel
+*.prob
+*.spat
+*.prototxt
 .deps
 .*.swp
 *.o

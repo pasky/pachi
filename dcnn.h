@@ -9,7 +9,7 @@ extern "C" {
 
 #ifdef DCNN
 
-void dcnn_get_moves(struct board *b, enum stone color, float result[]);
+void dcnn_get_moves(float *data, int channel, float result[]);
 bool using_dcnn(struct board *b);
 void dcnn_quiet_caffe(int argc, char *argv[]);
 void dcnn_init();
