@@ -94,12 +94,15 @@ First, build Pachi with DCNN support:
 - Edit Makefile, set DCNN=1, point it to where caffe is installed and build.
 
 Install dcnn files in current directory where pachi will run.
-Detlef Schmicker's 44% dcnn can be found at:  
-  http://physik.de/net.tgz  
+Detlef Schmicker's 54% dcnn can be found at:  
+  http://physik.de/CNNlast.tar.gz
+
+More information about this dcnn can be found at:
+  http://computer-go.org/pipermail/computer-go/2015-December/008324.html
 
 If you want to use a network with different inputs you'll have to tweak
-dcnn.cpp to accomodate it. Pachi will check for "movepredict.prototxt" and
-"movepredict.caffemodel" files on startup and use them if present when
+dcnn.cpp to accomodate it. Pachi will check for "golast19.prototxt" and
+"golast.trained" files on startup and use them if present when
 playing on 19x19. For now dcnn and pondering can't be used together
 (pondering data is thrown away).
 
