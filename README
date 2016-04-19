@@ -94,7 +94,7 @@ First, build Pachi with DCNN support:
 - Edit Makefile, set DCNN=1, point it to where caffe is installed and build.
 
 Install dcnn files in current directory where pachi will run.
-Detlef Schmicker's 54% dcnn can be found at:  
+Detlef Schmicker's 44% dcnn can be found at:  
   http://physik.de/net.tgz  
 
 If you want to use a network with different inputs you'll have to tweak
