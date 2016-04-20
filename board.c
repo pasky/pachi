@@ -1218,6 +1218,8 @@ board_play_outside(struct board *board, struct move *m, int f)
 	if (unlikely(!group))
 		group = new_group(board, coord);
 
+	board->last_move4 = board->last_move3;
+	board->last_move3 = board->last_move2;
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
 	board->moves++;
@@ -1317,6 +1319,8 @@ board_play_in_eye(struct board *board, struct move *m, int f)
 	board_at(board, coord) = color;
 	group_t group = new_group(board, coord);
 
+	board->last_move4 = board->last_move3;
+	board->last_move3 = board->last_move2;
 	board->last_move2 = board->last_move;
 	board->last_move = *m;
 	board->moves++;
