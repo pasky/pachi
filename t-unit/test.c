@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "board.h"
 #include "debug.h"
@@ -54,6 +55,8 @@ board_load(struct board *b, FILE *f, unsigned int size)
 	}
 	if (DEBUGL(2))
 		board_print(b, stderr);
+	int suicides = b->captures[S_BLACK] || b->captures[S_WHITE];
+	assert(!suicides);
 }
 
 bool
@@ -68,6 +71,7 @@ test_sar(struct board *b, char *arg)
 	if (DEBUGL(1))
 		printf("sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 
+	assert(board_at(b, c) == S_NONE);
 	int rres = is_bad_selfatari(b, color, c);
 
 	if (rres == eres) {
