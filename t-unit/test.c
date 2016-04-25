@@ -99,11 +99,13 @@ unittest(char *filename)
 		exit(EXIT_FAILURE);
 	}
 
+	int total = 0;
+	int passed = 0;
 	int skipped = 0;
-	bool passed = true;
-
+	
 	struct board *b = board_init(NULL);
 	char line[256];
+
 	while (fgets(line, sizeof(line), f)) {
 		line[strlen(line) - 1] = 0; // chomp
 		switch (line[0]) {
@@ -113,23 +115,28 @@ unittest(char *filename)
 		}
 		if (!strncmp(line, "boardsize ", 10)) {
 			board_load(b, f, atoi(line + 10));
-		} else if (!strncmp(line, "sar ", 4)) {
-			passed = test_sar(b, line + 4) && passed; 
-		} else {
+			continue;
+		}
+		
+		total++;
+		if (!strncmp(line, "sar ", 4))
+			passed += test_sar(b, line + 4); 
+		else {
 			fprintf(stderr, "Syntax error: %s\n", line);
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	fclose(f);
- 	if (passed) {
+	
+	printf("\n\n----------- [  %i/%i tests passed (%i%%)  ] -----------\n\n", passed, total, passed * 100 / total);
+ 	if (total == passed)
 		printf("\nAll tests PASSED");
-	} else {
-		printf("\nSome tests FAILED");
+	else {
+		printf("\nSome tests FAILED\n");
 		exit(EXIT_FAILURE);
 	}
-	if (skipped > 0) {
+	if (skipped > 0)
 		printf(", %d test(s) SKIPPED", skipped);
-	}
 	printf("\n");
 }
