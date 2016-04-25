@@ -1,0 +1,12 @@
+#!/usr/bin/perl
+# Usage: to_new_format < sar.t
+# convert sar.t from old format to new format (spaces between stones)
+
+foreach my $str (<STDIN>)
+{
+    if ($str =~ m/^[.XO]+$/)
+    {   $str =~ s/([.XO])/$1 /g;  
+	$str =~ s/ $//;
+    }
+    print $str;
+}

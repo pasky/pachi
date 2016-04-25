@@ -24,21 +24,26 @@ board_load(struct board *b, FILE *f, unsigned int size)
 			exit(EXIT_FAILURE);
 		}
 		line[strlen(line) - 1] = 0; // chomp
-		if (strlen(line) != size) {
-			fprintf(stderr, "Line not %d char long: %s\n", size, line);
+		if (strlen(line) != size * 2 - 1) {
+			fprintf(stderr, "Line not %d char long: %s\n", size * 2 - 1, line);
 			exit(EXIT_FAILURE);
 		}
-		for (unsigned int x = 0; x < size; x++) {
+		for (unsigned int i = 0; i < size * 2; i++) {
 			enum stone s;
-			switch (line[x]) {
+			switch (line[i]) {
 				case '.': s = S_NONE; break;
 				case 'X': s = S_BLACK; break;
 				case 'O': s = S_WHITE; break;
-				default: fprintf(stderr, "Invalid stone %c\n", line[x]);
+				default: fprintf(stderr, "Invalid stone '%c'\n", line[i]);
 					 exit(EXIT_FAILURE);
 			}
+			i++;
+			if (line[i] != ' ' && i/2 < size - 1) {
+				fprintf(stderr, "No space after stone %i: '%c'\n", i/2 + 1, line[i]);
+				exit(EXIT_FAILURE);
+			}
 			if (s == S_NONE) continue;
-			struct move m = { .color = s, .coord = coord_xy(b, x + 1, y + 1) };
+			struct move m = { .color = s, .coord = coord_xy(b, i/2 + 1, y + 1) };
 			if (board_play(b, &m) < 0) {
 				fprintf(stderr, "Failed to play %s %s\n",
 					stone2str(s), coord2sstr(m.coord, b));
