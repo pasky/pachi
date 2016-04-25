@@ -8,6 +8,7 @@
 #include "board.h"
 #include "debug.h"
 #include "tactics/selfatari.h"
+#include "tactics/ladder.h"
 #include "random.h"
 
 static bool board_printed;
@@ -90,6 +91,41 @@ test_sar(struct board *b, char *arg)
 	return rres == eres;
 }
 
+bool
+test_ladder(struct board *b, char *arg)
+{
+	enum stone color = str2stone(arg);
+	arg += 2;
+	coord_t *cc = str2coord(arg, board_size(b));
+	coord_t c = *cc; coord_done(cc);
+	arg += strcspn(arg, " ") + 1;
+	int eres = atoi(arg);
+	if (DEBUGL(1))
+		printf("ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+
+	assert(board_at(b, c) == S_NONE);
+	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
+	assert(atari_neighbor);
+	int rres = is_ladder(b, c, atari_neighbor, true);
+	
+	if (rres == eres) {
+		if (DEBUGL(1))
+			printf("OK\n");
+	} else {
+		if (debug_level <= 2) {
+			if (DEBUGL(0) && !board_printed) {
+				board_print(b, stderr);
+				board_printed = true;
+			}
+			printf("ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+		}
+		printf("FAILED (%d)\n", rres);
+	}
+
+	return (rres == eres);
+}
+
+
 void
 unittest(char *filename)
 {
@@ -121,6 +157,8 @@ unittest(char *filename)
 		total++;
 		if (!strncmp(line, "sar ", 4))
 			passed += test_sar(b, line + 4); 
+		else if (!strncmp(line, "ladder ", 7))
+			passed += test_ladder(b, line + 7);
 		else {
 			fprintf(stderr, "Syntax error: %s\n", line);
 			exit(EXIT_FAILURE);
