@@ -11,8 +11,11 @@
 
 
 bool
-is_border_ladder(struct board *b, coord_t coord, enum stone lcolor)
+is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
 {
+	if (can_countercapture(b, lcolor, laddered, lcolor, NULL, 0))
+		return false;
+	
 	int x = coord_x(coord, b), y = coord_y(coord, b);
 
 	if (DEBUGL(5))
