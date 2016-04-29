@@ -1,0 +1,24 @@
+#!/bin/bash
+# Test prediction rate of various Pachi components on game records
+
+die()
+{ echo "$@"; exit 1; }
+
+usage()
+{  die "Usage: predict -e [patternplay|replay|dcnn] [pachi_args]";  }
+
+cd  `dirname $0`
+[ "$1" = "-e" ] || usage
+[ -d sgf ] || die "Please setup 't-predict/sgf/' directory first"
+
+# Ensure pachi args are sane
+( cd .. ; ./pachi -d 0 "$@" < /dev/null ) || exit 1
+
+echo "Prediction rate for $2 (even games):"
+for f in sgf/*.gtp; do
+    if ! grep -q handicap "$f"; then
+	cat "$f" | sed -e 's/^play /pachi-predict /'
+    fi
+done |
+( cd .. ; ./pachi -d 0 "$@" 2>&1 | grep Predicted )
+
