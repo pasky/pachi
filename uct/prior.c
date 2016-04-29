@@ -10,13 +10,13 @@
 #include "joseki/base.h"
 #include "move.h"
 #include "random.h"
-#include "dcnn.h"
 #include "tactics/ladder.h"
 #include "tactics/util.h"
 #include "uct/internal.h"
 #include "uct/plugins.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
+#include "dcnn.h"
 
 /* Applying heuristic values to the tree nodes, skewing the reading in
  * most interesting directions. */
@@ -70,49 +70,6 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 
 #ifdef DCNN
 
-#define DCNN_BEST_N 5
-
-static void
-find_dcnn_best_moves(struct prior_map *map, float *r, coord_t *best, float *best_r)
-{
-        struct board *b = map->b;
-
-	for (int i = 0; i < DCNN_BEST_N; i++)
-		best[i] = pass;
-        
-        foreach_free_point(b) {
-                if (!map->consider[c])
-                        continue;
-
-                int k = (coord_x(c, b) - 1) * 19 + (coord_y(c, b) - 1);
-                for (int i = 0; i < DCNN_BEST_N; i++)
-                        if (r[k] > best_r[i]) {
-                                for (int j = DCNN_BEST_N - 1; j > i; j--) { // shift
-                                        best_r[j] = best_r[j - 1];
-                                        best[j] = best[j - 1];
-                                }
-                                best_r[i] = r[k];
-                                best[i] = c;
-                                break;
-                        }
-        } foreach_free_point_end;
-}
-
-static void
-print_dcnn_best_moves(struct tree_node *node, struct prior_map *map,
-		      coord_t *best, float *best_r)
-{
-        fprintf(stderr, "dcnn best: [ ");
-        for (int i = 0; i < DCNN_BEST_N; i++)
-                fprintf(stderr, "%s ", coord2sstr(best[i], map->b));
-        fprintf(stderr, "]      ");	
-	
-	fprintf(stderr, "[ ");
-        for (int i = 0; i < DCNN_BEST_N; i++)
-                fprintf(stderr, "%.2f ", best_r[i]);
-        fprintf(stderr, "]\n");	
-}
-
 static void
 uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
@@ -120,8 +77,8 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 	float best_r[DCNN_BEST_N] = { 0.0, };
 	coord_t best_moves[DCNN_BEST_N];
 	dcnn_get_moves(map->b, map->to_play, r);
-	find_dcnn_best_moves(map, r, best_moves, best_r);
-	print_dcnn_best_moves(node, map, best_moves, best_r);
+	find_dcnn_best_moves(map->b, r, best_moves, best_r);
+	print_dcnn_best_moves(node, map->b, best_moves, best_r);
 	
 	foreach_free_point(map->b) {
 		if (!map->consider[c])

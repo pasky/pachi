@@ -13,7 +13,6 @@
 #include "chat.h"
 #include "move.h"
 #include "mq.h"
-#include "dcnn.h"
 #include "joseki/base.h"
 #include "playout.h"
 #include "playout/moggy.h"
@@ -29,6 +28,7 @@
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
+#include "dcnn.h"
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board);
