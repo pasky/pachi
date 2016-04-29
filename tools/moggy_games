@@ -1,0 +1,13 @@
+#!/bin/bash
+# Moggy text-mode screensaver =)
+# Adjust speed by giving it an extra runs=n argument.
+
+cd `dirname $0`
+while true ; do
+    echo boardsize 9 ; echo clear_board
+    for f in `seq 1 70` ; do
+	echo genmove b ; echo genmove w;  
+    done
+done  |
+  (cd ..; ./pachi -e replay "$@")
+

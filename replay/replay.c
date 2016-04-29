@@ -1,57 +1,101 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DEBUG
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
-#include "joseki/base.h"
 #include "move.h"
 #include "playout.h"
+#include "joseki/base.h"
 #include "playout/light.h"
 #include "playout/moggy.h"
 #include "replay/replay.h"
 
-
 /* Internal engine state. */
 struct replay {
 	int debug_level;
+	int runs;
+	int no_suicide;
 	struct joseki_dict *jdict;
 	struct playout_policy *playout;
 };
 
+static void
+suicide_stats(int suicide)
+{
+	static int total = 0;
+	static int suicides = 0;
+	if (suicide) suicides++;
+	if (++total % 100 == 0)
+		fprintf(stderr, "Suicides: %i/%i (%i%%)\n", suicides, total, suicides * 100 / total);
+}
 
 static coord_t *
 replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct replay *r = e->data;
-	struct playout_setup s; memset(&s, 0, sizeof(s));
+	struct playout_setup setup;	        memset(&setup, 0, sizeof(setup));
+        int played[b->size * b->size];		memset(played, 0, sizeof(played));
+        int most_played = 0;
+	struct move m = { .coord = pass, .color = color };
+        int runs = r->runs;
+	
+        if (DEBUGL(3))
+	      printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), runs);
 
-	coord_t coord = r->playout->choose(r->playout, &s, b, color);
+	/* Find out what moves policy plays most in this situation */
+        for (int i = 0; i < runs; i++) {
+		struct board b2;
+		board_copy(&b2, b);
+		if (DEBUGL(4))
+			fprintf(stderr, "---------------------------------\n");
+		
+		coord_t c = play_random_move(&setup, &b2, color, r->playout);
+		
+		if (DEBUGL(4))
+			fprintf(stderr, "-> %s\n", coord2sstr(c, &b2));
+		if (!is_pass(c))
+			if (++played[c] > most_played) {
+				most_played++;
+				m.coord = c;
+			}
+		board_done_noalloc(&b2);
+	}
 
-	if (!is_pass(coord)) {
-		struct move m;
-		m.coord = coord; m.color = color;
-		if (board_play(b, &m) >= 0)
-			goto have_move;
+	if (DEBUGL(3)) {
+		for (int k = most_played; k > 0; k--)
+			for (coord_t c = 0; c < b->size * b->size; c++)
+				if (played[c] == k)
+					fprintf(stderr, "%s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
+		fprintf(stderr, "\n");
+	}
 
-		if (DEBUGL(2)) {
-			fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n",
-				coord_x(coord, b), coord_y(coord, b));
-			board_print(b, stderr);
+	if (!most_played)
+		return coord_copy(pass);
+	
+	if (DEBUGL(2))
+		fprintf(stderr, "genmove: %s %s    %.2f%%  (%i runs)\n\n",
+			(color == S_BLACK ? "B" : "W"),
+			coord2str(m.coord, b), (float)most_played * 100 / runs, runs);
+	
+	if (r->no_suicide) {  /* Check group suicides */
+		struct board b2;  board_copy(&b2, b);
+		int res = board_play(&b2, &m);  assert(res >= 0);
+		int suicide = !group_at(&b2, m.coord);
+		board_done_noalloc(&b2);
+		
+		suicide_stats(suicide);		
+		if (suicide) {
+			if (DEBUGL(2))
+				fprintf(stderr, "EEEK, group suicide, will pass instead !\n");
+			/* XXX: We should check for non-suicide alternatives. */
+			return coord_copy(pass);
 		}
-	}
+	}        
 
-	/* Defer to uniformly random move choice. */
-	board_play_random(b, color, &coord, (ppr_permit) r->playout->permit, r->playout);
-
-have_move:
-	if (!group_at(b, coord)) {
-		/* This was suicide. Just pass. */
-		/* XXX: We should check for non-suicide alternatives. */
-		return coord_pass();
-	}
-
-	return coord_copy(coord);
+	return coord_copy(m.coord);
 }
 
 static void
@@ -66,10 +110,12 @@ struct replay *
 replay_state_init(char *arg, struct board *b)
 {
 	struct replay *r = calloc2(1, sizeof(struct replay));
-
+	
 	r->debug_level = 1;
+	r->runs = 1000;
+	r->no_suicide = 0;
 	r->jdict = joseki_load(b->size);
-
+	
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -86,6 +132,14 @@ replay_state_init(char *arg, struct board *b)
 					r->debug_level = atoi(optval);
 				else
 					r->debug_level++;
+			} else if (!strcasecmp(optname, "runs") && optval) {
+				/* runs=n  set number of playout runs to sample.
+				 *         use runs=1 for raw playout policy */
+				r->runs = atoi(optval);
+			} else if (!strcasecmp(optname, "no_suicide")) {
+				/* ensure engine doesn't allow group suicides
+				 * (off by default) */
+				r->no_suicide = 1;
 			} else if (!strcasecmp(optname, "playout") && optval) {
 				char *playoutarg = strchr(optval, ':');
 				if (playoutarg)
@@ -99,24 +153,28 @@ replay_state_init(char *arg, struct board *b)
 				}
 			} else {
 				fprintf(stderr, "Replay: Invalid engine argument %s or missing value\n", optname);
+				exit(1);
 			}
 		}
 	}
 
 	if (!r->playout)
-		r->playout = playout_light_init(NULL, b);
+		r->playout = playout_moggy_init(NULL, b, r->jdict);
 	r->playout->debug_level = r->debug_level;
 
 	return r;
 }
 
+
 struct engine *
 engine_replay_init(char *arg, struct board *b)
 {
 	struct replay *r = replay_state_init(arg, b);
+        /* TODO engine_done(), free policy */
+	
 	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "PlayoutReplay";
-	e->comment = "I select moves blindly according to playout policy. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
+	e->comment = "I select the most probable move from moggy playout policy";
 	e->genmove = replay_genmove;
 	e->done = replay_done;
 	e->data = r;
