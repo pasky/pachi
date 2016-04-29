@@ -15,6 +15,7 @@ struct montecarlo {
 	int gamelen;
 	floating_t resign_ratio;
 	int loss_threshold;
+	struct joseki_dict *jdict;
 	struct playout_policy *playout;
 };
 

@@ -111,4 +111,6 @@ coord_t play_random_move(struct playout_setup *setup,
 		         struct board *b, enum stone color,
 		         struct playout_policy *policy);
 
+void playout_policy_done(struct playout_policy *p);
+
 #endif

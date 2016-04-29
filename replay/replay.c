@@ -15,6 +15,7 @@
 /* Internal engine state. */
 struct replay {
 	int debug_level;
+	struct joseki_dict *jdict;
 	struct playout_policy *playout;
 };
 
@@ -53,6 +54,13 @@ have_move:
 	return coord_copy(coord);
 }
 
+static void
+replay_done(struct engine *e)
+{
+	struct replay *r = e->data;
+	playout_policy_done(r->playout);
+	joseki_done(r->jdict);
+}
 
 struct replay *
 replay_state_init(char *arg, struct board *b)
@@ -60,6 +68,7 @@ replay_state_init(char *arg, struct board *b)
 	struct replay *r = calloc2(1, sizeof(struct replay));
 
 	r->debug_level = 1;
+	r->jdict = joseki_load(b->size);
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -82,7 +91,7 @@ replay_state_init(char *arg, struct board *b)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					r->playout = playout_moggy_init(playoutarg, b, joseki_load(b->size));
+					r->playout = playout_moggy_init(playoutarg, b, r->jdict);
 				} else if (!strcasecmp(optval, "light")) {
 					r->playout = playout_light_init(playoutarg, b);
 				} else {
@@ -109,6 +118,7 @@ engine_replay_init(char *arg, struct board *b)
 	e->name = "PlayoutReplay";
 	e->comment = "I select moves blindly according to playout policy. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = replay_genmove;
+	e->done = replay_done;
 	e->data = r;
 
 	return e;

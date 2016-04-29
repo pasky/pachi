@@ -295,14 +295,6 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 }
 
 static void
-playout_policy_done(struct playout_policy *p)
-{
-	if (p->done) p->done(p);
-	if (p->data) free(p->data);
-	free(p);
-}
-
-static void
 uct_stop(struct engine *e)
 {
 	/* This is called on game over notification. However, an undo

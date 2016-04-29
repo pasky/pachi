@@ -163,3 +163,11 @@ play_random_game(struct playout_setup *setup,
 
 	return result;
 }
+
+void
+playout_policy_done(struct playout_policy *p)
+{
+	if (p->done) p->done(p);
+	if (p->data) free(p->data);
+	free(p);
+}

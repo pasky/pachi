@@ -530,7 +530,7 @@ eye_fix_check(struct playout_policy *p, struct board *b, struct move *m, enum st
 		mq_print(q, b, "Eye fix");
 }
 
-coord_t
+static coord_t
 fillboard_check(struct playout_policy *p, struct board *b)
 {
 	struct moggy_policy *pp = p->data;
@@ -553,7 +553,7 @@ next_try:
 	return pass;
 }
 
-coord_t
+static coord_t
 playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
@@ -662,7 +662,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 /* Pick a move from queue q, giving different likelihoods to moves
  * based on their tags. */
-coord_t
+static coord_t
 mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
@@ -718,7 +718,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 	return pass;
 }
 
-coord_t
+static coord_t
 playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
@@ -806,7 +806,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 }
 
 
-void
+static void
 playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, group_t g, int games)
 {
 	struct moggy_policy *pp = p->data;
@@ -906,7 +906,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 	}
 }
 
-void
+static void
 playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_t coord, int games)
 {
 	struct moggy_policy *pp = p->data;
@@ -951,7 +951,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 	return;
 }
 
-void
+static void
 playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 {
 	struct moggy_policy *pp = p->data;
@@ -970,7 +970,7 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 	} foreach_free_point_end;
 }
 
-bool
+static bool
 playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 {
 	struct moggy_policy *pp = p->data;
@@ -1044,7 +1044,6 @@ eyefill_skip:
 	return true;
 }
 
-
 struct playout_policy *
 playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 {
@@ -1054,6 +1053,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	p->choose = playout_moggy_seqchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
+	/* no p->done: calling engine owns jdict and should call joseki_done() */
 
 	pp->jdict = jdict;
 
