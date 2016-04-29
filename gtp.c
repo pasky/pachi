@@ -117,6 +117,7 @@ static char *known_commands_base =
 	"pachi-result\n"
 	"pachi-gentbook\n"
 	"pachi-dumptbook\n"
+	"pachi-predict\n"
 	"kgs-chat\n"
 	"time_left\n"
 	"time_settings\n"
@@ -228,6 +229,65 @@ gtp_is_valid(struct engine *e, const char *cmd)
 	return s[len] == '\0' || s[len] == '\n';
 }
 
+// For prediction stats
+static int played_games = 0;
+
+static void
+gtp_predict_move(struct board *board, struct engine *engine, struct time_info *ti,
+		 int id, struct move *m)
+{
+	enum stone color = m->color;
+	
+	if (m->coord == pass || m->coord == resign) {
+		int r = board_play(board, m); 
+		assert(r >= 0);
+		gtp_reply(id, NULL);
+		return;
+	}
+
+	if (DEBUGL(5))
+		fprintf(stderr, "predict move %d,%d,%d\n", m->color, coord_x(m->coord, board), coord_y(m->coord, board));
+
+	// Not bothering with timer here for now.
+
+	coord_t *c = engine->genmove(engine, board, &ti[color], color, 0);
+
+	// Hack to reset engine state (if it has one) in case engine
+	// guessed wrong (engine expects us to play returned move)
+	if (engine->undo)  // hackish way to reset state if engine needs it
+		engine->undo(engine, board);
+
+	// Play correct expected move
+	if (board_play(board, m) < 0) {
+		fprintf(stderr, "ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, board), stone2str(m->color));
+		abort();
+	}
+
+	if (DEBUGL(1) && debug_boardprint)
+		board_print_custom(board, stderr, engine->printhook);
+		
+	if (*c == m->coord)
+		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", board->moves,
+			(color == S_BLACK ? "b" : "w"), coord2sstr(*c, board));
+	else
+		fprintf(stderr, "Move %3i: Predict: Wrong prediction: %s %s != %s\n", board->moves,
+			(color == S_BLACK ? "b" : "w"), coord2sstr(*c, board), coord2sstr(m->coord, board));
+		
+	// Display stats from time to time
+	{
+		static int total = 0;
+		static int guessed = 0;
+		guessed += (*c == m->coord);
+		if (++total % 200 == 0)
+			fprintf(stderr, "Predicted: %i/%i moves (%i%%)  games: %i\n", 
+				guessed, total, guessed * 100 / total, played_games);
+	}
+
+	gtp_reply(id, NULL);
+	coord_done(c);
+}
+
+
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
 
@@ -326,6 +386,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 
 	} else if (!strcasecmp(cmd, "clear_board")) {
 		board_clear(board);
+		played_games++;
 		if (DEBUGL(3) && debug_boardprint)
 			board_print(board, stderr);
 		gtp_reply(id, NULL);
@@ -397,6 +458,18 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 				board_print_custom(board, stderr, engine->printhook);
 			gtp_reply(id, reply, NULL);
 		}
+
+	} else if (!strcasecmp(cmd, "pachi-predict")) {
+		struct move m;
+		char *arg;
+		next_tok(arg);
+		m.color = str2stone(arg);
+		next_tok(arg);
+		coord_t *c = str2coord(arg, board_size(board));
+		m.coord = *c; coord_done(c);
+		next_tok(arg);
+
+		gtp_predict_move(board, engine, ti, id, &m);
 
 	} else if (!strcasecmp(cmd, "genmove") || !strcasecmp(cmd, "kgs-genmove_cleanup")) {
 		char *arg;
