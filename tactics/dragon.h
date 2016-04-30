@@ -46,6 +46,10 @@ bool neighbor_is_safe(struct board *b, group_t g);
  * Returns size of the area, or 0 if doesn't match.  */
 int big_eye_area(struct board *b, enum stone color, coord_t around, int *visited);
 
+/* Point we control: 
+ * Opponent can't play there or we can capture if he does. */
+bool is_controlled_eye_point(struct board *b, coord_t to, enum stone color);
+
 /* Try to find out if dragon is completely surrounded:
  * Look for outwards 2-stones gap from our external liberties. 
  * (hack, but works pretty well in practice) */

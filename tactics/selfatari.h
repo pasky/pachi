@@ -13,6 +13,11 @@
  * or throw-ins. */
 static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
 
+/* Check if this move is a really bad self-atari, allowing opponent to capture
+ * 3 stones or more that could have been saved / don't look like useful nakade.
+ * Doesn't care much about 1 stone / 2 stones business unlike is_bad_selfatari(). */
+static bool is_really_bad_selfatari(struct board *b, enum stone color, coord_t to);
+
 /* Check if move results in self-atari. */
 static bool is_selfatari(struct board *b, enum stone color, coord_t to);
 
@@ -25,7 +30,11 @@ static bool is_selfatari(struct board *b, enum stone color, coord_t to);
 coord_t selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygroup);
 
 
-bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to);
+#define SELFATARI_3LIB_SUICIDE		1
+#define SELFATARI_BIG_GROUPS_ONLY	2
+
+bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to, int flags);
+
 static inline bool
 is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 {
@@ -33,10 +42,19 @@ is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 	if (immediate_liberty_count(b, to) > 1)
 		return false;
 
-	return is_bad_selfatari_slow(b, color, to);
+	return is_bad_selfatari_slow(b, color, to, SELFATARI_3LIB_SUICIDE);
 }
 
-/* TODO use static rule instead ... */
+static inline bool
+is_really_bad_selfatari(struct board *b, enum stone color, coord_t to)
+{
+	/* More than one immediate liberty, thumbs up! */
+	if (immediate_liberty_count(b, to) > 1)
+		return false;
+
+	return is_bad_selfatari_slow(b, color, to, SELFATARI_BIG_GROUPS_ONLY);
+}
+
 static inline bool
 is_selfatari(struct board *b, enum stone color, coord_t to)
 {
