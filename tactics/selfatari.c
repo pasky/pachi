@@ -342,11 +342,7 @@ static bool
 nakade_making_dead_shape(struct board *b, enum stone color, coord_t to, struct selfatari_state *s,
 			 bool atariing_group, int stones)
 {
-	int r;
-	struct move m;
-	group_t g;
 	int cap_would_make_eye = false;
-	struct board b2;
 	
 	if (!stones)
 		return false;
@@ -367,55 +363,51 @@ nakade_making_dead_shape(struct board *b, enum stone color, coord_t to, struct s
      
 	/* Can oponent make living shape if we don't play ?
 	 * (don't bother killing stuff that's already dead...) */
-	do if (!atariing_group && !cap_would_make_eye && s->groupcts[color] == 1) 
+	if (!atariing_group && !cap_would_make_eye && s->groupcts[color] == 1) 
         {
-		board_copy(&b2, b);
-	
-		/* Play opponent color where we want to play */
-		m.coord = to;
-		m.color = stone_other(color);
-		if (board_play(&b2, &m) == -1)  /* Illegal move (eye ...) */
-		{	board_done_noalloc(&b2);	break;   }
-		
-		/* Had 2 libs ? One more move to capture us then */
-		if (neighbor_count_at(b, to, color) == neighbor_count_at(&b2, to, color)) {
+	    int would_live = false;
+	    int prev_neighbor = neighbor_count_at(b, to, color);
+
+	    /* Play opponent color where we want to play */
+	    with_move(b, to, stone_other(color), {
+
+		/* Had 2 libs ? One more move to capture then */
+		if (prev_neighbor == neighbor_count_at(b, to, color)) {
 			group_t standing = -1;	    
-			foreach_neighbor(&b2, to, {
-				g = group_at(&b2, c);		    
-				if (board_at(&b2, c) == color) {
-					assert(board_group_info(&b2, g).libs == 1);  /* Should be in atari */
+			foreach_neighbor(b, to, {
+				group_t g = group_at(b, c);		    
+				if (board_at(b, c) == color) {
+					assert(board_group_info(b, g).libs == 1);  /* Should be in atari */
 					standing = g;
 				}
 			});
 			assert(standing != -1);
 			
-			m.coord = board_group_info(&b2, standing).lib[0];
-			r = board_play(&b2, &m);      assert(r != -1);
+			with_move_strict(b, board_group_info(b, standing).lib[0], stone_other(color), {
+				/* Empty now since it's been captured */
+				coord_t empty = group_base(s->groupids[color][0]);
+				would_live = !nakade_dead_shape(b, empty, stone_other(color));
+			});
 		}
+		else {  /* Empty now since it's been captured */			
+			coord_t empty = group_base(s->groupids[color][0]);
+			would_live = !nakade_dead_shape(b, empty, stone_other(color));
+		}
+	    });
 
-		/* Empty now since it's been captured */
-		coord_t empty = group_base(s->groupids[color][0]);
-		int would_live = !nakade_dead_shape(&b2, empty, stone_other(color));
-		board_done_noalloc(&b2);
-		if (!would_live)	/* And !cap_would_make_eye here */
-			return false;   /* Bad nakade */
-	} while (0);
+	    if (!would_live)	/* And !cap_would_make_eye here */
+		    return false;   /* Bad nakade */
+	}
 	
-	board_copy(&b2, b);
-	
+	int dead_shape;
 	/* Play self-atari */
-	m.coord = to;
-	m.color = color;
-	r = board_play(&b2, &m);	assert(r != -1);
-	
-	/* Play capture */
-	g = group_at(&b2, to);
-	m.coord = board_group_info(&b2, g).lib[0];
-	m.color = stone_other(color);
-	r = board_play(&b2, &m);	assert(r != -1);
-        
-	int dead_shape = nakade_dead_shape(&b2, to, stone_other(color));
-	board_done_noalloc(&b2);
+	with_move_strict(b, to, color, {	
+		/* Play capture */
+		group_t g = group_at(b, to);
+		with_move_strict(b, board_group_info(b, g).lib[0], stone_other(color), {
+				dead_shape = nakade_dead_shape(b, to, stone_other(color));
+		});
+	});
 	return dead_shape;
 }
 
