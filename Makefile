@@ -2,7 +2,7 @@
 
 # Uncomment one of the options below to change the way Pachi is built.
 # Alternatively, you can pass the option to make itself, like:
-# 	make MAC=1 DOUBLE=1
+# 	make MAC=1 DOUBLE_TIME=1
 
 
 # Do you compile on Windows instead of Linux? Please note that the
@@ -31,7 +31,7 @@
 # e.g. with extremely long thinking times or massive parallelization;
 # 24 bits of floating_t mantissa become insufficient then.
 
-# DOUBLE=1
+# DOUBLE_TIME=1
 
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
@@ -97,8 +97,8 @@ ifdef DCNN
 	SYS_LIBS:=-lcaffe -lboost_system -lstdc++ $(SYS_LIBS)
 endif
 
-ifdef DOUBLE
-	CUSTOM_CFLAGS+=-DDOUBLE
+ifdef DOUBLE_TIME
+	CUSTOM_CFLAGS+=-DDOUBLE_TIME
 endif
 
 ifeq ($(PROFILING), gprof)

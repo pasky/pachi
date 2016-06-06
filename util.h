@@ -43,9 +43,9 @@ more_hay:;
 
 /* Misc. definitions. */
 
-/* Use make DOUBLE=1 in large configurations with counts > 1M
+/* Use make DOUBLE_TIME=1 in large configurations with counts > 1M
  * where 24 bits of floating_t mantissa become insufficient. */
-#ifdef DOUBLE
+#ifdef DOUBLE_TIME
 #  define floating_t double
 #  define PRIfloating "%lf"
 #else
