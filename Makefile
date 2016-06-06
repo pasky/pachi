@@ -12,6 +12,10 @@
 
 # WIN=1
 
+# To compile 64-bit version in msys2 with mingw64, uncomment the
+# following line
+# MSYS2_64=1
+
 # Do you compile on MacOS/X instead of Linux? Please note that the
 # performance may not be optimal.
 # (XXX: We are looking for volunteers contributing support for other
@@ -63,6 +67,11 @@ CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3
 
 ### CONFIGURATION END
 
+ifdef MSYS2_64
+	WIN=1
+	WIN_HAVE_NO_REGEX_SUPPORT=1
+	DOUBLE_TIME=1
+endif
 
 ifdef WIN
 	SYS_CFLAGS?=
