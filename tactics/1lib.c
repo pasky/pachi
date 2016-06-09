@@ -13,13 +13,57 @@
 #include "tactics/selfatari.h"
 
 
+static inline bool
+capturing_group_is_snapback(struct board *b, group_t group)
+{	
+	coord_t lib = board_group_info(b, group).lib[0];
+
+	if (immediate_liberty_count(b, lib) > 0 ||
+	    group_stone_count(b, group, 2) > 1)
+		return false;
+	
+	enum stone to_play = stone_other(board_at(b, group));
+	enum stone other = stone_other(to_play);	
+	if (board_is_eyelike(b, lib, other))
+		return false;
+	
+	foreach_neighbor(b, lib, {
+			group_t g = group_at(b, c);
+			if (board_at(b, c) == S_OFFBOARD || g == group)
+				continue;
+			
+			if (board_at(b, c) == other &&
+			    board_group_info(b, g).libs == 1)  // capture more than one group
+				return false;
+			if (board_at(b, c) == to_play &&
+			    board_group_info(b, g).libs > 1)  
+				return false;
+		});
+	return true;
+}
+
 /* Whether to avoid capturing/atariing doomed groups (this is big
  * performance hit and may reduce playouts balance; it does increase
  * the strength, but not quite proportionally to the performance). */
 //#define NO_DOOMED_GROUPS
 
 
-static bool
+static inline bool
+can_capture(struct board *b, group_t g, enum stone to_play)
+{
+	coord_t capture = board_group_info(b, g).lib[0];
+	if (DEBUGL(6))
+		fprintf(stderr, "can capture group %d (%s)?\n",
+			g, coord2sstr(capture, b));
+	/* Does playing on the liberty usefully capture the group? */
+	if (board_is_valid_play(b, to_play, capture)
+	    && !capturing_group_is_snapback(b, g))
+		return true;
+
+	return false;
+}
+
+static inline bool
 can_play_on_lib(struct board *b, group_t g, enum stone to_play)
 {
 	coord_t capture = board_group_info(b, g).lib[0];
@@ -34,11 +78,7 @@ can_play_on_lib(struct board *b, group_t g, enum stone to_play)
 	return false;
 }
 
-/* For given position @c, decide if this is a group that is in danger from
- * @capturer and @to_play can do anything about it (play at the last
- * liberty to either capture or escape). */
-/* Note that @to_play is important; e.g. consider snapback, it's good
- * to play at the last liberty by attacker, but not defender. */
+/* Check snapbacks */
 static inline __attribute__((always_inline)) bool
 capturable_group(struct board *b, enum stone capturer, coord_t c,
 		 enum stone to_play)
@@ -48,13 +88,16 @@ capturable_group(struct board *b, enum stone capturer, coord_t c,
 	           || board_group_info(b, g).libs > 1))
 		return false;
 
-	return can_play_on_lib(b, g, to_play);
+	return can_capture(b, g, to_play);
 }
 
 bool
 can_countercapture(struct board *b, enum stone owner, group_t g,
 		   enum stone to_play, struct move_queue *q, int tag)
 {
+	//if (!b->clen)
+	//	return false;
+
 	unsigned int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, g) {
@@ -73,6 +116,76 @@ can_countercapture(struct board *b, enum stone owner, group_t g,
 	bool can = q ? q->moves > qmoves_prev : false;
 	return can;
 }
+
+static inline __attribute__((always_inline)) bool
+capturable_group_fast(struct board *b, enum stone capturer, coord_t c,
+		      enum stone to_play)
+{
+	group_t g = group_at(b, c);
+	if (likely(board_at(b, c) != stone_other(capturer)
+	           || board_group_info(b, g).libs > 1))
+		return false;
+
+	coord_t lib = board_group_info(b, g).lib[0];
+	return board_is_valid_play(b, to_play, lib);
+}
+
+bool
+can_countercapture_any(struct board *b, enum stone owner, group_t g,
+		       enum stone to_play, struct move_queue *q, int tag)
+{
+	//if (b->clen < 2)
+	//	return false;
+
+	unsigned int qmoves_prev = q ? q->moves : 0;
+
+	foreach_in_group(b, g) {
+		foreach_neighbor(b, c, {
+			if (!capturable_group_fast(b, owner, c, to_play))
+				continue;
+
+			if (!q) {
+				return true;
+			}
+			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], tag);
+			mq_nodup(q);
+		});
+	} foreach_in_group_end;
+
+	bool can = q ? q->moves > qmoves_prev : false;
+	return can;
+}
+
+#if 0
+bool
+can_countercapture_(struct board *b, enum stone owner, group_t g,
+		   enum stone to_play, struct move_queue *q, int tag)
+{
+	if (!g || 
+	    board_at(b, g) != owner || 
+	    owner != to_play) {
+		board_print(b, stderr);
+		fprintf(stderr, "can_countercap(%s %s %s):  \n",
+			stone2str(owner), coord2sstr(g, b), stone2str(to_play));
+	}
+	/* Sanity checks */
+	assert(g);
+	assert(board_at(b, g) == owner);
+	assert(owner == to_play);
+
+#if 0
+	bool r1 = my_can_countercapture(b, owner, g, to_play, NULL, 0);
+	bool r2 = orig_can_countercapture(b, owner, g, to_play, NULL, 0);
+	if (r1 != r2) {
+		fprintf(stderr, "---------------------------------------------------------------\n");
+		board_print(b, stderr);
+		fprintf(stderr, "can_countercap(%s %s %s) diff !   my:%i   org:%i\n",
+			stone2str(owner), coord2sstr(g, b), stone2str(to_play), r1, r2);
+	}
+#endif
+	return orig_can_countercapture(b, owner, g, to_play, q, tag);
+}
+#endif
 
 #ifdef NO_DOOMED_GROUPS
 static bool
@@ -116,7 +229,11 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 	}
 
 	/* Can we capture some neighbor? */
-	bool ccap = can_countercapture(b, color, group, to_play, q, tag);
+	/* XXX Attempts at using new can_countercapture() here failed so far.
+	 *     Could be because of a bug / under the stones situations
+	 *     (maybe not so uncommon in moggy ?) / it upsets moggy's balance somehow
+	 *     (there's always a chance opponent doesn't capture after taking snapback) */
+	bool ccap = can_countercapture_any(b, color, group, to_play, q, tag);
 	if (ccap && !ladder && alwaysccaprate > fast_random(100))
 		return;
 
