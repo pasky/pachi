@@ -15,7 +15,7 @@
 bool
 is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
 {
-	if (can_countercapture(b, lcolor, laddered, lcolor, NULL, 0))
+	if (can_countercapture(b, laddered, NULL, 0))
 		return false;
 	
 	int x = coord_x(coord, b), y = coord_y(coord, b);
@@ -183,7 +183,7 @@ is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	 * board and start selective 2-liberty search. */
 
 	struct move_queue ccq = { .moves = 0 };
-	if (can_countercapture(b, lcolor, laddered, lcolor, &ccq, 0)) {
+	if (can_countercapture(b, laddered, &ccq, 0)) {
 		/* We could escape by countercapturing a group.
 		 * Investigate. */
 		assert(ccq.moves > 0);

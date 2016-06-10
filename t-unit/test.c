@@ -175,7 +175,7 @@ test_can_countercapture(struct board *b, char *arg)
 	enum stone color = board_at(b, c);
 	group_t g = group_at(b, c);
 	assert(color == S_BLACK || color == S_WHITE);
-	int rres = can_countercapture(b, color, g, color, NULL, 0);
+	int rres = can_countercapture(b, g, NULL, 0);
 
 	if (rres == eres) {
 		if (DEBUGL(1))
