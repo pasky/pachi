@@ -78,6 +78,7 @@ Pachi consists of the following components:
 				functionality, mainly tactics
 	t-play/		interface for testing performance by playing games
 				against a fixed opponent (e.g. GNUGo)
+	t-predict/      test prediction rates of various components
 
 
 UCT architecture

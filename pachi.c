@@ -25,6 +25,7 @@
 #include "random.h"
 #include "version.h"
 #include "network.h"
+#include "uct/tree.h"
 #include "dcnn.h"
 
 int debug_level = 3;
@@ -42,6 +43,9 @@ enum engine_id {
 	E_UCT,
 	E_DISTRIBUTED,
 	E_JOSEKI,
+#ifdef DCNN
+	E_DCNN,
+#endif
 	E_MAX,
 };
 
@@ -54,6 +58,9 @@ static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 	engine_uct_init,
 	engine_distributed_init,
 	engine_joseki_init,
+#ifdef DCNN
+	engine_dcnn_init,
+#endif
 };
 
 static struct engine *init_engine(enum engine_id engine, char *e_arg, struct board *b)
@@ -75,7 +82,7 @@ static void done_engine(struct engine *e)
 static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-	fprintf(stderr, "Usage: %s [-e random|replay|montecarlo|uct|distributed]\n"
+	fprintf(stderr, "Usage: %s [-e random|replay|montecarlo|uct|distributed|dcnn]\n"
 		" [-d DEBUG_LEVEL] [-D] [-r RULESET] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
 		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [-f FBOOKFILE] [ENGINE_ARGS]\n", name);
 }
@@ -117,6 +124,10 @@ int main(int argc, char *argv[])
 					engine = E_PATTERNPLAY;
 				} else if (!strcasecmp(optarg, "joseki")) {
 					engine = E_JOSEKI;
+#ifdef DCNN
+				} else if (!strcasecmp(optarg, "dcnn")) {
+					engine = E_DCNN;
+#endif
 				} else {
 					fprintf(stderr, "%s: Invalid -e argument %s\n", argv[0], optarg);
 					exit(1);

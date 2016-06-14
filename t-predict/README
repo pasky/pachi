@@ -1,0 +1,22 @@
+[ Test prediction rate of various Pachi components ]
+
+Choose engine to test with:
+
+   $ predict -e [patternplay|replay|dcnn] [pachi_args]
+
+and the script will make it try to predict moves from game records.
+
+Note: To change replay's speed/accuracy, adjust sampling:
+
+   $ predict -e replay runs=n
+
+
+[ Setup ]
+
+Place sgf files to use in a t-predict/sgf directory (symlink ok too)
+and convert them to gtp first (see tools/sgf2gtp*).
+(script will be reading t-predict/sgf/*.gtp)
+
+For game collections see:
+  http://www.u-go.net/gamerecords/        (KGS 6d+ games)
+  http://senseis.xmp.net/?GoDatabases
