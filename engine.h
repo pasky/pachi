@@ -69,4 +69,13 @@ engine_board_print(struct engine *e, struct board *b, FILE *f)
 	(e->board_print ? e->board_print(e, b, f) : board_print(b, f));
 }
 
+static inline void
+engine_done(struct engine *e)
+{
+	if (e->done) e->done(e);
+	if (e->data) free(e->data);
+	free(e);
+}
+
+
 #endif
