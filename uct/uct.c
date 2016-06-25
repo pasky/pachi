@@ -140,22 +140,11 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	return pass_is_safe(b, color, &mq);
 }
 
-static char *
-uct_printhook_ownermap(struct board *board, coord_t c, char *s, char *end)
+static void
+uct_board_print(struct engine *e, struct board *b, FILE *f)
 {
-	struct uct *u = board->es;
-	if (!u) {
-		strcat(s, ". ");
-		return s + 2;
-	}
-	const char chr[] = ":XO,"; // dame, black, white, unclear
-	const char chm[] = ":xo,";
-	char ch = chr[board_ownermap_judge_point(&u->ownermap, c, GJ_THRES)];
-	if (ch == ',') { // less precise estimate then?
-		ch = chm[board_ownermap_judge_point(&u->ownermap, c, 0.67)];
-	}
-	s += snprintf(s, end - s, "%c ", ch);
-	return s;
+	struct uct *u = b->es;
+	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
 static float
@@ -305,7 +294,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 		uct_playout(u, b, S_BLACK, u->t);
 	/* Show the ownermap: */
 	if (DEBUGL(2))
-		board_print_custom(b, stderr, uct_printhook_ownermap);
+		board_print_ownermap(b, stderr, &u->ownermap);
 	
 	struct move_queue relaxed; relaxed.moves = 0;
 	dead_group_list(u, b, mq, GJ_THRES);  	// Strict
@@ -418,7 +407,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 		};
 		debug_ti.len.games = t->root->u.playouts + u->debug_after.playouts;
 
-		board_print_custom(b, stderr, uct_printhook_ownermap);
+		board_print_ownermap(b, stderr, &u->ownermap);
 		fprintf(stderr, "--8<-- UCT debug post-run begin (%d:%d) --8<--\n", u->debug_after.level, u->debug_after.playouts);
 
 		int debug_level_save = debug_level;
@@ -1352,7 +1341,7 @@ engine_uct_init(char *arg, struct board *b)
 	struct uct *u = uct_state_init(arg, b);
 	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "UCT";
-	e->printhook = uct_printhook_ownermap;
+	e->board_print = uct_board_print;
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;
 	e->undo = uct_undo;

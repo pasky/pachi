@@ -264,7 +264,7 @@ gtp_predict_move(struct board *board, struct engine *engine, struct time_info *t
 	}
 
 	if (DEBUGL(1) && debug_boardprint)
-		board_print_custom(board, stderr, engine->printhook);
+		engine_board_print(engine, board, stderr);
 		
 	if (*c == m->coord)
 		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", board->moves,
@@ -455,7 +455,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			gtp_error(id, "illegal move", NULL);
 		} else {
 			if (DEBUGL(4) && debug_boardprint)
-				board_print_custom(board, stderr, engine->printhook);
+				engine_board_print(engine, board, stderr);
 			gtp_reply(id, reply, NULL);
 		}
 
@@ -477,7 +477,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		enum stone color = str2stone(arg);
 		coord_t *c = NULL;
 		if (DEBUGL(2) && debug_boardprint)
-			board_print_custom(board, stderr, engine->printhook);
+			engine_board_print(engine, board, stderr);
 		
 		if (!ti[color].len.t.timer_start) {
 			/* First game move. */
@@ -501,7 +501,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		if (DEBUGL(4))
 			fprintf(stderr, "playing move %s\n", str);
 		if (DEBUGL(1) && debug_boardprint) {
-			board_print_custom(board, stderr, engine->printhook);
+			engine_board_print(engine, board, stderr);
 		}
 		gtp_reply(id, str, NULL);
 		free(str); coord_done(c);
@@ -531,7 +531,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		if (DEBUGL(3))
 			fprintf(stderr, "proposing moves %s\n", reply);
 		if (DEBUGL(4) && debug_boardprint)
-			board_print_custom(board, stderr, engine->printhook);
+			engine_board_print(engine, board, stderr);
 		gtp_reply(id, reply, NULL);
 		if (stats_size > 0) {
 			double start = time_now();

@@ -6,6 +6,10 @@
 
 #include <signal.h> // sig_atomic_t
 
+/* How big proportion of ownermap counts must be of one color to consider
+ * the point sure. */
+#define GJ_THRES	0.8
+
 struct board_ownermap {
 	/* Map of final owners of all intersections on the board. */
 	/* This may be shared between multiple threads! */
@@ -17,6 +21,7 @@ struct board_ownermap {
 	sig_atomic_t (*map)[S_MAX]; // [board_size2(b)]
 };
 
+void board_print_ownermap(struct board *b, FILE *f, struct board_ownermap *ownermap);
 void board_ownermap_fill(struct board_ownermap *ownermap, struct board *b);
 void board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownermap *src);
 
