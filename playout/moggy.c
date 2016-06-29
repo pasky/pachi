@@ -969,29 +969,35 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 	} foreach_free_point_end;
 }
 
+
+#define permit_move(c)  playout_permit(p, b, c, m->color)
+
+/* alt parameter tells permit if we just want a yes/no answer for this move
+ * (alt=false) or we're ok with redirects if it doesn't pass (alt=true).
+ * Every playout move must pass permit() before being played. When permit()
+ * wants to suggest another move we need to validate this move as well, so
+ * permit() needs to call permit() again on that move. This time alt will be
+ * false though (we just want a yes/no answer) so it won't recurse again. */
 static bool
 playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt)
 {
 	struct moggy_policy *pp = p->data;
 
-	/* The idea is simple for now - never allow self-atari moves.
+	/* The idea is simple for now - never allow bad self-atari moves.
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 
-	if (fast_random(100) >= pp->selfatarirate) {
-		if (PLDEBUGL(5))
-			fprintf(stderr, "skipping sar test\n");
-		goto sar_skip;
-	}
-	bool selfatari = is_bad_selfatari(b, m->color, m->coord);
-	if (selfatari) {
+	int bad_selfatari = (pp->selfatarirate > fast_random(100) ? 
+			     is_bad_selfatari(b, m->color, m->coord) :
+			     is_really_bad_selfatari(b, m->color, m->coord));
+	if (bad_selfatari) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
 				stone2str(m->color), coord2sstr(m->coord, b));
-		if (pp->selfatari_other) {
+		if (alt && pp->selfatari_other) {
 			/* Ok, try the other liberty of the atari'd group. */
 			coord_t c = selfatari_cousin(b, m->color, m->coord, NULL);
-			if (is_pass(c)) return false;
+			if (!permit_move(c)) return false;
 			if (PLDEBUGL(5))
 				fprintf(stderr, "___ Redirecting to other lib %s\n",
 					coord2sstr(c, b));
@@ -1000,13 +1006,12 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 		}
 		return false;
 	}
-sar_skip:
 
 	/* Check if we don't seem to be filling our eye. This should
 	 * happen only for false eyes, but some of them are in fact
 	 * real eyes with diagonal filled by a dead stone. Prefer
 	 * to counter-capture in that case. */
-	if (fast_random(100) >= pp->eyefillrate) {
+	if (!alt || fast_random(100) >= pp->eyefillrate) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping eyefill test\n");
 		goto eyefill_skip;
@@ -1019,17 +1024,17 @@ sar_skip:
 			switch (board_group_info(b, group_at(b, c)).libs) {
 			case 1: /* Capture! */
 				c = board_group_info(b, group_at(b, c)).lib[0];
-				if (PLDEBUGL(5))
-					fprintf(stderr, "___ Redirecting to capture %s\n",
-						coord2sstr(c, b));
-				m->coord = c;
-				return true;
+				if (permit_move(c)) {
+					if (PLDEBUGL(5))
+						fprintf(stderr, "___ Redirecting to capture %s\n",
+							coord2sstr(c, b));
+					m->coord = c;
+					return true;
+				}
 			case 2: /* Try to switch to some 2-lib neighbor. */
 				for (int i = 0; i < 2; i++) {
 					coord_t l = board_group_info(b, group_at(b, c)).lib[i];
-					if (board_is_one_point_eye(b, l, board_at(b, c)))
-						continue;
-					if (is_bad_selfatari(b, m->color, l))
+					if (!permit_move(l))
 						continue;
 					m->coord = l;
 					return true;
