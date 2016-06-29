@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "mq.h"
 #include "tactics/1lib.h"
+#include "tactics/selfatari.h"
 #include "tactics/ladder.h"
 
 
@@ -260,6 +261,22 @@ is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 }
 
 bool
+is_middle_ladder_any(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
+{
+	/* TODO: Remove the redundant parameters. */
+	assert(board_group_info(b, laddered).libs == 1);
+	assert(board_group_info(b, laddered).lib[0] == coord);
+	assert(board_at(b, laddered) == lcolor);
+
+	/* We could escape by countercapturing a group. */
+	struct move_queue ccq = { .moves = 0 };
+	can_countercapture(b, laddered, &ccq, 0);
+	
+	int length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
+	return (length != 0);
+}
+
+bool
 wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chaselib, enum stone lcolor)
 {
 	assert(board_group_info(b, group).libs == 2);
@@ -283,10 +300,28 @@ wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chasel
 
 	bool is_ladder = false;
 	with_move(b, chaselib, stone_other(lcolor), {
-		is_ladder = is_middle_ladder(b, board_group_info(b, group).lib[0], group, lcolor);
+		is_ladder = is_middle_ladder_any(b, board_group_info(b, group).lib[0], group, lcolor);
 	});
 	
 	return is_ladder;
 }
 
 
+bool
+wouldbe_ladder_any(struct board *b, group_t group, coord_t escapelib, coord_t chaselib, enum stone lcolor)
+{
+	assert(board_group_info(b, group).libs == 2);
+	assert(board_at(b, group) == lcolor);
+	
+	if (!board_is_valid_play(b, stone_other(lcolor), chaselib) ||
+	    is_selfatari(b, stone_other(lcolor), chaselib) )   // !can_play_on_lib() sortof       
+		return false;
+
+	bool ladder = false;
+	with_move(b, chaselib, stone_other(lcolor), {
+		assert(group_at(b, group) == group);
+		ladder = is_ladder_any(b, escapelib, group, true);
+	});
+
+	return ladder;
+}
