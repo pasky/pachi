@@ -970,7 +970,7 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 }
 
 static bool
-playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
+playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt)
 {
 	struct moggy_policy *pp = p->data;
 

@@ -401,7 +401,8 @@ int board_play(struct board *board, struct move *m);
  * when no move can be played. You can impose extra restrictions if you
  * supply your own permit function; the permit function can also modify
  * the move coordinate to redirect the move elsewhere. */
-typedef bool (*ppr_permit)(void *data, struct board *b, struct move *m);
+typedef bool (*ppr_permit)(struct board *b, struct move *m, void *data);
+bool board_permit(struct board *b, struct move *m, void *data);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
 
 /* Undo, supported only for pass moves. Returns -1 on error, 0 otherwise. */
