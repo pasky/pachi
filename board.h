@@ -262,8 +262,7 @@ FB_ONLY(int last_ko_age);
 	void *es;
 
 	/* Playout-specific state; persistent through board development,
-	 * but its lifetime is maintained in play_random_game(); it should
-	 * not be set outside of it. */
+	 * initialized by play_random_game() and free()'d at board destroy time */
 	void *ps;
 
 

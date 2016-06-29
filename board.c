@@ -225,6 +225,7 @@ board_copy(struct board *b2, struct board *b1)
 
 	// XXX: Special semantics.
 	b2->fbook = NULL;
+	b2->ps = NULL;
 
 	return b2;
 }
@@ -234,6 +235,7 @@ board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
 	if (board->fbook) fbook_done(board->fbook);
+	if (board->ps) free(board->ps);
 }
 
 void

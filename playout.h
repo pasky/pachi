@@ -19,7 +19,7 @@ struct playout_setup;
  * (but not assess/permit calls!) will all be made on the same board; if
  * setboard is used, it is guaranteed that choose will pick all moves played
  * on the board subsequently. The routine is expected to initialize b->ps
- * with internal data. At the playout end, b->ps will be simply free()d,
+ * with internal data. b->ps will be simply free()d when board is destroyed,
  * so make sure all data is within single allocated block. */
 typedef void (*playoutp_setboard)(struct playout_policy *playout_policy, struct board *b);
 

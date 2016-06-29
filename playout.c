@@ -197,9 +197,6 @@ play_random_game(struct playout_setup *setup,
 	if (ownermap)
 		board_ownermap_fill(ownermap, b);
 
-	if (b->ps)
-		free(b->ps);
-
 #ifdef DEBUGL_BY_PLAYOUT
 	debug_level = debug_level_orig;
 #endif
