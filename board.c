@@ -1401,6 +1401,10 @@ board_play_f(struct board *board, struct move *m, int f)
 int
 board_play(struct board *board, struct move *m)
 {
+#ifdef BOARD_UNDO_CHECKS
+	assert(!board->quicked);
+#endif
+	
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
 		if (is_pass(m->coord) && board->rules == RULES_SIMING) {
 			/* On pass, the player gives a pass stone

@@ -36,6 +36,7 @@ struct fbook;
 //#define BOARD_TRAIT_SAFE 1 // include btraits.safe (rather expensive, unused)
 //#define BOARD_TRAIT_SAFE 2 // include btraits.safe based on full is_bad_selfatari()
 
+//#define BOARD_UNDO_CHECKS 1  // Guard against invalid quick_play() / quick_undo() uses
 
 #define BOARD_MAX_COORDS  ((BOARD_MAX_SIZE+2) * (BOARD_MAX_SIZE+2) )
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
@@ -238,6 +239,11 @@ struct board {
 
 	/* Basic ko check */
 	struct move ko;
+
+#ifdef BOARD_UNDO_CHECKS
+	/* Guard against invalid quick_play() / quick_undo() uses */
+	int quicked;
+#endif
 
 	/* Engine-specific state; persistent through board development,
 	 * is reset only at clear_board. */
@@ -443,6 +449,9 @@ bool board_set_rules(struct board *board, char *name);
  *   - traits (btraits, t, tq, tqlen)
  *   - last_move3, last_move4, last_ko_age
  *   - symmetry information  
+ *
+ * Invalid quick_play()/quick_undo() combinations (missing undo for example)
+ * are caught at next board_play() if BOARD_UNDO_CHECKS is defined.
  */
 int  board_quick_play(struct board *board, struct move *m, struct board_undo *u);
 void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
@@ -450,7 +459,9 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 /* quick_play() + quick_undo() combo.
  * Body is executed only if move is valid (silently ignored otherwise).
  * Can break out in body, but definitely *NOT* return / jump around !
- */
+ * (caught at run time if BOARD_UNDO_CHECKS defined). Can use
+ * with_move_return(val) to return value for non-nested with_move()'s
+ * though. */
 #define with_move(board_, coord_, color_, body_) \
        do { \
 	       struct board *board__ = (board_);  /* For with_move_return() */		\

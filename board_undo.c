@@ -562,8 +562,8 @@ undo_init(struct board *b, struct move *m, struct board_undo *u)
 }
 
 
-int
-board_quick_play(struct board *board, struct move *m, struct board_undo *u)
+static inline int
+board_quick_play_(struct board *board, struct move *m, struct board_undo *u)
 {
 	undo_init(board, m, u);
 	
@@ -583,6 +583,16 @@ board_quick_play(struct board *board, struct move *m, struct board_undo *u)
 	return -1;
 }
 
+int
+board_quick_play(struct board *board, struct move *m, struct board_undo *u)
+{
+	int r = board_quick_play_(board, m, u);
+#ifdef BOARD_UNDO_CHECKS
+	if (r >= 0)
+		board->quicked++;
+#endif
+	return r;
+}
 
 /***********************************************************************************/
 
@@ -761,6 +771,10 @@ board_undo_suicide(struct board *b, struct board_undo *u, struct move *m)
 void
 board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 {
+#ifdef BOARD_UNDO_CHECKS
+	b->quicked--;
+#endif
+
 	b->last_move = b->last_move2;
 	b->last_move2 = u->last_move2;
 	b->ko = u->ko;
