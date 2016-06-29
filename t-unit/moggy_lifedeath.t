@@ -177,3 +177,28 @@ X O X X . X X . . . X O X O X X O O .
 . . . . . . . . . . . . . . . . . . .
 
 moggy status (n2) b16		# origin: b16 black 59%
+
+
+% Test 8 - Simple atari defense check
+boardsize 19
+. . . . O X X X X O . O X X . . . . .
+O O O . O O X O O . . O O X . . . . .
+O X X O . O X X O O O . O X X . . . .
+X X . X O O X X X O X . O O X . X . .
+. . X X O O O O X X O O O O O X . . .
+. . . X X O X X X O O X O O X X . X .
+X X X O O O O X O O X X O O O X . O O
+O O X O O . O X O X X X O X O X X O X
+O . O . . O X X O X O X O X X X . X .
+. O O O O X X O O O O X X X O O X X X
+. . O X X X X O O O O O O O O O X O O
+. . X O X . X X X O X O X O X O O . O
+. . . O X X . . X O X X X X X O . O .
+. . . O O X O . X O O O O X X X O . .
+. O X O . O X X X O X O X X X O . O .
+O . O O . O O X . X X X X O O O . . .
+O O X X O O X X . X X . X X O . O . .
+O X X . X O X X X . . . X O O . O . .
+X X . X X O O O O X . . X X O . . O .
+
+moggy status (t13) t13		# origin: t13 black 94%

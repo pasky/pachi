@@ -306,10 +306,11 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 	}
 }
 
-static void
+static int
 local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
+	int force = false;
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
@@ -320,11 +321,21 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
+
+		// Always defend big groups
+		enum stone to_play = stone_other(m->color);
+		enum stone color = board_at(b, group_base(g));
+		if (to_play == color &&			// Defender
+		    group_stone_count(b, g, 5) >= 3)
+			force = true;
+		
+		group_atari_check(pp->alwaysccaprate, b, g, to_play, q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
 	});
 
 	if (PLDEBUGL(5))
 		mq_print(q, b, "Local atari");
+
+	return (force || pp->lcapturerate > fast_random(100));
 }
 
 
@@ -615,10 +626,10 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
-		if (pp->lcapturerate > fast_random(100)) {
-			struct move_queue q;  q.moves = 0;
-			local_atari_check(p, b, &b->last_move, &q);
-			if (q.moves > 0)
+		if (true) {  // pp->lcapturerate check in local_atari_check()
+			struct move_queue q; q.moves = 0;
+			if (local_atari_check(p, b, &b->last_move, &q) && 
+			    q.moves > 0)
 				return mq_pick(&q);
 		}
 
@@ -1074,7 +1085,8 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 		goto eyefill_skip;
 	}
 	bool eyefill = board_is_eyelike(b, m->coord, m->color);
-	if (eyefill) {
+	/* If saving a group in atari don't interfere ! */
+	if (eyefill && !board_get_atari_neighbor(b, m->coord, m->color)) {
 		foreach_diag_neighbor(b, m->coord) {
 			if (board_at(b, c) != stone_other(m->color))
 				continue;
