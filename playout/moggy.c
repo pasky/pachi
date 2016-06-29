@@ -21,6 +21,7 @@
 #include "tactics/ladder.h"
 #include "tactics/nakade.h"
 #include "tactics/selfatari.h"
+#include "tactics/seki.h"
 #include "uct/prior.h"
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
@@ -1045,6 +1046,9 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 	}
 
 eyefill_skip:
+	if (breaking_3_stone_seki(b, m->coord, m->color))
+		return false;
+
 	return true;
 }
 
