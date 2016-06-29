@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define QUICK_BOARD_CODE
+
 #define DEBUG
 #include "board.h"
 #include "debug.h"

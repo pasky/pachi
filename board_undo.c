@@ -72,6 +72,7 @@ board_quick_cmp(struct board *b1, struct board *b2)
 }
 
 
+
 static void
 board_group_find_extra_libs(struct board *board, group_t group, struct group *gi, coord_t avoid)
 {
@@ -774,7 +775,7 @@ board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 #ifdef BOARD_UNDO_CHECKS
 	b->quicked--;
 #endif
-
+	
 	b->last_move = b->last_move2;
 	b->last_move2 = u->last_move2;
 	b->ko = u->ko;

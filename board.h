@@ -122,6 +122,18 @@ struct btraits {
 };
 
 
+/* Quick hack to help ensure tactics code stays within quick board limitations.
+ * Ideally we'd have two different types for boards and quick_boards. The idea
+ * of having casts / duplicate api all over the place isn't so appealing though... */
+#ifndef QUICK_BOARD_CODE
+#define FB_ONLY(field)  field
+#else
+#define FB_ONLY(field)  field ## _disabled
+// Try to make error messages more helpful ...
+#define clen clen_field_not_supported_for_quick_boards
+#define flen flen_field_not_supported_for_quick_boards
+#endif
+
 /* You should treat this struct as read-only. Always call functions below if
  * you want to change it. */
 
@@ -168,11 +180,11 @@ struct board {
 	int moves;
 	struct move last_move;
 	struct move last_move2; /* second-to-last move */
-	struct move last_move3; /* just before last_move2, only set if last_move is pass */
-	struct move last_move4; /* just before last_move3, only set if last_move & last_move2 are pass */
+FB_ONLY(struct move last_move3); /* just before last_move2, only set if last_move is pass */
+FB_ONLY(struct move last_move4); /* just before last_move3, only set if last_move & last_move2 are pass */
 	/* Whether we tried to add a hash twice; board_play*() can
 	 * set this, but it will still carry out the move as well! */
-	bool superko_violation;
+FB_ONLY(bool superko_violation);
 
 	/* The following two structures are goban maps and are indexed by
 	 * coord.pos. The map is surrounded by a one-point margin from
@@ -196,18 +208,18 @@ struct board {
 	/* We keep hashes for black-to-play ([][0]) and white-to-play
 	 * ([][1], reversed stone colors since we match all patterns as
 	 * black-to-play). */
-	uint32_t (*spathash)[BOARD_SPATHASH_MAXD][2];
+FB_ONLY(uint32_t (*spathash))[BOARD_SPATHASH_MAXD][2];
 #endif
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
-	hash3_t *pat3;
+FB_ONLY(hash3_t *pat3);
 #endif
 #ifdef BOARD_TRAITS
 	/* Incrementally matched point traits information, black-to-play
 	 * ([][0]) and white-to-play ([][1]). */
 	/* The information is only valid for empty points. */
-	struct btraits (*t)[2];
+FB_ONLY(struct btraits (*t)[2]);
 #endif
 	/* Cached information on x-y coordinates so that we avoid division. */
 	uint8_t (*coord)[2];
@@ -218,24 +230,24 @@ struct board {
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes!
 	 * However, pass is not included. */
-	coord_t *f; int flen;
+FB_ONLY(coord_t *f);  FB_ONLY(int flen);
 
 #ifdef WANT_BOARD_C
 	/* Queue of capturable groups */
-	group_t *c; int clen;
+FB_ONLY(group_t *c);  FB_ONLY(int clen);
 #endif
 
 #ifdef BOARD_TRAITS
 	/* Queue of positions that need their traits updated */
-	coord_t *tq; int tqlen;
+FB_ONLY(coord_t *tq);  FB_ONLY(int tqlen);
 #endif
 
 	/* Symmetry information */
-	struct board_symmetry symmetry;
+FB_ONLY(struct board_symmetry symmetry);
 
 	/* Last ko played on the board. */
-	struct move last_ko;
-	int last_ko_age;
+FB_ONLY(struct move last_ko);
+FB_ONLY(int last_ko_age);
 
 	/* Basic ko check */
 	struct move ko;
@@ -244,7 +256,7 @@ struct board {
 	/* Guard against invalid quick_play() / quick_undo() uses */
 	int quicked;
 #endif
-
+	
 	/* Engine-specific state; persistent through board development,
 	 * is reset only at clear_board. */
 	void *es;
@@ -265,26 +277,26 @@ struct board {
 #define history_hash_mask ((1 << history_hash_bits) - 1)
 #define history_hash_prev(i) ((i - 1) & history_hash_mask)
 #define history_hash_next(i) ((i + 1) & history_hash_mask)
-	hash_t history_hash[1 << history_hash_bits];
+FB_ONLY(hash_t history_hash)[1 << history_hash_bits];
 	/* Hash of current board position. */
-	hash_t hash;
+FB_ONLY(hash_t hash);
 	/* Hash of current board position quadrants. */
-	hash_t qhash[4];
+FB_ONLY(hash_t qhash)[4];
 };
 
-struct  undo_merge {
+struct undo_merge {
 	group_t	     group;
 	coord_t	     last;  
 	struct group info;
 };
 
-struct  undo_enemy {
+struct undo_enemy {
 	group_t      group;
 	struct group info;
 	coord_t      stones[BOARD_MAX_MOVES];  // TODO try small array
 };
 
-struct  board_undo {
+struct board_undo {
 	struct move last_move2;
 	struct move ko;
 	struct move last_ko;
@@ -300,7 +312,7 @@ struct  board_undo {
 	struct undo_enemy enemies[4];
 	int nenemies;
 	int captures; /* number of stones captured */
- };
+};
 
 
 #ifdef BOARD_SIZE
@@ -406,11 +418,13 @@ static bool board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 /* Determine number of stones in a group, up to @max stones. */
 static int group_stone_count(struct board *b, group_t group, int max);
 
+#ifndef QUICK_BOARD_CODE
 /* Adjust symmetry information as if given coordinate has been played. */
 void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
 /* Check if coordinates are within symmetry base. (If false, they can
  * be derived from the base.) */
 static bool board_coord_in_symmetry(struct board *b, coord_t c);
+#endif
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 static bool board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color);
@@ -448,7 +462,10 @@ bool board_set_rules(struct board *board, char *name);
  *   - list of capturable groups (c / clen)
  *   - traits (btraits, t, tq, tqlen)
  *   - last_move3, last_move4, last_ko_age
- *   - symmetry information  
+ *   - symmetry information
+ *
+ * #define QUICK_BOARD_CODE at the top of your file to get compile-time
+ * error if you try to access a forbidden field.
  *
  * Invalid quick_play()/quick_undo() combinations (missing undo for example)
  * are caught at next board_play() if BOARD_UNDO_CHECKS is defined.
@@ -707,6 +724,7 @@ group_stone_count(struct board *b, group_t group, int max)
 	return n;
 }
 
+#ifndef QUICK_BOARD_CODE
 static inline bool
 board_coord_in_symmetry(struct board *b, coord_t c)
 {
@@ -724,5 +742,7 @@ board_coord_in_symmetry(struct board *b, coord_t c)
 	return true;
 
 }
+#endif
+
 
 #endif
