@@ -18,6 +18,60 @@
 #define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
 
 
+int
+board_quick_cmp(struct board *b1, struct board *b2)
+{
+	if (b1->size != b2->size ||
+	    b1->size2 != b2->size2 ||
+	    b1->bits2 != b2->bits2 ||
+	    b1->captures[S_BLACK] != b2->captures[S_BLACK] ||
+	    b1->captures[S_WHITE] != b2->captures[S_WHITE] ||
+	    b1->moves != b2->moves) {
+		fprintf(stderr, "differs in main vars\n");
+		return 1;
+	}
+	if (move_cmp(&b1->last_move, &b2->last_move) ||
+	    move_cmp(&b1->last_move2, &b2->last_move2)) {
+		fprintf(stderr, "differs in last_move\n");
+		return 1;
+	}
+	if (move_cmp(&b1->ko, &b2->ko) ||
+	    move_cmp(&b1->last_ko, &b2->last_ko) ||
+	    b1->last_ko_age != b2->last_ko_age) {
+		fprintf(stderr, "differs in ko\n");
+		return 1;
+	}
+
+	int bsize = board_size2(b1) * sizeof(*b1->b);
+	int gsize = board_size2(b1) * sizeof(*b1->g);
+	//int fsize = board_size2(b1) * sizeof(*b1->f);
+ 	int nsize = board_size2(b1) * sizeof(*b1->n);
+	int psize = board_size2(b1) * sizeof(*b1->p);
+	//int hsize = board_size2(b1) * 2 * sizeof(*b1->h);
+	int gisize = board_size2(b1) * sizeof(*b1->gi);
+	//int csize = board_size2(board) * sizeof(*b1->c);
+	//int ssize = board_size2(board) * sizeof(*b1->spathash);
+	//int p3size = board_size2(board) * sizeof(*b1->pat3);
+	//int tsize = board_size2(board) * sizeof(*b1->t);
+	//int tqsize = board_size2(board) * sizeof(*b1->t);
+
+	//int cdsize = board_size2(b1) * sizeof(*b1->coord);
+
+	if (memcmp(b1->b,  b2->b,  bsize)) {
+		fprintf(stderr, "differs in b\n");  return 1;  }
+	if (memcmp(b1->g,  b2->g,  gsize)) {
+		fprintf(stderr, "differs in g\n");  return 1;  }
+	if (memcmp(b1->n,  b2->n,  nsize)) {
+		fprintf(stderr, "differs in n\n");  return 1;  }
+	if (memcmp(b1->p,  b2->p,  psize)) {
+		fprintf(stderr, "differs in p\n");  return 1;  }
+	if (memcmp(b1->gi, b2->gi, gisize)) {
+		fprintf(stderr, "differs in gi\n");  return 1;  }
+
+	return 0;
+}
+
+
 static void
 board_group_find_extra_libs(struct board *board, group_t group, struct group *gi, coord_t avoid)
 {

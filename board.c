@@ -123,6 +123,47 @@ board_alloc(struct board *board)
 	return size;
 }
 
+int
+board_cmp(struct board *b1, struct board *b2)
+{
+	void **p1 = (void**)b1,  **p2 = (void**)b2;
+	for (unsigned int i = 0; i < sizeof(struct board) / sizeof(void*); i++)
+		if (p1[i] != p2[i] &&
+		    &p1[i] != (void**)&b1->b &&
+		    &p1[i] != (void**)&b1->g &&
+		    &p1[i] != (void**)&b1->f &&
+		    &p1[i] != (void**)&b1->n &&
+		    &p1[i] != (void**)&b1->p &&
+		    &p1[i] != (void**)&b1->h &&
+		    &p1[i] != (void**)&b1->gi &&
+#ifdef WANT_BOARD_C
+		    &p1[i] != (void**)&b1->c &&
+#endif
+#ifdef BOARD_SPATHASH
+		    &p1[i] != (void**)&b1->spathash &&		   
+#endif
+#ifdef BOARD_PAT3
+		    &p1[i] != (void**)&b1->pat3 &&
+#endif
+#ifdef BOARD_TRAITS
+		    &p1[i] != (void**)&b1->t &&
+		    &p1[i] != (void**)&b1->tq &&
+#endif
+		    &p1[i] != (void**)&b1->coord)
+			return 1;
+
+	/* Find alloc size */
+	struct board tmp;
+	board_setup(&tmp);
+	size_t size = board_alloc(&tmp);
+	board_done_noalloc(&tmp);
+	
+	return memcmp(b1->b, b2->b, size);
+}
+
+
+
+
 struct board *
 board_copy(struct board *b2, struct board *b1)
 {
