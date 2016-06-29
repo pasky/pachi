@@ -98,6 +98,12 @@ struct moggy_policy {
 	double mq_prob[MQ_MAX], tenuki_prob;
 };
 
+/* Per simulation state (moggy_policy is shared by all threads) */
+struct moggy_state {
+	/* Selfatari move rejected by permit() during the last move(s).
+	 * Logic may not kick in immediately so we have room for both colors. */
+	coord_t last_selfatari[S_MAX];
+};
 
 static char moggy_patterns_src[PAT3_N][11] = {
 	/* hane pattern - enclosing hane */	/* 0.52 */
@@ -375,6 +381,40 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 }
 
 static void
+local_2lib_capture_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+{
+	struct moggy_policy *pp = p->data;
+	group_t group = group_at(b, m->coord), group2 = 0;
+
+	/* Nothing there normally since opponent avoided bad selfatari ... */
+	if (board_group_info(b, group).libs == 2) {
+		group_2lib_capture_check(b, group, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+#if 0
+		/* We always prefer to take off an enemy chain liberty
+		 * before pulling out ourselves. */
+		/* XXX: We aren't guaranteed to return to that group
+		 * later. */
+		if (q->moves)
+			return q->move[fast_random(q->moves)];
+#endif
+	}
+
+	/* Then he took a third liberty from neighboring chain? */
+	foreach_neighbor(b, m->coord, {
+		if (board_at(b, c) != m->color)  /* Not opponent group, skip */
+			continue;
+		group_t g = group_at(b, c);
+		if (!g || g == group || g == group2 || board_group_info(b, g).libs != 2)
+			continue;
+		group_2lib_capture_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+		group2 = g; // prevent trivial repeated checks
+	});
+
+	if (PLDEBUGL(5))
+		mq_print(q, b, "Local 2lib capture");
+}
+
+static void
 local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
@@ -557,6 +597,8 @@ static coord_t
 playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
+	struct moggy_state *ps = b->ps;
+	enum stone other_color = stone_other(to_play);
 
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
@@ -584,6 +626,18 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		if (pp->ladderrate > fast_random(100)) {
 			struct move_queue q; q.moves = 0;
 			local_ladder_check(p, b, &b->last_move, &q);
+			if (q.moves > 0)
+				return mq_pick(&q);
+		}
+
+		/* Did we just reject selfatari move as opponent ?
+		 * Check if his group can be laddered / put in atari */
+		if (ps->last_selfatari[other_color] &&
+		    pp->atarirate > fast_random(100)) {
+			struct move_queue q; q.moves = 0;
+			struct move m = { .coord = ps->last_selfatari[other_color], .color = other_color };			
+			ps->last_selfatari[other_color] = 0;  /* Clear */
+			local_2lib_capture_check(p, b, &m, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
@@ -983,6 +1037,7 @@ static bool
 playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt)
 {
 	struct moggy_policy *pp = p->data;
+	struct moggy_state *ps = b->ps;
 
 	/* The idea is simple for now - never allow bad self-atari moves.
 	 * They suck in general, but this also permits us to actually
@@ -996,6 +1051,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 			fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
 				stone2str(m->color), coord2sstr(m->coord, b));
 		if (alt && pp->selfatari_other) {
+			ps->last_selfatari[m->color] = m->coord;
 			/* Ok, try the other liberty of the atari'd group. */
 			coord_t c = selfatari_cousin(b, m->color, m->coord, NULL);
 			if (!permit_move(c)) return false;
@@ -1052,12 +1108,24 @@ eyefill_skip:
 	return true;
 }
 
+static void
+playout_moggy_setboard(struct playout_policy *playout_policy, struct board *b)
+{
+	if (b->ps)
+		return;
+	struct moggy_state *ps = malloc2(sizeof(struct moggy_state));
+	ps->last_selfatari[S_BLACK] = ps->last_selfatari[S_WHITE] = 0;
+	b->ps = ps;
+}
+
 struct playout_policy *
 playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 {
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
+	p->setboard = playout_moggy_setboard;
+	p->setboard_randomok = true;
 	p->choose = playout_moggy_seqchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
