@@ -10,6 +10,7 @@
 #include "mq.h"
 #include "tactics/1lib.h"
 #include "tactics/selfatari.h"
+#include "tactics/dragon.h"
 #include "tactics/ladder.h"
 
 
@@ -226,6 +227,8 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
 	return len;
 }
 
+static __thread int length = 0;
+
 bool
 is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
 {
@@ -250,7 +253,7 @@ is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	struct move_queue ccq = { .moves = 0 };
 	can_countercapture(b, laddered, &ccq, 0);
 
-	int length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
+	length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
 
 	if (DEBUGL(6) && length) {
 		fprintf(stderr, "is_ladder(): stones: %i  length: %i\n",
@@ -272,7 +275,7 @@ is_middle_ladder_any(struct board *b, coord_t coord, group_t laddered, enum ston
 	struct move_queue ccq = { .moves = 0 };
 	can_countercapture(b, laddered, &ccq, 0);
 	
-	int length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
+	length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
 	return (length != 0);
 }
 
@@ -324,4 +327,73 @@ wouldbe_ladder_any(struct board *b, group_t group, coord_t escapelib, coord_t ch
 	});
 
 	return ladder;
+}
+
+/* Laddered group can't escape, but playing it out could still be useful.
+ *
+ *      . . . * . . .    For example, life & death:
+ *      X O O X O O X
+ *      X X O O O X X
+ *          X X X     
+ *
+ * Try to weed out as many useless moves as possible while still allowing these ...
+ * Call right after is_ladder() succeeded, uses static state.  
+ *
+ * XXX can also be useful in other situations ? Should be pretty rare hopefully */
+bool
+useful_ladder(struct board *b, group_t laddered)
+{
+	if (length >= 4 ||
+	    group_stone_count(b, laddered, 6) > 5 ||
+	    neighbor_is_safe(b, laddered))
+		return false;
+
+	coord_t lib = board_group_info(b, laddered).lib[0];
+	enum stone lcolor = board_at(b, laddered);
+
+	/* Check capturing group is surrounded */
+	with_move(b, lib, stone_other(lcolor), {	
+		assert(!group_at(b, laddered));
+		if (!dragon_is_surrounded(b, lib))
+			with_move_return(false);
+	});
+	
+	/* Group safe even after escaping + capturing us ? */
+	// XXX can need to walk ladder twice to become useful ...
+	bool still_safe = false, cap_ok = false;
+	with_move(b, lib, lcolor, {
+		if (!group_at(b, lib))
+			break;
+		
+		group_t g = group_at(b, lib);
+		// Try diff move order, could be suicide !
+		for (int i = 0; !cap_ok && i < board_group_info(b, g).libs; i++) {
+			coord_t cap = board_group_info(b, g).lib[i];
+			with_move(b, cap, stone_other(lcolor), {				       
+				if (!group_at(b, lib) || !group_at(b, cap))
+					break;				
+				coord_t cap = board_group_info(b, group_at(b, lib)).lib[0];						
+				with_move(b, cap, stone_other(lcolor), {
+						assert(!group_at(b, lib));
+						cap_ok = true;
+						still_safe = dragon_is_safe(b, group_at(b, cap), stone_other(lcolor));
+				});
+			});
+		}
+	});
+	if (still_safe)
+		return false;
+
+	/* Does it look useful as selfatari ? */
+	foreach_neighbor(b, lib, {
+		if (board_at(b, c) != S_NONE)
+			continue;
+		with_move(b, c, stone_other(lcolor), {
+			if (board_group_info(b, group_at(b, c)).libs - 1 <= 1)
+				break;
+			if (!is_bad_selfatari(b, lcolor, lib))
+				with_move_return(true);
+		});
+	});
+	return false;
 }

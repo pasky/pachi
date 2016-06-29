@@ -24,6 +24,10 @@ bool wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t c
  * Use this if you only care whether group can be captured. */
 bool wouldbe_ladder_any(struct board *b, group_t group, coord_t escapelib, coord_t chaselib, enum stone lcolor);
 
+/* Try to find out if playing out lost ladder could be useful for life&death. 
+ * Call right after is_ladder(), uses static state. */
+bool useful_ladder(struct board *b, group_t laddered);
+
 bool is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor);
 bool is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor);
 bool is_middle_ladder_any(struct board *b, coord_t coord, group_t laddered, enum stone lcolor);
@@ -52,7 +56,6 @@ is_ladder(struct board *b, coord_t coord, group_t laddered, bool test_middle)
 	return l;
 }
 
-
 static inline bool
 is_ladder_any(struct board *b, coord_t coord, group_t laddered, bool test_middle)
 {
@@ -77,6 +80,5 @@ is_ladder_any(struct board *b, coord_t coord, group_t laddered, bool test_middle
 	if (DEBUGL(6)) fprintf(stderr, "middle ladder solution: %d\n", l);
 	return l;
 }
-
 
 #endif

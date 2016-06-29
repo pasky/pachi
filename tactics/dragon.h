@@ -36,6 +36,9 @@ bool dragon_is_safe(struct board *b, group_t g, enum stone color);
 /* Like group_is_safe() but passing already visited stones / eyes. */
 bool dragon_is_safe_full(struct board *b, group_t g, enum stone color, int *visited, int *eyes);
 
+/* Does one opposite color group neighbor of @g have 2 eyes ? */
+bool neighbor_is_safe(struct board *b, group_t g);
+
 /* Try to detect big eye area, ie:
  *  - completely enclosed area, not too big,
  *  - surrounding stones all connected to each other

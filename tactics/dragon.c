@@ -503,6 +503,50 @@ dragon_is_safe(struct board *b, group_t g, enum stone color)
 	return dragon_is_safe_full(b, g, color, visited, &eyes);
 }
 
+
+static inline bool
+have_group_in(group_t g, group_t *groups, int ngroups)
+{
+	for (int i = 0; i < ngroups; i++)
+		if (groups[i] == g) 
+			return true;
+	return false;
+}
+
+static int
+group_neighbors(struct board *b, coord_t to, group_t *neighbors)
+{
+	group_t group = group_at(b, to);    assert(group);
+	enum stone color = board_at(b, to);
+	enum stone other_color = stone_other(color);
+	
+	int n = 0;       
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			if (board_at(b, c) != other_color)
+				continue;
+			group_t g = group_at(b, c);
+			if (have_group_in(g, neighbors, n))
+				continue;
+			neighbors[n++] = g;
+		});		
+	} foreach_in_group_end;
+	return n;
+}
+
+/* At least one neighbor is safe */
+bool
+neighbor_is_safe(struct board *b, group_t g)
+{
+	group_t neighbors[BOARD_MAX_GROUPS];
+	int n = group_neighbors(b, g, neighbors);
+	for (int i = 0; i < n; i++)
+		if (dragon_is_safe(b, neighbors[i], board_at(b, neighbors[i])))
+			return true;
+	return false;
+}
+
+
 static int
 count_libs(struct board *b, enum stone color, coord_t c, void *data)
 {	
