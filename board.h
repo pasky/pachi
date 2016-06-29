@@ -37,6 +37,7 @@ struct fbook;
 //#define BOARD_TRAIT_SAFE 2 // include btraits.safe based on full is_bad_selfatari()
 
 
+#define BOARD_MAX_COORDS  ((BOARD_MAX_SIZE+2) * (BOARD_MAX_SIZE+2) )
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
 #define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE / 2)
 
@@ -265,6 +266,37 @@ struct board {
 	hash_t qhash[4];
 };
 
+struct  undo_merge {
+	group_t	     group;
+	coord_t	     last;  
+	struct group info;
+};
+
+struct  undo_enemy {
+	group_t      group;
+	struct group info;
+	coord_t      stones[BOARD_MAX_MOVES];  // TODO try small array
+};
+
+struct  board_undo {
+	struct move last_move2;
+	struct move ko;
+	struct move last_ko;
+	int	    last_ko_age;
+	
+	coord_t next_at;
+	
+	coord_t	inserted;
+	struct undo_merge merged[4];
+	int nmerged;
+	int nmerged_tmp;
+
+	struct undo_enemy enemies[4];
+	int nenemies;
+	int captures; /* number of stones captured */
+ };
+
+
 #ifdef BOARD_SIZE
 /* Avoid unused variable warnings */
 #define board_size(b_) (((b_) == (b_)) ? BOARD_SIZE + 2 : 0)
@@ -347,7 +379,7 @@ int board_play(struct board *board, struct move *m);
 typedef bool (*ppr_permit)(void *data, struct board *b, struct move *m);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
 
-/*Undo, supported only for pass moves. Returns -1 on error, 0 otherwise. */
+/* Undo, supported only for pass moves. Returns -1 on error, 0 otherwise. */
 int board_undo(struct board *board);
 
 /* Returns true if given move can be played. */
@@ -393,6 +425,54 @@ floating_t board_official_score(struct board *board, struct move_queue *mq);
 /* Set board rules according to given string. Returns false in case
  * of unknown ruleset name. */
 bool board_set_rules(struct board *board, char *name);
+
+/* Quick play/undo to try out a move.
+ * WARNING  Only core board structures are maintained !
+ *          Code in between can't rely on anything else.
+ *
+ * Currently this means these can't be used:
+ *   - incremental patterns (pat3)
+ *   - hashes, superko_violation (spathash, hash, qhash, history_hash)
+ *   - list of free positions (f / flen)
+ *   - list of capturable groups (c / clen)
+ *   - traits (btraits, t, tq, tqlen)
+ *   - last_move3, last_move4, last_ko_age
+ *   - symmetry information  
+ */
+int  board_quick_play(struct board *board, struct move *m, struct board_undo *u);
+void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
+
+/* quick_play() + quick_undo() combo.
+ * Body is executed only if move is valid (silently ignored otherwise).
+ * Can break out in body, but definitely *NOT* return / jump around !
+ */
+#define with_move(board_, coord_, color_, body_) \
+       do { \
+	       struct board *board__ = (board_);  /* For with_move_return() */		\
+               struct move m_ = { .coord = (coord_), .color = (color_) }; \
+               struct board_undo u_; \
+               if (board_quick_play(board__, &m_, &u_) >= 0) {	  \
+	               do { body_ } while(0);                     \
+                       board_quick_undo(board__, &m_, &u_); \
+	       }					   \
+       } while (0)
+
+/* Return value from within with_move() statement.
+ * Valid for non-nested with_move() *ONLY* */
+#define with_move_return(val_)  \
+	do {  typeof(val_) val__ = (val_); board_quick_undo(board__, &m_, &u_); return val__;  } while (0)
+
+/* Same as with_move() but assert out in case of invalid move. */
+#define with_move_strict(board_, coord_, color_, body_) \
+       do { \
+	       struct board *board__ = (board_);  /* For with_move_return() */		\
+               struct move m_ = { .coord = (coord_), .color = (color_) }; \
+               struct board_undo u_; \
+               assert (board_quick_play(board__, &m_, &u_) >= 0);  \
+               do { body_ } while(0);                     \
+               board_quick_undo(board__, &m_, &u_); \
+       } while (0)
+
 
 /** Iterators */
 

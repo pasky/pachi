@@ -1386,8 +1386,7 @@ board_play(struct board *board, struct move *m)
 }
 
 /* Undo, supported only for pass moves. This form of undo is required by KGS
- * to settle disputes on dead groups. (Undo of real moves would be more complex
- * particularly for capturing moves.) */
+ * to settle disputes on dead groups. See also fast_board_undo() */
 int board_undo(struct board *board)
 {
 	if (!is_pass(board->last_move.coord))
