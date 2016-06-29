@@ -16,7 +16,6 @@ static bool is_ladder(struct board *b, coord_t coord, group_t laddered, bool tes
  * caught in a ladder given opponent stone at @chaselib.  */
 bool wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chaselib, enum stone lcolor);
 
-
 bool is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor);
 bool is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor);
 static inline bool
@@ -28,18 +27,21 @@ is_ladder(struct board *b, coord_t coord, group_t laddered, bool test_middle)
 		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
 			coord2sstr(coord, b), stone2str(lcolor), coord2sstr(laddered, b));
 
-	/* First, special-case first-line "ladders". This is a huge chunk
-	 * of ladders we actually meet and want to play. */
-	if (neighbor_count_at(b, coord, S_OFFBOARD) == 1
-	    && neighbor_count_at(b, coord, lcolor) == 1) {
-		bool l = is_border_ladder(b, coord, laddered, lcolor);
-		if (DEBUGL(6)) fprintf(stderr, "border ladder solution: %d\n", l);
-		return l;
+	if (!test_middle) {
+		/* First, special-case first-line "ladders". This is a huge chunk
+		 * of ladders we actually meet and want to play. */
+		if (neighbor_count_at(b, coord, S_OFFBOARD) == 1
+		    && neighbor_count_at(b, coord, lcolor) == 1) {
+			bool l = is_border_ladder(b, coord, laddered, lcolor);
+			if (DEBUGL(6)) fprintf(stderr, "border ladder solution: %d\n", l);
+			return l;
+		}
 	}
-
+	
 	bool l = test_middle && is_middle_ladder(b, coord, laddered, lcolor);
 	if (DEBUGL(6)) fprintf(stderr, "middle ladder solution: %d\n", l);
 	return l;
 }
+
 
 #endif
