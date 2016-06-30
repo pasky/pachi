@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+# Convert ascii board diagrams from board_print() to sgf.
+# Usage: ./board_print_to_sgf > foo.sgf
+#        copy paste the diagram, ^D
+
+use utf8;
+binmode STDIN, ":utf8";
+binmode STDOUT, ":utf8";
+
+my $asdf = "abcdefghijklmnopqrstuvwxyz";
+
+sub coord2sgf
+{
+    my ($x, $y) = @_;
+    $y = 19 + 1 - $y;
+    return substr($asdf, $x-1, 1) . substr($asdf, $y-1, 1);
+}
+
+my $ab = "";
+my $aw = "";
+my $size = 0;
+foreach my $s (<STDIN>)
+{
+    $s =~ s/·/./g;
+    # remove current move mark
+    $s =~ s/([OX.])\)/$1 /;
+    if ($s =~ m/^ ([ 1][0-9]) \| (([.OX] )+)\|/ ||
+	$s =~ m/^([ 1][0-9])  *(([.OX] )+) /)
+    { 
+	my ($l, $s) = ($1, $2);
+	$s =~ s/ //g;
+	my @t = split("", $s);
+
+	$size = @t;
+	for (my $i = 0; $i < @t; $i++)
+	{
+	    if ($t[$i] ne "X") { next; }
+	    $ab .= sprintf("[%s]", coord2sgf($i+1, $l)); 
+	}
+
+	for (my $i = 0; $i < @t; $i++)
+	{
+	    if ($t[$i] ne "O") { next; }
+	    $aw .= sprintf("[%s]", coord2sgf($i+1, $l));
+	}
+    }
+}
+
+print "(;\n";
+print "SZ[$size]\n";
+print "KM[7.5]\n\n";
+if ($ab ne "") {  print "AB$ab\n"; }
+if ($aw ne "") {  print "AW$aw\n"; }
+print ")\n";

@@ -1,0 +1,56 @@
+#!/usr/bin/perl
+# Convert ascii board diagrams from board_print() to gtp.
+# Usage: ./board_print_to_gtp > foo.gtp
+#        copy paste the diagram, ^D
+#        tweak foo.gtp: script doesn't pay attention to last
+#        move currently so always sets black to play.
+
+use utf8;
+binmode STDIN, ":utf8";
+binmode STDOUT, ":utf8";
+
+my $asdf = "abcdefghjklmnopqrstuvwxyz";
+
+sub coord2gtp
+{
+    my ($x, $y) = @_;
+    $y += 0;
+    return substr($asdf, $x-1, 1) . $y;
+}
+
+my $ab = "";
+my $aw = "";
+my $size = 0;
+foreach my $s (<STDIN>)
+{
+    $s =~ s/·/./g;
+    # remove current move mark
+    $s =~ s/([OX.])\)/$1 /;
+    if ($s =~ m/^ ([ 1][0-9]) \| (([.OX] )+)\|/ ||
+	$s =~ m/^([ 1][0-9])  *(([.OX] )+) /)
+    { 
+	my ($l, $s) = ($1, $2);
+	$s =~ s/ //g;
+	my @t = split("", $s);
+
+	$size = @t;
+	for (my $i = 0; $i < @t; $i++)
+	{
+	    if ($t[$i] ne "X") { next; }
+	    $ab .= sprintf("play b %s\n", coord2gtp($i+1, $l)); 
+	}
+
+	for (my $i = 0; $i < @t; $i++)
+	{
+	    if ($t[$i] ne "O") { next; }
+	    $aw .= sprintf("play w %s\n", coord2gtp($i+1, $l));
+	}
+    }
+}
+
+print "boardsize $size\n";
+print "clear_board\n";
+print "komi 7.5\n";
+print "$ab";
+print "$aw";
+print "genmove b\n";
