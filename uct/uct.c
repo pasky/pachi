@@ -263,20 +263,15 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 
 	/* This means the game is probably over, no use pondering on. */
 	uct_pondering_stop(u);
-
+	
 	if (u->pass_all_alive)
 		return; // no dead groups
-
-	bool mock_state = false;
-
-	if (!u->t) {
-		/* No state, but we cannot just back out - we might
-		 * have passed earlier, only assuming some stones are
-		 * dead, and then re-connected, only to lose counting
-		 * when all stones are assumed alive. */
-		uct_prepare_move(u, b, S_BLACK); assert(u->t);
-		mock_state = true;
-	}
+	
+	/* Create mock state */
+	if (u->t)  reset_state(u);
+	// We need S_BLACK here, but don't clobber u->my_color with uct_genmove_setup() !
+	uct_prepare_move(u, b, S_BLACK); 
+	
 	/* Make sure the ownermap is well-seeded. */
 	while (u->ownermap.playouts < GJ_MINGAMES)
 		uct_playout(u, b, S_BLACK, u->t);
@@ -286,12 +281,10 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 
 	dead_group_list(u, b, mq);
 
-	if (mock_state) {
-		/* Clean up the mock state in case we will receive
-		 * a genmove; we could get a non-alternating-move
-		 * error from uct_prepare_move() in that case otherwise. */
-		reset_state(u);
-	}
+	/* Clean up the mock state in case we will receive
+	 * a genmove; we could get a non-alternating-move
+	 * error from uct_prepare_move() in that case otherwise. */
+	reset_state(u);
 }
 
 static void
