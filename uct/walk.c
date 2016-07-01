@@ -658,27 +658,10 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	 * number is black's win! Be VERY CAREFUL.
 	 * !!! !!! !!! */
 
-	if (passes >= 2) {
-		/* XXX: No dead groups support. */
-		floating_t score = board_official_score(&b2, NULL);
-		/* Result from black's perspective (no matter who
-		 * the player; black's perspective is always
-		 * what the tree stores. */
-		result = - (score * 2);
-
-		if (UDEBUGL(5))
-			fprintf(stderr, "[%d..%d] %s p-p scoring playout result %d (W %f)\n",
-				player_color, node_color, coord2sstr(node_coord(n), t->board), result, score);
-		if (UDEBUGL(6))
-			board_print(&b2, stderr);
-
-		board_ownermap_fill(&u->ownermap, &b2);
-
-	} else { // assert(tree_leaf_node(n));
-		/* In case of parallel tree search, the assertion might
-		 * not hold if two threads chew on the same node. */
-		result = uct_leaf_node(u, &b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
-	}
+	// assert(tree_leaf_node(n));
+	/* In case of parallel tree search, the assertion might
+	 * not hold if two threads chew on the same node. */
+	result = uct_leaf_node(u, &b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
 		unsigned int cutoff = amaf.game_baselen;
