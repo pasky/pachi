@@ -257,6 +257,33 @@ uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd
 }
 
 static void
+print_dead_groups(struct uct *u, struct board *b, struct move_queue *mq)
+{
+	fprintf(stderr, "dead groups (playing %s)\n", (u->my_color ? stone2str(u->my_color) : "???"));
+	if (!mq->moves)
+		fprintf(stderr, "  none\n");
+	for (unsigned int i = 0; i < mq->moves; i++) {
+		fprintf(stderr, "  ");
+		foreach_in_group(b, mq->move[i]) {
+			fprintf(stderr, "%s ", coord2sstr(c, b));
+		} foreach_in_group_end;
+		fprintf(stderr, "\n");
+	}
+}
+
+static void
+print_extra_dead_group(struct board *b, group_t g, int found)
+{
+	if (!found)
+		fprintf(stderr, "also adding\n");
+	fprintf(stderr, "  ");
+	foreach_in_group(b, g) {
+		fprintf(stderr, "%s ", coord2sstr(c, b));
+	} foreach_in_group_end;
+	fprintf(stderr, "\n");	
+}
+
+static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
@@ -279,14 +306,16 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	/* Show the ownermap: */
 	if (DEBUGL(2))
 		board_print_custom(b, stderr, uct_printhook_ownermap);
-
+	
 	struct move_queue relaxed; relaxed.moves = 0;
 	dead_group_list(u, b, mq, GJ_THRES);  	// Strict
 	dead_group_list(u, b, &relaxed, 0.55);  // Relaxed
+	if (DEBUGL(2))  print_dead_groups(u, b, mq);
 
 	/* Add own unclear dead groups if it doesn't change the outcome
 	 * and spare opponent a genmove_cleanup phase... */
 	if (!unknown_color) {
+		int found = 0;
 		bool result = pass_is_safe(b, u->my_color, mq);
 		for (unsigned int i = 0; i < relaxed.moves; i++) {
 			group_t g = relaxed.move[i];
@@ -295,8 +324,10 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 			
 			struct move_queue tmp;  memcpy(&tmp, mq, sizeof(tmp));		       
 			mq_add(&tmp, g, 0);
-			if (result == pass_is_safe(b, u->my_color, &tmp))
+			if (result == pass_is_safe(b, u->my_color, &tmp)) {
 				mq_add(mq, g, 0);
+				if (DEBUGL(2))  print_extra_dead_group(b, g, found++);
+			}
 		}
 	}
 
