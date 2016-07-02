@@ -100,10 +100,10 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 }
 
 static void
-dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
+dead_group_list(struct uct *u, struct board *b, struct move_queue *mq, float thres)
 {
 	enum gj_state gs_array[board_size2(b)];
-	struct group_judgement gj = { .thres = GJ_THRES, .gs = gs_array };
+	struct group_judgement gj = { .thres = thres, .gs = gs_array };
 	board_ownermap_judge_groups(b, &u->ownermap, &gj);
 	groups_of_status(b, &gj, GS_DEAD, mq);
 }
@@ -116,7 +116,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		uct_playout(u, b, color, u->t);
 
 	struct move_queue mq = { .moves = 0 };
-	dead_group_list(u, b, &mq);
+	dead_group_list(u, b, &mq, GJ_THRES);
 	if (pass_all_alive) {
 		for (unsigned int i = 0; i < mq.moves; i++) {
 			if (board_at(b, mq.move[i]) == stone_other(color)) {
@@ -260,7 +260,8 @@ static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
-
+	bool unknown_color = !u->my_color;
+	
 	/* This means the game is probably over, no use pondering on. */
 	uct_pondering_stop(u);
 	
@@ -279,7 +280,25 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	if (DEBUGL(2))
 		board_print_custom(b, stderr, uct_printhook_ownermap);
 
-	dead_group_list(u, b, mq);
+	struct move_queue relaxed; relaxed.moves = 0;
+	dead_group_list(u, b, mq, GJ_THRES);  	// Strict
+	dead_group_list(u, b, &relaxed, 0.55);  // Relaxed
+
+	/* Add own unclear dead groups if it doesn't change the outcome
+	 * and spare opponent a genmove_cleanup phase... */
+	if (!unknown_color) {
+		bool result = pass_is_safe(b, u->my_color, mq);
+		for (unsigned int i = 0; i < relaxed.moves; i++) {
+			group_t g = relaxed.move[i];
+			if (board_at(b, g) != u->my_color || mq_has(mq, g))
+				continue;
+			
+			struct move_queue tmp;  memcpy(&tmp, mq, sizeof(tmp));		       
+			mq_add(&tmp, g, 0);
+			if (result == pass_is_safe(b, u->my_color, &tmp))
+				mq_add(mq, g, 0);
+		}
+	}
 
 	/* Clean up the mock state in case we will receive
 	 * a genmove; we could get a non-alternating-move
