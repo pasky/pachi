@@ -72,13 +72,6 @@ static struct engine *init_engine(enum engine_id engine, char *e_arg, struct boa
 	return e;
 }
 
-static void done_engine(struct engine *e)
-{
-	if (e->done) e->done(e);
-	if (e->data) free(e->data);
-	free(e);
-}
-
 static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
@@ -227,7 +220,7 @@ int main(int argc, char *argv[])
 				ti[S_WHITE] = ti_default;
 				if (!e->keep_on_clear) {
 					b->es = NULL;
-					done_engine(e);
+					engine_done(e);
 					e = init_engine(engine, e_arg, b);
 				}
 			} else if (c == P_UNKNOWN_COMMAND && gtp_port) {
@@ -239,7 +232,7 @@ int main(int argc, char *argv[])
 		if (!gtp_port) break;
 		open_gtp_connection(&gtp_sock, gtp_port);
 	}
-	done_engine(e);
+	engine_done(e);
 	chat_done();
 	free(testfile);
 	free(gtp_port);

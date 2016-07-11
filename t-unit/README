@@ -3,6 +3,7 @@ can be checked for proper result on given testcases (board pieces).
 Run the unit tests like:
 
 	./pachi -u t-unit/sar.t
+	./pachi -u t-unit/ladder.t
+	./pachi -u t-unit/moggy.t
+        ...
 
-Currently, only few basic tests for the self-atari detector are
-available, but it is easy to add more.

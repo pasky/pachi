@@ -32,53 +32,62 @@ suicide_stats(int suicide)
 		fprintf(stderr, "Suicides: %i/%i (%i%%)\n", suicides, total, suicides * 100 / total);
 }
 
+coord_t
+replay_sample_moves(struct engine *e, struct board *b, enum stone color, 
+		    int *played, int *pmost_played)
+{
+	struct replay *r = e->data;
+	struct playout_setup setup;	        memset(&setup, 0, sizeof(setup));
+	struct move m = { .coord = pass, .color = color };
+	int most_played = 0;
+	
+	/* Find out what moves policy plays most in this situation */
+        for (int i = 0; i < r->runs; i++) {
+		struct board b2;
+		board_copy(&b2, b);
+		
+		if (DEBUGL(4))  fprintf(stderr, "---------------------------------\n");		
+		coord_t c = play_random_move(&setup, &b2, color, r->playout);		
+		if (DEBUGL(4))  fprintf(stderr, "-> %s\n", coord2sstr(c, &b2));
+		
+		played[c]++;
+		if (played[c] > most_played) {
+			most_played++;  m.coord = c;
+		}
+
+		board_done_noalloc(&b2);
+	}
+	
+	*pmost_played = most_played;
+	return m.coord;
+}
+
 static coord_t *
 replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct replay *r = e->data;
-	struct playout_setup setup;	        memset(&setup, 0, sizeof(setup));
-        int played[b->size * b->size];		memset(played, 0, sizeof(played));
-        int most_played = 0;
 	struct move m = { .coord = pass, .color = color };
-        int runs = r->runs;
 	
         if (DEBUGL(3))
-	      printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), runs);
+	      printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
 
-	/* Find out what moves policy plays most in this situation */
-        for (int i = 0; i < runs; i++) {
-		struct board b2;
-		board_copy(&b2, b);
-		if (DEBUGL(4))
-			fprintf(stderr, "---------------------------------\n");
-		
-		coord_t c = play_random_move(&setup, &b2, color, r->playout);
-		
-		if (DEBUGL(4))
-			fprintf(stderr, "-> %s\n", coord2sstr(c, &b2));
-		if (!is_pass(c))
-			if (++played[c] > most_played) {
-				most_played++;
-				m.coord = c;
-			}
-		board_done_noalloc(&b2);
-	}
+        int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
+	int *played = played_ + 2;		// allow storing pass/resign
+        int most_played = 0;
+	m.coord = replay_sample_moves(e, b, color, played, &most_played);
 
-	if (DEBUGL(3)) {
+	if (DEBUGL(3)) {  /* Show moves stats */
 		for (int k = most_played; k > 0; k--)
-			for (coord_t c = 0; c < b->size * b->size; c++)
+			for (coord_t c = resign; c < b->size2; c++)
 				if (played[c] == k)
-					fprintf(stderr, "%s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
+					fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / r->runs);
 		fprintf(stderr, "\n");
 	}
 
-	if (!most_played)
-		return coord_copy(pass);
-	
 	if (DEBUGL(2))
 		fprintf(stderr, "genmove: %s %s    %.2f%%  (%i runs)\n\n",
 			(color == S_BLACK ? "B" : "W"),
-			coord2str(m.coord, b), (float)most_played * 100 / runs, runs);
+			coord2str(m.coord, b), (float)most_played * 100 / r->runs, r->runs);
 	
 	if (r->no_suicide) {  /* Check group suicides */
 		struct board b2;  board_copy(&b2, b);

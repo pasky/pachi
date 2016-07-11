@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+# Convert ascii board diagrams from board_print() to t-unit board format.
+# (remove borders and just keep the stones basically)
+# Usage: ./board_print_to_tunit > foo.t
+#        copy paste the diagram, ^D
+
+use utf8;
+binmode STDIN, ":utf8";
+binmode STDOUT, ":utf8";
+
+my $size = 0;
+foreach my $s (<STDIN>)
+{
+    $s =~ s/·/./g;
+    # Remove current move mark
+    $s =~ s/([OX.])\)/$1 /;
+    if ($s =~ m/^ [ 1][0-9] \| (([.OX] )+)\|/ ||
+	$s =~ m/^[ 1][0-9]  *(([.OX] )+) /)
+    {   
+	my $s = $1;
+	if ($size == 0)
+	{
+	    $size = split("", $s) / 2;
+	    print "boardsize $size\n";
+	}
+	$s =~ s/ *$//;	
+	print "$s\n";
+    }
+}

@@ -8,6 +8,29 @@
 #include "mq.h"
 #include "ownermap.h"
 
+static char *
+printhook(struct board *board, coord_t c, char *s, char *end, void *data)
+{
+        struct board_ownermap *ownermap = data;
+        if (!ownermap) {
+                strcat(s, ". ");
+                return s + 2;
+        }
+        const char chr[] = ":XO,"; // dame, black, white, unclear
+        const char chm[] = ":xo,";
+        char ch = chr[board_ownermap_judge_point(ownermap, c, GJ_THRES)];
+        if (ch == ',') { // less precise estimate then?
+                ch = chm[board_ownermap_judge_point(ownermap, c, 0.67)];
+        }
+        s += snprintf(s, end - s, "%c ", ch);
+        return s;
+}
+
+void
+board_print_ownermap(struct board *b, FILE *f, struct board_ownermap *ownermap)
+{
+        board_print_custom(b, stderr, printhook, ownermap);
+}
 
 void
 board_ownermap_fill(struct board_ownermap *ownermap, struct board *b)
@@ -112,3 +135,4 @@ groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s
 			mq_add(mq, g, 0);
 	} foreach_point_end;
 }
+

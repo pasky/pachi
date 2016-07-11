@@ -330,9 +330,9 @@ void board_done(struct board *board);
 void board_resize(struct board *board, int size);
 void board_clear(struct board *board);
 
-typedef char *(*board_cprint)(struct board *b, coord_t c, char *s, char *end);
+typedef char *(*board_cprint)(struct board *b, coord_t c, char *s, char *end, void *data);
 void board_print(struct board *board, FILE *f);
-void board_print_custom(struct board *board, FILE *f, board_cprint cprint);
+void board_print_custom(struct board *board, FILE *f, board_cprint cprint, void *data);
 
 /* Place given handicap on the board; coordinates are printed to f. */
 void board_handicap(struct board *board, int stones, FILE *f);

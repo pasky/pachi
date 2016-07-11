@@ -350,7 +350,7 @@ board_print_bottom(struct board *board, char *s, char *end, int c)
 }
 
 static char *
-board_print_row(struct board *board, int y, char *s, char *end, board_cprint cprint)
+board_print_row(struct board *board, int y, char *s, char *end, board_cprint cprint, void *data)
 {
 	s += snprintf(s, end - s, " %2d | ", y);
 	for (int x = 1; x < board_size(board) - 1; x++) {
@@ -363,7 +363,7 @@ board_print_row(struct board *board, int y, char *s, char *end, board_cprint cpr
 	if (cprint) {
 		s += snprintf(s, end - s, " %2d | ", y);
 		for (int x = 1; x < board_size(board) - 1; x++) {
-			s = cprint(board, coord_xy(board, x, y), s, end);
+			s = cprint(board, coord_xy(board, x, y), s, end, data);
 		}
 		s += snprintf(s, end - s, "|");
 	}
@@ -372,7 +372,7 @@ board_print_row(struct board *board, int y, char *s, char *end, board_cprint cpr
 }
 
 void
-board_print_custom(struct board *board, FILE *f, board_cprint cprint)
+board_print_custom(struct board *board, FILE *f, board_cprint cprint, void *data)
 {
 	char buf[10240];
 	char *s = buf;
@@ -382,13 +382,13 @@ board_print_custom(struct board *board, FILE *f, board_cprint cprint)
 		board->captures[S_BLACK], board->captures[S_WHITE]);
 	s = board_print_top(board, s, end, 1 + !!cprint);
 	for (int y = board_size(board) - 2; y >= 1; y--)
-		s = board_print_row(board, y, s, end, cprint);
+		s = board_print_row(board, y, s, end, cprint, data);
 	board_print_bottom(board, s, end, 1 + !!cprint);
 	fprintf(f, "%s\n", buf);
 }
 
 static char *
-cprint_group(struct board *board, coord_t c, char *s, char *end)
+cprint_group(struct board *board, coord_t c, char *s, char *end, void *data)
 {
 	s += snprintf(s, end - s, "%d ", group_base(group_at(board, c)));
 	return s;
@@ -397,7 +397,7 @@ cprint_group(struct board *board, coord_t c, char *s, char *end)
 void
 board_print(struct board *board, FILE *f)
 {
-	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL);
+	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL, NULL);
 }
 
 

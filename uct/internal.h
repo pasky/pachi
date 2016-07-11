@@ -20,9 +20,6 @@ struct uct_dynkomi;
 struct uct_pluginset;
 struct joseki_dict;
 
-/* How big proportion of ownermap counts must be of one color to consider
- * the point sure. */
-#define GJ_THRES	0.8
 /* How many games to consider at minimum before judging groups. */
 #define GJ_MINGAMES	500
 
