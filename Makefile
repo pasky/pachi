@@ -2,7 +2,7 @@
 
 # Uncomment one of the options below to change the way Pachi is built.
 # Alternatively, you can pass the option to make itself, like:
-# 	make MAC=1 DOUBLE=1
+# 	make MAC=1 DOUBLE_FLOATING=1
 
 
 # Do you compile on Windows instead of Linux? Please note that the
@@ -11,6 +11,10 @@
 # Patches for others are welcome!)
 
 # WIN=1
+
+# To compile 64-bit version in msys2 with mingw64, uncomment the
+# following line
+# MSYS2_64=1
 
 # Do you compile on MacOS/X instead of Linux? Please note that the
 # performance may not be optimal.
@@ -31,7 +35,7 @@
 # e.g. with extremely long thinking times or massive parallelization;
 # 24 bits of floating_t mantissa become insufficient then.
 
-# DOUBLE=1
+# DOUBLE_FLOATING=1
 
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
@@ -63,6 +67,11 @@ CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3
 
 ### CONFIGURATION END
 
+ifdef MSYS2_64
+	WIN=1
+	WIN_HAVE_NO_REGEX_SUPPORT=1
+	DOUBLE_FLOATING=1
+endif
 
 ifdef WIN
 	SYS_CFLAGS?=
@@ -97,8 +106,8 @@ ifdef DCNN
 	SYS_LIBS:=-lcaffe -lboost_system -lstdc++ $(SYS_LIBS)
 endif
 
-ifdef DOUBLE
-	CUSTOM_CFLAGS+=-DDOUBLE
+ifdef DOUBLE_FLOATING
+	CUSTOM_CFLAGS+=-DDOUBLE_FLOATING
 endif
 
 ifeq ($(PROFILING), gprof)
