@@ -100,10 +100,10 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 }
 
 static void
-dead_group_list(struct uct *u, struct board *b, struct move_queue *mq)
+dead_group_list(struct uct *u, struct board *b, struct move_queue *mq, float thres)
 {
 	enum gj_state gs_array[board_size2(b)];
-	struct group_judgement gj = { .thres = GJ_THRES, .gs = gs_array };
+	struct group_judgement gj = { .thres = thres, .gs = gs_array };
 	board_ownermap_judge_groups(b, &u->ownermap, &gj);
 	groups_of_status(b, &gj, GS_DEAD, mq);
 }
@@ -116,7 +116,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		uct_playout(u, b, color, u->t);
 
 	struct move_queue mq = { .moves = 0 };
-	dead_group_list(u, b, &mq);
+	dead_group_list(u, b, &mq, GJ_THRES);
 	if (pass_all_alive) {
 		for (unsigned int i = 0; i < mq.moves; i++) {
 			if (board_at(b, mq.move[i]) == stone_other(color)) {
@@ -257,41 +257,84 @@ uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd
 }
 
 static void
+print_dead_groups(struct uct *u, struct board *b, struct move_queue *mq)
+{
+	fprintf(stderr, "dead groups (playing %s)\n", (u->my_color ? stone2str(u->my_color) : "???"));
+	if (!mq->moves)
+		fprintf(stderr, "  none\n");
+	for (unsigned int i = 0; i < mq->moves; i++) {
+		fprintf(stderr, "  ");
+		foreach_in_group(b, mq->move[i]) {
+			fprintf(stderr, "%s ", coord2sstr(c, b));
+		} foreach_in_group_end;
+		fprintf(stderr, "\n");
+	}
+}
+
+static void
+print_extra_dead_group(struct board *b, group_t g, int found)
+{
+	if (!found)
+		fprintf(stderr, "also adding\n");
+	fprintf(stderr, "  ");
+	foreach_in_group(b, g) {
+		fprintf(stderr, "%s ", coord2sstr(c, b));
+	} foreach_in_group_end;
+	fprintf(stderr, "\n");	
+}
+
+static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
-
+	bool unknown_color = !u->my_color;
+	
 	/* This means the game is probably over, no use pondering on. */
 	uct_pondering_stop(u);
-
+	
 	if (u->pass_all_alive)
 		return; // no dead groups
-
-	bool mock_state = false;
-
-	if (!u->t) {
-		/* No state, but we cannot just back out - we might
-		 * have passed earlier, only assuming some stones are
-		 * dead, and then re-connected, only to lose counting
-		 * when all stones are assumed alive. */
-		uct_prepare_move(u, b, S_BLACK); assert(u->t);
-		mock_state = true;
-	}
+	
+	/* Create mock state */
+	if (u->t)  reset_state(u);
+	// We need S_BLACK here, but don't clobber u->my_color with uct_genmove_setup() !
+	uct_prepare_move(u, b, S_BLACK); 
+	
 	/* Make sure the ownermap is well-seeded. */
 	while (u->ownermap.playouts < GJ_MINGAMES)
 		uct_playout(u, b, S_BLACK, u->t);
 	/* Show the ownermap: */
 	if (DEBUGL(2))
 		board_print_custom(b, stderr, uct_printhook_ownermap);
+	
+	struct move_queue relaxed; relaxed.moves = 0;
+	dead_group_list(u, b, mq, GJ_THRES);  	// Strict
+	dead_group_list(u, b, &relaxed, 0.55);  // Relaxed
+	if (DEBUGL(2))  print_dead_groups(u, b, mq);
 
-	dead_group_list(u, b, mq);
-
-	if (mock_state) {
-		/* Clean up the mock state in case we will receive
-		 * a genmove; we could get a non-alternating-move
-		 * error from uct_prepare_move() in that case otherwise. */
-		reset_state(u);
+	/* Add own unclear dead groups if it doesn't change the outcome
+	 * and spare opponent a genmove_cleanup phase... */
+	if (!unknown_color) {
+		int found = 0;
+		bool result = pass_is_safe(b, u->my_color, mq);
+		for (unsigned int i = 0; i < relaxed.moves; i++) {
+			group_t g = relaxed.move[i];
+			if (board_at(b, g) != u->my_color || mq_has(mq, g))
+				continue;
+			
+			struct move_queue tmp;  memcpy(&tmp, mq, sizeof(tmp));		       
+			mq_add(&tmp, g, 0);
+			if (result == pass_is_safe(b, u->my_color, &tmp)) {
+				mq_add(mq, g, 0);
+				if (DEBUGL(2))  print_extra_dead_group(b, g, found++);
+			}
+		}
 	}
+
+	/* Clean up the mock state in case we will receive
+	 * a genmove; we could get a non-alternating-move
+	 * error from uct_prepare_move() in that case otherwise. */
+	reset_state(u);
 }
 
 static void

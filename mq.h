@@ -24,6 +24,9 @@ static coord_t mq_pick(struct move_queue *q);
 /* Add a move to the queue. */
 static void mq_add(struct move_queue *q, coord_t c, unsigned char tag);
 
+/* Is move in the queue ? */
+static bool mq_has(struct move_queue *q, coord_t c);
+
 /* Cat two queues together. */
 static void mq_append(struct move_queue *qd, struct move_queue *qs);
 
@@ -58,6 +61,15 @@ mq_add(struct move_queue *q, coord_t c, unsigned char tag)
 	assert(q->moves < MQL);
 	q->tag[q->moves] = tag;
 	q->move[q->moves++] = c;
+}
+
+static inline bool
+mq_has(struct move_queue *q, coord_t c)
+{
+	for (unsigned int i = 0; i < q->moves; i++)
+		if (q->move[i] == c)
+			return true;
+	return false;
 }
 
 static inline void
