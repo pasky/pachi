@@ -104,4 +104,13 @@ coord_done(coord_t *c)
 	free(c);
 }
 
+static inline int 
+move_cmp(struct move *m1, struct move *m2)
+{
+	if (m1->color != m2->color)
+		return m1->color - m2->color;
+	return m1->coord - m2->coord;
+}
+
+
 #endif

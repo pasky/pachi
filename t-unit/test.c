@@ -319,6 +319,8 @@ test_moggy_status(struct board *board, char *arg)
 	return true;   // Not much of a unit test right now =)
 }
 
+bool board_undo_stress_test(struct board *orig, char *arg);
+
 void
 unittest(char *filename)
 {
@@ -359,6 +361,8 @@ unittest(char *filename)
 			passed += test_moggy_moves(b, line + 12);
 		else if (!strncmp(line, "moggy status ", 13)) 
 			passed += test_moggy_status(b, line + 13);
+   		else if (!strncmp(line, "board_undo_stress_test", 22))
+			passed += board_undo_stress_test(b, line + 22); 
 		else {
 			fprintf(stderr, "Syntax error: %s\n", line);
 			exit(EXIT_FAILURE);

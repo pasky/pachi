@@ -1,5 +1,5 @@
 INCLUDES=-I..
-OBJS=test.o
+OBJS=test.o test_undo.o
 
 all: test.a
 test.a: $(OBJS)
