@@ -55,9 +55,6 @@ bool
 can_countercapture(struct board *b, enum stone owner, group_t g,
 		   enum stone to_play, struct move_queue *q, int tag)
 {
-	if (b->clen < 2)
-		return false;
-
 	unsigned int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, g) {

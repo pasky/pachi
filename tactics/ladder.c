@@ -64,27 +64,13 @@ is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	return true;
 }
 
-
-/* This is a rather expensive ladder reader. It can read out any sequences
- * where laddered group should be kept at two liberties. The recursion
- * always makes a "to-be-laddered" move and then considers the chaser's
- * two alternatives (usually, one of them is trivially refutable). The
- * function returns true if there is a branch that ends up with laddered
- * group captured, false if not (i.e. for each branch, laddered group can
- * gain three liberties). */
+static bool middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum stone lcolor);
 
 static bool
-middle_ladder_walk(struct board *b, struct board *bset, group_t laddered, coord_t nextmove, enum stone lcolor)
+check_middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum stone lcolor)
 {
-	assert(board_group_info(b, laddered).libs == 1);
-
-	/* First, escape. */
-	if (DEBUGL(6))
-		fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove, b));
-	struct move m = { nextmove, lcolor };
-	int res = board_play(b, &m);
 	laddered = group_at(b, laddered);
-	assert(res >= 0);
+
 	if (DEBUGL(8)) {
 		board_print(b, stderr);
 		fprintf(stderr, "%s c %d\n", coord2sstr(laddered, b), board_group_info(b, laddered).libs);
@@ -101,7 +87,7 @@ middle_ladder_walk(struct board *b, struct board *bset, group_t laddered, coord_
 		return false;
 	}
 
-	foreach_neighbor(b, m.coord, {
+	foreach_neighbor(b, nextmove, {
 		if (board_at(b, c) == stone_other(lcolor) && board_group_info(b, group_at(b, c)).libs == 1) {
 			/* We can capture one of the ladder stones
 			 * anytime later. */
@@ -128,31 +114,51 @@ middle_ladder_walk(struct board *b, struct board *bset, group_t laddered, coord_
 
 	/* Try out the alternatives. */
 	bool is_ladder = false;
-	for (int i = 0; !is_ladder && i < libs; i++) {
-		struct board *b2 = b;
-		if (i != libs - 1) {
-			b2 = bset++;
-			board_copy(b2, b);
-		}
-
-		coord_t ataristone = board_group_info(b2, laddered).lib[liblist[i]];
+	for (int i = 0; !is_ladder && i < libs; i++) {		
+		coord_t ataristone = board_group_info(b, laddered).lib[liblist[i]];
 		// coord_t escape = board_group_info(b2, laddered).lib[1 - liblist[i]];
-		struct move m = { ataristone, stone_other(lcolor) };
-		int res = board_play(b2, &m);
-		/* If we just played self-atari, abandon ship. */
-		/* XXX: If we were very lucky, capturing this stone will
-		 * not help us escape. That should be pretty rate. */
-		if (DEBUGL(6))
-			fprintf(stderr, "(%d=%d) ladder atari %s (%d libs)\n", i, res, coord2sstr(ataristone, b2), board_group_info(b2, group_at(b2, ataristone)).libs);
-		if (res >= 0 && board_group_info(b2, group_at(b2, ataristone)).libs > 1)
-			is_ladder = middle_ladder_walk(b2, bset, laddered, board_group_info(b2, laddered).lib[0], lcolor);
 
-		if (i != libs - 1) {
-			board_done_noalloc(b2);
-		}
+		with_move(b, ataristone, stone_other(lcolor), {
+			/* If we just played self-atari, abandon ship. */
+			/* XXX: If we were very lucky, capturing this stone will
+			 * not help us escape. That should be pretty rate. */
+				if (DEBUGL(6))
+					fprintf(stderr, "(%d=0) ladder atari %s (%d libs)\n", i, coord2sstr(ataristone, b), board_group_info(b, group_at(b, ataristone)).libs);
+				if (board_group_info(b, group_at(b, ataristone)).libs > 1)
+					is_ladder = middle_ladder_walk(b, laddered, board_group_info(b, laddered).lib[0], lcolor);
+		});
+
 	}
 	if (DEBUGL(6))
 		fprintf(stderr, "propagating %d\n", is_ladder);
+
+	return is_ladder;
+}
+
+
+
+/* This is a rather expensive ladder reader. It can read out any sequences
+ * where laddered group should be kept at two liberties. The recursion
+ * always makes a "to-be-laddered" move and then considers the chaser's
+ * two alternatives (usually, one of them is trivially refutable). The
+ * function returns true if there is a branch that ends up with laddered
+ * group captured, false if not (i.e. for each branch, laddered group can
+ * gain three liberties). */
+
+static bool
+middle_ladder_walk(struct board *b, group_t laddered, coord_t nextmove, enum stone lcolor)
+{
+	bool is_ladder = false;
+	assert(board_group_info(b, laddered).libs == 1);
+
+	/* First, escape. */
+	if (DEBUGL(6))
+		fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove, b));
+
+	with_move_strict(b, nextmove, lcolor, {
+		is_ladder = check_middle_ladder_walk(b, laddered, nextmove, lcolor);
+	});
+
 	return is_ladder;
 }
 
@@ -176,30 +182,19 @@ is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	 * space to escape. Time for the expensive stuff - set up a temporary
 	 * board and start selective 2-liberty search. */
 
-	struct board *bset = malloc2(BOARD_MAX_SIZE * 2 * sizeof(struct board));
-
 	struct move_queue ccq = { .moves = 0 };
 	if (can_countercapture(b, lcolor, laddered, lcolor, &ccq, 0)) {
 		/* We could escape by countercapturing a group.
 		 * Investigate. */
 		assert(ccq.moves > 0);
 		for (unsigned int i = 0; i < ccq.moves; i++) {
-			struct board b2;
-			board_copy(&b2, b);
-			bool is_ladder = middle_ladder_walk(&b2, bset, laddered, ccq.move[i], lcolor);
-			board_done_noalloc(&b2);
-			if (!is_ladder) {
-				free(bset);
+			bool is_ladder = middle_ladder_walk(b, laddered, ccq.move[i], lcolor);
+			if (!is_ladder) 
 				return false;
-			}
 		}
 	}
 
-	struct board b2;
-	board_copy(&b2, b);
-	bool is_ladder = middle_ladder_walk(&b2, bset, laddered, board_group_info(&b2, laddered).lib[0], lcolor);
-	board_done_noalloc(&b2);
-	free(bset);
+	bool is_ladder = middle_ladder_walk(b, laddered, board_group_info(b, laddered).lib[0], lcolor);
 	return is_ladder;
 }
 
@@ -226,16 +221,9 @@ wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chasel
 	}
 
 	bool is_ladder = false;
-	struct board *bset = malloc2(BOARD_MAX_SIZE * 2 * sizeof(struct board));
-	struct board b2;
-	board_copy(&b2, b);
-
-	struct move m = { chaselib, stone_other(lcolor) };
-	int res = board_play(&b2, &m);
-	if (res >= 0)
-		is_ladder = middle_ladder_walk(&b2, bset, group, board_group_info(&b2, group).lib[0], lcolor);
-
-	board_done_noalloc(&b2);
-	free(bset);
+	with_move(b, chaselib, stone_other(lcolor), {
+		is_ladder = middle_ladder_walk(b, group, board_group_info(b, group).lib[0], lcolor);
+	});
+	
 	return is_ladder;
 }
