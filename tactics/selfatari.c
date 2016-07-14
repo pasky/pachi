@@ -738,7 +738,8 @@ found:;
 		coord_t lib2;
 		/* Can we get liberties by capturing a neighbor? */
 		struct move_queue ccq; ccq.moves = 0;
-		if (can_countercapture(b, color, group, color, &ccq, 0)) {
+		if (board_at(b, group) == color &&
+		    can_countercapture(b, group, &ccq, 0)) {
 			lib2 = mq_pick(&ccq);
 
 		} else {

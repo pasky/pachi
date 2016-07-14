@@ -9,11 +9,11 @@
 struct move_queue;
 
 
-/* For given atari group @group owned by @owner, decide if @to_play
- * can save it / keep it in danger by dealing with one of the
- * neighboring groups. */
-bool can_countercapture(struct board *b, enum stone owner, group_t g,
-		        enum stone to_play, struct move_queue *q, int tag);
+/* Can group @group usefully capture a neighbor ? 
+ * (usefully: not a snapback) */
+bool can_countercapture(struct board *b, group_t group, struct move_queue *q, int tag);
+/* Can group @group capture *any* neighbor ? */
+bool can_countercapture_any(struct board *b, group_t group, struct move_queue *q, int tag);
 
 /* Examine given group in atari, suggesting suitable moves for player
  * @to_play to deal with it (rescuing or capturing it). */

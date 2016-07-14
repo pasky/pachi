@@ -10,6 +10,7 @@
 #include "tactics/selfatari.h"
 #include "tactics/dragon.h"
 #include "tactics/ladder.h"
+#include "tactics/1lib.h"
 #include "random.h"
 #include "playout.h"
 #include "timeinfo.h"
@@ -158,6 +159,35 @@ test_ladder(struct board *b, char *arg)
 	}
 
 	return (rres == eres);
+}
+
+static bool
+test_can_countercapture(struct board *b, char *arg)
+{
+	coord_t c = str2scoord(arg, board_size(b));
+	arg += strcspn(arg, " ") + 1;
+	int eres = atoi(arg);
+
+	board_print_test(2, b);
+	if (DEBUGL(1))
+		printf("can_countercap %s %d...\t", coord2sstr(c, b), eres);
+
+	enum stone color = board_at(b, c);
+	group_t g = group_at(b, c);
+	assert(color == S_BLACK || color == S_WHITE);
+	int rres = can_countercapture(b, g, NULL, 0);
+
+	if (rres == eres) {
+		if (DEBUGL(1))
+			printf("OK\n");
+	} else {
+		if (debug_level <= 2) {
+			board_print_test(0, b);
+			printf("can_countercap %s %d...\t", coord2sstr(c, b), eres);
+		}
+		printf("FAILED (%d)\n", rres);
+	}
+	return rres == eres;
 }
 
 
@@ -387,6 +417,8 @@ unittest(char *filename)
 			passed += test_sar(b, line + 4); 
 		else if (!strncmp(line, "ladder ", 7))
 			passed += test_ladder(b, line + 7);
+		else if (!strncmp(line, "can_countercap ", 15))
+			passed += test_can_countercapture(b, line + 15); 
 		else if (!strncmp(line, "two_eyes ", 9))
 			passed += test_two_eyes(b, line + 9); 
 		else if (!strncmp(line, "moggy moves ", 12)) 
