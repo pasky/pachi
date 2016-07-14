@@ -8,6 +8,7 @@
 #include "board.h"
 #include "debug.h"
 #include "tactics/selfatari.h"
+#include "tactics/dragon.h"
 #include "tactics/ladder.h"
 #include "random.h"
 #include "playout.h"
@@ -95,7 +96,6 @@ set_ko(struct board *b, char *arg)
 }
 
 
-
 static bool
 test_sar(struct board *b, char *arg)
 {
@@ -125,6 +125,7 @@ test_sar(struct board *b, char *arg)
 	}
 	return rres == eres;
 }
+
 
 static bool
 test_ladder(struct board *b, char *arg)
@@ -157,6 +158,35 @@ test_ladder(struct board *b, char *arg)
 	}
 
 	return (rres == eres);
+}
+
+
+static bool
+test_two_eyes(struct board *b, char *arg)
+{
+	coord_t c = str2scoord(arg, board_size(b));
+	arg += strcspn(arg, " ") + 1;
+	int eres = atoi(arg);
+
+	board_print_test(2, b);
+	if (DEBUGL(1))
+		printf("two_eyes %s %d...\t", coord2sstr(c, b), eres);
+
+	enum stone color = board_at(b, c);
+	assert(color == S_BLACK || color == S_WHITE);
+	int rres = dragon_is_safe(b, group_at(b, c), color);
+
+	if (rres == eres) {
+		if (DEBUGL(1))
+			printf("OK\n");
+	} else {
+		if (debug_level <= 2) {
+			board_print_test(0, b);
+			printf("two_eyes %s %d...\t", coord2sstr(c, b), eres);
+		}
+		printf("FAILED (%d)\n", rres);
+	}
+	return rres == eres;
 }
 
 
@@ -357,6 +387,8 @@ unittest(char *filename)
 			passed += test_sar(b, line + 4); 
 		else if (!strncmp(line, "ladder ", 7))
 			passed += test_ladder(b, line + 7);
+		else if (!strncmp(line, "two_eyes ", 9))
+			passed += test_two_eyes(b, line + 9); 
 		else if (!strncmp(line, "moggy moves ", 12)) 
 			passed += test_moggy_moves(b, line + 12);
 		else if (!strncmp(line, "moggy status ", 13)) 

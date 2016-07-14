@@ -480,6 +480,38 @@ board_print_custom(struct board *board, FILE *f, board_cprint cprint, void *data
 }
 
 static char *
+board_hprint_row(struct board *board, int y, char *s, char *end, board_print_handler handler, void *data)
+{
+        s += snprintf(s, end - s, " %2d | ", y);
+        for (int x = 1; x < board_size(board) - 1; x++) {
+                char *stone_str = handler(board, coord_xy(board, x, y), data);
+                if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
+                        s += snprintf(s, end - s, "%s)", stone_str);
+                else
+                        s += snprintf(s, end - s, "%s ", stone_str);
+        }
+        s += snprintf(s, end - s, "|");
+        s += snprintf(s, end - s, "\n");
+        return s;
+}
+
+void
+board_hprint(struct board *board, FILE *f, board_print_handler handler, void *data)
+{
+        char buf[10240];
+        char *s = buf;
+        char *end = buf + sizeof(buf);
+        s += snprintf(s, end - s, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
+                board->moves, board->komi, board->handicap,
+                board->captures[S_BLACK], board->captures[S_WHITE]);
+        s = board_print_top(board, s, end, 1);
+        for (int y = board_size(board) - 2; y >= 1; y--)
+                s = board_hprint_row(board, y, s, end, handler, data);
+        board_print_bottom(board, s, end, 1);
+        fprintf(f, "%s\n", buf);        
+}
+
+static char *
 cprint_group(struct board *board, coord_t c, char *s, char *end, void *data)
 {
 	s += snprintf(s, end - s, "%d ", group_base(group_at(board, c)));
