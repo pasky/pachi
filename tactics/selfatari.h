@@ -1,7 +1,7 @@
 #ifndef PACHI_TACTICS_SELFATARI_H
 #define PACHI_TACTICS_SELFATARI_H
 
-/* A fairly reliable elf-atari detector. */
+/* A fairly reliable self-atari detector. */
 
 #include "board.h"
 #include "debug.h"
@@ -12,6 +12,9 @@
  * tactical check, allowing self-atari moves that are nakade, eye falsification
  * or throw-ins. */
 static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
+
+/* Check if move results in self-atari. */
+static bool is_selfatari(struct board *b, enum stone color, coord_t to);
 
 /* Move (color, coord) is a selfatari; this means that it puts a group of
  * ours in atari; i.e., the group has two liberties now. Return the other
@@ -32,5 +35,24 @@ is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 
 	return is_bad_selfatari_slow(b, color, to);
 }
+
+/* TODO use static rule instead ... */
+static inline bool
+is_selfatari(struct board *b, enum stone color, coord_t to)
+{
+        /* More than one immediate liberty, thumbs up! */
+        if (immediate_liberty_count(b, to) > 1)
+                return false;
+
+        bool r = true;
+        with_move(b, to, color, {
+                group_t g = group_at(b, to);
+                if (g && board_group_info(b, g).libs > 1)
+                        r = false;
+        });
+
+        return r;
+}
+
 
 #endif

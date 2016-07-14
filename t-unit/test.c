@@ -162,6 +162,40 @@ test_ladder(struct board *b, char *arg)
 }
 
 static bool
+test_useful_ladder(struct board *b, char *arg)
+{
+	enum stone color = str2stone(arg);
+	arg += 2;
+	coord_t *cc = str2coord(arg, board_size(b));
+	coord_t c = *cc; coord_done(cc);
+	arg += strcspn(arg, " ") + 1;
+	int eres = atoi(arg);
+
+	board_print_test(2, b);
+	if (DEBUGL(1))
+		printf("useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	
+	assert(board_at(b, c) == S_NONE);
+	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
+	assert(atari_neighbor);
+	int ladder = is_ladder(b, c, atari_neighbor, true);  assert(ladder);
+	int rres = useful_ladder(b, atari_neighbor);
+	
+	if (rres == eres) {
+		if (DEBUGL(1))
+			printf("OK\n");
+	} else {
+		if (debug_level <= 2) {
+			board_print_test(0, b);
+			printf("useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+		}
+		printf("FAILED (%d)\n", rres);
+	}
+
+	return (rres == eres);
+}
+
+static bool
 test_can_countercapture(struct board *b, char *arg)
 {
 	coord_t c = str2scoord(arg, board_size(b));
@@ -417,6 +451,8 @@ unittest(char *filename)
 			passed += test_sar(b, line + 4); 
 		else if (!strncmp(line, "ladder ", 7))
 			passed += test_ladder(b, line + 7);
+		else if (!strncmp(line, "useful_ladder ", 14))
+			passed += test_useful_ladder(b, line + 14);
 		else if (!strncmp(line, "can_countercap ", 15))
 			passed += test_can_countercapture(b, line + 15); 
 		else if (!strncmp(line, "two_eyes ", 9))
