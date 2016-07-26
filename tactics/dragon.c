@@ -98,8 +98,6 @@ board_print_dragons(struct board *board, FILE *f)
 #define own_stone_atxy(x, y)    (board_atxy(b, (x), (y)) == color)
 #define enemy_stone_atxy(x, y)  (board_atxy(b, (x), (y)) == stone_other(color))
 
-static bool
-is_controlled_eye_point(struct board *b, coord_t to, enum stone color);
 
 /* Check if g and g2 are virtually connected through lib.
  * c2 is a stone of g2 next to lib */
@@ -356,7 +354,7 @@ big_eye_area(struct board *b, enum stone color, coord_t around, int *visited)
  * Opponent can't play there or we can capture if he does.
  * TODO - could make tiger mouth check smarter (check selfatari) 
  *      - handle more exotic cases (ladders ?) */
-static bool
+bool
 is_controlled_eye_point(struct board *b, coord_t to, enum stone color)
 {
 	assert(no_stone_at(to));

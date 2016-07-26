@@ -21,6 +21,7 @@
 #include "tactics/ladder.h"
 #include "tactics/nakade.h"
 #include "tactics/selfatari.h"
+#include "tactics/seki.h"
 #include "uct/prior.h"
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
@@ -97,6 +98,12 @@ struct moggy_policy {
 	double mq_prob[MQ_MAX], tenuki_prob;
 };
 
+/* Per simulation state (moggy_policy is shared by all threads) */
+struct moggy_state {
+	/* Selfatari move rejected by permit() during the last move(s).
+	 * Logic may not kick in immediately so we have room for both colors. */
+	coord_t last_selfatari[S_MAX];
+};
 
 static char moggy_patterns_src[PAT3_N][11] = {
 	/* hane pattern - enclosing hane */	/* 0.52 */
@@ -299,10 +306,11 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 	}
 }
 
-static void
+static int
 local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
+	int force = false;
 
 	/* Did the opponent play a self-atari? */
 	if (board_group_info(b, group_at(b, m->coord)).libs == 1) {
@@ -313,11 +321,21 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs != 1)
 			continue;
-		group_atari_check(pp->alwaysccaprate, b, g, stone_other(m->color), q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
+
+		// Always defend big groups
+		enum stone to_play = stone_other(m->color);
+		enum stone color = board_at(b, group_base(g));
+		if (to_play == color &&			// Defender
+		    group_stone_count(b, g, 5) >= 3)
+			force = true;
+		
+		group_atari_check(pp->alwaysccaprate, b, g, to_play, q, NULL, pp->middle_ladder, 1<<MQ_LATARI);
 	});
 
 	if (PLDEBUGL(5))
 		mq_print(q, b, "Local atari");
+
+	return (force || pp->lcapturerate > fast_random(100));
 }
 
 
@@ -371,6 +389,40 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 
 	if (PLDEBUGL(5))
 		mq_print(q, b, "Local 2lib");
+}
+
+static void
+local_2lib_capture_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+{
+	struct moggy_policy *pp = p->data;
+	group_t group = group_at(b, m->coord), group2 = 0;
+
+	/* Nothing there normally since opponent avoided bad selfatari ... */
+	if (board_group_info(b, group).libs == 2) {
+		group_2lib_capture_check(b, group, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+#if 0
+		/* We always prefer to take off an enemy chain liberty
+		 * before pulling out ourselves. */
+		/* XXX: We aren't guaranteed to return to that group
+		 * later. */
+		if (q->moves)
+			return q->move[fast_random(q->moves)];
+#endif
+	}
+
+	/* Then he took a third liberty from neighboring chain? */
+	foreach_neighbor(b, m->coord, {
+		if (board_at(b, c) != m->color)  /* Not opponent group, skip */
+			continue;
+		group_t g = group_at(b, c);
+		if (!g || g == group || g == group2 || board_group_info(b, g).libs != 2)
+			continue;
+		group_2lib_capture_check(b, g, stone_other(m->color), q, 1<<MQ_L2LIB, pp->atari_miaisafe, pp->atari_def_no_hopeless);
+		group2 = g; // prevent trivial repeated checks
+	});
+
+	if (PLDEBUGL(5))
+		mq_print(q, b, "Local 2lib capture");
 }
 
 static void
@@ -556,6 +608,8 @@ static coord_t
 playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
 {
 	struct moggy_policy *pp = p->data;
+	struct moggy_state *ps = b->ps;
+	enum stone other_color = stone_other(to_play);
 
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
@@ -572,10 +626,10 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	/* Local checks */
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
-		if (pp->lcapturerate > fast_random(100)) {
-			struct move_queue q;  q.moves = 0;
-			local_atari_check(p, b, &b->last_move, &q);
-			if (q.moves > 0)
+		if (true) {  // pp->lcapturerate check in local_atari_check()
+			struct move_queue q; q.moves = 0;
+			if (local_atari_check(p, b, &b->last_move, &q) && 
+			    q.moves > 0)
 				return mq_pick(&q);
 		}
 
@@ -583,6 +637,18 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		if (pp->ladderrate > fast_random(100)) {
 			struct move_queue q; q.moves = 0;
 			local_ladder_check(p, b, &b->last_move, &q);
+			if (q.moves > 0)
+				return mq_pick(&q);
+		}
+
+		/* Did we just reject selfatari move as opponent ?
+		 * Check if his group can be laddered / put in atari */
+		if (ps->last_selfatari[other_color] &&
+		    pp->atarirate > fast_random(100)) {
+			struct move_queue q; q.moves = 0;
+			struct move m = { .coord = ps->last_selfatari[other_color], .color = other_color };			
+			ps->last_selfatari[other_color] = 0;  /* Clear */
+			local_2lib_capture_check(p, b, &m, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
@@ -969,29 +1035,37 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 	} foreach_free_point_end;
 }
 
+
+#define permit_move(c)  playout_permit(p, b, c, m->color)
+
+/* alt parameter tells permit if we just want a yes/no answer for this move
+ * (alt=false) or we're ok with redirects if it doesn't pass (alt=true).
+ * Every playout move must pass permit() before being played. When permit()
+ * wants to suggest another move we need to validate this move as well, so
+ * permit() needs to call permit() again on that move. This time alt will be
+ * false though (we just want a yes/no answer) so it won't recurse again. */
 static bool
-playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
+playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt)
 {
 	struct moggy_policy *pp = p->data;
+	struct moggy_state *ps = b->ps;
 
-	/* The idea is simple for now - never allow self-atari moves.
+	/* The idea is simple for now - never allow bad self-atari moves.
 	 * They suck in general, but this also permits us to actually
 	 * handle seki in the playout stage. */
 
-	if (fast_random(100) >= pp->selfatarirate) {
-		if (PLDEBUGL(5))
-			fprintf(stderr, "skipping sar test\n");
-		goto sar_skip;
-	}
-	bool selfatari = is_bad_selfatari(b, m->color, m->coord);
-	if (selfatari) {
+	int bad_selfatari = (pp->selfatarirate > fast_random(100) ? 
+			     is_bad_selfatari(b, m->color, m->coord) :
+			     is_really_bad_selfatari(b, m->color, m->coord));
+	if (bad_selfatari) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
 				stone2str(m->color), coord2sstr(m->coord, b));
-		if (pp->selfatari_other) {
+		if (alt && pp->selfatari_other) {
+			ps->last_selfatari[m->color] = m->coord;
 			/* Ok, try the other liberty of the atari'd group. */
 			coord_t c = selfatari_cousin(b, m->color, m->coord, NULL);
-			if (is_pass(c)) return false;
+			if (!permit_move(c)) return false;
 			if (PLDEBUGL(5))
 				fprintf(stderr, "___ Redirecting to other lib %s\n",
 					coord2sstr(c, b));
@@ -1000,36 +1074,36 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m)
 		}
 		return false;
 	}
-sar_skip:
 
 	/* Check if we don't seem to be filling our eye. This should
 	 * happen only for false eyes, but some of them are in fact
 	 * real eyes with diagonal filled by a dead stone. Prefer
 	 * to counter-capture in that case. */
-	if (fast_random(100) >= pp->eyefillrate) {
+	if (!alt || fast_random(100) >= pp->eyefillrate) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "skipping eyefill test\n");
 		goto eyefill_skip;
 	}
 	bool eyefill = board_is_eyelike(b, m->coord, m->color);
-	if (eyefill) {
+	/* If saving a group in atari don't interfere ! */
+	if (eyefill && !board_get_atari_neighbor(b, m->coord, m->color)) {
 		foreach_diag_neighbor(b, m->coord) {
 			if (board_at(b, c) != stone_other(m->color))
 				continue;
 			switch (board_group_info(b, group_at(b, c)).libs) {
 			case 1: /* Capture! */
 				c = board_group_info(b, group_at(b, c)).lib[0];
-				if (PLDEBUGL(5))
-					fprintf(stderr, "___ Redirecting to capture %s\n",
-						coord2sstr(c, b));
-				m->coord = c;
-				return true;
+				if (permit_move(c)) {
+					if (PLDEBUGL(5))
+						fprintf(stderr, "___ Redirecting to capture %s\n",
+							coord2sstr(c, b));
+					m->coord = c;
+					return true;
+				}
 			case 2: /* Try to switch to some 2-lib neighbor. */
 				for (int i = 0; i < 2; i++) {
 					coord_t l = board_group_info(b, group_at(b, c)).lib[i];
-					if (board_is_one_point_eye(b, l, board_at(b, c)))
-						continue;
-					if (is_bad_selfatari(b, m->color, l))
+					if (!permit_move(l))
 						continue;
 					m->coord = l;
 					return true;
@@ -1040,7 +1114,20 @@ sar_skip:
 	}
 
 eyefill_skip:
+	if (breaking_3_stone_seki(b, m->coord, m->color))
+		return false;
+
 	return true;
+}
+
+static void
+playout_moggy_setboard(struct playout_policy *playout_policy, struct board *b)
+{
+	if (b->ps)
+		return;
+	struct moggy_state *ps = malloc2(sizeof(struct moggy_state));
+	ps->last_selfatari[S_BLACK] = ps->last_selfatari[S_WHITE] = 0;
+	b->ps = ps;
 }
 
 struct playout_policy *
@@ -1049,6 +1136,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
 	p->data = pp;
+	p->setboard = playout_moggy_setboard;
+	p->setboard_randomok = true;
 	p->choose = playout_moggy_seqchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;

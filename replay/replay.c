@@ -37,6 +37,7 @@ replay_sample_moves(struct engine *e, struct board *b, enum stone color,
 		    int *played, int *pmost_played)
 {
 	struct replay *r = e->data;
+	struct playout_policy *policy = r->playout;
 	struct playout_setup setup;	        memset(&setup, 0, sizeof(setup));
 	struct move m = { .coord = pass, .color = color };
 	int most_played = 0;
@@ -45,6 +46,9 @@ replay_sample_moves(struct engine *e, struct board *b, enum stone color,
         for (int i = 0; i < r->runs; i++) {
 		struct board b2;
 		board_copy(&b2, b);
+		
+		if (policy->setboard)
+			policy->setboard(policy, &b2);
 		
 		if (DEBUGL(4))  fprintf(stderr, "---------------------------------\n");		
 		coord_t c = play_random_move(&setup, &b2, color, r->playout);		

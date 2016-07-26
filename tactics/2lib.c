@@ -9,6 +9,7 @@
 #include "debug.h"
 #include "mq.h"
 #include "tactics/2lib.h"
+#include "tactics/ladder.h"
 #include "tactics/selfatari.h"
 
 
@@ -239,7 +240,8 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 			if (board_at(b, c) != stone_other(color))
 				continue;
 			group_t g2 = group_at(b, c);
-			if (board_group_info(b, g2).libs == 1) {
+			if (board_group_info(b, g2).libs == 1 &&
+			    board_is_valid_play(b, to_play, board_group_info(b, g2).lib[0])) {
 				/* We can capture a neighbor. */
 				mq_add(q, board_group_info(b, g2).lib[0], tag);
 				mq_nodup(q);
@@ -251,3 +253,58 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 		});
 	} foreach_in_group_end;
 }
+
+
+bool
+can_capture_2lib_group(struct board *b, group_t g, enum stone color,
+		       struct move_queue *q, int tag)
+{
+	assert(board_group_info(b, g).libs == 2);
+	for (int i = 0; i < 2; i++) {
+		coord_t lib = board_group_info(b, g).lib[i];
+		coord_t other = board_group_info(b, g).lib[1 - i];
+		//fprintf(stderr, "can_capture_2lib_group(): checking %s\n", coord2sstr(lib, b));
+		if (wouldbe_ladder_any(b, g, other, lib, color)) {
+			if (q)
+				mq_add(q, lib, tag);
+			return true;
+		}
+	}	
+	return false;
+}
+
+void
+group_2lib_capture_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+{
+	enum stone color = board_at(b, group_base(group));
+	assert(color != S_OFFBOARD && color != S_NONE);
+	
+	if (DEBUGL(5))
+		fprintf(stderr, "[%s] 2lib capture check of color %d\n",
+			coord2sstr(group, b), color);
+
+	if (to_play != color) {  /* Attacker */		
+		can_capture_2lib_group(b, group, color, q, tag);
+		return;
+	}
+
+	/* Can we counter-atari another group, if we are the defender? */
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			if (board_at(b, c) != stone_other(color))
+				continue;
+			group_t g2 = group_at(b, c);
+			if (board_group_info(b, g2).libs == 1 &&
+			    board_is_valid_play(b, to_play, board_group_info(b, g2).lib[0])) {
+				/* We can capture a neighbor. */
+				mq_add(q, board_group_info(b, g2).lib[0], tag);
+				mq_nodup(q);
+				continue;
+			}
+			if (board_group_info(b, g2).libs != 2)
+				continue;
+			can_capture_2lib_group(b, g2, stone_other(color), q, tag);
+		});
+	} foreach_in_group_end;
+}
+

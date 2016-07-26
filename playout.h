@@ -19,7 +19,7 @@ struct playout_setup;
  * (but not assess/permit calls!) will all be made on the same board; if
  * setboard is used, it is guaranteed that choose will pick all moves played
  * on the board subsequently. The routine is expected to initialize b->ps
- * with internal data. At the playout end, b->ps will be simply free()d,
+ * with internal data. b->ps will be simply free()d when board is destroyed,
  * so make sure all data is within single allocated block. */
 typedef void (*playoutp_setboard)(struct playout_policy *playout_policy, struct board *b);
 
@@ -32,8 +32,10 @@ typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct
  * just use uct/prior.h:add_prior_value(). */
 typedef void (*playoutp_assess)(struct playout_policy *playout_policy, struct prior_map *map, int games);
 
-/* Allow play of randomly selected move. */
-typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m);
+/* Whether to allow given move. All playout moves must pass permit()
+ * before being played. if alt parameter is true policy may suggest
+ * another move if this one doesn't pass (in which case m will be changed) */
+typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m, bool alt);
 
 /* Tear down the policy state; policy and policy->data will be free()d by caller. */
 typedef void (*playoutp_done)(struct playout_policy *playout_policy);
@@ -110,6 +112,10 @@ int play_random_game(struct playout_setup *setup,
 coord_t play_random_move(struct playout_setup *setup,
 		         struct board *b, enum stone color,
 		         struct playout_policy *policy);
+
+/* Is *this* move permitted ? 
+ * Called by policy permit() to check something so never the main permit() call. */
+bool playout_permit(struct playout_policy *p, struct board *b, coord_t coord, enum stone color);
 
 void playout_policy_done(struct playout_policy *p);
 

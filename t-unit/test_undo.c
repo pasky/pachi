@@ -125,9 +125,9 @@ test_undo(struct board *orig, coord_t c, enum stone color)
 static playoutp_permit policy_permit = NULL;
 
 static bool
-permit_hook(struct playout_policy *playout_policy, struct board *b, struct move *m)
+permit_hook(struct playout_policy *playout_policy, struct board *b, struct move *m, bool alt)
 {
-	bool permit = (policy_permit ? policy_permit(playout_policy, b, m) : true);
+	bool permit = (policy_permit ? policy_permit(playout_policy, b, m, alt) : true);
 	if (!permit)
 		return false;
 	

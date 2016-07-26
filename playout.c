@@ -21,13 +21,55 @@
 #define PLDEBUGL(n) DEBUGL_(policy->debug_level, n)
 
 
+/* Full permit logic, ie m->coord may get changed to an alternative move */
+static bool
+playout_permit_move(struct playout_policy *p, struct board *b, struct move *m, bool alt)
+{	
+	coord_t coord = m->coord;
+	if (coord == pass || coord == resign)
+		return false;
+
+	if (!board_permit(b, m, NULL) ||
+	    (p->permit && !p->permit(p, b, m, alt)))
+		return false;
+
+	return true;
+}
+
+/* Return coord if move is ok, an alternative move or pass if not */
+static coord_t
+playout_check_move(struct playout_policy *p, struct board *b, coord_t coord, enum stone color)
+{
+	struct move m = { .coord = coord, .color = color };
+	if (!playout_permit_move(p, b, &m, 1))
+		return pass;
+	return m.coord;
+}
+
+/* Is *this* move permitted ? 
+ * Called by policy permit() to check something so never the main permit() call. */
+bool
+playout_permit(struct playout_policy *p, struct board *b, coord_t coord, enum stone color)
+{
+	struct move m = { .coord = coord, .color = color };
+	return playout_permit_move(p, b, &m, 0);
+}
+
+static bool
+permit_handler(struct board *b, struct move *m, void *data)
+{
+	struct playout_policy *policy = data;
+	return playout_permit_move(policy, b, m, 1);
+}
+
+
 coord_t
 play_random_move(struct playout_setup *setup,
 		 struct board *b, enum stone color,
 		 struct playout_policy *policy)
 {
 	coord_t coord = pass;
-
+	
 	if (setup->prepolicy_hook) {
 		coord = setup->prepolicy_hook(policy, setup, b, color);
 		// fprintf(stderr, "prehook: %s\n", coord2sstr(coord, b));
@@ -35,6 +77,7 @@ play_random_move(struct playout_setup *setup,
 
 	if (is_pass(coord)) {
 		coord = policy->choose(policy, setup, b, color);
+		coord = playout_check_move(policy, b, coord, color);
 		// fprintf(stderr, "policy: %s\n", coord2sstr(coord, b));
 	}
 
@@ -44,12 +87,12 @@ play_random_move(struct playout_setup *setup,
 	}
 
 	if (is_pass(coord)) {
-play_random:
+	play_random:
 		/* Defer to uniformly random move choice. */
 		/* This must never happen if the policy is tracking
 		 * internal board state, obviously. */
 		assert(!policy->setboard || policy->setboard_randomok);
-		board_play_random(b, color, &coord, (ppr_permit) policy->permit, policy);
+		board_play_random(b, color, &coord, permit_handler, policy);
 
 	} else {
 		struct move m;
@@ -154,15 +197,13 @@ play_random_game(struct playout_setup *setup,
 	if (ownermap)
 		board_ownermap_fill(ownermap, b);
 
-	if (b->ps)
-		free(b->ps);
-
 #ifdef DEBUGL_BY_PLAYOUT
 	debug_level = debug_level_orig;
 #endif
 
 	return result;
 }
+
 
 void
 playout_policy_done(struct playout_policy *p)
@@ -171,3 +212,5 @@ playout_policy_done(struct playout_policy *p)
 	if (p->data) free(p->data);
 	free(p);
 }
+
+

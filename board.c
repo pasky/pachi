@@ -225,6 +225,7 @@ board_copy(struct board *b2, struct board *b1)
 
 	// XXX: Special semantics.
 	b2->fbook = NULL;
+	b2->ps = NULL;
 
 	return b2;
 }
@@ -234,6 +235,7 @@ board_done_noalloc(struct board *board)
 {
 	if (board->b) free(board->b);
 	if (board->fbook) fbook_done(board->fbook);
+	if (board->ps) free(board->ps);
 }
 
 void
@@ -1870,6 +1872,15 @@ int board_undo(struct board *board)
 	return 0;
 }
 
+bool
+board_permit(struct board *b, struct move *m, void *data)
+{
+	if (unlikely(board_is_one_point_eye(b, m->coord, m->color)) /* bad idea to play into one, usually */
+	    || !board_is_valid_move(b, m))
+		return false;
+	return true;
+}
+
 static inline bool
 board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, ppr_permit permit, void *permit_data)
 {
@@ -1877,9 +1888,8 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
 		fprintf(stderr, "trying random move %d: %d,%d %s %d\n", f, coord_x(*coord, b), coord_y(*coord, b), coord2sstr(*coord, b), board_is_valid_move(b, &m));
-	if (unlikely(board_is_one_point_eye(b, *coord, color)) /* bad idea to play into one, usually */
-		|| !board_is_valid_move(b, &m)
-		|| (permit && !permit(permit_data, b, &m)))
+	permit = (permit ? permit : board_permit);
+	if (!permit(b, &m, permit_data))
 		return false;
 	if (m.coord == *coord) {
 		return likely(board_play_f(b, &m, f, NULL) >= 0);
