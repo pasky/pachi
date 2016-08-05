@@ -28,7 +28,7 @@
 # If Caffe is in a custom directory you can set it here.
 
 #DCNN=1
-#CAFFE_LIB=/usr/local/lib
+#CAFFE_PREFIX=/usr/local
 
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
@@ -96,8 +96,9 @@ else
 endif
 endif
 
-ifdef CAFFE_LIB
-	SYS_LDFLAGS+=-L$(CAFFE_LIB)
+ifdef CAFFE_PREFIX
+	SYS_LDFLAGS+=-L$(CAFFE_PREFIX)/lib -Wl,-rpath=$(CAFFE_PREFIX)/lib
+	CXXFLAGS+=-I$(CAFFE_PREFIX)/include
 endif
 
 ifdef DCNN
