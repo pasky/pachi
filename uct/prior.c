@@ -79,6 +79,7 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
   printf("uct_prior: board is at 0x%p\n", map->b);
   printf("uct_prior: address of board.captures is 0x%p\n", &(map->b->captures));
   printf("uct_prior: address of board.komi is 0x%p\n", &(map->b->komi));
+  printf("uct_prior: S_MAX is %d\n", S_MAX);
 	dcnn_get_moves(map->b, map->to_play, r);
 	find_dcnn_best_moves(map->b, r, best_moves, best_r);
 	print_dcnn_best_moves(node, map->b, best_moves, best_r);

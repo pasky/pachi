@@ -73,6 +73,7 @@ dcnn_get_moves(struct board *b, enum stone color, float result[])
   std::cout << "dcnn_get_moves: board is at " << b << std::endl;
   std::cout << "dcnn_get_moves: address of board.captures is " << &(b->captures) << std::endl;
   std::cout << "dcnn_get_moves: address of board.komi is " << &(b->komi) << std::endl;
+  std::cout << "dcnn_get_moves: S_MAX is " << S_MAX << std::endl;
 
 
 	int size = 19;
