@@ -55,15 +55,16 @@ CAFFE_PREFIX=/usr/local/caffe
 # extra data files (such as pattern, joseki or fuseki database) only
 # in the current directory, bundled database files will not be installed
 # in a system directory or loaded from there.
-PREFIX=/usr/local
+PREFIX?=/usr/local
 BINDIR=$(PREFIX)/bin
+DATADIR?=$(PREFIX)/share/pachi
 
 # Generic compiler options. You probably do not really want to twiddle
 # any of this.
 # (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
 # unless PROFILING=gprof.)
-CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
-CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3
+CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE -DDATA_DIR=\"$(DATADIR)\"
+CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3 -DDATA_DIR=\"$(DATADIR)\"
 
 ### CONFIGURATION END
 
@@ -147,6 +148,7 @@ ifdef DCNN
 endif
 # Low-level dependencies last
 SUBDIRS=uct uct/policy playout tactics t-unit t-predict distributed engines
+DATAFILES=patterns.prob patterns.spat book.dat golast19.prototxt golast.trained joseki19.pdict
 
 all: gitversion.h all-recursive pachi
 
@@ -174,6 +176,12 @@ gitversion.h: .git/HEAD .git/index
 # install-recursive?
 install:
 	$(INSTALL) ./pachi $(DESTDIR)$(BINDIR)
+	for datafile in $(DATAFILES);          \
+	do                                     \
+		if [ -f $$datafile ]; then           \
+			$(INSTALL) $$datafile $(DATADIR);  \
+		fi;                                  \
+	done;
 
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive

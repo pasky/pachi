@@ -31,15 +31,16 @@ caffe_init()
 	if (net)
 		return;
 
-	struct stat s;	
-	const char *model_file =   "golast19.prototxt";
-	const char *trained_file = "golast.trained";
-	if (stat(model_file, &s) != 0  ||  stat(trained_file, &s) != 0) {
+	const char *model_file =   get_data_file("golast19.prototxt");
+	const char *trained_file = get_data_file("golast.trained");
+	if (open_data_file(model_file) == NULL  ||  open_data_file(trained_file) == NULL) {
 		if (DEBUGL(1))
 			fprintf(stderr, "No dcnn files found, will not use dcnn code.\n");
+    close(model_file);
+    close(trained_file);
 		return;
 	}
-	
+
 	Caffe::set_mode(Caffe::CPU);       
 	
 	/* Load the network. */

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b));
@@ -115,6 +116,30 @@ strbuf_t *new_strbuf(int size);
  * Use sbprintf(buf, format, ...) to accumulate output. */
 int strbuf_printf(strbuf_t *buf, const char *format, ...);
 #define sbprintf strbuf_printf
+
+
+/**************************************************************************************************/
+
+/* Data-loading definitions */
+static inline const char *
+get_data_file(const char *filename)
+{
+  struct stat s;
+
+  if (stat(filename, &s) == 0) {
+    return filename;
+  }
+
+#ifdef DATA_DIR
+  char *data_dir_filename = malloc(strlen(DATA_DIR) + 1 + strlen(filename) + 1);
+  sprintf(data_dir_filename, "%s/%s", DATA_DIR, filename);
+  if (stat(data_dir_filename, &s) == 0) {
+    return (const char *)data_dir_filename;
+  }
+#endif
+
+  return NULL;
+}
 
 
 #endif
