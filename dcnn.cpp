@@ -19,6 +19,7 @@ extern "C" {
 #include "dcnn.h"
 #include "engine.h"
 #include "uct/tree.h"
+#include "util.h"
 	
 	
 static shared_ptr<Net<float> > net;
@@ -47,11 +48,13 @@ dcnn_init()
 		return;
 
 	struct stat s;	
-	const char *model_file =   "golast19.prototxt";
-	const char *trained_file = "golast.trained";
-	if (stat(model_file, &s) != 0  ||  stat(trained_file, &s) != 0) {
+	const char *model_file =   get_data_file("golast19.prototxt");
+	const char *trained_file = get_data_file("golast.trained");
+	if (open_data_file(model_file) == NULL  ||  open_data_file(trained_file) == NULL) {
 		if (DEBUGL(1))
 			fprintf(stderr, "No dcnn files found, will not use dcnn code.\n");
+    close(model_file);
+    close(trained_file);
 		return;
 	}
 	

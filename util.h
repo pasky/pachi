@@ -3,6 +3,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
 
 /* Portability definitions. */
 
@@ -82,5 +84,26 @@ checked_calloc(size_t nmemb, size_t size, const char *filename, unsigned int lin
 
 #define malloc2(size)        checked_malloc((size), __FILE__, __LINE__, __func__)
 #define calloc2(nmemb, size) checked_calloc((nmemb), (size), __FILE__, __LINE__, __func__)
+
+/* Data-loading definitions */
+static inline const char *
+get_data_file(const char *filename)
+{
+  struct stat s;
+
+  if (stat(filename, &s) == 0) {
+    return filename;
+  }
+
+#ifdef DATA_DIR
+  char *data_dir_filename = malloc(strlen(DATA_DIR) + 1 + strlen(filename) + 1);
+  sprintf(data_dir_filename, "%s/%s", DATA_DIR, filename);
+  if (stat(data_dir_filename, &s) == 0) {
+    return (const char *)data_dir_filename;
+  }
+#endif
+
+  return NULL;
+}
 
 #endif
