@@ -11,6 +11,7 @@
 #include "patternprob.h"
 #include "playout.h"
 #include "stats.h"
+#include "mq.h"
 
 struct tree;
 struct tree_node;
@@ -125,6 +126,10 @@ struct uct {
 	double stats_delay; /* stored in seconds */
 	int played_own;
 	int played_all; /* games played by all slaves */
+
+	/* Saved dead groups, for final_status_list dead */
+	struct move_queue dead_groups;
+	int dead_groups_move;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
 	struct tree *t;

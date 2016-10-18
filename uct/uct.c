@@ -108,6 +108,32 @@ dead_group_list(struct uct *u, struct board *b, struct move_queue *mq, float thr
 	groups_of_status(b, &gj, GS_DEAD, mq);
 }
 
+static void
+get_dead_groups(struct uct *u, struct board *b, struct move_queue *mq, bool unknown_color)
+{
+	struct move_queue relaxed;
+	relaxed.moves = mq->moves = 0;
+	dead_group_list(u, b, mq, GJ_THRES);	// Strict
+	dead_group_list(u, b, &relaxed, 0.55);  // Relaxed
+
+	/* Add own unclear dead groups if it doesn't change the outcome
+	 * and spare opponent a genmove_cleanup phase... */
+	if (!unknown_color) 
+	{
+		bool result = pass_is_safe(b, u->my_color, mq);
+		for (unsigned int i = 0; i < relaxed.moves; i++) {
+			group_t g = relaxed.move[i];
+			if (board_at(b, g) != u->my_color || mq_has(mq, g))
+				continue;
+			
+			struct move_queue tmp;  memcpy(&tmp, mq, sizeof(tmp));		       
+			mq_add(&tmp, g, 0);
+			if (result == pass_is_safe(b, u->my_color, &tmp))
+				mq_add(mq, g, 0);
+		}
+	}
+}
+
 bool
 uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive)
 {
@@ -115,15 +141,19 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	while (u->ownermap.playouts < GJ_MINGAMES)
 		uct_playout(u, b, color, u->t);
 
-	struct move_queue mq = { .moves = 0 };
-	dead_group_list(u, b, &mq, GJ_THRES);
+	/* Save dead groups for final_status_list dead. */
+	struct move_queue *mq = &u->dead_groups;  mq->moves = 0;
+	u->dead_groups_move = b->moves;
+	bool unknown_color = !u->my_color;  assert(!unknown_color);
+	get_dead_groups(u, b, mq, unknown_color);
+
 	if (pass_all_alive) {
-		for (unsigned int i = 0; i < mq.moves; i++) {
-			if (board_at(b, mq.move[i]) == stone_other(color)) {
+		for (unsigned int i = 0; i < mq->moves; i++) {
+			if (board_at(b, mq->move[i]) == stone_other(color)) {
 				return false; // We need to remove opponent dead groups first.
 			}
 		}
-		mq.moves = 0; // our dead stones are alive when pass_all_alive is true
+		mq->moves = 0; // our dead stones are alive when pass_all_alive is true
 	}
 	if (u->allow_losing_pass) {
 		foreach_point(b) {
@@ -137,7 +167,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		} foreach_point_end;
 		return true;
 	}
-	return pass_is_safe(b, color, &mq);
+	return pass_is_safe(b, color, mq);
 }
 
 static void
@@ -260,17 +290,6 @@ print_dead_groups(struct uct *u, struct board *b, struct move_queue *mq)
 	}
 }
 
-static void
-print_extra_dead_group(struct board *b, group_t g, int found)
-{
-	if (!found)
-		fprintf(stderr, "also adding\n");
-	fprintf(stderr, "  ");
-	foreach_in_group(b, g) {
-		fprintf(stderr, "%s ", coord2sstr(c, b));
-	} foreach_in_group_end;
-	fprintf(stderr, "\n");	
-}
 
 static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
@@ -283,6 +302,14 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	
 	if (u->pass_all_alive)
 		return; // no dead groups
+
+	/* Normally last genmove was a pass and we've already figured out dead groups.
+	 * Don't recompute dead groups here, result could be different this time and lead to wrong list. */
+	if (u->dead_groups_move == b->moves) {
+		memcpy(mq, &u->dead_groups, sizeof(*mq));
+		print_dead_groups(u, b, mq);
+		return;
+	}
 	
 	/* Create mock state */
 	if (u->t)  reset_state(u);
@@ -295,30 +322,9 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	/* Show the ownermap: */
 	if (DEBUGL(2))
 		board_print_ownermap(b, stderr, &u->ownermap);
-	
-	struct move_queue relaxed; relaxed.moves = 0;
-	dead_group_list(u, b, mq, GJ_THRES);  	// Strict
-	dead_group_list(u, b, &relaxed, 0.55);  // Relaxed
-	if (DEBUGL(2))  print_dead_groups(u, b, mq);
 
-	/* Add own unclear dead groups if it doesn't change the outcome
-	 * and spare opponent a genmove_cleanup phase... */
-	if (!unknown_color) {
-		int found = 0;
-		bool result = pass_is_safe(b, u->my_color, mq);
-		for (unsigned int i = 0; i < relaxed.moves; i++) {
-			group_t g = relaxed.move[i];
-			if (board_at(b, g) != u->my_color || mq_has(mq, g))
-				continue;
-			
-			struct move_queue tmp;  memcpy(&tmp, mq, sizeof(tmp));		       
-			mq_add(&tmp, g, 0);
-			if (result == pass_is_safe(b, u->my_color, &tmp)) {
-				mq_add(mq, g, 0);
-				if (DEBUGL(2))  print_extra_dead_group(b, g, found++);
-			}
-		}
-	}
+	get_dead_groups(u, b, mq, unknown_color);
+	print_dead_groups(u, b, mq);
 
 	/* Clean up the mock state in case we will receive
 	 * a genmove; we could get a non-alternating-move
