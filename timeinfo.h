@@ -87,6 +87,10 @@ void time_sub(struct time_info *ti, double interval, bool new_move);
 /* Returns the current time. */
 double time_now(void);
 
+/* Get current time string, format like "Mar 15 07:39:50"
+ * Returns static buffer */
+char *time_str();
+
 /* Sleep for a given interval (in seconds). Return immediately if interval < 0. */
 void time_sleep(double interval);
 
