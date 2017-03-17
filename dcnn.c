@@ -101,9 +101,11 @@ void
 print_dcnn_best_moves(struct tree_node *node, struct board *b,
 		      coord_t *best, float *best_r)
 {
+	int depth = (node ? node->depth : 0);
+	coord_t c = (node ? node_coord(node) : pass);
 	fprintf(stderr, "%.*sprior_dcnn(%s) = [ ",
-		node->depth * 4, "                                   ",
-		coord2sstr(node_coord(node), b));
+		depth * 4, "                                   ",
+		coord2sstr(c, b));
 	for (int i = 0; i < DCNN_BEST_N; i++)
 		fprintf(stderr, "%s ", coord2sstr(best[i], b));
 	fprintf(stderr, "]      ");
@@ -122,6 +124,7 @@ dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	coord_t best_moves[DCNN_BEST_N];
 	dcnn_get_moves(b, color, r);
 	find_dcnn_best_moves(b, r, best_moves, best_r);
+	print_dcnn_best_moves(NULL, b, best_moves, best_r);
 	
 	return coord_copy(best_moves[0]);
 }	
