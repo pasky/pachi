@@ -403,6 +403,25 @@ board_print(struct board *board, FILE *f)
 	board_print_custom(board, f, DEBUGL(6) ? cprint_group : NULL, NULL);
 }
 
+static char*
+print_target_move_handler(struct board *b, coord_t c, void *data)
+{	
+	static char buf[32];
+	coord_t target_move = (coord_t)data;
+
+	if (c == target_move)	sprintf(buf, "\e[40;33;1m*\e[0m");
+	else			sprintf(buf, "%c", stone2char(board_at(b, c)));
+	return buf;
+}
+
+void
+board_print_target_move(struct board *b, FILE *f, coord_t target_move)
+{
+	assert(!is_pass(target_move));
+	assert(board_at(b, target_move) == S_NONE);
+	board_hprint(b, f, print_target_move_handler, (void*)target_move);
+}
+
 
 /* Update board hash with given coordinate. */
 static void profiling_noinline

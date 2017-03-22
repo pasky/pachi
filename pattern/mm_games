@@ -1,0 +1,39 @@
+#!/bin/bash
+# mm patterns training pipeline:
+# Process sgf files to learn from into format suitable for mm
+# (needs mm spatial dictionary patterns_mm.spat created in previous step)
+set -e
+set -o pipefail
+
+usage()
+{
+    echo "usage: pattern/mm_games <sgf_files>"
+    exit 1
+}
+
+
+if [ "$1" = "-h" ] || [ $# = 0 ]; then
+    usage
+fi
+
+( i=0;   n=`echo "$@" | wc -w`
+  for f in "$@"; do 
+      tools/sgf2gtp.pl < $f; 
+
+      # Show progress
+      printf "                                                      \r" >&2
+      echo $f >&2;
+      du=`du -sh mm-input.dat | cut -d'	' -f1`
+      printf "[ %i / %i ]  %i%%           mm-input.dat: %s\r" $i $n  $[$i * 100 / $n] "$du" >&2
+      i=$[$i+1]
+  done) |
+  ./pachi -e patternscan 2>pachi.log |
+  perl -nle 's/^= //; if ($_ ne "") { print $_; }'  > mm-input.dat
+
+echo ""
+echo "All Done. Wrote mm-pachi.table, mm-input.dat"
+echo "Now run: "
+echo "    mm < mm-input.dat"
+echo "to generate gammas (will create mm-with-freq.dat)"
+echo "and create patterns_mm.gamma with:"
+echo "    pattern/mm_gammas"

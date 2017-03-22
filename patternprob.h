@@ -20,56 +20,93 @@
 
 struct pattern_prob {
 	struct pattern p;
-	floating_t prob;
+	floating_t gamma;
 	struct pattern_prob *next;
 };
 
-struct pattern_pdict {
-	struct pattern_config *pc;
-
+struct prob_dict {
 	struct pattern_prob **table; /* [pc->spat_dict->nspatials + 1] */
 };
 
-/* Initialize the pdict data structure from a given file (pass NULL
+/* Initialize the prob_dict data structure from a given file (pass NULL
  * to use default filename). Returns NULL if the file with patterns
  * has been found. */
-struct pattern_pdict *pattern_pdict_init(char *filename, struct pattern_config *pc);
+struct prob_dict *prob_dict_init(char *filename, struct pattern_config *pc);
 
-/* Return probability associated with given pattern. Returns NaN if
- * the pattern cannot be found. */
-static floating_t pattern_prob(struct pattern_pdict *dict, struct pattern *p);
+/* Return probability associated with given pattern. */
+static inline floating_t pattern_gamma(struct pattern_config *pc, struct pattern *p);
 
-/* Evaluate patterns for all available moves. Stores found patterns
- * to pats[b->flen] and NON-normalized probability of each pattern
- * (or NaN in case of no match) to probs[b->flen]. Returns the sum
- * of all probabilities that can be used for normalization. */
-floating_t pattern_rate_moves(struct pattern_setup *pat,
-                        struct board *b, enum stone color,
-                        struct pattern *pats, floating_t *probs);
+/* Evaluate patterns for all available moves. Stores found patterns to pats[b->flen]
+ * and NON-normalized probability of each pattern to probs[b->flen].
+ * Returns the sum of all probabilities that can be used for normalization. */
+floating_t pattern_rate_moves(struct pattern_config *pc,
+			      struct board *b, enum stone color,
+			      struct pattern *pats, floating_t *probs,
+			      struct ownermap *ownermap);
+
+void print_pattern_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest);
+void find_pattern_best_moves(struct board *b, float *probs, coord_t *best_c, float *best_r, int nbest);
+
+/* Debugging */
+void dump_gammas(strbuf_t *buf, struct pattern_config *pc, struct pattern *p);
 
 /* Utility function - extract spatial id from a pattern. If the pattern
  * has no spatial feature, it is represented by the highest spatial id
  * plus one. */
-static uint32_t pattern2spatial(struct pattern_pdict *dict, struct pattern *p);
+static uint32_t pattern2spatial(struct pattern_config *pc, struct pattern *p);
+/* Same for one feature */
+static uint32_t feature2spatial(struct pattern_config *pc, struct feature *f);
 
 
-static inline floating_t
-pattern_prob(struct pattern_pdict *dict, struct pattern *p)
+/* Do we have a gamma for that feature ? */
+static inline bool
+feature_has_gamma(struct pattern_config *pc, struct feature *f)
 {
-	uint32_t spi = pattern2spatial(dict, p);
-	for (struct pattern_prob *pb = dict->table[spi]; pb; pb = pb->next)
-		if (pattern_eq(p, &pb->p))
-			return pb->prob;
-	return NAN; // XXX: We assume quiet NAN existence
+	uint32_t spi = feature2spatial(pc, f);
+	for (struct pattern_prob *pb = prob_dict->table[spi]; pb; pb = pb->next)
+		if (feature_eq(f, &pb->p.f[0]))
+			return true;
+	return false;
 }
 
+/* Find gamma for that feature. */
+static inline floating_t
+feature_gamma(struct pattern_config *pc, struct feature *f)
+{
+	uint32_t spi = feature2spatial(pc, f);
+	for (struct pattern_prob *pb = prob_dict->table[spi]; pb; pb = pb->next)
+		if (feature_eq(f, &pb->p.f[0]))
+			return pb->gamma;
+	die("no gamma for feature (%s) !\n", feature2sstr(f));
+	//return NAN; // XXX: We assume quiet NAN existence
+}
+
+static inline floating_t
+pattern_gamma(struct pattern_config *pc, struct pattern *p)
+{
+	floating_t gammas = 1;
+	for (int i = 0; i < p->n; i++)
+		gammas *= feature_gamma(pc, &p->f[i]);
+	return gammas;
+}
+
+
 static inline uint32_t
-pattern2spatial(struct pattern_pdict *dict, struct pattern *p)
+feature2spatial(struct pattern_config *pc, struct feature *f)
+{
+	if (f->id >= FEAT_SPATIAL3)
+		return f->payload;
+	return spat_dict->nspatials;
+}
+
+
+static inline uint32_t
+pattern2spatial(struct pattern_config *pc, struct pattern *p)
 {
 	for (int i = 0; i < p->n; i++)
-		if (p->f[i].id == FEAT_SPATIAL)
+		if (p->f[i].id >= FEAT_SPATIAL3)
 			return p->f[i].payload;
-	return dict->pc->spat_dict->nspatials;
+	return spat_dict->nspatials;
 }
 
 #endif

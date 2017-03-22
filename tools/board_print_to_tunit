@@ -15,7 +15,8 @@ foreach my $s (<STDIN>)
     if ($s =~ m/^Move: *[0-9]+ *Komi: ([0-9.-]+) *Handicap: ([0-9]+)/)
     {  $komi = $1;  $handicap = $2; next;  }
     
-    $s =~ s/·/./g;  # color diagrams
+    $s =~ s/·/./g;   # color boards
+    $s =~ s/\*/./g;  # target move
     if ($s =~ m/^ *([0-9]+) [ |]+(([.OX][ )])+)[ |]+/)
     {   
 	$s = $2;

@@ -23,7 +23,8 @@ my $size = 0;
 sub parse_board_line
 {
     my ($line) = @_;
-    $line =~ s/·/./g;   # For color boards ...
+    $line =~ s/·/./g;   # color boards
+    $line =~ s/\*/./g;  # target move
     if ($line !~ m/^ *([0-9]+) [ |]+(([.OX][ )])+)[ |]*/)  {  return ();  }
 
     my ($y, $stones, $post) = ($1,  $2, $2);

@@ -1,0 +1,23 @@
+#!/usr/bin/perl
+
+my %gamma_to_feature;
+
+open(IN, "< mm-pachi.table") || die("can't open mm-pachi.table");
+foreach my $str (<IN>)
+{
+    my ($gamma, $feature) = split(' ', $str);
+    $gamma_to_feature{$gamma} = $feature;
+}
+close(IN);
+
+
+open(IN, "< mm-with-freq.dat") || die("can't open mm-with-freq.dat");
+open(OUT, "> patterns_mm.gamma") || die("can't open patterns_mm.gamma");
+print "Writing patterns_mm.gamma ...\n";
+foreach my $str (<IN>)
+{
+    my ($number, $gamma, $victories, $participations, $presences) = split(' ', $str);
+    printf OUT ("%s %s\n", $gamma, $gamma_to_feature{$number});
+}
+close(IN);
+close(OUT);

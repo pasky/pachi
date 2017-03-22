@@ -6,6 +6,7 @@
  * randomly. But they are also used to juggle group lists (using the
  * fact that coord_t == group_t). */
 
+#include <assert.h>
 #include "move.h"
 #include "random.h"
 

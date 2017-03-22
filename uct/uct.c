@@ -164,8 +164,7 @@ bool
 uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg)
 {
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
-	while (u->ownermap.playouts < GJ_MINGAMES)
-		uct_playout(u, b, color, u->t);
+	uct_mcowner_playouts(u, b, color);
 
 	/* Save dead groups for final_status_list dead. */
 	struct move_queue unclear;
@@ -210,21 +209,31 @@ uct_board_print(struct engine *e, struct board *b, FILE *f)
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
+/* Fill ownermap for mc_owner pattern feature (no tree search)
+ * ownermap must be initialized already. */
+void
+uct_mcowner_playouts(struct uct *u, struct board *b, enum stone color)
+{
+	struct playout_setup ps = { .gamelen = u->gamelen, .mercymin = u->mercymin };
+	
+	/* TODO pick random last move, better playouts randomness */
+
+	while (u->ownermap.playouts < GJ_MINGAMES) {
+		struct board b2;
+		board_copy(&b2, b);
+		playout_play_game(&ps, &b2, color, NULL, &u->ownermap, u->playout);
+		board_done_noalloc(&b2);
+	}
+}
+
 static struct ownermap*
 uct_ownermap(struct engine *e, struct board *b)
 {
 	struct uct *u = b->es;
 	
 	/* Make sure ownermap is well-seeded. */
-	if (u->ownermap.playouts < GJ_MINGAMES) {
-		enum stone color = stone_other(b->last_move.color);
-		uct_pondering_stop(u);
-		if (u->t)  reset_state(u);
-		uct_prepare_move(u, b, color);	  /* don't clobber u->my_color with uct_genmove_setup() */
-		
-		while (u->ownermap.playouts < GJ_MINGAMES)
-			uct_playout(u, b, color, u->t);
-	}
+	enum stone color = (b->last_move.color ? stone_other(b->last_move.color) : S_BLACK);
+	uct_mcowner_playouts(u, b, color);
 	
 	return &u->ownermap;
 }
@@ -366,24 +375,13 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 
 	fprintf(stderr, "WARNING: Recomputing dead groups\n");
 
-	/* Create mock state */
-	if (u->t)  reset_state(u);
-	// We need S_BLACK here, but don't clobber u->my_color with uct_genmove_setup() !
-	uct_prepare_move(u, b, S_BLACK); 
-	
 	/* Make sure the ownermap is well-seeded. */
-	while (u->ownermap.playouts < GJ_MINGAMES)
-		uct_playout(u, b, S_BLACK, u->t);
+	uct_mcowner_playouts(u, b, S_BLACK);
 	if (DEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
 	struct move_queue unclear;
 	get_dead_groups(u, b, dead, &unclear);
 	print_dead_groups(u, b, dead);
-
-	/* Clean up the mock state in case we will receive
-	 * a genmove; we could get a non-alternating-move
-	 * error from uct_prepare_move() in that case otherwise. */
-	reset_state(u);
 }
 
 static void
@@ -1280,8 +1278,8 @@ uct_state_init(char *arg, struct board *b)
 				 * it automatically in that case, but you
 				 * can use this option to tweak the pattern
 				 * parameters. */
-				patterns_init(&u->pat, optval, false, true);
-				u->want_pat = pat_setup = true;
+				patterns_init(&u->pc, optval, false, true);
+				pat_setup = true;
 			} else if (!strcasecmp(optname, "significant_threshold") && optval) {
 				/* Some heuristics (XXX: none in mainline) rely
 				 * on the knowledge of the last "significant"
@@ -1384,18 +1382,12 @@ uct_state_init(char *arg, struct board *b)
 		u->max_tree_size -= u->max_tree_size / 20;
 	}
 
-	if (!u->prior)
-		u->prior = uct_prior_init(NULL, b, u);
-
-	if (!u->playout)
-		u->playout = playout_moggy_init(NULL, b, u->jdict);
-	if (!u->playout->debug_level)
-		u->playout->debug_level = u->debug_level;
-
-	if (u->want_pat && !pat_setup)
-		patterns_init(&u->pat, NULL, false, true);
+	if (!pat_setup)			patterns_init(&u->pc, NULL, false, true);
 	dcnn_init();
 	log_nthreads(u);
+	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);
+	if (!u->playout)		u->playout = playout_moggy_init(NULL, b, u->jdict);
+	if (!u->playout->debug_level)	u->playout->debug_level = u->debug_level;
 
 	if (u->slave) {
 		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
@@ -1403,8 +1395,7 @@ uct_state_init(char *arg, struct board *b)
 		assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
 	}
 
-	if (!u->dynkomi)
-		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
+	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 
 	if (u->pondering_opt && using_dcnn(b)) {
 		warning("Can't use pondering with dcnn right now, pondering turned off.\n");

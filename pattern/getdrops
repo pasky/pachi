@@ -4,7 +4,7 @@
 # and convert them to lead-in game records for pattern learning
 #
 # Run as pipeline:
-# 	tools/kgslog2gtp.pl | tools/pattern_getdrops.pl | tools/pattern_bayes_gen.sh -
+# 	tools/kgslog2gtp.pl | pattern/getdrops | tools/pattern_bayes_gen.sh -
 
 BEGIN {
 	use vars qw(@game $lastval $valthres $valfrac);
