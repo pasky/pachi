@@ -172,10 +172,11 @@ gogui_best_moves(struct engine *engine, struct board *b, struct time_info *ti, e
 		 bool winrates)
 {
 	assert(color != S_NONE);	
+	struct time_info *ti_genmove = time_info_genmove(b, ti, color);
 	enum gogui_reporting prev = gogui_live_gfx;
 	gogui_set_live_gfx(engine, (winrates ? "winrates" : "best_moves"));
 	gogui_gfx_buf[0] = 0;
-	engine->best_moves(engine, b, ti, color, NULL, NULL, 0);
+	engine->best_moves(engine, b, ti_genmove, color, NULL, NULL, 0);
 	gogui_live_gfx = prev;
 	return gogui_gfx_buf;
 }
@@ -231,6 +232,7 @@ gtp_is_valid(struct engine *e, const char *cmd)
 	int len = strlen(cmd);
 	return s[len] == '\0' || s[len] == '\n';
 }
+
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
@@ -430,14 +432,15 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 			time_start_timer(&ti[color]);
 		}
 
+		struct time_info *ti_genmove = time_info_genmove(board, ti, color);
 		coord_t cf = pass;
 		if (board->fbook)
 			cf = fbook_check(board);
-		if (!is_pass(cf)) {
+		if (!is_pass(cf))
 			c = coord_copy(cf);
-		} else {
-			c = engine->genmove(engine, board, &ti[color], color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
-		}
+		else
+			c = engine->genmove(engine, board, ti_genmove, color, !strcasecmp(cmd, "kgs-genmove_cleanup"));
+		
 		struct move m = { *c, color };
 		if (board_play(board, &m) < 0) {
 			fprintf(stderr, "Attempted to generate an illegal move: [%s, %s]\n", coord2sstr(m.coord, board), stone2str(m.color));
@@ -467,7 +470,8 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		void *stats;
 		int stats_size;
 
-		char *reply = engine->genmoves(engine, board, &ti[color], color, next,
+		struct time_info *ti_genmove = time_info_genmove(board, ti, color);
+		char *reply = engine->genmoves(engine, board, ti_genmove, color, next,
 					       !strcasecmp(cmd, "pachi-genmoves_cleanup"),
 					       &stats, &stats_size);
 		if (!reply) {
@@ -739,13 +743,13 @@ next_group:;
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		char *reply = gogui_best_moves(engine, board, &ti[color], color, false);
+		char *reply = gogui_best_moves(engine, board, ti, color, false);
 		gtp_reply(id, reply, NULL);
 	} else if (!strcasecmp(cmd, "gogui-winrates")) {
 		char *arg;
 		next_tok(arg);
 		enum stone color = str2stone(arg);
-		char *reply = gogui_best_moves(engine, board, &ti[color], color, true);
+		char *reply = gogui_best_moves(engine, board, ti, color, true);
 		gtp_reply(id, reply, NULL);
 
 	} else {

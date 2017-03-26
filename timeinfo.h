@@ -113,4 +113,10 @@ struct time_stop {
 void time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start,
 			  floating_t max_maintime_ratio, struct time_stop *stop);
 
+/* Time settings to use during fuseki */
+extern struct time_info ti_fuseki;
+
+/* time_info to use for genmove() */
+struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color);
+
 #endif

@@ -444,3 +444,14 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	lag_adjust(&stop->desired.time, net_lag);
 	lag_adjust(&stop->worst.time, net_lag);
 }
+
+struct time_info ti_fuseki = { .period = TT_NULL };
+
+struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color)
+{
+	/* Specific fuseki time settings ? */
+	if (ti_fuseki.period != TT_NULL && b->moves <= 30)
+		return &ti_fuseki;  
+	return &ti[color];
+}
+

@@ -80,6 +80,22 @@ static void usage(char *name)
 		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [-f FBOOKFILE] [ENGINE_ARGS]\n", name);
 }
 
+#define OPT_FUSEKI_TIME 256
+static struct option longopts[] = {
+	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
+	{ "chatfile",    required_argument, 0, 'c' },
+	{ "debug-level", required_argument, 0, 'd' },
+	{ "engine",      required_argument, 0, 'e' },
+	{ "fbook",       required_argument, 0, 'f' },
+	{ "gtp-port",    required_argument, 0, 'g' },
+	{ "log-port",    required_argument, 0, 'l' },
+	{ "rules",       required_argument, 0, 'r' },
+	{ "seed",        required_argument, 0, 's' },
+	{ "time",        required_argument, 0, 't' },
+	{ "unit-test",   required_argument, 0, 'u' },
+	{ 0, 0, 0, 0 }
+};
+
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
@@ -95,7 +111,8 @@ int main(int argc, char *argv[])
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "c:e:d:Df:g:l:r:s:t:u:")) != -1) {
+	int option_index;
+	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:l:r:s:t:u:", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
@@ -162,6 +179,14 @@ int main(int argc, char *argv[])
 				}
 				ti_default.ignore_gtp = true;
 				assert(ti_default.period != TT_NULL);
+				break;
+			case OPT_FUSEKI_TIME:
+				if (!time_parse(&ti_fuseki, optarg)) {
+					fprintf(stderr, "%s: Invalid --fuseki-time argument %s\n", argv[0], optarg);
+					exit(1);
+				}
+				ti_fuseki.ignore_gtp = true;
+				assert(ti_fuseki.period != TT_NULL);
 				break;
 			case 'u':
 				testfile = strdup(optarg);
