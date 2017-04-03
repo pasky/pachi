@@ -17,6 +17,8 @@ typedef char *(*engine_chat_t)(struct engine *e, struct board *b, bool in_game, 
  * if all stones on the board can be considered alive, without regard to "dead"
  * considered stones. */
 typedef coord_t *(*engine_genmove_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive);
+typedef void  (*engine_best_moves_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
+				     coord_t *best_c, float *best_r, int nbest);
 typedef char *(*engine_genmoves_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
 				 char *args, bool pass_all_alive, void **stats_buf, int *stats_size);
 /* Evaluate feasibility of player @color playing at all free moves. Will
@@ -33,7 +35,6 @@ typedef void (*engine_done_t)(struct engine *e);
 
 /* GoGui hooks */
 typedef float (*engine_owner_map_t)(struct engine *e, struct board *b, coord_t c);
-typedef void (*engine_best_moves_t)(struct engine *e, struct board *b, enum stone color);
 typedef void (*engine_live_gfx_hook_t)(struct engine *e);
 
 /* This is engine data structure. A new engine instance is spawned
@@ -53,12 +54,12 @@ struct engine {
 	engine_result_t result;
 	engine_genmove_t genmove;
 	engine_genmoves_t genmoves;
+	engine_best_moves_t best_moves;
 	engine_evaluate_t evaluate;
 	engine_dead_group_list_t dead_group_list;
 	engine_stop_t stop;
 	engine_done_t done;
 	engine_owner_map_t owner_map;
-	engine_best_moves_t best_moves;
 	engine_live_gfx_hook_t live_gfx_hook;
 	void *data;
 };
@@ -75,6 +76,22 @@ engine_done(struct engine *e)
 	if (e->done) e->done(e);
 	if (e->data) free(e->data);
 	free(e);
+}
+
+/* For engines best_move(): Add move @c with prob @r to best moves @best_c, @best_r */
+static inline void
+best_moves_add(coord_t c, float r, coord_t *best_c, float *best_r, int nbest)
+{
+	for (int i = 0; i < nbest; i++)
+		if (r > best_r[i]) {
+			for (int j = nbest - 1; j > i; j--) { // shift
+				best_r[j] = best_r[j - 1];
+				best_c[j] = best_c[j - 1];
+			}
+			best_r[i] = r;
+			best_c[i] = c;
+			break;
+		}
 }
 
 

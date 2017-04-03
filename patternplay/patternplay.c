@@ -43,6 +43,20 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	return coord_copy(b->f[best]);
 }
 
+static void
+patternplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+		       coord_t *best_c, float *best_r, int nbest)
+{
+	struct patternplay *pp = e->data;
+
+	struct pattern pats[b->flen];
+	floating_t probs[b->flen];
+	pattern_rate_moves(&pp->pat, b, color, pats, probs);
+	
+	for (int f = 0; f < b->flen; f++)
+		best_moves_add(b->f[f], probs[f], best_c, best_r, nbest);	
+}
+
 void
 patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, floating_t *vals, enum stone color)
 {
@@ -109,7 +123,11 @@ patternplay_state_init(char *arg)
 
 	if (!pat_setup)
 		patterns_init(&pp->pat, NULL, false, true);
-
+	
+	if (!pp->pat.pc.spat_dict || !pp->pat.pd) {
+		fprintf(stderr, "Missing spatial dictionary / probtable, aborting.\n");
+		exit(EXIT_FAILURE);
+	}
 	return pp;
 }
 
@@ -121,6 +139,7 @@ engine_patternplay_init(char *arg, struct board *b)
 	e->name = "PatternPlay Engine";
 	e->comment = "I select moves blindly according to learned patterns. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = patternplay_genmove;
+	e->best_moves = patternplay_best_moves;
 	e->evaluate = patternplay_evaluate;
 	e->data = pp;
 

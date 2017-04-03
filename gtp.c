@@ -165,14 +165,14 @@ gogui_set_live_gfx(struct engine *engine, char *arg)
 }
 
 static char *
-gogui_best_moves(struct board *b, struct engine *engine, char *arg, bool winrates)
+gogui_best_moves(struct engine *engine, struct board *b, struct time_info *ti, enum stone color,
+		 bool winrates)
 {
-	enum stone color = str2stone(arg);
 	assert(color != S_NONE);	
 	enum gogui_reporting prev = gogui_live_gfx;
 	gogui_set_live_gfx(engine, (winrates ? "winrates" : "best_moves"));
 	gogui_gfx_buf[0] = 0;
-	engine->best_moves(engine, b, color);
+	engine->best_moves(engine, b, ti, color, NULL, NULL, 0);
 	gogui_live_gfx = prev;
 	return gogui_gfx_buf;
 }
@@ -239,8 +239,7 @@ gtp_predict_move(struct board *board, struct engine *engine, struct time_info *t
 	enum stone color = m->color;
 	
 	if (m->coord == pass || m->coord == resign) {
-		int r = board_play(board, m); 
-		assert(r >= 0);
+		int r = board_play(board, m);  assert(r >= 0);
 		gtp_reply(id, NULL);
 		return;
 	}
@@ -250,12 +249,12 @@ gtp_predict_move(struct board *board, struct engine *engine, struct time_info *t
 
 	// Not bothering with timer here for now.
 
-	coord_t *c = engine->genmove(engine, board, &ti[color], color, 0);
-
-	// Hack to reset engine state (if it has one) in case engine
-	// guessed wrong (engine expects us to play returned move)
-	if (engine->undo)  // hackish way to reset state if engine needs it
-		engine->undo(engine, board);
+	#define PREDICT_TOPN 20
+	float   best_r[PREDICT_TOPN] = { 0.0, };
+	coord_t best_c[PREDICT_TOPN];
+	for (int i = 0; i < PREDICT_TOPN; i++)
+		best_c[i] = pass;
+	engine->best_moves(engine, board, &ti[color], color, best_c, best_r, PREDICT_TOPN);
 
 	// Play correct expected move
 	if (board_play(board, m) < 0) {
@@ -266,25 +265,24 @@ gtp_predict_move(struct board *board, struct engine *engine, struct time_info *t
 	if (DEBUGL(1) && debug_boardprint)
 		engine_board_print(engine, board, stderr);
 		
-	if (*c == m->coord)
+	if (best_c[0] == m->coord)
 		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", board->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(*c, board));
+			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], board));
 	else
 		fprintf(stderr, "Move %3i: Predict: Wrong prediction: %s %s != %s\n", board->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(*c, board), coord2sstr(m->coord, board));
+			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], board), coord2sstr(m->coord, board));
 		
 	// Display stats from time to time
 	{
 		static int total = 0;
 		static int guessed = 0;
-		guessed += (*c == m->coord);
+		guessed += (best_c[0] == m->coord);
 		if (++total % 200 == 0)
 			fprintf(stderr, "Predicted: %i/%i moves (%i%%)  games: %i\n", 
 				guessed, total, guessed * 100 / total, played_games);
 	}
 
 	gtp_reply(id, NULL);
-	coord_done(c);
 }
 
 
@@ -792,12 +790,14 @@ next_group:;
 	} else if (!strcasecmp(cmd, "gogui-best_moves")) {
 		char *arg;
 		next_tok(arg);
-		char *reply = gogui_best_moves(board, engine, arg, false);
+		enum stone color = str2stone(arg);
+		char *reply = gogui_best_moves(engine, board, &ti[color], color, false);
 		gtp_reply(id, reply, NULL);
 	} else if (!strcasecmp(cmd, "gogui-winrates")) {
 		char *arg;
 		next_tok(arg);
-		char *reply = gogui_best_moves(board, engine, arg, true);
+		enum stone color = str2stone(arg);
+		char *reply = gogui_best_moves(engine, board, &ti[color], color, true);
 		gtp_reply(id, reply, NULL);
 
 	} else {
