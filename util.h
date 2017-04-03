@@ -73,6 +73,9 @@ checked_calloc(size_t nmemb, size_t size, const char *filename, unsigned int lin
 #define malloc2(size)        checked_malloc((size), __FILE__, __LINE__, __func__)
 #define calloc2(nmemb, size) checked_calloc((nmemb), (size), __FILE__, __LINE__, __func__)
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b));
+#define MAX(a, b) ((a) > (b) ? (a) : (b));
+
 
 /**************************************************************************************************/
 /* Simple string buffer to store output

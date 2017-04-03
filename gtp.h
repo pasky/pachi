@@ -22,4 +22,7 @@ bool gtp_is_valid(struct engine *e, const char *cmd);
 #define is_reset(cmd) (is_gamestart(cmd) || !strcasecmp((cmd), "clear_board") || !strcasecmp((cmd), "kgs-rules"))
 #define is_repeated(cmd) (strstr((cmd), "pachi-genmoves"))
 
+/* Number of games played so far */
+extern int played_games;
+
 #endif

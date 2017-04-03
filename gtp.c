@@ -18,11 +18,14 @@
 #include "version.h"
 #include "timeinfo.h"
 #include "gogui.h"
+#include "t-predict/predict.h"
 
 #define NO_REPLY (-2)
 
 /* Sleep 5 seconds after a game ends to give time to kill the program. */
 #define GAME_OVER_SLEEP 5
+
+int played_games = 0;
 
 void
 gtp_prefix(char prefix, int id)
@@ -229,63 +232,6 @@ gtp_is_valid(struct engine *e, const char *cmd)
 	return s[len] == '\0' || s[len] == '\n';
 }
 
-// For prediction stats
-static int played_games = 0;
-
-static void
-gtp_predict_move(struct board *board, struct engine *engine, struct time_info *ti,
-		 int id, struct move *m)
-{
-	enum stone color = m->color;
-	
-	if (m->coord == pass || m->coord == resign) {
-		int r = board_play(board, m);  assert(r >= 0);
-		gtp_reply(id, NULL);
-		return;
-	}
-
-	if (DEBUGL(5))
-		fprintf(stderr, "predict move %d,%d,%d\n", m->color, coord_x(m->coord, board), coord_y(m->coord, board));
-
-	// Not bothering with timer here for now.
-
-	#define PREDICT_TOPN 20
-	float   best_r[PREDICT_TOPN] = { 0.0, };
-	coord_t best_c[PREDICT_TOPN];
-	for (int i = 0; i < PREDICT_TOPN; i++)
-		best_c[i] = pass;
-	engine->best_moves(engine, board, &ti[color], color, best_c, best_r, PREDICT_TOPN);
-
-	// Play correct expected move
-	if (board_play(board, m) < 0) {
-		fprintf(stderr, "ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, board), stone2str(m->color));
-		abort();
-	}
-
-	if (DEBUGL(1) && debug_boardprint)
-		engine_board_print(engine, board, stderr);
-		
-	if (best_c[0] == m->coord)
-		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", board->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], board));
-	else
-		fprintf(stderr, "Move %3i: Predict: Wrong prediction: %s %s != %s\n", board->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], board), coord2sstr(m->coord, board));
-		
-	// Display stats from time to time
-	{
-		static int total = 0;
-		static int guessed = 0;
-		guessed += (best_c[0] == m->coord);
-		if (++total % 200 == 0)
-			fprintf(stderr, "Predicted: %i/%i moves (%i%%)  games: %i\n", 
-				guessed, total, guessed * 100 / total, played_games);
-	}
-
-	gtp_reply(id, NULL);
-}
-
-
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
 
@@ -467,7 +413,9 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		m.coord = *c; coord_done(c);
 		next_tok(arg);
 
-		gtp_predict_move(board, engine, ti, id, &m);
+		char *str = predict_move(board, engine, ti, &m);
+		gtp_reply(id, str, NULL);
+		free(str);
 
 	} else if (!strcasecmp(cmd, "genmove") || !strcasecmp(cmd, "kgs-genmove_cleanup")) {
 		char *arg;
