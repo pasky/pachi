@@ -197,10 +197,12 @@ FB_ONLY(hash3_t pat3)[BOARD_MAX_COORDS];
 	/* Group information - indexed by gid (which is coord of base group stone) */
 	struct group gi[BOARD_MAX_COORDS];
 
-	/* Positions of free positions - queue (not map) */
+	/* List of free positions */
 	/* Note that free position here is any valid move; including single-point eyes!
 	 * However, pass is not included. */
 FB_ONLY(coord_t f)[BOARD_MAX_COORDS];  FB_ONLY(int flen);
+	/* Map free positions coords to their list index, for quick lookup. */
+FB_ONLY(int fmap)[BOARD_MAX_COORDS];
 
 #ifdef WANT_BOARD_C
 	/* Queue of capturable groups */
