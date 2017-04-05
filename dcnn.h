@@ -4,7 +4,7 @@
 
 #ifdef DCNN
 
-#define DCNN_BEST_N 5
+#define DCNN_BEST_N 20
 
 struct tree_node;
 

@@ -87,26 +87,22 @@ find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, 
 		best_moves_add(c, r[k], best_c, best_r, nbest);
 	} foreach_free_point_end;
 }
-	
+
 void
 print_dcnn_best_moves(struct tree_node *node, struct board *b,
 		      coord_t *best_c, float *best_r, int nbest)
 {
 	int depth = (node ? node->depth : 0);
 	coord_t c = (node ? node_coord(node) : pass);
-	fprintf(stderr, "%.*sprior_dcnn(%s) = [ ",
-		depth * 4, "                                   ",
-		coord2sstr(c, b));
+	int cols = fprintf(stderr, "%.*sprior_dcnn(%s) = [ ",
+			   depth * 4, "                                   ",
+			   coord2sstr(c, b));
 	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%s ", coord2sstr(best_c[i], b));
-	fprintf(stderr, "]      ");
+		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
+	fprintf(stderr, "]\n");
 
-	fprintf(stderr, "[ ");
+	fprintf(stderr, "%*s[ ", cols-2, "");
 	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%.2f ", best_r[i]);
+		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
 	fprintf(stderr, "]\n");
 }
-	
-	
-
-
