@@ -289,17 +289,17 @@ wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chasel
 		fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
 			stone2str(lcolor), coord2sstr(escapelib, b), coord2sstr(chaselib, b));
 
-	if (!coord_is_8adjecent(escapelib, chaselib, b)) {
+	if (immediate_liberty_count(b, escapelib) != 2) {
 		if (DEBUGL(5))
-			fprintf(stderr, "cannot determine ladder for remote simulated stone\n");
+			fprintf(stderr, "no ladder, or overly trivial for a ladder\n");
 		return false;
 	}
 
-	if (neighbor_count_at(b, chaselib, lcolor) != 1 || immediate_liberty_count(b, chaselib) != 2) {
-		if (DEBUGL(5))
-			fprintf(stderr, "overly trivial for a ladder\n");
+	// FIXME should assert instead here
+	// See ~/src/pachi_bugs/silly_misread3 for example that breaks it
+	if (!board_is_valid_play(b, stone_other(lcolor), chaselib) ||
+	    is_selfatari(b, stone_other(lcolor), chaselib) )   // !can_play_on_lib() sortof       
 		return false;
-	}
 
 	bool is_ladder = false;
 	with_move(b, chaselib, stone_other(lcolor), {
@@ -315,7 +315,8 @@ wouldbe_ladder_any(struct board *b, group_t group, coord_t escapelib, coord_t ch
 {
 	assert(board_group_info(b, group).libs == 2);
 	assert(board_at(b, group) == lcolor);
-	
+
+	// FIXME should assert instead here	
 	if (!board_is_valid_play(b, stone_other(lcolor), chaselib) ||
 	    is_selfatari(b, stone_other(lcolor), chaselib) )   // !can_play_on_lib() sortof       
 		return false;
