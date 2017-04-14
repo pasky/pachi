@@ -22,7 +22,7 @@ static int coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b);
  * graph of intersections where edges between all neighbors have weight 1,
  * but edges between neighbors of same color have weight 0. Thus, this is
  * "stone chain" metric in a sense. */
-/* The output are distanes from start stored in given [board_size2()] array;
+/* The output are distances from start stored in given [board_size2()] array;
  * intersections further away than maxdist have all distance maxdist+1 set. */
 void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
 
