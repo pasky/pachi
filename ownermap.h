@@ -54,4 +54,8 @@ void board_ownermap_judge_groups(struct board *b, struct board_ownermap *ownerma
 struct move_queue;
 void groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s, struct move_queue *mq);
 
+/* Score estimate based on board ownermap. (positive: W wins) */
+float board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap);
+char *board_ownermap_score_est_str(struct board *b, struct board_ownermap *ownermap);
+
 #endif

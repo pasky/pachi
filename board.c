@@ -322,9 +322,12 @@ board_print_custom(struct board *board, FILE *f, board_cprint cprint, void *data
 	char buffer[10240];
 	strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
+	sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d  ",
 		 board->moves, board->komi, board->handicap,
 		 board->captures[S_BLACK], board->captures[S_WHITE]);
+	if (cprint) /* handler can add things to header when called with pass */
+		cprint(board, pass, buf, data);
+	sbprintf(buf, "\n");
 	board_print_top(board, buf, 1 + !!cprint);
 	for (int y = board_size(board) - 2; y >= 1; y--)
 		board_print_row(board, y, buf, cprint, data);
