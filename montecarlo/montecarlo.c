@@ -87,6 +87,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 		ti->period = TT_MOVE;
 		ti->dim = TD_GAMES;
 		ti->len.games = MC_GAMES;
+		ti->len.games_max = 0;
 	}
 	struct time_stop stop;
 	time_stop_conditions(ti, b, 20, 40, 3.0, &stop);

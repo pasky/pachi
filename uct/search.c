@@ -38,7 +38,7 @@ default_ti_init(void)
 static const struct time_info unlimited_ti = {
 	.period = TT_MOVE,
 	.dim = TD_GAMES,
-	.len = { .games = INT_MAX },
+	.len = { .games = INT_MAX, .games_max = 0 },
 };
 
 /* When terminating UCT search early, the safety margin to add to the
@@ -364,7 +364,7 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		 * keep simulating. */
 		if (best2 && best2->u.playouts
 		    && (double)best->u.playouts / best2->u.playouts < u->best2_ratio) {
-			if (UDEBUGL(2))
+			if (UDEBUGL(3))
 				fprintf(stderr, "Best2 ratio %f < threshold %f\n",
 					(double)best->u.playouts / best2->u.playouts,
 					u->best2_ratio);
@@ -378,7 +378,7 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		 * keep simulating. */
 		if (bestr && bestr->u.playouts
 		    && fabs((double)best->u.value - bestr->u.value) > u->bestr_ratio) {
-			if (UDEBUGL(2))
+			if (UDEBUGL(3))
 				fprintf(stderr, "Bestr delta %f > threshold %f\n",
 					fabs((double)best->u.value - bestr->u.value),
 					u->bestr_ratio);
@@ -389,7 +389,7 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 	if (winner && winner != best) {
 		/* Keep simulating if best explored
 		 * does not have also highest value. */
-		if (UDEBUGL(2))
+		if (UDEBUGL(3))
 			fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
 				coord2sstr(node_coord(best), t->board),
 				best->u.playouts, tree_node_get_value(t, 1, best->u.value),

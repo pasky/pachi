@@ -37,11 +37,15 @@ time_parse(struct time_info *ti, char *s)
 		default: ti->period = TT_MOVE; break;
 	}
 	switch (s[0]) {
-		case '=':
+		case '=': {		
+			char *optval = strchr(s, ':');
+			if (optval) optval++;
+			
 			ti->dim = TD_GAMES;
 			ti->len.games = atoi(++s);
+			ti->len.games_max = (optval ? atoi(optval) : 0);
 			break;
-		default:
+		} default:
 			if (!isdigit(s[0]))
 				return false;
 			ti->dim = TD_WALLTIME;
@@ -354,9 +358,13 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		}
 
 		stop->desired.playouts = ti->len.games;
-		/* We force worst == desired, so note that we will NOT loop
-		 * until best == winner. */
 		stop->worst.playouts = ti->len.games;
+		/* We force worst == desired, so note that we will NOT loop until best == winner
+		 * unless a max number of playouts has been given explicitly. */
+		if (ti->len.games_max) {
+			assert(ti->len.games_max > ti->len.games);
+			stop->worst.playouts = ti->len.games_max;
+		}
 		return;
 	}
 

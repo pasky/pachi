@@ -25,8 +25,9 @@ struct time_info {
 		TD_WALLTIME, // Wall time to spend performing simulations.
 	} dim;
 	/* The actual time count. */
-	union {
-		int games; // TD_GAMES
+	struct {
+		int games;     // TD_GAMES
+		int games_max; // TD_GAMES
 		struct {   // TD_WALLTIME
 			/* Main thinking time. 0 if we are already completely
 			 * in byoyomi. */
