@@ -14,9 +14,26 @@ enum parse_code {
 	P_UNKNOWN_COMMAND,
 };
 
+typedef struct
+{
+	char *cmd;
+	char *next;
+	int   id;
+	int   replied;
+} gtp_t;
+
+#define next_tok(to_) \
+	to_ = gtp->next; \
+	gtp->next = gtp->next + strcspn(gtp->next, " \t\r\n"); \
+	if (*gtp->next) { \
+		*gtp->next = 0; gtp->next++; \
+		gtp->next += strspn(gtp->next, " \t\r\n"); \
+	}
+
 enum parse_code gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf);
-void gtp_reply(int id, ...);
 bool gtp_is_valid(struct engine *e, const char *cmd);
+void gtp_final_score_str(struct board *board, struct engine *engine, char *reply, int len);
+void gtp_reply(gtp_t *gtp, ...);
 
 #define is_gamestart(cmd) (!strcasecmp((cmd), "boardsize"))
 #define is_reset(cmd) (is_gamestart(cmd) || !strcasecmp((cmd), "clear_board") || !strcasecmp((cmd), "kgs-rules"))

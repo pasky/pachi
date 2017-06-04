@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 
 /**************************************************************************************************/
@@ -75,6 +76,9 @@ checked_calloc(size_t nmemb, size_t size, const char *filename, unsigned int lin
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b));
 #define MAX(a, b) ((a) > (b) ? (a) : (b));
+
+/* Returns true if @str starts with @prefix */
+int str_prefix(char *prefix, char *str);
 
 
 /**************************************************************************************************/
