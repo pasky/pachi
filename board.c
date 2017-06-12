@@ -567,34 +567,6 @@ board_handicap(struct board *board, int stones, FILE *f)
 }
 
 
-static void __attribute__((noinline))
-check_libs_consistency(struct board *board, group_t g)
-{
-#ifdef DEBUG
-	if (!g) return;
-	struct group *gi = &board_group_info(board, g);
-	for (int i = 0; i < GROUP_KEEP_LIBS; i++)
-		if (gi->lib[i] && board_at(board, gi->lib[i]) != S_NONE) {
-			fprintf(stderr, "BOGUS LIBERTY %s of group %d[%s]\n", coord2sstr(gi->lib[i], board), g, coord2sstr(group_base(g), board));
-			assert(0);
-		}
-#endif
-}
-
-static void
-check_pat3_consistency(struct board *board, coord_t coord)
-{
-#ifdef DEBUG
-	foreach_8neighbor(board, coord) {
-		if (board_at(board, c) == S_NONE && pattern3_hash(board, c) != board->pat3[c]) {
-			board_print(board, stderr);
-			fprintf(stderr, "%s(%d)->%s(%d) computed %x != stored %x (%d)\n", coord2sstr(coord, board), coord, coord2sstr(c, board), c, pattern3_hash(board, c), board->pat3[c], fn__i);
-			assert(0);
-		}
-	} foreach_8neighbor_end;
-#endif
-}
-
 static void
 board_capturable_add(struct board *board, group_t group, coord_t lib, bool onestone)
 {
@@ -649,8 +621,6 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, struct boa
 			board_group_info(board, group).libs, coord2sstr(coord, board));
 	}
 
-	if (!u) check_libs_consistency(board, group);
-
 	struct group *gi = &board_group_info(board, group);
 	bool onestone = group_is_onestone(board, group);
 	if (gi->libs < GROUP_KEEP_LIBS) {
@@ -672,8 +642,6 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, struct boa
 		}
 		gi->lib[gi->libs++] = coord;
 	}
-
-	if (!u) check_libs_consistency(board, group);
 }
 
 static void
@@ -727,8 +695,6 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord, struct boar
 		coord_t lib = gi->lib[i] = gi->lib[--gi->libs];
 		gi->lib[gi->libs] = 0;
 		
-		if (!u) check_libs_consistency(board, group);
-
 		/* Postpone refilling lib[] until we need to. */
 		assert(GROUP_REFILL_LIBS > 1);
 		if (gi->libs > GROUP_REFILL_LIBS)
@@ -746,7 +712,6 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord, struct boar
 
 	/* This is ok even if gi->libs < GROUP_KEEP_LIBS since we
 	 * can call this multiple times per coord. */
-	if (!u) check_libs_consistency(board, group);
 	return;
 }
 
@@ -916,7 +881,6 @@ new_group(struct board *board, coord_t coord, struct board_undo *u)
 	if (!u) {
 		if (gi->libs == 1)
 			board_capturable_add(board, group, gi->lib[0], true);
-		check_libs_consistency(board, group);
 	}
 
 	if (DEBUGL(8))
@@ -1070,8 +1034,6 @@ board_play_outside(struct board *board, struct move *m, int f, struct board_undo
 	struct move ko = { pass, S_NONE };
 	board->ko = ko;
 
-	if (!u) check_pat3_consistency(board, coord);
-
 	return group;
 }
 
@@ -1167,8 +1129,6 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 		board_symmetry_update(board, &board->symmetry, coord);
 	}
 	board->ko = ko;
-
-	if (!u) check_pat3_consistency(board, coord);
 
 	return !!group;
 }
