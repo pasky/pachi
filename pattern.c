@@ -165,23 +165,6 @@ pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
                       struct board *b, struct move *m)
 {
 	f->id = FEAT_CAPTURE; f->payload = 0;
-#ifdef BOARD_TRAITS
-	if (!trait_at(b, m->coord, m->color).cap)
-		return f;
-	/* Capturable! */
-	if ((ps[FEAT_CAPTURE] & ~(1<<PF_CAPTURE_1STONE | 1<<PF_CAPTURE_TRAPPED | 1<<PF_CAPTURE_CONNECTION)) == 1<<PF_MATCH) {
-		if (PS_PF(CAPTURE, 1STONE))
-			f->payload |= (trait_at(b, m->coord, m->color).cap1 == trait_at(b, m->coord, m->color).cap) << PF_CAPTURE_1STONE;
-		if (PS_PF(CAPTURE, TRAPPED))
-			f->payload |= (!trait_at(b, m->coord, stone_other(m->color)).safe) << PF_CAPTURE_TRAPPED;
-		if (PS_PF(CAPTURE, CONNECTION))
-			f->payload |= (trait_at(b, m->coord, m->color).cap < neighbor_count_at(b, m->coord, stone_other(m->color))) << PF_CAPTURE_CONNECTION;
-		(f++, p->n++);
-		return f;
-	}
-	/* We need to know details, so we still have to go through
-	 * the neighbors. */
-#endif
 
 	/* We look at neighboring groups we could capture, and also if the
 	 * opponent could save them. */
@@ -285,23 +268,6 @@ pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
 		      struct board *b, struct move *m)
 {
 	f->id = FEAT_AESCAPE; f->payload = 0;
-#ifdef BOARD_TRAITS
-	if (!trait_at(b, m->coord, stone_other(m->color)).cap)
-		return f;
-	/* Opponent can capture something! */
-	if ((ps[FEAT_AESCAPE] & ~(1<<PF_AESCAPE_1STONE | 1<<PF_AESCAPE_TRAPPED | 1<<PF_AESCAPE_CONNECTION)) == 1<<PF_MATCH) {
-		if (PS_PF(AESCAPE, 1STONE))
-			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap1 == trait_at(b, m->coord, stone_other(m->color)).cap) << PF_AESCAPE_1STONE;
-		if (PS_PF(AESCAPE, TRAPPED))
-			f->payload |= (!trait_at(b, m->coord, m->color).safe) << PF_AESCAPE_TRAPPED;
-		if (PS_PF(AESCAPE, CONNECTION))
-			f->payload |= (trait_at(b, m->coord, stone_other(m->color)).cap < neighbor_count_at(b, m->coord, m->color)) << PF_AESCAPE_CONNECTION;
-		(f++, p->n++);
-		return f;
-	}
-	/* We need to know details, so we still have to go through
-	 * the neighbors. */
-#endif
 
 	/* Find if a neighboring group of ours is in atari, AND that we provide
 	 * a liberty to connect out. XXX: No connect-and-die check. */
@@ -500,23 +466,13 @@ pattern_match(struct pattern_config *pc, pattern_spec ps,
 
 	if (PS_ANY(SELFATARI)) {
 		bool simple = false;
-		if (PS_PF(SELFATARI, STUPID)) {
-#ifdef BOARD_TRAITS
-			if (!b->precise_selfatari)
-				simple = !trait_at(b, m->coord, m->color).safe;
-			else
-#endif
+		if (PS_PF(SELFATARI, STUPID))
 			simple = !board_safe_to_play(b, m->coord, m->color);
-		}
+		
 		bool thorough = false;
-		if (PS_PF(SELFATARI, SMART)) {
-#ifdef BOARD_TRAITS
-			if (b->precise_selfatari)
-				thorough = !trait_at(b, m->coord, m->color).safe;
-			else
-#endif
+		if (PS_PF(SELFATARI, SMART))
 			thorough = is_bad_selfatari(b, m->color, m->coord);
-		}
+		
 		if (simple || thorough) {
 			f->id = FEAT_SELFATARI;
 			f->payload = simple << PF_SELFATARI_STUPID;

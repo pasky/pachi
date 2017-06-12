@@ -32,10 +32,6 @@ struct fbook;
 
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
-//#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
-//#define BOARD_TRAIT_SAFE 1 // include btraits.safe (rather expensive, unused)
-//#define BOARD_TRAIT_SAFE 2 // include btraits.safe based on full is_bad_selfatari()
-
 //#define BOARD_UNDO_CHECKS 1  // Guard against invalid quick_play() / quick_undo() uses
 
 #define BOARD_MAX_COORDS  ((BOARD_MAX_SIZE+2) * (BOARD_MAX_SIZE+2) )
@@ -98,28 +94,6 @@ struct group {
 
 struct neighbor_colors {
 	char colors[S_MAX];
-};
-
-
-/* Point traits bitmap; we update this information incrementally,
- * it can be used e.g. for fast pattern features matching. */
-struct btraits {
-	/* Number of neighbors we can capture. 0=this move is
-	 * not capturing, 1..4=this many neighbors we can capture
-	 * (can be multiple neighbors of same group). */
-	unsigned cap:3;
-	/* Number of 1-stone neighbors we can capture. */
-	unsigned cap1:3;
-#ifdef BOARD_TRAIT_SAFE
-	/* Whether it is SAFE to play here. This is essentially just
-	 * cached result of board_safe_to_play(). (Of course the concept
-	 * of "safety" is not perfect here, but it's the cheapest
-	 * reasonable thing we can do.) */
-	bool safe:1;
-#endif
-	/* Whether we need to re-compute this coordinate; used to
-	 * weed out duplicates. Maintained only for S_BLACK. */
-	bool dirty:1;
 };
 
 
@@ -232,13 +206,6 @@ FB_ONLY(uint32_t spathash)[BOARD_MAX_COORDS][BOARD_SPATHASH_MAXD][2];
 FB_ONLY(hash3_t pat3)[BOARD_MAX_COORDS];
 #endif
 
-#ifdef BOARD_TRAITS
-	/* Incrementally matched point traits information, black-to-play
-	 * ([][0]) and white-to-play ([][1]). */
-	/* The information is only valid for empty points. */
-FB_ONLY(struct btraits t)[BOARD_MAX_COORDS][2];
-#endif
-
 	/* Group information - indexed by gid (which is coord of base group stone) */
 	struct group gi[BOARD_MAX_COORDS];
 
@@ -250,11 +217,6 @@ FB_ONLY(coord_t f)[BOARD_MAX_COORDS];  FB_ONLY(int flen);
 #ifdef WANT_BOARD_C
 	/* Queue of capturable groups */
 FB_ONLY(group_t c)[BOARD_MAX_GROUPS];  FB_ONLY(int clen);
-#endif
-
-#ifdef BOARD_TRAITS
-	/* Queue of positions that need their traits updated */
-FB_ONLY(coord_t *tq);  FB_ONLY(int tqlen);
 #endif
 
 	/* Symmetry information */
@@ -609,17 +571,12 @@ board_is_valid_play(struct board *board, enum stone color, coord_t coord)
 	/* Play within {true,false} eye-ish formation */
 	if (board->ko.coord == coord && board->ko.color == color)
 		return false;
-#ifdef BOARD_TRAITS
-	/* XXX: Disallows suicide. */
-	return trait_at(board, coord, color).cap > 0;
-#else
 	int groups_in_atari = 0;
 	foreach_neighbor(board, coord, {
 		group_t g = group_at(board, c);
 		groups_in_atari += (board_group_info(board, g).libs == 1);
 	});
 	return !!groups_in_atari;
-#endif
 }
 
 /* Check group suicides, slower than board_is_valid_play() */
@@ -635,17 +592,11 @@ board_is_valid_play_no_suicide(struct board *board, enum stone color, coord_t co
 			return false;
 
 	// Capturing something ?
-#ifdef BOARD_TRAITS
-	/* XXX: Disallows suicide. */
-	if (trait_at(board, coord, color).cap > 0)
-		return true;
-#else
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == stone_other(color) &&
 		    board_group_info(board, group_at(board, c)).libs == 1)
 			return true;
 	});
-#endif
 
 	// Neighbour with 2 libs ?
 	foreach_neighbor(board, coord, {
@@ -673,9 +624,6 @@ board_playing_ko_threat(struct board *b)
 static inline group_t
 board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 {
-#ifdef BOARD_TRAITS
-	if (!trait_at(b, coord, stone_other(group_color)).cap) return 0;
-#endif
 	foreach_neighbor(b, coord, {
 		group_t g = group_at(b, c);
 		if (g && board_at(b, c) == group_color && board_group_info(b, g).libs == 1)
@@ -693,24 +641,12 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 	if (libs > 1)
 		return true;
 
-#ifdef BOARD_TRAITS
-	/* number of capturable enemy groups */
-	if (trait_at(b, coord, color).cap > 0)
-		return true; // XXX: We don't account for snapback.
-	/* number of non-capturable friendly groups */
-	int noncap_ours = neighbor_count_at(b, coord, color) - trait_at(b, coord, stone_other(color)).cap;
-	if (noncap_ours < 1)
-		return false;
-/*#else see below */
-#endif
-
 	/* ok, but we need to check if they don't have just two libs. */
 	coord_t onelib = -1;
 	foreach_neighbor(b, coord, {
-#ifndef BOARD_TRAITS
 		if (board_at(b, c) == stone_other(color) && board_group_info(b, group_at(b, c)).libs == 1)
 			return true; // can capture; no snapback check
-#endif
+
 		if (board_at(b, c) != color) continue;
 		group_t g = group_at(b, c);
 		if (board_group_info(b, g).libs == 1) continue; // in atari
