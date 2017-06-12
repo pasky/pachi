@@ -261,9 +261,8 @@ board_clear(struct board *board)
 	board->fbookfile = fbookfile;
 	board->rules = rules;
 
-	if (board->fbookfile) {
+	if (board->fbookfile)
 		board->fbook = fbook_init(board->fbookfile, board);
-	}
 }
 
 static void
@@ -302,18 +301,16 @@ static void
 board_print_row(struct board *board, int y, strbuf_t *buf, board_cprint cprint, void *data)
 {
 	sbprintf(buf, " %2d | ", y);
-	for (int x = 1; x < board_size(board) - 1; x++) {
+	for (int x = 1; x < board_size(board) - 1; x++)
 		if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
 			sbprintf(buf, "%c)", stone2char(board_atxy(board, x, y)));
 		else
 			sbprintf(buf, "%c ", stone2char(board_atxy(board, x, y)));
-	}
 	sbprintf(buf, "|");
 	if (cprint) {
 		sbprintf(buf, " %2d | ", y);
-		for (int x = 1; x < board_size(board) - 1; x++) {
+		for (int x = 1; x < board_size(board) - 1; x++)
 			cprint(board, coord_xy(board, x, y), buf, data);
-		}
 		sbprintf(buf, "|");
 	}
 	sbprintf(buf, "\n");
@@ -392,11 +389,10 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 	static const int ataribits[8] = { -1, 0, -1, 1, 2, -1, 3, -1 };
 	enum stone new_color = board_at(board, coord);
 	bool in_atari = false;
-	if (new_color == S_NONE) {
+	if (new_color == S_NONE)
 		board->pat3[coord] = pattern3_hash(board, coord);
-	} else {
+	else
 		in_atari = (board_group_info(board, group_at(board, coord)).libs == 1);
-	}
 	foreach_8neighbor(board, coord) {
 		/* Internally, the loop uses fn__i=[0..7]. We can use
 		 * it directly to address bits within the bitmap of the
@@ -422,20 +418,21 @@ board_hash_commit(struct board *board)
 		fprintf(stderr, "board_hash_commit %"PRIhash"\n", board->hash);
 	if (likely(board->history_hash[board->hash & history_hash_mask]) == 0) {
 		board->history_hash[board->hash & history_hash_mask] = board->hash;
-	} else {
-		hash_t i = board->hash;
-		while (board->history_hash[i & history_hash_mask]) {
-			if (board->history_hash[i & history_hash_mask] == board->hash) {
-				if (DEBUGL(5))
-					fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
-						coord_x(board->last_move.coord, board), coord_y(board->last_move.coord, board));
-				board->superko_violation = true;
-				return;
-			}
-			i = history_hash_next(i);
-		}
-		board->history_hash[i & history_hash_mask] = board->hash;
+		return;
 	}
+
+	hash_t i = board->hash;
+	while (board->history_hash[i & history_hash_mask]) {
+		if (board->history_hash[i & history_hash_mask] == board->hash) {
+			if (DEBUGL(5))
+				fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
+					coord_x(board->last_move.coord, board), coord_y(board->last_move.coord, board));
+			board->superko_violation = true;
+			return;
+		}
+		i = history_hash_next(i);
+	}
+	board->history_hash[i & history_hash_mask] = board->hash;
 }
 
 
@@ -451,18 +448,16 @@ board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t 
 
 	int x = coord_x(c, b), y = coord_y(c, b), t = board_size(b) / 2;
 	int dx = board_size(b) - 1 - x; /* for SYM_DOWN */
-	if (DEBUGL(6)) {
+	if (DEBUGL(6))
 		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d] update for %d,%d\n",
 			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
 			symmetry->d, symmetry->type, x, y);
-	}
-
+	
 	switch (symmetry->type) {
 		case SYM_FULL:
-			if (x == t && y == t) {
-				/* Tengen keeps full symmetry. */
-				return;
-			}
+			if (x == t && y == t)				
+				return;        /* Tengen keeps full symmetry. */
+			
 			/* New symmetry now? */
 			if (x == y) {
 				symmetry->type = SYM_DIAG_UP;
@@ -601,12 +596,11 @@ board_capturable_rm(struct board *board, group_t group, coord_t lib, bool onesto
 
 #ifdef WANT_BOARD_C
 	/* Update the list of capturable groups. */
-	for (int i = 0; i < board->clen; i++) {
+	for (int i = 0; i < board->clen; i++)
 		if (unlikely(board->c[i] == group)) {
 			board->c[i] = board->c[--board->clen];
 			return;
 		}
-	}
 	fprintf(stderr, "rm of bad group %d\n", group_base(group));
 	assert(0);
 #endif
@@ -615,11 +609,10 @@ board_capturable_rm(struct board *board, group_t group, coord_t lib, bool onesto
 static void
 board_group_addlib(struct board *board, group_t group, coord_t coord, struct board_undo *u)
 {
-	if (DEBUGL(7)) {
+	if (DEBUGL(7))
 		fprintf(stderr, "Group %d[%s] %d: Adding liberty %s\n",
 			group_base(group), coord2sstr(group_base(group), board),
 			board_group_info(board, group).libs, coord2sstr(coord, board));
-	}
 
 	struct group *gi = &board_group_info(board, group);
 	bool onestone = group_is_onestone(board, group);
@@ -634,11 +627,10 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, struct boa
 				return;
 		}
 		if (!u) {
-			if (gi->libs == 0) {
+			if (gi->libs == 0)
 				board_capturable_add(board, group, coord, onestone);
-			} else if (gi->libs == 1) {
+			else if (gi->libs == 1)
 				board_capturable_rm(board, group, gi->lib[0], onestone);
-			}
 		}
 		gi->lib[gi->libs++] = coord;
 	}
@@ -675,11 +667,10 @@ board_group_find_extra_libs(struct board *board, group_t group, struct group *gi
 static void
 board_group_rmlib(struct board *board, group_t group, coord_t coord, struct board_undo *u)
 {
-	if (DEBUGL(7)) {
+	if (DEBUGL(7))
 		fprintf(stderr, "Group %d[%s] %d: Removing liberty %s\n",
 			group_base(group), coord2sstr(group_base(group), board),
 			board_group_info(board, group).libs, coord2sstr(coord, board));
-	}
 
 	struct group *gi = &board_group_info(board, group);
 	bool onestone = group_is_onestone(board, group);
@@ -703,9 +694,9 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord, struct boar
 			board_group_find_extra_libs(board, group, gi, coord);
 		if (u) return;
 		
-		if (gi->libs == 1) {
+		if (gi->libs == 1)
 			board_capturable_add(board, group, gi->lib[0], onestone);
-		} else if (gi->libs == 0)
+		else if (gi->libs == 0)
 			board_capturable_rm(board, group, lib, onestone);
 		return;
 	}
@@ -724,9 +715,8 @@ board_remove_stone(struct board *board, group_t group, coord_t c, struct board_u
 	enum stone color = board_at(board, c);
 	board_at(board, c) = S_NONE;
 	group_at(board, c) = 0;
-	if (!u) {
+	if (!u)
 		board_hash_update(board, c, color);
- 	}
 
 	/* Increase liberties of surrounding groups */
 	coord_t coord = c;
@@ -800,11 +790,10 @@ merge_groups(struct board *board, group_t group_to, group_t group_from, struct b
 	bool onestone_from = group_is_onestone(board, group_from);
 	bool onestone_to = group_is_onestone(board, group_to);
 
-	if (!u) {
+	if (!u)
 		/* We do this early before the group info is rewritten. */
 		if (gi_from->libs == 1)
 			board_capturable_rm(board, group_from, gi_from->lib[0], onestone_from);
-	}
 
 	if (DEBUGL(7))
 		fprintf(stderr,"---- (froml %d, tol %d)\n", gi_from->libs, gi_to->libs);
@@ -815,11 +804,10 @@ merge_groups(struct board *board, group_t group_to, group_t group_from, struct b
 				if (gi_to->lib[j] == gi_from->lib[i])
 					goto next_from_lib;
 			if (!u) {
-				if (gi_to->libs == 0) {
+				if (gi_to->libs == 0)
 					board_capturable_add(board, group_to, gi_from->lib[i], onestone_to);
-				} else if (gi_to->libs == 1) {
+				else if (gi_to->libs == 1)
 					board_capturable_rm(board, group_to, gi_to->lib[0], onestone_to);
-				}
 			}
 			gi_to->lib[gi_to->libs++] = gi_from->lib[i];
 			if (gi_to->libs >= GROUP_KEEP_LIBS)
@@ -878,10 +866,9 @@ new_group(struct board *board, coord_t coord, struct board_undo *u)
 	group_at(board, coord) = group;
 	groupnext_at(board, coord) = 0;
 
-	if (!u) {
+	if (!u)
 		if (gi->libs == 1)
 			board_capturable_add(board, group, gi->lib[0], true);
-	}
 
 	if (DEBUGL(8))
 		fprintf(stderr, "new_group: added %d,%d to group %d\n",
@@ -978,9 +965,8 @@ play_one_neighbor(struct board *board,
 		if (!group) {
 			group = ngroup;
 			add_to_group(board, group, c, coord, u);
-		} else {
+		} else
 			merge_groups(board, group, ngroup, u);
-		}
 	} else if (ncolor == other_color) {
 		if (DEBUGL(8)) {
 			struct group *gi = &board_group_info(board, ngroup);
@@ -1049,11 +1035,10 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 		if (DEBUGL(5))
 			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord, board), coord_y(coord, board), color);
 		return -1;
-	} else if (DEBUGL(6)) {
+	} else if (DEBUGL(6))
 		fprintf(stderr, "board_check: no ko at %d,%d,%d - ko is %d,%d,%d\n",
 			color, coord_x(coord, board), coord_y(coord, board),
 			board->ko.color, coord_x(board->ko.coord, board), coord_y(board->ko.coord, board));
-	}
 
 	struct move ko = { pass, S_NONE };
 
@@ -1069,11 +1054,9 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 
 	if (likely(captured_groups == 0)) {
 		if (DEBUGL(5)) {
-			if (DEBUGL(6))
-				board_print(board, stderr);
+			if (DEBUGL(6))  board_print(board, stderr);
 			fprintf(stderr, "board_check: one-stone suicide\n");
 		}
-
 		return -1;
 	}
 
@@ -1136,9 +1119,8 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 static int __attribute__((flatten))
 board_play_f(struct board *board, struct move *m, int f, struct board_undo *u)
 {
-	if (DEBUGL(7)) {
+	if (DEBUGL(7))
 		fprintf(stderr, "board_play(%s): ---- Playing %d,%d\n", coord2sstr(m->coord, board), coord_x(m->coord, board), coord_y(m->coord, board));
-	}
 	if (likely(!board_is_eyelike(board, m->coord, stone_other(m->color)))) {
 		/* NOT playing in an eye. Thus this move has to succeed. (This
 		 * is thanks to New Zealand rules. Otherwise, multi-stone
@@ -1151,9 +1133,8 @@ board_play_f(struct board *board, struct move *m, int f, struct board_undo *u)
 		if (!u)
 			board_hash_commit(board);
 		return 0;
-	} else {
+	} else
 		return board_play_in_eye(board, m, f, u);
-	}
 }
 
 static void
@@ -1468,12 +1449,10 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 	permit = (permit ? permit : board_permit);
 	if (!permit(b, &m, permit_data))
 		return false;
-	if (m.coord == *coord) {
+	if (m.coord == *coord)
 		return likely(board_play_f(b, &m, f, NULL) >= 0);
-	} else {
-		*coord = m.coord; // permit modified the coordinate
-		return likely(board_play(b, &m) >= 0);
-	}
+	*coord = m.coord; // permit modified the coordinate
+	return likely(board_play(b, &m) >= 0);
 }
 
 void
@@ -1654,18 +1633,17 @@ board_official_score(struct board *board, struct move_queue *q)
 bool
 board_set_rules(struct board *board, char *name)
 {
-	if (!strcasecmp(name, "japanese")) {
+	if (!strcasecmp(name, "japanese"))
 		board->rules = RULES_JAPANESE;
-	} else if (!strcasecmp(name, "chinese")) {
+	else if (!strcasecmp(name, "chinese"))
 		board->rules = RULES_CHINESE;
-	} else if (!strcasecmp(name, "aga")) {
+	else if (!strcasecmp(name, "aga"))
 		board->rules = RULES_AGA;
-	} else if (!strcasecmp(name, "new_zealand")) {
+	else if (!strcasecmp(name, "new_zealand"))
 		board->rules = RULES_NEW_ZEALAND;
-	} else if (!strcasecmp(name, "siming") || !strcasecmp(name, "simplified_ing")) {
+	else if (!strcasecmp(name, "siming") || !strcasecmp(name, "simplified_ing"))
 		board->rules = RULES_SIMING;
-	} else {
+	else
 		return false;
-	}
 	return true;
 }
