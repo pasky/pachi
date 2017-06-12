@@ -27,9 +27,6 @@ struct fbook;
 
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
 
-//#define BOARD_SPATHASH // incremental patternsp.h hashes
-#define BOARD_SPATHASH_MAXD 3 // maximal diameter
-
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
 //#define BOARD_UNDO_CHECKS 1  // Guard against invalid quick_play() / quick_undo() uses
@@ -190,15 +187,6 @@ FB_ONLY(bool superko_violation);
 	coord_t p[BOARD_MAX_COORDS];
 	/* Neighboring colors; numbers of neighbors of index color */
 	struct neighbor_colors n[BOARD_MAX_COORDS];
-
-#ifdef BOARD_SPATHASH
-	/* For spatial hashes, we use only 24 bits. */
-	/* [0] is d==1, we don't keep hash for d==0. */
-	/* We keep hashes for black-to-play ([][0]) and white-to-play
-	 * ([][1], reversed stone colors since we match all patterns as
-	 * black-to-play). */
-FB_ONLY(uint32_t spathash)[BOARD_MAX_COORDS][BOARD_SPATHASH_MAXD][2];
-#endif
 
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
