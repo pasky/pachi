@@ -33,11 +33,6 @@ void cfg_distances(struct board *b, coord_t start, int *distances, int maxdist);
  * non-linear. */
 floating_t board_effective_handicap(struct board *b, int first_move_value);
 
-/* Decide if the given player wins counting on the board, considering
- * that given groups are dead. (To get the list of dead groups, use
- * e.g. groups_of_status().) */
-bool pass_is_safe(struct board *b, enum stone color, struct move_queue *mq);
-
 /* Returns estimated number of remaining moves for one player until end of game. */
 int board_estimated_moves_left(struct board *b);
 

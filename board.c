@@ -1589,9 +1589,8 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 
 /* Tromp-Taylor Counting */
 floating_t
-board_official_score(struct board *board, struct move_queue *q)
+board_official_score_and_dame(struct board *board, struct move_queue *q, int *dame)
 {
-
 	/* A point P, not colored C, is said to reach C, if there is a path of
 	 * (vertically or horizontally) adjacent points of P's color from P to
 	 * a point of color C.
@@ -1628,14 +1627,21 @@ board_official_score(struct board *board, struct move_queue *q)
 	int scores[S_MAX];
 	memset(scores, 0, sizeof(scores));
 
+	*dame = 0;
 	foreach_point(board) {
 		assert(board_at(board, c) == S_OFFBOARD || ownermap[c] != 0);
-		if (ownermap[c] == 3)
-			continue;
+		if (ownermap[c] == 3) {  (*dame)++; continue;  }
 		scores[ownermap[c]]++;
 	} foreach_point_end;
 
 	return board->komi + (board->rules != RULES_SIMING ? board->handicap : 0) + scores[S_WHITE] - scores[S_BLACK];
+}
+
+floating_t
+board_official_score(struct board *board, struct move_queue *q)
+{
+	int dame;
+	return board_official_score_and_dame(board, q, &dame);
 }
 
 bool

@@ -99,38 +99,35 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 }
 
 static void
-dead_group_list(struct uct *u, struct board *b, struct move_queue *mq, float thres)
+get_dead_groups(struct uct *u, struct board *b, struct move_queue *dead, struct move_queue *unclear)
 {
 	enum gj_state gs_array[board_size2(b)];
-	struct group_judgement gj = { .thres = thres, .gs = gs_array };
+	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
 	board_ownermap_judge_groups(b, &u->ownermap, &gj);
-	groups_of_status(b, &gj, GS_DEAD, mq);
+	dead->moves = unclear->moves = 0;
+	groups_of_status(b, &gj, GS_DEAD, dead);
+	groups_of_status(b, &gj, GS_UNKNOWN, unclear);
 }
 
-static void
-get_dead_groups(struct uct *u, struct board *b, struct move_queue *mq, bool unknown_color)
+/* Do we win counting, considering that given groups are dead ?
+ * Assumes ownermap is well seeded. */
+static bool
+pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue *mq,
+	     float ownermap_score, bool pass_all_alive)
 {
-	struct move_queue relaxed;
-	relaxed.moves = mq->moves = 0;
-	dead_group_list(u, b, mq, GJ_THRES);	// Strict
-	dead_group_list(u, b, &relaxed, 0.55);  // Relaxed
+	int dame;
+	floating_t score = board_official_score_and_dame(b, mq, &dame);
+	if (color == S_BLACK)  score = -score;
+	//fprintf(stderr, "pass_is_safe():  %d score %f   dame: %i\n", color, score, dame);
 
-	/* Add own unclear dead groups if it doesn't change the outcome
-	 * and spare opponent a genmove_cleanup phase... */
-	if (!unknown_color) 
-	{
-		bool result = pass_is_safe(b, u->my_color, mq);
-		for (unsigned int i = 0; i < relaxed.moves; i++) {
-			group_t g = relaxed.move[i];
-			if (board_at(b, g) != u->my_color || mq_has(mq, g))
-				continue;
-			
-			struct move_queue tmp;  memcpy(&tmp, mq, sizeof(tmp));		       
-			mq_add(&tmp, g, 0);
-			if (result == pass_is_safe(b, u->my_color, &tmp))
-				mq_add(mq, g, 0);
-		}
-	}
+	/* Don't go to counting if position is not final.
+	 * If ownermap and official score disagree position is likely not final.
+	 * If too many dames also. */
+	if (!pass_all_alive)
+		if (score != ownermap_score || dame > 20)
+			return false;
+	
+	return (score >= 0);
 }
 
 bool
@@ -140,18 +137,24 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	while (u->ownermap.playouts < GJ_MINGAMES)
 		uct_playout(u, b, color, u->t);
 
+	/* First check score estimate, official score is off if position is not final */
+	floating_t score = board_ownermap_score_est(b, &u->ownermap);
+	if (color == S_BLACK)  score = -score;
+	if (score < 0)  return false;
+
 	/* Save dead groups for final_status_list dead. */
-	struct move_queue *mq = &u->dead_groups;  mq->moves = 0;
+	struct move_queue unclear;
+	struct move_queue *mq = &u->dead_groups;
 	u->dead_groups_move = b->moves;
-	bool unknown_color = !u->my_color;  assert(!unknown_color);
-	get_dead_groups(u, b, mq, unknown_color);
+	get_dead_groups(u, b, mq, &unclear);
+	
+	/* Unclear groups ? Clarify first. */
+	if (unclear.moves)  return false;
 
 	if (pass_all_alive) {
-		for (unsigned int i = 0; i < mq->moves; i++) {
-			if (board_at(b, mq->move[i]) == stone_other(color)) {
+		for (unsigned int i = 0; i < mq->moves; i++)
+			if (board_at(b, mq->move[i]) == stone_other(color))
 				return false; // We need to remove opponent dead groups first.
-			}
-		}
 		mq->moves = 0; // our dead stones are alive when pass_all_alive is true
 	}
 	if (u->allow_losing_pass) {
@@ -166,7 +169,8 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		} foreach_point_end;
 		return true;
 	}
-	return pass_is_safe(b, color, mq);
+
+	return pass_is_safe(u, b, color, mq, score, pass_all_alive);
 }
 
 static void
@@ -306,7 +310,6 @@ static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
-	bool unknown_color = !u->my_color;
 	
 	/* This means the game is probably over, no use pondering on. */
 	uct_pondering_stop(u);
@@ -334,7 +337,8 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	if (DEBUGL(2))
 		board_print_ownermap(b, stderr, &u->ownermap);
 
-	get_dead_groups(u, b, mq, unknown_color);
+	struct move_queue unclear;
+	get_dead_groups(u, b, mq, &unclear);
 	print_dead_groups(u, b, mq);
 
 	/* Clean up the mock state in case we will receive

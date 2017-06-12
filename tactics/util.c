@@ -100,17 +100,6 @@ board_effective_handicap(struct board *b, int first_move_value)
 }
 
 
-bool
-pass_is_safe(struct board *b, enum stone color, struct move_queue *mq)
-{
-	floating_t score = board_official_score(b, mq);
-	if (color == S_BLACK)
-		score = -score;
-	//fprintf(stderr, "%d score %f\n", color, score);
-	return (score >= 0);
-}
-
-
 /* On average 20% of points remain empty at the end of a game */
 #define EXPECTED_FINAL_EMPTY_PERCENT 20
 

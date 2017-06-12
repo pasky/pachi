@@ -415,6 +415,7 @@ floating_t board_fast_score(struct board *board);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
 struct move_queue;
 floating_t board_official_score(struct board *board, struct move_queue *mq);
+floating_t board_official_score_and_dame(struct board *board, struct move_queue *mq, int *dame);
 
 /* Set board rules according to given string. Returns false in case
  * of unknown ruleset name. */
