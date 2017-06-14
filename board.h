@@ -40,7 +40,8 @@ struct fbook;
 
 #define BOARD_MAX_COORDS  ((BOARD_MAX_SIZE+2) * (BOARD_MAX_SIZE+2) )
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
-#define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE / 2)
+#define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE * 2 / 3)
+/* For 19x19, max 19*2*6 = 228 groups (stacking b&w stones, each third line empty) */
 
 enum e_sym {
 		SYM_FULL,
@@ -193,48 +194,55 @@ FB_ONLY(bool superko_violation);
 	 * you need to handle them yourselves, if you need to. */
 
 	/* Stones played on the board */
-	enum stone *b; /* enum stone */
+	enum stone b[BOARD_MAX_COORDS];
 	/* Group id the stones are part of; 0 == no group */
-	group_t *g;
+	group_t g[BOARD_MAX_COORDS];
 	/* Positions of next stones in the stone group; 0 == last stone */
-	coord_t *p;
+	coord_t p[BOARD_MAX_COORDS];
 	/* Neighboring colors; numbers of neighbors of index color */
-	struct neighbor_colors *n;
-	/* Zobrist hash for each position */
-	hash_t *h;
+	struct neighbor_colors n[BOARD_MAX_COORDS];
+
+	/* XXX take this out, one for each board size */
+	/* Coordinates zobrist hashes (black and white) */
+	hash_t h[BOARD_MAX_COORDS][2];
+
 #ifdef BOARD_SPATHASH
 	/* For spatial hashes, we use only 24 bits. */
 	/* [0] is d==1, we don't keep hash for d==0. */
 	/* We keep hashes for black-to-play ([][0]) and white-to-play
 	 * ([][1], reversed stone colors since we match all patterns as
 	 * black-to-play). */
-FB_ONLY(uint32_t (*spathash))[BOARD_SPATHASH_MAXD][2];
+FB_ONLY(uint32_t spathash)[BOARD_MAX_COORDS][BOARD_SPATHASH_MAXD][2];
 #endif
+
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
-FB_ONLY(hash3_t *pat3);
+FB_ONLY(hash3_t pat3)[BOARD_MAX_COORDS];
 #endif
+
 #ifdef BOARD_TRAITS
 	/* Incrementally matched point traits information, black-to-play
 	 * ([][0]) and white-to-play ([][1]). */
 	/* The information is only valid for empty points. */
-FB_ONLY(struct btraits (*t)[2]);
+FB_ONLY(struct btraits t)[BOARD_MAX_COORDS][2];
 #endif
+
+	/* XXX take this out, one for each board size */
 	/* Cached information on x-y coordinates so that we avoid division. */
-	uint8_t (*coord)[2];
+	uint8_t coord[BOARD_MAX_COORDS][2];
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
-	struct group *gi;
+	struct group gi[BOARD_MAX_COORDS];
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes!
 	 * However, pass is not included. */
-FB_ONLY(coord_t *f);  FB_ONLY(int flen);
+FB_ONLY(coord_t f)[BOARD_MAX_COORDS];  FB_ONLY(int flen);
 
 #ifdef WANT_BOARD_C
 	/* Queue of capturable groups */
-FB_ONLY(group_t *c);  FB_ONLY(int clen);
+FB_ONLY(group_t c)[BOARD_MAX_GROUPS];  FB_ONLY(int clen);
 #endif
 
 #ifdef BOARD_TRAITS
@@ -369,7 +377,7 @@ struct board_undo {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
-#define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
+#define hash_at(b_, coord, color) ((b_)->h[coord][((color) == S_BLACK ? 1 : 0)])
 
 struct board *board_init(char *fbookfile);
 struct board *board_copy(struct board *board2, struct board *board1);
