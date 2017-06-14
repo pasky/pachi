@@ -371,13 +371,8 @@ test_moggy_status(struct board *b, char *arg)
 	
 	struct playout_policy *policy = playout_moggy_init(NULL, b, NULL);
 	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
-	struct board_ownermap ownermap;
-
-	ownermap.playouts = 0;
-	ownermap.map = malloc2(board_size2(b) * sizeof(ownermap.map[0]));
-	memset(ownermap.map, 0, board_size2(b) * sizeof(ownermap.map[0]));	
-
-
+	struct board_ownermap ownermap;  board_ownermap_init(&ownermap);
+	
 	/* Get final status estimate after a number of moggy games */
 	int wr = 0;
 	double time_start = time_now();
@@ -411,7 +406,6 @@ test_moggy_status(struct board *b, char *arg)
 			ownermap.map[c][color] * 100 / ownermap.playouts);
 	}
 	
-	free(ownermap.map);
 	playout_policy_done(policy);
 	return true;   // Not much of a unit test right now =)
 }

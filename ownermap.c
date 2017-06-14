@@ -8,6 +8,12 @@
 #include "mq.h"
 #include "ownermap.h"
 
+void
+board_ownermap_init(struct board_ownermap *ownermap)
+{
+	memset(ownermap, 0, sizeof(*ownermap));
+}
+
 static void
 printhook(struct board *board, coord_t c, strbuf_t *buf, void *data)
 {

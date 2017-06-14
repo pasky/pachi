@@ -94,8 +94,7 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 		setup_state(u, b, color);
 	}
 
-	u->ownermap.playouts = 0;
-	memset(u->ownermap.map, 0, board_size2(b) * sizeof(u->ownermap.map[0]));
+	board_ownermap_init(&u->ownermap);
 	u->played_own = u->played_all = 0;
 }
 
@@ -353,7 +352,6 @@ uct_done(struct engine *e)
 	uct_pondering_stop(u);
 	if (u->t) reset_state(u);
 	if (u->dynkomi) u->dynkomi->done(u->dynkomi);
-	free(u->ownermap.map);
 
 	if (u->policy) u->policy->done(u->policy);
 	if (u->random_policy) u->random_policy->done(u->random_policy);
@@ -1320,8 +1318,6 @@ uct_state_init(char *arg, struct board *b)
 	if (u->want_pat && !pat_setup)
 		patterns_init(&u->pat, NULL, false, true);
 	dcnn_init();
-
-	u->ownermap.map = malloc2(board_size2(b) * sizeof(u->ownermap.map[0]));
 
 	if (u->slave) {
 		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
