@@ -6,7 +6,7 @@ X . O X . O
 . X X O O .
 . . . . . .
 . . . . . .
-moggy moves c3    
+moggy moves (c3)    
 moggy status c3    
 
 % Semeai 2 libs
@@ -18,7 +18,7 @@ X X X O O O
 . . X O . .
 . . X O . .
 
-moggy moves a5
+moggy moves (a5)
 moggy status a5
 
 
@@ -30,7 +30,7 @@ X . O X . O
 . X X O O .
 . . . . . .
 . . . . . .
-moggy moves c3    
+moggy moves (c3)    
 moggy status c3    
 
 
@@ -43,7 +43,7 @@ X X X O O O
 . . X O . .
 . . X O . .
 
-moggy moves a4
+moggy moves (a4)
 moggy status a4
 
 
@@ -57,7 +57,7 @@ X . O X . O
 X . O X . O
 . X X O O .
 . . . . . .
-moggy moves c2    
+moggy moves (c2)    
 moggy status c2    
 
 

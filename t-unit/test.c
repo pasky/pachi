@@ -18,8 +18,43 @@
 #include "engines/replay.h"
 #include "ownermap.h"
 
-
+/* Running tests over gtp ? */
+static bool tunit_over_gtp = 1;
 static bool board_printed;
+static char *next;
+
+#define next_arg(to_) \
+	to_ = next; \
+	next += strcspn(next, " \t"); \
+	if (*next) { \
+		*next = 0; next++; \
+		next += strspn(next, " \t"); \
+	} \
+
+static void
+chomp(char *line)
+{
+	int n = strlen(line);
+	if (line[n - 1] == '\n')
+		line[n - 1] = 0;
+}
+
+static void
+remove_comments(char *line)
+{
+	if (strchr(line, '#'))
+		*strchr(line, '#') = 0;
+}
+
+/* Check no more args */
+static void
+args_end()
+{
+	if (*next) {
+		fprintf(stderr, "Invalid extra arg: '%s'\n", next);
+		exit(EXIT_FAILURE);
+	}
+}
 
 static void
 board_print_test(int level, struct board *b)
@@ -33,7 +68,6 @@ board_print_test(int level, struct board *b)
 static void
 board_load(struct board *b, FILE *f, unsigned int size)
 {
-	board_printed = false;
 	board_resize(b, size);
 	board_clear(b);
 	for (int y = size - 1; y >= 0; y--) {
@@ -42,11 +76,14 @@ board_load(struct board *b, FILE *f, unsigned int size)
 			fprintf(stderr, "Premature EOF.\n");
 			exit(EXIT_FAILURE);
 		}
-		line[strlen(line) - 1] = 0; // chomp
+
+		chomp(line);
+		remove_comments(line);		
 		if (strlen(line) != size * 2 - 1) {
-			fprintf(stderr, "Line not %d char long: %s\n", size * 2 - 1, line);
+			fprintf(stderr, "Line not %d char long: '%s'\n", size * 2 - 1, line);
 			exit(EXIT_FAILURE);
 		}
+		
 		for (unsigned int i = 0; i < size * 2; i++) {
 			enum stone s;
 			switch (line[i]) {
@@ -97,83 +134,85 @@ set_ko(struct board *b, char *arg)
 }
 
 
+#define PRINT_TEST(board)    \
+	board_print_test(2, board); \
+	if (DEBUGL(1))  \
+		fprintf(stderr, TEST_PRINTF)
+
+#define CHECK_TEST(rres, eres, board)			\
+	if (rres != eres) { \
+		if (debug_level <= 2) { \
+			board_print_test(0, board); \
+                        if (debug_level != 2) \
+				fprintf(stderr, TEST_PRINTF);	\
+		} \
+		fprintf(stderr, "FAILED (%d)\n", rres);	\
+	} \
+	else \
+		if (DEBUGL(1))  fprintf(stderr, "OK\n");
+
+
 static bool
 test_sar(struct board *b, char *arg)
 {
+	next_arg(arg);
 	enum stone color = str2stone(arg);
-	arg += 2;
-	coord_t *cc = str2coord(arg, board_size(b));
-	coord_t c = *cc; coord_done(cc);
-	arg += strcspn(arg, " ") + 1;
+	next_arg(arg);
+	coord_t c = str2scoord(arg, board_size(b));
+	next_arg(arg);
 	int eres = atoi(arg);
+	args_end();
 
-	board_print_test(2, b);
-	if (DEBUGL(1))
-		printf("sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+#define TEST_PRINTF "sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
+	PRINT_TEST(b);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_bad_selfatari(b, color, c);
 
-	if (rres == eres) {
-		if (DEBUGL(1))
-			printf("OK\n");
-	} else {
-		if (debug_level <= 2) {
-			board_print_test(0, b);
-			printf("sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
-		}
-		printf("FAILED (%d)\n", rres);
-	}
-	return rres == eres;
+	CHECK_TEST(rres, eres, b);
+	return (rres == eres);
+#undef  TEST_PRINTF
 }
 
 
 static bool
 test_ladder(struct board *b, char *arg)
 {
+	next_arg(arg);
 	enum stone color = str2stone(arg);
-	arg += 2;
-	coord_t *cc = str2coord(arg, board_size(b));
-	coord_t c = *cc; coord_done(cc);
-	arg += strcspn(arg, " ") + 1;
+	next_arg(arg);
+	coord_t c = str2scoord(arg, board_size(b));
+	next_arg(arg);
 	int eres = atoi(arg);
+	args_end();
 
-	board_print_test(2, b);
-	if (DEBUGL(1))
-		printf("ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+#define TEST_PRINTF "ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
+	PRINT_TEST(b);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
 	assert(atari_neighbor);
 	int rres = is_ladder(b, c, atari_neighbor, true);
 	
-	if (rres == eres) {
-		if (DEBUGL(1))
-			printf("OK\n");
-	} else {
-		if (debug_level <= 2) {
-			board_print_test(0, b);
-			printf("ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
-		}
-		printf("FAILED (%d)\n", rres);
-	}
-
+	CHECK_TEST(rres, eres, b);
 	return (rres == eres);
+#undef  TEST_PRINTF
 }
+
 
 static bool
 test_useful_ladder(struct board *b, char *arg)
 {
+	next_arg(arg);
 	enum stone color = str2stone(arg);
-	arg += 2;
-	coord_t *cc = str2coord(arg, board_size(b));
-	coord_t c = *cc; coord_done(cc);
-	arg += strcspn(arg, " ") + 1;
+	next_arg(arg);
+	coord_t c = str2scoord(arg, board_size(b));
+	next_arg(arg);
 	int eres = atoi(arg);
+	args_end();
 
-	board_print_test(2, b);
-	if (DEBUGL(1))
-		printf("useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+#define TEST_PRINTF "useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
+	PRINT_TEST(b);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
@@ -181,101 +220,87 @@ test_useful_ladder(struct board *b, char *arg)
 	int ladder = is_ladder(b, c, atari_neighbor, true);  assert(ladder);
 	int rres = useful_ladder(b, atari_neighbor);
 	
-	if (rres == eres) {
-		if (DEBUGL(1))
-			printf("OK\n");
-	} else {
-		if (debug_level <= 2) {
-			board_print_test(0, b);
-			printf("useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
-		}
-		printf("FAILED (%d)\n", rres);
-	}
-
+	CHECK_TEST(rres, eres, b);
 	return (rres == eres);
+#undef  TEST_PRINTF
 }
 
 static bool
-test_can_countercapture(struct board *b, char *arg)
+test_can_countercap(struct board *b, char *arg)
 {
+	next_arg(arg);
 	coord_t c = str2scoord(arg, board_size(b));
-	arg += strcspn(arg, " ") + 1;
+	next_arg(arg);
 	int eres = atoi(arg);
+	args_end();
 
-	board_print_test(2, b);
-	if (DEBUGL(1))
-		printf("can_countercap %s %d...\t", coord2sstr(c, b), eres);
+#define TEST_PRINTF "can_countercap %s %d...\t", coord2sstr(c, b), eres
+	PRINT_TEST(b);
 
 	enum stone color = board_at(b, c);
 	group_t g = group_at(b, c);
 	assert(color == S_BLACK || color == S_WHITE);
 	int rres = can_countercapture(b, g, NULL, 0);
 
-	if (rres == eres) {
-		if (DEBUGL(1))
-			printf("OK\n");
-	} else {
-		if (debug_level <= 2) {
-			board_print_test(0, b);
-			printf("can_countercap %s %d...\t", coord2sstr(c, b), eres);
-		}
-		printf("FAILED (%d)\n", rres);
-	}
-	return rres == eres;
+	CHECK_TEST(rres, eres, b);
+	return (rres == eres);
+#undef  TEST_PRINTF
 }
 
 
 static bool
 test_two_eyes(struct board *b, char *arg)
 {
+	next_arg(arg);
 	coord_t c = str2scoord(arg, board_size(b));
-	arg += strcspn(arg, " ") + 1;
+	next_arg(arg);
 	int eres = atoi(arg);
+	args_end();
 
-	board_print_test(2, b);
-	if (DEBUGL(1))
-		printf("two_eyes %s %d...\t", coord2sstr(c, b), eres);
+#define TEST_PRINTF "two_eyes %s %d...\t", coord2sstr(c, b), eres
+	PRINT_TEST(b);
 
 	enum stone color = board_at(b, c);
 	assert(color == S_BLACK || color == S_WHITE);
 	int rres = dragon_is_safe(b, group_at(b, c), color);
 
-	if (rres == eres) {
-		if (DEBUGL(1))
-			printf("OK\n");
-	} else {
-		if (debug_level <= 2) {
-			board_print_test(0, b);
-			printf("two_eyes %s %d...\t", coord2sstr(c, b), eres);
-		}
-		printf("FAILED (%d)\n", rres);
-	}
-	return rres == eres;
+	CHECK_TEST(rres, eres, b);
+	return (rres == eres);
+#undef  TEST_PRINTF
 }
 
 
+/* Sample moves played by moggy in a given position.
+ * 
+ * Syntax (file):  moggy moves (last_move)
+ *        (gtp) :  moggy moves
+ */
 static bool
 test_moggy_moves(struct board *b, char *arg)
 {
-	int runs = 1000;	
-	
-	coord_t *cc = str2coord(arg, board_size(b));
-	struct move last;
-	last.coord = *cc; coord_done(cc);
-	last.color = board_at(b, last.coord);
-	assert(last.color == S_BLACK || last.color == S_WHITE);
-	enum stone color = stone_other(last.color);
-	arg += strcspn(arg, " ") + 1;
+	int runs = 1000;
 
-	b->last_move = last;
+	if (!tunit_over_gtp) {
+		next_arg(arg);
+		assert(*arg++ == '(');
+		struct move last;
+		last.coord = str2scoord(arg, board_size(b));
+		last.color = board_at(b, last.coord);
+		assert(last.color == S_BLACK || last.color == S_WHITE);
+		next_arg(arg);		
+		b->last_move = last;
+	}
+	args_end();
+
 	board_print(b, stderr);  // Always print board so we see last move
 
 	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
 	struct engine *e = engine_replay_init(e_arg, b);
+	enum stone color = stone_other(b->last_move.color);
 	
 	if (DEBUGL(1))
-		printf("moggy moves %s, %s to play. Sampling moves (%i runs)...\n\n", 
-		       coord2sstr(last.coord, b), stone2str(color), runs);
+		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
+			stone2str(color), runs);
 
         int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
 	int *played = played_ + 2;		// allow storing pass/resign
@@ -286,7 +311,7 @@ test_moggy_moves(struct board *b, char *arg)
 	for (int k = most_played; k > 0; k--)
 		for (coord_t c = resign; c < b->size2; c++)
 			if (played[c] == k)
-				printf("%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
+				fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
 	
 	engine_done(e);
 	return true;   // Not much of a unit test right now =)
@@ -312,7 +337,7 @@ pick_random_last_move(struct board *b, enum stone to_play)
 }
 
 
-/* Syntax:
+/* Syntax (file):
  *   moggy status (last_move) coord [coord...]
  *         Play number of random games starting from last_move
  * 
@@ -322,6 +347,10 @@ pick_random_last_move(struct board *b, enum stone to_play)
  *
  *   moggy status (w) coord [coord...]  
  *         White to play, pick random black last move
+ *
+ * Syntax (gtp):
+ *   Same but specifying last move is invalid here since last move is already known.
+ *   Likewise no random last move is picked.
  */
 static bool
 test_moggy_status(struct board *board, char *arg)
@@ -329,11 +358,16 @@ test_moggy_status(struct board *board, char *arg)
 	int games = 4000;
 	coord_t status_at[10];
 	int n = 0;
-	enum stone color = S_BLACK;
-	int pick_random = true;  // Pick random last move for each game
+	enum stone color = (tunit_over_gtp ? stone_other(board->last_move.color) : S_BLACK);
+	int pick_random = (!tunit_over_gtp);  // Pick random last move for each game
 
-	while (*arg && *arg != '#') {
-		if (*arg == ' ' || *arg == '\t') {  arg++; continue;  }		
+	next_arg(arg);
+	while(*arg) {
+		if (*arg == '(' && tunit_over_gtp) {
+			fprintf(stderr, "Error: may not specify last move in gtp mode\n");
+			exit(EXIT_FAILURE);
+		}
+
 		if (!strncmp(arg, "(b)", 3))
 			color = S_BLACK;
 		else if (!strncmp(arg, "(w)", 3))
@@ -352,15 +386,15 @@ test_moggy_status(struct board *board, char *arg)
 			assert(isalpha(*arg));
 			status_at[n++] = str2scoord(arg, board_size(board));
 		}
-		arg += strcspn(arg, " \t");
+		next_arg(arg);
 	}
 	
 	board_print(board, stderr);
 	if (DEBUGL(1)) {
-		printf("moggy status ");
+		fprintf(stderr, "moggy status ");
 		for (int i = 0; i < n; i++)
-			printf("%s%s", coord2sstr(status_at[i], board), (i != n-1 ? " " : ""));
-		printf(", %s to play. Playing %i games %s...\n", 
+			fprintf(stderr, "%s%s", coord2sstr(status_at[i], board), (i != n-1 ? " " : ""));
+		fprintf(stderr, ", %s to play. Playing %i games %s...\n", 
 		       stone2str(color), games, (pick_random ? "(random last move) " : ""));
 	}
 	
@@ -389,14 +423,14 @@ test_moggy_status(struct board *board, char *arg)
 		board_done_noalloc(&b);
 	}
 	double elapsed = time_now() - time_start;
-	printf("moggy status in %.1fs, %i games/s\n\n", elapsed, (int)((float)games / elapsed));
+	fprintf(stderr, "moggy status in %.1fs, %i games/s\n\n", elapsed, (int)((float)games / elapsed));
 	
 	int wr_black = wr * 100 / games;
 	int wr_white = (games - wr) * 100 / games;
 	if (wr_black > wr_white)
-		printf("Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white);
+		fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white);
 	else
-		printf("Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
+		fprintf(stderr, "Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
 
 	board_print_ownermap(board, stderr, &ownermap);
 
@@ -415,9 +449,61 @@ test_moggy_status(struct board *board, char *arg)
 
 bool board_undo_stress_test(struct board *orig, char *arg);
 
-void
-unittest(char *filename)
+typedef bool (*t_unit_func)(struct board *board, char *arg);
+
+typedef struct {
+	char *cmd;
+	t_unit_func f;
+	bool needs_arg;
+} t_unit_cmd;
+
+static t_unit_cmd commands[] = {
+	{ "sar",                    test_sar,               1 },
+	{ "ladder",                 test_ladder,            1 },
+	{ "useful_ladder",          test_useful_ladder,     1 },
+	{ "can_countercap",         test_can_countercap,    1 },
+	{ "two_eyes",               test_two_eyes,          1 },
+	{ "moggy moves",            test_moggy_moves,       0 },
+	{ "moggy status",           test_moggy_status,      1 },
+	{ "board_undo_stress_test", board_undo_stress_test, 0 },
+	{ 0, 0, 0 }
+};
+
+int
+unit_test_cmd(struct board *b, char *line)
 {
+	board_printed = false;
+	chomp(line);
+	remove_comments(line);
+	
+	for (int i = 0; commands[i].cmd; i++) {
+		char *cmd = commands[i].cmd;
+		if (!str_prefix(cmd, line))
+			continue;
+		char c = line[strlen(cmd)];
+		if (c && c != ' ' && c != '\t')
+			continue;
+		if (commands[i].needs_arg && c != ' ') {
+			fprintf(stderr, "%s\n", line);
+			fprintf(stderr, "error: command %s needs argument(s)\n", cmd);
+			exit(EXIT_FAILURE);
+		}
+		
+		next = line + strlen(cmd);
+		next += strspn(next, " \t");
+		return commands[i].f(b, next);
+	}
+
+	fprintf(stderr, "Syntax error: %s\n", line);
+	exit(EXIT_FAILURE);
+}
+
+
+void
+unit_test(char *filename)
+{
+	tunit_over_gtp = 0;
+	
 	FILE *f = fopen(filename, "r");
 	if (!f) {
 		perror(filename);
@@ -433,39 +519,22 @@ unittest(char *filename)
 	char line[256];
 
 	while (fgets(line, sizeof(line), f)) {
-		line[strlen(line) - 1] = 0; // chomp
+		chomp(line);
+		remove_comments(line);
+		
 		switch (line[0]) {
-			case '%': printf("\n%s\n", line); continue;
-			case '!': printf("%s...\tSKIPPED\n", line); skipped++; continue;
-			case 0: continue;
-		}
-		if (!strncmp(line, "boardsize ", 10)) {
-			board_load(b, f, atoi(line + 10));  continue;
-		}
-		if (!strncmp(line, "ko ", 3)) {
-			set_ko(b, line + 3);  continue;
+			case '%': fprintf(stderr, "\n%s\n", line); continue;
+			case '!': fprintf(stderr, "%s...\tSKIPPED\n", line); skipped++; continue;
+			case  0 : continue;
 		}
 		
-		total++;
-		if (!strncmp(line, "sar ", 4))
-			passed += test_sar(b, line + 4); 
-		else if (!strncmp(line, "ladder ", 7))
-			passed += test_ladder(b, line + 7);
-		else if (!strncmp(line, "useful_ladder ", 14))
-			passed += test_useful_ladder(b, line + 14);
-		else if (!strncmp(line, "can_countercap ", 15))
-			passed += test_can_countercapture(b, line + 15); 
-		else if (!strncmp(line, "two_eyes ", 9))
-			passed += test_two_eyes(b, line + 9); 
-		else if (!strncmp(line, "moggy moves ", 12)) 
-			passed += test_moggy_moves(b, line + 12);
-		else if (!strncmp(line, "moggy status ", 13)) 
-			passed += test_moggy_status(b, line + 13);
-   		else if (!strncmp(line, "board_undo_stress_test", 22))
-			passed += board_undo_stress_test(b, line + 22); 
-		else {
-			fprintf(stderr, "Syntax error: %s\n", line);
-			exit(EXIT_FAILURE);
+		if      (!strncmp(line, "boardsize ", 10))
+			board_load(b, f, atoi(line + 10));
+		else if (!strncmp(line, "ko ", 3))
+			set_ko(b, line + 3);
+		else {		
+			total++;
+			passed += unit_test_cmd(b, line);
 		}
 	}
 

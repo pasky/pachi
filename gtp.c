@@ -19,6 +19,7 @@
 #include "timeinfo.h"
 #include "gogui.h"
 #include "t-predict/predict.h"
+#include "t-unit/test.h"
 
 #define NO_REPLY (-2)
 
@@ -591,6 +592,15 @@ cmd_pachi_result(struct board *board, struct engine *engine, struct time_info *t
 }
 
 static enum parse_code
+cmd_pachi_tunit(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+{
+	int res = unit_test_cmd(board, gtp->next);
+	char *str = (res ? "passed" : "failed");
+	gtp_reply(gtp, str, NULL);
+	return P_OK;
+}
+
+static enum parse_code
 cmd_kgs_chat(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
 {
 	char *loc;
@@ -707,6 +717,7 @@ static gtp_command_t commands[] =
 	{ "kgs-chat",               cmd_kgs_chat },
 
 	{ "pachi-predict",          cmd_pachi_predict },
+	{ "pachi-tunit",            cmd_pachi_tunit },
 	{ "pachi-genmoves",         cmd_pachi_genmoves },
 	{ "pachi-genmoves_cleanup", cmd_pachi_genmoves },
 	{ "pachi-gentbook",         cmd_pachi_gentbook },
@@ -716,6 +727,7 @@ static gtp_command_t commands[] =
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },
+	{ "tunit",		    cmd_pachi_tunit },
 
 	{ "gogui-analyze_commands", cmd_gogui_analyze_commands },
 	{ "gogui-live_gfx",         cmd_gogui_live_gfx },

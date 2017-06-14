@@ -11,7 +11,7 @@ X X O O . O O O O
 X O O O O O . O O
 O O . O O . O . O
 
-moggy moves a1
+moggy moves (a1)
 moggy status a1
 
 

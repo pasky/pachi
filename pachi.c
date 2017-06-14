@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
 	struct engine *e = init_engine(engine, e_arg, b);
 
 	if (testfile) {
-		unittest(testfile);
+		unit_test(testfile);
 		return 0;
 	}
 
