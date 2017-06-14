@@ -11,8 +11,8 @@
 typedef int coord_t;
 
 #define coord_xy(board, x, y) ((x) + (y) * board_size(board))
-#define coord_x(c, b) ((b)->coord[c][0])
-#define coord_y(c, b) ((b)->coord[c][1])
+#define coord_x(c, b) (board_statics.coord[c][0])
+#define coord_y(c, b) (board_statics.coord[c][1])
 /* TODO: Smarter way to do this? */
 #define coord_dx(c1, c2, b) (coord_x(c1, b) - coord_x(c2, b))
 #define coord_dy(c1, c2, b) (coord_y(c1, b) - coord_y(c2, b))

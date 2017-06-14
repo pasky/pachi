@@ -143,6 +143,55 @@ board_resize(struct board *board, int size)
 	while ((1 << board->bits2) < board->size2) board->bits2++;
 }
 
+struct board_statics board_statics = { .size = 0 };
+
+static void
+board_statics_init(struct board *board)
+{
+	int size = board_size(board);
+	struct board_statics *bs = &board_statics;
+	if (bs->size == size)
+		return;
+	
+	memset(bs, 0, sizeof(*bs));
+	bs->size = size;
+	
+	/* Setup neighborhood iterators */
+	bs->nei8[0] = -size - 1; // (-1,-1)
+	bs->nei8[1] = 1;
+	bs->nei8[2] = 1;
+	bs->nei8[3] = size - 2; // (-1,0)
+	bs->nei8[4] = 2;
+	bs->nei8[5] = size - 2; // (-1,1)
+	bs->nei8[6] = 1;
+	bs->nei8[7] = 1;
+	bs->dnei[0] = -size - 1;
+	bs->dnei[1] = 2;
+	bs->dnei[2] = size*2 - 2;
+	bs->dnei[3] = 2;
+
+	/* Set up coordinate cache */
+	foreach_point(board) {
+		bs->coord[c][0] = c % board_size(board);
+		bs->coord[c][1] = c / board_size(board);
+	} foreach_point_end;
+
+	/* Initialize zobrist hashtable. */
+	/* We will need these to be stable across Pachi runs for
+	 * certain kinds of pattern matching, thus we do not use
+	 * fast_random() for this. */
+	hash_t hseed = 0x3121110101112131;
+	foreach_point(board) {
+		bs->h[c][0] = (hseed *= 16807);
+		if (!bs->h[c][0])
+			bs->h[c][0] = 1;
+		/* And once again for white */
+		bs->h[c][1] = (hseed *= 16807);
+		if (!bs->h[c][1])
+			bs->h[c][1] = 1;
+	} foreach_point_end;	
+}
+
 static void
 board_init_data(struct board *board)
 {
@@ -150,20 +199,6 @@ board_init_data(struct board *board)
 
 	board_setup(board);
 	board_resize(board, size - 2 /* S_OFFBOARD margin */);
-
-	/* Setup neighborhood iterators */
-	board->nei8[0] = -size - 1; // (-1,-1)
-	board->nei8[1] = 1;
-	board->nei8[2] = 1;
-	board->nei8[3] = size - 2; // (-1,0)
-	board->nei8[4] = 2;
-	board->nei8[5] = size - 2; // (-1,1)
-	board->nei8[6] = 1;
-	board->nei8[7] = 1;
-	board->dnei[0] = -size - 1;
-	board->dnei[1] = 2;
-	board->dnei[2] = size*2 - 2;
-	board->dnei[3] = 2;
 
 	/* Setup initial symmetry */
 	if (size % 2) {
@@ -179,12 +214,6 @@ board_init_data(struct board *board)
 		board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
 		board->symmetry.type = SYM_NONE;
 	}
-
-	/* Set up coordinate cache */
-	foreach_point(board) {
-		board->coord[c][0] = c % board_size(board);
-		board->coord[c][1] = c / board_size(board);
-	} foreach_point_end;
 
 	/* Draw the offboard margin */
 	int top_row = board_size2(board) - board_size(board);
@@ -207,21 +236,6 @@ board_init_data(struct board *board)
 	for (i = board_size(board); i < (board_size(board) - 1) * board_size(board); i++)
 		if (i % board_size(board) != 0 && i % board_size(board) != board_size(board) - 1)
 			board->f[board->flen++] = i;
-
-	/* Initialize zobrist hashtable. */
-	/* We will need these to be stable across Pachi runs for
-	 * certain kinds of pattern matching, thus we do not use
-	 * fast_random() for this. */
-	hash_t hseed = 0x3121110101112131;
-	foreach_point(board) {
-		board->h[c][0] = (hseed *= 16807);
-		if (!board->h[c][0])
-			board->h[c][0] = 1;
-		/* And once again for white */
-		board->h[c][1] = (hseed *= 16807);
-		if (!board->h[c][1])
-			board->h[c][1] = 1;
-	} foreach_point_end;
 
 #ifdef BOARD_SPATHASH
 	/* Initialize spatial hashes. */
@@ -269,11 +283,12 @@ board_clear(struct board *board)
 
 	board_done_noalloc(board);
 
+	board_statics_init(board);
 	static struct board bcache[BOARD_MAX_SIZE + 2];
 	assert(size > 0 && size <= BOARD_MAX_SIZE + 2);
-	if (bcache[size - 1].size == size) {
+	if (bcache[size - 1].size == size)
 		board_copy(board, &bcache[size - 1]);
-	} else {
+	else {
 		board_init_data(board);
 		board_copy(&bcache[size - 1], board);
 	}

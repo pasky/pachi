@@ -135,6 +135,50 @@ struct btraits {
 #define flen flen_field_not_supported_for_quick_boards
 #endif
 
+/* The ruleset is currently almost never taken into account;
+ * the board implementation is basically Chinese rules (handicap
+ * stones compensation) w/ suicide (or you can look at it as
+ * New Zealand w/o handi stones compensation), while the engine
+ * enforces no-suicide, making for real Chinese rules.
+ * However, we accept suicide moves by the opponent, so we
+ * should work with rules allowing suicide, just not taking
+ * full advantage of them. */
+enum go_ruleset {
+	RULES_CHINESE, /* default value */
+	RULES_AGA,
+	RULES_NEW_ZEALAND,
+	RULES_JAPANESE,
+	RULES_STONES_ONLY, /* do not count eyes */
+	/* http://home.snafu.de/jasiek/siming.html */
+	/* Simplified ING rules - RULES_CHINESE with handicaps
+	 * counting as points and pass stones. Also should
+	 * allow suicide, but Pachi will never suicide
+	 * nevertheless. */
+	/* XXX: I couldn't find the point about pass stones
+	 * in the rule text, but it is Robert Jasiek's
+	 * interpretation of them... These rules were
+	 * used e.g. at the EGC2012 13x13 tournament.
+	 * They are not supported by KGS. */
+	RULES_SIMING,
+};
+
+/* Data shared by all boards of a given size */
+struct board_statics {
+	int size;	
+
+	/* Iterator offsets for foreach_neighbor*() */
+	int nei8[8], dnei[4];
+
+	/* Coordinates zobrist hashes (black and white) */
+	hash_t h[BOARD_MAX_COORDS][2];	
+
+	/* Cached information on x-y coordinates so that we avoid division. */
+	uint8_t coord[BOARD_MAX_COORDS][2];
+};
+
+/* Only one board size in use at any given time so don't need array */
+extern struct board_statics board_statics;
+
 /* You should treat this struct as read-only. Always call functions below if
  * you want to change it. */
 
@@ -145,38 +189,9 @@ struct board {
 	int captures[S_MAX];
 	floating_t komi;
 	int handicap;
-	/* The ruleset is currently almost never taken into account;
-	 * the board implementation is basically Chinese rules (handicap
-	 * stones compensation) w/ suicide (or you can look at it as
-	 * New Zealand w/o handi stones compensation), while the engine
-	 * enforces no-suicide, making for real Chinese rules.
-	 * However, we accept suicide moves by the opponent, so we
-	 * should work with rules allowing suicide, just not taking
-	 * full advantage of them. */
-	enum go_ruleset {
-		RULES_CHINESE, /* default value */
-		RULES_AGA,
-		RULES_NEW_ZEALAND,
-		RULES_JAPANESE,
-		RULES_STONES_ONLY, /* do not count eyes */
-		/* http://home.snafu.de/jasiek/siming.html */
-		/* Simplified ING rules - RULES_CHINESE with handicaps
-		 * counting as points and pass stones. Also should
-		 * allow suicide, but Pachi will never suicide
-		 * nevertheless. */
-		/* XXX: I couldn't find the point about pass stones
-		 * in the rule text, but it is Robert Jasiek's
-		 * interpretation of them... These rules were
-		 * used e.g. at the EGC2012 13x13 tournament.
-		 * They are not supported by KGS. */
-		RULES_SIMING,
-	} rules;
-
+	enum go_ruleset rules;
 	char *fbookfile;
 	struct fbook *fbook;
-
-	/* Iterator offsets for foreach_neighbor*() */
-	int nei8[8], dnei[4];
 
 	int moves;
 	struct move last_move;
@@ -202,10 +217,6 @@ FB_ONLY(bool superko_violation);
 	/* Neighboring colors; numbers of neighbors of index color */
 	struct neighbor_colors n[BOARD_MAX_COORDS];
 
-	/* XXX take this out, one for each board size */
-	/* Coordinates zobrist hashes (black and white) */
-	hash_t h[BOARD_MAX_COORDS][2];
-
 #ifdef BOARD_SPATHASH
 	/* For spatial hashes, we use only 24 bits. */
 	/* [0] is d==1, we don't keep hash for d==0. */
@@ -227,10 +238,6 @@ FB_ONLY(hash3_t pat3)[BOARD_MAX_COORDS];
 	/* The information is only valid for empty points. */
 FB_ONLY(struct btraits t)[BOARD_MAX_COORDS][2];
 #endif
-
-	/* XXX take this out, one for each board size */
-	/* Cached information on x-y coordinates so that we avoid division. */
-	uint8_t coord[BOARD_MAX_COORDS][2];
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
 	struct group gi[BOARD_MAX_COORDS];
@@ -377,7 +384,7 @@ struct board_undo {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
-#define hash_at(b_, coord, color) ((b_)->h[coord][((color) == S_BLACK ? 1 : 0)])
+#define hash_at(b_, coord, color) (board_statics.h[coord][((color) == S_BLACK ? 1 : 0)])
 
 struct board *board_init(char *fbookfile);
 struct board *board_copy(struct board *board2, struct board *board1);
@@ -568,7 +575,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 		int fn__i; \
 		coord_t c = (coord_); \
 		for (fn__i = 0; fn__i < 8; fn__i++) { \
-			c += (board_)->nei8[fn__i];
+			c += board_statics.nei8[fn__i];
 #define foreach_8neighbor_end \
 		} \
 	} while (0)
@@ -578,7 +585,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 		int fn__i; \
 		coord_t c = (coord_); \
 		for (fn__i = 0; fn__i < 4; fn__i++) { \
-			c += (board_)->dnei[fn__i];
+			c += board_statics.dnei[fn__i];
 #define foreach_diag_neighbor_end \
 		} \
 	} while (0)
