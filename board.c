@@ -11,6 +11,9 @@
 #include "mq.h"
 #include "random.h"
 
+#ifdef BOARD_SPATHASH
+#include "patternsp.h"
+#endif
 #ifdef BOARD_PAT3
 #include "pattern3.h"
 #endif
@@ -48,6 +51,7 @@ board_init(char *fbookfile)
 
 	return b;
 }
+
 
 int
 board_cmp(struct board *b1, struct board *b2)
@@ -228,6 +232,21 @@ board_init_data(struct board *board)
 		if (i % board_size(board) != 0 && i % board_size(board) != board_size(board) - 1)
 			board->f[board->flen++] = i;
 
+#ifdef BOARD_SPATHASH
+	/* Initialize spatial hashes. */
+	foreach_point(board) {
+		for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
+			for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+				ptcoords_at(x, y, c, board, j);
+				board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
+					pthashes[0][j][board_at(board, c)];
+				board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
+					pthashes[0][j][stone_other(board_at(board, c))];
+			}
+		}
+	} foreach_point_end;
+#endif
+
 #ifdef BOARD_PAT3
 	/* Initialize 3x3 pattern codes. */
 	foreach_point(board) {
@@ -386,6 +405,22 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 	board->qhash[coord_quadrant(coord, board)] ^= hash_at(board, coord, color);
 	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
+
+#ifdef BOARD_SPATHASH
+	/* Gridcular metric is reflective, so we update all hashes
+	 * of appropriate ditance in OUR circle. */
+	for (int d = 1; d <= BOARD_SPATHASH_MAXD; d++) {
+		for (int j = ptind[d]; j < ptind[d + 1]; j++) {
+			ptcoords_at(x, y, coord, board, j);
+			/* We either changed from S_NONE to color
+			 * or vice versa; doesn't matter. */
+			board->spathash[coord_xy(board, x, y)][d - 1][0] ^=
+				pthashes[0][j][color] ^ pthashes[0][j][S_NONE];
+			board->spathash[coord_xy(board, x, y)][d - 1][1] ^=
+				pthashes[0][j][stone_other(color)] ^ pthashes[0][j][S_NONE];
+		}
+	}
+#endif
 
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */
