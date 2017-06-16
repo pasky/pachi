@@ -771,7 +771,7 @@ uct_state_init(char *arg, struct board *b)
 	u->max_maintime_ratio = 2.0;
 
 	u->val_scale = 0; u->val_points = 40;
-	u->dynkomi_interval = 1000;
+	u->dynkomi_interval = 100;
 	u->dynkomi_mask = S_BLACK | S_WHITE;
 
 	u->tenuki_d = 4;
