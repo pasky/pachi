@@ -67,6 +67,8 @@ CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3
 
 ### CONFIGURATION END
 
+MAKEFLAGS += --no-print-directory
+
 ifdef MSYS2_64
 	WIN=1
 	WIN_HAVE_NO_REGEX_SUPPORT=1
@@ -143,11 +145,12 @@ OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternpro
 ifdef DCNN
 	OBJS+=dcnn.o caffe.o
 endif
-SUBDIRS=random replay patternscan patternplay joseki montecarlo uct uct/policy playout tactics t-unit distributed t-predict
+# Low-level dependencies last
+SUBDIRS=t-unit t-predict uct uct/policy distributed replay patternscan patternplay joseki random montecarlo playout tactics
 
 all: all-recursive pachi
 
-LOCALLIBS=random/random.a replay/replay.a patternscan/patternscan.a patternplay/patternplay.a joseki/joseki.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a t-unit/test.a tactics/tactics.a distributed/distributed.a t-predict/predict.a
+LOCALLIBS=$(SUBDIRS:%=%/lib.a)
 $(LOCALLIBS): all-recursive
 	@
 pachi: $(OBJS) pachi.o $(LOCALLIBS)
@@ -158,18 +161,24 @@ pachi: $(OBJS) pachi.o $(LOCALLIBS)
 .PHONY: pachi-profiled
 pachi-profiled:
 	@make clean all XLDFLAGS=-fprofile-generate XCFLAGS="-fprofile-generate -fomit-frame-pointer -frename-registers"
-	./pachi -t =5000 no_tbook <tools/genmove19.gtp
+	./pachi -t =5000 no_tbook < gtp/genmove_both.gtp
 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
 
 # install-recursive?
 install:
 	$(INSTALL) ./pachi $(DESTDIR)$(BINDIR)
 
+# Generic clean rule is in Makefile.lib
+clean:: clean-recursive
+	-@rm pachi >/dev/null 2>&1
 
-clean: clean-recursive
-	rm -f pachi *.o
+clean-profiled:: clean-profiled-recursive
 
-clean-profiled: clean-profiled-recursive
-	rm -f *.gcda *.gcno
+TAGS: FORCE
+	@echo "Generating TAGS ..."
+	@etags `find . -name "*.[ch]" -o -name "*.cpp"`
+
+FORCE:
+
 
 -include Makefile.lib
