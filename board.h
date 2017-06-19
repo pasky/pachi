@@ -394,7 +394,7 @@ void board_done(struct board *board);
 void board_resize(struct board *board, int size);
 void board_clear(struct board *board);
 
-typedef char *(*board_cprint)(struct board *b, coord_t c, char *s, char *end, void *data);
+typedef void  (*board_cprint)(struct board *b, coord_t c, strbuf_t *buf, void *data);
 typedef char *(*board_print_handler)(struct board *b, coord_t c, void *data);
 void board_print(struct board *board, FILE *f);
 void board_print_custom(struct board *board, FILE *f, board_cprint cprint, void *data);

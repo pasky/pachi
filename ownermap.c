@@ -8,13 +8,13 @@
 #include "mq.h"
 #include "ownermap.h"
 
-static char *
-printhook(struct board *board, coord_t c, char *s, char *end, void *data)
+static void
+printhook(struct board *board, coord_t c, strbuf_t *buf, void *data)
 {
         struct board_ownermap *ownermap = data;
         if (!ownermap) {
-                strcat(s, ". ");
-                return s + 2;
+		sbprintf(buf, ". ");
+		return;
         }
         const char chr[] = ":XO,"; // dame, black, white, unclear
         const char chm[] = ":xo,";
@@ -22,8 +22,7 @@ printhook(struct board *board, coord_t c, char *s, char *end, void *data)
         if (ch == ',') { // less precise estimate then?
                 ch = chm[board_ownermap_judge_point(ownermap, c, 0.67)];
         }
-        s += snprintf(s, end - s, "%c ", ch);
-        return s;
+        sbprintf(buf, "%c ", ch);
 }
 
 void
