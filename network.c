@@ -188,11 +188,11 @@ log_thread(void *arg)
 		int size;
 		bool check = !strchr(info->port, ':');
 		if (!check)
-			write(STDERR, "Pachi\n", 6);
+			checked_write(STDERR, "Pachi\n", 6);
 		while ((size = read(STDERR, buf, BSIZE)) > 0) {
 			if (check && strncasecmp(buf, "Pachi", 5)) break;
 			check = false;
-			write(STDERR, buf, size);
+			checked_write(STDERR, buf, size);
 		}
 		fflush(stderr);
 		open_log_connection(info);

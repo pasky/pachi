@@ -74,6 +74,9 @@ checked_calloc(size_t nmemb, size_t size, const char *filename, unsigned int lin
 #define malloc2(size)        checked_malloc((size), __FILE__, __LINE__, __func__)
 #define calloc2(nmemb, size) checked_calloc((nmemb), (size), __FILE__, __LINE__, __func__)
 
+#define checked_write(fd, pt, size)	(assert(write((fd), (pt), (size)) == (size)))
+#define checked_fread(pt, size, n, f)   (assert(fread((pt), (size), (n), (f)) == (n)))
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b));
 #define MAX(a, b) ((a) > (b) ? (a) : (b));
 
