@@ -1625,6 +1625,11 @@ board_play_(struct board *board, struct move *m, struct board_undo *u)
 		return 0;
 	}
 
+	if (unlikely(board_at(board, m->coord) != S_NONE)) {
+		if (DEBUGL(7)) fprintf(stderr, "board_check: stone exists\n");
+		return -1;
+	}
+
 	if (u)
 		return board_play_f(board, m, -1, u);
 	
@@ -1633,9 +1638,7 @@ board_play_(struct board *board, struct move *m, struct board_undo *u)
 		if (board->f[f] == m->coord)
 			return board_play_f(board, m, f, u);
 
-	if (DEBUGL(7))
-		fprintf(stderr, "board_check: stone exists\n");
-	return -1;
+	assert(0);  /* not reached */
 }
 
 int
