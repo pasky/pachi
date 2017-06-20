@@ -9,9 +9,9 @@ X X X X O O . O O
 X X X O O O . O O
 X X O O . O O O O
 X O O O O O . O O
-O O . O O . O . O
+O)O . O O . O . O
 
-moggy moves (a1)
+moggy moves
 moggy status a1
 
 
@@ -34,7 +34,7 @@ boardsize 19
 . X O . . X . . X X X X X X O X . . .
 . X O X . . . . . . . . . O O X O O .
 . . X . . X . . . . . X X O X O X . .
-. . . . . . . . . . . . . X X O O . .
+. . . . . . . . . . . . . X X O O). .
 . . . . . . . . . . . . . . . . . . .
 
 moggy status t11
@@ -48,7 +48,7 @@ boardsize 7
 . X . O X X X
 O O O O X O .
 . O O O X O O
-O . O O X O .
+O . O O X O).
 
 !moggy status d1         # Eeek, shouldn't nakade here !
 
@@ -61,7 +61,7 @@ boardsize 7
 . . X . O O X
 . . X . O . X
 . . X X O O O
-. . . X X X .
+. . . X X X).
 
 moggy status g4
 
@@ -74,7 +74,7 @@ boardsize 9
 . . X . O . X O O
 . . X . O O X O .
 . . X . O . X O O
-. . X . O O O X .
+. . X . O O O X).
 . . . X X X X X .
 . . . . . . . . .
 

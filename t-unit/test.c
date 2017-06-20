@@ -21,6 +21,7 @@
 /* Running tests over gtp ? */
 static bool tunit_over_gtp = 1;
 static bool board_printed;
+static bool last_move_set;
 static char *next;
 
 #define next_arg(to_) \
@@ -66,8 +67,20 @@ board_print_test(int level, struct board *b)
 }
 
 static void
+check_play_move(struct board *b, struct move *m)
+{
+	if (board_play(b, m) < 0) {
+		fprintf(stderr, "Failed to play %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
+		board_print(b, stderr);
+		exit(EXIT_FAILURE);
+	}
+}
+
+static void
 board_load(struct board *b, FILE *f, unsigned int size)
 {
+	struct move last_move = { .coord = pass };
+	last_move_set = false;
 	board_resize(b, size);
 	board_clear(b);
 	for (int y = size - 1; y >= 0; y--) {
@@ -79,7 +92,8 @@ board_load(struct board *b, FILE *f, unsigned int size)
 
 		chomp(line);
 		remove_comments(line);		
-		if (strlen(line) != size * 2 - 1) {
+		if (strlen(line) != size * 2 - 1 && 
+		    strlen(line) != size * 2) {
 			fprintf(stderr, "Line not %d char long: '%s'\n", size * 2 - 1, line);
 			exit(EXIT_FAILURE);
 		}
@@ -94,20 +108,27 @@ board_load(struct board *b, FILE *f, unsigned int size)
 					 exit(EXIT_FAILURE);
 			}
 			i++;
-			if (line[i] != ' ' && i/2 < size - 1) {
+			if (line[i] && line[i] != ' ' && line[i] != ')') {
 				fprintf(stderr, "No space after stone %i: '%c'\n", i/2 + 1, line[i]);
 				exit(EXIT_FAILURE);
 			}
-			if (s == S_NONE) continue;
+
 			struct move m = { .color = s, .coord = coord_xy(b, i/2 + 1, y + 1) };
-			if (board_play(b, &m) < 0) {
-				fprintf(stderr, "Failed to play %s %s\n",
-					stone2str(s), coord2sstr(m.coord, b));
-				board_print(b, stderr);
-				exit(EXIT_FAILURE);
+			if (line[i] == ')') {
+				assert(s == S_BLACK || s == S_WHITE);
+				assert(last_move.coord == pass);
+				last_move = m;
+				last_move_set = true;
+				continue;	/* Play last move last ... */
 			}
+
+			if (s == S_NONE) continue;
+
+			check_play_move(b, &m);
 		}
 	}
+	if (last_move.coord != pass)
+		check_play_move(b, &last_move);
 	int suicides = b->captures[S_BLACK] || b->captures[S_WHITE];
 	assert(!suicides);
 }
@@ -271,26 +292,17 @@ test_two_eyes(struct board *b, char *arg)
 
 
 /* Sample moves played by moggy in a given position.
+ * Board last move matters quite a lot and must be set.
  * 
- * Syntax (file):  moggy moves (last_move)
- *        (gtp) :  moggy moves
+ * Syntax:  moggy moves
  */
 static bool
 test_moggy_moves(struct board *b, char *arg)
 {
 	int runs = 1000;
 
-	if (!tunit_over_gtp) {
-		next_arg(arg);
-		assert(*arg++ == '(');
-		struct move last;
-		last.coord = str2scoord(arg, board_size(b));
-		last.color = board_at(b, last.coord);
-		assert(last.color == S_BLACK || last.color == S_WHITE);
-		next_arg(arg);		
-		b->last_move = last;
-	}
 	args_end();
+	if (!tunit_over_gtp) assert(last_move_set);
 
 	board_print(b, stderr);  // Always print board so we see last move
 
@@ -317,110 +329,60 @@ test_moggy_moves(struct board *b, char *arg)
 	return true;   // Not much of a unit test right now =)
 }
 
-#define board_empty(b) ((b)->flen == real_board_size(b) * real_board_size(b))
 
-static void
-pick_random_last_move(struct board *b, enum stone to_play)
-{
-	if (board_empty(b))
-		return;
-	
-	int base = fast_random(board_size2(b));
-	for (int i = base; i < base + board_size2(b); i++) {
-		coord_t c = i % board_size2(b);
-		if (board_at(b, c) == stone_other(to_play)) {
-			b->last_move.coord = c;
-			b->last_move.color = board_at(b, c);
-			break;
-		}
-	}	
-}
-
-
-/* Syntax (file):
- *   moggy status (last_move) coord [coord...]
- *         Play number of random games starting from last_move
- * 
- *   moggy status     coord [coord...]
- *   moggy status (b) coord [coord...]
- *         Black to play, pick random white last move
+/* Play a number of playouts, show ownermap and stats on final status of given coord(s)
+ * Board last move matters quite a lot and must be set.
  *
- *   moggy status (w) coord [coord...]  
- *         White to play, pick random black last move
- *
- * Syntax (gtp):
- *   Same but specifying last move is invalid here since last move is already known.
- *   Likewise no random last move is picked.
+ * Syntax:
+ *   moggy status coord [coord...] 
  */
 static bool
-test_moggy_status(struct board *board, char *arg)
+test_moggy_status(struct board *b, char *arg)
 {
 	int games = 4000;
 	coord_t status_at[10];
 	int n = 0;
-	enum stone color = (tunit_over_gtp ? stone_other(board->last_move.color) : S_BLACK);
-	int pick_random = (!tunit_over_gtp);  // Pick random last move for each game
-
+	
 	next_arg(arg);
-	while(*arg) {
-		if (*arg == '(' && tunit_over_gtp) {
-			fprintf(stderr, "Error: may not specify last move in gtp mode\n");
-			exit(EXIT_FAILURE);
-		}
-
-		if (!strncmp(arg, "(b)", 3))
-			color = S_BLACK;
-		else if (!strncmp(arg, "(w)", 3))
-			color = S_WHITE;
-		else if (*arg == '(') {  /* Optional "(last_move)" argument */
-			arg++;	assert(isalpha(*arg));
-			pick_random = false;
-			struct move last;
-			last.coord = str2scoord(arg, board_size(board));
-			last.color = board_at(board, last.coord);
-			assert(last.color == S_BLACK || last.color == S_WHITE);
-			color = stone_other(last.color);
-			board->last_move = last;
-		}
-		else {
-			assert(isalpha(*arg));
-			status_at[n++] = str2scoord(arg, board_size(board));
-		}
+	while (*arg) {
+		if (!isalpha(*arg)) {  fprintf(stderr, "Invalid arg: '%s'\n", arg); exit(EXIT_FAILURE);  }
+		status_at[n++] = str2scoord(arg, board_size(b));
 		next_arg(arg);
 	}
 	
-	board_print(board, stderr);
+	if (!tunit_over_gtp) assert(last_move_set);
+	
+	enum stone color = (is_pass(b->last_move.coord) ? S_BLACK : stone_other(b->last_move.color));
+	board_print(b, stderr);
 	if (DEBUGL(1)) {
 		fprintf(stderr, "moggy status ");
 		for (int i = 0; i < n; i++)
-			fprintf(stderr, "%s%s", coord2sstr(status_at[i], board), (i != n-1 ? " " : ""));
-		fprintf(stderr, ", %s to play. Playing %i games %s...\n", 
-		       stone2str(color), games, (pick_random ? "(random last move) " : ""));
+			fprintf(stderr, "%s%s", coord2sstr(status_at[i], b), (i != n-1 ? " " : ""));
+		fprintf(stderr, ", %s to play. Playing %i games ...\n", 
+		       stone2str(color), games);
 	}
 	
-	struct playout_policy *policy = playout_moggy_init(NULL, board, NULL);
+	struct playout_policy *policy = playout_moggy_init(NULL, b, NULL);
 	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
 	struct board_ownermap ownermap;
 
 	ownermap.playouts = 0;
-	ownermap.map = malloc2(board_size2(board) * sizeof(ownermap.map[0]));
-	memset(ownermap.map, 0, board_size2(board) * sizeof(ownermap.map[0]));	
+	ownermap.map = malloc2(board_size2(b) * sizeof(ownermap.map[0]));
+	memset(ownermap.map, 0, board_size2(b) * sizeof(ownermap.map[0]));	
 
 
 	/* Get final status estimate after a number of moggy games */
 	int wr = 0;
 	double time_start = time_now();
 	for (int i = 0; i < games; i++)  {
-		struct board b;
-		board_copy(&b, board);
-		if (pick_random)
-			pick_random_last_move(&b, color);
+		struct board b2;
+		board_copy(&b2, b);
 		
-		int score = play_random_game(&setup, &b, color, NULL, &ownermap, policy);
+		int score = play_random_game(&setup, &b2, color, NULL, &ownermap, policy);
 		if (color == S_WHITE)
 			score = -score;
 		wr += (score > 0);
-		board_done_noalloc(&b);
+		board_done_noalloc(&b2);
 	}
 	double elapsed = time_now() - time_start;
 	fprintf(stderr, "moggy status in %.1fs, %i games/s\n\n", elapsed, (int)((float)games / elapsed));
@@ -432,13 +394,13 @@ test_moggy_status(struct board *board, char *arg)
 	else
 		fprintf(stderr, "Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
 
-	board_print_ownermap(board, stderr, &ownermap);
+	board_print_ownermap(b, stderr, &ownermap);
 
 	for (int i = 0; i < n; i++) {
 		coord_t c = status_at[i];
 		enum stone color = (ownermap.map[c][S_BLACK] > ownermap.map[c][S_WHITE] ? S_BLACK : S_WHITE);
 		fprintf(stderr, "%3s owned by %s: %i%%\n", 
-			coord2sstr(c, board), stone2str(color), 
+			coord2sstr(c, b), stone2str(color), 
 			ownermap.map[c][color] * 100 / ownermap.playouts);
 	}
 	

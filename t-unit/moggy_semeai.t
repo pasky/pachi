@@ -3,22 +3,22 @@ boardsize 6
 X X O X O O
 X . O X . O
 X . O X . O
-. X X O O .
+. X X)O O .
 . . . . . .
 . . . . . .
-moggy moves (c3)    
+moggy moves
 moggy status c3    
 
 % Semeai 2 libs
 boardsize 6
 . . . . . .
-X O O X X O
+X)O O X X O
 X X X O O O
 . . X O . .
 . . X O . .
 . . X O . .
 
-moggy moves (a5)
+moggy moves
 moggy status a5
 
 
@@ -27,10 +27,10 @@ boardsize 6
 X . O X . O
 X . O X . O
 X . O X . O
-. X X O O .
+. X X)O O .
 . . . . . .
 . . . . . .
-moggy moves (c3)    
+moggy moves
 moggy status c3    
 
 
@@ -38,12 +38,12 @@ moggy status c3
 boardsize 6
 . . . . . .
 O O O X X X
-X X X O O O
+X)X X O O O
 . . X O . .
 . . X O . .
 . . X O . .
 
-moggy moves (a4)
+moggy moves
 moggy status a4
 
 
@@ -55,9 +55,9 @@ X . O X . O
 X . O X . O
 X . O X . O
 X . O X . O
-. X X O O .
+. X X)O O .
 . . . . . .
-moggy moves (c2)    
+moggy moves
 moggy status c2    
 
 
