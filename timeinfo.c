@@ -32,26 +32,25 @@
 bool
 time_parse(struct time_info *ti, char *s)
 {
+	char *end = s;
 	switch (s[0]) {
 		case '_': ti->period = TT_TOTAL; s++; break;
 		default: ti->period = TT_MOVE; break;
 	}
 	switch (s[0]) {
-		case '=': {		
-			char *optval = strchr(s, ':');
-			if (optval) optval++;
-			
+		case '=':
 			ti->dim = TD_GAMES;
-			ti->len.games = atoi(++s);
-			ti->len.games_max = (optval ? atoi(optval) : 0);
+			ti->len.games = strtol(++s, &end, 10);
+			ti->len.games_max = 0;
+			if (*end == ':')
+				ti->len.games_max = strtol(end + 1, &end, 10);
+			if (*end) return false;
 			break;
-		} default:
-			if (!isdigit(s[0]))
-				return false;
+	        default:
 			ti->dim = TD_WALLTIME;
 			ti->len.t.timer_start = 0;
 			if (ti->period == TT_TOTAL) {
-				ti->len.t.main_time = atof(s);
+				ti->len.t.main_time = strtof(s, &end);
 				ti->len.t.byoyomi_time = 0.0;
 				ti->len.t.byoyomi_time_max = 0.0;
 				ti->len.t.byoyomi_periods = 0;
@@ -59,12 +58,13 @@ time_parse(struct time_info *ti, char *s)
 				ti->len.t.byoyomi_stones_max = 0;
 			} else { assert(ti->period == TT_MOVE);
 				ti->len.t.main_time = 0.0;
-				ti->len.t.byoyomi_time = atof(s);
+				ti->len.t.byoyomi_time = strtof(s, &end);
 				ti->len.t.byoyomi_time_max = ti->len.t.byoyomi_time;
 				ti->len.t.byoyomi_periods = 1;
 				ti->len.t.byoyomi_stones = 1;
 				ti->len.t.byoyomi_stones_max = 1;
 			}
+			if (*end) return false;
 			break;
 	}
 	return true;
