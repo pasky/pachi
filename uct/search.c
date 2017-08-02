@@ -134,6 +134,17 @@ spawn_thread_manager(void *ctx_)
 		t->root = tree_garbage_collect(t, t->root);
 	}
 
+	/* Make sure the root node is expanded. */
+	{
+		enum stone player_color = mctx->color;
+		struct tree_node *n = t->root;
+		enum stone node_color = stone_other(player_color);
+		assert(node_color == t->root_color);
+		
+		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
+			tree_expand_node(t, n, mctx->b, player_color, u, 1);
+	}
+	
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct uct_thread_ctx *ctx = malloc2(sizeof(*ctx));

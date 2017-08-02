@@ -466,10 +466,11 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	enum stone node_color = stone_other(player_color);
 	assert(node_color == t->root_color);
 
-	/* Make sure the root node is expanded. */
+	/* Make sure root node is expanded. Normally that's the case,
+	 * except direct calls to uct_playout() */
 	if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
-		tree_expand_node(t, n, &b2, player_color, u, 1);
-
+		tree_expand_node(t, n, b, player_color, u, 1);
+	
 	/* Tree descent history. */
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
