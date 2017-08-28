@@ -398,3 +398,63 @@ useful_ladder(struct board *b, group_t laddered)
 	});
 	return false;
 }
+
+static bool
+is_double_atari(struct board *b, coord_t c, enum stone color)
+{
+	if (board_at(b, c) != S_NONE ||
+	    immediate_liberty_count(b, c) < 2 ||  /* can't play there (hack) */
+	    neighbor_count_at(b, c, stone_other(color)) != 2)
+		return false;
+
+	int ataris = 0;
+	foreach_neighbor(b, c, {
+		if (board_at(b, c) == stone_other(color) &&
+		    board_group_info(b, group_at(b, c)).libs == 2)
+			ataris++;
+	});
+	
+	return (ataris >= 2);
+}
+
+static bool
+ladder_with_tons_of_double_ataris(struct board *b, group_t laddered, enum stone color)
+{
+	assert(board_at(b, laddered) == stone_other(color));
+
+	int double_ataris = 0;
+	foreach_in_group(b, laddered) {
+		coord_t stone = c;
+		foreach_diag_neighbor(b, stone) {
+			if (is_double_atari(b, c, stone_other(color)))
+				double_ataris++;
+		} foreach_diag_neighbor_end;
+	} foreach_in_group_end;
+
+	return (double_ataris >= 2);
+}
+
+bool
+harmful_ladder_atari(struct board *b, coord_t atari, enum stone color)
+{
+	assert(board_at(b, atari) == S_NONE);
+	
+	if (neighbor_count_at(b, atari, stone_other(color)) != 1)
+		return false;
+
+	foreach_neighbor(b, atari, {
+		if (board_at(b, c) != stone_other(color))
+			continue;
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)
+			continue;
+		
+		coord_t escape = board_group_other_lib(b, g, atari);
+		if (ladder_with_tons_of_double_ataris(b, g, color) &&              // getting ugly ...
+		    !wouldbe_ladder_any(b, g, escape, atari, stone_other(color)))  // and non-working ladder
+			return true;
+	});
+
+	return false;
+}
+

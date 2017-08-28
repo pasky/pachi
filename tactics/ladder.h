@@ -28,6 +28,9 @@ bool wouldbe_ladder_any(struct board *b, group_t group, coord_t escapelib, coord
  * Call right after is_ladder(), uses static state. */
 bool useful_ladder(struct board *b, group_t laddered);
 
+/* Playing out non-working ladder and getting ugly ? */
+bool harmful_ladder_atari(struct board *b, coord_t atari, enum stone color);
+
 bool is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor);
 bool is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor);
 bool is_middle_ladder_any(struct board *b, coord_t coord, group_t laddered, enum stone lcolor);
