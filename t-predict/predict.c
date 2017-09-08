@@ -19,9 +19,10 @@
   #define DEVIATION(devs_sum, total)    ( devs_sum / total )
 #endif
 
-
 #define PREDICT_TOPN 20
 #define PREDICT_MOVE_MAX 320
+#define PROB_MAX 1.0
+#define PREDICT_PROBS 11   // PROB_MAX * 10 + 1
 
 static char *stars = "****************************************************************************************************";
 
@@ -66,6 +67,19 @@ collect_move_stats(struct board *b, struct move *m, coord_t *best_c, int *guesse
 }
 
 static void
+collect_prob_stats(struct move *m, coord_t *best_c, float *best_r, int *guessed_by_prob, int *total_by_prob)
+{
+	for (int k = 0; k < PREDICT_TOPN; k++) {
+		int i = best_r[k] * 10;
+		assert(i >= 0); assert(i < PREDICT_PROBS);
+
+		total_by_prob[i]++;
+		if (m->coord == best_c[k])
+			guessed_by_prob[i]++;
+	}
+}
+
+static void
 collect_topn_stats(struct move *m, coord_t *best_c, int *guessed_top)
 {
 	int k; /* Correct move is kth guess */
@@ -90,19 +104,19 @@ collect_avg_val(int i, float val, float prob_max, float *probs_sum, float *devs_
 }
 
 static void
-collect_avg_stats(float *best_r, float prob_max, float *probs_sum, float *devs_sum, int total)
+collect_avg_stats(float *best_r, float *probs_sum, float *devs_sum, int total)
 {
 	for (int i = 0; i < PREDICT_TOPN; i++)
-		collect_avg_val(i, best_r[i], prob_max, probs_sum, devs_sum, total);
+		collect_avg_val(i, best_r[i], PROB_MAX, probs_sum, devs_sum, total);
 }
 
 #define RESCALE_LOG(p)  (log(1 + p * 1000))
 
 static void
-collect_avg_log_stats(float *best_r, float prob_max, float *probs_sum, float *devs_sum, int total)
+collect_avg_log_stats(float *best_r, float *probs_sum, float *devs_sum, int total)
 {
 	for (int i = 0; i < PREDICT_TOPN; i++)
-		collect_avg_val(i, RESCALE_LOG(best_r[i]), RESCALE_LOG(prob_max), probs_sum, devs_sum, total);
+		collect_avg_val(i, RESCALE_LOG(best_r[i]), RESCALE_LOG(PROB_MAX), probs_sum, devs_sum, total);
 }
 
 
@@ -161,14 +175,40 @@ print_topn_stats(strbuf_t *buf, int *guessed_top, int total)
 	#define PREDICT_SCALE  3/4
 	sbprintf(buf, "Topn stats: (Games: %i)\n", played_games);
 	int pc = round(guessed_top[0] * 100 / total);
-	sbprintf(buf, "Predicted   : %5i/%i moves (%2i%%)  %.*s\n",
+	sbprintf(buf, "Predicted   : %5i/%-5i moves (%2i%%)  %.*s\n",
 		guessed_top[0], total, pc, pc * PREDICT_SCALE, stars);
 	for (int i = 1; i < PREDICT_TOPN; i++) {
 		pc = round(guessed_top[i] * 100 / total);
-		sbprintf(buf, "  in best %2i: %5i/%i moves (%2i%%)  %.*s\n",
+		sbprintf(buf, "  in best %2i: %5i/%-5i moves (%2i%%)  %.*s\n",
 			 i+1, guessed_top[i], total, pc, pc * PREDICT_SCALE, stars);
 	}
 }
+
+static void
+print_prob_stats(strbuf_t *buf, int *guessed_by_prob, int *total_by_prob)
+{
+	sbprintf(buf, "Hits by probability vs expected value:\n");
+	for (int i = 9; i >= 0; i--) {
+		int expected = i * 10 + 5;
+		sbprintf(buf, "  [%2i%% - %3i%%]: ", expected - 5, expected + 5);
+		if (!total_by_prob[i]) {  sbprintf(buf, "NA\n"); continue;  }
+
+		char diag[62] = "                                          ";
+		int pc = round(guessed_by_prob[i] * 100 / total_by_prob[i]);
+		int start = expected - 30;  // can be negative
+		int end   = MIN(expected + 30, 100);
+		for (int j = start; j < end; j++) {
+			if (pc < expected && j >= pc && j <= expected)  diag[j - start] = '*';
+			if (expected < pc && j >= expected && j <= pc)  diag[j - start] = '*';
+		}
+		diag[expected - start] = '|';
+
+		sbprintf(buf, "%5i/%-6i (%2i%%)   %+3i%%  %s\n",
+			 guessed_by_prob[i], total_by_prob[i], pc, pc - expected, diag);
+	}
+	sbprintf(buf, " \n");
+}
+
 
 static char *
 predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r)
@@ -182,16 +222,21 @@ predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r)
 	collect_move_stats(b, m, best_c, guessed_move, total_move);
 
 	/* Average values */
-	/* Assumes properly scaled probs in [0.0 - prob_max] */
-	float prob_max = 1.0;
+	/* Assumes properly scaled probs in [0.0 - PROB_MAX] */
 	static float probs_sum[PREDICT_TOPN] = {0, };
 	static float devs_sum[PREDICT_TOPN] = {0, };
-	collect_avg_stats(best_r, prob_max, probs_sum, devs_sum, total);
+	collect_avg_stats(best_r, probs_sum, devs_sum, total);
 
 	/* Average log values */
 	static float log_probs_sum[PREDICT_TOPN] = {0, };
 	static float log_devs_sum[PREDICT_TOPN] = {0, };
-	collect_avg_log_stats(best_r, prob_max, log_probs_sum, log_devs_sum, total);
+	collect_avg_log_stats(best_r, log_probs_sum, log_devs_sum, total);
+
+	/* Check Probabilities */
+
+	static int guessed_by_prob[PREDICT_PROBS] = {0, };
+	static int total_by_prob[PREDICT_PROBS] = {0, };
+	collect_prob_stats(m, best_c, best_r, guessed_by_prob, total_by_prob);
 
 	/* Topn stats */
 	static int guessed_top[PREDICT_TOPN] = {0, };
@@ -201,13 +246,14 @@ predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r)
 	/* Dump stats from time to time */
 	if (total % 200 == 0) {
 		strbuf_t strbuf;
-		strbuf_t *buf = strbuf_init_alloc(&strbuf, 8192);
+		strbuf_t *buf = strbuf_init_alloc(&strbuf, 16384);
 
 		sbprintf(buf, " \n");
 		print_predict_move_stats(buf, guessed_move, total_move);
 		print_predict_move_stats_short(buf, guessed_move, total_move);
-		print_avg_stats(buf, "Average log values:", 50, RESCALE_LOG(prob_max), log_probs_sum, log_devs_sum, total);
-		print_avg_stats(buf, "Average values:",     50, prob_max,              probs_sum,     devs_sum,     total);
+		print_prob_stats(buf, guessed_by_prob, total_by_prob);
+		print_avg_stats(buf, "Average log values:", 50, RESCALE_LOG(PROB_MAX), log_probs_sum, log_devs_sum, total);
+		print_avg_stats(buf, "Average values:",     50, PROB_MAX,              probs_sum,     devs_sum,     total);
 		print_topn_stats(buf, guessed_top, total);
 		
 		return buf->str;
