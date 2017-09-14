@@ -527,9 +527,6 @@ board_handicap_stone(struct board *board, int x, int y, FILE *f)
 	m.color = S_BLACK; m.coord = coord_xy(board, x, y);
 
 	board_play(board, &m);
-	/* Simulate white passing; otherwise, UCT search can get confused since
-	 * tree depth parity won't match the color to move. */
-	board->moves++;
 
 	char *str = coord2str(m.coord, board);
 	if (DEBUGL(1))
@@ -546,7 +543,7 @@ board_handicap(struct board *board, int stones, FILE *f)
 	int mid = board_size(board) / 2;
 	int max = board_size(board) - 1 - margin;
 	const int places[][2] = {
-		{ min, min }, { max, max }, { min, max }, { max, min },
+		{ min, min }, { max, max }, { max, min }, { min, max }, 
 		{ min, mid }, { max, mid },
 		{ mid, min }, { mid, max },
 		{ mid, mid },
