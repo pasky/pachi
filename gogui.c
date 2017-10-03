@@ -24,9 +24,14 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 	}
 	if (e->ownermap) {
 		sbprintf(buf, "gfx/gfx   Influence/gogui-ownermap\n");
+		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");	
 	}
 
 	if (!strcmp(e->name, "UCT")) {
+#ifdef DCNN
+		sbprintf(buf, "gfx/gfx   DCNN Best Moves/gogui-dcnn_best\n");
+		sbprintf(buf, "gfx/gfx   DCNN Ratings/gogui-dcnn_rating\n");
+#endif
 		sbprintf(buf, "gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
 		sbprintf(buf, "gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
 		sbprintf(buf, "gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
@@ -39,7 +44,6 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
-
 
 
 enum gogui_reporting gogui_livegfx = 0;
@@ -169,6 +173,25 @@ gogui_ownermap(strbuf_t *buf, struct board *b, struct engine *e)
 	sbprintf(buf, "\nTEXT Score Est: %s", board_ownermap_score_est_str(b, ownermap));
 }
 
+static void
+gogui_score_est(strbuf_t *buf, struct board *b, struct engine *e)
+{
+	struct board_ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	if (!ownermap)	return;
+
+	sbprintf(buf, "INFLUENCE");	
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		enum point_judgement j = board_ownermap_score_est_coord(b, ownermap, c);
+		float p = 0;
+		if (j == PJ_BLACK)  p = 0.5;
+		if (j == PJ_WHITE)  p = -0.5;
+		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
+	} foreach_point_end;
+
+	sbprintf(buf, "\nTEXT Score Est: %s", board_ownermap_score_est_str(b, ownermap));
+}
+
 enum parse_code
 cmd_gogui_livegfx(struct board *board, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
@@ -184,6 +207,16 @@ cmd_gogui_ownermap(struct board *b, struct engine *e, struct time_info *ti, gtp_
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	gogui_ownermap(buf, b, e);
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+enum parse_code
+cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	char buffer[5000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gogui_score_est(buf, b, e);
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
@@ -224,4 +257,42 @@ cmd_gogui_best_moves(struct board *b, struct engine *e, struct time_info *ti, gt
 	return P_OK;
 }
 
+#ifdef DCNN
+static struct engine *dcnn_engine = NULL;
+
+enum parse_code
+cmd_gogui_dcnn_best(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
+	if (!using_dcnn(b)) return P_OK;
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+	
+	char buffer[1024];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gogui_best_moves(buf, dcnn_engine, b, ti, color, false);
+
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+enum parse_code
+cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
+	if (!using_dcnn(b)) return P_OK;
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+	
+	char buffer[1024];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gogui_best_moves(buf, dcnn_engine, b, ti, color, true);
+
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+#endif /* DCNN */
 
