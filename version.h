@@ -1,6 +1,8 @@
 #ifndef PACHI_VERSION_H
 #define PACHI_VERSION_H
 
+#include "gitversion.h"
+
 #define PACHI_VERNUM 11.99
 #define PACHI_VERNUMS "11.99"
 
@@ -34,6 +36,6 @@
 /* -devel except when tagged. */
 #define PACHI_VERDEV "-devel"
 
-#define PACHI_VERSION PACHI_VERNUMS " (" PACHI_VERNAME PACHI_VERDEV ")"
+#define PACHI_VERSION PACHI_VERNUMS " (" PACHI_VERNAME PACHI_VERDEV ") - " GIT_BRANCH " (" GIT_HASH ")"
 
 #endif

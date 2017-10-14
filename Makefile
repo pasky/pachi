@@ -141,19 +141,19 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o
+OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o pachi.o
 ifdef DCNN
 	OBJS+=dcnn.o caffe.o
 endif
 # Low-level dependencies last
 SUBDIRS=t-unit t-predict uct uct/policy distributed replay patternscan patternplay joseki random montecarlo playout tactics
 
-all: all-recursive pachi
+all: gitversion.h all-recursive pachi
 
 LOCALLIBS=$(SUBDIRS:%=%/lib.a)
 $(LOCALLIBS): all-recursive
 	@
-pachi: $(OBJS) pachi.o $(LOCALLIBS)
+pachi: $(OBJS) $(LOCALLIBS)
 	$(call cmd,link)
 
 # Use runtime gcc profiling for extra optimization. This used to be a large
@@ -164,13 +164,20 @@ pachi-profiled:
 	./pachi -t =5000 no_tbook < gtp/genmove_both.gtp
 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
 
+gitversion.h: .git/HEAD .git/index
+	@echo "[make] gitversion.h"
+	@branch=`git status | grep '^On branch' | sed -e 's/On branch //'`; \
+	 hash=`git rev-parse --short HEAD`; \
+	 echo "#define GIT_BRANCH \"$$branch\"" > $@;  \
+	 echo "#define GIT_HASH   \"$$hash\"" >> $@
+
 # install-recursive?
 install:
 	$(INSTALL) ./pachi $(DESTDIR)$(BINDIR)
 
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive
-	-@rm pachi >/dev/null 2>&1
+	-@rm pachi gitversion.h >/dev/null 2>&1
 
 clean-profiled:: clean-profiled-recursive
 
