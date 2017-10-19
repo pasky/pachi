@@ -36,14 +36,8 @@ foreach my $s (<STDIN>)
 	$size = @t;
 	for (my $i = 0; $i < @t; $i++)
 	{
-	    if ($t[$i] ne "X") { next; }
-	    $ab .= sprintf("play b %s\n", coord2gtp($i+1, $l)); 
-	}
-
-	for (my $i = 0; $i < @t; $i++)
-	{
-	    if ($t[$i] ne "O") { next; }
-	    $aw .= sprintf("play w %s\n", coord2gtp($i+1, $l));
+	    if ($t[$i] eq "X") {  $ab .= sprintf("play b %s\n", coord2gtp($i+1, $l));  }
+	    if ($t[$i] eq "O") {  $aw .= sprintf("play w %s\n", coord2gtp($i+1, $l));  }
 	}
     }
 }

@@ -1,0 +1,94 @@
+#!/usr/bin/perl
+# gtp2sgf: convert gtp stream to sgf
+
+my $size = 19;
+my $abcd = "abcdefghijklmnopqrstuvwxyz";
+
+# Convert gtp coord to sgf
+sub gtp2sgf
+{
+    my ($c) = @_;   $c = lc($c);
+    if ($c eq "pass") {  return "";  }
+    
+    my $x = substr($c, 0, 1);
+    if ($x ge 'j') {  $x = chr(ord($x)-1);  }
+    
+    my $y = substr($c, 1, 2);
+    $y = $size - $y;
+    $y = substr($abcd, $y, 1);
+
+    return "$x$y";
+}
+
+my @fixed_handi = (
+    [], [],
+    [ "q16", "d4" ],
+    [ "q16", "d4", "q4" ],
+    [ "q16", "d4", "q4", "d16" ],
+    [ "q16", "d4", "q4", "d16", "k10" ],
+    [ "q16", "d4", "q4", "d16", "d10", "q10" ],
+    [ "q16", "d4", "q4", "d16", "d10", "q10", "k10" ],
+    [ "q16", "d4", "q4", "d16", "d10", "q10", "k16", "k4" ],
+    [ "q16", "d4", "q4", "d16", "d10", "q10", "k16", "k4", "k10" ]
+    );
+
+my $comment = "";
+my $last_color = "B";
+while (my $s = <STDIN>)
+{
+    chomp($s);
+    
+    # flush buffered comments
+    if ($comment ne "" && 
+	$s !~ m/^echo/ && $s !~ m/^#/ && $s !~ m/^[ \t]*$/)
+    {  printf("C[%s]\n", "$comment"); $comment = "";  }
+
+    if    ($s =~ m/^(name|version|protocol_version|list_commands|gogui-)/)  {   }
+    elsif ($s =~ m/^boardsize (.*)/i) {  print "(;RU[Chinese]SZ[$1]\n";  $size = $1;  }
+    elsif ($s =~ m/^clear_board/i)    {   }
+    elsif ($s =~ m/^komi (.*)/i)      {  print "KM[$1]\n";   }
+
+    elsif ($s =~ m/^fixed_handicap (.*)/) {
+	printf("HA[%i]\n", $1);
+	foreach my $c (@{$fixed_handi[$1]}) { printf(";B[%s]\n", gtp2sgf($c));  }
+    }
+
+    elsif ($s =~ m/^set_free_handicap (.*)/) {
+	my @coords = split(" ", $1);
+	printf("HA[%i]\n", @coords + 0);
+	foreach my $c (@coords) {  printf(";B[%s]\n", gtp2sgf($c));  }
+    }
+
+    elsif ($s =~ m/^play ([bw]) (.*)/i) {
+	my ($color, $coord) = (uc($1), $2);
+	$last_color = $color;
+	printf(";%s[%s]\n", $color, gtp2sgf($coord));
+    }
+
+    elsif ($s =~ m/^genmove ([bw])/i ||
+	   $s =~ m/^kgs-genmove_cleanup ([bw])/i) {
+	my $color = uc($1);
+	if ($last_color eq $color) {  printf(";PL[%s]\n", $color);  }
+	printf STDERR ("genmove found, stopping there.\n");  last;  
+    }
+
+    # buffer comments
+    elsif ($s =~ m/^echo(.*)/ ||
+	   $s =~ m/^#(.*)/) {  
+	my $c = $1;  $c =~ s|\[|(|g;  $c =~ s|]|)|g;
+	$comment .= "$c\n";
+    }
+
+    # ignore
+    elsif ($s =~ m/^[ \t]*$/) {   }
+    elsif ($s =~ m/^final_status_list/) {   }
+
+    else {  die("unhandled gtp command: '$s'\n");  }
+}
+
+
+# flush buffered comments
+if ($comment ne "")
+{  printf("C[%s]\n", "$comment"); $comment = "";  }
+
+print ")\n";
