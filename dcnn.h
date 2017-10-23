@@ -1,4 +1,3 @@
-
 #ifndef PACHI_DCNN_H
 #define PACHI_DCNN_H
 
@@ -7,13 +6,14 @@
 
 #define DCNN_BEST_N 5
 
+struct tree_node;
+
 void dcnn_get_moves(struct board *b, enum stone color, float result[]);
 bool using_dcnn(struct board *b);
 void dcnn_quiet_caffe(int argc, char *argv[]);
 void dcnn_init();
 void find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest);
 void print_dcnn_best_moves(struct tree_node *node, struct board *b, coord_t *best_c, float *best_r, int nbest);
-struct engine *engine_dcnn_init(char *arg, struct board *b);
 
 #else
 

@@ -57,10 +57,11 @@ Pachi consists of the following components:
 	distributed/	"meta-engine" for distributed play by orchestrating
 			    several UCT engines on different computers
 	engines/	other engines:
+	  dcnn.c            example "dcnn move generator" engine
+	  patternplay.c	    example "large patterns move generator" engine
 	  random.c	    example "random move generator" engine
 	  replay.c	    example "playout move generator" engine
 	  montecarlo.c	    simple treeless Monte Carlo engine, quite bitrotten
-	  patternplay.c	    example "large patterns move generator" engine
 	  patternscan.c	    auxiliary engine for harvesting patterns from existing games
 	  joseki.c	    auxiliary engine for generating joseki patterns
 

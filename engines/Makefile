@@ -1,5 +1,10 @@
 INCLUDES=-I..
+
 OBJS=joseki.o josekibase.o montecarlo.o patternplay.o patternscan.o random.o replay.o
+
+ifdef DCNN
+	OBJS+=dcnn.o
+endif
 
 all: lib.a
 lib.a: $(OBJS)

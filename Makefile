@@ -141,9 +141,9 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o pachi.o
+OBJS=$(DCNN_OBJS) board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o pachi.o
 ifdef DCNN
-	OBJS+=dcnn.o caffe.o
+	DCNN_OBJS=caffe.o dcnn.o
 endif
 # Low-level dependencies last
 SUBDIRS=uct uct/policy playout tactics t-unit t-predict distributed engines
