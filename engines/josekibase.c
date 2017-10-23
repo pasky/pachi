@@ -6,7 +6,7 @@
 #include "board.h"
 #include "debug.h"
 #include "move.h"
-#include "joseki/base.h"
+#include "engines/josekibase.h"
 
 
 struct joseki_dict *

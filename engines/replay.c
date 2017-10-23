@@ -8,10 +8,10 @@
 #include "engine.h"
 #include "move.h"
 #include "playout.h"
-#include "joseki/base.h"
+#include "engines/josekibase.h"
 #include "playout/light.h"
 #include "playout/moggy.h"
-#include "replay/replay.h"
+#include "engines/replay.h"
 
 /* Internal engine state. */
 struct replay {

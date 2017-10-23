@@ -4,7 +4,7 @@
 #include "board.h"
 #include "engine.h"
 #include "move.h"
-#include "random/random.h"
+#include "engines/random.h"
 
 static coord_t *
 random_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)

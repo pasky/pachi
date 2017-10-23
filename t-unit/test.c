@@ -15,7 +15,7 @@
 #include "playout.h"
 #include "timeinfo.h"
 #include "playout/moggy.h"
-#include "replay/replay.h"
+#include "engines/replay.h"
 #include "ownermap.h"
 
 

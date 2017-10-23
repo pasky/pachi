@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "debug.h"
 #include "board.h"
 #include "engine.h"
-#include "joseki/base.h"
+#include "engines/josekibase.h"
 #include "move.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
-#include "montecarlo/internal.h"
-#include "montecarlo/montecarlo.h"
+#include "engines/montecarlo.h"
 #include "playout.h"
 #include "timeinfo.h"
 
@@ -34,6 +34,25 @@
 #define MC_GAMES	40000
 #define MC_GAMELEN	400
 
+#define MCDEBUGL(n) DEBUGL_(mc->debug_level, n)
+
+
+/* Internal engine state. */
+struct montecarlo {
+	int debug_level;
+	int gamelen;
+	floating_t resign_ratio;
+	int loss_threshold;
+	struct joseki_dict *jdict;
+	struct playout_policy *playout;
+};
+
+/* Per-move playout statistics. */
+struct move_stat {
+	int games;
+	int wins;
+};
+
 
 /* FIXME: Cutoff rule for simulations. Currently we are so fast that this
  * simply does not matter; even 100000 simulations are fast enough to
@@ -43,7 +62,7 @@
  * to consider 'pass' among the moves, but this seems tricky. */
 
 
-void
+static void
 board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 {
 	fprintf(f, "\n       ");

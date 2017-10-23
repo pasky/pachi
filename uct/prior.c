@@ -7,7 +7,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "joseki/base.h"
+#include "engines/josekibase.h"
 #include "move.h"
 #include "random.h"
 #include "tactics/ladder.h"

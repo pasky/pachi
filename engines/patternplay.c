@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "patternplay/patternplay.h"
+#include "engines/patternplay.h"
 #include "pattern.h"
 #include "patternsp.h"
 #include "patternprob.h"

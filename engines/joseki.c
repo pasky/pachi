@@ -6,8 +6,8 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "joseki/joseki.h"
-#include "joseki/base.h"
+#include "engines/joseki.h"
+#include "engines/josekibase.h"
 
 
 /* Internal engine state. */

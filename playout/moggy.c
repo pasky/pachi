@@ -9,7 +9,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "joseki/base.h"
+#include "engines/josekibase.h"
 #include "mq.h"
 #include "pattern3.h"
 #include "playout.h"

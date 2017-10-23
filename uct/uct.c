@@ -13,7 +13,7 @@
 #include "chat.h"
 #include "move.h"
 #include "mq.h"
-#include "joseki/base.h"
+#include "engines/josekibase.h"
 #include "playout.h"
 #include "playout/moggy.h"
 #include "playout/light.h"

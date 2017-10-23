@@ -1,3 +1,5 @@
+[ Joseki engine ]
+
 This is a joseki pattern scanner. At the beginning, you should
 have a SGF file with various joseki as variations; they are assumed
 to be laid out in the upper right corner; only variations leading
