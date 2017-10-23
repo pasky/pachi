@@ -22,7 +22,7 @@ static shared_ptr<Net<float> > net;
 bool
 caffe_ready()
 {
-	return net;
+	return (net != NULL);
 }
 
 void
@@ -47,22 +47,21 @@ caffe_init()
 	net->CopyTrainedLayersFrom(trained_file);
 	
 	if (DEBUGL(1))
-		fprintf(stderr, "Initialized dcnn.\n");
+		fprintf(stderr, "%s\n", "Loaded Detlef's 54% dcnn.");
 }	
 
 
 void
-caffe_get_data(float *data, float *result)
+caffe_get_data(float *data, float *result, int planes, int size)
 {
-	int size = 19;
-	Blob<float> *blob = new Blob<float>(1, 13, size, size);
+	Blob<float> *blob = new Blob<float>(1, planes, size, size);
 	blob->set_cpu_data(data);
 	vector<Blob<float>*> bottom;
 	bottom.push_back(blob);
 	assert(net);
 	const vector<Blob<float>*>& rr = net->Forward(bottom);
 	
-	for (int i = 0; i < size * size; i++) {
+	for (int i = 0; i < 19 * 19; i++) {
 		result[i] = rr[0]->cpu_data()[i];
 		if (result[i] < 0.00001)
 			result[i] = 0.00001;

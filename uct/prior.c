@@ -84,11 +84,8 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 		if (!map->consider[c])
 			continue;
 		
-		int i = coord_x(c, map->b) - 1;
-		int j = coord_y(c, map->b) - 1;
-		assert(i >= 0 && i < 19);
-		assert(j >= 0 && j < 19);
-		float val = r[i * 19 + j];
+		int k = coord2dcnn_idx(c, map->b);
+		float val = r[k];
 		if (isnan(val) || val < 0.001)
 			continue;
 		assert(val >= 0.0 && val <= 1.0);

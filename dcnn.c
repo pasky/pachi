@@ -8,8 +8,9 @@
 #include "uct/tree.h"
 #include "caffe.h"
 #include "dcnn.h"
-	
-	
+#include "timeinfo.h"	
+
+
 bool
 using_dcnn(struct board *b)
 {
@@ -33,48 +34,48 @@ dcnn_quiet_caffe(int argc, char *argv[])
 	execvp(argv[0], argv);   /* Sucks that we have to do this */
 }
 
-
 void
 dcnn_get_moves(struct board *b, enum stone color, float result[])
 {
 	assert(real_board_size(b) == 19);
 
-	int size = 19;
-	int dsize = 13 * size * size;
-	float *data = malloc(sizeof(float) * dsize);
-	for (int i = 0; i < dsize; i++) 
-		data[i] = 0.0;
+	int dsize = 13 * 19 * 19;
+	float *data = malloc(dsize * sizeof(float));
+	for (int i = 0; i < dsize; i++)  /* memset() not recommended for floats */
+		data[i] = 0;
 
-	for (int j = 0; j < size; j++) {
-		for(int k = 0; k < size; k++) {
-			int p = size * j + k;
-			coord_t c = coord_xy(b, j+1, k+1);
-			group_t g = group_at(b, c);
-			enum stone bc = board_at(b, c);
-			int libs = board_group_info(b, g).libs - 1;
-			if (libs > 3) libs = 3;
-			if (bc == S_NONE) 
-				data[8*size*size + p] = 1.0;
-			else if (bc == color)
-				data[(0+libs)*size*size + p] = 1.0;
-			else if (bc == stone_other(color))
-				data[(4+libs)*size*size + p] = 1.0;
-			
-			if (c == b->last_move.coord)
-				data[9*size*size + p] = 1.0;
-			else if (c == b->last_move2.coord)
-				data[10*size*size + p] = 1.0;
-			else if (c == b->last_move3.coord)
-				data[11*size*size + p] = 1.0;
-			else if (c == b->last_move4.coord)
-				data[12*size*size + p] = 1.0;
-			
-		}
+	for (int x = 0; x < 19; x++)
+	for (int y = 0; y < 19; y++) {
+		int p = y * 19 + x;
+
+		coord_t c = coord_xy(b, x+1, y+1);
+		group_t g = group_at(b, c);
+		enum stone bc = board_at(b, c);
+		int libs = board_group_info(b, g).libs - 1;
+		if (libs > 3) libs = 3;
+		if (bc == S_NONE)
+			data[       8*19*19 + p] = 1.0;
+		else if (bc == color)
+			data[(0+libs)*19*19 + p] = 1.0;
+		else if (bc == stone_other(color))
+			data[(4+libs)*19*19 + p] = 1.0;
+		
+		if (c == b->last_move.coord)
+			data[9*19*19 + p] = 1.0;
+		else if (c == b->last_move2.coord)
+			data[10*19*19 + p] = 1.0;
+		else if (c == b->last_move3.coord)
+			data[11*19*19 + p] = 1.0;
+		else if (c == b->last_move4.coord)
+			data[12*19*19 + p] = 1.0;
 	}
 
-	caffe_get_data(data, result);
+	double time_start = time_now();
+	caffe_get_data(data, result, 13, 19);
 	free(data);
+	fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
 }
+
 
 void
 find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest)
@@ -83,7 +84,7 @@ find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, 
 		best_c[i] = pass;
 
 	foreach_free_point(b) {
-		int k = (coord_x(c, b) - 1) * 19 + (coord_y(c, b) - 1);
+		int k = coord2dcnn_idx(c, b);
 		best_moves_add(c, r[k], best_c, best_r, nbest);
 	} foreach_free_point_end;
 }

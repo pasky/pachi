@@ -9,6 +9,7 @@
 #include "engines/dcnn.h"
 
 
+
 static coord_t *
 dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
