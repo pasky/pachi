@@ -27,8 +27,8 @@
 # You'll need to install Boost and Caffe libraries.
 # If Caffe is in a custom directory you can set it here.
 
-#DCNN=1
-#CAFFE_PREFIX=/usr/local
+DCNN=1
+CAFFE_PREFIX=/usr/local/caffe
 
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
