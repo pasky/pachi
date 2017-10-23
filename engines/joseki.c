@@ -120,7 +120,7 @@ already_have: {
 	return NULL;
 }
 
-static coord_t *
+static coord_t
 joseki_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	fprintf(stderr, "genmove command not available in joseki scan!\n");

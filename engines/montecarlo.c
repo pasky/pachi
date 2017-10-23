@@ -93,7 +93,7 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 }
 
 
-static coord_t *
+static coord_t
 montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct montecarlo *mc = e->data;
@@ -221,7 +221,7 @@ move_found:
 	if (MCDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord, b), coord_y(top_coord, b), top_ratio, i, superko);
 
-	return coord_copy(top_coord);
+	return top_coord;
 }
 
 static void

@@ -295,7 +295,7 @@ genmoves_args(char *args, enum stone color, int played,
 #define MAX_MAINTIME_RATIO 3.0
 
 /* Regularly send genmoves command to the slaves, and select the best move. */
-static coord_t *
+static coord_t
 distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 		    enum stone color, bool pass_all_alive)
 {
@@ -398,7 +398,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 		int total_hnodes = replies * (1 << dist->stats_hbits);
 		merge_print_stats(total_hnodes);
 	}
-	return coord_copy(best);
+	return best;
 }
 
 static char *

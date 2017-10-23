@@ -66,7 +66,7 @@ replay_sample_moves(struct engine *e, struct board *b, enum stone color,
 	return m.coord;
 }
 
-static coord_t *
+static coord_t
 replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct replay *r = e->data;
@@ -104,11 +104,11 @@ replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 			if (DEBUGL(2))
 				fprintf(stderr, "EEEK, group suicide, will pass instead !\n");
 			/* XXX: We should check for non-suicide alternatives. */
-			return coord_copy(pass);
+			return pass;
 		}
 	}        
 
-	return coord_copy(m.coord);
+	return m.coord;
 }
 
 static void

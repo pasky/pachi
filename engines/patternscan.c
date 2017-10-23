@@ -170,7 +170,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m, char *engine
 	return ps->no_pattern_match ? NULL : str;
 }
 
-static coord_t *
+static coord_t
 patternscan_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	fprintf(stderr, "genmove command not available during patternscan!\n");

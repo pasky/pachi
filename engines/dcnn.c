@@ -10,7 +10,7 @@
 
 
 
-static coord_t *
+static coord_t
 dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	float r[19 * 19];
@@ -23,7 +23,7 @@ dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	/* Make sure move is valid ... */
 	for (int i = 0; i < DCNN_BEST_N; i++) {
 		if (board_is_valid_play_no_suicide(b, color, best_moves[i]))
-			return coord_copy(best_moves[i]);
+			return best_moves[i];
 		fprintf(stderr, "dcnn suggests invalid move %s !\n", coord2sstr(best_moves[i], b));
 	}
 	assert(0);

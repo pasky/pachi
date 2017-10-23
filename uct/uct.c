@@ -577,7 +577,7 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 	return best;
 }
 
-static coord_t *
+static coord_t
 uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct uct *u = e->data;
@@ -589,7 +589,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		if (is_pass(best_coord))
 			u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-		return coord_copy(best_coord);
+		return best_coord;
 	}
 	
 	if (!u->t->untrustworthy_tree) {
@@ -610,7 +610,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
 
-	return coord_copy(best_coord);
+	return best_coord;
 }
 
 void

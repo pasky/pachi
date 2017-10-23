@@ -13,7 +13,7 @@ typedef char *(*engine_notify_play_t)(struct engine *e, struct board *b, struct 
 typedef char *(*engine_undo_t)(struct engine *e, struct board *b);
 typedef char *(*engine_result_t)(struct engine *e, struct board *b);
 typedef char *(*engine_chat_t)(struct engine *e, struct board *b, bool in_game, char *from, char *cmd);
-typedef coord_t *(*engine_genmove_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive);
+typedef coord_t (*engine_genmove_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive);
 typedef void  (*engine_best_moves_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
 				     coord_t *best_c, float *best_r, int nbest);
 typedef char *(*engine_genmoves_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color,

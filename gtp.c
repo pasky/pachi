@@ -325,7 +325,6 @@ cmd_genmove(struct board *board, struct engine *engine, struct time_info *ti, gt
 	char *arg;
 	next_tok(arg);
 	enum stone color = str2stone(arg);
-	coord_t *c = NULL;
 	if (DEBUGL(2) && debug_boardprint)
 		engine_board_print(engine, board, stderr);
 		
@@ -335,27 +334,21 @@ cmd_genmove(struct board *board, struct engine *engine, struct time_info *ti, gt
 	}
 
 	struct time_info *ti_genmove = time_info_genmove(board, ti, color);
-	coord_t cf = pass;
-	if (board->fbook)
-		cf = fbook_check(board);
-	if (!is_pass(cf))
-		c = coord_copy(cf);
-	else
+	coord_t c = (board->fbook ? fbook_check(board) : pass);
+	if (is_pass(c))
 		c = engine->genmove(engine, board, ti_genmove, color, !strcasecmp(gtp->cmd, "kgs-genmove_cleanup"));
 		
-	struct move m = { *c, color };
+	struct move m = { .coord = c, .color = color };
 	if (board_play(board, &m) < 0) {
 		fprintf(stderr, "Attempted to generate an illegal move: [%s, %s]\n", coord2sstr(m.coord, board), stone2str(m.color));
 		abort();
 	}
-	char *str = coord2str(*c, board);
+	char *str = coord2sstr(c, board);
 	if (DEBUGL(4))
 		fprintf(stderr, "playing move %s\n", str);
-	if (DEBUGL(1) && debug_boardprint) {
+	if (DEBUGL(1) && debug_boardprint)
 		engine_board_print(engine, board, stderr);
-	}
 	gtp_reply(gtp, str, NULL);
-	free(str); coord_done(c);
 
 	/* Account for spent time. If our GTP peer keeps our clock, this will
 	 * be overriden by next time_left GTP command properly. */
