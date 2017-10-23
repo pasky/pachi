@@ -13,15 +13,21 @@
 static coord_t *
 dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
-        float r[19 * 19];
-        float best_r[DCNN_BEST_N] = { 0.0, };
-        coord_t best_moves[DCNN_BEST_N];
-        dcnn_get_moves(b, color, r);
-        find_dcnn_best_moves(b, r, best_moves, best_r, DCNN_BEST_N);
-        print_dcnn_best_moves(NULL, b, best_moves, best_r, DCNN_BEST_N);
-        
-        return coord_copy(best_moves[0]);
-}       
+	float r[19 * 19];
+	float best_r[DCNN_BEST_N] = { 0.0, };
+	coord_t best_moves[DCNN_BEST_N];
+	dcnn_get_moves(b, color, r);
+	find_dcnn_best_moves(b, r, best_moves, best_r, DCNN_BEST_N);
+	print_dcnn_best_moves(NULL, b, best_moves, best_r, DCNN_BEST_N);
+	
+	/* Make sure move is valid ... */
+	for (int i = 0; i < DCNN_BEST_N; i++) {
+		if (board_is_valid_play_no_suicide(b, color, best_moves[i]))
+			return coord_copy(best_moves[i]);
+		fprintf(stderr, "dcnn suggests invalid move %s !\n", coord2sstr(best_moves[i], b));
+	}
+	assert(0);
+}
 
 static void
 dcnn_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
