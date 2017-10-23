@@ -146,7 +146,7 @@ ifdef DCNN
 	OBJS+=dcnn.o caffe.o
 endif
 # Low-level dependencies last
-SUBDIRS=t-unit t-predict uct uct/policy distributed replay patternscan patternplay joseki random montecarlo playout tactics
+SUBDIRS=uct uct/policy playout tactics t-unit t-predict distributed replay patternscan patternplay joseki random montecarlo
 
 all: gitversion.h all-recursive pachi
 
