@@ -273,8 +273,7 @@ cmd_play(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 	next_tok(arg);
 	m.color = str2stone(arg);
 	next_tok(arg);
-	coord_t *c = str2coord(arg, board_size(board));
-	m.coord = *c; coord_done(c);
+	m.coord = str2coord(arg, board_size(board));
 	next_tok(arg);
 	char *enginearg = arg;
 	char *reply = NULL;
@@ -309,8 +308,7 @@ cmd_pachi_predict(struct board *board, struct engine *engine, struct time_info *
 	next_tok(arg);
 	m.color = str2stone(arg);
 	next_tok(arg);
-	coord_t *c = str2coord(arg, board_size(board));
-	m.coord = *c; coord_done(c);
+	m.coord = str2coord(arg, board_size(board));
 	next_tok(arg);
 
 	char *str = predict_move(board, engine, ti, &m);
@@ -402,8 +400,7 @@ cmd_set_free_handicap(struct board *board, struct engine *engine, struct time_in
 	char *arg;
 	next_tok(arg);
 	do {
-		coord_t *c = str2coord(arg, board_size(board));
-		m.coord = *c; coord_done(c);
+		m.coord = str2coord(arg, board_size(board));
 		if (DEBUGL(4))
 			fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord, board), coord_y(m.coord, board));
 

@@ -46,15 +46,14 @@ coord2sstr(coord_t c, struct board *board)
 }
 
 /* No sanity checking */
-coord_t *
+coord_t
 str2coord(char *str, int size)
 {
-	if (!strcasecmp(str, "pass")) {
-		return coord_pass();
-	} else if (!strcasecmp(str, "resign")) {
-		return coord_resign();
-	} else {
-		char xc = tolower(str[0]);
-		return coord_init(xc - 'a' - (xc > 'i') + 1, atoi(str + 1), size);
-	}
+	if (!strcasecmp(str, "pass"))
+		return pass;
+	if (!strcasecmp(str, "resign"))
+		return resign;
+	
+	char xc = tolower(str[0]);
+	return xc - 'a' - (xc > 'i') + 1 + atoi(str + 1) * size;
 }

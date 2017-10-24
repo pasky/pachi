@@ -145,7 +145,7 @@ set_ko(struct board *b, char *arg)
 {
 	assert(isalpha(*arg));
 	struct move last;
-	last.coord = str2scoord(arg, board_size(b));
+	last.coord = str2coord(arg, board_size(b));
 	last.color = board_at(b, last.coord);
 	assert(last.color == S_BLACK || last.color == S_WHITE);
 	b->last_move = last;
@@ -186,7 +186,7 @@ test_sar(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2scoord(arg, board_size(b));
+	coord_t c = str2coord(arg, board_size(b));
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
@@ -209,7 +209,7 @@ test_ladder(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2scoord(arg, board_size(b));
+	coord_t c = str2coord(arg, board_size(b));
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
@@ -234,7 +234,7 @@ test_useful_ladder(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2scoord(arg, board_size(b));
+	coord_t c = str2coord(arg, board_size(b));
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
@@ -257,7 +257,7 @@ static bool
 test_can_countercap(struct board *b, char *arg)
 {
 	next_arg(arg);
-	coord_t c = str2scoord(arg, board_size(b));
+	coord_t c = str2coord(arg, board_size(b));
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
@@ -280,7 +280,7 @@ static bool
 test_two_eyes(struct board *b, char *arg)
 {
 	next_arg(arg);
-	coord_t c = str2scoord(arg, board_size(b));
+	coord_t c = str2coord(arg, board_size(b));
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();

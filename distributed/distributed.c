@@ -249,7 +249,7 @@ select_best_move(struct board *b, struct large_stats *stats, int *played,
 		char move[64];
 		struct move_stats s;
 		while (r && sscanf(++r, "%63s %d " PRIfloating, move, &s.playouts, &s.value) == 3) {
-			coord_t c = str2scoord(move, board_size(b));
+			coord_t c = str2coord(move, board_size(b));
 			assert (c >= resign && c < board_size2(b) && s.playouts >= 0);
 
 			large_stats_add_result(&stats[c], s.value, (long)s.playouts);
@@ -446,7 +446,7 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 	char *dead = gtp_replies[best_reply];
 	dead = strchr(dead, ' '); // skip "id "
 	while (dead && *++dead != '\n') {
-		mq_add(mq, str2scoord(dead, board_size(b)), 0);
+		mq_add(mq, str2coord(dead, board_size(b)), 0);
 		dead = strchr(dead, '\n');
 	}
 	protocol_unlock();

@@ -119,16 +119,15 @@ fbook_init(char *filename, struct board *b)
 		}
 
 		while (*line != '|') {
-			coord_t *c = str2coord(line, fbook->bsize);
+			coord_t c = str2coord(line, fbook->bsize);
 
 			for (int i = 0; i < 8; i++) {
-				coord_t coord = coord_transform(b, *c, i);
+				coord_t coord = coord_transform(b, c, i);
 				struct move m = { .coord = coord, .color = stone_other(bs[i]->last_move.color) };
 				int ret = board_play(bs[i], &m);
 				assert(ret >= 0);
 			}
 
-			coord_done(c);
 			while (!isspace(*line)) line++;
 			while (isspace(*line)) line++;
 		}
@@ -144,9 +143,9 @@ fbook_init(char *filename, struct board *b)
 			// fprintf(stderr, "<%s> skip to %s\n", linebuf, line);
 		}
 
-		coord_t *c = str2coord(line, fbook->bsize);
+		coord_t c = str2coord(line, fbook->bsize);
 		for (int i = 0; i < 8; i++) {
-			coord_t coord = coord_transform(b, *c, i);
+			coord_t coord = coord_transform(b, c, i);
 #if 0
 			char conflict = is_pass(fbook->moves[bs[i]->hash & fbook_hash_mask]) ? '+' : 'C';
 			if (conflict == 'C')
@@ -170,7 +169,6 @@ fbook_init(char *filename, struct board *b)
 			fbook->hashes[hi & fbook_hash_mask] = bs[i]->hash;
 			fbook->movecnt++;
 		}
-		coord_done(c);
 	}
 
 	for (int i = 0; i < 8; i++) {
