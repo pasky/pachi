@@ -106,5 +106,22 @@ best_moves_add(coord_t c, float r, coord_t *best_c, float *best_r, int nbest)
 		}
 }
 
+static inline void
+best_moves_add_full(coord_t c, float r, void *d, coord_t *best_c, float *best_r, void **best_d, int nbest)
+{
+	for (int i = 0; i < nbest; i++)
+		if (r > best_r[i]) {
+			for (int j = nbest - 1; j > i; j--) { // shift
+				best_r[j] = best_r[j - 1];
+				best_c[j] = best_c[j - 1];
+				best_d[j] = best_d[j - 1];
+			}
+			best_r[i] = r;
+			best_c[i] = c;
+			best_d[i] = d;
+			break;
+		}
+}
+
 
 #endif

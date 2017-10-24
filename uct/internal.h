@@ -138,11 +138,10 @@ struct uct {
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
 bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
-
 void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
 void uct_genmove_setup(struct uct *u, struct board *b, enum stone color);
 void uct_pondering_stop(struct uct *u);
-
+void uct_get_best_moves(struct tree *t, coord_t *best_c, float *best_r, int nbest, bool winrates);
 
 /* This is the state used for descending the tree; we use this wrapper
  * structure in order to be able to easily descend in multiple trees

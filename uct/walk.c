@@ -29,17 +29,18 @@
 void
 uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 {
+	struct board *b = t->board;
 	if (!UDEBUGL(0))
 		return;
 
 	/* Best move */
-	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+	struct tree_node *best = u->policy->choose(u->policy, t->root, b, color, resign);
 	if (!best) {
 		fprintf(stderr, "... No moves left\n");
 		return;
 	}
 	fprintf(stderr, "[%d] ", playouts);
-	fprintf(stderr, "best %f ", tree_node_get_value(t, 1, best->u.value));
+	fprintf(stderr, "best %.1f%% ", 100 * tree_node_get_value(t, 1, best->u.value));
 
 	/* Dynamic komi */
 	if (t->use_extra_komi)
@@ -49,36 +50,30 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	fprintf(stderr, "| seq ");
 	for (int depth = 0; depth < 4; depth++) {
 		if (best && best->u.playouts >= 25) {
-			fprintf(stderr, "%3s ", coord2sstr(node_coord(best), t->board));
-			best = u->policy->choose(u->policy, best, t->board, color, resign);
+			fprintf(stderr, "%3s ", coord2sstr(node_coord(best), b));
+			best = u->policy->choose(u->policy, best, b, color, resign);
 		} else {
 			fprintf(stderr, "    ");
 		}
 	}
 
 	/* Best candidates */
-	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
-	int cans = 4;
-	struct tree_node *can[cans];
-	memset(can, 0, sizeof(can));
-	best = t->root->children;
-	while (best) {
-		int c = 0;
-		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
-		for (int d = 0; d < c; d++) can[d] = can[d + 1];
-		if (c > 0) can[c - 1] = best;
-		best = best->sibling;
-	}
-	while (--cans >= 0) {
-		if (can[cans]) {
-			fprintf(stderr, "%3s(%.3f) ",
-			        coord2sstr(node_coord(can[cans]), t->board),
-				tree_node_get_value(t, 1, can[cans]->u.value));
-		} else {
-			fprintf(stderr, "           ");
-		}
-	}
+	int nbest = 4;
+	float   best_r[nbest];
+	coord_t best_c[nbest];
+	uct_get_best_moves(t, best_c, best_r, nbest, true);
 
+	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
+	for (int i = 0; i < nbest; i++)
+		if (!is_pass(best_c[i]))
+			fprintf(stderr, "%3s(%.1f) ", coord2sstr(best_c[i], b), 100 * best_r[i]);
+		else
+			fprintf(stderr, "          ");
+
+	/* Tree memory usage */
+	if (UDEBUGL(3))
+		fprintf(stderr, " | %.1fMb", (float)t->nodes_size / 1024 / 1024);
+	
 	fprintf(stderr, "\n");
 }
 
@@ -104,13 +99,9 @@ uct_progress_gogui_sequence(strbuf_t *buf, struct uct *u, struct tree *t, enum s
 static void
 uct_progress_gogui_best(strbuf_t *buf, struct uct *u, struct tree *t, enum stone color, int playouts)
 {
-	float   best_r[GOGUI_CANDIDATES] = { 0.0, };
 	coord_t best_c[GOGUI_CANDIDATES];
-	for (int i = 0; i < GOGUI_CANDIDATES; i++)
-		best_c[i] = pass;
-	
-	for (struct tree_node *n = t->root->children; n; n = n->sibling)
-		best_moves_add(node_coord(n), n->u.playouts, best_c, best_r, GOGUI_CANDIDATES);
+	float   best_r[GOGUI_CANDIDATES];
+	uct_get_best_moves(t, best_c, best_r, GOGUI_CANDIDATES, false);
 	gogui_show_best_moves(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 
@@ -118,22 +109,9 @@ uct_progress_gogui_best(strbuf_t *buf, struct uct *u, struct tree *t, enum stone
 static void
 uct_progress_gogui_winrates(strbuf_t *buf, struct uct *u, struct tree *t, enum stone color, int playouts)
 {
-	float   best_r[GOGUI_CANDIDATES] = { 0.0, };
 	coord_t best_c[GOGUI_CANDIDATES];
-	for (int i = 0; i < GOGUI_CANDIDATES; i++)
-		best_c[i] = pass;
-	
-	for (struct tree_node *n = t->root->children; n; n = n->sibling)
-		best_moves_add(node_coord(n), n->u.playouts, best_c, best_r, GOGUI_CANDIDATES);
-
-	/* Get winrates */
-	for (int i = 0; i < GOGUI_CANDIDATES; i++) {
-		struct tree_node *n;
-		for (n = t->root->children; n && node_coord(n) != best_c[i]; n = n->sibling)
-			;
-		best_r[i] = tree_node_get_value(t, 1, n->u.value);
-	}
-	
+	float   best_r[GOGUI_CANDIDATES];
+	uct_get_best_moves(t, best_c, best_r, GOGUI_CANDIDATES, true);
 	gogui_show_winrates(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 

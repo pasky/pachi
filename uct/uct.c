@@ -613,6 +613,22 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	return coord_copy(best_coord);
 }
 
+void
+uct_get_best_moves(struct tree *t, coord_t *best_c, float *best_r, int nbest, bool winrates)
+{
+	struct tree_node* best_d[nbest];
+	for (int i = 0; i < nbest; i++)  best_c[i] = pass;
+	for (int i = 0; i < nbest; i++)  best_r[i] = 0;
+	
+	/* Find best moves */
+	for (struct tree_node *n = t->root->children; n; n = n->sibling)
+		best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_d, nbest);
+
+	if (winrates)  /* Get winrates */
+		for (int i = 0; i < nbest && best_c[i] != pass; i++)
+			best_r[i] = tree_node_get_value(t, 1, best_d[i]->u.value);
+}
+
 /* Kindof like uct_genmove() but find the best candidates */
 static void
 uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
@@ -625,18 +641,7 @@ uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum sto
 	
 	coord_t best_coord;
 	genmove(e, b, ti, color, 0, &best_coord);
-
-	/* Find best moves */
-	for (struct tree_node *n = u->t->root->children; n; n = n->sibling)
-		best_moves_add(node_coord(n), n->u.playouts, best_c, best_r, nbest);
-
-	/* Get winrates */
-	for (int i = 0; i < nbest && best_c[i] != pass; i++) {
-		struct tree_node *n;
-		for (n = u->t->root->children; n && node_coord(n) != best_c[i]; n = n->sibling)
-			;
-		best_r[i] = tree_node_get_value(u->t, 1, n->u.value);
-	}
+	uct_get_best_moves(u->t, best_c, best_r, nbest, true);
 
 	if (u->t)	
 		reset_state(u);
