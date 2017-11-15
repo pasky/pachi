@@ -75,7 +75,6 @@ static struct engine *init_engine(enum engine_id engine, char *e_arg, struct boa
 
 static void usage(char *name)
 {
-	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 	fprintf(stderr, "Usage: %s [OPTIONS] [ENGINE_ARGS]\n\n", name);
 	fprintf(stderr,
 		"Options: \n"
@@ -95,6 +94,7 @@ static void usage(char *name)
 		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
 		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
 		"  -u, --unit-test FILE              run unit tests \n"
+		"  -v, --version                     show version \n"
 		" \n"
 		"TIME_SETTINGS: \n"
 		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
@@ -127,6 +127,7 @@ static struct option longopts[] = {
 	{ "seed",        required_argument, 0, 's' },
 	{ "time",        required_argument, 0, 't' },
 	{ "unit-test",   required_argument, 0, 'u' },
+	{ "version",     no_argument,       0, 'v' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -146,7 +147,7 @@ int main(int argc, char *argv[])
 
 	int opt;
 	int option_index;
-	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:l:r:s:t:u:", longopts, &option_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:l:r:s:t:u:v", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
@@ -225,6 +226,9 @@ int main(int argc, char *argv[])
 			case 'u':
 				testfile = strdup(optarg);
 				break;
+			case 'v':
+				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
+				exit(0);
 			default: /* '?' */
 				usage(argv[0]);
 				exit(1);
@@ -235,6 +239,7 @@ int main(int argc, char *argv[])
 	if (log_port)
 		open_log_port(log_port);
 
+	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 	fast_srandom(seed);
 	if (DEBUGL(0))
 		fprintf(stderr, "Random seed: %d\n", seed);
