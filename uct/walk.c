@@ -221,7 +221,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 	if (!gogui_livegfx)
 		return;
 
-	char buffer[1024];  strbuf_t strbuf;
+	char buffer[10000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 
 	switch(gogui_livegfx) {
