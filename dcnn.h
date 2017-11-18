@@ -2,10 +2,6 @@
 #ifndef PACHI_DCNN_H
 #define PACHI_DCNN_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 
 #ifdef DCNN
 
@@ -28,8 +24,5 @@ struct engine *engine_dcnn_init(char *arg, struct board *b);
 #endif
 
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* PACHI_DCNN_H */
