@@ -139,15 +139,15 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o
+OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o
 ifdef DCNN
 	OBJS+=dcnn.o caffe.o
 endif
-SUBDIRS=random replay patternscan patternplay joseki montecarlo uct uct/policy playout tactics t-unit distributed
+SUBDIRS=random replay patternscan patternplay joseki montecarlo uct uct/policy playout tactics t-unit distributed t-predict
 
 all: all-recursive pachi
 
-LOCALLIBS=random/random.a replay/replay.a patternscan/patternscan.a patternplay/patternplay.a joseki/joseki.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a t-unit/test.a tactics/tactics.a distributed/distributed.a
+LOCALLIBS=random/random.a replay/replay.a patternscan/patternscan.a patternplay/patternplay.a joseki/joseki.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a t-unit/test.a tactics/tactics.a distributed/distributed.a t-predict/predict.a
 $(LOCALLIBS): all-recursive
 	@
 pachi: $(OBJS) pachi.o $(LOCALLIBS)

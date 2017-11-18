@@ -77,39 +77,32 @@ dcnn_get_moves(struct board *b, enum stone color, float result[])
 }
 
 void
-find_dcnn_best_moves(struct board *b, float *r, coord_t *best, float *best_r)
+find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest)
 {
-	for (int i = 0; i < DCNN_BEST_N; i++)
-		best[i] = pass;
+	for (int i = 0; i < nbest; i++)
+		best_c[i] = pass;
 
 	foreach_free_point(b) {
 		int k = (coord_x(c, b) - 1) * 19 + (coord_y(c, b) - 1);
-		for (int i = 0; i < DCNN_BEST_N; i++)
-			if (r[k] > best_r[i]) {
-				for (int j = DCNN_BEST_N - 1; j > i; j--) { // shift
-					best_r[j] = best_r[j - 1];
-					best[j] = best[j - 1];
-				}
-				best_r[i] = r[k];
-				best[i] = c;
-				break;
-			}
+		best_moves_add(c, r[k], best_c, best_r, nbest);
 	} foreach_free_point_end;
 }
 	
 void
 print_dcnn_best_moves(struct tree_node *node, struct board *b,
-		      coord_t *best, float *best_r)
+		      coord_t *best_c, float *best_r, int nbest)
 {
+	int depth = (node ? node->depth : 0);
+	coord_t c = (node ? node_coord(node) : pass);
 	fprintf(stderr, "%.*sprior_dcnn(%s) = [ ",
-		node->depth * 4, "                                   ",
-		coord2sstr(node_coord(node), b));
-	for (int i = 0; i < DCNN_BEST_N; i++)
-		fprintf(stderr, "%s ", coord2sstr(best[i], b));
+		depth * 4, "                                   ",
+		coord2sstr(c, b));
+	for (int i = 0; i < nbest; i++)
+		fprintf(stderr, "%s ", coord2sstr(best_c[i], b));
 	fprintf(stderr, "]      ");
 
 	fprintf(stderr, "[ ");
-	for (int i = 0; i < DCNN_BEST_N; i++)
+	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%.2f ", best_r[i]);
 	fprintf(stderr, "]\n");
 }
@@ -121,9 +114,20 @@ dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	float best_r[DCNN_BEST_N] = { 0.0, };
 	coord_t best_moves[DCNN_BEST_N];
 	dcnn_get_moves(b, color, r);
-	find_dcnn_best_moves(b, r, best_moves, best_r);
+	find_dcnn_best_moves(b, r, best_moves, best_r, DCNN_BEST_N);
+	print_dcnn_best_moves(NULL, b, best_moves, best_r, DCNN_BEST_N);
 	
 	return coord_copy(best_moves[0]);
+}	
+
+static void
+dcnn_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
+		coord_t *best_c, float *best_r, int nbest)
+{
+	float r[19 * 19];
+	dcnn_get_moves(b, color, r);
+	find_dcnn_best_moves(b, r, best_c, best_r, nbest);
+	print_dcnn_best_moves(NULL, b, best_c, best_r, nbest);
 }	
 
 struct engine *
@@ -139,6 +143,7 @@ engine_dcnn_init(char *arg, struct board *b)
 	e->name = (char*)"DCNN Engine";
 	e->comment = (char*)"I just select dcnn's best move.";
 	e->genmove = dcnn_genmove;
+	e->best_moves = dcnn_best_moves;
 	//e->evaluate = dcnn_evaluate;
 	//e->data = pp;
 

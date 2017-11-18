@@ -12,7 +12,7 @@ cd  `dirname $0`
 [ -d sgf ] || die "Please setup 't-predict/sgf/' directory first"
 
 # Ensure pachi args are sane
-( cd .. ; ./pachi -d 0 "$@" < /dev/null ) || exit 1
+#( cd .. ; ./pachi -d 0 "$@" < /dev/null ) || exit 1
 
 echo "Prediction rate for $2 (even games):"
 for f in sgf/*.gtp; do
@@ -20,5 +20,5 @@ for f in sgf/*.gtp; do
 	cat "$f" | sed -e 's/^play /pachi-predict /'
     fi
 done |
-( cd .. ; ./pachi -d 0 "$@" 2>&1 | grep Predicted )
+( cd .. ; ./pachi -d 0 "$@" 2>pachi.log | perl -nle 's/^= //; if ($_ ne "") { print; }')
 

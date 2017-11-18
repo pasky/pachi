@@ -72,12 +72,12 @@ replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 	struct replay *r = e->data;
 	struct move m = { .coord = pass, .color = color };
 	
-        if (DEBUGL(3))
-	      printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
+	if (DEBUGL(3))
+		printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
 
-        int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
+	int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
 	int *played = played_ + 2;		// allow storing pass/resign
-        int most_played = 0;
+	int most_played = 0;
 	m.coord = replay_sample_moves(e, b, color, played, &most_played);
 
 	if (DEBUGL(3)) {  /* Show moves stats */
@@ -109,6 +109,24 @@ replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 	}        
 
 	return coord_copy(m.coord);
+}
+
+static void
+replay_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+		  coord_t *best_c, float *best_r, int nbest)
+{
+	struct replay *r = e->data;
+	
+	if (DEBUGL(3))
+		printf("best_moves: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
+
+	int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
+	int *played = played_ + 2;		// allow storing pass/resign
+	int most_played = 0;
+	replay_sample_moves(e, b, color, played, &most_played);
+	
+	for (coord_t c = resign; c < b->size2; c++)
+		best_moves_add(c, (float)played[c] / r->runs, best_c, best_r, nbest);
 }
 
 static void
@@ -189,6 +207,7 @@ engine_replay_init(char *arg, struct board *b)
 	e->name = "PlayoutReplay";
 	e->comment = "I select the most probable move from moggy playout policy";
 	e->genmove = replay_genmove;
+	e->best_moves = replay_best_moves;
 	e->done = replay_done;
 	e->data = r;
 

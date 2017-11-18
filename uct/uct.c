@@ -529,37 +529,8 @@ uct_live_gfx_hook(struct engine *e)
 	u->reportfreq = 1000;
 }
 
-/* Kindof like uct_genmove() but just find the best candidates */
-static void
-uct_best_moves(struct engine *e, struct board *b, enum stone color)
-{
-	struct time_info ti = { .period = TT_NULL };
-	double start_time = time_now();
-	struct uct *u = e->data;
-	uct_pondering_stop(u);
-	if (u->t)
-		reset_state(u);
-	uct_genmove_setup(u, b, color);
-
-        /* Start the Monte Carlo Tree Search! */
-	int base_playouts = u->t->root->u.playouts;
-	int played_games = uct_search(u, b, &ti, color, u->t, false);
-
-	coord_t best_coord;
-	uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, &best_coord);
-
-	if (UDEBUGL(2)) {
-		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
-		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
-			time, (int)(played_games/time), (int)(played_games/time/u->threads));
-	}
-
-	uct_progress_status(u, u->t, color, played_games, &best_coord);
-	reset_state(u);
-}
-
-static coord_t *
-uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+static struct tree_node *
+genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive, coord_t *best_coord)
 {
 	double start_time = time_now();
 	struct uct *u = e->data;
@@ -581,9 +552,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	int base_playouts = u->t->root->u.playouts;
 	int played_games = uct_search(u, b, ti, color, u->t, false);
 
-	coord_t best_coord;
 	struct tree_node *best;
-	best = uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, &best_coord);
+	best = uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, best_coord);
 
 	if (UDEBUGL(2)) {
 		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
@@ -591,7 +561,17 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 			time, (int)(played_games/time), (int)(played_games/time/u->threads));
 	}
 
-	uct_progress_status(u, u->t, color, played_games, &best_coord);
+	uct_progress_status(u, u->t, color, played_games, best_coord);
+
+	return best;
+}
+
+static coord_t *
+uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+{
+	struct uct *u = e->data;
+	coord_t best_coord;
+	struct tree_node *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
 
 	if (!best) {
 		/* Pass or resign. */
@@ -600,7 +580,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		reset_state(u);
 		return coord_copy(best_coord);
 	}
-
+	
 	if (!u->t->untrustworthy_tree) {
 		tree_promote_node(u->t, &best);
 	} else {
@@ -618,9 +598,29 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	if (u->pondering_opt && u->t && !is_pass(node_coord(best))) {
 		uct_pondering_start(u, b, u->t, stone_other(color));
 	}
+
 	return coord_copy(best_coord);
 }
 
+/* Kindof like uct_genmove() but find the best candidates */
+static void
+uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
+	       coord_t *best_c, float *best_r, int nbest)
+{
+	struct uct *u = e->data;
+	uct_pondering_stop(u);
+	if (u->t)
+		reset_state(u);	
+	
+	coord_t best_coord;
+	genmove(e, b, ti, color, 0, &best_coord);
+	
+	for (struct tree_node *n = u->t->root->children; n; n = n->sibling)
+		best_moves_add(node_coord(n), n->u.playouts, best_c, best_r, nbest);
+
+	if (u->t)	
+		reset_state(u);
+}
 
 bool
 uct_gentbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color)
@@ -1354,12 +1354,12 @@ engine_uct_init(char *arg, struct board *b)
 	e->result = uct_result;
 	e->genmove = uct_genmove;
 	e->genmoves = uct_genmoves;
+	e->best_moves = uct_best_moves;
 	e->evaluate = uct_evaluate;
 	e->dead_group_list = uct_dead_group_list;
 	e->stop = uct_stop;
 	e->done = uct_done;
 	e->owner_map = uct_owner_map;
-	e->best_moves = uct_best_moves;
 	e->live_gfx_hook = uct_live_gfx_hook;
 	e->data = u;
 	if (u->slave)

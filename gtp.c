@@ -18,11 +18,14 @@
 #include "version.h"
 #include "timeinfo.h"
 #include "gogui.h"
+#include "t-predict/predict.h"
 
 #define NO_REPLY (-2)
 
 /* Sleep 5 seconds after a game ends to give time to kill the program. */
 #define GAME_OVER_SLEEP 5
+
+int played_games = 0;
 
 void
 gtp_prefix(char prefix, int id)
@@ -165,14 +168,14 @@ gogui_set_live_gfx(struct engine *engine, char *arg)
 }
 
 static char *
-gogui_best_moves(struct board *b, struct engine *engine, char *arg, bool winrates)
+gogui_best_moves(struct engine *engine, struct board *b, struct time_info *ti, enum stone color,
+		 bool winrates)
 {
-	enum stone color = str2stone(arg);
 	assert(color != S_NONE);	
 	enum gogui_reporting prev = gogui_live_gfx;
 	gogui_set_live_gfx(engine, (winrates ? "winrates" : "best_moves"));
 	gogui_gfx_buf[0] = 0;
-	engine->best_moves(engine, b, color);
+	engine->best_moves(engine, b, ti, color, NULL, NULL, 0);
 	gogui_live_gfx = prev;
 	return gogui_gfx_buf;
 }
@@ -228,65 +231,6 @@ gtp_is_valid(struct engine *e, const char *cmd)
 	int len = strlen(cmd);
 	return s[len] == '\0' || s[len] == '\n';
 }
-
-// For prediction stats
-static int played_games = 0;
-
-static void
-gtp_predict_move(struct board *board, struct engine *engine, struct time_info *ti,
-		 int id, struct move *m)
-{
-	enum stone color = m->color;
-	
-	if (m->coord == pass || m->coord == resign) {
-		int r = board_play(board, m); 
-		assert(r >= 0);
-		gtp_reply(id, NULL);
-		return;
-	}
-
-	if (DEBUGL(5))
-		fprintf(stderr, "predict move %d,%d,%d\n", m->color, coord_x(m->coord, board), coord_y(m->coord, board));
-
-	// Not bothering with timer here for now.
-
-	coord_t *c = engine->genmove(engine, board, &ti[color], color, 0);
-
-	// Hack to reset engine state (if it has one) in case engine
-	// guessed wrong (engine expects us to play returned move)
-	if (engine->undo)  // hackish way to reset state if engine needs it
-		engine->undo(engine, board);
-
-	// Play correct expected move
-	if (board_play(board, m) < 0) {
-		fprintf(stderr, "ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, board), stone2str(m->color));
-		abort();
-	}
-
-	if (DEBUGL(1) && debug_boardprint)
-		engine_board_print(engine, board, stderr);
-		
-	if (*c == m->coord)
-		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", board->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(*c, board));
-	else
-		fprintf(stderr, "Move %3i: Predict: Wrong prediction: %s %s != %s\n", board->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(*c, board), coord2sstr(m->coord, board));
-		
-	// Display stats from time to time
-	{
-		static int total = 0;
-		static int guessed = 0;
-		guessed += (*c == m->coord);
-		if (++total % 200 == 0)
-			fprintf(stderr, "Predicted: %i/%i moves (%i%%)  games: %i\n", 
-				guessed, total, guessed * 100 / total, played_games);
-	}
-
-	gtp_reply(id, NULL);
-	coord_done(c);
-}
-
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
@@ -469,7 +413,9 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		m.coord = *c; coord_done(c);
 		next_tok(arg);
 
-		gtp_predict_move(board, engine, ti, id, &m);
+		char *str = predict_move(board, engine, ti, &m);
+		gtp_reply(id, str, NULL);
+		free(str);
 
 	} else if (!strcasecmp(cmd, "genmove") || !strcasecmp(cmd, "kgs-genmove_cleanup")) {
 		char *arg;
@@ -792,12 +738,14 @@ next_group:;
 	} else if (!strcasecmp(cmd, "gogui-best_moves")) {
 		char *arg;
 		next_tok(arg);
-		char *reply = gogui_best_moves(board, engine, arg, false);
+		enum stone color = str2stone(arg);
+		char *reply = gogui_best_moves(engine, board, &ti[color], color, false);
 		gtp_reply(id, reply, NULL);
 	} else if (!strcasecmp(cmd, "gogui-winrates")) {
 		char *arg;
 		next_tok(arg);
-		char *reply = gogui_best_moves(board, engine, arg, true);
+		enum stone color = str2stone(arg);
+		char *reply = gogui_best_moves(engine, board, &ti[color], color, true);
 		gtp_reply(id, reply, NULL);
 
 	} else {
