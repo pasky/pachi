@@ -176,11 +176,23 @@ uct_board_print(struct engine *e, struct board *b, FILE *f)
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
-static float
-uct_owner_map(struct engine *e, struct board *b, coord_t c)
+static struct board_ownermap*
+uct_ownermap(struct engine *e, struct board *b)
 {
 	struct uct *u = b->es;
-	return board_ownermap_estimate_point(&u->ownermap, c);
+	
+	/* Make sure ownermap is well-seeded. */
+	if (u->ownermap.playouts < GJ_MINGAMES) {
+		enum stone color = stone_other(b->last_move.color);
+		uct_pondering_stop(u);
+		if (u->t)  reset_state(u);
+		uct_prepare_move(u, b, color);	  /* don't clobber u->my_color with uct_genmove_setup() */
+		
+		while (u->ownermap.playouts < GJ_MINGAMES)
+			uct_playout(u, b, color, u->t);
+	}
+	
+	return &u->ownermap;
 }
 
 static char *
@@ -521,11 +533,11 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 }
 
 static void
-uct_live_gfx_hook(struct engine *e)
+uct_livegfx_hook(struct engine *e)
 {
 	struct uct *u = e->data;
 	/* Hack: Override reportfreq to get decent update rates in GoGui */
-	u->reportfreq = 1000;
+	u->reportfreq = MIN(u->reportfreq, 250);
 }
 
 static struct tree_node *
@@ -603,7 +615,7 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
 /* Kindof like uct_genmove() but find the best candidates */
 static void
-uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
+uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
 	       coord_t *best_c, float *best_r, int nbest)
 {
 	struct uct *u = e->data;
@@ -613,9 +625,18 @@ uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum sto
 	
 	coord_t best_coord;
 	genmove(e, b, ti, color, 0, &best_coord);
-	
+
+	/* Find best moves */
 	for (struct tree_node *n = u->t->root->children; n; n = n->sibling)
 		best_moves_add(node_coord(n), n->u.playouts, best_c, best_r, nbest);
+
+	/* Get winrates */
+	for (int i = 0; i < nbest && best_c[i] != pass; i++) {
+		struct tree_node *n;
+		for (n = u->t->root->children; n && node_coord(n) != best_c[i]; n = n->sibling)
+			;
+		best_r[i] = tree_node_get_value(u->t, 1, n->u.value);
+	}
 
 	if (u->t)	
 		reset_state(u);
@@ -1356,8 +1377,8 @@ engine_uct_init(char *arg, struct board *b)
 	e->dead_group_list = uct_dead_group_list;
 	e->stop = uct_stop;
 	e->done = uct_done;
-	e->owner_map = uct_owner_map;
-	e->live_gfx_hook = uct_live_gfx_hook;
+	e->ownermap = uct_ownermap;
+	e->livegfx_hook = uct_livegfx_hook;
 	e->data = u;
 	if (u->slave)
 		e->notify = uct_notify;

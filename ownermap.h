@@ -57,5 +57,6 @@ void groups_of_status(struct board *b, struct group_judgement *judge, enum gj_st
 /* Score estimate based on board ownermap. (positive: W wins) */
 float board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap);
 char *board_ownermap_score_est_str(struct board *b, struct board_ownermap *ownermap);
+enum point_judgement board_ownermap_score_est_coord(struct board *b, struct board_ownermap *ownermap, coord_t c);
 
 #endif

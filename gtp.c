@@ -122,8 +122,7 @@ known_commands(struct engine *engine)
 		str += sprintf(str, "%s\n", commands[i].cmd);
 	}
 	
-	if (!strcmp(engine->name, "UCT"))
-		str += sprintf(str, "gogui-analyze_commands\n");
+	str += sprintf(str, "gogui-analyze_commands\n");
 	str[-1] = 0;  /* remove last \n */
 	return buf;
 }
@@ -730,10 +729,11 @@ static gtp_command_t commands[] =
 	{ "tunit",		    cmd_pachi_tunit },
 
 	{ "gogui-analyze_commands", cmd_gogui_analyze_commands },
-	{ "gogui-live_gfx",         cmd_gogui_live_gfx },
-	{ "gogui-owner_map",        cmd_gogui_owner_map },
+	{ "gogui-livegfx",          cmd_gogui_livegfx },
+	{ "gogui-ownermap",         cmd_gogui_ownermap },
 	{ "gogui-best_moves",       cmd_gogui_best_moves },
 	{ "gogui-winrates",         cmd_gogui_winrates },
+
 	{ 0, 0 }
 };
 

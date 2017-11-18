@@ -149,16 +149,25 @@ groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s
 	} foreach_point_end;
 }
 
+enum point_judgement
+board_ownermap_score_est_coord(struct board *b, struct board_ownermap *ownermap, coord_t c)
+{
+	enum point_judgement j = board_ownermap_judge_point(ownermap, c, 0.67);
+	enum stone s = board_at(b, c);
+	
+	/* If status is unclear and there's a stone there assume it's alive. */
+	if (j != PJ_BLACK && j != PJ_WHITE && (s == S_BLACK || s == S_WHITE))
+		return s;
+	return j;
+}
+
 float
 board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap)
 {
 	float scores[S_MAX] = {0.0, };  /* Number of points owned by each color */
 	foreach_point(b) {
-		enum point_judgement j = board_ownermap_judge_point(ownermap, c, 0.67);
+		enum point_judgement j = board_ownermap_score_est_coord(b, ownermap, c);
 		scores[j]++;
-		/* If status is unclear and there's a stone there assume it's alive. */
-		if (j != PJ_BLACK && j != PJ_WHITE)
-			scores[board_at(b, c)]++;
 	} foreach_point_end;
 	
 	return ((scores[PJ_WHITE] + b->komi + b->handicap) - scores[PJ_BLACK]);
