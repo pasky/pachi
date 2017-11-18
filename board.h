@@ -27,20 +27,14 @@ struct fbook;
 
 //#define BOARD_SIZE 9 // constant board size, allows better optimization
 
-//#define BOARD_SPATHASH // incremental patternsp.h hashes
-#define BOARD_SPATHASH_MAXD 3 // maximal diameter
-
 #define BOARD_PAT3 // incremental 3x3 pattern codes
-
-//#define BOARD_TRAITS 1 // incremental point traits (see struct btraits)
-//#define BOARD_TRAIT_SAFE 1 // include btraits.safe (rather expensive, unused)
-//#define BOARD_TRAIT_SAFE 2 // include btraits.safe based on full is_bad_selfatari()
 
 //#define BOARD_UNDO_CHECKS 1  // Guard against invalid quick_play() / quick_undo() uses
 
 #define BOARD_MAX_COORDS  ((BOARD_MAX_SIZE+2) * (BOARD_MAX_SIZE+2) )
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
-#define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE / 2)
+#define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE * 2 / 3)
+/* For 19x19, max 19*2*6 = 228 groups (stacking b&w stones, each third line empty) */
 
 enum e_sym {
 		SYM_FULL,
@@ -100,28 +94,6 @@ struct neighbor_colors {
 };
 
 
-/* Point traits bitmap; we update this information incrementally,
- * it can be used e.g. for fast pattern features matching. */
-struct btraits {
-	/* Number of neighbors we can capture. 0=this move is
-	 * not capturing, 1..4=this many neighbors we can capture
-	 * (can be multiple neighbors of same group). */
-	unsigned cap:3;
-	/* Number of 1-stone neighbors we can capture. */
-	unsigned cap1:3;
-#ifdef BOARD_TRAIT_SAFE
-	/* Whether it is SAFE to play here. This is essentially just
-	 * cached result of board_safe_to_play(). (Of course the concept
-	 * of "safety" is not perfect here, but it's the cheapest
-	 * reasonable thing we can do.) */
-	bool safe:1;
-#endif
-	/* Whether we need to re-compute this coordinate; used to
-	 * weed out duplicates. Maintained only for S_BLACK. */
-	bool dirty:1;
-};
-
-
 /* Quick hack to help ensure tactics code stays within quick board limitations.
  * Ideally we'd have two different types for boards and quick_boards. The idea
  * of having casts / duplicate api all over the place isn't so appealing though... */
@@ -134,6 +106,50 @@ struct btraits {
 #define flen flen_field_not_supported_for_quick_boards
 #endif
 
+/* The ruleset is currently almost never taken into account;
+ * the board implementation is basically Chinese rules (handicap
+ * stones compensation) w/ suicide (or you can look at it as
+ * New Zealand w/o handi stones compensation), while the engine
+ * enforces no-suicide, making for real Chinese rules.
+ * However, we accept suicide moves by the opponent, so we
+ * should work with rules allowing suicide, just not taking
+ * full advantage of them. */
+enum go_ruleset {
+	RULES_CHINESE, /* default value */
+	RULES_AGA,
+	RULES_NEW_ZEALAND,
+	RULES_JAPANESE,
+	RULES_STONES_ONLY, /* do not count eyes */
+	/* http://home.snafu.de/jasiek/siming.html */
+	/* Simplified ING rules - RULES_CHINESE with handicaps
+	 * counting as points and pass stones. Also should
+	 * allow suicide, but Pachi will never suicide
+	 * nevertheless. */
+	/* XXX: I couldn't find the point about pass stones
+	 * in the rule text, but it is Robert Jasiek's
+	 * interpretation of them... These rules were
+	 * used e.g. at the EGC2012 13x13 tournament.
+	 * They are not supported by KGS. */
+	RULES_SIMING,
+};
+
+/* Data shared by all boards of a given size */
+struct board_statics {
+	int size;	
+
+	/* Iterator offsets for foreach_neighbor*() */
+	int nei8[8], dnei[4];
+
+	/* Coordinates zobrist hashes (black and white) */
+	hash_t h[BOARD_MAX_COORDS][2];	
+
+	/* Cached information on x-y coordinates so that we avoid division. */
+	uint8_t coord[BOARD_MAX_COORDS][2];
+};
+
+/* Only one board size in use at any given time so don't need array */
+extern struct board_statics board_statics;
+
 /* You should treat this struct as read-only. Always call functions below if
  * you want to change it. */
 
@@ -144,38 +160,9 @@ struct board {
 	int captures[S_MAX];
 	floating_t komi;
 	int handicap;
-	/* The ruleset is currently almost never taken into account;
-	 * the board implementation is basically Chinese rules (handicap
-	 * stones compensation) w/ suicide (or you can look at it as
-	 * New Zealand w/o handi stones compensation), while the engine
-	 * enforces no-suicide, making for real Chinese rules.
-	 * However, we accept suicide moves by the opponent, so we
-	 * should work with rules allowing suicide, just not taking
-	 * full advantage of them. */
-	enum go_ruleset {
-		RULES_CHINESE, /* default value */
-		RULES_AGA,
-		RULES_NEW_ZEALAND,
-		RULES_JAPANESE,
-		RULES_STONES_ONLY, /* do not count eyes */
-		/* http://home.snafu.de/jasiek/siming.html */
-		/* Simplified ING rules - RULES_CHINESE with handicaps
-		 * counting as points and pass stones. Also should
-		 * allow suicide, but Pachi will never suicide
-		 * nevertheless. */
-		/* XXX: I couldn't find the point about pass stones
-		 * in the rule text, but it is Robert Jasiek's
-		 * interpretation of them... These rules were
-		 * used e.g. at the EGC2012 13x13 tournament.
-		 * They are not supported by KGS. */
-		RULES_SIMING,
-	} rules;
-
+	enum go_ruleset rules;
 	char *fbookfile;
 	struct fbook *fbook;
-
-	/* Iterator offsets for foreach_neighbor*() */
-	int nei8[8], dnei[4];
 
 	int moves;
 	struct move last_move;
@@ -193,53 +180,31 @@ FB_ONLY(bool superko_violation);
 	 * you need to handle them yourselves, if you need to. */
 
 	/* Stones played on the board */
-	enum stone *b; /* enum stone */
+	enum stone b[BOARD_MAX_COORDS];
 	/* Group id the stones are part of; 0 == no group */
-	group_t *g;
+	group_t g[BOARD_MAX_COORDS];
 	/* Positions of next stones in the stone group; 0 == last stone */
-	coord_t *p;
+	coord_t p[BOARD_MAX_COORDS];
 	/* Neighboring colors; numbers of neighbors of index color */
-	struct neighbor_colors *n;
-	/* Zobrist hash for each position */
-	hash_t *h;
-#ifdef BOARD_SPATHASH
-	/* For spatial hashes, we use only 24 bits. */
-	/* [0] is d==1, we don't keep hash for d==0. */
-	/* We keep hashes for black-to-play ([][0]) and white-to-play
-	 * ([][1], reversed stone colors since we match all patterns as
-	 * black-to-play). */
-FB_ONLY(uint32_t (*spathash))[BOARD_SPATHASH_MAXD][2];
-#endif
+	struct neighbor_colors n[BOARD_MAX_COORDS];
+
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
 	 * specification. The information is only valid for empty points. */
-FB_ONLY(hash3_t *pat3);
+FB_ONLY(hash3_t pat3)[BOARD_MAX_COORDS];
 #endif
-#ifdef BOARD_TRAITS
-	/* Incrementally matched point traits information, black-to-play
-	 * ([][0]) and white-to-play ([][1]). */
-	/* The information is only valid for empty points. */
-FB_ONLY(struct btraits (*t)[2]);
-#endif
-	/* Cached information on x-y coordinates so that we avoid division. */
-	uint8_t (*coord)[2];
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
-	struct group *gi;
+	struct group gi[BOARD_MAX_COORDS];
 
 	/* Positions of free positions - queue (not map) */
 	/* Note that free position here is any valid move; including single-point eyes!
 	 * However, pass is not included. */
-FB_ONLY(coord_t *f);  FB_ONLY(int flen);
+FB_ONLY(coord_t f)[BOARD_MAX_COORDS];  FB_ONLY(int flen);
 
 #ifdef WANT_BOARD_C
 	/* Queue of capturable groups */
-FB_ONLY(group_t *c);  FB_ONLY(int clen);
-#endif
-
-#ifdef BOARD_TRAITS
-	/* Queue of positions that need their traits updated */
-FB_ONLY(coord_t *tq);  FB_ONLY(int tqlen);
+FB_ONLY(group_t c)[BOARD_MAX_GROUPS];  FB_ONLY(int clen);
 #endif
 
 	/* Symmetry information */
@@ -369,7 +334,7 @@ struct board_undo {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
-#define hash_at(b_, coord, color) ((b_)->h[((color) == S_BLACK ? board_size2(b_) : 0) + coord])
+#define hash_at(b_, coord, color) (board_statics.h[coord][((color) == S_BLACK ? 1 : 0)])
 
 struct board *board_init(char *fbookfile);
 struct board *board_copy(struct board *board2, struct board *board1);
@@ -379,7 +344,7 @@ void board_done(struct board *board);
 void board_resize(struct board *board, int size);
 void board_clear(struct board *board);
 
-typedef char *(*board_cprint)(struct board *b, coord_t c, char *s, char *end, void *data);
+typedef void  (*board_cprint)(struct board *b, coord_t c, strbuf_t *buf, void *data);
 typedef char *(*board_print_handler)(struct board *b, coord_t c, void *data);
 void board_print(struct board *board, FILE *f);
 void board_print_custom(struct board *board, FILE *f, board_cprint cprint, void *data);
@@ -560,7 +525,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 		int fn__i; \
 		coord_t c = (coord_); \
 		for (fn__i = 0; fn__i < 8; fn__i++) { \
-			c += (board_)->nei8[fn__i];
+			c += board_statics.nei8[fn__i];
 #define foreach_8neighbor_end \
 		} \
 	} while (0)
@@ -570,7 +535,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 		int fn__i; \
 		coord_t c = (coord_); \
 		for (fn__i = 0; fn__i < 4; fn__i++) { \
-			c += (board_)->dnei[fn__i];
+			c += board_statics.dnei[fn__i];
 #define foreach_diag_neighbor_end \
 		} \
 	} while (0)
@@ -594,17 +559,12 @@ board_is_valid_play(struct board *board, enum stone color, coord_t coord)
 	/* Play within {true,false} eye-ish formation */
 	if (board->ko.coord == coord && board->ko.color == color)
 		return false;
-#ifdef BOARD_TRAITS
-	/* XXX: Disallows suicide. */
-	return trait_at(board, coord, color).cap > 0;
-#else
 	int groups_in_atari = 0;
 	foreach_neighbor(board, coord, {
 		group_t g = group_at(board, c);
 		groups_in_atari += (board_group_info(board, g).libs == 1);
 	});
 	return !!groups_in_atari;
-#endif
 }
 
 /* Check group suicides, slower than board_is_valid_play() */
@@ -620,17 +580,11 @@ board_is_valid_play_no_suicide(struct board *board, enum stone color, coord_t co
 			return false;
 
 	// Capturing something ?
-#ifdef BOARD_TRAITS
-	/* XXX: Disallows suicide. */
-	if (trait_at(board, coord, color).cap > 0)
-		return true;
-#else
 	foreach_neighbor(board, coord, {
 		if (board_at(board, c) == stone_other(color) &&
 		    board_group_info(board, group_at(board, c)).libs == 1)
 			return true;
 	});
-#endif
 
 	// Neighbour with 2 libs ?
 	foreach_neighbor(board, coord, {
@@ -658,9 +612,6 @@ board_playing_ko_threat(struct board *b)
 static inline group_t
 board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 {
-#ifdef BOARD_TRAITS
-	if (!trait_at(b, coord, stone_other(group_color)).cap) return 0;
-#endif
 	foreach_neighbor(b, coord, {
 		group_t g = group_at(b, c);
 		if (g && board_at(b, c) == group_color && board_group_info(b, g).libs == 1)
@@ -678,24 +629,12 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 	if (libs > 1)
 		return true;
 
-#ifdef BOARD_TRAITS
-	/* number of capturable enemy groups */
-	if (trait_at(b, coord, color).cap > 0)
-		return true; // XXX: We don't account for snapback.
-	/* number of non-capturable friendly groups */
-	int noncap_ours = neighbor_count_at(b, coord, color) - trait_at(b, coord, stone_other(color)).cap;
-	if (noncap_ours < 1)
-		return false;
-/*#else see below */
-#endif
-
 	/* ok, but we need to check if they don't have just two libs. */
 	coord_t onelib = -1;
 	foreach_neighbor(b, coord, {
-#ifndef BOARD_TRAITS
 		if (board_at(b, c) == stone_other(color) && board_group_info(b, group_at(b, c)).libs == 1)
 			return true; // can capture; no snapback check
-#endif
+
 		if (board_at(b, c) != color) continue;
 		group_t g = group_at(b, c);
 		if (board_group_info(b, g).libs == 1) continue; // in atari
