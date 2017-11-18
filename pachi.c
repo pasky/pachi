@@ -75,10 +75,59 @@ static struct engine *init_engine(enum engine_id engine, char *e_arg, struct boa
 static void usage(char *name)
 {
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-	fprintf(stderr, "Usage: %s [-e random|replay|montecarlo|uct|distributed|dcnn]\n"
-		" [-d DEBUG_LEVEL] [-D] [-r RULESET] [-s RANDOM_SEED] [-t TIME_SETTINGS] [-u TEST_FILENAME]\n"
-		" [-g [HOST:]GTP_PORT] [-l [HOST:]LOG_PORT] [-f FBOOKFILE] [ENGINE_ARGS]\n", name);
+	fprintf(stderr, "Usage: %s [OPTIONS] [ENGINE_ARGS]\n\n", name);
+	fprintf(stderr,
+		"Options: \n"
+		"  -c, --chatfile FILE               set kgs chatfile \n"
+		"  -d, --debug-level LEVEL           set debug level \n"
+		"  -D                                don't log board diagrams \n"
+		"  -e, --engine ENGINE               select engine: (default uct) \n"
+		"                                    random|replay|montecarlo|uct|distributed|dcnn|patternplay \n"
+		"  -f, --fbook FBOOKFILE             use opening book \n"
+		"  -g, --gtp-port [HOST:]GTP_PORT    read gtp commands from network instead of stdin. \n"
+		"                                    listen on given port if HOST not given, otherwise \n"
+		"                                    connect to remote host. \n"
+		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
+		"  -r, --rules RULESET               rules to use: (default chinese) \n"
+		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
+		"  -s, --seed RANDOM_SEED            set random seed \n"
+		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
+		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
+		"  -u, --unit-test FILE              run unit tests \n"
+		" \n"
+		"TIME_SETTINGS: \n"
+		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
+		"                  Pachi will play fast on a fast computer, slow on a slow computer, \n"
+		"                  but strength will remain the same. \n"
+		"  =SIMS:MAX_SIMS  same but allow playing up-to MAX_SIMS simulations if best move is unclear. \n"
+		"                  useful to avoid blunders when playing with very low number of simulations. \n"
+		"  SECS            fixed number of seconds per move \n"
+		"                  Pachi will spend a little less to allow for network latency and other \n"
+		"                  unexpected slowdowns. This is the same as one-period japanese byoyomi. \n"
+		"  _SECS           absolute time: use fixed number of seconds for the whole game\n"
+		" \n"
+		"  Examples:       pachi -t =5000            5000 simulations per move \n"
+		"                  pachi -t =5000:15000      max 15000 simulations per move \n"
+		"                  pachi -t 20               20s per move \n"
+		"                  pachi -t _600             10min game, sudden death \n"
+		" \n");
 }
+
+#define OPT_FUSEKI_TIME 256
+static struct option longopts[] = {
+	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
+	{ "chatfile",    required_argument, 0, 'c' },
+	{ "debug-level", required_argument, 0, 'd' },
+	{ "engine",      required_argument, 0, 'e' },
+	{ "fbook",       required_argument, 0, 'f' },
+	{ "gtp-port",    required_argument, 0, 'g' },
+	{ "log-port",    required_argument, 0, 'l' },
+	{ "rules",       required_argument, 0, 'r' },
+	{ "seed",        required_argument, 0, 's' },
+	{ "time",        required_argument, 0, 't' },
+	{ "unit-test",   required_argument, 0, 'u' },
+	{ 0, 0, 0, 0 }
+};
 
 int main(int argc, char *argv[])
 {
@@ -95,7 +144,8 @@ int main(int argc, char *argv[])
 	seed = time(NULL) ^ getpid();
 
 	int opt;
-	while ((opt = getopt(argc, argv, "c:e:d:Df:g:l:r:s:t:u:")) != -1) {
+	int option_index;
+	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:l:r:s:t:u:", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
@@ -162,6 +212,14 @@ int main(int argc, char *argv[])
 				}
 				ti_default.ignore_gtp = true;
 				assert(ti_default.period != TT_NULL);
+				break;
+			case OPT_FUSEKI_TIME:
+				if (!time_parse(&ti_fuseki, optarg)) {
+					fprintf(stderr, "%s: Invalid --fuseki-time argument %s\n", argv[0], optarg);
+					exit(1);
+				}
+				ti_fuseki.ignore_gtp = true;
+				assert(ti_fuseki.period != TT_NULL);
 				break;
 			case 'u':
 				testfile = strdup(optarg);

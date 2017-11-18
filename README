@@ -74,8 +74,12 @@ Pachi can also use a pattern database to improve its playing performance.
 You can get it at http://pachi.or.cz/pat/ - you will also find further
 instructions there.
 
-For now, there is no comprehensive documentation of options, but you
-can get a pretty good idea by looking at the uct_state_init() function
+For main options description try:
+
+        ./pachi --help
+
+For now, there is no comprehensive documentation of engine options, but
+you can get a pretty good idea by looking at the uct_state_init() function
 in uct/uct.c - you will find the list of UCT engine options there, each
 with a description. At any rate, usually the three options above are
 the only ones you really want to tweak.

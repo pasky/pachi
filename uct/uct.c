@@ -412,6 +412,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			.dim = TD_GAMES,
 		};
 		debug_ti.len.games = t->root->u.playouts + u->debug_after.playouts;
+		debug_ti.len.games_max = 0;
 
 		board_print_ownermap(b, stderr, &u->ownermap);
 		fprintf(stderr, "--8<-- UCT debug post-run begin (%d:%d) --8<--\n", u->debug_after.level, u->debug_after.playouts);

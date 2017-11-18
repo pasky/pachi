@@ -107,7 +107,7 @@ struct distributed {
 static const struct time_info default_ti = {
 	.period = TT_MOVE,
 	.dim = TD_GAMES,
-	.len = { .games = DIST_GAMES },
+	.len = { .games = DIST_GAMES, .games_max = 0 },
 };
 
 #define get_value(value, color) \

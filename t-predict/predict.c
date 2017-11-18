@@ -282,7 +282,8 @@ predict_move(struct board *b, struct engine *engine, struct time_info *ti, struc
 	coord_t best_c[PREDICT_TOPN];
 	for (int i = 0; i < PREDICT_TOPN; i++)
 		best_c[i] = pass;
-	engine->best_moves(engine, b, &ti[color], color, best_c, best_r, PREDICT_TOPN);
+	struct time_info *ti_genmove = time_info_genmove(b, ti, color);
+	engine->best_moves(engine, b, ti_genmove, color, best_c, best_r, PREDICT_TOPN);
 	//print_dcnn_best_moves(NULL, b, best_c, best_r, PREDICT_TOPN);
 
 	// Play correct expected move

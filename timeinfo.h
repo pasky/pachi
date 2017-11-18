@@ -25,8 +25,9 @@ struct time_info {
 		TD_WALLTIME, // Wall time to spend performing simulations.
 	} dim;
 	/* The actual time count. */
-	union {
-		int games; // TD_GAMES
+	struct {
+		int games;     // TD_GAMES
+		int games_max; // TD_GAMES
 		struct {   // TD_WALLTIME
 			/* Main thinking time. 0 if we are already completely
 			 * in byoyomi. */
@@ -112,5 +113,11 @@ struct time_stop {
 /* fuseki_end and yose_start are percentages of expected game length. */
 void time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start,
 			  floating_t max_maintime_ratio, struct time_stop *stop);
+
+/* Time settings to use during fuseki */
+extern struct time_info ti_fuseki;
+
+/* time_info to use for genmove() */
+struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color);
 
 #endif

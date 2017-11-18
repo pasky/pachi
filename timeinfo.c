@@ -32,6 +32,7 @@
 bool
 time_parse(struct time_info *ti, char *s)
 {
+	char *end = s;
 	switch (s[0]) {
 		case '_': ti->period = TT_TOTAL; s++; break;
 		default: ti->period = TT_MOVE; break;
@@ -39,15 +40,17 @@ time_parse(struct time_info *ti, char *s)
 	switch (s[0]) {
 		case '=':
 			ti->dim = TD_GAMES;
-			ti->len.games = atoi(++s);
+			ti->len.games = strtol(++s, &end, 10);
+			ti->len.games_max = 0;
+			if (*end == ':')
+				ti->len.games_max = strtol(end + 1, &end, 10);
+			if (*end) return false;
 			break;
-		default:
-			if (!isdigit(s[0]))
-				return false;
+	        default:
 			ti->dim = TD_WALLTIME;
 			ti->len.t.timer_start = 0;
 			if (ti->period == TT_TOTAL) {
-				ti->len.t.main_time = atof(s);
+				ti->len.t.main_time = strtof(s, &end);
 				ti->len.t.byoyomi_time = 0.0;
 				ti->len.t.byoyomi_time_max = 0.0;
 				ti->len.t.byoyomi_periods = 0;
@@ -55,12 +58,13 @@ time_parse(struct time_info *ti, char *s)
 				ti->len.t.byoyomi_stones_max = 0;
 			} else { assert(ti->period == TT_MOVE);
 				ti->len.t.main_time = 0.0;
-				ti->len.t.byoyomi_time = atof(s);
+				ti->len.t.byoyomi_time = strtof(s, &end);
 				ti->len.t.byoyomi_time_max = ti->len.t.byoyomi_time;
 				ti->len.t.byoyomi_periods = 1;
 				ti->len.t.byoyomi_stones = 1;
 				ti->len.t.byoyomi_stones_max = 1;
 			}
+			if (*end) return false;
 			break;
 	}
 	return true;
@@ -354,9 +358,13 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 		}
 
 		stop->desired.playouts = ti->len.games;
-		/* We force worst == desired, so note that we will NOT loop
-		 * until best == winner. */
 		stop->worst.playouts = ti->len.games;
+		/* We force worst == desired, so note that we will NOT loop until best == winner
+		 * unless a max number of playouts has been given explicitly. */
+		if (ti->len.games_max) {
+			assert(ti->len.games_max > ti->len.games);
+			stop->worst.playouts = ti->len.games_max;
+		}
 		return;
 	}
 
@@ -444,3 +452,14 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	lag_adjust(&stop->desired.time, net_lag);
 	lag_adjust(&stop->worst.time, net_lag);
 }
+
+struct time_info ti_fuseki = { .period = TT_NULL };
+
+struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color)
+{
+	/* Specific fuseki time settings ? */
+	if (ti_fuseki.period != TT_NULL && b->moves <= 30)
+		return &ti_fuseki;  
+	return &ti[color];
+}
+
