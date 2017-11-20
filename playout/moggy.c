@@ -1114,9 +1114,11 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 	}
 
 eyefill_skip:
-	if (breaking_3_stone_seki(b, m->coord, m->color))
+	/* Check for special sekis moggy would break. */
+	if (breaking_3_stone_seki(b, m->coord, m->color) ||
+	    breaking_corner_seki(b, m->coord, m->color))
 		return false;
-
+	
 	return true;
 }
 

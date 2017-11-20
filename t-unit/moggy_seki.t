@@ -25,7 +25,7 @@ O O O O X O .
 . O O O X O O
 O . O O X O).
 
-!moggy status f1 O        # Shouldn't nakade here !
+moggy status f1 O        # Shouldn't nakade here !
 
 
 % Nakade move breaking seki  FIXME
@@ -38,7 +38,7 @@ O O O O X X X
 . O O O X . O
 O . O O X O).
 
-!moggy status f1 O        # Shouldn't nakade here !
+moggy status f1 O        # Shouldn't nakade here !
 
 
 % False eye seki  FIXME
@@ -119,7 +119,7 @@ boardsize 19
 
 moggy status t12 X
 
-% Early seki (5-stones)  FIXME
+% Early seki (5-stones)
 boardsize 19
 . . . . . . . . . . . . . . . . . . .
 . . . . . . X O O O O . O O X . O . .
@@ -141,4 +141,4 @@ boardsize 19
 . . . . . . . . . . . . . X X O O). .
 . . . . . . . . . . . . . . . . . . .
 
-!moggy status t12 X
+!moggy status t12 X           # FIXME

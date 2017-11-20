@@ -20,6 +20,7 @@
 #include "engines/replay.h"
 #include "ownermap.h"
 
+
 /* Running tests over gtp ? */
 static bool tunit_over_gtp = 1;
 static bool board_printed;
@@ -202,6 +203,26 @@ test_sar(struct board *b, char *arg)
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_bad_selfatari(b, color, c);
+
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
+}
+
+static bool
+test_corner_seki(struct board *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg, board_size(b));
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "corner_seki %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+
+	assert(board_at(b, c) == S_NONE);
+	int rres = breaking_corner_seki(b, c, color);
 
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -539,6 +560,7 @@ static t_unit_cmd commands[] = {
 	{ "two_eyes",               test_two_eyes,          1 },
 	{ "moggy moves",            test_moggy_moves,       0 },
 	{ "moggy status",           test_moggy_status,      1 },
+	{ "corner_seki",            test_corner_seki,       1 },
 	{ "board_undo_stress_test", board_undo_stress_test, 0 },
 	{ 0, 0, 0 }
 };
