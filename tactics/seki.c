@@ -11,6 +11,54 @@
 #include "tactics/dragon.h"
 #include "tactics/seki.h"
 
+
+/*   . . O O O |   We're black.
+ *   O O O X X |   
+ *   O X X X * |   Are we about to break false eye seki ?
+ *   O X O O X |     - b about to fill false eye
+ *   O X . O . |     - b groups 2 libs
+ *  -----------+     - dead shape after filling eye    */
+bool
+breaking_false_eye_seki(struct board *b, coord_t coord, enum stone color)
+{
+	enum stone other_color = stone_other(color);	
+	if (!board_is_eyelike(b, coord, color))
+		return false;
+
+	/* Find 2 own groups with 2 libs nearby */
+	group_t g1 = 0, g2 = 0;
+	foreach_neighbor(b, coord, {
+		if (board_at(b, c) != color)  continue;  /* And can't be other color since eyelike */
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)  return false;
+
+		if (!g1)     {  g1 = g;  continue;  }
+		if (g == g1)             continue;
+		if (!g2)     {  g2 = g;  continue;  }
+		if (g == g2)             continue;
+		return false;  /* 3+ groups */
+	});
+	if (!g1 || !g2)  return false;
+	
+	/* Find inside group */
+	coord_t lib2 = board_group_other_lib(b, g1, coord);
+	group_t in = 0;
+	foreach_neighbor(b, lib2, {
+		if (board_at(b, c) != other_color)  continue;
+		group_t g = group_at(b, c);
+		if (!in)  {  in = g;  continue;  }		
+		if (in != g)  return false;  /* Multiple inside groups */
+	});
+	if (!in)  return false;
+
+	coord_t lib3 = board_group_other_lib(b, g2, coord);
+	if (board_group_other_lib(b, in, lib2) != lib3)
+		return false;
+	
+	return true;
+}
+
+
 /*     . O O O |                   We're white.
  *     . O X X |      . O O O |
  *     O O X . |      . O X X |    Are we about to break corner seki by playing at @coord ?

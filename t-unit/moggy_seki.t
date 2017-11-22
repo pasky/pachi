@@ -51,7 +51,7 @@ O . O X X X .
 . O)O X O O X
 . . O X . O .
 
-!moggy status f3 X        # Shouldn't fill false eye ...
+moggy status f3 X        # Shouldn't fill false eye ...
 
 
 % Don't break seki
