@@ -2,26 +2,29 @@
 # Convert ascii board diagrams from board_print() to t-unit board format.
 # (remove borders and just keep the stones basically)
 # Usage: ./board_print_to_tunit > foo.t
-#        copy paste the diagram, ^D
+#        copy paste the diagram with header, ^D
 
 use utf8;
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
 
-my $size = 0;
+my $size = 0, $komi = 7.5, $handicap = 0;
 foreach my $s (<STDIN>)
 {
-    $s =~ s/·/./g;
-    # Remove current move mark
-    $s =~ s/([OX.])\)/$1 /;
-    if ($s =~ m/^ [ 1][0-9] \| (([.OX] )+)\|/ ||
-	$s =~ m/^[ 1][0-9]  *(([.OX] )+) /)
+    # Get komi and handicap from board header, if present
+    if ($s =~ m/^Move: *[0-9]+ *Komi: ([0-9.-]+) *Handicap: ([0-9]+)/)
+    {  $komi = $1;  $handicap = $2; next;  }
+    
+    $s =~ s/·/./g;  # color diagrams
+    if ($s =~ m/^ *([0-9]+) [ |]+(([.OX][ )])+)[ |]+/)
     {   
-	my $s = $1;
+	$s = $2;
 	if ($size == 0)
 	{
 	    $size = split("", $s) / 2;
 	    print "boardsize $size\n";
+	    if ($komi != 7.5)   {  print "komi $komi\n";  }
+	    if ($handicap != 0) {  print "handicap $handicap\n";  }
 	}
 	$s =~ s/ *$//;	
 	print "$s\n";

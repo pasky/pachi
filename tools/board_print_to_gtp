@@ -2,8 +2,7 @@
 # Convert ascii board diagrams from board_print() to gtp.
 # Usage: ./board_print_to_gtp > foo.gtp
 #        copy paste the diagram, ^D
-#        tweak foo.gtp: script doesn't pay attention to last
-#        move currently so always sets black to play.
+# Doesn't set handicap, tweak output as needed.
 
 use utf8;
 binmode STDIN, ":utf8";
@@ -18,33 +17,67 @@ sub coord2gtp
     return substr($asdf, $x-1, 1) . $y;
 }
 
+# Parse board diagram line and set $size
+# Returns ($y, $stones, $post) or () if doesn't match
+my $size = 0;
+sub parse_board_line
+{
+    my ($line) = @_;
+    $line =~ s/·/./g;   # For color boards ...
+    if ($line !~ m/^ *([0-9]+) [ |]+(([.OX][ )])+)[ |]+/)  {  return ();  }
+
+    my ($y, $stones, $post) = ($1,  $2, $2);
+    $stones =~ s/[ )]//g;
+    $post   =~ s/[.OX]//g;
+    
+    if (!$size)  {  $size = length($stones);  }
+    if ($size != length($stones))  {  die "Error: Line doesn't match boardsize $size:\n$line\n";  }
+    return ($y, $stones, $post);
+}
+
 my $ab = "";
 my $aw = "";
-my $size = 0;
+my $komi = 7.5, $handicap = 0;
+my $last_move = "";
+my $to_play = "b";
+my $lines = 0;
 foreach my $s (<STDIN>)
 {
-    $s =~ s/·/./g;
-    # remove current move mark
-    $s =~ s/([OX.])\)/$1 /;
-    if ($s =~ m/^ ([ 1][0-9]) \| (([.OX] )+)\|/ ||
-	$s =~ m/^([ 1][0-9])  *(([.OX] )+) /)
-    { 
-	my ($l, $s) = ($1, $2);
-	$s =~ s/ //g;
-	my @t = split("", $s);
+    # Get komi and handicap from board header, if present
+    if ($s =~ m/^Move: *[0-9]+ *Komi: ([0-9.-]+) *Handicap: ([0-9]+)/)
+    {  $komi = $1;  $handicap = $2; next;  }
 
-	$size = @t;
-	for (my $i = 0; $i < @t; $i++)
+    if (my @t = parse_board_line($s)) {
+	my ($y, $stones, $post) = @t;
+	$lines++;
+
+	my @stones = split("", $stones);
+	my @post   = split("", $post);
+	for (my $i = 0; $i < @stones; $i++)
 	{
-	    if ($t[$i] eq "X") {  $ab .= sprintf("play b %s\n", coord2gtp($i+1, $l));  }
-	    if ($t[$i] eq "O") {  $aw .= sprintf("play w %s\n", coord2gtp($i+1, $l));  }
+	    if ($stones[$i] eq ".") {  next;  }
+	    my $combo = "$stones[$i]$post[$i]";
+	    my $coord = coord2gtp($i+1, $y);
+	    
+	    # Save and skip last move.
+	    if ($combo eq "X)")    {  $last_move = sprintf("play b %s\n", $coord);  $to_play = "w"; next;  }
+	    if ($combo eq "O)")    {  $last_move = sprintf("play w %s\n", $coord);  $to_play = "b"; next;  }
+
+	    if ($stones[$i] eq "X") {  $ab .= sprintf("play b %s\n", $coord);  }
+	    if ($stones[$i] eq "O") {  $aw .= sprintf("play w %s\n", $coord);  }
 	}
     }
 }
 
+# Sanity checks
+if (!$lines)          {  die "Error: no board diagram found !\n";  }
+if ($lines != $size)  {  die "Error: Expecting $size lines, found $lines instead ...\n";  }
+
 print "boardsize $size\n";
 print "clear_board\n";
-print "komi 7.5\n";
+print "komi $komi\n";
+if ($handicap) {  warn "WARNING: i don't handle handicap, tweak output as needed ...\n"; }
 print "$ab";
 print "$aw";
-print "genmove b\n";
+if ($last_move)  {  print $last_move;  }
+print "genmove $to_play\n";

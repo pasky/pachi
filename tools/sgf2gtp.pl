@@ -55,7 +55,7 @@ $h =~ s/[ \n\t]//gs; # no whitespaces
 if ($h =~ /SZ\[(\d+)\]/) {  $size = $1;  } else {  warn "WARNING: no board size in game header ...\n";  }
 print "boardsize " . $size;
 print "clear_board";
-if ($h =~ s/\bKM\[([\d.]+)\]//gs)         {  print "komi $1";  }
+if ($h =~ s/\bKM\[([\d.+-]+)\]//gs)         {  print "komi $1";  }
 
 my $handicap = 0;
 my $set_free_handicap = "set_free_handicap";
