@@ -285,14 +285,15 @@ struct board_undo {
 
 #ifdef BOARD_SIZE
 /* Avoid unused variable warnings */
-#define board_size(b_) (((b_) == (b_)) ? BOARD_SIZE + 2 : 0)
-#define board_size2(b_) (board_size(b_) * board_size(b_))
-#define real_board_size(b_)  (((b_) == (b_)) ? BOARD_SIZE : 0)
+#define board_size(b)  (((b) == (b)) ? BOARD_SIZE + 2 : 0)
+#define board_size2(b) (board_size(b) * board_size(b))
 #else
-#define board_size(b_) ((b_)->size)
-#define board_size2(b_) ((b_)->size2)
-#define real_board_size(b_) ((b_)->size - 2)
+#define board_size(b)  ((b)->size)
+#define board_size2(b) ((b)->size2)
 #endif
+
+#define real_board_size(b)  (board_size(b) - 2)
+#define real_board_size2(b) (real_board_size(b) * real_board_size(b))
 
 /* This is a shortcut for taking different action on smaller
  * and large boards (e.g. picking different variable defaults).

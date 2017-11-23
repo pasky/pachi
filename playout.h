@@ -32,10 +32,11 @@ typedef coord_t (*playoutp_choose)(struct playout_policy *playout_policy, struct
  * just use uct/prior.h:add_prior_value(). */
 typedef void (*playoutp_assess)(struct playout_policy *playout_policy, struct prior_map *map, int games);
 
-/* Whether to allow given move. All playout moves must pass permit()
- * before being played. if alt parameter is true policy may suggest
- * another move if this one doesn't pass (in which case m will be changed) */
-typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m, bool alt);
+
+/* Whether to allow given move. All playout moves must pass permit() before being played.
+ * @alt:  policy may suggest another move if this one doesn't pass (in which case m will be changed).
+ * @rnd:  move has been randomly picked.   */
+typedef bool (*playoutp_permit)(struct playout_policy *playout_policy, struct board *b, struct move *m, bool alt, bool rnd);
 
 /* Tear down the policy state; policy and policy->data will be free()d by caller. */
 typedef void (*playoutp_done)(struct playout_policy *playout_policy);
@@ -103,7 +104,7 @@ coord_t playout_play_move(struct playout_setup *setup,
 
 /* Is *this* move permitted ? 
  * Called by policy permit() to check something so never the main permit() call. */
-bool playout_permit(struct playout_policy *p, struct board *b, coord_t coord, enum stone color);
+bool playout_permit(struct playout_policy *p, struct board *b, coord_t coord, enum stone color, bool rnd);
 
 void playout_policy_done(struct playout_policy *p);
 

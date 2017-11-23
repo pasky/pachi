@@ -1036,7 +1036,7 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 }
 
 
-#define permit_move(c)  playout_permit(p, b, c, m->color)
+#define permit_move(c)  playout_permit(p, b, c, m->color, random_move)
 
 /* alt parameter tells permit if we just want a yes/no answer for this move
  * (alt=false) or we're ok with redirects if it doesn't pass (alt=true).
@@ -1045,7 +1045,7 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
  * permit() needs to call permit() again on that move. This time alt will be
  * false though (we just want a yes/no answer) so it won't recurse again. */
 static bool
-playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt)
+playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt, bool random_move)
 {
 	struct moggy_policy *pp = p->data;
 	struct moggy_state *ps = b->ps;
@@ -1114,12 +1114,15 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 	}
 
 eyefill_skip:
-	/* Check for special sekis moggy would break. */
-	if (breaking_3_stone_seki(b, m->coord, m->color) ||
-	    breaking_corner_seki(b, m->coord, m->color) ||
-	    breaking_false_eye_seki(b, m->coord, m->color))
-		return false;
-	
+	/* Check special sekis moggy would break. */
+	if (check_special_sekis(b, m)) {
+		if (breaking_3_stone_seki(b, m->coord, m->color))
+			return false;
+		if (check_endgame_sekis(b, m, random_move) &&
+		    (breaking_corner_seki(b, m->coord, m->color) ||
+		     breaking_false_eye_seki(b, m->coord, m->color)))
+			return false;
+	}
 	return true;
 }
 
