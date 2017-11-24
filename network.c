@@ -29,12 +29,6 @@
 
 #define BSIZE 4096
 
-static inline void
-die(char *msg)
-{
-	perror(msg);
-	exit(42);
-}
 
 /* Create a socket, bind to it on the given port and listen.
  * This function is restricted to server mode (port has
@@ -44,7 +38,7 @@ port_listen(char *port, int max_connections)
 {
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == -1)
-		die("socket");
+		fail("socket");
 
 	struct sockaddr_in server_addr;
 	memset(&server_addr, 0, sizeof(server_addr));
@@ -54,11 +48,11 @@ port_listen(char *port, int max_connections)
 
 	const char val = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)))
-		die("setsockopt");
+		fail("setsockopt");
 	if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1)
-		die("bind");
+		fail("bind");
 	if (listen(sock, max_connections) == -1)
-		die("listen");
+		fail("listen");
 	return sock;
 }
 
@@ -84,7 +78,7 @@ open_server_connection(int socket, struct in_addr *client)
 		int sin_size = sizeof(struct sockaddr_in);
 		int fd = accept(socket, (struct sockaddr *)&client_addr, (socklen_t *)&sin_size);
 		if (fd == -1) {
-			die("accept");
+			fail("accept");
 		}
 		if (is_private(&client_addr.sin_addr)) {
 			if (client)
@@ -112,7 +106,7 @@ open_client_connection(char *port_name)
 		return -1;
 	int sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == -1)
-		die("socket");
+		fail("socket");
 	struct sockaddr_in sin;
 	memcpy(&sin.sin_addr.s_addr, host->h_addr, host->h_length);
 	sin.sin_family = AF_INET;
@@ -169,7 +163,7 @@ open_log_connection(struct port_info *info)
 {
 	int log_conn = open_connection(info);
 	if (dup2(log_conn, STDERR) < 0)
-		die("dup2");
+		fail("dup2");
 	if (DEBUGL(0))
 		fprintf(stderr, "log connection opened\n");
 }
@@ -224,7 +218,7 @@ open_gtp_connection(int *socket, char *port)
 	int gtp_conn = open_connection(&gtp_info);
 	for (int d = STDIN; d <= STDOUT; d++) {
 		if (dup2(gtp_conn, d) < 0)
-			die("dup2");
+			fail("dup2");
 	}
 	if (DEBUGL(0))
 		fprintf(stderr, "gtp connection opened\n");

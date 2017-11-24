@@ -11,6 +11,8 @@
 #include "tactics/dragon.h"
 #include "tactics/ladder.h"
 #include "tactics/1lib.h"
+#include "tactics/seki.h"
+#include "util.h"
 #include "random.h"
 #include "playout.h"
 #include "timeinfo.h"
@@ -51,10 +53,7 @@ remove_comments(char *line)
 static void
 args_end()
 {
-	if (*next) {
-		fprintf(stderr, "Invalid extra arg: '%s'\n", next);
-		exit(EXIT_FAILURE);
-	}
+	if (*next)  die("Invalid extra arg: '%s'\n", next);
 }
 
 static void
@@ -85,18 +84,12 @@ board_load(struct board *b, FILE *f, unsigned int size)
 	board_clear(b);
 	for (int y = size - 1; y >= 0; y--) {
 		char line[256];
-		if (!fgets(line, sizeof(line), f)) {
-			fprintf(stderr, "Premature EOF.\n");
-			exit(EXIT_FAILURE);
-		}
-
+		if (!fgets(line, sizeof(line), f))  die("Premature EOF.\n");
+		
 		chomp(line);
-		remove_comments(line);		
+		remove_comments(line);
 		if (strlen(line) != size * 2 - 1 && 
-		    strlen(line) != size * 2) {
-			fprintf(stderr, "Line not %d char long: '%s'\n", size * 2 - 1, line);
-			exit(EXIT_FAILURE);
-		}
+		    strlen(line) != size * 2)       die("Line not %d char long: '%s'\n", size * 2 - 1, line);
 		
 		for (unsigned int i = 0; i < size * 2; i++) {
 			enum stone s;
@@ -104,14 +97,11 @@ board_load(struct board *b, FILE *f, unsigned int size)
 				case '.': s = S_NONE; break;
 				case 'X': s = S_BLACK; break;
 				case 'O': s = S_WHITE; break;
-				default: fprintf(stderr, "Invalid stone '%c'\n", line[i]);
-					 exit(EXIT_FAILURE);
+				default : die("Invalid stone '%c'\n", line[i]);
 			}
 			i++;
-			if (line[i] && line[i] != ' ' && line[i] != ')') {
-				fprintf(stderr, "No space after stone %i: '%c'\n", i/2 + 1, line[i]);
-				exit(EXIT_FAILURE);
-			}
+			if (line[i] && line[i] != ' ' && line[i] != ')')
+				die("No space after stone %i: '%c'\n", i/2 + 1, line[i]);
 
 			struct move m = { .color = s, .coord = coord_xy(b, i/2 + 1, y + 1) };
 			if (line[i] == ')') {
@@ -345,8 +335,8 @@ test_moggy_status(struct board *b, char *arg)
 	
 	next_arg(arg);
 	while (*arg) {
-		if (!isalpha(*arg)) {  fprintf(stderr, "Invalid arg: '%s'\n", arg); exit(EXIT_FAILURE);  }
-		status_at[n++] = str2scoord(arg, board_size(b));
+		if (!isalpha(*arg))  die("Invalid arg: '%s'\n", arg);
+		status_at[n++] = str2coord(arg, board_size(b));
 		next_arg(arg);
 	}
 	
@@ -445,19 +435,15 @@ unit_test_cmd(struct board *b, char *line)
 		char c = line[strlen(cmd)];
 		if (c && c != ' ' && c != '\t')
 			continue;
-		if (commands[i].needs_arg && c != ' ') {
-			fprintf(stderr, "%s\n", line);
-			fprintf(stderr, "error: command %s needs argument(s)\n", cmd);
-			exit(EXIT_FAILURE);
-		}
+		if (commands[i].needs_arg && c != ' ')
+			die("%s\nerror: command %s needs argument(s)\n", line, cmd);
 		
 		next = line + strlen(cmd);
 		next += strspn(next, " \t");
 		return commands[i].f(b, next);
 	}
 
-	fprintf(stderr, "Syntax error: %s\n", line);
-	exit(EXIT_FAILURE);
+	die("Syntax error: %s\n", line);
 }
 
 
@@ -467,11 +453,8 @@ unit_test(char *filename)
 	tunit_over_gtp = 0;
 	
 	FILE *f = fopen(filename, "r");
-	if (!f) {
-		perror(filename);
-		exit(EXIT_FAILURE);
-	}
-
+	if (!f)  fail(filename);
+	
 	int total = 0;
 	int passed = 0;
 	int skipped = 0;
@@ -490,11 +473,9 @@ unit_test(char *filename)
 			case  0 : continue;
 		}
 		
-		if      (!strncmp(line, "boardsize ", 10))
-			board_load(b, f, atoi(line + 10));
-		else if (!strncmp(line, "ko ", 3))
-			set_ko(b, line + 3);
-		else {		
+		if      (!strncmp(line, "boardsize ", 10))  board_load(b, f, atoi(line + 10));
+		else if (!strncmp(line, "ko ", 3))	    set_ko(b, line + 3);
+		else {
 			total++;
 			passed += unit_test_cmd(b, line);
 		}

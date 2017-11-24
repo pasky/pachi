@@ -27,14 +27,30 @@ more_hay:;
 #endif /* _WIN32 */
 
 
-/**************************************************************************************************/
-
 int
 str_prefix(char *prefix, char *str)
 {
 	return (!strncmp(prefix, str, strlen(prefix)));
 }
 
+void
+die(const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+
+	vfprintf(stderr, format, ap);
+
+	va_end(ap);
+	exit(EXIT_FAILURE);
+}
+
+void
+fail(char *msg)
+{
+	perror(msg);
+	exit(42);
+}
 
 /**************************************************************************************************/
 /* String buffer */
