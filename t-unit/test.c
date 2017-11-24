@@ -76,6 +76,20 @@ check_play_move(struct board *b, struct move *m)
 }
 
 static void
+set_komi(struct board *b, char *arg)
+{
+	assert(*arg == '-' || *arg == '+' || isdigit(*arg));
+	b->komi = atof(arg);
+}
+
+static void
+set_handicap(struct board *b, char *arg)
+{
+	assert(isdigit(*arg));
+	b->handicap = atoi(arg);
+}
+
+static void
 board_load(struct board *b, FILE *f, unsigned int size)
 {
 	struct move last_move = { .coord = pass };
@@ -85,9 +99,12 @@ board_load(struct board *b, FILE *f, unsigned int size)
 	for (int y = size - 1; y >= 0; y--) {
 		char line[256];
 		if (!fgets(line, sizeof(line), f))  die("Premature EOF.\n");
-		
 		chomp(line);
 		remove_comments(line);
+
+		if (!strncmp(line, "komi ", 5))     {  set_komi(b, line + 5);     y++; continue;  }
+		if (!strncmp(line, "handicap ", 9)) {  set_handicap(b, line + 9); y++; continue;  }
+
 		if (strlen(line) != size * 2 - 1 && 
 		    strlen(line) != size * 2)       die("Line not %d char long: '%s'\n", size * 2 - 1, line);
 		
