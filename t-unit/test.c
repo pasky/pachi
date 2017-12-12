@@ -228,6 +228,31 @@ test_ladder(struct board *b, char *arg)
 }
 
 
+static bool
+test_ladder_any(struct board *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg, board_size(b));
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+#define TEST_PRINTF "ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
+	PRINT_TEST(b);
+	
+	assert(board_at(b, c) == S_NONE);
+	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
+	assert(atari_neighbor);
+	int rres = is_ladder_any(b, c, atari_neighbor, true);
+	
+	CHECK_TEST(rres, eres, b);
+	return (rres == eres);
+#undef  TEST_PRINTF
+}
+
+
 static group_t
 get_2lib_neighbor(struct board *b, coord_t c, enum stone color)
 {
@@ -260,8 +285,35 @@ test_wouldbe_ladder(struct board *b, char *arg)
 	coord_t escapelib = board_group_info(b, g).lib[0];
 	if (escapelib == c)
 		escapelib = board_group_info(b, g).lib[1];
-	//int rres = wouldbe_ladder_any(b, g, escapelib, chaselib, stone_other(color));
 	int rres = wouldbe_ladder(b, g, escapelib, chaselib, stone_other(color));
+	
+	CHECK_TEST(rres, eres, b);
+	return (rres == eres);
+#undef  TEST_PRINTF
+}
+
+static bool
+test_wouldbe_ladder_any(struct board *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg, board_size(b));
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+#define TEST_PRINTF "wouldbe_ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
+	PRINT_TEST(b);
+	
+	assert(board_at(b, c) == S_NONE);
+	group_t g = get_2lib_neighbor(b, c, stone_other(color));
+	assert(g); assert(board_at(b, g) == stone_other(color));
+	coord_t chaselib = c;
+	coord_t escapelib = board_group_info(b, g).lib[0];
+	if (escapelib == c)
+		escapelib = board_group_info(b, g).lib[1];
+	int rres = wouldbe_ladder_any(b, g, escapelib, chaselib, stone_other(color));
 	
 	CHECK_TEST(rres, eres, b);
 	return (rres == eres);
@@ -464,7 +516,9 @@ typedef struct {
 static t_unit_cmd commands[] = {
 	{ "sar",                    test_sar,               1 },
 	{ "ladder",                 test_ladder,            1 },
+	{ "ladder_any",             test_ladder_any,        1 },
 	{ "wouldbe_ladder",         test_wouldbe_ladder,    1 },
+	{ "wouldbe_ladder_any",     test_wouldbe_ladder_any,1 },
 	{ "useful_ladder",          test_useful_ladder,     1 },
 	{ "can_countercap",         test_can_countercap,    1 },
 	{ "two_eyes",               test_two_eyes,          1 },
