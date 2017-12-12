@@ -270,7 +270,10 @@ is_middle_ladder_any(struct board *b, coord_t coord, group_t laddered, enum ston
 	assert(board_group_info(b, laddered).libs == 1);
 	assert(board_group_info(b, laddered).lib[0] == coord);
 	assert(board_at(b, laddered) == lcolor);
-
+	
+	if (is_selfatari(b, lcolor, coord))
+		return true;
+	
 	/* We could escape by countercapturing a group. */
 	struct move_queue ccq = { .moves = 0 };
 	can_countercapture(b, laddered, &ccq, 0);
