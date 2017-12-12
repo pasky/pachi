@@ -21,4 +21,16 @@ before_install:
 
 # https://blog.lukaspradel.com/continuous-integration-for-cmake-projects-using-travis-ci/  
 script:
-  - make -j2 && ./pachi -u t-unit/sar.t
+  - make -j2
+  - ./pachi -u t-unit/sar.t
+  - ./pachi -u t-unit/ladder.t
+  - ./pachi -u t-unit/ladder_any.t
+  - ./pachi -u t-unit/wouldbe_ladder.t
+  - ./pachi -u t-unit/wouldbe_ladder_any.t
+  - ./pachi -u t-unit/useful_ladder.t
+  - ./pachi -u t-unit/can_countercap.t
+  - ./pachi -u t-unit/two_eyes.t
+  - ./pachi -u t-unit/board_undo.t
+# check no dcnn build works
+  - make clean
+  - make -j2 DCNN=''
