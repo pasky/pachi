@@ -21,6 +21,7 @@
 #include "gogui.h"
 #include "t-predict/predict.h"
 #include "t-unit/test.h"
+#include "fifo.h"
 
 #define NO_REPLY (-2)
 
@@ -340,26 +341,33 @@ cmd_genmove(struct board *board, struct engine *engine, struct time_info *ti, gt
 	if (DEBUGL(2) && debug_boardprint)
 		engine_board_print(engine, board, stderr);
 		
-	if (!ti[color].len.t.timer_start) {
-		/* First game move. */
+	if (!ti[color].len.t.timer_start)    /* First game move. */
 		time_start_timer(&ti[color]);
-	}
+	
+#ifdef PACHI_FIFO   /* Coordinate between multiple Pachi instances. */
+	double time_wait = time_now();
+	int ticket = fifo_task_queue();
+	double time_start = time_now();
+#endif
 
 	struct time_info *ti_genmove = time_info_genmove(board, ti, color);
 	coord_t c = (board->fbook ? fbook_check(board) : pass);
 	if (is_pass(c))
 		c = engine->genmove(engine, board, ti_genmove, color, !strcasecmp(gtp->cmd, "kgs-genmove_cleanup"));
-		
+
+#ifdef PACHI_FIFO	
+	if (DEBUGL(2)) fprintf(stderr, "fifo: genmove in %0.2fs  (waited %0.1fs)\n", time_now() - time_start, time_start - time_wait);
+	fifo_task_done(ticket);
+#endif
+	
 	struct move m = { .coord = c, .color = color };
 	if (board_play(board, &m) < 0) {
 		fprintf(stderr, "Attempted to generate an illegal move: [%s, %s]\n", coord2sstr(m.coord, board), stone2str(m.color));
 		abort();
 	}
 	char *str = coord2sstr(c, board);
-	if (DEBUGL(4))
-		fprintf(stderr, "playing move %s\n", str);
-	if (DEBUGL(1) && debug_boardprint)
-		engine_board_print(engine, board, stderr);
+	if (DEBUGL(4))                      fprintf(stderr, "playing move %s\n", str);
+	if (DEBUGL(1) && debug_boardprint)  engine_board_print(engine, board, stderr);
 	gtp_reply(gtp, str, NULL);
 
 	/* Account for spent time. If our GTP peer keeps our clock, this will
@@ -369,6 +377,7 @@ cmd_genmove(struct board *board, struct engine *engine, struct time_info *ti, gt
 	 * less time than we could on next few moves.) */
 	if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
 		time_sub(&ti[color], time_now() - ti[color].len.t.timer_start, true);
+
 	return P_OK;
 }
 

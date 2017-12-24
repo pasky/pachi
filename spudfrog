@@ -25,16 +25,19 @@ echo "$cc1" | grep -q "mtune=generic" && build_type="${cyan}[generic]${end}"
                         boardsize=""
 [ -n "$BOARD_SIZE" ] && boardsize="  ${cyan}[${BOARD_SIZE}x${BOARD_SIZE}]${end}"
 
-status="$build_type  $dcnn  $opt_flag  $floating$boardsize"
+                      fifo=""
+[ "$FIFO" = 1 ]    && fifo="  ${cyan}[fifo]${end}"
+
+status="$build_type  $dcnn  $opt_flag  $floating$boardsize$fifo"
 
 raw=${status//?????m/}; raw=${raw//${end}/}
-n=$[45-${#raw}];  n1=$[$n/2];  n2=$[$n-$n1]
+n=$[51-${#raw}];  n1=$[$n/2];  n2=$[$n-$n1]
 
 spud=$gray
 printf "%s          (.)~(.)                                           $end\n" $spud
 printf "%s         (-------)                                          $end\n" $spud
-printf "%s   .----%sooO%s-----%sOoo%s--------------------------------.$end\n" $gray $spud $gray $spud $gray
-printf "%s  | ${end} %*s%s%*s $gray |$end\n"                                  $gray  $n1 ""  "$status"  $n2 ""
-printf "%s   ᛫-----------------------------------------------᛫$end\n" $gray
+printf "%s   .----%sooO%s-----%sOoo%s--------------------------------------.$end\n" $gray $spud $gray $spud $gray
+printf "%s  | ${end} %*s%s%*s $gray |$end\n"                                        $gray  $n1 ""  "$status"  $n2 ""
+printf "%s   ᛫-----------------------------------------------------᛫$end\n" $gray
 printf "%s         ( )   ( )                                          $end  \n" $spud
 printf "\n"

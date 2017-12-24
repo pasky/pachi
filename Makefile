@@ -9,6 +9,7 @@
 # If binary will be distributed you need this !
 # Otherwise you may do without to enable more aggressive optimizations
 # for this machine only.
+
 # GENERIC=1
 
 # Do you compile on Windows instead of Linux ?
@@ -35,6 +36,12 @@ DCNN=1
 # board sizes.
 
 # BOARD_SIZE=19
+
+# Running multiple Pachi instances ? Enable this to coordinate them so that
+# only one takes the cpu at a time. If your system uses systemd beware !
+# Go and read note at top of fifo.c
+
+# FIFO=1
 
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
@@ -176,7 +183,13 @@ endif
 ifeq ($(DCNN), 1)
 	CUSTOM_CFLAGS   += -DDCNN
 	CUSTOM_CXXFLAGS += -DDCNN
+	EXTRA_OBJS      += caffe.o dcnn.o
 	SYS_LIBS := $(DCNN_LIBS)
+endif
+
+ifeq ($(FIFO), 1)
+	CUSTOM_CFLAGS   += -DPACHI_FIFO
+	EXTRA_OBJS      += fifo.o
 endif
 
 ifdef DOUBLE_FLOATING
@@ -210,11 +223,7 @@ export
 unexport INCLUDES
 INCLUDES=-I.
 
-ifeq ($(DCNN), 1)
-	DCNN_OBJS=caffe.o dcnn.o
-endif
-
-OBJS = $(DCNN_OBJS) $(EXTRA_OBJS) \
+OBJS = $(EXTRA_OBJS) \
        board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o \
        probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o pachi.o
 
@@ -272,7 +281,7 @@ pachi-profiled:
 # Pachi build attendant
 .PHONY: spudfrog
 spudfrog: FORCE
-	@DCNN=$(DCNN) OPT=$(OPT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
+	@DCNN=$(DCNN) FIFO=$(FIFO) OPT=$(OPT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
          DOUBLE_FLOATING=$(DOUBLE_FLOATING) BOARDSIZE=$(BOARDSIZE) ./spudfrog
 
 # Build info
