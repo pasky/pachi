@@ -73,7 +73,7 @@ dcnn_get_moves(struct board *b, enum stone color, float result[])
 	double time_start = time_now();
 	caffe_get_data(data, result, 13, 19);
 	free(data);
-	fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
+	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
 }
 
 
@@ -90,14 +90,9 @@ find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, 
 }
 
 void
-print_dcnn_best_moves(struct tree_node *node, struct board *b,
-		      coord_t *best_c, float *best_r, int nbest)
+print_dcnn_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
 {
-	int depth = (node ? node->depth : 0);
-	coord_t c = (node ? node_coord(node) : pass);
-	int cols = fprintf(stderr, "%.*sprior_dcnn(%s) = [ ",
-			   depth * 4, "                                   ",
-			   coord2sstr(c, b));
+	int cols = fprintf(stderr, "dcnn = [ ");
 	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
 	fprintf(stderr, "]\n");
