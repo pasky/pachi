@@ -8,8 +8,12 @@
 #include "uct/tree.h"
 #include "caffe.h"
 #include "dcnn.h"
-#include "timeinfo.h"	
+#include "timeinfo.h"
 
+/* Time spent in dcnn code */
+double dcnn_time = 0;
+double get_dcnn_time()  {  return dcnn_time;  }
+void reset_dcnn_time()  {  dcnn_time = 0;  }
 
 bool
 using_dcnn(struct board *b)
@@ -37,6 +41,7 @@ dcnn_quiet_caffe(int argc, char *argv[])
 void
 dcnn_get_moves(struct board *b, enum stone color, float result[])
 {
+	double time_start = time_now();
 	assert(real_board_size(b) == 19);
 
 	int dsize = 13 * 19 * 19;
@@ -70,10 +75,11 @@ dcnn_get_moves(struct board *b, enum stone color, float result[])
 			data[12*19*19 + p] = 1.0;
 	}
 
-	double time_start = time_now();
 	caffe_get_data(data, result, 13, 19);
 	free(data);
-	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
+	double elapsed = time_now() - time_start;
+	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", elapsed);
+	dcnn_time += elapsed;
 }
 
 
