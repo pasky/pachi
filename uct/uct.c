@@ -463,6 +463,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 static void
 uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color)
 {
+	assert(!using_dcnn(b0));
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
 	u->pondering = true;
@@ -757,7 +758,7 @@ uct_state_init(char *arg, struct board *b)
 	u->thread_model = TM_TREEVL;
 	u->virtual_loss = 1;
 
-	u->pondering_opt = true;
+	u->pondering_opt = false;
 
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
@@ -1365,6 +1366,11 @@ uct_state_init(char *arg, struct board *b)
 	if (!u->dynkomi)
 		u->dynkomi = board_small(b) ? uct_dynkomi_init_none(u, NULL, b)
 			: uct_dynkomi_init_linear(u, NULL, b);
+
+	if (u->pondering_opt && using_dcnn(b)) {
+		fprintf(stderr, "Can't use pondering with dcnn, pondering turned off.\n");
+		u->pondering_opt = false;
+	}
 
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
