@@ -1,0 +1,20 @@
+--- a/Makefile	2018-01-01 11:25:17.886903700 +0100
++++ b/Makefile	2018-01-01 11:26:17.095927965 +0100
+@@ -164,7 +164,7 @@
+ 	./pachi -t =5000 no_tbook < gtp/genmove_both.gtp
+ 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
+ 
+-gitversion.h: .git/HEAD .git/index
++gitversion.h: 
+ 	@echo "[make] gitversion.h"
+ 	@branch=`git status | grep '^On branch' | sed -e 's/On branch //'`; \
+ 	 hash=`git rev-parse --short HEAD`; \
+@@ -178,7 +178,7 @@
+ 
+ # Generic clean rule is in Makefile.lib
+ clean:: clean-recursive
+-	-@rm pachi gitversion.h >/dev/null 2>&1
++	-@rm pachi  >/dev/null 2>&1
+ 
+ clean-profiled:: clean-profiled-recursive
+ 

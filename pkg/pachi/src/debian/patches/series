@@ -1,0 +1,3 @@
+keep-gitversion.patch
+makefile-and-version.patch
+default-max-tree-size.patch

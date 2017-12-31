@@ -1,0 +1,27 @@
+pachi-go (11.99-1~20180105~trusty1) trusty; urgency=medium
+
+  * Updated git b002e0a (data_dir) 2018-01-05
+    https://github.com/pasky/pachi
+    Pachi uses DATA_DIR, no need for wrapper anymore
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 05 Jan 2018 13:14:39 +0200
+
+pachi-go (11.99~20171231~trusty1) trusty; urgency=medium
+
+  * Updated git 97173d7 (my) 2017-12-31
+    https://github.com/lemonsqueeze/pachi/tree/my
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 31 Dec 2017 08:15:39 +0200
+
+pachi-engine (11.99~20160806~ppa1~trusty1) trusty; urgency=medium
+
+  * New upstream version (latest git as of 2016-08-06)
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 06 Aug 2016 08:15:39 +0200
+
+pachi-engine (11.99~20160702~ppa4) trusty; urgency=low
+
+  * Initial release - Current upstream + seki branch
+    (https://github.com/lemonsqueeze/pachi/tree/seki)
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Thu, 07 Jul 2016 12:26:33 +0200

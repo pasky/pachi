@@ -1,0 +1,38 @@
+diff --git a/Makefile b/Makefile
+index 1927e52..b972252 100644
+--- a/Makefile
++++ b/Makefile
+@@ -54,9 +54,9 @@ CAFFE_PREFIX=/usr/local/caffe
+ # Pachi will look for extra data files (such as dcnn, pattern, joseki or
+ # fuseki database) in system directory below in addition to current directory
+ # (or DATA_DIR environment variable if present).
+-PREFIX?=/usr/local
++PREFIX?=$(DESTDIR)/usr
+ BINDIR?=$(PREFIX)/bin
+-DATADIR?=$(PREFIX)/share/pachi
++DATADIR?=$(PREFIX)/share/pachi-go
+ 
+ # Generic compiler options. You probably do not really want to twiddle
+ # any of this.
+@@ -92,7 +92,7 @@ ifdef MAC
+ 	SYS_LDFLAGS?=-pthread -rdynamic
+ 	SYS_LIBS?=-lm -ldl
+ else
+-	SYS_CFLAGS?=-march=native
++#	SYS_CFLAGS?=-march=native
+ 	SYS_LDFLAGS?=-pthread -rdynamic
+ 	SYS_LIBS?=-lm -lrt -ldl
+ endif
+diff --git a/version.h b/version.h
+index ffe420c..d1bc719 100644
+--- a/version.h
++++ b/version.h
+@@ -34,7 +34,7 @@
+ #define PACHI_VERNAME "Genjo"
+ 
+ /* -devel except when tagged. */
+-#define PACHI_VERDEV "-devel"
++#define PACHI_VERDEV "-20180105"
+ 
+ #define PACHI_VERSION PACHI_VERNUMS " (" PACHI_VERNAME PACHI_VERDEV ") - " GIT_BRANCH " (" GIT_HASH ")"
+ 

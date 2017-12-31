@@ -1,0 +1,44 @@
+Source: pachi-go
+Section: games
+Priority: optional
+Maintainer: lemonsqueeze <lemonsqueeze@gmx.com>
+Uploaders: lemonsqueeze <lemonsqueeze@gmx.com>
+Build-Depends: debhelper (>= 8.0.0),
+               libcaffe-cpu-dev,
+               libboost-dev,
+               libboost-system-dev,
+               libboost-thread-dev,
+               libgoogle-glog-dev,
+               libgflags-dev,
+               libprotobuf-dev,
+               libhdf5-dev,
+               liblzma-dev,
+               libopenblas-dev
+Standards-Version: 3.9.4
+Homepage: http://pachi.or.cz/
+Vcs-Git: https://github.com/lemonsqueeze/pachi.git
+Vcs-Browser: https://github.com/lemonsqueeze/pachi
+
+Package: pachi-go
+Architecture: any
+Depends: pachi-go-data, ${shlibs:Depends}, ${misc:Depends}
+Description: engine for the game of go / weiqi / baduk
+ Pachi is a reasonably strong engine for the ancient game of go
+ (http://senseis.xmp.net/?Go)
+ .
+ The default engine plays by Chinese rules and should be about 7d KGS
+ strength on 9x9. On 19x19 it can hold a solid KGS 2d rank on modest
+ hardware (Raspberry Pi 3, dcnn) or faster machine (e.g. six-way Intel
+ i7) without dcnn. When using a large cluster (64 machines, 20 cores each),
+ it maintains KGS 3d to 4d and has won e.g. a 7-stone handicap game against
+ Zhou Junxun 9p.
+ .
+ By default, Pachi currently uses the UCT engine that combines Monte Carlo
+ approach with tree search; UCB1AMAF tree policy using the RAVE method is
+ used for tree search, while the Moggy playout policy using 3×3 patterns
+ and various tactical checks is used for the semi-random Monte Carlo
+ playouts. Large-scale board patterns and dcnn are used in the tree
+ search. Technical information (only slightly dated) about Pachi's
+ architecture and algorithms can be found in Petr Baudis' Master's Thesis:
+ http://pachi.or.cz/
+

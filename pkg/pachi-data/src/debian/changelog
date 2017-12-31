@@ -1,0 +1,11 @@
+pachi-go-data (11.99-1~ppa2) trusty; urgency=low
+
+  * Changed paths
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Fri, 05 Jan 2018 18:30:37 +0200
+
+pachi-go-data (11.99~ppa1) trusty; urgency=low
+
+  * Initial release
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Fri, 08 Jul 2016 06:30:37 +0200
