@@ -13,6 +13,12 @@ matrix:
   allow_failures:
     - compiler: clang
 
+# get caffe from ppa
+before_install:
+  - sudo add-apt-repository ppa:lemonsqueeze/pachi -y
+  - sudo apt-get update -q
+  - sudo apt-get install libcaffe-cpu-dev -y
+
 # https://blog.lukaspradel.com/continuous-integration-for-cmake-projects-using-travis-ci/  
 script:
   - make -j2 && ./pachi -u t-unit/sar.t

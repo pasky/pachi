@@ -322,9 +322,12 @@ board_print_custom(struct board *board, FILE *f, board_cprint cprint, void *data
 	char buffer[10240];
 	strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
+	sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d  ",
 		 board->moves, board->komi, board->handicap,
 		 board->captures[S_BLACK], board->captures[S_WHITE]);
+	if (cprint) /* handler can add things to header when called with pass */
+		cprint(board, pass, buf, data);
+	sbprintf(buf, "\n");
 	board_print_top(board, buf, 1 + !!cprint);
 	for (int y = board_size(board) - 2; y >= 1; y--)
 		board_print_row(board, y, buf, cprint, data);
@@ -524,9 +527,6 @@ board_handicap_stone(struct board *board, int x, int y, FILE *f)
 	m.color = S_BLACK; m.coord = coord_xy(board, x, y);
 
 	board_play(board, &m);
-	/* Simulate white passing; otherwise, UCT search can get confused since
-	 * tree depth parity won't match the color to move. */
-	board->moves++;
 
 	char *str = coord2str(m.coord, board);
 	if (DEBUGL(1))
@@ -543,7 +543,7 @@ board_handicap(struct board *board, int stones, FILE *f)
 	int mid = board_size(board) / 2;
 	int max = board_size(board) - 1 - margin;
 	const int places[][2] = {
-		{ min, min }, { max, max }, { min, max }, { max, min },
+		{ min, min }, { max, max }, { max, min }, { min, max }, 
 		{ min, mid }, { max, mid },
 		{ mid, min }, { mid, max },
 		{ mid, mid },
@@ -1459,7 +1459,7 @@ void
 board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
 {
 	if (unlikely(b->flen == 0))
-		goto pass;
+		goto play_pass;
 
 	int base = fast_random(b->flen), f;
 	for (f = base; f < b->flen; f++)
@@ -1469,7 +1469,7 @@ board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit 
 		if (board_try_random_move(b, color, coord, f, permit, permit_data))
 			return;
 
-pass:
+play_pass:
 	*coord = pass;
 	struct move m = { pass, color };
 	board_play(b, &m);

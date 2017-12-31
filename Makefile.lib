@@ -29,19 +29,19 @@ quiet_cmd_compile = '[CC]   $<'
  masq_cmd_compile = $(COMPILE) -c $<
       cmd_compile = $(COMPILE) -Wp,-MD,.deps/$(*F).pp -c $<
 
-quiet_cmd_compilexx = '[CXX]   $<'
+quiet_cmd_compilexx = '[CXX]  $<'
  masq_cmd_compilexx = $(COMPILEXX) -c $<
       cmd_compilexx = $(COMPILEXX) -Wp,-MD,.deps/$(*F).pp -c $<
 
-quiet_cmd_archive = '[AR]   $@'
-      cmd_archive = $(AR) r $@ $^
+quiet_cmd_archive = 
+      cmd_archive = $(AR) r $@ $^  >/dev/null 2>&1
 
    quiet_cmd_link = '[LINK] $@'
          cmd_link = $(LINK) -o $@ $^ $(LIBS) $(SYS_LIBS)
 
 # Recursive make
-quiet_cmd_recmake = "[MAKE $$target]   $$subdir"
-      cmd_recmake = $(MAKE) -C $$subdir $$target
+quiet_cmd_recmake = "[make] $$subdir"
+      cmd_recmake = $(MAKE) -s -C $$subdir $$target
 
 
 
@@ -94,3 +94,10 @@ all-recursive clean-recursive clean-profiled-recursive:
 	for subdir in $(SUBDIRS); do \
 		$(call ncmd,recmake) || exit 1; \
 	done
+
+# Main makefile may add extra commands by creating another clean:: rule
+clean:: 
+	-@rm -f *.[oa] *~  >/dev/null 2>&1
+
+clean-profiled:: clean-profiled-recursive
+	-@rm -f *.gcda *.gcno  >/dev/null 2>&1

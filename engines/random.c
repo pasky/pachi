@@ -4,9 +4,9 @@
 #include "board.h"
 #include "engine.h"
 #include "move.h"
-#include "random/random.h"
+#include "engines/random.h"
 
-static coord_t *
+static coord_t
 random_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	/* Play a random coordinate. However, we must also guard
@@ -29,7 +29,7 @@ random_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 		board_done_noalloc(&b2);
 	} while (suicide && i++ < 100);
 
-	return coord_copy(suicide ? pass : coord);
+	return (suicide ? pass : coord);
 }
 
 struct engine *

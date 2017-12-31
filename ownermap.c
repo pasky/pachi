@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "board.h"
 #include "debug.h"
@@ -8,10 +9,23 @@
 #include "mq.h"
 #include "ownermap.h"
 
+void
+board_ownermap_init(struct board_ownermap *ownermap)
+{
+	memset(ownermap, 0, sizeof(*ownermap));
+}
+
 static void
 printhook(struct board *board, coord_t c, strbuf_t *buf, void *data)
 {
         struct board_ownermap *ownermap = data;
+
+	if (c == pass) { /* Stuff to display in header */
+		if (!ownermap || !ownermap->playouts) return;
+		sbprintf(buf, "Score Est: %s", board_ownermap_score_est_str(board, ownermap));
+		return;
+	}
+
         if (!ownermap) {
 		sbprintf(buf, ". ");
 		return;
@@ -135,3 +149,36 @@ groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s
 	} foreach_point_end;
 }
 
+enum point_judgement
+board_ownermap_score_est_coord(struct board *b, struct board_ownermap *ownermap, coord_t c)
+{
+	enum point_judgement j = board_ownermap_judge_point(ownermap, c, 0.67);
+	enum stone s = board_at(b, c);
+	
+	/* If status is unclear and there's a stone there assume it's alive. */
+	if (j != PJ_BLACK && j != PJ_WHITE && (s == S_BLACK || s == S_WHITE))
+		return s;
+	return j;
+}
+
+float
+board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap)
+{
+	float scores[S_MAX] = {0.0, };  /* Number of points owned by each color */
+	foreach_point(b) {
+		enum point_judgement j = board_ownermap_score_est_coord(b, ownermap, c);
+		scores[j]++;
+	} foreach_point_end;
+	
+	return ((scores[PJ_WHITE] + b->komi + b->handicap) - scores[PJ_BLACK]);
+}
+
+/* Returns static buffer */
+char *
+board_ownermap_score_est_str(struct board *b, struct board_ownermap *ownermap)
+{
+	static char buf[32];
+	float s = board_ownermap_score_est(b, ownermap);
+	sprintf(buf, "%s+%.1f\n", (s > 0 ? "W" : "B"), fabs(s));
+	return buf;
+}

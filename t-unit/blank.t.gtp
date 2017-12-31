@@ -1,0 +1,5 @@
+boardsize 19
+clear_board
+komi 7.5
+play b d16
+tunit moggy status c17

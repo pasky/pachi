@@ -53,15 +53,17 @@ Pachi consists of the following components:
   to generate a move to play on given board
 
 	engine.h	abstract engine interface
-	random/		example "random move generator" engine
-	replay/		example "playout move generator" engine
-	montecarlo/	simple treeless Monte Carlo engine, quite bitrotten
 	uct/		the main UCT-player engine, see below
 	distributed/	"meta-engine" for distributed play by orchestrating
-				several UCT engines on different computers
-	patternscan/	auxiliary engine for harvesting patterns from
-				existing games
-	joseki/		auxiliary engine for generating joseki patterns
+			    several UCT engines on different computers
+	engines/	other engines:
+	  dcnn.c            example "dcnn move generator" engine
+	  patternplay.c	    example "large patterns move generator" engine
+	  random.c	    example "random move generator" engine
+	  replay.c	    example "playout move generator" engine
+	  montecarlo.c	    simple treeless Monte Carlo engine, quite bitrotten
+	  patternscan.c	    auxiliary engine for harvesting patterns from existing games
+	  joseki.c	    auxiliary engine for generating joseki patterns
 
 * "playout" policy is asked to generate moves to play during the Monte Carlo
   simulations, and to provide rough evaluation of moves feasibility for
@@ -247,9 +249,9 @@ Joseki Patterns
 
 Joseki patterns can be generated from variations of a SGF file. Josekis
 are matched per-quadrant, no other move must be within the quadrant. See
-joseki/README for details on usage of the auxiliary engine and a full
-recipe for making Pachi play according to joseki sequences extracted from
-the Kogo dictionary.
+engines/README_JOSEKI for details on usage of the auxiliary engine and a
+full recipe for making Pachi play according to joseki sequences extracted
+from the Kogo dictionary.
 
 
 Opening Book

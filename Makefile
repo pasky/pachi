@@ -27,8 +27,8 @@
 # You'll need to install Boost and Caffe libraries.
 # If Caffe is in a custom directory you can set it here.
 
-#DCNN=1
-#CAFFE_PREFIX=/usr/local
+DCNN=1
+CAFFE_PREFIX=/usr/local/caffe
 
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
@@ -66,6 +66,8 @@ CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-co
 CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3
 
 ### CONFIGURATION END
+
+MAKEFLAGS += --no-print-directory
 
 ifdef MSYS2_64
 	WIN=1
@@ -139,18 +141,19 @@ unexport INCLUDES
 INCLUDES=-I.
 
 
-OBJS=board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o
+OBJS=$(DCNN_OBJS) board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o pachi.o
 ifdef DCNN
-	OBJS+=dcnn.o caffe.o
+	DCNN_OBJS=caffe.o dcnn.o
 endif
-SUBDIRS=random replay patternscan patternplay joseki montecarlo uct uct/policy playout tactics t-unit distributed t-predict
+# Low-level dependencies last
+SUBDIRS=uct uct/policy playout tactics t-unit t-predict distributed engines
 
-all: all-recursive pachi
+all: gitversion.h all-recursive pachi
 
-LOCALLIBS=random/random.a replay/replay.a patternscan/patternscan.a patternplay/patternplay.a joseki/joseki.a montecarlo/montecarlo.a uct/uct.a uct/policy/uctpolicy.a playout/playout.a t-unit/test.a tactics/tactics.a distributed/distributed.a t-predict/predict.a
+LOCALLIBS=$(SUBDIRS:%=%/lib.a)
 $(LOCALLIBS): all-recursive
 	@
-pachi: $(OBJS) pachi.o $(LOCALLIBS)
+pachi: $(OBJS) $(LOCALLIBS)
 	$(call cmd,link)
 
 # Use runtime gcc profiling for extra optimization. This used to be a large
@@ -158,18 +161,31 @@ pachi: $(OBJS) pachi.o $(LOCALLIBS)
 .PHONY: pachi-profiled
 pachi-profiled:
 	@make clean all XLDFLAGS=-fprofile-generate XCFLAGS="-fprofile-generate -fomit-frame-pointer -frename-registers"
-	./pachi -t =5000 no_tbook <tools/genmove19.gtp
+	./pachi -t =5000 no_tbook < gtp/genmove_both.gtp
 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
+
+gitversion.h: .git/HEAD .git/index
+	@echo "[make] gitversion.h"
+	@branch=`git status | grep '^On branch' | sed -e 's/On branch //'`; \
+	 hash=`git rev-parse --short HEAD`; \
+	 echo "#define GIT_BRANCH \"$$branch\"" > $@;  \
+	 echo "#define GIT_HASH   \"$$hash\"" >> $@
 
 # install-recursive?
 install:
 	$(INSTALL) ./pachi $(DESTDIR)$(BINDIR)
 
+# Generic clean rule is in Makefile.lib
+clean:: clean-recursive
+	-@rm pachi gitversion.h >/dev/null 2>&1
 
-clean: clean-recursive
-	rm -f pachi *.o
+clean-profiled:: clean-profiled-recursive
 
-clean-profiled: clean-profiled-recursive
-	rm -f *.gcda *.gcno
+TAGS: FORCE
+	@echo "Generating TAGS ..."
+	@etags `find . -name "*.[ch]" -o -name "*.cpp"`
+
+FORCE:
+
 
 -include Makefile.lib

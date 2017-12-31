@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "patternplay/patternplay.h"
+#include "engines/patternplay.h"
 #include "pattern.h"
 #include "patternsp.h"
 #include "patternprob.h"
@@ -21,7 +21,7 @@ struct patternplay {
 };
 
 
-static coord_t *
+static coord_t
 patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct patternplay *pp = e->data;
@@ -40,7 +40,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 			best = f;
 	}
 
-	return coord_copy(b->f[best]);
+	return b->f[best];
 }
 
 static void

@@ -10,12 +10,13 @@
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
-#include "replay/replay.h"
-#include "montecarlo/montecarlo.h"
-#include "random/random.h"
-#include "patternscan/patternscan.h"
-#include "patternplay/patternplay.h"
-#include "joseki/joseki.h"
+#include "engines/replay.h"
+#include "engines/montecarlo.h"
+#include "engines/random.h"
+#include "engines/patternscan.h"
+#include "engines/patternplay.h"
+#include "engines/joseki.h"
+#include "engines/dcnn.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "distributed/distributed.h"
@@ -74,15 +75,14 @@ static struct engine *init_engine(enum engine_id engine, char *e_arg, struct boa
 
 static void usage(char *name)
 {
-	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 	fprintf(stderr, "Usage: %s [OPTIONS] [ENGINE_ARGS]\n\n", name);
 	fprintf(stderr,
 		"Options: \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
-		"  -e, --engine ENGINE               select engine: (default uct) \n"
-		"                                    random|replay|montecarlo|uct|distributed|dcnn|patternplay \n"
+		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
+		"                                    uct, dcnn, patternplay, replay, random, montecarlo, distributed \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
 		"  -g, --gtp-port [HOST:]GTP_PORT    read gtp commands from network instead of stdin. \n"
 		"                                    listen on given port if HOST not given, otherwise \n"
@@ -94,6 +94,7 @@ static void usage(char *name)
 		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
 		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
 		"  -u, --unit-test FILE              run unit tests \n"
+		"  -v, --version                     show version \n"
 		" \n"
 		"TIME_SETTINGS: \n"
 		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
@@ -126,6 +127,7 @@ static struct option longopts[] = {
 	{ "seed",        required_argument, 0, 's' },
 	{ "time",        required_argument, 0, 't' },
 	{ "unit-test",   required_argument, 0, 'u' },
+	{ "version",     no_argument,       0, 'v' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -145,7 +147,7 @@ int main(int argc, char *argv[])
 
 	int opt;
 	int option_index;
-	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:l:r:s:t:u:", longopts, &option_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:l:r:s:t:u:v", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
@@ -224,6 +226,9 @@ int main(int argc, char *argv[])
 			case 'u':
 				testfile = strdup(optarg);
 				break;
+			case 'v':
+				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
+				exit(0);
 			default: /* '?' */
 				usage(argv[0]);
 				exit(1);
@@ -234,6 +239,7 @@ int main(int argc, char *argv[])
 	if (log_port)
 		open_log_port(log_port);
 
+	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 	fast_srandom(seed);
 	if (DEBUGL(0))
 		fprintf(stderr, "Random seed: %d\n", seed);
@@ -258,7 +264,7 @@ int main(int argc, char *argv[])
 	struct engine *e = init_engine(engine, e_arg, b);
 
 	if (testfile) {
-		unittest(testfile);
+		unit_test(testfile);
 		return 0;
 	}
 

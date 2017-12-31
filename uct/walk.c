@@ -29,17 +29,18 @@
 void
 uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 {
+	struct board *b = t->board;
 	if (!UDEBUGL(0))
 		return;
 
 	/* Best move */
-	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+	struct tree_node *best = u->policy->choose(u->policy, t->root, b, color, resign);
 	if (!best) {
 		fprintf(stderr, "... No moves left\n");
 		return;
 	}
 	fprintf(stderr, "[%d] ", playouts);
-	fprintf(stderr, "best %f ", tree_node_get_value(t, 1, best->u.value));
+	fprintf(stderr, "best %.1f%% ", 100 * tree_node_get_value(t, 1, best->u.value));
 
 	/* Dynamic komi */
 	if (t->use_extra_komi)
@@ -49,143 +50,69 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	fprintf(stderr, "| seq ");
 	for (int depth = 0; depth < 4; depth++) {
 		if (best && best->u.playouts >= 25) {
-			fprintf(stderr, "%3s ", coord2sstr(node_coord(best), t->board));
-			best = u->policy->choose(u->policy, best, t->board, color, resign);
+			fprintf(stderr, "%3s ", coord2sstr(node_coord(best), b));
+			best = u->policy->choose(u->policy, best, b, color, resign);
 		} else {
 			fprintf(stderr, "    ");
 		}
 	}
 
 	/* Best candidates */
-	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
-	int cans = 4;
-	struct tree_node *can[cans];
-	memset(can, 0, sizeof(can));
-	best = t->root->children;
-	while (best) {
-		int c = 0;
-		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
-		for (int d = 0; d < c; d++) can[d] = can[d + 1];
-		if (c > 0) can[c - 1] = best;
-		best = best->sibling;
-	}
-	while (--cans >= 0) {
-		if (can[cans]) {
-			fprintf(stderr, "%3s(%.3f) ",
-			        coord2sstr(node_coord(can[cans]), t->board),
-				tree_node_get_value(t, 1, can[cans]->u.value));
-		} else {
-			fprintf(stderr, "           ");
-		}
-	}
+	int nbest = 4;
+	float   best_r[nbest];
+	coord_t best_c[nbest];
+	uct_get_best_moves(t, best_c, best_r, nbest, true);
 
+	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
+	for (int i = 0; i < nbest; i++)
+		if (!is_pass(best_c[i]))
+			fprintf(stderr, "%3s(%.1f) ", coord2sstr(best_c[i], b), 100 * best_r[i]);
+		else
+			fprintf(stderr, "          ");
+
+	/* Tree memory usage */
+	if (UDEBUGL(3))
+		fprintf(stderr, " | %.1fMb", (float)t->nodes_size / 1024 / 1024);
+	
 	fprintf(stderr, "\n");
 }
 
-/* Live gfx: show best sequence in GoGui */
+/* GoGui live gfx: show best sequence */
 static void
-uct_progress_gogui_sequence(struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_gogui_sequence(strbuf_t *buf, struct uct *u, struct tree *t, enum stone color, int playouts)
 {
+	coord_t seq[4] = { pass, pass, pass, pass };
+
 	/* Best move */
 	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
-	if (!best) {
-		fprintf(stderr, "... No moves left\n");
-		return;
+	if (!best) {  fprintf(stderr, "... No moves left\n"); return;  }
+	
+	for (int i = 0; i < 4 && best && best->u.playouts >= 25; i++) {
+		seq[i] = node_coord(best);
+		best = u->policy->choose(u->policy, best, t->board, color, resign);
 	}
 	
-	fprintf(stderr, "gogui-gfx: VAR ");
-	char *col = "bw";
-	for (int depth = 0; depth < 4; depth++) {
-		if (best && best->u.playouts >= 25) {
-			fprintf(stderr, "%c %3s ", 
-				col[(depth + (color == S_WHITE)) % 2],
-				coord2sstr(node_coord(best), t->board));
-			best = u->policy->choose(u->policy, best, t->board, color, resign);
-		}
-	}
-	fprintf(stderr, "\n");	
+	gogui_show_best_seq(buf, t->board, color, seq, 4);
 }
 
-/* Display best moves graphically in GoGui.
- * gfx commands printed on stderr are for live gfx,
- * and the last run is kept in a buffer in case we need a gtp reply.
- */
+/* GoGui live gfx: show best moves */
 static void
-uct_progress_gogui_candidates(struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_gogui_best(strbuf_t *buf, struct uct *u, struct tree *t, enum stone color, int playouts)
 {
-	struct tree_node *best = t->root->children;
-	int cans = GOGUI_CANDIDATES;
-	struct tree_node *can[cans];
-	memset(can, 0, sizeof(can));
-	while (best) {
-		int c = 0;
-		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
-		for (int d = 0; d < c; d++) can[d] = can[d + 1];
-		if (c > 0) can[c - 1] = best;
-		best = best->sibling;
-	}
-
-	fprintf(stderr, "gogui-gfx:\n");
-	char *buf = gogui_gfx_buf;
-	if (--cans >= 0)
-		if (can[cans]) {
-			sprintf(buf, "VAR %s %s\n", 
-				(color == S_WHITE ? "w" : "b"),
-				coord2sstr(node_coord(can[cans]), t->board) );
-			fprintf(stderr, "%s", buf);
-			buf += strlen(buf);
-		}
-	while (--cans >= 0)
-		if (can[cans]) {
-			sprintf(buf, "LABEL %s %i\n", 
-				coord2sstr(node_coord(can[cans]), t->board),
-				GOGUI_CANDIDATES - cans);
-			fprintf(stderr, "%s", buf);
-			buf += strlen(buf);
-		}
-	fprintf(stderr, "\n");	
+	coord_t best_c[GOGUI_CANDIDATES];
+	float   best_r[GOGUI_CANDIDATES];
+	uct_get_best_moves(t, best_c, best_r, GOGUI_CANDIDATES, false);
+	gogui_show_best_moves(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 
-/* Display best moves' winrates in GoGui.
- * gfx commands printed on stderr are for live gfx,
- * and the last run is kept in a buffer in case we need a gtp reply.
- */
+/* GoGui live gfx: show winrates */
 static void
-uct_progress_gogui_winrates(struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_gogui_winrates(strbuf_t *buf, struct uct *u, struct tree *t, enum stone color, int playouts)
 {
-	struct tree_node *best = t->root->children;
-	int cans = GOGUI_CANDIDATES;
-	struct tree_node *can[cans];
-	memset(can, 0, sizeof(can));
-	while (best) {
-		int c = 0;
-		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
-		for (int d = 0; d < c; d++) can[d] = can[d + 1];
-		if (c > 0) can[c - 1] = best;
-		best = best->sibling;
-	}
-
-	fprintf(stderr, "gogui-gfx:\n");
-	char *buf = gogui_gfx_buf;
-	if (--cans >= 0)
-		if (can[cans]) {
-			sprintf(buf, "VAR %s %s\n", 
-				(color == S_WHITE ? "w" : "b"),
-				coord2sstr(node_coord(can[cans]), t->board) );
-			fprintf(stderr, "%s", buf);
-			buf += strlen(buf);
-		}
-	cans++;
-
-	while (--cans >= 0)
-		if (can[cans]) {
-			sprintf(buf, "LABEL %s .%02u\n", 
-				coord2sstr(node_coord(can[cans]), t->board),
-				(unsigned)(tree_node_get_value(t, 1, can[cans]->u.value) * 1000));
-			fprintf(stderr, "%s", buf);
-			buf += strlen(buf);
-		}
-	fprintf(stderr, "\n");	
+	coord_t best_c[GOGUI_CANDIDATES];
+	float   best_r[GOGUI_CANDIDATES];
+	uct_get_best_moves(t, best_c, best_r, GOGUI_CANDIDATES, true);
+	gogui_show_winrates(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 
 void
@@ -291,20 +218,26 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 		default: assert(0);
 	}
 
-	if (!gogui_live_gfx)
+	if (!gogui_livegfx)
 		return;
-	switch(gogui_live_gfx) {
-		case UR_GOGUI_CAN:
-			uct_progress_gogui_candidates(u, t, color, playouts);
+
+	char buffer[1024];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+
+	switch(gogui_livegfx) {
+		case UR_GOGUI_BEST:
+			uct_progress_gogui_best(buf, u, t, color, playouts);
 			break;
 		case UR_GOGUI_SEQ:
-			uct_progress_gogui_sequence(u, t, color, playouts);
+			uct_progress_gogui_sequence(buf, u, t, color, playouts);
 			break;
 		case UR_GOGUI_WR:
-			uct_progress_gogui_winrates(u, t, color, playouts);
+			uct_progress_gogui_winrates(buf, u, t, color, playouts);
 			break;
 		default: assert(0);
 	}
+
+	gogui_show_livegfx(buf->str);
 }
 
 static inline void

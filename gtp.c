@@ -19,6 +19,7 @@
 #include "timeinfo.h"
 #include "gogui.h"
 #include "t-predict/predict.h"
+#include "t-unit/test.h"
 
 #define NO_REPLY (-2)
 
@@ -121,8 +122,7 @@ known_commands(struct engine *engine)
 		str += sprintf(str, "%s\n", commands[i].cmd);
 	}
 	
-	if (!strcmp(engine->name, "UCT"))
-		str += sprintf(str, "gogui-analyze_commands\n");
+	str += sprintf(str, "gogui-analyze_commands\n");
 	str[-1] = 0;  /* remove last \n */
 	return buf;
 }
@@ -273,8 +273,7 @@ cmd_play(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 	next_tok(arg);
 	m.color = str2stone(arg);
 	next_tok(arg);
-	coord_t *c = str2coord(arg, board_size(board));
-	m.coord = *c; coord_done(c);
+	m.coord = str2coord(arg, board_size(board));
 	next_tok(arg);
 	char *enginearg = arg;
 	char *reply = NULL;
@@ -309,8 +308,7 @@ cmd_pachi_predict(struct board *board, struct engine *engine, struct time_info *
 	next_tok(arg);
 	m.color = str2stone(arg);
 	next_tok(arg);
-	coord_t *c = str2coord(arg, board_size(board));
-	m.coord = *c; coord_done(c);
+	m.coord = str2coord(arg, board_size(board));
 	next_tok(arg);
 
 	char *str = predict_move(board, engine, ti, &m);
@@ -325,7 +323,6 @@ cmd_genmove(struct board *board, struct engine *engine, struct time_info *ti, gt
 	char *arg;
 	next_tok(arg);
 	enum stone color = str2stone(arg);
-	coord_t *c = NULL;
 	if (DEBUGL(2) && debug_boardprint)
 		engine_board_print(engine, board, stderr);
 		
@@ -335,27 +332,21 @@ cmd_genmove(struct board *board, struct engine *engine, struct time_info *ti, gt
 	}
 
 	struct time_info *ti_genmove = time_info_genmove(board, ti, color);
-	coord_t cf = pass;
-	if (board->fbook)
-		cf = fbook_check(board);
-	if (!is_pass(cf))
-		c = coord_copy(cf);
-	else
+	coord_t c = (board->fbook ? fbook_check(board) : pass);
+	if (is_pass(c))
 		c = engine->genmove(engine, board, ti_genmove, color, !strcasecmp(gtp->cmd, "kgs-genmove_cleanup"));
 		
-	struct move m = { *c, color };
+	struct move m = { .coord = c, .color = color };
 	if (board_play(board, &m) < 0) {
 		fprintf(stderr, "Attempted to generate an illegal move: [%s, %s]\n", coord2sstr(m.coord, board), stone2str(m.color));
 		abort();
 	}
-	char *str = coord2str(*c, board);
+	char *str = coord2sstr(c, board);
 	if (DEBUGL(4))
 		fprintf(stderr, "playing move %s\n", str);
-	if (DEBUGL(1) && debug_boardprint) {
+	if (DEBUGL(1) && debug_boardprint)
 		engine_board_print(engine, board, stderr);
-	}
 	gtp_reply(gtp, str, NULL);
-	free(str); coord_done(c);
 
 	/* Account for spent time. If our GTP peer keeps our clock, this will
 	 * be overriden by next time_left GTP command properly. */
@@ -409,8 +400,7 @@ cmd_set_free_handicap(struct board *board, struct engine *engine, struct time_in
 	char *arg;
 	next_tok(arg);
 	do {
-		coord_t *c = str2coord(arg, board_size(board));
-		m.coord = *c; coord_done(c);
+		m.coord = str2coord(arg, board_size(board));
 		if (DEBUGL(4))
 			fprintf(stderr, "setting handicap %d,%d\n", coord_x(m.coord, board), coord_y(m.coord, board));
 
@@ -591,6 +581,15 @@ cmd_pachi_result(struct board *board, struct engine *engine, struct time_info *t
 }
 
 static enum parse_code
+cmd_pachi_tunit(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+{
+	int res = unit_test_cmd(board, gtp->next);
+	char *str = (res ? "passed" : "failed");
+	gtp_reply(gtp, str, NULL);
+	return P_OK;
+}
+
+static enum parse_code
 cmd_kgs_chat(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
 {
 	char *loc;
@@ -707,6 +706,7 @@ static gtp_command_t commands[] =
 	{ "kgs-chat",               cmd_kgs_chat },
 
 	{ "pachi-predict",          cmd_pachi_predict },
+	{ "pachi-tunit",            cmd_pachi_tunit },
 	{ "pachi-genmoves",         cmd_pachi_genmoves },
 	{ "pachi-genmoves_cleanup", cmd_pachi_genmoves },
 	{ "pachi-gentbook",         cmd_pachi_gentbook },
@@ -716,12 +716,14 @@ static gtp_command_t commands[] =
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },
+	{ "tunit",		    cmd_pachi_tunit },
 
 	{ "gogui-analyze_commands", cmd_gogui_analyze_commands },
-	{ "gogui-live_gfx",         cmd_gogui_live_gfx },
-	{ "gogui-owner_map",        cmd_gogui_owner_map },
+	{ "gogui-livegfx",          cmd_gogui_livegfx },
+	{ "gogui-ownermap",         cmd_gogui_ownermap },
 	{ "gogui-best_moves",       cmd_gogui_best_moves },
 	{ "gogui-winrates",         cmd_gogui_winrates },
+
 	{ 0, 0 }
 };
 

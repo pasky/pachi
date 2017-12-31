@@ -6,7 +6,7 @@
 #include "board.h"
 #include "debug.h"
 #include "move.h"
-#include "joseki/base.h"
+#include "engines/josekibase.h"
 
 
 struct joseki_dict *
@@ -54,9 +54,7 @@ joseki_load(int bsize)
 		coord_t *cc = *ccp;
 		while (*line) {
 			assert(cc - *ccp < count);
-			coord_t *c = str2coord(line, bsize);
-			*cc++ = *c;
-			coord_done(c);
+			*cc++ = str2coord(line, bsize);
 			line += strcspn(line, " ");
 			line += strspn(line, " ");
 		}

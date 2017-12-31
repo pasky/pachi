@@ -18,9 +18,10 @@ struct board_ownermap {
 	sig_atomic_t playouts;
 	/* At the final board position, for each coordinate increase the
 	 * counter of appropriate color. */
-	sig_atomic_t (*map)[S_MAX]; // [board_size2(b)]
+	sig_atomic_t map[BOARD_MAX_COORDS][S_MAX];
 };
 
+void board_ownermap_init(struct board_ownermap *ownermap);
 void board_print_ownermap(struct board *b, FILE *f, struct board_ownermap *ownermap);
 void board_ownermap_fill(struct board_ownermap *ownermap, struct board *b);
 void board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownermap *src);
@@ -52,5 +53,10 @@ void board_ownermap_judge_groups(struct board *b, struct board_ownermap *ownerma
 /* Add groups of given status to mq. */
 struct move_queue;
 void groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s, struct move_queue *mq);
+
+/* Score estimate based on board ownermap. (positive: W wins) */
+float board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap);
+char *board_ownermap_score_est_str(struct board *b, struct board_ownermap *ownermap);
+enum point_judgement board_ownermap_score_est_coord(struct board *b, struct board_ownermap *ownermap, coord_t c);
 
 #endif

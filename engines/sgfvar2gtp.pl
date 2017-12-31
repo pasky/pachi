@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+# Script to convert Kogo joseki dictionary to GTP, see README_JOSEKI.
 # Convert SGF file to a sequence of GTP games, one game per each variation
 # that ends with /GOOD/ comment.
 

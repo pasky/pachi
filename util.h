@@ -6,6 +6,19 @@
 #include <string.h>
 
 
+#define MIN(a, b) ((a) < (b) ? (a) : (b));
+#define MAX(a, b) ((a) > (b) ? (a) : (b));
+
+/* Returns true if @str starts with @prefix */
+int str_prefix(char *prefix, char *str);
+
+/* Terminate with error msg */
+void die(const char *format, ...)  __attribute__ ((noreturn));
+
+/* Terminate after system call failure (calls perror()) */
+void fail(char *msg) __attribute__ ((noreturn));
+
+
 /**************************************************************************************************/
 /* Portability definitions. */
 
@@ -51,11 +64,9 @@ static inline void *
 checked_malloc(size_t size, char *filename, unsigned int line, const char *func)
 {
 	void *p = malloc(size);
-	if (!p) {
-		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY malloc(%u)\n",
-			filename, line, func, (unsigned) size);
-		exit(1);
-	}
+	if (!p)
+		die("%s:%u: %s: OUT OF MEMORY malloc(%u)\n",
+		    filename, line, func, (unsigned) size);
 	return p;
 }
 
@@ -63,22 +74,17 @@ static inline void *
 checked_calloc(size_t nmemb, size_t size, const char *filename, unsigned int line, const char *func)
 {
 	void *p = calloc(nmemb, size);
-	if (!p) {
-		fprintf(stderr, "%s:%u: %s: OUT OF MEMORY calloc(%u, %u)\n",
-			filename, line, func, (unsigned) nmemb, (unsigned) size);
-		exit(1);
-	}
+	if (!p)
+		die("%s:%u: %s: OUT OF MEMORY calloc(%u, %u)\n",
+		    filename, line, func, (unsigned) nmemb, (unsigned) size);
 	return p;
 }
 
 #define malloc2(size)        checked_malloc((size), __FILE__, __LINE__, __func__)
 #define calloc2(nmemb, size) checked_calloc((nmemb), (size), __FILE__, __LINE__, __func__)
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b));
-#define MAX(a, b) ((a) > (b) ? (a) : (b));
-
-/* Returns true if @str starts with @prefix */
-int str_prefix(char *prefix, char *str);
+#define checked_write(fd, pt, size)	(assert(write((fd), (pt), (size)) == (size)))
+#define checked_fread(pt, size, n, f)   (assert(fread((pt), (size), (n), (f)) == (n)))
 
 
 /**************************************************************************************************/
