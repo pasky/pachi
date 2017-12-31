@@ -1,0 +1,26 @@
+Index: src/Makefile
+===================================================================
+--- src.orig/Makefile	2018-08-05 20:53:52.000000000 +0100
++++ src/Makefile	2018-08-05 21:02:10.393659113 +0100
+@@ -10,7 +10,7 @@
+ # Otherwise you may do without to enable more aggressive optimizations
+ # for this machine only.
+ 
+-# GENERIC=1
++GENERIC=1
+ 
+ # Do you compile on Windows instead of Linux ?
+ # Please note that performance may not be optimal.
+@@ -82,9 +82,9 @@ DCNN=1
+ # Pachi will look for extra data files (such as dcnn, pattern, joseki or
+ # fuseki database) in system directory below in addition to current directory
+ # (or DATA_DIR environment variable if present).
+-PREFIX  ?= /usr/local
+-BINDIR  ?= $(PREFIX)/bin
+-DATADIR ?= $(PREFIX)/share/pachi
++PREFIX=$(DESTDIR)/usr
++BINDIR=$(PREFIX)/bin
++DATADIR=$(PREFIX)/share/pachi-go
+ 
+ # Generic compiler options. You probably do not really want to twiddle
+ # any of this.
