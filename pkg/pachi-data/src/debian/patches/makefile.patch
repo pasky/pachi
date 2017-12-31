@@ -1,0 +1,13 @@
+--- /dev/null
++++ b/Makefile
+@@ -0,0 +1,10 @@
++
++
++DATA_DIR=$(DESTDIR)/usr/share/pachi-go
++
++all:
++
++
++install:
++	install -d $(DATA_DIR)
++	install *.* $(DATA_DIR)/
