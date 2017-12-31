@@ -1,0 +1,21 @@
+keep provided build.h.git
+--- a/Makefile
++++ b/Makefile
+@@ -316,7 +316,7 @@ build.h: build.h.git Makefile
+ 	@cp build.h.git $@
+ 	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild >> $@
+ 
+-build.h.git: .git/HEAD .git/index
++build.h.git:
+ 	@./genbuild --git > $@
+ 
+ # Unit tests
+@@ -380,7 +380,7 @@ detlef54.prototxt detlef54.trained:
+ 
+ # Generic clean rule is in Makefile.lib
+ clean:: clean-recursive
+-	-@rm pachi build.h* >/dev/null 2>&1
++	-@rm pachi build.h >/dev/null 2>&1
+ 	@echo ""
+ 
+ clean-profiled:: clean-profiled-recursive
