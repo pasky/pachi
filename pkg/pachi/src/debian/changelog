@@ -1,0 +1,104 @@
+pachi-go (12.50.20200520-trusty1) trusty; urgency=medium
+
+  Pachi 12.50:
+
+  * fixed analyze issues in Sabaki
+  * automatically grow tree memory as needed
+  * fixed kgsgtp-3.5.20+ crashes (kgs-chat disabled by default now)
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Wed, 20 May 2020 09:26:32 +0200
+
+pachi-go (12.45.20200408-trusty1) trusty; urgency=medium
+
+  Pachi 12.45:
+
+  * --accurate-scoring: use GnuGo to compute dead stones at the end
+  * --fuseki-time stops after move 10 instead of 20
+  * endgame pass fixes
+  * fixed gtp undo timer issue
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Wed, 08 Apr 2020 12:52:32 +0200
+
+pachi-go (12.40.20190406-trusty1) trusty; urgency=medium
+
+  Pachi 12.40:
+
+  * speedup, about 20% faster
+  * multiple dcnns support: detlef44, detlef54, darkforest
+  * lz-genmove_analyze support (get winrates in sabaki etc)
+  * lz-analyze: handle frequency
+  * set engine options over gtp
+  * dcnn pondering fix
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 06 Apr 2019 14:30:32 +0200
+
+pachi-go (12.30.20190211-trusty1) trusty; urgency=medium
+
+  Pachi 12.30:
+
+  * lizzie support !
+  * dcnn pondering
+  * japanese rules: territory scoring in playouts
+  * full gtp undo
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Mon, 11 Feb 2019 17:30:39 +0200
+
+pachi-go (12.20.20181104-trusty1) trusty; urgency=medium
+
+  Pachi 12.20:
+
+  * dcnn: handle smaller board sizes
+  * don't play slack when taking handicap
+  * mm patterns fixes, better prediction rate
+  * use joseki engine when playing without dcnn
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sun, 04 Nov 2018 17:30:39 +0200
+
+pachi-go (12.10.20180805-trusty1) trusty; urgency=medium
+
+  Pachi 12.10:
+
+  * mm patterns
+  * playouts: handle bent-four, special sekis
+  * infrastructure fixes
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sun, 05 Aug 2018 19:39:39 +0200
+
+pachi-go (12.00.20180211-trusty1) trusty; urgency=medium
+
+  Pachi 12.00:
+
+  * dcnn support
+  * default settings changed, see readme
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 11 Feb 2018 18:14:39 +0200
+
+pachi-go (11.99.20180106-1~trusty1) trusty; urgency=medium
+
+  * Fixed debian versioning (upstream part should contain date)
+  * Pachi uses DATA_DIR, no need for debian wrapper anymore
+  * Updated git master (252890a) 2018-01-06
+    https://github.com/pasky/pachi
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 06 Jan 2018 13:14:39 +0200
+
+pachi-go (11.99~20171231~trusty1) trusty; urgency=medium
+
+  * Renamed pachi-engine to pachi-go
+  * Updated git my (97173d7) 2017-12-31
+    https://github.com/lemonsqueeze/pachi/tree/my
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 31 Dec 2017 08:15:39 +0200
+
+pachi-engine (11.99~20160806~ppa1~trusty1) trusty; urgency=medium
+
+  * New upstream version (latest git as of 2016-08-06)
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 06 Aug 2016 08:15:39 +0200
+
+pachi-engine (11.99~20160702~ppa4) trusty; urgency=low
+
+  * Initial release - Current upstream + seki branch
+    (https://github.com/lemonsqueeze/pachi/tree/seki)
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Thu, 07 Jul 2016 12:26:33 +0200
