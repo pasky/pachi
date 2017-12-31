@@ -134,6 +134,17 @@ spawn_thread_manager(void *ctx_)
 		t->root = tree_garbage_collect(t, t->root);
 	}
 
+	/* Make sure the root node is expanded. */
+	{
+		enum stone player_color = mctx->color;
+		struct tree_node *n = t->root;
+		enum stone node_color = stone_other(player_color);
+		assert(node_color == t->root_color);
+		
+		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
+			tree_expand_node(t, n, mctx->b, player_color, u, 1);
+	}
+	
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
 		struct uct_thread_ctx *ctx = malloc2(sizeof(*ctx));
@@ -504,7 +515,8 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	 * pass as well. For option stones_only, we pass only when there
 	 * there is nothing else to do, to show how to maximize score. */
 	if (b->moves > 1 && is_pass(b->last_move.coord) && b->rules != RULES_STONES_ONLY) {
-		if (uct_pass_is_safe(u, b, color, pass_all_alive)) {
+		char *msg;
+		if (uct_pass_is_safe(u, b, color, pass_all_alive, &msg)) {
 			if (UDEBUGL(0)) {
 				float score = -1 * board_official_score(b, &u->dead_groups);
 				fprintf(stderr, "<Will rather pass, looks safe enough. Final score: %s%.1f>\n",
@@ -514,12 +526,8 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 			best = u->t->root->children; // pass is the first child
 			assert(is_pass(node_coord(best)));
 			return best;
-		} else {
-			if (UDEBUGL(3))
-				fprintf(stderr, "Refusing to pass, unsafe; pass_all_alive %d, ownermap #playouts %d, raw score %.1f\n",
-				        pass_all_alive, u->ownermap.playouts,
-					-1 * board_official_score(b, &u->dead_groups));
 		}
+		if (UDEBUGL(0))	fprintf(stderr, "Refusing to pass: %s\n", msg);
 	}
 	
 	return best;

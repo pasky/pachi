@@ -2,53 +2,83 @@
 # Convert ascii board diagrams from board_print() to sgf.
 # Usage: ./board_print_to_sgf > foo.sgf
 #        copy paste the diagram, ^D
+# Handles komi and handicap if you include board header.
 
 use utf8;
 binmode STDIN, ":utf8";
 binmode STDOUT, ":utf8";
+
+# Parse board diagram line and set $size
+# Returns ($y, $stones, $post) or () if doesn't match
+my $size = 0;
+sub parse_board_line
+{
+    my ($line) = @_;
+    $line =~ s/·/./g;   # For color boards ...
+    if ($line !~ m/^ *([0-9]+) [ |]+(([.OX][ )])+)[ |]+/)  {  return ();  }
+
+    my ($y, $stones, $post) = ($1,  $2, $2);
+    $stones =~ s/[ )]//g;
+    $post   =~ s/[.OX]//g;
+    
+    if (!$size)  {  $size = length($stones);  }
+    if ($size != length($stones))  {  die "Error: Line doesn't match boardsize $size:\n$line\n";  }
+    return ($y, $stones, $post);
+}
 
 my $asdf = "abcdefghijklmnopqrstuvwxyz";
 
 sub coord2sgf
 {
     my ($x, $y) = @_;
-    $y = 19 + 1 - $y;
+    $y = $size - $y + 1;
     return substr($asdf, $x-1, 1) . substr($asdf, $y-1, 1);
 }
 
 my $ab = "";
 my $aw = "";
-my $size = 0;
+my $to_play = "B";
+my $komi = 7.5, $handicap = 0;
+my $last_move = "", $last_move_color = "";
+my $lines = 0;
 foreach my $s (<STDIN>)
 {
-    $s =~ s/·/./g;
-    # remove current move mark
-    $s =~ s/([OX.])\)/$1 /;
-    if ($s =~ m/^ ([ 1][0-9]) \| (([.OX] )+)\|/ ||
-	$s =~ m/^([ 1][0-9])  *(([.OX] )+) /)
+    # Get komi and handicap from board header, if present
+    if ($s =~ m/^Move: *[0-9]+ *Komi: ([0-9.-]+) *Handicap: ([0-9]+)/)
+    {  $komi = $1;  $handicap = $2; next;  }
+
+    if ($s =~ m/X\)/)  {  $to_play = "W"; $last_move_color = "B";  }
+    if ($s =~ m/O\)/)  {  $to_play = "B"; $last_move_color = "W";  }
+
+    if (my @t = parse_board_line($s))
     { 
-	my ($l, $s) = ($1, $2);
-	$s =~ s/ //g;
-	my @t = split("", $s);
+	$lines++;
+	my ($y, $stones, $post) = @t;
+	my @stones = split("", $stones);
+	my @post   = split("", $post);
 
-	$size = @t;
-	for (my $i = 0; $i < @t; $i++)
+	for (my $i = 0; $i < @stones; $i++)
 	{
-	    if ($t[$i] ne "X") { next; }
-	    $ab .= sprintf("[%s]", coord2sgf($i+1, $l)); 
-	}
+	    # Save and skip last move.
+	    if ($post[$i] eq ")")   {  $last_move = coord2sgf($i+1, $y);  next;  }
 
-	for (my $i = 0; $i < @t; $i++)
-	{
-	    if ($t[$i] ne "O") { next; }
-	    $aw .= sprintf("[%s]", coord2sgf($i+1, $l));
+	    if ($stones[$i] eq "X") {  $ab .= sprintf("[%s]", coord2sgf($i+1, $y));  }
+	    if ($stones[$i] eq "O") {  $aw .= sprintf("[%s]", coord2sgf($i+1, $y));  }
 	}
     }
 }
 
+# Sanity checks
+if (!$lines)          {  die "Error: no board diagram found !\n";  }
+if ($lines != $size)  {  die "Error: Expecting $size lines, found $lines instead ...\n";  }
+
 print "(;\n";
 print "SZ[$size]\n";
-print "KM[7.5]\n\n";
-if ($ab ne "") {  print "AB$ab\n"; }
-if ($aw ne "") {  print "AW$aw\n"; }
+print "RU[Chinese]\n";
+print "KM[$komi]\n";
+if ($handicap)  {  print "HA[$handicap]\n";  }
+if ($ab ne "")  {  print "AB$ab\n"; }
+if ($aw ne "")  {  print "AW$aw\n"; }
+if ($last_move) {  print ";${last_move_color}[$last_move]\n";  }
+else            {  print "PL[$to_play]\n";  }
 print ")\n";

@@ -270,7 +270,10 @@ is_middle_ladder_any(struct board *b, coord_t coord, group_t laddered, enum ston
 	assert(board_group_info(b, laddered).libs == 1);
 	assert(board_group_info(b, laddered).lib[0] == coord);
 	assert(board_at(b, laddered) == lcolor);
-
+	
+	if (is_selfatari(b, lcolor, coord))
+		return true;
+	
 	/* We could escape by countercapturing a group. */
 	struct move_queue ccq = { .moves = 0 };
 	can_countercapture(b, laddered, &ccq, 0);
@@ -289,17 +292,17 @@ wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chasel
 		fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
 			stone2str(lcolor), coord2sstr(escapelib, b), coord2sstr(chaselib, b));
 
-	if (!coord_is_8adjecent(escapelib, chaselib, b)) {
+	if (immediate_liberty_count(b, escapelib) != 2) {
 		if (DEBUGL(5))
-			fprintf(stderr, "cannot determine ladder for remote simulated stone\n");
+			fprintf(stderr, "no ladder, or overly trivial for a ladder\n");
 		return false;
 	}
 
-	if (neighbor_count_at(b, chaselib, lcolor) != 1 || immediate_liberty_count(b, chaselib) != 2) {
-		if (DEBUGL(5))
-			fprintf(stderr, "overly trivial for a ladder\n");
+	// FIXME should assert instead here
+	// See ~/src/pachi_bugs/silly_misread3 for example that breaks it
+	if (!board_is_valid_play(b, stone_other(lcolor), chaselib) ||
+	    is_selfatari(b, stone_other(lcolor), chaselib) )   // !can_play_on_lib() sortof       
 		return false;
-	}
 
 	bool is_ladder = false;
 	with_move(b, chaselib, stone_other(lcolor), {
@@ -315,7 +318,8 @@ wouldbe_ladder_any(struct board *b, group_t group, coord_t escapelib, coord_t ch
 {
 	assert(board_group_info(b, group).libs == 2);
 	assert(board_at(b, group) == lcolor);
-	
+
+	// FIXME should assert instead here	
 	if (!board_is_valid_play(b, stone_other(lcolor), chaselib) ||
 	    is_selfatari(b, stone_other(lcolor), chaselib) )   // !can_play_on_lib() sortof       
 		return false;
@@ -397,3 +401,63 @@ useful_ladder(struct board *b, group_t laddered)
 	});
 	return false;
 }
+
+static bool
+is_double_atari(struct board *b, coord_t c, enum stone color)
+{
+	if (board_at(b, c) != S_NONE ||
+	    immediate_liberty_count(b, c) < 2 ||  /* can't play there (hack) */
+	    neighbor_count_at(b, c, stone_other(color)) != 2)
+		return false;
+
+	int ataris = 0;
+	foreach_neighbor(b, c, {
+		if (board_at(b, c) == stone_other(color) &&
+		    board_group_info(b, group_at(b, c)).libs == 2)
+			ataris++;
+	});
+	
+	return (ataris >= 2);
+}
+
+static bool
+ladder_with_tons_of_double_ataris(struct board *b, group_t laddered, enum stone color)
+{
+	assert(board_at(b, laddered) == stone_other(color));
+
+	int double_ataris = 0;
+	foreach_in_group(b, laddered) {
+		coord_t stone = c;
+		foreach_diag_neighbor(b, stone) {
+			if (is_double_atari(b, c, stone_other(color)))
+				double_ataris++;
+		} foreach_diag_neighbor_end;
+	} foreach_in_group_end;
+
+	return (double_ataris >= 2);
+}
+
+bool
+harmful_ladder_atari(struct board *b, coord_t atari, enum stone color)
+{
+	assert(board_at(b, atari) == S_NONE);
+	
+	if (neighbor_count_at(b, atari, stone_other(color)) != 1)
+		return false;
+
+	foreach_neighbor(b, atari, {
+		if (board_at(b, c) != stone_other(color))
+			continue;
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)
+			continue;
+		
+		coord_t escape = board_group_other_lib(b, g, atari);
+		if (ladder_with_tons_of_double_ataris(b, g, color) &&              // getting ugly ...
+		    !wouldbe_ladder_any(b, g, escape, atari, stone_other(color)))  // and non-working ladder
+			return true;
+	});
+
+	return false;
+}
+

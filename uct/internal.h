@@ -137,7 +137,7 @@ struct uct {
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
-bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive);
+bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg);
 void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
 void uct_genmove_setup(struct uct *u, struct board *b, enum stone color);
 void uct_pondering_stop(struct uct *u);

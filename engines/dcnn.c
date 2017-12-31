@@ -18,7 +18,7 @@ dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	coord_t best_moves[DCNN_BEST_N];
 	dcnn_get_moves(b, color, r);
 	find_dcnn_best_moves(b, r, best_moves, best_r, DCNN_BEST_N);
-	print_dcnn_best_moves(NULL, b, best_moves, best_r, DCNN_BEST_N);
+	print_dcnn_best_moves(b, best_moves, best_r, DCNN_BEST_N);
 	
 	/* Make sure move is valid ... */
 	for (int i = 0; i < DCNN_BEST_N; i++) {
@@ -36,7 +36,7 @@ dcnn_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum st
 	float r[19 * 19];
 	dcnn_get_moves(b, color, r);
 	find_dcnn_best_moves(b, r, best_c, best_r, nbest);
-	print_dcnn_best_moves(NULL, b, best_c, best_r, nbest);
+	print_dcnn_best_moves(b, best_c, best_r, nbest);
 }	
 
 struct engine *

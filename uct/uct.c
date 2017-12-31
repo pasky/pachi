@@ -99,74 +99,83 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 }
 
 static void
-dead_group_list(struct uct *u, struct board *b, struct move_queue *mq, float thres)
+get_dead_groups(struct uct *u, struct board *b, struct move_queue *dead, struct move_queue *unclear)
 {
 	enum gj_state gs_array[board_size2(b)];
-	struct group_judgement gj = { .thres = thres, .gs = gs_array };
+	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
 	board_ownermap_judge_groups(b, &u->ownermap, &gj);
-	groups_of_status(b, &gj, GS_DEAD, mq);
+	dead->moves = unclear->moves = 0;
+	groups_of_status(b, &gj, GS_DEAD, dead);
+	groups_of_status(b, &gj, GS_UNKNOWN, unclear);
 }
 
-static void
-get_dead_groups(struct uct *u, struct board *b, struct move_queue *mq, bool unknown_color)
+/* Do we win counting, considering that given groups are dead ?
+ * Assumes ownermap is well seeded. */
+static bool
+pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue *mq,
+	     float ownermap_score, bool pass_all_alive, char **msg)
 {
-	struct move_queue relaxed;
-	relaxed.moves = mq->moves = 0;
-	dead_group_list(u, b, mq, GJ_THRES);	// Strict
-	dead_group_list(u, b, &relaxed, 0.55);  // Relaxed
+	int dame;
+	floating_t score = board_official_score_and_dame(b, mq, &dame);
+	if (color == S_BLACK)  score = -score;
+	//fprintf(stderr, "pass_is_safe():  %d score %f   dame: %i\n", color, score, dame);
 
-	/* Add own unclear dead groups if it doesn't change the outcome
-	 * and spare opponent a genmove_cleanup phase... */
-	if (!unknown_color) 
-	{
-		bool result = pass_is_safe(b, u->my_color, mq);
-		for (unsigned int i = 0; i < relaxed.moves; i++) {
-			group_t g = relaxed.move[i];
-			if (board_at(b, g) != u->my_color || mq_has(mq, g))
-				continue;
-			
-			struct move_queue tmp;  memcpy(&tmp, mq, sizeof(tmp));		       
-			mq_add(&tmp, g, 0);
-			if (result == pass_is_safe(b, u->my_color, &tmp))
-				mq_add(mq, g, 0);
-		}
+	/* Don't go to counting if position is not final.
+	 * If ownermap and official score disagree position is likely not final.
+	 * If too many dames also. */
+	if (!pass_all_alive) {
+		*msg = "score est and official score don't agree";
+		if (score != ownermap_score)  return false;
+		*msg = "too many dames";
+		if (dame > 20)	              return false;
 	}
+	
+	*msg = "losing on official score";
+	return (score >= 0);
 }
 
 bool
-uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive)
+uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg)
 {
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
 	while (u->ownermap.playouts < GJ_MINGAMES)
 		uct_playout(u, b, color, u->t);
 
 	/* Save dead groups for final_status_list dead. */
-	struct move_queue *mq = &u->dead_groups;  mq->moves = 0;
+	struct move_queue unclear;
+	struct move_queue *mq = &u->dead_groups;
 	u->dead_groups_move = b->moves;
-	bool unknown_color = !u->my_color;  assert(!unknown_color);
-	get_dead_groups(u, b, mq, unknown_color);
-
+	get_dead_groups(u, b, mq, &unclear);
+	
+	/* Unclear groups ? */
+	*msg = "unclear groups";
+	if (unclear.moves)  return false;
+	
 	if (pass_all_alive) {
-		for (unsigned int i = 0; i < mq->moves; i++) {
-			if (board_at(b, mq->move[i]) == stone_other(color)) {
-				return false; // We need to remove opponent dead groups first.
-			}
-		}
+		*msg = "need to remove opponent dead groups first";
+		for (unsigned int i = 0; i < mq->moves; i++)
+			if (board_at(b, mq->move[i]) == stone_other(color))
+				return false;
 		mq->moves = 0; // our dead stones are alive when pass_all_alive is true
 	}
+	
 	if (u->allow_losing_pass) {
+		*msg = "unclear point, clarify first";
 		foreach_point(b) {
-			if (board_at(b, c) == S_OFFBOARD)
-				continue;
-			if (board_ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN) {
-				if (UDEBUGL(3))
-					fprintf(stderr, "uct_pass_is_safe fails at %s[%d]\n", coord2sstr(c, b), c);
-				return false; // Unclear point, clarify first.
-			}
+			if (board_at(b, c) == S_OFFBOARD)  continue;
+			if (board_ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN)
+				return false;
 		} foreach_point_end;
 		return true;
 	}
-	return pass_is_safe(b, color, mq);
+
+	/* Check score estimate first, official score is off if position is not final */
+	*msg = "losing on score estimate";
+	floating_t score = board_ownermap_score_est(b, &u->ownermap);
+	if (color == S_BLACK)  score = -score;
+	if (score < 0)  return false;
+
+	return pass_is_safe(u, b, color, mq, score, pass_all_alive, msg);
 }
 
 static void
@@ -306,7 +315,6 @@ static void
 uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 {
 	struct uct *u = e->data;
-	bool unknown_color = !u->my_color;
 	
 	/* This means the game is probably over, no use pondering on. */
 	uct_pondering_stop(u);
@@ -334,7 +342,8 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	if (DEBUGL(2))
 		board_print_ownermap(b, stderr, &u->ownermap);
 
-	get_dead_groups(u, b, mq, unknown_color);
+	struct move_queue unclear;
+	get_dead_groups(u, b, mq, &unclear);
 	print_dead_groups(u, b, mq);
 
 	/* Clean up the mock state in case we will receive
@@ -454,6 +463,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 static void
 uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color)
 {
+	assert(!using_dcnn(b0));
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
 	u->pondering = true;
@@ -543,6 +553,7 @@ uct_livegfx_hook(struct engine *e)
 static struct tree_node *
 genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive, coord_t *best_coord)
 {
+	reset_dcnn_time();
 	double start_time = time_now();
 	struct uct *u = e->data;
 	u->pass_all_alive |= pass_all_alive;
@@ -567,9 +578,10 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 	best = uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, best_coord);
 
 	if (UDEBUGL(2)) {
-		double time = time_now() - start_time + 0.000001; /* avoid divide by zero */
+		double total_time = time_now() - start_time + 0.000001; /* avoid divide by zero */
+		double mcts_time  = total_time - get_dcnn_time();
 		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
-			time, (int)(played_games/time), (int)(played_games/time/u->threads));
+			total_time, (int)(played_games/mcts_time), (int)(played_games/mcts_time/u->threads));
 	}
 
 	uct_progress_status(u, u->t, color, played_games, best_coord);
@@ -746,7 +758,7 @@ uct_state_init(char *arg, struct board *b)
 	u->thread_model = TM_TREEVL;
 	u->virtual_loss = 1;
 
-	u->pondering_opt = true;
+	u->pondering_opt = false;
 
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
@@ -1354,6 +1366,11 @@ uct_state_init(char *arg, struct board *b)
 	if (!u->dynkomi)
 		u->dynkomi = board_small(b) ? uct_dynkomi_init_none(u, NULL, b)
 			: uct_dynkomi_init_linear(u, NULL, b);
+
+	if (u->pondering_opt && using_dcnn(b)) {
+		fprintf(stderr, "Can't use pondering with dcnn, pondering turned off.\n");
+		u->pondering_opt = false;
+	}
 
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */

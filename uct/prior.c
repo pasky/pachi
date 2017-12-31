@@ -78,7 +78,8 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 	coord_t best_moves[DCNN_BEST_N];
 	dcnn_get_moves(map->b, map->to_play, r);
 	find_dcnn_best_moves(map->b, r, best_moves, best_r, DCNN_BEST_N);
-	print_dcnn_best_moves(node, map->b, best_moves, best_r, DCNN_BEST_N);
+	if (UDEBUGL(2))
+		print_dcnn_best_moves(map->b, best_moves, best_r, DCNN_BEST_N);
 	
 	foreach_free_point(map->b) {
 		if (!map->consider[c])
@@ -207,18 +208,25 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
-	if (u->prior->prune_ladders && !board_playing_ko_threat(map->b)) {
-		foreach_free_point(map->b) {
+	struct board *b = map->b;
+	
+	if (u->prior->prune_ladders && !board_playing_ko_threat(b)) {
+		foreach_free_point(b) {
 			if (!map->consider[c])
 				continue;
 
-			group_t atari_neighbor = board_get_atari_neighbor(map->b, c, map->to_play);
-			if (atari_neighbor && is_ladder(map->b, c, atari_neighbor, true) &&
-			    !useful_ladder(map->b, atari_neighbor)) {
-				if (UDEBUGL(5))
-					fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c, map->b));
-				map->consider[c] = false;
+			/* Don't try to escape non-working ladders */
+			group_t atari_neighbor = board_get_atari_neighbor(b, c, map->to_play);
+			if (atari_neighbor && is_ladder(b, c, atari_neighbor, true) &&
+			    !useful_ladder(b, atari_neighbor)) {
+				if (UDEBUGL(5))	fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c, b));
+				map->consider[c] = false;  continue;
 			}
+
+			/* Don't atari non-working ladders */
+			if (harmful_ladder_atari(b, c, map->to_play))
+				map->consider[c] = false;
+
 		} foreach_free_point_end;
 	}
 

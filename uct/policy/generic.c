@@ -33,9 +33,15 @@ uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *
 			nbest2 = ni;
 		}
 	}
-	/* Play pass only if we can afford scoring. Call expensive uct_pass_is_safe() only if
-	 * pass is indeed the best move. */
-	if (is_pass(node_coord(nbest)) && !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive))
+
+	/* Play pass only if we can afford scoring. But don't be silly and start filling
+	 * eyes in case uct_pass_is_safe() gets stuck and never allows passing.
+	 * (endgame situation that can't be clarified ...)
+	 * Call expensive uct_pass_is_safe() only if pass is indeed the best move. */
+	char *msg;
+	if (is_pass(node_coord(nbest)) &&
+	    !uct_pass_is_safe(p->uct, b, color, p->uct->pass_all_alive, &msg) &&
+	    nbest2 && !board_is_one_point_eye(b, node_coord(nbest2), color))
 		return nbest2;
 	return nbest;
 }

@@ -24,6 +24,21 @@
 #define gi_granularity 4
 #define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
 
+static inline void
+board_addf(struct board *b, coord_t c)
+{
+	b->fmap[c] = b->flen; 
+	b->f[b->flen++] = c;
+}
+
+static inline void
+board_rmf(struct board *b, int f)
+{
+	/* Not bothering to delete fmap records,
+	 * Just keep the valid ones up to date. */
+	coord_t c = b->f[f] = b->f[--b->flen];
+	b->fmap[c] = f;
+}
 
 static void
 board_setup(struct board *b)
@@ -226,7 +241,7 @@ board_init_data(struct board *board)
 	/* All positions are free! Except the margin. */
 	for (i = board_size(board); i < (board_size(board) - 1) * board_size(board); i++)
 		if (i % board_size(board) != 0 && i % board_size(board) != board_size(board) - 1)
-			board->f[board->flen++] = i;
+			board_addf(board, i);
 
 #ifdef BOARD_PAT3
 	/* Initialize 3x3 pattern codes. */
@@ -737,7 +752,7 @@ board_remove_stone(struct board *board, group_t group, coord_t c, struct board_u
 
 	if (DEBUGL(6))
 		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
-	board->f[board->flen++] = c;
+	board_addf(board, c);
 }
 
 static int profiling_noinline
@@ -994,7 +1009,7 @@ board_play_outside(struct board *board, struct move *m, int f, struct board_undo
 	if (u)  
 		undo_save_group_info(board, coord, color, u);
 	else {
-		board->f[f] = board->f[--board->flen];
+		board_rmf(board, f);
 		if (DEBUGL(6))
 			fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 	}
@@ -1061,7 +1076,7 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 	}
 
 	if (!u) {
-		board->f[f] = board->f[--board->flen];
+		board_rmf(board, f);
 		if (DEBUGL(6))
 			fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
 	}
@@ -1185,15 +1200,8 @@ board_play_(struct board *board, struct move *m, struct board_undo *u)
 		return -1;
 	}
 
-	if (u)
-		return board_play_f(board, m, -1, u);
-	
-	int f;
-	for (f = 0; f < board->flen; f++)
-		if (board->f[f] == m->coord)
-			return board_play_f(board, m, f, u);
-
-	assert(0);  /* not reached */
+	int f = (u ? -1 : board->fmap[m->coord]);
+	return board_play_f(board, m, f, u);
 }
 
 int
@@ -1581,9 +1589,8 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 
 /* Tromp-Taylor Counting */
 floating_t
-board_official_score(struct board *board, struct move_queue *q)
+board_official_score_and_dame(struct board *board, struct move_queue *q, int *dame)
 {
-
 	/* A point P, not colored C, is said to reach C, if there is a path of
 	 * (vertically or horizontally) adjacent points of P's color from P to
 	 * a point of color C.
@@ -1620,14 +1627,21 @@ board_official_score(struct board *board, struct move_queue *q)
 	int scores[S_MAX];
 	memset(scores, 0, sizeof(scores));
 
+	*dame = 0;
 	foreach_point(board) {
 		assert(board_at(board, c) == S_OFFBOARD || ownermap[c] != 0);
-		if (ownermap[c] == 3)
-			continue;
+		if (ownermap[c] == 3) {  (*dame)++; continue;  }
 		scores[ownermap[c]]++;
 	} foreach_point_end;
 
 	return board->komi + (board->rules != RULES_SIMING ? board->handicap : 0) + scores[S_WHITE] - scores[S_BLACK];
+}
+
+floating_t
+board_official_score(struct board *board, struct move_queue *q)
+{
+	int dame;
+	return board_official_score_and_dame(board, q, &dame);
 }
 
 bool

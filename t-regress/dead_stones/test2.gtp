@@ -1,9 +1,7 @@
 boardsize 19
 clear_board
 komi 0.50
-fixed_handicap 2
-play B q16
-play B d4
+set_free_handicap q16 d4
 play W e17
 play B r3
 play W o17

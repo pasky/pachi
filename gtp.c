@@ -721,8 +721,15 @@ static gtp_command_t commands[] =
 	{ "gogui-analyze_commands", cmd_gogui_analyze_commands },
 	{ "gogui-livegfx",          cmd_gogui_livegfx },
 	{ "gogui-ownermap",         cmd_gogui_ownermap },
+	{ "gogui-score_est",        cmd_gogui_score_est },
 	{ "gogui-best_moves",       cmd_gogui_best_moves },
 	{ "gogui-winrates",         cmd_gogui_winrates },
+#ifdef DCNN
+	{ "gogui-dcnn_best",        cmd_gogui_dcnn_best },
+	{ "gogui-dcnn_colors",      cmd_gogui_dcnn_colors },
+	{ "gogui-dcnn_rating",      cmd_gogui_dcnn_rating },
+#endif /* DCNN */
+	{ "gogui-color_palette",    cmd_gogui_color_palette },
 
 	{ 0, 0 }
 };
