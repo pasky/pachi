@@ -1,0 +1,20 @@
+--- a/Makefile	2018-02-11 19:35:51.422723074 +0100
++++ b/Makefile	2018-02-11 19:59:41.583680023 +0100
+@@ -276,7 +276,7 @@
+          DOUBLE_FLOATING=$(DOUBLE_FLOATING) BOARDSIZE=$(BOARDSIZE) ./spudfrog
+ 
+ # Build info
+-build.h: .git/HEAD .git/index Makefile
++build.h:
+ 	+@make spudfrog
+ 	@echo "[make] build.h"
+ 	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild > $@
+@@ -321,7 +321,7 @@
+ 
+ # Generic clean rule is in Makefile.lib
+ clean:: clean-recursive
+-	-@rm pachi build.h >/dev/null 2>&1
++	-@rm pachi >/dev/null 2>&1
+ 	@echo ""
+ 
+ clean-profiled:: clean-profiled-recursive
