@@ -15,7 +15,7 @@ gitversion.h
 *.caffemodel
 *.orig
 *.rej
-pachi
-pachi.??*
+/pachi
+/pachi.??*
 tags
 TAGS

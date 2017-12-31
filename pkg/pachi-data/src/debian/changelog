@@ -1,0 +1,35 @@
+pachi-go-data (12.40-1) trusty; urgency=low
+
+  * Pachi 12.40 (Renamed dcnn files)
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 06 Apr 2019 14:30:32 +0200
+
+pachi-go-data (12.20-1) trusty; urgency=low
+
+  * Pachi 12.20 (Joseki engine)
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sun, 04 Nov 2018 17:30:37 +0200
+
+pachi-go-data (12.10-1) trusty; urgency=low
+
+  * Pachi 12.10 (MM patterns)
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sun, 05 Aug 2018 19:39:37 +0200
+
+pachi-go-data (12.00-1) trusty; urgency=low
+
+  * Pachi 12.00
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sun, 11 Feb 2018 18:30:37 +0200
+
+pachi-go-data (11.99.1-1~ppa1) trusty; urgency=low
+
+  * Changed paths
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Fri, 05 Jan 2018 18:30:37 +0200
+
+pachi-go-data (11.99~ppa1) trusty; urgency=low
+
+  * Initial release
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Fri, 08 Jul 2016 06:30:37 +0200
