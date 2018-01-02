@@ -547,7 +547,7 @@ uct_livegfx_hook(struct engine *e)
 {
 	struct uct *u = e->data;
 	/* Hack: Override reportfreq to get decent update rates in GoGui */
-	u->reportfreq = MIN(u->reportfreq, 250);
+	u->reportfreq = MIN(u->reportfreq, 1000);
 }
 
 static struct tree_node *
@@ -740,7 +740,7 @@ uct_state_init(char *arg, struct board *b)
 	bool pat_setup = false;
 
 	u->debug_level = debug_level;
-	u->reportfreq = 10000;
+	u->reportfreq = 1000;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
 	u->sure_win_threshold = 0.95;

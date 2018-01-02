@@ -211,7 +211,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 {
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
-	s->print_interval = u->reportfreq * u->threads;
+	s->print_interval = u->reportfreq;
 	s->fullmem = false;
 
 	if (ti) {
