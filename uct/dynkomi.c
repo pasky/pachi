@@ -158,9 +158,9 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 
 	/* Force white to feel behind and try harder, but not to the
 	 * point of resigning immediately in high handicap games.
-	 * By move 100 white should still be behind but should have
+	 * By move 150 white should still be behind but should have
 	 * caught up enough to avoid resigning. */
-	int moves = board_large(b) ? 100 : 50;
+	int moves = board_large(b) ? 150 : 50;
 	if (!board_small(b)) {
 		l->moves[S_BLACK] = moves;
 		l->moves[S_WHITE] = moves;
@@ -170,7 +170,7 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	 * But use a lower value to avoid being too pessimistic as black
 	 * or too optimistic as white. */
 	l->handicap_value[S_BLACK] = 8;
-	l->handicap_value[S_WHITE] = 1;
+	l->handicap_value[S_WHITE] = 8;
 
 	l->komi_ratchet = INFINITY;
 	l->green_zone = 0.85;

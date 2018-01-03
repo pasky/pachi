@@ -208,6 +208,17 @@ time_now(void)
 #endif
 }
 
+/* Get current time string, format like "Mar 15 07:39:50"
+ * Returns static buffer */
+char *
+time_str()
+{
+    static char buf[80];
+    time_t t = time(NULL);
+    strftime(buf, sizeof(buf), "%b %e %H:%M:%S", localtime(&t));
+    return buf;    
+}
+
 /* Sleep for a given interval (in seconds). Return immediately if interval < 0. */
 void
 time_sleep(double interval)

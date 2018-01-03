@@ -609,9 +609,9 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	floating_t rval = scale_value(u, b, node_color, significant, result);
 	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, &b2, rval);
 
-	stats_add_result(&t->avg_score, result / 2, 1);
+	stats_add_result(&t->avg_score, (float)result / 2, 1);
 	if (t->use_extra_komi) {
-		stats_add_result(&u->dynkomi->score, result / 2, 1);
+		stats_add_result(&u->dynkomi->score, (float)result / 2, 1);
 		stats_add_result(&u->dynkomi->value, rval, 1);
 	}
 
