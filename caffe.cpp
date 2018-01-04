@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/stat.h>
 
 #define CPU_ONLY 1
 #include <caffe/caffe.hpp>
@@ -28,19 +27,15 @@ caffe_ready()
 void
 caffe_init()
 {
-	if (net)
-		return;
-
-	const char *model_file =   get_data_file("golast19.prototxt");
-	const char *trained_file = get_data_file("golast.trained");
-	if (open_data_file(model_file) == NULL  ||  open_data_file(trained_file) == NULL) {
-		if (DEBUGL(1))
-			fprintf(stderr, "No dcnn files found, will not use dcnn code.\n");
-    close(model_file);
-    close(trained_file);
+	if (net)  return;
+	
+	char model_file[256];    get_data_file(model_file, "golast19.prototxt");
+	char trained_file[256];  get_data_file(trained_file, "golast.trained");
+	if (!file_exists(model_file) || !file_exists(trained_file)) {
+		if (DEBUGL(1))  fprintf(stderr, "No dcnn files found, will not use dcnn code.\n");
 		return;
 	}
-
+	
 	Caffe::set_mode(Caffe::CPU);       
 	
 	/* Load the network. */

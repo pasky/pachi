@@ -230,6 +230,9 @@ int main(int argc, char *argv[])
 		open_log_port(log_port);
 
 	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
+	if (DEBUGL(0) && getenv("DATA_DIR"))
+		fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
+	
 	fast_srandom(seed);
 	if (DEBUGL(0))
 		fprintf(stderr, "Random seed: %d\n", seed);

@@ -187,9 +187,9 @@ patternscan_done(struct engine *e)
 	/* Save newly found patterns. */
 
 	bool newfile = true;
-	FILE *f = fopen(spatial_dict_filename, "r");
+	FILE *f = fopen_data_file(spatial_dict_filename, "r");
 	if (f) { fclose(f); newfile = false; }
-	f = fopen(spatial_dict_filename, "a");
+	f = fopen_data_file(spatial_dict_filename, "a");
 	if (newfile)
 		spatial_dict_writeinfo(ps->pat.pc.spat_dict, f);
 

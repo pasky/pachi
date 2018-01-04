@@ -218,9 +218,9 @@ patterns_gen(struct pattern3s *p, char src[][11], int src_n)
 }
 
 static bool
-patterns_load(char src[][11], int src_n, char *filename)
+patterns_load(char src[][11], int src_n)
 {
-	FILE *f = fopen("moggy.patterns", "r");
+	FILE *f = fopen_data_file("moggy.patterns", "r");
 	if (!f) return false;
 
 	int i;
@@ -247,7 +247,7 @@ pattern3s_init(struct pattern3s *p, char src[][11], int src_n)
 {
 	char nsrc[src_n][11];
 
-	if (!patterns_load(nsrc, src_n, "moggy.patterns")) {
+	if (!patterns_load(nsrc, src_n)) {
 		/* Use default pattern set. */
 		for (int i = 0; i < src_n; i++)
 			strcpy(nsrc[i], src[i]);

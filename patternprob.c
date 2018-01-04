@@ -9,7 +9,6 @@
 #include "pattern.h"
 #include "patternsp.h"
 #include "patternprob.h"
-#include "util.h"
 
 
 /* We try to avoid needlessly reloading probability dictionary
@@ -26,7 +25,7 @@ pattern_pdict_init(char *filename, struct pattern_config *pc)
 
 	if (!filename)
 		filename = "patterns.prob";
-	FILE *f = fopen(get_data_file(filename), "r");
+	FILE *f = fopen_data_file(filename, "r");
 	if (!f) {
 		if (DEBUGL(1))
 			fprintf(stderr, "No pattern probtable, will not use learned patterns.\n");

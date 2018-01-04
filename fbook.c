@@ -68,7 +68,7 @@ fbook_init(char *filename, struct board *b)
 	    && fbcache->handicap == b->handicap)
 		return fbcache;
 
-	FILE *f = fopen(filename, "r");
+	FILE *f = fopen_data_file(filename, "r");
 	if (!f) {
 		perror(filename);
 		return NULL;

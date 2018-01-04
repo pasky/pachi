@@ -9,7 +9,6 @@
 #include "debug.h"
 #include "pattern.h"
 #include "patternsp.h"
-#include "util.h"
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). The array is ordered
@@ -395,7 +394,7 @@ spatial_dict_init(bool will_append, bool hash)
 	if (cached_dict && !will_append)
 		return cached_dict;
 
-	FILE *f = fopen(get_data_file(spatial_dict_filename), "r");
+	FILE *f = fopen_data_file(spatial_dict_filename, "r");
 	if (!f && !will_append) {
 		if (DEBUGL(1))
 			fprintf(stderr, "No spatial dictionary, will not match spatial pattern features.\n");

@@ -70,7 +70,7 @@ To build Pachi with DCNN support:
   dependencies.
 - Edit Makefile, set DCNN=1, point it to where caffe is installed and build.
 
-Install dcnn files in current directory where pachi will run.  
+Install dcnn files in current directory.
 Detlef Schmicker's 54% dcnn can be found at:  
   http://physik.de/CNNlast.tar.gz
 
@@ -95,21 +95,8 @@ recommended to maximize efficient time allocation). However, most of these
 are accessible only via GTP, that is by the frontend keeping track of time,
 e.g. KGS or gogui.
 
-It's also possible to force time settings through the command line,
-see `pachi -h` for details:
-
-    -t =5000          Will not set the time per se, but number of Monte Carlo
-                      playouts per move. That is, Pachi will play fast on a fast
-                      computer, slow on a slow computer, but it should have fixed strength.
-
-    -t =5000:15000    Same but can continue up to 15000 playouts if best move is unclear.
-
-    -t 20             Sets number of seconds per move. Pachi will spend a little
-                      less to allow for network latency and other unexpected
-                      slowdowns. This is the same as one-period Japanese byoyomi.
-
-    -t _600           Sets the number of seconds for the whole game. Pachi will
-                      allocate time to fit the whole game in "sudden death" mode.
+It's also possible to force time settings via the command line (GTP
+time settings are ignored then), see `pachi -h` for details.
 
 For example:
 
@@ -117,12 +104,14 @@ For example:
 
 This will make Pachi play with max 15000 playouts per move on 4 threads,
 taking up to 100Mb of memory (+ several tens MiB as a constant overhead).
-It should be about 2d with dcnn support.
+It should be about 2d with dcnn and large patterns setup.
 
 	./pachi -t _1200 threads=8,max_tree_size=3072,pondering
 
 This will make Pachi play with time settings 20:00 S.D. with 8 threads,
 taking up to 3GiB of memory, and thinking during the opponent's turn as well.
+
+**Opening book**
 
 Pachi can use an opening book in a Fuego-compatible format - you can
 obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
@@ -133,6 +122,8 @@ with the -f parameter:
 You may wish to append some custom Pachi opening book lines to book.dat;
 take them from the book.dat.extra file. If using the default Fuego book,
 you may want to remove the lines listed in book.dat.bad.
+
+**Large patterns**
 
 Pachi can also use a pattern database to improve its playing performance.  
 You can get it at http://pachi.or.cz/pat/ - you will also find further
@@ -147,6 +138,21 @@ you can get a pretty good idea by looking at the uct_state_init() function
 in uct/uct.c - you will find the list of UCT engine options there, each
 with a description. At any rate, usually the three options above are
 the only ones you really want to tweak.
+
+
+## Install
+
+After compiling and setting up data files you can install pachi with:
+
+    make install
+    make install-data
+
+Pachi will look for extra data files (such as dcnn, pattern, joseki or
+fuseki database) in pachi's system directory (/usr/local/share/pachi by
+default) as well as current directory.
+
+System data directory can be overridden at runtime by setting `DATA_DIR`
+environment variable.
 
 
 ## Analyze commands
