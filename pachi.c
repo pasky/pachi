@@ -50,7 +50,7 @@ enum engine_id {
 	E_MAX,
 };
 
-static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
+static engine_init_t engine_init[E_MAX] = {
 	engine_random_init,
 	engine_replay_init,
 	engine_patternscan_init,
@@ -64,7 +64,8 @@ static struct engine *(*engine_init[E_MAX])(char *arg, struct board *b) = {
 #endif
 };
 
-static struct engine *init_engine(enum engine_id engine, char *e_arg, struct board *b)
+static struct engine *
+init_engine(enum engine_id engine, char *e_arg, struct board *b)
 {
 	char *arg = e_arg? strdup(e_arg) : e_arg;
 	assert(engine < E_MAX);
@@ -73,9 +74,10 @@ static struct engine *init_engine(enum engine_id engine, char *e_arg, struct boa
 	return e;
 }
 
-static void usage(char *name)
+static void
+usage()
 {
-	fprintf(stderr, "Usage: %s [OPTIONS] [ENGINE_ARGS]\n\n", name);
+	fprintf(stderr, "Usage: pachi [OPTIONS] [ENGINE_ARGS]\n\n");
 	fprintf(stderr,
 		"Options: \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
@@ -122,6 +124,7 @@ static struct option longopts[] = {
 	{ "engine",      required_argument, 0, 'e' },
 	{ "fbook",       required_argument, 0, 'f' },
 	{ "gtp-port",    required_argument, 0, 'g' },
+	{ "help",        no_argument,       0, 'h' },
 	{ "log-port",    required_argument, 0, 'l' },
 	{ "rules",       required_argument, 0, 'r' },
 	{ "seed",        required_argument, 0, 's' },
@@ -147,36 +150,24 @@ int main(int argc, char *argv[])
 
 	int opt;
 	int option_index;
-	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:l:r:s:t:u:v", longopts, &option_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:hl:r:s:t:u:v", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
 				break;
 			case 'e':
-				if (!strcasecmp(optarg, "random")) {
-					engine = E_RANDOM;
-				} else if (!strcasecmp(optarg, "replay")) {
-					engine = E_REPLAY;
-				} else if (!strcasecmp(optarg, "montecarlo")) {
-					engine = E_MONTECARLO;
-				} else if (!strcasecmp(optarg, "uct")) {
-					engine = E_UCT;
-				} else if (!strcasecmp(optarg, "distributed")) {
-					engine = E_DISTRIBUTED;
-				} else if (!strcasecmp(optarg, "patternscan")) {
-					engine = E_PATTERNSCAN;
-				} else if (!strcasecmp(optarg, "patternplay")) {
-					engine = E_PATTERNPLAY;
-				} else if (!strcasecmp(optarg, "joseki")) {
-					engine = E_JOSEKI;
+				if      (!strcasecmp(optarg, "random"))		engine = E_RANDOM;
+				else if (!strcasecmp(optarg, "replay"))		engine = E_REPLAY;
+				else if (!strcasecmp(optarg, "montecarlo"))	engine = E_MONTECARLO;
+				else if (!strcasecmp(optarg, "uct"))		engine = E_UCT;
+				else if (!strcasecmp(optarg, "distributed"))	engine = E_DISTRIBUTED;
+				else if (!strcasecmp(optarg, "patternscan"))	engine = E_PATTERNSCAN;
+				else if (!strcasecmp(optarg, "patternplay"))	engine = E_PATTERNPLAY;
+				else if (!strcasecmp(optarg, "joseki"))		engine = E_JOSEKI;
 #ifdef DCNN
-				} else if (!strcasecmp(optarg, "dcnn")) {
-					engine = E_DCNN;
+				else if (!strcasecmp(optarg, "dcnn"))		engine = E_DCNN;
 #endif
-				} else {
-					fprintf(stderr, "%s: Invalid -e argument %s\n", argv[0], optarg);
-					exit(1);
-				}
+				else die("%s: Invalid -e argument %s\n", argv[0], optarg);
 				break;
 			case 'd':
 				debug_level = atoi(optarg);
@@ -190,6 +181,9 @@ int main(int argc, char *argv[])
 			case 'g':
 				gtp_port = strdup(optarg);
 				break;
+			case 'h':
+				usage();
+				exit(0);
 			case 'l':
 				log_port = strdup(optarg);
 				break;
@@ -208,18 +202,14 @@ int main(int argc, char *argv[])
 				 * by number of simulations in timed games. */
 				/* Please see timeinfo.h:time_parse()
 				 * description for syntax details. */
-				if (!time_parse(&ti_default, optarg)) {
-					fprintf(stderr, "%s: Invalid -t argument %s\n", argv[0], optarg);
-					exit(1);
-				}
+				if (!time_parse(&ti_default, optarg))
+					die("%s: Invalid -t argument %s\n", argv[0], optarg);
 				ti_default.ignore_gtp = true;
 				assert(ti_default.period != TT_NULL);
 				break;
 			case OPT_FUSEKI_TIME:
-				if (!time_parse(&ti_fuseki, optarg)) {
-					fprintf(stderr, "%s: Invalid --fuseki-time argument %s\n", argv[0], optarg);
-					exit(1);
-				}
+				if (!time_parse(&ti_fuseki, optarg))
+					die("%s: Invalid --fuseki-time argument %s\n", argv[0], optarg);
 				ti_fuseki.ignore_gtp = true;
 				assert(ti_fuseki.period != TT_NULL);
 				break;
@@ -230,7 +220,7 @@ int main(int argc, char *argv[])
 				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
 				exit(0);
 			default: /* '?' */
-				usage(argv[0]);
+				usage();
 				exit(1);
 		}
 	}
@@ -245,12 +235,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init(fbookfile);
-	if (ruleset) {
-		if (!board_set_rules(b, ruleset)) {
-			fprintf(stderr, "Unknown ruleset: %s\n", ruleset);
-			exit(1);
-		}
-	}
+	if (ruleset && !board_set_rules(b, ruleset))
+		die("Unknown ruleset: %s\n", ruleset);
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
@@ -268,15 +254,13 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	if (gtp_port) {
+	if (gtp_port)
 		open_gtp_connection(&gtp_sock, gtp_port);
-	}
 
 	for (;;) {
 		char buf[4096];
 		while (fgets(buf, 4096, stdin)) {
-			if (DEBUGL(1))
-				fprintf(stderr, "IN: %s", buf);
+			if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
 
 			enum parse_code c = gtp_parse(b, e, ti, buf);
 			if (c == P_ENGINE_RESET) {
