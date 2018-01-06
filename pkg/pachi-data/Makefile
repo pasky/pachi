@@ -12,8 +12,8 @@
 
 
 # Debian package name
-BASE=pachi-go-data_11.99
-NAME=pachi-go-data_11.99-1~ppa2
+BASE=pachi-go-data_12.00
+NAME=pachi-go-data_12.00-1
 
 
 ################################################################

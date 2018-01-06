@@ -1,5 +1,5 @@
 # To package a new version of Pachi:
-#   pick new package name and branch
+#   pick new package name and branch (this Makefile)
 #   add an entry to debian/changelog for target distribution
 #   change version where appropriate:
 #                  patches/makefile-and-version.patch
@@ -11,8 +11,8 @@
 
 
 # Debian package name
-BASE=pachi-go_11.99
-NAME=pachi-go_11.99-1~20180105~trusty1
+BASE=pachi-go_12.00.20180211
+NAME=pachi-go_12.00.20180211-trusty1
 
 # Which branch to package ?
 GIT_BRANCH=master
@@ -51,7 +51,9 @@ checkout:
 	   git init &&     \
            git remote add -f origin ../../../.git  && \
            git checkout $(GIT_BRANCH)              && \
-	   make gitversion.h
+	   QUILT_PATCHES=../src/debian/patches quilt push -a  && \
+	   make  build.h   && \
+           quilt pop -a
 
 
 ################################################################

@@ -1,4 +1,10 @@
-pachi-go-data (11.99-1~ppa2) trusty; urgency=low
+pachi-go-data (12.00-1) trusty; urgency=low
+
+  * Pachi 12.00
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sun, 11 Feb 2018 18:30:37 +0200
+
+pachi-go-data (11.99.1-1~ppa1) trusty; urgency=low
 
   * Changed paths
 

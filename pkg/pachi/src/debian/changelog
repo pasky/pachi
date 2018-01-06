@@ -1,14 +1,22 @@
-pachi-go (11.99-1~20180105~trusty1) trusty; urgency=medium
+pachi-go (12.00.20180211-trusty1) trusty; urgency=medium
 
-  * Updated git b002e0a (data_dir) 2018-01-05
+  * Pachi 12.00
+
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 11 Feb 2018 18:14:39 +0200
+
+pachi-go (11.99.20180106-1~trusty1) trusty; urgency=medium
+
+  * Fixed debian versioning (upstream part should contain date)
+  * Pachi uses DATA_DIR, no need for debian wrapper anymore
+  * Updated git master (252890a) 2018-01-06
     https://github.com/pasky/pachi
-    Pachi uses DATA_DIR, no need for wrapper anymore
 
- -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 05 Jan 2018 13:14:39 +0200
+ -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 06 Jan 2018 13:14:39 +0200
 
 pachi-go (11.99~20171231~trusty1) trusty; urgency=medium
 
-  * Updated git 97173d7 (my) 2017-12-31
+  * Renamed pachi-engine to pachi-go
+  * Updated git my (97173d7) 2017-12-31
     https://github.com/lemonsqueeze/pachi/tree/my
 
  -- lemonsqueeze <lemonsqueeze@gmx.com>  Sat, 31 Dec 2017 08:15:39 +0200
