@@ -50,19 +50,19 @@ CAFFE_PREFIX=/usr/local/caffe
 # PROFILING=perftools
 
 
-# Target directories when running `make install`. Note that this is NOT
-# quite supported yet - Pachi will work fine, but will always look for
-# extra data files (such as pattern, joseki or fuseki database) only
-# in the current directory, bundled database files will not be installed
-# in a system directory or loaded from there.
-PREFIX=/usr/local
-BINDIR=$(PREFIX)/bin
+# Target directories when running 'make install' / 'make install-data'.
+# Pachi will look for extra data files (such as dcnn, pattern, joseki or
+# fuseki database) in system directory below in addition to current directory
+# (or DATA_DIR environment variable if present).
+PREFIX?=/usr/local
+BINDIR?=$(PREFIX)/bin
+DATADIR?=$(PREFIX)/share/pachi
 
 # Generic compiler options. You probably do not really want to twiddle
 # any of this.
 # (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
 # unless PROFILING=gprof.)
-CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE
+CUSTOM_CFLAGS?=-Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE -DDATA_DIR=\"$(DATADIR)\"
 CUSTOM_CXXFLAGS?=-Wall -ggdb3 -O3
 
 ### CONFIGURATION END
@@ -147,6 +147,7 @@ ifdef DCNN
 endif
 # Low-level dependencies last
 SUBDIRS=uct uct/policy playout tactics t-unit t-predict distributed engines
+DATAFILES=patterns.prob patterns.spat book.dat golast19.prototxt golast.trained joseki19.pdict
 
 all: gitversion.h all-recursive pachi
 
@@ -173,7 +174,19 @@ gitversion.h: .git/HEAD .git/index
 
 # install-recursive?
 install:
-	$(INSTALL) ./pachi $(DESTDIR)$(BINDIR)
+	$(INSTALL) -d $(BINDIR)
+	$(INSTALL) pachi $(BINDIR)/
+
+install-data:
+	$(INSTALL) -d $(DATADIR)
+	@for file in $(DATAFILES); do                               \
+		if [ -f $$file ]; then                              \
+                        echo $(INSTALL) $$file $(DATADIR)/;         \
+			$(INSTALL) $$file $(DATADIR)/;              \
+		else                                                \
+			echo "Warning: $$file datafile is missing"; \
+                fi                                                  \
+	done;
 
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive

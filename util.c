@@ -3,8 +3,57 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <sys/stat.h>
 #include "util.h"
 
+int
+file_exists(const char *name)
+{
+	struct stat st;
+	return (stat(name, &st) == 0);
+}
+
+#ifndef DATA_DIR
+#define DATA_DIR "/usr/local/share/pachi"
+#endif
+
+void
+get_data_file_(char buffer[], int size, const char *filename)
+{
+	struct stat st;
+	strbuf_t strbuf;
+	
+	/* Try current directory first. */
+	if (stat(filename, &st) == 0) {
+		strbuf_t *buf = strbuf_init(&strbuf, buffer, size);
+		sbprintf(buf, "%s", filename);
+		return;
+	}
+	
+	/* Try DATA_DIR environment variable / default */
+	const char *data_dir = (getenv("DATA_DIR") ? getenv("DATA_DIR") : DATA_DIR);
+	{
+		strbuf_t *buf = strbuf_init(&strbuf, buffer, size);
+		sbprintf(buf, "%s/%s", data_dir, filename);
+		if (stat(buf->str, &st) == 0)
+			return;
+	}
+
+	/* Not found, copy filename. */
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, size);
+	sbprintf(buf, "%s", filename);
+}
+
+FILE *
+fopen_data_file(const char *filename, const char *mode)
+{
+	FILE *f = fopen(filename, mode);
+	if (f)  return f;
+
+	char buf[256];
+	get_data_file(buf, filename);
+	return fopen(buf, mode);
+}
 
 #ifdef _WIN32
 

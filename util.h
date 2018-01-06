@@ -18,6 +18,21 @@ void die(const char *format, ...)  __attribute__ ((noreturn));
 /* Terminate after system call failure (calls perror()) */
 void fail(char *msg) __attribute__ ((noreturn));
 
+int file_exists(const char *name);
+
+/**************************************************************************************************/
+/* Data files */
+
+/* Lookup data file in the following places:
+ * 1) Current directory
+ * 2) DATA_DIR environment variable / compile time default
+ * Copies first match to @buffer (if no match @filename is still copied). */
+#define get_data_file(buffer, filename)    get_data_file_(buffer, sizeof(buffer), filename)
+void get_data_file_(char buffer[], int size, const char *filename);
+
+/* get_data_file() + fopen() */
+FILE *fopen_data_file(const char *filename, const char *mode);
+
 
 /**************************************************************************************************/
 /* Portability definitions. */
