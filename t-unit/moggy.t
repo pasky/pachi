@@ -15,7 +15,7 @@ moggy moves		# Sample white moves after black c3
 
 % Moggy status: Check outcome after some moggy games
 boardsize 9
-O . O . . O . . .
+O . O . . O . X .
 . O . O . O O X .
 . O . . O O X X O
 . . O)O O X O O O
@@ -25,8 +25,8 @@ O . O . . O . . .
 X X X O . . X X X
 X O . . O . . . O
 
-moggy status h8      
-moggy status h8 b5   # Check h8 and b5 status
+moggy status h8 ?     
+moggy status h8 x   b5 X   a9 O		# Check h8, b5 and a9 status
 
 
 
@@ -52,5 +52,5 @@ boardsize 19
 . . . . . . . . . . . . . . . . . . .
 . . . . . . . . . . . . . . . . . . .
 
-moggy status c17
+moggy status c17 ?
 

@@ -12,7 +12,7 @@ X O O O O O . O O
 O)O . O O . O . O
 
 moggy moves
-moggy status d9 e9 f9
+moggy status d9 O   e9 :   f9 X 
 
 
 % Nakade move breaking seki  FIXME
@@ -25,7 +25,7 @@ O O O O X O .
 . O O O X O O
 O . O O X O).
 
-moggy status f1         # Shouldn't nakade here !
+!moggy status f1 O        # Shouldn't nakade here !
 
 
 % Nakade move breaking seki  FIXME
@@ -38,7 +38,7 @@ O O O O X X X
 . O O O X . O
 O . O O X O).
 
-moggy status f1         # Shouldn't nakade here !
+!moggy status f1 O        # Shouldn't nakade here !
 
 
 % False eye seki  FIXME
@@ -51,7 +51,7 @@ O . O X X X .
 . O)O X O O X
 . . O X . O .
 
-moggy status f3         # Shouldn't fill false eye ...
+!moggy status f3 X        # Shouldn't fill false eye ...
 
 
 % Don't break seki
@@ -64,7 +64,7 @@ boardsize 7
 . . X X O O O
 . . . X X X).
 
-moggy status g6
+moggy status g6 O   f5 :   g4 X
 
 
 % Ok to break seki
@@ -77,7 +77,7 @@ boardsize 7
 . . X X O O O
 . . . X X X).
 
-moggy status g4
+moggy status g4 O
 
 
 % Must break seki !
@@ -92,7 +92,7 @@ boardsize 9
 . . . X X X X X .
 . . . . . . . . .
 
-moggy status g4
+moggy status g4 O
 
 
 % Early seki (3-stones)
@@ -117,7 +117,7 @@ boardsize 19
 . . . . . . . . . . . . . X X O O). .
 . . . . . . . . . . . . . . . . . . .
 
-moggy status t12
+moggy status t12 X
 
 % Early seki (5-stones)  FIXME
 boardsize 19
@@ -141,4 +141,4 @@ boardsize 19
 . . . . . . . . . . . . . X X O O). .
 . . . . . . . . . . . . . . . . . . .
 
-moggy status t12
+!moggy status t12 X

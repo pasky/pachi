@@ -435,32 +435,51 @@ test_moggy_moves(struct board *b, char *arg)
  * Board last move matters quite a lot and must be set.
  *
  * Syntax:
- *   moggy status coord [coord...] 
+ *   moggy status coord [x|o] [coord...]       coord owned by b/w  >= 67%
+ *   moggy status coord [X|O] [coord...]       coord owned by b/w  >= 80%
+ *   moggy status coord   :   [coord...]       coord dame          >= 67%
+ *   moggy status coord   ?   [coord...]       just check status, test never fails
  */
 static bool
 test_moggy_status(struct board *b, char *arg)
 {
 	int games = 4000;
-	coord_t status_at[10];
+	coord_t              status_at[10];
+	enum point_judgement expected[10];
+	int                  thres[10];
 	int n = 0;
 	
 	next_arg(arg);
-	while (*arg) {
+	for (n = 0; *arg; n++) {
 		if (!isalpha(*arg))  die("Invalid arg: '%s'\n", arg);
-		status_at[n++] = str2coord(arg, board_size(b));
+		status_at[n] = str2coord(arg, board_size(b));
+		next_arg(arg);
+
+		if (!*arg || strlen(arg) != 1) die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n], b));
+		thres[n] = 67;
+		if (!strcmp(arg, "X") || !strcmp(arg, "O" )) thres[n] = 80;
+		if      (!strcasecmp(arg, "x"))  expected[n] = PJ_BLACK;
+		else if (!strcasecmp(arg, "o"))  expected[n] = PJ_WHITE;
+		else if (!strcasecmp(arg, ":"))  expected[n] = PJ_DAME;
+		else if (!strcasecmp(arg, "?"))  { expected[n] = PJ_BLACK; thres[n] = 0;  }
+		else    die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n], b));
 		next_arg(arg);
 	}
+	args_end();
 	
 	if (!tunit_over_gtp) assert(last_move_set);
 	
 	enum stone color = (is_pass(b->last_move.coord) ? S_BLACK : stone_other(b->last_move.color));
 	board_print(b, stderr);
 	if (DEBUGL(1)) {
+		if (optional) fprintf(stderr, "(OPTIONAL) ");
 		fprintf(stderr, "moggy status ");
-		for (int i = 0; i < n; i++)
-			fprintf(stderr, "%s%s", coord2sstr(status_at[i], b), (i != n-1 ? " " : ""));
-		fprintf(stderr, ", %s to play. Playing %i games ...\n", 
-		       stone2str(color), games);
+		for (int i = 0; i < n; i++) {
+			char *chr = (thres[i] == 80 ? ":XO," : ":xo,");
+			if (!thres[i])  chr = "????";
+			fprintf(stderr, "%s %c  ", coord2sstr(status_at[i], b),	chr[expected[i]]);
+		}
+		fprintf(stderr, "%s to play. Playing %i games ...\n", stone2str(color), games);
 	}
 	
 	struct playout_policy *policy = playout_moggy_init(NULL, b, NULL);
@@ -485,23 +504,31 @@ test_moggy_status(struct board *b, char *arg)
 	
 	int wr_black = wr * 100 / games;
 	int wr_white = (games - wr) * 100 / games;
-	if (wr_black > wr_white)
-		fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white);
-	else
-		fprintf(stderr, "Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
+	if (wr_black > wr_white)  fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white);
+	else		          fprintf(stderr, "Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
 
 	board_print_ownermap(b, stderr, &ownermap);
 
+	bool ret = true;
 	for (int i = 0; i < n; i++) {
 		coord_t c = status_at[i];
+		enum point_judgement j = board_ownermap_judge_point(&ownermap, c, 0.8);
+		if (j == PJ_UNKNOWN) j = board_ownermap_judge_point(&ownermap, c, 0.67);
 		enum stone color = (ownermap.map[c][S_BLACK] > ownermap.map[c][S_WHITE] ? S_BLACK : S_WHITE);
-		fprintf(stderr, "%3s owned by %s: %i%%\n", 
-			coord2sstr(c, b), stone2str(color), 
-			ownermap.map[c][color] * 100 / ownermap.playouts);
+		int pc = ownermap.map[c][color] * 100 / ownermap.playouts;
+		
+		if (j == PJ_DAME) {
+			pc = ownermap.map[c][S_NONE] * 100 / ownermap.playouts;
+			fprintf(stderr, "%3s           dame: %i%%  ", coord2sstr(c, b), pc);
+		} else  fprintf(stderr, "%3s owned by %s: %i%%  ", coord2sstr(c, b), stone2str(color), pc);
+		
+		if (!thres[i] || (j == expected[i] && pc >= thres[i]))
+			fprintf(stderr, "OK\n");
+		else {  fprintf(stderr, "FAILED\n"); ret = false;  }
 	}
 	
 	playout_policy_done(policy);
-	return true;   // Not much of a unit test right now =)
+	return ret;
 }
 
 bool board_undo_stress_test(struct board *orig, char *arg);

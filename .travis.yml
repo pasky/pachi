@@ -30,6 +30,7 @@ script:
   - ./pachi -u t-unit/useful_ladder.t
   - ./pachi -u t-unit/can_countercap.t
   - ./pachi -u t-unit/two_eyes.t
+  - ./pachi -u t-unit/moggy_seki.t
   - ./pachi -u t-unit/board_undo.t
 # check no dcnn build works
   - make clean

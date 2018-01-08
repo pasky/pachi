@@ -1,25 +1,49 @@
-% Simple semeai, 2 libs
+% Simple semeai, 2 libs, last move nearby
 boardsize 6
 X X O X O O
 X . O X . O
 X . O X . O
 . X X)O O .
-. . . . . .
-. . . . . .
+X . X O . .
+. X . . . .
 moggy moves
-moggy status c3    
+moggy status d6 o
 
-% Semeai 2 libs
+% Simple semeai, 2 libs
+boardsize 6
+X X O X O O
+X . O X . O
+X . O X . O
+. X X O O .
+. X . X O .
+. . X X)O .
+
+moggy status d6 o
+
+
+% Semeai 2 libs, last move nearby
 boardsize 6
 . . . . . .
 X)O O X X O
 X X X O O O
 . . X O . .
-. . X O . .
+X X X O O O
 . . X O . .
 
 moggy moves
-moggy status a5
+moggy status d5 o
+
+
+% Semeai 2 libs
+boardsize 6
+. . . . . .
+X O O X X O
+X X X O O O
+X). X O . .
+X X X O O O
+. . X O . .
+
+moggy status d5 o
 
 
 % Simple semeai, 3 libs
@@ -28,10 +52,10 @@ X . O X . O
 X . O X . O
 X . O X . O
 . X X)O O .
-. . . . . .
-. . . . . .
+X . X O . O
+. X . . O .
 moggy moves
-moggy status c3    
+moggy status d5 o
 
 
 % Semeai 3 libs
@@ -40,25 +64,23 @@ boardsize 6
 O O O X X X
 X)X X O O O
 . . X O . .
-. . X O . .
+X X X O O O
 . . X O . .
 
 moggy moves
-moggy status a4
+moggy status d5 o
 
-
-stop here
 
 % Simple semeai, 4 libs
-boardsize 6
-X . O X . O
-X . O X . O
-X . O X . O
-X . O X . O
-. X X)O O .
-. . . . . .
+boardsize 7
+X . O X . O .
+X . O X . O .
+X . O X . O .
+X . O X . O .
+. X X)O O . .
+X . X O . O .
+. X . . O . .
 moggy moves
-moggy status c2    
+moggy status d5 o
 
 
-stop here
