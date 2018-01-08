@@ -237,6 +237,9 @@ int main(int argc, char *argv[])
 	if (DEBUGL(0))
 		fprintf(stderr, "Random seed: %d\n", seed);
 
+	if (testfile)
+		return unit_test(testfile);
+
 	struct board *b = board_init(fbookfile);
 	if (ruleset && !board_set_rules(b, ruleset))
 		die("Unknown ruleset: %s\n", ruleset);
@@ -251,11 +254,6 @@ int main(int argc, char *argv[])
 	if (optind < argc)
 		e_arg = argv[optind];
 	struct engine *e = init_engine(engine, e_arg, b);
-
-	if (testfile) {
-		unit_test(testfile);
-		return 0;
-	}
 
 	if (gtp_port)
 		open_gtp_connection(&gtp_sock, gtp_port);

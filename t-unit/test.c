@@ -161,18 +161,19 @@ set_ko(struct board *b, char *arg)
 	b->ko.color = stone_other(last.color);
 }
 
+/* Optional test ? */
+static int optional = 0;
 
-#define PRINT_TEST(board)    \
-	board_print_test(2, board); \
-	if (DEBUGL(1))  \
-		fprintf(stderr, TEST_PRINTF)
+#define PRINT_TEST(board)					   \
+	board_print_test(2, board);				   \
+	if (DEBUGL(1) && optional) fprintf(stderr, "(OPTIONAL) "); \
+	if (DEBUGL(1))             fprintf(stderr, TEST_PRINTF)
 
 #define CHECK_TEST(rres, eres, board)			\
 	if (rres != eres) { \
 		if (debug_level <= 2) { \
 			board_print_test(0, board); \
-                        if (debug_level != 2) \
-				fprintf(stderr, TEST_PRINTF);	\
+                        if (debug_level != 2) fprintf(stderr, TEST_PRINTF); \
 		} \
 		fprintf(stderr, "FAILED (%d)\n", rres);	\
 	} \
@@ -554,7 +555,7 @@ unit_test_cmd(struct board *b, char *line)
 }
 
 
-void
+int
 unit_test(char *filename)
 {
 	tunit_over_gtp = 0;
@@ -562,42 +563,46 @@ unit_test(char *filename)
 	FILE *f = fopen(filename, "r");
 	if (!f)  fail(filename);
 	
-	int total = 0;
-	int passed = 0;
-	int skipped = 0;
+	int total = 0, passed = 0;
+	int total_opt = 0, passed_opt = 0;
 	
 	struct board *b = board_init(NULL);
 	b->komi = 7.5;
-	char line[256];
+	char buf[256]; char *line = buf;
 
-	while (fgets(line, sizeof(line), f)) {
+	while (fgets(line, sizeof(buf), f)) {
 		chomp(line);
 		remove_comments(line);
 		
+		optional = 0;
 		switch (line[0]) {
 			case '%': fprintf(stderr, "\n%s\n", line); continue;
-			case '!': fprintf(stderr, "%s...\tSKIPPED\n", line); skipped++; continue;
+			case '!':
+				optional = 1; line++;
+				line += strspn(line, " ");
+				break;
 			case  0 : continue;
 		}
 		
-		if      (!strncmp(line, "boardsize ", 10))  board_load(b, f, atoi(line + 10));
-		else if (!strncmp(line, "ko ", 3))	    set_ko(b, line + 3);
-		else {
-			total++;
-			passed += unit_test_cmd(b, line);
-		}
+		if (!strncmp(line, "boardsize ", 10))  {  board_load(b, f, atoi(line + 10)); continue;  }
+		if (!strncmp(line, "ko ", 3))	       {  set_ko(b, line + 3); continue;  }
+
+		if (optional)  {  total_opt++;  passed_opt += unit_test_cmd(b, line); }
+		else           {  total++;      passed     += unit_test_cmd(b, line); }
 	}
 
 	fclose(f);
-	
-	printf("\n\n----------- [  %i/%i tests passed (%i%%)  ] -----------\n\n", passed, total, passed * 100 / total);
- 	if (total == passed)
-		printf("\nAll tests PASSED");
-	else {
-		printf("\nSome tests FAILED\n");
-		exit(EXIT_FAILURE);
-	}
-	if (skipped > 0)
-		printf(", %d test(s) SKIPPED", skipped);
+
+	printf("\n\n");
+	printf("----------- [  %3i/%-3i mandatory tests passed (%i%%)  ] -----------\n", passed, total, passed * 100 / total);
+	if (total_opt)
+	printf("               %3i/%-3i  optional tests passed (%i%%)               \n\n", passed_opt, total_opt, passed_opt * 100 / total_opt);
+
+	int ret = 0;
+ 	if (total == passed)  printf("\nAll tests PASSED");
+	else               {  printf("\nSome tests FAILED");  ret = EXIT_FAILURE;  }
+	if (passed_opt != total_opt)
+		printf(", %d optional test(s) IGNORED", total_opt - passed_opt);
 	printf("\n");
+	return ret;
 }

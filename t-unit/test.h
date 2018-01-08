@@ -5,6 +5,6 @@
 int unit_test_cmd(struct board *b, char *line);
 
 /* run all unit tests in file */
-void unit_test(char *filename);
+int unit_test(char *filename);
 
 #endif
