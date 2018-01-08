@@ -11,7 +11,12 @@
 #include "tactics/dragon.h"
 #include "tactics/seki.h"
 
-
+/*  X X X   
+    X . O   (We're black here)
+    X X O   Are we about to break a 3-stones seki by playing at @coord ?
+    X . O   Assumes selfatari checks passed, so b has outside liberties.
+    X X X   
+*/
 bool
 breaking_3_stone_seki(struct board *b, coord_t coord, enum stone color)
 {

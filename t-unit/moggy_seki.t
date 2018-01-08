@@ -12,35 +12,10 @@ X O O O O O . O O
 O)O . O O . O . O
 
 moggy moves
-moggy status a1
+moggy status d9 e9 f9
 
 
-% Early seki
-boardsize 19
-. . . . . . . . . . . . . . . . . . .
-. . . . . . X O O O O . O O X . O . .
-. . . . . . X X X X X O O X . X O . .
-. . . X . . . . . . O X O X . X . O .
-. . X . . . . . . X . X X O X . . . .
-. . . . . . . . . X . X O O O O O . O
-. . X . . . X . . . O O X O O . . O O
-. . X O X . O X X . . O X X O X X X X
-. . O X X . X . . X O O X O O O X . O
-. . O O . . O . X . O X X X . O X X O
-. . . . . O . . . O O X X X X O X . O
-. . O . . . O O O O X O O O X X X X X
-. X O . . . . X X X X . . O O O O O .
-. X O . O . . X O O O O O X . O X . .
-. X O . . X . . X X X X X X O X . . .
-. X O X . . . . . . . . . O O X O O .
-. . X . . X . . . . . X X O X O X . .
-. . . . . . . . . . . . . X X O O). .
-. . . . . . . . . . . . . . . . . . .
-
-moggy status t11
-
-
-% Nakade move breaking seki
+% Nakade move breaking seki  FIXME
 boardsize 7
 . X O O O O O
 . X X X O X X
@@ -50,7 +25,46 @@ O O O O X O .
 . O O O X O O
 O . O O X O).
 
-!moggy status d1         # Eeek, shouldn't nakade here !
+moggy status f1         # Shouldn't nakade here !
+
+
+% Nakade move breaking seki  FIXME
+boardsize 7
+. X O O O . O
+. X X X O O O
+. X . O O X X
+. X . O X X .
+O O O O X X X
+. O O O X . O
+O . O O X O).
+
+moggy status f1         # Shouldn't nakade here !
+
+
+% False eye seki  FIXME
+boardsize 7
+X . X O . . .
+. X X O O . .
+X X O . . O O
+X O . O O X X
+O . O X X X .
+. O)O X O O X
+. . O X . O .
+
+moggy status f3         # Shouldn't fill false eye ...
+
+
+% Don't break seki
+boardsize 7
+. X . X X X .
+. X X X O O O
+. . X . O . X
+. . X . O O X
+. . X . O . X
+. . X X O O O
+. . . X X X).
+
+moggy status g6
 
 
 % Ok to break seki
@@ -79,3 +93,52 @@ boardsize 9
 . . . . . . . . .
 
 moggy status g4
+
+
+% Early seki (3-stones)
+boardsize 19
+. . . . . . . . . . . . . . . . . . .
+. . . . . . X O O O O . O O X . O . .
+. . . . . . X X X X X O O X . X O . .
+. . . X . . . . . . O X O X . X . O .
+. . X . . . . . . X . X X O X . . . .
+. . . . . . . . . X . X O O O O O . O
+. . X . . . X . . . O O X O O . . O O
+. . X O X . O X X . . O X X O X X X X
+. . O X X . X . . X O O X O O O X . O
+. . O O . . O . X . O X X X . O X X O
+. . . . . O . . . O O X X X X O X . O
+. . O . . . O O O O X O O O X X X X X
+. X O . . . . X X X X . . O O O O O .
+. X O . O . . X O O O O O X . O X . .
+. X O . . X . . X X X X X X O X . . .
+. X O X . . . . . . . . . O O X O O .
+. . X . . X . . . . . X X O X O X . .
+. . . . . . . . . . . . . X X O O). .
+. . . . . . . . . . . . . . . . . . .
+
+moggy status t12
+
+% Early seki (5-stones)  FIXME
+boardsize 19
+. . . . . . . . . . . . . . . . . . .
+. . . . . . X O O O O . O O X . O . .
+. . . . . . X X X X X O O X . X O . .
+. . . X . . . . . . O X O X . X . O .
+. . X . . . . . . X . X X O X . . . .
+. . . . . . . . . X . X O O O O O . O
+. . X . . . X . . . O O X O O . . O O
+. . X O X . O X X . . O X X O . X X X
+. . O X X . X . . X O O X O O X X . O
+. . O O . . O . X . O X X X . X . O O
+. . . . . O . . . O O X X X X X X O O
+. . O . . . O O O O X O O O X X X X X
+. X O . . . . X X X X . . O O O O O .
+. X O . O . . X O O O O O X . O X . .
+. X O . . X . . X X X X X X O X . . .
+. X O X . . . . . . . . . O O X O O .
+. . X . . X . . . . . X X O X O X . .
+. . . . . . . . . . . . . X X O O). .
+. . . . . . . . . . . . . . . . . . .
+
+moggy status t12

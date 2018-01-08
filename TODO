@@ -2,14 +2,47 @@ Docs:
 * Manual page - full usage documentation
 * GTP interface documentation
 
+Strength:
+* GPU mode
+        Use dcnn for all nodes in the tree instead of just the root node.
+        This should improve tree search quite a bit (1-2 stones stronger
+        maybe). Try progressive widening, value networks.
+* Tactics
+        With low playouts Pachi sometimes makes simple tactical blunders
+        which are costly (oiotoshi, cut and capture some stones ...)
+        Fixing those would help quite a bit.
+        -> better playouts / tree search ?
+* Scalability
+        On same machine cpu-only Hira (36I) scales better:
+           6000 playouts -> 2d      15000 playouts -> 3d
+        With 15000 playouts Pachi is 2d but increasing further doesn't
+        help. Find what can be improved (it's not just playouts).
+* Better playouts
+        Moggy playouts are fast but noisy and not always balanced.
+        There are some blind spots also. A good learnt, balanced policy
+        would make quite a difference. See darkforest playouts for
+        example (very slow though)
+* MM / LFR large patterns (CPU mode)
+        Use MM or LFR for priors instead of Stern-style patterns.
+        Large patterns have 21% prediction rate right now, but drop
+	to ~10% in middle game (see t-predict).
+        Can expect 34% with MM and 44% with LFR throughout the game
+        which should help tree search quite a bit. Implementation
+        doesn't even need to be fast (incremental patterns) to be used
+        in tree search. Try progressive widening.
+
 Base:
 * Further optimize board implementation, profiling fun
-* Clean up GTP interface, allow custom GTP commands for modules
-* gogui-friendly GTP interface
+* Allow custom GTP commands for modules
+* Improve gogui analyze commands:
+    - Average playouts score estimate would be nice to have
+      (already have ownermap score est)
+    - Way to visualize winrates while playing ? graph would be nice
 * Implement parameter setup over GTP (less important)
 * Fix the build system to allow fully parallel build
 	However, revamp to something like cmake (or, ugh, autotools)
 	is not guaranteed to be appreciated.
+
 
 Self-contained tasks:
 * Improving Pachi's game analysis features
@@ -25,15 +58,17 @@ Self-contained tasks:
 	patterns fourth line vs. fifth line just doesn't matter. Maybe
 	its max should be 2 and maybe it should just be gone, needs
 	regenerating the pattern database and benchmarking.
-* Develop dedicated playout handling for few common tactical situations
-	Monkey jump (and its followup sequences!), bent four in the
-	corner, ...
-* Fix seki recognition to be stable
-	Try to research and fix most cases harmed by selfatarirate=100
-	or find another way to fix seki.
+* Special sekis
+        Playouts handle most sekis correctly now, but there are still
+        some special cases it doesn't get right:
+           - 2-stones corner seki / false-eye seki: see t-unit/moggy_seki.t
+           - sekis which shouldn't be broken early, similar to
+             breaking_3_stones_seki() but with more than 3 stones.
 * Try to avoid using a hash table for 3x3 patterns
 	Instead autogenerate procedural matching code; may be more
 	efficient (the near-guaranteed L1 cache miss is fairly expensive).
+        Experimented with this but no luck so far, with a few optimizations
+        procedural code comes pretty close but still slower than hash table.
 * Optimizing our tree implementation for cache-efficiency
 	Statistics of all children of a parent node shall be contained
 	in an array of the parent node so that move evaluation during
@@ -67,7 +102,6 @@ Some heuristics to test:
 * Liberty maps (work in progress)
 * Implement a tsumego solver and apply it once per playout (stv insp.,
   see Eric van der Werf's PhD thesis?)
-* MM local-based patterns in playouts (work in progress, no luck so far)
 * Balanced local-based patterns?
 * Killer moves (redundant to RAVE?)
 * Reverse status learning
