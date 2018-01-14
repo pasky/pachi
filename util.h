@@ -47,9 +47,8 @@ FILE *fopen_data_file(const char *filename, const char *mode);
 #include <windows.h>
 #include <ctype.h>
 
+#define setenv(name, value, overwrite)  SetEnvironmentVariable(name, value)
 #define sleep(seconds) Sleep((seconds) * 1000)
-#define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
-#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -((LONG)b));
 
 /* MinGW gcc, no function prototype for built-in function stpcpy() */ 
 char *stpcpy (char *dest, const char *src);
