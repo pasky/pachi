@@ -26,9 +26,18 @@ the semi-random Monte Carlo playouts.  Large-scale board patterns
 are used in the tree search.
 
 
+## Binary Releases
+
+Windows: download [binary release](https://github.com/pasky/pachi/releases)
+for windows and follow instructions inside.
+
+Ubuntu: coming soon (there are old packages in my
+[ppa](https://launchpad.net/~lemonsqueeze/+archive/ubuntu/pachi) though)
+
+
 ## Installation
 
-To build Pachi, simply type:
+Currently *nix, Mac and Windows are supported. To build Pachi, simply type:
 
 	make
 
@@ -61,11 +70,15 @@ section at the top of the Makefile.
 Pachi can use a neural network as source of good moves to consider.
 This makes it about 1 stone stronger and makes the games
 more pretty. With dcnn support Pachi can also run on modest hardware
-with very few playouts, or even no playouts at all using the dcnn
-engine (it's about 1d strength).
+with very few playouts, or even no playouts at all using the raw dcnn
+engine (not recommended for actual play, pachi won't know when to pass
+or resign !).
+
+One drawback however is that pondering and dcnn can't be used at the same
+time right now (you should get a warning on startup).
 
 To build Pachi with DCNN support:
-- Install Caffe library (http://caffe.berkeleyvision.org)  
+- Install [Caffe](http://caffe.berkeleyvision.org)  
   CPU only build is fine, no need for GPU, cuda or the other optional
   dependencies.
 - Edit Makefile, set DCNN=1, point it to where caffe is installed and build.
@@ -74,21 +87,25 @@ Install dcnn files in current directory.
 Detlef Schmicker's 54% dcnn can be found at:  
   http://physik.de/CNNlast.tar.gz
 
-More information about this dcnn:  
-  http://computer-go.org/pipermail/computer-go/2015-December/008324.html
+More information about this dcnn [here](http://computer-go.org/pipermail/computer-go/2015-December/008324.html).
 
 If you want to use a network with different inputs you'll have to tweak
 dcnn.c to accomodate it. Pachi will check for `golast19.prototxt` and
 `golast.trained` files on startup and use them if present when
-playing on 19x19. For now dcnn and pondering can't be used together
-(you should get a warning on startup).
+playing on 19x19.
 
 
 ## How to run
 
-By default Pachi will run as many threads as processors, using up to 200Mb
-of memory for tree search and taking a little under 10 seconds per move.  You can
-adjust these parameters by passing it extra command line options.
+By default Pachi will run on all cores, using up to 200Mb of memory for tree
+search and taking a little under 10 seconds per move.  You can adjust these
+parameters by passing it extra command line options.
+
+For main options description try:
+
+        ./pachi --help
+
+**Time Settings**
 
 Pachi can smartly deal with a variety of time settings (canadian byoyomi
 recommended to maximize efficient time allocation). However, most of these
@@ -96,9 +113,13 @@ are accessible only via GTP, that is by the frontend keeping track of time,
 e.g. KGS or gogui.
 
 It's also possible to force time settings via the command line (GTP
-time settings are ignored then), see `pachi -h` for details.
+time settings are ignored then).
 
 For example:
+
+	./pachi -t 20
+
+Will make Pachi use 20s per move.
 
 	./pachi -t =5000:15000 threads=4,max_tree_size=100
 
@@ -106,12 +127,31 @@ This will make Pachi play with max 15000 playouts per move on 4 threads,
 taking up to 100Mb of memory (+ several tens MiB as a constant overhead).
 It should be about 2d with dcnn and large patterns setup.
 
-	./pachi -t _1200 threads=8,max_tree_size=3072,pondering
+	./pachi -t _1200 --no-dcnn threads=8,max_tree_size=3072,pondering
 
-This will make Pachi play with time settings 20:00 S.D. with 8 threads,
+This will make Pachi play without dcnn with time settings 20:00 S.D. with 8 threads,
 taking up to 3GiB of memory, and thinking during the opponent's turn as well.
 
+**Logs**
+
+Pachi logs details of its activity on stderr, which can be viewed via
+`Tools->GTP Shell` in gogui. Tons of details about winrates, memory usage,
+score estimate etc can be found here. Even though most of it available through
+other means in gogui, it's always a good place to look in case something
+unexpected happens.
+
+`-d <log_level>` changes the amount of logging (-d0 suppresses everything)  
+`-o log_file` logs to a file instead. gogui live-gfx commands won't work though.
+
+**Large patterns**
+
+Pachi can also use a pattern database to improve its playing performance.  
+You can get it at http://pachi.or.cz/pat/ - you will also find further
+instructions there.
+
 **Opening book**
+
+> Mostly useful when running without dcnn (dcnn can deal with fuseki).
 
 Pachi can use an opening book in a Fuego-compatible format - you can
 obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
@@ -123,15 +163,7 @@ You may wish to append some custom Pachi opening book lines to book.dat;
 take them from the book.dat.extra file. If using the default Fuego book,
 you may want to remove the lines listed in book.dat.bad.
 
-**Large patterns**
-
-Pachi can also use a pattern database to improve its playing performance.  
-You can get it at http://pachi.or.cz/pat/ - you will also find further
-instructions there.
-
-For main options description try:
-
-        ./pachi --help
+**Other Options**
 
 For now, there is no comprehensive documentation of engine options, but
 you can get a pretty good idea by looking at the uct_state_init() function
@@ -149,10 +181,8 @@ After compiling and setting up data files you can install pachi with:
 
 Pachi will look for extra data files (such as dcnn, pattern, joseki or
 fuseki database) in pachi's system directory (/usr/local/share/pachi by
-default) as well as current directory.
-
-System data directory can be overridden at runtime by setting `DATA_DIR`
-environment variable.
+default) as well as current directory. System data directory can be
+overridden at runtime by setting `DATA_DIR` environment variable.
 
 
 ## Analyze commands
