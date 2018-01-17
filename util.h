@@ -23,6 +23,10 @@ void fail(char *msg) __attribute__ ((noreturn));
 
 int file_exists(const char *name);
 
+/* windows: cd to pachi directory to avoid cwd issues. */
+void win_set_pachi_cwd(char *pachi);
+
+
 /**************************************************************************************************/
 /* Data files */
 
