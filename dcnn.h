@@ -6,6 +6,9 @@
 
 #define DCNN_BEST_N 20
 
+/* Don't try to load dcnn. */
+void disable_dcnn();
+
 void dcnn_get_moves(struct board *b, enum stone color, float result[]);
 bool using_dcnn(struct board *b);
 void dcnn_quiet_caffe(int argc, char *argv[]);
@@ -33,6 +36,7 @@ coord2dcnn_idx(coord_t c, struct board *b)
 #else
 
 
+#define disable_dcnn()
 #define using_dcnn(b)  0
 #define dcnn_quiet_caffe(argc, argv) 
 #define dcnn_init()

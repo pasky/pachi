@@ -92,6 +92,8 @@ usage()
 		"                                    connect to remote host. \n"
 		"  -h, --help                        show usage \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
+		"      --no-dcnn                     disable dcnn \n"
+		"  -o  --log-file FILE               log to FILE instead of stderr \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
 		"  -s, --seed RANDOM_SEED            set random seed \n"
@@ -147,7 +149,9 @@ static struct option longopts[] = {
 	{ "fbook",       required_argument, 0, 'f' },
 	{ "gtp-port",    required_argument, 0, 'g' },
 	{ "help",        no_argument,       0, 'h' },
+	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
+	{ "no-dcnn",     no_argument,       0, OPT_NO_DCNN },
 	{ "rules",       required_argument, 0, 'r' },
 	{ "seed",        required_argument, 0, 's' },
 	{ "time",        required_argument, 0, 't' },
@@ -159,7 +163,7 @@ static struct option longopts[] = {
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
-	struct time_info ti_default = { .period = TT_NULL };
+	struct time_info ti_default = { .period = TT_NULL };	
 	char *testfile = NULL;
 	char *gtp_port = NULL;
 	char *log_port = NULL;
@@ -167,6 +171,7 @@ int main(int argc, char *argv[])
 	char *chatfile = NULL;
 	char *fbookfile = NULL;
 	char *ruleset = NULL;
+	FILE *file = NULL;
 
 	win_set_pachi_cwd(argv[0]);
 
@@ -175,7 +180,7 @@ int main(int argc, char *argv[])
 	int opt;
 	int option_index;
 	/* Leading ':' -> we handle error messages. */
-	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:r:s:t:u:v", longopts, &option_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
@@ -216,6 +221,15 @@ int main(int argc, char *argv[])
 				exit(0);
 			case 'l':
 				log_port = strdup(optarg);
+				break;
+			case 'o':
+				file = fopen(optarg, "w");   if (!file) fail(optarg);
+				fclose(file);
+				freopen(optarg, "w", stderr);
+				setlinebuf(stderr);
+				break;
+			case OPT_NO_DCNN:
+				disable_dcnn();
 				break;
 			case 'r':
 				ruleset = strdup(optarg);
