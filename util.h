@@ -12,10 +12,13 @@
 /* Returns true if @str starts with @prefix */
 int str_prefix(char *prefix, char *str);
 
-/* Terminate with error msg */
+/* Warn user (popup on windows) */
+void warning(const char *format, ...);
+
+/* Warning + terminate process */
 void die(const char *format, ...)  __attribute__ ((noreturn));
 
-/* Terminate after system call failure (calls perror()) */
+/* Terminate after system call failure (similar to perror()) */
 void fail(char *msg) __attribute__ ((noreturn));
 
 int file_exists(const char *name);
@@ -49,6 +52,9 @@ FILE *fopen_data_file(const char *filename, const char *mode);
 
 #define setenv(name, value, overwrite)  SetEnvironmentVariable(name, value)
 #define sleep(seconds) Sleep((seconds) * 1000)
+
+/* Windows MessageBox() */
+#define popup(msg)	MessageBox(0, msg, "Pachi", MB_OK);
 
 /* MinGW gcc, no function prototype for built-in function stpcpy() */ 
 char *stpcpy (char *dest, const char *src);

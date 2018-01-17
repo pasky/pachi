@@ -90,6 +90,7 @@ usage()
 		"  -g, --gtp-port [HOST:]GTP_PORT    read gtp commands from network instead of stdin. \n"
 		"                                    listen on given port if HOST not given, otherwise \n"
 		"                                    connect to remote host. \n"
+		"  -h, --help                        show usage \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
@@ -171,7 +172,8 @@ int main(int argc, char *argv[])
 
 	int opt;
 	int option_index;
-	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:hl:r:s:t:u:v", longopts, &option_index)) != -1) {
+	/* Leading ':' -> we handle error messages. */
+	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:r:s:t:u:v", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
@@ -245,9 +247,12 @@ int main(int argc, char *argv[])
 			case 'v':
 				show_version(stdout);
 				exit(0);
+			case ':':
+				die("%s: Missing argument\n"
+				    "Try 'pachi --help' for more information.\n", argv[optind-1]);
 			default: /* '?' */
-				usage();
-				exit(1);
+				die("Invalid argument: %s\n"
+				    "Try 'pachi --help' for more information.\n", argv[optind-1]);
 		}
 	}
 

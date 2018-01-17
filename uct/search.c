@@ -285,9 +285,12 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 	}
 
 	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
-		if (UDEBUGL(2))
-			fprintf(stderr, "memory limit hit (%lu > %lu)\n",
-				ctx->t->nodes_size, u->max_tree_size);
+		char *msg = "WARNING: Tree memory limit reached, stopping search.\n"
+			    "Try increasing max_tree_size.\n";
+		if (UDEBUGL(2))  fprintf(stderr, "%s", msg);
+#ifdef _WIN32
+		popup(msg);
+#endif
 		s->fullmem = true;
 	}
 }

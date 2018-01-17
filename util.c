@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <errno.h>
 #include <sys/stat.h>
 #include "util.h"
 
@@ -82,14 +83,34 @@ str_prefix(char *prefix, char *str)
 	return (!strncmp(prefix, str, strlen(prefix)));
 }
 
+
+static void
+vwarning(const char *format, va_list ap)
+{
+	vfprintf(stderr, format, ap);
+
+#ifdef _WIN32    /* Display popup */	
+	char buf[2048];
+	vsnprintf(buf, sizeof(buf), format, ap);
+	popup(buf);
+#endif
+}
+
+void
+warning(const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	vwarning(format, ap);
+	va_end(ap);
+}
+
 void
 die(const char *format, ...)
 {
 	va_list ap;
 	va_start(ap, format);
-
-	vfprintf(stderr, format, ap);
-
+	vwarning(format, ap);
 	va_end(ap);
 	exit(EXIT_FAILURE);
 }
@@ -97,7 +118,7 @@ die(const char *format, ...)
 void
 fail(char *msg)
 {
-	perror(msg);
+	warning("%s: %s\n", msg, strerror(errno));
 	exit(42);
 }
 

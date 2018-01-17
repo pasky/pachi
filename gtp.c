@@ -202,6 +202,13 @@ cmd_boardsize(struct board *board, struct engine *engine, struct time_info *ti, 
 	char *arg;
 	next_tok(arg);
 	int size = atoi(arg);
+
+	/* Give sane error msg if pachi was compiled for a specific board size. */
+#ifdef BOARD_SIZE
+	if (size != BOARD_SIZE)
+		die("Yozaa ! This Pachi only plays on %ix%i.\n", BOARD_SIZE, BOARD_SIZE);
+#endif
+		    
 	if (size < 1 || size > BOARD_MAX_SIZE) {
 		gtp_error(gtp, "illegal board size", NULL);
 		return P_OK;
