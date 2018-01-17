@@ -729,6 +729,24 @@ uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, floating_t
 	}
 }
 
+static void
+log_nthreads(struct uct *u)
+{
+	static int logged = 0;
+	if (DEBUGL(0) && !logged++)  fprintf(stderr, "Threads: %i\n", u->threads);
+}
+
+static size_t
+default_max_tree_size()
+{
+	/* Double it on 64-bit, tree takes up twice as much memory ... */
+	int mult = (sizeof(void*) == 4 ? 1 : 2);
+
+	/* Should be enough for most scenarios (up to 240k playouts ...)
+	 * If you're using really long thinking times you definitely should
+	 * set a higher max_tree_size. */
+	return (size_t)300 * mult * 1048576;
+}
 
 struct uct *
 uct_state_init(char *arg, struct board *b)
@@ -747,11 +765,11 @@ uct_state_init(char *arg, struct board *b)
 	u->dumpthres = 0.01;
 	u->playout_amaf = true;
 	u->amaf_prior = false;
-	u->max_tree_size = 1408ULL * 1048576;
+	u->max_tree_size = default_max_tree_size();
 	u->fast_alloc = true;
 	u->pruning_threshold = 0;
 
-	u->threads = 1;
+	u->threads = get_nprocessors();
 	u->thread_model = TM_TREEVL;
 	u->virtual_loss = 1;
 
@@ -1335,6 +1353,7 @@ uct_state_init(char *arg, struct board *b)
 	if (u->want_pat && !pat_setup)
 		patterns_init(&u->pat, NULL, false, true);
 	dcnn_init();
+	log_nthreads(u);
 
 	if (u->slave) {
 		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;

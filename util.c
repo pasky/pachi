@@ -1,4 +1,5 @@
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -19,6 +20,17 @@ win_set_pachi_cwd(char *pachi)
 #endif
 }
 
+int
+get_nprocessors()
+{
+#ifdef _WIN32
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+	return info.dwNumberOfProcessors;
+#else
+	return sysconf(_SC_NPROCESSORS_ONLN);
+#endif	
+}
 
 int
 file_exists(const char *name)

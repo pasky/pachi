@@ -86,8 +86,8 @@ playing on 19x19. For now dcnn and pondering can't be used together
 
 ## How to run
 
-By default, Pachi will run on a single CPU core, taking up to 1.4GiB
-of memory and taking a little under 15 seconds per move.  You can
+By default Pachi will run as many threads as processors, using up to 200Mb
+of memory for tree search and taking a little under 10 seconds per move.  You can
 adjust these parameters by passing it extra command line options.
 
 Pachi can smartly deal with a variety of time settings (canadian byoyomi

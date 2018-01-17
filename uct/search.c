@@ -32,7 +32,7 @@ static struct time_info default_ti;
 static __attribute__((constructor)) void
 default_ti_init(void)
 {
-	time_parse(&default_ti, "15");
+	time_parse(&default_ti, "10");
 }
 
 static const struct time_info unlimited_ti = {
