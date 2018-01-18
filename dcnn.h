@@ -11,7 +11,6 @@ void disable_dcnn();
 
 void dcnn_get_moves(struct board *b, enum stone color, float result[]);
 bool using_dcnn(struct board *b);
-void dcnn_quiet_caffe(int argc, char *argv[]);
 void dcnn_init();
 void find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest);
 void print_dcnn_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest);
@@ -38,7 +37,6 @@ coord2dcnn_idx(coord_t c, struct board *b)
 
 #define disable_dcnn()
 #define using_dcnn(b)  0
-#define dcnn_quiet_caffe(argc, argv) 
 #define dcnn_init()
 #define get_dcnn_time()    (0.)
 #define reset_dcnn_time()  do { } while(0)

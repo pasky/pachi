@@ -121,7 +121,7 @@ ifdef MSYS2
 		SYS_LIBS += -lregex -ltre -lintl -liconv	# Oh, dear...
 	endif
 
-	DCNN_LIBS := -lcaffe -lboost_system-mt -lstdc++ $(SYS_LIBS)
+	DCNN_LIBS := -lcaffe -lboost_system-mt -lglog -lstdc++ $(SYS_LIBS)
 
 	ifdef MSYS2_STATIC		# Static build, good luck
                 # Which type of caffe package do you have ?
@@ -157,14 +157,14 @@ ifdef MAC
 	SYS_CFLAGS  := -DNO_THREAD_LOCAL
 	SYS_LDFLAGS := -pthread -rdynamic
 	SYS_LIBS    := -lm -ldl
-	DCNN_LIBS   := -lcaffe -lboost_system -lstdc++ $(SYS_LIBS)
+	DCNN_LIBS   := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
 else
 ##############################################################################
 # Linux
 	SYS_CFLAGS  := $(TUNE)
 	SYS_LDFLAGS := -pthread -rdynamic
 	SYS_LIBS    := -lm -lrt -ldl
-	DCNN_LIBS   := -lcaffe -lboost_system -lstdc++ $(SYS_LIBS)
+	DCNN_LIBS   := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
 endif
 endif
 

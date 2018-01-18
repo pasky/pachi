@@ -30,17 +30,6 @@ dcnn_init()
 	if (dcnn_enabled)  caffe_init();
 }
 
-/* Make caffe quiet */
-void
-dcnn_quiet_caffe(int argc, char *argv[])
-{
-	if (DEBUGL(7) || getenv("GLOG_minloglevel"))
-		return;
-	
-	setenv("GLOG_minloglevel", "2", 1);
-	execvp(argv[0], argv);   /* Sucks that we have to do this */
-}
-
 void
 dcnn_get_moves(struct board *b, enum stone color, float result[])
 {

@@ -28,6 +28,7 @@
 #include "network.h"
 #include "uct/tree.h"
 #include "dcnn.h"
+#include "caffe.h"
 
 int debug_level = 3;
 bool debug_boardprint = true;
@@ -100,6 +101,7 @@ usage()
 		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
 		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
 		"  -u, --unit-test FILE              run unit tests \n"
+		"      --verbose-caffe               enable caffe logging \n"
 		"  -v, --version                     show version \n"
 		" \n"
 		"TIME_SETTINGS: \n"
@@ -156,6 +158,7 @@ static struct option longopts[] = {
 	{ "seed",        required_argument, 0, 's' },
 	{ "time",        required_argument, 0, 't' },
 	{ "unit-test",   required_argument, 0, 'u' },
+	{ "verbose-caffe", no_argument,     0, OPT_VERBOSE_CAFFE },
 	{ "version",     no_argument,       0, 'v' },
 	{ 0, 0, 0, 0 }
 };
@@ -172,9 +175,13 @@ int main(int argc, char *argv[])
 	char *fbookfile = NULL;
 	char *ruleset = NULL;
 	FILE *file = NULL;
+	bool verbose_caffe = false;
+
+	setlinebuf(stdout);
+	setlinebuf(stderr);
 
 	win_set_pachi_cwd(argv[0]);
-
+	
 	seed = time(NULL) ^ getpid();
 
 	int opt;
@@ -260,6 +267,9 @@ int main(int argc, char *argv[])
 			case 'u':
 				testfile = strdup(optarg);
 				break;
+			case OPT_VERBOSE_CAFFE:
+				verbose_caffe = true;
+				break;
 			case 'v':
 				show_version(stdout);
 				exit(0);
@@ -272,24 +282,18 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	dcnn_quiet_caffe(argc, argv);
-	if (log_port)
-		open_log_port(log_port);
-
-	if (DEBUGL(0))           show_version(stderr);
-	if (DEBUGL(0) && getenv("DATA_DIR"))
-		fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
-	
 	fast_srandom(seed);
-	if (DEBUGL(0))
-		fprintf(stderr, "Random seed: %d\n", seed);
-
-	if (testfile)
-		return unit_test(testfile);
+	
+	if (!verbose_caffe)      quiet_caffe(argc, argv);
+	if (log_port)		 open_log_port(log_port);	
+	if (testfile)		 return unit_test(testfile);
+	if (DEBUGL(0))           show_version(stderr);
+	if (getenv("DATA_DIR"))
+		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
+	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init(fbookfile);
-	if (ruleset && !board_set_rules(b, ruleset))
-		die("Unknown ruleset: %s\n", ruleset);
+	if (ruleset && !board_set_rules(b, ruleset))  die("Unknown ruleset: %s\n", ruleset);
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
@@ -298,12 +302,10 @@ int main(int argc, char *argv[])
 	chat_init(chatfile);
 
 	char *e_arg = NULL;
-	if (optind < argc)
-		e_arg = argv[optind];
+	if (optind < argc)	e_arg = argv[optind];
 	struct engine *e = init_engine(engine, e_arg, b);
 
-	if (gtp_port)
-		open_gtp_connection(&gtp_sock, gtp_port);
+	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
 
 	for (;;) {
 		char buf[4096];
