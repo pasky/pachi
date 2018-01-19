@@ -157,7 +157,7 @@ board_ownermap_score_est_coord(struct board *b, struct board_ownermap *ownermap,
 	
 	/* If status is unclear and there's a stone there assume it's alive. */
 	if (j != PJ_BLACK && j != PJ_WHITE && (s == S_BLACK || s == S_WHITE))
-		return s;
+		return (enum point_judgement)s;
 	return j;
 }
 
