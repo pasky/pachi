@@ -220,8 +220,7 @@ bsize2digit(int size)
 		case 7: return '7';
 		case 5: return '8';
 		default:
-			fprintf(stderr, "wolf plugin: Unsupported board size: %d\n", size);
-			exit(1);
+			die("wolf plugin: Unsupported board size: %d\n", size);
 	}
 }
 
@@ -344,29 +343,21 @@ pachi_plugin_init(char *arg, struct board *b, int seed)
 			} else if (!strcasecmp(optname, "iterations") && optval) {
 				iterations = atoi(optval);
 
-			} else {
-				fprintf(stderr, "wolf plugin: Invalid argument %s or missing value\n", optname);
-				exit(1);
-			}
+			} else
+				die("wolf plugin: Invalid argument %s or missing value\n", optname);
 		}
 	}
 
 	/* Initialize the rest of ctx (depending on arguments) here. */
-	if (!file) {
-		fprintf(stderr, "wolf plugin: file argument not specified\n");
-		exit(1);
-	}
+	if (!file)
+		die("wolf plugin: file argument not specified\n");
 	ctx->dlh = dlopen(file, RTLD_NOW);
-	if (!ctx->dlh) {
-		fprintf(stderr, "Cannot load file %s: %s\n", file, dlerror());
-		exit(EXIT_FAILURE);
-	}
+	if (!ctx->dlh)
+		die("Cannot load file %s: %s\n", file, dlerror());
 #define loadsym(s_) do {\
 	ctx->s_ = dlsym(ctx->dlh, #s_); \
-	if (!ctx->s_) { \
-		fprintf(stderr, "Cannot find %s in module: %s\n", #s_, dlerror()); \
-		exit(EXIT_FAILURE); \
-	} \
+	if (!ctx->s_) \
+		die("Cannot find %s in module: %s\n", #s_, dlerror());	\
 } while (0)
 	loadsym(SETPARAM);
 	loadsym(EVALFUN1);

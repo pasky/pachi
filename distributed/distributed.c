@@ -494,10 +494,8 @@ distributed_state_init(char *arg, struct board *b)
 
 	gtp_replies = calloc2(dist->max_slaves, sizeof(char *));
 
-	if (!dist->slave_port) {
-		fprintf(stderr, "distributed: missing slave_port\n");
-		exit(1);
-	}
+	if (!dist->slave_port)
+		die("distributed: missing slave_port\n");
 
 	merge_init(&default_sstate, dist->shared_nodes, dist->stats_hbits, dist->max_slaves);
 	protocol_init(dist->slave_port, dist->proxy_port, dist->max_slaves);

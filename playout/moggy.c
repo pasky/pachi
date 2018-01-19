@@ -1289,10 +1289,8 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 				}
 			} else if (!strcasecmp(optname, "tenukiprob") && optval) {
 				pp->tenuki_prob = atof(optval);
-			} else {
-				fprintf(stderr, "playout-moggy: Invalid policy argument %s or missing value\n", optname);
-				exit(1);
-			}
+			} else
+				die("playout-moggy: Invalid policy argument %s or missing value\n", optname);
 		}
 	}
 	if (pp->lcapturerate == -1U) pp->lcapturerate = rate;

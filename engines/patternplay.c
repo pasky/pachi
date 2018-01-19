@@ -114,20 +114,16 @@ patternplay_state_init(char *arg)
 				patterns_init(&pp->pat, optval, false, true);
 				pat_setup = true;
 
-			} else {
-				fprintf(stderr, "patternplay: Invalid engine argument %s or missing value\n", optname);
-				exit(EXIT_FAILURE);
-			}
+			} else
+				die("patternplay: Invalid engine argument %s or missing value\n", optname);
 		}
 	}
 
 	if (!pat_setup)
 		patterns_init(&pp->pat, NULL, false, true);
 	
-	if (!pp->pat.pc.spat_dict || !pp->pat.pd) {
-		fprintf(stderr, "Missing spatial dictionary / probtable, aborting.\n");
-		exit(EXIT_FAILURE);
-	}
+	if (!pp->pat.pc.spat_dict || !pp->pat.pd)
+		die("Missing spatial dictionary / probtable, aborting.\n");
 	return pp;
 }
 

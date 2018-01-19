@@ -96,16 +96,12 @@ plugin_load(struct uct_pluginset *ps, char *path, char *args)
 	p->args = args ? strdup(args) : args;
 
 	p->dlh = dlopen(path, RTLD_NOW);
-	if (!p->dlh) {
-		fprintf(stderr, "Cannot load plugin %s: %s\n", path, dlerror());
-		exit(EXIT_FAILURE);
-	}
+	if (!p->dlh)
+		die("Cannot load plugin %s: %s\n", path, dlerror());
 #define loadsym(s_) do {\
 	p->s_ = dlsym(p->dlh, "pachi_plugin_" #s_); \
-	if (!p->s_) { \
-		fprintf(stderr, "Cannot find pachi_plugin_%s in plugin %s: %s\n", #s_, path, dlerror()); \
-		exit(EXIT_FAILURE); \
-	} \
+	if (!p->s_) \
+		die("Cannot find pachi_plugin_%s in plugin %s: %s\n", #s_, path, dlerror()); \
 } while (0)
 	loadsym(init);
 	loadsym(prior);

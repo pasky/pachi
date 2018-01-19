@@ -81,11 +81,8 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 		/* Verify that we have sane state. */
 		assert(b->es == u);
 		assert(u->t && b->moves);
-		if (color != stone_other(u->t->root_color)) {
-			fprintf(stderr, "Fatal: Non-alternating play detected %d %d\n",
-				color, u->t->root_color);
-			exit(1);
-		}
+		if (color != stone_other(u->t->root_color))
+			die("Fatal: Non-alternating play detected %d %d\n", color, u->t->root_color);
 		uct_htable_reset(u->t);
 
 	} else {
@@ -823,10 +820,8 @@ uct_state_init(char *arg, struct board *b)
 					 * Implies debug=0. */
 					u->reporting = UR_JSON_BIG;
 					u->debug_level = 0;
-				} else {
-					fprintf(stderr, "UCT: Invalid reporting format %s\n", optval);
-					exit(1);
-				}
+				} else
+					die("UCT: Invalid reporting format %s\n", optval);
 			} else if (!strcasecmp(optname, "reportfreq") && optval) {
 				/* The progress information line will be shown
 				 * every <reportfreq> simulations. */
@@ -930,10 +925,8 @@ uct_state_init(char *arg, struct board *b)
 					*p = policy_ucb1_init(u, policyarg);
 				} else if (!strcasecmp(optval, "ucb1amaf")) {
 					*p = policy_ucb1amaf_init(u, policyarg, b);
-				} else {
-					fprintf(stderr, "UCT: Invalid tree policy %s\n", optval);
-					exit(1);
-				}
+				} else
+					die("UCT: Invalid tree policy %s\n", optval);
 			} else if (!strcasecmp(optname, "playout") && optval) {
 				/* Random simulation (playout) policy.
 				 * moggy is the default policy with large
@@ -947,10 +940,8 @@ uct_state_init(char *arg, struct board *b)
 					u->playout = playout_moggy_init(playoutarg, b, u->jdict);
 				} else if (!strcasecmp(optval, "light")) {
 					u->playout = playout_light_init(playoutarg, b);
-				} else {
-					fprintf(stderr, "UCT: Invalid playout policy %s\n", optval);
-					exit(1);
-				}
+				} else
+					die("UCT: Invalid playout policy %s\n", optval);
 			} else if (!strcasecmp(optname, "prior") && optval) {
 				/* Node priors policy. When expanding a node,
 				 * it will seed node values heuristically
@@ -1024,10 +1015,8 @@ uct_state_init(char *arg, struct board *b)
 					 * rages most threads choosing the
 					 * same tree branches to read. */
 					u->thread_model = TM_TREEVL;
-				} else {
-					fprintf(stderr, "UCT: Invalid thread model %s\n", optval);
-					exit(1);
-				}
+				} else
+					die("UCT: Invalid thread model %s\n", optval);
 			} else if (!strcasecmp(optname, "virtual_loss") && optval) {
 				/* Number of virtual losses added before evaluating a node. */
 				u->virtual_loss = atoi(optval);
@@ -1104,10 +1093,8 @@ uct_state_init(char *arg, struct board *b)
 					/* There are many more knobs to
 					 * crank - see uct/dynkomi.c. */
 					u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomiarg, b);
-				} else {
-					fprintf(stderr, "UCT: Invalid dynkomi mode %s\n", optval);
-					exit(1);
-				}
+				} else
+					die("UCT: Invalid dynkomi mode %s\n", optval);
 			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
 				/* Bitmask of colors the player must be
 				 * for dynkomi be applied; the default dynkomi_mask=3 allows
@@ -1169,10 +1156,8 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "tenuki_d") && optval) {
 				/* Tenuki distance at which to break the local tree. */
 				u->tenuki_d = atoi(optval);
-				if (u->tenuki_d > TREE_NODE_D_MAX + 1) {
-					fprintf(stderr, "uct: tenuki_d must not be larger than TREE_NODE_D_MAX+1 %d\n", TREE_NODE_D_MAX + 1);
-					exit(1);
-				}
+				if (u->tenuki_d > TREE_NODE_D_MAX + 1)
+					die("uct: tenuki_d must not be larger than TREE_NODE_D_MAX+1 %d\n", TREE_NODE_D_MAX + 1);
 			} else if (!strcasecmp(optname, "local_tree_aging") && optval) {
 				/* How much to reduce local tree values between moves. */
 				u->local_tree_aging = atof(optval);
@@ -1214,10 +1199,8 @@ uct_state_init(char *arg, struct board *b)
 					 * moves. Local values (and their
 					 * inverses) are averaged. */
 					u->local_tree_eval = LTE_TOTAL;
-				else {
-					fprintf(stderr, "uct: unknown local_tree_eval %s\n", optval);
-					exit(1);
-				}
+				else
+					die("uct: unknown local_tree_eval %s\n", optval);
 			} else if (!strcasecmp(optname, "local_tree_rootchoose")) {
 				/* If disabled, only moves within the local
 				 * tree branch are considered; the values
@@ -1309,20 +1292,16 @@ uct_state_init(char *arg, struct board *b)
 					u->val_byavg = true;
 				}
 
-			} else {
-				fprintf(stderr, "uct: Invalid engine argument %s or missing value\n", optname);
-				exit(1);
-			}
+			} else
+				die("uct: Invalid engine argument %s or missing value\n", optname);
 		}
 	}
 
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL, b);
 
-	if (!!u->random_policy_chance ^ !!u->random_policy) {
-		fprintf(stderr, "uct: Only one of random_policy and random_policy_chance is set\n");
-		exit(1);
-	}
+	if (!!u->random_policy_chance ^ !!u->random_policy)
+		die("uct: Only one of random_policy and random_policy_chance is set\n");
 
 	if (!u->local_tree) {
 		/* No ltree aging. */

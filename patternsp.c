@@ -278,11 +278,9 @@ spatial_dict_read(struct spatial_dict *dict, char *buf, bool hash)
 	while (isspace(*bufp)) bufp++;
 
 	/* Sanity check. */
-	if (sl != ptind[s.dist + 1]) {
-		fprintf(stderr, "Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n",
-			sl, ptind[radius + 1] - 1, buf);
-		exit(EXIT_FAILURE);
-	}
+	if (sl != ptind[s.dist + 1])
+		die("Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n",
+		    sl, ptind[radius + 1] - 1, buf);
 
 	/* Add to collection. */
 	unsigned int id = spatial_dict_addc(dict, &s);

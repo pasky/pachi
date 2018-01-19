@@ -424,11 +424,8 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 				b->vwin_min_playouts = atoi(optval);
 			} else if (!strcasecmp(optname, "vloss_sqrt")) {
 				b->vloss_sqrt = !optval || *optval == '1';
-			} else {
-				fprintf(stderr, "ucb1amaf: Invalid policy argument %s or missing value\n",
-					optname);
-				exit(1);
-			}
+			} else
+				die("ucb1amaf: Invalid policy argument %s or missing value\n", optname);
 		}
 	}
 

@@ -314,10 +314,8 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 					optval++;
 					p->cfgd_eqex[i] = atoi(optval);
 				}
-				if (i != p->cfgdn + 1) {
-					fprintf(stderr, "uct: Missing prior cfdn level %d/%d\n", i, p->cfgdn);
-					exit(1);
-				}
+				if (i != p->cfgdn + 1)
+					die("uct: Missing prior cfdn level %d/%d\n", i, p->cfgdn);
 
 			} else if (!strcasecmp(optname, "joseki") && optval) {
 				p->joseki_eqex = atoi(optval);
@@ -340,10 +338,8 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 			} else if (!strcasecmp(optname, "dcnn") && optval) {
 				p->dcnn_eqex = atoi(optval);
 #endif
-			} else {
-				fprintf(stderr, "uct: Invalid prior argument %s or missing value\n", optname);
-				exit(1);
-			}
+			} else
+				die("uct: Invalid prior argument %s or missing value\n", optname);
 		}
 	}
 
@@ -367,10 +363,8 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 		p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
 		memcpy(p->cfgd_eqex, board_large(b) ? large_bonuses : small_bonuses, sizeof(large_bonuses));
 	}
-	if (p->cfgdn > TREE_NODE_D_MAX) {
-		fprintf(stderr, "uct: CFG distances only up to %d available\n", TREE_NODE_D_MAX);
-		exit(1);
-	}
+	if (p->cfgdn > TREE_NODE_D_MAX)
+		die("uct: CFG distances only up to %d available\n", TREE_NODE_D_MAX);
 
 	if (p->pattern_eqex)
 		u->want_pat = true;

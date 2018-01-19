@@ -33,11 +33,8 @@ uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b)
 	d->done = generic_done;
 	d->data = NULL;
 
-	if (arg) {
-		fprintf(stderr, "uct: Dynkomi method none accepts no arguments\n");
-		exit(1);
-	}
-
+	if (arg)  die("uct: Dynkomi method none accepts no arguments\n");
+	
 	return d;
 }
 
@@ -220,10 +217,8 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "drop_step") && optval) {
 				/* Decrease komi by drop_step points */
 				l->drop_step = atof(optval);
-			} else {
-				fprintf(stderr, "uct: Invalid dynkomi argument %s or missing value\n", optname);
-				exit(1);
-			}
+			} else
+				die("uct: Invalid dynkomi argument %s or missing value\n", optname);
 		}
 	}
 
@@ -556,10 +551,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				} else if (!strcasecmp(optval, "score")) {
 					/* Expected score w/ current komi. */
 					a->indicator = komi_by_score;
-				} else {
-					fprintf(stderr, "UCT: Invalid indicator %s\n", optval);
-					exit(1);
-				}
+				} else
+					die("UCT: Invalid indicator %s\n", optval);
 
 				/* value indicator settings */
 			} else if (!strcasecmp(optname, "zone_red") && optval) {
@@ -584,10 +577,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 					a->adapter = adapter_sigmoid;
 				} else if (!strcasecmp(optval, "linear")) {
 					a->adapter = adapter_linear;
-				} else {
-					fprintf(stderr, "UCT: Invalid adapter %s\n", optval);
-					exit(1);
-				}
+				} else
+					die("UCT: Invalid adapter %s\n", optval);
 			} else if (!strcasecmp(optname, "adapt_base") && optval) {
 				/* Adaptation base rate; see above. */
 				a->adapt_base = atof(optval);
@@ -606,10 +597,8 @@ uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b)
 				/* Adaptation direction vector; see above. */
 				a->adapt_dir = atof(optval);
 
-			} else {
-				fprintf(stderr, "uct: Invalid dynkomi argument %s or missing value\n", optname);
-				exit(1);
-			}
+			} else
+				die("uct: Invalid dynkomi argument %s or missing value\n", optname);
 		}
 	}
 

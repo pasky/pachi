@@ -173,8 +173,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m, char *engine
 static coord_t
 patternscan_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
-	fprintf(stderr, "genmove command not available during patternscan!\n");
-	exit(EXIT_FAILURE);
+	die("genmove command not available during patternscan!\n");
 }
 
 void
@@ -285,10 +284,8 @@ patternscan_state_init(char *arg)
 				patterns_init(&ps->pat, optval, ps->gen_spat_dict, false);
 				pat_setup = true;
 
-			} else {
-				fprintf(stderr, "patternscan: Invalid engine argument %s or missing value\n", optname);
-				exit(EXIT_FAILURE);
-			}
+			} else
+				die("patternscan: Invalid engine argument %s or missing value\n", optname);
 		}
 	}
 

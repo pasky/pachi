@@ -66,8 +66,7 @@ str2feature(char *str, struct feature *f)
 			f->id = i;
 			goto found;
 		}
-	fprintf(stderr, "invalid featurespec: %s[%d]\n", str, flen);
-	exit(EXIT_FAILURE);
+	die("invalid featurespec: %s[%d]\n", str, flen);
 
 found:
 	str += flen + 1;
@@ -142,10 +141,8 @@ patterns_init(struct pattern_setup *pat, char *arg, bool will_append, bool load_
 			} else if (!strcasecmp(optname, "pdict_file") && optval) {
 				pdict_file = optval;
 
-			} else {
-				fprintf(stderr, "patterns: Invalid argument %s or missing value\n", optname);
-				exit(EXIT_FAILURE);
-			}
+			} else
+				die("patterns: Invalid argument %s or missing value\n", optname);
 		}
 	}
 
@@ -523,10 +520,8 @@ str2pattern(char *str, struct pattern *p)
 {
 	p->n = 0;
 	while (isspace(*str)) str++;
-	if (*str++ != '(') {
-		fprintf(stderr, "invalid patternspec: %s\n", str);
-		exit(EXIT_FAILURE);
-	}
+	if (*str++ != '(')
+		die("invalid patternspec: %s\n", str);
 
 	while (*str != ')') {
 		str = str2feature(str, &p->f[p->n++]);
