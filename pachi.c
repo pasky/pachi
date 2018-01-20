@@ -81,6 +81,7 @@ usage()
 	fprintf(stderr,
 		"Options: \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
+                "      --compile-flags               show pachi's compile flags \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
 		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
@@ -116,10 +117,30 @@ usage()
 		" \n");
 }
 
-#define OPT_FUSEKI_TIME 256
+static void
+show_version(FILE *s)
+{
+	fprintf(s, "Pachi version %s\n", PACHI_VERSION);
+	if (!DEBUGL(2)) return;
+
+	fprintf(s, "git %s\n", PACHI_VERGIT);
+
+	/* Build info */
+	char boardsize[32] = "";
+#ifdef BOARD_SIZE
+	sprintf(boardsize, "[%ix%i]", BOARD_SIZE, BOARD_SIZE);
+#endif
+	fprintf(s, "%s  %s\n\n", PACHI_VERBUILD, boardsize);
+}
+
+#define OPT_FUSEKI_TIME   256
+#define OPT_NO_DCNN       257
+#define OPT_VERBOSE_CAFFE 258
+#define OPT_COMPILE_FLAGS 259
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "chatfile",    required_argument, 0, 'c' },
+	{ "compile-flags", no_argument,     0, OPT_COMPILE_FLAGS },
 	{ "debug-level", required_argument, 0, 'd' },
 	{ "engine",      required_argument, 0, 'e' },
 	{ "fbook",       required_argument, 0, 'f' },
@@ -155,6 +176,11 @@ int main(int argc, char *argv[])
 			case 'c':
 				chatfile = strdup(optarg);
 				break;
+			case OPT_COMPILE_FLAGS:
+				printf("Compiler:\n%s\n\n", PACHI_COMPILER);
+				printf("CFLAGS:\n%s\n\n", PACHI_CFLAGS);
+				printf("Command:\n%s\n", PACHI_CC1);
+				exit(0);
 			case 'e':
 				if      (!strcasecmp(optarg, "random"))		engine = E_RANDOM;
 				else if (!strcasecmp(optarg, "replay"))		engine = E_REPLAY;
@@ -217,7 +243,7 @@ int main(int argc, char *argv[])
 				testfile = strdup(optarg);
 				break;
 			case 'v':
-				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
+				show_version(stdout);
 				exit(0);
 			default: /* '?' */
 				usage();
@@ -229,7 +255,7 @@ int main(int argc, char *argv[])
 	if (log_port)
 		open_log_port(log_port);
 
-	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
+	if (DEBUGL(0))           show_version(stderr);
 	if (DEBUGL(0) && getenv("DATA_DIR"))
 		fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
 	

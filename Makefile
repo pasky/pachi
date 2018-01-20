@@ -193,7 +193,7 @@ OBJS = $(DCNN_OBJS) $(EXTRA_OBJS) \
 SUBDIRS   = uct uct/policy playout tactics t-unit t-predict distributed engines
 DATAFILES = patterns.prob patterns.spat book.dat golast19.prototxt golast.trained joseki19.pdict
 
-all: gitversion.h all-recursive pachi
+all: build.h all-recursive pachi
 
 LOCALLIBS=$(SUBDIRS:%=%/lib.a)
 $(LOCALLIBS): all-recursive
@@ -210,12 +210,10 @@ pachi-profiled:
 	./pachi -t =5000 no_tbook < gtp/genmove_both.gtp
 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
 
-gitversion.h: .git/HEAD .git/index
-	@echo "[make] gitversion.h"
-	@branch=`git status | grep '^On branch' | sed -e 's/On branch //'`; \
-	 hash=`git rev-parse --short HEAD`; \
-	 echo "#define GIT_BRANCH \"$$branch\"" > $@;  \
-	 echo "#define GIT_HASH   \"$$hash\"" >> $@
+# Build info
+build.h: .git/HEAD .git/index Makefile
+	@echo "[make] build.h"
+	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild > $@
 
 # Prepare for install
 distribute: FORCE
@@ -259,7 +257,7 @@ install-data:
 
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive
-	-@rm pachi gitversion.h >/dev/null 2>&1
+	-@rm pachi build.h >/dev/null 2>&1
 
 clean-profiled:: clean-profiled-recursive
 
