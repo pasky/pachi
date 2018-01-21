@@ -4,6 +4,11 @@
 # Alternatively, you can pass the option to make itself, like:
 # 	make MAC=1 DOUBLE_FLOATING=1
 
+# Generic build ?
+# If binary will be distributed you need this !
+# Otherwise you may do without to enable more aggressive optimizations
+# for this machine only.
+# GENERIC=1
 
 # Do you compile on Windows instead of Linux ?
 # Please note that performance may not be optimal.
@@ -23,6 +28,12 @@
 
 DCNN=1
 # CAFFE_PREFIX=/usr/local/caffe
+
+# Fixed board size. Set this to enable more aggressive optimizations
+# if you only play on 19x19. Pachi won't be able to play on other
+# board sizes.
+
+# BOARD_SIZE=19
 
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
@@ -56,8 +67,9 @@ DATADIR ?= $(PREFIX)/share/pachi
 # any of this.
 # (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
 # unless PROFILING=gprof.)
-CUSTOM_CFLAGS   ?= -Wall -ggdb3 -O3 -std=gnu99 -frename-registers -pthread -Wsign-compare -D_GNU_SOURCE -DDATA_DIR=\"$(DATADIR)\"
-CUSTOM_CXXFLAGS ?= -Wall -ggdb3 -O3
+OPT ?= -O3
+CUSTOM_CFLAGS   := -Wall -ggdb3 $(OPT) -std=gnu99 -pthread -Wsign-compare -D_GNU_SOURCE
+CUSTOM_CXXFLAGS := -Wall -ggdb3 $(OPT)
 
 
 ###################################################################################################################
@@ -65,6 +77,22 @@ CUSTOM_CXXFLAGS ?= -Wall -ggdb3 -O3
 
 MAKEFLAGS += --no-print-directory
 
+TUNE := -march=native
+ifeq ($(GENERIC), 1)
+	TUNE := -mtune=generic
+endif
+
+ifndef NO_FRENAME_REGISTERS
+	CUSTOM_CFLAGS += -frename-registers
+endif
+
+ifdef DATADIR
+	CUSTOM_CFLAGS += -DDATA_DIR=\"$(DATADIR)\"
+endif
+
+ifdef BOARD_SIZE
+	CUSTOM_CFLAGS += -DBOARD_SIZE=$(BOARD_SIZE)
+endif
 
 
 ##############################################################################
@@ -78,7 +106,7 @@ ifdef MSYS2
 
 	WIN_HAVE_NO_REGEX_SUPPORT=1
 
-	SYS_CFLAGS  := 
+	SYS_CFLAGS  := $(TUNE)
 	SYS_LDFLAGS := -pthread -L$(CAFFE_PREFIX)/bin -L$(MINGW_PREFIX)/bin
 	SYS_LIBS    := -lws2_32
 	CUSTOM_CXXFLAGS += -I$(MINGW_PREFIX)/include/OpenBLAS
@@ -132,7 +160,7 @@ ifdef MAC
 else
 ##############################################################################
 # Linux
-	SYS_CFLAGS  := -march=native
+	SYS_CFLAGS  := $(TUNE)
 	SYS_LDFLAGS := -pthread -rdynamic
 	SYS_LIBS    := -lm -lrt -ldl
 	DCNN_LIBS   := -lcaffe -lboost_system -lstdc++ $(SYS_LIBS)
@@ -144,7 +172,7 @@ ifdef CAFFE_PREFIX
 	CXXFLAGS    += -I$(CAFFE_PREFIX)/include
 endif
 
-ifdef DCNN
+ifeq ($(DCNN), 1)
 	CUSTOM_CFLAGS   += -DDCNN
 	CUSTOM_CXXFLAGS += -DDCNN
 	SYS_LIBS := $(DCNN_LIBS)
@@ -217,9 +245,9 @@ build.h: .git/HEAD .git/index Makefile
 
 # Prepare for install
 distribute: FORCE
-ifneq (,$(findstring -march=native,$(CFLAGS) $(CXXFLAGS)))
-	@echo "WARNING: Don't distribute binaries built with -march=native !"
-endif
+        ifneq ($(GENERIC), 1)
+		@echo "WARNING: Don't distribute binaries built with -march=native !"
+        endif
 
 	rm -rf distribute 2>/dev/null;  $(INSTALL) -d distribute
 	cp pachi distribute/
