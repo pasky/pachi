@@ -227,7 +227,8 @@ DATAFILES = patterns.prob patterns.spat book.dat golast19.prototxt golast.traine
 # Aliases are nice, but don't ask too much: 'make quick 19' won't do what
 # you expect for example (use 'make OPT=-O0 BOARD_SIZE=19' instead)
 
-all: build.h all-recursive pachi
+all: build.h
+	+@make all-recursive pachi
 
 debug fast quick O0:
 	+@make OPT=-O0
@@ -268,8 +269,15 @@ pachi-profiled:
 	./pachi -t =5000 no_tbook < gtp/genmove_both.gtp
 	@make clean all clean-profiled XLDFLAGS=-fprofile-use XCFLAGS="-fprofile-use -fomit-frame-pointer -frename-registers"
 
+# Pachi build attendant
+.PHONY: spudfrog
+spudfrog: FORCE
+	@GENERIC=$(GENERIC) DCNN=$(DCNN) OPT=$(OPT) CFLAGS="$(CFLAGS)" \
+         DOUBLE_FLOATING=$(DOUBLE_FLOATING) BOARDSIZE=$(BOARDSIZE) ./spudfrog
+
 # Build info
 build.h: .git/HEAD .git/index Makefile
+	+@make spudfrog
 	@echo "[make] build.h"
 	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild > $@
 
@@ -316,6 +324,7 @@ install-data:
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive
 	-@rm pachi build.h >/dev/null 2>&1
+	@echo ""
 
 clean-profiled:: clean-profiled-recursive
 
