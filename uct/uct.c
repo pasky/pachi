@@ -1027,7 +1027,7 @@ uct_state_init(char *arg, struct board *b)
 				/* Maximum amount of memory [MiB] consumed by the move tree.
 				 * For fast_alloc it includes the temp tree used for pruning.
 				 * Default is 3072 (3 GiB). */
-				u->max_tree_size = atol(optval) * 1048576;
+				u->max_tree_size = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
 			} else if (!strcasecmp(optname, "fast_alloc")) {
 				u->fast_alloc = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "pruning_threshold") && optval) {
