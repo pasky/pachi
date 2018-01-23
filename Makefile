@@ -3,6 +3,7 @@
 # Uncomment one of the options below to change the way Pachi is built.
 # Alternatively, you can pass the option to make itself, like:
 # 	make MAC=1 DOUBLE_FLOATING=1
+# or use the short aliases (make quick, make generic ...)
 
 # Generic build ?
 # If binary will be distributed you need this !
@@ -221,7 +222,36 @@ OBJS = $(DCNN_OBJS) $(EXTRA_OBJS) \
 SUBDIRS   = uct uct/policy playout tactics t-unit t-predict distributed engines
 DATAFILES = patterns.prob patterns.spat book.dat golast19.prototxt golast.trained joseki19.pdict
 
+###############################################################################################################
+# Main rule + aliases
+# Aliases are nice, but don't ask too much: 'make quick 19' won't do what
+# you expect for example (use 'make OPT=-O0 BOARD_SIZE=19' instead)
+
 all: build.h all-recursive pachi
+
+debug fast quick O0:
+	+@make OPT=-O0
+
+opt slow O3:
+	+@make OPT=-O3
+
+generic:
+	+@make GENERIC=1
+
+native:
+	+@make GENERIC=0
+
+nodcnn:
+	+@make DCNN=0
+
+19:
+	+@make BOARD_SIZE=19
+
+double:
+	+@make DOUBLE_FLOATING=1
+
+
+###############################################################################################################
 
 LOCALLIBS=$(SUBDIRS:%=%/lib.a)
 $(LOCALLIBS): all-recursive
