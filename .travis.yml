@@ -8,30 +8,40 @@ compiler:
   - gcc
 os:
   - linux
+# - osx
+env:
+  - DCNN=1
+  - DCNN=0
 
 matrix:
-  allow_failures:
-    - compiler: clang
+  exclude:
+    - os: osx
+      env: DCNN=1
+    - os: osx
+      compiler: gcc
+#   allow_failures:
+#     - compiler: clang
 
 # get caffe from ppa
 before_install:
-  - sudo add-apt-repository ppa:lemonsqueeze/pachi -y
-  - sudo apt-get update -q
-  - sudo apt-get install libcaffe-cpu-dev -y
+  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ]; then sudo add-apt-repository ppa:lemonsqueeze/pachi -y ; fi
+  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ]; then sudo apt-get update -q ; fi
+  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ]; then sudo apt-get install libcaffe-cpu-dev -y ; fi
 
 # https://blog.lukaspradel.com/continuous-integration-for-cmake-projects-using-travis-ci/  
 script:
-  - make -j2
-  - ./pachi -u t-unit/sar.t
-  - ./pachi -u t-unit/ladder.t
-  - ./pachi -u t-unit/ladder_any.t
-  - ./pachi -u t-unit/wouldbe_ladder.t
-  - ./pachi -u t-unit/wouldbe_ladder_any.t
-  - ./pachi -u t-unit/useful_ladder.t
-  - ./pachi -u t-unit/can_countercap.t
-  - ./pachi -u t-unit/two_eyes.t
-  - ./pachi -u t-unit/moggy_seki.t
-  - ./pachi -u t-unit/board_undo.t
-# check no dcnn build works
-  - make clean
-  - make -j2 DCNN=''
+  - make -j2 DCNN=$DCNN
+  - ./pachi -d2 -u t-unit/sar.t
+  - ./pachi -d2 -u t-unit/ladder.t
+  - ./pachi -d2 -u t-unit/ladder_any.t
+  - ./pachi -d2 -u t-unit/wouldbe_ladder.t
+  - ./pachi -d2 -u t-unit/wouldbe_ladder_any.t
+  - ./pachi -d2 -u t-unit/useful_ladder.t
+  - ./pachi -d2 -u t-unit/can_countercap.t
+  - ./pachi -d2 -u t-unit/two_eyes.t
+  - ./pachi -d2 -u t-unit/moggy_seki.t
+  - ./pachi -d2 -u t-unit/board_undo.t
+  - ./pachi -t =5000 < gtp/genmove.gtp
+  # Test quiet mode
+  - ( ! ./pachi -d0 -t =5000 < gtp/genmove.gtp  2>&1 >/dev/null | grep '.' )
+
