@@ -1192,6 +1192,7 @@ board_play_(struct board *board, struct move *m, struct board_undo *u)
 		}
 		board->last_move2 = board->last_move;
 		board->last_move = *m;
+		board->moves++;
 		return 0;
 	}
 

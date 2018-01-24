@@ -321,7 +321,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 
 	/* Normally last genmove was a pass and we've already figured out dead groups.
 	 * Don't recompute dead groups here, result could be different this time and lead to wrong list. */
-	if (u->dead_groups_move == b->moves) {
+	if (u->dead_groups_move == b->moves - 1) {
 		memcpy(mq, &u->dead_groups, sizeof(*mq));
 		print_dead_groups(u, b, mq);
 		return;
