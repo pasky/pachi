@@ -161,24 +161,30 @@ set_ko(struct board *b, char *arg)
 	b->ko.color = stone_other(last.color);
 }
 
-/* Optional test ? */
 static int optional = 0;
+static char title[256];
 
-#define PRINT_TEST(board)					   \
+static void
+show_title_if_needed(int passed)
+{
+	if (!passed && debug_level == 1 && *title) {
+		fprintf(stderr, "\n%s\n", title);
+		*title = 0;
+	}
+}
+
+#define PRINT_TEST(board, format, ...)	do {			   \
 	board_print_test(2, board);				   \
-	if (DEBUGL(1) && optional) fprintf(stderr, "(OPTIONAL) "); \
-	if (DEBUGL(1))             fprintf(stderr, TEST_PRINTF)
+	if (DEBUGL(1))  fprintf(stderr, format, __VA_ARGS__);	   \
+} while(0)
 
-#define CHECK_TEST(rres, eres, board)			\
-	if (rres != eres) { \
-		if (debug_level <= 2) { \
-			board_print_test(0, board); \
-                        if (debug_level != 2) fprintf(stderr, TEST_PRINTF); \
-		} \
-		fprintf(stderr, "FAILED (%d)\n", rres);	\
-	} \
-	else \
-		if (DEBUGL(1))  fprintf(stderr, "OK\n");
+#define PRINT_RES(passed)  do {						\
+	if (!(passed)) {					\
+		show_title_if_needed(passed);			\
+		if (DEBUGL(0))  fprintf(stderr, "FAILED %s\n", (optional ? "(optional)" : "")); \
+	} else								\
+		if (DEBUGL(1))  fprintf(stderr, "OK\n");		\
+} while(0)
 
 
 static bool
@@ -192,15 +198,13 @@ test_sar(struct board *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-#define TEST_PRINTF "sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
-	PRINT_TEST(b);
+	PRINT_TEST(b, "sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_bad_selfatari(b, color, c);
 
-	CHECK_TEST(rres, eres, b);
-	return (rres == eres);
-#undef  TEST_PRINTF
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
 }
 
 
@@ -215,17 +219,15 @@ test_ladder(struct board *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-#define TEST_PRINTF "ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
-	PRINT_TEST(b);
+	PRINT_TEST(b, "ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
 	assert(atari_neighbor);
 	int rres = is_ladder(b, c, atari_neighbor, true);
 	
-	CHECK_TEST(rres, eres, b);
-	return (rres == eres);
-#undef  TEST_PRINTF
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
 }
 
 
@@ -240,17 +242,15 @@ test_ladder_any(struct board *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-#define TEST_PRINTF "ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
-	PRINT_TEST(b);
+	PRINT_TEST(b, "ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
 	assert(atari_neighbor);
 	int rres = is_ladder_any(b, c, atari_neighbor, true);
 	
-	CHECK_TEST(rres, eres, b);
-	return (rres == eres);
-#undef  TEST_PRINTF
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
 }
 
 
@@ -276,8 +276,7 @@ test_wouldbe_ladder(struct board *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-#define TEST_PRINTF "wouldbe_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
-	PRINT_TEST(b);
+	PRINT_TEST(b, "wouldbe_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t g = get_2lib_neighbor(b, c, stone_other(color));
@@ -288,9 +287,8 @@ test_wouldbe_ladder(struct board *b, char *arg)
 		escapelib = board_group_info(b, g).lib[1];
 	int rres = wouldbe_ladder(b, g, escapelib, chaselib, stone_other(color));
 	
-	CHECK_TEST(rres, eres, b);
-	return (rres == eres);
-#undef  TEST_PRINTF
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
 }
 
 static bool
@@ -304,8 +302,7 @@ test_wouldbe_ladder_any(struct board *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-#define TEST_PRINTF "wouldbe_ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
-	PRINT_TEST(b);
+	PRINT_TEST(b, "wouldbe_ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t g = get_2lib_neighbor(b, c, stone_other(color));
@@ -316,9 +313,8 @@ test_wouldbe_ladder_any(struct board *b, char *arg)
 		escapelib = board_group_info(b, g).lib[1];
 	int rres = wouldbe_ladder_any(b, g, escapelib, chaselib, stone_other(color));
 	
-	CHECK_TEST(rres, eres, b);
-	return (rres == eres);
-#undef  TEST_PRINTF
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
 }
 
 
@@ -333,8 +329,7 @@ test_useful_ladder(struct board *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-#define TEST_PRINTF "useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres
-	PRINT_TEST(b);
+	PRINT_TEST(b, "useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
@@ -342,9 +337,8 @@ test_useful_ladder(struct board *b, char *arg)
 	int ladder = is_ladder(b, c, atari_neighbor, true);  assert(ladder);
 	int rres = useful_ladder(b, atari_neighbor);
 	
-	CHECK_TEST(rres, eres, b);
-	return (rres == eres);
-#undef  TEST_PRINTF
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
 }
 
 static bool
@@ -356,17 +350,15 @@ test_can_countercap(struct board *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-#define TEST_PRINTF "can_countercap %s %d...\t", coord2sstr(c, b), eres
-	PRINT_TEST(b);
+	PRINT_TEST(b, "can_countercap %s %d...\t", coord2sstr(c, b), eres);
 
 	enum stone color = board_at(b, c);
 	group_t g = group_at(b, c);
 	assert(color == S_BLACK || color == S_WHITE);
 	int rres = can_countercapture(b, g, NULL, 0);
 
-	CHECK_TEST(rres, eres, b);
-	return (rres == eres);
-#undef  TEST_PRINTF
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
 }
 
 
@@ -379,16 +371,14 @@ test_two_eyes(struct board *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-#define TEST_PRINTF "two_eyes %s %d...\t", coord2sstr(c, b), eres
-	PRINT_TEST(b);
+	PRINT_TEST(b, "two_eyes %s %d...\t", coord2sstr(c, b), eres);
 
 	enum stone color = board_at(b, c);
 	assert(color == S_BLACK || color == S_WHITE);
 	int rres = dragon_is_safe(b, group_at(b, c), color);
 
-	CHECK_TEST(rres, eres, b);
-	return (rres == eres);
-#undef  TEST_PRINTF
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
 }
 
 
@@ -404,14 +394,13 @@ test_moggy_moves(struct board *b, char *arg)
 
 	args_end();
 	if (!tunit_over_gtp) assert(last_move_set);
-
-	board_print(b, stderr);  // Always print board so we see last move
+	board_print_test(2, b);
 
 	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
 	struct engine *e = engine_replay_init(e_arg, b);
 	enum stone color = stone_other(b->last_move.color);
 	
-	if (DEBUGL(1))
+	if (DEBUGL(2))
 		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
 			stone2str(color), runs);
 
@@ -424,7 +413,7 @@ test_moggy_moves(struct board *b, char *arg)
 	for (int k = most_played; k > 0; k--)
 		for (coord_t c = resign; c < b->size2; c++)
 			if (played[c] == k)
-				fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
+				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
 	
 	engine_done(e);
 	return true;   // Not much of a unit test right now =)
@@ -470,17 +459,14 @@ test_moggy_status(struct board *b, char *arg)
 	if (!tunit_over_gtp) assert(last_move_set);
 	
 	enum stone color = (is_pass(b->last_move.coord) ? S_BLACK : stone_other(b->last_move.color));
-	board_print(b, stderr);
-	if (DEBUGL(1)) {
-		if (optional) fprintf(stderr, "(OPTIONAL) ");
-		fprintf(stderr, "moggy status ");
-		for (int i = 0; i < n; i++) {
-			char *chr = (thres[i] == 80 ? ":XO," : ":xo,");
-			if (!thres[i])  chr = "????";
-			fprintf(stderr, "%s %c  ", coord2sstr(status_at[i], b),	chr[expected[i]]);
-		}
-		fprintf(stderr, "%s to play. Playing %i games ...\n", stone2str(color), games);
+	board_print_test(2, b);
+	if (DEBUGL(2))  fprintf(stderr, "moggy status ");
+	for (int i = 0; i < n; i++) {
+		char *chr = (thres[i] == 80 ? ":XO," : ":xo,");
+		if (!thres[i])  chr = "????";
+		if (DEBUGL(2)) fprintf(stderr, "%s %c  ", coord2sstr(status_at[i], b),	chr[expected[i]]);
 	}
+	if (DEBUGL(2)) fprintf(stderr, "\n%s to play. Playing %i games ...\n", stone2str(color), games);
 	
 	struct playout_policy *policy = playout_moggy_init(NULL, b, NULL);
 	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
@@ -500,31 +486,32 @@ test_moggy_status(struct board *b, char *arg)
 		board_done_noalloc(&b2);
 	}
 	double elapsed = time_now() - time_start;
-	fprintf(stderr, "moggy status in %.1fs, %i games/s\n\n", elapsed, (int)((float)games / elapsed));
+	if (DEBUGL(2)) fprintf(stderr, "moggy status in %.1fs, %i games/s\n\n", elapsed, (int)((float)games / elapsed));
 	
 	int wr_black = wr * 100 / games;
 	int wr_white = (games - wr) * 100 / games;
-	if (wr_black > wr_white)  fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white);
-	else		          fprintf(stderr, "Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
+	if (wr_black > wr_white)  { if (DEBUGL(2)) fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white); }
+	else		            if (DEBUGL(2)) fprintf(stderr, "Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
 
-	board_print_ownermap(b, stderr, &ownermap);
+	if (DEBUGL(2)) board_print_ownermap(b, stderr, &ownermap);
 
+	/* Check results */
 	bool ret = true;
 	for (int i = 0; i < n; i++) {
 		coord_t c = status_at[i];
 		enum point_judgement j = board_ownermap_judge_point(&ownermap, c, 0.8);
-		if (j == PJ_UNKNOWN) j = board_ownermap_judge_point(&ownermap, c, 0.67);
-		enum stone color = (ownermap.map[c][S_BLACK] > ownermap.map[c][S_WHITE] ? S_BLACK : S_WHITE);
+		if (j == PJ_UNKNOWN) j = board_ownermap_judge_point(&ownermap, c, 0.67);		
+		enum stone color = (enum stone)j;
+		if (j == PJ_UNKNOWN)
+			color = (ownermap.map[c][S_BLACK] > ownermap.map[c][S_WHITE] ? S_BLACK : S_WHITE);
 		int pc = ownermap.map[c][color] * 100 / ownermap.playouts;
+
+		int passed = (!thres[i] || (j == expected[i] && pc >= thres[i]));
+		char *colorstr = (j == PJ_DAME ? "dame" : stone2str(color));
+		PRINT_TEST(b, "%3s %-5s %i%%    ", coord2sstr(c, b), colorstr, pc);
 		
-		if (j == PJ_DAME) {
-			pc = ownermap.map[c][S_NONE] * 100 / ownermap.playouts;
-			fprintf(stderr, "%3s           dame: %i%%  ", coord2sstr(c, b), pc);
-		} else  fprintf(stderr, "%3s owned by %s: %i%%  ", coord2sstr(c, b), stone2str(color), pc);
-		
-		if (!thres[i] || (j == expected[i] && pc >= thres[i]))
-			fprintf(stderr, "OK\n");
-		else {  fprintf(stderr, "FAILED\n"); ret = false;  }
+		if (!passed)  ret = false;
+		PRINT_RES(passed);
 	}
 	
 	playout_policy_done(policy);
@@ -603,7 +590,10 @@ unit_test(char *filename)
 		
 		optional = 0;
 		switch (line[0]) {
-			case '%': fprintf(stderr, "\n%s\n", line); continue;
+			case '%':
+				strncpy(title, line, sizeof(title));
+				if (DEBUGL(1))  fprintf(stderr, "\n%s\n", line);
+				continue;
 			case '!':
 				optional = 1; line++;
 				line += strspn(line, " ");
