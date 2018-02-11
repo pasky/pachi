@@ -408,7 +408,7 @@ distributed_chat(struct engine *e, struct board *b, bool opponent, char *from, c
 	double winrate = get_value(dist->my_last_stats.value, dist->my_last_move.color);
 
 	return generic_chat(b, opponent, from, cmd, dist->my_last_move.color, dist->my_last_move.coord,
-			    dist->my_last_stats.playouts, dist->slaves, dist->threads, winrate, 0.0);
+			    dist->my_last_stats.playouts, dist->slaves, dist->threads, winrate, 0.0, "");
 }
 
 static int

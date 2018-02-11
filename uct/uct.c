@@ -310,14 +310,15 @@ uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd
 	struct uct *u = e->data;
 
 	if (!u->t)
-		return generic_chat(b, opponent, from, cmd, S_NONE, pass, 0, 1, u->threads, 0.0, 0.0);
+		return generic_chat(b, opponent, from, cmd, S_NONE, pass, 0, 1, u->threads, 0.0, 0.0, "");
 
 	struct tree_node *n = u->t->root;
 	double winrate = tree_node_get_value(u->t, -1, n->u.value);
 	double extra_komi = u->t->use_extra_komi && fabs(u->t->extra_komi) >= 0.5 ? u->t->extra_komi : 0;
+	char *score_est = board_ownermap_score_est_str(b, &u->ownermap);
 
 	return generic_chat(b, opponent, from, cmd, u->t->root_color, node_coord(n), n->u.playouts, 1,
-			    u->threads, winrate, extra_komi);
+			    u->threads, winrate, extra_komi, score_est);
 }
 
 static void

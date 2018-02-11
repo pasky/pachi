@@ -12,6 +12,6 @@ void chat_init(char *chat_file);
 void chat_done();
 
 char *generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
-		   int playouts, int machines, int threads, double winrate, double extra_komi);
+		   int playouts, int machines, int threads, double winrate, double extra_komi, char *score_est);
 
 #endif
