@@ -12,13 +12,23 @@
 /* Returns true if @str starts with @prefix */
 int str_prefix(char *prefix, char *str);
 
-/* Terminate with error msg */
+/* Warn user (popup on windows) */
+void warning(const char *format, ...);
+
+/* Warning + terminate process */
 void die(const char *format, ...)  __attribute__ ((noreturn));
 
-/* Terminate after system call failure (calls perror()) */
+/* Terminate after system call failure (similar to perror()) */
 void fail(char *msg) __attribute__ ((noreturn));
 
 int file_exists(const char *name);
+
+/* windows: cd to pachi directory to avoid cwd issues. */
+void win_set_pachi_cwd(char *pachi);
+
+/* Get number of processors. */
+int get_nprocessors();
+
 
 /**************************************************************************************************/
 /* Data files */
@@ -48,8 +58,12 @@ FILE *fopen_data_file(const char *filename, const char *mode);
 #include <ctype.h>
 
 #define sleep(seconds) Sleep((seconds) * 1000)
-#define __sync_fetch_and_add(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), (b));
-#define __sync_fetch_and_sub(ap, b) InterlockedExchangeAdd((LONG volatile *) (ap), -((LONG)b));
+
+/* No line buffering on windows, set to unbuffered. */
+#define setlinebuf(file)   setvbuf(file, NULL, _IONBF, 0)
+
+/* Windows MessageBox() */
+#define popup(msg)	MessageBox(0, msg, "Pachi", MB_OK);
 
 /* MinGW gcc, no function prototype for built-in function stpcpy() */ 
 char *stpcpy (char *dest, const char *src);

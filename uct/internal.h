@@ -49,9 +49,9 @@ struct uct {
 	int force_seed;
 	bool no_tbook;
 	bool fast_alloc;
-	unsigned long max_tree_size;
-	unsigned long max_pruned_size;
-	unsigned long pruning_threshold;
+	size_t max_tree_size;
+	size_t max_pruned_size;
+	size_t pruning_threshold;
 	int mercymin;
 	int significant_threshold;
 

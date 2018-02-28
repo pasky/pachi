@@ -18,6 +18,15 @@ extern "C" {
 
 static shared_ptr<Net<float> > net;
 
+/* Make caffe quiet */
+void
+quiet_caffe(int argc, char *argv[])
+{
+	google::InitGoogleLogging(argv[0]);
+	google::LogToStderr();
+	google::SetStderrLogging(google::NUM_SEVERITIES - 1);
+}
+	
 bool
 caffe_ready()
 {
@@ -33,6 +42,9 @@ caffe_init()
 	char trained_file[256];  get_data_file(trained_file, "golast.trained");
 	if (!file_exists(model_file) || !file_exists(trained_file)) {
 		if (DEBUGL(1))  fprintf(stderr, "No dcnn files found, will not use dcnn code.\n");
+#ifdef _WIN32
+		popup("WARNING: Couldn't find Pachi data files, running without dcnn support !\n");
+#endif
 		return;
 	}
 	

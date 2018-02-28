@@ -1,10 +1,36 @@
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <errno.h>
+#include <libgen.h>
 #include <sys/stat.h>
 #include "util.h"
+
+void
+win_set_pachi_cwd(char *pachi)
+{
+#ifdef _WIN32
+	char *pachi_path = strdup(pachi);
+	const char *pachi_dir = dirname(pachi_path);
+	if (chdir(pachi_dir) != 0)  die("Couldn't cd to %s", pachi_dir);
+	free(pachi_path);
+#endif
+}
+
+int
+get_nprocessors()
+{
+#ifdef _WIN32
+	SYSTEM_INFO info;
+	GetSystemInfo(&info);
+	return info.dwNumberOfProcessors;
+#else
+	return sysconf(_SC_NPROCESSORS_ONLN);
+#endif	
+}
 
 int
 file_exists(const char *name)
@@ -82,14 +108,34 @@ str_prefix(char *prefix, char *str)
 	return (!strncmp(prefix, str, strlen(prefix)));
 }
 
+
+static void
+vwarning(const char *format, va_list ap)
+{
+	vfprintf(stderr, format, ap);
+
+#ifdef _WIN32    /* Display popup */	
+	char buf[2048];
+	vsnprintf(buf, sizeof(buf), format, ap);
+	popup(buf);
+#endif
+}
+
+void
+warning(const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	vwarning(format, ap);
+	va_end(ap);
+}
+
 void
 die(const char *format, ...)
 {
 	va_list ap;
 	va_start(ap, format);
-
-	vfprintf(stderr, format, ap);
-
+	vwarning(format, ap);
 	va_end(ap);
 	exit(EXIT_FAILURE);
 }
@@ -97,7 +143,7 @@ die(const char *format, ...)
 void
 fail(char *msg)
 {
-	perror(msg);
+	warning("%s: %s\n", msg, strerror(errno));
 	exit(42);
 }
 

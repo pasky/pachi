@@ -5,6 +5,48 @@
 
 /* Simple Park-Miller for floating point; LCG as used in glibc and other places */
 
+
+/********************************************************************************************/
+#ifdef _WIN32
+
+/* Use TlsGetValue() / TlsSetValue() for thread-local storage,
+ * mingw-w64's __thread is painfully slow. */
+
+static int tls_index = -1;
+
+static void __attribute__((constructor))
+init_fast_random()
+{
+	tls_index = TlsAlloc();
+	fast_srandom(29264);
+}
+
+void
+fast_srandom(unsigned long seed_)
+{
+	TlsSetValue(tls_index, (void*)(intptr_t)seed_);
+}
+
+unsigned long
+fast_getseed(void)
+{
+	return (unsigned long)(intptr_t)TlsGetValue(tls_index);
+}
+
+uint16_t
+fast_random(unsigned int max)
+{
+	unsigned long pmseed = fast_getseed();
+	pmseed = ((pmseed * 1103515245) + 12345) & 0x7fffffff;
+	fast_srandom(pmseed);
+	return ((pmseed & 0xffff) * max) >> 16;
+}
+
+
+#else
+
+
+/********************************************************************************************/
 #ifndef NO_THREAD_LOCAL
 
 static __thread unsigned long pmseed = 29264;
@@ -39,6 +81,9 @@ fast_frandom(void)
 }
 
 #else
+
+
+/********************************************************************************************/
 
 /* Thread local storage not supported through __thread,
  * use pthread_getspecific() instead. */
@@ -88,4 +133,5 @@ fast_frandom(void)
 	return p.f - 1.0f;
 }
 
+#endif
 #endif

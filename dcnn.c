@@ -10,6 +10,9 @@
 #include "dcnn.h"
 #include "timeinfo.h"
 
+static bool dcnn_enabled = true;
+void disable_dcnn()     {  dcnn_enabled = false;  }
+
 /* Time spent in dcnn code */
 double dcnn_time = 0;
 double get_dcnn_time()  {  return dcnn_time;  }
@@ -18,24 +21,13 @@ void reset_dcnn_time()  {  dcnn_time = 0;  }
 bool
 using_dcnn(struct board *b)
 {
-	return (real_board_size(b) == 19 && caffe_ready());
+	return (dcnn_enabled && real_board_size(b) == 19 && caffe_ready());
 }
 
 void
 dcnn_init()
 {
-	caffe_init();
-}
-
-/* Make caffe quiet */
-void
-dcnn_quiet_caffe(int argc, char *argv[])
-{
-	if (DEBUGL(7) || getenv("GLOG_minloglevel"))
-		return;
-	
-	setenv("GLOG_minloglevel", "2", 1);
-	execvp(argv[0], argv);   /* Sucks that we have to do this */
+	if (dcnn_enabled)  caffe_init();
 }
 
 void

@@ -1,10 +1,10 @@
 #ifndef PACHI_VERSION_H
 #define PACHI_VERSION_H
 
-#include "gitversion.h"
+#include "build.h"
 
-#define PACHI_VERNUM 11.99
-#define PACHI_VERNUMS "11.99"
+#define PACHI_VERNUM 12.00
+#define PACHI_VERNUMS "12.00"
 
 /* 00. Wang Zhi
  * 01. Sansa     Meijin  1612-1623
@@ -31,11 +31,15 @@
  * 19. Shuei     Meijin  1887-1907
  * 20. Shugen    6-Dan   1907-1908
  * 21. Shusai    Meijin  1908-1940 */
-#define PACHI_VERNAME "Genjo"
+#define PACHI_VERNAME "Jowa"
 
-/* -devel except when tagged. */
-#define PACHI_VERDEV "-devel"
+#define PACHI_VERSION  PACHI_VERNUMS " (" PACHI_VERNAME ")"
+#define PACHI_VERGIT   PACHI_GIT_HASH " (" PACHI_GIT_BRANCH ")"
 
-#define PACHI_VERSION PACHI_VERNUMS " (" PACHI_VERNAME PACHI_VERDEV ") - " GIT_BRANCH " (" GIT_HASH ")"
+#ifdef DCNN
+    #define PACHI_VERBUILD PACHI_BUILD_TARGET " dcnn build, " PACHI_BUILD_DATE
+#else
+    #define PACHI_VERBUILD PACHI_BUILD_TARGET " !dcnn build, " PACHI_BUILD_DATE
+#endif
 
 #endif

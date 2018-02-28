@@ -114,11 +114,8 @@ policy_ucb1_init(struct uct *u, char *arg)
 				b->explore_p = atof(optval);
 			} else if (!strcasecmp(optname, "fpu") && optval) {
 				b->fpu = atof(optval);
-			} else {
-				fprintf(stderr, "ucb1: Invalid policy argument %s or missing value\n",
-					optname);
-				exit(1);
-			}
+			} else
+				die("ucb1: Invalid policy argument %s or missing value\n", optname);
 		}
 	}
 

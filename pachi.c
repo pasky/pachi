@@ -28,6 +28,7 @@
 #include "network.h"
 #include "uct/tree.h"
 #include "dcnn.h"
+#include "caffe.h"
 
 int debug_level = 3;
 bool debug_boardprint = true;
@@ -81,6 +82,7 @@ usage()
 	fprintf(stderr,
 		"Options: \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
+                "      --compile-flags               show pachi's compile flags \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
 		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
@@ -89,13 +91,17 @@ usage()
 		"  -g, --gtp-port [HOST:]GTP_PORT    read gtp commands from network instead of stdin. \n"
 		"                                    listen on given port if HOST not given, otherwise \n"
 		"                                    connect to remote host. \n"
+		"  -h, --help                        show usage \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
+		"      --no-dcnn                     disable dcnn \n"
+		"  -o  --log-file FILE               log to FILE instead of stderr \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
 		"  -s, --seed RANDOM_SEED            set random seed \n"
 		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
 		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
 		"  -u, --unit-test FILE              run unit tests \n"
+		"      --verbose-caffe               enable caffe logging \n"
 		"  -v, --version                     show version \n"
 		" \n"
 		"TIME_SETTINGS: \n"
@@ -116,20 +122,43 @@ usage()
 		" \n");
 }
 
-#define OPT_FUSEKI_TIME 256
+static void
+show_version(FILE *s)
+{
+	fprintf(s, "Pachi version %s\n", PACHI_VERSION);
+	if (!DEBUGL(2)) return;
+
+	fprintf(s, "git %s\n", PACHI_VERGIT);
+
+	/* Build info */
+	char boardsize[32] = "";
+#ifdef BOARD_SIZE
+	sprintf(boardsize, "[%ix%i]", BOARD_SIZE, BOARD_SIZE);
+#endif
+	fprintf(s, "%s  %s\n\n", PACHI_VERBUILD, boardsize);
+}
+
+#define OPT_FUSEKI_TIME   256
+#define OPT_NO_DCNN       257
+#define OPT_VERBOSE_CAFFE 258
+#define OPT_COMPILE_FLAGS 259
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "chatfile",    required_argument, 0, 'c' },
+	{ "compile-flags", no_argument,     0, OPT_COMPILE_FLAGS },
 	{ "debug-level", required_argument, 0, 'd' },
 	{ "engine",      required_argument, 0, 'e' },
 	{ "fbook",       required_argument, 0, 'f' },
 	{ "gtp-port",    required_argument, 0, 'g' },
 	{ "help",        no_argument,       0, 'h' },
+	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
+	{ "no-dcnn",     no_argument,       0, OPT_NO_DCNN },
 	{ "rules",       required_argument, 0, 'r' },
 	{ "seed",        required_argument, 0, 's' },
 	{ "time",        required_argument, 0, 't' },
 	{ "unit-test",   required_argument, 0, 'u' },
+	{ "verbose-caffe", no_argument,     0, OPT_VERBOSE_CAFFE },
 	{ "version",     no_argument,       0, 'v' },
 	{ 0, 0, 0, 0 }
 };
@@ -137,7 +166,7 @@ static struct option longopts[] = {
 int main(int argc, char *argv[])
 {
 	enum engine_id engine = E_UCT;
-	struct time_info ti_default = { .period = TT_NULL };
+	struct time_info ti_default = { .period = TT_NULL };	
 	char *testfile = NULL;
 	char *gtp_port = NULL;
 	char *log_port = NULL;
@@ -145,16 +174,29 @@ int main(int argc, char *argv[])
 	char *chatfile = NULL;
 	char *fbookfile = NULL;
 	char *ruleset = NULL;
+	FILE *file = NULL;
+	bool verbose_caffe = false;
 
+	setlinebuf(stdout);
+	setlinebuf(stderr);
+
+	win_set_pachi_cwd(argv[0]);
+	
 	seed = time(NULL) ^ getpid();
 
 	int opt;
 	int option_index;
-	while ((opt = getopt_long(argc, argv, "c:e:d:Df:g:hl:r:s:t:u:v", longopts, &option_index)) != -1) {
+	/* Leading ':' -> we handle error messages. */
+	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
 				break;
+			case OPT_COMPILE_FLAGS:
+				printf("Compiler:\n%s\n\n", PACHI_COMPILER);
+				printf("CFLAGS:\n%s\n\n", PACHI_CFLAGS);
+				printf("Command:\n%s\n", PACHI_CC1);
+				exit(0);
 			case 'e':
 				if      (!strcasecmp(optarg, "random"))		engine = E_RANDOM;
 				else if (!strcasecmp(optarg, "replay"))		engine = E_REPLAY;
@@ -187,6 +229,15 @@ int main(int argc, char *argv[])
 			case 'l':
 				log_port = strdup(optarg);
 				break;
+			case 'o':
+				file = fopen(optarg, "w");   if (!file) fail(optarg);
+				fclose(file);
+				if (!freopen(optarg, "w", stderr))  fail("freopen()");
+				setlinebuf(stderr);
+				break;
+			case OPT_NO_DCNN:
+				disable_dcnn();
+				break;
 			case 'r':
 				ruleset = strdup(optarg);
 				break;
@@ -216,33 +267,33 @@ int main(int argc, char *argv[])
 			case 'u':
 				testfile = strdup(optarg);
 				break;
+			case OPT_VERBOSE_CAFFE:
+				verbose_caffe = true;
+				break;
 			case 'v':
-				fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
+				show_version(stdout);
 				exit(0);
+			case ':':
+				die("%s: Missing argument\n"
+				    "Try 'pachi --help' for more information.\n", argv[optind-1]);
 			default: /* '?' */
-				usage();
-				exit(1);
+				die("Invalid argument: %s\n"
+				    "Try 'pachi --help' for more information.\n", argv[optind-1]);
 		}
 	}
 
-	dcnn_quiet_caffe(argc, argv);
-	if (log_port)
-		open_log_port(log_port);
-
-	fprintf(stderr, "Pachi version %s\n", PACHI_VERSION);
-	if (DEBUGL(0) && getenv("DATA_DIR"))
-		fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
-	
 	fast_srandom(seed);
-	if (DEBUGL(0))
-		fprintf(stderr, "Random seed: %d\n", seed);
-
-	if (testfile)
-		return unit_test(testfile);
+	
+	if (!verbose_caffe)      quiet_caffe(argc, argv);
+	if (log_port)		 open_log_port(log_port);	
+	if (testfile)		 return unit_test(testfile);
+	if (DEBUGL(0))           show_version(stderr);
+	if (getenv("DATA_DIR"))
+		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
+	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init(fbookfile);
-	if (ruleset && !board_set_rules(b, ruleset))
-		die("Unknown ruleset: %s\n", ruleset);
+	if (ruleset && !board_set_rules(b, ruleset))  die("Unknown ruleset: %s\n", ruleset);
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
@@ -251,12 +302,10 @@ int main(int argc, char *argv[])
 	chat_init(chatfile);
 
 	char *e_arg = NULL;
-	if (optind < argc)
-		e_arg = argv[optind];
+	if (optind < argc)	e_arg = argv[optind];
 	struct engine *e = init_engine(engine, e_arg, b);
 
-	if (gtp_port)
-		open_gtp_connection(&gtp_sock, gtp_port);
+	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
 
 	for (;;) {
 		char buf[4096];

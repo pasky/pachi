@@ -166,7 +166,12 @@ hsv2rgb(float h, float s, float v, int *r, int *g, int *b)
 static void
 value2color(float val, int *r, int *g, int *b)
 {
-	/* Shrink cyan range, too bright */
+	/* Shrink cyan range, too bright:
+	 * val: [ 1.0                                        0.0 ]
+	 *   h: [  0                    145           215    242 ]
+	 *      [ red....................[.....cyan....]....blue ]  <- linear mapping
+	 *      [ .......................[. . . . . . .]....blue ]  <- we want this
+	 */
 	int h1 = 145, h2 = 215;
 	int w = h2 - h1;  /* orig cyan range, 70 */
 	int w2 = 20;      /* new one */
@@ -179,14 +184,14 @@ value2color(float val, int *r, int *g, int *b)
 	if (h1 <= h && h <= h1 + w2) {
 		h = h1 + (h - h1) * w / w2;
 		int m = w / 2;
-		v -= (m - abs(h - (h1 + m))) * 0.2 / m;
+		v -= (m - fabsf(h - (h1 + m))) * 0.2 / m;
 	} else if (h >= h1 + w2)
 		h += w - w2;
 
 	/* Also decrease green range lightness. */
 	int h0 = 100;  int m0 = (h2 - h0) / 2;
 	if (h0 <= h && h <= h2)
-		v -= (m0 - abs(h - (h0 + m0))) * 0.2 / m0;
+		v -= (m0 - fabsf(h - (h0 + m0))) * 0.2 / m0;
 	
 	//fprintf(stderr, "h: %i\n", (int)h);
 	hsv2rgb(h, s, v, r, g, b);

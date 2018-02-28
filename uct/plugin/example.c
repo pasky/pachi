@@ -129,10 +129,8 @@ pachi_plugin_init(char *arg, struct board *b, int seed)
 				 * argument */
 				ctx->selfatari = !optval || atoi(optval);
 
-			} else {
-				fprintf(stderr, "example plugin: Invalid argument %s or missing value\n", optname);
-				exit(1);
-			}
+			} else
+				die("example plugin: Invalid argument %s or missing value\n", optname);
 		}
 	}
 

@@ -1,4 +1,7 @@
-Pachi stands on research shoulders of giants, specifically:
+Pachi stands on the research shoulders of giants:
+
+Move Evaluation in Go using Deep Convolutional Neural Networks
+	Chris J. Maddison, Aja Huang, Ilya Sutskever & David Silver
 
 Modification of UCT with Patterns in Monte-Carlo Go
 	Sylvain Gelly, Yizao Wang, Remi Munos & Olivier Teytaud
@@ -6,12 +9,29 @@ Modification of UCT with Patterns in Monte-Carlo Go
 Combining Online and Offline Knowledge in UCT
 	Sylvain Gelly, David Silver
 
+And many others...
+
+
+
+The 54% dcnn was trained by Detlef Schmicker and graciously shared
+with the computer-go community.
+
+
+
+Neural networks don't shine without good frameworks around them.
+Kudos to all the good work that went into Caffe, Cuda and OpenBlas,
+providing such a fast and flexible implementation. Even my old
+laptop can go through the millions of multiplications needed to
+evaluate the dcnn in less than a second, which is amazing.
+
+
 
 Pachi contains unpublished methods we claim we have invented
-independently and are preparing for publication:
+independently:
 
 * The dynamic komi feature.
 * The local tree feature.
+
 
 
 These people have made significant contributions to the code:
@@ -23,6 +43,10 @@ Jean-loup Gaily
 	Distributed engine
 	Time allocation algorithm
 	Efficient UCT memory allocator
+
+Lemonsqueeze
+	Seki, dcnn and all kinds of things to Pachi's guts which
+	unexpectedly ended up making it fly on embedded devices.
 
 
 Pachi uses data extracted from the Kogo joseki dictionary as its

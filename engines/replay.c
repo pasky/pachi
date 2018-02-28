@@ -182,10 +182,8 @@ replay_state_init(char *arg, struct board *b)
 				} else {
 					fprintf(stderr, "Replay: Invalid playout policy %s\n", optval);
 				}
-			} else {
-				fprintf(stderr, "Replay: Invalid engine argument %s or missing value\n", optname);
-				exit(1);
-			}
+			} else
+				die("Replay: Invalid engine argument %s or missing value\n", optname);
 		}
 	}
 

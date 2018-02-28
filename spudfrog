@@ -1,0 +1,38 @@
+#!/bin/bash
+# Trusted build attendant
+
+die() {  echo "spudfrog: $@"; exit 1;  }
+[ -n "$OPT" ] || die "i need to be called from Makefile"
+
+red="[31;1m";     green="[32;1m";  yellow="[33;1m";  blue="[34;1m"
+purple="[35;1m";  cyan="[36;1m";   end="[0m"
+ngreen="[32m";    white="[37;1m"   gray="[30;1m"
+
+                      build_type="${green}[native]${end}"
+[ "$GENERIC" = 1 ] && build_type="${cyan}[generic]${end}"
+
+                      dcnn="${cyan}[!dcnn]${end}"
+[ "$DCNN" = 1 ]    && dcnn="${green}[dcnn]${end}"
+
+                      opt_flag="${cyan}[$OPT]${end}"
+[ "$OPT" = "-O3" ] && opt_flag="${green}[$OPT]${end}"
+
+                              floating="${green}[float]${end}"
+[ "$DOUBLE_FLOATING" = 1 ] && floating="${cyan}[double]${end}"
+
+                        boardsize=""
+[ -n "$BOARD_SIZE" ] && boardsize="  ${cyan}[${BOARD_SIZE}x${BOARD_SIZE}]${end}"
+
+status="$build_type  $dcnn  $opt_flag  $floating$boardsize"
+
+raw=${status//?????m/}; raw=${raw//${end}/}
+n=$[45-${#raw}];  n1=$[$n/2];  n2=$[$n-$n1]
+
+spud=$gray
+printf "%s          (.)~(.)                                           $end\n" $spud
+printf "%s         (-------)                                          $end\n" $spud
+printf "%s   .----%sooO%s-----%sOoo%s--------------------------------.$end\n" $gray $spud $gray $spud $gray
+printf "%s  | ${end} %*s%s%*s $gray |$end\n"                                  $gray  $n1 ""  "$status"  $n2 ""
+printf "%s   ᛫-----------------------------------------------᛫$end\n" $gray
+printf "%s         ( )   ( )                                          $end  \n" $spud
+printf "\n"

@@ -2,7 +2,7 @@ INCLUDES=-I..
 
 OBJS=joseki.o josekibase.o montecarlo.o patternplay.o patternscan.o random.o replay.o
 
-ifdef DCNN
+ifeq ($(DCNN), 1)
 	OBJS+=dcnn.o
 endif
 

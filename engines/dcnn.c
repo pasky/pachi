@@ -26,7 +26,9 @@ dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 			return best_moves[i];
 		fprintf(stderr, "dcnn suggests invalid move %s !\n", coord2sstr(best_moves[i], b));
 	}
+	
 	assert(0);
+	return pass;
 }
 
 static void
