@@ -28,12 +28,16 @@ are used in the tree search.
 
 ## Binary Releases
 
-Windows: download [binary release](https://github.com/pasky/pachi/releases)
+**Windows**: download binary [release](https://github.com/pasky/pachi/releases)
 for windows and follow instructions inside.
 
-Ubuntu: coming soon (there are old packages in my
-[ppa](https://launchpad.net/~lemonsqueeze/+archive/ubuntu/pachi) though)
+**Ubuntu**: there's a 'pachi-go' package in my [ppa](https://launchpad.net/~lemonsqueeze/+archive/ubuntu/pachi):
 
+    sudo add-apt-repository ppa:lemonsqueeze/pachi
+    sudo apt-get update
+    sudo apt-get install pachi-go
+
+> Performance might be better if you recompile for your own system though.
 
 ## Installation
 
