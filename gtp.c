@@ -525,6 +525,13 @@ cmd_undo(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 	return P_OK;
 }
 
+static enum parse_code
+cmd_showboard(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+{
+	board_print(board, stderr);
+	return P_OK;
+}
+
 /* Custom commands for handling the tree opening tbook */
 static enum parse_code
 cmd_pachi_gentbook(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
@@ -706,6 +713,7 @@ static gtp_command_t commands[] =
 	{ "final_score",            cmd_final_score },
 	{ "final_status_list",      cmd_final_status_list },
 	{ "undo",                   cmd_undo },
+	{ "showboard",              cmd_showboard },   	/* ogs */
 
 	{ "kgs-game_over",          cmd_kgs_game_over },
 	{ "kgs-rules",              cmd_kgs_rules },

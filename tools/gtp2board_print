@@ -1,0 +1,9 @@
+#!/bin/sh
+# process gtp stream and print ascii board.
+# usage: gtp2board_print < file.gtp
+
+dir=`dirname "$0"`/..
+cd $dir
+
+# we don't need any engine really, using replay because it starts up fast.
+( ( cat; echo "showboard" ) | ./pachi -d0 -e replay >/dev/null ) 2>&1
