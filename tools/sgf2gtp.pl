@@ -52,6 +52,10 @@ if (shift @m ne "(") {  die "doesn't look like valid sgf, aborting\n";  }
 my $h = shift @m;    # game header
 $h =~ s/[ \n\t]//gs; # no whitespaces
 
+my $rules = "chinese";
+if ($h =~ /RU\[([^]]+)\]/) {  $rules = lc($1);  } else {  warn "WARNING: no rules specified, assuming $rules ...\n";  }
+print "kgs-rules $rules";
+
 if ($h =~ /SZ\[(\d+)\]/) {  $size = $1;  } else {  warn "WARNING: no board size in game header ...\n";  }
 print "boardsize " . $size;
 print "clear_board";
@@ -61,22 +65,10 @@ my $handicap = 0;
 my $set_free_handicap = "set_free_handicap";
 if ($h =~ s/\bHA\[(\d+)\]//gs and $1 > 0) {  $handicap = $1;   }
 
-
-# Handicap stones passed as setup stones ?
-if ($handicap && $h =~ m/AB((\[\w\w\])+)/)
-{
-    my $stones = $1;   $stones =~ s/\[//g;
-    foreach my $c (split(/\]/, $stones)) {
-	$set_free_handicap .= " " . sgf2gtp($c);
-	if (!--$handicap)  {  print "$set_free_handicap";  }
-	if ($handicap < 0) {  die "shouldn't happen";  }
-    }
-}
-
 sub play
 {
     my ($color, $coord) = @_;
-    if ($coord eq "") {  print "play $color pass"; return;  }
+    if ($coord eq "" || $coord eq "tt")   {  print "play $color pass"; return;  }
 
     my $c = sgf2gtp($coord);
 
@@ -89,6 +81,26 @@ sub play
     }
     
     print "play $color $c";
+}
+
+# Setup stones in game header
+while ($h =~ s/AB((\[\w\w\])+)//)
+{
+    my $stones = $1;   $stones =~ s/\[//g;
+    foreach my $c (split(/\]/, $stones)) {	
+	if ($handicap) {	# Handicap stones passed as setup stones ?
+	    $set_free_handicap .= " " . sgf2gtp($c);
+	    if (!--$handicap)  {  print "$set_free_handicap";  }
+	    next;
+	}
+	play("B", $c);		# Setup stone
+    }
+}
+
+while ($h =~ s/AW((\[\w\w\])+)//)
+{
+    my $stones = $1;   $stones =~ s/\[//g;
+    foreach my $c (split(/\]/, $stones))  {  play("W", $c);  }
 }
 
 my $movenum = 0;

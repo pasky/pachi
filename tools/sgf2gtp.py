@@ -64,12 +64,16 @@ def process_gametree(gametree, fout):
     # first node is the header
     header = c.node
 
+    rules = get_atr(header, 'RU')
     handicap = get_atr(header, 'HA')
     board_size = int(get_atr(header, 'SZ') or 19)
     komi = get_atr(header, 'KM')
     player_next, player_other = "B", "W"
     setup_black = get_setup(header, 'AB')
     setup_white = get_setup(header, 'AW')
+
+    if rules and rules.lower() == "chinese" and handicap and handicap != '0':
+        exit("sgf2gtp.py: fixme! i don't handle handicap in chinese-rules games yet.");
 
     print >>fout, "boardsize", board_size
     print >>fout, "clear_board"
