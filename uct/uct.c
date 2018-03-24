@@ -109,23 +109,50 @@ get_dead_groups(struct uct *u, struct board *b, struct move_queue *dead, struct 
 /* Do we win counting, considering that given groups are dead ?
  * Assumes ownermap is well seeded. */
 static bool
-pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue *mq,
-	     float ownermap_score, bool pass_all_alive, char **msg)
+pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue *dead,
+	     float score_est, bool pass_all_alive, char **msg)
 {
-	int dame;
+	int dames;
 	int final_ownermap[board_size2(b)];
-	floating_t score = board_official_score_details(b, mq, &dame, final_ownermap); 
+	floating_t score = board_official_score_details(b, dead, &dames, final_ownermap); 
 	if (color == S_BLACK)  score = -score;
 	//fprintf(stderr, "pass_is_safe():  %d score %f   dame: %i\n", color, score, dame);
+	//board_print_official_ownermap(b, final_ownermap);
 
 	/* Don't go to counting if position is not final.
-	 * If ownermap and official score disagree position is likely not final.
+	 * Non-seki dames surrounded by only dames / border / one color are no dame to me,
+	 * most likely some territories are still open ... */
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD) continue;
+		if (final_ownermap[c] != 3)  continue;
+		if (board_ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_DAME) continue;
+
+		coord_t dame = c;
+		int around[4] = { 0, };
+		foreach_neighbor(b, dame, {
+			around[final_ownermap[c]]++;
+		});		
+		if (around[S_BLACK] + around[3] == 4 ||
+		    around[S_WHITE] + around[3] == 4 )  {
+			static char buf[100];
+			sprintf(buf, "non-final position at %s", coord2sstr(dame, b));
+			*msg = buf;
+			return false;
+		}
+	} foreach_point_end;	
+
+	/* If ownermap and official score disagree position is likely not final.
 	 * If too many dames also. */
 	if (!pass_all_alive) {
-		*msg = "score est and official score don't agree";
-		if (score != ownermap_score)  return false;
+		int max_dames = (board_large(b) ? 20 : 7);
 		*msg = "too many dames";
-		if (dame > 20)	              return false;
+		if (dames > max_dames)    return false;
+
+		/* Can disagree up to dame points, as long as there are not too many.
+		 * For example a 1 point difference with 1 dame is quite usual... */
+		int max_diff = MIN(dames, 4);
+		*msg = "score est and official score don't agree";
+		if (fabs(score - score_est) > max_diff)  return false;
 	}
 	
 	*msg = "losing on official score";
@@ -141,9 +168,9 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 
 	/* Save dead groups for final_status_list dead. */
 	struct move_queue unclear;
-	struct move_queue *mq = &u->dead_groups;
+	struct move_queue *dead = &u->dead_groups;
 	u->dead_groups_move = b->moves;
-	get_dead_groups(u, b, mq, &unclear);
+	get_dead_groups(u, b, dead, &unclear);
 	
 	/* Unclear groups ? */
 	*msg = "unclear groups";
@@ -151,10 +178,10 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	
 	if (pass_all_alive) {
 		*msg = "need to remove opponent dead groups first";
-		for (unsigned int i = 0; i < mq->moves; i++)
-			if (board_at(b, mq->move[i]) == stone_other(color))
+		for (unsigned int i = 0; i < dead->moves; i++)
+			if (board_at(b, dead->move[i]) == stone_other(color))
 				return false;
-		mq->moves = 0; // our dead stones are alive when pass_all_alive is true
+		dead->moves = 0; // our dead stones are alive when pass_all_alive is true
 	}
 	
 	if (u->allow_losing_pass) {
@@ -173,7 +200,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	if (color == S_BLACK)  score = -score;
 	if (score < 0)  return false;
 
-	return pass_is_safe(u, b, color, mq, score, pass_all_alive, msg);
+	return pass_is_safe(u, b, color, dead, score, pass_all_alive, msg);
 }
 
 static void
@@ -294,14 +321,14 @@ uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd
 }
 
 static void
-print_dead_groups(struct uct *u, struct board *b, struct move_queue *mq)
+print_dead_groups(struct uct *u, struct board *b, struct move_queue *dead)
 {
 	fprintf(stderr, "dead groups (playing %s)\n", (u->my_color ? stone2str(u->my_color) : "???"));
-	if (!mq->moves)
+	if (!dead->moves)
 		fprintf(stderr, "  none\n");
-	for (unsigned int i = 0; i < mq->moves; i++) {
+	for (unsigned int i = 0; i < dead->moves; i++) {
 		fprintf(stderr, "  ");
-		foreach_in_group(b, mq->move[i]) {
+		foreach_in_group(b, dead->move[i]) {
 			fprintf(stderr, "%s ", coord2sstr(c, b));
 		} foreach_in_group_end;
 		fprintf(stderr, "\n");
@@ -310,7 +337,7 @@ print_dead_groups(struct uct *u, struct board *b, struct move_queue *mq)
 
 
 static void
-uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
+uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 {
 	struct uct *u = e->data;
 	
@@ -323,8 +350,8 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 	/* Normally last genmove was a pass and we've already figured out dead groups.
 	 * Don't recompute dead groups here, result could be different this time and lead to wrong list. */
 	if (u->dead_groups_move == b->moves - 1) {
-		memcpy(mq, &u->dead_groups, sizeof(*mq));
-		print_dead_groups(u, b, mq);
+		memcpy(dead, &u->dead_groups, sizeof(*dead));
+		print_dead_groups(u, b, dead);
 		return;
 	}
 	
@@ -341,8 +368,8 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
 		board_print_ownermap(b, stderr, &u->ownermap);
 
 	struct move_queue unclear;
-	get_dead_groups(u, b, mq, &unclear);
-	print_dead_groups(u, b, mq);
+	get_dead_groups(u, b, dead, &unclear);
+	print_dead_groups(u, b, dead);
 
 	/* Clean up the mock state in case we will receive
 	 * a genmove; we could get a non-alternating-move
