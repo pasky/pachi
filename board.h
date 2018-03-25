@@ -416,6 +416,8 @@ floating_t board_fast_score(struct board *board);
 struct move_queue;
 floating_t board_official_score(struct board *board, struct move_queue *mq);
 floating_t board_official_score_and_dame(struct board *board, struct move_queue *mq, int *dame);
+/* Used for area scoring handicap games: how many extra points to give white. */
+int board_score_handicap_compensation(struct board *b);
 
 /* Set board rules according to given string. Returns false in case
  * of unknown ruleset name. */

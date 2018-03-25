@@ -169,8 +169,9 @@ board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap)
 		enum point_judgement j = board_ownermap_score_est_coord(b, ownermap, c);
 		scores[j]++;
 	} foreach_point_end;
-	
-	return ((scores[PJ_WHITE] + b->komi + b->handicap) - scores[PJ_BLACK]);
+
+	int handi_comp = board_score_handicap_compensation(b);
+	return ((scores[PJ_WHITE] + b->komi + handi_comp) - scores[PJ_BLACK]);
 }
 
 /* Returns static buffer */

@@ -1536,7 +1536,8 @@ board_fast_score(struct board *board)
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
 
-	return board->komi + (board->rules != RULES_SIMING ? board->handicap : 0) + scores[S_WHITE] - scores[S_BLACK];
+	int handi_comp = board_score_handicap_compensation(board);
+	return board->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
 }
 
 /* Owner map: 0: undecided; 1: black; 2: white; 3: dame */
@@ -1588,6 +1589,25 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 	return needs_update;
 }
 
+int
+board_score_handicap_compensation(struct board *b)
+{
+	switch (b->rules) {		
+		case RULES_SIMING:    return 0;
+
+		/* Usually this makes territory and area scoring the same.
+		 * See handicap go section of:
+		 * https://senseis.xmp.net/?TerritoryScoringVersusAreaScoring */
+		case RULES_JAPANESE:
+		case RULES_AGA:	      return (b->handicap ? b->handicap - 1 : 0);
+
+		/* RULES_CHINESE etc */
+		default:              return  b->handicap;
+	}
+	
+	assert(0);  /* not reached */
+}
+
 /* Tromp-Taylor Counting */
 floating_t
 board_official_score_and_dame(struct board *board, struct move_queue *q, int *dame)
@@ -1635,7 +1655,8 @@ board_official_score_and_dame(struct board *board, struct move_queue *q, int *da
 		scores[ownermap[c]]++;
 	} foreach_point_end;
 
-	return board->komi + (board->rules != RULES_SIMING ? board->handicap : 0) + scores[S_WHITE] - scores[S_BLACK];
+	int handi_comp = board_score_handicap_compensation(board);
+	return board->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
 }
 
 floating_t
