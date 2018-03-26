@@ -7,6 +7,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "pachi.h"
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -34,7 +35,7 @@ int debug_level = 3;
 bool debug_boardprint = true;
 long verbose_logs = 0;
 int seed;
-
+char *forced_ruleset = NULL;
 
 enum engine_id {
 	E_RANDOM,
@@ -173,7 +174,6 @@ int main(int argc, char *argv[])
 	int gtp_sock = -1;
 	char *chatfile = NULL;
 	char *fbookfile = NULL;
-	char *ruleset = NULL;
 	FILE *file = NULL;
 	bool verbose_caffe = false;
 
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 				disable_dcnn();
 				break;
 			case 'r':
-				ruleset = strdup(optarg);
+				forced_ruleset = strdup(optarg);
 				break;
 			case 's':
 				seed = atoi(optarg);
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 
 	struct board *b = board_init(fbookfile);
-	if (ruleset && !board_set_rules(b, ruleset))  die("Unknown ruleset: %s\n", ruleset);
+	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
@@ -337,6 +337,6 @@ int main(int argc, char *argv[])
 	free(log_port);
 	free(chatfile);
 	free(fbookfile);
-	free(ruleset);
+	free(forced_ruleset);
 	return 0;
 }

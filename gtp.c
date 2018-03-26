@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "pachi.h"
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -264,11 +265,16 @@ cmd_kgs_rules(struct board *board, struct engine *engine, struct time_info *ti, 
 {
 	char *arg;
 	next_tok(arg);
-	fprintf(stderr, "%s\n", time_str());
-	if (!board_set_rules(board, arg)) {
-		gtp_error(gtp, "unknown rules", NULL);
+
+	if (DEBUGL(2))  fprintf(stderr, "%s\n", time_str());
+	
+	if (forced_ruleset) {
+		if (DEBUGL(2))  fprintf(stderr, "ignored kgs-rules, using %s.\n", forced_ruleset);
 		return P_OK;
 	}
+
+	if (!board_set_rules(board, arg))
+		gtp_error(gtp, "unknown rules", NULL);
 	return P_OK;
 }
 

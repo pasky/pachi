@@ -420,6 +420,7 @@ floating_t board_official_score_and_dame(struct board *board, struct move_queue 
 /* Set board rules according to given string. Returns false in case
  * of unknown ruleset name. */
 bool board_set_rules(struct board *board, char *name);
+const char *rules2str(enum go_ruleset rules);
 
 /* Quick play/undo to try out a move.
  * WARNING  Only core board structures are maintained !

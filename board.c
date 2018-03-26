@@ -1662,3 +1662,18 @@ board_set_rules(struct board *board, char *name)
 		return false;
 	return true;
 }
+
+const char*
+rules2str(enum go_ruleset rules)
+{
+	switch (rules) {
+		case RULES_CHINESE:     return "chinese";
+		case RULES_AGA:         return "aga";
+		case RULES_NEW_ZEALAND: return "new_zealand";
+		case RULES_JAPANESE:    return "japanese";
+		case RULES_STONES_ONLY: return "stones_only";
+		case RULES_SIMING:      return "simplified_ing";
+		default:                die("invalid rules: %i\n", rules);
+	}
+	return NULL;
+}
