@@ -414,8 +414,8 @@ enum stone board_get_one_point_eye(struct board *board, coord_t c);
 floating_t board_fast_score(struct board *board);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
 struct move_queue;
-floating_t board_official_score(struct board *board, struct move_queue *mq);
-floating_t board_official_score_and_dame(struct board *board, struct move_queue *mq, int *dame);
+floating_t board_official_score(struct board *board, struct move_queue *dead);
+floating_t board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *final_ownermap);
 /* Used for area scoring handicap games: how many extra points to give white. */
 int board_score_handicap_compensation(struct board *b);
 

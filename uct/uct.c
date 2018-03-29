@@ -113,7 +113,8 @@ pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue
 	     float ownermap_score, bool pass_all_alive, char **msg)
 {
 	int dame;
-	floating_t score = board_official_score_and_dame(b, mq, &dame);
+	int final_ownermap[board_size2(b)];
+	floating_t score = board_official_score_details(b, mq, &dame, final_ownermap); 
 	if (color == S_BLACK)  score = -score;
 	//fprintf(stderr, "pass_is_safe():  %d score %f   dame: %i\n", color, score, dame);
 

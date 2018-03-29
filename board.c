@@ -1608,9 +1608,10 @@ board_score_handicap_compensation(struct board *b)
 	assert(0);  /* not reached */
 }
 
-/* Tromp-Taylor Counting */
+/* Official score after removing dead groups and Tromp-Taylor counting.
+ * Number of dames is saved in @dame, final ownermap in @ownermap. */
 floating_t
-board_official_score_and_dame(struct board *board, struct move_queue *q, int *dame)
+board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *ownermap)
 {
 	/* A point P, not colored C, is said to reach C, if there is a path of
 	 * (vertically or horizontally) adjacent points of P's color from P to
@@ -1619,7 +1620,6 @@ board_official_score_and_dame(struct board *board, struct move_queue *q, int *da
 	 * A player's score is the number of points of her color, plus the
 	 * number of empty points that reach only her color. */
 
-	int ownermap[board_size2(board)];
 	int s[4] = {0};
 	const int o[4] = {0, 1, 2, 0};
 	foreach_point(board) {
@@ -1627,10 +1627,10 @@ board_official_score_and_dame(struct board *board, struct move_queue *q, int *da
 		s[board_at(board, c)]++;
 	} foreach_point_end;
 
-	if (q) {
+	if (dead) {
 		/* Process dead groups. */
-		for (unsigned int i = 0; i < q->moves; i++) {
-			foreach_in_group(board, q->move[i]) {
+		for (unsigned int i = 0; i < dead->moves; i++) {
+			foreach_in_group(board, dead->move[i]) {
 				enum stone color = board_at(board, c);
 				ownermap[c] = o[stone_other(color)];
 				s[color]--; s[stone_other(color)]++;
@@ -1645,8 +1645,7 @@ board_official_score_and_dame(struct board *board, struct move_queue *q, int *da
 	while (board_tromp_taylor_iter(board, ownermap))
 		/* Flood-fill... */;
 
-	int scores[S_MAX];
-	memset(scores, 0, sizeof(scores));
+	int scores[S_MAX] = { 0, };
 
 	*dame = 0;
 	foreach_point(board) {
@@ -1660,10 +1659,11 @@ board_official_score_and_dame(struct board *board, struct move_queue *q, int *da
 }
 
 floating_t
-board_official_score(struct board *board, struct move_queue *q)
+board_official_score(struct board *b, struct move_queue *dead)
 {
 	int dame;
-	return board_official_score_and_dame(board, q, &dame);
+	int ownermap[board_size2(b)];
+	return board_official_score_details(b, dead, &dame, ownermap);
 }
 
 bool
