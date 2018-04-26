@@ -901,8 +901,7 @@ undo_save_merge(struct board *b, struct board_undo *u, group_t g, coord_t c)
 		return;
 	
 	int i = u->nmerged++;
-	if (!i)
-		u->inserted = c;
+	if (!i) u->inserted = c;
 	u->merged[i].group = g;
 	u->merged[i].last = 0;   // can remove
 	u->merged[i].info = board_group_info(b, g);
@@ -918,16 +917,18 @@ undo_save_enemy(struct board *b, struct board_undo *u, group_t g)
 	int i = u->nenemies++;
 	u->enemies[i].group = g;
 	u->enemies[i].info = board_group_info(b, g);
-		
-	int j = 0;
-	coord_t *stones = u->enemies[i].stones;
+	u->enemies[i].stones = NULL;
+	
 	if (board_group_info(b, g).libs <= 1) { // Will be captured
+		coord_t *stones = u->enemies[i].stones = u->captures_end;
+		int j = 0;
 		foreach_in_group(b, g) {
 			stones[j++] = c;
 		} foreach_in_group_end;
-		u->captures += j;
+		u->ncaptures += j;
+		stones[j++] = 0;
+		u->captures_end = &stones[j];
 	}
-	stones[j] = 0;
 }
 
 static void
@@ -1162,7 +1163,8 @@ undo_init(struct board *b, struct move *m, struct board_undo *u)
 	u->ko = b->ko;
 	u->last_ko = b->last_ko;
 	u->last_ko_age = b->last_ko_age;
-	u->captures = 0;
+	u->captures_end = &u->captures[0];
+	u->ncaptures = 0;
 	
 	u->nmerged = u->nmerged_tmp = u->nenemies = 0;
 	for (int i = 0; i < 4; i++)
@@ -1278,6 +1280,8 @@ restore_enemies(struct board *b, struct board_undo *u, struct move *m)
 		board_group_info(b, old_group) = enemy[i].info;
 			
 		coord_t *stones = enemy[i].stones;
+		if (!stones)  continue;
+
 		for (int j = 0; stones[j]; j++) {
 			board_at(b, stones[j]) = other_color;
 			group_at(b, stones[j]) = old_group;
@@ -1327,7 +1331,7 @@ board_undo_stone(struct board *b, struct board_undo *u, struct move *m)
 
 	// Restore enemy groups
 	if (u->nenemies) {
-		b->captures[color] -= u->captures;
+		b->captures[color] -= u->ncaptures;
 		restore_enemies(b, u, m);
 	}
 }
@@ -1345,6 +1349,8 @@ restore_suicide(struct board *b, struct board_undo *u, struct move *m)
 		board_group_info(b, old_group) = enemy[i].info;
 			
 		coord_t *stones = enemy[i].stones;
+		if (!stones)  continue;
+
 		for (int j = 0; stones[j]; j++) {
 			board_at(b, stones[j]) = other_color;
 			group_at(b, stones[j]) = old_group;
@@ -1377,7 +1383,7 @@ board_undo_suicide(struct board *b, struct board_undo *u, struct move *m)
 	
 	// Pretend it's capture ...
 	struct move m2 = { .coord = m->coord, .color = other_color };
-	b->captures[other_color] -= u->captures;
+	b->captures[other_color] -= u->ncaptures;
 	
 	restore_suicide(b, u, &m2);
 

@@ -259,7 +259,7 @@ struct undo_merge {
 struct undo_enemy {
 	group_t      group;
 	struct group info;
-	coord_t      stones[BOARD_MAX_MOVES];  // TODO try small array
+	coord_t     *stones;
 };
 
 struct board_undo {
@@ -277,7 +277,9 @@ struct board_undo {
 
 	struct undo_enemy enemies[4];
 	int nenemies;
-	int captures; /* number of stones captured */
+	coord_t  captures[BOARD_MAX_COORDS];
+	coord_t *captures_end;
+	int      ncaptures;
 };
 
 
