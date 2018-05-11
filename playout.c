@@ -171,6 +171,27 @@ fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
 	return pass;
 }
 
+#define random_game_loop_stuff  \
+		if (PLDEBUGL(7)) { \
+			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord, b)); \
+			if (PLDEBUGL(8)) board_print(b, stderr); \
+		} \
+\
+		if (unlikely(is_pass(coord)))  passes++; \
+		else                           passes = 0; \
+\
+		if (amafmap) { \
+			assert(amafmap->gamelen < MAX_GAMELEN); \
+			amafmap->is_ko_capture[amafmap->gamelen] = board_playing_ko_threat(b); \
+			amafmap->game[amafmap->gamelen++] = coord; \
+		} \
+\
+		if (setup->mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup->mercymin) \
+			break; \
+\
+		color = stone_other(color);
+
+
 
 int
 playout_play_game(struct playout_setup *setup,
@@ -191,17 +212,26 @@ playout_play_game(struct playout_setup *setup,
 #endif
 
 	enum stone color = starting_color;
-
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
+
+	/* Play until both sides pass, or we hit threshold. */
+	while (gamelen-- > 0 && passes < 2) {
+		coord_t coord = playout_play_move(setup, b, color, policy);		
+		random_game_loop_stuff
+	}	
+
 	int bent4_moves = -2;
 	coord_t bent4_other = pass;
 	coord_t bent4_kill = pass;
 
-	while (gamelen-- && passes < 2) {
+	/* Play some more, handling bent-fours this time ...
+	 * FIXME bent-four code really belongs in moggy but needs to be handled here.
+	 *       Add some hooks and move this to moggy.c ... */
+	passes = 0;
+	while (gamelen-- > 0 && passes < 2) {
 		coord_t coord;
-
-		/* FIXME bent-four code really belongs in moggy but needs to be handled here.
-		 *       Add some hooks and move this to moggy.c ... */
+		
+		/* Kill bent-four group after filling. */
 		if (b->moves == bent4_moves + 1) {
 			/* Capture or kill group. */
 			coord = (board_at(b, bent4_other) == S_NONE ? bent4_other : bent4_kill);
@@ -210,30 +240,14 @@ playout_play_game(struct playout_setup *setup,
 		}
 		else    coord = playout_play_move(setup, b, color, policy);
 		
-		if (coord == pass && (coord = fill_bent_four(b, stone_other(color), &bent4_other, &bent4_kill)) != pass) { // XXX hack, can't put it here ...
+		/* Fill bent-fours */
+		if (coord == pass && (coord = fill_bent_four(b, stone_other(color), &bent4_other, &bent4_kill)) != pass) {
 			struct move m = { .color = color, .coord = coord };
 			int r = board_play(b, &m);  assert(r == 0);
 			bent4_moves = b->moves;
 		}
 
-		if (PLDEBUGL(7)) {
-			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord, b));
-			if (PLDEBUGL(8))  board_print(b, stderr);
-		}
-
-		if (unlikely(is_pass(coord)))  passes++;
-		else                           passes = 0;
-		
-		if (amafmap) {
-			assert(amafmap->gamelen < MAX_GAMELEN);
-			amafmap->is_ko_capture[amafmap->gamelen] = board_playing_ko_threat(b);
-			amafmap->game[amafmap->gamelen++] = coord;
-		}
-
-		if (setup->mercymin && abs(b->captures[S_BLACK] - b->captures[S_WHITE]) > setup->mercymin)
-			break;
-
-		color = stone_other(color);
+		random_game_loop_stuff
 	}
 
 	floating_t score = board_fast_score(b);
