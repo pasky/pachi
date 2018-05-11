@@ -100,6 +100,78 @@ playout_play_move(struct playout_setup *setup,
 	return coord;
 }
 
+/*   | . . . . . .
+ *   | O O O O O . 
+ *   | X X X X O . 
+ *   | * X . X O . 
+ *   | O O O X O . 
+ *   +-------------
+ */
+
+static coord_t
+fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
+{
+	enum stone other_color = stone_other(color);  // white here
+	int s = real_board_size(b);
+	coord_t corners[4] = { coord_xy(b, 1, 1),
+			       coord_xy(b, 1, s),
+			       coord_xy(b, s, 1),
+			       coord_xy(b, s, s),
+	};
+	
+	for (int i = 0; i < 4; i++) {
+		coord_t corner = corners[i];
+		group_t g = group_at(b, corner);
+		if (!g || board_at(b, corner) != other_color ||
+		    immediate_liberty_count(b, corner) != 1 ||
+		    group_stone_count(b, g, 4) != 3 || board_group_info(b, g).libs != 2)
+			continue;
+
+		
+		coord_t stone3 = pass;
+		int x = coord_x(corner, b);
+		int y = coord_y(corner, b);
+
+		/* check 3 in line, horizontal */
+		int dx = (x == 1 ? 1 : -1);
+		for (int j = 0; j < 3; j++) {
+			coord_t c = coord_xy(b, x + j * dx, y);
+			if (board_at(b, c) != other_color)  break;
+			if (j == 2)  {  stone3 = c;  *kill = coord_xy(b, x + dx, y);  }
+		}
+
+		/* check 3 in line, vertical */
+		int dy = (y == 1 ? 1 : -1);
+		for (int j = 0; j < 3; j++) {
+			coord_t c = coord_xy(b, x, y + j * dy);
+			if (board_at(b, c) != other_color)  break;
+			if (j == 2)  {  stone3 = c;  *kill = coord_xy(b, x, y + dy);  }
+		}
+
+		if (stone3 == pass)  continue;
+
+		group_t surrounding = 0;
+		foreach_neighbor(b, stone3, {
+				if (board_at(b, c) == color) {  surrounding = group_at(b, c);  break;  }
+			});
+		if (!surrounding || board_group_info(b, surrounding).libs != 2)  continue;
+
+		coord_t fill = pass;
+		foreach_neighbor(b, corner, {
+				if (board_at(b, c) == S_NONE)  {  fill = c;  break;  }
+			});
+
+		struct move m = {  .coord = fill, .color = other_color };
+		if (board_permit(b, &m, NULL)) {
+			*other = board_group_other_lib(b, g, fill);
+			return fill;
+		}
+	}
+
+	return pass;
+}
+
+
 int
 playout_play_game(struct playout_setup *setup,
 		  struct board *b, enum stone starting_color,
@@ -121,10 +193,28 @@ playout_play_game(struct playout_setup *setup,
 	enum stone color = starting_color;
 
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
+	int bent4_moves = -2;
+	coord_t bent4_other = pass;
+	coord_t bent4_kill = pass;
 
-	//fprintf(stderr, "------------------------ new game ------------------------------\n");
 	while (gamelen-- && passes < 2) {
-		coord_t coord = playout_play_move(setup, b, color, policy);
+		coord_t coord;
+
+		/* FIXME bent-four code really belongs in moggy but needs to be handled here.
+		 *       Add some hooks and move this to moggy.c ... */
+		if (b->moves == bent4_moves + 1) {
+			/* Capture or kill group. */
+			coord = (board_at(b, bent4_other) == S_NONE ? bent4_other : bent4_kill);
+			struct move m = { .color = color, .coord = coord };
+			int r = board_play(b, &m);  assert(r == 0);
+		}
+		else    coord = playout_play_move(setup, b, color, policy);
+		
+		if (coord == pass && (coord = fill_bent_four(b, stone_other(color), &bent4_other, &bent4_kill)) != pass) { // XXX hack, can't put it here ...
+			struct move m = { .color = color, .coord = coord };
+			int r = board_play(b, &m);  assert(r == 0);
+			bent4_moves = b->moves;
+		}
 
 		if (PLDEBUGL(7)) {
 			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord, b));
