@@ -508,7 +508,7 @@ test_moggy_status(struct board *b, char *arg)
 
 		int passed = (!thres[i] || (j == expected[i] && pc >= thres[i]));
 		char *colorstr = (j == PJ_DAME ? "dame" : stone2str(color));
-		PRINT_TEST(b, "%3s %-5s %i%%    ", coord2sstr(c, b), colorstr, pc);
+		PRINT_TEST(b, "moggy status %3s %-5s -> %3i%%    ", coord2sstr(c, b), colorstr, pc);
 		
 		if (!passed)  ret = false;
 		PRINT_RES(passed);

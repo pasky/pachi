@@ -281,6 +281,20 @@ build.h: .git/HEAD .git/index Makefile
 	@echo "[make] build.h"
 	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild > $@
 
+# Run unit tests
+test: FORCE
+	t-unit/run_tests
+
+	@echo -n "Testing uct genmove...   "
+	@ ./pachi -d0 -t =1000 < gtp/genmove.gtp  2>pachi.log >/dev/null
+	@echo "OK"
+
+	@echo -n "Testing quiet mode...    "
+	@if  grep -q '.' < pachi.log ; then \
+		echo "FAILED";  exit 1;  else  echo "OK"; \
+	fi
+
+
 # Prepare for install
 distribute: FORCE
         ifneq ($(GENERIC), 1)

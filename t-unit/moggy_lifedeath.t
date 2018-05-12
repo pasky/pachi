@@ -1,3 +1,5 @@
+# auto-run off
+
 % Some life & death situations that are a bit of a gray area for moggy.
 % Can be useful as regression test when making policy changes to check
 % if l&d is getting better or worse.

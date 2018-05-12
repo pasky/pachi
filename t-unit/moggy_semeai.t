@@ -1,3 +1,5 @@
+# auto-run off
+
 % Simple semeai, 2 libs, last move nearby
 boardsize 6
 X X O X O O

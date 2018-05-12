@@ -144,7 +144,7 @@ board_undo_stress_test(struct board *board, char *arg)
 	int games = 1000;
 	enum stone color = S_BLACK;
 	
-	board_print(board, stderr);
+	if (DEBUGL(2))  board_print(board, stderr);
 	if (DEBUGL(1))
 		printf("board_undo stress test.   Playing %i games checking every move...\n", games);
 

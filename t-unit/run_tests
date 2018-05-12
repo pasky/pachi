@@ -1,0 +1,16 @@
+#!/bin/sh
+# Run unit tests
+
+die() {  echo "$@"; exit 1;  }
+
+dir=`dirname $0`
+cd $dir
+
+for f in `git ls-files *.t | tac`; do
+    grep -q 'auto-run off' $f  &&  continue
+    
+    cmd="./pachi -d2 -u t-unit/$f"
+    echo ""; echo "*******************************************************************";
+    echo "$cmd"
+    (cd ..; $cmd) || die "Failed"
+done
