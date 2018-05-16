@@ -64,9 +64,9 @@ permit_handler(struct board *b, struct move *m, void *data)
 
 
 coord_t
-play_random_move(struct playout_setup *setup,
-		 struct board *b, enum stone color,
-		 struct playout_policy *policy)
+playout_play_move(struct playout_setup *setup,
+		  struct board *b, enum stone color,
+		  struct playout_policy *policy)
 {
 	coord_t coord = pass;
 	
@@ -111,11 +111,11 @@ play_random_move(struct playout_setup *setup,
 }
 
 int
-play_random_game(struct playout_setup *setup,
-                 struct board *b, enum stone starting_color,
-		 struct playout_amafmap *amafmap,
-		 struct board_ownermap *ownermap,
-		 struct playout_policy *policy)
+playout_play_game(struct playout_setup *setup,
+		  struct board *b, enum stone starting_color,
+		  struct playout_amafmap *amafmap,
+		  struct board_ownermap *ownermap,
+		  struct playout_policy *policy)
 {
 	assert(setup && policy);
 
@@ -133,46 +133,16 @@ play_random_game(struct playout_setup *setup,
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	while (gamelen-- && passes < 2) {
-		coord_t coord = play_random_move(setup, b, color, policy);
-
-#if 0
-		/* For UCT, superko test here is downright harmful since
-		 * in superko-likely situation we throw away literally
-		 * 95% of our playouts; UCT will deal with this fine by
-		 * itself. */
-		if (unlikely(b->superko_violation)) {
-			/* We ignore superko violations that are suicides. These
-			 * are common only at the end of the game and are
-			 * rather harmless. (They will not go through as a root
-			 * move anyway.) */
-			if (group_at(b, coord)) {
-				if (DEBUGL(3)) {
-					fprintf(stderr, "Superko fun at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
-					if (DEBUGL(4))
-						board_print(b, stderr);
-				}
-				return 0;
-			} else {
-				if (DEBUGL(6)) {
-					fprintf(stderr, "Ignoring superko at %d,%d in\n", coord_x(coord, b), coord_y(coord, b));
-					board_print(b, stderr);
-				}
-				b->superko_violation = false;
-			}
-		}
-#endif
+		coord_t coord = playout_play_move(setup, b, color, policy);
 
 		if (PLDEBUGL(7)) {
 			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord, b));
-			if (PLDEBUGL(8))
-				board_print(b, stderr);
+			if (PLDEBUGL(8))  board_print(b, stderr);
 		}
 
-		if (unlikely(is_pass(coord))) {
-			passes++;
-		} else {
-			passes = 0;
-		}
+		if (unlikely(is_pass(coord)))  passes++;
+		else                           passes = 0;
+		
 		if (amafmap) {
 			assert(amafmap->gamelen < MAX_GAMELEN);
 			amafmap->is_ko_capture[amafmap->gamelen] = board_playing_ko_threat(b);
@@ -190,12 +160,10 @@ play_random_game(struct playout_setup *setup,
 
 	if (DEBUGL(6)) {
 		fprintf(stderr, "Random playout result: %d (W %f)\n", result, score);
-		if (DEBUGL(7))
-			board_print(b, stderr);
+		if (DEBUGL(7))  board_print(b, stderr);
 	}
 
-	if (ownermap)
-		board_ownermap_fill(ownermap, b);
+	if (ownermap)  board_ownermap_fill(ownermap, b);
 
 #ifdef DEBUGL_BY_PLAYOUT
 	debug_level = debug_level_orig;

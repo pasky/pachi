@@ -479,7 +479,7 @@ test_moggy_status(struct board *b, char *arg)
 		struct board b2;
 		board_copy(&b2, b);
 		
-		int score = play_random_game(&setup, &b2, color, NULL, &ownermap, policy);
+		int score = playout_play_game(&setup, &b2, color, NULL, &ownermap, policy);
 		if (color == S_WHITE)
 			score = -score;
 		wr += (score > 0);

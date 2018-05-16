@@ -51,7 +51,7 @@ replay_sample_moves(struct engine *e, struct board *b, enum stone color,
 			policy->setboard(policy, &b2);
 		
 		if (DEBUGL(4))  fprintf(stderr, "---------------------------------\n");		
-		coord_t c = play_random_move(&setup, &b2, color, r->playout);		
+		coord_t c = playout_play_move(&setup, &b2, color, r->playout);		
 		if (DEBUGL(4))  fprintf(stderr, "-> %s\n", coord2sstr(c, &b2));
 		
 		played[c]++;

@@ -100,18 +100,19 @@ struct playout_amafmap {
 };
 
 
-/* >0: starting_color wins, <0: starting_color loses; the actual
- * number is a DOUBLE of the score difference
- * 0: superko inside the game tree (XXX: jigo not handled) */
-int play_random_game(struct playout_setup *setup,
-                     struct board *b, enum stone starting_color,
-                     struct playout_amafmap *amafmap,
-		     struct board_ownermap *ownermap,
-		     struct playout_policy *policy);
+/* >0: starting_color wins,
+ * <0: starting_color loses; returned number is DOUBLE the score difference.
+ *  0: superko inside the game tree (XXX: jigo not handled) */
+int playout_play_game(struct playout_setup *setup,
+		      struct board *b, enum stone starting_color,
+		      struct playout_amafmap *amafmap,
+		      struct board_ownermap *ownermap,
+		      struct playout_policy *policy);
 
-coord_t play_random_move(struct playout_setup *setup,
-		         struct board *b, enum stone color,
-		         struct playout_policy *policy);
+/* Play move returned by playout policy, or a randomly picked move if there was none. */
+coord_t playout_play_move(struct playout_setup *setup,
+			  struct board *b, enum stone color,
+			  struct playout_policy *policy);
 
 /* Is *this* move permitted ? 
  * Called by policy permit() to check something so never the main permit() call. */

@@ -307,9 +307,9 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 		.postpolicy_hook = uct_playout_postpolicy,
 		.hook_data = &upc,
 	};
-	int result = play_random_game(&ps, b, next_color,
-	                              u->playout_amaf ? amaf : NULL,
-				      &u->ownermap, u->playout);
+	int result = playout_play_game(&ps, b, next_color,
+				       u->playout_amaf ? amaf : NULL,
+				       &u->ownermap, u->playout);
 	if (next_color == S_WHITE) {
 		/* We need the result from black's perspective. */
 		result = - result;

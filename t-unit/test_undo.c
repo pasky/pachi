@@ -159,7 +159,7 @@ board_undo_stress_test(struct board *board, char *arg)
 	for (int i = 0; i < games; i++)  {
 		struct board b;
 		board_copy(&b, board);		
-		play_random_game(&setup, &b, color, NULL, NULL, policy);
+		playout_play_game(&setup, &b, color, NULL, NULL, policy);
 		board_done_noalloc(&b);
 	}
 	

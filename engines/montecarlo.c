@@ -145,7 +145,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord, b), coord_y(coord, b), color);
 
 		struct playout_setup ps = { .gamelen = mc->gamelen };
-		int result = play_random_game(&ps, &b2, color, NULL, NULL, mc->playout);
+		int result = playout_play_game(&ps, &b2, color, NULL, NULL, mc->playout);
 
 		board_done_noalloc(&b2);
 
