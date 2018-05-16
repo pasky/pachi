@@ -578,9 +578,8 @@ uct_livegfx_hook(struct engine *e)
 static struct tree_node *
 genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive, coord_t *best_coord)
 {
-	reset_dcnn_time();
-	double start_time = time_now();
 	struct uct *u = e->data;
+	double time_start = time_now();
 	u->pass_all_alive |= pass_all_alive;
 	uct_pondering_stop(u);
 
@@ -603,10 +602,10 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 	best = uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, best_coord);
 
 	if (UDEBUGL(2)) {
-		double total_time = time_now() - start_time + 0.000001; /* avoid divide by zero */
-		double mcts_time  = total_time - get_dcnn_time();
-		fprintf(stderr, "genmove in %0.2fs (%d games/s, %d games/s/thread)\n",
-			total_time, (int)(played_games/mcts_time), (int)(played_games/mcts_time/u->threads));
+		double total_time = time_now() - time_start;
+		double mcts_time  = time_now() - u->mcts_time_start + 0.000001; /* avoid divide by zero */
+		fprintf(stderr, "genmove in %0.2fs, mcts %0.2fs (%d games/s, %d games/s/thread)\n",
+			total_time, mcts_time, (int)(played_games/mcts_time), (int)(played_games/mcts_time/u->threads));
 	}
 
 	uct_progress_status(u, u->t, color, played_games, best_coord);

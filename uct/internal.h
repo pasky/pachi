@@ -131,6 +131,9 @@ struct uct {
 	struct move_queue dead_groups;
 	int dead_groups_move;
 
+	/* Timing */
+	double mcts_time_start;
+
 	/* Game state - maintained by setup_state(), reset_state(). */
 	struct tree *t;
 };

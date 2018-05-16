@@ -13,11 +13,6 @@
 static bool dcnn_enabled = true;
 void disable_dcnn()     {  dcnn_enabled = false;  }
 
-/* Time spent in dcnn code */
-double dcnn_time = 0;
-double get_dcnn_time()  {  return dcnn_time;  }
-void reset_dcnn_time()  {  dcnn_time = 0;  }
-
 bool
 using_dcnn(struct board *b)
 {
@@ -69,9 +64,7 @@ dcnn_get_moves(struct board *b, enum stone color, float result[])
 
 	caffe_get_data(data, result, 13, 19);
 	free(data);
-	double elapsed = time_now() - time_start;
-	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", elapsed);
-	dcnn_time += elapsed;
+	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
 }
 
 

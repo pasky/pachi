@@ -92,11 +92,15 @@ static pthread_mutex_t finish_serializer = PTHREAD_MUTEX_INITIALIZER;
 static void *
 spawn_worker(void *ctx_)
 {
-	struct uct_thread_ctx *ctx = ctx_;
 	/* Setup */
+	struct uct_thread_ctx *ctx = ctx_;
+	struct uct *u = ctx->u;
 	fast_srandom(ctx->seed);
+
 	/* Run */
+	if (!ctx->tid)  u->mcts_time_start = time_now();
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->ti);
+	
 	/* Finish */
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
