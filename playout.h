@@ -64,24 +64,11 @@ struct playout_policy {
 
 /** Playout engine interface: */
 
-/* Engine hook for forcing moves before doing policy decision.
- * Return pass to forward to policy. */
-typedef coord_t (*playouth_prepolicy)(struct playout_policy *playout_policy, struct playout_setup *setup, struct board *b, enum stone color);
-
-/* Engine hook for choosing moves in case policy did not choose
- * a move.
- * Return pass to forward to uniformly random selection. */
-typedef coord_t (*playouth_postpolicy)(struct playout_policy *playout_policy, struct playout_setup *setup, struct board *b, enum stone color);
-
 struct playout_setup {
 	unsigned int gamelen; /* Maximal # of moves in playout. */
 	/* Minimal difference between captures to terminate the playout.
 	 * 0 means don't check. */
 	int mercymin;
-
-	void *hook_data; // for hook to reference its state
-	playouth_prepolicy prepolicy_hook;
-	playouth_postpolicy postpolicy_hook;
 };
 
 

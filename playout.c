@@ -70,20 +70,10 @@ playout_play_move(struct playout_setup *setup,
 {
 	coord_t coord = pass;
 	
-	if (setup->prepolicy_hook) {
-		coord = setup->prepolicy_hook(policy, setup, b, color);
-		// fprintf(stderr, "prehook: %s\n", coord2sstr(coord, b));
-	}
-
 	if (is_pass(coord)) {
 		coord = policy->choose(policy, setup, b, color);
 		coord = playout_check_move(policy, b, coord, color);
 		// fprintf(stderr, "policy: %s\n", coord2sstr(coord, b));
-	}
-
-	if (is_pass(coord) && setup->postpolicy_hook) {
-		coord = setup->postpolicy_hook(policy, setup, b, color);
-		// fprintf(stderr, "posthook: %s\n", coord2sstr(coord, b));
 	}
 
 	if (is_pass(coord)) {

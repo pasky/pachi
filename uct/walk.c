@@ -256,26 +256,6 @@ struct uct_playout_callback {
 };
 
 
-static coord_t
-uct_playout_hook(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color, int mode)
-{
-	/* XXX: This is used in some non-master branches. */
-	return pass;
-}
-
-static coord_t
-uct_playout_prepolicy(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color)
-{
-	return uct_playout_hook(playout, setup, b, color, 0);
-}
-
-static coord_t
-uct_playout_postpolicy(struct playout_policy *playout, struct playout_setup *setup, struct board *b, enum stone color)
-{
-	return uct_playout_hook(playout, setup, b, color, 1);
-}
-
-
 static int
 uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
               struct playout_amafmap *amaf,
@@ -292,20 +272,9 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			spaces, n->u.playouts, coord2sstr(node_coord(n), t->board),
 			tree_node_get_value(t, -parity, n->u.value));
 
-	struct uct_playout_callback upc = {
-		.uct = u,
-		.tree = t,
-		/* TODO: Don't necessarily restart the sequence walk when
-		 * entering playout. */
-		.lnode = NULL,
-	};
-
 	struct playout_setup ps = {
 		.gamelen = u->gamelen,
 		.mercymin = u->mercymin,
-		.prepolicy_hook = uct_playout_prepolicy,
-		.postpolicy_hook = uct_playout_postpolicy,
-		.hook_data = &upc,
 	};
 	int result = playout_play_game(&ps, b, next_color,
 				       u->playout_amaf ? amaf : NULL,
