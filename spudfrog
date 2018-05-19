@@ -8,8 +8,10 @@ red="[31;1m";     green="[32;1m";  yellow="[33;1m";  blue="[34;1m"
 purple="[35;1m";  cyan="[36;1m";   end="[0m"
 ngreen="[32m";    white="[37;1m"   gray="[30;1m"
 
-                      build_type="${green}[native]${end}"
-[ "$GENERIC" = 1 ] && build_type="${cyan}[generic]${end}"
+cc1=$( $CC $CFLAGS -E -v - </dev/null 2>&1 | grep cc1 | head -1 | tr -d '\\"' )
+
+                                         build_type="${green}[native]${end}"
+echo "$cc1" | grep -q "mtune=generic" && build_type="${cyan}[generic]${end}"
 
                       dcnn="${cyan}[!dcnn]${end}"
 [ "$DCNN" = 1 ]    && dcnn="${green}[dcnn]${end}"

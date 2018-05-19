@@ -272,7 +272,7 @@ pachi-profiled:
 # Pachi build attendant
 .PHONY: spudfrog
 spudfrog: FORCE
-	@GENERIC=$(GENERIC) DCNN=$(DCNN) OPT=$(OPT) CFLAGS="$(CFLAGS)" \
+	@DCNN=$(DCNN) OPT=$(OPT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
          DOUBLE_FLOATING=$(DOUBLE_FLOATING) BOARDSIZE=$(BOARDSIZE) ./spudfrog
 
 # Build info
