@@ -158,6 +158,7 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	 * By move 150 white should still be behind but should have
 	 * caught up enough to avoid resigning. */
 	int moves = board_large(b) ? 150 : 50;
+	if (real_board_size(b) == 15)  moves = 100;
 	if (!board_small(b)) {
 		l->moves[S_BLACK] = moves;
 		l->moves[S_WHITE] = moves;
