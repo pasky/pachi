@@ -509,12 +509,8 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 #define foreach_in_group(board_, group_) \
 	do { \
 		struct board *board__ = board_; \
-		coord_t c = group_base(group_); \
-		coord_t c2 = c; c2 = groupnext_at(board__, c2); \
-		do {
+		for (coord_t c = group_base(group_); c; c = groupnext_at(board__, c))
 #define foreach_in_group_end \
-			c = c2; c2 = groupnext_at(board__, c2); \
-		} while (c != 0); \
 	} while (0)
 
 /* NOT VALID inside of foreach_point() or another foreach_neighbor(), or rather
