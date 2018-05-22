@@ -269,3 +269,43 @@ O O O . O O O
 
 ladder_any b b5 0
 
+
+% ladder ending in snapback
+boardsize 8
+O X X . X . O .
+O X O X X . X .
+O O O O O X . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+
+ladder_any b c8 1
+
+
+% no ladder, can countercap right away
+boardsize 7
+. . . . . . .
+. . . . . . .
+. . . X)X . .
+. O X O . . .
+O X O O X . .
+. X X X O O .
+. . . . . . .
+ladder_any w d4 0
+
+
+% no ladder, connecting to group with countercaptures
+boardsize 9
+. . . . . . . . .
+. . X . . . . O .
+X X O X)O O X O .
+O X O . O X . . O
+. O X O X O X X O
+. . X X X . . . .
+. . . . . . . . .
+. . . . . . . . .
+. . . . . . . . .
+
+ladder_any w c7 0

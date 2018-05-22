@@ -73,12 +73,10 @@ is_border_ladder(struct board *b, group_t laddered)
 }
 
 
-static int middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
-			      struct move_queue *prev_ccq, coord_t prevmove, int len);
+static int middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len);
 
 static int
-middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, struct move_queue *ccq,
-		    coord_t prevmove, int len)
+middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
 {
 	laddered = group_at(b, laddered);
 	
@@ -119,32 +117,18 @@ middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, struct
 		coord_t ataristone = board_group_info(b, laddered).lib[liblist[i]];
 
 		with_move(b, ataristone, stone_other(lcolor), {
-			/* If we just played self-atari, abandon ship. */
-			if (board_group_info(b, group_at(b, ataristone)).libs <= 1)
-				break;
+			/* No suicides, please. */
+			if (!group_at(b, ataristone))
+					break;
 
 			if (DEBUGL(6))  fprintf(stderr, "(%d=0) ladder atari %s (%d libs)\n", i, coord2sstr(ataristone, b), board_group_info(b, group_at(b, ataristone)).libs);
 
-			int l = middle_ladder_walk(b, laddered, lcolor, ccq, prevmove, len);
+			int l = middle_ladder_walk(b, laddered, lcolor, prevmove, len);
 			if (l)  with_move_return(l);
 		});
 	}
 	
 	return 0;
-}
-
-static void
-add_chaser_captures(struct board *b, group_t laddered, enum stone lcolor, struct move_queue *ccq,
-		    coord_t nextmove)
-{
-	foreach_neighbor(b, nextmove, {
-		if (board_at(b, c) == stone_other(lcolor) && board_group_info(b, group_at(b, c)).libs == 1) {
-			/* Ladder stone we can capture later, add it to the list */
-			coord_t lib = board_group_info(b, group_at(b, c)).lib[0];
-			if (DEBUGL(6))  fprintf(stderr, "adding potential chaser capture %s\n", coord2sstr(lib, b));
-			mq_add(ccq, lib, 0);
-		}
-	});
 }
 
 /* Can we escape by capturing chaser ? */
@@ -167,7 +151,7 @@ chaser_capture_escapes(struct board *b, group_t laddered, enum stone lcolor, str
 		}
 
 		with_move_strict(b, lib, lcolor, {
-			if (!middle_ladder_chase(b, laddered, lcolor, ccq, lib, 0))
+			if (!middle_ladder_chase(b, laddered, lcolor, lib, 0))
 				with_move_return(true); /* escape ! */		
 		});
 
@@ -186,9 +170,7 @@ chaser_capture_escapes(struct board *b, group_t laddered, enum stone lcolor, str
  * group captured, false if not (i.e. for each branch, laddered group can
  * gain three liberties). */
 static int
-middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
-		   struct move_queue *prev_ccq, coord_t prevmove,
-		   int len)
+middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
 {
 	assert(board_group_info(b, laddered).libs == 1);
 
@@ -202,9 +184,9 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
 		});
 
 	/* Check countercaptures */
-	struct move_queue ccq = *prev_ccq;
-	if (prevmove != pass)
-		add_chaser_captures(b, laddered, lcolor, &ccq, prevmove);
+	struct move_queue ccq = { .moves = 0 };
+	can_countercapture(b, laddered, &ccq, 0);
+	
 	if (chaser_capture_escapes(b, laddered, lcolor, &ccq))
 		return 0;
 
@@ -212,7 +194,7 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
 	coord_t nextmove = board_group_info(b, laddered).lib[0];
 	if (DEBUGL(6))  fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove, b));
 	with_move_strict(b, nextmove, lcolor, {
-		len = middle_ladder_chase(b, laddered, lcolor, &ccq, nextmove, len + 1);
+		len = middle_ladder_chase(b, laddered, lcolor, nextmove, len + 1);
 	});
 
 	return len;
@@ -236,12 +218,7 @@ is_middle_ladder(struct board *b, group_t laddered)
 	/* A fair chance for a ladder. Group in atari, with some but limited
 	 * space to escape. Time for the expensive stuff - play it out and
 	 * start selective 2-liberty search. */
-
-	/* We could escape by countercapturing a group. */
-	struct move_queue ccq = { .moves = 0 };
-	can_countercapture(b, laddered, &ccq, 0);
-
-	length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
+	length = middle_ladder_walk(b, laddered, lcolor, pass, 0);
 
 	if (DEBUGL(6) && length)  fprintf(stderr, "is_ladder(): stones: %i  length: %i\n",
 					  group_stone_count(b, laddered, 50), length);
@@ -253,16 +230,8 @@ bool
 is_middle_ladder_any(struct board *b, group_t laddered)
 {
 	enum stone lcolor = board_at(b, group_base(laddered));
-	coord_t coord = board_group_info(b, laddered).lib[0];
-
-	if (is_selfatari(b, lcolor, coord))
-		return true;
 	
-	/* We could escape by countercapturing a group. */
-	struct move_queue ccq = { .moves = 0 };
-	can_countercapture(b, laddered, &ccq, 0);
-	
-	length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
+	length = middle_ladder_walk(b, laddered, lcolor, pass, 0);
 	return (length != 0);
 }
 
