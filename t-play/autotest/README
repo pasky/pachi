@@ -17,39 +17,34 @@ should be self-guiding. You will need the twogtp tool from gogui package.
 
 Then on each computer, change to this directory and run:
 
-	nice -n 18 ./autotest-client `hostname`-1
+	bin/autotest
 
-where 1 should be 2, 3, 4, ... for further instances of autotest you would
-run on the same machine (no two instaces with the same id must be run).
-The `nice -n 18` prefix will make sure the client is being run with low
-priority, in case someone wants to use the computer for some real interaction.
-
-Leave cooking, stir time by time.  You can start and stop clients as much
+Leave cooking, stir now and then.  You can start and stop clients as much
 as you wish on the fly, or edit the rc file to change pairings without any
 need for restarting clients.
 
 
-Time by time, you will of course want to view the results of pairings.
+From time to time you will of course want to view the results of pairings.
 First, you will want to run:
 
-	./autotest-gather
+	bin/autotest-gather
 
 This will collect the results all in one place. Then, you can repeatedly
 examine the results using:
 
-	./autotest-show
-or
-	./autotest-show-diagram
+	bin/autotest-show
+or	bin/autotest-show --elo
+or	bin/autotest-show-diagram
 
 That will show results from all pairings. You can also use e.g.
 
-	./autotest-show 9-*
+	bin/autotest-show '^9-'
 
 to show only results of 9x9 pairings. To refresh the shown results, you
 will need to re-run autotest-gather; if you will always want to just see
 fresh results, combine the two commands:
 
-	./autotest-gather; ./autotest-show
+	bin/autotest-gather; bin/autotest-show
 
 Note that the S.D. column is standard deviation of the shown winrate;
 to get a 95%-confidence interval of the winrate, roughly double the S.D.
@@ -64,19 +59,43 @@ winrate is 30% +-10%. The meaning of the first 'S' column is:
 
 To remove results of old pairings, use:
 
-	./autotest-prune pairing-name
+	bin/autotest-prune pairing-name
+
+To rename an existing pairing use:
+
+	bin/autotest-rename pairing_from  pairing_to
 
 pairing-name can be either simply name of the pairing, or a mask matching
 many pairings (up to '*' for removal of all pairing results).
 
 To show status of all known clients, use:
 
-	./autotest-clients
+	bin/autotest-clients
 
 (To remove a gone client, just remove its subdirectory in the c/ directory.)
 The WFAIL column shows number of worker failures recorded in the log; examine
 c/<clientid>/log for details, you can remove the log to reset the WFAIL
 number. Usually, worker failures will result from interrupting a client.
+
+
+LOGS
+----
+
+By default players' logs for all games are saved.
+Current game log for each worker is in c/hostname-id/game.log
+Once game is finished log is moved to  c/hostname-id/pairing/game-number.log
+
+These are two-gtp's logs, so they have both players' stderr plus some two-gtp
+output of its own. They will end up taking quite a bit of space if you play
+lots of games. To remove a given pairing's logs do:
+
+	rm c/*/pairing/*.log
+
+or to remove logs for all pairings:
+
+	rm c/*/*/*.log
+
+You can also disable logging in autotest-worker.
 
 
 DISCONNECTED USAGE
@@ -89,7 +108,7 @@ just fine, with two exceptions:
 
 * You will need to manually copy over c/*/ directory tree from all your systems
 back to the central server (to the appropriate c/*/ directories) every time
-before running ./autotest-gather.
+before running autotest-gather.
 
 * You will manually need to remove old pairing results on the clients.
 
@@ -99,7 +118,7 @@ IMPLEMENTATION
 
 Autotest keeps all the state in plain files within the filesystem.
 
-./autotest-client will basically simply keep spawning `autotest-worker`
+autotest-client will basically simply keep spawning `autotest-worker`
 which will read the rc file, pick a random pairing and use gogui-twogtp
 to play one game, then store the result in a dat file (and leave the sgf
 file archived for future inspection).
@@ -111,18 +130,18 @@ The client workers will create a directory structure like:
 	c/drahokam-1/<pair_id>/game.dat
 	c/drahokam-1/<pair_id>/game-<N>.sgf
 
-...where drahokam-1 is the ./autotest-client parameter and <pair_id>
+...where drahokam-1 is the autotest-client parameter and <pair_id>
 is basically straightforwardly mangled version of `pairing` parameters.
 
 
-./autotest-gather will simply go through directories of all clients and rain
+autotest-gather will simply go through directories of all clients and rain
 down all pairing results to a single place:
 
 	r/<pair_id>.dat
 	r/<pair_id>.beacon  # when was the pairing last active
 	r/<pair_id>.error  # number of games reporting error
 
-Then, ./autotest-show will call gogui-twogtp -analyze on the selected
+Then, autotest-show will call gogui-twogtp -analyze on the selected
 produced dat files.
 
 

@@ -1,4 +1,3 @@
-* Support for handicap settings
 
 * Support for automatic checking against loss-by-points
   (desirable for UCT players)

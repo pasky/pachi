@@ -2,18 +2,20 @@
 # This is autotest display tool, showing gathered information in
 # a hopefully meaningful way.
 #
-# Usage: ./autotest-show [-e] [MASK]
-# Use -e to display winrates in terms of Elo points.
+# Usage: ./autotest-show [options] [MASK]
+# Options:
+#    -e, --elo:    display winrates in terms of Elo points.
+bin=`dirname $0`
 
 do_elo=
-if [ "$1" = -e ]; then
+if [ "$1" = "-e" ] || [ "$1" = "--elo" ]; then
 	do_elo=1
 	shift
 fi
 
 mask="$1"
-[ -n "$mask" ] || mask="*"
-. ./autotest-lib
+[ -n "$mask" ] || mask=".*"
+. $bin/autotest-lib
 
 if [ ! -d "r" ]; then
 	echo "Did you run autotest-gather?" >&2
@@ -68,7 +70,8 @@ if [ -n "$do_elo" ]; then
 else
 	printf "S GAMES\tWINRATE\tS.D.\tPAIRING\n"
 fi
-for pairing in $( (echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.dat$##') | sort | uniq); do
+
+for pairing in $( (echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.dat$##') | sort | uniq | grep "$mask"); do
 	[ ! -s "r/$pairing.dat" ] || $twogtp_path -analyze "r/$pairing.dat"
 	pairing_status "$pairing" # sets status
 	if [ -s "r/$pairing.summary.dat" ]; then

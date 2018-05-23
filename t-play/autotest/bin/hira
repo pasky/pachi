@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Hira settings:
+# 4d: hira -po 120000
+# 3d: hira -po 15000
+# 2d: hira -po 6000
+# 1d: hira -po 3000
+# 1k: hira -po 1500
+# 2k: hira -po 800
+# 3k: hira -po 400
+
+cd ~/Hiratuka10_36I
+exec wine Hiratuka-19x19_en.exe "$@"
