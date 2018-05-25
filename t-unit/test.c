@@ -262,10 +262,10 @@ test_ladder(struct board *b, char *arg)
 
 	PRINT_TEST(b, "ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 	
-	assert(board_at(b, c) == S_NONE);
-	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
-	assert(atari_neighbor);
-	int rres = is_ladder(b, c, atari_neighbor, true);
+	assert(board_at(b, c) == color);
+	group_t group = group_at(b, c);
+	assert(board_group_info(b, group).libs == 1);
+	int rres = is_ladder(b, group, true);
 	
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -284,11 +284,11 @@ test_ladder_any(struct board *b, char *arg)
 	args_end();
 
 	PRINT_TEST(b, "ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
-	
-	assert(board_at(b, c) == S_NONE);
-	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
-	assert(atari_neighbor);
-	int rres = is_ladder_any(b, c, atari_neighbor, true);
+
+	assert(board_at(b, c) == color);
+	group_t group = group_at(b, c);
+	assert(board_group_info(b, group).libs == 1);
+	int rres = is_ladder_any(b, group, true);
 	
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -323,10 +323,7 @@ test_wouldbe_ladder(struct board *b, char *arg)
 	group_t g = get_2lib_neighbor(b, c, stone_other(color));
 	assert(g); assert(board_at(b, g) == stone_other(color));
 	coord_t chaselib = c;
-	coord_t escapelib = board_group_info(b, g).lib[0];
-	if (escapelib == c)
-		escapelib = board_group_info(b, g).lib[1];
-	int rres = wouldbe_ladder(b, g, escapelib, chaselib, stone_other(color));
+	int rres = wouldbe_ladder(b, g, chaselib);
 	
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -349,10 +346,7 @@ test_wouldbe_ladder_any(struct board *b, char *arg)
 	group_t g = get_2lib_neighbor(b, c, stone_other(color));
 	assert(g); assert(board_at(b, g) == stone_other(color));
 	coord_t chaselib = c;
-	coord_t escapelib = board_group_info(b, g).lib[0];
-	if (escapelib == c)
-		escapelib = board_group_info(b, g).lib[1];
-	int rres = wouldbe_ladder_any(b, g, escapelib, chaselib, stone_other(color));
+	int rres = wouldbe_ladder_any(b, g, chaselib);
 	
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -375,7 +369,7 @@ test_useful_ladder(struct board *b, char *arg)
 	assert(board_at(b, c) == S_NONE);
 	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
 	assert(atari_neighbor);
-	int ladder = is_ladder(b, c, atari_neighbor, true);  assert(ladder);
+	int ladder = is_ladder(b, atari_neighbor, true);  assert(ladder);
 	int rres = useful_ladder(b, atari_neighbor);
 	
 	PRINT_RES(rres == eres);

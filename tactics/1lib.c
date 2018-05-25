@@ -32,11 +32,9 @@ capturing_group_is_snapback(struct board *b, group_t group)
 			if (board_at(b, c) == S_OFFBOARD || g == group)
 				continue;
 			
-			if (board_at(b, c) == other &&
-			    board_group_info(b, g).libs == 1)  // capture more than one group
+			if (board_at(b, c) == other && board_group_info(b, g).libs == 1)  // capture more than one group
 				return false;
-			if (board_at(b, c) == to_play &&
-			    board_group_info(b, g).libs > 1)  
+			if (board_at(b, c) == to_play && board_group_info(b, g).libs > 1)
 				return false;
 		});
 	return true;
@@ -52,9 +50,8 @@ static inline bool
 can_capture(struct board *b, group_t g, enum stone to_play)
 {
 	coord_t capture = board_group_info(b, g).lib[0];
-	if (DEBUGL(6))
-		fprintf(stderr, "can capture group %d (%s)?\n",
-			g, coord2sstr(capture, b));
+	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture, b));
+	
 	/* Does playing on the liberty usefully capture the group? */
 	if (board_is_valid_play(b, to_play, capture)
 	    && !capturing_group_is_snapback(b, g))
@@ -67,9 +64,8 @@ static inline bool
 can_play_on_lib(struct board *b, group_t g, enum stone to_play)
 {
 	coord_t capture = board_group_info(b, g).lib[0];
-	if (DEBUGL(6))
-		fprintf(stderr, "can capture group %d (%s)?\n",
-			g, coord2sstr(capture, b));
+	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture, b));
+	
 	/* Does playing on the liberty usefully capture the group? */
 	if (board_is_valid_play(b, to_play, capture)
 	    && !is_bad_selfatari(b, to_play, capture))
@@ -92,13 +88,12 @@ can_countercapture(struct board *b, group_t group, struct move_queue *q, int tag
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);
-			if (likely(board_at(b, c) != other
-				   || board_group_info(b, g).libs > 1) ||
+			if (board_at(b, c) != other ||
+			    board_group_info(b, g).libs > 1 ||
 			    !can_capture(b, g, color))
 				continue;
 
-			if (!q)
-				return true;
+			if (!q) return true;
 			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], tag);
 			mq_nodup(q);
 		});
@@ -121,15 +116,14 @@ can_countercapture_any(struct board *b, group_t group, struct move_queue *q, int
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);
-			if (likely(board_at(b, c) != other
-				   || board_group_info(b, g).libs > 1))
+			if (board_at(b, c) != other ||
+			    board_group_info(b, g).libs > 1)
 				continue;
 			coord_t lib = board_group_info(b, g).lib[0];
 			if (!board_is_valid_play(b, color, lib))
 				continue;
 
-			if (!q)
-				return true;
+			if (!q) return true;
 			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], tag);
 			mq_nodup(q);
 		});
@@ -161,9 +155,8 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 	coord_t lib = board_group_info(b, group).lib[0];
 
 	assert(color != S_OFFBOARD && color != S_NONE);
-	if (DEBUGL(5))
-		fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n",
-		        coord2sstr(group, b), coord2sstr(lib, b), color);
+	if (DEBUGL(5))  fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n",
+				coord2sstr(group, b), coord2sstr(lib, b), color);
 	assert(board_at(b, lib) == S_NONE);
 
 	if (to_play != color) {
@@ -201,27 +194,22 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 				break;
 			}
 		} foreach_diag_neighbor_end;
-		if (!eyeconnect)
-			return;
+		if (!eyeconnect)  return;
 	}
 
 	/* Do not suicide... */
 	if (!can_play_on_lib(b, group, to_play))
 		return;
-	if (DEBUGL(6))
-		fprintf(stderr, "...escape route valid\n");
+	if (DEBUGL(6))  fprintf(stderr, "...escape route valid\n");
 	
 	/* ...or play out ladders (unless we can counter-capture anytime). */
 	if (!ccap) {
-		if (is_ladder(b, lib, group, middle_ladder)) {
+		if (is_ladder(b, group, middle_ladder)) {
 			/* Sometimes we want to keep the ladder move in the
 			 * queue in order to discourage it. */
-			if (!ladder)
-				return;
-			else
-				*ladder = lib;
-		} else if (DEBUGL(6))
-			fprintf(stderr, "...no ladder\n");
+			if (!ladder)   return;
+			else           *ladder = lib;
+		} else if (DEBUGL(6))  fprintf(stderr, "...no ladder\n");
 	}
 
 	mq_add(q, lib, tag);

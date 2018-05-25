@@ -217,7 +217,7 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 
 			/* Don't try to escape non-working ladders */
 			group_t atari_neighbor = board_get_atari_neighbor(b, c, map->to_play);
-			if (atari_neighbor && is_ladder(b, c, atari_neighbor, true) &&
+			if (atari_neighbor && is_ladder(b, atari_neighbor, true) &&
 			    !useful_ladder(b, atari_neighbor)) {
 				if (UDEBUGL(5))	fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c, b));
 				map->consider[c] = false;  continue;

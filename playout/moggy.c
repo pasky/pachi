@@ -198,7 +198,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bo
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, middle_ladder)
+	if (atari_neighbor && is_ladder(b, atari_neighbor, middle_ladder)
 	    && !can_countercapture(b, atari_neighbor, NULL, 0))
 		return false;
 	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord, b), (int) pi, pp->pat3_gammas[(int) pi]);
@@ -349,8 +349,7 @@ local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, st
 
 	for (int i = 0; i < 2; i++) {
 		coord_t chase = board_group_info(b, group).lib[i];
-		coord_t escape = board_group_info(b, group).lib[1 - i];
-		if (wouldbe_ladder(b, group, escape, chase, board_at(b, group)))
+		if (wouldbe_ladder(b, group, chase))
 			mq_add(q, chase, 1<<MQ_LADDER);
 	}
 
@@ -909,14 +908,12 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			bool ladderable = false;
 			for (int i = 0; i < 2; i++) {
 				coord_t chase = board_group_info(b, g).lib[i];
-				coord_t escape = board_group_info(b, g).lib[1 - i];
-				if (wouldbe_ladder(b, g, escape, chase, board_at(b, g))) {
+				if (wouldbe_ladder(b, g, chase)) {
 					add_prior_value(map, chase, 1, games);
 					ladderable = true;
 				}
 			}
-			if (ladderable)
-				return; // do not suggest the other lib at all
+			if (ladderable)  return; // do not suggest the other lib at all
 		}
 
 		if (!pp->atarirate)
