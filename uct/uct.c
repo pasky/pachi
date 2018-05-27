@@ -404,7 +404,9 @@ uct_done(struct engine *e)
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
 	joseki_done(u->jdict);
+#ifdef PACHI_PLUGINS
 	pluginset_done(u->plugins);
+#endif
 }
 
 
@@ -827,7 +829,9 @@ uct_state_init(char *arg, struct board *b)
 	u->stats_delay = 0.01; // 10 ms
 	u->shared_levels = 1;
 
+#ifdef PACHI_PLUGINS
 	u->plugins = pluginset_init(b);
+#endif
 
 	u->jdict = joseki_load(b->size);
 
@@ -943,6 +947,7 @@ uct_state_init(char *arg, struct board *b)
 					if (*b == '+') *b = ' ';
 				}
 				break;
+#ifdef PACHI_PLUGINS
 			} else if (!strcasecmp(optname, "plugin") && optval) {
 				/* Load an external plugin; filename goes before the colon,
 				 * extra arguments after the colon. */
@@ -950,7 +955,7 @@ uct_state_init(char *arg, struct board *b)
 				if (pluginarg)
 					*pluginarg++ = 0;
 				plugin_load(u->plugins, optval, pluginarg);
-
+#endif
 			/** UCT behavior and policies */
 
 			} else if ((!strcasecmp(optname, "policy")

@@ -50,6 +50,11 @@ DCNN=1
 
 # DOUBLE_FLOATING=1
 
+# Compile Pachi with external plugin support ?
+# If unsure leave disabled, you most likely don't need it.
+
+# PLUGINS=1
+
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
 # it somewhat.
@@ -190,6 +195,10 @@ endif
 ifeq ($(FIFO), 1)
 	CUSTOM_CFLAGS   += -DPACHI_FIFO
 	EXTRA_OBJS      += fifo.o
+endif
+
+ifeq ($(PLUGINS), 1)
+	CUSTOM_CFLAGS   += -DPACHI_PLUGINS
 endif
 
 ifdef DOUBLE_FLOATING

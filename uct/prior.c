@@ -251,8 +251,10 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_joseki(u, node, map);
 	if (u->prior->pattern_eqex)
 		uct_prior_pattern(u, node, map);
+#ifdef PACHI_PLUGINS
 	if (u->prior->plugin_eqex)
 		plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
+#endif
 }
 
 struct uct_prior *
