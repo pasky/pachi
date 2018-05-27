@@ -1389,8 +1389,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->dynkomi)
-		u->dynkomi = board_small(b) ? uct_dynkomi_init_none(u, NULL, b)
-			: uct_dynkomi_init_linear(u, NULL, b);
+		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 
 	if (u->pondering_opt && using_dcnn(b)) {
 		warning("Can't use pondering with dcnn right now, pondering turned off.\n");
