@@ -1107,7 +1107,7 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 		ko.color = stone_other(color);
 		ko.coord = cap_at; // unique
 		board->last_ko = ko;
-		board->last_ko_age = board->moves;
+		board->last_ko_age = board->moves + 1;  /* == board->moves really, board->moves++ done after */
 		if (DEBUGL(5))
 			fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord, board));
 	}
@@ -1440,6 +1440,7 @@ int board_undo(struct board *board)
 	board->last_move = board->last_move2;
 	board->last_move2 = board->last_move3;
 	board->last_move3 = board->last_move4;
+	board->moves--;
 	if (board->last_ko_age == board->moves)
 		board->ko = board->last_ko;
 	return 0;
