@@ -81,6 +81,8 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 		/* Verify that we have sane state. */
 		assert(b->es == u);
 		assert(u->t && b->moves);
+		assert(node_coord(u->t->root) == b->last_move.coord);
+		assert(u->t->root_color == b->last_move.color);
 		if (color != stone_other(u->t->root_color))
 			die("Fatal: Non-alternating play detected %d %d\n", color, u->t->root_color);
 		uct_htable_reset(u->t);
@@ -253,7 +255,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 
 	/* Promote node of the appropriate move to the tree root. */
 	assert(u->t->root);
-	if (u->t->untrustworthy_tree | !tree_promote_at(u->t, b, m->coord)) {
+	if (u->t->untrustworthy_tree || !tree_promote_at(u->t, b, m->coord)) {
 		if (UDEBUGL(3)) {
 			if (u->t->untrustworthy_tree)
 				fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
