@@ -1,3 +1,5 @@
+# auto-run off
+
 % Moggy raw playout speed benchmark
 boardsize 19
 . . . . . . . . . . . . . . . . . . .

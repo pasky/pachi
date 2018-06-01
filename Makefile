@@ -309,7 +309,7 @@ test: FORCE
 
 	@echo -n "Testing quiet mode...    "
 	@if  grep -q '.' < pachi.log ; then \
-		echo "FAILED";  exit 1;  else  echo "OK"; \
+		echo "FAILED:";  cat pachi.log;  exit 1;  else  echo "OK"; \
 	fi
 
 

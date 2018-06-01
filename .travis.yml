@@ -1,7 +1,7 @@
 # http://docs.travis-ci.com/user/languages/c/
 # start from https://github.com/rubinius/rubinius/blob/master/.travis.yml
 language: c
-sudo: false
+sudo: required
 
 compiler:
   - clang
