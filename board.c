@@ -1630,9 +1630,9 @@ board_print_official_ownermap(struct board *b, int *final_ownermap)
 }
 
 /* Official score after removing dead groups and Tromp-Taylor counting.
- * Number of dames is saved in @dame, final ownermap in @ownermap. */
+ * Number of dames is saved in @dames, final ownermap in @ownermap. */
 floating_t
-board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *ownermap)
+board_official_score_details(struct board *board, struct move_queue *dead, int *dames, int *ownermap)
 {
 	/* A point P, not colored C, is said to reach C, if there is a path of
 	 * (vertically or horizontally) adjacent points of P's color from P to
@@ -1668,12 +1668,11 @@ board_official_score_details(struct board *board, struct move_queue *dead, int *
 
 	int scores[S_MAX] = { 0, };
 
-	*dame = 0;
 	foreach_point(board) {
 		assert(board_at(board, c) == S_OFFBOARD || ownermap[c] != 0);
-		if (ownermap[c] == 3) {  (*dame)++; continue;  }
 		scores[ownermap[c]]++;
 	} foreach_point_end;
+	*dames = scores[3];
 
 	int handi_comp = board_score_handicap_compensation(board);
 	return board->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];

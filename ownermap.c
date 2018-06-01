@@ -70,6 +70,7 @@ float
 board_ownermap_estimate_point(struct board_ownermap *ownermap, coord_t c)
 {
 	assert(ownermap->map);
+	assert(!is_pass(c));
 	int b = ownermap->map[c][S_BLACK];
 	int w = ownermap->map[c][S_WHITE];
 	int total = ownermap->playouts;
@@ -80,6 +81,7 @@ enum point_judgement
 board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_t thres)
 {
 	assert(ownermap->map);
+	assert(!is_pass(c));
 	int n = ownermap->map[c][S_NONE];
 	int b = ownermap->map[c][S_BLACK];
 	int w = ownermap->map[c][S_WHITE];
@@ -92,6 +94,14 @@ board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_
 		return PJ_WHITE;
 	else
 		return PJ_UNKNOWN;
+}
+
+enum stone
+board_ownermap_color(struct board_ownermap *ownermap, coord_t c, floating_t thres)
+{
+	enum stone colors[4] = {S_NONE, S_BLACK, S_WHITE, S_NONE };
+	enum point_judgement pj = board_ownermap_judge_point(ownermap, c, thres);
+	return colors[pj];
 }
 
 void
@@ -172,6 +182,13 @@ board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap)
 
 	int handi_comp = board_score_handicap_compensation(b);
 	return ((scores[PJ_WHITE] + b->komi + handi_comp) - scores[PJ_BLACK]);
+}
+
+float
+board_ownermap_score_est_color(struct board *b, struct board_ownermap *ownermap, enum stone color)
+{
+	floating_t score = board_ownermap_score_est(b, ownermap);
+	return (color == S_BLACK ? -score : score);
 }
 
 /* Returns static buffer */

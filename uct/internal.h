@@ -129,7 +129,7 @@ struct uct {
 
 	/* Saved dead groups, for final_status_list dead */
 	struct move_queue dead_groups;
-	int dead_groups_move;
+	int pass_moveno;
 
 	/* Timing */
 	double mcts_time_start;

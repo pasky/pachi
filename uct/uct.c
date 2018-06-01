@@ -171,7 +171,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	/* Save dead groups for final_status_list dead. */
 	struct move_queue unclear;
 	struct move_queue *dead = &u->dead_groups;
-	u->dead_groups_move = b->moves;
+	u->pass_moveno = b->moves + 1;
 	get_dead_groups(u, b, dead, &unclear);
 	
 	/* Unclear groups ? */
@@ -198,8 +198,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 
 	/* Check score estimate first, official score is off if position is not final */
 	*msg = "losing on score estimate";
-	floating_t score = board_ownermap_score_est(b, &u->ownermap);
-	if (color == S_BLACK)  score = -score;
+	floating_t score = board_ownermap_score_est_color(b, &u->ownermap, color);
 	if (score < 0)  return false;
 
 	return pass_is_safe(u, b, color, dead, score, pass_all_alive, msg);
@@ -286,6 +285,7 @@ uct_undo(struct engine *e, struct board *b)
 	uct_pondering_stop(u);
 	u->initial_extra_komi = u->t->extra_komi;
 	reset_state(u);
+	u->pass_moveno = 0;
 	return NULL;
 }
 
@@ -351,13 +351,16 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 		return; // no dead groups
 
 	/* Normally last genmove was a pass and we've already figured out dead groups.
-	 * Don't recompute dead groups here, result could be different this time and lead to wrong list. */
-	if (u->dead_groups_move == b->moves - 1) {
+	 * Don't recompute dead groups here, result could be different this time and
+	 * lead to wrong list. */
+	if (u->pass_moveno == b->moves || u->pass_moveno == b->moves - 1) {
 		memcpy(dead, &u->dead_groups, sizeof(*dead));
 		print_dead_groups(u, b, dead);
 		return;
 	}
-	
+
+	fprintf(stderr, "WARNING: Recomputing dead groups\n");
+
 	/* Create mock state */
 	if (u->t)  reset_state(u);
 	// We need S_BLACK here, but don't clobber u->my_color with uct_genmove_setup() !
@@ -366,9 +369,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 	/* Make sure the ownermap is well-seeded. */
 	while (u->ownermap.playouts < GJ_MINGAMES)
 		uct_playout(u, b, S_BLACK, u->t);
-	/* Show the ownermap: */
-	if (DEBUGL(2))
-		board_print_ownermap(b, stderr, &u->ownermap);
+	if (DEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
 	struct move_queue unclear;
 	get_dead_groups(u, b, dead, &unclear);

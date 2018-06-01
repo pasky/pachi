@@ -35,6 +35,7 @@ enum point_judgement {
 	PJ_UNKNOWN = 3,
 };
 enum point_judgement board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_t thres);
+enum stone board_ownermap_color(struct board_ownermap *ownermap, coord_t c, floating_t thres);
 float board_ownermap_estimate_point(struct board_ownermap *ownermap, coord_t c);
 
 
@@ -56,6 +57,8 @@ void groups_of_status(struct board *b, struct group_judgement *judge, enum gj_st
 
 /* Score estimate based on board ownermap. (positive: W wins) */
 float board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap);
+/* Score estimate from color point of view (positive: color wins) */
+float board_ownermap_score_est_color(struct board *b, struct board_ownermap *ownermap, enum stone color);
 char *board_ownermap_score_est_str(struct board *b, struct board_ownermap *ownermap);
 enum point_judgement board_ownermap_score_est_coord(struct board *b, struct board_ownermap *ownermap, coord_t c);
 
