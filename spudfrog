@@ -10,34 +10,34 @@ ngreen="[32m";    white="[37;1m"   gray="[30;1m"
 
 cc1=$( $CC $CFLAGS -E -v - </dev/null 2>&1 | grep cc1 | head -1 | tr -d '\\"' )
 
-                                         build_type="${green}[native]${end}"
-echo "$cc1" | grep -q "mtune=generic" && build_type="${cyan}[generic]${end}"
+                                         build="${green}[native]${end}"
+echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
 
-                      dcnn="${cyan}[!dcnn]${end}"
-[ "$DCNN" = 1 ]    && dcnn="${green}[dcnn]${end}"
+                      dcnn="  ${cyan}[!dcnn]${end}"
+[ "$DCNN" = 1 ]    && dcnn="  ${green}[dcnn]${end}"
 
-                      opt_flag="${cyan}[$OPT]${end}"
-[ "$OPT" = "-O3" ] && opt_flag="${green}[$OPT]${end}"
-
-                              floating="${green}[float]${end}"
-[ "$DOUBLE_FLOATING" = 1 ] && floating="${cyan}[double]${end}"
+                      opt="  ${cyan}[$OPT]${end}"
+[ "$OPT" = "-O3" ] && opt="  ${green}[$OPT]${end}"
 
                         boardsize=""
 [ -n "$BOARD_SIZE" ] && boardsize="  ${cyan}[${BOARD_SIZE}x${BOARD_SIZE}]${end}"
 
+                              float=""
+[ "$DOUBLE_FLOATING" = 1 ] && float="  ${cyan}[double]${end}"
+
                       fifo=""
 [ "$FIFO" = 1 ]    && fifo="  ${cyan}[fifo]${end}"
 
-status="$build_type  $dcnn  $opt_flag  $floating$boardsize$fifo"
+status="$build$dcnn$opt$boardsize$float$fifo"
 
 raw=${status//?????m/}; raw=${raw//${end}/}
-n=$[51-${#raw}];  n1=$[$n/2];  n2=$[$n-$n1]
+n=$[45-${#raw}];  n1=$[$n/2];  n2=$[$n-$n1]
 
 spud=$gray
-printf "%s          (.)~(.)                                           $end\n" $spud
-printf "%s         (-------)                                          $end\n" $spud
-printf "%s   .----%sooO%s-----%sOoo%s--------------------------------------.$end\n" $gray $spud $gray $spud $gray
-printf "%s  | ${end} %*s%s%*s $gray |$end\n"                                        $gray  $n1 ""  "$status"  $n2 ""
-printf "%s   ᛫-----------------------------------------------------᛫$end\n" $gray
-printf "%s         ( )   ( )                                          $end  \n" $spud
+printf "%s            (.)~(.)                                         $end\n" $spud
+printf "%s           (-------)                                        $end\n" $spud
+printf "%s   .------%sooO%s-----%sOoo%s------------------------------.$end\n" $gray $spud $gray $spud $gray
+printf "%s  | ${end} %*s%s%*s $gray |$end\n"                                  $gray  $n1 ""  "$status"  $n2 ""
+printf "%s   ᛫-----------------------------------------------᛫$end\n" $gray
+printf "%s           ( )   ( )                                        $end  \n" $spud
 printf "\n"
