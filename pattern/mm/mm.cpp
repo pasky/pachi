@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <sstream>
 #include <vector>
+#include <map>
 #include <cmath>
 #include <fstream>
 
@@ -180,13 +181,16 @@ void CGameCollection::MM(int Feature)
  //
  // Main loop over games
  //
+ std::map<int,double> tMul;
  for (int i = vgame.size(); --i >= 0;)
  {
-  double tMul[vGamma.size()];
-  {
-   for (int i = vGamma.size(); --i >= 0;)
-    tMul[i] = 0.0;
-  }
+  //double tMul[vGamma.size()];
+  //{
+  // for (int i = vGamma.size(); --i >= 0;)
+  //  tMul[i] = 0.0;
+  //}
+  tMul.clear();
+
   double Den = 0.0;
 
   std::vector<CTeam> &v = vgame[i].vParticipants;
@@ -208,15 +212,25 @@ void CGameCollection::MM(int Feature)
 
    if (FeatureIndex >= 0)
    {
-    tMul[FeatureIndex] += Product;
+    //tMul[FeatureIndex] += Product;
+    if (tMul.count(FeatureIndex))
+    	tMul[FeatureIndex] += Product;
+    else
+	tMul[FeatureIndex]=Product;
+    
     Product *= vGamma[FeatureIndex];
    }
 
    Den += Product;
   }
 
-  for (int i = Max; --i >= Min;)
-   vDen[i] += tMul[i] / Den;
+  //for (int i = Max; --i >= Min;)
+  // vDen[i] += tMul[i] / Den;
+  for (std::map<int,double>::iterator it=tMul.begin();it!=tMul.end();++it)
+  {
+   int key=it->first;
+   vDen[key]+=it->second / Den;
+  }
  }
 
  //
