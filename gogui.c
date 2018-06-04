@@ -38,15 +38,16 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 	}
 	if (e->ownermap) {
 		sbprintf(buf, "gfx/gfx   Influence/gogui-ownermap\n");
-		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");	
-	}
-
-	if (!strcmp(e->name, "UCT")) {
-#ifdef DCNN
+		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");
+	}	
+#ifdef DCNN                            /* board check fake since we're called once on startup ... */
+	if (!strcmp(e->name, "UCT") && using_dcnn(b)) {
 		sbprintf(buf, "gfx/gfx   DCNN Best Moves/gogui-dcnn_best\n");
 		sbprintf(buf, "gfx/gfx   DCNN Color Map/gogui-dcnn_colors\n");
 		sbprintf(buf, "gfx/gfx   DCNN Ratings/gogui-dcnn_rating\n");
+	}
 #endif
+	if (!strcmp(e->name, "UCT")) {
 		sbprintf(buf, "gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
 		sbprintf(buf, "gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
 		sbprintf(buf, "gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
@@ -419,8 +420,8 @@ static struct engine *dcnn_engine = NULL;
 enum parse_code
 cmd_gogui_dcnn_best(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
-	if (!using_dcnn(b)) return P_OK;
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -436,8 +437,8 @@ cmd_gogui_dcnn_best(struct board *b, struct engine *e, struct time_info *ti, gtp
 enum parse_code
 cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
-	if (!using_dcnn(b)) return P_OK;
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -453,8 +454,8 @@ cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, g
 enum parse_code
 cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
-	if (!using_dcnn(b)) return P_OK;
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
