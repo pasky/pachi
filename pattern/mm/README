@@ -1,0 +1,24 @@
+https://www.remi-coulom.fr/Amsterdam2007/
+
+usage: ./mm <input.dat >output.dat
+
+format of input.dat:
+! <number of gammas>
+<number of features>
+<number of gammas for this feature> <name of feature>
+...
+!
+#
+<winner team>
+<participant1 team>
+<participant2 team>
+...
+#
+<winner team>
+...
+
+A team (either participant or winner) is a list of gamma numbers separated by spaces.
+
+The total number of gammas should be equal to the sum of the number of gammas over all features.
+
+There should not be more than one gamma of a feature in a team.
