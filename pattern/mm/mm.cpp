@@ -14,6 +14,7 @@
 #include <map>
 #include <cmath>
 #include <fstream>
+#include <assert.h>
 
 const double PriorVictories = 1.0;
 const double PriorGames = 2.0;
@@ -38,10 +39,20 @@ class CTeam
 
 std::vector<int> CTeam::vi;
 
+int
+gamma_to_feature(int gamma, std::vector<int> &vFeatureIndex)
+{
+	for (unsigned int i = 0; i < vFeatureIndex.size(); i++) {
+		if (vFeatureIndex[i] > gamma)
+			return i;
+	}
+	return vFeatureIndex.size();
+}
+
 /////////////////////////////////////////////////////////////////////////////
 // Read a team
 /////////////////////////////////////////////////////////////////////////////
-CTeam ReadTeam(std::string &s)
+CTeam ReadTeam(std::string &s, std::vector<int> &vFeatureIndex, int Gammas)
 {
  std::istringstream in(s);
  CTeam team;
@@ -49,8 +60,22 @@ CTeam ReadTeam(std::string &s)
  while(1)
  {
   in >> Index;
-  if (in)
-   team.Append(Index);
+  if (Index < 0 || Index >= Gammas) {
+	  std::cerr << '\n' << s << '\n';
+	  fprintf(stderr, "invalid gamma: %i\n", Index);
+	  assert(0);
+  }
+  if (in) {
+	  int feature = gamma_to_feature(Index, vFeatureIndex);
+	  for (int i = team.GetSize(); --i >= 0;) {
+		  if (feature == gamma_to_feature(team.GetIndex(i), vFeatureIndex)) {
+			  std::cerr << '\n' << s << '\n';
+			  fprintf(stderr, "%i and %i are same feature !\n", Index, team.GetIndex(i));
+			  assert(0);
+		  }
+	  }
+	  team.Append(Index);
+  }
   else
    break;
  }
@@ -252,6 +277,7 @@ void ReadGameCollection(CGameCollection &gcol, std::istream &in)
  //
  // Read number of gammas in the first line
  //
+ int MaxGamma;
  {
   std::string sLine;
   std::getline(in, sLine);
@@ -259,6 +285,7 @@ void ReadGameCollection(CGameCollection &gcol, std::istream &in)
   std::string s;
   int Gammas = 0;
   is >> s >> Gammas;
+  MaxGamma = Gammas;
   gcol.vGamma.resize(Gammas);
   for (int i = Gammas; --i >= 0;)
    gcol.vGamma[i] = 1.0;
@@ -302,7 +329,7 @@ void ReadGameCollection(CGameCollection &gcol, std::istream &in)
    // Winner
    //
    std::getline(in, sLine);
-   game.Winner = ReadTeam(sLine);
+   game.Winner = ReadTeam(sLine, gcol.vFeatureIndex, MaxGamma);
 
    //
    // Participants
@@ -310,7 +337,7 @@ void ReadGameCollection(CGameCollection &gcol, std::istream &in)
    std::getline(in, sLine);
    while (sLine[0] != '#' && sLine[0] != '!' && in)
    {
-    CTeam team = ReadTeam(sLine);
+    CTeam team = ReadTeam(sLine, gcol.vFeatureIndex, MaxGamma);
     game.vParticipants.push_back(team);
     std::getline(in, sLine);
    }
