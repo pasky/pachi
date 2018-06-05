@@ -531,6 +531,8 @@ cmd_gogui_pattern_best(struct board *b, struct engine *e, struct time_info *ti, 
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	gogui_best_moves(buf, pattern_engine, b, ti, color, 10, GOGUI_BEST_MOVES, 0);
 
+	bool locally = patternplay_matched_locally(pattern_engine);
+	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
@@ -547,6 +549,8 @@ cmd_gogui_pattern_colors(struct board *b, struct engine *e, struct time_info *ti
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	gogui_best_moves(buf, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 
+	bool locally = patternplay_matched_locally(pattern_engine);
+	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
@@ -563,6 +567,8 @@ cmd_gogui_pattern_rating(struct board *b, struct engine *e, struct time_info *ti
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	gogui_best_moves(buf, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, 0);
 
+	bool locally = patternplay_matched_locally(pattern_engine);
+	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
@@ -584,9 +590,10 @@ cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *
 	struct ownermap ownermap;
 	struct pattern p;
 	struct move m = { .coord = coord, .color = color };
-	struct pattern_config *pc = engine_patternplay_get_pc(pattern_engine);
+	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
 	mcowner_playouts(b, color, &ownermap);
-	pattern_match(pc, &p, b, &m, &ownermap);
+	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
+	pattern_match(pc, &p, b, &m, &ownermap, locally);
 	
 	gtp_reply(gtp, "TEXT ", pattern2sstr(&p), NULL);
 	return P_OK;
@@ -609,9 +616,10 @@ cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti
 	struct ownermap ownermap;
 	struct pattern p;
 	struct move m = { .coord = coord, .color = color };
-	struct pattern_config *pc = engine_patternplay_get_pc(pattern_engine);
+	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
 	mcowner_playouts(b, color, &ownermap);
-	pattern_match(pc, &p, b, &m, &ownermap);
+	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
+	pattern_match(pc, &p, b, &m, &ownermap, locally);
 
 	char buffer[1000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));

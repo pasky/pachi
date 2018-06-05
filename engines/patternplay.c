@@ -16,15 +16,23 @@
 /* Internal engine state. */
 struct patternplay {
 	int debug_level;
-
 	struct pattern_config pc;
+	int matched_locally;
 };
 
 struct pattern_config*
-engine_patternplay_get_pc(struct engine *e)
+patternplay_get_pc(struct engine *e)
 {
 	struct patternplay *pp = e->data;
 	return &pp->pc;
+}
+
+bool
+patternplay_matched_locally(struct engine *e)
+{
+	struct patternplay *pp = e->data;
+	assert(pp->matched_locally != -1);
+	return pp->matched_locally;
 }
 
 static void
@@ -33,12 +41,13 @@ debug_pattern_best_moves(struct pattern_config *pc, struct board *b, enum stone 
 {
 	struct ownermap ownermap;
 	mcowner_playouts_fast(b, color, &ownermap);
-
+	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
+	
 	fprintf(stderr, "\n");
 	for (int i = 0; i < nbest; i++) {
 		struct move m = { .coord = best_c[i], .color = color };
 		struct pattern p;
-		pattern_match(pc, &p, b, &m, &ownermap);
+		pattern_match(pc, &p, b, &m, &ownermap, locally);
 
 		char buffer[512];  strbuf_t strbuf;
 		strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
@@ -58,6 +67,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	floating_t probs[b->flen];
 	struct ownermap ownermap;
 	mcowner_playouts_fast(b, color, &ownermap);
+	pp->matched_locally = -1;  // Invalidate
 	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
 
 	float best_r[20] = { 0.0, };
@@ -90,6 +100,7 @@ patternplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, 
 	floating_t probs[b->flen];
 	struct ownermap ownermap;
 	mcowner_playouts_fast(b, color, &ownermap);
+	pp->matched_locally = pattern_matching_locally(&pp->pc, b, color, &ownermap);
 	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
 
 	find_pattern_best_moves(b, probs, best_c, best_r, nbest);
@@ -104,6 +115,7 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 	struct pattern pats[b->flen];
 	struct ownermap ownermap;
 	mcowner_playouts_fast(b, color, &ownermap);
+	pp->matched_locally = -1;  // Invalidate
 	pattern_rate_moves(&pp->pc, b, color, pats, vals, &ownermap);
 
 #if 0
@@ -133,6 +145,7 @@ patternplay_state_init(char *arg)
 	bool pat_setup = false;
 
 	pp->debug_level = debug_level;
+	pp->matched_locally = -1;  /* Invalid */
 
 	if (arg) {
 		char *optspec, *next = arg;

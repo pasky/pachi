@@ -219,7 +219,7 @@ mm_process_move(struct patternscan *ps, struct board *b, struct move *m, strbuf_
 	
 	/* Now, match the pattern. */
 	struct pattern p;
-	pattern_match(&ps->pc, &p, b, m, ownermap);
+	pattern_match(&ps->pc, &p, b, m, ownermap, true);
 
 	if (game_move) {
 		sbprintf(buf, "#\n");

@@ -44,6 +44,12 @@ floating_t pattern_rate_moves(struct pattern_config *pc,
 			      struct pattern *pats, floating_t *probs,
 			      struct ownermap *ownermap);
 
+/* Helper function for pattern_match() callers:
+ * Returns @locally flag to use for this position. */
+bool pattern_matching_locally(struct pattern_config *pc,
+			      struct board *b, enum stone color,				
+			      struct ownermap *ownermap);
+
 void print_pattern_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest);
 void find_pattern_best_moves(struct board *b, float *probs, coord_t *best_c, float *best_r, int nbest);
 

@@ -175,8 +175,9 @@ char *str2pattern(char *str, struct pattern *p);
 /* Compare two patterns for equality. Assumes fixed feature order. */
 static bool pattern_eq(struct pattern *p1, struct pattern *p2);
 
-/* Initialize p and fill it with features matched by the given board move. */
-void pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m, struct ownermap *ownermap);
+/* Initialize p and fill it with features matched by the given board move. 
+ * @locally: Looking for local moves ? Distance features disabled if false. */
+void pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m, struct ownermap *ownermap, bool locally);
 
 /* Fill ownermap for mcowner feature. */
 void mcowner_playouts(struct board *b, enum stone color, struct ownermap *ownermap);

@@ -824,7 +824,7 @@ add_feature_stats(struct pattern *pattern)
 /* TODO: We should match pretty much all of these features incrementally. */
 static void
 pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struct board *b,
-		       struct move *m, struct ownermap *ownermap)
+		       struct move *m, struct ownermap *ownermap, bool locally)
 {
 #ifdef PATTERN_FEATURE_STATS
 	dump_feature_stats(pc);
@@ -866,8 +866,10 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 	check_feature(pattern_match_cut(b, m), FEAT_CUT);  // XXX prioritize ?
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
-	check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
-	check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
+	if (locally) {
+		check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
+		check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
+	}
 	check_feature(pattern_match_mc_owner(b, m, ownermap), FEAT_MC_OWNER);
 	
 	f = pattern_match_spatial(pc, pattern, f, b, m);
@@ -875,9 +877,9 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 
 void
 pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b,
-	      struct move *m, struct ownermap *ownermap)
+	      struct move *m, struct ownermap *ownermap, bool locally)
 {
-	pattern_match_internal(pc, p, b, m, ownermap);
+	pattern_match_internal(pc, p, b, m, ownermap, locally);
 	
 	/* Debugging */
 	//if (pattern_has_feature(p, FEAT_ATARI, PF_ATARI_LADDER))  show_move(b, m, "atari_ladder");
@@ -886,6 +888,7 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b,
 	add_feature_stats(p);
 #endif	
 }
+
 
 /* Return feature payload name if it has one. */
 static char*

@@ -92,15 +92,13 @@ rescale_probs(struct board *b, floating_t *probs, floating_t max)
 	return total;
 }
 
-floating_t
-pattern_rate_moves(struct pattern_config *pc,
-                   struct board *b, enum stone color,
-                   struct pattern *pats, floating_t *probs,
-		   struct ownermap *ownermap)
+static floating_t
+pattern_max_rating(struct pattern_config *pc,
+		   struct board *b, enum stone color,
+		   struct pattern *pats, floating_t *probs,
+		   struct ownermap *ownermap,
+		   bool locally)
 {
-#ifdef PATTERN_FEATURE_STATS
-	pattern_stats_new_position();
-#endif
 	//assert(ownermap->playouts >= GJ_MINGAMES);
 	assert(ownermap->playouts >= 100);
 	
@@ -112,7 +110,7 @@ pattern_rate_moves(struct pattern_config *pc,
 		if (is_pass(mo.coord))	continue;
 		if (!board_is_valid_play_no_suicide(b, mo.color, mo.coord)) continue;
 
-		pattern_match(pc, &pats[f], b, &mo, ownermap);
+		pattern_match(pc, &pats[f], b, &mo, ownermap, locally);
 		floating_t prob = pattern_gamma(pc, &pats[f]);
 		if (!isnan(prob)) {
 			probs[f] = prob;
@@ -124,8 +122,41 @@ pattern_rate_moves(struct pattern_config *pc,
 		}
 	}
 
+	return max;
+}
+
+#define LOW_PATTERN_RATING 6.0
+
+floating_t
+pattern_rate_moves(struct pattern_config *pc,
+                   struct board *b, enum stone color,
+                   struct pattern *pats, floating_t *probs,
+		   struct ownermap *ownermap)
+{
+#ifdef PATTERN_FEATURE_STATS
+	pattern_stats_new_position();
+#endif
+
+	/* Try local moves first. */
+	floating_t max = pattern_max_rating(pc, b, color, pats, probs, ownermap, true);
+
+	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
+	if (max < LOW_PATTERN_RATING)
+		max = pattern_max_rating(pc, b, color, pats, probs, ownermap, false);
+	
 	floating_t total = rescale_probs(b, probs, max);
 	return total;
+}
+
+bool
+pattern_matching_locally(struct pattern_config *pc,
+			 struct board *b, enum stone color,
+			 struct ownermap *ownermap)
+{
+	struct pattern pats[b->flen];
+	floating_t probs[b->flen];
+	floating_t max = pattern_max_rating(pc, b, color, pats, probs, ownermap, true);
+	return (max >= LOW_PATTERN_RATING);
 }
 
 void
