@@ -1,0 +1,35 @@
+
+Nov 26 09:54:54           Starting game as [white] against starbow [1d]            -1 stones  
+
+
+Move:  237  Komi: 0.5  Handicap: 0  Captures B: 3 W: 6  Score Est: W+3.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . X . . . . . . . . . . . . . X O O . | 19 | X X X X X X X X X X X X X X X X O O O |
+ 18 | X . X X . . . . . . . . . . O X X O . | 18 | X X X X X X X X X X X X X X X X X O O |
+ 17 | . X O X X X . X X . . . . X . X X O . | 17 | x X O X X X X X X X X X X X X X X O O |
+ 16 | . O O O O X X O O X . X . O X X O . . | 16 | , O O O O X X O O X X X X X X X O O O |
+ 15 | . . . . O X O O X X . . . X O O . O . | 15 | O O O O O X O O X X X X X X O O O O O |
+ 14 | . O O . . O . . O O X . . X . O X . . | 14 | o O O O O O O O O O X X X X , O O O O |
+ 13 | . X O . . . X . O X X X X O O O X O . | 13 | , X O O O O O O O X X X X O O O O O O |
+ 12 | X X O . O O O X O X O O X X X X O . . | 12 | X X O O O O O O O X O O X X X X O O O |
+ 11 | X O O O . O . O . O . O . . . X)O O O | 11 | X O O O O O O O O O O O , x x , O O O |
+ 10 | X X O . O X O . O O O O O X . X X O X | 10 | X X O O O X O O O O O O O X X X X O X |
+  9 | X O O . O X X O O O X X O O X . O X X |  9 | X O O O O X X O O O X X O O X , O X X |
+  8 | . X O O . O X X X X X X . O O O O X . |  8 | X X O O , , X X X X X X , O O O O X X |
+  7 | . X X X O X X . X O O X O . . X O X . |  7 | X X X X O X X X X O O X O O O O O X X |
+  6 | . X O X O O X . X X O O O O O O X O . |  6 | X X X X O O X X X X O O O O O O X X X |
+  5 | . . . X O X X X O X X X X O X X X X . |  5 | X X X X O X X X , X X X X O X X X X X |
+  4 | X X X X O . O O . O X O X X X X . . . |  4 | X X X X O , O O , O X O X X X X X X X |
+  3 | O O X O O O . . O O O O O X O X . X . |  3 | O O X O O O O O O O O O O X O X X X X |
+  2 | . O O X . . . . . . . . O O O O X . . |  2 | O O O O O O O O O O O O O O O O X X X |
+  1 | . . . . . . . . . . . . . . . X . X . |  1 | O O O O O O O O O O O O O O , X X X X |
+    +---------------------------------------+    +---------------------------------------+
+
+dcnn in 0.88s
+prior_dcnn(pass) = [ P1  O11 Q9  R15 A16 N11 J4  E8  N16 A14 S14 T6  A8  F4  G14 N8  H14 A15 P10 P17 ]
+                   [ 30  10  8   7   7   6   6   5   4   4   3   1   0   0   0   0   0   0   0   0   ]
+
+w winning until messes up here, need to answer Q11 !
+R15 or S14 ...

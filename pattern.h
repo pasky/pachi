@@ -52,7 +52,9 @@ enum feature_id {
 	FEAT_AESCAPE,	
 #define PF_AESCAPE_NEW_NOLADDER	0  /*     Escape new atari, not in a ladder */
 #define PF_AESCAPE_NEW_LADDER	1  /*     Escape new atari, in a ladder */
-#define PF_AESCAPE_N		2
+#define PF_AESCAPE_NOLADDER	2  /*     Escape atari, not in a ladder */
+#define PF_AESCAPE_LADDER	3  /*     Escape atari, in a ladder */
+#define PF_AESCAPE_N		4
 
 	/* Self-atari move. */
 	FEAT_SELFATARI,
@@ -63,10 +65,24 @@ enum feature_id {
 
 	/* Atari move. */
 	FEAT_ATARI,
-#define PF_ATARI_LADDER		0  /*     The atari'd group gets laddered? */
-#define PF_ATARI_KO		1  /*     Atari as ko-threat ? disables selfatari feature. */
-#define PF_ATARI_SOME		2  /*     Can atari something */
-#define PF_ATARI_N		3
+#define PF_ATARI_DOUBLE		0  /*     Double atari */
+#define PF_ATARI_AND_CAP	1  /*     Atari + can capture other group if opponent defends. */
+#define PF_ATARI_SNAPBACK       2  /*     Snapback on stones we don't own already. */
+#define PF_ATARI_LADDER_BIG	3  /*     Can ladder big safe opponent group */
+#define PF_ATARI_LADDER_SAFE	4  /*     Can ladder safe opponent stone(s) */
+#define PF_ATARI_LADDER_CUT	5  /*     Can ladder cutting stone(s) */
+#define PF_ATARI_LADDER		6  /*     The atari'd group gets laddered? */
+#define PF_ATARI_KO		7  /*     Atari as ko-threat ? disables selfatari feature. */
+#define PF_ATARI_SOME		8  /*     Can atari something */
+#define PF_ATARI_N		9
+
+	/* Cut */
+	FEAT_CUT,
+#define PF_CUT_DANGEROUS	0  /*     Cut that can't be captured with shortage of libs */
+#define PF_CUT_N		1
+
+	/* Double snapback */
+	FEAT_DOUBLE_SNAPBACK,      /*     Just what it says. */
 
 	/* Border distance. */
 	FEAT_BORDER,               /*     Payload: Line number, only up to 4. */

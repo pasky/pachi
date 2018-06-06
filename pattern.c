@@ -76,6 +76,8 @@ struct feature_info pattern_features[] = {
 	[FEAT_BORDER] =          { .name = "border",          .payloads = -1,              .spatial = 0 },
 	[FEAT_DISTANCE] =        { .name = "dist",            .payloads = 19,              .spatial = 0 },
 	[FEAT_DISTANCE2] =       { .name = "dist2",           .payloads = 19,              .spatial = 0 },
+	[FEAT_CUT] =             { .name = "cut",             .payloads = PF_CUT_N,        .spatial = 0 },
+	[FEAT_DOUBLE_SNAPBACK] = { .name = "double_snapback", .payloads = 1,               .spatial = 0 },
 	[FEAT_MC_OWNER] =        { .name = "mcowner",         .payloads = 9,               .spatial = 0 },
 	[FEAT_NO_SPATIAL] =      { .name = "nospat",          .payloads = 1,               .spatial = 0 },
 	[FEAT_SPATIAL3] =        { .name = "s3",              .payloads = -1,              .spatial = 3 },
@@ -104,15 +106,24 @@ static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
 	},
 	[FEAT_AESCAPE] =   { [ PF_AESCAPE_NEW_NOLADDER] = "new_noladder",
 			     [ PF_AESCAPE_NEW_LADDER] = "new_ladder",
+			     [ PF_AESCAPE_NOLADDER] = "noladder",
+			     [ PF_AESCAPE_LADDER] = "ladder",
 	},
 	[FEAT_SELFATARI] = { [ PF_SELFATARI_BAD] = "bad",
 			     [ PF_SELFATARI_GOOD] = "good",
 			     [ PF_SELFATARI_2LIBS] = "twolibs",
 	},
-	[FEAT_ATARI] =     { [ PF_ATARI_LADDER] = "ladder", 
+	[FEAT_ATARI] =     { [ PF_ATARI_DOUBLE] = "double",
+			     [ PF_ATARI_AND_CAP] = "and_cap",
+			     [ PF_ATARI_SNAPBACK] = "snapback",
+			     [ PF_ATARI_LADDER_BIG] = "ladder_big",
+			     [ PF_ATARI_LADDER_SAFE] = "ladder_safe", 
+			     [ PF_ATARI_LADDER_CUT] = "ladder_cut",
+			     [ PF_ATARI_LADDER] = "ladder", 
 			     [ PF_ATARI_KO] = "ko",
 			     [ PF_ATARI_SOME] = "some",
 	},
+	[FEAT_CUT] =       { [ PF_CUT_DANGEROUS] = "dangerous" },
 };
 
 static void
@@ -212,23 +223,7 @@ is_neighbor(struct board *b, coord_t c1, coord_t c2)
 	return false;
 }
 
-static bool
-move_can_be_captured(struct board *b, struct move *m)
-{
-	if (is_selfatari(b, m->color, m->coord))
-		return true;
-	
-	/* Move can be laddered ? */
-	bool safe = false;
-	with_move(b, m->coord, m->color, {
-		group_t g = group_at(b, m->coord);
-		if (!g) break;
-		if (board_group_info(b, g).libs == 2 &&
-		    can_capture_2lib_group(b, g, m->color, NULL, 0)) break;
-		safe = true;
-	});
-	return !safe;
-}
+static bool move_can_be_captured(struct board *b, struct move *m);
 
 static int
 pattern_match_capture(struct board *b, struct move *m)
@@ -283,9 +278,11 @@ pattern_match_aescape(struct board *b, struct move *m)
 {
 	enum stone other_color = stone_other(m->color);
 	coord_t last_move = b->last_move.coord;
+	bool found = false, ladder = false;
 
 	foreach_atari_neighbor(b, m->coord, m->color) {
-		bool ladder = is_ladder_any(b, g, true);
+		ladder = is_ladder_any(b, g, true);
+		found = true;
 		
 		/* Last move atari ? */
 		if (is_pass(last_move) || b->last_move.color != other_color)  continue;
@@ -296,6 +293,7 @@ pattern_match_aescape(struct board *b, struct move *m)
 		} foreach_atari_neighbor_end;
 	} foreach_atari_neighbor_end;
 	
+	if (found)  return (ladder ? PF_AESCAPE_LADDER : PF_AESCAPE_NOLADDER);
 	return -1;
 }
 
@@ -309,13 +307,106 @@ pattern_match_selfatari(struct board *b, struct move *m)
 	return -1;
 }
 
+/*    X  Are these cutting stones ?
+ *  O X  Looking for a crosscut pattern around the group.
+ *  X O  XXX very naive, we don't check atari, ownership or that they belong to != groups */
+static bool
+cutting_stones(struct board *b, group_t g)
+{
+	assert(g && group_at(b, g));
+	enum stone color = board_at(b, g);
+	enum stone other_color = stone_other(color);
+
+	foreach_in_group(b, g) {
+		if (neighbor_count_at(b, c, other_color) < 2)  continue;
+		int x1 = coord_x(c, b);  int y1 = coord_y(c, b);
+		coord_t coord = c;
+		foreach_diag_neighbor(b, coord) {
+			if (board_at(b, c) != color || group_at(b, c) == g)  continue;
+			int x2 = coord_x(c, b);  int y2 = coord_y(c, b);
+			coord_t c2 = coord_xy(b, x1, y2);
+			coord_t c3 = coord_xy(b, x2, y1);
+			if (board_at(b, c2) != other_color ||
+			    board_at(b, c3) != other_color)   continue;
+			return true;
+		} foreach_diag_neighbor_end;
+	} foreach_in_group_end;	
+	return false;
+}
+
+/* can capture @other after atari on @atariable + defense ? */
+static bool
+cutting_stones_and_can_capture_other_after_atari(struct board *b, struct move *m, group_t atariable, group_t other)
+{
+	bool found = false;
+	enum stone other_color = stone_other(m->color);
+	with_move(b, m->coord, m->color, {
+			assert(group_at(b, atariable) == atariable);
+			if (!cutting_stones(b, atariable))  break;
+			if (!cutting_stones(b, other))      break;
+			coord_t lib = board_group_info(b, atariable).lib[0];
+			with_move(b, lib, other_color, {
+					group_t g = group_at(b, other);
+					if (g && board_group_info(b, g).libs == 2 &&
+					    can_capture_2lib_group(b, g, other_color, NULL, 0))
+						found = true;
+				});
+		});
+	return found;
+}
+
+static bool
+can_countercap_common_stone(struct board *b, coord_t coord, enum stone color, group_t g1, group_t g2)
+{
+	int x1 = coord_x(coord, b);  int y1 = coord_y(coord, b);
+	foreach_diag_neighbor(b, coord) {
+		if (board_at(b, c) != color || board_group_info(b, group_at(b, c)).libs != 1)  continue;
+		int x2 = coord_x(c, b);  int y2 = coord_y(c, b);
+		coord_t c1 = coord_xy(b, x1, y2);
+		coord_t c2 = coord_xy(b, x2, y1);
+		if ((group_at(b, c1) == g1 && group_at(b, c2) == g2) ||
+		    (group_at(b, c1) == g2 && group_at(b, c2) == g1))   return true;
+	} foreach_diag_neighbor_end;
+	return false;
+}
+
+/* Ownermap color of @coord and its neighbors if they all match, S_NONE otherwise */
+static enum stone
+owner_around(struct board *b, struct ownermap *ownermap, coord_t coord)
+{
+	enum stone own = ownermap_color(ownermap, coord, 0.67);
+	if (own == S_NONE)  return S_NONE;
+	
+	foreach_neighbor(b, coord, {
+			if (board_at(b, c) == S_OFFBOARD)  continue;
+			enum stone own2 = ownermap_color(ownermap, c, 0.67);
+			if (own2 != own)  return S_NONE;
+	});
+	return own;
+}
+
 static int
 pattern_match_atari(struct board *b, struct move *m, struct ownermap *ownermap)
 {
 	enum stone color = m->color;
 	enum stone other_color = stone_other(color);
-	group_t g1 = 0;
-	bool ladder_atari = false;
+	group_t g1 = 0, g3libs = 0;
+	bool snapback = false, double_atari = false, atari_and_cap = false, ladder_atari = false;
+	bool ladder_big_safe = false, ladder_safe = false, ladder_cut = false;
+
+	/* Check snapback on stones we don't own already. */
+	if (immediate_liberty_count(b, m->coord) == 1 &&
+	    !neighbor_count_at(b, m->coord, m->color)) {
+		with_move(b, m->coord, m->color, {
+				group_t g = group_at(b, m->coord);
+				group_t atari_neighbor;
+				if (g && capturing_group_is_snapback(b, g) &&
+				    (atari_neighbor = board_get_atari_neighbor(b, g, other_color)) &&
+				    ownermap_color(ownermap, atari_neighbor, 0.67) != m->color)  // XXX check other stones in group ?)
+					snapback = true;
+		});
+	}
+	if (snapback)  return PF_ATARI_SNAPBACK;
 
 	bool selfatari = is_selfatari(b, m->color, m->coord);
 	if (!board_playing_ko_threat(b) && selfatari)  return -1;
@@ -324,16 +415,40 @@ pattern_match_atari(struct board *b, struct move *m, struct ownermap *ownermap)
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != other_color)           continue;
 		group_t g = group_at(b, c);
+		if (g  && board_group_info(b, g).libs == 3)  g3libs = g;
 		if (!g || board_group_info(b, g).libs != 2)  continue;		
 		/* Can atari! */
+
+		/* Double atari ? */
+		if (g1 && g != g1 && !can_countercap_common_stone(b, m->coord, color, g, g1))
+			double_atari = true;
 		g1 = g;
 		
-		if (wouldbe_ladder_any(b, g, m->coord))
+		if (wouldbe_ladder_any(b, g, m->coord)) {
 			ladder_atari = true;
+			enum stone gown = ownermap_color(ownermap, g, 0.67);
+			enum stone aown = owner_around(b, ownermap, m->coord);
+			// capturing big group not dead yet
+			if (gown != color && group_stone_count(b, g, 5) >= 4)   ladder_big_safe = true;
+			// capturing something in opponent territory, yummy
+			if (gown == other_color && aown == other_color)         ladder_safe = true;
+			// capturing cutting stones
+			if (gown != color && cutting_stones(b, g))		ladder_cut = true;
+		}
 	});
 	if (g1) {
-		if (!selfatari)
+		/* Can capture other group after atari ? */
+		if (g3libs && cutting_stones_and_can_capture_other_after_atari(b, m, g1, g3libs))
+			atari_and_cap = true;
+
+		if (!selfatari) {
+			if (ladder_big_safe)	return PF_ATARI_LADDER_BIG;
+			if (double_atari)	return PF_ATARI_DOUBLE;
+			if (ladder_safe)	return PF_ATARI_LADDER_SAFE;
+			if (ladder_cut)		return PF_ATARI_LADDER_CUT;
+			if (atari_and_cap)	return PF_ATARI_AND_CAP;
 			if (ladder_atari)	return PF_ATARI_LADDER;
+		}
 		
 		if (!is_pass(b->ko.coord))	return PF_ATARI_KO;
 		else				return PF_ATARI_SOME;
@@ -370,6 +485,142 @@ pattern_match_distance2(struct board *b, struct move *m)
 	assert(d >= 0 && d <= 17);
 	return d;
 }
+
+static bool
+safe_diag_neighbor_reaches_two_opp_groups(struct board *b, struct move *m,
+					  group_t groups[4], int ngroups)
+{
+	enum stone other_color = stone_other(m->color);
+	
+	foreach_diag_neighbor(b, m->coord) {
+		if (board_at(b, c) != m->color) continue;
+		group_t g = group_at(b, c);
+
+		/* Can be captured ? Not good */
+		if (board_group_info(b, g).libs == 1) continue;
+		if (board_group_info(b, g).libs == 2 &&
+		    can_capture_2lib_group(b, g, m->color, NULL, 0)) continue;
+
+		group_t gs[4];  memcpy(gs, groups, sizeof(gs));
+		int found = 0;
+		
+		/* Find how many known opponent groups we reach */
+		foreach_neighbor(b, c, {
+				if (board_at(b, c) != other_color) continue;
+				group_t g = group_at(b, c);
+				for (int i = 0; i < ngroups; i++)
+					if (gs[i] == g)  {  found++;  gs[i] = 0;  break;  }
+			});
+		if (found >= 2)  return true;
+	} foreach_diag_neighbor_end;
+	
+	return false;
+}
+
+static bool
+move_can_be_captured(struct board *b, struct move *m)
+{
+	if (is_selfatari(b, m->color, m->coord))
+		return true;
+
+	/* Move can be laddered ? */
+	bool safe = false;
+	with_move(b, m->coord, m->color, {
+		group_t g = group_at(b, m->coord);
+		if (!g) break;
+		if (board_group_info(b, g).libs == 2 &&
+		    can_capture_2lib_group(b, g, m->color, NULL, 0)) break;
+		safe = true;
+	});
+	return !safe;
+}
+
+static int
+pattern_match_cut(struct board *b, struct move *m)
+{
+	enum stone other_color = stone_other(m->color);
+	group_t groups[4];
+	int ngroups = 0;
+
+	/* Find neighbor groups */
+	foreach_neighbor(b, m->coord, {
+			if (board_at(b, c) != other_color) continue;
+			group_t g = group_at(b, c);
+			if (board_group_info(b, g).libs <= 2) continue;  /* Not atari / capture */
+
+			int found = 0;
+			for (int i = 0; i < ngroups; i++)
+				if (g == groups[i])  found = 1;
+			if (found)  continue;
+			
+			groups[ngroups++] = g;
+		});
+
+	if (ngroups >= 2 &&
+	    safe_diag_neighbor_reaches_two_opp_groups(b, m, groups, ngroups) &&
+	    !move_can_be_captured(b, m)) {
+
+		/* Cut groups short of liberties ? */
+		int found = 0;
+		for (int i = 0; i < ngroups; i++) {
+			group_t g = groups[i];
+			if (board_group_info(b, g).libs <= 3)
+				found++;
+		}
+		if (found >= 2)
+			return PF_CUT_DANGEROUS;
+	}
+
+	return -1;
+}
+
+/*   O O X X X O O
+ *   O X . X . X O
+ *   O X . * . X O
+ *  ---------------
+ */
+static int
+pattern_match_double_snapback(struct board *b, struct move *m)
+{
+	enum stone color = m->color;
+	enum stone other_color = stone_other(m->color);
+
+	/* Check center spot */
+	coord_t coord = m->coord;
+	if (neighbor_count_at(b, coord, S_OFFBOARD) != 1 ||
+	    immediate_liberty_count(b, coord) != 2 ||
+	    neighbor_count_at(b, coord, other_color) != 1)  return -1;
+	
+	int offsets[4][2][2] = {
+		{ { -1, -1}, { -1,  1} }, /* right side */
+		{ {  1, -1}, {  1,  1} }, /* left       */
+		{ { -1,  1}, {  1,  1} }, /* top        */
+		{ { -1, -1}, {  1, -1} }  /* bottom     */
+	};
+
+	int snap = 0;
+	int x = coord_x(coord, b);
+	int y = coord_y(coord, b);
+	with_move(b, coord, color, {
+		for (int i = 0; i < 4 && snap != 2; i++) {
+			snap = 0;
+			for (int j = 0; j < 2; j++) {
+				coord_t c = coord_xy(b, x + offsets[i][j][0], y + offsets[i][j][1]);
+				if (board_at(b, c) != S_NONE)  continue;
+				with_move(b, c, color, {
+					group_t g = group_at(b, c);
+					if (g && capturing_group_is_snapback(b, g))
+						snap++;
+				});
+			}
+		}
+	});
+
+	if (snap == 2)  return 0;
+	
+	return -1;
+}
+
 
 #ifndef BOARD_SPATHASH
 #undef BOARD_SPATHASH_MAXD
@@ -559,8 +810,10 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 	assert(!is_pass(m->coord));   assert(!is_resign(m->coord));
 
 	check_feature(pattern_match_atari(b, m, ownermap), FEAT_ATARI);
+	check_feature(pattern_match_double_snapback(b, m), FEAT_DOUBLE_SNAPBACK);
 	check_feature(pattern_match_capture(b, m), FEAT_CAPTURE);
 	check_feature(pattern_match_aescape(b, m), FEAT_AESCAPE);
+	check_feature(pattern_match_cut(b, m), FEAT_CUT);
 	check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
 	check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);

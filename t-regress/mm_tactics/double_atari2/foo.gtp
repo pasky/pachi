@@ -1,0 +1,58 @@
+boardsize 19
+komi 7.5
+clear_board
+play B Q16
+play W D4
+play B Q4
+play W D16
+play B F17
+play W C14
+play B K16
+play W O3
+play B R6
+play W K4
+play B Q10
+play W D10
+play B G4
+play W G5
+play B H5
+play W H4
+play B G3
+play W H3
+play B D3
+play W C3
+play B C2
+play W C4
+play B E2
+play W F5
+play B E4
+play W E5
+play B G2
+play W H2
+play B J5
+play W K5
+play B M3
+play W M4
+play B L4
+play W L3
+play B N4
+play W M5
+play B N3
+play W L2
+play B H7
+play W K7
+play B Q14
+play W F8
+play B H9
+play W K9
+play B C17
+play W H11
+play B J10
+play W K11
+play B J11
+play W J12
+play B K10
+play W L10
+play B L9
+
+genmove w
