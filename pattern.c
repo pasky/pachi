@@ -835,12 +835,36 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 	pattern->n = 0;
 	assert(!is_pass(m->coord));   assert(!is_resign(m->coord));
 
+
+	/***********************************************************************************/
+	/* Prioritized features, don't let others pull them down. */
+	
 	check_feature(pattern_match_atari(b, m, ownermap), FEAT_ATARI);
+	bool atari_ladder = (p == PF_ATARI_LADDER);
+	{       if (p == PF_ATARI_LADDER_BIG)  return;  /* don't let selfatari kick-in ... */
+		if (p == PF_ATARI_LADDER_SAFE) return;
+		if (p == PF_ATARI_LADDER_CUT)  return;
+		if (p == PF_ATARI_SNAPBACK)    return;  
+		if (p == PF_ATARI_KO)          return;  /* don't let selfatari kick-in, fine as ko-threats */
+	}
+
 	check_feature(pattern_match_double_snapback(b, m), FEAT_DOUBLE_SNAPBACK);
-	check_feature(pattern_match_capture(b, m), FEAT_CAPTURE);
+	{	if (p == 0)  return;  }
+	
+	check_feature(pattern_match_capture(b, m), FEAT_CAPTURE); {
+		if (p == PF_CAPTURE_TAKE_KO)  return;  /* don't care about distance etc */
+		if (p == PF_CAPTURE_END_KO)   return;
+	}
+
 	check_feature(pattern_match_aescape(b, m), FEAT_AESCAPE);
-	check_feature(pattern_match_cut(b, m), FEAT_CUT);
-	check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
+	{	if (p == PF_AESCAPE_FILL_KO)  return;  }
+
+
+	/***********************************************************************************/
+	/* Other features */
+	
+	check_feature(pattern_match_cut(b, m), FEAT_CUT);  // XXX prioritize ?
+	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
 	check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
 	check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
