@@ -103,11 +103,14 @@ static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
 			     [ PF_CAPTURE_PEEP] = "peep",
 			     [ PF_CAPTURE_LADDER] = "ladder",
 			     [ PF_CAPTURE_NOLADDER] = "noladder", 
+			     [ PF_CAPTURE_TAKE_KO] = "take_ko",
+			     [ PF_CAPTURE_END_KO] = "end_ko",
 	},
 	[FEAT_AESCAPE] =   { [ PF_AESCAPE_NEW_NOLADDER] = "new_noladder",
 			     [ PF_AESCAPE_NEW_LADDER] = "new_ladder",
 			     [ PF_AESCAPE_NOLADDER] = "noladder",
 			     [ PF_AESCAPE_LADDER] = "ladder",
+			     [ PF_AESCAPE_FILL_KO] = "fill_ko",
 	},
 	[FEAT_SELFATARI] = { [ PF_SELFATARI_BAD] = "bad",
 			     [ PF_SELFATARI_GOOD] = "good",
@@ -223,6 +226,16 @@ is_neighbor(struct board *b, coord_t c1, coord_t c2)
 	return false;
 }
 
+static bool
+is_neighbor_group(struct board *b, coord_t coord, group_t g)
+{
+	assert(!is_pass(coord));  assert(g);
+	foreach_neighbor(b, coord, {
+			if (group_at(b, c) == g)  return true;
+	});
+	return false;
+}
+
 static bool move_can_be_captured(struct board *b, struct move *m);
 
 static int
@@ -234,6 +247,10 @@ pattern_match_capture(struct board *b, struct move *m)
 	board_get_atari_neighbors(b, m->coord, other_color, &atari_neighbors);
 	if (!atari_neighbors.moves)  return -1;
 
+	/* Recapture ko after playing ko-threat ? */
+	if (b->last_ko_age == b->moves - 2 && m->coord == b->last_ko.coord)
+		return PF_CAPTURE_TAKE_KO;
+	
 	if (is_pass(last_move) || b->last_move.color != other_color)
 		goto regular_stuff;
 
@@ -259,6 +276,10 @@ pattern_match_capture(struct board *b, struct move *m)
 		if (capg != group_at(b, last_move) &&
 		    is_neighbor(b, m->coord, last_move))
 			return PF_CAPTURE_PEEP;
+
+		/* End ko by capture, ignoring ko threat ? */
+		if (b->last_ko_age == b->moves - 1 && is_neighbor_group(b, b->last_move2.coord, capg))
+			return PF_CAPTURE_END_KO;
 	}
 		
  regular_stuff:
@@ -280,6 +301,11 @@ pattern_match_aescape(struct board *b, struct move *m)
 	coord_t last_move = b->last_move.coord;
 	bool found = false, ladder = false;
 
+	/* Fill ko, ignoring ko-threat. */
+	if (b->last_ko_age == b->moves - 1 && m->coord == b->last_ko.coord &&
+	    !is_selfatari(b, m->color, m->coord))
+		return PF_AESCAPE_FILL_KO;
+	
 	foreach_atari_neighbor(b, m->coord, m->color) {
 		ladder = is_ladder_any(b, g, true);
 		found = true;

@@ -46,7 +46,9 @@ enum feature_id {
 #define PF_CAPTURE_PEEP		2  /*     Prevent connection to previous move */
 #define PF_CAPTURE_LADDER	3  /*     Capturing group already in a ladder */
 #define PF_CAPTURE_NOLADDER	4  /*     Capturing group not in a ladder */
-#define PF_CAPTURE_N		5
+#define PF_CAPTURE_TAKE_KO	5  /*     Recapture ko after ko-threat */
+#define PF_CAPTURE_END_KO	6  /*     End ko by capturing something else */
+#define PF_CAPTURE_N		7
 
 	/* Atari escape (extension). */
 	FEAT_AESCAPE,	
@@ -54,7 +56,8 @@ enum feature_id {
 #define PF_AESCAPE_NEW_LADDER	1  /*     Escape new atari, in a ladder */
 #define PF_AESCAPE_NOLADDER	2  /*     Escape atari, not in a ladder */
 #define PF_AESCAPE_LADDER	3  /*     Escape atari, in a ladder */
-#define PF_AESCAPE_N		4
+#define PF_AESCAPE_FILL_KO	4  /*     Fill ko, ignoring ko threat */
+#define PF_AESCAPE_N		5
 
 	/* Self-atari move. */
 	FEAT_SELFATARI,
