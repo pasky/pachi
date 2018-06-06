@@ -17,8 +17,36 @@
 struct patternplay {
 	int debug_level;
 
-	struct pattern_setup pat;
+	struct pattern_config pc;
 };
+
+struct pattern_config*
+engine_patternplay_get_pc(struct engine *e)
+{
+	struct patternplay *pp = e->data;
+	return &pp->pc;
+}
+
+static void
+debug_pattern_best_moves(struct pattern_config *pc, struct board *b, enum stone color,
+			 coord_t *best_c, int nbest)
+{
+	struct ownermap ownermap;
+	mcowner_playouts_fast(b, color, &ownermap);
+
+	fprintf(stderr, "\n");
+	for (int i = 0; i < nbest; i++) {
+		struct move m = { .coord = best_c[i], .color = color };
+		struct pattern p;
+		pattern_match(pc, &p, b, &m, &ownermap);
+
+		char buffer[512];  strbuf_t strbuf;
+		strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+		dump_gammas(buf, pc, &p);
+		fprintf(stderr, "%3s gamma %s\n", coord2sstr(m.coord, b), buf->str);
+	}
+	fprintf(stderr, "\n");
+}
 
 
 static coord_t
@@ -28,7 +56,16 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	struct pattern pats[b->flen];
 	floating_t probs[b->flen];
-	pattern_rate_moves(&pp->pat, b, color, pats, probs);
+	struct ownermap ownermap;
+	mcowner_playouts_fast(b, color, &ownermap);
+	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
+
+	float best_r[20] = { 0.0, };
+	coord_t best_c[20];
+	find_pattern_best_moves(b, probs, best_c, best_r, 20);
+	print_pattern_best_moves(b, best_c, best_r, 20);
+	if (pp->debug_level >= 4)
+		debug_pattern_best_moves(&pp->pc, b, color, best_c, 20);
 
 	int best = 0;
 	for (int f = 0; f < b->flen; f++) {
@@ -51,10 +88,12 @@ patternplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, 
 
 	struct pattern pats[b->flen];
 	floating_t probs[b->flen];
-	pattern_rate_moves(&pp->pat, b, color, pats, probs);
-	
-	for (int f = 0; f < b->flen; f++)
-		best_moves_add(b->f[f], probs[f], best_c, best_r, nbest);	
+	struct ownermap ownermap;
+	mcowner_playouts_fast(b, color, &ownermap);
+	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
+
+	find_pattern_best_moves(b, probs, best_c, best_r, nbest);
+	print_pattern_best_moves(b, best_c, best_r, nbest);
 }
 
 void
@@ -63,11 +102,13 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 	struct patternplay *pp = e->data;
 
 	struct pattern pats[b->flen];
-	pattern_rate_moves(&pp->pat, b, color, pats, vals);
+	struct ownermap ownermap;
+	mcowner_playouts_fast(b, color, &ownermap);
+	pattern_rate_moves(&pp->pc, b, color, pats, vals, &ownermap);
 
 #if 0
 	// unused variable 'total' in above call to pattern_rate_moves()
-	floating_t total = pattern_rate_moves(&pp->pat, b, color, pats, vals);
+	floating_t total = pattern_rate_moves(&pp->pc, b, color, pats, vals);
 	/* Rescale properly. */
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] /= total;
@@ -111,7 +152,7 @@ patternplay_state_init(char *arg)
 					pp->debug_level++;
 
 			} else if (!strcasecmp(optname, "patterns") && optval) {
-				patterns_init(&pp->pat, optval, false, true);
+				patterns_init(&pp->pc, optval, false, true);
 				pat_setup = true;
 
 			} else
@@ -120,9 +161,9 @@ patternplay_state_init(char *arg)
 	}
 
 	if (!pat_setup)
-		patterns_init(&pp->pat, NULL, false, true);
+		patterns_init(&pp->pc, NULL, false, true);
 	
-	if (!pp->pat.pc.spat_dict || !pp->pat.pd)
+	if (!using_patterns())
 		die("Missing spatial dictionary / probtable, aborting.\n");
 	return pp;
 }
