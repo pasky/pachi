@@ -7,8 +7,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "pachi.h"
 #include "board.h"
+#include "pachi.h"
 #include "debug.h"
 #include "engine.h"
 #include "engines/replay.h"
@@ -36,6 +36,7 @@ bool debug_boardprint = true;
 long verbose_logs = 0;
 int seed;
 char *forced_ruleset = NULL;
+bool nopassfirst = false;
 
 enum engine_id {
 	E_RANDOM,
@@ -87,6 +88,7 @@ usage()
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"      --dcnn                        abort if dcnn isn't used \n"
 		"  -D                                don't log board diagrams \n"
+		"      --nopassfirst                 don't pass first (needed for kgs) \n"
 		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
 		"                                    uct, dcnn, patternplay, replay, random, montecarlo, distributed \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
@@ -94,6 +96,7 @@ usage()
 		"                                    listen on given port if HOST not given, otherwise \n"
 		"                                    connect to remote host. \n"
 		"  -h, --help                        show usage \n"
+		"      --kgs                         turn on kgs-specific behavior (currently --nopassfirst) \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
 		"      --nodcnn, --no-dcnn           disable dcnn \n"
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
@@ -145,6 +148,7 @@ show_version(FILE *s)
 #define OPT_DCNN          258
 #define OPT_VERBOSE_CAFFE 259
 #define OPT_COMPILE_FLAGS 260
+#define OPT_NOPASSFIRST   261
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "chatfile",    required_argument, 0, 'c' },
@@ -155,10 +159,12 @@ static struct option longopts[] = {
 	{ "fbook",       required_argument, 0, 'f' },
 	{ "gtp-port",    required_argument, 0, 'g' },
 	{ "help",        no_argument,       0, 'h' },
+	{ "kgs",         no_argument,       0, OPT_NOPASSFIRST },
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
 	{ "no-dcnn",     no_argument,       0, OPT_NO_DCNN },
 	{ "nodcnn",      no_argument,       0, OPT_NO_DCNN },
+	{ "nopassfirst", no_argument,       0, OPT_NOPASSFIRST },
 	{ "rules",       required_argument, 0, 'r' },
 	{ "seed",        required_argument, 0, 's' },
 	{ "time",        required_argument, 0, 't' },
@@ -245,6 +251,9 @@ int main(int argc, char *argv[])
 				break;
 			case OPT_NO_DCNN:
 				disable_dcnn();
+				break;
+			case OPT_NOPASSFIRST:
+				nopassfirst = true;
 				break;
 			case 'r':
 				forced_ruleset = strdup(optarg);

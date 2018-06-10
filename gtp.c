@@ -8,8 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "pachi.h"
 #include "board.h"
+#include "pachi.h"
 #include "debug.h"
 #include "engine.h"
 #include "fbook.h"

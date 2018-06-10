@@ -11,6 +11,7 @@
 #define DEBUG
 
 #include "debug.h"
+#include "pachi.h"
 #include "distributed/distributed.h"
 #include "move.h"
 #include "random.h"
@@ -523,7 +524,8 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 		enum stone move_owner = board_ownermap_color(&u->ownermap, *best_coord, 0.80);
 		int capturing = board_get_atari_neighbor(b, *best_coord, other_color);
 		floating_t score = board_ownermap_score_est_color(b, &u->ownermap, color);
-		pass_first = ((move_owner == other_color) && /* play in opponent territory */
+		bool can_pass_first = (!nopassfirst || pass_all_alive);  /* For kgs: must not pass first in main game phase. */
+		pass_first = (can_pass_first && (move_owner == other_color) && /* play in opponent territory */
 			      !capturing && !board_playing_ko_threat(b) &&
 			      winrate > 0.80 && score > 1.0);
 	}
