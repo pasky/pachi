@@ -7,7 +7,7 @@ struct board;
 struct move;
 enum stone;
 struct prior_map;
-struct board_ownermap;
+struct ownermap;
 
 
 /** Playout policy interface: */
@@ -94,7 +94,7 @@ struct playout_amafmap {
 int playout_play_game(struct playout_setup *setup,
 		      struct board *b, enum stone starting_color,
 		      struct playout_amafmap *amafmap,
-		      struct board_ownermap *ownermap,
+		      struct ownermap *ownermap,
 		      struct playout_policy *policy);
 
 /* Play move returned by playout policy, or a randomly picked move if there was none. */

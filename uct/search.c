@@ -521,9 +521,9 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	bool opponent_passed = is_pass(b->last_move.coord);
 	bool pass_first = false;
 	if (!is_pass(*best_coord)) {
-		enum stone move_owner = board_ownermap_color(&u->ownermap, *best_coord, 0.80);
+		enum stone move_owner = ownermap_color(&u->ownermap, *best_coord, 0.80);
 		int capturing = board_get_atari_neighbor(b, *best_coord, other_color);
-		floating_t score = board_ownermap_score_est_color(b, &u->ownermap, color);
+		floating_t score = ownermap_score_est_color(b, &u->ownermap, color);
 		bool can_pass_first = (!nopassfirst || pass_all_alive);  /* For kgs: must not pass first in main game phase. */
 		pass_first = (can_pass_first && (move_owner == other_color) && /* play in opponent territory */
 			      !capturing && !board_playing_ko_threat(b) &&

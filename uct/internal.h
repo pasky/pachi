@@ -118,7 +118,7 @@ struct uct {
 	bool want_pat;
 
 	/* Used within frame of single genmove. */
-	struct board_ownermap ownermap;
+	struct ownermap ownermap;
 	/* Used for coordination among slaves of the distributed engine. */
 	int stats_hbits;
 	int shared_nodes;

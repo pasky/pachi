@@ -93,7 +93,7 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 		setup_state(u, b, color);
 	}
 
-	board_ownermap_init(&u->ownermap);
+	ownermap_init(&u->ownermap);
 	u->played_own = u->played_all = 0;
 }
 
@@ -102,7 +102,7 @@ get_dead_groups(struct uct *u, struct board *b, struct move_queue *dead, struct 
 {
 	enum gj_state gs_array[board_size2(b)];
 	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
-	board_ownermap_judge_groups(b, &u->ownermap, &gj);
+	ownermap_judge_groups(b, &u->ownermap, &gj);
 	dead->moves = unclear->moves = 0;
 	groups_of_status(b, &gj, GS_DEAD, dead);
 	groups_of_status(b, &gj, GS_UNKNOWN, unclear);
@@ -127,7 +127,7 @@ pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD) continue;
 		if (final_ownermap[c] != 3)  continue;
-		if (board_ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_DAME) continue;
+		if (ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_DAME) continue;
 
 		coord_t dame = c;
 		int around[4] = { 0, };
@@ -190,7 +190,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		*msg = "unclear point, clarify first";
 		foreach_point(b) {
 			if (board_at(b, c) == S_OFFBOARD)  continue;
-			if (board_ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN)
+			if (ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN)
 				return false;
 		} foreach_point_end;
 		return true;
@@ -198,7 +198,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 
 	/* Check score estimate first, official score is off if position is not final */
 	*msg = "losing on score estimate";
-	floating_t score = board_ownermap_score_est_color(b, &u->ownermap, color);
+	floating_t score = ownermap_score_est_color(b, &u->ownermap, color);
 	if (score < 0)  return false;
 
 	return pass_is_safe(u, b, color, dead, score, pass_all_alive, msg);
@@ -211,7 +211,7 @@ uct_board_print(struct engine *e, struct board *b, FILE *f)
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
-static struct board_ownermap*
+static struct ownermap*
 uct_ownermap(struct engine *e, struct board *b)
 {
 	struct uct *u = b->es;
@@ -317,7 +317,7 @@ uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd
 	struct tree_node *n = u->t->root;
 	double winrate = tree_node_get_value(u->t, -1, n->u.value);
 	double extra_komi = u->t->use_extra_komi && fabs(u->t->extra_komi) >= 0.5 ? u->t->extra_komi : 0;
-	char *score_est = board_ownermap_score_est_str(b, &u->ownermap);
+	char *score_est = ownermap_score_est_str(b, &u->ownermap);
 
 	return generic_chat(b, opponent, from, cmd, u->t->root_color, node_coord(n), n->u.playouts, 1,
 			    u->threads, winrate, extra_komi, score_est);

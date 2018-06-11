@@ -505,7 +505,7 @@ test_moggy_status(struct board *b, char *arg)
 	
 	struct playout_policy *policy = playout_moggy_init(NULL, b, NULL);
 	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
-	struct board_ownermap ownermap;  board_ownermap_init(&ownermap);
+	struct ownermap ownermap;  ownermap_init(&ownermap);
 	
 	/* Get final status estimate after a number of moggy games */
 	int wr = 0;
@@ -534,8 +534,8 @@ test_moggy_status(struct board *b, char *arg)
 	bool ret = true;
 	for (int i = 0; i < n; i++) {
 		coord_t c = status_at[i];
-		enum point_judgement j = board_ownermap_judge_point(&ownermap, c, 0.8);
-		if (j == PJ_UNKNOWN) j = board_ownermap_judge_point(&ownermap, c, 0.67);		
+		enum point_judgement j = ownermap_judge_point(&ownermap, c, 0.8);
+		if (j == PJ_UNKNOWN) j = ownermap_judge_point(&ownermap, c, 0.67);		
 		enum stone color = (enum stone)j;
 		if (j == PJ_UNKNOWN)
 			color = (ownermap.map[c][S_BLACK] > ownermap.map[c][S_WHITE] ? S_BLACK : S_WHITE);

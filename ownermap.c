@@ -10,7 +10,7 @@
 #include "ownermap.h"
 
 void
-board_ownermap_init(struct board_ownermap *ownermap)
+ownermap_init(struct ownermap *ownermap)
 {
 	memset(ownermap, 0, sizeof(*ownermap));
 }
@@ -18,11 +18,11 @@ board_ownermap_init(struct board_ownermap *ownermap)
 static void
 printhook(struct board *board, coord_t c, strbuf_t *buf, void *data)
 {
-        struct board_ownermap *ownermap = data;
+        struct ownermap *ownermap = data;
 
 	if (c == pass) { /* Stuff to display in header */
 		if (!ownermap || !ownermap->playouts) return;
-		sbprintf(buf, "Score Est: %s", board_ownermap_score_est_str(board, ownermap));
+		sbprintf(buf, "Score Est: %s", ownermap_score_est_str(board, ownermap));
 		return;
 	}
 
@@ -32,21 +32,21 @@ printhook(struct board *board, coord_t c, strbuf_t *buf, void *data)
         }
         const char chr[] = ":XO,"; // dame, black, white, unclear
         const char chm[] = ":xo,";
-        char ch = chr[board_ownermap_judge_point(ownermap, c, GJ_THRES)];
+        char ch = chr[ownermap_judge_point(ownermap, c, GJ_THRES)];
         if (ch == ',') { // less precise estimate then?
-                ch = chm[board_ownermap_judge_point(ownermap, c, 0.67)];
+                ch = chm[ownermap_judge_point(ownermap, c, 0.67)];
         }
         sbprintf(buf, "%c ", ch);
 }
 
 void
-board_print_ownermap(struct board *b, FILE *f, struct board_ownermap *ownermap)
+board_print_ownermap(struct board *b, FILE *f, struct ownermap *ownermap)
 {
         board_print_custom(b, stderr, printhook, ownermap);
 }
 
 void
-board_ownermap_fill(struct board_ownermap *ownermap, struct board *b)
+ownermap_fill(struct ownermap *ownermap, struct board *b)
 {
 	ownermap->playouts++;
 	foreach_point(b) {
@@ -58,7 +58,7 @@ board_ownermap_fill(struct board_ownermap *ownermap, struct board *b)
 }
 
 void
-board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownermap *src)
+ownermap_merge(int bsize2, struct ownermap *dst, struct ownermap *src)
 {
 	dst->playouts += src->playouts;
 	for (int i = 0; i < bsize2; i++)
@@ -67,7 +67,7 @@ board_ownermap_merge(int bsize2, struct board_ownermap *dst, struct board_ownerm
 }
 
 float
-board_ownermap_estimate_point(struct board_ownermap *ownermap, coord_t c)
+ownermap_estimate_point(struct ownermap *ownermap, coord_t c)
 {
 	assert(ownermap->map);
 	assert(!is_pass(c));
@@ -78,7 +78,7 @@ board_ownermap_estimate_point(struct board_ownermap *ownermap, coord_t c)
 }
 
 enum point_judgement
-board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_t thres)
+ownermap_judge_point(struct ownermap *ownermap, coord_t c, floating_t thres)
 {
 	assert(ownermap->map);
 	assert(!is_pass(c));
@@ -97,15 +97,15 @@ board_ownermap_judge_point(struct board_ownermap *ownermap, coord_t c, floating_
 }
 
 enum stone
-board_ownermap_color(struct board_ownermap *ownermap, coord_t c, floating_t thres)
+ownermap_color(struct ownermap *ownermap, coord_t c, floating_t thres)
 {
 	enum stone colors[4] = {S_NONE, S_BLACK, S_WHITE, S_NONE };
-	enum point_judgement pj = board_ownermap_judge_point(ownermap, c, thres);
+	enum point_judgement pj = ownermap_judge_point(ownermap, c, thres);
 	return colors[pj];
 }
 
 void
-board_ownermap_judge_groups(struct board *b, struct board_ownermap *ownermap, struct group_judgement *judge)
+ownermap_judge_groups(struct board *b, struct ownermap *ownermap, struct group_judgement *judge)
 {
 	assert(ownermap->map);
 	assert(judge->gs);
@@ -116,7 +116,7 @@ board_ownermap_judge_groups(struct board *b, struct board_ownermap *ownermap, st
 		group_t g = group_at(b, c);
 		if (!g) continue;
 
-		enum point_judgement pj = board_ownermap_judge_point(ownermap, c, judge->thres);
+		enum point_judgement pj = ownermap_judge_point(ownermap, c, judge->thres);
 		// assert(judge->gs[g] == GS_NONE || judge->gs[g] == pj);
 		if (pj == PJ_UNKNOWN) {
 			/* Fate is uncertain. */
@@ -160,9 +160,9 @@ groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s
 }
 
 enum point_judgement
-board_ownermap_score_est_coord(struct board *b, struct board_ownermap *ownermap, coord_t c)
+ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c)
 {
-	enum point_judgement j = board_ownermap_judge_point(ownermap, c, 0.67);
+	enum point_judgement j = ownermap_judge_point(ownermap, c, 0.67);
 	enum stone s = board_at(b, c);
 	
 	/* If status is unclear and there's a stone there assume it's alive. */
@@ -172,11 +172,11 @@ board_ownermap_score_est_coord(struct board *b, struct board_ownermap *ownermap,
 }
 
 float
-board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap)
+ownermap_score_est(struct board *b, struct ownermap *ownermap)
 {
 	float scores[S_MAX] = {0.0, };  /* Number of points owned by each color */
 	foreach_point(b) {
-		enum point_judgement j = board_ownermap_score_est_coord(b, ownermap, c);
+		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
 		scores[j]++;
 	} foreach_point_end;
 
@@ -185,18 +185,18 @@ board_ownermap_score_est(struct board *b, struct board_ownermap *ownermap)
 }
 
 float
-board_ownermap_score_est_color(struct board *b, struct board_ownermap *ownermap, enum stone color)
+ownermap_score_est_color(struct board *b, struct ownermap *ownermap, enum stone color)
 {
-	floating_t score = board_ownermap_score_est(b, ownermap);
+	floating_t score = ownermap_score_est(b, ownermap);
 	return (color == S_BLACK ? -score : score);
 }
 
 /* Returns static buffer */
 char *
-board_ownermap_score_est_str(struct board *b, struct board_ownermap *ownermap)
+ownermap_score_est_str(struct board *b, struct ownermap *ownermap)
 {
 	static char buf[32];
-	float s = board_ownermap_score_est(b, ownermap);
+	float s = ownermap_score_est(b, ownermap);
 	sprintf(buf, "%s+%.1f\n", (s > 0 ? "W" : "B"), fabs(s));
 	return buf;
 }

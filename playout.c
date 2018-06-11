@@ -197,7 +197,7 @@ int
 playout_play_game(struct playout_setup *setup,
 		  struct board *b, enum stone starting_color,
 		  struct playout_amafmap *amafmap,
-		  struct board_ownermap *ownermap,
+		  struct ownermap *ownermap,
 		  struct playout_policy *policy)
 {
 	assert(setup && policy);
@@ -258,7 +258,7 @@ playout_play_game(struct playout_setup *setup,
 		if (DEBUGL(7))  board_print(b, stderr);
 	}
 
-	if (ownermap)  board_ownermap_fill(ownermap, b);
+	if (ownermap)  ownermap_fill(ownermap, b);
 
 #ifdef DEBUGL_BY_PLAYOUT
 	debug_level = debug_level_orig;
