@@ -76,7 +76,7 @@ enum feature_id {
 #define PF_ATARI_SNAPBACK       2  /***** Snapback on stones we don't own already. */
 #define PF_ATARI_LADDER_BIG	3  /***** Can ladder big safe opponent group */
 #define PF_ATARI_LADDER_SAFE	4  /***** Can ladder safe opponent stone(s) */
-#define PF_ATARI_LADDER_CUT	5  /***** Can ladder cutting stone(s) */
+#define PF_ATARI_LADDER_CUT	5  /*     Can ladder cutting stone(s) */
 #define PF_ATARI_LADDER		6  /*     The atari'd group gets laddered? */
 #define PF_ATARI_KO		7  /***** Atari as ko-threat ? disables selfatari feature. */
 #define PF_ATARI_SOME		8  /*     Can atari something */
@@ -84,7 +84,7 @@ enum feature_id {
 
 	/* Cut */
 	FEAT_CUT,
-#define PF_CUT_DANGEROUS	0  /***   Cut that can't be captured with shortage of libs */
+#define PF_CUT_DANGEROUS	0  /***** Cut that can't be captured with shortage of libs around */
 #define PF_CUT_N		1
 
 	/* Double snapback */
@@ -98,7 +98,7 @@ enum feature_id {
 	FEAT_DISTANCE2,
 
 	/* Monte-carlo owner */
-	FEAT_MC_OWNER,
+	FEAT_MCOWNER,
 	
 	/* Spatial configuration of stones in certain board area,
 	 * with black to play. */
@@ -181,6 +181,7 @@ void pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b
 
 /* Fill ownermap for mcowner feature. */
 void mcowner_playouts(struct board *b, enum stone color, struct ownermap *ownermap);
+/* Faster version with few playouts, don't use for anything reliable. */
 void mcowner_playouts_fast(struct board *b, enum stone color, struct ownermap *ownermap);
 
 #ifdef PATTERN_FEATURE_STATS

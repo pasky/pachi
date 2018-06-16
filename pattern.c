@@ -20,6 +20,11 @@
 #include "ownermap.h"
 #include "mq.h"
 
+/* Number of playouts for mcowner_fast().
+ * Anything reliable uses much more (GJ_MINGAMES).
+ * Lower this to make patternplay super fast (and mcowner even more unreliable). */
+#define MM_MINGAMES 100
+
 static bool patterns_enabled = true;
 static bool patterns_required = false;
 void disable_patterns()     {  patterns_enabled = false;  }
@@ -78,7 +83,7 @@ struct feature_info pattern_features[] = {
 	[FEAT_DISTANCE2] =       { .name = "dist2",           .payloads = 19,              .spatial = 0 },
 	[FEAT_CUT] =             { .name = "cut",             .payloads = PF_CUT_N,        .spatial = 0 },
 	[FEAT_DOUBLE_SNAPBACK] = { .name = "double_snapback", .payloads = 1,               .spatial = 0 },
-	[FEAT_MC_OWNER] =        { .name = "mcowner",         .payloads = 9,               .spatial = 0 },
+	[FEAT_MCOWNER] =         { .name = "mcowner",         .payloads = 9,               .spatial = 0 },
 	[FEAT_NO_SPATIAL] =      { .name = "nospat",          .payloads = 1,               .spatial = 0 },
 	[FEAT_SPATIAL3] =        { .name = "s3",              .payloads = -1,              .spatial = 3 },
 	[FEAT_SPATIAL4] =        { .name = "s4",              .payloads = -1,              .spatial = 4 },
@@ -464,7 +469,9 @@ pattern_match_atari(struct board *b, struct move *m, struct ownermap *ownermap)
 	});
 	if (g1) {
 		/* Can capture other group after atari ? */
-		if (g3libs && cutting_stones_and_can_capture_other_after_atari(b, m, g1, g3libs))
+		if (g3libs && !group_is_onestone(b, g3libs) && !ladder_atari &&
+		    ownermap_color(ownermap, g3libs, 0.67) != color &&
+		    cutting_stones_and_can_capture_other_after_atari(b, m, g1, g3libs))
 			atari_and_cap = true;
 
 		if (!selfatari) {
@@ -562,7 +569,7 @@ move_can_be_captured(struct board *b, struct move *m)
 }
 
 static int
-pattern_match_cut(struct board *b, struct move *m)
+pattern_match_cut(struct board *b, struct move *m, struct ownermap *ownermap)
 {
 	enum stone other_color = stone_other(m->color);
 	group_t groups[4];
@@ -573,6 +580,7 @@ pattern_match_cut(struct board *b, struct move *m)
 			if (board_at(b, c) != other_color) continue;
 			group_t g = group_at(b, c);
 			if (board_group_info(b, g).libs <= 2) continue;  /* Not atari / capture */
+			if (group_is_onestone(b, g)) continue;
 
 			int found = 0;
 			for (int i = 0; i < ngroups; i++)
@@ -586,11 +594,12 @@ pattern_match_cut(struct board *b, struct move *m)
 	    safe_diag_neighbor_reaches_two_opp_groups(b, m, groups, ngroups) &&
 	    !move_can_be_captured(b, m)) {
 
-		/* Cut groups short of liberties ? */
+		/* Cut groups short of liberties (and not prisoners) ? */
 		int found = 0;
 		for (int i = 0; i < ngroups; i++) {
 			group_t g = groups[i];
-			if (board_group_info(b, g).libs <= 3)
+			enum stone gown = ownermap_color(ownermap, g, 0.67);
+			if (board_group_info(b, g).libs <= 3 && gown != m->color)
 				found++;
 		}
 		if (found >= 2)
@@ -727,9 +736,9 @@ pattern_match_spatial(struct pattern_config *pc,
 }
 
 static int
-pattern_match_mc_owner(struct board *b, struct move *m, struct ownermap *ownermap)
+pattern_match_mcowner(struct board *b, struct move *m, struct ownermap *ownermap)
 {
-	assert(ownermap->playouts);
+	assert(ownermap->playouts >= MM_MINGAMES);
 	return (ownermap->map[m->coord][m->color] * 8 / (ownermap->playouts + 1));
 }
 
@@ -761,7 +770,7 @@ mcowner_playouts(struct board *b, enum stone color, struct ownermap *ownermap)
 void
 mcowner_playouts_fast(struct board *b, enum stone color, struct ownermap *ownermap)
 {
-	mcowner_playouts_(b, color, ownermap, 100);
+	mcowner_playouts_(b, color, ownermap, MM_MINGAMES);
 }
 
 
@@ -843,7 +852,6 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 	bool atari_ladder = (p == PF_ATARI_LADDER);
 	{       if (p == PF_ATARI_LADDER_BIG)  return;  /* don't let selfatari kick-in ... */
 		if (p == PF_ATARI_LADDER_SAFE) return;
-		if (p == PF_ATARI_LADDER_CUT)  return;
 		if (p == PF_ATARI_SNAPBACK)    return;  
 		if (p == PF_ATARI_KO)          return;  /* don't let selfatari kick-in, fine as ko-threats */
 	}
@@ -859,19 +867,20 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 	check_feature(pattern_match_aescape(b, m), FEAT_AESCAPE);
 	{	if (p == PF_AESCAPE_FILL_KO)  return;  }
 
+	check_feature(pattern_match_cut(b, m, ownermap), FEAT_CUT);
+	{	if (p == PF_CUT_DANGEROUS)  return;  }
 
 	/***********************************************************************************/
 	/* Other features */
 	
-	check_feature(pattern_match_cut(b, m), FEAT_CUT);  // XXX prioritize ?
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
 	if (locally) {
 		check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
 		check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
 	}
-	check_feature(pattern_match_mc_owner(b, m, ownermap), FEAT_MC_OWNER);
-	
+	check_feature(pattern_match_mcowner(b, m, ownermap), FEAT_MCOWNER);
+
 	f = pattern_match_spatial(pc, pattern, f, b, m);
 }
 
@@ -882,7 +891,7 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b,
 	pattern_match_internal(pc, p, b, m, ownermap, locally);
 	
 	/* Debugging */
-	//if (pattern_has_feature(p, FEAT_ATARI, PF_ATARI_LADDER))  show_move(b, m, "atari_ladder");
+	//if (pattern_has_feature(p, FEAT_ATARI, PF_ATARI_AND_CAP))  show_move(b, m, "atari_and_cap");
 
 #ifdef PATTERN_FEATURE_STATS
 	add_feature_stats(p);

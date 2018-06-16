@@ -519,10 +519,17 @@ cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, 
 
 static struct engine *pattern_engine = NULL;
 
+static void
+init_patternplay_engine(struct board *b)
+{
+	char args[] = "mcowner_fast=0";
+	pattern_engine = engine_patternplay_init(args, b);
+}
+
 enum parse_code
 cmd_gogui_pattern_best(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   pattern_engine = engine_patternplay_init("", b);
+	if (!pattern_engine)   init_patternplay_engine(b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -540,7 +547,7 @@ cmd_gogui_pattern_best(struct board *b, struct engine *e, struct time_info *ti, 
 enum parse_code
 cmd_gogui_pattern_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   pattern_engine = engine_patternplay_init("", b);
+	if (!pattern_engine)   init_patternplay_engine(b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -558,7 +565,7 @@ cmd_gogui_pattern_colors(struct board *b, struct engine *e, struct time_info *ti
 enum parse_code
 cmd_gogui_pattern_rating(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   pattern_engine = engine_patternplay_init("", b);
+	if (!pattern_engine)   init_patternplay_engine(b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -577,7 +584,7 @@ cmd_gogui_pattern_rating(struct board *b, struct engine *e, struct time_info *ti
 enum parse_code
 cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   pattern_engine = engine_patternplay_init("", b);
+	if (!pattern_engine)   init_patternplay_engine(b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -603,7 +610,7 @@ cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *
 enum parse_code
 cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   pattern_engine = engine_patternplay_init("", b);
+	if (!pattern_engine)   init_patternplay_engine(b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);

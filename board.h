@@ -626,6 +626,7 @@ board_playing_ko_threat(struct board *b)
 static inline group_t
 board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 {
+	assert(coord != pass);
 	foreach_neighbor(b, coord, {
 		group_t g = group_at(b, c);
 		if (g && board_at(b, c) == group_color && board_group_info(b, g).libs == 1)
@@ -638,6 +639,7 @@ board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
 static inline void
 board_get_atari_neighbors(struct board *b, coord_t c, enum stone group_color, struct move_queue *q)
 {
+	assert(c != pass);
 	q->moves = 0;
 	foreach_neighbor(b, c, {
 		group_t g = group_at(b, c);

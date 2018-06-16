@@ -209,7 +209,7 @@ uct_board_print(struct engine *e, struct board *b, FILE *f)
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
-/* Fill ownermap for mc_owner pattern feature (no tree search)
+/* Fill ownermap for mcowner pattern feature (no tree search)
  * ownermap must be initialized already. */
 void
 uct_mcowner_playouts(struct uct *u, struct board *b, enum stone color)

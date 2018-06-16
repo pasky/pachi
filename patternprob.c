@@ -99,9 +99,6 @@ pattern_max_rating(struct pattern_config *pc,
 		   struct ownermap *ownermap,
 		   bool locally)
 {
-	//assert(ownermap->playouts >= GJ_MINGAMES);
-	assert(ownermap->playouts >= 100);
-	
 	floating_t max = -10000000;
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] = NAN;
