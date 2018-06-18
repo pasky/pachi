@@ -755,6 +755,7 @@ static gtp_command_t commands[] =
 	{ "gogui-score_est",        cmd_gogui_score_est },
 	{ "gogui-best_moves",       cmd_gogui_best_moves },
 	{ "gogui-winrates",         cmd_gogui_winrates },
+	{ "gogui-joseki_moves",     cmd_gogui_joseki_moves },
 #ifdef DCNN
 	{ "gogui-dcnn_best",        cmd_gogui_dcnn_best },
 	{ "gogui-dcnn_colors",      cmd_gogui_dcnn_colors },

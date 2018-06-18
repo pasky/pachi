@@ -230,6 +230,13 @@ uct_ownermap(struct engine *e, struct board *b)
 	return &u->ownermap;
 }
 
+struct joseki_dict*
+uct_get_jdict(struct engine *e)
+{
+	struct uct *u = e->data;
+	return u->jdict;
+}
+
 static char *
 uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {

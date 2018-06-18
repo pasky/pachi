@@ -6,6 +6,8 @@
 #include "gtp.h"
 #include "gogui.h"
 #include "ownermap.h"
+#include "engines/josekibase.h"
+#include "uct/uct.h"
 
 #ifdef DCNN
 #include "engines/dcnn.h"
@@ -39,7 +41,8 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 	if (e->ownermap) {
 		sbprintf(buf, "gfx/gfx   Influence/gogui-ownermap\n");
 		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");
-	}	
+	}
+	sbprintf(buf, "plist/gfx   Joseki Moves/gogui-joseki_moves\n");
 #ifdef DCNN                            /* board check fake since we're called once on startup ... */
 	if (!strcmp(e->name, "UCT") && using_dcnn(b)) {
 		sbprintf(buf, "gfx/gfx   DCNN Best Moves/gogui-dcnn_best\n");
@@ -469,4 +472,32 @@ cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, g
 }
 
 #endif /* DCNN */
+
+enum parse_code
+cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+
+	char buffer[512];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+
+	if (strcmp(e->name, "UCT"))  return P_OK;
+	struct joseki_dict *jdict = uct_get_jdict(e);
+	if (!jdict)  return P_OK;
+
+	for (int i = 0; i < 4; i++) {
+		hash_t h = b->qhash[i] & joseki_hash_mask;
+		coord_t *cc = jdict->patterns[h].moves[color - 1];
+		if (!cc) continue;
+		for (; !is_pass(*cc); cc++) {
+			if (coord_quadrant(*cc, b) != i)
+				continue;
+			sbprintf(buf, "%s ", coord2sstr(*cc, b));
+		}
+	}
+
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
 
