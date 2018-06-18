@@ -8,6 +8,7 @@
 20.0 (atari:ladder_safe)
 20.0 (net:last)
 10.0 (net:cut)
+10.0 (wedge:line3)
 5.00 (atari:ladder_cut)
 5.00 (defence:line2)
 0.50 (defence:silly)

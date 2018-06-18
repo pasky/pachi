@@ -83,6 +83,7 @@ features_init()
 	features[FEAT_CUT] =             feature_info("cut",             PF_CUT_N,        0);
 	features[FEAT_NET] =             feature_info("net",             PF_NET_N,        0);
 	features[FEAT_DEFENCE] =         feature_info("defence",         PF_DEFENCE_N,    0);
+	features[FEAT_WEDGE] =           feature_info("wedge",           PF_WEDGE_N,      0);
 	features[FEAT_DOUBLE_SNAPBACK] = feature_info("double_snapback", 1,               0);
 	features[FEAT_SELFATARI] =       feature_info("selfatari",       PF_SELFATARI_N,  0);
 	features[FEAT_BORDER] =          feature_info("border",          -1,              0);
@@ -148,6 +149,8 @@ payloads_names_init()
 	
 	payloads_names[FEAT_DEFENCE][PF_DEFENCE_LINE2] = "line2";
 	payloads_names[FEAT_DEFENCE][PF_DEFENCE_SILLY] = "silly";
+
+	payloads_names[FEAT_WEDGE][PF_WEDGE_LINE3] = "line3";
 }
 
 static void
@@ -822,6 +825,54 @@ pattern_match_defence(board_t *b, move_t *m)
 	return -1;
 }
 
+static bool
+check_wedge_neighbors(struct board *b, coord_t coord, enum stone color)
+{
+	foreach_neighbor(b, coord, {
+		if (coord_edge_distance(c) != 1) continue;
+		if (immediate_liberty_count(b, c) < 3) return false;
+	});
+	return true;
+}
+
+/* -------------
+ *  . . . . . .   
+ *  . . . . . .  3rd line wedge that can't be blocked
+ *  . X * X X .
+ *  . O O O X .  
+ *  . . . . . .  */
+static int
+pattern_match_wedge(board_t *b, move_t *m)
+{
+	enum stone other_color = stone_other(m->color);
+	if (coord_edge_distance(m->coord) != 2)  return -1;
+	if (neighbor_count_at(b, m->coord, m->color) != 1) return -1;
+	if (neighbor_count_at(b, m->coord, other_color) != 2) return -1;
+	
+	int groups = 0;
+	int found = 0;
+	foreach_neighbor(b, m->coord, {
+		int bdist = coord_edge_distance(c);
+		group_t g = group_at(b, c);
+		switch (bdist) {
+			case 1: if (board_at(b, c) != S_NONE ||
+				    neighbor_count_at(b, c, other_color) != 0 ||
+				    neighbor_count_at(b, c, m->color)    != 0 ||
+				    !check_wedge_neighbors(b, c, m->color))  return -1;
+				break;
+			case 3: if (board_group_info(b, g).libs <= 2)  return -1; /* short of libs */
+				break;
+			case 2: if (board_at(b, c) != other_color)  break;
+				groups++;
+				if (group_is_onestone(b, g) && board_group_info(b, g).libs <= 3)  found = 1;
+				break;
+			default: assert(0);
+		}
+	});
+	
+	return (groups == 2 && found ? PF_WEDGE_LINE3 : -1);
+}
+
 /*   O O X X X O O
  *   O X . X . X O
  *   O X . * . X O
@@ -1125,6 +1176,7 @@ pattern_match_internal(pattern_config_t *pc, pattern_t *pattern, board_t *b,
 
 	check_feature(pattern_match_net(b, m, ownermap), FEAT_NET);
 	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
+	check_feature(pattern_match_wedge(b, m), FEAT_WEDGE);
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
 	if (locally) {
