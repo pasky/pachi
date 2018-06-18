@@ -154,6 +154,7 @@ strbuf_t *
 strbuf_init(strbuf_t *buf, char *buffer, int size)
 {
 	buf->str = buf->cur = buffer;
+	buf->str[0] = 0;
 	buf->remaining = size;
 	return buf;
 }
