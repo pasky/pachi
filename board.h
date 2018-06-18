@@ -141,7 +141,7 @@ struct board_statics {
 	int nei8[8], dnei[4];
 
 	/* Coordinates zobrist hashes (black and white) */
-	hash_t h[BOARD_MAX_COORDS][2];	
+	hash_t h[2][BOARD_MAX_COORDS];
 
 	/* Cached information on x-y coordinates so that we avoid division. */
 	uint8_t coord[BOARD_MAX_COORDS][2];
@@ -339,7 +339,7 @@ struct board_undo {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
-#define hash_at(b_, coord, color) (board_statics.h[coord][((color) == S_BLACK ? 1 : 0)])
+#define hash_at(b_, coord, color) (board_statics.h[((color) == S_BLACK ? 1 : 0)][coord])
 
 struct board *board_init(char *fbookfile);
 struct board *board_copy(struct board *board2, struct board *board1);

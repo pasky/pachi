@@ -187,15 +187,26 @@ board_statics_init(struct board *board)
 	 * certain kinds of pattern matching, thus we do not use
 	 * fast_random() for this. */
 	hash_t hseed = 0x3121110101112131;
-	foreach_point(board) {
-		bs->h[c][0] = (hseed *= 16807);
-		if (!bs->h[c][0])
-			bs->h[c][0] = 1;
+
+	/* XXX Until <board_cleanup> board->h was treated as:
+	 *     h[2][BOARD_MAX_COORDS] here, and
+	 *     h[BOARD_MAX_COORDS][2] in hash_at().
+	 *     Preserve quirk to get same hashes across versions... */
+	hash_t (*hash)[2] = (hash_t (*)[2])bs->h;
+	for (coord_t c = 0 ; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
+		hash[c][0] = (hseed *= 16807);
+		if (!hash[c][0])  hash[c][0] = 1;
+		
 		/* And once again for white */
-		bs->h[c][1] = (hseed *= 16807);
-		if (!bs->h[c][1])
-			bs->h[c][1] = 1;
-	} foreach_point_end;	
+		hash[c][1] = (hseed *= 16807);
+		if (!hash[c][1])  hash[c][1] = 1;
+	}
+
+	/* Sanity check ... */
+	foreach_point(board) {
+		assert(hash_at(b, c, S_BLACK) != 0);
+		assert(hash_at(b, c, S_WHITE) != 0);
+	} foreach_point_end;
 }
 
 static void
