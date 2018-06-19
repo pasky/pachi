@@ -246,8 +246,11 @@ FB_ONLY(int last_ko_age);
 FB_ONLY(hash_t history_hash)[1 << history_hash_bits];
 	/* Hash of current board position. */
 FB_ONLY(hash_t hash);
+
+#ifdef JOSEKI
 	/* Hash of current board position quadrants. */
 FB_ONLY(hash_t qhash)[4];
+#endif
 };
 
 struct undo_merge {

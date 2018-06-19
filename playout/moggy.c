@@ -242,7 +242,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 		mq_gamma_print(q, gammas, b, "Pattern");
 }
 
-
+#ifdef MOGGY_JOSEKI
 static void
 joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
 {
@@ -266,6 +266,7 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 	if (q->moves > 0 && PLDEBUGL(5))
 		mq_print(q, b, "Joseki");
 }
+#endif /* MOGGY_JOSEKI */
 
 static void
 global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
@@ -706,6 +707,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 			return mq_pick(&q);
 	}
 
+#ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
 	if (pp->josekirate > fast_random(100)) {
 		struct move_queue q; q.moves = 0;
@@ -713,6 +715,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		if (q.moves > 0)
 			return mq_pick(&q);
 	}
+#endif
 
 	/* Fill board */
 	if (pp->fillboardtries > 0) {
@@ -844,9 +847,11 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 	if (pp->capturerate > 0)
 		global_atari_check(p, b, to_play, &q);
 
+#ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
 	if (pp->josekirate > 0)
 		joseki_check(p, b, to_play, &q);
+#endif
 
 #if 0
 	/* Average length of the queue is 1.4 move. */

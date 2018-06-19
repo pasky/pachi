@@ -43,6 +43,12 @@ DCNN=1
 
 # FIFO=1
 
+# Enable joseki engine ? Useful if running without dcnn support.
+# Otherwise will be slightly faster without.
+
+# JOSEKI=1
+# MOGGY_JOSEKI=1
+
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
 # e.g. with extremely long thinking times or massive parallelization;
@@ -197,6 +203,14 @@ ifeq ($(FIFO), 1)
 	EXTRA_OBJS      += fifo.o
 endif
 
+ifeq ($(JOSEKI), 1)
+	CUSTOM_CFLAGS   += -DJOSEKI
+endif
+
+ifeq ($(MOGGY_JOSEKI), 1)
+	CUSTOM_CFLAGS   += -DMOGGY_JOSEKI
+endif
+
 ifeq ($(PLUGINS), 1)
 	CUSTOM_CFLAGS   += -DPACHI_PLUGINS
 endif
@@ -290,8 +304,7 @@ pachi-profiled:
 # Pachi build attendant
 .PHONY: spudfrog
 spudfrog: FORCE
-	@DCNN=$(DCNN) FIFO=$(FIFO) OPT=$(OPT) CC="$(CC)" CFLAGS="$(CFLAGS)" \
-         DOUBLE_FLOATING=$(DOUBLE_FLOATING) BOARDSIZE=$(BOARDSIZE) ./spudfrog
+	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./spudfrog
 
 # Build info
 build.h: .git/HEAD .git/index Makefile

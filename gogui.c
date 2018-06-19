@@ -42,7 +42,9 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 		sbprintf(buf, "gfx/gfx   Influence/gogui-ownermap\n");
 		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");
 	}
+#ifdef JOSEKI
 	sbprintf(buf, "plist/gfx   Joseki Moves/gogui-joseki_moves\n");
+#endif
 #ifdef DCNN                            /* board check fake since we're called once on startup ... */
 	if (!strcmp(e->name, "UCT") && using_dcnn(b)) {
 		sbprintf(buf, "gfx/gfx   DCNN Best Moves/gogui-dcnn_best\n");
@@ -473,6 +475,7 @@ cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, g
 
 #endif /* DCNN */
 
+#ifdef JOSEKI
 enum parse_code
 cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
@@ -500,4 +503,4 @@ cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, 
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
-
+#endif /* JOSEKI */

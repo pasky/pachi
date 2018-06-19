@@ -18,8 +18,20 @@ struct joseki_dict {
 	struct joseki_pattern *patterns;
 };
 
+
+#ifdef JOSEKI
+
 struct joseki_dict *joseki_init(int bsize);
 struct joseki_dict *joseki_load(int bsize);
 void joseki_done(struct joseki_dict *);
+
+#else
+
+#define joseki_init(bsize)  NULL
+#define joseki_load(bsize)  NULL
+#define joseki_done(jdict)  do {} while(0)
+
+#endif /* JOSEKI */
+
 
 #endif

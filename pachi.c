@@ -46,7 +46,9 @@ enum engine_id {
 	E_MONTECARLO,
 	E_UCT,
 	E_DISTRIBUTED,
+#ifdef JOSEKI
 	E_JOSEKI,
+#endif
 #ifdef DCNN
 	E_DCNN,
 #endif
@@ -61,7 +63,9 @@ static engine_init_t engine_init[E_MAX] = {
 	engine_montecarlo_init,
 	engine_uct_init,
 	engine_distributed_init,
+#ifdef JOSEKI
 	engine_joseki_init,
+#endif
 #ifdef DCNN
 	engine_dcnn_init,
 #endif
@@ -216,7 +220,9 @@ int main(int argc, char *argv[])
 				else if (!strcasecmp(optarg, "distributed"))	engine = E_DISTRIBUTED;
 				else if (!strcasecmp(optarg, "patternscan"))	engine = E_PATTERNSCAN;
 				else if (!strcasecmp(optarg, "patternplay"))	engine = E_PATTERNPLAY;
+#ifdef JOSEKI
 				else if (!strcasecmp(optarg, "joseki"))		engine = E_JOSEKI;
+#endif
 #ifdef DCNN
 				else if (!strcasecmp(optarg, "dcnn"))		engine = E_DCNN;
 #endif

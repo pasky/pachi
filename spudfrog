@@ -22,13 +22,17 @@ echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
                         boardsize=""
 [ -n "$BOARD_SIZE" ] && boardsize="  ${cyan}[${BOARD_SIZE}x${BOARD_SIZE}]${end}"
 
-                              float=""
-[ "$DOUBLE_FLOATING" = 1 ] && float="  ${cyan}[double]${end}"
-
                       fifo=""
 [ "$FIFO" = 1 ]    && fifo="  ${cyan}[fifo]${end}"
 
-status="$build$dcnn$opt$boardsize$float$fifo"
+                    joseki=""
+[ -n "$JOSEKI" ] && joseki="  ${cyan}[joseki]${end}"
+
+                              float=""
+[ "$DOUBLE_FLOATING" = 1 ] && float="  ${cyan}[double]${end}"
+
+
+status="$build$dcnn$opt$boardsize$fifo$joseki$float"
 
 raw=${status//?????m/}; raw=${raw//${end}/}
 n=$[45-${#raw}];  n1=$[$n/2];  n2=$[$n-$n1]
