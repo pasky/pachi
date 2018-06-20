@@ -200,20 +200,24 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 	if (b->explore_p > 0)
 		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
 	struct uct *u = p->uct;
+#ifdef DISTRIBUTED
 	int vwin = 0;
 	if (u->max_slaves > 0 && u->slave_index >= 0)
 		vwin = descent->node == tree->root ? b->root_virtual_win : b->virtual_win;
 	int child = 0;
+#endif
 
 	uctd_try_node_children(tree, descent, allow_pass, parity, u->tenuki_d, di, urgency) {
 		struct tree_node *ni = di.node;
 		urgency = ucb1rave_evaluate(p, tree, &di, parity);
 
+#ifdef DISTRIBUTED
 		/* In distributed mode, encourage different slaves to work on different
 		 * parts of the tree. We rely on the fact that children (if they exist)
 		 * are the same and in the same order in all slaves. */
 		if (vwin > 0 && ni->u.playouts > b->vwin_min_playouts && (child - u->slave_index) % u->max_slaves == 0)
 			urgency += vwin / (ni->u.playouts + vwin);
+#endif
 
 		if (ni->u.playouts > 0 && b->explore_p > 0) {
 			urgency += b->explore_p * nconf / fast_sqrt(ni->u.playouts);
@@ -416,12 +420,14 @@ policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
 				b->crit_amaf = !optval || *optval == '1';
 			} else if (!strcasecmp(optname, "crit_lvalue")) {
 				b->crit_lvalue = !optval || *optval == '1';
+#ifdef DISTRIBUTED
 			} else if (!strcasecmp(optname, "virtual_win") && optval) {
 				b->virtual_win = atoi(optval);
 			} else if (!strcasecmp(optname, "root_virtual_win") && optval) {
 				b->root_virtual_win = atoi(optval);
 			} else if (!strcasecmp(optname, "vwin_min_playouts") && optval) {
 				b->vwin_min_playouts = atoi(optval);
+#endif
 			} else if (!strcasecmp(optname, "vloss_sqrt")) {
 				b->vloss_sqrt = !optval || *optval == '1';
 			} else

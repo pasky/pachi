@@ -221,9 +221,9 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 
 	if (ti) {
 		if (ti->period == TT_NULL) {
-			if (u->slave) {
+			if (u->slave)
 				*ti = unlimited_ti;
-			} else {
+			else {
 				*ti = default_ti;
 				time_start_timer(ti);
 			}

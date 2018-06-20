@@ -86,7 +86,6 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 		if (color != stone_other(u->t->root_color))
 			die("Fatal: Non-alternating play detected %d %d\n", color, u->t->root_color);
 		uct_htable_reset(u->t);
-
 	} else {
 		/* We need fresh state. */
 		b->es = u;
@@ -250,8 +249,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 
 	/* Stop pondering, required by tree_promote_at() */
 	uct_pondering_stop(u);
-	if (UDEBUGL(2) && u->slave)
-		tree_dump(u->t, u->dumpthres);
+	if (UDEBUGL(2) && u->slave)  tree_dump(u->t, u->dumpthres);
 
 	if (is_resign(m->coord)) {
 		/* Reset state. */
@@ -1294,7 +1292,7 @@ uct_state_init(char *arg, struct board *b)
 				u->significant_threshold = atoi(optval);
 
 			/** Distributed engine slaves setup */
-
+#ifdef DISTRIBUTED
 			} else if (!strcasecmp(optname, "slave")) {
 				/* Act as slave for the distributed engine. */
 				u->slave = !optval || atoi(optval);
@@ -1318,6 +1316,7 @@ uct_state_init(char *arg, struct board *b)
 				/* How long to wait in slave for initial stats to build up before
 				 * replying to the genmoves command (in ms) */
 				u->stats_delay = 0.001 * atof(optval);
+#endif /* DISTRIBUTED */
 
 			/** Presets */
 
@@ -1433,7 +1432,11 @@ engine_uct_init(char *arg, struct board *b)
 	e->undo = uct_undo;
 	e->result = uct_result;
 	e->genmove = uct_genmove;
+#ifdef DISTRIBUTED
 	e->genmoves = uct_genmoves;
+	if (u->slave)
+		e->notify = uct_notify;
+#endif
 	e->best_moves = uct_best_moves;
 	e->evaluate = uct_evaluate;
 	e->dead_group_list = uct_dead_group_list;
@@ -1442,8 +1445,6 @@ engine_uct_init(char *arg, struct board *b)
 	e->ownermap = uct_ownermap;
 	e->livegfx_hook = uct_livegfx_hook;
 	e->data = u;
-	if (u->slave)
-		e->notify = uct_notify;
 
 	const char banner[] = "If you believe you have won but I am still playing, "
 		"please help me understand by capturing all dead stones. "

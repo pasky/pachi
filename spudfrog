@@ -2,6 +2,7 @@
 # Trusted build attendant
 
 die() {  echo "spudfrog: $@"; exit 1;  }
+max() {  [ $1 -gt $2 ] && echo $1 || echo $2;  }
 [ -n "$OPT" ] || die "i need to be called from Makefile"
 
 red="[31;1m";     green="[32;1m";  yellow="[33;1m";  blue="[34;1m"
@@ -31,11 +32,14 @@ echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
                               float=""
 [ "$DOUBLE_FLOATING" = 1 ] && float="  ${cyan}[double]${end}"
 
+                          distributed=""
+[ "$DISTRIBUTED" = 1 ] && distributed="  ${cyan}[distributed]${end}"
 
-status="$build$dcnn$opt$boardsize$fifo$joseki$float"
+
+status="$build$dcnn$opt$boardsize$fifo$joseki$float$distributed"
 
 raw=${status//?????m/}; raw=${raw//${end}/}
-n=$[45-${#raw}];  n1=$[$n/2];  n2=$[$n-$n1]
+n=`max $[45-${#raw}] 0`;  n1=$[$n/2];  n2=$[$n-$n1]
 
 spud=$gray
 printf "%s            (.)~(.)                                         $end\n" $spud

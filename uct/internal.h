@@ -119,6 +119,7 @@ struct uct {
 
 	/* Used within frame of single genmove. */
 	struct ownermap ownermap;
+
 	/* Used for coordination among slaves of the distributed engine. */
 	int stats_hbits;
 	int shared_nodes;

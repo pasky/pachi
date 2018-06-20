@@ -56,6 +56,10 @@ DCNN=1
 
 # DOUBLE_FLOATING=1
 
+# Enable distributed engine for cluster play ?
+
+# DISTRIBUTED=1
+
 # Compile Pachi with external plugin support ?
 # If unsure leave disabled, you most likely don't need it.
 
@@ -113,6 +117,8 @@ ifdef BOARD_SIZE
 	CUSTOM_CFLAGS += -DBOARD_SIZE=$(BOARD_SIZE)
 endif
 
+EXTRA_OBJS :=
+EXTRA_SUBDIRS :=
 
 ##############################################################################
 ifdef MSYS2
@@ -199,25 +205,31 @@ ifeq ($(DCNN), 1)
 endif
 
 ifeq ($(FIFO), 1)
-	CUSTOM_CFLAGS   += -DPACHI_FIFO
-	EXTRA_OBJS      += fifo.o
+	CUSTOM_CFLAGS += -DPACHI_FIFO
+	EXTRA_OBJS    += fifo.o
 endif
 
 ifeq ($(JOSEKI), 1)
-	CUSTOM_CFLAGS   += -DJOSEKI
+	CUSTOM_CFLAGS += -DJOSEKI
 endif
 
 ifeq ($(MOGGY_JOSEKI), 1)
-	CUSTOM_CFLAGS   += -DMOGGY_JOSEKI
+	CUSTOM_CFLAGS += -DMOGGY_JOSEKI
+endif
+
+ifeq ($(DOUBLE_FLOATING), 1)
+	CUSTOM_CFLAGS += -DDOUBLE_FLOATING
+endif
+
+ifeq ($(DISTRIBUTED), 1)
+	CUSTOM_CFLAGS += -DDISTRIBUTED
+	EXTRA_SUBDIRS += distributed
 endif
 
 ifeq ($(PLUGINS), 1)
-	CUSTOM_CFLAGS   += -DPACHI_PLUGINS
+	CUSTOM_CFLAGS += -DPACHI_PLUGINS
 endif
 
-ifdef DOUBLE_FLOATING
-	CUSTOM_CFLAGS += -DDOUBLE_FLOATING
-endif
 
 ifeq ($(PROFILING), gprof)
 	CUSTOM_LDFLAGS += -pg
@@ -251,7 +263,7 @@ OBJS = $(EXTRA_OBJS) \
        probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o pachi.o
 
 # Low-level dependencies last
-SUBDIRS   = uct uct/policy playout tactics t-unit t-predict distributed engines
+SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics
 DATAFILES = patterns.prob patterns.spat book.dat golast19.prototxt golast.trained joseki19.pdict
 
 ###############################################################################################################
