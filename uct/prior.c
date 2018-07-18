@@ -68,11 +68,11 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 	} foreach_free_point_end;
 }
 
-#ifdef DCNN
 
 static void
 uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
+#ifdef DCNN
 	float r[19 * 19];
 	float best_r[DCNN_BEST_N] = { 0.0, };
 	coord_t best_moves[DCNN_BEST_N];
@@ -92,12 +92,8 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 		assert(val >= 0.0 && val <= 1.0);
 		add_prior_value(map, c, 1, sqrt(val) * u->prior->dcnn_eqex);
 	} foreach_free_point_end;
+#endif
 }
-
-#else
-#define uct_prior_dcnn(u, node, map)  
-#endif /* DCNN */
-
 
 void
 uct_prior_ko(struct uct *u, struct tree_node *node, struct prior_map *map)
@@ -162,9 +158,10 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 void
 uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
+#ifdef JOSEKI
 	/* Q_{joseki} */
-	if (!u->jdict)
-		return;
+	if (!u->jdict)  return;
+
 	for (int i = 0; i < 4; i++) {
 		hash_t h = map->b->qhash[i] & joseki_hash_mask;
 		coord_t *cc = u->jdict->patterns[h].moves[map->to_play - 1];
@@ -175,6 +172,7 @@ uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 			add_prior_value(map, *cc, 1.0, u->prior->joseki_eqex);
 		}
 	}
+#endif
 }
 
 void
@@ -217,7 +215,7 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 
 			/* Don't try to escape non-working ladders */
 			group_t atari_neighbor = board_get_atari_neighbor(b, c, map->to_play);
-			if (atari_neighbor && is_ladder(b, c, atari_neighbor, true) &&
+			if (atari_neighbor && is_ladder(b, atari_neighbor, true) &&
 			    !useful_ladder(b, atari_neighbor)) {
 				if (UDEBUGL(5))	fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c, b));
 				map->consider[c] = false;  continue;
@@ -251,8 +249,10 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		uct_prior_joseki(u, node, map);
 	if (u->prior->pattern_eqex)
 		uct_prior_pattern(u, node, map);
+#ifdef PACHI_PLUGINS
 	if (u->prior->plugin_eqex)
 		plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
+#endif
 }
 
 struct uct_prior *

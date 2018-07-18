@@ -81,17 +81,18 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 		/* Verify that we have sane state. */
 		assert(b->es == u);
 		assert(u->t && b->moves);
+		assert(node_coord(u->t->root) == b->last_move.coord);
+		assert(u->t->root_color == b->last_move.color);
 		if (color != stone_other(u->t->root_color))
 			die("Fatal: Non-alternating play detected %d %d\n", color, u->t->root_color);
 		uct_htable_reset(u->t);
-
 	} else {
 		/* We need fresh state. */
 		b->es = u;
 		setup_state(u, b, color);
 	}
 
-	board_ownermap_init(&u->ownermap);
+	ownermap_init(&u->ownermap);
 	u->played_own = u->played_all = 0;
 }
 
@@ -100,7 +101,7 @@ get_dead_groups(struct uct *u, struct board *b, struct move_queue *dead, struct 
 {
 	enum gj_state gs_array[board_size2(b)];
 	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
-	board_ownermap_judge_groups(b, &u->ownermap, &gj);
+	ownermap_judge_groups(b, &u->ownermap, &gj);
 	dead->moves = unclear->moves = 0;
 	groups_of_status(b, &gj, GS_DEAD, dead);
 	groups_of_status(b, &gj, GS_UNKNOWN, unclear);
@@ -125,7 +126,7 @@ pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD) continue;
 		if (final_ownermap[c] != 3)  continue;
-		if (board_ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_DAME) continue;
+		if (ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_DAME) continue;
 
 		coord_t dame = c;
 		int around[4] = { 0, };
@@ -169,7 +170,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	/* Save dead groups for final_status_list dead. */
 	struct move_queue unclear;
 	struct move_queue *dead = &u->dead_groups;
-	u->dead_groups_move = b->moves;
+	u->pass_moveno = b->moves + 1;
 	get_dead_groups(u, b, dead, &unclear);
 	
 	/* Unclear groups ? */
@@ -188,7 +189,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		*msg = "unclear point, clarify first";
 		foreach_point(b) {
 			if (board_at(b, c) == S_OFFBOARD)  continue;
-			if (board_ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN)
+			if (ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN)
 				return false;
 		} foreach_point_end;
 		return true;
@@ -196,8 +197,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 
 	/* Check score estimate first, official score is off if position is not final */
 	*msg = "losing on score estimate";
-	floating_t score = board_ownermap_score_est(b, &u->ownermap);
-	if (color == S_BLACK)  score = -score;
+	floating_t score = ownermap_score_est_color(b, &u->ownermap, color);
 	if (score < 0)  return false;
 
 	return pass_is_safe(u, b, color, dead, score, pass_all_alive, msg);
@@ -210,7 +210,7 @@ uct_board_print(struct engine *e, struct board *b, FILE *f)
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
-static struct board_ownermap*
+static struct ownermap*
 uct_ownermap(struct engine *e, struct board *b)
 {
 	struct uct *u = b->es;
@@ -229,6 +229,13 @@ uct_ownermap(struct engine *e, struct board *b)
 	return &u->ownermap;
 }
 
+struct joseki_dict*
+uct_get_jdict(struct engine *e)
+{
+	struct uct *u = e->data;
+	return u->jdict;
+}
+
 static char *
 uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {
@@ -242,8 +249,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 
 	/* Stop pondering, required by tree_promote_at() */
 	uct_pondering_stop(u);
-	if (UDEBUGL(2) && u->slave)
-		tree_dump(u->t, u->dumpthres);
+	if (UDEBUGL(2) && u->slave)  tree_dump(u->t, u->dumpthres);
 
 	if (is_resign(m->coord)) {
 		/* Reset state. */
@@ -253,7 +259,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 
 	/* Promote node of the appropriate move to the tree root. */
 	assert(u->t->root);
-	if (u->t->untrustworthy_tree | !tree_promote_at(u->t, b, m->coord)) {
+	if (u->t->untrustworthy_tree || !tree_promote_at(u->t, b, m->coord)) {
 		if (UDEBUGL(3)) {
 			if (u->t->untrustworthy_tree)
 				fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
@@ -284,6 +290,7 @@ uct_undo(struct engine *e, struct board *b)
 	uct_pondering_stop(u);
 	u->initial_extra_komi = u->t->extra_komi;
 	reset_state(u);
+	u->pass_moveno = 0;
 	return NULL;
 }
 
@@ -310,14 +317,15 @@ uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd
 	struct uct *u = e->data;
 
 	if (!u->t)
-		return generic_chat(b, opponent, from, cmd, S_NONE, pass, 0, 1, u->threads, 0.0, 0.0);
+		return generic_chat(b, opponent, from, cmd, S_NONE, pass, 0, 1, u->threads, 0.0, 0.0, "");
 
 	struct tree_node *n = u->t->root;
 	double winrate = tree_node_get_value(u->t, -1, n->u.value);
 	double extra_komi = u->t->use_extra_komi && fabs(u->t->extra_komi) >= 0.5 ? u->t->extra_komi : 0;
+	char *score_est = ownermap_score_est_str(b, &u->ownermap);
 
 	return generic_chat(b, opponent, from, cmd, u->t->root_color, node_coord(n), n->u.playouts, 1,
-			    u->threads, winrate, extra_komi);
+			    u->threads, winrate, extra_komi, score_est);
 }
 
 static void
@@ -348,13 +356,16 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 		return; // no dead groups
 
 	/* Normally last genmove was a pass and we've already figured out dead groups.
-	 * Don't recompute dead groups here, result could be different this time and lead to wrong list. */
-	if (u->dead_groups_move == b->moves - 1) {
+	 * Don't recompute dead groups here, result could be different this time and
+	 * lead to wrong list. */
+	if (u->pass_moveno == b->moves || u->pass_moveno == b->moves - 1) {
 		memcpy(dead, &u->dead_groups, sizeof(*dead));
 		print_dead_groups(u, b, dead);
 		return;
 	}
-	
+
+	fprintf(stderr, "WARNING: Recomputing dead groups\n");
+
 	/* Create mock state */
 	if (u->t)  reset_state(u);
 	// We need S_BLACK here, but don't clobber u->my_color with uct_genmove_setup() !
@@ -363,9 +374,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 	/* Make sure the ownermap is well-seeded. */
 	while (u->ownermap.playouts < GJ_MINGAMES)
 		uct_playout(u, b, S_BLACK, u->t);
-	/* Show the ownermap: */
-	if (DEBUGL(2))
-		board_print_ownermap(b, stderr, &u->ownermap);
+	if (DEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
 	struct move_queue unclear;
 	get_dead_groups(u, b, dead, &unclear);
@@ -404,7 +413,9 @@ uct_done(struct engine *e)
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
 	joseki_done(u->jdict);
+#ifdef PACHI_PLUGINS
 	pluginset_done(u->plugins);
+#endif
 }
 
 
@@ -827,7 +838,9 @@ uct_state_init(char *arg, struct board *b)
 	u->stats_delay = 0.01; // 10 ms
 	u->shared_levels = 1;
 
+#ifdef PACHI_PLUGINS
 	u->plugins = pluginset_init(b);
+#endif
 
 	u->jdict = joseki_load(b->size);
 
@@ -943,6 +956,7 @@ uct_state_init(char *arg, struct board *b)
 					if (*b == '+') *b = ' ';
 				}
 				break;
+#ifdef PACHI_PLUGINS
 			} else if (!strcasecmp(optname, "plugin") && optval) {
 				/* Load an external plugin; filename goes before the colon,
 				 * extra arguments after the colon. */
@@ -950,7 +964,7 @@ uct_state_init(char *arg, struct board *b)
 				if (pluginarg)
 					*pluginarg++ = 0;
 				plugin_load(u->plugins, optval, pluginarg);
-
+#endif
 			/** UCT behavior and policies */
 
 			} else if ((!strcasecmp(optname, "policy")
@@ -1278,7 +1292,7 @@ uct_state_init(char *arg, struct board *b)
 				u->significant_threshold = atoi(optval);
 
 			/** Distributed engine slaves setup */
-
+#ifdef DISTRIBUTED
 			} else if (!strcasecmp(optname, "slave")) {
 				/* Act as slave for the distributed engine. */
 				u->slave = !optval || atoi(optval);
@@ -1302,6 +1316,7 @@ uct_state_init(char *arg, struct board *b)
 				/* How long to wait in slave for initial stats to build up before
 				 * replying to the genmoves command (in ms) */
 				u->stats_delay = 0.001 * atof(optval);
+#endif /* DISTRIBUTED */
 
 			/** Presets */
 
@@ -1389,8 +1404,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->dynkomi)
-		u->dynkomi = board_small(b) ? uct_dynkomi_init_none(u, NULL, b)
-			: uct_dynkomi_init_linear(u, NULL, b);
+		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 
 	if (u->pondering_opt && using_dcnn(b)) {
 		warning("Can't use pondering with dcnn right now, pondering turned off.\n");
@@ -1418,7 +1432,11 @@ engine_uct_init(char *arg, struct board *b)
 	e->undo = uct_undo;
 	e->result = uct_result;
 	e->genmove = uct_genmove;
+#ifdef DISTRIBUTED
 	e->genmoves = uct_genmoves;
+	if (u->slave)
+		e->notify = uct_notify;
+#endif
 	e->best_moves = uct_best_moves;
 	e->evaluate = uct_evaluate;
 	e->dead_group_list = uct_dead_group_list;
@@ -1427,8 +1445,6 @@ engine_uct_init(char *arg, struct board *b)
 	e->ownermap = uct_ownermap;
 	e->livegfx_hook = uct_livegfx_hook;
 	e->data = u;
-	if (u->slave)
-		e->notify = uct_notify;
 
 	const char banner[] = "If you believe you have won but I am still playing, "
 		"please help me understand by capturing all dead stones. "

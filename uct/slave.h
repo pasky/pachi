@@ -4,6 +4,8 @@
 #include "move.h"
 #include "distributed/distributed.h"
 
+#ifdef DISTRIBUTED
+
 struct board;
 struct engine;
 struct time_info;
@@ -13,5 +15,11 @@ char *uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum
 		   char *args, bool pass_all_alive, void **stats_buf, int *stats_size);
 void *uct_htable_alloc(int hbits);
 void uct_htable_reset(struct tree *t);
+
+
+#else
+#define uct_htable_reset(t)  do { } while(0)
+#define uct_htable_alloc(hbits)  NULL
+#endif /* DISTRIBUTED */
 
 #endif

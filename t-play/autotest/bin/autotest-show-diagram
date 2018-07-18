@@ -1,0 +1,75 @@
+#!/usr/bin/perl
+# Display confidence diagrams
+use File::Basename;
+use List::Util qw(min max);
+
+sub usage
+{
+    print "Usage: autotest-show-diagram [pairing-pattern]\n";
+    print "Options: --scale val      diagram scale (default 2.0)\n";
+    print "         --min   val      diagram starts at val% (default 0)\n";
+    print "         --max   val      diagram stops  at val% (default 100)\n";
+    print "\n";
+    print "Make sure you run autotest-gather first !\n";
+    exit(1);
+}
+
+my $confidence = 95;
+#my $confidence = 67;
+
+# diagram scaling
+my $scale = 2;
+my $diag_min = 0;
+my $diag_max = 100;
+
+for (; $ARGV[0] =~ m/^-/; shift(@ARGV)) {
+    if ($ARGV[0] eq "--scale") {  shift(@ARGV); $scale    = $ARGV[0]; next;  }
+    if ($ARGV[0] eq "--min")   {  shift(@ARGV); $diag_min = $ARGV[0]; next;  }
+    if ($ARGV[0] eq "--max")   {  shift(@ARGV); $diag_max = $ARGV[0]; next;  }
+    usage();
+}
+
+my $ratio;
+if    ($confidence == 95) {  $ratio = 1.96;  }
+elsif ($confidence == 67) {  $ratio = 1;     }
+else  {  die "fixme";  }
+print "Confidence level: $confidence%\n";
+
+my $bin = dirname(__FILE__);
+my $mask = $ARGV[0];
+open(IN, "$bin/autotest-show '$mask' | ");
+my @tab = <IN>;
+
+# Find name field length
+my $name_field_len = 0;
+foreach my $str (@tab) {
+    if ($str =~ m/([0-9]+)\t([0-9.]+)\t([0-9.]+)\t(.*)/)  {
+	my ($games, $wr, $sd, $name) = ($1, $2, $3, $4);
+	if (length($name) > $name_field_len) {  $name_field_len = length($name);  }
+    }    
+}
+
+foreach my $str (@tab) {
+    if ($str =~ m/([0-9]+)\t([0-9.]+)\t([0-9.]+)\t(.*)/) {
+	my ($games, $wr, $sd, $name) = ($1, $2, $3, $4);
+	if (!$games) {  continue;  }
+	
+	$wr = $wr * 100;
+	my $pc = int($wr + 0.5);    # Don't use this for < 0 numbers !
+	my $sd = $sd * 100;
+	my $min = $wr - $ratio * $sd;  $min = max($min, 0);     $min = int($min + 0.5);
+	my $max = $wr + $ratio * $sd;  $max = min($max, 100);   $max = int($max + 0.5);
+
+	# diagram
+	my @diag = split("", " " x 100);
+	for (my $i = $min; $i < $max; $i++)  {  $diag[$i/$scale] = "-";  }
+	$diag[$pc / $scale] = "|";
+	$diag[$min / $scale] = "[";
+	$diag[$max / $scale] = "]";
+	my $diag = join("", @diag);
+	
+	printf("%4i %-*s  %2i%% [%2i%%-%2i%%] ", $games, $name_field_len, $name, $pc, $min, $max);	
+	printf("%s\n", substr($diag, $diag_min / $scale, ($diag_max - $diag_min) / $scale));
+    }
+}
+

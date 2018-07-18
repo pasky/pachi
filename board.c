@@ -58,7 +58,7 @@ board_init(char *fbookfile)
 	b->fbookfile = fbookfile;
 
 	// Default setup
-	b->size = 9 + 2;
+	b->size = 19 + 2;
 	board_clear(b);
 
 	return b;
@@ -187,15 +187,26 @@ board_statics_init(struct board *board)
 	 * certain kinds of pattern matching, thus we do not use
 	 * fast_random() for this. */
 	hash_t hseed = 0x3121110101112131;
-	foreach_point(board) {
-		bs->h[c][0] = (hseed *= 16807);
-		if (!bs->h[c][0])
-			bs->h[c][0] = 1;
+
+	/* XXX Until <board_cleanup> board->h was treated as:
+	 *     h[2][BOARD_MAX_COORDS] here, and
+	 *     h[BOARD_MAX_COORDS][2] in hash_at().
+	 *     Preserve quirk to get same hashes across versions... */
+	hash_t (*hash)[2] = (hash_t (*)[2])bs->h;
+	for (coord_t c = 0 ; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
+		hash[c][0] = (hseed *= 16807);
+		if (!hash[c][0])  hash[c][0] = 1;
+		
 		/* And once again for white */
-		bs->h[c][1] = (hseed *= 16807);
-		if (!bs->h[c][1])
-			bs->h[c][1] = 1;
-	} foreach_point_end;	
+		hash[c][1] = (hseed *= 16807);
+		if (!hash[c][1])  hash[c][1] = 1;
+	}
+
+	/* Sanity check ... */
+	foreach_point(board) {
+		assert(hash_at(b, c, S_BLACK) != 0);
+		assert(hash_at(b, c, S_WHITE) != 0);
+	} foreach_point_end;
 }
 
 static void
@@ -398,7 +409,9 @@ static void profiling_noinline
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
 	board->hash ^= hash_at(board, coord, color);
+#ifdef JOSEKI
 	board->qhash[coord_quadrant(coord, board)] ^= hash_at(board, coord, color);
+#endif
 	if (DEBUGL(8))
 		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
 
@@ -1107,7 +1120,7 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 		ko.color = stone_other(color);
 		ko.coord = cap_at; // unique
 		board->last_ko = ko;
-		board->last_ko_age = board->moves;
+		board->last_ko_age = board->moves + 1;  /* == board->moves really, board->moves++ done after */
 		if (DEBUGL(5))
 			fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord, board));
 	}
@@ -1440,6 +1453,7 @@ int board_undo(struct board *board)
 	board->last_move = board->last_move2;
 	board->last_move2 = board->last_move3;
 	board->last_move3 = board->last_move4;
+	board->moves--;
 	if (board->last_ko_age == board->moves)
 		board->ko = board->last_ko;
 	return 0;
@@ -1629,9 +1643,9 @@ board_print_official_ownermap(struct board *b, int *final_ownermap)
 }
 
 /* Official score after removing dead groups and Tromp-Taylor counting.
- * Number of dames is saved in @dame, final ownermap in @ownermap. */
+ * Number of dames is saved in @dames, final ownermap in @ownermap. */
 floating_t
-board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *ownermap)
+board_official_score_details(struct board *board, struct move_queue *dead, int *dames, int *ownermap)
 {
 	/* A point P, not colored C, is said to reach C, if there is a path of
 	 * (vertically or horizontally) adjacent points of P's color from P to
@@ -1667,12 +1681,11 @@ board_official_score_details(struct board *board, struct move_queue *dead, int *
 
 	int scores[S_MAX] = { 0, };
 
-	*dame = 0;
 	foreach_point(board) {
 		assert(board_at(board, c) == S_OFFBOARD || ownermap[c] != 0);
-		if (ownermap[c] == 3) {  (*dame)++; continue;  }
 		scores[ownermap[c]]++;
 	} foreach_point_end;
+	*dames = scores[3];
 
 	int handi_comp = board_score_handicap_compensation(board);
 	return board->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];

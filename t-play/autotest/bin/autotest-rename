@@ -1,0 +1,35 @@
+#!/bin/bash
+# This is autotest rename tool, renames specified pairing to new name.
+# Note that this only renames pairing results, you need to adjust the rc file
+# manually if you haven't renamed the pairing specifier there yet.
+# Rerun autotest-gather afterwards to update results.
+bin=`dirname $0`
+
+from="$1"
+to="$2"
+if [ -z "$from" ] || [ -z "$to" ]; then
+    echo "Usage: $0 old_pairing new_pairing" >&2
+    echo "Rename old_pairing to new_pairing" >&2
+    exit 1
+fi
+. $bin/autotest-lib
+
+# Make sure source exists
+if ! find c -type d -name $from | grep -q . ; then
+    echo "Source pairing not found." >&2
+    exit 1
+fi
+
+
+# Make sure destination doesn't exist
+if find c -type d -name $to | grep -q . ; then
+    echo "Destination already exists." >&2
+    exit 1
+fi
+
+rm -f r/$from.dat r/$from.summary.dat r/$from.html r/$from.beacon r/$from.error
+
+for dir in c/*; do
+    [ -d $dir/$from ] || continue
+    mv $dir/$from  $dir/$to
+done

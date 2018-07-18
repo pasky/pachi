@@ -11,12 +11,133 @@
 #include "tactics/dragon.h"
 #include "tactics/seki.h"
 
-/*  X X X   
-    X . O   (We're black here)
-    X X O   Are we about to break a 3-stones seki by playing at @coord ?
-    X . O   Assumes selfatari checks passed, so b has outside liberties.
-    X X X   
-*/
+
+/*   . . O O O |   We're black.
+ *   O O O X X |   
+ *   O X X X * |   Are we about to break false eye seki ?
+ *   O X O O X |     - b about to fill false eye
+ *   O X . O . |     - b groups 2 libs
+ *  -----------+     - dead shape after filling eye    */
+bool
+breaking_false_eye_seki(struct board *b, coord_t coord, enum stone color)
+{
+	enum stone other_color = stone_other(color);	
+	if (!board_is_eyelike(b, coord, color))
+		return false;
+
+	/* Find 2 own groups with 2 libs nearby */
+	group_t g1 = 0, g2 = 0;
+	foreach_neighbor(b, coord, {
+		if (board_at(b, c) != color)  continue;  /* And can't be other color since eyelike */
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)  return false;
+
+		if (!g1)     {  g1 = g;  continue;  }
+		if (g == g1)             continue;
+		if (!g2)     {  g2 = g;  continue;  }
+		if (g == g2)             continue;
+		return false;  /* 3+ groups */
+	});
+	if (!g1 || !g2)  return false;
+	
+	/* Find inside group */
+	coord_t lib2 = board_group_other_lib(b, g1, coord);
+	group_t in = 0;
+	foreach_neighbor(b, lib2, {
+		if (board_at(b, c) != other_color)  continue;
+		group_t g = group_at(b, c);
+		if (!in)  {  in = g;  continue;  }		
+		if (in != g)  return false;  /* Multiple inside groups */
+	});
+	if (!in)  return false;
+
+	coord_t lib3 = board_group_other_lib(b, g2, coord);
+	if (board_group_other_lib(b, in, lib2) != lib3)
+		return false;
+	
+	return true;
+}
+
+
+/*     . O O O |                   We're white.
+ *     . O X X |      . O O O |
+ *     O O X . |      . O X X |    Are we about to break corner seki by playing at @coord ?
+ *     O X X X |      O O X . |    Assumes selfatari checks already passed.
+ *     O X O * |      O X X X |      - b has 2 libs and one eye
+ *     O X O O |      O X * O |      - w has one eye in the corner (other lib)
+ *     O X O . |      O X O . |      - w makes a dead shape selfatari by playing at @coord
+ *    ---------+     ---------+        (selfatari checks passed, so we know shape is dead)   */
+bool
+breaking_corner_seki(struct board *b, coord_t coord, enum stone color)
+{
+	enum stone other_color = stone_other(color);	
+
+	if (immediate_liberty_count(b, coord))  /* Other lib checked later ... */
+		return false;
+	
+	/* Own group(s) with 2 libs nearby ? */
+	group_t gi = 0;
+	coord_t lib2 = 0;
+	foreach_neighbor(b, coord, {
+		group_t g = group_at(b, c);
+		if (g && board_group_info(b, g).libs != 2) /* Check groups of both colors */
+			return false;
+		if (board_at(b, c) != color)  continue;
+
+		if (!gi) {
+			gi = g;
+			lib2 = board_group_other_lib(b, gi, coord);
+			continue;
+		}		
+		if (g == gi) continue;
+
+		/* 2 groups ? Must share same libs */
+		for (int i = 0; i < 2; i++) {
+			coord_t lib = board_group_info(b, g).lib[i];
+			if (lib != coord && lib != lib2)
+				return false;
+		}
+	});
+	if (!gi)  return false;
+
+	/* Other lib is corner eye ? */
+	int x = coord_x(lib2, b), y = coord_y(lib2, b);
+	if ((x != 1 && x != real_board_size(b)) ||
+	    (y != 1 && y != real_board_size(b)) ||
+	    !board_is_one_point_eye(b, lib2, color))
+		return false;	
+
+	/* Find outside group */
+	group_t out = 0;
+	foreach_neighbor(b, coord, {
+		if (board_at(b, c) != other_color)  continue;
+		group_t g = group_at(b, c);
+		if (!out)  {  out = g;  continue;  }
+		/* Multiple outside groups ? */
+		if (out != g)  return false;
+	});
+	if (!out)  return false;
+
+	/* Outside group has one eye ? */
+	coord_t out_other_lib = board_group_other_lib(b, out, coord);
+	if (!board_is_one_point_eye(b, out_other_lib, other_color))
+		return false;
+
+	//fprintf(stderr, "corner seki break: %s %s\n", stone2str(color), coord2sstr(coord, b));
+	//board_print(b, stderr);
+
+	/* We don't capture anything so it's selfatari */
+	return true;
+}
+
+
+/*   . O O O O |
+ *   O . X X X |   We're black.
+ *   O . X * O |
+ *   O . X X O |   Are we about to break 3-stones seki by playing at @coord ?
+ *   O . X . O |   Assumes selfatari checks passed, so b has some outside liberties.
+ *   O . X X X |
+ *   . O O O O |   */
 bool
 breaking_3_stone_seki(struct board *b, coord_t coord, enum stone color)
 {
@@ -53,8 +174,7 @@ breaking_3_stone_seki(struct board *b, coord_t coord, enum stone color)
 	 *   O O X O O 	  O O X . O 
 	 *   O X X . O 	  O X X O O 
 	 *   O O . O O 	  O O . O O 
-	 *   . O O O . 	  . O O O . 
-	 */
+	 *   . O O O . 	  . O O O .   */
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, g3).lib[i];
 		foreach_neighbor(b, lib, {   /* Find adjacent stone */

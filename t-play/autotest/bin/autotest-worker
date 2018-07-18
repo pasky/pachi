@@ -1,9 +1,11 @@
 #!/bin/bash
 # This is autotest Go-testing framework worker. It picks a random
 # pairing among the ones defined in the rc file, and plays a single game.
+bin=`dirname $0`
+PATH="$bin:$PATH"
 
 clientid="$1"; shift
-. ./autotest-lib
+. $bin/autotest-lib
 
 
 # Load rc file. First, prepare functions for the endeavor:
@@ -97,7 +99,7 @@ komi="$(pairing_param $pair komi | sed 's/^h/0.5 -handicap /')"
 # Run twogtp!
 rm -f "c/$clientid"/scratch*
 echo $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch"
-$twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch"
+$twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch" 2> >(tee -a "c/$clientid/game.log" >&2)
 
 # Get count of our game
 mkdir -p "c/$clientid/$pairid"
@@ -123,3 +125,4 @@ cat "c/$clientid"/scratch.dat | grep -v '^#' | {
 	printf "$GAME\t$RES_B\t$RES_W\t$RES_R\t$ALT\t$DUP\t$LEN\t$TIME_B\t$TIME_W\t$CPU_B\t$CPU_W\t$ERR\t$ERR_MSG\n"
 } >>"c/$clientid/$pairid/game.dat"
 mv "c/$clientid/scratch-0.sgf" "c/$clientid/$pairid/game-$gameno.sgf"
+mv "c/$clientid/game.log" "c/$clientid/$pairid/game-$gameno.log"

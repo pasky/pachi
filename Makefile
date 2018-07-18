@@ -9,6 +9,7 @@
 # If binary will be distributed you need this !
 # Otherwise you may do without to enable more aggressive optimizations
 # for this machine only.
+
 # GENERIC=1
 
 # Do you compile on Windows instead of Linux ?
@@ -36,12 +37,33 @@ DCNN=1
 
 # BOARD_SIZE=19
 
+# Running multiple Pachi instances ? Enable this to coordinate them so that
+# only one takes the cpu at a time. If your system uses systemd beware !
+# Go and read note at top of fifo.c
+
+# FIFO=1
+
+# Enable joseki engine ? Useful if running without dcnn support.
+# Otherwise will be slightly faster without.
+
+# JOSEKI=1
+# MOGGY_JOSEKI=1
+
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
 # e.g. with extremely long thinking times or massive parallelization;
 # 24 bits of floating_t mantissa become insufficient then.
 
 # DOUBLE_FLOATING=1
+
+# Enable distributed engine for cluster play ?
+
+# DISTRIBUTED=1
+
+# Compile Pachi with external plugin support ?
+# If unsure leave disabled, you most likely don't need it.
+
+# PLUGINS=1
 
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
@@ -95,6 +117,8 @@ ifdef BOARD_SIZE
 	CUSTOM_CFLAGS += -DBOARD_SIZE=$(BOARD_SIZE)
 endif
 
+EXTRA_OBJS :=
+EXTRA_SUBDIRS :=
 
 ##############################################################################
 ifdef MSYS2
@@ -176,12 +200,36 @@ endif
 ifeq ($(DCNN), 1)
 	CUSTOM_CFLAGS   += -DDCNN
 	CUSTOM_CXXFLAGS += -DDCNN
+	EXTRA_OBJS      += caffe.o dcnn.o
 	SYS_LIBS := $(DCNN_LIBS)
 endif
 
-ifdef DOUBLE_FLOATING
+ifeq ($(FIFO), 1)
+	CUSTOM_CFLAGS += -DPACHI_FIFO
+	EXTRA_OBJS    += fifo.o
+endif
+
+ifeq ($(JOSEKI), 1)
+	CUSTOM_CFLAGS += -DJOSEKI
+endif
+
+ifeq ($(MOGGY_JOSEKI), 1)
+	CUSTOM_CFLAGS += -DMOGGY_JOSEKI
+endif
+
+ifeq ($(DOUBLE_FLOATING), 1)
 	CUSTOM_CFLAGS += -DDOUBLE_FLOATING
 endif
+
+ifeq ($(DISTRIBUTED), 1)
+	CUSTOM_CFLAGS += -DDISTRIBUTED
+	EXTRA_SUBDIRS += distributed
+endif
+
+ifeq ($(PLUGINS), 1)
+	CUSTOM_CFLAGS += -DPACHI_PLUGINS
+endif
+
 
 ifeq ($(PROFILING), gprof)
 	CUSTOM_LDFLAGS += -pg
@@ -210,16 +258,12 @@ export
 unexport INCLUDES
 INCLUDES=-I.
 
-ifeq ($(DCNN), 1)
-	DCNN_OBJS=caffe.o dcnn.o
-endif
-
-OBJS = $(DCNN_OBJS) $(EXTRA_OBJS) \
+OBJS = $(EXTRA_OBJS) \
        board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o \
        probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o pachi.o
 
 # Low-level dependencies last
-SUBDIRS   = uct uct/policy playout tactics t-unit t-predict distributed engines
+SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics
 DATAFILES = patterns.prob patterns.spat book.dat golast19.prototxt golast.trained joseki19.pdict
 
 ###############################################################################################################
@@ -272,8 +316,7 @@ pachi-profiled:
 # Pachi build attendant
 .PHONY: spudfrog
 spudfrog: FORCE
-	@GENERIC=$(GENERIC) DCNN=$(DCNN) OPT=$(OPT) CFLAGS="$(CFLAGS)" \
-         DOUBLE_FLOATING=$(DOUBLE_FLOATING) BOARDSIZE=$(BOARDSIZE) ./spudfrog
+	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./spudfrog
 
 # Build info
 build.h: .git/HEAD .git/index Makefile
@@ -291,7 +334,7 @@ test: FORCE
 
 	@echo -n "Testing quiet mode...    "
 	@if  grep -q '.' < pachi.log ; then \
-		echo "FAILED";  exit 1;  else  echo "OK"; \
+		echo "FAILED:";  cat pachi.log;  exit 1;  else  echo "OK"; \
 	fi
 
 

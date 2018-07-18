@@ -11,18 +11,23 @@
 #include "timeinfo.h"
 
 static bool dcnn_enabled = true;
+static bool dcnn_required = false;
 void disable_dcnn()     {  dcnn_enabled = false;  }
+void require_dcnn()     {  dcnn_required = true;  dcnn_init();  }
 
 bool
 using_dcnn(struct board *b)
 {
-	return (dcnn_enabled && real_board_size(b) == 19 && caffe_ready());
+	bool r = (dcnn_enabled && real_board_size(b) == 19 && caffe_ready());
+	if (dcnn_required && !r)  die("dcnn required but not used, aborting.\n");
+	return r;
 }
 
 void
 dcnn_init()
 {
 	if (dcnn_enabled)  caffe_init();
+	if (dcnn_required && !caffe_ready())  die("dcnn required, aborting.\n");
 }
 
 void

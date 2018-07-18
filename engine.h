@@ -23,7 +23,7 @@ typedef void (*engine_evaluate_t)(struct engine *e, struct board *b, struct time
 typedef void (*engine_dead_group_list_t)(struct engine *e, struct board *b, struct move_queue *mq);
 typedef void (*engine_stop_t)(struct engine *e);
 typedef void (*engine_done_t)(struct engine *e);
-typedef struct board_ownermap* (*engine_ownermap_t)(struct engine *e, struct board *b);
+typedef struct ownermap* (*engine_ownermap_t)(struct engine *e, struct board *b);
 typedef void (*engine_livegfx_hook_t)(struct engine *e);
 
 /* This is engine data structure. A new engine instance is spawned

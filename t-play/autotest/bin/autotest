@@ -1,0 +1,35 @@
+#!/bin/bash
+# Play autotest games.
+# Wrapper for autotest-client, picking an id automatically:
+# Will run something like:
+#
+#	nice -n 18 ./autotest-client `hostname`-1
+#
+# where 1 should be 2, 3, 4, ... for further instances of autotest you would
+# run on the same machine (no two instaces with the same id must be run).
+# The `nice -n 18` prefix will make sure the client is being run with low
+# priority, in case someone wants to use the computer for some real interaction.
+
+die()  {  echo "$@"; exit 1;  }
+bin=`dirname $0`
+
+# id must be unique
+find_id()
+{
+    echo -n "Looking for free id... "
+    for i in `seq 1 16`; do
+	id="`hostname`-$i"
+	if ! ps aux | grep autotest | grep -q " $id\$"; then
+	    echo "Ok"
+	    return
+	fi
+    done
+    die "no free id found"
+}
+
+find_id
+cmd="nice -n 18 $bin/autotest-client $id"
+echo "$cmd"
+echo ""
+
+exec $cmd

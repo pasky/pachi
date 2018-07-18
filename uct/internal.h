@@ -118,7 +118,8 @@ struct uct {
 	bool want_pat;
 
 	/* Used within frame of single genmove. */
-	struct board_ownermap ownermap;
+	struct ownermap ownermap;
+
 	/* Used for coordination among slaves of the distributed engine. */
 	int stats_hbits;
 	int shared_nodes;
@@ -129,7 +130,7 @@ struct uct {
 
 	/* Saved dead groups, for final_status_list dead */
 	struct move_queue dead_groups;
-	int dead_groups_move;
+	int pass_moveno;
 
 	/* Timing */
 	double mcts_time_start;

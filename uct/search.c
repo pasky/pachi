@@ -11,6 +11,7 @@
 #define DEBUG
 
 #include "debug.h"
+#include "pachi.h"
 #include "distributed/distributed.h"
 #include "move.h"
 #include "random.h"
@@ -220,9 +221,9 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 
 	if (ti) {
 		if (ti->period == TT_NULL) {
-			if (u->slave) {
+			if (u->slave)
 				*ti = unlimited_ti;
-			} else {
+			else {
 				*ti = default_ti;
 				time_start_timer(ti);
 			}
@@ -488,24 +489,26 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 		  coord_t *best_coord)
 {
 	/* Choose the best move from the tree. */
+	enum stone other_color = stone_other(color);
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
 	if (!best) {
 		*best_coord = pass;
 		return NULL;
 	}
 	*best_coord = node_coord(best);
+	floating_t winrate = tree_node_get_value(u->t, 1, best->u.value);
+
 	if (UDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %s (%d,%d) with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
-			coord2sstr(node_coord(best), b), coord_x(node_coord(best), b), coord_y(node_coord(best), b),
-			tree_node_get_value(u->t, 1, best->u.value), best->u.playouts,
-			u->t->root->u.playouts, u->t->root->u.playouts - base_playouts, played_games,
+		fprintf(stderr, "*** WINNER is %s with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
+			coord2sstr(node_coord(best), b), winrate,
+			best->u.playouts, u->t->root->u.playouts,
+			u->t->root->u.playouts - base_playouts, played_games,
 			u->t->extra_komi);
 
 	/* Do not resign if we're so short of time that evaluation of best
 	 * move is completely unreliable, we might be winning actually.
 	 * In this case best is almost random but still better than resign. */
-	if (tree_node_get_value(u->t, 1, best->u.value) < u->resign_threshold
-	    && !is_pass(node_coord(best))
+	if (winrate < u->resign_threshold && !is_pass(node_coord(best))
 	    // If only simulated node has been a pass and no other node has
 	    // been simulated but pass won't win, an unsimulated node has
 	    // been returned; test therefore also for #simulations at root.
@@ -515,10 +518,24 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 		return NULL;
 	}
 
-	/* If the opponent just passed and we win counting, always
-	 * pass as well. For option stones_only, we pass only when there
-	 * there is nothing else to do, to show how to maximize score. */
-	if (b->moves > 1 && is_pass(b->last_move.coord) && b->rules != RULES_STONES_ONLY) {
+	bool opponent_passed = is_pass(b->last_move.coord);
+	bool pass_first = false;
+	if (!is_pass(*best_coord)) {
+		enum stone move_owner = ownermap_color(&u->ownermap, *best_coord, 0.80);
+		int capturing = board_get_atari_neighbor(b, *best_coord, other_color);
+		floating_t score = ownermap_score_est_color(b, &u->ownermap, color);
+		bool can_pass_first = (!nopassfirst || pass_all_alive);  /* For kgs: must not pass first in main game phase. */
+		pass_first = (can_pass_first && (move_owner == other_color) && /* play in opponent territory */
+			      !capturing && !board_playing_ko_threat(b) &&
+			      winrate > 0.80 && score > 1.0);
+	}
+
+	/* If the opponent just passed and we win counting, always pass as well.
+	 * Pass also instead of playing in opponent territory if winning.
+	 * For option stones_only, we pass only when there is nothing else to do,
+	 * to show how to maximize score. */
+	if ((opponent_passed || pass_first) &&
+	    b->moves > 10 && b->rules != RULES_STONES_ONLY) {
 		char *msg;
 		if (uct_pass_is_safe(u, b, color, pass_all_alive, &msg)) {
 			if (UDEBUGL(0)) {

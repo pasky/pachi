@@ -6,6 +6,8 @@
 #include "gtp.h"
 #include "gogui.h"
 #include "ownermap.h"
+#include "engines/josekibase.h"
+#include "uct/uct.h"
 
 #ifdef DCNN
 #include "engines/dcnn.h"
@@ -38,15 +40,19 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 	}
 	if (e->ownermap) {
 		sbprintf(buf, "gfx/gfx   Influence/gogui-ownermap\n");
-		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");	
+		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");
 	}
-
-	if (!strcmp(e->name, "UCT")) {
-#ifdef DCNN
+#ifdef JOSEKI
+	sbprintf(buf, "plist/gfx   Joseki Moves/gogui-joseki_moves\n");
+#endif
+#ifdef DCNN                            /* board check fake since we're called once on startup ... */
+	if (!strcmp(e->name, "UCT") && using_dcnn(b)) {
 		sbprintf(buf, "gfx/gfx   DCNN Best Moves/gogui-dcnn_best\n");
 		sbprintf(buf, "gfx/gfx   DCNN Color Map/gogui-dcnn_colors\n");
 		sbprintf(buf, "gfx/gfx   DCNN Ratings/gogui-dcnn_rating\n");
+	}
 #endif
+	if (!strcmp(e->name, "UCT")) {
 		sbprintf(buf, "gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
 		sbprintf(buf, "gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
 		sbprintf(buf, "gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
@@ -279,14 +285,14 @@ gogui_best_moves(strbuf_t *buf, struct engine *e, struct board *b, struct time_i
 static void
 gogui_ownermap(strbuf_t *buf, struct board *b, struct engine *e)
 {
-	struct board_ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
 	if (!ownermap)	return;
 
 	sbprintf(buf, "INFLUENCE");	
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)
 			continue;
-		float p = board_ownermap_estimate_point(ownermap, c);
+		float p = ownermap_estimate_point(ownermap, c);
 		
 		// p = -1 for WHITE, 1 for BLACK absolute ownership of point i
 		if (p < -.8)
@@ -306,26 +312,26 @@ gogui_ownermap(strbuf_t *buf, struct board *b, struct engine *e)
 		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
 	} foreach_point_end;
 
-	sbprintf(buf, "\nTEXT Score Est: %s", board_ownermap_score_est_str(b, ownermap));
+	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
 }
 
 static void
 gogui_score_est(strbuf_t *buf, struct board *b, struct engine *e)
 {
-	struct board_ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
 	if (!ownermap)	return;
 
 	sbprintf(buf, "INFLUENCE");	
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
-		enum point_judgement j = board_ownermap_score_est_coord(b, ownermap, c);
+		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
 		float p = 0;
 		if (j == PJ_BLACK)  p = 0.5;
 		if (j == PJ_WHITE)  p = -0.5;
 		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
 	} foreach_point_end;
 
-	sbprintf(buf, "\nTEXT Score Est: %s", board_ownermap_score_est_str(b, ownermap));
+	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
 }
 
 enum parse_code
@@ -419,8 +425,8 @@ static struct engine *dcnn_engine = NULL;
 enum parse_code
 cmd_gogui_dcnn_best(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
-	if (!using_dcnn(b)) return P_OK;
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -436,8 +442,8 @@ cmd_gogui_dcnn_best(struct board *b, struct engine *e, struct time_info *ti, gtp
 enum parse_code
 cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
-	if (!using_dcnn(b)) return P_OK;
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -453,8 +459,8 @@ cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, g
 enum parse_code
 cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
-	if (!using_dcnn(b)) return P_OK;
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -469,3 +475,32 @@ cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, g
 
 #endif /* DCNN */
 
+#ifdef JOSEKI
+enum parse_code
+cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+
+	char buffer[512];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+
+	if (strcmp(e->name, "UCT"))  return P_OK;
+	struct joseki_dict *jdict = uct_get_jdict(e);
+	if (!jdict)  return P_OK;
+
+	for (int i = 0; i < 4; i++) {
+		hash_t h = b->qhash[i] & joseki_hash_mask;
+		coord_t *cc = jdict->patterns[h].moves[color - 1];
+		if (!cc) continue;
+		for (; !is_pass(*cc); cc++) {
+			if (coord_quadrant(*cc, b) != i)
+				continue;
+			sbprintf(buf, "%s ", coord2sstr(*cc, b));
+		}
+	}
+
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+#endif /* JOSEKI */

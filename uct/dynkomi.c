@@ -158,11 +158,11 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	 * By move 150 white should still be behind but should have
 	 * caught up enough to avoid resigning. */
 	int moves = board_large(b) ? 150 : 50;
-	if (!board_small(b)) {
-		l->moves[S_BLACK] = moves;
-		l->moves[S_WHITE] = moves;
-	}
-
+	if (real_board_size(b) == 15)  moves = 100;
+	if (board_small(b))            moves = 15;
+	l->moves[S_BLACK] = moves;
+	l->moves[S_WHITE] = moves;
+	
 	/* The real value of one stone is twice the komi so about 15 points.
 	 * But use a lower value to avoid being too pessimistic as black
 	 * or too optimistic as white. */

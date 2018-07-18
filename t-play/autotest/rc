@@ -8,15 +8,16 @@
 
 ### General parameters:
 
-# twogtp path - we need the gogui twogtp variant (the one that takes -black,
-# not --black as parameter)
-twogtp_path="/nfs/drahokam/pasky/gogui-1.1.10/bin/gogui-twogtp"
+# twogtp path
+# We need the gogui twogtp variant (the one that takes -black, not --black as parameter).
 # If you want handicap support, you will need a custom patch from:
-# http://pasky.or.cz/dev/pachi/gogui-handicap.diff
+#   http://pasky.or.cz/dev/pachi/gogui-handicap.diff
+# Or download patched release from https://github.com/lemonsqueeze/gogui/releases
+twogtp_path="/home/go/gogui-1.4.9/bin/gogui-twogtp"
 
 
 ### Players:
-# The player specification is later eval'd during the payring. You can use
+# The player specification is later eval'd during the pairing. You can use
 # $1, $2, ... placeholders within the specification to substitute various
 # parameters at the pairing time. The number parameter after player command
 # specification specifies how many parameters the specification takes.
@@ -26,13 +27,38 @@ twogtp_path="/nfs/drahokam/pasky/gogui-1.1.10/bin/gogui-twogtp"
 # some id, it's bad idea to tweak the definition in any way.
 
 # This is the reference player we use for our tests.
-player gnugo10 'gnugo --mode gtp --chinese-rules --capture-all-dead --level 10' 0
+# Hiratuka 10_36I (19x19, 13x13 or 9x9). Link no longer available, here's my copy:
+#   https://www.dropbox.com/s/aotkraae8sg08aw/Hira_10_36I_en.zip?dl=0
+#          10_37B is good too. Official link: (or search 平塚の囲碁 on www.vector.co.jp)
+#   https://www.vector.co.jp/soft/winnt/game/se513389.html
+# These are nice for testing (cpu only), later versions uses gpu so ymmv.
+player hira_3d        "hira -po 15000" 0
+player hira_2d        "hira -po 6000"  0
+player hira_1d        "hira -po 3000"  0
+player hira_1k        "hira -po 1500"  0
 
-# This is generic Pachi player that is being tested, we substitute particular
-# revision and specific parameters in the pairings.
+
+# GnuGo player, level 10
+# Probably best to avoid if possible: it doesn't resign lost games so wastes lots
+# of resources. The games also tend to be very noisy so have to play thousands of
+# them to get a good estimate. Better play a few games with a strong opponent which
+# is good at punishing Pachi's mistakes.
+#player gnugo10 "/usr/games/gnugo --mode gtp --chinese-rules --capture-all-dead --level 10" 0
+
+
+# Pachi player being tested. (5k sims, multithreaded, no dcnn)
+# Make native build for wanted boardsize to speed things up.
+# To test pachi build in ~/src/pachi use:
+player pachi5k_nodcnn        "runpachi ~/src/pachi --nodcnn -t =5000 max_tree_size=40,pondering=0" 0
+
+# Pachi                      (90k sims, multithreaded, no dcnn)
+player pachi90k_nodcnn       "runpachi ~/src/pachi --nodcnn -t =90000 max_tree_size=200,pondering=0" 0
+
+# Can also test different pachi versions from current directory:
+# We substitute particular revision and specific parameters in the pairings.
 # ${2:+,$2} means that if second parameter is passed, it will be inserted here,
 # comma-prepended, otherwise nothing will be inserted.
-player zamafmoggy5k './pachi-$1 games=5000,pass_all_alive,policy=ucb1amaf,playout=moggy${2:+,$2}' 2
+#player zamafmoggy5k './pachi-$1 -t =5000 pass_all_alive,policy=ucb1amaf,playout=moggy${2:+,$2}' 2
 
 
 ### Pairings:
@@ -54,5 +80,15 @@ player zamafmoggy5k './pachi-$1 games=5000,pass_all_alive,policy=ucb1amaf,playou
 
 # You will be editing this all the time. :)
 
-pairing 9 0.5 1 gnugo10 zamafmoggy5k 77d2d
-pairing 9 0.5 1 gnugo10 zamafmoggy5k 77d2d amaf_prior=0
+
+# hira vs pachi,   13x13 H2  (pachi is black)
+#pairing 13  h2  2 hira_1k  pachi5k_nodcnn
+
+
+# hira vs pachi,   19x19 even game
+#pairing 19  7.5 2 hira_1k  pachi90k_nodcnn
+
+
+# gnugo vs pachi,  15x15 reverse komi (pachi is white)
+#pairing 15 -7.5 1 gnugo10  pachi5k_nodcnn
+

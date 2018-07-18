@@ -2,8 +2,9 @@
 # This is autotest gathering tool, collecting game result info from
 # all clients and putting it in single place (which is completely
 # wiped otherwise).
+bin=`dirname $0`
 
-. ./autotest-lib
+. $bin/autotest-lib
 
 mkdir -p "r/"
 rm -f r/*

@@ -20,6 +20,7 @@
 #include "engines/replay.h"
 #include "ownermap.h"
 
+
 /* Running tests over gtp ? */
 static bool tunit_over_gtp = 1;
 static bool board_printed;
@@ -207,6 +208,46 @@ test_sar(struct board *b, char *arg)
 	return   (rres == eres);
 }
 
+static bool
+test_corner_seki(struct board *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg, board_size(b));
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "corner_seki %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+
+	assert(board_at(b, c) == S_NONE);
+	int rres = breaking_corner_seki(b, c, color);
+
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
+}
+
+static bool
+test_false_eye_seki(struct board *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg, board_size(b));
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "false_eye_seki %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+
+	assert(board_at(b, c) == S_NONE);
+	int rres = breaking_false_eye_seki(b, c, color);
+
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
+}
+
 
 static bool
 test_ladder(struct board *b, char *arg)
@@ -221,10 +262,10 @@ test_ladder(struct board *b, char *arg)
 
 	PRINT_TEST(b, "ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
 	
-	assert(board_at(b, c) == S_NONE);
-	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
-	assert(atari_neighbor);
-	int rres = is_ladder(b, c, atari_neighbor, true);
+	assert(board_at(b, c) == color);
+	group_t group = group_at(b, c);
+	assert(board_group_info(b, group).libs == 1);
+	int rres = is_ladder(b, group, true);
 	
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -243,11 +284,11 @@ test_ladder_any(struct board *b, char *arg)
 	args_end();
 
 	PRINT_TEST(b, "ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
-	
-	assert(board_at(b, c) == S_NONE);
-	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
-	assert(atari_neighbor);
-	int rres = is_ladder_any(b, c, atari_neighbor, true);
+
+	assert(board_at(b, c) == color);
+	group_t group = group_at(b, c);
+	assert(board_group_info(b, group).libs == 1);
+	int rres = is_ladder_any(b, group, true);
 	
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -282,10 +323,7 @@ test_wouldbe_ladder(struct board *b, char *arg)
 	group_t g = get_2lib_neighbor(b, c, stone_other(color));
 	assert(g); assert(board_at(b, g) == stone_other(color));
 	coord_t chaselib = c;
-	coord_t escapelib = board_group_info(b, g).lib[0];
-	if (escapelib == c)
-		escapelib = board_group_info(b, g).lib[1];
-	int rres = wouldbe_ladder(b, g, escapelib, chaselib, stone_other(color));
+	int rres = wouldbe_ladder(b, g, chaselib);
 	
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -308,10 +346,7 @@ test_wouldbe_ladder_any(struct board *b, char *arg)
 	group_t g = get_2lib_neighbor(b, c, stone_other(color));
 	assert(g); assert(board_at(b, g) == stone_other(color));
 	coord_t chaselib = c;
-	coord_t escapelib = board_group_info(b, g).lib[0];
-	if (escapelib == c)
-		escapelib = board_group_info(b, g).lib[1];
-	int rres = wouldbe_ladder_any(b, g, escapelib, chaselib, stone_other(color));
+	int rres = wouldbe_ladder_any(b, g, chaselib);
 	
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -334,7 +369,7 @@ test_useful_ladder(struct board *b, char *arg)
 	assert(board_at(b, c) == S_NONE);
 	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
 	assert(atari_neighbor);
-	int ladder = is_ladder(b, c, atari_neighbor, true);  assert(ladder);
+	int ladder = is_ladder(b, atari_neighbor, true);  assert(ladder);
 	int rres = useful_ladder(b, atari_neighbor);
 	
 	PRINT_RES(rres == eres);
@@ -470,7 +505,7 @@ test_moggy_status(struct board *b, char *arg)
 	
 	struct playout_policy *policy = playout_moggy_init(NULL, b, NULL);
 	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
-	struct board_ownermap ownermap;  board_ownermap_init(&ownermap);
+	struct ownermap ownermap;  ownermap_init(&ownermap);
 	
 	/* Get final status estimate after a number of moggy games */
 	int wr = 0;
@@ -499,8 +534,8 @@ test_moggy_status(struct board *b, char *arg)
 	bool ret = true;
 	for (int i = 0; i < n; i++) {
 		coord_t c = status_at[i];
-		enum point_judgement j = board_ownermap_judge_point(&ownermap, c, 0.8);
-		if (j == PJ_UNKNOWN) j = board_ownermap_judge_point(&ownermap, c, 0.67);		
+		enum point_judgement j = ownermap_judge_point(&ownermap, c, 0.8);
+		if (j == PJ_UNKNOWN) j = ownermap_judge_point(&ownermap, c, 0.67);		
 		enum stone color = (enum stone)j;
 		if (j == PJ_UNKNOWN)
 			color = (ownermap.map[c][S_BLACK] > ownermap.map[c][S_WHITE] ? S_BLACK : S_WHITE);
@@ -539,6 +574,8 @@ static t_unit_cmd commands[] = {
 	{ "two_eyes",               test_two_eyes,          1 },
 	{ "moggy moves",            test_moggy_moves,       0 },
 	{ "moggy status",           test_moggy_status,      1 },
+	{ "corner_seki",            test_corner_seki,       1 },
+	{ "false_eye_seki",         test_false_eye_seki,    1 },
 	{ "board_undo_stress_test", board_undo_stress_test, 0 },
 	{ 0, 0, 0 }
 };

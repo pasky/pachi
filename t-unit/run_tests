@@ -14,3 +14,5 @@ for f in `git ls-files *.t | tac`; do
     echo "$cmd"
     (cd ..; $cmd) || die "Failed"
 done
+
+( cd ..; ./pachi -u t-unit/blank.t )

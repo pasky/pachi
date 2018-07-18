@@ -2,37 +2,50 @@
 # Trusted build attendant
 
 die() {  echo "spudfrog: $@"; exit 1;  }
+max() {  [ $1 -gt $2 ] && echo $1 || echo $2;  }
 [ -n "$OPT" ] || die "i need to be called from Makefile"
 
 red="[31;1m";     green="[32;1m";  yellow="[33;1m";  blue="[34;1m"
 purple="[35;1m";  cyan="[36;1m";   end="[0m"
 ngreen="[32m";    white="[37;1m"   gray="[30;1m"
 
-                      build_type="${green}[native]${end}"
-[ "$GENERIC" = 1 ] && build_type="${cyan}[generic]${end}"
+cc1=$( $CC $CFLAGS -E -v - </dev/null 2>&1 | grep cc1 | head -1 | tr -d '\\"' )
 
-                      dcnn="${cyan}[!dcnn]${end}"
-[ "$DCNN" = 1 ]    && dcnn="${green}[dcnn]${end}"
+                                         build="${green}[native]${end}"
+echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
 
-                      opt_flag="${cyan}[$OPT]${end}"
-[ "$OPT" = "-O3" ] && opt_flag="${green}[$OPT]${end}"
+                      dcnn="  ${cyan}[!dcnn]${end}"
+[ "$DCNN" = 1 ]    && dcnn="  ${green}[dcnn]${end}"
 
-                              floating="${green}[float]${end}"
-[ "$DOUBLE_FLOATING" = 1 ] && floating="${cyan}[double]${end}"
+                      opt="  ${cyan}[$OPT]${end}"
+[ "$OPT" = "-O3" ] && opt="  ${green}[$OPT]${end}"
 
                         boardsize=""
 [ -n "$BOARD_SIZE" ] && boardsize="  ${cyan}[${BOARD_SIZE}x${BOARD_SIZE}]${end}"
 
-status="$build_type  $dcnn  $opt_flag  $floating$boardsize"
+                      fifo=""
+[ "$FIFO" = 1 ]    && fifo="  ${cyan}[fifo]${end}"
+
+                    joseki=""
+[ -n "$JOSEKI" ] && joseki="  ${cyan}[joseki]${end}"
+
+                              float=""
+[ "$DOUBLE_FLOATING" = 1 ] && float="  ${cyan}[double]${end}"
+
+                          distributed=""
+[ "$DISTRIBUTED" = 1 ] && distributed="  ${cyan}[distributed]${end}"
+
+
+status="$build$dcnn$opt$boardsize$fifo$joseki$float$distributed"
 
 raw=${status//?????m/}; raw=${raw//${end}/}
-n=$[45-${#raw}];  n1=$[$n/2];  n2=$[$n-$n1]
+n=`max $[45-${#raw}] 0`;  n1=$[$n/2];  n2=$[$n-$n1]
 
 spud=$gray
-printf "%s          (.)~(.)                                           $end\n" $spud
-printf "%s         (-------)                                          $end\n" $spud
-printf "%s   .----%sooO%s-----%sOoo%s--------------------------------.$end\n" $gray $spud $gray $spud $gray
+printf "%s            (.)~(.)                                         $end\n" $spud
+printf "%s           (-------)                                        $end\n" $spud
+printf "%s   .------%sooO%s-----%sOoo%s------------------------------.$end\n" $gray $spud $gray $spud $gray
 printf "%s  | ${end} %*s%s%*s $gray |$end\n"                                  $gray  $n1 ""  "$status"  $n2 ""
 printf "%s   ᛫-----------------------------------------------᛫$end\n" $gray
-printf "%s         ( )   ( )                                          $end  \n" $spud
+printf "%s           ( )   ( )                                        $end  \n" $spud
 printf "\n"

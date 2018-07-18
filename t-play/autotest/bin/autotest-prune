@@ -3,6 +3,7 @@
 # pairings. Note that this removes only pairing results, you need
 # to adjust the rc file manually if you haven't removed the pairing
 # specifiers from there yet.
+bin=`dirname $0`
 
 mask="$1"
 if [ -z "$mask" ]; then
@@ -11,7 +12,7 @@ if [ -z "$mask" ]; then
 	echo "Use \`$0 *\` to remove all pairings." >&2
 	exit 1
 fi
-. ./autotest-lib
+. $bin/autotest-lib
 
 echo "Removing $(ls r/$mask.dat | wc -l) result pairs..."
 rm -f r/$mask.dat r/$mask.summary.dat r/$mask.html r/$mask.beacon r/$mask.error

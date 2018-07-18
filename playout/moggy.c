@@ -198,7 +198,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bo
 		return false;
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
-	if (atari_neighbor && is_ladder(b, m->coord, atari_neighbor, middle_ladder)
+	if (atari_neighbor && is_ladder(b, atari_neighbor, middle_ladder)
 	    && !can_countercapture(b, atari_neighbor, NULL, 0))
 		return false;
 	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord, b), (int) pi, pp->pat3_gammas[(int) pi]);
@@ -242,7 +242,7 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 		mq_gamma_print(q, gammas, b, "Pattern");
 }
 
-
+#ifdef MOGGY_JOSEKI
 static void
 joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
 {
@@ -266,6 +266,7 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 	if (q->moves > 0 && PLDEBUGL(5))
 		mq_print(q, b, "Joseki");
 }
+#endif /* MOGGY_JOSEKI */
 
 static void
 global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
@@ -349,8 +350,7 @@ local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, st
 
 	for (int i = 0; i < 2; i++) {
 		coord_t chase = board_group_info(b, group).lib[i];
-		coord_t escape = board_group_info(b, group).lib[1 - i];
-		if (wouldbe_ladder(b, group, escape, chase, board_at(b, group)))
+		if (wouldbe_ladder(b, group, chase))
 			mq_add(q, chase, 1<<MQ_LADDER);
 	}
 
@@ -707,6 +707,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 			return mq_pick(&q);
 	}
 
+#ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
 	if (pp->josekirate > fast_random(100)) {
 		struct move_queue q; q.moves = 0;
@@ -714,6 +715,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		if (q.moves > 0)
 			return mq_pick(&q);
 	}
+#endif
 
 	/* Fill board */
 	if (pp->fillboardtries > 0) {
@@ -845,9 +847,11 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 	if (pp->capturerate > 0)
 		global_atari_check(p, b, to_play, &q);
 
+#ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
 	if (pp->josekirate > 0)
 		joseki_check(p, b, to_play, &q);
+#endif
 
 #if 0
 	/* Average length of the queue is 1.4 move. */
@@ -909,14 +913,12 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			bool ladderable = false;
 			for (int i = 0; i < 2; i++) {
 				coord_t chase = board_group_info(b, g).lib[i];
-				coord_t escape = board_group_info(b, g).lib[1 - i];
-				if (wouldbe_ladder(b, g, escape, chase, board_at(b, g))) {
+				if (wouldbe_ladder(b, g, chase)) {
 					add_prior_value(map, chase, 1, games);
 					ladderable = true;
 				}
 			}
-			if (ladderable)
-				return; // do not suggest the other lib at all
+			if (ladderable)  return; // do not suggest the other lib at all
 		}
 
 		if (!pp->atarirate)
@@ -1036,7 +1038,7 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
 }
 
 
-#define permit_move(c)  playout_permit(p, b, c, m->color)
+#define permit_move(c)  playout_permit(p, b, c, m->color, random_move)
 
 /* alt parameter tells permit if we just want a yes/no answer for this move
  * (alt=false) or we're ok with redirects if it doesn't pass (alt=true).
@@ -1045,7 +1047,7 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
  * permit() needs to call permit() again on that move. This time alt will be
  * false though (we just want a yes/no answer) so it won't recurse again. */
 static bool
-playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt)
+playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt, bool random_move)
 {
 	struct moggy_policy *pp = p->data;
 	struct moggy_state *ps = b->ps;
@@ -1114,9 +1116,15 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 	}
 
 eyefill_skip:
-	if (breaking_3_stone_seki(b, m->coord, m->color))
-		return false;
-
+	/* Check special sekis moggy would break. */
+	if (check_special_sekis(b, m)) {
+		if (breaking_3_stone_seki(b, m->coord, m->color))
+			return false;
+		if (check_endgame_sekis(b, m, random_move) &&
+		    (breaking_corner_seki(b, m->coord, m->color) ||
+		     breaking_false_eye_seki(b, m->coord, m->color)))
+			return false;
+	}
 	return true;
 }
 
@@ -1154,7 +1162,7 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	pp->lcapturerate = 90;
 	pp->atarirate = pp->josekirate = -1U;
 	pp->nakaderate = 60;
-	pp->korate = 40; pp->koage = 4;
+	pp->korate = 40; pp->koage = 3;
 	pp->alwaysccaprate = 40;
 	pp->eyefillrate = 60;
 	pp->nlibrate = 25;

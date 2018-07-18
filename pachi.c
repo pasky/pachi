@@ -7,8 +7,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "pachi.h"
 #include "board.h"
+#include "pachi.h"
 #include "debug.h"
 #include "engine.h"
 #include "engines/replay.h"
@@ -36,6 +36,7 @@ bool debug_boardprint = true;
 long verbose_logs = 0;
 int seed;
 char *forced_ruleset = NULL;
+bool nopassfirst = false;
 
 enum engine_id {
 	E_RANDOM,
@@ -44,8 +45,12 @@ enum engine_id {
 	E_PATTERNPLAY,
 	E_MONTECARLO,
 	E_UCT,
+#ifdef DISTRIBUTED
 	E_DISTRIBUTED,
+#endif
+#ifdef JOSEKI
 	E_JOSEKI,
+#endif
 #ifdef DCNN
 	E_DCNN,
 #endif
@@ -59,8 +64,12 @@ static engine_init_t engine_init[E_MAX] = {
 	engine_patternplay_init,
 	engine_montecarlo_init,
 	engine_uct_init,
+#ifdef DISTRIBUTED
 	engine_distributed_init,
+#endif
+#ifdef JOSEKI
 	engine_joseki_init,
+#endif
 #ifdef DCNN
 	engine_dcnn_init,
 #endif
@@ -85,7 +94,9 @@ usage()
 		"  -c, --chatfile FILE               set kgs chatfile \n"
                 "      --compile-flags               show pachi's compile flags \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
+		"      --dcnn                        abort if dcnn isn't used \n"
 		"  -D                                don't log board diagrams \n"
+		"      --nopassfirst                 don't pass first (needed for kgs) \n"
 		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
 		"                                    uct, dcnn, patternplay, replay, random, montecarlo, distributed \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
@@ -93,8 +104,9 @@ usage()
 		"                                    listen on given port if HOST not given, otherwise \n"
 		"                                    connect to remote host. \n"
 		"  -h, --help                        show usage \n"
+		"      --kgs                         turn on kgs-specific behavior (currently --nopassfirst) \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
-		"      --no-dcnn                     disable dcnn \n"
+		"      --nodcnn, --no-dcnn           disable dcnn \n"
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
@@ -141,20 +153,26 @@ show_version(FILE *s)
 
 #define OPT_FUSEKI_TIME   256
 #define OPT_NO_DCNN       257
-#define OPT_VERBOSE_CAFFE 258
-#define OPT_COMPILE_FLAGS 259
+#define OPT_DCNN          258
+#define OPT_VERBOSE_CAFFE 259
+#define OPT_COMPILE_FLAGS 260
+#define OPT_NOPASSFIRST   261
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "chatfile",    required_argument, 0, 'c' },
 	{ "compile-flags", no_argument,     0, OPT_COMPILE_FLAGS },
 	{ "debug-level", required_argument, 0, 'd' },
+	{ "dcnn",        no_argument,       0, OPT_DCNN },
 	{ "engine",      required_argument, 0, 'e' },
 	{ "fbook",       required_argument, 0, 'f' },
 	{ "gtp-port",    required_argument, 0, 'g' },
 	{ "help",        no_argument,       0, 'h' },
+	{ "kgs",         no_argument,       0, OPT_NOPASSFIRST },
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
 	{ "no-dcnn",     no_argument,       0, OPT_NO_DCNN },
+	{ "nodcnn",      no_argument,       0, OPT_NO_DCNN },
+	{ "nopassfirst", no_argument,       0, OPT_NOPASSFIRST },
 	{ "rules",       required_argument, 0, 'r' },
 	{ "seed",        required_argument, 0, 's' },
 	{ "time",        required_argument, 0, 't' },
@@ -176,6 +194,7 @@ int main(int argc, char *argv[])
 	char *fbookfile = NULL;
 	FILE *file = NULL;
 	bool verbose_caffe = false;
+	bool dcnn_required = false;
 
 	setlinebuf(stdout);
 	setlinebuf(stderr);
@@ -202,10 +221,14 @@ int main(int argc, char *argv[])
 				else if (!strcasecmp(optarg, "replay"))		engine = E_REPLAY;
 				else if (!strcasecmp(optarg, "montecarlo"))	engine = E_MONTECARLO;
 				else if (!strcasecmp(optarg, "uct"))		engine = E_UCT;
+#ifdef DISTRIBUTED
 				else if (!strcasecmp(optarg, "distributed"))	engine = E_DISTRIBUTED;
+#endif
 				else if (!strcasecmp(optarg, "patternscan"))	engine = E_PATTERNSCAN;
 				else if (!strcasecmp(optarg, "patternplay"))	engine = E_PATTERNPLAY;
+#ifdef JOSEKI
 				else if (!strcasecmp(optarg, "joseki"))		engine = E_JOSEKI;
+#endif
 #ifdef DCNN
 				else if (!strcasecmp(optarg, "dcnn"))		engine = E_DCNN;
 #endif
@@ -216,6 +239,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'D':
 				debug_boardprint = false;
+				break;
+			case OPT_DCNN:
+				dcnn_required = true;
 				break;
 			case 'f':
 				fbookfile = strdup(optarg);
@@ -237,6 +263,9 @@ int main(int argc, char *argv[])
 				break;
 			case OPT_NO_DCNN:
 				disable_dcnn();
+				break;
+			case OPT_NOPASSFIRST:
+				nopassfirst = true;
 				break;
 			case 'r':
 				forced_ruleset = strdup(optarg);
@@ -285,12 +314,13 @@ int main(int argc, char *argv[])
 	fast_srandom(seed);
 	
 	if (!verbose_caffe)      quiet_caffe(argc, argv);
-	if (log_port)		 open_log_port(log_port);	
+	if (log_port)            open_log_port(log_port);
 	if (testfile)		 return unit_test(testfile);
 	if (DEBUGL(0))           show_version(stderr);
 	if (getenv("DATA_DIR"))
 		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
+	if (dcnn_required)       require_dcnn();
 
 	struct board *b = board_init(fbookfile);
 	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);

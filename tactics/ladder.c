@@ -20,25 +20,28 @@
 
 
 bool
-is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
+is_border_ladder(struct board *b, group_t laddered)
 {
+	coord_t coord = board_group_info(b, laddered).lib[0];
+	enum stone lcolor = board_at(b, group_base(laddered));
+	
 	if (can_countercapture(b, laddered, NULL, 0))
 		return false;
 	
 	int x = coord_x(coord, b), y = coord_y(coord, b);
 
-	if (DEBUGL(5))
-		fprintf(stderr, "border ladder\n");
+	if (DEBUGL(5))  fprintf(stderr, "border ladder\n");
+	
 	/* Direction along border; xd is horiz. border, yd vertical. */
 	int xd = 0, yd = 0;
 	if (board_atxy(b, x + 1, y) == S_OFFBOARD || board_atxy(b, x - 1, y) == S_OFFBOARD)
 		yd = 1;
 	else
-		xd = 1;
+		xd = 1;	
 	/* Direction from the border; -1 is above/left, 1 is below/right. */
 	int dd = (board_atxy(b, x + yd, y + xd) == S_OFFBOARD) ? 1 : -1;
-	if (DEBUGL(6))
-		fprintf(stderr, "xd %d yd %d dd %d\n", xd, yd, dd);
+	if (DEBUGL(6))  fprintf(stderr, "xd %d yd %d dd %d\n", xd, yd, dd);
+	
 	/* | ? ?
 	 * | . O #
 	 * | c X #
@@ -46,8 +49,8 @@ is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	 * | ? ?   */
 	/* This is normally caught, unless we have friends both above
 	 * and below... */
-	if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor
-	    && board_atxy(b, x - xd * 2, y - yd * 2) == lcolor)
+	if (board_atxy(b, x + xd * 2, y + yd * 2) == lcolor &&
+	    board_atxy(b, x - xd * 2, y - yd * 2) == lcolor)
 		return false;
 
 	/* ...or can't block where we need because of shortage
@@ -56,11 +59,9 @@ is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 	int libs1 = board_group_info(b, g1).libs;
 	group_t g2 = group_atxy(b, x - xd - yd * dd, y - yd - xd * dd);
 	int libs2 = board_group_info(b, g2).libs;
-	if (DEBUGL(6))
-		fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);
+	if (DEBUGL(6))  fprintf(stderr, "libs1 %d libs2 %d\n", libs1, libs2);	
 	/* Already in atari? */
-	if (libs1 < 2 || libs2 < 2)
-		return false;
+	if (libs1 < 2 || libs2 < 2)  return false;
 	/* Would be self-atari? */
 	if (libs1 < 3 && (board_atxy(b, x + xd * 2, y + yd * 2) != S_NONE
 			  || coord_is_adjecent(board_group_info(b, g1).lib[0], board_group_info(b, g1).lib[1], b)))
@@ -72,13 +73,10 @@ is_border_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lc
 }
 
 
-
-static int middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
-			      struct move_queue *prev_ccq, coord_t prevmove, int len);
+static int middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len);
 
 static int
-middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, struct move_queue *ccq,
-		    coord_t prevmove, int len)
+middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
 {
 	laddered = group_at(b, laddered);
 	
@@ -88,13 +86,11 @@ middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, struct
 	}
 
 	if (!laddered || board_group_info(b, laddered).libs == 1) {
-		if (DEBUGL(6))
-			fprintf(stderr, "* we can capture now\n");
+		if (DEBUGL(6))  fprintf(stderr, "* we can capture now\n");
 		return len;
 	}
 	if (board_group_info(b, laddered).libs > 2) {
-		if (DEBUGL(6))
-			fprintf(stderr, "* we are free now\n");
+		if (DEBUGL(6))  fprintf(stderr, "* we are free now\n");
 		return 0;
 	}
 
@@ -121,36 +117,18 @@ middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, struct
 		coord_t ataristone = board_group_info(b, laddered).lib[liblist[i]];
 
 		with_move(b, ataristone, stone_other(lcolor), {
-			/* If we just played self-atari, abandon ship. */
-			if (board_group_info(b, group_at(b, ataristone)).libs <= 1)
-				break;
-			
-			if (DEBUGL(6))
-				fprintf(stderr, "(%d=0) ladder atari %s (%d libs)\n", i, coord2sstr(ataristone, b), board_group_info(b, group_at(b, ataristone)).libs);
+			/* No suicides, please. */
+			if (!group_at(b, ataristone))
+					break;
 
-			int l = middle_ladder_walk(b, laddered, lcolor, ccq, prevmove, len);
-			if (l)
-				with_move_return(l);
+			if (DEBUGL(6))  fprintf(stderr, "(%d=0) ladder atari %s (%d libs)\n", i, coord2sstr(ataristone, b), board_group_info(b, group_at(b, ataristone)).libs);
+
+			int l = middle_ladder_walk(b, laddered, lcolor, prevmove, len);
+			if (l)  with_move_return(l);
 		});
-
 	}
 	
 	return 0;
-}
-
-static void
-add_chaser_captures(struct board *b, group_t laddered, enum stone lcolor, struct move_queue *ccq,
-		    coord_t nextmove)
-{
-	foreach_neighbor(b, nextmove, {
-		if (board_at(b, c) == stone_other(lcolor) && board_group_info(b, group_at(b, c)).libs == 1) {
-			/* Ladder stone we can capture later, add it to the list */
-			coord_t lib = board_group_info(b, group_at(b, c)).lib[0];
-			if (DEBUGL(6))
-				fprintf(stderr, "adding potential chaser capture %s\n", coord2sstr(lib, b));
-			mq_add(ccq, lib, 0);
-		}
-	});
 }
 
 /* Can we escape by capturing chaser ? */
@@ -173,12 +151,11 @@ chaser_capture_escapes(struct board *b, group_t laddered, enum stone lcolor, str
 		}
 
 		with_move_strict(b, lib, lcolor, {
-			if (!middle_ladder_chase(b, laddered, lcolor, ccq, lib, 0))
+			if (!middle_ladder_chase(b, laddered, lcolor, lib, 0))
 				with_move_return(true); /* escape ! */		
 		});
 
-		if (DEBUGL(6))
-			fprintf(stderr, "-------------------------- done %s ------------------------------\n", coord2sstr(lib, b));
+		if (DEBUGL(6))  fprintf(stderr, "-------------------------- done %s ------------------------------\n", coord2sstr(lib, b));
 	}
 	
 	return false;
@@ -193,9 +170,7 @@ chaser_capture_escapes(struct board *b, group_t laddered, enum stone lcolor, str
  * group captured, false if not (i.e. for each branch, laddered group can
  * gain three liberties). */
 static int
-middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
-		   struct move_queue *prev_ccq, coord_t prevmove,
-		   int len)
+middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
 {
 	assert(board_group_info(b, laddered).libs == 1);
 
@@ -203,25 +178,23 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
 	if (b->ko.coord != pass)
 		foreach_neighbor(b, b->last_move.coord, {
 				if (group_at(b, c) == laddered) {
-					if (DEBUGL(6))
-						fprintf(stderr, "* ko, no ladder\n");
+					if (DEBUGL(6))  fprintf(stderr, "* ko, no ladder\n");
 					return 0;
 				}
 		});
 
 	/* Check countercaptures */
-	struct move_queue ccq = *prev_ccq;
-	if (prevmove != pass)
-		add_chaser_captures(b, laddered, lcolor, &ccq, prevmove);
+	struct move_queue ccq = { .moves = 0 };
+	can_countercapture(b, laddered, &ccq, 0);
+	
 	if (chaser_capture_escapes(b, laddered, lcolor, &ccq))
 		return 0;
 
 	/* Escape then */
 	coord_t nextmove = board_group_info(b, laddered).lib[0];
-	if (DEBUGL(6))
-		fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove, b));
+	if (DEBUGL(6))  fprintf(stderr, "  ladder escape %s\n", coord2sstr(nextmove, b));
 	with_move_strict(b, nextmove, lcolor, {
-		len = middle_ladder_chase(b, laddered, lcolor, &ccq, nextmove, len + 1);
+		len = middle_ladder_chase(b, laddered, lcolor, nextmove, len + 1);
 	});
 
 	return len;
@@ -230,104 +203,86 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor,
 static __thread int length = 0;
 
 bool
-is_middle_ladder(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
+is_middle_ladder(struct board *b, group_t laddered)
 {
-	/* TODO: Remove the redundant parameters. */
-	assert(board_group_info(b, laddered).libs == 1);
-	assert(board_group_info(b, laddered).lib[0] == coord);
-	assert(board_at(b, laddered) == lcolor);
+	coord_t coord = board_group_info(b, laddered).lib[0];
+	enum stone lcolor = board_at(b, group_base(laddered));
 
 	/* If we can move into empty space or do not have enough space
 	 * to escape, this is obviously not a ladder. */
 	if (immediate_liberty_count(b, coord) != 2) {
-		if (DEBUGL(5))
-			fprintf(stderr, "no ladder, wrong free space\n");
+		if (DEBUGL(5))  fprintf(stderr, "no ladder, wrong free space\n");
 		return false;
 	}
 
 	/* A fair chance for a ladder. Group in atari, with some but limited
 	 * space to escape. Time for the expensive stuff - play it out and
 	 * start selective 2-liberty search. */
+	length = middle_ladder_walk(b, laddered, lcolor, pass, 0);
 
-	/* We could escape by countercapturing a group. */
-	struct move_queue ccq = { .moves = 0 };
-	can_countercapture(b, laddered, &ccq, 0);
-
-	length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
-
-	if (DEBUGL(6) && length) {
-		fprintf(stderr, "is_ladder(): stones: %i  length: %i\n",
-			group_stone_count(b, laddered, 50), length);	    
-	}
+	if (DEBUGL(6) && length)  fprintf(stderr, "is_ladder(): stones: %i  length: %i\n",
+					  group_stone_count(b, laddered, 50), length);
 
 	return (length != 0);
 }
 
 bool
-is_middle_ladder_any(struct board *b, coord_t coord, group_t laddered, enum stone lcolor)
+is_middle_ladder_any(struct board *b, group_t laddered)
 {
-	/* TODO: Remove the redundant parameters. */
-	assert(board_group_info(b, laddered).libs == 1);
-	assert(board_group_info(b, laddered).lib[0] == coord);
-	assert(board_at(b, laddered) == lcolor);
+	enum stone lcolor = board_at(b, group_base(laddered));
 	
-	if (is_selfatari(b, lcolor, coord))
-		return true;
-	
-	/* We could escape by countercapturing a group. */
-	struct move_queue ccq = { .moves = 0 };
-	can_countercapture(b, laddered, &ccq, 0);
-	
-	length = middle_ladder_walk(b, laddered, lcolor, &ccq, pass, 0);
+	length = middle_ladder_walk(b, laddered, lcolor, pass, 0);
 	return (length != 0);
 }
 
 bool
-wouldbe_ladder(struct board *b, group_t group, coord_t escapelib, coord_t chaselib, enum stone lcolor)
+wouldbe_ladder(struct board *b, group_t group, coord_t chaselib)
 {
 	assert(board_group_info(b, group).libs == 2);
-	assert(board_at(b, group) == lcolor);
+	
+	enum stone lcolor = board_at(b, group_base(group));
+	enum stone other_color = stone_other(lcolor);
+	coord_t escapelib = board_group_other_lib(b, group, chaselib);
 
-	if (DEBUGL(6))
-		fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
-			stone2str(lcolor), coord2sstr(escapelib, b), coord2sstr(chaselib, b));
+	if (DEBUGL(6))  fprintf(stderr, "would-be ladder check - does %s %s play out chasing move %s?\n",
+				stone2str(lcolor), coord2sstr(escapelib, b), coord2sstr(chaselib, b));
 
 	if (immediate_liberty_count(b, escapelib) != 2) {
-		if (DEBUGL(5))
-			fprintf(stderr, "no ladder, or overly trivial for a ladder\n");
+		if (DEBUGL(5))  fprintf(stderr, "no ladder, or overly trivial for a ladder\n");
 		return false;
 	}
 
 	// FIXME should assert instead here
 	// See ~/src/pachi_bugs/silly_misread3 for example that breaks it
-	if (!board_is_valid_play(b, stone_other(lcolor), chaselib) ||
-	    is_selfatari(b, stone_other(lcolor), chaselib) )   // !can_play_on_lib() sortof       
+	if (!board_is_valid_play(b, other_color, chaselib) ||
+	    is_selfatari(b, other_color, chaselib) )   // !can_play_on_lib() sortof       
 		return false;
 
-	bool is_ladder = false;
-	with_move(b, chaselib, stone_other(lcolor), {
-		is_ladder = is_middle_ladder_any(b, board_group_info(b, group).lib[0], group, lcolor);
+	bool ladder = false;
+	with_move(b, chaselib, other_color, {
+		ladder = is_ladder_any(b, group, true);
 	});
 	
-	return is_ladder;
+	return ladder;
 }
 
 
 bool
-wouldbe_ladder_any(struct board *b, group_t group, coord_t escapelib, coord_t chaselib, enum stone lcolor)
+wouldbe_ladder_any(struct board *b, group_t group, coord_t chaselib)
 {
 	assert(board_group_info(b, group).libs == 2);
-	assert(board_at(b, group) == lcolor);
+	
+	enum stone lcolor = board_at(b, group_base(group));
+	enum stone other_color = stone_other(lcolor);
 
-	// FIXME should assert instead here	
-	if (!board_is_valid_play(b, stone_other(lcolor), chaselib) ||
-	    is_selfatari(b, stone_other(lcolor), chaselib) )   // !can_play_on_lib() sortof       
+	// FIXME should assert instead here
+	if (!board_is_valid_play(b, other_color, chaselib) ||
+	    is_selfatari(b, other_color, chaselib) )   // !can_play_on_lib() sortof       
 		return false;
 
 	bool ladder = false;
-	with_move(b, chaselib, stone_other(lcolor), {
-		assert(group_at(b, group) == group);
-		ladder = is_ladder_any(b, escapelib, group, true);
+	with_move(b, chaselib, other_color, {
+		ladder = is_ladder_any(b, group, true);
 	});
 
 	return ladder;
@@ -366,16 +321,15 @@ useful_ladder(struct board *b, group_t laddered)
 	// XXX can need to walk ladder twice to become useful ...
 	bool still_safe = false, cap_ok = false;
 	with_move(b, lib, lcolor, {
-		if (!group_at(b, lib))
-			break;
+		if (!group_at(b, lib))  break;
 		
 		group_t g = group_at(b, lib);
 		// Try diff move order, could be suicide !
 		for (int i = 0; !cap_ok && i < board_group_info(b, g).libs; i++) {
 			coord_t cap = board_group_info(b, g).lib[i];
 			with_move(b, cap, stone_other(lcolor), {				       
-				if (!group_at(b, lib) || !group_at(b, cap))
-					break;				
+				if (!group_at(b, lib) || !group_at(b, cap))  break;
+				
 				coord_t cap = board_group_info(b, group_at(b, lib)).lib[0];						
 				with_move(b, cap, stone_other(lcolor), {
 						assert(!group_at(b, lib));
@@ -385,13 +339,12 @@ useful_ladder(struct board *b, group_t laddered)
 			});
 		}
 	});
-	if (still_safe)
-		return false;
+	if (still_safe)  return false;
 
 	/* Does it look useful as selfatari ? */
 	foreach_neighbor(b, lib, {
-		if (board_at(b, c) != S_NONE)
-			continue;
+		if (board_at(b, c) != S_NONE)  continue;
+		
 		with_move(b, c, stone_other(lcolor), {
 			if (board_group_info(b, group_at(b, c)).libs - 1 <= 1)
 				break;
@@ -446,15 +399,13 @@ harmful_ladder_atari(struct board *b, coord_t atari, enum stone color)
 		return false;
 
 	foreach_neighbor(b, atari, {
-		if (board_at(b, c) != stone_other(color))
-			continue;
-		group_t g = group_at(b, c);
-		if (board_group_info(b, g).libs != 2)
-			continue;
+		if (board_at(b, c) != stone_other(color))  continue;
 		
-		coord_t escape = board_group_other_lib(b, g, atari);
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)      continue;
+		
 		if (ladder_with_tons_of_double_ataris(b, g, color) &&              // getting ugly ...
-		    !wouldbe_ladder_any(b, g, escape, atari, stone_other(color)))  // and non-working ladder
+		    !wouldbe_ladder_any(b, g, atari))                              // and non-working ladder
 			return true;
 	});
 

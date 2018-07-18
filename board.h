@@ -141,7 +141,7 @@ struct board_statics {
 	int nei8[8], dnei[4];
 
 	/* Coordinates zobrist hashes (black and white) */
-	hash_t h[BOARD_MAX_COORDS][2];	
+	hash_t h[2][BOARD_MAX_COORDS];
 
 	/* Cached information on x-y coordinates so that we avoid division. */
 	uint8_t coord[BOARD_MAX_COORDS][2];
@@ -246,8 +246,11 @@ FB_ONLY(int last_ko_age);
 FB_ONLY(hash_t history_hash)[1 << history_hash_bits];
 	/* Hash of current board position. */
 FB_ONLY(hash_t hash);
+
+#ifdef JOSEKI
 	/* Hash of current board position quadrants. */
 FB_ONLY(hash_t qhash)[4];
+#endif
 };
 
 struct undo_merge {
@@ -285,14 +288,15 @@ struct board_undo {
 
 #ifdef BOARD_SIZE
 /* Avoid unused variable warnings */
-#define board_size(b_) (((b_) == (b_)) ? BOARD_SIZE + 2 : 0)
-#define board_size2(b_) (board_size(b_) * board_size(b_))
-#define real_board_size(b_)  (((b_) == (b_)) ? BOARD_SIZE : 0)
+#define board_size(b)  (((b) == (b)) ? BOARD_SIZE + 2 : 0)
+#define board_size2(b) (board_size(b) * board_size(b))
 #else
-#define board_size(b_) ((b_)->size)
-#define board_size2(b_) ((b_)->size2)
-#define real_board_size(b_) ((b_)->size - 2)
+#define board_size(b)  ((b)->size)
+#define board_size2(b) ((b)->size2)
 #endif
+
+#define real_board_size(b)  (board_size(b) - 2)
+#define real_board_size2(b) (real_board_size(b) * real_board_size(b))
 
 /* This is a shortcut for taking different action on smaller
  * and large boards (e.g. picking different variable defaults).
@@ -338,7 +342,7 @@ struct board_undo {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
-#define hash_at(b_, coord, color) (board_statics.h[coord][((color) == S_BLACK ? 1 : 0)])
+#define hash_at(b_, coord, color) (board_statics.h[((color) == S_BLACK ? 1 : 0)][coord])
 
 struct board *board_init(char *fbookfile);
 struct board *board_copy(struct board *board2, struct board *board1);
@@ -508,12 +512,8 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 #define foreach_in_group(board_, group_) \
 	do { \
 		struct board *board__ = board_; \
-		coord_t c = group_base(group_); \
-		coord_t c2 = c; c2 = groupnext_at(board__, c2); \
-		do {
+		for (coord_t c = group_base(group_); c; c = groupnext_at(board__, c))
 #define foreach_in_group_end \
-			c = c2; c2 = groupnext_at(board__, c2); \
-		} while (c != 0); \
 	} while (0)
 
 /* NOT VALID inside of foreach_point() or another foreach_neighbor(), or rather

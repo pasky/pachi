@@ -1,0 +1,12 @@
+#!/bin/sh
+# Simple wrapper that runs pachi from its directory
+
+die()   {  echo "$@"; exit 1;  }
+usage() {  die "Usage: runpachi <pachi_dir> <pachi_opts>";  }
+
+dir=`eval echo "$1"`		# make '~' work
+shift
+
+[ -d "$dir" ] || usage
+cd $dir
+exec ./pachi $@

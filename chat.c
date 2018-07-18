@@ -77,22 +77,23 @@ void chat_done() {
 /* Reply to a chat. When not playing, color is S_NONE and all remaining parameters are undefined.
  * If some matching entries have not yet been displayed we pick randomly among them. Otherwise
  * we pick randomly among all matching entries. */
-char
-*generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
-	      int playouts, int machines, int threads, double winrate, double extra_komi) {
+char *
+generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
+	      int playouts, int machines, int threads, double winrate, double extra_komi, char *score_est) {
 
-	static char reply[1024];
+	static char buffer[1024];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	if (!chat_table) {
 		if (strncasecmp(cmd, "winrate", 7)) return NULL;
 		if (color == S_NONE) return not_playing;
 
-		snprintf(reply, 512, "In %d playouts at %d threads, %s %s can win with %.1f%% probability",
-			 playouts, threads, stone2str(color), coord2sstr(move, b), 100*winrate);
+		sbprintf(buf, "In %d playouts, %s %s can win with %.1f%% probability",
+			 playouts, stone2str(color), coord2sstr(move, b), 100*winrate);
 		if (fabs(extra_komi) >= 0.5) {
-			snprintf(reply + strlen(reply), 510, ", while self-imposing extra komi %.1f", extra_komi);
+			sbprintf(buf, ", while self-imposing extra komi %.1f", extra_komi);
 		}
-		strcat(reply, ".");
-		return reply;
+		sbprintf(buf, ". Score Est: %s", score_est);
+		return buf->str;
 	}
 	int matches = 0;
 	int undisplayed = 0;
@@ -116,8 +117,8 @@ char
 		if (undisplayed > 0 && entry->displayed) continue;
 		if (--index < 0) {
 			entry->displayed = true;
-			snprintf(reply, sizeof(reply), entry->reply, 100*winrate);
-			return reply;
+			sbprintf(buf, entry->reply, 100*winrate);
+			return buf->str;
 		}
 	}
 	assert(0);
@@ -130,7 +131,7 @@ void chat_done() {}
 
 char
 *generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
-	      int playouts, int machines, int threads, double winrate, double extra_komi) {
+	      int playouts, int machines, int threads, double winrate, double extra_komi, char *score_est) {
 	static char reply[1024] = { '.', '\0' };
 	return reply;
 }

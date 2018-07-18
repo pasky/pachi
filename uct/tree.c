@@ -457,7 +457,7 @@ tree_garbage_collect(struct tree *tree, struct tree_node *node)
 		static double prev_time;
 		if (!prev_time) prev_time = start_time;
 		fprintf(stderr,
-			"tree pruned in %0.6g s, prev %0.3g s ago, dest depth %d wanted %d,"
+			"tree pruned in %0.3fs, prev %0.1fs ago, dest depth %d wanted %d,"
 			" size %llu->%llu/%llu, playouts %d\n",
 			now - start_time, start_time - prev_time, temp_tree->max_depth, max_depth,
 			(unsigned long long)orig_size, (unsigned long long)temp_tree->nodes_size, (unsigned long long)tree->max_pruned_size, new_node->u.playouts);
