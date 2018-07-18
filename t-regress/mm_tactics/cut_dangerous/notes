@@ -1,0 +1,33 @@
+
+pachi - uqbar  H2    oct 23  21:30
+
+Move:  168  Komi: 0.5  Handicap: 2  Captures B: 1 W: 0
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | X . . . O . . . . . . . . O O X . . . | 19 | X X X , O O O O O O O O O O O X X X X |
+ 18 | . X X X X O O . O . O . . O X . X . . | 18 | X X X X X O O O O O O O O O X X X X X |
+ 17 | X X O X X X O O X O . . . O X . . . . | 17 | X X O X X X O O X O O O o O X X X X X |
+ 16 | X O O O O X X X X . . . O X . X . . . | 16 | X O O O O X X X X , o O O X X X X X X |
+ 15 | O . . . O O O X . . . . O X . . . . . | 15 | O O O O O O O X , , o O O X X X X X X |
+ 14 | . O O . O X X X O . O O X . . X . . . | 14 | O O O O O X X X O o O O X X X X X X X |
+ 13 | . . . O X X . . . . . X X . . X . . . | 13 | O O O O X X X x o o , X X x x X X X X |
+ 12 | . . . . O X . X O . . . . . . O X . . | 12 | O O O O O X x X O , , , , , , O X X X |
+ 11 | . . O . . O . . O . O . . O . O X X . | 11 | O O O O O O , , O o O o , O o O X X x |
+ 10 | . O . . . . O . . . . . . . . . X O . | 10 | , O O O O O O , , , , , , , , , X O , |
+  9 | X O . . . O . . X . X . X X O O X O . |  9 | X O O O O O , , X X X x X X O O X O , |
+  8 | . X O . . O X . . . . . . O X O O . . |  8 | X X O O O O X X X X X X X X X O O O x |
+  7 | . X O . O X X . X). X . X X X . . O X |  7 | X X O O O X X X X X X , X X X , O O X |
+  6 | . X O . . . . . . X O . . O O O O X X |  6 | X X O O o , x X X X O , , O O O O X X |
+  5 | . X O . . . . X X O . O . . . . . O X |  5 | X X O O o , , X X o O O O O O O O O X |
+  4 | . . X O . . . . O O . O . X . O O . X |  4 | X X X O o , , , O O O O O O O O O , X |
+  3 | . . X O . O . . . . O X O O O X O . X |  3 | X X X O O O o o O O O X O O O X O , X |
+  2 | . . X X O . . . O O X X X X X X X X . |  2 | X X X X O O O O O O X X X X X X X X X |
+  1 | . . . . . . . . O X X . . . . . . . . |  1 | X X X x o O O O O X X X X X X X X X X |
+    +---------------------------------------+    +---------------------------------------+
+
+prior_dcnn(pass) = [ F5 M10 G4 P13 H4 ]      [ 0.13 0.13 0.12 0.09 0.08 ]
+
+(and before)
+Doesn't see that n17 cut is dangerous
+dcnn blind spot (both colors)
+takes lots of sims to find it.

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #define DEBUG
 
@@ -22,6 +23,7 @@
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
+#include "uct/prior.h"
 
 
 /* Default time settings for the UCT engine. In distributed mode, slaves are
@@ -98,6 +100,33 @@ spawn_worker(void *ctx_)
 	struct uct *u = ctx->u;
 	fast_srandom(ctx->seed);
 
+	/* Fill ownermap for mcowner pattern feature. */
+	if (using_patterns()) {
+		double time_start = time_now();
+		uct_mcowner_playouts(ctx->u, ctx->b, ctx->color);	
+		if (!ctx->tid) {
+			if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
+			//fprintf(stderr, "\npattern ownermap:\n");
+			//board_print_ownermap(ctx->b, stderr, &u->ownermap);
+		}
+	}
+
+	/* Expand root node (dcnn). Other threads wait till it's ready. */
+	struct tree *t = ctx->t;
+	struct tree_node *n = t->root;
+	if (!ctx->tid) {
+		enum stone player_color = ctx->color;
+		enum stone node_color = stone_other(player_color);
+		assert(node_color == t->root_color);
+		
+		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
+			tree_expand_node(t, n, ctx->b, player_color, u, 1);
+		else    /* Show previously computed priors */
+			if (DEBUGL(2)) print_prior_best_moves(ctx->b, n);
+	}
+	else while (tree_leaf_node(n))
+		     usleep(100 * 1000);
+
 	/* Run */
 	if (!ctx->tid)  u->mcts_time_start = time_now();
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->ti);
@@ -137,17 +166,6 @@ spawn_thread_manager(void *ctx_)
 	/* Garbage collect the tree by preference when pondering. */
 	if (u->pondering && t->nodes && t->nodes_size >= t->pruning_threshold) {
 		t->root = tree_garbage_collect(t, t->root);
-	}
-
-	/* Make sure the root node is expanded. */
-	{
-		enum stone player_color = mctx->color;
-		struct tree_node *n = t->root;
-		enum stone node_color = stone_other(player_color);
-		assert(node_color == t->root_color);
-		
-		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
-			tree_expand_node(t, n, mctx->b, player_color, u, 1);
 	}
 	
 	/* Spawn threads... */

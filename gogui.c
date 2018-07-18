@@ -8,6 +8,10 @@
 #include "ownermap.h"
 #include "engines/josekibase.h"
 #include "uct/uct.h"
+#include "pattern.h"
+#include "engines/patternplay.h"
+#include "patternsp.h"
+#include "patternprob.h"
 
 #ifdef DCNN
 #include "engines/dcnn.h"
@@ -52,6 +56,13 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 		sbprintf(buf, "gfx/gfx   DCNN Ratings/gogui-dcnn_rating\n");
 	}
 #endif
+	if (!strcmp(e->name, "UCT") && using_patterns()) {
+		sbprintf(buf, "gfx/gfx   Pattern Best Moves/gogui-pattern_best\n");
+		sbprintf(buf, "gfx/gfx   Pattern Color Map/gogui-pattern_colors\n");
+		sbprintf(buf, "gfx/gfx   Pattern Ratings/gogui-pattern_rating\n");
+		sbprintf(buf, "gfx/gfx   Pattern Features/gogui-pattern_features %%p\n");
+		sbprintf(buf, "gfx/gfx   Pattern Gammas/gogui-pattern_gammas %%p\n");
+	}
 	if (!strcmp(e->name, "UCT")) {
 		sbprintf(buf, "gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
 		sbprintf(buf, "gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
@@ -504,3 +515,125 @@ cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, 
 	return P_OK;
 }
 #endif /* JOSEKI */
+
+
+static struct engine *pattern_engine = NULL;
+
+static void
+init_patternplay_engine(struct board *b)
+{
+	char args[] = "mcowner_fast=0";
+	pattern_engine = engine_patternplay_init(args, b);
+}
+
+enum parse_code
+cmd_gogui_pattern_best(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	if (!pattern_engine)   init_patternplay_engine(b);
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+	
+	char buffer[10000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gogui_best_moves(buf, pattern_engine, b, ti, color, 10, GOGUI_BEST_MOVES, 0);
+
+	bool locally = patternplay_matched_locally(pattern_engine);
+	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+enum parse_code
+cmd_gogui_pattern_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	if (!pattern_engine)   init_patternplay_engine(b);
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+	
+	char buffer[10000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gogui_best_moves(buf, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
+
+	bool locally = patternplay_matched_locally(pattern_engine);
+	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+enum parse_code
+cmd_gogui_pattern_rating(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	if (!pattern_engine)   init_patternplay_engine(b);
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+	
+	char buffer[5000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gogui_best_moves(buf, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, 0);
+
+	bool locally = patternplay_matched_locally(pattern_engine);
+	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+/* Show pattern features on point selected by user. */
+enum parse_code
+cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	if (!pattern_engine)   init_patternplay_engine(b);
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+	
+	char *arg;  next_tok(arg);
+	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	coord_t coord = str2coord(arg, board_size(b));	
+	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
+	
+	struct ownermap ownermap;
+	struct pattern p;
+	struct move m = { .coord = coord, .color = color };
+	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
+	mcowner_playouts(b, color, &ownermap);
+	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
+	pattern_match(pc, &p, b, &m, &ownermap, locally);
+	
+	gtp_reply(gtp, "TEXT ", pattern2sstr(&p), NULL);
+	return P_OK;
+}
+
+/* Show pattern gammas on point selected by user. */
+enum parse_code
+cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	if (!pattern_engine)   init_patternplay_engine(b);
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color)  color = stone_other(b->last_move.color);
+	
+	char *arg;  next_tok(arg);
+	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	coord_t coord = str2coord(arg, board_size(b));	
+	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
+	
+	struct ownermap ownermap;
+	struct pattern p;
+	struct move m = { .coord = coord, .color = color };
+	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
+	mcowner_playouts(b, color, &ownermap);
+	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
+	pattern_match(pc, &p, b, &m, &ownermap, locally);
+
+	char buffer[1000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+
+	sbprintf(buf, "TEXT ");
+	dump_gammas(buf, pc, &p);
+
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}

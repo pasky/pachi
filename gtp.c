@@ -763,6 +763,11 @@ static gtp_command_t commands[] =
 	{ "gogui-dcnn_colors",      cmd_gogui_dcnn_colors },
 	{ "gogui-dcnn_rating",      cmd_gogui_dcnn_rating },
 #endif /* DCNN */
+	{ "gogui-pattern_best",     cmd_gogui_pattern_best },
+	{ "gogui-pattern_colors",   cmd_gogui_pattern_colors },
+	{ "gogui-pattern_rating",   cmd_gogui_pattern_rating },
+	{ "gogui-pattern_features", cmd_gogui_pattern_features },
+	{ "gogui-pattern_gammas",   cmd_gogui_pattern_gammas },
 	{ "gogui-color_palette",    cmd_gogui_color_palette },
 
 	{ 0, 0 }

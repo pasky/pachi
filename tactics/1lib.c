@@ -13,7 +13,7 @@
 #include "tactics/selfatari.h"
 
 
-static inline bool
+bool
 capturing_group_is_snapback(struct board *b, group_t group)
 {	
 	coord_t lib = board_group_info(b, group).lib[0];
@@ -101,6 +101,33 @@ can_countercapture(struct board *b, group_t group, struct move_queue *q, int tag
 
 	bool can = q ? q->moves > qmoves_prev : false;
 	return can;
+}
+
+/* Same as can_countercapture() but returns capturable groups instead of moves,
+ * queue may not be NULL, and is always cleared. */
+bool
+countercapturable_groups(struct board *b, group_t group, struct move_queue *q)
+{
+	q->moves = 0;
+	enum stone color = board_at(b, group);
+	enum stone other = stone_other(color);
+	assert(color == S_BLACK || color == S_WHITE);	
+	// Not checking b->clen, not maintained by board_quick_play()
+	
+	foreach_in_group(b, group) {
+		foreach_neighbor(b, c, {
+			group_t g = group_at(b, c);
+			if (likely(board_at(b, c) != other
+				   || board_group_info(b, g).libs > 1) ||
+			    !can_capture(b, g, color))
+				continue;
+
+			mq_add(q, group_at(b, c), 0);
+			mq_nodup(q);
+		});
+	} foreach_in_group_end;
+
+	return (q->moves > 0);
 }
 
 bool

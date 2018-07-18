@@ -12,115 +12,178 @@
 #include "patternprob.h"
 #include "tactics/ladder.h"
 #include "tactics/selfatari.h"
+#include "tactics/1lib.h"
+#include "tactics/2lib.h"
 #include "tactics/util.h"
+#include "playout.h"
+#include "playout/moggy.h"
+#include "ownermap.h"
+#include "mq.h"
 
-#define CAPTURE_COUNTSTONES_MAX ((1 << CAPTURE_COUNTSTONES_PAYLOAD_SIZE) - 1)
+/* Number of playouts for mcowner_fast().
+ * Anything reliable uses much more (GJ_MINGAMES).
+ * Lower this to make patternplay super fast (and mcowner even more unreliable). */
+#define MM_MINGAMES 100
+
+static bool patterns_enabled = true;
+static bool patterns_required = false;
+void disable_patterns()     {  patterns_enabled = false;  }
+void require_patterns()     {  patterns_required = true;  }
+
+bool
+using_patterns()
+{
+	bool r = (patterns_enabled && spat_dict && prob_dict);
+	if (patterns_required && !r)  die("patterns required but not used, aborting.\n");
+	return r;
+}
 
 
-struct pattern_config DEFAULT_PATTERN_CONFIG = {
+static void check_pattern_gammas(struct pattern_config *pc);
+
+/* For debugging: print board with move being considered */
+#define show_move(b, m, msg) \
+    do { \
+	with_move_strict(b, m->coord, m->color, { \
+		fprintf(stderr, "\n\n%s\n", msg); \
+		board_print(b, stderr); \
+	}); \
+    } while(0)
+
+/* Debugging. Find if pattern has given feature.
+ * @payload: -1 to match any feature of this kind or payload to match */
+static inline bool
+pattern_has_feature(struct pattern *p, int feature_id, int payload)
+{
+	assert(feature_id < FEAT_MAX);
+	for (int i = 0; i < p->n; i++) {
+		struct feature *f = &p->f[i];
+		if (f->id != feature_id)  continue;
+		
+		if (payload == -1)		return true;
+		if (f->payload == payload)	return true;
+	}
+	return false;
+}
+
+static struct pattern_config DEFAULT_PATTERN_CONFIG = {
 	.bdist_max = 4,
 
-	.spat_min = 3, .spat_max = MAX_PATTERN_DIST,
-	.spat_largest = true,
+	.spat_min = 3, .spat_max = 10,
+	.spat_largest = false,
 };
 
-#define PF_MATCH 15
-
-pattern_spec PATTERN_SPEC_MATCH_DEFAULT = {
-	[FEAT_CAPTURE] = ~(1 << PF_CAPTURE_COUNTSTONES),
-	[FEAT_AESCAPE] = ~0,
-	[FEAT_SELFATARI] = ~0,
-	[FEAT_ATARI] = ~0,
-	[FEAT_BORDER] = ~0,
-	[FEAT_CONTIGUITY] = 0,
-	[FEAT_SPATIAL] = ~0,
+struct feature_info pattern_features[] = {
+	[FEAT_CAPTURE] =         { .name = "capture",         .payloads = PF_CAPTURE_N,    .spatial = 0 },
+	[FEAT_AESCAPE] =         { .name = "atariescape",     .payloads = PF_AESCAPE_N,    .spatial = 0 },
+	[FEAT_SELFATARI] =       { .name = "selfatari",       .payloads = PF_SELFATARI_N,  .spatial = 0 },
+	[FEAT_ATARI] =           { .name = "atari",           .payloads = PF_ATARI_N,      .spatial = 0 },
+	[FEAT_BORDER] =          { .name = "border",          .payloads = -1,              .spatial = 0 },
+	[FEAT_DISTANCE] =        { .name = "dist",            .payloads = 19,              .spatial = 0 },
+	[FEAT_DISTANCE2] =       { .name = "dist2",           .payloads = 19,              .spatial = 0 },
+	[FEAT_CUT] =             { .name = "cut",             .payloads = PF_CUT_N,        .spatial = 0 },
+	[FEAT_DOUBLE_SNAPBACK] = { .name = "double_snapback", .payloads = 1,               .spatial = 0 },
+	[FEAT_MCOWNER] =         { .name = "mcowner",         .payloads = 9,               .spatial = 0 },
+	[FEAT_NO_SPATIAL] =      { .name = "nospat",          .payloads = 1,               .spatial = 0 },
+	[FEAT_SPATIAL3] =        { .name = "s3",              .payloads = -1,              .spatial = 3 },
+	[FEAT_SPATIAL4] =        { .name = "s4",              .payloads = -1,              .spatial = 4 },
+	[FEAT_SPATIAL5] =        { .name = "s5",              .payloads = -1,              .spatial = 5 },
+	[FEAT_SPATIAL6] =        { .name = "s6",              .payloads = -1,              .spatial = 6 },
+	[FEAT_SPATIAL7] =        { .name = "s7",              .payloads = -1,              .spatial = 7 },
+	[FEAT_SPATIAL8] =        { .name = "s8",              .payloads = -1,              .spatial = 8 },
+	[FEAT_SPATIAL9] =        { .name = "s9",              .payloads = -1,              .spatial = 9 },
+	[FEAT_SPATIAL10] =       { .name = "s10",             .payloads = -1,              .spatial = 10 },
 };
 
-static const struct feature_info {
-	char *name;
-	int payloads;
-} features[FEAT_MAX] = {
-	[FEAT_CAPTURE] = { .name = "capture", .payloads = 64 },
-	[FEAT_AESCAPE] = { .name = "atariescape", .payloads = 16 },
-	[FEAT_SELFATARI] = { .name = "selfatari", .payloads = 4 },
-	[FEAT_ATARI] = { .name = "atari", .payloads = 4 },
-	[FEAT_BORDER] = { .name = "border", .payloads = -1 },
-	[FEAT_CONTIGUITY] = { .name = "cont", .payloads = 2 },
-	[FEAT_SPATIAL] = { .name = "s", .payloads = -1 },
+/* For convenience */
+static struct feature_info *features = pattern_features;
+
+
+/* Feature values may be named, otherwise payload is printed as number.
+ * Names may not begin with a number. */
+#define PAYLOAD_NAMES_MAX 16
+static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
+	[FEAT_CAPTURE] =   { [ PF_CAPTURE_ATARIDEF] = "ataridef",
+			     [ PF_CAPTURE_LAST] = "last",
+			     [ PF_CAPTURE_PEEP] = "peep",
+			     [ PF_CAPTURE_LADDER] = "ladder",
+			     [ PF_CAPTURE_NOLADDER] = "noladder", 
+			     [ PF_CAPTURE_TAKE_KO] = "take_ko",
+			     [ PF_CAPTURE_END_KO] = "end_ko",
+	},
+	[FEAT_AESCAPE] =   { [ PF_AESCAPE_NEW_NOLADDER] = "new_noladder",
+			     [ PF_AESCAPE_NEW_LADDER] = "new_ladder",
+			     [ PF_AESCAPE_NOLADDER] = "noladder",
+			     [ PF_AESCAPE_LADDER] = "ladder",
+			     [ PF_AESCAPE_FILL_KO] = "fill_ko",
+	},
+	[FEAT_SELFATARI] = { [ PF_SELFATARI_BAD] = "bad",
+			     [ PF_SELFATARI_GOOD] = "good",
+			     [ PF_SELFATARI_2LIBS] = "twolibs",
+	},
+	[FEAT_ATARI] =     { [ PF_ATARI_DOUBLE] = "double",
+			     [ PF_ATARI_AND_CAP] = "and_cap",
+			     [ PF_ATARI_SNAPBACK] = "snapback",
+			     [ PF_ATARI_LADDER_BIG] = "ladder_big",
+			     [ PF_ATARI_LADDER_SAFE] = "ladder_safe", 
+			     [ PF_ATARI_LADDER_CUT] = "ladder_cut",
+			     [ PF_ATARI_LADDER] = "ladder", 
+			     [ PF_ATARI_KO] = "ko",
+			     [ PF_ATARI_SOME] = "some",
+	},
+	[FEAT_CUT] =       { [ PF_CUT_DANGEROUS] = "dangerous" },
 };
 
-char *
-feature2str(char *str, struct feature *f)
+static void
+init_feature_info(struct pattern_config *pc)
 {
-	return str + sprintf(str + strlen(str), "%s:%d", features[f->id].name, f->payload);
-}
+	/* Sanity check, we use FEAT_MAX to iterate over features. */
+	assert(sizeof(pattern_features) / sizeof(*pattern_features) == FEAT_MAX);
 
-char *
-str2feature(char *str, struct feature *f)
-{
-	while (isspace(*str)) str++;
-
-	int unsigned flen = strcspn(str, ":");
-	for (unsigned int i = 0; i < sizeof(features)/sizeof(features[0]); i++)
-		if (strlen(features[i].name) == flen && !strncmp(features[i].name, str, flen)) {
-			f->id = i;
-			goto found;
+	/* Init feature payloads */
+	bool after_spatial = false;
+	for (int i = 0; i < FEAT_MAX; i++) {
+		if (features[i].spatial) {
+			after_spatial = true;
+			features[i].payloads = spat_dict->nspatials_by_dist[features[i].spatial];
+			continue;
+		} else if (after_spatial)  die("spatial features must be last !");
+		
+		if (i == FEAT_BORDER)  {
+			features[i].payloads = pc->bdist_max + 1;
+			continue;  
 		}
-	die("invalid featurespec: %s[%d]\n", str, flen);
-
-found:
-	str += flen + 1;
-	f->payload = strtoull(str, &str, 10);
-	return str;
-}
-
-char *
-feature_name(enum feature_id f)
-{
-	return features[f].name;
-}
-
-int
-feature_payloads(struct pattern_setup *pat, enum feature_id f)
-{
-	switch (f) {
-		int payloads;
-		case FEAT_CAPTURE:
-			payloads = features[f].payloads;
-			if (pat->ps[FEAT_CAPTURE] & (1<<PF_CAPTURE_COUNTSTONES))
-				payloads *= CAPTURE_COUNTSTONES_MAX + 1;
-			return payloads;
-		case FEAT_SPATIAL:
-			assert(features[f].payloads < 0);
-			return pat->pc.spat_dict->nspatials;
-		case FEAT_BORDER:
-			assert(features[f].payloads < 0);
-			return pat->pc.bdist_max + 1;
-		default:
-			assert(features[f].payloads > 0);
-			return features[f].payloads;
+		
+		/* Regular feature */
+		assert(features[i].payloads > 0);
 	}
 }
 
+int
+feature_payloads(enum feature_id id)
+{
+	assert(id < FEAT_MAX);
+	assert(features[id].payloads > 0);
+	return features[id].payloads;
+}
+
+struct spatial_dict *spat_dict = NULL;
+struct prob_dict    *prob_dict = NULL;
 
 void
-patterns_init(struct pattern_setup *pat, char *arg, bool will_append, bool load_prob)
+patterns_init(struct pattern_config *pc, char *arg, bool create, bool load_prob)
 {
 	char *pdict_file = NULL;
+	*pc = DEFAULT_PATTERN_CONFIG;
 
-	memset(pat, 0, sizeof(*pat));
-
-	pat->pc = DEFAULT_PATTERN_CONFIG;
-	pat->pc.spat_dict = spatial_dict_init(will_append, !load_prob);
-
-	memcpy(&pat->ps, PATTERN_SPEC_MATCH_DEFAULT, sizeof(pattern_spec));
-
+	if (!patterns_enabled)	return;
+	
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
 			optspec = next;
 			next += strcspn(next, ":");
-			if (*next) { *next++ = 0; } else { *next = 0; }
+			if (*next)  *next++ = 0;  else  *next = 0;
 
 			char *optname = optspec;
 			char *optval = strchr(optspec, '=');
@@ -129,239 +192,470 @@ patterns_init(struct pattern_setup *pat, char *arg, bool will_append, bool load_
 			/* See pattern.h:pattern_config for description and
 			 * pattern.c:DEFAULT_PATTERN_CONFIG for default values
 			 * of the following options. */
-			if (!strcasecmp(optname, "bdist_max") && optval) {
-				pat->pc.bdist_max = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_min") && optval) {
-				pat->pc.spat_min = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_max") && optval) {
-				pat->pc.spat_max = atoi(optval);
-			} else if (!strcasecmp(optname, "spat_largest")) {
-				pat->pc.spat_largest = !optval || atoi(optval);
-
-			} else if (!strcasecmp(optname, "pdict_file") && optval) {
-				pdict_file = optval;
-
-			} else
-				die("patterns: Invalid argument %s or missing value\n", optname);
+			if      (!strcasecmp(optname, "bdist_max") && optval)	pc->bdist_max = atoi(optval);
+			else if (!strcasecmp(optname, "spat_min") && optval)	pc->spat_min = atoi(optval);
+			else if (!strcasecmp(optname, "spat_max") && optval)	pc->spat_max = atoi(optval);
+			else if (!strcasecmp(optname, "spat_largest"))		pc->spat_largest = !optval || atoi(optval);
+			else if (!strcasecmp(optname, "pdict_file") && optval)	pdict_file = optval;
+			else die("patterns: Invalid argument %s or missing value\n", optname);
 		}
 	}
 
-	if (load_prob && pat->pc.spat_dict) {
-		pat->pd = pattern_pdict_init(pdict_file, &pat->pc);
+	/* Load spatial dictionary */
+	if (!spat_dict)
+		spat_dict = spatial_dict_init(create, !load_prob);
+	
+	if (!spat_dict)		return;	
+	spatial_dict_index_by_dist(pc);
+	init_feature_info(pc);
+	
+	if (!load_prob)		return;
+	
+	/* Load probability dictionary */
+	if (!prob_dict) {
+		prob_dict = prob_dict_init(pdict_file, pc);
+		
+		/* Make sure each feature has a gamma ... */
+		if (prob_dict)  check_pattern_gammas(pc);
 	}
 }
 
 
-/* pattern_spec helpers */
-#define PS_ANY(F) (ps[FEAT_ ## F] & (1 << PF_MATCH))
-#define PS_PF(F, P) (ps[FEAT_ ## F] & (1 << PF_ ## F ## _ ## P))
-
-static struct feature *
-pattern_match_capture(struct pattern_config *pc, pattern_spec ps,
-                      struct pattern *p, struct feature *f,
-                      struct board *b, struct move *m)
+static bool
+is_neighbor(struct board *b, coord_t c1, coord_t c2)
 {
-	f->id = FEAT_CAPTURE; f->payload = 0;
-
-	/* We look at neighboring groups we could capture, and also if the
-	 * opponent could save them. */
-	/* This is very similar in spirit to board_safe_to_play(), and almost
-	 * a color inverse of pattern_match_aescape(). */
-
-	/* Whether an escape move would be safe for the opponent. */
-	int captures = 0;
-	coord_t onelib = -1;
-	int extra_libs = 0, connectable_groups = 0;
-	bool onestone = false, multistone = false;
-	int captured_stones = 0;
-
-	foreach_neighbor(b, m->coord, {
-		if (board_at(b, c) != stone_other(m->color)) {
-			if (board_at(b, c) == S_NONE)
-				extra_libs++; // free point
-			else if (board_at(b, c) == m->color && board_group_info(b, group_at(b, c)).libs == 1)
-				extra_libs += 2; // capturable enemy group
-			continue;
-		}
-
-		group_t g = group_at(b, c); assert(g);
-		if (board_group_info(b, g).libs > 1) {
-			connectable_groups++;
-			if (board_group_info(b, g).libs > 2) {
-				extra_libs += 2; // connected out
-			} else {
-				/* This is a bit tricky; we connect our 2-lib
-				 * group to another 2-lib group, which counts
-				 * as one liberty, but only if the other lib
-				 * is not shared too. */
-				if (onelib == -1) {
-					onelib = board_group_other_lib(b, g, c);
-					extra_libs++;
-				} else {
-					if (c == onelib)
-						extra_libs--; // take that back
-					else
-						extra_libs++;
-				}
-			}
-			continue;
-		}
-
-		/* Capture! */
-		captures++;
-
-		if (PS_PF(CAPTURE, LADDER))
-			f->payload |= is_ladder(b, g, true) << PF_CAPTURE_LADDER;
-		/* TODO: is_ladder() is too conservative in some
-		 * very obvious situations, look at complete.gtp. */
-
-		if (PS_PF(CAPTURE, ATARIDEF))
-		foreach_in_group(b, g) {
-			foreach_neighbor(b, c, {
-				assert(board_at(b, c) != S_NONE || c == m->coord);
-				if (board_at(b, c) != m->color)
-					continue;
-				group_t g = group_at(b, c);
-				if (!g || board_group_info(b, g).libs != 1)
-					continue;
-				/* A neighboring group of ours is in atari. */
-				f->payload |= 1 << PF_CAPTURE_ATARIDEF;
-			});
-		} foreach_in_group_end;
-
-		if (PS_PF(CAPTURE, KO)
-		    && group_is_onestone(b, g)
-		    && neighbor_count_at(b, m->coord, stone_other(m->color))
-		       + neighbor_count_at(b, m->coord, S_OFFBOARD) == 4)
-			f->payload |= 1 << PF_CAPTURE_KO;
-
-		if (PS_PF(CAPTURE, COUNTSTONES)
-		    && captured_stones < CAPTURE_COUNTSTONES_MAX)
-			captured_stones += group_stone_count(b, g, CAPTURE_COUNTSTONES_MAX - captured_stones);
-
-		if (group_is_onestone(b, g))
-			onestone = true;
-		else
-			multistone = true;
+	assert(!is_pass(c1));  	assert(!is_pass(c2));
+	foreach_neighbor(b, c1, {
+			if (c == c2)  return true;
 	});
-
-	if (captures > 0) {
-		if (PS_PF(CAPTURE, 1STONE))
-			f->payload |= (onestone && !multistone) << PF_CAPTURE_1STONE;
-		if (PS_PF(CAPTURE, TRAPPED))
-			f->payload |= (extra_libs < 2) << PF_CAPTURE_TRAPPED;
-		if (PS_PF(CAPTURE, CONNECTION))
-			f->payload |= (connectable_groups > 0) << PF_CAPTURE_CONNECTION;
-		if (PS_PF(CAPTURE, COUNTSTONES))
-			f->payload |= captured_stones << PF_CAPTURE_COUNTSTONES;
-		(f++, p->n++);
-	}
-	return f;
+	return false;
 }
 
-static struct feature *
-pattern_match_aescape(struct pattern_config *pc, pattern_spec ps,
-                      struct pattern *p, struct feature *f,
-		      struct board *b, struct move *m)
+static bool
+is_neighbor_group(struct board *b, coord_t coord, group_t g)
 {
-	f->id = FEAT_AESCAPE; f->payload = 0;
-
-	/* Find if a neighboring group of ours is in atari, AND that we provide
-	 * a liberty to connect out. XXX: No connect-and-die check. */
-	/* This is very similar in spirit to board_safe_to_play(). */
-	group_t in_atari = -1;
-	coord_t onelib = -1;
-	int extra_libs = 0, connectable_groups = 0;
-	bool onestone = false, multistone = false;
-
-	foreach_neighbor(b, m->coord, {
-		if (board_at(b, c) != m->color) {
-			if (board_at(b, c) == S_NONE)
-				extra_libs++; // free point
-			else if (board_at(b, c) == stone_other(m->color) && board_group_info(b, group_at(b, c)).libs == 1) {
-				extra_libs += 2; // capturable enemy group
-				/* XXX: We just consider this move safe
-				 * unconditionally. */
-			}
-			continue;
-		}
-		group_t g = group_at(b, c); assert(g);
-		if (board_group_info(b, g).libs > 1) {
-			connectable_groups++;
-			if (board_group_info(b, g).libs > 2) {
-				extra_libs += 2; // connected out
-			} else {
-				/* This is a bit tricky; we connect our 2-lib
-				 * group to another 2-lib group, which counts
-				 * as one liberty, but only if the other lib
-				 * is not shared too. */
-				if (onelib == -1) {
-					onelib = board_group_other_lib(b, g, c);
-					extra_libs++;
-				} else {
-					if (c == onelib)
-						extra_libs--; // take that back
-					else
-						extra_libs++;
-				}
-			}
-			continue;
-		}
-
-		/* In atari! */
-		in_atari = g;
-
-		if (PS_PF(AESCAPE, LADDER))
-			f->payload |= is_ladder(b, g, true) << PF_AESCAPE_LADDER;
-		/* TODO: is_ladder() is too conservative in some
-		 * very obvious situations, look at complete.gtp. */
-
-		if (group_is_onestone(b, g))
-			onestone = true;
-		else
-			multistone = true;
+	assert(!is_pass(coord));  assert(g);
+	foreach_neighbor(b, coord, {
+			if (group_at(b, c) == g)  return true;
 	});
-
-	if (in_atari >= 0) {
-		if (PS_PF(AESCAPE, 1STONE))
-			f->payload |= (onestone && !multistone) << PF_AESCAPE_1STONE;
-		if (PS_PF(AESCAPE, TRAPPED))
-			f->payload |= (extra_libs < 2) << PF_AESCAPE_TRAPPED;
-		if (PS_PF(AESCAPE, CONNECTION))
-			f->payload |= (connectable_groups > 0) << PF_AESCAPE_CONNECTION;
-		(f++, p->n++);
-	}
-	return f;
+	return false;
 }
 
-static struct feature *
-pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
-                    struct pattern *p, struct feature *f,
-		    struct board *b, struct move *m)
+static bool move_can_be_captured(struct board *b, struct move *m);
+
+static int
+pattern_match_capture(struct board *b, struct move *m)
 {
+	enum stone other_color = stone_other(m->color);
+	coord_t last_move = b->last_move.coord;
+	struct move_queue atari_neighbors;
+	board_get_atari_neighbors(b, m->coord, other_color, &atari_neighbors);
+	if (!atari_neighbors.moves)  return -1;
+
+	/* Recapture ko after playing ko-threat ? */
+	if (b->last_ko_age == b->moves - 2 && m->coord == b->last_ko.coord)
+		return PF_CAPTURE_TAKE_KO;
+	
+	if (is_pass(last_move) || b->last_move.color != other_color)
+		goto regular_stuff;
+
+	/* Last move features */
+	for (unsigned int i = 0; i < atari_neighbors.moves; i++) {
+		group_t capg = atari_neighbors.move[i];  /* Can capture capg */
+		
+		/* Capture group contiguous to new group in atari ? */
+		foreach_atari_neighbor(b, last_move, m->color) {
+			group_t own_atari = g;
+			struct move_queue q;
+			countercapturable_groups(b, own_atari, &q);
+			for (unsigned int i = 0; i < q.moves; i++)
+				if (capg == q.move[i])
+					return PF_CAPTURE_ATARIDEF;
+		} foreach_atari_neighbor_end;
+
+		/* Recapture previous move ? */
+		if (capg == group_at(b, last_move))
+			return PF_CAPTURE_LAST;
+		
+		/* Prevent connection to previous move ? */
+		if (capg != group_at(b, last_move) &&
+		    is_neighbor(b, m->coord, last_move))
+			return PF_CAPTURE_PEEP;
+
+		/* End ko by capture, ignoring ko threat ? */
+		if (b->last_ko_age == b->moves - 1 && is_neighbor_group(b, b->last_move2.coord, capg))
+			return PF_CAPTURE_END_KO;
+	}
+		
+ regular_stuff:
+	for (unsigned int i = 0; i < atari_neighbors.moves; i++) {
+		group_t capg = atari_neighbors.move[i];  /* Can capture capg */
+		if (is_ladder_any(b, capg, true))
+			return PF_CAPTURE_LADDER;
+		return PF_CAPTURE_NOLADDER;
+	}
+	
+	return -1;
+}
+
+
+static int
+pattern_match_aescape(struct board *b, struct move *m)
+{
+	enum stone other_color = stone_other(m->color);
+	coord_t last_move = b->last_move.coord;
+	bool found = false, ladder = false;
+
+	/* Fill ko, ignoring ko-threat. */
+	if (b->last_ko_age == b->moves - 1 && m->coord == b->last_ko.coord &&
+	    !is_selfatari(b, m->color, m->coord))
+		return PF_AESCAPE_FILL_KO;
+	
+	foreach_atari_neighbor(b, m->coord, m->color) {
+		ladder = is_ladder_any(b, g, true);
+		found = true;
+		
+		/* Last move atari ? */
+		if (is_pass(last_move) || b->last_move.color != other_color)  continue;
+		group_t in_atari = g;
+		foreach_atari_neighbor(b, last_move, m->color) {
+			if (g == in_atari)
+				return (ladder ? PF_AESCAPE_NEW_LADDER : PF_AESCAPE_NEW_NOLADDER);
+		} foreach_atari_neighbor_end;
+	} foreach_atari_neighbor_end;
+	
+	if (found)  return (ladder ? PF_AESCAPE_LADDER : PF_AESCAPE_NOLADDER);
+	return -1;
+}
+
+static int
+pattern_match_selfatari(struct board *b, struct move *m)
+{
+	if (is_bad_selfatari(b, m->color, m->coord))	return PF_SELFATARI_BAD;
+	if (is_selfatari(b, m->color, m->coord))	return PF_SELFATARI_GOOD;
+	else if (move_can_be_captured(b, m))            return PF_SELFATARI_2LIBS;
+	
+	return -1;
+}
+
+/*    X  Are these cutting stones ?
+ *  O X  Looking for a crosscut pattern around the group.
+ *  X O  XXX very naive, we don't check atari, ownership or that they belong to != groups */
+static bool
+cutting_stones(struct board *b, group_t g)
+{
+	assert(g && group_at(b, g));
+	enum stone color = board_at(b, g);
+	enum stone other_color = stone_other(color);
+
+	foreach_in_group(b, g) {
+		if (neighbor_count_at(b, c, other_color) < 2)  continue;
+		int x1 = coord_x(c, b);  int y1 = coord_y(c, b);
+		coord_t coord = c;
+		foreach_diag_neighbor(b, coord) {
+			if (board_at(b, c) != color || group_at(b, c) == g)  continue;
+			int x2 = coord_x(c, b);  int y2 = coord_y(c, b);
+			coord_t c2 = coord_xy(b, x1, y2);
+			coord_t c3 = coord_xy(b, x2, y1);
+			if (board_at(b, c2) != other_color ||
+			    board_at(b, c3) != other_color)   continue;
+			return true;
+		} foreach_diag_neighbor_end;
+	} foreach_in_group_end;	
+	return false;
+}
+
+/* can capture @other after atari on @atariable + defense ? */
+static bool
+cutting_stones_and_can_capture_other_after_atari(struct board *b, struct move *m, group_t atariable, group_t other)
+{
+	bool found = false;
+	enum stone other_color = stone_other(m->color);
+	with_move(b, m->coord, m->color, {
+			assert(group_at(b, atariable) == atariable);
+			if (!cutting_stones(b, atariable))  break;
+			if (!cutting_stones(b, other))      break;
+			coord_t lib = board_group_info(b, atariable).lib[0];
+			with_move(b, lib, other_color, {
+					group_t g = group_at(b, other);
+					if (g && board_group_info(b, g).libs == 2 &&
+					    can_capture_2lib_group(b, g, other_color, NULL, 0))
+						found = true;
+				});
+		});
+	return found;
+}
+
+static bool
+can_countercap_common_stone(struct board *b, coord_t coord, enum stone color, group_t g1, group_t g2)
+{
+	int x1 = coord_x(coord, b);  int y1 = coord_y(coord, b);
+	foreach_diag_neighbor(b, coord) {
+		if (board_at(b, c) != color || board_group_info(b, group_at(b, c)).libs != 1)  continue;
+		int x2 = coord_x(c, b);  int y2 = coord_y(c, b);
+		coord_t c1 = coord_xy(b, x1, y2);
+		coord_t c2 = coord_xy(b, x2, y1);
+		if ((group_at(b, c1) == g1 && group_at(b, c2) == g2) ||
+		    (group_at(b, c1) == g2 && group_at(b, c2) == g1))   return true;
+	} foreach_diag_neighbor_end;
+	return false;
+}
+
+/* Ownermap color of @coord and its neighbors if they all match, S_NONE otherwise */
+static enum stone
+owner_around(struct board *b, struct ownermap *ownermap, coord_t coord)
+{
+	enum stone own = ownermap_color(ownermap, coord, 0.67);
+	if (own == S_NONE)  return S_NONE;
+	
+	foreach_neighbor(b, coord, {
+			if (board_at(b, c) == S_OFFBOARD)  continue;
+			enum stone own2 = ownermap_color(ownermap, c, 0.67);
+			if (own2 != own)  return S_NONE;
+	});
+	return own;
+}
+
+static int
+pattern_match_atari(struct board *b, struct move *m, struct ownermap *ownermap)
+{
+	enum stone color = m->color;
+	enum stone other_color = stone_other(color);
+	group_t g1 = 0, g3libs = 0;
+	bool snapback = false, double_atari = false, atari_and_cap = false, ladder_atari = false;
+	bool ladder_big_safe = false, ladder_safe = false, ladder_cut = false;
+
+	/* Check snapback on stones we don't own already. */
+	if (immediate_liberty_count(b, m->coord) == 1 &&
+	    !neighbor_count_at(b, m->coord, m->color)) {
+		with_move(b, m->coord, m->color, {
+				group_t g = group_at(b, m->coord);
+				group_t atari_neighbor;
+				if (g && capturing_group_is_snapback(b, g) &&
+				    (atari_neighbor = board_get_atari_neighbor(b, g, other_color)) &&
+				    ownermap_color(ownermap, atari_neighbor, 0.67) != m->color)  // XXX check other stones in group ?)
+					snapback = true;
+		});
+	}
+	if (snapback)  return PF_ATARI_SNAPBACK;
+
+	bool selfatari = is_selfatari(b, m->color, m->coord);
+	if (!board_playing_ko_threat(b) && selfatari)  return -1;
+	// XXX throw-in to capture a group with an eye isn't counted as atari with this ...
+
 	foreach_neighbor(b, m->coord, {
-		if (board_at(b, c) != stone_other(m->color))
-			continue;
+		if (board_at(b, c) != other_color)           continue;
 		group_t g = group_at(b, c);
-		if (!g || board_group_info(b, g).libs != 2)
-			continue;
-
+		if (g  && board_group_info(b, g).libs == 3)  g3libs = g;
+		if (!g || board_group_info(b, g).libs != 2)  continue;		
 		/* Can atari! */
-		f->id = FEAT_ATARI; f->payload = 0;
 
-		if (PS_PF(ATARI, LADDER)) {
-			/* TODO: is_ladder() is too conservative in some
-			 * very obvious situations, look at complete.gtp. */
-			f->payload |= wouldbe_ladder(b, g, m->coord) << PF_ATARI_LADDER;
+		/* Double atari ? */
+		if (g1 && g != g1 && !can_countercap_common_stone(b, m->coord, color, g, g1))
+			double_atari = true;
+		g1 = g;
+		
+		if (wouldbe_ladder_any(b, g, m->coord)) {
+			ladder_atari = true;
+			enum stone gown = ownermap_color(ownermap, g, 0.67);
+			enum stone aown = owner_around(b, ownermap, m->coord);
+			// capturing big group not dead yet
+			if (gown != color && group_stone_count(b, g, 5) >= 4)   ladder_big_safe = true;
+			// capturing something in opponent territory, yummy
+			if (gown == other_color && aown == other_color)         ladder_safe = true;
+			// capturing cutting stones
+			if (gown != color && cutting_stones(b, g))		ladder_cut = true;
 		}
-
-		if (PS_PF(ATARI, KO) && !is_pass(b->ko.coord))
-			f->payload |= 1 << PF_ATARI_KO;
-
-		(f++, p->n++);
 	});
-	return f;
+	if (g1) {
+		/* Can capture other group after atari ? */
+		if (g3libs && !group_is_onestone(b, g3libs) && !ladder_atari &&
+		    ownermap_color(ownermap, g3libs, 0.67) != color &&
+		    cutting_stones_and_can_capture_other_after_atari(b, m, g1, g3libs))
+			atari_and_cap = true;
+
+		if (!selfatari) {
+			if (ladder_big_safe)	return PF_ATARI_LADDER_BIG;
+			if (double_atari)	return PF_ATARI_DOUBLE;
+			if (ladder_safe)	return PF_ATARI_LADDER_SAFE;
+			if (ladder_cut)		return PF_ATARI_LADDER_CUT;
+			if (atari_and_cap)	return PF_ATARI_AND_CAP;
+			if (ladder_atari)	return PF_ATARI_LADDER;
+		}
+		
+		if (!is_pass(b->ko.coord))	return PF_ATARI_KO;
+		else				return PF_ATARI_SOME;
+	}
+	return -1;
 }
+
+static int
+pattern_match_border(struct board *b, struct move *m, struct pattern_config *pc)
+{
+	unsigned int bdist = coord_edge_distance(m->coord, b);
+	if (bdist <= pc->bdist_max)
+		return bdist;
+	return -1;
+}
+
+static int
+pattern_match_distance(struct board *b, struct move *m)
+{
+	if (is_pass(b->last_move.coord))  return -1;
+	int d = coord_gridcular_distance(m->coord, b->last_move.coord, b);
+	if (d > 17)  d = 18;
+	d--; assert(d >= 0 && d <= 17);
+	return d;
+}
+
+static int
+pattern_match_distance2(struct board *b, struct move *m)
+{
+	if (is_pass(b->last_move2.coord))  return -1;
+	int d = coord_gridcular_distance(m->coord, b->last_move2.coord, b);
+	if (d > 17)  d = 17;
+	/* can be zero here (same move) so don't decrement */
+	assert(d >= 0 && d <= 17);
+	return d;
+}
+
+static bool
+safe_diag_neighbor_reaches_two_opp_groups(struct board *b, struct move *m,
+					  group_t groups[4], int ngroups)
+{
+	enum stone other_color = stone_other(m->color);
+	
+	foreach_diag_neighbor(b, m->coord) {
+		if (board_at(b, c) != m->color) continue;
+		group_t g = group_at(b, c);
+
+		/* Can be captured ? Not good */
+		if (board_group_info(b, g).libs == 1) continue;
+		if (board_group_info(b, g).libs == 2 &&
+		    can_capture_2lib_group(b, g, m->color, NULL, 0)) continue;
+
+		group_t gs[4];  memcpy(gs, groups, sizeof(gs));
+		int found = 0;
+		
+		/* Find how many known opponent groups we reach */
+		foreach_neighbor(b, c, {
+				if (board_at(b, c) != other_color) continue;
+				group_t g = group_at(b, c);
+				for (int i = 0; i < ngroups; i++)
+					if (gs[i] == g)  {  found++;  gs[i] = 0;  break;  }
+			});
+		if (found >= 2)  return true;
+	} foreach_diag_neighbor_end;
+	
+	return false;
+}
+
+static bool
+move_can_be_captured(struct board *b, struct move *m)
+{
+	if (is_selfatari(b, m->color, m->coord))
+		return true;
+
+	/* Move can be laddered ? */
+	bool safe = false;
+	with_move(b, m->coord, m->color, {
+		group_t g = group_at(b, m->coord);
+		if (!g) break;
+		if (board_group_info(b, g).libs == 2 &&
+		    can_capture_2lib_group(b, g, m->color, NULL, 0)) break;
+		safe = true;
+	});
+	return !safe;
+}
+
+static int
+pattern_match_cut(struct board *b, struct move *m, struct ownermap *ownermap)
+{
+	enum stone other_color = stone_other(m->color);
+	group_t groups[4];
+	int ngroups = 0;
+
+	/* Find neighbor groups */
+	foreach_neighbor(b, m->coord, {
+			if (board_at(b, c) != other_color) continue;
+			group_t g = group_at(b, c);
+			if (board_group_info(b, g).libs <= 2) continue;  /* Not atari / capture */
+			if (group_is_onestone(b, g)) continue;
+
+			int found = 0;
+			for (int i = 0; i < ngroups; i++)
+				if (g == groups[i])  found = 1;
+			if (found)  continue;
+			
+			groups[ngroups++] = g;
+		});
+
+	if (ngroups >= 2 &&
+	    safe_diag_neighbor_reaches_two_opp_groups(b, m, groups, ngroups) &&
+	    !move_can_be_captured(b, m)) {
+
+		/* Cut groups short of liberties (and not prisoners) ? */
+		int found = 0;
+		for (int i = 0; i < ngroups; i++) {
+			group_t g = groups[i];
+			enum stone gown = ownermap_color(ownermap, g, 0.67);
+			if (board_group_info(b, g).libs <= 3 && gown != m->color)
+				found++;
+		}
+		if (found >= 2)
+			return PF_CUT_DANGEROUS;
+	}
+
+	return -1;
+}
+
+/*   O O X X X O O
+ *   O X . X . X O
+ *   O X . * . X O
+ *  ---------------
+ */
+static int
+pattern_match_double_snapback(struct board *b, struct move *m)
+{
+	enum stone color = m->color;
+	enum stone other_color = stone_other(m->color);
+
+	/* Check center spot */
+	coord_t coord = m->coord;
+	if (neighbor_count_at(b, coord, S_OFFBOARD) != 1 ||
+	    immediate_liberty_count(b, coord) != 2 ||
+	    neighbor_count_at(b, coord, other_color) != 1)  return -1;
+	
+	int offsets[4][2][2] = {
+		{ { -1, -1}, { -1,  1} }, /* right side */
+		{ {  1, -1}, {  1,  1} }, /* left       */
+		{ { -1,  1}, {  1,  1} }, /* top        */
+		{ { -1, -1}, {  1, -1} }  /* bottom     */
+	};
+
+	int snap = 0;
+	int x = coord_x(coord, b);
+	int y = coord_y(coord, b);
+	with_move(b, coord, color, {
+		for (int i = 0; i < 4 && snap != 2; i++) {
+			snap = 0;
+			for (int j = 0; j < 2; j++) {
+				coord_t c = coord_xy(b, x + offsets[i][j][0], y + offsets[i][j][1]);
+				if (board_at(b, c) != S_NONE)  continue;
+				with_move(b, c, color, {
+					group_t g = group_at(b, c);
+					if (g && capturing_group_is_snapback(b, g))
+						snap++;
+				});
+			}
+		}
+	});
+
+	if (snap == 2)  return 0;
+	
+	return -1;
+}
+
 
 #ifndef BOARD_SPATHASH
 #undef BOARD_SPATHASH_MAXD
@@ -370,11 +664,26 @@ pattern_match_atari(struct pattern_config *pc, pattern_spec ps,
 
 /* Match spatial features that are too distant to be pre-matched
  * incrementally. */
-struct feature *
-pattern_match_spatial_outer(struct pattern_config *pc, pattern_spec ps,
+static struct feature *
+pattern_match_spatial_outer(struct pattern_config *pc, 
                             struct pattern *p, struct feature *f,
 		            struct board *b, struct move *m, hash_t h)
 {
+#if 0   /* slow but safe, no spatial collisions */
+	struct spatial s;
+	spatial_from_board(pc, &s, b, m);
+	int dmax = s.dist;
+	for (int d = pc->spat_min; d <= dmax; d++) {
+		s.dist = d;
+		unsigned int sid = spatial_dict_gets(spat_dict, &s, spatial_hash(0, &s));
+		if (sid > 0) {
+			f->id = FEAT_SPATIAL3 + d - 3;
+			f->payload = sid;
+			if (!pc->spat_largest)
+				(f++, p->n++);
+		} /* else not found, ignore */		
+	}
+#else  
 	/* We record all spatial patterns black-to-play; simply
 	 * reverse all colors if we are white-to-play. */
 	static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
@@ -391,117 +700,265 @@ pattern_match_spatial_outer(struct pattern_config *pc, pattern_spec ps,
 		if (d < pc->spat_min)
 			continue;
 		/* Record spatial feature, one per distance. */
-		unsigned int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
+		unsigned int sid = spatial_dict_get(spat_dict, d, h & spatial_hash_mask);
 		if (sid > 0) {
-			f->id = FEAT_SPATIAL;
+			f->id = FEAT_SPATIAL3 + d - 3;
 			f->payload = sid;
 			if (!pc->spat_largest)
 				(f++, p->n++);
 		} /* else not found, ignore */
 	}
+#endif
 	return f;
 }
 
 struct feature *
-pattern_match_spatial(struct pattern_config *pc, pattern_spec ps,
+pattern_match_spatial(struct pattern_config *pc, 
                       struct pattern *p, struct feature *f,
 		      struct board *b, struct move *m)
 {
+	if (pc->spat_max <= 0 || !spat_dict)  return f;
+	assert(pc->spat_min > 0);
+	struct feature *orig_f = f;
+	f->id = FEAT_NO_SPATIAL;
+	f->payload = 0;
+
 	/* XXX: This is partially duplicated from spatial_from_board(), but
 	 * we build a hash instead of spatial record. */
 
-	assert(pc->spat_min > 0);
-	f->id = -1;
-
 	hash_t h = pthashes[0][0][S_NONE];
-#ifdef BOARD_SPATHASH
-	bool w_to_play = m->color == S_WHITE;
-	for (int d = 2; d <= BOARD_SPATHASH_MAXD; d++) {
-		/* Reuse all incrementally matched data. */
-		h ^= b->spathash[m->coord][d - 1][w_to_play];
-		if (d < pc->spat_min)
-			continue;
-		/* Record spatial feature, one per distance. */
-		unsigned int sid = spatial_dict_get(pc->spat_dict, d, h & spatial_hash_mask);
-		if (sid > 0) {
-			f->id = FEAT_SPATIAL;
-			f->payload = sid;
-			if (!pc->spat_largest)
-				(f++, p->n++);
-		} /* else not found, ignore */
-	}
-#else
 	assert(BOARD_SPATHASH_MAXD < 2);
-#endif
-	if (unlikely(pc->spat_max > BOARD_SPATHASH_MAXD))
-		f = pattern_match_spatial_outer(pc, ps, p, f, b, m, h);
-	if (pc->spat_largest && f->id == FEAT_SPATIAL)
-		(f++, p->n++);
+	if (pc->spat_max > BOARD_SPATHASH_MAXD)
+		f = pattern_match_spatial_outer(pc, p, f, b, m, h);
+	if (pc->spat_largest && f->id >= FEAT_SPATIAL)		(f++, p->n++);
+	if (f == orig_f) /* FEAT_NO_SPATIAL */			(f++, p->n++);
 	return f;
 }
 
+static int
+pattern_match_mcowner(struct board *b, struct move *m, struct ownermap *ownermap)
+{
+	assert(ownermap->playouts >= MM_MINGAMES);
+	return (ownermap->map[m->coord][m->color] * 8 / (ownermap->playouts + 1));
+}
+
+static void
+mcowner_playouts_(struct board *b, enum stone color, struct ownermap *ownermap, int playouts)
+{
+	static struct playout_policy *policy = NULL;
+	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
+	
+	if (!policy)  policy = playout_moggy_init(NULL, b, NULL);
+	ownermap_init(ownermap);
+	
+	for (int i = 0; i < playouts; i++)  {
+		struct board b2;
+		board_copy(&b2, b);		
+		playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
+		board_done_noalloc(&b2);
+	}
+	//fprintf(stderr, "pattern ownermap:\n");
+	//board_print_ownermap(b, stderr, ownermap);
+}
 
 void
-pattern_match(struct pattern_config *pc, pattern_spec ps,
-              struct pattern *p, struct board *b, struct move *m)
+mcowner_playouts(struct board *b, enum stone color, struct ownermap *ownermap)
 {
-	p->n = 0;
-	struct feature *f = &p->f[0];
+	mcowner_playouts_(b, color, ownermap, GJ_MINGAMES);
+}
 
-	/* TODO: We should match pretty much all of these features
-	 * incrementally. */
+void
+mcowner_playouts_fast(struct board *b, enum stone color, struct ownermap *ownermap)
+{
+	mcowner_playouts_(b, color, ownermap, MM_MINGAMES);
+}
 
-	if (PS_ANY(CAPTURE)) {
-		f = pattern_match_capture(pc, ps, p, f, b, m);
-	}
 
-	if (PS_ANY(AESCAPE)) {
-		f = pattern_match_aescape(pc, ps, p, f, b, m);
-	}
+/* Keep track of features hits stats ? */
+#ifdef PATTERN_FEATURE_STATS
 
-	if (PS_ANY(SELFATARI)) {
-		bool simple = false;
-		if (PS_PF(SELFATARI, STUPID))
-			simple = !board_safe_to_play(b, m->coord, m->color);
+static int feature_stats[FEAT_MAX][20] = { { 0, }, };
+static int stats_board_positions = 0;
+void pattern_stats_new_position() {  stats_board_positions++;  }
+
+static void
+dump_feature_stats(struct pattern_config *pc)
+{
+	static int calls = 0;
+	if (++calls % 10000)  return;
+
+	FILE *file = fopen("mm-feature-hits.dat", "w");
+	if (!file)  {  perror("mm-feature-hits.dat");  return;  }
+	
+	fprintf(file, "feature hits:\n");
+	for (int i = 0; i < FEAT_MAX; i++) {
+		struct feature f = {  .id = i  };
+		if (i >= FEAT_SPATIAL) continue; // For now ...
 		
-		bool thorough = false;
-		if (PS_PF(SELFATARI, SMART))
-			thorough = is_bad_selfatari(b, m->color, m->coord);
-		
-		if (simple || thorough) {
-			f->id = FEAT_SELFATARI;
-			f->payload = simple << PF_SELFATARI_STUPID;
-			f->payload |= thorough << PF_SELFATARI_SMART;
-			(f++, p->n++);
+		/* Regular feature */
+		for (int j = 0; j < feature_payloads(i); j++) {
+			f.payload = j;
+			fprintf(file, "  %-20s: %i\n", feature2sstr(&f), feature_stats[i][j]);
 		}
 	}
+	fprintf(file, "  %-20s: %i    board positions: %i\n", "total calls", calls, stats_board_positions);
+	fclose(file);
+}
 
-	if (PS_ANY(ATARI)) {
-		f = pattern_match_atari(pc, ps, p, f, b, m);
-	}
-
-	if (PS_ANY(BORDER)) {
-		unsigned int bdist = coord_edge_distance(m->coord, b);
-		if (bdist <= pc->bdist_max) {
-			f->id = FEAT_BORDER;
-			f->payload = bdist;
-			(f++, p->n++);
-		}
-	}
-
-	if (PS_ANY(CONTIGUITY) && !is_pass(b->last_move.coord)
-	    && coord_is_8adjecent(m->coord, b->last_move.coord, b)) {
-		f->id = FEAT_CONTIGUITY;
-		f->payload = 1;
-		(f++, p->n++);
-	}
-
-	if (PS_ANY(SPATIAL) && pc->spat_max > 0 && pc->spat_dict) {
-		f = pattern_match_spatial(pc, ps, p, f, b, m);
+static void
+add_feature_stats(struct pattern *pattern)
+{
+	for (int i = 0; i < pattern->n; i++) {
+		int id = pattern->f[i].id;
+		int p  = pattern->f[i].payload;
+		if (id >= FEAT_SPATIAL)  continue;
+		assert(p >= 0 && p < 20);
+		feature_stats[id][p]++;
 	}
 }
 
+#endif /* PATTERN_FEATURE_STATS */
+
+
+#define check_feature(result, feature_id)  do { \
+	p = (result); \
+	if (p != -1) { \
+		f->id = feature_id; \
+		f->payload = p; \
+		f++;  pattern->n++; \
+	} \
+} while (0)
+
+
+/* TODO: We should match pretty much all of these features incrementally. */
+static void
+pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struct board *b,
+		       struct move *m, struct ownermap *ownermap, bool locally)
+{
+#ifdef PATTERN_FEATURE_STATS
+	dump_feature_stats(pc);
+#endif
+
+	struct feature *f = &pattern->f[0];
+	int p;  /* payload */
+	pattern->n = 0;
+	assert(!is_pass(m->coord));   assert(!is_resign(m->coord));
+
+
+	/***********************************************************************************/
+	/* Prioritized features, don't let others pull them down. */
+	
+	check_feature(pattern_match_atari(b, m, ownermap), FEAT_ATARI);
+	bool atari_ladder = (p == PF_ATARI_LADDER);
+	{       if (p == PF_ATARI_LADDER_BIG)  return;  /* don't let selfatari kick-in ... */
+		if (p == PF_ATARI_LADDER_SAFE) return;
+		if (p == PF_ATARI_SNAPBACK)    return;  
+		if (p == PF_ATARI_KO)          return;  /* don't let selfatari kick-in, fine as ko-threats */
+	}
+
+	check_feature(pattern_match_double_snapback(b, m), FEAT_DOUBLE_SNAPBACK);
+	{	if (p == 0)  return;  }
+	
+	check_feature(pattern_match_capture(b, m), FEAT_CAPTURE); {
+		if (p == PF_CAPTURE_TAKE_KO)  return;  /* don't care about distance etc */
+		if (p == PF_CAPTURE_END_KO)   return;
+	}
+
+	check_feature(pattern_match_aescape(b, m), FEAT_AESCAPE);
+	{	if (p == PF_AESCAPE_FILL_KO)  return;  }
+
+	check_feature(pattern_match_cut(b, m, ownermap), FEAT_CUT);
+	{	if (p == PF_CUT_DANGEROUS)  return;  }
+
+	/***********************************************************************************/
+	/* Other features */
+	
+	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
+	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
+	if (locally) {
+		check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
+		check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
+	}
+	check_feature(pattern_match_mcowner(b, m, ownermap), FEAT_MCOWNER);
+
+	f = pattern_match_spatial(pc, pattern, f, b, m);
+}
+
+void
+pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b,
+	      struct move *m, struct ownermap *ownermap, bool locally)
+{
+	pattern_match_internal(pc, p, b, m, ownermap, locally);
+	
+	/* Debugging */
+	//if (pattern_has_feature(p, FEAT_ATARI, PF_ATARI_AND_CAP))  show_move(b, m, "atari_and_cap");
+
+#ifdef PATTERN_FEATURE_STATS
+	add_feature_stats(p);
+#endif	
+}
+
+
+/* Return feature payload name if it has one. */
+static char*
+payload_name(struct feature *f)
+{
+	if (f->payload < PAYLOAD_NAMES_MAX)
+		return payloads_names[f->id][f->payload];
+	return NULL;
+}
+
 char *
+feature2str(char *str, struct feature *f)
+{
+	char *name = payload_name(f);
+	if (name)  return str + sprintf(str, "%s:%s", features[f->id].name, name);
+	else	   return str + sprintf(str, "%s:%d", features[f->id].name, f->payload);
+}
+
+char *
+feature2sstr(struct feature *f)
+{
+	static char str[128];
+	feature2str(str, f);
+	return str;
+}
+
+/* Convert string to feature, return pointer after the featurespec. */
+static char *
+str2feature(char *str, struct feature *f)
+{
+	while (isspace(*str)) str++;
+
+	unsigned int flen = strcspn(str, ":");
+	for (unsigned int i = 0; i < FEAT_MAX; i++)
+		if (strlen(features[i].name) == flen && !strncmp(features[i].name, str, flen)) {
+			f->id = i;
+			goto found;
+		}
+	die("invalid featurespec: '%.*s'\n", flen, str);
+
+found:
+	str += flen + 1;
+	unsigned int len = strcspn(str, ")");
+	
+	if (!isdigit(*str)) { /* Regular feature and name */
+		for (int j = 0; j < PAYLOAD_NAMES_MAX; j++)
+			if (payloads_names[f->id][j] && strlen(payloads_names[f->id][j]) == len &&
+			    !strncmp(str, payloads_names[f->id][j], len)) {
+				f->payload = j;
+				return (str + len);
+			}
+		die("unknown value for feature '%s': '%.*s'\n", features[f->id].name, len, str);
+	}
+
+	/* Regular feature and number */
+	f->payload = strtoull(str, &str, 10);
+	return str;
+}
+
+
+char*
 pattern2str(char *str, struct pattern *p)
 {
 	str = stpcpy(str, "(");
@@ -513,6 +970,51 @@ pattern2str(char *str, struct pattern *p)
 	return str;
 }
 
+char*
+pattern2sstr(struct pattern *p)
+{
+	static char buf[512] = { 0, };
+	pattern2str(buf, p);
+	return buf;
+}
+
+
+/* Make sure each feature has a gamma ... */
+static void
+check_pattern_gammas(struct pattern_config *pc)
+{
+	struct feature f;
+
+	if (DEBUGL(1)) {  fprintf(stderr, "Checking gammas ...");  fflush(stderr);  }
+	for (int i = 0; i < FEAT_MAX; i++) {
+		f.id = i;
+
+		if (i >= FEAT_SPATIAL) { 
+			for (unsigned int j = 0; j < spat_dict->nspatials; j++) {
+                                struct spatial *s = &spat_dict->spatials[j];
+				if (!s->dist)  continue;
+				assert(s->dist >= 3);
+				f.id = FEAT_SPATIAL + s->dist - 3;
+				f.payload = j;
+				if (!feature_has_gamma(pc, &f))  goto error;
+			}
+			goto done;  /* Check all spatial features at once ... */
+		}
+
+		for (int j = 0; j < feature_payloads(i); j++) {
+			f.payload = j;
+			if (!feature_has_gamma(pc, &f))  goto error;
+		}
+	}
+
+ done:
+	if (DEBUGL(1)) fprintf(stderr, " OK\n");
+	return;
+
+ error:
+	die("\nNo gamma for feature (%s)\n", feature2sstr(&f));
+}
+
 char *
 str2pattern(char *str, struct pattern *p)
 {
@@ -521,9 +1023,7 @@ str2pattern(char *str, struct pattern *p)
 	if (*str++ != '(')
 		die("invalid patternspec: %s\n", str);
 
-	while (*str != ')') {
-		str = str2feature(str, &p->f[p->n++]);
-	}
+	while (*str != ')')  str = str2feature(str, &p->f[p->n++]);
 
 	str++;
 	return str;

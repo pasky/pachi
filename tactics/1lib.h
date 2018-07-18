@@ -9,9 +9,13 @@
 struct move_queue;
 
 
+bool capturing_group_is_snapback(struct board *b, group_t group);
 /* Can group @group usefully capture a neighbor ? 
  * (usefully: not a snapback) */
 bool can_countercapture(struct board *b, group_t group, struct move_queue *q, int tag);
+/* Same as can_countercapture() but returns capturable groups instead of moves,
+ * queue may not be NULL, and is always cleared. */
+bool countercapturable_groups(struct board *b, group_t group, struct move_queue *q);
 /* Can group @group capture *any* neighbor ? */
 bool can_countercapture_any(struct board *b, group_t group, struct move_queue *q, int tag);
 

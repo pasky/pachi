@@ -3,6 +3,9 @@ Pachi stands on the research shoulders of giants:
 Move Evaluation in Go using Deep Convolutional Neural Networks
 	Chris J. Maddison, Aja Huang, Ilya Sutskever & David Silver
 
+Computing Elo Ratings of Move Patterns in the Game of Go
+	Rémi Coulom
+
 Modification of UCT with Patterns in Monte-Carlo Go
 	Sylvain Gelly, Yizao Wang, Remi Munos & Olivier Teytaud
 

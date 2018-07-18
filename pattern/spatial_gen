@@ -1,0 +1,69 @@
+#!/bin/bash
+# Generate spatial dictionary from SGF collection.
+#
+# Gathers spatial features from the SGF collection and store them in a freshly
+# created spatial dictionary.
+# DO NOT RUN THIS CONCURRENTLY! The dictionary will get corrupted.
+#
+# Only keeps spatial patterns with at least 500 occurences by default.
+# set SPATMIN to change that:
+#
+#	SPATMIN=100 pattern/spatial_gen ...
+#
+# Spatials are scanned in competition mode by default (also get information
+# about unplayed moves present on the board, not just game move). To scan
+# played move only do:
+#
+#	PATARGS="competition=0" pattern/spatial_gen. ...
+#
+# By default sgf to gtp translation is cached in games.gtp (faster if doing
+# several runs on the same dataset). Delete games.gtp when changing dataset
+# or disable cache instead with:
+#
+#       NOCACHE=1  pattern/spatial_gen ...
+#
+# If something goes wrong check pachi.log
+#
+
+die() {  echo "$@"; exit 1;  }
+usage() {  die "Usage: pattern/spatial_gen sgf_train/*.sgf";  }
+[ -f "$1" ] || usage
+[ -n "$SPATMIN" ] || SPATMIN=500
+
+rm -f patterns_mm.spat patterns_mm.gamma
+
+echo " Gathering population of spatials occuring more than $SPATMIN times..."
+
+options="gen_spat_dict,spat_threshold=$SPATMIN${PATARGS:+,$PATARGS}"
+
+if [ -n "$NOCACHE" ]; then
+    (for i in "$@"; do echo $i >&2; tools/sgf2gtp.pl <$i; done) |
+                ./pachi -d 0 -e patternscan "$options" >/dev/null 2> >(tee pachi.log >&2)
+else
+    # Cache sgf2gtp output
+    if ! [ -f games.gtp ]; then
+	(for i in "$@"; do echo $i >&2; tools/sgf2gtp.pl <$i; done) > games.gtp
+    else
+	echo "Using cached games.gtp data"; sleep 1
+    fi
+    ./pachi -d 0 -e patternscan "$options" <games.gtp >/dev/null 2> >(tee pachi.log >&2) ||
+      die "pachi failed"
+fi
+
+# Show most frequent patterns
+sleep 1; echo ""; echo "Hits:"
+cat pachi.log | grep 'hits=' | cut -d'=' -f2- | tac
+
+# Global stats
+echo ""
+total=`cat patterns_mm.spat | grep '^[0-9]' | wc -l`
+moves="?"; if [ -z "$NOCACHE" ]; then moves=`grep ^play games.gtp | wc -l`; fi
+echo "Gathered $total patterns:  ($moves moves scanned)"
+for i in `seq 3 15`; do
+    n=`grep "^[0-9]* $i " patterns_mm.spat | wc -l`
+    if [ $n = 0 ]; then break; fi;
+    echo "  d=$i: $n"
+done
+
+#echo -n " Counting hash collisions... "
+#perl -lne 'chomp; my ($id, $d, $p, @h) = split(/ /, $_); foreach (@h) { next if $h{$_} = $id; print "collision $id - $h{$_} ($_)" if $h{$_}; $h{$_}=$id; }' patterns_mm.spat | wc -l

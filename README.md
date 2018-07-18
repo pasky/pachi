@@ -72,14 +72,14 @@ section at the top of the Makefile.
 ## DCNN support
 
 Pachi can use a neural network as source of good moves to consider.
-This makes it about 1 stone stronger and makes the games
-more pretty. With dcnn support Pachi can also run on modest hardware
-with very few playouts, or even no playouts at all using the raw dcnn
-engine (not recommended for actual play, pachi won't know when to pass
-or resign !).
+With dcnn support Pachi can play at dan level strength on modest hardware.
+For large number of playouts this makes it about 1 stone stronger, and
+tends to make the games more pretty. A raw dcnn engine is available for
+pure dcnn play (not recommended for actual games, pachi won't know when to
+pass or resign !).
 
-One drawback however is that pondering and dcnn can't be used at the same
-time right now (you should get a warning on startup).
+Currently dcnn is used for root node only, and pondering and dcnn can't be
+used together (you should get a warning on startup).
 
 To build Pachi with DCNN support:
 - Install [Caffe](http://caffe.berkeleyvision.org)  
@@ -97,6 +97,17 @@ If you want to use a network with different inputs you'll have to tweak
 dcnn.c to accomodate it. Pachi will check for `golast19.prototxt` and
 `golast.trained` files on startup and use them if present when
 playing on 19x19.
+
+
+## MM Patterns
+
+MM Patterns have replaced large patterns database used in previous versions.
+No need to download anything extra, they're enabled by default as long as Pachi
+can find its data files.
+
+Patterns load instantly now, take up very little memory and prediction rate is
+better in middle game. They also make it possible to fix tactical holes in
+Pachi by adding corresponding features. See pattern/README for details.
 
 
 ## How to run
@@ -128,30 +139,24 @@ Will make Pachi use 20s per move.
 	./pachi -t =5000:15000 threads=4,max_tree_size=100
 
 This will make Pachi play with max 15000 playouts per move on 4 threads,
-taking up to 100Mb of memory (+ several tens MiB as a constant overhead).
-It should be about 2d with dcnn and large patterns setup.
+taking up to 100Mb of memory (+ several tens Mb as a constant overhead).
+It should be about 2d with dcnn and mm patterns.
 
-	./pachi -t _1200 --no-dcnn threads=8,max_tree_size=3072,pondering
+	./pachi -t _1200 --nodcnn threads=8,max_tree_size=3072,pondering
 
 This will make Pachi play without dcnn with time settings 20:00 S.D. with 8 threads,
-taking up to 3GiB of memory, and thinking during the opponent's turn as well.
+taking up to 3Gb of memory, and thinking during the opponent's turn as well.
 
 **Logs**
 
 Pachi logs details of its activity on stderr, which can be viewed via
-`Tools->GTP Shell` in gogui. Tons of details about winrates, memory usage,
+`Tools -> GTP Shell` in gogui. Tons of details about winrates, memory usage,
 score estimate etc can be found here. Even though most of it available through
 other means in gogui, it's always a good place to look in case something
 unexpected happens.
 
 `-d <log_level>` changes the amount of logging (-d0 suppresses everything)  
 `-o log_file` logs to a file instead. gogui live-gfx commands won't work though.
-
-**Large patterns**
-
-Pachi can also use a pattern database to improve its playing performance.  
-You can get it at http://pachi.or.cz/pat/ - you will also find further
-instructions there.
 
 **Opening book**
 
@@ -192,7 +197,7 @@ overridden at runtime by setting `DATA_DIR` environment variable.
 ## Analyze commands
 
 When running Pachi through GoGui, a number of graphic tools are available
-through the `Tools->Analyze commands` window:
+through the `Tools -> Analyze commands` window:
 
 - Best moves
 - Score estimate

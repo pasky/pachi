@@ -10,6 +10,7 @@
 #include "engines/josekibase.h"
 #include "move.h"
 #include "random.h"
+#include "engine.h"
 #include "tactics/ladder.h"
 #include "tactics/util.h"
 #include "uct/internal.h"
@@ -34,6 +35,42 @@ struct uct_prior {
 	int cfgdn; int *cfgd_eqex;
 	bool prune_ladders;
 };
+
+static void
+find_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest)
+{
+	for (int i = 0; i < nbest; i++)
+		best_c[i] = pass;
+	
+	float max = 0.0;
+	for (struct tree_node *n = parent->children; n; n = n->sibling)
+		max = MAX(max, n->prior.playouts);
+
+	for (struct tree_node *n = parent->children; n; n = n->sibling)
+		best_moves_add(node_coord(n), (float)n->prior.playouts / max, best_c, best_r, nbest);
+}
+
+#define PRIOR_BEST_N 20
+
+/* Display node's priors best moves */
+void
+print_prior_best_moves(struct board *b, struct tree_node *parent)
+{
+	float best_r[PRIOR_BEST_N] = { 0.0, };
+	coord_t best_c[PRIOR_BEST_N];
+	int nbest = PRIOR_BEST_N;
+	find_prior_best_moves(parent, best_c, best_r, nbest);
+
+	int cols = fprintf(stderr, "prior = [ ");
+	for (int i = 0; i < nbest; i++)
+		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
+	fprintf(stderr, "]\n");
+
+	fprintf(stderr, "%*s[ ", cols-2, "");
+	for (int i = 0; i < nbest; i++)
+		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
+	fprintf(stderr, "]\n");	
+}
 
 void
 uct_prior_even(struct uct *u, struct tree_node *node, struct prior_map *map)
@@ -179,13 +216,20 @@ void
 uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{pattern} */
-	if (!u->pat.pd)
-		return;
 
 	struct board *b = map->b;
 	struct pattern pats[b->flen];
 	floating_t probs[b->flen];
-	pattern_rate_moves(&u->pat, b, map->to_play, pats, probs);
+	pattern_rate_moves(&u->pc, b, map->to_play, pats, probs, &u->ownermap);
+
+	/* Show patterns best moves for root node if not using dcnn. */
+	if (DEBUGL(2) && !node->parent && !using_dcnn(b)) {
+		float best_r[20] = { 0.0, };
+		coord_t best_c[20];
+		find_pattern_best_moves(b, probs, best_c, best_r, 20);
+		print_pattern_best_moves(map->b, best_c, best_r, 20);
+	}		
+
 	if (UDEBUGL(5)) {
 		fprintf(stderr, "Pattern prior at node %s\n", coord2sstr(node->coord, b));
 		board_print(b, stderr);
@@ -228,30 +272,24 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		} foreach_free_point_end;
 	}
 
-	if (u->prior->even_eqex)
-		uct_prior_even(u, node, map);
-	if (u->prior->eye_eqex)
-		uct_prior_eye(u, node, map);
-	if (u->prior->ko_eqex)
-		uct_prior_ko(u, node, map);
-	if (u->prior->b19_eqex)
-		uct_prior_b19(u, node, map);
+	if (u->prior->even_eqex)			uct_prior_even(u, node, map);
 	
-	if (!node->parent)  // Use dcnn for root priors
-		if (u->prior->dcnn_eqex)
-			uct_prior_dcnn(u, node, map);
-	
-	if (u->prior->policy_eqex)
-		uct_prior_playout(u, node, map);
-	if (u->prior->cfgd_eqex)
-		uct_prior_cfgd(u, node, map);
-	if (u->prior->joseki_eqex)
-		uct_prior_joseki(u, node, map);
-	if (u->prior->pattern_eqex)
-		uct_prior_pattern(u, node, map);
+	/* Use dcnn for root priors */
+	if (u->prior->dcnn_eqex && !node->parent)	uct_prior_dcnn(u, node, map);
+		
+	if (u->prior->pattern_eqex)			uct_prior_pattern(u, node, map);
+	else {  /* Fallback to old prior features if patterns are off. */
+		if (u->prior->eye_eqex)			uct_prior_eye(u, node, map);
+		if (u->prior->ko_eqex)			uct_prior_ko(u, node, map);
+		if (u->prior->b19_eqex)			uct_prior_b19(u, node, map);		
+		if (u->prior->policy_eqex)		uct_prior_playout(u, node, map);
+		if (u->prior->cfgd_eqex)		uct_prior_cfgd(u, node, map);
+	}
+
+	if (u->prior->joseki_eqex)			uct_prior_joseki(u, node, map);
+
 #ifdef PACHI_PLUGINS
-	if (u->prior->plugin_eqex)
-		plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
+	if (u->prior->plugin_eqex)			plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
 #endif
 }
 
@@ -353,8 +391,8 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex * -p->plugin_eqex / 100;
 	if (p->dcnn_eqex < 0) p->dcnn_eqex = p->eqex * -p->dcnn_eqex / 100;
 
-	if (!using_dcnn(b))
-		p->dcnn_eqex = 0;
+	if (!using_dcnn(b))	p->dcnn_eqex = 0;
+	if (!using_patterns())	p->pattern_eqex = 0;
 	
 	if (p->cfgdn < 0) {
 		static int large_bonuses[] = { 0, 55, 50, 15 };
@@ -365,9 +403,6 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	}
 	if (p->cfgdn > TREE_NODE_D_MAX)
 		die("uct: CFG distances only up to %d available\n", TREE_NODE_D_MAX);
-
-	if (p->pattern_eqex)
-		u->want_pat = true;
 
 	return p;
 }

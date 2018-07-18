@@ -15,7 +15,7 @@
  * feature implementation in the General Pattern Matcher (pattern.[ch]). */
 
 /* Maximum spatial pattern diameter. */
-#define MAX_PATTERN_DIST 7
+#define MAX_PATTERN_DIST 10
 /* Maximum number of points in spatial pattern (upper bound).
  * TODO: Better upper bound to save more data. */
 #define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
@@ -58,6 +58,9 @@ struct spatial {
 	 * spiral from middle to the edge; the dictionary file has
 	 * a comment describing the ordering at the top. */
 	unsigned char points[MAX_PATTERN_AREA / 4];
+	/* id of next spatial with same hash 
+	 * (can't use pointer here because of realloc) */
+	unsigned int next; 
 #define spatial_point_at(s, i) (((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3)
 };
 
@@ -71,6 +74,9 @@ hash_t spatial_hash(unsigned int rotation, struct spatial *s);
 
 /* Convert given spatial pattern to string. */
 char *spatial2str(struct spatial *s);
+
+/* Print spatial on board centered on @at */
+void spatial_print(struct spatial *s, FILE *f, struct move *at);
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). */
@@ -95,27 +101,48 @@ struct spatial_dict {
 	/* Indexed base store */
 	unsigned int nspatials; /* Number of records. */
 	struct spatial *spatials; /* Actual records. */
+	
+	/* number of spatials for each dist, for mm tool */
+	/* FIXME invalid unless spatial_dict_index_by_dist() has been called */
+	unsigned int     nspatials_by_dist[MAX_PATTERN_DIST+1];
 
 	/* Hashed access; all isomorphous configurations
 	 * are also hashed */
-#define spatial_hash_bits 26 // ~256mib array
+#ifndef GENSPATIAL
+	#define spatial_hash_bits 20 // 4Mb array
+#else
+	#define spatial_hash_bits 26 // ~256Mb, need large dict when scanning spatials
+#endif
+
 #define spatial_hash_mask ((1 << spatial_hash_bits) - 1)
 	/* Maps to spatials[] indices. The hash function
 	 * used is zobrist hashing with fixed values. */
 	uint32_t hash[1 << spatial_hash_bits];
 	/* Auxiliary counters for statistics. */
-	int fills, collisions;
+	int fills, collisions, repetitions;
 };
 
+#define spatial_id(s, dict)  ((unsigned int)(s - dict->spatials))
+#define next_spatial(s, dict) (s->next ? &dict->spatials[s->next] : 0)
+
+bool spatial_cmp(struct spatial *s1, struct spatial *s2);
+
 /* Initializes spatial dictionary, pre-loading existing records from
- * default filename if exists. If will_append is true, it will not
- * complain about non-existing file and initialize the dictionary anyway.
+ * default filename if exists. If create is true, it will not complain
+ * about non-existing file and initialize the dictionary anyway.
  * If hash is true, loaded spatials will be added to the hashtable;
  * use false if this is to be done later (e.g. by patternprob). */
-struct spatial_dict *spatial_dict_init(bool will_append, bool hash);
+struct spatial_dict *spatial_dict_init(bool create, bool hash);
 
-/* Lookup specified spatial pattern in the dictionary; return index
- * of the pattern. If the pattern is not found, 0 will be returned. */
+/* FIXME */
+void spatial_dict_index_by_dist(struct pattern_config *pc);
+
+/* Lookup spatial pattern: safe & slow version (resolves collisions).
+ * Returns index of the pattern, or 0 if not found. */
+static unsigned int spatial_dict_gets(struct spatial_dict *dict, struct spatial *s, hash_t h);
+
+/* Lookup spatial pattern: fast & unsafe version.
+ * Doesn't resolve collisions, just checks that dist matches. */
 static unsigned int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
 
 /* Store specified spatial pattern in the dictionary if it is not known yet.
@@ -148,6 +175,21 @@ void spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id
 
 
 static inline unsigned int
+spatial_dict_gets(struct spatial_dict *dict, struct spatial *s, hash_t h)
+{
+	unsigned int id = dict->hash[h];
+	if (id > 0) {
+		for (struct spatial *s2 = &dict->spatials[id]; s2; s2 = next_spatial(s2, dict)) {
+			/* Is this the same or isomorphous spatial? */
+			if (spatial_cmp(s, s2))
+				return spatial_id(s2, dict);
+		}
+	}
+	return 0;
+}
+
+#if 1   /* collisions ... */
+static inline unsigned int
 spatial_dict_get(struct spatial_dict *dict, int dist, hash_t hash)
 {
 	unsigned int id = dict->hash[hash];
@@ -161,5 +203,6 @@ spatial_dict_get(struct spatial_dict *dict, int dist, hash_t hash)
 #endif
 	return id;
 }
+#endif
 
 #endif

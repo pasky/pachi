@@ -30,6 +30,7 @@
 #include "uct/tree.h"
 #include "dcnn.h"
 #include "caffe.h"
+#include "pattern.h"
 
 int debug_level = 3;
 bool debug_boardprint = true;
@@ -94,7 +95,6 @@ usage()
 		"  -c, --chatfile FILE               set kgs chatfile \n"
                 "      --compile-flags               show pachi's compile flags \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
-		"      --dcnn                        abort if dcnn isn't used \n"
 		"  -D                                don't log board diagrams \n"
 		"      --nopassfirst                 don't pass first (needed for kgs) \n"
 		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
@@ -106,7 +106,6 @@ usage()
 		"  -h, --help                        show usage \n"
 		"      --kgs                         turn on kgs-specific behavior (currently --nopassfirst) \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
-		"      --nodcnn, --no-dcnn           disable dcnn \n"
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
@@ -116,6 +115,10 @@ usage()
 		"  -u, --unit-test FILE              run unit tests \n"
 		"      --verbose-caffe               enable caffe logging \n"
 		"  -v, --version                     show version \n"
+		" \n"
+		"Engine components: \n"
+		"      --dcnn, --nodcnn              dcnn required / disabled \n"
+		"      --patterns, --nopatterns      mm patterns required / disabled \n"
 		" \n"
 		"TIME_SETTINGS: \n"
 		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
@@ -152,11 +155,13 @@ show_version(FILE *s)
 }
 
 #define OPT_FUSEKI_TIME   256
-#define OPT_NO_DCNN       257
+#define OPT_NODCNN        257
 #define OPT_DCNN          258
 #define OPT_VERBOSE_CAFFE 259
 #define OPT_COMPILE_FLAGS 260
 #define OPT_NOPASSFIRST   261
+#define OPT_PATTERNS      262
+#define OPT_NOPATTERNS    263
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "chatfile",    required_argument, 0, 'c' },
@@ -170,9 +175,10 @@ static struct option longopts[] = {
 	{ "kgs",         no_argument,       0, OPT_NOPASSFIRST },
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
-	{ "no-dcnn",     no_argument,       0, OPT_NO_DCNN },
-	{ "nodcnn",      no_argument,       0, OPT_NO_DCNN },
+	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
 	{ "nopassfirst", no_argument,       0, OPT_NOPASSFIRST },
+	{ "nopatterns",  no_argument,       0, OPT_NOPATTERNS },
+	{ "patterns",    no_argument,       0, OPT_PATTERNS },
 	{ "rules",       required_argument, 0, 'r' },
 	{ "seed",        required_argument, 0, 's' },
 	{ "time",        required_argument, 0, 't' },
@@ -261,11 +267,17 @@ int main(int argc, char *argv[])
 				if (!freopen(optarg, "w", stderr))  fail("freopen()");
 				setlinebuf(stderr);
 				break;
-			case OPT_NO_DCNN:
+			case OPT_NODCNN:
 				disable_dcnn();
 				break;
 			case OPT_NOPASSFIRST:
 				nopassfirst = true;
+				break;
+			case OPT_NOPATTERNS:
+				disable_patterns();
+				break;
+			case OPT_PATTERNS:
+				require_patterns();
 				break;
 			case 'r':
 				forced_ruleset = strdup(optarg);

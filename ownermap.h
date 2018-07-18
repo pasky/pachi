@@ -7,6 +7,9 @@
 #include <signal.h> // sig_atomic_t
 struct move_queue;
 
+/* How many games to consider at minimum before judging groups. */
+#define GJ_MINGAMES	500
+
 /* How big proportion of ownermap counts must be of one color to consider
  * the point sure. */
 #define GJ_THRES	0.8

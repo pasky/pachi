@@ -1,0 +1,164 @@
+
+dmircea vs pachi   apr 11
+
+Move:  94  Komi: 7.5  Handicap: 0  Captures B: 0 W: 0
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . . . . . . . . . . . . | 19 | : : : : : : : : : : : : : : : : : : : |
+ 18 | . . . O O . O . . . . . . . . . . . . | 18 | : : : : : : : : : : : : : : : : : : : |
+ 17 | . . X . X O . X O . . . . . . . . . . | 17 | : : : : : : : : : : : : : : : : : : : |
+ 16 | . . X . X O . O O . . . . . . X . . . | 16 | : : : : : : : : : : : : : : : : : : : |
+ 15 | . . . . . X X X X . . . . . . . . . . | 15 | : : : : : : : : : : : : : : : : : : : |
+ 14 | . . X . . . . . . . . . . . . . . . . | 14 | : : : : : : : : : : : : : : : : : : : |
+ 13 | . O . . . . . . . . . . . . X . O . . | 13 | : : : : : : : : : : : : : : : : : : : |
+ 12 | . . O . . . . . . . . . . . . . O . . | 12 | : : : : : : : : : : : : : : : : : : : |
+ 11 | . . O X . . . . . . . . . . . X . . . | 11 | : : : : : : : : : : : : : : : : : : : |
+ 10 | . . O X . . . . . . . . . . . X O . . | 10 | : : : : : : : : : : : : : : : : : : : |
+  9 | . . O X . . . X . . . X O). . X O . . |  9 | : : : : : : : : : : : : : : : : : : : |
+  8 | . . O X . . . O X X X O . X X O O . . |  8 | : : : : : : : : : : : : : : : : : : : |
+  7 | . O X . . . . . O O X O . X O O . . . |  7 | : : : : : : : : : : : : : : : : : : : |
+  6 | O X X . X X X O . . O . . . X O X . . |  6 | : : : : : : : : : : : : : : : : : : : |
+  5 | . O O . . O X . . . . . O . . . . . . |  5 | : : : : : : : : : : : : : : : : : : : |
+  4 | . X O O O O X . . . O . . O . O . . . |  4 | : : : : : : : : : : : : : : : : : : : |
+  3 | . X X X X O . . X . X X . . . . . . . |  3 | : : : : : : : : : : : : : : : : : : : |
+  2 | . . . . X O . . . . . . O . . . . . . |  2 | : : : : : : : : : : : : : : : : : : : |
+  1 | . . . . . . . . . . . . . . . . . . . |  1 | : : : : : : : : : : : : : : : : : : : |
+    +---------------------------------------+    +---------------------------------------+
+
+prior_dcnn(pass) = [ M10 N8 M6 L9 K6 ]      [ 0.51 0.34 0.03 0.03 0.03 ]
+
+M10 of course, but N8 in the game and 3 stones get captured !
+
+
+Sometimes hesitates around N8 at the beginning:
+
+[2000] best 0.479253 xkomi 0.0 | seq M10 N10 M11     | can b M10(0.479)  N8(0.491)  M6(0.417)  K6(0.429)
+[4000] best 0.477769 xkomi 0.0 | seq M10  L9 K10     | can b M10(0.478)  N8(0.511)  M6(0.464)  K6(0.429)
+[6000] best 0.479952 xkomi 0.0 | seq M10 N10  N8 N11 | can b M10(0.480)  N8(0.501)  M6(0.441)  K6(0.429)
+[8000] best 0.493423 xkomi 0.0 | seq  N8  M6 N10  G8 | can b  N8(0.493) M10(0.471)  M6(0.453)  K6(0.429)
+[10000] best 0.491138 xkomi 0.0 | seq  N8 M10  L9  O6 | can b  N8(0.491) M10(0.471)  M6(0.445)  K6(0.429)
+[12000] best 0.472378 xkomi 0.0 | seq M10  G8  N8  O6 | can b M10(0.472)  N8(0.478)  M6(0.454)  A5(0.385)
+[14000] best 0.468173 xkomi 0.0 | seq M10  G8  N8  O6 | can b M10(0.468)  N8(0.468)  M6(0.454)  A5(0.367)
+[16000] best 0.465484 xkomi 0.0 | seq M10  G8  N8  O6 | can b M10(0.466)  N8(0.459)  M6(0.453)  A5(0.390)
+[18000] best 0.465130 xkomi 0.0 | seq M10 N10  N8 N11 | can b M10(0.465)  N8(0.455)  M6(0.447)  A5(0.390)
+
+
+Indeed patterns don't know how to punish N8:
+
+IN: genmove w
+Move:  95  Komi: 7.5  Handicap: 0  Captures B: 0 W: 0
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . . . . . . . . . . . . | 19 | : : : : : : : : : : : : : : : : : : : |
+ 18 | . . . O O . O . . . . . . . . . . . . | 18 | : : : : : : : : : : : : : : : : : : : |
+ 17 | . . X . X O . X O . . . . . . . . . . | 17 | : : : : : : : : : : : : : : : : : : : |
+ 16 | . . X . X O . O O . . . . . . X . . . | 16 | : : : : : : : : : : : : : : : : : : : |
+ 15 | . . . . . X X X X . . . . . . . . . . | 15 | : : : : : : : : : : : : : : : : : : : |
+ 14 | . . X . . . . . . . . . . . . . . . . | 14 | : : : : : : : : : : : : : : : : : : : |
+ 13 | . O . . . . . . . . . . . . X . O . . | 13 | : : : : : : : : : : : : : : : : : : : |
+ 12 | . . O . . . . . . . . . . . . . O . . | 12 | : : : : : : : : : : : : : : : : : : : |
+ 11 | . . O X . . . . . . . . . . . X . . . | 11 | : : : : : : : : : : : : : : : : : : : |
+ 10 | . . O X . . . . . . . . . . . X O . . | 10 | : : : : : : : : : : : : : : : : : : : |
+  9 | . . O X . . . X . . . X O . . X O . . |  9 | : : : : : : : : : : : : : : : : : : : |
+  8 | . . O X . . . O X X X O X)X X O O . . |  8 | : : : : : : : : : : : : : : : : : : : |
+  7 | . O X . . . . . O O X O . X O O . . . |  7 | : : : : : : : : : : : : : : : : : : : |
+  6 | O X X . X X X O . . O . . . X O X . . |  6 | : : : : : : : : : : : : : : : : : : : |
+  5 | . O O . . O X . . . . . O . . . . . . |  5 | : : : : : : : : : : : : : : : : : : : |
+  4 | . X O O O O X . . . O . . O . O . . . |  4 | : : : : : : : : : : : : : : : : : : : |
+  3 | . X X X X O . . X . X X . . . . . . . |  3 | : : : : : : : : : : : : : : : : : : : |
+  2 | . . . . X O . . . . . . O . . . . . . |  2 | : : : : : : : : : : : : : : : : : : : |
+  1 | . . . . . . . . . . . . . . . . . . . |  1 | : : : : : : : : : : : : : : : : : : : |
+    +---------------------------------------+    +---------------------------------------+
+
+prior_dcnn(pass) = [ L9  M6  N6  G9  J9  M10 K15 G8  N10 K4  N7  P12 L15 N13 J4  L16 O6  P14 O10 H2  ]
+                   [ 57  12  12  6   3   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+L9 of course, but ...
+
+prior_pattern(pass) = [ G8  M10 G9  O17 N10 O6  J4  L9  K15 L16 B14 D12 K4  G16 N7  F8  P5  J9  Q5  E1  ]
+                      [ 27  14  10  5   5   4   4   3   3   3   2   2   2   1   1   1   1   1   1   1   ]
+
+mm is clueless too:
+prior_pattern(pass) = [ H18 N10 R5  M10 B8  R11 O9  O6  D12 E15 P5  G9  K15 C18 J18 K4  G8  B14 L16 D5  ]
+                      [ 393 308 293 285 248 236 205 186 168 155 151 147 143 143 136 134 130 122 112 98  ]
+
+----------------------------------------------------------------------------------------------------------
+
+[ default ]
+./pachi.my -t =5000:15000 prior=pattern=160,threads=4,max_tree_size=300,pondering=0,reportfreq=250 < <( while true ; do cat ../pachi_bugs/silly_misread0/foo.gtp ; done) 2>&1 | tee pachi.log | grep WINNER
+*** WINNER is M10 (12,10) with score 0.4707 (4041/6314:6314/6331 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4741 (8489/15031:15031/15086 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4748 (2972/5278:5278/5285 games), extra komi 0.000000
+*** WINNER is N8 (13,8) with score 0.4872 (7640/15020:15020/15063 games), extra komi 0.000000
+*** WINNER is N8 (13,8) with score 0.4892 (7471/15007:15007/15043 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4646 (8301/15057:15057/15094 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4800 (3971/6896:6896/6905 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4671 (3074/5262:5262/5274 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4574 (7562/15022:15022/15062 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4650 (6880/15014:15014/15047 games), extra komi 0.000000
+
+----------------------------------------------------------------------------------------------------------
+
+[ ray patterns, pattern_eqex=200 ]  -> yuck !
+./pachi -t =5000:15000 prior=pattern=200,threads=4,max_tree_size=300,pondering=0,reportfreq=250 < <( while true ; do cat ../pachi_bugs/silly_misread0/foo.gtp ; done) 2>&1 | grep WINNER
+*** WINNER is M10 (12,10) with score 0.4824 (2533/5011:5011/5034 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4780 (8576/15041:15041/15211 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4700 (4094/7773:7773/7817 games), extra komi 0.000000
+*** WINNER is N8 (13,8) with score 0.4882 (8250/15109:15109/15278 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4707 (8095/15030:15030/15135 games), extra komi 0.000000
+*** WINNER is N8 (13,8) with score 0.4778 (7036/15036:15036/15191 games), extra komi 0.000000
+*** WINNER is N8 (13,8) with score 0.4868 (8085/15051:15051/15173 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4646 (8167/15102:15102/15217 games), extra komi 0.000000
+*** WINNER is N8 (13,8) with score 0.4644 (6193/15053:15053/15181 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4731 (8288/15116:15116/15222 games), extra komi 0.000000
+
+----------------------------------------------------------------------------------------------------------
+
+[ df playouts ]
+does better:
+
+while true ; do cat ../pachi_bugs/silly_misread0/foo.gtp; done | ./pachi.df -t =5000:15000 threads=4,max_tree_size=100,pondering=0,reportfreq=250  2>&1 | tee pachi.log | grep WINNER
+*** WINNER is M10 (12,10) with score 0.4926 (3244/5004:5004/5012 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4820 (2695/5004:5004/5008 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5017 (3147/5004:5004/5009 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4904 (3069/5004:5004/5009 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4853 (2761/5004:5004/5008 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4969 (2896/5004:5004/5008 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5078 (3511/5004:5004/5007 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5175 (3921/5004:5004/5010 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5059 (2957/5004:5004/5008 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4918 (2733/5004:5004/5008 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5037 (3560/5004:5004/5010 games), extra komi 0.000000
+*** WINNER is N8 (13,8) with score 0.5229 (2622/5004:5004/5012 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5030 (3048/5004:5004/5007 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4973 (2546/5004:5004/5007 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4969 (3268/5004:5004/5008 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4912 (2331/5004:5004/5009 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4980 (2544/5004:5004/5008 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4976 (3187/5004:5004/5010 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5134 (3356/5004:5004/5007 games), extra komi 0.000000
+
+
+[ hira playouts ]
+nice !
+
+while true ; do cat ../pachi_bugs/silly_misread0/foo.gtp; done | ./pachi.hira_591ebfc -t =5000:15000 threads=4,max_tree_size=100,pondering=0,reportfreq=250  2>&1 | tee pachi.log | grep WINNER
+*** WINNER is M10 (12,10) with score 0.4915 (3351/5106:5106/5106 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4993 (8998/15045:15045/15045 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5123 (3935/5148:5148/5148 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4875 (4825/7328:7328/7328 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5013 (3848/5296:5296/5296 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.5021 (3965/5493:5493/5493 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4968 (3774/5394:5394/5394 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4938 (3234/5028:5028/5028 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4921 (3932/5376:5376/5376 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4792 (3863/5668:5668/5668 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4907 (9563/15077:15077/15077 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4970 (10013/15011:15011/15011 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4798 (4435/6430:6430/6430 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4924 (9541/14477:14477/14477 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4878 (9751/15030:15030/15030 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4853 (9167/15060:15060/15060 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4826 (4903/6888:6888/6888 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4790 (9136/15029:15029/15029 games), extra komi 0.000000
+*** WINNER is M10 (12,10) with score 0.4909 (3783/5364:5364/5364 games), extra komi 0.000000
