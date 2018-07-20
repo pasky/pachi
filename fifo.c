@@ -175,7 +175,7 @@ attach_shm()
 
 /***************************************************************************************************/
 
-static void __attribute__((constructor))
+void
 fifo_init()
 {
 	if (!attach_shm())

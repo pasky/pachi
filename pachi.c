@@ -28,6 +28,7 @@
 #include "version.h"
 #include "network.h"
 #include "uct/tree.h"
+#include "fifo.h"
 #include "dcnn.h"
 #include "caffe.h"
 #include "pattern.h"
@@ -333,6 +334,7 @@ int main(int argc, char *argv[])
 		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 	if (dcnn_required)       require_dcnn();
+	fifo_init();
 
 	struct board *b = board_init(fbookfile);
 	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
