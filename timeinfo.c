@@ -10,6 +10,7 @@
 
 #include "debug.h"
 #include "tactics/util.h"
+#include "ownermap.h"
 #include "timeinfo.h"
 
 /* Max net lag in seconds. TODO: estimate dynamically. */
@@ -42,8 +43,12 @@ time_parse(struct time_info *ti, char *s)
 			ti->dim = TD_GAMES;
 			ti->len.games = strtol(++s, &end, 10);
 			ti->len.games_max = 0;
-			if (*end == ':')
+			if (*end == ':') {
 				ti->len.games_max = strtol(end + 1, &end, 10);
+				if (ti->len.games_max < ti->len.games)  return false;
+			}
+			if (ti->len.games < GJ_MINGAMES)  fprintf(stderr, "Error: minimum %i playouts.\n", GJ_MINGAMES);
+			if (ti->len.games < GJ_MINGAMES)  return false;
 			if (*end) return false;
 			break;
 	        default:
