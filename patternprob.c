@@ -50,7 +50,8 @@ prob_dict_init(char *filename, struct pattern_config *pc)
 
 		/* Some spatials may not have been loaded if they correspond
 		 * to a radius larger than supported. */
-		if (spat_dict->spatials[spi].dist > 0) {
+		if (spi != spat_dict->nspatials &&
+		    spat_dict->spatials[spi].dist > 0) {
 			/* We rehash spatials in the order of loaded patterns. This way
 			 * we make sure that the most popular patterns will be hashed
 			 * last and therefore take priority. */
