@@ -12,7 +12,7 @@ within this framework.
 
 The default engine plays by Chinese rules and should be about 7d KGS
 strength on 9x9. On 19x19 it can hold a solid KGS 2d rank on modest
-hardware (Raspberry Pi 3, dcnn) or faster machine (e.g. six-way Intel
+hardware (Raspberry Pi, dcnn) or faster machine (e.g. six-way Intel
 i7) without dcnn.
 
 When using a large cluster (64 machines, 20 cores each), it maintains
@@ -22,16 +22,16 @@ By default, Pachi currently uses the UCT engine that combines
 Monte Carlo approach with tree search; UCB1AMAF tree policy using
 the RAVE method is used for tree search, while the Moggy playout
 policy using 3x3 patterns and various tactical checks is used for
-the semi-random Monte Carlo playouts.  Large-scale board patterns
-are used in the tree search.
+the semi-random Monte Carlo playouts. MM patterns are used in the
+tree search.
 
 
 ## Binary Releases
 
-**Windows**: download binary [release](https://github.com/pasky/pachi/releases)
+**Windows**: Download [binary release](https://github.com/pasky/pachi/releases)
 for windows and follow instructions inside.
 
-**Ubuntu**: there's a 'pachi-go' package in my [ppa](https://launchpad.net/~lemonsqueeze/+archive/ubuntu/pachi):
+**Ubuntu**: There's a 'pachi-go' package in my [ppa](https://launchpad.net/~lemonsqueeze/+archive/ubuntu/pachi):
 
     sudo add-apt-repository ppa:lemonsqueeze/pachi
     sudo apt-get update
@@ -41,7 +41,8 @@ for windows and follow instructions inside.
 
 ## Installation
 
-Currently *nix, Mac and Windows are supported. To build Pachi, simply type:
+Currently Unix, Mac and Windows are supported.  
+To build Pachi, simply type:
 
 	make
 
@@ -99,17 +100,6 @@ dcnn.c to accomodate it. Pachi will check for `golast19.prototxt` and
 playing on 19x19.
 
 
-## MM Patterns
-
-MM Patterns have replaced large patterns database used in previous versions.
-No need to download anything extra, they're enabled by default as long as Pachi
-can find its data files.
-
-Patterns load instantly now, take up very little memory and prediction rate is
-better in middle game. They also make it possible to fix tactical holes in
-Pachi by adding corresponding features. See pattern/README for details.
-
-
 ## How to run
 
 By default Pachi will run on all cores, using up to 200Mb of memory for tree
@@ -118,7 +108,7 @@ parameters by passing it extra command line options.
 
 For main options description try:
 
-        ./pachi --help
+        pachi --help
 
 **Time Settings**
 
@@ -127,25 +117,42 @@ recommended to maximize efficient time allocation). However, most of these
 are accessible only via GTP, that is by the frontend keeping track of time,
 e.g. KGS or gogui.
 
-It's also possible to force time settings via the command line (GTP
-time settings are ignored then).
+It's also possible to force time settings via the command line
+(GTP time settings are ignored then):
 
-For example:
+* `pachi -t 20        `     20s per move.
+* `pachi -t _600       `     10 minutes sudden death.
+* `pachi -t =5000       `     5000 playouts per move.
+* `pachi -t =5000:15000   `      Think more when needed. Same but up-to 15000 playouts if best move is unclear.
+* `pachi -t =5000:15000 --fuseki-time =4000`     Don't think too much during fuseki.
 
-	./pachi -t 20
+**Fixed Strength**
 
-Will make Pachi use 20s per move.
+Pachi will play fast on a fast computer, slow on a slow computer, but strength
+will remain the same:
 
-	./pachi -t =5000:15000 threads=4,max_tree_size=100
+* `pachi -t =5000:15000    `    kgs 2d with dcnn support.
+* `pachi --nodcnn -t =5000   `   kgs 3k (mcts only).
 
-This will make Pachi play with max 15000 playouts per move on 4 threads,
-taking up to 100Mb of memory (+ several tens Mb as a constant overhead).
-It should be about 2d with dcnn and mm patterns.
+**Other Options**
 
-	./pachi -t _1200 --nodcnn threads=8,max_tree_size=3072,pondering
+* `pachi resign_threshold=0.25`     Resign when winrate < 25% (default: 10%).
 
-This will make Pachi play without dcnn with time settings 20:00 S.D. with 8 threads,
-taking up to 3Gb of memory, and thinking during the opponent's turn as well.
+* `pachi -t 10 threads=4,max_tree_size=100`
+
+  Play with 10s per move on 4 threads, taking up to 100Mb of memory
+  (+ several tens Mb as a constant overhead).
+
+* `pachi -t _1200 --nodcnn threads=8,max_tree_size=3072,pondering`
+
+  Play without dcnn with time settings 20:00 S.D. on 8 threads,
+  taking up to 3Gb of memory, and thinking during the opponent's turn as well.
+
+For now, there is no comprehensive documentation of engine options, but
+you can get a pretty good idea by looking at the uct_state_init() function
+in uct/uct.c - you will find the list of UCT engine options there, each
+with a description. At any rate, usually the three options above are
+the only ones you really want to tweak.
 
 **Logs**
 
@@ -166,32 +173,11 @@ Pachi can use an opening book in a Fuego-compatible format - you can
 obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
 with the -f parameter:
 
-	./pachi -f book.dat ...
+	pachi -f book.dat ...
 
 You may wish to append some custom Pachi opening book lines to book.dat;
 take them from the book.dat.extra file. If using the default Fuego book,
 you may want to remove the lines listed in book.dat.bad.
-
-**Other Options**
-
-For now, there is no comprehensive documentation of engine options, but
-you can get a pretty good idea by looking at the uct_state_init() function
-in uct/uct.c - you will find the list of UCT engine options there, each
-with a description. At any rate, usually the three options above are
-the only ones you really want to tweak.
-
-
-## Install
-
-After compiling and setting up data files you can install pachi with:
-
-    make install
-    make install-data
-
-Pachi will look for extra data files (such as dcnn, pattern, joseki or
-fuseki database) in pachi's system directory (/usr/local/share/pachi by
-default) as well as current directory. System data directory can be
-overridden at runtime by setting `DATA_DIR` environment variable.
 
 
 ## Analyze commands
@@ -225,7 +211,7 @@ _does_ take into account the point size, strives for a maximum
 (reasonable) win margin when winning and minimal point loss when
 losing. This is possible by using the maximize_score parameter, e.g.:
 
-	./pachi -t _1200 threads=8,maximize_score
+	pachi -t _1200 threads=8,maximize_score
 
 This enables an aggressive dynamic komi usage and end result margin
 is included in node values aside of winrate. Pachi will also enter
@@ -237,6 +223,30 @@ Note that Pachi in this mode may be slightly weaker, and result margin
 should not be taken into account when judging either player's strength.
 During the game, the winning/losing margin can be approximated from
 Pachi's "extra komi" or "xkomi" reporting in the progress messages.
+
+
+## Large Patterns
+
+MM patterns have replaced the large patterns database used in previous versions.
+No need to download anything extra, they're enabled by default as long as Pachi
+can find its data files.
+
+Patterns should load instantly now and take up very little memory. Prediction rate
+in middle game is better too.  
+See pattern/README for details.
+
+
+## Install
+
+After compiling and setting up data files you can install pachi with:
+
+    make install
+    make install-data
+
+Pachi will look for extra data files (such as dcnn, pattern, joseki or
+fuseki database) in pachi's system directory (`/usr/local/share/pachi`
+by default) as well as current directory. System data directory can be
+overridden at runtime by setting `DATA_DIR` environment variable.
 
 
 ## Experiments and Testing
@@ -257,7 +267,7 @@ Other special engines are also provided:
 Pachi can be used as a test opponent for development of other go-playing
 programs. For example, to get the "plainest UCT" player, use:
 
-	./pachi -t =5000 policy=ucb1,playout=light,prior=eqex=0,dynkomi=none,pondering=0,pass_all_alive
+	pachi -t =5000 --nodcnn policy=ucb1,playout=light,prior=eqex=0,dynkomi=none,pondering=0,pass_all_alive
 
 This will fix the number of playouts per move to 5000, switch the node
 selection policy from ucb1amaf to ucb1 (i.e. disable RAVE), switch the
