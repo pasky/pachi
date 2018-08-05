@@ -132,7 +132,7 @@ bool spatial_cmp(struct spatial *s1, struct spatial *s2);
  * about non-existing file and initialize the dictionary anyway.
  * If hash is true, loaded spatials will be added to the hashtable;
  * use false if this is to be done later (e.g. by patternprob). */
-struct spatial_dict *spatial_dict_init(bool create, bool hash);
+struct spatial_dict *spatial_dict_init(bool create);
 
 /* FIXME */
 void spatial_dict_index_by_dist(struct pattern_config *pc);

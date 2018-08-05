@@ -203,7 +203,7 @@ patterns_init(struct pattern_config *pc, char *arg, bool create, bool load_prob)
 
 	/* Load spatial dictionary */
 	if (!spat_dict)
-		spat_dict = spatial_dict_init(create, !load_prob);
+		spat_dict = spatial_dict_init(create);
 	
 	if (!spat_dict)		return;	
 	spatial_dict_index_by_dist(pc);

@@ -298,7 +298,7 @@ spatial_dict_addh(struct spatial_dict *dict, hash_t hash, unsigned int id)
  * HASH...: space-separated 18bit hash-table indices for the pattern */
 
 static void
-spatial_dict_read(struct spatial_dict *dict, char *buf, bool hash)
+spatial_dict_read(struct spatial_dict *dict, char *buf)
 {
 	/* XXX: We trust the data. Bad data will crash us. */
 	char *bufp = buf;
@@ -335,9 +335,8 @@ spatial_dict_read(struct spatial_dict *dict, char *buf, bool hash)
 	assert(id == index);
 
 	/* Add to specified hash places. */
-	if (hash)
-		for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
-			spatial_dict_addh(dict, spatial_hash(r, &s), id);
+	for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
+		spatial_dict_addh(dict, spatial_hash(r, &s), id);
 }
 
 void
@@ -366,18 +365,15 @@ spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id, FIL
 }
 
 static void
-spatial_dict_load(struct spatial_dict *dict, FILE *f, bool hash)
+spatial_dict_load(struct spatial_dict *dict, FILE *f)
 {
 	char buf[1024];
 	while (fgets(buf, sizeof(buf), f)) {
 		if (buf[0] == '#') continue;
-		spatial_dict_read(dict, buf, hash);
+		spatial_dict_read(dict, buf);
 	}
-	if (DEBUGL(1)) {
-		fprintf(stderr, "Loaded spatial dictionary of %d patterns.\n", dict->nspatials);
-		if (hash)
-			spatial_dict_hashstats(dict);
-	}
+	if (DEBUGL(1)) fprintf(stderr, "Loaded spatial dictionary of %d patterns.\n", dict->nspatials);
+	if (DEBUGL(3)) spatial_dict_hashstats(dict);
 }
 
 void
@@ -456,7 +452,7 @@ spatial_dict_index_by_dist(struct pattern_config *pc)
 const char *spatial_dict_filename = "patterns_mm.spat";
 
 struct spatial_dict *
-spatial_dict_init(bool create, bool hash)
+spatial_dict_init(bool create)
 {
 	FILE *f = fopen_data_file(spatial_dict_filename, "r");
 	if (!f && !create) {
@@ -472,7 +468,7 @@ spatial_dict_init(bool create, bool hash)
 	spatial_dict_addc(dict, &dummy);
 
 	if (f) {
-		spatial_dict_load(dict, f, hash);
+		spatial_dict_load(dict, f);
 		fclose(f); f = NULL;
 	} else
 		assert(create);

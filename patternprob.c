@@ -16,7 +16,7 @@ struct prob_dict*
 prob_dict_init(char *filename, struct pattern_config *pc)
 {
 	if (!filename)  filename = "patterns_mm.gamma";
-	FILE *f = fopen(filename, "r");
+	FILE *f = fopen_data_file(filename, "r");
 	if (!f) {
 		if (DEBUGL(1))  fprintf(stderr, "%s not found, will not use mm patterns.\n", filename);
 		return NULL;
@@ -24,9 +24,6 @@ prob_dict_init(char *filename, struct pattern_config *pc)
 
 	struct prob_dict *dict = calloc2(1, sizeof(*dict));
 	dict->table = calloc2(spat_dict->nspatials + 1, sizeof(*dict->table));
-
-	char *sphcachehit = calloc2(spat_dict->nspatials, 1);
-	hash_t (*sphcache)[PTH__ROTATIONS] = malloc(spat_dict->nspatials * sizeof(sphcache[0]));
 
 	int i = 0;
 	char sbuf[1024];
@@ -48,28 +45,9 @@ prob_dict_init(char *filename, struct pattern_config *pc)
 		pb->next = dict->table[spi];
 		dict->table[spi] = pb;
 
-		/* Some spatials may not have been loaded if they correspond
-		 * to a radius larger than supported. */
-		if (spi != spat_dict->nspatials &&
-		    spat_dict->spatials[spi].dist > 0) {
-			/* We rehash spatials in the order of loaded patterns. This way
-			 * we make sure that the most popular patterns will be hashed
-			 * last and therefore take priority. */
-			// FIXME reorder gammas ?
-			if (!sphcachehit[spi]) {
-				sphcachehit[spi] = 1;
-				for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
-					sphcache[spi][r] = spatial_hash(r, &spat_dict->spatials[spi]);
-			}
-			for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
-				spatial_dict_addh(spat_dict, sphcache[spi][r], spi);
-		}
-
 		i++;
 	}
 
-	free(sphcache);
-	free(sphcachehit);
 	if (DEBUGL(3))  spatial_dict_hashstats(spat_dict);
 
 	fclose(f);
@@ -142,8 +120,7 @@ pattern_rate_moves(struct pattern_config *pc,
 	if (max < LOW_PATTERN_RATING)
 		max = pattern_max_rating(pc, b, color, pats, probs, ownermap, false);
 	
-	floating_t total = rescale_probs(b, probs, max);
-	return total;
+	return rescale_probs(b, probs, max);
 }
 
 bool
