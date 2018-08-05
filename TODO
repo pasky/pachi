@@ -25,14 +25,12 @@ Strength:
         There are some blind spots also. A good learnt, balanced policy
         would make quite a difference. See darkforest playouts for
         example (very slow though)
-* MM / LFR large patterns (CPU mode)
-        Use MM or LFR for priors instead of Stern-style patterns.
-        Large patterns have 21% prediction rate right now, but drop
-	to ~10% in middle game (see t-predict).
-        Can expect 34% with MM and 44% with LFR throughout the game
-        which should help tree search quite a bit. Implementation
-        doesn't even need to be fast (incremental patterns) to be used
-        in tree search. Try progressive widening.
+* LFR large patterns (CPU mode)
+        Use LFR for priors instead of MM patterns.
+        MM patterns have about 31% prediction rate right now, can expect
+        44% with LFR which should help tree search quite a bit.
+        Implementation doesn't even need to be fast (incremental patterns)
+        to be used in tree search. Try progressive widening.
 
 
 Base:
