@@ -51,8 +51,16 @@ pairing_status() {
 	esac
 }
 
+#[ -n "$do_elo" ] && echo "Formula: 100 ELO = 64% winning prob,  1 stone ~= 150 ELO (orig)"
+#elo_rank=157
+#prob2elo() {
+#	echo "400*l(10*$1/(1-$1))/l(10)" | bc -l
+#}
+
+[ -n "$do_elo" ] && echo "Formula: 100 ELO = 1 stone = 71.3% winning prob  (EGF)"
+elo_rank=100
 prob2elo() {
-	echo "400*l(10*$1/(1-$1))/l(10)" | bc -l
+    echo "110 * l($1 / (1-$1))" | bc -l
 }
 
 elo_stats() {
@@ -60,13 +68,14 @@ elo_stats() {
 	refelo=$(prob2elo $ref); wrelo=$(prob2elo $winrate);
 	wrelo_d=$(prob2elo "($winrate-$sd)"); wrelo_u=$(prob2elo "($winrate+$sd)")
 	delo=$((${wrelo%.*}-${refelo%.*})); delo_u=$((${wrelo_u%.*}-${refelo%.*})); delo_d=$((${wrelo_d%.*}-${refelo%.*}))
-	stats="$games\t$delo_d\t$delo\t$delo_u"
+	drank=`echo "scale=1; $delo / $elo_rank" | bc`
+	stats=`printf "%-7s %-+5i  %-+5i  %-+5i    %-+8.1f" "$games" "$delo_d" "$delo" "$delo_u" "$drank"`
 }
 
 rm -f r/*.summary.dat r/*.html
 
 if [ -n "$do_elo" ]; then
-	printf "S GAMES\tWR -/0/+ (S.D.)\t\tPAIRING\n"
+	printf "\nS GAMES  [-SD    ELO    +SD]     RANK     PAIRING\n"
 else
 	printf "S GAMES\tWINRATE\tS.D.\tPAIRING\n"
 fi
@@ -80,9 +89,9 @@ for pairing in $( (echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.
 			if [ -n "$do_elo" ]; then
 				elo_stats
 			else
-				stats="$games\t$winrate\t$sd"
+				stats=`printf "%-5s %-7s %-7s" "$games" "$winrate" "$sd"`
 			fi
-			printf "$status $stats\t$pairing$color_stop\n"
+			printf "$status $stats $pairing$color_stop\n"
 			break
 		done
 	else
