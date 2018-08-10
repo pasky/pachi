@@ -264,7 +264,7 @@ OBJS = $(EXTRA_OBJS) \
 
 # Low-level dependencies last
 SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics
-DATAFILES = patterns.prob patterns.spat book.dat golast19.prototxt golast.trained joseki19.pdict
+DATAFILES = patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.pdict
 
 ###############################################################################################################
 # Main rule + aliases
