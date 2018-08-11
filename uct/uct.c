@@ -1383,7 +1383,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!pat_setup)			patterns_init(&u->pc, NULL, false, true);
-	dcnn_init();
+	dcnn_init(b);
 	log_nthreads(u);
 	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);
 	if (!u->playout)		u->playout = playout_moggy_init(NULL, b, u->jdict);

@@ -333,11 +333,11 @@ int main(int argc, char *argv[])
 	if (getenv("DATA_DIR"))
 		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
-	if (dcnn_required)       require_dcnn();
 	fifo_init();
 
 	struct board *b = board_init(fbookfile);
 	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
+	if (dcnn_required)       require_dcnn(b);
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
