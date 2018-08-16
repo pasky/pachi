@@ -160,7 +160,7 @@ ifdef MSYS2
 
 		ifeq ($(CAFFE), mini)
                         # Force linking of caffe layer factory, will pull in layers we need.
-			EXTRA_OBJS := layer_factory.o
+			EXTRA_DCNN_OBJS := layer_factory.o
 			CAFFE_STATIC_LIB = -lcaffe
 		else
 			CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
@@ -185,10 +185,37 @@ ifdef MAC
 else
 ##############################################################################
 # Linux
+        # Static build ?
+        # LINUX_STATIC=1
+
 	SYS_CFLAGS  := $(TUNE)
 	SYS_LDFLAGS := -pthread -rdynamic
 	SYS_LIBS    := -lm -lrt -ldl
 	DCNN_LIBS   := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
+
+	ifdef LINUX_STATIC
+                # Which type of caffe package do you have ?
+                # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
+                # and requires --whole-archive for static linking. This makes binaries unnecessarily
+                # bloated. Choose normal, nohdf5, or mini (mini is best)
+                # mini source: https://github.com/lemonsqueeze/mingw-caffe/tree/mini
+		CAFFE=normal
+
+		ifeq ($(CAFFE), normal)
+			HDF5_LIBS = -lhdf5_serial_hl -lhdf5_serial -lsz -laec -lz
+		endif
+
+		ifeq ($(CAFFE), mini)
+                        # Force linking of caffe layer factory, will pull in layers we need.
+			EXTRA_DCNN_OBJS := layer_factory.o
+			CAFFE_STATIC_LIB = -lcaffe
+		else
+			CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
+		endif
+
+		SYS_LDFLAGS := -pthread -static
+		DCNN_LIBS   := $(CAFFE_STATIC_LIB) -lglog -lgflags -lprotobuf -lboost_system -lboost_thread -lopenblas $(HDF5_LIBS) -lstdc++  $(SYS_LIBS)
+	endif
 endif
 endif
 
@@ -200,7 +227,7 @@ endif
 ifeq ($(DCNN), 1)
 	CUSTOM_CFLAGS   += -DDCNN
 	CUSTOM_CXXFLAGS += -DDCNN
-	EXTRA_OBJS      += caffe.o dcnn.o
+	EXTRA_OBJS      += $(EXTRA_DCNN_OBJS) caffe.o dcnn.o
 	SYS_LIBS := $(DCNN_LIBS)
 endif
 
@@ -391,9 +418,17 @@ TAGS: FORCE
 
 FORCE:
 
-# MSYS2 mini static link hack. XXX doesn't honor $(CAFFE_PREFIX)
+# 'mini' caffe static link hack.
+ifdef LINUX_STATIC
+layer_factory.o: $(CAFFE_PREFIX)/lib/libcaffe.a
+	@echo "[AR]   $@"
+	@ar x $< $@
+endif
+
+ifdef MSYS2_STATIC
 layer_factory.o: $(MINGW_PREFIX)/lib/libcaffe.a
 	@echo "[AR]   $@"
 	@ar x $< $@
+endif
 
 -include Makefile.lib
