@@ -33,6 +33,7 @@
 #include "caffe.h"
 #include "pattern.h"
 
+char *pachi_exe = NULL;
 int debug_level = 3;
 bool debug_boardprint = true;
 long verbose_logs = 0;
@@ -191,6 +192,7 @@ static struct option longopts[] = {
 
 int main(int argc, char *argv[])
 {
+	pachi_exe = argv[0];
 	enum engine_id engine = E_UCT;
 	struct time_info ti_default = { .period = TT_NULL };	
 	char *testfile = NULL;

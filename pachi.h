@@ -1,6 +1,9 @@
 #ifndef PACHI_PACHI_H
 #define PACHI_PACHI_H
 
+/* Pachi binary */
+extern char *pachi_exe;
+
 /* Ruleset from cmdline, if present. */
 extern char *forced_ruleset;
 
