@@ -125,6 +125,7 @@ static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
 			     [ PF_ATARI_AND_CAP] = "and_cap",
 			     [ PF_ATARI_SNAPBACK] = "snapback",
 			     [ PF_ATARI_LADDER_BIG] = "ladder_big",
+			     [ PF_ATARI_LADDER_LAST] = "ladder_last",
 			     [ PF_ATARI_LADDER_SAFE] = "ladder_safe", 
 			     [ PF_ATARI_LADDER_CUT] = "ladder_cut",
 			     [ PF_ATARI_LADDER] = "ladder", 
@@ -423,7 +424,7 @@ pattern_match_atari(struct board *b, struct move *m, struct ownermap *ownermap)
 	enum stone other_color = stone_other(color);
 	group_t g1 = 0, g3libs = 0;
 	bool snapback = false, double_atari = false, atari_and_cap = false, ladder_atari = false;
-	bool ladder_big_safe = false, ladder_safe = false, ladder_cut = false;
+	bool ladder_big = false, ladder_safe = false, ladder_cut = false, ladder_last = false;
 
 	/* Check snapback on stones we don't own already. */
 	if (immediate_liberty_count(b, m->coord) == 1 &&
@@ -460,33 +461,36 @@ pattern_match_atari(struct board *b, struct move *m, struct ownermap *ownermap)
 			enum stone gown = ownermap_color(ownermap, g, 0.67);
 			enum stone aown = owner_around(b, ownermap, m->coord);
 			// capturing big group not dead yet
-			if (gown != color && group_stone_count(b, g, 5) >= 4)   ladder_big_safe = true;
+			if (gown != color && group_stone_count(b, g, 5) >= 4)   ladder_big = true;
+			// ladder last move
+			if (g == group_at(b, b->last_move.coord))               ladder_last = true;
 			// capturing something in opponent territory, yummy
 			if (gown == other_color && aown == other_color)         ladder_safe = true;
 			// capturing cutting stones
 			if (gown != color && cutting_stones(b, g))		ladder_cut = true;
 		}
 	});
-	if (g1) {
-		/* Can capture other group after atari ? */
-		if (g3libs && !group_is_onestone(b, g3libs) && !ladder_atari &&
-		    ownermap_color(ownermap, g3libs, 0.67) != color &&
-		    cutting_stones_and_can_capture_other_after_atari(b, m, g1, g3libs))
-			atari_and_cap = true;
 
-		if (!selfatari) {
-			if (ladder_big_safe)	return PF_ATARI_LADDER_BIG;
-			if (double_atari)	return PF_ATARI_DOUBLE;
-			if (ladder_safe)	return PF_ATARI_LADDER_SAFE;
-			if (ladder_cut)		return PF_ATARI_LADDER_CUT;
-			if (atari_and_cap)	return PF_ATARI_AND_CAP;
-			if (ladder_atari)	return PF_ATARI_LADDER;
-		}
-		
-		if (!is_pass(b->ko.coord))	return PF_ATARI_KO;
-		else				return PF_ATARI_SOME;
+	if (!g1)  return -1;
+
+	/* Can capture other group after atari ? */
+	if (g3libs && !group_is_onestone(b, g3libs) && !ladder_atari &&
+	    ownermap_color(ownermap, g3libs, 0.67) != color &&
+	    cutting_stones_and_can_capture_other_after_atari(b, m, g1, g3libs))
+		atari_and_cap = true;
+
+	if (!selfatari) {
+		if (ladder_big)		return PF_ATARI_LADDER_BIG;
+		if (ladder_last)        return PF_ATARI_LADDER_LAST;
+		if (atari_and_cap)	return PF_ATARI_AND_CAP;
+		if (double_atari)	return PF_ATARI_DOUBLE;
+		if (ladder_safe)	return PF_ATARI_LADDER_SAFE;
+		if (ladder_cut)		return PF_ATARI_LADDER_CUT;
+		if (ladder_atari)	return PF_ATARI_LADDER;
 	}
-	return -1;
+		
+	if (!is_pass(b->ko.coord))	return PF_ATARI_KO;
+	else				return PF_ATARI_SOME;
 }
 
 static int
