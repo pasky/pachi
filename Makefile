@@ -99,8 +99,14 @@ CUSTOM_CXXFLAGS := -Wall -ggdb3 $(OPT)
 ### CONFIGURATION END
 
 MAKEFLAGS += --no-print-directory
-
+ARCH = $(shell uname -m)
 TUNE := -march=native
+
+ifeq ($(findstring armv7, $(ARCH)), armv7)
+        # -march=native targets armv6 by default on Raspbian ...
+	TUNE := -march=armv7-a
+endif
+
 ifeq ($(GENERIC), 1)
 	TUNE := -mtune=generic
 endif
