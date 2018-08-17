@@ -88,6 +88,11 @@ enum feature_id {
 #define PF_NET_LAST		0  /***   Capture last move in net (single stone) */
 #define PF_NET_N		1
 
+	/* 2nd line defence */
+	FEAT_DEFENCE,
+#define PF_DEFENCE_LINE2	0  /***   Defend stone on second line */
+#define PF_DEFENCE_N		1
+
 	/* Cut */
 	FEAT_CUT,
 #define PF_CUT_DANGEROUS	0  /***** Cut that can't be captured with shortage of libs around */

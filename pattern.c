@@ -79,6 +79,7 @@ struct feature_info pattern_features[] = {
 	[FEAT_ATARI] =           { .name = "atari",           .payloads = PF_ATARI_N,      .spatial = 0 },
 	[FEAT_CUT] =             { .name = "cut",             .payloads = PF_CUT_N,        .spatial = 0 },
 	[FEAT_NET] =             { .name = "net",             .payloads = PF_NET_N,        .spatial = 0 },
+	[FEAT_DEFENCE] =         { .name = "defence",         .payloads = PF_DEFENCE_N,    .spatial = 0 },
 	[FEAT_DOUBLE_SNAPBACK] = { .name = "double_snapback", .payloads = 1,               .spatial = 0 },
 	[FEAT_SELFATARI] =       { .name = "selfatari",       .payloads = PF_SELFATARI_N,  .spatial = 0 },
 	[FEAT_BORDER] =          { .name = "border",          .payloads = -1,              .spatial = 0 },
@@ -135,6 +136,7 @@ static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
 	},
 	[FEAT_CUT] =       { [ PF_CUT_DANGEROUS] = "dangerous" },
 	[FEAT_NET] =       { [ PF_NET_LAST] = "last" },
+	[FEAT_DEFENCE] =   { [ PF_DEFENCE_LINE2] = "line2" },
 };
 
 static void
@@ -689,6 +691,37 @@ pattern_match_net(struct board *b, struct move *m)
 	return PF_NET_LAST;
 }
 
+/*   . . O X .   
+ *   . O X * .   Defend stone on second line
+ *   . . . . .
+ *  -----------  */
+static int
+pattern_match_defence(struct board *b, struct move *m)
+{
+	enum stone other_color = stone_other(m->color);
+
+	if (coord_edge_distance(m->coord, b) != 1)     return -1;
+	if (immediate_liberty_count(b, m->coord) < 2)  return -1;
+
+	foreach_neighbor(b, m->coord, {
+		if (board_at(b, c) != m->color)  continue;
+		coord_t n = c;
+		if (neighbor_count_at(b, n, other_color) != 2)  return -1;
+		if (immediate_liberty_count(b, n) != 2)  return -1;
+		if (coord_edge_distance(n, b) != 1)  continue;
+
+		group_t g = group_at(b, n);
+		if (board_group_info(b, g).libs != 2)  continue;
+		for (int i = 0; i < 2; i++) {
+			coord_t lib = board_group_info(b, g).lib[i];
+			if (wouldbe_ladder_any(b, g, lib))
+				return PF_DEFENCE_LINE2;
+		}
+	});
+
+	return -1;
+}
+
 /*   O O X X X O O
  *   O X . X . X O
  *   O X . * . X O
@@ -954,6 +987,7 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 	/* Other features */
 
 	check_feature(pattern_match_net(b, m), FEAT_NET);
+	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
 	if (locally) {
