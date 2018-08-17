@@ -83,6 +83,11 @@ enum feature_id {
 #define PF_ATARI_SOME		9  /*     Can atari something */
 #define PF_ATARI_N		10
 
+	/* Net */
+	FEAT_NET,
+#define PF_NET_LAST		0  /***   Capture last move in net (single stone) */
+#define PF_NET_N		1
+
 	/* Cut */
 	FEAT_CUT,
 #define PF_CUT_DANGEROUS	0  /***** Cut that can't be captured with shortage of libs around */

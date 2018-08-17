@@ -76,13 +76,14 @@ static struct pattern_config DEFAULT_PATTERN_CONFIG = {
 struct feature_info pattern_features[] = {
 	[FEAT_CAPTURE] =         { .name = "capture",         .payloads = PF_CAPTURE_N,    .spatial = 0 },
 	[FEAT_AESCAPE] =         { .name = "atariescape",     .payloads = PF_AESCAPE_N,    .spatial = 0 },
-	[FEAT_SELFATARI] =       { .name = "selfatari",       .payloads = PF_SELFATARI_N,  .spatial = 0 },
 	[FEAT_ATARI] =           { .name = "atari",           .payloads = PF_ATARI_N,      .spatial = 0 },
+	[FEAT_CUT] =             { .name = "cut",             .payloads = PF_CUT_N,        .spatial = 0 },
+	[FEAT_NET] =             { .name = "net",             .payloads = PF_NET_N,        .spatial = 0 },
+	[FEAT_DOUBLE_SNAPBACK] = { .name = "double_snapback", .payloads = 1,               .spatial = 0 },
+	[FEAT_SELFATARI] =       { .name = "selfatari",       .payloads = PF_SELFATARI_N,  .spatial = 0 },
 	[FEAT_BORDER] =          { .name = "border",          .payloads = -1,              .spatial = 0 },
 	[FEAT_DISTANCE] =        { .name = "dist",            .payloads = 19,              .spatial = 0 },
 	[FEAT_DISTANCE2] =       { .name = "dist2",           .payloads = 19,              .spatial = 0 },
-	[FEAT_CUT] =             { .name = "cut",             .payloads = PF_CUT_N,        .spatial = 0 },
-	[FEAT_DOUBLE_SNAPBACK] = { .name = "double_snapback", .payloads = 1,               .spatial = 0 },
 	[FEAT_MCOWNER] =         { .name = "mcowner",         .payloads = 9,               .spatial = 0 },
 	[FEAT_NO_SPATIAL] =      { .name = "nospat",          .payloads = 1,               .spatial = 0 },
 	[FEAT_SPATIAL3] =        { .name = "s3",              .payloads = -1,              .spatial = 3 },
@@ -133,6 +134,7 @@ static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
 			     [ PF_ATARI_SOME] = "some",
 	},
 	[FEAT_CUT] =       { [ PF_CUT_DANGEROUS] = "dangerous" },
+	[FEAT_NET] =       { [ PF_NET_LAST] = "last" },
 };
 
 static void
@@ -613,6 +615,80 @@ pattern_match_cut(struct board *b, struct move *m, struct ownermap *ownermap)
 	return -1;
 }
 
+/*  . X X    Net last move (single stone)
+ *  X O .    
+ *  X . *    */
+static int
+pattern_match_net(struct board *b, struct move *m)
+{
+	enum stone other_color = stone_other(m->color);
+	coord_t last = b->last_move.coord;
+
+	if (last == pass)                          return -1;
+	if (board_at(b, last) != other_color)      return -1;
+	group_t lastg = group_at(b, last);
+	if (board_group_info(b, lastg).libs != 2)  return -1;
+	if (!group_is_onestone(b, lastg))          return -1;
+	if (neighbor_count_at(b, last, m->color) != 2)  return -1;
+	
+	bool diag = false;
+	int ldiag_neigbors = 0;
+	foreach_diag_neighbor(b, last) {
+		if (m->coord == c)  diag = true;
+		if (board_at(b, c) == m->color)  ldiag_neigbors++;
+	} foreach_diag_neighbor_end;
+	if (!diag || ldiag_neigbors < 2)  return -1;
+
+	//if (immediate_liberty_count(b, m->coord) <= 2)  return -1;
+
+	/* Check last move neighbors */
+	//foreach_neighbor(b, last, {
+	//	if (board_at(b, c) != m->color)  continue;
+	//	group_t g = group_at(b, c);
+	//	if (board_group_info(b, g).libs <= 2)  return -1;
+	//});
+
+	/* Check net shape. */
+	int xl = coord_x(last, b),     yl = coord_y(last, b);
+	int xm = coord_x(m->coord, b), ym = coord_y(m->coord, b);
+	int dx = xm - xl,              dy = ym - yl;
+	coord_t opposite = coord_xy(b, xl - dx, yl - dy);
+	if (ldiag_neigbors == 2 && board_at(b, opposite) == m->color)  return -1;
+
+	/*  . x X .    x: n1, n2
+	 *  x O - *    *: c1, c2
+	 *  X - X .    -: e1, e2
+	 *  . * . .    */
+	coord_t n1 = coord_xy(b, xl - dx, yl);
+	coord_t n2 = coord_xy(b, xl,      yl - dy);
+	if (board_at(b, n1) != m->color || board_at(b, n2) != m->color)  return -1;       
+
+	/* Check can't escape. */
+	bool can_escape = false;
+	with_move_strict(b, m->coord, m->color, {
+		coord_t e1 = coord_xy(b, xl + dx   , yl);
+		coord_t c1 = coord_xy(b, xl + dx+dx, yl);
+		with_move_strict(b, e1, other_color, {
+				group_t g = group_at(b, last);
+				if (board_at(b, c1) != S_NONE || board_group_info(b, g).libs != 2 ||
+				    !wouldbe_ladder_any(b, g, c1))
+					can_escape = true;
+		});
+
+		coord_t e2 = coord_xy(b, xl        , yl + dy);
+		coord_t c2 = coord_xy(b, xl        , yl + dy+dy);
+		with_move_strict(b, e2, other_color, {
+				group_t g = group_at(b, last);
+				if (board_at(b, c2) != S_NONE || board_group_info(b, g).libs != 2 ||
+				    !wouldbe_ladder_any(b, g, c2))
+					can_escape = true;
+		});
+	});
+	if (can_escape)  return -1;
+
+	return PF_NET_LAST;
+}
+
 /*   O O X X X O O
  *   O X . X . X O
  *   O X . * . X O
@@ -876,7 +952,8 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 
 	/***********************************************************************************/
 	/* Other features */
-	
+
+	check_feature(pattern_match_net(b, m), FEAT_NET);
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
 	if (locally) {

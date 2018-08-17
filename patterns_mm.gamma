@@ -6,6 +6,7 @@
 20.0 (atari:ladder_last)
 20.0 (atari:ladder_safe)
 20.0 (atari:double)
+10.0 (net:last)
 6.17887 (atari:ladder_cut)
 79.4922 (capture:ataridef)
 3.97624 (capture:last)
