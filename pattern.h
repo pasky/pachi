@@ -86,7 +86,10 @@ enum feature_id {
 	/* Net */
 	FEAT_NET,
 #define PF_NET_LAST		0  /***   Capture last move in net (single stone) */
-#define PF_NET_N		1
+#define PF_NET_CUT		1  /***   Net cutting stone (not already owned by us) */
+#define PF_NET_SOME		2  /***   Net something     (not already owned by us) */
+#define PF_NET_DEAD		3  /*     Net something     (own territory) */
+#define PF_NET_N		4
 
 	/* 2nd line defence */
 	FEAT_DEFENCE,

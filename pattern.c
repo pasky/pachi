@@ -135,7 +135,11 @@ static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
 			     [ PF_ATARI_SOME] = "some",
 	},
 	[FEAT_CUT] =       { [ PF_CUT_DANGEROUS] = "dangerous" },
-	[FEAT_NET] =       { [ PF_NET_LAST] = "last" },
+	[FEAT_NET] =       { [ PF_NET_LAST] = "last",
+			     [ PF_NET_CUT] = "cut",
+			     [ PF_NET_SOME] = "some",
+			     [ PF_NET_DEAD] = "dead",
+	},
 	[FEAT_DEFENCE] =   { [ PF_DEFENCE_LINE2] = "line2" },
 };
 
@@ -617,78 +621,144 @@ pattern_match_cut(struct board *b, struct move *m, struct ownermap *ownermap)
 	return -1;
 }
 
+static bool
+net_can_escape(struct board *b, group_t g)
+{
+	assert(g);
+	int libs = board_group_info(b, g).libs;
+	if    (libs == 1)  return false;
+	if    (libs  > 2)  return true;
+	assert(libs == 2);
+
+	bool ladder = false;
+	for (int i = 0; i < 2; i++) {
+		coord_t lib = board_group_info(b, g).lib[i];
+		ladder |= wouldbe_ladder_any(b, g, lib);
+	}
+	return !ladder;
+}
+
+/* XXX move to tactics */
+static bool
+is_net(struct board *b, coord_t target, coord_t net)
+{
+	enum stone color = board_at(b, net);
+	enum stone other_color = stone_other(color);
+	assert(color == S_BLACK || color == S_WHITE);
+	assert(board_at(b, target) == other_color);
+
+	group_t g = group_at(b, target);
+	assert(board_group_info(b, g).libs == 2);
+	if (can_countercapture(b, g, NULL, 0))  return false;  /* For now. */
+
+	group_t netg = group_at(b, net);
+	assert(board_group_info(b, netg).libs >= 2);
+
+	bool diag_neighbors = false;
+	foreach_diag_neighbor(b, net) {
+		if (group_at(b, c) == g)  diag_neighbors = true;
+	} foreach_diag_neighbor_end;
+	assert(diag_neighbors);	
+
+	/* Don't match on first line... */
+	if (coord_edge_distance(target, b) == 0 ||
+	    coord_edge_distance(net, b)    == 0)   return false;
+
+	/* Check net shape. */
+	int xt = coord_x(target, b),   yt = coord_y(target, b);
+	int xn = coord_x(net, b),      yn = coord_y(net, b);
+	int dx = (xn > xt ? -1 : 1),   dy = (yn > yt ? -1 : 1);
+
+	/* Check can't escape. */
+	/*  . X X .    
+	 *  X O - .    -: e1, e2
+	 *  X - X .    
+	 *  . . . .              */
+	coord_t e1 = coord_xy(b, xn + dx   , yn);
+	coord_t e2 = coord_xy(b, xn        , yn + dy);
+	if (board_at(b, e1) != S_NONE ||
+	    board_at(b, e2) != S_NONE)         return false;
+	//if (board_at(b, e1) == other_color)  return false;
+	//if (board_at(b, e2) == other_color)  return false;
+
+	with_move(b, e1, other_color, {
+		if (net_can_escape(b, group_at(b, target)))
+			with_move_return(false);
+	});
+	
+	with_move(b, e2, other_color, {
+		if (net_can_escape(b, group_at(b, target)))
+			with_move_return(false);
+	});
+	
+	return true;
+}
+
+static bool
+net_last_move(struct board *b, struct move *m, coord_t last)
+{
+	enum stone other_color = stone_other(m->color);
+
+	if (last == pass)                          return false;
+	if (board_at(b, last) != other_color)      return false;
+	group_t lastg = group_at(b, last);
+	if (board_group_info(b, lastg).libs != 2)  return false;
+	if (coord_edge_distance(last, b) == 0)	   return false;
+	
+	bool diag_neighbors = false;
+	foreach_diag_neighbor(b, last) {
+		if (m->coord == c)  diag_neighbors = true;
+	} foreach_diag_neighbor_end;
+	if (!diag_neighbors)  return false;
+
+	return is_net(b, last, m->coord);
+}
+
 /*  . X X    Net last move (single stone)
  *  X O .    
  *  X . *    */
 static int
-pattern_match_net(struct board *b, struct move *m)
+pattern_match_net(struct board *b, struct move *m, struct ownermap *ownermap)
 {
 	enum stone other_color = stone_other(m->color);
-	coord_t last = b->last_move.coord;
+	if (immediate_liberty_count(b, m->coord) < 2)	return -1;	
+	if (coord_edge_distance(m->coord, b) == 0)	return -1;
 
-	if (last == pass)                          return -1;
-	if (board_at(b, last) != other_color)      return -1;
-	group_t lastg = group_at(b, last);
-	if (board_group_info(b, lastg).libs != 2)  return -1;
-	if (!group_is_onestone(b, lastg))          return -1;
-	if (neighbor_count_at(b, last, m->color) != 2)  return -1;
-	
-	bool diag = false;
-	int ldiag_neigbors = 0;
-	foreach_diag_neighbor(b, last) {
-		if (m->coord == c)  diag = true;
-		if (board_at(b, c) == m->color)  ldiag_neigbors++;
+	/* Speedup: avoid with_move() if there are no candidates... */
+	int can = 0;
+	foreach_diag_neighbor(b, m->coord) {
+		if (board_at(b, c) != other_color)     continue;
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)  continue;
+		can++;
 	} foreach_diag_neighbor_end;
-	if (!diag || ldiag_neigbors < 2)  return -1;
+	if (!can)  return -1;
 
-	//if (immediate_liberty_count(b, m->coord) <= 2)  return -1;
+	coord_t last = b->last_move.coord;
+	with_move(b, m->coord, m->color, {
+		if (net_last_move(b, m, last))
+			with_move_return(PF_NET_LAST);
 
-	/* Check last move neighbors */
-	//foreach_neighbor(b, last, {
-	//	if (board_at(b, c) != m->color)  continue;
-	//	group_t g = group_at(b, c);
-	//	if (board_group_info(b, g).libs <= 2)  return -1;
-	//});
-
-	/* Check net shape. */
-	int xl = coord_x(last, b),     yl = coord_y(last, b);
-	int xm = coord_x(m->coord, b), ym = coord_y(m->coord, b);
-	int dx = xm - xl,              dy = ym - yl;
-	coord_t opposite = coord_xy(b, xl - dx, yl - dy);
-	if (ldiag_neigbors == 2 && board_at(b, opposite) == m->color)  return -1;
-
-	/*  . x X .    x: n1, n2
-	 *  x O - *    *: c1, c2
-	 *  X - X .    -: e1, e2
-	 *  . * . .    */
-	coord_t n1 = coord_xy(b, xl - dx, yl);
-	coord_t n2 = coord_xy(b, xl,      yl - dy);
-	if (board_at(b, n1) != m->color || board_at(b, n2) != m->color)  return -1;       
-
-	/* Check can't escape. */
-	bool can_escape = false;
-	with_move_strict(b, m->coord, m->color, {
-		coord_t e1 = coord_xy(b, xl + dx   , yl);
-		coord_t c1 = coord_xy(b, xl + dx+dx, yl);
-		with_move_strict(b, e1, other_color, {
-				group_t g = group_at(b, last);
-				if (board_at(b, c1) != S_NONE || board_group_info(b, g).libs != 2 ||
-				    !wouldbe_ladder_any(b, g, c1))
-					can_escape = true;
-		});
-
-		coord_t e2 = coord_xy(b, xl        , yl + dy);
-		coord_t c2 = coord_xy(b, xl        , yl + dy+dy);
-		with_move_strict(b, e2, other_color, {
-				group_t g = group_at(b, last);
-				if (board_at(b, c2) != S_NONE || board_group_info(b, g).libs != 2 ||
-				    !wouldbe_ladder_any(b, g, c2))
-					can_escape = true;
-		});
+		bool net_cut = false; bool net_some = false; bool net_dead = false;
+		foreach_diag_neighbor(b, m->coord) {
+			if (board_at(b, c) != other_color)     continue;
+			group_t g = group_at(b, c);
+			if (board_group_info(b, g).libs != 2)  continue;
+			
+			if (is_net(b, c, m->coord)) {
+				enum stone own = ownermap_color(ownermap, c, 0.67);
+				if (own != m->color && cutting_stones(b, g))	net_cut = true;
+				if (own != m->color)				net_some = true;
+				else						net_dead = true;
+			}
+		} foreach_diag_neighbor_end;
+		
+		if (net_cut)    with_move_return(PF_NET_CUT);
+		if (net_some)   with_move_return(PF_NET_SOME);
+		if (net_dead)   with_move_return(PF_NET_DEAD);
 	});
-	if (can_escape)  return -1;
 
-	return PF_NET_LAST;
+	return -1;
 }
 
 /*   . . O X .   
@@ -986,7 +1056,7 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 	/***********************************************************************************/
 	/* Other features */
 
-	check_feature(pattern_match_net(b, m), FEAT_NET);
+	check_feature(pattern_match_net(b, m, ownermap), FEAT_NET);
 	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
@@ -1007,6 +1077,8 @@ pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b,
 	
 	/* Debugging */
 	//if (pattern_has_feature(p, FEAT_ATARI, PF_ATARI_AND_CAP))  show_move(b, m, "atari_and_cap");
+	//if (pattern_has_feature(p, FEAT_NET, PF_NET_FIGHT))  show_move(b, m, "net:fight");
+	//if (pattern_has_feature(p, FEAT_NET, PF_NET_SOME))   show_move(b, m, "net:some");
 
 #ifdef PATTERN_FEATURE_STATS
 	add_feature_stats(p);
