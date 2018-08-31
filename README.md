@@ -69,6 +69,17 @@ In case you hit compilation issues (e.g. when building on MacOS/X)
 or want to change the build configuration, check the user configurable
 section at the top of the Makefile.
 
+Here is an example for installing all dependencies and compiling Pachi
+from sources under Ubuntu 18.04:
+
+	sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
+	git clone https://github.com/pasky/pachi.git
+	cd pachi
+	make
+
+Install libcaffe-cuda-dev instead for nvidia gpu acceleration.  
+Non-dcnn build just needs git make and gcc.
+
 
 ## DCNN support
 
