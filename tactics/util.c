@@ -11,25 +11,24 @@
 bool
 board_stone_radar(struct board *b, coord_t coord, int distance)
 {
-	int bounds[4] = {
-		coord_x(coord, b) - distance,
-		coord_y(coord, b) - distance,
-		coord_x(coord, b) + distance,
-		coord_y(coord, b) + distance
-	};
+	int cx = coord_x(coord, b), cy = coord_y(coord, b);
+	int bounds[4] = { cx - distance, cy - distance,
+			  cx + distance, cy + distance  };
 	for (int i = 0; i < 4; i++)
 		if (bounds[i] < 1)
 			bounds[i] = 1;
 		else if (bounds[i] > board_size(b) - 2)
 			bounds[i] = board_size(b) - 2;
 	for (int x = bounds[0]; x <= bounds[2]; x++)
-		for (int y = bounds[1]; y <= bounds[3]; y++)
-			if (board_atxy(b, x, y) != S_NONE) {
+		for (int y = bounds[1]; y <= bounds[3]; y++) {
+			coord_t c = coord_xy(b, x, y);
+			if (c != coord && board_at(b, c) != S_NONE) {
 				/* fprintf(stderr, "radar %d,%d,%d: %d,%d (%d)\n",
 					coord_x(coord, b), coord_y(coord, b),
 					distance, x, y, board_atxy(b, x, y)); */
 				return true;
 			}
+		}
 	return false;
 }
 
