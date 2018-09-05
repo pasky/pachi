@@ -35,7 +35,7 @@ typedef enum {
 enum parse_code
 cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	char buffer[1000];  strbuf_t strbuf;
+	char buffer[2000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 
 	if (e->best_moves) {
@@ -62,6 +62,8 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 		sbprintf(buf, "gfx/gfx   Pattern Ratings/gogui-pattern_rating\n");
 		sbprintf(buf, "gfx/gfx   Pattern Features/gogui-pattern_features %%p\n");
 		sbprintf(buf, "gfx/gfx   Pattern Gammas/gogui-pattern_gammas %%p\n");
+		sbprintf(buf, "gfx/gfx   Set Spatial Size/gogui-spatial_size %%o\n");
+		sbprintf(buf, "gfx/gfx   Show Spatial/gogui-show_spatial %%p\n");
 	}
 	if (!strcmp(e->name, "UCT")) {
 		sbprintf(buf, "gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
@@ -81,72 +83,8 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 }
 
 
-enum gogui_reporting gogui_livegfx = 0;
-
-static void
-gogui_set_livegfx(struct engine *e, char *arg)
-{
-	gogui_livegfx = 0;
-	if (!strcmp(arg, "best_moves"))
-		gogui_livegfx = UR_GOGUI_BEST;
-	if (!strcmp(arg, "best_seq"))
-		gogui_livegfx = UR_GOGUI_SEQ;
-	if (!strcmp(arg, "winrates"))
-		gogui_livegfx = UR_GOGUI_WR;
-	if (e->livegfx_hook)
-		e->livegfx_hook(e);
-}
-
-/* GoGui reads live gfx commands on stderr */
-void
-gogui_show_livegfx(char *str)
-{
-	fprintf(stderr, "gogui-gfx:\n");
-	fprintf(stderr, "%s", str);
-	fprintf(stderr, "\n");
-}
-
-void
-gogui_show_winrates(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int nbest)
-{
-	/* best move */
-	if (best_c[0] != pass)
-		sbprintf(buf, "VAR %s %s\n", 
-			 (color == S_WHITE ? "w" : "b"),
-			 coord2sstr(best_c[0], b) );
-	
-	for (int i = 0; i < nbest; i++)
-		if (best_c[i] != pass)
-			sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i], b),
-				 (int)(roundf(best_r[i] * 100)));
-}
-
-void
-gogui_show_best_seq(strbuf_t *buf, struct board *b, enum stone color, coord_t *seq, int n)
-{	
-	char *col = "bw";
-	sbprintf(buf, "VAR ");
-	for (int i = 0; i < n && seq[i] != pass; i++)
-		sbprintf(buf, "%c %3s ",
-			 col[(i + (color == S_WHITE)) % 2],
-			 coord2sstr(seq[i], b));
-	sbprintf(buf, "\n");
-}
-
-/* Display best moves graphically in GoGui. */
-void
-gogui_show_best_moves(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int n)
-{
-        /* best move */
-        if (best_c[0] != pass)
-                sbprintf(buf, "VAR %s %s\n",
-                         (color == S_WHITE ? "w" : "b"),
-                         coord2sstr(best_c[0], b) );
-        
-        for (int i = 1; i < n; i++)
-                if (best_c[i] != pass)
-                        sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i], b), i + 1);
-}
+/****************************************************************************************/
+/* Utils */
 
 /* Convert HSV colorspace to RGB
  * https://stackoverflow.com/a/6930407 */
@@ -214,6 +152,111 @@ value2color(float val, int *r, int *g, int *b)
 	hsv2rgb(h, s, v, r, g, b);
 }
 
+static void
+gogui_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
+		    coord_t coord, unsigned int maxd,
+		    int rr, int gg, int bb)
+{
+	for (unsigned int d = 2; d <= maxd; d++)
+	for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
+			ptcoords_at(x, y, coord, b, j);
+		        coord_t c  = coord_xy(b, x, y);
+			if (board_at(b, c) == S_OFFBOARD)  continue;
+
+/* Just lighten if already something */
+#define add_primary_color(p, val)  colors[c][p] = (val) + (colors[c][p] ? 30 : 0);
+
+			add_primary_color(0, rr);
+			add_primary_color(1, gg);
+			add_primary_color(2, bb);
+			colors[c][3]++; /* count */
+	}
+}
+
+/* Display spatial pattern */
+static void
+gogui_show_pattern(struct board *b, strbuf_t *buf, coord_t coord, int maxd)
+{
+	assert(!is_pass(coord));
+	int colors[BOARD_MAX_COORDS][4];  memset(colors, 0, sizeof(colors));
+	
+	//gogui_paint_pattern(b, colors, coord, maxd, 0x00, 0x8a, 0xff);   // blue
+	gogui_paint_pattern(b, colors, coord, maxd, 0xff, 0xa2, 0x00);     // orange
+
+	foreach_point(b) {
+		if (!colors[c][3]) continue;
+		int rr = MIN(colors[c][0], 255);
+		int gg = MIN(colors[c][1], 255);
+		int bb = MIN(colors[c][2], 255);
+		sbprintf(buf, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c, b));
+	} foreach_point_end;
+}
+
+
+/****************************************************************************************/
+
+enum gogui_reporting gogui_livegfx = 0;
+
+static void
+gogui_set_livegfx(struct engine *e, char *arg)
+{
+	gogui_livegfx = 0;
+	if (!strcmp(arg, "best_moves"))  gogui_livegfx = UR_GOGUI_BEST;
+	if (!strcmp(arg, "best_seq"))    gogui_livegfx = UR_GOGUI_SEQ;
+	if (!strcmp(arg, "winrates"))    gogui_livegfx = UR_GOGUI_WR;
+	if (e->livegfx_hook)  e->livegfx_hook(e);
+}
+
+/* GoGui reads live gfx commands on stderr */
+void
+gogui_show_livegfx(char *str)
+{
+	fprintf(stderr, "gogui-gfx:\n");
+	fprintf(stderr, "%s", str);
+	fprintf(stderr, "\n");
+}
+
+void
+gogui_show_winrates(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int nbest)
+{
+	/* best move */
+	if (best_c[0] != pass)
+		sbprintf(buf, "VAR %s %s\n", 
+			 (color == S_WHITE ? "w" : "b"),
+			 coord2sstr(best_c[0], b) );
+	
+	for (int i = 0; i < nbest; i++)
+		if (best_c[i] != pass)
+			sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i], b),
+				 (int)(roundf(best_r[i] * 100)));
+}
+
+void
+gogui_show_best_seq(strbuf_t *buf, struct board *b, enum stone color, coord_t *seq, int n)
+{	
+	char *col = "bw";
+	sbprintf(buf, "VAR ");
+	for (int i = 0; i < n && seq[i] != pass; i++)
+		sbprintf(buf, "%c %3s ",
+			 col[(i + (color == S_WHITE)) % 2],
+			 coord2sstr(seq[i], b));
+	sbprintf(buf, "\n");
+}
+
+/* Display best moves graphically in GoGui. */
+void
+gogui_show_best_moves(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int n)
+{
+        /* best move */
+        if (best_c[0] != pass)
+                sbprintf(buf, "VAR %s %s\n",
+                         (color == S_WHITE ? "w" : "b"),
+                         coord2sstr(best_c[0], b) );
+        
+        for (int i = 1; i < n; i++)
+                if (best_c[i] != pass)
+                        sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i], b), i + 1);
+}
 
 /* Display best moves graphically in GoGui. */
 void
@@ -306,20 +349,13 @@ gogui_ownermap(strbuf_t *buf, struct board *b, struct engine *e)
 		float p = ownermap_estimate_point(ownermap, c);
 		
 		// p = -1 for WHITE, 1 for BLACK absolute ownership of point i
-		if (p < -.8)
-			p = -1.0;
-		else if (p < -.5)
-			p = -0.7;
-		else if (p < -.2)
-			p = -0.4;
-		else if (p < 0.2)
-			p = 0.0;
-		else if (p < 0.5)
-			p = 0.4;
-		else if (p < 0.8)
-			p = 0.7;
-		else
-			p = 1.0;
+		if      (p < -.8)  p = -1.0;
+		else if (p < -.5)  p = -0.7;
+		else if (p < -.2)  p = -0.4;
+		else if (p < 0.2)  p = 0.0;
+		else if (p < 0.5)  p = 0.4;
+		else if (p < 0.8)  p = 0.7;
+		else               p = 1.0;
 		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
 	} foreach_point_end;
 
@@ -601,8 +637,18 @@ cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *
 	mcowner_playouts(b, color, &ownermap);
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
 	pattern_match(pc, &p, b, &m, &ownermap, locally);
-	
-	gtp_reply(gtp, "TEXT ", pattern2sstr(&p), NULL);
+
+	char buffer[10000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+
+	/* Show largest spatial */
+	int dist = 0;
+	for (int i = 0; i < p.n; i++)
+		if (p.f[i].id >= FEAT_SPATIAL3)
+			dist = MAX(dist, p.f[i].id - FEAT_SPATIAL3 + 3);
+	if (dist)  gogui_show_pattern(b, buf, coord, dist);
+
+	gtp_reply(gtp, buf->str, "TEXT ", pattern2sstr(&p), NULL);
 	return P_OK;
 }
 
@@ -635,5 +681,48 @@ cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti
 	dump_gammas(buf, pc, &p);
 
 	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+static int spatial_dist = 6;
+
+enum parse_code
+cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	if (!pattern_engine)   init_patternplay_engine(b);
+	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
+
+	char *arg;  next_tok(arg);
+	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	coord_t coord = str2coord(arg, board_size(b));
+
+	char buffer[10000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gogui_show_pattern(b, buf, coord, spatial_dist);
+	
+	struct move m = { .coord = coord, .color = stone_other(b->last_move.color) };
+	struct spatial s;
+	spatial_from_board(pc, &s, b, &m);
+	s.dist = spatial_dist;
+	unsigned int sid = spatial_dict_gets(spat_dict, &s, spatial_hash(0, &s));
+	if (sid > 0)  sbprintf(buf, "TEXT matches s%i:%i\n", spatial_dist, sid);
+	else          sbprintf(buf, "TEXT unknown s%i spatial\n", spatial_dist);       
+
+	spatial_write(spat_dict, &s, 0, stderr);
+
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+enum parse_code
+cmd_gogui_spatial_size(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	char *arg;  next_tok(arg);
+	/* Return current value */
+	if (!*arg) {  gtp_reply_printf(gtp, "%i\n", spatial_dist);  return P_OK;  }
+
+	int d = atoi(arg);
+	if (d < 3 || d > 10) {  gtp_error(gtp, "Between 3 and 10 please", NULL);  return P_OK;  }
+	spatial_dist = d;
 	return P_OK;
 }

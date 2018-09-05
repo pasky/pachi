@@ -23,8 +23,6 @@
 #include "t-unit/test.h"
 #include "fifo.h"
 
-#define NO_REPLY (-2)
-
 /* Sleep 5 seconds after a game ends to give time to kill the program. */
 #define GAME_OVER_SLEEP 5
 
@@ -44,12 +42,12 @@ static gtp_command_t commands[];
 void
 gtp_prefix(char prefix, gtp_t *gtp)
 {
+	if (gtp->replied)  return;
 	gtp->replied = true;
-	if (gtp->id == NO_REPLY) return;
-	if (gtp->id >= 0)
-		printf("%c%d ", prefix, gtp->id);
-	else
-		printf("%c ", prefix);
+	
+	if (gtp->id == GTP_NO_REPLY)  return;
+	if (gtp->id >= 0)  printf("%c%d ", prefix, gtp->id);
+	else               printf("%c ", prefix);
 }
 
 void
@@ -62,7 +60,7 @@ gtp_flush(void)
 void
 gtp_output(char prefix, gtp_t *gtp, va_list params)
 {
-	if (gtp->id == NO_REPLY) return;
+	if (gtp->id == GTP_NO_REPLY) return;
 	gtp_prefix(prefix, gtp);
 	char *s;
 	while ((s = va_arg(params, char *))) {
@@ -79,6 +77,17 @@ gtp_reply(gtp_t *gtp, ...)
 	va_start(params, gtp);
 	gtp_output('=', gtp, params);
 	va_end(params);
+}
+
+void
+gtp_reply_printf(gtp_t *gtp, const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	gtp_prefix('=', gtp);
+	vprintf(format, ap);
+	gtp_flush();
+	va_end(ap);	
 }
 
 void
@@ -451,10 +460,10 @@ cmd_fixed_handicap(struct board *board, struct engine *engine, struct time_info 
 	int stones = atoi(arg);
 
 	gtp_prefix('=', gtp);
-	board_handicap(board, stones, gtp->id == NO_REPLY ? NULL : stdout);
+	board_handicap(board, stones, gtp->id == GTP_NO_REPLY ? NULL : stdout);
 	if (DEBUGL(1) && debug_boardprint)
 		board_print(board, stderr);
-	if (gtp->id == NO_REPLY) return P_OK;
+	if (gtp->id == GTP_NO_REPLY) return P_OK;
 	putchar('\n');
 	gtp_flush();
 	return P_OK;
@@ -473,7 +482,7 @@ cmd_final_score(struct board *board, struct engine *engine, struct time_info *ti
 static enum parse_code
 cmd_final_status_list(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
 {
-	if (gtp->id == NO_REPLY) return P_OK;
+	if (gtp->id == GTP_NO_REPLY) return P_OK;
 	char *arg;
 	next_tok(arg);
 	struct move_queue q = { .moves = 0 };
@@ -768,6 +777,8 @@ static gtp_command_t commands[] =
 	{ "gogui-pattern_rating",   cmd_gogui_pattern_rating },
 	{ "gogui-pattern_features", cmd_gogui_pattern_features },
 	{ "gogui-pattern_gammas",   cmd_gogui_pattern_gammas },
+	{ "gogui-show_spatial",     cmd_gogui_show_spatial },
+	{ "gogui-spatial_size",     cmd_gogui_spatial_size },
 	{ "gogui-color_palette",    cmd_gogui_color_palette },
 
 	{ 0, 0 }
@@ -799,7 +810,7 @@ gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char
 		char *reply;
 		enum parse_code c = engine->notify(engine, board, gtp->id, gtp->cmd, gtp->next, &reply);
 		if (c == P_NOREPLY) {
-			gtp->id = NO_REPLY;
+			gtp->id = GTP_NO_REPLY;
 		} else if (c == P_DONE_OK) {
 			gtp_reply(gtp, reply, NULL);
 			return P_OK;

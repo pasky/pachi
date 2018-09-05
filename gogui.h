@@ -32,7 +32,8 @@ enum parse_code cmd_gogui_pattern_colors(struct board *b, struct engine *e, stru
 enum parse_code cmd_gogui_pattern_rating(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-
+enum parse_code cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_spatial_size(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
 
 void gogui_show_best_moves(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int n);
 void gogui_show_best_moves_colors(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int n);
