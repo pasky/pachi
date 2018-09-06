@@ -176,9 +176,6 @@ feature_payloads(enum feature_id id)
 	return features[id].payloads;
 }
 
-struct spatial_dict *spat_dict = NULL;
-struct prob_dict    *prob_dict = NULL;
-
 void
 patterns_init(struct pattern_config *pc, char *arg, bool create, bool load_prob)
 {
@@ -211,19 +208,15 @@ patterns_init(struct pattern_config *pc, char *arg, bool create, bool load_prob)
 	}
 
 	/* Load spatial dictionary */
-	if (!spat_dict)
-		spat_dict = spatial_dict_init(create);
-	
-	if (!spat_dict)		return;	
-	spatial_dict_index_by_dist(pc);
+	if (!spat_dict)  spatial_dict_init(pc, create);
+	if (!spat_dict)  return;
+
 	init_feature_info(pc);
-	
-	if (!load_prob)		return;
+	if (!load_prob)	 return;
 	
 	/* Load probability dictionary */
 	if (!prob_dict) {
-		prob_dict = prob_dict_init(pdict_file, pc);
-		
+		prob_dict_init(pdict_file, pc);		
 		/* Make sure each feature has a gamma ... */
 		if (prob_dict)  check_pattern_gammas(pc);
 	}

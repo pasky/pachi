@@ -240,6 +240,8 @@ found_rot:;
 /**********************************************************************************/
 /* Spatial dict manipulation. */
 
+struct spatial_dict *spat_dict = NULL;
+
 /* Spatial dict hashtable hash function. @h: spatial hash */
 static unsigned int
 spatial_dict_hash(hash_t h) {  return h & spatial_hash_mask;  }
@@ -349,23 +351,6 @@ spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id, FIL
 {
 	fprintf(f, "%d %d ", id, s->dist);
 	fputs(spatial2str(s), f);
-	for (unsigned int r = 0; r < PTH__ROTATIONS; r++) {
-#if 0
-		hash_t rhash = spatial_hash(r, s);
-		unsigned int id2 = dict->hash[rhash];
-		if (id2 != id) {
-			/* This hash does not belong to us. Decide whether
-			 * we or the current owner is better owner. */
-			/* TODO: Compare also # of patternscan encounters? */
-			struct spatial *s2 = &dict->spatials[id2];
-			if (s2->dist < s->dist)
-				continue;
-			if (s2->dist == s->dist && id2 < id)
-				continue;
-		}
-#endif
-		fprintf(f, " %"PRIhash"", spatial_hash(r, s));
-	}
 	fputc('\n', f);
 }
 
@@ -447,7 +432,7 @@ spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f)
 	}
 }
 
-void
+static void
 spatial_dict_index_by_dist(struct pattern_config *pc)
 {
 	assert(MAX_PATTERN_DIST == 10);
@@ -470,25 +455,24 @@ spatial_dict_index_by_dist(struct pattern_config *pc)
 
 const char *spatial_dict_filename = "patterns_mm.spat";
 
-struct spatial_dict *
-spatial_dict_init(bool create)
+void
+spatial_dict_init(struct pattern_config *pc, bool create)
 {
 	FILE *f = fopen_data_file(spatial_dict_filename, "r");
 	if (!f && !create) {
 		if (DEBUGL(1)) fprintf(stderr, "%s not found, mm patterns disabled.\n", spatial_dict_filename);
-		return NULL;
+		return;
 	}
 
-	struct spatial_dict *dict = calloc2(1, sizeof(*dict));
+	spat_dict = calloc2(1, sizeof(*spat_dict));
 	/* Dummy record for index 0 so ids start at 1. */
 	struct spatial dummy = { .dist = 0 };
-	spatial_dict_addc(dict, &dummy);
+	spatial_dict_addc(spat_dict, &dummy);
 
 	if (f) {
-		spatial_dict_load(dict, f);
+		spatial_dict_load(spat_dict, f);
+		spatial_dict_index_by_dist(pc);
 		fclose(f); f = NULL;
 	} else  assert(create);
-
-	return dict;
 }
 

@@ -64,6 +64,9 @@ typedef struct spatial {
 
 /* Spatial dictionary - collection of stone configurations. */
 
+extern struct spatial_dict *spat_dict;
+extern const char *spatial_dict_filename;
+
 #ifndef GENSPATIAL
 #define spatial_hash_bits 20 // 4Mb array
 #else
@@ -83,7 +86,6 @@ typedef struct spatial_dict {
 	struct spatial *spatials; /* Actual records. */
 	
 	/* number of spatials for each dist, for mm tool */
-	/* FIXME invalid unless spatial_dict_index_by_dist() has been called */
 	unsigned int     nspatials_by_dist[MAX_PATTERN_DIST+1];
 
 	/* Hashed access (all isomorphous configurations are also hashed)
@@ -95,7 +97,7 @@ typedef struct spatial_dict {
 
 #define spatial_id(s, dict)  ((unsigned int)((s) - (dict)->spatials))
 #define spatial(id, dict)    ((dict)->spatials + (id))
-//#define next_spatial(s, dict) ((s)->next ? &(dict)->spatials[(s)->next] : 0)
+
 
 /* Fill up the spatial record from @m vincinity, up to full distance
  * given by pattern config. */
@@ -128,17 +130,14 @@ hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 	if (y_ >= board_size(b_)) y_ = board_size(b_) - 1; else if (y_ < 0) y_ = 0;
 
 
-//bool spatial_cmp(spatial_t *s1, spatial_t *s2);
+/* Spatial dictionary file manipulation. */
 
 /* Initializes spatial dictionary, pre-loading existing records from
  * default filename if exists. If create is true, it will not complain
  * about non-existing file and initialize the dictionary anyway.
  * If hash is true, loaded spatials will be added to the hashtable;
  * use false if this is to be done later (e.g. by patternprob). */
-struct spatial_dict *spatial_dict_init(bool create);
-
-/* FIXME */
-void spatial_dict_index_by_dist(struct pattern_config *pc);
+void spatial_dict_init(struct pattern_config *pc, bool create);
 
 /* Lookup spatial pattern (resolves collisions). */
 spatial_t *spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t spatial_hash);
@@ -149,15 +148,6 @@ unsigned int spatial_dict_add(spatial_dict_t *dict, struct spatial *s);
 
 /* Print stats about the hash to stderr. Companion to spatial_dict_addh(). */
 void spatial_dict_hashstats(spatial_dict_t *dict);
-
-
-/* Spatial dictionary file manipulation. */
-
-/* Loading routine is not exported, it is called automatically within
- * spatial_dict_init(). */
-
-/* Default spatial dict filename to use. */
-extern const char *spatial_dict_filename;
 
 /* Write comment lines describing the dictionary (e.g. point order
  * in patterns) to given file. */

@@ -144,9 +144,6 @@ struct pattern {
 	struct feature f[FEAT_MAX];
 };
 
-struct spatial_dict;
-struct prob_dict;
-
 struct pattern_config {
 	/* FEAT_BORDER: Generate features only up to this board distance. */
 	unsigned int bdist_max;
@@ -159,12 +156,6 @@ struct pattern_config {
 	 * to the largest matched spatial pattern. */
 	bool spat_largest;
 };
-
-/* The spatial patterns dictionary used by FEAT_SPATIAL. */
-extern struct spatial_dict *spat_dict;
-
-/* The patterns probability dictionary */
-extern struct prob_dict *prob_dict;
 
 bool using_patterns();
 void disable_patterns();
