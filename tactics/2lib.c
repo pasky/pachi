@@ -238,8 +238,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 
 
 bool
-can_capture_2lib_group(struct board *b, group_t g, enum stone color,
-		       struct move_queue *q, int tag)
+can_capture_2lib_group(struct board *b, group_t g, struct move_queue *q, int tag)
 {
 	assert(board_group_info(b, g).libs == 2);
 	for (int i = 0; i < 2; i++) {
@@ -263,7 +262,7 @@ group_2lib_capture_check(struct board *b, group_t group, enum stone to_play, str
 				coord2sstr(group, b), color);
 
 	if (to_play != color) {  /* Attacker */		
-		can_capture_2lib_group(b, group, color, q, tag);
+		can_capture_2lib_group(b, group, q, tag);
 		return;
 	}
 
@@ -281,7 +280,7 @@ group_2lib_capture_check(struct board *b, group_t group, enum stone to_play, str
 				continue;
 			}
 			if (board_group_info(b, g2).libs != 2)  continue;
-			can_capture_2lib_group(b, g2, stone_other(color), q, tag);
+			can_capture_2lib_group(b, g2, q, tag);
 		});
 	} foreach_in_group_end;
 }
