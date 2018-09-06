@@ -704,9 +704,9 @@ cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, 
 	struct spatial s;
 	spatial_from_board(pc, &s, b, &m);
 	s.dist = spatial_dist;
-	unsigned int sid = spatial_dict_gets(spat_dict, &s, spatial_hash(0, &s));
-	if (sid > 0)  sbprintf(buf, "TEXT matches s%i:%i\n", spatial_dist, sid);
-	else          sbprintf(buf, "TEXT unknown s%i spatial\n", spatial_dist);       
+	spatial_t *s2 = spatial_dict_lookup(spat_dict, s.dist, spatial_hash(0, &s));
+	if (s2)	sbprintf(buf, "TEXT matches s%i:%i\n", spatial_dist, spatial_id(s2, spat_dict));
+	else	sbprintf(buf, "TEXT unknown s%i spatial\n", spatial_dist);
 
 	spatial_write(spat_dict, &s, 0, stderr);
 

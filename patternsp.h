@@ -50,7 +50,7 @@
 
 /* Spatial record - single stone configuration. */
 
-struct spatial {
+typedef struct spatial {
 	/* Gridcular radius of matched pattern. */
 	unsigned char dist;
 	/* The points; each point is two bits, corresponding
@@ -58,25 +58,58 @@ struct spatial {
 	 * spiral from middle to the edge; the dictionary file has
 	 * a comment describing the ordering at the top. */
 	unsigned char points[MAX_PATTERN_AREA / 4];
-	/* id of next spatial with same hash 
-	 * (can't use pointer here because of realloc) */
-	unsigned int next; 
 #define spatial_point_at(s, i) (((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3)
-};
+} spatial_t;
+
+
+/* Spatial dictionary - collection of stone configurations. */
+
+#ifndef GENSPATIAL
+#define spatial_hash_bits 20 // 4Mb array
+#else
+#define spatial_hash_bits 26 // ~256Mb, need large dict when scanning spatials
+#endif
+#define spatial_hash_mask ((1 << spatial_hash_bits) - 1)
+
+typedef struct spatial_entry {
+	hash_t hash;			/* full hash */
+	unsigned int id;		/* spatial record index */
+	struct spatial_entry *next;	/* next entry with same hash */
+} spatial_entry_t;
+
+typedef struct spatial_dict {
+	/* Indexed base store */
+	unsigned int nspatials; /* Number of records. */
+	struct spatial *spatials; /* Actual records. */
+	
+	/* number of spatials for each dist, for mm tool */
+	/* FIXME invalid unless spatial_dict_index_by_dist() has been called */
+	unsigned int     nspatials_by_dist[MAX_PATTERN_DIST+1];
+
+	/* Hashed access (all isomorphous configurations are also hashed)
+	 * Maps to spatials[] indices. Hash function: zobrist hashing with fixed values. */
+	spatial_entry_t* hashtable[1 << spatial_hash_bits];
+	/* Auxiliary counters for statistics. */
+	int fills, collisions, repetitions;
+} spatial_dict_t;
+
+#define spatial_id(s, dict)  ((unsigned int)((s) - (dict)->spatials))
+#define spatial(id, dict)    ((dict)->spatials + (id))
+//#define next_spatial(s, dict) ((s)->next ? &(dict)->spatials[(s)->next] : 0)
 
 /* Fill up the spatial record from @m vincinity, up to full distance
  * given by pattern config. */
 struct pattern_config;
-void spatial_from_board(struct pattern_config *pc, struct spatial *s, struct board *b, struct move *m);
+void spatial_from_board(struct pattern_config *pc, spatial_t *s, struct board *b, struct move *m);
 
 /* Compute hash of given spatial pattern. */
-hash_t spatial_hash(unsigned int rotation, struct spatial *s);
+hash_t spatial_hash(unsigned int rotation, spatial_t *s);
 
 /* Convert given spatial pattern to string. */
-char *spatial2str(struct spatial *s);
+char *spatial2str(spatial_t *s);
 
 /* Print spatial on board centered on @at */
-void spatial_print(struct spatial *s, FILE *f, struct move *at);
+void spatial_print(spatial_t *s, FILE *f, struct move *at);
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). */
@@ -94,38 +127,8 @@ hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 	if (x_ >= board_size(b_)) x_ = board_size(b_) - 1; else if (x_ < 0) x_ = 0; \
 	if (y_ >= board_size(b_)) y_ = board_size(b_) - 1; else if (y_ < 0) y_ = 0;
 
-/* Spatial dictionary - collection of stone configurations. */
 
-/* Two ways of lookup: (i) by index (ii) by hash of the configuration. */
-struct spatial_dict {
-	/* Indexed base store */
-	unsigned int nspatials; /* Number of records. */
-	struct spatial *spatials; /* Actual records. */
-	
-	/* number of spatials for each dist, for mm tool */
-	/* FIXME invalid unless spatial_dict_index_by_dist() has been called */
-	unsigned int     nspatials_by_dist[MAX_PATTERN_DIST+1];
-
-	/* Hashed access; all isomorphous configurations
-	 * are also hashed */
-#ifndef GENSPATIAL
-	#define spatial_hash_bits 20 // 4Mb array
-#else
-	#define spatial_hash_bits 26 // ~256Mb, need large dict when scanning spatials
-#endif
-
-#define spatial_hash_mask ((1 << spatial_hash_bits) - 1)
-	/* Maps to spatials[] indices. The hash function
-	 * used is zobrist hashing with fixed values. */
-	uint32_t hash[1 << spatial_hash_bits];
-	/* Auxiliary counters for statistics. */
-	int fills, collisions, repetitions;
-};
-
-#define spatial_id(s, dict)  ((unsigned int)(s - dict->spatials))
-#define next_spatial(s, dict) (s->next ? &dict->spatials[s->next] : 0)
-
-bool spatial_cmp(struct spatial *s1, struct spatial *s2);
+//bool spatial_cmp(spatial_t *s1, spatial_t *s2);
 
 /* Initializes spatial dictionary, pre-loading existing records from
  * default filename if exists. If create is true, it will not complain
@@ -137,25 +140,15 @@ struct spatial_dict *spatial_dict_init(bool create);
 /* FIXME */
 void spatial_dict_index_by_dist(struct pattern_config *pc);
 
-/* Lookup spatial pattern: safe & slow version (resolves collisions).
- * Returns index of the pattern, or 0 if not found. */
-static unsigned int spatial_dict_gets(struct spatial_dict *dict, struct spatial *s, hash_t h);
-
-/* Lookup spatial pattern: fast & unsafe version.
- * Doesn't resolve collisions, just checks that dist matches. */
-static unsigned int spatial_dict_get(struct spatial_dict *dict, int dist, hash_t h);
+/* Lookup spatial pattern (resolves collisions). */
+spatial_t *spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t spatial_hash);
 
 /* Store specified spatial pattern in the dictionary if it is not known yet.
- * Returns pattern id. Note that the pattern is NOT written to the underlying
- * file automatically. */
-unsigned int spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t);
-
-/* Readds given rotation of given pattern to the hash. This is useful only
- * if you want to tweak hash priority of various patterns. */
-bool spatial_dict_addh(struct spatial_dict *dict, hash_t hash, unsigned int id);
+ * Returns spatial id. */
+unsigned int spatial_dict_add(spatial_dict_t *dict, struct spatial *s);
 
 /* Print stats about the hash to stderr. Companion to spatial_dict_addh(). */
-void spatial_dict_hashstats(struct spatial_dict *dict);
+void spatial_dict_hashstats(spatial_dict_t *dict);
 
 
 /* Spatial dictionary file manipulation. */
@@ -172,37 +165,5 @@ void spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f);
 
 /* Append specified spatial pattern to the given file. */
 void spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id, FILE *f);
-
-
-static inline unsigned int
-spatial_dict_gets(struct spatial_dict *dict, struct spatial *s, hash_t h)
-{
-	unsigned int id = dict->hash[h];
-	if (id > 0) {
-		for (struct spatial *s2 = &dict->spatials[id]; s2; s2 = next_spatial(s2, dict)) {
-			/* Is this the same or isomorphous spatial? */
-			if (spatial_cmp(s, s2))
-				return spatial_id(s2, dict);
-		}
-	}
-	return 0;
-}
-
-#if 1   /* collisions ... */
-static inline unsigned int
-spatial_dict_get(struct spatial_dict *dict, int dist, hash_t hash)
-{
-	unsigned int id = dict->hash[hash];
-#ifdef DEBUG
-	if (id && dict->spatials[id].dist != dist) {
-		if (DEBUGL(6))
-			fprintf(stderr, "Collision dist %d vs %d (hash [%d]%"PRIhash")\n",
-				dist, dict->spatials[id].dist, id, hash);
-		return 0;
-	}
-#endif
-	return id;
-}
-#endif
 
 #endif

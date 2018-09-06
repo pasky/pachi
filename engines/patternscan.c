@@ -250,8 +250,7 @@ genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m,
 	int dmax = s.dist;
 	for (int d = ps->pc.spat_min; d <= dmax; d++) {
 		s.dist = d;
-		unsigned int sid = spatial_dict_put(spat_dict, &s, spatial_hash(0, &s));
-		assert(sid > 0);
+		unsigned int sid = spatial_dict_add(spat_dict, &s);
 #define SCOUNTS_ALLOC 1048576 // Allocate space in 1M*4 blocks.
 		if (sid >= ps->nscounts) {
 			int newnsc = (sid / SCOUNTS_ALLOC + 1) * SCOUNTS_ALLOC;

@@ -852,19 +852,20 @@ pattern_match_spatial_outer(struct pattern_config *pc,
                             struct pattern *p, struct feature *f,
 		            struct board *b, struct move *m, hash_t h)
 {
-#if 0   /* slow but safe, no spatial collisions */
+#if 0   /* Simple & Slow */
 	struct spatial s;
 	spatial_from_board(pc, &s, b, m);
 	int dmax = s.dist;
 	for (int d = pc->spat_min; d <= dmax; d++) {
 		s.dist = d;
-		unsigned int sid = spatial_dict_gets(spat_dict, &s, spatial_hash(0, &s));
-		if (sid > 0) {
-			f->id = FEAT_SPATIAL3 + d - 3;
-			f->payload = sid;
-			if (!pc->spat_largest)
-				(f++, p->n++);
-		} /* else not found, ignore */		
+		spatial_t *s2 = spatial_dict_lookup(spat_dict, d, spatial_hash(0, &s));
+		if (!s2)  continue;
+
+		unsigned int sid = spatial_id(s2, spat_dict);
+		f->id = FEAT_SPATIAL3 + d - 3;
+		f->payload = sid;
+		if (!pc->spat_largest)
+			(f++, p->n++);
 	}
 #else  
 	/* We record all spatial patterns black-to-play; simply
@@ -874,22 +875,21 @@ pattern_match_spatial_outer(struct pattern_config *pc,
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
 	for (unsigned int d = BOARD_SPATHASH_MAXD + 1; d <= pc->spat_max; d++) {
-		/* Recompute missing outer circles:
-		 * Go through all points in given distance. */
+		/* Recompute missing outer circles: Go through all points in given distance. */
 		for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
 			ptcoords_at(x, y, m->coord, b, j);
 			h ^= pthashes[0][j][(*bt)[board_atxy(b, x, y)]];
 		}
-		if (d < pc->spat_min)
-			continue;
+		if (d < pc->spat_min)	continue;			
+		spatial_t *s = spatial_dict_lookup(spat_dict, d, h);
+		if (!s)			continue;
+		
 		/* Record spatial feature, one per distance. */
-		unsigned int sid = spatial_dict_get(spat_dict, d, h & spatial_hash_mask);
-		if (sid > 0) {
-			f->id = FEAT_SPATIAL3 + d - 3;
-			f->payload = sid;
-			if (!pc->spat_largest)
-				(f++, p->n++);
-		} /* else not found, ignore */
+		unsigned int sid = spatial_id(s, spat_dict);
+		f->id = FEAT_SPATIAL3 + d - 3;
+		f->payload = sid;
+		if (!pc->spat_largest)
+			(f++, p->n++);
 	}
 #endif
 	return f;

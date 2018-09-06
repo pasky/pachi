@@ -147,7 +147,7 @@ spatial_hash(unsigned int rotation, struct spatial *s)
 	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
 		h ^= pthashes[rotation][i][spatial_point_at(*s, i)];
 	}
-	return h & spatial_hash_mask;
+	return h;
 }
 
 char *
@@ -208,8 +208,8 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 
 /* Compare two spatials, allowing for differences up to isomorphism.
  * True means the spatials are equivalent. */
-bool
-spatial_cmp(struct spatial *s1, struct spatial *s2)
+static bool
+spatial_equal(struct spatial *s1, struct spatial *s2)
 {
 	/* Quick preliminary check. */
 	if (s1->dist != s2->dist)
@@ -237,57 +237,74 @@ found_rot:;
 }
 
 
+/**********************************************************************************/
 /* Spatial dict manipulation. */
 
+/* Spatial dict hashtable hash function. @h: spatial hash */
 static unsigned int
-spatial_dict_addc(struct spatial_dict *dict, struct spatial *s)
+spatial_dict_hash(hash_t h) {  return h & spatial_hash_mask;  }
+
+spatial_t*
+spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t hash)
 {
-#ifndef GENSPATIAL
-	/* Allocate space in 1024 blocks. */
-#define SPATIALS_ALLOC 1024
-#else
-	/* Allocate space in 1M blocks. */
-#define SPATIALS_ALLOC (1024 * 1024)
-#endif
-	if (!(dict->nspatials % SPATIALS_ALLOC)) {
-		dict->spatials = realloc(dict->spatials,
-				(dict->nspatials + SPATIALS_ALLOC)
-				* sizeof(*dict->spatials));
-	}
-	dict->spatials[dict->nspatials] = *s;
-	s->next = 0;
-	return dict->nspatials++;
+	spatial_entry_t *e = dict->hashtable[spatial_dict_hash(hash)];
+	for (; e ; e = e->next)
+		if (e->hash == hash && spatial(e->id, dict)->dist == dist)
+			return spatial(e->id, dict);
+	return NULL;
 }
 
-bool
-spatial_dict_addh(struct spatial_dict *dict, hash_t hash, unsigned int id)
-{
-	if (!dict->hash[hash]) {
-		dict->hash[hash] = id;
-		dict->fills++;
-		return true; // XXX what is return value for ??
-	}
+#ifndef GENSPATIAL	
+#define SPATIALS_ALLOC 1024		/* Allocate space in 1024 blocks. */
+#else	
+#define SPATIALS_ALLOC (1024 * 1024)	/* Allocate space in 1M blocks. */
+#endif
 
-	/* Check it's not already there */
-	unsigned int id1 = dict->hash[hash];
-	struct spatial *s =  &dict->spatials[id];
-	for (struct spatial *s1 = &dict->spatials[id1]; s1; s1 = next_spatial(s1, dict))
-		if (spatial_id(s1, dict) == id) {
-			dict->repetitions++;
-			return true;
-		}
-	
-	dict->collisions++;
+/* Add to collection, returns new pattern id */
+static unsigned int
+spatial_dict_addc(struct spatial_dict *d, struct spatial *s)
+{
+	if (!(d->nspatials % SPATIALS_ALLOC))
+		d->spatials = realloc(d->spatials, (d->nspatials + SPATIALS_ALLOC) * sizeof(*d->spatials));
+	d->spatials[d->nspatials] = *s;
+	return d->nspatials++;
+}
+
+/* Add to hashtable */
+static void
+spatial_dict_addh(spatial_dict_t *dict, hash_t spatial_hash, unsigned int id)
+{
+	spatial_entry_t *e = malloc(sizeof(*e));
+	e->hash = spatial_hash;
+	e->id = id;
+	e->next = NULL;
+
+	uint32_t h = spatial_dict_hash(spatial_hash);
+	if (dict->hashtable[h])  dict->collisions++;
 	dict->fills++;
 
-	/* Ok add it then */
-	//fprintf(stderr, "adding hash %8llx\n", hash);
-	//struct spatial *s1 = &dict->spatials[id1];
-	dict->hash[hash] = id;
-	s->next = id1;
-
-	return true;
+	e->next = dict->hashtable[h];
+	dict->hashtable[h] = e;
 }
+
+unsigned int
+spatial_dict_add(struct spatial_dict *dict, struct spatial *s)
+{
+	struct spatial *s2 = spatial_dict_lookup(dict, s->dist, spatial_hash(0, s));
+	if (s2) {
+		assert(spatial_equal(s, s2));	/* Sanity check */
+		return spatial_id(s2, dict);	/* Already have */
+	}
+
+	/* Add to collection */
+	unsigned int id = spatial_dict_addc(dict, s);
+
+	/* Add rotations to hashtable */
+	for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
+		spatial_dict_addh(dict, spatial_hash(r, s), id);
+	return id;
+}
+
 
 /* Spatial dictionary file format:
  * /^#/ - comments
@@ -308,13 +325,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	radius = strtoul(bufp, &bufp, 10);
 	while (isspace(*bufp)) bufp++;
 
-	if (radius > MAX_PATTERN_DIST) {
-		/* Too large spatial, skip. */
-		struct spatial s = { .dist = 0 };
-		unsigned int id = spatial_dict_addc(dict, &s);
-		assert(id == index);
-		return;
-	}
+	assert(radius <= MAX_PATTERN_DIST);
 
 	/* Load the stone configuration. */
 	struct spatial s = { .dist = radius };
@@ -327,16 +338,10 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 
 	/* Sanity check. */
 	if (sl != ptind[s.dist + 1])
-		die("Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n",
-		    sl, ptind[radius + 1] - 1, buf);
+		die("Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n", sl, ptind[radius + 1] - 1, buf);
 
-	/* Add to collection. */
-	unsigned int id = spatial_dict_addc(dict, &s);
+	unsigned int id = spatial_dict_add(dict, &s);
 	assert(id == index);
-
-	/* Add to specified hash places. */
-	for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
-		spatial_dict_addh(dict, spatial_hash(r, &s), id);
 }
 
 void
@@ -403,12 +408,26 @@ spatial_dict_hashstats(struct spatial_dict *dict)
 	 * -e patternscan), since it will insert a pattern multiple times,
 	 * multiplying the reported number of collisions. */
 
-	unsigned long buckets = (sizeof(dict->hash) / sizeof(dict->hash[0]));
+	unsigned long buckets = (sizeof(dict->hashtable) / sizeof(dict->hashtable[0]));
 	fprintf(stderr, "Spatial hash: %d collisions, %d repetitions, %.2f%% (%d/%lu) fill rate, %iMb total\n",
 			dict->collisions, dict->repetitions,
 			(double) dict->fills * 100 / buckets,
 			dict->fills, buckets,
-			sizeof(dict->hash) / 1024 / 1024);
+			sizeof(dict->hashtable) / 1024 / 1024);
+
+	int stats[10] = { 0, };
+	int max = 0;
+	for (unsigned int i = 0; i <= spatial_hash_mask; i++) {
+		int j = 0;
+		for (spatial_entry_t *e = dict->hashtable[i]; e; e = e->next)
+			j++;
+		if (j > max)  max = j;
+		if (j < 10)  stats[j]++;
+	}
+
+	for (int i = 0; i < 10; i++)
+		fprintf(stderr, "\t%i entries: %i (%i%%)\n", i, stats[i], stats[i] * 100 / (1 << spatial_hash_bits));
+	fprintf(stderr, "\tworst case: %i entries\n", max);
 }
 
 void
@@ -461,67 +480,15 @@ spatial_dict_init(bool create)
 	}
 
 	struct spatial_dict *dict = calloc2(1, sizeof(*dict));
-	/* We create a dummy record for index 0 that we will
-	 * never reference. This is so that hash value 0 can
-	 * represent "no value". */
+	/* Dummy record for index 0 so ids start at 1. */
 	struct spatial dummy = { .dist = 0 };
 	spatial_dict_addc(dict, &dummy);
 
 	if (f) {
 		spatial_dict_load(dict, f);
 		fclose(f); f = NULL;
-	} else
-		assert(create);
+	} else  assert(create);
 
 	return dict;
 }
 
-unsigned int
-spatial_dict_put(struct spatial_dict *dict, struct spatial *s, hash_t h)
-{
-	unsigned int id = spatial_dict_gets(dict, s, h);
-	if (id > 0) {
-		return id;
-
-#if 0
-		/* Look a bit harder - perhaps one of our rotations still
-		 * points at the correct spatial. */
-		for (unsigned int r = 0; r < PTH__ROTATIONS; r++) {
-			hash_t rhash = spatial_hash(r, s);
-			unsigned int rid = dict->hash[rhash];
-			/* No match means we definitely aren't stored yet. */
-			if (!rid)
-				break;
-			if (id != rid && spatial_cmp(s, &dict->spatials[rid])) {
-				/* Yay, this is us! */
-				if (DEBUGL(3))
-					fprintf(stderr, "Repeated collision %d vs %d\n", id, rid);
-				id = rid;
-				/* Point the hashes back to us. */
-				goto hash_store;
-			}
-		}
-
-		if (DEBUGL(1))
-			fprintf(stderr, "Collision %d vs %d\n", id, dict->nspatials);
-		id = 0;
-		/* dict->collisions++; gets done by addh */
-#endif
-	}
-
-	/* Add new pattern! */
-	id = spatial_dict_addc(dict, s);
-	if (DEBUGL(4)) {
-		fprintf(stderr, "new spat %d(%d) %s <%"PRIhash"> ", id, s->dist, spatial2str(s), h);
-		for (unsigned int r = 0; r < 8; r++)
-			fprintf(stderr,"[%"PRIhash"] ", spatial_hash(r, s));
-		fprintf(stderr, "\n");
-	}
-
-	/* Store new pattern in the hash. */
-	//hash_store:
-	for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
-		spatial_dict_addh(dict, spatial_hash(r, s), id);
-
-	return id;
-}
