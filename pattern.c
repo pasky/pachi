@@ -140,7 +140,9 @@ static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
 			     [ PF_NET_SOME] = "some",
 			     [ PF_NET_DEAD] = "dead",
 	},
-	[FEAT_DEFENCE] =   { [ PF_DEFENCE_LINE2] = "line2" },
+	[FEAT_DEFENCE] =   { [ PF_DEFENCE_LINE2] = "line2",
+			     [ PF_DEFENCE_SILLY] = "silly",
+	},
 };
 
 static void
@@ -383,7 +385,7 @@ cutting_stones_and_can_capture_other_after_atari(struct board *b, struct move *m
 			with_move(b, lib, other_color, {
 					group_t g = group_at(b, other);
 					if (g && board_group_info(b, g).libs == 2 &&
-					    can_capture_2lib_group(b, g, other_color, NULL, 0))
+					    can_capture_2lib_group(b, g, NULL, 0))
 						found = true;
 				});
 		});
@@ -539,7 +541,7 @@ safe_diag_neighbor_reaches_two_opp_groups(struct board *b, struct move *m,
 		/* Can be captured ? Not good */
 		if (board_group_info(b, g).libs == 1) continue;
 		if (board_group_info(b, g).libs == 2 &&
-		    can_capture_2lib_group(b, g, m->color, NULL, 0)) continue;
+		    can_capture_2lib_group(b, g, NULL, 0)) continue;
 
 		group_t gs[4];  memcpy(gs, groups, sizeof(gs));
 		int found = 0;
@@ -569,7 +571,7 @@ move_can_be_captured(struct board *b, struct move *m)
 		group_t g = group_at(b, m->coord);
 		if (!g) break;
 		if (board_group_info(b, g).libs == 2 &&
-		    can_capture_2lib_group(b, g, m->color, NULL, 0)) break;
+		    can_capture_2lib_group(b, g, NULL, 0)) break;
 		safe = true;
 	});
 	return !safe;
@@ -770,18 +772,29 @@ pattern_match_defence(struct board *b, struct move *m)
 
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != m->color)  continue;
-		coord_t n = c;
-		if (neighbor_count_at(b, n, other_color) != 2)  return -1;
-		if (immediate_liberty_count(b, n) != 2)  return -1;
-		if (coord_edge_distance(n, b) != 1)  continue;
-
-		group_t g = group_at(b, n);
-		if (board_group_info(b, g).libs != 2)  continue;
-		for (int i = 0; i < 2; i++) {
-			coord_t lib = board_group_info(b, g).lib[i];
-			if (wouldbe_ladder_any(b, g, lib))
-				return PF_DEFENCE_LINE2;
-		}
+		if (coord_edge_distance(c, b) != 1)  continue;
+		if (neighbor_count_at(b, c, other_color) != 2)  return -1;
+		if (immediate_liberty_count(b, c) != 2)  return -1;
+		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)  return -1;
+		
+		/*   . . X O .   But don't defend if we
+		 *   . . O X *   can capture instead !
+		 *   . . . . .
+		 *  -----------  */
+		int x = coord_x(c, b); int y = coord_y(c, b);
+		int dx = x - coord_x(m->coord, b);
+		int dy = y - coord_y(m->coord, b);
+		coord_t o = coord_xy(b, x + dx, y + dy);
+		if (board_at(b, o) != other_color)  return -1;
+		group_t go = group_at(b, o);
+		if (board_group_info(b, go).libs == 2 &&
+		    can_capture_2lib_group(b, go, NULL, 0))
+			return PF_DEFENCE_SILLY;
+		
+		if (can_capture_2lib_group(b, g, NULL, 0))
+			return PF_DEFENCE_LINE2;
+		return -1;
 	});
 
 	return -1;
@@ -1029,7 +1042,6 @@ pattern_match_internal(struct pattern_config *pc, struct pattern *pattern, struc
 	check_feature(pattern_match_atari(b, m, ownermap), FEAT_ATARI);
 	bool atari_ladder = (p == PF_ATARI_LADDER);
 	{       if (p == PF_ATARI_LADDER_BIG)  return;  /* don't let selfatari kick-in ... */
-		if (p == PF_ATARI_LADDER_SAFE) return;
 		if (p == PF_ATARI_SNAPBACK)    return;  
 		if (p == PF_ATARI_KO)          return;  /* don't let selfatari kick-in, fine as ko-threats */
 	}

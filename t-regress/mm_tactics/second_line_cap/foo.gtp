@@ -1,0 +1,29 @@
+kgs-rules chinese
+boardsize 19
+clear_board
+komi 6.5
+play B q4
+play W q16
+play B d4
+play W f3
+play B c6
+play W d2
+play B c3
+play W j3
+play B d16
+play W f17
+play B c13
+play W c17
+play B c16
+play W d17
+play B e16
+play W b16
+play B b15
+play W b17
+play B e17
+play W e18
+play B f16
+play w o3
+play b f18
+play w g17
+genmove b

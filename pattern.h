@@ -94,7 +94,8 @@ enum feature_id {
 	/* 2nd line defence */
 	FEAT_DEFENCE,
 #define PF_DEFENCE_LINE2	0  /***   Defend stone on second line */
-#define PF_DEFENCE_N		1
+#define PF_DEFENCE_SILLY	1  /***   Can cap instead */
+#define PF_DEFENCE_N		2
 
 	/* Cut */
 	FEAT_CUT,
