@@ -375,8 +375,10 @@ cutting_stones_and_can_capture_other_after_atari(struct board *b, struct move *m
 	enum stone other_color = stone_other(m->color);
 	with_move(b, m->coord, m->color, {
 			assert(group_at(b, atariable) == atariable);
-			if (!cutting_stones(b, atariable))  break;
-			if (!cutting_stones(b, other))      break;
+			if (!cutting_stones(b, atariable))		break;
+			if (!cutting_stones(b, other))			break;
+			if (can_countercapture(b, atariable, NULL, 0))	break;
+			
 			coord_t lib = board_group_info(b, atariable).lib[0];
 			with_move(b, lib, other_color, {
 					group_t g = group_at(b, other);
@@ -475,7 +477,7 @@ pattern_match_atari(struct board *b, struct move *m, struct ownermap *ownermap)
 	if (!g1)  return -1;
 
 	/* Can capture other group after atari ? */
-	if (g3libs && !group_is_onestone(b, g3libs) && !ladder_atari &&
+	if (g3libs && !ladder_atari &&
 	    ownermap_color(ownermap, g3libs, 0.67) != color &&
 	    cutting_stones_and_can_capture_other_after_atari(b, m, g1, g3libs))
 		atari_and_cap = true;
