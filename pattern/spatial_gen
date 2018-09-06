@@ -1,20 +1,20 @@
 #!/bin/bash
 # Generate spatial dictionary from SGF collection.
 #
-# Gathers spatial features from the SGF collection and store them in a freshly
+# Collect spatial patterns from SGF collection and store them in a freshly
 # created spatial dictionary.
 # DO NOT RUN THIS CONCURRENTLY! The dictionary will get corrupted.
 #
-# Only keeps spatial patterns with at least 500 occurences by default.
+# Only keeps spatial patterns with at least 3 occurences by default.
 # set SPATMIN to change that:
 #
-#	SPATMIN=100 pattern/spatial_gen ...
+#	SPATMIN=2 pattern/spatial_gen ...
 #
-# Spatials are scanned in competition mode by default (also get information
-# about unplayed moves present on the board, not just game move). To scan
-# played move only do:
-#
-#	PATARGS="competition=0" pattern/spatial_gen. ...
+# Only patterns from played moves are scanned: this is best as it captures
+# interesting situations around moves we want to play. The other way
+# (competition, scanning all available moves on the board) yields lots of
+# frequently occuring but useless patterns for making a decision and
+# prediction rate suffers.
 #
 # By default sgf to gtp translation is cached in games.gtp (faster if doing
 # several runs on the same dataset). Delete games.gtp when changing dataset
@@ -28,13 +28,13 @@
 die() {  echo "$@"; exit 1;  }
 usage() {  die "Usage: pattern/spatial_gen sgf_train/*.sgf";  }
 [ -f "$1" ] || usage
-[ -n "$SPATMIN" ] || SPATMIN=500
+[ -n "$SPATMIN" ] || SPATMIN=3
 
 rm -f patterns_mm.spat patterns_mm.gamma
 
-echo " Gathering population of spatials occuring more than $SPATMIN times..."
+echo " Gathering spatial patterns occuring more than $SPATMIN times..."
 
-options="gen_spat_dict,spat_threshold=$SPATMIN${PATARGS:+,$PATARGS}"
+options="gen_spat_dict,spat_threshold=$SPATMIN"
 
 if [ -n "$NOCACHE" ]; then
     (for i in "$@"; do echo $i >&2; tools/sgf2gtp.pl <$i; done) |

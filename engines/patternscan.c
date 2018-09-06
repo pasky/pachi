@@ -15,8 +15,7 @@
 /* The engine has two modes:
  *
  * - gen_spat_dict=1: generate patterns_mm.spat file from encountered spatials.
- *       competition=1: consider all spatials on the board (default)
- *       competition=0: only spatials from played moves
+ *                    only consider spatials from played moves.
  *
  * - gen_spat_dict=0: generate output for mm tool
  *       each move is pattern matched into team of features which can be fed
@@ -28,7 +27,6 @@ struct patternscan {
 	int debug_level;
 
 	struct pattern_config pc;
-	bool competition;
 	bool spat_split_sizes;
 	int color_mask;
 
@@ -200,8 +198,8 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m,
 {
 	callback(ps, b, m, &ps->buf, game_move, data);
 
-	/* Go through other moves as well if competition=1 */	
-	if (game_move && ps->competition) {
+	/* Go through other moves as well */
+	if (game_move) {
 		foreach_free_point(b) {
 			struct move m2 = { .coord = c, .color = m->color };
 			if (c == m->coord)                                           continue;
@@ -229,12 +227,13 @@ mm_process_move(struct patternscan *ps, struct board *b, struct move *m, strbuf_
 	else    mm_print_pattern(ps, buf, &p);
 }
 
+/* Store the spatial configuration in dictionary if applicable. */
 static void
 genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m, strbuf_t *buf,
 			bool game_move, void *data)
 {
-	/* Store the spatial configuration in dictionary if applicable. */
 	if (is_pass(m->coord))  return;
+	if (!game_move) return;		/* Only save patterns from played moves */
 
 #ifdef DEBUG_GENSPATIAL
 	fprintf(stderr, "--------------------------------------------------------------\n\n");
@@ -268,12 +267,6 @@ genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m,
 		/* Global pattern count (including multiple hits per game) */
 		ps->scounts[sid]++;
 			
-		/* To keep only one hit per game do this instead: */
-		// if (ps->sgameno[sid] != ps->gameno) {
-		//      ps->scounts[sid]++;
-		//      ps->sgameno[sid] = ps->gameno;
-		//}
-
 #ifdef DEBUG_GENSPATIAL
 		fprintf(stderr, "id=%u d=%i hits=%i %s\n\n", sid, s.dist, ps->scounts[sid], spatial2str(&s));
 		spatial_print(&s, stderr, m);
@@ -284,7 +277,7 @@ genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m,
 			gameno = ps->gameno;
 			fprintf(stderr, "\t\t\tgames: %-15i spatials stored: %u\n", gameno, spat_dict->nspatials);
 		}
-	}	
+	}
 }
 
 static char *
@@ -337,7 +330,7 @@ compare_pattern_counts(const void *p1, const void *p2)
 	return (global_ps->scounts[id2] - global_ps->scounts[id1]);
 }
 
-/* genspatial: save newly found patterns. */
+/* genspatial: write spatial dictionary. */
 static void
 genspatial_done(struct patternscan *ps)
 {
@@ -369,9 +362,8 @@ genspatial_done(struct patternscan *ps)
 		struct spatial *s = &spat_dict->spatials[id];
 		spatial_write(spat_dict, s, newid, f);
 
-		/* Show stats */
-		fprintf(stderr, "hits=%-6i   id=%-6i    d=%-2i    %s\n", 
-			ps->scounts[id], id, s->dist, spatial2str(s));
+		/* Stats */
+		fprintf(stderr, "hits=%-6i   id=%-6i    d=%-2i    %s\n", ps->scounts[id], id, s->dist, spatial2str(s));
 	}
 	fprintf(stderr, "Added %u patterns\n", nmatches);
 
@@ -405,7 +397,6 @@ patternscan_state_init(char *arg)
 	ps->color_mask = S_BLACK | S_WHITE;
 
 	/* Default mode: match patterns and generate output for mm tool. */
-	ps->competition = 1;
 	ps->spat_split_sizes = 1;
 	ps->mcowner_fast = true;
 
@@ -432,23 +423,12 @@ patternscan_state_init(char *arg)
 				/* XXX: If you specify the 'patterns' option,
 				 * this must come first! */
 				ps->gen_spat_dict = !optval || atoi(optval);
-				ps->competition = 1;
 
 			} else if (!strcasecmp(optname, "spat_threshold") && optval) {
 				/* Minimal number of times new spatial
 				 * feature must occur in this run (!) to
-				 * be included in the dictionary. Note that
-				 * this will produce discontinuous dictionary
-				 * that you should renumber. Also note that
-				 * 3x3 patterns are always saved. */
+				 * be included in the dictionary. */
 				ps->spat_threshold = atoi(optval);
-
-			} else if (!strcasecmp(optname, "competition")) {
-				/* In competition mode, first the played
-				 * pattern is printed, then all patterns
-				 * that could be played (including the played
-				 * one). */
-				ps->competition = !optval || atoi(optval);
 
 			} else if (!strcasecmp(optname, "spat_split_sizes")) {
 				/* Generate a separate pattern for each
