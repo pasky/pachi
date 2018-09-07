@@ -80,17 +80,27 @@ from sources under Ubuntu 18.04:
 Install libcaffe-cuda-dev instead for nvidia gpu acceleration.  
 Non-dcnn build just needs git make and gcc.
 
+After compiling and setting up data files you can install pachi with:
+
+    make install
+    make install-data
+
+Pachi will look for extra data files (such as dcnn, pattern, joseki or
+fuseki database) in pachi's system directory (`/usr/local/share/pachi`
+by default) as well as current directory. System data directory can be
+overridden at runtime by setting `DATA_DIR` environment variable.
+
 
 ## DCNN support
 
-Pachi can use a neural network as source of good moves to consider.
+Pachi can use a neural network as source of good moves to consider (priors).
 With dcnn support Pachi can play at dan level strength on modest hardware.
 For large number of playouts this makes it about 1 stone stronger, and
 tends to make the games more pretty. A raw dcnn engine is available for
 pure dcnn play (not recommended for actual games, pachi won't know when to
 pass or resign !).
 
-Currently dcnn is used for root node only, and pondering and dcnn can't be
+Currently dcnn is used only for root node, and pondering and dcnn can't be
 used together (you should get a warning on startup).
 
 To build Pachi with DCNN support:
@@ -165,31 +175,6 @@ in uct/uct.c - you will find the list of UCT engine options there, each
 with a description. At any rate, usually the three options above are
 the only ones you really want to tweak.
 
-**Logs**
-
-Pachi logs details of its activity on stderr, which can be viewed via
-`Tools -> GTP Shell` in gogui. Tons of details about winrates, memory usage,
-score estimate etc can be found here. Even though most of it available through
-other means in gogui, it's always a good place to look in case something
-unexpected happens.
-
-`-d <log_level>` changes the amount of logging (-d0 suppresses everything)  
-`-o log_file` logs to a file instead. gogui live-gfx commands won't work though.
-
-**Opening book**
-
-> Mostly useful when running without dcnn (dcnn can deal with fuseki).
-
-Pachi can use an opening book in a Fuego-compatible format - you can
-obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
-with the -f parameter:
-
-	pachi -f book.dat ...
-
-You may wish to append some custom Pachi opening book lines to book.dat;
-take them from the book.dat.extra file. If using the default Fuego book,
-you may want to remove the lines listed in book.dat.bad.
-
 
 ## Analyze commands
 
@@ -207,6 +192,47 @@ via the live gfx commands.
 ![dcnn colormap](media/screenshot_dcnn_colors.png?raw=true "dcnn colormap")
 
 There are some non-gui tools for game analysis as well, see below.
+
+
+## Logs
+
+Pachi logs details of its activity on stderr, which can be viewed via
+`Tools -> GTP Shell` in gogui. Tons of details about winrates, memory usage,
+score estimate etc can be found here. Even though most of it available through
+other means in gogui, it's always a good place to look in case something
+unexpected happens.
+
+`-d <log_level>` changes the amount of logging (-d0 suppresses everything)  
+`-o log_file` logs to a file instead. gogui live-gfx commands won't work though.
+
+
+## Large Patterns
+
+Pachi uses MM patterns to guide tree search (mcts priors). The pattern
+matcher runs on the cpu each time a new node is explored. For each possible
+move it looks for known spatial / tactical features and rates them according
+to learned weights, which are obtained through supervised learning (see
+pattern/README for details). Right now prediction rate is about 37%.
+
+One benefit of MM is that the weights are very small. If you used previous
+Pachi versions, it's no longer necessary to install extra files to
+get patterns working. Patterns should load instantly now and take up
+very little memory.
+
+
+## Opening book
+
+> Mostly useful when running without dcnn (dcnn can deal with fuseki).
+
+Pachi can use an opening book in a Fuego-compatible format - you can
+obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
+with the -f parameter:
+
+	pachi -f book.dat ...
+
+You may wish to append some custom Pachi opening book lines to book.dat;
+take them from the book.dat.extra file. If using the default Fuego book,
+you may want to remove the lines listed in book.dat.bad.
 
 
 ## Greedy Pachi
@@ -234,30 +260,6 @@ Note that Pachi in this mode may be slightly weaker, and result margin
 should not be taken into account when judging either player's strength.
 During the game, the winning/losing margin can be approximated from
 Pachi's "extra komi" or "xkomi" reporting in the progress messages.
-
-
-## Large Patterns
-
-MM patterns have replaced the large patterns database used in previous versions.
-No need to download anything extra, they're enabled by default as long as Pachi
-can find its data files.
-
-Patterns should load instantly now and take up very little memory. Prediction rate
-in middle game is better too.  
-See pattern/README for details.
-
-
-## Install
-
-After compiling and setting up data files you can install pachi with:
-
-    make install
-    make install-data
-
-Pachi will look for extra data files (such as dcnn, pattern, joseki or
-fuseki database) in pachi's system directory (`/usr/local/share/pachi`
-by default) as well as current directory. System data directory can be
-overridden at runtime by setting `DATA_DIR` environment variable.
 
 
 ## Experiments and Testing
