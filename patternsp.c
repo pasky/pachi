@@ -162,11 +162,9 @@ spatial2str(struct spatial *s)
 }
 
 void
-spatial_print(struct spatial *s, FILE *f, struct move *at)
+spatial_print(struct board *board, struct spatial *s, FILE *f, struct move *at)
 {
-	struct board *b = board_init(NULL);
-	board_resize(b, 19);
-        board_clear(b);
+	struct board *b = board_new(board_size(board), NULL);
 	b->last_move.coord = at->coord;
 	
 	for (int i = 0; i < real_board_size(b); i++)
@@ -180,8 +178,7 @@ spatial_print(struct spatial *s, FILE *f, struct move *at)
 		struct move m = { .coord = coord_xy(b, x, y), .color = spatial_point_at(*s, j)  };
 		board_at(b, m.coord) = m.color;
 	}
-	board_print(b, stderr);
-	
+	board_print(b, stderr);	
 	board_done(b);
 }
 

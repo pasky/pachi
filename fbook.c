@@ -88,11 +88,9 @@ fbook_init(char *filename, struct board *b)
 	/* Scratch board where we lay out the sequence;
 	 * one for each transposition. */
 	struct board *bs[8];
-	for (int i = 0; i < 8; i++) {
-		bs[i] = board_init(NULL);
-		board_resize(bs[i], fbook->bsize - 2);
-	}
-
+	for (int i = 0; i < 8; i++)
+		bs[i] = board_new(fbook->bsize, NULL);
+	
 	char linebuf[1024];
 	while (fgets(linebuf, sizeof(linebuf), f)) {
 		char *line = linebuf;

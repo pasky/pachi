@@ -111,7 +111,7 @@ hash_t spatial_hash(unsigned int rotation, spatial_t *s);
 char *spatial2str(spatial_t *s);
 
 /* Print spatial on board centered on @at */
-void spatial_print(spatial_t *s, FILE *f, struct move *at);
+void spatial_print(struct board *b, spatial_t *s, FILE *f, struct move *at);
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). */

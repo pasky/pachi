@@ -269,7 +269,7 @@ genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m,
 			
 #ifdef DEBUG_GENSPATIAL
 		fprintf(stderr, "id=%u d=%i hits=%i %s\n\n", sid, s.dist, ps->scounts[sid], spatial2str(&s));
-		spatial_print(&s, stderr, m);
+		spatial_print(b, &s, stderr, m);
 #endif
 			
 		static int gameno = 0;

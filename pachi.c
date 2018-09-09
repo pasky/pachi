@@ -337,7 +337,7 @@ int main(int argc, char *argv[])
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 	fifo_init();
 
-	struct board *b = board_init(fbookfile);
+	struct board *b = board_new(19 + 2, fbookfile);
 	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
 	if (dcnn_required)       require_dcnn(b);
 

@@ -617,7 +617,7 @@ unit_test(char *filename)
 	int total = 0, passed = 0;
 	int total_opt = 0, passed_opt = 0;
 	
-	struct board *b = board_init(NULL);
+	struct board *b = board_new(19+2, NULL);
 	b->komi = 7.5;
 	char buf[256]; char *line = buf;
 
