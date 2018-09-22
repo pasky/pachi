@@ -91,8 +91,6 @@ typedef struct spatial_dict {
 	/* Hashed access (all isomorphous configurations are also hashed)
 	 * Maps to spatials[] indices. Hash function: zobrist hashing with fixed values. */
 	spatial_entry_t* hashtable[1 << spatial_hash_bits];
-	/* Auxiliary counters for statistics. */
-	int fills, collisions, repetitions;
 } spatial_dict_t;
 
 #define spatial_id(s, dict)  ((unsigned int)((s) - (dict)->spatials))
@@ -145,9 +143,6 @@ spatial_t *spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t spatial_ha
 /* Store specified spatial pattern in the dictionary if it is not known yet.
  * Returns spatial id. */
 unsigned int spatial_dict_add(spatial_dict_t *dict, struct spatial *s);
-
-/* Print stats about the hash to stderr. Companion to spatial_dict_addh(). */
-void spatial_dict_hashstats(spatial_dict_t *dict);
 
 /* Write comment lines describing the dictionary (e.g. point order
  * in patterns) to given file. */

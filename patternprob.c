@@ -51,8 +51,6 @@ prob_dict_init(char *filename, struct pattern_config *pc)
 		i++;
 	}
 
-	if (DEBUGL(3))  spatial_dict_hashstats(spat_dict);
-
 	fclose(f);
 	if (DEBUGL(1))  fprintf(stderr, "Loaded %d gammas.\n", i);
 }

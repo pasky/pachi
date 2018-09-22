@@ -131,6 +131,8 @@ pthashes_init(void)
 	}
 }
 
+static void spatial_dict_hashstats(spatial_dict_t *dict);
+
 static void __attribute__((constructor))
 spatial_init(void)
 {
@@ -279,9 +281,6 @@ spatial_dict_addh(spatial_dict_t *dict, hash_t spatial_hash, unsigned int id)
 	e->next = NULL;
 
 	uint32_t h = spatial_dict_hash(spatial_hash);
-	if (dict->hashtable[h])  dict->collisions++;
-	dict->fills++;
-
 	e->next = dict->hashtable[h];
 	dict->hashtable[h] = e;
 }
@@ -363,7 +362,7 @@ spatial_dict_load(struct spatial_dict *dict, FILE *f)
 	if (DEBUGL(3)) spatial_dict_hashstats(dict);
 }
 
-void
+static void
 spatial_dict_hashstats(struct spatial_dict *dict)
 {
 	/* m hash size, n number of patterns; is zobrist universal hash?
@@ -390,26 +389,31 @@ spatial_dict_hashstats(struct spatial_dict *dict)
 	 * -e patternscan), since it will insert a pattern multiple times,
 	 * multiplying the reported number of collisions. */
 
-	unsigned long buckets = (sizeof(dict->hashtable) / sizeof(dict->hashtable[0]));
-	fprintf(stderr, "Spatial hash: %d collisions, %d repetitions, %.2f%% (%d/%lu) fill rate, %iMb total\n",
-			dict->collisions, dict->repetitions,
-			(double) dict->fills * 100 / buckets,
-			dict->fills, buckets,
-			sizeof(dict->hashtable) / 1024 / 1024);
-
 	int stats[10] = { 0, };
-	int max = 0;
+	unsigned int max = 0, entries = 0, empty = 0;
 	for (unsigned int i = 0; i <= spatial_hash_mask; i++) {
-		int j = 0;
-		for (spatial_entry_t *e = dict->hashtable[i]; e; e = e->next)
-			j++;
-		if (j > max)  max = j;
-		if (j < 10)  stats[j]++;
+		unsigned int n = 0;
+		for (spatial_entry_t *e = dict->hashtable[i]; e; e = e->next)  n++;
+		entries += n;
+		max = MAX(max, n);
+		if (!n)      empty++;
+		if (n < 10)  stats[n]++;
 	}
 
-	for (int i = 0; i < 10; i++)
-		fprintf(stderr, "\t%i entries: %i (%i%%)\n", i, stats[i], stats[i] * 100 / (1 << spatial_hash_bits));
-	fprintf(stderr, "\tworst case: %i entries\n", max);
+	unsigned int buckets = (sizeof(dict->hashtable) / sizeof(dict->hashtable[0]));
+	unsigned int htmem = sizeof(dict->hashtable);
+	unsigned int mem = htmem + dict->nspatials * sizeof(struct spatial) + entries * sizeof(spatial_entry_t);
+	fprintf(stderr, "Spatial hash: %i entries, empty %.1f%%, avg len %.1f,   %.1fMb (%.1fMb total)\n",
+			entries,
+			(float)empty * 100 / buckets,
+			(float)entries / (buckets - empty),
+			(float)htmem / (1024*1024), (float)mem / (1024*1024));
+
+	if (DEBUGL(4)) {
+		for (int i = 0; i < 10; i++)
+			fprintf(stderr, "\t%i entries: %i (%i%%)\n", i, stats[i], stats[i] * 100 / (1 << spatial_hash_bits));
+		fprintf(stderr, "\tworst case: %i entries\n", max);
+	}
 }
 
 void

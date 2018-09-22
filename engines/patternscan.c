@@ -262,7 +262,7 @@ genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m,
 		
 		/* Show stats from time to time */
 		if (ps->debug_level > 1 && !fast_random(65536) && !fast_random(32))
-			fprintf(stderr, "%d spatials, %d collisions\n", spat_dict->nspatials, spat_dict->collisions);
+			fprintf(stderr, "%d spatials\n", spat_dict->nspatials);
 			
 		/* Global pattern count (including multiple hits per game) */
 		ps->scounts[sid]++;
