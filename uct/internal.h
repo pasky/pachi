@@ -51,6 +51,7 @@ struct uct {
 	size_t pruning_threshold;
 	int mercymin;
 	int significant_threshold;
+	bool genmove_reset_tree;
 
 	int threads;
 	enum uct_thread_model {
