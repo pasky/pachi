@@ -477,3 +477,20 @@ spatial_dict_init(struct pattern_config *pc, bool create)
 	} else  assert(create);
 }
 
+void
+spatial_dict_done()
+{
+	if (!spat_dict)  return;
+	
+	free(spat_dict->spatials);
+	
+	spatial_entry_t *next = NULL;
+	for (unsigned int id = 0; id <= spatial_hash_mask; id++)
+		for (spatial_entry_t *e = spat_dict->hashtable[id]; e ; e = next) {
+			next = e->next;
+			free(e);
+		}
+
+	free(spat_dict);
+	spat_dict = NULL;
+}

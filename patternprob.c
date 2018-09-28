@@ -16,6 +16,7 @@ struct prob_dict    *prob_dict = NULL;
 void
 prob_dict_init(char *filename, struct pattern_config *pc)
 {
+	assert(!prob_dict);
 	if (!filename)  filename = "patterns_mm.gamma";
 	FILE *f = fopen_data_file(filename, "r");
 	if (!f) {
@@ -53,6 +54,18 @@ prob_dict_init(char *filename, struct pattern_config *pc)
 
 	fclose(f);
 	if (DEBUGL(1))  fprintf(stderr, "Loaded %d gammas.\n", i);
+}
+
+void
+prob_dict_done()
+{
+	if (!prob_dict)  return;
+
+	for (unsigned int id = 0; id < spat_dict->nspatials; id++)
+		free(prob_dict->table[id]);
+	free(prob_dict->table);
+	free(prob_dict);
+	prob_dict = NULL;
 }
 
 static floating_t

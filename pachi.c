@@ -32,6 +32,8 @@
 #include "dcnn.h"
 #include "caffe.h"
 #include "pattern.h"
+#include "patternsp.h"
+#include "patternprob.h"
 
 char *pachi_exe = NULL;
 int debug_level = 3;
@@ -385,4 +387,11 @@ int main(int argc, char *argv[])
 	free(fbookfile);
 	free(forced_ruleset);
 	return 0;
+}
+
+void
+pachi_done()
+{
+	prob_dict_done();
+	spatial_dict_done();
 }

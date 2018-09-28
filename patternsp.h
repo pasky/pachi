@@ -137,6 +137,9 @@ hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
  * use false if this is to be done later (e.g. by patternprob). */
 void spatial_dict_init(struct pattern_config *pc, bool create);
 
+/* Free spatial dictionary. */
+void spatial_dict_done();
+
 /* Lookup spatial pattern (resolves collisions). */
 spatial_t *spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t spatial_hash);
 

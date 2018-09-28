@@ -204,6 +204,7 @@ static enum parse_code
 cmd_quit(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
 {
 	gtp_reply(gtp, NULL);
+	pachi_done();
 	exit(0);
 }
 

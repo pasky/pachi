@@ -35,6 +35,9 @@ struct prob_dict {
  * to use default filename). */
 void prob_dict_init(char *filename, struct pattern_config *pc);
 
+/* Free patterns probability dictionary. */
+void prob_dict_done();
+
 /* Return probability associated with given pattern. */
 static inline floating_t pattern_gamma(struct pattern_config *pc, struct pattern *p);
 
