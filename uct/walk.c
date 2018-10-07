@@ -158,7 +158,7 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 	while (--cans >= 0) {
 		if (!can[cans]) break;
 		/* Best sequence */
-		fprintf(stderr, "%s[", cans < 3 ? ", " : "");
+		fprintf(stderr, "[");
 		best = can[cans];
 		for (int depth = 0; depth < 4; depth++) {
 			if (!best || best->u.playouts < 25) break;
@@ -167,7 +167,7 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 				tree_node_get_value(t, 1, best->u.value));
 			best = u->policy->choose(u->policy, best, t->board, color, resign);
 		}
-		fprintf(stderr, "]");
+		fprintf(stderr, "]%s", cans > 0 ? ", " : "");
 	}
 	fprintf(stderr, "]");
 
