@@ -96,7 +96,8 @@ static int
 open_client_connection(char *port_name)
 {
 	char hostname[BSIZE];
-	strncpy(hostname, port_name, sizeof(hostname));
+	strncpy(hostname, port_name, sizeof(hostname)-1);
+	hostname[sizeof(hostname)-1] = 0;
 	char *port = strchr(hostname, ':');
 	assert(port);
 	*port++ = '\0';

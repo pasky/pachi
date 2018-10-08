@@ -220,8 +220,8 @@ time_str()
 {
     static char buf[80];
     time_t t = time(NULL);
-    strftime(buf, sizeof(buf), "%b %e %H:%M:%S", localtime(&t));
-    return buf;    
+    strftime(buf, sizeof(buf), "%b %d %H:%M:%S", localtime(&t));
+    return buf;
 }
 
 /* Sleep for a given interval (in seconds). Return immediately if interval < 0. */

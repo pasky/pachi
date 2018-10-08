@@ -628,7 +628,8 @@ unit_test(char *filename)
 		optional = 0;
 		switch (line[0]) {
 			case '%':
-				strncpy(title, line, sizeof(title));
+				strncpy(title, line, sizeof(title)-1);
+				title[sizeof(title)-1] = 0;
 				if (DEBUGL(1))  fprintf(stderr, "\n%s\n", line);
 				continue;
 			case '!':

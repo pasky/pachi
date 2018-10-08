@@ -1096,6 +1096,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 					m->coord = c;
 					return true;
 				}
+				/* FALLTHROUGH */
 			case 2: /* Try to switch to some 2-lib neighbor. */
 				for (int i = 0; i < 2; i++) {
 					coord_t l = board_group_info(b, group_at(b, c)).lib[i];

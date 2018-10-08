@@ -401,7 +401,7 @@ static char*
 print_target_move_handler(struct board *b, coord_t c, void *data)
 {	
 	static char buf[32];
-	coord_t target_move = (coord_t)data;
+	coord_t target_move = (coord_t)(intptr_t)data;
 
 	if (c == target_move)	sprintf(buf, "\e[40;33;1m*\e[0m");
 	else			sprintf(buf, "%c", stone2char(board_at(b, c)));
@@ -413,7 +413,7 @@ board_print_target_move(struct board *b, FILE *f, coord_t target_move)
 {
 	assert(!is_pass(target_move));
 	assert(board_at(b, target_move) == S_NONE);
-	board_hprint(b, f, print_target_move_handler, (void*)target_move);
+	board_hprint(b, f, print_target_move_handler, (void*)(intptr_t)target_move);
 }
 
 
