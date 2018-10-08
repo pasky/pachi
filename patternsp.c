@@ -408,7 +408,7 @@ spatial_dict_hashstats(struct spatial_dict *dict)
 			dict->collisions, dict->repetitions,
 			(double) dict->fills * 100 / buckets,
 			dict->fills, buckets,
-			sizeof(dict->hash) / 1024 / 1024);
+			(int)(sizeof(dict->hash) / 1024 / 1024));
 }
 
 void
