@@ -7,12 +7,12 @@
 #define DCNN_BEST_N 20
 
 /* Ensure / disable dcnn */
-void require_dcnn(); 
-void disable_dcnn();
+void require_dcnn(void);
+void disable_dcnn(void);
 
 void dcnn_get_moves(struct board *b, enum stone color, float result[]);
 bool using_dcnn(struct board *b);
-void dcnn_init();
+void dcnn_init(void);
 void find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest);
 void print_dcnn_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest);
 

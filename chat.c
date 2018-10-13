@@ -67,7 +67,7 @@ void chat_init(char *chat_file) {
 		fprintf(stderr, "Loaded %u chat entries from %s\n", (unsigned)(entry - chat_table), chat_file);
 }
 
-void chat_done() {
+void chat_done(void) {
 	if (chat_table) {
 		free(chat_table);
 		chat_table = NULL;
@@ -127,7 +127,7 @@ generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone c
 #else
 void chat_init(char *chat_file) {}
 
-void chat_done() {}
+void chat_done(void) {}
 
 char
 *generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,

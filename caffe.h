@@ -7,8 +7,8 @@ extern "C" {
 #endif
 
 
-bool caffe_ready();
-void caffe_init();
+bool caffe_ready(void);
+void caffe_init(void);
 void caffe_get_data(float *data, float *result, int planes, int size);
 
 #ifdef DCNN

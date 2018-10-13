@@ -12,8 +12,8 @@
 
 static bool dcnn_enabled = true;
 static bool dcnn_required = false;
-void disable_dcnn()     {  dcnn_enabled = false;  }
-void require_dcnn()     {  dcnn_required = true;  dcnn_init();  }
+void disable_dcnn(void)     {  dcnn_enabled = false;  }
+void require_dcnn(void)     {  dcnn_required = true;  dcnn_init();  }
 
 bool
 using_dcnn(struct board *b)
@@ -24,7 +24,7 @@ using_dcnn(struct board *b)
 }
 
 void
-dcnn_init()
+dcnn_init(void)
 {
 	if (dcnn_enabled)  caffe_init();
 	if (dcnn_required && !caffe_ready())  die("dcnn required, aborting.\n");
