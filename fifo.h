@@ -8,7 +8,7 @@ int  fifo_task_queue(void);
 void fifo_task_done(int ticket);
 
 #else
-#define fifo_init()
+#define fifo_init() ((void)0)
 #endif /* FIFO */
 
 #endif /* PACHI_FIFO_H */
