@@ -33,10 +33,10 @@ coord2dcnn_idx(coord_t c, struct board *b)
 #else
 
 
-#define disable_dcnn()
-#define require_dcnn()     die("dcnn required but not compiled in, aborting.\n")
-#define using_dcnn(b)  0
-#define dcnn_init(b)
+#define disable_dcnn()  ((void)0)
+#define require_dcnn()  die("dcnn required but not compiled in, aborting.\n")
+#define using_dcnn(b)   0
+#define dcnn_init(b)    ((void)0)
 
 
 #endif
