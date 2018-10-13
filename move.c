@@ -20,7 +20,7 @@ coord2bstr(char *buf, coord_t c, struct board *board)
 		return "resign";
 	} else {
 		/* Some GTP servers are broken and won't grok lowercase coords */
-		snprintf(buf, 4, "%c%d", toupper(asdf[coord_x(c, board) - 1]), coord_y(c, board));
+		snprintf(buf, 4, "%c%u", toupper(asdf[coord_x(c, board) - 1]), coord_y(c, board));
 		return buf;
 	}
 }
