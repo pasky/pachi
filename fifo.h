@@ -3,8 +3,8 @@
 
 #ifdef PACHI_FIFO
 
-void fifo_init();
-int  fifo_task_queue();
+void fifo_init(void);
+int  fifo_task_queue(void);
 void fifo_task_done(int ticket);
 
 #else

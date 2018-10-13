@@ -176,14 +176,14 @@ attach_shm()
 /***************************************************************************************************/
 
 void
-fifo_init()
+fifo_init(void)
 {
 	if (!attach_shm())
 		create_shm();
 }
 
 int
-fifo_task_queue()
+fifo_task_queue(void)
 {
 	return ticket_lock(&shm->queue);
 }

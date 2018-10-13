@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 
-bool caffe_ready();
+bool caffe_ready(void);
 void caffe_init(int size);
 void caffe_get_data(float *data, float *result, int planes, int size);
 

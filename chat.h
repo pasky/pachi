@@ -9,7 +9,7 @@
 struct board;
 
 void chat_init(char *chat_file);
-void chat_done();
+void chat_done(void);
 
 char *generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
 		   int playouts, int machines, int threads, double winrate, double extra_komi, char *score_est);
