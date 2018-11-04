@@ -36,6 +36,7 @@ int get_nprocessors();
 /* Lookup data file in the following places:
  * 1) Current directory
  * 2) DATA_DIR environment variable / compile time default
+ * 3) exe's directory
  * Copies first match to @buffer (if no match @filename is still copied). */
 #define get_data_file(buffer, filename)    get_data_file_(buffer, sizeof(buffer), filename)
 void get_data_file_(char buffer[], int size, const char *filename);

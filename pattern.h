@@ -71,16 +71,31 @@ enum feature_id {
 
 	/* Atari move. */
 	FEAT_ATARI,
-#define PF_ATARI_DOUBLE		0  /***   Double atari */
-#define PF_ATARI_AND_CAP	1  /***   Atari + can capture other group if opponent defends. */
-#define PF_ATARI_SNAPBACK       2  /***** Snapback on stones we don't own already. */
-#define PF_ATARI_LADDER_BIG	3  /***** Can ladder big safe opponent group */
-#define PF_ATARI_LADDER_SAFE	4  /***** Can ladder safe opponent stone(s) */
-#define PF_ATARI_LADDER_CUT	5  /*     Can ladder cutting stone(s) */
-#define PF_ATARI_LADDER		6  /*     The atari'd group gets laddered? */
-#define PF_ATARI_KO		7  /***** Atari as ko-threat ? disables selfatari feature. */
-#define PF_ATARI_SOME		8  /*     Can atari something */
-#define PF_ATARI_N		9
+#define PF_ATARI_SNAPBACK       0  /***** Snapback on stones we don't own already. */
+#define PF_ATARI_LADDER_BIG	1  /***** Can ladder big safe opponent group */
+#define PF_ATARI_LADDER_LAST    2  /*     Ladder last move */
+#define PF_ATARI_AND_CAP	3  /***   Atari + can capture other group if opponent defends. */
+#define PF_ATARI_DOUBLE		4  /***   Double atari */
+#define PF_ATARI_LADDER_SAFE	5  /***** Can ladder safe opponent stone(s) */
+#define PF_ATARI_LADDER_CUT	6  /*     Can ladder cutting stone(s) */
+#define PF_ATARI_LADDER		7  /*     The atari'd group gets laddered? */
+#define PF_ATARI_KO		8  /***** Atari as ko-threat ? disables selfatari feature. */
+#define PF_ATARI_SOME		9  /*     Can atari something */
+#define PF_ATARI_N		10
+
+	/* Net */
+	FEAT_NET,
+#define PF_NET_LAST		0  /***   Capture last move in net (single stone) */
+#define PF_NET_CUT		1  /***   Net cutting stone (not already owned by us) */
+#define PF_NET_SOME		2  /***   Net something     (not already owned by us) */
+#define PF_NET_DEAD		3  /*     Net something     (own territory) */
+#define PF_NET_N		4
+
+	/* 2nd line defence */
+	FEAT_DEFENCE,
+#define PF_DEFENCE_LINE2	0  /***   Defend stone on second line */
+#define PF_DEFENCE_SILLY	1  /***   Can cap instead */
+#define PF_DEFENCE_N		2
 
 	/* Cut */
 	FEAT_CUT,
@@ -130,9 +145,6 @@ struct pattern {
 	struct feature f[FEAT_MAX];
 };
 
-struct spatial_dict;
-struct prob_dict;
-
 struct pattern_config {
 	/* FEAT_BORDER: Generate features only up to this board distance. */
 	unsigned int bdist_max;
@@ -145,12 +157,6 @@ struct pattern_config {
 	 * to the largest matched spatial pattern. */
 	bool spat_largest;
 };
-
-/* The spatial patterns dictionary used by FEAT_SPATIAL. */
-extern struct spatial_dict *spat_dict;
-
-/* The patterns probability dictionary */
-extern struct prob_dict *prob_dict;
 
 bool using_patterns();
 void disable_patterns();

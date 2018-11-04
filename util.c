@@ -7,6 +7,8 @@
 #include <errno.h>
 #include <libgen.h>
 #include <sys/stat.h>
+#include <stdbool.h>
+#include "pachi.h"
 #include "util.h"
 
 void
@@ -61,6 +63,17 @@ get_data_file_(char buffer[], int size, const char *filename)
 	{
 		strbuf_t *buf = strbuf_init(&strbuf, buffer, size);
 		sbprintf(buf, "%s/%s", data_dir, filename);
+		if (stat(buf->str, &st) == 0)
+			return;
+	}
+
+	/* Try exe's directory */
+	{
+		strbuf_t *buf = strbuf_init(&strbuf, buffer, size);
+		char *exe = strdup(pachi_exe);
+		char *exe_dir = dirname(exe);
+		sbprintf(buf, "%s/%s", exe_dir, filename);
+		free(exe);
 		if (stat(buf->str, &st) == 0)
 			return;
 	}

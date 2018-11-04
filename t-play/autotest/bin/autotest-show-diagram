@@ -43,14 +43,14 @@ my @tab = <IN>;
 # Find name field length
 my $name_field_len = 0;
 foreach my $str (@tab) {
-    if ($str =~ m/([0-9]+)\t([0-9.]+)\t([0-9.]+)\t(.*)/)  {
+    if ($str =~ m/([0-9]+) +([0-9.]+) +([0-9.]+) +(.*)/) {
 	my ($games, $wr, $sd, $name) = ($1, $2, $3, $4);
 	if (length($name) > $name_field_len) {  $name_field_len = length($name);  }
     }    
 }
 
 foreach my $str (@tab) {
-    if ($str =~ m/([0-9]+)\t([0-9.]+)\t([0-9.]+)\t(.*)/) {
+    if ($str =~ m/([0-9]+) +([0-9.]+) +([0-9.]+) +(.*)/) {
 	my ($games, $wr, $sd, $name) = ($1, $2, $3, $4);
 	if (!$games) {  continue;  }
 	

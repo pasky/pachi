@@ -141,6 +141,15 @@ linear_persim(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct 
 	return tree->extra_komi;
 }
 
+static int
+linear_moves(struct board *b, enum stone color)
+{
+	if (board_small(b))            return 15;
+	if (real_board_size(b) == 15)  return 100;
+	if (color == S_BLACK)          return (board_large(b) ? 200 : 50);
+	else                           return (board_large(b) ? 150 : 50);
+}
+
 struct uct_dynkomi *
 uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 {
@@ -157,16 +166,14 @@ uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b)
 	 * point of resigning immediately in high handicap games.
 	 * By move 150 white should still be behind but should have
 	 * caught up enough to avoid resigning. */
-	int moves = board_large(b) ? 150 : 50;
-	if (real_board_size(b) == 15)  moves = 100;
-	if (board_small(b))            moves = 15;
-	l->moves[S_BLACK] = moves;
-	l->moves[S_WHITE] = moves;
+
+	l->moves[S_BLACK] = linear_moves(b, S_BLACK);
+	l->moves[S_WHITE] = linear_moves(b, S_WHITE);
 	
 	/* The real value of one stone is twice the komi so about 15 points.
 	 * But use a lower value to avoid being too pessimistic as black
 	 * or too optimistic as white. */
-	l->handicap_value[S_BLACK] = 8;
+	l->handicap_value[S_BLACK] = 12;
 	l->handicap_value[S_WHITE] = 8;
 
 	l->komi_ratchet = INFINITY;

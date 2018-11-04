@@ -32,7 +32,10 @@
 #include "dcnn.h"
 #include "caffe.h"
 #include "pattern.h"
+#include "patternsp.h"
+#include "patternprob.h"
 
+char *pachi_exe = NULL;
 int debug_level = 3;
 bool debug_boardprint = true;
 long verbose_logs = 0;
@@ -191,6 +194,7 @@ static struct option longopts[] = {
 
 int main(int argc, char *argv[])
 {
+	pachi_exe = argv[0];
 	enum engine_id engine = E_UCT;
 	struct time_info ti_default = { .period = TT_NULL };	
 	char *testfile = NULL;
@@ -333,11 +337,11 @@ int main(int argc, char *argv[])
 	if (getenv("DATA_DIR"))
 		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
-	if (dcnn_required)       require_dcnn();
 	fifo_init();
 
-	struct board *b = board_init(fbookfile);
+	struct board *b = board_new(19 + 2, fbookfile);
 	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
+	if (dcnn_required)       require_dcnn(b);
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
@@ -383,4 +387,11 @@ int main(int argc, char *argv[])
 	free(fbookfile);
 	free(forced_ruleset);
 	return 0;
+}
+
+void
+pachi_done()
+{
+	prob_dict_done();
+	spatial_dict_done();
 }

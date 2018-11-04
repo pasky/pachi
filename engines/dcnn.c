@@ -44,7 +44,7 @@ dcnn_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum st
 struct engine *
 engine_dcnn_init(char *arg, struct board *b)
 {
-	dcnn_init();
+	dcnn_init(b);
 	if (!caffe_ready()) {
 		fprintf(stderr, "Couldn't initialize dcnn, aborting.\n");
 		abort();

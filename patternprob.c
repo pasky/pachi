@@ -11,19 +11,21 @@
 #include "patternprob.h"
 #include "engine.h"
 
+struct prob_dict    *prob_dict = NULL;
 
-struct prob_dict*
+void
 prob_dict_init(char *filename, struct pattern_config *pc)
 {
+	assert(!prob_dict);
 	if (!filename)  filename = "patterns_mm.gamma";
 	FILE *f = fopen_data_file(filename, "r");
 	if (!f) {
 		if (DEBUGL(1))  fprintf(stderr, "%s not found, will not use mm patterns.\n", filename);
-		return NULL;
+		return;
 	}
 
-	struct prob_dict *dict = calloc2(1, sizeof(*dict));
-	dict->table = calloc2(spat_dict->nspatials + 1, sizeof(*dict->table));
+	prob_dict = calloc2(1, sizeof(*prob_dict));
+	prob_dict->table = calloc2(spat_dict->nspatials + 1, sizeof(*prob_dict->table));
 
 	int i = 0;
 	char sbuf[1024];
@@ -38,22 +40,32 @@ prob_dict_init(char *filename, struct pattern_config *pc)
 		pb->gamma = gamma;
 		while (isspace(*buf)) buf++;
 		str2pattern(buf, &pb->p);
-		assert(pb->p.n == 1);  /* One gamma per feature, please ! */
+		assert(pb->p.n == 1);				/* One gamma per feature, please ! */
 
-		uint32_t spi = pattern2spatial(pc, &pb->p);
-		assert(spi <= spat_dict->nspatials); /* Bad patterns.spat / patterns.prob ? */
-		pb->next = dict->table[spi];
-		dict->table[spi] = pb;
+		uint32_t spi = feature2spatial(pc, &pb->p.f[0]);
+		assert(spi <= spat_dict->nspatials);		/* Bad patterns.spat / patterns.prob ? */
+		if (feature_has_gamma(pc, &pb->p.f[0]))
+			die("%s: multiple gammas for feature %s\n", filename, pattern2sstr(&pb->p));
+		pb->next = prob_dict->table[spi];
+		prob_dict->table[spi] = pb;
 
 		i++;
 	}
 
-	if (DEBUGL(3))  spatial_dict_hashstats(spat_dict);
-
 	fclose(f);
 	if (DEBUGL(1))  fprintf(stderr, "Loaded %d gammas.\n", i);
-	
-	return dict;
+}
+
+void
+prob_dict_done()
+{
+	if (!prob_dict)  return;
+
+	for (unsigned int id = 0; id < spat_dict->nspatials; id++)
+		free(prob_dict->table[id]);
+	free(prob_dict->table);
+	free(prob_dict);
+	prob_dict = NULL;
 }
 
 static floating_t
@@ -147,6 +159,17 @@ dump_gammas(strbuf_t *buf, struct pattern_config *pc, struct pattern *p)
 		strcpy(head, "* ");
 		continue;
 	}
+}
+
+/* Do we have a gamma for that feature ? */
+bool
+feature_has_gamma(struct pattern_config *pc, struct feature *f)
+{
+	uint32_t spi = feature2spatial(pc, f);
+	for (struct pattern_prob *pb = prob_dict->table[spi]; pb; pb = pb->next)
+		if (feature_eq(f, &pb->p.f[0]))
+			return true;
+	return false;
 }
 
 void

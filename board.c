@@ -49,18 +49,20 @@ board_setup(struct board *b)
 	b->last_move = b->last_move2 = b->last_move3 = b->last_move4 = b->last_ko = b->ko = m;
 }
 
+void
+board_init(struct board *b, int bsize, char *fbookfile)
+{
+	board_setup(b);
+	b->fbookfile = fbookfile;
+	b->size = bsize;
+	board_clear(b);	
+}
+
 struct board *
-board_init(char *fbookfile)
+board_new(int bsize, char *fbookfile)
 {
 	struct board *b = malloc2(sizeof(struct board));
-	board_setup(b);
-
-	b->fbookfile = fbookfile;
-
-	// Default setup
-	b->size = 19 + 2;
-	board_clear(b);
-
+	board_init(b, bsize, fbookfile);
 	return b;
 }
 

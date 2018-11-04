@@ -130,9 +130,7 @@ void
 engine_joseki_done(struct engine *e)
 {
 	struct joseki_engine *j = e->data;
-	struct board *b = board_init(NULL);
-	board_resize(b, j->size - 2);
-	board_clear(b);
+	struct board *b = board_new(j->size, NULL);
 
 	for (hash_t i = 0; i < 1 << joseki_hash_bits; i++) {
 		for (int s = 0; s < 2; s++) {
@@ -151,7 +149,6 @@ engine_joseki_done(struct engine *e)
 	}
 
 	board_done(b);
-
 	joseki_done(j->jdict);
 }
 
@@ -162,7 +159,7 @@ joseki_state_init(char *arg)
 	struct joseki_engine *j = calloc2(1, sizeof(struct joseki_engine));
 
 	for (int i = 0; i < 16; i++)
-		j->b[i] = board_init(NULL);
+		j->b[i] = board_new(19+2, NULL);
 
 	j->debug_level = 1;
 

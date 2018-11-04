@@ -345,7 +345,8 @@ struct board_undo {
 
 #define hash_at(b_, coord, color) (board_statics.h[((color) == S_BLACK ? 1 : 0)][coord])
 
-struct board *board_init(char *fbookfile);
+void board_init(struct board *b, int bsize, char *fbookfile);
+struct board *board_new(int bsize, char *fbookfile);
 struct board *board_copy(struct board *board2, struct board *board1);
 void board_done_noalloc(struct board *board);
 void board_done(struct board *board);

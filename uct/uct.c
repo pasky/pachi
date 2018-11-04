@@ -592,13 +592,9 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 	u->pass_all_alive |= pass_all_alive;
 	uct_pondering_stop(u);
 
-	if (using_dcnn(b)) {
-		// dcnn hack: reset state to make dcnn priors kick in.
-		// FIXME this makes pondering useless when using dcnn ...
-		if (u->t) {
-			u->initial_extra_komi = u->t->extra_komi;
-			reset_state(u);
-		}
+	if (u->genmove_reset_tree && u->t) {
+		u->initial_extra_komi = u->t->extra_komi;
+		reset_state(u);
 	}
 
 	uct_genmove_setup(u, b, color);
@@ -804,6 +800,7 @@ uct_state_init(char *arg, struct board *b)
 	u->max_tree_size = default_max_tree_size();
 	u->fast_alloc = true;
 	u->pruning_threshold = 0;
+	u->genmove_reset_tree = false;
 
 	u->threads = get_nprocessors();
 	u->thread_model = TM_TREEVL;
@@ -1093,6 +1090,11 @@ uct_state_init(char *arg, struct board *b)
 				 * Increase to reduce pruning time overhead if memory is plentiful.
 				 * This option is meaningful only for fast_alloc. */
 				u->pruning_threshold = atol(optval) * 1048576;
+			} else if (!strcasecmp(optname, "reset_tree")) {
+				/* Reset tree before each genmove ?
+				 * Default is to reuse previous tree when not using dcnn. 
+				 * When using dcnn tree is always reset. */
+				u->genmove_reset_tree = !optval || atoi(optval);
 
 			/** Time control */
 
@@ -1383,7 +1385,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!pat_setup)			patterns_init(&u->pc, NULL, false, true);
-	dcnn_init();
+	dcnn_init(b);
 	log_nthreads(u);
 	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);
 	if (!u->playout)		u->playout = playout_moggy_init(NULL, b, u->jdict);
@@ -1397,9 +1399,15 @@ uct_state_init(char *arg, struct board *b)
 
 	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 
-	if (u->pondering_opt && using_dcnn(b)) {
-		warning("Can't use pondering with dcnn right now, pondering turned off.\n");
-		u->pondering_opt = false;
+	if (using_dcnn(b)) {
+		/* dcnn hack: always reset state to make dcnn priors kick in.
+		 * FIXME this makes pondering useless when using dcnn ... */
+		u->genmove_reset_tree = true;
+
+		if (u->pondering_opt) {
+			warning("Can't use pondering with dcnn right now, pondering turned off.\n");
+			u->pondering_opt = false;
+		}
 	}
 
 	/* Some things remain uninitialized for now - the opening tbook

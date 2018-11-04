@@ -9,6 +9,8 @@
 #include "move.h"
 #include "pattern.h"
 
+/* The patterns probability dictionary */
+extern struct prob_dict *prob_dict;
 
 /* The pattern probability table considers each pattern as a whole
  * (not dividing it to individual features) and stores probability
@@ -28,10 +30,13 @@ struct prob_dict {
 	struct pattern_prob **table; /* [pc->spat_dict->nspatials + 1] */
 };
 
+
 /* Initialize the prob_dict data structure from a given file (pass NULL
- * to use default filename). Returns NULL if the file with patterns
- * has been found. */
-struct prob_dict *prob_dict_init(char *filename, struct pattern_config *pc);
+ * to use default filename). */
+void prob_dict_init(char *filename, struct pattern_config *pc);
+
+/* Free patterns probability dictionary. */
+void prob_dict_done();
 
 /* Return probability associated with given pattern. */
 static inline floating_t pattern_gamma(struct pattern_config *pc, struct pattern *p);
@@ -56,26 +61,20 @@ void find_pattern_best_moves(struct board *b, float *probs, coord_t *best_c, flo
 /* Debugging */
 void dump_gammas(strbuf_t *buf, struct pattern_config *pc, struct pattern *p);
 
-/* Utility function - extract spatial id from a pattern. If the pattern
- * has no spatial feature, it is represented by the highest spatial id
- * plus one. */
-static uint32_t pattern2spatial(struct pattern_config *pc, struct pattern *p);
-/* Same for one feature */
+/* Do we have a gamma for that feature ? */
+bool feature_has_gamma(struct pattern_config *pc, struct feature *f);
+
+/* Lookup gamma for that feature. */
+static floating_t feature_gamma(struct pattern_config *pc, struct feature *f);
+
+/* Compute pattern gamma */
+static floating_t pattern_gamma(struct pattern_config *pc, struct pattern *p);
+
+/* Extract spatial id from pattern feature.
+ * If not a spatial feature returns highest spatial id plus one. */
 static uint32_t feature2spatial(struct pattern_config *pc, struct feature *f);
 
 
-/* Do we have a gamma for that feature ? */
-static inline bool
-feature_has_gamma(struct pattern_config *pc, struct feature *f)
-{
-	uint32_t spi = feature2spatial(pc, f);
-	for (struct pattern_prob *pb = prob_dict->table[spi]; pb; pb = pb->next)
-		if (feature_eq(f, &pb->p.f[0]))
-			return true;
-	return false;
-}
-
-/* Find gamma for that feature. */
 static inline floating_t
 feature_gamma(struct pattern_config *pc, struct feature *f)
 {
@@ -105,14 +104,5 @@ feature2spatial(struct pattern_config *pc, struct feature *f)
 	return spat_dict->nspatials;
 }
 
-
-static inline uint32_t
-pattern2spatial(struct pattern_config *pc, struct pattern *p)
-{
-	for (int i = 0; i < p->n; i++)
-		if (p->f[i].id >= FEAT_SPATIAL3)
-			return p->f[i].payload;
-	return spat_dict->nspatials;
-}
 
 #endif

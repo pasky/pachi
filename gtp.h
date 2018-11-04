@@ -1,6 +1,8 @@
 #ifndef PACHI_GTP_H
 #define PACHI_GTP_H
 
+#define GTP_NO_REPLY (-2)
+
 struct board;
 struct engine;
 struct time_info;
@@ -34,6 +36,7 @@ enum parse_code gtp_parse(struct board *b, struct engine *e, struct time_info *t
 bool gtp_is_valid(struct engine *e, const char *cmd);
 void gtp_final_score_str(struct board *board, struct engine *engine, char *reply, int len);
 void gtp_reply(gtp_t *gtp, ...);
+void gtp_reply_printf(gtp_t *gtp, const char *format, ...);
 void gtp_error(gtp_t *gtp, ...);
 
 #define is_gamestart(cmd) (!strcasecmp((cmd), "boardsize"))

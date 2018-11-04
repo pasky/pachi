@@ -18,7 +18,7 @@ MM Training Pipeline:
   training set:  https://www.u-go.net/gamerecords/
 
 - pattern/spatial_gen  sgf_train/*.sgf
-  Create a new spatial dictionary by collecting spatial features found at
+  Generate spatial dictionary by collecting spatial patterns found at
   least N times in the training set. Will generate patterns_mm.spat
   You should end up with 15k-20k patterns.
 
