@@ -8,7 +8,7 @@
 #include "engine.h"
 #include "move.h"
 #include "playout.h"
-#include "engines/josekibase.h"
+#include "../joseki.h"
 #include "playout/light.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"
@@ -18,7 +18,6 @@ struct replay {
 	int debug_level;
 	int runs;
 	int no_suicide;
-	struct joseki_dict *jdict;
 	struct playout_policy *playout;
 };
 
@@ -134,7 +133,6 @@ replay_done(struct engine *e)
 {
 	struct replay *r = e->data;
 	playout_policy_done(r->playout);
-	joseki_done(r->jdict);
 }
 
 struct replay *
@@ -145,7 +143,7 @@ replay_state_init(char *arg, struct board *b)
 	r->debug_level = 1;
 	r->runs = 1000;
 	r->no_suicide = 0;
-	r->jdict = joseki_load(b->size);
+	joseki_load(b->size);
 	
 	if (arg) {
 		char *optspec, *next = arg;
@@ -176,7 +174,7 @@ replay_state_init(char *arg, struct board *b)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					r->playout = playout_moggy_init(playoutarg, b, r->jdict);
+					r->playout = playout_moggy_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "light")) {
 					r->playout = playout_light_init(playoutarg, b);
 				} else {
@@ -188,7 +186,7 @@ replay_state_init(char *arg, struct board *b)
 	}
 
 	if (!r->playout)
-		r->playout = playout_moggy_init(NULL, b, r->jdict);
+		r->playout = playout_moggy_init(NULL, b);
 	r->playout->debug_level = r->debug_level;
 
 	return r;

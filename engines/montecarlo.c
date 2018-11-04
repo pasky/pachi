@@ -6,8 +6,8 @@
 #include "debug.h"
 #include "board.h"
 #include "engine.h"
-#include "engines/josekibase.h"
 #include "move.h"
+#include "../joseki.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
 #include "engines/montecarlo.h"
@@ -43,7 +43,6 @@ struct montecarlo {
 	int gamelen;
 	floating_t resign_ratio;
 	int loss_threshold;
-	struct joseki_dict *jdict;
 	struct playout_policy *playout;
 };
 
@@ -229,7 +228,6 @@ montecarlo_done(struct engine *e)
 {
 	struct montecarlo *mc = e->data;
 	playout_policy_done(mc->playout);
-	joseki_done(mc->jdict);
 }
 
 struct montecarlo *
@@ -239,7 +237,7 @@ montecarlo_state_init(char *arg, struct board *b)
 
 	mc->debug_level = 1;
 	mc->gamelen = MC_GAMELEN;
-	mc->jdict = joseki_load(b->size);
+	joseki_load(b->size);
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -264,7 +262,7 @@ montecarlo_state_init(char *arg, struct board *b)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					mc->playout = playout_moggy_init(playoutarg, b, mc->jdict);
+					mc->playout = playout_moggy_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "light")) {
 					mc->playout = playout_light_init(playoutarg, b);
 				} else {
