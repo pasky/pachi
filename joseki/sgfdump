@@ -1,0 +1,160 @@
+#!/usr/bin/perl
+# Usage: sgfdump file.sgf
+# Convert joseki database in file.sgf into annotated gtp sequence
+# for josekiscan engine. Expects specific tags in sgf comments for
+# moves meta meaning (see README for details).
+use strict;
+
+eval "use Games::SGF::Go";
+if ($@) {  die "sgfdump: SGF perl module is missing, try:\n\t\$ cpan \n\tcpan[1]> install Games::SGF::Go \n\n";  }
+
+my $sgf = new Games::SGF::Go;
+my $file = $ARGV[0];
+$sgf->readFile($file);
+
+my $boardsize = 19;
+if ($sgf->property('SZ')) {  $boardsize = $sgf->property('SZ')->[0];  }
+
+my $re_ignore    = qr/don't|avoid|bad/;
+my $re_3x3_match = qr/3x3/;
+my $re_tenuki    = qr/tenuki|later/;
+my $re_later     = qr/later/;
+
+my @abcd = split("", "abcdefghjklmnopqrstuvwxyz");
+my $variations = 0;
+my $moves_ignored = 0;
+my $moves_3x3 = 0;
+
+sub gtp_coord
+{
+    my ($prop) = @_;
+    if (@$prop != 2) {  return "pass";  }
+    my ($x, $y) = ($prop->[0], $boardsize - $prop->[1]);
+    if ($x < 0 || $y < 0)     {  die "Negative coord";  }
+    if ($x >= @abcd )         {  die "Bad coord";  }
+    return "$abcd[$x]$y";
+}
+
+sub print_moves
+{
+    my ($moves) = @_;
+    $variations++;
+    # print STDERR "moves: $moves\n";  return;
+    
+    print "clear_board\n";
+    my $tag = "";
+    foreach my $m (split(' ', $moves)) {
+	if ($m =~ m/^B(.*)/) {  print "play b $1  $tag\n";  if ($tag ne "setup") { $tag = ""; }  next;  }
+	if ($m =~ m/^W(.*)/) {  print "play w $1  $tag\n";  if ($tag ne "setup") { $tag = ""; }  next;  }
+	if ($m eq "[")       {  $tag = "setup";   next;  }
+	if ($m eq "]")       {  $tag = "";        next;  }
+	if ($m eq "!")       {  $tag .= "ignore ";  next;  }
+	if ($m eq "3")       {  $tag .= "3x3 ";   next;  }
+	if ($m eq "~")       {  $tag .= "later ";   next;  }
+	die "bad move '$m', shouldn't happen";
+    }
+}
+
+sub sgf_error
+{
+    my $moves = shift(@_);
+    print STDERR ("$file:$moves\n$file: ");
+    die @_;
+}
+
+sub comment_first_line
+{
+    my ($moves) = @_;
+    if (!$sgf->property('C'))  {  return "";  }
+    my $comment = $sgf->property('C')->[0];
+    my @lines = split("\n", $comment);
+
+    # Sanity checks ...
+    my $tmp = $lines[0];  $tmp =~ s/<[^>]*>//g;
+    if ($tmp =~ m/[^ ]/) {  die "comment first line should only be tags:\n$lines[0]\n"; }
+    foreach my $tag (split(/[<> ]+/, $lines[0])) {
+	if ($tag && $tag !~ m/($re_ignore|$re_3x3_match|$re_tenuki)/)  {  sgf_error($moves, "unknown tag in comment: <$tag>\n");  }
+    }
+    return $lines[0];
+}
+
+sub check_pass
+{
+    my ($comment, $coord, $moves) = @_;
+    if ($coord ne "pass") {  return 0;  }
+    if ($comment !~ m/$re_tenuki/) {  sgf_error($moves, "pass should be tagged <tenuki> or <later>\n");  }
+    return 1;
+}
+
+sub play_later
+{
+    my ($comment, $coord, $color) = @_;
+    if ($comment =~ m/$re_later/)  {  return 1; }
+    return 0;
+}
+
+sub ignore_move
+{
+    my ($comment, $coord, $color) = @_;
+    if ($comment !~ m/$re_ignore/) {  return 0;  }    
+    # printf STDERR ("ignored:  %s %s '%s'\n", lc($color), $coord, $comment);
+    $moves_ignored++;  return 1;
+}
+
+sub match_3x3
+{
+    my ($comment, $coord, $color) = @_;
+    if ($comment !~ m/$re_3x3_match/) {  return 0;  }
+    # printf STDERR ("3x3:  %s %s '%s'\n", lc($color), $coord, $comment);
+    $moves_3x3++;  return 1;
+}
+
+
+sub val {  return $sgf->property($_[0])->[0];  }
+
+sub scan_tree
+{
+    my ($moves) = @_;
+    
+    for (my $i = 0; $i == 0 || $sgf->next; $i++)
+    {
+	if ($sgf->property('AE')) {  die "'AE' tag unsupported (setup stones removal), aborting\n";  }
+
+	foreach my $tag ('AB', 'AW') {			# Setup stones
+	    if ($sgf->property($tag)) {
+		my $color = ($tag eq 'AB' ? 'B' : 'W');
+		$moves .= " [ " . join(" ", map { $color . gtp_coord($_) } @{$sgf->property($tag)}) . " ]";
+	    }
+	}
+	
+	foreach my $tag ('B', 'W') {			# Normal move
+	    if ($sgf->property($tag)) {		    
+		my $coord = gtp_coord(val($tag));
+		my $comment = comment_first_line($moves);
+		my $prefix = "";
+		check_pass($comment, $coord, $moves);
+		if (ignore_move($comment, $coord, $tag))  {  $prefix .= "! ";  }
+		if (match_3x3($comment, $coord, $tag))    {  $prefix .= "3 ";  }
+		if (play_later($comment, $coord, $tag))   {  $prefix .= "~ ";  }
+		$moves .= " $prefix$tag$coord";
+	    }
+	}
+
+	for (my $j = 1; $j < $sgf->branches; $j++) {	# Explore other branches
+	    my $here = $sgf->getAddress();
+	    $sgf->gotoBranch($j);
+	    scan_tree($moves);
+	    $sgf->goto($here);
+	}
+    }
+    
+    print_moves($moves);  				# Dump whole branch
+}
+
+print "echo $file\n";
+print "boardsize $boardsize\n";
+
+$sgf->gotoRoot;
+scan_tree("", "");
+printf STDERR ("%i variations, moves: %i ignored, %i 3x3\n", $variations, $moves_ignored, $moves_3x3);
+

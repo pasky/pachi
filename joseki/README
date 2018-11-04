@@ -1,0 +1,125 @@
+[ Joseki engine ]
+
+This is a joseki pattern scanner. At the beginning, you should
+have SGF files with various joseki as variations. Right now there's
+one sgf file for each type of corner sequences:
+
+	joseki_33.sgf    sansan variations
+	joseki_34.sgf    komoku variations
+	joseki_44.sgf    hoshi variations
+	joseki_54.sgf    takamoku variations
+
+They started as "a few simple variations to get Pachi to do the right
+thing when playing without dcnn" (patterns are terrible at joseki), but
+by now quite a few variations from Kogo joseki dictionary have made it
+in. There are some non-joseki variations as well (good answers to bad
+moves), some of which come from Leela-Zero ELF for things that are not
+in Kogo. It's by no means complete or exhaustive, the idea here was:
+start with basic variations, let Pachi play with human players, see what
+kind of joseki mistakes it does, fix these. Rinse and repeat ...
+
+Previous Pachi versions contained a recipe for automatically extracting
+joseki sequences from Kogo, however starting from scratch gives more
+flexibility and control:
+
+For example at 3k level there's no point in Pachi playing large avalanche
+or taisha joseki, it will screw up at first unknown deviation. So right
+now it chooses simple variations to avoid them. Also it's a lot easier
+to enforce consistent conventions for tenuki and we can also support
+joseki deviations so it can have good answers to bad moves.
+
+TODO: enable joseki engine for dcnn ?
+right now joseki is turned off when playing with dcnn. Joseki priors are
+tuned against patterns priors, would need some tweaking.
+
+To generate the joseki database from sgf variations type:
+
+	cd joseki ; make
+
+this will (re)create joseki19.gtp. If Pachi finds it it will use it to
+match joseki patterns and guide tree search when playing without dcnn,
+and optionally in playouts as well if MOGGY_JOSEKI is defined (disabled
+by default, slow).
+
+
+[ Conventions ]
+
+The SGF files can contain any sequence of moves / setup stones etc,
+however there are guidelines to follow to get the joseki engine to do
+the right thing. Moves can be any color and don't have to be in a
+particular quadrant. First line of comments is reserved for tags which
+give move special meaning, if there are none first line should be empty
+(actual comments may follow).
+
+Cheatsheet:
+-----------------------------------------------------------------------------------------------------------------
+                            |                           |  pattern |  matches prev ?    |          |  
+type of move                |         sgf               |  radius  |      move          |   prio   |  gogui
+-----------------------------------------------------------------------------------------------------------------
+normal move                 |    regular move           |    4     |        y           |   high   |  red/orange
+match 3x3 pattern only      |    tag: <3x3>             |    1     |        y           |   high   |  circle
+mistake                     |    tag: <don't>           |    4     |        y           |    -     |  cross
+tenuki followup (urgent)    |    2 moves in a row       |    4     |        y           |   high   |  red/orange
+tenuki followup (later)     |    pass <later> + move    |    4     |        y           |   low    |  yellow
+                            |    or move <later>        |          |                    |          |
+match with extra stones     |    setup stones + move    |    4     |        n           |   low    |  yellow
+
+
+Spatial patterns:
+The joseki engine matches based on spatial patterns. For a move to match
+the situation around both the move to play and the previous move in the
+joseki sequence must match. The spatial pattern is a circle of radius 4
+currently, so if there's any extra (or missing) stone on the board within
+4 stones of the previous move or move to play there won't be a match.
+Usually this is fine for corner sequences, but if the sequence extends
+to the side existing stones on that side can interfere. 
+
+Match 3x3 pattern only:
+To get around that either add extra variations with setup stones for the
+existing stones you want to match (...) or tag that move <3x3>. Only the
+3x3 pattern around that move will be checked and more distant stones will
+be ignored. Prev move in the sequence must still match fully, so it won't
+just match any random situation. 
+
+Ignored moves:
+Moves tagged <don't> <bad> or <avoid> are ignored: they won't match as
+joseki moves (pachi won't play them), however if opponent does pachi will
+know how to answer. Useful to include good answers to bad moves, trick
+plays, deviations etc.
+
+Setup stones:      (disrupt the sequence)
+Setup stones are treated as out-of-sequence stones, there's no pattern 
+matching around them but of course they affect pattern matching of following
+moves. Setup stones disrupt the sequence: following move will be treated like
+the first move in a sequence, ie matched without previous move. This can be
+good or bad depending on the situation: it will get lower priority than a
+normal answer-to-previous move, and without previous move less context is
+checked so it might match more situations than intended.
+To get a strong match after setup stones add previous move as ignored move:
+
+    [ setup stones -> ignored move -> move ]
+                       (prev move)
+
+Tenuki variations:
+  - urgent: [ change color, play 2 moves in a row ]      (2 black moves for example)
+            -> high priority move
+  - later:  [ pass <later>, next move ]  or just
+            [ next move <later> ]
+do not play elsewhere, say another corner or move will be matched !
+Pass moves must be tagged <later> or <tenuki> (same thing).
+
+
+[ Testing / Visualizing ]
+
+Start pachi in gogui, then
+
+  Tools -> Analyze commands -> Joseki Moves
+
+Shows matching joseki moves for current board (red: strong matches,
+yellow: weak matches, cross: ignored move with followup sequence),
+circle: 3x3 pattern match only.
+
+  Tools -> Analyze commands -> Joseki Range
+
+Shows joseki spatial pattern range around clicked coordinate (4 stones radius).
+

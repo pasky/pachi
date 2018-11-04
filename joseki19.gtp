@@ -1,0 +1,6265 @@
+echo joseki_44.sgf
+boardsize 19
+clear_board
+play b n17  setup
+play b q16  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b s17  ignore 
+play w o17  
+play b o16  
+play w p16  
+play b p15  
+play w p17  
+play b n16  
+play w s18  
+play b s16  
+play w n18  
+play b m18  
+play w o19  
+play b l17  3x3 
+clear_board
+play b n17  setup
+play b q16  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  
+play w p16  
+play b o17  
+play w s16  
+play b s15  
+play w s17  
+play b r14  3x3 
+play w q18  
+play b p15  
+clear_board
+play b n17  setup
+play b q16  ignore 
+play w r14  
+play b r16  
+play w q10  
+clear_board
+play b n17  setup
+play b q16  ignore 
+play w r14  
+play b r16  
+play w r11  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r14  ignore 3x3 
+play b s16  
+play w r11  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r14  ignore 3x3 
+play b r16  
+play w r11  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r16  ignore 
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b s17  
+play w q15  
+play b r14  
+play w q17  
+play b p16  
+play w s14  
+play b q18  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r16  ignore 
+play b r15  
+play w q15  ignore 
+play b r17  
+play w s16  
+play b s15  
+play w s17  
+play b q17  
+play w q14  
+play b r13  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r16  ignore 
+play b r15  
+play w q17  
+play b p16  
+play w s16  ignore 
+play b s15  
+play w r18  
+play b p18  
+play w t18  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r16  ignore 
+play b r15  
+play w q17  
+play b p16  
+play w s17  
+play b s15  
+play w p18  
+play b o18  
+play w r18  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r16  ignore 
+play b r17  
+play w r15  
+play b s17  
+play w r12  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w s15  ignore 
+play b r16  
+play w s16  
+play b s17  
+play w s18  
+play b r17  
+play w r12  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w s15  ignore 
+play b s17  ignore 
+play w q15  
+play b p16  
+play w r11  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w s15  ignore 
+play b s17  ignore 
+play w q15  
+play b r16  
+play w r11  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w s15  ignore 
+play b r14  ignore 
+play w s14  
+play b r16  
+play w r15  
+play b p14  
+play w q14  
+play b p13  
+play w q12  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w s15  ignore 
+play b s16  
+play w r16  
+play b r17  
+play w r15  
+play b s17  
+play w q15  ignore 
+play b p16  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w s15  ignore 
+play b s16  
+play w r16  
+play b r17  
+play w r15  
+play b s17  
+play w p16  
+play b q17  
+play w q15  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w q14  ignore 3x3 
+play b r16  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w q14  ignore 3x3 
+play b r15  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r17  ignore 
+play b r16  3x3 
+play w q17  ignore 
+play b p16  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r17  ignore 
+play b r16  3x3 
+play w q17  ignore 
+play b p17  
+play w s16  3x3 
+play b s15  3x3 
+play w s17  
+play b r14  3x3 
+play b q18  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r17  ignore 
+play b r16  3x3 
+play w q17  ignore 
+play b p17  
+play w s16  3x3 
+play b s15  3x3 
+play w s17  
+play b r14  3x3 
+play w p18  
+play b o18  
+play w q18  
+clear_board
+play b o17  setup
+play b q16  ignore 
+play w r17  ignore 
+play b r16  3x3 
+play w s16  3x3 
+play b s15  3x3 
+play w s18  
+play b t16  3x3 
+play w t17  
+play b s17  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r14  ignore 
+play b r16  
+play w r12  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r16  
+play b r17  
+play w r15  
+play b s17  
+play w q15  
+play b p16  
+play w q12  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r16  
+play b r17  
+play w r15  
+play b s17  
+play w q15  
+play b p16  
+play w r12  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b s16  
+play w r17  
+play b s17  
+play w q15  
+play b r14  
+play w q17  
+play b p16  
+play w s14  
+play b s18  
+play w r13  
+play b q14  
+play w r10  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b s17  
+play w r14  
+play b q15  
+play w r11  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b r14  ignore 
+play w q17  
+play b r18  
+play w q18  
+play b s17  
+play w s14  
+play b p16  
+play w r13  
+play b q13  
+play w r12  
+play b q12  
+play w s10  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b r14  ignore 
+play w q17  
+play b r18  
+play w q18  
+play b s17  
+play w s14  
+play b p16  
+play w r13  
+play b p17  
+play w p13  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b q15  
+play w s17  
+play b r18  
+play w r13  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  
+play w p16  
+play b o17  
+play w s16  
+play b s15  
+play w s17  
+play b p15  ignore 
+play w q18  
+clear_board
+play b n17  setup
+play b q10  setup
+play b q16  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  
+play w p16  
+play b o17  
+play w s16  
+play b s15  
+play w s17  
+play b r14  
+play w q18  
+play b p15  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r14  ignore 
+play b r16  
+play w r12  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r16  
+play b r17  
+play w r15  
+play b s17  
+play w q15  
+play b p16  
+play w r12  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b s16  
+play w r17  
+play b s17  
+play w q15  
+play b r14  
+play w q17  
+play b p16  
+play w s14  
+play b s18  
+play w r13  
+play b q14  
+play w q13  
+play b p14  
+play w p13  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b s17  
+play w r14  
+play b q15  
+play w r12  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b r14  ignore 
+play w q17  
+play b r18  
+play w q18  
+play b s17  
+play w s14  
+play b p16  
+play w r13  
+play b q13  
+play w r12  
+play b q12  
+play w s10  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b r14  ignore 
+play w q17  
+play b r18  
+play w q18  
+play b s17  
+play w s14  
+play b p16  
+play w r13  
+play b p17  
+play w p13  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b r17  
+play w s16  
+play b q15  
+play w s17  
+play b r18  
+play w r13  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  
+play w p16  
+play b o17  
+play w s16  
+play b s15  
+play w s17  
+play b p15  ignore 
+play w q18  
+clear_board
+play b n17  setup
+play b r10  setup
+play b q16  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  
+play w p16  
+play b o17  
+play w s16  
+play b s15  
+play w s17  
+play b r14  
+play w q18  
+play b p15  
+clear_board
+play w q10  setup
+play b q16  
+play w pass  
+play b r12  
+clear_board
+play w q10  setup
+play b q16  
+play w pass  
+play b r14  
+clear_board
+play w q10  setup
+play b q16  
+play w r14  
+play b o16  
+clear_board
+play w q10  setup
+play b q16  
+play w r14  
+play b q14  
+clear_board
+play w q10  setup
+play b q16  
+play w r14  
+play b o17  
+clear_board
+play w r10  setup
+play b q16  
+play w pass  
+play b r14  
+clear_board
+play w r10  setup
+play b q16  
+play w r14  
+play b o16  
+clear_board
+play w r10  setup
+play b q16  
+play w r14  
+play b q14  
+clear_board
+play w r10  setup
+play b q16  
+play w r14  
+play b o17  
+clear_board
+play w r11  setup
+play b q16  
+play w pass  
+play b r14  
+clear_board
+play w r11  setup
+play b q16  
+play w r14  
+play b o16  
+clear_board
+play w r11  setup
+play b q16  
+play w r14  
+play b r15  
+play w q14  
+play b o16  
+clear_board
+play w r11  setup
+play b q16  
+play w r14  
+play b q14  
+play w q13  
+play b r15  
+clear_board
+play w r11  setup
+play b q16  
+play w r14  
+play b o17  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b p16  
+play w o18  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r14  
+play w o17  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b o17  
+play w p17  
+play b p16  
+play w o18  
+play b s17  
+play w s18  
+play b n18  
+play w s16  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b o17  
+play w p17  
+play b p16  
+play w o18  
+play b n17  
+play w n18  
+play b m17  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  3x3 
+play w s16  
+play b s15  
+play w r15  
+play b p16  
+play w s17  
+play b r14  
+play w q18  
+play b n17  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  3x3 
+play w s16  
+play b s15  
+play w r15  
+play b p16  
+play w s14  3x3 
+play b s17  
+play w t15  
+play b s18  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  3x3 
+play w s16  
+play b s15  
+play w r15  
+play b q15  ignore 
+play w s17  
+play b r14  
+play w o17  3x3 
+play b p16  
+play w n18  3x3 
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o18  3x3 
+play w o17  
+play b p16  
+play w n18  
+play b q18  
+play w o19  
+play b r18  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o17  3x3 
+play w o18  
+play b n17  
+play w s16  
+play b s15  
+play w t16  
+play b r14  
+clear_board
+play b q16  
+play w r17  ignore 
+play b r16  
+play w q17  
+play b p17  
+play w p18  
+play b o17  3x3 
+play w o18  
+play b n17  
+play w s16  
+play b s15  
+play w s17  
+play b r14  
+clear_board
+play b q16  
+play w q14  ignore 
+play b o16  
+play w r16  
+play b r17  
+play w s16  ignore 
+play b s17  
+play w q15  
+play b p16  
+clear_board
+play b q16  
+play w q14  ignore 
+play b o16  
+play w r16  
+play b r17  
+play w r15  
+play b s17  
+play w r11  3x3 
+clear_board
+play b q16  
+play w q14  ignore 
+play b o16  
+play w r16  
+play b r17  
+play w r15  
+play b s17  
+play w r10  
+clear_board
+play b q16  
+play w r13  ignore 
+play b n17  
+clear_board
+play b q16  
+play b k16  setup
+play b q10  setup
+play w r14  
+play b r15  
+play w q14  
+play b o16  
+play w r11  3x3 
+play b r10  3x3 
+clear_board
+play b q16  
+play b k16  setup
+play b q10  setup
+play w r14  
+play b r15  
+play w q14  
+play b o16  
+play w q12  
+play b r11  3x3 
+play w n13  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b q14  
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b q14  
+play w k16  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b q14  
+play w q18  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b l17  ignore 
+play w r14  
+play b p15  
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b l17  ignore 
+play w q14  
+play b o16  
+play w r16  
+play b p17  
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b l17  ignore 
+play w r17  
+play b q17  
+play w r16  
+play b q15  
+play w q18  
+play b p18  
+play w r18  
+play b p17  
+play w r14  
+play b p13  
+play w r13  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b l17  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w n18  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play w q14  
+play b o16  
+play w n16  
+play b o15  
+play w p17  
+play b q15  
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play w q14  
+play b o16  
+play w n16  
+play b o15  
+play w p17  
+play b q15  
+play w p13  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play w r14  
+play b q14  
+play w q13  
+play b p14  
+play w r16  
+play b r15  
+play w s15  
+play b q15  
+play w s13  
+play b r17  
+play w s16  
+play b r12  
+play w r13  
+play b p17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play w r14  
+play b q14  
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w r14  
+play b o16  ignore 
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w r14  
+play b p15  ignore 
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w r14  
+play b r17  
+play w m16  
+play b l16  
+play w n16  
+play b p14  
+play w l17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w r14  
+play b q14  ignore 
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w r17  
+play b q17  ignore 
+play w r16  
+play b q15  
+play w q18  
+play b p18  
+play w r18  
+play b p17  
+play w r14  
+play b q14  
+play w r13  
+play b q13  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w r17  
+play b q17  ignore 
+play w r16  
+play b q15  
+play w q18  
+play b p18  
+play w r18  
+play b p17  
+play w r14  
+play b r12  3x3 
+play w q14  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w r17  
+play b q17  ignore 
+play w r16  
+play b q15  
+play w q18  
+play b p18  
+play w r18  
+play b p17  
+play w r14  
+play b r12  3x3 
+play w s14  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w r17  
+play b q17  ignore 
+play w r16  
+play b q15  
+play w q18  
+play b p18  
+play w r18  
+play b p17  
+play w r14  
+play b p13  ignore 
+play w r13  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w q14  
+play b o16  
+play w n16  
+play b n17  
+play w r16  
+play b p17  
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w o15  
+play b q14  
+play w r17  
+clear_board
+play b q16  
+play b q10  setup
+play w o17  
+play b m17  
+play w o15  
+play b q14  
+play w l16  
+clear_board
+play b q16  
+play b q10  setup
+play w r17  ignore 
+play b q17  ignore 
+play w r16  
+play b q15  
+play w s14  
+clear_board
+play b q16  
+play b q10  setup
+play w r17  ignore 
+play b q17  ignore 
+play w r16  
+play b r14  
+play w r15  
+play b q15  
+play w s14  
+play b r13  
+clear_board
+play b q16  
+play b q10  setup
+play w r17  ignore 
+play b q17  ignore 
+play w r16  
+play b r14  
+play w r15  
+play b q15  
+play w s14  
+play b r18  
+play w s18  
+play b s13  
+play w q18  
+clear_board
+play b q16  
+play b q10  setup
+play w r14  
+play b r15  
+play w q14  
+play b o16  
+play w r11  3x3 
+play b r10  3x3 
+clear_board
+play b q16  
+play b q10  setup
+play w r14  
+play b r15  
+play w q14  
+play b o16  
+play w q12  
+play b r11  3x3 
+play w n13  
+clear_board
+play b q16  
+play b q10  setup
+play w k16  setup
+play w o17  
+play b q14  
+clear_board
+play b q16  
+play b q10  setup
+play w k16  setup
+play w o17  
+play b r14  
+clear_board
+play b q16  
+play b q10  setup
+play w k16  setup
+play w o17  
+play b o16  
+play w n16  
+play b o15  
+play w p17  
+play b q17  
+clear_board
+play b q16  
+play b r10  setup
+play w r17  ignore 
+play b q17  ignore 
+play w r16  
+play b q15  
+play w s14  
+clear_board
+play b q16  
+play b r10  setup
+play w r17  ignore 
+play b q17  ignore 
+play w r16  
+play b r14  
+play w r15  
+play b q15  
+play w s14  
+play b r13  
+clear_board
+play b q16  
+play b r10  setup
+play w r17  ignore 
+play b q17  ignore 
+play w r16  
+play b r14  
+play w r15  
+play b q15  
+play w s14  
+play b r18  
+play w s18  
+play b s13  
+play w q18  
+clear_board
+play b q16  
+play w s15  ignore 
+play b s16  
+play w r16  
+play b r17  
+play w r15  
+play b s17  
+play w q15  
+play b p16  
+clear_board
+play b q16  
+play w q13  ignore 
+play b o16  
+clear_board
+play b q16  
+play w q13  ignore 
+play b o17  
+clear_board
+play b q16  
+play b o17  setup
+play w r11  setup
+play w r14  
+play b s16  
+clear_board
+play b q16  
+play w pass  
+play b r14  
+clear_board
+play b q16  
+play w r12  ignore 
+play b r14  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play w o16  
+play b o17  
+play w n17  3x3 
+play b p17  
+play w n16  3x3 
+play b s16  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w s16  ignore 
+play b r17  
+play w r9  
+play b p12  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w s16  ignore 
+play b r17  
+play w s17  
+play b s18  
+play w r16  
+play b q17  
+play w r9  
+play b p12  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w s16  ignore 
+play b r17  
+play w s17  
+play b s18  
+play w r16  
+play b q17  
+play w q15  
+play b r9  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w s16  ignore 
+play b r17  
+play w s17  
+play b s18  
+play w r16  
+play b q17  
+play w t18  
+play b s19  
+play w q15  
+play b r9  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q13  ignore 
+play w q14  
+play b p13  
+play w o13  
+play b o12  
+play w n12  
+play b p12  
+play w n14  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q13  ignore 
+play w q14  
+play b p13  
+play w o13  
+play b o12  
+play w n12  
+play b o14  
+play w n13  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q13  ignore 
+play w q14  
+play b p13  
+play w o13  
+play b o12  
+play w n12  
+play b p11  
+play w n14  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q13  ignore 
+play w q14  
+play b p13  
+play w o13  
+play b o12  
+play w n12  
+play b o11  
+play w n14  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q12  
+play w p12  
+play b p11  ignore 3x3 
+play w p10  ignore 3x3 
+play b o11  
+play w o12  
+play b q10  3x3 
+play w r11  3x3 
+play b o10  3x3 
+play w p9  3x3 
+play b q9  3x3 
+play w q8  3x3 
+play b s10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q12  
+play w p12  
+play b p11  ignore 3x3 
+play w r11  3x3 
+play b s11  3x3 
+play w s12  
+play b s13  
+play w r13  
+play b t12  
+play w q13  
+play b s12  
+play w r9  3x3 
+play b s10  3x3 
+play w p9  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q12  
+play w p12  
+play b r11  
+play w q10  
+play b r10  
+play w q9  3x3 
+play b r8  3x3 
+play w p7  3x3 
+play b r7  3x3 
+play w pass  
+play b p13  
+play w o13  
+play b q13  
+play w r17  
+play b r16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w p18  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q12  
+play w p12  
+play b r11  
+play w q10  
+play b r10  
+play w q9  3x3 
+play b r8  3x3 
+play w p7  3x3 
+play b r7  3x3 
+play w pass  
+play b p13  
+play w o13  
+play b q13  
+play w r17  
+play b r16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w p18  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q12  
+play w p12  
+play b r11  
+play w q10  
+play b r10  
+play w q9  3x3 
+play b r8  3x3 
+play w p7  3x3 
+play b r7  3x3 
+play w pass  
+play b q13  
+play w r17  
+play b r16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w p18  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w q11  
+play b q12  
+play w p12  
+play b r11  
+play w q10  
+play b r10  
+play w q9  3x3 
+play b r8  3x3 
+play w p7  3x3 
+play b r7  3x3 
+play w pass  
+play b q13  
+play w r17  
+play b r16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w p18  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w r17  
+play b q17  ignore 
+play w r16  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w p14  
+play b o16  
+play w r17  
+play b r16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w p18  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w q12  ignore 
+play b r11  
+play w p14  
+play b o16  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w q12  ignore 
+play b r11  
+play w q13  
+play b o16  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b o16  ignore 
+play w n16  
+play b o15  
+play w p17  ignore 
+play b q17  
+play w p16  ignore 
+play b p15  
+play w q15  
+play b s16  
+play w q18  
+play b r18  
+play w p18  
+play b n15  
+play w m16  
+play b q14  
+play w r15  
+play b r13  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b o16  ignore 
+play w n16  
+play b o15  
+play w p17  ignore 
+play b q17  
+play w q13  
+play b p16  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b o16  ignore 
+play w n16  
+play b o15  
+play w r17  ignore 
+play b p17  
+play w r16  
+play b n17  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b o16  ignore 
+play w n16  
+play b o15  
+play w q17  
+play b r17  
+play w p17  
+play b r16  
+play w k17  3x3 
+play b q13  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b q14  
+play w r17  
+play b r16  
+play w q17  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b q14  
+play b k16  setup
+play w r17  
+play b q17  
+play w r16  
+play b q15  
+play w s14  
+play b q18  
+play w r18  
+play b r13  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b q14  
+play b k16  setup
+play w r17  
+play b q17  
+play w r16  
+play b q15  
+play w s14  
+play b q18  
+play w r18  
+play b n16  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b q14  
+play b k16  setup
+play w r17  
+play b q17  
+play w r16  
+play b q15  
+play w s14  
+play b q18  
+play w r18  
+play b p12  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b q14  
+play w q13  
+play b r13  
+play w r17  
+play b q17  
+play w q15  
+play b p14  
+play w p15  
+play b r15  
+play w r16  
+play b s14  
+play w p16  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w o17  
+play b q14  
+play w q13  
+play b r13  
+play w r17  
+play b r15  
+play w q17  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play b k16  setup
+play w r17  
+play b q17  
+play w r16  
+play b q15  
+play w r18  
+play b q14  
+play w s14  
+play b p12  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play b k16  setup
+play w r17  
+play b q17  
+play w r16  
+play b q15  
+play w r18  
+play b q14  
+play w s14  
+play b q18  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play b k16  setup
+play w r17  
+play b q17  
+play w r16  
+play b q15  
+play w s14  
+play b p13  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w s16  ignore 
+play b r17  
+play w p14  
+play b o16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p17  ignore 
+play w s17  
+play b s16  
+play w p16  
+play b p18  
+play w q15  
+play b s14  
+play w s15  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p17  ignore 
+play w s17  
+play b s16  
+play w p16  
+play b q15  
+play w o17  
+play b p18  
+play w o18  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p17  ignore 
+play w s17  
+play b s16  
+play w p16  
+play b p15  
+play w o16  
+play b o17  
+play w q15  
+play b s14  
+play w s15  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p17  ignore 
+play w s17  
+play b s16  
+play w p16  
+play b p15  
+play w o16  
+play b q14  
+play w o17  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p17  ignore 
+play w s17  
+play b s16  
+play w p16  
+play b o17  
+play w q15  
+play b s14  
+play w s15  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w p17  ignore 
+play b o16  
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b m17  3x3 
+play w o16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b m17  3x3 
+play w o18  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b n15  3x3 
+play w n17  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b m17  3x3 
+play w o16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b m17  3x3 
+play w o18  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r12  3x3 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b n15  3x3 
+play w n17  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b r15  
+play w p14  
+play b q15  
+play w r13  
+play b p13  
+play w o14  
+play b o13  
+play w n14  
+play b n13  
+play w m14  
+play b m13  
+play w l14  
+play b q11  
+play w s11  
+play b s10  
+play w r10  
+play b r11  
+play w s9  
+play b s12  
+play w t10  
+play b r12  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b r15  
+play w p14  
+play b q15  
+play w r13  
+play b p13  
+play w o14  
+play b p12  
+play w r10  3x3 
+play b o16  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b r15  
+play w p14  
+play b q15  
+play w p13  
+play b r13  
+play w r12  
+play b s14  
+play w s13  
+play b o16  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b r15  
+play w p14  
+play b q15  
+play w s14  
+play b p13  
+play w q12  
+play b p12  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b r15  
+play w p14  
+play b q15  
+play w s14  
+play b p13  
+play w q12  
+play b o14  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b p13  
+play w q15  
+play b p14  
+play w r15  
+play b p15  
+play w r16  
+play b q17  
+play w q12  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b r13  ignore 
+play w s15  
+play b r15  
+play w s14  
+play b s16  
+play w r17  
+play b r16  
+play w p14  
+play b q15  
+play w r12  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b p14  
+play w r17  
+play b q17  
+play w r16  
+play b r15  
+play w s15  
+play b q15  
+play w s13  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b p14  
+play w r17  
+play b r15  
+play w p18  
+play b r13  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b p14  
+play w r15  
+play b r16  
+play b q11  3x3 
+play w p13  
+play b o13  
+play w o12  
+play b p12  
+play w r12  
+play b r11  
+play w q15  
+play b p15  
+play w p16  
+play b o14  
+play w s16  
+play b s17  
+play w s15  
+play b p17  
+play w o16  
+play b o17  
+play w n16  
+play b n17  
+play w m16  
+play b m13  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b p14  
+play w r15  
+play b r16  
+play b q11  3x3 
+play w q12  
+play b p11  
+play w r11  3x3 
+play b r10  3x3 
+play w s11  3x3 
+play b s10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b p14  
+play w r15  
+play b r16  
+play w r10  3x3 
+play b r13  ignore 
+play w r12  
+play b s13  
+play w s12  
+play b p13  
+play w q12  
+clear_board
+play b q16  
+play w r14  
+play b q14  ignore 
+play w q13  
+play b p14  
+play w r15  
+play b r16  
+play w r10  3x3 
+play b p13  ignore 
+play w q12  
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b o17  
+play w r10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b n16  ignore 
+play w r10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play w r10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b pass  
+play w r10  
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play w r6  setup
+play b o16  
+play w q10  
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play w r7  setup
+play b o16  
+play w q10  
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r9  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r9  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r10  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r10  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b q10  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b q10  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b q9  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b q9  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b q11  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b q11  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r11  ignore 3x3 
+play w p16  
+play b q17  ignore 
+play w p17  
+play b p18  
+play w o18  
+play b q18  
+play w n17  
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r11  ignore 3x3 
+play w p16  
+play b q17  ignore 
+play w p17  
+play b p18  
+play w o18  
+play b r18  
+play w n17  
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r11  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r11  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r12  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b r12  ignore 3x3 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w n16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b o16  
+play b q10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b o16  
+play b r10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b o16  
+play w r10  3x3 
+play b pass  
+play b s14  
+play w s13  
+play b s15  
+play w r12  
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b o16  
+play w r10  3x3 
+play b pass  
+play w r17  
+play b q17  
+play w s15  
+play b r16  ignore 
+play w s16  
+play b s17  
+play w pass  later 
+play w s18  
+play b r18  
+play w t17  
+clear_board
+play b q16  
+play w r14  
+play b r15  ignore 
+play w q14  
+play b o16  
+play w r10  3x3 
+play b pass  
+play w r17  
+play b q17  
+play w s15  
+play b s16  
+play w r16  
+play b s17  
+play w q15  
+play b r18  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w r17  
+play b q17  ignore 
+play w r16  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w r17  
+play b r16  
+play w s16  
+play b q17  
+play w s18  
+play b r18  
+play w s17  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w r17  
+play b r16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w p18  
+play b q14  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w r16  
+play b r17  
+play w s17  
+play b r15  
+play w s16  
+play b s15  
+play w q17  
+play b q15  
+play w p17  
+play b o17  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w r16  
+play b r17  
+play w s17  
+play b r15  
+play w s16  
+play b s15  
+play w q15  
+play b s14  
+play w q14  
+play b r13  
+play w q13  
+play b r12  
+play w q17  
+play b p16  
+play w q18  
+play b o13  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w r16  
+play b r17  
+play w s17  
+play b r15  
+play w s16  
+play b s15  
+play w q15  
+play b s14  
+play w q14  
+play b r13  
+play w q13  
+play b r12  
+play w p16  
+play b q17  
+play w p17  
+play b p18  
+play w o17  
+play b o18  
+play w n17  
+play b s18  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w r16  
+play b r17  
+play w s17  
+play b r15  
+play w s16  
+play b q15  
+play w s15  
+play b r18  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w q10  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w r11  3x3 
+play b r15  
+play w s15  
+play b s16  
+play w r8  3x3 
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w s16  
+play b r10  setup
+play b r17  
+play w r12  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w s16  
+play b r12  
+play w r17  
+play b r15  
+play w s15  
+play b q14  
+play w o18  
+play b s14  
+play w p17  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w s16  
+play b r12  
+play w r17  
+play b r15  
+play w s15  
+play b q14  
+play w q13  
+play b r13  
+play w s14  
+play b p14  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w s16  
+play b r13  ignore 
+play w q13  
+play b r12  
+play w s14  
+play b r17  
+play w q12  
+play b r11  
+play w q11  
+play b r10  
+play w p17  
+play b p16  
+play w p14  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w s16  
+play b r13  ignore 
+play w q13  
+play b r12  
+play w r17  
+play b s14  
+play w r15  
+play b q17  
+play w s15  
+play b q12  
+play w p14  
+play b o13  
+play w o14  
+play b l17  
+play w n13  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w s16  
+play b r13  ignore 
+play w q13  
+play b r12  
+play w r17  
+play b q14  
+play w s14  
+play b p14  
+play w p18  
+clear_board
+play b q16  
+play w r14  
+play b o16  
+play w s16  
+play b r17  
+play w r11  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w p14  
+play b r15  ignore 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b q17  
+play w m16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w p14  
+play b r15  ignore 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b o17  3x3 
+play w n17  3x3 
+play b r17  
+play w m16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w p14  
+play b r15  ignore 
+play w p16  
+play b p17  
+play w o16  3x3 
+play b q14  
+play w q13  
+play b q15  
+play w q17  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w p14  
+play b r15  ignore 
+play w s13  
+play b o16  3x3 
+play w r10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w p14  
+play b r15  ignore 
+play w s13  
+play b q13  
+play w q14  
+play b o16  3x3 
+play w r10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w p14  
+play b r15  ignore 
+play w s13  
+play b s15  
+play w r10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w p14  
+play b o16  
+play w s16  
+play b r17  
+play w s11  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w o17  
+play b q14  
+play w r17  
+play b q17  
+play w r16  
+play b r15  
+play w s15  
+play b q15  
+play w s14  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w o17  
+play b q14  
+play w r17  
+play b q17  
+play w r16  
+play b q15  
+play w r15  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w o17  
+play b q14  
+play w r17  
+play b r15  
+play w q17  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w o17  
+play b q14  
+play w q13  
+play b p14  
+play w r17  
+play b r15  
+play w q17  
+play b p13  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w o17  
+play b q14  
+play w q13  
+play b p14  
+play w r17  
+play b r15  
+play w q17  
+play b s14  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w o16  
+play b q14  
+play w r17  
+play b q17  
+play w r16  
+play b r15  
+play w s15  
+play b q15  
+play w s14  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b m17  
+play w o16  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b m17  
+play w o18  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b n15  
+play w n17  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b m17  
+play w o16  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b m17  
+play w o18  
+clear_board
+play b q16  
+play w r14  
+play b q11  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b n15  
+play w n17  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b q14  
+play w q13  
+play b p14  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b q15  
+play w s13  
+play b r17  
+play w s16  
+play b p17  
+play w k17  3x3 
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b q14  
+play w q13  
+play b p14  ignore 
+play w r16  
+play b p17  
+play w r17  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b q14  
+play w q13  
+play b p14  ignore 
+play w r16  
+play b r17  
+play w r15  
+play b q17  
+play w l17  3x3 
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b q14  
+play w q13  
+play b r15  
+play w p14  
+play b q15  
+play w r13  
+play b o16  
+play w n16  
+play b o15  
+play w p18  
+play b q18  
+play w q17  
+play b r17  
+play w p17  
+play b l16  
+play w r18  
+play b s18  
+play w q19  
+play b s16  
+play w l17  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b q14  
+play w q13  
+play b r15  
+play w p14  
+play b q15  
+play w r13  
+play b o16  
+play w n16  
+play b o15  
+play w p18  
+play b q18  
+play w q17  
+play b r17  
+play w p17  
+play b r18  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play w p15  
+play b r17  
+play w q18  
+play b r15  
+play w s14  
+play b r18  
+play w q17  
+play b p16  
+play w o16  
+play b q15  
+play w q14  
+play b s15  
+play w s16  
+play b t15  
+play w s18  
+play b s19  
+play w s17  
+play b r16  
+play w t17  
+play b t18  
+play w t19  
+play b r19  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play w p15  
+play b r17  
+play w q18  
+play b r15  
+play w s15  
+play b q15  
+play w q14  
+play b s16  
+play w s14  
+play b q17  
+play w p18  
+play b r18  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play w r17  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b r17  
+play w p15  
+play b p17  
+play w o16  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b r15  ignore 
+play w q14  
+play b p17  
+play w o16  
+play b r17  
+play w p15  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b r15  ignore 
+play w q14  
+play b r17  
+play w o15  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b r15  ignore 
+play w q14  
+play b o16  
+play w n16  
+clear_board
+play b q16  
+play w r14  
+play w o17  
+play b p15  
+play w r17  
+play b r16  
+play w q17  
+play b n16  
+play w p16  
+play b q15  
+play w s16  
+play b s15  
+play w s17  
+play b q13  
+clear_board
+play b q16  
+play w r14  
+play b s16  ignore 
+play w r11  
+clear_board
+play b q16  
+play w r14  
+play b s16  ignore 
+play w o17  
+clear_board
+play b q16  
+play w r14  
+play b s16  ignore 
+play w q10  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r16  
+play b r17  
+play w q17  
+play b p17  
+play w q18  
+play b r18  ignore 
+play w p16  
+play b q15  
+play w p18  
+play b o17  
+play w r15  
+play b q14  3x3 
+play w s18  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r16  
+play b r17  
+play w q17  
+play b p17  
+play w q18  
+play b r18  ignore 
+play w p16  
+play b q15  
+play w p18  
+play b o17  
+play w r15  
+play b p15  
+play w s18  
+play b s17  
+play w r19  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r16  
+play b r17  
+play w q17  
+play b p17  
+play w q18  
+play b r15  
+play w s16  
+play b q15  
+play w s15  
+play b r18  
+play w q14  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r16  
+play b r17  
+play w q17  
+play b p17  
+play w q18  
+play b r15  
+play w s16  
+play b q15  
+play w s15  
+play b r18  
+play w p18  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r16  
+play b r17  
+play w q17  
+play b p16  
+play w s17  
+play b r18  
+play w s15  
+play b s18  
+play w t18  
+play b q18  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w q10  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  3x3 
+play w s17  
+play b r15  3x3 
+play w o18  3x3 
+play b n18  3x3 
+play w o17  3x3 
+play b o16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r17  
+play b r16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w p18  
+play b o17  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r17  
+play b r16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w p18  
+play b p17  
+play w o18  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r17  
+play b r16  
+play w s16  
+play b q17  ignore 
+play w s18  
+play b r18  
+play w s17  
+clear_board
+play b q16  
+play w r14  
+play b n17  ignore 
+play w r17  
+play b q17  ignore 
+play w r16  
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b m17  
+play w o16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b m17  
+play w o18  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b s14  
+play w o17  
+play b pass  
+play b n15  
+play w n17  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b m17  
+play w o16  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b m17  
+play w o18  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+play b pass  
+play b n15  
+play w n17  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w o16  
+play b q14  
+play w q13  
+play b p14  
+play w r15  
+play b p16  
+play w p13  
+play b r16  
+play w n13  
+play b o13  
+play w o12  
+play b o14  
+play w p11  3x3 
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w p14  ignore 
+play b o16  
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w o17  
+play b r17  ignore 
+play w p15  
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w o17  
+play b p15  
+play w p14  
+clear_board
+play b q16  
+play w r14  
+play b q10  ignore 
+play w o17  
+play b p15  
+play w r17  
+clear_board
+play b q16  
+play w r14  
+play b r11  ignore 
+play w o17  
+clear_board
+play b q16  
+play w r14  
+play b r11  ignore 
+play w p14  
+clear_board
+play b q16  
+play w r14  
+play b r11  ignore 
+play w r17  
+play b r16  
+play w q17  
+play b p16  
+play w s16  
+play b s15  
+play w s17  
+play b r15  
+play w o17  
+clear_board
+play b q16  
+play w r14  
+play b r16  ignore 
+play w o17  
+clear_board
+play b q16  
+play w r14  
+play b r16  ignore 
+play w r11  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w r16  
+play b r17  
+play w s17  
+play b r15  
+play w s16  
+play b s15  
+play w q15  
+play b s14  
+play w q17  
+play b p16  
+play w q18  
+play b p13  
+play w q14  ignore 
+play b s13  
+play w o15  
+play b p15  
+play w p14  
+play b o14  
+play w o13  
+play b n14  
+play w q13  
+play b p12  
+play w q12  
+play b q11  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w r16  
+play b r17  
+play w s17  
+play b r15  
+play w s16  
+play b s15  
+play w q15  
+play b s14  
+play w q17  
+play b p16  
+play w q18  
+play b p13  
+play w q14  ignore 
+play b s13  
+play w r12  
+play b r13  
+play w q13  
+play b q12  
+play w p12  
+play b q11  
+play w p14  
+play b o13  
+play w o14  
+play b n14  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w r16  
+play b r17  
+play w s17  
+play b r15  
+play w s16  
+play b q15  
+play w s15  
+play b r18  
+play w r12  3x3 
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w r11  ignore 
+play b r15  
+play w q14  
+play w r17  
+play b q17  
+play w s15  
+play b r16  
+play w s16  
+play b s17  
+play w pass  later 
+play w s18  
+play b r18  
+play w t17  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w r11  ignore 
+play b r15  
+play w q14  
+play w r17  
+play b q17  
+play w s15  
+play b s16  
+play w r16  
+play b s17  
+play w q15  
+play b r18  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w r11  ignore 
+play b r15  
+play w q14  
+play b s14  
+play w s13  
+play b s15  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w q10  
+play b pass  later 
+play w p14  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w m17  ignore 
+play b s16  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w r10  
+play b s16  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w r10  
+play b r12  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w n17  ignore 
+play b o16  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r13  ignore 
+play w q13  
+play b r12  
+play w q12  
+play b s14  
+play w s15  ignore 
+play b q14  
+play w r15  
+play b q11  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r13  ignore 
+play w q13  
+play b r12  
+play w q12  
+play b s14  
+play w r15  
+play b r10  3x3 
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r13  ignore 
+play w q13  
+play b r12  
+play w q12  
+play b s14  
+play w r15  
+play b r11  
+play w r17  
+play b l17  3x3 
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r12  
+play w r17  
+play b r15  
+play w s15  
+play b q14  
+play w q13  
+play b r13  
+play w s14  
+play b p14  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b pass  
+play w m17  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b pass  
+play w r17  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r17  
+play w m17  ignore 
+play b s17  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r17  
+play w s17  ignore 
+play b l17  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r17  
+play b r12  3x3 
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r17  
+play w r11  3x3 
+play b pass  
+play b s17  
+clear_board
+play b q16  
+play w r14  
+play b o17  
+play w s16  
+play b r17  
+play w r11  3x3 
+play b pass  
+play w s17  
+play b s18  
+play w r16  
+play b q17  
+echo joseki_34.sgf
+boardsize 19
+clear_board
+play b q3  
+play b r9  
+play w n3  
+play b k3  ignore 
+play w q5  
+clear_board
+play b q3  
+play b r9  
+play w n3  
+play b q5  
+play w k3  3x3 
+clear_board
+play b r9  setup
+play b q3  setup
+play w q5  ignore 
+play b q4  
+play w p5  ignore 
+play b o4  3x3 
+play w o5  3x3 
+play b n4  3x3 
+clear_board
+play b r9  setup
+play b q3  setup
+play w q5  ignore 
+play b q4  
+play w r5  
+play b p5  
+play w p6  
+play b o5  
+play w o6  
+play b n5  
+play w r7  
+play b q11  3x3 
+clear_board
+play b r9  setup
+play b q3  setup
+play w q5  ignore 
+play b r5  
+play w r6  ignore 
+play b r4  
+play w q6  
+play b o4  
+clear_board
+play b r9  setup
+play b q3  setup
+play w q5  ignore 
+play b r5  
+play w q4  
+play b r4  
+play w p3  
+play b r3  
+play w o4  ignore 
+play b q6  
+clear_board
+play b r9  setup
+play b q3  setup
+play w q5  ignore 
+play b r5  
+play w q4  
+play b r4  
+play w p3  
+play b r3  
+play w q6  
+play b p2  
+play w o3  3x3 
+play b o2  3x3 
+clear_board
+play b r9  setup
+play b q3  setup
+play w q5  ignore 
+play b o4  
+play w r3  
+play b r2  
+play w r4  
+play b p2  ignore 
+play w r7  
+play b p9  3x3 
+clear_board
+play b r9  setup
+play b q3  setup
+play w q5  ignore 
+play b o4  
+play w r3  
+play b r2  
+play w r4  
+play b s2  
+play w r7  
+play b p9  3x3 
+play w o6  
+play b m4  3x3 
+clear_board
+play b r9  setup
+play b q3  setup
+play w q5  ignore 
+play b o4  
+play w r3  
+play b r2  
+play w r4  
+play b s2  
+play w r7  
+play b p9  3x3 
+play w p3  ignore 
+play b p4  
+clear_board
+play b r9  setup
+play b q3  setup
+play w r6  ignore 
+play b r4  
+play w p6  
+play b n4  3x3 
+clear_board
+play b r9  setup
+play b q3  setup
+play w r5  ignore 
+play b r4  
+play w p4  
+play b q4  
+play w q5  
+play b p5  
+play w p3  
+play b p2  
+play w o2  3x3 
+play b q2  
+play w q8  
+play b p6  
+clear_board
+play b r9  setup
+play b q3  setup
+play w r5  ignore 
+play b r4  
+play w q5  ignore 
+play b o4  3x3 
+play w p3  ignore 
+play b p4  
+play w q4  
+play b r3  
+play w p2  
+play b o3  3x3 
+clear_board
+play b r9  setup
+play b q3  setup
+play w r5  ignore 
+play b r4  
+play w q5  ignore 
+play b o4  3x3 
+play w o5  3x3 
+play b n4  3x3 
+clear_board
+play b r16  
+play b q10  setup
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b r14  
+clear_board
+play b r16  
+play b q10  setup
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b q14  
+clear_board
+play b r16  
+play b q10  setup
+play w o17  
+play b p16  
+play w q18  
+play b m17  
+play w o16  
+play b o15  
+play w n15  
+play b n16  
+play w p15  
+play b o14  
+play w q16  
+play b q15  
+play w p17  
+play b p14  
+play w r15  
+play b q14  
+play w s16  
+play b r17  
+play w s17  
+play b s15  
+play w r14  
+play b r13  
+play w s14  
+play b s13  
+play w t15  
+clear_board
+play b r16  
+play b q10  setup
+play w o17  
+play b p16  
+play w q18  
+play b m17  
+play w o16  
+play b o15  
+play w n15  
+play b n16  
+play w p15  
+play b o14  
+play w q16  
+play b q15  
+play w p17  
+play b p14  
+play w r15  
+play b p16  
+play w s16  
+play b q17  
+play w r17  
+play b q16  
+play w q14  
+play b p15  
+play w s18  
+play b r14  
+play w s15  
+play b q13  
+clear_board
+play b r16  
+play b q10  setup
+play w o17  
+play b p16  
+play w q18  
+play b m17  
+play w o16  
+play b p17  
+play w p18  
+play b n18  
+play w r17  
+play b o18  
+play w s16  
+clear_board
+play b r16  
+play b q10  setup
+play w o17  
+play b p16  
+play w q18  
+play b m17  
+play w o16  
+play b p17  
+play w p18  
+play b r17  
+play w n18  
+play b o15  
+play w m16  
+play b n15  
+play w l16  
+clear_board
+play b r16  
+play b q10  setup
+play w o17  
+play b p16  
+play w q18  
+play b m16  
+play w o16  
+play b p17  
+play w p18  
+play b n18  
+play w r17  
+play b o18  
+play w s16  
+play b o15  
+clear_board
+play b r16  
+play b q10  setup
+play w o17  
+play b p16  
+play w q18  
+play b m16  
+play w o16  
+play b p17  
+play w p18  
+play b r17  
+play w m17  
+play b l17  
+play w m18  
+play b o15  
+play w l16  
+play b n15  
+play w k16  
+clear_board
+play b r16  
+play b q10  setup
+play w o17  
+play b p16  
+play w q18  
+play b m16  
+play w o16  
+play b p17  
+play w p18  
+play b r17  
+play w n18  
+play b o15  
+play w l17  
+clear_board
+play b r16  
+play b r10  setup
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b r14  
+clear_board
+play b r16  
+play b r10  setup
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b q14  
+clear_board
+play b r16  
+play w k16  setup
+play w p16  
+play b r14  
+play w r17  
+play b q17  ignore 
+play w q16  
+play b r18  
+play w s17  
+play b q15  
+play w p15  
+play b s18  
+play w q13  
+play b r13  
+play w q12  
+clear_board
+play b r16  
+play w k16  setup
+play w p16  
+play b r14  
+play w r17  
+play b s17  
+play w q17  
+play b s18  
+clear_board
+play b r16  
+play w k16  setup
+play w p16  
+play b p15  
+play w o15  
+play b q15  
+play w n16  
+play b p17  
+play w o17  
+play b p18  
+clear_board
+play b r16  
+play w k16  setup
+play w p16  
+play b p17  
+play w q16  ignore 
+play b q17  
+play w r15  
+play b r17  
+clear_board
+play b r16  
+play w k16  setup
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b r14  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w o15  ignore 
+play b r13  
+play w m16  
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w o15  ignore 
+play b r13  
+play w m16  
+play b p17  
+play w m17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w o15  ignore 
+play b r13  
+play w r17  
+play b s17  
+play w q17  
+play b k17  
+play w s15  
+play b s16  
+play w r15  
+play b q15  
+play w q16  
+play b t15  
+play w q14  
+play b s14  
+play w p15  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w n16  ignore 
+play b m16  
+play w n15  
+play b o17  
+play w p17  
+play b r13  
+play w r17  
+play b s17  
+play w r15  
+play b s15  
+play w q16  
+play b s16  
+play w k16  
+play b m15  
+play w m14  
+play b l14  
+play w l15  
+play b l17  
+play w k17  
+play b n14  
+play w m13  
+play b o16  
+play w o15  
+play b p15  
+play w o14  
+play b q15  
+play w p18  
+play b k18  
+play w j18  
+play b l18  
+play w h17  
+play b o18  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w n16  ignore 
+play b m16  
+play w o17  ignore 
+play b n15  
+play w o16  
+play b m17  
+play w m15  
+play b n14  
+play w l15  
+play b j17  
+play w p14  
+play b r14  
+play w q13  
+play b r13  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w k16  ignore 
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w p14  ignore 
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w q14  ignore 
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w q15  ignore 
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w l17  ignore 
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w k17  ignore 
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w q13  ignore 
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play b p17  
+play w q17  
+play b q16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w p18  ignore 
+play b q17  
+play w p17  
+play b r14  
+play w l17  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b r13  
+play w q16  
+play b s16  
+play w p18  
+play b s17  ignore 
+play w k17  3x3 
+play b n15  
+play w q13  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b r13  
+play w q16  
+play b s16  
+play w p18  
+play b k17  3x3 
+play w s17  
+play b r10  3x3 
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w l17  
+play b n15  
+play w p14  
+play b r13  
+play w q12  
+play b r12  
+play w q11  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w l17  
+play b n15  
+play w p14  
+play b r13  
+play w q12  
+play b q13  
+play w p13  
+play b p12  
+play w n14  
+play b l16  
+play w r12  
+play b s12  
+play w s11  
+play b s13  
+play w q10  
+play b k17  
+play w l14  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w l17  
+play b n15  
+play w p14  
+play b r13  
+play w q12  
+play b q13  
+play w p13  
+play b p12  
+play w n14  
+play b l16  
+play w r12  
+play b s13  
+play w k17  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w l17  
+play b m16  
+play w p14  
+play b r13  
+play w l16  
+play b m15  
+play w k14  
+play b m13  
+play w p12  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w l17  
+play b m16  
+play w p14  
+play b l16  
+play w r14  
+play b s14  
+play w r13  
+play b r11  
+play w s13  
+play b r18  
+play w q18  
+play b s18  
+play w k17  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w l17  
+play b m16  
+play w p14  
+play b l16  
+play w r14  
+play b s14  
+play w r13  
+play b r11  
+play w s13  
+play b r18  
+play w q18  
+play b s18  
+play w k16  
+play b k17  
+play w j17  
+play b k18  
+play w j16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w p14  ignore 
+play b q13  
+play w p13  
+play b q12  3x3 
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w q14  
+play b s18  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w q14  
+play b r13  3x3 
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w r14  
+play b q15  
+play w n16  
+play b m16  
+play w n15  
+play b o17  
+play w p13  
+play b p14  
+play w p15  
+play b q14  
+play w k16  
+play b l16  
+play w k15  
+play b k17  
+play w j17  
+play b k18  
+play w j18  
+play b m14  
+play w n13  
+play b l14  
+play w q13  
+play b r13  
+play w r12  
+play b s13  
+play w s12  
+play b s14  
+play w o13  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w r14  
+play b q15  
+play w n16  
+play b m16  
+play w n15  
+play b o17  
+play w p13  
+play b r13  
+play w r12  
+play b s13  ignore 
+play w p15  
+play b k16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w r14  
+play b q15  
+play w n16  
+play b m16  
+play w n15  
+play b o17  
+play w p13  
+play b r13  
+play w r12  
+play b q14  ignore 
+play w q13  
+play b s13  
+play w s12  
+play b t14  
+play w p15  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w r14  
+play b q15  
+play w n16  
+play b m16  
+play w n15  
+play b o17  
+play w p13  
+play b r13  
+play w r12  
+play b q14  ignore 
+play w q13  
+play b s13  
+play w s12  
+play b s14  
+play w p15  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w r14  
+play b q15  
+play w n16  
+play b m16  
+play w n15  
+play b o17  
+play w p13  
+play b r13  
+play w r12  
+play b q13  
+play w q12  
+play b p14  ignore 
+play w o13  
+play b o16  
+play w q14  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w r14  
+play b q15  
+play w n16  
+play b m16  
+play w n15  
+play b o17  
+play w p13  
+play b r13  
+play w r12  
+play b q13  
+play w q12  
+play b q14  
+play w o12  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w o15  
+play b k17  
+play w r14  
+play b q15  
+play w q14  
+play b p15  ignore 
+play w p14  
+play b q16  
+play w o17  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w o15  
+play b k17  
+play w r14  
+play b q15  
+play w q14  
+play b s14  
+play w r12  
+play b s13  
+play w p12  
+play b p15  ignore 
+play w n16  
+play b o17  
+play w o16  
+play b p14  
+play w n13  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w o15  
+play b l16  
+play w r14  
+play b q15  
+play w q14  
+play b p15  ignore 
+play w p14  
+play b q16  
+play w o17  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w o15  
+play b l16  
+play w r14  
+play b q15  
+play w q14  
+play b s14  
+play w r12  
+play b s13  
+play w p12  
+play b p15  ignore 
+play w n16  
+play b o17  
+play w o16  
+play b p14  
+play w n13  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w o15  
+play b q13  
+play w m16  
+play b l17  
+play w m17  
+play b m18  
+play w n18  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w o15  
+play b q13  
+play w m16  
+play b l17  
+play w m17  
+play b m18  
+play w n16  
+play b l16  
+play w n18  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b b17  setup
+play b g17  setup
+play b c16  setup
+play b b15  setup
+play w c17  setup
+play w d17  setup
+play w e16  setup
+play b s15  
+play w k16  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b s17  
+play w q17  
+play b r13  
+play w s18  
+play b s16  
+play w o15  
+play b r10  
+play w m16  
+play b l17  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b q17  
+play w q16  
+play b p17  
+play b r15  3x3 
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b q17  
+play w q16  
+play b p17  
+play w s17  ignore 
+play b r15  
+clear_board
+play b r16  
+play w p16  
+play b n17  
+play w r17  
+play b q17  
+play w q16  
+play b p17  
+play w o17  
+play b o16  
+play w o18  
+play b r18  
+play w s17  
+play b p18  
+play w r15  
+play b n18  
+play w o15  
+play b n16  
+clear_board
+play b r16  
+play w p16  
+play b r14  
+play w r17  
+play b q17  ignore 
+play w q16  
+play b r18  
+play w s17  
+play b q15  
+play w p15  
+play b s18  
+play w q13  
+play b r13  
+play w q12  
+clear_board
+play b r16  
+play w p16  
+play b r14  
+play w r17  
+play b s17  
+play w q17  
+play b s18  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b r14  ignore 
+play w p14  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b p15  
+play w o15  
+play b p14  
+play w r17  
+play b r14  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b p15  
+play w o15  
+play b p14  
+play w q16  
+play b q15  
+play w r17  
+play b r15  
+play w o17  
+play b s17  
+play w r18  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b p15  
+play w o15  
+play b p14  
+play w q16  
+play b q15  
+play w r17  
+play b s17  ignore 
+play w r15  
+play b s16  
+play w r14  
+play b o16  
+play w o17  
+play b n16  
+play w r18  
+play b s18  
+play w p18  
+play b r19  
+play w q17  
+play b q19  
+play w m18  
+play b q18  
+play w p17  
+play b l18  
+play w n18  
+play b m17  
+play w s19  
+play b t19  
+play w l19  
+play b k18  
+play w o19  
+play b m19  
+play w s15  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b p15  
+play w o15  
+play b p14  
+play w q16  
+play b q15  
+play w r17  
+play b s17  ignore 
+play w r15  
+play b s16  
+play w n16  
+play b r14  
+play w m17  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b p15  
+play w o15  
+play b p14  
+play w q16  
+play b q15  
+play w r17  
+play b s17  ignore 
+play w r15  
+play b s16  
+play w n16  
+play b m15  
+play w r14  
+play b q17  
+play w p17  
+play b r18  
+play w n13  
+play b p18  
+play w o14  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b p15  
+play w o15  
+play b p14  
+play w q16  
+play b r14  
+play w r17  
+play b s16  
+play w o17  
+play b s17  
+play w r18  
+play b n16  
+play w o16  
+play b n18  
+play w o14  
+play b p13  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b p15  
+play w o15  
+play b p14  
+play w q16  
+play b r14  
+play w r17  
+play b s16  
+play w o17  
+play b s17  
+play w r18  
+play b q10  
+clear_board
+play b r16  
+play w p16  
+play b m16  
+play w q13  
+play b p15  
+play w o15  
+play b p14  
+play w q16  
+play b r14  
+play w r17  
+play b r15  
+play w o14  
+play b p13  
+play w q18  
+play b q10  
+clear_board
+play b r16  
+play w p16  
+play b p15  
+play w o15  
+play b q15  
+play w o14  
+play b o16  
+play w n16  
+play b o17  
+play w n17  
+play b p18  
+play w o18  
+play b p17  
+clear_board
+play b r16  
+play w p16  
+play b p15  
+play w o15  
+play b q15  
+play w n16  
+play b p17  
+play w o17  
+play b p18  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b q17  ignore 
+play w q16  
+play b p17  
+play w r15  
+play b s16  
+play w r18  
+play b o16  
+play w o15  
+play b n16  
+play w s14  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b q17  ignore 
+play w q16  
+play b p17  
+play w r15  
+play b s16  
+play w o16  
+play b r18  
+play w q15  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b s17  
+play w q17  
+play b s18  
+play w m17  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b s17  
+play w q17  
+play b m16  
+play w r15  
+play b q15  
+play w s16  
+play b q16  
+play w s18  
+play b p17  
+play w p18  
+play b o17  
+play w o18  
+play b n17  
+play w s15  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b s17  
+play w q17  
+play b m16  
+play w r15  
+play b s15  
+play w q16  
+play b s16  
+play w r14  
+play b q15  
+play w r13  
+play b q13  
+play w r12  
+play b q12  ignore 
+play w r11  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b s17  
+play w q17  
+play b m16  
+play w r15  
+play b s15  
+play w q16  
+play b s16  
+play w r14  
+play b q15  
+play w r13  
+play b q13  
+play w r12  
+play b q12  ignore 
+play w s18  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b s17  
+play w q17  
+play b m16  
+play w r15  
+play b s15  
+play w q16  
+play b s16  
+play w r14  
+play b q15  
+play w r13  
+play b q13  
+play w r12  
+play b r18  
+play w q18  
+play b s18  ignore 
+play w n15  
+play b o13  
+play w m15  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b s17  
+play w q17  
+play b m16  
+play w r15  
+play b s15  
+play w q16  
+play b s16  
+play w r14  
+play b q15  
+play w r13  
+play b q13  
+play w r12  
+play b r18  
+play w q18  
+play b r19  
+play w n15  
+play b o13  
+play w m15  
+clear_board
+play b r16  
+play w p16  
+play b q14  
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w m17  
+clear_board
+play b r16  
+play w p16  
+play w r15  
+clear_board
+play b r16  
+play w p16  
+play w q14  
+clear_board
+play b r16  
+play w p16  
+play w r17  
+clear_board
+play b r16  
+play w p16  
+play b m17  ignore 
+play w p14  
+play b r14  
+play w p12  
+play b r12  
+play w j17  
+clear_board
+play b r16  
+play w p16  
+play b q15  ignore 
+play w r17  
+play b q17  
+play w q16  
+play b s17  ignore 
+play w r18  
+play b p15  
+play w p17  
+play b s15  
+play w o15  
+play b o14  
+play w n15  
+clear_board
+play b r16  
+play w p16  
+play b q15  ignore 
+play w r17  
+play b q17  
+play w q16  
+play b s17  ignore 
+play w r15  
+play b s16  
+play w q14  
+clear_board
+play b r16  
+play w p16  
+play b q15  ignore 
+play w r17  
+play b q17  
+play w q16  
+play b r18  
+play w r15  
+play b s17  
+play w s16  
+play b r17  
+play w q14  
+clear_board
+play b r16  
+play w p16  
+play b q15  ignore 
+play w r17  
+play b s17  
+play w q17  
+play b s16  
+play w m17  3x3 
+clear_board
+play b r16  
+play w p16  
+play b q15  ignore 
+play w r17  
+play b s17  
+play w q17  
+play w m17  3x3 
+clear_board
+play b r16  
+play w p16  
+play b q15  ignore 
+play w r17  
+play b s17  
+play w q17  
+play b s18  
+play w m17  3x3 
+clear_board
+play b r16  
+play w p16  
+play b q15  ignore 
+play w r17  
+play b s17  
+play w q17  
+play b m16  ignore 
+play w s18  
+clear_board
+play b r16  
+play w p16  
+play b q15  ignore 
+play w r17  
+play b s17  
+play w q17  
+play b s15  
+play w m17  3x3 
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w q16  ignore 
+play b q17  
+play w r15  
+play b r17  
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w n16  ignore 
+play b r14  
+play w j17  3x3 
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b q14  ignore 
+play w k17  3x3 
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b k16  ignore 
+play w r15  
+play b s15  
+play w q16  
+play b s17  
+play w r14  
+play b s14  
+play w r13  
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b l16  ignore 
+play w r15  
+play b s15  
+play w q16  
+play b s17  
+play w r14  
+play b s14  
+play w r13  
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b k17  ignore 
+play w r15  
+play b s15  
+play w q16  
+play b s17  
+play w r14  
+play b s14  
+play w r13  
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play w f17  setup
+play b r14  
+play w k16  
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play w g17  setup
+play b r14  
+play w k16  
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play w f16  setup
+play b r14  
+play w k17  
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b q15  ignore 
+play w k17  3x3 
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b r13  ignore 
+play w k17  3x3 
+clear_board
+play b r16  
+play w p16  
+play b p17  
+play w o17  
+play b q17  
+play w o16  
+play b r14  
+play w k17  3x3 
+clear_board
+play b r16  
+play b p17  
+play w r10  
+clear_board
+play b r16  
+play b p17  
+play w r11  
+clear_board
+play b r16  
+play b p17  
+play w s16  ignore 
+play b r15  
+play w r17  
+play b q17  
+play w r18  
+play b s15  
+play w t17  
+play b s18  ignore 
+play w s19  
+play b t18  
+play w q18  
+clear_board
+play b r16  
+play b p17  
+play w s16  ignore 
+play b s15  
+play w s17  ignore 
+play b r15  
+play w q18  
+play b p18  
+play w q17  
+play b p16  
+play w r17  
+play b s19  
+clear_board
+play b r16  
+play b p17  
+play w s16  ignore 
+play b s15  
+play w r15  
+play b s14  
+play w q16  
+play b r17  
+play w q17  
+play b q15  
+play w r18  
+play b s17  
+play w s18  
+play b t16  
+play w p16  
+clear_board
+play b r16  
+play b p17  
+play w s16  ignore 
+play b s15  
+play w r15  
+play b s14  
+play w q16  
+play b r17  
+play w q17  
+play b r18  
+play w q18  
+clear_board
+play b r16  
+play b p17  
+play w s16  ignore 
+play b s15  
+play w r15  
+play b s17  
+play w q16  
+play b r17  
+play w s14  
+play b t16  
+clear_board
+play b r16  
+play b p17  
+play w s16  ignore 
+play b s17  
+play w r15  
+play b q16  
+clear_board
+play b r16  
+play b p17  
+play w r15  ignore 
+play b q15  
+play w r14  3x3 
+play b s16  
+clear_board
+play b r16  
+play b p17  
+play w r15  ignore 
+play b q16  
+play w s16  
+play b s17  
+clear_board
+play b r16  
+play b p17  
+play w r15  ignore 
+play b s15  
+play w s16  
+clear_board
+play b r16  
+play b p17  
+play w r15  ignore 
+play b s15  
+play w s14  
+play b s16  
+clear_board
+play b r16  
+play b p17  
+play w r15  ignore 
+play b s16  
+clear_board
+play b r16  
+play b p17  
+play b r10  3x3 
+clear_board
+play b r16  
+play b p16  
+play w r10  
+clear_board
+play b r16  
+play b p16  
+play w r11  
+clear_board
+play b r16  
+play b p16  
+play b r10  3x3 
+clear_board
+play b r16  
+play b o17  3x3 
+play b r10  3x3 
+clear_board
+play b r16  
+play b o17  3x3 
+play w r10  
+clear_board
+play b r16  
+play b o17  3x3 
+play w r11  
+clear_board
+play b r16  
+play b o17  3x3 
+play w r17  ignore 
+play b q16  
+clear_board
+play b r16  
+play w l17  ignore 
+play b p17  
+clear_board
+play b r16  
+play w p17  
+play w q15  
+clear_board
+play b r16  
+play w p17  
+play b q15  
+play w n16  
+play b r10  
+clear_board
+play b r16  
+play w p17  
+play b q15  
+play w n16  
+play b l17  3x3 
+play w p15  ignore 
+play b p14  
+clear_board
+play b r16  
+play w p17  
+play b q15  
+play w l17  
+play b n17  
+clear_board
+play b r16  
+play w p17  
+play b q15  
+play w m17  
+play b q17  
+play w p16  
+play b q13  
+clear_board
+play b r16  
+play w p17  
+play b q14  
+play w r12  
+play b l17  
+clear_board
+play b r16  
+play w p17  
+play b q14  
+play w r12  
+play b n17  
+clear_board
+play b r16  
+play w p17  
+play b q14  
+play w m17  
+play b q17  
+play w p16  
+play b q12  
+clear_board
+play b r16  
+play w p17  
+play b q14  
+play w r17  
+play b s17  
+play w q16  
+play b r15  
+play w r18  
+clear_board
+play b r16  
+play w p17  
+play b r13  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b r13  
+play w k16  
+play b n15  
+play w p13  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b r13  
+play w k17  
+play b q17  
+play w q18  
+play b r18  
+play w q16  
+play b r17  
+play w p13  
+play b m15  
+play w m13  
+play b k15  
+play w h17  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b r13  
+play w q14  
+play b r14  
+play w r17  
+play b s17  
+play w q16  
+play b r15  
+play w r18  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b q17  
+play w q18  
+play b r18  
+play w q16  
+play b r17  
+play w n16  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m15  ignore 
+play w m17  
+play b o15  
+play w n14  
+play b o16  
+play w o14  
+play b p16  
+play w n18  
+play b q16  ignore 
+play w l15  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m15  ignore 
+play w m17  
+play b o15  
+play w n14  
+play b o16  
+play w o14  
+play b p16  
+play w n18  
+play b q17  
+play w l15  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m15  ignore 
+play w m17  
+play b m18  
+play w n18  
+play b o18  
+play w o17  
+play b o16  ignore 
+play w p16  
+play b n19  
+play w o15  
+play b n18  
+play w k17  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m15  ignore 
+play w m17  
+play b m18  
+play w n18  
+play b o18  
+play w o17  
+play b n19  
+play w o16  
+play b n18  
+play w k17  3x3 
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m15  ignore 
+play w p14  
+play b q13  
+play w m17  
+play b o15  ignore 
+play w n14  
+play b p16  
+play w q16  
+play b o16  
+play w o14  
+play b q15  
+play w q17  
+play b n18  
+play w m18  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m15  ignore 
+play w p14  
+play b q13  
+play w m17  
+play b o15  ignore 
+play w n14  
+play b o16  
+play w p16  
+play b o14  
+play w o13  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m15  ignore 
+play w p14  
+play b q13  
+play w m17  
+play b m18  
+play w n18  
+play b o18  
+play w o17  
+play b n19  
+play w o16  
+play b n18  
+play w k17  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m17  
+play w l16  
+play b l17  
+play w k16  
+play b j17  
+play w o16  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m17  
+play w l16  
+play b l17  
+play w k16  
+play b j17  
+play w h15  
+play b h17  
+play b o15  ignore 
+play w o14  
+play b o16  
+play w p14  
+play b p16  
+play w q15  
+play b r15  
+play w q16  
+play b q17  
+play w r17  
+play b q18  
+play w s17  
+play b p18  
+play w r14  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w m16  
+play b n16  
+play w n15  
+play b m17  
+play w l16  
+play b l17  
+play w k16  
+play b j17  
+play w h15  
+play b h17  
+play b o16  ignore 
+play w o15  
+play b p16  
+play w q15  
+play b q16  
+play w r15  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w q12  
+play b p13  ignore 
+play w n16  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w q12  
+play b p14  
+play w n16  
+play b q17  
+play w o17  
+play b n14  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w q12  
+play b p14  
+play w n16  
+play b m16  ignore 
+play w n15  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w p15  
+play b q14  
+play w q12  
+play b p14  
+play w n16  
+play b m17  
+play w o14  
+play b p12  
+play w q15  
+play b r15  
+play w p13  
+play b o13  
+play w q13  
+play b r14  
+play w n14  
+play b q11  
+play w o12  
+play b p11  
+play w n13  
+play b r12  
+play w j17  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w q15  
+play b q16  
+play w p16  
+play b p15  
+play w o15  
+play b p14  
+play w n16  
+play b q14  
+play w m17  
+play b o14  
+play w n14  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w q15  
+play b q16  
+play w p16  
+play b p15  
+play w o15  
+play b p14  
+play w n16  
+play b m16  
+play w m15  
+clear_board
+play b r16  
+play w p17  
+play b n17  
+play w q15  
+play b r15  
+play w q14  
+play b r13  
+clear_board
+play b r16  
+play w p17  
+play b m17  
+play w q15  
+play b r15  
+play w q14  
+play b r13  
+play w k17  
+play b m15  
+clear_board
+play b r16  
+play w p17  
+play b m17  
+play w p14  
+play b p15  
+play w o15  
+play b q15  
+play w n17  
+play b o14  
+play w n15  
+play b p13  
+play w m16  
+clear_board
+play b r16  
+play w p17  
+play b m17  
+play w p14  
+play b r13  
+play w k17  
+play b m15  
+play w q16  
+play b r15  
+play w r17  
+play b s17  
+play w r18  
+clear_board
+play b r16  
+play w p17  
+play b m17  
+play w p14  
+play b r13  
+play w k17  
+play b m15  
+play w q16  
+play b r17  
+play w r15  
+play b s15  
+play w s14  
+play b r14  
+play w q15  
+play b s16  
+play w p12  
+clear_board
+play b r16  
+play w p17  
+play b q17  ignore 
+play w p16  
+play b q15  
+play w l17  
+clear_board
+play b r16  
+play w p17  
+play b q17  ignore 
+play w p16  
+play b r14  
+play w l17  
+clear_board
+play b r16  
+play w p17  
+play b q17  ignore 
+play w p16  
+play b pass  
+play w l17  
+clear_board
+play b r16  
+play w p17  
+play b q17  ignore 
+play w p16  
+play w r15  
+play b s15  
+play w r14  
+play b s14  
+play w r13  
+clear_board
+play b r16  
+play w p17  
+play b q17  ignore 
+play w p16  
+play b q14  
+play w l17  
+clear_board
+play b r16  
+play w p17  
+play b p15  ignore 
+play w r17  
+play b s17  ignore 
+play w q16  
+play b q15  
+play w s16  
+play b r15  
+play w s18  
+clear_board
+play b r16  
+play w p17  
+play b p15  ignore 
+play w r17  
+play b q16  
+play w q17  
+play b n15  
+play w m17  
+clear_board
+play b r16  
+play w p17  
+play w q14  
+play b r15  
+play w r14  
+play b p16  
+play w o16  
+play b p15  
+clear_board
+play b r16  
+play w p17  
+play w q14  
+play b r15  
+play w p15  
+play b r13  
+echo joseki_54.sgf
+boardsize 19
+clear_board
+play b p16  ignore 
+play b r16  
+play b r10  
+clear_board
+play b p16  ignore 
+play b r16  
+play w r10  
+clear_board
+play b p16  ignore 
+play w r16  
+play b r17  
+play w s17  
+play b q17  
+play w r14  
+play b s18  
+play w r11  
+clear_board
+play b p16  ignore 
+play w r16  
+play b r17  
+play w s17  
+play b q17  
+play w q14  
+play b s18  
+play w r10  
+clear_board
+play b p16  ignore 
+play w r16  
+play b r17  
+play w s17  
+play b q17  
+play w s15  
+play b l17  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b r13  
+play w q15  ignore 
+play b p15  
+play w q13  
+play b p14  
+play w s13  
+play b r12  
+play w s12  
+play b r17  
+play w s17  
+play b s15  
+play w r15  
+play b s16  
+play w s14  
+play b s18  
+play w q17  
+play b r18  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b r13  
+play w q15  ignore 
+play b p15  
+play w q13  
+play b p14  
+play w r12  
+play b s13  
+play w q11  
+play b r17  
+play w s14  
+play b p13  
+play w q12  
+play b s16  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b r13  
+play w q15  ignore 
+play b p15  
+play w s13  
+play b q13  
+play w s12  
+play b r17  
+play w s17  
+play b s15  
+play w r15  
+play b s16  
+play w s14  
+play b s18  
+play w q17  
+play b r18  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b r13  
+play w q13  
+play b r15  
+play w s14  
+play b q15  
+play w s15  
+play b r12  
+play w p17  
+play b o17  
+play w q17  
+play b n16  
+play w p13  
+play b q10  
+play w n13  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b r13  
+play w q13  
+play b r15  
+play w s14  
+play b q15  
+play w s15  
+play b r12  
+play w q16  
+play b p15  
+play w p13  
+play b p18  
+play w r18  
+play b q10  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b r13  
+play w q13  
+play b p14  
+play w r12  
+play b r15  
+play w s13  
+play b s14  
+play w q16  
+play b p17  
+play w q15  
+play b r13  
+play w p15  
+play b o15  
+play w r14  
+play b s15  
+play w s16  
+play b r13  
+play w o16  
+play b r14  
+play w o17  
+play b q18  
+play w o18  
+play b s18  
+play w r18  
+play b r17  
+play w q17  
+play b p18  
+play w s17  
+play b r19  
+play w p19  
+play b r17  
+play w n15  
+play b o14  
+play w r18  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b r13  
+play w q13  
+play b p14  
+play w q15  
+play b s14  
+play w r15  
+play b p15  
+play w s13  
+play b r12  
+play w s12  
+play b r11  
+play w q17  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b q13  
+play w p17  
+play b q17  
+play w q16  
+play b r17  
+play w s17  
+play b s18  
+play w s16  
+play b p18  
+play w o17  
+play b o18  
+play w n17  
+play b p15  
+play w t18  
+play b r18  
+play w m16  
+play b n18  
+play w m18  
+play b l17  
+play w m17  
+play b n19  
+play w r13  
+play b r12  
+play w s12  
+play b s11  
+play w s19  
+play b q19  
+play w r11  
+play b q12  
+play w s10  
+play b s13  
+play w t11  
+play b r15  
+play w s14  
+play b s15  
+play w t13  
+play b t15  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w r14  
+play b q13  
+play w p17  
+play b o17  
+play w q17  
+play b n16  
+play w r13  
+play b q12  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q14  
+play w p17  
+play b o17  
+play w q17  
+play b o16  
+play w pass  
+play w s14  
+clear_board
+play b p16  ignore 
+play w r16  
+play b p14  ignore 
+play w p17  
+clear_board
+play b p16  ignore 
+play w r16  
+play b q15  ignore 
+play w r15  
+play b r14  
+play w s14  
+play b r13  
+play w s13  
+play b r12  
+play w p17  
+play b o17  
+play w q17  
+play b o16  
+clear_board
+play b p16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b q15  
+play w r14  
+play b s14  
+play w s13  
+play b s16  
+play w t14  
+play b r17  
+clear_board
+play b p16  ignore 
+play w r16  
+play b r15  
+play w s15  
+play b q15  
+play w r14  
+play b s16  
+play w s17  
+play b s14  
+play w t16  
+play b r13  
+echo joseki_33.sgf
+boardsize 19
+clear_board
+play b r17  ignore 
+play w o16  
+play b q14  
+play w k17  
+play b r10  
+clear_board
+play b r17  ignore 
+play w p17  
+play b r14  
+play w m17  
+clear_board
+play b r17  ignore 
+play w p17  
+play b q15  
+play w m17  
+play b r11  
+play w p15  
+clear_board
+play b r17  ignore 
+play w p17  
+play b q15  
+play w n16  
+play b r11  
+play w j17  
+clear_board
+play b r17  ignore 
+play w q16  
+play b r16  
+play w q15  
+play b p18  
+play w r15  
+play b q11  
+play w n16  
+clear_board
+play b r17  ignore 
+play w q16  
+play b r16  
+play w q15  
+play b p18  
+play w r15  
+play b o16  
+play w r11  
+clear_board
+play b r17  ignore 
+play w q16  
+play b r16  
+play w q15  
+play b p18  
+play w n16  
+play b s14  
+play w q12  
