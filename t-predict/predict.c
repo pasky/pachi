@@ -173,7 +173,7 @@ static void
 print_topn_stats(strbuf_t *buf, int *guessed_top, int total)
 {
 	#define PREDICT_SCALE  3/4
-	sbprintf(buf, "Topn stats: (Games: %i)\n", played_games);
+	sbprintf(buf, "Topn stats: (Games: %i)\n", gtp_played_games());
 	int pc = round(guessed_top[0] * 100 / total);
 	sbprintf(buf, "Predicted   : %5i/%-5i moves (%2i%%)  %.*s\n",
 		guessed_top[0], total, pc, pc * PREDICT_SCALE, stars);

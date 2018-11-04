@@ -26,7 +26,9 @@
 /* Sleep 5 seconds after a game ends to give time to kill the program. */
 #define GAME_OVER_SLEEP 5
 
-int played_games = 0;
+static int played_games = 0;
+int  gtp_played_games()        {  return played_games;  }
+void gtp_played_games_reset()  {  played_games = 0;  }
 
 typedef enum parse_code
 (*gtp_func_t)(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
@@ -299,7 +301,7 @@ cmd_play(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 	m.color = str2stone(arg);
 	next_tok(arg);
 	m.coord = str2coord(arg, board_size(board));
-	next_tok(arg);
+	arg = gtp->next;
 	char *enginearg = arg;
 	char *reply = NULL;
 
@@ -322,6 +324,7 @@ cmd_play(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 			engine_board_print(engine, board, stderr);
 		gtp_reply(gtp, reply, NULL);
 	}
+	
 	return P_OK;
 }
 
@@ -765,9 +768,8 @@ static gtp_command_t commands[] =
 	{ "gogui-score_est",        cmd_gogui_score_est },
 	{ "gogui-best_moves",       cmd_gogui_best_moves },
 	{ "gogui-winrates",         cmd_gogui_winrates },
-#ifdef JOSEKI
 	{ "gogui-joseki_moves",     cmd_gogui_joseki_moves },
-#endif
+	{ "gogui-joseki_show_pattern", cmd_gogui_joseki_show_pattern },
 #ifdef DCNN
 	{ "gogui-dcnn_best",        cmd_gogui_dcnn_best },
 	{ "gogui-dcnn_colors",      cmd_gogui_dcnn_colors },
@@ -792,10 +794,16 @@ static gtp_command_t commands[] =
 enum parse_code
 gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char *buf)
 {
+	return gtp_parse_full(board, engine, ti, buf, -1);
+}
+
+enum parse_code
+gtp_parse_full(struct board *board, struct engine *engine, struct time_info *ti, char *buf, int id)
+{
 	if (strchr(buf, '#'))
 		*strchr(buf, '#') = 0;
 
-	gtp_t gtp_struct = { .next = buf, .id = -1 };
+	gtp_t gtp_struct = { .next = buf, .id = id };
 	gtp_t *gtp = &gtp_struct;
 	next_tok(gtp->cmd);
 	
