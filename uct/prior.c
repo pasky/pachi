@@ -7,7 +7,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "engines/josekibase.h"
+#include "joseki.h"
 #include "move.h"
 #include "random.h"
 #include "engine.h"
@@ -19,25 +19,10 @@
 #include "uct/tree.h"
 #include "dcnn.h"
 
-/* Applying heuristic values to the tree nodes, skewing the reading in
- * most interesting directions. */
-
-/* TODO: Introduce foreach_fpoint() to iterate only over non-occupied
- * positions. */
-
-struct uct_prior {
-	/* Equivalent experience for prior knowledge. MoGo paper recommends
-	 * 50 playouts per source; in practice, esp. with RAVE, about 6
-	 * playouts per source seems best. */
-	int eqex;
-	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex, joseki_eqex, pattern_eqex;
-	int dcnn_eqex;
-	int cfgdn; int *cfgd_eqex;
-	bool prune_ladders;
-};
+#define PRIOR_BEST_N 20
 
 static void
-find_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest)
+find_node_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++)
 		best_c[i] = pass;
@@ -50,18 +35,16 @@ find_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, 
 		best_moves_add(node_coord(n), (float)n->prior.playouts / max, best_c, best_r, nbest);
 }
 
-#define PRIOR_BEST_N 20
-
-/* Display node's priors best moves */
+/* Display node's priors best moves. */
 void
-print_prior_best_moves(struct board *b, struct tree_node *parent)
+print_node_prior_best_moves(struct board *b, struct tree_node *parent)
 {
 	float best_r[PRIOR_BEST_N] = { 0.0, };
 	coord_t best_c[PRIOR_BEST_N];
 	int nbest = PRIOR_BEST_N;
-	find_prior_best_moves(parent, best_c, best_r, nbest);
+	find_node_prior_best_moves(parent, best_c, best_r, nbest);
 
-	int cols = fprintf(stderr, "prior = [ ");
+	int cols = fprintf(stderr, "prior =    [ ");
 	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
 	fprintf(stderr, "]\n");
@@ -72,7 +55,43 @@ print_prior_best_moves(struct board *b, struct tree_node *parent)
 	fprintf(stderr, "]\n");	
 }
 
-void
+static void
+find_prior_best_moves(struct prior_map *map, coord_t *best_c, float *best_r, int nbest)
+{
+	for (int i = 0; i < nbest; i++)
+		best_c[i] = pass;
+	
+	float max = 0.0;
+	foreach_free_point(map->b) {
+		max = MAX(max, map->prior[c].playouts);
+	} foreach_free_point_end;
+
+	foreach_free_point(map->b) {
+		best_moves_add(c, (float)map->prior[c].playouts / max, best_c, best_r, nbest);
+	} foreach_free_point_end;
+}
+
+/* Display priors best moves. */
+static void
+print_prior_best_moves(struct board *b, struct prior_map *map)
+{
+	float best_r[PRIOR_BEST_N] = { 0.0, };
+	coord_t best_c[PRIOR_BEST_N];
+	int nbest = PRIOR_BEST_N;
+	find_prior_best_moves(map, best_c, best_r, nbest);
+
+	int cols = fprintf(stderr, "prior =    [ ");
+	for (int i = 0; i < nbest; i++)
+		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
+	fprintf(stderr, "]\n");
+
+	fprintf(stderr, "%*s[ ", cols-2, "");
+	for (int i = 0; i < nbest; i++)
+		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
+	fprintf(stderr, "]\n");	
+}
+
+static void
 uct_prior_even(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{even} */
@@ -86,7 +105,7 @@ uct_prior_even(struct uct *u, struct tree_node *node, struct prior_map *map)
 	} foreach_free_point_end;
 }
 
-void
+static void
 uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Discourage playing into our own eyes. However, we cannot
@@ -132,7 +151,7 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 #endif
 }
 
-void
+static void
 uct_prior_ko(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Favor fighting ko, if we took it le 10 moves ago. */
@@ -143,7 +162,7 @@ uct_prior_ko(struct uct *u, struct tree_node *node, struct prior_map *map)
 	add_prior_value(map, ko, 1, u->prior->ko_eqex);
 }
 
-void
+static void
 uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{b19} */
@@ -164,7 +183,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 	} foreach_free_point_end;
 }
 
-void
+static void
 uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{playout-policy} */
@@ -172,7 +191,7 @@ uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
 		u->playout->assess(u->playout, map, u->prior->policy_eqex);
 }
 
-void
+static void
 uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{common_fate_graph_distance} */
@@ -192,27 +211,31 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 	} foreach_free_point_end;
 }
 
-void
+static int
 uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
-#ifdef JOSEKI
 	/* Q_{joseki} */
-	if (!u->jdict)  return;
+	int matches = 0;
 
-	for (int i = 0; i < 4; i++) {
-		hash_t h = map->b->qhash[i] & joseki_hash_mask;
-		coord_t *cc = u->jdict->patterns[h].moves[map->to_play - 1];
-		if (!cc) continue;
-		for (; !is_pass(*cc); cc++) {
-			if (coord_quadrant(*cc, map->b) != i)
-				continue;
-			add_prior_value(map, *cc, 1.0, u->prior->joseki_eqex);
-		}
+	struct board *b = map->b;
+	enum stone color = map->to_play;
+	coord_t coords[BOARD_MAX_COORDS];
+	float ratings[BOARD_MAX_COORDS];
+	matches = joseki_list_moves(joseki_dict, b, color, coords, ratings);
+	
+	for (int i = 0; i < matches; i++)
+		add_prior_value(map, coords[i], 1.0, ratings[i] * u->prior->joseki_eqex);
+
+	if (DEBUGL(2) && !node->parent && matches) {
+		float best_r[20] = { 0.0, };
+		coord_t best_c[20];
+		find_joseki_best_moves(b, coords, ratings, matches, best_c, best_r, 20);
+		print_joseki_best_moves(b, best_c, best_r, 20);
 	}
-#endif
+	return matches;
 }
 
-void
+static void
 uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{pattern} */
@@ -251,6 +274,7 @@ void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	struct board *b = map->b;
+	int joseki_matches = 0;
 	
 	if (u->prior->prune_ladders && !board_playing_ko_threat(b)) {
 		foreach_free_point(b) {
@@ -276,7 +300,7 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 	
 	/* Use dcnn for root priors */
 	if (u->prior->dcnn_eqex && !node->parent)	uct_prior_dcnn(u, node, map);
-		
+
 	if (u->prior->pattern_eqex)			uct_prior_pattern(u, node, map);
 	else {  /* Fallback to old prior features if patterns are off. */
 		if (u->prior->eye_eqex)			uct_prior_eye(u, node, map);
@@ -286,11 +310,15 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		if (u->prior->cfgd_eqex)		uct_prior_cfgd(u, node, map);
 	}
 
-	if (u->prior->joseki_eqex)			uct_prior_joseki(u, node, map);
+	if (u->prior->joseki_eqex)			joseki_matches = uct_prior_joseki(u, node, map);
 
 #ifdef PACHI_PLUGINS
 	if (u->prior->plugin_eqex)			plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
 #endif
+
+	/* Show final prior mix in case there are joseki matches. */
+	if (DEBUGL(3) && !node->parent && joseki_matches)
+		print_prior_best_moves(map->b, map);
 }
 
 struct uct_prior *
@@ -302,12 +330,15 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	/* FIXME: Optimal pattern_eqex is about -1000 with small playout counts
 	 * but only -400 on a cluster. We need a better way to set the default
 	 * here. */
-	p->pattern_eqex = -800;
+	p->pattern_eqex    = -800;
+
+	/* Override patterns for nearby joseki moves. */
+	p->joseki_eqex     = -1600;
+
 	/* Best value for dcnn_eqex so far seems to be 1300 with ~88% winrate
 	 * against regular pachi. Below 1200 is bad (50% winrate and worse), more
 	 * gives diminishing returns (1500 -> 78%, 2000 -> 70% ...) */
-	p->dcnn_eqex    = 1300;
-	p->joseki_eqex = -200;
+	p->dcnn_eqex       = 1300;
 	p->cfgdn = -1;
 
 	/* Even number! */
@@ -391,8 +422,9 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 	if (p->plugin_eqex < 0) p->plugin_eqex = p->eqex * -p->plugin_eqex / 100;
 	if (p->dcnn_eqex < 0) p->dcnn_eqex = p->eqex * -p->dcnn_eqex / 100;
 
-	if (!using_dcnn(b))	p->dcnn_eqex = 0;
-	if (!using_patterns())	p->pattern_eqex = 0;
+	if (!using_joseki(b))   p->joseki_eqex = 0;
+	if (!using_dcnn(b))     p->dcnn_eqex = 0;
+	if (!using_patterns())  p->pattern_eqex = 0;
 	
 	if (p->cfgdn < 0) {
 		static int large_bonuses[] = { 0, 55, 50, 15 };

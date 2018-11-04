@@ -10,6 +10,5 @@ struct board;
 struct time_info;
 bool uct_gentbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color);
 void uct_dumptbook(struct engine *e, struct board *b, enum stone color);
-struct joseki_dict* uct_get_jdict(struct engine *e);
 
 #endif

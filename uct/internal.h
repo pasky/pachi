@@ -19,7 +19,6 @@ struct uct_policy;
 struct uct_prior;
 struct uct_dynkomi;
 struct uct_pluginset;
-struct joseki_dict;
 
 /* Internal engine state. */
 struct uct {
@@ -108,7 +107,6 @@ struct uct {
 	struct playout_policy *playout;
 	struct uct_prior *prior;
 	struct uct_pluginset *plugins;
-	struct joseki_dict *jdict;
 	struct pattern_config pc;
 
 	/* Used within frame of single genmove. */
@@ -176,5 +174,6 @@ struct uct_policy {
 	bool wants_amaf;
 	void *data;
 };
+
 
 #endif

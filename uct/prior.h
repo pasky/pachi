@@ -9,6 +9,20 @@ struct tree_node;
 struct uct;
 struct board;
 
+/* Applying heuristic values to the tree nodes, skewing the reading in
+ * most interesting directions. */
+
+struct uct_prior {
+	/* Equivalent experience for prior knowledge. MoGo paper recommends
+	 * 50 playouts per source; in practice, esp. with RAVE, about 6
+	 * playouts per source seems best. */
+	int eqex;
+	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex;
+	int joseki_eqex, joseki_eqex_far, pattern_eqex, dcnn_eqex;
+	int cfgdn; int *cfgd_eqex;
+	bool prune_ladders;
+};
+
 struct prior_map {
 	struct board *b;
 	enum stone to_play;
@@ -29,7 +43,6 @@ static void add_prior_value(struct prior_map *map, coord_t c, floating_t value, 
 
 void uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map);
 
-struct uct_prior;
 struct uct_prior *uct_prior_init(char *arg, struct board *b, struct uct *u);
 void uct_prior_done(struct uct_prior *p);
 
@@ -44,6 +57,6 @@ add_prior_value(struct prior_map *map, coord_t c, floating_t value, int playouts
 }
 
 /* Display node's priors best moves */
-void print_prior_best_moves(struct board *b, struct tree_node *parent);
+void print_node_prior_best_moves(struct board *b, struct tree_node *parent);
 
 #endif

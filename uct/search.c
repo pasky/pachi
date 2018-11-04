@@ -15,6 +15,7 @@
 #include "pachi.h"
 #include "distributed/distributed.h"
 #include "move.h"
+#include "joseki.h"
 #include "random.h"
 #include "timeinfo.h"
 #include "uct/dynkomi.h"
@@ -121,8 +122,10 @@ spawn_worker(void *ctx_)
 		
 		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
 			tree_expand_node(t, n, ctx->b, player_color, u, 1);
-		else    /* Show previously computed priors */
-			if (DEBUGL(2)) print_prior_best_moves(ctx->b, n);
+		else if (DEBUGL(2)) {  /* Show previously computed priors */
+			print_joseki_moves(joseki_dict, ctx->b, ctx->color);
+			print_node_prior_best_moves(ctx->b, n);
+		}
 	}
 	else while (tree_leaf_node(n))
 		     usleep(100 * 1000);
