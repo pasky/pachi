@@ -31,6 +31,12 @@ Strength:
         44% with LFR which should help tree search quite a bit.
         Implementation doesn't even need to be fast (incremental patterns)
         to be used in tree search. Try progressive widening.
+* Joseki
+        make joseki engine work with dcnn ? not very high prio since dcnn
+        is decent at joseki, but would be useful to patch holes (some
+        players use the same hamete over and over).
+        right now joseki is turned off when playing with dcnn. Joseki priors are
+        tuned against patterns priors, would need some tweaking.
 
 
 Base:

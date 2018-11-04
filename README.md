@@ -220,6 +220,19 @@ get patterns working. Patterns should load instantly now and take up
 very little memory.
 
 
+## Joseki engine
+
+When playing without dcnn Pachi uses a joseki engine to improve play during
+the opening. The "Joseki Moves" gogui analyze command can be used to display
+what moves Pachi would consider in a given position. Just keep in mind these
+are "Pachi joseki moves": moves Pachi might want to play at around 3k level.
+For a full joseki reference from a player's point of view see Kogo joseki
+dictionary for example.
+
+To run Pachi without joseki engine:
+   `pachi --nodcnn --nojoseki -t =5000`
+
+
 ## Opening book
 
 > Mostly useful when running without dcnn (dcnn can deal with fuseki).
