@@ -939,7 +939,7 @@ mcowner_playouts_(struct board *b, enum stone color, struct ownermap *ownermap, 
 	static struct playout_policy *policy = NULL;
 	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
 	
-	if (!policy)  policy = playout_moggy_init(NULL, b, NULL);
+	if (!policy)  policy = playout_moggy_init(NULL, b);
 	ownermap_init(ownermap);
 	
 	for (int i = 0; i < playouts; i++)  {

@@ -12,8 +12,8 @@
 
 static bool dcnn_enabled = true;
 static bool dcnn_required = false;
-void disable_dcnn()                    {  dcnn_enabled = false;  }
-void require_dcnn(struct board *b)     {  dcnn_required = true;  dcnn_init(b);  }
+void disable_dcnn()  {  dcnn_enabled = false;  }
+void require_dcnn()  {  dcnn_required = true;  }
 
 static bool
 dcnn_supported_board_size(struct board *b)

@@ -16,7 +16,7 @@
 #include "engines/random.h"
 #include "engines/patternscan.h"
 #include "engines/patternplay.h"
-#include "engines/joseki.h"
+#include "engines/josekiscan.h"
 #include "engines/dcnn.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
@@ -34,6 +34,7 @@
 #include "pattern.h"
 #include "patternsp.h"
 #include "patternprob.h"
+#include "joseki.h"
 
 char *pachi_exe = NULL;
 int debug_level = 3;
@@ -53,9 +54,6 @@ enum engine_id {
 #ifdef DISTRIBUTED
 	E_DISTRIBUTED,
 #endif
-#ifdef JOSEKI
-	E_JOSEKI,
-#endif
 #ifdef DCNN
 	E_DCNN,
 #endif
@@ -71,9 +69,6 @@ static engine_init_t engine_init[E_MAX] = {
 	engine_uct_init,
 #ifdef DISTRIBUTED
 	engine_distributed_init,
-#endif
-#ifdef JOSEKI
-	engine_joseki_init,
 #endif
 #ifdef DCNN
 	engine_dcnn_init,
@@ -121,8 +116,9 @@ usage()
 		"  -v, --version                     show version \n"
 		" \n"
 		"Engine components: \n"
-		"      --dcnn, --nodcnn              dcnn required / disabled \n"
+		"      --dcnn,     --nodcnn          dcnn required / disabled \n"
 		"      --patterns, --nopatterns      mm patterns required / disabled \n"
+		"      --joseki,   --nojoseki        joseki engine required / disabled \n"
 		" \n"
 		"TIME_SETTINGS: \n"
 		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
@@ -166,6 +162,8 @@ show_version(FILE *s)
 #define OPT_NOPASSFIRST   261
 #define OPT_PATTERNS      262
 #define OPT_NOPATTERNS    263
+#define OPT_JOSEKI        264
+#define OPT_NOJOSEKI      265
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "chatfile",    required_argument, 0, 'c' },
@@ -174,12 +172,14 @@ static struct option longopts[] = {
 	{ "dcnn",        no_argument,       0, OPT_DCNN },
 	{ "engine",      required_argument, 0, 'e' },
 	{ "fbook",       required_argument, 0, 'f' },
+	{ "joseki",      no_argument,       0, OPT_JOSEKI },
 	{ "gtp-port",    required_argument, 0, 'g' },
 	{ "help",        no_argument,       0, 'h' },
 	{ "kgs",         no_argument,       0, OPT_NOPASSFIRST },
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
 	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
+	{ "nojoseki",    no_argument,       0, OPT_NOJOSEKI },
 	{ "nopassfirst", no_argument,       0, OPT_NOPASSFIRST },
 	{ "nopatterns",  no_argument,       0, OPT_NOPATTERNS },
 	{ "patterns",    no_argument,       0, OPT_PATTERNS },
@@ -205,7 +205,6 @@ int main(int argc, char *argv[])
 	char *fbookfile = NULL;
 	FILE *file = NULL;
 	bool verbose_caffe = false;
-	bool dcnn_required = false;
 
 	setlinebuf(stdout);
 	setlinebuf(stderr);
@@ -237,9 +236,6 @@ int main(int argc, char *argv[])
 #endif
 				else if (!strcasecmp(optarg, "patternscan"))	engine = E_PATTERNSCAN;
 				else if (!strcasecmp(optarg, "patternplay"))	engine = E_PATTERNPLAY;
-#ifdef JOSEKI
-				else if (!strcasecmp(optarg, "joseki"))		engine = E_JOSEKI;
-#endif
 #ifdef DCNN
 				else if (!strcasecmp(optarg, "dcnn"))		engine = E_DCNN;
 #endif
@@ -252,7 +248,7 @@ int main(int argc, char *argv[])
 				debug_boardprint = false;
 				break;
 			case OPT_DCNN:
-				dcnn_required = true;
+				require_dcnn();
 				break;
 			case 'f':
 				fbookfile = strdup(optarg);
@@ -263,6 +259,9 @@ int main(int argc, char *argv[])
 			case 'h':
 				usage();
 				exit(0);
+			case OPT_JOSEKI:
+				require_joseki();
+				break;
 			case 'l':
 				log_port = strdup(optarg);
 				break;
@@ -274,6 +273,9 @@ int main(int argc, char *argv[])
 				break;
 			case OPT_NODCNN:
 				disable_dcnn();
+				break;
+			case OPT_NOJOSEKI:
+				disable_joseki();
 				break;
 			case OPT_NOPASSFIRST:
 				nopassfirst = true;
@@ -341,7 +343,6 @@ int main(int argc, char *argv[])
 
 	struct board *b = board_new(19 + 2, fbookfile);
 	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
-	if (dcnn_required)       require_dcnn(b);
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
@@ -392,6 +393,7 @@ int main(int argc, char *argv[])
 void
 pachi_done()
 {
+	joseki_done();
 	prob_dict_done();
 	spatial_dict_done();
 }

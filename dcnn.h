@@ -7,7 +7,7 @@
 #define DCNN_BEST_N 20
 
 /* Ensure / disable dcnn */
-void require_dcnn(struct board *b); 
+void require_dcnn(); 
 void disable_dcnn();
 
 void dcnn_get_moves(struct board *b, enum stone color, float result[]);
@@ -34,7 +34,7 @@ coord2dcnn_idx(coord_t c, struct board *b)
 
 
 #define disable_dcnn()
-#define require_dcnn(b)     die("dcnn required but not compiled in, aborting.\n")
+#define require_dcnn()     die("dcnn required but not compiled in, aborting.\n")
 #define using_dcnn(b)  0
 #define dcnn_init(b)
 
