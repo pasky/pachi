@@ -27,6 +27,7 @@ enum parse_code cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct 
 enum parse_code cmd_gogui_dcnn_rating(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_color_palette(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_joseki_show_pattern(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_pattern_best(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_pattern_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_pattern_rating(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);

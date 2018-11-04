@@ -13,7 +13,7 @@
 #include "chat.h"
 #include "move.h"
 #include "mq.h"
-#include "engines/josekibase.h"
+#include "joseki.h"
 #include "playout.h"
 #include "playout/moggy.h"
 #include "playout/light.h"
@@ -36,7 +36,6 @@ static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t,
 
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
-
 
 static void
 setup_state(struct uct *u, struct board *b, enum stone color)
@@ -238,13 +237,6 @@ uct_ownermap(struct engine *e, struct board *b)
 	return &u->ownermap;
 }
 
-struct joseki_dict*
-uct_get_jdict(struct engine *e)
-{
-	struct uct *u = e->data;
-	return u->jdict;
-}
-
 static char *
 uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
 {
@@ -410,7 +402,6 @@ uct_done(struct engine *e)
 	if (u->random_policy) u->random_policy->done(u->random_policy);
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
-	joseki_done(u->jdict);
 #ifdef PACHI_PLUGINS
 	pluginset_done(u->plugins);
 #endif
@@ -837,8 +828,6 @@ uct_state_init(char *arg, struct board *b)
 	u->plugins = pluginset_init(b);
 #endif
 
-	u->jdict = joseki_load(b->size);
-
 	if (arg) {
 		char *optspec, *next = arg;
 		while (*next) {
@@ -991,7 +980,7 @@ uct_state_init(char *arg, struct board *b)
 				if (playoutarg)
 					*playoutarg++ = 0;
 				if (!strcasecmp(optval, "moggy")) {
-					u->playout = playout_moggy_init(playoutarg, b, u->jdict);
+					u->playout = playout_moggy_init(playoutarg, b);
 				} else if (!strcasecmp(optval, "light")) {
 					u->playout = playout_light_init(playoutarg, b);
 				} else
@@ -1384,11 +1373,12 @@ uct_state_init(char *arg, struct board *b)
 		u->max_tree_size -= u->max_tree_size / 20;
 	}
 
-	if (!pat_setup)			patterns_init(&u->pc, NULL, false, true);
 	dcnn_init(b);
+	if (!using_dcnn(b))		joseki_load(b->size);
+	if (!pat_setup)			patterns_init(&u->pc, NULL, false, true);
 	log_nthreads(u);
 	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);
-	if (!u->playout)		u->playout = playout_moggy_init(NULL, b, u->jdict);
+	if (!u->playout)		u->playout = playout_moggy_init(NULL, b);
 	if (!u->playout->debug_level)	u->playout->debug_level = u->debug_level;
 
 	if (u->slave) {

@@ -26,9 +26,6 @@ echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
                       fifo=""
 [ "$FIFO" = 1 ]    && fifo="  ${cyan}[fifo]${end}"
 
-                    joseki=""
-[ -n "$JOSEKI" ] && joseki="  ${cyan}[joseki]${end}"
-
                               float=""
 [ "$DOUBLE_FLOATING" = 1 ] && float="  ${cyan}[double]${end}"
 
@@ -36,7 +33,7 @@ echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
 [ "$DISTRIBUTED" = 1 ] && distributed="  ${cyan}[distributed]${end}"
 
 
-status="$build$dcnn$opt$boardsize$fifo$joseki$float$distributed"
+status="$build$dcnn$opt$boardsize$fifo$float$distributed"
 
 raw=${status//?????m/}; raw=${raw//${end}/}
 n=`max $[45-${#raw}] 0`;  n1=$[$n/2];  n2=$[$n-$n1]

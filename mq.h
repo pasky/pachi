@@ -7,6 +7,7 @@
  * fact that coord_t == group_t). */
 
 #include <assert.h>
+#include "fixp.h"
 #include "move.h"
 #include "random.h"
 

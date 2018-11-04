@@ -503,7 +503,7 @@ test_moggy_status(struct board *b, char *arg)
 	}
 	if (DEBUGL(2)) fprintf(stderr, "\n%s to play. Playing %i games ...\n", stone2str(color), games);
 	
-	struct playout_policy *policy = playout_moggy_init(NULL, b, NULL);
+	struct playout_policy *policy = playout_moggy_init(NULL, b);
 	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
 	struct ownermap ownermap;  ownermap_init(&ownermap);
 	

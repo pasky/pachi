@@ -152,6 +152,41 @@ spatial_hash(unsigned int rotation, struct spatial *s)
 	return h;
 }
 
+/* compute spatial hash from board, ignoring center stone */
+hash_t
+outer_spatial_hash_from_board_rot_d(struct board *b, coord_t coord, enum stone color,
+				    int rot, unsigned int d)
+{
+	hash_t h = pthashes[0][0][S_NONE];
+	assert(d+1 < sizeof(ptind) / sizeof(*ptind));
+
+	if (is_pass(coord) || is_resign(coord))  return 0;
+	
+	/* We record all spatial patterns black-to-play; simply
+	 * reverse all colors if we are white-to-play. */
+	static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
+	static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
+	enum stone (*bt)[4] = color == S_WHITE ? &bt_white : &bt_black;
+
+	for (unsigned int i = ptind[2]; i < ptind[d + 1]; i++) {
+		ptcoords_at(x, y, coord, b, i);
+		h ^= pthashes[rot][i][(*bt)[board_atxy(b, x, y)]];
+	}
+	return h;
+}
+
+hash_t
+outer_spatial_hash_from_board_rot(struct board *b, coord_t coord, enum stone color, int rot)
+{
+	return outer_spatial_hash_from_board_rot_d(b, coord, color, rot, MAX_PATTERN_DIST);
+}
+
+hash_t
+outer_spatial_hash_from_board(struct board *b, coord_t coord, enum stone color)
+{
+	return outer_spatial_hash_from_board_rot(b, coord, color, 0);
+}
+
 char *
 spatial2str(struct spatial *s)
 {
@@ -459,6 +494,7 @@ const char *spatial_dict_filename = "patterns_mm.spat";
 void
 spatial_dict_init(struct pattern_config *pc, bool create)
 {
+	assert(!spat_dict);	
 	FILE *f = fopen_data_file(spatial_dict_filename, "r");
 	if (!f && !create) {
 		if (DEBUGL(1)) fprintf(stderr, "%s not found, mm patterns disabled.\n", spatial_dict_filename);

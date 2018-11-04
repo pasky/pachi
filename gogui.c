@@ -6,10 +6,11 @@
 #include "gtp.h"
 #include "gogui.h"
 #include "ownermap.h"
-#include "engines/josekibase.h"
+#include "joseki.h"
 #include "uct/uct.h"
 #include "pattern.h"
 #include "engines/patternplay.h"
+#include "engines/josekiplay.h"
 #include "patternsp.h"
 #include "patternprob.h"
 
@@ -17,7 +18,6 @@
 #include "engines/dcnn.h"
 #include "dcnn.h"
 #endif /* DCNN */
-
 
 typedef enum {
 	GOGUI_BEST_WINRATES,
@@ -46,9 +46,9 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 		sbprintf(buf, "gfx/gfx   Influence/gogui-ownermap\n");
 		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");
 	}
-#ifdef JOSEKI
-	sbprintf(buf, "plist/gfx   Joseki Moves/gogui-joseki_moves\n");
-#endif
+	if (!strcmp(e->name, "UCT") && using_joseki(b))
+		sbprintf(buf, "gfx/gfx   Joseki Moves/gogui-joseki_moves\n");
+		sbprintf(buf, "gfx/gfx   Joseki Range/gogui-joseki_show_pattern %%p\n");
 #ifdef DCNN                            /* board check fake since we're called once on startup ... */
 	if (!strcmp(e->name, "UCT") && using_dcnn(b)) {
 		sbprintf(buf, "gfx/gfx   DCNN Best Moves/gogui-dcnn_best\n");
@@ -466,7 +466,11 @@ cmd_gogui_best_moves(struct board *b, struct engine *e, struct time_info *ti, gt
 	return P_OK;
 }
 
+
 #ifdef DCNN
+/********************************************************************************************/
+/* dcnn */
+
 static struct engine *dcnn_engine = NULL;
 
 enum parse_code
@@ -522,36 +526,75 @@ cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, g
 
 #endif /* DCNN */
 
-#ifdef JOSEKI
+
+/********************************************************************************************/
+/* joseki */
+
+static struct engine *joseki_engine = NULL;
+
+static void
+init_josekiplay_engine(struct board *b)
+{
+	joseki_engine = engine_josekiplay_init(NULL, b);
+}
+
 enum parse_code
 cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki", NULL);  return P_OK;  }
+	if (!joseki_engine)   init_josekiplay_engine(b);
+	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
-
-	char buffer[512];  strbuf_t strbuf;
+	
+	char buffer[10000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 
-	if (strcmp(e->name, "UCT"))  return P_OK;
-	struct joseki_dict *jdict = uct_get_jdict(e);
-	if (!jdict)  return P_OK;
+	float joseki_map[BOARD_MAX_COORDS];
+	joseki_rate_moves(joseki_dict, b, color, joseki_map);
 
-	for (int i = 0; i < 4; i++) {
-		hash_t h = b->qhash[i] & joseki_hash_mask;
-		coord_t *cc = jdict->patterns[h].moves[color - 1];
-		if (!cc) continue;
-		for (; !is_pass(*cc); cc++) {
-			if (coord_quadrant(*cc, b) != i)
-				continue;
-			sbprintf(buf, "%s ", coord2sstr(*cc, b));
-		}
-	}
+	/* Show relaxed / ignored moves */
+	foreach_free_point(b) {
+		josekipat_t *p = joseki_lookup_ignored(joseki_dict, b, c, color);
+		if (p)  sbprintf(buf, "MARK %s\n", coord2sstr(c, b));
+		if (p && (p->flags & JOSEKI_FLAGS_3X3))
+			sbprintf(buf, "CIRCLE %s\n", coord2sstr(c, b));
+		
+		p = joseki_lookup_3x3(joseki_dict, b, c, color);
+		if (p)  sbprintf(buf, "CIRCLE %s\n", coord2sstr(c, b));
+	} foreach_free_point_end;
+
+	gogui_best_moves(buf, joseki_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
+
+	/* Show ignored moves, background color */
+	foreach_free_point(b) {
+		if (joseki_map[c]) continue;  /* Don't clobber valid moves ! */
+		josekipat_t *p = joseki_lookup_ignored(joseki_dict, b, c, color);
+		if (!p)  continue;
+		sbprintf(buf, "COLOR #0000a0 %s\n", coord2sstr(c, b));
+	} foreach_free_point_end;
 
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
-#endif /* JOSEKI */
 
+enum parse_code
+cmd_gogui_joseki_show_pattern(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	char *arg;  next_tok(arg);
+	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	coord_t coord = str2coord(arg, board_size(b));
+
+	char buffer[10000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gogui_show_pattern(b, buf, coord, JOSEKI_PATTERN_DIST);
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+
+/********************************************************************************************/
+/* pattern */
 
 static struct engine *pattern_engine = NULL;
 

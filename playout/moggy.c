@@ -9,7 +9,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "engines/josekibase.h"
+#include "joseki.h"
 #include "mq.h"
 #include "pattern3.h"
 #include "playout.h"
@@ -26,6 +26,8 @@
 
 #define PLDEBUGL(n) DEBUGL_(p->debug_level, n)
 
+/* Use joseki moves in moggy ? */
+//#define MOGGY_JOSEKI 1
 
 /* In case "seqchoose" move picker is enabled (i.e. no "fullchoose"
  * parameter passed), we stochastically apply fixed set of decision
@@ -87,7 +89,6 @@ struct moggy_policy {
 	/* nlib settings: */
 	int nlib_count;
 
-	struct joseki_dict *jdict;
 	struct pattern3s patterns;
 
 	double pat3_gammas[PAT3_N];
@@ -247,21 +248,14 @@ static void
 joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
 {
 	struct moggy_policy *pp = p->data;
-	if (!pp->jdict)
+	if (!joseki_dict)
 		return;
 
-	for (int i = 0; i < 4; i++) {
-		hash_t h = b->qhash[i] & joseki_hash_mask;
-		coord_t *cc = pp->jdict->patterns[h].moves[to_play];
-		if (!cc) continue;
-		for (; !is_pass(*cc); cc++) {
-			if (coord_quadrant(*cc, b) != i)
-				continue;
-			if (!board_is_valid_play(b, to_play, *cc))
-				continue;
-			mq_add(q, *cc, 1<<MQ_JOSEKI);
-		}
-	}
+	foreach_joseki_move(joseki_dict, b, to_play) {
+		if (!board_is_valid_play(b, to_play, c))
+			continue;
+		mq_add(q, c, 1<<MQ_JOSEKI);
+	} foreach_joseki_move_end;
 
 	if (q->moves > 0 && PLDEBUGL(5))
 		mq_print(q, b, "Joseki");
@@ -1139,7 +1133,7 @@ playout_moggy_setboard(struct playout_policy *playout_policy, struct board *b)
 }
 
 struct playout_policy *
-playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
+playout_moggy_init(char *arg, struct board *b)
 {
 	struct playout_policy *p = calloc2(1, sizeof(*p));
 	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
@@ -1149,9 +1143,6 @@ playout_moggy_init(char *arg, struct board *b, struct joseki_dict *jdict)
 	p->choose = playout_moggy_seqchoose;
 	p->assess = playout_moggy_assess;
 	p->permit = playout_moggy_permit;
-	/* no p->done: calling engine owns jdict and should call joseki_done() */
-
-	pp->jdict = jdict;
 
 	/* These settings are tuned for 19x19 play with several threads
 	 * on reasonable time limits (i.e., rather large number of playouts).

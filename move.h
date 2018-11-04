@@ -25,12 +25,6 @@ typedef int coord_t;
 #define coord_is_adjecent(c1, c2, b) (abs(c1 - c2) == 1 || abs(c1 - c2) == board_size(b))
 #define coord_is_8adjecent(c1, c2, b) (abs(c1 - c2) == 1 || abs(abs(c1 - c2) - board_size(b)) < 2)
 
-/* Quadrants:
- * 0 1
- * 2 3 (vertically reversed from board_print output, of course!)
- * Middle coordinates are included in lower-valued quadrants. */
-#define coord_quadrant(c, b) ((coord_x(c, b) > board_size(b) / 2) + 2 * (coord_y(c, b) > board_size(b) / 2))
-
 struct board;
 char *coord2bstr(char *buf, coord_t c, struct board *board);
 /* Return coordinate string in a dynamically allocated buffer. Thread-safe. */
@@ -40,7 +34,8 @@ char *coord2str(coord_t c, struct board *b);
  * anything but debugging - in particular, it is NOT thread-safe! */
 char *coord2sstr(coord_t c, struct board *b);
 coord_t str2coord(char *str, int board_size);
-
+/* Rotate coordinate according to rot: [0-7] for 8 board symmetries. */
+coord_t rotate_coord(struct board *b, coord_t c, int rot);
 
 struct move {
 	coord_t coord;
@@ -55,6 +50,5 @@ move_cmp(struct move *m1, struct move *m2)
 		return m1->color - m2->color;
 	return m1->coord - m2->coord;
 }
-
 
 #endif

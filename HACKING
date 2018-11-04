@@ -11,14 +11,15 @@ Basic architecture
 
 Pachi consists of the following components:
 
-
-  +------+    +--------+    +---------+    +------------------+
-  | core | -- | engine | -- | playout | -- | tactical library |
-  +------+    +--------+    +---------+    +------------------+
-                     |        |
-                  +-------------+
-                  | aux library |
-                  +-------------+
+  +------+    +--------+    +---------+
+  | core | -- | engine | -- | playout |
+  +------+    +--------+    +---------+
+                     |        |     |
+            +-------------------+  +---------+
+            |      modules      |--| tactics |
+            | dcnn, patterns    |  +---------+
+            | joseki, ownermap  |
+            +-------------------+
 
 * "core" takes care of the program's lifetime, GTP interface and basic
   fast Go board implementation
@@ -33,16 +34,23 @@ Pachi consists of the following components:
 	stone.[ch]	one board point coloring definition
 	move.[ch]	one board move definition
 	board.[ch]	board definition and basic interface
+	gogui.[ch]      gogui analyze commands
 
-* "aux library" provides extra functions like static tactical evaluation
+* "modules" provides extra functions like static tactical evaluation
   and pattern matching; it is somewhat interwound with "core" component
 
-	mq.h		"move queue" data structure
-	stats.h		"move statistics" data structure
-	probdist.[ch]	"probability distribution" data structure
-	ownermap.[ch]	simulation-based finalpos. "owner map" data structure
-	pattern3.[ch]	fast 3x3 spatial pattern matcher
-	pattern.[ch]	general multi-feature pattern matcher
+	mq.h		 "move queue" data structure
+	stats.h		 "move statistics" data structure
+	probdist.[ch]	 "probability distribution" data structure
+	ownermap.[ch]	 simulation-based finalpos. "owner map" data structure
+	fbook.[ch]       fuseki database (opening book)
+	pattern3.[ch]	 fast 3x3 spatial pattern matcher
+	pattern.[ch]	 general multi-feature pattern matcher
+	patternsp.[ch]   spatial pattern matching
+	patternprob.[ch] pattern-based move predictor
+	joseki.[ch]      pattern based joseki engine
+	dcnn.[ch]        dcnn-based move predictor
+	caffe.cpp        c++ interface with caffe for dcnn evaluation
 
 * "tactical library" provides extended interfaces for the go board,
   most important non-trivial tactical information
@@ -63,7 +71,7 @@ Pachi consists of the following components:
 	  replay.c	    example "playout move generator" engine
 	  montecarlo.c	    simple treeless Monte Carlo engine, quite bitrotten
 	  patternscan.c	    auxiliary engine for mm patterns training pipeline
-	  joseki.c	    auxiliary engine for generating joseki patterns
+	  josekiscan.c	    auxiliary engine for generating joseki patterns
 
 * "playout" policy is asked to generate moves to play during the Monte Carlo
   simulations, and to provide rough evaluation of moves feasibility for
@@ -166,7 +174,7 @@ GTP Implementation
 GTP interface, as it is totally non-resilient to any kind of overflow
 or bad input attacks and allowing arbitrary input to be entered within
 is a major security hole. Yes, this needs to be cleaned up. Also, currently
-engines cannot plug in their own commands and there is no GoGui interface.
+engines cannot plug in their own commands.
 
 Pachi supports only few GTP commands now. Most importantly, it does not
 support the undo command.  The final_status_list command requires engine
@@ -190,14 +198,15 @@ but more can be added easily. The plugins should follow the API in
 <uct/plugin.h> - see that file for details.
 
 
-Joseki Patterns
+Joseki Database
 ===============
 
-Joseki patterns can be generated from variations of a SGF file. Josekis
-are matched per-quadrant, no other move must be within the quadrant. See
-engines/README_JOSEKI for details on usage of the auxiliary engine and a
-full recipe for making Pachi play according to joseki sequences extracted
-from the Kogo dictionary.
+The joseki database is generated from variations of a SGF file. Josekis
+patterns are matched based on spatial patterns: situation around previous
+move and move to play must match (circle of 4 stones radius). See
+joseki/README for details on how to generate the joseki database from sgf
+files, and joseki.[ch] for the implementation. engines/josekiscan.[ch] is
+the aux engine for generating joseki patterns from gtp moves.
 
 
 Opening Book

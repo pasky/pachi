@@ -43,12 +43,6 @@ DCNN=1
 
 # FIFO=1
 
-# Enable joseki engine ? Useful if running without dcnn support.
-# Otherwise will be slightly faster without.
-
-# JOSEKI=1
-# MOGGY_JOSEKI=1
-
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
 # e.g. with extremely long thinking times or massive parallelization;
@@ -242,14 +236,6 @@ ifeq ($(FIFO), 1)
 	EXTRA_OBJS    += fifo.o
 endif
 
-ifeq ($(JOSEKI), 1)
-	CUSTOM_CFLAGS += -DJOSEKI
-endif
-
-ifeq ($(MOGGY_JOSEKI), 1)
-	CUSTOM_CFLAGS += -DMOGGY_JOSEKI
-endif
-
 ifeq ($(DOUBLE_FLOATING), 1)
 	CUSTOM_CFLAGS += -DDOUBLE_FLOATING
 endif
@@ -292,8 +278,8 @@ unexport INCLUDES
 INCLUDES=-I.
 
 OBJS = $(EXTRA_OBJS) \
-       board.o gtp.o move.o ownermap.o pattern3.o pattern.o patternsp.o patternprob.o playout.o \
-       probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o gogui.o pachi.o
+       board.o gogui.o gtp.o joseki.o move.o ownermap.o pachi.o pattern3.o pattern.o patternsp.o \
+       patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o
 
 # Low-level dependencies last
 SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics
