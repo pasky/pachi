@@ -189,25 +189,17 @@ board_statics_init(struct board *board)
 	 * certain kinds of pattern matching, thus we do not use
 	 * fast_random() for this. */
 	hash_t hseed = 0x3121110101112131;
-
-	/* XXX Until <board_cleanup> board->h was treated as:
-	 *     h[2][BOARD_MAX_COORDS] here, and
-	 *     h[BOARD_MAX_COORDS][2] in hash_at().
-	 *     Preserve quirk to get same hashes across versions... */
-	hash_t (*hash)[2] = (hash_t (*)[2])bs->h;
 	for (coord_t c = 0 ; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
-		hash[c][0] = (hseed *= 16807);
-		if (!hash[c][0])  hash[c][0] = 1;
-		
-		/* And once again for white */
-		hash[c][1] = (hseed *= 16807);
-		if (!hash[c][1])  hash[c][1] = 1;
+		for (int color = S_BLACK; color <= S_WHITE; color++) {
+			hash_at(c, color) = (hseed *= 16807);
+			if (!hash_at(c, color))  hash_at(c, color) = 1;
+		}
 	}
 
 	/* Sanity check ... */
 	foreach_point(board) {
-		assert(hash_at(b, c, S_BLACK) != 0);
-		assert(hash_at(b, c, S_WHITE) != 0);
+		assert(hash_at(c, S_BLACK) != 0);
+		assert(hash_at(c, S_WHITE) != 0);
 	} foreach_point_end;
 }
 
@@ -429,12 +421,9 @@ board_print_target_move(struct board *b, FILE *f, coord_t target_move)
 static void profiling_noinline
 board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
-	board->hash ^= hash_at(board, coord, color);
-#ifdef JOSEKI
-	board->qhash[coord_quadrant(coord, board)] ^= hash_at(board, coord, color);
-#endif
+	board->hash ^= hash_at(coord, color);
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(board, coord, color), board->hash);
+		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(coord, color), board->hash);
 
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */

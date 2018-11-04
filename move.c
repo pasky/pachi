@@ -57,3 +57,18 @@ str2coord(char *str, int size)
 	char xc = tolower(str[0]);
 	return xc - 'a' - (xc > 'i') + 1 + atoi(str + 1) * size;
 }
+
+/* Must match rotations in pthashes_init() */
+coord_t
+rotate_coord(struct board *b, coord_t c, int rot)
+{
+	assert(c != pass);
+	int size = real_board_size(b);
+	int x = coord_x(c, b);
+	int y = coord_y(c, b);
+	
+	if (rot & 1)  y = size - y + 1;
+	if (rot & 2)  x = size - x + 1;
+	if (rot & 4)  {  int tmp = x;  x = size - y + 1;  y = tmp;  }
+	return coord_xy(b, x, y);
+}

@@ -1,6 +1,6 @@
 /* probdist.h must be included before the include goard since we require
  * proper including order. */
-#include "probdist.h"
+//#include "probdist.h"
 
 #ifndef PACHI_BOARD_H
 #define PACHI_BOARD_H
@@ -247,11 +247,6 @@ FB_ONLY(int last_ko_age);
 FB_ONLY(hash_t history_hash)[1 << history_hash_bits];
 	/* Hash of current board position. */
 FB_ONLY(hash_t hash);
-
-#ifdef JOSEKI
-	/* Hash of current board position quadrants. */
-FB_ONLY(hash_t qhash)[4];
-#endif
 };
 
 struct undo_merge {
@@ -343,7 +338,7 @@ struct board_undo {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
-#define hash_at(b_, coord, color) (board_statics.h[((color) == S_BLACK ? 1 : 0)][coord])
+#define hash_at(coord, color) (board_statics.h[(color) == S_BLACK][coord])
 
 void board_init(struct board *b, int bsize, char *fbookfile);
 struct board *board_new(int bsize, char *fbookfile);
