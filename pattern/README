@@ -6,8 +6,8 @@ Pachi has a general pattern matcher that can match various sets of features
 database inspired by the van der Werf - de Groot - Stern pattern model
 (http://pachi.or.cz/pat/), while current implementation uses mm patterns
 following Rémi's paper with some tweaks and custom features. See pattern.h
-for detailed description of the pattern concept and recognized
-features, and Rémi's paper:
+for detailed description of the pattern concept and recognized features,
+and Rémi's paper:
 
   https://www.remi-coulom.fr/Amsterdam2007/
 

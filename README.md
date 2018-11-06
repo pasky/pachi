@@ -31,7 +31,7 @@ tree search.
 **Windows**: Download [binary release](https://github.com/pasky/pachi/releases)
 for windows and follow instructions inside.
 
-**Ubuntu**: There's a 'pachi-go' package in my [ppa](https://launchpad.net/~lemonsqueeze/+archive/ubuntu/pachi):
+**Ubuntu**: Install 'pachi-go' package from [ppa](https://launchpad.net/~lemonsqueeze/+archive/ubuntu/pachi):
 
     sudo add-apt-repository ppa:lemonsqueeze/pachi
     sudo apt-get update
@@ -61,9 +61,8 @@ or use [kgsGtp][4] to connect it to KGS.
 [3]: http://qgo.sourceforge.net/
 [4]: http://www.michna.com/kgsbot.htm
 
-The pachi program can take many parameters, as well as the particular
-engine being used; the defaults should be fine for initial usage,
-see below for some more tips.
+The pachi program can take many parameters. The defaults should be fine
+for initial usage, see below for some more tips.
 
 In case you hit compilation issues (e.g. when building on MacOS/X)
 or want to change the build configuration, check the user configurable
@@ -105,8 +104,8 @@ used together (you should get a warning on startup).
 
 To build Pachi with DCNN support:
 - Install [Caffe](http://caffe.berkeleyvision.org)  
-  CPU only build is fine, no need for GPU, cuda or the other optional
-  dependencies.
+  CPU only build is fine, no need for GPU, cuda or the other optional dependencies.  
+  You need openblas for good performance.
 - Edit Makefile, set DCNN=1, point it to where caffe is installed and build.
 
 Install dcnn files in current directory.
@@ -117,8 +116,7 @@ More information about this dcnn [here](http://computer-go.org/pipermail/compute
 
 If you want to use a network with different inputs you'll have to tweak
 dcnn.c to accomodate it. Pachi will check for `golast19.prototxt` and
-`golast.trained` files on startup and use them if present when
-playing on 19x19.
+`golast.trained` files on startup.
 
 
 ## How to run
@@ -208,11 +206,9 @@ unexpected happens.
 
 ## Large Patterns
 
-Pachi uses MM patterns to guide tree search (mcts priors). The pattern
-matcher runs on the cpu each time a new node is explored. For each possible
-move it looks for known spatial / tactical features and rates them according
-to learned weights, which are obtained through supervised learning (see
-pattern/README for details). Right now prediction rate is about 37%.
+Pachi uses MM patterns to guide tree search. The pattern matcher runs
+on the cpu each time a new node is explored (see pattern/README for details).
+Right now prediction rate is about 37%.
 
 One benefit of MM is that the weights are very small. If you used previous
 Pachi versions, it's no longer necessary to install extra files to

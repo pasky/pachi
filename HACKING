@@ -184,9 +184,11 @@ support.
 General Pattern Matcher
 =======================
 
-Pachi has a general pattern matcher that can match various sets of features
-(spatial and others). See pattern/README for description of the pattern
-matcher and training pipeline.
+Pachi uses MM patterns to guide tree search. The pattern matcher runs on
+the cpu each time a new node is explored. For each possible move it looks
+for known spatial / tactical features and rates them according to learned
+weights, which are obtained through supervised learning.
+See pattern/README for details.
 
 
 Plugin API
