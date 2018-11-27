@@ -198,7 +198,7 @@ else
                 # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
                 # and requires --whole-archive for static linking. This makes binaries unnecessarily
                 # bloated. Choose normal, nohdf5, or mini (mini is best)
-                # mini source: https://github.com/lemonsqueeze/mingw-caffe/tree/mini
+                # mini source: https://github.com/lemonsqueeze/caffe/tree/mini
 		CAFFE=normal
 
 		ifeq ($(CAFFE), normal)
