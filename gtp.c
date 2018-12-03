@@ -18,6 +18,7 @@
 #include "uct/uct.h"
 #include "version.h"
 #include "timeinfo.h"
+#include "ownermap.h"
 #include "gogui.h"
 #include "t-predict/predict.h"
 #include "t-unit/test.h"
@@ -482,56 +483,117 @@ cmd_final_score(struct board *board, struct engine *engine, struct time_info *ti
 	return P_OK;
 }
 
+static int
+cmd_final_status_list_dead(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
+{
+	struct move_queue q = { .moves = 0 };
+	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
+	/* else we return empty list - i.e. engine not supporting
+	 * this assumes all stones alive at the game end. */
+
+	gtp_prefix('=', gtp);
+	for (unsigned int i = 0; i < q.moves; i++) {
+		foreach_in_group(b, q.move[i]) {
+			printf("%s ", coord2sstr(c, b));
+		} foreach_in_group_end;
+		putchar('\n');
+	}
+	return q.moves;
+}
+
+static int
+cmd_final_status_list_alive(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
+{
+	struct move_queue q = { .moves = 0 };
+	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
+	int printed = 0;
+	
+	gtp_prefix('=', gtp);
+	foreach_point(b) { // foreach_group, effectively
+		group_t g = group_at(b, c);
+		if (!g || g != c) continue;
+
+		for (unsigned int i = 0; i < q.moves; i++)
+			if (q.move[i] == g)  goto next_group;
+			
+		foreach_in_group(b, g) {
+			printf("%s ", coord2sstr(c, b));
+		} foreach_in_group_end;
+		putchar('\n');  printed++;
+	next_group:;
+	} foreach_point_end;
+	return printed;
+}
+
+static int
+cmd_final_status_list_seki(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
+{
+	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	if (!ownermap) {  gtp_error(gtp, "no ownermap", NULL);  return -1;  }
+	int printed = 0;
+
+	gtp_prefix('=', gtp);
+	struct move_queue sekis = { .moves = 0 };
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		if (ownermap_judge_point(ownermap, c, 0.80) != PJ_DAME)  continue;
+
+		foreach_neighbor(b, c, {
+			group_t g = group_at(b, c);
+			if (!g)  continue;
+			mq_add(&sekis, g, 0);
+			mq_nodup(&sekis);
+		});
+	} foreach_point_end;
+
+	for (unsigned int i = 0; i < sekis.moves; i++) {
+		foreach_in_group(b, sekis.move[i]) {
+			printf("%s ", coord2sstr(c, b));
+		} foreach_in_group_end;
+		putchar('\n');  printed++;
+	}
+
+	return printed;
+}
+
+static int
+cmd_final_status_list_territory(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
+{
+	enum stone color = str2stone(arg);
+	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	if (!ownermap) {  gtp_error(gtp, "no ownermap", NULL);  return -1;  }
+		
+	gtp_prefix('=', gtp);
+	foreach_point(b) {
+		if (board_at(b, c) != S_NONE)  continue;
+		if (ownermap_color(ownermap, c, 0.67) != color)  continue;
+		printf("%s ", coord2sstr(c, b));
+	} foreach_point_end;
+	putchar('\n');
+	return 1;
+}	
+
 /* XXX: This is a huge hack. */
 static enum parse_code
-cmd_final_status_list(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_final_status_list(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
 	if (gtp->id == GTP_NO_REPLY) return P_OK;
 	char *arg;
 	next_tok(arg);
-	struct move_queue q = { .moves = 0 };
-	if (engine->dead_group_list)
-		engine->dead_group_list(engine, board, &q);
-	/* else we return empty list - i.e. engine not supporting
-	 * this assumes all stones alive at the game end. */
-	if (!strcasecmp(arg, "dead")) {
-		gtp_prefix('=', gtp);
-		for (unsigned int i = 0; i < q.moves; i++) {
-			foreach_in_group(board, q.move[i]) {
-				printf("%s ", coord2sstr(c, board));
-			} foreach_in_group_end;
-			putchar('\n');
-		}
-		if (!q.moves)
-			putchar('\n');
-		gtp_flush();
-	} else if (!strcasecmp(arg, "seki") || !strcasecmp(arg, "alive")) {
-		gtp_prefix('=', gtp);
-		bool printed_group = false;
-		foreach_point(board) { // foreach_group, effectively
-			group_t g = group_at(board, c);
-			if (!g || g != c) continue;
+	int r = -1;
+	
+	if      (!strcasecmp(arg, "dead"))            r = cmd_final_status_list_dead(arg, b, e, gtp);
+	else if (!strcasecmp(arg, "alive"))           r = cmd_final_status_list_alive(arg, b, e, gtp);
+	else if (!strcasecmp(arg, "seki"))            r = cmd_final_status_list_seki(arg, b, e, gtp);
+	else if (!strcasecmp(arg, "black_territory")  ||       /* gnugo extensions */
+		 !strcasecmp(arg, "white_territory")) r = cmd_final_status_list_territory(arg, b, e, gtp);
+	else    gtp_error(gtp, "illegal status specifier", NULL);
 
-			for (unsigned int i = 0; i < q.moves; i++) {
-				if (q.move[i] == g)
-					goto next_group;
-			}
-			foreach_in_group(board, g) {
-				printf("%s ", coord2sstr(c, board));
-			} foreach_in_group_end;
-			putchar('\n');
-			printed_group = true;
-		next_group:;
-		} foreach_point_end;
-		if (!printed_group)
-			putchar('\n');
-		gtp_flush();
-	} else {
-		gtp_error(gtp, "illegal status specifier", NULL);
-	}
+	if (r < 0)  return P_OK;
+	if (!r)  putchar('\n');
+	gtp_flush();
 	return P_OK;
 }
-
 
 static enum parse_code
 cmd_undo(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)

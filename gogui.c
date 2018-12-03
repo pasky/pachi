@@ -72,8 +72,14 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 		sbprintf(buf, "gfx/Live gfx = None/gogui-livegfx\n");
 	}
 
-	if (e->dead_group_list)
+	if (e->dead_group_list) {
 		sbprintf(buf, "string/          Final Score/final_score\n");
+		sbprintf(buf, "plist/          Final Status List Dead/final_status_list dead\n");
+		sbprintf(buf, "plist/          Final Status List Alive/final_status_list alive\n");
+		sbprintf(buf, "plist/          Final Status List Seki/final_status_list seki\n");
+		//sbprintf(buf, "plist/          Final Status List Black/final_status_list black_territory\n");
+		//sbprintf(buf, "plist/          Final Status List White/final_status_list white_territory\n");
+	}
 
 	/* Debugging */
 	//sbprintf(buf, "gfx/gfx   Color Palette/gogui-color_palette\n");
