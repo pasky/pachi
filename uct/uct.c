@@ -590,13 +590,14 @@ uct_get_best_moves(struct tree *t, coord_t *best_c, float *best_r, int nbest, bo
 	struct tree_node* best_d[nbest];
 	for (int i = 0; i < nbest; i++)  best_c[i] = pass;
 	for (int i = 0; i < nbest; i++)  best_r[i] = 0;
+	for (int i = 0; i < nbest; i++)  best_d[i] = NULL;
 	
 	/* Find best moves */
 	for (struct tree_node *n = t->root->children; n; n = n->sibling)
 		best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_d, nbest);
 
 	if (winrates)  /* Get winrates */
-		for (int i = 0; i < nbest && best_c[i] != pass; i++)
+		for (int i = 0; i < nbest && best_d[i]; i++)
 			best_r[i] = tree_node_get_value(t, 1, best_d[i]->u.value);
 }
 
