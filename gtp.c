@@ -102,23 +102,6 @@ gtp_error(gtp_t *gtp, ...)
 	va_end(params);
 }
 
-void
-gtp_final_score_str(struct board *board, struct engine *engine, char *reply, int len)
-{
-	struct move_queue q = { .moves = 0 };
-	if (engine->dead_group_list)
-		engine->dead_group_list(engine, board, &q);
-	floating_t score = board_official_score(board, &q);
-	if (DEBUGL(1))
-		fprintf(stderr, "counted score %.1f\n", score);
-	if (score == 0)
-		snprintf(reply, len, "0");
-	else if (score > 0)
-		snprintf(reply, len, "W+%.1f", score);
-	else
-		snprintf(reply, len, "B+%.1f", -score);
-}
-
 /* List of public gtp commands. The internal command pachi-genmoves is not exported,
  * it should only be used between master and slaves of the distributed engine.
  * For now only uct engine supports gogui-analyze_commands. */
@@ -129,9 +112,8 @@ known_commands(struct engine *engine)
 	char *str = buf;
 	
 	for (int i = 0; commands[i].cmd; i++) {
-		char *cmd = commands[i].cmd;		
-		if (str_prefix("gogui", cmd) ||
-		    str_prefix("pachi-genmoves", cmd))
+		char *cmd = commands[i].cmd;
+		if (str_prefix("pachi-genmoves", cmd))
 			continue;		
 		str += sprintf(str, "%s\n", commands[i].cmd);
 	}
@@ -475,11 +457,24 @@ cmd_fixed_handicap(struct board *board, struct engine *engine, struct time_info 
 }
 
 static enum parse_code
-cmd_final_score(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	char str[64];
-	gtp_final_score_str(board, engine, str, sizeof(str));
-	gtp_reply(gtp, str, NULL);
+	char *msg = NULL;
+	struct ownermap *o = (e->ownermap ? e->ownermap(e, b) : NULL);
+	if (o && !board_position_final(b, o, &msg)) {
+		gtp_error(gtp, msg, NULL);	
+		return P_OK;
+	}
+
+	struct move_queue q = { .moves = 0 };
+	if (e->dead_group_list)  e->dead_group_list(e, b, &q);	
+	floating_t score = board_official_score(b, &q);
+
+	if (DEBUGL(1))  fprintf(stderr, "counted score %.1f\n", score);
+	
+	if      (score == 0) gtp_reply_printf(gtp, "0\n");
+	else if (score > 0)  gtp_reply_printf(gtp, "W+%.1f\n", score);
+	else                 gtp_reply_printf(gtp, "B+%.1f\n", -score);
 	return P_OK;
 }
 
@@ -828,6 +823,7 @@ static gtp_command_t commands[] =
 	{ "gogui-livegfx",          cmd_gogui_livegfx },
 	{ "gogui-ownermap",         cmd_gogui_ownermap },
 	{ "gogui-score_est",        cmd_gogui_score_est },
+	{ "gogui-final_score",      cmd_gogui_final_score },
 	{ "gogui-best_moves",       cmd_gogui_best_moves },
 	{ "gogui-winrates",         cmd_gogui_winrates },
 	{ "gogui-joseki_moves",     cmd_gogui_joseki_moves },

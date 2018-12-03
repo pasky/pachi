@@ -35,7 +35,6 @@ typedef struct
 enum parse_code gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf);
 enum parse_code gtp_parse_full(struct board *b, struct engine *e, struct time_info *ti, char *buf, int id);
 bool gtp_is_valid(struct engine *e, const char *cmd);
-void gtp_final_score_str(struct board *board, struct engine *engine, char *reply, int len);
 void gtp_reply(gtp_t *gtp, ...);
 void gtp_reply_printf(gtp_t *gtp, const char *format, ...);
 void gtp_error(gtp_t *gtp, ...);

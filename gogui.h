@@ -22,6 +22,7 @@ enum parse_code cmd_gogui_best_moves(struct board *board, struct engine *engine,
 enum parse_code cmd_gogui_winrates(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_ownermap(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_dcnn_best(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_dcnn_rating(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);

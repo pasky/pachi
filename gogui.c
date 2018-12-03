@@ -39,31 +39,40 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 
 	if (e->best_moves) {
-		sbprintf(buf, "gfx/gfx   Best Moves/gogui-best_moves\n");
-		sbprintf(buf, "gfx/gfx   Winrates/gogui-winrates\n");
+		sbprintf(buf, "gfx/Best Moves/gogui-best_moves\n");
+		sbprintf(buf, "gfx/Winrates/gogui-winrates\n");
 	}
 	if (e->ownermap) {
-		sbprintf(buf, "gfx/gfx   Influence/gogui-ownermap\n");
-		sbprintf(buf, "gfx/gfx   Score Est/gogui-score_est\n");
+		sbprintf(buf, "gfx/Influence/gogui-ownermap\n");
+		sbprintf(buf, "gfx/Score Est/gogui-score_est\n");
+	}
+	if (e->dead_group_list) {
+		sbprintf(buf, "gfx/Final Score/gogui-final_score\n");
+		sbprintf(buf, "plist/Dead Groups/final_status_list dead\n");
+		//sbprintf(buf, "plist/Final Status List Dead/final_status_list dead\n");
+		//sbprintf(buf, "plist/Final Status List Alive/final_status_list alive\n");
+		//sbprintf(buf, "plist/Final Status List Seki/final_status_list seki\n");
+		//sbprintf(buf, "plist/Final Status List Black/final_status_list black_territory\n");
+		//sbprintf(buf, "plist/Final Status List White/final_status_list white_territory\n");
 	}
 	if (!strcmp(e->name, "UCT") && using_joseki(b))
-		sbprintf(buf, "gfx/gfx   Joseki Moves/gogui-joseki_moves\n");
-		sbprintf(buf, "gfx/gfx   Joseki Range/gogui-joseki_show_pattern %%p\n");
+		sbprintf(buf, "gfx/Joseki Moves/gogui-joseki_moves\n");
+		sbprintf(buf, "gfx/Joseki Range/gogui-joseki_show_pattern %%p\n");
 #ifdef DCNN                            /* board check fake since we're called once on startup ... */
 	if (!strcmp(e->name, "UCT") && using_dcnn(b)) {
-		sbprintf(buf, "gfx/gfx   DCNN Best Moves/gogui-dcnn_best\n");
-		sbprintf(buf, "gfx/gfx   DCNN Color Map/gogui-dcnn_colors\n");
-		sbprintf(buf, "gfx/gfx   DCNN Ratings/gogui-dcnn_rating\n");
+		sbprintf(buf, "gfx/DCNN Best Moves/gogui-dcnn_best\n");
+		sbprintf(buf, "gfx/DCNN Color Map/gogui-dcnn_colors\n");
+		sbprintf(buf, "gfx/DCNN Ratings/gogui-dcnn_rating\n");
 	}
 #endif
 	if (!strcmp(e->name, "UCT") && using_patterns()) {
-		sbprintf(buf, "gfx/gfx   Pattern Best Moves/gogui-pattern_best\n");
-		sbprintf(buf, "gfx/gfx   Pattern Color Map/gogui-pattern_colors\n");
-		sbprintf(buf, "gfx/gfx   Pattern Ratings/gogui-pattern_rating\n");
-		sbprintf(buf, "gfx/gfx   Pattern Features/gogui-pattern_features %%p\n");
-		sbprintf(buf, "gfx/gfx   Pattern Gammas/gogui-pattern_gammas %%p\n");
-		sbprintf(buf, "gfx/gfx   Set Spatial Size/gogui-spatial_size %%o\n");
-		sbprintf(buf, "gfx/gfx   Show Spatial/gogui-show_spatial %%p\n");
+		sbprintf(buf, "gfx/Pattern Best Moves/gogui-pattern_best\n");
+		sbprintf(buf, "gfx/Pattern Color Map/gogui-pattern_colors\n");
+		sbprintf(buf, "gfx/Pattern Ratings/gogui-pattern_rating\n");
+		sbprintf(buf, "gfx/Pattern Features/gogui-pattern_features %%p\n");
+		sbprintf(buf, "gfx/Pattern Gammas/gogui-pattern_gammas %%p\n");
+		sbprintf(buf, "gfx/Set Spatial Size/gogui-spatial_size %%o\n");
+		sbprintf(buf, "gfx/Show Spatial/gogui-show_spatial %%p\n");
 	}
 	if (!strcmp(e->name, "UCT")) {
 		sbprintf(buf, "gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
@@ -72,17 +81,8 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 		sbprintf(buf, "gfx/Live gfx = None/gogui-livegfx\n");
 	}
 
-	if (e->dead_group_list) {
-		sbprintf(buf, "string/          Final Score/final_score\n");
-		sbprintf(buf, "plist/          Final Status List Dead/final_status_list dead\n");
-		sbprintf(buf, "plist/          Final Status List Alive/final_status_list alive\n");
-		sbprintf(buf, "plist/          Final Status List Seki/final_status_list seki\n");
-		//sbprintf(buf, "plist/          Final Status List Black/final_status_list black_territory\n");
-		//sbprintf(buf, "plist/          Final Status List White/final_status_list white_territory\n");
-	}
-
 	/* Debugging */
-	//sbprintf(buf, "gfx/gfx   Color Palette/gogui-color_palette\n");
+	//sbprintf(buf, "gfx/Color Palette/gogui-color_palette\n");
 	
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
@@ -374,7 +374,7 @@ gogui_score_est(strbuf_t *buf, struct board *b, struct engine *e)
 	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
 	if (!ownermap)	return;
 
-	sbprintf(buf, "INFLUENCE");	
+	sbprintf(buf, "INFLUENCE");
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
 		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
@@ -432,6 +432,43 @@ cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	gogui_score_est(buf, b, e);
+	gtp_reply(gtp, buf->str, NULL);
+	return P_OK;
+}
+
+enum parse_code
+cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	char *msg = NULL;
+	struct ownermap *o = (e->ownermap ? e->ownermap(e, b) : NULL);
+	if (o && !board_position_final(b, o, &msg)) {
+		gtp_error(gtp, msg, NULL);
+		return P_OK;
+	}
+
+	struct move_queue q = { .moves = 0 };
+	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
+	
+	int dame;
+	int ownermap[board_size2(b)];
+	floating_t score = board_official_score_details(b, &q, &dame, ownermap);	
+	char buffer[5000];  strbuf_t strbuf;
+	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	
+	sbprintf(buf, "INFLUENCE");
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		float p = 0;
+		if (ownermap[c] == S_BLACK)  p = 0.5;
+		if (ownermap[c] == S_WHITE)  p = -0.5;
+		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
+	} foreach_point_end;
+	sbprintf(buf, "\n");
+	
+	if      (score == 0) sbprintf(buf, "TEXT 0\n");
+	else if (score > 0)  sbprintf(buf, "TEXT W+%.1f\n", score);
+	else                 sbprintf(buf, "TEXT B+%.1f\n", -score);
+
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
