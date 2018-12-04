@@ -51,6 +51,7 @@ ownermap_fill(struct ownermap *ownermap, struct board *b)
 	ownermap->playouts++;
 	foreach_point(b) {
 		enum stone color = board_at(b, c);
+		if (color == S_OFFBOARD)  continue;
 		if (color == S_NONE)
 			color = board_get_one_point_eye(b, c);
 		ownermap->map[c][color]++;
@@ -159,6 +160,16 @@ groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s
 	} foreach_point_end;
 }
 
+void
+get_dead_groups(struct board *b, struct ownermap *ownermap, struct move_queue *dead, struct move_queue *unclear)
+{
+	enum gj_state gs_array[board_size2(b)];
+	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
+	ownermap_judge_groups(b, ownermap, &gj);
+	if (dead)     {  dead->moves = 0;     groups_of_status(b, &gj, GS_DEAD, dead);  }
+	if (unclear)  {  unclear->moves = 0;  groups_of_status(b, &gj, GS_UNKNOWN, unclear);  }
+}
+
 enum point_judgement
 ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c)
 {
@@ -176,6 +187,7 @@ ownermap_score_est(struct board *b, struct ownermap *ownermap)
 {
 	float scores[S_MAX] = {0.0, };  /* Number of points owned by each color */
 	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
 		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
 		scores[j]++;
 	} foreach_point_end;
@@ -199,4 +211,90 @@ ownermap_score_est_str(struct board *b, struct ownermap *ownermap)
 	float s = ownermap_score_est(b, ownermap);
 	sprintf(buf, "%s+%.1f\n", (s > 0 ? "W" : "B"), fabs(s));
 	return buf;
+}
+
+bool
+board_position_final(struct board *b, struct ownermap *ownermap, char **msg)
+{
+	*msg = "too early to pass";
+	if (b->moves < board_earliest_pass(b))
+		return false;
+	
+	struct move_queue dead, unclear;
+	get_dead_groups(b, ownermap, &dead, &unclear);
+	
+	floating_t score_est = ownermap_score_est(b, ownermap);
+
+	int final_dames;
+	int final_ownermap[board_size2(b)];
+	floating_t final_score = board_official_score_details(b, &dead, &final_dames, final_ownermap);
+
+	return board_position_final_full(b, ownermap, &dead, &unclear, score_est,
+					 final_ownermap, final_dames, final_score, msg, true);
+}
+
+bool
+board_position_final_full(struct board *b, struct ownermap *ownermap,
+			  struct move_queue *dead, struct move_queue *unclear, float score_est,
+			  int *final_ownermap, int final_dames, float final_score,
+			  char **msg, bool extra_checks)
+{
+	*msg = "too early to pass";
+	if (b->moves < board_earliest_pass(b))
+		return false;
+	
+	/* Unclear groups ? */
+	*msg = "unclear groups";
+	if (unclear->moves)  return false;
+
+	/* Border stones in atari ? */
+	foreach_point(b) {
+		group_t g = group_at(b, c);
+		if (!g || board_group_info(b, g).libs > 1)  continue;
+		enum stone color = board_at(b, c);
+		if (final_ownermap[c] != (int)color)  continue;
+		coord_t coord = c;
+		foreach_neighbor(b, coord, {
+			if (final_ownermap[c] != (int)stone_other(color))  continue;
+			*msg = "border stones in atari";
+			return false;
+		});
+	} foreach_point_end;
+
+	/* Non-seki dames surrounded by only dames / border / one color are no dame to me,
+	 * most likely some territories are still open ... */
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD) continue;
+		if (final_ownermap[c] != 3)  continue;
+		if (ownermap_judge_point(ownermap, c, GJ_THRES) == PJ_DAME) continue;
+
+		coord_t dame = c;
+		int around[4] = { 0, };
+		foreach_neighbor(b, dame, {
+			around[final_ownermap[c]]++;
+		});		
+		if (around[S_BLACK] + around[3] == 4 ||
+		    around[S_WHITE] + around[3] == 4) {
+			static char buf[100];
+			sprintf(buf, "non-final position at %s", coord2sstr(dame, b));
+			*msg = buf;
+			return false;
+		}
+	} foreach_point_end;
+
+	/* If ownermap and official score disagree position is likely not final.
+	 * If too many dames also. */
+	if (extra_checks) {
+		int max_dames = (board_large(b) ? 20 : 7);
+		*msg = "non-final position: too many dames";
+		if (final_dames > max_dames)    return false;
+
+		/* Can disagree up to dame points, as long as there are not too many.
+		 * For example a 1 point difference with 1 dame is quite usual... */
+		int max_diff = MIN(final_dames, 4);
+		*msg = "non-final position: score est and official score don't agree";
+		if (fabs(final_score - score_est) > max_diff)  return false;
+	}
+	
+	return true;
 }

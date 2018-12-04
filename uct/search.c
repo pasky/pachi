@@ -504,6 +504,22 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 }
 
 
+/* uct_pass_is_safe() also called by uct policy, beware.  */
+static bool
+uct_search_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg)
+{
+	bool res = uct_pass_is_safe(u, b, color, pass_all_alive, msg);
+
+	/* Save dead groups for final_status_list dead. */
+	if (res) {
+		struct move_queue unclear;
+		struct move_queue *dead = &u->dead_groups;
+		u->pass_moveno = b->moves + 1;
+		get_dead_groups(b, &u->ownermap, dead, &unclear);
+	}
+	return res;
+}
+
 struct tree_node *
 uct_search_result(struct uct *u, struct board *b, enum stone color,
 		  bool pass_all_alive, int played_games, int base_playouts,
@@ -558,7 +574,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	if ((opponent_passed || pass_first) &&
 	    b->moves > 10 && b->rules != RULES_STONES_ONLY) {
 		char *msg;
-		if (uct_pass_is_safe(u, b, color, pass_all_alive, &msg)) {
+		if (uct_search_pass_is_safe(u, b, color, pass_all_alive, &msg)) {
 			if (UDEBUGL(0)) {
 				float score = -1 * board_official_score(b, &u->dead_groups);
 				fprintf(stderr, "<Will rather pass, looks safe enough. Final score: %s%.1f>\n",

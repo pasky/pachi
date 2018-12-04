@@ -95,110 +95,50 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 	u->played_own = u->played_all = 0;
 }
 
-static void
-get_dead_groups(struct uct *u, struct board *b, struct move_queue *dead, struct move_queue *unclear)
-{
-	enum gj_state gs_array[board_size2(b)];
-	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
-	ownermap_judge_groups(b, &u->ownermap, &gj);
-	dead->moves = unclear->moves = 0;
-	groups_of_status(b, &gj, GS_DEAD, dead);
-	groups_of_status(b, &gj, GS_UNKNOWN, unclear);
-}
-
-/* Do we win counting, considering that given groups are dead ?
- * Assumes ownermap is well seeded. */
-static bool
-pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue *dead,
-	     float score_est, bool pass_all_alive, char **msg)
-{
-	int dames;
-	int final_ownermap[board_size2(b)];
-	floating_t score = board_official_score_details(b, dead, &dames, final_ownermap); 
-	if (color == S_BLACK)  score = -score;
-	//fprintf(stderr, "pass_is_safe():  %d score %f   dame: %i\n", color, score, dame);
-	//board_print_official_ownermap(b, final_ownermap);
-
-	/* Don't go to counting if position is not final.
-	 * Non-seki dames surrounded by only dames / border / one color are no dame to me,
-	 * most likely some territories are still open ... */
-	foreach_point(b) {
-		if (board_at(b, c) == S_OFFBOARD) continue;
-		if (final_ownermap[c] != 3)  continue;
-		if (ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_DAME) continue;
-
-		coord_t dame = c;
-		int around[4] = { 0, };
-		foreach_neighbor(b, dame, {
-			around[final_ownermap[c]]++;
-		});		
-		if (around[S_BLACK] + around[3] == 4 ||
-		    around[S_WHITE] + around[3] == 4 )  {
-			static char buf[100];
-			sprintf(buf, "non-final position at %s", coord2sstr(dame, b));
-			*msg = buf;
-			return false;
-		}
-	} foreach_point_end;	
-
-	/* If ownermap and official score disagree position is likely not final.
-	 * If too many dames also. */
-	if (!pass_all_alive) {
-		int max_dames = (board_large(b) ? 20 : 7);
-		*msg = "too many dames";
-		if (dames > max_dames)    return false;
-
-		/* Can disagree up to dame points, as long as there are not too many.
-		 * For example a 1 point difference with 1 dame is quite usual... */
-		int max_diff = MIN(dames, 4);
-		*msg = "score est and official score don't agree";
-		if (fabs(score - score_est) > max_diff)  return false;
-	}
-	
-	*msg = "losing on official score";
-	return (score >= 0);
-}
-
+/* Does the board look like a final position ?
+ * And do we win counting, considering that given groups are dead ?
+ * (if allow_losing_pass wasn't set) */
 bool
 uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg)
 {
-	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
-	uct_mcowner_playouts(u, b, color);
-
-	/* Save dead groups for final_status_list dead. */
-	struct move_queue unclear;
-	struct move_queue *dead = &u->dead_groups;
-	u->pass_moveno = b->moves + 1;
-	get_dead_groups(u, b, dead, &unclear);
+	/* Check this early, no need to go through the whole thing otherwise. */
+	*msg = "too early to pass";
+	if (b->moves < board_earliest_pass(b))
+		return false;
 	
-	/* Unclear groups ? */
-	*msg = "unclear groups";
-	if (unclear.moves)  return false;
+	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
+	struct move_queue dead, unclear;	
+	uct_mcowner_playouts(u, b, color);
+	get_dead_groups(b, &u->ownermap, &dead, &unclear);
 	
 	if (pass_all_alive) {
 		*msg = "need to remove opponent dead groups first";
-		for (unsigned int i = 0; i < dead->moves; i++)
-			if (board_at(b, dead->move[i]) == stone_other(color))
+		for (unsigned int i = 0; i < dead.moves; i++)
+			if (board_at(b, dead.move[i]) == stone_other(color))
 				return false;
-		dead->moves = 0; // our dead stones are alive when pass_all_alive is true
-	}
-	
-	if (u->allow_losing_pass) {
-		*msg = "unclear point, clarify first";
-		foreach_point(b) {
-			if (board_at(b, c) == S_OFFBOARD)  continue;
-			if (ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN)
-				return false;
-		} foreach_point_end;
-		return true;
+		dead.moves = 0; // our dead stones are alive when pass_all_alive is true
 	}
 
 	/* Check score estimate first, official score is off if position is not final */
 	*msg = "losing on score estimate";
-	floating_t score = ownermap_score_est_color(b, &u->ownermap, color);
-	if (score < 0)  return false;
-
-	return pass_is_safe(u, b, color, dead, score, pass_all_alive, msg);
+	bool check_score = !u->allow_losing_pass;
+	floating_t score_est = ownermap_score_est_color(b, &u->ownermap, color);
+	if (check_score && score_est < 0)  return false;
+	
+	int final_ownermap[board_size2(b)];
+	int dames;
+	floating_t final_score = board_official_score_details(b, &dead, &dames, final_ownermap); 
+	if (color == S_BLACK)  final_score = -final_score;
+	
+	/* Don't go to counting if position is not final.
+	 * Skip extra checks for pass_all_alive in case there are
+	 * positions which don't pass them (too many sekis for example). */
+	if (!board_position_final_full(b, &u->ownermap, &dead, &unclear, score_est,
+				       final_ownermap, dames, final_score, msg, !pass_all_alive))
+		return false;
+	
+	*msg = "losing on official score";
+	return (check_score ? final_score >= 0 : true);
 }
 
 static void
@@ -371,8 +311,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 	uct_mcowner_playouts(u, b, S_BLACK);
 	if (DEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
-	struct move_queue unclear;
-	get_dead_groups(u, b, dead, &unclear);
+	get_dead_groups(b, &u->ownermap, dead, NULL);
 	print_dead_groups(u, b, dead);
 }
 
