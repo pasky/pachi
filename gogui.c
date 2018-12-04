@@ -43,7 +43,7 @@ cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *
 		sbprintf(buf, "gfx/Winrates/gogui-winrates\n");
 	}
 	if (e->ownermap) {
-		sbprintf(buf, "gfx/Influence/gogui-ownermap\n");
+		sbprintf(buf, "gfx/Influence/gogui-influence\n");
 		sbprintf(buf, "gfx/Score Est/gogui-score_est\n");
 	}
 	if (e->dead_group_list) {
@@ -342,51 +342,6 @@ gogui_best_moves(strbuf_t *buf, struct engine *e, struct board *b, struct time_i
 		gogui_show_best_moves_colors(buf, b, color, best_c, best_r, n);
 }
 
-static void
-gogui_ownermap(strbuf_t *buf, struct board *b, struct engine *e)
-{
-	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
-	if (!ownermap)	return;
-
-	sbprintf(buf, "INFLUENCE");	
-	foreach_point(b) {
-		if (board_at(b, c) == S_OFFBOARD)
-			continue;
-		float p = ownermap_estimate_point(ownermap, c);
-		
-		// p = -1 for WHITE, 1 for BLACK absolute ownership of point i
-		if      (p < -.8)  p = -1.0;
-		else if (p < -.5)  p = -0.7;
-		else if (p < -.2)  p = -0.4;
-		else if (p < 0.2)  p = 0.0;
-		else if (p < 0.5)  p = 0.4;
-		else if (p < 0.8)  p = 0.7;
-		else               p = 1.0;
-		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
-	} foreach_point_end;
-
-	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
-}
-
-static void
-gogui_score_est(strbuf_t *buf, struct board *b, struct engine *e)
-{
-	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
-	if (!ownermap)	return;
-
-	sbprintf(buf, "INFLUENCE");
-	foreach_point(b) {
-		if (board_at(b, c) == S_OFFBOARD)  continue;
-		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
-		float p = 0;
-		if (j == PJ_BLACK)  p = 0.5;
-		if (j == PJ_WHITE)  p = -0.5;
-		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
-	} foreach_point_end;
-
-	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
-}
-
 enum parse_code
 cmd_gogui_color_palette(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
@@ -417,11 +372,32 @@ cmd_gogui_livegfx(struct board *board, struct engine *e, struct time_info *ti, g
 }
 
 enum parse_code
-cmd_gogui_ownermap(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_influence(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
+	
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_ownermap(buf, b, e);
+	
+	sbprintf(buf, "INFLUENCE");	
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)
+			continue;
+		float p = ownermap_estimate_point(ownermap, c);
+		
+		// p = -1 for WHITE, 1 for BLACK absolute ownership of point i
+		if      (p < -.8)  p = -1.0;
+		else if (p < -.5)  p = -0.7;
+		else if (p < -.2)  p = -0.4;
+		else if (p < 0.2)  p = 0.0;
+		else if (p < 0.5)  p = 0.4;
+		else if (p < 0.8)  p = 0.7;
+		else               p = 1.0;
+		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
+	} foreach_point_end;
+
+	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
@@ -429,9 +405,23 @@ cmd_gogui_ownermap(struct board *b, struct engine *e, struct time_info *ti, gtp_
 enum parse_code
 cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
+	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
+	
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_score_est(buf, b, e);
+	
+	sbprintf(buf, "INFLUENCE");
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
+		float p = 0;
+		if (j == PJ_BLACK)  p = 0.5;
+		if (j == PJ_WHITE)  p = -0.5;
+		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
+	} foreach_point_end;
+
+	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }

@@ -478,6 +478,17 @@ cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *
 	return P_OK;
 }
 
+static enum parse_code
+cmd_pachi_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
+
+	board_print_ownermap(b, stderr, ownermap);
+	gtp_reply(gtp, ownermap_score_est_str(b, ownermap), NULL);
+	return P_OK;
+}
+
 static int
 cmd_final_status_list_dead(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
 {
@@ -814,14 +825,16 @@ static gtp_command_t commands[] =
 	{ "pachi-dumptbook",        cmd_pachi_dumptbook },
 	{ "pachi-evaluate",         cmd_pachi_evaluate },
 	{ "pachi-result",           cmd_pachi_result },
+	{ "pachi-score_est",        cmd_pachi_score_est },
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },
 	{ "tunit",		    cmd_pachi_tunit },
+	{ "score_est",              cmd_pachi_score_est },
 
 	{ "gogui-analyze_commands", cmd_gogui_analyze_commands },
 	{ "gogui-livegfx",          cmd_gogui_livegfx },
-	{ "gogui-ownermap",         cmd_gogui_ownermap },
+	{ "gogui-influence",        cmd_gogui_influence },
 	{ "gogui-score_est",        cmd_gogui_score_est },
 	{ "gogui-final_score",      cmd_gogui_final_score },
 	{ "gogui-best_moves",       cmd_gogui_best_moves },
