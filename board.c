@@ -1435,11 +1435,10 @@ board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 	b->ko = u->ko;
 	b->last_ko = u->last_ko;
 	b->last_ko_age = u->last_ko_age;
+	b->moves--;	
 	
 	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) 
 		return;
-
-	b->moves--;
 
 	if (likely(board_at(b, m->coord) == m->color))
 		board_undo_stone(b, u, m);
