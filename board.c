@@ -1551,13 +1551,11 @@ board_get_one_point_eye(struct board *board, coord_t coord)
 		return S_NONE;
 }
 
-
 floating_t
 board_fast_score(struct board *board)
 {
-	int scores[S_MAX];
-	memset(scores, 0, sizeof(scores));
-
+	int scores[S_MAX] = { 0, };
+	
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
 		if (color == S_NONE && board->rules != RULES_STONES_ONLY)
@@ -1566,8 +1564,7 @@ board_fast_score(struct board *board)
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
 
-	int handi_comp = board_score_handicap_compensation(board);
-	return board->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
+	return board_score(board, scores);
 }
 
 /* Owner map: 0: undecided; 1: black; 2: white; 3: dame */
@@ -1619,7 +1616,7 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 	return needs_update;
 }
 
-int
+static int
 board_score_handicap_compensation(struct board *b)
 {
 	switch (b->rules) {		
@@ -1636,6 +1633,15 @@ board_score_handicap_compensation(struct board *b)
 	}
 	
 	assert(0);  /* not reached */
+}
+
+/* Score from white perspective, taking rules / handicap into account.
+ * scores[]: number of points controlled by black/white. */
+floating_t
+board_score(struct board *b, int scores[S_MAX])
+{
+	int handi_comp = board_score_handicap_compensation(b);
+	return b->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
 }
 
 void
@@ -1697,8 +1703,7 @@ board_official_score_details(struct board *board, struct move_queue *dead, int *
 	} foreach_point_end;
 	*dames = scores[3];
 
-	int handi_comp = board_score_handicap_compensation(board);
-	return board->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
+	return board_score(board, scores);
 }
 
 floating_t

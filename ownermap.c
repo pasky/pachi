@@ -185,15 +185,15 @@ ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c)
 float
 ownermap_score_est(struct board *b, struct ownermap *ownermap)
 {
-	float scores[S_MAX] = {0.0, };  /* Number of points owned by each color */
+	int scores[S_MAX] = {0, };  /* Number of points owned by each color */
+	
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
 		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
 		scores[j]++;
 	} foreach_point_end;
 
-	int handi_comp = board_score_handicap_compensation(b);
-	return ((scores[PJ_WHITE] + b->komi + handi_comp) - scores[PJ_BLACK]);
+	return board_score(b, scores);
 }
 
 float
