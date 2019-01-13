@@ -439,14 +439,14 @@ test_moggy_moves(struct board *b, char *arg)
 		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
 			stone2str(color), runs);
 
-        int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
-	int *played = played_ + 2;		// allow storing pass/resign
+        int played_[b->size2 + 1];		memset(played_, 0, sizeof(played_));
+	int *played = played_ + 1;		// allow storing pass
 	int most_played = 0;
 	replay_sample_moves(e, b, color, played, &most_played);
 
 	/* Show moves stats */	
 	for (int k = most_played; k > 0; k--)
-		for (coord_t c = resign; c < b->size2; c++)
+		for (coord_t c = pass; c < b->size2; c++)
 			if (played[c] == k)
 				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
 	

@@ -26,8 +26,7 @@ static bool
 playout_permit_move(struct playout_policy *p, struct board *b, struct move *m, bool alt, bool rnd)
 {
 	coord_t coord = m->coord;
-	if (coord == pass || coord == resign)
-		return false;
+	if (coord == pass) return false;
 
 	if (!board_permit(b, m, NULL) ||
 	    (p->permit && !p->permit(p, b, m, alt, rnd)))

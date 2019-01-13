@@ -568,12 +568,10 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 {
 	/* Get a Common Fate Graph distance map from parent node. */
 	int distances[board_size2(b)];
-	if (!is_pass(b->last_move.coord) && !is_resign(b->last_move.coord)) {
+	if (!is_pass(b->last_move.coord))
 		cfg_distances(b, b->last_move.coord, distances, TREE_NODE_D_MAX);
-	} else {
-		// Pass or resign - everything is too far.
+	else    // Pass - everything is too far.
 		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
-	}
 
 	/* Get a map of prior values to initialize the new nodes with. */
 	struct prior_map map = {

@@ -51,6 +51,7 @@ replay_sample_moves(struct engine *e, struct board *b, enum stone color,
 		
 		if (DEBUGL(4))  fprintf(stderr, "---------------------------------\n");		
 		coord_t c = playout_play_move(&setup, &b2, color, r->playout);		
+		assert(!is_resign(c));
 		if (DEBUGL(4))  fprintf(stderr, "-> %s\n", coord2sstr(c, &b2));
 		
 		played[c]++;
@@ -74,14 +75,14 @@ replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 	if (DEBUGL(3))
 		printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
 
-	int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
-	int *played = played_ + 2;		// allow storing pass/resign
+	int played_[b->size2 + 1];		memset(played_, 0, sizeof(played_));
+	int *played = played_ + 1;		// allow storing pass
 	int most_played = 0;
 	m.coord = replay_sample_moves(e, b, color, played, &most_played);
 
 	if (DEBUGL(3)) {  /* Show moves stats */
 		for (int k = most_played; k > 0; k--)
-			for (coord_t c = resign; c < b->size2; c++)
+			for (coord_t c = pass; c < b->size2; c++)
 				if (played[c] == k)
 					fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / r->runs);
 		fprintf(stderr, "\n");
@@ -119,12 +120,12 @@ replay_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum 
 	if (DEBUGL(3))
 		printf("best_moves: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
 
-	int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
-	int *played = played_ + 2;		// allow storing pass/resign
+	int played_[b->size2 + 1];		memset(played_, 0, sizeof(played_));
+	int *played = played_ + 1;		// allow storing pass
 	int most_played = 0;
 	replay_sample_moves(e, b, color, played, &most_played);
 	
-	for (coord_t c = resign; c < b->size2; c++)
+	for (coord_t c = pass; c < b->size2; c++)
 		best_moves_add(c, (float)played[c] / r->runs, best_c, best_r, nbest);
 }
 

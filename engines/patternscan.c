@@ -285,7 +285,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m, char *engine
 {
 	struct patternscan *ps = e->data;
 
-	if (is_pass(m->coord) || is_resign(m->coord))
+	if (is_pass(m->coord))
 		return NULL;
 	/* Deal with broken game records that sometimes get fed in. */
 	assert(board_at(b, m->coord) == S_NONE);
