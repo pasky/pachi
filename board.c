@@ -1204,11 +1204,11 @@ board_play_(struct board *board, struct move *m, struct board_undo *u)
 	if (u) undo_init(board, m, u);
 	
 	if (unlikely(is_pass(m->coord))) {
-		if (board->rules == RULES_SIMING) {
-			/* On pass, the player gives a pass stone
-			 * to the opponent. */
+		board->passes[m->color]++;
+		/* On pass, the player gives a pass stone to the opponent. */
+		if (is_pass(m->coord) && board->rules == RULES_SIMING)
 			board->captures[stone_other(m->color)]++;
-		}
+		
 		struct move nomove = { pass, S_NONE };
 		board->ko = nomove;
 		if (!u) { 
@@ -1437,8 +1437,10 @@ board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 	b->last_ko_age = u->last_ko_age;
 	b->moves--;	
 	
-	if (unlikely(is_pass(m->coord)))
+	if (unlikely(is_pass(m->coord))) {
+		b->passes[m->color]--;
 		return;
+	}
 
 	if (likely(board_at(b, m->coord) == m->color))
 		board_undo_stone(b, u, m);
@@ -1449,16 +1451,17 @@ board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 }
 
 
-/* Undo, supported only for pass moves. This form of undo is required by KGS
- * to settle disputes on dead groups. See also fast_board_undo() */
+/* Undo, supported only for pass moves. 
+ * This form of undo is required by KGS to settle disputes on dead groups. */
 int board_undo(struct board *board)
 {
 	if (!is_pass(board->last_move.coord))
 		return -1;
-	if (board->rules == RULES_SIMING) {
-		/* Return pass stone to the passing player. */
+	
+	if (board->rules == RULES_SIMING)  /* Return pass stone to the passing player. */
 		board->captures[stone_other(board->last_move.color)]--;
-	}
+	
+	board->passes[board->last_move.color]--;
 	board->last_move = board->last_move2;
 	board->last_move2 = board->last_move3;
 	board->last_move3 = board->last_move4;
@@ -1640,7 +1643,13 @@ floating_t
 board_score(struct board *b, int scores[S_MAX])
 {
 	int handi_comp = board_score_handicap_compensation(b);
-	return b->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
+	floating_t score = b->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
+
+	/* Aja's formula for converting playouts area scoring to territory.
+	 * http://computer-go.org/pipermail/computer-go/2010-April/000209.html */
+	if (b->rules == RULES_JAPANESE)
+		score += (b->last_move.color == S_BLACK) + (b->passes[S_WHITE] - b->passes[S_BLACK]);
+	return score;
 }
 
 void

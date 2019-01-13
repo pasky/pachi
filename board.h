@@ -159,6 +159,7 @@ struct board {
 	int size2; /* size^2 */
 	int bits2; /* ceiling(log2(size2)) */
 	int captures[S_MAX];
+	int passes[S_MAX];
 	floating_t komi;
 	int handicap;
 	enum go_ruleset rules;

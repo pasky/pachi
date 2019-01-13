@@ -342,7 +342,10 @@ int main(int argc, char *argv[])
 	fifo_init();
 
 	struct board *b = board_new(19 + 2, fbookfile);
-	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
+	if (forced_ruleset) {
+		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
+		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
+	}
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;

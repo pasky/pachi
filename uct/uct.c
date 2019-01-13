@@ -488,22 +488,6 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 	 * the last genmove issued. */
 	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
 	setup_dynkomi(u, b, color);
-
-	if (b->rules == RULES_JAPANESE)
-		u->territory_scoring = true;
-
-	/* Make pessimistic assumption about komi for Japanese rules to
-	 * avoid losing by 0.5 when winning by 0.5 with Chinese rules.
-	 * The rules usually give the same winner if the integer part of komi
-	 * is odd so we adjust the komi only if it is even (for a board of
-	 * odd size). We are not trying  to get an exact evaluation for rare
-	 * cases of seki. For details see http://home.snafu.de/jasiek/parity.html */
-	if (u->territory_scoring && (((int)floor(b->komi) + board_size(b)) & 1)) {
-		b->komi += (color == S_BLACK ? 1.0 : -1.0);
-		if (UDEBUGL(0))
-			fprintf(stderr, "Setting komi to %.1f assuming Japanese rules\n",
-				b->komi);
-	}
 }
 
 static void
@@ -843,10 +827,6 @@ uct_state_init(char *arg, struct board *b)
 				 * but losing situation, to be scored as a loss
 				 * for us. */
 				u->allow_losing_pass = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "territory_scoring")) {
-				/* Use territory scoring (default is area scoring).
-				 * An explicit kgs-rules command overrides this. */
-				u->territory_scoring = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "stones_only")) {
 				/* Do not count eyes. Nice to teach go to kids.
 				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
