@@ -551,6 +551,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	    // been returned; test therefore also for #simulations at root.
 	    && (best->u.playouts > GJ_MINGAMES || u->t->root->u.playouts > GJ_MINGAMES * 2)
 	    && !u->t->untrustworthy_tree) {
+		if (UDEBUGL(0)) fprintf(stderr, "<resign>\n");
 		*best_coord = resign;
 		return NULL;
 	}
