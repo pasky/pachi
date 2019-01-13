@@ -1203,8 +1203,8 @@ board_play_(struct board *board, struct move *m, struct board_undo *u)
 
 	if (u) undo_init(board, m, u);
 	
-	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
-		if (is_pass(m->coord) && board->rules == RULES_SIMING) {
+	if (unlikely(is_pass(m->coord))) {
+		if (board->rules == RULES_SIMING) {
 			/* On pass, the player gives a pass stone
 			 * to the opponent. */
 			board->captures[stone_other(m->color)]++;
@@ -1437,7 +1437,7 @@ board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 	b->last_ko_age = u->last_ko_age;
 	b->moves--;	
 	
-	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) 
+	if (unlikely(is_pass(m->coord)))
 		return;
 
 	if (likely(board_at(b, m->coord) == m->color))

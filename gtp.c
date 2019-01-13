@@ -370,7 +370,7 @@ cmd_genmove(struct board *board, struct engine *engine, struct time_info *ti, gt
 #endif
 	
 	struct move m = { .coord = c, .color = color };
-	if (board_play(board, &m) < 0) {
+	if (!is_resign(c) && board_play(board, &m) < 0) {
 		fprintf(stderr, "Attempted to generate an illegal move: [%s, %s]\n", coord2sstr(m.coord, board), stone2str(m.color));
 		abort();
 	}
