@@ -474,8 +474,10 @@ struct time_info ti_fuseki = { .period = TT_NULL };
 struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color)
 {
 	/* Specific fuseki time settings ? */
-	int fuseki_end = (board_large(b) ? 20 : 10);
-	if (board_small(b))  fuseki_end = 4;
+	int fuseki_end = 20;
+	if (real_board_size(b) <= 15)  fuseki_end = 10;
+	if (real_board_size(b) <= 13)  fuseki_end = 7;
+	if (board_small(b))	       fuseki_end = 4;
 	
 	if (ti_fuseki.period != TT_NULL && b->moves <= fuseki_end)
 		return &ti_fuseki;  
