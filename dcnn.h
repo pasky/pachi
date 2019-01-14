@@ -6,6 +6,11 @@
 
 #define DCNN_BEST_N 20
 
+/* Choose which dcnn to load */
+void set_dcnn(char *name);
+void list_dcnns(void);
+int dcnn_default_board_size(void);
+
 /* Ensure / disable dcnn */
 void require_dcnn(void);
 void disable_dcnn(void);
@@ -34,6 +39,8 @@ coord2dcnn_idx(coord_t c)
 #else
 
 
+#define set_dcnn(n)     die("dcnn required but not compiled in, aborting.\n")
+#define dcnn_default_board_size()  19
 #define disable_dcnn()  ((void)0)
 #define require_dcnn()  die("dcnn required but not compiled in, aborting.\n")
 #define using_dcnn(b)   0

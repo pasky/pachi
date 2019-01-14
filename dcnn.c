@@ -10,18 +10,81 @@
 #include "dcnn.h"
 #include "timeinfo.h"
 
+static bool board_19x19(board_t *b)        {  return (board_rsize(b) == 19);  }
+static bool board_15x15(board_t *b)        {  return (board_rsize(b) == 15);  }
+//static bool board_13x13(board_t *b)      {  return (board_rsize(b) == 13);  }
+static bool board_13x13_and_up(board_t *b) {  return (board_rsize(b) >= 13);  }
+
+static void detlef54_dcnn_eval(board_t *b, enum stone color, float result[]);
+
+typedef void (*dcnn_evaluate_t)(board_t *b, enum stone color, float result[]);
+typedef bool (*dcnn_supported_board_size_t)(board_t *b);
+
+typedef struct {
+	char *name;
+	char *full_name;
+	char *model_filename;
+	char *weights_filename;
+	int  default_size;
+	dcnn_supported_board_size_t supported_board_size;
+	dcnn_evaluate_t             eval;
+} dcnn_t;
+
+static dcnn_t dcnns[] = {
+#ifdef DCNN_DETLEF
+{  "detlef",     "Detlef's 54%", "detlef54.prototxt",  "detlef54.trained",   19, board_13x13_and_up,   detlef54_dcnn_eval },
+{  "detlef54",   "Detlef's 54%", "detlef54.prototxt",  "detlef54.trained",   19, board_13x13_and_up,   detlef54_dcnn_eval },
+#endif
+{  0, }
+};
+
+static dcnn_t *dcnn = NULL;
+
+#define dcnn_supported_board_size(b) (dcnn->supported_board_size(b))
+
+/* Find dcnn entry for @name (can also be model/weights filename). */
+void
+set_dcnn(char *name)
+{
+	for (int i = 0; dcnns[i].name; i++)
+		if (!strcmp(name, dcnns[i].name) ||
+		    !strcmp(name, dcnns[i].model_filename) ||
+		    !strcmp(name, dcnns[i].weights_filename)) {
+			dcnn = &dcnns[i];
+			return;
+		}
+	
+	die("Unknown dcnn '%s'\n", name);
+}
+
+void
+list_dcnns()
+{
+	printf("Supported networks:\n");
+	for (int i = 0; dcnns[i].name; i++)
+		printf("  %-20s %s dcnn\n", dcnns[i].name, dcnns[i].full_name);
+}
+
+static int
+find_dcnn_for_board(board_t *b)
+{
+	for (int i = 0; dcnns[i].name; i++)
+		if (!strcmp(dcnn->name, dcnns[i].name) &&
+		    dcnns[i].supported_board_size(b)) {  dcnn = &dcnns[i];  return 1;  }
+	return 0;
+}
+
+int
+dcnn_default_board_size()
+{
+	if (!dcnn)  dcnn = &dcnns[0];
+	return dcnn->default_size;
+}
+
 static bool dcnn_enabled = true;
 static bool dcnn_required = false;
 void disable_dcnn(void)  {  dcnn_enabled = false;  }
 void require_dcnn(void)  {  dcnn_required = true;  }
-
-static void detlef54_dcnn_eval(board_t *b, enum stone color, float result[]);
-
-static bool
-dcnn_supported_board_size(board_t *b)
-{
-	return (board_rsize(b) >= 13);
-}
 
 bool
 using_dcnn(board_t *b)
@@ -34,24 +97,36 @@ using_dcnn(board_t *b)
 void
 dcnn_init(board_t *b)
 {
+	if (!dcnn)  dcnn = &dcnns[0];
+	if (dcnn_enabled && !dcnn_supported_board_size(b) && find_dcnn_for_board(b))
+		caffe_done();  /* Reload net */	
 	if (dcnn_enabled && dcnn_supported_board_size(b))
-		caffe_init(board_rsize(b));
+		caffe_init(board_rsize(b), dcnn->model_filename, dcnn->weights_filename, dcnn->full_name, dcnn->default_size);
 	if (dcnn_required && !caffe_ready())  die("dcnn required, aborting.\n");
 }
 
 void
 dcnn_evaluate_quiet(board_t *b, enum stone color, float result[])
 {
-	detlef54_dcnn_eval(b, color, result);
+	dcnn->eval(b, color, result);
 }
 
 void
 dcnn_evaluate(board_t *b, enum stone color, float result[])
 {
 	double time_start = time_now();	
-	detlef54_dcnn_eval(b, color, result);
-	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
+	dcnn->eval(b, color, result);
+	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);	
 }
+
+
+#ifdef DCNN_DETLEF
+/********************************************************************************************************/
+/* Detlef's 54% dcnn */
+
+/* 19 layers, 13 input planes:
+ * http://computer-go.org/pipermail/computer-go/2015-December/008324.html
+ * http://physik.de/CNNlast.tar.gz */
 
 static void
 detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
@@ -80,8 +155,12 @@ detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 		else if (c == last_move4(b).coord)   data[12][y][x] = 1.0;
 	}
 
-	caffe_get_data((float*)data, result, 13, size);
+	caffe_get_data((float*)data, result, size, 13, size);
 }
+
+
+/********************************************************************************************************/
+#endif /* DCNN_DETLEF */
 
 void
 get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest)
