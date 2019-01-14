@@ -11,6 +11,7 @@
 #include "mq.h"
 #include "random.h"
 #include "ownermap.h"
+#include "dcnn.h"
 
 #ifdef BOARD_PAT3
 #include "pattern3.h"
@@ -860,6 +861,13 @@ board_rmf(board_t *b, int f)
 static void
 board_commit_move(board_t *b, move_t *m)
 {
+	if (!playout_board(b)) {
+#ifdef DCNN_DARKFOREST
+		if (darkforest_dcnn && !is_pass(m->coord))
+			b->moveno[m->coord] = b->moves;
+#endif
+	}
+
 	b->last_move_i = last_move_nexti(b);
 	last_move(b) = *m;
 

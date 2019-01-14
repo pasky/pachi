@@ -39,6 +39,7 @@ DCNN=1
 # Comment out those you don't need for speed.
 
 DCNN_DETLEF=1
+DCNN_DARKFOREST=1
 
 ######################## Extras #########################
 
@@ -191,10 +192,15 @@ ifeq ($(DCNN), 1)
 	SYS_LIBS := $(DCNN_LIBS)
 else
 	DCNN_DETLEF = 0
+	DCNN_DARKFOREST = 0
 endif
 
 ifeq ($(DCNN_DETLEF), 1)
 	COMMON_FLAGS += -DDCNN_DETLEF
+endif
+
+ifeq ($(DCNN_DARKFOREST), 1)
+	COMMON_FLAGS += -DDCNN_DARKFOREST
 endif
 
 ifeq ($(FIFO), 1)

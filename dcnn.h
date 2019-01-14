@@ -25,6 +25,8 @@ void print_dcnn_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest
 /* Convert board coord to dcnn data index */
 static inline int coord2dcnn_idx(coord_t c);
 
+extern int darkforest_dcnn;
+
 
 static inline int
 coord2dcnn_idx(coord_t c)
