@@ -476,12 +476,22 @@ tree_garbage_collect(struct tree *tree, struct tree_node *node)
 	return new_node;
 }
 
+/* Find node of given coordinate under parent.
+ * FIXME: Adjust for board symmetry. */
+struct tree_node *
+tree_get_node(struct tree_node *parent, coord_t c)
+{
+	for (struct tree_node *n = parent->children; n; n = n->sibling)
+		if (node_coord(n) == c)
+			return n;
+	return NULL;
+}
 
 /* Get a node of given coordinate from within parent, possibly creating it
  * if necessary - in a very raw form (no .d, priors, ...). */
 /* FIXME: Adjust for board symmetry. */
 struct tree_node *
-tree_get_node(struct tree *t, struct tree_node *parent, coord_t c, bool create)
+tree_get_node2(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 {
 	if (!parent->children || node_coord(parent->children) >= c) {
 		/* Special case: Insertion at the beginning. */
@@ -785,15 +795,13 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 }
 
 bool
-tree_promote_at(struct tree *tree, struct board *b, coord_t c)
+tree_promote_at(struct tree *t, struct board *b, coord_t c)
 {
-	tree_fix_symmetry(tree, b, c);
+	tree_fix_symmetry(t, b, c);
 
-	for (struct tree_node *ni = tree->root->children; ni; ni = ni->sibling) {
-		if (node_coord(ni) == c) {
-			tree_promote_node(tree, &ni);
-			return true;
-		}
-	}
-	return false;
+	struct tree_node *n = tree_get_node(t->root, c);
+	if (!n)  return false;
+	
+	tree_promote_node(t, &n);
+	return true;
 }

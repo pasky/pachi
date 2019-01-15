@@ -403,7 +403,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 		LTREE_DEBUG fprintf(stderr, "%s[%s %1.3f][%d] ",
 			coord2sstr(node_coord(descent[di].node), t->board),
 			stone2str(color), rval, descent[di].node->d);
-		lnode = tree_get_node(t, lnode, node_coord(descent[di++].node), true);
+		lnode = tree_get_node2(t, lnode, node_coord(descent[di++].node), true);
 		assert(lnode);
 		stats_add_result(&lnode->u, rval, pval);
 	}
@@ -412,7 +412,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	if (di < dlen) {
 		double rval = u->local_tree_eval != LTE_EACH ? sval : 0.5;
 		LTREE_DEBUG fprintf(stderr, "pass ");
-		lnode = tree_get_node(t, lnode, pass, true);
+		lnode = tree_get_node2(t, lnode, pass, true);
 		assert(lnode);
 		stats_add_result(&lnode->u, rval, pval);
 	}
