@@ -93,6 +93,8 @@ static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
 static volatile int finish_thread;
 static pthread_mutex_t finish_serializer = PTHREAD_MUTEX_INITIALIZER;
 
+static void *spawn_logger(void *ctx_);
+
 static void *
 spawn_worker(void *ctx_)
 {
@@ -161,7 +163,7 @@ spawn_thread_manager(void *ctx_)
 	fast_srandom(mctx->seed);
 
 	int played_games = 0;
-	pthread_t threads[u->threads];
+	pthread_t threads[u->threads + 1];
 	int joined = 0;
 
 	uct_halt = 0;
@@ -170,6 +172,10 @@ spawn_thread_manager(void *ctx_)
 	if (u->pondering && t->nodes && t->nodes_size >= t->pruning_threshold) {
 		t->root = tree_garbage_collect(t, t->root);
 	}
+
+	/* Logging thread for pondering */
+	if (u->pondering)
+		pthread_create(&threads[u->threads], NULL, spawn_logger, mctx);
 	
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
@@ -212,10 +218,41 @@ spawn_thread_manager(void *ctx_)
 		pthread_mutex_unlock(&finish_serializer);
 	}
 
+	if (u->pondering)
+		pthread_join(threads[u->threads], NULL);
+	
 	pthread_mutex_unlock(&finish_mutex);
 
 	mctx->games = played_games;
 	return mctx;
+}
+
+/* Pondering: Logging thread */
+static void *
+spawn_logger(void *ctx_)
+{
+	struct uct_thread_ctx *ctx = ctx_;
+	struct uct *u = ctx->u;
+	struct tree *t = ctx->t;
+	struct board *b = ctx->b;
+	enum stone color = ctx->color;
+	struct uct_search_state *s = ctx->s;
+	struct time_info *ti = ctx->ti;
+
+	// Similar to uct_search() code when pondering
+	while (!uct_halt) {
+		time_sleep(TREE_BUSYWAIT_INTERVAL);
+		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
+		 * time control is broken. But if it happens to be less, we still search
+		 * at least 100ms otherwise the move is completely random. */
+
+		int i = uct_search_games(s);
+		/* Print notifications etc. */
+		uct_search_progress(u, b, color, t, ti, s, i);
+		
+		if (s->fullmem)  uct_pondering_stop(u);
+	}
+	return NULL;
 }
 
 
@@ -257,7 +294,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
 	static struct uct_thread_ctx mctx;
-	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti };
+	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti, .s = s };
 	s->ctx = &mctx;
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
