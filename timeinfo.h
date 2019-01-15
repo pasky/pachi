@@ -124,4 +124,7 @@ extern struct time_info ti_fuseki;
 /* time_info to use for genmove() */
 struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color);
 
+/* set number of moves for fuseki for --fuseki-time */
+void set_fuseki_moves(int moves);
+
 #endif

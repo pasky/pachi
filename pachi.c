@@ -111,6 +111,7 @@ usage()
 		"  -s, --seed RANDOM_SEED            set random seed \n"
 		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
 		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
+		"      --fuseki MOVES                set fuseki length for --fuseki-time \n"
 		"  -u, --unit-test FILE              run unit tests \n"
 		"      --verbose-caffe               enable caffe logging \n"
 		"  -v, --version                     show version \n"
@@ -164,8 +165,10 @@ show_version(FILE *s)
 #define OPT_NOPATTERNS    263
 #define OPT_JOSEKI        264
 #define OPT_NOJOSEKI      265
+#define OPT_FUSEKI	  266
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
+	{ "fuseki",      required_argument, 0, OPT_FUSEKI },
 	{ "chatfile",    required_argument, 0, 'c' },
 	{ "compile-flags", no_argument,     0, OPT_COMPILE_FLAGS },
 	{ "debug-level", required_argument, 0, 'd' },
@@ -305,6 +308,9 @@ int main(int argc, char *argv[])
 					die("%s: Invalid -t argument %s\n", argv[0], optarg);
 				ti_default.ignore_gtp = true;
 				assert(ti_default.period != TT_NULL);
+				break;
+			case OPT_FUSEKI:
+				set_fuseki_moves(atoi(optarg));
 				break;
 			case OPT_FUSEKI_TIME:
 				if (!time_parse(&ti_fuseki, optarg))
