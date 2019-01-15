@@ -94,6 +94,17 @@ gtp_reply_printf(gtp_t *gtp, const char *format, ...)
 }
 
 void
+gtp_error_printf(gtp_t *gtp, const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	gtp_prefix('?', gtp);
+	vprintf(format, ap);
+	gtp_flush();
+	va_end(ap);	
+}
+
+void
 gtp_error(gtp_t *gtp, ...)
 {
 	va_list params;
@@ -202,8 +213,10 @@ cmd_boardsize(struct board *board, struct engine *engine, struct time_info *ti, 
 
 	/* Give sane error msg if pachi was compiled for a specific board size. */
 #ifdef BOARD_SIZE
-	if (size != BOARD_SIZE)
+	if (size != BOARD_SIZE) {
+		gtp_error_printf(gtp, "This Pachi only plays on %ix%i.\n", BOARD_SIZE, BOARD_SIZE);
 		die("Yozaa ! This Pachi only plays on %ix%i.\n", BOARD_SIZE, BOARD_SIZE);
+	}
 #endif
 		    
 	if (size < 1 || size > BOARD_MAX_SIZE) {
