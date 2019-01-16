@@ -61,7 +61,7 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	int nbest = 4;
 	float   best_r[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves(t, best_c, best_r, nbest, true);
+	uct_get_best_moves(u, best_c, best_r, nbest, true);
 
 	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
 	for (int i = 0; i < nbest; i++)
@@ -101,7 +101,7 @@ uct_progress_gogui_best(strbuf_t *buf, struct uct *u, struct tree *t, enum stone
 {
 	coord_t best_c[GOGUI_CANDIDATES];
 	float   best_r[GOGUI_CANDIDATES];
-	uct_get_best_moves(t, best_c, best_r, GOGUI_CANDIDATES, false);
+	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, false);
 	gogui_show_best_moves(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 
@@ -111,7 +111,7 @@ uct_progress_gogui_winrates(strbuf_t *buf, struct uct *u, struct tree *t, enum s
 {
 	coord_t best_c[GOGUI_CANDIDATES];
 	float   best_r[GOGUI_CANDIDATES];
-	uct_get_best_moves(t, best_c, best_r, GOGUI_CANDIDATES, true);
+	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, true);
 	gogui_show_winrates(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 

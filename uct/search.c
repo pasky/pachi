@@ -503,7 +503,6 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	return false;
 }
 
-
 /* uct_pass_is_safe() also called by uct policy, beware.  */
 static bool
 uct_search_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg)

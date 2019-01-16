@@ -137,7 +137,8 @@ bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pas
 void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
 void uct_genmove_setup(struct uct *u, struct board *b, enum stone color);
 void uct_pondering_stop(struct uct *u);
-void uct_get_best_moves(struct tree *t, coord_t *best_c, float *best_r, int nbest, bool winrates);
+void uct_get_best_moves(struct uct *u, coord_t *best_c, float *best_r, int nbest, bool winrates);
+void uct_get_best_moves_at(struct uct *u, struct tree_node *n, coord_t *best_c, float *best_r, int nbest, bool winrates);
 void uct_mcowner_playouts(struct uct *u, struct board *b, enum stone color);
 
 /* This is the state used for descending the tree; we use this wrapper
