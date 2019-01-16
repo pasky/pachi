@@ -467,7 +467,7 @@ joseki_rate_moves(struct joseki_dict *jdict, struct board *b, enum stone color,
 }
 
 void
-find_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matches,
+get_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matches,
 		       coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
@@ -507,7 +507,7 @@ print_joseki_moves(struct joseki_dict *jdict, struct board *b, enum stone color)
 	int nbest = 20;
 	float best_r[20] = { 0.0, };
 	coord_t best_c[20];
-	find_joseki_best_moves(b, coords, ratings, n, best_c, best_r, nbest);
+	get_joseki_best_moves(b, coords, ratings, n, best_c, best_r, nbest);
 	print_joseki_best_moves(b, best_c, best_r, nbest);
 }
 

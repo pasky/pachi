@@ -17,7 +17,7 @@ josekiplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, e
 	float ratings[BOARD_MAX_COORDS];
 	int matches = joseki_list_moves(joseki_dict, b, color, coords, ratings);
 	
-	find_joseki_best_moves(b, coords, ratings, matches, best_c, best_r, nbest);
+	get_joseki_best_moves(b, coords, ratings, matches, best_c, best_r, nbest);
 	print_joseki_best_moves(b, best_c, best_r, nbest);
 }
 

@@ -51,7 +51,7 @@ josekipat_t *joseki_lookup_ignored(struct joseki_dict *jd, struct board *b, coor
 josekipat_t *joseki_lookup_3x3(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color);
 int  joseki_list_moves(struct joseki_dict *jd, struct board *b, enum stone color, coord_t *coords, float *ratings);
 void joseki_rate_moves(struct joseki_dict *jd, struct board *b, enum stone color, float *map);
-void find_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matches, coord_t *best_c, float *best_r, int nbest);
+void get_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matches, coord_t *best_c, float *best_r, int nbest);
 void print_joseki_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest);
 void print_joseki_moves(struct joseki_dict *jd, struct board *b, enum stone color);
 

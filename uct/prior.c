@@ -22,7 +22,7 @@
 #define PRIOR_BEST_N 20
 
 static void
-find_node_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest)
+get_node_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;
@@ -43,7 +43,7 @@ print_node_prior_best_moves(struct board *b, struct tree_node *parent)
 	float best_r[PRIOR_BEST_N];
 	coord_t best_c[PRIOR_BEST_N];
 	int nbest = PRIOR_BEST_N;
-	find_node_prior_best_moves(parent, best_c, best_r, nbest);
+	get_node_prior_best_moves(parent, best_c, best_r, nbest);
 
 	int cols = fprintf(stderr, "prior =    [ ");
 	for (int i = 0; i < nbest; i++)
@@ -57,7 +57,7 @@ print_node_prior_best_moves(struct board *b, struct tree_node *parent)
 }
 
 static void
-find_prior_best_moves(struct prior_map *map, coord_t *best_c, float *best_r, int nbest)
+get_prior_best_moves(struct prior_map *map, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;
@@ -80,7 +80,7 @@ print_prior_best_moves(struct board *b, struct prior_map *map)
 	float best_r[PRIOR_BEST_N];
 	coord_t best_c[PRIOR_BEST_N];
 	int nbest = PRIOR_BEST_N;
-	find_prior_best_moves(map, best_c, best_r, nbest);
+	get_prior_best_moves(map, best_c, best_r, nbest);
 
 	int cols = fprintf(stderr, "prior =    [ ");
 	for (int i = 0; i < nbest; i++)
@@ -231,7 +231,7 @@ uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 	if (DEBUGL(2) && !node->parent && matches) {
 		float best_r[20];
 		coord_t best_c[20];
-		find_joseki_best_moves(b, coords, ratings, matches, best_c, best_r, 20);
+		get_joseki_best_moves(b, coords, ratings, matches, best_c, best_r, 20);
 		print_joseki_best_moves(b, best_c, best_r, 20);
 	}
 	return matches;
@@ -251,7 +251,7 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 	if (DEBUGL(2) && !node->parent && !using_dcnn(b)) {
 		float best_r[20];
 		coord_t best_c[20];
-		find_pattern_best_moves(b, probs, best_c, best_r, 20);
+		get_pattern_best_moves(b, probs, best_c, best_r, 20);
 		print_pattern_best_moves(map->b, best_c, best_r, 20);
 	}		
 

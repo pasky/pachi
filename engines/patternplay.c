@@ -75,7 +75,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 
 	float best_r[20];
 	coord_t best_c[20];
-	find_pattern_best_moves(b, probs, best_c, best_r, 20);
+	get_pattern_best_moves(b, probs, best_c, best_r, 20);
 	print_pattern_best_moves(b, best_c, best_r, 20);
 	if (pp->debug_level >= 4)
 		debug_pattern_best_moves(pp, b, color, best_c, 20);
@@ -107,7 +107,7 @@ patternplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, 
 	pp->matched_locally = pattern_matching_locally(&pp->pc, b, color, &ownermap);
 	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
 
-	find_pattern_best_moves(b, probs, best_c, best_r, nbest);
+	get_pattern_best_moves(b, probs, best_c, best_r, nbest);
 	print_pattern_best_moves(b, best_c, best_r, nbest);
 }
 

@@ -187,7 +187,7 @@ print_pattern_best_moves(struct board *b, coord_t *best_c, float *best_r, int nb
 }
 
 void
-find_pattern_best_moves(struct board *b, float *probs, coord_t *best_c, float *best_r, int nbest)
+get_pattern_best_moves(struct board *b, float *probs, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;
