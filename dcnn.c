@@ -38,7 +38,7 @@ dcnn_init(struct board *b)
 }
 
 void
-dcnn_get_moves(struct board *b, enum stone color, float result[])
+dcnn_evaluate(struct board *b, enum stone color, float result[])
 {
 	assert(dcnn_supported_board_size(b));
 	double time_start = time_now();
@@ -82,7 +82,7 @@ dcnn_get_moves(struct board *b, enum stone color, float result[])
 
 
 void
-find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest)
+get_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;
