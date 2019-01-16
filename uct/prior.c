@@ -45,12 +45,9 @@ print_node_prior_best_moves(struct board *b, struct tree_node *parent)
 	int nbest = PRIOR_BEST_N;
 	get_node_prior_best_moves(parent, best_c, best_r, nbest);
 
-	int cols = fprintf(stderr, "prior =    [ ");
-	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
-	fprintf(stderr, "]\n");
-
-	fprintf(stderr, "%*s[ ", cols-2, "");
+	int cols = best_moves_print(b, "prior =    ", best_c, nbest);
+	
+	fprintf(stderr, "%*s[ ", cols, "");
 	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
 	fprintf(stderr, "]\n");	
@@ -82,12 +79,9 @@ print_prior_best_moves(struct board *b, struct prior_map *map)
 	int nbest = PRIOR_BEST_N;
 	get_prior_best_moves(map, best_c, best_r, nbest);
 
-	int cols = fprintf(stderr, "prior =    [ ");
-	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
-	fprintf(stderr, "]\n");
+	int cols = best_moves_print(b, "prior =    ", best_c, nbest);
 
-	fprintf(stderr, "%*s[ ", cols-2, "");
+	fprintf(stderr, "%*s[ ", cols, "");
 	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
 	fprintf(stderr, "]\n");	

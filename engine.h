@@ -141,5 +141,18 @@ best_moves_add_full(coord_t c, float r, void *d, coord_t *best_c, float *best_r,
 		}
 }
 
+static inline int
+best_moves_print(struct board *b, char *str, coord_t *best_c, int nbest)
+{
+	fprintf(stderr, "%s[ ", str);
+	for (int i = 0; i < nbest; i++) {
+		char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i], b));
+		fprintf(stderr, "%-3s ", str);
+	}
+	fprintf(stderr, "]\n");
+	return strlen(str);
+}
+
+
 
 #endif

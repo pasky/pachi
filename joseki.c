@@ -481,14 +481,9 @@ get_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matc
 void
 print_joseki_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
 {
-	int cols = fprintf(stderr, "joseki =   [ ");
-	for (int i = 0; i < nbest; i++) {
-		char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i], b));
-		fprintf(stderr, "%-3s ", str);
-	}
-	fprintf(stderr, "]\n");
+	int cols = best_moves_print(b, "joseki =   ", best_c, nbest);	
 
-	fprintf(stderr, "%*s[ ", cols-2, "");
+	fprintf(stderr, "%*s[ ", cols, "");
 	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100.0));
 	fprintf(stderr, "]\n");

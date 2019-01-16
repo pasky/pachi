@@ -175,12 +175,9 @@ feature_has_gamma(struct pattern_config *pc, struct feature *f)
 void
 print_pattern_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
 {
-	int cols = fprintf(stderr, "patterns = [ ");
-	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
-	fprintf(stderr, "]\n");
+	int cols = best_moves_print(b, "patterns = ", best_c, nbest);
 
-	fprintf(stderr, "%*s[ ", cols-2, "");
+	fprintf(stderr, "%*s[ ", cols, "");
 	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
 	fprintf(stderr, "]\n");

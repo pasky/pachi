@@ -97,12 +97,9 @@ get_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, i
 void
 print_dcnn_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
 {
-	int cols = fprintf(stderr, "dcnn = [ ");
-	for (int i = 0; i < nbest; i++)
-		fprintf(stderr, "%-3s ", coord2sstr(best_c[i], b));
-	fprintf(stderr, "]\n");
+	int cols = best_moves_print(b, "dcnn = ", best_c, nbest);
 
-	fprintf(stderr, "%*s[ ", cols-2, "");
+	fprintf(stderr, "%*s[ ", cols, "");
 	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
 	fprintf(stderr, "]\n");
