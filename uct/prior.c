@@ -24,8 +24,9 @@
 static void
 find_node_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest)
 {
-	for (int i = 0; i < nbest; i++)
-		best_c[i] = pass;
+	for (int i = 0; i < nbest; i++) {
+		best_c[i] = pass;  best_r[i] = 0;
+	}
 	
 	float max = 0.0;
 	for (struct tree_node *n = parent->children; n; n = n->sibling)
@@ -39,7 +40,7 @@ find_node_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *bes
 void
 print_node_prior_best_moves(struct board *b, struct tree_node *parent)
 {
-	float best_r[PRIOR_BEST_N] = { 0.0, };
+	float best_r[PRIOR_BEST_N];
 	coord_t best_c[PRIOR_BEST_N];
 	int nbest = PRIOR_BEST_N;
 	find_node_prior_best_moves(parent, best_c, best_r, nbest);
@@ -58,8 +59,9 @@ print_node_prior_best_moves(struct board *b, struct tree_node *parent)
 static void
 find_prior_best_moves(struct prior_map *map, coord_t *best_c, float *best_r, int nbest)
 {
-	for (int i = 0; i < nbest; i++)
-		best_c[i] = pass;
+	for (int i = 0; i < nbest; i++) {
+		best_c[i] = pass;  best_r[i] = 0;
+	}
 	
 	float max = 0.0;
 	foreach_free_point(map->b) {
@@ -75,7 +77,7 @@ find_prior_best_moves(struct prior_map *map, coord_t *best_c, float *best_r, int
 static void
 print_prior_best_moves(struct board *b, struct prior_map *map)
 {
-	float best_r[PRIOR_BEST_N] = { 0.0, };
+	float best_r[PRIOR_BEST_N];
 	coord_t best_c[PRIOR_BEST_N];
 	int nbest = PRIOR_BEST_N;
 	find_prior_best_moves(map, best_c, best_r, nbest);
@@ -129,13 +131,13 @@ static void
 uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 #ifdef DCNN
-	float r[19 * 19];
-	float best_r[DCNN_BEST_N] = { 0.0, };
-	coord_t best_moves[DCNN_BEST_N];
+	float   r[19 * 19];
+	coord_t best_c[DCNN_BEST_N];	
+	float   best_r[DCNN_BEST_N];
 	dcnn_get_moves(map->b, map->to_play, r);
-	find_dcnn_best_moves(map->b, r, best_moves, best_r, DCNN_BEST_N);
+	find_dcnn_best_moves(map->b, r, best_c, best_r, DCNN_BEST_N);
 	if (UDEBUGL(2))
-		print_dcnn_best_moves(map->b, best_moves, best_r, DCNN_BEST_N);
+		print_dcnn_best_moves(map->b, best_c, best_r, DCNN_BEST_N);
 	
 	foreach_free_point(map->b) {
 		if (!map->consider[c])
@@ -227,7 +229,7 @@ uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 		add_prior_value(map, coords[i], 1.0, ratings[i] * u->prior->joseki_eqex);
 
 	if (DEBUGL(2) && !node->parent && matches) {
-		float best_r[20] = { 0.0, };
+		float best_r[20];
 		coord_t best_c[20];
 		find_joseki_best_moves(b, coords, ratings, matches, best_c, best_r, 20);
 		print_joseki_best_moves(b, best_c, best_r, 20);
@@ -247,7 +249,7 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 
 	/* Show patterns best moves for root node if not using dcnn. */
 	if (DEBUGL(2) && !node->parent && !using_dcnn(b)) {
-		float best_r[20] = { 0.0, };
+		float best_r[20];
 		coord_t best_c[20];
 		find_pattern_best_moves(b, probs, best_c, best_r, 20);
 		print_pattern_best_moves(map->b, best_c, best_r, 20);

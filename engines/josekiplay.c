@@ -25,7 +25,7 @@ static coord_t
 josekiplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	coord_t best_c[20];
-	float   best_r[20] = { 0.0, };
+	float   best_r[20];
 	josekiplay_best_moves(e, b, ti, color, best_c, best_r, 20);
 
 	return best_c[0];

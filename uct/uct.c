@@ -572,9 +572,9 @@ void
 uct_get_best_moves(struct tree *t, coord_t *best_c, float *best_r, int nbest, bool winrates)
 {
 	struct tree_node* best_d[nbest];
-	for (int i = 0; i < nbest; i++)  best_c[i] = pass;
-	for (int i = 0; i < nbest; i++)  best_r[i] = 0;
-	for (int i = 0; i < nbest; i++)  best_d[i] = NULL;
+	for (int i = 0; i < nbest; i++)  {
+		best_c[i] = pass;  best_r[i] = 0;  best_d[i] = NULL;
+	}
 	
 	/* Find best moves */
 	for (struct tree_node *n = t->root->children; n; n = n->sibling)

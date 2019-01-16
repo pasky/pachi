@@ -73,7 +73,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	pp->matched_locally = -1;  // Invalidate
 	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
 
-	float best_r[20] = { 0.0, };
+	float best_r[20];
 	coord_t best_c[20];
 	find_pattern_best_moves(b, probs, best_c, best_r, 20);
 	print_pattern_best_moves(b, best_c, best_r, 20);

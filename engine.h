@@ -50,7 +50,8 @@ struct engine {
 	/* Used by distributed engine */
 	engine_genmoves_t        genmoves;
 
-	/* List best moves for current position. */
+	/* List best moves for current position.
+	 * Call engine_best_move() for data to be initialized correctly. */
 	engine_best_moves_t      best_moves;
 
 	/* Evaluate feasibility of player @color playing at all free moves. Will
@@ -81,6 +82,16 @@ static inline void
 engine_board_print(struct engine *e, struct board *b, FILE *f)
 {
 	(e->board_print ? e->board_print(e, b, f) : board_print(b, f));
+}
+
+static inline  void
+engine_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
+		  coord_t *best_c, float *best_r, int nbest)
+{
+	for (int i = 0; i < nbest; i++) {
+		best_c[i] = pass;  best_r[i] = 0;
+	}
+	e->best_moves(e, b, ti, color, best_c, best_r, nbest);
 }
 
 static inline void

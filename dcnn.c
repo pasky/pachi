@@ -84,8 +84,9 @@ dcnn_get_moves(struct board *b, enum stone color, float result[])
 void
 find_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest)
 {
-	for (int i = 0; i < nbest; i++)
-		best_c[i] = pass;
+	for (int i = 0; i < nbest; i++) {
+		best_c[i] = pass;  best_r[i] = 0;
+	}
 
 	foreach_free_point(b) {
 		int k = coord2dcnn_idx(c, b);

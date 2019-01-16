@@ -470,8 +470,9 @@ void
 find_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matches,
 		       coord_t *best_c, float *best_r, int nbest)
 {
-	for (int i = 0; i < nbest; i++)
-		best_c[i] = pass;
+	for (int i = 0; i < nbest; i++) {
+		best_c[i] = pass;  best_r[i] = 0;
+	}
 	
 	for (int i = 0; i < matches; i++)
 		best_moves_add(coords[i], ratings[i], best_c, best_r, nbest);

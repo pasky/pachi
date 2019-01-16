@@ -322,8 +322,7 @@ gogui_best_moves(strbuf_t *buf, struct engine *e, struct board *b, struct time_i
 	
 	coord_t best_c[n];
 	float   best_r[n];
-	for (int i = 0; i < n; i++)  {  best_c[i] = pass;  best_r[i] = 0.;  }
-	e->best_moves(e, b, ti_genmove, color, best_c, best_r, n);
+	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, n);
 	
 #if 0
 	fprintf(stderr, "best: [");

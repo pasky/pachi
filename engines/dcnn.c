@@ -14,7 +14,7 @@ static coord_t
 dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	float r[19 * 19];
-	float best_r[DCNN_BEST_N] = { 0.0, };
+	float best_r[DCNN_BEST_N];
 	coord_t best_moves[DCNN_BEST_N];
 	dcnn_get_moves(b, color, r);
 	find_dcnn_best_moves(b, r, best_moves, best_r, DCNN_BEST_N);

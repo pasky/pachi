@@ -278,12 +278,12 @@ predict_move(struct board *b, struct engine *engine, struct time_info *ti, struc
 
 	// Not bothering with timer here for now.
 
-	float   best_r[PREDICT_TOPN] = { 0.0, };
+	float   best_r[PREDICT_TOPN];
 	coord_t best_c[PREDICT_TOPN];
 	for (int i = 0; i < PREDICT_TOPN; i++)
 		best_c[i] = pass;
 	struct time_info *ti_genmove = time_info_genmove(b, ti, color);
-	engine->best_moves(engine, b, ti_genmove, color, best_c, best_r, PREDICT_TOPN);
+	engine_best_moves(engine, b, ti_genmove, color, best_c, best_r, PREDICT_TOPN);
 	//print_dcnn_best_moves(b, best_c, best_r, PREDICT_TOPN);
 
 	// Play correct expected move
