@@ -473,7 +473,7 @@ static enum parse_code
 cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
 	char *msg = NULL;
-	struct ownermap *o = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *o = engine_ownermap(e, b);
 	if (o && !board_position_final(b, o, &msg)) {
 		gtp_error(gtp, msg, NULL);	
 		return P_OK;
@@ -494,7 +494,7 @@ cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *
 static enum parse_code
 cmd_pachi_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *ownermap = engine_ownermap(e, b);
 	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
 
 	board_print_ownermap(b, stderr, ownermap);
@@ -547,7 +547,7 @@ cmd_final_status_list_alive(char *arg, struct board *b, struct engine *e, gtp_t 
 static int
 cmd_final_status_list_seki(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
 {
-	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *ownermap = engine_ownermap(e, b);
 	if (!ownermap) {  gtp_error(gtp, "no ownermap", NULL);  return -1;  }
 	int printed = 0;
 
@@ -579,7 +579,7 @@ static int
 cmd_final_status_list_territory(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
 {
 	enum stone color = str2stone(arg);
-	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *ownermap = engine_ownermap(e, b);
 	if (!ownermap) {  gtp_error(gtp, "no ownermap", NULL);  return -1;  }
 		
 	gtp_prefix('=', gtp);

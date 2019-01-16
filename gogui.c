@@ -373,7 +373,7 @@ cmd_gogui_livegfx(struct board *board, struct engine *e, struct time_info *ti, g
 enum parse_code
 cmd_gogui_influence(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *ownermap = engine_ownermap(e, b);
 	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
 	
 	char buffer[5000];  strbuf_t strbuf;
@@ -404,7 +404,7 @@ cmd_gogui_influence(struct board *b, struct engine *e, struct time_info *ti, gtp
 enum parse_code
 cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	struct ownermap *ownermap = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *ownermap = engine_ownermap(e, b);
 	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
 	
 	char buffer[5000];  strbuf_t strbuf;
@@ -429,7 +429,7 @@ enum parse_code
 cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
 	char *msg = NULL;
-	struct ownermap *o = (e->ownermap ? e->ownermap(e, b) : NULL);
+	struct ownermap *o = engine_ownermap(e, b);
 	if (o && !board_position_final(b, o, &msg)) {
 		gtp_error(gtp, msg, NULL);
 		return P_OK;

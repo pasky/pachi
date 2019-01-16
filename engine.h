@@ -94,6 +94,12 @@ engine_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum 
 	e->best_moves(e, b, ti, color, best_c, best_r, nbest);
 }
 
+static inline struct ownermap*
+engine_ownermap(struct engine *e, struct board *b)
+{
+	return (e->ownermap ? e->ownermap(e, b) : NULL);
+}
+
 static inline void
 engine_done(struct engine *e)
 {
