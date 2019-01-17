@@ -15,7 +15,10 @@ static bool board_15x15(board_t *b)        {  return (board_rsize(b) == 15);  }
 //static bool board_13x13(board_t *b)      {  return (board_rsize(b) == 13);  }
 static bool board_13x13_and_up(board_t *b) {  return (board_rsize(b) >= 13);  }
 
+#ifdef DCNN_DETLEF
 static void detlef54_dcnn_eval(board_t *b, enum stone color, float result[]);
+static void detlef44_dcnn_eval(board_t *b, enum stone color, float result[]);
+#endif
 
 typedef void (*dcnn_evaluate_t)(board_t *b, enum stone color, float result[]);
 typedef bool (*dcnn_supported_board_size_t)(board_t *b);
@@ -32,8 +35,9 @@ typedef struct {
 
 static dcnn_t dcnns[] = {
 #ifdef DCNN_DETLEF
-{  "detlef",     "Detlef's 54%", "detlef54.prototxt",  "detlef54.trained",   19, board_13x13_and_up,   detlef54_dcnn_eval },
-{  "detlef54",   "Detlef's 54%", "detlef54.prototxt",  "detlef54.trained",   19, board_13x13_and_up,   detlef54_dcnn_eval },
+{  "detlef",     "Detlef's 54%", "detlef54.prototxt",  "detlef54.trained", 19, board_13x13_and_up,   detlef54_dcnn_eval },
+{  "detlef54",   "Detlef's 54%", "detlef54.prototxt",  "detlef54.trained", 19, board_13x13_and_up,   detlef54_dcnn_eval },
+{  "detlef44",   "Detlef's 44%", "detlef44.prototxt",  "detlef44.trained", 19, board_19x19,          detlef44_dcnn_eval },
 #endif
 {  0, }
 };
@@ -160,7 +164,34 @@ detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 
 
 /********************************************************************************************************/
+/* Detlef's 44% dcnn */
+
+/* 19 layers, 2 input planes:
+ * http://computer-go.org/pipermail/computer-go/2015-April/007573.html
+ * http://physik.de/net.tgz */
+
+static void
+detlef44_dcnn_eval(board_t *b, enum stone color, float result[])
+{
+	enum stone other_color = stone_other(color);
+
+	int size = board_rsize(b);
+	float data[2][size][size];
+	memset(data, 0, sizeof(data));
+
+	for (int y = 0; y < size; y++)
+	for (int x = 0; x < size; x++) {
+                coord_t c = coord_xy(x+1, y+1);
+		if (board_at(b, c) == color)        data[0][y][x] = 1;
+		if (board_at(b, c) == other_color)  data[1][y][x] = 1;			
+	}
+
+	caffe_get_data((float*)data, result, size, 2, size);
+}
+
+/********************************************************************************************************/
 #endif /* DCNN_DETLEF */
+
 
 void
 get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest)
