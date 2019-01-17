@@ -66,6 +66,7 @@ struct uct {
 
 	bool pondering_opt;                /* User wants pondering */
 	bool pondering;                    /* Actually pondering now */
+	bool genmove_pondering;            /* Regular pondering (after a genmove) */
 	int     dcnn_pondering_prior;      /* Prior next move guesses */
 	int     dcnn_pondering_mcts;       /* Genmove next move guesses */
 	coord_t dcnn_pondering_mcts_c[20];

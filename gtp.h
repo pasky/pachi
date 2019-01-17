@@ -29,6 +29,7 @@ typedef struct
 	bool        undo_pending;
 	bool        noundo;        /* undo only allowed for pass */
 	bool        kgs;
+	bool        analyze_running;
 } gtp_t;
 
 #define next_tok(to_) \

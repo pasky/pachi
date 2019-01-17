@@ -465,6 +465,36 @@ cmd_pachi_genmoves(struct board *board, struct engine *engine, struct time_info 
 	return P_OK;
 }
 
+/* Start tree search in the background and output stats for the sake of frontend running Pachi.
+ * Sortof like pondering without a genmove.
+ * Stop processing when we receive some other command or "pachi-analyze 0".
+ * Similar to Leela-Zero's lz-analyze so we can feed data to lizzie. */
+static enum parse_code
+cmd_pachi_analyze(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	char *arg;
+	next_tok(arg);
+
+	int start = 1;
+	if (isdigit(*arg))  start = atoi(arg);
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color != S_NONE)
+		color = stone_other(b->last_move.color);
+	
+	if (e->analyze) {  e->analyze(e, b, color, start);  gtp->analyze_running = true;  }
+	else               gtp_error(gtp, "pachi-analyze not supported for this engine", NULL);
+	
+	return P_OK;	
+}
+
+static void
+stop_analyzing(gtp_t *gtp, struct board *b, struct engine *e)
+{
+	gtp->analyze_running = false;
+	e->analyze(e, b, S_BLACK, 0);
+}
+
 static enum parse_code
 cmd_set_free_handicap(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
@@ -919,6 +949,8 @@ static gtp_command_t commands[] =
 	{ "pachi-evaluate",         cmd_pachi_evaluate },
 	{ "pachi-result",           cmd_pachi_result },
 	{ "pachi-score_est",        cmd_pachi_score_est },
+	{ "pachi-analyze",          cmd_pachi_analyze },
+	{ "lz-analyze",             cmd_pachi_analyze },     /* For Lizzie */
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },
@@ -975,6 +1007,9 @@ gtp_parse(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct tim
 	if (!*gtp->cmd)
 		return P_OK;
 
+	if (gtp->analyze_running && strcasecmp(gtp->cmd, "pachi-analyze"))
+		stop_analyzing(gtp, b, e);
+	
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
 		undo_reload_engine(gtp, b, e, e_arg);

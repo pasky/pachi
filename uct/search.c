@@ -127,7 +127,7 @@ spawn_worker(void *ctx_)
 		
 		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1)) {
 			tree_expand_node(t, n, ctx->b, player_color, u, 1);
-			if (u->pondering && using_dcnn(ctx->b))
+			if (u->genmove_pondering && using_dcnn(ctx->b))
 				uct_expand_next_best_moves(u, t, ctx->b, player_color);
 		}
 		else if (DEBUGL(2)) {  /* Show previously computed priors */
