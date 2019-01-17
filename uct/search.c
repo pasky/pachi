@@ -618,9 +618,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 					(score > 0 ? "B+" : "W+"), fabs(score));
 			}
 			*best_coord = pass;
-			best = u->t->root->children; // pass is the first child
-			assert(is_pass(node_coord(best)));
-			return best;
+			return NULL;
 		}
 		if (UDEBUGL(0))	fprintf(stderr, "Refusing to pass: %s\n", msg);
 	}

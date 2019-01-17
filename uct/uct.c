@@ -525,8 +525,13 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	coord_t best_coord;
 	struct tree_node *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
 
-	if (!best) {
-		/* Pass or resign. */
+	/* Pass or resign.
+	 * After a pass, pondering is harmful for two reasons:
+	 * (i) We might keep pondering even when the game is over.
+	 * Of course this is the case for opponent resign as well.
+	 * (ii) More importantly, the ownermap will get skewed since
+	 * the UCT will start cutting off any playouts. */	
+	if (is_pass(best_coord) || is_resign(best_coord)) {
 		if (is_pass(best_coord))
 			u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
@@ -542,14 +547,8 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		reset_state(u);
 	}
 
-	/* After a pass, pondering is harmful for two reasons:
-	 * (i) We might keep pondering even when the game is over.
-	 * Of course this is the case for opponent resign as well.
-	 * (ii) More importantly, the ownermap will get skewed since
-	 * the UCT will start cutting off any playouts. */
-	if (u->pondering_opt && u->t && !is_pass(node_coord(best))) {
-		uct_pondering_start(u, b, u->t, stone_other(color));
-	}
+	if (u->pondering_opt && u->t)
+		uct_pondering_start(u, b, u->t, stone_other(color), best_coord);
 
 	return best_coord;
 }
