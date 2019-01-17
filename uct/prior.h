@@ -58,5 +58,6 @@ add_prior_value(struct prior_map *map, coord_t c, floating_t value, int playouts
 
 /* Display node's priors best moves */
 void print_node_prior_best_moves(struct board *b, struct tree_node *parent);
+void get_node_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest);
 
 #endif

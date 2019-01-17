@@ -58,13 +58,17 @@ struct uct {
 		TM_TREEVL, /* Tree parallelization with virtual loss. */
 	} thread_model;
 	int virtual_loss;
-	bool pondering_opt; /* User wants pondering */
-	bool pondering; /* Actually pondering now */
 	bool slave; /* Act as slave in distributed engine. */
 	int max_slaves; /* Optional, -1 if not set */
 	int slave_index; /* 0..max_slaves-1, or -1 if not set */
 	enum stone my_color;
 
+	bool pondering_opt;                /* User wants pondering */
+	bool pondering;                    /* Actually pondering now */
+	int     dcnn_pondering_prior;      /* Prior next move guesses */
+	int     dcnn_pondering_mcts;       /* Genmove next move guesses */
+	coord_t dcnn_pondering_mcts_c[20];
+	
 	int fuseki_end;
 	int yose_start;
 
@@ -123,12 +127,13 @@ struct uct {
 	/* Saved dead groups, for final_status_list dead */
 	struct move_queue dead_groups;
 	int pass_moveno;
-
+	
 	/* Timing */
 	double mcts_time_start;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
 	struct tree *t;
+	bool tree_ready;
 };
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)

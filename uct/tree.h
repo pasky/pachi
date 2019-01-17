@@ -86,6 +86,7 @@ struct tree_node {
 	unsigned char d;
 
 #define TREE_HINT_INVALID 1 // don't go to this node, invalid move
+#define TREE_HINT_DCNN    2 // node has dcnn priors
 	unsigned char hints;
 
 	/* In case multiple threads walk the tree, is_expanded is set
@@ -161,7 +162,7 @@ struct tree_node *tree_get_node(struct tree_node *parent, coord_t c);
 struct tree_node *tree_get_node2(struct tree *tree, struct tree_node *parent, coord_t c, bool create);
 struct tree_node *tree_garbage_collect(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node **node);
-bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);
+bool tree_promote_at(struct tree *tree, struct board *b, coord_t c, int *reason);
 
 void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity);
 struct tree_node *tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *lni, int tenuki_d);

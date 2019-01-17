@@ -32,7 +32,7 @@
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board);
-static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color);
+static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color, coord_t our_move);
 
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
@@ -198,15 +198,19 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 		return NULL;
 	}
 
-	/* Promote node of the appropriate move to the tree root. */
+	/* Promote node of the appropriate move to the tree root.
+	 * If using dcnn, only promote node if it has dcnn priors:
+	 * Direction of tree search is heavily influenced by initial priors,
+	 * if we started searching without dcnn data better start from scratch. */
+	int reason;	
 	assert(u->t->root);
-	if (u->t->untrustworthy_tree || !tree_promote_at(u->t, b, m->coord)) {
+	if (u->t->untrustworthy_tree || !tree_promote_at(u->t, b, m->coord, &reason)) {
 		if (UDEBUGL(3)) {
-			if (u->t->untrustworthy_tree)
-				fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
-			else
-				fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+			if      (u->t->untrustworthy_tree)  fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
+			else if (reason == TREE_HINT_DCNN)  fprintf(stderr, "Played move has no dcnn priors, resetting tree.\n");
+			else				    fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
 		}
+
 		/* Preserve dynamic komi information, though, that is important. */
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
@@ -217,7 +221,8 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 	 * we know which move we actually played. See uct_genmove() about
 	 * the check for pass. */
 	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord))
-		uct_pondering_start(u, b, u->t, stone_other(m->color));
+		uct_pondering_start(u, b, u->t, stone_other(m->color), m->coord);
+	assert(!(u->slave && using_dcnn(b))); // XXX distributed engine dcnn pondering support
 
 	return NULL;
 }
@@ -411,9 +416,8 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 /* Start pondering background with @color to play. */
 static void
-uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color)
+uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color, coord_t our_move)
 {
-	assert(!using_dcnn(b0));
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
 	u->pondering = true;
@@ -422,7 +426,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	struct board *b = malloc2(sizeof(*b)); board_copy(b, b0);
 
 	/* *b0 did not have the genmove'd move played yet. */
-	struct move m = { node_coord(t->root), t->root_color };
+	struct move m = { .coord = our_move, .color = stone_other(color) };
 	int res = board_play(b, &m);
 	assert(res >= 0);
 	setup_dynkomi(u, b, stone_other(m.color));
@@ -537,15 +541,33 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 		reset_state(u);
 		return best_coord;
 	}
-	
-	if (!u->t->untrustworthy_tree) {
-		tree_promote_node(u->t, &best);
-	} else {
-		/* Throw away an untrustworthy tree. */
-		/* Preserve dynamic komi information, though, that is important. */
+
+	/* Throw away an untrustworthy tree.
+	 * Preserve dynamic komi information though, that is important. */
+	if (u->t->untrustworthy_tree) {
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-	}
+		uct_prepare_move(u, b, stone_other(color));
+	} else
+		tree_promote_node(u->t, &best);
+
+	/* Dcnn pondering:
+	 * Promoted node wasn't searched with dcnn priors, start from scratch
+	 * so it gets dcnn evaluated (and next move as well). Save opponent
+	 * best moves from genmove search, will need it later on to guess
+	 * next move. */
+	if (u->pondering_opt && using_dcnn(b)) {
+		int      nbest =  u->dcnn_pondering_mcts;
+		coord_t *best_c = u->dcnn_pondering_mcts_c;
+		float    best_r[nbest];
+		uct_get_best_moves(u, best_c, best_r, nbest, false);
+		for (int i = 0; i < nbest; i++)
+			if (best_r[i] < 100)  best_c[i] = pass;  /* Too few playouts. */
+
+		u->initial_extra_komi = u->t->extra_komi;
+		reset_state(u);
+		uct_prepare_move(u, b, stone_other(color));
+	}	
 
 	if (u->pondering_opt && u->t)
 		uct_pondering_start(u, b, u->t, stone_other(color), best_coord);
@@ -713,6 +735,8 @@ uct_state_init(char *arg, struct board *b)
 	u->virtual_loss = 1;
 
 	u->pondering_opt = false;
+	u->dcnn_pondering_prior = 5;
+	u->dcnn_pondering_mcts = 3;
 
 	u->fuseki_end = 20; // max time at 361*20% = 72 moves (our 36th move, still 99 to play)
 	u->yose_start = 40; // (100-40-25)*361/100/2 = 63 moves still to play by us then
@@ -976,9 +1000,6 @@ uct_state_init(char *arg, struct board *b)
 			} else if (!strcasecmp(optname, "virtual_loss") && optval) {
 				/* Number of virtual losses added before evaluating a node. */
 				u->virtual_loss = atoi(optval);
-			} else if (!strcasecmp(optname, "pondering")) {
-				/* Keep searching even during opponent's turn. */
-				u->pondering_opt = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
 				/* Maximum amount of memory [MiB] consumed by the move tree.
 				 * For fast_alloc it includes the temp tree used for pruning.
@@ -997,6 +1018,32 @@ uct_state_init(char *arg, struct board *b)
 				 * Default is to reuse previous tree when not using dcnn. 
 				 * When using dcnn tree is always reset. */
 				u->genmove_reset_tree = !optval || atoi(optval);
+
+			/* Pondering */
+
+			} else if (!strcasecmp(optname, "pondering")) {
+				/* Keep searching even during opponent's turn. */
+				u->pondering_opt = !optval || atoi(optval);
+			} else if (!strcasecmp(optname, "dcnn_pondering_prior") && optval) {
+				/* Dcnn pondering: prior guesses for next move.
+				 * When pondering with dcnn we need to guess opponent's next move:
+				 * Only these guesses are dcnn evaluated.
+				 * This is the number of guesses we pick from priors' best moves
+				 * (dcnn policy mostly). Default is 5 meaning only top-5 moves
+				 * for opponent will be considered (plus dcnnn_pondering_mcts_best
+				 * ones, see below). For slow games it makes sense to increase this:
+				 * we spend more time before actual search starts but there's more
+				 * chance we guess right, so that pondering will be useful. If we
+				 * guess wrong search results will be discarded and pondering will
+				 * not be useful for this move. For fast games try decreasing it. */
+				u->dcnn_pondering_prior = atoi(optval);
+			} else if (!strcasecmp(optname, "dcnn_pondering_mcts") && optval) {
+				/* Dcnn pondering: mcts guesses for next move.
+				 * Same as dcnn_pondering_prior but number of guesses picked from
+				 * opponent best moves in genmove search.
+				 * Default is 3. */
+				size_t n = u->dcnn_pondering_mcts = atoi(optval);
+				assert(n <= sizeof(u->dcnn_pondering_mcts_c) / sizeof(u->dcnn_pondering_mcts_c[0]));
 
 			/** Time control */
 
@@ -1303,17 +1350,6 @@ uct_state_init(char *arg, struct board *b)
 	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 	if (!u->banner)                 u->banner = strdup("Pachi %s, Have a nice game !");
 
-	if (using_dcnn(b)) {
-		/* dcnn hack: always reset state to make dcnn priors kick in.
-		 * FIXME this makes pondering useless when using dcnn ... */
-		u->genmove_reset_tree = true;
-
-		if (u->pondering_opt) {
-			warning("Can't use pondering with dcnn right now, pondering turned off.\n");
-			u->pondering_opt = false;
-		}
-	}
-	
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
 	/* This will be initialized in setup_state() at the first move

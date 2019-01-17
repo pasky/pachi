@@ -92,19 +92,16 @@ overridden at runtime by setting `DATA_DIR` environment variable.
 
 ## DCNN support
 
-Pachi can use a neural network as source of good moves to consider (priors).
+Pachi can use a neural network as source of good moves to consider.
 With dcnn support Pachi can play at dan level strength on modest hardware.
 For large number of playouts this makes it about 1 stone stronger, and
 tends to make the games more pretty. A raw dcnn engine is available for
 pure dcnn play (not recommended for actual games, pachi won't know when to
 pass or resign !).
 
-Currently dcnn is used only for root node, and pondering and dcnn can't be
-used together (you should get a warning on startup).
-
 To build Pachi with DCNN support:
 - Install [Caffe](http://caffe.berkeleyvision.org)  
-  CPU only build is fine, no need for GPU, cuda or the other optional dependencies.  
+  CPU-only build is fine, no need for GPU, cuda or the other optional dependencies.  
   You need openblas for good performance.
 - Edit Makefile, set DCNN=1, point it to where caffe is installed and build.
 
@@ -114,9 +111,12 @@ Detlef Schmicker's 54% dcnn can be found at:
 
 More information about this dcnn [here](http://computer-go.org/pipermail/computer-go/2015-December/008324.html).
 
-If you want to use a network with different inputs you'll have to tweak
-dcnn.c to accomodate it. Pachi will check for `golast19.prototxt` and
-`golast.trained` files on startup.
+Pachi will look for `golast19.prototxt` and `golast.trained` files on startup.
+
+Althouh it was trained on 19x19 it can be used on other board sizes as well since
+it's fully convolutional (Right now Pachi will use it all the way down to 13x13).
+Currently dcnn is used only for root node, dcnn + pondering is working now.
+(see `dcnn_pondering_prior` and `dcnn_pondering_mcts` uct params to tweak it).
 
 
 ## How to run

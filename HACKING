@@ -181,6 +181,14 @@ support the undo command.  The final_status_list command requires engine
 support.
 
 
+DCNN
+====
+
+dcnn.c has the code that prepares the input planes from board state and
+feeds that to caffe for dcnn evaluation (caffe.cpp). If you want to use
+a network with different inputs this is the place to accomodate it.
+
+
 General Pattern Matcher
 =======================
 
