@@ -801,6 +801,9 @@ uct_state_init(char *arg, struct board *b)
 					 * Implies debug=0. */
 					u->reporting = UR_JSON_BIG;
 					u->debug_level = 0;
+				} else if (!strcasecmp(optval, "leelaz")) {
+					/* Leela-Zero pondering format. */
+					u->reporting = UR_LEELAZ;
 				} else
 					die("UCT: Invalid reporting format %s\n", optval);
 			} else if (!strcasecmp(optname, "reportfreq") && optval) {

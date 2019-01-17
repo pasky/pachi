@@ -27,6 +27,7 @@ struct uct {
 		UR_TEXT,
 		UR_JSON,
 		UR_JSON_BIG,
+		UR_LEELAZ,
 	} reporting;
 	int reportfreq;
 
