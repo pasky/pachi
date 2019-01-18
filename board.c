@@ -558,24 +558,21 @@ break_symmetry:
 }
 
 
-void
-board_handicap_stone(struct board *board, int x, int y, FILE *f)
+static void
+board_handicap_stone(struct board *board, int x, int y, struct move_queue *q)
 {
 	struct move m;
 	m.color = S_BLACK; m.coord = coord_xy(board, x, y);
 
-	board_play(board, &m);
+	int r = board_play(board, &m);  assert(r >= 0);
 
-	char *str = coord2str(m.coord, board);
-	if (DEBUGL(1))
-		fprintf(stderr, "choosing handicap %s (%d,%d)\n", str, x, y);
-	if (f) fprintf(f, "%s ", str);
-	free(str);
+	if (q)  mq_add(q, m.coord, 0);
 }
 
 void
-board_handicap(struct board *board, int stones, FILE *f)
+board_handicap(struct board *board, int stones, struct move_queue *q)
 {
+	assert(stones <= 9);
 	int margin = 3 + (board_size(board) >= 13);
 	int min = margin;
 	int mid = board_size(board) / 2;
@@ -590,13 +587,13 @@ board_handicap(struct board *board, int stones, FILE *f)
 	board->handicap = stones;
 
 	if (stones == 5 || stones == 7) {
-		board_handicap_stone(board, mid, mid, f);
+		board_handicap_stone(board, mid, mid, q);
 		stones--;
 	}
 
 	int i;
 	for (i = 0; i < stones; i++)
-		board_handicap_stone(board, places[i][0], places[i][1], f);
+		board_handicap_stone(board, places[i][0], places[i][1], q);
 }
 
 
@@ -1450,26 +1447,6 @@ board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 		assert(0);	/* Anything else doesn't make sense */
 }
 
-
-/* Undo, supported only for pass moves. 
- * This form of undo is required by KGS to settle disputes on dead groups. */
-int board_undo(struct board *board)
-{
-	if (!is_pass(board->last_move.coord))
-		return -1;
-	
-	if (board->rules == RULES_SIMING)  /* Return pass stone to the passing player. */
-		board->captures[stone_other(board->last_move.color)]--;
-	
-	board->passes[board->last_move.color]--;
-	board->last_move = board->last_move2;
-	board->last_move2 = board->last_move3;
-	board->last_move3 = board->last_move4;
-	board->moves--;
-	if (board->last_ko_age == board->moves)
-		board->ko = board->last_ko;
-	return 0;
-}
 
 bool
 board_permit(struct board *b, struct move *m, void *data)

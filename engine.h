@@ -31,7 +31,6 @@ typedef void (*engine_init_t)(struct engine *e, char *arg, struct board *b);
 typedef enum parse_code (*engine_notify_t)(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply);
 typedef void (*engine_board_print_t)(struct engine *e, struct board *b, FILE *f);
 typedef char *(*engine_notify_play_t)(struct engine *e, struct board *b, struct move *m, char *enginearg);
-typedef char *(*engine_undo_t)(struct engine *e, struct board *b);
 typedef char *(*engine_result_t)(struct engine *e, struct board *b);
 typedef char *(*engine_chat_t)(struct engine *e, struct board *b, bool in_game, char *from, char *cmd);
 typedef coord_t (*engine_genmove_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive);
@@ -60,7 +59,6 @@ struct engine {
 	engine_board_print_t     board_print;
 	engine_notify_play_t     notify_play;
 	engine_chat_t            chat;
-	engine_undo_t            undo;
 	engine_result_t          result;
 
 	/* Generate a move. If pass_all_alive is true, <pass> shall be generated only

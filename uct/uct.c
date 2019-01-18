@@ -223,19 +223,6 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 }
 
 static char *
-uct_undo(struct engine *e, struct board *b)
-{
-	struct uct *u = e->data;
-
-	if (!u->t) return NULL;
-	uct_pondering_stop(u);
-	u->initial_extra_komi = u->t->extra_komi;
-	reset_state(u);
-	u->pass_moveno = 0;
-	return NULL;
-}
-
-static char *
 uct_result(struct engine *e, struct board *b)
 {
 	struct uct *u = e->data;
@@ -1343,7 +1330,6 @@ engine_uct_init(struct engine *e, char *arg, struct board *b)
 	e->board_print = uct_board_print;
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;
-	e->undo = uct_undo;
 	e->result = uct_result;
 	e->genmove = uct_genmove;
 #ifdef DISTRIBUTED

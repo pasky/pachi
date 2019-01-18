@@ -287,10 +287,8 @@ predict_move(struct board *b, struct engine *e, struct time_info *ti, struct mov
 	//print_dcnn_best_moves(b, best_c, best_r, PREDICT_TOPN);
 
 	// Play correct expected move
-	if (board_play(b, m) < 0) {
-		fprintf(stderr, "ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, b), stone2str(m->color));
-		abort();
-	}
+	if (board_play(b, m) < 0)
+		die("ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, b), stone2str(m->color));
 
 	fprintf(stderr, "WINNER is %s in the actual game.\n", coord2sstr(m->coord, b));		
 	if (best_c[0] == m->coord)
