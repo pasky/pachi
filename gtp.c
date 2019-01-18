@@ -27,12 +27,19 @@
 /* Sleep 5 seconds after a game ends to give time to kill the program. */
 #define GAME_OVER_SLEEP 5
 
-static int played_games = 0;
-int  gtp_played_games()        {  return played_games;  }
-void gtp_played_games_reset()  {  played_games = 0;  }
+/* Don't put standalone globals in gtp.c, some engines call gtp_parse()
+ * internally and your global will likely get changed unintentionally.
+ * Add some field in gtp_t instead and access it from whatever gtp_t
+ * context is appropriate. */
 
-typedef enum parse_code
-(*gtp_func_t)(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
+void
+gtp_init(gtp_t *gtp)
+{
+	memset(gtp, 0, sizeof(*gtp));
+}
+
+
+typedef enum parse_code (*gtp_func_t)(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
 
 typedef struct
 {
@@ -232,7 +239,7 @@ static enum parse_code
 cmd_clear_board(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
 {
 	board_clear(board);
-	played_games++;
+	gtp->played_games++;
 	if (DEBUGL(3) && debug_boardprint)
 		board_print(board, stderr);
 	return P_ENGINE_RESET;
@@ -335,7 +342,11 @@ cmd_pachi_predict(struct board *board, struct engine *engine, struct time_info *
 	m.coord = str2coord(arg, board_size(board));
 	next_tok(arg);
 
-	char *str = predict_move(board, engine, ti, &m);
+	char *str = predict_move(board, engine, ti, &m, gtp->played_games);
+
+	/* Add to gtp move history. */
+	gtp_add_move(gtp, &m);
+	
 	gtp_reply(gtp, str, NULL);
 	free(str);
 	return P_OK;
@@ -876,13 +887,15 @@ static gtp_command_t commands[] =
  * Even basic input checking is missing. */
 
 enum parse_code
-gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf, bool quiet)
+gtp_parse(gtp_t *gtp, struct board *b, struct engine *e, struct time_info *ti, char *buf)
 {
 	if (strchr(buf, '#'))
 		*strchr(buf, '#') = 0;
 
-	gtp_t gtp_struct = { .next = buf, .id = -1, .quiet = quiet };
-	gtp_t *gtp = &gtp_struct;
+	/* Reset non global fields. */
+	gtp->id = -1;
+	gtp->next = buf;
+	gtp->replied = false;
 	next_tok(gtp->cmd);
 	
 	if (isdigit(*gtp->cmd)) {
@@ -906,9 +919,8 @@ gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf, bo
 			/* This is an internal error for the engine, but
 			 * it is still OK from main's point of view. */
 			return P_OK;
-		} else if (c != P_OK) {
+		} else if (c != P_OK)
 			return c;
-		}
 	}
 	
 	for (int i = 0; commands[i].cmd; i++)

@@ -21,6 +21,9 @@ typedef struct
 	int   id;
 	bool  quiet;
 	int   replied;
+
+	/* Global fields: */
+	int played_games;
 } gtp_t;
 
 #define next_tok(to_) \
@@ -31,7 +34,9 @@ typedef struct
 		gtp->next += strspn(gtp->next, " \t\r\n"); \
 	}
 
-enum parse_code gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf, bool quiet);
+void   gtp_init(gtp_t *gtp);
+
+enum parse_code gtp_parse(gtp_t *gtp, struct board *b, struct engine *e, struct time_info *ti, char *buf);
 bool gtp_is_valid(struct engine *e, const char *cmd);
 void gtp_reply(gtp_t *gtp, ...);
 void gtp_reply_printf(gtp_t *gtp, const char *format, ...);
@@ -42,8 +47,5 @@ void gtp_error(gtp_t *gtp, ...);
 #define is_reset(cmd) (is_gamestart(cmd) || !strcasecmp((cmd), "clear_board") || !strcasecmp((cmd), "kgs-rules"))
 #define is_repeated(cmd) (strstr((cmd), "pachi-genmoves"))
 
-/* Number of games played so far */
-int  gtp_played_games();
-void gtp_played_games_reset();
 
 #endif
