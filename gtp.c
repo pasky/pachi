@@ -48,7 +48,7 @@ gtp_prefix(char prefix, gtp_t *gtp)
 	if (gtp->replied)  return;
 	gtp->replied = true;
 	
-	if (gtp->id == GTP_NO_REPLY)  return;
+	if (gtp->quiet)    return;
 	if (gtp->id >= 0)  printf("%c%d ", prefix, gtp->id);
 	else               printf("%c ", prefix);
 }
@@ -63,7 +63,7 @@ gtp_flush(void)
 void
 gtp_output(char prefix, gtp_t *gtp, va_list params)
 {
-	if (gtp->id == GTP_NO_REPLY) return;
+	if (gtp->quiet)  return;
 	gtp_prefix(prefix, gtp);
 	char *s;
 	while ((s = va_arg(params, char *))) {
@@ -460,10 +460,10 @@ cmd_fixed_handicap(struct board *board, struct engine *engine, struct time_info 
 	int stones = atoi(arg);
 
 	gtp_prefix('=', gtp);
-	board_handicap(board, stones, gtp->id == GTP_NO_REPLY ? NULL : stdout);
+	board_handicap(board, stones, (gtp->quiet ? NULL : stdout));
 	if (DEBUGL(1) && debug_boardprint)
 		board_print(board, stderr);
-	if (gtp->id == GTP_NO_REPLY) return P_OK;
+	if (gtp->quiet)  return P_OK;
 	putchar('\n');
 	gtp_flush();
 	return P_OK;
@@ -596,7 +596,7 @@ cmd_final_status_list_territory(char *arg, struct board *b, struct engine *e, gt
 static enum parse_code
 cmd_final_status_list(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	if (gtp->id == GTP_NO_REPLY) return P_OK;
+	if (gtp->quiet)  return P_OK;
 	char *arg;
 	next_tok(arg);
 	int r = -1;
@@ -876,18 +876,12 @@ static gtp_command_t commands[] =
  * Even basic input checking is missing. */
 
 enum parse_code
-gtp_parse(struct board *board, struct engine *engine, struct time_info *ti, char *buf)
-{
-	return gtp_parse_full(board, engine, ti, buf, -1);
-}
-
-enum parse_code
-gtp_parse_full(struct board *board, struct engine *engine, struct time_info *ti, char *buf, int id)
+gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf, bool quiet)
 {
 	if (strchr(buf, '#'))
 		*strchr(buf, '#') = 0;
 
-	gtp_t gtp_struct = { .next = buf, .id = id };
+	gtp_t gtp_struct = { .next = buf, .id = -1, .quiet = quiet };
 	gtp_t *gtp = &gtp_struct;
 	next_tok(gtp->cmd);
 	
@@ -899,11 +893,11 @@ gtp_parse_full(struct board *board, struct engine *engine, struct time_info *ti,
 	if (!*gtp->cmd)
 		return P_OK;
 
-	if (engine->notify && gtp_is_valid(engine, gtp->cmd)) {
+	if (e->notify && gtp_is_valid(e, gtp->cmd)) {
 		char *reply;
-		enum parse_code c = engine->notify(engine, board, gtp->id, gtp->cmd, gtp->next, &reply);
+		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, &reply);
 		if (c == P_NOREPLY) {
-			gtp->id = GTP_NO_REPLY;
+			gtp->quiet = true;
 		} else if (c == P_DONE_OK) {
 			gtp_reply(gtp, reply, NULL);
 			return P_OK;
@@ -919,7 +913,7 @@ gtp_parse_full(struct board *board, struct engine *engine, struct time_info *ti,
 	
 	for (int i = 0; commands[i].cmd; i++)
 		if (!strcasecmp(gtp->cmd, commands[i].cmd)) {
-			enum parse_code ret = commands[i].f(board, engine, ti, gtp);
+			enum parse_code ret = commands[i].f(b, e, ti, gtp);
 			/* For functions convenience: no reply means empty reply */
 			if (!gtp->replied)
 				gtp_reply(gtp, NULL);

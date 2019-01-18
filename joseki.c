@@ -280,7 +280,7 @@ joseki_load(int bsize)
 		if (bsize != 19+2 && convert_coords(bsize, buf) < 0)
 			skip_sequence(buf, 4096, f, &lineno);
 
-		enum parse_code c = gtp_parse_full(b, &e, ti, buf, GTP_NO_REPLY);
+		enum parse_code c = gtp_parse(b, &e, ti, buf, true);  /* quiet */
 		/* TODO check gtp command didn't gtp_error() also, will still return P_OK on error ... */
 		if (c != P_OK && c != P_ENGINE_RESET)
 			die("%s:%i  gtp command '%s' failed, aborting.\n", fname, lineno, buf);		

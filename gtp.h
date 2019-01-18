@@ -1,8 +1,6 @@
 #ifndef PACHI_GTP_H
 #define PACHI_GTP_H
 
-#define GTP_NO_REPLY (-2)
-
 struct board;
 struct engine;
 struct time_info;
@@ -21,6 +19,7 @@ typedef struct
 	char *cmd;
 	char *next;
 	int   id;
+	bool  quiet;
 	int   replied;
 } gtp_t;
 
@@ -32,8 +31,7 @@ typedef struct
 		gtp->next += strspn(gtp->next, " \t\r\n"); \
 	}
 
-enum parse_code gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf);
-enum parse_code gtp_parse_full(struct board *b, struct engine *e, struct time_info *ti, char *buf, int id);
+enum parse_code gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf, bool quiet);
 bool gtp_is_valid(struct engine *e, const char *cmd);
 void gtp_reply(gtp_t *gtp, ...);
 void gtp_reply_printf(gtp_t *gtp, const char *format, ...);
