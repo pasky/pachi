@@ -49,8 +49,8 @@ To build Pachi, simply type:
 <img align="right" src="media/screenshot_sabaki.jpg" title="playing through sabaki">
 
 The resulting binary program `pachi` is a GTP client. Connect to it
-with your favorite Go program interface (e.g. [gogui][1], [sabaki][2], [qgo][3]),
-or use [kgsGtp][4] to connect it to KGS.
+with your favorite Go program interface (e.g. [gogui][1], [sabaki][2], [lizzie](#Lizzie)),
+or use [kgsGtp][3] to connect it to KGS.
 
 > DO NOT make the GTP interface accessible directly to untrusted users
 > since the parser is not secure - see the [HACKING](HACKING?raw=true)
@@ -58,8 +58,7 @@ or use [kgsGtp][4] to connect it to KGS.
 
 [1]: https://sourceforge.net/projects/gogui/
 [2]: http://sabaki.yichuanshen.de/
-[3]: http://qgo.sourceforge.net/
-[4]: http://www.michna.com/kgsbot.htm
+[3]: http://www.michna.com/kgsbot.htm
 
 The pachi program can take many parameters. The defaults should be fine
 for initial usage, see below for some more tips.
@@ -190,6 +189,21 @@ via the live gfx commands.
 ![dcnn colormap](media/screenshot_dcnn_colors.png?raw=true "dcnn colormap")
 
 There are some non-gui tools for game analysis as well, see below.
+
+
+## Lizzie
+
+<a href="media/screenshot_lizzie_big.jpg?raw=true"> <img align="right" src="media/screenshot_lizzie.jpg" title="pachi in lizzie v0.6 !" /> </a>
+
+It's also possible to run Pachi with [Lizzie](https://github.com/featurecat/lizzie) to analyze things !  
+This is a great way to explore variations, analyze games or visualize what Pachi is doing while it's thinking,
+the graphics are amazing.
+
+To make Lizzie use Pachi instead of Leela-Zero edit Lizzie config.txt:
+
+    "engine-command": "/path/to/pachi --version=0.16 reporting=leelaz,reportfreq=500",
+
+Tweak reportfreq to change update speed.
 
 
 ## Logs
