@@ -4,6 +4,6 @@
 #include "engine.h"
 struct joseki_dict;
 
-struct engine *engine_josekiscan_init(char *arg, struct board *b);
+void engine_josekiscan_init(struct engine *e, char *arg, struct board *b);
 
 #endif

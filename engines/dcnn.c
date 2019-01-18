@@ -41,20 +41,18 @@ dcnn_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum st
 	print_dcnn_best_moves(b, best_c, best_r, nbest);
 }	
 
-struct engine *
-engine_dcnn_init(char *arg, struct board *b)
+void
+engine_dcnn_init(struct engine *e, char *arg, struct board *b)
 {
 	dcnn_init(b);
 	if (!caffe_ready()) {
 		fprintf(stderr, "Couldn't initialize dcnn, aborting.\n");
 		abort();
 	}
-	struct engine *e = (struct engine*)calloc2(1, sizeof(struct engine));
+
 	e->name = (char*)"DCNN Engine";
 	e->comment = (char*)"I just select dcnn's best move.";
 	e->genmove = dcnn_genmove;
 	e->best_moves = dcnn_best_moves;
-
-	return e;
 }
 

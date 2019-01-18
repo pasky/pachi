@@ -3,6 +3,6 @@
 
 #include "engine.h"
 
-struct engine *engine_patternscan_init(char *arg, struct board *b);
+void engine_patternscan_init(struct engine *e, char *arg, struct board *b);
 
 #endif

@@ -3,7 +3,7 @@
 
 #include "engine.h"
 
-struct engine *engine_patternplay_init(char *arg, struct board *b);
+void engine_patternplay_init(struct engine *e, char *arg, struct board *b);
 struct pattern_config *patternplay_get_pc(struct engine *e);
 bool patternplay_matched_locally(struct engine *e);
 

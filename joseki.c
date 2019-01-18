@@ -272,7 +272,7 @@ joseki_load(int bsize)
 	int saved_debug_level = debug_level;
 	debug_level = 0;   /* quiet */
 	struct board *b = board_new(bsize, NULL);
-	struct engine *e = engine_josekiscan_init(NULL, NULL);
+	struct engine e;  engine_init(&e, E_JOSEKISCAN, NULL, NULL);
 	struct time_info ti_default = { .period = TT_NULL };
 	struct time_info ti[S_MAX] = { [S_BLACK] = ti_default, [S_WHITE] = ti_default };
 	char buf[4096];
@@ -280,12 +280,12 @@ joseki_load(int bsize)
 		if (bsize != 19+2 && convert_coords(bsize, buf) < 0)
 			skip_sequence(buf, 4096, f, &lineno);
 
-		enum parse_code c = gtp_parse_full(b, e, ti, buf, GTP_NO_REPLY);
+		enum parse_code c = gtp_parse_full(b, &e, ti, buf, GTP_NO_REPLY);
 		/* TODO check gtp command didn't gtp_error() also, will still return P_OK on error ... */
 		if (c != P_OK && c != P_ENGINE_RESET)
 			die("%s:%i  gtp command '%s' failed, aborting.\n", fname, lineno, buf);		
 	}
-	engine_done(e);
+	engine_done(&e);
 	board_done(b);
 	debug_level = saved_debug_level;
 	int variations = gtp_played_games();  gtp_played_games_reset();

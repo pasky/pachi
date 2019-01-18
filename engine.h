@@ -1,13 +1,33 @@
 #ifndef PACHI_ENGINE_H
 #define PACHI_ENGINE_H
 
+#include "pachi.h"
 #include "board.h"
 #include "move.h"
 #include "gtp.h"
 
 struct move_queue;
 
-typedef struct engine *(*engine_init_t)(char *arg, struct board *b);
+enum engine_id {
+	E_RANDOM,
+	E_REPLAY,
+	E_MONTECARLO,	
+	E_PATTERNSCAN,
+	E_PATTERNPLAY,
+	E_JOSEKISCAN,
+	E_JOSEKIPLAY,
+	E_UCT,
+#ifdef DISTRIBUTED
+	E_DISTRIBUTED,
+#endif
+#ifdef DCNN
+	E_DCNN,
+#endif
+	E_MAX,
+};
+
+
+typedef void (*engine_init_t)(struct engine *e, char *arg, struct board *b);
 typedef enum parse_code (*engine_notify_t)(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply);
 typedef void (*engine_board_print_t)(struct engine *e, struct board *b, FILE *f);
 typedef char *(*engine_notify_play_t)(struct engine *e, struct board *b, struct move *m, char *enginearg);
@@ -29,6 +49,7 @@ typedef void (*engine_livegfx_hook_t)(struct engine *e);
 /* This is engine data structure. A new engine instance is spawned
  * for each new game during the program lifetime. */
 struct engine {
+	int   id;
 	char *name;
 	char *comment;
 
@@ -78,81 +99,34 @@ struct engine {
 	void *data;
 };
 
-static inline void
-engine_board_print(struct engine *e, struct board *b, FILE *f)
-{
-	(e->board_print ? e->board_print(e, b, f) : board_print(b, f));
-}
 
-static inline  void
-engine_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
-		  coord_t *best_c, float *best_r, int nbest)
-{
-	for (int i = 0; i < nbest; i++) {
-		best_c[i] = pass;  best_r[i] = 0;
-	}
-	e->best_moves(e, b, ti, color, best_c, best_r, nbest);
-}
+/* Initialize engine. Call engine_done() later when finished with it. */
+void engine_init(struct engine *e, int id, char *e_arg, struct board *b);
 
-static inline struct ownermap*
-engine_ownermap(struct engine *e, struct board *b)
-{
-	return (e->ownermap ? e->ownermap(e, b) : NULL);
-}
+/* Clean up what engine_init() did. */
+void engine_done(struct engine *e);
 
-static inline void
-engine_done(struct engine *e)
-{
-	if (e->done) e->done(e);
-	if (e->data) free(e->data);
-	free(e);
-}
+/* Allocate and initialize a new engine.
+ * You are responsible for calling engine_done() and free() on it when done. */
+struct engine* new_engine(int id, char *e_arg, struct board *b);
+
+/* engine_done() + engine_init(), more or less. */
+void engine_reset(struct engine *e, struct board *b, char *e_arg);
+
+
+/* Convenience functions for engine actions: */
+void engine_board_print(struct engine *e, struct board *b, FILE *f);
+void engine_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+		       coord_t *best_c, float *best_r, int nbest);
+struct ownermap* engine_ownermap(struct engine *e, struct board *b);
+
+
+/* Engines best moves common code */
 
 /* For engines best_move(): Add move @c with prob @r to best moves @best_c, @best_r */
-static inline void
-best_moves_add(coord_t c, float r, coord_t *best_c, float *best_r, int nbest)
-{
-	for (int i = 0; i < nbest; i++)
-		if (r > best_r[i]) {
-			for (int j = nbest - 1; j > i; j--) { // shift
-				best_r[j] = best_r[j - 1];
-				best_c[j] = best_c[j - 1];
-			}
-			best_r[i] = r;
-			best_c[i] = c;
-			break;
-		}
-}
-
-static inline void
-best_moves_add_full(coord_t c, float r, void *d, coord_t *best_c, float *best_r, void **best_d, int nbest)
-{
-	for (int i = 0; i < nbest; i++)
-		if (r > best_r[i]) {
-			for (int j = nbest - 1; j > i; j--) { // shift
-				best_r[j] = best_r[j - 1];
-				best_c[j] = best_c[j - 1];
-				best_d[j] = best_d[j - 1];
-			}
-			best_r[i] = r;
-			best_c[i] = c;
-			best_d[i] = d;
-			break;
-		}
-}
-
-static inline int
-best_moves_print(struct board *b, char *str, coord_t *best_c, int nbest)
-{
-	fprintf(stderr, "%s[ ", str);
-	for (int i = 0; i < nbest; i++) {
-		char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i], b));
-		fprintf(stderr, "%-3s ", str);
-	}
-	fprintf(stderr, "]\n");
-	return strlen(str);
-}
-
+void best_moves_add(coord_t c, float r, coord_t *best_c, float *best_r, int nbest);
+void best_moves_add_full(coord_t c, float r, void *d, coord_t *best_c, float *best_r, void **best_d, int nbest);
+int  best_moves_print(struct board *b, char *str, coord_t *best_c, int nbest);
 
 
 #endif

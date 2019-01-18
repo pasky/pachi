@@ -31,13 +31,11 @@ josekiplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 	return best_c[0];
 }
 
-struct engine *
-engine_josekiplay_init(char *arg, struct board *b)
+void
+engine_josekiplay_init(struct engine *e, char *arg, struct board *b)
 {
-	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "JosekiPlay Engine";
 	e->comment = "I select joseki moves blindly, if there are none i just pass.";
 	e->genmove = josekiplay_genmove;
 	e->best_moves = josekiplay_best_moves;
-	return e;
 }

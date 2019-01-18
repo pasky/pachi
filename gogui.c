@@ -509,7 +509,7 @@ enum parse_code
 cmd_gogui_dcnn_best(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
 	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
-	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
+	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -526,7 +526,7 @@ enum parse_code
 cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
 	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
-	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
+	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -543,7 +543,7 @@ enum parse_code
 cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
 	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
-	if (!dcnn_engine)   dcnn_engine = engine_dcnn_init("", b);
+	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -564,17 +564,11 @@ cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, g
 
 static struct engine *joseki_engine = NULL;
 
-static void
-init_josekiplay_engine(struct board *b)
-{
-	joseki_engine = engine_josekiplay_init(NULL, b);
-}
-
 enum parse_code
 cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
 	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki", NULL);  return P_OK;  }
-	if (!joseki_engine)   init_josekiplay_engine(b);
+	if (!joseki_engine)   joseki_engine = new_engine(E_JOSEKIPLAY, NULL, b);
 	
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -634,7 +628,7 @@ static void
 init_patternplay_engine(struct board *b)
 {
 	char args[] = "mcowner_fast=0";
-	pattern_engine = engine_patternplay_init(args, b);
+	pattern_engine = new_engine(E_PATTERNPLAY, args, b);
 }
 
 enum parse_code

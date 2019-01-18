@@ -99,6 +99,6 @@ struct incr_stats {
 #define reply_disabled(id) ((id) < DIST_GAMELEN)
 
 char *path2sstr(path_t path, struct board *b);
-struct engine *engine_distributed_init(char *arg, struct board *b);
+void engine_distributed_init(struct engine *e, char *arg, struct board *b);
 
 #endif

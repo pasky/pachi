@@ -1335,11 +1335,10 @@ uct_state_init(char *arg, struct board *b)
 	return u;
 }
 
-struct engine *
-engine_uct_init(char *arg, struct board *b)
+void
+engine_uct_init(struct engine *e, char *arg, struct board *b)
 {
 	struct uct *u = uct_state_init(arg, b);
-	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "UCT";
 	e->board_print = uct_board_print;
 	e->notify_play = uct_notify_play;
@@ -1367,6 +1366,4 @@ engine_uct_init(char *arg, struct board *b)
 	if (!u->banner) u->banner = "";
 	e->comment = malloc2(sizeof(banner) + strlen(u->banner) + 1);
 	sprintf(e->comment, "%s %s", banner, u->banner);
-
-	return e;
 }

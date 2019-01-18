@@ -143,11 +143,10 @@ josekiscan_done(struct engine *e)
 		board_done(j->b[i]);
 }
 
-struct engine *
-engine_josekiscan_init(char *arg, struct board *b)
+void
+engine_josekiscan_init(struct engine *e, char *arg, struct board *b)
 {
 	struct josekiscan_engine *j = josekiscan_state_init(arg);
-	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "Josekiscan";
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of joseki sequences fed to it within the GTP stream.";
 	e->genmove = josekiscan_genmove;
@@ -156,6 +155,4 @@ engine_josekiscan_init(char *arg, struct board *b)
 	e->data = j;
 	// clear_board does not concern us, we like to work over many games
 	e->keep_on_clear = true;
-
-	return e;
 }

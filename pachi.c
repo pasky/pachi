@@ -17,6 +17,7 @@
 #include "engines/patternscan.h"
 #include "engines/patternplay.h"
 #include "engines/josekiscan.h"
+#include "engines/josekiplay.h"
 #include "engines/dcnn.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
@@ -44,45 +45,33 @@ int seed;
 char *forced_ruleset = NULL;
 bool nopassfirst = false;
 
-enum engine_id {
-	E_RANDOM,
-	E_REPLAY,
-	E_PATTERNSCAN,
-	E_PATTERNPLAY,
-	E_MONTECARLO,
-	E_UCT,
+static engine_init_t engine_inits[E_MAX] = {
+	[ E_RANDOM ]      = engine_random_init,
+	[ E_REPLAY ]      = engine_replay_init,
+	[ E_PATTERNSCAN ] = engine_patternscan_init,
+	[ E_PATTERNPLAY ] = engine_patternplay_init,
+	[ E_JOSEKISCAN ]  = engine_josekiscan_init,
+	[ E_JOSEKIPLAY ]  = engine_josekiplay_init,
+	[ E_MONTECARLO ]  = engine_montecarlo_init,
+	[ E_UCT ]         = engine_uct_init,
 #ifdef DISTRIBUTED
-	E_DISTRIBUTED,
+	[ E_DISTRIBUTED ] = engine_distributed_init,
 #endif
 #ifdef DCNN
-	E_DCNN,
-#endif
-	E_MAX,
-};
-
-static engine_init_t engine_init[E_MAX] = {
-	engine_random_init,
-	engine_replay_init,
-	engine_patternscan_init,
-	engine_patternplay_init,
-	engine_montecarlo_init,
-	engine_uct_init,
-#ifdef DISTRIBUTED
-	engine_distributed_init,
-#endif
-#ifdef DCNN
-	engine_dcnn_init,
+	[ E_DCNN ]        = engine_dcnn_init,
 #endif
 };
 
-static struct engine *
-init_engine(enum engine_id engine, char *e_arg, struct board *b)
+void
+pachi_engine_init(struct engine *e, int id, char *e_arg, struct board *b)
 {
-	char *arg = e_arg? strdup(e_arg) : e_arg;
-	assert(engine < E_MAX);
-	struct engine *e = engine_init[engine](arg, b);
-	if (arg) free(arg);
-	return e;
+	assert(id >= 0 && id < E_MAX);
+	
+	memset(e, 0, sizeof(*e));
+	char *arg = (e_arg ? strdup(e_arg) : e_arg);
+	engine_inits[id](e, arg, b);
+	e->id = id;
+	if (arg)  free(arg);
 }
 
 static void
@@ -198,7 +187,7 @@ static struct option longopts[] = {
 int main(int argc, char *argv[])
 {
 	pachi_exe = argv[0];
-	enum engine_id engine = E_UCT;
+	enum engine_id engine_id = E_UCT;
 	struct time_info ti_default = { .period = TT_NULL };	
 	char *testfile = NULL;
 	char *gtp_port = NULL;
@@ -230,17 +219,17 @@ int main(int argc, char *argv[])
 				printf("Command:\n%s\n", PACHI_CC1);
 				exit(0);
 			case 'e':
-				if      (!strcasecmp(optarg, "random"))		engine = E_RANDOM;
-				else if (!strcasecmp(optarg, "replay"))		engine = E_REPLAY;
-				else if (!strcasecmp(optarg, "montecarlo"))	engine = E_MONTECARLO;
-				else if (!strcasecmp(optarg, "uct"))		engine = E_UCT;
+				if      (!strcasecmp(optarg, "random"))		engine_id = E_RANDOM;
+				else if (!strcasecmp(optarg, "replay"))		engine_id = E_REPLAY;
+				else if (!strcasecmp(optarg, "montecarlo"))	engine_id = E_MONTECARLO;
+				else if (!strcasecmp(optarg, "uct"))		engine_id = E_UCT;
 #ifdef DISTRIBUTED
-				else if (!strcasecmp(optarg, "distributed"))	engine = E_DISTRIBUTED;
+				else if (!strcasecmp(optarg, "distributed"))	engine_id = E_DISTRIBUTED;
 #endif
-				else if (!strcasecmp(optarg, "patternscan"))	engine = E_PATTERNSCAN;
-				else if (!strcasecmp(optarg, "patternplay"))	engine = E_PATTERNPLAY;
+				else if (!strcasecmp(optarg, "patternscan"))	engine_id = E_PATTERNSCAN;
+				else if (!strcasecmp(optarg, "patternplay"))	engine_id = E_PATTERNPLAY;
 #ifdef DCNN
-				else if (!strcasecmp(optarg, "dcnn"))		engine = E_DCNN;
+				else if (!strcasecmp(optarg, "dcnn"))		engine_id = E_DCNN;
 #endif
 				else die("%s: Invalid -e argument %s\n", argv[0], optarg);
 				break;
@@ -361,7 +350,7 @@ int main(int argc, char *argv[])
 
 	char *e_arg = NULL;
 	if (optind < argc)	e_arg = argv[optind];
-	struct engine *e = init_engine(engine, e_arg, b);
+	struct engine e;  engine_init(&e, engine_id, e_arg, b);
 
 	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
 
@@ -370,15 +359,12 @@ int main(int argc, char *argv[])
 		while (fgets(buf, 4096, stdin)) {
 			if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
 
-			enum parse_code c = gtp_parse(b, e, ti, buf);
+			enum parse_code c = gtp_parse(b, &e, ti, buf);
 			if (c == P_ENGINE_RESET) {
 				ti[S_BLACK] = ti_default;
 				ti[S_WHITE] = ti_default;
-				if (!e->keep_on_clear) {
-					b->es = NULL;
-					engine_done(e);
-					e = init_engine(engine, e_arg, b);
-				}
+				if (!e.keep_on_clear)
+					engine_reset(&e, b, e_arg);
 			} else if (c == P_UNKNOWN_COMMAND && gtp_port) {
 				/* The gtp command is a weak identity check,
 				 * close the connection with a wrong peer. */
@@ -388,7 +374,7 @@ int main(int argc, char *argv[])
 		if (!gtp_port) break;
 		open_gtp_connection(&gtp_sock, gtp_port);
 	}
-	engine_done(e);
+	engine_done(&e);
 	chat_done();
 	free(testfile);
 	free(gtp_port);
