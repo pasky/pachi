@@ -788,7 +788,7 @@ cmd_gogui_spatial_size(struct board *b, struct engine *e, struct time_info *ti, 
 {
 	char *arg;  next_tok(arg);
 	/* Return current value */
-	if (!*arg) {  gtp_reply_printf(gtp, "%i\n", spatial_dist);  return P_OK;  }
+	if (!*arg) {  gtp_reply_printf(gtp, "%i", spatial_dist);  return P_OK;  }
 
 	int d = atoi(arg);
 	if (d < 3 || d > 10) {  gtp_error(gtp, "Between 3 and 10 please", NULL);  return P_OK;  }

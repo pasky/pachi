@@ -89,6 +89,7 @@ gtp_reply(gtp_t *gtp, ...)
 	va_end(params);
 }
 
+/* Like gtp_reply() takes care of final \n\n so format must not have it. */
 void
 gtp_reply_printf(gtp_t *gtp, const char *format, ...)
 {
@@ -96,6 +97,7 @@ gtp_reply_printf(gtp_t *gtp, const char *format, ...)
 	va_start(ap, format);
 	gtp_prefix('=', gtp);
 	vprintf(format, ap);
+	putchar('\n');
 	gtp_flush();
 	va_end(ap);	
 }
@@ -182,10 +184,12 @@ cmd_protocol_version(struct board *board, struct engine *engine, struct time_inf
 }
 
 static enum parse_code
-cmd_name(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_name(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	/* KGS hack */
-	gtp_reply(gtp, "Pachi ", engine->name, NULL);
+	char *name = "Pachi %s";
+	if (!strcmp(e->name, "UCT"))  name = "Pachi";
+	if (gtp->custom_name)         name = gtp->custom_name;
+	gtp_reply_printf(gtp, name, e->name);
 	return P_OK;
 }
 
@@ -196,16 +200,19 @@ cmd_echo(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 	return P_OK;
 }
 
+/* Return engine comment if playing on kgs, Pachi version otherwise.
+ * See "banner" uct param to set engine comment. */
 static enum parse_code
 cmd_version(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	/* kgs displays 'version' gtp command output on game start. */
-	if (gtp->kgs) {
-		/* %s in engine comment stands for Pachi version. */
-		gtp_reply_printf(gtp, e->comment, PACHI_VERSION, NULL);
-	}
-	else    gtp_reply(gtp, PACHI_VERSION, NULL);
+	/* kgs hijacks 'version' gtp command for game start message. */	
+	char *version = (gtp->kgs ? e->comment : "%s");
+
+	/* Custom gtp version ? */
+	if (gtp->custom_version)  version = gtp->custom_version;
 	
+	/* %s in version string stands for Pachi version. */
+	gtp_reply_printf(gtp, version, PACHI_VERSION);
 	return P_OK;
 }
 
@@ -566,9 +573,9 @@ cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *
 
 	if (DEBUGL(1))  fprintf(stderr, "counted score %.1f\n", score);
 	
-	if      (score == 0) gtp_reply_printf(gtp, "0\n");
-	else if (score > 0)  gtp_reply_printf(gtp, "W+%.1f\n", score);
-	else                 gtp_reply_printf(gtp, "B+%.1f\n", -score);
+	if      (score == 0) gtp_reply_printf(gtp, "0");
+	else if (score > 0)  gtp_reply_printf(gtp, "W+%.1f", score);
+	else                 gtp_reply_printf(gtp, "B+%.1f", -score);
 	return P_OK;
 }
 
