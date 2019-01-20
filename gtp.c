@@ -662,7 +662,14 @@ cmd_final_status_list(struct board *b, struct engine *e, struct time_info *ti, g
 /* Handle undo at the gtp level. */
 static enum parse_code
 cmd_undo(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
-{	
+{
+	/* --noundo: undo only allowed for pass. */
+	if (gtp->noundo && !is_pass(b->last_move.coord)) {
+		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(b->last_move.coord, b));
+		gtp_error(gtp, "cannot undo", NULL);
+		return P_OK;
+	}
+	
 	if (!gtp->moves) {  gtp_error(gtp, "no moves to undo", NULL);  return P_OK;  }
 	if (b->moves == b->handicap) {  gtp_error(gtp, "can't undo handicap", NULL);  return P_OK;  }
 	gtp->moves--;

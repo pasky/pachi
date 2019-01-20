@@ -91,6 +91,7 @@ usage()
 		"Gameplay: \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
 		"      --nopassfirst                 don't pass first (needed for kgs) \n"
+		"      --noundo                      undo only allowed for pass \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
 		"KGS: \n"
@@ -167,7 +168,8 @@ show_version(FILE *s)
 #define OPT_NOPATTERNS    263
 #define OPT_JOSEKI        264
 #define OPT_NOJOSEKI      265
-#define OPT_FUSEKI	  266
+#define OPT_FUSEKI        266
+#define OPT_NOUNDO        267
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "fuseki",      required_argument, 0, OPT_FUSEKI },
@@ -184,6 +186,7 @@ static struct option longopts[] = {
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
 	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
+	{ "noundo",      no_argument,       0, OPT_NOUNDO },
 	{ "nojoseki",    no_argument,       0, OPT_NOJOSEKI },
 	{ "nopassfirst", no_argument,       0, OPT_NOPASSFIRST },
 	{ "nopatterns",  no_argument,       0, OPT_NOPATTERNS },
@@ -201,7 +204,7 @@ int main(int argc, char *argv[])
 {
 	pachi_exe = argv[0];
 	enum engine_id engine_id = E_UCT;
-	struct time_info ti_default = { .period = TT_NULL };	
+	struct time_info ti_default = { .period = TT_NULL };
 	char *testfile = NULL;
 	char *gtp_port = NULL;
 	char *log_port = NULL;
@@ -215,9 +218,11 @@ int main(int argc, char *argv[])
 	setlinebuf(stderr);
 
 	win_set_pachi_cwd(argv[0]);
-	
 	seed = time(NULL) ^ getpid();
 
+	gtp_t maingtp, *gtp = &maingtp;
+	gtp_init(gtp);
+	
 	int opt;
 	int option_index;
 	/* Leading ':' -> we handle error messages. */
@@ -278,6 +283,9 @@ int main(int argc, char *argv[])
 				break;
 			case OPT_NODCNN:
 				disable_dcnn();
+				break;
+			case OPT_NOUNDO:
+				gtp->noundo = true;
 				break;
 			case OPT_NOJOSEKI:
 				disable_joseki();
@@ -367,7 +375,6 @@ int main(int argc, char *argv[])
 
 	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
 
-	gtp_t gtp;  gtp_init(&gtp);
 	for (;;) {
 		char buf[4096];
 		while (fgets(buf, 4096, stdin)) {
