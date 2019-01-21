@@ -96,7 +96,7 @@ usage()
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
 		"KGS: \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
-		"      --kgs                         turn on kgs-specific behavior (currently --nopassfirst) \n"		
+		"      --kgs                         use this when playing on kgs \n"
 		" \n"
 		"Logs / IO: \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
@@ -145,7 +145,7 @@ usage()
 static void
 show_version(FILE *s)
 {
-	fprintf(s, "Pachi version %s\n", PACHI_VERSION);
+	fprintf(s, "Pachi %s\n", PACHI_VERSION);
 	if (!DEBUGL(2)) return;
 
 	fprintf(s, "git %s\n", PACHI_VERGIT);
@@ -170,6 +170,7 @@ show_version(FILE *s)
 #define OPT_NOJOSEKI      265
 #define OPT_FUSEKI        266
 #define OPT_NOUNDO        267
+#define OPT_KGS           268
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "fuseki",      required_argument, 0, OPT_FUSEKI },
@@ -182,7 +183,7 @@ static struct option longopts[] = {
 	{ "joseki",      no_argument,       0, OPT_JOSEKI },
 	{ "gtp-port",    required_argument, 0, 'g' },
 	{ "help",        no_argument,       0, 'h' },
-	{ "kgs",         no_argument,       0, OPT_NOPASSFIRST },
+	{ "kgs",         no_argument,       0, OPT_KGS },
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
 	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
@@ -271,6 +272,10 @@ int main(int argc, char *argv[])
 				exit(0);
 			case OPT_JOSEKI:
 				require_joseki();
+				break;
+			case OPT_KGS:
+				gtp->kgs = true;       /* Show engine comment in version. */
+				nopassfirst = true;    /* --nopassfirst */
 				break;
 			case 'l':
 				log_port = strdup(optarg);

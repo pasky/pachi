@@ -197,9 +197,15 @@ cmd_echo(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 }
 
 static enum parse_code
-cmd_version(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_version(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	gtp_reply(gtp, PACHI_VERSION, ": ", engine->comment, " Have a nice game!", NULL);
+	/* kgs displays 'version' gtp command output on game start. */
+	if (gtp->kgs) {
+		/* %s in engine comment stands for Pachi version. */
+		gtp_reply_printf(gtp, e->comment, PACHI_VERSION, NULL);
+	}
+	else    gtp_reply(gtp, PACHI_VERSION, NULL);
+	
 	return P_OK;
 }
 

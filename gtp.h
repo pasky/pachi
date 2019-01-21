@@ -28,6 +28,7 @@ typedef struct
 	int         moves;
 	bool        undo_pending;
 	bool        noundo;        /* undo only allowed for pass */
+	bool        kgs;
 } gtp_t;
 
 #define next_tok(to_) \

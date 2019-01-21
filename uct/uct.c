@@ -312,19 +312,18 @@ uct_stop(struct engine *e)
 	uct_pondering_stop(u);
 }
 
+/* This is called on engine reset, especially when clear_board
+ * is received and new game should begin. */
 static void
 uct_done(struct engine *e)
 {
-	/* This is called on engine reset, especially when clear_board
-	 * is received and new game should begin. */
-	free(e->comment);
-
 	struct uct *u = e->data;
-	uct_pondering_stop(u);
-	if (u->t) reset_state(u);
-	if (u->dynkomi) u->dynkomi->done(u->dynkomi);
 
-	if (u->policy) u->policy->done(u->policy);
+	free(u->banner);
+	uct_pondering_stop(u);
+	if (u->t)             reset_state(u);
+	if (u->dynkomi)       u->dynkomi->done(u->dynkomi);
+	if (u->policy)        u->policy->done(u->policy);
 	if (u->random_policy) u->random_policy->done(u->random_policy);
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
@@ -693,7 +692,7 @@ uct_state_init(char *arg, struct board *b)
 {
 	struct uct *u = calloc2(1, sizeof(struct uct));
 	bool pat_setup = false;
-
+	
 	u->debug_level = debug_level;
 	u->reportfreq = 1000;
 	u->gamelen = MC_GAMELEN;
@@ -843,15 +842,17 @@ uct_state_init(char *arg, struct board *b)
 					u->debug_after.level = 9;
 					u->debug_after.playouts = 1000;
 				}
-			} else if (!strcasecmp(optname, "banner") && optval) {
-				/* Additional banner string. This must come as the
-				 * last engine parameter. You can use '+' instead
-				 * of ' ' if you are wrestling with kgsGtp. */
+			} else if ((!strcasecmp(optname, "banner") && optval) ||
+				   (!strcasecmp(optname, "comment") && optval)) {
+				/* Set message displayed at game start on kgs.
+				 * Default is "Pachi %s, Have a nice game !"
+				 * '%s' is replaced by Pachi version.
+				 * This must come as the last engine parameter.
+				 * You can use '+' instead of ' ' if you are wrestling with kgsGtp. */
 				if (*next) *--next = ',';
 				u->banner = strdup(optval);
-				for (char *b = u->banner; *b; b++) {
+				for (char *b = u->banner; *b; b++)
 					if (*b == '+') *b = ' ';
-				}
 				break;
 #ifdef PACHI_PLUGINS
 			} else if (!strcasecmp(optname, "plugin") && optval) {
@@ -1301,6 +1302,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
+	if (!u->banner)                 u->banner = strdup("Pachi %s, Have a nice game !");
 
 	if (using_dcnn(b)) {
 		/* dcnn hack: always reset state to make dcnn priors kick in.
@@ -1312,7 +1314,7 @@ uct_state_init(char *arg, struct board *b)
 			u->pondering_opt = false;
 		}
 	}
-
+	
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
 	/* This will be initialized in setup_state() at the first move
@@ -1345,11 +1347,5 @@ engine_uct_init(struct engine *e, char *arg, struct board *b)
 	e->ownermap = uct_ownermap;
 	e->livegfx_hook = uct_livegfx_hook;
 	e->data = u;
-
-	const char banner[] = "If you believe you have won but I am still playing, "
-		"please help me understand by capturing all dead stones. "
-		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
-	if (!u->banner) u->banner = "";
-	e->comment = malloc2(sizeof(banner) + strlen(u->banner) + 1);
-	sprintf(e->comment, "%s %s", banner, u->banner);
+	e->comment = u->banner;
 }
