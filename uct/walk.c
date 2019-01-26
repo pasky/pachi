@@ -465,13 +465,9 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	LTREE_DEBUG fprintf(stderr, "\n");
 }
 
-
-int
-uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
+static struct tree_node *
+uct_playout_descent(struct uct *u, struct board *b, struct board *b2, enum stone player_color, struct tree *t, int *presult)
 {
-	struct board b2;
-	board_copy(&b2, b);
-
 	struct playout_amafmap amaf;
 	amaf.gamelen = amaf.game_baselen = 0;
 
@@ -502,7 +498,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		significant[node_color - 1] = n;
 
 	int result;
-	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
+	int pass_limit = real_board_size2(b2) / 2;
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	/* debug */
@@ -532,16 +528,15 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		}
 
 		if (!u->random_policy_chance || fast_random(u->random_policy_chance))
-			u->policy->descend(u->policy, t, &descent[dlen], parity, b2.moves > pass_limit);
+			u->policy->descend(u->policy, t, &descent[dlen], parity, (b2->moves > pass_limit));
 		else
-			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, b2.moves > pass_limit);
+			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, (b2->moves > pass_limit));
 
 
 		/*** Perform the descent: */
 
-		if (descent[dlen].node->u.playouts >= u->significant_threshold) {
+		if (descent[dlen].node->u.playouts >= u->significant_threshold)
 			significant[node_color - 1] = descent[dlen].node;
-		}
 
 		seq_value.playouts += descent[dlen].value.playouts;
 		seq_value.value += descent[dlen].value.value * descent[dlen].value.playouts;
@@ -557,29 +552,27 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 			__sync_fetch_and_add(&n->descents, u->virtual_loss);
 
 		struct move m = { node_coord(n), node_color };
-		int res = board_play(&b2, &m);
+		int res = board_play(b2, &m);
 
-		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
-		    || b2.superko_violation) {
+		if (res < 0 || (!is_pass(m.coord) && !group_at(b2, m.coord)) /* suicide */
+		    || b2->superko_violation) {
 			if (UDEBUGL(4)) {
 				for (struct tree_node *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%"PRIhash"> ", coord2sstr(node_coord(ni), t->board), ni->hash);
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
 				        stone2str(node_color), coord_x(node_coord(n),b), coord_y(node_coord(n),b),
-					res, group_at(&b2, m.coord), b2.superko_violation);
+					res, group_at(b2, m.coord), b2->superko_violation);
 			}
 			n->hints |= TREE_HINT_INVALID;
-			result = 0;
-			goto end;
+			*presult = 0;
+			return n;
 		}
 
 		assert(node_coord(n) >= -1);
-		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(&b2));
+		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(b2));
 
-		if (is_pass(node_coord(n)))
-			passes++;
-		else
-			passes = 0;
+		if (is_pass(node_coord(n)))  passes++;
+		else                         passes = 0;
 
 		enum stone next_color = stone_other(node_color);
 		/* We need to make sure only one thread expands the node. If
@@ -592,14 +585,13 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (tree_leaf_node(n)
 		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < u->max_tree_size
 		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
-			tree_expand_node(t, n, &b2, next_color, u, -parity);
+			tree_expand_node(t, n, b2, next_color, u, -parity);
 	}
 
 	amaf.game_baselen = amaf.gamelen;
 
-	if (t->use_extra_komi && u->dynkomi->persim) {
-		b2.komi += round(u->dynkomi->persim(u->dynkomi, &b2, t, n));
-	}
+	if (t->use_extra_komi && u->dynkomi->persim)
+		b2->komi += round(u->dynkomi->persim(u->dynkomi, b2, t, n));
 
 	/* !!! !!! !!!
 	 * ALERT: The "result" number is extremely confusing. In some parts
@@ -610,7 +602,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	// assert(tree_leaf_node(n));
 	/* In case of parallel tree search, the assertion might
 	 * not hold if two threads chew on the same node. */
-	result = uct_leaf_node(u, &b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
+	result = uct_leaf_node(u, b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
 		unsigned int cutoff = amaf.game_baselen;
@@ -622,7 +614,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	floating_t rval = scale_value(u, b, node_color, significant, result);
-	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, &b2, rval);
+	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b2, rval);
 
 	stats_add_result(&t->avg_score, (float)result / 2, 1);
 	if (t->use_extra_komi) {
@@ -639,28 +631,40 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * which is expected as it will create new lnodes. */
 		enum stone seq_color = player_color;
 		/* First move always starts a sequence. */
-		record_local_sequence(u, t, &b2, descent, dlen, 1, seq_color);
+		record_local_sequence(u, t, b2, descent, dlen, 1, seq_color);
 		seq_color = stone_other(seq_color);
 		for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
 			if (u->local_tree_allseq) {
 				/* We are configured to record all subsequences. */
-				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
 			if (descent[dseqi].node->d >= u->tenuki_d) {
 				/* Tenuki! Record the fresh sequence. */
-				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
 			if (descent[dseqi].lnode && !descent[dseqi].lnode) {
 				/* Record result for in-descent picked sequence. */
-				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
 		}
 	}
 
-end:
+	*presult = result;
+	return n;
+}
+
+int
+uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
+{
+	struct board b2;
+	board_copy(&b2, b);
+	
+	int result;
+	struct tree_node *n = uct_playout_descent(u, b, &b2, player_color, t, &result);
+	
 	/* We need to undo the virtual loss we added during descend. */
 	if (u->virtual_loss) {
 		for (; n->parent; n = n->parent) {
