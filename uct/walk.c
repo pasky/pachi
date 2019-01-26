@@ -318,10 +318,7 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 			spaces, n->u.playouts, coord2sstr(node_coord(n), t->board),
 			tree_node_get_value(t, -parity, n->u.value));
 
-	struct playout_setup ps = {
-		.gamelen = u->gamelen,
-		.mercymin = u->mercymin,
-	};
+	struct playout_setup ps = playout_setup(u->gamelen, u->mercymin);
 	int result = playout_play_game(&ps, b, next_color,
 				       u->playout_amaf ? amaf : NULL,
 				       &u->ownermap, u->playout);
@@ -489,7 +486,7 @@ uct_playout_descent(struct uct *u, struct board *b, struct board *b2, enum stone
 	descent[0].node = n; descent[0].lnode = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
-	struct move_stats seq_value = { .playouts = 0 };
+	struct move_stats seq_value = move_stats(0.0, 0);
 	/* The last "significant" node along the descent (i.e. node
 	 * with higher than configured number of playouts). For black
 	 * and white. */

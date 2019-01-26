@@ -485,7 +485,9 @@ fuseki_moves(struct board *b)
 	return moves;
 }
 
-struct time_info ti_fuseki = { .period = TT_NULL };
+const struct time_info ti_none   = { TT_NULL };
+
+struct time_info ti_fuseki = { TT_NULL };
 
 struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color)
 {

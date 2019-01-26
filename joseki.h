@@ -24,6 +24,8 @@ typedef struct josekipat {
 	struct josekipat *next;  /* next hash table entry */
 } josekipat_t;
 
+#define josekipat(coord, color, h, prev, flags)  \
+	{  coord, color, flags, h, prev  }
 
 #define joseki_hash_bits 18  /* 1Mb w/ 32-bit pointers */
 #define joseki_hash_mask ((1 << joseki_hash_bits) - 1)

@@ -126,7 +126,7 @@ mm_table(struct patternscan *ps)
 	FILE *file = fopen("mm-pachi.table", "w");  assert(file);
 	
 	for (int i = 0; i < FEAT_MAX; i++) {
-		struct feature f = {  .id = i  };
+		struct feature f = feature(i, 0);
 		int gamma = ps->feature2mm[i];
 		
 		if (i >= FEAT_SPATIAL) {  /* Spatial feature */
@@ -201,7 +201,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m,
 	/* Go through other moves as well */
 	if (game_move) {
 		foreach_free_point(b) {
-			struct move m2 = { .coord = c, .color = m->color };
+			struct move m2 = move(c, m->color);
 			if (c == m->coord)                                           continue;
 			if (!board_is_valid_play_no_suicide(b, m2.color, m2.coord))  continue;
 			process_pattern(ps, b, &m2, false, callback, data);

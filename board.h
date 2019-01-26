@@ -457,7 +457,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 #define with_move(board_, coord_, color_, body_) \
        do { \
 	       struct board *board__ = (board_);  /* For with_move_return() */		\
-               struct move m_ = { .coord = (coord_), .color = (color_) }; \
+               struct move m_ = move((coord_), (color_));	  \
                struct board_undo u_; \
                if (board_quick_play(board__, &m_, &u_) >= 0) {	  \
 	               do { body_ } while(0);                     \
@@ -474,7 +474,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 #define with_move_strict(board_, coord_, color_, body_) \
        do { \
 	       struct board *board__ = (board_);  /* For with_move_return() */		\
-               struct move m_ = { .coord = (coord_), .color = (color_) }; \
+               struct move m_ = move((coord_), (color_));	  \
                struct board_undo u_; \
                assert (board_quick_play(board__, &m_, &u_) >= 0);  \
                do { body_ } while(0);                     \

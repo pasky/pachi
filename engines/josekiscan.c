@@ -82,7 +82,7 @@ josekiscan_play(struct engine *e, struct board *board, struct move *m, char *mov
 		else               j->prev[i] = joseki_add(joseki_dict, b, coord, color, j->prev[i], flags);
 
 		int captures = board_captures(b);
-		struct move m2 = { .coord = coord, .color = color };
+		struct move m2 = move(coord, color);
 		int r = board_play(b, &m2);  assert(r >= 0);
 
 		/* update prev pattern if stones were captured, board configuration changed ! */

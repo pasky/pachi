@@ -184,7 +184,7 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t
 		});
 
 	/* Check countercaptures */
-	struct move_queue ccq = { .moves = 0 };
+	struct move_queue ccq;  mq_init(&ccq);
 	can_countercapture(b, laddered, &ccq, 0);
 	
 	if (chaser_capture_escapes(b, laddered, lcolor, &ccq))

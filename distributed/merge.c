@@ -68,7 +68,7 @@ stats_tally(struct incr_stats *s, struct slave_state *sstate, int *bucket_count)
 	return h;
 }
 
-static struct incr_stats terminator = { .coord_path = INT64_MAX };
+static struct incr_stats terminator = { INT64_MAX };
 
 /* Initialize the next pointers (see merge_new_stats()).
  * Exclude invalid buffers and my own buffers by setting their next pointer
@@ -153,8 +153,7 @@ merge_new_stats(struct slave_state *sstate, int min, int max,
 	path_t min_c;
 	while ((min_c = min_coord(next, min, max)) != INT64_MAX) {
 
-		struct incr_stats sum = { .coord_path = min_c,
-					  .incr = { .playouts = 0, .value = 0.0 }};
+		struct incr_stats sum = { min_c, move_stats(0.0, 0) };
 		for (int q = min; q <= max; q++) {
 			struct incr_stats s = *(next[q]);
 

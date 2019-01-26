@@ -14,6 +14,8 @@ struct move_stats {
 	int playouts; // # of playouts
 };
 
+#define move_stats(value, playouts)  { value, playouts }
+
 /* Add a result to the stats. */
 static void stats_add_result(struct move_stats *s, floating_t result, int playouts);
 

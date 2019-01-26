@@ -38,7 +38,7 @@ replay_sample_moves(struct engine *e, struct board *b, enum stone color,
 	struct replay *r = e->data;
 	struct playout_policy *policy = r->playout;
 	struct playout_setup setup;	        memset(&setup, 0, sizeof(setup));
-	struct move m = { .coord = pass, .color = color };
+	struct move m = move(pass, color);
 	int most_played = 0;
 	
 	/* Find out what moves policy plays most in this situation */
@@ -70,7 +70,7 @@ static coord_t
 replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
 {
 	struct replay *r = e->data;
-	struct move m = { .coord = pass, .color = color };
+	struct move m = move(pass, color);
 	
 	if (DEBUGL(3))
 		printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);

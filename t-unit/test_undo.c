@@ -95,7 +95,7 @@ test_undo(struct board *orig, coord_t c, enum stone color)
 	board_copy(&b, orig);
 	board_copy(&b2, orig);
 
-	struct move m = { .coord = c, .color = color };
+	struct move m = move(c, color);
 	int r = board_play(&b, &m);  assert(r >= 0);
 
 	with_move(&b2, c, color, {
@@ -149,7 +149,7 @@ board_undo_stress_test(struct board *board, char *arg)
 
 	// Light policy better to test wild multi-group suicides
 	struct playout_policy *policy = playout_light_init(NULL, board);
-	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
+	struct playout_setup setup = playout_setup(MAX_GAMELEN, 0);
 	
 	// Hijack policy permit()
 	policy_permit = policy->permit;  policy->permit = permit_hook;

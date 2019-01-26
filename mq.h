@@ -20,6 +20,8 @@ struct move_queue {
 	unsigned char tag[MQL];
 };
 
+static void mq_init(struct move_queue *q);
+
 /* Pick a random move from the queue. */
 static coord_t mq_pick(struct move_queue *q);
 
@@ -50,6 +52,12 @@ static coord_t mq_gamma_pick(struct move_queue *q, fixp_t *gammas);
 static void mq_gamma_add(struct move_queue *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag);
 static void mq_gamma_print(struct move_queue *q, fixp_t *gammas, struct board *b, char *label);
 
+
+static inline void
+mq_init(struct move_queue *q)
+{
+	q->moves = 0;
+}
 
 static inline coord_t
 mq_pick(struct move_queue *q)

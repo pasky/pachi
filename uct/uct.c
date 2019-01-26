@@ -156,7 +156,7 @@ uct_board_print(struct engine *e, struct board *b, FILE *f)
 void
 uct_mcowner_playouts(struct uct *u, struct board *b, enum stone color)
 {
-	struct playout_setup ps = { .gamelen = u->gamelen, .mercymin = u->mercymin };
+	struct playout_setup ps = playout_setup(u->gamelen, u->mercymin);
 	
 	/* TODO pick random last move, better playouts randomness */
 
@@ -384,10 +384,9 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 	if (u->debug_after.playouts > 0) {
 		/* Now, start an additional run of playouts, single threaded. */
-		struct time_info debug_ti = {
-			.period = TT_MOVE,
-			.dim = TD_GAMES,
-		};
+		struct time_info debug_ti;
+		debug_ti.period = TT_MOVE;
+		debug_ti.dim = TD_GAMES;
 		debug_ti.len.games = t->root->u.playouts + u->debug_after.playouts;
 		debug_ti.len.games_max = 0;
 
@@ -432,7 +431,7 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 
 	/* Board needs updating ? (b0 did not have the genmove'd move played yet) */
 	if (our_move) {	          /* 0 never a real coord */
-		struct move m = { .coord = our_move, .color = stone_other(color) };
+		struct move m = move(our_move, stone_other(color));
 		int res = board_play(b, &m);
 		assert(res >= 0);
 	}

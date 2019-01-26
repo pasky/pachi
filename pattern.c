@@ -66,88 +66,97 @@ pattern_has_feature(struct pattern *p, int feature_id, int payload)
 	return false;
 }
 
-static struct pattern_config DEFAULT_PATTERN_CONFIG = {
-	.bdist_max = 4,
 
-	.spat_min = 3, .spat_max = 10,
-	.spat_largest = false,
-};
-
-struct feature_info pattern_features[] = {
-	[FEAT_CAPTURE] =         { .name = "capture",         .payloads = PF_CAPTURE_N,    .spatial = 0 },
-	[FEAT_AESCAPE] =         { .name = "atariescape",     .payloads = PF_AESCAPE_N,    .spatial = 0 },
-	[FEAT_ATARI] =           { .name = "atari",           .payloads = PF_ATARI_N,      .spatial = 0 },
-	[FEAT_CUT] =             { .name = "cut",             .payloads = PF_CUT_N,        .spatial = 0 },
-	[FEAT_NET] =             { .name = "net",             .payloads = PF_NET_N,        .spatial = 0 },
-	[FEAT_DEFENCE] =         { .name = "defence",         .payloads = PF_DEFENCE_N,    .spatial = 0 },
-	[FEAT_DOUBLE_SNAPBACK] = { .name = "double_snapback", .payloads = 1,               .spatial = 0 },
-	[FEAT_SELFATARI] =       { .name = "selfatari",       .payloads = PF_SELFATARI_N,  .spatial = 0 },
-	[FEAT_BORDER] =          { .name = "border",          .payloads = -1,              .spatial = 0 },
-	[FEAT_DISTANCE] =        { .name = "dist",            .payloads = 19,              .spatial = 0 },
-	[FEAT_DISTANCE2] =       { .name = "dist2",           .payloads = 19,              .spatial = 0 },
-	[FEAT_MCOWNER] =         { .name = "mcowner",         .payloads = 9,               .spatial = 0 },
-	[FEAT_NO_SPATIAL] =      { .name = "nospat",          .payloads = 1,               .spatial = 0 },
-	[FEAT_SPATIAL3] =        { .name = "s3",              .payloads = -1,              .spatial = 3 },
-	[FEAT_SPATIAL4] =        { .name = "s4",              .payloads = -1,              .spatial = 4 },
-	[FEAT_SPATIAL5] =        { .name = "s5",              .payloads = -1,              .spatial = 5 },
-	[FEAT_SPATIAL6] =        { .name = "s6",              .payloads = -1,              .spatial = 6 },
-	[FEAT_SPATIAL7] =        { .name = "s7",              .payloads = -1,              .spatial = 7 },
-	[FEAT_SPATIAL8] =        { .name = "s8",              .payloads = -1,              .spatial = 8 },
-	[FEAT_SPATIAL9] =        { .name = "s9",              .payloads = -1,              .spatial = 9 },
-	[FEAT_SPATIAL10] =       { .name = "s10",             .payloads = -1,              .spatial = 10 },
-};
+feature_info_t pattern_features[FEAT_MAX];
 
 /* For convenience */
-static struct feature_info *features = pattern_features;
+static feature_info_t *features = pattern_features;
+
+static void
+features_init()
+{
+	memset(pattern_features, 0, sizeof(pattern_features));
+	
+	features[FEAT_CAPTURE] =         feature_info("capture",         PF_CAPTURE_N,    0);
+	features[FEAT_AESCAPE] =         feature_info("atariescape",     PF_AESCAPE_N,    0);
+	features[FEAT_ATARI] =           feature_info("atari",           PF_ATARI_N,      0);
+	features[FEAT_CUT] =             feature_info("cut",             PF_CUT_N,        0);
+	features[FEAT_NET] =             feature_info("net",             PF_NET_N,        0);
+	features[FEAT_DEFENCE] =         feature_info("defence",         PF_DEFENCE_N,    0);
+	features[FEAT_DOUBLE_SNAPBACK] = feature_info("double_snapback", 1,               0);
+	features[FEAT_SELFATARI] =       feature_info("selfatari",       PF_SELFATARI_N,  0);
+	features[FEAT_BORDER] =          feature_info("border",          -1,              0);
+	features[FEAT_DISTANCE] =        feature_info("dist",            19,              0);
+	features[FEAT_DISTANCE2] =       feature_info("dist2",           19,              0);
+	features[FEAT_MCOWNER] =         feature_info("mcowner",         9,               0);
+	features[FEAT_NO_SPATIAL] =      feature_info("nospat",          1,               0);
+	features[FEAT_SPATIAL3] =        feature_info("s3",              -1,              3);
+	features[FEAT_SPATIAL4] =        feature_info("s4",              -1,              4);
+	features[FEAT_SPATIAL5] =        feature_info("s5",              -1,              5);
+	features[FEAT_SPATIAL6] =        feature_info("s6",              -1,              6);
+	features[FEAT_SPATIAL7] =        feature_info("s7",              -1,              7);
+	features[FEAT_SPATIAL8] =        feature_info("s8",              -1,              8);
+	features[FEAT_SPATIAL9] =        feature_info("s9",              -1,              9);
+	features[FEAT_SPATIAL10] =       feature_info("s10",             -1,              10);
+}
 
 
 /* Feature values may be named, otherwise payload is printed as number.
  * Names may not begin with a number. */
 #define PAYLOAD_NAMES_MAX 16
-static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX] = {
-	[FEAT_CAPTURE] =   { [ PF_CAPTURE_ATARIDEF] = "ataridef",
-			     [ PF_CAPTURE_LAST] = "last",
-			     [ PF_CAPTURE_PEEP] = "peep",
-			     [ PF_CAPTURE_LADDER] = "ladder",
-			     [ PF_CAPTURE_NOLADDER] = "noladder", 
-			     [ PF_CAPTURE_TAKE_KO] = "take_ko",
-			     [ PF_CAPTURE_END_KO] = "end_ko",
-	},
-	[FEAT_AESCAPE] =   { [ PF_AESCAPE_NEW_NOLADDER] = "new_noladder",
-			     [ PF_AESCAPE_NEW_LADDER] = "new_ladder",
-			     [ PF_AESCAPE_NOLADDER] = "noladder",
-			     [ PF_AESCAPE_LADDER] = "ladder",
-			     [ PF_AESCAPE_FILL_KO] = "fill_ko",
-	},
-	[FEAT_SELFATARI] = { [ PF_SELFATARI_BAD] = "bad",
-			     [ PF_SELFATARI_GOOD] = "good",
-			     [ PF_SELFATARI_2LIBS] = "twolibs",
-	},
-	[FEAT_ATARI] =     { [ PF_ATARI_DOUBLE] = "double",
-			     [ PF_ATARI_AND_CAP] = "and_cap",
-			     [ PF_ATARI_SNAPBACK] = "snapback",
-			     [ PF_ATARI_LADDER_BIG] = "ladder_big",
-			     [ PF_ATARI_LADDER_LAST] = "ladder_last",
-			     [ PF_ATARI_LADDER_SAFE] = "ladder_safe", 
-			     [ PF_ATARI_LADDER_CUT] = "ladder_cut",
-			     [ PF_ATARI_LADDER] = "ladder", 
-			     [ PF_ATARI_KO] = "ko",
-			     [ PF_ATARI_SOME] = "some",
-	},
-	[FEAT_CUT] =       { [ PF_CUT_DANGEROUS] = "dangerous" },
-	[FEAT_NET] =       { [ PF_NET_LAST] = "last",
-			     [ PF_NET_CUT] = "cut",
-			     [ PF_NET_SOME] = "some",
-			     [ PF_NET_DEAD] = "dead",
-	},
-	[FEAT_DEFENCE] =   { [ PF_DEFENCE_LINE2] = "line2",
-			     [ PF_DEFENCE_SILLY] = "silly",
-	},
-};
+static char* payloads_names[FEAT_MAX][PAYLOAD_NAMES_MAX];
+
+static void
+payloads_names_init()
+{
+	memset(payloads_names, 0, sizeof(payloads_names));
+
+	payloads_names[FEAT_CAPTURE][PF_CAPTURE_ATARIDEF] = "ataridef";
+	payloads_names[FEAT_CAPTURE][PF_CAPTURE_LAST] = "last";
+	payloads_names[FEAT_CAPTURE][PF_CAPTURE_PEEP] = "peep";
+	payloads_names[FEAT_CAPTURE][PF_CAPTURE_LADDER] = "ladder";
+	payloads_names[FEAT_CAPTURE][PF_CAPTURE_NOLADDER] = "noladder";
+	payloads_names[FEAT_CAPTURE][PF_CAPTURE_TAKE_KO] = "take_ko";
+	payloads_names[FEAT_CAPTURE][PF_CAPTURE_END_KO] = "end_ko";
+
+	payloads_names[FEAT_AESCAPE][PF_AESCAPE_NEW_NOLADDER] = "new_noladder";
+	payloads_names[FEAT_AESCAPE][PF_AESCAPE_NEW_LADDER] = "new_ladder";
+	payloads_names[FEAT_AESCAPE][PF_AESCAPE_NOLADDER] = "noladder";
+	payloads_names[FEAT_AESCAPE][PF_AESCAPE_LADDER] = "ladder";
+	payloads_names[FEAT_AESCAPE][PF_AESCAPE_FILL_KO] = "fill_ko";
+
+	payloads_names[FEAT_SELFATARI][PF_SELFATARI_BAD] = "bad";
+	payloads_names[FEAT_SELFATARI][PF_SELFATARI_GOOD] = "good";
+	payloads_names[FEAT_SELFATARI][PF_SELFATARI_2LIBS] = "twolibs";
+
+	payloads_names[FEAT_ATARI][PF_ATARI_DOUBLE] = "double";
+	payloads_names[FEAT_ATARI][PF_ATARI_AND_CAP] = "and_cap";
+	payloads_names[FEAT_ATARI][PF_ATARI_SNAPBACK] = "snapback";
+	payloads_names[FEAT_ATARI][PF_ATARI_LADDER_BIG] = "ladder_big";
+	payloads_names[FEAT_ATARI][PF_ATARI_LADDER_LAST] = "ladder_last";
+	payloads_names[FEAT_ATARI][PF_ATARI_LADDER_SAFE] = "ladder_safe";
+	payloads_names[FEAT_ATARI][PF_ATARI_LADDER_CUT] = "ladder_cut";
+	payloads_names[FEAT_ATARI][PF_ATARI_LADDER] = "ladder";
+	payloads_names[FEAT_ATARI][PF_ATARI_KO] = "ko";
+	payloads_names[FEAT_ATARI][PF_ATARI_SOME] = "some";
+
+	payloads_names[FEAT_CUT][PF_CUT_DANGEROUS] = "dangerous";
+	
+	payloads_names[FEAT_NET][PF_NET_LAST] = "last";
+	payloads_names[FEAT_NET][PF_NET_CUT] = "cut";
+	payloads_names[FEAT_NET][PF_NET_SOME] = "some";
+	payloads_names[FEAT_NET][PF_NET_DEAD] = "dead";
+	
+	payloads_names[FEAT_DEFENCE][PF_DEFENCE_LINE2] = "line2";
+	payloads_names[FEAT_DEFENCE][PF_DEFENCE_SILLY] = "silly";
+}
 
 static void
 init_feature_info(struct pattern_config *pc)
 {
+	features_init();
+	payloads_names_init();
+	
 	/* Sanity check, we use FEAT_MAX to iterate over features. */
 	assert(sizeof(pattern_features) / sizeof(*pattern_features) == FEAT_MAX);
 
@@ -182,6 +191,12 @@ void
 patterns_init(struct pattern_config *pc, char *arg, bool create, bool load_prob)
 {
 	char *pdict_file = NULL;
+	struct pattern_config DEFAULT_PATTERN_CONFIG = { 0 };
+	DEFAULT_PATTERN_CONFIG.bdist_max = 4;
+	DEFAULT_PATTERN_CONFIG.spat_min = 3;
+	DEFAULT_PATTERN_CONFIG.spat_max = 10;
+	DEFAULT_PATTERN_CONFIG.spat_largest = false;
+	
 	*pc = DEFAULT_PATTERN_CONFIG;
 
 	if (!patterns_enabled)	return;
@@ -938,7 +953,7 @@ static void
 mcowner_playouts_(struct board *b, enum stone color, struct ownermap *ownermap, int playouts)
 {
 	static struct playout_policy *policy = NULL;
-	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
+	struct playout_setup setup = playout_setup(MAX_GAMELEN, 0);
 	
 	if (!policy)  policy = playout_moggy_init(NULL, b);
 	ownermap_init(ownermap);
@@ -984,7 +999,7 @@ dump_feature_stats(struct pattern_config *pc)
 	
 	fprintf(file, "feature hits:\n");
 	for (int i = 0; i < FEAT_MAX; i++) {
-		struct feature f = {  .id = i  };
+		struct feature f = {  i  };
 		if (i >= FEAT_SPATIAL) continue; // For now ...
 		
 		/* Regular feature */

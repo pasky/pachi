@@ -53,7 +53,7 @@ add_prior_value(struct prior_map *map, coord_t c, floating_t value, int playouts
 {
 	floating_t v = map->parity > 0 ? value : 1 - value;
 	/* We don't need atomicity: */
-	struct move_stats s = { .playouts = playouts, .value = v };
+	struct move_stats s = move_stats(v, playouts);
 	stats_merge(&map->prior[c], &s);
 }
 

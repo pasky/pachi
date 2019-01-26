@@ -29,11 +29,11 @@
  * Output written to mm-feature-hits.dat periodically. */
 //#define PATTERN_FEATURE_STATS 1
 
-struct feature_info {
+typedef struct feature_info {
 	char *name;
 	int payloads;
 	int spatial;   /* For spatial features, spatial feature dist */
-};
+} feature_info_t;
 
 extern struct feature_info pattern_features[];
 
@@ -139,6 +139,8 @@ struct feature {
 	unsigned int payload:24;
 };
 
+#define feature(id, payload)  {  (enum feature_id)(id), (payload)  }
+
 /* Pattern (matched) is set of features. */
 struct pattern {       
 	int n;
@@ -157,6 +159,7 @@ struct pattern_config {
 	 * to the largest matched spatial pattern. */
 	bool spat_largest;
 };
+
 
 bool using_patterns();
 void disable_patterns();
@@ -195,6 +198,13 @@ void pattern_stats_new_position();
 #endif
 
 #define feature_eq(f1, f2) ((f1)->id == (f2)->id && (f1)->payload == (f2)->payload)
+
+static inline feature_info_t
+feature_info(char *name, int payloads, int spatial)
+{
+       feature_info_t f = { name, payloads, spatial };
+       return f;
+}
 
 static inline bool
 pattern_eq(struct pattern *p1, struct pattern *p2)

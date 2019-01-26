@@ -9,6 +9,7 @@
  * with all engines. */
 
 #include <stdbool.h>
+#include <limits.h>
 
 #include "board.h"
 
@@ -61,6 +62,12 @@ struct time_info {
 	 * forced on the command line. */
 	bool ignore_gtp;
 };
+
+extern const struct time_info ti_none;
+
+// XXX ugly
+static inline struct time_info ti_unlimited();
+
 
 /* Parse time information provided in custom format:
  *   =NUM - fixed number of simulations per move
@@ -126,5 +133,16 @@ struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum 
 
 /* set number of moves for fuseki for --fuseki-time */
 void set_fuseki_moves(int moves);
+
+
+static inline struct time_info ti_unlimited()
+{
+	struct time_info ti = { 0, };
+	ti.period = TT_MOVE;
+	ti.dim = TD_GAMES;
+	ti.len.games = INT_MAX;
+	ti.len.games_max = 0;
+	return ti;
+}
 
 #endif

@@ -94,7 +94,7 @@ set_handicap(struct board *b, char *arg)
 static void
 board_load(struct board *b, FILE *f, unsigned int size)
 {
-	struct move last_move = { .coord = pass };
+	struct move last_move = move(pass, S_NONE);
 	last_move_set = false;
 	board_resize(b, size);
 	board_clear(b);
@@ -122,7 +122,7 @@ board_load(struct board *b, FILE *f, unsigned int size)
 			if (line[i] && line[i] != ' ' && line[i] != ')')
 				die("No space after stone %i: '%c'\n", i/2 + 1, line[i]);
 
-			struct move m = { .color = s, .coord = coord_xy(b, i/2 + 1, y + 1) };
+			struct move m = move(coord_xy(b, i/2 + 1, y + 1), s);
 			if (line[i] == ')') {
 				assert(s == S_BLACK || s == S_WHITE);
 				assert(last_move.coord == pass);
@@ -448,7 +448,7 @@ static int
 moggy_games(struct board *b, enum stone color, int games, struct ownermap *ownermap, bool speed_benchmark)
 {
 	struct playout_policy *policy = playout_moggy_init(NULL, b);
-	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
+	struct playout_setup setup = playout_setup(MAX_GAMELEN, 0);
 	ownermap_init(ownermap);
 	
 	int wr = 0;
@@ -526,7 +526,7 @@ test_moggy_status(struct board *b, char *arg)
 	/* Get final status estimate after a number of moggy games */	
 	struct ownermap ownermap;
 	int wr = moggy_games(b, color, games, &ownermap, speed_benchmark);
-		
+
 	int wr_black = wr * 100 / games;
 	int wr_white = (games - wr) * 100 / games;
 	if (wr_black > wr_white)  { if (DEBUGL(2)) fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white); }

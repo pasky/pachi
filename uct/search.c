@@ -42,12 +42,6 @@ default_ti_init(void)
 	time_parse(&default_ti, "10");
 }
 
-static const struct time_info unlimited_ti = {
-	.period = TT_MOVE,
-	.dim = TD_GAMES,
-	.len = { .games = INT_MAX, .games_max = 0 },
-};
-
 /* When terminating UCT search early, the safety margin to add to the
  * remaining playout number estimate when deciding whether the result can
  * still change. */
@@ -284,7 +278,7 @@ uct_expand_next_move(struct uct *u, struct tree *t, struct board *board, enum st
 	struct board b;
 	board_copy(&b, board);
 
-	struct move m = { .coord = c, .color = color };
+	struct move m = move(c, color);
 	int res = board_play(&b, &m);
 	if (res < 0) goto done;
 		
@@ -303,7 +297,7 @@ static void
 uct_expand_next_best_moves(struct uct *u, struct tree *t, struct board *b, enum stone color)
 {
 	assert(using_dcnn(b));
-	struct move_queue q = { .moves = 0 };
+	struct move_queue q;  mq_init(&q);
 	
 	{  /* Prior best moves (dcnn policy mostly) */
 		int nbest = u->dcnn_pondering_prior;
@@ -364,7 +358,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	if (ti) {
 		if (ti->period == TT_NULL) {
 			if (u->slave)
-				*ti = unlimited_ti;
+				*ti = ti_unlimited();
 			else {
 				*ti = default_ti;
 				time_start_timer(ti);
@@ -378,7 +372,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
 	static struct uct_thread_ctx mctx;
-	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti, .s = s };
+	mctx = (struct uct_thread_ctx) { 0, u, b, color, t, fast_random(65536), 0, ti, s };
 	s->ctx = &mctx;
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
@@ -608,7 +602,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	 * if we aren't completely sure about the winner yet. */
 	if (desired_done) {
 		if (u->policy->winner && u->policy->evaluate) {
-			struct uct_descent descent = { .node = ctx->t->root };
+			struct uct_descent descent = uct_descent(ctx->t->root, NULL);
 			u->policy->winner(u->policy, ctx->t, &descent);
 			winner = descent.node;
 		}

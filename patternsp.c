@@ -212,7 +212,7 @@ spatial_print(struct board *board, struct spatial *s, FILE *f, struct move *at)
 	
 	for (unsigned int j = 0; j < ptind[s->dist + 1]; j++) {
 		ptcoords_at(x, y, at->coord, b, j);
-		struct move m = { .coord = coord_xy(b, x, y), .color = spatial_point_at(*s, j)  };
+		struct move m = move(coord_xy(b, x, y), spatial_point_at(*s, j) );
 		board_at(b, m.coord) = m.color;
 	}
 	board_print(b, stderr);	
@@ -361,7 +361,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	assert(radius <= MAX_PATTERN_DIST);
 
 	/* Load the stone configuration. */
-	struct spatial s = { .dist = radius };
+	struct spatial s = { radius, };
 	unsigned int sl = 0;
 	while (!isspace(*bufp)) {
 		s.points[sl / 4] |= char2stone(*bufp++) << ((sl % 4)*2);
@@ -503,7 +503,7 @@ spatial_dict_init(struct pattern_config *pc, bool create)
 
 	spat_dict = calloc2(1, sizeof(*spat_dict));
 	/* Dummy record for index 0 so ids start at 1. */
-	struct spatial dummy = { .dist = 0 };
+	struct spatial dummy = { 0, };
 	spatial_dict_addc(spat_dict, &dummy);
 
 	if (f) {

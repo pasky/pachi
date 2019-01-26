@@ -147,7 +147,7 @@ void
 get_dead_groups(struct board *b, struct ownermap *ownermap, struct move_queue *dead, struct move_queue *unclear)
 {
 	enum gj_state gs_array[board_size2(b)];
-	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
+	struct group_judgement gj = { 0.67, gs_array };
 	ownermap_judge_groups(b, ownermap, &gj);
 	if (dead)     {  dead->moves = 0;     groups_of_status(b, &gj, GS_DEAD, dead);  }
 	if (unclear)  {  unclear->moves = 0;  groups_of_status(b, &gj, GS_UNKNOWN, unclear);  }

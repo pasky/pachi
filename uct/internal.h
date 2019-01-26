@@ -161,6 +161,7 @@ struct uct_descent {
 	struct move_stats value;
 };
 
+#define uct_descent(node, lnode)  { node, lnode }
 
 typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude);
 typedef floating_t (*uctp_evaluate)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity);

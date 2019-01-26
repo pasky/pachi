@@ -258,7 +258,7 @@ foreach_lib_in_connected_groups(struct board *b, enum stone color, coord_t to,
 				foreach_in_connected_groups_t f, void *data)
 {
 	int visited[BOARD_MAX_COORDS] = {0, };
-	struct foreach_lib_data d = { .visited = visited, .f = f, .data = data };	
+	struct foreach_lib_data d = { visited, f, data };	
 	foreach_connected_group(b, color, to, foreach_lib_handler, &d);
 }
 
@@ -488,7 +488,7 @@ count_eyes(struct board *b, enum stone color, coord_t lib, void *data)
 bool
 dragon_is_safe_full(struct board *b, group_t g, enum stone color, int *visited, int *eyes)
 {
-	struct safe_data d = { .visited = visited, .eyes = eyes };
+	struct safe_data d = { visited, eyes };
 	foreach_lib_in_connected_groups(b, color, g, count_eyes, &d);
 	return (*eyes >= 2);
 }
@@ -698,7 +698,7 @@ dragon_is_surrounded(struct board *b, coord_t to)
 	/* Mark connected stones */
 	foreach_in_connected_groups(b, color, to, mark_connected, connected);
 	
-	struct surrounded_data d = { .connected = connected, .surrounded = 1 };
+	struct surrounded_data d = { connected, 1 };
 	foreach_lib_in_connected_groups(b, color, to, surrounded_check, &d);
 	return d.surrounded;
 }

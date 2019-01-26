@@ -152,7 +152,7 @@ board_resize(struct board *board, int size)
 	while ((1 << board->bits2) < board->size2) board->bits2++;
 }
 
-struct board_statics board_statics = { .size = 0 };
+struct board_statics board_statics = { 0, };
 
 static void
 board_statics_init(struct board *board)
@@ -562,8 +562,7 @@ break_symmetry:
 static void
 board_handicap_stone(struct board *board, int x, int y, struct move_queue *q)
 {
-	struct move m;
-	m.color = S_BLACK; m.coord = coord_xy(board, x, y);
+	struct move m = move(coord_xy(board, x, y), S_BLACK);
 
 	int r = board_play(board, &m);  assert(r >= 0);
 
@@ -1403,7 +1402,7 @@ board_undo_suicide(struct board *b, struct board_undo *u, struct move *m)
 	enum stone other_color = stone_other(m->color);
 	
 	// Pretend it's capture ...
-	struct move m2 = { .coord = m->coord, .color = other_color };
+	struct move m2 = move(m->coord, other_color);
 	b->captures[other_color] -= u->ncaptures;
 	
 	restore_suicide(b, u, &m2);

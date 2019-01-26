@@ -264,8 +264,9 @@ print_board_flags(struct board *b)
 bool
 board_regression_test(struct board *b, char *arg)
 {
-	struct time_info ti_default = { .period = TT_NULL };
-	struct time_info ti[S_MAX] = { [S_BLACK] = ti_default, [S_WHITE] = ti_default };
+	struct time_info ti[S_MAX];
+	ti[S_BLACK] = ti_none;
+	ti[S_WHITE] = ti_none;
 
 	gtp_t gtp;  gtp_init(&gtp);
 	char buf[4096];

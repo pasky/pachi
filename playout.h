@@ -72,6 +72,7 @@ struct playout_setup {
 	int mercymin;
 };
 
+#define playout_setup(gamelen, mercymin)  { gamelen, mercymin }
 
 struct playout_amafmap {
 	/* We keep record of the game so that we can

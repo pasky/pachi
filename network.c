@@ -128,6 +128,8 @@ struct port_info {
 	char *port;
 };
 
+#define port_info_none()  { -1, 0 }
+
 /* Wait at most 30s between connection attempts. */
 #define MAX_WAIT 30
 
@@ -201,7 +203,7 @@ void
 open_log_port(char *port)
 {
 	pthread_t thread;
-	static struct port_info log_info = { .socket = -1 };
+	static struct port_info log_info = port_info_none();
 	log_info.port = port;
 	open_log_connection(&log_info);
 
@@ -214,7 +216,7 @@ open_log_port(char *port)
 void
 open_gtp_connection(int *socket, char *port)
 {
-	static struct port_info gtp_info = { .socket = -1 };
+	static struct port_info gtp_info = port_info_none();
 	gtp_info.port = port;
 	int gtp_conn = open_connection(&gtp_info);
 	for (int d = STDIN; d <= STDOUT; d++) {

@@ -435,7 +435,7 @@ cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, g
 		return P_OK;
 	}
 
-	struct move_queue q = { .moves = 0 };
+	struct move_queue q;  mq_init(&q);
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
 	
 	int dame, seki;
@@ -701,7 +701,7 @@ cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *
 	
 	struct ownermap ownermap;
 	struct pattern p;
-	struct move m = { .coord = coord, .color = color };
+	struct move m = move(coord, color);
 	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
 	mcowner_playouts(b, color, &ownermap);
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
@@ -737,7 +737,7 @@ cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti
 	
 	struct ownermap ownermap;
 	struct pattern p;
-	struct move m = { .coord = coord, .color = color };
+	struct move m = move(coord, color);
 	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
 	mcowner_playouts(b, color, &ownermap);
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
@@ -769,7 +769,7 @@ cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, 
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	gogui_show_pattern(b, buf, coord, spatial_dist);
 	
-	struct move m = { .coord = coord, .color = stone_other(b->last_move.color) };
+	struct move m = move(coord, stone_other(b->last_move.color));
 	struct spatial s;
 	spatial_from_board(pc, &s, b, &m);
 	s.dist = spatial_dist;

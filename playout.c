@@ -39,7 +39,7 @@ playout_permit_move(struct playout_policy *p, struct board *b, struct move *m, b
 static coord_t
 playout_check_move(struct playout_policy *p, struct board *b, coord_t coord, enum stone color)
 {
-	struct move m = { .coord = coord, .color = color };
+	struct move m = move(coord, color);
 	if (!playout_permit_move(p, b, &m, true, false))
 		return pass;
 	return m.coord;
@@ -50,7 +50,7 @@ playout_check_move(struct playout_policy *p, struct board *b, coord_t coord, enu
 bool
 playout_permit(struct playout_policy *p, struct board *b, coord_t coord, enum stone color, bool rnd)
 {
-	struct move m = { .coord = coord, .color = color };
+	struct move m = move(coord, color);
 	return playout_permit_move(p, b, &m, false, rnd);
 }
 
@@ -84,8 +84,7 @@ playout_play_move(struct playout_setup *setup,
 		board_play_random(b, color, &coord, random_permit_handler, policy);
 
 	} else {
-		struct move m;
-		m.coord = coord; m.color = color;
+		struct move m = move(coord, color);
 		if (board_play(b, &m) < 0) {
 			if (PLDEBUGL(4)) {
 				fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n",
@@ -160,7 +159,7 @@ fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
 				if (board_at(b, c) == S_NONE)  {  fill = c;  break;  }
 			});
 
-		struct move m = {  .coord = fill, .color = other_color };
+		struct move m = move(fill, other_color);
 		if (board_permit(b, &m, NULL)) {
 			*other = board_group_other_lib(b, g, fill);
 			return fill;
@@ -236,14 +235,14 @@ playout_play_game(struct playout_setup *setup,
 		if (b->moves == bent4_moves + 1) {
 			/* Capture or kill group. */
 			coord = (board_at(b, bent4_other) == S_NONE ? bent4_other : bent4_kill);
-			struct move m = { .color = color, .coord = coord };
+			struct move m = move(coord, color);
 			int r = board_play(b, &m);  assert(r == 0);
 		}
 		else    coord = playout_play_move(setup, b, color, policy);
 		
 		/* Fill bent-fours */
 		if (coord == pass && (coord = fill_bent_four(b, stone_other(color), &bent4_other, &bent4_kill)) != pass) {
-			struct move m = { .color = color, .coord = coord };
+			struct move m = move(coord, color);
 			int r = board_play(b, &m);  assert(r == 0);
 			bent4_moves = b->moves;
 		}

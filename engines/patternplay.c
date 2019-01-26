@@ -47,7 +47,7 @@ debug_pattern_best_moves(struct patternplay *pp, struct board *b, enum stone col
 	
 	fprintf(stderr, "\n");
 	for (int i = 0; i < nbest; i++) {
-		struct move m = { .coord = best_c[i], .color = color };
+		struct move m = move(best_c[i], color);
 		struct pattern p;
 		pattern_match(&pp->pc, &p, b, &m, &ownermap, locally);
 

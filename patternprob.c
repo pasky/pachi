@@ -94,7 +94,7 @@ pattern_max_rating(struct pattern_config *pc,
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] = NAN;
 
-		struct move mo = { .coord = b->f[f], .color = color };
+		struct move mo = move(b->f[f], color);
 		if (is_pass(mo.coord))	continue;
 		if (!board_is_valid_play_no_suicide(b, mo.color, mo.coord)) continue;
 

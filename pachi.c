@@ -57,20 +57,24 @@ network_init()
 #endif
 }
 
-static engine_init_t engine_inits[E_MAX] = {
-	[ E_RANDOM ]      = engine_random_init,
-	[ E_REPLAY ]      = engine_replay_init,
-	[ E_PATTERNSCAN ] = engine_patternscan_init,
-	[ E_PATTERNPLAY ] = engine_patternplay_init,
-	[ E_JOSEKISCAN ]  = engine_josekiscan_init,
-	[ E_JOSEKIPLAY ]  = engine_josekiplay_init,
-	[ E_MONTECARLO ]  = engine_montecarlo_init,
-	[ E_UCT ]         = engine_uct_init,
+static engine_init_t engine_inits[E_MAX] = { NULL };
+
+static void
+init()
+{
+	engine_inits[ E_RANDOM ]      = engine_random_init;
+	engine_inits[ E_REPLAY ]      = engine_replay_init;
+	engine_inits[ E_PATTERNSCAN ] = engine_patternscan_init;
+	engine_inits[ E_PATTERNPLAY ] = engine_patternplay_init;
+	engine_inits[ E_JOSEKISCAN ]  = engine_josekiscan_init;
+	engine_inits[ E_JOSEKIPLAY ]  = engine_josekiplay_init;
+	engine_inits[ E_MONTECARLO ]  = engine_montecarlo_init;
+	engine_inits[ E_UCT ]         = engine_uct_init;
 #ifdef DISTRIBUTED
-	[ E_DISTRIBUTED ] = engine_distributed_init,
+	engine_inits[ E_DISTRIBUTED ] = engine_distributed_init;
 #endif
 #ifdef DCNN
-	[ E_DCNN ]        = engine_dcnn_init,
+	engine_inits[ E_DCNN ]        = engine_dcnn_init;
 #endif
 };
 
@@ -224,9 +228,11 @@ static struct option longopts[] = {
 
 int main(int argc, char *argv[])
 {
+	init();
+	
 	pachi_exe = argv[0];
 	enum engine_id engine_id = E_UCT;
-	struct time_info ti_default = { .period = TT_NULL };
+	struct time_info ti_default = ti_none;
 	int  seed = time(NULL) ^ getpid();
 	char *testfile = NULL;
 	char *log_port = NULL;

@@ -121,7 +121,7 @@ fbook_init(char *filename, struct board *b)
 
 			for (int i = 0; i < 8; i++) {
 				coord_t coord = coord_transform(b, c, i);
-				struct move m = { .coord = coord, .color = stone_other(bs[i]->last_move.color) };
+				struct move m = move(coord, stone_other(bs[i]->last_move.color));
 				int ret = board_play(bs[i], &m);
 				assert(ret >= 0);
 			}

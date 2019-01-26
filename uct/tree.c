@@ -584,18 +584,13 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	else    // Pass - everything is too far.
 		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
 
+	/* Include pass in the prior map. */
+	struct move_stats map_prior[board_size2(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
+	bool              map_consider[board_size2(b) + 1];   memset(map_consider, 0, sizeof(map_consider));
+	
 	/* Get a map of prior values to initialize the new nodes with. */
-	struct prior_map map = {
-		.b = b,
-		.to_play = color,
-		.parity = tree_parity(t, parity),
-		.distances = distances,
-	};
-	// Include pass in the prior map.
-	struct move_stats map_prior[board_size2(b) + 1]; map.prior = &map_prior[1];
-	bool map_consider[board_size2(b) + 1]; map.consider = &map_consider[1];
-	memset(map_prior, 0, sizeof(map_prior));
-	memset(map_consider, 0, sizeof(map_consider));
+	struct prior_map map = { b, color, tree_parity(t, parity), &map_prior[1], &map_consider[1], distances };
+	
 	map.consider[pass] = true;
 	int child_count = 1; // for pass
 	foreach_free_point(b) {

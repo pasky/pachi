@@ -121,7 +121,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		 * other threads from visiting this node in case of multiple
 		 * threads doing the tree search. */
 		floating_t vloss_coeff = b->vloss_sqrt ? sqrt(p->uct->threads) / p->uct->threads : 1.;
-		struct move_stats c = { .value = parity > 0 ? 0. : 1., .playouts = node->descents * vloss_coeff };
+		struct move_stats c = move_stats((parity > 0 ? 0. : 1.), node->descents * vloss_coeff);
 		stats_merge(&n, &c);
 	}
 
@@ -148,10 +148,8 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 				val = 0;
 				crit = -crit;
 			}
-			struct move_stats c = {
-				.value = tree_node_get_value(tree, parity, val),
-				.playouts = crit * r.playouts * b->crit_rave
-			};
+			struct move_stats c = move_stats(tree_node_get_value(tree, parity, val),
+							 crit * r.playouts * b->crit_rave);
 			URAVE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
 				c.value, c.playouts,
 				coord2sstr(node_coord(node), tree->board), r.value, r.playouts);

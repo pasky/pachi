@@ -104,11 +104,6 @@ struct distributed {
 /* Default number of simulations to perform per move.
  * Note that this is in total over all slaves! */
 #define DIST_GAMES	80000
-static const struct time_info default_ti = {
-	.period = TT_MOVE,
-	.dim = TD_GAMES,
-	.len = { .games = DIST_GAMES, .games_max = 0 },
-};
 
 #define get_value(value, color) \
 	((color) == S_BLACK ? (value) : 1 - (value))
@@ -310,7 +305,13 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 	coord_t best;
 	int played, playouts, threads;
 
-	if (ti->period == TT_NULL) *ti = default_ti;
+	if (ti->period == TT_NULL) {
+		*ti = ti_none;
+		ti->period = TT_MOVE;
+		ti->dim = TD_GAMES;
+		ti->len.games = DIST_GAMES;
+		ti->len.games_max = 0;
+	}
 	struct time_stop stop;
 	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, MAX_MAINTIME_RATIO, &stop);
 	struct time_info saved_ti = *ti;

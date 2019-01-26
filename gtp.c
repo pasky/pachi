@@ -418,7 +418,7 @@ cmd_genmove(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 #endif
 
 	if (!is_resign(c)) {
-		struct move m = { .coord = c, .color = color };
+		struct move m = move(c, color);
 		if (gtp_board_play(gtp, b, &m) < 0)
 			die("Attempted to generate an illegal move: %s %s\n", stone2str(m.color), coord2sstr(m.coord, b));
 	}
@@ -508,7 +508,7 @@ cmd_set_free_handicap(struct board *b, struct engine *e, struct time_info *ti, g
 	char *arg;
 	next_tok(arg);
 	do {
-		struct move m = { .coord = str2coord(arg, board_size(b)), .color = S_BLACK };
+		struct move m = move(str2coord(arg, board_size(b)), S_BLACK);
 		if (DEBUGL(4))  fprintf(stderr, "setting handicap %s\n", arg);
 
 		// XXX board left in inconsistent state if illegal move comes in
@@ -539,14 +539,14 @@ cmd_fixed_handicap(struct board *b, struct engine *engine, struct time_info *ti,
 	char buffer[1024];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	
-	struct move_queue q = { .moves = 0 };
+	struct move_queue q;  mq_init(&q);
 	board_handicap(b, stones, &q);
 	
 	if (DEBUGL(1) && debug_boardprint)
 		board_print(b, stderr);
 
 	for (unsigned int i = 0; i < q.moves; i++) {
-		struct move m = { .coord = q.move[i], .color = S_BLACK };
+		struct move m = move(q.move[i], S_BLACK);
 		sbprintf(buf, "%s ", coord2sstr(m.coord, b));
 
 		/* Add to gtp move history. */
@@ -567,7 +567,7 @@ cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *
 		return P_OK;
 	}
 
-	struct move_queue q = { .moves = 0 };
+	struct move_queue q;  mq_init(&q);
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);	
 	floating_t score = board_official_score(b, &q);
 
@@ -593,7 +593,7 @@ cmd_pachi_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp
 static int
 cmd_final_status_list_dead(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
 {
-	struct move_queue q = { .moves = 0 };
+	struct move_queue q;  mq_init(&q);
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
 	/* else we return empty list - i.e. engine not supporting
 	 * this assumes all stones alive at the game end. */
@@ -611,7 +611,7 @@ cmd_final_status_list_dead(char *arg, struct board *b, struct engine *e, gtp_t *
 static int
 cmd_final_status_list_alive(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
 {
-	struct move_queue q = { .moves = 0 };
+	struct move_queue q;  mq_init(&q);
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
 	int printed = 0;
 	
@@ -640,7 +640,7 @@ cmd_final_status_list_seki(char *arg, struct board *b, struct engine *e, gtp_t *
 	int printed = 0;
 
 	gtp_prefix('=', gtp);
-	struct move_queue sekis = { .moves = 0 };
+	struct move_queue sekis;  mq_init(&sekis);
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
 		if (ownermap_judge_point(ownermap, c, 0.80) != PJ_SEKI)  continue;
@@ -719,7 +719,7 @@ cmd_undo(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
 	enum stone color = stone_other(b->last_move.color);
-	struct move m = { .coord = pass, .color = color };
+	struct move m = move(pass, color);
 	if (e->notify_play)
 		e->notify_play(e, b, &m, "");
 

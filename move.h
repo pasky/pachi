@@ -42,6 +42,7 @@ struct move {
 	enum stone color;
 };
 
+#define move(coord, color)  { coord, color }
 
 static inline int 
 move_cmp(struct move *m1, struct move *m2)
