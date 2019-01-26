@@ -147,7 +147,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ch
 static void
 uct_board_print(engine_t *e, board_t *b, FILE *f)
 {
-	uct_t *u = b->es;
+	uct_t *u = (uct_t*)b->es;
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
@@ -171,7 +171,7 @@ uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color)
 static ownermap_t*
 uct_ownermap(engine_t *e, board_t *b)
 {
-	uct_t *u = b->es;
+	uct_t *u = (uct_t*)b->es;
 	
 	/* Make sure ownermap is well-seeded. */
 	enum stone color = (b->last_move.color ? stone_other(b->last_move.color) : S_BLACK);
@@ -183,7 +183,7 @@ uct_ownermap(engine_t *e, board_t *b)
 static char *
 uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	if (!u->t) {
 		/* No state, create one - this is probably game beginning
 		 * and we need to load the opening tbook right now. */
@@ -233,7 +233,7 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 static char *
 uct_result(engine_t *e, board_t *b)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	static char reply[1024];
 
 	if (!u->t)
@@ -250,7 +250,7 @@ uct_result(engine_t *e, board_t *b)
 static char *
 uct_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 
 	if (!u->t)
 		return generic_chat(b, opponent, from, cmd, S_NONE, pass, 0, 1, u->threads, 0.0, 0.0, "");
@@ -283,7 +283,7 @@ print_dead_groups(uct_t *u, board_t *b, move_queue_t *dead)
 static void
 uct_dead_group_list(engine_t *e, board_t *b, move_queue_t *dead)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	
 	/* This means the game is probably over, no use pondering on. */
 	uct_pondering_stop(u);
@@ -316,7 +316,7 @@ uct_stop(engine_t *e)
 	/* This is called on game over notification. However, an undo
 	 * and game resume can follow, so don't panic yet and just
 	 * relax and stop thinking so that we don't waste CPU. */
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	uct_pondering_stop(u);
 }
 
@@ -325,7 +325,7 @@ uct_stop(engine_t *e)
 static void
 uct_done(engine_t *e)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 
 	free(u->banner);
 	uct_pondering_stop(u);
@@ -492,7 +492,7 @@ uct_genmove_setup(uct_t *u, board_t *b, enum stone color)
 static void
 uct_livegfx_hook(engine_t *e)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	/* Hack: Override reportfreq to get decent update rates in GoGui */
 	u->reportfreq = MIN(u->reportfreq, 1000);
 }
@@ -500,7 +500,7 @@ uct_livegfx_hook(engine_t *e)
 static tree_node_t *
 genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive, coord_t *best_coord)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	double time_start = time_now();
 	u->pass_all_alive |= pass_all_alive;	
 
@@ -536,7 +536,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 static coord_t
 uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {	
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 
 	coord_t best_coord;
 	tree_node_t *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
@@ -591,7 +591,7 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 static void
 uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 
 	if (!start) {
 		if (u->pondering) uct_pondering_stop(u);
@@ -635,7 +635,7 @@ static void
 uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	       coord_t *best_c, float *best_r, int nbest)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	uct_pondering_stop(u);
 	if (u->t)
 		reset_state(u);	
@@ -651,7 +651,7 @@ uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 bool
 uct_gentbook(engine_t *e, board_t *b, time_info_t *ti, enum stone color)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	if (!u->t) uct_prepare_move(u, b, color);
 	assert(u->t);
 
@@ -670,9 +670,9 @@ uct_gentbook(engine_t *e, board_t *b, time_info_t *ti, enum stone color)
 void
 uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	tree_t *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
-			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, 0);
+			      u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -682,7 +682,7 @@ uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 floating_t
 uct_evaluate_one(engine_t *e, board_t *b, time_info_t *ti, coord_t c, enum stone color)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 
 	board_t b2;
 	board_copy(&b2, b);

@@ -13,18 +13,22 @@
 
 #include "board.h"
 
+enum time_period {
+	TT_NULL, // No time limit. Other structure elements are undef.
+	TT_MOVE, // Time for the next move.
+	TT_TOTAL, // Time for the rest of the game. Never seen by engine.
+};
+
+enum time_dimension {
+	TD_GAMES, // Fixed number of simulations to perform.
+	TD_WALLTIME, // Wall time to spend performing simulations.
+};
+
 typedef struct {
 	/* For how long we can spend the time? */
-	enum time_period {
-		TT_NULL, // No time limit. Other structure elements are undef.
-		TT_MOVE, // Time for the next move.
-		TT_TOTAL, // Time for the rest of the game. Never seen by engine.
-	} period;
+	enum time_period period;
 	/* How are we counting the time? */
-	enum time_dimension {
-		TD_GAMES, // Fixed number of simulations to perform.
-		TD_WALLTIME, // Wall time to spend performing simulations.
-	} dim;
+	enum time_dimension dim;
 	/* The actual time count. */
 	struct {
 		int games;     // TD_GAMES
@@ -137,8 +141,7 @@ void set_fuseki_moves(int moves);
 
 static inline time_info_t ti_unlimited()
 {
-	time_info_t ti = { 0, };
-	ti.period = TT_MOVE;
+	time_info_t ti = { TT_MOVE, };
 	ti.dim = TD_GAMES;
 	ti.len.games = INT_MAX;
 	ti.len.games_max = 0;

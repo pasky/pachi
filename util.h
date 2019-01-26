@@ -11,6 +11,12 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b));
 #define MAX(a, b) ((a) > (b) ? (a) : (b));
 
+#ifdef __cplusplus
+#define typeof decltype
+#define restrict __restrict__
+#endif
+
+
 /* Returns true if @str starts with @prefix */
 int str_prefix(char *prefix, char *str);
 

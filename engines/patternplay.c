@@ -24,14 +24,14 @@ typedef struct {
 pattern_config_t*
 patternplay_get_pc(engine_t *e)
 {
-	patternplay_t *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 	return &pp->pc;
 }
 
 bool
 patternplay_matched_locally(engine_t *e)
 {
-	patternplay_t *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 	assert(pp->matched_locally != -1);
 	return pp->matched_locally;
 }
@@ -63,7 +63,7 @@ debug_pattern_best_moves(patternplay_t *pp, board_t *b, enum stone color,
 static coord_t
 patternplay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	patternplay_t *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 
 	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
@@ -97,7 +97,7 @@ static void
 patternplay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		       coord_t *best_c, float *best_r, int nbest)
 {
-	patternplay_t *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 
 	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
@@ -114,7 +114,7 @@ patternplay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 void
 patternplay_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color)
 {
-	patternplay_t *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 
 	pattern_t pats[b->flen];
 	ownermap_t ownermap;

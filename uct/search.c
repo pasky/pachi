@@ -97,7 +97,7 @@ static void *
 spawn_worker(void *ctx_)
 {
 	/* Setup */
-	uct_thread_ctx_t *ctx = ctx_;
+	uct_thread_ctx_t *ctx = (uct_thread_ctx_t*)ctx_;
 	uct_t *u = ctx->u;
 	board_t *b = ctx->b;
 	enum stone color = ctx->color;
@@ -168,7 +168,7 @@ static void *
 spawn_thread_manager(void *ctx_)
 {
 	/* In thread_manager, we use only some of the ctx fields. */
-	uct_thread_ctx_t *mctx = ctx_;
+	uct_thread_ctx_t *mctx = (uct_thread_ctx_t*)ctx_;
 	uct_t *u = mctx->u;
 	tree_t *t = mctx->t;
 	fast_srandom(mctx->seed);
@@ -244,7 +244,7 @@ spawn_thread_manager(void *ctx_)
 static void *
 spawn_logger(void *ctx_)
 {
-	uct_thread_ctx_t *ctx = ctx_;
+	uct_thread_ctx_t *ctx = (uct_thread_ctx_t*)ctx_;
 	uct_t *u = ctx->u;
 	tree_t *t = ctx->t;
 	board_t *b = ctx->b;

@@ -61,7 +61,7 @@ typedef struct tree_hash {
 	tree_node_t *node;
 } tree_hash_t;
 
-void *
+tree_hash_t *
 uct_htable_alloc(int hbits)
 {
 	return calloc2(1 << hbits, tree_hash_t);
@@ -108,7 +108,7 @@ tree_find_node(tree_t *t, incr_stats_t *is, tree_node_t *prev)
 
 	if (DEBUGVV(7))
 		fprintf(stderr,
-			"find_node %"PRIpath" %s found %d hash %d playouts %d node %p\n", path,
+			"find_node %" PRIpath " %s found %d hash %d playouts %d node %p\n", path,
 			path2sstr(path, t->board), found, hash, is->incr.playouts, hnode->node);
 
 	if (found) return hnode->node;
@@ -135,7 +135,7 @@ tree_find_node(tree_t *t, incr_stats_t *is, tree_node_t *prev)
 	} else {
 		if (DEBUG_MODE) parent_not_found++;
 		if (DEBUGVV(7))
-			fprintf(stderr, "parent of %"PRIpath" %s not found\n",
+			fprintf(stderr, "parent of %" PRIpath " %s not found\n",
 				path, path2sstr(path, t->board));
 	}
 
@@ -143,7 +143,7 @@ tree_find_node(tree_t *t, incr_stats_t *is, tree_node_t *prev)
 	hnode->node = node;
 	if (DEBUG_MODE) h_counts.inserts++, h_counts.occupied++;
 	if (DEBUGVV(7))
-		fprintf(stderr, "insert path %"PRIpath" %s hash %d playouts %d node %p\n",
+		fprintf(stderr, "insert path %" PRIpath " %s hash %d playouts %d node %p\n",
 			path, path2sstr(path, t->board), hash, is->incr.playouts, node);
 
 	if (DEBUG_MODE && !node) node_not_found++;
@@ -174,7 +174,7 @@ discard_bin_args(char *args)
 enum parse_code
 uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 
 	static bool board_resized = true;
 	if (is_gamestart(cmd)) {
@@ -225,7 +225,7 @@ receive_stats(uct_t *u, int size)
 			return false;
 
 		if (UDEBUGL(7))
-			fprintf(stderr, "read %5d/%d %6d %.3f %"PRIpath" %s\n", n, nodes,
+			fprintf(stderr, "read %5d/%d %6d %.3f %" PRIpath " %s\n", n, nodes,
 				is.incr.playouts, is.incr.value, is.coord_path,
 				path2sstr(is.coord_path, t->board));
 
@@ -488,7 +488,7 @@ char *
 uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	     char *args, bool pass_all_alive, void **stats_buf, int *stats_size)
 {
-	uct_t *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	assert(u->slave);
 	u->pass_all_alive |= pass_all_alive;
 

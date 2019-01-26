@@ -35,7 +35,7 @@ ucb1_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, 
 	 * urgency will be always higher; even with normal fpu because
 	 * of the explore coefficient. */
 
-	ucb1_policy_t *b = p->data;
+	ucb1_policy_t *b = (ucb1_policy_t*)p->data;
 	floating_t xpl = log(descent->node->u.playouts + descent->node->prior.playouts);
 
 	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {

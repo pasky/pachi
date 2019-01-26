@@ -201,12 +201,12 @@ gogui_show_pattern(board_t *b, strbuf_t *buf, coord_t coord, int maxd)
 
 /****************************************************************************************/
 
-enum gogui_reporting gogui_livegfx = 0;
+enum gogui_reporting gogui_livegfx = UR_GOGUI_NONE;
 
 static void
 gogui_set_livegfx(engine_t *e, char *arg)
 {
-	gogui_livegfx = 0;
+	gogui_livegfx = UR_GOGUI_NONE;
 	if (!strcmp(arg, "best_moves"))  gogui_livegfx = UR_GOGUI_BEST;
 	if (!strcmp(arg, "best_seq"))    gogui_livegfx = UR_GOGUI_SEQ;
 	if (!strcmp(arg, "winrates"))    gogui_livegfx = UR_GOGUI_WR;
@@ -471,9 +471,9 @@ cmd_gogui_winrates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 
-	int prev = gogui_livegfx;
+	gogui_reporting_t prev = gogui_livegfx;
 	gogui_set_livegfx(e, "winrates");
-	gogui_best_moves(buf, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, 0);
+	gogui_best_moves(buf, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 
 	gtp_reply(gtp, buf->str, NULL);
@@ -489,9 +489,9 @@ cmd_gogui_best_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char buffer[10000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	
-	int prev = gogui_livegfx;
+	gogui_reporting_t prev = gogui_livegfx;
 	gogui_set_livegfx(e, "best_moves");
-	gogui_best_moves(buf, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_MOVES, 0);
+	gogui_best_moves(buf, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 	
 	gtp_reply(gtp, buf->str, NULL);
@@ -516,7 +516,7 @@ cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	
 	char buffer[10000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, dcnn_engine, b, ti, color, 10, GOGUI_BEST_MOVES, 0);
+	gogui_best_moves(buf, dcnn_engine, b, ti, color, 10, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
@@ -550,7 +550,7 @@ cmd_gogui_dcnn_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, dcnn_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, 0);
+	gogui_best_moves(buf, dcnn_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 
 	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
@@ -641,7 +641,7 @@ cmd_gogui_pattern_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	
 	char buffer[10000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, pattern_engine, b, ti, color, 10, GOGUI_BEST_MOVES, 0);
+	gogui_best_moves(buf, pattern_engine, b, ti, color, 10, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 
 	bool locally = patternplay_matched_locally(pattern_engine);
 	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
@@ -677,7 +677,7 @@ cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, 0);
+	gogui_best_moves(buf, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 
 	bool locally = patternplay_matched_locally(pattern_engine);
 	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));

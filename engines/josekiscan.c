@@ -26,7 +26,7 @@ typedef struct {
 static char *
 josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags)
 {
-	josekiscan_t *j = e->data;
+	josekiscan_t *j = (josekiscan_t*)e->data;
 
 	if (!board->moves) {
 		/* New game, reset state. */
@@ -137,7 +137,7 @@ josekiscan_state_init(char *arg)
 static void
 josekiscan_done(engine_t *e)
 {
-	josekiscan_t *j = e->data;
+	josekiscan_t *j = (josekiscan_t*)e->data;
 
 	for (int i = 0; i < 16; i++)
 		board_done(j->b[i]);

@@ -179,9 +179,9 @@ init_feature_info(pattern_config_t *pc)
 }
 
 int
-feature_payloads(enum feature_id id)
+feature_payloads(int id)
 {
-	assert(id < FEAT_MAX);
+	assert(id >= 0 && id < FEAT_MAX);
 	assert(features[id].payloads > 0);
 	return features[id].payloads;
 }
@@ -908,7 +908,7 @@ pattern_match_spatial_outer(pattern_config_t *pc,
 		
 		/* Record spatial feature, one per distance. */
 		unsigned int sid = spatial_id(s, spat_dict);
-		f->id = FEAT_SPATIAL3 + d - 3;
+		f->id = (enum feature_id)(FEAT_SPATIAL3 + d - 3);
 		f->payload = sid;
 		if (!pc->spat_largest)
 			(f++, p->n++);
@@ -1142,7 +1142,7 @@ str2feature(char *str, feature_t *f)
 	unsigned int flen = strcspn(str, ":");
 	for (unsigned int i = 0; i < FEAT_MAX; i++)
 		if (strlen(features[i].name) == flen && !strncmp(features[i].name, str, flen)) {
-			f->id = i;
+			f->id = (enum feature_id)i;
 			goto found;
 		}
 	die("invalid featurespec: '%.*s'\n", flen, str);
@@ -1196,21 +1196,21 @@ check_pattern_gammas(pattern_config_t *pc)
 
 	if (DEBUGL(1)) {  fprintf(stderr, "Checking gammas ...");  fflush(stderr);  }
 	for (int i = 0; i < FEAT_MAX; i++) {
-		f.id = i;
+		f.id = (enum feature_id)i;
 
 		if (i >= FEAT_SPATIAL) { 
 			for (unsigned int j = 0; j < spat_dict->nspatials; j++) {
                                 spatial_t *s = &spat_dict->spatials[j];
 				if (!s->dist)  continue;
 				assert(s->dist >= 3);
-				f.id = FEAT_SPATIAL + s->dist - 3;
+				f.id = (enum feature_id)(FEAT_SPATIAL + s->dist - 3);
 				f.payload = j;
 				if (!feature_has_gamma(pc, &f))  goto error;
 			}
 			goto done;  /* Check all spatial features at once ... */
 		}
 
-		for (int j = 0; j < feature_payloads(i); j++) {
+		for (int j = 0; j < feature_payloads((enum feature_id)i); j++) {
 			f.payload = j;
 			if (!feature_has_gamma(pc, &f))  goto error;
 		}

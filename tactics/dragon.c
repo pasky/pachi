@@ -66,7 +66,7 @@ static char*
 print_dragons(board_t *board, coord_t c, void *data)
 {
 	static char buf[64];
-	group_t *dragons = data;
+	group_t *dragons = (group_t*)data;
 	group_t d = dragon_at(board, c);
 	char *before = "", *after = "";
 
@@ -240,7 +240,7 @@ typedef struct {
 static int 
 foreach_lib_handler(board_t *b, enum stone color, group_t g, void *data)
 {
-	foreach_lib_data_t *d = data;
+	foreach_lib_data_t *d = (foreach_lib_data_t*)data;
 	for (int i = 0; i < board_group_info(b, g).libs; i++) {
 		coord_t lib = board_group_info(b, g).lib[i];
 		if (d->visited[lib])
@@ -266,7 +266,7 @@ foreach_lib_in_connected_groups(board_t *b, enum stone color, coord_t to,
 static int
 stones_all_connected_handler(board_t *b,  enum stone color, coord_t c, void *data)
 {
-	int *connected = data;
+	int *connected = (int*)data;
 	connected[c] = 1;  return 0;
 }
 
@@ -385,7 +385,7 @@ is_controlled_eye_point(board_t *b, coord_t to, enum stone color)
 static bool
 real_eye_endpoint(board_t *board, coord_t to, enum stone color)
 {
-	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
+	int color_diag_libs[S_MAX] = {0, 0, 0, 0};
 	
 	foreach_diag_neighbor(board, to) {
 		color_diag_libs[(enum stone) board_at(board, c)]++;
@@ -453,7 +453,7 @@ typedef struct {
 static int
 count_eyes(board_t *b, enum stone color, coord_t lib, void *data)
 {	
-	safe_data_t *d = data;
+	safe_data_t *d = (safe_data_t*)data;
 	if (d->visited[lib])  /* Don't visit big eyes multiple times */
 		return 0;
 
@@ -548,7 +548,7 @@ neighbor_is_safe(board_t *b, group_t g)
 static int
 count_libs(board_t *b, enum stone color, coord_t c, void *data)
 {	
-	int *libs = data;
+	int *libs = (int*)data;
 	(*libs)++;  return 0;
 }
 
@@ -564,7 +564,7 @@ dragon_liberties(board_t *b, enum stone color, coord_t to)
 static int
 dragon_at_handler(board_t *b, enum stone color, group_t g, void *data)
 {
-	group_t *d = data;
+	group_t *d = (group_t*)data;
 	*d = (*d > g ? *d : g);  return 0;		
 }
 
@@ -658,7 +658,7 @@ two_stones_gap(board_t *b, enum stone color, coord_t lib, int *connected)
 static int
 mark_connected(board_t *b,  enum stone color, coord_t c, void *data)
 {
-	int *connected = data;
+	int *connected = (int*)data;
 	connected[c] = 1;  return 0;
 }
 
@@ -670,7 +670,7 @@ typedef struct {
 static int 
 surrounded_check(board_t *b,  enum stone color, coord_t lib, void *data)
 {    
-	surrounded_data_t *d = data;	
+	surrounded_data_t *d = (surrounded_data_t*)data;
 	if (two_stones_gap(b, color, lib, d->connected)) {	
 		d->surrounded = 0;    return -1;   
 	}

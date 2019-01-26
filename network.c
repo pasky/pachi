@@ -145,11 +145,11 @@ open_connection(port_info_t *info)
 	int conn;
 	char *p = strchr(info->port, ':');
 	if (p) {
-		for (int try = 1;; ) {
+		for (int tries = 1;; ) {
 			conn = open_client_connection(info->port);
 			if (conn >= 0) break;
-			sleep(try);
-			if (try < MAX_WAIT) try++;
+			sleep(tries);
+			if (tries < MAX_WAIT) tries++;
 		}
 		info->socket = conn;
 	} else {
@@ -178,7 +178,7 @@ open_log_connection(port_info_t *info)
 static void * __attribute__((noreturn))
 log_thread(void *arg)
 {
-	port_info_t *info = arg;
+	port_info_t *info = (port_info_t*)arg;
 	assert(info && info->port);
 	for (;;) {
 		char buf[BSIZE];

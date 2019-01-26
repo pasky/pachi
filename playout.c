@@ -57,7 +57,7 @@ playout_permit(playout_policy_t *p, board_t *b, coord_t coord, enum stone color,
 static bool
 random_permit_handler(board_t *b, move_t *m, void *data)
 {
-	playout_policy_t *policy = data;
+	playout_policy_t *policy = (playout_policy_t*)data;
 	return playout_permit_move(policy, b, m, true, true);
 }
 

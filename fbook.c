@@ -47,12 +47,12 @@ fbook_check(board_t *board)
 	}
 	if (!is_pass(cf)) {
 		if (DEBUGL(1))
-			fprintf(stderr, "fbook match %"PRIhash":%"PRIhash"\n", board->hash, board->hash & fbook_hash_mask);
+			fprintf(stderr, "fbook match %" PRIhash ":%" PRIhash "\n", board->hash, board->hash & fbook_hash_mask);
 	} else {
 		/* No match, also prevent further fbook usage
 		 * until the next clear_board. */
 		if (DEBUGL(4))
-			fprintf(stderr, "fbook out %"PRIhash":%"PRIhash"\n", board->hash, board->hash & fbook_hash_mask);
+			fprintf(stderr, "fbook out %" PRIhash ":%" PRIhash "\n", board->hash, board->hash & fbook_hash_mask);
 		fbook_done(board->fbook);
 		board->fbook = NULL;
 	}
@@ -157,7 +157,7 @@ fbook_init(char *filename, board_t *b)
 				if (fbook->hashes[hi & fbook_hash_mask] == bs[i]->hash)
 					hi = 'c';
 			}
-			fprintf(stderr, "%c %"PRIhash":%"PRIhash" (<%d> %s)\n", conflict,
+			fprintf(stderr, "%c %" PRIhash ":%" PRIhash " (<%d> %s)\n", conflict,
 			        bs[i]->hash & fbook_hash_mask, bs[i]->hash, i, linebuf);
 #endif
 			hash_t hi = bs[i]->hash;

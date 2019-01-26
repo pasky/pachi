@@ -424,7 +424,7 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 {
 	board->hash ^= hash_at(coord, color);
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
+		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %" PRIhash " -> %" PRIhash "\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
 
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */
@@ -457,7 +457,7 @@ static void profiling_noinline
 board_hash_commit(board_t *board)
 {
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_commit %"PRIhash"\n", board->hash);
+		fprintf(stderr, "board_hash_commit %" PRIhash "\n", board->hash);
 	if (likely(board->history_hash[board->hash & history_hash_mask]) == 0) {
 		board->history_hash[board->hash & history_hash_mask] = board->hash;
 		return;
@@ -1479,13 +1479,15 @@ board_play_random(board_t *b, enum stone color, coord_t *coord, ppr_permit permi
 	if (unlikely(b->flen == 0))
 		goto play_pass;
 
-	int base = fast_random(b->flen), f;
-	for (f = base; f < b->flen; f++)
-		if (board_try_random_move(b, color, coord, f, permit, permit_data))
-			return;
-	for (f = 0; f < base; f++)
-		if (board_try_random_move(b, color, coord, f, permit, permit_data))
-			return;
+	{
+		int base = fast_random(b->flen), f;
+		for (f = base; f < b->flen; f++)
+			if (board_try_random_move(b, color, coord, f, permit, permit_data))
+				return;
+		for (f = 0; f < base; f++)
+			if (board_try_random_move(b, color, coord, f, permit, permit_data))
+				return;
+	}
 
 play_pass:
 	*coord = pass;
@@ -1499,10 +1501,10 @@ play_pass:
 bool
 board_is_false_eyelike(board_t *board, coord_t coord, enum stone eye_color)
 {
-	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
+	int color_diag_libs[S_MAX] = {0, 0, 0, 0};
 
 	foreach_diag_neighbor(board, coord) {
-		color_diag_libs[(enum stone) board_at(board, c)]++;
+		color_diag_libs[board_at(board, c)]++;
 	} foreach_diag_neighbor_end;
 	
 	/* For false eye, we need two enemy stones diagonally in the

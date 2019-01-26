@@ -58,7 +58,7 @@ typedef struct {
 	 * spiral from middle to the edge; the dictionary file has
 	 * a comment describing the ordering at the top. */
 	unsigned char points[MAX_PATTERN_AREA / 4];
-#define spatial_point_at(s, i) (((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3)
+#define spatial_point_at(s, i) ((enum stone)(((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3))
 } spatial_t;
 
 
@@ -120,11 +120,11 @@ void spatial_print(board_t *b, spatial_t *s, FILE *f, move_t *at);
 typedef struct { short x, y; } ptcoord_t;
 extern ptcoord_t ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
-unsigned int ptind[MAX_PATTERN_DIST + 2];
+extern unsigned int ptind[MAX_PATTERN_DIST + 2];
 
 /* Zobrist hashes used for points in patterns. */
 #define PTH__ROTATIONS	8
-hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
+extern hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 
 #define ptcoords_at(x_, y_, c_, j_) \
 	int x_ = coord_x((c_)) + ptcoords[j_].x; \

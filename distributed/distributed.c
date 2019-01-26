@@ -152,7 +152,7 @@ path2sstr(path_t path, board_t *b)
 static enum parse_code
 distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply)
 {
-	distributed_t *dist = e->data;
+	distributed_t *dist = (distributed_t*)e->data;
 
 	/* Commands that should not be sent to slaves.
 	 * time_left will be part of next pachi-genmoves,
@@ -295,12 +295,12 @@ static coord_t
 distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 		    enum stone color, bool pass_all_alive)
 {
-	distributed_t *dist = e->data;
+	distributed_t *dist = (distributed_t*)e->data;
 	double now = time_now();
 	double first = now;
 	char buf[BSIZE]; // debug only
 
-	char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
+	const char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
 	char args[CMDS_SIZE];
 
 	coord_t best;
@@ -406,7 +406,7 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 static char *
 distributed_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 {
-	distributed_t *dist = e->data;
+	distributed_t *dist = (distributed_t*)e->data;
 	double winrate = get_value(dist->my_last_stats.value, dist->my_last_move.color);
 
 	return generic_chat(b, opponent, from, cmd, dist->my_last_move.color, dist->my_last_move.coord,

@@ -142,7 +142,7 @@ spatial_init(void)
 	pthashes_init();
 }
 
-inline hash_t
+hash_t
 spatial_hash(unsigned int rotation, spatial_t *s)
 {
 	hash_t h = 0;
@@ -207,7 +207,7 @@ spatial_print(board_t *board, spatial_t *s, FILE *f, move_t *at)
 	for (int i = 0; i < real_board_size(b); i++)
 		for (int j = 0; j < real_board_size(b); j++) {
 			coord_t c = coord_xy(i+1, j+1);
-			board_at(b, c) = 4; // HACK !
+			board_at(b, c) = (enum stone)4; // HACK !
 		}
 	
 	for (unsigned int j = 0; j < ptind[s->dist + 1]; j++) {
@@ -301,7 +301,7 @@ static unsigned int
 spatial_dict_addc(spatial_dict_t *d, spatial_t *s)
 {
 	if (!(d->nspatials % SPATIALS_ALLOC))
-		d->spatials = realloc(d->spatials, (d->nspatials + SPATIALS_ALLOC) * sizeof(*d->spatials));
+		d->spatials = (spatial_t*)realloc(d->spatials, (d->nspatials + SPATIALS_ALLOC) * sizeof(*d->spatials));
 	d->spatials[d->nspatials] = *s;
 	return d->nspatials++;
 }

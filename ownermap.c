@@ -18,7 +18,7 @@ ownermap_init(ownermap_t *ownermap)
 static void
 printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 {
-        ownermap_t *ownermap = data;
+        ownermap_t *ownermap = (ownermap_t*)data;
 
 	if (c == pass) { /* Stuff to display in header */
 		if (!ownermap || !ownermap->playouts) return;
@@ -120,13 +120,13 @@ ownermap_judge_groups(board_t *b, ownermap_t *ownermap, group_judgement_t *judge
 		
 		/* Update group state.
 		 * Comparing enum types, casting (int) avoids compiler warnings */
-		enum gj_state new;
-		if      ((int)pj == (int)color)               new = GS_ALIVE;
-		else if ((int)pj == (int)stone_other(color))  new = GS_DEAD;
-		else                { assert(pj == PJ_SEKI);  new = GS_UNKNOWN;  /* Exotic! */  }
+		enum gj_state newst;
+		if      ((int)pj == (int)color)               newst = GS_ALIVE;
+		else if ((int)pj == (int)stone_other(color))  newst = GS_DEAD;
+		else                { assert(pj == PJ_SEKI);  newst = GS_UNKNOWN;  /* Exotic! */  }
 		
-		if      (judge->gs[g] == GS_NONE)  judge->gs[g] = new;
-		else if (judge->gs[g] != new)      judge->gs[g] = GS_UNKNOWN;  /* Contradiction. :( */
+		if      (judge->gs[g] == GS_NONE)  judge->gs[g] = newst;
+		else if (judge->gs[g] != newst)    judge->gs[g] = GS_UNKNOWN;  /* Contradiction. :( */
 	} foreach_point_end;
 }
 

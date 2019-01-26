@@ -92,7 +92,7 @@ set_handicap(board_t *b, char *arg)
 }
 
 static void
-board_load(board_t *b, FILE *f, unsigned int size)
+board_load(board_t *b, FILE *f, int size)
 {
 	move_t last_move = move(pass, S_NONE);
 	last_move_set = false;
@@ -107,10 +107,10 @@ board_load(board_t *b, FILE *f, unsigned int size)
 		if (!strncmp(line, "komi ", 5))     {  set_komi(b, line + 5);     y++; continue;  }
 		if (!strncmp(line, "handicap ", 9)) {  set_handicap(b, line + 9); y++; continue;  }
 
-		if (strlen(line) != size * 2 - 1 && 
-		    strlen(line) != size * 2)       die("Line not %d char long: '%s'\n", size * 2 - 1, line);
+		if ((int)strlen(line) != size * 2 - 1 && 
+		    (int)strlen(line) != size * 2)       die("Line not %d char long: '%s'\n", size * 2 - 1, line);
 		
-		for (unsigned int i = 0; i < size * 2; i++) {
+		for (int i = 0; i < size * 2; i++) {
 			enum stone s;
 			switch (line[i]) {
 				case '.': s = S_NONE; break;
@@ -517,7 +517,7 @@ test_moggy_status(board_t *b, char *arg)
 	board_print_test(2, b);
 	if (DEBUGL(2))  fprintf(stderr, "moggy status ");
 	for (int i = 0; i < n; i++) {
-		char *chr = (thres[i] == 80 ? ":XO," : ":xo,");
+		const char *chr = (thres[i] == 80 ? ":XO," : ":xo,");
 		if (!thres[i])  chr = "????";
 		if (DEBUGL(2)) fprintf(stderr, "%s %c  ", coord2sstr(status_at[i]),	chr[expected[i]]);
 	}
@@ -546,7 +546,7 @@ test_moggy_status(board_t *b, char *arg)
 		int pc = ownermap.map[c][color] * 100 / ownermap.playouts;
 
 		int passed = (!thres[i] || (j == expected[i] && pc >= thres[i]));
-		char *colorstr = (j == PJ_SEKI ? "seki" : stone2str(color));
+		const char *colorstr = (j == PJ_SEKI ? "seki" : stone2str(color));
 		PRINT_TEST(b, "moggy status %3s %-5s -> %3i%%    ", coord2sstr(c), colorstr, pc);
 		
 		if (!passed)  ret = false;

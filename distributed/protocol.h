@@ -69,11 +69,11 @@ extern slave_state_t default_sstate;
 void protocol_lock(void);
 void protocol_unlock(void);
 
-void logline(struct in_addr *client, char *prefix, char *s);
+void logline(struct in_addr *client, const char *prefix, const char *s);
 
 void clear_receive_queue(void);
-void update_cmd(board_t *b, char *cmd, char *args, bool new_id);
-void new_cmd(board_t *b, char *cmd, char *args);
+void update_cmd(board_t *b, const char *cmd, char *args, bool new_id);
+void new_cmd(board_t *b, const char *cmd, char *args);
 void get_replies(double time_limit, int min_replies);
 void protocol_init(char *slave_port, char *proxy_port, int max_slaves);
 

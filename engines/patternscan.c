@@ -213,7 +213,7 @@ static void
 mm_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 		bool game_move, void *data)
 {
-	ownermap_t *ownermap = data;
+	ownermap_t *ownermap = (ownermap_t*)data;
 	
 	/* Now, match the pattern. */
 	pattern_t p;
@@ -253,7 +253,7 @@ genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 #define SCOUNTS_ALLOC 1048576 // Allocate space in 1M*4 blocks.
 		if (sid >= ps->nscounts) {
 			int newnsc = (sid / SCOUNTS_ALLOC + 1) * SCOUNTS_ALLOC;
-			ps->scounts = realloc(ps->scounts, newnsc * sizeof(*ps->scounts));
+			ps->scounts = (int*)realloc(ps->scounts, newnsc * sizeof(*ps->scounts));
 			memset(&ps->scounts[ps->nscounts], 0, (newnsc - ps->nscounts) * sizeof(*ps->scounts));
 			//ps->sgameno = realloc(ps->sgameno, newnsc * sizeof(*ps->sgameno));
 			//memset(&ps->sgameno[ps->nscounts], 0, (newnsc - ps->nscounts) * sizeof(*ps->sgameno));
@@ -283,7 +283,7 @@ genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 static char *
 patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 {
-	patternscan_t *ps = e->data;
+	patternscan_t *ps = (patternscan_t*)e->data;
 
 	if (is_pass(m->coord))
 		return NULL;
@@ -349,7 +349,7 @@ genspatial_done(patternscan_t *ps)
 		assert(i < ps->nscounts && ps->scounts[i] > 0);
 		if (ps->scounts[i] >= ps->spat_threshold) {
 			if (!(nmatches % MATCHES_ALLOC))
-				matches = realloc(matches, (nmatches + MATCHES_ALLOC) * sizeof(*matches));
+				matches = (unsigned int*)realloc(matches, (nmatches + MATCHES_ALLOC) * sizeof(*matches));
 			matches[nmatches++] = i;
 		}
 	}
@@ -378,7 +378,7 @@ genspatial_done(patternscan_t *ps)
 static void
 patternscan_done(engine_t *e)
 {
-	patternscan_t *ps = e->data;
+	patternscan_t *ps = (patternscan_t*)e->data;
 	
 	if (ps->gen_spat_dict)
 		genspatial_done(ps);

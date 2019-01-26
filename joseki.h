@@ -7,8 +7,8 @@
 
 #define JOSEKI_PATTERN_DIST	     9
 
-#define joseki_spatial_hash(b, coord, color)         (outer_spatial_hash_from_board_rot_d((b), (coord), (color), 0, JOSEKI_PATTERN_DIST))
-#define joseki_3x3_spatial_hash(b, coord, color) (outer_spatial_hash_from_board_rot_d((b), (coord), (color), 0, 3))
+#define joseki_spatial_hash(b, coord, color)         (outer_spatial_hash_from_board_rot_d((b), (coord), (enum stone)(color), 0, JOSEKI_PATTERN_DIST))
+#define joseki_3x3_spatial_hash(b, coord, color)     (outer_spatial_hash_from_board_rot_d((b), (coord), (enum stone)(color), 0, 3))
 
 #define JOSEKI_FLAGS_IGNORE  (1 << 0)
 #define JOSEKI_FLAGS_3X3     (1 << 1)
@@ -24,8 +24,8 @@ typedef struct josekipat {
 	struct josekipat *next;  /* next hash table entry */
 } josekipat_t;
 
-#define josekipat(coord, color, h, prev, flags)  \
-	{  coord, color, flags, h, prev  }
+#define josekipat(coord, color, h, prev, flags) \
+	{  (short)(coord), (color), (uint8_t)(flags), (h), (prev)  }
 
 #define joseki_hash_bits 18  /* 1Mb w/ 32-bit pointers */
 #define joseki_hash_mask ((1 << joseki_hash_bits) - 1)
@@ -65,7 +65,7 @@ void print_joseki_moves(joseki_dict_t *jd, board_t *b, enum stone color);
 		for (josekipat_t *p = (jd)->hash[id]; p; p = p->next)
 
 #define forall_3x3_joseki_patterns(jd) \
-	for (enum stone _color = S_BLACK; _color <= S_WHITE; _color++) \
+	for (int _color = S_BLACK; _color <= S_WHITE; _color++) \
 		for (josekipat_t *p = jd->pat_3x3[_color]; p; p = p->next)
 
 #define forall_ignored_joseki_patterns(jd) \

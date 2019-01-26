@@ -74,7 +74,7 @@ linear_simple(dynkomi_linear_t *l, board_t *b, enum stone color)
 static floating_t
 linear_permove(uct_dynkomi_t *d, board_t *b, tree_t *tree)
 {
-	dynkomi_linear_t *l = d->data;
+	dynkomi_linear_t *l = (dynkomi_linear_t*)d->data;
 	enum stone color = d->uct->pondering ? tree->root_color : stone_other(tree->root_color);
 	int lmoves = l->moves[color];
 
@@ -125,7 +125,7 @@ linear_permove(uct_dynkomi_t *d, board_t *b, tree_t *tree)
 static floating_t
 linear_persim(uct_dynkomi_t *d, board_t *b, tree_t *tree, tree_node_t *node)
 {
-	dynkomi_linear_t *l = d->data;
+	dynkomi_linear_t *l = (dynkomi_linear_t*)d->data;
 	if (l->rootbased)
 		return tree->extra_komi;
 
@@ -301,7 +301,7 @@ board_game_portion(dynkomi_adaptive_t *a, board_t *b)
 static floating_t
 adapter_sigmoid(uct_dynkomi_t *d, board_t *b)
 {
-	dynkomi_adaptive_t *a = d->data;
+	dynkomi_adaptive_t *a = (dynkomi_adaptive_t*)d->data;
 	/* Figure out how much to adjust the komi based on the game
 	 * stage. The adaptation rate is 0 at the beginning,
 	 * at game stage a->adapt_phase crosses though 0.5 and
@@ -315,7 +315,7 @@ adapter_sigmoid(uct_dynkomi_t *d, board_t *b)
 static floating_t
 adapter_linear(uct_dynkomi_t *d, board_t *b)
 {
-	dynkomi_adaptive_t *a = d->data;
+	dynkomi_adaptive_t *a = (dynkomi_adaptive_t*)d->data;
 	/* Figure out how much to adjust the komi based on the game
 	 * stage. We just linearly increase/decrease the adaptation
 	 * rate for first N moves. */
@@ -330,7 +330,7 @@ adapter_linear(uct_dynkomi_t *d, board_t *b)
 static floating_t
 komi_by_score(uct_dynkomi_t *d, board_t *b, tree_t *tree, enum stone color)
 {
-	dynkomi_adaptive_t *a = d->data;
+	dynkomi_adaptive_t *a = (dynkomi_adaptive_t*)d->data;
 	if (d->score.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
 		return tree->extra_komi;
 
@@ -351,7 +351,7 @@ komi_by_score(uct_dynkomi_t *d, board_t *b, tree_t *tree, enum stone color)
 static floating_t
 komi_by_value(uct_dynkomi_t *d, board_t *b, tree_t *tree, enum stone color)
 {
-	dynkomi_adaptive_t *a = d->data;
+	dynkomi_adaptive_t *a = (dynkomi_adaptive_t*)d->data;
 	if (d->value.playouts < TRUSTWORTHY_KOMI_PLAYOUTS)
 		return tree->extra_komi;
 
@@ -465,7 +465,7 @@ bounded_komi(dynkomi_adaptive_t *a, board_t *b,
 static floating_t
 adaptive_permove(uct_dynkomi_t *d, board_t *b, tree_t *tree)
 {
-	dynkomi_adaptive_t *a = d->data;
+	dynkomi_adaptive_t *a = (dynkomi_adaptive_t*)d->data;
 	enum stone color = stone_other(tree->root_color);
 
 	/* We do not use extra komi at the game end - we are not

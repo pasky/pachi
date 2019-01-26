@@ -95,7 +95,7 @@ board_stats_print(board_t *board, move_stat_t *moves, FILE *f)
 static coord_t
 montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	montecarlo_t *mc = e->data;
+	montecarlo_t *mc = (montecarlo_t*)e->data;
 
 	if (ti->dim == TD_WALLTIME) {
 		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
@@ -226,7 +226,7 @@ move_found:
 static void
 montecarlo_done(engine_t *e)
 {
-	montecarlo_t *mc = e->data;
+	montecarlo_t *mc = (montecarlo_t*)e->data;
 	playout_policy_done(mc->playout);
 }
 

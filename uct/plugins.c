@@ -20,15 +20,19 @@
 
 /* Keep the API typedefs in sync with <uct/plugin.h>. */
 
+typedef void *(*plugin_init_t)(char *args, board_t *b, int seed);
+typedef	void (*plugin_prior_t)(void *data, tree_node_t *node, prior_map_t *map, int eqex);
+typedef	void (*plugin_done_t)(void *data);
+
 typedef struct {
 	char *path;
 	char *args;
 	void *dlh;
 	void *data;
 
-	void *(*init)(char *args, board_t *b, int seed);
-	void (*prior)(void *data, tree_node_t *node, prior_map_t *map, int eqex);
-	void (*done)(void *data);
+	plugin_init_t  init;
+	plugin_prior_t prior;
+	plugin_done_t  done;
 } plugin_t;
 
 typedef struct uct_pluginset {
@@ -41,7 +45,7 @@ typedef struct uct_pluginset {
 uct_pluginset_t *
 pluginset_init(board_t *b)
 {
-	uct_pluginset_t *ps = calloc(1, uct_pluginset_t);
+	uct_pluginset_t *ps = calloc2(1, uct_pluginset_t);
 	ps->b = b;
 	return ps;
 }
@@ -63,7 +67,7 @@ pluginset_done(uct_pluginset_t *ps)
 void
 plugin_load(uct_pluginset_t *ps, char *path, char *args)
 {
-	ps->plugins = realloc(ps->plugins, ++ps->n_plugins * sizeof(ps->plugins[0]));
+	ps->plugins = (plugin_t*)realloc(ps->plugins, ++ps->n_plugins * sizeof(ps->plugins[0]));
 	plugin_t *p = &ps->plugins[ps->n_plugins - 1];
 	p->path = strdup(path);
 	p->args = args ? strdup(args) : args;
@@ -71,14 +75,14 @@ plugin_load(uct_pluginset_t *ps, char *path, char *args)
 	p->dlh = dlopen(path, RTLD_NOW);
 	if (!p->dlh)
 		die("Cannot load plugin %s: %s\n", path, dlerror());
-#define loadsym(s_) do {\
-	p->s_ = dlsym(p->dlh, "pachi_plugin_" #s_); \
+#define loadsym(s_, type) do {			    \
+	p->s_ = (type)dlsym(p->dlh, "pachi_plugin_" #s_);	\
 	if (!p->s_) \
 		die("Cannot find pachi_plugin_%s in plugin %s: %s\n", #s_, path, dlerror()); \
 } while (0)
-	loadsym(init);
-	loadsym(prior);
-	loadsym(done);
+	loadsym(init, plugin_init_t);
+	loadsym(prior, plugin_prior_t);
+	loadsym(done, plugin_done_t);
 
 	p->data = p->init(p->args, ps->b, fast_random(65536));
 }

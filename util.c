@@ -175,15 +175,15 @@ strbuf_init(strbuf_t *buf, char *buffer, int size)
 strbuf_t *
 strbuf_init_alloc(strbuf_t *buf, int size)
 {
-	char *str = malloc(size);
+	char *str = (char*)malloc(size);
 	return strbuf_init(buf, str, size);
 }
 
 strbuf_t *
 new_strbuf(int size)
 {
-	strbuf_t *buf = malloc(sizeof(strbuf_t));
-	char *str = malloc(size);
+	strbuf_t *buf = (strbuf_t*)malloc(sizeof(strbuf_t));
+	char *str = (char*)malloc(size);
 	strbuf_init(buf, str, size);
 	return buf;	
 }

@@ -66,7 +66,7 @@ struct playout_policy {
 /** Playout engine interface: */
 
 struct playout_setup {
-	unsigned int gamelen; /* Maximal # of moves in playout. */
+	int gamelen; /* Maximal # of moves in playout. */
 	/* Minimal difference between captures to terminate the playout.
 	 * 0 means don't check. */
 	int mercymin;

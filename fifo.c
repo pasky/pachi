@@ -137,7 +137,7 @@ create_shm()
 	void *pt = mmap(0, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	assert(pt != MAP_FAILED);
        
-	shm = pt;
+	shm = (sched_shm_t*)pt;
 	memset(shm, 0, sizeof(*shm));
 	shm->size = shm_size;
 	shm->magic = SHM_MAGIC;
@@ -162,7 +162,7 @@ attach_shm()
 	if (stat("/dev/shm/" SHM_NAME, &st) != 0)  fail("/dev/shm/" SHM_NAME);
 	assert(st.st_size == sizeof(sched_shm_t));
 	
-	shm = mmap(0, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	shm = (sched_shm_t*)mmap(0, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (shm == MAP_FAILED)  fail("mmap");	
 	assert(shm->magic == SHM_MAGIC);
 	assert(shm->size == shm_size);

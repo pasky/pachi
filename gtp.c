@@ -47,7 +47,7 @@ typedef struct
 	gtp_func_t f;
 } gtp_command_t;
 
-static gtp_command_t commands[];
+static gtp_command_t *commands;
 
 void
 gtp_prefix(char prefix, gtp_t *gtp)
@@ -206,7 +206,7 @@ static enum parse_code
 cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	/* kgs hijacks 'version' gtp command for game start message. */	
-	char *version = (gtp->kgs ? e->comment : "%s");
+	const char *version = (gtp->kgs ? e->comment : "%s");
 
 	/* Custom gtp version ? */
 	if (gtp->custom_version)  version = gtp->custom_version;
@@ -825,7 +825,7 @@ static enum parse_code
 cmd_pachi_tunit(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	int res = unit_test_cmd(board, gtp->next);
-	char *str = (res ? "passed" : "failed");
+	const char *str = (res ? "passed" : "failed");
 	gtp_reply(gtp, str, NULL);
 	return P_OK;
 }
@@ -917,7 +917,7 @@ cmd_kgs_time_settings(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *
 }
 
 
-static gtp_command_t commands[] =
+static gtp_command_t gtp_commands[] =
 {
 	{ "protocol_version",       cmd_protocol_version },
 	{ "name",                   cmd_name },
@@ -990,6 +990,11 @@ static gtp_command_t commands[] =
 	{ 0, 0 }
 };
 
+static __attribute__((constructor)) void
+gtp_internal_init()
+{
+	commands = gtp_commands;  /* c++ madness */
+}
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
@@ -1050,3 +1055,6 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, cha
 	gtp_error(gtp, "unknown command", NULL);
 	return P_UNKNOWN_COMMAND;
 }
+
+
+

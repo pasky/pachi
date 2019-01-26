@@ -35,7 +35,7 @@ coord_t
 replay_sample_moves(engine_t *e, board_t *b, enum stone color, 
 		    int *played, int *pmost_played)
 {
-	replay_t *r = e->data;
+	replay_t *r = (replay_t*)e->data;
 	playout_policy_t *policy = r->playout;
 	playout_setup_t setup;	        memset(&setup, 0, sizeof(setup));
 	move_t m = move(pass, color);
@@ -69,7 +69,7 @@ replay_sample_moves(engine_t *e, board_t *b, enum stone color,
 static coord_t
 replay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	replay_t *r = e->data;
+	replay_t *r = (replay_t*)e->data;
 	move_t m = move(pass, color);
 	
 	if (DEBUGL(3))
@@ -115,7 +115,7 @@ static void
 replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		  coord_t *best_c, float *best_r, int nbest)
 {
-	replay_t *r = e->data;
+	replay_t *r = (replay_t*)e->data;
 	
 	if (DEBUGL(3))
 		printf("best_moves: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
@@ -132,7 +132,7 @@ replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 static void
 replay_done(engine_t *e)
 {
-	replay_t *r = e->data;
+	replay_t *r = (replay_t*)e->data;
 	playout_policy_done(r->playout);
 }
 

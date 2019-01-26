@@ -101,7 +101,7 @@ protocol_unlock(void)
 /* Write the time, client address, prefix, and string s to stderr atomically.
  * s should end with a \n */
 void
-logline(struct in_addr *client, char *prefix, char *s)
+logline(struct in_addr *client, const char *prefix, const char *s)
 {
 	double now = time_now();
 
@@ -557,7 +557,7 @@ slave_thread(void *arg)
  * if gtp_cmd points to a non-empty string. cmd is a single word;
  * args has all arguments and is empty or has a trailing \n */
 void
-update_cmd(board_t *b, char *cmd, char *args, bool new_id)
+update_cmd(board_t *b, const char *cmd, char *args, bool new_id)
 {
 	assert(gtp_cmd);
 	/* To make sure the slaves are in sync, we ignore the original id
@@ -596,7 +596,7 @@ update_cmd(board_t *b, char *cmd, char *args, bool new_id)
  * lock is released. cmd is a single word; args has all
  * arguments and is empty or has a trailing \n */
 void
-new_cmd(board_t *b, char *cmd, char *args)
+new_cmd(board_t *b, const char *cmd, char *args)
 {
 	// Clear the history when a new game starts:
 	if (!gtp_cmd || is_gamestart(cmd)) {

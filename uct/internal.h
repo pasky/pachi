@@ -21,15 +21,28 @@ struct uct_pluginset;
 
 typedef struct uct_policy uct_policy_t;
 
+typedef enum uct_reporting {
+	UR_TEXT,
+	UR_JSON,
+	UR_JSON_BIG,
+	UR_LEELAZ,
+} uct_reporting_t;
+
+typedef enum uct_thread_model {
+	TM_TREE, /* Tree parallelization w/o virtual loss. */
+	TM_TREEVL, /* Tree parallelization with virtual loss. */
+} uct_thread_model_t;
+
+typedef enum local_tree_eval {
+	LTE_ROOT,
+	LTE_EACH,
+	LTE_TOTAL,
+} local_tree_eval_t;
+
 /* Internal engine state. */
 typedef struct uct {
 	int debug_level;
-	enum uct_reporting {
-		UR_TEXT,
-		UR_JSON,
-		UR_JSON_BIG,
-		UR_LEELAZ,
-	} reporting;
+	enum uct_reporting reporting;
 	int reportfreq;
 
 	int games, gamelen;
@@ -55,10 +68,7 @@ typedef struct uct {
 	bool genmove_reset_tree;
 
 	int threads;
-	enum uct_thread_model {
-		TM_TREE, /* Tree parallelization w/o virtual loss. */
-		TM_TREEVL, /* Tree parallelization with virtual loss. */
-	} thread_model;
+	enum uct_thread_model thread_model;
 	int virtual_loss;
 	bool slave; /* Act as slave in distributed engine. */
 	int max_slaves; /* Optional, -1 if not set */
@@ -95,11 +105,7 @@ typedef struct uct {
 	floating_t local_tree_depth_decay;
 	bool local_tree_allseq;
 	bool local_tree_neival;
-	enum {
-		LTE_ROOT,
-		LTE_EACH,
-		LTE_TOTAL,
-	} local_tree_eval;
+	enum local_tree_eval local_tree_eval;
 	bool local_tree_rootchoose;
 
 	struct {

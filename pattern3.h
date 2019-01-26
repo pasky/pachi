@@ -34,7 +34,7 @@ typedef struct {
 
 /* Zobrist hashes for the various 3x3 points. */
 /* [point][is_atari][color] */
-hash_t p3hashes[8][2][S_MAX];
+extern hash3_t p3hashes[8][2][S_MAX];
 
 /* Source pattern encoding:
  * X: black;  O: white;  .: empty;  #: edge

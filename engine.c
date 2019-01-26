@@ -93,7 +93,7 @@ best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest)
 {
 	fprintf(stderr, "%s[ ", str);
 	for (int i = 0; i < nbest; i++) {
-		char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i]));
+		const char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i]));
 		fprintf(stderr, "%-3s ", str);
 	}
 	fprintf(stderr, "]\n");

@@ -35,7 +35,7 @@ tree_alloc_node(tree_t *t, int count, bool fast_alloc)
 		if (old_size + nsize > t->max_tree_size)
 			return NULL;
 		assert(t->nodes != NULL);
-		n = (tree_node_t *)(t->nodes + old_size);
+		n = (tree_node_t *)((char*)t->nodes + old_size);
 		memset(n, 0, nsize);
 	} else {
 		n = calloc2(count, tree_node_t);
@@ -130,7 +130,7 @@ typedef struct {
 static void *
 tree_done_node_worker(void *ctx_)
 {
-	subtree_ctx_t *ctx = ctx_;
+	subtree_ctx_t *ctx = (subtree_ctx_t*)ctx_;
 	char *str = coord2str(node_coord(ctx->n));
 
 	size_t tree_size = tree_done_node(ctx->t, ctx->n);
@@ -193,7 +193,7 @@ tree_node_dump(tree_t *tree, tree_node_t *node, int treeparity, int l, int thres
 		children++;
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
-	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f vloss %d] h=%x c#=%d <%"PRIhash">\n",
+	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f vloss %d] h=%x c#=%d <%" PRIhash ">\n",
 		coord2sstr(node_coord(node)),
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
@@ -259,7 +259,7 @@ tree_node_save(FILE *f, tree_node_t *node, int thres)
 		node->is_expanded = 0;
 
 	fputc(1, f);
-	fwrite(((void *) node) + offsetof(tree_node_t, u),
+	fwrite(((int *) node) + offsetof(tree_node_t, u),
 	       sizeof(tree_node_t) - offsetof(tree_node_t, u),
 	       1, f);
 
@@ -294,7 +294,7 @@ tree_node_load(FILE *f, tree_node_t *node, int *num)
 {
 	(*num)++;
 
-	checked_fread(((void *) node) + offsetof(tree_node_t, u),
+	checked_fread(((int *) node) + offsetof(tree_node_t, u),
 		      sizeof(tree_node_t) - offsetof(tree_node_t, u),
 		      1, f);
 

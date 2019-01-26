@@ -105,7 +105,7 @@ static inline floating_t fast_sqrt(unsigned int x)
 static inline floating_t
 ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity)
 {
-	ucb1_policy_amaf_t *b = p->data;
+	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	tree_node_t *node = descent->node;
 	tree_node_t *lnode = descent->lnode;
 
@@ -193,7 +193,7 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int par
 void
 ucb1rave_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, bool allow_pass)
 {
-	ucb1_policy_amaf_t *b = p->data;
+	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	floating_t nconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
@@ -252,7 +252,7 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		playout_amafmap_t *map, board_t *final_board,
 		floating_t result)
 {
-	ucb1_policy_amaf_t *b = p->data;
+	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
 
 	/* Record of the random playout - for each intersection coord,
@@ -322,7 +322,7 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 			}
 #if 0
 			board_t bb; bb.size = 9+2;
-			fprintf(stderr, "* %s<%"PRIhash"> -> %s<%"PRIhash"> [%d/%f => %d/%f]\n",
+			fprintf(stderr, "* %s<%" PRIhash "> -> %s<%" PRIhash "> [%d/%f => %d/%f]\n",
 				coord2sstr(node_coord(node)), node->hash,
 				coord2sstr(node_coord(ni)), ni->hash,
 				player_color, result, move, res);

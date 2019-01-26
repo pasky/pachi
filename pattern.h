@@ -171,7 +171,7 @@ char *feature2str(char *str, feature_t *f);
 /* Feature to static string */
 char *feature2sstr(feature_t *f);
 /* Get number of possible payload values associated with the feature. */
-int feature_payloads(enum feature_id f);
+int feature_payloads(int id);
 
 /* Append pattern as feature spec string. */
 char *pattern2str(char *str, pattern_t *p);

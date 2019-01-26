@@ -6,12 +6,12 @@
 /* How many candidates to display */
 #define GOGUI_CANDIDATES 30
 
-enum gogui_reporting {
-	UR_GOGUI_ZERO,
+typedef enum gogui_reporting {
+	UR_GOGUI_NONE,
 	UR_GOGUI_BEST,
 	UR_GOGUI_SEQ,
 	UR_GOGUI_WR,
-};
+} gogui_reporting_t;
 
 extern enum gogui_reporting gogui_livegfx;
 

@@ -44,6 +44,7 @@ typedef struct uct_thread_ctx {
 	struct uct_search_state *s;
 } uct_thread_ctx_t;
 
+
 /* Progress information of the on-going MCTS search - when did we
  * last adjusted dynkomi, printed out stuff, etc. */
 typedef struct uct_search_state {

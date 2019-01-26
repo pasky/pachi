@@ -555,7 +555,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 		    || b2->superko_violation) {
 			if (UDEBUGL(4)) {
 				for (tree_node_t *ni = n; ni; ni = ni->parent)
-					fprintf(stderr, "%s<%"PRIhash"> ", coord2sstr(node_coord(ni)), ni->hash);
+					fprintf(stderr, "%s<%" PRIhash "> ", coord2sstr(node_coord(ni)), ni->hash);
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
 				        stone2str(node_color), coord_x(node_coord(n)), coord_y(node_coord(n)),
 					res, group_at(b2, m.coord), b2->superko_violation);

@@ -256,6 +256,7 @@ pattern3s_init(pattern3s_t *p, char src[][11], int src_n)
 	patterns_gen(p, nsrc, src_n);
 }
 
+hash3_t p3hashes[8][2][S_MAX];
 
 static __attribute__((constructor)) void
 p3hashes_init(void)
