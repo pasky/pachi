@@ -54,7 +54,7 @@ debug_pattern_best_moves(struct patternplay *pp, struct board *b, enum stone col
 		char buffer[512];  strbuf_t strbuf;
 		strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 		dump_gammas(buf, &pp->pc, &p);
-		fprintf(stderr, "%3s gamma %s\n", coord2sstr(m.coord, b), buf->str);
+		fprintf(stderr, "%3s gamma %s\n", coord2sstr(m.coord), buf->str);
 	}
 	fprintf(stderr, "\n");
 }
@@ -84,7 +84,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	for (int f = 0; f < b->flen; f++) {
 		if (pp->debug_level >= 5 && probs[f] >= 0.001) {
 			char s[256]; pattern2str(s, &pats[f]);
-			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), probs[f], s);
+			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), probs[f], s);
 		}
 		if (probs[f] > probs[best])
 			best = f;
@@ -136,7 +136,7 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 		for (int f = 0; f < b->flen; f++) {
 			if (vals[f] >= 0.001) {
 				char s[256]; pattern2str(s, &pats[f]);
-				fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), vals[f], s);
+				fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), vals[f], s);
 			}
 		}
 	}

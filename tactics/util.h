@@ -13,10 +13,10 @@ bool board_stone_radar(struct board *b, coord_t coord, int distance);
 
 /* Measure various distances on the board: */
 /* Distance from the edge; on edge returns 0. */
-static int coord_edge_distance(coord_t c, struct board *b);
+static int coord_edge_distance(coord_t c);
 /* Distance of two points in gridcular metric - this metric defines
  * circle-like structures on the square grid. */
-static int coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b);
+static int coord_gridcular_distance(coord_t c1, coord_t c2);
 
 /* Construct a "common fate graph" from given coordinate; that is, a weighted
  * graph of intersections where edges between all neighbors have weight 1,
@@ -50,18 +50,18 @@ static double board_local_value(bool scan_neis, struct board *b, coord_t coord, 
 
 
 static inline int
-coord_edge_distance(coord_t c, struct board *b)
+coord_edge_distance(coord_t c)
 {
-	int x = coord_x(c, b), y = coord_y(c, b);
-	int dx = x > board_size(b) / 2 ? board_size(b) - 1 - x : x;
-	int dy = y > board_size(b) / 2 ? board_size(b) - 1 - y : y;
+	int x = coord_x(c), y = coord_y(c);
+	int dx = x > the_board_size() / 2 ? the_board_size() - 1 - x : x;
+	int dy = y > the_board_size() / 2 ? the_board_size() - 1 - y : y;
 	return (dx < dy ? dx : dy) - 1 /* S_OFFBOARD */;
 }
 
 static inline int
-coord_gridcular_distance(coord_t c1, coord_t c2, struct board *b)
+coord_gridcular_distance(coord_t c1, coord_t c2)
 {
-	int dx = abs(coord_dx(c1, c2, b)), dy = abs(coord_dy(c1, c2, b));
+	int dx = abs(coord_dx(c1, c2)), dy = abs(coord_dy(c1, c2));
 	return dx + dy + (dx > dy ? dx : dy);
 }
 

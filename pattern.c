@@ -369,13 +369,13 @@ cutting_stones(struct board *b, group_t g)
 
 	foreach_in_group(b, g) {
 		if (neighbor_count_at(b, c, other_color) < 2)  continue;
-		int x1 = coord_x(c, b);  int y1 = coord_y(c, b);
+		int x1 = coord_x(c);  int y1 = coord_y(c);
 		coord_t coord = c;
 		foreach_diag_neighbor(b, coord) {
 			if (board_at(b, c) != color || group_at(b, c) == g)  continue;
-			int x2 = coord_x(c, b);  int y2 = coord_y(c, b);
-			coord_t c2 = coord_xy(b, x1, y2);
-			coord_t c3 = coord_xy(b, x2, y1);
+			int x2 = coord_x(c);  int y2 = coord_y(c);
+			coord_t c2 = coord_xy(x1, y2);
+			coord_t c3 = coord_xy(x2, y1);
 			if (board_at(b, c2) != other_color ||
 			    board_at(b, c3) != other_color)   continue;
 			return true;
@@ -410,12 +410,12 @@ cutting_stones_and_can_capture_other_after_atari(struct board *b, struct move *m
 static bool
 can_countercap_common_stone(struct board *b, coord_t coord, enum stone color, group_t g1, group_t g2)
 {
-	int x1 = coord_x(coord, b);  int y1 = coord_y(coord, b);
+	int x1 = coord_x(coord);  int y1 = coord_y(coord);
 	foreach_diag_neighbor(b, coord) {
 		if (board_at(b, c) != color || board_group_info(b, group_at(b, c)).libs != 1)  continue;
-		int x2 = coord_x(c, b);  int y2 = coord_y(c, b);
-		coord_t c1 = coord_xy(b, x1, y2);
-		coord_t c2 = coord_xy(b, x2, y1);
+		int x2 = coord_x(c);  int y2 = coord_y(c);
+		coord_t c1 = coord_xy(x1, y2);
+		coord_t c2 = coord_xy(x2, y1);
 		if ((group_at(b, c1) == g1 && group_at(b, c2) == g2) ||
 		    (group_at(b, c1) == g2 && group_at(b, c2) == g1))   return true;
 	} foreach_diag_neighbor_end;
@@ -516,7 +516,7 @@ pattern_match_atari(struct board *b, struct move *m, struct ownermap *ownermap)
 static int
 pattern_match_border(struct board *b, struct move *m, struct pattern_config *pc)
 {
-	unsigned int bdist = coord_edge_distance(m->coord, b);
+	unsigned int bdist = coord_edge_distance(m->coord);
 	if (bdist <= pc->bdist_max)
 		return bdist;
 	return -1;
@@ -526,7 +526,7 @@ static int
 pattern_match_distance(struct board *b, struct move *m)
 {
 	if (is_pass(b->last_move.coord))  return -1;
-	int d = coord_gridcular_distance(m->coord, b->last_move.coord, b);
+	int d = coord_gridcular_distance(m->coord, b->last_move.coord);
 	if (d > 17)  d = 18;
 	d--; assert(d >= 0 && d <= 17);
 	return d;
@@ -536,7 +536,7 @@ static int
 pattern_match_distance2(struct board *b, struct move *m)
 {
 	if (is_pass(b->last_move2.coord))  return -1;
-	int d = coord_gridcular_distance(m->coord, b->last_move2.coord, b);
+	int d = coord_gridcular_distance(m->coord, b->last_move2.coord);
 	if (d > 17)  d = 17;
 	/* can be zero here (same move) so don't decrement */
 	assert(d >= 0 && d <= 17);
@@ -673,12 +673,12 @@ is_net(struct board *b, coord_t target, coord_t net)
 	assert(diag_neighbors);	
 
 	/* Don't match on first line... */
-	if (coord_edge_distance(target, b) == 0 ||
-	    coord_edge_distance(net, b)    == 0)   return false;
+	if (coord_edge_distance(target) == 0 ||
+	    coord_edge_distance(net)    == 0)   return false;
 
 	/* Check net shape. */
-	int xt = coord_x(target, b),   yt = coord_y(target, b);
-	int xn = coord_x(net, b),      yn = coord_y(net, b);
+	int xt = coord_x(target),   yt = coord_y(target);
+	int xn = coord_x(net),      yn = coord_y(net);
 	int dx = (xn > xt ? -1 : 1),   dy = (yn > yt ? -1 : 1);
 
 	/* Check can't escape. */
@@ -686,8 +686,8 @@ is_net(struct board *b, coord_t target, coord_t net)
 	 *  X O - .    -: e1, e2
 	 *  X - X .    
 	 *  . . . .              */
-	coord_t e1 = coord_xy(b, xn + dx   , yn);
-	coord_t e2 = coord_xy(b, xn        , yn + dy);
+	coord_t e1 = coord_xy(xn + dx   , yn);
+	coord_t e2 = coord_xy(xn        , yn + dy);
 	if (board_at(b, e1) != S_NONE ||
 	    board_at(b, e2) != S_NONE)         return false;
 	//if (board_at(b, e1) == other_color)  return false;
@@ -715,7 +715,7 @@ net_last_move(struct board *b, struct move *m, coord_t last)
 	if (board_at(b, last) != other_color)      return false;
 	group_t lastg = group_at(b, last);
 	if (board_group_info(b, lastg).libs != 2)  return false;
-	if (coord_edge_distance(last, b) == 0)	   return false;
+	if (coord_edge_distance(last) == 0)	   return false;
 	
 	bool diag_neighbors = false;
 	foreach_diag_neighbor(b, last) {
@@ -734,7 +734,7 @@ pattern_match_net(struct board *b, struct move *m, struct ownermap *ownermap)
 {
 	enum stone other_color = stone_other(m->color);
 	if (immediate_liberty_count(b, m->coord) < 2)	return -1;	
-	if (coord_edge_distance(m->coord, b) == 0)	return -1;
+	if (coord_edge_distance(m->coord) == 0)	        return -1;
 
 	/* Speedup: avoid with_move() if there are no candidates... */
 	int can = 0;
@@ -782,12 +782,12 @@ pattern_match_defence(struct board *b, struct move *m)
 {
 	enum stone other_color = stone_other(m->color);
 
-	if (coord_edge_distance(m->coord, b) != 1)     return -1;
+	if (coord_edge_distance(m->coord) != 1)        return -1;
 	if (immediate_liberty_count(b, m->coord) < 2)  return -1;
 
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != m->color)  continue;
-		if (coord_edge_distance(c, b) != 1)  continue;
+		if (coord_edge_distance(c) != 1) continue;
 		if (neighbor_count_at(b, c, other_color) != 2)  return -1;
 		if (immediate_liberty_count(b, c) != 2)  return -1;
 		group_t g = group_at(b, c);
@@ -797,10 +797,10 @@ pattern_match_defence(struct board *b, struct move *m)
 		 *   . . O X *   can capture instead !
 		 *   . . . . .
 		 *  -----------  */
-		int x = coord_x(c, b); int y = coord_y(c, b);
-		int dx = x - coord_x(m->coord, b);
-		int dy = y - coord_y(m->coord, b);
-		coord_t o = coord_xy(b, x + dx, y + dy);
+		int x = coord_x(c); int y = coord_y(c);
+		int dx = x - coord_x(m->coord);
+		int dy = y - coord_y(m->coord);
+		coord_t o = coord_xy(x + dx, y + dy);
 		if (board_at(b, o) != other_color)  return -1;
 		group_t go = group_at(b, o);
 		if (board_group_info(b, go).libs == 2 &&
@@ -840,13 +840,13 @@ pattern_match_double_snapback(struct board *b, struct move *m)
 	};
 
 	int snap = 0;
-	int x = coord_x(coord, b);
-	int y = coord_y(coord, b);
+	int x = coord_x(coord);
+	int y = coord_y(coord);
 	with_move(b, coord, color, {
 		for (int i = 0; i < 4 && snap != 2; i++) {
 			snap = 0;
 			for (int j = 0; j < 2; j++) {
-				coord_t c = coord_xy(b, x + offsets[i][j][0], y + offsets[i][j][1]);
+				coord_t c = coord_xy(x + offsets[i][j][0], y + offsets[i][j][1]);
 				if (board_at(b, c) != S_NONE)  continue;
 				with_move(b, c, color, {
 					group_t g = group_at(b, c);
@@ -900,7 +900,7 @@ pattern_match_spatial_outer(struct pattern_config *pc,
 	for (unsigned int d = BOARD_SPATHASH_MAXD + 1; d <= pc->spat_max; d++) {
 		/* Recompute missing outer circles: Go through all points in given distance. */
 		for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
-			ptcoords_at(x, y, m->coord, b, j);
+			ptcoords_at(x, y, m->coord, j);
 			h ^= pthashes[0][j][(*bt)[board_atxy(b, x, y)]];
 		}
 		if (d < pc->spat_min)	continue;			

@@ -241,7 +241,7 @@ uct_result(struct engine *e, struct board *b)
 	enum stone color = u->t->root_color;
 	struct tree_node *n = u->t->root;
 	snprintf(reply, 1024, "%s %s %d %.2f %.1f",
-		 stone2str(color), coord2sstr(node_coord(n), b),
+		 stone2str(color), coord2sstr(node_coord(n)),
 		 n->u.playouts, tree_node_get_value(u->t, -1, n->u.value),
 		 u->t->use_extra_komi ? u->t->extra_komi : 0);
 	return reply;
@@ -273,7 +273,7 @@ print_dead_groups(struct uct *u, struct board *b, struct move_queue *dead)
 	for (unsigned int i = 0; i < dead->moves; i++) {
 		fprintf(stderr, "  ");
 		foreach_in_group(b, dead->move[i]) {
-			fprintf(stderr, "%s ", coord2sstr(c, b));
+			fprintf(stderr, "%s ", coord2sstr(c));
 		} foreach_in_group_end;
 		fprintf(stderr, "\n");
 	}

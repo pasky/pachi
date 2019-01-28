@@ -271,10 +271,8 @@ predict_move(struct board *b, struct engine *e, struct time_info *ti, struct mov
 		return NULL;
 	}
 
-	if (DEBUGL(5))
-		fprintf(stderr, "predict move %d,%d,%d\n", m->color, coord_x(m->coord, b), coord_y(m->coord, b));
-	if (DEBUGL(1) && debug_boardprint)
-		engine_board_print(e, b, stderr);
+	if (DEBUGL(5))  fprintf(stderr, "predict move %d,%d,%d\n", m->color, coord_x(m->coord), coord_y(m->coord));
+	if (DEBUGL(1) && debug_boardprint)  engine_board_print(e, b, stderr);
 
 	// Not bothering with timer here for now.
 
@@ -288,15 +286,15 @@ predict_move(struct board *b, struct engine *e, struct time_info *ti, struct mov
 
 	// Play correct expected move
 	if (board_play(b, m) < 0)
-		die("ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, b), stone2str(m->color));
+		die("ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord), stone2str(m->color));
 
-	fprintf(stderr, "WINNER is %s in the actual game.\n", coord2sstr(m->coord, b));		
+	fprintf(stderr, "WINNER is %s in the actual game.\n", coord2sstr(m->coord));
 	if (best_c[0] == m->coord)
 		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", b->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], b));
+			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0]));
 	else
 		fprintf(stderr, "Move %3i: Predict: Wrong prediction: %s %s != %s\n", b->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], b), coord2sstr(m->coord, b));
+			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0]), coord2sstr(m->coord));
 
 	if (DEBUGL(1) && debug_boardprint)
 		engine_board_print(e, b, stderr);

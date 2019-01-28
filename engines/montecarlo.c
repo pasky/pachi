@@ -134,14 +134,14 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 			 * so we can't consider this. (Note that we
 			 * unfortunately still consider this in playouts.) */
 			if (DEBUGL(4)) {
-				fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(coord, b), coord_y(coord, b));
+				fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(coord), coord_y(coord));
 				board_print(b, stderr);
 			}
 			continue;
 		}
 
 		if (DEBUGL(3))
-			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord, b), coord_y(coord, b), color);
+			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord), coord_y(coord), color);
 
 		struct playout_setup ps = playout_setup(mc->gamelen, 0);
 		int result = playout_play_game(&ps, &b2, color, NULL, NULL, mc->playout);
@@ -198,8 +198,8 @@ pass_wins:
 			/* Simple heuristic: avoid opening too low. Do not
 			 * play on second or first line as first white or
 			 * first two black moves.*/
-			if (coord_x(c, b) < 3 || coord_x(c, b) > board_size(b) - 4
-			    || coord_y(c, b) < 3 || coord_y(c, b) > board_size(b) - 4)
+			if (coord_x(c) < 3 || coord_x(c) > board_size(b) - 4
+			    || coord_y(c) < 3 || coord_y(c) > board_size(b) - 4)
 				continue;
 		}
 
@@ -218,7 +218,7 @@ pass_wins:
 
 move_found:
 	if (MCDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord, b), coord_y(top_coord, b), top_ratio, i, superko);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord), coord_y(top_coord), top_ratio, i, superko);
 
 	return top_coord;
 }

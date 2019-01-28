@@ -141,7 +141,7 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 		if (!map->consider[c])
 			continue;
 		
-		int k = coord2dcnn_idx(c, map->b);
+		int k = coord2dcnn_idx(c);
 		float val = r[k];
 		if (isnan(val) || val < 0.001)
 			continue;
@@ -160,7 +160,7 @@ uct_prior_ko(struct uct *u, struct tree_node *node, struct prior_map *map)
 	coord_t ko = map->b->last_ko.coord;
 	if (is_pass(ko) || map->b->moves - map->b->last_ko_age > 10 || !map->consider[ko])
 		return;
-	// fprintf(stderr, "prior ko-fight @ %s %s\n", stone2str(map->to_play), coord2sstr(ko, map->b));
+	// fprintf(stderr, "prior ko-fight @ %s %s\n", stone2str(map->to_play), coord2sstr(ko));
 	add_prior_value(map, ko, 1, u->prior->ko_eqex);
 }
 
@@ -172,7 +172,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 	foreach_free_point(map->b) {
 		if (!map->consider[c])
 			continue;
-		int d = coord_edge_distance(c, map->b);
+		int d = coord_edge_distance(c);
 		if (d != 0 && d != 2)
 			continue;
 		/* The bonus applies only with no stones in immediate
@@ -255,7 +255,7 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 	}		
 
 	if (UDEBUGL(5)) {
-		fprintf(stderr, "Pattern prior at node %s\n", coord2sstr(node->coord, b));
+		fprintf(stderr, "Pattern prior at node %s\n", coord2sstr(node->coord));
 		board_print(b, stderr);
 	}
 
@@ -265,7 +265,7 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 		assert(!is_pass(b->f[f]));
 		if (UDEBUGL(5)) {
 			char s[256]; pattern2str(s, &pats[f]);
-			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), probs[f], s);
+			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), probs[f], s);
 		}
 		add_prior_value(map, b->f[f], 1.0, sqrt(probs[f]) * u->prior->pattern_eqex);
 	}
@@ -285,7 +285,7 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 			group_t atari_neighbor = board_get_atari_neighbor(b, c, map->to_play);
 			if (atari_neighbor && is_ladder(b, atari_neighbor, true) &&
 			    !useful_ladder(b, atari_neighbor)) {
-				if (UDEBUGL(5))	fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c, b));
+				if (UDEBUGL(5))	fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c));
 				map->consider[c] = false;  continue;
 			}
 

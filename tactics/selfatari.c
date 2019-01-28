@@ -53,7 +53,7 @@ three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, 
 	for (int i = 0, j = 0; i < 3; i++) {
 		coord_t lib = board_group_info(b, g).lib[i];
 		if (lib != to) {
-			other_libs_adj[j] = coord_is_adjecent(lib, to, b);
+			other_libs_adj[j] = coord_is_adjecent(lib, to);
 			other_libs[j++] = lib;
 		}
 	}
@@ -86,7 +86,7 @@ three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, 
 	/* Therefore, the final suicidal test is: (After filling this
 	 * liberty,) when opponent fills liberty [0], playing liberty
 	 * [1] will not help the group, or vice versa. */
-	bool other_libs_neighbors = coord_is_adjecent(other_libs[0], other_libs[1], b);
+	bool other_libs_neighbors = coord_is_adjecent(other_libs[0], other_libs[1]);
 	for (int i = 0; i < 2; i++) {
 		int null_libs = other_libs_neighbors + other_libs_adj[i];
 		if (board_is_one_point_eye(b, other_libs[1 - i], color)) {
@@ -117,7 +117,7 @@ next_lib:
 		 * before wasting a liberty. So no need to check. */
 		/* Ok, the last liberty has no way to get out. */
 		if (DEBUGL(6))
-			fprintf(stderr, "3-lib dangerous: %s\n", coord2sstr(other_libs[i], b));
+			fprintf(stderr, "3-lib dangerous: %s\n", coord2sstr(other_libs[i]));
 		return true;
 	}
 
@@ -164,7 +164,7 @@ examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct se
 			return false;
 		/* ...or one liberty, but not lib2. */
 		if (s->groupcts[S_NONE] > 0
-		    && !coord_is_adjecent(lib2, to, b))
+		    && !coord_is_adjecent(lib2, to))
 			return false;
 
 		/* ...ok, then we can still contribute a liberty
@@ -682,7 +682,7 @@ bool
 is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to, int flags)
 {
 	if (DEBUGL(5))
-		fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
+		fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to));
 	/* Assess if we actually gain any liberties by this escape route.
 	 * Note that this is not 100% as we cannot check whether we are
 	 * connecting out or just to ourselves. */
@@ -735,7 +735,7 @@ selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygr
 			groups[groups_n++] = g;
 			groupsbycolor[s]++;
 			if (DEBUGL(6))
-				fprintf(stderr, "%s(%s) ", coord2sstr(c, b), stone2str(s));
+				fprintf(stderr, "%s(%s) ", coord2sstr(c), stone2str(s));
 		}
 	});
 	if (DEBUGL(6))

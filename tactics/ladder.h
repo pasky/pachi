@@ -43,7 +43,7 @@ is_ladder(struct board *b, group_t laddered, bool test_middle)
 		coord_t coord = board_group_info(b, laddered).lib[0];
 		enum stone lcolor = board_at(b, group_base(laddered));
 		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
-			coord2sstr(coord, b), stone2str(lcolor), coord2sstr(laddered, b));
+			coord2sstr(coord), stone2str(lcolor), coord2sstr(laddered));
 	}
 
 	if (!test_middle) {
@@ -75,7 +75,7 @@ is_ladder_any(struct board *b, group_t laddered, bool test_middle)
 		coord_t coord = board_group_info(b, laddered).lib[0];
 		enum stone lcolor = board_at(b, group_base(laddered));
 		fprintf(stderr, "ladder check - does %s play out %s's laddered group %s?\n",
-			coord2sstr(coord, b), stone2str(lcolor), coord2sstr(laddered, b));
+			coord2sstr(coord), stone2str(lcolor), coord2sstr(laddered));
 	}
 
 	if (!test_middle) {

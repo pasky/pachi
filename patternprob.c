@@ -106,7 +106,7 @@ pattern_max_rating(struct pattern_config *pc,
 		}
 		if (DEBUGL(5)) {
 			char buf[256]; pattern2str(buf, &pats[f]);
-			fprintf(stderr, "=> move %s pattern %s prob %.3f\n", coord2sstr(mo.coord, b), buf, prob);
+			fprintf(stderr, "=> move %s pattern %s prob %.3f\n", coord2sstr(mo.coord), buf, prob);
 		}
 	}
 

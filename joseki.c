@@ -159,7 +159,7 @@ joseki_add_3x3(struct joseki_dict *jd, struct board *b, coord_t coord, enum ston
 {
 	assert(!is_pass(coord));
 	if (!prev)  die("joseki: [ %s %s ] adding 3x3 match with no previous move, this is bad.\n",
-			coord2sstr(b->last_move.coord, b), coord2sstr(coord, b));
+			coord2sstr(b->last_move.coord), coord2sstr(coord));
 	josekipat_t *p = joseki_lookup_3x3_prev(jd, b, coord, color, prev, flags);
 	if (p)  return p;
 
@@ -226,7 +226,7 @@ convert_coords(int bsize, char *buf)
 		char *arg = buf + 7;  assert(buf[6] == ' ');
 		if (str_prefix("pass", arg))  return 0;
 		
-		coord_t c = str2coord(arg, 19+2);
+		coord_t c = str2coord_for(arg, 19+2);
 		int offset = 21 - bsize;  assert(offset >= 0);
 		int x = (c % 21) - offset,  y = (c / 21) - offset;		
 		if (x < 1 || y < 1)           return -1;	/* Offboard, discard rest of sequence */

@@ -131,7 +131,7 @@ static void *
 tree_done_node_worker(void *ctx_)
 {
 	struct subtree_ctx *ctx = ctx_;
-	char *str = coord2str(node_coord(ctx->n), ctx->t->board);
+	char *str = coord2str(node_coord(ctx->n));
 
 	size_t tree_size = tree_done_node(ctx->t, ctx->n);
 	if (!tree_size)
@@ -194,7 +194,7 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int treeparity, int l,
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
 	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f vloss %d] h=%x c#=%d <%"PRIhash">\n",
-		coord2sstr(node_coord(node), tree->board),
+		coord2sstr(node_coord(node)),
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
 		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
@@ -618,7 +618,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	/* The loop considers only the symmetry playground. */
 	if (UDEBUGL(6)) {
 		fprintf(stderr, "expanding %s within [%d,%d],[%d,%d] %d-%d\n",
-				coord2sstr(node_coord(node), b),
+				coord2sstr(node_coord(node)),
 				b->symmetry.x1, b->symmetry.y1,
 				b->symmetry.x2, b->symmetry.y2,
 				b->symmetry.type, b->symmetry.d);
@@ -635,7 +635,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 				}
 			}
 
-			coord_t c = coord_xy(t->board, i, j);
+			coord_t c = coord_xy(i, j);
 			if (!map.consider[c]) // Filter out invalid moves
 				continue;
 			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
@@ -656,17 +656,11 @@ static coord_t
 flip_coord(struct board *b, coord_t c,
            bool flip_horiz, bool flip_vert, int flip_diag)
 {
-	int x = coord_x(c, b), y = coord_y(c, b);
-	if (flip_diag) {
-		int z = x; x = y; y = z;
-	}
-	if (flip_horiz) {
-		x = board_size(b) - 1 - x;
-	}
-	if (flip_vert) {
-		y = board_size(b) - 1 - y;
-	}
-	return coord_xy(b, x, y);
+	int x = coord_x(c), y = coord_y(c);
+	if (flip_diag)  {  int z = x; x = y; y = z;    }
+	if (flip_horiz) {  x = board_size(b) - 1 - x;  }
+	if (flip_vert)  {  y = board_size(b) - 1 - y;  }
+	return coord_xy(x, y);
 }
 
 static void
@@ -687,7 +681,7 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 		return;
 
 	struct board_symmetry *s = &tree->root_symmetry;
-	int cx = coord_x(c, b), cy = coord_y(c, b);
+	int cx = coord_x(c), cy = coord_y(c);
 
 	/* playground	X->h->v->d normalization
 	 * :::..	.d...
@@ -709,10 +703,10 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 
 	if (DEBUGL(4)) {
 		fprintf(stderr, "%s [%d,%d -> %d,%d;%d,%d] will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
-			coord2sstr(c, b),
+			coord2sstr(c),
 			cx, cy, s->x1, s->y1, s->x2, s->y2,
 			flip_horiz, flip_vert, flip_diag,
-			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag), b),
+			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag)),
 			s->type, s->d, b->symmetry.type, b->symmetry.d);
 	}
 	if (flip_horiz || flip_vert || flip_diag)

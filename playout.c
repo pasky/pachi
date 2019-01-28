@@ -72,7 +72,7 @@ playout_play_move(struct playout_setup *setup,
 	if (is_pass(coord)) {
 		coord = policy->choose(policy, setup, b, color);
 		coord = playout_check_move(policy, b, coord, color);
-		// fprintf(stderr, "policy: %s\n", coord2sstr(coord, b));
+		// fprintf(stderr, "policy: %s\n", coord2sstr(coord));
 	}
 
 	if (is_pass(coord)) {
@@ -87,8 +87,7 @@ playout_play_move(struct playout_setup *setup,
 		struct move m = move(coord, color);
 		if (board_play(b, &m) < 0) {
 			if (PLDEBUGL(4)) {
-				fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n",
-					coord_x(coord, b), coord_y(coord, b));
+				fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n", coord_x(coord), coord_y(coord));
 				board_print(b, stderr);
 			}
 			goto play_random;
@@ -111,10 +110,10 @@ fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
 {
 	enum stone other_color = stone_other(color);  // white here
 	int s = real_board_size(b);
-	coord_t corners[4] = { coord_xy(b, 1, 1),
-			       coord_xy(b, 1, s),
-			       coord_xy(b, s, 1),
-			       coord_xy(b, s, s),
+	coord_t corners[4] = { coord_xy(1, 1),
+			       coord_xy(1, s),
+			       coord_xy(s, 1),
+			       coord_xy(s, s),
 	};
 	
 	for (int i = 0; i < 4; i++) {
@@ -127,23 +126,23 @@ fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
 
 		
 		coord_t stone3 = pass;
-		int x = coord_x(corner, b);
-		int y = coord_y(corner, b);
+		int x = coord_x(corner);
+		int y = coord_y(corner);
 
 		/* check 3 in line, horizontal */
 		int dx = (x == 1 ? 1 : -1);
 		for (int j = 0; j < 3; j++) {
-			coord_t c = coord_xy(b, x + j * dx, y);
+			coord_t c = coord_xy(x + j * dx, y);
 			if (board_at(b, c) != other_color)  break;
-			if (j == 2)  {  stone3 = c;  *kill = coord_xy(b, x + dx, y);  }
+			if (j == 2)  {  stone3 = c;  *kill = coord_xy(x + dx, y);  }
 		}
 
 		/* check 3 in line, vertical */
 		int dy = (y == 1 ? 1 : -1);
 		for (int j = 0; j < 3; j++) {
-			coord_t c = coord_xy(b, x, y + j * dy);
+			coord_t c = coord_xy(x, y + j * dy);
 			if (board_at(b, c) != other_color)  break;
-			if (j == 2)  {  stone3 = c;  *kill = coord_xy(b, x, y + dy);  }
+			if (j == 2)  {  stone3 = c;  *kill = coord_xy(x, y + dy);  }
 		}
 
 		if (stone3 == pass)  continue;
@@ -171,7 +170,7 @@ fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
 
 #define random_game_loop_stuff  \
 		if (PLDEBUGL(7)) { \
-			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord, b)); \
+			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord)); \
 			if (PLDEBUGL(8)) board_print(b, stderr); \
 		} \
 \

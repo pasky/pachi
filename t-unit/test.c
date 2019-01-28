@@ -71,7 +71,7 @@ static void
 check_play_move(struct board *b, struct move *m)
 {
 	if (board_play(b, m) < 0) {
-		fprintf(stderr, "Failed to play %s %s\n", stone2str(m->color), coord2sstr(m->coord, b));
+		fprintf(stderr, "Failed to play %s %s\n", stone2str(m->color), coord2sstr(m->coord));
 		board_print(b, stderr);
 		exit(EXIT_FAILURE);
 	}
@@ -122,7 +122,7 @@ board_load(struct board *b, FILE *f, unsigned int size)
 			if (line[i] && line[i] != ' ' && line[i] != ')')
 				die("No space after stone %i: '%c'\n", i/2 + 1, line[i]);
 
-			struct move m = move(coord_xy(b, i/2 + 1, y + 1), s);
+			struct move m = move(coord_xy(i/2 + 1, y + 1), s);
 			if (line[i] == ')') {
 				assert(s == S_BLACK || s == S_WHITE);
 				assert(last_move.coord == pass);
@@ -147,7 +147,7 @@ set_ko(struct board *b, char *arg)
 {
 	assert(isalpha(*arg));
 	struct move last;
-	last.coord = str2coord(arg, board_size(b));
+	last.coord = str2coord(arg);
 	last.color = board_at(b, last.coord);
 	assert(last.color == S_BLACK || last.color == S_WHITE);
 	b->last_move = last;
@@ -195,12 +195,12 @@ test_sar(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "sar %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	PRINT_TEST(b, "sar %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_bad_selfatari(b, color, c);
@@ -215,12 +215,12 @@ test_corner_seki(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "corner_seki %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	PRINT_TEST(b, "corner_seki %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = breaking_corner_seki(b, c, color);
@@ -235,12 +235,12 @@ test_false_eye_seki(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "false_eye_seki %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	PRINT_TEST(b, "false_eye_seki %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = breaking_false_eye_seki(b, c, color);
@@ -256,12 +256,12 @@ test_ladder(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	PRINT_TEST(b, "ladder %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 	
 	assert(board_at(b, c) == color);
 	group_t group = group_at(b, c);
@@ -279,12 +279,12 @@ test_ladder_any(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	PRINT_TEST(b, "ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == color);
 	group_t group = group_at(b, c);
@@ -302,12 +302,12 @@ test_wouldbe_ladder(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "wouldbe_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	PRINT_TEST(b, "wouldbe_ladder %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t g = board_get_2lib_neighbor(b, c, stone_other(color));
@@ -325,12 +325,12 @@ test_wouldbe_ladder_any(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "wouldbe_ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	PRINT_TEST(b, "wouldbe_ladder_any %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t g = board_get_2lib_neighbor(b, c, stone_other(color));
@@ -349,12 +349,12 @@ test_useful_ladder(struct board *b, char *arg)
 	next_arg(arg);
 	enum stone color = str2stone(arg);
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c, b), eres);
+	PRINT_TEST(b, "useful_ladder %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 	
 	assert(board_at(b, c) == S_NONE);
 	group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
@@ -370,12 +370,12 @@ static bool
 test_can_countercap(struct board *b, char *arg)
 {
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "can_countercap %s %d...\t", coord2sstr(c, b), eres);
+	PRINT_TEST(b, "can_countercap %s %d...\t", coord2sstr(c), eres);
 
 	enum stone color = board_at(b, c);
 	group_t g = group_at(b, c);
@@ -391,12 +391,12 @@ static bool
 test_two_eyes(struct board *b, char *arg)
 {
 	next_arg(arg);
-	coord_t c = str2coord(arg, board_size(b));
+	coord_t c = str2coord(arg);
 	next_arg(arg);
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "two_eyes %s %d...\t", coord2sstr(c, b), eres);
+	PRINT_TEST(b, "two_eyes %s %d...\t", coord2sstr(c), eres);
 
 	enum stone color = board_at(b, c);
 	assert(color == S_BLACK || color == S_WHITE);
@@ -438,7 +438,7 @@ test_moggy_moves(struct board *b, char *arg)
 	for (int k = most_played; k > 0; k--)
 		for (coord_t c = pass; c < b->size2; c++)
 			if (played[c] == k)
-				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
+				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c), (float)k * 100 / runs);
 	
 	engine_done(&e);
 	return true;   // Not much of a unit test right now =)
@@ -496,17 +496,17 @@ test_moggy_status(struct board *b, char *arg)
 	
 	for (n = 0; *arg; n++) {
 		if (!isalpha(*arg))  die("Invalid arg: '%s'\n", arg);
-		status_at[n] = str2coord(arg, board_size(b));
+		status_at[n] = str2coord(arg);
 		next_arg(arg);
 
-		if (!*arg || strlen(arg) != 1) die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n], b));
+		if (!*arg || strlen(arg) != 1) die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n]));
 		thres[n] = 67;
 		if (!strcmp(arg, "X") || !strcmp(arg, "O" )) thres[n] = 80;
 		if      (!strcasecmp(arg, "x"))  expected[n] = PJ_BLACK;
 		else if (!strcasecmp(arg, "o"))  expected[n] = PJ_WHITE;
 		else if (!strcasecmp(arg, ":"))  expected[n] = PJ_SEKI;
 		else if (!strcasecmp(arg, "?"))  { expected[n] = PJ_BLACK; thres[n] = 0;  }
-		else    die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n], b));
+		else    die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n]));
 		next_arg(arg);
 	}
 	args_end();
@@ -519,7 +519,7 @@ test_moggy_status(struct board *b, char *arg)
 	for (int i = 0; i < n; i++) {
 		char *chr = (thres[i] == 80 ? ":XO," : ":xo,");
 		if (!thres[i])  chr = "????";
-		if (DEBUGL(2)) fprintf(stderr, "%s %c  ", coord2sstr(status_at[i], b),	chr[expected[i]]);
+		if (DEBUGL(2)) fprintf(stderr, "%s %c  ", coord2sstr(status_at[i]),	chr[expected[i]]);
 	}
 	if (DEBUGL(2)) fprintf(stderr, "\n%s to play. Playing %i games ...\n", stone2str(color), games);
 
@@ -547,7 +547,7 @@ test_moggy_status(struct board *b, char *arg)
 
 		int passed = (!thres[i] || (j == expected[i] && pc >= thres[i]));
 		char *colorstr = (j == PJ_SEKI ? "seki" : stone2str(color));
-		PRINT_TEST(b, "moggy status %3s %-5s -> %3i%%    ", coord2sstr(c, b), colorstr, pc);
+		PRINT_TEST(b, "moggy status %3s %-5s -> %3i%%    ", coord2sstr(c), colorstr, pc);
 		
 		if (!passed)  ret = false;
 		PRINT_RES(passed);

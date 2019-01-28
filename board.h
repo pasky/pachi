@@ -287,13 +287,16 @@ struct board_undo {
 /* Avoid unused variable warnings */
 #define board_size(b)  (((b) == (b)) ? BOARD_SIZE + 2 : 0)
 #define board_size2(b) (board_size(b) * board_size(b))
+#define the_board_size()  (BOARD_SIZE + 2)
 #else
 #define board_size(b)  ((b)->size)
 #define board_size2(b) ((b)->size2)
+#define the_board_size()  (board_statics.size)
 #endif
 
 #define real_board_size(b)  (board_size(b) - 2)
 #define real_board_size2(b) (real_board_size(b) * real_board_size(b))
+#define the_real_board_size()  (the_board_size() - 2)
 
 /* This is a shortcut for taking different action on smaller
  * and large boards (e.g. picking different variable defaults).
@@ -662,15 +665,15 @@ group_stone_count(struct board *b, group_t group, int max)
 static inline bool
 board_coord_in_symmetry(struct board *b, coord_t c)
 {
-	if (coord_y(c, b) < b->symmetry.y1 || coord_y(c, b) > b->symmetry.y2)
+	if (coord_y(c) < b->symmetry.y1 || coord_y(c) > b->symmetry.y2)
 		return false;
-	if (coord_x(c, b) < b->symmetry.x1 || coord_x(c, b) > b->symmetry.x2)
+	if (coord_x(c) < b->symmetry.x1 || coord_x(c) > b->symmetry.x2)
 		return false;
 	if (b->symmetry.d) {
-		int x = coord_x(c, b);
+		int x = coord_x(c);
 		if (b->symmetry.type == SYM_DIAG_DOWN)
 			x = board_size(b) - 1 - x;
-		if (x > coord_y(c, b))
+		if (x > coord_y(c))
 			return false;
 	}
 	return true;

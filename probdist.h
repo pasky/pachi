@@ -65,7 +65,7 @@ probdist_set(struct probdist *pd, coord_t c, fixp_t val)
 	assert(val >= 0);
 #endif
 	pd->total += val - pd->items[c];
-	pd->rowtotals[coord_y(c, pd->b)] += val - pd->items[c];
+	pd->rowtotals[coord_y(c)] += val - pd->items[c];
 	pd->items[c] = val;
 }
 
@@ -73,7 +73,7 @@ static inline void
 probdist_mute(struct probdist *pd, coord_t c)
 {
 	pd->total -= pd->items[c];
-	pd->rowtotals[coord_y(c, pd->b)] -= pd->items[c];
+	pd->rowtotals[coord_y(c)] -= pd->items[c];
 }
 
 #endif

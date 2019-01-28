@@ -18,13 +18,13 @@ coord_transform(struct board *b, coord_t coord, int i)
 #define HASH_HMIRROR     2
 #define HASH_XYFLIP      4
 	if (i & HASH_VMIRROR) {
-		coord = coord_xy(b, coord_x(coord, b), board_size(b) - 1 - coord_y(coord, b));
+		coord = coord_xy(coord_x(coord), board_size(b) - 1 - coord_y(coord));
 	}
 	if (i & HASH_HMIRROR) {
-		coord = coord_xy(b, board_size(b) - 1 - coord_x(coord, b), coord_y(coord, b));
+		coord = coord_xy(board_size(b) - 1 - coord_x(coord), coord_y(coord));
 	}
 	if (i & HASH_XYFLIP) {
-		coord = coord_xy(b, coord_y(coord, b), coord_x(coord, b));
+		coord = coord_xy(coord_y(coord), coord_x(coord));
 	}
 	return coord;
 }
@@ -117,7 +117,7 @@ fbook_init(char *filename, struct board *b)
 		}
 
 		while (*line != '|') {
-			coord_t c = str2coord(line, fbook->bsize);
+			coord_t c = str2coord(line);
 
 			for (int i = 0; i < 8; i++) {
 				coord_t coord = coord_transform(b, c, i);
@@ -141,7 +141,7 @@ fbook_init(char *filename, struct board *b)
 			// fprintf(stderr, "<%s> skip to %s\n", linebuf, line);
 		}
 
-		coord_t c = str2coord(line, fbook->bsize);
+		coord_t c = str2coord(line);
 		for (int i = 0; i < 8; i++) {
 			coord_t coord = coord_transform(b, c, i);
 #if 0

@@ -202,7 +202,7 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bo
 	if (atari_neighbor && is_ladder(b, atari_neighbor, middle_ladder)
 	    && !can_countercapture(b, atari_neighbor, NULL, 0))
 		return false;
-	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord, b), (int) pi, pp->pat3_gammas[(int) pi]);
+	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord), (int) pi, pp->pat3_gammas[(int) pi]);
 	if (gamma)
 		*gamma = pp->pat3_gammas[(int) pi];
 	return true;
@@ -233,14 +233,14 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 
 	if (mm) { /* Second move for pattern searching */
 		foreach_8neighbor(b, mm->coord) {
-			if (coord_is_8adjecent(m->coord, c, b))
+			if (coord_is_8adjecent(m->coord, c))
 				continue;
 			apply_pattern_here(p, b, c, stone_other(m->color), q, gammas);
 		} foreach_8neighbor_end;
 	}
 
 	if (PLDEBUGL(5))
-		mq_gamma_print(q, gammas, b, "Pattern");
+		mq_gamma_print(q, gammas, "Pattern");
 }
 
 #ifdef MOGGY_JOSEKI
@@ -258,7 +258,7 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 	} foreach_joseki_move_end;
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, b, "Joseki");
+		mq_print(q, "Joseki");
 }
 #endif /* MOGGY_JOSEKI */
 
@@ -273,7 +273,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		for (int g = 0; g < b->clen; g++)
 			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
-			mq_print(q, b, "Global atari");
+			mq_print(q, "Global atari");
 		if (pp->fullchoose)
 			return;
 	}
@@ -284,7 +284,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print(q, b, "Global atari");
+				mq_print(q, "Global atari");
 			if (pp->fullchoose)
 				return;
 		}
@@ -294,7 +294,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print(q, b, "Global atari");
+				mq_print(q, "Global atari");
 			if (pp->fullchoose)
 				return;
 		}
@@ -328,7 +328,7 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local atari");
+		mq_print(q, "Local atari");
 
 	return (force || pp->lcapturerate > fast_random(100));
 }
@@ -349,7 +349,7 @@ local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, st
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, b, "Ladder");
+		mq_print(q, "Ladder");
 }
 
 
@@ -382,7 +382,7 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local 2lib");
+		mq_print(q, "Local 2lib");
 }
 
 static void
@@ -416,7 +416,7 @@ local_2lib_capture_check(struct playout_policy *p, struct board *b, struct move 
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local 2lib capture");
+		mq_print(q, "Local 2lib capture");
 }
 
 static void
@@ -465,7 +465,7 @@ local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 	} foreach_8neighbor_end;
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local nlib");
+		mq_print(q, "Local nlib");
 }
 
 static coord_t
@@ -479,7 +479,7 @@ nakade_check(struct playout_policy *p, struct board *b, struct move *m, enum sto
 			empty = c;
 			continue;
 		}
-		if (!coord_is_8adjecent(c, empty, b)) {
+		if (!coord_is_8adjecent(c, empty)) {
 			/* Seems like impossible nakade
 			 * shape! */
 			return pass;
@@ -489,7 +489,7 @@ nakade_check(struct playout_policy *p, struct board *b, struct move *m, enum sto
 
 	coord_t nakade = nakade_point(b, empty, stone_other(to_play));
 	if (PLDEBUGL(5) && !is_pass(nakade))
-		fprintf(stderr, "Nakade: %s\n", coord2sstr(nakade, b));
+		fprintf(stderr, "Nakade: %s\n", coord2sstr(nakade));
 	return nakade;
 }
 
@@ -524,7 +524,7 @@ eye_fix_check(struct playout_policy *p, struct board *b, struct move *m, enum st
 
 		/* The last move must have a pair of unfriendly diagonal
 		 * neighbors separated by a friendly stone. */
-		//fprintf(stderr, "inv. %s(%s)-%s(%s)-%s(%s), imm. libcount %d\n", coord2sstr(c0, b), stone2str(board_at(b, c0)), coord2sstr(c1, b), stone2str(board_at(b, c1)), coord2sstr(c2, b), stone2str(board_at(b, c2)), immediate_liberty_count(b, c1));
+		//fprintf(stderr, "inv. %s(%s)-%s(%s)-%s(%s), imm. libcount %d\n", coord2sstr(c0), stone2str(board_at(b, c0)), coord2sstr(c1), stone2str(board_at(b, c1)), coord2sstr(c2), stone2str(board_at(b, c2)), immediate_liberty_count(b, c1));
 		if ((board_at(b, c0) == to_play || board_at(b, c0) == S_OFFBOARD)
 		    && board_at(b, c1) == m->color
 		    && (board_at(b, c2) == to_play || board_at(b, c2) == S_OFFBOARD)
@@ -572,7 +572,7 @@ eye_fix_check(struct playout_policy *p, struct board *b, struct move *m, enum st
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, b, "Eye fix");
+		mq_print(q, "Eye fix");
 }
 
 static coord_t
@@ -750,7 +750,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 		assert(q->tag[i] != 0);
 		for (int j = 0; j < MQ_MAX; j++)
 			if (q->tag[i] & (1<<j)) {
-				//fprintf(stderr, "%s(%x) %d %f *= %f\n", coord2sstr(q->move[i], b), q->tag[i], j, val, pp->mq_prob[j]);
+				//fprintf(stderr, "%s(%x) %d %f *= %f\n", coord2sstr(q->move[i]), q->tag[i], j, val, pp->mq_prob[j]);
 				val *= pp->mq_prob[j];
 			}
 		pd[i] = double_to_fixp(val);
@@ -763,12 +763,12 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 	if (PLDEBUGL(5)) {
 		fprintf(stderr, "Pick (total %.3f stab %.3f): ", fixp_to_double(total), fixp_to_double(stab));
 		for (unsigned int i = 0; i < q->moves; i++) {
-			fprintf(stderr, "%s(%x:%.3f) ", coord2sstr(q->move[i], b), q->tag[i], fixp_to_double(pd[i]));
+			fprintf(stderr, "%s(%x:%.3f) ", coord2sstr(q->move[i]), q->tag[i], fixp_to_double(pd[i]));
 		}
 		fprintf(stderr, "\n");
 	}
 	for (unsigned int i = 0; i < q->moves; i++) {
-		//fprintf(stderr, "%s(%x) %f (%f/%f)\n", coord2sstr(q->move[i], b), q->tag[i], fixp_to_double(stab), fixp_to_double(pd[i]), fixp_to_double(total));
+		//fprintf(stderr, "%s(%x) %f (%f/%f)\n", coord2sstr(q->move[i]), q->tag[i], fixp_to_double(stab), fixp_to_double(pd[i]), fixp_to_double(total));
 		if (stab < pd[i])
 			return q->move[i];
 		stab -= pd[i];
@@ -851,7 +851,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 	/* Average length of the queue is 1.4 move. */
 	printf("MQL %d ", q.moves);
 	for (unsigned int i = 0; i < q.moves; i++)
-		printf("%s ", coord2sstr(q.move[i], b));
+		printf("%s ", coord2sstr(q.move[i]));
 	printf("\n");
 #endif
 
@@ -880,7 +880,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		return;
 
 	if (PLDEBUGL(5)) {
-		fprintf(stderr, "ASSESS of group %s:\n", coord2sstr(g, b));
+		fprintf(stderr, "ASSESS of group %s:\n", coord2sstr(g));
 		board_print(b, stderr);
 	}
 
@@ -893,7 +893,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
-				fprintf(stderr, "1.0: nlib %s\n", coord2sstr(coord, b));
+				fprintf(stderr, "1.0: nlib %s\n", coord2sstr(coord));
 			int assess = games / 2;
 			add_prior_value(map, coord, 1, assess);
 		}
@@ -921,7 +921,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
-				fprintf(stderr, "1.0: 2lib %s\n", coord2sstr(coord, b));
+				fprintf(stderr, "1.0: 2lib %s\n", coord2sstr(coord));
 			int assess = games / 2;
 			add_prior_value(map, coord, 1, assess);
 		}
@@ -948,7 +948,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			/* FIXME: We give the malus even if this move
 			 * captures another group. */
 			if (PLDEBUGL(5))
-				fprintf(stderr, "0.0: ladder %s\n", coord2sstr(coord, b));
+				fprintf(stderr, "0.0: ladder %s\n", coord2sstr(coord));
 			add_prior_value(map, coord, 0, games);
 			continue;
 		}
@@ -962,7 +962,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			assess += (stones > 0 ? stones : 0) * games * 100 / pp->cap_stone_denom;
 		}
 		if (PLDEBUGL(5))
-			fprintf(stderr, "1.0 (%d): atari %s\n", assess, coord2sstr(coord, b));
+			fprintf(stderr, "1.0 (%d): atari %s\n", assess, coord2sstr(coord));
 		add_prior_value(map, coord, 1, assess);
 	}
 }
@@ -974,7 +974,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 	struct board *b = map->b;
 
 	if (PLDEBUGL(5)) {
-		fprintf(stderr, "ASSESS of move %s:\n", coord2sstr(coord, b));
+		fprintf(stderr, "ASSESS of move %s:\n", coord2sstr(coord));
 		board_print(b, stderr);
 	}
 
@@ -992,7 +992,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 			if (is_pass(coord))
 				return;
 			if (PLDEBUGL(5))
-				fprintf(stderr, "1.0: self-atari redirect %s\n", coord2sstr(coord, b));
+				fprintf(stderr, "1.0: self-atari redirect %s\n", coord2sstr(coord));
 			add_prior_value(map, coord, 1.0, games);
 			return;
 		}
@@ -1056,7 +1056,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 	if (bad_selfatari) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
-				stone2str(m->color), coord2sstr(m->coord, b));
+				stone2str(m->color), coord2sstr(m->coord));
 		if (alt && pp->selfatari_other) {
 			ps->last_selfatari[m->color] = m->coord;
 			/* Ok, try the other liberty of the atari'd group. */
@@ -1064,7 +1064,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 			if (!permit_move(c)) return false;
 			if (PLDEBUGL(5))
 				fprintf(stderr, "___ Redirecting to other lib %s\n",
-					coord2sstr(c, b));
+					coord2sstr(c));
 			m->coord = c;
 			return true;
 		}
@@ -1092,7 +1092,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 				if (permit_move(c)) {
 					if (PLDEBUGL(5))
 						fprintf(stderr, "___ Redirecting to capture %s\n",
-							coord2sstr(c, b));
+							coord2sstr(c));
 					m->coord = c;
 					return true;
 				}

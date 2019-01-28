@@ -70,7 +70,7 @@ static inline hash3_t
 pattern3_hash(struct board *b, coord_t c)
 {
 	hash3_t pat = 0;
-	int x = coord_x(c, b), y = coord_y(c, b);
+	int x = coord_x(c), y = coord_y(c);
 	/* Stone info. */
 	pat |= (board_atxy(b, x - 1, y - 1) << 14)
 		| (board_atxy(b, x, y - 1) << 12)

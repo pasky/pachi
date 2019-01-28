@@ -187,7 +187,7 @@ static void
 print_move(struct board *b, struct move *m)
 {
 	if (m->color == S_NONE)  printf("%7s", "");
-	else printf("%1.1s %-4s ", stone2str(m->color), coord2sstr(m->coord, b));
+	else printf("%1.1s %-4s ", stone2str(m->color), coord2sstr(m->coord));
 }
 
 static void
@@ -208,7 +208,7 @@ dump_board(struct board *b)
 	printf("cap %-2i %-2i ", b->captures[S_BLACK], b->captures[S_WHITE]);
 
 	if (is_pass(b->ko.coord))  printf("%7s", "");
-	else                       printf("ko %-3s ", coord2sstr(b->ko.coord, b));
+	else                       printf("ko %-3s ", coord2sstr(b->ko.coord));
 
 #ifdef CHECK_KO_AGE
 	if (b->last_ko_age)  printf("ko_age %-3i ", b->last_ko_age);

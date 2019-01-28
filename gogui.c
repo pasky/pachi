@@ -165,8 +165,8 @@ gogui_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
 {
 	for (unsigned int d = 2; d <= maxd; d++)
 	for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
-			ptcoords_at(x, y, coord, b, j);
-		        coord_t c  = coord_xy(b, x, y);
+			ptcoords_at(x, y, coord, j);
+		        coord_t c  = coord_xy(x, y);
 			if (board_at(b, c) == S_OFFBOARD)  continue;
 
 /* Just lighten if already something */
@@ -194,7 +194,7 @@ gogui_show_pattern(struct board *b, strbuf_t *buf, coord_t coord, int maxd)
 		int rr = MIN(colors[c][0], 255);
 		int gg = MIN(colors[c][1], 255);
 		int bb = MIN(colors[c][2], 255);
-		sbprintf(buf, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c, b));
+		sbprintf(buf, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
 	} foreach_point_end;
 }
 
@@ -229,11 +229,11 @@ gogui_show_winrates(strbuf_t *buf, struct board *b, enum stone color, coord_t *b
 	if (best_c[0] != pass)
 		sbprintf(buf, "VAR %s %s\n", 
 			 (color == S_WHITE ? "w" : "b"),
-			 coord2sstr(best_c[0], b) );
+			 coord2sstr(best_c[0]) );
 	
 	for (int i = 0; i < nbest; i++)
 		if (best_c[i] != pass)
-			sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i], b),
+			sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i]),
 				 (int)(roundf(best_r[i] * 100)));
 }
 
@@ -245,7 +245,7 @@ gogui_show_best_seq(strbuf_t *buf, struct board *b, enum stone color, coord_t *s
 	for (int i = 0; i < n && seq[i] != pass; i++)
 		sbprintf(buf, "%c %3s ",
 			 col[(i + (color == S_WHITE)) % 2],
-			 coord2sstr(seq[i], b));
+			 coord2sstr(seq[i]));
 	sbprintf(buf, "\n");
 }
 
@@ -257,11 +257,11 @@ gogui_show_best_moves(strbuf_t *buf, struct board *b, enum stone color, coord_t 
         if (best_c[0] != pass)
                 sbprintf(buf, "VAR %s %s\n",
                          (color == S_WHITE ? "w" : "b"),
-                         coord2sstr(best_c[0], b) );
+                         coord2sstr(best_c[0]) );
         
         for (int i = 1; i < n; i++)
                 if (best_c[i] != pass)
-                        sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i], b), i + 1);
+                        sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i]), i + 1);
 }
 
 /* Display best moves graphically in GoGui. */
@@ -279,12 +279,12 @@ gogui_show_best_moves_colors(strbuf_t *buf, struct board *b, enum stone color,
 
 	for (int y = 19; y >= 1; y--)
 	for (int x = 1; x <= 19; x++) {		
-		coord_t c = coord_xy(b, x, y);			
+		coord_t c = coord_xy(x, y);			
 		int rr, gg, bb;
 		value2color(vals[c], &rr, &gg, &bb);
 		
-		//fprintf(stderr, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c, b));
-		sbprintf(buf,   "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c, b));
+		//fprintf(stderr, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+		sbprintf(buf,   "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
 	}
 }
 
@@ -327,7 +327,7 @@ gogui_best_moves(strbuf_t *buf, struct engine *e, struct board *b, struct time_i
 #if 0
 	fprintf(stderr, "best: [");
 	for (int i = 0; i < n; i++)
-		fprintf(stderr, "%s ", coord2sstr(best_c[i], b));
+		fprintf(stderr, "%s ", coord2sstr(best_c[i]));
 	fprintf(stderr, "]\n");
 #endif
 	
@@ -352,7 +352,7 @@ cmd_gogui_color_palette(struct board *b, struct engine *e, struct time_info *ti,
 	float   best_r[GOGUI_CANDIDATES] = { 0.0, };
 	coord_t best_c[GOGUI_CANDIDATES];
 	for (int i = 0; i < GOGUI_CANDIDATES; i++)
-		best_c[i] = coord_xy(b, i%19 +1, 18 - i/19 + 1);
+		best_c[i] = coord_xy(i%19 +1, 18 - i/19 + 1);
 
 	rescale_best_moves(best_c, best_r, GOGUI_CANDIDATES, GOGUI_RESCALE_LINEAR);	
 	gogui_show_best_moves_colors(buf, b, color, best_c, best_r, GOGUI_CANDIDATES);
@@ -393,7 +393,7 @@ cmd_gogui_influence(struct board *b, struct engine *e, struct time_info *ti, gtp
 		else if (p < 0.5)  p = 0.4;
 		else if (p < 0.8)  p = 0.7;
 		else               p = 1.0;
-		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
+		sbprintf(buf, " %3s %.1lf", coord2sstr(c), p);
 	} foreach_point_end;
 
 	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
@@ -417,7 +417,7 @@ cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp
 		float p = 0;
 		if (j == PJ_BLACK)  p = 0.5;
 		if (j == PJ_WHITE)  p = -0.5;
-		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
+		sbprintf(buf, " %3s %.1lf", coord2sstr(c), p);
 	} foreach_point_end;
 
 	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
@@ -450,7 +450,7 @@ cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, g
 		float p = 0;
 		if (ownermap[c] == S_BLACK)  p = 0.5;
 		if (ownermap[c] == S_WHITE)  p = -0.5;
-		sbprintf(buf, " %3s %.1lf", coord2sstr(c, b), p);
+		sbprintf(buf, " %3s %.1lf", coord2sstr(c), p);
 	} foreach_point_end;
 	sbprintf(buf, "\n");
 	
@@ -582,12 +582,12 @@ cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, 
 	/* Show relaxed / ignored moves */
 	foreach_free_point(b) {
 		josekipat_t *p = joseki_lookup_ignored(joseki_dict, b, c, color);
-		if (p)  sbprintf(buf, "MARK %s\n", coord2sstr(c, b));
+		if (p)  sbprintf(buf, "MARK %s\n", coord2sstr(c));
 		if (p && (p->flags & JOSEKI_FLAGS_3X3))
-			sbprintf(buf, "CIRCLE %s\n", coord2sstr(c, b));
+			sbprintf(buf, "CIRCLE %s\n", coord2sstr(c));
 		
 		p = joseki_lookup_3x3(joseki_dict, b, c, color);
-		if (p)  sbprintf(buf, "CIRCLE %s\n", coord2sstr(c, b));
+		if (p)  sbprintf(buf, "CIRCLE %s\n", coord2sstr(c));
 	} foreach_free_point_end;
 
 	gogui_best_moves(buf, joseki_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
@@ -597,7 +597,7 @@ cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, 
 		if (joseki_map[c]) continue;  /* Don't clobber valid moves ! */
 		josekipat_t *p = joseki_lookup_ignored(joseki_dict, b, c, color);
 		if (!p)  continue;
-		sbprintf(buf, "COLOR #0000a0 %s\n", coord2sstr(c, b));
+		sbprintf(buf, "COLOR #0000a0 %s\n", coord2sstr(c));
 	} foreach_free_point_end;
 
 	gtp_reply(gtp, buf->str, NULL);
@@ -609,7 +609,7 @@ cmd_gogui_joseki_show_pattern(struct board *b, struct engine *e, struct time_inf
 {
 	char *arg;  next_tok(arg);
 	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
-	coord_t coord = str2coord(arg, board_size(b));
+	coord_t coord = str2coord(arg);
 
 	char buffer[10000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
@@ -696,7 +696,7 @@ cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *
 	
 	char *arg;  next_tok(arg);
 	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
-	coord_t coord = str2coord(arg, board_size(b));	
+	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
 	
 	struct ownermap ownermap;
@@ -732,7 +732,7 @@ cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti
 	
 	char *arg;  next_tok(arg);
 	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
-	coord_t coord = str2coord(arg, board_size(b));	
+	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
 	
 	struct ownermap ownermap;
@@ -763,7 +763,7 @@ cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, 
 
 	char *arg;  next_tok(arg);
 	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
-	coord_t coord = str2coord(arg, board_size(b));
+	coord_t coord = str2coord(arg);
 
 	char buffer[10000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));

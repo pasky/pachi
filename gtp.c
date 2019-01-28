@@ -340,7 +340,7 @@ cmd_play(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 	next_tok(arg);
 	m.color = str2stone(arg);
 	next_tok(arg);
-	m.coord = str2coord(arg, board_size(b));
+	m.coord = str2coord(arg);
 	arg = gtp->next;
 	char *enginearg = arg;
 	char *reply = NULL;
@@ -354,7 +354,7 @@ cmd_play(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 	
 	if (gtp_board_play(gtp, b, &m) < 0) {
 		if (DEBUGL(0)) {
-			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str(m.color), coord2sstr(m.coord, b));
+			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str(m.color), coord2sstr(m.coord));
 			board_print(b, stderr);
 		}
 		gtp_error(gtp, "illegal move", NULL);
@@ -376,7 +376,7 @@ cmd_pachi_predict(struct board *board, struct engine *engine, struct time_info *
 	next_tok(arg);
 	m.color = str2stone(arg);
 	next_tok(arg);
-	m.coord = str2coord(arg, board_size(board));
+	m.coord = str2coord(arg);
 	next_tok(arg);
 
 	char *str = predict_move(board, engine, ti, &m, gtp->played_games);
@@ -420,10 +420,10 @@ cmd_genmove(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 	if (!is_resign(c)) {
 		struct move m = move(c, color);
 		if (gtp_board_play(gtp, b, &m) < 0)
-			die("Attempted to generate an illegal move: %s %s\n", stone2str(m.color), coord2sstr(m.coord, b));
+			die("Attempted to generate an illegal move: %s %s\n", stone2str(m.color), coord2sstr(m.coord));
 	}
 	
-	char *str = coord2sstr(c, b);
+	char *str = coord2sstr(c);
 	if (DEBUGL(4))                      fprintf(stderr, "playing move %s\n", str);
 	if (DEBUGL(1) && debug_boardprint)  engine_board_print(e, b, stderr);
 	gtp_reply(gtp, str, NULL);
@@ -508,7 +508,7 @@ cmd_set_free_handicap(struct board *b, struct engine *e, struct time_info *ti, g
 	char *arg;
 	next_tok(arg);
 	do {
-		struct move m = move(str2coord(arg, board_size(b)), S_BLACK);
+		struct move m = move(str2coord(arg), S_BLACK);
 		if (DEBUGL(4))  fprintf(stderr, "setting handicap %s\n", arg);
 
 		// XXX board left in inconsistent state if illegal move comes in
@@ -547,7 +547,7 @@ cmd_fixed_handicap(struct board *b, struct engine *engine, struct time_info *ti,
 
 	for (unsigned int i = 0; i < q.moves; i++) {
 		struct move m = move(q.move[i], S_BLACK);
-		sbprintf(buf, "%s ", coord2sstr(m.coord, b));
+		sbprintf(buf, "%s ", coord2sstr(m.coord));
 
 		/* Add to gtp move history. */
 		gtp_add_move(gtp, &m);
@@ -601,7 +601,7 @@ cmd_final_status_list_dead(char *arg, struct board *b, struct engine *e, gtp_t *
 	gtp_prefix('=', gtp);
 	for (unsigned int i = 0; i < q.moves; i++) {
 		foreach_in_group(b, q.move[i]) {
-			printf("%s ", coord2sstr(c, b));
+			printf("%s ", coord2sstr(c));
 		} foreach_in_group_end;
 		putchar('\n');
 	}
@@ -624,7 +624,7 @@ cmd_final_status_list_alive(char *arg, struct board *b, struct engine *e, gtp_t 
 			if (q.move[i] == g)  goto next_group;
 			
 		foreach_in_group(b, g) {
-			printf("%s ", coord2sstr(c, b));
+			printf("%s ", coord2sstr(c));
 		} foreach_in_group_end;
 		putchar('\n');  printed++;
 	next_group:;
@@ -655,7 +655,7 @@ cmd_final_status_list_seki(char *arg, struct board *b, struct engine *e, gtp_t *
 
 	for (unsigned int i = 0; i < sekis.moves; i++) {
 		foreach_in_group(b, sekis.move[i]) {
-			printf("%s ", coord2sstr(c, b));
+			printf("%s ", coord2sstr(c));
 		} foreach_in_group_end;
 		putchar('\n');  printed++;
 	}
@@ -674,7 +674,7 @@ cmd_final_status_list_territory(char *arg, struct board *b, struct engine *e, gt
 	foreach_point(b) {
 		if (board_at(b, c) != S_NONE)  continue;
 		if (ownermap_color(ownermap, c, 0.67) != color)  continue;
-		printf("%s ", coord2sstr(c, b));
+		printf("%s ", coord2sstr(c));
 	} foreach_point_end;
 	putchar('\n');
 	return 1;
@@ -708,7 +708,7 @@ cmd_undo(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
 	/* --noundo: undo only allowed for pass. */
 	if (gtp->noundo && !is_pass(b->last_move.coord)) {
-		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(b->last_move.coord, b));
+		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(b->last_move.coord));
 		gtp_error(gtp, "cannot undo", NULL);
 		return P_OK;
 	}
@@ -799,7 +799,7 @@ cmd_pachi_evaluate(struct board *board, struct engine *engine, struct time_info 
 			if (!board_coord_in_symmetry(board, board->f[i])
 			    || isnan(vals[i]) || vals[i] < 0.001)
 				continue;
-			printf("%s %.3f\n", coord2sstr(board->f[i], board), (double) vals[i]);
+			printf("%s %.3f\n", coord2sstr(board->f[i]), (double) vals[i]);
 		}
 		gtp_flush();
 	}

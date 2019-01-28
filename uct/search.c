@@ -322,7 +322,7 @@ uct_expand_next_best_moves(struct uct *u, struct tree *t, struct board *b, enum 
 	if (DEBUGL(2)) {  /* Show guesses. */
 		fprintf(stderr, "dcnn eval %s ", stone2str(color));
 		for (unsigned int i = 0; i < q.moves; i++)
-			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
+			fprintf(stderr, "%s ", coord2sstr(q.move[i]));
 		fflush(stderr);
 	}
 
@@ -546,9 +546,9 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		 * does not have also highest value. */
 		if (UDEBUGL(3))
 			fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
-				coord2sstr(node_coord(best), t->board),
+				coord2sstr(node_coord(best)),
 				best->u.playouts, tree_node_get_value(t, 1, best->u.value),
-				coord2sstr(node_coord(winner), t->board),
+				coord2sstr(node_coord(winner)),
 				winner->u.playouts, tree_node_get_value(t, 1, winner->u.value));
 		return true;
 	}
@@ -677,7 +677,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
-			coord2sstr(node_coord(best), b), winrate,
+			coord2sstr(node_coord(best)), winrate,
 			best->u.playouts, u->t->root->u.playouts,
 			u->t->root->u.playouts - base_playouts, played_games,
 			u->t->extra_komi);

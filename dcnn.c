@@ -68,7 +68,7 @@ detlef54_dcnn_eval(struct board *b, enum stone color, float result[])
 	for (int y = 0; y < size; y++) {
 		int p = y * size + x;
 
-		coord_t c = coord_xy(b, x+1, y+1);
+		coord_t c = coord_xy(x+1, y+1);
 		group_t g = group_at(b, c);
 		enum stone bc = board_at(b, c);
 		int libs = board_group_info(b, g).libs - 1;
@@ -103,7 +103,7 @@ get_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, i
 	}
 
 	foreach_free_point(b) {
-		int k = coord2dcnn_idx(c, b);
+		int k = coord2dcnn_idx(c);
 		best_moves_add(c, r[k], best_c, best_r, nbest);
 	} foreach_free_point_end;
 }

@@ -132,8 +132,8 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		struct move_stats l = lnode->u;
 		l.playouts = ((floating_t) l.playouts) * b->ltree_rave / LTREE_PLAYOUTS_MULTIPLIER;
 		URAVE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
-			coord2sstr(node_coord(lnode), tree->board), l.value, l.playouts,
-			coord2sstr(node_coord(node), tree->board), r.value, r.playouts);
+			coord2sstr(node_coord(lnode)), l.value, l.playouts,
+			coord2sstr(node_coord(node)), r.value, r.playouts);
 		stats_merge(&r, &l);
 	}
 
@@ -152,7 +152,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 							 crit * r.playouts * b->crit_rave);
 			URAVE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
 				c.value, c.playouts,
-				coord2sstr(node_coord(node), tree->board), r.value, r.playouts);
+				coord2sstr(node_coord(node)), r.value, r.playouts);
 			stats_merge(&r, &c);
 		}
 	}
@@ -173,16 +173,16 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 
 			value = beta * r.value + (1.f - beta) * n.value;
 			URAVE_DEBUG fprintf(stderr, "\t%s value = %f * %f + (1 - %f) * %f (prior %f)\n",
-			        coord2sstr(node_coord(node), tree->board), beta, r.value, beta, n.value, node->prior.value);
+			        coord2sstr(node_coord(node)), beta, r.value, beta, n.value, node->prior.value);
 		} else {
 			value = n.value;
 			URAVE_DEBUG fprintf(stderr, "\t%s value = %f (prior %f)\n",
-			        coord2sstr(node_coord(node), tree->board), n.value, node->prior.value);
+			        coord2sstr(node_coord(node)), n.value, node->prior.value);
 		}
 	} else if (r.playouts) {
 		value = r.value;
 		URAVE_DEBUG fprintf(stderr, "\t%s value = rave %f (prior %f)\n",
-			coord2sstr(node_coord(node), tree->board), r.value, node->prior.value);
+			coord2sstr(node_coord(node)), r.value, node->prior.value);
 	}
 	descent->value.playouts = r.playouts + n.playouts;
 	descent->value.value = value;
@@ -266,7 +266,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 #if 0
 	struct board bb; bb.size = 9+2;
 	for (struct tree_node *ni = node; ni; ni = ni->parent)
-		fprintf(stderr, "%s ", coord2sstr(node_coord(ni), &bb));
+		fprintf(stderr, "%s ", coord2sstr(node_coord(ni)));
 	fprintf(stderr, "[color %d] update result %d (color %d)\n",
 			node_color, result, player_color);
 #endif
@@ -323,8 +323,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 #if 0
 			struct board bb; bb.size = 9+2;
 			fprintf(stderr, "* %s<%"PRIhash"> -> %s<%"PRIhash"> [%d/%f => %d/%f]\n",
-				coord2sstr(node_coord(node), &bb), node->hash,
-				coord2sstr(node_coord(ni), &bb), ni->hash,
+				coord2sstr(node_coord(node)), node->hash,
+				coord2sstr(node_coord(ni)), ni->hash,
 				player_color, result, move, res);
 #endif
 		}

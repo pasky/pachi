@@ -88,7 +88,7 @@ generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone c
 		if (color == S_NONE) return not_playing;
 
 		sbprintf(buf, "In %d playouts, %s %s can win with %.1f%% probability",
-			 playouts, stone2str(color), coord2sstr(move, b), 100*winrate);
+			 playouts, stone2str(color), coord2sstr(move), 100*winrate);
 		if (fabs(extra_komi) >= 0.5) {
 			sbprintf(buf, ", while self-imposing extra komi %.1f", extra_komi);
 		}

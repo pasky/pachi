@@ -20,7 +20,7 @@ play_game(struct playout_setup *setup,
 	int passes = 0;
 	for (int gamelen = setup->gamelen; gamelen-- > 0 && passes < 2; ) {
 		coord_t coord = playout_play_move(setup, b, color, policy);
-		fprintf(stderr, "move %-3i %1.1s %s\n", b->moves, stone2str(color), coord2sstr(coord, b));
+		fprintf(stderr, "move %-3i %1.1s %s\n", b->moves, stone2str(color), coord2sstr(coord));
 		if (is_pass(coord)) passes++;  else passes = 0;
 		color = stone_other(color);
 	}	

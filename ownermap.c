@@ -288,7 +288,7 @@ board_position_final_full(struct board *b, struct ownermap *ownermap,
 		if (around[S_BLACK] + around[3] == 4 ||
 		    around[S_WHITE] + around[3] == 4) {
 			static char buf[100];
-			sprintf(buf, "non-final position at %s", coord2sstr(dame, b));
+			sprintf(buf, "non-final position at %s", coord2sstr(dame));
 			*msg = buf;
 			return false;
 		}

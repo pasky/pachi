@@ -42,7 +42,7 @@ josekiscan_play(struct engine *e, struct board *board, struct move *m, char *mov
 	}
 
 	//board_print(board, stderr);
-	//fprintf(stderr, "move: %s %s\n", stone2str(m->color), coord2sstr(m->coord, board));
+	//fprintf(stderr, "move: %s %s\n", stone2str(m->color), coord2sstr(m->coord));
 	
 	assert(!is_resign(m->coord));
 	/* pass -> tag next move <later> */
@@ -66,14 +66,14 @@ josekiscan_play(struct engine *e, struct board *board, struct move *m, char *mov
 	       joseki_spatial_hash(board,   m->coord, m->color));
 
 	coord_t last = board->last_move.coord;
-	if (last != pass && coord_gridcular_distance(m->coord, last, board) >= 30)
+	if (last != pass && coord_gridcular_distance(m->coord, last) >= 30)
 		fprintf(stderr, "warning: josekiscan %s %s: big distance to prev move, use pass / setup stones for tenuki\n",
-			coord2sstr(last, board), coord2sstr(m->coord, board));
+			coord2sstr(last), coord2sstr(m->coord));
 
 	/* Record next move in all rotations and add joseki pattern. */
 	for (int i = 0; i < 16; i++) {
 		struct board *b = j->b[i];
-		coord_t coord = rotate_coord(b, m->coord, i);
+		coord_t coord = rotate_coord(m->coord, i);
 		enum stone color = m->color;
 		if (i & 8) color = stone_other(color);
 

@@ -127,7 +127,7 @@ char *
 path2sstr(path_t path, struct board *b)
 {
 	/* Special case for pass and resign. */
-	if (path < 0) return coord2sstr((coord_t)path, b);
+	if (path < 0) return coord2sstr((coord_t)path);
 
 	static char buf[16][64];
 	static int bi = 0;
@@ -138,7 +138,7 @@ path2sstr(path_t path, struct board *b)
 	char *end = b2 + 64;
 	coord_t leaf;
 	while ((leaf = leaf_coord(path, b)) != 0) {
-		s += snprintf(s, end - s, "%s<", coord2sstr(leaf, b));
+		s += snprintf(s, end - s, "%s<", coord2sstr(leaf));
 		path = parent_path(path, b);
 	}
 	if (s != b2) s[-1] = '\0';
@@ -244,7 +244,7 @@ select_best_move(struct board *b, struct large_stats *stats, int *played,
 		char move[64];
 		struct move_stats s;
 		while (r && sscanf(++r, "%63s %d " PRIfloating, move, &s.playouts, &s.value) == 3) {
-			coord_t c = str2coord(move, board_size(b));
+			coord_t c = str2coord(move);
 			assert (c >= resign && c < board_size2(b) && s.playouts >= 0);
 
 			large_stats_add_result(&stats[c], s.value, (long)s.playouts);
@@ -349,7 +349,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 			if (!keep_looking || played >= stop.worst.playouts) break;
 		}
 		if (DEBUGVV(2)) {
-			char *coord = coord2sstr(best, b);
+			char *coord = coord2sstr(best);
 			snprintf(buf, sizeof(buf),
 				 "temp winner is %s %s with score %1.4f (%d/%d games)"
 				 " %d slaves %d threads\n",
@@ -378,7 +378,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 	 * the last "pachi-genmoves" in the command history. */
 	clear_receive_queue();
 	char coordbuf[4];
-	char *coord = coord2bstr(coordbuf, best, b);
+	char *coord = coord2bstr(coordbuf, best);
 	snprintf(args, sizeof(args), "%s %s\n", stone2str(color), coord);
 	update_cmd(b, "play", args, true);
 	protocol_unlock();
@@ -447,7 +447,7 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 	char *dead = gtp_replies[best_reply];
 	dead = strchr(dead, ' '); // skip "id "
 	while (dead && *++dead != '\n') {
-		mq_add(mq, str2coord(dead, board_size(b)), 0);
+		mq_add(mq, str2coord(dead), 0);
 		dead = strchr(dead, '\n');
 	}
 	protocol_unlock();

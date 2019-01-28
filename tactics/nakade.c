@@ -55,7 +55,7 @@ get_neighbors(struct board *b, coord_t *area, int area_n, int *neighbors, int *p
         memset(neighbors, 0, area_n * sizeof(int));
 	for (int i = 0; i < area_n; i++) {
 		for (int j = i + 1; j < area_n; j++)
-			if (coord_is_adjecent(area[i], area[j], b)) {
+			if (coord_is_adjecent(area[i], area[j])) {
 				ptbynei[neighbors[i]]--;
 				neighbors[i]++;
 				ptbynei[neighbors[i]]++;

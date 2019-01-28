@@ -15,19 +15,19 @@ static void
 board_dump_group(struct board *b, group_t g)
 {
         printf("group base: %s  color: %s  libs: %i  stones: %i\n",
-               coord2sstr(g, b), stone2str(board_at(b, g)),
+               coord2sstr(g), stone2str(board_at(b, g)),
                board_group_info(b, g).libs, group_stone_count(b, g, 500));
 
         printf("  stones: ");
         foreach_in_group(b, g) {
-                printf("%s ", coord2sstr(c, b));
+                printf("%s ", coord2sstr(c));
         } foreach_in_group_end;
         printf("\n");
 
         printf("  libs  : ");   
         for (int i = 0; i < board_group_info(b, g).libs; i++) {
                 coord_t lib = board_group_info(b, g).lib[i];
-                printf("%s ", coord2sstr(lib, b));
+                printf("%s ", coord2sstr(lib));
         }
         printf("\n");
 }
@@ -40,8 +40,8 @@ board_dump(struct board *b)
         board_print(b, stdout);
 
         printf("ko: %s %s  last_ko: %s %s  last_ko_age: %i\n",
-               stone2str(b->ko.color), coord2sstr(b->ko.coord, b),
-               stone2str(b->last_ko.color), coord2sstr(b->last_ko.coord, b),
+               stone2str(b->ko.color), coord2sstr(b->ko.coord),
+               stone2str(b->last_ko.color), coord2sstr(b->last_ko.coord),
                b->last_ko_age);
 
         printf("groups: \n");

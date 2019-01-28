@@ -50,7 +50,7 @@ static inline bool
 can_capture(struct board *b, group_t g, enum stone to_play)
 {
 	coord_t capture = board_group_info(b, g).lib[0];
-	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture, b));
+	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
 	
 	/* Does playing on the liberty usefully capture the group? */
 	if (board_is_valid_play(b, to_play, capture)
@@ -64,7 +64,7 @@ static inline bool
 can_play_on_lib(struct board *b, group_t g, enum stone to_play)
 {
 	coord_t capture = board_group_info(b, g).lib[0];
-	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture, b));
+	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
 	
 	/* Does playing on the liberty usefully capture the group? */
 	if (board_is_valid_play(b, to_play, capture)
@@ -183,7 +183,7 @@ group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, e
 
 	assert(color != S_OFFBOARD && color != S_NONE);
 	if (DEBUGL(5))  fprintf(stderr, "[%s] atariiiiiiiii %s of color %d\n",
-				coord2sstr(group, b), coord2sstr(lib, b), color);
+				coord2sstr(group), coord2sstr(lib), color);
 	assert(board_at(b, lib) == S_NONE);
 
 	if (to_play != color) {

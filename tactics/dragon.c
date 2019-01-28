@@ -113,21 +113,21 @@ virtual_connection_at(struct board *b, enum stone color, coord_t lib, coord_t c2
 		return true;
 
 	/* Diagonal connection ? */
-	int x2 = coord_x(c2, b),          y2 = coord_y(c2, b);
+	int x2 = coord_x(c2),          y2 = coord_y(c2);
 	foreach_diag_neighbor(b, c2) {
 		if (board_at(b, c) != color || group_at(b, c) != g1)
 			continue;
-		int x = coord_x(c, b);    coord_t d1 = coord_xy(b, x, y2);
-		int y = coord_y(c, b);    coord_t d2 = coord_xy(b, x2, y);		   
+		int x = coord_x(c);    coord_t d1 = coord_xy(x, y2);
+		int y = coord_y(c);    coord_t d2 = coord_xy(x2, y);		   
 		if (no_stone_at(d1) && no_stone_at(d2))
 			return true;	
 	} foreach_diag_neighbor_end;
 
-	int x = coord_x(lib, b);          int dx = coord_dx(lib, c2, b);
-	int y = coord_y(lib, b);          int dy = coord_dy(lib, c2, b);
+	int x = coord_x(lib);          int dx = coord_dx(lib, c2);
+	int y = coord_y(lib);          int dy = coord_dy(lib, c2);
 	int x1 = x + dx;
 	int y1 = y + dy;
-	coord_t c1 = coord_xy(b, x1, y1);  // other side of lib wrt c2
+	coord_t c1 = coord_xy(x1, y1);  // other side of lib wrt c2
 	
 	/* Bamboo joint or stronger ? */
 	if ( own_stone_at(c1) && group_at(b, c1) == g1 && 
@@ -591,7 +591,7 @@ is_vert_gap(struct board *b, enum stone color, int *connected, int lx, int ly,  
 	assert(dy);
 	for (int i = 0; i < GAP_LENGTH; i++) {
 		int y = ly + dy * i;		
-		coord_t d = coord_xy(b, x, y);
+		coord_t d = coord_xy(x, y);
 		if (board_at(b, d) == S_NONE)
 			continue;
 		if (board_at(b, d) == color && !connected[d])
@@ -611,7 +611,7 @@ is_horiz_gap(struct board *b, enum stone color, int *connected, int lx, int ly, 
 	assert(dx);
 	for (int i = 0; i < GAP_LENGTH; i++) {
 		int x = lx + dx * i;
-		coord_t d = coord_xy(b, x, y);
+		coord_t d = coord_xy(x, y);
 		if (board_at(b, d) == S_NONE)
 			continue;
 		if (board_at(b, d) == color && !connected[d])
@@ -638,8 +638,8 @@ is_horiz_gap(struct board *b, enum stone color, int *connected, int lx, int ly, 
 static bool
 two_stones_gap(struct board *b, enum stone color, coord_t lib, int *connected) 
 {
-	int lx = coord_x(lib, b);
-	int ly = coord_y(lib, b);		
+	int lx = coord_x(lib);
+	int ly = coord_y(lib);
 
 	for (int dx = -1; dx <= 1; dx++)
 		for (int dy = -1; dy <= 1; dy++) {

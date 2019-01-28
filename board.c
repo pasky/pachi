@@ -323,7 +323,7 @@ board_print_row(struct board *board, int y, strbuf_t *buf, board_cprint cprint, 
 {
 	sbprintf(buf, " %2d | ", y);
 	for (int x = 1; x < board_size(board) - 1; x++)
-		if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
+		if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
 			sbprintf(buf, "%c)", stone2char(board_atxy(board, x, y)));
 		else
 			sbprintf(buf, "%c ", stone2char(board_atxy(board, x, y)));
@@ -331,7 +331,7 @@ board_print_row(struct board *board, int y, strbuf_t *buf, board_cprint cprint, 
 	if (cprint) {
 		sbprintf(buf, " %2d | ", y);
 		for (int x = 1; x < board_size(board) - 1; x++)
-			cprint(board, coord_xy(board, x, y), buf, data);
+			cprint(board, coord_xy(x, y), buf, data);
 		sbprintf(buf, "|");
 	}
 	sbprintf(buf, "\n");
@@ -361,8 +361,8 @@ board_hprint_row(struct board *board, int y, strbuf_t *buf, board_print_handler 
 {
         sbprintf(buf, " %2d | ", y);
         for (int x = 1; x < board_size(board) - 1; x++) {
-                char *stone_str = handler(board, coord_xy(board, x, y), data);
-                if (coord_x(board->last_move.coord, board) == x && coord_y(board->last_move.coord, board) == y)
+                char *stone_str = handler(board, coord_xy(x, y), data);
+                if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
                         sbprintf(buf, "%s)", stone_str);
                 else
                         sbprintf(buf, "%s ", stone_str);
@@ -424,7 +424,7 @@ board_hash_update(struct board *board, coord_t coord, enum stone color)
 {
 	board->hash ^= hash_at(coord, color);
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord, board), coord_y(coord, board), hash_at(coord, color), board->hash);
+		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %"PRIhash" -> %"PRIhash"\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
 
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */
@@ -468,7 +468,7 @@ board_hash_commit(struct board *board)
 		if (board->history_hash[i & history_hash_mask] == board->hash) {
 			if (DEBUGL(5))
 				fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
-					coord_x(board->last_move.coord, board), coord_y(board->last_move.coord, board));
+					coord_x(board->last_move.coord), coord_y(board->last_move.coord));
 			board->superko_violation = true;
 			return;
 		}
@@ -488,7 +488,7 @@ board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t 
 		return;
 	}
 
-	int x = coord_x(c, b), y = coord_y(c, b), t = board_size(b) / 2;
+	int x = coord_x(c), y = coord_y(c), t = board_size(b) / 2;
 	int dx = board_size(b) - 1 - x; /* for SYM_DOWN */
 	if (DEBUGL(6))
 		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d] update for %d,%d\n",
@@ -562,7 +562,7 @@ break_symmetry:
 static void
 board_handicap_stone(struct board *board, int x, int y, struct move_queue *q)
 {
-	struct move m = move(coord_xy(board, x, y), S_BLACK);
+	struct move m = move(coord_xy(x, y), S_BLACK);
 
 	int r = board_play(board, &m);  assert(r >= 0);
 
@@ -600,7 +600,7 @@ board_handicap(struct board *board, int stones, struct move_queue *q)
 static void
 board_capturable_add(struct board *board, group_t group, coord_t lib, bool onestone)
 {
-	//fprintf(stderr, "group %s cap %s\n", coord2sstr(group, board), coord2sstr(lib, boarD));
+	//fprintf(stderr, "group %s cap %s\n", coord2sstr(group), coord2sstr(lib));
 
 #ifdef BOARD_PAT3
 	int fn__i = 0;
@@ -620,7 +620,7 @@ board_capturable_add(struct board *board, group_t group, coord_t lib, bool onest
 static void
 board_capturable_rm(struct board *board, group_t group, coord_t lib, bool onestone)
 {
-	//fprintf(stderr, "group %s nocap %s\n", coord2sstr(group, board), coord2sstr(lib, board));
+	//fprintf(stderr, "group %s nocap %s\n", coord2sstr(group), coord2sstr(lib));
 #ifdef BOARD_PAT3
 	int fn__i = 0;
 	foreach_neighbor(board, lib, {
@@ -646,8 +646,8 @@ board_group_addlib(struct board *board, group_t group, coord_t coord, struct boa
 {
 	if (DEBUGL(7))
 		fprintf(stderr, "Group %d[%s] %d: Adding liberty %s\n",
-			group_base(group), coord2sstr(group_base(group), board),
-			board_group_info(board, group).libs, coord2sstr(coord, board));
+			group_base(group), coord2sstr(group_base(group)),
+			board_group_info(board, group).libs, coord2sstr(coord));
 
 	struct group *gi = &board_group_info(board, group);
 	bool onestone = group_is_onestone(board, group);
@@ -704,8 +704,8 @@ board_group_rmlib(struct board *board, group_t group, coord_t coord, struct boar
 {
 	if (DEBUGL(7))
 		fprintf(stderr, "Group %d[%s] %d: Removing liberty %s\n",
-			group_base(group), coord2sstr(group_base(group), board),
-			board_group_info(board, group).libs, coord2sstr(coord, board));
+			group_base(group), coord2sstr(group_base(group)),
+			board_group_info(board, group).libs, coord2sstr(coord));
 
 	struct group *gi = &board_group_info(board, group);
 	bool onestone = group_is_onestone(board, group);
@@ -771,7 +771,7 @@ board_remove_stone(struct board *board, group_t group, coord_t c, struct board_u
 #endif
 
 	if (DEBUGL(6))
-		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c, board), coord_y(c, board));
+		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
 	board_addf(board, c);
 }
 
@@ -808,8 +808,8 @@ add_to_group(struct board *board, group_t group, coord_t prevstone, coord_t coor
 
 	if (DEBUGL(8))
 		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d\n",
-			coord_x(prevstone, board), coord_y(prevstone, board),
-			coord_x(coord, board), coord_y(coord, board),
+			coord_x(prevstone), coord_y(prevstone),
+			coord_x(coord), coord_y(coord),
 			groupnext_at(board, coord) % board_size(board), groupnext_at(board, coord) / board_size(board),
 			group_base(group));
 }
@@ -907,7 +907,7 @@ new_group(struct board *board, coord_t coord, struct board_undo *u)
 
 	if (DEBUGL(8))
 		fprintf(stderr, "new_group: added %d,%d to group %d\n",
-			coord_x(coord, board), coord_y(coord, board),
+			coord_x(coord), coord_y(coord),
 			group_base(group));
 
 	return group;
@@ -1006,9 +1006,9 @@ play_one_neighbor(struct board *board,
 	} else if (ncolor == other_color) {
 		if (DEBUGL(8)) {
 			struct group *gi = &board_group_info(board, ngroup);
-			fprintf(stderr, "testing captured group %d[%s]: ", group_base(ngroup), coord2sstr(group_base(ngroup), board));
+			fprintf(stderr, "testing captured group %d[%s]: ", group_base(ngroup), coord2sstr(group_base(ngroup)));
 			for (int i = 0; i < GROUP_KEEP_LIBS; i++)
-				fprintf(stderr, "%s ", coord2sstr(gi->lib[i], board));
+				fprintf(stderr, "%s ", coord2sstr(gi->lib[i]));
 			fprintf(stderr, "\n");
 		}
 		if (unlikely(board_group_captured(board, ngroup)))
@@ -1069,12 +1069,12 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 	/* Check ko: Capture at a position of ko capture one move ago */
 	if (unlikely(color == board->ko.color && coord == board->ko.coord)) {
 		if (DEBUGL(5))
-			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord, board), coord_y(coord, board), color);
+			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord), coord_y(coord), color);
 		return -1;
 	} else if (DEBUGL(6))
 		fprintf(stderr, "board_check: no ko at %d,%d,%d - ko is %d,%d,%d\n",
-			color, coord_x(coord, board), coord_y(coord, board),
-			board->ko.color, coord_x(board->ko.coord, board), coord_y(board->ko.coord, board));
+			color, coord_x(coord), coord_y(coord),
+			board->ko.color, coord_x(board->ko.coord), coord_y(board->ko.coord));
 
 	struct move ko = { pass, S_NONE };
 
@@ -1129,7 +1129,7 @@ board_play_in_eye(struct board *board, struct move *m, int f, struct board_undo 
 		board->last_ko = ko;
 		board->last_ko_age = board->moves + 1;  /* == board->moves really, board->moves++ done after */
 		if (DEBUGL(5))
-			fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord, board));
+			fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord));
 	}
 
 	board_at(board, coord) = color;
@@ -1156,7 +1156,7 @@ static int __attribute__((flatten))
 board_play_f(struct board *board, struct move *m, int f, struct board_undo *u)
 {
 	if (DEBUGL(7))
-		fprintf(stderr, "board_play(%s): ---- Playing %d,%d\n", coord2sstr(m->coord, board), coord_x(m->coord, board), coord_y(m->coord, board));
+		fprintf(stderr, "board_play(%s): ---- Playing %d,%d\n", coord2sstr(m->coord), coord_x(m->coord), coord_y(m->coord));
 	if (likely(!board_is_eyelike(board, m->coord, stone_other(m->color)))) {
 		/* NOT playing in an eye. Thus this move has to succeed. (This
 		 * is thanks to New Zealand rules. Otherwise, multi-stone
@@ -1261,9 +1261,9 @@ undo_merge(struct board *b, struct board_undo *u, struct move *m)
 		groupnext_at(b, merged[i].last) = 0;
 
 #if 0
-		printf("merged_group[%i]:   (last: %s)", i, coord2sstr(merged[i].last, b));
+		printf("merged_group[%i]:   (last: %s)", i, coord2sstr(merged[i].last));
 		foreach_in_group(b, old_group) {
-			printf("%s ", coord2sstr(c, b));
+			printf("%s ", coord2sstr(c));
 		} foreach_in_group_end;
 		printf("\n");
 #endif
@@ -1280,7 +1280,7 @@ undo_merge(struct board *b, struct board_undo *u, struct move *m)
 #if 0
 	printf("merged_group[0]: ");
 	foreach_in_group(b, merged[0].group) {
-		printf("%s ", coord2sstr(c, b));
+		printf("%s ", coord2sstr(c));
 	} foreach_in_group_end;
 	printf("\n");
 #endif
@@ -1463,7 +1463,7 @@ board_try_random_move(struct board *b, enum stone color, coord_t *coord, int f, 
 	*coord = b->f[f];
 	struct move m = { *coord, color };
 	if (DEBUGL(6))
-		fprintf(stderr, "trying random move %d: %d,%d %s %d\n", f, coord_x(*coord, b), coord_y(*coord, b), coord2sstr(*coord, b), board_is_valid_move(b, &m));
+		fprintf(stderr, "trying random move %d: %d,%d %s %d\n", f, coord_x(*coord), coord_y(*coord), coord2sstr(*coord), board_is_valid_move(b, &m));
 	permit = (permit ? permit : board_permit);
 	if (!permit(b, &m, permit_data))
 		return false;
@@ -1537,7 +1537,7 @@ board_fast_score(struct board *board)
 		if (color == S_NONE && board->rules != RULES_STONES_ONLY)
 			color = board_eye_color(board, c);
 		scores[color]++;
-		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
+		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c), coord_y(c), color, scores[color]);
 	} foreach_point_end;
 
 	return board_score(board, scores);
@@ -1635,7 +1635,7 @@ board_print_official_ownermap(struct board *b, int *final_ownermap)
 {
 	for (int y = board_size(b) - 2; y >= 1; y--) {
 		for (int x = 1; x < board_size(b) - 1; x++) {
-			coord_t c = coord_xy(b, x, y);
+			coord_t c = coord_xy(x, y);
 			char *chars = ".XO:";
 			fprintf(stderr, "%c ", chars[final_ownermap[c]]);
 		}

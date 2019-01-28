@@ -459,7 +459,7 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 
 		char buf[4];
 		/* We return the values as stored in the tree, so from black's view. */
-		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, node_coord(ni), b),
+		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, node_coord(ni)),
 			      ni->u.playouts, ni->u.value);
 	}
 	/* Give a large but not infinite weight to pass, resign or book move, to avoid
@@ -467,7 +467,7 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 	if (c) {
 		double resign_value = u->t->root_color == S_WHITE ? 0.0 : 1.0;
 		double c_value = is_resign(c) ? resign_value : 1.0 - resign_value;
-		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c, b),
+		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c),
 			      2 * max_playouts, c_value);
 	}
 	return reply;
