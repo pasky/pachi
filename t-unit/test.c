@@ -557,6 +557,7 @@ test_moggy_status(struct board *b, char *arg)
 }
 
 bool board_undo_stress_test(struct board *orig, char *arg);
+bool board_regression_test(struct board *orig, char *arg);
 
 typedef bool (*t_unit_func)(struct board *board, char *arg);
 
@@ -579,7 +580,10 @@ static t_unit_cmd commands[] = {
 	{ "moggy status",           test_moggy_status,      0 },
 	{ "corner_seki",            test_corner_seki,       1 },
 	{ "false_eye_seki",         test_false_eye_seki,    1 },
+#ifdef BOARD_TESTS
 	{ "board_undo_stress_test", board_undo_stress_test, 0 },
+	{ "board_regtest",          board_regression_test,  0 },
+#endif
 	{ 0, 0, 0 }
 };
 

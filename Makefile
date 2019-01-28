@@ -59,6 +59,9 @@ DCNN=1
 
 # PLUGINS=1
 
+# Compile extra tests ? Enable this to test board implementation.
+# BOARD_TESTS=1
+
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
 # it somewhat.
@@ -249,6 +252,10 @@ ifeq ($(PLUGINS), 1)
 	CUSTOM_CFLAGS += -DPACHI_PLUGINS
 endif
 
+ifeq ($(BOARD_TESTS), 1)
+	SYS_LIBS      += -lcrypto
+	CUSTOM_CFLAGS += -DBOARD_TESTS
+endif
 
 ifeq ($(PROFILING), gprof)
 	CUSTOM_LDFLAGS += -pg
@@ -343,18 +350,12 @@ build.h: .git/HEAD .git/index Makefile
 	@echo "[make] build.h"
 	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild > $@
 
-# Run unit tests
+# Unit tests
 test: FORCE
-	t-unit/run_tests
+	+@make -C t-unit test
 
-	@echo -n "Testing uct genmove...   "
-	@ ./pachi -d0 -t =1000 < gtp/genmove.gtp  2>pachi.log >/dev/null
-	@echo "OK"
-
-	@echo -n "Testing quiet mode...    "
-	@if  grep -q '.' < pachi.log ; then \
-		echo "FAILED:";  cat pachi.log;  exit 1;  else  echo "OK"; \
-	fi
+test_board: FORCE
+	+@make -C t-unit test_board
 
 
 # Prepare for install
