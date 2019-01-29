@@ -4,6 +4,7 @@
 /* A fairly reliable self-atari detector. */
 
 #include "board.h"
+#include "board_undo.h"
 #include "debug.h"
 
 /* Check if this move is undesirable self-atari (resulting group would have

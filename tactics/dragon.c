@@ -6,6 +6,7 @@
 
 #define DEBUG
 #include "board.h"
+#include "board_undo.h"
 #include "debug.h"
 #include "tactics/dragon.h"
 

@@ -6,10 +6,47 @@
 #include <string.h>
 
 #include "board.h"
+#include "board_undo.h"
 #include "debug.h"
 #include "playout.h"
 #include "playout/light.h"
 
+/* Like board_cmp() but only care about fields maintained by quick_play() / quick_undo() */
+static int
+board_quick_cmp(struct board *b1, struct board *b2)
+{
+	if (b1->size != b2->size ||
+	    b1->captures[S_BLACK] != b2->captures[S_BLACK] ||
+	    b1->captures[S_WHITE] != b2->captures[S_WHITE] ||
+	    b1->moves != b2->moves) {
+		fprintf(stderr, "differs in main vars\n");
+		return 1;
+	}
+	if (move_cmp(&b1->last_move, &b2->last_move) ||
+	    move_cmp(&b1->last_move2, &b2->last_move2)) {
+		fprintf(stderr, "differs in last_move\n");
+		return 1;
+	}
+	if (move_cmp(&b1->ko, &b2->ko) ||
+	    move_cmp(&b1->last_ko, &b2->last_ko) ||
+	    b1->last_ko_age != b2->last_ko_age) {
+		fprintf(stderr, "differs in ko\n");
+		return 1;
+	}
+
+	if (memcmp(b1->b,  b2->b,  sizeof(b1->b))) {
+		fprintf(stderr, "differs in b\n");  return 1;  }
+	if (memcmp(b1->g,  b2->g,  sizeof(b1->g))) {
+		fprintf(stderr, "differs in g\n");  return 1;  }
+	if (memcmp(b1->n,  b2->n,  sizeof(b1->n))) {
+		fprintf(stderr, "differs in n\n");  return 1;  }
+	if (memcmp(b1->p,  b2->p,  sizeof(b1->p))) {
+		fprintf(stderr, "differs in p\n");  return 1;  }
+	if (memcmp(b1->gi, b2->gi, sizeof(b1->gi))) {
+		fprintf(stderr, "differs in gi\n");  return 1;  }
+
+	return 0;
+}
 
 static void
 board_dump_group(board_t *b, group_t g)
