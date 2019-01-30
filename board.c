@@ -164,6 +164,7 @@ board_statics_init(board_t *board)
 	
 	memset(bs, 0, sizeof(*bs));
 	bs->size = size;
+	bs->size2 = size * size;
 	
 	/* Setup neighborhood iterators */
 	bs->nei8[0] = -size - 1; // (-1,-1)
@@ -186,16 +187,27 @@ board_statics_init(board_t *board)
 	} foreach_point_end;
 
 	/* Initialize zobrist hashtable. */
-	/* We will need these to be stable across Pachi runs for
-	 * certain kinds of pattern matching, thus we do not use
-	 * fast_random() for this. */
+	/* We will need these to be stable across Pachi runs for certain kinds
+	 * of pattern matching, thus we do not use fast_random() for this. */
 	hash_t hseed = 0x3121110101112131;
-	for (coord_t c = 0 ; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
+#ifdef BOARD_HASH_COMPAT
+        /* Until <board_cleanup> board->h was treated as h[BOARD_MAX_COORDS][2] here
+	 * and h[2][BOARD_MAX_COORDS] in hash_at(). Preserve quirk to get same hashes. */
+        hash_t (*hash)[2] = (hash_t (*)[2])bs->h;
+        for (coord_t c = 0; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
+		for (int color = 0; color <= 1; color++) {
+			hash[c][color] = (hseed *= 16807);
+			if (!hash[c][color])  hash[c][color] = 1;
+		}
+	}
+#else
+	for (coord_t c = 0; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
 		for (int color = S_BLACK; color <= S_WHITE; color++) {
 			hash_at(c, color) = (hseed *= 16807);
 			if (!hash_at(c, color))  hash_at(c, color) = 1;
 		}
 	}
+#endif
 
 	/* Sanity check ... */
 	foreach_point(board) {

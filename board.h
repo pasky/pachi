@@ -26,7 +26,11 @@ struct ownermap;
 
 #define BOARD_PAT3 // incremental 3x3 pattern codes
 
+/* Enable to get same hashes as old Pachi versions. */
+//#define BOARD_HASH_COMPAT
+
 //#define BOARD_UNDO_CHECKS 1  // Guard against invalid quick_play() / quick_undo() uses
+
 
 #define BOARD_MAX_COORDS  ((BOARD_MAX_SIZE+2) * (BOARD_MAX_SIZE+2) )
 #define BOARD_MAX_MOVES (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
@@ -132,13 +136,14 @@ enum rules {
 
 /* Data shared by all boards of a given size */
 typedef struct {
-	int size;	
+	int size;
+	int size2;
 
 	/* Iterator offsets for foreach_neighbor*() */
 	int nei8[8], dnei[4];
 
 	/* Coordinates zobrist hashes (black and white) */
-	hash_t h[2][BOARD_MAX_COORDS];
+	hash_t h[BOARD_MAX_COORDS][2];
 
 	/* Cached information on x-y coordinates so that we avoid division. */
 	uint8_t coord[BOARD_MAX_COORDS][2];
@@ -338,7 +343,12 @@ typedef struct {
 /* board_group_other_lib() makes sense only for groups with two liberties. */
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
-#define hash_at(coord, color) (board_statics.h[(color) == S_BLACK][coord])
+#ifdef BOARD_HASH_COMPAT
+#define hash_at(coord, color) (*(&board_statics.h[0][0] + ((color) == S_BLACK ? board_statics.size2 : 0) + (coord)))
+#else
+#define hash_at(coord, color) (board_statics.h[coord][(color) == S_BLACK])
+#endif
+
 
 void board_init(board_t *b, int bsize, char *fbookfile);
 board_t *board_new(int bsize, char *fbookfile);
