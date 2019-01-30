@@ -35,8 +35,7 @@ board_dump_group(board_t *b, group_t g)
 static void
 board_dump(board_t *b)
 {       
-        printf("board_dump(): size: %i  size2: %i  bits2: %i\n", 
-               b->size, b->size2, b->bits2);
+        printf("board_dump(): size: %i\n", b->size);
         board_print(b, stdout);
 
         printf("ko: %s %s  last_ko: %s %s  last_ko_age: %i\n",

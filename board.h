@@ -137,7 +137,9 @@ enum rules {
 /* Data shared by all boards of a given size */
 typedef struct {
 	int size;
-	int size2;
+	int size2;       /* size^2 */
+	int bits2;       /* ceiling(log2(size2)) */
+	int real_size2;  /* real_board_size^2 */
 
 	/* Iterator offsets for foreach_neighbor*() */
 	int nei8[8], dnei[4];
@@ -156,9 +158,9 @@ extern board_statics_t board_statics;
  * you want to change it. */
 
 typedef struct board {
-	int size; /* Including S_OFFBOARD margin - see below. */
-	int size2; /* size^2 */
-	int bits2; /* ceiling(log2(size2)) */
+	int size;               /* Including S_OFFBOARD margin - see below. */
+
+	int moves;
 	int captures[S_MAX];
 	int passes[S_MAX];
 	floating_t komi;
@@ -285,19 +287,20 @@ typedef struct {
 
 
 #ifdef BOARD_SIZE
-/* Avoid unused variable warnings */
-#define board_size(b)  (((b) == (b)) ? BOARD_SIZE + 2 : 0)
-#define board_size2(b) (board_size(b) * board_size(b))
-#define the_board_size()  (BOARD_SIZE + 2)
+#define the_board_size()       (BOARD_SIZE + 2)
+#define board_size(b)          (BOARD_SIZE + 2)
+#define board_size2(b)         (board_size(b) * board_size(b))
+#define real_board_size2(b)    (BOARD_SIZE * BOARD_SIZE)
 #else
-#define board_size(b)  ((b)->size)
-#define board_size2(b) ((b)->size2)
-#define the_board_size()  (board_statics.size)
+#define the_board_size()       (board_statics.size)
+#define board_size(b)          ((b)->size)
+#define board_size2(b)         (board_statics.size2)
+#define real_board_size2(b)    (board_statics.real_size2)
 #endif
 
-#define real_board_size(b)  (board_size(b) - 2)
-#define real_board_size2(b) (real_board_size(b) * real_board_size(b))
+#define real_board_size(b)     (board_size(b) - 2)
 #define the_real_board_size()  (the_board_size() - 2)
+
 
 /* This is a shortcut for taking different action on smaller
  * and large boards (e.g. picking different variable defaults).
@@ -315,7 +318,7 @@ typedef struct {
 #elif BOARD_SIZE == 9
 #  define board_bits2(b_) 7
 #else
-#  define board_bits2(b_) ((b_)->bits2)
+#  define board_bits2(b_) (board_statics.bits2)
 #endif
 
 #define board_at(b_, c) ((b_)->b[c])
@@ -526,10 +529,10 @@ void board_quick_undo(board_t *b, move_t *m, board_undo_t *u);
 		board_t *board__ = board_; \
 		coord_t coord__ = coord_; \
 		coord_t c; \
-		c = coord__ - board_size(board__); do { loop_body } while (0); \
+		c = coord__ - board_size(board_); do { loop_body } while (0); \
 		c = coord__ - 1; do { loop_body } while (0); \
 		c = coord__ + 1; do { loop_body } while (0); \
-		c = coord__ + board_size(board__); do { loop_body } while (0); \
+		c = coord__ + board_size(board_); do { loop_body } while (0); \
 	} while (0)
 
 #define foreach_8neighbor(board_, coord_) \

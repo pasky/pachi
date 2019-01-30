@@ -77,8 +77,6 @@ int
 board_quick_cmp(board_t *b1, board_t *b2)
 {
 	if (b1->size != b2->size ||
-	    b1->size2 != b2->size2 ||
-	    b1->bits2 != b2->bits2 ||
 	    b1->captures[S_BLACK] != b2->captures[S_BLACK] ||
 	    b1->captures[S_WHITE] != b2->captures[S_WHITE] ||
 	    b1->moves != b2->moves) {
@@ -145,11 +143,7 @@ board_resize(board_t *board, int size)
 	assert(board_size(board) == size + 2);
 #endif
 	assert(size <= BOARD_MAX_SIZE);
-	board->size = size + 2 /* S_OFFBOARD margin */;
-	board->size2 = board_size(board) * board_size(board);
-
-	board->bits2 = 1;
-	while ((1 << board->bits2) < board->size2) board->bits2++;
+	board->size = size + 2; /* S_OFFBOARD margin */
 }
 
 board_statics_t board_statics = { 0, };
@@ -165,6 +159,10 @@ board_statics_init(board_t *board)
 	memset(bs, 0, sizeof(*bs));
 	bs->size = size;
 	bs->size2 = size * size;
+	bs->real_size2 = (size-2) * (size-2);
+
+	bs->bits2 = 1;
+	while ((1 << bs->bits2) < bs->size2)  bs->bits2++;
 	
 	/* Setup neighborhood iterators */
 	bs->nei8[0] = -size - 1; // (-1,-1)
