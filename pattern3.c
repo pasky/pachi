@@ -11,7 +11,7 @@
 static void
 pattern_record(pattern3s_t *p, int pi, char *str, hash3_t pat, int fixed_color)
 {
-	hash_t h = hash3_to_hash(pat);
+	hash3_t h = hash3_to_hash(pat);
 	while (p->hash[h & pattern3_hash_mask].pattern != pat
 	       && p->hash[h & pattern3_hash_mask].value != 0)
 		h++;
@@ -262,8 +262,9 @@ static __attribute__((constructor)) void
 p3hashes_init(void)
 {
 	/* tuned for 11482 collisions */
+	// 8577 collisions actually
 	/* XXX: tune better */
-	hash_t h = 0x35373c;
+	hash3_t h =  0x35373c;
 	for (int i = 0; i < 8; i++) {
 		for (int a = 0; a < 2; a++) {
 			p3hashes[i][a][S_NONE] = (h = h * 16803-7);

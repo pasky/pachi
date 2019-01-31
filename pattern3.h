@@ -87,10 +87,11 @@ pattern3_hash(board_t *b, coord_t c)
 	return pat;
 }
 
-static inline __attribute__((const)) hash_t
+
+static inline __attribute__((const)) hash3_t
 hash3_to_hash(hash3_t pat)
 {
-	hash_t h = 0;
+	hash3_t h = 0;
 	static const int ataribits[8] = { -1, 0, -1, 1, 2, -1, 3, -1 };
 	for (int i = 0; i < 8; i++) {
 		h ^= p3hashes[i][ataribits[i] >= 0 ? (pat >> (16 + ataribits[i])) & 1 : 0][(pat >> (i*2)) & 3];
@@ -106,7 +107,7 @@ pattern3_move_here(pattern3s_t *p, board_t *b, move_t *m, char *idx)
 #else
 	hash3_t pat = pattern3_hash(b, m->coord);
 #endif
-	hash_t h = hash3_to_hash(pat);
+	hash3_t h = hash3_to_hash(pat);
 	while (p->hash[h & pattern3_hash_mask].pattern != pat
 	       && p->hash[h & pattern3_hash_mask].value != 0)
 		h++;
