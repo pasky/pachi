@@ -105,7 +105,7 @@ hash3_to_hash(hash3_t pat)
 	for (int i = 0; i < 8; i++) {
 		h ^= p3hashes[i][ataribits[i] >= 0 ? (pat >> (16 + ataribits[i])) & 1 : 0][(pat >> (i*2)) & 3];
 	}
-	return h;
+	return (h & pattern3_hash_mask);
 }
 
 static inline bool
@@ -132,12 +132,10 @@ pattern3_move_here(pattern3s_t *p, board_t *b, move_t *m, char *idx)
 #endif
 	hash3_t h = hash3_to_hash(pat);
 
-	while (p->hash[h & pattern3_hash_mask].pattern != pat &&
-	       p->hash[h & pattern3_hash_mask].value != 0)
-		h++;
-
-	if (p->hash[h & pattern3_hash_mask].value & m->color) {
-		*idx = p->hash[h & pattern3_hash_mask].value >> 2;
+	while (p->hash[h].pattern != pat && p->hash[h].value)
+		h = (h + 1) & pattern3_hash_mask;
+	if (p->hash[h].value & m->color) {
+		*idx = p->hash[h].value >> 2;
 		return true;
 	}
 

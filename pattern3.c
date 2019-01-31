@@ -12,16 +12,21 @@ static void
 pattern_record(pattern3s_t *p, int pi, char *str, hash3_t pat, int fixed_color)
 {
 	hash3_t h = hash3_to_hash(pat);
-	while (p->hash[h & pattern3_hash_mask].pattern != pat
-	       && p->hash[h & pattern3_hash_mask].value != 0)
-		h++;
+	while (p->hash[h].pattern != pat && p->hash[h].value)
+		h = (h + 1) & pattern3_hash_mask;
+
+	p->hash[h].pattern = pat;
+	p->hash[h].value = (fixed_color ? fixed_color : 3) | (pi << 2);
+
 #if 0
-	if (h != hash3_to_hash(pat) && p->hash[h & pattern3_hash_mask].pattern != pat)
-		fprintf(stderr, "collision of %06x: %llx(%x)\n", pat, hash3_to_hash(pat)&pattern3_hash_mask, p->hash[hash3_to_hash(pat)&pattern3_hash_mask].pattern);
-#endif
-	p->hash[h & pattern3_hash_mask].pattern = pat;
-	p->hash[h & pattern3_hash_mask].value = (fixed_color ? fixed_color : 3) | (pi << 2);
-	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
+	if (h != hash3_to_hash(pat) && p->hash[h].pattern != pat)
+		fprintf(stderr, "collision of %06x: %llx(%x)\n", pat, hash3_to_hash(pat), p->hash[hash3_to_hash(pat)].pattern);
+	if (p->hash[h].pattern == pat && (p->hash[h].value >> 2) != pi)
+		fprintf(stderr, "clobbering prev pattern %#06x value %i -> %i\n", pat, 
+			(p->hash[h].value >> 2), pi);
+ 	/* Dump all patterns_record()     (including clobbers) */
+ 	// fprintf(stderr, "[%s] %06x %d %i\n", str, pat, fixed_color, pi);
+#endif	
 }
 
 static int
