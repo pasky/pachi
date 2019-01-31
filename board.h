@@ -19,7 +19,8 @@ struct ownermap;
 
 //#define BOARD_SIZE 9            /* Fixed board size, allows better optimization */
 
-#define BOARD_PAT3                /* Incremental 3x3 pattern codes */
+//#define BOARD_PAT3              /* Incremental 3x3 pattern codes */
+                                  /* XXX faster without ?! */
 
 //#define BOARD_HASH_COMPAT	  /* Enable to get same hashes as old Pachi versions. */
 
