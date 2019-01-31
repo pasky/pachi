@@ -18,7 +18,7 @@
 typedef struct {
 	int groupcts[S_MAX];
 	group_t groupids[S_MAX][4];
-	coord_t groupneis[S_MAX][4];
+	int libs;
 
 	/* This is set if this move puts a group out of _all_
 	 * liberties; we need to watch out for snapback then. */
@@ -160,10 +160,10 @@ examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_stat
 
 		/* Can we get the liberty locally? */
 		/* Yes if we are route to more liberties... */
-		if (s->groupcts[S_NONE] > 1)
+		if (s->libs > 1)
 			return false;
 		/* ...or one liberty, but not lib2. */
-		if (s->groupcts[S_NONE] > 0
+		if (s->libs > 0
 		    && !coord_is_adjecent(lib2, to))
 			return false;
 
@@ -194,7 +194,7 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 		 * we already have one outside liberty, or the group is
 		 * more than 1 stone (in that case, capturing is always
 		 * nice!). */
-		if (s->groupcts[S_NONE] > 0 || !group_is_onestone(b, g))
+		if (s->libs > 0 || !group_is_onestone(b, g))
 			return false;
 		/* ...or, it's a ko stone, */
 		if (neighbor_count_at(b, g, color) + neighbor_count_at(b, g, S_OFFBOARD) == 3) {
@@ -214,7 +214,7 @@ examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t
 	if (DEBUGL(6))
 		fprintf(stderr, "no cap group\n");
 
-	if (!s->needs_more_lib && !can_capture && !s->groupcts[S_NONE]) {
+	if (!s->needs_more_lib && !can_capture && !s->libs) {
 		/* We have no hope for more fancy tactics - this move is simply
 		 * a suicide, not even a self-atari. */
 		if (DEBUGL(6))
@@ -660,21 +660,26 @@ check_throwin(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 static void
 init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
-	memset(s, 0, sizeof(*s));
+	// memset() slower here ...
+	s->groupcts[S_BLACK] = s->groupcts[S_WHITE] = 0;
+	s->libs = immediate_liberty_count(b, to);
+	s->friend_has_no_libs = false;
+	s->needs_more_lib = 0;
+	s->needs_more_lib_except = 0;
 
 	foreach_neighbor(b, to, {
 		enum stone color = board_at(b, c);
 		group_t group = group_at(b, c);
+		if (!group) { continue; }
+
 		bool dup = false;
 		for (int i = 0; i < s->groupcts[color]; i++)
 			if (s->groupids[color][i] == group) {
 				dup = true;
 				break;
 			}
-		if (!dup) {
-			s->groupneis[color][s->groupcts[color]] = c;
-			s->groupids[color][s->groupcts[color]++] = group_at(b, c);
-		}
+		if (!dup)
+			s->groupids[color][s->groupcts[color]++] = group;
 	});	
 }
 
@@ -691,7 +696,7 @@ is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 	init_selfatari_state(b, color, to, &s);
 	
 	/* We have shortage of liberties; that's the point. */
-	assert(s.groupcts[S_NONE] <= 1);
+	assert(s.libs <= 1);
 
 	int d;
 	d = examine_friendly_groups(b, color, to, &s, flags);
