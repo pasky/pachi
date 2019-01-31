@@ -1,9 +1,12 @@
 #ifndef PACHI_PATTERN3_H
 #define PACHI_PATTERN3_H
 
-/* Fast matching of simple 3x3 patterns. */
-
 #include "board.h"
+
+#define PAT3_SHORT_CIRCUIT          /* Speedup when no stones around */
+
+
+/* Fast matching of simple 3x3 patterns. */
 
 /* (Note that this is completely independent from the general pattern
  * matching infrastructure in pattern.[ch]. This is fast and simple.) */
@@ -102,21 +105,37 @@ hash3_to_hash(hash3_t pat)
 static inline bool
 pattern3_move_here(pattern3s_t *p, board_t *b, move_t *m, char *idx)
 {
+	coord_t c = m->coord;
+	int stride = board_stride(b);
+	int c1 = board_at(b, c - stride - 1);
+	int c3 = board_at(b, c - stride + 1);
+	int c6 = board_at(b, c + stride - 1);
+	int c8 = board_at(b, c + stride + 1);
+
+#ifdef PAT3_SHORT_CIRCUIT
+	/* Nothing can match if there's no black stones or no white stones around. */
+	if (!(neighbor_count_at(b, c, S_BLACK) || (c1 == S_BLACK) || (c3 == S_BLACK) ||  (c6 == S_BLACK) ||  (c8 == S_BLACK)) ||
+	    !(neighbor_count_at(b, c, S_WHITE) || (c1 == S_WHITE) || (c3 == S_WHITE) ||  (c6 == S_WHITE) ||  (c8 == S_WHITE)) )
+		return false;
+#endif
+
 #ifdef BOARD_PAT3
 	hash3_t pat = b->pat3[m->coord];
 #else
 	hash3_t pat = pattern3_hash(b, m->coord);
 #endif
 	hash3_t h = hash3_to_hash(pat);
-	while (p->hash[h & pattern3_hash_mask].pattern != pat
-	       && p->hash[h & pattern3_hash_mask].value != 0)
+
+	while (p->hash[h & pattern3_hash_mask].pattern != pat &&
+	       p->hash[h & pattern3_hash_mask].value != 0)
 		h++;
+
 	if (p->hash[h & pattern3_hash_mask].value & m->color) {
 		*idx = p->hash[h & pattern3_hash_mask].value >> 2;
 		return true;
-	} else {
-		return false;
 	}
+
+	return false;
 }
 
 static inline hash3_t

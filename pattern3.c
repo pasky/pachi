@@ -189,6 +189,16 @@ pattern_gen(pattern3s_t *p, int pi, hash3_t pat, char *src, int srclen, int fixe
 		}
 	}
 
+#ifdef PAT3_SHORT_CIRCUIT
+	/* Check there's indeed no pattern without black stones / white stones. */
+	int stones[S_MAX] = { 0, };
+	for (int i = 0; i < 8; i++) {
+		int color = (pat >> (i*2)) & 0x3;
+		stones[color]++;
+	}
+	assert(stones[S_BLACK] && stones[S_WHITE]);
+#endif
+
 	/* Original pattern, all transpositions and rotations */
 	hash3_t transp[8];
 	pattern3_transpose(pat, &transp);
