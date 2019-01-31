@@ -69,27 +69,33 @@ static hash3_t pattern3_reverse(hash3_t pat);
 static inline hash3_t
 pattern3_hash(board_t *b, coord_t c)
 {
-	hash3_t pat = 0;
-	int x = coord_x(c), y = coord_y(c);
-	/* Stone info. */
-	pat |= (board_atxy(b, x - 1, y - 1) << 14)
-		| (board_atxy(b, x, y - 1) << 12)
-		| (board_atxy(b, x + 1, y - 1) << 10);
-	pat |= (board_atxy(b, x - 1, y) << 8)
-		| (board_atxy(b, x + 1, y) << 6);
-	pat |= (board_atxy(b, x - 1, y + 1) << 4)
-		| (board_atxy(b, x, y + 1) << 2)
-		| (board_atxy(b, x + 1, y + 1));
-	/* Atari info. */
-#define atari_atxy(b, x, y) (group_atxy(b, x, y) && board_group_info(b, group_atxy(b, x, y)).libs == 1)
-	pat |= (atari_atxy(b, x, y - 1) << 19);
-	pat |= (atari_atxy(b, x - 1, y) << 18)
-		| (atari_atxy(b, x + 1, y) << 17);
-	pat |= (atari_atxy(b, x, y + 1) << 16);
-#undef atari_atxy
-	return pat;
-}
+	int stride = board_stride(b);
 
+        int c1 = c - stride - 1;
+        int c2 = c - stride    ;
+        int c3 = c - stride + 1;
+        int c4 = c - 1;
+        int c5 = c + 1;
+        int c6 = c + stride - 1;
+        int c7 = c + stride    ;
+        int c8 = c + stride + 1;
+
+        /* Stone and atari info. */
+#define atari_at(b, c) (group_at(b, c) && board_group_info(b, group_at(b, c)).libs == 1)
+        return ((board_at(b, c1) << 14) |
+                (board_at(b, c2) << 12) |
+                (board_at(b, c3) << 10) |
+                (board_at(b, c4) << 8)  |
+                (board_at(b, c5) << 6)  |
+                (board_at(b, c6) << 4)  |
+                (board_at(b, c7) << 2)  |
+                (board_at(b, c8)     )  |
+                (atari_at(b, c2) << 19) |
+                (atari_at(b, c4) << 18) |
+                (atari_at(b, c5) << 17) |
+                (atari_at(b, c7) << 16));
+#undef atari_at
+}
 
 static inline __attribute__((const)) hash3_t
 hash3_to_hash(hash3_t pat)
