@@ -21,7 +21,7 @@
 
 #define PRIOR_BEST_N 20
 
-static void
+void
 get_node_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
@@ -126,11 +126,13 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 #ifdef DCNN
 	float   r[19 * 19];
-	coord_t best_c[DCNN_BEST_N];	
+	coord_t best_c[DCNN_BEST_N];
 	float   best_r[DCNN_BEST_N];
-	dcnn_evaluate(map->b, map->to_play, r);
+	if (!node->parent)  dcnn_evaluate(map->b, map->to_play, r);
+	else                dcnn_evaluate_quiet(map->b, map->to_play, r);
 	get_dcnn_best_moves(map->b, r, best_c, best_r, DCNN_BEST_N);
-	if (UDEBUGL(2))
+	
+	if (UDEBUGL(2) && !node->parent)
 		print_dcnn_best_moves(map->b, best_c, best_r, DCNN_BEST_N);
 	
 	foreach_free_point(map->b) {
@@ -144,6 +146,8 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 		assert(val >= 0.0 && val <= 1.0);
 		add_prior_value(map, c, 1, sqrt(val) * u->prior->dcnn_eqex);
 	} foreach_free_point_end;
+
+	node->hints |= TREE_HINT_DCNN;
 #endif
 }
 
@@ -295,7 +299,7 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 	if (u->prior->even_eqex)			uct_prior_even(u, node, map);
 	
 	/* Use dcnn for root priors */
-	if (u->prior->dcnn_eqex && !node->parent)	uct_prior_dcnn(u, node, map);
+	if (u->prior->dcnn_eqex && !u->tree_ready)	uct_prior_dcnn(u, node, map);
 
 	if (u->prior->pattern_eqex)			uct_prior_pattern(u, node, map);
 	else {  /* Fallback to old prior features if patterns are off. */

@@ -41,6 +41,7 @@ struct uct_thread_ctx {
 	unsigned long seed;
 	int games;
 	struct time_info *ti;
+	struct uct_search_state *s;
 };
 
 

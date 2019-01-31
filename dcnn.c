@@ -15,6 +15,8 @@ static bool dcnn_required = false;
 void disable_dcnn(void)  {  dcnn_enabled = false;  }
 void require_dcnn(void)  {  dcnn_required = true;  }
 
+static void detlef54_dcnn_eval(struct board *b, enum stone color, float result[]);
+
 static bool
 dcnn_supported_board_size(struct board *b)
 {
@@ -38,10 +40,23 @@ dcnn_init(struct board *b)
 }
 
 void
+dcnn_evaluate_quiet(struct board *b, enum stone color, float result[])
+{
+	detlef54_dcnn_eval(b, color, result);
+}
+
+void
 dcnn_evaluate(struct board *b, enum stone color, float result[])
 {
+	double time_start = time_now();	
+	detlef54_dcnn_eval(b, color, result);
+	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
+}
+
+static void
+detlef54_dcnn_eval(struct board *b, enum stone color, float result[])
+{
 	assert(dcnn_supported_board_size(b));
-	double time_start = time_now();
 
 	int size = real_board_size(b);
 	int dsize = 13 * size * size;
@@ -77,7 +92,6 @@ dcnn_evaluate(struct board *b, enum stone color, float result[])
 
 	caffe_get_data(data, result, 13, size);
 	free(data);
-	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
 }
 
 
@@ -104,3 +118,4 @@ print_dcnn_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100));
 	fprintf(stderr, "]\n");
 }
+

@@ -18,6 +18,7 @@
 #include "uct/prior.h"
 #include "uct/tree.h"
 #include "uct/slave.h"
+#include "dcnn.h"
 
 
 /* Allocate tree node(s). The returned nodes are initialized with zeroes.
@@ -795,12 +796,18 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 }
 
 bool
-tree_promote_at(struct tree *t, struct board *b, coord_t c)
+tree_promote_at(struct tree *t, struct board *b, coord_t c, int *reason)
 {
+	*reason = 0;
 	tree_fix_symmetry(t, b, c);
 
 	struct tree_node *n = tree_get_node(t->root, c);
 	if (!n)  return false;
+	
+	if (using_dcnn(b) && !(n->hints & TREE_HINT_DCNN)) {
+		*reason = TREE_HINT_DCNN;
+		return false;  /* No dcnn priors, can't reuse ... */
+	}
 	
 	tree_promote_node(t, &n);
 	return true;

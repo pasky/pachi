@@ -25,6 +25,7 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "uct/prior.h"
+#include "dcnn.h"
 
 
 /* Default time settings for the UCT engine. In distributed mode, slaves are
@@ -93,6 +94,9 @@ static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
 static volatile int finish_thread;
 static pthread_mutex_t finish_serializer = PTHREAD_MUTEX_INITIALIZER;
 
+static void  uct_expand_next_best_moves(struct uct *u, struct tree *t, struct board *b, enum stone color);
+static void *spawn_logger(void *ctx_);
+
 static void *
 spawn_worker(void *ctx_)
 {
@@ -112,7 +116,8 @@ spawn_worker(void *ctx_)
 		}
 	}
 
-	/* Expand root node (dcnn). Other threads wait till it's ready. */
+	/* Expand root node (dcnn). Other threads wait till it's ready. 
+	 * For dcnn pondering we also need dcnn values for opponent's best moves. */
 	struct tree *t = ctx->t;
 	struct tree_node *n = t->root;
 	if (!ctx->tid) {
@@ -120,14 +125,18 @@ spawn_worker(void *ctx_)
 		enum stone node_color = stone_other(player_color);
 		assert(node_color == t->root_color);
 		
-		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
+		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1)) {
 			tree_expand_node(t, n, ctx->b, player_color, u, 1);
+			if (u->pondering && using_dcnn(ctx->b))
+				uct_expand_next_best_moves(u, t, ctx->b, player_color);
+		}
 		else if (DEBUGL(2)) {  /* Show previously computed priors */
 			print_joseki_moves(joseki_dict, ctx->b, ctx->color);
 			print_node_prior_best_moves(ctx->b, n);
 		}
+		u->tree_ready = true;
 	}
-	else while (tree_leaf_node(n))
+	else while (!u->tree_ready)
 		     usleep(100 * 1000);
 
 	/* Run */
@@ -161,7 +170,7 @@ spawn_thread_manager(void *ctx_)
 	fast_srandom(mctx->seed);
 
 	int played_games = 0;
-	pthread_t threads[u->threads];
+	pthread_t threads[u->threads + 1];
 	int joined = 0;
 
 	uct_halt = 0;
@@ -170,6 +179,12 @@ spawn_thread_manager(void *ctx_)
 	if (u->pondering && t->nodes && t->nodes_size >= t->pruning_threshold) {
 		t->root = tree_garbage_collect(t, t->root);
 	}
+
+	u->tree_ready = false;
+		
+	/* Logging thread for pondering */
+	if (u->pondering)
+		pthread_create(&threads[u->threads], NULL, spawn_logger, mctx);
 	
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
@@ -212,10 +227,106 @@ spawn_thread_manager(void *ctx_)
 		pthread_mutex_unlock(&finish_serializer);
 	}
 
+	if (u->pondering)
+		pthread_join(threads[u->threads], NULL);
+	
 	pthread_mutex_unlock(&finish_mutex);
 
 	mctx->games = played_games;
 	return mctx;
+}
+
+/* Pondering: Logging thread */
+static void *
+spawn_logger(void *ctx_)
+{
+	struct uct_thread_ctx *ctx = ctx_;
+	struct uct *u = ctx->u;
+	struct tree *t = ctx->t;
+	struct board *b = ctx->b;
+	enum stone color = ctx->color;
+	struct uct_search_state *s = ctx->s;
+	struct time_info *ti = ctx->ti;
+
+	// Similar to uct_search() code when pondering
+	while (!uct_halt) {
+		time_sleep(TREE_BUSYWAIT_INTERVAL);
+		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
+		 * time control is broken. But if it happens to be less, we still search
+		 * at least 100ms otherwise the move is completely random. */
+
+		int i = uct_search_games(s);
+		/* Print notifications etc. */
+		uct_search_progress(u, b, color, t, ti, s, i);
+		
+		if (s->fullmem)  uct_pondering_stop(u);
+	}
+	return NULL;
+}
+
+/* Expand next move node (dcnn pondering) */
+static void
+uct_expand_next_move(struct uct *u, struct tree *t, struct board *board, enum stone color, coord_t c)
+{
+	struct tree_node *n = tree_get_node(t->root, c);
+	assert(n && tree_leaf_node(n) && !n->is_expanded);
+	
+	struct board b;
+	board_copy(&b, board);
+
+	struct move m = { .coord = c, .color = color };
+	int res = board_play(&b, &m);
+	if (res < 0) goto done;
+		
+	if (!__sync_lock_test_and_set(&n->is_expanded, 1))
+		tree_expand_node(t, n, &b, stone_other(color), u, -1);
+
+ done:  board_done_noalloc(&b);
+}
+
+/* For pondering with dcnn we need dcnn values for next move as well before
+ * search starts. Can't evaluate all of them, so guess from prior best moves +
+ * genmove's best moves for opponent. If we guess right all is well. If we
+ * guess wrong pondering will not be useful for this move, search results
+ * will be discarded. */
+static void
+uct_expand_next_best_moves(struct uct *u, struct tree *t, struct board *b, enum stone color)
+{
+	assert(using_dcnn(b));
+	struct move_queue q = { .moves = 0 };
+	
+	{  /* Prior best moves (dcnn policy mostly) */
+		int nbest = u->dcnn_pondering_prior;
+		float best_r[nbest];
+		coord_t best_c[nbest];
+		get_node_prior_best_moves(t->root, best_c, best_r, nbest);
+		assert(t->root->hints & TREE_HINT_DCNN);
+		
+		for (int i = 0; i < nbest && !is_pass(best_c[i]); i++)
+			mq_add(&q, best_c[i], 0);
+	}
+	
+	{  /* Opponent best moves from genmove search */
+		int       nbest = u->dcnn_pondering_mcts;
+		coord_t *best_c = u->dcnn_pondering_mcts_c;
+		for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
+			mq_add(&q, best_c[i], 0);
+			mq_nodup(&q);
+		}
+	}
+	
+	if (DEBUGL(2)) {  /* Show guesses. */
+		fprintf(stderr, "dcnn eval %s ", stone2str(color));
+		for (unsigned int i = 0; i < q.moves; i++)
+			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
+		fflush(stderr);
+	}
+
+	for (unsigned int i = 0; i < q.moves && !uct_halt; i++) { /* Don't hang if genmove comes in. */
+		uct_expand_next_move(u, t, b, color, q.move[i]);
+		if (DEBUGL(2)) {  fprintf(stderr, ".");  fflush(stderr);  }
+	}
+	if (DEBUGL(2)) fprintf(stderr, "\n");
 }
 
 
@@ -257,7 +368,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
 	static struct uct_thread_ctx mctx;
-	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti };
+	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti, .s = s };
 	s->ctx = &mctx;
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
@@ -581,9 +692,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 					(score > 0 ? "B+" : "W+"), fabs(score));
 			}
 			*best_coord = pass;
-			best = u->t->root->children; // pass is the first child
-			assert(is_pass(node_coord(best)));
-			return best;
+			return NULL;
 		}
 		if (UDEBUGL(0))	fprintf(stderr, "Refusing to pass: %s\n", msg);
 	}
