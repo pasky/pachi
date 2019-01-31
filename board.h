@@ -159,6 +159,7 @@ struct board {
 	int size2; /* size^2 */
 	int bits2; /* ceiling(log2(size2)) */
 	int captures[S_MAX];
+	int passes[S_MAX];
 	floating_t komi;
 	int handicap;
 	enum go_ruleset rules;
@@ -363,7 +364,7 @@ int board_cmp(struct board *b1, struct board *b2);
 int board_quick_cmp(struct board *b1, struct board *b2);
 
 /* Place given handicap on the board; coordinates are printed to f. */
-void board_handicap(struct board *board, int stones, FILE *f);
+void board_handicap(struct board *board, int stones, struct move_queue *q);
 
 /* Returns group id, 0 on allowed suicide, pass or resign, -1 on error */
 int board_play(struct board *board, struct move *m);
@@ -375,9 +376,6 @@ int board_play(struct board *board, struct move *m);
 typedef bool (*ppr_permit)(struct board *b, struct move *m, void *data);
 bool board_permit(struct board *b, struct move *m, void *data);
 void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
-
-/* Undo, supported only for pass moves. Returns -1 on error, 0 otherwise. */
-int board_undo(struct board *board);
 
 /* Returns true if given move can be played. */
 static bool board_is_valid_play(struct board *b, enum stone color, coord_t coord);
@@ -419,13 +417,12 @@ enum stone board_get_one_point_eye(struct board *board, coord_t c);
 /* Positive: W wins */
 /* Compare number of stones + 1pt eyes. */
 floating_t board_fast_score(struct board *board);
+floating_t board_score(struct board *b, int scores[S_MAX]);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
 struct move_queue;
 floating_t board_official_score(struct board *board, struct move_queue *dead);
 floating_t board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *final_ownermap);
 void       board_print_official_ownermap(struct board *b, int *final_ownermap);
-/* Used for area scoring handicap games: how many extra points to give white. */
-int board_score_handicap_compensation(struct board *b);
 
 /* Set board rules according to given string. Returns false in case
  * of unknown ruleset name. */

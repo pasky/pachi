@@ -95,110 +95,50 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
 	u->played_own = u->played_all = 0;
 }
 
-static void
-get_dead_groups(struct uct *u, struct board *b, struct move_queue *dead, struct move_queue *unclear)
-{
-	enum gj_state gs_array[board_size2(b)];
-	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
-	ownermap_judge_groups(b, &u->ownermap, &gj);
-	dead->moves = unclear->moves = 0;
-	groups_of_status(b, &gj, GS_DEAD, dead);
-	groups_of_status(b, &gj, GS_UNKNOWN, unclear);
-}
-
-/* Do we win counting, considering that given groups are dead ?
- * Assumes ownermap is well seeded. */
-static bool
-pass_is_safe(struct uct *u, struct board *b, enum stone color, struct move_queue *dead,
-	     float score_est, bool pass_all_alive, char **msg)
-{
-	int dames;
-	int final_ownermap[board_size2(b)];
-	floating_t score = board_official_score_details(b, dead, &dames, final_ownermap); 
-	if (color == S_BLACK)  score = -score;
-	//fprintf(stderr, "pass_is_safe():  %d score %f   dame: %i\n", color, score, dame);
-	//board_print_official_ownermap(b, final_ownermap);
-
-	/* Don't go to counting if position is not final.
-	 * Non-seki dames surrounded by only dames / border / one color are no dame to me,
-	 * most likely some territories are still open ... */
-	foreach_point(b) {
-		if (board_at(b, c) == S_OFFBOARD) continue;
-		if (final_ownermap[c] != 3)  continue;
-		if (ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_DAME) continue;
-
-		coord_t dame = c;
-		int around[4] = { 0, };
-		foreach_neighbor(b, dame, {
-			around[final_ownermap[c]]++;
-		});		
-		if (around[S_BLACK] + around[3] == 4 ||
-		    around[S_WHITE] + around[3] == 4 )  {
-			static char buf[100];
-			sprintf(buf, "non-final position at %s", coord2sstr(dame, b));
-			*msg = buf;
-			return false;
-		}
-	} foreach_point_end;	
-
-	/* If ownermap and official score disagree position is likely not final.
-	 * If too many dames also. */
-	if (!pass_all_alive) {
-		int max_dames = (board_large(b) ? 20 : 7);
-		*msg = "too many dames";
-		if (dames > max_dames)    return false;
-
-		/* Can disagree up to dame points, as long as there are not too many.
-		 * For example a 1 point difference with 1 dame is quite usual... */
-		int max_diff = MIN(dames, 4);
-		*msg = "score est and official score don't agree";
-		if (fabs(score - score_est) > max_diff)  return false;
-	}
-	
-	*msg = "losing on official score";
-	return (score >= 0);
-}
-
+/* Does the board look like a final position ?
+ * And do we win counting, considering that given groups are dead ?
+ * (if allow_losing_pass wasn't set) */
 bool
 uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg)
 {
-	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
-	uct_mcowner_playouts(u, b, color);
-
-	/* Save dead groups for final_status_list dead. */
-	struct move_queue unclear;
-	struct move_queue *dead = &u->dead_groups;
-	u->pass_moveno = b->moves + 1;
-	get_dead_groups(u, b, dead, &unclear);
+	/* Check this early, no need to go through the whole thing otherwise. */
+	*msg = "too early to pass";
+	if (b->moves < board_earliest_pass(b))
+		return false;
 	
-	/* Unclear groups ? */
-	*msg = "unclear groups";
-	if (unclear.moves)  return false;
+	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
+	struct move_queue dead, unclear;	
+	uct_mcowner_playouts(u, b, color);
+	get_dead_groups(b, &u->ownermap, &dead, &unclear);
 	
 	if (pass_all_alive) {
 		*msg = "need to remove opponent dead groups first";
-		for (unsigned int i = 0; i < dead->moves; i++)
-			if (board_at(b, dead->move[i]) == stone_other(color))
+		for (unsigned int i = 0; i < dead.moves; i++)
+			if (board_at(b, dead.move[i]) == stone_other(color))
 				return false;
-		dead->moves = 0; // our dead stones are alive when pass_all_alive is true
-	}
-	
-	if (u->allow_losing_pass) {
-		*msg = "unclear point, clarify first";
-		foreach_point(b) {
-			if (board_at(b, c) == S_OFFBOARD)  continue;
-			if (ownermap_judge_point(&u->ownermap, c, GJ_THRES) == PJ_UNKNOWN)
-				return false;
-		} foreach_point_end;
-		return true;
+		dead.moves = 0; // our dead stones are alive when pass_all_alive is true
 	}
 
 	/* Check score estimate first, official score is off if position is not final */
 	*msg = "losing on score estimate";
-	floating_t score = ownermap_score_est_color(b, &u->ownermap, color);
-	if (score < 0)  return false;
-
-	return pass_is_safe(u, b, color, dead, score, pass_all_alive, msg);
+	bool check_score = !u->allow_losing_pass;
+	floating_t score_est = ownermap_score_est_color(b, &u->ownermap, color);
+	if (check_score && score_est < 0)  return false;
+	
+	int final_ownermap[board_size2(b)];
+	int dames;
+	floating_t final_score = board_official_score_details(b, &dead, &dames, final_ownermap); 
+	if (color == S_BLACK)  final_score = -final_score;
+	
+	/* Don't go to counting if position is not final.
+	 * Skip extra checks for pass_all_alive in case there are
+	 * positions which don't pass them (too many sekis for example). */
+	if (!board_position_final_full(b, &u->ownermap, &dead, &unclear, score_est,
+				       final_ownermap, dames, final_score, msg, !pass_all_alive))
+		return false;
+	
+	*msg = "losing on official score";
+	return (check_score ? final_score >= 0 : true);
 }
 
 static void
@@ -283,19 +223,6 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 }
 
 static char *
-uct_undo(struct engine *e, struct board *b)
-{
-	struct uct *u = e->data;
-
-	if (!u->t) return NULL;
-	uct_pondering_stop(u);
-	u->initial_extra_komi = u->t->extra_komi;
-	reset_state(u);
-	u->pass_moveno = 0;
-	return NULL;
-}
-
-static char *
 uct_result(struct engine *e, struct board *b)
 {
 	struct uct *u = e->data;
@@ -371,8 +298,7 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 	uct_mcowner_playouts(u, b, S_BLACK);
 	if (DEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
-	struct move_queue unclear;
-	get_dead_groups(u, b, dead, &unclear);
+	get_dead_groups(b, &u->ownermap, dead, NULL);
 	print_dead_groups(u, b, dead);
 }
 
@@ -386,19 +312,18 @@ uct_stop(struct engine *e)
 	uct_pondering_stop(u);
 }
 
+/* This is called on engine reset, especially when clear_board
+ * is received and new game should begin. */
 static void
 uct_done(struct engine *e)
 {
-	/* This is called on engine reset, especially when clear_board
-	 * is received and new game should begin. */
-	free(e->comment);
-
 	struct uct *u = e->data;
-	uct_pondering_stop(u);
-	if (u->t) reset_state(u);
-	if (u->dynkomi) u->dynkomi->done(u->dynkomi);
 
-	if (u->policy) u->policy->done(u->policy);
+	free(u->banner);
+	uct_pondering_stop(u);
+	if (u->t)             reset_state(u);
+	if (u->dynkomi)       u->dynkomi->done(u->dynkomi);
+	if (u->policy)        u->policy->done(u->policy);
 	if (u->random_policy) u->random_policy->done(u->random_policy);
 	playout_policy_done(u->playout);
 	uct_prior_done(u->prior);
@@ -549,22 +474,6 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 	 * the last genmove issued. */
 	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
 	setup_dynkomi(u, b, color);
-
-	if (b->rules == RULES_JAPANESE)
-		u->territory_scoring = true;
-
-	/* Make pessimistic assumption about komi for Japanese rules to
-	 * avoid losing by 0.5 when winning by 0.5 with Chinese rules.
-	 * The rules usually give the same winner if the integer part of komi
-	 * is odd so we adjust the komi only if it is even (for a board of
-	 * odd size). We are not trying  to get an exact evaluation for rare
-	 * cases of seki. For details see http://home.snafu.de/jasiek/parity.html */
-	if (u->territory_scoring && (((int)floor(b->komi) + board_size(b)) & 1)) {
-		b->komi += (color == S_BLACK ? 1.0 : -1.0);
-		if (UDEBUGL(0))
-			fprintf(stderr, "Setting komi to %.1f assuming Japanese rules\n",
-				b->komi);
-	}
 }
 
 static void
@@ -646,19 +555,26 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 }
 
 void
-uct_get_best_moves(struct tree *t, coord_t *best_c, float *best_r, int nbest, bool winrates)
+uct_get_best_moves_at(struct uct *u, struct tree_node *parent, coord_t *best_c, float *best_r, int nbest, bool winrates)
 {
 	struct tree_node* best_d[nbest];
-	for (int i = 0; i < nbest; i++)  best_c[i] = pass;
-	for (int i = 0; i < nbest; i++)  best_r[i] = 0;
+	for (int i = 0; i < nbest; i++)  {
+		best_c[i] = pass;  best_r[i] = 0;  best_d[i] = NULL;
+	}
 	
 	/* Find best moves */
-	for (struct tree_node *n = t->root->children; n; n = n->sibling)
+	for (struct tree_node *n = parent->children; n; n = n->sibling)
 		best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_d, nbest);
 
 	if (winrates)  /* Get winrates */
-		for (int i = 0; i < nbest && best_c[i] != pass; i++)
-			best_r[i] = tree_node_get_value(t, 1, best_d[i]->u.value);
+		for (int i = 0; i < nbest && best_d[i]; i++)
+			best_r[i] = tree_node_get_value(u->t, 1, best_d[i]->u.value);
+}
+
+void
+uct_get_best_moves(struct uct *u, coord_t *best_c, float *best_r, int nbest, bool winrates)
+{
+	uct_get_best_moves_at(u, u->t->root, best_c, best_r, nbest, winrates);
 }
 
 /* Kindof like uct_genmove() but find the best candidates */
@@ -673,7 +589,7 @@ uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum sto
 	
 	coord_t best_coord;
 	genmove(e, b, ti, color, 0, &best_coord);
-	uct_get_best_moves(u->t, best_c, best_r, nbest, true);
+	uct_get_best_moves(u, best_c, best_r, nbest, true);
 
 	if (u->t)	
 		reset_state(u);
@@ -776,7 +692,7 @@ uct_state_init(char *arg, struct board *b)
 {
 	struct uct *u = calloc2(1, sizeof(struct uct));
 	bool pat_setup = false;
-
+	
 	u->debug_level = debug_level;
 	u->reportfreq = 1000;
 	u->gamelen = MC_GAMELEN;
@@ -903,10 +819,6 @@ uct_state_init(char *arg, struct board *b)
 				 * but losing situation, to be scored as a loss
 				 * for us. */
 				u->allow_losing_pass = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "territory_scoring")) {
-				/* Use territory scoring (default is area scoring).
-				 * An explicit kgs-rules command overrides this. */
-				u->territory_scoring = !optval || atoi(optval);
 			} else if (!strcasecmp(optname, "stones_only")) {
 				/* Do not count eyes. Nice to teach go to kids.
 				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
@@ -930,15 +842,17 @@ uct_state_init(char *arg, struct board *b)
 					u->debug_after.level = 9;
 					u->debug_after.playouts = 1000;
 				}
-			} else if (!strcasecmp(optname, "banner") && optval) {
-				/* Additional banner string. This must come as the
-				 * last engine parameter. You can use '+' instead
-				 * of ' ' if you are wrestling with kgsGtp. */
+			} else if ((!strcasecmp(optname, "banner") && optval) ||
+				   (!strcasecmp(optname, "comment") && optval)) {
+				/* Set message displayed at game start on kgs.
+				 * Default is "Pachi %s, Have a nice game !"
+				 * '%s' is replaced by Pachi version.
+				 * This must come as the last engine parameter.
+				 * You can use '+' instead of ' ' if you are wrestling with kgsGtp. */
 				if (*next) *--next = ',';
 				u->banner = strdup(optval);
-				for (char *b = u->banner; *b; b++) {
+				for (char *b = u->banner; *b; b++)
 					if (*b == '+') *b = ' ';
-				}
 				break;
 #ifdef PACHI_PLUGINS
 			} else if (!strcasecmp(optname, "plugin") && optval) {
@@ -1388,6 +1302,7 @@ uct_state_init(char *arg, struct board *b)
 	}
 
 	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
+	if (!u->banner)                 u->banner = strdup("Pachi %s, Have a nice game !");
 
 	if (using_dcnn(b)) {
 		/* dcnn hack: always reset state to make dcnn priors kick in.
@@ -1399,7 +1314,7 @@ uct_state_init(char *arg, struct board *b)
 			u->pondering_opt = false;
 		}
 	}
-
+	
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
 	/* This will be initialized in setup_state() at the first move
@@ -1409,16 +1324,14 @@ uct_state_init(char *arg, struct board *b)
 	return u;
 }
 
-struct engine *
-engine_uct_init(char *arg, struct board *b)
+void
+engine_uct_init(struct engine *e, char *arg, struct board *b)
 {
 	struct uct *u = uct_state_init(arg, b);
-	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "UCT";
 	e->board_print = uct_board_print;
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;
-	e->undo = uct_undo;
 	e->result = uct_result;
 	e->genmove = uct_genmove;
 #ifdef DISTRIBUTED
@@ -1434,13 +1347,5 @@ engine_uct_init(char *arg, struct board *b)
 	e->ownermap = uct_ownermap;
 	e->livegfx_hook = uct_livegfx_hook;
 	e->data = u;
-
-	const char banner[] = "If you believe you have won but I am still playing, "
-		"please help me understand by capturing all dead stones. "
-		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
-	if (!u->banner) u->banner = "";
-	e->comment = malloc2(sizeof(banner) + strlen(u->banner) + 1);
-	sprintf(e->comment, "%s %s", banner, u->banner);
-
-	return e;
+	e->comment = u->banner;
 }

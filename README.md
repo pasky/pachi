@@ -155,7 +155,7 @@ will remain the same:
 
 **Other Options**
 
-* `pachi resign_threshold=0.25`     Resign when winrate < 25% (default: 10%).
+* `pachi resign_threshold=0.25`     Resign when winrate < 25% (default: 20%).
 
 * `pachi -t 10 threads=4,max_tree_size=100`
 

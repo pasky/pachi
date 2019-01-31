@@ -268,27 +268,28 @@ joseki_load(int bsize)
 
 	joseki_dict = joseki_init(bsize);
 
-	gtp_played_games_reset();
 	int saved_debug_level = debug_level;
 	debug_level = 0;   /* quiet */
 	struct board *b = board_new(bsize, NULL);
-	struct engine *e = engine_josekiscan_init(NULL, NULL);
+	struct engine e;  engine_init(&e, E_JOSEKISCAN, NULL, NULL);
 	struct time_info ti_default = { .period = TT_NULL };
 	struct time_info ti[S_MAX] = { [S_BLACK] = ti_default, [S_WHITE] = ti_default };
 	char buf[4096];
+	gtp_t gtp;  gtp_init(&gtp);
 	for (int lineno = 1; fgets(buf, 4096, f); lineno++) {
 		if (bsize != 19+2 && convert_coords(bsize, buf) < 0)
 			skip_sequence(buf, 4096, f, &lineno);
 
-		enum parse_code c = gtp_parse_full(b, e, ti, buf, GTP_NO_REPLY);
+		gtp.quiet = true;
+		enum parse_code c = gtp_parse(&gtp, b, &e, NULL, ti, buf);  /* quiet */
 		/* TODO check gtp command didn't gtp_error() also, will still return P_OK on error ... */
 		if (c != P_OK && c != P_ENGINE_RESET)
 			die("%s:%i  gtp command '%s' failed, aborting.\n", fname, lineno, buf);		
 	}
-	engine_done(e);
+	engine_done(&e);
 	board_done(b);
 	debug_level = saved_debug_level;
-	int variations = gtp_played_games();  gtp_played_games_reset();
+	int variations = gtp.played_games;
 	
 	if (DEBUGL(2))  fprintf(stderr, "Loaded joseki dictionary for %ix%i (%i variations).\n", bsize-2, bsize-2, variations);
 	if (DEBUGL(3))  joseki_stats(joseki_dict);
@@ -467,11 +468,12 @@ joseki_rate_moves(struct joseki_dict *jdict, struct board *b, enum stone color,
 }
 
 void
-find_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matches,
+get_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matches,
 		       coord_t *best_c, float *best_r, int nbest)
 {
-	for (int i = 0; i < nbest; i++)
-		best_c[i] = pass;
+	for (int i = 0; i < nbest; i++) {
+		best_c[i] = pass;  best_r[i] = 0;
+	}
 	
 	for (int i = 0; i < matches; i++)
 		best_moves_add(coords[i], ratings[i], best_c, best_r, nbest);
@@ -480,14 +482,9 @@ find_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int mat
 void
 print_joseki_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
 {
-	int cols = fprintf(stderr, "joseki =   [ ");
-	for (int i = 0; i < nbest; i++) {
-		char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i], b));
-		fprintf(stderr, "%-3s ", str);
-	}
-	fprintf(stderr, "]\n");
+	int cols = best_moves_print(b, "joseki =   ", best_c, nbest);	
 
-	fprintf(stderr, "%*s[ ", cols-2, "");
+	fprintf(stderr, "%*s[ ", cols, "");
 	for (int i = 0; i < nbest; i++)
 		fprintf(stderr, "%-3i ", (int)(best_r[i] * 100.0));
 	fprintf(stderr, "]\n");
@@ -506,7 +503,7 @@ print_joseki_moves(struct joseki_dict *jdict, struct board *b, enum stone color)
 	int nbest = 20;
 	float best_r[20] = { 0.0, };
 	coord_t best_c[20];
-	find_joseki_best_moves(b, coords, ratings, n, best_c, best_r, nbest);
+	get_joseki_best_moves(b, coords, ratings, n, best_c, best_r, nbest);
 	print_joseki_best_moves(b, best_c, best_r, nbest);
 }
 

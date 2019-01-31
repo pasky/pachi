@@ -73,9 +73,9 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	pp->matched_locally = -1;  // Invalidate
 	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
 
-	float best_r[20] = { 0.0, };
+	float best_r[20];
 	coord_t best_c[20];
-	find_pattern_best_moves(b, probs, best_c, best_r, 20);
+	get_pattern_best_moves(b, probs, best_c, best_r, 20);
 	print_pattern_best_moves(b, best_c, best_r, 20);
 	if (pp->debug_level >= 4)
 		debug_pattern_best_moves(pp, b, color, best_c, 20);
@@ -107,7 +107,7 @@ patternplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, 
 	pp->matched_locally = pattern_matching_locally(&pp->pc, b, color, &ownermap);
 	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
 
-	find_pattern_best_moves(b, probs, best_c, best_r, nbest);
+	get_pattern_best_moves(b, probs, best_c, best_r, nbest);
 	print_pattern_best_moves(b, best_c, best_r, nbest);
 }
 
@@ -193,17 +193,14 @@ patternplay_state_init(char *arg)
 	return pp;
 }
 
-struct engine *
-engine_patternplay_init(char *arg, struct board *b)
+void
+engine_patternplay_init(struct engine *e, char *arg, struct board *b)
 {
 	struct patternplay *pp = patternplay_state_init(arg);
-	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "PatternPlay Engine";
 	e->comment = "I select moves blindly according to learned patterns. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = patternplay_genmove;
 	e->best_moves = patternplay_best_moves;
 	e->evaluate = patternplay_evaluate;
 	e->data = pp;
-
-	return e;
 }

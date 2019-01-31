@@ -170,10 +170,10 @@ print_avg_stats(strbuf_t *buf, char *title, int scale,
 }
 
 static void
-print_topn_stats(strbuf_t *buf, int *guessed_top, int total)
+print_topn_stats(strbuf_t *buf, int *guessed_top, int total, int games)
 {
 	#define PREDICT_SCALE  3/4
-	sbprintf(buf, "Topn stats: (Games: %i)\n", gtp_played_games());
+	sbprintf(buf, "Topn stats: (Games: %i)\n", games);
 	int pc = round(guessed_top[0] * 100 / total);
 	sbprintf(buf, "Predicted   : %5i/%-5i moves (%2i%%)  %.*s\n",
 		guessed_top[0], total, pc, pc * PREDICT_SCALE, stars);
@@ -211,7 +211,7 @@ print_prob_stats(strbuf_t *buf, int *guessed_by_prob, int *total_by_prob)
 
 
 static char *
-predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r)
+predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r, int games)
 {
 	static int total_ = 0;
 	int total = ++total_;
@@ -254,7 +254,7 @@ predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r)
 		print_prob_stats(buf, guessed_by_prob, total_by_prob);
 		print_avg_stats(buf, "Average log values:", 50, RESCALE_LOG(PROB_MAX), log_probs_sum, log_devs_sum, total);
 		print_avg_stats(buf, "Average values:",     50, PROB_MAX,              probs_sum,     devs_sum,     total);
-		print_topn_stats(buf, guessed_top, total);
+		print_topn_stats(buf, guessed_top, total, games);
 		
 		return buf->str;
 	}
@@ -262,7 +262,7 @@ predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r)
 }
 
 char *
-predict_move(struct board *b, struct engine *engine, struct time_info *ti, struct move *m)
+predict_move(struct board *b, struct engine *e, struct time_info *ti, struct move *m, int games)
 {
 	enum stone color = m->color;
 	
@@ -274,23 +274,21 @@ predict_move(struct board *b, struct engine *engine, struct time_info *ti, struc
 	if (DEBUGL(5))
 		fprintf(stderr, "predict move %d,%d,%d\n", m->color, coord_x(m->coord, b), coord_y(m->coord, b));
 	if (DEBUGL(1) && debug_boardprint)
-		engine_board_print(engine, b, stderr);
+		engine_board_print(e, b, stderr);
 
 	// Not bothering with timer here for now.
 
-	float   best_r[PREDICT_TOPN] = { 0.0, };
+	float   best_r[PREDICT_TOPN];
 	coord_t best_c[PREDICT_TOPN];
 	for (int i = 0; i < PREDICT_TOPN; i++)
 		best_c[i] = pass;
 	struct time_info *ti_genmove = time_info_genmove(b, ti, color);
-	engine->best_moves(engine, b, ti_genmove, color, best_c, best_r, PREDICT_TOPN);
+	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, PREDICT_TOPN);
 	//print_dcnn_best_moves(b, best_c, best_r, PREDICT_TOPN);
 
 	// Play correct expected move
-	if (board_play(b, m) < 0) {
-		fprintf(stderr, "ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, b), stone2str(m->color));
-		abort();
-	}
+	if (board_play(b, m) < 0)
+		die("ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, b), stone2str(m->color));
 
 	fprintf(stderr, "WINNER is %s in the actual game.\n", coord2sstr(m->coord, b));		
 	if (best_c[0] == m->coord)
@@ -301,8 +299,8 @@ predict_move(struct board *b, struct engine *engine, struct time_info *ti, struc
 			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], b), coord2sstr(m->coord, b));
 
 	if (DEBUGL(1) && debug_boardprint)
-		engine_board_print(engine, b, stderr);
+		engine_board_print(e, b, stderr);
 
 	// Record/show stats
-	return predict_stats(b, m, best_c, best_r);
+	return predict_stats(b, m, best_c, best_r, games);
 }

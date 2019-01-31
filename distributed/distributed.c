@@ -503,11 +503,10 @@ distributed_state_init(char *arg, struct board *b)
 	return dist;
 }
 
-struct engine *
-engine_distributed_init(char *arg, struct board *b)
+void
+engine_distributed_init(struct engine *e, char *arg, struct board *b)
 {
 	struct distributed *dist = distributed_state_init(arg, b);
-	struct engine *e = calloc2(1, sizeof(struct engine));
 	e->name = "Distributed";
 	e->comment = "If you believe you have won but I am still playing, "
 		"please help me understand by capturing all dead stones. "
@@ -519,6 +518,4 @@ engine_distributed_init(char *arg, struct board *b)
 	e->data = dist;
 	// Keep the threads and the open socket connections:
 	e->keep_on_clear = true;
-
-	return e;
 }

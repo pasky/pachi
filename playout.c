@@ -26,8 +26,7 @@ static bool
 playout_permit_move(struct playout_policy *p, struct board *b, struct move *m, bool alt, bool rnd)
 {
 	coord_t coord = m->coord;
-	if (coord == pass || coord == resign)
-		return false;
+	if (coord == pass) return false;
 
 	if (!board_permit(b, m, NULL) ||
 	    (p->permit && !p->permit(p, b, m, alt, rnd)))
@@ -200,8 +199,10 @@ playout_play_game(struct playout_setup *setup,
 		  struct ownermap *ownermap,
 		  struct playout_policy *policy)
 {
-	assert(setup && policy);
+	int starting_passes[S_MAX];
+	memcpy(starting_passes, b->passes, sizeof(starting_passes));
 
+	assert(setup && policy);
 	int gamelen = setup->gamelen - b->moves;
 
 	if (policy->setboard)
@@ -249,7 +250,17 @@ playout_play_game(struct playout_setup *setup,
 
 		random_game_loop_stuff
 	}
-
+	
+	/* Territory scoring: score starting board, using playouts as confirmation phase.
+	 * Like in a real game where players disagree about life and death:
+	 * They play it out and rewind state for scoring once agreement is reached.
+	 * Trying to score final boards directly is too noisy, random passes change the score...
+	 * TODO: handle eyes in seki according to japanese rules. */
+	if (b->rules == RULES_JAPANESE) {
+		memcpy(b->passes, starting_passes, sizeof(starting_passes));
+		b->last_move.color = stone_other(starting_color);
+	}
+	
 	floating_t score = board_fast_score(b);
 	int result = (starting_color == S_WHITE ? score * 2 : - (score * 2));
 

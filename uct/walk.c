@@ -61,7 +61,7 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	int nbest = 4;
 	float   best_r[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves(t, best_c, best_r, nbest, true);
+	uct_get_best_moves(u, best_c, best_r, nbest, true);
 
 	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
 	for (int i = 0; i < nbest; i++)
@@ -101,7 +101,7 @@ uct_progress_gogui_best(strbuf_t *buf, struct uct *u, struct tree *t, enum stone
 {
 	coord_t best_c[GOGUI_CANDIDATES];
 	float   best_r[GOGUI_CANDIDATES];
-	uct_get_best_moves(t, best_c, best_r, GOGUI_CANDIDATES, false);
+	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, false);
 	gogui_show_best_moves(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 
@@ -111,7 +111,7 @@ uct_progress_gogui_winrates(strbuf_t *buf, struct uct *u, struct tree *t, enum s
 {
 	coord_t best_c[GOGUI_CANDIDATES];
 	float   best_r[GOGUI_CANDIDATES];
-	uct_get_best_moves(t, best_c, best_r, GOGUI_CANDIDATES, true);
+	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, true);
 	gogui_show_winrates(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 
@@ -403,7 +403,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 		LTREE_DEBUG fprintf(stderr, "%s[%s %1.3f][%d] ",
 			coord2sstr(node_coord(descent[di].node), t->board),
 			stone2str(color), rval, descent[di].node->d);
-		lnode = tree_get_node(t, lnode, node_coord(descent[di++].node), true);
+		lnode = tree_get_node2(t, lnode, node_coord(descent[di++].node), true);
 		assert(lnode);
 		stats_add_result(&lnode->u, rval, pval);
 	}
@@ -412,7 +412,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	if (di < dlen) {
 		double rval = u->local_tree_eval != LTE_EACH ? sval : 0.5;
 		LTREE_DEBUG fprintf(stderr, "pass ");
-		lnode = tree_get_node(t, lnode, pass, true);
+		lnode = tree_get_node2(t, lnode, pass, true);
 		assert(lnode);
 		stats_add_result(&lnode->u, rval, pval);
 	}

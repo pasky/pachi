@@ -198,7 +198,7 @@ else
                 # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
                 # and requires --whole-archive for static linking. This makes binaries unnecessarily
                 # bloated. Choose normal, nohdf5, or mini (mini is best)
-                # mini source: https://github.com/lemonsqueeze/mingw-caffe/tree/mini
+                # mini source: https://github.com/lemonsqueeze/caffe/tree/mini
 		CAFFE=normal
 
 		ifeq ($(CAFFE), normal)
@@ -278,7 +278,7 @@ unexport INCLUDES
 INCLUDES=-I.
 
 OBJS = $(EXTRA_OBJS) \
-       board.o gogui.o gtp.o joseki.o move.o ownermap.o pachi.o pattern3.o pattern.o patternsp.o \
+       board.o engine.o gogui.o gtp.o joseki.o move.o ownermap.o pachi.o pattern3.o pattern.o patternsp.o \
        patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o
 
 # Low-level dependencies last

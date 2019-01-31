@@ -558,24 +558,21 @@ break_symmetry:
 }
 
 
-void
-board_handicap_stone(struct board *board, int x, int y, FILE *f)
+static void
+board_handicap_stone(struct board *board, int x, int y, struct move_queue *q)
 {
 	struct move m;
 	m.color = S_BLACK; m.coord = coord_xy(board, x, y);
 
-	board_play(board, &m);
+	int r = board_play(board, &m);  assert(r >= 0);
 
-	char *str = coord2str(m.coord, board);
-	if (DEBUGL(1))
-		fprintf(stderr, "choosing handicap %s (%d,%d)\n", str, x, y);
-	if (f) fprintf(f, "%s ", str);
-	free(str);
+	if (q)  mq_add(q, m.coord, 0);
 }
 
 void
-board_handicap(struct board *board, int stones, FILE *f)
+board_handicap(struct board *board, int stones, struct move_queue *q)
 {
+	assert(stones <= 9);
 	int margin = 3 + (board_size(board) >= 13);
 	int min = margin;
 	int mid = board_size(board) / 2;
@@ -590,13 +587,13 @@ board_handicap(struct board *board, int stones, FILE *f)
 	board->handicap = stones;
 
 	if (stones == 5 || stones == 7) {
-		board_handicap_stone(board, mid, mid, f);
+		board_handicap_stone(board, mid, mid, q);
 		stones--;
 	}
 
 	int i;
 	for (i = 0; i < stones; i++)
-		board_handicap_stone(board, places[i][0], places[i][1], f);
+		board_handicap_stone(board, places[i][0], places[i][1], q);
 }
 
 
@@ -1203,12 +1200,12 @@ board_play_(struct board *board, struct move *m, struct board_undo *u)
 
 	if (u) undo_init(board, m, u);
 	
-	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) {
-		if (is_pass(m->coord) && board->rules == RULES_SIMING) {
-			/* On pass, the player gives a pass stone
-			 * to the opponent. */
+	if (unlikely(is_pass(m->coord))) {
+		board->passes[m->color]++;
+		/* On pass, the player gives a pass stone to the opponent. */
+		if (is_pass(m->coord) && board->rules == RULES_SIMING)
 			board->captures[stone_other(m->color)]++;
-		}
+		
 		struct move nomove = { pass, S_NONE };
 		board->ko = nomove;
 		if (!u) { 
@@ -1435,11 +1432,12 @@ board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 	b->ko = u->ko;
 	b->last_ko = u->last_ko;
 	b->last_ko_age = u->last_ko_age;
+	b->moves--;	
 	
-	if (unlikely(is_pass(m->coord) || is_resign(m->coord))) 
+	if (unlikely(is_pass(m->coord))) {
+		b->passes[m->color]--;
 		return;
-
-	b->moves--;
+	}
 
 	if (likely(board_at(b, m->coord) == m->color))
 		board_undo_stone(b, u, m);
@@ -1449,25 +1447,6 @@ board_quick_undo(struct board *b, struct move *m, struct board_undo *u)
 		assert(0);	/* Anything else doesn't make sense */
 }
 
-
-/* Undo, supported only for pass moves. This form of undo is required by KGS
- * to settle disputes on dead groups. See also fast_board_undo() */
-int board_undo(struct board *board)
-{
-	if (!is_pass(board->last_move.coord))
-		return -1;
-	if (board->rules == RULES_SIMING) {
-		/* Return pass stone to the passing player. */
-		board->captures[stone_other(board->last_move.color)]--;
-	}
-	board->last_move = board->last_move2;
-	board->last_move2 = board->last_move3;
-	board->last_move3 = board->last_move4;
-	board->moves--;
-	if (board->last_ko_age == board->moves)
-		board->ko = board->last_ko;
-	return 0;
-}
 
 bool
 board_permit(struct board *b, struct move *m, void *data)
@@ -1551,13 +1530,11 @@ board_get_one_point_eye(struct board *board, coord_t coord)
 		return S_NONE;
 }
 
-
 floating_t
 board_fast_score(struct board *board)
 {
-	int scores[S_MAX];
-	memset(scores, 0, sizeof(scores));
-
+	int scores[S_MAX] = { 0, };
+	
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
 		if (color == S_NONE && board->rules != RULES_STONES_ONLY)
@@ -1566,8 +1543,7 @@ board_fast_score(struct board *board)
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
 
-	int handi_comp = board_score_handicap_compensation(board);
-	return board->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
+	return board_score(board, scores);
 }
 
 /* Owner map: 0: undecided; 1: black; 2: white; 3: dame */
@@ -1619,7 +1595,7 @@ board_tromp_taylor_iter(struct board *board, int *ownermap)
 	return needs_update;
 }
 
-int
+static int
 board_score_handicap_compensation(struct board *b)
 {
 	switch (b->rules) {		
@@ -1636,6 +1612,21 @@ board_score_handicap_compensation(struct board *b)
 	}
 	
 	assert(0);  /* not reached */
+}
+
+/* Score from white perspective, taking rules / handicap into account.
+ * scores[]: number of points controlled by black/white. */
+floating_t
+board_score(struct board *b, int scores[S_MAX])
+{
+	int handi_comp = board_score_handicap_compensation(b);
+	floating_t score = b->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
+
+	/* Aja's formula for converting playouts area scoring to territory.
+	 * http://computer-go.org/pipermail/computer-go/2010-April/000209.html */
+	if (b->rules == RULES_JAPANESE)
+		score += (b->last_move.color == S_BLACK) + (b->passes[S_WHITE] - b->passes[S_BLACK]);
+	return score;
 }
 
 void
@@ -1697,8 +1688,7 @@ board_official_score_details(struct board *board, struct move_queue *dead, int *
 	} foreach_point_end;
 	*dames = scores[3];
 
-	int handi_comp = board_score_handicap_compensation(board);
-	return board->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
+	return board_score(board, scores);
 }
 
 floating_t

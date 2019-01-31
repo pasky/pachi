@@ -17,6 +17,7 @@
 #include "engines/patternscan.h"
 #include "engines/patternplay.h"
 #include "engines/josekiscan.h"
+#include "engines/josekiplay.h"
 #include "engines/dcnn.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
@@ -44,45 +45,33 @@ int seed;
 char *forced_ruleset = NULL;
 bool nopassfirst = false;
 
-enum engine_id {
-	E_RANDOM,
-	E_REPLAY,
-	E_PATTERNSCAN,
-	E_PATTERNPLAY,
-	E_MONTECARLO,
-	E_UCT,
+static engine_init_t engine_inits[E_MAX] = {
+	[ E_RANDOM ]      = engine_random_init,
+	[ E_REPLAY ]      = engine_replay_init,
+	[ E_PATTERNSCAN ] = engine_patternscan_init,
+	[ E_PATTERNPLAY ] = engine_patternplay_init,
+	[ E_JOSEKISCAN ]  = engine_josekiscan_init,
+	[ E_JOSEKIPLAY ]  = engine_josekiplay_init,
+	[ E_MONTECARLO ]  = engine_montecarlo_init,
+	[ E_UCT ]         = engine_uct_init,
 #ifdef DISTRIBUTED
-	E_DISTRIBUTED,
+	[ E_DISTRIBUTED ] = engine_distributed_init,
 #endif
 #ifdef DCNN
-	E_DCNN,
-#endif
-	E_MAX,
-};
-
-static engine_init_t engine_init[E_MAX] = {
-	engine_random_init,
-	engine_replay_init,
-	engine_patternscan_init,
-	engine_patternplay_init,
-	engine_montecarlo_init,
-	engine_uct_init,
-#ifdef DISTRIBUTED
-	engine_distributed_init,
-#endif
-#ifdef DCNN
-	engine_dcnn_init,
+	[ E_DCNN ]        = engine_dcnn_init,
 #endif
 };
 
-static struct engine *
-init_engine(enum engine_id engine, char *e_arg, struct board *b)
+void
+pachi_engine_init(struct engine *e, int id, char *e_arg, struct board *b)
 {
-	char *arg = e_arg? strdup(e_arg) : e_arg;
-	assert(engine < E_MAX);
-	struct engine *e = engine_init[engine](arg, b);
-	if (arg) free(arg);
-	return e;
+	assert(id >= 0 && id < E_MAX);
+	
+	memset(e, 0, sizeof(*e));
+	char *arg = (e_arg ? strdup(e_arg) : e_arg);
+	engine_inits[id](e, arg, b);
+	e->id = id;
+	if (arg)  free(arg);
 }
 
 static void
@@ -91,36 +80,46 @@ usage()
 	fprintf(stderr, "Usage: pachi [OPTIONS] [ENGINE_ARGS]\n\n");
 	fprintf(stderr,
 		"Options: \n"
-		"  -c, --chatfile FILE               set kgs chatfile \n"
                 "      --compile-flags               show pachi's compile flags \n"
-		"  -d, --debug-level LEVEL           set debug level \n"
-		"  -D                                don't log board diagrams \n"
-		"      --nopassfirst                 don't pass first (needed for kgs) \n"
 		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
 		"                                    uct, dcnn, patternplay, replay, random, montecarlo, distributed \n"
+		"  -h, --help                        show usage \n"
+		"  -s, --seed RANDOM_SEED            set random seed \n"
+		"  -u, --unit-test FILE              run unit tests \n"
+		"  -v, --version                     show version \n"
+		" \n"
+		"Gameplay: \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
+		"      --nopassfirst                 don't pass first (needed for kgs) \n"
+		"      --noundo                      undo only allowed for pass \n"
+		"  -r, --rules RULESET               rules to use: (default chinese) \n"
+		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
+		"KGS: \n"
+		"  -c, --chatfile FILE               set kgs chatfile \n"
+		"      --kgs                         use this when playing on kgs \n"
+		" \n"
+		"Logs / IO: \n"
+		"  -d, --debug-level LEVEL           set debug level \n"
+		"  -D                                don't log board diagrams \n"
 		"  -g, --gtp-port [HOST:]GTP_PORT    read gtp commands from network instead of stdin. \n"
 		"                                    listen on given port if HOST not given, otherwise \n"
 		"                                    connect to remote host. \n"
-		"  -h, --help                        show usage \n"
-		"      --kgs                         turn on kgs-specific behavior (currently --nopassfirst) \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
-		"  -r, --rules RULESET               rules to use: (default chinese) \n"
-		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
-		"  -s, --seed RANDOM_SEED            set random seed \n"
-		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
-		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
-		"  -u, --unit-test FILE              run unit tests \n"
 		"      --verbose-caffe               enable caffe logging \n"
-		"  -v, --version                     show version \n"
 		" \n"
 		"Engine components: \n"
 		"      --dcnn,     --nodcnn          dcnn required / disabled \n"
 		"      --patterns, --nopatterns      mm patterns required / disabled \n"
 		"      --joseki,   --nojoseki        joseki engine required / disabled \n"
 		" \n"
-		"TIME_SETTINGS: \n"
+		"Time settings: \n"
+		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
+		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
+		"      --fuseki MOVES                set fuseki length for --fuseki-time \n"
+		"                                    default: 19x19: 20  15x15: 10  13x13: 7  9x9: 4 \n"
+		" \n"
+		"  TIME_SETTINGS: \n"
 		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
 		"                  Pachi will play fast on a fast computer, slow on a slow computer, \n"
 		"                  but strength will remain the same. \n"
@@ -131,17 +130,22 @@ usage()
 		"                  unexpected slowdowns. This is the same as one-period japanese byoyomi. \n"
 		"  _SECS           absolute time: use fixed number of seconds for the whole game\n"
 		" \n"
-		"  Examples:       pachi -t =5000            5000 simulations per move \n"
-		"                  pachi -t =5000:15000      max 15000 simulations per move \n"
-		"                  pachi -t 20               20s per move \n"
-		"                  pachi -t _600             10min game, sudden death \n"
+		"Engine args: \n"
+		"  Comma separated engine specific options, as in:\n"
+		"      pachi --nodcnn threads=8,max_tree_size=3072,pondering \n"
+		"  See respective engines for details. Most common options for uct: \n"
+		"\n"
+		"      max_tree_size=100             use up to 100 Mb of memory for tree search \n"
+		"      resign_threshold=0.25         resign if winrate < 25%% (default: 20%%) \n"
+		"      threads=4                     use 4 threads for tree search (default: #cores) \n"
+		"      pondering                     think during opponent turn (nodcnn only, default: no) \n"
 		" \n");
 }
 
 static void
 show_version(FILE *s)
 {
-	fprintf(s, "Pachi version %s\n", PACHI_VERSION);
+	fprintf(s, "Pachi %s\n", PACHI_VERSION);
 	if (!DEBUGL(2)) return;
 
 	fprintf(s, "git %s\n", PACHI_VERGIT);
@@ -164,8 +168,12 @@ show_version(FILE *s)
 #define OPT_NOPATTERNS    263
 #define OPT_JOSEKI        264
 #define OPT_NOJOSEKI      265
+#define OPT_FUSEKI        266
+#define OPT_NOUNDO        267
+#define OPT_KGS           268
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
+	{ "fuseki",      required_argument, 0, OPT_FUSEKI },
 	{ "chatfile",    required_argument, 0, 'c' },
 	{ "compile-flags", no_argument,     0, OPT_COMPILE_FLAGS },
 	{ "debug-level", required_argument, 0, 'd' },
@@ -175,10 +183,11 @@ static struct option longopts[] = {
 	{ "joseki",      no_argument,       0, OPT_JOSEKI },
 	{ "gtp-port",    required_argument, 0, 'g' },
 	{ "help",        no_argument,       0, 'h' },
-	{ "kgs",         no_argument,       0, OPT_NOPASSFIRST },
+	{ "kgs",         no_argument,       0, OPT_KGS },
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
 	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
+	{ "noundo",      no_argument,       0, OPT_NOUNDO },
 	{ "nojoseki",    no_argument,       0, OPT_NOJOSEKI },
 	{ "nopassfirst", no_argument,       0, OPT_NOPASSFIRST },
 	{ "nopatterns",  no_argument,       0, OPT_NOPATTERNS },
@@ -195,8 +204,8 @@ static struct option longopts[] = {
 int main(int argc, char *argv[])
 {
 	pachi_exe = argv[0];
-	enum engine_id engine = E_UCT;
-	struct time_info ti_default = { .period = TT_NULL };	
+	enum engine_id engine_id = E_UCT;
+	struct time_info ti_default = { .period = TT_NULL };
 	char *testfile = NULL;
 	char *gtp_port = NULL;
 	char *log_port = NULL;
@@ -210,9 +219,11 @@ int main(int argc, char *argv[])
 	setlinebuf(stderr);
 
 	win_set_pachi_cwd(argv[0]);
-	
 	seed = time(NULL) ^ getpid();
 
+	gtp_t maingtp, *gtp = &maingtp;
+	gtp_init(gtp);
+	
 	int opt;
 	int option_index;
 	/* Leading ':' -> we handle error messages. */
@@ -227,17 +238,17 @@ int main(int argc, char *argv[])
 				printf("Command:\n%s\n", PACHI_CC1);
 				exit(0);
 			case 'e':
-				if      (!strcasecmp(optarg, "random"))		engine = E_RANDOM;
-				else if (!strcasecmp(optarg, "replay"))		engine = E_REPLAY;
-				else if (!strcasecmp(optarg, "montecarlo"))	engine = E_MONTECARLO;
-				else if (!strcasecmp(optarg, "uct"))		engine = E_UCT;
+				if      (!strcasecmp(optarg, "random"))		engine_id = E_RANDOM;
+				else if (!strcasecmp(optarg, "replay"))		engine_id = E_REPLAY;
+				else if (!strcasecmp(optarg, "montecarlo"))	engine_id = E_MONTECARLO;
+				else if (!strcasecmp(optarg, "uct"))		engine_id = E_UCT;
 #ifdef DISTRIBUTED
-				else if (!strcasecmp(optarg, "distributed"))	engine = E_DISTRIBUTED;
+				else if (!strcasecmp(optarg, "distributed"))	engine_id = E_DISTRIBUTED;
 #endif
-				else if (!strcasecmp(optarg, "patternscan"))	engine = E_PATTERNSCAN;
-				else if (!strcasecmp(optarg, "patternplay"))	engine = E_PATTERNPLAY;
+				else if (!strcasecmp(optarg, "patternscan"))	engine_id = E_PATTERNSCAN;
+				else if (!strcasecmp(optarg, "patternplay"))	engine_id = E_PATTERNPLAY;
 #ifdef DCNN
-				else if (!strcasecmp(optarg, "dcnn"))		engine = E_DCNN;
+				else if (!strcasecmp(optarg, "dcnn"))		engine_id = E_DCNN;
 #endif
 				else die("%s: Invalid -e argument %s\n", argv[0], optarg);
 				break;
@@ -262,6 +273,10 @@ int main(int argc, char *argv[])
 			case OPT_JOSEKI:
 				require_joseki();
 				break;
+			case OPT_KGS:
+				gtp->kgs = true;       /* Show engine comment in version. */
+				nopassfirst = true;    /* --nopassfirst */
+				break;
 			case 'l':
 				log_port = strdup(optarg);
 				break;
@@ -273,6 +288,9 @@ int main(int argc, char *argv[])
 				break;
 			case OPT_NODCNN:
 				disable_dcnn();
+				break;
+			case OPT_NOUNDO:
+				gtp->noundo = true;
 				break;
 			case OPT_NOJOSEKI:
 				disable_joseki();
@@ -305,6 +323,9 @@ int main(int argc, char *argv[])
 					die("%s: Invalid -t argument %s\n", argv[0], optarg);
 				ti_default.ignore_gtp = true;
 				assert(ti_default.period != TT_NULL);
+				break;
+			case OPT_FUSEKI:
+				set_fuseki_moves(atoi(optarg));
 				break;
 			case OPT_FUSEKI_TIME:
 				if (!time_parse(&ti_fuseki, optarg))
@@ -342,7 +363,10 @@ int main(int argc, char *argv[])
 	fifo_init();
 
 	struct board *b = board_new(19 + 2, fbookfile);
-	if (forced_ruleset && !board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
+	if (forced_ruleset) {
+		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
+		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
+	}
 
 	struct time_info ti[S_MAX];
 	ti[S_BLACK] = ti_default;
@@ -352,7 +376,7 @@ int main(int argc, char *argv[])
 
 	char *e_arg = NULL;
 	if (optind < argc)	e_arg = argv[optind];
-	struct engine *e = init_engine(engine, e_arg, b);
+	struct engine e;  engine_init(&e, engine_id, e_arg, b);
 
 	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
 
@@ -361,15 +385,12 @@ int main(int argc, char *argv[])
 		while (fgets(buf, 4096, stdin)) {
 			if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
 
-			enum parse_code c = gtp_parse(b, e, ti, buf);
+			enum parse_code c = gtp_parse(gtp, b, &e, e_arg, ti, buf);
 			if (c == P_ENGINE_RESET) {
 				ti[S_BLACK] = ti_default;
 				ti[S_WHITE] = ti_default;
-				if (!e->keep_on_clear) {
-					b->es = NULL;
-					engine_done(e);
-					e = init_engine(engine, e_arg, b);
-				}
+				if (!e.keep_on_clear)
+					engine_reset(&e, b, e_arg);
 			} else if (c == P_UNKNOWN_COMMAND && gtp_port) {
 				/* The gtp command is a weak identity check,
 				 * close the connection with a wrong peer. */
@@ -379,7 +400,7 @@ int main(int argc, char *argv[])
 		if (!gtp_port) break;
 		open_gtp_connection(&gtp_sock, gtp_port);
 	}
-	engine_done(e);
+	engine_done(&e);
 	chat_done();
 	free(testfile);
 	free(gtp_port);

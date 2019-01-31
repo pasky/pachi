@@ -469,15 +469,28 @@ time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int 
 	lag_adjust(&stop->worst.time, net_lag);
 }
 
+static int opt_fuseki_moves = 0;
+void set_fuseki_moves(int moves)  {	opt_fuseki_moves = moves;  }
+
+static int
+fuseki_moves(struct board *b)
+{
+	if (opt_fuseki_moves)
+		return opt_fuseki_moves;
+	
+	int moves = 20;
+	if (real_board_size(b) <= 15)  moves = 10;
+	if (real_board_size(b) <= 13)  moves = 7;
+	if (board_small(b))	       moves = 4;
+	return moves;
+}
+
 struct time_info ti_fuseki = { .period = TT_NULL };
 
 struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color)
 {
-	/* Specific fuseki time settings ? */
-	int fuseki_end = (board_large(b) ? 20 : 10);
-	if (board_small(b))  fuseki_end = 4;
-	
-	if (ti_fuseki.period != TT_NULL && b->moves <= fuseki_end)
+	/* Specific fuseki time settings ? */	
+	if (ti_fuseki.period != TT_NULL && b->moves <= fuseki_moves(b))
 		return &ti_fuseki;  
 	return &ti[color];
 }

@@ -432,25 +432,25 @@ test_moggy_moves(struct board *b, char *arg)
 	board_print_test(2, b);
 
 	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
-	struct engine *e = engine_replay_init(e_arg, b);
+	struct engine e;  engine_init(&e, E_REPLAY, e_arg, b);
 	enum stone color = stone_other(b->last_move.color);
 	
 	if (DEBUGL(2))
 		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
 			stone2str(color), runs);
 
-        int played_[b->size2 + 2];		memset(played_, 0, sizeof(played_));
-	int *played = played_ + 2;		// allow storing pass/resign
+        int played_[b->size2 + 1];		memset(played_, 0, sizeof(played_));
+	int *played = played_ + 1;		// allow storing pass
 	int most_played = 0;
-	replay_sample_moves(e, b, color, played, &most_played);
+	replay_sample_moves(&e, b, color, played, &most_played);
 
 	/* Show moves stats */	
 	for (int k = most_played; k > 0; k--)
-		for (coord_t c = resign; c < b->size2; c++)
+		for (coord_t c = pass; c < b->size2; c++)
 			if (played[c] == k)
 				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / runs);
 	
-	engine_done(e);
+	engine_done(&e);
 	return true;   // Not much of a unit test right now =)
 }
 

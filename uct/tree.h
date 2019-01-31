@@ -157,7 +157,8 @@ void tree_dump(struct tree *tree, double thres);
 void tree_save(struct tree *tree, struct board *b, int thres);
 void tree_load(struct tree *tree, struct board *b);
 
-struct tree_node *tree_get_node(struct tree *tree, struct tree_node *node, coord_t c, bool create);
+struct tree_node *tree_get_node(struct tree_node *parent, coord_t c);
+struct tree_node *tree_get_node2(struct tree *tree, struct tree_node *parent, coord_t c, bool create);
 struct tree_node *tree_garbage_collect(struct tree *tree, struct tree_node *node);
 void tree_promote_node(struct tree *tree, struct tree_node **node);
 bool tree_promote_at(struct tree *tree, struct board *b, coord_t c);

@@ -1,8 +1,6 @@
 #ifndef PACHI_GTP_H
 #define PACHI_GTP_H
 
-#define GTP_NO_REPLY (-2)
-
 struct board;
 struct engine;
 struct time_info;
@@ -21,7 +19,16 @@ typedef struct
 	char *cmd;
 	char *next;
 	int   id;
+	bool  quiet;
 	int   replied;
+
+	/* Global fields: */
+	int         played_games;
+	struct move move[1500];     /* move history, for undo */
+	int         moves;
+	bool        undo_pending;
+	bool        noundo;        /* undo only allowed for pass */
+	bool        kgs;
 } gtp_t;
 
 #define next_tok(to_) \
@@ -32,20 +39,18 @@ typedef struct
 		gtp->next += strspn(gtp->next, " \t\r\n"); \
 	}
 
-enum parse_code gtp_parse(struct board *b, struct engine *e, struct time_info *ti, char *buf);
-enum parse_code gtp_parse_full(struct board *b, struct engine *e, struct time_info *ti, char *buf, int id);
+void   gtp_init(gtp_t *gtp);
+
+enum parse_code gtp_parse(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct time_info *ti, char *buf);
 bool gtp_is_valid(struct engine *e, const char *cmd);
-void gtp_final_score_str(struct board *board, struct engine *engine, char *reply, int len);
 void gtp_reply(gtp_t *gtp, ...);
 void gtp_reply_printf(gtp_t *gtp, const char *format, ...);
+void gtp_error_printf(gtp_t *gtp, const char *format, ...);
 void gtp_error(gtp_t *gtp, ...);
 
 #define is_gamestart(cmd) (!strcasecmp((cmd), "boardsize"))
 #define is_reset(cmd) (is_gamestart(cmd) || !strcasecmp((cmd), "clear_board") || !strcasecmp((cmd), "kgs-rules"))
 #define is_repeated(cmd) (strstr((cmd), "pachi-genmoves"))
 
-/* Number of games played so far */
-int  gtp_played_games();
-void gtp_played_games_reset();
 
 #endif

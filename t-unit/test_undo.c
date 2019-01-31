@@ -127,13 +127,13 @@ static playoutp_permit policy_permit = NULL;
 static bool
 permit_hook(struct playout_policy *playout_policy, struct board *b, struct move *m, bool alt, bool rnd)
 {
-	bool permit = (policy_permit ? policy_permit(playout_policy, b, m, alt, rnd) : true);
-	if (!permit)
-		return false;
-	
 	test_undo(b, m->coord, m->color);
 
-	return true;
+	/* Also test pass, permit() never gets called on pass ... */
+	if (fast_random(100) < 5)
+		test_undo(b, pass, m->color);
+	
+	return (policy_permit ? policy_permit(playout_policy, b, m, alt, rnd) : true);
 }
 
 
@@ -145,8 +145,7 @@ board_undo_stress_test(struct board *board, char *arg)
 	enum stone color = S_BLACK;
 	
 	if (DEBUGL(2))  board_print(board, stderr);
-	if (DEBUGL(1))
-		printf("board_undo stress test.   Playing %i games checking every move...\n", games);
+	if (DEBUGL(1))  printf("board_undo stress test.   Playing %i games checking every move + pass...\n", games);
 
 	// Light policy better to test wild multi-group suicides
 	struct playout_policy *policy = playout_light_init(NULL, board);

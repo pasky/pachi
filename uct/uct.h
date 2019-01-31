@@ -4,7 +4,7 @@
 #include "engine.h"
 #include "move.h"
 
-struct engine *engine_uct_init(char *arg, struct board *b);
+void engine_uct_init(struct engine *e, char *arg, struct board *b);
 
 struct board;
 struct time_info;
