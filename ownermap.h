@@ -74,8 +74,7 @@ enum point_judgement ownermap_score_est_coord(struct board *b, struct ownermap *
 bool board_position_final(struct board *b, struct ownermap *ownermap, char **msg);
 bool board_position_final_full(struct board *b, struct ownermap *ownermap,
 			       struct move_queue *dead, struct move_queue *unclear, float score_est,
-			       int *final_ownermap, int final_dames, float final_score,
-			       char **msg, bool extra_checks);
+			       int *final_ownermap, int final_dames, float final_score, char **msg);
 
 /* Don't allow passing earlier than that:
  * 19x19: 120    15x15: 56    13x13: 33    9x9: 16 */

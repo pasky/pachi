@@ -1699,6 +1699,13 @@ board_official_score(struct board *b, struct move_queue *dead)
 	return board_official_score_details(b, dead, &dame, ownermap);
 }
 
+floating_t
+board_official_score_color(struct board *b, struct move_queue *dead, enum stone color)
+{
+	floating_t score = board_official_score(b, dead);
+	return (color == S_WHITE ? score : -score);
+}
+
 bool
 board_set_rules(struct board *board, char *name)
 {

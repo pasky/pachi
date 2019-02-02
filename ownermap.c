@@ -230,14 +230,13 @@ board_position_final(struct board *b, struct ownermap *ownermap, char **msg)
 	floating_t final_score = board_official_score_details(b, &dead, &final_dames, final_ownermap);
 
 	return board_position_final_full(b, ownermap, &dead, &unclear, score_est,
-					 final_ownermap, final_dames, final_score, msg, true);
+					 final_ownermap, final_dames, final_score, msg);
 }
 
 bool
 board_position_final_full(struct board *b, struct ownermap *ownermap,
 			  struct move_queue *dead, struct move_queue *unclear, float score_est,
-			  int *final_ownermap, int final_dames, float final_score,
-			  char **msg, bool extra_checks)
+			  int *final_ownermap, int final_dames, float final_score, char **msg)
 {
 	*msg = "too early to pass";
 	if (b->moves < board_earliest_pass(b))
@@ -284,17 +283,15 @@ board_position_final_full(struct board *b, struct ownermap *ownermap,
 
 	/* If ownermap and official score disagree position is likely not final.
 	 * If too many dames also. */
-	if (extra_checks) {
-		int max_dames = (board_large(b) ? 20 : 7);
-		*msg = "non-final position: too many dames";
-		if (final_dames > max_dames)    return false;
-
-		/* Can disagree up to dame points, as long as there are not too many.
-		 * For example a 1 point difference with 1 dame is quite usual... */
-		int max_diff = MIN(final_dames, 4);
-		*msg = "non-final position: score est and official score don't agree";
-		if (fabs(final_score - score_est) > max_diff)  return false;
-	}
+	int max_dames = (board_large(b) ? 20 : 7);
+	*msg = "non-final position: too many dames";
+	if (final_dames > max_dames)    return false;
+	
+	/* Can disagree up to dame points, as long as there are not too many.
+	 * For example a 1 point difference with 1 dame is quite usual... */
+	int max_diff = MIN(final_dames, 4);
+	*msg = "non-final position: score est and official score don't agree";
+	if (fabs(final_score - score_est) > max_diff)  return false;
 	
 	return true;
 }

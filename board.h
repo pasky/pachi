@@ -421,6 +421,7 @@ floating_t board_score(struct board *b, int scores[S_MAX]);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
 struct move_queue;
 floating_t board_official_score(struct board *board, struct move_queue *dead);
+floating_t board_official_score_color(struct board *board, struct move_queue *dead, enum stone color);
 floating_t board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *final_ownermap);
 void       board_print_official_ownermap(struct board *b, int *final_ownermap);
 
