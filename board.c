@@ -1622,8 +1622,12 @@ board_score(struct board *b, int scores[S_MAX])
 	int handi_comp = board_score_handicap_compensation(b);
 	floating_t score = b->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
 
-	/* Aja's formula for converting playouts area scoring to territory.
-	 * http://computer-go.org/pipermail/computer-go/2010-April/000209.html */
+	/* Aja's formula for converting area scoring to territory:
+	 *   http://computer-go.org/pipermail/computer-go/2010-April/000209.html
+	 * Under normal circumstances there's a relationship between area
+	 * and territory scoring so we can derive one from the other. If
+	 * the board has been artificially edited however the relationship
+	 * is broken and japanese score will be off. */
 	if (b->rules == RULES_JAPANESE)
 		score += (b->last_move.color == S_BLACK) + (b->passes[S_WHITE] - b->passes[S_BLACK]);
 	return score;

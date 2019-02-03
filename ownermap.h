@@ -70,6 +70,10 @@ float ownermap_score_est_color(struct board *b, struct ownermap *ownermap, enum 
 char *ownermap_score_est_str(struct board *b, struct ownermap *ownermap);
 enum point_judgement ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c);
 
+/* Raw count for each color. */
+void ownermap_scores(struct board *b, struct ownermap *ownermap, int *scores);
+int ownermap_dames(struct board *b, struct ownermap *ownermap);
+
 /* Is board position final ? */
 bool board_position_final(struct board *b, struct ownermap *ownermap, char **msg);
 bool board_position_final_full(struct board *b, struct ownermap *ownermap,

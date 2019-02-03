@@ -103,17 +103,26 @@ spawn_worker(void *ctx_)
 	/* Setup */
 	struct uct_thread_ctx *ctx = ctx_;
 	struct uct *u = ctx->u;
+	struct board *b = ctx->b;
+	enum stone color = ctx->color;
 	fast_srandom(ctx->seed);
 
 	/* Fill ownermap for mcowner pattern feature. */
 	if (using_patterns()) {
 		double time_start = time_now();
-		uct_mcowner_playouts(ctx->u, ctx->b, ctx->color);	
+		uct_mcowner_playouts(u, b, color);
 		if (!ctx->tid) {
 			if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
 			//fprintf(stderr, "\npattern ownermap:\n");
-			//board_print_ownermap(ctx->b, stderr, &u->ownermap);
+			//board_print_ownermap(b, stderr, &u->ownermap);
 		}
+	}
+
+	/* Close endgame with japanese rules ? Boost pass prior. */
+	if (!ctx->tid && b->rules == RULES_JAPANESE) {
+		int dames = ownermap_dames(b, &u->ownermap);
+		float score = ownermap_score_est(b, &u->ownermap);
+		u->prior->boost_pass = (dames < 10 && fabs(score) <= 3);
 	}
 
 	/* Expand root node (dcnn). Other threads wait till it's ready. 
@@ -121,18 +130,17 @@ spawn_worker(void *ctx_)
 	struct tree *t = ctx->t;
 	struct tree_node *n = t->root;
 	if (!ctx->tid) {
-		enum stone player_color = ctx->color;
-		enum stone node_color = stone_other(player_color);
+		enum stone node_color = stone_other(color);
 		assert(node_color == t->root_color);
 		
 		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1)) {
-			tree_expand_node(t, n, ctx->b, player_color, u, 1);
-			if (u->genmove_pondering && using_dcnn(ctx->b))
-				uct_expand_next_best_moves(u, t, ctx->b, player_color);
+			tree_expand_node(t, n, b, color, u, 1);
+			if (u->genmove_pondering && using_dcnn(b))
+				uct_expand_next_best_moves(u, t, b, color);
 		}
 		else if (DEBUGL(2)) {  /* Show previously computed priors */
-			print_joseki_moves(joseki_dict, ctx->b, ctx->color);
-			print_node_prior_best_moves(ctx->b, n);
+			print_joseki_moves(joseki_dict, b, color);
+			print_node_prior_best_moves(b, n);
 		}
 		u->tree_ready = true;
 	}

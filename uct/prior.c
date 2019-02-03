@@ -60,11 +60,12 @@ get_prior_best_moves(struct prior_map *map, coord_t *best_c, float *best_r, int 
 		best_c[i] = pass;  best_r[i] = 0;
 	}
 	
-	float max = 0.0;
+	float max = map->prior[pass].playouts;
 	foreach_free_point(map->b) {
 		max = MAX(max, map->prior[c].playouts);
 	} foreach_free_point_end;
 
+	best_moves_add(pass, (float)map->prior[pass].playouts / max, best_c, best_r, nbest);
 	foreach_free_point(map->b) {
 		best_moves_add(c, (float)map->prior[c].playouts / max, best_c, best_r, nbest);
 	} foreach_free_point_end;
@@ -211,7 +212,7 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 	} foreach_free_point_end;
 }
 
-static int
+static void
 uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	/* Q_{joseki} */
@@ -232,7 +233,6 @@ uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 		get_joseki_best_moves(b, coords, ratings, matches, best_c, best_r, 20);
 		print_joseki_best_moves(b, best_c, best_r, 20);
 	}
-	return matches;
 }
 
 static void
@@ -274,7 +274,6 @@ void
 uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 {
 	struct board *b = map->b;
-	int joseki_matches = 0;
 	
 	if (u->prior->prune_ladders && !board_playing_ko_threat(b)) {
 		foreach_free_point(b) {
@@ -296,6 +295,9 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		} foreach_free_point_end;
 	}
 
+	if (u->prior->boost_pass)  /* Endgame with japanese rules, pass can be hard to find. */
+		add_prior_value(map, pass, 1.0, u->prior->pattern_eqex * 3 / 4);
+
 	if (u->prior->even_eqex)			uct_prior_even(u, node, map);
 	
 	/* Use dcnn for root priors */
@@ -310,15 +312,14 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 		if (u->prior->cfgd_eqex)		uct_prior_cfgd(u, node, map);
 	}
 
-	if (u->prior->joseki_eqex)			joseki_matches = uct_prior_joseki(u, node, map);
+	if (u->prior->joseki_eqex)			uct_prior_joseki(u, node, map);
 
 #ifdef PACHI_PLUGINS
 	if (u->prior->plugin_eqex)			plugin_prior(u->plugins, node, map, u->prior->plugin_eqex);
 #endif
 
-	/* Show final prior mix in case there are joseki matches. */
-	if (DEBUGL(3) && !node->parent && joseki_matches)
-		print_prior_best_moves(map->b, map);
+	/* Show final prior mix. */
+	if (DEBUGL(3) && !node->parent)                 print_prior_best_moves(map->b, map);
 }
 
 struct uct_prior *

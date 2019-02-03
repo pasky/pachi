@@ -170,6 +170,24 @@ get_dead_groups(struct board *b, struct ownermap *ownermap, struct move_queue *d
 	if (unclear)  {  unclear->moves = 0;  groups_of_status(b, &gj, GS_UNKNOWN, unclear);  }
 }
 
+void
+ownermap_scores(struct board *b, struct ownermap *ownermap, int *scores)
+{
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		enum point_judgement j = ownermap_judge_point(ownermap, c, 0.67);
+		scores[j]++;
+	} foreach_point_end;
+}
+
+int
+ownermap_dames(struct board *b, struct ownermap *ownermap)
+{
+	int scores[S_MAX] = { 0, };
+	ownermap_scores(b, ownermap, scores);
+	return scores[PJ_UNKNOWN];
+}
+
 enum point_judgement
 ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c)
 {
