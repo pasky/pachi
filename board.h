@@ -408,8 +408,8 @@ bool board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_c
 /* Returns true if given coordinate is a 1-pt eye (checks against false eyes, or
  * at least tries to). */
 bool board_is_one_point_eye(struct board *board, coord_t c, enum stone eye_color);
-/* Returns color of a 1pt eye owner, S_NONE if not an eye. */
-enum stone board_get_one_point_eye(struct board *board, coord_t c);
+/* Returns 1pt eye color (can be false-eye) */
+enum stone board_eye_color(struct board *board, coord_t c);
 
 /* board_official_score() is the scoring method for yielding score suitable
  * for external presentation. For fast scoring of entirely filled boards
@@ -552,8 +552,8 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 static inline bool
 board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 {
-	return (neighbor_count_at(board, coord, eye_color)
-	        + neighbor_count_at(board, coord, S_OFFBOARD)) == 4;
+	return (neighbor_count_at(board, coord, eye_color) +
+	        neighbor_count_at(board, coord, S_OFFBOARD)) == 4;
 }
 
 /* Group suicides allowed */

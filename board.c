@@ -1494,17 +1494,17 @@ play_pass:
 }
 
 
+/* XXX: We attempt false eye detection but we will yield false
+ * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
 bool
 board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 {
 	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
 
-	/* XXX: We attempt false eye detection but we will yield false
-	 * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
-
 	foreach_diag_neighbor(board, coord) {
 		color_diag_libs[(enum stone) board_at(board, c)]++;
 	} foreach_diag_neighbor_end;
+	
 	/* For false eye, we need two enemy stones diagonally in the
 	 * middle of the board, or just one enemy stone at the edge
 	 * or in the corner. */
@@ -1513,21 +1513,18 @@ board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 }
 
 bool
-board_is_one_point_eye(struct board *board, coord_t coord, enum stone eye_color)
+board_is_one_point_eye(struct board *b, coord_t c, enum stone eye_color)
 {
-	return board_is_eyelike(board, coord, eye_color)
-		&& !board_is_false_eyelike(board, coord, eye_color);
+	return (board_is_eyelike(b, c, eye_color) &&
+		!board_is_false_eyelike(b, c, eye_color));
 }
 
 enum stone
-board_get_one_point_eye(struct board *board, coord_t coord)
+board_eye_color(struct board *b, coord_t c)
 {
-	if (board_is_one_point_eye(board, coord, S_WHITE))
-		return S_WHITE;
-	else if (board_is_one_point_eye(board, coord, S_BLACK))
-		return S_BLACK;
-	else
-		return S_NONE;
+	if (board_is_eyelike(b, c, S_WHITE))  return S_WHITE;
+	if (board_is_eyelike(b, c, S_BLACK))  return S_BLACK;
+	return S_NONE;
 }
 
 floating_t
@@ -1538,7 +1535,7 @@ board_fast_score(struct board *board)
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
 		if (color == S_NONE && board->rules != RULES_STONES_ONLY)
-			color = board_get_one_point_eye(board, c);
+			color = board_eye_color(board, c);
 		scores[color]++;
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
