@@ -18,6 +18,8 @@
 #include "joseki.h"
 #include "random.h"
 #include "timeinfo.h"
+#include "tactics/1lib.h"
+#include "tactics/2lib.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
 #include "uct/search.h"
@@ -638,13 +640,39 @@ uct_search_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool p
 	return res;
 }
 
+static bool
+uct_pass_first(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, coord_t coord)
+{	
+	/* For kgs: must not pass first in main game phase. */
+	bool can_pass_first = (!nopassfirst || pass_all_alive);
+	if (!can_pass_first)  return false;
+
+	if (is_pass(coord) || is_pass(b->last_move.coord))  return false;
+
+	enum stone other_color = stone_other(color);
+	int capturing = board_get_atari_neighbor(b, coord, other_color);
+	int atariing = board_get_2lib_neighbor(b, coord, other_color);
+	if (capturing || atariing || board_playing_ko_threat(b))  return false;
+
+	/* Find dames left */
+	struct move_queue dead, unclear;
+	uct_mcowner_playouts(u, b, color);
+	get_dead_groups(b, &u->ownermap, &dead, &unclear);
+	if (unclear.moves)  return false;
+	int final_ownermap[board_size2(b)];
+	int dame, seki;
+	board_official_score_details(b, &dead, &dame, &seki, final_ownermap, &u->ownermap);
+	
+	enum stone move_owner = ownermap_color(&u->ownermap, coord, 0.80);
+	return (!dame && move_owner == other_color); /* play in opponent territory */
+}
+
 struct tree_node *
 uct_search_result(struct uct *u, struct board *b, enum stone color,
 		  bool pass_all_alive, int played_games, int base_playouts,
 		  coord_t *best_coord)
 {
 	/* Choose the best move from the tree. */
-	enum stone other_color = stone_other(color);
 	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
 	if (!best) {
 		*best_coord = pass;
@@ -675,22 +703,15 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 	}
 
 	bool opponent_passed = is_pass(b->last_move.coord);
-	bool pass_first = false;
-	if (!is_pass(*best_coord)) {
-		enum stone move_owner = ownermap_color(&u->ownermap, *best_coord, 0.80);
-		int capturing = board_get_atari_neighbor(b, *best_coord, other_color);
-		floating_t score = ownermap_score_est_color(b, &u->ownermap, color);
-		bool can_pass_first = (!nopassfirst || pass_all_alive);  /* For kgs: must not pass first in main game phase. */
-		pass_first = (can_pass_first && (move_owner == other_color) && /* play in opponent territory */
-			      !capturing && !board_playing_ko_threat(b) &&
-			      winrate > 0.80 && score > 1.0);
-	}
+	bool pass_first = uct_pass_first(u, b, color, pass_all_alive, *best_coord);
+	if (UDEBUGL(2) && pass_first)  fprintf(stderr, "<Pass first ok>\n");
 
 	/* If the opponent just passed and we win counting, always pass as well.
 	 * Pass also instead of playing in opponent territory if winning.
 	 * For option stones_only, we pass only when there is nothing else to do,
 	 * to show how to maximize score. */
 	if ((opponent_passed || pass_first) &&
+	    !is_pass(*best_coord) &&
 	    b->moves > 10 && b->rules != RULES_STONES_ONLY) {
 		char *msg;
 		if (uct_search_pass_is_safe(u, b, color, pass_all_alive, &msg)) {
@@ -702,7 +723,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 			*best_coord = pass;
 			return NULL;
 		}
-		if (UDEBUGL(0))	fprintf(stderr, "Refusing to pass: %s\n", msg);
+		if (UDEBUGL(2))	fprintf(stderr, "Refusing to pass: %s\n", msg);
 	}
 	
 	return best;

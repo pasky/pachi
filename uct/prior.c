@@ -11,6 +11,7 @@
 #include "move.h"
 #include "random.h"
 #include "engine.h"
+#include "tactics/1lib.h"
 #include "tactics/ladder.h"
 #include "tactics/util.h"
 #include "uct/internal.h"
