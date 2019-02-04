@@ -484,7 +484,7 @@ test_moggy_status(struct board *b, char *arg)
 		if (!strcmp(arg, "X") || !strcmp(arg, "O" )) thres[n] = 80;
 		if      (!strcasecmp(arg, "x"))  expected[n] = PJ_BLACK;
 		else if (!strcasecmp(arg, "o"))  expected[n] = PJ_WHITE;
-		else if (!strcasecmp(arg, ":"))  expected[n] = PJ_DAME;
+		else if (!strcasecmp(arg, ":"))  expected[n] = PJ_SEKI;
 		else if (!strcasecmp(arg, "?"))  { expected[n] = PJ_BLACK; thres[n] = 0;  }
 		else    die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n], b));
 		next_arg(arg);
@@ -542,7 +542,7 @@ test_moggy_status(struct board *b, char *arg)
 		int pc = ownermap.map[c][color] * 100 / ownermap.playouts;
 
 		int passed = (!thres[i] || (j == expected[i] && pc >= thres[i]));
-		char *colorstr = (j == PJ_DAME ? "dame" : stone2str(color));
+		char *colorstr = (j == PJ_SEKI ? "seki" : stone2str(color));
 		PRINT_TEST(b, "moggy status %3s %-5s -> %3i%%    ", coord2sstr(c, b), colorstr, pc);
 		
 		if (!passed)  ret = false;

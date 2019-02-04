@@ -15,7 +15,7 @@ struct move_queue;
 #define GJ_THRES	0.8
 
 enum point_judgement {
-	PJ_DAME = S_NONE,
+	PJ_SEKI = S_NONE,
 	PJ_BLACK = S_BLACK,
 	PJ_WHITE = S_WHITE,
 	PJ_UNKNOWN = 3,
