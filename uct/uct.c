@@ -131,13 +131,13 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	if (check_score && score_est < 0)  return false;
 	
 	int final_ownermap[board_size2(b)];
-	int dames;
-	floating_t final_score = board_official_score_details(b, &dead, &dames, final_ownermap); 
+	int dame, seki;
+	floating_t final_score = board_official_score_details(b, &dead, &dame, &seki, final_ownermap, &u->ownermap);
 	if (color == S_BLACK)  final_score = -final_score;
 	
 	/* Don't go to counting if position is not final. */
 	if (!board_position_final_full(b, &u->ownermap, &dead, &unclear, score_est,
-				       final_ownermap, dames, final_score, msg))
+				       final_ownermap, dame, final_score, msg))
 		return false;
 	
 	*msg = "losing on official score";

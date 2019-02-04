@@ -10,6 +10,7 @@
 #include "fbook.h"
 #include "mq.h"
 #include "random.h"
+#include "ownermap.h"
 
 #ifdef BOARD_PAT3
 #include "pattern3.h"
@@ -1645,9 +1646,11 @@ board_print_official_ownermap(struct board *b, int *final_ownermap)
 }
 
 /* Official score after removing dead groups and Tromp-Taylor counting.
- * Number of dames is saved in @dames, final ownermap in @ownermap. */
+ * Returns number of dames, sekis, final ownermap in @dame, @seki, @ownermap.
+ * (only distinguishes between dames/sekis if @po is not NULL) */
 floating_t
-board_official_score_details(struct board *board, struct move_queue *dead, int *dames, int *ownermap)
+board_official_score_details(struct board *b, struct move_queue *dead,
+			     int *dame, int *seki, int *ownermap, struct ownermap *po)
 {
 	/* A point P, not colored C, is said to reach C, if there is a path of
 	 * (vertically or horizontally) adjacent points of P's color from P to
@@ -1658,16 +1661,16 @@ board_official_score_details(struct board *board, struct move_queue *dead, int *
 
 	int s[4] = {0};
 	const int o[4] = {0, 1, 2, 0};
-	foreach_point(board) {
-		ownermap[c] = o[board_at(board, c)];
-		s[board_at(board, c)]++;
+	foreach_point(b) {
+		ownermap[c] = o[board_at(b, c)];
+		s[board_at(b, c)]++;
 	} foreach_point_end;
 
 	if (dead) {
 		/* Process dead groups. */
 		for (unsigned int i = 0; i < dead->moves; i++) {
-			foreach_in_group(board, dead->move[i]) {
-				enum stone color = board_at(board, c);
+			foreach_in_group(b, dead->move[i]) {
+				enum stone color = board_at(b, c);
 				ownermap[c] = o[stone_other(color)];
 				s[color]--; s[stone_other(color)]++;
 			} foreach_in_group_end;
@@ -1676,28 +1679,36 @@ board_official_score_details(struct board *board, struct move_queue *dead, int *
 
 	/* We need to special-case empty board. */
 	if (!s[S_BLACK] && !s[S_WHITE])
-		return board->komi;
+		return b->komi;
 
-	while (board_tromp_taylor_iter(board, ownermap))
+	while (board_tromp_taylor_iter(b, ownermap))
 		/* Flood-fill... */;
 
 	int scores[S_MAX] = { 0, };
 
-	foreach_point(board) {
-		assert(board_at(board, c) == S_OFFBOARD || ownermap[c] != 0);
+	foreach_point(b) {
+		assert(board_at(b, c) == S_OFFBOARD || ownermap[c] != 0);
 		scores[ownermap[c]]++;
 	} foreach_point_end;
-	*dames = scores[3];
+	*dame = scores[3];
+	*seki = 0;
 
-	return board_score(board, scores);
+	if (po) {
+		foreach_point(b) {
+			if (ownermap_judge_point(po, c, GJ_THRES) != PJ_SEKI)  continue;
+			(*seki)++;  (*dame)--;
+		} foreach_point_end;
+	}
+
+	return board_score(b, scores);
 }
 
 floating_t
 board_official_score(struct board *b, struct move_queue *dead)
 {
-	int dame;
+	int dame, seki;
 	int ownermap[board_size2(b)];
-	return board_official_score_details(b, dead, &dame, ownermap);
+	return board_official_score_details(b, dead, &dame, &seki, ownermap, NULL);
 }
 
 floating_t

@@ -226,12 +226,12 @@ board_position_final(struct board *b, struct ownermap *ownermap, char **msg)
 	
 	floating_t score_est = ownermap_score_est(b, ownermap);
 
-	int final_dames;
+	int dame, seki;
 	int final_ownermap[board_size2(b)];
-	floating_t final_score = board_official_score_details(b, &dead, &final_dames, final_ownermap);
+	floating_t final_score = board_official_score_details(b, &dead, &dame, &seki, final_ownermap, ownermap);
 
 	return board_position_final_full(b, ownermap, &dead, &unclear, score_est,
-					 final_ownermap, final_dames, final_score, msg);
+					 final_ownermap, dame, final_score, msg);
 }
 
 bool
@@ -284,7 +284,7 @@ board_position_final_full(struct board *b, struct ownermap *ownermap,
 
 	/* If ownermap and official score disagree position is likely not final.
 	 * If too many dames also. */
-	int max_dames = (board_large(b) ? 20 : 7);
+	int max_dames = (board_large(b) ? 15 : 7);
 	*msg = "non-final position: too many dames";
 	if (final_dames > max_dames)    return false;
 	

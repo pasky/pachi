@@ -15,7 +15,7 @@
 #include "mq.h"
 
 struct fbook;
-
+struct ownermap;
 
 /* Maximum supported board size. (Without the S_OFFBOARD edges.) */
 #define BOARD_MAX_SIZE 19
@@ -422,7 +422,7 @@ floating_t board_score(struct board *b, int scores[S_MAX]);
 struct move_queue;
 floating_t board_official_score(struct board *board, struct move_queue *dead);
 floating_t board_official_score_color(struct board *board, struct move_queue *dead, enum stone color);
-floating_t board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *final_ownermap);
+floating_t board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *seki, int *ownermap, struct ownermap *po);
 void       board_print_official_ownermap(struct board *b, int *final_ownermap);
 
 /* Set board rules according to given string. Returns false in case
