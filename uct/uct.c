@@ -507,7 +507,8 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 
 	uct_pondering_stop(u);
 
-	if (u->genmove_reset_tree && u->t) {
+	if (u->t && (u->genmove_reset_tree ||
+		     (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN)))) {
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
 	}
