@@ -277,8 +277,7 @@ wouldbe_ladder_any(board_t *b, group_t group, coord_t chaselib)
 	enum stone other_color = stone_other(lcolor);
 
 	// FIXME should assert instead here
-	if (!board_is_valid_play(b, other_color, chaselib) ||
-	    is_selfatari(b, other_color, chaselib) )   // !can_play_on_lib() sortof       
+	if (!board_is_valid_play_no_suicide(b, other_color, chaselib))
 		return false;
 
 	bool ladder = false;

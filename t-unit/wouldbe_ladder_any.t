@@ -51,3 +51,14 @@ boardsize 7
 
 wouldbe_ladder_any w d2 1
 
+% Snapback
+boardsize 7
+. . . . . . .
+. . . . . . .
+. . X O . . .
+. X . . O . .
+. O X X X O .
+. O O O O O .
+. . . . . . .
+
+wouldbe_ladder_any w c4 1
