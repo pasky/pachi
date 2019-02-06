@@ -357,6 +357,9 @@ test: FORCE
 test_board: FORCE
 	+@make -C t-unit test_board
 
+test_moggy: FORCE
+	+@make -C t-unit test_moggy
+
 
 # Prepare for install
 distribute: FORCE
