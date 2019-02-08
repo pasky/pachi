@@ -21,6 +21,7 @@
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
+#include "uct/prior.h"
 #include "gogui.h"
 
 #define DESCENT_DLEN 512
@@ -74,6 +75,48 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	if (UDEBUGL(3))
 		fprintf(stderr, " | %.1fMb", (float)t->nodes_size / 1024 / 1024);
 	
+	fprintf(stderr, "\n");
+}
+
+static void
+uct_progress_leelaz(struct uct *u, struct tree *t, enum stone color)
+{
+	struct board *b = t->board;
+	struct tree_node *node = u->t->root;
+
+	/* Best candidates */
+	int nbest = 20;
+	float   best_pl[nbest];	
+	float   best_wr[nbest];
+	coord_t best_c[nbest];
+	uct_get_best_moves_at(u, node, best_c, best_pl, nbest, false);
+	uct_get_best_moves_at(u, node, best_c, best_wr, nbest, true);
+
+	/* Priors */
+	float   best_pr[19 * 19];
+	coord_t best_cpr[19 * 19];
+	float   priors[BOARD_MAX_COORDS];  memset(priors, 0, sizeof(priors));
+	get_node_prior_best_moves(node, best_cpr, best_pr, 19 * 19);
+	for (int i = 0; i < 19 * 19; i++)
+		priors[best_cpr[i]] = best_pr[i];
+
+	// Leela-Zero format:
+	// info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...]
+	for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
+		if (best_pl[i] < 500)  break;  // too few playouts
+		fprintf(stderr, "info move %s visits %i winrate %i prior %i order %i ",
+			coord2sstr(best_c[i], b), (int)best_pl[i], (int)(best_wr[i] * 10000),
+			(int)(priors[best_c[i]] * 10000), i);
+
+		/* Dump best variation */
+		fprintf(stderr, "pv %s ", coord2sstr(best_c[i], b));
+		struct tree_node *n = tree_get_node(node, best_c[i]);
+		while (1) {
+			n = u->policy->choose(u->policy, n, b, color, resign);
+			if (!n || n->u.playouts < 100) break;
+			fprintf(stderr, "%s ", coord2sstr(node_coord(n), b));
+		}
+	}
 	fprintf(stderr, "\n");
 }
 
@@ -215,6 +258,8 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 		case UR_JSON_BIG:
 			uct_progress_json(u, t, color, playouts, final,
 			                  u->reporting == UR_JSON_BIG);
+		case UR_LEELAZ:
+			uct_progress_leelaz(u, t, color);
 			break;
 		default: assert(0);
 	}

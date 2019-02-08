@@ -39,6 +39,7 @@ typedef void  (*engine_best_moves_t)(struct engine *e, struct board *b, struct t
 typedef char *(*engine_genmoves_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
 				 char *args, bool pass_all_alive, void **stats_buf, int *stats_size);
 typedef void (*engine_evaluate_t)(struct engine *e, struct board *b, struct time_info *ti, floating_t *vals, enum stone color);
+typedef void (*engine_analyze_t)(struct engine *e, struct board *b, enum stone color, int start);
 typedef void (*engine_dead_group_list_t)(struct engine *e, struct board *b, struct move_queue *mq);
 typedef void (*engine_stop_t)(struct engine *e);
 typedef void (*engine_done_t)(struct engine *e);
@@ -78,6 +79,9 @@ struct engine {
 	 * 1-max(opponent_win_likelihood) in vals[i]. */
 	engine_evaluate_t        evaluate;
 
+	/* Tell engine to start pondering for the sake of frontend running Pachi. */
+	engine_analyze_t         analyze;
+	
 	/* One dead group per queued move (coord_t is (ab)used as group_t). */
 	engine_dead_group_list_t dead_group_list;
 

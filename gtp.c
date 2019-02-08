@@ -89,6 +89,7 @@ gtp_reply(gtp_t *gtp, ...)
 	va_end(params);
 }
 
+/* Like gtp_reply() takes care of final \n\n so format must not have it. */
 void
 gtp_reply_printf(gtp_t *gtp, const char *format, ...)
 {
@@ -96,6 +97,7 @@ gtp_reply_printf(gtp_t *gtp, const char *format, ...)
 	va_start(ap, format);
 	gtp_prefix('=', gtp);
 	vprintf(format, ap);
+	putchar('\n');
 	gtp_flush();
 	va_end(ap);	
 }
@@ -182,10 +184,12 @@ cmd_protocol_version(struct board *board, struct engine *engine, struct time_inf
 }
 
 static enum parse_code
-cmd_name(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_name(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	/* KGS hack */
-	gtp_reply(gtp, "Pachi ", engine->name, NULL);
+	char *name = "Pachi %s";
+	if (!strcmp(e->name, "UCT"))  name = "Pachi";
+	if (gtp->custom_name)         name = gtp->custom_name;
+	gtp_reply_printf(gtp, name, e->name);
 	return P_OK;
 }
 
@@ -196,16 +200,19 @@ cmd_echo(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 	return P_OK;
 }
 
+/* Return engine comment if playing on kgs, Pachi version otherwise.
+ * See "banner" uct param to set engine comment. */
 static enum parse_code
 cmd_version(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
-	/* kgs displays 'version' gtp command output on game start. */
-	if (gtp->kgs) {
-		/* %s in engine comment stands for Pachi version. */
-		gtp_reply_printf(gtp, e->comment, PACHI_VERSION, NULL);
-	}
-	else    gtp_reply(gtp, PACHI_VERSION, NULL);
+	/* kgs hijacks 'version' gtp command for game start message. */	
+	char *version = (gtp->kgs ? e->comment : "%s");
+
+	/* Custom gtp version ? */
+	if (gtp->custom_version)  version = gtp->custom_version;
 	
+	/* %s in version string stands for Pachi version. */
+	gtp_reply_printf(gtp, version, PACHI_VERSION);
 	return P_OK;
 }
 
@@ -465,6 +472,36 @@ cmd_pachi_genmoves(struct board *board, struct engine *engine, struct time_info 
 	return P_OK;
 }
 
+/* Start tree search in the background and output stats for the sake of frontend running Pachi.
+ * Sortof like pondering without a genmove.
+ * Stop processing when we receive some other command or "pachi-analyze 0".
+ * Similar to Leela-Zero's lz-analyze so we can feed data to lizzie. */
+static enum parse_code
+cmd_pachi_analyze(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+{
+	char *arg;
+	next_tok(arg);
+
+	int start = 1;
+	if (isdigit(*arg))  start = atoi(arg);
+	
+	enum stone color = S_BLACK;
+	if (b->last_move.color != S_NONE)
+		color = stone_other(b->last_move.color);
+	
+	if (e->analyze) {  e->analyze(e, b, color, start);  gtp->analyze_running = true;  }
+	else               gtp_error(gtp, "pachi-analyze not supported for this engine", NULL);
+	
+	return P_OK;	
+}
+
+static void
+stop_analyzing(gtp_t *gtp, struct board *b, struct engine *e)
+{
+	gtp->analyze_running = false;
+	e->analyze(e, b, S_BLACK, 0);
+}
+
 static enum parse_code
 cmd_set_free_handicap(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 {
@@ -536,9 +573,9 @@ cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *
 
 	if (DEBUGL(1))  fprintf(stderr, "counted score %.1f\n", score);
 	
-	if      (score == 0) gtp_reply_printf(gtp, "0\n");
-	else if (score > 0)  gtp_reply_printf(gtp, "W+%.1f\n", score);
-	else                 gtp_reply_printf(gtp, "B+%.1f\n", -score);
+	if      (score == 0) gtp_reply_printf(gtp, "0");
+	else if (score > 0)  gtp_reply_printf(gtp, "W+%.1f", score);
+	else                 gtp_reply_printf(gtp, "B+%.1f", -score);
 	return P_OK;
 }
 
@@ -919,6 +956,8 @@ static gtp_command_t commands[] =
 	{ "pachi-evaluate",         cmd_pachi_evaluate },
 	{ "pachi-result",           cmd_pachi_result },
 	{ "pachi-score_est",        cmd_pachi_score_est },
+	{ "pachi-analyze",          cmd_pachi_analyze },
+	{ "lz-analyze",             cmd_pachi_analyze },     /* For Lizzie */
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },
@@ -975,6 +1014,9 @@ gtp_parse(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct tim
 	if (!*gtp->cmd)
 		return P_OK;
 
+	if (gtp->analyze_running && strcasecmp(gtp->cmd, "pachi-analyze"))
+		stop_analyzing(gtp, b, e);
+	
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
 		undo_reload_engine(gtp, b, e, e_arg);

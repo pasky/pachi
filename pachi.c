@@ -87,6 +87,8 @@ usage()
 		"  -s, --seed RANDOM_SEED            set random seed \n"
 		"  -u, --unit-test FILE              run unit tests \n"
 		"  -v, --version                     show version \n"
+		"      --version=VERSION             version to return to gtp frontend \n"
+		"      --name=NAME                   name to return to gtp frontend \n"
 		" \n"
 		"Gameplay: \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
@@ -171,6 +173,7 @@ show_version(FILE *s)
 #define OPT_FUSEKI        266
 #define OPT_NOUNDO        267
 #define OPT_KGS           268
+#define OPT_NAME          269
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "fuseki",      required_argument, 0, OPT_FUSEKI },
@@ -186,6 +189,7 @@ static struct option longopts[] = {
 	{ "kgs",         no_argument,       0, OPT_KGS },
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "log-port",    required_argument, 0, 'l' },
+	{ "name",        required_argument, 0, OPT_NAME },
 	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
 	{ "noundo",      no_argument,       0, OPT_NOUNDO },
 	{ "nojoseki",    no_argument,       0, OPT_NOJOSEKI },
@@ -197,7 +201,7 @@ static struct option longopts[] = {
 	{ "time",        required_argument, 0, 't' },
 	{ "unit-test",   required_argument, 0, 'u' },
 	{ "verbose-caffe", no_argument,     0, OPT_VERBOSE_CAFFE },
-	{ "version",     no_argument,       0, 'v' },
+	{ "version",     optional_argument, 0, 'v' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -227,7 +231,7 @@ int main(int argc, char *argv[])
 	int opt;
 	int option_index;
 	/* Leading ':' -> we handle error messages. */
-	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v", longopts, &option_index)) != -1) {
+	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v::", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case 'c':
 				chatfile = strdup(optarg);
@@ -333,6 +337,9 @@ int main(int argc, char *argv[])
 				ti_fuseki.ignore_gtp = true;
 				assert(ti_fuseki.period != TT_NULL);
 				break;
+			case OPT_NAME:
+				gtp->custom_name = strdup(optarg);
+				break;
 			case 'u':
 				testfile = strdup(optarg);
 				break;
@@ -340,8 +347,9 @@ int main(int argc, char *argv[])
 				verbose_caffe = true;
 				break;
 			case 'v':
-				show_version(stdout);
-				exit(0);
+				if (optarg)  gtp->custom_version = strdup(optarg);
+				else         {  show_version(stdout);  exit(0);  }
+				break;
 			case ':':
 				die("%s: Missing argument\n"
 				    "Try 'pachi --help' for more information.\n", argv[optind-1]);

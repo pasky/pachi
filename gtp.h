@@ -27,8 +27,11 @@ typedef struct
 	struct move move[1500];     /* move history, for undo */
 	int         moves;
 	bool        undo_pending;
-	bool        noundo;        /* undo only allowed for pass */
+	bool        noundo;           /* undo only allowed for pass */
 	bool        kgs;
+	bool        analyze_running;
+	char*       custom_name;
+	char*       custom_version;
 } gtp_t;
 
 #define next_tok(to_) \

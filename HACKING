@@ -1,4 +1,4 @@
-This is brief developer-oriented overview in Pachi structure.
+This is brief developer-oriented overview of Pachi structure.
 
 Pachi is completely Go-specific (c.f. Fuego; though e.g. atari go support
 should be easy to add), but fairly modular. It has been built with focus
@@ -176,9 +176,8 @@ or bad input attacks and allowing arbitrary input to be entered within
 is a major security hole. Yes, this needs to be cleaned up. Also, currently
 engines cannot plug in their own commands.
 
-Pachi supports only few GTP commands now. Most importantly, it does not
-support the undo command.  The final_status_list command requires engine
-support.
+Pachi supports only few GTP commands now.
+The final_status_list command requires engine support.
 
 
 DCNN

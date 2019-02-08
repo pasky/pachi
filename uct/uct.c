@@ -32,7 +32,7 @@
 
 struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
 struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board);
-static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color, coord_t our_move);
+static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color, coord_t our_move, bool genmove_pondering);
 
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
@@ -221,7 +221,7 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 	 * we know which move we actually played. See uct_genmove() about
 	 * the check for pass. */
 	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord))
-		uct_pondering_start(u, b, u->t, stone_other(m->color), m->coord);
+		uct_pondering_start(u, b, u->t, stone_other(m->color), m->coord, false);
 	assert(!(u->slave && using_dcnn(b))); // XXX distributed engine dcnn pondering support
 
 	return NULL;
@@ -414,22 +414,29 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 	return ctx->games;
 }
 
-/* Start pondering background with @color to play. */
+/* Start pondering background with @color to play.
+ * @our_move: move to be added before starting. 0 means doesn't apply. */
 static void
-uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color, coord_t our_move)
+uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color, coord_t our_move, bool genmove_pondering)
 {
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
 	u->pondering = true;
+	u->genmove_pondering = genmove_pondering;
 
 	/* We need a local board copy to ponder upon. */
 	struct board *b = malloc2(sizeof(*b)); board_copy(b, b0);
 
-	/* *b0 did not have the genmove'd move played yet. */
-	struct move m = { .coord = our_move, .color = stone_other(color) };
-	int res = board_play(b, &m);
-	assert(res >= 0);
-	setup_dynkomi(u, b, stone_other(m.color));
+	/* Board needs updating ? (b0 did not have the genmove'd move played yet) */
+	if (our_move) {	          /* 0 never a real coord */
+		struct move m = { .coord = our_move, .color = stone_other(color) };
+		int res = board_play(b, &m);
+		assert(res >= 0);
+	}
+	if (b->last_move.color != S_NONE)
+		assert(b->last_move.color == stone_other(color));
+	
+	setup_dynkomi(u, b, color);
 
 	/* Start MCTS manager thread "headless". */
 	static struct uct_search_state s;
@@ -493,7 +500,8 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 {
 	struct uct *u = e->data;
 	double time_start = time_now();
-	u->pass_all_alive |= pass_all_alive;
+	u->pass_all_alive |= pass_all_alive;	
+
 	uct_pondering_stop(u);
 
 	if (u->genmove_reset_tree && u->t) {
@@ -524,8 +532,9 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 
 static coord_t
 uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
-{
+{	
 	struct uct *u = e->data;
+
 	coord_t best_coord;
 	struct tree_node *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
 
@@ -570,9 +579,29 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 	}	
 
 	if (u->pondering_opt && u->t)
-		uct_pondering_start(u, b, u->t, stone_other(color), best_coord);
+		uct_pondering_start(u, b, u->t, stone_other(color), best_coord, true);
 
 	return best_coord;
+}
+
+/* Wild pondering for the sake of frontend running Pachi. */
+static void
+uct_analyze(struct engine *e, struct board *b, enum stone color, int start)
+{
+	struct uct *u = e->data;
+
+	if (!start) {
+		if (u->pondering) uct_pondering_stop(u);
+		return;
+	}
+
+	/* Start pondering if not already. */
+	if (u->pondering)  return;
+
+	if (!u->t)
+		uct_prepare_move(u, b, color);
+
+	uct_pondering_start(u, b, u->t, color, 0, false);
 }
 
 void
@@ -801,6 +830,9 @@ uct_state_init(char *arg, struct board *b)
 					 * Implies debug=0. */
 					u->reporting = UR_JSON_BIG;
 					u->debug_level = 0;
+				} else if (!strcasecmp(optval, "leelaz")) {
+					/* Leela-Zero pondering format. */
+					u->reporting = UR_LEELAZ;
 				} else
 					die("UCT: Invalid reporting format %s\n", optval);
 			} else if (!strcasecmp(optname, "reportfreq") && optval) {
@@ -1376,6 +1408,7 @@ engine_uct_init(struct engine *e, char *arg, struct board *b)
 #endif
 	e->best_moves = uct_best_moves;
 	e->evaluate = uct_evaluate;
+	e->analyze = uct_analyze;
 	e->dead_group_list = uct_dead_group_list;
 	e->stop = uct_stop;
 	e->done = uct_done;
