@@ -413,6 +413,8 @@ board_coord_in_symmetry(board_t *b, coord_t c)
 void
 board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c)
 {
+	if (playout_board(b))  return;
+
 	if (likely(symmetry->type == SYM_NONE)) {
 		/* Fully degenerated already. We do not support detection
 		 * of restoring of symmetry, assuming that this is too rare
@@ -868,9 +870,11 @@ board_commit_move(board_t *b, move_t *m)
 static void profiling_noinline
 board_hash_update(board_t *board, coord_t coord, enum stone color)
 {
-	board->hash ^= hash_at(coord, color);
-	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %" PRIhash " -> %" PRIhash "\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
+	if (!playout_board(board)) {
+		board->hash ^= hash_at(coord, color);
+		if (DEBUGL(8))
+			fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %" PRIhash " -> %" PRIhash "\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
+	}
 
 #if defined(BOARD_PAT3)
 	/* @color is not what we need in case of capture. */
@@ -902,6 +906,8 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 static void profiling_noinline
 board_hash_commit(board_t *b)
 {
+	if (playout_board(b))  return;
+
 	if (DEBUGL(8)) fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
 
 	for (int i = 0; i < BOARD_HASH_HISTORY; i++) {

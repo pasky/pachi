@@ -187,12 +187,20 @@ FB_ONLY(int fmap)[BOARD_MAX_COORDS];       /* Map free positions coords to their
 FB_ONLY(group_t c)[BOARD_MAX_GROUPS];      /* List of capturable groups */
 FB_ONLY(int clen);
 #endif
+
+FB_ONLY(bool playout_board);
+
+/*************************************************************************************************************/
+/* Not maintained during playouts: */
 	
-FB_ONLY(board_symmetry_t symmetry);        /* Symmetry information */
+FB_ONLY(board_symmetry_t symmetry);               /* Symmetry information */
 
 FB_ONLY(hash_t hash);                             /* Hash of current board position. */
 FB_ONLY(hash_t hash_history)[BOARD_HASH_HISTORY]; /* Last hashes encountered, for superko check. */
 	int    hash_history_next;                 /* (circular buffer) */
+
+
+/*************************************************************************************************************/
 
 #ifdef BOARD_UNDO_CHECKS	
 	int quicked;                       /* Guard against invalid quick_play() / quick_undo() uses */
@@ -279,6 +287,7 @@ FB_ONLY(hash_t hash_history)[BOARD_HASH_HISTORY]; /* Last hashes encountered, fo
 #define hash_at(coord, color) (board_statics.h[coord][(color) == S_BLACK])
 #endif
 
+#define playout_board(b) ((b)->playout_board)
 
 board_t *board_new(int size, char *fbookfile);
 void board_delete(board_t **board);

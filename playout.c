@@ -197,6 +197,8 @@ playout_play_game(playout_setup_t *setup,
 		  ownermap_t *ownermap,
 		  playout_policy_t *policy)
 {
+	b->playout_board = true;   // don't need board hash, history, symmetry...
+
 	int starting_passes[S_MAX];
 	memcpy(starting_passes, b->passes, sizeof(starting_passes));
 
