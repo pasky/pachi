@@ -27,8 +27,9 @@ struct ownermap;
 
 #define BOARD_LAST_N 4            /* Previous moves. */
 
-/**************************************************************************************/
+#define BOARD_HASH_HISTORY 16
 
+/**************************************************************************************/
 
 /* Maximum supported board size. (Without the S_OFFBOARD edges.) */
 #define BOARD_MAX_SIZE 19
@@ -138,13 +139,6 @@ typedef struct {
 extern board_statics_t board_statics;
 
 
-#define history_hash_bits 12               /* Size of hashtable should be >> board_size^2. */
-#define history_hash_mask ((1 << history_hash_bits) - 1)
-#define history_hash_size (1 << history_hash_bits)
-#define history_hash_prev(i) ((i - 1) & history_hash_mask)
-#define history_hash_next(i) ((i + 1) & history_hash_mask)
-
-
 /* You should treat this struct as read-only.
  * Always call functions below if you want to change it. */
 
@@ -196,8 +190,9 @@ FB_ONLY(int clen);
 	
 FB_ONLY(board_symmetry_t symmetry);        /* Symmetry information */
 
-FB_ONLY(hash_t hash);                            /* Hash of current board position. */
-FB_ONLY(hash_t history_hash)[history_hash_size]; /* Board "history" - hashes encountered, for superko check */
+FB_ONLY(hash_t hash);                             /* Hash of current board position. */
+FB_ONLY(hash_t hash_history)[BOARD_HASH_HISTORY]; /* Last hashes encountered, for superko check. */
+	int    hash_history_next;                 /* (circular buffer) */
 
 #ifdef BOARD_UNDO_CHECKS	
 	int quicked;                       /* Guard against invalid quick_play() / quick_undo() uses */

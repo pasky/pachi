@@ -902,25 +902,19 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 static void profiling_noinline
 board_hash_commit(board_t *b)
 {
-	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
-	if (likely(b->history_hash[b->hash & history_hash_mask]) == 0) {
-		b->history_hash[b->hash & history_hash_mask] = b->hash;
-		return;
-	}
+	if (DEBUGL(8)) fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
 
-	hash_t i = b->hash;
-	while (b->history_hash[i & history_hash_mask]) {
-		if (b->history_hash[i & history_hash_mask] == b->hash) {
-			if (DEBUGL(5))
-				fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
-					coord_x(last_move(b).coord), coord_y(last_move(b).coord));
+	for (int i = 0; i < BOARD_HASH_HISTORY; i++) {
+		if (b->hash_history[i] == b->hash) {
+			if (DEBUGL(5))  fprintf(stderr, "SUPERKO VIOLATION noted at %s\n", coord2sstr(last_move(b).coord));
 			b->superko_violation = true;
 			return;
 		}
-		i = history_hash_next(i);
 	}
-	b->history_hash[i & history_hash_mask] = b->hash;
+
+	int i = b->hash_history_next;
+	b->hash_history[i] = b->hash;
+	b->hash_history_next = (i+1) % BOARD_HASH_HISTORY;
 }
 
 static inline void
