@@ -31,11 +31,11 @@ static void
 dump_spatials(board_t *b, pattern_config_t *pc)
 {
 	/* Skip suicides */
-	if (b->moves && board_at(b, b->last_move.coord) == S_NONE)  return;
+	if (b->moves && board_at(b, last_move(b).coord) == S_NONE)  return;
 
 	//board_print(b, stderr);
 
-	enum stone color = (is_pass(b->last_move.coord) ? S_BLACK : stone_other(b->last_move.color));
+	enum stone color = (is_pass(last_move(b).coord) ? S_BLACK : stone_other(last_move(b).color));
 	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
 	ownermap_t ownermap;  fake_ownermap(b, &ownermap);  /* fake */

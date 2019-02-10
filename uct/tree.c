@@ -579,8 +579,8 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 {
 	/* Get a Common Fate Graph distance map from parent node. */
 	int distances[board_size2(b)];
-	if (!is_pass(b->last_move.coord))
-		cfg_distances(b, b->last_move.coord, distances, TREE_NODE_D_MAX);
+	if (!is_pass(last_move(b).coord))
+		cfg_distances(b, last_move(b).coord, distances, TREE_NODE_D_MAX);
 	else    // Pass - everything is too far.
 		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
 

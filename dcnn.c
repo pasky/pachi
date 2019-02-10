@@ -78,13 +78,13 @@ detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 		else if (bc == stone_other(color))
 			data[(4+libs)*size*size + p] = 1.0;
 		
-		if (c == b->last_move.coord)
+		if (c == last_move(b).coord)
 			data[9*size*size + p] = 1.0;
-		else if (c == b->last_move2.coord)
+		else if (c == last_move2(b).coord)
 			data[10*size*size + p] = 1.0;
-		else if (c == b->last_move3.coord)
+		else if (c == last_move3(b).coord)
 			data[11*size*size + p] = 1.0;
-		else if (c == b->last_move4.coord)
+		else if (c == last_move4(b).coord)
 			data[12*size*size + p] = 1.0;
 	}
 

@@ -202,7 +202,7 @@ void
 spatial_print(board_t *board, spatial_t *s, FILE *f, move_t *at)
 {
 	board_t *b = board_new(board_size(board), NULL);
-	b->last_move.coord = at->coord;
+	last_move(b).coord = at->coord;
 	
 	for (int i = 0; i < real_board_size(b); i++)
 		for (int j = 0; j < real_board_size(b); j++) {

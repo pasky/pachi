@@ -177,7 +177,7 @@ middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prev
 
 	/* Check ko */
 	if (b->ko.coord != pass)
-		foreach_neighbor(b, b->last_move.coord, {
+		foreach_neighbor(b, last_move(b).coord, {
 				if (group_at(b, c) == laddered) {
 					if (DEBUGL(6))  fprintf(stderr, "* ko, no ladder\n");
 					return 0;

@@ -33,10 +33,14 @@ static void board_rmf(board_t *b, int f);
 static void
 board_setup(board_t *b)
 {
+	assert(BOARD_LAST_N >= 4);
+
 	memset(b, 0, sizeof(*b));
 
 	move_t m = { pass, S_NONE };
-	b->last_move = b->last_move2 = b->last_move3 = b->last_move4 = b->last_ko = b->ko = m;
+	for (int i = 0; i < BOARD_LAST_N; i++)
+		last_moven(b, i) = m;
+	b->last_ko = b->ko = m;
 }
 
 void
@@ -285,7 +289,7 @@ board_print_row(board_t *board, int y, strbuf_t *buf, board_cprint cprint, void 
 {
 	sbprintf(buf, " %2d | ", y);
 	for (int x = 1; x < board_size(board) - 1; x++)
-		if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
+		if (coord_x(last_move(board).coord) == x && coord_y(last_move(board).coord) == y)
 			sbprintf(buf, "%c)", stone2char(board_atxy(board, x, y)));
 		else
 			sbprintf(buf, "%c ", stone2char(board_atxy(board, x, y)));
@@ -324,7 +328,7 @@ board_hprint_row(board_t *board, int y, strbuf_t *buf, board_print_handler handl
         sbprintf(buf, " %2d | ", y);
         for (int x = 1; x < board_size(board) - 1; x++) {
                 char *stone_str = handler(board, coord_xy(x, y), data);
-                if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
+                if (coord_x(last_move(board).coord) == x && coord_y(last_move(board).coord) == y)
                         sbprintf(buf, "%s)", stone_str);
                 else
                         sbprintf(buf, "%s ", stone_str);
@@ -697,7 +701,7 @@ board_score(board_t *b, int scores[S_MAX])
 	 * the board has been artificially edited however the relationship
 	 * is broken and japanese score will be off. */
 	if (b->rules == RULES_JAPANESE)
-		score += (b->last_move.color == S_BLACK) + (b->passes[S_WHITE] - b->passes[S_BLACK]);
+		score += (last_move(b).color == S_BLACK) + (b->passes[S_WHITE] - b->passes[S_BLACK]);
 	return score;
 }
 
@@ -844,11 +848,10 @@ board_rmf(board_t *b, int f)
 static void
 board_commit_move(board_t *b, move_t *m)
 {
-	b->last_move4 = b->last_move3;
-	b->last_move3 = b->last_move2;
-	b->last_move2 = b->last_move;
-	b->last_move = *m;
-	b->moves++;	
+	b->last_move_i = last_move_nexti(b);
+	last_move(b) = *m;
+
+	b->moves++;
 }
 
 /* Update board hash with given coordinate. */
@@ -887,27 +890,27 @@ board_hash_update(board_t *board, coord_t coord, enum stone color)
 
 /* Commit current board hash to history. */
 static void profiling_noinline
-board_hash_commit(board_t *board)
+board_hash_commit(board_t *b)
 {
 	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_commit %" PRIhash "\n", board->hash);
-	if (likely(board->history_hash[board->hash & history_hash_mask]) == 0) {
-		board->history_hash[board->hash & history_hash_mask] = board->hash;
+		fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
+	if (likely(b->history_hash[b->hash & history_hash_mask]) == 0) {
+		b->history_hash[b->hash & history_hash_mask] = b->hash;
 		return;
 	}
 
-	hash_t i = board->hash;
-	while (board->history_hash[i & history_hash_mask]) {
-		if (board->history_hash[i & history_hash_mask] == board->hash) {
+	hash_t i = b->hash;
+	while (b->history_hash[i & history_hash_mask]) {
+		if (b->history_hash[i & history_hash_mask] == b->hash) {
 			if (DEBUGL(5))
 				fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
-					coord_x(board->last_move.coord), coord_y(board->last_move.coord));
-			board->superko_violation = true;
+					coord_x(last_move(b).coord), coord_y(last_move(b).coord));
+			b->superko_violation = true;
 			return;
 		}
 		i = history_hash_next(i);
 	}
-	board->history_hash[i & history_hash_mask] = board->hash;
+	b->history_hash[i & history_hash_mask] = b->hash;
 }
 
 static inline void

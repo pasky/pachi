@@ -19,7 +19,7 @@ undo_init(board_t *b, move_t *m, board_undo_t *u)
 	// Paranoid uninitialized mem test
 	// memset(u, 0xff, sizeof(*u));
 	
-	u->last_move2 = b->last_move2;
+	u->last_move2 = last_move2(b);
 	u->ko = b->ko;
 	u->last_ko = b->last_ko;
 	u->last_ko_age = b->last_ko_age;
@@ -102,8 +102,8 @@ static void
 board_commit_move(board_t *b, move_t *m)
 {
 	/* Not touching last_move3 / last_move4 */
-	b->last_move2 = b->last_move;
-	b->last_move = *m;
+	last_move2(b) = last_move(b);
+	last_move(b) = *m;
 	b->moves++;
 }
 
@@ -314,8 +314,8 @@ board_quick_undo(board_t *b, move_t *m, board_undo_t *u)
 	b->quicked--;
 #endif
 	
-	b->last_move = b->last_move2;
-	b->last_move2 = u->last_move2;
+	last_move(b) = last_move2(b);
+	last_move2(b) = u->last_move2;
 	b->ko = u->ko;
 	b->last_ko = u->last_ko;
 	b->last_ko_age = u->last_ko_age;

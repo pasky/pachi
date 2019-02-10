@@ -495,7 +495,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 
 	int result;
 	int pass_limit = real_board_size2(b2) / 2;
-	int passes = is_pass(b->last_move.coord) && b->moves > 0;
+	int passes = is_pass(last_move(b).coord) && b->moves > 0;
 
 	/* debug */
 	static char spaces[] = "\0                                                      ";

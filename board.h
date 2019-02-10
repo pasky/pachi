@@ -25,6 +25,8 @@ struct ownermap;
 
 //#define BOARD_UNDO_CHECKS 1     /* Guard against invalid quick_play() / quick_undo() uses */
 
+#define BOARD_LAST_N 4            /* Previous moves. */
+
 /**************************************************************************************/
 
 
@@ -156,10 +158,8 @@ typedef struct board {
 	int handicap;
 	enum rules rules;
 
-	move_t last_move;
-	move_t last_move2;        /* Second-to-last move    */
-FB_ONLY(move_t last_move3);       /* Move before last_move2 */
-FB_ONLY(move_t last_move4);       /* Move before last_move3 */
+	move_t last_moves[BOARD_LAST_N]; /* Last moves (circular buffer) */
+	int    last_move_i;              /* For quick boards only last two moves are maintained. */
 
 	move_t ko;                /* Basic ko check */	
 	move_t last_ko;           /* Last ko played on the board. */
@@ -248,6 +248,14 @@ FB_ONLY(hash_t history_hash)[history_hash_size]; /* Board "history" - hashes enc
 #else
 #  define board_bits2(b_) (board_statics.bits2)
 #endif
+
+#define last_move(b)  ((b)->last_moves[b->last_move_i])
+#define last_move2(b) ((b)->last_moves[(BOARD_LAST_N + b->last_move_i - 1) % BOARD_LAST_N])
+#define last_move3(b) ((b)->last_moves[(BOARD_LAST_N + b->last_move_i - 2) % BOARD_LAST_N])
+#define last_move4(b) ((b)->last_moves[(BOARD_LAST_N + b->last_move_i - 3) % BOARD_LAST_N])
+#define last_move_nexti(b)     (((b)->last_move_i + 1) % BOARD_LAST_N)
+#define last_move_previ(b, n)  ((BOARD_LAST_N + b->last_move_i - (n)) % BOARD_LAST_N)
+#define last_moven(b, n) ((b)->last_moves[last_move_previ(b, n)])
 
 #define board_at(b_, c) ((b_)->b[c])
 #define board_atxy(b_, x, y) ((b_)->b[(x) + board_size(b_) * (y)])

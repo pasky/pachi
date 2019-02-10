@@ -211,7 +211,7 @@ playout_play_game(playout_setup_t *setup,
 #endif
 
 	enum stone color = starting_color;
-	int passes = is_pass(b->last_move.coord) && b->moves > 0;
+	int passes = is_pass(last_move(b).coord) && b->moves > 0;
 
 	/* Play until both sides pass, or we hit threshold. */
 	while (gamelen-- > 0 && passes < 2) {
@@ -256,7 +256,7 @@ playout_play_game(playout_setup_t *setup,
 	 * TODO: handle eyes in seki according to japanese rules. */
 	if (b->rules == RULES_JAPANESE) {
 		memcpy(b->passes, starting_passes, sizeof(starting_passes));
-		b->last_move.color = stone_other(starting_color);
+		last_move(b).color = stone_other(starting_color);
 	}
 	
 	floating_t score = board_fast_score(b);

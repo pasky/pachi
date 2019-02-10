@@ -641,7 +641,7 @@ uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coor
 	bool can_pass_first = (!nopassfirst || pass_all_alive);
 	if (!can_pass_first)  return false;
 
-	if (is_pass(coord) || is_pass(b->last_move.coord))  return false;
+	if (is_pass(coord) || is_pass(last_move(b).coord))  return false;
 
 	enum stone other_color = stone_other(color);
 	int capturing = board_get_atari_neighbor(b, coord, other_color);
@@ -696,7 +696,7 @@ uct_search_result(uct_t *u, board_t *b, enum stone color,
 		return NULL;
 	}
 
-	bool opponent_passed = is_pass(b->last_move.coord);
+	bool opponent_passed = is_pass(last_move(b).coord);
 	bool pass_first = uct_pass_first(u, b, color, pass_all_alive, *best_coord);
 	if (UDEBUGL(2) && pass_first)  fprintf(stderr, "<Pass first ok>\n");
 

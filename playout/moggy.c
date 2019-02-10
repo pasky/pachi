@@ -618,11 +618,11 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 	}
 
 	/* Local checks */
-	if (!is_pass(b->last_move.coord)) {
+	if (!is_pass(last_move(b).coord)) {
 		/* Local group in atari? */
 		if (true) {  // pp->lcapturerate check in local_atari_check()
 			move_queue_t q;  mq_init(&q);
-			if (local_atari_check(p, b, &b->last_move, &q) && 
+			if (local_atari_check(p, b, &last_move(b), &q) && 
 			    q.moves > 0)
 				return mq_pick(&q);
 		}
@@ -630,7 +630,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > fast_random(100)) {
 			move_queue_t q;  mq_init(&q);
-			local_ladder_check(p, b, &b->last_move, &q);
+			local_ladder_check(p, b, &last_move(b), &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
@@ -650,7 +650,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
 			move_queue_t q;  mq_init(&q);
-			local_2lib_check(p, b, &b->last_move, &q);
+			local_2lib_check(p, b, &last_move(b), &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
@@ -658,7 +658,7 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		/* Local group reduced some of our groups to 3 libs? */
 		if (pp->nlibrate > fast_random(100)) {
 			move_queue_t q;  mq_init(&q);
-			local_nlib_check(p, b, &b->last_move, &q);
+			local_nlib_check(p, b, &last_move(b), &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
@@ -666,15 +666,15 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		/* Some other semeai-ish shape checks */
 		if (pp->eyefixrate > fast_random(100)) {
 			move_queue_t q;  mq_init(&q);
-			eye_fix_check(p, b, &b->last_move, to_play, &q);
+			eye_fix_check(p, b, &last_move(b), to_play, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
 		}
 
 		/* Nakade check */
 		if (pp->nakaderate > fast_random(100)
-		    && immediate_liberty_count(b, b->last_move.coord) > 0) {
-			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
+		    && immediate_liberty_count(b, last_move(b).coord) > 0) {
+			coord_t nakade = nakade_check(p, b, &last_move(b), to_play);
 			if (!is_pass(nakade))
 				return nakade;
 		}
@@ -683,8 +683,8 @@ playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enu
 		if (pp->patternrate > fast_random(100)) {
 			move_queue_t q;  mq_init(&q);
 			fixp_t gammas[MQL];
-			apply_pattern(p, b, &b->last_move,
-			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
+			apply_pattern(p, b, &last_move(b),
+			                  pp->pattern2 && last_move2(b).coord >= 0 ? &last_move2(b) : NULL,
 					  &q, gammas);
 			if (q.moves > 0)
 				return mq_gamma_pick(&q, gammas);
@@ -797,30 +797,30 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 	}
 
 	/* Local checks */
-	if (!is_pass(b->last_move.coord)) {
+	if (!is_pass(last_move(b).coord)) {
 		/* Local group in atari? */
 		if (pp->lcapturerate > 0)
-			local_atari_check(p, b, &b->last_move, &q);
+			local_atari_check(p, b, &last_move(b), &q);
 
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > 0)
-			local_ladder_check(p, b, &b->last_move, &q);
+			local_ladder_check(p, b, &last_move(b), &q);
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > 0)
-			local_2lib_check(p, b, &b->last_move, &q);
+			local_2lib_check(p, b, &last_move(b), &q);
 
 		/* Local group reduced some of our groups to 3 libs? */
 		if (pp->nlibrate > 0)
-			local_nlib_check(p, b, &b->last_move, &q);
+			local_nlib_check(p, b, &last_move(b), &q);
 
 		/* Some other semeai-ish shape checks */
 		if (pp->eyefixrate > 0)
-			eye_fix_check(p, b, &b->last_move, to_play, &q);
+			eye_fix_check(p, b, &last_move(b), to_play, &q);
 
 		/* Nakade check */
-		if (pp->nakaderate > 0 && immediate_liberty_count(b, b->last_move.coord) > 0) {
-			coord_t nakade = nakade_check(p, b, &b->last_move, to_play);
+		if (pp->nakaderate > 0 && immediate_liberty_count(b, last_move(b).coord) > 0) {
+			coord_t nakade = nakade_check(p, b, &last_move(b), to_play);
 			if (!is_pass(nakade))
 				mq_add(&q, nakade, 1<<MQ_NAKADE);
 		}
@@ -828,8 +828,8 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 		/* Check for patterns we know */
 		if (pp->patternrate > 0) {
 			fixp_t gammas[MQL];
-			apply_pattern(p, b, &b->last_move,
-					pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
+			apply_pattern(p, b, &last_move(b),
+					pp->pattern2 && last_move2(b).coord >= 0 ? &last_move2(b) : NULL,
 					&q, gammas);
 			/* FIXME: Use the gammas. */
 		}

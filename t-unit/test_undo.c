@@ -22,8 +22,8 @@ board_quick_cmp(struct board *b1, struct board *b2)
 		fprintf(stderr, "differs in main vars\n");
 		return 1;
 	}
-	if (move_cmp(&b1->last_move, &b2->last_move) ||
-	    move_cmp(&b1->last_move2, &b2->last_move2)) {
+	if (move_cmp(&last_move(b1), &last_move(b2)) ||
+	    move_cmp(&last_move2(b1), &last_move2(b2))) {
 		fprintf(stderr, "differs in last_move\n");
 		return 1;
 	}

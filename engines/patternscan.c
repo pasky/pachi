@@ -237,11 +237,11 @@ genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 
 #ifdef DEBUG_GENSPATIAL
 	fprintf(stderr, "--------------------------------------------------------------\n\n");
-	coord_t last_move = b->last_move.coord;
-	b->last_move.coord = m->coord;
+	coord_t last_move = last_move(b).coord;
+	last_move(b).coord = m->coord;
 	board_print(b, stderr);
-	fprintf(stderr, "%s to play\n", stone2str(stone_other(b->last_move.color)));
-	b->last_move.coord = last_move;
+	fprintf(stderr, "%s to play\n", stone2str(stone_other(last_move(b).color)));
+	last_move(b).coord = last_move;
 #endif
 
 	spatial_t s;

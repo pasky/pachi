@@ -199,7 +199,7 @@ uct_prior_cfgd(uct_t *u, tree_node_t *node, prior_map_t *map)
 	/* Q_{common_fate_graph_distance} */
 	/* Give bonus to moves local to the last move, where "local" means
 	 * local in terms of groups, not just manhattan distance. */
-	if (is_pass(map->b->last_move.coord))
+	if (is_pass(last_move(map->b).coord))
 		return;
 
 	foreach_free_point(map->b) {

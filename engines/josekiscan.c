@@ -65,7 +65,7 @@ josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags)
 	assert(joseki_spatial_hash(j->b[0], m->coord, m->color) ==
 	       joseki_spatial_hash(board,   m->coord, m->color));
 
-	coord_t last = board->last_move.coord;
+	coord_t last = last_move(board).coord;
 	if (last != pass && coord_gridcular_distance(m->coord, last) >= 30)
 		fprintf(stderr, "warning: josekiscan %s %s: big distance to prev move, use pass / setup stones for tenuki\n",
 			coord2sstr(last), coord2sstr(m->coord));

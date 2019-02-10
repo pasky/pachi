@@ -159,7 +159,7 @@ joseki_add_3x3(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color, j
 {
 	assert(!is_pass(coord));
 	if (!prev)  die("joseki: [ %s %s ] adding 3x3 match with no previous move, this is bad.\n",
-			coord2sstr(b->last_move.coord), coord2sstr(coord));
+			coord2sstr(last_move(b).coord), coord2sstr(coord));
 	josekipat_t *p = joseki_lookup_3x3_prev(jd, b, coord, color, prev, flags);
 	if (p)  return p;
 
@@ -315,7 +315,7 @@ static float
 joseki_rating(board_t *b, josekipat_t *p)
 {
 	coord_t prev = (p->prev ? p->prev->coord : pass);
-	coord_t last = b->last_move.coord;
+	coord_t last = last_move(b).coord;
 	if (b->moves < 4)		     return 0.2; /* Play corners first */
 	if (p->flags & JOSEKI_FLAGS_LATER)   return 0.2; /* Low prio */
 	if (prev == last && last != pass)    return 1.0; /* Boost answers to last move */
@@ -364,8 +364,8 @@ joseki_lookup_regular(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone c
 		if (p->flags & JOSEKI_FLAGS_LATER)  match_low = p;	/* low prio */
 		else				    match_prev = p;	/* strong match: prev move matches */
 
-		if (prev->coord == b->last_move.coord &&
-		    prev->color == b->last_move.color)
+		if (prev->coord == last_move(b).coord &&
+		    prev->color == last_move(b).color)
 			return p;					/* last move match */
 	}
 
@@ -389,8 +389,8 @@ joseki_lookup_3x3(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color
 		if (p->flags & JOSEKI_FLAGS_LATER)  match_low = p;	/* low prio */			
 		else				    match_prev = p;	/* strong match: prev move matches */
 
-		if (prev->coord == b->last_move.coord &&
-		    prev->color == b->last_move.color)
+		if (prev->coord == last_move(b).coord &&
+		    prev->color == last_move(b).color)
 			return p;					/* last move match */
 	}
 	return (match_prev ? match_prev : match_low);

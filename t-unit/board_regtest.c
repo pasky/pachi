@@ -79,11 +79,11 @@ hash_board(board_t *b)
 	hash_field(rules);
 	//hash_field(moves);       // don't hash displayed fields
 
-	hash_field(last_move);
-	hash_field(last_move2);
+	hash_struct(&last_move(b));
+	hash_struct(&last_move2(b));
 #ifdef CHECK_LAST_MOVES
-	hash_field(last_move3);
-	hash_field(last_move4);
+	hash_struct(&last_move3(b));
+	hash_struct(&last_move4(b));
 #endif
 
 	//hash_field(ko);          // don't hash displayed fields
@@ -193,16 +193,16 @@ print_move(board_t *b, move_t *m)
 static void
 dump_board(board_t *b)
 {
-	if (b->last_move.color == S_NONE)
+	if (last_move(b).color == S_NONE)
 		dump_board_statics(b);
 
 	printf("move %3i ", b->moves);
 
-	print_move(b, &b->last_move);
+	print_move(b, &last_move(b));
 #ifdef SHOW_LAST_MOVES
-	print_move(b, &b->last_move2);
-	print_move(b, &b->last_move3);
-	print_move(b, &b->last_move4);
+	print_move(b, &last_move2(b));
+	print_move(b, &last_move3(b));
+	print_move(b, &last_move4(b));
 #endif
 
 	printf("cap %-2i %-2i ", b->captures[S_BLACK], b->captures[S_WHITE]);

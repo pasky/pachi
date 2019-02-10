@@ -486,8 +486,8 @@ cmd_pachi_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (isdigit(*arg))  start = atoi(arg);
 	
 	enum stone color = S_BLACK;
-	if (b->last_move.color != S_NONE)
-		color = stone_other(b->last_move.color);
+	if (last_move(b).color != S_NONE)
+		color = stone_other(last_move(b).color);
 	
 	if (e->analyze) {  e->analyze(e, b, color, start);  gtp->analyze_running = true;  }
 	else               gtp_error(gtp, "pachi-analyze not supported for this engine", NULL);
@@ -707,8 +707,8 @@ static enum parse_code
 cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	/* --noundo: undo only allowed for pass. */
-	if (gtp->noundo && !is_pass(b->last_move.coord)) {
-		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(b->last_move.coord));
+	if (gtp->noundo && !is_pass(last_move(b).coord)) {
+		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(last_move(b).coord));
 		gtp_error(gtp, "cannot undo", NULL);
 		return P_OK;
 	}
@@ -718,7 +718,7 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
-	enum stone color = stone_other(b->last_move.color);
+	enum stone color = stone_other(last_move(b).color);
 	move_t m = move(pass, color);
 	if (e->notify_play)
 		e->notify_play(e, b, &m, "");
