@@ -45,12 +45,12 @@ if ($ARGV[0]) {
 local $/ = undef; my $sgf = <>;
 $sgf =~ s/\\]//gs;        # remove escaped brackets (in comments)
 $sgf =~ s/\bC\[.*?\]//gs; # no comments
+$sgf =~ s/[ \n\t]//gs;    # no whitespaces
 #$sgf =~ s/\).*//gs; # cut at end of principal branch
 
 my @m = split(/;/, $sgf);
 if (shift @m ne "(") {  die "doesn't look like valid sgf, aborting\n";  }
 my $h = shift @m;    # game header
-$h =~ s/[ \n\t]//gs; # no whitespaces
 
 my $rules = "chinese";
 if ($h =~ /RU\[([^]]+)\]/) {  $rules = lc($1);  } else {  warn "WARNING: no rules specified, assuming $rules ...\n";  }

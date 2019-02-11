@@ -438,9 +438,9 @@ cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, g
 	struct move_queue q = { .moves = 0 };
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
 	
-	int dame;
+	int dame, seki;
 	int ownermap[board_size2(b)];
-	floating_t score = board_official_score_details(b, &q, &dame, ownermap);	
+	floating_t score = board_official_score_details(b, &q, &dame, &seki, ownermap, NULL);
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	

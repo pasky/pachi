@@ -110,31 +110,34 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 	struct move_queue dead, unclear;	
 	uct_mcowner_playouts(u, b, color);
 	get_dead_groups(b, &u->ownermap, &dead, &unclear);
-	
+
+	bool check_score = !u->allow_losing_pass;
+
 	if (pass_all_alive) {
 		*msg = "need to remove opponent dead groups first";
 		for (unsigned int i = 0; i < dead.moves; i++)
 			if (board_at(b, dead.move[i]) == stone_other(color))
 				return false;
 		dead.moves = 0; // our dead stones are alive when pass_all_alive is true
+
+		float final_score = board_official_score_color(b, &dead, color);
+		*msg = "losing on official score";
+		return (check_score ? final_score >= 0 : true);
 	}
 
 	/* Check score estimate first, official score is off if position is not final */
 	*msg = "losing on score estimate";
-	bool check_score = !u->allow_losing_pass;
 	floating_t score_est = ownermap_score_est_color(b, &u->ownermap, color);
 	if (check_score && score_est < 0)  return false;
 	
 	int final_ownermap[board_size2(b)];
-	int dames;
-	floating_t final_score = board_official_score_details(b, &dead, &dames, final_ownermap); 
+	int dame, seki;
+	floating_t final_score = board_official_score_details(b, &dead, &dame, &seki, final_ownermap, &u->ownermap);
 	if (color == S_BLACK)  final_score = -final_score;
 	
-	/* Don't go to counting if position is not final.
-	 * Skip extra checks for pass_all_alive in case there are
-	 * positions which don't pass them (too many sekis for example). */
+	/* Don't go to counting if position is not final. */
 	if (!board_position_final_full(b, &u->ownermap, &dead, &unclear, score_est,
-				       final_ownermap, dames, final_score, msg, !pass_all_alive))
+				       final_ownermap, dame, final_score, msg))
 		return false;
 	
 	*msg = "losing on official score";
@@ -504,7 +507,8 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 
 	uct_pondering_stop(u);
 
-	if (u->genmove_reset_tree && u->t) {
+	if (u->t && (u->genmove_reset_tree ||
+		     (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN)))) {
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
 	}

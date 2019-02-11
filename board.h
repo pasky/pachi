@@ -15,7 +15,7 @@
 #include "mq.h"
 
 struct fbook;
-
+struct ownermap;
 
 /* Maximum supported board size. (Without the S_OFFBOARD edges.) */
 #define BOARD_MAX_SIZE 19
@@ -382,10 +382,6 @@ static bool board_is_valid_play(struct board *b, enum stone color, coord_t coord
 static bool board_is_valid_move(struct board *b, struct move *m);
 /* Returns true if ko was just taken. */
 static bool board_playing_ko_threat(struct board *b);
-/* Returns 0 or ID of neighboring group in atari. */
-static group_t board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color);
-/* Get all neighboring groups in atari */
-static void board_get_atari_neighbors(struct board *b, coord_t coord, enum stone group_color, struct move_queue *q);
 /* Returns true if the move is not obvious self-atari. */
 static bool board_safe_to_play(struct board *b, coord_t coord, enum stone color);
 
@@ -408,8 +404,8 @@ bool board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_c
 /* Returns true if given coordinate is a 1-pt eye (checks against false eyes, or
  * at least tries to). */
 bool board_is_one_point_eye(struct board *board, coord_t c, enum stone eye_color);
-/* Returns color of a 1pt eye owner, S_NONE if not an eye. */
-enum stone board_get_one_point_eye(struct board *board, coord_t c);
+/* Returns 1pt eye color (can be false-eye) */
+enum stone board_eye_color(struct board *board, coord_t c);
 
 /* board_official_score() is the scoring method for yielding score suitable
  * for external presentation. For fast scoring of entirely filled boards
@@ -421,7 +417,8 @@ floating_t board_score(struct board *b, int scores[S_MAX]);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
 struct move_queue;
 floating_t board_official_score(struct board *board, struct move_queue *dead);
-floating_t board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *final_ownermap);
+floating_t board_official_score_color(struct board *board, struct move_queue *dead, enum stone color);
+floating_t board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *seki, int *ownermap, struct ownermap *po);
 void       board_print_official_ownermap(struct board *b, int *final_ownermap);
 
 /* Set board rules according to given string. Returns false in case
@@ -551,8 +548,8 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 static inline bool
 board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 {
-	return (neighbor_count_at(board, coord, eye_color)
-	        + neighbor_count_at(board, coord, S_OFFBOARD)) == 4;
+	return (neighbor_count_at(board, coord, eye_color) +
+	        neighbor_count_at(board, coord, S_OFFBOARD)) == 4;
 }
 
 /* Group suicides allowed */
@@ -615,44 +612,6 @@ board_playing_ko_threat(struct board *b)
 {
 	return !is_pass(b->ko.coord);
 }
-
-static inline group_t
-board_get_atari_neighbor(struct board *b, coord_t coord, enum stone group_color)
-{
-	assert(coord != pass);
-	foreach_neighbor(b, coord, {
-		group_t g = group_at(b, c);
-		if (g && board_at(b, c) == group_color && board_group_info(b, g).libs == 1)
-			return g;
-		/* We return first match. */
-	});
-	return 0;
-}
-
-static inline void
-board_get_atari_neighbors(struct board *b, coord_t c, enum stone group_color, struct move_queue *q)
-{
-	assert(c != pass);
-	q->moves = 0;
-	foreach_neighbor(b, c, {
-		group_t g = group_at(b, c);
-		if (g && board_at(b, c) == group_color && board_group_info(b, g).libs == 1) {
-			mq_add(q, g, 0);
-			mq_nodup(q);
-		}
-	});
-}
-
-#define foreach_atari_neighbor(b, c, group_color)			\
-	do {								\
-		struct move_queue __q;					\
-		board_get_atari_neighbors(b, (c), (group_color), &__q);	\
-		for (unsigned int __i = 0; __i < __q.moves; __i++) {		\
-			group_t g = __q.move[__i];
-
-#define foreach_atari_neighbor_end  \
-			} \
-	} while (0)
 
 
 static inline bool

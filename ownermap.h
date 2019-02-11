@@ -15,7 +15,7 @@ struct move_queue;
 #define GJ_THRES	0.8
 
 enum point_judgement {
-	PJ_DAME = S_NONE,
+	PJ_SEKI = S_NONE,
 	PJ_BLACK = S_BLACK,
 	PJ_WHITE = S_WHITE,
 	PJ_UNKNOWN = 3,
@@ -70,12 +70,15 @@ float ownermap_score_est_color(struct board *b, struct ownermap *ownermap, enum 
 char *ownermap_score_est_str(struct board *b, struct ownermap *ownermap);
 enum point_judgement ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c);
 
+/* Raw count for each color. */
+void ownermap_scores(struct board *b, struct ownermap *ownermap, int *scores);
+int ownermap_dames(struct board *b, struct ownermap *ownermap);
+
 /* Is board position final ? */
 bool board_position_final(struct board *b, struct ownermap *ownermap, char **msg);
 bool board_position_final_full(struct board *b, struct ownermap *ownermap,
 			       struct move_queue *dead, struct move_queue *unclear, float score_est,
-			       int *final_ownermap, int final_dames, float final_score,
-			       char **msg, bool extra_checks);
+			       int *final_ownermap, int final_dames, float final_score, char **msg);
 
 /* Don't allow passing earlier than that:
  * 19x19: 120    15x15: 56    13x13: 33    9x9: 16 */

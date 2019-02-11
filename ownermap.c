@@ -25,17 +25,14 @@ printhook(struct board *board, coord_t c, strbuf_t *buf, void *data)
 		sbprintf(buf, "Score Est: %s", ownermap_score_est_str(board, ownermap));
 		return;
 	}
-
-        if (!ownermap) {
-		sbprintf(buf, ". ");
-		return;
-        }
-        const char chr[] = ":XO,"; // dame, black, white, unclear
+	
+        if (!ownermap) {  sbprintf(buf, ". ");  return;  }
+	
+        const char chr[] = ":XO,"; // seki, black, white, unclear
         const char chm[] = ":xo,";
         char ch = chr[ownermap_judge_point(ownermap, c, GJ_THRES)];
-        if (ch == ',') { // less precise estimate then?
-                ch = chm[ownermap_judge_point(ownermap, c, 0.67)];
-        }
+        if (ch == ',')   // less precise estimate then?
+                ch = chm[ownermap_judge_point(ownermap, c, 0.67)];	
         sbprintf(buf, "%c ", ch);
 }
 
@@ -52,8 +49,7 @@ ownermap_fill(struct ownermap *ownermap, struct board *b)
 	foreach_point(b) {
 		enum stone color = board_at(b, c);
 		if (color == S_OFFBOARD)  continue;
-		if (color == S_NONE)
-			color = board_get_one_point_eye(b, c);
+		if (color == S_NONE)      color = board_eye_color(b, c);
 		ownermap->map[c][color]++;
 	} foreach_point_end;
 }
@@ -87,14 +83,10 @@ ownermap_judge_point(struct ownermap *ownermap, coord_t c, floating_t thres)
 	int b = ownermap->map[c][S_BLACK];
 	int w = ownermap->map[c][S_WHITE];
 	int total = ownermap->playouts;
-	if (n >= total * thres)
-		return PJ_DAME;
-	else if (n + b >= total * thres)
-		return PJ_BLACK;
-	else if (n + w >= total * thres)
-		return PJ_WHITE;
-	else
-		return PJ_UNKNOWN;
+	if      (n     >= total * thres)  return PJ_SEKI;
+	else if (n + b >= total * thres)  return PJ_BLACK;
+	else if (n + w >= total * thres)  return PJ_WHITE;
+	else                              return PJ_UNKNOWN;
 }
 
 enum stone
@@ -115,35 +107,26 @@ ownermap_judge_groups(struct board *b, struct ownermap *ownermap, struct group_j
 	foreach_point(b) {
 		enum stone color = board_at(b, c);
 		group_t g = group_at(b, c);
-		if (!g) continue;
-
+		if (!g)  continue;
 		enum point_judgement pj = ownermap_judge_point(ownermap, c, judge->thres);
-		// assert(judge->gs[g] == GS_NONE || judge->gs[g] == pj);
+
 		if (pj == PJ_UNKNOWN) {
-			/* Fate is uncertain. */
 			judge->gs[g] = GS_UNKNOWN;
-
-		} else if (judge->gs[g] != GS_UNKNOWN) {
-			/* Update group state. */
-			enum gj_state new;
-
-			// Comparing enum types, casting (int) avoids compiler warnings
-			if ((int)pj == (int)color) { 
-				new = GS_ALIVE;
-			} else if ((int)pj == (int)stone_other(color)) {
-				new = GS_DEAD;
-			} else { assert(pj == PJ_DAME);
-				/* Exotic! */
-				new = GS_UNKNOWN;
-			}
-
-			if (judge->gs[g] == GS_NONE) {
-				judge->gs[g] = new;
-			} else if (judge->gs[g] != new) {
-				/* Contradiction. :( */
-				judge->gs[g] = GS_UNKNOWN;
-			}
+			continue;
 		}
+		
+		if (judge->gs[g] == GS_UNKNOWN)
+			continue;
+		
+		/* Update group state.
+		 * Comparing enum types, casting (int) avoids compiler warnings */
+		enum gj_state new;
+		if      ((int)pj == (int)color)               new = GS_ALIVE;
+		else if ((int)pj == (int)stone_other(color))  new = GS_DEAD;
+		else                { assert(pj == PJ_SEKI);  new = GS_UNKNOWN;  /* Exotic! */  }
+		
+		if      (judge->gs[g] == GS_NONE)  judge->gs[g] = new;
+		else if (judge->gs[g] != new)      judge->gs[g] = GS_UNKNOWN;  /* Contradiction. :( */
 	} foreach_point_end;
 }
 
@@ -168,6 +151,24 @@ get_dead_groups(struct board *b, struct ownermap *ownermap, struct move_queue *d
 	ownermap_judge_groups(b, ownermap, &gj);
 	if (dead)     {  dead->moves = 0;     groups_of_status(b, &gj, GS_DEAD, dead);  }
 	if (unclear)  {  unclear->moves = 0;  groups_of_status(b, &gj, GS_UNKNOWN, unclear);  }
+}
+
+void
+ownermap_scores(struct board *b, struct ownermap *ownermap, int *scores)
+{
+	foreach_point(b) {
+		if (board_at(b, c) == S_OFFBOARD)  continue;
+		enum point_judgement j = ownermap_judge_point(ownermap, c, 0.67);
+		scores[j]++;
+	} foreach_point_end;
+}
+
+int
+ownermap_dames(struct board *b, struct ownermap *ownermap)
+{
+	int scores[S_MAX] = { 0, };
+	ownermap_scores(b, ownermap, scores);
+	return scores[PJ_UNKNOWN];
 }
 
 enum point_judgement
@@ -225,19 +226,18 @@ board_position_final(struct board *b, struct ownermap *ownermap, char **msg)
 	
 	floating_t score_est = ownermap_score_est(b, ownermap);
 
-	int final_dames;
+	int dame, seki;
 	int final_ownermap[board_size2(b)];
-	floating_t final_score = board_official_score_details(b, &dead, &final_dames, final_ownermap);
+	floating_t final_score = board_official_score_details(b, &dead, &dame, &seki, final_ownermap, ownermap);
 
 	return board_position_final_full(b, ownermap, &dead, &unclear, score_est,
-					 final_ownermap, final_dames, final_score, msg, true);
+					 final_ownermap, dame, final_score, msg);
 }
 
 bool
 board_position_final_full(struct board *b, struct ownermap *ownermap,
 			  struct move_queue *dead, struct move_queue *unclear, float score_est,
-			  int *final_ownermap, int final_dames, float final_score,
-			  char **msg, bool extra_checks)
+			  int *final_ownermap, int final_dames, float final_score, char **msg)
 {
 	*msg = "too early to pass";
 	if (b->moves < board_earliest_pass(b))
@@ -266,7 +266,7 @@ board_position_final_full(struct board *b, struct ownermap *ownermap,
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD) continue;
 		if (final_ownermap[c] != 3)  continue;
-		if (ownermap_judge_point(ownermap, c, GJ_THRES) == PJ_DAME) continue;
+		if (ownermap_judge_point(ownermap, c, GJ_THRES) == PJ_SEKI) continue;
 
 		coord_t dame = c;
 		int around[4] = { 0, };
@@ -284,17 +284,15 @@ board_position_final_full(struct board *b, struct ownermap *ownermap,
 
 	/* If ownermap and official score disagree position is likely not final.
 	 * If too many dames also. */
-	if (extra_checks) {
-		int max_dames = (board_large(b) ? 20 : 7);
-		*msg = "non-final position: too many dames";
-		if (final_dames > max_dames)    return false;
-
-		/* Can disagree up to dame points, as long as there are not too many.
-		 * For example a 1 point difference with 1 dame is quite usual... */
-		int max_diff = MIN(final_dames, 4);
-		*msg = "non-final position: score est and official score don't agree";
-		if (fabs(final_score - score_est) > max_diff)  return false;
-	}
+	int max_dames = (board_large(b) ? 15 : 7);
+	*msg = "non-final position: too many dames";
+	if (final_dames > max_dames)    return false;
+	
+	/* Can disagree up to dame points, as long as there are not too many.
+	 * For example a 1 point difference with 1 dame is quite usual... */
+	int max_diff = MIN(final_dames, 4);
+	*msg = "non-final position: score est and official score don't agree";
+	if (fabs(final_score - score_est) > max_diff)  return false;
 	
 	return true;
 }

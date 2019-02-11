@@ -643,7 +643,7 @@ cmd_final_status_list_seki(char *arg, struct board *b, struct engine *e, gtp_t *
 	struct move_queue sekis = { .moves = 0 };
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
-		if (ownermap_judge_point(ownermap, c, 0.80) != PJ_DAME)  continue;
+		if (ownermap_judge_point(ownermap, c, 0.80) != PJ_SEKI)  continue;
 
 		foreach_neighbor(b, c, {
 			group_t g = group_at(b, c);

@@ -21,6 +21,7 @@ struct uct_prior {
 	int joseki_eqex, joseki_eqex_far, pattern_eqex, dcnn_eqex;
 	int cfgdn; int *cfgd_eqex;
 	bool prune_ladders;
+	bool boost_pass;
 };
 
 struct prior_map {

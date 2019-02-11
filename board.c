@@ -10,6 +10,7 @@
 #include "fbook.h"
 #include "mq.h"
 #include "random.h"
+#include "ownermap.h"
 
 #ifdef BOARD_PAT3
 #include "pattern3.h"
@@ -1494,17 +1495,17 @@ play_pass:
 }
 
 
+/* XXX: We attempt false eye detection but we will yield false
+ * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
 bool
 board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 {
 	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
 
-	/* XXX: We attempt false eye detection but we will yield false
-	 * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
-
 	foreach_diag_neighbor(board, coord) {
 		color_diag_libs[(enum stone) board_at(board, c)]++;
 	} foreach_diag_neighbor_end;
+	
 	/* For false eye, we need two enemy stones diagonally in the
 	 * middle of the board, or just one enemy stone at the edge
 	 * or in the corner. */
@@ -1513,21 +1514,18 @@ board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 }
 
 bool
-board_is_one_point_eye(struct board *board, coord_t coord, enum stone eye_color)
+board_is_one_point_eye(struct board *b, coord_t c, enum stone eye_color)
 {
-	return board_is_eyelike(board, coord, eye_color)
-		&& !board_is_false_eyelike(board, coord, eye_color);
+	return (board_is_eyelike(b, c, eye_color) &&
+		!board_is_false_eyelike(b, c, eye_color));
 }
 
 enum stone
-board_get_one_point_eye(struct board *board, coord_t coord)
+board_eye_color(struct board *b, coord_t c)
 {
-	if (board_is_one_point_eye(board, coord, S_WHITE))
-		return S_WHITE;
-	else if (board_is_one_point_eye(board, coord, S_BLACK))
-		return S_BLACK;
-	else
-		return S_NONE;
+	if (board_is_eyelike(b, c, S_WHITE))  return S_WHITE;
+	if (board_is_eyelike(b, c, S_BLACK))  return S_BLACK;
+	return S_NONE;
 }
 
 floating_t
@@ -1538,7 +1536,7 @@ board_fast_score(struct board *board)
 	foreach_point(board) {
 		enum stone color = board_at(board, c);
 		if (color == S_NONE && board->rules != RULES_STONES_ONLY)
-			color = board_get_one_point_eye(board, c);
+			color = board_eye_color(board, c);
 		scores[color]++;
 		// fprintf(stderr, "%d, %d ++%d = %d\n", coord_x(c, board), coord_y(c, board), color, scores[color]);
 	} foreach_point_end;
@@ -1622,8 +1620,12 @@ board_score(struct board *b, int scores[S_MAX])
 	int handi_comp = board_score_handicap_compensation(b);
 	floating_t score = b->komi + handi_comp + scores[S_WHITE] - scores[S_BLACK];
 
-	/* Aja's formula for converting playouts area scoring to territory.
-	 * http://computer-go.org/pipermail/computer-go/2010-April/000209.html */
+	/* Aja's formula for converting area scoring to territory:
+	 *   http://computer-go.org/pipermail/computer-go/2010-April/000209.html
+	 * Under normal circumstances there's a relationship between area
+	 * and territory scoring so we can derive one from the other. If
+	 * the board has been artificially edited however the relationship
+	 * is broken and japanese score will be off. */
 	if (b->rules == RULES_JAPANESE)
 		score += (b->last_move.color == S_BLACK) + (b->passes[S_WHITE] - b->passes[S_BLACK]);
 	return score;
@@ -1644,9 +1646,11 @@ board_print_official_ownermap(struct board *b, int *final_ownermap)
 }
 
 /* Official score after removing dead groups and Tromp-Taylor counting.
- * Number of dames is saved in @dames, final ownermap in @ownermap. */
+ * Returns number of dames, sekis, final ownermap in @dame, @seki, @ownermap.
+ * (only distinguishes between dames/sekis if @po is not NULL) */
 floating_t
-board_official_score_details(struct board *board, struct move_queue *dead, int *dames, int *ownermap)
+board_official_score_details(struct board *b, struct move_queue *dead,
+			     int *dame, int *seki, int *ownermap, struct ownermap *po)
 {
 	/* A point P, not colored C, is said to reach C, if there is a path of
 	 * (vertically or horizontally) adjacent points of P's color from P to
@@ -1657,16 +1661,16 @@ board_official_score_details(struct board *board, struct move_queue *dead, int *
 
 	int s[4] = {0};
 	const int o[4] = {0, 1, 2, 0};
-	foreach_point(board) {
-		ownermap[c] = o[board_at(board, c)];
-		s[board_at(board, c)]++;
+	foreach_point(b) {
+		ownermap[c] = o[board_at(b, c)];
+		s[board_at(b, c)]++;
 	} foreach_point_end;
 
 	if (dead) {
 		/* Process dead groups. */
 		for (unsigned int i = 0; i < dead->moves; i++) {
-			foreach_in_group(board, dead->move[i]) {
-				enum stone color = board_at(board, c);
+			foreach_in_group(b, dead->move[i]) {
+				enum stone color = board_at(b, c);
 				ownermap[c] = o[stone_other(color)];
 				s[color]--; s[stone_other(color)]++;
 			} foreach_in_group_end;
@@ -1675,28 +1679,43 @@ board_official_score_details(struct board *board, struct move_queue *dead, int *
 
 	/* We need to special-case empty board. */
 	if (!s[S_BLACK] && !s[S_WHITE])
-		return board->komi;
+		return b->komi;
 
-	while (board_tromp_taylor_iter(board, ownermap))
+	while (board_tromp_taylor_iter(b, ownermap))
 		/* Flood-fill... */;
 
 	int scores[S_MAX] = { 0, };
 
-	foreach_point(board) {
-		assert(board_at(board, c) == S_OFFBOARD || ownermap[c] != 0);
+	foreach_point(b) {
+		assert(board_at(b, c) == S_OFFBOARD || ownermap[c] != 0);
 		scores[ownermap[c]]++;
 	} foreach_point_end;
-	*dames = scores[3];
+	*dame = scores[3];
+	*seki = 0;
 
-	return board_score(board, scores);
+	if (po) {
+		foreach_point(b) {
+			if (ownermap_judge_point(po, c, GJ_THRES) != PJ_SEKI)  continue;
+			(*seki)++;  (*dame)--;
+		} foreach_point_end;
+	}
+
+	return board_score(b, scores);
 }
 
 floating_t
 board_official_score(struct board *b, struct move_queue *dead)
 {
-	int dame;
+	int dame, seki;
 	int ownermap[board_size2(b)];
-	return board_official_score_details(b, dead, &dame, ownermap);
+	return board_official_score_details(b, dead, &dame, &seki, ownermap, NULL);
+}
+
+floating_t
+board_official_score_color(struct board *b, struct move_queue *dead, enum stone color)
+{
+	floating_t score = board_official_score(b, dead);
+	return (color == S_WHITE ? score : -score);
 }
 
 bool

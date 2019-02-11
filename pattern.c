@@ -927,10 +927,11 @@ pattern_match_spatial(struct pattern_config *pc,
 }
 
 static int
-pattern_match_mcowner(struct board *b, struct move *m, struct ownermap *ownermap)
+pattern_match_mcowner(struct board *b, struct move *m, struct ownermap *o)
 {
-	assert(ownermap->playouts >= MM_MINGAMES);
-	return (ownermap->map[m->coord][m->color] * 8 / (ownermap->playouts + 1));
+	assert(o->playouts >= MM_MINGAMES);
+	int r = o->map[m->coord][m->color] * 8 / (o->playouts + 1);
+	return MIN(r, 8);   // multi-threads count not exact, can reach 9 sometimes...
 }
 
 static void
