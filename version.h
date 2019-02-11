@@ -3,8 +3,8 @@
 
 #include "build.h"
 
-#define PACHI_VERNUM 12.20
-#define PACHI_VERNUMS "12.20"
+#define PACHI_VERNUM 12.30
+#define PACHI_VERNUMS "12.30"
 
 /* 00. Wang Zhi
  * 01. Sansa     Meijin  1612-1623
@@ -33,8 +33,9 @@
  * 21. Shusai    Meijin  1908-1940 */
 #define PACHI_VERNAME "Jowa"
 
-#define PACHI_VERSION  PACHI_VERNUMS " (" PACHI_VERNAME ")"
-#define PACHI_VERGIT   PACHI_GIT_HASH " (" PACHI_GIT_BRANCH ")"
+#define PACHI_VERSION       PACHI_VERNUMS
+#define PACHI_VERSION_FULL  PACHI_VERNUMS " (" PACHI_VERNAME ")"
+#define PACHI_VERGIT        PACHI_GIT_HASH " (" PACHI_GIT_BRANCH ")"
 
 #ifdef DCNN
     #define PACHI_VERBUILD PACHI_BUILD_TARGET " dcnn build, " PACHI_BUILD_DATE

@@ -140,14 +140,14 @@ usage()
 		"      max_tree_size=100             use up to 100 Mb of memory for tree search \n"
 		"      resign_threshold=0.25         resign if winrate < 25%% (default: 20%%) \n"
 		"      threads=4                     use 4 threads for tree search (default: #cores) \n"
-		"      pondering                     think during opponent turn (nodcnn only, default: no) \n"
+		"      pondering                     think during opponent turn (default: no) \n"
 		" \n");
 }
 
 static void
 show_version(FILE *s)
 {
-	fprintf(s, "Pachi %s\n", PACHI_VERSION);
+	fprintf(s, "Pachi %s\n", PACHI_VERSION_FULL);
 	if (!DEBUGL(2)) return;
 
 	fprintf(s, "git %s\n", PACHI_VERGIT);

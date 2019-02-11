@@ -112,10 +112,9 @@ More information about this dcnn [here](http://computer-go.org/pipermail/compute
 
 Pachi will look for `golast19.prototxt` and `golast.trained` files on startup.
 
-Althouh it was trained on 19x19 it can be used on other board sizes as well since
-it's fully convolutional (Right now Pachi will use it all the way down to 13x13).
-Currently dcnn is used only for root node, dcnn + pondering is working now.
-(see `dcnn_pondering_prior` and `dcnn_pondering_mcts` uct params to tweak it).
+This network is fully convolutional, so can work with boards other than 19x19.
+right now it's used for boards 13x13 and up.
+Currently dcnn is used for root node only, dcnn + pondering working now.
 
 
 ## How to run
