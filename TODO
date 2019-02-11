@@ -4,17 +4,10 @@ Docs:
 
 
 Strength:
-* Pondering + dcnn
-        Make it work
 * GPU mode
         Use dcnn for all nodes in the tree instead of just the root node.
         This should improve tree search quite a bit (1-2 stones stronger
         maybe). Try progressive widening, value networks.
-* Tactics
-        With low playouts Pachi sometimes makes simple tactical blunders
-        which are costly (oiotoshi, cut and capture some stones ...)
-        Fixing those would help quite a bit.
-        -> better playouts / tree search ?
 * Scalability
         On same machine cpu-only Hira (36I) scales better:
            6000 playouts -> 2d      15000 playouts -> 3d
@@ -45,7 +38,6 @@ Base:
 * Improve gogui analyze commands:
     - Average playouts score estimate would be nice to have
       (already have ownermap score est)
-    - Way to visualize winrates while playing ? graph would be nice
 * Implement parameter setup over GTP (less important)
 * Fix the build system to allow fully parallel build
 	However, revamp to something like cmake (or, ugh, autotools)

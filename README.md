@@ -28,8 +28,8 @@ tree search.
 
 ## Binary Releases
 
-**Windows**: Download [binary release](https://github.com/pasky/pachi/releases)
-for windows and follow instructions inside.
+**Linux / Windows**: Download [binary release](https://github.com/pasky/pachi/releases)
+and follow instructions inside.
 
 **Ubuntu**: Install 'pachi-go' package from [ppa](https://launchpad.net/~lemonsqueeze/+archive/ubuntu/pachi):
 
@@ -198,9 +198,14 @@ It's also possible to run Pachi with [Lizzie](https://github.com/featurecat/lizz
 This is a great way to explore variations, analyze games or visualize what Pachi is doing while it's thinking,
 the graphics are amazing.
 
-To make Lizzie use Pachi instead of Leela-Zero edit Lizzie config.txt:
+Download windows release: [Lizzie-0.6.Pachi-12.30.Windows.zip](https://github.com/featurecat/lizzie/files/2866380/Lizzie-0.6.Pachi-12.30.Windows.zip)
 
-    "engine-command": "/path/to/pachi --version=0.16 reporting=leelaz,reportfreq=500",
+Or make your own:
+- Download [Lizzie 0.6](https://github.com/featurecat/lizzie/releases/tag/0.6)
+- Download [Pachi 12.30](https://github.com/pasky/pachi/releases/tag/pachi-12.30-jowa), extract in Lizzie folder
+- Edit Lizzie config.txt, make it use Pachi instead of Leela-Zero:
+
+        "engine-command": "pachi/pachi --version=0.16 reporting=leelaz,reportfreq=500",
 
 Tweak reportfreq to change update speed.
 
