@@ -20,7 +20,7 @@
 
 
 static bool
-miai_2lib(struct board *b, group_t group, enum stone color)
+miai_2lib(board_t *b, group_t group, enum stone color)
 {
 	bool can_connect = false, can_pull_out = false;
 	/* We have miai if we can either connect on both libs,
@@ -56,9 +56,9 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 }
 
 static bool
-defense_is_hopeless(struct board *b, group_t group, enum stone owner,
-			enum stone to_play, coord_t lib, coord_t otherlib,
-			bool use)
+defense_is_hopeless(board_t *b, group_t group, enum stone owner,
+		    enum stone to_play, coord_t lib, coord_t otherlib,
+		    bool use)
 {
 	/* If we are the defender not connecting out, do not
 	 * escape with moves that do not gain liberties anyway
@@ -81,9 +81,9 @@ defense_is_hopeless(struct board *b, group_t group, enum stone owner,
 }
 
 void
-can_atari_group(struct board *b, group_t group, enum stone owner,
-		  enum stone to_play, struct move_queue *q,
-		  int tag, bool use_def_no_hopeless)
+can_atari_group(board_t *b, group_t group, enum stone owner,
+		enum stone to_play, move_queue_t *q,
+		int tag, bool use_def_no_hopeless)
 {
 	bool have[2] = { false, false };
 	bool preference[2] = { true, true };
@@ -201,7 +201,7 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 }
 
 void
-group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
@@ -238,7 +238,7 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 
 
 bool
-can_capture_2lib_group(struct board *b, group_t g, struct move_queue *q, int tag)
+can_capture_2lib_group(board_t *b, group_t g, move_queue_t *q, int tag)
 {
 	assert(board_group_info(b, g).libs == 2);
 	for (int i = 0; i < 2; i++) {
@@ -253,7 +253,7 @@ can_capture_2lib_group(struct board *b, group_t g, struct move_queue *q, int tag
 }
 
 void
-group_2lib_capture_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);

@@ -14,7 +14,7 @@
 
 /* This implements the basic UCB1 policy. */
 
-struct ucb1_policy {
+typedef struct {
 	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
 	 * paper calls 'p'. Original UCB has this on 2, but this seems to
 	 * produce way too wide searches; reduce this to get deeper and
@@ -24,25 +24,25 @@ struct ucb1_policy {
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
 	floating_t fpu;
-};
+} ucb1_policy_t;
 
 
 void
-ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass)
+ucb1_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, bool allow_pass)
 {
-	/* We want to count in the prior stats here after all. Otherwise,
-	 * nodes with positive prior will get explored _LESS_ since the
-	 * urgency will be always higher; even with normal FPU because
+	/* we want to count in the prior stats here after all. otherwise,
+	 * nodes with positive prior will get explored _less_ since the
+	 * urgency will be always higher; even with normal fpu because
 	 * of the explore coefficient. */
 
-	struct ucb1_policy *b = p->data;
+	ucb1_policy_t *b = p->data;
 	floating_t xpl = log(descent->node->u.playouts + descent->node->prior.playouts);
 
 	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
-		struct tree_node *ni = di.node;
+		tree_node_t *ni = di.node;
 		int uct_playouts = ni->u.playouts + ni->prior.playouts + ni->descents;
 
-		/* XXX: We don't take local-tree information into account. */
+		/* xxx: we don't take local-tree information into account. */
 
 		if (uct_playouts) {
 			urgency = (ni->u.playouts * tree_node_get_value(tree, parity, ni->u.value)
@@ -59,9 +59,9 @@ ucb1_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descen
 }
 
 void
-ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *map, struct board *final_board, floating_t result)
+ucb1_update(uct_policy_t *p, tree_t *tree, tree_node_t *node, enum stone node_color, enum stone player_color, playout_amafmap_t *map, board_t *final_board, floating_t result)
 {
-	/* It is enough to iterate by a single chain; we will
+	/* it is enough to iterate by a single chain; we will
 	 * update all the preceding positions properly since
 	 * they had to all occur in all branches, only in
 	 * different order. */
@@ -78,17 +78,17 @@ ucb1_update(struct uct_policy *p, struct tree *tree, struct tree_node *node, enu
 }
 
 void
-ucb1_done(struct uct_policy *p)
+ucb1_done(uct_policy_t *p)
 {
 	free(p->data);
 	free(p);
 }
 
-struct uct_policy *
-policy_ucb1_init(struct uct *u, char *arg)
+uct_policy_t *
+policy_ucb1_init(uct_t *u, char *arg)
 {
-	struct uct_policy *p = calloc2(1, sizeof(*p));
-	struct ucb1_policy *b = calloc2(1, sizeof(*b));
+	uct_policy_t *p = calloc2(1, sizeof(*p));
+	ucb1_policy_t *b = calloc2(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
 	p->done = ucb1_done;

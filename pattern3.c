@@ -9,7 +9,7 @@
 
 
 static void
-pattern_record(struct pattern3s *p, int pi, char *str, hash3_t pat, int fixed_color)
+pattern_record(pattern3s_t *p, int pi, char *str, hash3_t pat, int fixed_color)
 {
 	hash_t h = hash3_to_hash(pat);
 	while (p->hash[h & pattern3_hash_mask].pattern != pat
@@ -101,7 +101,7 @@ pattern3_transpose(hash3_t pat, hash3_t (*transp)[8])
 }
 
 static void
-pattern_gen(struct pattern3s *p, int pi, hash3_t pat, char *src, int srclen, int fixed_color)
+pattern_gen(pattern3s_t *p, int pi, hash3_t pat, char *src, int srclen, int fixed_color)
 {
 	for (; srclen > 0; src++, srclen--) {
 		if (srclen == 5)
@@ -203,7 +203,7 @@ pattern_gen(struct pattern3s *p, int pi, hash3_t pat, char *src, int srclen, int
 }
 
 static void
-patterns_gen(struct pattern3s *p, char src[][11], int src_n)
+patterns_gen(pattern3s_t *p, char src[][11], int src_n)
 {
 	for (int i = 0; i < src_n; i++) {
 		//printf("<%s>\n", src[i]);
@@ -243,7 +243,7 @@ error:
 }
 
 void
-pattern3s_init(struct pattern3s *p, char src[][11], int src_n)
+pattern3s_init(pattern3s_t *p, char src[][11], int src_n)
 {
 	char nsrc[src_n][11];
 

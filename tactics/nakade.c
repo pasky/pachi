@@ -12,7 +12,7 @@
 
 
 static inline int
-nakade_area(struct board *b, coord_t around, enum stone color, coord_t *area)
+nakade_area(board_t *b, coord_t around, enum stone color, coord_t *area)
 {
 	/* First, examine the nakade area. For sure, it must be at most
 	 * six points. And it must be within color group(s). */
@@ -47,7 +47,7 @@ nakade_area(struct board *b, coord_t around, enum stone color, coord_t *area)
 }
 
 static inline void
-get_neighbors(struct board *b, coord_t *area, int area_n, int *neighbors, int *ptbynei)
+get_neighbors(board_t *b, coord_t *area, int area_n, int *neighbors, int *ptbynei)
 {
 	/* We also collect adjecency information - how many neighbors
 	 * we have for each area point, and histogram of this. This helps
@@ -95,7 +95,7 @@ nakade_point_(coord_t *area, int area_n, int *neighbors, int *ptbynei)
 }
 
 coord_t
-nakade_point(struct board *b, coord_t around, enum stone color)
+nakade_point(board_t *b, coord_t around, enum stone color)
 {
 	assert(board_at(b, around) == S_NONE);	
 	coord_t area[NAKADE_MAX]; int area_n = 0;
@@ -111,7 +111,7 @@ nakade_point(struct board *b, coord_t around, enum stone color)
 
 
 bool
-nakade_dead_shape(struct board *b, coord_t around, enum stone color)
+nakade_dead_shape(board_t *b, coord_t around, enum stone color)
 {
 	assert(board_at(b, around) == S_NONE);
 	coord_t area[NAKADE_MAX]; int area_n = 0;

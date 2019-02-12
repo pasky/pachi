@@ -1,15 +1,11 @@
 #ifndef PACHI_UCT_WALK_H
 #define PACHI_UCT_WALK_H
 
-#include "move.h"
+#include "uct/internal.h"
 
-struct tree;
-struct uct;
-struct board;
+void uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final);
 
-void uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts, coord_t *final);
-
-int uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t);
-int uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti);
+int uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t);
+int uct_playouts(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti);
 
 #endif

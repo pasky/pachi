@@ -29,13 +29,13 @@
  * Output written to mm-feature-hits.dat periodically. */
 //#define PATTERN_FEATURE_STATS 1
 
-typedef struct feature_info {
+typedef struct {
 	char *name;
 	int payloads;
 	int spatial;   /* For spatial features, spatial feature dist */
 } feature_info_t;
 
-extern struct feature_info pattern_features[];
+extern feature_info_t pattern_features[];
 
 /* If you add a payload for a feature, don't forget to update the values in feature_info. 
  * Legend:                          *      Ordinary feature
@@ -134,20 +134,20 @@ enum feature_id {
 /* Having separate spatial features is nice except for this ... */
 #define FEAT_SPATIAL FEAT_SPATIAL3
 
-struct feature {
+typedef struct {
 	enum feature_id id:8;
 	unsigned int payload:24;
-};
+} feature_t;
 
 #define feature(id, payload)  {  (enum feature_id)(id), (payload)  }
 
 /* Pattern (matched) is set of features. */
-struct pattern {       
+typedef struct {
 	int n;
-	struct feature f[FEAT_MAX];
-};
+	feature_t f[FEAT_MAX];
+} pattern_t;
 
-struct pattern_config {
+typedef struct {
 	/* FEAT_BORDER: Generate features only up to this board distance. */
 	unsigned int bdist_max;
 
@@ -158,40 +158,40 @@ struct pattern_config {
 	/* Produce only a single spatial feature per pattern, corresponding
 	 * to the largest matched spatial pattern. */
 	bool spat_largest;
-};
+} pattern_config_t;
 
 
 bool using_patterns();
 void disable_patterns();
 void require_patterns();
-void patterns_init(struct pattern_config *pc, char *arg, bool create, bool load_prob);
+void patterns_init(pattern_config_t *pc, char *arg, bool create, bool load_prob);
 
 /* Append feature to string. */
-char *feature2str(char *str, struct feature *f);
+char *feature2str(char *str, feature_t *f);
 /* Feature to static string */
-char *feature2sstr(struct feature *f);
+char *feature2sstr(feature_t *f);
 /* Get number of possible payload values associated with the feature. */
 int feature_payloads(enum feature_id f);
 
 /* Append pattern as feature spec string. */
-char *pattern2str(char *str, struct pattern *p);
+char *pattern2str(char *str, pattern_t *p);
 /* Returns static string. */
-char *pattern2sstr(struct pattern *p);
+char *pattern2sstr(pattern_t *p);
 /* Convert string to pattern, return pointer after the patternspec. */
-char *str2pattern(char *str, struct pattern *p);
+char *str2pattern(char *str, pattern_t *p);
 /* Dump pattern as numbers for mm tools */
 
 /* Compare two patterns for equality. Assumes fixed feature order. */
-static bool pattern_eq(struct pattern *p1, struct pattern *p2);
+static bool pattern_eq(pattern_t *p1, pattern_t *p2);
 
 /* Initialize p and fill it with features matched by the given board move. 
  * @locally: Looking for local moves ? Distance features disabled if false. */
-void pattern_match(struct pattern_config *pc, struct pattern *p, struct board *b, struct move *m, struct ownermap *ownermap, bool locally);
+void pattern_match(pattern_config_t *pc, pattern_t *p, board_t *b, move_t *m, ownermap_t *ownermap, bool locally);
 
 /* Fill ownermap for mcowner feature. */
-void mcowner_playouts(struct board *b, enum stone color, struct ownermap *ownermap);
+void mcowner_playouts(board_t *b, enum stone color, ownermap_t *ownermap);
 /* Faster version with few playouts, don't use for anything reliable. */
-void mcowner_playouts_fast(struct board *b, enum stone color, struct ownermap *ownermap);
+void mcowner_playouts_fast(board_t *b, enum stone color, ownermap_t *ownermap);
 
 #ifdef PATTERN_FEATURE_STATS
 void pattern_stats_new_position();
@@ -207,7 +207,7 @@ feature_info(char *name, int payloads, int spatial)
 }
 
 static inline bool
-pattern_eq(struct pattern *p1, struct pattern *p2)
+pattern_eq(pattern_t *p1, pattern_t *p2)
 {
 	if (p1->n != p2->n) return false;
 	for (int i = 0; i < p1->n; i++)

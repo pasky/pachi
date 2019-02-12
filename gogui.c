@@ -33,7 +33,7 @@ typedef enum {
 
 
 enum parse_code
-cmd_gogui_analyze_commands(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char buffer[2000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
@@ -159,7 +159,7 @@ value2color(float val, int *r, int *g, int *b)
 }
 
 static void
-gogui_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
+gogui_paint_pattern(board_t *b, int colors[BOARD_MAX_COORDS][4],
 		    coord_t coord, unsigned int maxd,
 		    int rr, int gg, int bb)
 {
@@ -181,7 +181,7 @@ gogui_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
 
 /* Display spatial pattern */
 static void
-gogui_show_pattern(struct board *b, strbuf_t *buf, coord_t coord, int maxd)
+gogui_show_pattern(board_t *b, strbuf_t *buf, coord_t coord, int maxd)
 {
 	assert(!is_pass(coord));
 	int colors[BOARD_MAX_COORDS][4];  memset(colors, 0, sizeof(colors));
@@ -204,7 +204,7 @@ gogui_show_pattern(struct board *b, strbuf_t *buf, coord_t coord, int maxd)
 enum gogui_reporting gogui_livegfx = 0;
 
 static void
-gogui_set_livegfx(struct engine *e, char *arg)
+gogui_set_livegfx(engine_t *e, char *arg)
 {
 	gogui_livegfx = 0;
 	if (!strcmp(arg, "best_moves"))  gogui_livegfx = UR_GOGUI_BEST;
@@ -223,7 +223,7 @@ gogui_show_livegfx(char *str)
 }
 
 void
-gogui_show_winrates(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int nbest)
+gogui_show_winrates(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest)
 {
 	/* best move */
 	if (best_c[0] != pass)
@@ -238,7 +238,7 @@ gogui_show_winrates(strbuf_t *buf, struct board *b, enum stone color, coord_t *b
 }
 
 void
-gogui_show_best_seq(strbuf_t *buf, struct board *b, enum stone color, coord_t *seq, int n)
+gogui_show_best_seq(strbuf_t *buf, board_t *b, enum stone color, coord_t *seq, int n)
 {	
 	char *col = "bw";
 	sbprintf(buf, "VAR ");
@@ -251,7 +251,7 @@ gogui_show_best_seq(strbuf_t *buf, struct board *b, enum stone color, coord_t *s
 
 /* Display best moves graphically in GoGui. */
 void
-gogui_show_best_moves(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int n)
+gogui_show_best_moves(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n)
 {
         /* best move */
         if (best_c[0] != pass)
@@ -266,7 +266,7 @@ gogui_show_best_moves(strbuf_t *buf, struct board *b, enum stone color, coord_t 
 
 /* Display best moves graphically in GoGui. */
 void
-gogui_show_best_moves_colors(strbuf_t *buf, struct board *b, enum stone color,
+gogui_show_best_moves_colors(strbuf_t *buf, board_t *b, enum stone color,
 			     coord_t *best_c, float *best_r, int n)
 {
 	float vals[BOARD_MAX_COORDS];
@@ -314,11 +314,11 @@ rescale_best_moves(coord_t *best_c, float *best_r, int n, int rescale)
 }
 
 static void
-gogui_best_moves(strbuf_t *buf, struct engine *e, struct board *b, struct time_info *ti,
+gogui_best_moves(strbuf_t *buf, engine_t *e, board_t *b, time_info_t *ti,
 		 enum stone color, int n, gogui_gfx_t gfx_type, gogui_rescale_t rescale)
 {
 	assert(color != S_NONE);
-	struct time_info *ti_genmove = time_info_genmove(b, ti, color);
+	time_info_t *ti_genmove = time_info_genmove(b, ti, color);
 	
 	coord_t best_c[n];
 	float   best_r[n];
@@ -342,7 +342,7 @@ gogui_best_moves(strbuf_t *buf, struct engine *e, struct board *b, struct time_i
 }
 
 enum parse_code
-cmd_gogui_color_palette(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -362,7 +362,7 @@ cmd_gogui_color_palette(struct board *b, struct engine *e, struct time_info *ti,
 
 
 enum parse_code
-cmd_gogui_livegfx(struct board *board, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_livegfx(board_t *board, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -371,9 +371,9 @@ cmd_gogui_livegfx(struct board *board, struct engine *e, struct time_info *ti, g
 }
 
 enum parse_code
-cmd_gogui_influence(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_influence(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	struct ownermap *ownermap = engine_ownermap(e, b);
+	ownermap_t *ownermap = engine_ownermap(e, b);
 	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
 	
 	char buffer[5000];  strbuf_t strbuf;
@@ -402,9 +402,9 @@ cmd_gogui_influence(struct board *b, struct engine *e, struct time_info *ti, gtp
 }
 
 enum parse_code
-cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	struct ownermap *ownermap = engine_ownermap(e, b);
+	ownermap_t *ownermap = engine_ownermap(e, b);
 	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
 	
 	char buffer[5000];  strbuf_t strbuf;
@@ -426,16 +426,16 @@ cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp
 }
 
 enum parse_code
-cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *msg = NULL;
-	struct ownermap *o = engine_ownermap(e, b);
+	ownermap_t *o = engine_ownermap(e, b);
 	if (o && !board_position_final(b, o, &msg)) {
 		gtp_error(gtp, msg, NULL);
 		return P_OK;
 	}
 
-	struct move_queue q;  mq_init(&q);
+	move_queue_t q;  mq_init(&q);
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
 	
 	int dame, seki;
@@ -463,7 +463,7 @@ cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, g
 }
 
 enum parse_code
-cmd_gogui_winrates(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_winrates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -481,7 +481,7 @@ cmd_gogui_winrates(struct board *b, struct engine *e, struct time_info *ti, gtp_
 }
 
 enum parse_code
-cmd_gogui_best_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_best_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = S_BLACK;
 	if (b->last_move.color)  color = stone_other(b->last_move.color);
@@ -503,10 +503,10 @@ cmd_gogui_best_moves(struct board *b, struct engine *e, struct time_info *ti, gt
 /********************************************************************************************/
 /* dcnn */
 
-static struct engine *dcnn_engine = NULL;
+static engine_t *dcnn_engine = NULL;
 
 enum parse_code
-cmd_gogui_dcnn_best(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
@@ -523,7 +523,7 @@ cmd_gogui_dcnn_best(struct board *b, struct engine *e, struct time_info *ti, gtp
 }
 
 enum parse_code
-cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
@@ -540,7 +540,7 @@ cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, g
 }
 
 enum parse_code
-cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_dcnn_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
@@ -562,10 +562,10 @@ cmd_gogui_dcnn_rating(struct board *b, struct engine *e, struct time_info *ti, g
 /********************************************************************************************/
 /* joseki */
 
-static struct engine *joseki_engine = NULL;
+static engine_t *joseki_engine = NULL;
 
 enum parse_code
-cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki", NULL);  return P_OK;  }
 	if (!joseki_engine)   joseki_engine = new_engine(E_JOSEKIPLAY, NULL, b);
@@ -605,7 +605,7 @@ cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, 
 }
 
 enum parse_code
-cmd_gogui_joseki_show_pattern(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_joseki_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;  next_tok(arg);
 	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
@@ -622,17 +622,17 @@ cmd_gogui_joseki_show_pattern(struct board *b, struct engine *e, struct time_inf
 /********************************************************************************************/
 /* pattern */
 
-static struct engine *pattern_engine = NULL;
+static engine_t *pattern_engine = NULL;
 
 static void
-init_patternplay_engine(struct board *b)
+init_patternplay_engine(board_t *b)
 {
 	char args[] = "mcowner_fast=0";
 	pattern_engine = new_engine(E_PATTERNPLAY, args, b);
 }
 
 enum parse_code
-cmd_gogui_pattern_best(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_pattern_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
 	
@@ -650,7 +650,7 @@ cmd_gogui_pattern_best(struct board *b, struct engine *e, struct time_info *ti, 
 }
 
 enum parse_code
-cmd_gogui_pattern_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_pattern_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
 	
@@ -668,7 +668,7 @@ cmd_gogui_pattern_colors(struct board *b, struct engine *e, struct time_info *ti
 }
 
 enum parse_code
-cmd_gogui_pattern_rating(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
 	
@@ -687,7 +687,7 @@ cmd_gogui_pattern_rating(struct board *b, struct engine *e, struct time_info *ti
 
 /* Show pattern features on point selected by user. */
 enum parse_code
-cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
 	
@@ -699,10 +699,10 @@ cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *
 	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
 	
-	struct ownermap ownermap;
-	struct pattern p;
-	struct move m = move(coord, color);
-	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
+	ownermap_t ownermap;
+	pattern_t p;
+	move_t m = move(coord, color);
+	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
 	mcowner_playouts(b, color, &ownermap);
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
 	pattern_match(pc, &p, b, &m, &ownermap, locally);
@@ -723,7 +723,7 @@ cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *
 
 /* Show pattern gammas on point selected by user. */
 enum parse_code
-cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
 	
@@ -735,10 +735,10 @@ cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti
 	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
 	
-	struct ownermap ownermap;
-	struct pattern p;
-	struct move m = move(coord, color);
-	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
+	ownermap_t ownermap;
+	pattern_t p;
+	move_t m = move(coord, color);
+	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
 	mcowner_playouts(b, color, &ownermap);
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
 	pattern_match(pc, &p, b, &m, &ownermap, locally);
@@ -756,10 +756,10 @@ cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti
 static int spatial_dist = 6;
 
 enum parse_code
-cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
-	struct pattern_config *pc = patternplay_get_pc(pattern_engine);
+	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
 
 	char *arg;  next_tok(arg);
 	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
@@ -769,8 +769,8 @@ cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, 
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	gogui_show_pattern(b, buf, coord, spatial_dist);
 	
-	struct move m = move(coord, stone_other(b->last_move.color));
-	struct spatial s;
+	move_t m = move(coord, stone_other(b->last_move.color));
+	spatial_t s;
 	spatial_from_board(pc, &s, b, &m);
 	s.dist = spatial_dist;
 	spatial_t *s2 = spatial_dict_lookup(spat_dict, s.dist, spatial_hash(0, &s));
@@ -784,7 +784,7 @@ cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, 
 }
 
 enum parse_code
-cmd_gogui_spatial_size(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_gogui_spatial_size(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;  next_tok(arg);
 	/* Return current value */

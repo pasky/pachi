@@ -23,7 +23,7 @@
 
 /* Full permit logic, ie m->coord may get changed to an alternative move */
 static bool
-playout_permit_move(struct playout_policy *p, struct board *b, struct move *m, bool alt, bool rnd)
+playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool rnd)
 {
 	coord_t coord = m->coord;
 	if (coord == pass) return false;
@@ -37,9 +37,9 @@ playout_permit_move(struct playout_policy *p, struct board *b, struct move *m, b
 /* Return coord if move is ok, an alternative move or pass if not.
  * Not to be used with randomly picked moves (calls permit_move() with rnd=false). */
 static coord_t
-playout_check_move(struct playout_policy *p, struct board *b, coord_t coord, enum stone color)
+playout_check_move(playout_policy_t *p, board_t *b, coord_t coord, enum stone color)
 {
-	struct move m = move(coord, color);
+	move_t m = move(coord, color);
 	if (!playout_permit_move(p, b, &m, true, false))
 		return pass;
 	return m.coord;
@@ -48,24 +48,24 @@ playout_check_move(struct playout_policy *p, struct board *b, coord_t coord, enu
 /* Is *this* move permitted ? 
  * Called by policy permit() to check something so never the main permit() call. */
 bool
-playout_permit(struct playout_policy *p, struct board *b, coord_t coord, enum stone color, bool rnd)
+playout_permit(playout_policy_t *p, board_t *b, coord_t coord, enum stone color, bool rnd)
 {
-	struct move m = move(coord, color);
+	move_t m = move(coord, color);
 	return playout_permit_move(p, b, &m, false, rnd);
 }
 
 static bool
-random_permit_handler(struct board *b, struct move *m, void *data)
+random_permit_handler(board_t *b, move_t *m, void *data)
 {
-	struct playout_policy *policy = data;
+	playout_policy_t *policy = data;
 	return playout_permit_move(policy, b, m, true, true);
 }
 
 
 coord_t
-playout_play_move(struct playout_setup *setup,
-		  struct board *b, enum stone color,
-		  struct playout_policy *policy)
+playout_play_move(playout_setup_t *setup,
+		  board_t *b, enum stone color,
+		  playout_policy_t *policy)
 {
 	coord_t coord = pass;
 	
@@ -84,7 +84,7 @@ playout_play_move(struct playout_setup *setup,
 		board_play_random(b, color, &coord, random_permit_handler, policy);
 
 	} else {
-		struct move m = move(coord, color);
+		move_t m = move(coord, color);
 		if (board_play(b, &m) < 0) {
 			if (PLDEBUGL(4)) {
 				fprintf(stderr, "Pre-picked move %d,%d is ILLEGAL:\n", coord_x(coord), coord_y(coord));
@@ -106,7 +106,7 @@ playout_play_move(struct playout_setup *setup,
  */
 
 static coord_t
-fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
+fill_bent_four(board_t *b, enum stone color, coord_t *other, coord_t *kill)
 {
 	enum stone other_color = stone_other(color);  // white here
 	int s = real_board_size(b);
@@ -158,7 +158,7 @@ fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
 				if (board_at(b, c) == S_NONE)  {  fill = c;  break;  }
 			});
 
-		struct move m = move(fill, other_color);
+		move_t m = move(fill, other_color);
 		if (board_permit(b, &m, NULL)) {
 			*other = board_group_other_lib(b, g, fill);
 			return fill;
@@ -191,11 +191,11 @@ fill_bent_four(struct board *b, enum stone color, coord_t *other, coord_t *kill)
 
 
 int
-playout_play_game(struct playout_setup *setup,
-		  struct board *b, enum stone starting_color,
-		  struct playout_amafmap *amafmap,
-		  struct ownermap *ownermap,
-		  struct playout_policy *policy)
+playout_play_game(playout_setup_t *setup,
+		  board_t *b, enum stone starting_color,
+		  playout_amafmap_t *amafmap,
+		  ownermap_t *ownermap,
+		  playout_policy_t *policy)
 {
 	int starting_passes[S_MAX];
 	memcpy(starting_passes, b->passes, sizeof(starting_passes));
@@ -234,14 +234,14 @@ playout_play_game(struct playout_setup *setup,
 		if (b->moves == bent4_moves + 1) {
 			/* Capture or kill group. */
 			coord = (board_at(b, bent4_other) == S_NONE ? bent4_other : bent4_kill);
-			struct move m = move(coord, color);
+			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r == 0);
 		}
 		else    coord = playout_play_move(setup, b, color, policy);
 		
 		/* Fill bent-fours */
 		if (coord == pass && (coord = fill_bent_four(b, stone_other(color), &bent4_other, &bent4_kill)) != pass) {
-			struct move m = move(coord, color);
+			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r == 0);
 			bent4_moves = b->moves;
 		}
@@ -278,7 +278,7 @@ playout_play_game(struct playout_setup *setup,
 
 
 void
-playout_policy_done(struct playout_policy *p)
+playout_policy_done(playout_policy_t *p)
 {
 	if (p->done) p->done(p);
 	if (p->data) free(p->data);

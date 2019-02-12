@@ -59,7 +59,7 @@ args_end()
 }
 
 static void
-board_print_test(int level, struct board *b)
+board_print_test(int level, board_t *b)
 {
 	if (!DEBUGL(level) || board_printed)
 		return;
@@ -68,7 +68,7 @@ board_print_test(int level, struct board *b)
 }
 
 static void
-check_play_move(struct board *b, struct move *m)
+check_play_move(board_t *b, move_t *m)
 {
 	if (board_play(b, m) < 0) {
 		fprintf(stderr, "Failed to play %s %s\n", stone2str(m->color), coord2sstr(m->coord));
@@ -78,23 +78,23 @@ check_play_move(struct board *b, struct move *m)
 }
 
 static void
-set_komi(struct board *b, char *arg)
+set_komi(board_t *b, char *arg)
 {
 	assert(*arg == '-' || *arg == '+' || isdigit(*arg));
 	b->komi = atof(arg);
 }
 
 static void
-set_handicap(struct board *b, char *arg)
+set_handicap(board_t *b, char *arg)
 {
 	assert(isdigit(*arg));
 	b->handicap = atoi(arg);
 }
 
 static void
-board_load(struct board *b, FILE *f, unsigned int size)
+board_load(board_t *b, FILE *f, unsigned int size)
 {
-	struct move last_move = move(pass, S_NONE);
+	move_t last_move = move(pass, S_NONE);
 	last_move_set = false;
 	board_resize(b, size);
 	board_clear(b);
@@ -122,7 +122,7 @@ board_load(struct board *b, FILE *f, unsigned int size)
 			if (line[i] && line[i] != ' ' && line[i] != ')')
 				die("No space after stone %i: '%c'\n", i/2 + 1, line[i]);
 
-			struct move m = move(coord_xy(i/2 + 1, y + 1), s);
+			move_t m = move(coord_xy(i/2 + 1, y + 1), s);
 			if (line[i] == ')') {
 				assert(s == S_BLACK || s == S_WHITE);
 				assert(last_move.coord == pass);
@@ -143,10 +143,10 @@ board_load(struct board *b, FILE *f, unsigned int size)
 }
 
 static void
-set_ko(struct board *b, char *arg)
+set_ko(board_t *b, char *arg)
 {
 	assert(isalpha(*arg));
-	struct move last;
+	move_t last;
 	last.coord = str2coord(arg);
 	last.color = board_at(b, last.coord);
 	assert(last.color == S_BLACK || last.color == S_WHITE);
@@ -190,7 +190,7 @@ show_title_if_needed(int passed)
 
 
 static bool
-test_sar(struct board *b, char *arg)
+test_sar(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -210,7 +210,7 @@ test_sar(struct board *b, char *arg)
 }
 
 static bool
-test_corner_seki(struct board *b, char *arg)
+test_corner_seki(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -230,7 +230,7 @@ test_corner_seki(struct board *b, char *arg)
 }
 
 static bool
-test_false_eye_seki(struct board *b, char *arg)
+test_false_eye_seki(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -251,7 +251,7 @@ test_false_eye_seki(struct board *b, char *arg)
 
 
 static bool
-test_ladder(struct board *b, char *arg)
+test_ladder(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -274,7 +274,7 @@ test_ladder(struct board *b, char *arg)
 
 
 static bool
-test_ladder_any(struct board *b, char *arg)
+test_ladder_any(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -297,7 +297,7 @@ test_ladder_any(struct board *b, char *arg)
 
 
 static bool
-test_wouldbe_ladder(struct board *b, char *arg)
+test_wouldbe_ladder(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -320,7 +320,7 @@ test_wouldbe_ladder(struct board *b, char *arg)
 }
 
 static bool
-test_wouldbe_ladder_any(struct board *b, char *arg)
+test_wouldbe_ladder_any(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -344,7 +344,7 @@ test_wouldbe_ladder_any(struct board *b, char *arg)
 
 
 static bool
-test_useful_ladder(struct board *b, char *arg)
+test_useful_ladder(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -367,7 +367,7 @@ test_useful_ladder(struct board *b, char *arg)
 }
 
 static bool
-test_can_countercap(struct board *b, char *arg)
+test_can_countercap(board_t *b, char *arg)
 {
 	next_arg(arg);
 	coord_t c = str2coord(arg);
@@ -388,7 +388,7 @@ test_can_countercap(struct board *b, char *arg)
 
 
 static bool
-test_two_eyes(struct board *b, char *arg)
+test_two_eyes(board_t *b, char *arg)
 {
 	next_arg(arg);
 	coord_t c = str2coord(arg);
@@ -413,7 +413,7 @@ test_two_eyes(struct board *b, char *arg)
  * Syntax:  moggy moves
  */
 static bool
-test_moggy_moves(struct board *b, char *arg)
+test_moggy_moves(board_t *b, char *arg)
 {
 	int runs = 1000;
 
@@ -422,7 +422,7 @@ test_moggy_moves(struct board *b, char *arg)
 	board_print_test(2, b);
 
 	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
-	struct engine e;  engine_init(&e, E_REPLAY, e_arg, b);
+	engine_t e;  engine_init(&e, E_REPLAY, e_arg, b);
 	enum stone color = stone_other(b->last_move.color);
 	
 	if (DEBUGL(2))
@@ -445,16 +445,16 @@ test_moggy_moves(struct board *b, char *arg)
 }
 
 static int
-moggy_games(struct board *b, enum stone color, int games, struct ownermap *ownermap, bool speed_benchmark)
+moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool speed_benchmark)
 {
-	struct playout_policy *policy = playout_moggy_init(NULL, b);
-	struct playout_setup setup = playout_setup(MAX_GAMELEN, 0);
+	playout_policy_t *policy = playout_moggy_init(NULL, b);
+	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
 	ownermap_init(ownermap);
 	
 	int wr = 0;
 	double time_start = time_now();
 	for (int i = 0; i < games; i++)  {
-		struct board b2;
+		board_t b2;
 		board_copy(&b2, b);
 		
 		int score = playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
@@ -483,7 +483,7 @@ moggy_games(struct board *b, enum stone color, int games, struct ownermap *owner
  *   moggy status                              speed benchmark
  */
 static bool
-test_moggy_status(struct board *b, char *arg)
+test_moggy_status(board_t *b, char *arg)
 {
 	next_arg(arg);
 
@@ -524,7 +524,7 @@ test_moggy_status(struct board *b, char *arg)
 	if (DEBUGL(2)) fprintf(stderr, "\n%s to play. Playing %i games ...\n", stone2str(color), games);
 
 	/* Get final status estimate after a number of moggy games */	
-	struct ownermap ownermap;
+	ownermap_t ownermap;
 	int wr = moggy_games(b, color, games, &ownermap, speed_benchmark);
 
 	int wr_black = wr * 100 / games;
@@ -556,12 +556,12 @@ test_moggy_status(struct board *b, char *arg)
 	return ret;
 }
 
-bool board_undo_stress_test(struct board *orig, char *arg);
-bool board_regression_test(struct board *orig, char *arg);
-bool moggy_regression_test(struct board *orig, char *arg);
-bool spatial_regression_test(struct board *orig, char *arg);
+bool board_undo_stress_test(board_t *orig, char *arg);
+bool board_regression_test(board_t *orig, char *arg);
+bool moggy_regression_test(board_t *orig, char *arg);
+bool spatial_regression_test(board_t *orig, char *arg);
 
-typedef bool (*t_unit_func)(struct board *board, char *arg);
+typedef bool (*t_unit_func)(board_t *board, char *arg);
 
 typedef struct {
 	char *cmd;
@@ -592,7 +592,7 @@ static t_unit_cmd commands[] = {
 };
 
 int
-unit_test_cmd(struct board *b, char *line)
+unit_test_cmd(board_t *b, char *line)
 {
 	board_printed = false;
 	chomp(line);
@@ -628,7 +628,7 @@ unit_test(char *filename)
 	int total = 0, passed = 0;
 	int total_opt = 0, passed_opt = 0;
 	
-	struct board *b = board_new(19+2, NULL);
+	board_t *b = board_new(19+2, NULL);
 	b->komi = 7.5;
 	char buf[256]; char *line = buf;
 

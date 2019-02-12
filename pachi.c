@@ -37,7 +37,7 @@
 #include "patternprob.h"
 #include "joseki.h"
 
-static void main_loop(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct time_info *ti, struct time_info *ti_default);
+static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, time_info_t *ti_default);
 
 char *pachi_exe = NULL;
 int   debug_level = 3;
@@ -79,7 +79,7 @@ init()
 };
 
 void
-pachi_engine_init(struct engine *e, int id, char *e_arg, struct board *b)
+pachi_engine_init(engine_t *e, int id, char *e_arg, board_t *b)
 {
 	assert(id >= 0 && id < E_MAX);
 	
@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
 	
 	pachi_exe = argv[0];
 	enum engine_id engine_id = E_UCT;
-	struct time_info ti_default = ti_none;
+	time_info_t ti_default = ti_none;
 	int  seed = time(NULL) ^ getpid();
 	char *testfile = NULL;
 	char *log_port = NULL;
@@ -395,13 +395,13 @@ int main(int argc, char *argv[])
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 	fifo_init();
 
-	struct board *b = board_new(19 + 2, fbookfile);
+	board_t *b = board_new(19 + 2, fbookfile);
 	if (forced_ruleset) {
 		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
 	}
 
-	struct time_info ti[S_MAX];
+	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_default;
 	ti[S_WHITE] = ti_default;
 
@@ -409,7 +409,7 @@ int main(int argc, char *argv[])
 
 	char *e_arg = NULL;
 	if (optind < argc)	e_arg = argv[optind];
-	struct engine e;  engine_init(&e, engine_id, e_arg, b);
+	engine_t e;  engine_init(&e, engine_id, e_arg, b);
 	network_init();
 
 	while (1) {
@@ -430,7 +430,7 @@ int main(int argc, char *argv[])
 }
 
 static void
-main_loop(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct time_info *ti, struct time_info *ti_default)
+main_loop(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, time_info_t *ti_default)
 {
 	char buf[4096];
 	while (fgets(buf, 4096, stdin)) {

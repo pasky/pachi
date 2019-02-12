@@ -23,23 +23,23 @@
 #define PRIOR_BEST_N 20
 
 void
-get_node_prior_best_moves(struct tree_node *parent, coord_t *best_c, float *best_r, int nbest)
+get_node_prior_best_moves(tree_node_t *parent, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;
 	}
 	
 	float max = 0.0;
-	for (struct tree_node *n = parent->children; n; n = n->sibling)
+	for (tree_node_t *n = parent->children; n; n = n->sibling)
 		max = MAX(max, n->prior.playouts);
 
-	for (struct tree_node *n = parent->children; n; n = n->sibling)
+	for (tree_node_t *n = parent->children; n; n = n->sibling)
 		best_moves_add(node_coord(n), (float)n->prior.playouts / max, best_c, best_r, nbest);
 }
 
 /* Display node's priors best moves. */
 void
-print_node_prior_best_moves(struct board *b, struct tree_node *parent)
+print_node_prior_best_moves(board_t *b, tree_node_t *parent)
 {
 	float best_r[PRIOR_BEST_N];
 	coord_t best_c[PRIOR_BEST_N];
@@ -55,7 +55,7 @@ print_node_prior_best_moves(struct board *b, struct tree_node *parent)
 }
 
 static void
-get_prior_best_moves(struct prior_map *map, coord_t *best_c, float *best_r, int nbest)
+get_prior_best_moves(prior_map_t *map, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;
@@ -74,7 +74,7 @@ get_prior_best_moves(struct prior_map *map, coord_t *best_c, float *best_r, int 
 
 /* Display priors best moves. */
 static void
-print_prior_best_moves(struct board *b, struct prior_map *map)
+print_prior_best_moves(board_t *b, prior_map_t *map)
 {
 	float best_r[PRIOR_BEST_N];
 	coord_t best_c[PRIOR_BEST_N];
@@ -90,7 +90,7 @@ print_prior_best_moves(struct board *b, struct prior_map *map)
 }
 
 static void
-uct_prior_even(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_even(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 	/* Q_{even} */
 	/* This may be dubious for normal UCB1 but is essential for
@@ -104,7 +104,7 @@ uct_prior_even(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 static void
-uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_eye(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 	/* Discourage playing into our own eyes. However, we cannot
 	 * completely prohibit it:
@@ -124,7 +124,7 @@ uct_prior_eye(struct uct *u, struct tree_node *node, struct prior_map *map)
 
 
 static void
-uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_dcnn(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 #ifdef DCNN
 	float   r[19 * 19];
@@ -154,7 +154,7 @@ uct_prior_dcnn(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 static void
-uct_prior_ko(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_ko(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 	/* Favor fighting ko, if we took it le 10 moves ago. */
 	coord_t ko = map->b->last_ko.coord;
@@ -165,7 +165,7 @@ uct_prior_ko(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 static void
-uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_b19(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 	/* Q_{b19} */
 	/* Specific hints for 19x19 board - priors for certain edge distances. */
@@ -186,7 +186,7 @@ uct_prior_b19(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 static void
-uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_playout(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 	/* Q_{playout-policy} */
 	if (u->playout->assess)
@@ -194,7 +194,7 @@ uct_prior_playout(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 static void
-uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_cfgd(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 	/* Q_{common_fate_graph_distance} */
 	/* Give bonus to moves local to the last move, where "local" means
@@ -214,12 +214,12 @@ uct_prior_cfgd(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 static void
-uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_joseki(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 	/* Q_{joseki} */
 	int matches = 0;
 
-	struct board *b = map->b;
+	board_t *b = map->b;
 	enum stone color = map->to_play;
 	coord_t coords[BOARD_MAX_COORDS];
 	float ratings[BOARD_MAX_COORDS];
@@ -237,12 +237,12 @@ uct_prior_joseki(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 static void
-uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 	/* Q_{pattern} */
 
-	struct board *b = map->b;
-	struct pattern pats[b->flen];
+	board_t *b = map->b;
+	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
 	pattern_rate_moves(&u->pc, b, map->to_play, pats, probs, &u->ownermap);
 
@@ -272,9 +272,9 @@ uct_prior_pattern(struct uct *u, struct tree_node *node, struct prior_map *map)
 }
 
 void
-uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
+uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
-	struct board *b = map->b;
+	board_t *b = map->b;
 	
 	if (u->prior->prune_ladders && !board_playing_ko_threat(b)) {
 		foreach_free_point(b) {
@@ -323,10 +323,10 @@ uct_prior(struct uct *u, struct tree_node *node, struct prior_map *map)
 	if (DEBUGL(3) && !node->parent)                 print_prior_best_moves(map->b, map);
 }
 
-struct uct_prior *
-uct_prior_init(char *arg, struct board *b, struct uct *u)
+uct_prior_t *
+uct_prior_init(char *arg, board_t *b, uct_t *u)
 {
-	struct uct_prior *p = calloc2(1, sizeof(struct uct_prior));
+	uct_prior_t *p = calloc2(1, sizeof(uct_prior_t));
 
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = p->plugin_eqex = -100;
 	/* FIXME: Optimal pattern_eqex is about -1000 with small playout counts
@@ -442,7 +442,7 @@ uct_prior_init(char *arg, struct board *b, struct uct *u)
 }
 
 void
-uct_prior_done(struct uct_prior *p)
+uct_prior_done(uct_prior_t *p)
 {
 	assert(p->cfgd_eqex);
 	free(p->cfgd_eqex);

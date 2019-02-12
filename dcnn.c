@@ -15,16 +15,16 @@ static bool dcnn_required = false;
 void disable_dcnn(void)  {  dcnn_enabled = false;  }
 void require_dcnn(void)  {  dcnn_required = true;  }
 
-static void detlef54_dcnn_eval(struct board *b, enum stone color, float result[]);
+static void detlef54_dcnn_eval(board_t *b, enum stone color, float result[]);
 
 static bool
-dcnn_supported_board_size(struct board *b)
+dcnn_supported_board_size(board_t *b)
 {
 	return (real_board_size(b) >= 13);
 }
 
 bool
-using_dcnn(struct board *b)
+using_dcnn(board_t *b)
 {
 	bool r = dcnn_enabled && dcnn_supported_board_size(b) && caffe_ready();
 	if (dcnn_required && !r)  die("dcnn required but not used, aborting.\n");
@@ -32,7 +32,7 @@ using_dcnn(struct board *b)
 }
 
 void
-dcnn_init(struct board *b)
+dcnn_init(board_t *b)
 {
 	if (dcnn_enabled && dcnn_supported_board_size(b))
 		caffe_init(real_board_size(b));
@@ -40,13 +40,13 @@ dcnn_init(struct board *b)
 }
 
 void
-dcnn_evaluate_quiet(struct board *b, enum stone color, float result[])
+dcnn_evaluate_quiet(board_t *b, enum stone color, float result[])
 {
 	detlef54_dcnn_eval(b, color, result);
 }
 
 void
-dcnn_evaluate(struct board *b, enum stone color, float result[])
+dcnn_evaluate(board_t *b, enum stone color, float result[])
 {
 	double time_start = time_now();	
 	detlef54_dcnn_eval(b, color, result);
@@ -54,7 +54,7 @@ dcnn_evaluate(struct board *b, enum stone color, float result[])
 }
 
 static void
-detlef54_dcnn_eval(struct board *b, enum stone color, float result[])
+detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 {
 	assert(dcnn_supported_board_size(b));
 
@@ -96,7 +96,7 @@ detlef54_dcnn_eval(struct board *b, enum stone color, float result[])
 
 
 void
-get_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, int nbest)
+get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;
@@ -109,7 +109,7 @@ get_dcnn_best_moves(struct board *b, float *r, coord_t *best_c, float *best_r, i
 }
 
 void
-print_dcnn_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
+print_dcnn_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest)
 {
 	int cols = best_moves_print(b, "dcnn = ", best_c, nbest);
 

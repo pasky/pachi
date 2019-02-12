@@ -24,10 +24,10 @@
 /* Allocate tree node(s). The returned nodes are initialized with zeroes.
  * Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
-static struct tree_node *
-tree_alloc_node(struct tree *t, int count, bool fast_alloc)
+static tree_node_t *
+tree_alloc_node(tree_t *t, int count, bool fast_alloc)
 {
-	struct tree_node *n = NULL;
+	tree_node_t *n = NULL;
 	size_t nsize = count * sizeof(*n);
 	size_t old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
 
@@ -35,7 +35,7 @@ tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 		if (old_size + nsize > t->max_tree_size)
 			return NULL;
 		assert(t->nodes != NULL);
-		n = (struct tree_node *)(t->nodes + old_size);
+		n = (tree_node_t *)(t->nodes + old_size);
 		memset(n, 0, nsize);
 	} else {
 		n = calloc2(count, sizeof(*n));
@@ -46,14 +46,14 @@ tree_alloc_node(struct tree *t, int count, bool fast_alloc)
 /* Initialize a node at a given place in memory.
  * This function may be called by multiple threads in parallel. */
 static void
-tree_setup_node(struct tree *t, struct tree_node *n, coord_t coord, int depth)
+tree_setup_node(tree_t *t, tree_node_t *n, coord_t coord, int depth)
 {
 	static volatile unsigned int hash = 0;
 	n->coord = coord;
 	n->depth = depth;
 	/* n->hash is used only for debugging. It is very likely (but not
 	 * guaranteed) to be unique. */
-	hash_t h = n - (struct tree_node *)0;
+	hash_t h = n - (tree_node_t *)0;
 	n->hash = (h << 32) + (hash++ & 0xffffffff);
 	if (depth > t->max_depth)
 		t->max_depth = depth;
@@ -62,10 +62,10 @@ tree_setup_node(struct tree *t, struct tree_node *n, coord_t coord, int depth)
 /* Allocate and initialize a node. Returns NULL (fast_alloc mode)
  * or exits the main program if not enough memory.
  * This function may be called by multiple threads in parallel. */
-static struct tree_node *
-tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
+static tree_node_t *
+tree_init_node(tree_t *t, coord_t coord, int depth, bool fast_alloc)
 {
-	struct tree_node *n;
+	tree_node_t *n;
 	n = tree_alloc_node(t, 1, fast_alloc);
 	if (!n) return NULL;
 	tree_setup_node(t, n, coord, depth);
@@ -73,11 +73,11 @@ tree_init_node(struct tree *t, coord_t coord, int depth, bool fast_alloc)
 }
 
 /* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
-struct tree *
-tree_init(struct board *board, enum stone color, size_t max_tree_size,
+tree_t *
+tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	  size_t max_pruned_size, size_t pruning_threshold, floating_t ltree_aging, int hbits)
 {
-	struct tree *t = calloc2(1, sizeof(*t));
+	tree_t *t = calloc2(1, sizeof(*t));
 	t->board = board;
 	t->max_tree_size = max_tree_size;
 	t->max_pruned_size = max_pruned_size;
@@ -108,11 +108,11 @@ tree_init(struct board *board, enum stone color, size_t max_tree_size,
  * must have been created in this tree originally.
  * It returns the remaining size of the tree after n has been freed. */
 static size_t
-tree_done_node(struct tree *t, struct tree_node *n)
+tree_done_node(tree_t *t, tree_node_t *n)
 {
-	struct tree_node *ni = n->children;
+	tree_node_t *ni = n->children;
 	while (ni) {
-		struct tree_node *nj = ni->sibling;
+		tree_node_t *nj = ni->sibling;
 		tree_done_node(t, ni);
 		ni = nj;
 	}
@@ -121,16 +121,16 @@ tree_done_node(struct tree *t, struct tree_node *n)
 	return old_size - sizeof(*n);
 }
 
-struct subtree_ctx {
-	struct tree *t;
-	struct tree_node *n;
-};
+typedef struct {
+	tree_t *t;
+	tree_node_t *n;
+} subtree_ctx_t;
 
 /* Worker thread for tree_done_node_detached(). Only for fast_alloc=false. */
 static void *
 tree_done_node_worker(void *ctx_)
 {
-	struct subtree_ctx *ctx = ctx_;
+	subtree_ctx_t *ctx = ctx_;
 	char *str = coord2str(node_coord(ctx->n));
 
 	size_t tree_size = tree_done_node(ctx->t, ctx->n);
@@ -146,7 +146,7 @@ tree_done_node_worker(void *ctx_)
 /* Asynchronously free the subtree of nodes rooted at n. If the tree becomes
  * empty free the tree also.  Only for fast_alloc=false. */
 static void
-tree_done_node_detached(struct tree *t, struct tree_node *n)
+tree_done_node_detached(tree_t *t, tree_node_t *n)
 {
 	if (n->u.playouts < 1000) { // no thread for small tree
 		if (!tree_done_node(t, n))
@@ -158,7 +158,7 @@ tree_done_node_detached(struct tree *t, struct tree_node *n)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	pthread_t thread;
-	struct subtree_ctx *ctx = malloc2(sizeof(struct subtree_ctx));
+	subtree_ctx_t *ctx = malloc2(sizeof(subtree_ctx_t));
 	ctx->t = t;
 	ctx->n = n;
 	pthread_create(&thread, &attr, tree_done_node_worker, ctx);
@@ -166,7 +166,7 @@ tree_done_node_detached(struct tree *t, struct tree_node *n)
 }
 
 void
-tree_done(struct tree *t)
+tree_done(tree_t *t)
 {
 	tree_done_node(t, t->ltree_black);
 	tree_done_node(t, t->ltree_white);
@@ -185,11 +185,11 @@ tree_done(struct tree *t)
 
 
 static void
-tree_node_dump(struct tree *tree, struct tree_node *node, int treeparity, int l, int thres)
+tree_node_dump(tree_t *tree, tree_node_t *node, int treeparity, int l, int thres)
 {
 	for (int i = 0; i < l; i++) fputc(' ', stderr);
 	int children = 0;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+	for (tree_node_t *ni = node->children; ni; ni = ni->sibling)
 		children++;
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
@@ -203,8 +203,8 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int treeparity, int l,
 
 	/* Print nodes sorted by #playouts. */
 
-	struct tree_node *nbox[1000]; int nboxl = 0;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+	tree_node_t *nbox[1000]; int nboxl = 0;
+	for (tree_node_t *ni = node->children; ni; ni = ni->sibling)
 		if (ni->u.playouts > thres)
 			nbox[nboxl++] = ni;
 
@@ -221,7 +221,7 @@ tree_node_dump(struct tree *tree, struct tree_node *node, int treeparity, int l,
 }
 
 void
-tree_dump(struct tree *tree, double thres)
+tree_dump(tree_t *tree, double thres)
 {
 	int thres_abs = thres > 0 ? tree->root->u.playouts * thres : thres;
 	fprintf(stderr, "(UCT tree; root %s; extra komi %f; max depth %d)\n",
@@ -239,7 +239,7 @@ tree_dump(struct tree *tree, double thres)
 
 
 static char *
-tree_book_name(struct board *b)
+tree_book_name(board_t *b)
 {
 	static char buf[256];
 	if (b->handicap > 0) {
@@ -251,7 +251,7 @@ tree_book_name(struct board *b)
 }
 
 static void
-tree_node_save(FILE *f, struct tree_node *node, int thres)
+tree_node_save(FILE *f, tree_node_t *node, int thres)
 {
 	bool save_children = node->u.playouts >= thres;
 
@@ -259,12 +259,12 @@ tree_node_save(FILE *f, struct tree_node *node, int thres)
 		node->is_expanded = 0;
 
 	fputc(1, f);
-	fwrite(((void *) node) + offsetof(struct tree_node, u),
-	       sizeof(struct tree_node) - offsetof(struct tree_node, u),
+	fwrite(((void *) node) + offsetof(tree_node_t, u),
+	       sizeof(tree_node_t) - offsetof(tree_node_t, u),
 	       1, f);
 
 	if (save_children) {
-		for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+		for (tree_node_t *ni = node->children; ni; ni = ni->sibling)
 			tree_node_save(f, ni, thres);
 	} else {
 		if (node->children)
@@ -275,7 +275,7 @@ tree_node_save(FILE *f, struct tree_node *node, int thres)
 }
 
 void
-tree_save(struct tree *tree, struct board *b, int thres)
+tree_save(tree_t *tree, board_t *b, int thres)
 {
 	char *filename = tree_book_name(b);
 	FILE *f = fopen(filename, "wb");
@@ -290,12 +290,12 @@ tree_save(struct tree *tree, struct board *b, int thres)
 
 
 void
-tree_node_load(FILE *f, struct tree_node *node, int *num)
+tree_node_load(FILE *f, tree_node_t *node, int *num)
 {
 	(*num)++;
 
-	checked_fread(((void *) node) + offsetof(struct tree_node, u),
-		      sizeof(struct tree_node) - offsetof(struct tree_node, u),
+	checked_fread(((void *) node) + offsetof(tree_node_t, u),
+		      sizeof(tree_node_t) - offsetof(tree_node_t, u),
 		      1, f);
 
 	/* Keep values in sane scale, otherwise we start overflowing. */
@@ -308,7 +308,7 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 	}
 	memcpy(&node->pu, &node->u, sizeof(node->u));
 
-	struct tree_node *ni = NULL, *ni_prev = NULL;
+	tree_node_t *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {
 		ni_prev = ni; ni = calloc2(1, sizeof(*ni));
 		if (!node->children)
@@ -321,7 +321,7 @@ tree_node_load(FILE *f, struct tree_node *node, int *num)
 }
 
 void
-tree_load(struct tree *tree, struct board *b)
+tree_load(tree_t *tree, board_t *b)
 {
 	char *filename = tree_book_name(b);
 	FILE *f = fopen(filename, "rb");
@@ -345,12 +345,12 @@ tree_load(struct tree *tree, struct board *b)
  * a given node is preserved (assumed by tree_get_node in particular).
  * Returns the copy of node in the destination tree, or NULL
  * if we could not copy it. */
-static struct tree_node *
-tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
+static tree_node_t *
+tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
 	   int threshold, int depth)
 {
 	assert(dest->nodes && node);
-	struct tree_node *n2 = tree_alloc_node(dest, 1, true);
+	tree_node_t *n2 = tree_alloc_node(dest, 1, true);
 	if (!n2)
 		return NULL;
 	*n2 = *node;
@@ -367,12 +367,12 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
 	 * would degrade the playing strength. The only exception is
 	 * when dest becomes full, but this should never happen in practice
 	 * if threshold is chosen to limit the number of nodes traversed. */
-	struct tree_node *ni = node->children;
+	tree_node_t *ni = node->children;
 	if (!ni)
 		return n2;
-	struct tree_node **prev2 = &(n2->children);
+	tree_node_t **prev2 = &(n2->children);
 	while (ni) {
-		struct tree_node *ni2 = tree_prune(dest, src, ni, threshold, depth);
+		tree_node_t *ni2 = tree_prune(dest, src, ni, threshold, depth);
 		if (!ni2) break;
 		*prev2 = ni2;
 		prev2 = &(ni2->sibling);
@@ -412,21 +412,21 @@ tree_prune(struct tree *dest, struct tree *src, struct tree_node *node,
  * Prune the subtree if necessary to fit in memory or
  * to save time scanning the tree.
  * Returns the moved node. Only for fast_alloc. */
-struct tree_node *
-tree_garbage_collect(struct tree *tree, struct tree_node *node)
+tree_node_t *
+tree_garbage_collect(tree_t *tree, tree_node_t *node)
 {
 	assert(tree->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
 	size_t orig_size = tree->nodes_size;
 
-	struct tree *temp_tree = tree_init(tree->board,  tree->root_color,
+	tree_t *temp_tree = tree_init(tree->board,  tree->root_color,
 					   tree->max_pruned_size, 0, 0, tree->ltree_aging, 0);
 	temp_tree->nodes_size = 0; // We do not want the dummy pass node
-        struct tree_node *temp_node;
+        tree_node_t *temp_node;
 
 	/* Find the maximum depth at which we can copy all nodes. */
 	int max_nodes = 1;
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+	for (tree_node_t *ni = node->children; ni; ni = ni->sibling)
 		max_nodes++;
 	size_t nodes_size = max_nodes * sizeof(*node);
 	int max_depth = node->depth;
@@ -451,7 +451,7 @@ tree_garbage_collect(struct tree *tree, struct tree_node *node)
 	/* Now copy back to original tree. */
 	tree->nodes_size = 0;
 	tree->max_depth = 0;
-	struct tree_node *new_node = tree_prune(tree, temp_tree, temp_node, 0, temp_tree->max_depth);
+	tree_node_t *new_node = tree_prune(tree, temp_tree, temp_node, 0, temp_tree->max_depth);
 
 	if (DEBUGL(1)) {
 		double now = time_now();
@@ -479,10 +479,10 @@ tree_garbage_collect(struct tree *tree, struct tree_node *node)
 
 /* Find node of given coordinate under parent.
  * FIXME: Adjust for board symmetry. */
-struct tree_node *
-tree_get_node(struct tree_node *parent, coord_t c)
+tree_node_t *
+tree_get_node(tree_node_t *parent, coord_t c)
 {
-	for (struct tree_node *n = parent->children; n; n = n->sibling)
+	for (tree_node_t *n = parent->children; n; n = n->sibling)
 		if (node_coord(n) == c)
 			return n;
 	return NULL;
@@ -491,8 +491,8 @@ tree_get_node(struct tree_node *parent, coord_t c)
 /* Get a node of given coordinate from within parent, possibly creating it
  * if necessary - in a very raw form (no .d, priors, ...). */
 /* FIXME: Adjust for board symmetry. */
-struct tree_node *
-tree_get_node2(struct tree *t, struct tree_node *parent, coord_t c, bool create)
+tree_node_t *
+tree_get_node2(tree_t *t, tree_node_t *parent, coord_t c, bool create)
 {
 	if (!parent->children || node_coord(parent->children) >= c) {
 		/* Special case: Insertion at the beginning. */
@@ -501,7 +501,7 @@ tree_get_node2(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 		if (!create)
 			return NULL;
 
-		struct tree_node *nn = tree_init_node(t, c, parent->depth + 1, false);
+		tree_node_t *nn = tree_init_node(t, c, parent->depth + 1, false);
 		nn->parent = parent; nn->sibling = parent->children;
 		parent->children = nn;
 		return nn;
@@ -509,7 +509,7 @@ tree_get_node2(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 
 	/* No candidate at the beginning, look through all the children. */
 
-	struct tree_node *ni;
+	tree_node_t *ni;
 	for (ni = parent->children; ni->sibling; ni = ni->sibling)
 		if (node_coord(ni->sibling) >= c)
 			break;
@@ -520,7 +520,7 @@ tree_get_node2(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 	if (!create)
 		return NULL;
 
-	struct tree_node *nn = tree_init_node(t, c, parent->depth + 1, false);
+	tree_node_t *nn = tree_init_node(t, c, parent->depth + 1, false);
 	nn->parent = parent; nn->sibling = ni->sibling; ni->sibling = nn;
 	return nn;
 }
@@ -528,8 +528,8 @@ tree_get_node2(struct tree *t, struct tree_node *parent, coord_t c, bool create)
 /* Get local tree node corresponding to given node, given local node child
  * iterator @lni (which points either at the corresponding node, or at the
  * nearest local tree node after @ni). */
-struct tree_node *
-tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *lni, int tenuki_d)
+tree_node_t *
+tree_lnode_for_node(tree_t *tree, tree_node_t *ni, tree_node_t *lni, int tenuki_d)
 {
 	/* Now set up lnode, which is the actual local node
 	 * corresponding to ni - either lni if it is an
@@ -575,7 +575,7 @@ tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *l
 
 /* This function must be thread safe, given that board b is only modified by the calling thread. */
 void
-tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity)
+tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct_t *u, int parity)
 {
 	/* Get a Common Fate Graph distance map from parent node. */
 	int distances[board_size2(b)];
@@ -585,11 +585,11 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
 
 	/* Include pass in the prior map. */
-	struct move_stats map_prior[board_size2(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
-	bool              map_consider[board_size2(b) + 1];   memset(map_consider, 0, sizeof(map_consider));
+	move_stats_t map_prior[board_size2(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
+	bool         map_consider[board_size2(b) + 1];   memset(map_consider, 0, sizeof(map_consider));
 	
 	/* Get a map of prior values to initialize the new nodes with. */
-	struct prior_map map = { b, color, tree_parity(t, parity), &map_prior[1], &map_consider[1], distances };
+	prior_map_t map = { b, color, tree_parity(t, parity), &map_prior[1], &map_consider[1], distances };
 	
 	map.consider[pass] = true;
 	int child_count = 1; // for pass
@@ -603,7 +603,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	uct_prior(u, node, &map);
 
 	/* Now, create the nodes (all at once if fast_alloc) */
-	struct tree_node *ni = t->nodes ? tree_alloc_node(t, child_count, true) : tree_alloc_node(t, 1, false);
+	tree_node_t *ni = t->nodes ? tree_alloc_node(t, child_count, true) : tree_alloc_node(t, 1, false);
 	/* In fast_alloc mode we might temporarily run out of nodes but this should be rare. */
 	if (!ni) {
 		node->is_expanded = false;
@@ -611,7 +611,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 	}
 	tree_setup_node(t, ni, pass, node->depth + 1);
 
-	struct tree_node *first_child = ni;
+	tree_node_t *first_child = ni;
 	ni->parent = node;
 	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
 
@@ -640,7 +640,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 				continue;
 			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
 
-			struct tree_node *nj = t->nodes ? first_child + child++ : tree_alloc_node(t, 1, false);
+			tree_node_t *nj = t->nodes ? first_child + child++ : tree_alloc_node(t, 1, false);
 			tree_setup_node(t, nj, c, node->depth + 1);
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
@@ -653,7 +653,7 @@ tree_expand_node(struct tree *t, struct tree_node *node, struct board *b, enum s
 
 
 static coord_t
-flip_coord(struct board *b, coord_t c,
+flip_coord(board_t *b, coord_t c,
            bool flip_horiz, bool flip_vert, int flip_diag)
 {
 	int x = coord_x(c), y = coord_y(c);
@@ -664,23 +664,23 @@ flip_coord(struct board *b, coord_t c,
 }
 
 static void
-tree_fix_node_symmetry(struct board *b, struct tree_node *node,
+tree_fix_node_symmetry(board_t *b, tree_node_t *node,
                        bool flip_horiz, bool flip_vert, int flip_diag)
 {
 	if (!is_pass(node_coord(node)))
 		node->coord = flip_coord(b, node_coord(node), flip_horiz, flip_vert, flip_diag);
 
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling)
+	for (tree_node_t *ni = node->children; ni; ni = ni->sibling)
 		tree_fix_node_symmetry(b, ni, flip_horiz, flip_vert, flip_diag);
 }
 
 static void
-tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
+tree_fix_symmetry(tree_t *tree, board_t *b, coord_t c)
 {
 	if (is_pass(c))
 		return;
 
-	struct board_symmetry *s = &tree->root_symmetry;
+	board_symmetry_t *s = &tree->root_symmetry;
 	int cx = coord_x(c), cy = coord_y(c);
 
 	/* playground	X->h->v->d normalization
@@ -715,9 +715,9 @@ tree_fix_symmetry(struct tree *tree, struct board *b, coord_t c)
 
 
 static void
-tree_unlink_node(struct tree_node *node)
+tree_unlink_node(tree_node_t *node)
 {
-	struct tree_node *ni = node->parent;
+	tree_node_t *ni = node->parent;
 	if (ni->children == node) {
 		ni->children = node->sibling;
 	} else {
@@ -733,19 +733,19 @@ tree_unlink_node(struct tree_node *node)
 /* Reduce weight of statistics on promotion. Remove nodes that
  * get reduced to zero playouts; returns next node to consider
  * in the children list (@node may get deleted). */
-static struct tree_node *
-tree_age_node(struct tree *tree, struct tree_node *node)
+static tree_node_t *
+tree_age_node(tree_t *tree, tree_node_t *node)
 {
 	node->u.playouts /= tree->ltree_aging;
 	if (node->parent && !node->u.playouts) {
-		struct tree_node *sibling = node->sibling;
+		tree_node_t *sibling = node->sibling;
 		/* Delete node, no playouts. */
 		tree_unlink_node(node);
 		tree_done_node(tree, node);
 		return sibling;
 	}
 
-	struct tree_node *ni = node->children;
+	tree_node_t *ni = node->children;
 	while (ni) ni = tree_age_node(tree, ni);
 	return node->sibling;
 }
@@ -753,7 +753,7 @@ tree_age_node(struct tree *tree, struct tree_node *node)
 /* Promotes the given node as the root of the tree. In the fast_alloc
  * mode, the node may be moved and some of its subtree may be pruned. */
 void
-tree_promote_node(struct tree *tree, struct tree_node **node)
+tree_promote_node(tree_t *tree, tree_node_t **node)
 {
 	assert((*node)->parent == tree->root);
 	tree_unlink_node(*node);
@@ -785,12 +785,12 @@ tree_promote_node(struct tree *tree, struct tree_node **node)
 }
 
 bool
-tree_promote_at(struct tree *t, struct board *b, coord_t c, int *reason)
+tree_promote_at(tree_t *t, board_t *b, coord_t c, int *reason)
 {
 	*reason = 0;
 	tree_fix_symmetry(t, b, c);
 
-	struct tree_node *n = tree_get_node(t->root, c);
+	tree_node_t *n = tree_get_node(t->root, c);
 	if (!n)  return false;
 	
 	if (using_dcnn(b) && !(n->hints & TREE_HINT_DCNN)) {

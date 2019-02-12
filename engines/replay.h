@@ -3,8 +3,8 @@
 
 #include "engine.h"
 
-coord_t replay_sample_moves(struct engine *e, struct board *b, enum stone color, 
+coord_t replay_sample_moves(engine_t *e, board_t *b, enum stone color, 
 			    int *played, int *pmost_played);
-void engine_replay_init(struct engine *e, char *arg, struct board *b);
+void engine_replay_init(engine_t *e, char *arg, board_t *b);
 
 #endif

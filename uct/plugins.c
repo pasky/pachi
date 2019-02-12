@@ -10,9 +10,9 @@
 #include "debug.h"
 #include "move.h"
 #include "random.h"
-#include "uct/plugins.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
+#include "uct/plugins.h"
 
 /* Plugin interface for UCT. External plugins may hook callbacks on various
  * events and e.g. bias the tree. */
@@ -20,37 +20,37 @@
 
 /* Keep the API typedefs in sync with <uct/plugin.h>. */
 
-struct plugin {
+typedef struct {
 	char *path;
 	char *args;
 	void *dlh;
 	void *data;
 
-	void *(*init)(char *args, struct board *b, int seed);
-	void (*prior)(void *data, struct tree_node *node, struct prior_map *map, int eqex);
+	void *(*init)(char *args, board_t *b, int seed);
+	void (*prior)(void *data, tree_node_t *node, prior_map_t *map, int eqex);
 	void (*done)(void *data);
-};
+} plugin_t;
 
-struct uct_pluginset {
-	struct plugin *plugins;
+typedef struct uct_pluginset {
+	plugin_t *plugins;
 	int n_plugins;
-	struct board *b;
-};
+	board_t *b;
+} uct_pluginset_t;
 
 
-struct uct_pluginset *
-pluginset_init(struct board *b)
+uct_pluginset_t *
+pluginset_init(board_t *b)
 {
-	struct uct_pluginset *ps = calloc(1, sizeof(*ps));
+	uct_pluginset_t *ps = calloc(1, sizeof(*ps));
 	ps->b = b;
 	return ps;
 }
 
 void
-pluginset_done(struct uct_pluginset *ps)
+pluginset_done(uct_pluginset_t *ps)
 {
 	for (int i = 0; i < ps->n_plugins; i++) {
-		struct plugin *p = &ps->plugins[i];
+		plugin_t *p = &ps->plugins[i];
 		p->done(p->data);
 		dlclose(p->dlh);
 		free(p->path);
@@ -61,10 +61,10 @@ pluginset_done(struct uct_pluginset *ps)
 
 
 void
-plugin_load(struct uct_pluginset *ps, char *path, char *args)
+plugin_load(uct_pluginset_t *ps, char *path, char *args)
 {
 	ps->plugins = realloc(ps->plugins, ++ps->n_plugins * sizeof(ps->plugins[0]));
-	struct plugin *p = &ps->plugins[ps->n_plugins - 1];
+	plugin_t *p = &ps->plugins[ps->n_plugins - 1];
 	p->path = strdup(path);
 	p->args = args ? strdup(args) : args;
 
@@ -84,10 +84,10 @@ plugin_load(struct uct_pluginset *ps, char *path, char *args)
 }
 
 void
-plugin_prior(struct uct_pluginset *ps, struct tree_node *node, struct prior_map *map, int eqex)
+plugin_prior(uct_pluginset_t *ps, tree_node_t *node, prior_map_t *map, int eqex)
 {
 	for (int i = 0; i < ps->n_plugins; i++) {
-		struct plugin *p = &ps->plugins[i];
+		plugin_t *p = &ps->plugins[i];
 		p->prior(p->data, node, map, eqex);
 	}
 }

@@ -123,10 +123,10 @@ open_client_connection(char *port_name)
 /* Allow connexion queue > 1 to avoid race conditions. */
 #define MAX_CONNEXIONS 5
 
-struct port_info {
+typedef struct {
 	int socket;
 	char *port;
-};
+} port_info_t;
 
 #define port_info_none()  { -1, 0 }
 
@@ -140,7 +140,7 @@ struct port_info {
  * Block until the connection succeeds.
  * Return a file descriptor for the new connection. */
 static int
-open_connection(struct port_info *info)
+open_connection(port_info_t *info)
 {
 	int conn;
 	char *p = strchr(info->port, ':');
@@ -162,7 +162,7 @@ open_connection(struct port_info *info)
 
 /* Open the log connection on the given port, redirect stderr to it. */
 static void
-open_log_connection(struct port_info *info)
+open_log_connection(port_info_t *info)
 {
 	int log_conn = open_connection(info);
 	if (dup2(log_conn, STDERR) < 0)
@@ -178,7 +178,7 @@ open_log_connection(struct port_info *info)
 static void * __attribute__((noreturn))
 log_thread(void *arg)
 {
-	struct port_info *info = arg;
+	port_info_t *info = arg;
 	assert(info && info->port);
 	for (;;) {
 		char buf[BSIZE];
@@ -203,7 +203,7 @@ void
 open_log_port(char *port)
 {
 	pthread_t thread;
-	static struct port_info log_info = port_info_none();
+	static port_info_t log_info = port_info_none();
 	log_info.port = port;
 	open_log_connection(&log_info);
 
@@ -216,7 +216,7 @@ open_log_port(char *port)
 void
 open_gtp_connection(int *socket, char *port)
 {
-	static struct port_info gtp_info = port_info_none();
+	static port_info_t gtp_info = port_info_none();
 	gtp_info.port = port;
 	int gtp_conn = open_connection(&gtp_info);
 	for (int d = STDIN; d <= STDOUT; d++) {

@@ -16,7 +16,7 @@
 #include "distributed/merge.h"
 
 /* We merge together debug stats for all hash tables. */
-static struct hash_counts h_counts;
+static hash_counts_t h_counts;
 
 /* Display and reset hash statistics. For debugging only. */
 void
@@ -48,11 +48,11 @@ merge_print_stats(int total_hnodes)
  * and increment the bucket count. Return the hash index.
  * The slave lock is not held on either entry or exit of this function */
 static inline int
-stats_tally(struct incr_stats *s, struct slave_state *sstate, int *bucket_count)
+stats_tally(incr_stats_t *s, slave_state_t *sstate, int *bucket_count)
 {
 	int h;
 	bool found;
-	struct incr_stats *stats_htable = sstate->stats_htable;
+	incr_stats_t *stats_htable = sstate->stats_htable;
 	find_hash(h, stats_htable, sstate->stats_hbits, s->coord_path, found, h_counts);
 	if (found) {
 		assert(stats_htable[h].incr.playouts > 0);
@@ -68,7 +68,7 @@ stats_tally(struct incr_stats *s, struct slave_state *sstate, int *bucket_count)
 	return h;
 }
 
-static struct incr_stats terminator = { INT64_MAX };
+static incr_stats_t terminator = { INT64_MAX };
 
 /* Initialize the next pointers (see merge_new_stats()).
  * Exclude invalid buffers and my own buffers by setting their next pointer
@@ -79,11 +79,11 @@ static struct incr_stats terminator = { INT64_MAX };
  * Return the total number of nodes to be merged.
  * The slave lock is not held on either entry or exit of this function. */
 static int
-filter_buffers(struct slave_state *sstate, struct incr_stats **next,
+filter_buffers(slave_state_t *sstate, incr_stats_t **next,
 	       int *min, int max)
 {
 	int size = 0;
-	int max_size = sstate->max_merged_nodes * sizeof(struct incr_stats);
+	int max_size = sstate->max_merged_nodes * sizeof(incr_stats_t);
  
 	for (int q = max; q >= *min; q--) {
 		if (!receive_queue[q] || receive_queue[q]->owner == sstate->thread_id) {
@@ -93,11 +93,11 @@ filter_buffers(struct slave_state *sstate, struct incr_stats **next,
 			assert(*min <= max);
 			break;
 		} else {
-			next[q] = (struct incr_stats *)receive_queue[q]->buf;
+			next[q] = (incr_stats_t *)receive_queue[q]->buf;
 			size += receive_queue[q]->size;
 		}
 	}
-	return size / sizeof(struct incr_stats);
+	return size / sizeof(incr_stats_t);
 }
 
 /* Return the minimum coord path of next[min..max].
@@ -108,7 +108,7 @@ filter_buffers(struct slave_state *sstate, struct incr_stats **next,
  * been invalidated, the caller must check for this; in this
  * case the returned value is < the correct value. */
 static inline path_t
-min_coord(struct incr_stats **next, int min, int max)
+min_coord(incr_stats_t **next, int min, int max)
 {
 	path_t min_c = next[min]->coord_path;
 	for (int q = min + 1; q <= max; q++) {
@@ -131,15 +131,15 @@ min_coord(struct incr_stats **next, int min, int max)
  * entries above max, they will be processed at the next call.
  * This function does not modify the receive queue. */
 static int
-merge_new_stats(struct slave_state *sstate, int min, int max,
+merge_new_stats(slave_state_t *sstate, int min, int max,
 		int *bucket_count, int *nodes_read, int last_queue_age)
 {
 	*nodes_read = 0;
 	if (max < min) return 0;
 
 	/* next[q] is the next value to be checked in receive_queue[q]->buf */
-	struct incr_stats *next_[max - min + 1];
-	struct incr_stats **next = next_ - min;
+	incr_stats_t *next_[max - min + 1];
+	incr_stats_t **next = next_ - min;
 	*nodes_read = filter_buffers(sstate, next, &min, max);
 
 	/* prev_min_c is only used for debugging. */
@@ -153,9 +153,9 @@ merge_new_stats(struct slave_state *sstate, int min, int max,
 	path_t min_c;
 	while ((min_c = min_coord(next, min, max)) != INT64_MAX) {
 
-		struct incr_stats sum = { min_c, move_stats(0.0, 0) };
+		incr_stats_t sum = { min_c, move_stats(0.0, 0) };
 		for (int q = min; q <= max; q++) {
-			struct incr_stats s = *(next[q]);
+			incr_stats_t s = *(next[q]);
 
 			/* If s.coord_path != min_c, we must skip s.coord_path for now.
 			 * If min_c is invalid, a future iteration will get a stable
@@ -208,7 +208,7 @@ merge_new_stats(struct slave_state *sstate, int min, int max,
  * Return the number of nodes to be sent.
  * The slave lock is not held on either entry or exit of this function. */
 static int
-output_stats(struct incr_stats *buf, struct slave_state *sstate,
+output_stats(incr_stats_t *buf, slave_state_t *sstate,
 	     int *bucket_count, int merge_count)
 {
 	/* Find the minimum increment to send. The bucket with minimum
@@ -224,7 +224,7 @@ output_stats(struct incr_stats *buf, struct slave_state *sstate,
 	int min_count = bucket_count[min_incr] - (out_count - shared_nodes);
 	out_count = 0;
 	int *merged = sstate->merged;
-	struct incr_stats *stats_htable = sstate->stats_htable;
+	incr_stats_t *stats_htable = sstate->stats_htable;
 	while (merge_count--) {
 		int h = *merged++;
 		int delta = stats_htable[h].incr.playouts - min_incr;
@@ -250,7 +250,7 @@ output_stats(struct incr_stats *buf, struct slave_state *sstate,
  * check that the result is still valid.
  * The slave lock is held on both entry and exit of this function. */
 static int
-get_new_stats(struct incr_stats *buf, struct slave_state *sstate, int cmd_id)
+get_new_stats(incr_stats_t *buf, slave_state_t *sstate, int cmd_id)
 {
 	/* Process all valid buffers in receive_queue[min..max] */
 	int min = sstate->last_processed + 1;
@@ -308,17 +308,17 @@ get_new_stats(struct incr_stats *buf, struct slave_state *sstate, int cmd_id)
 /* Allocate the buffers in the merge specific part of the slave sate,
  * and reserve space for a terminator value (see merge_insert_hook). */
 static void
-merge_state_alloc(struct slave_state *sstate)
+merge_state_alloc(slave_state_t *sstate)
 {
-	sstate->stats_htable = calloc2(1 << sstate->stats_hbits, sizeof(struct incr_stats));
+	sstate->stats_htable = calloc2(1 << sstate->stats_hbits, sizeof(incr_stats_t));
 	sstate->merged = malloc2(sstate->max_merged_nodes * sizeof(int));
-	sstate->max_buf_size -= sizeof(struct incr_stats);
+	sstate->max_buf_size -= sizeof(incr_stats_t);
 }
 
 /* Append a terminator value to make merge_new_stats() more
  * efficient. merge_state_alloc() has reserved enough space. */
 static void
-merge_insert_hook(struct incr_stats *buf, int size)
+merge_insert_hook(incr_stats_t *buf, int size)
 {
 	int nodes = size / sizeof(*buf);
 	buf[nodes].coord_path = INT64_MAX;
@@ -326,10 +326,10 @@ merge_insert_hook(struct incr_stats *buf, int size)
 
 /* Initiliaze merge-related fields of the default slave state. */
 void
-merge_init(struct slave_state *sstate, int shared_nodes, int stats_hbits, int max_slaves)
+merge_init(slave_state_t *sstate, int shared_nodes, int stats_hbits, int max_slaves)
 {
 	/* See merge_state_alloc() for shared_nodes + 1 */
-	sstate->max_buf_size = (shared_nodes + 1) * sizeof(struct incr_stats);
+	sstate->max_buf_size = (shared_nodes + 1) * sizeof(incr_stats_t);
 	sstate->stats_hbits = stats_hbits;
 
 	sstate->insert_hook = (buffer_hook)merge_insert_hook;

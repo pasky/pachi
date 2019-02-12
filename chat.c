@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdint.h>
+#include "board.h"
 #include "chat.h"
 
 #ifndef HAVE_NO_REGEX_SUPPORT
@@ -15,7 +16,7 @@
 
 #define MAX_CHAT_PATTERNS 500
 
-static struct chat {
+typedef struct {
 	double minwin;
 	double maxwin;
 	char from[20];
@@ -25,7 +26,9 @@ static struct chat {
 	regex_t preg;
 	bool displayed;
 	bool match;
-} *chat_table;
+} chat_t;
+
+static chat_t *chat_table;
 
 static char default_reply[] = "I know all those words, but that sentence makes no sense to me";
 static char not_playing[] = "I'm winning big without playing";
@@ -46,7 +49,7 @@ void chat_init(char *chat_file) {
 		return;
 	}
 	chat_table = calloc2(MAX_CHAT_PATTERNS, sizeof(*chat_table));
-	struct chat *entry = chat_table;
+	chat_t *entry = chat_table;
 	while (fscanf(f, "%lf;%lf;%20[^;];%100[^;];%300[^\n]\n", &entry->minwin, &entry->maxwin,
 		      entry->from, entry->regex, entry->reply ) == 5) {
 		if (!strcmp(entry->from, " "))
@@ -78,7 +81,7 @@ void chat_done(void) {
  * If some matching entries have not yet been displayed we pick randomly among them. Otherwise
  * we pick randomly among all matching entries. */
 char *
-generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
+generic_chat(board_t *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
 	      int playouts, int machines, int threads, double winrate, double extra_komi, char *score_est) {
 
 	static char buffer[1024];  strbuf_t strbuf;
@@ -97,7 +100,7 @@ generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone c
 	}
 	int matches = 0;
 	int undisplayed = 0;
-	for (struct chat *entry = chat_table; entry->regex[0]; entry++) {
+	for (chat_t *entry = chat_table; entry->regex[0]; entry++) {
 		entry->match = false;
 		if (color != S_NONE) {
 			if (winrate < entry->minwin) continue;
@@ -112,7 +115,7 @@ generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone c
 	if (matches == 0) return default_reply;
 	int choices = undisplayed > 0 ? undisplayed : matches;
 	int index = fast_random(choices);
-	for (struct chat *entry = chat_table; entry->regex[0]; entry++) {
+	for (chat_t *entry = chat_table; entry->regex[0]; entry++) {
 		if (!entry->match) continue;
 		if (undisplayed > 0 && entry->displayed) continue;
 		if (--index < 0) {
@@ -130,7 +133,7 @@ void chat_init(char *chat_file) {}
 void chat_done(void) {}
 
 char
-*generic_chat(struct board *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
+*generic_chat(board_t *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
 	      int playouts, int machines, int threads, double winrate, double extra_komi, char *score_est) {
 	static char reply[1024] = { '.', '\0' };
 	return reply;

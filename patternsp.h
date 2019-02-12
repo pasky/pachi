@@ -50,7 +50,7 @@
 
 /* Spatial record - single stone configuration. */
 
-typedef struct spatial {
+typedef struct {
 	/* Gridcular radius of matched pattern. */
 	unsigned char dist;
 	/* The points; each point is two bits, corresponding
@@ -63,9 +63,6 @@ typedef struct spatial {
 
 
 /* Spatial dictionary - collection of stone configurations. */
-
-extern struct spatial_dict *spat_dict;
-extern const char *spatial_dict_filename;
 
 #ifndef GENSPATIAL
 #define spatial_hash_bits 20 // 4Mb array
@@ -80,10 +77,10 @@ typedef struct spatial_entry {
 	struct spatial_entry *next;	/* next entry with same hash */
 } spatial_entry_t;
 
-typedef struct spatial_dict {
+typedef struct {
 	/* Indexed base store */
 	unsigned int nspatials; /* Number of records. */
-	struct spatial *spatials; /* Actual records. */
+	spatial_t *spatials; /* Actual records. */
 	
 	/* number of spatials for each dist, for mm tool */
 	unsigned int     nspatials_by_dist[MAX_PATTERN_DIST+1];
@@ -93,32 +90,35 @@ typedef struct spatial_dict {
 	spatial_entry_t* hashtable[1 << spatial_hash_bits];
 } spatial_dict_t;
 
+extern spatial_dict_t *spat_dict;
+extern const char *spatial_dict_filename;
+
 #define spatial_id(s, dict)  ((unsigned int)((s) - (dict)->spatials))
 #define spatial(id, dict)    ((dict)->spatials + (id))
 
 
 /* Fill up the spatial record from @m vincinity, up to full distance
  * given by pattern config. */
-struct pattern_config;
-void spatial_from_board(struct pattern_config *pc, spatial_t *s, struct board *b, struct move *m);
+void spatial_from_board(pattern_config_t *pc, spatial_t *s, board_t *b, move_t *m);
 
 /* Compute hash of given spatial pattern. */
 hash_t spatial_hash(unsigned int rotation, spatial_t *s);
 
 /* Compute spatial hash from board, ignoring center stone */
-hash_t outer_spatial_hash_from_board(struct board *b, coord_t coord, enum stone color);
-hash_t outer_spatial_hash_from_board_rot(struct board *b, coord_t coord, enum stone color, int rot);
-hash_t outer_spatial_hash_from_board_rot_d(struct board *b, coord_t coord, enum stone color, int rot, unsigned int d);
+hash_t outer_spatial_hash_from_board(board_t *b, coord_t coord, enum stone color);
+hash_t outer_spatial_hash_from_board_rot(board_t *b, coord_t coord, enum stone color, int rot);
+hash_t outer_spatial_hash_from_board_rot_d(board_t *b, coord_t coord, enum stone color, int rot, unsigned int d);
 
 /* Convert given spatial pattern to string. */
 char *spatial2str(spatial_t *s);
 
 /* Print spatial on board centered on @at */
-void spatial_print(struct board *b, spatial_t *s, FILE *f, struct move *at);
+void spatial_print(board_t *b, spatial_t *s, FILE *f, move_t *at);
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). */
-struct ptcoord { short x, y; } ptcoords[MAX_PATTERN_AREA];
+typedef struct { short x, y; } ptcoord_t;
+extern ptcoord_t ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
 unsigned int ptind[MAX_PATTERN_DIST + 2];
 
@@ -140,7 +140,7 @@ hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
  * about non-existing file and initialize the dictionary anyway.
  * If hash is true, loaded spatials will be added to the hashtable;
  * use false if this is to be done later (e.g. by patternprob). */
-void spatial_dict_init(struct pattern_config *pc, bool create);
+void spatial_dict_init(pattern_config_t *pc, bool create);
 
 /* Free spatial dictionary. */
 void spatial_dict_done();
@@ -150,13 +150,13 @@ spatial_t *spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t spatial_ha
 
 /* Store specified spatial pattern in the dictionary if it is not known yet.
  * Returns spatial id. */
-unsigned int spatial_dict_add(spatial_dict_t *dict, struct spatial *s);
+unsigned int spatial_dict_add(spatial_dict_t *dict, spatial_t *s);
 
 /* Write comment lines describing the dictionary (e.g. point order
  * in patterns) to given file. */
-void spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f);
+void spatial_dict_writeinfo(spatial_dict_t *dict, FILE *f);
 
 /* Append specified spatial pattern to the given file. */
-void spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id, FILE *f);
+void spatial_write(spatial_dict_t *dict, spatial_t *s, unsigned int id, FILE *f);
 
 #endif

@@ -32,22 +32,21 @@ extern volatile sig_atomic_t uct_halt;
 extern bool thread_manager_running;
 
 /* Search thread context */
-struct uct_thread_ctx {
+typedef struct uct_thread_ctx {
 	int tid;
-	struct uct *u;
-	struct board *b;
+	uct_t *u;
+	board_t *b;
 	enum stone color;
-	struct tree *t;
+	tree_t *t;
 	unsigned long seed;
 	int games;
-	struct time_info *ti;
+	time_info_t *ti;
 	struct uct_search_state *s;
-};
-
+} uct_thread_ctx_t;
 
 /* Progress information of the on-going MCTS search - when did we
  * last adjusted dynkomi, printed out stuff, etc. */
-struct uct_search_state {
+typedef struct uct_search_state {
 	/* Number of games simulated for this simulation before
 	 * we started the search. (We have simulated them earlier.) */
 	int base_playouts;
@@ -60,19 +59,20 @@ struct uct_search_state {
 	/* Printed notification about full memory? */
 	bool fullmem;
 
-	struct time_stop stop;
-	struct uct_thread_ctx *ctx;
-};
+	time_stop_t stop;
+	uct_thread_ctx_t *ctx;
+} uct_search_state_t;
 
-int uct_search_games(struct uct_search_state *s);
 
-void uct_search_start(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s);
-struct uct_thread_ctx *uct_search_stop(void);
+int uct_search_games(uct_search_state_t *s);
 
-void uct_search_progress(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s, int i);
+void uct_search_start(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s);
+uct_thread_ctx_t *uct_search_stop(void);
 
-bool uct_search_check_stop(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti, struct uct_search_state *s, int i);
+void uct_search_progress(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s, int i);
 
-struct tree_node *uct_search_result(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, int played_games, int base_playouts, coord_t *best_coord);
+bool uct_search_check_stop(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s, int i);
+
+tree_node_t *uct_search_result(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, int played_games, int base_playouts, coord_t *best_coord);
 
 #endif

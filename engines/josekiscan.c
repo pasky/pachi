@@ -12,21 +12,21 @@
 
 
 /* Internal engine state. */
-struct josekiscan_engine {
+typedef struct {
 	int debug_level;
 	
-	struct board *b[16]; // boards with reversed color, mirrored and rotated
+	board_t *b[16]; // boards with reversed color, mirrored and rotated
 	josekipat_t *prev[16];
 	int next_flags;
-};
+} josekiscan_t;
 
 #define board_captures(b)  (b->captures[S_BLACK] + b->captures[S_WHITE])
 
 /* Record joseki moves into incrementally-built jdict->hash[]. */
 static char *
-josekiscan_play(struct engine *e, struct board *board, struct move *m, char *move_tags)
+josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags)
 {
-	struct josekiscan_engine *j = e->data;
+	josekiscan_t *j = e->data;
 
 	if (!board->moves) {
 		/* New game, reset state. */
@@ -72,7 +72,7 @@ josekiscan_play(struct engine *e, struct board *board, struct move *m, char *mov
 
 	/* Record next move in all rotations and add joseki pattern. */
 	for (int i = 0; i < 16; i++) {
-		struct board *b = j->b[i];
+		board_t *b = j->b[i];
 		coord_t coord = rotate_coord(m->coord, i);
 		enum stone color = m->color;
 		if (i & 8) color = stone_other(color);
@@ -82,7 +82,7 @@ josekiscan_play(struct engine *e, struct board *board, struct move *m, char *mov
 		else               j->prev[i] = joseki_add(joseki_dict, b, coord, color, j->prev[i], flags);
 
 		int captures = board_captures(b);
-		struct move m2 = move(coord, color);
+		move_t m2 = move(coord, color);
 		int r = board_play(b, &m2);  assert(r >= 0);
 
 		/* update prev pattern if stones were captured, board configuration changed ! */
@@ -94,15 +94,15 @@ josekiscan_play(struct engine *e, struct board *board, struct move *m, char *mov
 }
 
 static coord_t
-josekiscan_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+josekiscan_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	die("genmove command not available in josekiscan engine!\n");
 }
 
-static struct josekiscan_engine *
+static josekiscan_t *
 josekiscan_state_init(char *arg)
 {
-	struct josekiscan_engine *j = calloc2(1, sizeof(struct josekiscan_engine));
+	josekiscan_t *j = calloc2(1, sizeof(josekiscan_t));
 
 	for (int i = 0; i < 16; i++)
 		j->b[i] = board_new(19+2, NULL);
@@ -135,18 +135,18 @@ josekiscan_state_init(char *arg)
 }
 
 static void
-josekiscan_done(struct engine *e)
+josekiscan_done(engine_t *e)
 {
-	struct josekiscan_engine *j = e->data;
+	josekiscan_t *j = e->data;
 
 	for (int i = 0; i < 16; i++)
 		board_done(j->b[i]);
 }
 
 void
-engine_josekiscan_init(struct engine *e, char *arg, struct board *b)
+engine_josekiscan_init(engine_t *e, char *arg, board_t *b)
 {
-	struct josekiscan_engine *j = josekiscan_state_init(arg);
+	josekiscan_t *j = josekiscan_state_init(arg);
 	e->name = "Josekiscan";
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of joseki sequences fed to it within the GTP stream.";
 	e->genmove = josekiscan_genmove;

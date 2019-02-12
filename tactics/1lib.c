@@ -14,7 +14,7 @@
 
 
 bool
-capturing_group_is_snapback(struct board *b, group_t group)
+capturing_group_is_snapback(board_t *b, group_t group)
 {	
 	coord_t lib = board_group_info(b, group).lib[0];
 
@@ -47,7 +47,7 @@ capturing_group_is_snapback(struct board *b, group_t group)
 
 
 static inline bool
-can_capture(struct board *b, group_t g, enum stone to_play)
+can_capture(board_t *b, group_t g, enum stone to_play)
 {
 	coord_t capture = board_group_info(b, g).lib[0];
 	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
@@ -61,7 +61,7 @@ can_capture(struct board *b, group_t g, enum stone to_play)
 }
 
 static inline bool
-can_play_on_lib(struct board *b, group_t g, enum stone to_play)
+can_play_on_lib(board_t *b, group_t g, enum stone to_play)
 {
 	coord_t capture = board_group_info(b, g).lib[0];
 	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
@@ -76,7 +76,7 @@ can_play_on_lib(struct board *b, group_t g, enum stone to_play)
 
 /* Checks snapbacks */
 bool
-can_countercapture(struct board *b, group_t group, struct move_queue *q, int tag)
+can_countercapture(board_t *b, group_t group, move_queue_t *q, int tag)
 {
 	enum stone color = board_at(b, group);
 	enum stone other = stone_other(color);
@@ -106,7 +106,7 @@ can_countercapture(struct board *b, group_t group, struct move_queue *q, int tag
 /* Same as can_countercapture() but returns capturable groups instead of moves,
  * queue may not be NULL, and is always cleared. */
 bool
-countercapturable_groups(struct board *b, group_t group, struct move_queue *q)
+countercapturable_groups(board_t *b, group_t group, move_queue_t *q)
 {
 	q->moves = 0;
 	enum stone color = board_at(b, group);
@@ -131,7 +131,7 @@ countercapturable_groups(struct board *b, group_t group, struct move_queue *q)
 }
 
 bool
-can_countercapture_any(struct board *b, group_t group, struct move_queue *q, int tag)
+can_countercapture_any(board_t *b, group_t group, move_queue_t *q, int tag)
 {
 	enum stone color = board_at(b, group);
 	enum stone other = stone_other(color);
@@ -163,7 +163,7 @@ can_countercapture_any(struct board *b, group_t group, struct move_queue *q, int
 
 #ifdef NO_DOOMED_GROUPS
 static bool
-can_be_rescued(struct board *b, group_t group, enum stone color, int tag)
+can_be_rescued(board_t *b, group_t group, enum stone color, int tag)
 {
 	/* Does playing on the liberty rescue the group? */
 	if (can_play_on_lib(b, group, color))
@@ -175,8 +175,8 @@ can_be_rescued(struct board *b, group_t group, enum stone color, int tag)
 #endif
 
 void
-group_atari_check(unsigned int alwaysccaprate, struct board *b, group_t group, enum stone to_play,
-                  struct move_queue *q, coord_t *ladder, bool middle_ladder, int tag)
+group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum stone to_play,
+                  move_queue_t *q, coord_t *ladder, bool middle_ladder, int tag)
 {
 	enum stone color = board_at(b, group_base(group));
 	coord_t lib = board_group_info(b, group).lib[0];

@@ -6,15 +6,11 @@
 
 #ifdef DISTRIBUTED
 
-struct board;
-struct engine;
-struct time_info;
-
-enum parse_code uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply);
-char *uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+enum parse_code uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply);
+char *uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		   char *args, bool pass_all_alive, void **stats_buf, int *stats_size);
 void *uct_htable_alloc(int hbits);
-void uct_htable_reset(struct tree *t);
+void uct_htable_reset(tree_t *t);
 
 
 #else

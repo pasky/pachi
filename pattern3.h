@@ -8,9 +8,6 @@
 /* (Note that this is completely independent from the general pattern
  * matching infrastructure in pattern.[ch]. This is fast and simple.) */
 
-struct board;
-struct move;
-
 /* hash3_t pattern: ignore middle point, 2 bits per intersection (color)
  * plus 1 bit per each direct neighbor => 8*2 + 4 bits. Bitmap point order:
  * 7 6 5    b
@@ -20,20 +17,20 @@ struct move;
 
 /* XXX: See <board.h> for hash3_t typedef. */
 
-struct pattern2p {
+typedef struct {
 	hash3_t pattern;
 	unsigned char value;
-};
+} pattern2p_t;
 
-struct pattern3s {
+typedef struct {
 	/* In case of a collision, following hash entries are
 	 * used. value==0 indicates an unoccupied hash entry. */
 	/* The hash indices are zobrist hashes based on p3hashes. */
 #define pattern3_hash_bits 19
 #define pattern3_hash_size (1 << pattern3_hash_bits)
 #define pattern3_hash_mask (pattern3_hash_size - 1)
-	struct pattern2p hash[pattern3_hash_size];
-};
+	pattern2p_t hash[pattern3_hash_size];
+} pattern3s_t;
 
 /* Zobrist hashes for the various 3x3 points. */
 /* [point][is_atari][color] */
@@ -50,13 +47,13 @@ hash_t p3hashes[8][2][S_MAX];
  * extra X: pattern valid only for one side;
  * middle point ignored. */
 
-void pattern3s_init(struct pattern3s *p, char src[][11], int src_n);
+void pattern3s_init(pattern3s_t *p, char src[][11], int src_n);
 
 /* Compute pattern3 hash at local position. */
-static hash3_t pattern3_hash(struct board *b, coord_t c);
+static hash3_t pattern3_hash(board_t *b, coord_t c);
 
 /* Check if we match any 3x3 pattern centered on given move. */
-static bool pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m, char *idx);
+static bool pattern3_move_here(pattern3s_t *p, board_t *b, move_t *m, char *idx);
 
 /* Generate all transpositions of given pattern, stored in an
  * hash3_t[8] array. */
@@ -67,7 +64,7 @@ static hash3_t pattern3_reverse(hash3_t pat);
 
 
 static inline hash3_t
-pattern3_hash(struct board *b, coord_t c)
+pattern3_hash(board_t *b, coord_t c)
 {
 	hash3_t pat = 0;
 	int x = coord_x(c), y = coord_y(c);
@@ -102,7 +99,7 @@ hash3_to_hash(hash3_t pat)
 }
 
 static inline bool
-pattern3_move_here(struct pattern3s *p, struct board *b, struct move *m, char *idx)
+pattern3_move_here(pattern3s_t *p, board_t *b, move_t *m, char *idx)
 {
 #ifdef BOARD_PAT3
 	hash3_t pat = b->pat3[m->coord];

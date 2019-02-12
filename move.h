@@ -38,15 +38,15 @@ coord_t str2coord_for(char *str, int size);
 /* Rotate coordinate according to rot: [0-7] for 8 board symmetries. */
 coord_t rotate_coord(coord_t c, int rot);
 
-struct move {
+typedef struct {
 	coord_t coord;
 	enum stone color;
-};
+} move_t;
 
 #define move(coord, color)  { coord, color }
 
 static inline int 
-move_cmp(struct move *m1, struct move *m2)
+move_cmp(move_t *m1, move_t *m2)
 {
 	if (m1->color != m2->color)
 		return m1->color - m2->color;

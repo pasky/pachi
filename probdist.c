@@ -6,12 +6,12 @@
 //#define DEBUG
 #include "debug.h"
 #include "move.h"
-#include "probdist.h"
 #include "random.h"
 #include "board.h"
+#include "probdist.h"
 
 coord_t
-probdist_pick(struct probdist *restrict pd, coord_t *restrict ignore)
+probdist_pick(probdist_t *restrict pd, coord_t *restrict ignore)
 {
 	fixp_t total = probdist_total(pd);
 	fixp_t stab = fast_irandom(total);

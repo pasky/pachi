@@ -13,16 +13,16 @@
 
 
 coord_t
-playout_light_choose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
+playout_light_choose(playout_policy_t *p, playout_setup_t *s, board_t *b, enum stone to_play)
 {
 	return pass;
 }
 
 
-struct playout_policy *
-playout_light_init(char *arg, struct board *b)
+playout_policy_t *
+playout_light_init(char *arg, board_t *b)
 {
-	struct playout_policy *p = calloc2(1, sizeof(*p));
+	playout_policy_t *p = calloc2(1, sizeof(*p));
 	p->choose = playout_light_choose;
 
 	if (arg)

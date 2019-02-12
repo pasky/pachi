@@ -5,7 +5,7 @@
  * information from the map. */
 
 #include <signal.h> // sig_atomic_t
-struct move_queue;
+#include "mq.h"
 
 /* How many games to consider at minimum before judging groups. */
 #define GJ_MINGAMES	500
@@ -28,12 +28,12 @@ enum gj_state {
 	GS_UNKNOWN,
 };
 
-struct group_judgement {
+typedef struct {
 	floating_t thres;
 	enum gj_state *gs; // [bsize2]
-};
+} group_judgement_t;
 
-struct ownermap {
+typedef struct ownermap {
 	/* Map of final owners of all intersections on the board. */
 	/* This may be shared between multiple threads! */
 	/* XXX: We assume sig_atomic_t is thread-atomic. This may not
@@ -42,42 +42,42 @@ struct ownermap {
 	/* At the final board position, for each coordinate increase the
 	 * counter of appropriate color. */
 	sig_atomic_t map[BOARD_MAX_COORDS][S_MAX];
-};
+} ownermap_t;
 
-void ownermap_init(struct ownermap *ownermap);
-void board_print_ownermap(struct board *b, FILE *f, struct ownermap *ownermap);
-void ownermap_fill(struct ownermap *ownermap, struct board *b);
-void ownermap_merge(int bsize2, struct ownermap *dst, struct ownermap *src);
+void ownermap_init(ownermap_t *ownermap);
+void board_print_ownermap(board_t *b, FILE *f, ownermap_t *ownermap);
+void ownermap_fill(ownermap_t *ownermap, board_t *b);
+void ownermap_merge(int bsize2, ownermap_t *dst, ownermap_t *src);
 
 /* Coord ownermap status: dame / black / white / unclear */
-enum point_judgement ownermap_judge_point(struct ownermap *ownermap, coord_t c, floating_t thres);
+enum point_judgement ownermap_judge_point(ownermap_t *ownermap, coord_t c, floating_t thres);
 /* Coord's owner if there is one with this threshold, otherwise S_NONE. */
-enum stone ownermap_color(struct ownermap *ownermap, coord_t c, floating_t thres);
+enum stone ownermap_color(ownermap_t *ownermap, coord_t c, floating_t thres);
 /* Coord's status from 1.0 (black) to 0.0 (white) */
-float ownermap_estimate_point(struct ownermap *ownermap, coord_t c);
+float ownermap_estimate_point(ownermap_t *ownermap, coord_t c);
 
 /* Find dead / unclear groups. */
-void get_dead_groups(struct board *b, struct ownermap *ownermap, struct move_queue *dead, struct move_queue *unclear);
+void get_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear);
 /* Estimate status of stones on board based on ownermap stats. */
-void ownermap_judge_groups(struct board *b, struct ownermap *ownermap, struct group_judgement *judge);
+void ownermap_judge_groups(board_t *b, ownermap_t *ownermap, group_judgement_t *judge);
 /* Add groups of given status to mq. */
-void groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s, struct move_queue *mq);
+void groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, move_queue_t *mq);
 
 /* Score estimate based on board ownermap. (positive: W wins) */
-float ownermap_score_est(struct board *b, struct ownermap *ownermap);
+float ownermap_score_est(board_t *b, ownermap_t *ownermap);
 /* Score estimate from color point of view (positive: color wins) */
-float ownermap_score_est_color(struct board *b, struct ownermap *ownermap, enum stone color);
-char *ownermap_score_est_str(struct board *b, struct ownermap *ownermap);
-enum point_judgement ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c);
+float ownermap_score_est_color(board_t *b, ownermap_t *ownermap, enum stone color);
+char *ownermap_score_est_str(board_t *b, ownermap_t *ownermap);
+enum point_judgement ownermap_score_est_coord(board_t *b, ownermap_t *ownermap, coord_t c);
 
 /* Raw count for each color. */
-void ownermap_scores(struct board *b, struct ownermap *ownermap, int *scores);
-int ownermap_dames(struct board *b, struct ownermap *ownermap);
+void ownermap_scores(board_t *b, ownermap_t *ownermap, int *scores);
+int ownermap_dames(board_t *b, ownermap_t *ownermap);
 
 /* Is board position final ? */
-bool board_position_final(struct board *b, struct ownermap *ownermap, char **msg);
-bool board_position_final_full(struct board *b, struct ownermap *ownermap,
-			       struct move_queue *dead, struct move_queue *unclear, float score_est,
+bool board_position_final(board_t *b, ownermap_t *ownermap, char **msg);
+bool board_position_final_full(board_t *b, ownermap_t *ownermap,
+			       move_queue_t *dead, move_queue_t *unclear, float score_est,
 			       int *final_ownermap, int final_dames, float final_score, char **msg);
 
 /* Don't allow passing earlier than that:

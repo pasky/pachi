@@ -3,6 +3,6 @@
 
 #include "engine.h"
 
-void engine_montecarlo_init(struct engine *e, char *arg, struct board *b);
+void engine_montecarlo_init(engine_t *e, char *arg, board_t *b);
 
 #endif

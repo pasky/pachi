@@ -14,7 +14,7 @@
 
 
 void
-group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag)
+group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag)
 {
 	enum stone color = to_play;
 	assert(color != S_OFFBOARD && color != S_NONE

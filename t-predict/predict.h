@@ -3,6 +3,6 @@
 
 /* See if engine guesses move m, and return stats string from time to time.
  * Returned string must be freed */
-char *predict_move(struct board *b, struct engine *e, struct time_info *ti, struct move *m, int games);
+char *predict_move(board_t *b, engine_t *e, time_info_t *ti, move_t *m, int games);
 
 #endif

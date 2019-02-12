@@ -20,7 +20,7 @@
 
 
 bool
-is_border_ladder(struct board *b, group_t laddered)
+is_border_ladder(board_t *b, group_t laddered)
 {
 	coord_t coord = board_group_info(b, laddered).lib[0];
 	enum stone lcolor = board_at(b, group_base(laddered));
@@ -73,10 +73,10 @@ is_border_ladder(struct board *b, group_t laddered)
 }
 
 
-static int middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len);
+static int middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len);
 
 static int
-middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
+middle_ladder_chase(board_t *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
 {
 	laddered = group_at(b, laddered);
 	
@@ -133,7 +133,7 @@ middle_ladder_chase(struct board *b, group_t laddered, enum stone lcolor, coord_
 
 /* Can we escape by capturing chaser ? */
 static bool
-chaser_capture_escapes(struct board *b, group_t laddered, enum stone lcolor, struct move_queue *ccq)
+chaser_capture_escapes(board_t *b, group_t laddered, enum stone lcolor, move_queue_t *ccq)
 {
 	for (unsigned int i = 0; i < ccq->moves; i++) {
 		coord_t lib = ccq->move[i];
@@ -170,7 +170,7 @@ chaser_capture_escapes(struct board *b, group_t laddered, enum stone lcolor, str
  * group captured, false if not (i.e. for each branch, laddered group can
  * gain three liberties). */
 static int
-middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
+middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prevmove, int len)
 {
 	assert(board_group_info(b, laddered).libs == 1);
 
@@ -184,7 +184,7 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t
 		});
 
 	/* Check countercaptures */
-	struct move_queue ccq;  mq_init(&ccq);
+	move_queue_t ccq;  mq_init(&ccq);
 	can_countercapture(b, laddered, &ccq, 0);
 	
 	if (chaser_capture_escapes(b, laddered, lcolor, &ccq))
@@ -203,7 +203,7 @@ middle_ladder_walk(struct board *b, group_t laddered, enum stone lcolor, coord_t
 static __thread int length = 0;
 
 bool
-is_middle_ladder(struct board *b, group_t laddered)
+is_middle_ladder(board_t *b, group_t laddered)
 {
 	coord_t coord = board_group_info(b, laddered).lib[0];
 	enum stone lcolor = board_at(b, group_base(laddered));
@@ -227,7 +227,7 @@ is_middle_ladder(struct board *b, group_t laddered)
 }
 
 bool
-is_middle_ladder_any(struct board *b, group_t laddered)
+is_middle_ladder_any(board_t *b, group_t laddered)
 {
 	enum stone lcolor = board_at(b, group_base(laddered));
 	
@@ -236,7 +236,7 @@ is_middle_ladder_any(struct board *b, group_t laddered)
 }
 
 bool
-wouldbe_ladder(struct board *b, group_t group, coord_t chaselib)
+wouldbe_ladder(board_t *b, group_t group, coord_t chaselib)
 {
 	assert(board_group_info(b, group).libs == 2);
 	
@@ -268,7 +268,7 @@ wouldbe_ladder(struct board *b, group_t group, coord_t chaselib)
 
 
 bool
-wouldbe_ladder_any(struct board *b, group_t group, coord_t chaselib)
+wouldbe_ladder_any(board_t *b, group_t group, coord_t chaselib)
 {
 	assert(board_group_info(b, group).libs == 2);
 	
@@ -300,7 +300,7 @@ wouldbe_ladder_any(struct board *b, group_t group, coord_t chaselib)
  *
  * XXX can also be useful in other situations ? Should be pretty rare hopefully */
 bool
-useful_ladder(struct board *b, group_t laddered)
+useful_ladder(board_t *b, group_t laddered)
 {
 	if (length >= 4 ||
 	    group_stone_count(b, laddered, 6) > 5 ||
@@ -356,7 +356,7 @@ useful_ladder(struct board *b, group_t laddered)
 }
 
 static bool
-is_double_atari(struct board *b, coord_t c, enum stone color)
+is_double_atari(board_t *b, coord_t c, enum stone color)
 {
 	if (board_at(b, c) != S_NONE ||
 	    immediate_liberty_count(b, c) < 2 ||  /* can't play there (hack) */
@@ -374,7 +374,7 @@ is_double_atari(struct board *b, coord_t c, enum stone color)
 }
 
 static bool
-ladder_with_tons_of_double_ataris(struct board *b, group_t laddered, enum stone color)
+ladder_with_tons_of_double_ataris(board_t *b, group_t laddered, enum stone color)
 {
 	assert(board_at(b, laddered) == stone_other(color));
 
@@ -391,7 +391,7 @@ ladder_with_tons_of_double_ataris(struct board *b, group_t laddered, enum stone 
 }
 
 bool
-harmful_ladder_atari(struct board *b, coord_t atari, enum stone color)
+harmful_ladder_atari(board_t *b, coord_t atari, enum stone color)
 {
 	assert(board_at(b, atari) == S_NONE);
 	

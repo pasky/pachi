@@ -11,9 +11,9 @@
 #include "playout/moggy.h"
 
 static void
-play_game(struct playout_setup *setup,
-	  struct board *b, enum stone color,
-	  struct playout_policy *policy)
+play_game(playout_setup_t *setup,
+	  board_t *b, enum stone color,
+	  playout_policy_t *policy)
 {
 	if (policy->setboard)  policy->setboard(policy, b);
 	
@@ -28,7 +28,7 @@ play_game(struct playout_setup *setup,
 
 /* Play some predictable moggy games dumping every move. */
 bool
-moggy_regression_test(struct board *board, char *arg)
+moggy_regression_test(board_t *board, char *arg)
 {
 	int games = 10;
 	fast_srandom(0x12345);
@@ -36,13 +36,13 @@ moggy_regression_test(struct board *board, char *arg)
 	if (DEBUGL(2))  board_print(board, stderr);
 	if (DEBUGL(1))  printf("moggy regression test.   Playing %i games\n", games);
 
-	struct playout_policy *policy = playout_moggy_init(NULL, board);
-	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
+	playout_policy_t *policy = playout_moggy_init(NULL, board);
+	playout_setup_t setup = { .gamelen = MAX_GAMELEN };
 	
 	/* Play some games */
 	for (int i = 0; i < games; i++)  {
 		enum stone color = S_BLACK;
-		struct board b;
+		board_t b;
 		board_copy(&b, board);
 		fprintf(stderr, "game %i:\n", i+1);
 		play_game(&setup, &b, color, policy);

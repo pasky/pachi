@@ -1,30 +1,31 @@
 #define DEBUG
 #include "engine.h"
+#include "pachi.h"
 
 
 void
-engine_init(struct engine *e, int id, char *e_arg, struct board *b)
+engine_init(engine_t *e, int id, char *e_arg, board_t *b)
 {
 	pachi_engine_init(e, id, e_arg, b);
 }
 
 void
-engine_done(struct engine *e)
+engine_done(engine_t *e)
 {
 	if (e->done) e->done(e);
 	if (e->data) free(e->data);
 }
 
-struct engine*
-new_engine(int id, char *e_arg, struct board *b)
+engine_t*
+new_engine(int id, char *e_arg, board_t *b)
 {
-	struct engine *e = malloc2(sizeof(*e));
+	engine_t *e = malloc2(sizeof(*e));
 	engine_init(e, id, e_arg, b);
 	return e;
 }
 
 void
-engine_reset(struct engine *e, struct board *b, char *e_arg)
+engine_reset(engine_t *e, board_t *b, char *e_arg)
 {
 	int engine_id = e->id;
 	b->es = NULL;
@@ -33,13 +34,13 @@ engine_reset(struct engine *e, struct board *b, char *e_arg)
 }
 
 void
-engine_board_print(struct engine *e, struct board *b, FILE *f)
+engine_board_print(engine_t *e, board_t *b, FILE *f)
 {
 	(e->board_print ? e->board_print(e, b, f) : board_print(b, f));
 }
 
 void
-engine_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
+engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
 		  coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
@@ -48,8 +49,8 @@ engine_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum 
 	e->best_moves(e, b, ti, color, best_c, best_r, nbest);
 }
 
-struct ownermap*
-engine_ownermap(struct engine *e, struct board *b)
+ownermap_t*
+engine_ownermap(engine_t *e, board_t *b)
 {
 	return (e->ownermap ? e->ownermap(e, b) : NULL);
 }
@@ -88,7 +89,7 @@ best_moves_add_full(coord_t c, float r, void *d, coord_t *best_c, float *best_r,
 }
 
 int
-best_moves_print(struct board *b, char *str, coord_t *best_c, int nbest)
+best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest)
 {
 	fprintf(stderr, "%s[ ", str);
 	for (int i = 0; i < nbest; i++) {

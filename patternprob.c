@@ -11,10 +11,10 @@
 #include "patternprob.h"
 #include "engine.h"
 
-struct prob_dict    *prob_dict = NULL;
+prob_dict_t    *prob_dict = NULL;
 
 void
-prob_dict_init(char *filename, struct pattern_config *pc)
+prob_dict_init(char *filename, pattern_config_t *pc)
 {
 	assert(!prob_dict);
 	if (!filename)  filename = "patterns_mm.gamma";
@@ -30,7 +30,7 @@ prob_dict_init(char *filename, struct pattern_config *pc)
 	int i = 0;
 	char sbuf[1024];
 	while (fgets(sbuf, sizeof(sbuf), f)) {
-		struct pattern_prob *pb = calloc2(1, sizeof(*pb));
+		pattern_prob_t *pb = calloc2(1, sizeof(*pb));
 		//int c, o;
 
 		char *buf = sbuf;
@@ -69,7 +69,7 @@ prob_dict_done()
 }
 
 static floating_t
-rescale_probs(struct board *b, floating_t *probs, floating_t max)
+rescale_probs(board_t *b, floating_t *probs, floating_t max)
 {
 	floating_t total = 0;
 	
@@ -84,17 +84,17 @@ rescale_probs(struct board *b, floating_t *probs, floating_t max)
 }
 
 static floating_t
-pattern_max_rating(struct pattern_config *pc,
-		   struct board *b, enum stone color,
-		   struct pattern *pats, floating_t *probs,
-		   struct ownermap *ownermap,
+pattern_max_rating(pattern_config_t *pc,
+		   board_t *b, enum stone color,
+		   pattern_t *pats, floating_t *probs,
+		   ownermap_t *ownermap,
 		   bool locally)
 {
 	floating_t max = -10000000;
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] = NAN;
 
-		struct move mo = move(b->f[f], color);
+		move_t mo = move(b->f[f], color);
 		if (is_pass(mo.coord))	continue;
 		if (!board_is_valid_play_no_suicide(b, mo.color, mo.coord)) continue;
 
@@ -116,10 +116,10 @@ pattern_max_rating(struct pattern_config *pc,
 #define LOW_PATTERN_RATING 6.0
 
 floating_t
-pattern_rate_moves(struct pattern_config *pc,
-                   struct board *b, enum stone color,
-                   struct pattern *pats, floating_t *probs,
-		   struct ownermap *ownermap)
+pattern_rate_moves(pattern_config_t *pc,
+                   board_t *b, enum stone color,
+                   pattern_t *pats, floating_t *probs,
+		   ownermap_t *ownermap)
 {
 #ifdef PATTERN_FEATURE_STATS
 	pattern_stats_new_position();
@@ -136,25 +136,25 @@ pattern_rate_moves(struct pattern_config *pc,
 }
 
 bool
-pattern_matching_locally(struct pattern_config *pc,
-			 struct board *b, enum stone color,
-			 struct ownermap *ownermap)
+pattern_matching_locally(pattern_config_t *pc,
+			 board_t *b, enum stone color,
+			 ownermap_t *ownermap)
 {
-	struct pattern pats[b->flen];
+	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
 	floating_t max = pattern_max_rating(pc, b, color, pats, probs, ownermap, true);
 	return (max >= LOW_PATTERN_RATING);
 }
 
 void
-dump_gammas(strbuf_t *buf, struct pattern_config *pc, struct pattern *p)
+dump_gammas(strbuf_t *buf, pattern_config_t *pc, pattern_t *p)
 {
 	char head[4] = { 0, };
 	floating_t gamma = pattern_gamma(pc, p);
 	sbprintf(buf, "%.2f = ", gamma);
 	
 	for (int i = 0; i < p->n; i++) {
-		struct feature *f = &p->f[i];		
+		feature_t *f = &p->f[i];		
 		sbprintf(buf, "%s(%s) %.2f ", head, feature2sstr(f), feature_gamma(pc, f));
 		strcpy(head, "* ");
 		continue;
@@ -163,17 +163,17 @@ dump_gammas(strbuf_t *buf, struct pattern_config *pc, struct pattern *p)
 
 /* Do we have a gamma for that feature ? */
 bool
-feature_has_gamma(struct pattern_config *pc, struct feature *f)
+feature_has_gamma(pattern_config_t *pc, feature_t *f)
 {
 	uint32_t spi = feature2spatial(pc, f);
-	for (struct pattern_prob *pb = prob_dict->table[spi]; pb; pb = pb->next)
+	for (pattern_prob_t *pb = prob_dict->table[spi]; pb; pb = pb->next)
 		if (feature_eq(f, &pb->p.f[0]))
 			return true;
 	return false;
 }
 
 void
-print_pattern_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
+print_pattern_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest)
 {
 	int cols = best_moves_print(b, "patterns = ", best_c, nbest);
 
@@ -184,7 +184,7 @@ print_pattern_best_moves(struct board *b, coord_t *best_c, float *best_r, int nb
 }
 
 void
-get_pattern_best_moves(struct board *b, float *probs, coord_t *best_c, float *best_r, int nbest)
+get_pattern_best_moves(board_t *b, float *probs, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;

@@ -12,34 +12,34 @@
 #include "random.h"
 
 #define MQL 512 /* XXX: On larger board this might not be enough. */
-struct move_queue {
+typedef struct {
 	unsigned int moves;
 	coord_t move[MQL];
 	/* Each move can have an optional tag or set of tags.
 	 * The usage of these is user-dependent. */
 	unsigned char tag[MQL];
-};
+} move_queue_t;
 
-static void mq_init(struct move_queue *q);
+static void mq_init(move_queue_t *q);
 
 /* Pick a random move from the queue. */
-static coord_t mq_pick(struct move_queue *q);
+static coord_t mq_pick(move_queue_t *q);
 
 /* Add a move to the queue. */
-static void mq_add(struct move_queue *q, coord_t c, unsigned char tag);
+static void mq_add(move_queue_t *q, coord_t c, unsigned char tag);
 
 /* Is move in the queue ? */
-static bool mq_has(struct move_queue *q, coord_t c);
+static bool mq_has(move_queue_t *q, coord_t c);
 
 /* Cat two queues together. */
-static void mq_append(struct move_queue *qd, struct move_queue *qs);
+static void mq_append(move_queue_t *qd, move_queue_t *qs);
 
 /* Check if the last move in queue is not a dupe, and remove it
  * in that case. */
-static void mq_nodup(struct move_queue *q);
+static void mq_nodup(move_queue_t *q);
 
 /* Print queue contents on stderr. */
-static void mq_print(struct move_queue *q, char *label);
+static void mq_print(move_queue_t *q, char *label);
 
 
 /* Variations of the above that allow move weighting. */
@@ -48,25 +48,25 @@ static void mq_print(struct move_queue *q, char *label);
  * At least rewrite it to be less hacky and maybe make a move_gamma_queue
  * that encapsulates move_queue. */
 
-static coord_t mq_gamma_pick(struct move_queue *q, fixp_t *gammas);
-static void mq_gamma_add(struct move_queue *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag);
-static void mq_gamma_print(struct move_queue *q, fixp_t *gammas, char *label);
+static coord_t mq_gamma_pick(move_queue_t *q, fixp_t *gammas);
+static void mq_gamma_add(move_queue_t *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag);
+static void mq_gamma_print(move_queue_t *q, fixp_t *gammas, char *label);
 
 
 static inline void
-mq_init(struct move_queue *q)
+mq_init(move_queue_t *q)
 {
 	q->moves = 0;
 }
 
 static inline coord_t
-mq_pick(struct move_queue *q)
+mq_pick(move_queue_t *q)
 {
 	return q->moves ? q->move[fast_random(q->moves)] : pass;
 }
 
 static inline void
-mq_add(struct move_queue *q, coord_t c, unsigned char tag)
+mq_add(move_queue_t *q, coord_t c, unsigned char tag)
 {
 	assert(q->moves < MQL);
 	q->tag[q->moves] = tag;
@@ -74,7 +74,7 @@ mq_add(struct move_queue *q, coord_t c, unsigned char tag)
 }
 
 static inline bool
-mq_has(struct move_queue *q, coord_t c)
+mq_has(move_queue_t *q, coord_t c)
 {
 	for (unsigned int i = 0; i < q->moves; i++)
 		if (q->move[i] == c)
@@ -83,7 +83,7 @@ mq_has(struct move_queue *q, coord_t c)
 }
 
 static inline void
-mq_append(struct move_queue *qd, struct move_queue *qs)
+mq_append(move_queue_t *qd, move_queue_t *qs)
 {
 	assert(qd->moves + qs->moves < MQL);
 	memcpy(&qd->tag[qd->moves], qs->tag, qs->moves * sizeof(*qs->tag));
@@ -92,7 +92,7 @@ mq_append(struct move_queue *qd, struct move_queue *qs)
 }
 
 static inline void
-mq_nodup(struct move_queue *q)
+mq_nodup(move_queue_t *q)
 {
 	unsigned int n = q->moves;
 	for (unsigned int i = 0; i < n - 1; i++) {
@@ -105,7 +105,7 @@ mq_nodup(struct move_queue *q)
 }
 
 static inline void
-mq_print(struct move_queue *q, char *label)
+mq_print(move_queue_t *q, char *label)
 {
 	fprintf(stderr, "%s candidate moves: ", label);
 	for (unsigned int i = 0; i < q->moves; i++)
@@ -114,7 +114,7 @@ mq_print(struct move_queue *q, char *label)
 }
 
 static inline coord_t
-mq_gamma_pick(struct move_queue *q, fixp_t *gammas)
+mq_gamma_pick(move_queue_t *q, fixp_t *gammas)
 {
 	if (!q->moves)  return pass;
 
@@ -134,14 +134,14 @@ mq_gamma_pick(struct move_queue *q, fixp_t *gammas)
 }
 
 static inline void
-mq_gamma_add(struct move_queue *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag)
+mq_gamma_add(move_queue_t *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag)
 {
 	mq_add(q, c, tag);
 	gammas[q->moves - 1] = double_to_fixp(gamma);
 }
 
 static inline void
-mq_gamma_print(struct move_queue *q, fixp_t *gammas, char *label)
+mq_gamma_print(move_queue_t *q, fixp_t *gammas, char *label)
 {
 	fprintf(stderr, "%s candidate moves: ", label);
 	for (unsigned int i = 0; i < q->moves; i++)

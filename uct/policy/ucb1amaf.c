@@ -18,7 +18,7 @@
 
 /* This implements the UCB1 policy with an extra AMAF heuristics. */
 
-struct ucb1_policy_amaf {
+typedef struct {
 	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
 	 * paper calls 'p'. Original UCB has this on 2, but this seems to
 	 * produce way too wide searches; reduce this to get deeper and
@@ -56,7 +56,7 @@ struct ucb1_policy_amaf {
 	bool crit_negflip;
 	bool crit_amaf;
 	bool crit_lvalue;
-};
+} ucb1_policy_amaf_t;
 
 
 static inline floating_t fast_sqrt(unsigned int x)
@@ -103,13 +103,13 @@ static inline floating_t fast_sqrt(unsigned int x)
 
 #define URAVE_DEBUG if (0)
 static inline floating_t
-ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity)
+ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity)
 {
-	struct ucb1_policy_amaf *b = p->data;
-	struct tree_node *node = descent->node;
-	struct tree_node *lnode = descent->lnode;
+	ucb1_policy_amaf_t *b = p->data;
+	tree_node_t *node = descent->node;
+	tree_node_t *lnode = descent->lnode;
 
-	struct move_stats n = node->u, r = node->amaf;
+	move_stats_t n = node->u, r = node->amaf;
 	if (p->uct->amaf_prior) {
 		stats_merge(&r, &node->prior);
 	} else {
@@ -121,7 +121,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 		 * other threads from visiting this node in case of multiple
 		 * threads doing the tree search. */
 		floating_t vloss_coeff = b->vloss_sqrt ? sqrt(p->uct->threads) / p->uct->threads : 1.;
-		struct move_stats c = move_stats((parity > 0 ? 0. : 1.), node->descents * vloss_coeff);
+		move_stats_t c = move_stats((parity > 0 ? 0. : 1.), node->descents * vloss_coeff);
 		stats_merge(&n, &c);
 	}
 
@@ -129,7 +129,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 	assert(!lnode || lnode->parent);
 	if (p->uct->local_tree && b->ltree_rave > 0 && lnode
 	    && (p->uct->local_tree_rootchoose || lnode->parent->parent)) {
-		struct move_stats l = lnode->u;
+		move_stats_t l = lnode->u;
 		l.playouts = ((floating_t) l.playouts) * b->ltree_rave / LTREE_PLAYOUTS_MULTIPLIER;
 		URAVE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
 			coord2sstr(node_coord(lnode)), l.value, l.playouts,
@@ -148,7 +148,7 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 				val = 0;
 				crit = -crit;
 			}
-			struct move_stats c = move_stats(tree_node_get_value(tree, parity, val),
+			move_stats_t c = move_stats(tree_node_get_value(tree, parity, val),
 							 crit * r.playouts * b->crit_rave);
 			URAVE_DEBUG fprintf(stderr, "[crit] adding %f%%%d to [%s] RAVE %f%%%d\n",
 				c.value, c.playouts,
@@ -191,13 +191,13 @@ ucb1rave_evaluate(struct uct_policy *p, struct tree *tree, struct uct_descent *d
 }
 
 void
-ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass)
+ucb1rave_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, bool allow_pass)
 {
-	struct ucb1_policy_amaf *b = p->data;
+	ucb1_policy_amaf_t *b = p->data;
 	floating_t nconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
-	struct uct *u = p->uct;
+	uct_t *u = p->uct;
 #ifdef DISTRIBUTED
 	int vwin = 0;
 	if (u->max_slaves > 0 && u->slave_index >= 0)
@@ -206,7 +206,7 @@ ucb1rave_descend(struct uct_policy *p, struct tree *tree, struct uct_descent *de
 #endif
 
 	uctd_try_node_children(tree, descent, allow_pass, parity, u->tenuki_d, di, urgency) {
-		struct tree_node *ni = di.node;
+		tree_node_t *ni = di.node;
 		urgency = ucb1rave_evaluate(p, tree, &di, parity);
 
 #ifdef DISTRIBUTED
@@ -247,12 +247,12 @@ static inline int ko_length(bool *ko_capture_map, int map_length)
 }
 
 void
-ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
+ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		enum stone node_color, enum stone player_color,
-		struct playout_amafmap *map, struct board *final_board,
+		playout_amafmap_t *map, board_t *final_board,
 		floating_t result)
 {
-	struct ucb1_policy_amaf *b = p->data;
+	ucb1_policy_amaf_t *b = p->data;
 	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
 
 	/* Record of the random playout - for each intersection coord,
@@ -264,8 +264,8 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 	int *first_move = &first_map[1]; // +1 for pass
 
 #if 0
-	struct board bb; bb.size = 9+2;
-	for (struct tree_node *ni = node; ni; ni = ni->parent)
+	board_t bb; bb.size = 9+2;
+	for (tree_node_t *ni = node; ni; ni = ni->parent)
 		fprintf(stderr, "%s ", coord2sstr(node_coord(ni)));
 	fprintf(stderr, "[color %d] update result %d (color %d)\n",
 			node_color, result, player_color);
@@ -291,7 +291,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 		/* This loop ignores symmetry considerations, but they should
 		 * matter only at a point when AMAF doesn't help much. */
 		assert(map->game_baselen >= 0);
-		for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+		for (tree_node_t *ni = node->children; ni; ni = ni->sibling) {
 			if (is_pass(node_coord(ni))) continue;
 
 			/* Use the child move only if it was first played by the same color. */
@@ -321,7 +321,7 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 				stats_add_result(&ni->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), S_BLACK), 1);
 			}
 #if 0
-			struct board bb; bb.size = 9+2;
+			board_t bb; bb.size = 9+2;
 			fprintf(stderr, "* %s<%"PRIhash"> -> %s<%"PRIhash"> [%d/%f => %d/%f]\n",
 				coord2sstr(node_coord(node)), node->hash,
 				coord2sstr(node_coord(ni)), ni->hash,
@@ -338,18 +338,18 @@ ucb1amaf_update(struct uct_policy *p, struct tree *tree, struct tree_node *node,
 }
 
 void
-ucb1amaf_done(struct uct_policy *p)
+ucb1amaf_done(uct_policy_t *p)
 {
 	free(p->data);
 	free(p);
 }
 
 
-struct uct_policy *
-policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board)
+uct_policy_t *
+policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 {
-	struct uct_policy *p = calloc2(1, sizeof(*p));
-	struct ucb1_policy_amaf *b = calloc2(1, sizeof(*b));
+	uct_policy_t *p = calloc2(1, sizeof(*p));
+	ucb1_policy_amaf_t *b = calloc2(1, sizeof(*b));
 	p->uct = u;
 	p->data = b;
 	p->done = ucb1amaf_done;

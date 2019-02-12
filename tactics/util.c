@@ -9,7 +9,7 @@
 
 
 bool
-board_stone_radar(struct board *b, coord_t coord, int distance)
+board_stone_radar(board_t *b, coord_t coord, int distance)
 {
 	int cx = coord_x(coord), cy = coord_y(coord);
 	int bounds[4] = { cx - distance, cy - distance,
@@ -34,7 +34,7 @@ board_stone_radar(struct board *b, coord_t coord, int distance)
 
 
 void
-cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
+cfg_distances(board_t *b, coord_t start, int *distances, int maxdist)
 {
 	/* Queue for d+1 spots; no two spots of the same group
 	 * should appear in the queue. */
@@ -84,7 +84,7 @@ cfg_distances(struct board *b, coord_t start, int *distances, int maxdist)
 
 
 floating_t
-board_effective_handicap(struct board *b, int first_move_value)
+board_effective_handicap(board_t *b, int first_move_value)
 {
 	/* This can happen if the opponent passes during handicap
 	 * placing phase. */
@@ -104,7 +104,7 @@ board_effective_handicap(struct board *b, int first_move_value)
 
 /* Returns estimated number of remaining moves for one player until end of game. */
 int
-board_estimated_moves_left(struct board *b)
+board_estimated_moves_left(board_t *b)
 {
 	int total_points = (board_size(b)-2)*(board_size(b)-2);
 	int moves_left = (b->flen - total_points*EXPECTED_FINAL_EMPTY_PERCENT/100)/2;

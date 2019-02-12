@@ -12,7 +12,7 @@
 
 
 static coord_t
-coord_transform(struct board *b, coord_t coord, int i)
+coord_transform(board_t *b, coord_t coord, int i)
 {
 #define HASH_VMIRROR     1
 #define HASH_HMIRROR     2
@@ -32,7 +32,7 @@ coord_transform(struct board *b, coord_t coord, int i)
 /* Check if we can make a move along the fbook right away.
  * Otherwise return pass. */
 coord_t
-fbook_check(struct board *board)
+fbook_check(board_t *board)
 {
 	if (!board->fbook) return pass;
 
@@ -59,10 +59,10 @@ fbook_check(struct board *board)
 	return cf;
 }
 
-static struct fbook *fbcache;
+static fbook_t *fbcache;
 
-struct fbook *
-fbook_init(char *filename, struct board *b)
+fbook_t *
+fbook_init(char *filename, board_t *b)
 {
 	if (fbcache && fbcache->bsize == board_size(b)
 	    && fbcache->handicap == b->handicap)
@@ -74,7 +74,7 @@ fbook_init(char *filename, struct board *b)
 		return NULL;
 	}
 
-	struct fbook *fbook = calloc(1, sizeof(*fbook));
+	fbook_t *fbook = calloc(1, sizeof(*fbook));
 	fbook->bsize = board_size(b);
 	fbook->handicap = b->handicap;
 	/* We do not set handicap=1 in case of too low komi on purpose;
@@ -87,7 +87,7 @@ fbook_init(char *filename, struct board *b)
 
 	/* Scratch board where we lay out the sequence;
 	 * one for each transposition. */
-	struct board *bs[8];
+	board_t *bs[8];
 	for (int i = 0; i < 8; i++)
 		bs[i] = board_new(fbook->bsize, NULL);
 	
@@ -121,7 +121,7 @@ fbook_init(char *filename, struct board *b)
 
 			for (int i = 0; i < 8; i++) {
 				coord_t coord = coord_transform(b, c, i);
-				struct move m = move(coord, stone_other(bs[i]->last_move.color));
+				move_t m = move(coord, stone_other(bs[i]->last_move.color));
 				int ret = board_play(bs[i], &m);
 				assert(ret >= 0);
 			}
@@ -181,7 +181,7 @@ fbook_init(char *filename, struct board *b)
 		return NULL;
 	}
 
-	struct fbook *fbold = fbcache;
+	fbook_t *fbold = fbcache;
 	fbcache = fbook;
 	if (fbold)
 		fbook_done(fbold);
@@ -189,7 +189,7 @@ fbook_init(char *filename, struct board *b)
 	return fbook;
 }
 
-void fbook_done(struct fbook *fbook)
+void fbook_done(fbook_t *fbook)
 {
 	if (fbook != fbcache)
 		free(fbook);

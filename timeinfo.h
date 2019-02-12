@@ -13,7 +13,7 @@
 
 #include "board.h"
 
-struct time_info {
+typedef struct {
 	/* For how long we can spend the time? */
 	enum time_period {
 		TT_NULL, // No time limit. Other structure elements are undef.
@@ -61,12 +61,12 @@ struct time_info {
 	 * which will be ignored. This is the case if the time settings were
 	 * forced on the command line. */
 	bool ignore_gtp;
-};
+} time_info_t;
 
-extern const struct time_info ti_none;
+extern const time_info_t ti_none;
 
 // XXX ugly
-static inline struct time_info ti_unlimited();
+static inline time_info_t ti_unlimited();
 
 
 /* Parse time information provided in custom format:
@@ -75,21 +75,21 @@ static inline struct time_info ti_unlimited();
  *   _NUM - number of seconds to spend per game
  *
  * Returns false on parse error.  */
-bool time_parse(struct time_info *ti, char *s);
+bool time_parse(time_info_t *ti, char *s);
 
 /* Update time settings according to gtp time_settings command.
  * main_time < 0 implies no time limit. */
-void time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi_stones, int byoyomi_periods);
+void time_settings(time_info_t *ti, int main_time, int byoyomi_time, int byoyomi_stones, int byoyomi_periods);
 
 /* Update time information according to gtp time_left command. */
-void time_left(struct time_info *ti, int time_left, int stones_left);
+void time_left(time_info_t *ti, int time_left, int stones_left);
 
 /* Start our timer. kgs does this (correctly) on "play" not "genmove"
  * unless we are making the first move of the game. */
-void time_start_timer(struct time_info *ti);
+void time_start_timer(time_info_t *ti);
 
 /* Subtract given amount of elapsed time from time settings. */
-void time_sub(struct time_info *ti, double interval, bool new_move);
+void time_sub(time_info_t *ti, double interval, bool new_move);
 
 /* Returns the current time. */
 double time_now(void);
@@ -108,7 +108,7 @@ void time_sleep(double interval);
  * available than netlag safety margin) and consequently need to choose
  * a move ASAP. */
 
-struct time_stop {
+typedef struct {
 	/* spend this amount of time if possible */
 	union {
 		double time; // TD_WALLTIME
@@ -119,25 +119,25 @@ struct time_stop {
 		double time; // TD_WALLTIME
 		int playouts; // TD_GAMES
 	} worst;
-};
+} time_stop_t;
 
 /* fuseki_end and yose_start are percentages of expected game length. */
-void time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start,
-			  floating_t max_maintime_ratio, struct time_stop *stop);
+void time_stop_conditions(time_info_t *ti, board_t *b, int fuseki_end, int yose_start,
+			  floating_t max_maintime_ratio, time_stop_t *stop);
 
 /* Time settings to use during fuseki */
-extern struct time_info ti_fuseki;
+extern time_info_t ti_fuseki;
 
 /* time_info to use for genmove() */
-struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color);
+time_info_t *time_info_genmove(board_t *b, time_info_t *ti, enum stone color);
 
 /* set number of moves for fuseki for --fuseki-time */
 void set_fuseki_moves(int moves);
 
 
-static inline struct time_info ti_unlimited()
+static inline time_info_t ti_unlimited()
 {
-	struct time_info ti = { 0, };
+	time_info_t ti = { 0, };
 	ti.period = TT_MOVE;
 	ti.dim = TD_GAMES;
 	ti.len.games = INT_MAX;

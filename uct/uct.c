@@ -30,15 +30,15 @@
 #include "uct/walk.h"
 #include "dcnn.h"
 
-struct uct_policy *policy_ucb1_init(struct uct *u, char *arg);
-struct uct_policy *policy_ucb1amaf_init(struct uct *u, char *arg, struct board *board);
-static void uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color, coord_t our_move, bool genmove_pondering);
+uct_policy_t *policy_ucb1_init(uct_t *u, char *arg);
+uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
+static void uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, bool genmove_pondering);
 
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
 
 static void
-setup_state(struct uct *u, struct board *b, enum stone color)
+setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
 			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, u->stats_hbits);
@@ -58,14 +58,14 @@ setup_state(struct uct *u, struct board *b, enum stone color)
 }
 
 static void
-reset_state(struct uct *u)
+reset_state(uct_t *u)
 {
 	assert(u->t);
 	tree_done(u->t); u->t = NULL;
 }
 
 static void
-setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
+setup_dynkomi(uct_t *u, board_t *b, enum stone to_play)
 {
 	if (u->t->use_extra_komi && !u->pondering && u->dynkomi->permove)
 		u->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, u->t);
@@ -74,7 +74,7 @@ setup_dynkomi(struct uct *u, struct board *b, enum stone to_play)
 }
 
 void
-uct_prepare_move(struct uct *u, struct board *b, enum stone color)
+uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 {
 	if (u->t) {
 		/* Verify that we have sane state. */
@@ -99,7 +99,7 @@ uct_prepare_move(struct uct *u, struct board *b, enum stone color)
  * And do we win counting, considering that given groups are dead ?
  * (if allow_losing_pass wasn't set) */
 bool
-uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg)
+uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg)
 {
 	/* Check this early, no need to go through the whole thing otherwise. */
 	*msg = "too early to pass";
@@ -107,7 +107,7 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 		return false;
 	
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
-	struct move_queue dead, unclear;	
+	move_queue_t dead, unclear;	
 	uct_mcowner_playouts(u, b, color);
 	get_dead_groups(b, &u->ownermap, &dead, &unclear);
 
@@ -145,33 +145,33 @@ uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all
 }
 
 static void
-uct_board_print(struct engine *e, struct board *b, FILE *f)
+uct_board_print(engine_t *e, board_t *b, FILE *f)
 {
-	struct uct *u = b->es;
+	uct_t *u = b->es;
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
 /* Fill ownermap for mcowner pattern feature (no tree search)
  * ownermap must be initialized already. */
 void
-uct_mcowner_playouts(struct uct *u, struct board *b, enum stone color)
+uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color)
 {
-	struct playout_setup ps = playout_setup(u->gamelen, u->mercymin);
+	playout_setup_t ps = playout_setup(u->gamelen, u->mercymin);
 	
 	/* TODO pick random last move, better playouts randomness */
 
 	while (u->ownermap.playouts < GJ_MINGAMES) {
-		struct board b2;
+		board_t b2;
 		board_copy(&b2, b);
 		playout_play_game(&ps, &b2, color, NULL, &u->ownermap, u->playout);
 		board_done_noalloc(&b2);
 	}
 }
 
-static struct ownermap*
-uct_ownermap(struct engine *e, struct board *b)
+static ownermap_t*
+uct_ownermap(engine_t *e, board_t *b)
 {
-	struct uct *u = b->es;
+	uct_t *u = b->es;
 	
 	/* Make sure ownermap is well-seeded. */
 	enum stone color = (b->last_move.color ? stone_other(b->last_move.color) : S_BLACK);
@@ -181,9 +181,9 @@ uct_ownermap(struct engine *e, struct board *b)
 }
 
 static char *
-uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
+uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 	if (!u->t) {
 		/* No state, create one - this is probably game beginning
 		 * and we need to load the opening tbook right now. */
@@ -231,15 +231,15 @@ uct_notify_play(struct engine *e, struct board *b, struct move *m, char *enginea
 }
 
 static char *
-uct_result(struct engine *e, struct board *b)
+uct_result(engine_t *e, board_t *b)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 	static char reply[1024];
 
 	if (!u->t)
 		return NULL;
 	enum stone color = u->t->root_color;
-	struct tree_node *n = u->t->root;
+	tree_node_t *n = u->t->root;
 	snprintf(reply, 1024, "%s %s %d %.2f %.1f",
 		 stone2str(color), coord2sstr(node_coord(n)),
 		 n->u.playouts, tree_node_get_value(u->t, -1, n->u.value),
@@ -248,14 +248,14 @@ uct_result(struct engine *e, struct board *b)
 }
 
 static char *
-uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd)
+uct_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 
 	if (!u->t)
 		return generic_chat(b, opponent, from, cmd, S_NONE, pass, 0, 1, u->threads, 0.0, 0.0, "");
 
-	struct tree_node *n = u->t->root;
+	tree_node_t *n = u->t->root;
 	double winrate = tree_node_get_value(u->t, -1, n->u.value);
 	double extra_komi = u->t->use_extra_komi && fabs(u->t->extra_komi) >= 0.5 ? u->t->extra_komi : 0;
 	char *score_est = ownermap_score_est_str(b, &u->ownermap);
@@ -265,7 +265,7 @@ uct_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd
 }
 
 static void
-print_dead_groups(struct uct *u, struct board *b, struct move_queue *dead)
+print_dead_groups(uct_t *u, board_t *b, move_queue_t *dead)
 {
 	fprintf(stderr, "dead groups (playing %s)\n", (u->my_color ? stone2str(u->my_color) : "???"));
 	if (!dead->moves)
@@ -281,9 +281,9 @@ print_dead_groups(struct uct *u, struct board *b, struct move_queue *dead)
 
 
 static void
-uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
+uct_dead_group_list(engine_t *e, board_t *b, move_queue_t *dead)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 	
 	/* This means the game is probably over, no use pondering on. */
 	uct_pondering_stop(u);
@@ -311,21 +311,21 @@ uct_dead_group_list(struct engine *e, struct board *b, struct move_queue *dead)
 }
 
 static void
-uct_stop(struct engine *e)
+uct_stop(engine_t *e)
 {
 	/* This is called on game over notification. However, an undo
 	 * and game resume can follow, so don't panic yet and just
 	 * relax and stop thinking so that we don't waste CPU. */
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 	uct_pondering_stop(u);
 }
 
 /* This is called on engine reset, especially when clear_board
  * is received and new game should begin. */
 static void
-uct_done(struct engine *e)
+uct_done(engine_t *e)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 
 	free(u->banner);
 	uct_pondering_stop(u);
@@ -344,9 +344,9 @@ uct_done(struct engine *e)
 
 /* Run time-limited MCTS search on foreground. */
 static int
-uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone color, struct tree *t, bool print_progress)
+uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, bool print_progress)
 {
-	struct uct_search_state s;
+	uct_search_state_t s;
 	uct_search_start(u, b, color, t, ti, &s);
 	if (UDEBUGL(2) && s.base_playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games>\n", s.base_playouts);
@@ -372,7 +372,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 			break;
 	}
 
-	struct uct_thread_ctx *ctx = uct_search_stop();
+	uct_thread_ctx_t *ctx = uct_search_stop();
 	if (UDEBUGL(3)) tree_dump(t, u->dumpthres);
 	if (UDEBUGL(2))
 		fprintf(stderr, "(avg score %f/%d; dynkomi's %f/%d value %f/%d)\n",
@@ -384,7 +384,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 
 	if (u->debug_after.playouts > 0) {
 		/* Now, start an additional run of playouts, single threaded. */
-		struct time_info debug_ti;
+		time_info_t debug_ti;
 		debug_ti.period = TT_MOVE;
 		debug_ti.dim = TD_GAMES;
 		debug_ti.len.games = t->root->u.playouts + u->debug_after.playouts;
@@ -419,7 +419,7 @@ uct_search(struct uct *u, struct board *b, struct time_info *ti, enum stone colo
 /* Start pondering background with @color to play.
  * @our_move: move to be added before starting. 0 means doesn't apply. */
 static void
-uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone color, coord_t our_move, bool genmove_pondering)
+uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, bool genmove_pondering)
 {
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
@@ -427,11 +427,11 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	u->genmove_pondering = genmove_pondering;
 
 	/* We need a local board copy to ponder upon. */
-	struct board *b = malloc2(sizeof(*b)); board_copy(b, b0);
+	board_t *b = malloc2(sizeof(*b)); board_copy(b, b0);
 
 	/* Board needs updating ? (b0 did not have the genmove'd move played yet) */
 	if (our_move) {	          /* 0 never a real coord */
-		struct move m = move(our_move, stone_other(color));
+		move_t m = move(our_move, stone_other(color));
 		int res = board_play(b, &m);
 		assert(res >= 0);
 	}
@@ -441,20 +441,20 @@ uct_pondering_start(struct uct *u, struct board *b0, struct tree *t, enum stone 
 	setup_dynkomi(u, b, color);
 
 	/* Start MCTS manager thread "headless". */
-	static struct uct_search_state s;
+	static uct_search_state_t s;
 	uct_search_start(u, b, color, t, NULL, &s);
 }
 
 /* uct_search_stop() frontend for the pondering (non-genmove) mode, and
  * to stop the background search for a slave in the distributed engine. */
 void
-uct_pondering_stop(struct uct *u)
+uct_pondering_stop(uct_t *u)
 {
 	if (!thread_manager_running)
 		return;
 
 	/* Stop the thread manager. */
-	struct uct_thread_ctx *ctx = uct_search_stop();
+	uct_thread_ctx_t *ctx = uct_search_stop();
 	if (UDEBUGL(1)) {
 		if (u->pondering) fprintf(stderr, "(pondering) ");
 		uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
@@ -467,7 +467,7 @@ uct_pondering_stop(struct uct *u)
 
 
 void
-uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
+uct_genmove_setup(uct_t *u, board_t *b, enum stone color)
 {
 	if (b->superko_violation) {
 		fprintf(stderr, "!!! WARNING: SUPERKO VIOLATION OCCURED BEFORE THIS MOVE\n");
@@ -490,17 +490,17 @@ uct_genmove_setup(struct uct *u, struct board *b, enum stone color)
 }
 
 static void
-uct_livegfx_hook(struct engine *e)
+uct_livegfx_hook(engine_t *e)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 	/* Hack: Override reportfreq to get decent update rates in GoGui */
 	u->reportfreq = MIN(u->reportfreq, 1000);
 }
 
-static struct tree_node *
-genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive, coord_t *best_coord)
+static tree_node_t *
+genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive, coord_t *best_coord)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 	double time_start = time_now();
 	u->pass_all_alive |= pass_all_alive;	
 
@@ -518,7 +518,7 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 	int base_playouts = u->t->root->u.playouts;
 	int played_games = uct_search(u, b, ti, color, u->t, false);
 
-	struct tree_node *best;
+	tree_node_t *best;
 	best = uct_search_result(u, b, color, u->pass_all_alive, played_games, base_playouts, best_coord);
 
 	if (UDEBUGL(2)) {
@@ -534,12 +534,12 @@ genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone colo
 }
 
 static coord_t
-uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {	
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 
 	coord_t best_coord;
-	struct tree_node *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
+	tree_node_t *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
 
 	/* Pass or resign.
 	 * After a pass, pondering is harmful for two reasons:
@@ -589,9 +589,9 @@ uct_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone 
 
 /* Wild pondering for the sake of frontend running Pachi. */
 static void
-uct_analyze(struct engine *e, struct board *b, enum stone color, int start)
+uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 
 	if (!start) {
 		if (u->pondering) uct_pondering_stop(u);
@@ -608,15 +608,15 @@ uct_analyze(struct engine *e, struct board *b, enum stone color, int start)
 }
 
 void
-uct_get_best_moves_at(struct uct *u, struct tree_node *parent, coord_t *best_c, float *best_r, int nbest, bool winrates)
+uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest, bool winrates)
 {
-	struct tree_node* best_d[nbest];
+	tree_node_t* best_d[nbest];
 	for (int i = 0; i < nbest; i++)  {
 		best_c[i] = pass;  best_r[i] = 0;  best_d[i] = NULL;
 	}
 	
 	/* Find best moves */
-	for (struct tree_node *n = parent->children; n; n = n->sibling)
+	for (tree_node_t *n = parent->children; n; n = n->sibling)
 		best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_d, nbest);
 
 	if (winrates)  /* Get winrates */
@@ -625,17 +625,17 @@ uct_get_best_moves_at(struct uct *u, struct tree_node *parent, coord_t *best_c, 
 }
 
 void
-uct_get_best_moves(struct uct *u, coord_t *best_c, float *best_r, int nbest, bool winrates)
+uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates)
 {
 	uct_get_best_moves_at(u, u->t->root, best_c, best_r, nbest, winrates);
 }
 
 /* Kindof like uct_genmove() but find the best candidates */
 static void
-uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	       coord_t *best_c, float *best_r, int nbest)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 	uct_pondering_stop(u);
 	if (u->t)
 		reset_state(u);	
@@ -649,9 +649,9 @@ uct_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum sto
 }
 
 bool
-uct_gentbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color)
+uct_gentbook(engine_t *e, board_t *b, time_info_t *ti, enum stone color)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 	if (!u->t) uct_prepare_move(u, b, color);
 	assert(u->t);
 
@@ -668,10 +668,10 @@ uct_gentbook(struct engine *e, struct board *b, struct time_info *ti, enum stone
 }
 
 void
-uct_dumptbook(struct engine *e, struct board *b, enum stone color)
+uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 {
-	struct uct *u = e->data;
-	struct tree *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
+	uct_t *u = e->data;
+	tree_t *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
 			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
@@ -680,13 +680,13 @@ uct_dumptbook(struct engine *e, struct board *b, enum stone color)
 
 
 floating_t
-uct_evaluate_one(struct engine *e, struct board *b, struct time_info *ti, coord_t c, enum stone color)
+uct_evaluate_one(engine_t *e, board_t *b, time_info_t *ti, coord_t c, enum stone color)
 {
-	struct uct *u = e->data;
+	uct_t *u = e->data;
 
-	struct board b2;
+	board_t b2;
 	board_copy(&b2, b);
-	struct move m = { c, color };
+	move_t m = { c, color };
 	int res = board_play(&b2, &m);
 	if (res < 0)
 		return NAN;
@@ -698,7 +698,7 @@ uct_evaluate_one(struct engine *e, struct board *b, struct time_info *ti, coord_
 
 	floating_t bestval;
 	uct_search(u, &b2, ti, color, u->t, true);
-	struct tree_node *best = u->policy->choose(u->policy, u->t->root, &b2, color, resign);
+	tree_node_t *best = u->policy->choose(u->policy, u->t->root, &b2, color, resign);
 	if (!best) {
 		bestval = NAN; // the opponent has no reply!
 	} else {
@@ -711,7 +711,7 @@ uct_evaluate_one(struct engine *e, struct board *b, struct time_info *ti, coord_
 }
 
 void
-uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, floating_t *vals, enum stone color)
+uct_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color)
 {
 	for (int i = 0; i < b->flen; i++) {
 		if (is_pass(b->f[i]))
@@ -722,7 +722,7 @@ uct_evaluate(struct engine *e, struct board *b, struct time_info *ti, floating_t
 }
 
 static void
-log_nthreads(struct uct *u)
+log_nthreads(uct_t *u)
 {
 	static int logged = 0;
 	if (DEBUGL(0) && !logged++)  fprintf(stderr, "Threads: %i\n", u->threads);
@@ -740,10 +740,10 @@ default_max_tree_size()
 	return (size_t)300 * mult * 1048576;
 }
 
-struct uct *
-uct_state_init(char *arg, struct board *b)
+uct_t *
+uct_state_init(char *arg, board_t *b)
 {
-	struct uct *u = calloc2(1, sizeof(struct uct));
+	uct_t *u = calloc2(1, sizeof(uct_t));
 	bool pat_setup = false;
 	
 	u->debug_level = debug_level;
@@ -933,7 +933,7 @@ uct_state_init(char *arg, struct board *b)
 				/* A policy to be used randomly with small
 				 * chance instead of the default policy. */
 				char *policyarg = strchr(optval, ':');
-				struct uct_policy **p = !strcasecmp(optname, "policy") ? &u->policy : &u->random_policy;
+				uct_policy_t **p = !strcasecmp(optname, "policy") ? &u->policy : &u->random_policy;
 				if (policyarg)
 					*policyarg++ = 0;
 				if (!strcasecmp(optval, "ucb1")) {
@@ -1395,9 +1395,9 @@ uct_state_init(char *arg, struct board *b)
 }
 
 void
-engine_uct_init(struct engine *e, char *arg, struct board *b)
+engine_uct_init(engine_t *e, char *arg, board_t *b)
 {
-	struct uct *u = uct_state_init(arg, b);
+	uct_t *u = uct_state_init(arg, b);
 	e->name = "UCT";
 	e->board_print = uct_board_print;
 	e->notify_play = uct_notify_play;

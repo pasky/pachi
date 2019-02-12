@@ -23,10 +23,10 @@
  */
 
 /* Internal engine state. */
-struct patternscan {
+typedef struct {
 	int debug_level;
 
-	struct pattern_config pc;
+	pattern_config_t pc;
 	bool spat_split_sizes;
 	int color_mask;
 
@@ -45,7 +45,7 @@ struct patternscan {
 	unsigned int nscounts;
 	int *scounts;
 	//int *sgameno;
-};
+} patternscan_t;
 
 /* Visualize spatials ? */
 //#define DEBUG_GENSPATIAL 1
@@ -57,18 +57,18 @@ struct patternscan {
 
 #define PATTERNSCAN_BUF_LEN  1048576
 
-static struct patternscan *global_ps = 0;
-static struct feature_info *features = pattern_features;
+static patternscan_t *global_ps = 0;
+static feature_info_t *features = pattern_features;
 
 static void
-mm_print_feature(struct patternscan *ps, strbuf_t *buf, struct feature *f)
+mm_print_feature(patternscan_t *ps, strbuf_t *buf, feature_t *f)
 {
 	int mm_number = ps->feature2mm[f->id];
 	assert(f->id >= 0 && f->id < FEAT_MAX);
 
 	/* Spatial feature */
 	if (f->id >= FEAT_SPATIAL) {
-		struct spatial *s = &spat_dict->spatials[f->payload];
+		spatial_t *s = &spat_dict->spatials[f->payload];
 		int spatial_id = s - spat_dict->spatials;
 		assert(s->dist == features[f->id].spatial);
 		mm_number += ps->spatial2mm[spatial_id];
@@ -89,7 +89,7 @@ mm_print_feature(struct patternscan *ps, strbuf_t *buf, struct feature *f)
 }
 
 static void
-mm_print_pattern(struct patternscan *ps, strbuf_t *buf, struct pattern *p)
+mm_print_pattern(patternscan_t *ps, strbuf_t *buf, pattern_t *p)
 {
 	for (int i = 0; i < p->n; i++) {
 		if (i)  sbprintf(buf, " ");
@@ -99,13 +99,13 @@ mm_print_pattern(struct patternscan *ps, strbuf_t *buf, struct pattern *p)
 }
 
 static int
-mm_gammas(struct patternscan *ps)
+mm_gammas(patternscan_t *ps)
 {
 	return ps->feature2mm[FEAT_MAX-1] + feature_payloads(FEAT_MAX-1);
 }
 
 static void
-mm_header(struct patternscan *ps)
+mm_header(patternscan_t *ps)
 {
 	/* Number of gammas */
 	printf("! %i\n", mm_gammas(ps));
@@ -121,17 +121,17 @@ mm_header(struct patternscan *ps)
 }
 
 static void
-mm_table(struct patternscan *ps)
+mm_table(patternscan_t *ps)
 {
 	FILE *file = fopen("mm-pachi.table", "w");  assert(file);
 	
 	for (int i = 0; i < FEAT_MAX; i++) {
-		struct feature f = feature(i, 0);
+		feature_t f = feature(i, 0);
 		int gamma = ps->feature2mm[i];
 		
 		if (i >= FEAT_SPATIAL) {  /* Spatial feature */
 			for (unsigned int j = 0; j < spat_dict->nspatials; j++) {
-                                struct spatial *s = &spat_dict->spatials[j];
+                                spatial_t *s = &spat_dict->spatials[j];
 				f.payload = j;
                                 if (s->dist == features[i].spatial) {
 					int spatial_id = s - spat_dict->spatials;
@@ -154,7 +154,7 @@ mm_table(struct patternscan *ps)
 
 /* Init features gamma numbers */
 static void
-init_feature_numbers(struct patternscan *ps)
+init_feature_numbers(patternscan_t *ps)
 {
 	int number = 0;  /* mm gamma numbers are 0-based */
 	for (int i = 0; i < FEAT_MAX; i++) {
@@ -166,7 +166,7 @@ init_feature_numbers(struct patternscan *ps)
 }
 
 static void
-patternscan_mm_init(struct patternscan *ps)
+patternscan_mm_init(patternscan_t *ps)
 {
 	init_feature_numbers(ps);
 	
@@ -174,7 +174,7 @@ patternscan_mm_init(struct patternscan *ps)
 	ps->spatial2mm = malloc(spat_dict->nspatials * sizeof(ps->spatial2mm[0]));
 	unsigned int nspatials_by_dist[MAX_PATTERN_DIST+1] = { 0, };
 	for (unsigned int i = 0; i < spat_dict->nspatials; i++) {
-		struct spatial *s = &spat_dict->spatials[i];
+		spatial_t *s = &spat_dict->spatials[i];
 		int d = s->dist;
 		if (!d) continue;
 		assert(d <= MAX_PATTERN_DIST && d >= 3);
@@ -189,11 +189,11 @@ patternscan_mm_init(struct patternscan *ps)
 }
 
 
-typedef void (*process_func_t)(struct patternscan *ps, struct board *b, struct move *m,
+typedef void (*process_func_t)(patternscan_t *ps, board_t *b, move_t *m,
 			       strbuf_t *buf, bool game_move, void *data);
 
 static void
-process_pattern(struct patternscan *ps, struct board *b, struct move *m,
+process_pattern(patternscan_t *ps, board_t *b, move_t *m,
 		bool game_move, process_func_t callback, void *data)
 {
 	callback(ps, b, m, &ps->buf, game_move, data);
@@ -201,7 +201,7 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m,
 	/* Go through other moves as well */
 	if (game_move) {
 		foreach_free_point(b) {
-			struct move m2 = move(c, m->color);
+			move_t m2 = move(c, m->color);
 			if (c == m->coord)                                           continue;
 			if (!board_is_valid_play_no_suicide(b, m2.color, m2.coord))  continue;
 			process_pattern(ps, b, &m2, false, callback, data);
@@ -210,13 +210,13 @@ process_pattern(struct patternscan *ps, struct board *b, struct move *m,
 }
 
 static void
-mm_process_move(struct patternscan *ps, struct board *b, struct move *m, strbuf_t *buf,
+mm_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 		bool game_move, void *data)
 {
-	struct ownermap *ownermap = data;
+	ownermap_t *ownermap = data;
 	
 	/* Now, match the pattern. */
-	struct pattern p;
+	pattern_t p;
 	pattern_match(&ps->pc, &p, b, m, ownermap, true);
 
 	if (game_move) {
@@ -229,7 +229,7 @@ mm_process_move(struct patternscan *ps, struct board *b, struct move *m, strbuf_
 
 /* Store the spatial configuration in dictionary if applicable. */
 static void
-genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m, strbuf_t *buf,
+genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 			bool game_move, void *data)
 {
 	if (is_pass(m->coord))  return;
@@ -244,7 +244,7 @@ genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m,
 	b->last_move.coord = last_move;
 #endif
 
-	struct spatial s;
+	spatial_t s;
 	spatial_from_board(&ps->pc, &s, b, m);
 	int dmax = s.dist;
 	for (int d = ps->pc.spat_min; d <= dmax; d++) {
@@ -281,9 +281,9 @@ genspatial_process_move(struct patternscan *ps, struct board *b, struct move *m,
 }
 
 static char *
-patternscan_play(struct engine *e, struct board *b, struct move *m, char *enginearg)
+patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 {
-	struct patternscan *ps = e->data;
+	patternscan_t *ps = e->data;
 
 	if (is_pass(m->coord))
 		return NULL;
@@ -307,7 +307,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m, char *engine
 	if (ps->gen_spat_dict)
 		process_pattern(ps, b, m, true, genspatial_process_move, NULL);
 	else {
-		struct ownermap ownermap;
+		ownermap_t ownermap;
 		if (ps->mcowner_fast)  mcowner_playouts_fast(b, m->color, &ownermap);
 		else		       mcowner_playouts(b, m->color, &ownermap); /* slooow */
 		process_pattern(ps, b, m, true, mm_process_move, &ownermap);
@@ -317,7 +317,7 @@ patternscan_play(struct engine *e, struct board *b, struct move *m, char *engine
 }
 
 static coord_t
-patternscan_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+patternscan_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	die("genmove command not available during patternscan!\n");
 }
@@ -332,7 +332,7 @@ compare_pattern_counts(const void *p1, const void *p2)
 
 /* genspatial: write spatial dictionary. */
 static void
-genspatial_done(struct patternscan *ps)
+genspatial_done(patternscan_t *ps)
 {
 	bool newfile = !file_exists(spatial_dict_filename);
 	FILE *f = fopen(spatial_dict_filename, "a");
@@ -359,7 +359,7 @@ genspatial_done(struct patternscan *ps)
 	for (unsigned int j = 0; j < nmatches; j++) {
 		unsigned int id = matches[j];
 		unsigned int newid = ps->loaded_spatials + j;
-		struct spatial *s = &spat_dict->spatials[id];
+		spatial_t *s = &spat_dict->spatials[id];
 		spatial_write(spat_dict, s, newid, f);
 
 		/* Stats */
@@ -376,9 +376,9 @@ genspatial_done(struct patternscan *ps)
 }
 
 static void
-patternscan_done(struct engine *e)
+patternscan_done(engine_t *e)
 {
-	struct patternscan *ps = e->data;
+	patternscan_t *ps = e->data;
 	
 	if (ps->gen_spat_dict)
 		genspatial_done(ps);
@@ -387,10 +387,10 @@ patternscan_done(struct engine *e)
 	free(ps->buf.str);     ps->buf.str = NULL;
 }
 
-static struct patternscan *
+static patternscan_t *
 patternscan_state_init(char *arg)
 {
-	struct patternscan *ps = global_ps = calloc2(1, sizeof(struct patternscan));
+	patternscan_t *ps = global_ps = calloc2(1, sizeof(patternscan_t));
 	bool pat_setup = false;
 
 	ps->debug_level = 1;
@@ -475,9 +475,9 @@ patternscan_state_init(char *arg)
 }
 
 void
-engine_patternscan_init(struct engine *e, char *arg, struct board *b)
+engine_patternscan_init(engine_t *e, char *arg, board_t *b)
 {
-	struct patternscan *ps = patternscan_state_init(arg);
+	patternscan_t *ps = patternscan_state_init(arg);
 	e->name = "PatternScan Engine";
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of games fed to it as GTP streams for various pattern features.";
 	e->genmove = patternscan_genmove;

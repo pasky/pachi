@@ -31,7 +31,7 @@
 #define MAX_BYOYOMI_TIME_RATIO 1.1
 
 bool
-time_parse(struct time_info *ti, char *s)
+time_parse(time_info_t *ti, char *s)
 {
 	char *end = s;
 	switch (s[0]) {
@@ -77,7 +77,7 @@ time_parse(struct time_info *ti, char *s)
 
 /* Update time settings according to gtp time_settings or kgs-time_settings command. */
 void
-time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi_stones, int byoyomi_periods)
+time_settings(time_info_t *ti, int main_time, int byoyomi_time, int byoyomi_stones, int byoyomi_periods)
 {
 	if (main_time < 0) {
 		ti->period = TT_NULL; // no time limit, rely on engine default
@@ -113,7 +113,7 @@ time_settings(struct time_info *ti, int main_time, int byoyomi_time, int byoyomi
  * kgs doesn't give time_left for the first move, so make sure
  * that just time_settings + time_stop_conditions still work. */
 void
-time_left(struct time_info *ti, int time_left, int stones_left)
+time_left(time_info_t *ti, int time_left, int stones_left)
 {
 	assert(ti->period != TT_NULL);
 	ti->dim = TD_WALLTIME;
@@ -149,14 +149,14 @@ time_left(struct time_info *ti, int time_left, int stones_left)
 /* Start our timer. kgs does this (correctly) on "play" not "genmove"
  * unless we are making the first move of the game. */
 void
-time_start_timer(struct time_info *ti)
+time_start_timer(time_info_t *ti)
 {
 	if (ti->period != TT_NULL && ti->dim == TD_WALLTIME)
 		ti->len.t.timer_start = time_now();
 }
 
 void
-time_sub(struct time_info *ti, double interval, bool new_move)
+time_sub(time_info_t *ti, double interval, bool new_move)
 {
 	assert(ti->dim == TD_WALLTIME && ti->period != TT_NULL);
 
@@ -245,7 +245,7 @@ time_sleep(double interval)
  * because remaining time per move in main time is less than byoyomi time
  * per move). */
 static bool
-time_in_byoyomi(struct time_info *ti) {
+time_in_byoyomi(time_info_t *ti) {
 	assert(ti->dim == TD_WALLTIME);
 	if (!ti->len.t.byoyomi_time)
 		return false; // there is no byoyomi!
@@ -262,7 +262,7 @@ time_in_byoyomi(struct time_info *ti) {
  * length minus moves to be played in final byoyomi - if we would not be
  * able to spend more time on them in main time anyway). */
 static int
-time_stop_set_remaining(struct time_info *ti, struct board *b, double net_lag, struct time_stop *stop)
+time_stop_set_remaining(time_info_t *ti, board_t *b, double net_lag, time_stop_t *stop)
 {
 	int moves_left = board_estimated_moves_left(b);
 	stop->worst.time = ti->len.t.main_time;
@@ -313,7 +313,7 @@ time_stop_set_remaining(struct time_info *ti, struct board *b, double net_lag, s
  * We expect stop->worst to be total time available, stop->desired the current
  * per-move time allocation, and set stop->desired to adjusted per-move time. */
 static void
-time_stop_phase_adjust(struct board *b, int fuseki_end, int yose_start, struct time_stop *stop)
+time_stop_phase_adjust(board_t *b, int fuseki_end, int yose_start, time_stop_t *stop)
 {
 	int bsize = (board_size(b)-2)*(board_size(b)-2);
 	fuseki_end = fuseki_end * bsize / 100; // move nb at fuseki end
@@ -360,8 +360,8 @@ lag_adjust(double *time, double net_lag)
 
 /* Pre-process time_info for search control and sets the desired stopping conditions. */
 void
-time_stop_conditions(struct time_info *ti, struct board *b, int fuseki_end, int yose_start,
-		     floating_t max_maintime_ratio, struct time_stop *stop)
+time_stop_conditions(time_info_t *ti, board_t *b, int fuseki_end, int yose_start,
+		     floating_t max_maintime_ratio, time_stop_t *stop)
 {
 	/* We must have _some_ limits by now, be it random default values! */
 	assert(ti->period != TT_NULL);
@@ -473,7 +473,7 @@ static int opt_fuseki_moves = 0;
 void set_fuseki_moves(int moves)  {	opt_fuseki_moves = moves;  }
 
 static int
-fuseki_moves(struct board *b)
+fuseki_moves(board_t *b)
 {
 	if (opt_fuseki_moves)
 		return opt_fuseki_moves;
@@ -485,11 +485,11 @@ fuseki_moves(struct board *b)
 	return moves;
 }
 
-const struct time_info ti_none   = { TT_NULL };
+const time_info_t ti_none   = { TT_NULL };
 
-struct time_info ti_fuseki = { TT_NULL };
+time_info_t ti_fuseki = { TT_NULL };
 
-struct time_info *time_info_genmove(struct board *b, struct time_info *ti, enum stone color)
+time_info_t *time_info_genmove(board_t *b, time_info_t *ti, enum stone color)
 {
 	/* Specific fuseki time settings ? */	
 	if (ti_fuseki.period != TT_NULL && b->moves <= fuseki_moves(b))

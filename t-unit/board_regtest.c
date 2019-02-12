@@ -39,10 +39,10 @@
 #define hash_final(md)     do {  r = SHA1_Final(md, &ctx);  assert(r);  } while(0)
 
 
-static void print_board_flags(struct board *b);
+static void print_board_flags(board_t *b);
 
 static unsigned char*
-hash_board_statics(struct board *b)
+hash_board_statics(board_t *b)
 {
 	hash_init();
 
@@ -64,7 +64,7 @@ hash_board_statics(struct board *b)
 }
 
 static unsigned char*
-hash_board(struct board *b)
+hash_board(board_t *b)
 {
 	hash_init();
 
@@ -164,7 +164,7 @@ hash_board(struct board *b)
 }
 
 static void
-dump_board_statics(struct board *b)
+dump_board_statics(board_t *b)
 {
 	int size = real_board_size(b);
 
@@ -184,14 +184,14 @@ dump_board_statics(struct board *b)
 }
 
 static void
-print_move(struct board *b, struct move *m)
+print_move(board_t *b, move_t *m)
 {
 	if (m->color == S_NONE)  printf("%7s", "");
 	else printf("%1.1s %-4s ", stone2str(m->color), coord2sstr(m->coord));
 }
 
 static void
-dump_board(struct board *b)
+dump_board(board_t *b)
 {
 	if (b->last_move.color == S_NONE)
 		dump_board_statics(b);
@@ -229,7 +229,7 @@ dump_board(struct board *b)
 }
 
 static void
-print_board_flags(struct board *b)
+print_board_flags(board_t *b)
 {
 	static int shown = 0;
 	if (shown++) return;
@@ -262,15 +262,15 @@ print_board_flags(struct board *b)
 
 /* Replay games dumping board state hashes at every move. */
 bool
-board_regression_test(struct board *b, char *arg)
+board_regression_test(board_t *b, char *arg)
 {
-	struct time_info ti[S_MAX];
+	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_none;
 	ti[S_WHITE] = ti_none;
 
 	gtp_t gtp;  gtp_init(&gtp);
 	char buf[4096];
-	struct engine e;  memset(&e, 0, sizeof(e));  /* dummy engine */
+	engine_t e;  memset(&e, 0, sizeof(e));  /* dummy engine */
 	while (fgets(buf, 4096, stdin)) {
 		if (buf[0] == '#') continue;
 		//if (!strncmp(buf, "clear_board", 11))  printf("\nGame %i:\n", gtp.played_games + 1);
