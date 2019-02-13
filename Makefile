@@ -88,8 +88,9 @@ DATADIR ?= $(PREFIX)/share/pachi
 # (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
 # unless PROFILING=gprof.)
 OPT ?= -O3
-CUSTOM_CFLAGS   := -Wall -ggdb3 $(OPT) -std=gnu99 -pthread -Wsign-compare -D_GNU_SOURCE
-CUSTOM_CXXFLAGS := -Wall -ggdb3 $(OPT)
+COMMON_FLAGS := -Wall -ggdb3 $(OPT) -D_GNU_SOURCE
+CFLAGS       := -std=gnu99 -pthread -Wsign-compare
+CXXFLAGS     := -std=c++11
 
 
 ###################################################################################################################
@@ -109,15 +110,15 @@ ifeq ($(GENERIC), 1)
 endif
 
 ifndef NO_FRENAME_REGISTERS
-	CUSTOM_CFLAGS += -frename-registers
+	COMMON_FLAGS += -frename-registers
 endif
 
 ifdef DATADIR
-	CUSTOM_CFLAGS += -DDATA_DIR=\"$(DATADIR)\"
+	COMMON_FLAGS += -DDATA_DIR=\"$(DATADIR)\"
 endif
 
 ifdef BOARD_SIZE
-	CUSTOM_CFLAGS += -DBOARD_SIZE=$(BOARD_SIZE)
+	COMMON_FLAGS += -DBOARD_SIZE=$(BOARD_SIZE)
 endif
 
 EXTRA_OBJS :=
@@ -134,16 +135,16 @@ ifdef MSYS2
 
 	WIN_HAVE_NO_REGEX_SUPPORT=1
 
-	SYS_CFLAGS  := $(TUNE)
-	SYS_LDFLAGS := -pthread -L$(CAFFE_PREFIX)/bin -L$(MINGW_PREFIX)/bin
-	SYS_LIBS    := -lws2_32
-	CUSTOM_CXXFLAGS += -I$(MINGW_PREFIX)/include/OpenBLAS
+	COMMON_FLAGS += $(TUNE)
+	LDFLAGS      := -pthread -L$(CAFFE_PREFIX)/bin -L$(MINGW_PREFIX)/bin
+	SYS_LIBS     := -lws2_32
+	CXXFLAGS     += -I$(MINGW_PREFIX)/include/OpenBLAS
 
         # Enable mingw-w64 C99 printf() / scanf() layer ?
-        SYS_CFLAGS += -D__USE_MINGW_ANSI_STDIO
+        COMMON_FLAGS += -D__USE_MINGW_ANSI_STDIO
 
 	ifdef WIN_HAVE_NO_REGEX_SUPPORT
-		SYS_CFLAGS += -DHAVE_NO_REGEX_SUPPORT
+		COMMON_FLAGS += -DHAVE_NO_REGEX_SUPPORT
 	else
 		SYS_LIBS += -lregex -ltre -lintl -liconv	# Oh, dear...
 	endif
@@ -176,25 +177,25 @@ ifdef MSYS2
                 # glog / gflags headers really shouldn't __declspec(dllexport) symbols for us,
                 # static linking will fail with undefined __imp__xxx symbols.
                 # Normally this works around it.
-		SYS_CXXFLAGS += -DGOOGLE_GLOG_DLL_DECL="" -DGFLAGS_DLL_DECL=""
+		CXXFLAGS += -DGOOGLE_GLOG_DLL_DECL="" -DGFLAGS_DLL_DECL=""
 	endif
 else
 ##############################################################################
 ifdef MAC
-	SYS_CFLAGS  := -DNO_THREAD_LOCAL
-	SYS_LDFLAGS := -pthread -rdynamic
-	SYS_LIBS    := -lm -ldl
-	DCNN_LIBS   := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
+	COMMON_FLAGS += -DNO_THREAD_LOCAL
+	LDFLAGS      := -pthread -rdynamic
+	SYS_LIBS     := -lm -ldl
+	DCNN_LIBS    := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
 else
 ##############################################################################
 # Linux
         # Static build ?
         # LINUX_STATIC=1
 
-	SYS_CFLAGS  := $(TUNE)
-	SYS_LDFLAGS := -pthread -rdynamic
-	SYS_LIBS    := -lm -lrt -ldl
-	DCNN_LIBS   := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
+	COMMON_FLAGS += $(TUNE)
+	LDFLAGS      := -pthread -rdynamic
+	SYS_LIBS     := -lm -lrt -ldl
+	DCNN_LIBS    := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
 
 	ifdef LINUX_STATIC
                 # Which type of caffe package do you have ?
@@ -216,53 +217,52 @@ else
 			CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
 		endif
 
-		SYS_LDFLAGS := -pthread -static
-		DCNN_LIBS   := $(CAFFE_STATIC_LIB) -lglog -lgflags -lprotobuf -lboost_system -lboost_thread -lopenblas $(HDF5_LIBS) -lstdc++  $(SYS_LIBS)
+		LDFLAGS   := -pthread -static
+		DCNN_LIBS := $(CAFFE_STATIC_LIB) -lglog -lgflags -lprotobuf -lboost_system -lboost_thread -lopenblas $(HDF5_LIBS) -lstdc++  $(SYS_LIBS)
 	endif
 endif
 endif
 
 ifdef CAFFE_PREFIX
-	SYS_LDFLAGS += -L$(CAFFE_PREFIX)/lib -Wl,-rpath=$(CAFFE_PREFIX)/lib
-	CXXFLAGS    += -I$(CAFFE_PREFIX)/include
+	LDFLAGS  += -L$(CAFFE_PREFIX)/lib -Wl,-rpath=$(CAFFE_PREFIX)/lib
+	CXXFLAGS += -I$(CAFFE_PREFIX)/include
 endif
 
 ifeq ($(DCNN), 1)
-	CUSTOM_CFLAGS   += -DDCNN
-	CUSTOM_CXXFLAGS += -DDCNN
-	EXTRA_OBJS      += $(EXTRA_DCNN_OBJS) caffe.o dcnn.o
+	COMMON_FLAGS   += -DDCNN
+	EXTRA_OBJS     += $(EXTRA_DCNN_OBJS) caffe.o dcnn.o
 	SYS_LIBS := $(DCNN_LIBS)
 endif
 
 ifeq ($(FIFO), 1)
-	CUSTOM_CFLAGS += -DPACHI_FIFO
-	EXTRA_OBJS    += fifo.o
+	COMMON_FLAGS += -DPACHI_FIFO
+	EXTRA_OBJS   += fifo.o
 endif
 
 ifeq ($(DOUBLE_FLOATING), 1)
-	CUSTOM_CFLAGS += -DDOUBLE_FLOATING
+	COMMON_FLAGS += -DDOUBLE_FLOATING
 endif
 
 ifeq ($(DISTRIBUTED), 1)
-	CUSTOM_CFLAGS += -DDISTRIBUTED
+	COMMON_FLAGS  += -DDISTRIBUTED
 	EXTRA_SUBDIRS += distributed
 endif
 
 ifeq ($(PLUGINS), 1)
-	CUSTOM_CFLAGS += -DPACHI_PLUGINS
+	COMMON_FLAGS += -DPACHI_PLUGINS
 endif
 
 ifeq ($(BOARD_TESTS), 1)
 	SYS_LIBS      += -lcrypto
-	CUSTOM_CFLAGS += -DBOARD_TESTS
+	COMMON_FLAGS  += -DBOARD_TESTS
 endif
 
 ifeq ($(PROFILING), gprof)
-	CUSTOM_LDFLAGS += -pg
-	CUSTOM_CFLAGS  += -pg -fno-inline
+	LDFLAGS      += -pg
+	COMMON_FLAGS += -pg -fno-inline
 else
         # Whee, an extra register!
-	CUSTOM_CFLAGS += -fomit-frame-pointer
+	COMMON_FLAGS += -fomit-frame-pointer
 ifeq ($(PROFILING), perftools)
 	SYS_LIBS += -lprofiler
 endif
