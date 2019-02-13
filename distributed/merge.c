@@ -310,8 +310,8 @@ get_new_stats(incr_stats_t *buf, slave_state_t *sstate, int cmd_id)
 static void
 merge_state_alloc(slave_state_t *sstate)
 {
-	sstate->stats_htable = calloc2(1 << sstate->stats_hbits, sizeof(incr_stats_t));
-	sstate->merged = malloc2(sstate->max_merged_nodes * sizeof(int));
+	sstate->stats_htable = calloc2(1 << sstate->stats_hbits, incr_stats_t);
+	sstate->merged = calloc2(sstate->max_merged_nodes, int);
 	sstate->max_buf_size -= sizeof(incr_stats_t);
 }
 

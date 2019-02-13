@@ -35,7 +35,7 @@ using_joseki(board_t *b)
 static joseki_dict_t *
 joseki_init(int bsize)
 {
-	joseki_dict_t *jd = calloc(1, sizeof(*jd));
+	joseki_dict_t *jd = calloc2(1, joseki_dict_t);
 	jd->bsize = bsize;
 	return jd;
 }
@@ -43,7 +43,7 @@ joseki_init(int bsize)
 static josekipat_t *
 joseki_pattern_new(board_t *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
 {
-	josekipat_t *p = calloc(1, sizeof(*p));
+	josekipat_t *p = calloc2(1, josekipat_t);
 	p->coord = coord;
 	p->color = color;
 	p->flags = flags;

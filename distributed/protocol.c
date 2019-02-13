@@ -278,7 +278,7 @@ static void
 slave_state_alloc(slave_state_t *sstate)
 {
 	for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
-		sstate->b[n].buf = malloc2(sstate->max_buf_size);
+		sstate->b[n].buf = cmalloc(sstate->max_buf_size);
 		sstate->b[n].owner = sstate->thread_id;
 	}
 	if (sstate->alloc_hook) sstate->alloc_hook(sstate);
@@ -666,7 +666,7 @@ protocol_init(char *slave_port, char *proxy_port, int max_slaves)
 	start_time = time_now();
 
 	queue_max_length = max_slaves * MAX_GENMOVES_PER_SLAVE;
-	receive_queue = calloc2(queue_max_length, sizeof(*receive_queue));
+	receive_queue = calloc2(queue_max_length, buf_state_t*);
 
 	default_sstate.slave_sock = port_listen(slave_port, max_slaves);
 	default_sstate.last_processed = -1;

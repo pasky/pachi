@@ -62,7 +62,7 @@ board_init(board_t *b, int bsize, char *fbookfile)
 board_t *
 board_new(int bsize, char *fbookfile)
 {
-	board_t *b = malloc2(sizeof(board_t));
+	board_t *b = malloc2(board_t);
 	board_init(b, bsize, fbookfile);
 	return b;
 }

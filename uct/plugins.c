@@ -41,7 +41,7 @@ typedef struct uct_pluginset {
 uct_pluginset_t *
 pluginset_init(board_t *b)
 {
-	uct_pluginset_t *ps = calloc(1, sizeof(*ps));
+	uct_pluginset_t *ps = calloc(1, uct_pluginset_t);
 	ps->b = b;
 	return ps;
 }

@@ -310,7 +310,7 @@ spatial_dict_addc(spatial_dict_t *d, spatial_t *s)
 static void
 spatial_dict_addh(spatial_dict_t *dict, hash_t spatial_hash, unsigned int id)
 {
-	spatial_entry_t *e = malloc(sizeof(*e));
+	spatial_entry_t *e = malloc2(spatial_entry_t);
 	e->hash = spatial_hash;
 	e->id = id;
 	e->next = NULL;
@@ -501,7 +501,7 @@ spatial_dict_init(pattern_config_t *pc, bool create)
 		return;
 	}
 
-	spat_dict = calloc2(1, sizeof(*spat_dict));
+	spat_dict = calloc2(1, spatial_dict_t);
 	/* Dummy record for index 0 so ids start at 1. */
 	spatial_t dummy = { 0, };
 	spatial_dict_addc(spat_dict, &dummy);

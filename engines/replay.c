@@ -139,7 +139,7 @@ replay_done(engine_t *e)
 replay_t *
 replay_state_init(char *arg, board_t *b)
 {
-	replay_t *r = calloc2(1, sizeof(replay_t));
+	replay_t *r = calloc2(1, replay_t);
 	
 	r->debug_level = 1;
 	r->runs = 1000;

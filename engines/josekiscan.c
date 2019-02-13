@@ -102,7 +102,7 @@ josekiscan_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 static josekiscan_t *
 josekiscan_state_init(char *arg)
 {
-	josekiscan_t *j = calloc2(1, sizeof(josekiscan_t));
+	josekiscan_t *j = calloc2(1, josekiscan_t);
 
 	for (int i = 0; i < 16; i++)
 		j->b[i] = board_new(19+2, NULL);

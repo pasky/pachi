@@ -64,7 +64,7 @@ typedef struct tree_hash {
 void *
 uct_htable_alloc(int hbits)
 {
-	return calloc2(1 << hbits, sizeof(tree_hash_t));
+	return calloc2(1 << hbits, tree_hash_t);
 }
 
 /* Clear the hash table. Used only when running as slave for the distributed engine. */
@@ -320,7 +320,7 @@ select_best_stats(stats_candidate_t *stats_queue, int stats_count,
 {
 	static incr_stats_t *out_stats = NULL;
 	if (!out_stats)
-		out_stats = malloc2(shared_nodes * sizeof(*out_stats));
+		out_stats = calloc2(shared_nodes, incr_stats_t);
 
 	/* Find the minimum increment to send. The bucket with minimum
          * increment may be sent only partially. */
@@ -383,7 +383,7 @@ report_incr_stats(uct_t *u, int *stats_size)
 	 * discard some stats updates but this is rare. */
 	int max_nodes = 3 * u->shared_nodes;
 	static stats_candidate_t *stats_queue = NULL;
-	if (!stats_queue) stats_queue = malloc2(max_nodes * sizeof(*stats_queue));
+	if (!stats_queue) stats_queue = calloc2(max_nodes, stats_candidate_t);
 
 	memset(bucket_count, 0, sizeof(bucket_count));
 

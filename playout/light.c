@@ -22,7 +22,7 @@ playout_light_choose(playout_policy_t *p, playout_setup_t *s, board_t *b, enum s
 playout_policy_t *
 playout_light_init(char *arg, board_t *b)
 {
-	playout_policy_t *p = calloc2(1, sizeof(*p));
+	playout_policy_t *p = calloc2(1, playout_policy_t);
 	p->choose = playout_light_choose;
 
 	if (arg)

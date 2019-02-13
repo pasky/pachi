@@ -326,7 +326,7 @@ uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map)
 uct_prior_t *
 uct_prior_init(char *arg, board_t *b, uct_t *u)
 {
-	uct_prior_t *p = calloc2(1, sizeof(uct_prior_t));
+	uct_prior_t *p = calloc2(1, uct_prior_t);
 
 	p->even_eqex = p->policy_eqex = p->b19_eqex = p->eye_eqex = p->ko_eqex = p->plugin_eqex = -100;
 	/* FIXME: Optimal pattern_eqex is about -1000 with small playout counts
@@ -378,7 +378,7 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 				 * 20 wins, 2nd-level neighbors 20 wins;
 				 * neighbors are group-transitive. */
 				p->cfgdn = atoi(optval); optval += strcspn(optval, "%");
-				p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
+				p->cfgd_eqex = calloc2(p->cfgdn + 1, int);
 				p->cfgd_eqex[0] = 0;
 				int i;
 				for (i = 1; *optval; i++, optval += strcspn(optval, "%")) {
@@ -432,7 +432,7 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 		static int large_bonuses[] = { 0, 55, 50, 15 };
 		static int small_bonuses[] = { 0, 45, 40, 15 };
 		p->cfgdn = 3;
-		p->cfgd_eqex = calloc2(p->cfgdn + 1, sizeof(*p->cfgd_eqex));
+		p->cfgd_eqex = calloc2(p->cfgdn + 1, int);
 		memcpy(p->cfgd_eqex, board_large(b) ? large_bonuses : small_bonuses, sizeof(large_bonuses));
 	}
 	if (p->cfgdn > TREE_NODE_D_MAX)

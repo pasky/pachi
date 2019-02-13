@@ -457,7 +457,7 @@ distributed_dead_group_list(engine_t *e, board_t *b, move_queue_t *mq)
 static distributed_t *
 distributed_state_init(char *arg, board_t *b)
 {
-	distributed_t *dist = calloc2(1, sizeof(distributed_t));
+	distributed_t *dist = calloc2(1, distributed_t);
 
 	dist->stats_hbits = DEFAULT_STATS_HBITS;
 	dist->max_slaves = DEFAULT_MAX_SLAVES;
@@ -494,7 +494,7 @@ distributed_state_init(char *arg, board_t *b)
 		}
 	}
 
-	gtp_replies = calloc2(dist->max_slaves, sizeof(char *));
+	gtp_replies = calloc2(dist->max_slaves, char *);
 
 	if (!dist->slave_port)
 		die("distributed: missing slave_port\n");

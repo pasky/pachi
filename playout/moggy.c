@@ -1128,7 +1128,7 @@ playout_moggy_setboard(playout_policy_t *playout_policy, board_t *b)
 {
 	if (b->ps)
 		return;
-	moggy_state_t *ps = malloc2(sizeof(moggy_state_t));
+	moggy_state_t *ps = malloc2(moggy_state_t);
 	ps->last_selfatari[S_BLACK] = ps->last_selfatari[S_WHITE] = 0;
 	b->ps = ps;
 }
@@ -1136,8 +1136,8 @@ playout_moggy_setboard(playout_policy_t *playout_policy, board_t *b)
 playout_policy_t *
 playout_moggy_init(char *arg, board_t *b)
 {
-	playout_policy_t *p = calloc2(1, sizeof(*p));
-	moggy_policy_t *pp = calloc2(1, sizeof(*pp));
+	playout_policy_t *p = calloc2(1, playout_policy_t);
+	moggy_policy_t *pp = calloc2(1, moggy_policy_t);
 	p->data = pp;
 	p->setboard = playout_moggy_setboard;
 	p->setboard_randomok = true;

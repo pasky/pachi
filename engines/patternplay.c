@@ -146,7 +146,7 @@ patternplay_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals,
 patternplay_t *
 patternplay_state_init(char *arg)
 {
-	patternplay_t *pp = calloc2(1, sizeof(patternplay_t));
+	patternplay_t *pp = calloc2(1, patternplay_t);
 	bool pat_setup = false;
 
 	pp->debug_level = debug_level;

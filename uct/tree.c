@@ -38,7 +38,7 @@ tree_alloc_node(tree_t *t, int count, bool fast_alloc)
 		n = (tree_node_t *)(t->nodes + old_size);
 		memset(n, 0, nsize);
 	} else {
-		n = calloc2(count, sizeof(*n));
+		n = calloc2(count, tree_node_t);
 	}
 	return n;
 }
@@ -77,13 +77,13 @@ tree_t *
 tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	  size_t max_pruned_size, size_t pruning_threshold, floating_t ltree_aging, int hbits)
 {
-	tree_t *t = calloc2(1, sizeof(*t));
+	tree_t *t = calloc2(1, tree_t);
 	t->board = board;
 	t->max_tree_size = max_tree_size;
 	t->max_pruned_size = max_pruned_size;
 	t->pruning_threshold = pruning_threshold;
 	if (max_tree_size != 0) {
-		t->nodes = malloc2(max_tree_size);
+		t->nodes = cmalloc(max_tree_size);
 		/* The nodes buffer doesn't need initialization. This is currently
 		 * done by tree_init_node to spread the load. Doing a memset for the
 		 * entire buffer here would be too slow for large trees (>10 GB). */
@@ -158,7 +158,7 @@ tree_done_node_detached(tree_t *t, tree_node_t *n)
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
 	pthread_t thread;
-	subtree_ctx_t *ctx = malloc2(sizeof(subtree_ctx_t));
+	subtree_ctx_t *ctx = malloc2(subtree_ctx_t);
 	ctx->t = t;
 	ctx->n = n;
 	pthread_create(&thread, &attr, tree_done_node_worker, ctx);
@@ -310,7 +310,7 @@ tree_node_load(FILE *f, tree_node_t *node, int *num)
 
 	tree_node_t *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {
-		ni_prev = ni; ni = calloc2(1, sizeof(*ni));
+		ni_prev = ni; ni = calloc2(1, tree_node_t);
 		if (!node->children)
 			node->children = ni;
 		else

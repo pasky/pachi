@@ -427,7 +427,7 @@ uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t 
 	u->genmove_pondering = genmove_pondering;
 
 	/* We need a local board copy to ponder upon. */
-	board_t *b = malloc2(sizeof(*b)); board_copy(b, b0);
+	board_t *b = malloc2(board_t); board_copy(b, b0);
 
 	/* Board needs updating ? (b0 did not have the genmove'd move played yet) */
 	if (our_move) {	          /* 0 never a real coord */
@@ -743,7 +743,7 @@ default_max_tree_size()
 uct_t *
 uct_state_init(char *arg, board_t *b)
 {
-	uct_t *u = calloc2(1, sizeof(uct_t));
+	uct_t *u = calloc2(1, uct_t);
 	bool pat_setup = false;
 	
 	u->debug_level = debug_level;

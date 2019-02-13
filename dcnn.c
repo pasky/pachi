@@ -60,9 +60,7 @@ detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 
 	int size = real_board_size(b);
 	int dsize = 13 * size * size;
-	float *data = malloc(dsize * sizeof(float));
-	for (int i = 0; i < dsize; i++)  /* memset() not recommended for floats */
-		data[i] = 0;
+	float *data = calloc2(dsize, float);
 
 	for (int x = 0; x < size; x++)
 	for (int y = 0; y < size; y++) {

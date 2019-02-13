@@ -19,7 +19,7 @@ engine_done(engine_t *e)
 engine_t*
 new_engine(int id, char *e_arg, board_t *b)
 {
-	engine_t *e = malloc2(sizeof(*e));
+	engine_t *e = malloc2(engine_t);
 	engine_init(e, id, e_arg, b);
 	return e;
 }

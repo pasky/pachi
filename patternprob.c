@@ -24,13 +24,13 @@ prob_dict_init(char *filename, pattern_config_t *pc)
 		return;
 	}
 
-	prob_dict = calloc2(1, sizeof(*prob_dict));
-	prob_dict->table = calloc2(spat_dict->nspatials + 1, sizeof(*prob_dict->table));
+	prob_dict = calloc2(1, prob_dict_t);
+	prob_dict->table = calloc2(spat_dict->nspatials + 1, pattern_prob_t*);
 
 	int i = 0;
 	char sbuf[1024];
 	while (fgets(sbuf, sizeof(sbuf), f)) {
-		pattern_prob_t *pb = calloc2(1, sizeof(*pb));
+		pattern_prob_t *pb = calloc2(1, pattern_prob_t);
 		//int c, o;
 
 		char *buf = sbuf;

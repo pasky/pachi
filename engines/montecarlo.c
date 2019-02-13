@@ -233,7 +233,7 @@ montecarlo_done(engine_t *e)
 montecarlo_t *
 montecarlo_state_init(char *arg, board_t *b)
 {
-	montecarlo_t *mc = calloc2(1, sizeof(montecarlo_t));
+	montecarlo_t *mc = calloc2(1, montecarlo_t);
 
 	mc->debug_level = 1;
 	mc->gamelen = MC_GAMELEN;

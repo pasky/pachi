@@ -171,7 +171,7 @@ patternscan_mm_init(patternscan_t *ps)
 	init_feature_numbers(ps);
 	
 	/* Assign mm number to each spatial */
-	ps->spatial2mm = malloc(spat_dict->nspatials * sizeof(ps->spatial2mm[0]));
+	ps->spatial2mm = calloc2(spat_dict->nspatials, unsigned int);
 	unsigned int nspatials_by_dist[MAX_PATTERN_DIST+1] = { 0, };
 	for (unsigned int i = 0; i < spat_dict->nspatials; i++) {
 		spatial_t *s = &spat_dict->spatials[i];
@@ -390,7 +390,7 @@ patternscan_done(engine_t *e)
 static patternscan_t *
 patternscan_state_init(char *arg)
 {
-	patternscan_t *ps = global_ps = calloc2(1, sizeof(patternscan_t));
+	patternscan_t *ps = global_ps = calloc2(1, patternscan_t);
 	bool pat_setup = false;
 
 	ps->debug_level = 1;

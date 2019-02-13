@@ -48,7 +48,7 @@ void chat_init(char *chat_file) {
 		perror(chat_file);
 		return;
 	}
-	chat_table = calloc2(MAX_CHAT_PATTERNS, sizeof(*chat_table));
+	chat_table = calloc2(MAX_CHAT_PATTERNS, chat_t);
 	chat_t *entry = chat_table;
 	while (fscanf(f, "%lf;%lf;%20[^;];%100[^;];%300[^\n]\n", &entry->minwin, &entry->maxwin,
 		      entry->from, entry->regex, entry->reply ) == 5) {

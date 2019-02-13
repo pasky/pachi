@@ -26,7 +26,7 @@ generic_done(uct_dynkomi_t *d)
 uct_dynkomi_t *
 uct_dynkomi_init_none(uct_t *u, char *arg, board_t *b)
 {
-	uct_dynkomi_t *d = calloc2(1, sizeof(*d));
+	uct_dynkomi_t *d = calloc2(1, uct_dynkomi_t);
 	d->uct = u;
 	d->permove = NULL;
 	d->persim = NULL;
@@ -153,13 +153,13 @@ linear_moves(board_t *b, enum stone color)
 uct_dynkomi_t *
 uct_dynkomi_init_linear(uct_t *u, char *arg, board_t *b)
 {
-	uct_dynkomi_t *d = calloc2(1, sizeof(*d));
+	uct_dynkomi_t *d = calloc2(1, uct_dynkomi_t);
 	d->uct = u;
 	d->permove = linear_permove;
 	d->persim = linear_persim;
 	d->done = generic_done;
 
-	dynkomi_linear_t *l = calloc2(1, sizeof(*l));
+	dynkomi_linear_t *l = calloc2(1, dynkomi_linear_t);
 	d->data = l;
 
 	/* Force white to feel behind and try harder, but not to the
@@ -500,13 +500,13 @@ adaptive_persim(uct_dynkomi_t *d, board_t *b, tree_t *tree, tree_node_t *node)
 uct_dynkomi_t *
 uct_dynkomi_init_adaptive(uct_t *u, char *arg, board_t *b)
 {
-	uct_dynkomi_t *d = calloc2(1, sizeof(*d));
+	uct_dynkomi_t *d = calloc2(1, uct_dynkomi_t);
 	d->uct = u;
 	d->permove = adaptive_permove;
 	d->persim = adaptive_persim;
 	d->done = generic_done;
 
-	dynkomi_adaptive_t *a = calloc2(1, sizeof(*a));
+	dynkomi_adaptive_t *a = calloc2(1, dynkomi_adaptive_t);
 	d->data = a;
 
 	a->lead_moves = board_large(b) ? 20 : 4; // XXX

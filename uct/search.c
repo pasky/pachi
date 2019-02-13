@@ -192,7 +192,7 @@ spawn_thread_manager(void *ctx_)
 	
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
-		uct_thread_ctx_t *ctx = malloc2(sizeof(*ctx));
+		uct_thread_ctx_t *ctx = malloc2(uct_thread_ctx_t);
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
 		mctx->t = ctx->t = t;
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;

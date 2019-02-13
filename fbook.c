@@ -74,7 +74,7 @@ fbook_init(char *filename, board_t *b)
 		return NULL;
 	}
 
-	fbook_t *fbook = calloc(1, sizeof(*fbook));
+	fbook_t *fbook = calloc2(1, fbook_t);
 	fbook->bsize = board_size(b);
 	fbook->handicap = b->handicap;
 	/* We do not set handicap=1 in case of too low komi on purpose;

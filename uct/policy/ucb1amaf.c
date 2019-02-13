@@ -348,8 +348,8 @@ ucb1amaf_done(uct_policy_t *p)
 uct_policy_t *
 policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 {
-	uct_policy_t *p = calloc2(1, sizeof(*p));
-	ucb1_policy_amaf_t *b = calloc2(1, sizeof(*b));
+	uct_policy_t *p = calloc2(1, uct_policy_t);
+	ucb1_policy_amaf_t *b = calloc2(1, ucb1_policy_amaf_t);
 	p->uct = u;
 	p->data = b;
 	p->done = ucb1amaf_done;
