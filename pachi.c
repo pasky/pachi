@@ -103,10 +103,12 @@ usage()
 		"Logs / IO: \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
+#ifdef NETWORK
 		"  -g, --gtp-port [HOST:]GTP_PORT    read gtp commands from network instead of stdin. \n"
 		"                                    listen on given port if HOST not given, otherwise \n"
 		"                                    connect to remote host. \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
+#endif
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
 		"      --verbose-caffe               enable caffe logging \n"
 		" \n"
@@ -184,11 +186,13 @@ static struct option longopts[] = {
 	{ "engine",      required_argument, 0, 'e' },
 	{ "fbook",       required_argument, 0, 'f' },
 	{ "joseki",      no_argument,       0, OPT_JOSEKI },
+#ifdef NETWORK
 	{ "gtp-port",    required_argument, 0, 'g' },
+	{ "log-port",    required_argument, 0, 'l' },
+#endif
 	{ "help",        no_argument,       0, 'h' },
 	{ "kgs",         no_argument,       0, OPT_KGS },
 	{ "log-file",    required_argument, 0, 'o' },
-	{ "log-port",    required_argument, 0, 'l' },
 	{ "name",        required_argument, 0, OPT_NAME },
 	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
 	{ "noundo",      no_argument,       0, OPT_NOUNDO },
@@ -268,9 +272,11 @@ int main(int argc, char *argv[])
 			case 'f':
 				fbookfile = strdup(optarg);
 				break;
+#ifdef NETWORK
 			case 'g':
 				gtp_port = strdup(optarg);
 				break;
+#endif
 			case 'h':
 				usage();
 				exit(0);
@@ -281,9 +287,11 @@ int main(int argc, char *argv[])
 				gtp->kgs = true;       /* Show engine comment in version. */
 				nopassfirst = true;    /* --nopassfirst */
 				break;
+#ifdef NETWORK
 			case 'l':
 				log_port = strdup(optarg);
 				break;
+#endif
 			case 'o':
 				file = fopen(optarg, "w");   if (!file) fail(optarg);
 				fclose(file);

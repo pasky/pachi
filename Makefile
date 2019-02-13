@@ -53,6 +53,7 @@ DCNN=1
 # Enable distributed engine for cluster play ?
 
 # DISTRIBUTED=1
+# NETWORK=1
 
 # Compile Pachi with external plugin support ?
 # If unsure leave disabled, you most likely don't need it.
@@ -181,6 +182,11 @@ ifeq ($(FIFO), 1)
 	EXTRA_OBJS   += fifo.o
 endif
 
+ifeq ($(NETWORK), 1)
+	COMMON_FLAGS += -DNETWORK
+	EXTRA_OBJS   += network.o
+endif
+
 ifeq ($(DOUBLE_FLOATING), 1)
 	COMMON_FLAGS += -DDOUBLE_FLOATING
 endif
@@ -228,7 +234,7 @@ INCLUDES=-I.
 
 OBJS = $(EXTRA_OBJS) \
        board.o engine.o gogui.o gtp.o joseki.o move.o ownermap.o pachi.o pattern3.o pattern.o patternsp.o \
-       patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o
+       patternprob.o playout.o probdist.o random.o stone.o timeinfo.o fbook.o chat.o util.o
 
 # Low-level dependencies last
 SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics
