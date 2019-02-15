@@ -214,6 +214,18 @@ ownermap_score_est_str(struct board *b, struct ownermap *ownermap)
 	return buf;
 }
 
+static bool
+border_stone(struct board *b, coord_t c, int *final_ownermap)
+{
+	enum stone color = board_at(b, c);
+	foreach_neighbor(b, c, {
+		if (board_at(b, c) == stone_other(color) &&
+		    final_ownermap[c] == (int)stone_other(color))
+			return true;
+	});
+	return false;
+}
+
 bool
 board_position_final(struct board *b, struct ownermap *ownermap, char **msg)
 {
@@ -251,11 +263,11 @@ board_position_final_full(struct board *b, struct ownermap *ownermap,
 	foreach_point(b) {
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs > 1)  continue;
+		if (!border_stone(b, c, final_ownermap))  continue;
+
 		enum stone color = board_at(b, c);
-		if (final_ownermap[c] != (int)color)  continue;
-		coord_t coord = c;
-		foreach_neighbor(b, coord, {
-			if (final_ownermap[c] != (int)stone_other(color))  continue;
+		foreach_neighbor(b, board_group_info(b, g).lib[0], {
+			if (final_ownermap[c] != (int)color) continue;
 			*msg = "border stones in atari";
 			return false;
 		});
