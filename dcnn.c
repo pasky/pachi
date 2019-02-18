@@ -59,39 +59,29 @@ detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 	assert(dcnn_supported_board_size(b));
 
 	int size = board_rsize(b);
-	int dsize = 13 * size * size;
-	float *data = calloc2(dsize, float);
+	float data[13][size][size];
+	memset(data, 0, sizeof(data));
 
 	for (int x = 0; x < size; x++)
 	for (int y = 0; y < size; y++) {
-		int p = y * size + x;
-
 		coord_t c = coord_xy(x+1, y+1);
 		group_t g = group_at(b, c);
 		enum stone bc = board_at(b, c);
 		int libs = board_group_info(b, g).libs - 1;
 		if (libs > 3) libs = 3;
-		if (bc == S_NONE)
-			data[       8*size*size + p] = 1.0;
-		else if (bc == color)
-			data[(0+libs)*size*size + p] = 1.0;
-		else if (bc == stone_other(color))
-			data[(4+libs)*size*size + p] = 1.0;
 		
-		if (c == last_move(b).coord)
-			data[9*size*size + p] = 1.0;
-		else if (c == last_move2(b).coord)
-			data[10*size*size + p] = 1.0;
-		else if (c == last_move3(b).coord)
-			data[11*size*size + p] = 1.0;
-		else if (c == last_move4(b).coord)
-			data[12*size*size + p] = 1.0;
+		if (bc == S_NONE)                    data[8][y][x] = 1.0;
+		else if (bc == color)                data[0+libs][y][x] = 1.0;
+		else if (bc == stone_other(color))   data[4+libs][y][x] = 1.0;
+		
+		if (c == last_move(b).coord)	     data[9][y][x] = 1.0;
+		else if (c == last_move2(b).coord)   data[10][y][x] = 1.0;
+		else if (c == last_move3(b).coord)   data[11][y][x] = 1.0;
+		else if (c == last_move4(b).coord)   data[12][y][x] = 1.0;
 	}
 
-	caffe_get_data(data, result, 13, size);
-	free(data);
+	caffe_get_data((float*)data, result, 13, size);
 }
-
 
 void
 get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest)
