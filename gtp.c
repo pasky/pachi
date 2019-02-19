@@ -146,7 +146,6 @@ known_commands(engine_t *engine)
 	}
 	
 	str += sprintf(str, "gogui-analyze_commands\n");
-	str[-1] = 0;  /* remove last \n */
 	return buf;
 }
 
@@ -204,7 +203,7 @@ cmd_name(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_echo(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_reply(gtp, gtp->next);
+	gtp_printf(gtp, "%s", gtp->next);
 	return P_OK;
 }
 
@@ -228,7 +227,7 @@ cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_list_commands(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_reply(gtp, known_commands(engine));
+	gtp_printf(gtp, "%s", known_commands(engine));
 	return P_OK;
 }
 
@@ -543,7 +542,6 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	gtp_arg(arg);
 	int stones = atoi(arg);
 	
-	strbuf(buf, 1024);	
 	move_queue_t q;  mq_init(&q);
 	board_handicap(b, stones, &q);
 	
@@ -552,13 +550,12 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 
 	for (unsigned int i = 0; i < q.moves; i++) {
 		move_t m = move(q.move[i], S_BLACK);
-		sbprintf(buf, "%s ", coord2sstr(m.coord));
+		gtp_printf(gtp, "%s ", coord2sstr(m.coord));
 
 		/* Add to gtp move history. */
 		gtp_add_move(gtp, &m);
 	}
-	
-	gtp_reply(gtp, buf->str);
+	gtp_printf(gtp, "\n");
 	return P_OK;
 }
 
@@ -754,7 +751,9 @@ undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg)
 static enum parse_code
 cmd_showboard(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
-	board_print(board, stderr);
+	gtp_printf(gtp, "");
+	board_print(board, stdout);
+	gtp->flushed = 1;  // already ends with \n\n
 	return P_OK;
 }
 

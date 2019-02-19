@@ -121,7 +121,7 @@ uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 
 /* GoGui live gfx: show best sequence */
 static void
-uct_progress_gogui_sequence(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_sequence(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
 	coord_t seq[4] = { pass, pass, pass, pass };
 
@@ -134,27 +134,27 @@ uct_progress_gogui_sequence(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color
 		best = u->policy->choose(u->policy, best, t->board, color, resign);
 	}
 	
-	gogui_show_best_seq(buf, t->board, color, seq, 4);
+	gogui_show_best_seq(stderr, t->board, color, seq, 4);
 }
 
 /* GoGui live gfx: show best moves */
 static void
-uct_progress_gogui_best(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_best_moves(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
 	coord_t best_c[GOGUI_CANDIDATES];
 	float   best_r[GOGUI_CANDIDATES];
 	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, false);
-	gogui_show_best_moves(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
+	gogui_show_best_moves(stderr, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 
 /* GoGui live gfx: show winrates */
 static void
-uct_progress_gogui_winrates(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_winrates(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
 	coord_t best_c[GOGUI_CANDIDATES];
 	float   best_r[GOGUI_CANDIDATES];
 	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, true);
-	gogui_show_winrates(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
+	gogui_show_winrates(stderr, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
 }
 
 void
@@ -247,38 +247,31 @@ uct_progress_json(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *
 }
 
 void
-uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
+uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
 {
-	switch (u->reporting) {
-		case UR_TEXT:
-			uct_progress_text(u, t, color, playouts);
-			break;
-		case UR_JSON:
-		case UR_JSON_BIG:
-			uct_progress_json(u, t, color, playouts, final,
-			                  u->reporting == UR_JSON_BIG);
-		case UR_LEELAZ:
-			uct_progress_leelaz(u, t, color);
-			break;
-		default: assert(0);
-	}
 	if (!gogui_livegfx)  return;
 
-	strbuf(buf, 10000);
-	switch(gogui_livegfx) {
-		case UR_GOGUI_BEST:
-			uct_progress_gogui_best(buf, u, t, color, playouts);
-			break;
-		case UR_GOGUI_SEQ:
-			uct_progress_gogui_sequence(buf, u, t, color, playouts);
-			break;
-		case UR_GOGUI_WR:
-			uct_progress_gogui_winrates(buf, u, t, color, playouts);
-			break;
-		default: assert(0);
-	}
+	/* GoGui reads live gfx commands on stderr. */
+	fprintf(stderr, "gogui-gfx:\n");
 
-	gogui_show_livegfx(buf->str);
+	if      (gogui_livegfx == UR_GOGUI_BEST)  uct_progress_gogui_best_moves(u, t, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_SEQ)   uct_progress_gogui_sequence(u, t, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_WR)    uct_progress_gogui_winrates(u, t, color, playouts);
+	else    assert(0);
+
+	fprintf(stderr, "\n");
+}
+
+void
+uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
+{
+	if      (u->reporting == UR_TEXT)      uct_progress_text(u, t, color, playouts);
+	else if (u->reporting == UR_JSON)      uct_progress_json(u, t, color, playouts, final, false);
+	else if (u->reporting == UR_JSON_BIG)  uct_progress_json(u, t, color, playouts, final, true);
+	else if (u->reporting == UR_LEELAZ)    uct_progress_leelaz(u, t, color);
+	else    assert(0);
+	
+	uct_progress_gogui_livegfx(u, t, color, playouts, final);
 }
 
 static inline void
