@@ -83,7 +83,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	/* Debugging */
 	//sbprintf(buf, "gfx/Color Palette/gogui-color_palette\n");
 	
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -355,7 +355,7 @@ cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	rescale_best_moves(best_c, best_r, GOGUI_CANDIDATES, GOGUI_RESCALE_LINEAR);	
 	gogui_show_best_moves_colors(buf, b, color, best_c, best_r, GOGUI_CANDIDATES);
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -373,7 +373,7 @@ enum parse_code
 cmd_gogui_influence(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	ownermap_t *ownermap = engine_ownermap(e, b);
-	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
+	if (!ownermap)  {  gtp_error(gtp, "no ownermap");  return P_OK;  }
 	
 	strbuf(buf, 5000);	
 	sbprintf(buf, "INFLUENCE");	
@@ -394,7 +394,7 @@ cmd_gogui_influence(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	} foreach_point_end;
 
 	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -402,7 +402,7 @@ enum parse_code
 cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	ownermap_t *ownermap = engine_ownermap(e, b);
-	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
+	if (!ownermap)  {  gtp_error(gtp, "no ownermap");  return P_OK;  }
 	
 	strbuf(buf, 5000);	
 	sbprintf(buf, "INFLUENCE");
@@ -416,7 +416,7 @@ cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	} foreach_point_end;
 
 	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -426,7 +426,7 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char *msg = NULL;
 	ownermap_t *o = engine_ownermap(e, b);
 	if (o && !board_position_final(b, o, &msg)) {
-		gtp_error(gtp, msg, NULL);
+		gtp_error(gtp, msg);
 		return P_OK;
 	}
 
@@ -452,7 +452,7 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	else if (score > 0)  sbprintf(buf, "TEXT W+%.1f\n", score);
 	else                 sbprintf(buf, "TEXT B+%.1f\n", -score);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -468,7 +468,7 @@ cmd_gogui_winrates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gogui_best_moves(buf, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -484,7 +484,7 @@ cmd_gogui_best_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gogui_best_moves(buf, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 	
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -498,7 +498,7 @@ static engine_t *dcnn_engine = NULL;
 enum parse_code
 cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
@@ -507,14 +507,14 @@ cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	strbuf(buf, 10000);
 	gogui_best_moves(buf, dcnn_engine, b, ti, color, 10, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
@@ -523,14 +523,14 @@ cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	strbuf(buf, 10000);
 	gogui_best_moves(buf, dcnn_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_dcnn_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
@@ -539,7 +539,7 @@ cmd_gogui_dcnn_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	strbuf(buf, 5000);
 	gogui_best_moves(buf, dcnn_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -554,7 +554,7 @@ static engine_t *joseki_engine = NULL;
 enum parse_code
 cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki", NULL);  return P_OK;  }
+	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki");  return P_OK;  }
 	if (!joseki_engine)   joseki_engine = new_engine(E_JOSEKIPLAY, NULL, b);
 	
 	enum stone color = S_BLACK;
@@ -586,7 +586,7 @@ cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		sbprintf(buf, "COLOR #0000a0 %s\n", coord2sstr(c));
 	} foreach_free_point_end;
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -594,12 +594,12 @@ enum parse_code
 cmd_gogui_joseki_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	if (!arg)                          {  gtp_error(gtp, "arg missing");  return P_OK;  }
 	coord_t coord = str2coord(arg);
 
 	strbuf(buf, 10000);
 	gogui_show_pattern(b, buf, coord, JOSEKI_PATTERN_DIST);
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -629,7 +629,7 @@ cmd_gogui_pattern_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	bool locally = patternplay_matched_locally(pattern_engine);
 	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -646,7 +646,7 @@ cmd_gogui_pattern_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	bool locally = patternplay_matched_locally(pattern_engine);
 	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -663,7 +663,7 @@ cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	bool locally = patternplay_matched_locally(pattern_engine);
 	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -677,9 +677,9 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 	
 	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	if (!arg)                          {  gtp_error(gtp, "arg missing");  return P_OK;  }
 	coord_t coord = str2coord(arg);
-	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
+	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 	
 	ownermap_t ownermap;
 	pattern_t p;
@@ -698,7 +698,7 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 			dist = MAX(dist, p.f[i].id - FEAT_SPATIAL3 + 3);
 	if (dist)  gogui_show_pattern(b, buf, coord, dist);
 
-	gtp_reply(gtp, buf->str, "TEXT ", pattern2sstr(&p), NULL);
+	gtp_printf(gtp, "%sTEXT %s\n", buf->str, pattern2sstr(&p));
 	return P_OK;
 }
 
@@ -712,9 +712,9 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 	
 	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	if (!arg)                          {  gtp_error(gtp, "arg missing");  return P_OK;  }
 	coord_t coord = str2coord(arg);
-	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
+	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 	
 	ownermap_t ownermap;
 	pattern_t p;
@@ -728,7 +728,7 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	sbprintf(buf, "TEXT ");
 	dump_gammas(buf, pc, &p);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -741,7 +741,7 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
 
 	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	if (!arg)                          {  gtp_error(gtp, "arg missing");  return P_OK;  }
 	coord_t coord = str2coord(arg);
 
 	strbuf(buf, 10000);
@@ -757,7 +757,7 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	spatial_write(spat_dict, &s, 0, stderr);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -766,10 +766,10 @@ cmd_gogui_spatial_size(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;  next_tok(arg);
 	/* Return current value */
-	if (!*arg) {  gtp_reply_printf(gtp, "%i", spatial_dist);  return P_OK;  }
+	if (!*arg) {  gtp_printf(gtp, "%i\n", spatial_dist);  return P_OK;  }
 
 	int d = atoi(arg);
-	if (d < 3 || d > 10) {  gtp_error(gtp, "Between 3 and 10 please", NULL);  return P_OK;  }
+	if (d < 3 || d > 10) {  gtp_error(gtp, "Between 3 and 10 please");  return P_OK;  }
 	spatial_dist = d;
 	return P_OK;
 }
