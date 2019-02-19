@@ -15,6 +15,7 @@ test: FORCE
 		make test_board test_moggy test_spatial; \
 	fi
 
+	@make test_gtp
 	./run_tests
 
 	@echo -n "Testing uct genmove...   "
@@ -50,6 +51,19 @@ test_spatial: FORCE
 	@if bzcmp spatial.out spatial.ref.bz2  >/dev/null; then \
 	   echo "OK"; else  echo "FAILED"; exit 1;  fi
 
+test_gtp: FORCE
+	@echo "Testing gtp is sane...   "
+	@if ../pachi --compile-flags | grep -q "DCNN"; then  \
+		cp gtp_test.gtp tmp.gtp;  \
+	 else \
+		cat gtp_test.gtp | grep -v dcnn >tmp.gtp; \
+	 fi
+        # Check test suite is not missing some commands...
+	@echo list_commands | ../pachi -d0 --nodcnn --nopatterns --nojoseki | sed -e 's/^= //' | \
+           while read f; do  if ! grep -q "^\(# *\|\)$$f" tmp.gtp  ; then \
+               echo "t-unit/tmp.gtp: command $$f not tested, fixme !"; exit 1 ; fi; done
+	@if ./gtp_check ../pachi --nodcnn -t =1000 -o /dev/null < tmp.gtp;  then \
+	   echo "OK"; else  echo "FAILED"; exit 1;  fi
 
 FORCE:
 

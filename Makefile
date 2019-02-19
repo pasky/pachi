@@ -273,6 +273,9 @@ build.h: .git/HEAD .git/index Makefile
 test: FORCE
 	+@make -C t-unit test
 
+test_gtp: FORCE
+	+@make -C t-unit test_gtp
+
 test_board: FORCE
 	+@make -C t-unit test_board
 
