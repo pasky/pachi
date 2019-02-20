@@ -39,7 +39,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	if (e->best_moves) {
 		printf("gfx/Best Moves/gogui-best_moves\n");
-		printf("gfx/Winrates/gogui-winrates\n");
+		printf("gfx/Best Winrates/gogui-winrates\n");
 	}
 	if (e->ownermap) {
 		printf("gfx/Influence/gogui-influence\n");
@@ -321,14 +321,14 @@ cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 
-	float   best_r[GOGUI_CANDIDATES] = { 0.0, };
-	coord_t best_c[GOGUI_CANDIDATES];
-	for (int i = 0; i < GOGUI_CANDIDATES; i++)
+	float   best_r[GOGUI_MANY] = { 0.0, };
+	coord_t best_c[GOGUI_MANY];
+	for (int i = 0; i < GOGUI_MANY; i++)
 		best_c[i] = coord_xy(i%19 +1, 18 - i/19 + 1);
 
 	gtp_printf(gtp, "");  /* gtp prefix */
-	rescale_best_moves(best_c, best_r, GOGUI_CANDIDATES, GOGUI_RESCALE_LINEAR);
-	gogui_show_best_moves_colors(stdout, b, color, best_c, best_r, GOGUI_CANDIDATES);
+	rescale_best_moves(best_c, best_r, GOGUI_MANY, GOGUI_RESCALE_LINEAR);
+	gogui_show_best_moves_colors(stdout, b, color, best_c, best_r, GOGUI_MANY);
 	return P_OK;
 }
 
@@ -432,7 +432,7 @@ cmd_gogui_winrates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	gogui_reporting_t prev = gogui_livegfx;
 	gogui_set_livegfx(e, "winrates");
-	gogui_best_moves(stdout, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
+	gogui_best_moves(stdout, e, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 	
 	return P_OK;
@@ -448,7 +448,7 @@ cmd_gogui_best_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	gogui_reporting_t prev = gogui_livegfx;
 	gogui_set_livegfx(e, "best_moves");
-	gogui_best_moves(stdout, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
+	gogui_best_moves(stdout, e, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 	
 	return P_OK;
@@ -471,7 +471,7 @@ cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 
 	gtp_printf(gtp, "");   /* gtp prefix */	
-	gogui_best_moves(stdout, dcnn_engine, b, ti, color, 10, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
+	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 	return P_OK;
 }
 
@@ -485,7 +485,7 @@ cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 
 	gtp_printf(gtp, "");  /* gtp prefix */
-	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
+	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 	return P_OK;
 }
 
@@ -499,7 +499,7 @@ cmd_gogui_dcnn_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
-	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
+	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 	return P_OK;
 }
 
@@ -536,7 +536,7 @@ cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		if (p)  printf("CIRCLE %s\n", coord2sstr(c));
 	} foreach_free_point_end;
 
-	gogui_best_moves(stdout, joseki_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
+	gogui_best_moves(stdout, joseki_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 
 	/* Show ignored moves, background color */
 	foreach_free_point(b) {
@@ -582,7 +582,7 @@ cmd_gogui_pattern_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
-	gogui_best_moves(stdout, pattern_engine, b, ti, color, 10, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
+	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 
 	bool locally = patternplay_matched_locally(pattern_engine);
 	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
@@ -598,7 +598,7 @@ cmd_gogui_pattern_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 
 	gtp_printf(gtp, "");  /* gtp prefix */	
-	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
+	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 
 	bool locally = patternplay_matched_locally(pattern_engine);
 	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
@@ -614,7 +614,7 @@ cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
-	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
+	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 
 	bool locally = patternplay_matched_locally(pattern_engine);
 	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));

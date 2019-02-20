@@ -572,9 +572,7 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		int      nbest =  u->dcnn_pondering_mcts;
 		coord_t *best_c = u->dcnn_pondering_mcts_c;
 		float    best_r[nbest];
-		uct_get_best_moves(u, best_c, best_r, nbest, false);
-		for (int i = 0; i < nbest; i++)
-			if (best_r[i] < 100)  best_c[i] = pass;  /* Too few playouts. */
+		uct_get_best_moves(u, best_c, best_r, nbest, false, 100);
 
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
@@ -607,27 +605,35 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	uct_pondering_start(u, b, u->t, color, 0, false);
 }
 
+/* Same as uct_get_best_moves() for node @parent.
+ * XXX pass can be a valid move in which case you need best_n to check. 
+ *     have another function which exposes best_n ? */
 void
-uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest, bool winrates)
+uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,
+		      bool winrates, int min_playouts)
 {
-	tree_node_t* best_d[nbest];
+	tree_node_t* best_n[nbest];
 	for (int i = 0; i < nbest; i++)  {
-		best_c[i] = pass;  best_r[i] = 0;  best_d[i] = NULL;
+		best_c[i] = pass;  best_r[i] = 0;  best_n[i] = NULL;
 	}
 	
 	/* Find best moves */
 	for (tree_node_t *n = parent->children; n; n = n->sibling)
-		best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_d, nbest);
+		if (n->u.playouts >= min_playouts)
+			best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_n, nbest);
 
 	if (winrates)  /* Get winrates */
-		for (int i = 0; i < nbest && best_d[i]; i++)
-			best_r[i] = tree_node_get_value(u->t, 1, best_d[i]->u.value);
+		for (int i = 0; i < nbest && best_n[i]; i++)
+			best_r[i] = tree_node_get_value(u->t, 1, best_n[i]->u.value);
 }
 
+/* Get best moves with at least @min_playouts.
+ * If @winrates is true @best_r returns winrates instead of visits.
+ * (moves remain in best-visited order) */
 void
-uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates)
+uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts)
 {
-	uct_get_best_moves_at(u, u->t->root, best_c, best_r, nbest, winrates);
+	uct_get_best_moves_at(u, u->t->root, best_c, best_r, nbest, winrates, min_playouts);
 }
 
 /* Kindof like uct_genmove() but find the best candidates */
@@ -642,7 +648,7 @@ uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	
 	coord_t best_coord;
 	genmove(e, b, ti, color, 0, &best_coord);
-	uct_get_best_moves(u, best_c, best_r, nbest, true);
+	uct_get_best_moves(u, best_c, best_r, nbest, true, 100);
 
 	if (u->t)	
 		reset_state(u);

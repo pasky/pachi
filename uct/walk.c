@@ -61,7 +61,7 @@ uct_progress_text(uct_t *u, tree_t *t, enum stone color, int playouts)
 	int nbest = 4;
 	float   best_r[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves(u, best_c, best_r, nbest, true);
+	uct_get_best_moves(u, best_c, best_r, nbest, true, 100);
 
 	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
 	for (int i = 0; i < nbest; i++)
@@ -88,8 +88,8 @@ uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 	float   best_pl[nbest];	
 	float   best_wr[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves_at(u, node, best_c, best_pl, nbest, false);
-	uct_get_best_moves_at(u, node, best_c, best_wr, nbest, true);
+	uct_get_best_moves_at(u, node, best_c, best_pl, nbest, false, 500);
+	uct_get_best_moves_at(u, node, best_c, best_wr, nbest, true,  500);
 
 	/* Priors */
 	float   best_pr[19 * 19];
@@ -102,7 +102,6 @@ uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 	// Leela-Zero format:
 	// info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...]
 	for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
-		if (best_pl[i] < 500)  break;  // too few playouts
 		fprintf(stderr, "info move %s visits %i winrate %i prior %i order %i ",
 			coord2sstr(best_c[i]), (int)best_pl[i], (int)(best_wr[i] * 10000),
 			(int)(priors[best_c[i]] * 10000), i);
@@ -123,38 +122,39 @@ uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 static void
 uct_progress_gogui_sequence(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
-	coord_t seq[4] = { pass, pass, pass, pass };
+	int n = 20;
+	coord_t seq[n];   for (int i = 0; i < n; i++)  seq[i] = pass;
 
 	/* Best move */
 	tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
 	if (!best) {  fprintf(stderr, "... No moves left\n"); return;  }
 	
-	for (int i = 0; i < 4 && best && best->u.playouts >= 25; i++) {
+	for (int i = 0; i < n && best && best->u.playouts >= 50; i++) {
 		seq[i] = node_coord(best);
 		best = u->policy->choose(u->policy, best, t->board, color, resign);
 	}
 	
-	gogui_show_best_seq(stderr, t->board, color, seq, 4);
+	gogui_show_best_seq(stderr, t->board, color, seq, n);
 }
 
 /* GoGui live gfx: show best moves */
 static void
 uct_progress_gogui_best_moves(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
-	coord_t best_c[GOGUI_CANDIDATES];
-	float   best_r[GOGUI_CANDIDATES];
-	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, false);
-	gogui_show_best_moves(stderr, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
+	coord_t best_c[GOGUI_NBEST];
+	float   best_r[GOGUI_NBEST];
+	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, false, 200);
+	gogui_show_best_moves(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
 }
 
 /* GoGui live gfx: show winrates */
 static void
 uct_progress_gogui_winrates(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
-	coord_t best_c[GOGUI_CANDIDATES];
-	float   best_r[GOGUI_CANDIDATES];
-	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, true);
-	gogui_show_winrates(stderr, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
+	coord_t best_c[GOGUI_NBEST];
+	float   best_r[GOGUI_NBEST];
+	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, true, 200);
+	gogui_show_winrates(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
 }
 
 void

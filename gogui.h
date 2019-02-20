@@ -3,8 +3,9 @@
 
 #include "gtp.h"
 
-/* How many candidates to display */
-#define GOGUI_CANDIDATES 30
+/* How many moves to display ? */
+#define GOGUI_NBEST 9
+#define GOGUI_MANY 30
 
 typedef enum gogui_reporting {
 	UR_GOGUI_NONE,
