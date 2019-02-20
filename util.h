@@ -21,13 +21,17 @@
 int str_prefix(char *prefix, char *str);
 
 /* Warn user (popup on windows) */
-void warning(const char *format, ...);
+void warning(const char *format, ...)
+	__attribute__ ((format (printf, 1, 2)));
 
 /* Warning + terminate process */
-void die(const char *format, ...)  __attribute__ ((noreturn));
+void die(const char *format, ...)
+	__attribute__ ((noreturn))
+	__attribute__ ((format (printf, 1, 2)));
 
 /* Terminate after system call failure (similar to perror()) */
-void fail(char *msg) __attribute__ ((noreturn));
+void fail(char *msg)
+	__attribute__ ((noreturn));
 
 int file_exists(const char *name);
 
@@ -163,7 +167,9 @@ strbuf_t *new_strbuf(int size);
 
 /* String buffer version of printf():
  * Use sbprintf(buf, format, ...) to accumulate output. */
-int strbuf_printf(strbuf_t *buf, const char *format, ...);
+int strbuf_printf(strbuf_t *buf, const char *format, ...)
+	__attribute__ ((format (printf, 2, 3)));
+
 #define sbprintf strbuf_printf
 
 
