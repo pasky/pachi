@@ -364,7 +364,7 @@ enum parse_code
 cmd_gogui_livegfx(board_t *board, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg_optional(arg);
 	gogui_set_livegfx(e, arg);
 	return P_OK;
 }
@@ -593,8 +593,7 @@ cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_joseki_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing");  return P_OK;  }
+	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 
 	strbuf(buf, 10000);
@@ -676,8 +675,7 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 	
-	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing");  return P_OK;  }
+	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 	
@@ -711,8 +709,7 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 	
-	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing");  return P_OK;  }
+	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 	
@@ -740,8 +737,7 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (!pattern_engine)   init_patternplay_engine(b);
 	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
 
-	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing");  return P_OK;  }
+	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 
 	strbuf(buf, 10000);
@@ -764,7 +760,7 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_spatial_size(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;  next_tok(arg);
+	char *arg;  gtp_arg_optional(arg);
 	/* Return current value */
 	if (!*arg) {  gtp_printf(gtp, "%i\n", spatial_dist);  return P_OK;  }
 

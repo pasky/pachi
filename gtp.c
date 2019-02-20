@@ -236,7 +236,7 @@ static enum parse_code
 cmd_known_command(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	if (gtp_is_valid(engine, arg))  gtp_reply(gtp, "true");
 	else                            gtp_reply(gtp, "false");
 	return P_OK;
@@ -254,7 +254,7 @@ static enum parse_code
 cmd_boardsize(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	int size = atoi(arg);
 
 	/* Give sane error msg if pachi was compiled for a specific board size. */
@@ -311,7 +311,7 @@ static enum parse_code
 cmd_komi(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	sscanf(arg, PRIfloating, &board->komi);
 
 	if (DEBUGL(3) && debug_boardprint)
@@ -323,7 +323,7 @@ static enum parse_code
 cmd_kgs_rules(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 
 	if (DEBUGL(2))  fprintf(stderr, "%s\n", time_str());
 	
@@ -343,9 +343,9 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	move_t m;
 
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	m.color = str2stone(arg);
-	next_tok(arg);
+	gtp_arg(arg);
 	m.coord = str2coord(arg);
 	arg = gtp->next;
 	char *enginearg = arg;
@@ -379,11 +379,10 @@ cmd_pachi_predict(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	move_t m;
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	m.color = str2stone(arg);
-	next_tok(arg);
+	gtp_arg(arg);
 	m.coord = str2coord(arg);
-	next_tok(arg);
 
 	char *str = predict_move(board, engine, ti, &m, gtp->played_games);
 
@@ -399,7 +398,7 @@ static enum parse_code
 cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	enum stone color = str2stone(arg);
 
 	if (DEBUGL(2) && debug_boardprint)
@@ -451,7 +450,7 @@ static enum parse_code
 cmd_pachi_genmoves(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	enum stone color = str2stone(arg);
 	void *stats;
 	int stats_size;
@@ -488,7 +487,7 @@ static enum parse_code
 cmd_pachi_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg_optional(arg);
 
 	int start = 1;
 	if (isdigit(*arg))  start = atoi(arg);
@@ -514,7 +513,7 @@ static enum parse_code
 cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	do {
 		move_t m = move(str2coord(arg), S_BLACK);
 		if (DEBUGL(4))  fprintf(stderr, "setting handicap %s\n", arg);
@@ -526,7 +525,7 @@ cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		}
 		
 		b->handicap++;
-		next_tok(arg);
+		gtp_arg_optional(arg);
 	} while (*arg);
 	
 	if (DEBUGL(1) && debug_boardprint)
@@ -541,7 +540,7 @@ static enum parse_code
 cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	int stones = atoi(arg);
 	
 	strbuf(buf, 1024);	
@@ -688,7 +687,7 @@ cmd_final_status_list(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (gtp->quiet)  return P_OK;
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	int r = -1;
 	
 	if      (!strcasecmp(arg, "dead"))            r = cmd_final_status_list_dead(arg, b, e, gtp);
@@ -766,7 +765,7 @@ cmd_pachi_gentbook(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp
 	/* Board must be initialized properly, as if for genmove;
 	 * makes sense only as 'uct_gentbook b'. */
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	enum stone color = str2stone(arg);
 	if (!uct_gentbook(engine, board, &ti[color], color))
 		gtp_error(gtp, "error generating tbook");
@@ -777,7 +776,7 @@ static enum parse_code
 cmd_pachi_dumptbook(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	enum stone color = str2stone(arg);
 	uct_dumptbook(engine, board, color);
 	return P_OK;
@@ -787,7 +786,7 @@ static enum parse_code
 cmd_pachi_evaluate(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	enum stone color = str2stone(arg);
 
 	if (!engine->evaluate) {
@@ -833,10 +832,10 @@ static enum parse_code
 cmd_kgs_chat(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *loc;
-	next_tok(loc);
+	gtp_arg(loc);
 	bool opponent = !strcasecmp(loc, "game");
 	char *from;
-	next_tok(from);
+	gtp_arg(from);
 	char *msg = gtp->next;
 	msg += strspn(msg, " \n\t");
 	char *end = strchr(msg, '\n');
@@ -856,11 +855,11 @@ static enum parse_code
 cmd_time_left(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg(arg);
 	enum stone color = str2stone(arg);
-	next_tok(arg);
+	gtp_arg(arg);
 	int time = atoi(arg);
-	next_tok(arg);
+	gtp_arg(arg);
 	int stones = atoi(arg);
 	if (!ti[color].ignore_gtp)
 		time_left(&ti[color], time, stones);
@@ -875,7 +874,7 @@ cmd_kgs_time_settings(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *
 	char *time_system;
 	char *arg;
 	if (!strcasecmp(gtp->cmd, "kgs-time_settings")) {
-		next_tok(time_system);
+		gtp_arg(time_system);
 	} else {
 		time_system = "canadian";
 	}
@@ -884,21 +883,21 @@ cmd_kgs_time_settings(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *
 	if (!strcasecmp(time_system, "none")) {
 		main_time = -1;
 	} else if (!strcasecmp(time_system, "absolute")) {
-		next_tok(arg);
+		gtp_arg(arg);
 		main_time = atoi(arg);
 	} else if (!strcasecmp(time_system, "byoyomi")) {
-		next_tok(arg);
+		gtp_arg(arg);
 		main_time = atoi(arg);
-		next_tok(arg);
+		gtp_arg(arg);
 		byoyomi_time = atoi(arg);
-		next_tok(arg);
+		gtp_arg(arg);
 		byoyomi_periods = atoi(arg);
 	} else if (!strcasecmp(time_system, "canadian")) {
-		next_tok(arg);
+		gtp_arg(arg);
 		main_time = atoi(arg);
-		next_tok(arg);
+		gtp_arg(arg);
 		byoyomi_time = atoi(arg);
-		next_tok(arg);
+		gtp_arg(arg);
 		byoyomi_stones = atoi(arg);
 	}
 
@@ -1010,11 +1009,11 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, cha
 	gtp->next = buf;
 	gtp->replied = false;
 	gtp->flushed = false;
-	next_tok(gtp->cmd);
+	gtp_arg_optional(gtp->cmd);
 	
 	if (isdigit(*gtp->cmd)) {
 		gtp->id = atoi(gtp->cmd);
-		next_tok(gtp->cmd);
+		gtp_arg(gtp->cmd);
 	}
 
 	if (!*gtp->cmd)

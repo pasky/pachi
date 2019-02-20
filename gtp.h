@@ -36,13 +36,27 @@ typedef struct
 	char*   custom_version;
 } gtp_t;
 
-#define next_tok(to_) \
-	to_ = gtp->next; \
+#define gtp_arg_next(gtp) \
 	gtp->next = gtp->next + strcspn(gtp->next, " \t\r\n"); \
 	if (*gtp->next) { \
 		*gtp->next = 0; gtp->next++; \
 		gtp->next += strspn(gtp->next, " \t\r\n"); \
 	}
+
+#define gtp_arg_optional(arg)  do {  \
+	(arg) = gtp->next;  \
+	gtp_arg_next(gtp);  \
+} while(0)
+
+#define gtp_arg(arg)  do { \
+	(arg) = gtp->next; \
+	if (!*(arg)) {	\
+		gtp_error(gtp, "argument missing"); \
+		return P_OK; \
+	} \
+	gtp_arg_next(gtp); \
+} while(0)
+
 
 void   gtp_init(gtp_t *gtp);
 
