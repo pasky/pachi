@@ -82,10 +82,10 @@ void chat_done(void) {
  * we pick randomly among all matching entries. */
 char *
 generic_chat(board_t *b, bool opponent, char *from, char *cmd, enum stone color, coord_t move,
-	      int playouts, int machines, int threads, double winrate, double extra_komi, char *score_est) {
-
-	static char buffer[1024];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	      int playouts, int machines, int threads, double winrate, double extra_komi, char *score_est)
+{
+	static_strbuf(buf, 1024);
+	
 	if (!chat_table) {
 		if (strncasecmp(cmd, "winrate", 7)) return NULL;
 		if (color == S_NONE) return not_playing;
@@ -98,6 +98,7 @@ generic_chat(board_t *b, bool opponent, char *from, char *cmd, enum stone color,
 		sbprintf(buf, ". Score Est: %s", score_est);
 		return buf->str;
 	}
+	
 	int matches = 0;
 	int undisplayed = 0;
 	for (chat_t *entry = chat_table; entry->regex[0]; entry++) {
@@ -113,6 +114,7 @@ generic_chat(board_t *b, bool opponent, char *from, char *cmd, enum stone color,
 		if (!entry->displayed) undisplayed++;
 	}
 	if (matches == 0) return default_reply;
+	
 	int choices = undisplayed > 0 ? undisplayed : matches;
 	int index = fast_random(choices);
 	for (chat_t *entry = chat_table; entry->regex[0]; entry++) {

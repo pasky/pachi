@@ -262,13 +262,9 @@ uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t
 			break;
 		default: assert(0);
 	}
+	if (!gogui_livegfx)  return;
 
-	if (!gogui_livegfx)
-		return;
-
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-
+	strbuf(buf, 10000);
 	switch(gogui_livegfx) {
 		case UR_GOGUI_BEST:
 			uct_progress_gogui_best(buf, u, t, color, playouts);

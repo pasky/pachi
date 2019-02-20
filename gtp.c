@@ -536,9 +536,7 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	next_tok(arg);
 	int stones = atoi(arg);
 	
-	char buffer[1024];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	
+	strbuf(buf, 1024);	
 	move_queue_t q;  mq_init(&q);
 	board_handicap(b, stones, &q);
 	
