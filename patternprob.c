@@ -175,6 +175,9 @@ pattern_rate_moves(pattern_config_t *pc,
 	if (max < LOW_PATTERN_RATING)
 		max = pattern_max_rating(pc, b, color, probs, ownermap, false);
 	
+	/* Normal thing to do here would be to normalize probabilities based on total sum.
+	 * But we use max instead in order to get values like pre-mm pattern code so things
+	 * remain the same from prior code point of view. */
 	return rescale_probs(b, probs, max);
 }
 

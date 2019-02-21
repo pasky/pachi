@@ -48,18 +48,35 @@
  */
 
 
-/* Spatial record - single stone configuration. */
-
-typedef struct {
-	/* Gridcular radius of matched pattern. */
-	unsigned char dist;
-	/* The points; each point is two bits, corresponding
-	 * to {enum stone}. Points are ordered in gridcular-defined
-	 * spiral from middle to the edge; the dictionary file has
-	 * a comment describing the ordering at the top. */
+/* Spatial record - single stone configuration.
+ * Each point is two bits, corresponding to enum stone.
+ * Points are ordered in gridcular-defined spiral from middle to the edge.
+ * The dictionary file has a comment describing the ordering at the top. 
+ *
+ *                                                        9
+ *   d=2      1           d=3   6  1  5         d=4    6  1  5
+ *         4  0  3              4  0  3	            12 4  0  3 11
+ *            2                 8  2  7	               8  2  7
+ *                                                        10
+ *
+ *   d=5                         d=10           61
+ *          14 9  13                      64 50 37 49 63
+ *       18 6  1  5  17                54 40 30 21 29 39 53
+ *       12 4  0  3  11             68 44 24 14 9  13 23 43 67
+ *       20 8  2  7  19             58 34 18 6  1  5  17 33 57
+ *          16 10 15             72 48 28 12 4  0  3  11 27 47 71
+ *                                  60 36 20 8  2  7  19 35 59
+ *                                  70 46 26 16 10 15 25 45 69
+ *                                     56 42 32 22 31 41 55
+ *                                        66 52 38 51 65
+ *                                              62
+ */
+typedef struct {	
+	unsigned char dist;		/* Gridcular radius of matched pattern. */
 	unsigned char points[MAX_PATTERN_AREA / 4];
-#define spatial_point_at(s, i) ((enum stone)(((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3))
 } spatial_t;
+
+#define spatial_point_at(s, i) ((enum stone)(((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3))
 
 
 /* Spatial dictionary - collection of stone configurations. */

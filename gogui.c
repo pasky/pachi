@@ -1,3 +1,4 @@
+#define DEBUG
 #include <assert.h>
 #include <math.h>
 #include "board.h"
@@ -82,7 +83,8 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	}
 
 	/* Debugging */
-	//printf("gfx/Color Palette/gogui-color_palette\n");
+	if (DEBUGL(3))
+		printf("gfx/Color Palette/gogui-color_palette\n");
 	
 	return P_OK;
 }
@@ -168,6 +170,9 @@ gogui_paint_pattern(board_t *b, int colors[BOARD_MAX_COORDS][4],
 			ptcoords_at(x, y, cx, cy, j);
 		        coord_t c  = coord_xy(x, y);
 			if (board_at(b, c) == S_OFFBOARD)  continue;
+			
+			/* Also show indices if debugging is on. */
+			if (DEBUGL(3))  printf("LABEL %s %i\n", coord2sstr(c), j);
 
 /* Just lighten if already something */
 #define add_primary_color(p, val)  colors[c][p] = (val) + (colors[c][p] ? 30 : 0);
