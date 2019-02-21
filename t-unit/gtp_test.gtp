@@ -103,8 +103,6 @@ tunit sar b J8 0
 pachi-tunit sar b J8 0
 
 lz-analyze 10
-lz-analyze 0
-pachi-analyze 0
 
 gogui-analyze_commands
 gogui-livegfx best_moves

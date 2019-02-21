@@ -478,27 +478,21 @@ cmd_pachi_genmoves(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp
 	return P_OK;
 }
 
-/* Start tree search in the background and output stats for the sake of frontend running Pachi.
- * Sortof like pondering without a genmove.
- * Stop processing when we receive some other command or "pachi-analyze 0".
- * Similar to Leela-Zero's lz-analyze so we can feed data to lizzie. */
+/* Start pondering and output stats for the sake of frontend running Pachi.
+ * Stop processing when we receive some other command.
+ * Similar to Leela-Zero's lz-analyze so we can feed data to lizzie. 
+ * XXX we don't honor lz-analyze frequency argument, set reportfreq for now. */
 static enum parse_code
-cmd_pachi_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg_optional(arg);
-
-	int start = 1;
-	if (isdigit(*arg))  start = atoi(arg);
-	
 	enum stone color = S_BLACK;
 	if (last_move(b).color != S_NONE)
 		color = stone_other(last_move(b).color);
 	
-	if (e->analyze) {  e->analyze(e, b, color, start);  gtp->analyze_running = true;  }
-	else               gtp_error(gtp, "pachi-analyze not supported for this engine");
+	if (e->analyze) {  e->analyze(e, b, color, 1);  gtp->analyze_running = true;  }
+	else               gtp_error(gtp, "lz-analyze not supported for this engine");
 	
-	return P_OK;	
+	return P_OK;
 }
 
 static void
@@ -953,9 +947,8 @@ static gtp_command_t gtp_commands[] =
 	{ "pachi-evaluate",         cmd_pachi_evaluate },
 	{ "pachi-result",           cmd_pachi_result },
 	{ "pachi-score_est",        cmd_pachi_score_est },
-	{ "pachi-analyze",          cmd_pachi_analyze },
 
-	{ "lz-analyze",             cmd_pachi_analyze },     /* For Lizzie */
+	{ "lz-analyze",             cmd_lz_analyze },     /* For Lizzie */
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },
@@ -1018,7 +1011,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, cha
 	if (!*gtp->cmd)
 		return P_OK;
 
-	if (gtp->analyze_running && strcasecmp(gtp->cmd, "pachi-analyze"))
+	if (gtp->analyze_running && strcasecmp(gtp->cmd, "lz-analyze"))
 		stop_analyzing(gtp, b, e);
 	
 	/* Undo: reload engine after first non-undo command. */

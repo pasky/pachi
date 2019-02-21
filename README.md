@@ -205,7 +205,7 @@ Or make your own:
 - Download [Pachi 12.30](https://github.com/pasky/pachi/releases/tag/pachi-12.30-jowa), extract in Lizzie folder
 - Edit Lizzie config.txt, make it use Pachi instead of Leela-Zero:
 
-        "engine-command": "pachi/pachi --version=0.16 reporting=leelaz,reportfreq=500",
+        "engine-command": "pachi/pachi --version=0.16 reporting=lz,reportfreq=500",
 
 Tweak reportfreq to change update speed.
 

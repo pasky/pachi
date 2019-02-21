@@ -25,7 +25,7 @@ typedef enum uct_reporting {
 	UR_TEXT,
 	UR_JSON,
 	UR_JSON_BIG,
-	UR_LEELAZ,
+	UR_LEELA_ZERO,
 } uct_reporting_t;
 
 typedef enum uct_thread_model {

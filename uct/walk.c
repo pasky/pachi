@@ -77,8 +77,10 @@ uct_progress_text(uct_t *u, tree_t *t, enum stone color, int playouts)
 	fprintf(stderr, "\n");
 }
 
+/* Leela-zero format:
+ * info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...] */
 static void
-uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
+uct_progress_lz(uct_t *u, tree_t *t, enum stone color)
 {
 	board_t *b = t->board;
 	tree_node_t *node = u->t->root;
@@ -88,8 +90,9 @@ uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 	float   best_pl[nbest];	
 	float   best_wr[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves_at(u, node, best_c, best_pl, nbest, false, 500);
-	uct_get_best_moves_at(u, node, best_c, best_wr, nbest, true,  500);
+	uct_get_best_moves(u, best_c, best_pl, nbest, false, 500);
+	uct_get_best_moves(u, best_c, best_wr, nbest, true,  500);
+	if (is_pass(best_c[0]))  return;
 
 	/* Priors */
 	float   best_pr[19 * 19];
@@ -99,8 +102,6 @@ uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 	for (int i = 0; i < 19 * 19; i++)
 		priors[best_cpr[i]] = best_pr[i];
 
-	// Leela-Zero format:
-	// info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...]
 	for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
 		fprintf(stderr, "info move %s visits %i winrate %i prior %i order %i ",
 			coord2sstr(best_c[i]), (int)best_pl[i], (int)(best_wr[i] * 10000),
@@ -265,10 +266,10 @@ uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, 
 void
 uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
 {
-	if      (u->reporting == UR_TEXT)      uct_progress_text(u, t, color, playouts);
-	else if (u->reporting == UR_JSON)      uct_progress_json(u, t, color, playouts, final, false);
-	else if (u->reporting == UR_JSON_BIG)  uct_progress_json(u, t, color, playouts, final, true);
-	else if (u->reporting == UR_LEELAZ)    uct_progress_leelaz(u, t, color);
+	if      (u->reporting == UR_TEXT)        uct_progress_text(u, t, color, playouts);
+	else if (u->reporting == UR_JSON)        uct_progress_json(u, t, color, playouts, final, false);
+	else if (u->reporting == UR_JSON_BIG)    uct_progress_json(u, t, color, playouts, final, true);
+	else if (u->reporting == UR_LEELA_ZERO)  uct_progress_lz(u, t, color);
 	else    assert(0);
 	
 	uct_progress_gogui_livegfx(u, t, color, playouts, final);

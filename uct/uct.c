@@ -585,7 +585,9 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 	return best_coord;
 }
 
-/* Wild pondering for the sake of frontend running Pachi. */
+/* Start tree search in the background and output stats for the sake of
+ * frontend running Pachi: sortof like pondering without a genmove.
+ * Stop processing if @start is 0. */
 static void
 uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 {
@@ -599,9 +601,8 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	/* Start pondering if not already. */
 	if (u->pondering)  return;
 
-	if (!u->t)
-		uct_prepare_move(u, b, color);
-
+	u->reporting = UR_LEELA_ZERO;
+	if (!u->t)  uct_prepare_move(u, b, color);
 	uct_pondering_start(u, b, u->t, color, 0, false);
 }
 
@@ -839,9 +840,11 @@ uct_state_init(char *arg, board_t *b)
 					 * Implies debug=0. */
 					u->reporting = UR_JSON_BIG;
 					u->debug_level = 0;
-				} else if (!strcasecmp(optval, "leelaz")) {
+				} else if (!strcasecmp(optval, "leela-zero") ||
+					   !strcasecmp(optval, "leelaz") ||
+					   !strcasecmp(optval, "lz")) {
 					/* Leela-Zero pondering format. */
-					u->reporting = UR_LEELAZ;
+					u->reporting = UR_LEELA_ZERO;
 				} else
 					die("UCT: Invalid reporting format %s\n", optval);
 			} else if (!strcasecmp(optname, "reportfreq") && optval) {
