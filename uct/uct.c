@@ -755,6 +755,7 @@ uct_state_init(char *arg, board_t *b)
 	
 	u->debug_level = debug_level;
 	u->reportfreq = 1000;
+	u->report_fh = stderr;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
 	u->sure_win_threshold = 0.95;

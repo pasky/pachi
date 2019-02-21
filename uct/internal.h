@@ -44,6 +44,7 @@ typedef struct uct {
 	int debug_level;
 	enum uct_reporting reporting;
 	int reportfreq;
+	FILE *report_fh;
 
 	int games, gamelen;
 	floating_t resign_threshold, sure_win_threshold;
