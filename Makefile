@@ -15,7 +15,7 @@
 # Do you compile on Windows instead of Linux ?
 # Please note that performance may not be optimal.
 # To compile in msys2 with mingw-w64, uncomment the following line.
-# See MSYS2 section for further configuration.
+# See Makefile.msys2 for further configuration.
 
 # MSYS2=1
 
@@ -96,6 +96,37 @@ CXXFLAGS     := -std=c++11
 ###################################################################################################################
 ### CONFIGURATION END
 
+# Main rule + aliases
+# Aliases are nice, but don't ask too much: 'make quick 19' won't do what
+# you expect for example (use 'make OPT=-O0 BOARD_SIZE=19' instead)
+
+all: build.h
+	+@make all-recursive pachi
+
+debug fast quick O0:
+	+@make OPT=-O0
+
+opt slow O3:
+	+@make OPT=-O3
+
+generic:
+	+@make GENERIC=1
+
+native:
+	+@make GENERIC=0
+
+nodcnn:
+	+@make DCNN=0
+
+19:
+	+@make BOARD_SIZE=19
+
+double:
+	+@make DOUBLE_FLOATING=1
+
+
+###############################################################################################################
+
 MAKEFLAGS += --no-print-directory
 ARCH = $(shell uname -m)
 TUNE := -march=native
@@ -124,102 +155,13 @@ endif
 EXTRA_OBJS :=
 EXTRA_SUBDIRS :=
 
-##############################################################################
 ifdef MSYS2
-        # Try static build ?
-        # MSYS2_STATIC=1
-
-        # For dcnn build, caffe msys2 package is probably in the repos now.
-        # Otherwise get one from https://github.com/lemonsqueeze/mingw-caffe
-        # ('mini' / 'nohdf5' releases allow for smaller static builds)
-
-	WIN_HAVE_NO_REGEX_SUPPORT=1
-
-	COMMON_FLAGS += $(TUNE)
-	LDFLAGS      := -pthread -L$(CAFFE_PREFIX)/bin -L$(MINGW_PREFIX)/bin
-	SYS_LIBS     := -lws2_32
-	CXXFLAGS     += -I$(MINGW_PREFIX)/include/OpenBLAS
-
-        # Enable mingw-w64 C99 printf() / scanf() layer ?
-        COMMON_FLAGS += -D__USE_MINGW_ANSI_STDIO
-
-	ifdef WIN_HAVE_NO_REGEX_SUPPORT
-		COMMON_FLAGS += -DHAVE_NO_REGEX_SUPPORT
-	else
-		SYS_LIBS += -lregex -ltre -lintl -liconv	# Oh, dear...
-	endif
-
-	DCNN_LIBS := -lcaffe -lboost_system-mt -lglog -lstdc++ $(SYS_LIBS)
-
-	ifdef MSYS2_STATIC		# Static build, good luck
-                # Which type of caffe package do you have ?
-                # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
-                # and requires --whole-archive for static linking. This makes binaries unnecessarily
-                # bloated. Choose normal, nohdf5, or mini (mini is best)
-		CAFFE=normal
-
-		ifeq ($(CAFFE), normal)
-			HDF5_LIBS = -lhdf5_hl -lhdf5 -lszip -lz
-		endif
-
-		ifeq ($(CAFFE), mini)
-                        # Force linking of caffe layer factory, will pull in layers we need.
-			EXTRA_DCNN_OBJS := layer_factory.o
-			CAFFE_STATIC_LIB = -lcaffe
-		else
-			CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
-		endif
-
-		DCNN_LIBS := -Wl,-Bstatic $(CAFFE_STATIC_LIB)  \
-			     -lboost_system-mt -lboost_thread-mt -lopenblas $(HDF5_LIBS) -lgflags_static \
-			     -lglog -lprotobuf -lstdc++ -lwinpthread $(SYS_LIBS)   -Wl,-Bdynamic -lshlwapi
-
-                # glog / gflags headers really shouldn't __declspec(dllexport) symbols for us,
-                # static linking will fail with undefined __imp__xxx symbols.
-                # Normally this works around it.
-		CXXFLAGS += -DGOOGLE_GLOG_DLL_DECL="" -DGFLAGS_DLL_DECL=""
-	endif
+	-include Makefile.msys2
 else
-##############################################################################
 ifdef MAC
-	COMMON_FLAGS += -DNO_THREAD_LOCAL
-	LDFLAGS      := -pthread -rdynamic
-	SYS_LIBS     := -lm -ldl
-	DCNN_LIBS    := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
+	-include Makefile.mac
 else
-##############################################################################
-# Linux
-        # Static build ?
-        # LINUX_STATIC=1
-
-	COMMON_FLAGS += $(TUNE)
-	LDFLAGS      := -pthread -rdynamic
-	SYS_LIBS     := -lm -lrt -ldl
-	DCNN_LIBS    := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
-
-	ifdef LINUX_STATIC
-                # Which type of caffe package do you have ?
-                # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
-                # and requires --whole-archive for static linking. This makes binaries unnecessarily
-                # bloated. Choose normal, nohdf5, or mini (mini is best)
-                # mini source: https://github.com/lemonsqueeze/caffe/tree/mini
-		CAFFE=normal
-
-		ifeq ($(CAFFE), normal)
-			HDF5_LIBS = -lhdf5_serial_hl -lhdf5_serial -lsz -laec -lz
-		endif
-
-		ifeq ($(CAFFE), mini)
-                        # Force linking of caffe layer factory, will pull in layers we need.
-			EXTRA_DCNN_OBJS := layer_factory.o
-			CAFFE_STATIC_LIB = -lcaffe
-		else
-			CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
-		endif
-
-		LDFLAGS   := -pthread -static
-		DCNN_LIBS := $(CAFFE_STATIC_LIB) -lglog -lgflags -lprotobuf -lboost_system -lboost_thread -lopenblas $(HDF5_LIBS) -lstdc++  $(SYS_LIBS)
-	endif
+	-include Makefile.linux
 endif
 endif
 
@@ -292,35 +234,6 @@ OBJS = $(EXTRA_OBJS) \
 SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics
 DATAFILES = patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.gtp
 
-###############################################################################################################
-# Main rule + aliases
-# Aliases are nice, but don't ask too much: 'make quick 19' won't do what
-# you expect for example (use 'make OPT=-O0 BOARD_SIZE=19' instead)
-
-all: build.h
-	+@make all-recursive pachi
-
-debug fast quick O0:
-	+@make OPT=-O0
-
-opt slow O3:
-	+@make OPT=-O3
-
-generic:
-	+@make GENERIC=1
-
-native:
-	+@make GENERIC=0
-
-nodcnn:
-	+@make DCNN=0
-
-19:
-	+@make BOARD_SIZE=19
-
-double:
-	+@make DOUBLE_FLOATING=1
-
 
 ###############################################################################################################
 
@@ -370,23 +283,9 @@ distribute: FORCE
 		@echo "WARNING: Don't distribute binaries built with -march=native !"
         endif
 
-	rm -rf distribute 2>/dev/null;  $(INSTALL) -d distribute
+	@rm -rf distribute 2>/dev/null;  $(INSTALL) -d distribute
 	cp pachi distribute/
-
-        ifndef MSYS2
-		cd distribute  &&  strip pachi
-        else
-		cd distribute  &&  strip pachi.exe
-		@echo "packing exe ..."
-		@cd distribute  &&  upx -o p.exe pachi.exe  &&  mv p.exe pachi.exe
-                ifndef MSYS2_STATIC
-			@echo "copying dlls ..."
-			@cd distribute; \
-			    mingw=`echo $$MINGW_PREFIX | tr '/' '.' `; \
-			    dlls_list="../$${mingw}_dlls"; \
-			    cp `cat $$dlls_list` .
-                endif
-        endif
+	+@make strip      # arch specific stuff
 
 # install-recursive?
 install: distribute
@@ -417,17 +316,5 @@ TAGS: FORCE
 
 FORCE:
 
-# 'mini' caffe static link hack.
-ifdef LINUX_STATIC
-layer_factory.o: $(CAFFE_PREFIX)/lib/libcaffe.a
-	@echo "[AR]   $@"
-	@ar x $< $@
-endif
-
-ifdef MSYS2_STATIC
-layer_factory.o: $(MINGW_PREFIX)/lib/libcaffe.a
-	@echo "[AR]   $@"
-	@ar x $< $@
-endif
 
 -include Makefile.lib
