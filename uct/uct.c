@@ -535,7 +535,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 
 static coord_t
 uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
-{	
+{
 	uct_t *u = (uct_t*)e->data;
 
 	coord_t best_coord;
@@ -583,6 +583,22 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		uct_pondering_start(u, b, u->t, stone_other(color), best_coord, true);
 
 	return best_coord;
+}
+
+/* lz-genmove_analyze */
+static coord_t
+uct_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
+{
+	uct_t *u = (uct_t*)e->data;
+	enum uct_reporting prev = u->reporting;
+	
+	u->reporting = UR_LEELA_ZERO;
+	u->report_fh = stdout;	
+	coord_t coord = uct_genmove(e, b, ti, color, pass_all_alive);
+	u->reporting = prev;
+	u->report_fh = stderr;
+	
+	return coord;
 }
 
 /* Start tree search in the background and output stats for the sake of
@@ -1414,6 +1430,7 @@ engine_uct_init(engine_t *e, char *arg, board_t *b)
 	e->chat = uct_chat;
 	e->result = uct_result;
 	e->genmove = uct_genmove;
+	e->genmove_analyze = uct_genmove_analyze;
 #ifdef DISTRIBUTED
 	e->genmoves = uct_genmoves;
 	if (u->slave)

@@ -393,13 +393,9 @@ cmd_pachi_predict(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
-static enum parse_code
-cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+static coord_t
+genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, engine_genmove_t genmove_func)
 {
-	char *arg;
-	gtp_arg(arg);
-	enum stone color = str2stone(arg);
-
 	if (DEBUGL(2) && debug_boardprint)
 		engine_board_print(e, b, stderr);
 		
@@ -414,8 +410,9 @@ cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	time_info_t *ti_genmove = time_info_genmove(b, ti, color);
 	coord_t c = (b->fbook ? fbook_check(b) : pass);
+	bool pass_all_alive = !strcasecmp(gtp->cmd, "kgs-genmove_cleanup");
 	if (is_pass(c))
-		c = e->genmove(e, b, ti_genmove, color, !strcasecmp(gtp->cmd, "kgs-genmove_cleanup"));
+		c = genmove_func(e, b, ti_genmove, color, pass_all_alive);
 
 #ifdef PACHI_FIFO	
 	if (DEBUGL(2)) fprintf(stderr, "fifo: genmove in %0.2fs  (waited %0.1fs)\n", time_now() - time_start, time_start - time_wait);
@@ -439,9 +436,41 @@ cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	 * less time than we could on next few moves.) */
 	if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
 		time_sub(&ti[color], time_now() - ti[color].len.t.timer_start, true);
+	
+	return c;
+}
 
+static enum parse_code
+cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *arg;
+	gtp_arg(arg);
+	enum stone color = str2stone(arg);
+
+	coord_t c = genmove(b, color, e, ti, gtp, e->genmove);
 	gtp_reply(gtp, coord2sstr(c));
+	return P_OK;
+}
 
+/* Sabaki etc: get winrates etc during genmove.
+ * Similar to Leela-zero lz-genmove_analyze 
+ * XXX we don't honor frequency argument, set reportfreq for now. */
+static enum parse_code
+cmd_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *arg;
+	gtp_arg(arg);
+	enum stone color = str2stone(arg);
+	gtp_arg(arg);  /* freq */
+
+	if (!e->genmove_analyze) {
+		gtp_error(gtp, "lz-genmove_analyze not supported for this engine");
+		return P_OK;
+	}
+
+	gtp_printf(gtp, "\n");
+	coord_t c = genmove(b, color, e, ti, gtp, e->genmove_analyze);
+	printf("play %s\n", coord2sstr(c));
 	return P_OK;
 }
 
@@ -948,7 +977,8 @@ static gtp_command_t gtp_commands[] =
 	{ "pachi-result",           cmd_pachi_result },
 	{ "pachi-score_est",        cmd_pachi_score_est },
 
-	{ "lz-analyze",             cmd_lz_analyze },     /* For Lizzie */
+	{ "lz-analyze",             cmd_lz_analyze },       /* For Lizzie */
+	{ "lz-genmove_analyze",     cmd_genmove_analyze },  /* Sabaki etc */
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },

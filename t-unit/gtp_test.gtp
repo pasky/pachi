@@ -17,7 +17,8 @@ showboard
 genmove w
 pachi-result
 undo
-kgs-genmove_cleanup w
+lz-genmove_analyze w 10
+kgs-genmove_cleanup b
 
 clear_board
 set_free_handicap d4 q16
