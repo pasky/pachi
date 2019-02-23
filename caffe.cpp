@@ -37,14 +37,14 @@ caffe_ready()
 static int
 caffe_load()
 {
-	char model_file[256];    get_data_file(model_file, "golast19.prototxt");
-	char trained_file[256];  get_data_file(trained_file, "golast.trained");
+	char model_file[256];    get_data_file(model_file, "detlef54.prototxt");
+	char trained_file[256];  get_data_file(trained_file, "detlef54.trained");
 	if (!file_exists(model_file) || !file_exists(trained_file)) {
-		if (DEBUGL(1))  fprintf(stderr, "No dcnn files found, will not use dcnn code.\n");
-#ifdef _WIN32
-		popup("WARNING: Couldn't find Pachi data files, running without dcnn support !\n");
-#endif
-		return 0;
+ 		if (DEBUGL(1))  fprintf(stderr, "Couldn't find dcnn files, aborting.\n");
+ #ifdef _WIN32
+		popup("ERROR: Couldn't find Pachi data files.\n");
+ #endif
+		exit(1);
 	}
 	
 	Caffe::set_mode(Caffe::CPU);       
