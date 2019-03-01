@@ -44,19 +44,19 @@ board_setup(board_t *b)
 }
 
 void
-board_init(board_t *b, int bsize, char *fbookfile)
+board_init(board_t *b, int size, char *fbookfile)
 {
 	board_setup(b);
 	b->fbookfile = fbookfile;
-	b->size = bsize;
+	b->rsize = size;
 	board_clear(b);	
 }
 
 board_t *
-board_new(int bsize, char *fbookfile)
+board_new(int size, char *fbookfile)
 {
 	board_t *b = malloc2(board_t);
-	board_init(b, bsize, fbookfile);
+	board_init(b, size, fbookfile);
 	return b;
 }
 
@@ -96,10 +96,10 @@ void
 board_resize(board_t *board, int size)
 {
 #ifdef BOARD_SIZE
-	assert(board_size(board) == size + 2);
+	assert(board_rsize(board) == size);
 #endif
 	assert(size <= BOARD_MAX_SIZE);
-	board->size = size + 2; /* S_OFFBOARD margin */
+	board->rsize = size;
 }
 
 board_statics_t board_statics = { 0, };
@@ -107,37 +107,39 @@ board_statics_t board_statics = { 0, };
 static void
 board_statics_init(board_t *board)
 {
-	int size = board_size(board);
+	int size = board_rsize(board);
+	int stride = size + 2;
 	board_statics_t *bs = &board_statics;
-	if (bs->size == size)
+	if (bs->rsize == size)
 		return;
 	
 	memset(bs, 0, sizeof(*bs));
-	bs->size = size;
-	bs->size2 = size * size;
-	bs->real_size2 = (size-2) * (size-2);
+	bs->rsize = size;
+	bs->stride = stride;
+	bs->max_coords = stride * stride;
 
 	bs->bits2 = 1;
-	while ((1 << bs->bits2) < bs->size2)  bs->bits2++;
+	while ((1 << bs->bits2) < bs->max_coords)  bs->bits2++;
 	
 	/* Setup neighborhood iterators */
-	bs->nei8[0] = -size - 1; // (-1,-1)
+	bs->nei8[0] = -stride - 1; // (-1,-1)
 	bs->nei8[1] = 1;
 	bs->nei8[2] = 1;
-	bs->nei8[3] = size - 2; // (-1,0)
+	bs->nei8[3] = stride - 2; // (-1,0)
 	bs->nei8[4] = 2;
-	bs->nei8[5] = size - 2; // (-1,1)
+	bs->nei8[5] = stride - 2; // (-1,1)
 	bs->nei8[6] = 1;
 	bs->nei8[7] = 1;
-	bs->dnei[0] = -size - 1;
+	
+	bs->dnei[0] = -stride - 1;
 	bs->dnei[1] = 2;
-	bs->dnei[2] = size*2 - 2;
+	bs->dnei[2] = stride*2 - 2;
 	bs->dnei[3] = 2;
 
 	/* Set up coordinate cache */
 	foreach_point(board) {
-		bs->coord[c][0] = c % board_size(board);
-		bs->coord[c][1] = c / board_size(board);
+		bs->coord[c][0] = c % stride;
+		bs->coord[c][1] = c / stride;
 	} foreach_point_end;
 
 	/* Initialize zobrist hashtable. */
@@ -173,33 +175,34 @@ board_statics_init(board_t *board)
 static void
 board_init_data(board_t *board)
 {
-	int size = board_size(board);
+	int size = board_rsize(board);
+	int stride = board_stride(board);
 
 	board_setup(board);
-	board_resize(board, size - 2 /* S_OFFBOARD margin */);
+	board_resize(board, size);
 
 	/* Setup initial symmetry */
 	if (size % 2) {
 		board->symmetry.d = 1;
-		board->symmetry.x1 = board->symmetry.y1 = board_size(board) / 2;
-		board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
+		board->symmetry.x1 = board->symmetry.y1 = stride / 2;
+		board->symmetry.x2 = board->symmetry.y2 = stride - 1;
 		board->symmetry.type = SYM_FULL;
 	} else {
 		/* TODO: We do not handle board symmetry on boards
 		 * with no tengen yet. */
 		board->symmetry.d = 0;
 		board->symmetry.x1 = board->symmetry.y1 = 1;
-		board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
+		board->symmetry.x2 = board->symmetry.y2 = stride - 1;
 		board->symmetry.type = SYM_NONE;
 	}
 
 	/* Draw the offboard margin */
-	int top_row = board_size2(board) - board_size(board);
+	int top_row = board_max_coords(board) - stride;
 	int i;
-	for (i = 0; i < board_size(board); i++)
+	for (i = 0; i < stride; i++)
 		board->b[i] = board->b[top_row + i] = S_OFFBOARD;
-	for (i = 0; i <= top_row; i += board_size(board))
-		board->b[i] = board->b[board_size(board) - 1 + i] = S_OFFBOARD;
+	for (i = 0; i <= top_row; i += stride)
+		board->b[i] = board->b[i + stride - 1] = S_OFFBOARD;
 
 	foreach_point(board) {
 		coord_t coord = c;
@@ -211,9 +214,11 @@ board_init_data(board_t *board)
 	} foreach_point_end;
 
 	/* All positions are free! Except the margin. */
-	for (i = board_size(board); i < (board_size(board) - 1) * board_size(board); i++)
-		if (i % board_size(board) != 0 && i % board_size(board) != board_size(board) - 1)
-			board_addf(board, i);
+	foreach_point(board) {
+		if (board_at(board, c) == S_NONE)
+			board_addf(board, c);
+	} foreach_point_end;
+	assert(board->flen == size * size);
 
 #ifdef BOARD_PAT3
 	/* Initialize 3x3 pattern codes. */
@@ -227,7 +232,7 @@ board_init_data(board_t *board)
 void
 board_clear(board_t *board)
 {
-	int size = board_size(board);
+	int size = board_rsize(board);
 	floating_t komi = board->komi;
 	char *fbookfile = board->fbookfile;
 	enum rules rules = board->rules;
@@ -236,8 +241,8 @@ board_clear(board_t *board)
 
 	board_statics_init(board);
 	static board_t bcache[BOARD_MAX_SIZE + 2];
-	assert(size > 0 && size <= BOARD_MAX_SIZE + 2);
-	if (bcache[size - 1].size == size)
+	assert(size > 1 && size <= BOARD_MAX_SIZE);
+	if (bcache[size - 1].rsize == size)
 		board_copy(board, &bcache[size - 1]);
 	else {
 		board_init_data(board);
@@ -255,17 +260,18 @@ board_clear(board_t *board)
 static void
 board_print_top(board_t *board, strbuf_t *buf, int c)
 {
+	int size = board_rsize(board);
 	for (int i = 0; i < c; i++) {
 		char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 		sbprintf(buf, "      ");
-		for (int x = 1; x < board_size(board) - 1; x++)
+		for (int x = 1; x <= size; x++)
 			sbprintf(buf, "%c ", asdf[x - 1]);
 		sbprintf(buf, " ");
 	}
 	sbprintf(buf, "\n");
 	for (int i = 0; i < c; i++) {
 		sbprintf(buf, "    +-");
-		for (int x = 1; x < board_size(board) - 1; x++)
+		for (int x = 1; x <= size; x++)
 			sbprintf(buf, "--");
 		sbprintf(buf, "+");
 	}
@@ -275,9 +281,10 @@ board_print_top(board_t *board, strbuf_t *buf, int c)
 static void
 board_print_bottom(board_t *board, strbuf_t *buf, int c)
 {
+	int size = board_rsize(board);
 	for (int i = 0; i < c; i++) {
 		sbprintf(buf, "    +-");
-		for (int x = 1; x < board_size(board) - 1; x++)
+		for (int x = 1; x <= size; x++)
 			sbprintf(buf, "--");
 		sbprintf(buf, "+");
 	}
@@ -287,8 +294,9 @@ board_print_bottom(board_t *board, strbuf_t *buf, int c)
 static void
 board_print_row(board_t *board, int y, strbuf_t *buf, board_cprint cprint, void *data)
 {
+	int size = board_rsize(board);
 	sbprintf(buf, " %2d | ", y);
-	for (int x = 1; x < board_size(board) - 1; x++)
+	for (int x = 1; x <= size; x++)
 		if (coord_x(last_move(board).coord) == x && coord_y(last_move(board).coord) == y)
 			sbprintf(buf, "%c)", stone2char(board_atxy(board, x, y)));
 		else
@@ -296,7 +304,7 @@ board_print_row(board_t *board, int y, strbuf_t *buf, board_cprint cprint, void 
 	sbprintf(buf, "|");
 	if (cprint) {
 		sbprintf(buf, " %2d | ", y);
-		for (int x = 1; x < board_size(board) - 1; x++)
+		for (int x = 1; x <= size; x++)
 			cprint(board, coord_xy(x, y), buf, data);
 		sbprintf(buf, "|");
 	}
@@ -309,14 +317,18 @@ board_print_custom(board_t *board, FILE *f, board_cprint cprint, void *data)
 	char buffer[10240];
 	strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	int size = board_rsize(board);
+
 	sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d  ",
 		 board->moves, board->komi, board->handicap,
-		 board->captures[S_BLACK], board->captures[S_WHITE]);
+		 board->captures[S_BLACK], board->captures[S_WHITE]);	
+	
 	if (cprint) /* handler can add things to header when called with pass */
 		cprint(board, pass, buf, data);
 	sbprintf(buf, "\n");
+	
 	board_print_top(board, buf, 1 + !!cprint);
-	for (int y = board_size(board) - 2; y >= 1; y--)
+	for (int y = size; y >= 1; y--)
 		board_print_row(board, y, buf, cprint, data);
 	board_print_bottom(board, buf, 1 + !!cprint);
 	fprintf(f, "%s\n", buf->str);
@@ -325,8 +337,9 @@ board_print_custom(board_t *board, FILE *f, board_cprint cprint, void *data)
 static void
 board_hprint_row(board_t *board, int y, strbuf_t *buf, board_print_handler handler, void *data)
 {
+	int size = board_rsize(board);
         sbprintf(buf, " %2d | ", y);
-        for (int x = 1; x < board_size(board) - 1; x++) {
+	for (int x = 1; x <= size; x++) {
                 char *stone_str = handler(board, coord_xy(x, y), data);
                 if (coord_x(last_move(board).coord) == x && coord_y(last_move(board).coord) == y)
                         sbprintf(buf, "%s)", stone_str);
@@ -342,11 +355,14 @@ board_hprint(board_t *board, FILE *f, board_print_handler handler, void *data)
         char buffer[10240];
 	strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	int size = board_rsize(board);
+	
         sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
 		 board->moves, board->komi, board->handicap,
 		 board->captures[S_BLACK], board->captures[S_WHITE]);
+	
 	board_print_top(board, buf, 1);
-        for (int y = board_size(board) - 2; y >= 1; y--)
+	for (int y = size; y >= 1; y--)
                 board_hprint_row(board, y, buf, handler, data);
         board_print_bottom(board, buf, 1);
         fprintf(f, "%s\n", buf->str);
@@ -394,7 +410,7 @@ board_coord_in_symmetry(board_t *b, coord_t c)
 	if (b->symmetry.d) {
 		int x = coord_x(c);
 		if (b->symmetry.type == SYM_DIAG_DOWN)
-			x = board_size(b) - 1 - x;
+			x = board_stride(b) - 1 - x;
 		if (x > coord_y(c))
 			return false;
 	}
@@ -411,8 +427,8 @@ board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c)
 		return;
 	}
 
-	int x = coord_x(c), y = coord_y(c), t = board_size(b) / 2;
-	int dx = board_size(b) - 1 - x; /* for SYM_DOWN */
+	int x = coord_x(c), y = coord_y(c), t = board_stride(b) / 2;
+	int dx = board_stride(b) - 1 - x; /* for SYM_DOWN */
 	if (DEBUGL(6))
 		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d] update for %d,%d\n",
 			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
@@ -427,28 +443,28 @@ board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c)
 			if (x == y) {
 				symmetry->type = SYM_DIAG_UP;
 				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_size(b) - 1;
+				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
 				symmetry->d = 1;
 			} else if (dx == y) {
 				symmetry->type = SYM_DIAG_DOWN;
 				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_size(b) - 1;
+				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
 				symmetry->d = 1;
 			} else if (x == t) {
 				symmetry->type = SYM_HORIZ;
 				symmetry->y1 = 1;
-				symmetry->y2 = board_size(b) - 1;
+				symmetry->y2 = board_stride(b) - 1;
 				symmetry->d = 0;
 			} else if (y == t) {
 				symmetry->type = SYM_VERT;
 				symmetry->x1 = 1;
-				symmetry->x2 = board_size(b) - 1;
+				symmetry->x2 = board_stride(b) - 1;
 				symmetry->d = 0;
 			} else {
 break_symmetry:
 				symmetry->type = SYM_NONE;
 				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_size(b) - 1;
+				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
 				symmetry->d = 0;
 			}
 			break;
@@ -496,10 +512,10 @@ void
 board_handicap(board_t *board, int stones, move_queue_t *q)
 {
 	assert(stones <= 9);
-	int margin = 3 + (board_size(board) >= 13);
+	int margin = 3 + (board_rsize(board) >= 13);
 	int min = margin;
-	int mid = board_size(board) / 2;
-	int max = board_size(board) - 1 - margin;
+	int mid = board_stride(board) / 2;
+	int max = board_stride(board) - 1 - margin;
 	const int places[][2] = {
 		{ min, min }, { max, max }, { max, min }, { min, max }, 
 		{ min, mid }, { max, mid },
@@ -708,8 +724,9 @@ board_score(board_t *b, int scores[S_MAX])
 void
 board_print_official_ownermap(board_t *b, int *final_ownermap)
 {
-	for (int y = board_size(b) - 2; y >= 1; y--) {
-		for (int x = 1; x < board_size(b) - 1; x++) {
+	int size = board_rsize(b);
+	for (int y = size; y >= 1; y--) {
+		for (int x = 1; x <= size; x++) {
 			coord_t c = coord_xy(x, y);
 			char *chars = ".XO:";
 			fprintf(stderr, "%c ", chars[final_ownermap[c]]);
@@ -781,7 +798,7 @@ floating_t
 board_official_score(board_t *b, move_queue_t *dead)
 {
 	int dame, seki;
-	int ownermap[board_size2(b)];
+	int ownermap[board_max_coords(b)];
 	return board_official_score_details(b, dead, &dame, &seki, ownermap, NULL);
 }
 
@@ -961,10 +978,11 @@ board_capturable_add(board_t *board, group_t group, coord_t lib)
 #ifdef WANT_BOARD_C
 	/* Update the list of capturable groups. */
 	assert(group);
-	assert(board->clen < board_size2(board));
+	assert(board->clen < BOARD_MAX_GROUPS);
 	board->c[board->clen++] = group;
 #endif
 }
+
 static void
 board_capturable_rm(board_t *board, group_t group, coord_t lib)
 {
@@ -984,7 +1002,7 @@ board_capturable_rm(board_t *board, group_t group, coord_t lib)
 			board->c[i] = board->c[--board->clen];
 			return;
 		}
-	fprintf(stderr, "rm of bad group %d\n", group_base(group));
+	fprintf(stderr, "rm of bad group %s\n", coord2sstr(group_base(group)));
 	assert(0);
 #endif
 }
@@ -999,6 +1017,6 @@ board_play(board_t *b, move_t *m)
 #ifdef BOARD_UNDO_CHECKS
         assert(!b->quicked);
 #endif
-        
-        return board_play_(b, m);
+
+	return board_play_(b, m);
 }

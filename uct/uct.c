@@ -130,7 +130,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ch
 	floating_t score_est = ownermap_score_est_color(b, &u->ownermap, color);
 	if (check_score && score_est < 0)  return false;
 	
-	int final_ownermap[board_size2(b)];
+	int final_ownermap[board_max_coords(b)];
 	int dame, seki;
 	floating_t final_score = board_official_score_details(b, &dead, &dame, &seki, final_ownermap, &u->ownermap);
 	if (color == S_BLACK)  final_score = -final_score;
@@ -1369,7 +1369,7 @@ uct_state_init(char *arg, board_t *b)
 	}
 
 	dcnn_init(b);
-	if (!using_dcnn(b))		joseki_load(b->size);
+	if (!using_dcnn(b))		joseki_load(board_rsize(b));
 	if (!pat_setup)			patterns_init(&u->pc, NULL, false, true);
 	log_nthreads(u);
 	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);

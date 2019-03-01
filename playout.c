@@ -109,7 +109,7 @@ static coord_t
 fill_bent_four(board_t *b, enum stone color, coord_t *other, coord_t *kill)
 {
 	enum stone other_color = stone_other(color);  // white here
-	int s = real_board_size(b);
+	int s = board_rsize(b);
 	coord_t corners[4] = { coord_xy(1, 1),
 			       coord_xy(1, s),
 			       coord_xy(s, 1),

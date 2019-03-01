@@ -241,12 +241,12 @@ tree_dump(tree_t *tree, double thres)
 static char *
 tree_book_name(board_t *b)
 {
+	int size = board_rsize(b);
 	static char buf[256];
-	if (b->handicap > 0) {
-		sprintf(buf, "ucttbook-%d-%02.01f-h%d.pachitree", b->size - 2, b->komi, b->handicap);
-	} else {
-		sprintf(buf, "ucttbook-%d-%02.01f.pachitree", b->size - 2, b->komi);
-	}
+	if (b->handicap > 0)
+		sprintf(buf, "ucttbook-%d-%02.01f-h%d.pachitree", size, b->komi, b->handicap);
+	else
+		sprintf(buf, "ucttbook-%d-%02.01f.pachitree", size, b->komi);
 	return buf;
 }
 
@@ -578,15 +578,15 @@ void
 tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct_t *u, int parity)
 {
 	/* Get a Common Fate Graph distance map from parent node. */
-	int distances[board_size2(b)];
+	int distances[board_max_coords(b)];
 	if (!is_pass(last_move(b).coord))
 		cfg_distances(b, last_move(b).coord, distances, TREE_NODE_D_MAX);
 	else    // Pass - everything is too far.
 		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
 
 	/* Include pass in the prior map. */
-	move_stats_t map_prior[board_size2(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
-	bool         map_consider[board_size2(b) + 1];   memset(map_consider, 0, sizeof(map_consider));
+	move_stats_t map_prior[board_max_coords(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
+	bool         map_consider[board_max_coords(b) + 1];   memset(map_consider, 0, sizeof(map_consider));
 	
 	/* Get a map of prior values to initialize the new nodes with. */
 	prior_map_t map = { b, color, tree_parity(t, parity), &map_prior[1], &map_consider[1], distances };
@@ -627,7 +627,7 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	for (int j = b->symmetry.y1; j <= b->symmetry.y2; j++) {
 		for (int i = b->symmetry.x1; i <= b->symmetry.x2; i++) {
 			if (b->symmetry.d) {
-				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_size(b) - 1 - i : i;
+				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_stride(b) - 1 - i : i;
 				if (x > j) {
 					if (UDEBUGL(7))
 						fprintf(stderr, "drop %d,%d\n", i, j);
@@ -658,8 +658,8 @@ flip_coord(board_t *b, coord_t c,
 {
 	int x = coord_x(c), y = coord_y(c);
 	if (flip_diag)  {  int z = x; x = y; y = z;    }
-	if (flip_horiz) {  x = board_size(b) - 1 - x;  }
-	if (flip_vert)  {  y = board_size(b) - 1 - y;  }
+	if (flip_horiz) {  x = board_stride(b) - 1 - x;  }
+	if (flip_vert)  {  y = board_stride(b) - 1 - y;  }
 	return coord_xy(x, y);
 }
 
@@ -695,7 +695,7 @@ tree_fix_symmetry(tree_t *tree, board_t *b, coord_t c)
 	bool flip_diag = 0;
 	if (s->d) {
 		bool dir = (s->type == SYM_DIAG_DOWN);
-		int x = dir ^ flip_horiz ^ flip_vert ? board_size(b) - 1 - cx : cx;
+		int x = dir ^ flip_horiz ^ flip_vert ? board_stride(b) - 1 - cx : cx;
 		if (flip_vert ? x < cy : x > cy) {
 			flip_diag = 1;
 		}

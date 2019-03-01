@@ -47,7 +47,7 @@ hash_board_statics(board_t *b)
 	hash_init();
 
 	/* These are board statics really */
-	hash_int(board_size2(b));
+	hash_int(board_max_coords(b));
 	hash_int(board_bits2(b));
 
 	/* Just care about hashes here */
@@ -71,7 +71,7 @@ hash_board(board_t *b)
 	/****************************************************************/
 	/* Common fields */
 	
-	hash_field(size);
+	hash_int(board_rsize(b) + 2);  // for backwards compatibility
 	//hash_field(captures);    // don't hash displayed fields
 	//hash_field(passes);
 	hash_field(komi);
@@ -166,7 +166,7 @@ hash_board(board_t *b)
 static void
 dump_board_statics(board_t *b)
 {
-	int size = real_board_size(b);
+	int size = board_rsize(b);
 
 	/* Dump once for each board size. */
 	static int size_done[BOARD_MAX_SIZE + 1] = { 0, };

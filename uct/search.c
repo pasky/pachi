@@ -653,7 +653,7 @@ uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coor
 	uct_mcowner_playouts(u, b, color);
 	get_dead_groups(b, &u->ownermap, &dead, &unclear);
 	if (unclear.moves)  return false;
-	int final_ownermap[board_size2(b)];
+	int final_ownermap[board_max_coords(b)];
 	int dame, seki;
 	board_official_score_details(b, &dead, &dame, &seki, final_ownermap, &u->ownermap);
 	

@@ -448,7 +448,7 @@ report_stats(uct_t *u, board_t *b, coord_t c,
 	for (tree_node_t *ni = root->children; ni; ni = ni->sibling) {
 
 		if (is_pass(node_coord(ni))) continue;
-		assert(node_coord(ni) > 0 && node_coord(ni) < board_size2(b));
+		assert(node_coord(ni) > 0 && node_coord(ni) < board_max_coords(b));
 
 		if (ni->u.playouts > max_playouts)
 			max_playouts = ni->u.playouts;

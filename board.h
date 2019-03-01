@@ -33,7 +33,7 @@ struct ownermap;
 /* Maximum supported board size. (Without the S_OFFBOARD edges.) */
 #define BOARD_MAX_SIZE 19
 
-#define BOARD_MAX_COORDS  ((BOARD_MAX_SIZE+2) * (BOARD_MAX_SIZE+2) )
+#define BOARD_MAX_COORDS  ((BOARD_MAX_SIZE+2) * (BOARD_MAX_SIZE+2))
 #define BOARD_MAX_MOVES   (BOARD_MAX_SIZE * BOARD_MAX_SIZE)
 #define BOARD_MAX_GROUPS  (BOARD_MAX_SIZE * BOARD_MAX_SIZE * 2 / 3)
 /* For 19x19, max 19*2*6 = 228 groups (stacking b&w stones, each third line empty) */
@@ -122,10 +122,10 @@ enum rules {
 
 /* Data shared by all boards of a given size */
 typedef struct {
-	int size;
-	int size2;                          /* size^2 */
+	int rsize;                          /* real board size     (19x19: 19) */
+	int stride;                         /* padded board size   (19x19: 21) */
+	int max_coords;                     /* stride^2 */
 	int bits2;                          /* ceiling(log2(size2)) */
-	int real_size2;                     /* real_board_size^2 */
 	
 	int nei8[8], dnei[4];               /* Iterator offsets for foreach_neighbor*() */
 	
@@ -149,7 +149,7 @@ extern board_statics_t board_statics;
  * Always call functions below if you want to change it. */
 
 typedef struct board {
-	int size;                 /* Including S_OFFBOARD margin - see below. */
+	int rsize;                 /* Real board size   (19x19: 19) */
 
 	int moves;
 	int captures[S_MAX];
@@ -217,27 +217,26 @@ FB_ONLY(hash_t history_hash)[history_hash_size]; /* Board "history" - hashes enc
 
 
 #ifdef BOARD_SIZE
-#define the_board_size()       (BOARD_SIZE + 2)
-#define board_size(b)          (BOARD_SIZE + 2)
-#define board_size2(b)         (board_size(b) * board_size(b))
-#define real_board_size2(b)    (BOARD_SIZE * BOARD_SIZE)
+#define board_rsize(b)          BOARD_SIZE
+#define the_board_rsize()       BOARD_SIZE
+#define the_board_stride()        (BOARD_SIZE + 2)
+#define board_max_coords(b)       (board_stride(b) * board_stride(b))
 #else
-#define the_board_size()       (board_statics.size)
-#define board_size(b)          ((b)->size)
-#define board_size2(b)         (board_statics.size2)
-#define real_board_size2(b)    (board_statics.real_size2)
+#define board_rsize(b)          ((b)->rsize)
+#define the_board_rsize()       (board_statics.rsize)
+#define the_board_stride()        (board_statics.stride)
+#define board_max_coords(b)       (board_statics.max_coords)
 #endif
 
-#define real_board_size(b)     (board_size(b) - 2)
-#define the_real_board_size()  (the_board_size() - 2)
+#define board_stride(b)           (board_rsize(b) + 2)
 
 
 /* This is a shortcut for taking different action on smaller and large boards 
  * (e.g. picking different variable defaults). This is of course less optimal than
  * fine-tuning dependency function of values on board size, but that is difficult
  * and possibly not very rewarding if you are interested just in 9x9 and 19x19. */
-#define board_large(b_) (board_size(b_)-2 >= 15)
-#define board_small(b_) (board_size(b_)-2 <= 9)
+#define board_large(b_) (board_rsize(b_) >= 15)
+#define board_small(b_) (board_rsize(b_) <= 9)
 
 #if BOARD_SIZE == 19
 #  define board_bits2(b_) 9
@@ -257,11 +256,11 @@ FB_ONLY(hash_t history_hash)[history_hash_size]; /* Board "history" - hashes enc
 #define last_move_previ(b, n)  ((BOARD_LAST_N + b->last_move_i - (n)) % BOARD_LAST_N)
 #define last_moven(b, n) ((b)->last_moves[last_move_previ(b, n)])
 
-#define board_at(b_, c) ((b_)->b[c])
-#define board_atxy(b_, x, y) ((b_)->b[(x) + board_size(b_) * (y)])
+#define board_at(b_, c)      ((b_)->b[c])
+#define board_atxy(b_, x, y) ((b_)->b[coord_xy(x, y)])
 
-#define group_at(b_, c) ((b_)->g[c])
-#define group_atxy(b_, x, y) ((b_)->g[(x) + board_size(b_) * (y)])
+#define group_at(b_, c)      ((b_)->g[c])
+#define group_atxy(b_, x, y) ((b_)->g[coord_xy(x, y)])
 
 /* Warning! Neighbor count is not kept up-to-date for S_NONE! */
 #define neighbor_count_at(b_, coord, color) ((b_)->n[coord].colors[(enum stone) color])
@@ -271,7 +270,6 @@ FB_ONLY(hash_t history_hash)[history_hash_size]; /* Board "history" - hashes enc
 #define immediate_liberty_count(b_, coord) (4 - neighbor_count_at(b_, coord, S_BLACK) - neighbor_count_at(b_, coord, S_WHITE) - neighbor_count_at(b_, coord, S_OFFBOARD))
 
 #define groupnext_at(b_, c) ((b_)->p[c])
-#define groupnext_atxy(b_, x, y) ((b_)->p[(x) + board_size(b_) * (y)])
 
 #define group_base(g_) (g_)
 #define group_is_onestone(b_, g_) (groupnext_at(b_, group_base(g_)) == 0)
@@ -281,18 +279,17 @@ FB_ONLY(hash_t history_hash)[history_hash_size]; /* Board "history" - hashes enc
 #define board_group_other_lib(b_, g_, l_) (board_group_info(b_, g_).lib[board_group_info(b_, g_).lib[0] != (l_) ? 0 : 1])
 
 #ifdef BOARD_HASH_COMPAT
-#define hash_at(coord, color) (*(&board_statics.h[0][0] + ((color) == S_BLACK ? board_statics.size2 : 0) + (coord)))
+#define hash_at(coord, color) (*(&board_statics.h[0][0] + ((color) == S_BLACK ? board_statics.max_coords : 0) + (coord)))
 #else
 #define hash_at(coord, color) (board_statics.h[coord][(color) == S_BLACK])
 #endif
 
 
-void board_init(board_t *b, int bsize, char *fbookfile);
-board_t *board_new(int bsize, char *fbookfile);
+void board_init(board_t *b, int size, char *fbookfile);
+board_t *board_new(int size, char *fbookfile);
 board_t *board_copy(board_t *board2, board_t *board1);
 void board_done_noalloc(board_t *board);
 void board_done(board_t *board);
-/* size here is without the S_OFFBOARD margin. */
 void board_resize(board_t *b, int size);
 void board_clear(board_t *board);
 
@@ -373,11 +370,7 @@ const char *rules2str(enum rules rules);
 #define foreach_point(board_) \
 	do { \
 		coord_t c = 0; \
-		for (; c < board_size(board_) * board_size(board_); c++)
-#define foreach_point_and_pass(board_) \
-	do { \
-		coord_t c = pass; \
-		for (; c < board_size(board_) * board_size(board_); c++)
+		for (; c < board_max_coords(board_); c++)
 #define foreach_point_end \
 	} while (0)
 
@@ -403,10 +396,10 @@ const char *rules2str(enum rules rules);
 	do { \
 		coord_t coord__ = coord_; \
 		coord_t c; \
-		c = coord__ - board_size(board_); do { loop_body } while (0); \
+		c = coord__ - board_stride(board_); do { loop_body } while (0); \
 		c = coord__ - 1; do { loop_body } while (0); \
 		c = coord__ + 1; do { loop_body } while (0); \
-		c = coord__ + board_size(board_); do { loop_body } while (0); \
+		c = coord__ + board_stride(board_); do { loop_body } while (0); \
 	} while (0)
 
 #define foreach_8neighbor(board_, coord_) \

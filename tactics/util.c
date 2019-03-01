@@ -17,8 +17,8 @@ board_stone_radar(board_t *b, coord_t coord, int distance)
 	for (int i = 0; i < 4; i++)
 		if (bounds[i] < 1)
 			bounds[i] = 1;
-		else if (bounds[i] > board_size(b) - 2)
-			bounds[i] = board_size(b) - 2;
+		else if (bounds[i] > board_rsize(b))
+			bounds[i] = board_rsize(b);
 	for (int x = bounds[0]; x <= bounds[2]; x++)
 		for (int y = bounds[1]; y <= bounds[3]; y++) {
 			coord_t c = coord_xy(x, y);
@@ -38,8 +38,8 @@ cfg_distances(board_t *b, coord_t start, int *distances, int maxdist)
 {
 	/* Queue for d+1 spots; no two spots of the same group
 	 * should appear in the queue. */
-#define qinc(x) (x = ((x + 1) >= board_size2(b) ? ((x) + 1 - board_size2(b)) : (x) + 1))
-	coord_t queue[board_size2(b)]; int qstart = 0, qstop = 0;
+#define qinc(x) (x = ((x + 1) >= board_max_coords(b) ? ((x) + 1 - board_max_coords(b)) : (x) + 1))
+	coord_t queue[board_max_coords(b)]; int qstart = 0, qstop = 0;
 
 	foreach_point(b) {
 		distances[c] = board_at(b, c) == S_OFFBOARD ? maxdist + 1 : -1;
@@ -106,7 +106,7 @@ board_effective_handicap(board_t *b, int first_move_value)
 int
 board_estimated_moves_left(board_t *b)
 {
-	int total_points = (board_size(b)-2)*(board_size(b)-2);
+	int total_points = (board_rsize(b)) * (board_rsize(b));
 	int moves_left = (b->flen - total_points*EXPECTED_FINAL_EMPTY_PERCENT/100)/2;
 	return moves_left > MIN_MOVES_LEFT ? moves_left : MIN_MOVES_LEFT;
 }

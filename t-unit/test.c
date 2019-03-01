@@ -429,14 +429,14 @@ test_moggy_moves(board_t *b, char *arg)
 		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
 			stone2str(color), runs);
 
-        int played_[board_size2(b) + 1];	memset(played_, 0, sizeof(played_));
+        int played_[board_max_coords(b) + 1];	memset(played_, 0, sizeof(played_));
 	int *played = played_ + 1;		// allow storing pass
 	int most_played = 0;
 	replay_sample_moves(&e, b, color, played, &most_played);
 
 	/* Show moves stats */	
 	for (int k = most_played; k > 0; k--)
-		for (coord_t c = pass; c < board_size2(b); c++)
+		for (coord_t c = pass; c < board_max_coords(b); c++)
 			if (played[c] == k)
 				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c), (float)k * 100 / runs);
 	
@@ -628,7 +628,7 @@ unit_test(char *filename)
 	int total = 0, passed = 0;
 	int total_opt = 0, passed_opt = 0;
 	
-	board_t *b = board_new(19+2, NULL);
+	board_t *b = board_new(19, NULL);
 	b->komi = 7.5;
 	char buf[256]; char *line = buf;
 

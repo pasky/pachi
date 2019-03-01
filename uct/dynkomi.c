@@ -145,7 +145,7 @@ static int
 linear_moves(board_t *b, enum stone color)
 {
 	if (board_small(b))            return 15;
-	if (real_board_size(b) == 15)  return 100;
+	if (board_rsize(b) == 15)    return 100;
 	if (color == S_BLACK)          return (board_large(b) ? 200 : 50);
 	else                           return (board_large(b) ? 150 : 50);
 }
@@ -293,8 +293,8 @@ board_game_portion(dynkomi_adaptive_t *a, board_t *b)
 		int total_moves = b->moves + 2 * board_estimated_moves_left(b);
 		return (floating_t) b->moves / total_moves;
 	} else {
-		int brsize = board_size(b) - 2;
-		return 1.0 - (floating_t) b->flen / (brsize * brsize);
+		int size = board_rsize(b);
+		return 1.0 - (floating_t) b->flen / (size * size);
 	}
 }
 

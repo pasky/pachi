@@ -20,7 +20,7 @@ static void detlef54_dcnn_eval(board_t *b, enum stone color, float result[]);
 static bool
 dcnn_supported_board_size(board_t *b)
 {
-	return (real_board_size(b) >= 13);
+	return (board_rsize(b) >= 13);
 }
 
 bool
@@ -35,7 +35,7 @@ void
 dcnn_init(board_t *b)
 {
 	if (dcnn_enabled && dcnn_supported_board_size(b))
-		caffe_init(real_board_size(b));
+		caffe_init(board_rsize(b));
 	if (dcnn_required && !caffe_ready())  die("dcnn required, aborting.\n");
 }
 
@@ -58,7 +58,7 @@ detlef54_dcnn_eval(board_t *b, enum stone color, float result[])
 {
 	assert(dcnn_supported_board_size(b));
 
-	int size = real_board_size(b);
+	int size = board_rsize(b);
 	int dsize = 13 * size * size;
 	float *data = calloc2(dsize, float);
 

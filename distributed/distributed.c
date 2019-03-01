@@ -222,7 +222,7 @@ select_best_move(board_t *b, large_stats_t *stats, int *played,
 	assert(reply_count > 0);
 
 	/* +2 for pass and resign */
-	memset(stats-2, 0, (board_size2(b)+2) * sizeof(*stats));
+	memset(stats-2, 0, (board_max_coords(b)+2) * sizeof(*stats));
 
 	coord_t best_move = pass;
 	long best_playouts = 0;
@@ -246,7 +246,7 @@ select_best_move(board_t *b, large_stats_t *stats, int *played,
 		move_stats_t s;
 		while (r && sscanf(++r, "%63s %d " PRIfloating, move, &s.playouts, &s.value) == 3) {
 			coord_t c = str2coord(move);
-			assert (c >= resign && c < board_size2(b) && s.playouts >= 0);
+			assert (c >= resign && c < board_max_coords(b) && s.playouts >= 0);
 
 			large_stats_add_result(&stats[c], s.value, (long)s.playouts);
 
@@ -257,7 +257,7 @@ select_best_move(board_t *b, large_stats_t *stats, int *played,
 			r = strchr(r, '\n');
 		}
 	}
-	for (coord_t c = resign; c < board_size2(b); c++)
+	for (coord_t c = resign; c < board_max_coords(b); c++)
 		stats[c].playouts /= reply_count;
 	*keep_looking = keep > reply_count / 2;
 	return best_move;
@@ -319,7 +319,7 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 
 	/* Combined move stats from all slaves, only for children
 	 * of the root node, plus 2 for pass and resign. */
-	large_stats_t stats_array[board_size2(b) + 2], *stats;
+	large_stats_t stats_array[board_max_coords(b) + 2], *stats;
 	stats = &stats_array[2];
 
 	protocol_lock();

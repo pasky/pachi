@@ -508,8 +508,8 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mo
 
 	/* Iterator for walking coordinates in a clockwise fashion
 	 * (nei8 jumps "over" the middle point, inst. of "around). */
-	int size = board_size(b);
-	int nei8_clockwise[10] = { -size-1, 1, 1, size, size, -1, -1, -size, -size, 1 };
+	int stride = board_stride(b);
+	int nei8_clockwise[10] = { -stride-1, 1, 1, stride, stride, -1, -1, -stride, -stride, 1 };
 
 	/* This is sort of like a cross between foreach_diag_neighbor
 	 * and foreach_8neighbor. */
@@ -1018,7 +1018,7 @@ playout_moggy_assess(playout_policy_t *p, prior_map_t *map, int games)
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 
 	/* First, go through all endangered groups. */
-	for (group_t g = 1; g < board_size2(map->b); g++)
+	for (group_t g = 1; g < board_max_coords(map->b); g++)
 		if (group_at(map->b, g) == g)
 			playout_moggy_assess_group(p, map, g, games);
 

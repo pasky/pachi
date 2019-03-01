@@ -29,7 +29,7 @@ static void
 board_group_find_extra_libs(board_t *board, group_t group, group_info_t *gi, coord_t avoid)
 {
 	/* Add extra liberty from the board to our liberty list. */
-	unsigned char watermark[board_size2(board) / 8];
+	unsigned char watermark[board_max_coords(board) / 8];
 	memset(watermark, 0, sizeof(watermark));
 #define watermark_get(c)	(watermark[c >> 3] & (1 << (c & 7)))
 #define watermark_set(c)	watermark[c >> 3] |= (1 << (c & 7))
@@ -156,11 +156,9 @@ add_to_group(board_t *board, group_t group, coord_t prevstone, coord_t coord)
 	});
 
 	if (DEBUGL(8))
-		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d\n",
-			coord_x(prevstone), coord_y(prevstone),
-			coord_x(coord), coord_y(coord),
-			groupnext_at(board, coord) % board_size(board), groupnext_at(board, coord) / board_size(board),
-			group_base(group));
+		fprintf(stderr, "add_to_group: added (%s ->) %s (-> %s) to group %s\n",
+			coord2sstr(prevstone), coord2sstr(coord), coord2sstr(groupnext_at(board, coord)),
+			coord2sstr(group_base(group)));
 }
 
 static void profiling_noinline

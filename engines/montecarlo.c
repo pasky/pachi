@@ -64,29 +64,32 @@ typedef struct {
 static void
 board_stats_print(board_t *board, move_stat_t *moves, FILE *f)
 {
+	int size = board_rsize(board);
 	fprintf(f, "\n       ");
 	int x, y;
 	char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
-	for (x = 1; x < board_size(board) - 1; x++)
+	for (x = 1; x <= size; x++)
 		fprintf(f, "%c    ", asdf[x - 1]);
 	fprintf(f, "\n   +-");
-	for (x = 1; x < board_size(board) - 1; x++)
+	for (x = 1; x <= size; x++)
 		fprintf(f, "-----");
 	fprintf(f, "+\n");
-	for (y = board_size(board) - 2; y >= 1; y--) {
+	for (y = size; y >= 1; y--) {
 		fprintf(f, "%2d | ", y);
-		for (x = 1; x < board_size(board) - 1; x++)
-			if (moves[y * board_size(board) + x].games)
-				fprintf(f, "%0.2f ", (floating_t) moves[y * board_size(board) + x].wins / moves[y * board_size(board) + x].games);
+		for (x = 1; x <= size; x++) {
+			coord_t c = coord_xy(x, y);
+			if (moves[c].games)
+				fprintf(f, "%0.2f ", (floating_t) moves[c].wins / moves[c].games);
 			else
 				fprintf(f, "---- ");
+		}
 		fprintf(f, "| ");
-		for (x = 1; x < board_size(board) - 1; x++)
-			fprintf(f, "%4d ", moves[y * board_size(board) + x].games);
+		for (x = 1; x <= size; x++)
+			fprintf(f, "%4d ", moves[coord_xy(x, y)].games);
 		fprintf(f, "|\n");
 	}
 	fprintf(f, "   +-");
-	for (x = 1; x < board_size(board) - 1; x++)
+	for (x = 1; x <= size; x++)
 		fprintf(f, "-----");
 	fprintf(f, "+\n");
 }
@@ -116,7 +119,7 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 
 	/* We use [0] for pass. Normally, this is an inaccessible corner
 	 * of board margin. */
-	move_stat_t moves[board_size2(b)];
+	move_stat_t moves[board_max_coords(b)];
 	memset(moves, 0, sizeof(moves));
 
 	int losses = 0;
@@ -198,8 +201,8 @@ pass_wins:
 			/* Simple heuristic: avoid opening too low. Do not
 			 * play on second or first line as first white or
 			 * first two black moves.*/
-			if (coord_x(c) < 3 || coord_x(c) > board_size(b) - 4
-			    || coord_y(c) < 3 || coord_y(c) > board_size(b) - 4)
+			if (coord_x(c) < 3 || coord_x(c) > board_stride(b) - 4
+			    || coord_y(c) < 3 || coord_y(c) > board_stride(b) - 4)
 				continue;
 		}
 
@@ -237,7 +240,7 @@ montecarlo_state_init(char *arg, board_t *b)
 
 	mc->debug_level = 1;
 	mc->gamelen = MC_GAMELEN;
-	joseki_load(b->size);
+	joseki_load(board_rsize(b));
 
 	if (arg) {
 		char *optspec, *next = arg;

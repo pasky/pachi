@@ -30,10 +30,10 @@ josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags)
 
 	if (!board->moves) {
 		/* New game, reset state. */
-		assert(board->size == joseki_dict->bsize);
+		assert(board_rsize(board) == joseki_dict->bsize);
 		
 		for (int i = 0; i < 16; i++) {
-			board_resize(j->b[i], board->size - 2);
+			board_resize(j->b[i], board_rsize(board));
 			board_clear(j->b[i]);
 		}
 
@@ -105,7 +105,7 @@ josekiscan_state_init(char *arg)
 	josekiscan_t *j = calloc2(1, josekiscan_t);
 
 	for (int i = 0; i < 16; i++)
-		j->b[i] = board_new(19+2, NULL);
+		j->b[i] = board_new(19, NULL);
 
 	j->debug_level = 1;
 

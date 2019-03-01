@@ -15,7 +15,7 @@
 static int
 board_quick_cmp(struct board *b1, struct board *b2)
 {
-	if (b1->size != b2->size ||
+	if (b1->rsize != b2->rsize ||
 	    b1->captures[S_BLACK] != b2->captures[S_BLACK] ||
 	    b1->captures[S_WHITE] != b2->captures[S_WHITE] ||
 	    b1->moves != b2->moves) {
@@ -72,7 +72,7 @@ board_dump_group(board_t *b, group_t g)
 static void
 board_dump(board_t *b)
 {       
-        printf("board_dump(): size: %i\n", b->size);
+        printf("board_dump(): size: %i\n", board_rsize(b));
         board_print(b, stdout);
 
         printf("ko: %s %s  last_ko: %s %s  last_ko_age: %i\n",

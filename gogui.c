@@ -439,7 +439,7 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
 	
 	int dame, seki;
-	int ownermap[board_size2(b)];
+	int ownermap[board_max_coords(b)];
 	floating_t score = board_official_score_details(b, &q, &dame, &seki, ownermap, NULL);
 	char buffer[5000];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));

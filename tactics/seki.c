@@ -103,8 +103,8 @@ breaking_corner_seki(board_t *b, coord_t coord, enum stone color)
 
 	/* Other lib is corner eye ? */
 	int x = coord_x(lib2), y = coord_y(lib2);
-	if ((x != 1 && x != real_board_size(b)) ||
-	    (y != 1 && y != real_board_size(b)) ||
+	if ((x != 1 && x != board_rsize(b)) ||
+	    (y != 1 && y != board_rsize(b)) ||
 	    !board_is_one_point_eye(b, lib2, color))
 		return false;	
 
