@@ -117,7 +117,7 @@ void spatial_print(board_t *b, spatial_t *s, FILE *f, move_t *at);
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). */
-typedef struct { short x, y; } ptcoord_t;
+typedef struct { int x, y; } ptcoord_t;
 extern ptcoord_t ptcoords[MAX_PATTERN_AREA];
 /* For each radius, starting index in ptcoords[]. */
 extern unsigned int ptind[MAX_PATTERN_DIST + 2];
@@ -126,11 +126,11 @@ extern unsigned int ptind[MAX_PATTERN_DIST + 2];
 #define PTH__ROTATIONS	8
 extern hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 
-#define ptcoords_at(x_, y_, c_, j_) \
-	int x_ = coord_x((c_)) + ptcoords[j_].x; \
-	int y_ = coord_y((c_)) + ptcoords[j_].y; \
-	if (x_ >= the_board_stride()) x_ = the_board_stride() - 1; else if (x_ < 0) x_ = 0; \
-	if (y_ >= the_board_stride()) y_ = the_board_stride() - 1; else if (y_ < 0) y_ = 0;
+#define ptcoords_at(x, y, cx, cy, j)		 \
+	int x = cx + ptcoords[j].x; \
+	int y = cy + ptcoords[j].y; \
+	if (x >= the_board_stride()) x = the_board_stride() - 1; else if (x < 0) x = 0; \
+	if (y >= the_board_stride()) y = the_board_stride() - 1; else if (y < 0) y = 0;
 
 
 /* Spatial dictionary file manipulation. */

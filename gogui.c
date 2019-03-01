@@ -163,9 +163,10 @@ gogui_paint_pattern(board_t *b, int colors[BOARD_MAX_COORDS][4],
 		    coord_t coord, unsigned int maxd,
 		    int rr, int gg, int bb)
 {
+	int cx = coord_x(coord), cy = coord_y(coord);
 	for (unsigned int d = 2; d <= maxd; d++)
 	for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
-			ptcoords_at(x, y, coord, j);
+			ptcoords_at(x, y, cx, cy, j);
 		        coord_t c  = coord_xy(x, y);
 			if (board_at(b, c) == S_OFFBOARD)  continue;
 

@@ -349,6 +349,7 @@ joseki_prev_matches(board_t *b, josekipat_t *prev)
 static josekipat_t*
 joseki_lookup_regular(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color)
 {
+	/* TODO we already computed hashes for spatial patterns, reuse instead ? */
 	hash_t h = joseki_spatial_hash(b, coord, color);
 	uint32_t kh = joseki_dict_hash(h, coord);
 
