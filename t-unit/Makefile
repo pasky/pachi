@@ -3,7 +3,7 @@ INCLUDES=-I..
 OBJS := test.o
 
 ifeq ($(BOARD_TESTS), 1)
-	OBJS += test_undo.o board_regtest.o moggy_regtest.o
+	OBJS += test_undo.o board_regtest.o moggy_regtest.o spatial_regtest.o
 endif
 
 all: lib.a
@@ -12,7 +12,7 @@ lib.a: $(OBJS)
 # Run unit tests
 test: FORCE
 	@if ../pachi --compile-flags | grep -q "BOARD_TESTS"; then  \
-		make test_board test_moggy; \
+		make test_board test_moggy test_spatial; \
 	fi
 
 	./run_tests
@@ -43,6 +43,13 @@ test_moggy: FORCE
 	@  echo "tunit moggy_regtest" | ../pachi -d0 2>moggy.out  >/dev/null
 	@if bzcmp moggy.out moggy.ref.bz2  >/dev/null; then \
 	   echo "OK"; else  echo "FAILED"; exit 1;  fi
+
+test_spatial: FORCE
+	@echo -n "Testing spatials didn't change...   "
+	@  ../pachi -d0 < spatial.gtp  2>spatial.out  >/dev/null
+	@if bzcmp spatial.out spatial.ref.bz2  >/dev/null; then \
+	   echo "OK"; else  echo "FAILED"; exit 1;  fi
+
 
 FORCE:
 

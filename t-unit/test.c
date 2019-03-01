@@ -559,6 +559,7 @@ test_moggy_status(struct board *b, char *arg)
 bool board_undo_stress_test(struct board *orig, char *arg);
 bool board_regression_test(struct board *orig, char *arg);
 bool moggy_regression_test(struct board *orig, char *arg);
+bool spatial_regression_test(struct board *orig, char *arg);
 
 typedef bool (*t_unit_func)(struct board *board, char *arg);
 
@@ -585,6 +586,7 @@ static t_unit_cmd commands[] = {
 	{ "board_undo_stress_test", board_undo_stress_test, 0 },
 	{ "board_regtest",          board_regression_test,  0 },
 	{ "moggy_regtest",          moggy_regression_test,  0 },
+	{ "spatial_regtest",        spatial_regression_test,  0 },
 #endif
 	{ 0, 0, 0 }
 };

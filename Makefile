@@ -360,6 +360,9 @@ test_board: FORCE
 test_moggy: FORCE
 	+@make -C t-unit test_moggy
 
+test_spatial: FORCE
+	+@make -C t-unit test_spatial
+
 
 # Prepare for install
 distribute: FORCE
