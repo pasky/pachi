@@ -234,7 +234,7 @@ INCLUDES=-I.
 
 OBJS = $(EXTRA_OBJS) \
        board.o engine.o gogui.o gtp.o joseki.o move.o ownermap.o pachi.o pattern3.o pattern.o patternsp.o \
-       patternprob.o playout.o probdist.o random.o stone.o timeinfo.o fbook.o chat.o util.o
+       patternprob.o playout.o random.o stone.o timeinfo.o fbook.o chat.o util.o
 
 # Low-level dependencies last
 SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics

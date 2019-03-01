@@ -1,7 +1,3 @@
-/* probdist.h must be included before the include goard since we require
- * proper including order. */
-//#include "probdist.h"
-
 #ifndef PACHI_BOARD_H
 #define PACHI_BOARD_H
 

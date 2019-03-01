@@ -12,7 +12,6 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
-#include "probdist.h"
 #include "random.h"
 #include "tactics/util.h"
 #include "uct/dynkomi.h"

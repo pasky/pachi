@@ -29,7 +29,6 @@
 #include <pthread.h>
 #include "move.h"
 #include "stats.h"
-#include "probdist.h"
 
 struct board;
 struct uct;
