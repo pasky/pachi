@@ -285,11 +285,11 @@ FB_ONLY(hash_t history_hash)[history_hash_size]; /* Board "history" - hashes enc
 #endif
 
 
-void board_init(board_t *b, int size, char *fbookfile);
 board_t *board_new(int size, char *fbookfile);
-board_t *board_copy(board_t *board2, board_t *board1);
-void board_done_noalloc(board_t *board);
+void board_delete(board_t **board);
+void board_copy(board_t *board2, board_t *board1);
 void board_done(board_t *board);
+
 void board_resize(board_t *b, int size);
 void board_clear(board_t *board);
 

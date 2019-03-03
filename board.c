@@ -43,21 +43,23 @@ board_setup(board_t *b)
 	b->last_ko = b->ko = m;
 }
 
-void
-board_init(board_t *b, int size, char *fbookfile)
-{
-	board_setup(b);
-	b->fbookfile = fbookfile;
-	b->rsize = size;
-	board_clear(b);	
-}
-
 board_t *
 board_new(int size, char *fbookfile)
 {
 	board_t *b = malloc2(board_t);
-	board_init(b, size, fbookfile);
+	board_setup(b);
+	b->fbookfile = fbookfile;
+	b->rsize = size;
+	board_clear(b);	
 	return b;
+}
+
+void
+board_delete(board_t **b)
+{
+	board_done(*b);
+	free(*b);
+	*b = NULL;
 }
 
 int
@@ -66,7 +68,7 @@ board_cmp(board_t *b1, board_t *b2)
 	return memcmp(b1, b2, sizeof(board_t));
 }
 
-board_t *
+void
 board_copy(board_t *b2, board_t *b1)
 {
 	memcpy(b2, b1, sizeof(board_t));
@@ -74,22 +76,13 @@ board_copy(board_t *b2, board_t *b1)
 	// XXX: Special semantics.
 	b2->fbook = NULL;
 	b2->ps = NULL;
-
-	return b2;
-}
-
-void
-board_done_noalloc(board_t *board)
-{
-	if (board->fbook) fbook_done(board->fbook);
-	if (board->ps) free(board->ps);
 }
 
 void
 board_done(board_t *board)
 {
-	board_done_noalloc(board);
-	free(board);
+	if (board->fbook) fbook_done(board->fbook);
+	if (board->ps) free(board->ps);
 }
 
 void
@@ -237,7 +230,7 @@ board_clear(board_t *board)
 	char *fbookfile = board->fbookfile;
 	enum rules rules = board->rules;
 
-	board_done_noalloc(board);
+	board_done(board);
 
 	board_statics_init(board);
 	static board_t bcache[BOARD_MAX_SIZE + 2];

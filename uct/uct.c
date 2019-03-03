@@ -164,7 +164,7 @@ uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color)
 		board_t b2;
 		board_copy(&b2, b);
 		playout_play_game(&ps, &b2, color, NULL, &u->ownermap, u->playout);
-		board_done_noalloc(&b2);
+		board_done(&b2);
 	}
 }
 

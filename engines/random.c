@@ -26,7 +26,7 @@ random_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool 
 		board_play_random(&b2, color, &coord, NULL, NULL);
 
 		suicide = (coord != pass && !group_at(&b2, coord));
-		board_done_noalloc(&b2);
+		board_done(&b2);
 	} while (suicide && i++ < 100);
 
 	return (suicide ? pass : coord);

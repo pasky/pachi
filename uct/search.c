@@ -285,7 +285,7 @@ uct_expand_next_move(uct_t *u, tree_t *t, board_t *board, enum stone color, coor
 	if (!__sync_lock_test_and_set(&n->is_expanded, 1))
 		tree_expand_node(t, n, &b, stone_other(color), u, -1);
 
- done:  board_done_noalloc(&b);
+ done:  board_done(&b);
 }
 
 /* For pondering with dcnn we need dcnn values for next move as well before

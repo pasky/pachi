@@ -151,8 +151,8 @@ test_undo(board_t *orig, coord_t c, enum stone color)
 		assert(0);
 	}
 
-	board_done_noalloc(&b);
-	board_done_noalloc(&b2);
+	board_done(&b);
+	board_done(&b2);
 	
 	return c;
 }
@@ -195,7 +195,7 @@ board_undo_stress_test(board_t *board, char *arg)
 		board_t b;
 		board_copy(&b, board);		
 		playout_play_game(&setup, &b, color, NULL, NULL, policy);
-		board_done_noalloc(&b);
+		board_done(&b);
 	}
 	
 	printf("All good.\n\n");

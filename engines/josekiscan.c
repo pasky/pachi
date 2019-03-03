@@ -140,7 +140,7 @@ josekiscan_done(engine_t *e)
 	josekiscan_t *j = (josekiscan_t*)e->data;
 
 	for (int i = 0; i < 16; i++)
-		board_done(j->b[i]);
+		board_delete(&j->b[i]);
 }
 
 void

@@ -166,9 +166,8 @@ fbook_init(char *filename, board_t *b)
 		}
 	}
 
-	for (int i = 0; i < 8; i++) {
-		board_done(bs[i]);
-	}
+	for (int i = 0; i < 8; i++)
+		board_delete(&bs[i]);
 
 	fclose(f);
 

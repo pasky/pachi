@@ -59,7 +59,7 @@ replay_sample_moves(engine_t *e, board_t *b, enum stone color,
 			most_played++;  m.coord = c;
 		}
 
-		board_done_noalloc(&b2);
+		board_done(&b2);
 	}
 	
 	*pmost_played = most_played;
@@ -97,7 +97,7 @@ replay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool 
 		board_t b2;  board_copy(&b2, b);
 		int res = board_play(&b2, &m);  assert(res >= 0);
 		int suicide = !group_at(&b2, m.coord);
-		board_done_noalloc(&b2);
+		board_done(&b2);
 		
 		suicide_stats(suicide);		
 		if (suicide) {

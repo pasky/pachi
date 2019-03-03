@@ -961,7 +961,7 @@ mcowner_playouts_(board_t *b, enum stone color, ownermap_t *ownermap, int playou
 		board_t b2;
 		board_copy(&b2, b);		
 		playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
-		board_done_noalloc(&b2);
+		board_done(&b2);
 	}
 	//fprintf(stderr, "pattern ownermap:\n");
 	//board_print_ownermap(b, stderr, ownermap);

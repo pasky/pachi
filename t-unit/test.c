@@ -461,7 +461,7 @@ moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool 
 		if (color == S_WHITE)
 			score = -score;
 		wr += (score > 0);
-		board_done_noalloc(&b2);
+		board_done(&b2);
 	}
 	
 	double elapsed = time_now() - time_start;
@@ -658,6 +658,7 @@ unit_test(char *filename)
 	}
 
 	fclose(f);
+	board_delete(&b);
 
 	printf("\n\n");
 	printf("----------- [  %3i/%-3i mandatory tests passed (%i%%)  ] -----------\n", passed, total, passed * 100 / total);

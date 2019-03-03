@@ -288,7 +288,7 @@ joseki_load(int bsize)
 			die("%s:%i  gtp command '%s' failed, aborting.\n", fname, lineno, buf);		
 	}
 	engine_done(&e);
-	board_done(b);
+	board_delete(&b);
 	debug_level = saved_debug_level;
 	int variations = gtp.played_games;
 	

@@ -217,7 +217,7 @@ spatial_print(board_t *board, spatial_t *s, FILE *f, move_t *at)
 		board_at(b, m.coord) = m.color;
 	}
 	board_print(b, stderr);	
-	board_done(b);
+	board_delete(&b);
 }
 
 

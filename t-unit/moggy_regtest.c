@@ -46,7 +46,7 @@ moggy_regression_test(board_t *board, char *arg)
 		board_copy(&b, board);
 		fprintf(stderr, "game %i:\n", i+1);
 		play_game(&setup, &b, color, policy);
-		board_done_noalloc(&b);
+		board_done(&b);
 	}
 	
 	printf("All good.\n\n");

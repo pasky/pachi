@@ -668,7 +668,7 @@ uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 		}
 	}
 
-	board_done_noalloc(&b2);
+	board_done(&b2);
 	return result;
 }
 

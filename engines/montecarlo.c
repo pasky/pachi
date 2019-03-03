@@ -149,7 +149,7 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 		playout_setup_t ps = playout_setup(mc->gamelen, 0);
 		int result = playout_play_game(&ps, &b2, color, NULL, NULL, mc->playout);
 
-		board_done_noalloc(&b2);
+		board_done(&b2);
 
 		if (result == 0) {
 			/* Superko. We just ignore this playout.

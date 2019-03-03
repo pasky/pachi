@@ -419,6 +419,7 @@ int main(int argc, char *argv[])
 	}
 
 	engine_done(&e);
+	board_delete(&b);
 	chat_done();
 	free(testfile);
 	free(gtp_port);
