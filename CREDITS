@@ -21,14 +21,6 @@ with the computer-go community.
 
 
 
-Neural networks don't shine without good frameworks around them.
-Kudos to all the good work that went into Caffe, Cuda and OpenBlas,
-providing such a fast and flexible implementation. Even my old
-laptop can go through the millions of multiplications needed to
-evaluate the dcnn in less than a second, which is amazing.
-
-
-
 Pachi contains unpublished methods we claim we have invented
 independently:
 
@@ -48,9 +40,7 @@ Jean-loup Gaily
 	Efficient UCT memory allocator
 
 Lemonsqueeze
-	Seki, dcnn and all kinds of things to Pachi's guts which
-	unexpectedly ended up making it fly on embedded devices.
+	Seki, dcnn, mm patterns
+	Raspberry Pi =)
 
 
-Pachi uses data extracted from the Kogo joseki dictionary as its
-joseki database: http://waterfire.us/joseki.htm
