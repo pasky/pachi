@@ -86,7 +86,7 @@ uct_progress_leelaz(struct uct *u, struct tree *t, enum stone color)
 
 	/* Best candidates */
 	int nbest = 20;
-	float   best_pl[nbest];	
+	float   best_pl[nbest];
 	float   best_wr[nbest];
 	coord_t best_c[nbest];
 	uct_get_best_moves_at(u, node, best_c, best_pl, nbest, false);
@@ -104,20 +104,20 @@ uct_progress_leelaz(struct uct *u, struct tree *t, enum stone color)
 	// info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...]
 	for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
 		if (best_pl[i] < 500)  break;  // too few playouts
-		fprintf(stderr, "info move %s visits %i winrate %i prior %i order %i ",
-			coord2sstr(best_c[i], b), (int)best_pl[i], (int)(best_wr[i] * 10000),
-			(int)(priors[best_c[i]] * 10000), i);
+		printf("info move %s visits %i winrate %i prior %i order %i ",
+		       coord2sstr(best_c[i], b), (int)best_pl[i], (int)(best_wr[i] * 10000),
+		       (int)(priors[best_c[i]] * 10000), i);
 
 		/* Dump best variation */
-		fprintf(stderr, "pv %s ", coord2sstr(best_c[i], b));
+		printf("pv %s ", coord2sstr(best_c[i], b));
 		struct tree_node *n = tree_get_node(node, best_c[i]);
 		while (1) {
 			n = u->policy->choose(u->policy, n, b, color, resign);
 			if (!n || n->u.playouts < 100) break;
-			fprintf(stderr, "%s ", coord2sstr(node_coord(n), b));
+			printf("%s ", coord2sstr(node_coord(n), b));
 		}
 	}
-	fprintf(stderr, "\n");
+	printf("\n");
 }
 
 /* GoGui live gfx: show best sequence */
