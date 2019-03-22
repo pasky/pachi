@@ -1,5 +1,14 @@
 This is brief developer-oriented overview of Pachi structure.
 
+The aim of the software framework is to make it easy to plug your
+engine to the common infrastructure and implement your ideas while
+minimalizing the overhead of implementing the GTP, speed-optimized
+board implementation, etc.  Also, there are premade random playout
+and UCT tree engines, so that you can directly tweak only particular
+policies.  The infrastructure is pretty fast and it should be quite
+easy for you (or us) to extend it to provide more facilities for
+your engine.
+
 Pachi is completely Go-specific (c.f. Fuego; though e.g. atari go support
 should be easy to add), but fairly modular. It has been built with focus
 on MonteCarlo-based play, but it can in principle be used for other

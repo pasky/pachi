@@ -39,17 +39,14 @@ and follow instructions inside.
 
 > Performance might be better if you recompile for your own system though.
 
-## Installation
-
-Currently Unix, Mac and Windows are supported.  
-To build Pachi, simply type:
-
-	make
+For build instructions see [INSTALL](INSTALL.md).
 
 <img align="right" src="media/screenshot_sabaki.jpg" title="playing through sabaki">
 
-The resulting binary program `pachi` is a GTP client. Connect to it
-with your favorite Go program interface (e.g. [gogui][1], [sabaki][2], [lizzie](#Lizzie)),
+## Setup
+
+The `pachi` binary program is a GTP client. Use it with your favorite
+Go program interface (e.g. [gogui][1], [sabaki][2], [lizzie](#Lizzie)),
 or use [kgsGtp][3] to connect it to KGS.
 
 > DO NOT make the GTP interface accessible directly to untrusted users
@@ -61,60 +58,25 @@ or use [kgsGtp][3] to connect it to KGS.
 [3]: http://www.michna.com/kgsbot.htm
 
 The pachi program can take many parameters. The defaults should be fine
-for initial usage, see below for some more tips.
-
-In case you hit compilation issues (e.g. when building on MacOS/X)
-or want to change the build configuration, check the user configurable
-section at the top of the Makefile.
-
-Here is an example for installing all dependencies and compiling Pachi
-from sources under Ubuntu 18.04:
-
-	sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
-	git clone https://github.com/pasky/pachi.git
-	cd pachi
-	make
-
-Install libcaffe-cuda-dev instead for nvidia gpu acceleration.  
-Non-dcnn build just needs git make and gcc.
-
-After compiling and setting up data files you can install pachi with:
-
-    make install
-    make install-data
-
-Pachi will look for extra data files (such as dcnn, pattern, joseki or
-fuseki database) in pachi's system directory (`/usr/local/share/pachi`
-by default) as well as current directory. System data directory can be
-overridden at runtime by setting `DATA_DIR` environment variable.
+for initial usage, see below for more tips.
 
 
-## DCNN support
+## Deep Learning
 
-Pachi can use a neural network as source of good moves to consider.
-With dcnn support Pachi can play at dan level strength on modest hardware.
-For large number of playouts this makes it about 1 stone stronger, and
-tends to make the games more pretty. A raw dcnn engine is available for
-pure dcnn play (not recommended for actual games, pachi won't know when to
-pass or resign !).
+Pachi uses a neural network as source of good moves to consider (policy network).
+With dcnn support Pachi can play at dan level on modest hardware.
+For large number of playouts this makes it about 1 stone stronger and
+makes the games more pretty. A raw dcnn engine is available for
+pure dcnn play (not recommended for actual games, pachi won't know
+when to pass or resign !).
 
-To build Pachi with DCNN support:
-- Install [Caffe](http://caffe.berkeleyvision.org)  
-  CPU-only build is fine, no need for GPU, cuda or the other optional dependencies.  
-  You need openblas for good performance.
-- Edit Makefile, set DCNN=1, point it to where caffe is installed and build.
+`pachi --list-dcnn`    List supported networks.  
+`pachi --dcnn=name`    Choose network to use (Detlef's 54% dcnn by default).
 
-Install dcnn files in current directory.
-Detlef Schmicker's 54% dcnn can be found at:  
-  http://physik.de/CNNlast.tar.gz
+Releases come with Detlef's 54% dcnn by default.
+For other networks see [Pachi Networks](https://github.com/pasky/pachi/releases/tag/pachi_networks).
 
-More information about this dcnn [here](http://computer-go.org/pipermail/computer-go/2015-December/008324.html).
-
-Pachi will look for `golast19.prototxt` and `golast.trained` files on startup.
-
-This network is fully convolutional, so can work with boards other than 19x19.
-right now it's used for boards 13x13 and up.
-Currently dcnn is used for root node only, dcnn + pondering working now.
+Currently dcnn is used for root node only.
 
 
 ## How to run
@@ -148,8 +110,9 @@ It's also possible to force time settings via the command line
 Pachi will play fast on a fast computer, slow on a slow computer, but strength
 will remain the same:
 
-* `pachi -t =5000:15000    `    kgs 2d with dcnn support.
-* `pachi --nodcnn -t =5000   `   kgs 3k (mcts only).
+* `pachi -t =5000:15000 --dcnn=df `   kgs 3d
+* `pachi -t =5000:15000       `       kgs 2d
+* `pachi -t =5000 --nodcnn      `     kgs 3k (mcts only).
 
 **Other Options**
 
@@ -187,7 +150,8 @@ via the live gfx commands.
 ![score estimate](media/screenshot_score_est.png?raw=true "score estimate")
 ![dcnn colormap](media/screenshot_dcnn_colors.png?raw=true "dcnn colormap")
 
-There are some non-gui tools for game analysis as well, see below.
+For game analysis try [GoReviewPartner](https://github.com/pnprog/goreviewpartner),
+or see [here](MORE.md) for some tools that come with Pachi.
 
 
 ## Lizzie
@@ -222,159 +186,10 @@ unexpected happens.
 `-o log_file` logs to a file instead. gogui live-gfx commands won't work though.
 
 
-## Large Patterns
+## More
 
-Pachi uses MM patterns to guide tree search. The pattern matcher runs
-on the cpu each time a new node is explored (see pattern/README for details).
-Right now prediction rate is about 37%.
-
-One benefit of MM is that the weights are very small. If you used previous
-Pachi versions, it's no longer necessary to install extra files to
-get patterns working. Patterns should load instantly now and take up
-very little memory.
-
-
-## Joseki engine
-
-When playing without dcnn Pachi uses a joseki engine to improve play during
-the opening. The "Joseki Moves" gogui analyze command can be used to display
-what moves Pachi would consider in a given position. Just keep in mind these
-are "Pachi joseki moves": moves Pachi might want to play at around 3k level.
-For a full joseki reference from a player's point of view see Kogo joseki
-dictionary for example.
-
-To run Pachi without joseki engine:
-   `pachi --nodcnn --nojoseki -t =5000`
-
-
-## Opening book
-
-> Mostly useful when running without dcnn (dcnn can deal with fuseki).
-
-Pachi can use an opening book in a Fuego-compatible format - you can
-obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
-with the -f parameter:
-
-	pachi -f book.dat ...
-
-You may wish to append some custom Pachi opening book lines to book.dat;
-take them from the book.dat.extra file. If using the default Fuego book,
-you may want to remove the lines listed in book.dat.bad.
-
-
-## Greedy Pachi
-
-> Mostly useful when running without dcnn
-
-Normally, Pachi cares only for win or loss and does not take into
-account the point amount. This means that it will play slack endgame
-when winning and crazy moves followed with a resign when losing.
-
-It may give you a more pleasurable playing experience if Pachi
-_does_ take into account the point size, strives for a maximum
-(reasonable) win margin when winning and minimal point loss when
-losing. This is possible by using the maximize_score parameter, e.g.:
-
-	pachi -t _1200 threads=8,maximize_score
-
-This enables an aggressive dynamic komi usage and end result margin
-is included in node values aside of winrate. Pachi will also enter
-scoring even when losing (normally, Pachi will never pass in that case).
-Note that if you pass any 'dynkomi' parameter to Pachi, you will reset
-the values set by 'maximize_score'.
-
-Note that Pachi in this mode may be slightly weaker, and result margin
-should not be taken into account when judging either player's strength.
-During the game, the winning/losing margin can be approximated from
-Pachi's "extra komi" or "xkomi" reporting in the progress messages.
-
-
-## Experiments and Testing
-
-Except UCT, Pachi supports a simple `random` idiotbot-like engine and an
-example `montecarlo` treeless MonteCarlo-player. The MonteCarlo simulation ("playout")
-policies are also pluggable, by default we use the one that makes use of
-heavy domain knowledge.
-
-Other special engines are also provided:
-* `distributed` engine for cluster play; the description at the top of
-  distributed/distributed.c should provide all the guidance
-* `dcnn` engine plays moves according to dcnn policy.
-* `replay` engine simply plays moves according to the playout policy suggestions
-* `patternplay` engine plays moves according to the learned patterns
-* few other purely for development usage
-
-Pachi can be used as a test opponent for development of other go-playing
-programs. For example, to get the "plainest UCT" player, use:
-
-	pachi -t =5000 --nodcnn policy=ucb1,playout=light,prior=eqex=0,dynkomi=none,pondering=0,pass_all_alive
-
-This will fix the number of playouts per move to 5000, switch the node
-selection policy from ucb1amaf to ucb1 (i.e. disable RAVE), switch the
-playouts from heuristic-heavy moggy to uniformly random light, stop
-prioring the node values heuristically, turn off dynamic komi, disable
-thinking on the opponent's time and make sure Pachi passes only when
-just 10% alive stones remain on the board (to avoid disputes during
-counting).
-
-You can of course selectively re-enable various features or tweak this
-further. But please note that using Pachi in this mode is not tested
-extensively, so check its performance in whatever version you test
-before you use it as a reference.
-
-Note that even in this "basic UCT" mode, Pachi optimizes tree search
-by considering board symmetries at the beginning. Currently, there's no
-easy option to turn that off. The easiest way is to tweak board.c so
-that board_symmetry_update() has goto break_symmetry at the beginning
-and board_clear has board->symmetry.type = SYM_NONE.
-
-
-## Game Analysis
-
-Pachi can also help you analyze your games by being able to provide
-its opinion on various positions. The user interface is very rudimentary,
-but the ability is certainly there.
-
-There are currently several Pachi interfaces provided for this purpose.
-
-**Winrate Development**
-
-Pachi can evaluate all moves within a given game and show how
-the winrates for both players evolved - i.e. who was winning at which
-game stage. This is implemented using the `tools/sgf-analyse.pl` script.
-See the comment on top of the script about its usage.
-
-**Move Ranking**
-
-Pachi can evaluate all available moves in a given situation
-and for each give a value between 0 and 1 representing perceived
-likelihood of winning the game if one would play that move. I.e. it can
-suggest which moves would be good and bad in a single given situation.
-
-To achieve the latter, note the number of move at the situation you
-want to evaluate and run the `tools/sgf-ratemove.sh` script.
-See the comment on top of the script about its usage.
-
-**Pattern Move Hinting**
-
-Pachi can show instantenous pattern-based move suggestions very much
-like for example Moyo Go Studio (though of course without a GUI).
-You can use the Move Ranking method above (tools/sgf-ratemove.sh),
-but pass it an extra parameter '-e patternplay'.
-
-
-## Framework
-
-The aim of the software framework is to make it easy to plug your
-engine to the common infrastructure and implement your ideas while
-minimalizing the overhead of implementing the GTP, speed-optimized
-board implementation, etc.  Also, there are premade random playout
-and UCT tree engines, so that you can directly tweak only particular
-policies.  The infrastructure is pretty fast and it should be quite
-easy for you (or us) to extend it to provide more facilities for
-your engine.
-
-See the [HACKING](HACKING?raw=true) file for a more detailed developer's view of Pachi.
+See [HACKING](HACKING?raw=true) for a more detailed developer's view of Pachi,  
+[MORE](MORE.md) for more details, other engines and game analysis tools.
 
 Also, if you are interested about Pachi's architecture, algorithms
 etc., consider taking a look at Petr Baudis' Master's Thesis:

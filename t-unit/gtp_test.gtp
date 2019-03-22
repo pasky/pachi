@@ -21,6 +21,11 @@ lz-genmove_analyze w 10
 kgs-genmove_cleanup b
 
 clear_board
+predict b a1
+clear_board
+pachi-predict b a1
+
+clear_board
 set_free_handicap d4 q16
 
 clear_board
@@ -40,52 +45,249 @@ time_left b 30 5
 
 kgs-chat game user winrate
 
-boardsize 9
+kgs-rules japanese
+boardsize 19
 clear_board
-komi 7.5
-play b C4
-play w E5
-play b C6
-play w E6
-play b D3
-play w F4
-play b D7
-play w E7
-play b E4
-play w E3
-play b D4
-play w F3
-play b D5
-play w F5
-play b D6
-play w E8
-play b D2
-play w D8
-play b C8
-play w E2
-play b D9
-play w H5
-play b E1
-play w G2
-play b E9
-play w F8
-play b F9
-play w G9
-play b C9
-play w G8
-play b G1
-play w H2
-play b F1
-play w J2
-play b H1
-play w G3
-play b J1
-play w G6
-play b D1
-play w H4
-play b J9
-play w PASS
-play b J7
+komi 0.5
+set_free_handicap q16 d4 q4
+play W d16
+play B k4
+play W c6
+play B g4
+play W o17
+play B r13
+play W q17
+play B r16
+play W r6
+play B n4
+play W r4
+play B q5
+play W r5
+play B q6
+play W q7
+play B p7
+play W q8
+play B o8
+play W o9
+play B n8
+play W p8
+play B r10
+play W n9
+play B m8
+play W q3
+play B p3
+play W p6
+play B p4
+play W o7
+play B n7
+play W n6
+play B m6
+play W m5
+play B n5
+play W o6
+play B l5
+play W e13
+play B m4
+play W p16
+play B p15
+play W o15
+play B p14
+play W c9
+play B p10
+play W p9
+play B q10
+play W o14
+play B o13
+play W n13
+play B o12
+play W r17
+play B s16
+play W s2
+play B q2
+play W r3
+play B p2
+play W s17
+play B e6
+play W c4
+play B d3
+play W c3
+play B d5
+play W c5
+play B s7
+play W s8
+play B r8
+play W r7
+play B r9
+play W s6
+play B s9
+play W t7
+play B f17
+play W h17
+play B g18
+play W d2
+play B e2
+play W j18
+play B d18
+play W c2
+play B f3
+play W c17
+play B c18
+play W b18
+play B d17
+play W c16
+play B e16
+play W e15
+play B f15
+play W f14
+play B g15
+play W h15
+play B g14
+play W h14
+play B f13
+play W e14
+play B h13
+play W j13
+play B f12
+play W h12
+play B g13
+play W e12
+play B h16
+play W j16
+play B g16
+play W m9
+play B l8
+play W j11
+play B e11
+play W d11
+play B e10
+play W b15
+play B d10
+play W c10
+play B e8
+play W g11
+play B f11
+play W k11
+play B g10
+play W h10
+play B g9
+play W k17
+play B h9
+play W t16
+play B t15
+play W t17
+play B s15
+play W k9
+play B k8
+play W c8
+play B l9
+play W l10
+play B j9
+play W n12
+play B n11
+play W m11
+play B n10
+play W o10
+play B o11
+play W m12
+play B m10
+play W j15
+play B k10
+play W l11
+play B j10
+play W h18
+play B g17
+play W b19
+play B c19
+play W b17
+play B h11
+play W p13
+play B p11
+play W r14
+play B q15
+play W s14
+play B q13
+play W g19
+play B f19
+play W e1
+play B f1
+play W r2
+play B g12
+play W j12
+play B s13
+play W h19
+play B e18
+play W d1
+play B d6
+play W f2
+play B g2
+play W p18
+play B o5
+play W c7
+play B d8
+play W t9
+play B t10
+play W t8
+play B s10
+play W d7
+play B e7
+play W r1
+play B q1
+play W d9
+play B e9
+play W q9
+play B p5
+play W p7
+play B p12
+play W c12
+play B n16
+play W o16
+play B n17
+play W k12
+play B n18
+play W o18
+play B n15
+play W l18
+play B n14
+play W m14
+play B m15
+play W r18
+play B l14
+play W k15
+play B m13
+play W l15
+play B k14
+play W j14
+play B l16
+play W k16
+play B l17
+play W l19
+play B m18
+play W b2
+play B l13
+play W k19
+play B b11
+play W c11
+play B b12
+play W b10
+play B b13
+play W c13
+play B b14
+play W c14
+play B a15
+play W a16
+play B a14
+play W n19
+play B m19
+play W o19
+play B q19
+play W r19
+play B t5
+play W t4
+play B s4
+play W t6
+play B t3
+play W t2
+play B pass
 
 score_est
 pachi-score_est
@@ -95,10 +297,6 @@ final_status_list seki
 final_status_list alive
 final_status_list black_territory
 final_status_list white_territory
-
-
-predict w h9
-pachi-predict b a1
 
 tunit sar b J8 0
 pachi-tunit sar b J8 0

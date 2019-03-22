@@ -203,6 +203,10 @@ FB_ONLY(hash_t hash_history)[BOARD_HASH_HISTORY]; /* Last hashes encountered, fo
 
 /*************************************************************************************************************/
 
+#ifdef DCNN_DARKFOREST
+FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
+#endif
+
 #ifdef BOARD_UNDO_CHECKS	
 	int quicked;                       /* Guard against invalid quick_play() / quick_undo() uses */
 #endif

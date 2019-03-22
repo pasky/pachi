@@ -464,7 +464,7 @@ static engine_t *dcnn_engine = NULL;
 enum parse_code
 cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_error(gtp, "Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
@@ -478,7 +478,7 @@ cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_error(gtp, "Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
@@ -492,7 +492,7 @@ cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_dcnn_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_error(gtp, "Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;

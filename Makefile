@@ -1,9 +1,11 @@
 #### CONFIGURATION
 
-# Uncomment one of the options below to change the way Pachi is built.
+# Tweak options below to change the way Pachi is built.
 # Alternatively, you can pass the option to make itself, like:
 # 	make MAC=1 DOUBLE_FLOATING=1
-# or use the short aliases (make quick, make generic ...)
+# or use the short aliases (make fast, make generic ...)
+
+######################### Build #########################
 
 # Generic build ?
 # If binary will be distributed you need this !
@@ -24,12 +26,22 @@
 
 # MAC=1
 
+#################### Deep Learning ######################
+
 # Compile Pachi with dcnn support ?
 # You'll need to install Boost and Caffe libraries.
 # If Caffe is in a custom directory you can set it here.
 
 DCNN=1
 # CAFFE_PREFIX=/usr/local/caffe
+
+# Supported networks:
+# Comment out those you don't need for speed.
+
+DCNN_DETLEF=1
+DCNN_DARKFOREST=1
+
+######################## Extras #########################
 
 # Fixed board size. Set this to enable more aggressive optimizations
 # if you only play on 19x19. Pachi won't be able to play on other
@@ -63,6 +75,8 @@ DCNN=1
 # Compile extra tests ? Enable this to test board implementation.
 # BOARD_TESTS=1
 
+###################### Profiling ########################
+
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
 # it somewhat.
@@ -75,6 +89,7 @@ DCNN=1
 
 # PROFILING=perftools
 
+######################## Install #########################
 
 # Target directories when running 'make install' / 'make install-data'.
 # Pachi will look for extra data files (such as dcnn, pattern, joseki or
@@ -94,7 +109,7 @@ CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length
 CXXFLAGS     := -std=c++11
 
 
-###################################################################################################################
+##############################################################################
 ### CONFIGURATION END
 
 # Main rule + aliases
@@ -175,6 +190,17 @@ ifeq ($(DCNN), 1)
 	COMMON_FLAGS   += -DDCNN
 	EXTRA_OBJS     += $(EXTRA_DCNN_OBJS) caffe.o dcnn.o
 	SYS_LIBS := $(DCNN_LIBS)
+else
+	DCNN_DETLEF = 0
+	DCNN_DARKFOREST = 0
+endif
+
+ifeq ($(DCNN_DETLEF), 1)
+	COMMON_FLAGS += -DDCNN_DETLEF
+endif
+
+ifeq ($(DCNN_DARKFOREST), 1)
+	COMMON_FLAGS += -DDCNN_DARKFOREST
 endif
 
 ifeq ($(FIFO), 1)

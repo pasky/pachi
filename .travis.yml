@@ -26,9 +26,12 @@ matrix:
 before_install:
   - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ]; then sudo add-apt-repository ppa:lemonsqueeze/pachi -y ; fi
   - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ]; then sudo apt-get update -q ; fi
-  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ]; then sudo apt-get install libcaffe-cpu-dev -y ; fi
+  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ]; then sudo apt-get install -y libcaffe-cpu-dev pachi-go-data; fi
+# XXX remove once pachi-data package is updated
+  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ] && ! [ -f /usr/share/pachi-go/detlef54.prototxt ]; then sudo mv /usr/share/pachi-go/golast19.prototxt /usr/share/pachi-go/detlef54.prototxt; fi
+  - if [ "$TRAVIS_OS_NAME" = linux ] && [ "$DCNN" = 1 ] && ! [ -f /usr/share/pachi-go/detlef54.trained ];  then sudo mv /usr/share/pachi-go/golast.trained    /usr/share/pachi-go/detlef54.trained; fi
 
 # https://blog.lukaspradel.com/continuous-integration-for-cmake-projects-using-travis-ci/  
 script:
-  - make -j2 DCNN=$DCNN BOARD_TESTS=1
+  - make -j2 DCNN=$DCNN BOARD_TESTS=1 DATADIR=/usr/share/pachi-go
   - make test

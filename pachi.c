@@ -133,6 +133,13 @@ usage()
 		"      --patterns, --nopatterns      mm patterns required / disabled \n"
 		"      --joseki,   --nojoseki        joseki engine required / disabled \n"
 		" \n"
+#ifdef DCNN
+		"Deep learning: \n"
+		"      --dcnn=name                   choose which dcnn to load (default detlef) \n"
+		"      --dcnn=file                   \n"
+		"      --list-dcnns                  show supported networks \n"
+		" \n"
+#endif
 		"Time settings: \n"
 		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
 		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
@@ -193,13 +200,14 @@ show_version(FILE *s)
 #define OPT_NOUNDO        267
 #define OPT_KGS           268
 #define OPT_NAME          269
+#define OPT_LIST_DCNNS    270
 static struct option longopts[] = {
 	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
 	{ "fuseki",      required_argument, 0, OPT_FUSEKI },
 	{ "chatfile",    required_argument, 0, 'c' },
 	{ "compile-flags", no_argument,     0, OPT_COMPILE_FLAGS },
 	{ "debug-level", required_argument, 0, 'd' },
-	{ "dcnn",        no_argument,       0, OPT_DCNN },
+	{ "dcnn",        optional_argument, 0, OPT_DCNN },
 	{ "engine",      required_argument, 0, 'e' },
 	{ "fbook",       required_argument, 0, 'f' },
 	{ "joseki",      no_argument,       0, OPT_JOSEKI },
@@ -209,6 +217,9 @@ static struct option longopts[] = {
 #endif
 	{ "help",        no_argument,       0, 'h' },
 	{ "kgs",         no_argument,       0, OPT_KGS },
+#ifdef DCNN
+	{ "list-dcnns",  no_argument,       0, OPT_LIST_DCNNS },
+#endif
 	{ "log-file",    required_argument, 0, 'o' },
 	{ "name",        required_argument, 0, OPT_NAME },
 	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
@@ -284,6 +295,7 @@ int main(int argc, char *argv[])
 				debug_boardprint = false;
 				break;
 			case OPT_DCNN:
+				if (optarg)  set_dcnn(optarg);
 				require_dcnn();
 				break;
 			case 'f':
@@ -308,6 +320,11 @@ int main(int argc, char *argv[])
 			case 'l':
 				log_port = strdup(optarg);
 				break;
+#endif
+#ifdef DCNN
+			case OPT_LIST_DCNNS:
+				list_dcnns();
+				exit(0);
 #endif
 			case 'o':
 				file = fopen(optarg, "w");   if (!file) fail(optarg);
@@ -395,7 +412,7 @@ int main(int argc, char *argv[])
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 	fifo_init();
 
-	board_t *b = board_new(19, fbookfile);
+	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
 	if (forced_ruleset) {
 		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
