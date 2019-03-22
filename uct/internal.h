@@ -12,23 +12,37 @@
 #include "playout.h"
 #include "stats.h"
 #include "mq.h"
+#include "uct/tree.h"
+#include "uct/prior.h"
 
-struct tree;
-struct tree_node;
-struct uct_policy;
 struct uct_prior;
 struct uct_dynkomi;
 struct uct_pluginset;
 
+typedef struct uct_policy uct_policy_t;
+
+typedef enum uct_reporting {
+	UR_TEXT,
+	UR_JSON,
+	UR_JSON_BIG,
+	UR_LEELAZ,
+} uct_reporting_t;
+
+typedef enum uct_thread_model {
+	TM_TREE, /* Tree parallelization w/o virtual loss. */
+	TM_TREEVL, /* Tree parallelization with virtual loss. */
+} uct_thread_model_t;
+
+typedef enum local_tree_eval {
+	LTE_ROOT,
+	LTE_EACH,
+	LTE_TOTAL,
+} local_tree_eval_t;
+
 /* Internal engine state. */
-struct uct {
+typedef struct uct {
 	int debug_level;
-	enum uct_reporting {
-		UR_TEXT,
-		UR_JSON,
-		UR_JSON_BIG,
-		UR_LEELAZ,
-	} reporting;
+	enum uct_reporting reporting;
 	int reportfreq;
 
 	int games, gamelen;
@@ -54,10 +68,7 @@ struct uct {
 	bool genmove_reset_tree;
 
 	int threads;
-	enum uct_thread_model {
-		TM_TREE, /* Tree parallelization w/o virtual loss. */
-		TM_TREEVL, /* Tree parallelization with virtual loss. */
-	} thread_model;
+	enum uct_thread_model thread_model;
 	int virtual_loss;
 	bool slave; /* Act as slave in distributed engine. */
 	int max_slaves; /* Optional, -1 if not set */
@@ -94,11 +105,7 @@ struct uct {
 	floating_t local_tree_depth_decay;
 	bool local_tree_allseq;
 	bool local_tree_neival;
-	enum {
-		LTE_ROOT,
-		LTE_EACH,
-		LTE_TOTAL,
-	} local_tree_eval;
+	enum local_tree_eval local_tree_eval;
 	bool local_tree_rootchoose;
 
 	struct {
@@ -108,15 +115,15 @@ struct uct {
 
 	char *banner;
 
-	struct uct_policy *policy;
-	struct uct_policy *random_policy;
-	struct playout_policy *playout;
-	struct uct_prior *prior;
+	uct_policy_t *policy;
+	uct_policy_t *random_policy;
+	playout_policy_t *playout;
+	uct_prior_t *prior;
 	struct uct_pluginset *plugins;
-	struct pattern_config pc;
+	pattern_config_t pc;
 
 	/* Used within frame of single genmove. */
-	struct ownermap ownermap;
+	ownermap_t ownermap;
 
 	/* Used for coordination among slaves of the distributed engine. */
 	int stats_hbits;
@@ -127,51 +134,52 @@ struct uct {
 	int played_all; /* games played by all slaves */
 
 	/* Saved dead groups, for final_status_list dead */
-	struct move_queue dead_groups;
+	move_queue_t dead_groups;
 	int pass_moveno;
 	
 	/* Timing */
 	double mcts_time_start;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
-	struct tree *t;
+	tree_t *t;
 	bool tree_ready;
-};
+} uct_t;
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
-bool uct_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg);
-void uct_prepare_move(struct uct *u, struct board *b, enum stone color);
-void uct_genmove_setup(struct uct *u, struct board *b, enum stone color);
-void uct_pondering_stop(struct uct *u);
-void uct_get_best_moves(struct uct *u, coord_t *best_c, float *best_r, int nbest, bool winrates);
-void uct_get_best_moves_at(struct uct *u, struct tree_node *n, coord_t *best_c, float *best_r, int nbest, bool winrates);
-void uct_mcowner_playouts(struct uct *u, struct board *b, enum stone color);
+bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg);
+void uct_prepare_move(uct_t *u, board_t *b, enum stone color);
+void uct_genmove_setup(uct_t *u, board_t *b, enum stone color);
+void uct_pondering_stop(uct_t *u);
+void uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates);
+void uct_get_best_moves_at(uct_t *u, tree_node_t *n, coord_t *best_c, float *best_r, int nbest, bool winrates);
+void uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color);
 
 /* This is the state used for descending the tree; we use this wrapper
  * structure in order to be able to easily descend in multiple trees
  * in parallel (e.g. main tree and local tree) or compute cummulative
  * "path value" throughout the tree descent. */
-struct uct_descent {
+typedef struct {
 	/* Active tree nodes: */
-	struct tree_node *node; /* Main tree. */
-	struct tree_node *lnode; /* Local tree. */
+	tree_node_t *node; /* Main tree. */
+	tree_node_t *lnode; /* Local tree. */
 	/* Value of main tree node (with all value factors, but unbiased
 	 * - without exploration factor), from black's perspective. */
-	struct move_stats value;
-};
+	move_stats_t value;
+} uct_descent_t;
 
+#define uct_descent(node, lnode)  { node, lnode }
 
-typedef struct tree_node *(*uctp_choose)(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude);
-typedef floating_t (*uctp_evaluate)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity);
-typedef void (*uctp_descend)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent, int parity, bool allow_pass);
-typedef void (*uctp_winner)(struct uct_policy *p, struct tree *tree, struct uct_descent *descent);
-typedef void (*uctp_prior)(struct uct_policy *p, struct tree *tree, struct tree_node *node, struct board *b, enum stone color, int parity);
-typedef void (*uctp_update)(struct uct_policy *p, struct tree *tree, struct tree_node *node, enum stone node_color, enum stone player_color, struct playout_amafmap *amaf, struct board *final_board, floating_t result);
-typedef void (*uctp_done)(struct uct_policy *p);
+typedef tree_node_t *(*uctp_choose)(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone color, coord_t exclude);
+typedef floating_t (*uctp_evaluate)(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity);
+typedef void (*uctp_descend)(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, bool allow_pass);
+typedef void (*uctp_winner)(uct_policy_t *p, tree_t *tree, uct_descent_t *descent);
+typedef void (*uctp_prior)(uct_policy_t *p, tree_t *tree, tree_node_t *node, board_t *b, enum stone color, int parity);
+typedef void (*uctp_update)(uct_policy_t *p, tree_t *tree, tree_node_t *node, enum stone node_color, enum stone player_color, playout_amafmap_t *amaf, board_t *final_board, floating_t result);
+typedef void (*uctp_done)(uct_policy_t *p);
 
 struct uct_policy {
-	struct uct *uct;
+	uct_t *uct;
 	uctp_choose choose;
 	uctp_winner winner;
 	uctp_evaluate evaluate;

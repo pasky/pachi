@@ -19,12 +19,13 @@
 #define BUFFERS_PER_SLAVE_BITS 8
 #define BUFFERS_PER_SLAVE (1 << BUFFERS_PER_SLAVE_BITS)
 
-struct slave_state;
+typedef struct slave_state slave_state_t;
+
 typedef void (*buffer_hook)(void *buf, int size);
 typedef void (*state_alloc_hook)(struct slave_state *sstate);
 typedef int (*getargs_hook)(void *buf, struct slave_state *sstate, int cmd_id);
 
-struct buf_state {
+typedef struct {
 	void *buf;
 	/* All buffers have the same physical size. size is the
 	 * number of valid bytes. It is set only when the buffer
@@ -32,7 +33,7 @@ struct buf_state {
 	int size;
 	int queue_index;
 	int owner;
-};
+} buf_state_t;
 
 struct slave_state {
 	int max_buf_size;
@@ -48,14 +49,14 @@ struct slave_state {
 
 	/* --- PRIVATE DATA for protocol.c --- */
 
-	struct buf_state b[BUFFERS_PER_SLAVE];
+	buf_state_t b[BUFFERS_PER_SLAVE];
 	int newest_buf;
 	int slave_sock;
 
 	/* --- PRIVATE DATA for merge.c --- */
 
 	/* Hash table of incremental stats. */
-	struct incr_stats *stats_htable;
+	incr_stats_t *stats_htable;
 	int stats_hbits;
 	int stats_id;
 
@@ -63,16 +64,16 @@ struct slave_state {
 	int *merged;
 	int max_merged_nodes;
 };
-extern struct slave_state default_sstate;
+extern slave_state_t default_sstate;
 
 void protocol_lock(void);
 void protocol_unlock(void);
 
-void logline(struct in_addr *client, char *prefix, char *s);
+void logline(struct in_addr *client, const char *prefix, const char *s);
 
 void clear_receive_queue(void);
-void update_cmd(struct board *b, char *cmd, char *args, bool new_id);
-void new_cmd(struct board *b, char *cmd, char *args);
+void update_cmd(board_t *b, const char *cmd, char *args, bool new_id);
+void new_cmd(board_t *b, const char *cmd, char *args);
 void get_replies(double time_limit, int min_replies);
 void protocol_init(char *slave_port, char *proxy_port, int max_slaves);
 
@@ -82,7 +83,7 @@ extern int active_slaves;
 
 /* All binary buffers received from all slaves in current move are in
  * receive_queue[0..queue_length-1] */
-extern struct buf_state **receive_queue;
+extern buf_state_t **receive_queue;
 extern int queue_length;
 /* Queue age is incremented each time the queue is emptied. */
 extern int queue_age;

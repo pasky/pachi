@@ -16,7 +16,7 @@
  * and incrementally match spatial features in nested circles.
  * Within one circle, coordinates are ordered by rows to keep
  * good cache behavior. */
-struct ptcoord ptcoords[MAX_PATTERN_AREA];
+ptcoord_t ptcoords[MAX_PATTERN_AREA];
 
 /* For each radius, starting index in ptcoords[]. */
 unsigned int ptind[MAX_PATTERN_DIST + 2];
@@ -142,8 +142,8 @@ spatial_init(void)
 	pthashes_init();
 }
 
-inline hash_t
-spatial_hash(unsigned int rotation, struct spatial *s)
+hash_t
+spatial_hash(unsigned int rotation, spatial_t *s)
 {
 	hash_t h = 0;
 	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
@@ -154,7 +154,7 @@ spatial_hash(unsigned int rotation, struct spatial *s)
 
 /* compute spatial hash from board, ignoring center stone */
 hash_t
-outer_spatial_hash_from_board_rot_d(struct board *b, coord_t coord, enum stone color,
+outer_spatial_hash_from_board_rot_d(board_t *b, coord_t coord, enum stone color,
 				    int rot, unsigned int d)
 {
 	hash_t h = pthashes[0][0][S_NONE];
@@ -169,26 +169,26 @@ outer_spatial_hash_from_board_rot_d(struct board *b, coord_t coord, enum stone c
 	enum stone (*bt)[4] = color == S_WHITE ? &bt_white : &bt_black;
 
 	for (unsigned int i = ptind[2]; i < ptind[d + 1]; i++) {
-		ptcoords_at(x, y, coord, b, i);
+		ptcoords_at(x, y, coord, i);
 		h ^= pthashes[rot][i][(*bt)[board_atxy(b, x, y)]];
 	}
 	return h;
 }
 
 hash_t
-outer_spatial_hash_from_board_rot(struct board *b, coord_t coord, enum stone color, int rot)
+outer_spatial_hash_from_board_rot(board_t *b, coord_t coord, enum stone color, int rot)
 {
 	return outer_spatial_hash_from_board_rot_d(b, coord, color, rot, MAX_PATTERN_DIST);
 }
 
 hash_t
-outer_spatial_hash_from_board(struct board *b, coord_t coord, enum stone color)
+outer_spatial_hash_from_board(board_t *b, coord_t coord, enum stone color)
 {
 	return outer_spatial_hash_from_board_rot(b, coord, color, 0);
 }
 
 char *
-spatial2str(struct spatial *s)
+spatial2str(spatial_t *s)
 {
 	static char buf[1024];
 	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
@@ -199,20 +199,20 @@ spatial2str(struct spatial *s)
 }
 
 void
-spatial_print(struct board *board, struct spatial *s, FILE *f, struct move *at)
+spatial_print(board_t *board, spatial_t *s, FILE *f, move_t *at)
 {
-	struct board *b = board_new(board_size(board), NULL);
+	board_t *b = board_new(board_size(board), NULL);
 	b->last_move.coord = at->coord;
 	
 	for (int i = 0; i < real_board_size(b); i++)
 		for (int j = 0; j < real_board_size(b); j++) {
-			coord_t c = coord_xy(b, i+1, j+1);
-			board_at(b, c) = 4; // HACK !
+			coord_t c = coord_xy(i+1, j+1);
+			board_at(b, c) = (enum stone)4; // HACK !
 		}
 	
 	for (unsigned int j = 0; j < ptind[s->dist + 1]; j++) {
-		ptcoords_at(x, y, at->coord, b, j);
-		struct move m = { .coord = coord_xy(b, x, y), .color = spatial_point_at(*s, j)  };
+		ptcoords_at(x, y, at->coord, j);
+		move_t m = move(coord_xy(x, y), spatial_point_at(*s, j) );
 		board_at(b, m.coord) = m.color;
 	}
 	board_print(b, stderr);	
@@ -221,8 +221,8 @@ spatial_print(struct board *board, struct spatial *s, FILE *f, struct move *at)
 
 
 void
-spatial_from_board(struct pattern_config *pc, struct spatial *s,
-                   struct board *b, struct move *m)
+spatial_from_board(pattern_config_t *pc, spatial_t *s,
+                   board_t *b, move_t *m)
 {
 	assert(pc->spat_min > 0);
 
@@ -234,7 +234,7 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 
 	memset(s, 0, sizeof(*s));
 	for (unsigned int j = 0; j < ptind[pc->spat_max + 1]; j++) {
-		ptcoords_at(x, y, m->coord, b, j);
+		ptcoords_at(x, y, m->coord, j);
 		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
 	}
 	s->dist = pc->spat_max;
@@ -243,7 +243,7 @@ spatial_from_board(struct pattern_config *pc, struct spatial *s,
 /* Compare two spatials, allowing for differences up to isomorphism.
  * True means the spatials are equivalent. */
 static bool
-spatial_equal(struct spatial *s1, struct spatial *s2)
+spatial_equal(spatial_t *s1, spatial_t *s2)
 {
 	/* Quick preliminary check. */
 	if (s1->dist != s2->dist)
@@ -274,7 +274,7 @@ found_rot:;
 /**********************************************************************************/
 /* Spatial dict manipulation. */
 
-struct spatial_dict *spat_dict = NULL;
+spatial_dict_t *spat_dict = NULL;
 
 /* Spatial dict hashtable hash function. @h: spatial hash */
 static unsigned int
@@ -298,10 +298,10 @@ spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t hash)
 
 /* Add to collection, returns new pattern id */
 static unsigned int
-spatial_dict_addc(struct spatial_dict *d, struct spatial *s)
+spatial_dict_addc(spatial_dict_t *d, spatial_t *s)
 {
 	if (!(d->nspatials % SPATIALS_ALLOC))
-		d->spatials = realloc(d->spatials, (d->nspatials + SPATIALS_ALLOC) * sizeof(*d->spatials));
+		d->spatials = (spatial_t*)realloc(d->spatials, (d->nspatials + SPATIALS_ALLOC) * sizeof(*d->spatials));
 	d->spatials[d->nspatials] = *s;
 	return d->nspatials++;
 }
@@ -310,7 +310,7 @@ spatial_dict_addc(struct spatial_dict *d, struct spatial *s)
 static void
 spatial_dict_addh(spatial_dict_t *dict, hash_t spatial_hash, unsigned int id)
 {
-	spatial_entry_t *e = malloc(sizeof(*e));
+	spatial_entry_t *e = malloc2(spatial_entry_t);
 	e->hash = spatial_hash;
 	e->id = id;
 	e->next = NULL;
@@ -321,9 +321,9 @@ spatial_dict_addh(spatial_dict_t *dict, hash_t spatial_hash, unsigned int id)
 }
 
 unsigned int
-spatial_dict_add(struct spatial_dict *dict, struct spatial *s)
+spatial_dict_add(spatial_dict_t *dict, spatial_t *s)
 {
-	struct spatial *s2 = spatial_dict_lookup(dict, s->dist, spatial_hash(0, s));
+	spatial_t *s2 = spatial_dict_lookup(dict, s->dist, spatial_hash(0, s));
 	if (s2) {
 		assert(spatial_equal(s, s2));	/* Sanity check */
 		return spatial_id(s2, dict);	/* Already have */
@@ -348,7 +348,7 @@ spatial_dict_add(struct spatial_dict *dict, struct spatial *s)
  * HASH...: space-separated 18bit hash-table indices for the pattern */
 
 static void
-spatial_dict_read(struct spatial_dict *dict, char *buf)
+spatial_dict_read(spatial_dict_t *dict, char *buf)
 {
 	/* XXX: We trust the data. Bad data will crash us. */
 	char *bufp = buf;
@@ -361,7 +361,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 	assert(radius <= MAX_PATTERN_DIST);
 
 	/* Load the stone configuration. */
-	struct spatial s = { .dist = radius };
+	spatial_t s = { radius, };
 	unsigned int sl = 0;
 	while (!isspace(*bufp)) {
 		s.points[sl / 4] |= char2stone(*bufp++) << ((sl % 4)*2);
@@ -378,7 +378,7 @@ spatial_dict_read(struct spatial_dict *dict, char *buf)
 }
 
 void
-spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id, FILE *f)
+spatial_write(spatial_dict_t *dict, spatial_t *s, unsigned int id, FILE *f)
 {
 	fprintf(f, "%d %d ", id, s->dist);
 	fputs(spatial2str(s), f);
@@ -386,7 +386,7 @@ spatial_write(struct spatial_dict *dict, struct spatial *s, unsigned int id, FIL
 }
 
 static void
-spatial_dict_load(struct spatial_dict *dict, FILE *f)
+spatial_dict_load(spatial_dict_t *dict, FILE *f)
 {
 	char buf[1024];
 	while (fgets(buf, sizeof(buf), f)) {
@@ -398,7 +398,7 @@ spatial_dict_load(struct spatial_dict *dict, FILE *f)
 }
 
 static void
-spatial_dict_hashstats(struct spatial_dict *dict)
+spatial_dict_hashstats(spatial_dict_t *dict)
 {
 	/* m hash size, n number of patterns; is zobrist universal hash?
 	 *
@@ -437,7 +437,7 @@ spatial_dict_hashstats(struct spatial_dict *dict)
 
 	unsigned int buckets = (sizeof(dict->hashtable) / sizeof(dict->hashtable[0]));
 	unsigned int htmem = sizeof(dict->hashtable);
-	unsigned int mem = htmem + dict->nspatials * sizeof(struct spatial) + entries * sizeof(spatial_entry_t);
+	unsigned int mem = htmem + dict->nspatials * sizeof(spatial_t) + entries * sizeof(spatial_entry_t);
 	fprintf(stderr, "Spatial hash: %i entries, empty %.1f%%, avg len %.1f,   %.1fMb (%.1fMb total)\n",
 			entries,
 			(float)empty * 100 / buckets,
@@ -452,7 +452,7 @@ spatial_dict_hashstats(struct spatial_dict *dict)
 }
 
 void
-spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f)
+spatial_dict_writeinfo(spatial_dict_t *dict, FILE *f)
 {
 	/* New file. First, create a comment describing order
 	 * of points in the array. This is just for purposes
@@ -469,14 +469,14 @@ spatial_dict_writeinfo(struct spatial_dict *dict, FILE *f)
 }
 
 static void
-spatial_dict_index_by_dist(struct pattern_config *pc)
+spatial_dict_index_by_dist(pattern_config_t *pc)
 {
 	assert(MAX_PATTERN_DIST == 10);
 	assert(pc->spat_max == MAX_PATTERN_DIST);
 	assert(pc->spat_min == 3);
 
 	for (unsigned int i = 0; i < spat_dict->nspatials; i++) {
-		struct spatial *s = &spat_dict->spatials[i];
+		spatial_t *s = &spat_dict->spatials[i];
 		int d = s->dist;
 		//fprintf(stderr, "d: %i  %s\n", d, spatial2str(s));
 		/* XXX FIXME what are all these d=0 spatials ?! */
@@ -492,7 +492,7 @@ spatial_dict_index_by_dist(struct pattern_config *pc)
 const char *spatial_dict_filename = "patterns_mm.spat";
 
 void
-spatial_dict_init(struct pattern_config *pc, bool create)
+spatial_dict_init(pattern_config_t *pc, bool create)
 {
 	assert(!spat_dict);	
 	FILE *f = fopen_data_file(spatial_dict_filename, "r");
@@ -501,9 +501,9 @@ spatial_dict_init(struct pattern_config *pc, bool create)
 		return;
 	}
 
-	spat_dict = calloc2(1, sizeof(*spat_dict));
+	spat_dict = calloc2(1, spatial_dict_t);
 	/* Dummy record for index 0 so ids start at 1. */
-	struct spatial dummy = { .dist = 0 };
+	spatial_t dummy = { 0, };
 	spatial_dict_addc(spat_dict, &dummy);
 
 	if (f) {

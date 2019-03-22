@@ -28,14 +28,14 @@
 
 
 void
-uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_text(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
-	struct board *b = t->board;
+	board_t *b = t->board;
 	if (!UDEBUGL(0))
 		return;
 
 	/* Best move */
-	struct tree_node *best = u->policy->choose(u->policy, t->root, b, color, resign);
+	tree_node_t *best = u->policy->choose(u->policy, t->root, b, color, resign);
 	if (!best) {
 		fprintf(stderr, "... No moves left\n");
 		return;
@@ -51,7 +51,7 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	fprintf(stderr, "| seq ");
 	for (int depth = 0; depth < 4; depth++) {
 		if (best && best->u.playouts >= 25) {
-			fprintf(stderr, "%3s ", coord2sstr(node_coord(best), b));
+			fprintf(stderr, "%3s ", coord2sstr(node_coord(best)));
 			best = u->policy->choose(u->policy, best, b, color, resign);
 		} else {
 			fprintf(stderr, "    ");
@@ -67,7 +67,7 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
 	for (int i = 0; i < nbest; i++)
 		if (!is_pass(best_c[i]))
-			fprintf(stderr, "%3s(%.1f) ", coord2sstr(best_c[i], b), 100 * best_r[i]);
+			fprintf(stderr, "%3s(%.1f) ", coord2sstr(best_c[i]), 100 * best_r[i]);
 		else
 			fprintf(stderr, "          ");
 
@@ -79,10 +79,10 @@ uct_progress_text(struct uct *u, struct tree *t, enum stone color, int playouts)
 }
 
 static void
-uct_progress_leelaz(struct uct *u, struct tree *t, enum stone color)
+uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 {
-	struct board *b = t->board;
-	struct tree_node *node = u->t->root;
+	board_t *b = t->board;
+	tree_node_t *node = u->t->root;
 
 	/* Best candidates */
 	int nbest = 20;
@@ -105,16 +105,16 @@ uct_progress_leelaz(struct uct *u, struct tree *t, enum stone color)
 	for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
 		if (best_pl[i] < 500)  break;  // too few playouts
 		fprintf(stderr, "info move %s visits %i winrate %i prior %i order %i ",
-			coord2sstr(best_c[i], b), (int)best_pl[i], (int)(best_wr[i] * 10000),
+			coord2sstr(best_c[i]), (int)best_pl[i], (int)(best_wr[i] * 10000),
 			(int)(priors[best_c[i]] * 10000), i);
 
 		/* Dump best variation */
-		fprintf(stderr, "pv %s ", coord2sstr(best_c[i], b));
-		struct tree_node *n = tree_get_node(node, best_c[i]);
+		fprintf(stderr, "pv %s ", coord2sstr(best_c[i]));
+		tree_node_t *n = tree_get_node(node, best_c[i]);
 		while (1) {
 			n = u->policy->choose(u->policy, n, b, color, resign);
 			if (!n || n->u.playouts < 100) break;
-			fprintf(stderr, "%s ", coord2sstr(node_coord(n), b));
+			fprintf(stderr, "%s ", coord2sstr(node_coord(n)));
 		}
 	}
 	fprintf(stderr, "\n");
@@ -122,12 +122,12 @@ uct_progress_leelaz(struct uct *u, struct tree *t, enum stone color)
 
 /* GoGui live gfx: show best sequence */
 static void
-uct_progress_gogui_sequence(strbuf_t *buf, struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_gogui_sequence(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
 {
 	coord_t seq[4] = { pass, pass, pass, pass };
 
 	/* Best move */
-	struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+	tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
 	if (!best) {  fprintf(stderr, "... No moves left\n"); return;  }
 	
 	for (int i = 0; i < 4 && best && best->u.playouts >= 25; i++) {
@@ -140,7 +140,7 @@ uct_progress_gogui_sequence(strbuf_t *buf, struct uct *u, struct tree *t, enum s
 
 /* GoGui live gfx: show best moves */
 static void
-uct_progress_gogui_best(strbuf_t *buf, struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_gogui_best(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
 {
 	coord_t best_c[GOGUI_CANDIDATES];
 	float   best_r[GOGUI_CANDIDATES];
@@ -150,7 +150,7 @@ uct_progress_gogui_best(strbuf_t *buf, struct uct *u, struct tree *t, enum stone
 
 /* GoGui live gfx: show winrates */
 static void
-uct_progress_gogui_winrates(strbuf_t *buf, struct uct *u, struct tree *t, enum stone color, int playouts)
+uct_progress_gogui_winrates(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
 {
 	coord_t best_c[GOGUI_CANDIDATES];
 	float   best_r[GOGUI_CANDIDATES];
@@ -159,7 +159,7 @@ uct_progress_gogui_winrates(strbuf_t *buf, struct uct *u, struct tree *t, enum s
 }
 
 void
-uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts, coord_t *final, bool big)
+uct_progress_json(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final, bool big)
 {
 	/* Prefix indicating JSON line. */
 	fprintf(stderr, "{\"%s\": {", final ? "move" : "frame");
@@ -174,22 +174,22 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 	if (final) {
 		/* Final move choice */
 		fprintf(stderr, ", \"choice\": \"%s\"",
-			coord2sstr(*final, t->board));
+			coord2sstr(*final));
 	} else {
-		struct tree_node *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+		tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
 		if (best) {
 			/* Best move */
 			fprintf(stderr, ", \"best\": {\"%s\": %f}",
-				coord2sstr(best->coord, t->board),
+				coord2sstr(best->coord),
 				tree_node_get_value(t, 1, best->u.value));
 		}
 	}
 
 	/* Best candidates */
 	int cans = 4;
-	struct tree_node *can[cans];
+	tree_node_t *can[cans];
 	memset(can, 0, sizeof(can));
-	struct tree_node *best = t->root->children;
+	tree_node_t *best = t->root->children;
 	while (best) {
 		int c = 0;
 		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
@@ -206,7 +206,7 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 		for (int depth = 0; depth < 4; depth++) {
 			if (!best || best->u.playouts < 25) break;
 			fprintf(stderr, "%s{\"%s\": [%.3f, %i]}", depth > 0 ? "," : "",
-				coord2sstr(best->coord, t->board),
+				coord2sstr(best->coord),
 				tree_node_get_value(t, 1, best->u.value),
 				best->u.playouts);
 			best = u->policy->choose(u->policy, best, t->board, color, resign);
@@ -248,7 +248,7 @@ uct_progress_json(struct uct *u, struct tree *t, enum stone color, int playouts,
 }
 
 void
-uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playouts, coord_t *final)
+uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
 {
 	switch (u->reporting) {
 		case UR_TEXT:
@@ -287,7 +287,7 @@ uct_progress_status(struct uct *u, struct tree *t, enum stone color, int playout
 }
 
 static inline void
-record_amaf_move(struct playout_amafmap *amaf, coord_t coord, bool is_ko_capture)
+record_amaf_move(playout_amafmap_t *amaf, coord_t coord, bool is_ko_capture)
 {
 	assert(amaf->gamelen < MAX_GAMELEN);
 	amaf->is_ko_capture[amaf->gamelen] = is_ko_capture;
@@ -295,19 +295,19 @@ record_amaf_move(struct playout_amafmap *amaf, coord_t coord, bool is_ko_capture
 }
 
 
-struct uct_playout_callback {
-	struct uct *uct;
-	struct tree *tree;
-	struct tree_node *lnode;
-};
+typedef struct {
+	uct_t *uct;
+	tree_t *tree;
+	tree_node_t *lnode;
+} uct_playout_callback_t;
 
 
 static int
-uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
-              struct playout_amafmap *amaf,
-	      struct uct_descent *descent, int *dlen,
-	      struct tree_node *significant[2],
-              struct tree *t, struct tree_node *n, enum stone node_color,
+uct_leaf_node(uct_t *u, board_t *b, enum stone player_color,
+              playout_amafmap_t *amaf,
+	      uct_descent_t *descent, int *dlen,
+	      tree_node_t *significant[2],
+              tree_t *t, tree_node_t *n, enum stone node_color,
 	      char *spaces)
 {
 	enum stone next_color = stone_other(node_color);
@@ -315,13 +315,10 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
-			spaces, n->u.playouts, coord2sstr(node_coord(n), t->board),
+			spaces, n->u.playouts, coord2sstr(node_coord(n)),
 			tree_node_get_value(t, -parity, n->u.value));
 
-	struct playout_setup ps = {
-		.gamelen = u->gamelen,
-		.mercymin = u->mercymin,
-	};
+	playout_setup_t ps = playout_setup(u->gamelen, u->mercymin);
 	int result = playout_play_game(&ps, b, next_color,
 				       u->playout_amaf ? amaf : NULL,
 				       &u->ownermap, u->playout);
@@ -331,13 +328,13 @@ uct_leaf_node(struct uct *u, struct board *b, enum stone player_color,
 	}
 	if (UDEBUGL(7))
 		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n",
-		        spaces, player_color, next_color, coord2sstr(node_coord(n), t->board), result);
+		        spaces, player_color, next_color, coord2sstr(node_coord(n)), result);
 
 	return result;
 }
 
 static floating_t
-scale_value(struct uct *u, struct board *b, enum stone node_color, struct tree_node *significant[2], int result)
+scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significant[2], int result)
 {
 	floating_t rval = result > 0 ? 1.0 : result < 0 ? 0.0 : 0.5;
 	if (u->val_scale && result != 0) {
@@ -373,7 +370,7 @@ scale_value(struct uct *u, struct board *b, enum stone node_color, struct tree_n
 }
 
 static double
-local_value(struct uct *u, struct board *b, coord_t coord, enum stone color)
+local_value(uct_t *u, board_t *b, coord_t coord, enum stone color)
 {
 	/* Tactical evaluation of move @coord by color @color, given
 	 * simulation end position @b. I.e., a move is tactically good
@@ -385,8 +382,8 @@ local_value(struct uct *u, struct board *b, coord_t coord, enum stone color)
 }
 
 static void
-record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
-                      struct uct_descent *descent, int dlen, int di,
+record_local_sequence(uct_t *u, tree_t *t, board_t *endb,
+                      uct_descent_t *descent, int dlen, int di,
 		      enum stone seq_color)
 {
 #define LTREE_DEBUG if (UDEBUGL(6))
@@ -409,7 +406,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	}
 
 	/* Pick the right local tree root... */
-	struct tree_node *lnode = seq_color == S_BLACK ? t->ltree_black : t->ltree_white;
+	tree_node_t *lnode = seq_color == S_BLACK ? t->ltree_black : t->ltree_white;
 	lnode->u.playouts++;
 
 	/* ...determine the sequence value... */
@@ -417,7 +414,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	if (u->local_tree_eval != LTE_EACH) {
 		sval = local_value(u, endb, node_coord(descent[di].node), seq_color);
 		LTREE_DEBUG fprintf(stderr, "(goal %s[%s %1.3f][%d]) ",
-			coord2sstr(node_coord(descent[di].node), t->board),
+			coord2sstr(node_coord(descent[di].node)),
 			stone2str(seq_color), sval, descent[di].node->d);
 
 		if (u->local_tree_eval == LTE_TOTAL) {
@@ -446,7 +443,7 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 		else
 			rval = local_value(u, endb, node_coord(descent[di].node), color);
 		LTREE_DEBUG fprintf(stderr, "%s[%s %1.3f][%d] ",
-			coord2sstr(node_coord(descent[di].node), t->board),
+			coord2sstr(node_coord(descent[di].node)),
 			stone2str(color), rval, descent[di].node->d);
 		lnode = tree_get_node2(t, lnode, node_coord(descent[di++].node), true);
 		assert(lnode);
@@ -465,19 +462,15 @@ record_local_sequence(struct uct *u, struct tree *t, struct board *endb,
 	LTREE_DEBUG fprintf(stderr, "\n");
 }
 
-
-int
-uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree *t)
+static tree_node_t *
+uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, tree_t *t, int *presult)
 {
-	struct board b2;
-	board_copy(&b2, b);
-
-	struct playout_amafmap amaf;
+	playout_amafmap_t amaf;
 	amaf.gamelen = amaf.game_baselen = 0;
 
 	/* Walk the tree until we find a leaf, then expand it and do
 	 * a random playout. */
-	struct tree_node *n = t->root;
+	tree_node_t *n = t->root;
 	enum stone node_color = stone_other(player_color);
 	assert(node_color == t->root_color);
 
@@ -489,20 +482,20 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	/* Tree descent history. */
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
-	struct uct_descent descent[DESCENT_DLEN];
+	uct_descent_t descent[DESCENT_DLEN];
 	descent[0].node = n; descent[0].lnode = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
-	struct move_stats seq_value = { .playouts = 0 };
+	move_stats_t seq_value = move_stats(0.0, 0);
 	/* The last "significant" node along the descent (i.e. node
 	 * with higher than configured number of playouts). For black
 	 * and white. */
-	struct tree_node *significant[2] = { NULL, NULL };
+	tree_node_t *significant[2] = { NULL, NULL };
 	if (n->u.playouts >= u->significant_threshold)
 		significant[node_color - 1] = n;
 
 	int result;
-	int pass_limit = (board_size(&b2) - 2) * (board_size(&b2) - 2) / 2;
+	int pass_limit = real_board_size2(b2) / 2;
 	int passes = is_pass(b->last_move.coord) && b->moves > 0;
 
 	/* debug */
@@ -532,16 +525,15 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		}
 
 		if (!u->random_policy_chance || fast_random(u->random_policy_chance))
-			u->policy->descend(u->policy, t, &descent[dlen], parity, b2.moves > pass_limit);
+			u->policy->descend(u->policy, t, &descent[dlen], parity, (b2->moves > pass_limit));
 		else
-			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, b2.moves > pass_limit);
+			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, (b2->moves > pass_limit));
 
 
 		/*** Perform the descent: */
 
-		if (descent[dlen].node->u.playouts >= u->significant_threshold) {
+		if (descent[dlen].node->u.playouts >= u->significant_threshold)
 			significant[node_color - 1] = descent[dlen].node;
-		}
 
 		seq_value.playouts += descent[dlen].value.playouts;
 		seq_value.value += descent[dlen].value.value * descent[dlen].value.playouts;
@@ -549,37 +541,35 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %d,%f\n",
-			        spaces, coord2sstr(node_coord(n), t->board),
+			        spaces, coord2sstr(node_coord(n)),
 				node_coord(n), n->u.playouts,
 				tree_node_get_value(t, parity, n->u.value));
 
 		if (u->virtual_loss)
 			__sync_fetch_and_add(&n->descents, u->virtual_loss);
 
-		struct move m = { node_coord(n), node_color };
-		int res = board_play(&b2, &m);
+		move_t m = { node_coord(n), node_color };
+		int res = board_play(b2, &m);
 
-		if (res < 0 || (!is_pass(m.coord) && !group_at(&b2, m.coord)) /* suicide */
-		    || b2.superko_violation) {
+		if (res < 0 || (!is_pass(m.coord) && !group_at(b2, m.coord)) /* suicide */
+		    || b2->superko_violation) {
 			if (UDEBUGL(4)) {
-				for (struct tree_node *ni = n; ni; ni = ni->parent)
-					fprintf(stderr, "%s<%"PRIhash"> ", coord2sstr(node_coord(ni), t->board), ni->hash);
+				for (tree_node_t *ni = n; ni; ni = ni->parent)
+					fprintf(stderr, "%s<%" PRIhash "> ", coord2sstr(node_coord(ni)), ni->hash);
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
-				        stone2str(node_color), coord_x(node_coord(n),b), coord_y(node_coord(n),b),
-					res, group_at(&b2, m.coord), b2.superko_violation);
+				        stone2str(node_color), coord_x(node_coord(n)), coord_y(node_coord(n)),
+					res, group_at(b2, m.coord), b2->superko_violation);
 			}
 			n->hints |= TREE_HINT_INVALID;
-			result = 0;
-			goto end;
+			*presult = 0;
+			return n;
 		}
 
 		assert(node_coord(n) >= -1);
-		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(&b2));
+		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(b2));
 
-		if (is_pass(node_coord(n)))
-			passes++;
-		else
-			passes = 0;
+		if (is_pass(node_coord(n)))  passes++;
+		else                         passes = 0;
 
 		enum stone next_color = stone_other(node_color);
 		/* We need to make sure only one thread expands the node. If
@@ -592,14 +582,13 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		if (tree_leaf_node(n)
 		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < u->max_tree_size
 		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
-			tree_expand_node(t, n, &b2, next_color, u, -parity);
+			tree_expand_node(t, n, b2, next_color, u, -parity);
 	}
 
 	amaf.game_baselen = amaf.gamelen;
 
-	if (t->use_extra_komi && u->dynkomi->persim) {
-		b2.komi += round(u->dynkomi->persim(u->dynkomi, &b2, t, n));
-	}
+	if (t->use_extra_komi && u->dynkomi->persim)
+		b2->komi += round(u->dynkomi->persim(u->dynkomi, b2, t, n));
 
 	/* !!! !!! !!!
 	 * ALERT: The "result" number is extremely confusing. In some parts
@@ -610,7 +599,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 	// assert(tree_leaf_node(n));
 	/* In case of parallel tree search, the assertion might
 	 * not hold if two threads chew on the same node. */
-	result = uct_leaf_node(u, &b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
+	result = uct_leaf_node(u, b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
 		unsigned int cutoff = amaf.game_baselen;
@@ -622,7 +611,7 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 
 	assert(n == t->root || n->parent);
 	floating_t rval = scale_value(u, b, node_color, significant, result);
-	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, &b2, rval);
+	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b2, rval);
 
 	stats_add_result(&t->avg_score, (float)result / 2, 1);
 	if (t->use_extra_komi) {
@@ -639,28 +628,40 @@ uct_playout(struct uct *u, struct board *b, enum stone player_color, struct tree
 		 * which is expected as it will create new lnodes. */
 		enum stone seq_color = player_color;
 		/* First move always starts a sequence. */
-		record_local_sequence(u, t, &b2, descent, dlen, 1, seq_color);
+		record_local_sequence(u, t, b2, descent, dlen, 1, seq_color);
 		seq_color = stone_other(seq_color);
 		for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
 			if (u->local_tree_allseq) {
 				/* We are configured to record all subsequences. */
-				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
 			if (descent[dseqi].node->d >= u->tenuki_d) {
 				/* Tenuki! Record the fresh sequence. */
-				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
 			if (descent[dseqi].lnode && !descent[dseqi].lnode) {
 				/* Record result for in-descent picked sequence. */
-				record_local_sequence(u, t, &b2, descent, dlen, dseqi, seq_color);
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
 				continue;
 			}
 		}
 	}
 
-end:
+	*presult = result;
+	return n;
+}
+
+int
+uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
+{
+	board_t b2;
+	board_copy(&b2, b);
+	
+	int result;
+	tree_node_t *n = uct_playout_descent(u, b, &b2, player_color, t, &result);
+	
 	/* We need to undo the virtual loss we added during descend. */
 	if (u->virtual_loss) {
 		for (; n->parent; n = n->parent) {
@@ -673,7 +674,7 @@ end:
 }
 
 int
-uct_playouts(struct uct *u, struct board *b, enum stone color, struct tree *t, struct time_info *ti)
+uct_playouts(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti)
 {
 	int i;
 	for (i = 0; !uct_halt; i++)

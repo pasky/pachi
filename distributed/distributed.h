@@ -26,12 +26,12 @@ typedef int64_t path_t;
 
 
 /* For debugging only */
-struct hash_counts {
+typedef struct {
 	long lookups;
 	long collisions;
 	long inserts;
 	long occupied;
-};
+} hash_counts_t;
 
 /* Find a hash table entry given its coord path from root.
  * Set found to false if the entry is empty.
@@ -60,10 +60,10 @@ struct hash_counts {
 
 /* Stats exchanged between master and slave. They are always
  * incremental values to be added to what was last sent. */
-struct incr_stats {
+typedef struct {
 	path_t coord_path;
-	struct move_stats incr;
-};
+	move_stats_t incr;
+} incr_stats_t;
 
 /* A slave machine updates at most 7 (19x19) or 9 (9x9) nodes for each
  * update of the root node. If we have at most 20 threads at 1500
@@ -98,7 +98,7 @@ struct incr_stats {
 #define move_number(id)    ((id) % DIST_GAMELEN)
 #define reply_disabled(id) ((id) < DIST_GAMELEN)
 
-char *path2sstr(path_t path, struct board *b);
-void engine_distributed_init(struct engine *e, char *arg, struct board *b);
+char *path2sstr(path_t path, board_t *b);
+void engine_distributed_init(engine_t *e, char *arg, board_t *b);
 
 #endif

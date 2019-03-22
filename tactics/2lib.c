@@ -20,7 +20,7 @@
 
 
 static bool
-miai_2lib(struct board *b, group_t group, enum stone color)
+miai_2lib(board_t *b, group_t group, enum stone color)
 {
 	bool can_connect = false, can_pull_out = false;
 	/* We have miai if we can either connect on both libs,
@@ -56,9 +56,9 @@ miai_2lib(struct board *b, group_t group, enum stone color)
 }
 
 static bool
-defense_is_hopeless(struct board *b, group_t group, enum stone owner,
-			enum stone to_play, coord_t lib, coord_t otherlib,
-			bool use)
+defense_is_hopeless(board_t *b, group_t group, enum stone owner,
+		    enum stone to_play, coord_t lib, coord_t otherlib,
+		    bool use)
 {
 	/* If we are the defender not connecting out, do not
 	 * escape with moves that do not gain liberties anyway
@@ -75,15 +75,15 @@ defense_is_hopeless(struct board *b, group_t group, enum stone owner,
 	if (to_play == owner && neighbor_count_at(b, lib, owner) == 1) {
 		if (immediate_liberty_count(b, lib) == 1)	return true;
 		if (immediate_liberty_count(b, lib) == 2
-		    && coord_is_adjecent(lib, otherlib, b))	return true;
+		    && coord_is_adjecent(lib, otherlib))	return true;
 	}
 	return false;
 }
 
 void
-can_atari_group(struct board *b, group_t group, enum stone owner,
-		  enum stone to_play, struct move_queue *q,
-		  int tag, bool use_def_no_hopeless)
+can_atari_group(board_t *b, group_t group, enum stone owner,
+		enum stone to_play, move_queue_t *q,
+		int tag, bool use_def_no_hopeless)
 {
 	bool have[2] = { false, false };
 	bool preference[2] = { true, true };
@@ -93,8 +93,8 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 		if (!board_is_valid_play(b, to_play, lib))  continue;
 
 		if (DEBUGL(6))  fprintf(stderr, "- checking liberty %s of %s %s, filled by %s\n",
-					coord2sstr(lib, b),
-					stone2str(owner), coord2sstr(group, b),
+					coord2sstr(lib),
+					stone2str(owner), coord2sstr(group),
 					stone2str(to_play));
 
 		/* Don't play at the spot if it is extremely short
@@ -144,7 +144,7 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 			/* Ok, connect, but prefer not to. */
 			enum stone byowner = board_at(b, bygroup);
 			if (DEBUGL(7))  fprintf(stderr, "\treluctantly switching to cousin %s (group %s %s)\n",
-						coord2sstr(coord, b), coord2sstr(bygroup, b), stone2str(byowner));
+						coord2sstr(coord), coord2sstr(bygroup), stone2str(byowner));
 			/* One more thing - is the cousin sensible defense
 			 * for the other group? */
 			if (defense_is_hopeless(b, bygroup, byowner, to_play, coord, lib, use_def_no_hopeless))
@@ -170,7 +170,7 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 			preference[i] = false;
 		}
 
-		if (DEBUGL(6))  fprintf(stderr, "+ liberty %s ready with preference %d\n", coord2sstr(lib, b), preference[i]);
+		if (DEBUGL(6))  fprintf(stderr, "+ liberty %s ready with preference %d\n", coord2sstr(lib), preference[i]);
 
 		/* If we prefer only one of the moves, pick that one. */
 		if (i == 1 && have[0] && preference[0] != preference[1]) {
@@ -194,20 +194,20 @@ can_atari_group(struct board *b, group_t group, enum stone owner,
 	if (DEBUGL(7)) {
 		char label[256];
 		snprintf(label, 256, "= final %s %s liberties to play by %s",
-			stone2str(owner), coord2sstr(group, b),
+			stone2str(owner), coord2sstr(group),
 			stone2str(to_play));
-		mq_print(q, b, label);
+		mq_print(q, label);
 	}
 }
 
 void
-group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
 
 	if (DEBUGL(5))  fprintf(stderr, "[%s] 2lib check of color %d\n",
-				coord2sstr(group, b), color);
+				coord2sstr(group), color);
 
 	/* Do not try to atari groups that cannot be harmed. */
 	if (use_miaisafe && miai_2lib(b, group, color))
@@ -238,12 +238,12 @@ group_2lib_check(struct board *b, group_t group, enum stone to_play, struct move
 
 
 bool
-can_capture_2lib_group(struct board *b, group_t g, struct move_queue *q, int tag)
+can_capture_2lib_group(board_t *b, group_t g, move_queue_t *q, int tag)
 {
 	assert(board_group_info(b, g).libs == 2);
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, g).lib[i];
-		//fprintf(stderr, "can_capture_2lib_group(): checking %s\n", coord2sstr(lib, b));
+		//fprintf(stderr, "can_capture_2lib_group(): checking %s\n", coord2sstr(lib));
 		if (wouldbe_ladder_any(b, g, lib)) {
 			if (q)  mq_add(q, lib, tag);
 			return true;
@@ -253,13 +253,13 @@ can_capture_2lib_group(struct board *b, group_t g, struct move_queue *q, int tag
 }
 
 void
-group_2lib_capture_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
+group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag, bool use_miaisafe, bool use_def_no_hopeless)
 {
 	enum stone color = board_at(b, group_base(group));
 	assert(color != S_OFFBOARD && color != S_NONE);
 	
 	if (DEBUGL(5))  fprintf(stderr, "[%s] 2lib capture check of color %d\n",
-				coord2sstr(group, b), color);
+				coord2sstr(group), color);
 
 	if (to_play != color) {  /* Attacker */		
 		can_capture_2lib_group(b, group, q, tag);

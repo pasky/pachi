@@ -14,12 +14,12 @@
 #include "engines/replay.h"
 
 /* Internal engine state. */
-struct replay {
+typedef struct {
 	int debug_level;
 	int runs;
 	int no_suicide;
-	struct playout_policy *playout;
-};
+	playout_policy_t *playout;
+} replay_t;
 
 static void
 suicide_stats(int suicide)
@@ -32,18 +32,18 @@ suicide_stats(int suicide)
 }
 
 coord_t
-replay_sample_moves(struct engine *e, struct board *b, enum stone color, 
+replay_sample_moves(engine_t *e, board_t *b, enum stone color, 
 		    int *played, int *pmost_played)
 {
-	struct replay *r = e->data;
-	struct playout_policy *policy = r->playout;
-	struct playout_setup setup;	        memset(&setup, 0, sizeof(setup));
-	struct move m = { .coord = pass, .color = color };
+	replay_t *r = (replay_t*)e->data;
+	playout_policy_t *policy = r->playout;
+	playout_setup_t setup;	        memset(&setup, 0, sizeof(setup));
+	move_t m = move(pass, color);
 	int most_played = 0;
 	
 	/* Find out what moves policy plays most in this situation */
         for (int i = 0; i < r->runs; i++) {
-		struct board b2;
+		board_t b2;
 		board_copy(&b2, b);
 		
 		if (policy->setboard)
@@ -52,7 +52,7 @@ replay_sample_moves(struct engine *e, struct board *b, enum stone color,
 		if (DEBUGL(4))  fprintf(stderr, "---------------------------------\n");		
 		coord_t c = playout_play_move(&setup, &b2, color, r->playout);		
 		assert(!is_resign(c));
-		if (DEBUGL(4))  fprintf(stderr, "-> %s\n", coord2sstr(c, &b2));
+		if (DEBUGL(4))  fprintf(stderr, "-> %s\n", coord2sstr(c));
 		
 		played[c]++;
 		if (played[c] > most_played) {
@@ -67,10 +67,10 @@ replay_sample_moves(struct engine *e, struct board *b, enum stone color,
 }
 
 static coord_t
-replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+replay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	struct replay *r = e->data;
-	struct move m = { .coord = pass, .color = color };
+	replay_t *r = (replay_t*)e->data;
+	move_t m = move(pass, color);
 	
 	if (DEBUGL(3))
 		printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
@@ -84,17 +84,17 @@ replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 		for (int k = most_played; k > 0; k--)
 			for (coord_t c = pass; c < b->size2; c++)
 				if (played[c] == k)
-					fprintf(stderr, "%3s: %.2f%%\n", coord2str(c, b), (float)k * 100 / r->runs);
+					fprintf(stderr, "%3s: %.2f%%\n", coord2sstr(c), (float)k * 100 / r->runs);
 		fprintf(stderr, "\n");
 	}
 
 	if (DEBUGL(2))
 		fprintf(stderr, "genmove: %s %s    %.2f%%  (%i runs)\n\n",
 			(color == S_BLACK ? "B" : "W"),
-			coord2str(m.coord, b), (float)most_played * 100 / r->runs, r->runs);
+			coord2sstr(m.coord), (float)most_played * 100 / r->runs, r->runs);
 	
 	if (r->no_suicide) {  /* Check group suicides */
-		struct board b2;  board_copy(&b2, b);
+		board_t b2;  board_copy(&b2, b);
 		int res = board_play(&b2, &m);  assert(res >= 0);
 		int suicide = !group_at(&b2, m.coord);
 		board_done_noalloc(&b2);
@@ -112,10 +112,10 @@ replay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 }
 
 static void
-replay_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		  coord_t *best_c, float *best_r, int nbest)
 {
-	struct replay *r = e->data;
+	replay_t *r = (replay_t*)e->data;
 	
 	if (DEBUGL(3))
 		printf("best_moves: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
@@ -130,16 +130,16 @@ replay_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum 
 }
 
 static void
-replay_done(struct engine *e)
+replay_done(engine_t *e)
 {
-	struct replay *r = e->data;
+	replay_t *r = (replay_t*)e->data;
 	playout_policy_done(r->playout);
 }
 
-struct replay *
-replay_state_init(char *arg, struct board *b)
+replay_t *
+replay_state_init(char *arg, board_t *b)
 {
-	struct replay *r = calloc2(1, sizeof(struct replay));
+	replay_t *r = calloc2(1, replay_t);
 	
 	r->debug_level = 1;
 	r->runs = 1000;
@@ -195,9 +195,9 @@ replay_state_init(char *arg, struct board *b)
 
 
 void
-engine_replay_init(struct engine *e, char *arg, struct board *b)
+engine_replay_init(engine_t *e, char *arg, board_t *b)
 {
-	struct replay *r = replay_state_init(arg, b);
+	replay_t *r = replay_state_init(arg, b);
         /* TODO engine_done(), free policy */
 	
 	e->name = "PlayoutReplay";

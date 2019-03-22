@@ -19,10 +19,7 @@
  * rest of UCT implementation. */
 
 struct board;
-struct tree;
-struct tree_node;
-struct uct;
-struct uct_dynkomi;
+typedef struct uct_dynkomi uct_dynkomi_t;
 
 /* Compute effective komi value for given color: Positive value
  * means giving komi, negative value means taking komi. */
@@ -31,17 +28,17 @@ struct uct_dynkomi;
 /* Determine base dynamic komi for this genmove run. The returned
  * value is stored in tree->extra_komi and by itself used just for
  * user information. */
-typedef floating_t (*uctd_permove)(struct uct_dynkomi *d, struct board *b, struct tree *tree);
+typedef floating_t (*uctd_permove)(uct_dynkomi_t *d, board_t *b, tree_t *tree);
 /* Determine actual dynamic komi for this simulation (run on board @b
  * from node @node). In some cases, this function will just return
  * tree->extra_komi, in other cases it might want to adjust the komi
  * according to the actual move depth. */
-typedef floating_t (*uctd_persim)(struct uct_dynkomi *d, struct board *b, struct tree *tree, struct tree_node *node);
+typedef floating_t (*uctd_persim)(uct_dynkomi_t *d, board_t *b, tree_t *tree, tree_node_t *node);
 /* Destroy the uct_dynkomi structure. */
-typedef void (*uctd_done)(struct uct_dynkomi *d);
+typedef void (*uctd_done)(uct_dynkomi_t *d);
 
 struct uct_dynkomi {
-	struct uct *uct;
+	uct_t *uct;
 	uctd_permove permove;
 	uctd_persim persim;
 	uctd_done done;
@@ -50,14 +47,14 @@ struct uct_dynkomi {
 	/* Game state for dynkomi use: */
 	/* Information on average score at the simulation end (black's
 	 * perspective) since last dynkomi adjustment. */
-	struct move_stats score;
+	move_stats_t score;
 	/* Information on average winrate of simulations since last
 	 * dynkomi adjustment. */
-	struct move_stats value;
+	move_stats_t value;
 };
 
-struct uct_dynkomi *uct_dynkomi_init_none(struct uct *u, char *arg, struct board *b);
-struct uct_dynkomi *uct_dynkomi_init_linear(struct uct *u, char *arg, struct board *b);
-struct uct_dynkomi *uct_dynkomi_init_adaptive(struct uct *u, char *arg, struct board *b);
+uct_dynkomi_t *uct_dynkomi_init_none(uct_t *u, char *arg, board_t *b);
+uct_dynkomi_t *uct_dynkomi_init_linear(uct_t *u, char *arg, board_t *b);
+uct_dynkomi_t *uct_dynkomi_init_adaptive(uct_t *u, char *arg, board_t *b);
 
 #endif

@@ -1,9 +1,8 @@
 #ifndef PACHI_PLAYOUT_LIGHT_H
 #define PACHI_PLAYOUT_LIGHT_H
 
-struct board;
-struct playout_policy;
+#include "playout.h"
 
-struct playout_policy *playout_light_init(char *arg, struct board *b);
+playout_policy_t *playout_light_init(char *arg, board_t *b);
 
 #endif

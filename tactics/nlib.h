@@ -6,8 +6,6 @@
 #include "board.h"
 #include "debug.h"
 
-struct move_queue;
-
-void group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag);
+void group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag);
 
 #endif

@@ -37,7 +37,7 @@ struct ownermap;
 #define BOARD_MAX_GROUPS (BOARD_MAX_SIZE * BOARD_MAX_SIZE * 2 / 3)
 /* For 19x19, max 19*2*6 = 228 groups (stacking b&w stones, each third line empty) */
 
-enum e_sym {
+enum symmetry {
 		SYM_FULL,
 		SYM_DIAG_UP,
 		SYM_DIAG_DOWN,
@@ -49,7 +49,7 @@ enum e_sym {
 
 /* Some engines might normalize their reading and skip symmetrical
  * moves. We will tell them how can they do it. */
-struct board_symmetry {
+typedef struct {
 	/* Playground is in this rectangle. */
 	int x1, x2, y1, y2;
 	/* d ==  0: Full rectangle
@@ -58,8 +58,8 @@ struct board_symmetry {
 	/* General symmetry type. */
 	/* Note that the above is redundant to this, but just provided
 	 * for easier usage. */
-	enum e_sym type;
-};
+	enum symmetry type;
+} board_symmetry_t;
 
 
 typedef uint64_t hash_t;
@@ -74,7 +74,7 @@ typedef uint32_t hash3_t; // 3x3 pattern hash
  * connected for us. */
 typedef coord_t group_t;
 
-struct group {
+typedef struct {
 	/* We keep track of only up to GROUP_KEEP_LIBS; over that, we
 	 * don't care. */
 	/* _Combination_ of these two values can make some difference
@@ -88,11 +88,11 @@ struct group {
 	 * It denotes only number of items in lib[], thus you can rely
 	 * on it to store real liberties only up to <= GROUP_REFILL_LIBS. */
 	int libs;
-};
+} group_info_t;
 
-struct neighbor_colors {
+typedef struct {
 	char colors[S_MAX];
-};
+} neighbors_t;
 
 
 /* Quick hack to help ensure tactics code stays within quick board limitations.
@@ -115,7 +115,7 @@ struct neighbor_colors {
  * However, we accept suicide moves by the opponent, so we
  * should work with rules allowing suicide, just not taking
  * full advantage of them. */
-enum go_ruleset {
+enum rules {
 	RULES_CHINESE, /* default value */
 	RULES_AGA,
 	RULES_NEW_ZEALAND,
@@ -135,7 +135,7 @@ enum go_ruleset {
 };
 
 /* Data shared by all boards of a given size */
-struct board_statics {
+typedef struct {
 	int size;	
 
 	/* Iterator offsets for foreach_neighbor*() */
@@ -146,15 +146,15 @@ struct board_statics {
 
 	/* Cached information on x-y coordinates so that we avoid division. */
 	uint8_t coord[BOARD_MAX_COORDS][2];
-};
+} board_statics_t;
 
 /* Only one board size in use at any given time so don't need array */
-extern struct board_statics board_statics;
+extern board_statics_t board_statics;
 
 /* You should treat this struct as read-only. Always call functions below if
  * you want to change it. */
 
-struct board {
+typedef struct board {
 	int size; /* Including S_OFFBOARD margin - see below. */
 	int size2; /* size^2 */
 	int bits2; /* ceiling(log2(size2)) */
@@ -162,15 +162,15 @@ struct board {
 	int passes[S_MAX];
 	floating_t komi;
 	int handicap;
-	enum go_ruleset rules;
+	enum rules rules;
 	char *fbookfile;
 	struct fbook *fbook;
 
 	int moves;
-	struct move last_move;
-	struct move last_move2; /* second-to-last move */
-FB_ONLY(struct move last_move3); /* just before last_move2, only set if last_move is pass */
-FB_ONLY(struct move last_move4); /* just before last_move3, only set if last_move & last_move2 are pass */
+	move_t last_move;
+	move_t last_move2; /* second-to-last move */
+FB_ONLY(move_t last_move3); /* just before last_move2, only set if last_move is pass */
+FB_ONLY(move_t last_move4); /* just before last_move3, only set if last_move & last_move2 are pass */
 	/* Whether we tried to add a hash twice; board_play*() can
 	 * set this, but it will still carry out the move as well! */
 FB_ONLY(bool superko_violation);
@@ -188,7 +188,7 @@ FB_ONLY(bool superko_violation);
 	/* Positions of next stones in the stone group; 0 == last stone */
 	coord_t p[BOARD_MAX_COORDS];
 	/* Neighboring colors; numbers of neighbors of index color */
-	struct neighbor_colors n[BOARD_MAX_COORDS];
+	neighbors_t n[BOARD_MAX_COORDS];
 
 #ifdef BOARD_PAT3
 	/* 3x3 pattern code for each position; see pattern3.h for encoding
@@ -197,7 +197,7 @@ FB_ONLY(hash3_t pat3)[BOARD_MAX_COORDS];
 #endif
 
 	/* Group information - indexed by gid (which is coord of base group stone) */
-	struct group gi[BOARD_MAX_COORDS];
+	group_info_t gi[BOARD_MAX_COORDS];
 
 	/* List of free positions */
 	/* Note that free position here is any valid move; including single-point eyes!
@@ -212,14 +212,14 @@ FB_ONLY(group_t c)[BOARD_MAX_GROUPS];  FB_ONLY(int clen);
 #endif
 
 	/* Symmetry information */
-FB_ONLY(struct board_symmetry symmetry);
+FB_ONLY(board_symmetry_t symmetry);
 
 	/* Last ko played on the board. */
-FB_ONLY(struct move last_ko);
+FB_ONLY(move_t last_ko);
 FB_ONLY(int last_ko_age);
 
 	/* Basic ko check */
-	struct move ko;
+	move_t ko;
 
 #ifdef BOARD_UNDO_CHECKS
 	/* Guard against invalid quick_play() / quick_undo() uses */
@@ -248,52 +248,55 @@ FB_ONLY(int last_ko_age);
 FB_ONLY(hash_t history_hash)[1 << history_hash_bits];
 	/* Hash of current board position. */
 FB_ONLY(hash_t hash);
-};
+} board_t;
 
-struct undo_merge {
+typedef struct {
 	group_t	     group;
 	coord_t	     last;  
-	struct group info;
-};
+	group_info_t info;
+} undo_merge_t;
 
-struct undo_enemy {
+typedef struct {
 	group_t      group;
-	struct group info;
+	group_info_t info;
 	coord_t     *stones;
-};
+} undo_enemy_t;
 
-struct board_undo {
-	struct move last_move2;
-	struct move ko;
-	struct move last_ko;
-	int	    last_ko_age;
+typedef struct {
+	move_t  last_move2;
+	move_t  ko;
+	move_t  last_ko;
+	int     last_ko_age;
 	
 	coord_t next_at;
 	
 	coord_t	inserted;
-	struct undo_merge merged[4];
+	undo_merge_t merged[4];
 	int nmerged;
 	int nmerged_tmp;
 
-	struct undo_enemy enemies[4];
+	undo_enemy_t enemies[4];
 	int nenemies;
 	coord_t  captures[BOARD_MAX_COORDS];
 	coord_t *captures_end;
 	int      ncaptures;
-};
+} board_undo_t;
 
 
 #ifdef BOARD_SIZE
 /* Avoid unused variable warnings */
 #define board_size(b)  (((b) == (b)) ? BOARD_SIZE + 2 : 0)
 #define board_size2(b) (board_size(b) * board_size(b))
+#define the_board_size()  (BOARD_SIZE + 2)
 #else
 #define board_size(b)  ((b)->size)
 #define board_size2(b) ((b)->size2)
+#define the_board_size()  (board_statics.size)
 #endif
 
 #define real_board_size(b)  (board_size(b) - 2)
 #define real_board_size2(b) (real_board_size(b) * real_board_size(b))
+#define the_real_board_size()  (the_board_size() - 2)
 
 /* This is a shortcut for taking different action on smaller
  * and large boards (e.g. picking different variable defaults).
@@ -341,90 +344,89 @@ struct board_undo {
 
 #define hash_at(coord, color) (board_statics.h[(color) == S_BLACK][coord])
 
-void board_init(struct board *b, int bsize, char *fbookfile);
-struct board *board_new(int bsize, char *fbookfile);
-struct board *board_copy(struct board *board2, struct board *board1);
-void board_done_noalloc(struct board *board);
-void board_done(struct board *board);
+void board_init(board_t *b, int bsize, char *fbookfile);
+board_t *board_new(int bsize, char *fbookfile);
+board_t *board_copy(board_t *board2, board_t *board1);
+void board_done_noalloc(board_t *board);
+void board_done(board_t *board);
 /* size here is without the S_OFFBOARD margin. */
-void board_resize(struct board *board, int size);
-void board_clear(struct board *board);
+void board_resize(board_t *board, int size);
+void board_clear(board_t *board);
 
-typedef void  (*board_cprint)(struct board *b, coord_t c, strbuf_t *buf, void *data);
-typedef char *(*board_print_handler)(struct board *b, coord_t c, void *data);
-void board_print(struct board *board, FILE *f);
-void board_print_custom(struct board *board, FILE *f, board_cprint cprint, void *data);
-void board_hprint(struct board *board, FILE *f, board_print_handler handler, void *data);
+typedef void  (*board_cprint)(board_t *b, coord_t c, strbuf_t *buf, void *data);
+typedef char *(*board_print_handler)(board_t *b, coord_t c, void *data);
+void board_print(board_t *board, FILE *f);
+void board_print_custom(board_t *board, FILE *f, board_cprint cprint, void *data);
+void board_hprint(board_t *board, FILE *f, board_print_handler handler, void *data);
 /* @target_move displayed as '*' (must be empty spot) */
-void board_print_target_move(struct board *b, FILE *f, coord_t target_move);
+void board_print_target_move(board_t *b, FILE *f, coord_t target_move);
 
 /* Debugging: Compare 2 boards byte by byte. Don't use that for sorting =) */
-int board_cmp(struct board *b1, struct board *b2);
+int board_cmp(board_t *b1, board_t *b2);
 /* Same but only care about fields maintained by quick_play() / quick_undo() */
-int board_quick_cmp(struct board *b1, struct board *b2);
+int board_quick_cmp(board_t *b1, board_t *b2);
 
 /* Place given handicap on the board; coordinates are printed to f. */
-void board_handicap(struct board *board, int stones, struct move_queue *q);
+void board_handicap(board_t *board, int stones, move_queue_t *q);
 
 /* Returns group id, 0 on allowed suicide, pass or resign, -1 on error */
-int board_play(struct board *board, struct move *m);
+int board_play(board_t *board, move_t *m);
 /* Like above, but plays random move; the move coordinate is recorded
  * to *coord. This method will never fill your own eye. pass is played
  * when no move can be played. You can impose extra restrictions if you
  * supply your own permit function; the permit function can also modify
  * the move coordinate to redirect the move elsewhere. */
-typedef bool (*ppr_permit)(struct board *b, struct move *m, void *data);
-bool board_permit(struct board *b, struct move *m, void *data);
-void board_play_random(struct board *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
+typedef bool (*ppr_permit)(board_t *b, move_t *m, void *data);
+bool board_permit(board_t *b, move_t *m, void *data);
+void board_play_random(board_t *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data);
 
 /* Returns true if given move can be played. */
-static bool board_is_valid_play(struct board *b, enum stone color, coord_t coord);
-static bool board_is_valid_move(struct board *b, struct move *m);
+static bool board_is_valid_play(board_t *b, enum stone color, coord_t coord);
+static bool board_is_valid_move(board_t *b, move_t *m);
 /* Returns true if ko was just taken. */
-static bool board_playing_ko_threat(struct board *b);
+static bool board_playing_ko_threat(board_t *b);
 /* Returns true if the move is not obvious self-atari. */
-static bool board_safe_to_play(struct board *b, coord_t coord, enum stone color);
+static bool board_safe_to_play(board_t *b, coord_t coord, enum stone color);
 
 /* Determine number of stones in a group, up to @max stones. */
-static int group_stone_count(struct board *b, group_t group, int max);
+static int group_stone_count(board_t *b, group_t group, int max);
 
 #ifndef QUICK_BOARD_CODE
 /* Adjust symmetry information as if given coordinate has been played. */
-void board_symmetry_update(struct board *b, struct board_symmetry *symmetry, coord_t c);
+void board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c);
 /* Check if coordinates are within symmetry base. (If false, they can
  * be derived from the base.) */
-static bool board_coord_in_symmetry(struct board *b, coord_t c);
+static bool board_coord_in_symmetry(board_t *b, coord_t c);
 #endif
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
-static bool board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color);
+static bool board_is_eyelike(board_t *board, coord_t coord, enum stone eye_color);
 /* Returns true if given coordinate could be a false eye; this check makes
  * sense only if you already know the coordinate is_eyelike(). */
-bool board_is_false_eyelike(struct board *board, coord_t coord, enum stone eye_color);
+bool board_is_false_eyelike(board_t *board, coord_t coord, enum stone eye_color);
 /* Returns true if given coordinate is a 1-pt eye (checks against false eyes, or
  * at least tries to). */
-bool board_is_one_point_eye(struct board *board, coord_t c, enum stone eye_color);
+bool board_is_one_point_eye(board_t *board, coord_t c, enum stone eye_color);
 /* Returns 1pt eye color (can be false-eye) */
-enum stone board_eye_color(struct board *board, coord_t c);
+enum stone board_eye_color(board_t *board, coord_t c);
 
 /* board_official_score() is the scoring method for yielding score suitable
  * for external presentation. For fast scoring of entirely filled boards
  * (e.g. playouts), use board_fast_score(). */
 /* Positive: W wins */
 /* Compare number of stones + 1pt eyes. */
-floating_t board_fast_score(struct board *board);
-floating_t board_score(struct board *b, int scores[S_MAX]);
+floating_t board_fast_score(board_t *board);
+floating_t board_score(board_t *b, int scores[S_MAX]);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */
-struct move_queue;
-floating_t board_official_score(struct board *board, struct move_queue *dead);
-floating_t board_official_score_color(struct board *board, struct move_queue *dead, enum stone color);
-floating_t board_official_score_details(struct board *board, struct move_queue *dead, int *dame, int *seki, int *ownermap, struct ownermap *po);
-void       board_print_official_ownermap(struct board *b, int *final_ownermap);
+floating_t board_official_score(board_t *board, move_queue_t *dead);
+floating_t board_official_score_color(board_t *board, move_queue_t *dead, enum stone color);
+floating_t board_official_score_details(board_t *board, move_queue_t *dead, int *dame, int *seki, int *ownermap, struct ownermap *po);
+void       board_print_official_ownermap(board_t *b, int *final_ownermap);
 
 /* Set board rules according to given string. Returns false in case
  * of unknown ruleset name. */
-bool board_set_rules(struct board *board, char *name);
-const char *rules2str(enum go_ruleset rules);
+bool board_set_rules(board_t *board, char *name);
+const char *rules2str(enum rules rules);
 
 /* Quick play/undo to try out a move.
  * WARNING  Only core board structures are maintained !
@@ -445,8 +447,8 @@ const char *rules2str(enum go_ruleset rules);
  * Invalid quick_play()/quick_undo() combinations (missing undo for example)
  * are caught at next board_play() if BOARD_UNDO_CHECKS is defined.
  */
-int  board_quick_play(struct board *board, struct move *m, struct board_undo *u);
-void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
+int  board_quick_play(board_t *board, move_t *m, board_undo_t *u);
+void board_quick_undo(board_t *b, move_t *m, board_undo_t *u);
 
 /* quick_play() + quick_undo() combo.
  * Body is executed only if move is valid (silently ignored otherwise).
@@ -456,9 +458,9 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
  * though. */
 #define with_move(board_, coord_, color_, body_) \
        do { \
-	       struct board *board__ = (board_);  /* For with_move_return() */		\
-               struct move m_ = { .coord = (coord_), .color = (color_) }; \
-               struct board_undo u_; \
+	       board_t *board__ = (board_);  /* For with_move_return() */		\
+               move_t m_ = move((coord_), (color_));	  \
+               board_undo_t u_; \
                if (board_quick_play(board__, &m_, &u_) >= 0) {	  \
 	               do { body_ } while(0);                     \
                        board_quick_undo(board__, &m_, &u_); \
@@ -473,9 +475,9 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 /* Same as with_move() but assert out in case of invalid move. */
 #define with_move_strict(board_, coord_, color_, body_) \
        do { \
-	       struct board *board__ = (board_);  /* For with_move_return() */		\
-               struct move m_ = { .coord = (coord_), .color = (color_) }; \
-               struct board_undo u_; \
+	       board_t *board__ = (board_);  /* For with_move_return() */		\
+               move_t m_ = move((coord_), (color_));	  \
+               board_undo_t u_; \
                assert (board_quick_play(board__, &m_, &u_) >= 0);  \
                do { body_ } while(0);                     \
                board_quick_undo(board__, &m_, &u_); \
@@ -506,7 +508,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 
 #define foreach_in_group(board_, group_) \
 	do { \
-		struct board *board__ = board_; \
+		board_t *board__ = board_; \
 		for (coord_t c = group_base(group_); c; c = groupnext_at(board__, c))
 #define foreach_in_group_end \
 	} while (0)
@@ -515,7 +517,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
  * on S_OFFBOARD coordinates. */
 #define foreach_neighbor(board_, coord_, loop_body) \
 	do { \
-		struct board *board__ = board_; \
+		board_t *board__ = board_; \
 		coord_t coord__ = coord_; \
 		coord_t c; \
 		c = coord__ - board_size(board__); do { loop_body } while (0); \
@@ -546,7 +548,7 @@ void board_quick_undo(struct board *b, struct move *m, struct board_undo *u);
 
 
 static inline bool
-board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color)
+board_is_eyelike(board_t *board, coord_t coord, enum stone eye_color)
 {
 	return (neighbor_count_at(board, coord, eye_color) +
 	        neighbor_count_at(board, coord, S_OFFBOARD)) == 4;
@@ -554,7 +556,7 @@ board_is_eyelike(struct board *board, coord_t coord, enum stone eye_color)
 
 /* Group suicides allowed */
 static inline bool
-board_is_valid_play(struct board *board, enum stone color, coord_t coord)
+board_is_valid_play(board_t *board, enum stone color, coord_t coord)
 {
 	if (board_at(board, coord) != S_NONE)
 		return false;
@@ -573,7 +575,7 @@ board_is_valid_play(struct board *board, enum stone color, coord_t coord)
 
 /* Check group suicides, slower than board_is_valid_play() */
 static inline bool
-board_is_valid_play_no_suicide(struct board *board, enum stone color, coord_t coord)
+board_is_valid_play_no_suicide(board_t *board, enum stone color, coord_t coord)
 {
 	if (board_at(board, coord) != S_NONE)
 		return false;
@@ -602,20 +604,20 @@ board_is_valid_play_no_suicide(struct board *board, enum stone color, coord_t co
 
 
 static inline bool
-board_is_valid_move(struct board *board, struct move *m)
+board_is_valid_move(board_t *board, move_t *m)
 {
 	return board_is_valid_play(board, m->color, m->coord);
 }
 
 static inline bool
-board_playing_ko_threat(struct board *b)
+board_playing_ko_threat(board_t *b)
 {
 	return !is_pass(b->ko.coord);
 }
 
 
 static inline bool
-board_safe_to_play(struct board *b, coord_t coord, enum stone color)
+board_safe_to_play(board_t *b, coord_t coord, enum stone color)
 {
 	/* number of free neighbors */
 	int libs = immediate_liberty_count(b, coord);
@@ -648,7 +650,7 @@ board_safe_to_play(struct board *b, coord_t coord, enum stone color)
 }
 
 static inline int
-group_stone_count(struct board *b, group_t group, int max)
+group_stone_count(board_t *b, group_t group, int max)
 {
 	int n = 0;
 	foreach_in_group(b, group) {
@@ -660,17 +662,17 @@ group_stone_count(struct board *b, group_t group, int max)
 
 #ifndef QUICK_BOARD_CODE
 static inline bool
-board_coord_in_symmetry(struct board *b, coord_t c)
+board_coord_in_symmetry(board_t *b, coord_t c)
 {
-	if (coord_y(c, b) < b->symmetry.y1 || coord_y(c, b) > b->symmetry.y2)
+	if (coord_y(c) < b->symmetry.y1 || coord_y(c) > b->symmetry.y2)
 		return false;
-	if (coord_x(c, b) < b->symmetry.x1 || coord_x(c, b) > b->symmetry.x2)
+	if (coord_x(c) < b->symmetry.x1 || coord_x(c) > b->symmetry.x2)
 		return false;
 	if (b->symmetry.d) {
-		int x = coord_x(c, b);
+		int x = coord_x(c);
 		if (b->symmetry.type == SYM_DIAG_DOWN)
 			x = board_size(b) - 1 - x;
-		if (x > coord_y(c, b))
+		if (x > coord_y(c))
 			return false;
 	}
 	return true;

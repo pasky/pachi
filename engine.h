@@ -1,12 +1,8 @@
 #ifndef PACHI_ENGINE_H
 #define PACHI_ENGINE_H
 
-#include "pachi.h"
-#include "board.h"
-#include "move.h"
 #include "gtp.h"
-
-struct move_queue;
+#include "ownermap.h"
 
 enum engine_id {
 	E_RANDOM,
@@ -26,25 +22,26 @@ enum engine_id {
 	E_MAX,
 };
 
+typedef struct engine engine_t;
 
-typedef void (*engine_init_t)(struct engine *e, char *arg, struct board *b);
-typedef enum parse_code (*engine_notify_t)(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply);
-typedef void (*engine_board_print_t)(struct engine *e, struct board *b, FILE *f);
-typedef char *(*engine_notify_play_t)(struct engine *e, struct board *b, struct move *m, char *enginearg);
-typedef char *(*engine_result_t)(struct engine *e, struct board *b);
-typedef char *(*engine_chat_t)(struct engine *e, struct board *b, bool in_game, char *from, char *cmd);
-typedef coord_t (*engine_genmove_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive);
-typedef void  (*engine_best_moves_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
+typedef void (*engine_init_t)(engine_t *e, char *arg, board_t *b);
+typedef enum parse_code (*engine_notify_t)(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply);
+typedef void (*engine_board_print_t)(engine_t *e, board_t *b, FILE *f);
+typedef char *(*engine_notify_play_t)(engine_t *e, board_t *b, move_t *m, char *enginearg);
+typedef char *(*engine_result_t)(engine_t *e, board_t *b);
+typedef char *(*engine_chat_t)(engine_t *e, board_t *b, bool in_game, char *from, char *cmd);
+typedef coord_t (*engine_genmove_t)(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive);
+typedef void  (*engine_best_moves_t)(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
 				     coord_t *best_c, float *best_r, int nbest);
-typedef char *(*engine_genmoves_t)(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+typedef char *(*engine_genmoves_t)(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 				 char *args, bool pass_all_alive, void **stats_buf, int *stats_size);
-typedef void (*engine_evaluate_t)(struct engine *e, struct board *b, struct time_info *ti, floating_t *vals, enum stone color);
-typedef void (*engine_analyze_t)(struct engine *e, struct board *b, enum stone color, int start);
-typedef void (*engine_dead_group_list_t)(struct engine *e, struct board *b, struct move_queue *mq);
-typedef void (*engine_stop_t)(struct engine *e);
-typedef void (*engine_done_t)(struct engine *e);
-typedef struct ownermap* (*engine_ownermap_t)(struct engine *e, struct board *b);
-typedef void (*engine_livegfx_hook_t)(struct engine *e);
+typedef void (*engine_evaluate_t)(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color);
+typedef void (*engine_analyze_t)(engine_t *e, board_t *b, enum stone color, int start);
+typedef void (*engine_dead_group_list_t)(engine_t *e, board_t *b, move_queue_t *mq);
+typedef void (*engine_stop_t)(engine_t *e);
+typedef void (*engine_done_t)(engine_t *e);
+typedef ownermap_t* (*engine_ownermap_t)(engine_t *e, board_t *b);
+typedef void (*engine_livegfx_hook_t)(engine_t *e);
 
 /* This is engine data structure. A new engine instance is spawned
  * for each new game during the program lifetime. */
@@ -103,24 +100,24 @@ struct engine {
 
 
 /* Initialize engine. Call engine_done() later when finished with it. */
-void engine_init(struct engine *e, int id, char *e_arg, struct board *b);
+void engine_init(engine_t *e, int id, char *e_arg, board_t *b);
 
 /* Clean up what engine_init() did. */
-void engine_done(struct engine *e);
+void engine_done(engine_t *e);
 
 /* Allocate and initialize a new engine.
  * You are responsible for calling engine_done() and free() on it when done. */
-struct engine* new_engine(int id, char *e_arg, struct board *b);
+engine_t* new_engine(int id, char *e_arg, board_t *b);
 
 /* engine_done() + engine_init(), more or less. */
-void engine_reset(struct engine *e, struct board *b, char *e_arg);
+void engine_reset(engine_t *e, board_t *b, char *e_arg);
 
 
 /* Convenience functions for engine actions: */
-void engine_board_print(struct engine *e, struct board *b, FILE *f);
-void engine_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+void engine_board_print(engine_t *e, board_t *b, FILE *f);
+void engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		       coord_t *best_c, float *best_r, int nbest);
-struct ownermap* engine_ownermap(struct engine *e, struct board *b);
+struct ownermap* engine_ownermap(engine_t *e, board_t *b);
 
 
 /* Engines best moves common code */
@@ -128,7 +125,7 @@ struct ownermap* engine_ownermap(struct engine *e, struct board *b);
 /* For engines best_move(): Add move @c with prob @r to best moves @best_c, @best_r */
 void best_moves_add(coord_t c, float r, coord_t *best_c, float *best_r, int nbest);
 void best_moves_add_full(coord_t c, float r, void *d, coord_t *best_c, float *best_r, void **best_d, int nbest);
-int  best_moves_print(struct board *b, char *str, coord_t *best_c, int nbest);
+int  best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest);
 
 
 #endif

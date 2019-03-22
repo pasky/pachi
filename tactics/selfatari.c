@@ -15,7 +15,7 @@
 #include "nakade.h"
 
 
-struct selfatari_state {
+typedef struct {
 	int groupcts[S_MAX];
 	group_t groupids[S_MAX][4];
 	coord_t groupneis[S_MAX][4];
@@ -30,10 +30,10 @@ struct selfatari_state {
 	/* ID of the first liberty, providing it again is not
 	 * interesting. */
 	coord_t needs_more_lib_except;
-};
+} selfatari_state_t;
 
 static bool
-three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, struct selfatari_state *s)
+three_liberty_suicide(board_t *b, group_t g, enum stone color, coord_t to, selfatari_state_t *s)
 {
 	/* If a group has three liberties, by playing on one of
 	 * them it is possible to kill the group clumsily. Check
@@ -53,7 +53,7 @@ three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, 
 	for (int i = 0, j = 0; i < 3; i++) {
 		coord_t lib = board_group_info(b, g).lib[i];
 		if (lib != to) {
-			other_libs_adj[j] = coord_is_adjecent(lib, to, b);
+			other_libs_adj[j] = coord_is_adjecent(lib, to);
 			other_libs[j++] = lib;
 		}
 	}
@@ -86,7 +86,7 @@ three_liberty_suicide(struct board *b, group_t g, enum stone color, coord_t to, 
 	/* Therefore, the final suicidal test is: (After filling this
 	 * liberty,) when opponent fills liberty [0], playing liberty
 	 * [1] will not help the group, or vice versa. */
-	bool other_libs_neighbors = coord_is_adjecent(other_libs[0], other_libs[1], b);
+	bool other_libs_neighbors = coord_is_adjecent(other_libs[0], other_libs[1]);
 	for (int i = 0; i < 2; i++) {
 		int null_libs = other_libs_neighbors + other_libs_adj[i];
 		if (board_is_one_point_eye(b, other_libs[1 - i], color)) {
@@ -117,7 +117,7 @@ next_lib:
 		 * before wasting a liberty. So no need to check. */
 		/* Ok, the last liberty has no way to get out. */
 		if (DEBUGL(6))
-			fprintf(stderr, "3-lib dangerous: %s\n", coord2sstr(other_libs[i], b));
+			fprintf(stderr, "3-lib dangerous: %s\n", coord2sstr(other_libs[i]));
 		return true;
 	}
 
@@ -125,7 +125,7 @@ next_lib:
 }
 
 static int
-examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct selfatari_state *s, int flags)
+examine_friendly_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t *s, int flags)
 {
 	for (int i = 0; i < s->groupcts[color]; i++) {
 		/* We can escape by connecting to this group if it's
@@ -164,7 +164,7 @@ examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct se
 			return false;
 		/* ...or one liberty, but not lib2. */
 		if (s->groupcts[S_NONE] > 0
-		    && !coord_is_adjecent(lib2, to, b))
+		    && !coord_is_adjecent(lib2, to))
 			return false;
 
 		/* ...ok, then we can still contribute a liberty
@@ -178,7 +178,7 @@ examine_friendly_groups(struct board *b, enum stone color, coord_t to, struct se
 }
 
 static int
-examine_enemy_groups(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+examine_enemy_groups(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
 	/* We may be able to gain a liberty by capturing this group. */
 	group_t can_capture = 0;
@@ -228,7 +228,7 @@ examine_enemy_groups(struct board *b, enum stone color, coord_t to, struct selfa
 }
 
 static inline bool
-is_neighbor_group(struct board *b, enum stone color, group_t g, struct selfatari_state *s)
+is_neighbor_group(board_t *b, enum stone color, group_t g, selfatari_state_t *s)
 {
 	for (int i = 0; i < s->groupcts[color]; i++)
 		if (g == s->groupids[color][i])
@@ -240,7 +240,7 @@ is_neighbor_group(struct board *b, enum stone color, group_t g, struct selfatari
 /* Instead of playing this self-atari, could we have connected/escaped by 
  * playing on the other liberty of a neighboring group ? */
 static inline bool
-is_bad_nakade(struct board *b, enum stone color, coord_t to, coord_t lib2, struct selfatari_state *s)
+is_bad_nakade(board_t *b, enum stone color, coord_t to, coord_t lib2, selfatari_state_t *s)
 {
 	/* Let's look at neighbors of the other liberty: */
 	foreach_neighbor(b, lib2, {
@@ -278,7 +278,7 @@ is_bad_nakade(struct board *b, enum stone color, coord_t to, coord_t lib2, struc
 /* Instead of playing this self-atari, could we have connected/escaped by 
  * playing on the other liberty of a neighboring group ? */
 static inline bool
-can_escape_instead(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+can_escape_instead(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
 	for (int i = 0; i < s->groupcts[color]; i++) {
 		group_t g = s->groupids[color][i];
@@ -295,7 +295,7 @@ can_escape_instead(struct board *b, enum stone color, coord_t to, struct selfata
 }
 
 static inline bool
-unreachable_lib_from_neighbors(struct board *b, enum stone color, coord_t to, struct selfatari_state *s,
+unreachable_lib_from_neighbors(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
 			       coord_t lib)
 {
 	for (int i = 0; i < s->groupcts[color]; i++) {
@@ -309,7 +309,7 @@ unreachable_lib_from_neighbors(struct board *b, enum stone color, coord_t to, st
 
 /* This only looks at existing empty spots, not captures */
 static inline bool
-capture_would_make_extra_eye(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+capture_would_make_extra_eye(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
 	foreach_neighbor(b, to, {
 		if (board_at(b, c) == S_NONE)
@@ -321,7 +321,7 @@ capture_would_make_extra_eye(struct board *b, enum stone color, coord_t to, stru
 
 /* Only cares about dead shape. */
 static bool
-nakade_making_dead_shape(struct board *b, enum stone color, coord_t to, int stones)
+nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, int stones)
 {
 	assert(stones >= 1);
 	assert(stones <= 5);
@@ -340,7 +340,7 @@ nakade_making_dead_shape(struct board *b, enum stone color, coord_t to, int ston
 }
 
 static bool
-useful_nakade_making_dead_shape(struct board *b, enum stone color, coord_t to, struct selfatari_state *s,
+useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfatari_state_t *s,
 				bool atariing_group, int stones)
 {
 	int cap_would_make_eye = false;
@@ -435,7 +435,7 @@ useful_nakade_making_dead_shape(struct board *b, enum stone color, coord_t to, s
  * We also allow to only nakade if the created shape is dead
  * (http://senseis.xmp.net/?Nakade). */
 static int
-setup_nakade(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+setup_nakade(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
 	/* Look at the enemy groups and determine the other contended
 	 * liberty. We must make sure the liberty:
@@ -516,7 +516,7 @@ setup_nakade(struct board *b, enum stone color, coord_t to, struct selfatari_sta
 }
 
 static int
-setup_nakade_big_group_only(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
 	// Throwing a single stone in ? Fine.
 	if (!s->groupcts[color])
@@ -560,8 +560,8 @@ setup_nakade_big_group_only(struct board *b, enum stone color, coord_t to, struc
 /* Fast but there are issues with this (triangle six is not dead !)
  * We also need to know status if opponent plays first */
 static inline int
-nakade_making_dead_shape_hack(struct board *b, enum stone color, coord_t to, int lib2,
-			      struct selfatari_state *s, int stones)
+nakade_making_dead_shape_hack(board_t *b, enum stone color, coord_t to, int lib2,
+			      selfatari_state_t *s, int stones)
 {
 	/* It also remains to be seen whether it is nakade
 	 * and not seki destruction. To do this properly, we
@@ -610,7 +610,7 @@ nakade_making_dead_shape_hack(struct board *b, enum stone color, coord_t to, int
 
 
 static int
-check_throwin(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+check_throwin(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
 	/* We can be throwing-in to false eye:
 	 * X X X O X X X O X X X X X
@@ -658,7 +658,7 @@ check_throwin(struct board *b, enum stone color, coord_t to, struct selfatari_st
 }
 
 static void
-init_selfatari_state(struct board *b, enum stone color, coord_t to, struct selfatari_state *s)
+init_selfatari_state(board_t *b, enum stone color, coord_t to, selfatari_state_t *s)
 {
 	memset(s, 0, sizeof(*s));
 
@@ -679,15 +679,15 @@ init_selfatari_state(struct board *b, enum stone color, coord_t to, struct selfa
 }
 
 bool
-is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to, int flags)
+is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags)
 {
 	if (DEBUGL(5))
-		fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to, b));
+		fprintf(stderr, "sar check %s %s\n", stone2str(color), coord2sstr(to));
 	/* Assess if we actually gain any liberties by this escape route.
 	 * Note that this is not 100% as we cannot check whether we are
 	 * connecting out or just to ourselves. */
 
-	struct selfatari_state s;
+	selfatari_state_t s;
 	init_selfatari_state(b, color, to, &s);
 	
 	/* We have shortage of liberties; that's the point. */
@@ -722,7 +722,7 @@ is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to, int flags)
 
 
 coord_t
-selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygroup)
+selfatari_cousin(board_t *b, enum stone color, coord_t coord, group_t *bygroup)
 {
 	group_t groups[4]; int groups_n = 0;
 	int groupsbycolor[4] = {0, 0, 0, 0};
@@ -735,7 +735,7 @@ selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygr
 			groups[groups_n++] = g;
 			groupsbycolor[s]++;
 			if (DEBUGL(6))
-				fprintf(stderr, "%s(%s) ", coord2sstr(c, b), stone2str(s));
+				fprintf(stderr, "%s(%s) ", coord2sstr(c), stone2str(s));
 		}
 	});
 	if (DEBUGL(6))
@@ -766,7 +766,7 @@ found:;
 
 		coord_t lib2;
 		/* Can we get liberties by capturing a neighbor? */
-		struct move_queue ccq; ccq.moves = 0;
+		move_queue_t ccq;  mq_init(&ccq);
 		if (board_at(b, group) == color &&
 		    can_countercapture(b, group, &ccq, 0)) {
 			lib2 = mq_pick(&ccq);

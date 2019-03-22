@@ -12,16 +12,16 @@
 #include "uct/tree.h"
 #include "uct/policy/generic.h"
 
-struct tree_node *
-uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude)
+tree_node_t *
+uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone color, coord_t exclude)
 {
-	struct tree_node *nbest = node->children;
+	tree_node_t *nbest = node->children;
 	if (!nbest) return NULL;
-	struct tree_node *nbest2 = nbest->sibling;
+	tree_node_t *nbest2 = nbest->sibling;
 
 	/* This function is called while the tree is updated by other threads.
 	 * We rely on node->children being set only after the node has been fully expanded. */
-	for (struct tree_node *ni = nbest2; ni; ni = ni->sibling) {
+	for (tree_node_t *ni = nbest2; ni; ni = ni->sibling) {
 		// we compare playouts and choose the best-explored
 		// child; comparing values is more brittle
 		if (node_coord(ni) == exclude || ni->hints & TREE_HINT_INVALID)
@@ -51,7 +51,7 @@ uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *
  * nodes evaluated rarely.
  * This function is called while the tree is updated by other threads */
 void
-uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_descent *descent)
+uctp_generic_winner(uct_policy_t *p, tree_t *tree, uct_descent_t *descent)
 {
 	if (!p->evaluate)
 		return;

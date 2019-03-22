@@ -11,15 +11,15 @@
  * want to avoid these moves. The function actually does a rather elaborate
  * tactical check, allowing self-atari moves that are nakade, eye falsification
  * or throw-ins. */
-static bool is_bad_selfatari(struct board *b, enum stone color, coord_t to);
+static bool is_bad_selfatari(board_t *b, enum stone color, coord_t to);
 
 /* Check if this move is a really bad self-atari, allowing opponent to capture
  * 3 stones or more that could have been saved / don't look like useful nakade.
  * Doesn't care much about 1 stone / 2 stones business unlike is_bad_selfatari(). */
-static bool is_really_bad_selfatari(struct board *b, enum stone color, coord_t to);
+static bool is_really_bad_selfatari(board_t *b, enum stone color, coord_t to);
 
 /* Check if move results in self-atari. */
-static bool is_selfatari(struct board *b, enum stone color, coord_t to);
+static bool is_selfatari(board_t *b, enum stone color, coord_t to);
 
 /* Move (color, coord) is a selfatari; this means that it puts a group of
  * ours in atari; i.e., the group has two liberties now. Return the other
@@ -27,16 +27,16 @@ static bool is_selfatari(struct board *b, enum stone color, coord_t to);
  * if that one is not a self-atari.
  * (In case (color, coord) is a multi-selfatari, consider a randomly chosen
  * candidate.) */
-coord_t selfatari_cousin(struct board *b, enum stone color, coord_t coord, group_t *bygroup);
+coord_t selfatari_cousin(board_t *b, enum stone color, coord_t coord, group_t *bygroup);
 
 
 #define SELFATARI_3LIB_SUICIDE		1
 #define SELFATARI_BIG_GROUPS_ONLY	2
 
-bool is_bad_selfatari_slow(struct board *b, enum stone color, coord_t to, int flags);
+bool is_bad_selfatari_slow(board_t *b, enum stone color, coord_t to, int flags);
 
 static inline bool
-is_bad_selfatari(struct board *b, enum stone color, coord_t to)
+is_bad_selfatari(board_t *b, enum stone color, coord_t to)
 {
 	/* More than one immediate liberty, thumbs up! */
 	if (immediate_liberty_count(b, to) > 1)
@@ -46,7 +46,7 @@ is_bad_selfatari(struct board *b, enum stone color, coord_t to)
 }
 
 static inline bool
-is_really_bad_selfatari(struct board *b, enum stone color, coord_t to)
+is_really_bad_selfatari(board_t *b, enum stone color, coord_t to)
 {
 	/* More than one immediate liberty, thumbs up! */
 	if (immediate_liberty_count(b, to) > 1)
@@ -56,7 +56,7 @@ is_really_bad_selfatari(struct board *b, enum stone color, coord_t to)
 }
 
 static inline bool
-is_selfatari(struct board *b, enum stone color, coord_t to)
+is_selfatari(board_t *b, enum stone color, coord_t to)
 {
         /* More than one immediate liberty, thumbs up! */
         if (immediate_liberty_count(b, to) > 1)

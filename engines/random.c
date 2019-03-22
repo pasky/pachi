@@ -7,7 +7,7 @@
 #include "engines/random.h"
 
 static coord_t
-random_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+random_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	/* Play a random coordinate. However, we must also guard
 	 * against suicide moves; repeat playing while it's a suicide
@@ -20,7 +20,7 @@ random_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 		/* board_play_random() actually plays the move too;
 		 * this is desirable for MC simulations but not within
 		 * the genmove. Make a scratch new board for it. */
-		struct board b2;
+		board_t b2;
 		board_copy(&b2, b);
 
 		board_play_random(&b2, color, &coord, NULL, NULL);
@@ -33,7 +33,7 @@ random_genmove(struct engine *e, struct board *b, struct time_info *ti, enum sto
 }
 
 void
-engine_random_init(struct engine *e, char *arg, struct board *b)
+engine_random_init(engine_t *e, char *arg, board_t *b)
 {
 	e->name = "RandomMove";
 	e->comment = "I just make random moves. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";

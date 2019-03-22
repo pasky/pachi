@@ -12,36 +12,36 @@
 
 
 static void
-board_dump_group(struct board *b, group_t g)
+board_dump_group(board_t *b, group_t g)
 {
         printf("group base: %s  color: %s  libs: %i  stones: %i\n",
-               coord2sstr(g, b), stone2str(board_at(b, g)),
+               coord2sstr(g), stone2str(board_at(b, g)),
                board_group_info(b, g).libs, group_stone_count(b, g, 500));
 
         printf("  stones: ");
         foreach_in_group(b, g) {
-                printf("%s ", coord2sstr(c, b));
+                printf("%s ", coord2sstr(c));
         } foreach_in_group_end;
         printf("\n");
 
         printf("  libs  : ");   
         for (int i = 0; i < board_group_info(b, g).libs; i++) {
                 coord_t lib = board_group_info(b, g).lib[i];
-                printf("%s ", coord2sstr(lib, b));
+                printf("%s ", coord2sstr(lib));
         }
         printf("\n");
 }
 
 static void
-board_dump(struct board *b)
+board_dump(board_t *b)
 {       
         printf("board_dump(): size: %i  size2: %i  bits2: %i\n", 
                b->size, b->size2, b->bits2);
         board_print(b, stdout);
 
         printf("ko: %s %s  last_ko: %s %s  last_ko_age: %i\n",
-               stone2str(b->ko.color), coord2sstr(b->ko.coord, b),
-               stone2str(b->last_ko.color), coord2sstr(b->last_ko.coord, b),
+               stone2str(b->ko.color), coord2sstr(b->ko.coord),
+               stone2str(b->last_ko.color), coord2sstr(b->last_ko.coord),
                b->last_ko_age);
 
         printf("groups: \n");
@@ -62,7 +62,7 @@ board_dump(struct board *b)
 
 // Print info about suicides
 static void
-show_suicide_info(struct board *b, struct board *orig, coord_t c, enum stone color)
+show_suicide_info(board_t *b, board_t *orig, coord_t c, enum stone color)
 {
 	if (board_at(b, c) != S_NONE)
 		return;
@@ -89,13 +89,13 @@ show_suicide_info(struct board *b, struct board *orig, coord_t c, enum stone col
 
 /* Play move and check board states after quick_play() / quick_undo() match */
 static coord_t
-test_undo(struct board *orig, coord_t c, enum stone color)
+test_undo(board_t *orig, coord_t c, enum stone color)
 {
-	struct board b, b2;
+	board_t b, b2;
 	board_copy(&b, orig);
 	board_copy(&b2, orig);
 
-	struct move m = { .coord = c, .color = color };
+	move_t m = move(c, color);
 	int r = board_play(&b, &m);  assert(r >= 0);
 
 	with_move(&b2, c, color, {
@@ -125,7 +125,7 @@ test_undo(struct board *orig, coord_t c, enum stone color)
 static playoutp_permit policy_permit = NULL;
 
 static bool
-permit_hook(struct playout_policy *playout_policy, struct board *b, struct move *m, bool alt, bool rnd)
+permit_hook(playout_policy_t *playout_policy, board_t *b, move_t *m, bool alt, bool rnd)
 {
 	test_undo(b, m->coord, m->color);
 
@@ -139,7 +139,7 @@ permit_hook(struct playout_policy *playout_policy, struct board *b, struct move 
 
 /* Play some random games testing undo on every move. */
 bool
-board_undo_stress_test(struct board *board, char *arg)
+board_undo_stress_test(board_t *board, char *arg)
 {
 	int games = 100;
 	enum stone color = S_BLACK;
@@ -148,15 +148,15 @@ board_undo_stress_test(struct board *board, char *arg)
 	if (DEBUGL(1))  printf("board_undo stress test.   Playing %i games checking every move + pass...\n", games);
 
 	// Light policy better to test wild multi-group suicides
-	struct playout_policy *policy = playout_light_init(NULL, board);
-	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
+	playout_policy_t *policy = playout_light_init(NULL, board);
+	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
 	
 	// Hijack policy permit()
 	policy_permit = policy->permit;  policy->permit = permit_hook;
 
 	/* Play some games */
 	for (int i = 0; i < games; i++)  {
-		struct board b;
+		board_t b;
 		board_copy(&b, board);		
 		playout_play_game(&setup, &b, color, NULL, NULL, policy);
 		board_done_noalloc(&b);

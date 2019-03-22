@@ -1,46 +1,48 @@
 #ifndef PACHI_GOGUI_H
 #define PACHI_GOGUI_H
 
+#include "gtp.h"
+
 /* How many candidates to display */
 #define GOGUI_CANDIDATES 30
 
-enum gogui_reporting {
-	UR_GOGUI_ZERO,
+typedef enum gogui_reporting {
+	UR_GOGUI_NONE,
 	UR_GOGUI_BEST,
 	UR_GOGUI_SEQ,
 	UR_GOGUI_WR,
-};
+} gogui_reporting_t;
 
 extern enum gogui_reporting gogui_livegfx;
 
 extern char gogui_gfx_buf[];
 
 
-enum parse_code cmd_gogui_analyze_commands(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_livegfx(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_best_moves(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_winrates(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_influence(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_dcnn_best(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_dcnn_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_dcnn_rating(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_color_palette(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_joseki_moves(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_joseki_show_pattern(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_pattern_best(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_pattern_colors(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_pattern_rating(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_pattern_features(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_pattern_gammas(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_show_spatial(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
-enum parse_code cmd_gogui_spatial_size(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_analyze_commands(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_livegfx(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_best_moves(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_winrates(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_influence(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_dcnn_best(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_dcnn_rating(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_joseki_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_pattern_best(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_pattern_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_pattern_rating(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_spatial_size(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 
-void gogui_show_best_moves(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int n);
-void gogui_show_best_moves_colors(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int n);
-void gogui_show_winrates(strbuf_t *buf, struct board *b, enum stone color, coord_t *best_c, float *best_r, int nbest);
-void gogui_show_best_seq(strbuf_t *buf, struct board *b, enum stone color, coord_t *seq, int n);
+void gogui_show_best_moves(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n);
+void gogui_show_best_moves_colors(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n);
+void gogui_show_winrates(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest);
+void gogui_show_best_seq(strbuf_t *buf, board_t *b, enum stone color, coord_t *seq, int n);
 void gogui_show_livegfx(char *str);
 
 #endif

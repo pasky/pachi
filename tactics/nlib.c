@@ -14,15 +14,13 @@
 
 
 void
-group_nlib_defense_check(struct board *b, group_t group, enum stone to_play, struct move_queue *q, int tag)
+group_nlib_defense_check(board_t *b, group_t group, enum stone to_play, move_queue_t *q, int tag)
 {
 	enum stone color = to_play;
 	assert(color != S_OFFBOARD && color != S_NONE
 	       && color == board_at(b, group_base(group)));
 
-	if (DEBUGL(5))
-		fprintf(stderr, "[%s] nlib defense check of color %d\n",
-			coord2sstr(group, b), color);
+	if (DEBUGL(5))  fprintf(stderr, "[%s] nlib defense check of color %d\n", coord2sstr(group), color);
 
 #if 0
 	/* XXX: The code below is specific for 3-liberty groups. Its impact

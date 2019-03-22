@@ -6,12 +6,12 @@
 //#define DEBUG
 #include "debug.h"
 #include "move.h"
-#include "probdist.h"
 #include "random.h"
 #include "board.h"
+#include "probdist.h"
 
 coord_t
-probdist_pick(struct probdist *restrict pd, coord_t *restrict ignore)
+probdist_pick(probdist_t *restrict pd, coord_t *restrict ignore)
 {
 	fixp_t total = probdist_total(pd);
 	fixp_t stab = fast_irandom(total);
@@ -22,7 +22,7 @@ probdist_pick(struct probdist *restrict pd, coord_t *restrict ignore)
 	coord_t c = board_size(pd->b) + 1;
 	while (stab > pd->rowtotals[r]) {
 		if (DEBUGL(6))
-			fprintf(stderr, "[%s] skipping row %f (%f)\n", coord2sstr(c, pd->b), fixp_to_double(pd->rowtotals[r]), fixp_to_double(stab));
+			fprintf(stderr, "[%s] skipping row %f (%f)\n", coord2sstr(c), fixp_to_double(pd->rowtotals[r]), fixp_to_double(stab));
 
 		stab -= pd->rowtotals[r];
 		r++; assert(r < board_size(pd->b));
@@ -34,7 +34,7 @@ probdist_pick(struct probdist *restrict pd, coord_t *restrict ignore)
 
 	for (; c < board_size2(pd->b); c++) {
 		if (DEBUGL(6))
-			fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(c, pd->b), fixp_to_double(pd->items[c]), fixp_to_double(stab));
+			fprintf(stderr, "[%s] %f (%f)\n", coord2sstr(c), fixp_to_double(pd->items[c]), fixp_to_double(stab));
 
 		assert(is_pass(*ignore) || c <= *ignore);
 		if (c == *ignore) {

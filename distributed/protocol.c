@@ -18,6 +18,7 @@
 
 #define DEBUG
 
+#include "gtp.h"
 #include "random.h"
 #include "timeinfo.h"
 #include "playout.h"
@@ -40,10 +41,12 @@ static int cmd_count = 0;
 #define MAX_CMDS_PER_MOVE 10
 
 /* History of gtp commands sent for current game, indexed by move. */
-static struct cmd_history {
+typedef struct {
 	int gtp_id;
 	char *next_cmd;
-} history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
+} cmd_history_t;
+
+static cmd_history_t history[MAX_GAMELEN][MAX_CMDS_PER_MOVE];
 
 /* Number of active slave machines working for this master. */
 int active_slaves = 0;
@@ -55,7 +58,7 @@ int reply_count = 0;
 char **gtp_replies;
 
 
-struct buf_state **receive_queue;
+buf_state_t **receive_queue;
 int queue_length = 0;
 int queue_age = 0;
 static int queue_max_length;
@@ -78,7 +81,7 @@ static pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 static double start_time;
 
 /* Default slave state. */
-struct slave_state default_sstate;
+slave_state_t default_sstate;
 
 
 /* Get exclusive access to the threads and commands state. */
@@ -98,7 +101,7 @@ protocol_unlock(void)
 /* Write the time, client address, prefix, and string s to stderr atomically.
  * s should end with a \n */
 void
-logline(struct in_addr *client, char *prefix, char *s)
+logline(struct in_addr *client, const char *prefix, const char *s)
 {
 	double now = time_now();
 
@@ -201,7 +204,7 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
  * slave_lock is held on both entry and exit of this function. */
 static int
 send_command(char *to_send, void *bin_buf, int *bin_size,
-	     FILE *f, struct slave_state *sstate, char *buf)
+	     FILE *f, slave_state_t *sstate, char *buf)
 {
 	assert(to_send && gtp_cmd && bin_buf && bin_size);
 	strncpy(buf, to_send, CMDS_SIZE);
@@ -272,10 +275,10 @@ next_command(int cmd_id)
  * initialized already as a copy of the default slave state.
  * slave_lock is not held on either entry or exit of this function. */
 static void
-slave_state_alloc(struct slave_state *sstate)
+slave_state_alloc(slave_state_t *sstate)
 {
 	for (int n = 0; n < BUFFERS_PER_SLAVE; n++) {
-		sstate->b[n].buf = malloc2(sstate->max_buf_size);
+		sstate->b[n].buf = cmalloc(sstate->max_buf_size);
 		sstate->b[n].owner = sstate->thread_id;
 	}
 	if (sstate->alloc_hook) sstate->alloc_hook(sstate);
@@ -286,7 +289,7 @@ slave_state_alloc(struct slave_state *sstate)
  * before they are invalidated, if BUFFERS_PER_SLAVE is large enough.
  * slave_lock is held on both entry and exit of this function. */
 static void *
-get_free_buf(struct slave_state *sstate)
+get_free_buf(slave_state_t *sstate)
 {
 	int newest = (sstate->newest_buf + 1) & (BUFFERS_PER_SLAVE - 1);
 	sstate->newest_buf = newest;
@@ -318,7 +321,7 @@ get_free_buf(struct slave_state *sstate)
  * recent buffer allocated by the calling thread.
  * slave_lock is held on both entry and exit of this function. */
 static void
-insert_buf(struct slave_state *sstate, void *buf, int size)
+insert_buf(slave_state_t *sstate, void *buf, int size)
 {
 	assert(queue_length < queue_max_length);
 
@@ -366,7 +369,7 @@ clear_receive_queue(void)
 static bool
 process_reply(int reply_id, char *reply, char *reply_buf,
 	      void *bin_reply, int bin_size, int *last_reply_id,
-	      int *reply_slot, struct slave_state *sstate)
+	      int *reply_slot, slave_state_t *sstate)
 {
 	/* Resend everything if slave returned an error. */
 	/* FIXME: this often results in infinite loops on errors
@@ -408,7 +411,7 @@ process_reply(int reply_id, char *reply, char *reply_buf,
  * in future commits.
  * slave_lock is held on both entry and exit of this function. */
 void *
-get_binary_arg(struct slave_state *sstate, char *cmd, int cmd_size, int *bin_size)
+get_binary_arg(slave_state_t *sstate, char *cmd, int cmd_size, int *bin_size)
 {
 	int cmd_id = atoi(gtp_cmd);
 	void *buf = get_free_buf(sstate);
@@ -437,7 +440,7 @@ get_binary_arg(struct slave_state *sstate, char *cmd, int cmd_size, int *bin_siz
  * Returns when the connection with the slave machine is cut.
  * slave_lock is held on both entry and exit of this function. */
 static void
-slave_loop(FILE *f, char *reply_buf, struct slave_state *sstate, bool resend)
+slave_loop(FILE *f, char *reply_buf, slave_state_t *sstate, bool resend)
 {
 	char *to_send;
 	int last_cmd_count = 0;
@@ -507,7 +510,7 @@ is_pachi_slave(FILE *f, struct in_addr *client)
 static void * __attribute__((noreturn))
 slave_thread(void *arg)
 {
-	struct slave_state sstate = default_sstate;
+	slave_state_t sstate = default_sstate;
 	sstate.thread_id = (intptr_t)arg;
 
 	assert(sstate.slave_sock >= 0);
@@ -554,7 +557,7 @@ slave_thread(void *arg)
  * if gtp_cmd points to a non-empty string. cmd is a single word;
  * args has all arguments and is empty or has a trailing \n */
 void
-update_cmd(struct board *b, char *cmd, char *args, bool new_id)
+update_cmd(board_t *b, const char *cmd, char *args, bool new_id)
 {
 	assert(gtp_cmd);
 	/* To make sure the slaves are in sync, we ignore the original id
@@ -575,7 +578,7 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
 
 	/* Remember history for out-of-sync slaves. */
 	static int slot = 0;
-	static struct cmd_history *last = NULL;
+	static cmd_history_t *last = NULL;
 	if (new_id) {
 		if (last) last->next_cmd = gtp_cmd;
 		slot = (slot + 1) % MAX_CMDS_PER_MOVE;
@@ -593,7 +596,7 @@ update_cmd(struct board *b, char *cmd, char *args, bool new_id)
  * lock is released. cmd is a single word; args has all
  * arguments and is empty or has a trailing \n */
 void
-new_cmd(struct board *b, char *cmd, char *args)
+new_cmd(board_t *b, const char *cmd, char *args)
 {
 	// Clear the history when a new game starts:
 	if (!gtp_cmd || is_gamestart(cmd)) {
@@ -663,7 +666,7 @@ protocol_init(char *slave_port, char *proxy_port, int max_slaves)
 	start_time = time_now();
 
 	queue_max_length = max_slaves * MAX_GENMOVES_PER_SLAVE;
-	receive_queue = calloc2(queue_max_length, sizeof(*receive_queue));
+	receive_queue = calloc2(queue_max_length, buf_state_t*);
 
 	default_sstate.slave_sock = port_listen(slave_port, max_slaves);
 	default_sstate.last_processed = -1;

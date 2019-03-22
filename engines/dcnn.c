@@ -11,7 +11,7 @@
 
 
 static coord_t
-dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+dcnn_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	float r[19 * 19];
 	float best_r[DCNN_BEST_N];
@@ -24,7 +24,7 @@ dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 	for (int i = 0; i < DCNN_BEST_N; i++) {
 		if (board_is_valid_play_no_suicide(b, color, best_moves[i]))
 			return best_moves[i];
-		fprintf(stderr, "dcnn suggests invalid move %s !\n", coord2sstr(best_moves[i], b));
+		fprintf(stderr, "dcnn suggests invalid move %s !\n", coord2sstr(best_moves[i]));
 	}
 	
 	assert(0);
@@ -32,7 +32,7 @@ dcnn_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone
 }
 
 static void
-dcnn_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color, 
+dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
 		coord_t *best_c, float *best_r, int nbest)
 {
 	float r[19 * 19];
@@ -42,7 +42,7 @@ dcnn_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum st
 }	
 
 void
-engine_dcnn_init(struct engine *e, char *arg, struct board *b)
+engine_dcnn_init(engine_t *e, char *arg, board_t *b)
 {
 	dcnn_init(b);
 	if (!caffe_ready()) {

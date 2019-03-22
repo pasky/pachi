@@ -10,15 +10,15 @@
 #include "ownermap.h"
 
 void
-ownermap_init(struct ownermap *ownermap)
+ownermap_init(ownermap_t *ownermap)
 {
 	memset(ownermap, 0, sizeof(*ownermap));
 }
 
 static void
-printhook(struct board *board, coord_t c, strbuf_t *buf, void *data)
+printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 {
-        struct ownermap *ownermap = data;
+        ownermap_t *ownermap = (ownermap_t*)data;
 
 	if (c == pass) { /* Stuff to display in header */
 		if (!ownermap || !ownermap->playouts) return;
@@ -37,13 +37,13 @@ printhook(struct board *board, coord_t c, strbuf_t *buf, void *data)
 }
 
 void
-board_print_ownermap(struct board *b, FILE *f, struct ownermap *ownermap)
+board_print_ownermap(board_t *b, FILE *f, ownermap_t *ownermap)
 {
         board_print_custom(b, stderr, printhook, ownermap);
 }
 
 void
-ownermap_fill(struct ownermap *ownermap, struct board *b)
+ownermap_fill(ownermap_t *ownermap, board_t *b)
 {
 	ownermap->playouts++;
 	foreach_point(b) {
@@ -55,7 +55,7 @@ ownermap_fill(struct ownermap *ownermap, struct board *b)
 }
 
 void
-ownermap_merge(int bsize2, struct ownermap *dst, struct ownermap *src)
+ownermap_merge(int bsize2, ownermap_t *dst, ownermap_t *src)
 {
 	dst->playouts += src->playouts;
 	for (int i = 0; i < bsize2; i++)
@@ -64,7 +64,7 @@ ownermap_merge(int bsize2, struct ownermap *dst, struct ownermap *src)
 }
 
 float
-ownermap_estimate_point(struct ownermap *ownermap, coord_t c)
+ownermap_estimate_point(ownermap_t *ownermap, coord_t c)
 {
 	assert(ownermap->map);
 	assert(!is_pass(c));
@@ -75,7 +75,7 @@ ownermap_estimate_point(struct ownermap *ownermap, coord_t c)
 }
 
 enum point_judgement
-ownermap_judge_point(struct ownermap *ownermap, coord_t c, floating_t thres)
+ownermap_judge_point(ownermap_t *ownermap, coord_t c, floating_t thres)
 {
 	assert(ownermap->map);
 	assert(!is_pass(c));
@@ -90,7 +90,7 @@ ownermap_judge_point(struct ownermap *ownermap, coord_t c, floating_t thres)
 }
 
 enum stone
-ownermap_color(struct ownermap *ownermap, coord_t c, floating_t thres)
+ownermap_color(ownermap_t *ownermap, coord_t c, floating_t thres)
 {
 	enum stone colors[4] = {S_NONE, S_BLACK, S_WHITE, S_NONE };
 	enum point_judgement pj = ownermap_judge_point(ownermap, c, thres);
@@ -98,7 +98,7 @@ ownermap_color(struct ownermap *ownermap, coord_t c, floating_t thres)
 }
 
 void
-ownermap_judge_groups(struct board *b, struct ownermap *ownermap, struct group_judgement *judge)
+ownermap_judge_groups(board_t *b, ownermap_t *ownermap, group_judgement_t *judge)
 {
 	assert(ownermap->map);
 	assert(judge->gs);
@@ -120,18 +120,18 @@ ownermap_judge_groups(struct board *b, struct ownermap *ownermap, struct group_j
 		
 		/* Update group state.
 		 * Comparing enum types, casting (int) avoids compiler warnings */
-		enum gj_state new;
-		if      ((int)pj == (int)color)               new = GS_ALIVE;
-		else if ((int)pj == (int)stone_other(color))  new = GS_DEAD;
-		else                { assert(pj == PJ_SEKI);  new = GS_UNKNOWN;  /* Exotic! */  }
+		enum gj_state newst;
+		if      ((int)pj == (int)color)               newst = GS_ALIVE;
+		else if ((int)pj == (int)stone_other(color))  newst = GS_DEAD;
+		else                { assert(pj == PJ_SEKI);  newst = GS_UNKNOWN;  /* Exotic! */  }
 		
-		if      (judge->gs[g] == GS_NONE)  judge->gs[g] = new;
-		else if (judge->gs[g] != new)      judge->gs[g] = GS_UNKNOWN;  /* Contradiction. :( */
+		if      (judge->gs[g] == GS_NONE)  judge->gs[g] = newst;
+		else if (judge->gs[g] != newst)    judge->gs[g] = GS_UNKNOWN;  /* Contradiction. :( */
 	} foreach_point_end;
 }
 
 void
-groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s, struct move_queue *mq)
+groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, move_queue_t *mq)
 {
 	foreach_point(b) { /* foreach_group, effectively */
 		group_t g = group_at(b, c);
@@ -144,17 +144,17 @@ groups_of_status(struct board *b, struct group_judgement *judge, enum gj_state s
 }
 
 void
-get_dead_groups(struct board *b, struct ownermap *ownermap, struct move_queue *dead, struct move_queue *unclear)
+get_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear)
 {
 	enum gj_state gs_array[board_size2(b)];
-	struct group_judgement gj = { .thres = 0.67, .gs = gs_array };
+	group_judgement_t gj = { 0.67, gs_array };
 	ownermap_judge_groups(b, ownermap, &gj);
 	if (dead)     {  dead->moves = 0;     groups_of_status(b, &gj, GS_DEAD, dead);  }
 	if (unclear)  {  unclear->moves = 0;  groups_of_status(b, &gj, GS_UNKNOWN, unclear);  }
 }
 
 void
-ownermap_scores(struct board *b, struct ownermap *ownermap, int *scores)
+ownermap_scores(board_t *b, ownermap_t *ownermap, int *scores)
 {
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
@@ -164,7 +164,7 @@ ownermap_scores(struct board *b, struct ownermap *ownermap, int *scores)
 }
 
 int
-ownermap_dames(struct board *b, struct ownermap *ownermap)
+ownermap_dames(board_t *b, ownermap_t *ownermap)
 {
 	int scores[S_MAX] = { 0, };
 	ownermap_scores(b, ownermap, scores);
@@ -172,7 +172,7 @@ ownermap_dames(struct board *b, struct ownermap *ownermap)
 }
 
 enum point_judgement
-ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c)
+ownermap_score_est_coord(board_t *b, ownermap_t *ownermap, coord_t c)
 {
 	enum point_judgement j = ownermap_judge_point(ownermap, c, 0.67);
 	enum stone s = board_at(b, c);
@@ -184,7 +184,7 @@ ownermap_score_est_coord(struct board *b, struct ownermap *ownermap, coord_t c)
 }
 
 float
-ownermap_score_est(struct board *b, struct ownermap *ownermap)
+ownermap_score_est(board_t *b, ownermap_t *ownermap)
 {
 	int scores[S_MAX] = {0, };  /* Number of points owned by each color */
 	
@@ -198,7 +198,7 @@ ownermap_score_est(struct board *b, struct ownermap *ownermap)
 }
 
 float
-ownermap_score_est_color(struct board *b, struct ownermap *ownermap, enum stone color)
+ownermap_score_est_color(board_t *b, ownermap_t *ownermap, enum stone color)
 {
 	floating_t score = ownermap_score_est(b, ownermap);
 	return (color == S_BLACK ? -score : score);
@@ -206,7 +206,7 @@ ownermap_score_est_color(struct board *b, struct ownermap *ownermap, enum stone 
 
 /* Returns static buffer */
 char *
-ownermap_score_est_str(struct board *b, struct ownermap *ownermap)
+ownermap_score_est_str(board_t *b, ownermap_t *ownermap)
 {
 	static char buf[32];
 	float s = ownermap_score_est(b, ownermap);
@@ -215,7 +215,7 @@ ownermap_score_est_str(struct board *b, struct ownermap *ownermap)
 }
 
 static bool
-border_stone(struct board *b, coord_t c, int *final_ownermap)
+border_stone(board_t *b, coord_t c, int *final_ownermap)
 {
 	enum stone color = board_at(b, c);
 	foreach_neighbor(b, c, {
@@ -227,13 +227,13 @@ border_stone(struct board *b, coord_t c, int *final_ownermap)
 }
 
 bool
-board_position_final(struct board *b, struct ownermap *ownermap, char **msg)
+board_position_final(board_t *b, ownermap_t *ownermap, char **msg)
 {
 	*msg = "too early to pass";
 	if (b->moves < board_earliest_pass(b))
 		return false;
 	
-	struct move_queue dead, unclear;
+	move_queue_t dead, unclear;
 	get_dead_groups(b, ownermap, &dead, &unclear);
 	
 	floating_t score_est = ownermap_score_est(b, ownermap);
@@ -247,8 +247,8 @@ board_position_final(struct board *b, struct ownermap *ownermap, char **msg)
 }
 
 bool
-board_position_final_full(struct board *b, struct ownermap *ownermap,
-			  struct move_queue *dead, struct move_queue *unclear, float score_est,
+board_position_final_full(board_t *b, ownermap_t *ownermap,
+			  move_queue_t *dead, move_queue_t *unclear, float score_est,
 			  int *final_ownermap, int final_dames, float final_score, char **msg)
 {
 	*msg = "too early to pass";
@@ -288,7 +288,7 @@ board_position_final_full(struct board *b, struct ownermap *ownermap,
 		if (around[S_BLACK] + around[3] == 4 ||
 		    around[S_WHITE] + around[3] == 4) {
 			static char buf[100];
-			sprintf(buf, "non-final position at %s", coord2sstr(dame, b));
+			sprintf(buf, "non-final position at %s", coord2sstr(dame));
 			*msg = buf;
 			return false;
 		}

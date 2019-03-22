@@ -10,7 +10,7 @@
 #include "engines/josekiplay.h"
 
 static void
-josekiplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+josekiplay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		      coord_t *best_c, float *best_r, int nbest)
 {
 	coord_t coords[BOARD_MAX_COORDS];
@@ -22,7 +22,7 @@ josekiplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, e
 }
 
 static coord_t
-josekiplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+josekiplay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	coord_t best_c[20];
 	float   best_r[20];
@@ -32,7 +32,7 @@ josekiplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 }
 
 void
-engine_josekiplay_init(struct engine *e, char *arg, struct board *b)
+engine_josekiplay_init(engine_t *e, char *arg, board_t *b)
 {
 	e->name = "JosekiPlay Engine";
 	e->comment = "I select joseki moves blindly, if there are none i just pass.";

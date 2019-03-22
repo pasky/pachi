@@ -50,25 +50,25 @@
 /* UCT infrastructure for a distributed engine slave. */
 
 /* For debugging only. */
-static struct hash_counts h_counts;
+static hash_counts_t h_counts;
 static long parent_not_found = 0;
 static long parent_leaf = 0;
 static long node_not_found = 0;
 
 /* Hash table entry mapping path to node. */
-struct tree_hash {
+typedef struct tree_hash {
 	path_t coord_path;
-	struct tree_node *node;
-};
+	tree_node_t *node;
+} tree_hash_t;
 
-void *
+tree_hash_t *
 uct_htable_alloc(int hbits)
 {
-	return calloc2(1 << hbits, sizeof(struct tree_hash));
+	return calloc2(1 << hbits, tree_hash_t);
 }
 
 /* Clear the hash table. Used only when running as slave for the distributed engine. */
-void uct_htable_reset(struct tree *t)
+void uct_htable_reset(tree_t *t)
 {
 	if (!t->htable) return;
 	double start = time_now();
@@ -93,8 +93,8 @@ void uct_htable_reset(struct tree *t)
  * prev is only used to optimize the tree search, given that calls to
  * tree_find_node are made with sorted coordinates (increasing levels
  * and increasing coord within a level). */
-static struct tree_node *
-tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
+static tree_node_t *
+tree_find_node(tree_t *t, incr_stats_t *is, tree_node_t *prev)
 {
 	assert(t && t->htable);
 	path_t path = is->coord_path;
@@ -104,11 +104,11 @@ tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
 	int hash, parent_hash;
 	bool found;
 	find_hash(hash, t->htable, t->hbits, path, found, h_counts);
-	struct tree_hash *hnode = &t->htable[hash];
+	tree_hash_t *hnode = &t->htable[hash];
 
 	if (DEBUGVV(7))
 		fprintf(stderr,
-			"find_node %"PRIpath" %s found %d hash %d playouts %d node %p\n", path,
+			"find_node %" PRIpath " %s found %d hash %d playouts %d node %p\n", path,
 			path2sstr(path, t->board), found, hash, is->incr.playouts, hnode->node);
 
 	if (found) return hnode->node;
@@ -116,7 +116,7 @@ tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
 	/* The master sends parents before children so the parent should
 	 * already be in the hash table. */
 	path_t parent_p = parent_path(path, t->board);
-	struct tree_node *parent;
+	tree_node_t *parent;
 	if (parent_p) {
 		find_hash(parent_hash, t->htable, t->hbits,
 			  parent_p, found, h_counts);
@@ -124,7 +124,7 @@ tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
 	} else {
 		parent = t->root;
 	}
-	struct tree_node *node = NULL;
+	tree_node_t *node = NULL;
 	if (parent) {
 		/* Search for the node in parent's children. */
 		coord_t leaf = leaf_coord(path, t->board);
@@ -135,7 +135,7 @@ tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
 	} else {
 		if (DEBUG_MODE) parent_not_found++;
 		if (DEBUGVV(7))
-			fprintf(stderr, "parent of %"PRIpath" %s not found\n",
+			fprintf(stderr, "parent of %" PRIpath " %s not found\n",
 				path, path2sstr(path, t->board));
 	}
 
@@ -143,7 +143,7 @@ tree_find_node(struct tree *t, struct incr_stats *is, struct tree_node *prev)
 	hnode->node = node;
 	if (DEBUG_MODE) h_counts.inserts++, h_counts.occupied++;
 	if (DEBUGVV(7))
-		fprintf(stderr, "insert path %"PRIpath" %s hash %d playouts %d node %p\n",
+		fprintf(stderr, "insert path %" PRIpath " %s hash %d playouts %d node %p\n",
 			path, path2sstr(path, t->board), hash, is->incr.playouts, node);
 
 	if (DEBUG_MODE && !node) node_not_found++;
@@ -172,9 +172,9 @@ discard_bin_args(char *args)
 }
 
 enum parse_code
-uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply)
+uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply)
 {
-	struct uct *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 
 	static bool board_resized = true;
 	if (is_gamestart(cmd)) {
@@ -208,28 +208,28 @@ uct_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, cha
  * Keep this code in sync with distributed/merge.c:output_stats()
  * Return true if ok, false if error. */
 static bool
-receive_stats(struct uct *u, int size)
+receive_stats(uct_t *u, int size)
 {
-	if (size % sizeof(struct incr_stats)) return false;
-	int nodes = size / sizeof(struct incr_stats);
+	if (size % sizeof(incr_stats_t)) return false;
+	int nodes = size / sizeof(incr_stats_t);
 	if (nodes > (1 << u->stats_hbits)) return false;
 
-	struct tree *t = u->t;
+	tree_t *t = u->t;
 	assert(nodes && t->htable);
-	struct tree_node *prev = NULL;
+	tree_node_t *prev = NULL;
 	double start_time = time_now();
 
 	for (int n = 0; n < nodes; n++) {
-		struct incr_stats is;
-		if (fread(&is, sizeof(struct incr_stats), 1, stdin) != 1)
+		incr_stats_t is;
+		if (fread(&is, sizeof(incr_stats_t), 1, stdin) != 1)
 			return false;
 
 		if (UDEBUGL(7))
-			fprintf(stderr, "read %5d/%d %6d %.3f %"PRIpath" %s\n", n, nodes,
+			fprintf(stderr, "read %5d/%d %6d %.3f %" PRIpath " %s\n", n, nodes,
 				is.incr.playouts, is.incr.value, is.coord_path,
 				path2sstr(is.coord_path, t->board));
 
-		struct tree_node *node = tree_find_node(t, &is, prev);
+		tree_node_t *node = tree_find_node(t, &is, prev);
 		if (!node) continue;
 
 		/* node_total += others_incr */
@@ -247,11 +247,11 @@ receive_stats(struct uct *u, int size)
 }
 
 /* A tree traversal fills this array, then the nodes with most increments are sent. */
-struct stats_candidate {
+typedef struct {
 	path_t coord_path;
 	int playout_incr;
-	struct tree_node *node;
-};
+	tree_node_t *node;
+} stats_candidate_t;
 
 /* We maintain counts per bucket to avoid sorting stats_queue.
  * All nodes with n updates since last send go to bucket n.
@@ -267,12 +267,12 @@ static int bucket_count[MAX_BUCKETS];
  * have been made since the last send, and the level is not too deep.
  * Return the updated stats count. */
 static int
-append_stats(struct stats_candidate *stats_queue, struct tree_node *node, int stats_count,
-	     int max_count, path_t start_path, path_t max_path, int min_increment, struct board *b)
+append_stats(stats_candidate_t *stats_queue, tree_node_t *node, int stats_count,
+	     int max_count, path_t start_path, path_t max_path, int min_increment, board_t *b)
 {
 	/* The children field is set only after all children are created
 	 * so we can traverse the the tree while it is updated. */
-	for (struct tree_node *ni = node->children; ni; ni = ni->sibling) {
+	for (tree_node_t *ni = node->children; ni; ni = ni->sibling) {
 
 		if (is_pass(node_coord(ni))) continue;
 		if (ni->hints & TREE_HINT_INVALID) continue;
@@ -307,20 +307,20 @@ append_stats(struct stats_candidate *stats_queue, struct tree_node *node, int st
 static int
 coord_cmp(const void *p1, const void *p2)
 {
-	path_t diff = ((struct incr_stats *)p1)->coord_path
-		    - ((struct incr_stats *)p2)->coord_path;
+	path_t diff = ((incr_stats_t *)p1)->coord_path
+		    - ((incr_stats_t *)p2)->coord_path;
 	return (int)(diff >> 32) | !!(int)diff;
 }
 
 /* Select from stats_queue at most shared_nodes candidates with
  * biggest increments. Return a binary array sorted by coord path. */
-static struct incr_stats *
-select_best_stats(struct stats_candidate *stats_queue, int stats_count,
+static incr_stats_t *
+select_best_stats(stats_candidate_t *stats_queue, int stats_count,
 		  int shared_nodes, int *byte_size)
 {
-	static struct incr_stats *out_stats = NULL;
+	static incr_stats_t *out_stats = NULL;
 	if (!out_stats)
-		out_stats = malloc2(shared_nodes * sizeof(*out_stats));
+		out_stats = calloc2(shared_nodes, incr_stats_t);
 
 	/* Find the minimum increment to send. The bucket with minimum
          * increment may be sent only partially. */
@@ -332,13 +332,13 @@ select_best_stats(struct stats_candidate *stats_queue, int stats_count,
 
 	/* Send all all increments > min_incr plus whatever we can at min_incr. */
 	int min_count = bucket_count[min_incr] - (out_count - shared_nodes);
-	struct incr_stats *os = out_stats;
+	incr_stats_t *os = out_stats;
 	out_count = 0;
 	for (int count = 0; count < stats_count; count++) {
 		int delta = stats_queue[count].playout_incr - min_incr;
 		if (delta < 0 || (delta == 0 && --min_count < 0)) continue;
 
-		struct tree_node *node = stats_queue[count].node;
+		tree_node_t *node = stats_queue[count].node;
 		os->incr = node->u;
 		stats_rm_result(&os->incr, node->pu.value, node->pu.playouts);
 
@@ -371,19 +371,19 @@ select_best_stats(struct stats_candidate *stats_queue, int stats_count,
  * called while the tree is updated by the worker threads. Keep this
  * code in sync with distributed/merge.c:merge_new_stats(). */
 static void *
-report_incr_stats(struct uct *u, int *stats_size)
+report_incr_stats(uct_t *u, int *stats_size)
 {
 	double start_time = time_now();
 
-	struct tree_node *root = u->t->root;
-	struct board *b = u->t->board;
+	tree_node_t *root = u->t->root;
+	board_t *b = u->t->board;
 
 	/* The factor 3 below has experimentally been found to be
 	 * sufficient. At worst if we fill stats_queue we will
 	 * discard some stats updates but this is rare. */
 	int max_nodes = 3 * u->shared_nodes;
-	static struct stats_candidate *stats_queue = NULL;
-	if (!stats_queue) stats_queue = malloc2(max_nodes * sizeof(*stats_queue));
+	static stats_candidate_t *stats_queue = NULL;
+	if (!stats_queue) stats_queue = calloc2(max_nodes, stats_candidate_t);
 
 	memset(bucket_count, 0, sizeof(bucket_count));
 
@@ -413,7 +413,7 @@ report_incr_stats(struct uct *u, int *stats_size)
 		fprintf(stderr,
 			"min_incr %d games %d stats_queue %d/%d sending %d/%d in %.3fms\n",
 			min_increment, root->u.playouts - root->pu.playouts, stats_count,
-			max_nodes, *stats_size / (int)sizeof(struct incr_stats), u->shared_nodes,
+			max_nodes, *stats_size / (int)sizeof(incr_stats_t), u->shared_nodes,
 			(time_now() - start_time)*1000);
 	root->pu = root->u;
 	return buf;
@@ -429,13 +429,13 @@ report_incr_stats(struct uct *u, int *stats_size)
  * called while the tree is updated by the worker threads. Keep this
  * code in sync with distributed/distributed.c:select_best_move(). */
 static char *
-report_stats(struct uct *u, struct board *b, coord_t c,
+report_stats(uct_t *u, board_t *b, coord_t c,
 	     bool keep_looking, int bin_size)
 {
 	static char reply[10240];
 	char *r = reply;
 	char *end = reply + sizeof(reply);
-	struct tree_node *root = u->t->root;
+	tree_node_t *root = u->t->root;
 	r += snprintf(r, end - r, "%d %d %d %d @%d", u->played_own, root->u.playouts,
 		      u->threads, keep_looking, bin_size);
 	int min_playouts = root->u.playouts / 100;
@@ -445,7 +445,7 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 
 	/* We rely on the fact that root->children is set only
 	 * after all children are created. */
-	for (struct tree_node *ni = root->children; ni; ni = ni->sibling) {
+	for (tree_node_t *ni = root->children; ni; ni = ni->sibling) {
 
 		if (is_pass(node_coord(ni))) continue;
 		assert(node_coord(ni) > 0 && node_coord(ni) < board_size2(b));
@@ -459,7 +459,7 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 
 		char buf[4];
 		/* We return the values as stored in the tree, so from black's view. */
-		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, node_coord(ni), b),
+		r += snprintf(r, end - r, "\n%s %d %.16f", coord2bstr(buf, node_coord(ni)),
 			      ni->u.playouts, ni->u.value);
 	}
 	/* Give a large but not infinite weight to pass, resign or book move, to avoid
@@ -467,7 +467,7 @@ report_stats(struct uct *u, struct board *b, coord_t c,
 	if (c) {
 		double resign_value = u->t->root_color == S_WHITE ? 0.0 : 1.0;
 		double c_value = is_resign(c) ? resign_value : 1.0 - resign_value;
-		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c, b),
+		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c),
 			      2 * max_playouts, c_value);
 	}
 	return reply;
@@ -485,10 +485,10 @@ report_stats(struct uct *u, struct board *b, coord_t c,
  * except possibly for the first call at a given move number.
  * See report_stats() for the description of the return value. */
 char *
-uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	     char *args, bool pass_all_alive, void **stats_buf, int *stats_size)
 {
-	struct uct *u = e->data;
+	uct_t *u = (uct_t*)e->data;
 	assert(u->slave);
 	u->pass_all_alive |= pass_all_alive;
 
@@ -509,7 +509,7 @@ uct_genmoves(struct engine *e, struct board *b, struct time_info *ti, enum stone
 		return NULL;
 	}
 
-	static struct uct_search_state s;
+	static uct_search_state_t s;
 	if (!thread_manager_running) {
 		/* This is the first genmoves issue, start the MCTS
 		 * now and let it run while we receive stats. */

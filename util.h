@@ -11,6 +11,12 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b));
 #define MAX(a, b) ((a) > (b) ? (a) : (b));
 
+#ifdef __cplusplus
+#define typeof decltype
+#define restrict __restrict__
+#endif
+
+
 /* Returns true if @str starts with @prefix */
 int str_prefix(char *prefix, char *str);
 
@@ -106,14 +112,16 @@ static inline void *
 checked_calloc(size_t nmemb, size_t size, const char *filename, unsigned int line, const char *func)
 {
 	void *p = calloc(nmemb, size);
-	if (!p)
-		die("%s:%u: %s: OUT OF MEMORY calloc(%u, %u)\n",
-		    filename, line, func, (unsigned) nmemb, (unsigned) size);
+	if (!p)  die("%s:%u: %s: OUT OF MEMORY calloc(%u, %u)\n",
+		     filename, line, func, (unsigned) nmemb, (unsigned) size);
 	return p;
 }
 
-#define malloc2(size)        checked_malloc((size), __FILE__, __LINE__, __func__)
-#define calloc2(nmemb, size) checked_calloc((nmemb), (size), __FILE__, __LINE__, __func__)
+/* casts: make c++ happy */
+#define cmalloc(size)        checked_malloc((size), __FILE__, __LINE__, __func__)
+#define ccalloc(nmemb, size) checked_calloc((nmemb), (size), __FILE__, __LINE__, __func__)
+#define malloc2(type)        ((type*)cmalloc(sizeof(type)))
+#define calloc2(nmemb, type) ((type*)ccalloc(nmemb, sizeof(type)))
 
 #define checked_write(fd, pt, size)	(assert(write((fd), (pt), (size)) == (size)))
 #define checked_fread(pt, size, n, f)   (assert(fread((pt), (size), (n), (f)) == (n)))

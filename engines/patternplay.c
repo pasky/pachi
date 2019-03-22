@@ -14,60 +14,60 @@
 
 
 /* Internal engine state. */
-struct patternplay {
+typedef struct {
 	int debug_level;
-	struct pattern_config pc;
+	pattern_config_t pc;
 	bool mcowner_fast;
 	int  matched_locally;
-};
+} patternplay_t;
 
-struct pattern_config*
-patternplay_get_pc(struct engine *e)
+pattern_config_t*
+patternplay_get_pc(engine_t *e)
 {
-	struct patternplay *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 	return &pp->pc;
 }
 
 bool
-patternplay_matched_locally(struct engine *e)
+patternplay_matched_locally(engine_t *e)
 {
-	struct patternplay *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 	assert(pp->matched_locally != -1);
 	return pp->matched_locally;
 }
 
 static void
-debug_pattern_best_moves(struct patternplay *pp, struct board *b, enum stone color,
+debug_pattern_best_moves(patternplay_t *pp, board_t *b, enum stone color,
 			 coord_t *best_c, int nbest)
 {
-	struct ownermap ownermap;
+	ownermap_t ownermap;
 	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
 	else                   mcowner_playouts(b, color, &ownermap);
 	bool locally = pattern_matching_locally(&pp->pc, b, color, &ownermap);
 	
 	fprintf(stderr, "\n");
 	for (int i = 0; i < nbest; i++) {
-		struct move m = { .coord = best_c[i], .color = color };
-		struct pattern p;
+		move_t m = move(best_c[i], color);
+		pattern_t p;
 		pattern_match(&pp->pc, &p, b, &m, &ownermap, locally);
 
 		char buffer[512];  strbuf_t strbuf;
 		strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 		dump_gammas(buf, &pp->pc, &p);
-		fprintf(stderr, "%3s gamma %s\n", coord2sstr(m.coord, b), buf->str);
+		fprintf(stderr, "%3s gamma %s\n", coord2sstr(m.coord), buf->str);
 	}
 	fprintf(stderr, "\n");
 }
 
 
 static coord_t
-patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+patternplay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	struct patternplay *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 
-	struct pattern pats[b->flen];
+	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
-	struct ownermap ownermap;
+	ownermap_t ownermap;
 	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
 	else		       mcowner_playouts(b, color, &ownermap);
 	pp->matched_locally = -1;  // Invalidate
@@ -84,7 +84,7 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 	for (int f = 0; f < b->flen; f++) {
 		if (pp->debug_level >= 5 && probs[f] >= 0.001) {
 			char s[256]; pattern2str(s, &pats[f]);
-			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), probs[f], s);
+			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), probs[f], s);
 		}
 		if (probs[f] > probs[best])
 			best = f;
@@ -94,14 +94,14 @@ patternplay_genmove(struct engine *e, struct board *b, struct time_info *ti, enu
 }
 
 static void
-patternplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, enum stone color,
+patternplay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		       coord_t *best_c, float *best_r, int nbest)
 {
-	struct patternplay *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 
-	struct pattern pats[b->flen];
+	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
-	struct ownermap ownermap;
+	ownermap_t ownermap;
 	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
 	else		       mcowner_playouts(b, color, &ownermap);
 	pp->matched_locally = pattern_matching_locally(&pp->pc, b, color, &ownermap);
@@ -112,12 +112,12 @@ patternplay_best_moves(struct engine *e, struct board *b, struct time_info *ti, 
 }
 
 void
-patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, floating_t *vals, enum stone color)
+patternplay_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color)
 {
-	struct patternplay *pp = e->data;
+	patternplay_t *pp = (patternplay_t*)e->data;
 
-	struct pattern pats[b->flen];
-	struct ownermap ownermap;
+	pattern_t pats[b->flen];
+	ownermap_t ownermap;
 	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
 	else                   mcowner_playouts(b, color, &ownermap);
 	pp->matched_locally = -1;  // Invalidate
@@ -136,17 +136,17 @@ patternplay_evaluate(struct engine *e, struct board *b, struct time_info *ti, fl
 		for (int f = 0; f < b->flen; f++) {
 			if (vals[f] >= 0.001) {
 				char s[256]; pattern2str(s, &pats[f]);
-				fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f], b), vals[f], s);
+				fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), vals[f], s);
 			}
 		}
 	}
 }
 
 
-struct patternplay *
+patternplay_t *
 patternplay_state_init(char *arg)
 {
-	struct patternplay *pp = calloc2(1, sizeof(struct patternplay));
+	patternplay_t *pp = calloc2(1, patternplay_t);
 	bool pat_setup = false;
 
 	pp->debug_level = debug_level;
@@ -194,9 +194,9 @@ patternplay_state_init(char *arg)
 }
 
 void
-engine_patternplay_init(struct engine *e, char *arg, struct board *b)
+engine_patternplay_init(engine_t *e, char *arg, board_t *b)
 {
-	struct patternplay *pp = patternplay_state_init(arg);
+	patternplay_t *pp = patternplay_state_init(arg);
 	e->name = "PatternPlay Engine";
 	e->comment = "I select moves blindly according to learned patterns. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = patternplay_genmove;

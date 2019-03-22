@@ -10,8 +10,8 @@
 struct board;
 struct tree_node;
 
-struct tree_node *uctp_generic_choose(struct uct_policy *p, struct tree_node *node, struct board *b, enum stone color, coord_t exclude);
-void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_descent *descent);
+tree_node_t *uctp_generic_choose(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone color, coord_t exclude);
+void uctp_generic_winner(uct_policy_t *p, tree_t *tree, uct_descent_t *descent);
 
 
 /* Some generic stitching for tree descent. */
@@ -25,10 +25,10 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 #define uctd_try_node_children(tree, descent, allow_pass, parity, tenuki_d, di, urgency) \
 	/* Information abound best children. */ \
 	/* XXX: We assume board <=25x25. */ \
-	struct uct_descent dbest[BOARD_MAX_MOVES + 1] = { { .node = descent->node->children, .lnode = NULL } }; int dbests = 1; \
+	uct_descent_t dbest[BOARD_MAX_MOVES + 1] = { uct_descent(descent->node->children, NULL) }; int dbests = 1; \
 	floating_t best_urgency = -9999; \
 	/* Descent children iterator. */ \
-	struct uct_descent dci = { .node = descent->node->children, .lnode = descent->lnode ? descent->lnode->children : NULL }; \
+	uct_descent_t dci = uct_descent(descent->node->children, (descent->lnode ? descent->lnode->children : NULL)); \
 	\
 	for (; dci.node; dci.node = dci.node->sibling) { \
 		floating_t urgency; \
@@ -43,7 +43,7 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 		 * one, and usually is similar to dci. However, in case of local
 		 * trees, we may keep next-candidate pointer in dci while storing
 		 * actual-specimen in di. */ \
-		struct uct_descent di = dci; \
+		uct_descent_t di = dci; \
 		if (dci.lnode) { \
 			/* Set lnode to local tree node corresponding
 			 * to node (dci.lnode, pass-lnode or NULL). */ \
@@ -65,7 +65,7 @@ void uctp_generic_winner(struct uct_policy *p, struct tree *tree, struct uct_des
 			if (dbests == 1 && is_pass(node_coord(dbest[0].node))) { \
 				dbests--; \
 			} \
-			struct uct_descent db = di; \
+			uct_descent_t db = di; \
 			/* Make sure lnode information is meaningful. */ \
 			if (db.lnode && is_pass(node_coord(db.lnode))) \
 				db.lnode = NULL; \

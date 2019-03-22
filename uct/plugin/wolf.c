@@ -197,14 +197,14 @@ typedef char byte_board[MAXBOARDSIZE+2][MAXBOARDSIZE+2]; // The array indices ar
 typedef floating_t influ_board[MAXBOARDSIZE][MAXBOARDSIZE];
 
 /* Our context structure. */
-struct context {
+typedef struct {
 	int eqex;
 
 	void *dlh;
 	void (*SETPARAM)(double sv, double omega, uint16_t mi);
 	void (*EVALFUN1)(char *javp, char *InfluField);
 	void (*FINDMOVE2)(int fa, char *mi, char *mj, floating_t *mxscore, influ_board *SB, byte_board **PChainNo);
-};
+} context_t;
 
 
 char
@@ -232,10 +232,10 @@ coord2digit(enum stone color, int coord)
 }
 
 void
-pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, int eqex)
+pachi_plugin_prior(void *data, tree_node_t *node, prior_map_t *map, int eqex)
 {
-	struct context *ctx = data;
-	struct board *b = map->b;
+	context_t *ctx = data;
+	board_t *b = map->b;
 	if (ctx->eqex >= 0)
 		eqex = ctx->eqex; // override Pachi default
 
@@ -304,9 +304,9 @@ pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, in
 
 
 void *
-pachi_plugin_init(char *arg, struct board *b, int seed)
+pachi_plugin_init(char *arg, board_t *b, int seed)
 {
-	struct context *ctx = calloc(1, sizeof(*ctx));
+	context_t *ctx = calloc(1, sizeof(*ctx));
 
 	/* Initialize ctx defaults here. */
 	char *file = NULL;
@@ -371,7 +371,7 @@ pachi_plugin_init(char *arg, struct board *b, int seed)
 void
 pachi_plugin_done(void *data)
 {
-	struct context *ctx = data;
+	context_t *ctx = data;
 	dlclose(ctx->dlh);
 	free(ctx);
 }

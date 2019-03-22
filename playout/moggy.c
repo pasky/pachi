@@ -58,7 +58,7 @@ enum mq_tag {
 
 /* Note that the context can be shared by multiple threads! */
 
-struct moggy_policy {
+typedef struct {
 	unsigned int lcapturerate, atarirate, nlibrate, ladderrate, capturerate, patternrate, korate, josekirate, nakaderate, eyefixrate;
 	unsigned int selfatarirate, eyefillrate, alwaysccaprate;
 	unsigned int fillboardtries;
@@ -89,7 +89,7 @@ struct moggy_policy {
 	/* nlib settings: */
 	int nlib_count;
 
-	struct pattern3s patterns;
+	pattern3s_t patterns;
 
 	double pat3_gammas[PAT3_N];
 
@@ -97,14 +97,14 @@ struct moggy_policy {
 	/* XXX: Tune. */
 	bool fullchoose;
 	double mq_prob[MQ_MAX], tenuki_prob;
-};
+} moggy_policy_t;
 
 /* Per simulation state (moggy_policy is shared by all threads) */
-struct moggy_state {
+typedef struct {
 	/* Selfatari move rejected by permit() during the last move(s).
 	 * Logic may not kick in immediately so we have room for both colors. */
 	coord_t last_selfatari[S_MAX];
-};
+} moggy_state_t;
 
 static char moggy_patterns_src[PAT3_N][11] = {
 	/* hane pattern - enclosing hane */	/* 0.52 */
@@ -187,9 +187,9 @@ static char moggy_patterns_src[PAT3_N][11] = {
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
 static inline bool
-test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bool middle_ladder, double *gamma)
+test_pattern3_here(playout_policy_t *p, board_t *b, move_t *m, bool middle_ladder, double *gamma)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	/* Check if 3x3 pattern is matched by given move... */
 	char pi = -1;
 	if (!pattern3_move_here(&pp->patterns, b, m, &pi))
@@ -202,17 +202,17 @@ test_pattern3_here(struct playout_policy *p, struct board *b, struct move *m, bo
 	if (atari_neighbor && is_ladder(b, atari_neighbor, middle_ladder)
 	    && !can_countercapture(b, atari_neighbor, NULL, 0))
 		return false;
-	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord, b), (int) pi, pp->pat3_gammas[(int) pi]);
+	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord), (int) pi, pp->pat3_gammas[(int) pi]);
 	if (gamma)
 		*gamma = pp->pat3_gammas[(int) pi];
 	return true;
 }
 
 static void
-apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum stone color, struct move_queue *q, fixp_t *gammas)
+apply_pattern_here(playout_policy_t *p, board_t *b, coord_t c, enum stone color, move_queue_t *q, fixp_t *gammas)
 {
-	struct moggy_policy *pp = p->data;
-	struct move m2 = { .coord = c, .color = color };
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
+	move_t m2 = move(c, color);
 	double gamma;
 	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder, &gamma)) {
 		mq_gamma_add(q, gammas, c, gamma, 1<<MQ_PAT3);
@@ -221,7 +221,7 @@ apply_pattern_here(struct playout_policy *p, struct board *b, coord_t c, enum st
 
 /* Check if we match any pattern around given move (with the other color to play). */
 static void
-apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct move *mm, struct move_queue *q, fixp_t *gammas)
+apply_pattern(playout_policy_t *p, board_t *b, move_t *m, move_t *mm, move_queue_t *q, fixp_t *gammas)
 {
 	/* Suicides do not make any patterns and confuse us. */
 	if (board_at(b, m->coord) == S_NONE || board_at(b, m->coord) == S_OFFBOARD)
@@ -233,21 +233,21 @@ apply_pattern(struct playout_policy *p, struct board *b, struct move *m, struct 
 
 	if (mm) { /* Second move for pattern searching */
 		foreach_8neighbor(b, mm->coord) {
-			if (coord_is_8adjecent(m->coord, c, b))
+			if (coord_is_8adjecent(m->coord, c))
 				continue;
 			apply_pattern_here(p, b, c, stone_other(m->color), q, gammas);
 		} foreach_8neighbor_end;
 	}
 
 	if (PLDEBUGL(5))
-		mq_gamma_print(q, gammas, b, "Pattern");
+		mq_gamma_print(q, gammas, "Pattern");
 }
 
 #ifdef MOGGY_JOSEKI
 static void
-joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
+joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, move_queue_t *q)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	if (!joseki_dict)
 		return;
 
@@ -258,22 +258,22 @@ joseki_check(struct playout_policy *p, struct board *b, enum stone to_play, stru
 	} foreach_joseki_move_end;
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, b, "Joseki");
+		mq_print(q, "Joseki");
 }
 #endif /* MOGGY_JOSEKI */
 
 static void
-global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
+global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_queue_t *q)
 {
 	if (b->clen == 0)
 		return;
 
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	if (pp->capcheckall) {
 		for (int g = 0; g < b->clen; g++)
 			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
-			mq_print(q, b, "Global atari");
+			mq_print(q, "Global atari");
 		if (pp->fullchoose)
 			return;
 	}
@@ -284,7 +284,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print(q, b, "Global atari");
+				mq_print(q, "Global atari");
 			if (pp->fullchoose)
 				return;
 		}
@@ -294,7 +294,7 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print(q, b, "Global atari");
+				mq_print(q, "Global atari");
 			if (pp->fullchoose)
 				return;
 		}
@@ -302,9 +302,9 @@ global_atari_check(struct playout_policy *p, struct board *b, enum stone to_play
 }
 
 static int
-local_atari_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+local_atari_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	int force = false;
 
 	/* Did the opponent play a self-atari? */
@@ -328,14 +328,14 @@ local_atari_check(struct playout_policy *p, struct board *b, struct move *m, str
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local atari");
+		mq_print(q, "Local atari");
 
 	return (force || pp->lcapturerate > fast_random(100));
 }
 
 
 static void
-local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 {
 	group_t group = group_at(b, m->coord);
 
@@ -349,14 +349,14 @@ local_ladder_check(struct playout_policy *p, struct board *b, struct move *m, st
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, b, "Ladder");
+		mq_print(q, "Ladder");
 }
 
 
 static void
-local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	group_t group = group_at(b, m->coord), group2 = 0;
 
 	/* Does the opponent have just two liberties? */
@@ -382,13 +382,13 @@ local_2lib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local 2lib");
+		mq_print(q, "Local 2lib");
 }
 
 static void
-local_2lib_capture_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	group_t group = group_at(b, m->coord), group2 = 0;
 
 	/* Nothing there normally since opponent avoided bad selfatari ... */
@@ -416,13 +416,13 @@ local_2lib_capture_check(struct playout_policy *p, struct board *b, struct move 
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local 2lib capture");
+		mq_print(q, "Local 2lib capture");
 }
 
 static void
-local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, struct move_queue *q)
+local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	enum stone color = stone_other(m->color);
 
 	/* Attacking N-liberty groups in general is probably
@@ -465,11 +465,11 @@ local_nlib_check(struct playout_policy *p, struct board *b, struct move *m, stru
 	} foreach_8neighbor_end;
 
 	if (PLDEBUGL(5))
-		mq_print(q, b, "Local nlib");
+		mq_print(q, "Local nlib");
 }
 
 static coord_t
-nakade_check(struct playout_policy *p, struct board *b, struct move *m, enum stone to_play)
+nakade_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play)
 {
 	coord_t empty = pass;
 	foreach_neighbor(b, m->coord, {
@@ -479,7 +479,7 @@ nakade_check(struct playout_policy *p, struct board *b, struct move *m, enum sto
 			empty = c;
 			continue;
 		}
-		if (!coord_is_8adjecent(c, empty, b)) {
+		if (!coord_is_8adjecent(c, empty)) {
 			/* Seems like impossible nakade
 			 * shape! */
 			return pass;
@@ -489,12 +489,12 @@ nakade_check(struct playout_policy *p, struct board *b, struct move *m, enum sto
 
 	coord_t nakade = nakade_point(b, empty, stone_other(to_play));
 	if (PLDEBUGL(5) && !is_pass(nakade))
-		fprintf(stderr, "Nakade: %s\n", coord2sstr(nakade, b));
+		fprintf(stderr, "Nakade: %s\n", coord2sstr(nakade));
 	return nakade;
 }
 
 static void
-eye_fix_check(struct playout_policy *p, struct board *b, struct move *m, enum stone to_play, struct move_queue *q)
+eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, move_queue_t *q)
 {
 	/* The opponent could have filled an approach liberty for
 	 * falsifying an eye like these:
@@ -524,7 +524,7 @@ eye_fix_check(struct playout_policy *p, struct board *b, struct move *m, enum st
 
 		/* The last move must have a pair of unfriendly diagonal
 		 * neighbors separated by a friendly stone. */
-		//fprintf(stderr, "inv. %s(%s)-%s(%s)-%s(%s), imm. libcount %d\n", coord2sstr(c0, b), stone2str(board_at(b, c0)), coord2sstr(c1, b), stone2str(board_at(b, c1)), coord2sstr(c2, b), stone2str(board_at(b, c2)), immediate_liberty_count(b, c1));
+		//fprintf(stderr, "inv. %s(%s)-%s(%s)-%s(%s), imm. libcount %d\n", coord2sstr(c0), stone2str(board_at(b, c0)), coord2sstr(c1), stone2str(board_at(b, c1)), coord2sstr(c2), stone2str(board_at(b, c2)), immediate_liberty_count(b, c1));
 		if ((board_at(b, c0) == to_play || board_at(b, c0) == S_OFFBOARD)
 		    && board_at(b, c1) == m->color
 		    && (board_at(b, c2) == to_play || board_at(b, c2) == S_OFFBOARD)
@@ -572,13 +572,13 @@ eye_fix_check(struct playout_policy *p, struct board *b, struct move *m, enum st
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, b, "Eye fix");
+		mq_print(q, "Eye fix");
 }
 
 static coord_t
-fillboard_check(struct playout_policy *p, struct board *b)
+fillboard_check(playout_policy_t *p, board_t *b)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	unsigned int fbtries = b->flen / 8;
 	if (pp->fillboardtries < fbtries)
 		fbtries = pp->fillboardtries;
@@ -599,10 +599,10 @@ next_try:
 }
 
 static coord_t
-playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
+playout_moggy_seqchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enum stone to_play)
 {
-	struct moggy_policy *pp = p->data;
-	struct moggy_state *ps = b->ps;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
+	moggy_state_t *ps = (moggy_state_t*)b->ps;
 	enum stone other_color = stone_other(to_play);
 
 	if (PLDEBUGL(5))
@@ -621,7 +621,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 	if (!is_pass(b->last_move.coord)) {
 		/* Local group in atari? */
 		if (true) {  // pp->lcapturerate check in local_atari_check()
-			struct move_queue q; q.moves = 0;
+			move_queue_t q;  mq_init(&q);
 			if (local_atari_check(p, b, &b->last_move, &q) && 
 			    q.moves > 0)
 				return mq_pick(&q);
@@ -629,7 +629,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 		/* Local group trying to escape ladder? */
 		if (pp->ladderrate > fast_random(100)) {
-			struct move_queue q; q.moves = 0;
+			move_queue_t q;  mq_init(&q);
 			local_ladder_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -639,8 +639,8 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 		 * Check if his group can be laddered / put in atari */
 		if (ps->last_selfatari[other_color] &&
 		    pp->atarirate > fast_random(100)) {
-			struct move_queue q; q.moves = 0;
-			struct move m = { .coord = ps->last_selfatari[other_color], .color = other_color };			
+			move_queue_t q;  mq_init(&q);
+			move_t m = move(ps->last_selfatari[other_color], other_color);			
 			ps->last_selfatari[other_color] = 0;  /* Clear */
 			local_2lib_capture_check(p, b, &m, &q);
 			if (q.moves > 0)
@@ -649,7 +649,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 		/* Local group can be PUT in atari? */
 		if (pp->atarirate > fast_random(100)) {
-			struct move_queue q; q.moves = 0;
+			move_queue_t q;  mq_init(&q);
 			local_2lib_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -657,7 +657,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 		/* Local group reduced some of our groups to 3 libs? */
 		if (pp->nlibrate > fast_random(100)) {
-			struct move_queue q; q.moves = 0;
+			move_queue_t q;  mq_init(&q);
 			local_nlib_check(p, b, &b->last_move, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -665,7 +665,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 		/* Some other semeai-ish shape checks */
 		if (pp->eyefixrate > fast_random(100)) {
-			struct move_queue q; q.moves = 0;
+			move_queue_t q;  mq_init(&q);
 			eye_fix_check(p, b, &b->last_move, to_play, &q);
 			if (q.moves > 0)
 				return mq_pick(&q);
@@ -681,7 +681,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 		/* Check for patterns we know */
 		if (pp->patternrate > fast_random(100)) {
-			struct move_queue q; q.moves = 0;
+			move_queue_t q;  mq_init(&q);
 			fixp_t gammas[MQL];
 			apply_pattern(p, b, &b->last_move,
 			                  pp->pattern2 && b->last_move2.coord >= 0 ? &b->last_move2 : NULL,
@@ -695,7 +695,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 
 	/* Any groups in atari? */
 	if (pp->capturerate > fast_random(100)) {
-		struct move_queue q; q.moves = 0;
+		move_queue_t q;  mq_init(&q);
 		global_atari_check(p, b, to_play, &q);
 		if (q.moves > 0)
 			return mq_pick(&q);
@@ -704,7 +704,7 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 #ifdef MOGGY_JOSEKI
 	/* Joseki moves? */
 	if (pp->josekirate > fast_random(100)) {
-		struct move_queue q; q.moves = 0;
+		move_queue_t q;  mq_init(&q);
 		joseki_check(p, b, to_play, &q);
 		if (q.moves > 0)
 			return mq_pick(&q);
@@ -724,9 +724,9 @@ playout_moggy_seqchoose(struct playout_policy *p, struct playout_setup *s, struc
 /* Pick a move from queue q, giving different likelihoods to moves
  * based on their tags. */
 static coord_t
-mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, struct move_queue *q)
+mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, move_queue_t *q)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 
 	/* First, merge all entries for a move. */
 	/* We use a naive O(N^2) since the average length of the queue
@@ -742,7 +742,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 		}
 	}
 
-	/* Now, construct a probdist. */
+	/* Now, cona_t probdist. */
 	fixp_t total = 0;
 	fixp_t pd[q->moves];
 	for (unsigned int i = 0; i < q->moves; i++) {
@@ -750,7 +750,7 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 		assert(q->tag[i] != 0);
 		for (int j = 0; j < MQ_MAX; j++)
 			if (q->tag[i] & (1<<j)) {
-				//fprintf(stderr, "%s(%x) %d %f *= %f\n", coord2sstr(q->move[i], b), q->tag[i], j, val, pp->mq_prob[j]);
+				//fprintf(stderr, "%s(%x) %d %f *= %f\n", coord2sstr(q->move[i]), q->tag[i], j, val, pp->mq_prob[j]);
 				val *= pp->mq_prob[j];
 			}
 		pd[i] = double_to_fixp(val);
@@ -763,12 +763,12 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 	if (PLDEBUGL(5)) {
 		fprintf(stderr, "Pick (total %.3f stab %.3f): ", fixp_to_double(total), fixp_to_double(stab));
 		for (unsigned int i = 0; i < q->moves; i++) {
-			fprintf(stderr, "%s(%x:%.3f) ", coord2sstr(q->move[i], b), q->tag[i], fixp_to_double(pd[i]));
+			fprintf(stderr, "%s(%x:%.3f) ", coord2sstr(q->move[i]), q->tag[i], fixp_to_double(pd[i]));
 		}
 		fprintf(stderr, "\n");
 	}
 	for (unsigned int i = 0; i < q->moves; i++) {
-		//fprintf(stderr, "%s(%x) %f (%f/%f)\n", coord2sstr(q->move[i], b), q->tag[i], fixp_to_double(stab), fixp_to_double(pd[i]), fixp_to_double(total));
+		//fprintf(stderr, "%s(%x) %f (%f/%f)\n", coord2sstr(q->move[i]), q->tag[i], fixp_to_double(stab), fixp_to_double(pd[i]), fixp_to_double(total));
 		if (stab < pd[i])
 			return q->move[i];
 		stab -= pd[i];
@@ -780,10 +780,10 @@ mq_tagged_choose(struct playout_policy *p, struct board *b, enum stone to_play, 
 }
 
 static coord_t
-playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, struct board *b, enum stone to_play)
+playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, enum stone to_play)
 {
-	struct moggy_policy *pp = p->data;
-	struct move_queue q; q.moves = 0;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
+	move_queue_t q;  mq_init(&q);
 
 	if (PLDEBUGL(5))
 		board_print(b, stderr);
@@ -851,7 +851,7 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 	/* Average length of the queue is 1.4 move. */
 	printf("MQL %d ", q.moves);
 	for (unsigned int i = 0; i < q.moves; i++)
-		printf("%s ", coord2sstr(q.move[i], b));
+		printf("%s ", coord2sstr(q.move[i]));
 	printf("\n");
 #endif
 
@@ -870,17 +870,17 @@ playout_moggy_fullchoose(struct playout_policy *p, struct playout_setup *s, stru
 
 
 static void
-playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, group_t g, int games)
+playout_moggy_assess_group(playout_policy_t *p, prior_map_t *map, group_t g, int games)
 {
-	struct moggy_policy *pp = p->data;
-	struct board *b = map->b;
-	struct move_queue q; q.moves = 0;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
+	board_t *b = map->b;
+	move_queue_t q;  mq_init(&q);
 
 	if (board_group_info(b, g).libs > pp->nlib_count)
 		return;
 
 	if (PLDEBUGL(5)) {
-		fprintf(stderr, "ASSESS of group %s:\n", coord2sstr(g, b));
+		fprintf(stderr, "ASSESS of group %s:\n", coord2sstr(g));
 		board_print(b, stderr);
 	}
 
@@ -893,7 +893,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
-				fprintf(stderr, "1.0: nlib %s\n", coord2sstr(coord, b));
+				fprintf(stderr, "1.0: nlib %s\n", coord2sstr(coord));
 			int assess = games / 2;
 			add_prior_value(map, coord, 1, assess);
 		}
@@ -921,7 +921,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 		while (q.moves--) {
 			coord_t coord = q.move[q.moves];
 			if (PLDEBUGL(5))
-				fprintf(stderr, "1.0: 2lib %s\n", coord2sstr(coord, b));
+				fprintf(stderr, "1.0: 2lib %s\n", coord2sstr(coord));
 			int assess = games / 2;
 			add_prior_value(map, coord, 1, assess);
 		}
@@ -948,7 +948,7 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			/* FIXME: We give the malus even if this move
 			 * captures another group. */
 			if (PLDEBUGL(5))
-				fprintf(stderr, "0.0: ladder %s\n", coord2sstr(coord, b));
+				fprintf(stderr, "0.0: ladder %s\n", coord2sstr(coord));
 			add_prior_value(map, coord, 0, games);
 			continue;
 		}
@@ -962,19 +962,19 @@ playout_moggy_assess_group(struct playout_policy *p, struct prior_map *map, grou
 			assess += (stones > 0 ? stones : 0) * games * 100 / pp->cap_stone_denom;
 		}
 		if (PLDEBUGL(5))
-			fprintf(stderr, "1.0 (%d): atari %s\n", assess, coord2sstr(coord, b));
+			fprintf(stderr, "1.0 (%d): atari %s\n", assess, coord2sstr(coord));
 		add_prior_value(map, coord, 1, assess);
 	}
 }
 
 static void
-playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_t coord, int games)
+playout_moggy_assess_one(playout_policy_t *p, prior_map_t *map, coord_t coord, int games)
 {
-	struct moggy_policy *pp = p->data;
-	struct board *b = map->b;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
+	board_t *b = map->b;
 
 	if (PLDEBUGL(5)) {
-		fprintf(stderr, "ASSESS of move %s:\n", coord2sstr(coord, b));
+		fprintf(stderr, "ASSESS of move %s:\n", coord2sstr(coord));
 		board_print(b, stderr);
 	}
 
@@ -992,7 +992,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 			if (is_pass(coord))
 				return;
 			if (PLDEBUGL(5))
-				fprintf(stderr, "1.0: self-atari redirect %s\n", coord2sstr(coord, b));
+				fprintf(stderr, "1.0: self-atari redirect %s\n", coord2sstr(coord));
 			add_prior_value(map, coord, 1.0, games);
 			return;
 		}
@@ -1001,7 +1001,7 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 	/* Pattern check */
 	if (pp->patternrate) {
 		// XXX: Use gamma value?
-		struct move m = { .color = map->to_play, .coord = coord };
+		move_t m = move(coord, map->to_play);
 		if (test_pattern3_here(p, b, &m, true, NULL)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
@@ -1013,9 +1013,9 @@ playout_moggy_assess_one(struct playout_policy *p, struct prior_map *map, coord_
 }
 
 static void
-playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
+playout_moggy_assess(playout_policy_t *p, prior_map_t *map, int games)
 {
-	struct moggy_policy *pp = p->data;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 
 	/* First, go through all endangered groups. */
 	for (group_t g = 1; g < board_size2(map->b); g++)
@@ -1041,10 +1041,10 @@ playout_moggy_assess(struct playout_policy *p, struct prior_map *map, int games)
  * permit() needs to call permit() again on that move. This time alt will be
  * false though (we just want a yes/no answer) so it won't recurse again. */
 static bool
-playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, bool alt, bool random_move)
+playout_moggy_permit(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool random_move)
 {
-	struct moggy_policy *pp = p->data;
-	struct moggy_state *ps = b->ps;
+	moggy_policy_t *pp = (moggy_policy_t*)p->data;
+	moggy_state_t *ps = (moggy_state_t*)b->ps;
 
 	/* The idea is simple for now - never allow bad self-atari moves.
 	 * They suck in general, but this also permits us to actually
@@ -1056,7 +1056,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 	if (bad_selfatari) {
 		if (PLDEBUGL(5))
 			fprintf(stderr, "__ Prohibiting self-atari %s %s\n",
-				stone2str(m->color), coord2sstr(m->coord, b));
+				stone2str(m->color), coord2sstr(m->coord));
 		if (alt && pp->selfatari_other) {
 			ps->last_selfatari[m->color] = m->coord;
 			/* Ok, try the other liberty of the atari'd group. */
@@ -1064,7 +1064,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 			if (!permit_move(c)) return false;
 			if (PLDEBUGL(5))
 				fprintf(stderr, "___ Redirecting to other lib %s\n",
-					coord2sstr(c, b));
+					coord2sstr(c));
 			m->coord = c;
 			return true;
 		}
@@ -1080,6 +1080,8 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 			fprintf(stderr, "skipping eyefill test\n");
 		goto eyefill_skip;
 	}
+
+	{
 	bool eyefill = board_is_eyelike(b, m->coord, m->color);
 	/* If saving a group in atari don't interfere ! */
 	if (eyefill && !board_get_atari_neighbor(b, m->coord, m->color)) {
@@ -1092,7 +1094,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 				if (permit_move(c)) {
 					if (PLDEBUGL(5))
 						fprintf(stderr, "___ Redirecting to capture %s\n",
-							coord2sstr(c, b));
+							coord2sstr(c));
 					m->coord = c;
 					return true;
 				}
@@ -1109,6 +1111,7 @@ playout_moggy_permit(struct playout_policy *p, struct board *b, struct move *m, 
 			}
 		} foreach_diag_neighbor_end;
 	}
+	}
 
 eyefill_skip:
 	/* Check special sekis moggy would break. */
@@ -1124,20 +1127,20 @@ eyefill_skip:
 }
 
 static void
-playout_moggy_setboard(struct playout_policy *playout_policy, struct board *b)
+playout_moggy_setboard(playout_policy_t *playout_policy, board_t *b)
 {
 	if (b->ps)
 		return;
-	struct moggy_state *ps = malloc2(sizeof(struct moggy_state));
+	moggy_state_t *ps = malloc2(moggy_state_t);
 	ps->last_selfatari[S_BLACK] = ps->last_selfatari[S_WHITE] = 0;
 	b->ps = ps;
 }
 
-struct playout_policy *
-playout_moggy_init(char *arg, struct board *b)
+playout_policy_t *
+playout_moggy_init(char *arg, board_t *b)
 {
-	struct playout_policy *p = calloc2(1, sizeof(*p));
-	struct moggy_policy *pp = calloc2(1, sizeof(*pp));
+	playout_policy_t *p = calloc2(1, playout_policy_t);
+	moggy_policy_t *pp = calloc2(1, moggy_policy_t);
 	p->data = pp;
 	p->setboard = playout_moggy_setboard;
 	p->setboard_randomok = true;
@@ -1182,16 +1185,15 @@ playout_moggy_init(char *arg, struct board *b)
 	pp->nlib_count = 4;
 
 	/* C is stupid. */
-	double mq_prob_default[MQ_MAX] = {
-		[MQ_KO] = 6.0,
-		[MQ_NAKADE] = 5.5,
-		[MQ_LATARI] = 5.0,
-		[MQ_L2LIB] = 4.0,
-		[MQ_LNLIB] = 3.5,
-		[MQ_PAT3] = 3.0,
-		[MQ_GATARI] = 2.0,
-		[MQ_JOSEKI] = 1.0,
-	};
+	double mq_prob_default[MQ_MAX] = { 0.0, };
+	mq_prob_default[MQ_KO] = 6.0;
+	mq_prob_default[MQ_NAKADE] = 5.5;
+	mq_prob_default[MQ_LATARI] = 5.0;
+	mq_prob_default[MQ_L2LIB] = 4.0;
+	mq_prob_default[MQ_LNLIB] = 3.5;
+	mq_prob_default[MQ_PAT3] = 3.0;
+	mq_prob_default[MQ_GATARI] = 2.0;
+	mq_prob_default[MQ_JOSEKI] = 1.0;
 	memcpy(pp->mq_prob, mq_prob_default, sizeof(pp->mq_prob));
 
 	/* Default 3x3 pattern gammas tuned on 15x15 with 500s/game on

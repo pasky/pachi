@@ -77,6 +77,7 @@
 #define DEBUG
 
 #include "engine.h"
+#include "gtp.h"
 #include "move.h"
 #include "timeinfo.h"
 #include "playout.h"
@@ -88,27 +89,22 @@
 #include "distributed/merge.h"
 
 /* Internal engine state. */
-struct distributed {
+typedef struct {
 	char *slave_port;
 	char *proxy_port;
 	int max_slaves;
 	int shared_nodes;
 	int stats_hbits;
 	bool slaves_quit;
-	struct move my_last_move;
-	struct move_stats my_last_stats;
+	move_t my_last_move;
+	move_stats_t my_last_stats;
 	int slaves;
 	int threads;
-};
+} distributed_t;
 
 /* Default number of simulations to perform per move.
  * Note that this is in total over all slaves! */
 #define DIST_GAMES	80000
-static const struct time_info default_ti = {
-	.period = TT_MOVE,
-	.dim = TD_GAMES,
-	.len = { .games = DIST_GAMES, .games_max = 0 },
-};
 
 #define get_value(value, color) \
 	((color) == S_BLACK ? (value) : 1 - (value))
@@ -129,10 +125,10 @@ static const struct time_info default_ti = {
  * Returns the path string in a static buffer; it is NOT safe for
  * anything but debugging - in particular, it is NOT thread-safe! */
 char *
-path2sstr(path_t path, struct board *b)
+path2sstr(path_t path, board_t *b)
 {
 	/* Special case for pass and resign. */
-	if (path < 0) return coord2sstr((coord_t)path, b);
+	if (path < 0) return coord2sstr((coord_t)path);
 
 	static char buf[16][64];
 	static int bi = 0;
@@ -143,7 +139,7 @@ path2sstr(path_t path, struct board *b)
 	char *end = b2 + 64;
 	coord_t leaf;
 	while ((leaf = leaf_coord(path, b)) != 0) {
-		s += snprintf(s, end - s, "%s<", coord2sstr(leaf, b));
+		s += snprintf(s, end - s, "%s<", coord2sstr(leaf));
 		path = parent_path(path, b);
 	}
 	if (s != b2) s[-1] = '\0';
@@ -154,9 +150,9 @@ path2sstr(path_t path, struct board *b)
  * The slave lock must not be held upon entry and is released upon return.
  * args is empty or ends with '\n' */
 static enum parse_code
-distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *args, char **reply)
+distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply)
 {
-	struct distributed *dist = e->data;
+	distributed_t *dist = (distributed_t*)e->data;
 
 	/* Commands that should not be sent to slaves.
 	 * time_left will be part of next pachi-genmoves,
@@ -197,13 +193,13 @@ distributed_notify(struct engine *e, struct board *b, int id, char *cmd, char *a
 /* The playouts sent by slaves for the children of the root node
  * include contributions from other slaves. To avoid 32-bit overflow on
  * large configurations with many slaves we must average the playouts. */
-struct large_stats {
+typedef struct {
 	long playouts; // # of playouts
 	floating_t value; // BLACK wins/playouts
-};
+} large_stats_t;
 
 static void
-large_stats_add_result(struct large_stats *s, floating_t result, long playouts)
+large_stats_add_result(large_stats_t *s, floating_t result, long playouts)
 {
 	s->playouts += playouts;
 	s->value += (result - s->value) * playouts / s->playouts;
@@ -220,7 +216,7 @@ large_stats_add_result(struct large_stats *s, floating_t result, long playouts)
  * Keep this code in sync with uct/slave.c:report_stats().
  * slave_lock is held on entry and on return. */
 static coord_t
-select_best_move(struct board *b, struct large_stats *stats, int *played,
+select_best_move(board_t *b, large_stats_t *stats, int *played,
 		 int *total_playouts, int *total_threads, bool *keep_looking)
 {
 	assert(reply_count > 0);
@@ -247,9 +243,9 @@ select_best_move(struct board *b, struct large_stats *stats, int *played,
 		r = strchr(r, '\n');
 
 		char move[64];
-		struct move_stats s;
+		move_stats_t s;
 		while (r && sscanf(++r, "%63s %d " PRIfloating, move, &s.playouts, &s.value) == 3) {
-			coord_t c = str2coord(move, board_size(b));
+			coord_t c = str2coord(move);
 			assert (c >= resign && c < board_size2(b) && s.playouts >= 0);
 
 			large_stats_add_result(&stats[c], s.value, (long)s.playouts);
@@ -276,7 +272,7 @@ select_best_move(struct board *b, struct large_stats *stats, int *played,
  * rely on the lock here. */
 static void
 genmoves_args(char *args, enum stone color, int played,
-	      struct time_info *ti, bool binary_args)
+	      time_info_t *ti, bool binary_args)
 {
 	char *end = args + CMDS_SIZE;
 	char *s = args + snprintf(args, CMDS_SIZE, "%s %d", stone2str(color), played);
@@ -296,28 +292,34 @@ genmoves_args(char *args, enum stone color, int played,
 
 /* Regularly send genmoves command to the slaves, and select the best move. */
 static coord_t
-distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
+distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 		    enum stone color, bool pass_all_alive)
 {
-	struct distributed *dist = e->data;
+	distributed_t *dist = (distributed_t*)e->data;
 	double now = time_now();
 	double first = now;
 	char buf[BSIZE]; // debug only
 
-	char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
+	const char *cmd = pass_all_alive ? "pachi-genmoves_cleanup" : "pachi-genmoves";
 	char args[CMDS_SIZE];
 
 	coord_t best;
 	int played, playouts, threads;
 
-	if (ti->period == TT_NULL) *ti = default_ti;
-	struct time_stop stop;
+	if (ti->period == TT_NULL) {
+		*ti = ti_none;
+		ti->period = TT_MOVE;
+		ti->dim = TD_GAMES;
+		ti->len.games = DIST_GAMES;
+		ti->len.games_max = 0;
+	}
+	time_stop_t stop;
 	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, MAX_MAINTIME_RATIO, &stop);
-	struct time_info saved_ti = *ti;
+	time_info_t saved_ti = *ti;
 
 	/* Combined move stats from all slaves, only for children
 	 * of the root node, plus 2 for pass and resign. */
-	struct large_stats stats_array[board_size2(b) + 2], *stats;
+	large_stats_t stats_array[board_size2(b) + 2], *stats;
 	stats = &stats_array[2];
 
 	protocol_lock();
@@ -348,7 +350,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 			if (!keep_looking || played >= stop.worst.playouts) break;
 		}
 		if (DEBUGVV(2)) {
-			char *coord = coord2sstr(best, b);
+			char *coord = coord2sstr(best);
 			snprintf(buf, sizeof(buf),
 				 "temp winner is %s %s with score %1.4f (%d/%d games)"
 				 " %d slaves %d threads\n",
@@ -377,7 +379,7 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 	 * the last "pachi-genmoves" in the command history. */
 	clear_receive_queue();
 	char coordbuf[4];
-	char *coord = coord2bstr(coordbuf, best, b);
+	char *coord = coord2bstr(coordbuf, best);
 	snprintf(args, sizeof(args), "%s %s\n", stone2str(color), coord);
 	update_cmd(b, "play", args, true);
 	protocol_unlock();
@@ -402,9 +404,9 @@ distributed_genmove(struct engine *e, struct board *b, struct time_info *ti,
 }
 
 static char *
-distributed_chat(struct engine *e, struct board *b, bool opponent, char *from, char *cmd)
+distributed_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 {
-	struct distributed *dist = e->data;
+	distributed_t *dist = (distributed_t*)e->data;
 	double winrate = get_value(dist->my_last_stats.value, dist->my_last_move.color);
 
 	return generic_chat(b, opponent, from, cmd, dist->my_last_move.color, dist->my_last_move.coord,
@@ -418,7 +420,7 @@ scmp(const void *p1, const void *p2)
 }
 
 static void
-distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue *mq)
+distributed_dead_group_list(engine_t *e, board_t *b, move_queue_t *mq)
 {
 	protocol_lock();
 
@@ -446,16 +448,16 @@ distributed_dead_group_list(struct engine *e, struct board *b, struct move_queue
 	char *dead = gtp_replies[best_reply];
 	dead = strchr(dead, ' '); // skip "id "
 	while (dead && *++dead != '\n') {
-		mq_add(mq, str2coord(dead, board_size(b)), 0);
+		mq_add(mq, str2coord(dead), 0);
 		dead = strchr(dead, '\n');
 	}
 	protocol_unlock();
 }
 
-static struct distributed *
-distributed_state_init(char *arg, struct board *b)
+static distributed_t *
+distributed_state_init(char *arg, board_t *b)
 {
-	struct distributed *dist = calloc2(1, sizeof(struct distributed));
+	distributed_t *dist = calloc2(1, distributed_t);
 
 	dist->stats_hbits = DEFAULT_STATS_HBITS;
 	dist->max_slaves = DEFAULT_MAX_SLAVES;
@@ -492,7 +494,7 @@ distributed_state_init(char *arg, struct board *b)
 		}
 	}
 
-	gtp_replies = calloc2(dist->max_slaves, sizeof(char *));
+	gtp_replies = calloc2(dist->max_slaves, char *);
 
 	if (!dist->slave_port)
 		die("distributed: missing slave_port\n");
@@ -504,9 +506,9 @@ distributed_state_init(char *arg, struct board *b)
 }
 
 void
-engine_distributed_init(struct engine *e, char *arg, struct board *b)
+engine_distributed_init(engine_t *e, char *arg, board_t *b)
 {
-	struct distributed *dist = distributed_state_init(arg, b);
+	distributed_t *dist = distributed_state_init(arg, b);
 	e->name = "Distributed";
 	e->comment = "If you believe you have won but I am still playing, "
 		"please help me understand by capturing all dead stones. "

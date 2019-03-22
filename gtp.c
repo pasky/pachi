@@ -39,7 +39,7 @@ gtp_init(gtp_t *gtp)
 }
 
 
-typedef enum parse_code (*gtp_func_t)(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp);
+typedef enum parse_code (*gtp_func_t)(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 
 typedef struct
 {
@@ -47,7 +47,7 @@ typedef struct
 	gtp_func_t f;
 } gtp_command_t;
 
-static gtp_command_t commands[];
+static gtp_command_t *commands;
 
 void
 gtp_prefix(char prefix, gtp_t *gtp)
@@ -126,7 +126,7 @@ gtp_error(gtp_t *gtp, ...)
  * it should only be used between master and slaves of the distributed engine.
  * For now only uct engine supports gogui-analyze_commands. */
 static char*
-known_commands(struct engine *engine)
+known_commands(engine_t *engine)
 {
 	static char buf[8192];
 	char *str = buf;
@@ -145,7 +145,7 @@ known_commands(struct engine *engine)
 
 /* Return true if cmd is a valid gtp command. */
 bool
-gtp_is_valid(struct engine *e, const char *cmd)
+gtp_is_valid(engine_t *e, const char *cmd)
 {
 	if (!cmd || !*cmd) return false;
 	const char *s = strcasestr(known_commands(e), cmd);
@@ -158,14 +158,14 @@ gtp_is_valid(struct engine *e, const char *cmd)
 
 /* Add move to gtp move history. */
 static void
-gtp_add_move(gtp_t *gtp, struct move *m)
+gtp_add_move(gtp_t *gtp, move_t *m)
 {
 	assert(gtp->moves < (int)(sizeof(gtp->move) / sizeof(gtp->move[0])));
 	gtp->move[gtp->moves++] = *m;
 }
 
 static int
-gtp_board_play(gtp_t *gtp, struct board *b, struct move *m)
+gtp_board_play(gtp_t *gtp, board_t *b, move_t *m)
 {
 	int r = board_play(b, m);
 	if (r < 0)  return r;
@@ -177,14 +177,14 @@ gtp_board_play(gtp_t *gtp, struct board *b, struct move *m)
 }
 
 static enum parse_code
-cmd_protocol_version(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_protocol_version(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	gtp_reply(gtp, "2", NULL);
 	return P_OK;
 }
 
 static enum parse_code
-cmd_name(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_name(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *name = "Pachi %s";
 	if (!strcmp(e->name, "UCT"))  name = "Pachi";
@@ -194,7 +194,7 @@ cmd_name(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_echo(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_echo(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	gtp_reply(gtp, gtp->next, NULL);
 	return P_OK;
@@ -203,10 +203,10 @@ cmd_echo(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 /* Return engine comment if playing on kgs, Pachi version otherwise.
  * See "banner" uct param to set engine comment. */
 static enum parse_code
-cmd_version(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	/* kgs hijacks 'version' gtp command for game start message. */	
-	char *version = (gtp->kgs ? e->comment : "%s");
+	const char *version = (gtp->kgs ? e->comment : "%s");
 
 	/* Custom gtp version ? */
 	if (gtp->custom_version)  version = gtp->custom_version;
@@ -217,14 +217,14 @@ cmd_version(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_list_commands(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_list_commands(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	gtp_reply(gtp, known_commands(engine), NULL);
 	return P_OK;
 }
 
 static enum parse_code
-cmd_known_command(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_known_command(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -237,7 +237,7 @@ cmd_known_command(struct board *board, struct engine *engine, struct time_info *
 }
 
 static enum parse_code
-cmd_quit(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_quit(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	gtp_reply(gtp, NULL);
 	pachi_done();
@@ -245,7 +245,7 @@ cmd_quit(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 }
 
 static enum parse_code
-cmd_boardsize(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_boardsize(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -269,7 +269,7 @@ cmd_boardsize(struct board *board, struct engine *engine, struct time_info *ti, 
 }
 
 static enum parse_code
-cmd_clear_board(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_clear_board(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	board_clear(board);
 	gtp->played_games++;
@@ -283,7 +283,7 @@ cmd_clear_board(struct board *board, struct engine *engine, struct time_info *ti
 }
 
 static enum parse_code
-cmd_kgs_game_over(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_kgs_game_over(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	/* The game may not be really over, just adjourned.
 	 * Do not clear the board to avoid illegal moves
@@ -302,7 +302,7 @@ cmd_kgs_game_over(struct board *board, struct engine *engine, struct time_info *
 }
 
 static enum parse_code
-cmd_komi(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_komi(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -314,7 +314,7 @@ cmd_komi(struct board *board, struct engine *engine, struct time_info *ti, gtp_t
 }
 
 static enum parse_code
-cmd_kgs_rules(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_kgs_rules(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -332,15 +332,15 @@ cmd_kgs_rules(struct board *board, struct engine *engine, struct time_info *ti, 
 }
 
 static enum parse_code
-cmd_play(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	struct move m;
+	move_t m;
 
 	char *arg;
 	next_tok(arg);
 	m.color = str2stone(arg);
 	next_tok(arg);
-	m.coord = str2coord(arg, board_size(b));
+	m.coord = str2coord(arg);
 	arg = gtp->next;
 	char *enginearg = arg;
 	char *reply = NULL;
@@ -354,7 +354,7 @@ cmd_play(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 	
 	if (gtp_board_play(gtp, b, &m) < 0) {
 		if (DEBUGL(0)) {
-			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str(m.color), coord2sstr(m.coord, b));
+			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str(m.color), coord2sstr(m.coord));
 			board_print(b, stderr);
 		}
 		gtp_error(gtp, "illegal move", NULL);
@@ -369,14 +369,14 @@ cmd_play(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_pachi_predict(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_predict(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
-	struct move m;
+	move_t m;
 	char *arg;
 	next_tok(arg);
 	m.color = str2stone(arg);
 	next_tok(arg);
-	m.coord = str2coord(arg, board_size(board));
+	m.coord = str2coord(arg);
 	next_tok(arg);
 
 	char *str = predict_move(board, engine, ti, &m, gtp->played_games);
@@ -390,7 +390,7 @@ cmd_pachi_predict(struct board *board, struct engine *engine, struct time_info *
 }
 
 static enum parse_code
-cmd_genmove(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -407,7 +407,7 @@ cmd_genmove(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 	double time_start = time_now();
 #endif
 
-	struct time_info *ti_genmove = time_info_genmove(b, ti, color);
+	time_info_t *ti_genmove = time_info_genmove(b, ti, color);
 	coord_t c = (b->fbook ? fbook_check(b) : pass);
 	if (is_pass(c))
 		c = e->genmove(e, b, ti_genmove, color, !strcasecmp(gtp->cmd, "kgs-genmove_cleanup"));
@@ -418,12 +418,12 @@ cmd_genmove(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 #endif
 
 	if (!is_resign(c)) {
-		struct move m = { .coord = c, .color = color };
+		move_t m = move(c, color);
 		if (gtp_board_play(gtp, b, &m) < 0)
-			die("Attempted to generate an illegal move: %s %s\n", stone2str(m.color), coord2sstr(m.coord, b));
+			die("Attempted to generate an illegal move: %s %s\n", stone2str(m.color), coord2sstr(m.coord));
 	}
 	
-	char *str = coord2sstr(c, b);
+	char *str = coord2sstr(c);
 	if (DEBUGL(4))                      fprintf(stderr, "playing move %s\n", str);
 	if (DEBUGL(1) && debug_boardprint)  engine_board_print(e, b, stderr);
 	gtp_reply(gtp, str, NULL);
@@ -440,7 +440,7 @@ cmd_genmove(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_pachi_genmoves(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_genmoves(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -448,7 +448,7 @@ cmd_pachi_genmoves(struct board *board, struct engine *engine, struct time_info 
 	void *stats;
 	int stats_size;
 
-	struct time_info *ti_genmove = time_info_genmove(board, ti, color);
+	time_info_t *ti_genmove = time_info_genmove(board, ti, color);
 	char *reply = engine->genmoves(engine, board, ti_genmove, color, gtp->next,
 				       !strcasecmp(gtp->cmd, "pachi-genmoves_cleanup"),
 				       &stats, &stats_size);
@@ -477,7 +477,7 @@ cmd_pachi_genmoves(struct board *board, struct engine *engine, struct time_info 
  * Stop processing when we receive some other command or "pachi-analyze 0".
  * Similar to Leela-Zero's lz-analyze so we can feed data to lizzie. */
 static enum parse_code
-cmd_pachi_analyze(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -496,19 +496,19 @@ cmd_pachi_analyze(struct board *b, struct engine *e, struct time_info *ti, gtp_t
 }
 
 static void
-stop_analyzing(gtp_t *gtp, struct board *b, struct engine *e)
+stop_analyzing(gtp_t *gtp, board_t *b, engine_t *e)
 {
 	gtp->analyze_running = false;
 	e->analyze(e, b, S_BLACK, 0);
 }
 
 static enum parse_code
-cmd_set_free_handicap(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
 	do {
-		struct move m = { .coord = str2coord(arg, board_size(b)), .color = S_BLACK };
+		move_t m = move(str2coord(arg), S_BLACK);
 		if (DEBUGL(4))  fprintf(stderr, "setting handicap %s\n", arg);
 
 		// XXX board left in inconsistent state if illegal move comes in
@@ -530,7 +530,7 @@ cmd_set_free_handicap(struct board *b, struct engine *e, struct time_info *ti, g
  * overly long to think it all out, and unless it's clever its
  * handicap stones won't be of much help. ;-) */
 static enum parse_code
-cmd_fixed_handicap(struct board *b, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -539,15 +539,15 @@ cmd_fixed_handicap(struct board *b, struct engine *engine, struct time_info *ti,
 	char buffer[1024];  strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	
-	struct move_queue q = { .moves = 0 };
+	move_queue_t q;  mq_init(&q);
 	board_handicap(b, stones, &q);
 	
 	if (DEBUGL(1) && debug_boardprint)
 		board_print(b, stderr);
 
 	for (unsigned int i = 0; i < q.moves; i++) {
-		struct move m = { .coord = q.move[i], .color = S_BLACK };
-		sbprintf(buf, "%s ", coord2sstr(m.coord, b));
+		move_t m = move(q.move[i], S_BLACK);
+		sbprintf(buf, "%s ", coord2sstr(m.coord));
 
 		/* Add to gtp move history. */
 		gtp_add_move(gtp, &m);
@@ -558,16 +558,16 @@ cmd_fixed_handicap(struct board *b, struct engine *engine, struct time_info *ti,
 }
 
 static enum parse_code
-cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *msg = NULL;
-	struct ownermap *o = engine_ownermap(e, b);
+	ownermap_t *o = engine_ownermap(e, b);
 	if (o && !board_position_final(b, o, &msg)) {
 		gtp_error(gtp, msg, NULL);	
 		return P_OK;
 	}
 
-	struct move_queue q = { .moves = 0 };
+	move_queue_t q;  mq_init(&q);
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);	
 	floating_t score = board_official_score(b, &q);
 
@@ -580,9 +580,9 @@ cmd_final_score(struct board *b, struct engine *e, struct time_info *ti, gtp_t *
 }
 
 static enum parse_code
-cmd_pachi_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	struct ownermap *ownermap = engine_ownermap(e, b);
+	ownermap_t *ownermap = engine_ownermap(e, b);
 	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
 
 	board_print_ownermap(b, stderr, ownermap);
@@ -591,9 +591,9 @@ cmd_pachi_score_est(struct board *b, struct engine *e, struct time_info *ti, gtp
 }
 
 static int
-cmd_final_status_list_dead(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
+cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	struct move_queue q = { .moves = 0 };
+	move_queue_t q;  mq_init(&q);
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
 	/* else we return empty list - i.e. engine not supporting
 	 * this assumes all stones alive at the game end. */
@@ -601,7 +601,7 @@ cmd_final_status_list_dead(char *arg, struct board *b, struct engine *e, gtp_t *
 	gtp_prefix('=', gtp);
 	for (unsigned int i = 0; i < q.moves; i++) {
 		foreach_in_group(b, q.move[i]) {
-			printf("%s ", coord2sstr(c, b));
+			printf("%s ", coord2sstr(c));
 		} foreach_in_group_end;
 		putchar('\n');
 	}
@@ -609,9 +609,9 @@ cmd_final_status_list_dead(char *arg, struct board *b, struct engine *e, gtp_t *
 }
 
 static int
-cmd_final_status_list_alive(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
+cmd_final_status_list_alive(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	struct move_queue q = { .moves = 0 };
+	move_queue_t q;  mq_init(&q);
 	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
 	int printed = 0;
 	
@@ -624,7 +624,7 @@ cmd_final_status_list_alive(char *arg, struct board *b, struct engine *e, gtp_t 
 			if (q.move[i] == g)  goto next_group;
 			
 		foreach_in_group(b, g) {
-			printf("%s ", coord2sstr(c, b));
+			printf("%s ", coord2sstr(c));
 		} foreach_in_group_end;
 		putchar('\n');  printed++;
 	next_group:;
@@ -633,14 +633,14 @@ cmd_final_status_list_alive(char *arg, struct board *b, struct engine *e, gtp_t 
 }
 
 static int
-cmd_final_status_list_seki(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
+cmd_final_status_list_seki(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	struct ownermap *ownermap = engine_ownermap(e, b);
+	ownermap_t *ownermap = engine_ownermap(e, b);
 	if (!ownermap) {  gtp_error(gtp, "no ownermap", NULL);  return -1;  }
 	int printed = 0;
 
 	gtp_prefix('=', gtp);
-	struct move_queue sekis = { .moves = 0 };
+	move_queue_t sekis;  mq_init(&sekis);
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
 		if (ownermap_judge_point(ownermap, c, 0.80) != PJ_SEKI)  continue;
@@ -655,7 +655,7 @@ cmd_final_status_list_seki(char *arg, struct board *b, struct engine *e, gtp_t *
 
 	for (unsigned int i = 0; i < sekis.moves; i++) {
 		foreach_in_group(b, sekis.move[i]) {
-			printf("%s ", coord2sstr(c, b));
+			printf("%s ", coord2sstr(c));
 		} foreach_in_group_end;
 		putchar('\n');  printed++;
 	}
@@ -664,17 +664,17 @@ cmd_final_status_list_seki(char *arg, struct board *b, struct engine *e, gtp_t *
 }
 
 static int
-cmd_final_status_list_territory(char *arg, struct board *b, struct engine *e, gtp_t *gtp)
+cmd_final_status_list_territory(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
 	enum stone color = str2stone(arg);
-	struct ownermap *ownermap = engine_ownermap(e, b);
+	ownermap_t *ownermap = engine_ownermap(e, b);
 	if (!ownermap) {  gtp_error(gtp, "no ownermap", NULL);  return -1;  }
 		
 	gtp_prefix('=', gtp);
 	foreach_point(b) {
 		if (board_at(b, c) != S_NONE)  continue;
 		if (ownermap_color(ownermap, c, 0.67) != color)  continue;
-		printf("%s ", coord2sstr(c, b));
+		printf("%s ", coord2sstr(c));
 	} foreach_point_end;
 	putchar('\n');
 	return 1;
@@ -682,7 +682,7 @@ cmd_final_status_list_territory(char *arg, struct board *b, struct engine *e, gt
 
 /* XXX: This is a huge hack. */
 static enum parse_code
-cmd_final_status_list(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_final_status_list(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (gtp->quiet)  return P_OK;
 	char *arg;
@@ -704,11 +704,11 @@ cmd_final_status_list(struct board *b, struct engine *e, struct time_info *ti, g
 
 /* Handle undo at the gtp level. */
 static enum parse_code
-cmd_undo(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
+cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	/* --noundo: undo only allowed for pass. */
 	if (gtp->noundo && !is_pass(b->last_move.coord)) {
-		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(b->last_move.coord, b));
+		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(b->last_move.coord));
 		gtp_error(gtp, "cannot undo", NULL);
 		return P_OK;
 	}
@@ -719,7 +719,7 @@ cmd_undo(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
 	enum stone color = stone_other(b->last_move.color);
-	struct move m = { .coord = pass, .color = color };
+	move_t m = move(pass, color);
 	if (e->notify_play)
 		e->notify_play(e, b, &m, "");
 
@@ -730,7 +730,7 @@ cmd_undo(struct board *b, struct engine *e, struct time_info *ti, gtp_t *gtp)
 }
 
 static void
-undo_reload_engine(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg)
+undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg)
 {
 	if (DEBUGL(3)) fprintf(stderr, "reloading engine after undo(s).\n");
 	
@@ -752,7 +752,7 @@ undo_reload_engine(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg)
 }
 
 static enum parse_code
-cmd_showboard(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_showboard(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	board_print(board, stderr);
 	return P_OK;
@@ -760,7 +760,7 @@ cmd_showboard(struct board *board, struct engine *engine, struct time_info *ti, 
 
 /* Custom commands for handling the tree opening tbook */
 static enum parse_code
-cmd_pachi_gentbook(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_gentbook(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	/* Board must be initialized properly, as if for genmove;
 	 * makes sense only as 'uct_gentbook b'. */
@@ -773,7 +773,7 @@ cmd_pachi_gentbook(struct board *board, struct engine *engine, struct time_info 
 }
 
 static enum parse_code
-cmd_pachi_dumptbook(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_dumptbook(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -783,7 +783,7 @@ cmd_pachi_dumptbook(struct board *board, struct engine *engine, struct time_info
 }
 
 static enum parse_code
-cmd_pachi_evaluate(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_evaluate(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -799,7 +799,7 @@ cmd_pachi_evaluate(struct board *board, struct engine *engine, struct time_info 
 			if (!board_coord_in_symmetry(board, board->f[i])
 			    || isnan(vals[i]) || vals[i] < 0.001)
 				continue;
-			printf("%s %.3f\n", coord2sstr(board->f[i], board), (double) vals[i]);
+			printf("%s %.3f\n", coord2sstr(board->f[i]), (double) vals[i]);
 		}
 		gtp_flush();
 	}
@@ -807,7 +807,7 @@ cmd_pachi_evaluate(struct board *board, struct engine *engine, struct time_info 
 }
 
 static enum parse_code
-cmd_pachi_result(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_result(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	/* More detailed result of the last genmove. */
 	/* For UCT, the output format is: = color move playouts winrate dynkomi */
@@ -822,16 +822,16 @@ cmd_pachi_result(struct board *board, struct engine *engine, struct time_info *t
 }
 
 static enum parse_code
-cmd_pachi_tunit(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_pachi_tunit(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	int res = unit_test_cmd(board, gtp->next);
-	char *str = (res ? "passed" : "failed");
+	const char *str = (res ? "passed" : "failed");
 	gtp_reply(gtp, str, NULL);
 	return P_OK;
 }
 
 static enum parse_code
-cmd_kgs_chat(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_kgs_chat(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *loc;
 	next_tok(loc);
@@ -854,7 +854,7 @@ cmd_kgs_chat(struct board *board, struct engine *engine, struct time_info *ti, g
 }
 
 static enum parse_code
-cmd_time_left(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_time_left(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	next_tok(arg);
@@ -871,7 +871,7 @@ cmd_time_left(struct board *board, struct engine *engine, struct time_info *ti, 
 }
 
 static enum parse_code
-cmd_kgs_time_settings(struct board *board, struct engine *engine, struct time_info *ti, gtp_t *gtp)
+cmd_kgs_time_settings(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
 	char *time_system;
 	char *arg;
@@ -917,7 +917,7 @@ cmd_kgs_time_settings(struct board *board, struct engine *engine, struct time_in
 }
 
 
-static gtp_command_t commands[] =
+static gtp_command_t gtp_commands[] =
 {
 	{ "protocol_version",       cmd_protocol_version },
 	{ "name",                   cmd_name },
@@ -990,12 +990,17 @@ static gtp_command_t commands[] =
 	{ 0, 0 }
 };
 
+static __attribute__((constructor)) void
+gtp_internal_init()
+{
+	commands = gtp_commands;  /* c++ madness */
+}
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
 
 enum parse_code
-gtp_parse(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct time_info *ti, char *buf)
+gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, char *buf)
 {
 	if (strchr(buf, '#'))
 		*strchr(buf, '#') = 0;
@@ -1050,3 +1055,6 @@ gtp_parse(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct tim
 	gtp_error(gtp, "unknown command", NULL);
 	return P_UNKNOWN_COMMAND;
 }
+
+
+

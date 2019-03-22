@@ -3,12 +3,10 @@
 
 #include "move.h"
 
-struct board;
-
 /* Opening book (fbook as in "forcing book" since the move is just
  * played unconditionally if found, or possibly "fuseki book"). */
 
-struct fbook {
+typedef struct fbook {
 	int bsize;
 	int handicap;
 
@@ -19,10 +17,10 @@ struct fbook {
 	/* pass == no move in this position */
 	coord_t moves[1<<fbook_hash_bits];
 	hash_t hashes[1<<fbook_hash_bits];
-};
+} fbook_t;
 
-coord_t fbook_check(struct board *board);
-struct fbook *fbook_init(char *filename, struct board *b);
-void fbook_done(struct fbook *fbook);
+coord_t  fbook_check(board_t *board);
+fbook_t* fbook_init(char *filename, board_t *b);
+void     fbook_done(fbook_t *fbook);
 
 #endif

@@ -19,7 +19,7 @@
  *   O X . O . |     - b groups 2 libs
  *  -----------+     - dead shape after filling eye    */
 bool
-breaking_false_eye_seki(struct board *b, coord_t coord, enum stone color)
+breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 {
 	enum stone other_color = stone_other(color);	
 	if (!board_is_eyelike(b, coord, color))
@@ -68,7 +68,7 @@ breaking_false_eye_seki(struct board *b, coord_t coord, enum stone color)
  *     O X O . |      O X O . |      - w makes a dead shape selfatari by playing at @coord
  *    ---------+     ---------+        (selfatari checks passed, so we know shape is dead)   */
 bool
-breaking_corner_seki(struct board *b, coord_t coord, enum stone color)
+breaking_corner_seki(board_t *b, coord_t coord, enum stone color)
 {
 	enum stone other_color = stone_other(color);	
 
@@ -101,7 +101,7 @@ breaking_corner_seki(struct board *b, coord_t coord, enum stone color)
 	if (!gi)  return false;
 
 	/* Other lib is corner eye ? */
-	int x = coord_x(lib2, b), y = coord_y(lib2, b);
+	int x = coord_x(lib2), y = coord_y(lib2);
 	if ((x != 1 && x != real_board_size(b)) ||
 	    (y != 1 && y != real_board_size(b)) ||
 	    !board_is_one_point_eye(b, lib2, color))
@@ -139,7 +139,7 @@ breaking_corner_seki(struct board *b, coord_t coord, enum stone color)
  *   O . X X X |
  *   . O O O O |   */
 bool
-breaking_3_stone_seki(struct board *b, coord_t coord, enum stone color)
+breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 {
 	enum stone other_color = stone_other(color);
 	

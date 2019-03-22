@@ -10,7 +10,7 @@
 #include "tactics/dragon.h"
 
 static char*
-print_handler(struct board *board, coord_t c, void *data)
+print_handler(board_t *board, coord_t c, void *data)
 {
 	static char buf[64];
 	group_t dragon = *(group_t*)data;
@@ -24,7 +24,7 @@ print_handler(struct board *board, coord_t c, void *data)
 }
 
 void
-dragon_print(struct board *board, FILE *f, group_t dragon)
+dragon_print(board_t *board, FILE *f, group_t dragon)
 {
         board_hprint(board, f, print_handler, &dragon);
 }
@@ -63,10 +63,10 @@ pick_dragon_color(int i, bool bold, bool white_ok)
 }
 
 static char*
-print_dragons(struct board *board, coord_t c, void *data)
+print_dragons(board_t *board, coord_t c, void *data)
 {
 	static char buf[64];
-	group_t *dragons = data;
+	group_t *dragons = (group_t*)data;
 	group_t d = dragon_at(board, c);
 	char *before = "", *after = "";
 
@@ -85,7 +85,7 @@ print_dragons(struct board *board, coord_t c, void *data)
 }
 
 void
-board_print_dragons(struct board *board, FILE *f)
+board_print_dragons(board_t *board, FILE *f)
 {
 	group_t dragons[BOARD_MAX_GROUPS] = { 0, };
         board_hprint(board, f, print_dragons, dragons);
@@ -102,7 +102,7 @@ board_print_dragons(struct board *board, FILE *f)
 /* Check if g and g2 are virtually connected through lib.
  * c2 is a stone of g2 next to lib */
 static bool
-virtual_connection_at(struct board *b, enum stone color, coord_t lib, coord_t c2, group_t g1, group_t g2)
+virtual_connection_at(board_t *b, enum stone color, coord_t lib, coord_t c2, group_t g1, group_t g2)
 {
 	assert(board_at(b, lib) == S_NONE);
 	assert(board_at(b, c2) == color);
@@ -113,21 +113,21 @@ virtual_connection_at(struct board *b, enum stone color, coord_t lib, coord_t c2
 		return true;
 
 	/* Diagonal connection ? */
-	int x2 = coord_x(c2, b),          y2 = coord_y(c2, b);
+	int x2 = coord_x(c2),          y2 = coord_y(c2);
 	foreach_diag_neighbor(b, c2) {
 		if (board_at(b, c) != color || group_at(b, c) != g1)
 			continue;
-		int x = coord_x(c, b);    coord_t d1 = coord_xy(b, x, y2);
-		int y = coord_y(c, b);    coord_t d2 = coord_xy(b, x2, y);		   
+		int x = coord_x(c);    coord_t d1 = coord_xy(x, y2);
+		int y = coord_y(c);    coord_t d2 = coord_xy(x2, y);		   
 		if (no_stone_at(d1) && no_stone_at(d2))
 			return true;	
 	} foreach_diag_neighbor_end;
 
-	int x = coord_x(lib, b);          int dx = coord_dx(lib, c2, b);
-	int y = coord_y(lib, b);          int dy = coord_dy(lib, c2, b);
+	int x = coord_x(lib);          int dx = coord_dx(lib, c2);
+	int y = coord_y(lib);          int dy = coord_dy(lib, c2);
 	int x1 = x + dx;
 	int y1 = y + dy;
-	coord_t c1 = coord_xy(b, x1, y1);  // other side of lib wrt c2
+	coord_t c1 = coord_xy(x1, y1);  // other side of lib wrt c2
 	
 	/* Bamboo joint or stronger ? */
 	if ( own_stone_at(c1) && group_at(b, c1) == g1 && 
@@ -145,10 +145,10 @@ virtual_connection_at(struct board *b, enum stone color, coord_t lib, coord_t c2
 
 
 /* Handler should return -1 to stop iterating */
-typedef int (*foreach_in_connected_groups_t)(struct board *b, enum stone color, coord_t c, void *data);
+typedef int (*foreach_in_connected_groups_t)(board_t *b, enum stone color, coord_t c, void *data);
 
 static int
-foreach_in_connected_groups_(struct board *b, enum stone color, group_t g, 
+foreach_in_connected_groups_(board_t *b, enum stone color, group_t g, 
 			     foreach_in_connected_groups_t f, void *data, int *visited)
 {
 	if (visited[group_base(g)])
@@ -179,7 +179,7 @@ foreach_in_connected_groups_(struct board *b, enum stone color, group_t g,
 
 /* Call f() for each stone in dragon at @to. */
 static void 
-foreach_in_connected_groups(struct board *b, enum stone color, coord_t to, 
+foreach_in_connected_groups(board_t *b, enum stone color, coord_t to, 
 			    foreach_in_connected_groups_t f, void *data)
 {
 	int visited[BOARD_MAX_COORDS] = {0, };
@@ -190,10 +190,10 @@ foreach_in_connected_groups(struct board *b, enum stone color, coord_t to,
 
 
 /* Handler should return -1 to stop iterating. */
-typedef int (*foreach_connected_group_t)(struct board *b, enum stone color, group_t g, void *data);
+typedef int (*foreach_connected_group_t)(board_t *b, enum stone color, group_t g, void *data);
 
 static int
-foreach_connected_group_(struct board *b, enum stone color, group_t g, 
+foreach_connected_group_(board_t *b, enum stone color, group_t g, 
 			 foreach_connected_group_t f, void *data, int *visited)
 {
 	if (visited[group_base(g)])
@@ -222,7 +222,7 @@ foreach_connected_group_(struct board *b, enum stone color, group_t g,
 
 /* Call f() for each group in dragon at @to. */
 static void 
-foreach_connected_group(struct board *b, enum stone color, coord_t to,
+foreach_connected_group(board_t *b, enum stone color, coord_t to,
 			foreach_connected_group_t f, void *data)
 {
 	int visited[BOARD_MAX_COORDS] = {0, };
@@ -231,16 +231,16 @@ foreach_connected_group(struct board *b, enum stone color, coord_t to,
 	foreach_connected_group_(b, color, g, f, data, visited);
 }
 
-struct foreach_lib_data {
+typedef struct {
 	int *visited;
 	foreach_in_connected_groups_t f;
 	void *data;
-};
+} foreach_lib_data_t;
 
 static int 
-foreach_lib_handler(struct board *b, enum stone color, group_t g, void *data)
+foreach_lib_handler(board_t *b, enum stone color, group_t g, void *data)
 {
-	struct foreach_lib_data *d = data;
+	foreach_lib_data_t *d = (foreach_lib_data_t*)data;
 	for (int i = 0; i < board_group_info(b, g).libs; i++) {
 		coord_t lib = board_group_info(b, g).lib[i];
 		if (d->visited[lib])
@@ -254,24 +254,24 @@ foreach_lib_handler(struct board *b, enum stone color, group_t g, void *data)
 
 /* Call f() for each liberty of dragon at @to. */
 static void
-foreach_lib_in_connected_groups(struct board *b, enum stone color, coord_t to,
+foreach_lib_in_connected_groups(board_t *b, enum stone color, coord_t to,
 				foreach_in_connected_groups_t f, void *data)
 {
 	int visited[BOARD_MAX_COORDS] = {0, };
-	struct foreach_lib_data d = { .visited = visited, .f = f, .data = data };	
+	foreach_lib_data_t d = { visited, f, data };	
 	foreach_connected_group(b, color, to, foreach_lib_handler, &d);
 }
 
 
 static int
-stones_all_connected_handler(struct board *b,  enum stone color, coord_t c, void *data)
+stones_all_connected_handler(board_t *b,  enum stone color, coord_t c, void *data)
 {
-	int *connected = data;
+	int *connected = (int*)data;
 	connected[c] = 1;  return 0;
 }
 
 static bool
-stones_all_connected(struct board *b, enum stone color, coord_t *stones, int n)
+stones_all_connected(board_t *b, enum stone color, coord_t *stones, int n)
 {
 	// TODO optimize: check if all same group first ...
 	int connected[BOARD_MAX_COORDS] = {0, };
@@ -290,7 +290,7 @@ stones_all_connected(struct board *b, enum stone color, coord_t *stones, int n)
  *  - size >= 2  (so no false eye issues)
  * Returns size of the area, or 0 if doesn't match.  */
 int
-big_eye_area(struct board *b, enum stone color, coord_t around, int *visited)
+big_eye_area(board_t *b, enum stone color, coord_t around, int *visited)
 {
 	int NAKADE_MAX = 8;  // min area size for living group (corner)
 	                     // could increase to 10 (side) and 12 (middle)
@@ -355,7 +355,7 @@ big_eye_area(struct board *b, enum stone color, coord_t around, int *visited)
  * TODO - could make tiger mouth check smarter (check selfatari) 
  *      - handle more exotic cases (ladders ?) */
 bool
-is_controlled_eye_point(struct board *b, coord_t to, enum stone color)
+is_controlled_eye_point(board_t *b, coord_t to, enum stone color)
 {
 	assert(no_stone_at(to));
 
@@ -383,9 +383,9 @@ is_controlled_eye_point(struct board *b, coord_t to, enum stone color)
 
 
 static bool
-real_eye_endpoint(struct board *board, coord_t to, enum stone color)
+real_eye_endpoint(board_t *board, coord_t to, enum stone color)
 {
-	enum stone color_diag_libs[S_MAX] = {0, 0, 0, 0};
+	int color_diag_libs[S_MAX] = {0, 0, 0, 0};
 	
 	foreach_diag_neighbor(board, to) {
 		color_diag_libs[(enum stone) board_at(board, c)]++;
@@ -416,14 +416,14 @@ real_eye_endpoint(struct board *board, coord_t to, enum stone color)
 /* Point is finished one point eye.
  * (board_is_one_point_eye() ones can become false later ...) */
 static bool
-is_real_one_point_eye(struct board *b, coord_t to, enum stone color)
+is_real_one_point_eye(board_t *b, coord_t to, enum stone color)
 {
 	return (board_is_eyelike(b, to, color) &&
 		real_eye_endpoint(b, to, color));
 }
 
 static bool
-is_real_two_point_eye(struct board *b, coord_t to, enum stone color, coord_t *pother)
+is_real_two_point_eye(board_t *b, coord_t to, enum stone color, coord_t *pother)
 {
 	if ((neighbor_count_at(b, to, color) +	    
 	     neighbor_count_at(b, to, S_OFFBOARD)) != 3)
@@ -445,15 +445,15 @@ is_real_two_point_eye(struct board *b, coord_t to, enum stone color, coord_t *po
 		real_eye_endpoint(b, other, color));
 }
 
-struct safe_data {
+typedef struct {
 	int *visited;
 	int *eyes;
-};
+} safe_data_t;
 
 static int
-count_eyes(struct board *b, enum stone color, coord_t lib, void *data)
+count_eyes(board_t *b, enum stone color, coord_t lib, void *data)
 {	
-	struct safe_data *d = data;
+	safe_data_t *d = (safe_data_t*)data;
 	if (d->visited[lib])  /* Don't visit big eyes multiple times */
 		return 0;
 
@@ -486,15 +486,15 @@ count_eyes(struct board *b, enum stone color, coord_t lib, void *data)
 }
 
 bool
-dragon_is_safe_full(struct board *b, group_t g, enum stone color, int *visited, int *eyes)
+dragon_is_safe_full(board_t *b, group_t g, enum stone color, int *visited, int *eyes)
 {
-	struct safe_data d = { .visited = visited, .eyes = eyes };
+	safe_data_t d = { visited, eyes };
 	foreach_lib_in_connected_groups(b, color, g, count_eyes, &d);
 	return (*eyes >= 2);
 }
 
 bool
-dragon_is_safe(struct board *b, group_t g, enum stone color)
+dragon_is_safe(board_t *b, group_t g, enum stone color)
 {
 	int visited[BOARD_MAX_COORDS] = {0, };
 	int eyes = 0;
@@ -512,7 +512,7 @@ have_group_in(group_t g, group_t *groups, int ngroups)
 }
 
 static int
-group_neighbors(struct board *b, coord_t to, group_t *neighbors)
+group_neighbors(board_t *b, coord_t to, group_t *neighbors)
 {
 	group_t group = group_at(b, to);    assert(group);
 	enum stone color = board_at(b, to);
@@ -534,7 +534,7 @@ group_neighbors(struct board *b, coord_t to, group_t *neighbors)
 
 /* At least one neighbor is safe */
 bool
-neighbor_is_safe(struct board *b, group_t g)
+neighbor_is_safe(board_t *b, group_t g)
 {
 	group_t neighbors[BOARD_MAX_GROUPS];
 	int n = group_neighbors(b, g, neighbors);
@@ -546,14 +546,14 @@ neighbor_is_safe(struct board *b, group_t g)
 
 
 static int
-count_libs(struct board *b, enum stone color, coord_t c, void *data)
+count_libs(board_t *b, enum stone color, coord_t c, void *data)
 {	
-	int *libs = data;
+	int *libs = (int*)data;
 	(*libs)++;  return 0;
 }
 
 int
-dragon_liberties(struct board *b, enum stone color, coord_t to)
+dragon_liberties(board_t *b, enum stone color, coord_t to)
 {
 	int libs = 0;	
 	foreach_lib_in_connected_groups(b, color, to, count_libs, &libs);
@@ -562,14 +562,14 @@ dragon_liberties(struct board *b, enum stone color, coord_t to)
 
 
 static int
-dragon_at_handler(struct board *b, enum stone color, group_t g, void *data)
+dragon_at_handler(board_t *b, enum stone color, group_t g, void *data)
 {
-	group_t *d = data;
+	group_t *d = (group_t*)data;
 	*d = (*d > g ? *d : g);  return 0;		
 }
 
 group_t
-dragon_at(struct board *b, coord_t to)
+dragon_at(board_t *b, coord_t to)
 {
 	group_t g = group_at(b, to);
 	group_t d = 0;
@@ -586,12 +586,12 @@ dragon_at(struct board *b, coord_t to)
 
 /* Vertical gap ? */
 static inline bool
-is_vert_gap(struct board *b, enum stone color, int *connected, int lx, int ly,    int x, int dy) 
+is_vert_gap(board_t *b, enum stone color, int *connected, int lx, int ly,    int x, int dy) 
 {
 	assert(dy);
 	for (int i = 0; i < GAP_LENGTH; i++) {
 		int y = ly + dy * i;		
-		coord_t d = coord_xy(b, x, y);
+		coord_t d = coord_xy(x, y);
 		if (board_at(b, d) == S_NONE)
 			continue;
 		if (board_at(b, d) == color && !connected[d])
@@ -606,12 +606,12 @@ is_vert_gap(struct board *b, enum stone color, int *connected, int lx, int ly,  
 
 /* Horizontal gap ? */
 static inline bool
-is_horiz_gap(struct board *b, enum stone color, int *connected, int lx, int ly,   int y, int dx)
+is_horiz_gap(board_t *b, enum stone color, int *connected, int lx, int ly,   int y, int dx)
 {
 	assert(dx);
 	for (int i = 0; i < GAP_LENGTH; i++) {
 		int x = lx + dx * i;
-		coord_t d = coord_xy(b, x, y);
+		coord_t d = coord_xy(x, y);
 		if (board_at(b, d) == S_NONE)
 			continue;
 		if (board_at(b, d) == color && !connected[d])
@@ -636,10 +636,10 @@ is_horiz_gap(struct board *b, enum stone color, int *connected, int lx, int ly, 
  *    . O . X . .      
  */
 static bool
-two_stones_gap(struct board *b, enum stone color, coord_t lib, int *connected) 
+two_stones_gap(board_t *b, enum stone color, coord_t lib, int *connected) 
 {
-	int lx = coord_x(lib, b);
-	int ly = coord_y(lib, b);		
+	int lx = coord_x(lib);
+	int ly = coord_y(lib);
 
 	for (int dx = -1; dx <= 1; dx++)
 		for (int dy = -1; dy <= 1; dy++) {
@@ -656,21 +656,21 @@ two_stones_gap(struct board *b, enum stone color, coord_t lib, int *connected)
 }
 
 static int
-mark_connected(struct board *b,  enum stone color, coord_t c, void *data)
+mark_connected(board_t *b,  enum stone color, coord_t c, void *data)
 {
-	int *connected = data;
+	int *connected = (int*)data;
 	connected[c] = 1;  return 0;
 }
 
-struct surrounded_data {
+typedef struct {
 	int *connected;
 	bool surrounded;
-};
+} surrounded_data_t;
 
 static int 
-surrounded_check(struct board *b,  enum stone color, coord_t lib, void *data)
+surrounded_check(board_t *b,  enum stone color, coord_t lib, void *data)
 {    
-	struct surrounded_data *d = data;	
+	surrounded_data_t *d = (surrounded_data_t*)data;
 	if (two_stones_gap(b, color, lib, d->connected)) {	
 		d->surrounded = 0;    return -1;   
 	}
@@ -689,7 +689,7 @@ surrounded_check(struct board *b,  enum stone color, coord_t lib, void *data)
 }
 
 bool
-dragon_is_surrounded(struct board *b, coord_t to)
+dragon_is_surrounded(board_t *b, coord_t to)
 {
 	enum stone color = board_at(b, to);
 	assert(color == S_BLACK || color == S_WHITE);
@@ -698,7 +698,7 @@ dragon_is_surrounded(struct board *b, coord_t to)
 	/* Mark connected stones */
 	foreach_in_connected_groups(b, color, to, mark_connected, connected);
 	
-	struct surrounded_data d = { .connected = connected, .surrounded = 1 };
+	surrounded_data_t d = { connected, 1 };
 	foreach_lib_in_connected_groups(b, color, to, surrounded_check, &d);
 	return d.surrounded;
 }

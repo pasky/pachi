@@ -2,13 +2,10 @@
 #define PACHI_UCT_UCT_H
 
 #include "engine.h"
-#include "move.h"
 
-void engine_uct_init(struct engine *e, char *arg, struct board *b);
+void engine_uct_init(engine_t *e, char *arg, board_t *b);
 
-struct board;
-struct time_info;
-bool uct_gentbook(struct engine *e, struct board *b, struct time_info *ti, enum stone color);
-void uct_dumptbook(struct engine *e, struct board *b, enum stone color);
+bool uct_gentbook(engine_t *e, board_t *b, time_info_t *ti, enum stone color);
+void uct_dumptbook(engine_t *e, board_t *b, enum stone color);
 
 #endif

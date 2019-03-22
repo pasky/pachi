@@ -48,7 +48,7 @@
 #define PACHI_FIFO_ALLOW_MULTIPLE_USERS 1
 
 
-typedef struct ticket_lock {
+typedef struct {
 	pthread_mutex_t mutex;
 } ticket_lock_t;
 
@@ -107,7 +107,7 @@ ticket_unlock(ticket_lock_t *ticket, int me)
 #define SHM_NAME    "pachi_fifo"
 #define SHM_MAGIC   ((int)0xf1f0c0de)
 
-struct sched_shm {
+typedef struct {
 	unsigned int size;
 	int	     magic;
 	int          ready;
@@ -115,10 +115,10 @@ struct sched_shm {
 	
 	/* sched stuff */
 	ticket_lock_t queue;
-};
+} sched_shm_t;
 
-static unsigned int shm_size = sizeof(struct sched_shm);
-static struct sched_shm *shm = 0;
+static unsigned int shm_size = sizeof(sched_shm_t);
+static sched_shm_t *shm = 0;
 
 
 /* Create new shared memory segment */
@@ -137,7 +137,7 @@ create_shm()
 	void *pt = mmap(0, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	assert(pt != MAP_FAILED);
        
-	shm = pt;
+	shm = (sched_shm_t*)pt;
 	memset(shm, 0, sizeof(*shm));
 	shm->size = shm_size;
 	shm->magic = SHM_MAGIC;
@@ -160,9 +160,9 @@ attach_shm()
 	/* Sanity check, make sure it has the right size ... */
 	struct stat st;
 	if (stat("/dev/shm/" SHM_NAME, &st) != 0)  fail("/dev/shm/" SHM_NAME);
-	assert(st.st_size == sizeof(struct sched_shm));	
+	assert(st.st_size == sizeof(sched_shm_t));
 	
-	shm = mmap(0, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	shm = (sched_shm_t*)mmap(0, shm_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (shm == MAP_FAILED)  fail("mmap");	
 	assert(shm->magic == SHM_MAGIC);
 	assert(shm->size == shm_size);

@@ -20,11 +20,11 @@ void disable_joseki()  {  joseki_enabled = false;  }
 void require_joseki()  {  joseki_required = true;  }
 
 
-struct joseki_dict *joseki_dict = NULL;
+joseki_dict_t *joseki_dict = NULL;
 
 /* Joseki component only used in mcts only mode (no dcnn) for now. */
 bool
-using_joseki(struct board *b)
+using_joseki(board_t *b)
 {
 	bool r = (joseki_enabled && !using_dcnn(b) &&
 		  joseki_dict && joseki_dict->bsize == board_size(b));
@@ -32,18 +32,18 @@ using_joseki(struct board *b)
 	return r;
 }
 
-static struct joseki_dict *
+static joseki_dict_t *
 joseki_init(int bsize)
 {
-	struct joseki_dict *jd = calloc(1, sizeof(*jd));
+	joseki_dict_t *jd = calloc2(1, joseki_dict_t);
 	jd->bsize = bsize;
 	return jd;
 }
 
 static josekipat_t *
-joseki_pattern_new(struct board *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
+joseki_pattern_new(board_t *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
 {
-	josekipat_t *p = calloc(1, sizeof(*p));
+	josekipat_t *p = calloc2(1, josekipat_t);
 	p->coord = coord;
 	p->color = color;
 	p->flags = flags;
@@ -89,15 +89,15 @@ same_prevs(josekipat_t *prev1, josekipat_t *prev2)
 	return true;
 }
 
-static bool joseki_prev_matches(struct board *b, josekipat_t *prev);
+static bool joseki_prev_matches(board_t *b, josekipat_t *prev);
 
 static josekipat_t*
-joseki_lookup_regular_prev(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color,
+joseki_lookup_regular_prev(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color,
 			   josekipat_t *prev, int flags)
 {
 	hash_t h = joseki_spatial_hash(b, coord, color);
 	uint32_t kh = joseki_dict_hash(h, coord);
-	josekipat_t p1 = { .coord = coord, .color = color, .h = h, .prev = prev, .flags = flags };
+	josekipat_t p1 = josekipat(coord, color, h, prev, flags);
 	for (josekipat_t *p = jd->hash[kh]; p; p = p->next) {
 		if (!joseki_dict_equal(&p1, p))  continue;
 		if (!flags_match(&p1, p))        continue;
@@ -109,11 +109,11 @@ joseki_lookup_regular_prev(struct joseki_dict *jd, struct board *b, coord_t coor
 }
 
 static josekipat_t*
-joseki_lookup_3x3_prev(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color,
+joseki_lookup_3x3_prev(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color,
 		       josekipat_t *prev, int flags)
 {
 	hash_t h = joseki_3x3_spatial_hash(b, coord, color);
-	josekipat_t p1 = { .coord = coord, .color = color, .h = h, .prev = prev, .flags = flags };
+	josekipat_t p1 = josekipat(coord, color, h, prev, flags);
 	for (josekipat_t *p = jd->pat_3x3[color]; p; p = p->next) {
 		if (!joseki_dict_equal(&p1, p))        continue;
 		if (!flags_match(&p1, p))              continue;
@@ -125,13 +125,13 @@ joseki_lookup_3x3_prev(struct joseki_dict *jd, struct board *b, coord_t coord, e
 }
 
 static josekipat_t*
-joseki_lookup_ignored_prev(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color, josekipat_t *prev)
+joseki_lookup_ignored_prev(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color, josekipat_t *prev)
 {
 	hash_t h  = joseki_spatial_hash(b, coord, color);
 	hash_t h3 = joseki_3x3_spatial_hash(b, coord, color);
 
-	josekipat_t p1 = { .coord = coord, .color = color, .h = h, .prev = prev };
-	josekipat_t p2 = { .coord = coord, .color = color, .h = h3, .prev = prev };
+	josekipat_t p1 = josekipat(coord, color, h,  prev, 0);
+	josekipat_t p2 = josekipat(coord, color, h3, prev, 0);
 	for (josekipat_t *p = jd->ignored; p; p = p->next) {
 		// should check flags and compare only one ...
 		if (!joseki_dict_equal(&p1, p) && !joseki_dict_equal(&p2, p))  continue;
@@ -143,7 +143,7 @@ joseki_lookup_ignored_prev(struct joseki_dict *jd, struct board *b, coord_t coor
 }
 
 static josekipat_t *
-joseki_add_ignored(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
+joseki_add_ignored(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
 {
 	josekipat_t *p = joseki_lookup_ignored_prev(jd, b, coord, color, prev);
 	if (p)  return p;
@@ -155,11 +155,11 @@ joseki_add_ignored(struct joseki_dict *jd, struct board *b, coord_t coord, enum 
 }
 
 static josekipat_t *
-joseki_add_3x3(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
+joseki_add_3x3(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
 {
 	assert(!is_pass(coord));
 	if (!prev)  die("joseki: [ %s %s ] adding 3x3 match with no previous move, this is bad.\n",
-			coord2sstr(b->last_move.coord, b), coord2sstr(coord, b));
+			coord2sstr(b->last_move.coord), coord2sstr(coord));
 	josekipat_t *p = joseki_lookup_3x3_prev(jd, b, coord, color, prev, flags);
 	if (p)  return p;
 
@@ -170,7 +170,7 @@ joseki_add_3x3(struct joseki_dict *jd, struct board *b, coord_t coord, enum ston
 }
 
 josekipat_t *
-joseki_add(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
+joseki_add(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color, josekipat_t *prev, int flags)
 {
 	/* Pattern can be both ignored and 3x3 */
 	if (flags & JOSEKI_FLAGS_IGNORE)  return joseki_add_ignored(jd, b, coord, color, prev, flags);
@@ -187,7 +187,7 @@ joseki_add(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone co
 }
 
 static void
-joseki_stats(struct joseki_dict *jd)
+joseki_stats(joseki_dict_t *jd)
 {
 	int normal = 0, relaxed = 0, ignored = 0, later = 0;
 	forall_joseki_patterns(jd)         {  normal++;  if (p->flags & JOSEKI_FLAGS_LATER)  later++;  }
@@ -226,7 +226,7 @@ convert_coords(int bsize, char *buf)
 		char *arg = buf + 7;  assert(buf[6] == ' ');
 		if (str_prefix("pass", arg))  return 0;
 		
-		coord_t c = str2coord(arg, 19+2);
+		coord_t c = str2coord_for(arg, 19+2);
 		int offset = 21 - bsize;  assert(offset >= 0);
 		int x = (c % 21) - offset,  y = (c / 21) - offset;		
 		if (x < 1 || y < 1)           return -1;	/* Offboard, discard rest of sequence */
@@ -270,10 +270,11 @@ joseki_load(int bsize)
 
 	int saved_debug_level = debug_level;
 	debug_level = 0;   /* quiet */
-	struct board *b = board_new(bsize, NULL);
-	struct engine e;  engine_init(&e, E_JOSEKISCAN, NULL, NULL);
-	struct time_info ti_default = { .period = TT_NULL };
-	struct time_info ti[S_MAX] = { [S_BLACK] = ti_default, [S_WHITE] = ti_default };
+	board_t *b = board_new(bsize, NULL);
+	engine_t e;  engine_init(&e, E_JOSEKISCAN, NULL, NULL);
+	time_info_t ti[S_MAX];
+	ti[S_BLACK] = ti_none;
+	ti[S_WHITE] = ti_none;
 	char buf[4096];
 	gtp_t gtp;  gtp_init(&gtp);
 	for (int lineno = 1; fgets(buf, 4096, f); lineno++) {
@@ -311,7 +312,7 @@ joseki_done()
 }
 
 static float
-joseki_rating(struct board *b, josekipat_t *p)
+joseki_rating(board_t *b, josekipat_t *p)
 {
 	coord_t prev = (p->prev ? p->prev->coord : pass);
 	coord_t last = b->last_move.coord;
@@ -323,7 +324,7 @@ joseki_rating(struct board *b, josekipat_t *p)
 }
 
 static bool
-joseki_prev_matches(struct board *b, josekipat_t *prev)
+joseki_prev_matches(board_t *b, josekipat_t *prev)
 {
 	if (!prev)  return true;
 	if (board_at(b, prev->coord) != prev->color)  return false;
@@ -346,13 +347,13 @@ joseki_prev_matches(struct board *b, josekipat_t *prev)
  * we only return first match, however prefer strong matches over weak matches
  * and last move matches above all else. */ 
 static josekipat_t*
-joseki_lookup_regular(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color)
+joseki_lookup_regular(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color)
 {
 	hash_t h = joseki_spatial_hash(b, coord, color);
 	uint32_t kh = joseki_dict_hash(h, coord);
 
 	josekipat_t *match_low = NULL, *match_prev = NULL, *match_any = NULL;
-	josekipat_t p1 = { .coord = coord, .color = color, .h = h };
+	josekipat_t p1 = josekipat(coord, color, h, NULL, 0);
 	for (josekipat_t *p = jd->hash[kh]; p; p = p->next) {
 		josekipat_t *prev = p->prev;
 		if (!joseki_dict_equal(&p1, p))     continue;
@@ -373,10 +374,10 @@ joseki_lookup_regular(struct joseki_dict *jd, struct board *b, coord_t coord, en
 
 /* same as joseki_lookup_regular(): prefer last move matches above all else. */ 
 josekipat_t*
-joseki_lookup_3x3(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color)
+joseki_lookup_3x3(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color)
 {
 	hash_t h = joseki_3x3_spatial_hash(b, coord, color);
-	josekipat_t p1 = { .coord = coord, .color = color, .h = h };
+	josekipat_t p1 = josekipat(coord, color, h, NULL, 0);
 	josekipat_t *match_low = NULL, *match_prev = NULL;
 	for (josekipat_t *p = jd->pat_3x3[color]; p; p = p->next) {
 		josekipat_t *prev = p->prev;
@@ -396,13 +397,13 @@ joseki_lookup_3x3(struct joseki_dict *jd, struct board *b, coord_t coord, enum s
 }
 
 josekipat_t*
-joseki_lookup_ignored(struct joseki_dict *jd, struct board *b, coord_t coord, enum stone color)
+joseki_lookup_ignored(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color)
 {
 	hash_t h  = joseki_spatial_hash(b, coord, color);
 	hash_t h3 = joseki_3x3_spatial_hash(b, coord, color);
 
-	josekipat_t p1 = { .coord = coord, .color = color, .h = h };
-	josekipat_t p2 = { .coord = coord, .color = color, .h = h3 };
+	josekipat_t p1 = josekipat(coord, color, h,  NULL, 0);
+	josekipat_t p2 = josekipat(coord, color, h3, NULL, 0);
 	for (josekipat_t *p = jd->ignored; p; p = p->next) {
 		// should check flags and compare only one ...
 		if (!joseki_dict_equal(&p1, p) && !joseki_dict_equal(&p2, p))  continue;
@@ -412,7 +413,7 @@ joseki_lookup_ignored(struct joseki_dict *jd, struct board *b, coord_t coord, en
 }
 
 static int
-append_3x3_matches(struct joseki_dict *jd, struct board *b, enum stone color,
+append_3x3_matches(joseki_dict_t *jd, board_t *b, enum stone color,
 		   coord_t *coords, float *ratings, int matches)
 {
 	for (josekipat_t *p = jd->pat_3x3[color]; p; p = p->next) {
@@ -436,7 +437,7 @@ append_3x3_matches(struct joseki_dict *jd, struct board *b, enum stone color,
 }
 
 int
-joseki_list_moves(struct joseki_dict *jd, struct board *b, enum stone color,
+joseki_list_moves(joseki_dict_t *jd, board_t *b, enum stone color,
                   coord_t *coords, float *ratings)
 {
 	assert(using_joseki(b));
@@ -454,7 +455,7 @@ joseki_list_moves(struct joseki_dict *jd, struct board *b, enum stone color,
 }
 
 void
-joseki_rate_moves(struct joseki_dict *jdict, struct board *b, enum stone color,
+joseki_rate_moves(joseki_dict_t *jdict, board_t *b, enum stone color,
                   float *map)
 {
 	coord_t coords[BOARD_MAX_COORDS];
@@ -468,7 +469,7 @@ joseki_rate_moves(struct joseki_dict *jdict, struct board *b, enum stone color,
 }
 
 void
-get_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matches,
+get_joseki_best_moves(board_t *b, coord_t *coords, float *ratings, int matches,
 		       coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
@@ -480,7 +481,7 @@ get_joseki_best_moves(struct board *b, coord_t *coords, float *ratings, int matc
 }
 
 void
-print_joseki_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbest)
+print_joseki_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest)
 {
 	int cols = best_moves_print(b, "joseki =   ", best_c, nbest);	
 
@@ -491,7 +492,7 @@ print_joseki_best_moves(struct board *b, coord_t *best_c, float *best_r, int nbe
 }
 
 void
-print_joseki_moves(struct joseki_dict *jdict, struct board *b, enum stone color)
+print_joseki_moves(joseki_dict_t *jdict, board_t *b, enum stone color)
 {
 	if (!using_joseki(b))  return;
 	

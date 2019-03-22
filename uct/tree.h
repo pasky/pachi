@@ -54,22 +54,22 @@ struct uct;
  * Currently, rave_update is top source of cache misses, and
  * there is large memory overhead for having all nodes separate. */
 
-struct tree_node {
+typedef struct tree_node {
 	hash_t hash;
 	struct tree_node *parent, *sibling, *children;
 
 	/*** From here on, struct is saved/loaded from opening tbook */
 
-	struct move_stats u;
-	struct move_stats prior;
+	move_stats_t u;
+	move_stats_t prior;
 	/* XXX: Should be way for policies to add their own stats */
-	struct move_stats amaf;
+	move_stats_t amaf;
 	/* Stats before starting playout; used for distributed engine. */
-	struct move_stats pu;
+	move_stats_t pu;
 	/* Criticality information; information about final board owner
 	 * of the tree coordinate corresponding to the node */
-	struct move_stats winner_owner; // owner == winner
-	struct move_stats black_owner; // owner == black
+	move_stats_t winner_owner; // owner == winner
+	move_stats_t black_owner; // owner == black
 
 	/* coord is usually coord_t, but this is very space-sensitive. */
 #define node_coord(n) ((int) (n)->coord)
@@ -96,14 +96,14 @@ struct tree_node {
 	*   2) children == null, is_expanded == true: one thread currently expanding
 	*   2) children != null, is_expanded == true: fully expanded node */
 	bool is_expanded;
-};
+} tree_node_t;
 
 struct tree_hash;
 
-struct tree {
-	struct board *board;
-	struct tree_node *root;
-	struct board_symmetry root_symmetry;
+typedef struct {
+	board_t *board;
+	tree_node_t *root;
+	board_symmetry_t root_symmetry;
 	enum stone root_color;
 
 	/* Whether to use any extra komi during score counting. This is
@@ -121,7 +121,7 @@ struct tree {
 	floating_t extra_komi;
 	/* Score in simulations, averaged over all branches, in the last
 	 * search episode. */
-	struct move_stats avg_score;
+	move_stats_t avg_score;
 
 	/* We merge local (non-tenuki) sequences for both colors, occuring
 	 * anywhere in the tree; nodes are created on-demand, special 'pass'
@@ -129,9 +129,9 @@ struct tree {
 	 * is ignored. Values in root node are ignored. */
 	/* The value corresponds to black-to-play as usual; i.e. if white
 	 * succeeds in its replies, the values will be low. */
-	struct tree_node *ltree_black;
+	tree_node_t *ltree_black;
 	/* ltree_white has white-first sequences as children. */
-	struct tree_node *ltree_white;
+	tree_node_t *ltree_white;
 	/* Aging factor; 2 means halve all playout values after each turn.
 	 * 1 means don't age at all. */
 	floating_t ltree_aging;
@@ -148,26 +148,26 @@ struct tree {
 	size_t max_pruned_size;
 	size_t pruning_threshold;
 	void *nodes; // nodes buffer, only for fast_alloc
-};
+} tree_t;
 
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
-struct tree *tree_init(struct board *board, enum stone color, size_t max_tree_size,
+tree_t *tree_init(board_t *board, enum stone color, size_t max_tree_size,
 		       size_t max_pruned_size, size_t pruning_threshold, floating_t ltree_aging, int hbits);
-void tree_done(struct tree *tree);
-void tree_dump(struct tree *tree, double thres);
-void tree_save(struct tree *tree, struct board *b, int thres);
-void tree_load(struct tree *tree, struct board *b);
+void tree_done(tree_t *tree);
+void tree_dump(tree_t *tree, double thres);
+void tree_save(tree_t *tree, board_t *b, int thres);
+void tree_load(tree_t *tree, board_t *b);
 
-struct tree_node *tree_get_node(struct tree_node *parent, coord_t c);
-struct tree_node *tree_get_node2(struct tree *tree, struct tree_node *parent, coord_t c, bool create);
-struct tree_node *tree_garbage_collect(struct tree *tree, struct tree_node *node);
-void tree_promote_node(struct tree *tree, struct tree_node **node);
-bool tree_promote_at(struct tree *tree, struct board *b, coord_t c, int *reason);
+tree_node_t *tree_get_node(tree_node_t *parent, coord_t c);
+tree_node_t *tree_get_node2(tree_t *tree, tree_node_t *parent, coord_t c, bool create);
+tree_node_t *tree_garbage_collect(tree_t *tree, tree_node_t *node);
+void tree_promote_node(tree_t *tree, tree_node_t **node);
+bool tree_promote_at(tree_t *tree, board_t *b, coord_t c, int *reason);
 
-void tree_expand_node(struct tree *tree, struct tree_node *node, struct board *b, enum stone color, struct uct *u, int parity);
-struct tree_node *tree_lnode_for_node(struct tree *tree, struct tree_node *ni, struct tree_node *lni, int tenuki_d);
+void tree_expand_node(tree_t *tree, tree_node_t *node, board_t *b, enum stone color, struct uct *u, int parity);
+tree_node_t *tree_lnode_for_node(tree_t *tree, tree_node_t *ni, tree_node_t *lni, int tenuki_d);
 
-static bool tree_leaf_node(struct tree_node *node);
+static bool tree_leaf_node(tree_node_t *node);
 
 #define tree_node_parity(tree, node) \
 	((((node)->depth ^ (tree)->root->depth) & 1) ? -1 : 1)
@@ -181,13 +181,13 @@ static bool tree_leaf_node(struct tree_node *node);
 	(tree_parity(tree, parity) > 0 ? value : 1 - value)
 
 static inline bool
-tree_leaf_node(struct tree_node *node)
+tree_leaf_node(tree_node_t *node)
 {
 	return !(node->children);
 }
 
 static inline floating_t
-tree_node_criticality(const struct tree *t, const struct tree_node *node)
+tree_node_criticality(const tree_t *t, const tree_node_t *node)
 {
 	/* cov(player_gets, player_wins) =
 	 * [The argument: If 'gets' and 'wins' is uncorrelated, b_gets * b_wins

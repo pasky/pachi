@@ -38,19 +38,19 @@
 
 
 /* Internal engine state. */
-struct montecarlo {
+typedef struct {
 	int debug_level;
 	int gamelen;
 	floating_t resign_ratio;
 	int loss_threshold;
-	struct playout_policy *playout;
-};
+	playout_policy_t *playout;
+} montecarlo_t;
 
 /* Per-move playout statistics. */
-struct move_stat {
+typedef struct {
 	int games;
 	int wins;
-};
+} move_stat_t;
 
 
 /* FIXME: Cutoff rule for simulations. Currently we are so fast that this
@@ -62,7 +62,7 @@ struct move_stat {
 
 
 static void
-board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
+board_stats_print(board_t *board, move_stat_t *moves, FILE *f)
 {
 	fprintf(f, "\n       ");
 	int x, y;
@@ -93,9 +93,9 @@ board_stats_print(struct board *board, struct move_stat *moves, FILE *f)
 
 
 static coord_t
-montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum stone color, bool pass_all_alive)
+montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	struct montecarlo *mc = e->data;
+	montecarlo_t *mc = (montecarlo_t*)e->data;
 
 	if (ti->dim == TD_WALLTIME) {
 		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
@@ -107,7 +107,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 		ti->len.games = MC_GAMES;
 		ti->len.games_max = 0;
 	}
-	struct time_stop stop;
+	time_stop_t stop;
 	time_stop_conditions(ti, b, 20, 40, 3.0, &stop);
 
 	/* resign when the hope for win vanishes */
@@ -116,7 +116,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 
 	/* We use [0] for pass. Normally, this is an inaccessible corner
 	 * of board margin. */
-	struct move_stat moves[board_size2(b)];
+	move_stat_t moves[board_size2(b)];
 	memset(moves, 0, sizeof(moves));
 
 	int losses = 0;
@@ -124,7 +124,7 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 	for (i = 0; i < stop.desired.playouts; i++) {
 		assert(!b->superko_violation);
 
-		struct board b2;
+		board_t b2;
 		board_copy(&b2, b);
 
 		coord_t coord;
@@ -134,16 +134,16 @@ montecarlo_genmove(struct engine *e, struct board *b, struct time_info *ti, enum
 			 * so we can't consider this. (Note that we
 			 * unfortunately still consider this in playouts.) */
 			if (DEBUGL(4)) {
-				fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(coord, b), coord_y(coord, b));
+				fprintf(stderr, "SUICIDE DETECTED at %d,%d:\n", coord_x(coord), coord_y(coord));
 				board_print(b, stderr);
 			}
 			continue;
 		}
 
 		if (DEBUGL(3))
-			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord, b), coord_y(coord, b), color);
+			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord), coord_y(coord), color);
 
-		struct playout_setup ps = { .gamelen = mc->gamelen };
+		playout_setup_t ps = playout_setup(mc->gamelen, 0);
 		int result = playout_play_game(&ps, &b2, color, NULL, NULL, mc->playout);
 
 		board_done_noalloc(&b2);
@@ -198,8 +198,8 @@ pass_wins:
 			/* Simple heuristic: avoid opening too low. Do not
 			 * play on second or first line as first white or
 			 * first two black moves.*/
-			if (coord_x(c, b) < 3 || coord_x(c, b) > board_size(b) - 4
-			    || coord_y(c, b) < 3 || coord_y(c, b) > board_size(b) - 4)
+			if (coord_x(c) < 3 || coord_x(c) > board_size(b) - 4
+			    || coord_y(c) < 3 || coord_y(c) > board_size(b) - 4)
 				continue;
 		}
 
@@ -218,22 +218,22 @@ pass_wins:
 
 move_found:
 	if (MCDEBUGL(1))
-		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord, b), coord_y(top_coord, b), top_ratio, i, superko);
+		fprintf(stderr, "*** WINNER is %d,%d with score %1.4f (%d games, %d superko)\n", coord_x(top_coord), coord_y(top_coord), top_ratio, i, superko);
 
 	return top_coord;
 }
 
 static void
-montecarlo_done(struct engine *e)
+montecarlo_done(engine_t *e)
 {
-	struct montecarlo *mc = e->data;
+	montecarlo_t *mc = (montecarlo_t*)e->data;
 	playout_policy_done(mc->playout);
 }
 
-struct montecarlo *
-montecarlo_state_init(char *arg, struct board *b)
+montecarlo_t *
+montecarlo_state_init(char *arg, board_t *b)
 {
-	struct montecarlo *mc = calloc2(1, sizeof(struct montecarlo));
+	montecarlo_t *mc = calloc2(1, montecarlo_t);
 
 	mc->debug_level = 1;
 	mc->gamelen = MC_GAMELEN;
@@ -286,9 +286,9 @@ montecarlo_state_init(char *arg, struct board *b)
 
 
 void
-engine_montecarlo_init(struct engine *e, char *arg, struct board *b)
+engine_montecarlo_init(engine_t *e, char *arg, board_t *b)
 {
-	struct montecarlo *mc = montecarlo_state_init(arg, b);
+	montecarlo_t *mc = montecarlo_state_init(arg, b);
 	e->name = "MonteCarlo";
 	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
 	e->genmove = montecarlo_genmove;

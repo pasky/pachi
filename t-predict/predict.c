@@ -58,7 +58,7 @@ avg_dev_diagram(char *diag, int len, float avg, float dev, float prob_max)
 
 
 static void
-collect_move_stats(struct board *b, struct move *m, coord_t *best_c, int *guessed_move, int *total_move)
+collect_move_stats(board_t *b, move_t *m, coord_t *best_c, int *guessed_move, int *total_move)
 {
 	int i = MIN(b->moves/10, PREDICT_MOVE_MAX/10 - 1);
 	if (m->coord == best_c[0])
@@ -67,7 +67,7 @@ collect_move_stats(struct board *b, struct move *m, coord_t *best_c, int *guesse
 }
 
 static void
-collect_prob_stats(struct move *m, coord_t *best_c, float *best_r, int *guessed_by_prob, int *total_by_prob)
+collect_prob_stats(move_t *m, coord_t *best_c, float *best_r, int *guessed_by_prob, int *total_by_prob)
 {
 	for (int k = 0; k < PREDICT_TOPN; k++) {
 		int i = best_r[k] * 10;
@@ -80,7 +80,7 @@ collect_prob_stats(struct move *m, coord_t *best_c, float *best_r, int *guessed_
 }
 
 static void
-collect_topn_stats(struct move *m, coord_t *best_c, int *guessed_top)
+collect_topn_stats(move_t *m, coord_t *best_c, int *guessed_top)
 {
 	int k; /* Correct move is kth guess */
 	for (k = 0; k < PREDICT_TOPN; k++)
@@ -211,7 +211,7 @@ print_prob_stats(strbuf_t *buf, int *guessed_by_prob, int *total_by_prob)
 
 
 static char *
-predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r, int games)
+predict_stats(board_t *b, move_t *m, coord_t *best_c, float *best_r, int games)
 {
 	static int total_ = 0;
 	int total = ++total_;
@@ -262,7 +262,7 @@ predict_stats(struct board *b, struct move *m, coord_t *best_c, float *best_r, i
 }
 
 char *
-predict_move(struct board *b, struct engine *e, struct time_info *ti, struct move *m, int games)
+predict_move(board_t *b, engine_t *e, time_info_t *ti, move_t *m, int games)
 {
 	enum stone color = m->color;
 	
@@ -271,10 +271,8 @@ predict_move(struct board *b, struct engine *e, struct time_info *ti, struct mov
 		return NULL;
 	}
 
-	if (DEBUGL(5))
-		fprintf(stderr, "predict move %d,%d,%d\n", m->color, coord_x(m->coord, b), coord_y(m->coord, b));
-	if (DEBUGL(1) && debug_boardprint)
-		engine_board_print(e, b, stderr);
+	if (DEBUGL(5))  fprintf(stderr, "predict move %d,%d,%d\n", m->color, coord_x(m->coord), coord_y(m->coord));
+	if (DEBUGL(1) && debug_boardprint)  engine_board_print(e, b, stderr);
 
 	// Not bothering with timer here for now.
 
@@ -282,21 +280,21 @@ predict_move(struct board *b, struct engine *e, struct time_info *ti, struct mov
 	coord_t best_c[PREDICT_TOPN];
 	for (int i = 0; i < PREDICT_TOPN; i++)
 		best_c[i] = pass;
-	struct time_info *ti_genmove = time_info_genmove(b, ti, color);
+	time_info_t *ti_genmove = time_info_genmove(b, ti, color);
 	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, PREDICT_TOPN);
 	//print_dcnn_best_moves(b, best_c, best_r, PREDICT_TOPN);
 
 	// Play correct expected move
 	if (board_play(b, m) < 0)
-		die("ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord, b), stone2str(m->color));
+		die("ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord), stone2str(m->color));
 
-	fprintf(stderr, "WINNER is %s in the actual game.\n", coord2sstr(m->coord, b));		
+	fprintf(stderr, "WINNER is %s in the actual game.\n", coord2sstr(m->coord));
 	if (best_c[0] == m->coord)
 		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", b->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], b));
+			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0]));
 	else
 		fprintf(stderr, "Move %3i: Predict: Wrong prediction: %s %s != %s\n", b->moves,
-			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0], b), coord2sstr(m->coord, b));
+			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0]), coord2sstr(m->coord));
 
 	if (DEBUGL(1) && debug_boardprint)
 		engine_board_print(e, b, stderr);

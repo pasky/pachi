@@ -9,22 +9,24 @@
  * What this means in practice is that perhaps the value will get
  * slightly wrong, but not drastically corrupted. */
 
-struct move_stats {
+typedef struct {
 	floating_t value; // BLACK wins/playouts
 	int playouts; // # of playouts
-};
+} move_stats_t;
+
+#define move_stats(value, playouts)  { value, playouts }
 
 /* Add a result to the stats. */
-static void stats_add_result(struct move_stats *s, floating_t result, int playouts);
+static void stats_add_result(move_stats_t *s, floating_t result, int playouts);
 
 /* Remove a result from the stats. */
-static void stats_rm_result(struct move_stats *s, floating_t result, int playouts);
+static void stats_rm_result(move_stats_t *s, floating_t result, int playouts);
 
 /* Merge two stats together. THIS IS NOT ATOMIC! */
-static void stats_merge(struct move_stats *dest, struct move_stats *src);
+static void stats_merge(move_stats_t *dest, move_stats_t *src);
 
 /* Reverse stats parity. */
-static void stats_reverse_parity(struct move_stats *s);
+static void stats_reverse_parity(move_stats_t *s);
 
 
 /* We actually do the atomicity in a pretty hackish way - we simply
@@ -37,7 +39,7 @@ static void stats_reverse_parity(struct move_stats *s);
  * current s->playouts is zero. */
 
 static inline void
-stats_add_result(struct move_stats *s, floating_t result, int playouts)
+stats_add_result(move_stats_t *s, floating_t result, int playouts)
 {
 	int s_playouts = s->playouts;
 	floating_t s_value = s->value;
@@ -55,7 +57,7 @@ stats_add_result(struct move_stats *s, floating_t result, int playouts)
 }
 
 static inline void
-stats_rm_result(struct move_stats *s, floating_t result, int playouts)
+stats_rm_result(move_stats_t *s, floating_t result, int playouts)
 {
 	if (s->playouts > playouts) {
 		int s_playouts = s->playouts;
@@ -83,7 +85,7 @@ stats_rm_result(struct move_stats *s, floating_t result, int playouts)
 }
 
 static inline void
-stats_merge(struct move_stats *dest, struct move_stats *src)
+stats_merge(move_stats_t *dest, move_stats_t *src)
 {
 	/* In a sense, this is non-atomic version of stats_add_result(). */
 	if (src->playouts) {
@@ -93,7 +95,7 @@ stats_merge(struct move_stats *dest, struct move_stats *src)
 }
 
 static inline void
-stats_reverse_parity(struct move_stats *s)
+stats_reverse_parity(move_stats_t *s)
 {
 	s->value = 1 - s->value;
 }

@@ -12,9 +12,7 @@
 #define DEBUG
 
 #include "debug.h"
-#include "pachi.h"
-#include "distributed/distributed.h"
-#include "move.h"
+#include "board.h"
 #include "joseki.h"
 #include "random.h"
 #include "timeinfo.h"
@@ -27,7 +25,9 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "uct/prior.h"
+#include "distributed/distributed.h"
 #include "dcnn.h"
+#include "pachi.h"
 
 
 /* Default time settings for the UCT engine. In distributed mode, slaves are
@@ -35,18 +35,12 @@
  * or with total number of playouts over all slaves. (It is also possible but
  * not recommended to limit only the slaves; the master then decides the move
  * when a majority of slaves have made their choice.) */
-static struct time_info default_ti;
+static time_info_t default_ti;
 static __attribute__((constructor)) void
 default_ti_init(void)
 {
 	time_parse(&default_ti, "10");
 }
-
-static const struct time_info unlimited_ti = {
-	.period = TT_MOVE,
-	.dim = TD_GAMES,
-	.len = { .games = INT_MAX, .games_max = 0 },
-};
 
 /* When terminating UCT search early, the safety margin to add to the
  * remaining playout number estimate when deciding whether the result can
@@ -96,16 +90,16 @@ static pthread_cond_t finish_cond = PTHREAD_COND_INITIALIZER;
 static volatile int finish_thread;
 static pthread_mutex_t finish_serializer = PTHREAD_MUTEX_INITIALIZER;
 
-static void  uct_expand_next_best_moves(struct uct *u, struct tree *t, struct board *b, enum stone color);
+static void  uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color);
 static void *spawn_logger(void *ctx_);
 
 static void *
 spawn_worker(void *ctx_)
 {
 	/* Setup */
-	struct uct_thread_ctx *ctx = ctx_;
-	struct uct *u = ctx->u;
-	struct board *b = ctx->b;
+	uct_thread_ctx_t *ctx = (uct_thread_ctx_t*)ctx_;
+	uct_t *u = ctx->u;
+	board_t *b = ctx->b;
 	enum stone color = ctx->color;
 	fast_srandom(ctx->seed);
 
@@ -129,8 +123,8 @@ spawn_worker(void *ctx_)
 
 	/* Expand root node (dcnn). Other threads wait till it's ready. 
 	 * For dcnn pondering we also need dcnn values for opponent's best moves. */
-	struct tree *t = ctx->t;
-	struct tree_node *n = t->root;
+	tree_t *t = ctx->t;
+	tree_node_t *n = t->root;
 	if (!ctx->tid) {
 		enum stone node_color = stone_other(color);
 		assert(node_color == t->root_color);
@@ -174,9 +168,9 @@ static void *
 spawn_thread_manager(void *ctx_)
 {
 	/* In thread_manager, we use only some of the ctx fields. */
-	struct uct_thread_ctx *mctx = ctx_;
-	struct uct *u = mctx->u;
-	struct tree *t = mctx->t;
+	uct_thread_ctx_t *mctx = (uct_thread_ctx_t*)ctx_;
+	uct_t *u = mctx->u;
+	tree_t *t = mctx->t;
 	fast_srandom(mctx->seed);
 
 	int played_games = 0;
@@ -198,7 +192,7 @@ spawn_thread_manager(void *ctx_)
 	
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
-		struct uct_thread_ctx *ctx = malloc2(sizeof(*ctx));
+		uct_thread_ctx_t *ctx = malloc2(uct_thread_ctx_t);
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
 		mctx->t = ctx->t = t;
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
@@ -227,7 +221,7 @@ spawn_thread_manager(void *ctx_)
 			continue;
 		}
 		/* ...and gather its remnants. */
-		struct uct_thread_ctx *ctx;
+		uct_thread_ctx_t *ctx;
 		pthread_join(threads[finish_thread], (void **) &ctx);
 		played_games += ctx->games;
 		joined++;
@@ -250,13 +244,13 @@ spawn_thread_manager(void *ctx_)
 static void *
 spawn_logger(void *ctx_)
 {
-	struct uct_thread_ctx *ctx = ctx_;
-	struct uct *u = ctx->u;
-	struct tree *t = ctx->t;
-	struct board *b = ctx->b;
+	uct_thread_ctx_t *ctx = (uct_thread_ctx_t*)ctx_;
+	uct_t *u = ctx->u;
+	tree_t *t = ctx->t;
+	board_t *b = ctx->b;
 	enum stone color = ctx->color;
-	struct uct_search_state *s = ctx->s;
-	struct time_info *ti = ctx->ti;
+	uct_search_state_t *s = ctx->s;
+	time_info_t *ti = ctx->ti;
 
 	// Similar to uct_search() code when pondering
 	while (!uct_halt) {
@@ -276,15 +270,15 @@ spawn_logger(void *ctx_)
 
 /* Expand next move node (dcnn pondering) */
 static void
-uct_expand_next_move(struct uct *u, struct tree *t, struct board *board, enum stone color, coord_t c)
+uct_expand_next_move(uct_t *u, tree_t *t, board_t *board, enum stone color, coord_t c)
 {
-	struct tree_node *n = tree_get_node(t->root, c);
+	tree_node_t *n = tree_get_node(t->root, c);
 	assert(n && tree_leaf_node(n) && !n->is_expanded);
 	
-	struct board b;
+	board_t b;
 	board_copy(&b, board);
 
-	struct move m = { .coord = c, .color = color };
+	move_t m = move(c, color);
 	int res = board_play(&b, &m);
 	if (res < 0) goto done;
 		
@@ -300,10 +294,10 @@ uct_expand_next_move(struct uct *u, struct tree *t, struct board *board, enum st
  * guess wrong pondering will not be useful for this move, search results
  * will be discarded. */
 static void
-uct_expand_next_best_moves(struct uct *u, struct tree *t, struct board *b, enum stone color)
+uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color)
 {
 	assert(using_dcnn(b));
-	struct move_queue q = { .moves = 0 };
+	move_queue_t q;  mq_init(&q);
 	
 	{  /* Prior best moves (dcnn policy mostly) */
 		int nbest = u->dcnn_pondering_prior;
@@ -328,7 +322,7 @@ uct_expand_next_best_moves(struct uct *u, struct tree *t, struct board *b, enum 
 	if (DEBUGL(2)) {  /* Show guesses. */
 		fprintf(stderr, "dcnn eval %s ", stone2str(color));
 		for (unsigned int i = 0; i < q.moves; i++)
-			fprintf(stderr, "%s ", coord2sstr(q.move[i], b));
+			fprintf(stderr, "%s ", coord2sstr(q.move[i]));
 		fflush(stderr);
 	}
 
@@ -346,15 +340,15 @@ uct_expand_next_best_moves(struct uct *u, struct tree *t, struct board *b, enum 
 
 
 int
-uct_search_games(struct uct_search_state *s)
+uct_search_games(uct_search_state_t *s)
 {
 	return s->ctx->t->root->u.playouts;
 }
 
 void
-uct_search_start(struct uct *u, struct board *b, enum stone color,
-		 struct tree *t, struct time_info *ti,
-		 struct uct_search_state *s)
+uct_search_start(uct_t *u, board_t *b, enum stone color,
+		 tree_t *t, time_info_t *ti,
+		 uct_search_state_t *s)
 {
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
@@ -364,7 +358,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	if (ti) {
 		if (ti->period == TT_NULL) {
 			if (u->slave)
-				*ti = unlimited_ti;
+				*ti = ti_unlimited();
 			else {
 				*ti = default_ti;
 				time_start_timer(ti);
@@ -377,8 +371,8 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	 * spawn the searching threads. */
 	assert(u->threads > 0);
 	assert(!thread_manager_running);
-	static struct uct_thread_ctx mctx;
-	mctx = (struct uct_thread_ctx) { .u = u, .b = b, .color = color, .t = t, .seed = fast_random(65536), .ti = ti, .s = s };
+	static uct_thread_ctx_t mctx;
+	mctx = (uct_thread_ctx_t) { 0, u, b, color, t, fast_random(65536), 0, ti, s };
 	s->ctx = &mctx;
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
@@ -386,7 +380,7 @@ uct_search_start(struct uct *u, struct board *b, enum stone color,
 	thread_manager_running = true;
 }
 
-struct uct_thread_ctx *
+uct_thread_ctx_t *
 uct_search_stop(void)
 {
 	assert(thread_manager_running);
@@ -398,7 +392,7 @@ uct_search_stop(void)
 	pthread_mutex_unlock(&finish_mutex);
 
 	/* Collect the thread manager. */
-	struct uct_thread_ctx *pctx;
+	uct_thread_ctx_t *pctx;
 	thread_manager_running = false;
 	pthread_join(thread_manager, (void **) &pctx);
 	return pctx;
@@ -406,11 +400,11 @@ uct_search_stop(void)
 
 
 void
-uct_search_progress(struct uct *u, struct board *b, enum stone color,
-		    struct tree *t, struct time_info *ti,
-		    struct uct_search_state *s, int i)
+uct_search_progress(uct_t *u, board_t *b, enum stone color,
+		    tree_t *t, time_info_t *ti,
+		    uct_search_state_t *s, int i)
 {
-	struct uct_thread_ctx *ctx = s->ctx;
+	uct_thread_ctx_t *ctx = s->ctx;
 
 	/* Adjust dynkomi? */
 	int di = u->dynkomi_interval * u->threads;
@@ -445,9 +439,9 @@ uct_search_progress(struct uct *u, struct board *b, enum stone color,
 
 /* Determine whether we should terminate the search early. */
 static bool
-uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
-		struct time_info *ti, struct time_stop *stop,
-		struct tree_node *best, struct tree_node *best2,
+uct_search_stop_early(uct_t *u, tree_t *t, board_t *b,
+		time_info_t *ti, time_stop_t *stop,
+		tree_node_t *best, tree_node_t *best2,
 		int played, bool fullmem)
 {
 	/* If the memory is full, stop immediately. Since the tree
@@ -499,10 +493,10 @@ uct_search_stop_early(struct uct *u, struct tree *t, struct board *b,
 
 /* Determine whether we should terminate the search later than expected. */
 static bool
-uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
-		struct time_info *ti, struct time_stop *stop,
-		struct tree_node *best, struct tree_node *best2,
-		struct tree_node *bestr, struct tree_node *winner, int i)
+uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
+		time_info_t *ti, time_stop_t *stop,
+		tree_node_t *best, tree_node_t *best2,
+		tree_node_t *bestr, tree_node_t *winner, int i)
 {
 	if (!best) {
 		if (UDEBUGL(2))
@@ -552,9 +546,9 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 		 * does not have also highest value. */
 		if (UDEBUGL(3))
 			fprintf(stderr, "[%d] best %3s [%d] %f != winner %3s [%d] %f\n", i,
-				coord2sstr(node_coord(best), t->board),
+				coord2sstr(node_coord(best)),
 				best->u.playouts, tree_node_get_value(t, 1, best->u.value),
-				coord2sstr(node_coord(winner), t->board),
+				coord2sstr(node_coord(winner)),
 				winner->u.playouts, tree_node_get_value(t, 1, winner->u.value));
 		return true;
 	}
@@ -564,11 +558,11 @@ uct_search_keep_looking(struct uct *u, struct tree *t, struct board *b,
 }
 
 bool
-uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
-		      struct tree *t, struct time_info *ti,
-		      struct uct_search_state *s, int i)
+uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
+		      tree_t *t, time_info_t *ti,
+		      uct_search_state_t *s, int i)
 {
-	struct uct_thread_ctx *ctx = s->ctx;
+	uct_thread_ctx_t *ctx = s->ctx;
 
 	/* Never consider stopping if we played too few simulations.
 	 * Maybe we risk losing on time when playing in super-extreme
@@ -579,10 +573,10 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	if (i < GJ_MINGAMES)
 		return false;
 
-	struct tree_node *best = NULL;
-	struct tree_node *best2 = NULL; // Second-best move.
-	struct tree_node *bestr = NULL; // best's best child.
-	struct tree_node *winner = NULL;
+	tree_node_t *best = NULL;
+	tree_node_t *best2 = NULL; // Second-best move.
+	tree_node_t *bestr = NULL; // best's best child.
+	tree_node_t *winner = NULL;
 
 	best = u->policy->choose(u->policy, ctx->t->root, b, color, resign);
 	if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, node_coord(best));
@@ -608,7 +602,7 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 	 * if we aren't completely sure about the winner yet. */
 	if (desired_done) {
 		if (u->policy->winner && u->policy->evaluate) {
-			struct uct_descent descent = { .node = ctx->t->root };
+			uct_descent_t descent = uct_descent(ctx->t->root, NULL);
 			u->policy->winner(u->policy, ctx->t, &descent);
 			winner = descent.node;
 		}
@@ -626,14 +620,14 @@ uct_search_check_stop(struct uct *u, struct board *b, enum stone color,
 
 /* uct_pass_is_safe() also called by uct policy, beware.  */
 static bool
-uct_search_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, char **msg)
+uct_search_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg)
 {
 	bool res = uct_pass_is_safe(u, b, color, pass_all_alive, msg);
 
 	/* Save dead groups for final_status_list dead. */
 	if (res) {
-		struct move_queue unclear;
-		struct move_queue *dead = &u->dead_groups;
+		move_queue_t unclear;
+		move_queue_t *dead = &u->dead_groups;
 		u->pass_moveno = b->moves + 1;
 		get_dead_groups(b, &u->ownermap, dead, &unclear);
 	}
@@ -641,7 +635,7 @@ uct_search_pass_is_safe(struct uct *u, struct board *b, enum stone color, bool p
 }
 
 static bool
-uct_pass_first(struct uct *u, struct board *b, enum stone color, bool pass_all_alive, coord_t coord)
+uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coord_t coord)
 {	
 	/* For kgs: must not pass first in main game phase. */
 	bool can_pass_first = (!nopassfirst || pass_all_alive);
@@ -655,7 +649,7 @@ uct_pass_first(struct uct *u, struct board *b, enum stone color, bool pass_all_a
 	if (capturing || atariing || board_playing_ko_threat(b))  return false;
 
 	/* Find dames left */
-	struct move_queue dead, unclear;
+	move_queue_t dead, unclear;
 	uct_mcowner_playouts(u, b, color);
 	get_dead_groups(b, &u->ownermap, &dead, &unclear);
 	if (unclear.moves)  return false;
@@ -667,13 +661,13 @@ uct_pass_first(struct uct *u, struct board *b, enum stone color, bool pass_all_a
 	return (!dame && move_owner == other_color); /* play in opponent territory */
 }
 
-struct tree_node *
-uct_search_result(struct uct *u, struct board *b, enum stone color,
+tree_node_t *
+uct_search_result(uct_t *u, board_t *b, enum stone color,
 		  bool pass_all_alive, int played_games, int base_playouts,
 		  coord_t *best_coord)
 {
 	/* Choose the best move from the tree. */
-	struct tree_node *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
+	tree_node_t *best = u->policy->choose(u->policy, u->t->root, b, color, resign);
 	if (!best) {
 		*best_coord = pass;
 		return NULL;
@@ -683,7 +677,7 @@ uct_search_result(struct uct *u, struct board *b, enum stone color,
 
 	if (UDEBUGL(1))
 		fprintf(stderr, "*** WINNER is %s with score %1.4f (%d/%d:%d/%d games), extra komi %f\n",
-			coord2sstr(node_coord(best), b), winrate,
+			coord2sstr(node_coord(best)), winrate,
 			best->u.playouts, u->t->root->u.playouts,
 			u->t->root->u.playouts - base_playouts, played_games,
 			u->t->extra_komi);

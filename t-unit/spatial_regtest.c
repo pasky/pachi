@@ -14,7 +14,7 @@
 #include "patternprob.h"
 
 static void
-fake_ownermap(struct board *b, struct ownermap *ownermap)
+fake_ownermap(board_t *b, ownermap_t *ownermap)
 {
 	int games = 100;
 	
@@ -28,7 +28,7 @@ fake_ownermap(struct board *b, struct ownermap *ownermap)
 }
 
 static void
-dump_spatials(struct board *b, struct pattern_config *pc)
+dump_spatials(board_t *b, pattern_config_t *pc)
 {
 	/* Skip suicides */
 	if (b->moves && board_at(b, b->last_move.coord) == S_NONE)  return;
@@ -36,16 +36,16 @@ dump_spatials(struct board *b, struct pattern_config *pc)
 	//board_print(b, stderr);
 
 	enum stone color = (is_pass(b->last_move.coord) ? S_BLACK : stone_other(b->last_move.color));
-	struct pattern pats[b->flen];
+	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
-	struct ownermap ownermap;  fake_ownermap(b, &ownermap);  /* fake */
+	ownermap_t ownermap;  fake_ownermap(b, &ownermap);  /* fake */
 	pattern_rate_moves(pc, b, color, pats, probs, &ownermap);
 	
 	for (int f = 0; f < b->flen; f++) {
 		if (isnan(probs[f]))  continue;
-		fprintf(stderr, "move %i: %s: ", b->moves, coord2sstr(b->f[f], b));
+		fprintf(stderr, "move %i: %s: ", b->moves, coord2sstr(b->f[f]));
 		
-		struct pattern *pat = &pats[f];
+		pattern_t *pat = &pats[f];
 		for (int i = 0; i < pat->n; i++) {
 			if (pat->f[i].id < FEAT_SPATIAL3) continue;
 			char s[256]; feature2str(s, &pat->f[i]);
@@ -57,17 +57,18 @@ dump_spatials(struct board *b, struct pattern_config *pc)
 
 /* Replay games dumping spatials every 10 moves. */
 bool
-spatial_regression_test(struct board *b, char *arg)
+spatial_regression_test(board_t *b, char *arg)
 {
-	struct time_info ti_default = { .period = TT_NULL };
-	struct time_info ti[S_MAX] = { [S_BLACK] = ti_default, [S_WHITE] = ti_default };
+	time_info_t ti[S_MAX];
+	ti[S_BLACK] = ti_none;
+	ti[S_WHITE] = ti_none;
 
-	struct pattern_config pc;
+	pattern_config_t pc;
 	patterns_init(&pc, NULL, false, true);
 
 	gtp_t gtp;  gtp_init(&gtp);
 	char buf[4096];
-	struct engine e;  memset(&e, 0, sizeof(e));  /* dummy engine */
+	engine_t e;  memset(&e, 0, sizeof(e));  /* dummy engine */
 	while (fgets(buf, 4096, stdin)) {
 		if (buf[0] == '#') continue;
 		//if (!strncmp(buf, "clear_board", 11))  printf("\nGame %i:\n", gtp.played_games + 1);
