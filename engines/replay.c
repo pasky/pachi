@@ -59,7 +59,7 @@ replay_sample_moves(engine_t *e, board_t *b, enum stone color,
 			most_played++;  m.coord = c;
 		}
 
-		board_done_noalloc(&b2);
+		board_done(&b2);
 	}
 	
 	*pmost_played = most_played;
@@ -75,14 +75,14 @@ replay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool 
 	if (DEBUGL(3))
 		printf("genmove: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
 
-	int played_[b->size2 + 1];		memset(played_, 0, sizeof(played_));
+	int played_[board_max_coords(b) + 1];	memset(played_, 0, sizeof(played_));
 	int *played = played_ + 1;		// allow storing pass
 	int most_played = 0;
 	m.coord = replay_sample_moves(e, b, color, played, &most_played);
 
 	if (DEBUGL(3)) {  /* Show moves stats */
 		for (int k = most_played; k > 0; k--)
-			for (coord_t c = pass; c < b->size2; c++)
+			for (coord_t c = pass; c < board_max_coords(b); c++)
 				if (played[c] == k)
 					fprintf(stderr, "%3s: %.2f%%\n", coord2sstr(c), (float)k * 100 / r->runs);
 		fprintf(stderr, "\n");
@@ -97,7 +97,7 @@ replay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool 
 		board_t b2;  board_copy(&b2, b);
 		int res = board_play(&b2, &m);  assert(res >= 0);
 		int suicide = !group_at(&b2, m.coord);
-		board_done_noalloc(&b2);
+		board_done(&b2);
 		
 		suicide_stats(suicide);		
 		if (suicide) {
@@ -120,12 +120,12 @@ replay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	if (DEBUGL(3))
 		printf("best_moves: %s to play. Sampling moves (%i runs)\n", stone2str(color), r->runs);
 
-	int played_[b->size2 + 1];		memset(played_, 0, sizeof(played_));
+	int played_[board_max_coords(b) + 1];	memset(played_, 0, sizeof(played_));
 	int *played = played_ + 1;		// allow storing pass
 	int most_played = 0;
 	replay_sample_moves(e, b, color, played, &most_played);
 	
-	for (coord_t c = pass; c < b->size2; c++)
+	for (coord_t c = pass; c < board_max_coords(b); c++)
 		best_moves_add(c, (float)played[c] / r->runs, best_c, best_r, nbest);
 }
 
@@ -144,7 +144,7 @@ replay_state_init(char *arg, board_t *b)
 	r->debug_level = 1;
 	r->runs = 1000;
 	r->no_suicide = 0;
-	joseki_load(b->size);
+	joseki_load(board_rsize(b));
 	
 	if (arg) {
 		char *optspec, *next = arg;

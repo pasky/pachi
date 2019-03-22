@@ -12,7 +12,6 @@
 #include "board.h"
 #include "move.h"
 #include "playout.h"
-#include "probdist.h"
 #include "random.h"
 #include "tactics/util.h"
 #include "uct/dynkomi.h"
@@ -354,7 +353,7 @@ scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significan
 
 		int vp = u->val_points;
 		if (!vp) {
-			vp = board_size(b) - 1; vp *= vp; vp *= 2;
+			vp = board_stride(b) - 1; vp *= vp; vp *= 2;
 		}
 
 		floating_t sval = (floating_t) abs(result) / vp;
@@ -495,8 +494,8 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 		significant[node_color - 1] = n;
 
 	int result;
-	int pass_limit = real_board_size2(b2) / 2;
-	int passes = is_pass(b->last_move.coord) && b->moves > 0;
+	int pass_limit = board_rsize(b2) * board_rsize(b2) / 2;
+	int passes = is_pass(last_move(b).coord) && b->moves > 0;
 
 	/* debug */
 	static char spaces[] = "\0                                                      ";
@@ -669,7 +668,7 @@ uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 		}
 	}
 
-	board_done_noalloc(&b2);
+	board_done(&b2);
 	return result;
 }
 

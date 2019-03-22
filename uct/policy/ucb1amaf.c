@@ -260,7 +260,7 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 	 * at this coordinate, or INT_MAX if the move was not played.
 	 * The parity gives the color of this move.
 	 */
-	int first_map[board_size2(final_board)+1];
+	int first_map[board_max_coords(final_board)+1];
 	int *first_move = &first_map[1]; // +1 for pass
 
 #if 0
@@ -272,7 +272,7 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 #endif
 
 	/* Initialize first_move */
-	for (int i = pass; i < board_size2(final_board); i++) first_move[i] = INT_MAX;
+	for (int i = pass; i < board_max_coords(final_board); i++) first_move[i] = INT_MAX;
 	int move;
 	assert(map->gamelen > 0);
 	for (move = map->gamelen - 1; move >= map->game_baselen; move--)

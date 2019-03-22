@@ -20,7 +20,7 @@ static int coord_gridcular_distance(coord_t c1, coord_t c2);
  * graph of intersections where edges between all neighbors have weight 1,
  * but edges between neighbors of same color have weight 0. Thus, this is
  * "stone chain" metric in a sense. */
-/* The output are distances from start stored in given [board_size2()] array;
+/* The output are distances from start stored in given [board_max_coords()] array;
  * intersections further away than maxdist have all distance maxdist+1 set. */
 void cfg_distances(board_t *b, coord_t start, int *distances, int maxdist);
 
@@ -50,9 +50,10 @@ static double board_local_value(bool scan_neis, board_t *b, coord_t coord, enum 
 static inline int
 coord_edge_distance(coord_t c)
 {
+	int stride = the_board_stride();
 	int x = coord_x(c), y = coord_y(c);
-	int dx = x > the_board_size() / 2 ? the_board_size() - 1 - x : x;
-	int dy = y > the_board_size() / 2 ? the_board_size() - 1 - y : y;
+	int dx = x > stride / 2 ? stride - 1 - x : x;
+	int dy = y > stride / 2 ? stride - 1 - y : y;
 	return (dx < dy ? dx : dy) - 1 /* S_OFFBOARD */;
 }
 

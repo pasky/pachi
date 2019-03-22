@@ -54,15 +54,6 @@ ownermap_fill(ownermap_t *ownermap, board_t *b)
 	} foreach_point_end;
 }
 
-void
-ownermap_merge(int bsize2, ownermap_t *dst, ownermap_t *src)
-{
-	dst->playouts += src->playouts;
-	for (int i = 0; i < bsize2; i++)
-		for (int j = 0; j < S_MAX; j++)
-			dst->map[i][j] += src->map[i][j];
-}
-
 float
 ownermap_estimate_point(ownermap_t *ownermap, coord_t c)
 {
@@ -102,7 +93,7 @@ ownermap_judge_groups(board_t *b, ownermap_t *ownermap, group_judgement_t *judge
 {
 	assert(ownermap->map);
 	assert(judge->gs);
-	memset(judge->gs, GS_NONE, board_size2(b) * sizeof(judge->gs[0]));
+	memset(judge->gs, GS_NONE, board_max_coords(b) * sizeof(judge->gs[0]));
 
 	foreach_point(b) {
 		enum stone color = board_at(b, c);
@@ -146,7 +137,7 @@ groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, move_que
 void
 get_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear)
 {
-	enum gj_state gs_array[board_size2(b)];
+	enum gj_state gs_array[board_max_coords(b)];
 	group_judgement_t gj = { 0.67, gs_array };
 	ownermap_judge_groups(b, ownermap, &gj);
 	if (dead)     {  dead->moves = 0;     groups_of_status(b, &gj, GS_DEAD, dead);  }
@@ -239,7 +230,7 @@ board_position_final(board_t *b, ownermap_t *ownermap, char **msg)
 	floating_t score_est = ownermap_score_est(b, ownermap);
 
 	int dame, seki;
-	int final_ownermap[board_size2(b)];
+	int final_ownermap[board_max_coords(b)];
 	floating_t final_score = board_official_score_details(b, &dead, &dame, &seki, final_ownermap, ownermap);
 
 	return board_position_final_full(b, ownermap, &dead, &unclear, score_est,

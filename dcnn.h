@@ -24,7 +24,7 @@ static inline int coord2dcnn_idx(coord_t c);
 static inline int
 coord2dcnn_idx(coord_t c)
 {
-	int size = the_real_board_size();
+	int size = the_board_rsize();
 	int x = coord_x(c) - 1;
 	int y = coord_y(c) - 1;
 	return (y * size + x);

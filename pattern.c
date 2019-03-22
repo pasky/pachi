@@ -265,7 +265,7 @@ static int
 pattern_match_capture(board_t *b, move_t *m)
 {
 	enum stone other_color = stone_other(m->color);
-	coord_t last_move = b->last_move.coord;
+	coord_t last_move = last_move(b).coord;
 	move_queue_t atari_neighbors;
 	board_get_atari_neighbors(b, m->coord, other_color, &atari_neighbors);
 	if (!atari_neighbors.moves)  return -1;
@@ -274,7 +274,7 @@ pattern_match_capture(board_t *b, move_t *m)
 	if (b->last_ko_age == b->moves - 2 && m->coord == b->last_ko.coord)
 		return PF_CAPTURE_TAKE_KO;
 	
-	if (is_pass(last_move) || b->last_move.color != other_color)
+	if (is_pass(last_move) || last_move(b).color != other_color)
 		goto regular_stuff;
 
 	/* Last move features */
@@ -301,7 +301,7 @@ pattern_match_capture(board_t *b, move_t *m)
 			return PF_CAPTURE_PEEP;
 
 		/* End ko by capture, ignoring ko threat ? */
-		if (b->last_ko_age == b->moves - 1 && is_neighbor_group(b, b->last_move2.coord, capg))
+		if (b->last_ko_age == b->moves - 1 && is_neighbor_group(b, last_move2(b).coord, capg))
 			return PF_CAPTURE_END_KO;
 	}
 		
@@ -321,7 +321,7 @@ static int
 pattern_match_aescape(board_t *b, move_t *m)
 {
 	enum stone other_color = stone_other(m->color);
-	coord_t last_move = b->last_move.coord;
+	coord_t last_move = last_move(b).coord;
 	bool found = false, ladder = false;
 
 	/* Fill ko, ignoring ko-threat. */
@@ -334,7 +334,7 @@ pattern_match_aescape(board_t *b, move_t *m)
 		found = true;
 		
 		/* Last move atari ? */
-		if (is_pass(last_move) || b->last_move.color != other_color)  continue;
+		if (is_pass(last_move) || last_move(b).color != other_color)  continue;
 		group_t in_atari = g;
 		foreach_atari_neighbor(b, last_move, m->color) {
 			if (g == in_atari)
@@ -482,7 +482,7 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 			// capturing big group not dead yet
 			if (gown != color && group_stone_count(b, g, 5) >= 4)   ladder_big = true;
 			// ladder last move
-			if (g == group_at(b, b->last_move.coord))               ladder_last = true;
+			if (g == group_at(b, last_move(b).coord))               ladder_last = true;
 			// capturing something in opponent territory, yummy
 			if (gown == other_color && aown == other_color)         ladder_safe = true;
 			// capturing cutting stones
@@ -524,8 +524,8 @@ pattern_match_border(board_t *b, move_t *m, pattern_config_t *pc)
 static int
 pattern_match_distance(board_t *b, move_t *m)
 {
-	if (is_pass(b->last_move.coord))  return -1;
-	int d = coord_gridcular_distance(m->coord, b->last_move.coord);
+	if (is_pass(last_move(b).coord))  return -1;
+	int d = coord_gridcular_distance(m->coord, last_move(b).coord);
 	if (d > 17)  d = 18;
 	d--; assert(d >= 0 && d <= 17);
 	return d;
@@ -534,8 +534,8 @@ pattern_match_distance(board_t *b, move_t *m)
 static int
 pattern_match_distance2(board_t *b, move_t *m)
 {
-	if (is_pass(b->last_move2.coord))  return -1;
-	int d = coord_gridcular_distance(m->coord, b->last_move2.coord);
+	if (is_pass(last_move2(b).coord))  return -1;
+	int d = coord_gridcular_distance(m->coord, last_move2(b).coord);
 	if (d > 17)  d = 17;
 	/* can be zero here (same move) so don't decrement */
 	assert(d >= 0 && d <= 17);
@@ -745,7 +745,7 @@ pattern_match_net(board_t *b, move_t *m, ownermap_t *ownermap)
 	} foreach_diag_neighbor_end;
 	if (!can)  return -1;
 
-	coord_t last = b->last_move.coord;
+	coord_t last = last_move(b).coord;
 	with_move(b, m->coord, m->color, {
 		if (net_last_move(b, m, last))
 			with_move_return(PF_NET_LAST);
@@ -961,7 +961,7 @@ mcowner_playouts_(board_t *b, enum stone color, ownermap_t *ownermap, int playou
 		board_t b2;
 		board_copy(&b2, b);		
 		playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
-		board_done_noalloc(&b2);
+		board_done(&b2);
 	}
 	//fprintf(stderr, "pattern ownermap:\n");
 	//board_print_ownermap(b, stderr, ownermap);

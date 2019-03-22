@@ -30,10 +30,10 @@ josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags)
 
 	if (!board->moves) {
 		/* New game, reset state. */
-		assert(board->size == joseki_dict->bsize);
+		assert(board_rsize(board) == joseki_dict->bsize);
 		
 		for (int i = 0; i < 16; i++) {
-			board_resize(j->b[i], board->size - 2);
+			board_resize(j->b[i], board_rsize(board));
 			board_clear(j->b[i]);
 		}
 
@@ -65,7 +65,7 @@ josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags)
 	assert(joseki_spatial_hash(j->b[0], m->coord, m->color) ==
 	       joseki_spatial_hash(board,   m->coord, m->color));
 
-	coord_t last = board->last_move.coord;
+	coord_t last = last_move(board).coord;
 	if (last != pass && coord_gridcular_distance(m->coord, last) >= 30)
 		fprintf(stderr, "warning: josekiscan %s %s: big distance to prev move, use pass / setup stones for tenuki\n",
 			coord2sstr(last), coord2sstr(m->coord));
@@ -105,7 +105,7 @@ josekiscan_state_init(char *arg)
 	josekiscan_t *j = calloc2(1, josekiscan_t);
 
 	for (int i = 0; i < 16; i++)
-		j->b[i] = board_new(19+2, NULL);
+		j->b[i] = board_new(19, NULL);
 
 	j->debug_level = 1;
 
@@ -140,7 +140,7 @@ josekiscan_done(engine_t *e)
 	josekiscan_t *j = (josekiscan_t*)e->data;
 
 	for (int i = 0; i < 16; i++)
-		board_done(j->b[i]);
+		board_delete(&j->b[i]);
 }
 
 void

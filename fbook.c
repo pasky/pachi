@@ -11,21 +11,18 @@
 #include "random.h"
 
 
-static coord_t
-coord_transform(board_t *b, coord_t coord, int i)
-{
 #define HASH_VMIRROR     1
 #define HASH_HMIRROR     2
 #define HASH_XYFLIP      4
-	if (i & HASH_VMIRROR) {
-		coord = coord_xy(coord_x(coord), board_size(b) - 1 - coord_y(coord));
-	}
-	if (i & HASH_HMIRROR) {
-		coord = coord_xy(board_size(b) - 1 - coord_x(coord), coord_y(coord));
-	}
-	if (i & HASH_XYFLIP) {
-		coord = coord_xy(coord_y(coord), coord_x(coord));
-	}
+
+static coord_t
+coord_transform(board_t *b, coord_t coord, int i)
+{
+	int stride = board_stride(b);
+	int x = coord_x(coord);  int y = coord_y(coord);	
+	if (i & HASH_VMIRROR)  coord = coord_xy(x, stride - 1 - y);
+	if (i & HASH_HMIRROR)  coord = coord_xy(stride - 1 - x, y);
+	if (i & HASH_XYFLIP)   coord = coord_xy(y, x);
 	return coord;
 }
 
@@ -64,7 +61,7 @@ static fbook_t *fbcache;
 fbook_t *
 fbook_init(char *filename, board_t *b)
 {
-	if (fbcache && fbcache->bsize == board_size(b)
+	if (fbcache && fbcache->bsize == board_rsize(b)
 	    && fbcache->handicap == b->handicap)
 		return fbcache;
 
@@ -75,7 +72,7 @@ fbook_init(char *filename, board_t *b)
 	}
 
 	fbook_t *fbook = calloc2(1, fbook_t);
-	fbook->bsize = board_size(b);
+	fbook->bsize = board_rsize(b);
 	fbook->handicap = b->handicap;
 	/* We do not set handicap=1 in case of too low komi on purpose;
 	 * we want to go with the no-handicap fbook for now. */
@@ -100,7 +97,7 @@ fbook_init(char *filename, board_t *b)
 		 * BSIZE COORD COORD COORD... | COORD
 		 * BSIZE/HANDI COORD COORD COORD... | COORD */
 		int bsize = strtol(line, &line, 10);
-		if (bsize != fbook->bsize - 2)
+		if (bsize != fbook->bsize)
 			continue;
 		int handi = 0;
 		if (*line == '/') {
@@ -113,7 +110,7 @@ fbook_init(char *filename, board_t *b)
 
 		for (int i = 0; i < 8; i++) {
 			board_clear(bs[i]);
-			bs[i]->last_move.color = S_WHITE;
+			last_move(bs[i]).color = S_WHITE;
 		}
 
 		while (*line != '|') {
@@ -121,7 +118,7 @@ fbook_init(char *filename, board_t *b)
 
 			for (int i = 0; i < 8; i++) {
 				coord_t coord = coord_transform(b, c, i);
-				move_t m = move(coord, stone_other(bs[i]->last_move.color));
+				move_t m = move(coord, stone_other(last_move(bs[i]).color));
 				int ret = board_play(bs[i], &m);
 				assert(ret >= 0);
 			}
@@ -169,9 +166,8 @@ fbook_init(char *filename, board_t *b)
 		}
 	}
 
-	for (int i = 0; i < 8; i++) {
-		board_done(bs[i]);
-	}
+	for (int i = 0; i < 8; i++)
+		board_delete(&bs[i]);
 
 	fclose(f);
 

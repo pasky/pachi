@@ -47,7 +47,6 @@ typedef struct ownermap {
 void ownermap_init(ownermap_t *ownermap);
 void board_print_ownermap(board_t *b, FILE *f, ownermap_t *ownermap);
 void ownermap_fill(ownermap_t *ownermap, board_t *b);
-void ownermap_merge(int bsize2, ownermap_t *dst, ownermap_t *src);
 
 /* Coord ownermap status: dame / black / white / unclear */
 enum point_judgement ownermap_judge_point(ownermap_t *ownermap, coord_t c, floating_t thres);
@@ -82,7 +81,7 @@ bool board_position_final_full(board_t *b, ownermap_t *ownermap,
 
 /* Don't allow passing earlier than that:
  * 19x19: 120    15x15: 56    13x13: 33    9x9: 16 */
-#define board_earliest_pass(b)  (real_board_size2(b) / (7 - 2 * real_board_size(b) / 9))
+#define board_earliest_pass(b)  (board_max_coords(b) / (7 - 2 * board_rsize(b) / 9))
 
 
 #endif

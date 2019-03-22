@@ -285,7 +285,7 @@ uct_expand_next_move(uct_t *u, tree_t *t, board_t *board, enum stone color, coor
 	if (!__sync_lock_test_and_set(&n->is_expanded, 1))
 		tree_expand_node(t, n, &b, stone_other(color), u, -1);
 
- done:  board_done_noalloc(&b);
+ done:  board_done(&b);
 }
 
 /* For pondering with dcnn we need dcnn values for next move as well before
@@ -641,7 +641,7 @@ uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coor
 	bool can_pass_first = (!nopassfirst || pass_all_alive);
 	if (!can_pass_first)  return false;
 
-	if (is_pass(coord) || is_pass(b->last_move.coord))  return false;
+	if (is_pass(coord) || is_pass(last_move(b).coord))  return false;
 
 	enum stone other_color = stone_other(color);
 	int capturing = board_get_atari_neighbor(b, coord, other_color);
@@ -653,7 +653,7 @@ uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coor
 	uct_mcowner_playouts(u, b, color);
 	get_dead_groups(b, &u->ownermap, &dead, &unclear);
 	if (unclear.moves)  return false;
-	int final_ownermap[board_size2(b)];
+	int final_ownermap[board_max_coords(b)];
 	int dame, seki;
 	board_official_score_details(b, &dead, &dame, &seki, final_ownermap, &u->ownermap);
 	
@@ -696,7 +696,7 @@ uct_search_result(uct_t *u, board_t *b, enum stone color,
 		return NULL;
 	}
 
-	bool opponent_passed = is_pass(b->last_move.coord);
+	bool opponent_passed = is_pass(last_move(b).coord);
 	bool pass_first = uct_pass_first(u, b, color, pass_all_alive, *best_coord);
 	if (UDEBUGL(2) && pass_first)  fprintf(stderr, "<Pass first ok>\n");
 

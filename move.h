@@ -11,7 +11,7 @@
 typedef int coord_t;
 
 // XXX board_size() instead of board_statics.size
-#define coord_xy(x, y) ((x) + (y) * the_board_size())
+#define coord_xy(x, y) ((x) + (y) * the_board_stride())
 #define coord_x(c) (board_statics.coord[c][0])
 #define coord_y(c) (board_statics.coord[c][1])
 /* TODO: Smarter way to do this? */
@@ -23,8 +23,8 @@ typedef int coord_t;
 #define is_pass(c)   (c == pass)
 #define is_resign(c) (c == resign)
 
-#define coord_is_adjecent(c1, c2) (abs(c1 - c2) == 1 || abs(c1 - c2) == the_board_size())
-#define coord_is_8adjecent(c1, c2) (abs(c1 - c2) == 1 || abs(abs(c1 - c2) - the_board_size()) < 2)
+#define coord_is_adjecent(c1, c2) (abs(c1 - c2) == 1 || abs(c1 - c2) == the_board_stride())
+#define coord_is_8adjecent(c1, c2) (abs(c1 - c2) == 1 || abs(abs(c1 - c2) - the_board_stride()) < 2)
 
 char *coord2bstr(char *buf, coord_t c);
 /* Return coordinate string in a dynamically allocated buffer. Thread-safe. */

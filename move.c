@@ -50,13 +50,14 @@ str2coord_for(char *str, int size)
 	if (!strcasecmp(str, "resign"))	 return resign;
 	
 	char xc = tolower(str[0]);
-	return xc - 'a' - (xc > 'i') + 1 + atoi(str + 1) * size;
+	int stride = size + 2;
+	return xc - 'a' - (xc > 'i') + 1 + atoi(str + 1) * stride;
 }
 
 coord_t
 str2coord(char *str)
 {
-	return str2coord_for(str, the_board_size());
+	return str2coord_for(str, the_board_rsize());
 }
 
 /* Must match rotations in pthashes_init() */
@@ -64,7 +65,7 @@ coord_t
 rotate_coord(coord_t c, int rot)
 {
 	assert(c != pass);
-	int size = the_real_board_size();
+	int size = the_board_rsize();
 	int x = coord_x(c);
 	int y = coord_y(c);
 	

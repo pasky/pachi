@@ -25,46 +25,41 @@
 #define gi_granularity 4
 #define gi_allocsize(gids) ((1 << gi_granularity) + ((gids) >> gi_granularity) * (1 << gi_granularity))
 
-static inline void
-board_addf(board_t *b, coord_t c)
-{
-	b->fmap[c] = b->flen; 
-	b->f[b->flen++] = c;
-}
+static int  board_play_f(board_t *board, move_t *m, int f);
+static void board_addf(board_t *b, coord_t c);
+static void board_rmf(board_t *b, int f);
 
-static inline void
-board_rmf(board_t *b, int f)
-{
-	/* Not bothering to delete fmap records,
-	 * Just keep the valid ones up to date. */
-	coord_t c = b->f[f] = b->f[--b->flen];
-	b->fmap[c] = f;
-}
 
 static void
 board_setup(board_t *b)
 {
+	assert(BOARD_LAST_N >= 4);
+
 	memset(b, 0, sizeof(*b));
 
 	move_t m = { pass, S_NONE };
-	b->last_move = b->last_move2 = b->last_move3 = b->last_move4 = b->last_ko = b->ko = m;
-}
-
-void
-board_init(board_t *b, int bsize, char *fbookfile)
-{
-	board_setup(b);
-	b->fbookfile = fbookfile;
-	b->size = bsize;
-	board_clear(b);	
+	for (int i = 0; i < BOARD_LAST_N; i++)
+		last_moven(b, i) = m;
+	b->last_ko = b->ko = m;
 }
 
 board_t *
-board_new(int bsize, char *fbookfile)
+board_new(int size, char *fbookfile)
 {
 	board_t *b = malloc2(board_t);
-	board_init(b, bsize, fbookfile);
+	board_setup(b);
+	b->fbookfile = fbookfile;
+	b->rsize = size;
+	board_clear(b);	
 	return b;
+}
+
+void
+board_delete(board_t **b)
+{
+	board_done(*b);
+	free(*b);
+	*b = NULL;
 }
 
 int
@@ -73,46 +68,7 @@ board_cmp(board_t *b1, board_t *b2)
 	return memcmp(b1, b2, sizeof(board_t));
 }
 
-int
-board_quick_cmp(board_t *b1, board_t *b2)
-{
-	if (b1->size != b2->size ||
-	    b1->size2 != b2->size2 ||
-	    b1->bits2 != b2->bits2 ||
-	    b1->captures[S_BLACK] != b2->captures[S_BLACK] ||
-	    b1->captures[S_WHITE] != b2->captures[S_WHITE] ||
-	    b1->moves != b2->moves) {
-		fprintf(stderr, "differs in main vars\n");
-		return 1;
-	}
-	if (move_cmp(&b1->last_move, &b2->last_move) ||
-	    move_cmp(&b1->last_move2, &b2->last_move2)) {
-		fprintf(stderr, "differs in last_move\n");
-		return 1;
-	}
-	if (move_cmp(&b1->ko, &b2->ko) ||
-	    move_cmp(&b1->last_ko, &b2->last_ko) ||
-	    b1->last_ko_age != b2->last_ko_age) {
-		fprintf(stderr, "differs in ko\n");
-		return 1;
-	}
-
-	if (memcmp(b1->b,  b2->b,  sizeof(b1->b))) {
-		fprintf(stderr, "differs in b\n");  return 1;  }
-	if (memcmp(b1->g,  b2->g,  sizeof(b1->g))) {
-		fprintf(stderr, "differs in g\n");  return 1;  }
-	if (memcmp(b1->n,  b2->n,  sizeof(b1->n))) {
-		fprintf(stderr, "differs in n\n");  return 1;  }
-	if (memcmp(b1->p,  b2->p,  sizeof(b1->p))) {
-		fprintf(stderr, "differs in p\n");  return 1;  }
-	if (memcmp(b1->gi, b2->gi, sizeof(b1->gi))) {
-		fprintf(stderr, "differs in gi\n");  return 1;  }
-
-	return 0;
-}
-
-
-board_t *
+void
 board_copy(board_t *b2, board_t *b1)
 {
 	memcpy(b2, b1, sizeof(board_t));
@@ -120,36 +76,23 @@ board_copy(board_t *b2, board_t *b1)
 	// XXX: Special semantics.
 	b2->fbook = NULL;
 	b2->ps = NULL;
-
-	return b2;
 }
 
 void
-board_done_noalloc(board_t *board)
+board_done(board_t *board)
 {
 	if (board->fbook) fbook_done(board->fbook);
 	if (board->ps) free(board->ps);
 }
 
 void
-board_done(board_t *board)
-{
-	board_done_noalloc(board);
-	free(board);
-}
-
-void
 board_resize(board_t *board, int size)
 {
 #ifdef BOARD_SIZE
-	assert(board_size(board) == size + 2);
+	assert(board_rsize(board) == size);
 #endif
 	assert(size <= BOARD_MAX_SIZE);
-	board->size = size + 2 /* S_OFFBOARD margin */;
-	board->size2 = board_size(board) * board_size(board);
-
-	board->bits2 = 1;
-	while ((1 << board->bits2) < board->size2) board->bits2++;
+	board->rsize = size;
 }
 
 board_statics_t board_statics = { 0, };
@@ -157,45 +100,63 @@ board_statics_t board_statics = { 0, };
 static void
 board_statics_init(board_t *board)
 {
-	int size = board_size(board);
+	int size = board_rsize(board);
+	int stride = size + 2;
 	board_statics_t *bs = &board_statics;
-	if (bs->size == size)
+	if (bs->rsize == size)
 		return;
 	
 	memset(bs, 0, sizeof(*bs));
-	bs->size = size;
+	bs->rsize = size;
+	bs->stride = stride;
+	bs->max_coords = stride * stride;
+
+	bs->bits2 = 1;
+	while ((1 << bs->bits2) < bs->max_coords)  bs->bits2++;
 	
 	/* Setup neighborhood iterators */
-	bs->nei8[0] = -size - 1; // (-1,-1)
+	bs->nei8[0] = -stride - 1; // (-1,-1)
 	bs->nei8[1] = 1;
 	bs->nei8[2] = 1;
-	bs->nei8[3] = size - 2; // (-1,0)
+	bs->nei8[3] = stride - 2; // (-1,0)
 	bs->nei8[4] = 2;
-	bs->nei8[5] = size - 2; // (-1,1)
+	bs->nei8[5] = stride - 2; // (-1,1)
 	bs->nei8[6] = 1;
 	bs->nei8[7] = 1;
-	bs->dnei[0] = -size - 1;
+	
+	bs->dnei[0] = -stride - 1;
 	bs->dnei[1] = 2;
-	bs->dnei[2] = size*2 - 2;
+	bs->dnei[2] = stride*2 - 2;
 	bs->dnei[3] = 2;
 
 	/* Set up coordinate cache */
 	foreach_point(board) {
-		bs->coord[c][0] = c % board_size(board);
-		bs->coord[c][1] = c / board_size(board);
+		bs->coord[c][0] = c % stride;
+		bs->coord[c][1] = c / stride;
 	} foreach_point_end;
 
 	/* Initialize zobrist hashtable. */
-	/* We will need these to be stable across Pachi runs for
-	 * certain kinds of pattern matching, thus we do not use
-	 * fast_random() for this. */
+	/* We will need these to be stable across Pachi runs for certain kinds
+	 * of pattern matching, thus we do not use fast_random() for this. */
 	hash_t hseed = 0x3121110101112131;
-	for (coord_t c = 0 ; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
+#ifdef BOARD_HASH_COMPAT
+        /* Until <board_cleanup> board->h was treated as h[BOARD_MAX_COORDS][2] here
+	 * and h[2][BOARD_MAX_COORDS] in hash_at(). Preserve quirk to get same hashes. */
+        hash_t (*hash)[2] = (hash_t (*)[2])bs->h;
+        for (coord_t c = 0; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
+		for (int color = 0; color <= 1; color++) {
+			hash[c][color] = (hseed *= 16807);
+			if (!hash[c][color])  hash[c][color] = 1;
+		}
+	}
+#else
+	for (coord_t c = 0; c < BOARD_MAX_COORDS; c++) {  /* Don't foreach_point(), need all 21x21 */
 		for (int color = S_BLACK; color <= S_WHITE; color++) {
 			hash_at(c, color) = (hseed *= 16807);
 			if (!hash_at(c, color))  hash_at(c, color) = 1;
 		}
 	}
+#endif
 
 	/* Sanity check ... */
 	foreach_point(board) {
@@ -207,33 +168,34 @@ board_statics_init(board_t *board)
 static void
 board_init_data(board_t *board)
 {
-	int size = board_size(board);
+	int size = board_rsize(board);
+	int stride = board_stride(board);
 
 	board_setup(board);
-	board_resize(board, size - 2 /* S_OFFBOARD margin */);
+	board_resize(board, size);
 
 	/* Setup initial symmetry */
 	if (size % 2) {
 		board->symmetry.d = 1;
-		board->symmetry.x1 = board->symmetry.y1 = board_size(board) / 2;
-		board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
+		board->symmetry.x1 = board->symmetry.y1 = stride / 2;
+		board->symmetry.x2 = board->symmetry.y2 = stride - 1;
 		board->symmetry.type = SYM_FULL;
 	} else {
 		/* TODO: We do not handle board symmetry on boards
 		 * with no tengen yet. */
 		board->symmetry.d = 0;
 		board->symmetry.x1 = board->symmetry.y1 = 1;
-		board->symmetry.x2 = board->symmetry.y2 = board_size(board) - 1;
+		board->symmetry.x2 = board->symmetry.y2 = stride - 1;
 		board->symmetry.type = SYM_NONE;
 	}
 
 	/* Draw the offboard margin */
-	int top_row = board_size2(board) - board_size(board);
+	int top_row = board_max_coords(board) - stride;
 	int i;
-	for (i = 0; i < board_size(board); i++)
+	for (i = 0; i < stride; i++)
 		board->b[i] = board->b[top_row + i] = S_OFFBOARD;
-	for (i = 0; i <= top_row; i += board_size(board))
-		board->b[i] = board->b[board_size(board) - 1 + i] = S_OFFBOARD;
+	for (i = 0; i <= top_row; i += stride)
+		board->b[i] = board->b[i + stride - 1] = S_OFFBOARD;
 
 	foreach_point(board) {
 		coord_t coord = c;
@@ -245,9 +207,11 @@ board_init_data(board_t *board)
 	} foreach_point_end;
 
 	/* All positions are free! Except the margin. */
-	for (i = board_size(board); i < (board_size(board) - 1) * board_size(board); i++)
-		if (i % board_size(board) != 0 && i % board_size(board) != board_size(board) - 1)
-			board_addf(board, i);
+	foreach_point(board) {
+		if (board_at(board, c) == S_NONE)
+			board_addf(board, c);
+	} foreach_point_end;
+	assert(board->flen == size * size);
 
 #ifdef BOARD_PAT3
 	/* Initialize 3x3 pattern codes. */
@@ -261,17 +225,17 @@ board_init_data(board_t *board)
 void
 board_clear(board_t *board)
 {
-	int size = board_size(board);
+	int size = board_rsize(board);
 	floating_t komi = board->komi;
 	char *fbookfile = board->fbookfile;
 	enum rules rules = board->rules;
 
-	board_done_noalloc(board);
+	board_done(board);
 
 	board_statics_init(board);
 	static board_t bcache[BOARD_MAX_SIZE + 2];
-	assert(size > 0 && size <= BOARD_MAX_SIZE + 2);
-	if (bcache[size - 1].size == size)
+	assert(size > 1 && size <= BOARD_MAX_SIZE);
+	if (bcache[size - 1].rsize == size)
 		board_copy(board, &bcache[size - 1]);
 	else {
 		board_init_data(board);
@@ -289,17 +253,18 @@ board_clear(board_t *board)
 static void
 board_print_top(board_t *board, strbuf_t *buf, int c)
 {
+	int size = board_rsize(board);
 	for (int i = 0; i < c; i++) {
 		char asdf[] = "ABCDEFGHJKLMNOPQRSTUVWXYZ";
 		sbprintf(buf, "      ");
-		for (int x = 1; x < board_size(board) - 1; x++)
+		for (int x = 1; x <= size; x++)
 			sbprintf(buf, "%c ", asdf[x - 1]);
 		sbprintf(buf, " ");
 	}
 	sbprintf(buf, "\n");
 	for (int i = 0; i < c; i++) {
 		sbprintf(buf, "    +-");
-		for (int x = 1; x < board_size(board) - 1; x++)
+		for (int x = 1; x <= size; x++)
 			sbprintf(buf, "--");
 		sbprintf(buf, "+");
 	}
@@ -309,9 +274,10 @@ board_print_top(board_t *board, strbuf_t *buf, int c)
 static void
 board_print_bottom(board_t *board, strbuf_t *buf, int c)
 {
+	int size = board_rsize(board);
 	for (int i = 0; i < c; i++) {
 		sbprintf(buf, "    +-");
-		for (int x = 1; x < board_size(board) - 1; x++)
+		for (int x = 1; x <= size; x++)
 			sbprintf(buf, "--");
 		sbprintf(buf, "+");
 	}
@@ -321,16 +287,17 @@ board_print_bottom(board_t *board, strbuf_t *buf, int c)
 static void
 board_print_row(board_t *board, int y, strbuf_t *buf, board_cprint cprint, void *data)
 {
+	int size = board_rsize(board);
 	sbprintf(buf, " %2d | ", y);
-	for (int x = 1; x < board_size(board) - 1; x++)
-		if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
+	for (int x = 1; x <= size; x++)
+		if (coord_x(last_move(board).coord) == x && coord_y(last_move(board).coord) == y)
 			sbprintf(buf, "%c)", stone2char(board_atxy(board, x, y)));
 		else
 			sbprintf(buf, "%c ", stone2char(board_atxy(board, x, y)));
 	sbprintf(buf, "|");
 	if (cprint) {
 		sbprintf(buf, " %2d | ", y);
-		for (int x = 1; x < board_size(board) - 1; x++)
+		for (int x = 1; x <= size; x++)
 			cprint(board, coord_xy(x, y), buf, data);
 		sbprintf(buf, "|");
 	}
@@ -343,14 +310,18 @@ board_print_custom(board_t *board, FILE *f, board_cprint cprint, void *data)
 	char buffer[10240];
 	strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	int size = board_rsize(board);
+
 	sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d  ",
 		 board->moves, board->komi, board->handicap,
-		 board->captures[S_BLACK], board->captures[S_WHITE]);
+		 board->captures[S_BLACK], board->captures[S_WHITE]);	
+	
 	if (cprint) /* handler can add things to header when called with pass */
 		cprint(board, pass, buf, data);
 	sbprintf(buf, "\n");
+	
 	board_print_top(board, buf, 1 + !!cprint);
-	for (int y = board_size(board) - 2; y >= 1; y--)
+	for (int y = size; y >= 1; y--)
 		board_print_row(board, y, buf, cprint, data);
 	board_print_bottom(board, buf, 1 + !!cprint);
 	fprintf(f, "%s\n", buf->str);
@@ -359,10 +330,11 @@ board_print_custom(board_t *board, FILE *f, board_cprint cprint, void *data)
 static void
 board_hprint_row(board_t *board, int y, strbuf_t *buf, board_print_handler handler, void *data)
 {
+	int size = board_rsize(board);
         sbprintf(buf, " %2d | ", y);
-        for (int x = 1; x < board_size(board) - 1; x++) {
+	for (int x = 1; x <= size; x++) {
                 char *stone_str = handler(board, coord_xy(x, y), data);
-                if (coord_x(board->last_move.coord) == x && coord_y(board->last_move.coord) == y)
+                if (coord_x(last_move(board).coord) == x && coord_y(last_move(board).coord) == y)
                         sbprintf(buf, "%s)", stone_str);
                 else
                         sbprintf(buf, "%s ", stone_str);
@@ -376,11 +348,14 @@ board_hprint(board_t *board, FILE *f, board_print_handler handler, void *data)
         char buffer[10240];
 	strbuf_t strbuf;
 	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	int size = board_rsize(board);
+	
         sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d\n",
 		 board->moves, board->komi, board->handicap,
 		 board->captures[S_BLACK], board->captures[S_WHITE]);
+	
 	board_print_top(board, buf, 1);
-        for (int y = board_size(board) - 2; y >= 1; y--)
+	for (int y = size; y >= 1; y--)
                 board_hprint_row(board, y, buf, handler, data);
         board_print_bottom(board, buf, 1);
         fprintf(f, "%s\n", buf->str);
@@ -418,69 +393,28 @@ board_print_target_move(board_t *b, FILE *f, coord_t target_move)
 }
 
 
-/* Update board hash with given coordinate. */
-static void profiling_noinline
-board_hash_update(board_t *board, coord_t coord, enum stone color)
+bool
+board_coord_in_symmetry(board_t *b, coord_t c)
 {
-	board->hash ^= hash_at(coord, color);
-	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %" PRIhash " -> %" PRIhash "\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
-
-#if defined(BOARD_PAT3)
-	/* @color is not what we need in case of capture. */
-	static const int ataribits[8] = { -1, 0, -1, 1, 2, -1, 3, -1 };
-	enum stone new_color = board_at(board, coord);
-	bool in_atari = false;
-	if (new_color == S_NONE)
-		board->pat3[coord] = pattern3_hash(board, coord);
-	else
-		in_atari = (board_group_info(board, group_at(board, coord)).libs == 1);
-	foreach_8neighbor(board, coord) {
-		/* Internally, the loop uses fn__i=[0..7]. We can use
-		 * it directly to address bits within the bitmap of the
-		 * neighbors since the bitmap order is reverse to the
-		 * loop order. */
-		if (board_at(board, c) != S_NONE)
-			continue;
-		board->pat3[c] &= ~(3 << (fn__i*2));
-		board->pat3[c] |= new_color << (fn__i*2);
-		if (ataribits[fn__i] >= 0) {
-			board->pat3[c] &= ~(1 << (16 + ataribits[fn__i]));
-			board->pat3[c] |= in_atari << (16 + ataribits[fn__i]);
-		}
-	} foreach_8neighbor_end;
-#endif
-}
-
-/* Commit current board hash to history. */
-static void profiling_noinline
-board_hash_commit(board_t *board)
-{
-	if (DEBUGL(8))
-		fprintf(stderr, "board_hash_commit %" PRIhash "\n", board->hash);
-	if (likely(board->history_hash[board->hash & history_hash_mask]) == 0) {
-		board->history_hash[board->hash & history_hash_mask] = board->hash;
-		return;
+	if (coord_y(c) < b->symmetry.y1 || coord_y(c) > b->symmetry.y2)
+		return false;
+	if (coord_x(c) < b->symmetry.x1 || coord_x(c) > b->symmetry.x2)
+		return false;
+	if (b->symmetry.d) {
+		int x = coord_x(c);
+		if (b->symmetry.type == SYM_DIAG_DOWN)
+			x = board_stride(b) - 1 - x;
+		if (x > coord_y(c))
+			return false;
 	}
-
-	hash_t i = board->hash;
-	while (board->history_hash[i & history_hash_mask]) {
-		if (board->history_hash[i & history_hash_mask] == board->hash) {
-			if (DEBUGL(5))
-				fprintf(stderr, "SUPERKO VIOLATION noted at %d,%d\n",
-					coord_x(board->last_move.coord), coord_y(board->last_move.coord));
-			board->superko_violation = true;
-			return;
-		}
-		i = history_hash_next(i);
-	}
-	board->history_hash[i & history_hash_mask] = board->hash;
+	return true;
 }
-
 
 void
 board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c)
 {
+	if (playout_board(b))  return;
+
 	if (likely(symmetry->type == SYM_NONE)) {
 		/* Fully degenerated already. We do not support detection
 		 * of restoring of symmetry, assuming that this is too rare
@@ -488,8 +422,8 @@ board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c)
 		return;
 	}
 
-	int x = coord_x(c), y = coord_y(c), t = board_size(b) / 2;
-	int dx = board_size(b) - 1 - x; /* for SYM_DOWN */
+	int x = coord_x(c), y = coord_y(c), t = board_stride(b) / 2;
+	int dx = board_stride(b) - 1 - x; /* for SYM_DOWN */
 	if (DEBUGL(6))
 		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d] update for %d,%d\n",
 			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
@@ -504,28 +438,28 @@ board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c)
 			if (x == y) {
 				symmetry->type = SYM_DIAG_UP;
 				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_size(b) - 1;
+				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
 				symmetry->d = 1;
 			} else if (dx == y) {
 				symmetry->type = SYM_DIAG_DOWN;
 				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_size(b) - 1;
+				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
 				symmetry->d = 1;
 			} else if (x == t) {
 				symmetry->type = SYM_HORIZ;
 				symmetry->y1 = 1;
-				symmetry->y2 = board_size(b) - 1;
+				symmetry->y2 = board_stride(b) - 1;
 				symmetry->d = 0;
 			} else if (y == t) {
 				symmetry->type = SYM_VERT;
 				symmetry->x1 = 1;
-				symmetry->x2 = board_size(b) - 1;
+				symmetry->x2 = board_stride(b) - 1;
 				symmetry->d = 0;
 			} else {
 break_symmetry:
 				symmetry->type = SYM_NONE;
 				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_size(b) - 1;
+				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
 				symmetry->d = 0;
 			}
 			break;
@@ -573,10 +507,10 @@ void
 board_handicap(board_t *board, int stones, move_queue_t *q)
 {
 	assert(stones <= 9);
-	int margin = 3 + (board_size(board) >= 13);
+	int margin = 3 + (board_rsize(board) >= 13);
 	int min = margin;
-	int mid = board_size(board) / 2;
-	int max = board_size(board) - 1 - margin;
+	int mid = board_stride(board) / 2;
+	int max = board_stride(board) - 1 - margin;
 	const int places[][2] = {
 		{ min, min }, { max, max }, { max, min }, { min, max }, 
 		{ min, mid }, { max, mid },
@@ -597,856 +531,8 @@ board_handicap(board_t *board, int stones, move_queue_t *q)
 }
 
 
-static void
-board_capturable_add(board_t *board, group_t group, coord_t lib, bool onestone)
-{
-	//fprintf(stderr, "group %s cap %s\n", coord2sstr(group), coord2sstr(lib));
-
-#ifdef BOARD_PAT3
-	int fn__i = 0;
-	foreach_neighbor(board, lib, {
-		board->pat3[lib] |= (group_at(board, c) == group) << (16 + 3 - fn__i);
-		fn__i++;
-	});
-#endif
-
-#ifdef WANT_BOARD_C
-	/* Update the list of capturable groups. */
-	assert(group);
-	assert(board->clen < board_size2(board));
-	board->c[board->clen++] = group;
-#endif
-}
-static void
-board_capturable_rm(board_t *board, group_t group, coord_t lib, bool onestone)
-{
-	//fprintf(stderr, "group %s nocap %s\n", coord2sstr(group), coord2sstr(lib));
-#ifdef BOARD_PAT3
-	int fn__i = 0;
-	foreach_neighbor(board, lib, {
-		board->pat3[lib] &= ~((group_at(board, c) == group) << (16 + 3 - fn__i));
-		fn__i++;
-	});
-#endif
-
-#ifdef WANT_BOARD_C
-	/* Update the list of capturable groups. */
-	for (int i = 0; i < board->clen; i++)
-		if (unlikely(board->c[i] == group)) {
-			board->c[i] = board->c[--board->clen];
-			return;
-		}
-	fprintf(stderr, "rm of bad group %d\n", group_base(group));
-	assert(0);
-#endif
-}
-
-static void
-board_group_addlib(board_t *board, group_t group, coord_t coord, board_undo_t *u)
-{
-	if (DEBUGL(7))
-		fprintf(stderr, "Group %d[%s] %d: Adding liberty %s\n",
-			group_base(group), coord2sstr(group_base(group)),
-			board_group_info(board, group).libs, coord2sstr(coord));
-
-	group_info_t *gi = &board_group_info(board, group);
-	bool onestone = group_is_onestone(board, group);
-	if (gi->libs < GROUP_KEEP_LIBS) {
-		for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
-#if 0
-			/* Seems extra branch just slows it down */
-			if (!gi->lib[i])
-				break;
-#endif
-			if (unlikely(gi->lib[i] == coord))
-				return;
-		}
-		if (!u) {
-			if (gi->libs == 0)
-				board_capturable_add(board, group, coord, onestone);
-			else if (gi->libs == 1)
-				board_capturable_rm(board, group, gi->lib[0], onestone);
-		}
-		gi->lib[gi->libs++] = coord;
-	}
-}
-
-static void
-board_group_find_extra_libs(board_t *board, group_t group, group_info_t *gi, coord_t avoid)
-{
-	/* Add extra liberty from the board to our liberty list. */
-	unsigned char watermark[board_size2(board) / 8];
-	memset(watermark, 0, sizeof(watermark));
-#define watermark_get(c)	(watermark[c >> 3] & (1 << (c & 7)))
-#define watermark_set(c)	watermark[c >> 3] |= (1 << (c & 7))
-
-	for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++)
-		watermark_set(gi->lib[i]);
-	watermark_set(avoid);
-
-	foreach_in_group(board, group) {
-		coord_t coord2 = c;
-		foreach_neighbor(board, coord2, {
-			if (board_at(board, c) + watermark_get(c) != S_NONE)
-				continue;
-			watermark_set(c);
-			gi->lib[gi->libs++] = c;
-			if (unlikely(gi->libs >= GROUP_KEEP_LIBS))
-				return;
-		} );
-	} foreach_in_group_end;
-#undef watermark_get
-#undef watermark_set
-}
-
-static void
-board_group_rmlib(board_t *board, group_t group, coord_t coord, board_undo_t *u)
-{
-	if (DEBUGL(7))
-		fprintf(stderr, "Group %d[%s] %d: Removing liberty %s\n",
-			group_base(group), coord2sstr(group_base(group)),
-			board_group_info(board, group).libs, coord2sstr(coord));
-
-	group_info_t *gi = &board_group_info(board, group);
-	bool onestone = group_is_onestone(board, group);
-	for (int i = 0; i < GROUP_KEEP_LIBS; i++) {
-#if 0
-		/* Seems extra branch just slows it down */
-		if (!gi->lib[i])
-			break;
-#endif
-		if (likely(gi->lib[i] != coord))
-			continue;
-
-		coord_t lib = gi->lib[i] = gi->lib[--gi->libs];
-		gi->lib[gi->libs] = 0;
-		
-		/* Postpone refilling lib[] until we need to. */
-		assert(GROUP_REFILL_LIBS > 1);
-		if (gi->libs > GROUP_REFILL_LIBS)
-			return;
-		if (gi->libs == GROUP_REFILL_LIBS)
-			board_group_find_extra_libs(board, group, gi, coord);
-		if (u) return;
-		
-		if (gi->libs == 1)
-			board_capturable_add(board, group, gi->lib[0], onestone);
-		else if (gi->libs == 0)
-			board_capturable_rm(board, group, lib, onestone);
-		return;
-	}
-
-	/* This is ok even if gi->libs < GROUP_KEEP_LIBS since we
-	 * can call this multiple times per coord. */
-	return;
-}
-
-
-/* This is a low-level routine that doesn't maintain consistency
- * of all the board data structures. */
-static void
-board_remove_stone(board_t *board, group_t group, coord_t c, board_undo_t *u)
-{
-	enum stone color = board_at(board, c);
-	board_at(board, c) = S_NONE;
-	group_at(board, c) = 0;
-	if (!u)
-		board_hash_update(board, c, color);
-
-	/* Increase liberties of surrounding groups */
-	coord_t coord = c;
-	foreach_neighbor(board, coord, {
-		dec_neighbor_count_at(board, c, color);
-		group_t g = group_at(board, c);
-		if (g && g != group)
-			board_group_addlib(board, g, coord, u);
-	});
-	if (u) return;
-
-#ifdef BOARD_PAT3
-	/* board_hash_update() might have seen the freed up point as able
-	 * to capture another group in atari that only after the loop
-	 * above gained enough liberties. Reset pat3 again. */
-	board->pat3[c] = pattern3_hash(board, c);
-#endif
-
-	if (DEBUGL(6))
-		fprintf(stderr, "pushing free move [%d]: %d,%d\n", board->flen, coord_x(c), coord_y(c));
-	board_addf(board, c);
-}
-
-static int profiling_noinline
-board_group_capture(board_t *board, group_t group, board_undo_t *u)
-{
-	int stones = 0;
-
-	foreach_in_group(board, group) {
-		board->captures[stone_other(board_at(board, c))]++;
-		board_remove_stone(board, group, c, u);
-		stones++;
-	} foreach_in_group_end;
-
-	group_info_t *gi = &board_group_info(board, group);
-	assert(gi->libs == 0);
-	memset(gi, 0, sizeof(*gi));
-
-	return stones;
-}
-
-
-static void profiling_noinline
-add_to_group(board_t *board, group_t group, coord_t prevstone, coord_t coord, board_undo_t *u)
-{
-	group_at(board, coord) = group;
-	groupnext_at(board, coord) = groupnext_at(board, prevstone);
-	groupnext_at(board, prevstone) = coord;
-
-	foreach_neighbor(board, coord, {
-		if (board_at(board, c) == S_NONE)
-			board_group_addlib(board, group, c, u);
-	});
-
-	if (DEBUGL(8))
-		fprintf(stderr, "add_to_group: added (%d,%d ->) %d,%d (-> %d,%d) to group %d\n",
-			coord_x(prevstone), coord_y(prevstone),
-			coord_x(coord), coord_y(coord),
-			groupnext_at(board, coord) % board_size(board), groupnext_at(board, coord) / board_size(board),
-			group_base(group));
-}
-
-static void profiling_noinline
-merge_groups(board_t *board, group_t group_to, group_t group_from, board_undo_t *u)
-{
-	if (DEBUGL(7))
-		fprintf(stderr, "board_play_raw: merging groups %d -> %d\n",
-			group_base(group_from), group_base(group_to));
-	group_info_t *gi_from = &board_group_info(board, group_from);
-	group_info_t *gi_to = &board_group_info(board, group_to);
-	bool onestone_from = group_is_onestone(board, group_from);
-	bool onestone_to = group_is_onestone(board, group_to);
-
-	if (!u)
-		/* We do this early before the group info is rewritten. */
-		if (gi_from->libs == 1)
-			board_capturable_rm(board, group_from, gi_from->lib[0], onestone_from);
-
-	if (DEBUGL(7))
-		fprintf(stderr,"---- (froml %d, tol %d)\n", gi_from->libs, gi_to->libs);
-
-	if (gi_to->libs < GROUP_KEEP_LIBS) {
-		for (int i = 0; i < gi_from->libs; i++) {
-			for (int j = 0; j < gi_to->libs; j++)
-				if (gi_to->lib[j] == gi_from->lib[i])
-					goto next_from_lib;
-			if (!u) {
-				if (gi_to->libs == 0)
-					board_capturable_add(board, group_to, gi_from->lib[i], onestone_to);
-				else if (gi_to->libs == 1)
-					board_capturable_rm(board, group_to, gi_to->lib[0], onestone_to);
-			}
-			gi_to->lib[gi_to->libs++] = gi_from->lib[i];
-			if (gi_to->libs >= GROUP_KEEP_LIBS)
-				break;
-next_from_lib:;
-		}
-	}
-
-	if (!u && gi_to->libs == 1) {
-		coord_t lib = board_group_info(board, group_to).lib[0];
-#ifdef BOARD_PAT3
-		if (gi_from->libs == 1) {
-			/* We removed group_from from capturable groups,
-			 * therefore switching the atari flag off.
-			 * We need to set it again since group_to is also
-			 * capturable. */
-			int fn__i = 0;
-			foreach_neighbor(board, lib, {
-				board->pat3[lib] |= (group_at(board, c) == group_from) << (16 + 3 - fn__i);
-				fn__i++;
-			});
-		}
-#endif
-	}
-
-	coord_t last_in_group;
-	foreach_in_group(board, group_from) {
-		last_in_group = c;
-		group_at(board, c) = group_to;
-	} foreach_in_group_end;
-
-	if (u) u->merged[++u->nmerged_tmp].last = last_in_group;
-	groupnext_at(board, last_in_group) = groupnext_at(board, group_base(group_to));
-	groupnext_at(board, group_base(group_to)) = group_base(group_from);
-	memset(gi_from, 0, sizeof(group_info_t));
-
-	if (DEBUGL(7))
-		fprintf(stderr, "board_play_raw: merged group: %d\n",
-			group_base(group_to));
-}
-
-static group_t profiling_noinline
-new_group(board_t *board, coord_t coord, board_undo_t *u)
-{
-	group_t group = coord;
-	group_info_t *gi = &board_group_info(board, group);
-	foreach_neighbor(board, coord, {
-		if (board_at(board, c) == S_NONE)
-			/* board_group_addlib is ridiculously expensive for us */
-#if GROUP_KEEP_LIBS < 4
-			if (gi->libs < GROUP_KEEP_LIBS)
-#endif
-			gi->lib[gi->libs++] = c;
-	});
-
-	group_at(board, coord) = group;
-	groupnext_at(board, coord) = 0;
-
-	if (!u)
-		if (gi->libs == 1)
-			board_capturable_add(board, group, gi->lib[0], true);
-
-	if (DEBUGL(8))
-		fprintf(stderr, "new_group: added %d,%d to group %d\n",
-			coord_x(coord), coord_y(coord),
-			group_base(group));
-
-	return group;
-}
-
-static inline void
-undo_save_merge(board_t *b, board_undo_t *u, group_t g, coord_t c)
-{
-	if (g == u->merged[0].group || g == u->merged[1].group || 
-	    g == u->merged[2].group || g == u->merged[3].group)
-		return;
-	
-	int i = u->nmerged++;
-	if (!i) u->inserted = c;
-	u->merged[i].group = g;
-	u->merged[i].last = 0;   // can remove
-	u->merged[i].info = board_group_info(b, g);
-}
-
-static inline void
-undo_save_enemy(board_t *b, board_undo_t *u, group_t g)
-{
-	if (g == u->enemies[0].group || g == u->enemies[1].group ||
-	    g == u->enemies[2].group || g == u->enemies[3].group)
-		return;
-	
-	int i = u->nenemies++;
-	u->enemies[i].group = g;
-	u->enemies[i].info = board_group_info(b, g);
-	u->enemies[i].stones = NULL;
-	
-	if (board_group_info(b, g).libs <= 1) { // Will be captured
-		coord_t *stones = u->enemies[i].stones = u->captures_end;
-		int j = 0;
-		foreach_in_group(b, g) {
-			stones[j++] = c;
-		} foreach_in_group_end;
-		u->ncaptures += j;
-		stones[j++] = 0;
-		u->captures_end = &stones[j];
-	}
-}
-
-static void
-undo_save_group_info(board_t *b, coord_t coord, enum stone color, board_undo_t *u)
-{
-	u->next_at = groupnext_at(b, coord);
-
-	foreach_neighbor(b, coord, {			
-		group_t g = group_at(b, c);
-	
-		if (board_at(b, c) == color)
-			undo_save_merge(b, u, g, c);
-		else if (board_at(b, c) == stone_other(color)) 
-			undo_save_enemy(b, u, g);
-	});
-}		
-
-static void
-undo_save_suicide(board_t *b, coord_t coord, enum stone color, board_undo_t *u)
-{
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) == color) {
-			// Handle suicide as a capture ...
-			undo_save_enemy(b, u, group_at(b, c));
-			return;
-		}
-	});
-	assert(0);
-}
-
-static inline group_t
-play_one_neighbor(board_t *board,
-		  coord_t coord, enum stone color, enum stone other_color,
-		  coord_t c, group_t group, board_undo_t *u)
-{
-	enum stone ncolor = board_at(board, c);
-	group_t ngroup = group_at(board, c);
-
-	inc_neighbor_count_at(board, c, color);
-
-	if (!ngroup)
-		return group;
-
-	board_group_rmlib(board, ngroup, coord, u);
-	if (DEBUGL(7))
-		fprintf(stderr, "board_play_raw: reducing libs for group %d (%d:%d,%d)\n",
-			group_base(ngroup), ncolor, color, other_color);
-
-	if (ncolor == color && ngroup != group) {
-		if (!group) {
-			group = ngroup;
-			add_to_group(board, group, c, coord, u);
-		} else
-			merge_groups(board, group, ngroup, u);
-	} else if (ncolor == other_color) {
-		if (DEBUGL(8)) {
-			group_info_t *gi = &board_group_info(board, ngroup);
-			fprintf(stderr, "testing captured group %d[%s]: ", group_base(ngroup), coord2sstr(group_base(ngroup)));
-			for (int i = 0; i < GROUP_KEEP_LIBS; i++)
-				fprintf(stderr, "%s ", coord2sstr(gi->lib[i]));
-			fprintf(stderr, "\n");
-		}
-		if (unlikely(board_group_captured(board, ngroup)))
-			board_group_capture(board, ngroup, u);
-	}
-	return group;
-}
-
-/* We played on a place with at least one liberty. We will become a member of
- * some group for sure. */
-static group_t profiling_noinline
-board_play_outside(board_t *board, move_t *m, int f, board_undo_t *u)
-{
-	coord_t coord = m->coord;
-	enum stone color = m->color;
-	enum stone other_color = stone_other(color);
-	group_t group = 0;
-
-	if (u)  
-		undo_save_group_info(board, coord, color, u);
-	else {
-		board_rmf(board, f);
-		if (DEBUGL(6))
-			fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
-	}
-	foreach_neighbor(board, coord, {
-			group = play_one_neighbor(board, coord, color, other_color, c, group, u);
-	});
-
-	board_at(board, coord) = color;
-	if (unlikely(!group))
-		group = new_group(board, coord, u);
-
-	if (!u) {
-		board->last_move4 = board->last_move3;
-		board->last_move3 = board->last_move2;
-	}
-	board->last_move2 = board->last_move;
-	board->last_move = *m;
-	board->moves++;
-	if (!u) {
-		board_hash_update(board, coord, color);
-		board_symmetry_update(board, &board->symmetry, coord);
-	}
-	move_t ko = { pass, S_NONE };
-	board->ko = ko;
-
-	return group;
-}
-
-/* We played in an eye-like shape. Either we capture at least one of the eye
- * sides in the process of playing, or return -1. */
-static int profiling_noinline
-board_play_in_eye(board_t *board, move_t *m, int f, board_undo_t *u)
-{
-	coord_t coord = m->coord;
-	enum stone color = m->color;
-	/* Check ko: Capture at a position of ko capture one move ago */
-	if (unlikely(color == board->ko.color && coord == board->ko.coord)) {
-		if (DEBUGL(5))
-			fprintf(stderr, "board_check: ko at %d,%d color %d\n", coord_x(coord), coord_y(coord), color);
-		return -1;
-	} else if (DEBUGL(6))
-		fprintf(stderr, "board_check: no ko at %d,%d,%d - ko is %d,%d,%d\n",
-			color, coord_x(coord), coord_y(coord),
-			board->ko.color, coord_x(board->ko.coord), coord_y(board->ko.coord));
-
-	move_t ko = { pass, S_NONE };
-
-	int captured_groups = 0;
-
-	foreach_neighbor(board, coord, {
-		group_t g = group_at(board, c);
-		if (DEBUGL(7))
-			fprintf(stderr, "board_check: group %d has %d libs\n",
-				g, board_group_info(board, g).libs);
-		captured_groups += (board_group_info(board, g).libs == 1);
-	});
-
-	if (likely(captured_groups == 0)) {
-		if (DEBUGL(5)) {
-			if (DEBUGL(6))  board_print(board, stderr);
-			fprintf(stderr, "board_check: one-stone suicide\n");
-		}
-		return -1;
-	}
-
-	if (!u) {
-		board_rmf(board, f);
-		if (DEBUGL(6))
-			fprintf(stderr, "popping free move [%d->%d]: %d\n", board->flen, f, board->f[f]);
-	}
-	else
-		undo_save_group_info(board, coord, color, u);
-
-	int ko_caps = 0;
-	coord_t cap_at = pass;
-	foreach_neighbor(board, coord, {
-		inc_neighbor_count_at(board, c, color);
-
-		group_t group = group_at(board, c);
-		if (!group)
-			continue;
-
-		board_group_rmlib(board, group, coord, u);
-		if (DEBUGL(7))
-			fprintf(stderr, "board_play_raw: reducing libs for group %d\n",
-				group_base(group));
-
-		if (board_group_captured(board, group)) {
-			ko_caps += board_group_capture(board, group, u);
-			cap_at = c;
-		}
-	});
-	if (ko_caps == 1) {
-		ko.color = stone_other(color);
-		ko.coord = cap_at; // unique
-		board->last_ko = ko;
-		board->last_ko_age = board->moves + 1;  /* == board->moves really, board->moves++ done after */
-		if (DEBUGL(5))
-			fprintf(stderr, "guarding ko at %d,%s\n", ko.color, coord2sstr(ko.coord));
-	}
-
-	board_at(board, coord) = color;
-	group_t group = new_group(board, coord, u);
-
-	if (!u) {
-		board->last_move4 = board->last_move3;
-		board->last_move3 = board->last_move2;
-	}
-	board->last_move2 = board->last_move;
-	board->last_move = *m;
-	board->moves++;
-	if (!u) {
-		board_hash_update(board, coord, color);
-		board_hash_commit(board);
-		board_symmetry_update(board, &board->symmetry, coord);
-	}
-	board->ko = ko;
-
-	return !!group;
-}
-
-static int __attribute__((flatten))
-board_play_f(board_t *board, move_t *m, int f, board_undo_t *u)
-{
-	if (DEBUGL(7))
-		fprintf(stderr, "board_play(%s): ---- Playing %d,%d\n", coord2sstr(m->coord), coord_x(m->coord), coord_y(m->coord));
-	if (likely(!board_is_eyelike(board, m->coord, stone_other(m->color)))) {
-		/* NOT playing in an eye. Thus this move has to succeed. (This
-		 * is thanks to New Zealand rules. Otherwise, multi-stone
-		 * suicide might fail.) */
-		group_t group = board_play_outside(board, m, f, u);
-		if (unlikely(board_group_captured(board, group))) {
-			if (u) undo_save_suicide(board, m->coord, m->color, u);
-			board_group_capture(board, group, u);
-		}
-		if (!u)
-			board_hash_commit(board);
-		return 0;
-	} else
-		return board_play_in_eye(board, m, f, u);
-}
-
-static void
-undo_init(board_t *b, move_t *m, board_undo_t *u)
-{
-	// Paranoid uninitialized mem test
-	// memset(u, 0xff, sizeof(*u));
-	
-	u->last_move2 = b->last_move2;
-	u->ko = b->ko;
-	u->last_ko = b->last_ko;
-	u->last_ko_age = b->last_ko_age;
-	u->captures_end = &u->captures[0];
-	u->ncaptures = 0;
-	
-	u->nmerged = u->nmerged_tmp = u->nenemies = 0;
-	for (int i = 0; i < 4; i++)
-		u->merged[i].group = u->enemies[i].group = 0;
-}
-
-static int
-board_play_(board_t *board, move_t *m, board_undo_t *u)
-{
-#ifdef BOARD_UNDO_CHECKS
-	assert(u || !board->quicked);
-#endif
-
-	if (u) undo_init(board, m, u);
-	
-	if (unlikely(is_pass(m->coord))) {
-		board->passes[m->color]++;
-		/* On pass, the player gives a pass stone to the opponent. */
-		if (is_pass(m->coord) && board->rules == RULES_SIMING)
-			board->captures[stone_other(m->color)]++;
-		
-		move_t nomove = { pass, S_NONE };
-		board->ko = nomove;
-		if (!u) { 
-			board->last_move4 = board->last_move3;
-			board->last_move3 = board->last_move2;
-		}
-		board->last_move2 = board->last_move;
-		board->last_move = *m;
-		board->moves++;
-		return 0;
-	}
-
-	if (unlikely(board_at(board, m->coord) != S_NONE)) {
-		if (DEBUGL(7)) fprintf(stderr, "board_check: stone exists\n");
-		return -1;
-	}
-
-	int f = (u ? -1 : board->fmap[m->coord]);
-	return board_play_f(board, m, f, u);
-}
-
-int
-board_play(board_t *board, move_t *m)
-{
-	return board_play_(board, m, NULL);
-}
-
-int
-board_quick_play(board_t *board, move_t *m, board_undo_t *u)
-{
-	int r = board_play_(board, m, u);
-#ifdef BOARD_UNDO_CHECKS
-	if (r >= 0)
-		board->quicked++;
-#endif
-	return r;
-}
-
-static inline void
-undo_merge(board_t *b, board_undo_t *u, move_t *m)
-{
-	coord_t coord = m->coord;
-	group_t group = group_at(b, coord);
-	undo_merge_t *merged = u->merged;
-	
-	// Others groups, in reverse order ...
-	for (int i = u->nmerged - 1; i > 0; i--) {
-		group_t old_group = merged[i].group;
-			
-		board_group_info(b, old_group) = merged[i].info;
-			
-		groupnext_at(b, group_base(group)) = groupnext_at(b, merged[i].last);
-		groupnext_at(b, merged[i].last) = 0;
-
-#if 0
-		printf("merged_group[%i]:   (last: %s)", i, coord2sstr(merged[i].last));
-		foreach_in_group(b, old_group) {
-			printf("%s ", coord2sstr(c));
-		} foreach_in_group_end;
-		printf("\n");
-#endif
-			
-		foreach_in_group(b, old_group) {
-			group_at(b, c) = old_group;
-		} foreach_in_group_end;
-	}
-
-	// Restore first group
-	groupnext_at(b, u->inserted) = groupnext_at(b, coord);
-	board_group_info(b, merged[0].group) = merged[0].info;
-
-#if 0
-	printf("merged_group[0]: ");
-	foreach_in_group(b, merged[0].group) {
-		printf("%s ", coord2sstr(c));
-	} foreach_in_group_end;
-	printf("\n");
-#endif
-}
-
-
-static inline void
-restore_enemies(board_t *b, board_undo_t *u, move_t *m)
-{
-	enum stone color = m->color;
-	enum stone other_color = stone_other(m->color);
-	
-	undo_enemy_t *enemy = u->enemies;
-	for (int i = 0; i < u->nenemies; i++) {
-		group_t old_group = enemy[i].group;
-			
-		board_group_info(b, old_group) = enemy[i].info;
-			
-		coord_t *stones = enemy[i].stones;
-		if (!stones)  continue;
-
-		for (int j = 0; stones[j]; j++) {
-			board_at(b, stones[j]) = other_color;
-			group_at(b, stones[j]) = old_group;
-			groupnext_at(b, stones[j]) = stones[j + 1];
-
-			foreach_neighbor(b, stones[j], {
-				inc_neighbor_count_at(b, c, other_color);
-			});
-
-			// Update liberties of neighboring groups
-			foreach_neighbor(b, stones[j], {
-					if (board_at(b, c) != color)
-						continue;
-					group_t g = group_at(b, c);
-					if (g == u->merged[0].group || g == u->merged[1].group || g == u->merged[2].group || g == u->merged[3].group)
-						continue;
-					board_group_rmlib(b, g, stones[j], u);
-				});
-		}
-	}
-}
-
-static void
-board_undo_stone(board_t *b, board_undo_t *u, move_t *m)
-{	
-	coord_t coord = m->coord;
-	enum stone color = m->color;
-	/* - update groups
-	 * - put captures back
-	 */
-	
-	//printf("nmerged: %i\n", u->nmerged);
-	
-	// Restore merged groups
-	if (u->nmerged)
-		undo_merge(b, u, m);
-	else			// Single stone group undo
-		memset(&board_group_info(b, group_at(b, coord)), 0, sizeof(group_info_t));
-	
-	board_at(b, coord) = S_NONE;
-	group_at(b, coord) = 0;
-	groupnext_at(b, coord) = u->next_at;
-	
-	foreach_neighbor(b, coord, {
-			dec_neighbor_count_at(b, c, color);
-	});
-
-	// Restore enemy groups
-	if (u->nenemies) {
-		b->captures[color] -= u->ncaptures;
-		restore_enemies(b, u, m);
-	}
-}
-
-static inline void
-restore_suicide(board_t *b, board_undo_t *u, move_t *m)
-{
-	enum stone color = m->color;
-	enum stone other_color = stone_other(m->color);
-	
-	undo_enemy_t *enemy = u->enemies;
-	for (int i = 0; i < u->nenemies; i++) {
-		group_t old_group = enemy[i].group;
-			
-		board_group_info(b, old_group) = enemy[i].info;
-			
-		coord_t *stones = enemy[i].stones;
-		if (!stones)  continue;
-
-		for (int j = 0; stones[j]; j++) {
-			board_at(b, stones[j]) = other_color;
-			group_at(b, stones[j]) = old_group;
-			groupnext_at(b, stones[j]) = stones[j + 1];
-
-			foreach_neighbor(b, stones[j], {
-				inc_neighbor_count_at(b, c, other_color);
-			});
-
-			// Update liberties of neighboring groups
-			foreach_neighbor(b, stones[j], {
-					if (board_at(b, c) != color)
-						continue;
-					group_t g = group_at(b, c);
-					if (g == u->enemies[0].group || g == u->enemies[1].group || 
-					    g == u->enemies[2].group || g == u->enemies[3].group)
-						continue;
-					board_group_rmlib(b, g, stones[j], u);
-				});
-		}
-	}
-}
-
-
-static void
-board_undo_suicide(board_t *b, board_undo_t *u, move_t *m)
-{	
-	coord_t coord = m->coord;
-	enum stone other_color = stone_other(m->color);
-	
-	// Pretend it's capture ...
-	move_t m2 = move(m->coord, other_color);
-	b->captures[other_color] -= u->ncaptures;
-	
-	restore_suicide(b, u, &m2);
-
-	undo_merge(b, u, m);
-
-	board_at(b, coord) = S_NONE;
-	group_at(b, coord) = 0;
-	groupnext_at(b, coord) = u->next_at;
-
-	foreach_neighbor(b, coord, {
-		dec_neighbor_count_at(b, c, m->color);
-	});
-
-}
-
-
-void
-board_quick_undo(board_t *b, move_t *m, board_undo_t *u)
-{
-#ifdef BOARD_UNDO_CHECKS
-	b->quicked--;
-#endif
-	
-	b->last_move = b->last_move2;
-	b->last_move2 = u->last_move2;
-	b->ko = u->ko;
-	b->last_ko = u->last_ko;
-	b->last_ko_age = u->last_ko_age;
-	b->moves--;	
-	
-	if (unlikely(is_pass(m->coord))) {
-		b->passes[m->color]--;
-		return;
-	}
-
-	if (likely(board_at(b, m->coord) == m->color))
-		board_undo_stone(b, u, m);
-	else if (board_at(b, m->coord) == S_NONE)
-		board_undo_suicide(b, u, m);
-	else
-		assert(0);	/* Anything else doesn't make sense */
-}
-
+/********************************************************************************************************/
+/* playout board logic */
 
 bool
 board_permit(board_t *b, move_t *m, void *data)
@@ -1468,7 +554,7 @@ board_try_random_move(board_t *b, enum stone color, coord_t *coord, int f, ppr_p
 	if (!permit(b, &m, permit_data))
 		return false;
 	if (m.coord == *coord)
-		return likely(board_play_f(b, &m, f, NULL) >= 0);
+		return likely(board_play_f(b, &m, f) >= 0);
 	*coord = m.coord; // permit modified the coordinate
 	return likely(board_play(b, &m) >= 0);
 }
@@ -1476,10 +562,7 @@ board_try_random_move(board_t *b, enum stone color, coord_t *coord, int f, ppr_p
 void
 board_play_random(board_t *b, enum stone color, coord_t *coord, ppr_permit permit, void *permit_data)
 {
-	if (unlikely(b->flen == 0))
-		goto play_pass;
-
-	{
+	if (likely(b->flen)) {
 		int base = fast_random(b->flen), f;
 		for (f = base; f < b->flen; f++)
 			if (board_try_random_move(b, color, coord, f, permit, permit_data))
@@ -1489,12 +572,13 @@ board_play_random(board_t *b, enum stone color, coord_t *coord, ppr_permit permi
 				return;
 	}
 
-play_pass:
 	*coord = pass;
 	move_t m = { pass, color };
 	board_play(b, &m);
 }
 
+
+/********************************************************************************************************/
 
 /* XXX: We attempt false eye detection but we will yield false
  * positives in case of http://senseis.xmp.net/?TwoHeadedDragon :-( */
@@ -1628,15 +712,16 @@ board_score(board_t *b, int scores[S_MAX])
 	 * the board has been artificially edited however the relationship
 	 * is broken and japanese score will be off. */
 	if (b->rules == RULES_JAPANESE)
-		score += (b->last_move.color == S_BLACK) + (b->passes[S_WHITE] - b->passes[S_BLACK]);
+		score += (last_move(b).color == S_BLACK) + (b->passes[S_WHITE] - b->passes[S_BLACK]);
 	return score;
 }
 
 void
 board_print_official_ownermap(board_t *b, int *final_ownermap)
 {
-	for (int y = board_size(b) - 2; y >= 1; y--) {
-		for (int x = 1; x < board_size(b) - 1; x++) {
+	int size = board_rsize(b);
+	for (int y = size; y >= 1; y--) {
+		for (int x = 1; x <= size; x++) {
 			coord_t c = coord_xy(x, y);
 			char *chars = ".XO:";
 			fprintf(stderr, "%c ", chars[final_ownermap[c]]);
@@ -1708,7 +793,7 @@ floating_t
 board_official_score(board_t *b, move_queue_t *dead)
 {
 	int dame, seki;
-	int ownermap[board_size2(b)];
+	int ownermap[board_max_coords(b)];
 	return board_official_score_details(b, dead, &dame, &seki, ownermap, NULL);
 }
 
@@ -1750,4 +835,181 @@ rules2str(enum rules rules)
 		default:                die("invalid rules: %i\n", rules);
 	}
 	return NULL;
+}
+
+
+/********************************************************************************************************/
+/* board_play() implementation */
+
+static inline void
+board_addf(board_t *b, coord_t c)
+{
+	b->fmap[c] = b->flen; 
+	b->f[b->flen++] = c;
+}
+
+static inline void
+board_rmf(board_t *b, int f)
+{
+	/* Not bothering to delete fmap records,
+	 * Just keep the valid ones up to date. */
+	coord_t c = b->f[f] = b->f[--b->flen];
+	b->fmap[c] = f;
+}
+
+static void
+board_commit_move(board_t *b, move_t *m)
+{
+	b->last_move_i = last_move_nexti(b);
+	last_move(b) = *m;
+
+	b->moves++;
+}
+
+/* Update board hash with given coordinate. */
+static void profiling_noinline
+board_hash_update(board_t *board, coord_t coord, enum stone color)
+{
+	if (!playout_board(board)) {
+		board->hash ^= hash_at(coord, color);
+		if (DEBUGL(8))
+			fprintf(stderr, "board_hash_update(%d,%d,%d) ^ %" PRIhash " -> %" PRIhash "\n", color, coord_x(coord), coord_y(coord), hash_at(coord, color), board->hash);
+	}
+
+#if defined(BOARD_PAT3)
+	/* @color is not what we need in case of capture. */
+	static const int ataribits[8] = { -1, 0, -1, 1, 2, -1, 3, -1 };
+	enum stone new_color = board_at(board, coord);
+	bool in_atari = false;
+	if (new_color == S_NONE)
+		board->pat3[coord] = pattern3_hash(board, coord);
+	else
+		in_atari = (board_group_info(board, group_at(board, coord)).libs == 1);
+	foreach_8neighbor(board, coord) {
+		/* Internally, the loop uses fn__i=[0..7]. We can use
+		 * it directly to address bits within the bitmap of the
+		 * neighbors since the bitmap order is reverse to the
+		 * loop order. */
+		if (board_at(board, c) != S_NONE)
+			continue;
+		board->pat3[c] &= ~(3 << (fn__i*2));
+		board->pat3[c] |= new_color << (fn__i*2);
+		if (ataribits[fn__i] >= 0) {
+			board->pat3[c] &= ~(1 << (16 + ataribits[fn__i]));
+			board->pat3[c] |= in_atari << (16 + ataribits[fn__i]);
+		}
+	} foreach_8neighbor_end;
+#endif
+}
+
+/* Commit current board hash to history. */
+static void profiling_noinline
+board_hash_commit(board_t *b)
+{
+	if (playout_board(b))  return;
+
+	if (DEBUGL(8)) fprintf(stderr, "board_hash_commit %" PRIhash "\n", b->hash);
+
+	for (int i = 0; i < BOARD_HASH_HISTORY; i++) {
+		if (b->hash_history[i] == b->hash) {
+			if (DEBUGL(5))  fprintf(stderr, "SUPERKO VIOLATION noted at %s\n", coord2sstr(last_move(b).coord));
+			b->superko_violation = true;
+			return;
+		}
+	}
+
+	int i = b->hash_history_next;
+	b->hash_history[i] = b->hash;
+	b->hash_history_next = (i+1) % BOARD_HASH_HISTORY;
+}
+
+static inline void
+board_pat3_reset(board_t *b, coord_t c)
+{
+#ifdef BOARD_PAT3
+	b->pat3[c] = pattern3_hash(b, c);
+#endif
+}
+
+static inline void
+board_pat3_fix(board_t *b, group_t group_from, group_t group_to)
+{
+#ifdef BOARD_PAT3
+	group_info_t *gi_from = &board_group_info(b, group_from);
+	group_info_t *gi_to = &board_group_info(b, group_to);
+	
+	if (gi_to->libs == 1) {
+		coord_t lib = board_group_info(b, group_to).lib[0];
+		if (gi_from->libs == 1) {
+			/* We removed group_from from capturable groups,
+			 * therefore switching the atari flag off.
+			 * We need to set it again since group_to is also
+			 * capturable. */
+			int fn__i = 0;
+			foreach_neighbor(b, lib, {
+				b->pat3[lib] |= (group_at(b, c) == group_from) << (16 + 3 - fn__i);
+				fn__i++;
+			});
+		}
+	}
+#endif /* BOARD_PAT3 */
+}
+
+static void
+board_capturable_add(board_t *board, group_t group, coord_t lib)
+{
+	//fprintf(stderr, "group %s cap %s\n", coord2sstr(group), coord2sstr(lib));
+
+#ifdef BOARD_PAT3
+	int fn__i = 0;
+	foreach_neighbor(board, lib, {
+		board->pat3[lib] |= (group_at(board, c) == group) << (16 + 3 - fn__i);
+		fn__i++;
+	});
+#endif
+
+#ifdef WANT_BOARD_C
+	/* Update the list of capturable groups. */
+	assert(group);
+	assert(board->clen < BOARD_MAX_GROUPS);
+	board->c[board->clen++] = group;
+#endif
+}
+
+static void
+board_capturable_rm(board_t *board, group_t group, coord_t lib)
+{
+	//fprintf(stderr, "group %s nocap %s\n", coord2sstr(group), coord2sstr(lib));
+#ifdef BOARD_PAT3
+	int fn__i = 0;
+	foreach_neighbor(board, lib, {
+		board->pat3[lib] &= ~((group_at(board, c) == group) << (16 + 3 - fn__i));
+		fn__i++;
+	});
+#endif
+
+#ifdef WANT_BOARD_C
+	/* Update the list of capturable groups. */
+	for (int i = 0; i < board->clen; i++)
+		if (unlikely(board->c[i] == group)) {
+			board->c[i] = board->c[--board->clen];
+			return;
+		}
+	fprintf(stderr, "rm of bad group %s\n", coord2sstr(group_base(group)));
+	assert(0);
+#endif
+}
+
+
+#define FULL_BOARD
+#include "board_play.h"
+
+int
+board_play(board_t *b, move_t *m)
+{
+#ifdef BOARD_UNDO_CHECKS
+        assert(!b->quicked);
+#endif
+
+	return board_play_(b, m);
 }

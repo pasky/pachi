@@ -395,7 +395,7 @@ int main(int argc, char *argv[])
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 	fifo_init();
 
-	board_t *b = board_new(19 + 2, fbookfile);
+	board_t *b = board_new(19, fbookfile);
 	if (forced_ruleset) {
 		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
@@ -419,6 +419,7 @@ int main(int argc, char *argv[])
 	}
 
 	engine_done(&e);
+	board_delete(&b);
 	chat_done();
 	free(testfile);
 	free(gtp_port);

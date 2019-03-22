@@ -129,8 +129,8 @@ extern hash_t pthashes[PTH__ROTATIONS][MAX_PATTERN_AREA][S_MAX];
 #define ptcoords_at(x_, y_, c_, j_) \
 	int x_ = coord_x((c_)) + ptcoords[j_].x; \
 	int y_ = coord_y((c_)) + ptcoords[j_].y; \
-	if (x_ >= the_board_size()) x_ = the_board_size() - 1; else if (x_ < 0) x_ = 0; \
-	if (y_ >= the_board_size()) y_ = the_board_size() - 1; else if (y_ < 0) y_ = 0;
+	if (x_ >= the_board_stride()) x_ = the_board_stride() - 1; else if (x_ < 0) x_ = 0; \
+	if (y_ >= the_board_stride()) y_ = the_board_stride() - 1; else if (y_ < 0) y_ = 0;
 
 
 /* Spatial dictionary file manipulation. */

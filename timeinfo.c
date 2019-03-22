@@ -315,7 +315,7 @@ time_stop_set_remaining(time_info_t *ti, board_t *b, double net_lag, time_stop_t
 static void
 time_stop_phase_adjust(board_t *b, int fuseki_end, int yose_start, time_stop_t *stop)
 {
-	int bsize = (board_size(b)-2)*(board_size(b)-2);
+	int bsize = (board_rsize(b))*(board_rsize(b));
 	fuseki_end = fuseki_end * bsize / 100; // move nb at fuseki end
 	yose_start = yose_start * bsize / 100; // move nb at yose start
 	assert(fuseki_end < yose_start);
@@ -479,8 +479,8 @@ fuseki_moves(board_t *b)
 		return opt_fuseki_moves;
 	
 	int moves = 20;
-	if (real_board_size(b) <= 15)  moves = 10;
-	if (real_board_size(b) <= 13)  moves = 7;
+	if (board_rsize(b) <= 15)  moves = 10;
+	if (board_rsize(b) <= 13)  moves = 7;
 	if (board_small(b))	       moves = 4;
 	return moves;
 }

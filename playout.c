@@ -109,7 +109,7 @@ static coord_t
 fill_bent_four(board_t *b, enum stone color, coord_t *other, coord_t *kill)
 {
 	enum stone other_color = stone_other(color);  // white here
-	int s = real_board_size(b);
+	int s = board_rsize(b);
 	coord_t corners[4] = { coord_xy(1, 1),
 			       coord_xy(1, s),
 			       coord_xy(s, 1),
@@ -197,6 +197,8 @@ playout_play_game(playout_setup_t *setup,
 		  ownermap_t *ownermap,
 		  playout_policy_t *policy)
 {
+	b->playout_board = true;   // don't need board hash, history, symmetry...
+
 	int starting_passes[S_MAX];
 	memcpy(starting_passes, b->passes, sizeof(starting_passes));
 
@@ -211,7 +213,7 @@ playout_play_game(playout_setup_t *setup,
 #endif
 
 	enum stone color = starting_color;
-	int passes = is_pass(b->last_move.coord) && b->moves > 0;
+	int passes = is_pass(last_move(b).coord) && b->moves > 0;
 
 	/* Play until both sides pass, or we hit threshold. */
 	while (gamelen-- > 0 && passes < 2) {
@@ -256,7 +258,7 @@ playout_play_game(playout_setup_t *setup,
 	 * TODO: handle eyes in seki according to japanese rules. */
 	if (b->rules == RULES_JAPANESE) {
 		memcpy(b->passes, starting_passes, sizeof(starting_passes));
-		b->last_move.color = stone_other(starting_color);
+		last_move(b).color = stone_other(starting_color);
 	}
 	
 	floating_t score = board_fast_score(b);

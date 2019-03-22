@@ -27,7 +27,7 @@ bool
 using_joseki(board_t *b)
 {
 	bool r = (joseki_enabled && !using_dcnn(b) &&
-		  joseki_dict && joseki_dict->bsize == board_size(b));
+		  joseki_dict && joseki_dict->bsize == board_rsize(b));
 	if (joseki_required && !r)  die("joseki required but not used, aborting.\n");
 	return r;
 }
@@ -159,7 +159,7 @@ joseki_add_3x3(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color, j
 {
 	assert(!is_pass(coord));
 	if (!prev)  die("joseki: [ %s %s ] adding 3x3 match with no previous move, this is bad.\n",
-			coord2sstr(b->last_move.coord), coord2sstr(coord));
+			coord2sstr(last_move(b).coord), coord2sstr(coord));
 	josekipat_t *p = joseki_lookup_3x3_prev(jd, b, coord, color, prev, flags);
 	if (p)  return p;
 
@@ -220,14 +220,14 @@ static int
 convert_coords(int bsize, char *buf)
 {
 	if (str_prefix("boardsize", buf))
-		sprintf(buf, "boardsize %i", bsize-2);	
+		sprintf(buf, "boardsize %i", bsize);
 	
 	if (str_prefix("play ", buf)) {  /* Convert coordinates */
 		char *arg = buf + 7;  assert(buf[6] == ' ');
 		if (str_prefix("pass", arg))  return 0;
 		
-		coord_t c = str2coord_for(arg, 19+2);
-		int offset = 21 - bsize;  assert(offset >= 0);
+		coord_t c = str2coord_for(arg, 19);
+		int offset = 21 - (bsize+2);  assert(offset >= 0);
 		int x = (c % 21) - offset,  y = (c / 21) - offset;		
 		if (x < 1 || y < 1)           return -1;	/* Offboard, discard rest of sequence */
 		
@@ -255,7 +255,7 @@ joseki_load(int bsize)
 	if (!joseki_enabled)  return;
 	if (joseki_dict && joseki_dict->bsize != bsize)  joseki_done();
 	if (joseki_dict && joseki_dict->bsize == bsize)  return;
-	if (joseki_dict || bsize < 13+2)  return;  /* no joseki below 13x13 */
+	if (joseki_dict || bsize < 13)  return;  /* no joseki below 13x13 */
 
 	char fname[1024];
 	snprintf(fname, 1024, "joseki19.gtp");
@@ -278,7 +278,7 @@ joseki_load(int bsize)
 	char buf[4096];
 	gtp_t gtp;  gtp_init(&gtp);
 	for (int lineno = 1; fgets(buf, 4096, f); lineno++) {
-		if (bsize != 19+2 && convert_coords(bsize, buf) < 0)
+		if (bsize != 19 && convert_coords(bsize, buf) < 0)
 			skip_sequence(buf, 4096, f, &lineno);
 
 		gtp.quiet = true;
@@ -288,11 +288,11 @@ joseki_load(int bsize)
 			die("%s:%i  gtp command '%s' failed, aborting.\n", fname, lineno, buf);		
 	}
 	engine_done(&e);
-	board_done(b);
+	board_delete(&b);
 	debug_level = saved_debug_level;
 	int variations = gtp.played_games;
 	
-	if (DEBUGL(2))  fprintf(stderr, "Loaded joseki dictionary for %ix%i (%i variations).\n", bsize-2, bsize-2, variations);
+	if (DEBUGL(2))  fprintf(stderr, "Loaded joseki dictionary for %ix%i (%i variations).\n", bsize, bsize, variations);
 	if (DEBUGL(3))  joseki_stats(joseki_dict);
 	fclose(f);
 }
@@ -315,7 +315,7 @@ static float
 joseki_rating(board_t *b, josekipat_t *p)
 {
 	coord_t prev = (p->prev ? p->prev->coord : pass);
-	coord_t last = b->last_move.coord;
+	coord_t last = last_move(b).coord;
 	if (b->moves < 4)		     return 0.2; /* Play corners first */
 	if (p->flags & JOSEKI_FLAGS_LATER)   return 0.2; /* Low prio */
 	if (prev == last && last != pass)    return 1.0; /* Boost answers to last move */
@@ -364,8 +364,8 @@ joseki_lookup_regular(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone c
 		if (p->flags & JOSEKI_FLAGS_LATER)  match_low = p;	/* low prio */
 		else				    match_prev = p;	/* strong match: prev move matches */
 
-		if (prev->coord == b->last_move.coord &&
-		    prev->color == b->last_move.color)
+		if (prev->coord == last_move(b).coord &&
+		    prev->color == last_move(b).color)
 			return p;					/* last move match */
 	}
 
@@ -389,8 +389,8 @@ joseki_lookup_3x3(joseki_dict_t *jd, board_t *b, coord_t coord, enum stone color
 		if (p->flags & JOSEKI_FLAGS_LATER)  match_low = p;	/* low prio */			
 		else				    match_prev = p;	/* strong match: prev move matches */
 
-		if (prev->coord == b->last_move.coord &&
-		    prev->color == b->last_move.color)
+		if (prev->coord == last_move(b).coord &&
+		    prev->color == last_move(b).color)
 			return p;					/* last move match */
 	}
 	return (match_prev ? match_prev : match_low);

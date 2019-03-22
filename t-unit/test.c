@@ -150,7 +150,7 @@ set_ko(board_t *b, char *arg)
 	last.coord = str2coord(arg);
 	last.color = board_at(b, last.coord);
 	assert(last.color == S_BLACK || last.color == S_WHITE);
-	b->last_move = last;
+	last_move(b) = last;
 
 	/* Sanity checks */
 	group_t g = group_at(b, last.coord);
@@ -423,20 +423,20 @@ test_moggy_moves(board_t *b, char *arg)
 
 	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
 	engine_t e;  engine_init(&e, E_REPLAY, e_arg, b);
-	enum stone color = stone_other(b->last_move.color);
+	enum stone color = stone_other(last_move(b).color);
 	
 	if (DEBUGL(2))
 		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
 			stone2str(color), runs);
 
-        int played_[b->size2 + 1];		memset(played_, 0, sizeof(played_));
+        int played_[board_max_coords(b) + 1];	memset(played_, 0, sizeof(played_));
 	int *played = played_ + 1;		// allow storing pass
 	int most_played = 0;
 	replay_sample_moves(&e, b, color, played, &most_played);
 
 	/* Show moves stats */	
 	for (int k = most_played; k > 0; k--)
-		for (coord_t c = pass; c < b->size2; c++)
+		for (coord_t c = pass; c < board_max_coords(b); c++)
 			if (played[c] == k)
 				if (DEBUGL(2)) fprintf(stderr, "%3s: %.2f%%\n", coord2str(c), (float)k * 100 / runs);
 	
@@ -461,7 +461,7 @@ moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool 
 		if (color == S_WHITE)
 			score = -score;
 		wr += (score > 0);
-		board_done_noalloc(&b2);
+		board_done(&b2);
 	}
 	
 	double elapsed = time_now() - time_start;
@@ -513,7 +513,7 @@ test_moggy_status(board_t *b, char *arg)
 	
 	if (!tunit_over_gtp) assert(last_move_set);
 	
-	enum stone color = (is_pass(b->last_move.coord) ? S_BLACK : stone_other(b->last_move.color));
+	enum stone color = (is_pass(last_move(b).coord) ? S_BLACK : stone_other(last_move(b).color));
 	board_print_test(2, b);
 	if (DEBUGL(2))  fprintf(stderr, "moggy status ");
 	for (int i = 0; i < n; i++) {
@@ -628,7 +628,7 @@ unit_test(char *filename)
 	int total = 0, passed = 0;
 	int total_opt = 0, passed_opt = 0;
 	
-	board_t *b = board_new(19+2, NULL);
+	board_t *b = board_new(19, NULL);
 	b->komi = 7.5;
 	char buf[256]; char *line = buf;
 
@@ -658,6 +658,7 @@ unit_test(char *filename)
 	}
 
 	fclose(f);
+	board_delete(&b);
 
 	printf("\n\n");
 	printf("----------- [  %3i/%-3i mandatory tests passed (%i%%)  ] -----------\n", passed, total, passed * 100 / total);

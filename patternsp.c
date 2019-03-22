@@ -201,11 +201,12 @@ spatial2str(spatial_t *s)
 void
 spatial_print(board_t *board, spatial_t *s, FILE *f, move_t *at)
 {
-	board_t *b = board_new(board_size(board), NULL);
-	b->last_move.coord = at->coord;
+	int size = board_rsize(board);
+	board_t *b = board_new(size, NULL);
+	last_move(b).coord = at->coord;
 	
-	for (int i = 0; i < real_board_size(b); i++)
-		for (int j = 0; j < real_board_size(b); j++) {
+	for (int i = 0; i < size; i++)
+		for (int j = 0; j < size; j++) {
 			coord_t c = coord_xy(i+1, j+1);
 			board_at(b, c) = (enum stone)4; // HACK !
 		}
@@ -216,7 +217,7 @@ spatial_print(board_t *board, spatial_t *s, FILE *f, move_t *at)
 		board_at(b, m.coord) = m.color;
 	}
 	board_print(b, stderr);	
-	board_done(b);
+	board_delete(&b);
 }
 
 
