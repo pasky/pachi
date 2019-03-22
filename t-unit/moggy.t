@@ -66,5 +66,5 @@ boardsize 19
 . . . . . . . . . . . . . . . . . . .
 . . . . . . . . . . . . . . . . . . .
 
-moggy status c17 ?
+# moggy status
 

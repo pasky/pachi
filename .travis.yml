@@ -30,5 +30,5 @@ before_install:
 
 # https://blog.lukaspradel.com/continuous-integration-for-cmake-projects-using-travis-ci/  
 script:
-  - make -j2 DCNN=$DCNN
+  - make -j2 DCNN=$DCNN BOARD_TESTS=1
   - make test

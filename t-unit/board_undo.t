@@ -1,3 +1,4 @@
+# auto-run off
 
 % Test board undo
 boardsize 19

@@ -37,13 +37,25 @@
 #include "patternprob.h"
 #include "joseki.h"
 
+static void main_loop(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct time_info *ti, struct time_info *ti_default);
+
 char *pachi_exe = NULL;
-int debug_level = 3;
-bool debug_boardprint = true;
-long verbose_logs = 0;
-int seed;
+int   debug_level = 3;
+bool  debug_boardprint = true;
+long  verbose_logs = 0;
 char *forced_ruleset = NULL;
-bool nopassfirst = false;
+bool  nopassfirst = false;
+
+static char *gtp_port = NULL;
+
+static void
+network_init()
+{
+#ifdef NETWORK
+	int gtp_sock = -1;
+	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
+#endif
+}
 
 static engine_init_t engine_inits[E_MAX] = {
 	[ E_RANDOM ]      = engine_random_init,
@@ -103,10 +115,12 @@ usage()
 		"Logs / IO: \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
+#ifdef NETWORK
 		"  -g, --gtp-port [HOST:]GTP_PORT    read gtp commands from network instead of stdin. \n"
 		"                                    listen on given port if HOST not given, otherwise \n"
 		"                                    connect to remote host. \n"
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
+#endif
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
 		"      --verbose-caffe               enable caffe logging \n"
 		" \n"
@@ -160,6 +174,7 @@ show_version(FILE *s)
 	fprintf(s, "%s  %s\n\n", PACHI_VERBUILD, boardsize);
 }
 
+
 #define OPT_FUSEKI_TIME   256
 #define OPT_NODCNN        257
 #define OPT_DCNN          258
@@ -184,11 +199,13 @@ static struct option longopts[] = {
 	{ "engine",      required_argument, 0, 'e' },
 	{ "fbook",       required_argument, 0, 'f' },
 	{ "joseki",      no_argument,       0, OPT_JOSEKI },
+#ifdef NETWORK
 	{ "gtp-port",    required_argument, 0, 'g' },
+	{ "log-port",    required_argument, 0, 'l' },
+#endif
 	{ "help",        no_argument,       0, 'h' },
 	{ "kgs",         no_argument,       0, OPT_KGS },
 	{ "log-file",    required_argument, 0, 'o' },
-	{ "log-port",    required_argument, 0, 'l' },
 	{ "name",        required_argument, 0, OPT_NAME },
 	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
 	{ "noundo",      no_argument,       0, OPT_NOUNDO },
@@ -210,10 +227,9 @@ int main(int argc, char *argv[])
 	pachi_exe = argv[0];
 	enum engine_id engine_id = E_UCT;
 	struct time_info ti_default = { .period = TT_NULL };
+	int  seed = time(NULL) ^ getpid();
 	char *testfile = NULL;
-	char *gtp_port = NULL;
 	char *log_port = NULL;
-	int gtp_sock = -1;
 	char *chatfile = NULL;
 	char *fbookfile = NULL;
 	FILE *file = NULL;
@@ -223,7 +239,6 @@ int main(int argc, char *argv[])
 	setlinebuf(stderr);
 
 	win_set_pachi_cwd(argv[0]);
-	seed = time(NULL) ^ getpid();
 
 	gtp_t maingtp, *gtp = &maingtp;
 	gtp_init(gtp);
@@ -268,9 +283,11 @@ int main(int argc, char *argv[])
 			case 'f':
 				fbookfile = strdup(optarg);
 				break;
+#ifdef NETWORK
 			case 'g':
 				gtp_port = strdup(optarg);
 				break;
+#endif
 			case 'h':
 				usage();
 				exit(0);
@@ -281,9 +298,11 @@ int main(int argc, char *argv[])
 				gtp->kgs = true;       /* Show engine comment in version. */
 				nopassfirst = true;    /* --nopassfirst */
 				break;
+#ifdef NETWORK
 			case 'l':
 				log_port = strdup(optarg);
 				break;
+#endif
 			case 'o':
 				file = fopen(optarg, "w");   if (!file) fail(optarg);
 				fclose(file);
@@ -385,29 +404,14 @@ int main(int argc, char *argv[])
 	char *e_arg = NULL;
 	if (optind < argc)	e_arg = argv[optind];
 	struct engine e;  engine_init(&e, engine_id, e_arg, b);
+	network_init();
 
-	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
-
-	for (;;) {
-		char buf[4096];
-		while (fgets(buf, 4096, stdin)) {
-			if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
-
-			enum parse_code c = gtp_parse(gtp, b, &e, e_arg, ti, buf);
-			if (c == P_ENGINE_RESET) {
-				ti[S_BLACK] = ti_default;
-				ti[S_WHITE] = ti_default;
-				if (!e.keep_on_clear)
-					engine_reset(&e, b, e_arg);
-			} else if (c == P_UNKNOWN_COMMAND && gtp_port) {
-				/* The gtp command is a weak identity check,
-				 * close the connection with a wrong peer. */
-				break;
-			}
-		}
+	while (1) {
+		main_loop(gtp, b, &e, e_arg, ti, &ti_default);
 		if (!gtp_port) break;
-		open_gtp_connection(&gtp_sock, gtp_port);
+		network_init();
 	}
+
 	engine_done(&e);
 	chat_done();
 	free(testfile);
@@ -417,6 +421,28 @@ int main(int argc, char *argv[])
 	free(fbookfile);
 	free(forced_ruleset);
 	return 0;
+}
+
+static void
+main_loop(gtp_t *gtp, struct board *b, struct engine *e, char *e_arg, struct time_info *ti, struct time_info *ti_default)
+{
+	char buf[4096];
+	while (fgets(buf, 4096, stdin)) {
+		if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
+
+		enum parse_code c = gtp_parse(gtp, b, e, e_arg, ti, buf);
+
+		/* The gtp command is a weak identity check,
+		 * close the connection with a wrong peer. */
+		if (c == P_UNKNOWN_COMMAND && gtp_port)  return;
+		
+		if (c == P_ENGINE_RESET) {
+			ti[S_BLACK] = *ti_default;
+			ti[S_WHITE] = *ti_default;
+			if (!e->keep_on_clear)
+				engine_reset(e, b, e_arg);
+		}
+	}
 }
 
 void

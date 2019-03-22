@@ -1,0 +1,74 @@
+# Try static build ?
+# MSYS2_STATIC=1
+
+# For dcnn build, caffe msys2 package is probably in the repos now.
+# Otherwise get one from https://github.com/lemonsqueeze/mingw-caffe
+# ('mini' / 'nohdf5' releases allow for smaller static builds)
+
+WIN_HAVE_NO_REGEX_SUPPORT=1
+
+COMMON_FLAGS += $(TUNE)
+LDFLAGS      := -pthread -L$(CAFFE_PREFIX)/bin -L$(MINGW_PREFIX)/bin
+SYS_LIBS     := -lws2_32
+CXXFLAGS     += -I$(MINGW_PREFIX)/include/OpenBLAS
+
+# Enable mingw-w64 C99 printf() / scanf() layer ?
+COMMON_FLAGS += -D__USE_MINGW_ANSI_STDIO
+
+ifdef WIN_HAVE_NO_REGEX_SUPPORT
+	COMMON_FLAGS += -DHAVE_NO_REGEX_SUPPORT
+else
+	SYS_LIBS += -lregex -ltre -lintl -liconv	# Oh, dear...
+endif
+
+DCNN_LIBS := -lcaffe -lboost_system-mt -lglog -lstdc++ $(SYS_LIBS)
+
+ifdef MSYS2_STATIC		# Static build, good luck
+        # Which type of caffe package do you have ?
+        # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
+        # and requires --whole-archive for static linking. This makes binaries unnecessarily
+        # bloated. Choose normal, nohdf5, or mini (mini is best)
+	CAFFE=normal
+
+	ifeq ($(CAFFE), normal)
+		HDF5_LIBS = -lhdf5_hl -lhdf5 -lszip -lz
+	endif
+
+	ifeq ($(CAFFE), mini)
+                # Force linking of caffe layer factory, will pull in layers we need.
+		EXTRA_DCNN_OBJS := layer_factory.o
+		CAFFE_STATIC_LIB = -lcaffe
+	else
+		CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
+	endif
+
+	DCNN_LIBS := -Wl,-Bstatic $(CAFFE_STATIC_LIB)  \
+		     -lboost_system-mt -lboost_thread-mt -lopenblas $(HDF5_LIBS) -lgflags_static \
+		     -lglog -lprotobuf -lstdc++ -lwinpthread $(SYS_LIBS)   -Wl,-Bdynamic -lshlwapi
+
+        # glog / gflags headers really shouldn't __declspec(dllexport) symbols for us,
+        # static linking will fail with undefined __imp__xxx symbols.
+        # Normally this works around it.
+	CXXFLAGS += -DGOOGLE_GLOG_DLL_DECL="" -DGFLAGS_DLL_DECL=""
+endif
+
+
+strip: FORCE
+	cd distribute  &&  strip pachi.exe
+	@echo "packing exe ..."
+	@cd distribute  &&  upx -o p.exe pachi.exe  &&  mv p.exe pachi.exe
+        ifndef MSYS2_STATIC
+		@echo "copying dlls ..."
+		@cd distribute; \
+		    mingw=`echo $$MINGW_PREFIX | tr '/' '.' `; \
+		    dlls_list="../$${mingw}_dlls"; \
+		    cp `cat $$dlls_list` .
+        endif
+
+
+# 'mini' caffe static link hack.
+ifdef MSYS2_STATIC
+layer_factory.o: $(MINGW_PREFIX)/lib/libcaffe.a
+	@echo "[AR]   $@"
+	@ar x $< $@
+endif

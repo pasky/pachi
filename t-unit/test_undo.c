@@ -141,7 +141,7 @@ permit_hook(struct playout_policy *playout_policy, struct board *b, struct move 
 bool
 board_undo_stress_test(struct board *board, char *arg)
 {
-	int games = 1000;
+	int games = 100;
 	enum stone color = S_BLACK;
 	
 	if (DEBUGL(2))  board_print(board, stderr);

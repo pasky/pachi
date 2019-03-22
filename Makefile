@@ -15,7 +15,7 @@
 # Do you compile on Windows instead of Linux ?
 # Please note that performance may not be optimal.
 # To compile in msys2 with mingw-w64, uncomment the following line.
-# See MSYS2 section for further configuration.
+# See Makefile.msys2 for further configuration.
 
 # MSYS2=1
 
@@ -53,11 +53,15 @@ DCNN=1
 # Enable distributed engine for cluster play ?
 
 # DISTRIBUTED=1
+# NETWORK=1
 
 # Compile Pachi with external plugin support ?
 # If unsure leave disabled, you most likely don't need it.
 
 # PLUGINS=1
+
+# Compile extra tests ? Enable this to test board implementation.
+# BOARD_TESTS=1
 
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
@@ -85,207 +89,14 @@ DATADIR ?= $(PREFIX)/share/pachi
 # (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
 # unless PROFILING=gprof.)
 OPT ?= -O3
-CUSTOM_CFLAGS   := -Wall -ggdb3 $(OPT) -std=gnu99 -pthread -Wsign-compare -D_GNU_SOURCE
-CUSTOM_CXXFLAGS := -Wall -ggdb3 $(OPT)
+COMMON_FLAGS := -Wall -ggdb3 $(OPT) -D_GNU_SOURCE
+CFLAGS       := -std=gnu99 -pthread -Wsign-compare
+CXXFLAGS     := -std=c++11
 
 
 ###################################################################################################################
 ### CONFIGURATION END
 
-MAKEFLAGS += --no-print-directory
-ARCH = $(shell uname -m)
-TUNE := -march=native
-
-ifeq ($(findstring armv7, $(ARCH)), armv7)
-        # -march=native targets armv6 by default on Raspbian ...
-	TUNE := -march=armv7-a
-endif
-
-ifeq ($(GENERIC), 1)
-	TUNE := -mtune=generic
-endif
-
-ifndef NO_FRENAME_REGISTERS
-	CUSTOM_CFLAGS += -frename-registers
-endif
-
-ifdef DATADIR
-	CUSTOM_CFLAGS += -DDATA_DIR=\"$(DATADIR)\"
-endif
-
-ifdef BOARD_SIZE
-	CUSTOM_CFLAGS += -DBOARD_SIZE=$(BOARD_SIZE)
-endif
-
-EXTRA_OBJS :=
-EXTRA_SUBDIRS :=
-
-##############################################################################
-ifdef MSYS2
-        # Try static build ?
-        # MSYS2_STATIC=1
-
-        # For dcnn build, caffe msys2 package is probably in the repos now.
-        # Otherwise get one from https://github.com/lemonsqueeze/mingw-caffe
-        # ('mini' / 'nohdf5' releases allow for smaller static builds)
-
-	WIN_HAVE_NO_REGEX_SUPPORT=1
-
-	SYS_CFLAGS  := $(TUNE)
-	SYS_LDFLAGS := -pthread -L$(CAFFE_PREFIX)/bin -L$(MINGW_PREFIX)/bin
-	SYS_LIBS    := -lws2_32
-	CUSTOM_CXXFLAGS += -I$(MINGW_PREFIX)/include/OpenBLAS
-
-        # Enable mingw-w64 C99 printf() / scanf() layer ?
-        SYS_CFLAGS += -D__USE_MINGW_ANSI_STDIO
-
-	ifdef WIN_HAVE_NO_REGEX_SUPPORT
-		SYS_CFLAGS += -DHAVE_NO_REGEX_SUPPORT
-	else
-		SYS_LIBS += -lregex -ltre -lintl -liconv	# Oh, dear...
-	endif
-
-	DCNN_LIBS := -lcaffe -lboost_system-mt -lglog -lstdc++ $(SYS_LIBS)
-
-	ifdef MSYS2_STATIC		# Static build, good luck
-                # Which type of caffe package do you have ?
-                # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
-                # and requires --whole-archive for static linking. This makes binaries unnecessarily
-                # bloated. Choose normal, nohdf5, or mini (mini is best)
-		CAFFE=normal
-
-		ifeq ($(CAFFE), normal)
-			HDF5_LIBS = -lhdf5_hl -lhdf5 -lszip -lz
-		endif
-
-		ifeq ($(CAFFE), mini)
-                        # Force linking of caffe layer factory, will pull in layers we need.
-			EXTRA_DCNN_OBJS := layer_factory.o
-			CAFFE_STATIC_LIB = -lcaffe
-		else
-			CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
-		endif
-
-		DCNN_LIBS := -Wl,-Bstatic $(CAFFE_STATIC_LIB)  \
-			     -lboost_system-mt -lboost_thread-mt -lopenblas $(HDF5_LIBS) -lgflags_static \
-			     -lglog -lprotobuf -lstdc++ -lwinpthread $(SYS_LIBS)   -Wl,-Bdynamic -lshlwapi
-
-                # glog / gflags headers really shouldn't __declspec(dllexport) symbols for us,
-                # static linking will fail with undefined __imp__xxx symbols.
-                # Normally this works around it.
-		SYS_CXXFLAGS += -DGOOGLE_GLOG_DLL_DECL="" -DGFLAGS_DLL_DECL=""
-	endif
-else
-##############################################################################
-ifdef MAC
-	SYS_CFLAGS  := -DNO_THREAD_LOCAL
-	SYS_LDFLAGS := -pthread -rdynamic
-	SYS_LIBS    := -lm -ldl
-	DCNN_LIBS   := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
-else
-##############################################################################
-# Linux
-        # Static build ?
-        # LINUX_STATIC=1
-
-	SYS_CFLAGS  := $(TUNE)
-	SYS_LDFLAGS := -pthread -rdynamic
-	SYS_LIBS    := -lm -lrt -ldl
-	DCNN_LIBS   := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
-
-	ifdef LINUX_STATIC
-                # Which type of caffe package do you have ?
-                # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
-                # and requires --whole-archive for static linking. This makes binaries unnecessarily
-                # bloated. Choose normal, nohdf5, or mini (mini is best)
-                # mini source: https://github.com/lemonsqueeze/caffe/tree/mini
-		CAFFE=normal
-
-		ifeq ($(CAFFE), normal)
-			HDF5_LIBS = -lhdf5_serial_hl -lhdf5_serial -lsz -laec -lz
-		endif
-
-		ifeq ($(CAFFE), mini)
-                        # Force linking of caffe layer factory, will pull in layers we need.
-			EXTRA_DCNN_OBJS := layer_factory.o
-			CAFFE_STATIC_LIB = -lcaffe
-		else
-			CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
-		endif
-
-		SYS_LDFLAGS := -pthread -static
-		DCNN_LIBS   := $(CAFFE_STATIC_LIB) -lglog -lgflags -lprotobuf -lboost_system -lboost_thread -lopenblas $(HDF5_LIBS) -lstdc++  $(SYS_LIBS)
-	endif
-endif
-endif
-
-ifdef CAFFE_PREFIX
-	SYS_LDFLAGS += -L$(CAFFE_PREFIX)/lib -Wl,-rpath=$(CAFFE_PREFIX)/lib
-	CXXFLAGS    += -I$(CAFFE_PREFIX)/include
-endif
-
-ifeq ($(DCNN), 1)
-	CUSTOM_CFLAGS   += -DDCNN
-	CUSTOM_CXXFLAGS += -DDCNN
-	EXTRA_OBJS      += $(EXTRA_DCNN_OBJS) caffe.o dcnn.o
-	SYS_LIBS := $(DCNN_LIBS)
-endif
-
-ifeq ($(FIFO), 1)
-	CUSTOM_CFLAGS += -DPACHI_FIFO
-	EXTRA_OBJS    += fifo.o
-endif
-
-ifeq ($(DOUBLE_FLOATING), 1)
-	CUSTOM_CFLAGS += -DDOUBLE_FLOATING
-endif
-
-ifeq ($(DISTRIBUTED), 1)
-	CUSTOM_CFLAGS += -DDISTRIBUTED
-	EXTRA_SUBDIRS += distributed
-endif
-
-ifeq ($(PLUGINS), 1)
-	CUSTOM_CFLAGS += -DPACHI_PLUGINS
-endif
-
-
-ifeq ($(PROFILING), gprof)
-	CUSTOM_LDFLAGS += -pg
-	CUSTOM_CFLAGS  += -pg -fno-inline
-else
-        # Whee, an extra register!
-	CUSTOM_CFLAGS += -fomit-frame-pointer
-ifeq ($(PROFILING), perftools)
-	SYS_LIBS += -lprofiler
-endif
-endif
-
-ifndef LD
-LD=ld
-endif
-
-ifndef AR
-AR=ar
-endif
-
-ifndef INSTALL
-INSTALL=/usr/bin/install
-endif
-
-export
-unexport INCLUDES
-INCLUDES=-I.
-
-OBJS = $(EXTRA_OBJS) \
-       board.o engine.o gogui.o gtp.o joseki.o move.o ownermap.o pachi.o pattern3.o pattern.o patternsp.o \
-       patternprob.o playout.o probdist.o random.o stone.o timeinfo.o network.o fbook.o chat.o util.o
-
-# Low-level dependencies last
-SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics
-DATAFILES = patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.gtp
-
-###############################################################################################################
 # Main rule + aliases
 # Aliases are nice, but don't ask too much: 'make quick 19' won't do what
 # you expect for example (use 'make OPT=-O0 BOARD_SIZE=19' instead)
@@ -317,6 +128,121 @@ double:
 
 ###############################################################################################################
 
+MAKEFLAGS += --no-print-directory
+ARCH = $(shell uname -m)
+TUNE := -march=native
+
+ifeq ($(findstring armv7, $(ARCH)), armv7)
+        # -march=native targets armv6 by default on Raspbian ...
+	TUNE := -march=armv7-a
+endif
+
+ifeq ($(GENERIC), 1)
+	TUNE := -mtune=generic
+endif
+
+ifndef NO_FRENAME_REGISTERS
+	COMMON_FLAGS += -frename-registers
+endif
+
+ifdef DATADIR
+	COMMON_FLAGS += -DDATA_DIR=\"$(DATADIR)\"
+endif
+
+ifdef BOARD_SIZE
+	COMMON_FLAGS += -DBOARD_SIZE=$(BOARD_SIZE)
+endif
+
+EXTRA_OBJS :=
+EXTRA_SUBDIRS :=
+
+ifdef MSYS2
+	-include Makefile.msys2
+else
+ifdef MAC
+	-include Makefile.mac
+else
+	-include Makefile.linux
+endif
+endif
+
+ifdef CAFFE_PREFIX
+	LDFLAGS  += -L$(CAFFE_PREFIX)/lib -Wl,-rpath=$(CAFFE_PREFIX)/lib
+	CXXFLAGS += -I$(CAFFE_PREFIX)/include
+endif
+
+ifeq ($(DCNN), 1)
+	COMMON_FLAGS   += -DDCNN
+	EXTRA_OBJS     += $(EXTRA_DCNN_OBJS) caffe.o dcnn.o
+	SYS_LIBS := $(DCNN_LIBS)
+endif
+
+ifeq ($(FIFO), 1)
+	COMMON_FLAGS += -DPACHI_FIFO
+	EXTRA_OBJS   += fifo.o
+endif
+
+ifeq ($(NETWORK), 1)
+	COMMON_FLAGS += -DNETWORK
+	EXTRA_OBJS   += network.o
+endif
+
+ifeq ($(DOUBLE_FLOATING), 1)
+	COMMON_FLAGS += -DDOUBLE_FLOATING
+endif
+
+ifeq ($(DISTRIBUTED), 1)
+	COMMON_FLAGS  += -DDISTRIBUTED
+	EXTRA_SUBDIRS += distributed
+endif
+
+ifeq ($(PLUGINS), 1)
+	COMMON_FLAGS += -DPACHI_PLUGINS
+endif
+
+ifeq ($(BOARD_TESTS), 1)
+	SYS_LIBS      += -lcrypto
+	COMMON_FLAGS  += -DBOARD_TESTS
+endif
+
+ifeq ($(PROFILING), gprof)
+	LDFLAGS      += -pg
+	COMMON_FLAGS += -pg -fno-inline
+else
+        # Whee, an extra register!
+	COMMON_FLAGS += -fomit-frame-pointer
+ifeq ($(PROFILING), perftools)
+	SYS_LIBS += -lprofiler
+endif
+endif
+
+ifndef LD
+LD=ld
+endif
+
+ifndef AR
+AR=ar
+endif
+
+ifndef INSTALL
+INSTALL=/usr/bin/install
+endif
+
+export
+unexport INCLUDES
+INCLUDES=-I.
+
+OBJS = $(EXTRA_OBJS) \
+       board.o engine.o gogui.o gtp.o joseki.o move.o ownermap.o pachi.o pattern3.o pattern.o patternsp.o \
+       patternprob.o playout.o probdist.o random.o stone.o timeinfo.o fbook.o chat.o util.o
+
+# Low-level dependencies last
+SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tactics
+DATAFILES = patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.gtp
+
+
+###############################################################################################################
+
 LOCALLIBS=$(SUBDIRS:%=%/lib.a)
 $(LOCALLIBS): all-recursive
 	@
@@ -343,18 +269,18 @@ build.h: .git/HEAD .git/index Makefile
 	@echo "[make] build.h"
 	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild > $@
 
-# Run unit tests
+# Unit tests
 test: FORCE
-	t-unit/run_tests
+	+@make -C t-unit test
 
-	@echo -n "Testing uct genmove...   "
-	@ ./pachi -d0 -t =1000 < gtp/genmove.gtp  2>pachi.log >/dev/null
-	@echo "OK"
+test_board: FORCE
+	+@make -C t-unit test_board
 
-	@echo -n "Testing quiet mode...    "
-	@if  grep -q '.' < pachi.log ; then \
-		echo "FAILED:";  cat pachi.log;  exit 1;  else  echo "OK"; \
-	fi
+test_moggy: FORCE
+	+@make -C t-unit test_moggy
+
+test_spatial: FORCE
+	+@make -C t-unit test_spatial
 
 
 # Prepare for install
@@ -363,23 +289,9 @@ distribute: FORCE
 		@echo "WARNING: Don't distribute binaries built with -march=native !"
         endif
 
-	rm -rf distribute 2>/dev/null;  $(INSTALL) -d distribute
+	@rm -rf distribute 2>/dev/null;  $(INSTALL) -d distribute
 	cp pachi distribute/
-
-        ifndef MSYS2
-		cd distribute  &&  strip pachi
-        else
-		cd distribute  &&  strip pachi.exe
-		@echo "packing exe ..."
-		@cd distribute  &&  upx -o p.exe pachi.exe  &&  mv p.exe pachi.exe
-                ifndef MSYS2_STATIC
-			@echo "copying dlls ..."
-			@cd distribute; \
-			    mingw=`echo $$MINGW_PREFIX | tr '/' '.' `; \
-			    dlls_list="../$${mingw}_dlls"; \
-			    cp `cat $$dlls_list` .
-                endif
-        endif
+	+@make strip      # arch specific stuff
 
 # install-recursive?
 install: distribute
@@ -410,17 +322,5 @@ TAGS: FORCE
 
 FORCE:
 
-# 'mini' caffe static link hack.
-ifdef LINUX_STATIC
-layer_factory.o: $(CAFFE_PREFIX)/lib/libcaffe.a
-	@echo "[AR]   $@"
-	@ar x $< $@
-endif
-
-ifdef MSYS2_STATIC
-layer_factory.o: $(MINGW_PREFIX)/lib/libcaffe.a
-	@echo "[AR]   $@"
-	@ar x $< $@
-endif
 
 -include Makefile.lib

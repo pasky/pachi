@@ -444,8 +444,35 @@ test_moggy_moves(struct board *b, char *arg)
 	return true;   // Not much of a unit test right now =)
 }
 
+static int
+moggy_games(struct board *b, enum stone color, int games, struct ownermap *ownermap, bool speed_benchmark)
+{
+	struct playout_policy *policy = playout_moggy_init(NULL, b);
+	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
+	ownermap_init(ownermap);
+	
+	int wr = 0;
+	double time_start = time_now();
+	for (int i = 0; i < games; i++)  {
+		struct board b2;
+		board_copy(&b2, b);
+		
+		int score = playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
+		if (color == S_WHITE)
+			score = -score;
+		wr += (score > 0);
+		board_done_noalloc(&b2);
+	}
+	
+	double elapsed = time_now() - time_start;
+	if (DEBUGL(2) && speed_benchmark)
+		fprintf(stderr, "moggy status in %.1fs, %i games/s\n\n", elapsed, (int)((float)games / elapsed));
 
-/* Play a number of playouts, show ownermap and stats on final status of given coord(s)
+	playout_policy_done(policy);
+	return wr;
+}
+
+/* Play a number of moggy games, show ownermap and stats on final status of given coord(s)
  * Board last move matters quite a lot and must be set.
  *
  * Syntax:
@@ -453,17 +480,20 @@ test_moggy_moves(struct board *b, char *arg)
  *   moggy status coord [X|O] [coord...]       coord owned by b/w  >= 80%
  *   moggy status coord   :   [coord...]       coord dame          >= 67%
  *   moggy status coord   ?   [coord...]       just check status, test never fails
+ *   moggy status                              speed benchmark
  */
 static bool
 test_moggy_status(struct board *b, char *arg)
 {
-	int games = 4000;
+	next_arg(arg);
+
+	bool speed_benchmark = !*arg;
+	int games = (speed_benchmark ? 4000 : 500);
 	coord_t              status_at[10];
 	enum point_judgement expected[10];
 	int                  thres[10];
 	int n = 0;
 	
-	next_arg(arg);
 	for (n = 0; *arg; n++) {
 		if (!isalpha(*arg))  die("Invalid arg: '%s'\n", arg);
 		status_at[n] = str2coord(arg, board_size(b));
@@ -492,27 +522,11 @@ test_moggy_status(struct board *b, char *arg)
 		if (DEBUGL(2)) fprintf(stderr, "%s %c  ", coord2sstr(status_at[i], b),	chr[expected[i]]);
 	}
 	if (DEBUGL(2)) fprintf(stderr, "\n%s to play. Playing %i games ...\n", stone2str(color), games);
-	
-	struct playout_policy *policy = playout_moggy_init(NULL, b);
-	struct playout_setup setup = { .gamelen = MAX_GAMELEN };
-	struct ownermap ownermap;  ownermap_init(&ownermap);
-	
-	/* Get final status estimate after a number of moggy games */
-	int wr = 0;
-	double time_start = time_now();
-	for (int i = 0; i < games; i++)  {
-		struct board b2;
-		board_copy(&b2, b);
+
+	/* Get final status estimate after a number of moggy games */	
+	struct ownermap ownermap;
+	int wr = moggy_games(b, color, games, &ownermap, speed_benchmark);
 		
-		int score = playout_play_game(&setup, &b2, color, NULL, &ownermap, policy);
-		if (color == S_WHITE)
-			score = -score;
-		wr += (score > 0);
-		board_done_noalloc(&b2);
-	}
-	double elapsed = time_now() - time_start;
-	if (DEBUGL(2)) fprintf(stderr, "moggy status in %.1fs, %i games/s\n\n", elapsed, (int)((float)games / elapsed));
-	
 	int wr_black = wr * 100 / games;
 	int wr_white = (games - wr) * 100 / games;
 	if (wr_black > wr_white)  { if (DEBUGL(2)) fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white); }
@@ -539,11 +553,13 @@ test_moggy_status(struct board *b, char *arg)
 		PRINT_RES(passed);
 	}
 	
-	playout_policy_done(policy);
 	return ret;
 }
 
 bool board_undo_stress_test(struct board *orig, char *arg);
+bool board_regression_test(struct board *orig, char *arg);
+bool moggy_regression_test(struct board *orig, char *arg);
+bool spatial_regression_test(struct board *orig, char *arg);
 
 typedef bool (*t_unit_func)(struct board *board, char *arg);
 
@@ -563,10 +579,15 @@ static t_unit_cmd commands[] = {
 	{ "can_countercap",         test_can_countercap,    1 },
 	{ "two_eyes",               test_two_eyes,          1 },
 	{ "moggy moves",            test_moggy_moves,       0 },
-	{ "moggy status",           test_moggy_status,      1 },
+	{ "moggy status",           test_moggy_status,      0 },
 	{ "corner_seki",            test_corner_seki,       1 },
 	{ "false_eye_seki",         test_false_eye_seki,    1 },
+#ifdef BOARD_TESTS
 	{ "board_undo_stress_test", board_undo_stress_test, 0 },
+	{ "board_regtest",          board_regression_test,  0 },
+	{ "moggy_regtest",          moggy_regression_test,  0 },
+	{ "spatial_regtest",        spatial_regression_test,  0 },
+#endif
 	{ 0, 0, 0 }
 };
 
