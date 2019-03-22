@@ -21,13 +21,17 @@
 int str_prefix(char *prefix, char *str);
 
 /* Warn user (popup on windows) */
-void warning(const char *format, ...);
+void warning(const char *format, ...)
+	__attribute__ ((format (printf, 1, 2)));
 
 /* Warning + terminate process */
-void die(const char *format, ...)  __attribute__ ((noreturn));
+void die(const char *format, ...)
+	__attribute__ ((noreturn))
+	__attribute__ ((format (printf, 1, 2)));
 
 /* Terminate after system call failure (similar to perror()) */
-void fail(char *msg) __attribute__ ((noreturn));
+void fail(char *msg)
+	__attribute__ ((noreturn));
 
 int file_exists(const char *name);
 
@@ -139,6 +143,7 @@ typedef struct
 	char *cur;
 } strbuf_t;
 
+
 /* Initialize passed string buffer. Returns buf. */
 strbuf_t *strbuf_init(strbuf_t *buf, char *buffer, int size);
 
@@ -150,10 +155,21 @@ strbuf_t *strbuf_init_alloc(strbuf_t *buf, int size);
  * Both must be free()ed afterwards. */
 strbuf_t *new_strbuf(int size);
 
+/* Create string buffer for use within current function (stack-allocated). */
+#define strbuf(buf, size)  \
+	char buffer_[(size)];  strbuf_t strbuf_; \
+	strbuf_t *buf = strbuf_init(&strbuf_, buffer_, sizeof(buffer_));
+
+/* Create static string buffer: can return buf->str (but not buf). */
+#define static_strbuf(buf, size)  \
+	static char buffer_[(size)];  strbuf_t strbuf_; \
+	strbuf_t *buf = strbuf_init(&strbuf_, buffer_, sizeof(buffer_));
 
 /* String buffer version of printf():
  * Use sbprintf(buf, format, ...) to accumulate output. */
-int strbuf_printf(strbuf_t *buf, const char *format, ...);
+int strbuf_printf(strbuf_t *buf, const char *format, ...)
+	__attribute__ ((format (printf, 2, 3)));
+
 #define sbprintf strbuf_printf
 
 

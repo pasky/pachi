@@ -27,7 +27,7 @@
 
 
 void
-uct_progress_text(uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_text(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts)
 {
 	board_t *b = t->board;
 	if (!UDEBUGL(0))
@@ -36,49 +36,50 @@ uct_progress_text(uct_t *u, tree_t *t, enum stone color, int playouts)
 	/* Best move */
 	tree_node_t *best = u->policy->choose(u->policy, t->root, b, color, resign);
 	if (!best) {
-		fprintf(stderr, "... No moves left\n");
+		fprintf(fh, "... No moves left\n");
 		return;
 	}
-	fprintf(stderr, "[%d] ", playouts);
-	fprintf(stderr, "best %.1f%% ", 100 * tree_node_get_value(t, 1, best->u.value));
+	fprintf(fh, "[%d] ", playouts);
+	fprintf(fh, "best %.1f%% ", 100 * tree_node_get_value(t, 1, best->u.value));
 
 	/* Dynamic komi */
 	if (t->use_extra_komi)
-		fprintf(stderr, "xkomi %.1f ", t->extra_komi);
+		fprintf(fh, "xkomi %.1f ", t->extra_komi);
 
 	/* Best sequence */
-	fprintf(stderr, "| seq ");
+	fprintf(fh, "| seq ");
 	for (int depth = 0; depth < 4; depth++) {
 		if (best && best->u.playouts >= 25) {
-			fprintf(stderr, "%3s ", coord2sstr(node_coord(best)));
+			fprintf(fh, "%3s ", coord2sstr(node_coord(best)));
 			best = u->policy->choose(u->policy, best, b, color, resign);
-		} else {
-			fprintf(stderr, "    ");
 		}
+		else    fprintf(fh, "    ");
 	}
 
 	/* Best candidates */
 	int nbest = 4;
 	float   best_r[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves(u, best_c, best_r, nbest, true);
+	uct_get_best_moves(u, best_c, best_r, nbest, true, 100);
 
-	fprintf(stderr, "| can %c ", color == S_BLACK ? 'b' : 'w');
+	fprintf(fh, "| can %c ", color == S_BLACK ? 'b' : 'w');
 	for (int i = 0; i < nbest; i++)
 		if (!is_pass(best_c[i]))
-			fprintf(stderr, "%3s(%.1f) ", coord2sstr(best_c[i]), 100 * best_r[i]);
+			fprintf(fh, "%3s(%.1f) ", coord2sstr(best_c[i]), 100 * best_r[i]);
 		else
-			fprintf(stderr, "          ");
+			fprintf(fh, "          ");
 
 	/* Tree memory usage */
 	if (UDEBUGL(3))
-		fprintf(stderr, " | %.1fMb", (float)t->nodes_size / 1024 / 1024);
+		fprintf(fh, " | %.1fMb", (float)t->nodes_size / 1024 / 1024);
 	
-	fprintf(stderr, "\n");
+	fprintf(fh, "\n");
 }
 
+/* Leela-zero format:
+ * info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...] */
 static void
-uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
+uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, enum stone color)
 {
 	board_t *b = t->board;
 	tree_node_t *node = u->t->root;
@@ -88,8 +89,9 @@ uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 	float   best_pl[nbest];	
 	float   best_wr[nbest];
 	coord_t best_c[nbest];
-	uct_get_best_moves_at(u, node, best_c, best_pl, nbest, false);
-	uct_get_best_moves_at(u, node, best_c, best_wr, nbest, true);
+	uct_get_best_moves(u, best_c, best_pl, nbest, false, 500);
+	uct_get_best_moves(u, best_c, best_wr, nbest, true,  500);
+	if (is_pass(best_c[0]))  return;
 
 	/* Priors */
 	float   best_pr[19 * 19];
@@ -99,86 +101,84 @@ uct_progress_leelaz(uct_t *u, tree_t *t, enum stone color)
 	for (int i = 0; i < 19 * 19; i++)
 		priors[best_cpr[i]] = best_pr[i];
 
-	// Leela-Zero format:
-	// info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...]
 	for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
-		if (best_pl[i] < 500)  break;  // too few playouts
-		fprintf(stderr, "info move %s visits %i winrate %i prior %i order %i ",
+		fprintf(fh, "info move %s visits %i winrate %i prior %i order %i ",
 			coord2sstr(best_c[i]), (int)best_pl[i], (int)(best_wr[i] * 10000),
 			(int)(priors[best_c[i]] * 10000), i);
 
 		/* Dump best variation */
-		fprintf(stderr, "pv %s ", coord2sstr(best_c[i]));
+		fprintf(fh, "pv %s ", coord2sstr(best_c[i]));
 		tree_node_t *n = tree_get_node(node, best_c[i]);
 		while (1) {
 			n = u->policy->choose(u->policy, n, b, color, resign);
 			if (!n || n->u.playouts < 100) break;
-			fprintf(stderr, "%s ", coord2sstr(node_coord(n)));
+			fprintf(fh, "%s ", coord2sstr(node_coord(n)));
 		}
 	}
-	fprintf(stderr, "\n");
+	fprintf(fh, "\n");
 }
 
 /* GoGui live gfx: show best sequence */
 static void
-uct_progress_gogui_sequence(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_sequence(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
-	coord_t seq[4] = { pass, pass, pass, pass };
+	int n = 20;
+	coord_t seq[n];   for (int i = 0; i < n; i++)  seq[i] = pass;
 
 	/* Best move */
 	tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
 	if (!best) {  fprintf(stderr, "... No moves left\n"); return;  }
 	
-	for (int i = 0; i < 4 && best && best->u.playouts >= 25; i++) {
+	for (int i = 0; i < n && best && best->u.playouts >= 50; i++) {
 		seq[i] = node_coord(best);
 		best = u->policy->choose(u->policy, best, t->board, color, resign);
 	}
 	
-	gogui_show_best_seq(buf, t->board, color, seq, 4);
+	gogui_show_best_seq(stderr, t->board, color, seq, n);
 }
 
 /* GoGui live gfx: show best moves */
 static void
-uct_progress_gogui_best(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_best_moves(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
-	coord_t best_c[GOGUI_CANDIDATES];
-	float   best_r[GOGUI_CANDIDATES];
-	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, false);
-	gogui_show_best_moves(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
+	coord_t best_c[GOGUI_NBEST];
+	float   best_r[GOGUI_NBEST];
+	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, false, 200);
+	gogui_show_best_moves(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
 }
 
 /* GoGui live gfx: show winrates */
 static void
-uct_progress_gogui_winrates(strbuf_t *buf, uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_winrates(uct_t *u, tree_t *t, enum stone color, int playouts)
 {
-	coord_t best_c[GOGUI_CANDIDATES];
-	float   best_r[GOGUI_CANDIDATES];
-	uct_get_best_moves(u, best_c, best_r, GOGUI_CANDIDATES, true);
-	gogui_show_winrates(buf, t->board, color, best_c, best_r, GOGUI_CANDIDATES);
+	coord_t best_c[GOGUI_NBEST];
+	float   best_r[GOGUI_NBEST];
+	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, true, 200);
+	gogui_show_winrates(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
 }
 
 void
-uct_progress_json(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final, bool big)
+uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final, bool big)
 {
 	/* Prefix indicating JSON line. */
-	fprintf(stderr, "{\"%s\": {", final ? "move" : "frame");
+	fprintf(fh, "{\"%s\": {", final ? "move" : "frame");
 
 	/* Plaout count */
-	fprintf(stderr, "\"playouts\": %d", playouts);
+	fprintf(fh, "\"playouts\": %d", playouts);
 
 	/* Dynamic komi */
 	if (t->use_extra_komi)
-		fprintf(stderr, ", \"extrakomi\": %.1f", t->extra_komi);
+		fprintf(fh, ", \"extrakomi\": %.1f", t->extra_komi);
 
 	if (final) {
 		/* Final move choice */
-		fprintf(stderr, ", \"choice\": \"%s\"",
+		fprintf(fh, ", \"choice\": \"%s\"",
 			coord2sstr(*final));
 	} else {
 		tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
 		if (best) {
 			/* Best move */
-			fprintf(stderr, ", \"best\": {\"%s\": %f}",
+			fprintf(fh, ", \"best\": {\"%s\": %f}",
 				coord2sstr(best->coord),
 				tree_node_get_value(t, 1, best->u.value));
 		}
@@ -189,100 +189,89 @@ uct_progress_json(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *
 	tree_node_t *can[cans];
 	memset(can, 0, sizeof(can));
 	tree_node_t *best = t->root->children;
-	while (best) {
+	while (best) {        /* XXX clean this up, use uct_get_best_moves() instead */
 		int c = 0;
 		while ((!can[c] || best->u.playouts > can[c]->u.playouts) && ++c < cans);
 		for (int d = 0; d < c; d++) can[d] = can[d + 1];
 		if (c > 0) can[c - 1] = best;
 		best = best->sibling;
 	}
-	fprintf(stderr, ", \"can\": [");
+	fprintf(fh, ", \"can\": [");
 	while (--cans >= 0) {
 		if (!can[cans]) break;
 		/* Best sequence */
-		fprintf(stderr, "[");
+		fprintf(fh, "[");
 		best = can[cans];
 		for (int depth = 0; depth < 4; depth++) {
 			if (!best || best->u.playouts < 25) break;
-			fprintf(stderr, "%s{\"%s\": [%.3f, %i]}", depth > 0 ? "," : "",
+			fprintf(fh, "%s{\"%s\": [%.3f, %i]}", depth > 0 ? "," : "",
 				coord2sstr(best->coord),
 				tree_node_get_value(t, 1, best->u.value),
 				best->u.playouts);
 			best = u->policy->choose(u->policy, best, t->board, color, resign);
 		}
-		fprintf(stderr, "]%s", cans > 0 ? ", " : "");
+		fprintf(fh, "]%s", cans > 0 ? ", " : "");
 	}
-	fprintf(stderr, "]");
+	fprintf(fh, "]");
 
 	if (big) {
 		/* Average score. */
 		if (t->avg_score.playouts > 0)
-			fprintf(stderr, ", \"avg\": {\"score\": %.3f}", t->avg_score.value);
+			fprintf(fh, ", \"avg\": {\"score\": %.3f}", t->avg_score.value);
 		/* Per-intersection information. */
-		fprintf(stderr, ", \"boards\": {");
+		fprintf(fh, ", \"boards\": {");
 		/* Position coloring information. */
-		fprintf(stderr, "\"colors\": [");
+		fprintf(fh, "\"colors\": [");
 		int f = 0;
 		foreach_point(t->board) {
 			if (board_at(t->board, c) == S_OFFBOARD) continue;
-			fprintf(stderr, "%s%d", f++ > 0 ? "," : "", board_at(t->board, c));
+			fprintf(fh, "%s%d", f++ > 0 ? "," : "", board_at(t->board, c));
 		} foreach_point_end;
-		fprintf(stderr, "]");
+		fprintf(fh, "]");
 		/* Ownership statistics. Value (0..1000) for each possible
 		 * point describes likelihood of this point becoming black.
 		 * Normally, white rate is 1000-value; exception are possible
 		 * seki points, but these should be rare. */
-		fprintf(stderr, ", \"territory\": [");
+		fprintf(fh, ", \"territory\": [");
 		f = 0;
 		foreach_point(t->board) {
 			if (board_at(t->board, c) == S_OFFBOARD) continue;
 			int rate = u->ownermap.map[c][S_BLACK] * 1000 / u->ownermap.playouts;
-			fprintf(stderr, "%s%d", f++ > 0 ? "," : "", rate);
+			fprintf(fh, "%s%d", f++ > 0 ? "," : "", rate);
 		} foreach_point_end;
-		fprintf(stderr, "]");
-		fprintf(stderr, "}");
+		fprintf(fh, "]");
+		fprintf(fh, "}");
 	}
 
-	fprintf(stderr, "}}\n");
+	fprintf(fh, "}}\n");
+}
+
+void
+uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
+{
+	if (!gogui_livegfx)  return;
+
+	/* GoGui reads live gfx commands on stderr. */
+	fprintf(stderr, "gogui-gfx:\n");
+
+	if      (gogui_livegfx == UR_GOGUI_BEST)  uct_progress_gogui_best_moves(u, t, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_SEQ)   uct_progress_gogui_sequence(u, t, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_WR)    uct_progress_gogui_winrates(u, t, color, playouts);
+	else    assert(0);
+
+	fprintf(stderr, "\n");
 }
 
 void
 uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
 {
-	switch (u->reporting) {
-		case UR_TEXT:
-			uct_progress_text(u, t, color, playouts);
-			break;
-		case UR_JSON:
-		case UR_JSON_BIG:
-			uct_progress_json(u, t, color, playouts, final,
-			                  u->reporting == UR_JSON_BIG);
-		case UR_LEELAZ:
-			uct_progress_leelaz(u, t, color);
-			break;
-		default: assert(0);
-	}
-
-	if (!gogui_livegfx)
-		return;
-
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-
-	switch(gogui_livegfx) {
-		case UR_GOGUI_BEST:
-			uct_progress_gogui_best(buf, u, t, color, playouts);
-			break;
-		case UR_GOGUI_SEQ:
-			uct_progress_gogui_sequence(buf, u, t, color, playouts);
-			break;
-		case UR_GOGUI_WR:
-			uct_progress_gogui_winrates(buf, u, t, color, playouts);
-			break;
-		default: assert(0);
-	}
-
-	gogui_show_livegfx(buf->str);
+	if      (u->reporting == UR_TEXT)        uct_progress_text(u->report_fh, u, t, color, playouts);
+	else if (u->reporting == UR_JSON)        uct_progress_json(u->report_fh, u, t, color, playouts, final, false);
+	else if (u->reporting == UR_JSON_BIG)    uct_progress_json(u->report_fh, u, t, color, playouts, final, true);
+	else if (u->reporting == UR_LEELA_ZERO)  uct_progress_lz(u->report_fh, u, t, color);
+	else    assert(0);
+	
+	uct_progress_gogui_livegfx(u, t, color, playouts, final);
 }
 
 static inline void

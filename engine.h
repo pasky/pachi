@@ -63,6 +63,7 @@ struct engine {
 	 * if all stones on the board can be considered alive, without regard to "dead"
 	 * considered stones. */
 	engine_genmove_t         genmove;
+	engine_genmove_t         genmove_analyze;
 
 	/* Used by distributed engine */
 	engine_genmoves_t        genmoves;

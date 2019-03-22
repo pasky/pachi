@@ -3,8 +3,9 @@
 
 #include "gtp.h"
 
-/* How many candidates to display */
-#define GOGUI_CANDIDATES 30
+/* How many moves to display ? */
+#define GOGUI_NBEST 9
+#define GOGUI_MANY 30
 
 typedef enum gogui_reporting {
 	UR_GOGUI_NONE,
@@ -39,11 +40,9 @@ enum parse_code cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *t
 enum parse_code cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_spatial_size(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 
-void gogui_show_best_moves(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n);
-void gogui_show_best_moves_colors(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n);
-void gogui_show_winrates(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest);
-void gogui_show_best_seq(strbuf_t *buf, board_t *b, enum stone color, coord_t *seq, int n);
-void gogui_show_livegfx(char *str);
+void gogui_show_best_moves(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n);
+void gogui_show_winrates(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest);
+void gogui_show_best_seq(FILE *f, board_t *b, enum stone color, coord_t *seq, int n);
 
 #endif
 

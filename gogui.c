@@ -35,56 +35,55 @@ typedef enum {
 enum parse_code
 cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char buffer[2000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+	gtp_printf(gtp, "");  /* gtp prefix */
 
 	if (e->best_moves) {
-		sbprintf(buf, "gfx/Best Moves/gogui-best_moves\n");
-		sbprintf(buf, "gfx/Winrates/gogui-winrates\n");
+		printf("gfx/Best Moves/gogui-best_moves\n");
+		printf("gfx/Best Winrates/gogui-winrates\n");
 	}
 	if (e->ownermap) {
-		sbprintf(buf, "gfx/Influence/gogui-influence\n");
-		sbprintf(buf, "gfx/Score Est/gogui-score_est\n");
+		printf("gfx/Influence/gogui-influence\n");
+		printf("gfx/Score Est/gogui-score_est\n");
 	}
 	if (e->dead_group_list) {
-		sbprintf(buf, "gfx/Final Score/gogui-final_score\n");
-		sbprintf(buf, "plist/Dead Groups/final_status_list dead\n");
-		//sbprintf(buf, "plist/Final Status List Dead/final_status_list dead\n");
-		//sbprintf(buf, "plist/Final Status List Alive/final_status_list alive\n");
-		//sbprintf(buf, "plist/Final Status List Seki/final_status_list seki\n");
-		//sbprintf(buf, "plist/Final Status List Black/final_status_list black_territory\n");
-		//sbprintf(buf, "plist/Final Status List White/final_status_list white_territory\n");
+		printf("gfx/Final Score/gogui-final_score\n");
+		printf("plist/Dead Groups/final_status_list dead\n");
+		//printf("plist/Final Status List Dead/final_status_list dead\n");
+		//printf("plist/Final Status List Alive/final_status_list alive\n");
+		//printf("plist/Final Status List Seki/final_status_list seki\n");
+		//printf("plist/Final Status List Black/final_status_list black_territory\n");
+		//printf("plist/Final Status List White/final_status_list white_territory\n");
 	}
-	if (!strcmp(e->name, "UCT") && using_joseki(b))
-		sbprintf(buf, "gfx/Joseki Moves/gogui-joseki_moves\n");
-		sbprintf(buf, "gfx/Joseki Range/gogui-joseki_show_pattern %%p\n");
+	if (!strcmp(e->name, "UCT") && using_joseki(b)) {
+		printf("gfx/Joseki Moves/gogui-joseki_moves\n");
+		printf("gfx/Joseki Range/gogui-joseki_show_pattern %%p\n");
+	}
 #ifdef DCNN                            /* board check fake since we're called once on startup ... */
 	if (!strcmp(e->name, "UCT") && using_dcnn(b)) {
-		sbprintf(buf, "gfx/DCNN Best Moves/gogui-dcnn_best\n");
-		sbprintf(buf, "gfx/DCNN Color Map/gogui-dcnn_colors\n");
-		sbprintf(buf, "gfx/DCNN Ratings/gogui-dcnn_rating\n");
+		printf("gfx/DCNN Best Moves/gogui-dcnn_best\n");
+		printf("gfx/DCNN Color Map/gogui-dcnn_colors\n");
+		printf("gfx/DCNN Ratings/gogui-dcnn_rating\n");
 	}
 #endif
 	if (!strcmp(e->name, "UCT") && using_patterns()) {
-		sbprintf(buf, "gfx/Pattern Best Moves/gogui-pattern_best\n");
-		sbprintf(buf, "gfx/Pattern Color Map/gogui-pattern_colors\n");
-		sbprintf(buf, "gfx/Pattern Ratings/gogui-pattern_rating\n");
-		sbprintf(buf, "gfx/Pattern Features/gogui-pattern_features %%p\n");
-		sbprintf(buf, "gfx/Pattern Gammas/gogui-pattern_gammas %%p\n");
-		sbprintf(buf, "gfx/Set Spatial Size/gogui-spatial_size %%o\n");
-		sbprintf(buf, "gfx/Show Spatial/gogui-show_spatial %%p\n");
+		printf("gfx/Pattern Best Moves/gogui-pattern_best\n");
+		printf("gfx/Pattern Color Map/gogui-pattern_colors\n");
+		printf("gfx/Pattern Ratings/gogui-pattern_rating\n");
+		printf("gfx/Pattern Features At/gogui-pattern_features %%p\n");
+		printf("gfx/Pattern Gammas At/gogui-pattern_gammas %%p\n");
+		printf("gfx/Set Spatial Size/gogui-spatial_size %%o\n");
+		printf("gfx/Show Spatial/gogui-show_spatial %%p\n");
 	}
 	if (!strcmp(e->name, "UCT")) {
-		sbprintf(buf, "gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
-		sbprintf(buf, "gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
-		sbprintf(buf, "gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
-		sbprintf(buf, "gfx/Live gfx = None/gogui-livegfx\n");
+		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
+		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
+		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates\n");
+		printf("gfx/Live gfx = None/gogui-livegfx\n");
 	}
 
 	/* Debugging */
-	//sbprintf(buf, "gfx/Color Palette/gogui-color_palette\n");
+	//printf("gfx/Color Palette/gogui-color_palette\n");
 	
-	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
 
@@ -182,7 +181,7 @@ gogui_paint_pattern(board_t *b, int colors[BOARD_MAX_COORDS][4],
 
 /* Display spatial pattern */
 static void
-gogui_show_pattern(board_t *b, strbuf_t *buf, coord_t coord, int maxd)
+gogui_show_pattern(board_t *b, coord_t coord, int maxd)
 {
 	assert(!is_pass(coord));
 	int colors[BOARD_MAX_COORDS][4];  memset(colors, 0, sizeof(colors));
@@ -195,7 +194,7 @@ gogui_show_pattern(board_t *b, strbuf_t *buf, coord_t coord, int maxd)
 		int rr = MIN(colors[c][0], 255);
 		int gg = MIN(colors[c][1], 255);
 		int bb = MIN(colors[c][2], 255);
-		sbprintf(buf, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+		printf("COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
 	} foreach_point_end;
 }
 
@@ -214,60 +213,45 @@ gogui_set_livegfx(engine_t *e, char *arg)
 	if (e->livegfx_hook)  e->livegfx_hook(e);
 }
 
-/* GoGui reads live gfx commands on stderr */
 void
-gogui_show_livegfx(char *str)
-{
-	fprintf(stderr, "gogui-gfx:\n");
-	fprintf(stderr, "%s", str);
-	fprintf(stderr, "\n");
-}
-
-void
-gogui_show_winrates(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest)
+gogui_show_winrates(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest)
 {
 	/* best move */
 	if (best_c[0] != pass)
-		sbprintf(buf, "VAR %s %s\n", 
-			 (color == S_WHITE ? "w" : "b"),
-			 coord2sstr(best_c[0]) );
+		fprintf(f, "VAR %s %s\n", (color == S_WHITE ? "w" : "b"), coord2sstr(best_c[0]) );
 	
 	for (int i = 0; i < nbest; i++)
 		if (best_c[i] != pass)
-			sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i]),
-				 (int)(roundf(best_r[i] * 100)));
+			fprintf(f, "LABEL %s %i\n", coord2sstr(best_c[i]), (int)(roundf(best_r[i] * 100)));
 }
 
 void
-gogui_show_best_seq(strbuf_t *buf, board_t *b, enum stone color, coord_t *seq, int n)
+gogui_show_best_seq(FILE *f, board_t *b, enum stone color, coord_t *seq, int n)
 {	
-	char *col = "bw";
-	sbprintf(buf, "VAR ");
-	for (int i = 0; i < n && seq[i] != pass; i++)
-		sbprintf(buf, "%c %3s ",
-			 col[(i + (color == S_WHITE)) % 2],
-			 coord2sstr(seq[i]));
-	sbprintf(buf, "\n");
+	fprintf(f, "VAR ");
+	for (int i = 0; i < n && seq[i] != pass; i++) {
+		fprintf(f, "%.1s %3s ", stone2str(color), coord2sstr(seq[i]));
+		color = stone_other(color);
+	}
+	fprintf(f, "\n");
 }
 
 /* Display best moves graphically in GoGui. */
 void
-gogui_show_best_moves(strbuf_t *buf, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n)
+gogui_show_best_moves(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n)
 {
         /* best move */
         if (best_c[0] != pass)
-                sbprintf(buf, "VAR %s %s\n",
-                         (color == S_WHITE ? "w" : "b"),
-                         coord2sstr(best_c[0]) );
+                fprintf(f, "VAR %.1s %s\n", stone2str(color), coord2sstr(best_c[0]));
         
         for (int i = 1; i < n; i++)
                 if (best_c[i] != pass)
-                        sbprintf(buf, "LABEL %s %i\n", coord2sstr(best_c[i]), i + 1);
+                        fprintf(f, "LABEL %s %i\n", coord2sstr(best_c[i]), i + 1);
 }
 
 /* Display best moves graphically in GoGui. */
-void
-gogui_show_best_moves_colors(strbuf_t *buf, board_t *b, enum stone color,
+static void
+gogui_show_best_moves_colors(FILE *f, board_t *b, enum stone color,
 			     coord_t *best_c, float *best_r, int n)
 {
 	float vals[BOARD_MAX_COORDS];
@@ -284,8 +268,7 @@ gogui_show_best_moves_colors(strbuf_t *buf, board_t *b, enum stone color,
 		int rr, gg, bb;
 		value2color(vals[c], &rr, &gg, &bb);
 		
-		//fprintf(stderr, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
-		sbprintf(buf,   "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
+		fprintf(f, "COLOR #%02x%02x%02x %s\n", rr, gg, bb, coord2sstr(c));
 	}
 }
 
@@ -315,7 +298,7 @@ rescale_best_moves(coord_t *best_c, float *best_r, int n, int rescale)
 }
 
 static void
-gogui_best_moves(strbuf_t *buf, engine_t *e, board_t *b, time_info_t *ti,
+gogui_best_moves(FILE *f, engine_t *e, board_t *b, time_info_t *ti,
 		 enum stone color, int n, gogui_gfx_t gfx_type, gogui_rescale_t rescale)
 {
 	assert(color != S_NONE);
@@ -323,23 +306,13 @@ gogui_best_moves(strbuf_t *buf, engine_t *e, board_t *b, time_info_t *ti,
 	
 	coord_t best_c[n];
 	float   best_r[n];
-	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, n);
-	
-#if 0
-	fprintf(stderr, "best: [");
-	for (int i = 0; i < n; i++)
-		fprintf(stderr, "%s ", coord2sstr(best_c[i]));
-	fprintf(stderr, "]\n");
-#endif
-	
+	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, n);	
 	rescale_best_moves(best_c, best_r, n, rescale);
 	
-	if (gfx_type == GOGUI_BEST_WINRATES)
-		gogui_show_winrates(buf, b, color, best_c, best_r, n);
-	if (gfx_type == GOGUI_BEST_MOVES)
-		gogui_show_best_moves(buf, b, color, best_c, best_r, n);
-	if (gfx_type == GOGUI_BEST_COLORS)
-		gogui_show_best_moves_colors(buf, b, color, best_c, best_r, n);
+	if      (gfx_type == GOGUI_BEST_WINRATES)  gogui_show_winrates(f, b, color, best_c, best_r, n);
+	else if (gfx_type == GOGUI_BEST_MOVES)     gogui_show_best_moves(f, b, color, best_c, best_r, n);
+	else if (gfx_type == GOGUI_BEST_COLORS)    gogui_show_best_moves_colors(f, b, color, best_c, best_r, n);
+	else    assert(0);
 }
 
 enum parse_code
@@ -347,17 +320,15 @@ cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 
-	float   best_r[GOGUI_CANDIDATES] = { 0.0, };
-	coord_t best_c[GOGUI_CANDIDATES];
-	for (int i = 0; i < GOGUI_CANDIDATES; i++)
+	float   best_r[GOGUI_MANY] = { 0.0, };
+	coord_t best_c[GOGUI_MANY];
+	for (int i = 0; i < GOGUI_MANY; i++)
 		best_c[i] = coord_xy(i%19 +1, 18 - i/19 + 1);
 
-	rescale_best_moves(best_c, best_r, GOGUI_CANDIDATES, GOGUI_RESCALE_LINEAR);	
-	gogui_show_best_moves_colors(buf, b, color, best_c, best_r, GOGUI_CANDIDATES);
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_printf(gtp, "");  /* gtp prefix */
+	rescale_best_moves(best_c, best_r, GOGUI_MANY, GOGUI_RESCALE_LINEAR);
+	gogui_show_best_moves_colors(stdout, b, color, best_c, best_r, GOGUI_MANY);
 	return P_OK;
 }
 
@@ -366,7 +337,7 @@ enum parse_code
 cmd_gogui_livegfx(board_t *board, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
-	next_tok(arg);
+	gtp_arg_optional(arg);
 	gogui_set_livegfx(e, arg);
 	return P_OK;
 }
@@ -375,12 +346,9 @@ enum parse_code
 cmd_gogui_influence(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	ownermap_t *ownermap = engine_ownermap(e, b);
-	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
+	if (!ownermap)  {  gtp_error(gtp, "no ownermap");  return P_OK;  }
 	
-	char buffer[5000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	
-	sbprintf(buf, "INFLUENCE");	
+	gtp_printf(gtp, "INFLUENCE");
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)
 			continue;
@@ -394,11 +362,10 @@ cmd_gogui_influence(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		else if (p < 0.5)  p = 0.4;
 		else if (p < 0.8)  p = 0.7;
 		else               p = 1.0;
-		sbprintf(buf, " %3s %.1lf", coord2sstr(c), p);
+		printf(" %3s %.1lf", coord2sstr(c), p);
 	} foreach_point_end;
 
-	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
-	gtp_reply(gtp, buf->str, NULL);
+	printf("\nTEXT Score Est: %s\n", ownermap_score_est_str(b, ownermap));
 	return P_OK;
 }
 
@@ -406,23 +373,19 @@ enum parse_code
 cmd_gogui_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	ownermap_t *ownermap = engine_ownermap(e, b);
-	if (!ownermap)  {  gtp_error(gtp, "no ownermap", NULL);  return P_OK;  }
+	if (!ownermap)  {  gtp_error(gtp, "no ownermap");  return P_OK;  }
 	
-	char buffer[5000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	
-	sbprintf(buf, "INFLUENCE");
+	gtp_printf(gtp, "INFLUENCE");
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
 		enum point_judgement j = ownermap_score_est_coord(b, ownermap, c);
 		float p = 0;
 		if (j == PJ_BLACK)  p = 0.5;
 		if (j == PJ_WHITE)  p = -0.5;
-		sbprintf(buf, " %3s %.1lf", coord2sstr(c), p);
+		printf(" %3s %.1lf", coord2sstr(c), p);
 	} foreach_point_end;
 
-	sbprintf(buf, "\nTEXT Score Est: %s", ownermap_score_est_str(b, ownermap));
-	gtp_reply(gtp, buf->str, NULL);
+	printf("\nTEXT Score Est: %s\n", ownermap_score_est_str(b, ownermap));
 	return P_OK;
 }
 
@@ -432,7 +395,7 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char *msg = NULL;
 	ownermap_t *o = engine_ownermap(e, b);
 	if (o && !board_position_final(b, o, &msg)) {
-		gtp_error(gtp, msg, NULL);
+		gtp_error(gtp, msg);
 		return P_OK;
 	}
 
@@ -442,24 +405,20 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	int dame, seki;
 	int ownermap[board_max_coords(b)];
 	floating_t score = board_official_score_details(b, &q, &dame, &seki, ownermap, NULL);
-	char buffer[5000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
 	
-	sbprintf(buf, "INFLUENCE");
+	gtp_printf(gtp, "INFLUENCE");
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD)  continue;
 		float p = 0;
 		if (ownermap[c] == S_BLACK)  p = 0.5;
 		if (ownermap[c] == S_WHITE)  p = -0.5;
-		sbprintf(buf, " %3s %.1lf", coord2sstr(c), p);
+		printf(" %3s %.1lf", coord2sstr(c), p);
 	} foreach_point_end;
-	sbprintf(buf, "\n");
+	printf("\n");
 	
-	if      (score == 0) sbprintf(buf, "TEXT 0\n");
-	else if (score > 0)  sbprintf(buf, "TEXT W+%.1f\n", score);
-	else                 sbprintf(buf, "TEXT B+%.1f\n", -score);
-
-	gtp_reply(gtp, buf->str, NULL);
+	if      (score == 0) printf("TEXT 0\n");
+	else if (score > 0)  printf("TEXT W+%.1f\n", score);
+	else                 printf("TEXT B+%.1f\n", -score);
 	return P_OK;
 }
 
@@ -468,16 +427,14 @@ cmd_gogui_winrates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
-	char buffer[5000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
+
+	gtp_printf(gtp, "");   /* gtp prefix */
 
 	gogui_reporting_t prev = gogui_livegfx;
 	gogui_set_livegfx(e, "winrates");
-	gogui_best_moves(buf, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
+	gogui_best_moves(stdout, e, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
-
-	gtp_reply(gtp, buf->str, NULL);
+	
 	return P_OK;
 }
 
@@ -486,16 +443,14 @@ cmd_gogui_best_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	
+
+	gtp_printf(gtp, "");   /* gtp prefix */
+
 	gogui_reporting_t prev = gogui_livegfx;
 	gogui_set_livegfx(e, "best_moves");
-	gogui_best_moves(buf, e, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
+	gogui_best_moves(stdout, e, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 	
-	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
 
@@ -509,51 +464,42 @@ static engine_t *dcnn_engine = NULL;
 enum parse_code
 cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, dcnn_engine, b, ti, color, 10, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_printf(gtp, "");   /* gtp prefix */	
+	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, dcnn_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_printf(gtp, "");  /* gtp prefix */
+	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_dcnn_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn", NULL);  return P_OK;  }
+	if (!using_dcnn(b)) {  gtp_reply(gtp, "TEXT Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
-	char buffer[5000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, dcnn_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_printf(gtp, "");   /* gtp prefix */
+	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 	return P_OK;
 }
 
@@ -568,54 +514,49 @@ static engine_t *joseki_engine = NULL;
 enum parse_code
 cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki", NULL);  return P_OK;  }
+	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki");  return P_OK;  }
 	if (!joseki_engine)   joseki_engine = new_engine(E_JOSEKIPLAY, NULL, b);
 	
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 	
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-
 	float joseki_map[BOARD_MAX_COORDS];
 	joseki_rate_moves(joseki_dict, b, color, joseki_map);
+
+	gtp_printf(gtp, "");   /* gtp prefix */
 
 	/* Show relaxed / ignored moves */
 	foreach_free_point(b) {
 		josekipat_t *p = joseki_lookup_ignored(joseki_dict, b, c, color);
-		if (p)  sbprintf(buf, "MARK %s\n", coord2sstr(c));
+		if (p)  printf("MARK %s\n", coord2sstr(c));
 		if (p && (p->flags & JOSEKI_FLAGS_3X3))
-			sbprintf(buf, "CIRCLE %s\n", coord2sstr(c));
+			printf("CIRCLE %s\n", coord2sstr(c));
 		
 		p = joseki_lookup_3x3(joseki_dict, b, c, color);
-		if (p)  sbprintf(buf, "CIRCLE %s\n", coord2sstr(c));
+		if (p)  printf("CIRCLE %s\n", coord2sstr(c));
 	} foreach_free_point_end;
 
-	gogui_best_moves(buf, joseki_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
+	gogui_best_moves(stdout, joseki_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 
 	/* Show ignored moves, background color */
 	foreach_free_point(b) {
 		if (joseki_map[c]) continue;  /* Don't clobber valid moves ! */
 		josekipat_t *p = joseki_lookup_ignored(joseki_dict, b, c, color);
 		if (!p)  continue;
-		sbprintf(buf, "COLOR #0000a0 %s\n", coord2sstr(c));
+		printf("COLOR #0000a0 %s\n", coord2sstr(c));
 	} foreach_free_point_end;
 
-	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_joseki_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_show_pattern(b, buf, coord, JOSEKI_PATTERN_DIST);
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_printf(gtp, "");  /* gtp prefix */
+	gogui_show_pattern(b, coord, JOSEKI_PATTERN_DIST);
 	return P_OK;
 }
 
@@ -639,14 +580,12 @@ cmd_gogui_pattern_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, pattern_engine, b, ti, color, 10, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
+
+	gtp_printf(gtp, "");   /* gtp prefix */
+	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 
 	bool locally = patternplay_matched_locally(pattern_engine);
-	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
-	gtp_reply(gtp, buf->str, NULL);
+	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	return P_OK;
 }
 
@@ -657,14 +596,12 @@ cmd_gogui_pattern_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
+
+	gtp_printf(gtp, "");  /* gtp prefix */	
+	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 
 	bool locally = patternplay_matched_locally(pattern_engine);
-	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
-	gtp_reply(gtp, buf->str, NULL);
+	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	return P_OK;
 }
 
@@ -675,14 +612,12 @@ cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
-	char buffer[5000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_best_moves(buf, pattern_engine, b, ti, color, GOGUI_CANDIDATES, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
+
+	gtp_printf(gtp, "");   /* gtp prefix */
+	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 
 	bool locally = patternplay_matched_locally(pattern_engine);
-	sbprintf(buf, "TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
-	gtp_reply(gtp, buf->str, NULL);
+	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	return P_OK;
 }
 
@@ -695,10 +630,9 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 	
-	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
-	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
+	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 	
 	ownermap_t ownermap;
 	pattern_t p;
@@ -708,17 +642,15 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
 	pattern_match(pc, &p, b, &m, &ownermap, locally);
 
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-
 	/* Show largest spatial */
 	int dist = 0;
 	for (int i = 0; i < p.n; i++)
 		if (p.f[i].id >= FEAT_SPATIAL3)
 			dist = MAX(dist, p.f[i].id - FEAT_SPATIAL3 + 3);
-	if (dist)  gogui_show_pattern(b, buf, coord, dist);
-
-	gtp_reply(gtp, buf->str, "TEXT ", pattern2sstr(&p), NULL);
+	
+	gtp_printf(gtp, "TEXT %s\n", pattern2sstr(&p));
+	if (dist)  gogui_show_pattern(b, coord, dist);
+	
 	return P_OK;
 }
 
@@ -731,10 +663,9 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	enum stone color = S_BLACK;
 	if (last_move(b).color)  color = stone_other(last_move(b).color);
 	
-	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
-	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...", NULL);  return P_OK;  }
+	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 	
 	ownermap_t ownermap;
 	pattern_t p;
@@ -744,13 +675,10 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
 	pattern_match(pc, &p, b, &m, &ownermap, locally);
 
-	char buffer[1000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-
-	sbprintf(buf, "TEXT ");
+	strbuf(buf, 1000);
 	dump_gammas(buf, pc, &p);
 
-	gtp_reply(gtp, buf->str, NULL);
+	gtp_printf(gtp, "TEXT %s\n", buf->str);
 	return P_OK;
 }
 
@@ -762,37 +690,34 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (!pattern_engine)   init_patternplay_engine(b);
 	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
 
-	char *arg;  next_tok(arg);
-	if (!arg)                          {  gtp_error(gtp, "arg missing", NULL);  return P_OK;  }
+	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 
-	char buffer[10000];  strbuf_t strbuf;
-	strbuf_t *buf = strbuf_init(&strbuf, buffer, sizeof(buffer));
-	gogui_show_pattern(b, buf, coord, spatial_dist);
+	gtp_printf(gtp, "");   /* gtp prefix */
+	gogui_show_pattern(b, coord, spatial_dist);
 	
 	move_t m = move(coord, stone_other(last_move(b).color));
 	spatial_t s;
 	spatial_from_board(pc, &s, b, &m);
 	s.dist = spatial_dist;
 	spatial_t *s2 = spatial_dict_lookup(spat_dict, s.dist, spatial_hash(0, &s));
-	if (s2)	sbprintf(buf, "TEXT matches s%i:%i\n", spatial_dist, spatial_id(s2, spat_dict));
-	else	sbprintf(buf, "TEXT unknown s%i spatial\n", spatial_dist);
+	if (s2)	printf("TEXT matches s%i:%i\n", spatial_dist, spatial_id(s2, spat_dict));
+	else	printf("TEXT unknown s%i spatial\n", spatial_dist);
 
 	spatial_write(spat_dict, &s, 0, stderr);
 
-	gtp_reply(gtp, buf->str, NULL);
 	return P_OK;
 }
 
 enum parse_code
 cmd_gogui_spatial_size(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;  next_tok(arg);
+	char *arg;  gtp_arg_optional(arg);
 	/* Return current value */
-	if (!*arg) {  gtp_reply_printf(gtp, "%i", spatial_dist);  return P_OK;  }
+	if (!*arg) {  gtp_printf(gtp, "%i\n", spatial_dist);  return P_OK;  }
 
 	int d = atoi(arg);
-	if (d < 3 || d > 10) {  gtp_error(gtp, "Between 3 and 10 please", NULL);  return P_OK;  }
+	if (d < 3 || d > 10) {  gtp_error(gtp, "Between 3 and 10 please");  return P_OK;  }
 	spatial_dist = d;
 	return P_OK;
 }

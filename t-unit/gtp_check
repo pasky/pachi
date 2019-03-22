@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+# check gtp answers are sane
+
+use IPC::Open2;
+
+$| = 1;
+
+$SIG{CHLD} = handler;
+sub handler {  exit 1;  }
+
+# Start Pachi instance
+my $pachi_cmd = join(" ", @ARGV);
+
+my $pachi_pid = open2(PACHI_OUT, PACHI_IN, "$pachi_cmd");
+PACHI_IN->autoflush(1);
+
+my $prev_cmd;
+
+sub check_reply
+{
+    my $reply = <PACHI_OUT>;
+    if ($reply eq "\n")       { die "malformed answer to '$prev_cmd': extra newline\n"; }
+    if ($reply =~ m/^[?] /)   { die "command failed: '$reply'\n"; }
+    if ($reply !~ m/^[=?][0-9]* /)  { die "malformed answer: '$reply'\n"; }
+
+    my $s = $reply;
+    for ($reply = "";  ($s ne "\n") && ($s ne "\r\n");  $s = <PACHI_OUT>) {
+	$reply .= $s;
+    }
+    #print "'$reply'";
+}
+
+sub pachi_command
+{
+    my ($cmd) = @_;
+    print PACHI_IN "$cmd\n";  # Forward command to pachi
+    check_reply();
+}
+
+
+# Process gtp commands
+foreach my $s (<STDIN>)
+{
+    if ($s =~ m/^ *$/) { next; }
+    if ($s =~ m/^#/)   { next; }
+    chomp($s);
+    
+    printf("  %-30s  ", $s);
+    pachi_command("$s");
+    $prev_cmd = $s;
+    print "ok\n";
+}

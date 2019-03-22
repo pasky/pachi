@@ -22,7 +22,7 @@ printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 
 	if (c == pass) { /* Stuff to display in header */
 		if (!ownermap || !ownermap->playouts) return;
-		sbprintf(buf, "Score Est: %s", ownermap_score_est_str(board, ownermap));
+		sbprintf(buf, "Score Est: %s\n", ownermap_score_est_str(board, ownermap));
 		return;
 	}
 	
@@ -201,7 +201,7 @@ ownermap_score_est_str(board_t *b, ownermap_t *ownermap)
 {
 	static char buf[32];
 	float s = ownermap_score_est(b, ownermap);
-	sprintf(buf, "%s+%.1f\n", (s > 0 ? "W" : "B"), fabs(s));
+	sprintf(buf, "%s+%.1f", (s > 0 ? "W" : "B"), fabs(s));
 	return buf;
 }
 

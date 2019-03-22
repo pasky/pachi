@@ -21,7 +21,8 @@ typedef struct
 	char *next;
 	int   id;
 	bool  quiet;
-	int   replied;
+	bool  replied;
+	bool  flushed;
 
 	/* Global fields: */
 	int     played_games;
@@ -35,22 +36,43 @@ typedef struct
 	char*   custom_version;
 } gtp_t;
 
-#define next_tok(to_) \
-	to_ = gtp->next; \
+#define gtp_arg_next(gtp) \
 	gtp->next = gtp->next + strcspn(gtp->next, " \t\r\n"); \
 	if (*gtp->next) { \
 		*gtp->next = 0; gtp->next++; \
 		gtp->next += strspn(gtp->next, " \t\r\n"); \
 	}
 
+#define gtp_arg_optional(arg)  do {  \
+	(arg) = gtp->next;  \
+	gtp_arg_next(gtp);  \
+} while(0)
+
+#define gtp_arg(arg)  do { \
+	(arg) = gtp->next; \
+	if (!*(arg)) {	\
+		gtp_error(gtp, "argument missing"); \
+		return P_OK; \
+	} \
+	gtp_arg_next(gtp); \
+} while(0)
+
+
 void   gtp_init(gtp_t *gtp);
 
 enum parse_code gtp_parse(gtp_t *gtp, board_t *b, struct engine *e, char *e_arg, time_info_t *ti, char *buf);
 bool gtp_is_valid(struct engine *e, const char *cmd);
-void gtp_reply(gtp_t *gtp, ...);
-void gtp_reply_printf(gtp_t *gtp, const char *format, ...);
-void gtp_error_printf(gtp_t *gtp, const char *format, ...);
-void gtp_error(gtp_t *gtp, ...);
+
+/* Output one line, end-of-line \n added automatically. */
+void gtp_reply(gtp_t *gtp, const char *str);
+void gtp_error(gtp_t *gtp, const char *str);
+
+/* Output anything (no \n added). 
+ * Can just use printf() after first gtp_printf() */
+void gtp_printf(gtp_t *gtp, const char *format, ...)
+	__attribute__ ((format (printf, 2, 3)));
+void gtp_error_printf(gtp_t *gtp, const char *format, ...)
+	__attribute__ ((format (printf, 2, 3)));
 
 #define is_gamestart(cmd) (!strcasecmp((cmd), "boardsize"))
 #define is_reset(cmd) (is_gamestart(cmd) || !strcasecmp((cmd), "clear_board") || !strcasecmp((cmd), "kgs-rules"))

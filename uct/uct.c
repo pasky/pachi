@@ -535,7 +535,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 
 static coord_t
 uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
-{	
+{
 	uct_t *u = (uct_t*)e->data;
 
 	coord_t best_coord;
@@ -572,9 +572,7 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		int      nbest =  u->dcnn_pondering_mcts;
 		coord_t *best_c = u->dcnn_pondering_mcts_c;
 		float    best_r[nbest];
-		uct_get_best_moves(u, best_c, best_r, nbest, false);
-		for (int i = 0; i < nbest; i++)
-			if (best_r[i] < 100)  best_c[i] = pass;  /* Too few playouts. */
+		uct_get_best_moves(u, best_c, best_r, nbest, false, 100);
 
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
@@ -587,7 +585,25 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 	return best_coord;
 }
 
-/* Wild pondering for the sake of frontend running Pachi. */
+/* lz-genmove_analyze */
+static coord_t
+uct_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
+{
+	uct_t *u = (uct_t*)e->data;
+	enum uct_reporting prev = u->reporting;
+	
+	u->reporting = UR_LEELA_ZERO;
+	u->report_fh = stdout;	
+	coord_t coord = uct_genmove(e, b, ti, color, pass_all_alive);
+	u->reporting = prev;
+	u->report_fh = stderr;
+	
+	return coord;
+}
+
+/* Start tree search in the background and output stats for the sake of
+ * frontend running Pachi: sortof like pondering without a genmove.
+ * Stop processing if @start is 0. */
 static void
 uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 {
@@ -601,33 +617,40 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	/* Start pondering if not already. */
 	if (u->pondering)  return;
 
-	if (!u->t)
-		uct_prepare_move(u, b, color);
-
+	u->reporting = UR_LEELA_ZERO;
+	if (!u->t)  uct_prepare_move(u, b, color);
 	uct_pondering_start(u, b, u->t, color, 0, false);
 }
 
+/* Same as uct_get_best_moves() for node @parent.
+ * XXX pass can be a valid move in which case you need best_n to check. 
+ *     have another function which exposes best_n ? */
 void
-uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest, bool winrates)
+uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,
+		      bool winrates, int min_playouts)
 {
-	tree_node_t* best_d[nbest];
+	tree_node_t* best_n[nbest];
 	for (int i = 0; i < nbest; i++)  {
-		best_c[i] = pass;  best_r[i] = 0;  best_d[i] = NULL;
+		best_c[i] = pass;  best_r[i] = 0;  best_n[i] = NULL;
 	}
 	
 	/* Find best moves */
 	for (tree_node_t *n = parent->children; n; n = n->sibling)
-		best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_d, nbest);
+		if (n->u.playouts >= min_playouts)
+			best_moves_add_full(node_coord(n), n->u.playouts, n, best_c, best_r, (void**)best_n, nbest);
 
 	if (winrates)  /* Get winrates */
-		for (int i = 0; i < nbest && best_d[i]; i++)
-			best_r[i] = tree_node_get_value(u->t, 1, best_d[i]->u.value);
+		for (int i = 0; i < nbest && best_n[i]; i++)
+			best_r[i] = tree_node_get_value(u->t, 1, best_n[i]->u.value);
 }
 
+/* Get best moves with at least @min_playouts.
+ * If @winrates is true @best_r returns winrates instead of visits.
+ * (moves remain in best-visited order) */
 void
-uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates)
+uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts)
 {
-	uct_get_best_moves_at(u, u->t->root, best_c, best_r, nbest, winrates);
+	uct_get_best_moves_at(u, u->t->root, best_c, best_r, nbest, winrates, min_playouts);
 }
 
 /* Kindof like uct_genmove() but find the best candidates */
@@ -642,7 +665,7 @@ uct_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	
 	coord_t best_coord;
 	genmove(e, b, ti, color, 0, &best_coord);
-	uct_get_best_moves(u, best_c, best_r, nbest, true);
+	uct_get_best_moves(u, best_c, best_r, nbest, true, 100);
 
 	if (u->t)	
 		reset_state(u);
@@ -748,6 +771,7 @@ uct_state_init(char *arg, board_t *b)
 	
 	u->debug_level = debug_level;
 	u->reportfreq = 1000;
+	u->report_fh = stderr;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
 	u->sure_win_threshold = 0.95;
@@ -833,9 +857,11 @@ uct_state_init(char *arg, board_t *b)
 					 * Implies debug=0. */
 					u->reporting = UR_JSON_BIG;
 					u->debug_level = 0;
-				} else if (!strcasecmp(optval, "leelaz")) {
+				} else if (!strcasecmp(optval, "leela-zero") ||
+					   !strcasecmp(optval, "leelaz") ||
+					   !strcasecmp(optval, "lz")) {
 					/* Leela-Zero pondering format. */
-					u->reporting = UR_LEELAZ;
+					u->reporting = UR_LEELA_ZERO;
 				} else
 					die("UCT: Invalid reporting format %s\n", optval);
 			} else if (!strcasecmp(optname, "reportfreq") && optval) {
@@ -1404,6 +1430,7 @@ engine_uct_init(engine_t *e, char *arg, board_t *b)
 	e->chat = uct_chat;
 	e->result = uct_result;
 	e->genmove = uct_genmove;
+	e->genmove_analyze = uct_genmove_analyze;
 #ifdef DISTRIBUTED
 	e->genmoves = uct_genmoves;
 	if (u->slave)

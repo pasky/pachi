@@ -90,7 +90,7 @@ DATADIR ?= $(PREFIX)/share/pachi
 # unless PROFILING=gprof.)
 OPT ?= -O3
 COMMON_FLAGS := -Wall -ggdb3 $(OPT) -D_GNU_SOURCE
-CFLAGS       := -std=gnu99 -pthread -Wsign-compare
+CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length
 CXXFLAGS     := -std=c++11
 
 
@@ -272,6 +272,9 @@ build.h: .git/HEAD .git/index Makefile
 # Unit tests
 test: FORCE
 	+@make -C t-unit test
+
+test_gtp: FORCE
+	+@make -C t-unit test_gtp
 
 test_board: FORCE
 	+@make -C t-unit test_board
