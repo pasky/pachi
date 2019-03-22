@@ -456,13 +456,14 @@ uct_pondering_stop(uct_t *u)
 	/* Stop the thread manager. */
 	uct_thread_ctx_t *ctx = uct_search_stop();
 	if (UDEBUGL(1)) {
-		if (u->pondering) fprintf(stderr, "(pondering) ");
+		if (u->pondering) fprintf(u->report_fh, "(pondering) ");
 		uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
 	}
 	if (u->pondering) {
 		free(ctx->b);
 		u->pondering = false;
 		u->genmove_pondering = false;
+		u->report_fh = stderr;
 	}
 }
 
@@ -592,6 +593,8 @@ uct_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
 {
 	uct_t *u = (uct_t*)e->data;
 	enum uct_reporting prev = u->reporting;
+
+	uct_pondering_stop(u);   /* Don't clobber report_fh later on... */
 	
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;	
@@ -620,6 +623,7 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	if (u->pondering)  return;
 
 	u->reporting = UR_LEELA_ZERO;
+	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
 	if (!u->t)  uct_prepare_move(u, b, color);
 	uct_pondering_start(u, b, u->t, color, 0, false);
 }
