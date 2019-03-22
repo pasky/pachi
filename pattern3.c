@@ -11,17 +11,22 @@
 static void
 pattern_record(pattern3s_t *p, int pi, char *str, hash3_t pat, int fixed_color)
 {
-	hash_t h = hash3_to_hash(pat);
-	while (p->hash[h & pattern3_hash_mask].pattern != pat
-	       && p->hash[h & pattern3_hash_mask].value != 0)
-		h++;
+	hash3_t h = hash3_to_hash(pat);
+	while (p->hash[h].pattern != pat && p->hash[h].value)
+		h = (h + 1) & pattern3_hash_mask;
+
+	p->hash[h].pattern = pat;
+	p->hash[h].value = (fixed_color ? fixed_color : 3) | (pi << 2);
+
 #if 0
-	if (h != hash3_to_hash(pat) && p->hash[h & pattern3_hash_mask].pattern != pat)
-		fprintf(stderr, "collision of %06x: %llx(%x)\n", pat, hash3_to_hash(pat)&pattern3_hash_mask, p->hash[hash3_to_hash(pat)&pattern3_hash_mask].pattern);
-#endif
-	p->hash[h & pattern3_hash_mask].pattern = pat;
-	p->hash[h & pattern3_hash_mask].value = (fixed_color ? fixed_color : 3) | (pi << 2);
-	//fprintf(stderr, "[%s] %04x %d\n", str, pat, fixed_color);
+	if (h != hash3_to_hash(pat) && p->hash[h].pattern != pat)
+		fprintf(stderr, "collision of %06x: %llx(%x)\n", pat, hash3_to_hash(pat), p->hash[hash3_to_hash(pat)].pattern);
+	if (p->hash[h].pattern == pat && (p->hash[h].value >> 2) != pi)
+		fprintf(stderr, "clobbering prev pattern %#06x value %i -> %i\n", pat, 
+			(p->hash[h].value >> 2), pi);
+ 	/* Dump all patterns_record()     (including clobbers) */
+ 	// fprintf(stderr, "[%s] %06x %d %i\n", str, pat, fixed_color, pi);
+#endif	
 }
 
 static int
@@ -189,6 +194,16 @@ pattern_gen(pattern3s_t *p, int pi, hash3_t pat, char *src, int srclen, int fixe
 		}
 	}
 
+#ifdef PAT3_SHORT_CIRCUIT
+	/* Check there's indeed no pattern without black stones / white stones. */
+	int stones[S_MAX] = { 0, };
+	for (int i = 0; i < 8; i++) {
+		int color = (pat >> (i*2)) & 0x3;
+		stones[color]++;
+	}
+	assert(stones[S_BLACK] && stones[S_WHITE]);
+#endif
+
 	/* Original pattern, all transpositions and rotations */
 	hash3_t transp[8];
 	pattern3_transpose(pat, &transp);
@@ -262,8 +277,9 @@ static __attribute__((constructor)) void
 p3hashes_init(void)
 {
 	/* tuned for 11482 collisions */
+	// 8577 collisions actually
 	/* XXX: tune better */
-	hash_t h = 0x35373c;
+	hash3_t h =  0x35373c;
 	for (int i = 0; i < 8; i++) {
 		for (int a = 0; a < 2; a++) {
 			p3hashes[i][a][S_NONE] = (h = h * 16803-7);

@@ -91,7 +91,7 @@ typedef struct {
 
 	pattern3s_t patterns;
 
-	double pat3_gammas[PAT3_N];
+	fixp_t pat3_gammas[PAT3_N];
 
 	/* Gamma values for queue tags - correspond to probabilities. */
 	/* XXX: Tune. */
@@ -187,7 +187,7 @@ static char moggy_patterns_src[PAT3_N][11] = {
 #define moggy_patterns_src_n sizeof(moggy_patterns_src) / sizeof(moggy_patterns_src[0])
 
 static inline bool
-test_pattern3_here(playout_policy_t *p, board_t *b, move_t *m, bool middle_ladder, double *gamma)
+test_pattern3_here(playout_policy_t *p, board_t *b, move_t *m, bool middle_ladder, fixp_t *gamma)
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	/* Check if 3x3 pattern is matched by given move... */
@@ -203,8 +203,7 @@ test_pattern3_here(playout_policy_t *p, board_t *b, move_t *m, bool middle_ladde
 	    && !can_countercapture(b, atari_neighbor, NULL, 0))
 		return false;
 	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord), (int) pi, pp->pat3_gammas[(int) pi]);
-	if (gamma)
-		*gamma = pp->pat3_gammas[(int) pi];
+	*gamma = pp->pat3_gammas[(int) pi];
 	return true;
 }
 
@@ -213,7 +212,7 @@ apply_pattern_here(playout_policy_t *p, board_t *b, coord_t c, enum stone color,
 {
 	moggy_policy_t *pp = (moggy_policy_t*)p->data;
 	move_t m2 = move(c, color);
-	double gamma;
+	fixp_t gamma;
 	if (board_is_valid_move(b, &m2) && test_pattern3_here(p, b, &m2, pp->middle_ladder, &gamma)) {
 		mq_gamma_add(q, gammas, c, gamma, 1<<MQ_PAT3);
 	}
@@ -1000,9 +999,9 @@ playout_moggy_assess_one(playout_policy_t *p, prior_map_t *map, coord_t coord, i
 
 	/* Pattern check */
 	if (pp->patternrate) {
-		// XXX: Use gamma value?
 		move_t m = move(coord, map->to_play);
-		if (test_pattern3_here(p, b, &m, true, NULL)) {
+		fixp_t gamma;  // XXX: Use gamma value?
+		if (test_pattern3_here(p, b, &m, true, &gamma)) {
 			if (PLDEBUGL(5))
 				fprintf(stderr, "1.0: pattern\n");
 			add_prior_value(map, coord, 1, games);
@@ -1202,7 +1201,9 @@ playout_moggy_init(char *arg, board_t *b)
 		0.52, 0.53, 0.32, 0.22, 0.37, 0.28, 0.21, 0.19, 0.82,
 		0.12, 0.20, 0.11, 0.16, 0.57, 0.44
 	};
-	memcpy(pp->pat3_gammas, pat3_gammas_default, sizeof(pp->pat3_gammas));
+	//memcpy(pp->pat3_gammas, pat3_gammas_default, sizeof(pp->pat3_gammas));
+	for (int i = 0; i < PAT3_N; i++)
+		pp->pat3_gammas[i] = double_to_fixp(pat3_gammas_default[i]);
 
 	if (arg) {
 		char *optspec, *next = arg;
@@ -1285,7 +1286,7 @@ playout_moggy_init(char *arg, board_t *b)
 			} else if (!strcasecmp(optname, "pat3gammas") && optval) {
 				/* PAT3_N %-separated floating point values */
 				for (int i = 0; *optval && i < PAT3_N; i++) {
-					pp->pat3_gammas[i] = atof(optval);
+					pp->pat3_gammas[i] = double_to_fixp(atof(optval));
 					optval += strcspn(optval, "%");
 					if (*optval) optval++;
 				}

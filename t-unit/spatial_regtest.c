@@ -39,7 +39,7 @@ dump_spatials(board_t *b, pattern_config_t *pc)
 	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
 	ownermap_t ownermap;  fake_ownermap(b, &ownermap);  /* fake */
-	pattern_rate_moves(pc, b, color, pats, probs, &ownermap);
+	pattern_rate_moves_full(pc, b, color, pats, probs, &ownermap);
 	
 	for (int f = 0; f < b->flen; f++) {
 		if (isnan(probs[f]))  continue;

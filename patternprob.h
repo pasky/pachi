@@ -46,8 +46,14 @@ static inline floating_t pattern_gamma(pattern_config_t *pc, pattern_t *p);
  * Returns the sum of all probabilities that can be used for normalization. */
 floating_t pattern_rate_moves(pattern_config_t *pc,
 			      board_t *b, enum stone color,
-			      pattern_t *pats, floating_t *probs,
+			      floating_t *probs,
 			      ownermap_t *ownermap);
+/* Saves patterns for each move as well. */
+floating_t pattern_rate_moves_full(pattern_config_t *pc,
+				   board_t *b, enum stone color,
+				   pattern_t *pats, floating_t *probs,
+				   ownermap_t *ownermap);
+
 
 /* Helper function for pattern_match() callers:
  * Returns @locally flag to use for this position. */

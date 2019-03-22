@@ -17,7 +17,7 @@ typedef struct board_undo {
 	move_t last_move2;
 	move_t ko;
 	move_t last_ko;
-	int	    last_ko_age;
+	int    last_ko_age;
 	
 	coord_t next_at;
 	
@@ -26,11 +26,11 @@ typedef struct board_undo {
 	int nmerged;
 	int nmerged_tmp;
 
+	int          nenemies;
+	int          ncaptures;
+	coord_t      *captures_end;
 	undo_enemy_t enemies[4];
-	int nenemies;
-	coord_t  captures[BOARD_MAX_COORDS];
-	coord_t *captures_end;
-	int      ncaptures;
+	coord_t      captures[BOARD_MAX_COORDS];
 } board_undo_t;
 
 

@@ -868,7 +868,9 @@ pattern_match_double_snapback(board_t *b, move_t *m)
 #endif
 
 /* Match spatial features that are too distant to be pre-matched
- * incrementally. */
+ * incrementally. Most expensive part of pattern matching, on some
+ * archs this is almost 20% genmove time. Any optimization here
+ * will make a big difference. */
 static feature_t *
 pattern_match_spatial_outer(pattern_config_t *pc, 
                             pattern_t *p, feature_t *f,
@@ -894,13 +896,14 @@ pattern_match_spatial_outer(pattern_config_t *pc,
 	 * reverse all colors if we are white-to-play. */
 	static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
 	static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
-	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
+	enum stone *bt = m->color == S_WHITE ? bt_white : bt_black;
+	int cx = coord_x(m->coord), cy = coord_y(m->coord);
 
 	for (unsigned int d = BOARD_SPATHASH_MAXD + 1; d <= pc->spat_max; d++) {
 		/* Recompute missing outer circles: Go through all points in given distance. */
 		for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
-			ptcoords_at(x, y, m->coord, j);
-			h ^= pthashes[0][j][(*bt)[board_atxy(b, x, y)]];
+			ptcoords_at(x, y, cx, cy, j);
+			h ^= pthashes[0][j][bt[board_atxy(b, x, y)]];
 		}
 		if (d < pc->spat_min)	continue;			
 		spatial_t *s = spatial_dict_lookup(spat_dict, d, h);

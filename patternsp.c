@@ -168,8 +168,9 @@ outer_spatial_hash_from_board_rot_d(board_t *b, coord_t coord, enum stone color,
 	static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
 	enum stone (*bt)[4] = color == S_WHITE ? &bt_white : &bt_black;
 
+	int cx = coord_x(coord), cy = coord_y(coord);
 	for (unsigned int i = ptind[2]; i < ptind[d + 1]; i++) {
-		ptcoords_at(x, y, coord, i);
+		ptcoords_at(x, y, cx, cy, i);
 		h ^= pthashes[rot][i][(*bt)[board_atxy(b, x, y)]];
 	}
 	return h;
@@ -211,8 +212,9 @@ spatial_print(board_t *board, spatial_t *s, FILE *f, move_t *at)
 			board_at(b, c) = (enum stone)4; // HACK !
 		}
 	
+	int cx = coord_x(at->coord), cy = coord_y(at->coord);
 	for (unsigned int j = 0; j < ptind[s->dist + 1]; j++) {
-		ptcoords_at(x, y, at->coord, j);
+		ptcoords_at(x, y, cx, cy, j);
 		move_t m = move(coord_xy(x, y), spatial_point_at(*s, j) );
 		board_at(b, m.coord) = m.color;
 	}
@@ -234,8 +236,9 @@ spatial_from_board(pattern_config_t *pc, spatial_t *s,
 	enum stone (*bt)[4] = m->color == S_WHITE ? &bt_white : &bt_black;
 
 	memset(s, 0, sizeof(*s));
+	int cx = coord_x(m->coord), cy = coord_y(m->coord);
 	for (unsigned int j = 0; j < ptind[pc->spat_max + 1]; j++) {
-		ptcoords_at(x, y, m->coord, j);
+		ptcoords_at(x, y, cx, cy, j);
 		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
 	}
 	s->dist = pc->spat_max;

@@ -1,9 +1,12 @@
 #ifndef PACHI_PATTERN3_H
 #define PACHI_PATTERN3_H
 
-/* Fast matching of simple 3x3 patterns. */
-
 #include "board.h"
+
+#define PAT3_SHORT_CIRCUIT          /* Speedup when no stones around */
+
+
+/* Fast matching of simple 3x3 patterns. */
 
 /* (Note that this is completely independent from the general pattern
  * matching infrastructure in pattern.[ch]. This is fast and simple.) */
@@ -66,56 +69,77 @@ static hash3_t pattern3_reverse(hash3_t pat);
 static inline hash3_t
 pattern3_hash(board_t *b, coord_t c)
 {
-	hash3_t pat = 0;
-	int x = coord_x(c), y = coord_y(c);
-	/* Stone info. */
-	pat |= (board_atxy(b, x - 1, y - 1) << 14)
-		| (board_atxy(b, x, y - 1) << 12)
-		| (board_atxy(b, x + 1, y - 1) << 10);
-	pat |= (board_atxy(b, x - 1, y) << 8)
-		| (board_atxy(b, x + 1, y) << 6);
-	pat |= (board_atxy(b, x - 1, y + 1) << 4)
-		| (board_atxy(b, x, y + 1) << 2)
-		| (board_atxy(b, x + 1, y + 1));
-	/* Atari info. */
-#define atari_atxy(b, x, y) (group_atxy(b, x, y) && board_group_info(b, group_atxy(b, x, y)).libs == 1)
-	pat |= (atari_atxy(b, x, y - 1) << 19);
-	pat |= (atari_atxy(b, x - 1, y) << 18)
-		| (atari_atxy(b, x + 1, y) << 17);
-	pat |= (atari_atxy(b, x, y + 1) << 16);
-#undef atari_atxy
-	return pat;
+	int stride = board_stride(b);
+
+        int c1 = c - stride - 1;
+        int c2 = c - stride    ;
+        int c3 = c - stride + 1;
+        int c4 = c - 1;
+        int c5 = c + 1;
+        int c6 = c + stride - 1;
+        int c7 = c + stride    ;
+        int c8 = c + stride + 1;
+
+        /* Stone and atari info. */
+#define atari_at(b, c) (group_at(b, c) && board_group_info(b, group_at(b, c)).libs == 1)
+        return ((board_at(b, c1) << 14) |
+                (board_at(b, c2) << 12) |
+                (board_at(b, c3) << 10) |
+                (board_at(b, c4) << 8)  |
+                (board_at(b, c5) << 6)  |
+                (board_at(b, c6) << 4)  |
+                (board_at(b, c7) << 2)  |
+                (board_at(b, c8)     )  |
+                (atari_at(b, c2) << 19) |
+                (atari_at(b, c4) << 18) |
+                (atari_at(b, c5) << 17) |
+                (atari_at(b, c7) << 16));
+#undef atari_at
 }
 
-static inline __attribute__((const)) hash_t
+static inline __attribute__((const)) hash3_t
 hash3_to_hash(hash3_t pat)
 {
-	hash_t h = 0;
+	hash3_t h = 0;
 	static const int ataribits[8] = { -1, 0, -1, 1, 2, -1, 3, -1 };
 	for (int i = 0; i < 8; i++) {
 		h ^= p3hashes[i][ataribits[i] >= 0 ? (pat >> (16 + ataribits[i])) & 1 : 0][(pat >> (i*2)) & 3];
 	}
-	return h;
+	return (h & pattern3_hash_mask);
 }
 
 static inline bool
 pattern3_move_here(pattern3s_t *p, board_t *b, move_t *m, char *idx)
 {
+	coord_t c = m->coord;
+	int stride = board_stride(b);
+	int c1 = board_at(b, c - stride - 1);
+	int c3 = board_at(b, c - stride + 1);
+	int c6 = board_at(b, c + stride - 1);
+	int c8 = board_at(b, c + stride + 1);
+
+#ifdef PAT3_SHORT_CIRCUIT
+	/* Nothing can match if there's no black stones or no white stones around. */
+	if (!(neighbor_count_at(b, c, S_BLACK) || (c1 == S_BLACK) || (c3 == S_BLACK) ||  (c6 == S_BLACK) ||  (c8 == S_BLACK)) ||
+	    !(neighbor_count_at(b, c, S_WHITE) || (c1 == S_WHITE) || (c3 == S_WHITE) ||  (c6 == S_WHITE) ||  (c8 == S_WHITE)) )
+		return false;
+#endif
+
 #ifdef BOARD_PAT3
 	hash3_t pat = b->pat3[m->coord];
 #else
 	hash3_t pat = pattern3_hash(b, m->coord);
 #endif
-	hash_t h = hash3_to_hash(pat);
-	while (p->hash[h & pattern3_hash_mask].pattern != pat
-	       && p->hash[h & pattern3_hash_mask].value != 0)
-		h++;
-	if (p->hash[h & pattern3_hash_mask].value & m->color) {
-		*idx = p->hash[h & pattern3_hash_mask].value >> 2;
+	hash3_t h = hash3_to_hash(pat);
+
+	while (p->hash[h].pattern != pat && p->hash[h].value)
+		h = (h + 1) & pattern3_hash_mask;
+	if (p->hash[h].value & m->color) {
+		*idx = p->hash[h].value >> 2;
 		return true;
-	} else {
-		return false;
 	}
+
+	return false;
 }
 
 static inline hash3_t

@@ -84,30 +84,53 @@ rescale_probs(board_t *b, floating_t *probs, floating_t max)
 }
 
 static floating_t
-pattern_max_rating(pattern_config_t *pc,
-		   board_t *b, enum stone color,
-		   pattern_t *pats, floating_t *probs,
-		   ownermap_t *ownermap,
-		   bool locally)
+pattern_rate_move(pattern_config_t *pc,
+		  board_t *b, move_t *m,
+		  pattern_t *pat, ownermap_t *ownermap, bool locally)
+{
+	floating_t prob = NAN;
+
+	if (is_pass(m->coord))	return prob;
+	if (!board_is_valid_play_no_suicide(b, m->color, m->coord)) return prob;
+
+	pattern_match(pc, pat, b, m, ownermap, locally);
+	prob = pattern_gamma(pc, pat);
+	
+	//if (DEBUGL(5)) {
+	//	char buf[256]; pattern2str(buf, pat);
+	//	fprintf(stderr, "=> move %s pattern %s prob %.3f\n", coord2sstr(m->coord), buf, prob);
+	//}
+	return prob;
+}
+
+static floating_t
+pattern_max_rating_full(pattern_config_t *pc,
+			board_t *b, enum stone color,
+			pattern_t *pats, floating_t *probs,
+			ownermap_t *ownermap, bool locally)
 {
 	floating_t max = -10000000;
 	for (int f = 0; f < b->flen; f++) {
-		probs[f] = NAN;
+		move_t m = move(b->f[f], color);
+		probs[f] = pattern_rate_move(pc, b, &m, &pats[f], ownermap, locally);
+		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
+	}
 
-		move_t mo = move(b->f[f], color);
-		if (is_pass(mo.coord))	continue;
-		if (!board_is_valid_play_no_suicide(b, mo.color, mo.coord)) continue;
+	return max;
+}
 
-		pattern_match(pc, &pats[f], b, &mo, ownermap, locally);
-		floating_t prob = pattern_gamma(pc, &pats[f]);
-		if (!isnan(prob)) {
-			probs[f] = prob;
-			if (prob > max)  max = prob;
-		}
-		if (DEBUGL(5)) {
-			char buf[256]; pattern2str(buf, &pats[f]);
-			fprintf(stderr, "=> move %s pattern %s prob %.3f\n", coord2sstr(mo.coord), buf, prob);
-		}
+static floating_t
+pattern_max_rating(pattern_config_t *pc,
+		   board_t *b, enum stone color,
+		   floating_t *probs,
+		   ownermap_t *ownermap, bool locally)
+{
+	floating_t max = -10000000;
+	for (int f = 0; f < b->flen; f++) {
+		move_t m = move(b->f[f], color);
+		pattern_t pat;
+		probs[f] = pattern_rate_move(pc, b, &m, &pat, ownermap, locally);
+		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
 	}
 
 	return max;
@@ -116,9 +139,29 @@ pattern_max_rating(pattern_config_t *pc,
 #define LOW_PATTERN_RATING 6.0
 
 floating_t
+pattern_rate_moves_full(pattern_config_t *pc,
+			board_t *b, enum stone color,
+			pattern_t *pats, floating_t *probs,
+			ownermap_t *ownermap)
+{
+#ifdef PATTERN_FEATURE_STATS
+	pattern_stats_new_position();
+#endif
+
+	/* Try local moves first. */
+	floating_t max = pattern_max_rating_full(pc, b, color, pats, probs, ownermap, true);
+
+	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
+	if (max < LOW_PATTERN_RATING)
+		max = pattern_max_rating_full(pc, b, color, pats, probs, ownermap, false);
+	
+	return rescale_probs(b, probs, max);
+}
+
+floating_t
 pattern_rate_moves(pattern_config_t *pc,
-                   board_t *b, enum stone color,
-                   pattern_t *pats, floating_t *probs,
+		   board_t *b, enum stone color,
+		   floating_t *probs,
 		   ownermap_t *ownermap)
 {
 #ifdef PATTERN_FEATURE_STATS
@@ -126,11 +169,11 @@ pattern_rate_moves(pattern_config_t *pc,
 #endif
 
 	/* Try local moves first. */
-	floating_t max = pattern_max_rating(pc, b, color, pats, probs, ownermap, true);
+	floating_t max = pattern_max_rating(pc, b, color, probs, ownermap, true);
 
 	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
 	if (max < LOW_PATTERN_RATING)
-		max = pattern_max_rating(pc, b, color, pats, probs, ownermap, false);
+		max = pattern_max_rating(pc, b, color, probs, ownermap, false);
 	
 	return rescale_probs(b, probs, max);
 }
@@ -140,9 +183,8 @@ pattern_matching_locally(pattern_config_t *pc,
 			 board_t *b, enum stone color,
 			 ownermap_t *ownermap)
 {
-	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
-	floating_t max = pattern_max_rating(pc, b, color, pats, probs, ownermap, true);
+	floating_t max = pattern_max_rating(pc, b, color, probs, ownermap, true);
 	return (max >= LOW_PATTERN_RATING);
 }
 

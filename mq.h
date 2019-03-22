@@ -49,7 +49,7 @@ static void mq_print(move_queue_t *q, char *label);
  * that encapsulates move_queue. */
 
 static coord_t mq_gamma_pick(move_queue_t *q, fixp_t *gammas);
-static void mq_gamma_add(move_queue_t *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag);
+static void mq_gamma_add(move_queue_t *q, fixp_t *gammas, coord_t c, fixp_t gamma, unsigned char tag);
 static void mq_gamma_print(move_queue_t *q, fixp_t *gammas, char *label);
 
 
@@ -134,10 +134,10 @@ mq_gamma_pick(move_queue_t *q, fixp_t *gammas)
 }
 
 static inline void
-mq_gamma_add(move_queue_t *q, fixp_t *gammas, coord_t c, double gamma, unsigned char tag)
+mq_gamma_add(move_queue_t *q, fixp_t *gammas, coord_t c, fixp_t gamma, unsigned char tag)
 {
 	mq_add(q, c, tag);
-	gammas[q->moves - 1] = double_to_fixp(gamma);
+	gammas[q->moves - 1] = gamma;
 }
 
 static inline void

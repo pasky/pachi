@@ -242,9 +242,8 @@ uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 	/* Q_{pattern} */
 
 	board_t *b = map->b;
-	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
-	pattern_rate_moves(&u->pc, b, map->to_play, pats, probs, &u->ownermap);
+	pattern_rate_moves(&u->pc, b, map->to_play, probs, &u->ownermap);
 
 	/* Show patterns best moves for root node if not using dcnn. */
 	if (DEBUGL(2) && !node->parent && !using_dcnn(b)) {
@@ -263,10 +262,6 @@ uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 		if (isnan(probs[f]) || probs[f] < 0.001)
 			continue;
 		assert(!is_pass(b->f[f]));
-		if (UDEBUGL(5)) {
-			char s[256]; pattern2str(s, &pats[f]);
-			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), probs[f], s);
-		}
 		add_prior_value(map, b->f[f], 1.0, sqrt(probs[f]) * u->prior->pattern_eqex);
 	}
 }
