@@ -455,10 +455,7 @@ uct_pondering_stop(uct_t *u)
 
 	/* Stop the thread manager. */
 	uct_thread_ctx_t *ctx = uct_search_stop();
-	if (UDEBUGL(1)) {
-		if (u->pondering) fprintf(u->report_fh, "(pondering) ");
-		uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
-	}
+	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
 	if (u->pondering) {
 		free(ctx->b);
 		u->pondering = false;
