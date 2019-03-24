@@ -493,7 +493,8 @@ uct_livegfx_hook(engine_t *e)
 {
 	uct_t *u = (uct_t*)e->data;
 	/* Hack: Override reportfreq to get decent update rates in GoGui */
-	u->reportfreq = MIN(u->reportfreq, 1000);
+	u->reportfreq_time = 0.2;
+	u->reportfreq_playouts = 0;
 }
 
 static tree_node_t *
@@ -808,9 +809,16 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 			option_error("UCT: Invalid reporting format %s\n", optval);
 	}
 	else if (!strcasecmp(optname, "reportfreq") && optval) {
-		/* The progress information line will be shown
-		 * every <reportfreq> simulations. */
-		u->reportfreq = atoi(optval);
+		/* Set search progress info frequency:
+		 *   reportfreq=<int>    show progress every <int> playouts.
+		 *   reportfreq=<float>  show progress every <float> seconds.
+		 *   reportfreq=1s       show progress every second. */
+		u->reportfreq_time = 0.0;
+		u->reportfreq_playouts = 0;
+		if (strchr(optval, '.') || strchr(optval, 's'))
+			u->reportfreq_time = atof(optval);
+		else
+			u->reportfreq_playouts = atoi(optval);
 	}
 	else if (!strcasecmp(optname, "dumpthres") && optval) {
 		/* When dumping the UCT tree on output, include
@@ -1368,7 +1376,7 @@ uct_state_init(engine_t *e, board_t *b)
 	bool pat_setup = false;	
 
 	u->debug_level = debug_level;
-	u->reportfreq = 1000;
+	u->reportfreq_playouts = 1000;
 	u->report_fh = stderr;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;

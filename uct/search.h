@@ -47,18 +47,13 @@ typedef struct uct_thread_ctx {
 
 /* Progress information of the on-going MCTS search - when did we
  * last adjusted dynkomi, printed out stuff, etc. */
-typedef struct uct_search_state {
-	/* Number of games simulated for this simulation before
-	 * we started the search. (We have simulated them earlier.) */
-	int base_playouts;
-	/* Number of last dynkomi adjustment. */
-	int last_dynkomi;
-	/* Number of last game with progress print. */
-	int last_print;
-	/* Number of simulations to wait before next print. */
-	int print_interval;
-	/* Printed notification about full memory? */
-	bool fullmem;
+typedef struct uct_search_state {	
+	int base_playouts;	  /* Number of games simulated for this simulation before
+				   * we started the search. (We have simulated them earlier.) */
+	int last_dynkomi;	  /* Number of playouts for last dynkomi adjustment. */
+	int last_print_playouts;  /* Last progress print (playouts) */
+	double last_print_time;   /* Last progress print (time) */
+	bool fullmem;		  /* Printed notification about full memory? */
 
 	time_stop_t stop;
 	uct_thread_ctx_t *ctx;
@@ -70,7 +65,7 @@ int uct_search_games(uct_search_state_t *s);
 void uct_search_start(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s);
 uct_thread_ctx_t *uct_search_stop(void);
 
-void uct_search_progress(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s, int i);
+void uct_search_progress(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s, int playouts);
 
 bool uct_search_check_stop(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s, int i);
 
