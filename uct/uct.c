@@ -604,7 +604,7 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 
 	if (!start) {
 		if (u->pondering) uct_pondering_stop(u);
-		reset_state(u);
+		if (u->t) reset_state(u);
 		return;
 	}
 
