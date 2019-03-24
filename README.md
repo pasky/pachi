@@ -118,6 +118,8 @@ will remain the same:
 
 * `pachi resign_threshold=0.25`     Resign when winrate < 25% (default: 20%).
 
+* `pachi reportfreq=1s`     Show search progress every second (default: 1000 playouts).
+
 * `pachi -t 10 threads=4,max_tree_size=100`
 
   Play with 10s per move on 4 threads, taking up to 100Mb of memory

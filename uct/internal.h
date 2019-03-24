@@ -43,8 +43,9 @@ typedef enum local_tree_eval {
 typedef struct uct {
 	int debug_level;
 	enum uct_reporting reporting;
-	int reportfreq;
-	FILE *report_fh;
+	int    reportfreq_playouts;
+	double reportfreq_time;
+	FILE*  report_fh;
 
 	int games, gamelen;
 	floating_t resign_threshold, sure_win_threshold;
