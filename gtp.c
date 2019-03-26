@@ -459,12 +459,15 @@ cmd_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char *arg;
 	gtp_arg(arg);
 	enum stone color = str2stone(arg);
-	gtp_arg(arg);  /* freq */
+	gtp_arg(arg);
+	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
+	int freq = atoi(arg);  /* frequency (centiseconds) */
 
-	if (!e->genmove_analyze) {
-		gtp_error(gtp, "lz-genmove_analyze not supported for this engine");
-		return P_OK;
-	}
+	if (!e->genmove_analyze) {  gtp_error(gtp, "lz-genmove_analyze not supported for this engine"); return P_OK; }
+
+	strbuf(buf, 100);  char *err;
+	sbprintf(buf, "reportfreq=%fs", 0.01 * freq);
+	bool r = engine_setoptions(e, b, buf->str, &err);  assert(r);
 
 	gtp_printf(gtp, "\n");
 	coord_t c = genmove(b, color, e, ti, gtp, e->genmove_analyze);
