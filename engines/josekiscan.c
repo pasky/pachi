@@ -100,8 +100,9 @@ josekiscan_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 }
 
 static josekiscan_t *
-josekiscan_state_init(char *arg)
+josekiscan_state_init(engine_t *e)
 {
+	options_t *options = &e->options;
 	josekiscan_t *j = calloc2(1, josekiscan_t);
 
 	for (int i = 0; i < 16; i++)
@@ -109,26 +110,18 @@ josekiscan_state_init(char *arg)
 
 	j->debug_level = 1;
 
-	if (arg) {
-		char *optspec, *next = arg;
-		while (*next) {
-			optspec = next;
-			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
+	for (int i = 0; i < options->n; i++) {
+		const char *optname = options->o[i].name;
+		const char *optval = options->o[i].val;
 
-			char *optname = optspec;
-			char *optval = strchr(optspec, '=');
-			if (optval) *optval++ = 0;
+		if (!strcasecmp(optname, "debug")) {
+			if (optval)
+				j->debug_level = atoi(optval);
+			else
+				j->debug_level++;
 
-			if (!strcasecmp(optname, "debug")) {
-				if (optval)
-					j->debug_level = atoi(optval);
-				else
-					j->debug_level++;
-
-			} else
-				die("josekiscan: Invalid engine argument %s or missing value\n", optname);
-		}
+		} else
+			die("josekiscan: Invalid engine argument %s or missing value\n", optname);
 	}
 
 	return j;
@@ -144,9 +137,9 @@ josekiscan_done(engine_t *e)
 }
 
 void
-engine_josekiscan_init(engine_t *e, char *arg, board_t *b)
+engine_josekiscan_init(engine_t *e, board_t *b)
 {
-	josekiscan_t *j = josekiscan_state_init(arg);
+	josekiscan_t *j = josekiscan_state_init(e);
 	e->name = "Josekiscan";
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of joseki sequences fed to it within the GTP stream.";
 	e->genmove = josekiscan_genmove;

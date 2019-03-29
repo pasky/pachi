@@ -131,7 +131,7 @@ will remain the same:
 For now, there is no comprehensive documentation of engine options, but
 you can get a pretty good idea by looking at the uct_state_init() function
 in uct/uct.c - you will find the list of UCT engine options there, each
-with a description. At any rate, usually the three options above are
+with a description. At any rate, usually the four options above are
 the only ones you really want to tweak.
 
 

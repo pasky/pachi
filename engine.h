@@ -38,7 +38,8 @@ enum engine_id {
 
 typedef struct engine engine_t;
 
-typedef void (*engine_init_t)(engine_t *e, char *arg, board_t *b);
+typedef void (*engine_init_t)(engine_t *e, board_t *b);
+typedef bool (*engine_setoption_t)(engine_t *e, board_t *b, const char *optname, char *optval, char **err, bool setup, bool *reset);
 typedef enum parse_code (*engine_notify_t)(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply);
 typedef void (*engine_board_print_t)(engine_t *e, board_t *b, FILE *f);
 typedef char *(*engine_notify_play_t)(engine_t *e, board_t *b, move_t *m, char *enginearg);
@@ -69,7 +70,13 @@ struct engine {
 
 	bool keep_on_clear;			    /* If set, do not reset the engine state on clear_board. */
 
-	engine_notify_t		 notify;
+	engine_setoption_t       setoption;	    /* Set/change engine option. Don't call directly.
+						     * @optname/@optval: option name/value. @optval may be changed by engine.
+						     * Returns true on success, otherwise @err has error msg.
+						     * @setup: true if called during engine setup.
+						     * @reset: set by engine if option can only be set at setup time. */
+
+	engine_notify_t          notify;
 	engine_board_print_t     board_print;
 	engine_notify_play_t     notify_play;
 	engine_chat_t            chat;
@@ -80,7 +87,7 @@ struct engine {
 	engine_genmove_t         genmove;           /* Generate a move. If pass_all_alive is true, <pass> shall be generated only */
 	engine_genmove_t         genmove_analyze;   /* if all stones on the board can be considered alive, without regard to "dead" */
 						    /* considered stones. */
-	engine_genmoves_t	 genmoves;	    /* Used by distributed engine */
+	engine_genmoves_t        genmoves;	    /* Used by distributed engine */
 	engine_best_moves_t      best_moves;	    /* List best moves for current position.
 						     * Call engine_best_move() for data to be initialized correctly. */
 	engine_analyze_t         analyze;	    /* Tell engine to start pondering for the sake of frontend running Pachi. */
@@ -122,8 +129,12 @@ void engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 		       coord_t *best_c, float *best_r, int nbest);
 struct ownermap* engine_ownermap(engine_t *e, board_t *b);
 
-/* Set/change engine option(s) and reload engine. */
+/* Set/change engine option(s). May reset engine if needed.
+ * New options are saved, so persist across engine resets.
+ * Returns true if successful, otherwise @err has error msg. */
 bool engine_setoptions(engine_t *e, board_t *b, const char *arg, char **err);
+/* For engines internal use, ensures optval is properly strdup'ed / freed since engine may change it. */
+bool engine_setoption(engine_t *e, board_t *b, option_t *option, char **err, bool setup, bool *reset);
 
 
 /* Engines best moves common code */
@@ -139,6 +150,17 @@ int  best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest);
 void      engine_options_print(options_t *options);
 option_t *engine_options_lookup(options_t *options, const char *name);
 void      engine_options_concat(strbuf_t *buf, options_t *options);
+
+/* For options which need to be set at engine setup time: */
+#define ENGINE_SETOPTION_NEED_RESET  \
+	do {  if (!setup) {  *reset = true; return false;  } } while(0);
+
+#define engine_setoption_error(fmt, ...)  \
+	do { \
+		sbprintf(ebuf, fmt, __VA_ARGS__); \
+		*err = ebuf->str; \
+		return false; \
+	} while(0)
 
 
 #endif

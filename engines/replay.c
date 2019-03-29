@@ -136,55 +136,64 @@ replay_done(engine_t *e)
 	playout_policy_done(r->playout);
 }
 
-replay_t *
-replay_state_init(char *arg, board_t *b)
+#define NEED_RESET   ENGINE_SETOPTION_NEED_RESET
+#define option_error engine_setoption_error
+
+static bool
+replay_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
+		 char **err, bool setup, bool *reset)
 {
+	static_strbuf(ebuf, 256);
+	replay_t *r = (replay_t*)e->data;
+
+	if (!strcasecmp(optname, "debug")) {
+		if (optval)  r->debug_level = atoi(optval);
+		else         r->debug_level++;
+	}
+	else if (!strcasecmp(optname, "runs") && optval) {
+		/* runs=n  set number of playout runs to sample.
+		 *         use runs=1 for raw playout policy */
+		r->runs = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "no_suicide")) {
+		/* ensure engine doesn't allow group suicides
+		 * (off by default) */
+		r->no_suicide = 1;
+	}
+	else if (!strcasecmp(optname, "playout") && optval) {  NEED_RESET
+		char *playoutarg = strchr(optval, ':');
+		if (playoutarg)  *playoutarg++ = 0;
+		
+		if (!strcasecmp(optval, "moggy"))
+			r->playout = playout_moggy_init(playoutarg, b);
+		else if (!strcasecmp(optval, "light"))
+			r->playout = playout_light_init(playoutarg, b);
+		else
+			option_error("Replay: Invalid playout policy %s\n", optval);
+	}
+	else
+		option_error("Replay: Invalid engine argument %s or missing value\n", optname);
+
+	return true;
+}
+
+replay_t *
+replay_state_init(engine_t *e, board_t *b)
+{
+	options_t *options = &e->options;
 	replay_t *r = calloc2(1, replay_t);
+	e->data = r;
 	
 	r->debug_level = 1;
 	r->runs = 1000;
 	r->no_suicide = 0;
 	joseki_load(board_rsize(b));
-	
-	if (arg) {
-		char *optspec, *next = arg;
-		while (*next) {
-			optspec = next;
-			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
 
-			char *optname = optspec;
-			char *optval = strchr(optspec, '=');
-			if (optval) *optval++ = 0;
-
-			if (!strcasecmp(optname, "debug")) {
-				if (optval)
-					r->debug_level = atoi(optval);
-				else
-					r->debug_level++;
-			} else if (!strcasecmp(optname, "runs") && optval) {
-				/* runs=n  set number of playout runs to sample.
-				 *         use runs=1 for raw playout policy */
-				r->runs = atoi(optval);
-			} else if (!strcasecmp(optname, "no_suicide")) {
-				/* ensure engine doesn't allow group suicides
-				 * (off by default) */
-				r->no_suicide = 1;
-			} else if (!strcasecmp(optname, "playout") && optval) {
-				char *playoutarg = strchr(optval, ':');
-				if (playoutarg)
-					*playoutarg++ = 0;
-				if (!strcasecmp(optval, "moggy")) {
-					r->playout = playout_moggy_init(playoutarg, b);
-				} else if (!strcasecmp(optval, "light")) {
-					r->playout = playout_light_init(playoutarg, b);
-				} else {
-					fprintf(stderr, "Replay: Invalid playout policy %s\n", optval);
-				}
-			} else
-				die("Replay: Invalid engine argument %s or missing value\n", optname);
-		}
-	}
+	/* Process engine options. */
+	char *err;
+	for (int i = 0; i < options->n; i++)
+		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
+			die("%s", err);
 
 	if (!r->playout)
 		r->playout = playout_moggy_init(NULL, b);
@@ -195,15 +204,14 @@ replay_state_init(char *arg, board_t *b)
 
 
 void
-engine_replay_init(engine_t *e, char *arg, board_t *b)
+engine_replay_init(engine_t *e, board_t *b)
 {
-	replay_t *r = replay_state_init(arg, b);
-        /* TODO engine_done(), free policy */
-	
 	e->name = "PlayoutReplay";
 	e->comment = "I select the most probable move from moggy playout policy";
 	e->genmove = replay_genmove;
+	e->setoption = replay_setoption;
 	e->best_moves = replay_best_moves;
 	e->done = replay_done;
-	e->data = r;
+
+	replay_state_init(e, b);
 }
