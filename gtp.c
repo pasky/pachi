@@ -621,6 +621,29 @@ cmd_pachi_setoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+/* Get engine option(s):
+ * Without arg, return all options (comma-separated)
+ * With arg (option name), return option value. */
+static enum parse_code
+cmd_pachi_getoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *name;
+	gtp_arg_optional(name);
+
+	if (*name) {  /* Return option value */
+		option_t *o = engine_options_lookup(&e->options, name);
+		if (!o)  gtp_error(gtp, "option not set");
+		else     gtp_reply(gtp, (o->val ? o->val : ""));
+		return P_OK;
+	}
+
+	/* Dump all options. */
+	strbuf(buf, 1024);
+	engine_options_concat(buf, &e->options);
+	gtp_reply(gtp, buf->str);
+	return P_OK;
+}
+
 static int
 cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
@@ -974,6 +997,7 @@ static gtp_command_t gtp_commands[] =
 	{ "pachi-result",           cmd_pachi_result },
 	{ "pachi-score_est",        cmd_pachi_score_est },
 	{ "pachi-setoption",	    cmd_pachi_setoption },  /* Set/change engine option */
+	{ "pachi-getoption",	    cmd_pachi_getoption },  /* Get engine option(s) */
 
 	{ "lz-analyze",             cmd_lz_analyze },       /* For Lizzie */
 	{ "lz-genmove_analyze",     cmd_genmove_analyze },  /* Sabaki etc */

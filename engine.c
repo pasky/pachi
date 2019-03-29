@@ -80,6 +80,25 @@ engine_options_print(options_t *options)
 		else                    fprintf(stderr, "  %s\n", options->o[i].name);
 }
 
+option_t *
+engine_options_lookup(options_t *options, const char *name)
+{
+	for (int i = 0; i < options->n; i++)
+		if (!strcmp(options->o[i].name, name))
+			return &options->o[i];
+	return NULL;
+}
+
+void
+engine_options_concat(strbuf_t *buf, options_t *options)
+{
+	option_t *option = &options->o[0];
+	
+	for (int i = 0;  i < options->n;  i++, option++)
+		if (option->val)  sbprintf(buf, "%s%s=%s", (i ? "," : ""), option->name, option->val);
+		else              sbprintf(buf, "%s%s",    (i ? "," : ""), option->name);
+}
+
 
 /**************************************************************************************************/
 

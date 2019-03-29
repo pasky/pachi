@@ -9,6 +9,7 @@ known_command version
 7 version
 
 pachi-setoption pondering=0
+pachi-getoption pondering
 
 kgs-rules chinese
 boardsize 9
