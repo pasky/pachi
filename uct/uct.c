@@ -462,6 +462,7 @@ uct_pondering_stop(uct_t *u)
 	if (u->pondering) {
 		free(ctx->b);
 		u->pondering = false;
+		u->genmove_pondering = false;
 	}
 }
 
