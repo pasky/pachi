@@ -209,13 +209,16 @@ gogui_show_pattern(board_t *b, coord_t coord, int maxd)
 enum gogui_reporting gogui_livegfx = UR_GOGUI_NONE;
 
 static void
-gogui_set_livegfx(engine_t *e, char *arg)
+gogui_set_livegfx(engine_t *e, board_t *b, char *arg)
 {
 	gogui_livegfx = UR_GOGUI_NONE;
 	if (!strcmp(arg, "best_moves"))  gogui_livegfx = UR_GOGUI_BEST;
 	if (!strcmp(arg, "best_seq"))    gogui_livegfx = UR_GOGUI_SEQ;
 	if (!strcmp(arg, "winrates"))    gogui_livegfx = UR_GOGUI_WR;
-	if (e->livegfx_hook)  e->livegfx_hook(e);
+	
+	/* Override reportfreq to get decent update rates in GoGui */
+	char *err;
+	bool r = engine_setoptions(e, b, "reportfreq=0.2s", &err);  assert(r);
 }
 
 void
@@ -339,11 +342,11 @@ cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 
 enum parse_code
-cmd_gogui_livegfx(board_t *board, engine_t *e, time_info_t *ti, gtp_t *gtp)
+cmd_gogui_livegfx(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg_optional(arg);
-	gogui_set_livegfx(e, arg);
+	gogui_set_livegfx(e, b, arg);
 	return P_OK;
 }
 
@@ -436,7 +439,7 @@ cmd_gogui_winrates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp_printf(gtp, "");   /* gtp prefix */
 
 	gogui_reporting_t prev = gogui_livegfx;
-	gogui_set_livegfx(e, "winrates");
+	gogui_set_livegfx(e, b, "winrates");
 	gogui_best_moves(stdout, e, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 	
@@ -452,7 +455,7 @@ cmd_gogui_best_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp_printf(gtp, "");   /* gtp prefix */
 
 	gogui_reporting_t prev = gogui_livegfx;
-	gogui_set_livegfx(e, "best_moves");
+	gogui_set_livegfx(e, b, "best_moves");
 	gogui_best_moves(stdout, e, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 	gogui_livegfx = prev;
 	
