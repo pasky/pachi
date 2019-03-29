@@ -10,7 +10,7 @@ struct engine;
 void pachi_done();
 
 /* Init engines */
-void pachi_engine_init(struct engine *e, int id, char *e_arg, struct board *b);
+void pachi_engine_init(struct engine *e, int id, struct board *b);
 
 
 /* Pachi binary */

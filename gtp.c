@@ -746,13 +746,13 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 }
 
 static void
-undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg)
+undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e)
 {
 	if (DEBUGL(3)) fprintf(stderr, "reloading engine after undo(s).\n");
 	
 	gtp->undo_pending = false;
 
-	engine_reset(e, b, e_arg);
+	engine_reset(e, b);
 	
 	/* Reset board */
 	int handicap = b->handicap;
@@ -1008,7 +1008,7 @@ gtp_internal_init()
  * Even basic input checking is missing. */
 
 enum parse_code
-gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, char *buf)
+gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 {
 	if (strchr(buf, '#'))
 		*strchr(buf, '#') = 0;
@@ -1033,7 +1033,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, cha
 	
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
-		undo_reload_engine(gtp, b, e, e_arg);
+		undo_reload_engine(gtp, b, e);
 	
 	if (e->notify && gtp_is_valid(e, gtp->cmd)) {
 		char *reply;
