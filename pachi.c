@@ -82,17 +82,7 @@ void
 pachi_engine_init(engine_t *e, int id, board_t *b)
 {
 	assert(id >= 0 && id < E_MAX);	
-	strbuf(buf, 1024);
-
-	/* For now reconstruct arg from parsed options so engines side can remain the same. */
-	options_t *options = &e->options;
-	option_t *option = &options->o[0];
-	for (int i = 0;  i < options->n;  i++, option++)
-		if (option->val)  sbprintf(buf, "%s%s=%s", (i ? "," : ""), option->name, option->val);
-		else              sbprintf(buf, "%s%s", (i ? "," : ""), option->name);
-	
-	char *arg = buf->str;
-	engine_inits[id](e, arg, b);
+	engine_inits[id](e, b);
 }
 
 static void

@@ -4,6 +4,6 @@
 #include "joseki.h"
 
 void josekiplay_set_jdict(engine_t *e, joseki_dict_t *jdict);
-void engine_josekiplay_init(engine_t *e, char *arg, board_t *b);
+void engine_josekiplay_init(engine_t *e, board_t *b);
 
 #endif

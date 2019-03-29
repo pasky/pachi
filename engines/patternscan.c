@@ -387,10 +387,72 @@ patternscan_done(engine_t *e)
 	free(ps->buf.str);     ps->buf.str = NULL;
 }
 
-static patternscan_t *
-patternscan_state_init(char *arg)
+#define NEED_RESET   ENGINE_SETOPTION_NEED_RESET
+#define option_error engine_setoption_error
+
+static bool
+patternscan_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
+		      char **err, bool setup, bool *reset)
 {
+	static_strbuf(ebuf, 256);
+	patternscan_t *ps = (patternscan_t*)e->data;
+
+	if (!strcasecmp(optname, "debug")) {
+		if (optval)  ps->debug_level = atoi(optval);
+		else         ps->debug_level++;
+	}
+	else if (!strcasecmp(optname, "gen_spat_dict")) {
+		/* If set, re-generate the spatial patterns
+		 * dictionary; you need to have a dictionary
+		 * of spatial stone configurations in order
+		 * to match any spatial features. */
+		/* XXX: If you specify the 'patterns' option,
+		 * this must come first! */
+		ps->gen_spat_dict = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "spat_threshold") && optval) {
+		/* Minimal number of times new spatial
+		 * feature must occur in this run (!) to
+		 * be included in the dictionary. */
+		ps->spat_threshold = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "spat_split_sizes")) {
+		/* Generate a separate pattern for each
+		 * spatial size. This is important to
+		 * preserve good generalization in unknown
+		 * situations where the largest pattern
+		 * might not match. */
+		ps->spat_split_sizes = 1;
+	}
+	else if (!strcasecmp(optname, "color_mask") && optval) {
+		/* Bitmask of move colors to match. Set this
+		 * to 2 if you want to match only white moves,
+		 * for example. (Useful for processing
+		 * handicap games.) */
+		ps->color_mask = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "mcowner_fast") && optval) {
+		/* Use mcowner_fast=0 for better ownermap accuracy
+		 * when generating mm patterns. Will take hours though.
+		 * Default: mcowner_fast=1 */
+		ps->mcowner_fast = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "patterns") && optval) {  NEED_RESET
+		patterns_init(&ps->pc, optval, ps->gen_spat_dict, false);
+	}
+	else
+		option_error("patternscan: Invalid engine argument %s or missing value\n", optname);
+
+	return true;
+}
+
+static patternscan_t *
+patternscan_state_init(engine_t *e, board_t *b)
+{
+	options_t *options = &e->options;
 	patternscan_t *ps = global_ps = calloc2(1, patternscan_t);
+	e->data = ps;
+	
 	bool pat_setup = false;
 
 	ps->debug_level = 1;
@@ -400,64 +462,13 @@ patternscan_state_init(char *arg)
 	ps->spat_split_sizes = 1;
 	ps->mcowner_fast = true;
 
-	if (arg) {
-		char *optspec, *next = arg;
-		while (*next) {
-			optspec = next;
-			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
-
-			char *optname = optspec;
-			char *optval = strchr(optspec, '=');
-			if (optval) *optval++ = 0;
-
-			if (!strcasecmp(optname, "debug")) {
-				if (optval)  ps->debug_level = atoi(optval);
-				else         ps->debug_level++;
-
-			} else if (!strcasecmp(optname, "gen_spat_dict")) {
-				/* If set, re-generate the spatial patterns
-				 * dictionary; you need to have a dictionary
-				 * of spatial stone configurations in order
-				 * to match any spatial features. */
-				/* XXX: If you specify the 'patterns' option,
-				 * this must come first! */
-				ps->gen_spat_dict = !optval || atoi(optval);
-
-			} else if (!strcasecmp(optname, "spat_threshold") && optval) {
-				/* Minimal number of times new spatial
-				 * feature must occur in this run (!) to
-				 * be included in the dictionary. */
-				ps->spat_threshold = atoi(optval);
-
-			} else if (!strcasecmp(optname, "spat_split_sizes")) {
-				/* Generate a separate pattern for each
-				 * spatial size. This is important to
-				 * preserve good generalization in unknown
-				 * situations where the largest pattern
-				 * might not match. */
-				ps->spat_split_sizes = 1;
-
-			} else if (!strcasecmp(optname, "color_mask") && optval) {
-				/* Bitmask of move colors to match. Set this
-				 * to 2 if you want to match only white moves,
-				 * for example. (Useful for processing
-				 * handicap games.) */
-				ps->color_mask = atoi(optval);
-
-			} else if (!strcasecmp(optname, "mcowner_fast") && optval) {
-				/* Use mcowner_fast=0 for better ownermap accuracy
-				 * when generating mm patterns. Will take hours though.
-				 * Default: mcowner_fast=1 */
-				ps->mcowner_fast = atoi(optval);
-
-			} else if (!strcasecmp(optname, "patterns") && optval) {
-				patterns_init(&ps->pc, optval, ps->gen_spat_dict, false);
-				pat_setup = true;
-
-			} else
-				die("patternscan: Invalid engine argument %s or missing value\n", optname);
-		}
+	/* Process engine options. */
+	for (int i = 0; i < options->n; i++) {
+		char *err;
+		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
+			die("%s", err);
+		if (!strcmp(options->o[i].name, "patterns"))
+			pat_setup = true;
 	}
 
 #ifndef GENSPATIAL
@@ -475,15 +486,16 @@ patternscan_state_init(char *arg)
 }
 
 void
-engine_patternscan_init(engine_t *e, char *arg, board_t *b)
+engine_patternscan_init(engine_t *e, board_t *b)
 {
-	patternscan_t *ps = patternscan_state_init(arg);
 	e->name = "PatternScan Engine";
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of games fed to it as GTP streams for various pattern features.";
 	e->genmove = patternscan_genmove;
+	e->setoption = patternscan_setoption;
 	e->notify_play = patternscan_play;
 	e->done = patternscan_done;
-	e->data = ps;
 	// clear_board does not concern us, we like to work over many games
 	e->keep_on_clear = true;
+
+	patternscan_state_init(e, b);
 }

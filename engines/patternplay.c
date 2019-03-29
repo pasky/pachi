@@ -140,47 +140,55 @@ patternplay_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals,
 	}
 }
 
+#define NEED_RESET   ENGINE_SETOPTION_NEED_RESET
+#define option_error engine_setoption_error
+
+static bool
+patternplay_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
+		     char **err, bool setup, bool *reset)
+{
+	static_strbuf(ebuf, 256);
+	patternplay_t *pp = (patternplay_t*)e->data;
+
+	if (!strcasecmp(optname, "debug")) {
+		if (optval)  pp->debug_level = atoi(optval);
+		else         pp->debug_level++;
+	}
+	else if (!strcasecmp(optname, "mcowner_fast") && optval) {
+		/* Use mcowner_fast=0 for better ownermap accuracy,
+		 * Will be much slower though. (Default: mcowner_fast=1) 
+		 * See also MM_MINGAMES. */
+		pp->mcowner_fast = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "patterns") && optval) {  NEED_RESET
+		patterns_init(&pp->pc, optval, false, true);
+	}
+	else
+		option_error("patternplay: Invalid engine argument %s or missing value\n", optname);
+
+	return true;
+}
 
 patternplay_t *
-patternplay_state_init(char *arg)
+patternplay_state_init(engine_t *e, board_t *b)
 {
+	options_t *options = &e->options;
 	patternplay_t *pp = calloc2(1, patternplay_t);
+	e->data = pp;
+	
 	bool pat_setup = false;
 
 	pp->debug_level = debug_level;
 	pp->matched_locally = -1;  /* Invalid */
 	pp->mcowner_fast = true;
 
-	if (arg) {
-		char *optspec, *next = arg;
-		while (*next) {
-			optspec = next;
-			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
-
-			char *optname = optspec;
-			char *optval = strchr(optspec, '=');
-			if (optval) *optval++ = 0;
-
-			if (!strcasecmp(optname, "debug")) {
-				if (optval)
-					pp->debug_level = atoi(optval);
-				else
-					pp->debug_level++;
-
-			} else if (!strcasecmp(optname, "mcowner_fast") && optval) {
-				/* Use mcowner_fast=0 for better ownermap accuracy,
-				 * Will be much slower though. (Default: mcowner_fast=1) 
-				 * See also MM_MINGAMES. */
-				pp->mcowner_fast = atoi(optval);
-
-			} else if (!strcasecmp(optname, "patterns") && optval) {
-				patterns_init(&pp->pc, optval, false, true);
-				pat_setup = true;
-
-			} else
-				die("patternplay: Invalid engine argument %s or missing value\n", optname);
-		}
+	/* Process engine options. */
+	for (int i = 0; i < options->n; i++) {
+		char *err;
+		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
+			die("%s", err);
+		if (!strcmp(options->o[i].name, "patterns"))
+			pat_setup = true;
 	}
 
 	if (!pat_setup)
@@ -192,13 +200,13 @@ patternplay_state_init(char *arg)
 }
 
 void
-engine_patternplay_init(engine_t *e, char *arg, board_t *b)
+engine_patternplay_init(engine_t *e, board_t *b)
 {
-	patternplay_t *pp = patternplay_state_init(arg);
 	e->name = "PatternPlay Engine";
 	e->comment = "I select moves blindly according to learned patterns. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = patternplay_genmove;
+	e->setoption = patternplay_setoption;
 	e->best_moves = patternplay_best_moves;
 	e->evaluate = patternplay_evaluate;
-	e->data = pp;
+	patternplay_state_init(e, b);
 }

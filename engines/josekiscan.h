@@ -3,6 +3,6 @@
 
 #include "engine.h"
 
-void engine_josekiscan_init(engine_t *e, char *arg, board_t *b);
+void engine_josekiscan_init(engine_t *e, board_t *b);
 
 #endif

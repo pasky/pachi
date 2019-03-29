@@ -233,49 +233,56 @@ montecarlo_done(engine_t *e)
 	playout_policy_done(mc->playout);
 }
 
-montecarlo_t *
-montecarlo_state_init(char *arg, board_t *b)
+#define NEED_RESET   ENGINE_SETOPTION_NEED_RESET
+#define option_error engine_setoption_error
+
+static bool
+montecarlo_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
+		     char **err, bool setup, bool *reset)
 {
+	static_strbuf(ebuf, 256);
+	montecarlo_t *mc = (montecarlo_t*)e->data;
+	
+	if (!strcasecmp(optname, "debug")) {
+		if (optval)  mc->debug_level = atoi(optval);
+		else         mc->debug_level++;
+	}
+	else if (!strcasecmp(optname, "gamelen") && optval) {
+		mc->gamelen = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "playout") && optval) {  NEED_RESET
+		char *playoutarg = strchr(optval, ':');
+		if (playoutarg)
+			*playoutarg++ = 0;
+		if (!strcasecmp(optval, "moggy"))
+			mc->playout = playout_moggy_init(playoutarg, b);
+		else if (!strcasecmp(optval, "light"))
+			mc->playout = playout_light_init(playoutarg, b);
+		else
+			option_error("MonteCarlo: Invalid playout policy %s\n", optval);
+	}
+	else
+		option_error("MonteCarlo: Invalid engine argument %s or missing value\n", optname);
+
+	return true;  /* successful */
+}
+
+montecarlo_t *
+montecarlo_state_init(engine_t *e, board_t *b)
+{
+	options_t *options = &e->options;
 	montecarlo_t *mc = calloc2(1, montecarlo_t);
+	e->data = mc;
 
 	mc->debug_level = 1;
 	mc->gamelen = MC_GAMELEN;
 	joseki_load(board_rsize(b));
 
-	if (arg) {
-		char *optspec, *next = arg;
-		while (*next) {
-			optspec = next;
-			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
-
-			char *optname = optspec;
-			char *optval = strchr(optspec, '=');
-			if (optval) *optval++ = 0;
-
-			if (!strcasecmp(optname, "debug")) {
-				if (optval)
-					mc->debug_level = atoi(optval);
-				else
-					mc->debug_level++;
-			} else if (!strcasecmp(optname, "gamelen") && optval) {
-				mc->gamelen = atoi(optval);
-			} else if (!strcasecmp(optname, "playout") && optval) {
-				char *playoutarg = strchr(optval, ':');
-				if (playoutarg)
-					*playoutarg++ = 0;
-				if (!strcasecmp(optval, "moggy")) {
-					mc->playout = playout_moggy_init(playoutarg, b);
-				} else if (!strcasecmp(optval, "light")) {
-					mc->playout = playout_light_init(playoutarg, b);
-				} else {
-					fprintf(stderr, "MonteCarlo: Invalid playout policy %s\n", optval);
-				}
-			} else {
-				fprintf(stderr, "MonteCarlo: Invalid engine argument %s or missing value\n", optname);
-			}
-		}
-	}
+	/* Process engine options. */
+	char *err;
+	for (int i = 0; i < options->n; i++)
+		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
+			die("%s", err);
 
 	if (!mc->playout)
 		mc->playout = playout_light_init(NULL, b);
@@ -289,12 +296,12 @@ montecarlo_state_init(char *arg, board_t *b)
 
 
 void
-engine_montecarlo_init(engine_t *e, char *arg, board_t *b)
+engine_montecarlo_init(engine_t *e, board_t *b)
 {
-	montecarlo_t *mc = montecarlo_state_init(arg, b);
 	e->name = "MonteCarlo";
 	e->comment = "I'm playing in Monte Carlo. When we both pass, I will consider all the stones on the board alive. If you are reading this, write 'yes'. Please bear with me at the game end, I need to fill the whole board; if you help me, we will both be happier. Filling the board will not lose points (NZ rules).";
 	e->genmove = montecarlo_genmove;
+	e->setoption = montecarlo_setoption;
 	e->done = montecarlo_done;
-	e->data = mc;
+	montecarlo_state_init(e, b);
 }

@@ -188,6 +188,17 @@ engine_ownermap(engine_t *e, board_t *b)
 	return (e->ownermap ? e->ownermap(e, b) : NULL);
 }
 
+/* For engines internal use, ensures optval is properly strdup'ed / freed
+ * since engine may change it. Must be preserved for next engine reset. */
+bool
+engine_setoption(engine_t *e, board_t *b, option_t *option, char **err, bool setup, bool *reset)
+{
+	char *optval = (option->val ? strdup(option->val) : NULL);
+	bool r = e->setoption(e, b, option->name, optval, err, setup, reset);
+	free(optval);
+	return r;
+}
+
 bool
 engine_setoptions(engine_t *e, board_t *b, const char *arg, char **err)
 {
@@ -196,12 +207,23 @@ engine_setoptions(engine_t *e, board_t *b, const char *arg, char **err)
 	options_t options;
 	engine_options_parse(arg, &options);
 
-	/* Save options. */
+	/* Reset engine if engine doesn't implement setoption(). */
+	bool reset = true;
+
+	if (e->setoption) {
+		reset = false;
+		/* Don't save options until we know they're all good. */
+		for (int i = 0; i < options.n; i++)
+			if (!engine_setoption(e, b, &options.o[i], err, false, &reset))
+				if (!reset)  return false;   /* Failed, err is error msg */
+	}
+		
+	/* Ok, save. */
 	for (int i = 0; i < options.n; i++)
 		engine_options_add(&e->options, options.o[i].name, options.o[i].val);	
 
-	/* Reload engine. */
-	engine_reset(e, b);
+	/* Engine reset needed ? */
+	if (reset)  engine_reset(e, b);
 
 	engine_options_free(&options);
 	return true;
