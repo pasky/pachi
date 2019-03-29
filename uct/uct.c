@@ -488,15 +488,6 @@ uct_genmove_setup(uct_t *u, board_t *b, enum stone color)
 	setup_dynkomi(u, b, color);
 }
 
-static void
-uct_livegfx_hook(engine_t *e)
-{
-	uct_t *u = (uct_t*)e->data;
-	/* Hack: Override reportfreq to get decent update rates in GoGui */
-	u->reportfreq_time = 0.2;
-	u->reportfreq_playouts = 0;
-}
-
 static tree_node_t *
 genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive, coord_t *best_coord)
 {
@@ -1507,7 +1498,6 @@ engine_uct_init(engine_t *e, board_t *b)
 	e->stop = uct_stop;
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;
-	e->livegfx_hook = uct_livegfx_hook;
 
 	uct_t *u = uct_state_init(e, b);
 

@@ -56,7 +56,6 @@ typedef ownermap_t* (*engine_ownermap_t)(engine_t *e, board_t *b);
 typedef char *(*engine_result_t)(engine_t *e, board_t *b);
 typedef void (*engine_stop_t)(engine_t *e);
 typedef void (*engine_done_t)(engine_t *e);
-typedef void (*engine_livegfx_hook_t)(engine_t *e);
 
 
 /* Engine data structure. A new engine instance is spawned
@@ -80,9 +79,6 @@ struct engine {
 	engine_board_print_t     board_print;
 	engine_notify_play_t     notify_play;
 	engine_chat_t            chat;
-	engine_livegfx_hook_t    livegfx_hook;	    /* GoGui hook */
-
-
 
 	engine_genmove_t         genmove;           /* Generate a move. If pass_all_alive is true, <pass> shall be generated only */
 	engine_genmove_t         genmove_analyze;   /* if all stones on the board can be considered alive, without regard to "dead" */
