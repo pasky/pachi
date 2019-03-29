@@ -122,6 +122,9 @@ void engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 		       coord_t *best_c, float *best_r, int nbest);
 struct ownermap* engine_ownermap(engine_t *e, board_t *b);
 
+/* Set/change engine option(s) and reload engine. */
+bool engine_setoptions(engine_t *e, board_t *b, const char *arg, char **err);
+
 
 /* Engines best moves common code */
 
