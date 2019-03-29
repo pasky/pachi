@@ -18,7 +18,7 @@ coord2bstr(char *buf, coord_t c)
 	if (is_resign(c)) return "resign";
 	
 	/* Some GTP servers are broken and won't grok lowercase coords */
-	snprintf(buf, 4, "%c%u", toupper(asdf[coord_x(c) - 1]), coord_y(c));
+	snprintf(buf, 4, "%c%i", toupper(asdf[coord_x(c) - 1]), coord_y(c) % 100);
 	return buf;
 }
 
