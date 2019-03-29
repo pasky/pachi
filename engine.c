@@ -44,6 +44,27 @@ engine_options_free(options_t *options)
 	}
 }
 
+/* Add option, overwriting previous value if any. */
+static void
+engine_options_add(options_t *options, const char *name, const char *val)
+{
+	/* Overwrite existing option ? */
+	for (int i = 0; i < options->n; i++) {
+		assert(i < ENGINE_OPTIONS_MAX);
+		
+		if (!strcmp(options->o[i].name, name)) {
+			free(options->o[i].val);
+			options->o[i].val = (val ? strdup(val) : NULL);
+			return;
+		}
+	}
+
+	/* Ok, new option. */
+	options->o[options->n].name = strdup(name);
+	options->o[options->n].val = (val ? strdup(val) : NULL);
+	options->n++;
+}
+
 static void
 engine_options_copy(options_t *dest, options_t *src)
 {
@@ -146,6 +167,25 @@ ownermap_t*
 engine_ownermap(engine_t *e, board_t *b)
 {
 	return (e->ownermap ? e->ownermap(e, b) : NULL);
+}
+
+bool
+engine_setoptions(engine_t *e, board_t *b, const char *arg, char **err)
+{
+	assert(arg);
+
+	options_t options;
+	engine_options_parse(arg, &options);
+
+	/* Save options. */
+	for (int i = 0; i < options.n; i++)
+		engine_options_add(&e->options, options.o[i].name, options.o[i].val);	
+
+	/* Reload engine. */
+	engine_reset(e, b);
+
+	engine_options_free(&options);
+	return true;
 }
 
 

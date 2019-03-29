@@ -611,6 +611,16 @@ cmd_pachi_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+static enum parse_code
+cmd_pachi_setoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *arg, *err;
+	gtp_arg(arg);
+	if (!engine_setoptions(e, b, arg, &err))
+	    gtp_error(gtp, err);
+	return P_OK;
+}
+
 static int
 cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
@@ -963,6 +973,7 @@ static gtp_command_t gtp_commands[] =
 	{ "pachi-evaluate",         cmd_pachi_evaluate },
 	{ "pachi-result",           cmd_pachi_result },
 	{ "pachi-score_est",        cmd_pachi_score_est },
+	{ "pachi-setoption",	    cmd_pachi_setoption },  /* Set/change engine option */
 
 	{ "lz-analyze",             cmd_lz_analyze },       /* For Lizzie */
 	{ "lz-genmove_analyze",     cmd_genmove_analyze },  /* Sabaki etc */

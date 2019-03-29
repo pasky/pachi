@@ -8,6 +8,8 @@ known_command version
 # command ids
 7 version
 
+pachi-setoption pondering=0
+
 kgs-rules chinese
 boardsize 9
 clear_board
