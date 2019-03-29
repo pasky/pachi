@@ -136,7 +136,9 @@ int  best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest);
 
 /* Engine options */
 
-void engine_options_print(options_t *options);
+void      engine_options_print(options_t *options);
+option_t *engine_options_lookup(options_t *options, const char *name);
+void      engine_options_concat(strbuf_t *buf, options_t *options);
 
 
 #endif
