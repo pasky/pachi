@@ -104,10 +104,10 @@ pattern_rate_move(pattern_config_t *pc,
 }
 
 static floating_t
-pattern_max_rating_full(pattern_config_t *pc,
-			board_t *b, enum stone color,
-			pattern_t *pats, floating_t *probs,
-			ownermap_t *ownermap, bool locally)
+pattern_max_rating(pattern_config_t *pc,
+		   board_t *b, enum stone color,
+		   pattern_t *pats, floating_t *probs,
+		   ownermap_t *ownermap, bool locally)
 {
 	floating_t max = -10000000;
 	for (int f = 0; f < b->flen; f++) {
@@ -120,10 +120,10 @@ pattern_max_rating_full(pattern_config_t *pc,
 }
 
 static floating_t
-pattern_max_rating(pattern_config_t *pc,
-		   board_t *b, enum stone color,
-		   floating_t *probs,
-		   ownermap_t *ownermap, bool locally)
+pattern_max_rating_fast(pattern_config_t *pc,
+			board_t *b, enum stone color,
+			floating_t *probs,
+			ownermap_t *ownermap, bool locally)
 {
 	floating_t max = -10000000;
 	for (int f = 0; f < b->flen; f++) {
@@ -139,29 +139,9 @@ pattern_max_rating(pattern_config_t *pc,
 #define LOW_PATTERN_RATING 6.0
 
 floating_t
-pattern_rate_moves_full(pattern_config_t *pc,
-			board_t *b, enum stone color,
-			pattern_t *pats, floating_t *probs,
-			ownermap_t *ownermap)
-{
-#ifdef PATTERN_FEATURE_STATS
-	pattern_stats_new_position();
-#endif
-
-	/* Try local moves first. */
-	floating_t max = pattern_max_rating_full(pc, b, color, pats, probs, ownermap, true);
-
-	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
-	if (max < LOW_PATTERN_RATING)
-		max = pattern_max_rating_full(pc, b, color, pats, probs, ownermap, false);
-	
-	return rescale_probs(b, probs, max);
-}
-
-floating_t
 pattern_rate_moves(pattern_config_t *pc,
 		   board_t *b, enum stone color,
-		   floating_t *probs,
+		   pattern_t *pats, floating_t *probs,
 		   ownermap_t *ownermap)
 {
 #ifdef PATTERN_FEATURE_STATS
@@ -169,11 +149,31 @@ pattern_rate_moves(pattern_config_t *pc,
 #endif
 
 	/* Try local moves first. */
-	floating_t max = pattern_max_rating(pc, b, color, probs, ownermap, true);
+	floating_t max = pattern_max_rating(pc, b, color, pats, probs, ownermap, true);
 
 	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
 	if (max < LOW_PATTERN_RATING)
-		max = pattern_max_rating(pc, b, color, probs, ownermap, false);
+		max = pattern_max_rating(pc, b, color, pats, probs, ownermap, false);
+	
+	return rescale_probs(b, probs, max);
+}
+
+floating_t
+pattern_rate_moves_fast(pattern_config_t *pc,
+			board_t *b, enum stone color,
+			floating_t *probs,
+			ownermap_t *ownermap)
+{
+#ifdef PATTERN_FEATURE_STATS
+	pattern_stats_new_position();
+#endif
+
+	/* Try local moves first. */
+	floating_t max = pattern_max_rating_fast(pc, b, color, probs, ownermap, true);
+
+	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
+	if (max < LOW_PATTERN_RATING)
+		max = pattern_max_rating_fast(pc, b, color, probs, ownermap, false);
 	
 	/* Normal thing to do here would be to normalize probabilities based on total sum.
 	 * But we use max instead in order to get values like pre-mm pattern code so things
@@ -187,7 +187,7 @@ pattern_matching_locally(pattern_config_t *pc,
 			 ownermap_t *ownermap)
 {
 	floating_t probs[b->flen];
-	floating_t max = pattern_max_rating(pc, b, color, probs, ownermap, true);
+	floating_t max = pattern_max_rating_fast(pc, b, color, probs, ownermap, true);
 	return (max >= LOW_PATTERN_RATING);
 }
 
