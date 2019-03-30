@@ -53,6 +53,11 @@ floating_t pattern_rate_moves(pattern_config_t *pc,
 			      board_t *b, enum stone color,
 			      pattern_t *pats, floating_t *probs,
 			      ownermap_t *ownermap);
+/* For testing purposes: no prioritized features, check every feature. */
+floating_t pattern_rate_moves_vanilla(pattern_config_t *pc,
+				      board_t *b, enum stone color,
+				      pattern_t *pats, floating_t *probs,
+				      ownermap_t *ownermap);
 
 
 /* Helper function for pattern_match() callers:

@@ -104,6 +104,26 @@ pattern_rate_move(pattern_config_t *pc,
 }
 
 static floating_t
+pattern_rate_move_vanilla(pattern_config_t *pc,
+			  board_t *b, move_t *m,
+			  pattern_t *pat, ownermap_t *ownermap)
+{
+	floating_t prob = NAN;
+
+	if (is_pass(m->coord))	return prob;
+	if (!board_is_valid_play_no_suicide(b, m->color, m->coord)) return prob;
+
+	pattern_match_vanilla(pc, pat, b, m, ownermap);
+	prob = pattern_gamma(pc, pat);
+	
+	//if (DEBUGL(5)) {
+	//	char buf[256]; pattern2str(buf, pat);
+	//	fprintf(stderr, "=> move %s pattern %s prob %.3f\n", coord2sstr(m->coord), buf, prob);
+	//}
+	return prob;
+}
+
+static floating_t
 pattern_max_rating(pattern_config_t *pc,
 		   board_t *b, enum stone color,
 		   pattern_t *pats, floating_t *probs,
@@ -138,6 +158,7 @@ pattern_max_rating_fast(pattern_config_t *pc,
 
 #define LOW_PATTERN_RATING 6.0
 
+/* Save patterns for each move as well. */
 floating_t
 pattern_rate_moves(pattern_config_t *pc,
 		   board_t *b, enum stone color,
@@ -180,6 +201,28 @@ pattern_rate_moves_fast(pattern_config_t *pc,
 	 * remain the same from prior code point of view. */
 	return rescale_probs(b, probs, max);
 }
+
+/* For testing purposes: no prioritized features, check every feature. */
+floating_t
+pattern_rate_moves_vanilla(pattern_config_t *pc,
+			   board_t *b, enum stone color,
+			   pattern_t *pats, floating_t *probs,
+			   ownermap_t *ownermap)
+{
+#ifdef PATTERN_FEATURE_STATS
+	pattern_stats_new_position();
+#endif
+
+	floating_t max = -10000000;
+	for (int f = 0; f < b->flen; f++) {
+		move_t m = move(b->f[f], color);
+		probs[f] = pattern_rate_move_vanilla(pc, b, &m, &pats[f], ownermap);
+		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
+	}
+	
+	return rescale_probs(b, probs, max);
+}
+
 
 bool
 pattern_matching_locally(pattern_config_t *pc,
