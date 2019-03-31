@@ -389,20 +389,28 @@ cutting_stones_and_can_capture_other_after_atari(board_t *b, move_t *m, group_t 
 {
 	bool found = false;
 	enum stone other_color = stone_other(m->color);
+	
 	with_move(b, m->coord, m->color, {
-			assert(group_at(b, atariable) == atariable);
-			if (!cutting_stones(b, atariable))		break;
-			if (!cutting_stones(b, other))			break;
-			if (can_countercapture(b, atariable, NULL, 0))	break;
-			
-			coord_t lib = board_group_info(b, atariable).lib[0];
-			with_move(b, lib, other_color, {
-					group_t g = group_at(b, other);
-					if (g && board_group_info(b, g).libs == 2 &&
-					    can_capture_2lib_group(b, g, NULL, 0))
-						found = true;
-				});
-		});
+		assert(group_at(b, atariable) == atariable);
+		if (!cutting_stones(b, atariable))		break;
+		if (!cutting_stones(b, other))			break;
+		
+		move_queue_t mq;  mq_init(&mq);
+		coord_t lib = board_group_info(b, atariable).lib[0];
+		mq_add(&mq, lib, 0);
+		can_countercapture(b, atariable, &mq, 0);
+		
+		/* try possible replies, must work for all of them */
+		for (unsigned int i = 0; i < mq.moves; i++) {
+			with_move(b, mq.move[i], other_color, {
+				group_t g = group_at(b, other);
+				if (g && board_group_info(b, g).libs == 2 &&
+				    can_capture_2lib_group(b, g, NULL, 0))
+					found = true;
+				else {  found = false; mq.moves = 0;  }
+			});
+		}
+	});
 	return found;
 }
 
@@ -1039,6 +1047,39 @@ add_feature_stats(pattern_t *pattern)
 } while (0)
 
 
+/* For testing purposes: no prioritized features, check every feature. */
+void
+pattern_match_vanilla(pattern_config_t *pc, pattern_t *pattern, board_t *b,
+		      move_t *m, ownermap_t *ownermap)
+{
+#ifdef PATTERN_FEATURE_STATS
+	dump_feature_stats(pc);
+#endif
+
+	feature_t *f = &pattern->f[0];
+	int p;  /* payload */
+	pattern->n = 0;
+	assert(!is_pass(m->coord));   assert(!is_resign(m->coord));
+
+	check_feature(pattern_match_atari(b, m, ownermap), FEAT_ATARI);
+	check_feature(pattern_match_double_snapback(b, m), FEAT_DOUBLE_SNAPBACK);
+	check_feature(pattern_match_capture(b, m), FEAT_CAPTURE);
+	check_feature(pattern_match_aescape(b, m), FEAT_AESCAPE);
+	check_feature(pattern_match_cut(b, m, ownermap), FEAT_CUT);
+	check_feature(pattern_match_net(b, m, ownermap), FEAT_NET);
+	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
+	check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
+	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
+	check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
+	check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
+	check_feature(pattern_match_mcowner(b, m, ownermap), FEAT_MCOWNER);
+	pattern_match_spatial(pc, pattern, f, b, m);
+
+#ifdef PATTERN_FEATURE_STATS
+	add_feature_stats(p);
+#endif
+}
+
 /* TODO: We should match pretty much all of these features incrementally. */
 static void
 pattern_match_internal(pattern_config_t *pc, pattern_t *pattern, board_t *b,
@@ -1061,6 +1102,7 @@ pattern_match_internal(pattern_config_t *pc, pattern_t *pattern, board_t *b,
 	bool atari_ladder = (p == PF_ATARI_LADDER);
 	{       if (p == PF_ATARI_LADDER_BIG)  return;  /* don't let selfatari kick-in ... */
 		if (p == PF_ATARI_SNAPBACK)    return;  
+		if (p == PF_ATARI_AND_CAP)     return;
 		if (p == PF_ATARI_KO)          return;  /* don't let selfatari kick-in, fine as ko-threats */
 	}
 

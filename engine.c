@@ -25,6 +25,14 @@ new_engine(int id, char *e_arg, board_t *b)
 }
 
 void
+delete_engine(engine_t **e)
+{
+	engine_done(*e);
+	free(*e);
+	*e = NULL;
+}
+
+void
 engine_reset(engine_t *e, board_t *b, char *e_arg)
 {
 	int engine_id = e->id;

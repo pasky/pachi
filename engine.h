@@ -107,8 +107,9 @@ void engine_init(engine_t *e, int id, char *e_arg, board_t *b);
 void engine_done(engine_t *e);
 
 /* Allocate and initialize a new engine.
- * You are responsible for calling engine_done() and free() on it when done. */
+ * Call delete_engine() when done. */
 engine_t* new_engine(int id, char *e_arg, board_t *b);
+void delete_engine(engine_t **e);
 
 /* engine_done() + engine_init(), more or less. */
 void engine_reset(engine_t *e, board_t *b, char *e_arg);

@@ -44,15 +44,20 @@ static inline floating_t pattern_gamma(pattern_config_t *pc, pattern_t *p);
 /* Evaluate patterns for all available moves. Stores found patterns to pats[b->flen]
  * and NON-normalized probability of each pattern to probs[b->flen].
  * Returns the sum of all probabilities that can be used for normalization. */
+floating_t pattern_rate_moves_fast(pattern_config_t *pc,
+				   board_t *b, enum stone color,
+				   floating_t *probs,
+				   ownermap_t *ownermap);
+/* Save pattern for each move as well. */
 floating_t pattern_rate_moves(pattern_config_t *pc,
 			      board_t *b, enum stone color,
-			      floating_t *probs,
+			      pattern_t *pats, floating_t *probs,
 			      ownermap_t *ownermap);
-/* Saves patterns for each move as well. */
-floating_t pattern_rate_moves_full(pattern_config_t *pc,
-				   board_t *b, enum stone color,
-				   pattern_t *pats, floating_t *probs,
-				   ownermap_t *ownermap);
+/* For testing purposes: no prioritized features, check every feature. */
+floating_t pattern_rate_moves_vanilla(pattern_config_t *pc,
+				      board_t *b, enum stone color,
+				      pattern_t *pats, floating_t *probs,
+				      ownermap_t *ownermap);
 
 
 /* Helper function for pattern_match() callers:

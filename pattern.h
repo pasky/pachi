@@ -187,6 +187,8 @@ static bool pattern_eq(pattern_t *p1, pattern_t *p2);
 /* Initialize p and fill it with features matched by the given board move. 
  * @locally: Looking for local moves ? Distance features disabled if false. */
 void pattern_match(pattern_config_t *pc, pattern_t *p, board_t *b, move_t *m, ownermap_t *ownermap, bool locally);
+/* For testing purposes: no prioritized features, check every feature. */
+void pattern_match_vanilla(pattern_config_t *pc, pattern_t *p, board_t *b, move_t *m, ownermap_t *ownermap);
 
 /* Fill ownermap for mcowner feature. */
 void mcowner_playouts(board_t *b, enum stone color, ownermap_t *ownermap);

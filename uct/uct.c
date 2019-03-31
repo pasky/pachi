@@ -462,6 +462,7 @@ uct_pondering_stop(uct_t *u)
 	if (u->pondering) {
 		free(ctx->b);
 		u->pondering = false;
+		u->genmove_pondering = false;
 	}
 }
 
@@ -716,7 +717,7 @@ uct_evaluate_one(engine_t *e, board_t *b, time_info_t *ti, coord_t c, enum stone
 	color = stone_other(color);
 
 	if (u->t) reset_state(u);
-	uct_prepare_move(u, &b2, color);
+	uct_genmove_setup(u, &b2, color);
 	assert(u->t);
 
 	floating_t bestval;

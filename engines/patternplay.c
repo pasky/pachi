@@ -70,7 +70,7 @@ patternplay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
 	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
 	else		       mcowner_playouts(b, color, &ownermap);
 	pp->matched_locally = -1;  // Invalidate
-	pattern_rate_moves_full(&pp->pc, b, color, pats, probs, &ownermap);
+	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
 
 	float best_r[20];
 	coord_t best_c[20];
@@ -103,7 +103,7 @@ patternplay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
 	else		       mcowner_playouts(b, color, &ownermap);
 	pp->matched_locally = pattern_matching_locally(&pp->pc, b, color, &ownermap);
-	pattern_rate_moves(&pp->pc, b, color, probs, &ownermap);
+	pattern_rate_moves_fast(&pp->pc, b, color, probs, &ownermap);
 
 	get_pattern_best_moves(b, probs, best_c, best_r, nbest);
 	print_pattern_best_moves(b, best_c, best_r, nbest);
@@ -119,11 +119,11 @@ patternplay_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals,
 	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
 	else                   mcowner_playouts(b, color, &ownermap);
 	pp->matched_locally = -1;  // Invalidate
-	pattern_rate_moves_full(&pp->pc, b, color, pats, vals, &ownermap);
+	pattern_rate_moves(&pp->pc, b, color, pats, vals, &ownermap);
 
 #if 0
 	// unused variable 'total' in above call to pattern_rate_moves()
-	floating_t total = pattern_rate_moves(&pp->pc, b, color, pats, vals);
+	floating_t total = pattern_rate_moves_fast(&pp->pc, b, color, pats, vals);
 	/* Rescale properly. */
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] /= total;
