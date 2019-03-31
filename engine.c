@@ -3,10 +3,126 @@
 #include "pachi.h"
 
 
-void
-engine_init(engine_t *e, int id, char *e_arg, board_t *b)
+/**************************************************************************************************/
+/* Engine options */
+
+/* Parse comma separated @arg, fill @options. */
+static void
+engine_options_parse(const char *arg, options_t *options)
 {
-	pachi_engine_init(e, id, e_arg, b);
+	options->n = 0;
+	if (!arg)  return;
+
+	option_t *option = &options->o[0];
+	char *tmp_arg = strdup(arg);
+	char *next = tmp_arg;
+	
+	for (options->n = 0;  *next;  options->n++, option++) {
+		assert(options->n < ENGINE_OPTIONS_MAX);
+		
+		char *optspec = next;
+		next += strcspn(next, ",");
+		if (*next)  *next++ = 0;  else  *next = 0;
+		
+		char *optname = optspec;
+		char *optval = strchr(optspec, '=');
+		if (optval)  *optval++ = 0;
+
+		option->name = strdup(optname);
+		option->val = (optval ? strdup(optval) : NULL);
+	}
+
+	free(tmp_arg);
+}
+
+static void
+engine_options_free(options_t *options)
+{
+	for (int i = 0; i < options->n; i++) {
+		free(options->o[i].name);
+		free(options->o[i].val);
+	}
+}
+
+/* Add option, overwriting previous value if any. */
+static void
+engine_options_add(options_t *options, const char *name, const char *val)
+{
+	/* Overwrite existing option ? */
+	for (int i = 0; i < options->n; i++) {
+		assert(i < ENGINE_OPTIONS_MAX);
+		
+		if (!strcmp(options->o[i].name, name)) {
+			free(options->o[i].val);
+			options->o[i].val = (val ? strdup(val) : NULL);
+			return;
+		}
+	}
+
+	/* Ok, new option. */
+	options->o[options->n].name = strdup(name);
+	options->o[options->n].val = (val ? strdup(val) : NULL);
+	options->n++;
+}
+
+static void
+engine_options_copy(options_t *dest, options_t *src)
+{
+	memcpy(dest, src, sizeof(*src));
+}
+
+void
+engine_options_print(options_t *options)
+{
+	fprintf(stderr, "engine options:\n");
+	for (int i = 0; i < options->n; i++)
+		if (options->o[i].val)  fprintf(stderr, "  %s=%s\n", options->o[i].name, options->o[i].val);
+		else                    fprintf(stderr, "  %s\n", options->o[i].name);
+}
+
+option_t *
+engine_options_lookup(options_t *options, const char *name)
+{
+	for (int i = 0; i < options->n; i++)
+		if (!strcmp(options->o[i].name, name))
+			return &options->o[i];
+	return NULL;
+}
+
+void
+engine_options_concat(strbuf_t *buf, options_t *options)
+{
+	option_t *option = &options->o[0];
+	
+	for (int i = 0;  i < options->n;  i++, option++)
+		if (option->val)  sbprintf(buf, "%s%s=%s", (i ? "," : ""), option->name, option->val);
+		else              sbprintf(buf, "%s%s",    (i ? "," : ""), option->name);
+}
+
+
+/**************************************************************************************************/
+
+/* init from scratch, preserving options. */
+static void
+engine_init_(engine_t *e, int id, board_t *b)
+{
+	options_t options;
+	//engine_options_print(&e->options);
+
+	engine_options_copy(&options, &e->options);
+	memset(e, 0, sizeof(*e));
+	engine_options_copy(&e->options, &options);
+
+	e->id = id;
+	pachi_engine_init(e, id, b);
+}
+
+/* init from scratch */
+void
+engine_init(engine_t *e, int id, const char *e_arg, board_t *b)
+{
+	engine_options_parse(e_arg, &e->options);
+	engine_init_(e, id, b);
 }
 
 void
@@ -14,10 +130,12 @@ engine_done(engine_t *e)
 {
 	if (e->done) e->done(e);
 	if (e->data) free(e->data);
+	engine_options_free(&e->options);
+	memset(e, 0, sizeof(*e));
 }
 
 engine_t*
-new_engine(int id, char *e_arg, board_t *b)
+new_engine(int id, const char *e_arg, board_t *b)
 {
 	engine_t *e = malloc2(engine_t);
 	engine_init(e, id, e_arg, b);
@@ -33,12 +151,19 @@ delete_engine(engine_t **e)
 }
 
 void
-engine_reset(engine_t *e, board_t *b, char *e_arg)
+engine_reset(engine_t *e, board_t *b)
 {
 	int engine_id = e->id;
+	options_t options;
+	
+	engine_options_copy(&options, &e->options);  /* Save options. */
+	
+	e->options.n = 0;
 	b->es = NULL;
 	engine_done(e);
-	engine_init(e, engine_id, e_arg, b);
+	
+	engine_options_copy(&e->options, &options);  /* Restore options. */
+	engine_init_(e, engine_id, b);
 }
 
 void
@@ -62,6 +187,50 @@ engine_ownermap(engine_t *e, board_t *b)
 {
 	return (e->ownermap ? e->ownermap(e, b) : NULL);
 }
+
+/* For engines internal use, ensures optval is properly strdup'ed / freed
+ * since engine may change it. Must be preserved for next engine reset. */
+bool
+engine_setoption(engine_t *e, board_t *b, option_t *option, char **err, bool setup, bool *reset)
+{
+	char *optval = (option->val ? strdup(option->val) : NULL);
+	bool r = e->setoption(e, b, option->name, optval, err, setup, reset);
+	free(optval);
+	return r;
+}
+
+bool
+engine_setoptions(engine_t *e, board_t *b, const char *arg, char **err)
+{
+	assert(arg);
+
+	options_t options;
+	engine_options_parse(arg, &options);
+
+	/* Reset engine if engine doesn't implement setoption(). */
+	bool reset = true;
+
+	if (e->setoption) {
+		reset = false;
+		/* Don't save options until we know they're all good. */
+		for (int i = 0; i < options.n; i++)
+			if (!engine_setoption(e, b, &options.o[i], err, false, &reset))
+				if (!reset)  return false;   /* Failed, err is error msg */
+	}
+		
+	/* Ok, save. */
+	for (int i = 0; i < options.n; i++)
+		engine_options_add(&e->options, options.o[i].name, options.o[i].val);	
+
+	/* Engine reset needed ? */
+	if (reset)  engine_reset(e, b);
+
+	engine_options_free(&options);
+	return true;
+}
+
+
+/**************************************************************************************************/
 
 /* For engines best_move(): Add move @c with prob @r to best moves @best_c, @best_r */
 void
@@ -107,3 +276,4 @@ best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest)
 	fprintf(stderr, "]\n");
 	return strlen(str);
 }
+

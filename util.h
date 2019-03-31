@@ -87,6 +87,20 @@ const char *strcasestr(const char *haystack, const char *needle);
 
 
 /**************************************************************************************************/
+/* const-safe versions of some string functions */
+
+#ifdef strchr
+#undef strchr
+#endif
+
+/* https://fanf.livejournal.com/144696.html */
+#define strchr(str, chr)  ((__typeof__(&(str)[0])) strchr((str), (chr)))
+#define strrchr(str, chr) ((__typeof__(&(str)[0])) strrchr((str), (chr)))
+#define index(str, chr)   ((__typeof__(&(str)[0])) index((str), (chr)))
+#define rindex(str, chr)  ((__typeof__(&(str)[0])) rindex((str), (chr)))
+
+
+/**************************************************************************************************/
 /* Misc. definitions. */
 
 /* Use make DOUBLE_FLOATING=1 in large configurations with counts > 1M

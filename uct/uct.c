@@ -764,12 +764,607 @@ default_max_tree_size()
 	return (size_t)300 * mult * 1048576;
 }
 
-uct_t *
-uct_state_init(char *arg, board_t *b)
+
+#define NEED_RESET   ENGINE_SETOPTION_NEED_RESET
+#define option_error engine_setoption_error
+
+static bool
+uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
+	      char **err, bool setup, bool *reset)
 {
-	uct_t *u = calloc2(1, uct_t);
-	bool pat_setup = false;
+	static_strbuf(ebuf, 256);
+	uct_t *u = (uct_t*)e->data;
+
+	/** Basic options */
+
+	if (!strcasecmp(optname, "debug")) {
+		if (optval)  u->debug_level = atoi(optval);
+		else         u->debug_level++;
+	}
+	else if (!strcasecmp(optname, "reporting") && optval) {
+		/* The format of output for detailed progress
+		 * information (such as current best move and
+		 * its value, etc.). */
+		if (!strcasecmp(optval, "text")) {
+			/* Plaintext traditional output. */
+			u->reporting = UR_TEXT;
+		} else if (!strcasecmp(optval, "json")) {
+			/* JSON output. Implies debug=0. */
+			u->reporting = UR_JSON;
+			u->debug_level = 0;
+		} else if (!strcasecmp(optval, "jsonbig")) {
+			/* JSON output, but much more detailed.
+			 * Implies debug=0. */
+			u->reporting = UR_JSON_BIG;
+			u->debug_level = 0;
+		} else if (!strcasecmp(optval, "leela-zero") ||
+			   !strcasecmp(optval, "leelaz") ||
+			   !strcasecmp(optval, "lz")) {
+			/* Leela-Zero pondering format. */
+			u->reporting = UR_LEELA_ZERO;
+		} else
+			option_error("UCT: Invalid reporting format %s\n", optval);
+	}
+	else if (!strcasecmp(optname, "reportfreq") && optval) {
+		/* The progress information line will be shown
+		 * every <reportfreq> simulations. */
+		u->reportfreq = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "dumpthres") && optval) {
+		/* When dumping the UCT tree on output, include
+		 * nodes with at least this many playouts.
+		 * (A fraction of the total # of playouts at the
+		 * tree root.) */
+		/* Use 0 to list all nodes with at least one
+		 * simulation, and -1 to list _all_ nodes. */
+		u->dumpthres = atof(optval);
+	}
+	else if (!strcasecmp(optname, "resign_threshold") && optval) {
+		/* Resign when this ratio of games is lost
+		 * after GJ_MINGAMES sample is taken. */
+		u->resign_threshold = atof(optval);
+	}
+	else if (!strcasecmp(optname, "sure_win_threshold") && optval) {
+		/* Stop reading when this ratio of games is won
+		 * after PLAYOUT_EARLY_BREAK_MIN sample is
+		 * taken. (Prevents stupid time losses,
+		 * friendly to human opponents.) */
+		u->sure_win_threshold = atof(optval);
+	}
+	else if (!strcasecmp(optname, "force_seed") && optval) {
+		/* Set RNG seed at the tree setup. */
+		u->force_seed = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "no_tbook")) {
+		/* Disable UCT opening tbook. */
+		u->no_tbook = true;
+	}
+	else if (!strcasecmp(optname, "pass_all_alive")) {
+		/* Whether to consider passing only after all
+		 * dead groups were removed from the board;
+		 * this is like all genmoves are in fact
+		 * kgs-genmove_cleanup. */
+		u->pass_all_alive = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "allow_losing_pass")) {
+		/* Whether to consider passing in a clear
+		 * but losing situation, to be scored as a loss
+		 * for us. */
+		u->allow_losing_pass = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "stones_only")) {
+		/* Do not count eyes. Nice to teach go to kids.
+		 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
+		b->rules = RULES_STONES_ONLY;
+		u->pass_all_alive = true;
+	}
+	else if (!strcasecmp(optname, "debug_after")) {
+		/* debug_after=9:1000 will make Pachi think under
+		 * the normal conditions, but at the point when
+		 * a move is to be chosen, the tree is dumped and
+		 * another 1000 simulations are run single-threaded
+		 * with debug level 9, allowing inspection of Pachi's
+		 * behavior after it has thought a lot. */
+		if (optval) {
+			u->debug_after.level = atoi(optval);
+			char *playouts = strchr(optval, ':');
+			if (playouts)  u->debug_after.playouts = atoi(playouts+1);
+			else           u->debug_after.playouts = 1000;
+		} else {
+			u->debug_after.level = 9;
+			u->debug_after.playouts = 1000;
+		}
+	}
+	else if ((!strcasecmp(optname, "banner") && optval) ||
+		 (!strcasecmp(optname, "comment") && optval)) {  NEED_RESET
+		/* Set message displayed at game start on kgs.
+		 * Default is "Pachi %s, Have a nice game !"
+		 * '%s' is replaced by Pachi version.
+		 * You can use '+' instead of ' ' if you are wrestling with kgsGtp. */
+		u->banner = strdup(optval);
+		for (char *b = u->banner; *b; b++)
+			if (*b == '+') *b = ' ';
+	}
+#ifdef PACHI_PLUGINS
+	else if (!strcasecmp(optname, "plugin") && optval) {
+		/* Load an external plugin; filename goes before the colon,
+		 * extra arguments after the colon. */
+		char *pluginarg = strchr(optval, ':');
+		if (pluginarg)  *pluginarg++ = 0;
+		plugin_load(u->plugins, optval, pluginarg);
+	}
+#endif
+
+	/** UCT behavior and policies */
+
+	else if ((!strcasecmp(optname, "policy")
+		  /* Node selection policy. ucb1amaf is the
+		   * default policy implementing RAVE, while
+		   * ucb1 is the simple exploration/exploitation
+		   * policy. Policies can take further extra
+		   * options. */
+		  || !strcasecmp(optname, "random_policy")) && optval) {  NEED_RESET
+		  /* A policy to be used randomly with small
+		   * chance instead of the default policy. */
+		char *policyarg = strchr(optval, ':');
+		uct_policy_t **p = !strcasecmp(optname, "policy") ? &u->policy : &u->random_policy;
+		if (policyarg)
+			*policyarg++ = 0;
+		if      (!strcasecmp(optval, "ucb1"))      *p = policy_ucb1_init(u, policyarg);
+		else if (!strcasecmp(optval, "ucb1amaf"))  *p = policy_ucb1amaf_init(u, policyarg, b);
+		else    option_error("UCT: Invalid tree policy %s\n", optval);
+	}
+	else if (!strcasecmp(optname, "playout") && optval) {  NEED_RESET
+		/* Random simulation (playout) policy.
+		 * moggy is the default policy with large
+		 * amount of domain-specific knowledge and
+		 * heuristics. light is a simple uniformly
+		 * random move selection policy. */
+		char *playoutarg = strchr(optval, ':');
+		if (playoutarg)
+			*playoutarg++ = 0;
+		if      (!strcasecmp(optval, "moggy"))  u->playout = playout_moggy_init(playoutarg, b);
+		else if (!strcasecmp(optval, "light"))  u->playout = playout_light_init(playoutarg, b);
+		else    option_error("UCT: Invalid playout policy %s\n", optval);
+	}
+	else if (!strcasecmp(optname, "prior") && optval) {  NEED_RESET
+		/* Node priors policy. When expanding a node,
+		 * it will seed node values heuristically
+		 * (most importantly, based on playout policy
+		 * opinion, but also with regard to other
+		 * things). See uct/prior.c for details.
+		 * Use prior=eqex=0 to disable priors. */
+		u->prior = uct_prior_init(optval, b, u);
+	}
+	else if (!strcasecmp(optname, "mercy") && optval) {
+		/* Minimal difference of black/white captures
+		 * to stop playout - "Mercy Rule". Speeds up
+		 * hopeless playouts at the expense of some
+		 * accuracy. */
+		u->mercymin = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "gamelen") && optval) {
+		/* Maximum length of single simulation
+		 * in moves. */
+		u->gamelen = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "expand_p") && optval) {
+		/* Expand UCT nodes after it has been
+		 * visited this many times. */
+		u->expand_p = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "random_policy_chance") && optval) {
+		/* If specified (N), with probability 1/N, random_policy policy
+		 * descend is used instead of main policy descend; useful
+		 * if specified policy (e.g. UCB1AMAF) can make unduly biased
+		 * choices sometimes, you can fall back to e.g.
+		 * random_policy=UCB1. */
+		u->random_policy_chance = atoi(optval);
+
+		/** General AMAF behavior */
+		/* (Only relevant if the policy supports AMAF.
+		 * More variables can be tuned as policy
+		 * parameters.) */
+	}
+	else if (!strcasecmp(optname, "playout_amaf")) {
+		/* Whether to include random playout moves in
+		 * AMAF as well. (Otherwise, only tree moves
+		 * are included in AMAF. Of course makes sense
+		 * only in connection with an AMAF policy.) */
+		/* with-without: 55.5% (+-4.1) */
+		if (optval && *optval == '0')  u->playout_amaf = false;
+		else                           u->playout_amaf = true;
+	}
+	else if (!strcasecmp(optname, "playout_amaf_cutoff") && optval) {
+		/* Keep only first N% of playout stage AMAF
+		 * information. */
+		u->playout_amaf_cutoff = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "amaf_prior") && optval) {
+		/* In node policy, consider prior values
+		 * part of the real result term or part
+		 * of the AMAF term? */
+		u->amaf_prior = atoi(optval);
+	}
+
+	/** Performance and memory management */
+
+	else if (!strcasecmp(optname, "threads") && optval) {
+		/* Default: 1 thread per core. */
+		u->threads = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "thread_model") && optval) {
+		if (!strcasecmp(optval, "tree")) {
+			/* Tree parallelization - all threads
+			 * grind on the same tree. */
+			u->thread_model = TM_TREE;
+			u->virtual_loss = 0;
+		} else if (!strcasecmp(optval, "treevl")) {
+			/* Tree parallelization, but also
+			 * with virtual losses - this discou-
+			 * rages most threads choosing the
+			 * same tree branches to read. */
+			u->thread_model = TM_TREEVL;
+		} else
+			option_error("UCT: Invalid thread model %s\n", optval);
+	}
+	else if (!strcasecmp(optname, "virtual_loss") && optval) {
+		/* Number of virtual losses added before evaluating a node. */
+		u->virtual_loss = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "max_tree_size") && optval) {  NEED_RESET
+		/* Maximum amount of memory [MiB] consumed by the move tree.
+		 * For fast_alloc it includes the temp tree used for pruning.
+		 * Default is 3072 (3 GiB). */
+		u->max_tree_size = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
+	}
+	else if (!strcasecmp(optname, "fast_alloc")) {  NEED_RESET
+		u->fast_alloc = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "pruning_threshold") && optval) {  NEED_RESET
+		/* Force pruning at beginning of a move if the tree consumes
+		 * more than this [MiB]. Default is 10% of max_tree_size.
+		 * Increase to reduce pruning time overhead if memory is plentiful.
+		 * This option is meaningful only for fast_alloc. */
+		u->pruning_threshold = atol(optval) * 1048576;
+	}
+	else if (!strcasecmp(optname, "reset_tree")) {
+		/* Reset tree before each genmove ?
+		 * Default is to reuse previous tree when not using dcnn. 
+		 * When using dcnn tree is always reset (unless pondering). */
+		u->genmove_reset_tree = !optval || atoi(optval);
+	}
+
+	/* Pondering */
+
+	else if (!strcasecmp(optname, "pondering")) {
+		/* Keep searching even during opponent's turn. */
+		u->pondering_opt = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "dcnn_pondering_prior") && optval) {
+		/* Dcnn pondering: prior guesses for next move.
+		 * When pondering with dcnn we need to guess opponent's next move:
+		 * Only these guesses are dcnn evaluated.
+		 * This is the number of guesses we pick from priors' best moves
+		 * (dcnn policy mostly). Default is 5 meaning only top-5 moves
+		 * for opponent will be considered (plus dcnnn_pondering_mcts_best
+		 * ones, see below). For slow games it makes sense to increase this:
+		 * we spend more time before actual search starts but there's more
+		 * chance we guess right, so that pondering will be useful. If we
+		 * guess wrong search results will be discarded and pondering will
+		 * not be useful for this move. For fast games try decreasing it. */
+		u->dcnn_pondering_prior = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "dcnn_pondering_mcts") && optval) {
+		/* Dcnn pondering: mcts guesses for next move.
+		 * Same as dcnn_pondering_prior but number of guesses picked from
+		 * opponent best moves in genmove search.
+		 * Default is 3. */
+		size_t n = u->dcnn_pondering_mcts = atoi(optval);
+		assert(n <= sizeof(u->dcnn_pondering_mcts_c) / sizeof(u->dcnn_pondering_mcts_c[0]));
+	}
+
+	/** Time control */
+
+	else if (!strcasecmp(optname, "best2_ratio") && optval) {
+		/* If set, prolong simulating while
+		 * first_best/second_best playouts ratio
+		 * is less than best2_ratio. */
+		u->best2_ratio = atof(optval);
+	}
+	else if (!strcasecmp(optname, "bestr_ratio") && optval) {
+		/* If set, prolong simulating while
+		 * best,best_best_child values delta
+		 * is more than bestr_ratio. */
+		u->bestr_ratio = atof(optval);
+	}
+	else if (!strcasecmp(optname, "max_maintime_ratio") && optval) {
+		/* If set and while not in byoyomi, prolong simulating no more than
+		 * max_maintime_ratio times the normal desired thinking time. */
+		u->max_maintime_ratio = atof(optval);
+	}
+	else if (!strcasecmp(optname, "fuseki_end") && optval) {
+		/* At the very beginning it's not worth thinking
+		 * too long because the playout evaluations are
+		 * very noisy. So gradually increase the thinking
+		 * time up to maximum when fuseki_end percent
+		 * of the board has been played.
+		 * This only applies if we are not in byoyomi. */
+		u->fuseki_end = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "yose_start") && optval) {
+		/* When yose_start percent of the board has been
+		 * played, or if we are in byoyomi, stop spending
+		 * more time and spread the remaining time
+		 * uniformly.
+		 * Between fuseki_end and yose_start, we spend
+		 * a constant proportion of the remaining time
+		 * on each move. (yose_start should actually
+		 * be much earlier than when real yose start,
+		 * but "yose" is a good short name to convey
+		 * the idea.) */
+		u->yose_start = atoi(optval);
+	}
+
+	/** Dynamic komi */
+
+	else if (!strcasecmp(optname, "dynkomi") && optval) {  NEED_RESET
+		/* Dynamic komi approach; there are multiple
+		 * ways to adjust komi dynamically throughout
+		 * play. We currently support two: */
+		char *dynkomiarg = strchr(optval, ':');
+		if (dynkomiarg)
+			*dynkomiarg++ = 0;
+		if (!strcasecmp(optval, "none")) {
+			u->dynkomi = uct_dynkomi_init_none(u, dynkomiarg, b);
+		} else if (!strcasecmp(optval, "linear")) {
+			/* You should set dynkomi_mask=1 or a very low handicap_value for white. */
+			u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
+		} else if (!strcasecmp(optval, "adaptive")) {
+			/* There are many more knobs to crank - see uct/dynkomi.c. */
+			u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomiarg, b);
+		} else
+			option_error("UCT: Invalid dynkomi mode %s\n", optval);
+	}
+	else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
+		/* Bitmask of colors the player must be
+		 * for dynkomi be applied; the default dynkomi_mask=3 allows
+		 * dynkomi even in games where Pachi is white. */
+		u->dynkomi_mask = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "dynkomi_interval") && optval) {
+		/* If non-zero, re-adjust dynamic komi
+		 * throughout a single genmove reading,
+		 * roughly every N simulations. */
+		/* XXX: Does not work with tree
+		 * parallelization. */
+		u->dynkomi_interval = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "extra_komi") && optval) {
+		/* Initial dynamic komi settings. This
+		 * is useful for the adaptive dynkomi
+		 * policy as the value to start with
+		 * (this is NOT kept fixed) in case
+		 * there is not enough time in the search
+		 * to adjust the value properly (e.g. the
+		 * game was interrupted). */
+		u->initial_extra_komi = atof(optval);
+	}
+
+	/** Node value result scaling */
+
+	else if (!strcasecmp(optname, "val_scale") && optval) {
+		/* How much of the game result value should be
+		 * influenced by win size. Zero means it isn't. */
+		u->val_scale = atof(optval);
+	}
+	else if (!strcasecmp(optname, "val_points") && optval) {
+		/* Maximum size of win to be scaled into game
+		 * result value. Zero means boardsize^2. */
+		u->val_points = atoi(optval) * 2; // result values are doubled
+	}
+	else if (!strcasecmp(optname, "val_extra")) {
+		/* If false, the score coefficient will be simply
+		 * added to the value, instead of scaling the result
+		 * coefficient because of it. */
+		u->val_extra = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "val_byavg")) {
+		/* If true, the score included in the value will
+		 * be relative to average score in the current
+		 * search episode inst. of jigo. */
+		u->val_byavg = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "val_bytemp")) {
+		/* If true, the value scaling coefficient
+		 * is different based on value extremity
+		 * (dist. from 0.5), linear between
+		 * val_bytemp_min, val_scale. */
+		u->val_bytemp = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "val_bytemp_min") && optval) {
+		/* Minimum val_scale in case of val_bytemp. */
+		u->val_bytemp_min = atof(optval);
+	}
+
+	/** Local trees */
+	/* (Purely experimental. Does not work - yet!) */
+
+	else if (!strcasecmp(optname, "local_tree")) {
+		/* Whether to bias exploration by local tree values. */
+		u->local_tree = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "tenuki_d") && optval) {
+		/* Tenuki distance at which to break the local tree. */
+		u->tenuki_d = atoi(optval);
+		if (u->tenuki_d > TREE_NODE_D_MAX + 1)
+			option_error("uct: tenuki_d must not be larger than TREE_NODE_D_MAX+1 %d\n", TREE_NODE_D_MAX + 1);
+	}
+	else if (!strcasecmp(optname, "local_tree_aging") && optval) {
+		/* How much to reduce local tree values between moves. */
+		u->local_tree_aging = atof(optval);
+	}
+	else if (!strcasecmp(optname, "local_tree_depth_decay") && optval) {
+		/* With value x>0, during the descent the node
+		 * contributes 1/x^depth playouts in
+		 * the local tree. I.e., with x>1, nodes more
+		 * distant from local situation contribute more
+		 * than nodes near the root. */
+		u->local_tree_depth_decay = atof(optval);
+	}
+	else if (!strcasecmp(optname, "local_tree_allseq")) {
+		/* If disabled, only complete sequences are stored
+		 * in the local tree. If this is on, also
+		 * subsequences starting at each move are stored. */
+		u->local_tree_allseq = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "local_tree_neival")) {
+		/* If disabled, local node value is not
+		 * computed just based on terminal status
+		 * of the coordinate, but also its neighbors. */
+		u->local_tree_neival = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "local_tree_eval")) {
+		/* How is the value inserted in the local tree
+		 * determined. */
+		if (!strcasecmp(optval, "root"))
+			/* All moves within a tree branch are
+			 * considered wrt. their merit
+			 * reaching tachtical goal of making
+			 * the first move in the branch
+			 * survive. */
+			u->local_tree_eval = LTE_ROOT;
+		else if (!strcasecmp(optval, "each"))
+			/* Each move is considered wrt.
+			 * its own survival. */
+			u->local_tree_eval = LTE_EACH;
+		else if (!strcasecmp(optval, "total"))
+			/* The tactical goal is the survival
+			 * of all the moves of my color and
+			 * non-survival of all the opponent
+			 * moves. Local values (and their
+			 * inverses) are averaged. */
+			u->local_tree_eval = LTE_TOTAL;
+		else
+			option_error("uct: unknown local_tree_eval %s\n", optval);
+	}
+	else if (!strcasecmp(optname, "local_tree_rootchoose")) {
+		/* If disabled, only moves within the local
+		 * tree branch are considered; the values
+		 * of the branch roots (i.e. root children)
+		 * are ignored. This may make sense together
+		 * with eval!=each, we consider only moves
+		 * that influence the goal, not the "rating"
+		 * of the goal itself. (The real solution
+		 * will be probably using criticality to pick
+		 * local tree branches.) */
+		u->local_tree_rootchoose = !optval || atoi(optval);
+	}
+
+	/** Other heuristics */
 	
+	else if (!strcasecmp(optname, "patterns")) {  NEED_RESET
+		/* Load pattern database. Various modules
+		 * (priors, policies etc.) may make use
+		 * of this database. They will request
+		 * it automatically in that case, but you
+		 * can use this option to tweak the pattern
+		 * parameters. */
+		patterns_init(&u->pc, optval, false, true);
+	}
+	else if (!strcasecmp(optname, "significant_threshold") && optval) {
+		/* Some heuristics (XXX: none in mainline) rely
+		 * on the knowledge of the last "significant"
+		 * node in the descent. Such a node is
+		 * considered reasonably trustworthy to carry
+		 * some meaningful information in the values
+		 * of the node and its children. */
+		u->significant_threshold = atoi(optval);
+	}
+
+	/** Distributed engine slaves setup */
+	
+#ifdef DISTRIBUTED
+	else if (!strcasecmp(optname, "slave")) {
+		/* Act as slave for the distributed engine. */
+		u->slave = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "slave_index") && optval) {
+		/* Optional index if per-slave behavior is desired.
+		 * Must be given as index/max */
+		u->slave_index = atoi(optval);
+		char *p = strchr(optval, '/');
+		if (p) u->max_slaves = atoi(++p);
+	}
+	else if (!strcasecmp(optname, "shared_nodes") && optval) {
+		/* Share at most shared_nodes between master and slave at each genmoves.
+		 * Must use the same value in master and slaves. */
+		u->shared_nodes = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "shared_levels") && optval) {
+		/* Share only nodes of level <= shared_levels. */
+		u->shared_levels = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "stats_hbits") && optval) {
+		/* Set hash table size to 2^stats_hbits for the shared stats. */
+		u->stats_hbits = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "stats_delay") && optval) {
+		/* How long to wait in slave for initial stats to build up before
+		 * replying to the genmoves command (in ms) */
+		u->stats_delay = 0.001 * atof(optval);
+	}
+#endif /* DISTRIBUTED */
+
+	/** Presets */
+
+	else if (!strcasecmp(optname, "maximize_score")) {  NEED_RESET
+		/* A combination of settings that will make
+		 * Pachi try to maximize his points (instead
+		 * of playing slack yose) or minimize his loss
+		 * (and proceed to counting even when losing). */
+		/* Please note that this preset might be
+		 * somewhat weaker than normal Pachi, and the
+		 * score maximization is approximate; point size
+		 * of win/loss still should not be used to judge
+		 * strength of Pachi or the opponent. */
+		/* See README for some further notes. */
+		if (!optval || atoi(optval)) {
+			/* Allow scoring a lost game. */
+			u->allow_losing_pass = true;
+			/* Make Pachi keep his calm when losing
+			 * and/or maintain winning marging. */
+			/* Do not play games that are losing
+			 * by too much. */
+			/* XXX: komi_ratchet_age=40000 is necessary
+			 * with losing_komi_ratchet, but 40000
+			 * is somewhat arbitrary value. */
+			char dynkomi_args[] = "losing_komi_ratchet:komi_ratchet_age=60000:no_komi_at_game_end=0:max_losing_komi=30";
+			u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomi_args, b);
+			/* XXX: Values arbitrary so far. */
+			/* XXX: Also, is bytemp sensible when
+			 * combined with dynamic komi?! */
+			u->val_scale = 0.01;
+			u->val_bytemp = true;
+			u->val_bytemp_min = 0.001;
+			u->val_byavg = true;
+		}
+	}
+	else
+		option_error("uct: Invalid engine argument %s or missing value\n", optname);
+
+	return true;  /* successful */
+}
+
+uct_t *
+uct_state_init(engine_t *e, board_t *b)
+{
+	options_t *options = &e->options;
+	uct_t *u = calloc2(1, uct_t);
+	e->data = u;
+
+	bool pat_setup = false;	
+
 	u->debug_level = debug_level;
 	u->reportfreq = 1000;
 	u->report_fh = stderr;
@@ -823,561 +1418,24 @@ uct_state_init(char *arg, board_t *b)
 #ifdef PACHI_PLUGINS
 	u->plugins = pluginset_init(b);
 #endif
-
-	if (arg) {
-		char *optspec, *next = arg;
-		while (*next) {
-			optspec = next;
-			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
-
-			char *optname = optspec;
-			char *optval = strchr(optspec, '=');
-			if (optval) *optval++ = 0;
-
-			/** Basic options */
-
-			if (!strcasecmp(optname, "debug")) {
-				if (optval)
-					u->debug_level = atoi(optval);
-				else
-					u->debug_level++;
-			} else if (!strcasecmp(optname, "reporting") && optval) {
-				/* The format of output for detailed progress
-				 * information (such as current best move and
-				 * its value, etc.). */
-				if (!strcasecmp(optval, "text")) {
-					/* Plaintext traditional output. */
-					u->reporting = UR_TEXT;
-				} else if (!strcasecmp(optval, "json")) {
-					/* JSON output. Implies debug=0. */
-					u->reporting = UR_JSON;
-					u->debug_level = 0;
-				} else if (!strcasecmp(optval, "jsonbig")) {
-					/* JSON output, but much more detailed.
-					 * Implies debug=0. */
-					u->reporting = UR_JSON_BIG;
-					u->debug_level = 0;
-				} else if (!strcasecmp(optval, "leela-zero") ||
-					   !strcasecmp(optval, "leelaz") ||
-					   !strcasecmp(optval, "lz")) {
-					/* Leela-Zero pondering format. */
-					u->reporting = UR_LEELA_ZERO;
-				} else
-					die("UCT: Invalid reporting format %s\n", optval);
-			} else if (!strcasecmp(optname, "reportfreq") && optval) {
-				/* The progress information line will be shown
-				 * every <reportfreq> simulations. */
-				u->reportfreq = atoi(optval);
-			} else if (!strcasecmp(optname, "dumpthres") && optval) {
-				/* When dumping the UCT tree on output, include
-				 * nodes with at least this many playouts.
-				 * (A fraction of the total # of playouts at the
-				 * tree root.) */
-				/* Use 0 to list all nodes with at least one
-				 * simulation, and -1 to list _all_ nodes. */
-				u->dumpthres = atof(optval);
-			} else if (!strcasecmp(optname, "resign_threshold") && optval) {
-				/* Resign when this ratio of games is lost
-				 * after GJ_MINGAMES sample is taken. */
-				u->resign_threshold = atof(optval);
-			} else if (!strcasecmp(optname, "sure_win_threshold") && optval) {
-				/* Stop reading when this ratio of games is won
-				 * after PLAYOUT_EARLY_BREAK_MIN sample is
-				 * taken. (Prevents stupid time losses,
-				 * friendly to human opponents.) */
-				u->sure_win_threshold = atof(optval);
-			} else if (!strcasecmp(optname, "force_seed") && optval) {
-				/* Set RNG seed at the tree setup. */
-				u->force_seed = atoi(optval);
-			} else if (!strcasecmp(optname, "no_tbook")) {
-				/* Disable UCT opening tbook. */
-				u->no_tbook = true;
-			} else if (!strcasecmp(optname, "pass_all_alive")) {
-				/* Whether to consider passing only after all
-				 * dead groups were removed from the board;
-				 * this is like all genmoves are in fact
-				 * kgs-genmove_cleanup. */
-				u->pass_all_alive = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "allow_losing_pass")) {
-				/* Whether to consider passing in a clear
-				 * but losing situation, to be scored as a loss
-				 * for us. */
-				u->allow_losing_pass = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "stones_only")) {
-				/* Do not count eyes. Nice to teach go to kids.
-				 * http://strasbourg.jeudego.org/regle_strasbourgeoise.htm */
-				b->rules = RULES_STONES_ONLY;
-				u->pass_all_alive = true;
-			} else if (!strcasecmp(optname, "debug_after")) {
-				/* debug_after=9:1000 will make Pachi think under
-				 * the normal conditions, but at the point when
-				 * a move is to be chosen, the tree is dumped and
-				 * another 1000 simulations are run single-threaded
-				 * with debug level 9, allowing inspection of Pachi's
-				 * behavior after it has thought a lot. */
-				if (optval) {
-					u->debug_after.level = atoi(optval);
-					char *playouts = strchr(optval, ':');
-					if (playouts)
-						u->debug_after.playouts = atoi(playouts+1);
-					else
-						u->debug_after.playouts = 1000;
-				} else {
-					u->debug_after.level = 9;
-					u->debug_after.playouts = 1000;
-				}
-			} else if ((!strcasecmp(optname, "banner") && optval) ||
-				   (!strcasecmp(optname, "comment") && optval)) {
-				/* Set message displayed at game start on kgs.
-				 * Default is "Pachi %s, Have a nice game !"
-				 * '%s' is replaced by Pachi version.
-				 * This must come as the last engine parameter.
-				 * You can use '+' instead of ' ' if you are wrestling with kgsGtp. */
-				if (*next) *--next = ',';
-				u->banner = strdup(optval);
-				for (char *b = u->banner; *b; b++)
-					if (*b == '+') *b = ' ';
-				break;
-#ifdef PACHI_PLUGINS
-			} else if (!strcasecmp(optname, "plugin") && optval) {
-				/* Load an external plugin; filename goes before the colon,
-				 * extra arguments after the colon. */
-				char *pluginarg = strchr(optval, ':');
-				if (pluginarg)
-					*pluginarg++ = 0;
-				plugin_load(u->plugins, optval, pluginarg);
-#endif
-			/** UCT behavior and policies */
-
-			} else if ((!strcasecmp(optname, "policy")
-				/* Node selection policy. ucb1amaf is the
-				 * default policy implementing RAVE, while
-				 * ucb1 is the simple exploration/exploitation
-				 * policy. Policies can take further extra
-				 * options. */
-			            || !strcasecmp(optname, "random_policy")) && optval) {
-				/* A policy to be used randomly with small
-				 * chance instead of the default policy. */
-				char *policyarg = strchr(optval, ':');
-				uct_policy_t **p = !strcasecmp(optname, "policy") ? &u->policy : &u->random_policy;
-				if (policyarg)
-					*policyarg++ = 0;
-				if (!strcasecmp(optval, "ucb1")) {
-					*p = policy_ucb1_init(u, policyarg);
-				} else if (!strcasecmp(optval, "ucb1amaf")) {
-					*p = policy_ucb1amaf_init(u, policyarg, b);
-				} else
-					die("UCT: Invalid tree policy %s\n", optval);
-			} else if (!strcasecmp(optname, "playout") && optval) {
-				/* Random simulation (playout) policy.
-				 * moggy is the default policy with large
-				 * amount of domain-specific knowledge and
-				 * heuristics. light is a simple uniformly
-				 * random move selection policy. */
-				char *playoutarg = strchr(optval, ':');
-				if (playoutarg)
-					*playoutarg++ = 0;
-				if (!strcasecmp(optval, "moggy")) {
-					u->playout = playout_moggy_init(playoutarg, b);
-				} else if (!strcasecmp(optval, "light")) {
-					u->playout = playout_light_init(playoutarg, b);
-				} else
-					die("UCT: Invalid playout policy %s\n", optval);
-			} else if (!strcasecmp(optname, "prior") && optval) {
-				/* Node priors policy. When expanding a node,
-				 * it will seed node values heuristically
-				 * (most importantly, based on playout policy
-				 * opinion, but also with regard to other
-				 * things). See uct/prior.c for details.
-				 * Use prior=eqex=0 to disable priors. */
-				u->prior = uct_prior_init(optval, b, u);
-			} else if (!strcasecmp(optname, "mercy") && optval) {
-				/* Minimal difference of black/white captures
-				 * to stop playout - "Mercy Rule". Speeds up
-				 * hopeless playouts at the expense of some
-				 * accuracy. */
-				u->mercymin = atoi(optval);
-			} else if (!strcasecmp(optname, "gamelen") && optval) {
-				/* Maximum length of single simulation
-				 * in moves. */
-				u->gamelen = atoi(optval);
-			} else if (!strcasecmp(optname, "expand_p") && optval) {
-				/* Expand UCT nodes after it has been
-				 * visited this many times. */
-				u->expand_p = atoi(optval);
-			} else if (!strcasecmp(optname, "random_policy_chance") && optval) {
-				/* If specified (N), with probability 1/N, random_policy policy
-				 * descend is used instead of main policy descend; useful
-				 * if specified policy (e.g. UCB1AMAF) can make unduly biased
-				 * choices sometimes, you can fall back to e.g.
-				 * random_policy=UCB1. */
-				u->random_policy_chance = atoi(optval);
-
-			/** General AMAF behavior */
-			/* (Only relevant if the policy supports AMAF.
-			 * More variables can be tuned as policy
-			 * parameters.) */
-
-			} else if (!strcasecmp(optname, "playout_amaf")) {
-				/* Whether to include random playout moves in
-				 * AMAF as well. (Otherwise, only tree moves
-				 * are included in AMAF. Of course makes sense
-				 * only in connection with an AMAF policy.) */
-				/* with-without: 55.5% (+-4.1) */
-				if (optval && *optval == '0')
-					u->playout_amaf = false;
-				else
-					u->playout_amaf = true;
-			} else if (!strcasecmp(optname, "playout_amaf_cutoff") && optval) {
-				/* Keep only first N% of playout stage AMAF
-				 * information. */
-				u->playout_amaf_cutoff = atoi(optval);
-			} else if (!strcasecmp(optname, "amaf_prior") && optval) {
-				/* In node policy, consider prior values
-				 * part of the real result term or part
-				 * of the AMAF term? */
-				u->amaf_prior = atoi(optval);
-
-			/** Performance and memory management */
-
-			} else if (!strcasecmp(optname, "threads") && optval) {
-				/* By default, Pachi will run with only single
-				 * tree search thread! */
-				u->threads = atoi(optval);
-			} else if (!strcasecmp(optname, "thread_model") && optval) {
-				if (!strcasecmp(optval, "tree")) {
-					/* Tree parallelization - all threads
-					 * grind on the same tree. */
-					u->thread_model = TM_TREE;
-					u->virtual_loss = 0;
-				} else if (!strcasecmp(optval, "treevl")) {
-					/* Tree parallelization, but also
-					 * with virtual losses - this discou-
-					 * rages most threads choosing the
-					 * same tree branches to read. */
-					u->thread_model = TM_TREEVL;
-				} else
-					die("UCT: Invalid thread model %s\n", optval);
-			} else if (!strcasecmp(optname, "virtual_loss") && optval) {
-				/* Number of virtual losses added before evaluating a node. */
-				u->virtual_loss = atoi(optval);
-			} else if (!strcasecmp(optname, "max_tree_size") && optval) {
-				/* Maximum amount of memory [MiB] consumed by the move tree.
-				 * For fast_alloc it includes the temp tree used for pruning.
-				 * Default is 3072 (3 GiB). */
-				u->max_tree_size = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
-			} else if (!strcasecmp(optname, "fast_alloc")) {
-				u->fast_alloc = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "pruning_threshold") && optval) {
-				/* Force pruning at beginning of a move if the tree consumes
-				 * more than this [MiB]. Default is 10% of max_tree_size.
-				 * Increase to reduce pruning time overhead if memory is plentiful.
-				 * This option is meaningful only for fast_alloc. */
-				u->pruning_threshold = atol(optval) * 1048576;
-			} else if (!strcasecmp(optname, "reset_tree")) {
-				/* Reset tree before each genmove ?
-				 * Default is to reuse previous tree when not using dcnn. 
-				 * When using dcnn tree is always reset. */
-				u->genmove_reset_tree = !optval || atoi(optval);
-
-			/* Pondering */
-
-			} else if (!strcasecmp(optname, "pondering")) {
-				/* Keep searching even during opponent's turn. */
-				u->pondering_opt = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "dcnn_pondering_prior") && optval) {
-				/* Dcnn pondering: prior guesses for next move.
-				 * When pondering with dcnn we need to guess opponent's next move:
-				 * Only these guesses are dcnn evaluated.
-				 * This is the number of guesses we pick from priors' best moves
-				 * (dcnn policy mostly). Default is 5 meaning only top-5 moves
-				 * for opponent will be considered (plus dcnnn_pondering_mcts_best
-				 * ones, see below). For slow games it makes sense to increase this:
-				 * we spend more time before actual search starts but there's more
-				 * chance we guess right, so that pondering will be useful. If we
-				 * guess wrong search results will be discarded and pondering will
-				 * not be useful for this move. For fast games try decreasing it. */
-				u->dcnn_pondering_prior = atoi(optval);
-			} else if (!strcasecmp(optname, "dcnn_pondering_mcts") && optval) {
-				/* Dcnn pondering: mcts guesses for next move.
-				 * Same as dcnn_pondering_prior but number of guesses picked from
-				 * opponent best moves in genmove search.
-				 * Default is 3. */
-				size_t n = u->dcnn_pondering_mcts = atoi(optval);
-				assert(n <= sizeof(u->dcnn_pondering_mcts_c) / sizeof(u->dcnn_pondering_mcts_c[0]));
-
-			/** Time control */
-
-			} else if (!strcasecmp(optname, "best2_ratio") && optval) {
-				/* If set, prolong simulating while
-				 * first_best/second_best playouts ratio
-				 * is less than best2_ratio. */
-				u->best2_ratio = atof(optval);
-			} else if (!strcasecmp(optname, "bestr_ratio") && optval) {
-				/* If set, prolong simulating while
-				 * best,best_best_child values delta
-				 * is more than bestr_ratio. */
-				u->bestr_ratio = atof(optval);
-			} else if (!strcasecmp(optname, "max_maintime_ratio") && optval) {
-				/* If set and while not in byoyomi, prolong simulating no more than
-				 * max_maintime_ratio times the normal desired thinking time. */
-				u->max_maintime_ratio = atof(optval);
-			} else if (!strcasecmp(optname, "fuseki_end") && optval) {
-				/* At the very beginning it's not worth thinking
-				 * too long because the playout evaluations are
-				 * very noisy. So gradually increase the thinking
-				 * time up to maximum when fuseki_end percent
-				 * of the board has been played.
-				 * This only applies if we are not in byoyomi. */
-				u->fuseki_end = atoi(optval);
-			} else if (!strcasecmp(optname, "yose_start") && optval) {
-				/* When yose_start percent of the board has been
-				 * played, or if we are in byoyomi, stop spending
-				 * more time and spread the remaining time
-				 * uniformly.
-				 * Between fuseki_end and yose_start, we spend
-				 * a constant proportion of the remaining time
-				 * on each move. (yose_start should actually
-				 * be much earlier than when real yose start,
-				 * but "yose" is a good short name to convey
-				 * the idea.) */
-				u->yose_start = atoi(optval);
-
-			/** Dynamic komi */
-
-			} else if (!strcasecmp(optname, "dynkomi") && optval) {
-				/* Dynamic komi approach; there are multiple
-				 * ways to adjust komi dynamically throughout
-				 * play. We currently support two: */
-				char *dynkomiarg = strchr(optval, ':');
-				if (dynkomiarg)
-					*dynkomiarg++ = 0;
-				if (!strcasecmp(optval, "none")) {
-					u->dynkomi = uct_dynkomi_init_none(u, dynkomiarg, b);
-				} else if (!strcasecmp(optval, "linear")) {
-					/* You should set dynkomi_mask=1 or a very low
-					 * handicap_value for white. */
-					u->dynkomi = uct_dynkomi_init_linear(u, dynkomiarg, b);
-				} else if (!strcasecmp(optval, "adaptive")) {
-					/* There are many more knobs to
-					 * crank - see uct/dynkomi.c. */
-					u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomiarg, b);
-				} else
-					die("UCT: Invalid dynkomi mode %s\n", optval);
-			} else if (!strcasecmp(optname, "dynkomi_mask") && optval) {
-				/* Bitmask of colors the player must be
-				 * for dynkomi be applied; the default dynkomi_mask=3 allows
-				 * dynkomi even in games where Pachi is white. */
-				u->dynkomi_mask = atoi(optval);
-			} else if (!strcasecmp(optname, "dynkomi_interval") && optval) {
-				/* If non-zero, re-adjust dynamic komi
-				 * throughout a single genmove reading,
-				 * roughly every N simulations. */
-				/* XXX: Does not work with tree
-				 * parallelization. */
-				u->dynkomi_interval = atoi(optval);
-			} else if (!strcasecmp(optname, "extra_komi") && optval) {
-				/* Initial dynamic komi settings. This
-				 * is useful for the adaptive dynkomi
-				 * policy as the value to start with
-				 * (this is NOT kept fixed) in case
-				 * there is not enough time in the search
-				 * to adjust the value properly (e.g. the
-				 * game was interrupted). */
-				u->initial_extra_komi = atof(optval);
-
-			/** Node value result scaling */
-
-			} else if (!strcasecmp(optname, "val_scale") && optval) {
-				/* How much of the game result value should be
-				 * influenced by win size. Zero means it isn't. */
-				u->val_scale = atof(optval);
-			} else if (!strcasecmp(optname, "val_points") && optval) {
-				/* Maximum size of win to be scaled into game
-				 * result value. Zero means boardsize^2. */
-				u->val_points = atoi(optval) * 2; // result values are doubled
-			} else if (!strcasecmp(optname, "val_extra")) {
-				/* If false, the score coefficient will be simply
-				 * added to the value, instead of scaling the result
-				 * coefficient because of it. */
-				u->val_extra = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "val_byavg")) {
-				/* If true, the score included in the value will
-				 * be relative to average score in the current
-				 * search episode inst. of jigo. */
-				u->val_byavg = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "val_bytemp")) {
-				/* If true, the value scaling coefficient
-				 * is different based on value extremity
-				 * (dist. from 0.5), linear between
-				 * val_bytemp_min, val_scale. */
-				u->val_bytemp = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "val_bytemp_min") && optval) {
-				/* Minimum val_scale in case of val_bytemp. */
-				u->val_bytemp_min = atof(optval);
-
-			/** Local trees */
-			/* (Purely experimental. Does not work - yet!) */
-
-			} else if (!strcasecmp(optname, "local_tree")) {
-				/* Whether to bias exploration by local tree values. */
-				u->local_tree = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "tenuki_d") && optval) {
-				/* Tenuki distance at which to break the local tree. */
-				u->tenuki_d = atoi(optval);
-				if (u->tenuki_d > TREE_NODE_D_MAX + 1)
-					die("uct: tenuki_d must not be larger than TREE_NODE_D_MAX+1 %d\n", TREE_NODE_D_MAX + 1);
-			} else if (!strcasecmp(optname, "local_tree_aging") && optval) {
-				/* How much to reduce local tree values between moves. */
-				u->local_tree_aging = atof(optval);
-			} else if (!strcasecmp(optname, "local_tree_depth_decay") && optval) {
-				/* With value x>0, during the descent the node
-				 * contributes 1/x^depth playouts in
-				 * the local tree. I.e., with x>1, nodes more
-				 * distant from local situation contribute more
-				 * than nodes near the root. */
-				u->local_tree_depth_decay = atof(optval);
-			} else if (!strcasecmp(optname, "local_tree_allseq")) {
-				/* If disabled, only complete sequences are stored
-				 * in the local tree. If this is on, also
-				 * subsequences starting at each move are stored. */
-				u->local_tree_allseq = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_neival")) {
-				/* If disabled, local node value is not
-				 * computed just based on terminal status
-				 * of the coordinate, but also its neighbors. */
-				u->local_tree_neival = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "local_tree_eval")) {
-				/* How is the value inserted in the local tree
-				 * determined. */
-				if (!strcasecmp(optval, "root"))
-					/* All moves within a tree branch are
-					 * considered wrt. their merit
-					 * reaching tachtical goal of making
-					 * the first move in the branch
-					 * survive. */
-					u->local_tree_eval = LTE_ROOT;
-				else if (!strcasecmp(optval, "each"))
-					/* Each move is considered wrt.
-					 * its own survival. */
-					u->local_tree_eval = LTE_EACH;
-				else if (!strcasecmp(optval, "total"))
-					/* The tactical goal is the survival
-					 * of all the moves of my color and
-					 * non-survival of all the opponent
-					 * moves. Local values (and their
-					 * inverses) are averaged. */
-					u->local_tree_eval = LTE_TOTAL;
-				else
-					die("uct: unknown local_tree_eval %s\n", optval);
-			} else if (!strcasecmp(optname, "local_tree_rootchoose")) {
-				/* If disabled, only moves within the local
-				 * tree branch are considered; the values
-				 * of the branch roots (i.e. root children)
-				 * are ignored. This may make sense together
-				 * with eval!=each, we consider only moves
-				 * that influence the goal, not the "rating"
-				 * of the goal itself. (The real solution
-				 * will be probably using criticality to pick
-				 * local tree branches.) */
-				u->local_tree_rootchoose = !optval || atoi(optval);
-
-			/** Other heuristics */
-			} else if (!strcasecmp(optname, "patterns")) {
-				/* Load pattern database. Various modules
-				 * (priors, policies etc.) may make use
-				 * of this database. They will request
-				 * it automatically in that case, but you
-				 * can use this option to tweak the pattern
-				 * parameters. */
-				patterns_init(&u->pc, optval, false, true);
-				pat_setup = true;
-			} else if (!strcasecmp(optname, "significant_threshold") && optval) {
-				/* Some heuristics (XXX: none in mainline) rely
-				 * on the knowledge of the last "significant"
-				 * node in the descent. Such a node is
-				 * considered reasonably trustworthy to carry
-				 * some meaningful information in the values
-				 * of the node and its children. */
-				u->significant_threshold = atoi(optval);
-
-			/** Distributed engine slaves setup */
-#ifdef DISTRIBUTED
-			} else if (!strcasecmp(optname, "slave")) {
-				/* Act as slave for the distributed engine. */
-				u->slave = !optval || atoi(optval);
-			} else if (!strcasecmp(optname, "slave_index") && optval) {
-				/* Optional index if per-slave behavior is desired.
-				 * Must be given as index/max */
-				u->slave_index = atoi(optval);
-				char *p = strchr(optval, '/');
-				if (p) u->max_slaves = atoi(++p);
-			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
-				/* Share at most shared_nodes between master and slave at each genmoves.
-				 * Must use the same value in master and slaves. */
-				u->shared_nodes = atoi(optval);
-			} else if (!strcasecmp(optname, "shared_levels") && optval) {
-				/* Share only nodes of level <= shared_levels. */
-				u->shared_levels = atoi(optval);
-			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
-				/* Set hash table size to 2^stats_hbits for the shared stats. */
-				u->stats_hbits = atoi(optval);
-			} else if (!strcasecmp(optname, "stats_delay") && optval) {
-				/* How long to wait in slave for initial stats to build up before
-				 * replying to the genmoves command (in ms) */
-				u->stats_delay = 0.001 * atof(optval);
-#endif /* DISTRIBUTED */
-
-			/** Presets */
-
-			} else if (!strcasecmp(optname, "maximize_score")) {
-				/* A combination of settings that will make
-				 * Pachi try to maximize his points (instead
-				 * of playing slack yose) or minimize his loss
-				 * (and proceed to counting even when losing). */
-				/* Please note that this preset might be
-				 * somewhat weaker than normal Pachi, and the
-				 * score maximization is approximate; point size
-				 * of win/loss still should not be used to judge
-				 * strength of Pachi or the opponent. */
-				/* See README for some further notes. */
-				if (!optval || atoi(optval)) {
-					/* Allow scoring a lost game. */
-					u->allow_losing_pass = true;
-					/* Make Pachi keep his calm when losing
-					 * and/or maintain winning marging. */
-					/* Do not play games that are losing
-					 * by too much. */
-					/* XXX: komi_ratchet_age=40000 is necessary
-					 * with losing_komi_ratchet, but 40000
-					 * is somewhat arbitrary value. */
-					char dynkomi_args[] = "losing_komi_ratchet:komi_ratchet_age=60000:no_komi_at_game_end=0:max_losing_komi=30";
-					u->dynkomi = uct_dynkomi_init_adaptive(u, dynkomi_args, b);
-					/* XXX: Values arbitrary so far. */
-					/* XXX: Also, is bytemp sensible when
-					 * combined with dynamic komi?! */
-					u->val_scale = 0.01;
-					u->val_bytemp = true;
-					u->val_bytemp_min = 0.001;
-					u->val_byavg = true;
-				}
-
-			} else
-				die("uct: Invalid engine argument %s or missing value\n", optname);
-		}
+	
+	/* Process engine options. */
+	for (int i = 0; i < options->n; i++) {
+		char *err;
+		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
+			die("%s", err);
+		if (!strcmp(options->o[i].name, "patterns"))
+			pat_setup = true;
 	}
-
+	
 	if (!u->policy)
 		u->policy = policy_ucb1amaf_init(u, NULL, b);
 
 	if (!!u->random_policy_chance ^ !!u->random_policy)
 		die("uct: Only one of random_policy and random_policy_chance is set\n");
 
-	if (!u->local_tree) {
-		/* No ltree aging. */
+	if (!u->local_tree)  /* No ltree aging. */
 		u->local_tree_aging = 1.0f;
-	}
 
 	if (u->fast_alloc) {
 		if (u->pruning_threshold < u->max_tree_size / 10)
@@ -1422,21 +1480,16 @@ uct_state_init(char *arg, board_t *b)
 }
 
 void
-engine_uct_init(engine_t *e, char *arg, board_t *b)
+engine_uct_init(engine_t *e, board_t *b)
 {
-	uct_t *u = uct_state_init(arg, b);
 	e->name = "UCT";
+	e->setoption = uct_setoption;
 	e->board_print = uct_board_print;
 	e->notify_play = uct_notify_play;
 	e->chat = uct_chat;
 	e->result = uct_result;
 	e->genmove = uct_genmove;
 	e->genmove_analyze = uct_genmove_analyze;
-#ifdef DISTRIBUTED
-	e->genmoves = uct_genmoves;
-	if (u->slave)
-		e->notify = uct_notify;
-#endif
 	e->best_moves = uct_best_moves;
 	e->evaluate = uct_evaluate;
 	e->analyze = uct_analyze;
@@ -1445,6 +1498,14 @@ engine_uct_init(engine_t *e, char *arg, board_t *b)
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;
 	e->livegfx_hook = uct_livegfx_hook;
-	e->data = u;
+
+	uct_t *u = uct_state_init(e, b);
+
+#ifdef DISTRIBUTED
+	e->genmoves = uct_genmoves;
+	if (u->slave)
+		e->notify = uct_notify;
+#endif
+
 	e->comment = u->banner;
 }

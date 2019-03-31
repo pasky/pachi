@@ -276,7 +276,7 @@ board_regression_test(board_t *b, char *arg)
 		//if (!strncmp(buf, "clear_board", 11))  printf("\nGame %i:\n", gtp.played_games + 1);
 		// if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
 
-		gtp_parse(&gtp, b, &e, NULL, ti, buf);
+		gtp_parse(&gtp, b, &e, ti, buf);
 		dump_board(b);
 		b->superko_violation = false;       // never cleared currently.
 	}

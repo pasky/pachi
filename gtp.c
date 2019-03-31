@@ -133,7 +133,7 @@ gtp_error_printf(gtp_t *gtp, const char *format, ...)
  * it should only be used between master and slaves of the distributed engine.
  * For now only uct engine supports gogui-analyze_commands. */
 static char*
-known_commands(engine_t *engine)
+known_commands(engine_t *e)
 {
 	static char buf[8192];
 	char *str = buf;
@@ -183,7 +183,7 @@ gtp_board_play(gtp_t *gtp, board_t *b, move_t *m)
 }
 
 static enum parse_code
-cmd_protocol_version(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_protocol_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	gtp_reply(gtp, "2");
 	return P_OK;
@@ -201,7 +201,7 @@ cmd_name(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_echo(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_echo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	gtp_printf(gtp, "%s", gtp->next);
 	return P_OK;
@@ -225,24 +225,24 @@ cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_list_commands(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_list_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_printf(gtp, "%s", known_commands(engine));
+	gtp_printf(gtp, "%s", known_commands(e));
 	return P_OK;
 }
 
 static enum parse_code
-cmd_known_command(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_known_command(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
-	if (gtp_is_valid(engine, arg))  gtp_reply(gtp, "true");
-	else                            gtp_reply(gtp, "false");
+	if (gtp_is_valid(e, arg))  gtp_reply(gtp, "true");
+	else                       gtp_reply(gtp, "false");
 	return P_OK;
 }
 
 static enum parse_code
-cmd_quit(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_quit(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	gtp_flush(gtp);
 	pachi_done();
@@ -250,7 +250,7 @@ cmd_quit(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_boardsize(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_boardsize(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
@@ -268,18 +268,18 @@ cmd_boardsize(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 		gtp_error(gtp, "illegal board size");
 		return P_OK;
 	}
-	board_resize(board, size);
-	board_clear(board);
+	board_resize(b, size);
+	board_clear(b);
 	return P_ENGINE_RESET;
 }
 
 static enum parse_code
-cmd_clear_board(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_clear_board(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	board_clear(board);
+	board_clear(b);
 	gtp->played_games++;
 	if (DEBUGL(3) && debug_boardprint)
-		board_print(board, stderr);
+		board_print(b, stderr);
 
 	/* Reset move history. */
 	gtp->moves = 0;
@@ -288,7 +288,7 @@ cmd_clear_board(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_kgs_game_over(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_kgs_game_over(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	/* The game may not be really over, just adjourned.
 	 * Do not clear the board to avoid illegal moves
@@ -298,8 +298,8 @@ cmd_kgs_game_over(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 		fprintf(stderr, "game is over\n");
 		fflush(stderr);
 	}
-	if (engine->stop)
-		engine->stop(engine);
+	if (e->stop)
+		e->stop(e);
 	/* Sleep before replying, so that kgs doesn't
 	 * start another game immediately. */
 	sleep(GAME_OVER_SLEEP);
@@ -307,19 +307,19 @@ cmd_kgs_game_over(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_komi(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_komi(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
-	sscanf(arg, PRIfloating, &board->komi);
+	sscanf(arg, PRIfloating, &b->komi);
 
 	if (DEBUGL(3) && debug_boardprint)
-		board_print(board, stderr);
+		board_print(b, stderr);
 	return P_OK;
 }
 
 static enum parse_code
-cmd_kgs_rules(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_kgs_rules(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
@@ -331,7 +331,7 @@ cmd_kgs_rules(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	if (!board_set_rules(board, arg))
+	if (!board_set_rules(b, arg))
 		gtp_error(gtp, "unknown rules");
 	return P_OK;
 }
@@ -348,14 +348,12 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	m.coord = str2coord(arg);
 	arg = gtp->next;
 	char *enginearg = arg;
-	char *reply = NULL;
 
 	// This is where kgs starts the timer, not at genmove!
 	time_start_timer(&ti[stone_other(m.color)]);
 
 	// XXX engine getting notified if move is illegal !
-	if (e->notify_play)
-		reply = e->notify_play(e, b, &m, enginearg);
+	char *reply = (e->notify_play ? e->notify_play(e, b, &m, enginearg) : NULL);
 	
 	if (gtp_board_play(gtp, b, &m) < 0) {
 		if (DEBUGL(0)) {
@@ -374,7 +372,7 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_pachi_predict(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_pachi_predict(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	move_t m;
 	char *arg;
@@ -383,7 +381,7 @@ cmd_pachi_predict(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	gtp_arg(arg);
 	m.coord = str2coord(arg);
 
-	char *str = predict_move(board, engine, ti, &m, gtp->played_games);
+	char *str = predict_move(b, e, ti, &m, gtp->played_games);
 
 	/* Add to gtp move history. */
 	gtp_add_move(gtp, &m);
@@ -475,7 +473,7 @@ cmd_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_pachi_genmoves(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
@@ -483,18 +481,16 @@ cmd_pachi_genmoves(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp
 	void *stats;
 	int stats_size;
 
-	time_info_t *ti_genmove = time_info_genmove(board, ti, color);
-	char *reply = engine->genmoves(engine, board, ti_genmove, color, gtp->next,
-				       !strcasecmp(gtp->cmd, "pachi-genmoves_cleanup"),
-				       &stats, &stats_size);
+	time_info_t *ti_genmove = time_info_genmove(b, ti, color);
+	char *reply = e->genmoves(e, b, ti_genmove, color, gtp->next,
+				  !strcasecmp(gtp->cmd, "pachi-genmoves_cleanup"),
+				  &stats, &stats_size);
 	if (!reply) {
 		gtp_error(gtp, "genmoves error");
 		return P_OK;
 	}
-	if (DEBUGL(3))
-		fprintf(stderr, "proposing moves %s\n", reply);
-	if (DEBUGL(4) && debug_boardprint)
-		engine_board_print(engine, board, stderr);
+	if (DEBUGL(3))                      fprintf(stderr, "proposing moves %s\n", reply);
+	if (DEBUGL(4) && debug_boardprint)  engine_board_print(e, b, stderr);
 	gtp_reply(gtp, reply);
 	if (stats_size > 0) {
 		double start = time_now();
@@ -612,6 +608,39 @@ cmd_pachi_score_est(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	board_print_ownermap(b, stderr, ownermap);
 	gtp_reply(gtp, ownermap_score_est_str(b, ownermap));
+	return P_OK;
+}
+
+static enum parse_code
+cmd_pachi_setoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *arg, *err;
+	gtp_arg(arg);
+	if (!engine_setoptions(e, b, arg, &err))
+	    gtp_error(gtp, err);
+	return P_OK;
+}
+
+/* Get engine option(s):
+ * Without arg, return all options (comma-separated)
+ * With arg (option name), return option value. */
+static enum parse_code
+cmd_pachi_getoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *name;
+	gtp_arg_optional(name);
+
+	if (*name) {  /* Return option value */
+		option_t *o = engine_options_lookup(&e->options, name);
+		if (!o)  gtp_error(gtp, "option not set");
+		else     gtp_reply(gtp, (o->val ? o->val : ""));
+		return P_OK;
+	}
+
+	/* Dump all options. */
+	strbuf(buf, 1024);
+	engine_options_concat(buf, &e->options);
+	gtp_reply(gtp, buf->str);
 	return P_OK;
 }
 
@@ -750,13 +779,13 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 }
 
 static void
-undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg)
+undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e)
 {
 	if (DEBUGL(3)) fprintf(stderr, "reloading engine after undo(s).\n");
 	
 	gtp->undo_pending = false;
 
-	engine_reset(e, b, e_arg);
+	engine_reset(e, b);
 	
 	/* Reset board */
 	int handicap = b->handicap;
@@ -772,86 +801,82 @@ undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg)
 }
 
 static enum parse_code
-cmd_showboard(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_showboard(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	gtp_printf(gtp, "");
-	board_print(board, stdout);
+	board_print(b, stdout);
 	gtp->flushed = 1;  // already ends with \n\n
 	return P_OK;
 }
 
 /* Custom commands for handling the tree opening tbook */
 static enum parse_code
-cmd_pachi_gentbook(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_pachi_gentbook(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	/* Board must be initialized properly, as if for genmove;
 	 * makes sense only as 'uct_gentbook b'. */
 	char *arg;
 	gtp_arg(arg);
 	enum stone color = str2stone(arg);
-	if (!uct_gentbook(engine, board, &ti[color], color))
+	if (!uct_gentbook(e, b, &ti[color], color))
 		gtp_error(gtp, "error generating tbook");
 	return P_OK;
 }
 
 static enum parse_code
-cmd_pachi_dumptbook(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_pachi_dumptbook(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
 	enum stone color = str2stone(arg);
-	uct_dumptbook(engine, board, color);
+	uct_dumptbook(e, b, color);
 	return P_OK;
 }
 
 static enum parse_code
-cmd_pachi_evaluate(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_pachi_evaluate(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
 	enum stone color = str2stone(arg);
 
-	if (!engine->evaluate) {
+	if (!e->evaluate) {
 		gtp_error(gtp, "pachi-evaluate not supported by engine");
 	} else {
-		floating_t vals[board->flen];
-		engine->evaluate(engine, board, &ti[color], vals, color);
-		for (int i = 0; i < board->flen; i++) {
-			if (!board_coord_in_symmetry(board, board->f[i])
+		floating_t vals[b->flen];
+		e->evaluate(e, b, &ti[color], vals, color);
+		for (int i = 0; i < b->flen; i++) {
+			if (!board_coord_in_symmetry(b, b->f[i])
 			    || isnan(vals[i]) || vals[i] < 0.001)
 				continue;
-			gtp_printf(gtp, "%s %.3f\n", coord2sstr(board->f[i]), (double) vals[i]);
+			gtp_printf(gtp, "%s %.3f\n", coord2sstr(b->f[i]), (double) vals[i]);
 		}
 	}
 	return P_OK;
 }
 
 static enum parse_code
-cmd_pachi_result(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_pachi_result(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	/* More detailed result of the last genmove. */
 	/* For UCT, the output format is: = color move playouts winrate dynkomi */
-	char *reply = NULL;
-	if (engine->result)
-		reply = engine->result(engine, board);
-	if (reply)
-		gtp_reply(gtp, reply);
-	else
-		gtp_error(gtp, "unknown pachi-result command");
+	char *reply = (e->result ? e->result(e, b) : NULL);
+	if (reply)  gtp_reply(gtp, reply);
+	else        gtp_error(gtp, "unknown pachi-result command");
 	return P_OK;
 }
 
 static enum parse_code
-cmd_pachi_tunit(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_pachi_tunit(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	int res = unit_test_cmd(board, gtp->next);
+	int res = unit_test_cmd(b, gtp->next);
 	const char *str = (res ? "passed" : "failed");
 	gtp_reply(gtp, str);
 	return P_OK;
 }
 
 static enum parse_code
-cmd_kgs_chat(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_kgs_chat(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *loc;
 	gtp_arg(loc);
@@ -862,19 +887,14 @@ cmd_kgs_chat(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	msg += strspn(msg, " \n\t");
 	char *end = strchr(msg, '\n');
 	if (end) *end = '\0';
-	char *reply = NULL;
-	if (engine->chat) {
-		reply = engine->chat(engine, board, opponent, from, msg);
-	}
-	if (reply)
-		gtp_reply(gtp, reply);
-	else
-		gtp_error(gtp, "unknown kgs-chat command");
+	char *reply = (e->chat ? e->chat(e, b, opponent, from, msg) : NULL);
+	if (reply)  gtp_reply(gtp, reply);
+	else        gtp_error(gtp, "unknown kgs-chat command");
 	return P_OK;
 }
 
 static enum parse_code
-cmd_time_left(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_time_left(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
@@ -891,7 +911,7 @@ cmd_time_left(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 }
 
 static enum parse_code
-cmd_kgs_time_settings(board_t *board, engine_t *engine, time_info_t *ti, gtp_t *gtp)
+cmd_kgs_time_settings(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *time_system;
 	char *arg;
@@ -976,6 +996,8 @@ static gtp_command_t gtp_commands[] =
 	{ "pachi-evaluate",         cmd_pachi_evaluate },
 	{ "pachi-result",           cmd_pachi_result },
 	{ "pachi-score_est",        cmd_pachi_score_est },
+	{ "pachi-setoption",	    cmd_pachi_setoption },  /* Set/change engine option */
+	{ "pachi-getoption",	    cmd_pachi_getoption },  /* Get engine option(s) */
 
 	{ "lz-analyze",             cmd_lz_analyze },       /* For Lizzie */
 	{ "lz-genmove_analyze",     cmd_genmove_analyze },  /* Sabaki etc */
@@ -1021,7 +1043,7 @@ gtp_internal_init()
  * Even basic input checking is missing. */
 
 enum parse_code
-gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, char *buf)
+gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 {
 	if (strchr(buf, '#'))
 		*strchr(buf, '#') = 0;
@@ -1046,7 +1068,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, cha
 	
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
-		undo_reload_engine(gtp, b, e, e_arg);
+		undo_reload_engine(gtp, b, e);
 	
 	if (e->notify && gtp_is_valid(e, gtp->cmd)) {
 		char *reply;

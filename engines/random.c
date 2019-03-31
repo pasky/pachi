@@ -33,12 +33,12 @@ random_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool 
 }
 
 void
-engine_random_init(engine_t *e, char *arg, board_t *b)
+engine_random_init(engine_t *e, board_t *b)
 {
 	e->name = "RandomMove";
 	e->comment = "I just make random moves. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = random_genmove;
 
-	if (arg)
-		fprintf(stderr, "Random: I support no engine arguments\n");
+	if (e->options.n)
+		die("Random: I support no engine arguments\n");
 }

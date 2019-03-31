@@ -37,7 +37,7 @@
 #include "patternprob.h"
 #include "joseki.h"
 
-static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, time_info_t *ti_default);
+static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default);
 
 char *pachi_exe = NULL;
 int   debug_level = 3;
@@ -79,15 +79,10 @@ init()
 };
 
 void
-pachi_engine_init(engine_t *e, int id, char *e_arg, board_t *b)
+pachi_engine_init(engine_t *e, int id, board_t *b)
 {
-	assert(id >= 0 && id < E_MAX);
-	
-	memset(e, 0, sizeof(*e));
-	char *arg = (e_arg ? strdup(e_arg) : e_arg);
-	engine_inits[id](e, arg, b);
-	e->id = id;
-	if (arg)  free(arg);
+	assert(id >= 0 && id < E_MAX);	
+	engine_inits[id](e, b);
 }
 
 static void
@@ -430,7 +425,7 @@ int main(int argc, char *argv[])
 	network_init();
 
 	while (1) {
-		main_loop(gtp, b, &e, e_arg, ti, &ti_default);
+		main_loop(gtp, b, &e, ti, &ti_default);
 		if (!gtp_port) break;
 		network_init();
 	}
@@ -448,13 +443,13 @@ int main(int argc, char *argv[])
 }
 
 static void
-main_loop(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, time_info_t *ti_default)
+main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default)
 {
 	char buf[4096];
 	while (fgets(buf, 4096, stdin)) {
 		if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
 
-		enum parse_code c = gtp_parse(gtp, b, e, e_arg, ti, buf);
+		enum parse_code c = gtp_parse(gtp, b, e, ti, buf);
 
 		/* The gtp command is a weak identity check,
 		 * close the connection with a wrong peer. */
@@ -464,7 +459,7 @@ main_loop(gtp_t *gtp, board_t *b, engine_t *e, char *e_arg, time_info_t *ti, tim
 			ti[S_BLACK] = *ti_default;
 			ti[S_WHITE] = *ti_default;
 			if (!e->keep_on_clear)
-				engine_reset(e, b, e_arg);
+				engine_reset(e, b);
 		}
 	}
 }

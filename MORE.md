@@ -65,6 +65,30 @@ During the game, the winning/losing margin can be approximated from
 Pachi's "extra komi" or "xkomi" reporting in the progress messages.
 
 
+## Setting Engine Options Over GTP
+
+- `pachi-setoption <engine_options>`
+- `pachi-getoption [<option>]`
+
+<engine_options> format is the same as toplevel pachi command (comma separated).
+pachi-setoption adds specified option(s) to current set of engine options.
+Options set through pachi-setoption persist across engine resets (clear_board etc).
+You should get a gtp error if option is invalid.
+
+Without argument pachi-getoption returns all engine options currently set (comma separated),
+given option's value otherwise.
+
+Example:
+
+* `pachi-getoption max_tree_size`
+
+  Get max memory size for tree search.
+
+* `pachi-setoption max_tree_size=1024`
+
+  Change to 1Gb.
+
+
 ## Game Analysis
 
 Pachi can help you analyze your games by being able to provide its
