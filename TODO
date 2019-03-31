@@ -20,7 +20,7 @@ Strength:
         example (very slow though)
 * LFR large patterns (CPU mode)
         Use LFR for priors instead of MM patterns.
-        MM patterns have about 31% prediction rate right now, can expect
+        MM patterns have about 37% prediction rate right now, can expect
         44% with LFR which should help tree search quite a bit.
         Implementation doesn't even need to be fast (incremental patterns)
         to be used in tree search. Try progressive widening.
@@ -35,10 +35,6 @@ Strength:
 Base:
 * Further optimize board implementation, profiling fun
 * Allow custom GTP commands for modules
-* Improve gogui analyze commands:
-    - Average playouts score estimate would be nice to have
-      (already have ownermap score est)
-* Implement parameter setup over GTP (less important)
 * Fix the build system to allow fully parallel build
 	However, revamp to something like cmake (or, ugh, autotools)
 	is not guaranteed to be appreciated.
@@ -53,11 +49,6 @@ Self-contained tasks:
 	output may be used for inspiration, but we can take it further!
 	This could be done even if you are afraid of Pachi's codebase,
 	just using Pachi's output.
-* Try to disable the bsize pattern feature
-	It just fudges the pattern evaluation since for most tactical
-	patterns fourth line vs. fifth line just doesn't matter. Maybe
-	its max should be 2 and maybe it should just be gone, needs
-	regenerating the pattern database and benchmarking.
 * Try to avoid using a hash table for 3x3 patterns
 	Instead autogenerate procedural matching code; may be more
 	efficient (the near-guaranteed L1 cache miss is fairly expensive).
