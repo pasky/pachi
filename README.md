@@ -164,16 +164,14 @@ It's also possible to run Pachi with [Lizzie](https://github.com/featurecat/lizz
 This is a great way to explore variations, analyze games or visualize what Pachi is doing while it's thinking,
 the graphics are amazing.
 
-Download windows release: [Lizzie-0.6.Pachi-12.30.Windows.zip](https://github.com/featurecat/lizzie/files/2866380/Lizzie-0.6.Pachi-12.30.Windows.zip)
+Download windows release: [Lizzie-0.6.Pachi-12.40.Windows.zip](https://github.com/featurecat/lizzie/files/3027159/Lizzie-0.6.Pachi-12.40.Windows.zip)
 
 Or make your own:
 - Download [Lizzie 0.6](https://github.com/featurecat/lizzie/releases/tag/0.6)
-- Download [Pachi 12.30](https://github.com/pasky/pachi/releases/tag/pachi-12.30-jowa), extract in Lizzie folder
+- Download [Pachi 12.40](https://github.com/pasky/pachi/releases/tag/pachi-12.40), extract in Lizzie folder
 - Edit Lizzie config.txt, make it use Pachi instead of Leela-Zero:
 
-        "engine-command": "pachi/pachi --version=0.16 reporting=lz,reportfreq=500",
-
-Tweak reportfreq to change update speed.
+        "engine-command": "pachi/pachi --version=0.16",
 
 
 ## Logs
