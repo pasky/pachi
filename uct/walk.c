@@ -185,7 +185,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 	}
 
 	/* Best candidates */
-	int cans = 4;
+	int cans = 20;
 	tree_node_t *can[cans];
 	memset(can, 0, sizeof(can));
 	tree_node_t *best = t->root->children;
@@ -202,8 +202,8 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 		/* Best sequence */
 		fprintf(fh, "[");
 		best = can[cans];
-		for (int depth = 0; depth < 4; depth++) {
-			if (!best || best->u.playouts < 25) break;
+		for (int depth = 0; depth < 20; depth++) {
+			if (!best || best->u.playouts < 1) break;
 			fprintf(fh, "%s{\"%s\": [%.3f, %i]}", depth > 0 ? "," : "",
 				coord2sstr(best->coord),
 				tree_node_get_value(t, 1, best->u.value),
