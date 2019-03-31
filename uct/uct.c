@@ -455,14 +455,12 @@ uct_pondering_stop(uct_t *u)
 
 	/* Stop the thread manager. */
 	uct_thread_ctx_t *ctx = uct_search_stop();
-	if (UDEBUGL(1)) {
-		if (u->pondering) fprintf(stderr, "(pondering) ");
-		uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
-	}
+	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
 	if (u->pondering) {
 		free(ctx->b);
 		u->pondering = false;
 		u->genmove_pondering = false;
+		u->report_fh = stderr;
 	}
 }
 
@@ -488,14 +486,6 @@ uct_genmove_setup(uct_t *u, board_t *b, enum stone color)
 	 * the last genmove issued. */
 	u->t->use_extra_komi = !!(u->dynkomi_mask & color);
 	setup_dynkomi(u, b, color);
-}
-
-static void
-uct_livegfx_hook(engine_t *e)
-{
-	uct_t *u = (uct_t*)e->data;
-	/* Hack: Override reportfreq to get decent update rates in GoGui */
-	u->reportfreq = MIN(u->reportfreq, 1000);
 }
 
 static tree_node_t *
@@ -592,6 +582,8 @@ uct_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
 {
 	uct_t *u = (uct_t*)e->data;
 	enum uct_reporting prev = u->reporting;
+
+	uct_pondering_stop(u);   /* Don't clobber report_fh later on... */
 	
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;	
@@ -612,6 +604,7 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 
 	if (!start) {
 		if (u->pondering) uct_pondering_stop(u);
+		if (u->t) reset_state(u);
 		return;
 	}
 
@@ -619,6 +612,7 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	if (u->pondering)  return;
 
 	u->reporting = UR_LEELA_ZERO;
+	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
 	if (!u->t)  uct_prepare_move(u, b, color);
 	uct_pondering_start(u, b, u->t, color, 0, false);
 }
@@ -806,9 +800,16 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 			option_error("UCT: Invalid reporting format %s\n", optval);
 	}
 	else if (!strcasecmp(optname, "reportfreq") && optval) {
-		/* The progress information line will be shown
-		 * every <reportfreq> simulations. */
-		u->reportfreq = atoi(optval);
+		/* Set search progress info frequency:
+		 *   reportfreq=<int>    show progress every <int> playouts.
+		 *   reportfreq=<float>  show progress every <float> seconds.
+		 *   reportfreq=1s       show progress every second. */
+		u->reportfreq_time = 0.0;
+		u->reportfreq_playouts = 0;
+		if (strchr(optval, '.') || strchr(optval, 's'))
+			u->reportfreq_time = atof(optval);
+		else
+			u->reportfreq_playouts = atoi(optval);
 	}
 	else if (!strcasecmp(optname, "dumpthres") && optval) {
 		/* When dumping the UCT tree on output, include
@@ -1366,7 +1367,7 @@ uct_state_init(engine_t *e, board_t *b)
 	bool pat_setup = false;	
 
 	u->debug_level = debug_level;
-	u->reportfreq = 1000;
+	u->reportfreq_playouts = 1000;
 	u->report_fh = stderr;
 	u->gamelen = MC_GAMELEN;
 	u->resign_threshold = 0.2;
@@ -1497,7 +1498,6 @@ engine_uct_init(engine_t *e, board_t *b)
 	e->stop = uct_stop;
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;
-	e->livegfx_hook = uct_livegfx_hook;
 
 	uct_t *u = uct_state_init(e, b);
 

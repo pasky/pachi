@@ -98,6 +98,7 @@ spawn_worker(void *ctx_)
 {
 	/* Setup */
 	uct_thread_ctx_t *ctx = (uct_thread_ctx_t*)ctx_;
+	uct_search_state_t *s = ctx->s;
 	uct_t *u = ctx->u;
 	board_t *b = ctx->b;
 	enum stone color = ctx->color;
@@ -144,7 +145,7 @@ spawn_worker(void *ctx_)
 		     usleep(100 * 1000);
 
 	/* Run */
-	if (!ctx->tid)  u->mcts_time_start = time_now();
+	if (!ctx->tid)  u->mcts_time_start = s->last_print_time = time_now();
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->ti);
 	
 	/* Finish */
@@ -192,11 +193,12 @@ spawn_thread_manager(void *ctx_)
 	
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
-		uct_thread_ctx_t *ctx = malloc2(uct_thread_ctx_t);
+		uct_thread_ctx_t *ctx = calloc2(1, uct_thread_ctx_t);
 		ctx->u = u; ctx->b = mctx->b; ctx->color = mctx->color;
 		mctx->t = ctx->t = t;
 		ctx->tid = ti; ctx->seed = fast_random(65536) + ti;
 		ctx->ti = mctx->ti;
+		ctx->s = mctx->s;
 		pthread_attr_t a;
 		pthread_attr_init(&a);
 		pthread_attr_setstacksize(&a, 1048576);
@@ -351,8 +353,7 @@ uct_search_start(uct_t *u, board_t *b, enum stone color,
 		 uct_search_state_t *s)
 {
 	/* Set up search state. */
-	s->base_playouts = s->last_dynkomi = s->last_print = t->root->u.playouts;
-	s->print_interval = u->reportfreq;
+	s->base_playouts = s->last_dynkomi = s->last_print_playouts = t->root->u.playouts;
 	s->fullmem = false;
 
 	if (ti) {
@@ -402,7 +403,7 @@ uct_search_stop(void)
 void
 uct_search_progress(uct_t *u, board_t *b, enum stone color,
 		    tree_t *t, time_info_t *ti,
-		    uct_search_state_t *s, int i)
+		    uct_search_state_t *s, int playouts)
 {
 	uct_thread_ctx_t *ctx = s->ctx;
 
@@ -410,21 +411,27 @@ uct_search_progress(uct_t *u, board_t *b, enum stone color,
 	int di = u->dynkomi_interval * u->threads;
 	if (ctx->t->use_extra_komi && u->dynkomi->permove
 	    && !u->pondering && di
-	    && i > s->last_dynkomi + di) {
+	    && playouts > s->last_dynkomi + di) {
 		s->last_dynkomi += di;
 		floating_t old_dynkomi = ctx->t->extra_komi;
 		ctx->t->extra_komi = u->dynkomi->permove(u->dynkomi, b, ctx->t);
 		if (UDEBUGL(3) && old_dynkomi != ctx->t->extra_komi)
-			fprintf(stderr, "dynkomi adjusted (%f -> %f)\n",
-				old_dynkomi, ctx->t->extra_komi);
+			fprintf(stderr, "dynkomi adjusted (%f -> %f)\n", old_dynkomi, ctx->t->extra_komi);
 	}
 
-	/* Print progress? */
-	if (i - s->last_print > s->print_interval) {
-		s->last_print += s->print_interval; // keep the numbers tidy
-		uct_progress_status(u, ctx->t, color, s->last_print, NULL);
+	/* Print progress ? */
+	if (u->reportfreq_time) { /* Time based */
+		if (playouts > 100 && time_now() - s->last_print_time > u->reportfreq_time) {
+			s->last_print_time = time_now();
+			uct_progress_status(u, ctx->t, color, playouts, NULL);
+		}
 	}
-
+	else		          /* Playouts based */
+		if (playouts - s->last_print_playouts > u->reportfreq_playouts) {
+			s->last_print_playouts += u->reportfreq_playouts; // keep the numbers tidy
+			uct_progress_status(u, ctx->t, color, s->last_print_playouts, NULL);
+		}
+	
 	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
 		char *msg = "WARNING: Tree memory limit reached, stopping search.\n"
 			    "Try increasing max_tree_size.\n";

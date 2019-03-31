@@ -459,12 +459,15 @@ cmd_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char *arg;
 	gtp_arg(arg);
 	enum stone color = str2stone(arg);
-	gtp_arg(arg);  /* freq */
+	gtp_arg(arg);
+	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
+	int freq = atoi(arg);  /* frequency (centiseconds) */
 
-	if (!e->genmove_analyze) {
-		gtp_error(gtp, "lz-genmove_analyze not supported for this engine");
-		return P_OK;
-	}
+	if (!e->genmove_analyze) {  gtp_error(gtp, "lz-genmove_analyze not supported for this engine"); return P_OK; }
+
+	strbuf(buf, 100);  char *err;
+	sbprintf(buf, "reportfreq=%fs", 0.01 * freq);
+	bool r = engine_setoptions(e, b, buf->str, &err);  assert(r);
 
 	gtp_printf(gtp, "\n");
 	coord_t c = genmove(b, color, e, ti, gtp, e->genmove_analyze);
@@ -503,10 +506,18 @@ cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+static void
+stop_analyzing(gtp_t *gtp, board_t *b, engine_t *e)
+{
+	gtp->analyze_running = false;
+	e->analyze(e, b, S_BLACK, 0);
+}
+
 /* Start pondering and output stats for the sake of frontend running Pachi.
  * Stop processing when we receive some other command.
  * Similar to Leela-Zero's lz-analyze so we can feed data to lizzie. 
- * XXX we don't honor lz-analyze frequency argument, set reportfreq for now. */
+ * Usage: lz-analyze <freq>       (centiseconds)
+ * XXX 'lz-analyze b 10' syntax support */
 static enum parse_code
 cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -514,17 +525,22 @@ cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (last_move(b).color != S_NONE)
 		color = stone_other(last_move(b).color);
 	
-	if (e->analyze) {  e->analyze(e, b, color, 1);  gtp->analyze_running = true;  }
-	else               gtp_error(gtp, "lz-analyze not supported for this engine");
+	char *arg;
+	gtp_arg(arg);
+	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
+	if (!e->analyze)    {  gtp_error(gtp, "lz-analyze not supported for this engine"); return P_OK;  }
+	int freq = atoi(arg);  /* frequency (centiseconds) */
+
+	if (!freq)  {  stop_analyzing(gtp, b, e);  return P_OK;  }
+
+	strbuf(buf, 100); char *err;
+	sbprintf(buf, "reportfreq=%fs", 0.01 * freq);
+	bool r = engine_setoptions(e, b, buf->str, &err);  assert(r);
+	
+	e->analyze(e, b, color, 1);
+	gtp->analyze_running = true;
 	
 	return P_OK;
-}
-
-static void
-stop_analyzing(gtp_t *gtp, board_t *b, engine_t *e)
-{
-	gtp->analyze_running = false;
-	e->analyze(e, b, S_BLACK, 0);
 }
 
 static enum parse_code
