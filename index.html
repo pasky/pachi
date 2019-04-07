@@ -1,0 +1,136 @@
+<html><head><title>Pachi - Board Game of Go / Weiqi / Baduk</title>
+</head>
+<style>
+	body { padding: 10pt; font-family: verdana }
+	h1 { text-align: center }
+	h1, h2, h3 { font-family: sans-serif}
+	p { text-align: justify }
+	dt { font-weight: bold }
+	img { border: 0pt }
+</style>
+<body>
+
+<h1>Pachi: Software for the Board Game of Go / Weiqi / Baduk</h1>
+
+<a href="http://chid0ri.deviantart.com/art/Pachi-the-bot-98877096"><img align="right" src="pachi.jpg" width="400" /></a>
+
+<p>Pachi can refer to: a <strong>simple modular framework</strong> for programs playing
+the game of Go/Weiqi/Baduk, and a <strong>reasonably strong engine</strong> built
+within this framework.</p>
+
+<h2>About Pachi</h2>
+
+<table style="float: left; text-align: center; border: 1pt solid; margin: 0pt; margin-right: 10pt; padding: 0pt 10pt">
+	<tr><th>Pachi's official<br />KGS accounts</th></tr>
+	<tr><td><a href="http://www.gokgs.com/gameArchives.jsp?user=pachi2">pachi2</a> |
+	        <a href="http://www.gokgs.com/gameArchives.jsp?user=pachi30s">pachi30s</a></td></tr>
+	<tr><td><a href="http://www.gokgs.com/gameArchives.jsp?user=pachi">pachi</a> |
+	        <a href="http://www.gokgs.com/gameArchives.jsp?user=pachIV">pachIV</a> |
+	        <a href="http://www.gokgs.com/gameArchives.jsp?user=pachIW">pachIW</a></td></tr>
+</table>
+<p>The default engine plays by Chinese rules and should be about
+7d KGS strength on 9&times;9. On 19&times;19, <!-- it might be about KGS 1k, --> assuming
+<!-- reasonable hardware, e.g. two-core Athlon64 machine.  On --> a higher-end
+(e.g. four-way Intel i7) machine, it can hold a solid <strong>KGS 2d</strong> rank.
+When using a large cluster (64 machines, 20 cores each), it maintains KGS 4d
+and has won e.g. <a href="http://files.gokgs.com/games/2011/4/14/nutngo1-pachi2.sgf">a 7-stone handicap game against Zhou Junxun 9p</a>.</p>
+
+<p>By default, Pachi currently uses the UCT engine that combines
+Monte Carlo approach with tree search; UCB1AMAF tree policy using
+the RAVE method is used for tree search, while the Moggy playout
+policy using 3&times;3 patterns and various tactical checks is used for
+the semi-random Monte Carlo playouts.
+Large-scale board patterns are used in the tree search.
+Technical information (only slightly dated) about Pachi's architecture and algorithms
+can be found in <a href="http://pasky.or.cz/go/prace.pdf">Petr Baudis'
+	Master's Thesis</a> <a href="http://pasky.or.cz/go/">(more papers)</a>.</p>
+
+<p style="text-align: right; font-weight: bold"><a href="http://repo.or.cz/w/pachi.git/blob/HEAD:/README">(More details.)</a></p>
+
+<h2>Download and Development</h2>
+
+<p>Current stable Pachi version is <strong>11.00 (codename Retsugen)</strong>, released on
+Apr 14, 2015.
+You can <a href="http://repo.or.cz/w/pachi.git/snapshot/pachi-11.00-retsugen.tar.gz">download the tarball</a><!--,
+<a href="http://repo.or.cz/w/pachi.git/tags">browse older versions</a>-->
+or <a href="https://github.com/pasky/pachi">explore the source code online</a>.
+You will need to compile it yourself for now; contributed binary builds
+and packages are heartily welcome!</p>
+
+<div style="border: 1pt solid; padding: 0 1em; text-align: center">
+	<!--<p><strong>Windows binary</strong> of development Pachi version 9.99 (commit <code>d8248</code>)
+	kindly contributed by CurieCat: <a href="pachi-d8248-win32.7z">pachi-d8248-win32.7z</a></p>-->
+	<!--<p><strong>Windows binary</strong> of development Pachi version 9.99 (commit <code>ac7d7</code>)
+	kindly contributed by Neil McLean: <a href="pachi-ac7d7-win32.7z">pachi-ac7d7-win32.7z</a></p>-->
+	<!--<p><strong>Windows binary</strong> of stable Pachi version 10.00
+	 kindly contributed by Neil McLean: <a href="pachi-10.00-win32.7z">pachi-10.00-win32.7z</a></p>-->
+	<p><strong>Windows binary</strong> of stable Pachi version 11.00
+	 kindly contributed by Neil McLean: <a href="pachi-11.00-win32.7z">pachi-11.00-win32.7z</a></p>
+	<p><strong>Android version</strong> of stable Pachi version 10.00 with ElyGo frontend
+	kindly contributed by Emmanuel Mathis:
+	<a href="https://play.google.com/store/apps/details?id=net.lrstudios.android.pachi">PlayStore</a>
+	<a href="https://sourceforge.net/projects/android-pachi/files/">APK</a>
+	<a href="https://github.com/Daimas/android-pachi">source</a></p>
+	<p><strong>Extra: Pattern files</strong> can be <a href="pat/">downloaded separately</a>
+	to give a good boost to Pachi's strength (but they are quite large).</p>
+</div>
+
+<p>Pachi implements only the playing algorithm and does not have
+any builtin user-friendly interface. In order to play with Pachi,
+you will want to also install a "GTP frontend" software, e.g.
+<a href="http://gogui.sf.net/">gogui</a>;
+you can also use e.g.
+<a href="http://www.gokgs.com/download.jsp">kgsGtp</a>
+to connect your Pachi instance to an internet Go server
+<a href="kgsgtp-pachi.conf">(example config)</a>.</p>
+
+<p>Pachi's main source code branch is maintained within the
+<a href="http://repo.or.cz/w/pachi.git">pachi.git</a> repository.
+Patches and help is encouraged, as well as reuse of the source code
+base for your own research.</p>
+
+
+<div style="border: 1pt solid; padding: 0 1em; width: 45%; margin: 0 0.5em; float: left">
+<p>Pachi is completely free, but you can help Pachi's development by donating below!
+<!-- Any amount is appreciated. -->
+Donations go to the main author Petr Baudis,
+who can then spend more time on Pachi instead of unrealed for-hire work.
+<!-- You may also request and donate to development of specific features. --></p>
+
+<div align="center">
+<form action="https://www.paypal.com/cgi-bin/webscr" method="post">
+	<input type="hidden" name="cmd" value="_s-xclick">
+	<input type="hidden" name="hosted_button_id" value="CRMDHVEUAN54Y">
+	<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+	<img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
+</form>
+</div>
+<p style="text-align: center">or bitcoin address <tt>1AiTsEWMaiYpeJAo15eJwwQ7DjskCc8r9j</tt></p>
+</div>
+
+<div style="border: 1pt solid; padding: 0 1em; width: 45%; margin: 0 0.5em; float: left">
+	<p>
+	If Pachi was useful in your research, we will be glad if you
+	cite the paper <a href="http://pasky.or.cz/go/pachi-tr.pdf"><b>Baudis, Gailly &ndash; Pachi: State of the art open source Go program</b></a>.
+	</p>
+	<p style="text-align: right">
+	<a href="http://link.springer.com/export-citation/chapter/10.1007/978-3-642-31866-5_3">(citation export)</a>
+	</p>
+</div>
+
+<br clear="all">
+
+<h2>Contact Information</h2>
+
+<p>We use the
+<a href="http://rover.ms.mff.cuni.cz/mailman/listinfo/pachi">pachi@v.or.cz mailing list</a>
+for discussions, coordinating development and providing user support.</p>
+
+<p>Pachi is being developed by:</p>
+
+<dl>
+	<dt>Petr Baudis</dt><dd>The original Pachi developer and current Pachi maintainer.</dd>
+	<dt>Jean-loup Gailly</dt><dd>Focuses on running Pachi's tree search distributed on large clusters. Also has done a lot of work on parameter tuning, tree memory allocator and time management.</dd>
+</dl>
+
+</body></html>
