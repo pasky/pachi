@@ -34,5 +34,5 @@ After compiling and setting up data files you can install pachi with:
 
 Pachi will look for extra data files (such as dcnn, pattern, joseki or
 fuseki database) in pachi's system directory (`/usr/local/share/pachi`
-by default) as well as current directory. System data directory can be
+by default), current directory or executable directory. System data directory can be
 overridden at runtime by setting `DATA_DIR` environment variable.
