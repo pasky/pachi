@@ -197,10 +197,15 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 		best = best->sibling;
 	}
 	fprintf(fh, ", \"can\": [");
-	while (--cans >= 0) {
-		if (!can[cans]) break;
+	bool first = true;
+	while (--cans >= 0 && can[cans]) {
 		/* Best sequence */
-		fprintf(fh, "[");
+		if (first == true) {
+			first = false;
+			fprintf(fh, "[");
+		} else {
+			fprintf(fh, " ,[");
+		}
 		best = can[cans];
 		for (int depth = 0; depth < 20; depth++) {
 			if (!best || best->u.playouts < 1) break;
@@ -210,7 +215,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 				best->u.playouts);
 			best = u->policy->choose(u->policy, best, t->board, color, resign);
 		}
-		fprintf(fh, "]%s", cans > 0 ? ", " : "");
+		fprintf(fh, "]");
 	}
 	fprintf(fh, "]");
 
