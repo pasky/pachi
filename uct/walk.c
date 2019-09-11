@@ -204,7 +204,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 			first = false;
 			fprintf(fh, "[");
 		} else {
-			fprintf(fh, " ,[");
+			fprintf(fh, ", [");
 		}
 		best = can[cans];
 		for (int depth = 0; depth < 20; depth++) {
