@@ -636,7 +636,7 @@ uct_search_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_al
 		move_queue_t unclear;
 		move_queue_t *dead = &u->dead_groups;
 		u->pass_moveno = b->moves + 1;
-		get_dead_groups(b, &u->ownermap, dead, &unclear);
+		ownermap_dead_groups(b, &u->ownermap, dead, &unclear);
 	}
 	return res;
 }
@@ -658,7 +658,7 @@ uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coor
 	/* Find dames left */
 	move_queue_t dead, unclear;
 	uct_mcowner_playouts(u, b, color);
-	get_dead_groups(b, &u->ownermap, &dead, &unclear);
+	ownermap_dead_groups(b, &u->ownermap, &dead, &unclear);
 	if (unclear.moves)  return false;
 	int final_ownermap[board_max_coords(b)];
 	int dame, seki;

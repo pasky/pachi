@@ -56,7 +56,7 @@ enum stone ownermap_color(ownermap_t *ownermap, coord_t c, floating_t thres);
 float ownermap_estimate_point(ownermap_t *ownermap, coord_t c);
 
 /* Find dead / unclear groups. */
-void get_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear);
+void ownermap_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear);
 /* Estimate status of stones on board based on ownermap stats. */
 void ownermap_judge_groups(board_t *b, ownermap_t *ownermap, group_judgement_t *judge);
 /* Add groups of given status to mq. */

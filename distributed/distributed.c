@@ -420,7 +420,7 @@ scmp(const void *p1, const void *p2)
 }
 
 static void
-distributed_dead_group_list(engine_t *e, board_t *b, move_queue_t *mq)
+distributed_dead_groups(engine_t *e, board_t *b, move_queue_t *mq)
 {
 	protocol_lock();
 
@@ -515,7 +515,7 @@ engine_distributed_init(engine_t *e, char *arg, board_t *b)
 		"Anyone can send me 'winrate' in private chat to get my assessment of the position.";
 	e->notify = distributed_notify;
 	e->genmove = distributed_genmove;
-	e->dead_group_list = distributed_dead_group_list;
+	e->dead_groups = distributed_dead_groups;
 	e->chat = distributed_chat;
 	e->data = dist;
 	// Keep the threads and the open socket connections:

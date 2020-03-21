@@ -109,7 +109,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ch
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
 	move_queue_t dead, unclear;	
 	uct_mcowner_playouts(u, b, color);
-	get_dead_groups(b, &u->ownermap, &dead, &unclear);
+	ownermap_dead_groups(b, &u->ownermap, &dead, &unclear);
 
 	bool check_score = !u->allow_losing_pass;
 
@@ -281,7 +281,7 @@ print_dead_groups(uct_t *u, board_t *b, move_queue_t *dead)
 
 
 static void
-uct_dead_group_list(engine_t *e, board_t *b, move_queue_t *dead)
+uct_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
 {
 	uct_t *u = (uct_t*)e->data;
 	
@@ -306,7 +306,7 @@ uct_dead_group_list(engine_t *e, board_t *b, move_queue_t *dead)
 	uct_mcowner_playouts(u, b, S_BLACK);
 	if (DEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
-	get_dead_groups(b, &u->ownermap, dead, NULL);
+	ownermap_dead_groups(b, &u->ownermap, dead, NULL);
 	print_dead_groups(u, b, dead);
 }
 
@@ -1494,7 +1494,7 @@ engine_uct_init(engine_t *e, board_t *b)
 	e->best_moves = uct_best_moves;
 	e->evaluate = uct_evaluate;
 	e->analyze = uct_analyze;
-	e->dead_group_list = uct_dead_group_list;
+	e->dead_groups = uct_dead_groups;
 	e->stop = uct_stop;
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;

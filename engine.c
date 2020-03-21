@@ -188,6 +188,16 @@ engine_ownermap(engine_t *e, board_t *b)
 	return (e->ownermap ? e->ownermap(e, b) : NULL);
 }
 
+void
+engine_dead_groups(engine_t *e, gtp_t *gtp, board_t *b, move_queue_t *q)
+{
+	mq_init(q);
+	
+	if (e->dead_groups)  e->dead_groups(e, b, q);
+	/* else we return empty list - i.e. engine not supporting
+	 * this assumes all stones alive at the game end. */
+}
+
 /* For engines internal use, ensures optval is properly strdup'ed / freed
  * since engine may change it. Must be preserved for next engine reset. */
 bool

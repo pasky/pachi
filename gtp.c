@@ -604,8 +604,8 @@ cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	move_queue_t q;  mq_init(&q);
-	if (e->dead_group_list)  e->dead_group_list(e, b, &q);	
+	move_queue_t q;
+	engine_dead_groups(e, gtp, b, &q);
 	floating_t score = board_official_score(b, &q);
 
 	if (DEBUGL(1))  fprintf(stderr, "counted score %.1f\n", score);
@@ -663,10 +663,8 @@ cmd_pachi_getoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static int
 cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	move_queue_t q;  mq_init(&q);
-	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
-	/* else we return empty list - i.e. engine not supporting
-	 * this assumes all stones alive at the game end. */
+	move_queue_t q;
+	engine_dead_groups(e, gtp, b, &q);
 
 	for (unsigned int i = 0; i < q.moves; i++) {
 		foreach_in_group(b, q.move[i]) {
@@ -680,8 +678,8 @@ cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 static int
 cmd_final_status_list_alive(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	move_queue_t q;  mq_init(&q);
-	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
+	move_queue_t q;
+	engine_dead_groups(e, gtp, b, &q);
 	int printed = 0;
 	
 	foreach_point(b) { // foreach_group, effectively
