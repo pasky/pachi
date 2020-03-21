@@ -705,7 +705,7 @@ uct_search_result(uct_t *u, board_t *b, enum stone color,
 
 	bool opponent_passed = is_pass(last_move(b).coord);
 	bool pass_first = uct_pass_first(u, b, color, pass_all_alive, *best_coord);
-	if (UDEBUGL(2) && pass_first)  fprintf(stderr, "<Pass first ok>\n");
+	if (UDEBUGL(2) && pass_first)  fprintf(stderr, "pass first ok\n");
 
 	/* If the opponent just passed and we win counting, always pass as well.
 	 * Pass also instead of playing in opponent territory if winning.
