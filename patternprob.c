@@ -272,7 +272,7 @@ print_pattern_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest)
 }
 
 void
-get_pattern_best_moves(board_t *b, float *probs, coord_t *best_c, float *best_r, int nbest)
+get_pattern_best_moves(board_t *b, floating_t *probs, coord_t *best_c, float *best_r, int nbest)
 {
 	for (int i = 0; i < nbest; i++) {
 		best_c[i] = pass;  best_r[i] = 0;
