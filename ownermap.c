@@ -22,7 +22,7 @@ printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 
 	if (c == pass) { /* Stuff to display in header */
 		if (!ownermap || !ownermap->playouts) return;
-		sbprintf(buf, "Score Est: %s\n", ownermap_score_est_str(board, ownermap));
+		sbprintf(buf, "Score Est: %s", ownermap_score_est_str(board, ownermap));
 		return;
 	}
 	
@@ -39,7 +39,7 @@ printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 void
 board_print_ownermap(board_t *b, FILE *f, ownermap_t *ownermap)
 {
-        board_print_custom(b, stderr, printhook, ownermap);
+        board_print_custom(b, f, printhook, ownermap);
 }
 
 void
