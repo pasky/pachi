@@ -607,13 +607,11 @@ cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	move_queue_t q;
 	engine_dead_groups(e, gtp, b, &q);
-	floating_t score = board_official_score(b, &q);
+	char *score_str = board_official_score_str(b, &q);
 
-	if (DEBUGL(1))  fprintf(stderr, "counted score %.1f\n", score);
-	
-	if      (score == 0) gtp_printf(gtp, "0\n");
-	else if (score > 0)  gtp_printf(gtp, "W+%.1f\n", score);
-	else                 gtp_printf(gtp, "B+%.1f\n", -score);
+	if (DEBUGL(1))  fprintf(stderr, "official score: %s\n", score_str);
+	gtp_printf(gtp, "%s\n", score_str);
+
 	return P_OK;
 }
 
@@ -673,6 +671,12 @@ cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 		} foreach_in_group_end;
 		gtp_printf(gtp, "\n");
 	}
+
+	if (DEBUGL(1)) {   /* show final score and board */
+		fprintf(stderr, "\nfinal score: %s\n", board_official_score_str(b, &q));
+		board_print_official_ownermap(b, &q);
+	}
+
 	return q.moves;
 }
 

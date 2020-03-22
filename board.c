@@ -805,6 +805,19 @@ board_official_score(board_t *b, move_queue_t *dead)
 	return board_official_score_details(b, dead, &dame, &seki, ownermap, NULL);
 }
 
+/* Returns static buffer */
+char *
+board_official_score_str(board_t *b, move_queue_t *dead)
+{
+	static char buf[32];
+	floating_t score = board_official_score(b, dead);
+	
+	if      (score == 0)  sprintf(buf, "0");
+	else if (score > 0)   sprintf(buf, "W+%.1f", score);
+	else                  sprintf(buf, "B+%.1f", -score);
+	return buf;
+}
+
 floating_t
 board_official_score_color(board_t *b, move_queue_t *dead, enum stone color)
 {
