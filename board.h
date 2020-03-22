@@ -366,7 +366,7 @@ floating_t board_score(board_t *b, int scores[S_MAX]);
 floating_t board_official_score(board_t *b, move_queue_t *dead);
 floating_t board_official_score_color(board_t *b, move_queue_t *dead, enum stone color);
 floating_t board_official_score_details(board_t *b, move_queue_t *dead, int *dame, int *seki, int *ownermap, struct ownermap *po);
-void       board_print_official_ownermap(board_t *b, int *final_ownermap);
+void       board_print_official_ownermap(board_t *b, move_queue_t *dead);
 
 /* Set board rules according to given string. Returns false in case
  * of unknown ruleset name. */
