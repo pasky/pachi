@@ -482,10 +482,9 @@ fuseki_moves(board_t *b)
 	if (opt_fuseki_moves)
 		return opt_fuseki_moves;
 	
-	int moves = 20;
-	if (board_rsize(b) <= 15)  moves = 10;
-	if (board_rsize(b) <= 13)  moves = 7;
-	if (board_small(b))	       moves = 4;
+	int moves = 10;
+	if (board_rsize(b) <= 15)  moves = 7;
+	if (board_small(b))	   moves = 4;
 	return moves;
 }
 

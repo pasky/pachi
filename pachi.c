@@ -172,7 +172,7 @@ usage()
 		"  -t, --time TIME_SETTINGS          force basic time settings (override kgs/gtp time settings) \n"
 		"      --fuseki-time TIME_SETTINGS   specific time settings to use during fuseki \n"
 		"      --fuseki MOVES                set fuseki length for --fuseki-time \n"
-		"                                    default: 19x19: 20  15x15: 10  13x13: 7  9x9: 4 \n"
+		"                                    default: 19x19: 10  15x15: 7  9x9: 4 \n"
 		" \n"
 		"  TIME_SETTINGS: \n"
 		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
