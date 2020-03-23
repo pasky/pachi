@@ -93,6 +93,7 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 
 	ownermap_init(&u->ownermap);
 	u->played_own = u->played_all = 0;
+	u->allow_pass = (b->moves > board_earliest_pass(b));  /* && dames < 10  if using patterns */
 }
 
 /* Does the board look like a final position ?

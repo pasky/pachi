@@ -108,18 +108,25 @@ spawn_worker(void *ctx_)
 	if (using_patterns()) {
 		double time_start = time_now();
 		uct_mcowner_playouts(u, b, color);
+		
 		if (!ctx->tid) {
 			if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
-			//fprintf(stderr, "\npattern ownermap:\n");
-			//board_print_ownermap(b, stderr, &u->ownermap);
+			if (DEBUGL(4))  fprintf(stderr, "\npattern ownermap:\n");
+			if (DEBUGL(4))  board_print_ownermap(b, stderr, &u->ownermap);
 		}
 	}
 
-	/* Close endgame with japanese rules ? Boost pass prior. */
-	if (!ctx->tid && b->rules == RULES_JAPANESE) {
+	/* Stuff that depends on ownermap. */
+	if (!ctx->tid && using_patterns()) {
 		int dames = ownermap_dames(b, &u->ownermap);
 		float score = ownermap_score_est(b, &u->ownermap);
-		u->prior->boost_pass = (dames < 10 && fabs(score) <= 3);
+		
+		/* Close endgame with japanese rules ? Boost pass prior. */
+		if (b->rules == RULES_JAPANESE)
+			u->prior->boost_pass = (dames < 10 && fabs(score) <= 3);
+
+		/* Allow pass in uct descent only at the end */
+		u->allow_pass = (u->allow_pass && dames < 10);
 	}
 
 	/* Expand root node (dcnn). Other threads wait till it's ready. 
