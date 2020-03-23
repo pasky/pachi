@@ -237,6 +237,7 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 #endif
 
 #define board_stride(b)           (board_rsize(b) + 2)
+#define board_rsize2(b)		  (board_rsize(b) * board_rsize(b))
 
 
 /* This is a shortcut for taking different action on smaller and large boards 
