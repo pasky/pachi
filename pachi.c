@@ -44,9 +44,9 @@ int   debug_level = 3;
 bool  debug_boardprint = true;
 long  verbose_logs = 0;
 char *forced_ruleset = NULL;
-bool  nopassfirst = false;
 
 static char *gtp_port = NULL;
+static bool  nopassfirst = false;
 static int   accurate_scoring_wanted = 0;
 
 static void
@@ -56,6 +56,12 @@ network_init()
 	int gtp_sock = -1;
 	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
 #endif
+}
+
+bool
+pachi_nopassfirst(board_t *b)
+{
+	return (nopassfirst && b->rules == RULES_CHINESE);
 }
 
 bool
@@ -141,7 +147,7 @@ usage()
 		"      --accurate-scoring            use GnuGo to compute dead stones at the end. otherwise expect \n"
 		"                                    ~5%% games to be scored incorrectly. recommended for online play \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
-		"      --nopassfirst                 don't pass first \n"
+		"      --nopassfirst                 don't pass first when playing chinese \n"
 		"      --kgs                         use this when playing on kgs, \n"
 		"                                    enables --nopassfirst, and --accurate-scoring if gnugo is found \n"
 		"Logs / IO: \n"

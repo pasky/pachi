@@ -644,8 +644,8 @@ uct_search_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_al
 static bool
 uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coord_t coord)
 {	
-	/* For kgs: must not pass first in main game phase. */
-	bool can_pass_first = (!nopassfirst || pass_all_alive);
+	/* For kgs: must not pass first in main game phase when playing chinese. */
+	bool can_pass_first = (!pachi_nopassfirst(b) || pass_all_alive);
 	if (!can_pass_first)  return false;
 
 	if (is_pass(coord) || is_pass(last_move(b).coord))  return false;

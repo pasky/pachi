@@ -22,7 +22,8 @@ extern char *pachi_exe;
 /* Ruleset from cmdline, if present. */
 extern char *forced_ruleset;
 
-/* Don't pass first ? Needed on kgs or cleanup phase can be abused. */
-extern bool nopassfirst;
+/* Don't pass first ? Needed when playing chinese rules on kgs or cleanup phase can be abused. */
+bool pachi_nopassfirst(struct board *b);
+
 
 #endif
