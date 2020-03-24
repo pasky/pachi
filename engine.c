@@ -202,10 +202,9 @@ gnugo_dead_groups(gtp_t *gtp, board_t *b, move_queue_t *q)
 		
 	/* Generate gtp commands for game */
 	
-	// XXX portable way to find temp dir ?
-	char file_in[] = "/tmp/pachi.XXXXXX";
-	int fd = mkstemp(file_in);	if (fd == -1)  fail("mkstemp");		
-	FILE *f = fdopen(fd, "w");	if (!f)        fail("fdopen");
+	char file_in[1024] = "pachi.XXXXXX";
+	int fd = pachi_mkstemp(file_in, sizeof(file_in));	if (fd == -1)  fail("mkstemp");
+	FILE *f = fdopen(fd, "w");				if (!f)        fail("fdopen");
 	fprintf(f, "boardsize %i\n", board_rsize(b));
 	fprintf(f, "clear_board\n");
 	fprintf(f, "komi %.1f\n", b->komi);
@@ -225,8 +224,8 @@ gnugo_dead_groups(gtp_t *gtp, board_t *b, move_queue_t *q)
 	
 	/* And fire up GnuGo on it */
 	
-	char file_out[] = "/tmp/pachi.XXXXXX";
-	fd = mkstemp(file_out);	    if (fd == -1)  fail("mkstemp");
+	char file_out[1024] = "pachi.XXXXXX";
+	fd = pachi_mkstemp(file_out, sizeof(file_out));		if (fd == -1)  fail("mkstemp");
 	close(fd);  fd = -1;
 	char *rules;
 	if      (b->rules == RULES_JAPANESE)  rules = "--japanese-rules";

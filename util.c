@@ -14,6 +14,10 @@
 #include "debug.h"
 #include "util.h"
 
+#ifdef _WIN32
+#include <shlwapi.h>
+#endif
+
 void
 win_set_pachi_cwd(char *pachi)
 {
@@ -163,14 +167,46 @@ fail(char *msg)
 	exit(42);
 }
 
+/* like mkstemp() but takes care of creating file in system's temp directory.
+ * on return @pattern contains the full path to the file. */
+int
+pachi_mkstemp(char *pattern, size_t max_size)
+{
+#ifdef _WIN32
+	char *    dir = getenv("TEMP");
+	if (!dir) dir = getenv("TMP");
+	if (!dir) die("couldn't find temp directory\n");
+#else
+	char *dir = "/tmp";
+#endif
+
+	size_t res_len = strlen(dir) + strlen(pattern) + 1;
+	assert(max_size >= res_len + 1);
+	assert(max_size >  res_len + 1 + strlen(pattern) + 1);  /* copy */
+
+	char *tmp = pattern + res_len + 1;
+	strcpy(tmp, pattern);
+	
+	size_t r = snprintf(pattern, max_size, "%s/%s", dir, tmp);	assert(r == res_len);
+	return mkstemp(pattern);
+}
+
 
 char *gnugo_exe = NULL;
 
 bool
 check_gnugo()
 {
-	// XXX windows support
+#ifdef _WIN32
+  
+	static char path[MAX_PATH] = "gnugo.exe";
+	
+	if (file_exists("gnugo.exe"))     {  gnugo_exe = "gnugo";  return true;  }
+	if (file_exists("gnugo.bat"))     {  gnugo_exe = "gnugo";  return true;  }
+	if (PathFindOnPathA(path, NULL))  {  gnugo_exe = "gnugo";  return true;  }
 
+#else
+  
 	char *cmds[] = { "./gnugo", "gnugo", "/usr/games/gnugo", NULL };
 	char cmd[256];
 
@@ -182,7 +218,8 @@ check_gnugo()
 		}
 	}
 	
-	return false;
+#endif
+	return false;	
 }
 
 
