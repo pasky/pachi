@@ -13,6 +13,10 @@
 #include "ownermap.h"
 #include "timeinfo.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 /* Max net lag in seconds. TODO: estimate dynamically. */
 #define MAX_NET_LAG 2.0
 /* Minimal thinking time; in case reserved time gets smaller than MAX_NET_LAG,

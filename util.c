@@ -15,7 +15,8 @@
 #include "util.h"
 
 #ifdef _WIN32
-#include <shlwapi.h>
+#include <shlwapi.h>   /* PathFindOnPathA() */
+#include <windows.h>
 #endif
 
 void
@@ -100,27 +101,6 @@ fopen_data_file(const char *filename, const char *mode)
 	get_data_file(buf, filename);
 	return fopen(buf, mode);
 }
-
-#ifdef _WIN32
-
-const char *
-strcasestr(const char *haystack, const char *needle)
-{
-	for (const char *p = haystack; *p; p++) {
-		for (int ni = 0; needle[ni]; ni++) {
-			if (!p[ni])
-				return NULL;
-			if (toupper(p[ni]) != toupper(needle[ni]))
-				goto more_hay;
-		}
-		return p;
-more_hay:;
-	}
-	return NULL;
-}
-
-#endif /* _WIN32 */
-
 
 int
 str_prefix(char *prefix, char *str)
@@ -272,3 +252,41 @@ strbuf_printf(strbuf_t *buf, const char *format, ...)
 	va_end(ap);
 	return n;
 }
+
+
+/**************************************************************************************************/
+/* Windows */
+
+#ifdef _WIN32
+
+
+void pachi_sleep(int seconds)
+{
+	Sleep((seconds) * 1000);
+}
+
+/* Windows MessageBox() */
+void
+pachi_popup(const char *msg)
+{
+	MessageBox(0, msg, "Pachi", MB_OK);
+}
+
+const char *
+strcasestr(const char *haystack, const char *needle)
+{
+	for (const char *p = haystack; *p; p++) {
+		for (int ni = 0; needle[ni]; ni++) {
+			if (!p[ni])
+				return NULL;
+			if (toupper(p[ni]) != toupper(needle[ni]))
+				goto more_hay;
+		}
+		return p;
+more_hay:;
+	}
+	return NULL;
+}
+
+
+#endif /* _WIN32 */
