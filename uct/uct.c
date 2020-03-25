@@ -265,22 +265,6 @@ uct_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 }
 
 static void
-print_dead_groups(uct_t *u, board_t *b, move_queue_t *dead)
-{
-	fprintf(stderr, "dead groups (playing %s)\n", (u->my_color ? stone2str(u->my_color) : "???"));
-	if (!dead->moves)
-		fprintf(stderr, "  none\n");
-	for (unsigned int i = 0; i < dead->moves; i++) {
-		fprintf(stderr, "  ");
-		foreach_in_group(b, dead->move[i]) {
-			fprintf(stderr, "%s ", coord2sstr(c));
-		} foreach_in_group_end;
-		fprintf(stderr, "\n");
-	}
-}
-
-
-static void
 uct_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
 {
 	uct_t *u = (uct_t*)e->data;
@@ -296,7 +280,6 @@ uct_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
 	 * lead to wrong list. */
 	if (u->pass_moveno == b->moves || u->pass_moveno == b->moves - 1) {
 		memcpy(dead, &u->dead_groups, sizeof(*dead));
-		print_dead_groups(u, b, dead);
 		return;
 	}
 
@@ -307,7 +290,6 @@ uct_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
 	if (DEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
 	ownermap_dead_groups(b, &u->ownermap, dead, NULL);
-	print_dead_groups(u, b, dead);
 }
 
 static void
