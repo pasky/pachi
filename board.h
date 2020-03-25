@@ -370,7 +370,7 @@ void       board_print_official_ownermap(board_t *b, move_queue_t *dead);
 
 /* Set board rules according to given string. Returns false in case
  * of unknown ruleset name. */
-bool board_set_rules(board_t *b, char *name);
+bool board_set_rules(board_t *b, const char *name);
 const char *rules2str(enum rules rules);
 
 

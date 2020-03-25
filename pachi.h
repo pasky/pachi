@@ -2,6 +2,7 @@
 #define PACHI_PACHI_H
 
 #include <stdbool.h>
+#include "gtp.h"
 
 struct board;
 struct engine;
@@ -12,6 +13,8 @@ void pachi_done();
 /* Init engines */
 void pachi_engine_init(struct engine *e, int id, struct board *b);
 
+/* Set board rules */
+bool pachi_set_rules(gtp_t *gtp, board_t *b, const char *name);
 
 /* Pachi binary */
 extern char *pachi_exe;

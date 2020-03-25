@@ -1,3 +1,4 @@
+#define DEBUG 1
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -8,7 +9,9 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #include <stdbool.h>
+
 #include "pachi.h"
+#include "debug.h"
 #include "util.h"
 
 void
@@ -159,6 +162,29 @@ fail(char *msg)
 	warning("%s: %s\n", msg, strerror(errno));
 	exit(42);
 }
+
+
+char *gnugo_exe = NULL;
+
+bool
+check_gnugo()
+{
+	// XXX windows support
+
+	char *cmds[] = { "./gnugo", "gnugo", "/usr/games/gnugo", NULL };
+	char cmd[256];
+
+	for (int i = 0; cmds[i]; i++) {
+		snprintf(cmd, sizeof(cmd), "%s -h >/dev/null 2>&1", cmds[i]);
+		if (system(cmd) == 0) {
+			gnugo_exe = cmds[i];
+			return true;
+		}
+	}
+	
+	return false;
+}
+
 
 /**************************************************************************************************/
 /* String buffer */

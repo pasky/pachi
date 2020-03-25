@@ -232,7 +232,7 @@ gnugo_dead_groups(gtp_t *gtp, board_t *b, move_queue_t *q)
 	if      (b->rules == RULES_JAPANESE)  rules = "--japanese-rules";
 	else if (b->rules == RULES_CHINESE)   rules = "--chinese-rules";
 	else die("rules must be japanese or chinese when scoring with gnugo\n");
-	snprintf(cmd, sizeof(cmd), "gnugo --mode gtp %s < %s > %s", rules, file_in, file_out);
+	snprintf(cmd, sizeof(cmd), "%s --mode gtp %s < %s > %s", gnugo_exe, rules, file_in, file_out);
 	if (DEBUGL(4))  fprintf(stderr, "cmd: '%s'\n", cmd);
 	double time_start = time_now();
 	if (system(cmd) != 0)  die("couldn't run gnugo\n");
@@ -282,6 +282,7 @@ print_dead_groups(board_t *b, move_queue_t *dead)
 	}
 }
 
+/* Ask engine for dead stones, or use gnugo if --accurate-scoring */
 void
 engine_dead_groups(engine_t *e, gtp_t *gtp, board_t *b, move_queue_t *q)
 {
@@ -290,7 +291,7 @@ engine_dead_groups(engine_t *e, gtp_t *gtp, board_t *b, move_queue_t *q)
 	/* Tell engine to stop pondering, the game is probably over. */
 	if (e->stop)  e->stop(e);
 	
-	if (true)  // XXX
+	if (gtp->accurate_scoring)
 		gnugo_dead_groups(gtp, b, q);
 	else
 		if (e->dead_groups)  e->dead_groups(e, b, q);

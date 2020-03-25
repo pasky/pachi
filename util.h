@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #undef MIN
 #undef MAX
@@ -185,6 +186,12 @@ int strbuf_printf(strbuf_t *buf, const char *format, ...)
 	__attribute__ ((format (printf, 2, 3)));
 
 #define sbprintf strbuf_printf
+
+
+/**************************************************************************************************/
+
+extern char *gnugo_exe;
+bool check_gnugo();
 
 
 #endif

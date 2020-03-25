@@ -813,7 +813,7 @@ board_official_score_color(board_t *b, move_queue_t *dead, enum stone color)
 }
 
 bool
-board_set_rules(board_t *board, char *name)
+board_set_rules(board_t *board, const char *name)
 {
 	if (!strcasecmp(name, "japanese"))
 		board->rules = RULES_JAPANESE;
