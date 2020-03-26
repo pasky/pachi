@@ -47,7 +47,7 @@ char *forced_ruleset = NULL;
 bool  nopassfirst = false;
 
 static char *gtp_port = NULL;
-static bool  accurate_scoring_wanted = false;
+static int   accurate_scoring_wanted = 0;
 
 static void
 network_init()
@@ -82,7 +82,10 @@ accurate_scoring_init(gtp_t *gtp, board_t *b) {
 		return;
 	}
 	
-	die("Couldn't find gnugo, needed for --accurate-scoring. Aborting.\n");
+	if (accurate_scoring_wanted > 1)  /* required ? */
+		die("Couldn't find gnugo, needed for --accurate-scoring. Aborting.\n");
+	else
+		if (DEBUGL(1)) warning("WARNING: gnugo not found, using mcts to compute dead stones (possibly inaccurate)\n");
 }
 
 static engine_init_t engine_inits[E_MAX] = { NULL };
@@ -131,7 +134,6 @@ usage()
 		" \n"
 		"Gameplay: \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
-		"      --nopassfirst                 don't pass first (kgs) \n"
 		"      --noundo                      undo only allowed for pass \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
@@ -139,8 +141,9 @@ usage()
 		"      --accurate-scoring            use GnuGo to compute dead stones at the end. otherwise expect \n"
 		"                                    ~5%% games to be scored incorrectly. recommended for online play \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
+		"      --nopassfirst                 don't pass first \n"
 		"      --kgs                         use this when playing on kgs, \n"
-		" \n"
+		"                                    enables --nopassfirst, and --accurate-scoring if gnugo is found \n"
 		"Logs / IO: \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
@@ -295,7 +298,7 @@ int main(int argc, char *argv[])
 	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v::", longopts, &option_index)) != -1) {
 		switch (opt) {
 			case OPT_ACCURATE_SCORING:
-				accurate_scoring_wanted = true;
+				accurate_scoring_wanted = 2; /* required */
 				break;
 			case 'c':
 				chatfile = strdup(optarg);
@@ -347,6 +350,7 @@ int main(int argc, char *argv[])
 			case OPT_KGS:
 				gtp->kgs = true;                /* Show engine comment in version. */
 				nopassfirst = true;             /* --nopassfirst */
+				accurate_scoring_wanted = 1;    /* use gnugo to get dead stones, if possible */
 				break;
 #ifdef NETWORK
 			case 'l':
