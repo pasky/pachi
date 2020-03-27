@@ -651,9 +651,7 @@ uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coor
 	if (is_pass(coord) || is_pass(last_move(b).coord))  return false;
 
 	enum stone other_color = stone_other(color);
-	int capturing = board_get_atari_neighbor(b, coord, other_color);
-	int atariing = board_get_2lib_neighbor(b, coord, other_color);
-	if (capturing || atariing || board_playing_ko_threat(b))  return false;
+	if (board_playing_ko_threat(b))  return false;
 
 	/* Find dames left */
 	move_queue_t dead, unclear;
