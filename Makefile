@@ -324,18 +324,18 @@ distribute: FORCE
 
 # install-recursive?
 install: distribute
-	$(INSTALL) -d $(BINDIR)
-	$(INSTALL) distribute/pachi $(BINDIR)/
+	$(INSTALL) -d $(DESTDIR)$(BINDIR)
+	$(INSTALL) distribute/pachi $(DESTDIR)$(BINDIR)/
 
 install-data:
-	$(INSTALL) -d $(DATADIR)
-	@for file in $(DATAFILES); do                               \
-		if [ -f $$file ]; then                              \
-                        echo $(INSTALL) $$file $(DATADIR)/;         \
-			$(INSTALL) $$file $(DATADIR)/;              \
-		else                                                \
-			echo "WARNING: $$file datafile is missing"; \
-                fi                                                  \
+	$(INSTALL) -d $(DESTDIR)$(DATADIR)
+	@for file in $(DATAFILES); do                         \
+		if [ -f $$file ]; then                            \
+			echo $(INSTALL) $$file $(DESTDIR)$(DATADIR)/; \
+			$(INSTALL) $$file $(DESTDIR)$(DATADIR)/;      \
+		else                                              \
+			echo "WARNING: $$file datafile is missing";   \
+		fi                                                \
 	done;
 
 # Generic clean rule is in Makefile.lib
