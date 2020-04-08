@@ -46,7 +46,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Influence/gogui-influence\n");
 		printf("gfx/Score Est/gogui-score_est\n");
 	}
-	if (e->dead_group_list) {
+	if (e->dead_groups) {
 		printf("gfx/Final Score/gogui-final_score\n");
 		printf("plist/Dead Groups/final_status_list dead\n");
 		//printf("plist/Final Status List Dead/final_status_list dead\n");
@@ -407,8 +407,8 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	move_queue_t q;  mq_init(&q);
-	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
+	move_queue_t q;
+	engine_dead_groups(e, gtp, b, &q);
 	
 	int dame, seki;
 	int ownermap[board_max_coords(b)];

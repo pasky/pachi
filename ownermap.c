@@ -135,7 +135,7 @@ groups_of_status(board_t *b, group_judgement_t *judge, enum gj_state s, move_que
 }
 
 void
-get_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear)
+ownermap_dead_groups(board_t *b, ownermap_t *ownermap, move_queue_t *dead, move_queue_t *unclear)
 {
 	enum gj_state gs_array[board_max_coords(b)];
 	group_judgement_t gj = { 0.67, gs_array };
@@ -225,7 +225,7 @@ board_position_final(board_t *b, ownermap_t *ownermap, char **msg)
 		return false;
 	
 	move_queue_t dead, unclear;
-	get_dead_groups(b, ownermap, &dead, &unclear);
+	ownermap_dead_groups(b, ownermap, &dead, &unclear);
 	
 	floating_t score_est = ownermap_score_est(b, ownermap);
 

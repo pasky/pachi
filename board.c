@@ -717,19 +717,26 @@ board_score(board_t *b, int scores[S_MAX])
 	return score;
 }
 
-void
-board_print_official_ownermap(board_t *b, int *final_ownermap)
+static void
+printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 {
-	int size = board_rsize(b);
-	for (int y = size; y >= 1; y--) {
-		for (int x = 1; x <= size; x++) {
-			coord_t c = coord_xy(x, y);
-			char *chars = ".XO:";
-			fprintf(stderr, "%c ", chars[final_ownermap[c]]);
-		}
-		fprintf(stderr, "\n");
-	}
-	fprintf(stderr, "\n");
+	int *ownermap = (int*)data;
+	
+	if (c == pass)  /* Stuff to display in header */
+		return;
+	
+        const char chr[] = ".XO:";
+        sbprintf(buf, "%c ", chr[ownermap[c]]);
+}
+
+void
+board_print_official_ownermap(board_t *b, move_queue_t *dead)
+{
+	int dame, seki;
+	int ownermap[board_max_coords(b)];
+	board_official_score_details(b, dead, &dame, &seki, ownermap, NULL);
+
+        board_print_custom(b, stderr, printhook, ownermap);
 }
 
 /* Official score after removing dead groups and Tromp-Taylor counting.
@@ -798,6 +805,19 @@ board_official_score(board_t *b, move_queue_t *dead)
 	return board_official_score_details(b, dead, &dame, &seki, ownermap, NULL);
 }
 
+/* Returns static buffer */
+char *
+board_official_score_str(board_t *b, move_queue_t *dead)
+{
+	static char buf[32];
+	floating_t score = board_official_score(b, dead);
+	
+	if      (score == 0)  sprintf(buf, "0");
+	else if (score > 0)   sprintf(buf, "W+%.1f", score);
+	else                  sprintf(buf, "B+%.1f", -score);
+	return buf;
+}
+
 floating_t
 board_official_score_color(board_t *b, move_queue_t *dead, enum stone color)
 {
@@ -806,7 +826,7 @@ board_official_score_color(board_t *b, move_queue_t *dead, enum stone color)
 }
 
 bool
-board_set_rules(board_t *board, char *name)
+board_set_rules(board_t *board, const char *name)
 {
 	if (!strcasecmp(name, "japanese"))
 		board->rules = RULES_JAPANESE;

@@ -114,6 +114,10 @@ will remain the same:
 * `pachi -t =5000:15000       `       kgs 2d
 * `pachi -t =5000 --nodcnn      `     kgs 3k (mcts only).
 
+**KGS**
+
+Use `pachi --kgs` when playing on KGS. See [kgsgtp.conf](kgs/kgsgtp-pachi.conf?raw=true) for example.
+
 **Other Options**
 
 * `pachi resign_threshold=0.25`     Resign when winrate < 25% (default: 20%).

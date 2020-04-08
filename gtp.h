@@ -26,14 +26,15 @@ typedef struct
 
 	/* Global fields: */
 	int     played_games;
-	move_t  move[1500];     /* move history, for undo */
+	move_t  move[1500];        /* move history, for undo */
 	int     moves;
 	bool    undo_pending;
-	bool    noundo;           /* undo only allowed for pass */
+	bool    noundo;            /* undo only allowed for pass */
 	bool    kgs;
 	bool    analyze_running;
 	char*   custom_name;
 	char*   custom_version;
+	bool    accurate_scoring;  /* use gnugo to get dead stones */
 } gtp_t;
 
 #define gtp_arg_next(gtp) \

@@ -9,7 +9,7 @@ WIN_HAVE_NO_REGEX_SUPPORT=1
 
 COMMON_FLAGS += $(TUNE)
 LDFLAGS      := -pthread -L$(CAFFE_PREFIX)/bin -L$(MINGW_PREFIX)/bin
-SYS_LIBS     := -lws2_32
+SYS_LIBS     := -lws2_32 -lshlwapi
 CXXFLAGS     += -I$(MINGW_PREFIX)/include/OpenBLAS
 
 # Enable mingw-w64 C99 printf() / scanf() layer ?
@@ -44,7 +44,7 @@ ifdef MSYS2_STATIC		# Static build, good luck
 
 	DCNN_LIBS := -Wl,-Bstatic $(CAFFE_STATIC_LIB)  \
 		     -lboost_system-mt -lboost_thread-mt -lopenblas $(HDF5_LIBS) -lgflags_static \
-		     -lglog -lprotobuf -lstdc++ -lwinpthread $(SYS_LIBS)   -Wl,-Bdynamic -lshlwapi
+		     -lglog -lprotobuf -lstdc++ -lwinpthread -lws2_32   -Wl,-Bdynamic -lshlwapi
 
         # glog / gflags headers really shouldn't __declspec(dllexport) symbols for us,
         # static linking will fail with undefined __imp__xxx symbols.

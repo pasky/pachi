@@ -47,6 +47,7 @@ char *forced_ruleset = NULL;
 bool  nopassfirst = false;
 
 static char *gtp_port = NULL;
+static int   accurate_scoring_wanted = 0;
 
 static void
 network_init()
@@ -55,6 +56,36 @@ network_init()
 	int gtp_sock = -1;
 	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
 #endif
+}
+
+bool
+pachi_set_rules(gtp_t *gtp, board_t *b, const char *name)
+{
+	if (gtp->accurate_scoring &&   /* GnuGo handles japaneses or chinese */
+	    b->rules != RULES_JAPANESE && b->rules != RULES_CHINESE)
+		die("--accurate-scoring: rules must be japanese or chinese\n");
+
+	return board_set_rules(b, name);
+}
+
+static void
+accurate_scoring_init(gtp_t *gtp, board_t *b) {
+	if (!accurate_scoring_wanted) {
+		if (DEBUGL(1)) fprintf(stderr, "Scoring: using mcts (possibly inaccurate)\n");
+		return;
+	}
+	
+	if (check_gnugo()) {
+		gtp->accurate_scoring = true;
+		pachi_set_rules(gtp, b, rules2str(b->rules));  /* recheck rules */
+		if (DEBUGL(1)) fprintf(stderr, "Scoring: using gnugo (accurate)\n");
+		return;
+	}
+	
+	if (accurate_scoring_wanted > 1)  /* required ? */
+		die("Couldn't find gnugo, needed for --accurate-scoring. Aborting.\n");
+	else
+		if (DEBUGL(1)) warning("WARNING: gnugo not found, using mcts to compute dead stones (possibly inaccurate)\n");
 }
 
 static engine_init_t engine_inits[E_MAX] = { NULL };
@@ -103,14 +134,16 @@ usage()
 		" \n"
 		"Gameplay: \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
-		"      --nopassfirst                 don't pass first (needed for kgs) \n"
 		"      --noundo                      undo only allowed for pass \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
 		"KGS: \n"
+		"      --accurate-scoring            use GnuGo to compute dead stones at the end. otherwise expect \n"
+		"                                    ~5%% games to be scored incorrectly. recommended for online play \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
-		"      --kgs                         use this when playing on kgs \n"
-		" \n"
+		"      --nopassfirst                 don't pass first \n"
+		"      --kgs                         use this when playing on kgs, \n"
+		"                                    enables --nopassfirst, and --accurate-scoring if gnugo is found \n"
 		"Logs / IO: \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
@@ -182,54 +215,57 @@ show_version(FILE *s)
 }
 
 
-#define OPT_FUSEKI_TIME   256
-#define OPT_NODCNN        257
-#define OPT_DCNN          258
-#define OPT_VERBOSE_CAFFE 259
-#define OPT_COMPILE_FLAGS 260
-#define OPT_NOPASSFIRST   261
-#define OPT_PATTERNS      262
-#define OPT_NOPATTERNS    263
-#define OPT_JOSEKI        264
-#define OPT_NOJOSEKI      265
-#define OPT_FUSEKI        266
-#define OPT_NOUNDO        267
-#define OPT_KGS           268
-#define OPT_NAME          269
-#define OPT_LIST_DCNNS    270
+#define OPT_FUSEKI_TIME       256
+#define OPT_NODCNN            257
+#define OPT_DCNN              258
+#define OPT_VERBOSE_CAFFE     259
+#define OPT_COMPILE_FLAGS     260
+#define OPT_NOPASSFIRST       261
+#define OPT_PATTERNS          262
+#define OPT_NOPATTERNS        263
+#define OPT_JOSEKI            264
+#define OPT_NOJOSEKI          265
+#define OPT_FUSEKI            266
+#define OPT_NOUNDO            267
+#define OPT_KGS               268
+#define OPT_NAME              269
+#define OPT_LIST_DCNNS	      270
+#define OPT_ACCURATE_SCORING  271
+
 static struct option longopts[] = {
-	{ "fuseki-time", required_argument, 0, OPT_FUSEKI_TIME },
-	{ "fuseki",      required_argument, 0, OPT_FUSEKI },
-	{ "chatfile",    required_argument, 0, 'c' },
-	{ "compile-flags", no_argument,     0, OPT_COMPILE_FLAGS },
-	{ "debug-level", required_argument, 0, 'd' },
-	{ "dcnn",        optional_argument, 0, OPT_DCNN },
-	{ "engine",      required_argument, 0, 'e' },
-	{ "fbook",       required_argument, 0, 'f' },
-	{ "joseki",      no_argument,       0, OPT_JOSEKI },
+	{ "accurate-scoring",   no_argument,       0, OPT_ACCURATE_SCORING },	
+	{ "chatfile",           required_argument, 0, 'c' },
+	{ "compile-flags",      no_argument,       0, OPT_COMPILE_FLAGS },
+	{ "debug-level",        required_argument, 0, 'd' },
+	{ "dcnn",               optional_argument, 0, OPT_DCNN },
+	{ "engine",             required_argument, 0, 'e' },
+	{ "fbook",              required_argument, 0, 'f' },
+	{ "fuseki-time",        required_argument, 0, OPT_FUSEKI_TIME },
+	{ "fuseki",             required_argument, 0, OPT_FUSEKI },
 #ifdef NETWORK
-	{ "gtp-port",    required_argument, 0, 'g' },
-	{ "log-port",    required_argument, 0, 'l' },
+	{ "gtp-port",           required_argument, 0, 'g' },
+	{ "log-port",           required_argument, 0, 'l' },
 #endif
-	{ "help",        no_argument,       0, 'h' },
-	{ "kgs",         no_argument,       0, OPT_KGS },
+	{ "help",               no_argument,       0, 'h' },
+	{ "joseki",             no_argument,       0, OPT_JOSEKI },	
+	{ "kgs",                no_argument,       0, OPT_KGS },
 #ifdef DCNN
-	{ "list-dcnns",  no_argument,       0, OPT_LIST_DCNNS },
+	{ "list-dcnns",         no_argument,       0, OPT_LIST_DCNNS },
 #endif
-	{ "log-file",    required_argument, 0, 'o' },
-	{ "name",        required_argument, 0, OPT_NAME },
-	{ "nodcnn",      no_argument,       0, OPT_NODCNN },
-	{ "noundo",      no_argument,       0, OPT_NOUNDO },
-	{ "nojoseki",    no_argument,       0, OPT_NOJOSEKI },
-	{ "nopassfirst", no_argument,       0, OPT_NOPASSFIRST },
-	{ "nopatterns",  no_argument,       0, OPT_NOPATTERNS },
-	{ "patterns",    no_argument,       0, OPT_PATTERNS },
-	{ "rules",       required_argument, 0, 'r' },
-	{ "seed",        required_argument, 0, 's' },
-	{ "time",        required_argument, 0, 't' },
-	{ "unit-test",   required_argument, 0, 'u' },
-	{ "verbose-caffe", no_argument,     0, OPT_VERBOSE_CAFFE },
-	{ "version",     optional_argument, 0, 'v' },
+	{ "log-file",           required_argument, 0, 'o' },
+	{ "name",               required_argument, 0, OPT_NAME },
+	{ "nodcnn",             no_argument,       0, OPT_NODCNN },
+	{ "noundo",             no_argument,       0, OPT_NOUNDO },
+	{ "nojoseki",           no_argument,       0, OPT_NOJOSEKI },
+	{ "nopassfirst",        no_argument,       0, OPT_NOPASSFIRST },
+	{ "nopatterns",         no_argument,       0, OPT_NOPATTERNS },
+	{ "patterns",           no_argument,       0, OPT_PATTERNS },
+	{ "rules",              required_argument, 0, 'r' },
+	{ "seed",               required_argument, 0, 's' },
+	{ "time",               required_argument, 0, 't' },
+	{ "unit-test",          required_argument, 0, 'u' },
+	{ "verbose-caffe",      no_argument,       0, OPT_VERBOSE_CAFFE },
+	{ "version",            optional_argument, 0, 'v' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -261,6 +297,9 @@ int main(int argc, char *argv[])
 	/* Leading ':' -> we handle error messages. */
 	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v::", longopts, &option_index)) != -1) {
 		switch (opt) {
+			case OPT_ACCURATE_SCORING:
+				accurate_scoring_wanted = 2; /* required */
+				break;
 			case 'c':
 				chatfile = strdup(optarg);
 				break;
@@ -309,8 +348,9 @@ int main(int argc, char *argv[])
 				require_joseki();
 				break;
 			case OPT_KGS:
-				gtp->kgs = true;       /* Show engine comment in version. */
-				nopassfirst = true;    /* --nopassfirst */
+				gtp->kgs = true;                /* Show engine comment in version. */
+				nopassfirst = true;             /* --nopassfirst */
+				accurate_scoring_wanted = 1;    /* use gnugo to get dead stones, if possible */
 				break;
 #ifdef NETWORK
 			case 'l':
@@ -410,9 +450,10 @@ int main(int argc, char *argv[])
 
 	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
 	if (forced_ruleset) {
-		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
+		if (!pachi_set_rules(gtp, b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
 	}
+	accurate_scoring_init(gtp, b);
 
 	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_default;

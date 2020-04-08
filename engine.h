@@ -51,7 +51,7 @@ typedef void  (*engine_best_moves_t)(engine_t *e, board_t *b, time_info_t *ti, e
 				     coord_t *best_c, float *best_r, int nbest);
 typedef void (*engine_analyze_t)(engine_t *e, board_t *b, enum stone color, int start);
 typedef void (*engine_evaluate_t)(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color);
-typedef void (*engine_dead_group_list_t)(engine_t *e, board_t *b, move_queue_t *mq);
+typedef void (*engine_dead_groups_t)(engine_t *e, board_t *b, move_queue_t *mq);
 typedef ownermap_t* (*engine_ownermap_t)(engine_t *e, board_t *b);
 typedef char *(*engine_result_t)(engine_t *e, board_t *b);
 typedef void (*engine_stop_t)(engine_t *e);
@@ -92,7 +92,7 @@ struct engine {
 						     * simulate each move from b->f[i] for time @ti, then set
 						     * 1-max(opponent_win_likelihood) in vals[i]. */
 
-	engine_dead_group_list_t dead_group_list;   /* One dead group per queued move (coord_t is (ab)used as group_t). */
+	engine_dead_groups_t     dead_groups;       /* One dead group per queued move (coord_t is (ab)used as group_t). */
 	engine_ownermap_t        ownermap;	    /* Return current ownermap, if engine supports it. */
 	engine_result_t          result;
 
@@ -124,6 +124,8 @@ void engine_board_print(engine_t *e, board_t *b, FILE *f);
 void engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		       coord_t *best_c, float *best_r, int nbest);
 struct ownermap* engine_ownermap(engine_t *e, board_t *b);
+/* Ask engine for dead stones, or use gnugo if --accurate-scoring */
+void engine_dead_groups(engine_t *e, gtp_t *gtp, board_t *b, move_queue_t *mq);
 
 /* Set/change engine option(s). May reset engine if needed.
  * New options are saved, so persist across engine resets.

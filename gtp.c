@@ -330,9 +330,10 @@ cmd_kgs_rules(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		if (DEBUGL(2))  fprintf(stderr, "ignored kgs-rules, using %s.\n", forced_ruleset);
 		return P_OK;
 	}
-
-	if (!board_set_rules(b, arg))
+	
+	if (!pachi_set_rules(gtp, b, arg))
 		gtp_error(gtp, "unknown rules");
+
 	return P_OK;
 }
 
@@ -604,15 +605,13 @@ cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	move_queue_t q;  mq_init(&q);
-	if (e->dead_group_list)  e->dead_group_list(e, b, &q);	
-	floating_t score = board_official_score(b, &q);
+	move_queue_t q;
+	engine_dead_groups(e, gtp, b, &q);
+	char *score_str = board_official_score_str(b, &q);
 
-	if (DEBUGL(1))  fprintf(stderr, "counted score %.1f\n", score);
-	
-	if      (score == 0) gtp_printf(gtp, "0\n");
-	else if (score > 0)  gtp_printf(gtp, "W+%.1f\n", score);
-	else                 gtp_printf(gtp, "B+%.1f\n", -score);
+	if (DEBUGL(1))  fprintf(stderr, "official score: %s\n", score_str);
+	gtp_printf(gtp, "%s\n", score_str);
+
 	return P_OK;
 }
 
@@ -663,10 +662,8 @@ cmd_pachi_getoption(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static int
 cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	move_queue_t q;  mq_init(&q);
-	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
-	/* else we return empty list - i.e. engine not supporting
-	 * this assumes all stones alive at the game end. */
+	move_queue_t q;
+	engine_dead_groups(e, gtp, b, &q);
 
 	for (unsigned int i = 0; i < q.moves; i++) {
 		foreach_in_group(b, q.move[i]) {
@@ -674,14 +671,20 @@ cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 		} foreach_in_group_end;
 		gtp_printf(gtp, "\n");
 	}
+
+	if (DEBUGL(1)) {   /* show final score and board */
+		fprintf(stderr, "\nfinal score: %s\n", board_official_score_str(b, &q));
+		board_print_official_ownermap(b, &q);
+	}
+
 	return q.moves;
 }
 
 static int
 cmd_final_status_list_alive(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
-	move_queue_t q;  mq_init(&q);
-	if (e->dead_group_list)  e->dead_group_list(e, b, &q);
+	move_queue_t q;
+	engine_dead_groups(e, gtp, b, &q);
 	int printed = 0;
 	
 	foreach_point(b) { // foreach_group, effectively

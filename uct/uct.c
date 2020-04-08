@@ -109,7 +109,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ch
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
 	move_queue_t dead, unclear;	
 	uct_mcowner_playouts(u, b, color);
-	get_dead_groups(b, &u->ownermap, &dead, &unclear);
+	ownermap_dead_groups(b, &u->ownermap, &dead, &unclear);
 
 	bool check_score = !u->allow_losing_pass;
 
@@ -265,23 +265,7 @@ uct_chat(engine_t *e, board_t *b, bool opponent, char *from, char *cmd)
 }
 
 static void
-print_dead_groups(uct_t *u, board_t *b, move_queue_t *dead)
-{
-	fprintf(stderr, "dead groups (playing %s)\n", (u->my_color ? stone2str(u->my_color) : "???"));
-	if (!dead->moves)
-		fprintf(stderr, "  none\n");
-	for (unsigned int i = 0; i < dead->moves; i++) {
-		fprintf(stderr, "  ");
-		foreach_in_group(b, dead->move[i]) {
-			fprintf(stderr, "%s ", coord2sstr(c));
-		} foreach_in_group_end;
-		fprintf(stderr, "\n");
-	}
-}
-
-
-static void
-uct_dead_group_list(engine_t *e, board_t *b, move_queue_t *dead)
+uct_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
 {
 	uct_t *u = (uct_t*)e->data;
 	
@@ -296,7 +280,6 @@ uct_dead_group_list(engine_t *e, board_t *b, move_queue_t *dead)
 	 * lead to wrong list. */
 	if (u->pass_moveno == b->moves || u->pass_moveno == b->moves - 1) {
 		memcpy(dead, &u->dead_groups, sizeof(*dead));
-		print_dead_groups(u, b, dead);
 		return;
 	}
 
@@ -306,8 +289,7 @@ uct_dead_group_list(engine_t *e, board_t *b, move_queue_t *dead)
 	uct_mcowner_playouts(u, b, S_BLACK);
 	if (DEBUGL(2))  board_print_ownermap(b, stderr, &u->ownermap);
 
-	get_dead_groups(b, &u->ownermap, dead, NULL);
-	print_dead_groups(u, b, dead);
+	ownermap_dead_groups(b, &u->ownermap, dead, NULL);
 }
 
 static void
@@ -1494,7 +1476,7 @@ engine_uct_init(engine_t *e, board_t *b)
 	e->best_moves = uct_best_moves;
 	e->evaluate = uct_evaluate;
 	e->analyze = uct_analyze;
-	e->dead_group_list = uct_dead_group_list;
+	e->dead_groups = uct_dead_groups;
 	e->stop = uct_stop;
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;
