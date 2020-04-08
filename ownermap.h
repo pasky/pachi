@@ -81,7 +81,7 @@ bool board_position_final_full(board_t *b, ownermap_t *ownermap,
 
 /* Don't allow passing earlier than that:
  * 19x19: 120    15x15: 56    13x13: 33    9x9: 16 */
-#define board_earliest_pass(b)  (board_max_coords(b) / (7 - 2 * board_rsize(b) / 9))
+#define board_earliest_pass(b)  (board_rsize2(b) / (7 - 2 * board_rsize(b) / 9))
 
 
 #endif

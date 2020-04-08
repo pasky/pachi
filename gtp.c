@@ -798,13 +798,17 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 }
 
 static void
-undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e)
+undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 {
 	if (DEBUGL(3)) fprintf(stderr, "reloading engine after undo(s).\n");
 	
 	gtp->undo_pending = false;
 
 	engine_reset(e, b);
+
+	/* Reset timer */
+	ti[S_BLACK].len.t.timer_start = 0;
+	ti[S_WHITE].len.t.timer_start = 0;
 	
 	/* Reset board */
 	int handicap = b->handicap;
@@ -1087,7 +1091,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
-		undo_reload_engine(gtp, b, e);
+		undo_reload_engine(gtp, b, e, ti);
 	
 	if (e->notify && gtp_is_valid(e, gtp->cmd)) {
 		char *reply;

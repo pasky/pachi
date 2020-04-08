@@ -454,46 +454,61 @@ distributed_dead_groups(engine_t *e, board_t *b, move_queue_t *mq)
 	protocol_unlock();
 }
 
-static distributed_t *
-distributed_state_init(char *arg, board_t *b)
+#define NEED_RESET   ENGINE_SETOPTION_NEED_RESET
+#define option_error engine_setoption_error
+
+static bool
+distributed_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
+		      char **err, bool setup, bool *reset)
 {
+	static_strbuf(ebuf, 256);
+	distributed_t *dist = (distributed_t*)e->data;
+
+	if (!strcasecmp(optname, "slave_port") && optval) {  NEED_RESET
+		dist->slave_port = strdup(optval);
+	}
+	else if (!strcasecmp(optname, "proxy_port") && optval) {  NEED_RESET
+		dist->proxy_port = strdup(optval);
+	}
+	else if (!strcasecmp(optname, "max_slaves") && optval) {  NEED_RESET
+		dist->max_slaves = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "shared_nodes") && optval) {  NEED_RESET
+		/* Share at most shared_nodes between master and slave at each genmoves.
+		 * Must use the same value in master and slaves. */
+		dist->shared_nodes = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "stats_hbits") && optval) {  NEED_RESET
+		/* Set hash table size to 2^stats_hbits for the shared stats. */
+		dist->stats_hbits = atoi(optval);
+	}
+	else if (!strcasecmp(optname, "slaves_quit")) {  NEED_RESET
+		dist->slaves_quit = !optval || atoi(optval);
+	}
+	else
+		option_error("Distributed: Invalid engine argument %s or missing value\n", optname);
+
+	return true;  /* successful */	
+}
+
+
+static distributed_t *
+distributed_state_init(engine_t *e, board_t *b)
+{
+	options_t *options = &e->options;
 	distributed_t *dist = calloc2(1, distributed_t);
+	e->data = dist;
 
 	dist->stats_hbits = DEFAULT_STATS_HBITS;
 	dist->max_slaves = DEFAULT_MAX_SLAVES;
 	dist->shared_nodes = DEFAULT_SHARED_NODES;
-	if (arg) {
-		char *optspec, *next = arg;
-		while (*next) {
-			optspec = next;
-			next += strcspn(next, ",");
-			if (*next) { *next++ = 0; } else { *next = 0; }
 
-			char *optname = optspec;
-			char *optval = strchr(optspec, '=');
-			if (optval) *optval++ = 0;
-
-			if (!strcasecmp(optname, "slave_port") && optval) {
-				dist->slave_port = strdup(optval);
-			} else if (!strcasecmp(optname, "proxy_port") && optval) {
-				dist->proxy_port = strdup(optval);
-			} else if (!strcasecmp(optname, "max_slaves") && optval) {
-				dist->max_slaves = atoi(optval);
-			} else if (!strcasecmp(optname, "shared_nodes") && optval) {
-				/* Share at most shared_nodes between master and slave at each genmoves.
-				 * Must use the same value in master and slaves. */
-				dist->shared_nodes = atoi(optval);
-			} else if (!strcasecmp(optname, "stats_hbits") && optval) {
-                                /* Set hash table size to 2^stats_hbits for the shared stats. */
-				dist->stats_hbits = atoi(optval);
-			} else if (!strcasecmp(optname, "slaves_quit")) {
-				dist->slaves_quit = !optval || atoi(optval);
-			} else {
-				fprintf(stderr, "distributed: Invalid engine argument %s or missing value\n", optname);
-			}
-		}
-	}
-
+	/* Process engine options. */
+	char *err;
+	for (int i = 0; i < options->n; i++)
+		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
+			die("%s", err);
+	
 	gtp_replies = calloc2(dist->max_slaves, char *);
 
 	if (!dist->slave_port)
@@ -506,9 +521,8 @@ distributed_state_init(char *arg, board_t *b)
 }
 
 void
-engine_distributed_init(engine_t *e, char *arg, board_t *b)
+engine_distributed_init(engine_t *e, board_t *b)
 {
-	distributed_t *dist = distributed_state_init(arg, b);
 	e->name = "Distributed";
 	e->comment = "If you believe you have won but I am still playing, "
 		"please help me understand by capturing all dead stones. "
@@ -517,7 +531,8 @@ engine_distributed_init(engine_t *e, char *arg, board_t *b)
 	e->genmove = distributed_genmove;
 	e->dead_groups = distributed_dead_groups;
 	e->chat = distributed_chat;
-	e->data = dist;
 	// Keep the threads and the open socket connections:
 	e->keep_on_clear = true;
+	e->setoption = distributed_setoption;
+	distributed_state_init(e, b);
 }

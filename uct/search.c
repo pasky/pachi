@@ -108,18 +108,25 @@ spawn_worker(void *ctx_)
 	if (using_patterns()) {
 		double time_start = time_now();
 		uct_mcowner_playouts(u, b, color);
+		
 		if (!ctx->tid) {
 			if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
-			//fprintf(stderr, "\npattern ownermap:\n");
-			//board_print_ownermap(b, stderr, &u->ownermap);
+			if (DEBUGL(4))  fprintf(stderr, "\npattern ownermap:\n");
+			if (DEBUGL(4))  board_print_ownermap(b, stderr, &u->ownermap);
 		}
 	}
 
-	/* Close endgame with japanese rules ? Boost pass prior. */
-	if (!ctx->tid && b->rules == RULES_JAPANESE) {
+	/* Stuff that depends on ownermap. */
+	if (!ctx->tid && using_patterns()) {
 		int dames = ownermap_dames(b, &u->ownermap);
 		float score = ownermap_score_est(b, &u->ownermap);
-		u->prior->boost_pass = (dames < 10 && fabs(score) <= 3);
+		
+		/* Close endgame with japanese rules ? Boost pass prior. */
+		if (b->rules == RULES_JAPANESE)
+			u->prior->boost_pass = (dames < 10 && fabs(score) <= 3);
+
+		/* Allow pass in uct descent only at the end */
+		u->allow_pass = (u->allow_pass && dames < 10);
 	}
 
 	/* Expand root node (dcnn). Other threads wait till it's ready. 
@@ -644,16 +651,14 @@ uct_search_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_al
 static bool
 uct_pass_first(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, coord_t coord)
 {	
-	/* For kgs: must not pass first in main game phase. */
-	bool can_pass_first = (!nopassfirst || pass_all_alive);
+	/* For kgs: must not pass first in main game phase when playing chinese. */
+	bool can_pass_first = (!pachi_nopassfirst(b) || pass_all_alive);
 	if (!can_pass_first)  return false;
 
 	if (is_pass(coord) || is_pass(last_move(b).coord))  return false;
 
 	enum stone other_color = stone_other(color);
-	int capturing = board_get_atari_neighbor(b, coord, other_color);
-	int atariing = board_get_2lib_neighbor(b, coord, other_color);
-	if (capturing || atariing || board_playing_ko_threat(b))  return false;
+	if (board_playing_ko_threat(b))  return false;
 
 	/* Find dames left */
 	move_queue_t dead, unclear;
@@ -705,7 +710,7 @@ uct_search_result(uct_t *u, board_t *b, enum stone color,
 
 	bool opponent_passed = is_pass(last_move(b).coord);
 	bool pass_first = uct_pass_first(u, b, color, pass_all_alive, *best_coord);
-	if (UDEBUGL(2) && pass_first)  fprintf(stderr, "<Pass first ok>\n");
+	if (UDEBUGL(2) && pass_first)  fprintf(stderr, "pass first ok\n");
 
 	/* If the opponent just passed and we win counting, always pass as well.
 	 * Pass also instead of playing in opponent territory if winning.

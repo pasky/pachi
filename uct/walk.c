@@ -488,7 +488,6 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 		significant[node_color - 1] = n;
 
 	int result;
-	int pass_limit = board_rsize(b2) * board_rsize(b2) / 2;
 	int passes = is_pass(last_move(b).coord) && b->moves > 0;
 
 	/* debug */
@@ -518,9 +517,9 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 		}
 
 		if (!u->random_policy_chance || fast_random(u->random_policy_chance))
-			u->policy->descend(u->policy, t, &descent[dlen], parity, (b2->moves > pass_limit));
+			u->policy->descend(u->policy, t, &descent[dlen], parity, u->allow_pass);
 		else
-			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, (b2->moves > pass_limit));
+			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, u->allow_pass);
 
 
 		/*** Perform the descent: */

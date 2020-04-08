@@ -63,26 +63,21 @@ FILE *fopen_data_file(const char *filename, const char *mode);
 
 #ifdef _WIN32
 
-/*
- * sometimes we use winsock and like to avoid a warning to include
- * windows.h only after winsock2.h
- */
-#include <winsock2.h>
-#include <windows.h>
-#include <ctype.h>
-
-#define sleep(seconds) Sleep((seconds) * 1000)
+#define sleep(seconds)  pachi_sleep(seconds)
+void pachi_sleep(int seconds);
 
 /* No line buffering on windows, set to unbuffered. */
 #define setlinebuf(file)   setvbuf(file, NULL, _IONBF, 0)
 
 /* Windows MessageBox() */
-#define popup(msg)	MessageBox(0, msg, "Pachi", MB_OK);
+#define popup(msg)	pachi_popup(msg)
+void pachi_popup(const char *msg);
 
 /* MinGW gcc, no function prototype for built-in function stpcpy() */ 
 char *stpcpy (char *dest, const char *src);
 
 const char *strcasestr(const char *haystack, const char *needle);
+
 
 #endif /* _WIN32 */
 

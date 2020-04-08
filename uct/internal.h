@@ -126,6 +126,7 @@ typedef struct uct {
 
 	/* Used within frame of single genmove. */
 	ownermap_t ownermap;
+	bool allow_pass;    /* allow pass in uct descent */
 
 	/* Used for coordination among slaves of the distributed engine. */
 	int stats_hbits;

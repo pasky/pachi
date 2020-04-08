@@ -1,8 +1,8 @@
 #ifndef PACHI_TACTICS_SEKI_H
 #define PACHI_TACTICS_SEKI_H
 
-#define MOGGY_MIDDLEGAME  (board_rsize(b) * board_rsize(b) * 10 / 25)      /*  19x19: 144 */
-#define MOGGY_ENDGAME     (board_rsize(b) * board_rsize(b) * 100 / 164)    /*  19x19: 220 */
+#define MOGGY_MIDDLEGAME  (board_rsize2(b) * 10 / 25)      /*  19x19: 144 */
+#define MOGGY_ENDGAME     (board_rsize2(b) * 100 / 164)    /*  19x19: 220 */
 
 #define check_special_sekis(b, m)  \
 	(b->moves > MOGGY_MIDDLEGAME && !immediate_liberty_count(b, m->coord))

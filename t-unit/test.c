@@ -190,7 +190,7 @@ show_title_if_needed(int passed)
 
 
 static bool
-test_sar(board_t *b, char *arg)
+test_selfatari(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -200,10 +200,30 @@ test_sar(board_t *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "sar %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	PRINT_TEST(b, "selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_bad_selfatari(b, color, c);
+
+	PRINT_RES(rres == eres);
+	return   (rres == eres);
+}
+
+static bool
+test_selfatari_really_bad(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "selfatari_really_bad %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+
+	assert(board_at(b, c) == S_NONE);
+	int rres = is_really_bad_selfatari(b, color, c);
 
 	PRINT_RES(rres == eres);
 	return   (rres == eres);
@@ -570,7 +590,9 @@ typedef struct {
 } t_unit_cmd;
 
 static t_unit_cmd commands[] = {
-	{ "sar",                    test_sar,               1 },
+	{ "selfatari",              test_selfatari,         1 },
+	{ "sar",                    test_selfatari,         1 },  /* alias */
+	{ "selfatari_really_bad",   test_selfatari_really_bad,  1 },	
 	{ "ladder",                 test_ladder,            1 },
 	{ "ladder_any",             test_ladder_any,        1 },
 	{ "wouldbe_ladder",         test_wouldbe_ladder,    1 },

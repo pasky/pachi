@@ -67,7 +67,7 @@ bool pattern_matching_locally(pattern_config_t *pc,
 			      ownermap_t *ownermap);
 
 void print_pattern_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest);
-void get_pattern_best_moves(board_t *b, float *probs, coord_t *best_c, float *best_r, int nbest);
+void get_pattern_best_moves(board_t *b, floating_t *probs, coord_t *best_c, float *best_r, int nbest);
 
 /* Debugging */
 void dump_gammas(strbuf_t *buf, pattern_config_t *pc, pattern_t *p);

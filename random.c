@@ -8,6 +8,7 @@
 
 /********************************************************************************************/
 #ifdef _WIN32
+#include <windows.h>
 
 /* Use TlsGetValue() / TlsSetValue() for thread-local storage,
  * mingw-w64's __thread is painfully slow. */
