@@ -95,9 +95,9 @@ DCNN_DARKFOREST=1
 # Pachi will look for extra data files (such as dcnn, pattern, joseki or
 # fuseki database) in system directory below in addition to current directory
 # (or DATA_DIR environment variable if present).
-PREFIX  ?= /usr/local
-BINDIR  ?= $(PREFIX)/bin
-DATADIR ?= $(PREFIX)/share/pachi
+PREFIX=$(DESTDIR)/usr
+BINDIR=$(PREFIX)/bin
+DATADIR=$(PREFIX)/share/pachi-go
 
 # Generic compiler options. You probably do not really want to twiddle
 # any of this.
@@ -324,15 +324,15 @@ distribute: FORCE
 
 # install-recursive?
 install: distribute
-	$(INSTALL) -d $(DESTDIR)$(BINDIR)
-	$(INSTALL) distribute/pachi $(DESTDIR)$(BINDIR)/
+	$(INSTALL) -d $(BINDIR)
+	$(INSTALL) distribute/pachi $(BINDIR)/
 
 install-data:
-	$(INSTALL) -d $(DESTDIR)$(DATADIR)
-	@for file in $(DATAFILES); do                         \
+	$(INSTALL) -d $(DATADIR)
+	@for file in $(DATAFILES); do                             \
 		if [ -f $$file ]; then                            \
-			echo $(INSTALL) $$file $(DESTDIR)$(DATADIR)/; \
-			$(INSTALL) $$file $(DESTDIR)$(DATADIR)/;      \
+			echo $(INSTALL) $$file $(DATADIR)/;       \
+			$(INSTALL) $$file $(DATADIR)/;            \
 		else                                              \
 			echo "WARNING: $$file datafile is missing";   \
 		fi                                                \
