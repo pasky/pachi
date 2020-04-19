@@ -147,6 +147,7 @@ usage()
 		"      --accurate-scoring            use GnuGo to compute dead stones at the end. otherwise expect \n"
 		"                                    ~5%% games to be scored incorrectly. recommended for online play \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
+		"      --kgs-chat                    enable kgs-chat cmd (kgsGtp 3.5.11 only, crashes 3.5.20+) \n"
 		"      --nopassfirst                 don't pass first when playing chinese \n"
 		"      --kgs                         use this when playing on kgs, \n"
 		"                                    enables --nopassfirst, and --accurate-scoring if gnugo is found \n"
@@ -237,6 +238,7 @@ show_version(FILE *s)
 #define OPT_NAME              269
 #define OPT_LIST_DCNNS	      270
 #define OPT_ACCURATE_SCORING  271
+#define OPT_KGS_CHAT	      272
 
 static struct option longopts[] = {
 	{ "accurate-scoring",   no_argument,       0, OPT_ACCURATE_SCORING },	
@@ -255,6 +257,7 @@ static struct option longopts[] = {
 	{ "help",               no_argument,       0, 'h' },
 	{ "joseki",             no_argument,       0, OPT_JOSEKI },	
 	{ "kgs",                no_argument,       0, OPT_KGS },
+	{ "kgs-chat",           no_argument,       0, OPT_KGS_CHAT },
 #ifdef DCNN
 	{ "list-dcnns",         no_argument,       0, OPT_LIST_DCNNS },
 #endif
@@ -358,6 +361,9 @@ int main(int argc, char *argv[])
 				nopassfirst = true;             /* --nopassfirst */
 				accurate_scoring_wanted = 1;    /* use gnugo to get dead stones, if possible */
 				break;
+			case OPT_KGS_CHAT:
+				gtp->kgs_chat = true;
+				break;
 #ifdef NETWORK
 			case 'l':
 				log_port = strdup(optarg);
@@ -459,6 +465,7 @@ int main(int argc, char *argv[])
 		if (!pachi_set_rules(gtp, b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
 	}
+	gtp_internal_init(gtp);
 	accurate_scoring_init(gtp, b);
 
 	time_info_t ti[S_MAX];

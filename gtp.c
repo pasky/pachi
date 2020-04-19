@@ -131,22 +131,24 @@ gtp_error_printf(gtp_t *gtp, const char *format, ...)
 
 /* List of public gtp commands. The internal command pachi-genmoves is not exported,
  * it should only be used between master and slaves of the distributed engine.
+ * kgs-chat command enabled only if --kgs-chat passed (makes kgsgtp-3.5.20+ crash).
  * For now only uct engine supports gogui-analyze_commands. */
-static char*
-known_commands(engine_t *e)
+static char *known_commands = NULL;
+
+static void
+known_commands_init(gtp_t *gtp)
 {
-	static char buf[8192];
-	char *str = buf;
+	static_strbuf(buf, 8192);
 
 	for (int i = 0; commands[i].cmd; i++) {
 		char *cmd = commands[i].cmd;
-		if (str_prefix("pachi-genmoves", cmd))
-			continue;		
-		str += sprintf(str, "%s\n", commands[i].cmd);
+		if (str_prefix("pachi-genmoves", cmd))           continue;
+		if (!strcmp("kgs-chat", cmd) && !gtp->kgs_chat)  continue;
+		sbprintf(buf, "%s\n", commands[i].cmd);
 	}
 	
-	str += sprintf(str, "gogui-analyze_commands\n");
-	return buf;
+	sbprintf(buf, "gogui-analyze_commands\n");
+	known_commands = buf->str;
 }
 
 /* Return true if cmd is a valid gtp command. */
@@ -154,9 +156,9 @@ bool
 gtp_is_valid(engine_t *e, const char *cmd)
 {
 	if (!cmd || !*cmd) return false;
-	const char *s = strcasestr(known_commands(e), cmd);
+	const char *s = strcasestr(known_commands, cmd);
 	if (!s) return false;
-	if (s != known_commands(e) && s[-1] != '\n') return false;
+	if (s != known_commands && s[-1] != '\n') return false;
 
 	int len = strlen(cmd);
 	return s[len] == '\0' || s[len] == '\n';
@@ -227,7 +229,7 @@ cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_list_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_printf(gtp, "%s", known_commands(e));
+	gtp_printf(gtp, "%s", known_commands);
 	return P_OK;
 }
 
@@ -1056,10 +1058,11 @@ static gtp_command_t gtp_commands[] =
 	{ 0, 0 }
 };
 
-static __attribute__((constructor)) void
-gtp_internal_init()
+void
+gtp_internal_init(gtp_t *gtp)
 {
 	commands = gtp_commands;  /* c++ madness */
+	known_commands_init(gtp);
 }
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
