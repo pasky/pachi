@@ -598,6 +598,10 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
+	if (u->t) {
+		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
+		if (missing_dcnn_priors) reset_state(u);
+	}
 	if (!u->t)  uct_prepare_move(u, b, color);
 	uct_pondering_start(u, b, u->t, color, 0, false);
 }
