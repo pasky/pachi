@@ -125,7 +125,7 @@ pachi_engine_init(engine_t *e, int id, board_t *b)
 static void
 usage()
 {
-	fprintf(stderr, "Usage: pachi [OPTIONS] [ENGINE_ARGS]\n\n");
+	fprintf(stderr, "Usage: pachi [OPTIONS] [ENGINE_ARGS...]\n\n");
 	fprintf(stderr,
 		"Options: \n"
                 "      --compile-flags               show pachi's compile flags \n"
@@ -181,7 +181,7 @@ usage()
 		"      --fuseki MOVES                set fuseki length for --fuseki-time \n"
 		"                                    default: 19x19: 10  15x15: 7  9x9: 4 \n"
 		" \n"
-		"  TIME_SETTINGS: \n"
+		"TIME_SETTINGS: \n"
 		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
 		"                  Pachi will play fast on a fast computer, slow on a slow computer, \n"
 		"                  but strength will remain the same. \n"
@@ -193,10 +193,11 @@ usage()
 		"  _SECS           absolute time: use fixed number of seconds for the whole game\n"
 		" \n"
 		"Engine args: \n"
-		"  Comma separated engine specific options, as in:\n"
-		"      pachi --nodcnn threads=8,max_tree_size=3072,pondering \n"
-		"  See respective engines for details. Most common options for uct: \n"
+		"  Comma/space separated engine specific options as in:\n"
+		"      pachi threads=8 max_tree_size=3072 pondering \n"
+		"      pachi threads=8,max_tree_size=3072,pondering            (pachi < 12.50) \n"
 		"\n"
+		"  See respective engines for details. Most common options for uct: \n"
 		"      max_tree_size=100             use up to 100 Mb of memory for tree search \n"
 		"      resign_threshold=0.25         resign if winrate < 25%% (default: 20%%) \n"
 		"      reportfreq=1s                 show search progress every second (default: 1000 playouts) \n"
@@ -474,9 +475,13 @@ int main(int argc, char *argv[])
 
 	chat_init(chatfile);
 
-	char *e_arg = NULL;
-	if (optind < argc)	e_arg = argv[optind];
-	engine_t e;  engine_init(&e, engine_id, e_arg, b);
+	/* Extra cmdline args are engine parameters */
+	strbuf(buf, 1000);
+	for (int i = optind; i < argc; i++)
+		sbprintf(buf, "%s%s", (i == optind ? "" : ","), argv[i]);
+	char *engine_args = buf->str;
+	
+	engine_t e;  engine_init(&e, engine_id, engine_args, b);
 	network_init();
 
 	while (1) {
