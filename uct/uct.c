@@ -60,6 +60,7 @@ setup_state(uct_t *u, board_t *b, enum stone color)
 static void
 reset_state(uct_t *u)
 {
+	if (UDEBUGL(3)) fprintf(stderr, "resetting tree\n");
 	assert(u->t);
 	tree_done(u->t); u->t = NULL;
 }
@@ -478,10 +479,13 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 
 	uct_pondering_stop(u);
 
-	if (u->t && (u->genmove_reset_tree ||
-		     (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN)))) {
-		u->initial_extra_komi = u->t->extra_komi;
-		reset_state(u);
+	if (u->t) {
+		bool unexpected_color = (color != board_to_play(b));  /* playing twice in a row ?? */
+		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
+		if (u->genmove_reset_tree || unexpected_color || missing_dcnn_priors) {
+			u->initial_extra_komi = u->t->extra_komi;
+			reset_state(u);
+		}
 	}
 
 	uct_genmove_setup(u, b, color);
