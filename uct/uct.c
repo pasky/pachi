@@ -418,7 +418,8 @@ uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t 
 		int res = board_play(b, &m);
 		assert(res >= 0);
 	}
-	assert(color == board_to_play(b));
+	/* analyzing should be only case of switching color to play */
+	if (genmove_pondering)  assert(color == board_to_play(b));
 	
 	setup_dynkomi(u, b, color);
 
@@ -595,13 +596,16 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 
 	/* Start pondering if not already. */
 	if (u->pondering)  return;
-
-	u->reporting = UR_LEELA_ZERO;
-	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
+	
 	if (u->t) {
 		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
-		if (missing_dcnn_priors) reset_state(u);
+		bool switching_color_to_play = (color != stone_other(u->t->root_color));
+		if (missing_dcnn_priors || switching_color_to_play)
+			reset_state(u);
 	}
+	
+	u->reporting = UR_LEELA_ZERO;
+	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
 	if (!u->t)  uct_prepare_move(u, b, color);
 	uct_pondering_start(u, b, u->t, color, 0, false);
 }

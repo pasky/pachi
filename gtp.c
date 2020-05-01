@@ -519,15 +519,19 @@ stop_analyzing(gtp_t *gtp, board_t *b, engine_t *e)
 
 /* Start pondering and output stats for the sake of frontend running Pachi.
  * Stop processing when we receive some other command.
- * Similar to Leela-Zero's lz-analyze so we can feed data to lizzie. 
- * Usage: lz-analyze <freq>       (centiseconds)
- * XXX 'lz-analyze b 10' syntax support */
+ * Similar to Leela-Zero's lz-analyze so we can feed data to Lizzie / Sabaki.
+ * Usage: lz-analyze <freq>		(centiseconds)
+ *        lz-analyze <color> <freq>
+ * lz-analyze with allow move / avoid move syntax unsupported right now. */
 static enum parse_code
 cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = board_to_play(b);
 	char *arg;
 	gtp_arg(arg);
+	
+	/* optional color argument ? */
+	if (tolower(arg[0]) == 'w' || tolower(arg[0]) == 'b') {  color = str2stone(arg);  gtp_arg(arg);  }
 	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
 	if (!e->analyze)    {  gtp_error(gtp, "lz-analyze not supported for this engine"); return P_OK;  }
 	int freq = atoi(arg);  /* frequency (centiseconds) */
