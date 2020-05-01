@@ -515,6 +515,8 @@ stop_analyzing(gtp_t *gtp, board_t *b, engine_t *e)
 {
 	gtp->analyze_running = false;
 	e->analyze(e, b, S_BLACK, 0);
+	printf("\n");  /* end of lz-analyze output */
+	fflush(stdout);
 }
 
 /* Start pondering and output stats for the sake of frontend running Pachi.
@@ -541,7 +543,8 @@ cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	strbuf(buf, 100); char *err;
 	sbprintf(buf, "reportfreq=%fs", 0.01 * freq);
 	bool r = engine_setoptions(e, b, buf->str, &err);  assert(r);
-	
+
+	gtp_printf(gtp, "");   /* just "= \n" output, last newline will be sent when we stop analyzing */
 	e->analyze(e, b, color, 1);
 	gtp->analyze_running = true;
 	
