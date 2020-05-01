@@ -453,17 +453,18 @@ cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
-/* Sabaki etc: get winrates etc during genmove.
+/* lz-genmove_analyze: get winrates etc during genmove.
  * Similar to Leela-zero lz-genmove_analyze 
- * XXX we don't honor frequency argument, set reportfreq for now. */
+ * syntax: lz-genmove_analyze <color> <freq>   */
 static enum parse_code
-cmd_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+cmd_lz_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
 	enum stone color = str2stone(arg);
+	if (color == S_NONE) {  gtp_error(gtp, "bad argument"); return P_OK;  }
 	gtp_arg(arg);
-	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
+	if (!isdigit(*arg))  {  gtp_error(gtp, "bad argument"); return P_OK;  }
 	int freq = atoi(arg);  /* frequency (centiseconds) */
 
 	if (!e->genmove_analyze) {  gtp_error(gtp, "lz-genmove_analyze not supported for this engine"); return P_OK; }
@@ -1020,8 +1021,8 @@ static gtp_command_t gtp_commands[] =
 	{ "pachi-setoption",	    cmd_pachi_setoption },  /* Set/change engine option */
 	{ "pachi-getoption",	    cmd_pachi_getoption },  /* Get engine option(s) */
 
-	{ "lz-analyze",             cmd_lz_analyze },       /* For Lizzie */
-	{ "lz-genmove_analyze",     cmd_genmove_analyze },  /* Sabaki etc */
+	{ "lz-analyze",             cmd_lz_analyze },         /* Lizzie, Sabaki, etc */
+	{ "lz-genmove_analyze",     cmd_lz_genmove_analyze },
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },
