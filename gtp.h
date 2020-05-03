@@ -32,6 +32,7 @@ typedef struct
 	bool    noundo;            /* undo only allowed for pass */
 	bool    kgs;
 	bool    kgs_chat;          /* enable kgs-chat command ? */
+	bool    analyze_mode;      /* analyze mode / genmove mode */
 	bool    analyze_running;
 	char*   custom_name;
 	char*   custom_version;
