@@ -510,16 +510,26 @@ cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+static void
+gtp_reset_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
+{
+	engine_reset(e, b);
+
+	/* Reset timer */
+	ti[S_BLACK].len.t.timer_start = 0;
+	ti[S_WHITE].len.t.timer_start = 0;
+}
+
 /* Reset engine when switching from analyze mode <-> genmove move only.
  * This way we don't lose analyze state when toggling analyze on and off.
  * We don't want analyze tree to affect next genmove either. */
 static void
-gtp_set_analyze_mode(gtp_t *gtp, board_t *b, engine_t *e, bool analyze_mode)
+gtp_set_analyze_mode(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, bool analyze_mode)
 {
 	if (analyze_mode != gtp->analyze_mode) {
 		// fprintf(stderr, "gtp: switching analyze_mode: %i -> %i\n", gtp->analyze_mode, analyze_mode);
 		gtp->analyze_mode = analyze_mode;
-		engine_reset(e, b);
+		gtp_reset_engine(gtp, b, e, ti);
 	}
 }
 
@@ -558,7 +568,7 @@ cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	bool r = engine_setoptions(e, b, buf->str, &err);  assert(r);
 
 	gtp_printf(gtp, "");   /* just "= \n" output, last newline will be sent when we stop analyzing */
-	gtp_set_analyze_mode(gtp, b, e, true);
+	gtp_set_analyze_mode(gtp, b, e, ti, true);
 	gtp->analyze_running = true;
 	e->analyze(e, b, color, 1);
 	
@@ -824,11 +834,7 @@ undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	
 	gtp->undo_pending = false;
 
-	engine_reset(e, b);
-
-	/* Reset timer */
-	ti[S_BLACK].len.t.timer_start = 0;
-	ti[S_WHITE].len.t.timer_start = 0;
+	gtp_reset_engine(gtp, b, e, ti);
 	
 	/* Reset board */
 	int handicap = b->handicap;
@@ -1110,7 +1116,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	if (gtp->analyze_running && strcasecmp(gtp->cmd, "lz-analyze"))
 		stop_analyzing(gtp, b, e);
 	if (gtp->analyze_mode && strstr(gtp->cmd, "genmove"))
-		gtp_set_analyze_mode(gtp, b, e, false);
+		gtp_set_analyze_mode(gtp, b, e, ti, false);
 	
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
