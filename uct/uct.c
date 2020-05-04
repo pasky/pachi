@@ -729,8 +729,8 @@ log_nthreads(uct_t *u)
 	if (DEBUGL(0) && !logged++)  fprintf(stderr, "Threads: %i\n", u->threads);
 }
 
-static size_t
-default_max_tree_size()
+size_t
+uct_default_max_tree_size()
 {
 	/* Double it on 64-bit, tree takes up twice as much memory ... */
 	int mult = (sizeof(void*) == 4 ? 1 : 2);
@@ -1361,7 +1361,7 @@ uct_state_init(engine_t *e, board_t *b)
 	u->dumpthres = 0.01;
 	u->playout_amaf = true;
 	u->amaf_prior = false;
-	u->max_tree_size = default_max_tree_size();
+	u->max_tree_size = uct_default_max_tree_size();
 	u->fast_alloc = true;
 	u->pruning_threshold = 0;
 	u->genmove_reset_tree = false;

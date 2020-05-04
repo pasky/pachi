@@ -197,8 +197,11 @@ usage()
 		"      pachi threads=8 max_tree_size=3072 pondering \n"
 		"      pachi threads=8,max_tree_size=3072,pondering            (pachi < 12.50) \n"
 		"\n"
-		"  See respective engines for details. Most common options for uct: \n"
-		"      max_tree_size=100             use up to 100 Mb of memory for tree search \n"
+		"  See respective engines for details. Most common options for uct: \n");
+	fprintf(stderr,
+		"      max_tree_size=100             use 100 Mb of memory for tree search (default: %i Mb) \n",
+		(int) (uct_default_max_tree_size() / 1048576));
+	fprintf(stderr,
 		"      resign_threshold=0.25         resign if winrate < 25%% (default: 20%%) \n"
 		"      reportfreq=1s                 show search progress every second (default: 1000 playouts) \n"
 		"      threads=4                     use 4 threads for tree search (default: #cores) \n"
