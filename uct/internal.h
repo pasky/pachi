@@ -42,6 +42,7 @@ typedef enum local_tree_eval {
 /* Internal engine state. */
 typedef struct uct {
 	int debug_level;
+	enum uct_reporting reporting_opt;  /* original value */
 	enum uct_reporting reporting;
 	int    reportfreq_playouts;
 	double reportfreq_time;

@@ -443,6 +443,7 @@ uct_pondering_stop(uct_t *u)
 		free(ctx->b);
 		u->pondering = false;
 		u->genmove_pondering = false;
+		u->reporting = u->reporting_opt;
 		u->report_fh = stderr;
 	}
 }
@@ -567,14 +568,13 @@ static coord_t
 uct_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	uct_t *u = (uct_t*)e->data;
-	enum uct_reporting prev = u->reporting;
 
 	uct_pondering_stop(u);   /* Don't clobber report_fh later on... */
 	
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;	
 	coord_t coord = uct_genmove(e, b, ti, color, pass_all_alive);
-	u->reporting = prev;
+	u->reporting = u->reporting_opt;
 	u->report_fh = stderr;
 	
 	return coord;
@@ -795,6 +795,7 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 			u->reporting = UR_LEELA_ZERO;
 		} else
 			option_error("UCT: Invalid reporting format %s\n", optval);
+		u->reporting_opt = u->reporting;  /* original value */
 	}
 	else if (!strcasecmp(optname, "reportfreq") && optval) {
 		/* Set search progress info frequency:
@@ -1364,6 +1365,7 @@ uct_state_init(engine_t *e, board_t *b)
 	bool pat_setup = false;	
 
 	u->debug_level = debug_level;
+	u->reporting = u->reporting_opt = UR_TEXT;
 	u->reportfreq_playouts = 1000;
 	u->report_fh = stderr;
 	u->gamelen = MC_GAMELEN;
