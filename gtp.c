@@ -520,16 +520,31 @@ gtp_reset_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	ti[S_WHITE].len.t.timer_start = 0;
 }
 
-/* Reset engine when switching from analyze mode <-> genmove move only.
- * This way we don't lose analyze state when toggling analyze on and off.
- * We don't want analyze tree to affect next genmove either. */
+static int
+engine_pondering(engine_t *e)
+{
+	option_t *o = engine_options_lookup(&e->options, "pondering");
+	if (!o)  return 0;
+	return (!o->val || atoi(o->val));
+}
+
+/* Keep track of analyze mode / genmove mode and manage engine.
+ * Allows to reset engine only when needed so we don't lose analyze data
+ * when toggling analyze on and off.
+ * normal:    reset engine when switching from analyze mode -> genmove mode
+ *            analyze tree shouldn't affect next genmove.
+ * pondering: don't reset !
+ *            engine handles switching from pondering <-> pondering + analyzing */
 static void
 gtp_set_analyze_mode(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, bool analyze_mode)
 {
 	if (analyze_mode != gtp->analyze_mode) {
 		// fprintf(stderr, "gtp: switching analyze_mode: %i -> %i\n", gtp->analyze_mode, analyze_mode);
 		gtp->analyze_mode = analyze_mode;
-		gtp_reset_engine(gtp, b, e, ti);
+
+		if (!engine_pondering(e))
+			if (!analyze_mode)  /* analyze mode -> genmove mode */
+				gtp_reset_engine(gtp, b, e, ti);
 	}
 }
 

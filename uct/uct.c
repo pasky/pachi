@@ -587,14 +587,19 @@ static void
 uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 {
 	uct_t *u = (uct_t*)e->data;
-
+	bool genmove_pondering = u->genmove_pondering;   /* false normally, unless pondering + analyzing */
+	
 	if (!start) {
 		if (u->pondering) uct_pondering_stop(u);
+		if (genmove_pondering)  /* pondering + analyzing ? resume normal pondering */
+			uct_pondering_start(u, b, u->t, board_to_play(b), 0, true);
 		return;
 	}
 
-	/* Start pondering if not already. */
-	if (u->pondering)  return;
+	/* If pondering already restart, situation/parameters may have changed.
+	 * For example frequency change or getting analyze cmd while pondering. */
+	if (u->pondering)
+		uct_pondering_stop(u);
 	
 	if (u->t) {
 		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
@@ -606,7 +611,7 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
 	if (!u->t)  uct_prepare_move(u, b, color);
-	uct_pondering_start(u, b, u->t, color, 0, false);
+	uct_pondering_start(u, b, u->t, color, 0, genmove_pondering);
 }
 
 /* Same as uct_get_best_moves() for node @parent.
