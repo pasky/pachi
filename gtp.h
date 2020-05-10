@@ -31,6 +31,7 @@ typedef struct
 	bool    undo_pending;
 	bool    noundo;            /* undo only allowed for pass */
 	bool    kgs;
+	bool    kgs_chat;          /* enable kgs-chat command ? */
 	bool    analyze_running;
 	char*   custom_name;
 	char*   custom_version;
@@ -61,6 +62,7 @@ typedef struct
 
 void   gtp_init(gtp_t *gtp);
 
+void gtp_internal_init(gtp_t *gtp);
 enum parse_code gtp_parse(gtp_t *gtp, board_t *b, struct engine *e, time_info_t *ti, char *buf);
 bool gtp_is_valid(struct engine *e, const char *cmd);
 
