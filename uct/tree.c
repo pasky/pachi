@@ -472,8 +472,9 @@ tree_garbage_collect(tree_t *t)
 	
 	tree_node_t *node = t->root;
 	assert(t->nodes && !node->parent && !node->sibling);
-	double start_time = time_now();
+	double time_start = time_now();
 	size_t orig_size = t->nodes_size;
+	size_t orig_content_size = (DEBUGL(3) ? tree_actual_size(t) : 0);
 
 	/* Temp tree for pruning. */
 	tree_t *t2 = tree_init(t->root_color, max_pruned_size, 0);
@@ -505,19 +506,26 @@ tree_garbage_collect(tree_t *t)
 	tree_copy(t, t2);
 
 	if (DEBUGL(1)) {
-		double now = time_now();
-		static double prev_time;
-		if (!prev_time) prev_time = start_time;
-		fprintf(stderr,
-			"tree pruned in %0.3fs, prev %0.1fs ago, dest depth %d wanted %d,"
-			" size %llu->%llu/%llu, playouts %d\n",
-			now - start_time, start_time - prev_time, t2->max_depth, max_depth,
-			(unsigned long long)orig_size, (unsigned long long)t2->nodes_size, (unsigned long long)max_pruned_size, t->root->u.playouts);
-		prev_time = start_time;
+		fprintf(stderr, "tree gc in %0.1fs ", time_now() - time_start);
+		if (!DEBUGL(3))
+			fprintf(stderr, " (%0.1f -> %0.1f Mb)",
+				(float)orig_size / (1024*1024), (float)t->nodes_size / (1024*1024));
+		else {
+			fprintf(stderr, " (%0.1f Mb -> %0.1f Mb used -> %0.1f Mb pruned)\n",
+				(float)orig_size / (1024*1024),
+				(float)orig_content_size / (1024*1024),
+				(float)t->nodes_size / (1024*1024));
+			fprintf(stderr, "pruned %i nodes (%i%%), dest depth %d, wanted %d",
+				(orig_size - t->nodes_size) / sizeof(tree_node_t),
+				(orig_size - t->nodes_size) * 100 / orig_size,
+				t2->max_depth, max_depth);
+		}
+		fprintf(stderr, "\n");
 	}
+
 	if (t2->nodes_size >= t2->max_tree_size) {
-		fprintf(stderr, "temp tree overflow, max_tree_size %llu, pruning_threshold %llu\n",
-			(unsigned long long)t->max_tree_size, (unsigned long long)pruning_threshold);
+		fprintf(stderr, "temp tree overflow, max_tree_size %0.1f Mb, pruning_threshold %0.1f Mb\n",
+			(float)t->max_tree_size / (1024*1024), (float)pruning_threshold / (1024*1024));
 		/* This is not a serious problem, we will simply recompute the discarded nodes
 		 * at the next move if necessary. This is better than frequently wasting memory. */
 	} else {
