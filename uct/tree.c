@@ -266,11 +266,10 @@ tree_load(tree_t *tree, board_t *b)
 /************************************************************************/
 /* Tree garbage collection */
 
-static tree_node_t *
-tree_prune_node(tree_t *dest, tree_t *src, tree_node_t *node,
-		int threshold, int depth)
+static tree_node_t*
+tree_prune_dup_node(tree_t *dest, tree_t *src, tree_node_t *node,
+		    int threshold, int depth)
 {
-	assert(dest->nodes && node);
 	tree_node_t *n2 = tree_alloc_node(dest, 1);
 	if (!n2)
 		return NULL;
@@ -279,44 +278,110 @@ tree_prune_node(tree_t *dest, tree_t *src, tree_node_t *node,
 		dest->max_depth = n2->depth;
 	n2->children = NULL;
 	n2->is_expanded = false;
+	return n2;
+}
+
+/* breadth-first tree pruning queue */
+typedef struct {
+	unsigned int n;
+	unsigned int max_nodes;
+	tree_node_t **src_nodes;
+	tree_node_t **dst_nodes;
+} pruning_queue_t;
+
+static void
+pruning_queue_init(pruning_queue_t *q, unsigned int max_nodes)
+{
+	q->n = 0;
+	q->max_nodes = max_nodes;
+	q->src_nodes  = cmalloc(max_nodes * sizeof(tree_node_t *));
+	q->dst_nodes  = cmalloc(max_nodes * sizeof(tree_node_t *));
+}
+
+static void
+pruning_queue_free(pruning_queue_t *q) {
+	free(q->src_nodes);  q->src_nodes = NULL;
+	free(q->dst_nodes);  q->dst_nodes = NULL;
+}
+
+static void
+pruning_queue_push(pruning_queue_t *q, tree_node_t *src, tree_node_t *dst)
+{
+	if (q->n == q->max_nodes) {
+		if (DEBUGL(4)) fprintf(stderr, "pruning queue realloc: %i -> %i\n", q->max_nodes, q->max_nodes * 2);
+		q->max_nodes *= 2;
+		q->src_nodes = crealloc(q->src_nodes, q->max_nodes * sizeof(tree_node_t *));
+		q->dst_nodes = crealloc(q->dst_nodes, q->max_nodes * sizeof(tree_node_t *));
+	}
+
+	q->src_nodes[q->n] = src;
+	q->dst_nodes[q->n] = dst;
+	q->n++;
+}
+
+static void
+pruning_queue_pop(pruning_queue_t *q)
+{
+	assert(q->n);
+	q->n--;
+}
+
+/* Prune children of given node.
+ * Queue them since we're going breadth-first. */
+static void
+tree_prune_node(tree_t *dest, tree_t *src,
+		pruning_queue_t *queue, unsigned int node_index,
+		int threshold, int depth)
+{
+	tree_node_t *node = queue->src_nodes[node_index];
+	tree_node_t *n2	  = queue->dst_nodes[node_index];
+	assert(n2);
+	assert(node);
 
 	if (node->depth >= depth && node->u.playouts < threshold)
-		return n2;
-	/* For deep nodes with many playouts, we must copy all children,
+		return;
+	
+	if (!node->children)
+		return;
+
+	/* Prune children:
+	 * For deep nodes with many playouts, we must copy all children,
 	 * even those with zero playouts, because partially expanded
 	 * nodes are not supported. Considering them as fully expanded
 	 * would degrade the playing strength. The only exception is
 	 * when dest becomes full, but this should never happen in practice
 	 * if threshold is chosen to limit the number of nodes traversed. */
-	tree_node_t *ni = node->children;
-	if (!ni)
-		return n2;
+	int added = 0;	
 	tree_node_t **prev2 = &(n2->children);
-	while (ni) {
-		tree_node_t *ni2 = tree_prune_node(dest, src, ni, threshold, depth);
-		if (!ni2) break;
+	tree_node_t *ni;
+	for (ni = node->children;  ni;  ni = ni->sibling, added++) {
+		tree_node_t *ni2 = tree_prune_dup_node(dest, src, ni, threshold, depth);
+		if (!ni2)  break;
 		*prev2 = ni2;
 		prev2 = &(ni2->sibling);
 		ni2->parent = n2;
-		ni = ni->sibling;
+		
+		pruning_queue_push(queue, ni, ni2);
 	}
-	if (!ni) {
+	
+	if (!ni)
 		n2->is_expanded = true;
-	} else {
-		n2->children = NULL; // avoid partially expanded nodes
+	else {
+		n2->children = NULL;  // avoid partially expanded nodes
+		for (int i = 0; i < added; i++)  pruning_queue_pop(queue);
 	}
-	return n2;
 }
 
 /* Prune src tree into dest (nodes are copied).
  * Keep all nodes at or below depth with at least threshold playouts.
  * The relative order of children of a given node is preserved
  * (assumed by tree_get_node() in particular).
+ * Process nodes breadth-first so that we don't drop toplevel nodes !
  * Note: Only for fast_alloc. */
 static void
 tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 {
-        tree_node_t *node = src->root;
+	tree_node_t *node = src->root;
 	assert(dest->nodes && node);
 
 	dest->use_extra_komi = src->use_extra_komi;
@@ -326,9 +391,27 @@ tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 	/* DISTRIBUTED htable not copied, gets rebuilt as needed */
 	dest->nodes_size = 0;	/* we do not want the dummy pass node */
 	dest->max_depth = 0;	/* gets recomputed */
-	dest->root_color = src->root_color;
-	dest->root = tree_prune_node(dest, src, node, threshold, depth);
-	assert(dest->root);	
+ 	dest->root_color = src->root_color;
+	dest->root = tree_prune_dup_node(dest, src, node, threshold, depth);
+	assert(dest->root);
+
+	unsigned int pruning_queue_len = 32768;
+	pruning_queue_t queue;   pruning_queue_init(&queue, pruning_queue_len);
+	pruning_queue_t queue2;  pruning_queue_init(&queue2, pruning_queue_len);
+	pruning_queue_push(&queue, node, dest->root);
+
+	//int cur_depth = 1;
+	while(queue.n) {
+		// if (DEBUGL(1)) fprintf(stderr, "processing depth %i\n", cur_depth++);
+		for (unsigned int i = 0; i < queue.n; i++)
+			tree_prune_node(dest, src, &queue, i, threshold, depth);
+		
+		swap(queue, queue2);
+		queue2.n = 0;
+	}
+
+	pruning_queue_free(&queue);
+	pruning_queue_free(&queue2);
 }
 
 /* The following constants are used for garbage collection of nodes.
@@ -458,7 +541,8 @@ tree_realloc(tree_t *t, size_t max_tree_size)
 }
 
 /* tree <- content
- * makes @tree be @content without changing tree_t pointers (cheap)
+ * makes @tree be @content without changing tree_t pointers.
+ * Cheap but there must not be dangling pointers to @tree content.
  * afterwards @tree prev content and @content pointer are invalid */
 void
 tree_replace(tree_t *tree, tree_t *content)
