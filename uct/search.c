@@ -112,13 +112,14 @@ worker_thread(void *ctx_)
 	board_t *b = ctx->b;
 	enum stone color = ctx->color;
 	fast_srandom(ctx->seed);
+	int restarted = (s->flags & UCT_SEARCH_RESTART);
 
 	/* Fill ownermap for mcowner pattern feature. */
 	if (using_patterns()) {
 		double time_start = time_now();
 		uct_mcowner_playouts(u, b, color);
 		
-		if (!ctx->tid) {
+		if (!ctx->tid && !restarted) {
 			if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
 			if (DEBUGL(4))  fprintf(stderr, "\npattern ownermap:\n");
 			if (DEBUGL(4))  board_print_ownermap(b, stderr, &u->ownermap);
@@ -152,7 +153,7 @@ worker_thread(void *ctx_)
 		if (u->genmove_pondering && using_dcnn(b))
 			uct_expand_next_best_moves(u, t, b, color);
 		
-		if (DEBUGL(2) && already_have) {  /* Show previously computed priors */
+		if (DEBUGL(2) && already_have && !restarted) {  /* Show previously computed priors */
 			print_joseki_moves(joseki_dict, b, color);
 			print_node_prior_best_moves(b, n);
 		}
@@ -162,7 +163,7 @@ worker_thread(void *ctx_)
 		     usleep(100 * 1000);
 
 	/* Run */
-	if (!ctx->tid)  u->mcts_time_start = s->last_print_time = time_now();
+	if (!ctx->tid)  s->mcts_time_start = s->last_print_time = time_now();
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->ti);
 	
 	/* Finish */
@@ -394,13 +395,16 @@ uct_search_games(uct_search_state_t *s)
 void
 uct_search_start(uct_t *u, board_t *b, enum stone color,
 		 tree_t *t, time_info_t *ti,
-		 uct_search_state_t *s)
+		 uct_search_state_t *s, int flags)
 {
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print_playouts = t->root->u.playouts;
 	s->fullmem = false;
+	s->flags = flags;
 
-	if (ti) {
+	int restarted = (flags & UCT_SEARCH_RESTART);
+		
+	if (ti && !restarted) {
 		if (ti->period == TT_NULL) {
 			if (u->slave)
 				*ti = ti_unlimited();
@@ -440,6 +444,9 @@ uct_search_stop(void)
 	/* Collect the thread manager. */
 	uct_thread_ctx_t *pctx;
 	pthread_join(thread_manager_id, (void **) &pctx);
+	uct_t *u = pctx->u;
+	uct_search_state_t *s = pctx->s;
+	u->mcts_time += time_now() - s->mcts_time_start;
 	return pctx;
 }
 
@@ -463,9 +470,11 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	double time_start = time_now();
 	tree_realloc(u->t, u->max_tree_size, u->max_pruned_size, u->pruning_threshold);
 	if (UDEBUGL(2)) fprintf(stderr, "tree realloc in %.1fs\n", time_now() - time_start);
-	
+
+	/* Timers already setup, reuse stop condition in s */
+	s->flags |= UCT_SEARCH_RESTART;
 	s->fullmem = false;
-	uct_search_start(u, b, color, u->t, ti, s);
+	uct_search_start(u, b, color, u->t, ti, s, s->flags);
 }
 
 void

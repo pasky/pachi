@@ -514,7 +514,7 @@ uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		/* This is the first genmoves issue, start the MCTS
 		 * now and let it run while we receive stats. */
 		memset(&s, 0, sizeof(s));
-		uct_search_start(u, b, color, u->t, ti, &s);
+		uct_search_start(u, b, color, u->t, ti, &s, 0);
 	}
 
 	/* Read binary incremental stats if present, otherwise

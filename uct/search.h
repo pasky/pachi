@@ -26,6 +26,8 @@ struct tree_node;
  * stop, progress reports, etc. (in seconds) */
 #define TREE_BUSYWAIT_INTERVAL 0.1 /* 100ms */
 
+/* uct_search_start() flags */
+#define UCT_SEARCH_RESTART	(1 << 0)
 
 /* Thread manager state */
 extern volatile sig_atomic_t uct_halt;
@@ -47,7 +49,9 @@ typedef struct uct_thread_ctx {
 
 /* Progress information of the on-going MCTS search - when did we
  * last adjusted dynkomi, printed out stuff, etc. */
-typedef struct uct_search_state {	
+typedef struct uct_search_state {
+	int flags;		  /* uct_search_start() flags */
+	double mcts_time_start;
 	int base_playouts;	  /* Number of games simulated for this simulation before
 				   * we started the search. (We have simulated them earlier.) */
 	int last_dynkomi;	  /* Number of playouts for last dynkomi adjustment. */
@@ -62,7 +66,7 @@ typedef struct uct_search_state {
 
 int uct_search_games(uct_search_state_t *s);
 
-void uct_search_start(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s);
+void uct_search_start(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s, int flags);
 uct_thread_ctx_t *uct_search_stop(void);
 
 void uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti, uct_search_state_t *s);

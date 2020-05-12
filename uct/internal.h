@@ -144,7 +144,7 @@ typedef struct uct {
 	int pass_moveno;
 	
 	/* Timing */
-	double mcts_time_start;
+	double mcts_time;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
 	tree_t *t;

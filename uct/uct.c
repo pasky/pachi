@@ -332,7 +332,7 @@ static int
 uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, bool print_progress)
 {
 	uct_search_state_t s;
-	uct_search_start(u, b, color, t, ti, &s);
+	uct_search_start(u, b, color, t, ti, &s, 0);
 	if (UDEBUGL(2) && s.base_playouts > 0)
 		fprintf(stderr, "<pre-simulated %d games>\n", s.base_playouts);
 
@@ -354,7 +354,6 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		uct_search_progress(u, b, color, t, ti, &s, i);
 
 		if (s.fullmem && u->auto_alloc) {
-			// XXX final uct_progress_status() still messed up
 			/* Stop search, realloc tree and restart search */
 			uct_search_realloc_tree(u, b, color, ti, &s);
 			continue;
@@ -373,7 +372,7 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 			u->dynkomi->score.value, u->dynkomi->score.playouts,
 			u->dynkomi->value.value, u->dynkomi->value.playouts);
 	if (print_progress)
-		uct_progress_status(u, t, color, ctx->games, NULL);
+		uct_progress_status(u, t, color, 0, NULL);
 
 	if (u->debug_after.playouts > 0) {
 		/* Now, start an additional run of playouts, single threaded. */
@@ -438,7 +437,7 @@ uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t 
 
 	/* Start MCTS manager thread "headless". */
 	static uct_search_state_t s;
-	uct_search_start(u, b, color, t, NULL, &s);
+	uct_search_start(u, b, color, t, NULL, &s, 0);
 }
 
 /* uct_search_stop() frontend for the pondering (non-genmove) mode, and
@@ -451,7 +450,7 @@ uct_pondering_stop(uct_t *u)
 
 	/* Stop the thread manager. */
 	uct_thread_ctx_t *ctx = uct_search_stop();
-	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, ctx->games, NULL);
+	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, 0, NULL);
 	if (u->pondering) {
 		free(ctx->b);
 		u->pondering = false;
@@ -490,7 +489,8 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 {
 	uct_t *u = (uct_t*)e->data;
 	double time_start = time_now();
-	u->pass_all_alive |= pass_all_alive;	
+	u->pass_all_alive |= pass_all_alive;
+	u->mcts_time = 0;
 
 	uct_pondering_stop(u);
 
@@ -514,12 +514,12 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 
 	if (UDEBUGL(2)) {
 		double total_time = time_now() - time_start;
-		double mcts_time  = time_now() - u->mcts_time_start + 0.000001; /* avoid divide by zero */
+		double mcts_time  = u->mcts_time + 0.000001; /* avoid divide by zero */
 		fprintf(stderr, "genmove in %0.2fs, mcts %0.2fs (%d games/s, %d games/s/thread)\n",
 			total_time, mcts_time, (int)(played_games/mcts_time), (int)(played_games/mcts_time/u->threads));
 	}
 
-	uct_progress_status(u, u->t, color, played_games, best_coord);
+	uct_progress_status(u, u->t, color, 0, best_coord);
 
 	return best;
 }

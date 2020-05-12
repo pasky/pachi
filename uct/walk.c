@@ -267,9 +267,15 @@ uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, 
 	fprintf(stderr, "\n");
 }
 
+/* Print search progress in text / json / leela-zero format
+ * Also takes care of gogui livegfx updates if enabled.
+ * If @playouts is 0 show total playouts */
 void
 uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
 {
+	if (!playouts)
+		playouts = t->root->u.playouts;
+		
 	if      (u->reporting == UR_TEXT)        uct_progress_text(u->report_fh, u, t, color, playouts);
 	else if (u->reporting == UR_JSON)        uct_progress_json(u->report_fh, u, t, color, playouts, final, false);
 	else if (u->reporting == UR_JSON_BIG)    uct_progress_json(u->report_fh, u, t, color, playouts, final, true);
