@@ -224,8 +224,10 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 	/* If we are a slave in a distributed engine, start pondering once
 	 * we know which move we actually played. See uct_genmove() about
 	 * the check for pass. */
-	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord))
+	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord)) {
+		u->pondering_want_gc = true;
 		uct_pondering_start(u, b, u->t, stone_other(m->color), m->coord, false);
+	}
 	assert(!(u->slave && using_dcnn(b))); // XXX distributed engine dcnn pondering support
 
 	return NULL;
@@ -399,8 +401,11 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	return ctx->games;
 }
 
-/* Start pondering background with @color to play.
- * @our_move: move to be added before starting. 0 means doesn't apply. */
+/* Start pondering in the background with @color to play.
+ * @our_move:          move to be added before starting. 0 means doesn't apply.
+ * @genmove_pondering  pondering after genmove, dcnn eval opponent's replies as well.
+ *                     false: analyzing, regular search.
+ * Set u->pondering_want_gc if you want tree to be garbage collected. */
 static void
 uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, bool genmove_pondering)
 {
@@ -557,8 +562,10 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		uct_prepare_move(u, b, stone_other(color));
 	}	
 
-	if (u->pondering_opt && u->t)
+	if (u->pondering_opt && u->t) {
+		u->pondering_want_gc = true;
 		uct_pondering_start(u, b, u->t, stone_other(color), best_coord, true);
+	}
 
 	return best_coord;
 }

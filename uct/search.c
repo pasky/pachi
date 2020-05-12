@@ -187,14 +187,13 @@ thread_manager(void *ctx_)
 	int joined = 0;
 
 	uct_halt = 0;
+	u->tree_ready = false;
 
 	/* Garbage collect the tree by preference when pondering. */
-	if (u->pondering && t->nodes && t->nodes_size >= t->pruning_threshold) {
+	if (u->pondering && u->pondering_want_gc && t->nodes && t->nodes_size >= t->pruning_threshold)
 		t->root = tree_garbage_collect(t, t->root);
-	}
+	u->pondering_want_gc = false;
 
-	u->tree_ready = false;
-		
 	/* Logging thread for pondering */
 	if (u->pondering)
 		pthread_create(&threads[u->threads], NULL, logger_thread, mctx);
