@@ -74,15 +74,15 @@ default_ti_init(void)
  * | uct_genmove()
  * | uct_search()            (uct_search_start() .. uct_search_stop())
  * | -----------------------
- * | spawn_thread_manager()
+ * | thread_manager()
  * | -----------------------
- * | spawn_worker()
- * V uct_playouts() */
+ * | worker_thread()
+ * V uct_playouts() 
+ *
+ * If we are pondering there is also logger_thread() which checks progress */
 
-/* Set in thread manager in case the workers should stop. */
-volatile sig_atomic_t uct_halt = 0;
-/* ID of the thread manager. */
-static pthread_t thread_manager;
+volatile sig_atomic_t uct_halt = 0;	/* Set in thread manager in case the workers should stop. */
+static pthread_t thread_manager_id;	/* ID of the thread manager. */
 bool thread_manager_running;
 
 static pthread_mutex_t finish_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -91,10 +91,10 @@ static volatile int finish_thread;
 static pthread_mutex_t finish_serializer = PTHREAD_MUTEX_INITIALIZER;
 
 static void  uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color);
-static void *spawn_logger(void *ctx_);
+static void *logger_thread(void *ctx_);
 
 static void *
-spawn_worker(void *ctx_)
+worker_thread(void *ctx_)
 {
 	/* Setup */
 	uct_thread_ctx_t *ctx = (uct_thread_ctx_t*)ctx_;
@@ -173,7 +173,7 @@ spawn_worker(void *ctx_)
  * used for the actual search, on return
  * it will set mctx->games to the number of performed simulations. */
 static void *
-spawn_thread_manager(void *ctx_)
+thread_manager(void *ctx_)
 {
 	/* In thread_manager, we use only some of the ctx fields. */
 	uct_thread_ctx_t *mctx = (uct_thread_ctx_t*)ctx_;
@@ -196,7 +196,7 @@ spawn_thread_manager(void *ctx_)
 		
 	/* Logging thread for pondering */
 	if (u->pondering)
-		pthread_create(&threads[u->threads], NULL, spawn_logger, mctx);
+		pthread_create(&threads[u->threads], NULL, logger_thread, mctx);
 	
 	/* Spawn threads... */
 	for (int ti = 0; ti < u->threads; ti++) {
@@ -209,7 +209,7 @@ spawn_thread_manager(void *ctx_)
 		pthread_attr_t a;
 		pthread_attr_init(&a);
 		pthread_attr_setstacksize(&a, 1048576);
-		pthread_create(&threads[ti], &a, spawn_worker, ctx);
+		pthread_create(&threads[ti], &a, worker_thread, ctx);
 		if (UDEBUGL(4))
 			fprintf(stderr, "Spawned worker %d\n", ti);
 	}
@@ -249,9 +249,10 @@ spawn_thread_manager(void *ctx_)
 	return mctx;
 }
 
-/* Pondering: Logging thread */
+/* Logger thread, keeps track of progress when pondering.
+ * Similar to uct_search() when pondering. */
 static void *
-spawn_logger(void *ctx_)
+logger_thread(void *ctx_)
 {
 	uct_thread_ctx_t *ctx = (uct_thread_ctx_t*)ctx_;
 	uct_t *u = ctx->u;
@@ -261,7 +262,6 @@ spawn_logger(void *ctx_)
 	uct_search_state_t *s = ctx->s;
 	time_info_t *ti = ctx->ti;
 
-	// Similar to uct_search() code when pondering
 	while (!uct_halt) {
 		time_sleep(TREE_BUSYWAIT_INTERVAL);
 		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
@@ -384,7 +384,7 @@ uct_search_start(uct_t *u, board_t *b, enum stone color,
 	s->ctx = &mctx;
 	pthread_mutex_lock(&finish_serializer);
 	pthread_mutex_lock(&finish_mutex);
-	pthread_create(&thread_manager, NULL, spawn_thread_manager, s->ctx);
+	pthread_create(&thread_manager_id, NULL, thread_manager, s->ctx);
 	thread_manager_running = true;
 }
 
@@ -402,7 +402,7 @@ uct_search_stop(void)
 	/* Collect the thread manager. */
 	uct_thread_ctx_t *pctx;
 	thread_manager_running = false;
-	pthread_join(thread_manager, (void **) &pctx);
+	pthread_join(thread_manager_id, (void **) &pctx);
 	return pctx;
 }
 
