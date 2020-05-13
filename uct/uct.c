@@ -352,6 +352,14 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		int i = uct_search_games(&s);
 		/* Print notifications etc. */
 		uct_search_progress(u, b, color, t, ti, &s, i);
+
+		if (s.fullmem) {
+			// XXX final uct_progress_status() still messed up
+			/* Stop search, realloc tree and restart search */
+			uct_search_realloc_tree(u, b, color, ti, &s);
+			continue;
+		}
+		
 		/* Check if we should stop the search. */
 		if (uct_search_check_stop(u, b, color, t, ti, &s, i))
 			break;
@@ -760,6 +768,25 @@ uct_default_max_tree_size()
 	 * If you're using really long thinking times you definitely should
 	 * set a higher max_tree_size. */
 	return (size_t)300 * mult * 1048576;
+}
+
+/* Sets actual max_tree_size, pruning_threshold and max_pruned_size
+ * values to use for target @max_tree_size. Beware actual max_tree_size
+ * used is lower (max_tree_size - max_pruned_size) */
+void
+uct_max_tree_size_init(uct_t *u, size_t max_tree_size)
+{
+	u->max_tree_size = max_tree_size;
+	
+	if (u->pruning_threshold < max_tree_size / 10)
+		u->pruning_threshold = max_tree_size / 10;
+	if (u->pruning_threshold > max_tree_size / 2)
+		u->pruning_threshold = max_tree_size / 2;
+	
+	/* Limit pruning temp space to 20% of memory. Beyond this we discard
+	 * the nodes and recompute them at the next move if necessary. */
+	u->max_pruned_size = max_tree_size / 5;
+	u->max_tree_size -= u->max_pruned_size;
 }
 
 
@@ -1444,17 +1471,9 @@ uct_state_init(engine_t *e, board_t *b)
 	if (!u->local_tree)  /* No ltree aging. */
 		u->local_tree_aging = 1.0f;
 
-	if (u->fast_alloc) {
-		if (u->pruning_threshold < u->max_tree_size / 10)
-			u->pruning_threshold = u->max_tree_size / 10;
-		if (u->pruning_threshold > u->max_tree_size / 2)
-			u->pruning_threshold = u->max_tree_size / 2;
-
-		/* Limit pruning temp space to 20% of memory. Beyond this we discard
-		 * the nodes and recompute them at the next move if necessary. */
-		u->max_pruned_size = u->max_tree_size / 5;
-		u->max_tree_size -= u->max_pruned_size;
-	} else {
+	if (u->fast_alloc)
+		uct_max_tree_size_init(u, u->max_tree_size);
+	else {
 		/* Reserve 5% memory in case the background free() are slower
 		 * than the concurrent allocations. */
 		u->max_tree_size -= u->max_tree_size / 20;

@@ -83,6 +83,7 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	t->max_pruned_size = max_pruned_size;
 	t->pruning_threshold = pruning_threshold;
 	if (max_tree_size != 0) {
+		if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", max_tree_size / (1024*1024));
 		t->nodes = cmalloc(max_tree_size);
 		/* The nodes buffer doesn't need initialization. This is currently
 		 * done by tree_init_node to spread the load. Doing a memset for the
@@ -476,6 +477,34 @@ tree_garbage_collect(tree_t *tree, tree_node_t *node)
 	tree_done(temp_tree);
 	return new_node;
 }
+
+void
+tree_copy(tree_t *dst, tree_t *src)
+{
+	dst->nodes_size = 0;
+	dst->max_depth = 0;
+	// just copy everything for now ...
+	dst->root = tree_prune(dst, src, src->root, 0, src->max_depth);
+	assert(dst->root);
+}
+
+void
+tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold)
+{
+	assert(max_tree_size > t->max_tree_size);
+	assert(max_pruned_size > t->max_pruned_size);
+	assert(pruning_threshold > t->pruning_threshold);
+
+	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), max_tree_size, max_pruned_size,
+			       pruning_threshold, t->ltree_aging, t->hbits);
+
+	tree_copy(t2, t);   assert(t2->root_color == t->root_color);
+
+	tree_t *tmp = malloc2(tree_t);
+	*tmp = *t;  tree_done(tmp);
+	*t = *t2;   free(t2);
+}
+
 
 /* Find node of given coordinate under parent.
  * FIXME: Adjust for board symmetry. */

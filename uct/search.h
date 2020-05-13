@@ -65,6 +65,8 @@ int uct_search_games(uct_search_state_t *s);
 void uct_search_start(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s);
 uct_thread_ctx_t *uct_search_stop(void);
 
+void uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti, uct_search_state_t *s);
+
 void uct_search_progress(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s, int playouts);
 
 bool uct_search_check_stop(uct_t *u, board_t *b, enum stone color, tree_t *t, time_info_t *ti, uct_search_state_t *s, int i);

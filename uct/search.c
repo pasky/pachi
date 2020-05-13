@@ -29,6 +29,15 @@
 #include "dcnn.h"
 #include "pachi.h"
 
+static int
+checked_pthread_join(pthread_t thread, void **retval)
+{
+	int r = pthread_join(thread, retval);
+	if (r)  fail("pthread_join");
+	return r;
+}
+
+#define pthread_join  checked_pthread_join
 
 /* Default time settings for the UCT engine. In distributed mode, slaves are
  * unlimited by default and all control is done on the master, either in time
@@ -249,6 +258,27 @@ thread_manager(void *ctx_)
 	return mctx;
 }
 
+/* Detached thread to deal with memory full while pondering */
+static void *
+pondering_fullmem_handler(void *ctx_)
+{
+	uct_thread_ctx_t *ctx = (uct_thread_ctx_t*)ctx_;
+	uct_t *u = ctx->u;
+	board_t *b = ctx->b;
+	enum stone color = ctx->color;
+	uct_search_state_t *s = ctx->s;
+	time_info_t *ti = ctx->ti;
+	ctx = NULL;
+
+	int r = pthread_detach(pthread_self());  if (r) fail("pthread_detach");
+
+	if (!thread_manager_running)  return NULL;
+
+	uct_search_realloc_tree(u, b, color, ti, s);
+	
+	return NULL;
+}
+
 /* Logger thread, keeps track of progress when pondering.
  * Similar to uct_search() when pondering. */
 static void *
@@ -272,7 +302,13 @@ logger_thread(void *ctx_)
 		/* Print notifications etc. */
 		uct_search_progress(u, b, color, t, ti, s, i);
 		
-		if (s->fullmem)  uct_pondering_stop(u);
+		if (s->fullmem) {
+			/* Stop search, realloc tree and resume search.
+			 * Do it from another thread, would deadlock here. */
+			pthread_t tid;
+			pthread_create(&tid, NULL, pondering_fullmem_handler, ctx);
+			return NULL;
+		}		
 	}
 	return NULL;
 }
@@ -391,6 +427,7 @@ uct_thread_ctx_t *
 uct_search_stop(void)
 {
 	assert(thread_manager_running);
+	thread_manager_running = false;
 
 	/* Signal thread manager to stop the workers. */
 	pthread_mutex_lock(&finish_mutex);
@@ -400,11 +437,34 @@ uct_search_stop(void)
 
 	/* Collect the thread manager. */
 	uct_thread_ctx_t *pctx;
-	thread_manager_running = false;
 	pthread_join(thread_manager_id, (void **) &pctx);
 	return pctx;
 }
 
+/* Stop search, realloc tree and resume search */
+void
+uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti, uct_search_state_t *s)
+{
+	assert(u->fast_alloc);
+	
+	uct_search_stop();
+	
+	size_t old_size = (u->max_tree_size + u->max_pruned_size);
+	size_t new_size = old_size * 2;
+	if (UDEBUGL(2)) fprintf(stderr, "Tree memory full, reallocating (%i -> %i Mb)\n",
+				old_size / (1024*1024), new_size / (1024*1024));
+	
+	u->pruning_threshold = 0;
+	u->max_pruned_size = 0;
+	uct_max_tree_size_init(u, new_size);
+	
+	double time_start = time_now();
+	tree_realloc(u->t, u->max_tree_size, u->max_pruned_size, u->pruning_threshold);
+	if (UDEBUGL(2)) fprintf(stderr, "tree realloc in %.1fs\n", time_now() - time_start);
+	
+	s->fullmem = false;
+	uct_search_start(u, b, color, u->t, ti, s);
+}
 
 void
 uct_search_progress(uct_t *u, board_t *b, enum stone color,
@@ -439,12 +499,7 @@ uct_search_progress(uct_t *u, board_t *b, enum stone color,
 		}
 	
 	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
-		char *msg = "WARNING: Tree memory limit reached, stopping search.\n"
-			    "Try increasing max_tree_size.\n";
-		if (UDEBUGL(2))  fprintf(stderr, "%s", msg);
-#ifdef _WIN32
-		popup(msg);
-#endif
+		if (UDEBUGL(2))  fprintf(stderr, "Tree memory limit reached, stopping search.\n");
 		s->fullmem = true;
 	}
 }

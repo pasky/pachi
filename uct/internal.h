@@ -159,6 +159,8 @@ void uct_pondering_stop(uct_t *u);
 void uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts);
 void uct_get_best_moves_at(uct_t *u, tree_node_t *n, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts);
 void uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color);
+void uct_max_tree_size_init(uct_t *u, size_t max_tree_size);
+
 
 /* This is the state used for descending the tree; we use this wrapper
  * structure in order to be able to easily descend in multiple trees
