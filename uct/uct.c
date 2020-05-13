@@ -353,7 +353,7 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		/* Print notifications etc. */
 		uct_search_progress(u, b, color, t, ti, &s, i);
 
-		if (s.fullmem) {
+		if (s.fullmem && u->auto_alloc) {
 			// XXX final uct_progress_status() still messed up
 			/* Stop search, realloc tree and restart search */
 			uct_search_realloc_tree(u, b, color, ti, &s);
@@ -1045,6 +1045,21 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 		/* Number of virtual losses added before evaluating a node. */
 		u->virtual_loss = atoi(optval);
 	}
+	else if (!strcasecmp(optname, "auto_alloc")) {  NEED_RESET
+	        /* Automatically grow tree memory during search (default)
+		 * If tree memory runs out will allocate bigger space and resume
+		 * search, so you don't have to worry about setting max_tree_size
+		 * to a big enough value ahead of time for long thinking times.
+		 * Tree starts with size max_tree_size so it's still a good idea
+		 * to set it if you know how much you need. */
+		u->auto_alloc = !optval || atoi(optval);
+	}
+	else if (!strcasecmp(optname, "fixed_mem") && !optval) {  NEED_RESET
+		/* Don't grow tree memory during search (same as auto_alloc=0)
+		 * If allocated memory runs out search will stop.
+		 * max_tree_size controls how much memory is allocated initially. */
+		u->auto_alloc = false;
+	}
 	else if (!strcasecmp(optname, "max_tree_size") && optval) {  NEED_RESET
 		/* Maximum amount of memory [MiB] consumed by the move tree.
 		 * For fast_alloc it includes the temp tree used for pruning.
@@ -1413,6 +1428,7 @@ uct_state_init(engine_t *e, board_t *b)
 	u->amaf_prior = false;
 	u->max_tree_size = uct_default_max_tree_size();
 	u->fast_alloc = true;
+	u->auto_alloc = true;
 	u->pruning_threshold = 0;
 	u->genmove_reset_tree = false;
 
@@ -1474,6 +1490,7 @@ uct_state_init(engine_t *e, board_t *b)
 	if (u->fast_alloc)
 		uct_max_tree_size_init(u, u->max_tree_size);
 	else {
+		u->auto_alloc = false;  /* auto_alloc is for fast_alloc */
 		/* Reserve 5% memory in case the background free() are slower
 		 * than the concurrent allocations. */
 		u->max_tree_size -= u->max_tree_size / 20;

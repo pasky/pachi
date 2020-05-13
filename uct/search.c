@@ -258,7 +258,8 @@ thread_manager(void *ctx_)
 	return mctx;
 }
 
-/* Detached thread to deal with memory full while pondering */
+/* Detached thread to deal with memory full while pondering:
+ * Stop search or realloc tree if u->auto_alloc. */
 static void *
 pondering_fullmem_handler(void *ctx_)
 {
@@ -274,7 +275,8 @@ pondering_fullmem_handler(void *ctx_)
 
 	if (!thread_manager_running)  return NULL;
 
-	uct_search_realloc_tree(u, b, color, ti, s);
+	if (u->auto_alloc)  uct_search_realloc_tree(u, b, color, ti, s);
+	else                uct_pondering_stop(u);
 	
 	return NULL;
 }
@@ -303,7 +305,7 @@ logger_thread(void *ctx_)
 		uct_search_progress(u, b, color, t, ti, s, i);
 		
 		if (s->fullmem) {
-			/* Stop search, realloc tree and resume search.
+			/* Stop search / Realloc tree.
 			 * Do it from another thread, would deadlock here. */
 			pthread_t tid;
 			pthread_create(&tid, NULL, pondering_fullmem_handler, ctx);
@@ -497,10 +499,17 @@ uct_search_progress(uct_t *u, board_t *b, enum stone color,
 			s->last_print_playouts += u->reportfreq_playouts; // keep the numbers tidy
 			uct_progress_status(u, ctx->t, color, s->last_print_playouts, NULL);
 		}
-	
-	if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
-		if (UDEBUGL(2))  fprintf(stderr, "Tree memory limit reached, stopping search.\n");
+
+        if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
 		s->fullmem = true;
+		if (!u->auto_alloc) {
+			char *msg = "WARNING: Tree memory limit reached, stopping search.\n"
+				    "Try increasing max_tree_size.\n";
+			if (UDEBUGL(2))  fprintf(stderr, "%s", msg);
+#ifdef _WIN32
+			popup(msg);
+#endif
+		}
 	}
 }
 

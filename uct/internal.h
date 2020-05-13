@@ -63,6 +63,7 @@ typedef struct uct {
 	int force_seed;
 	bool no_tbook;
 	bool fast_alloc;
+	bool auto_alloc;
 	size_t max_tree_size;
 	size_t max_pruned_size;
 	size_t pruning_threshold;
