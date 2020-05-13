@@ -999,7 +999,7 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 	else if (!strcasecmp(optname, "max_tree_size") && optval) {  NEED_RESET
 		/* Maximum amount of memory [MiB] consumed by the move tree.
 		 * For fast_alloc it includes the temp tree used for pruning.
-		 * Default is 3072 (3 GiB). */
+		 * Default is 300 Mb (32 bits) / 600 Mb (64 bits) */
 		u->max_tree_size = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
 	}
 	else if (!strcasecmp(optname, "fast_alloc")) {  NEED_RESET
