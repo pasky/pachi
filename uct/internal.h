@@ -79,10 +79,10 @@ typedef struct uct {
 	int slave_index; /* 0..max_slaves-1, or -1 if not set */
 	enum stone my_color;
 
+	/* Current search flags */
+	int search_flags;
+	
 	bool pondering_opt;                /* User wants pondering */
-	bool pondering;                    /* Actually pondering now */
-	bool genmove_pondering;            /* Regular pondering (after a genmove) */
-	bool pondering_want_gc;		   /* Garbage collect tree before pondering */
 	int     dcnn_pondering_prior;      /* Prior next move guesses */
 	int     dcnn_pondering_mcts;       /* Genmove next move guesses */
 	coord_t dcnn_pondering_mcts_c[20];

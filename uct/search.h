@@ -27,7 +27,18 @@ struct tree_node;
 #define TREE_BUSYWAIT_INTERVAL 0.1 /* 100ms */
 
 /* uct_search_start() flags */
-#define UCT_SEARCH_RESTART	(1 << 0)
+#define UCT_SEARCH_PONDERING		(1 << 0)  /* Pondering now */
+#define UCT_SEARCH_GENMOVE_PONDERING	(1 << 1)  /* Regular pondering after a genmove */
+#define UCT_SEARCH_WANT_GC		(1 << 2)  /* Garbage collect tree before pondering */
+#define UCT_SEARCH_RESTARTED		(1 << 3)  /* Resuming search */
+
+/* Search flags macros */
+#define pondering(u)		((u)->search_flags & UCT_SEARCH_PONDERING)
+#define genmove_pondering(u)	((u)->search_flags & UCT_SEARCH_GENMOVE_PONDERING)
+#define search_want_gc(u)	((u)->search_flags & UCT_SEARCH_WANT_GC)
+#define search_restarted(u)	((u)->search_flags & UCT_SEARCH_RESTARTED)
+
+#define clear_search_want_gc(u)	 do { (u)->search_flags &= ~UCT_SEARCH_WANT_GC; } while(0)
 
 /* Thread manager state */
 extern volatile sig_atomic_t uct_halt;
@@ -50,7 +61,6 @@ typedef struct uct_thread_ctx {
 /* Progress information of the on-going MCTS search - when did we
  * last adjusted dynkomi, printed out stuff, etc. */
 typedef struct uct_search_state {
-	int flags;		  /* uct_search_start() flags */
 	double mcts_time_start;
 	int base_playouts;	  /* Number of games simulated for this simulation before
 				   * we started the search. (We have simulated them earlier.) */

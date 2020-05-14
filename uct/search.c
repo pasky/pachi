@@ -112,7 +112,7 @@ worker_thread(void *ctx_)
 	board_t *b = ctx->b;
 	enum stone color = ctx->color;
 	fast_srandom(ctx->seed);
-	int restarted = (s->flags & UCT_SEARCH_RESTART);
+	int restarted = search_restarted(u);
 
 	/* Fill ownermap for mcowner pattern feature. */
 	if (using_patterns()) {
@@ -150,7 +150,7 @@ worker_thread(void *ctx_)
 		
 		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
 			tree_expand_node(t, n, b, color, u, 1);
-		if (u->genmove_pondering && using_dcnn(b))
+		if (genmove_pondering(u) && using_dcnn(b))
 			uct_expand_next_best_moves(u, t, b, color);
 		
 		if (DEBUGL(2) && already_have && !restarted) {  /* Show previously computed priors */
@@ -200,12 +200,12 @@ thread_manager(void *ctx_)
 	u->tree_ready = false;
 
 	/* Garbage collect the tree by preference when pondering. */
-	if (u->pondering && u->pondering_want_gc && t->nodes && t->nodes_size >= t->pruning_threshold)
+	if (pondering(u) && search_want_gc(u) && t->nodes && t->nodes_size >= t->pruning_threshold)
 		t->root = tree_garbage_collect(t, t->root);
-	u->pondering_want_gc = false;
+	clear_search_want_gc(u);
 
 	/* Logging thread for pondering */
-	if (u->pondering)
+	if (pondering(u))
 		pthread_create(&threads[u->threads], NULL, logger_thread, mctx);
 	
 	/* Spawn threads... */
@@ -250,7 +250,7 @@ thread_manager(void *ctx_)
 		pthread_mutex_unlock(&finish_serializer);
 	}
 
-	if (u->pondering)
+	if (pondering(u))
 		pthread_join(threads[u->threads], NULL);
 	
 	pthread_mutex_unlock(&finish_mutex);
@@ -397,14 +397,14 @@ uct_search_start(uct_t *u, board_t *b, enum stone color,
 		 tree_t *t, time_info_t *ti,
 		 uct_search_state_t *s, int flags)
 {
+	u->search_flags = flags;
+	
 	/* Set up search state. */
 	s->base_playouts = s->last_dynkomi = s->last_print_playouts = t->root->u.playouts;
 	s->fullmem = false;
-	s->flags = flags;
 
-	int restarted = (flags & UCT_SEARCH_RESTART);
-		
-	if (ti && !restarted) {
+	/* If restarted timers are already setup, reuse stop condition in s */
+	if (ti && !search_restarted(u)) {
 		if (ti->period == TT_NULL) {
 			if (u->slave)
 				*ti = ti_unlimited();
@@ -429,6 +429,7 @@ uct_search_start(uct_t *u, board_t *b, enum stone color,
 	thread_manager_running = true;
 }
 
+/* Stop current search. Clears search flags. */
 uct_thread_ctx_t *
 uct_search_stop(void)
 {
@@ -444,9 +445,12 @@ uct_search_stop(void)
 	/* Collect the thread manager. */
 	uct_thread_ctx_t *pctx;
 	pthread_join(thread_manager_id, (void **) &pctx);
+	
 	uct_t *u = pctx->u;
 	uct_search_state_t *s = pctx->s;
 	u->mcts_time += time_now() - s->mcts_time_start;
+	u->search_flags = 0;  /* Reset search flags */
+	
 	return pctx;
 }
 
@@ -456,6 +460,7 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 {
 	assert(u->fast_alloc);
 	
+	int flags = u->search_flags;	/* Save flags ! */
 	uct_search_stop();
 	
 	size_t old_size = (u->max_tree_size + u->max_pruned_size);
@@ -471,10 +476,9 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	tree_realloc(u->t, u->max_tree_size, u->max_pruned_size, u->pruning_threshold);
 	if (UDEBUGL(2)) fprintf(stderr, "tree realloc in %.1fs\n", time_now() - time_start);
 
-	/* Timers already setup, reuse stop condition in s */
-	s->flags |= UCT_SEARCH_RESTART;
+	/* Restart search (preserve timers...) */
 	s->fullmem = false;
-	uct_search_start(u, b, color, u->t, ti, s, s->flags);
+	uct_search_start(u, b, color, u->t, ti, s, flags | UCT_SEARCH_RESTARTED);
 }
 
 void
@@ -487,7 +491,7 @@ uct_search_progress(uct_t *u, board_t *b, enum stone color,
 	/* Adjust dynkomi? */
 	int di = u->dynkomi_interval * u->threads;
 	if (ctx->t->use_extra_komi && u->dynkomi->permove
-	    && !u->pondering && di
+	    && !pondering(u) && di
 	    && playouts > s->last_dynkomi + di) {
 		s->last_dynkomi += di;
 		floating_t old_dynkomi = ctx->t->extra_komi;

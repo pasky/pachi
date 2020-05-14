@@ -10,6 +10,7 @@
 #include "tactics/util.h"
 #include "uct/dynkomi.h"
 #include "uct/internal.h"
+#include "uct/search.h"
 #include "uct/tree.h"
 
 
@@ -75,7 +76,7 @@ static floating_t
 linear_permove(uct_dynkomi_t *d, board_t *b, tree_t *tree)
 {
 	dynkomi_linear_t *l = (dynkomi_linear_t*)d->data;
-	enum stone color = d->uct->pondering ? tree->root_color : stone_other(tree->root_color);
+	enum stone color = pondering(d->uct) ? tree->root_color : stone_other(tree->root_color);
 	int lmoves = l->moves[color];
 
 	if (b->moves < lmoves)
@@ -134,7 +135,7 @@ linear_persim(uct_dynkomi_t *d, board_t *b, tree_t *tree, tree_node_t *node)
 	 * This also means the values will stay correct after
 	 * node promotion. */
 
-	enum stone color = d->uct->pondering ? tree->root_color : stone_other(tree->root_color);
+	enum stone color = pondering(d->uct) ? tree->root_color : stone_other(tree->root_color);
 	int lmoves = l->moves[color];
 	if (b->moves < lmoves)
 		return linear_simple(l, b, color);
