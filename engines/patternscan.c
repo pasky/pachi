@@ -240,7 +240,7 @@ genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 	coord_t last_move = last_move(b).coord;
 	last_move(b).coord = m->coord;
 	board_print(b, stderr);
-	fprintf(stderr, "%s to play\n", stone2str(stone_other(last_move(b).color)));
+	fprintf(stderr, "%s to play\n", stone2str(board_to_play(b)));
 	last_move(b).coord = last_move;
 #endif
 

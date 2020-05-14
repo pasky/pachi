@@ -326,9 +326,7 @@ gogui_best_moves(FILE *f, engine_t *e, board_t *b, time_info_t *ti,
 enum parse_code
 cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
-
+	enum stone color = board_to_play(b);
 	float   best_r[GOGUI_MANY] = { 0.0, };
 	coord_t best_c[GOGUI_MANY];
 	for (int i = 0; i < GOGUI_MANY; i++)
@@ -433,8 +431,7 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_winrates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
 
@@ -449,8 +446,7 @@ cmd_gogui_winrates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_best_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
 
@@ -475,8 +471,7 @@ cmd_gogui_dcnn_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (!using_dcnn(b)) {  gtp_error(gtp, "Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");   /* gtp prefix */	
 	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
@@ -489,8 +484,7 @@ cmd_gogui_dcnn_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (!using_dcnn(b)) {  gtp_error(gtp, "Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
 	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");  /* gtp prefix */
 	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
@@ -502,9 +496,8 @@ cmd_gogui_dcnn_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!using_dcnn(b)) {  gtp_error(gtp, "Not using dcnn");  return P_OK;  }
 	if (!dcnn_engine)   dcnn_engine = new_engine(E_DCNN, "", b);
-	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+
+	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
 	gogui_best_moves(stdout, dcnn_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
@@ -524,10 +517,8 @@ cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki");  return P_OK;  }
 	if (!joseki_engine)   joseki_engine = new_engine(E_JOSEKIPLAY, NULL, b);
-	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
+
+	enum stone color = board_to_play(b);
 	float joseki_map[BOARD_MAX_COORDS];
 	joseki_rate_moves(joseki_dict, b, color, joseki_map);
 
@@ -585,9 +576,8 @@ enum parse_code
 cmd_gogui_pattern_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
-	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+
+	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
 	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
@@ -601,9 +591,8 @@ enum parse_code
 cmd_gogui_pattern_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
-	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+
+	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");  /* gtp prefix */	
 	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
@@ -617,9 +606,8 @@ enum parse_code
 cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
-	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+
+	enum stone color = board_to_play(b);	
 
 	gtp_printf(gtp, "");   /* gtp prefix */
 	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
@@ -634,9 +622,8 @@ enum parse_code
 cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
-	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
+
+	enum stone color = board_to_play(b);
 	
 	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
@@ -667,10 +654,8 @@ enum parse_code
 cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!pattern_engine)   init_patternplay_engine(b);
-	
-	enum stone color = S_BLACK;
-	if (last_move(b).color)  color = stone_other(last_move(b).color);
-	
+
+	enum stone color = board_to_play(b);	
 	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
@@ -704,7 +689,7 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp_printf(gtp, "");   /* gtp prefix */
 	gogui_show_pattern(b, coord, spatial_dist);
 	
-	move_t m = move(coord, stone_other(last_move(b).color));
+	move_t m = move(coord, board_to_play(b));
 	spatial_t s;
 	spatial_from_board(pc, &s, b, &m);
 	s.dist = spatial_dist;

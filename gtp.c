@@ -524,10 +524,7 @@ stop_analyzing(gtp_t *gtp, board_t *b, engine_t *e)
 static enum parse_code
 cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	enum stone color = S_BLACK;
-	if (last_move(b).color != S_NONE)
-		color = stone_other(last_move(b).color);
-	
+	enum stone color = board_to_play(b);
 	char *arg;
 	gtp_arg(arg);
 	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
@@ -788,8 +785,7 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
-	enum stone color = stone_other(last_move(b).color);
-	move_t m = move(pass, color);
+	move_t m = move(pass, board_to_play(b));
 	if (e->notify_play)
 		e->notify_play(e, b, &m, "");
 

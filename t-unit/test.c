@@ -443,7 +443,7 @@ test_moggy_moves(board_t *b, char *arg)
 
 	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
 	engine_t e;  engine_init(&e, E_REPLAY, e_arg, b);
-	enum stone color = stone_other(last_move(b).color);
+	enum stone color = board_to_play(b);
 	
 	if (DEBUGL(2))
 		fprintf(stderr, "moggy moves, %s to play. Sampling moves (%i runs)...\n\n",
@@ -533,7 +533,7 @@ test_moggy_status(board_t *b, char *arg)
 	
 	if (!tunit_over_gtp) assert(last_move_set);
 	
-	enum stone color = (is_pass(last_move(b).coord) ? S_BLACK : stone_other(last_move(b).color));
+	enum stone color = board_to_play(b);
 	board_print_test(2, b);
 	if (DEBUGL(2))  fprintf(stderr, "moggy status ");
 	for (int i = 0; i < n; i++) {

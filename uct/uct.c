@@ -175,8 +175,7 @@ uct_ownermap(engine_t *e, board_t *b)
 	uct_t *u = (uct_t*)b->es;
 	
 	/* Make sure ownermap is well-seeded. */
-	enum stone color = (last_move(b).color ? stone_other(last_move(b).color) : S_BLACK);
-	uct_mcowner_playouts(u, b, color);
+	uct_mcowner_playouts(u, b, board_to_play(b));
 	
 	return &u->ownermap;
 }
@@ -418,8 +417,7 @@ uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t 
 		int res = board_play(b, &m);
 		assert(res >= 0);
 	}
-	if (last_move(b).color != S_NONE)
-		assert(last_move(b).color == stone_other(color));
+	assert(color == board_to_play(b));
 	
 	setup_dynkomi(u, b, color);
 
