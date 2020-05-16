@@ -488,13 +488,21 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	if (UDEBUGL(2)) fprintf(stderr, "Tree memory full, reallocating (%i -> %i Mb)\n",
 				old_size / (1024*1024), new_size / (1024*1024));
 
+	/* Can't simply use tree_realloc(), need to check if we can allocate
+	 * memory before stopping search otherwise we can't recover. */
+	tree_t *t  = u->t;
+	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), new_size, pruned_size(new_size),
+			       pruning_threshold(new_size), t->ltree_aging, t->hbits);
+	if (!t2)  return 0;		/* Not enough memory */
+	
 	int flags = u->search_flags;	/* Save flags ! */
 	uct_search_stop();
 	
 	uct_tree_size_init(u, new_size);
 	
 	double time_start = time_now();
-	tree_realloc(u->t, new_size, pruned_size(new_size), pruning_threshold(new_size));
+	tree_copy(t2, t);	assert(t2->root_color == t->root_color);
+	tree_replace(t, t2);
 	if (UDEBUGL(2)) fprintf(stderr, "tree realloc in %.1fs\n", time_now() - time_start);
 
 	/* Restart search (preserve timers...) */

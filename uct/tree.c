@@ -72,23 +72,30 @@ tree_init_node(tree_t *t, coord_t coord, int depth, bool fast_alloc)
 	return n;
 }
 
-/* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0. */
+/* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0.
+ * Returns NULL if out of memory */
 tree_t *
 tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	  size_t max_pruned_size, size_t pruning_threshold, floating_t ltree_aging, int hbits)
 {
+	tree_node_t *nodes = NULL;
+	if (max_tree_size != 0) {
+		if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", max_tree_size / (1024*1024));
+		if (!(nodes = malloc(max_tree_size))) {
+			if (DEBUGL(2))  fprintf(stderr, "Out of memory.\n");
+			return NULL;
+		}
+		/* The nodes buffer doesn't need initialization. This is currently
+		 * done by tree_init_node to spread the load. Doing a memset for the
+		 * entire buffer here would be too slow for large trees (>10 GB). */
+	}
+	
 	tree_t *t = calloc2(1, tree_t);
 	t->board = board;
 	t->max_tree_size = max_tree_size;
 	t->max_pruned_size = max_pruned_size;
 	t->pruning_threshold = pruning_threshold;
-	if (max_tree_size != 0) {
-		if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", max_tree_size / (1024*1024));
-		t->nodes = cmalloc(max_tree_size);
-		/* The nodes buffer doesn't need initialization. This is currently
-		 * done by tree_init_node to spread the load. Doing a memset for the
-		 * entire buffer here would be too slow for large trees (>10 GB). */
-	}
+	t->nodes = nodes;
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0, t->nodes);
 	t->root_symmetry = board->symmetry;
@@ -488,8 +495,11 @@ tree_copy(tree_t *dst, tree_t *src)
 	assert(dst->root);
 }
 
-// XXX handle failed memory alloc gracefully
-void
+/* Realloc internal tree memory so it can accomodate bigger search tree
+ * Expensive: needs to allocate a new tree and copy it over.
+ * returns 1 if successful
+ *         0 if failed (out of memory) */
+int
 tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold)
 {
 	assert(max_tree_size > t->max_tree_size);
@@ -498,12 +508,22 @@ tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pru
 
 	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), max_tree_size, max_pruned_size,
 			       pruning_threshold, t->ltree_aging, t->hbits);
+	if (!t2)  return 0;	/* Out of memory */
 
-	tree_copy(t2, t);   assert(t2->root_color == t->root_color);
+	tree_copy(t2, t);	assert(t2->root_color == t->root_color);
+	tree_replace(t, t2);
+	return 1;
+}
 
+/* tree <- content
+ * makes @tree be @content without changing tree_t pointers (cheap)
+ * afterwards @tree prev content and @content pointer are invalid */
+void
+tree_replace(tree_t *tree, tree_t *content)
+{
 	tree_t *tmp = malloc2(tree_t);
-	*tmp = *t;  tree_done(tmp);
-	*t = *t2;   free(t2);
+	*tmp = *tree;      tree_done(tmp);
+	*tree = *content;  free(content);
 }
 
 

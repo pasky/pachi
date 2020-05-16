@@ -157,7 +157,8 @@ void tree_dump(tree_t *tree, double thres);
 void tree_save(tree_t *tree, board_t *b, int thres);
 void tree_load(tree_t *tree, board_t *b);
 void tree_copy(tree_t *dst, tree_t *src);
-void tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold);
+void tree_replace(tree_t *tree, tree_t *content);
+int  tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold);
 
 tree_node_t *tree_get_node(tree_node_t *parent, coord_t c);
 tree_node_t *tree_get_node2(tree_t *tree, tree_node_t *parent, coord_t c, bool create);
