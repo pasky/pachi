@@ -134,6 +134,11 @@ Use `pachi --kgs` when playing on KGS. See [kgsgtp.conf](kgs/kgsgtp-pachi.conf?r
   Play without dcnn with time settings 20:00 S.D. on 8 threads,
   taking up to 3Gb of memory, and thinking during the opponent's turn as well.
 
+> Pachi 12.50 Note:
+> By default Pachi automatically allocates memory for tree search now so you
+> shouldn't have to set "max_tree_size" anymore unless you want to limit max
+> memory used. See [here](MORE.md) for details.
+
 For now, there is no comprehensive documentation of engine options, but
 you can get a pretty good idea by looking at the uct_state_init() function
 in uct/uct.c - you will find the list of UCT engine options there, each

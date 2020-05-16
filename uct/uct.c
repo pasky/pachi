@@ -40,8 +40,9 @@ static void uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone col
 static void
 setup_state(uct_t *u, board_t *b, enum stone color)
 {
-	u->t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
-			 u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, u->stats_hbits);
+	size_t size = u->tree_size;
+	u->t = tree_init(b, color, u->fast_alloc ? size : 0,
+			 pruned_size(size), pruning_threshold(size), u->local_tree_aging, u->stats_hbits);
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
@@ -353,8 +354,8 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 
 		if (s.fullmem && u->auto_alloc) {
 			/* Stop search, realloc tree and restart search */
-			uct_search_realloc_tree(u, b, color, ti, &s);
-			continue;
+			if (uct_search_realloc_tree(u, b, color, ti, &s))  continue;
+			break;
 		}
 		
 		/* Check if we should stop the search. */
@@ -696,8 +697,9 @@ void
 uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 {
 	uct_t *u = (uct_t*)e->data;
-	tree_t *t = tree_init(b, color, u->fast_alloc ? u->max_tree_size : 0,
-			      u->max_pruned_size, u->pruning_threshold, u->local_tree_aging, 0);
+	size_t size = u->tree_size;
+	tree_t *t = tree_init(b, color, u->fast_alloc ? size : 0,
+			      pruned_size(size), pruning_threshold(size), u->local_tree_aging, 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -754,34 +756,37 @@ log_nthreads(uct_t *u)
 }
 
 size_t
-uct_default_max_tree_size()
+uct_default_tree_size()
 {
 	/* Double it on 64-bit, tree takes up twice as much memory ... */
 	int mult = (sizeof(void*) == 4 ? 1 : 2);
 
-	/* Should be enough for most scenarios (up to 240k playouts ...)
+	/* XXX doc
+	 * Should be enough for most scenarios (up to 240k playouts ...)
 	 * If you're using really long thinking times you definitely should
 	 * set a higher max_tree_size. */
 	return (size_t)300 * mult * 1048576;
 }
 
-/* Sets actual max_tree_size, pruning_threshold and max_pruned_size
- * values to use for target @max_tree_size. Beware actual max_tree_size
- * used is lower (max_tree_size - max_pruned_size) */
+/* Set current tree size to use taking memory limits into account */
 void
-uct_max_tree_size_init(uct_t *u, size_t max_tree_size)
+uct_tree_size_init(uct_t *u, size_t tree_size)
 {
-	u->max_tree_size = max_tree_size;
+	size_t max_tree_size = (u->max_tree_size_opt ? u->max_tree_size_opt : (size_t)-1);
+	size_t max_mem = (u->max_mem ? u->max_mem : (size_t)-1);
+
+	/* fixed_mem: can use either "tree_size" or "max_tree_size"
+	 * to set amount of memory to allocate.
+	 * before auto_alloc there was only max_tree_size so you
+	 * can "fixed_mem,max_tree_size=..." to get old behavior. */
+	if (!u->auto_alloc && u->max_tree_size_opt)
+		tree_size = u->max_tree_size_opt;
 	
-	if (u->pruning_threshold < max_tree_size / 10)
-		u->pruning_threshold = max_tree_size / 10;
-	if (u->pruning_threshold > max_tree_size / 2)
-		u->pruning_threshold = max_tree_size / 2;
+	/* Honor memory limits */
+	if (tree_size > max_tree_size)	tree_size = max_tree_size;
+	if (tree_size > max_mem)	tree_size = max_mem;
 	
-	/* Limit pruning temp space to 20% of memory. Beyond this we discard
-	 * the nodes and recompute them at the next move if necessary. */
-	u->max_pruned_size = max_tree_size / 5;
-	u->max_tree_size -= u->max_pruned_size;
+	u->tree_size = tree_size;
 }
 
 
@@ -1043,33 +1048,45 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 	else if (!strcasecmp(optname, "auto_alloc")) {  NEED_RESET
 	        /* Automatically grow tree memory during search (default)
 		 * If tree memory runs out will allocate bigger space and resume
-		 * search, so you don't have to worry about setting max_tree_size
-		 * to a big enough value ahead of time for long thinking times.
-		 * Tree starts with size max_tree_size so it's still a good idea
-		 * to set it if you know how much you need. */
+		 * search, so you don't have to worry about setting tree size
+		 * to a big enough value ahead of time.
+		 * see also "tree_size", "max_tree_size" which control initial
+		 * size / max size tree can grow to. */
 		u->auto_alloc = !optval || atoi(optval);
 	}
 	else if (!strcasecmp(optname, "fixed_mem") && !optval) {  NEED_RESET
-		/* Don't grow tree memory during search (same as auto_alloc=0)
-		 * If allocated memory runs out search will stop.
-		 * max_tree_size controls how much memory is allocated initially. */
+		/* Don't grow tree memory during search  (same as "auto_alloc=0")
+		 * Search will stop if allocated memory runs out. Set "tree_size"
+		 * or "max_tree_size" to control how much memory is allocated. */
 		u->auto_alloc = false;
+	}
+	else if (!strcasecmp(optname, "max_mem") && optval) {  NEED_RESET
+		/* Maximum amount of memory [MiB] used
+		 * Default: Unlimited
+		 * By default tree memory grows automatically, use this to limit
+		 * global memory usage when using long thinking times (unlike
+		 * "max_tree_size" takes temp tree into account when reallocating). */
+		u->max_mem = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
+	}
+	else if (!strcasecmp(optname, "tree_size") && optval) {  NEED_RESET
+		/* Initial amount of memory [MiB] allocated for tree search.
+		 * Default: 100 Mb (32 bits),  200 Mb (64 bits)
+		 * By default tree memory grows automatically as needed so
+		 * you don't have to set this. Can be useful to save memory /
+		 * avoid reallocations if you know how much you need. */
+		u->tree_size = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
 	}
 	else if (!strcasecmp(optname, "max_tree_size") && optval) {  NEED_RESET
 		/* Maximum amount of memory [MiB] consumed by the move tree.
-		 * For fast_alloc it includes the temp tree used for pruning.
-		 * Default is 300 Mb (32 bits) / 600 Mb (64 bits) */
-		u->max_tree_size = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
+		 * Default: Unlimited
+		 * By default tree memory grows automatically, use this to limit
+		 * memory usage when using long thinking times. When reallocating
+		 * tree Pachi can temporarily use more memory, see "max_mem" to
+		 * limit global memory usage instead. */
+		u->max_tree_size_opt = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
 	}
 	else if (!strcasecmp(optname, "fast_alloc")) {  NEED_RESET
 		u->fast_alloc = !optval || atoi(optval);
-	}
-	else if (!strcasecmp(optname, "pruning_threshold") && optval) {  NEED_RESET
-		/* Force pruning at beginning of a move if the tree consumes
-		 * more than this [MiB]. Default is 10% of max_tree_size.
-		 * Increase to reduce pruning time overhead if memory is plentiful.
-		 * This option is meaningful only for fast_alloc. */
-		u->pruning_threshold = atol(optval) * 1048576;
 	}
 	else if (!strcasecmp(optname, "reset_tree")) {
 		/* Reset tree before each genmove ?
@@ -1421,10 +1438,10 @@ uct_state_init(engine_t *e, board_t *b)
 	u->dumpthres = 0.01;
 	u->playout_amaf = true;
 	u->amaf_prior = false;
-	u->max_tree_size = uct_default_max_tree_size();
 	u->fast_alloc = true;
 	u->auto_alloc = true;
-	u->pruning_threshold = 0;
+	u->tree_size = uct_default_tree_size();
+	u->max_tree_size_opt = 0;   /* unlimited */
 	u->genmove_reset_tree = false;
 
 	u->threads = get_nprocessors();
@@ -1483,12 +1500,12 @@ uct_state_init(engine_t *e, board_t *b)
 		u->local_tree_aging = 1.0f;
 
 	if (u->fast_alloc)
-		uct_max_tree_size_init(u, u->max_tree_size);
+		uct_tree_size_init(u, u->tree_size);
 	else {
 		u->auto_alloc = false;  /* auto_alloc is for fast_alloc */
 		/* Reserve 5% memory in case the background free() are slower
 		 * than the concurrent allocations. */
-		u->max_tree_size -= u->max_tree_size / 20;
+		u->tree_size -= u->tree_size / 20;
 	}
 
 	dcnn_init(b);

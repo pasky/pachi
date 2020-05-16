@@ -276,8 +276,8 @@ pondering_fullmem_handler(void *ctx_)
 
 	if (!thread_manager_running)  return NULL;
 
-	if (u->auto_alloc)  uct_search_realloc_tree(u, b, color, ti, s);
-	else                uct_pondering_stop(u);
+	if (!u->auto_alloc || !uct_search_realloc_tree(u, b, color, ti, s))
+	    uct_pondering_stop(u);
 	
 	return NULL;
 }
@@ -454,31 +454,53 @@ uct_search_stop(void)
 	return pctx;
 }
 
+static void
+fullmem_warning(uct_t *u, char *msg)
+{
+	if (UDEBUGL(2))  fprintf(stderr, "%s", msg);
+}
+
 /* Stop search, realloc tree and resume search */
-void
+int
 uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti, uct_search_state_t *s)
 {
 	assert(u->fast_alloc);
+		
+	size_t old_size = u->tree_size;
+	size_t new_size = old_size * 2;
+	size_t max_tree_size = (u->max_tree_size_opt ? u->max_tree_size_opt : (size_t)-1);
+	size_t max_mem = (u->max_mem ? u->max_mem : (size_t)-1);
+
+	/* Use all available memory if needed but don't bother reallocating for a few % */
+	size_t minimum_new_size = old_size + old_size / 10;
+	if (new_size > max_tree_size && max_tree_size > minimum_new_size)
+		new_size = max_tree_size;
+	// XXX max_mem: take pruned_size into account ?
+	if ((old_size + new_size) > max_mem && (max_mem - old_size) > minimum_new_size)
+		new_size = max_mem - old_size;
 	
+	/* Don't go over memory limits */
+	if (new_size > max_tree_size || (old_size + new_size) > max_mem) {
+		fullmem_warning(u, "WARNING: Max memory limit reached, stopping search.\n");
+		return 0;
+	}
+	
+	if (UDEBUGL(2)) fprintf(stderr, "Tree memory full, reallocating (%i -> %i Mb)\n",
+				old_size / (1024*1024), new_size / (1024*1024));
+
 	int flags = u->search_flags;	/* Save flags ! */
 	uct_search_stop();
 	
-	size_t old_size = (u->max_tree_size + u->max_pruned_size);
-	size_t new_size = old_size * 2;
-	if (UDEBUGL(2)) fprintf(stderr, "Tree memory full, reallocating (%i -> %i Mb)\n",
-				old_size / (1024*1024), new_size / (1024*1024));
-	
-	u->pruning_threshold = 0;
-	u->max_pruned_size = 0;
-	uct_max_tree_size_init(u, new_size);
+	uct_tree_size_init(u, new_size);
 	
 	double time_start = time_now();
-	tree_realloc(u->t, u->max_tree_size, u->max_pruned_size, u->pruning_threshold);
+	tree_realloc(u->t, new_size, pruned_size(new_size), pruning_threshold(new_size));
 	if (UDEBUGL(2)) fprintf(stderr, "tree realloc in %.1fs\n", time_now() - time_start);
 
 	/* Restart search (preserve timers...) */
 	s->fullmem = false;
 	uct_search_start(u, b, color, u->t, ti, s, flags | UCT_SEARCH_RESTARTED);
+	return 1;
 }
 
 void
@@ -513,16 +535,10 @@ uct_search_progress(uct_t *u, board_t *b, enum stone color,
 			uct_progress_status(u, ctx->t, color, s->last_print_playouts, NULL);
 		}
 
-        if (!s->fullmem && ctx->t->nodes_size > u->max_tree_size) {
+        if (!s->fullmem && ctx->t->nodes_size > ctx->t->max_tree_size) {
 		s->fullmem = true;
-		if (!u->auto_alloc) {
-			char *msg = "WARNING: Tree memory limit reached, stopping search.\n"
-				    "Try increasing max_tree_size.\n";
-			if (UDEBUGL(2))  fprintf(stderr, "%s", msg);
-#ifdef _WIN32
-			popup(msg);
-#endif
-		}
+		if (!u->auto_alloc)
+			fullmem_warning(u, "WARNING: Tree memory limit reached, stopping search.\n");
 	}
 }
 

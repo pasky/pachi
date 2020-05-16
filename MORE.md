@@ -1,3 +1,28 @@
+## Memory management
+
+By default Pachi automatically allocates memory for tree search now:
+
+```
+auto_alloc     automatically grow tree memory as needed (default)
+fixed_mem      don't grow tree memory during search (same as "auto_alloc=0")
+               search will stop if initial memory runs out.
+	       
+tree_size      initial amount of memory allocated for tree search  
+               can be useful to save memory / avoid reallocations  
+               if you know how much you need.
+max_tree_size  max amount of memory tree search can use (default: unlimited)  
+               can temporarily use more during tree reallocations.
+max_mem        max amount of memory tree search can use  
+               like "max_tree_size" but takes tree reallocations into account.
+```
+
+Compared to earlier versions of Pachi (<= 12.45):
+- Not needed to set `max_tree_size` anymore to make long thinking times work
+- If you know how much you need use `tree_size`
+- If you want to limit total memory used use `max_tree_size` or `max_mem`
+- `fixed_mem` gives old behavior (tree memory doesn't grow)
+
+
 ## Large Patterns
 
 Pachi uses MM patterns to guide tree search. The pattern matcher runs

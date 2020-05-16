@@ -488,6 +488,7 @@ tree_copy(tree_t *dst, tree_t *src)
 	assert(dst->root);
 }
 
+// XXX handle failed memory alloc gracefully
 void
 tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold)
 {

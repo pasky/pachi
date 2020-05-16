@@ -62,11 +62,14 @@ typedef struct uct {
 	double dumpthres;
 	int force_seed;
 	bool no_tbook;
+
+	/* Memory management */
 	bool fast_alloc;
 	bool auto_alloc;
-	size_t max_tree_size;
-	size_t max_pruned_size;
-	size_t pruning_threshold;
+	size_t tree_size;
+	size_t max_tree_size_opt;
+	size_t max_mem;
+	
 	int mercymin;
 	int significant_threshold;
 	bool genmove_reset_tree;
@@ -151,6 +154,11 @@ typedef struct uct {
 	bool tree_ready;
 } uct_t;
 
+/* Limit pruning temp space to 20% of memory. Beyond this we discard
+ * the nodes and recompute them at the next move if necessary. */
+#define pruned_size(tree_size)		((tree_size) / 5)
+#define pruning_threshold(tree_size)	((tree_size) / 10)
+
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
 bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg);
@@ -160,7 +168,7 @@ void uct_pondering_stop(uct_t *u);
 void uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts);
 void uct_get_best_moves_at(uct_t *u, tree_node_t *n, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts);
 void uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color);
-void uct_max_tree_size_init(uct_t *u, size_t max_tree_size);
+void uct_tree_size_init(uct_t *u, size_t tree_size);
 
 
 /* This is the state used for descending the tree; we use this wrapper
