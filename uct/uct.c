@@ -761,11 +761,8 @@ uct_default_tree_size()
 	/* Double it on 64-bit, tree takes up twice as much memory ... */
 	int mult = (sizeof(void*) == 4 ? 1 : 2);
 
-	/* XXX doc
-	 * Should be enough for most scenarios (up to 240k playouts ...)
-	 * If you're using really long thinking times you definitely should
-	 * set a higher max_tree_size. */
-	return (size_t)300 * mult * 1048576;
+	/* Default tree size can be small now that it grows as needed. */
+	return (size_t)100 * mult * 1048576;
 }
 
 /* Set current tree size to use taking memory limits into account */
