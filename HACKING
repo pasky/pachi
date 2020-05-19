@@ -280,5 +280,3 @@ still subject to research.
 
 To enable local trees usage, pass local_tree=1 to the UCT engine.
 There are many further knobs to twiddle, too.
-
-Code is in local_tree branch.

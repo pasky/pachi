@@ -293,6 +293,14 @@ record_amaf_move(playout_amafmap_t *amaf, coord_t coord, bool is_ko_capture)
 	amaf->game[amaf->gamelen++] = coord;
 }
 
+
+typedef struct {
+	uct_t *uct;
+	tree_t *tree;
+	tree_node_t *lnode;
+} uct_playout_callback_t;
+
+
 static int
 uct_leaf_node(uct_t *u, board_t *b, enum stone player_color,
               playout_amafmap_t *amaf,
@@ -360,6 +368,99 @@ scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significan
 	return rval;
 }
 
+static double
+local_value(uct_t *u, board_t *b, coord_t coord, enum stone color)
+{
+	/* Tactical evaluation of move @coord by color @color, given
+	 * simulation end position @b. I.e., a move is tactically good
+	 * if the resulting group stays on board until the game end. */
+	/* We can also take into account surrounding stones, e.g. to
+	 * encourage taking off external liberties during a semeai. */
+	double val = board_local_value(u->local_tree_neival, b, coord, color);
+	return (color == S_WHITE) ? 1.f - val : val;
+}
+
+static void
+record_local_sequence(uct_t *u, tree_t *t, board_t *endb,
+                      uct_descent_t *descent, int dlen, int di,
+		      enum stone seq_color)
+{
+#define LTREE_DEBUG if (UDEBUGL(6))
+
+	/* Ignore pass sequences. */
+	if (is_pass(node_coord(descent[di].node)))
+		return;
+
+	LTREE_DEBUG board_print(endb, stderr);
+	LTREE_DEBUG fprintf(stderr, "recording local %s sequence: ",
+		stone2str(seq_color));
+
+	/* Sequences starting deeper are less relevant in general. */
+	int pval = LTREE_PLAYOUTS_MULTIPLIER;
+	if (u->local_tree && u->local_tree_depth_decay > 0)
+		pval = ((floating_t) pval) / pow(u->local_tree_depth_decay, di - 1);
+	if (!pval) {
+		LTREE_DEBUG fprintf(stderr, "too deep @%d\n", di);
+		return;
+	}
+
+	/* Pick the right local tree root... */
+	tree_node_t *lnode = seq_color == S_BLACK ? t->ltree_black : t->ltree_white;
+	lnode->u.playouts++;
+
+	/* ...determine the sequence value... */
+	double sval = 0.5;
+	if (u->local_tree_eval != LTE_EACH) {
+		sval = local_value(u, endb, node_coord(descent[di].node), seq_color);
+		LTREE_DEBUG fprintf(stderr, "(goal %s[%s %1.3f][%d]) ",
+			coord2sstr(node_coord(descent[di].node)),
+			stone2str(seq_color), sval, descent[di].node->d);
+
+		if (u->local_tree_eval == LTE_TOTAL) {
+			int di0 = di;
+			while (di < dlen && (di == di0 || descent[di].node->d < u->tenuki_d)) {
+				enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
+				double rval = local_value(u, endb, node_coord(descent[di].node), color);
+				if ((di - di0) % 2)
+					rval = 1 - rval;
+				sval += rval;
+				di++;
+			}
+			sval /= (di - di0 + 1);
+			di = di0;
+		}
+	}
+
+	/* ...and record the sequence. */
+	int di0 = di;
+	while (di < dlen && !is_pass(node_coord(descent[di].node))
+	       && (di == di0 || descent[di].node->d < u->tenuki_d)) {
+		enum stone color = (di - di0) % 2 ? stone_other(seq_color) : seq_color;
+		double rval;
+		if (u->local_tree_eval != LTE_EACH)
+			rval = sval;
+		else
+			rval = local_value(u, endb, node_coord(descent[di].node), color);
+		LTREE_DEBUG fprintf(stderr, "%s[%s %1.3f][%d] ",
+			coord2sstr(node_coord(descent[di].node)),
+			stone2str(color), rval, descent[di].node->d);
+		lnode = tree_get_node2(t, lnode, node_coord(descent[di++].node), true);
+		assert(lnode);
+		stats_add_result(&lnode->u, rval, pval);
+	}
+
+	/* Add lnode for tenuki (pass) if we descended further. */
+	if (di < dlen) {
+		double rval = u->local_tree_eval != LTE_EACH ? sval : 0.5;
+		LTREE_DEBUG fprintf(stderr, "pass ");
+		lnode = tree_get_node2(t, lnode, pass, true);
+		assert(lnode);
+		stats_add_result(&lnode->u, rval, pval);
+	}
+	
+	LTREE_DEBUG fprintf(stderr, "\n");
+}
+
 static tree_node_t *
 uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, tree_t *t, int *presult)
 {
@@ -381,7 +482,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
 	 * redundant. */
 	uct_descent_t descent[DESCENT_DLEN];
-	descent[0].node = n;
+	descent[0].node = n; descent[0].lnode = NULL;
 	int dlen = 1;
 	/* Total value of the sequence. */
 	move_stats_t seq_value = move_stats(0.0, 0);
@@ -414,6 +515,12 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 
 		assert(dlen < DESCENT_DLEN);
 		descent[dlen] = descent[dlen - 1];
+		if (u->local_tree && (!descent[dlen].lnode || descent[dlen].node->d >= u->tenuki_d)) {
+			/* Start new local sequence. */
+			/* Remember that node_color already holds color of the
+			 * to-be-found child. */
+			descent[dlen].lnode = node_color == S_BLACK ? t->ltree_black : t->ltree_white;
+		}
 
 		if (!u->random_policy_chance || fast_random(u->random_policy_chance))
 			u->policy->descend(u->policy, t, &descent[dlen], parity, u->allow_pass);
@@ -508,6 +615,36 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 	if (t->use_extra_komi) {
 		stats_add_result(&u->dynkomi->score, (float)result / 2, 1);
 		stats_add_result(&u->dynkomi->value, rval, 1);
+	}
+
+	if (u->local_tree && n->parent && !is_pass(node_coord(n)) && dlen > 0) {
+		/* Get the local sequences and record them in ltree. */
+		/* We will look for sequence starts in our descent
+		 * history, then run record_local_sequence() for each
+		 * found sequence start; record_local_sequence() may
+		 * pick longer sequences from descent history then,
+		 * which is expected as it will create new lnodes. */
+		enum stone seq_color = player_color;
+		/* First move always starts a sequence. */
+		record_local_sequence(u, t, b2, descent, dlen, 1, seq_color);
+		seq_color = stone_other(seq_color);
+		for (int dseqi = 2; dseqi < dlen; dseqi++, seq_color = stone_other(seq_color)) {
+			if (u->local_tree_allseq) {
+				/* We are configured to record all subsequences. */
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
+				continue;
+			}
+			if (descent[dseqi].node->d >= u->tenuki_d) {
+				/* Tenuki! Record the fresh sequence. */
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
+				continue;
+			}
+			if (descent[dseqi].lnode && !descent[dseqi].lnode) {
+				/* Record result for in-descent picked sequence. */
+				record_local_sequence(u, t, b2, descent, dlen, dseqi, seq_color);
+				continue;
+			}
+		}
 	}
 
 	*presult = result;

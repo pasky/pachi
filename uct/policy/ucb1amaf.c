@@ -46,6 +46,8 @@ typedef struct {
 	/* Give 0 or negative rave bonus to ko threats before taking the ko.
 	   1=normal bonus, 0=no bonus, -1=invert rave bonus, -2=double penalty... */
 	int threat_rave;
+	/* Coefficient of local tree values embedded in RAVE. */
+	floating_t ltree_rave;
 	/* Coefficient of criticality embedded in RAVE. */
 	floating_t crit_rave;
 	int crit_min_playouts;
@@ -105,6 +107,7 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int par
 {
 	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	tree_node_t *node = descent->node;
+	tree_node_t *lnode = descent->lnode;
 
 	move_stats_t n = node->u, r = node->amaf;
 	if (p->uct->amaf_prior) {
@@ -120,6 +123,18 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int par
 		floating_t vloss_coeff = b->vloss_sqrt ? sqrt(p->uct->threads) / p->uct->threads : 1.;
 		move_stats_t c = move_stats((parity > 0 ? 0. : 1.), node->descents * vloss_coeff);
 		stats_merge(&n, &c);
+	}
+
+	/* Local tree heuristics. */
+	assert(!lnode || lnode->parent);
+	if (p->uct->local_tree && b->ltree_rave > 0 && lnode
+	    && (p->uct->local_tree_rootchoose || lnode->parent->parent)) {
+		move_stats_t l = lnode->u;
+		l.playouts = ((floating_t) l.playouts) * b->ltree_rave / LTREE_PLAYOUTS_MULTIPLIER;
+		URAVE_DEBUG fprintf(stderr, "[ltree] adding [%s] %f%%%d to [%s] RAVE %f%%%d\n",
+			coord2sstr(node_coord(lnode)), l.value, l.playouts,
+			coord2sstr(node_coord(node)), r.value, r.playouts);
+		stats_merge(&r, &l);
 	}
 
 	/* Criticality heuristics. */
@@ -182,8 +197,8 @@ ucb1rave_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int pari
 	floating_t nconf = 1.f;
 	if (b->explore_p > 0)
 		nconf = sqrt(log(descent->node->u.playouts + descent->node->prior.playouts));
-#ifdef DISTRIBUTED
 	uct_t *u = p->uct;
+#ifdef DISTRIBUTED
 	int vwin = 0;
 	if (u->max_slaves > 0 && u->slave_index >= 0)
 		vwin = descent->node == tree->root ? b->root_virtual_win : b->virtual_win;
@@ -351,6 +366,7 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 	b->sylvain_rave = true;
 	b->distance_rave = 3;
 	b->threat_rave = 0;
+	b->ltree_rave = 0.75f;
 
 	b->crit_rave = 1.1f;
 	b->crit_min_playouts = 2000;
@@ -386,6 +402,8 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 				b->distance_rave = atoi(optval);
 			} else if (!strcasecmp(optname, "threat_rave") && optval) {
 				b->threat_rave = atoi(optval);
+			} else if (!strcasecmp(optname, "ltree_rave") && optval) {
+				b->ltree_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_rave") && optval) {
 				b->crit_rave = atof(optval);
 			} else if (!strcasecmp(optname, "crit_min_playouts") && optval) {

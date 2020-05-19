@@ -25,21 +25,30 @@ void uctp_generic_winner(uct_policy_t *p, tree_t *tree, uct_descent_t *descent);
 #define uctd_try_node_children(tree, descent, allow_pass, parity, tenuki_d, di, urgency) \
 	/* Information abound best children. */ \
 	/* XXX: We assume board <=25x25. */ \
-	uct_descent_t dbest[BOARD_MAX_MOVES + 1] = { uct_descent(descent->node->children) }; int dbests = 1; \
+	uct_descent_t dbest[BOARD_MAX_MOVES + 1] = { uct_descent(descent->node->children, NULL) }; int dbests = 1; \
 	floating_t best_urgency = -9999; \
 	/* Descent children iterator. */ \
-	uct_descent_t dci = uct_descent(descent->node->children); \
+	uct_descent_t dci = uct_descent(descent->node->children, (descent->lnode ? descent->lnode->children : NULL)); \
 	\
 	for (; dci.node; dci.node = dci.node->sibling) { \
 		floating_t urgency; \
 		/* Do not consider passing early. */ \
 		if (unlikely((!allow_pass && is_pass(node_coord(dci.node))) || (dci.node->hints & TREE_HINT_INVALID))) \
 			continue; \
+		/* Position dci.lnode to point at or right after the local
+		 * node corresponding to dci.node. */ \
+		while (dci.lnode && node_coord(dci.lnode) < node_coord(dci.node)) \
+			dci.lnode = dci.lnode->sibling; \
 		/* Set up descent-further iterator. This is the public-accessible
 		 * one, and usually is similar to dci. However, in case of local
 		 * trees, we may keep next-candidate pointer in dci while storing
 		 * actual-specimen in di. */ \
 		uct_descent_t di = dci; \
+		if (dci.lnode) { \
+			/* Set lnode to local tree node corresponding
+			 * to node (dci.lnode, pass-lnode or NULL). */ \
+			di.lnode = tree_lnode_for_node(tree, dci.node, dci.lnode, tenuki_d); \
+		}
 
 		/* ...your urgency computation code goes here... */
 
@@ -57,6 +66,9 @@ void uctp_generic_winner(uct_policy_t *p, tree_t *tree, uct_descent_t *descent);
 				dbests--; \
 			} \
 			uct_descent_t db = di; \
+			/* Make sure lnode information is meaningful. */ \
+			if (db.lnode && is_pass(node_coord(db.lnode))) \
+				db.lnode = NULL; \
 			dbest[dbests++] = db; \
 		} \
 	}

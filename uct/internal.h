@@ -33,6 +33,12 @@ typedef enum uct_thread_model {
 	TM_TREEVL, /* Tree parallelization with virtual loss. */
 } uct_thread_model_t;
 
+typedef enum local_tree_eval {
+	LTE_ROOT,
+	LTE_EACH,
+	LTE_TOTAL,
+} local_tree_eval_t;
+
 /* Internal engine state. */
 typedef struct uct {
 	int debug_level;
@@ -100,6 +106,15 @@ typedef struct uct {
 	floating_t val_bytemp_min;
 
 	int random_policy_chance;
+	bool local_tree;
+	int tenuki_d;
+	floating_t local_tree_aging;
+#define LTREE_PLAYOUTS_MULTIPLIER 100
+	floating_t local_tree_depth_decay;
+	bool local_tree_allseq;
+	bool local_tree_neival;
+	enum local_tree_eval local_tree_eval;
+	bool local_tree_rootchoose;
 
 	struct {
 		int level;
@@ -163,12 +178,13 @@ void uct_tree_size_init(uct_t *u, size_t tree_size);
 typedef struct {
 	/* Active tree nodes: */
 	tree_node_t *node; /* Main tree. */
+	tree_node_t *lnode; /* Local tree. */
 	/* Value of main tree node (with all value factors, but unbiased
 	 * - without exploration factor), from black's perspective. */
 	move_stats_t value;
 } uct_descent_t;
 
-#define uct_descent(node)  { node }
+#define uct_descent(node, lnode)  { node, lnode }
 
 typedef tree_node_t *(*uctp_choose)(uct_policy_t *p, tree_node_t *node, board_t *b, enum stone color, coord_t exclude);
 typedef floating_t (*uctp_evaluate)(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity);
