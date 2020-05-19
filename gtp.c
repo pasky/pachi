@@ -453,17 +453,18 @@ cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
-/* Sabaki etc: get winrates etc during genmove.
+/* lz-genmove_analyze: get winrates etc during genmove.
  * Similar to Leela-zero lz-genmove_analyze 
- * XXX we don't honor frequency argument, set reportfreq for now. */
+ * syntax: lz-genmove_analyze <color> <freq>   */
 static enum parse_code
-cmd_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+cmd_lz_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg(arg);
 	enum stone color = str2stone(arg);
+	if (color == S_NONE) {  gtp_error(gtp, "bad argument"); return P_OK;  }
 	gtp_arg(arg);
-	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
+	if (!isdigit(*arg))  {  gtp_error(gtp, "bad argument"); return P_OK;  }
 	int freq = atoi(arg);  /* frequency (centiseconds) */
 
 	if (!e->genmove_analyze) {  gtp_error(gtp, "lz-genmove_analyze not supported for this engine"); return P_OK; }
@@ -510,26 +511,67 @@ cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 }
 
 static void
+gtp_reset_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
+{
+	engine_reset(e, b);
+
+	/* Reset timer */
+	ti[S_BLACK].len.t.timer_start = 0;
+	ti[S_WHITE].len.t.timer_start = 0;
+}
+
+static int
+engine_pondering(engine_t *e)
+{
+	option_t *o = engine_options_lookup(&e->options, "pondering");
+	if (!o)  return 0;
+	return (!o->val || atoi(o->val));
+}
+
+/* Keep track of analyze mode / genmove mode and manage engine.
+ * Allows to reset engine only when needed so we don't lose analyze data
+ * when toggling analyze on and off.
+ * normal:    reset engine when switching from analyze mode -> genmove mode
+ *            analyze tree shouldn't affect next genmove.
+ * pondering: don't reset !
+ *            engine handles switching from pondering <-> pondering + analyzing */
+static void
+gtp_set_analyze_mode(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, bool analyze_mode)
+{
+	if (analyze_mode != gtp->analyze_mode) {
+		// fprintf(stderr, "gtp: switching analyze_mode: %i -> %i\n", gtp->analyze_mode, analyze_mode);
+		gtp->analyze_mode = analyze_mode;
+
+		if (!engine_pondering(e))
+			if (!analyze_mode)  /* analyze mode -> genmove mode */
+				gtp_reset_engine(gtp, b, e, ti);
+	}
+}
+
+static void
 stop_analyzing(gtp_t *gtp, board_t *b, engine_t *e)
 {
 	gtp->analyze_running = false;
 	e->analyze(e, b, S_BLACK, 0);
+	printf("\n");  /* end of lz-analyze output */
+	fflush(stdout);
 }
 
 /* Start pondering and output stats for the sake of frontend running Pachi.
  * Stop processing when we receive some other command.
- * Similar to Leela-Zero's lz-analyze so we can feed data to lizzie. 
- * Usage: lz-analyze <freq>       (centiseconds)
- * XXX 'lz-analyze b 10' syntax support */
+ * Similar to Leela-Zero's lz-analyze so we can feed data to Lizzie / Sabaki.
+ * Usage: lz-analyze <freq>		(centiseconds)
+ *        lz-analyze <color> <freq>
+ * lz-analyze with allow move / avoid move syntax unsupported right now. */
 static enum parse_code
 cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	enum stone color = S_BLACK;
-	if (last_move(b).color != S_NONE)
-		color = stone_other(last_move(b).color);
-	
+	enum stone color = board_to_play(b);
 	char *arg;
 	gtp_arg(arg);
+	
+	/* optional color argument ? */
+	if (tolower(arg[0]) == 'w' || tolower(arg[0]) == 'b') {  color = str2stone(arg);  gtp_arg(arg);  }
 	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
 	if (!e->analyze)    {  gtp_error(gtp, "lz-analyze not supported for this engine"); return P_OK;  }
 	int freq = atoi(arg);  /* frequency (centiseconds) */
@@ -539,9 +581,11 @@ cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	strbuf(buf, 100); char *err;
 	sbprintf(buf, "reportfreq=%fs", 0.01 * freq);
 	bool r = engine_setoptions(e, b, buf->str, &err);  assert(r);
-	
-	e->analyze(e, b, color, 1);
+
+	gtp_printf(gtp, "");   /* just "= \n" output, last newline will be sent when we stop analyzing */
+	gtp_set_analyze_mode(gtp, b, e, ti, true);
 	gtp->analyze_running = true;
+	e->analyze(e, b, color, 1);
 	
 	return P_OK;
 }
@@ -788,8 +832,7 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
-	enum stone color = stone_other(last_move(b).color);
-	move_t m = move(pass, color);
+	move_t m = move(pass, board_to_play(b));
 	if (e->notify_play)
 		e->notify_play(e, b, &m, "");
 
@@ -806,11 +849,7 @@ undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	
 	gtp->undo_pending = false;
 
-	engine_reset(e, b);
-
-	/* Reset timer */
-	ti[S_BLACK].len.t.timer_start = 0;
-	ti[S_WHITE].len.t.timer_start = 0;
+	gtp_reset_engine(gtp, b, e, ti);
 	
 	/* Reset board */
 	int handicap = b->handicap;
@@ -1024,8 +1063,8 @@ static gtp_command_t gtp_commands[] =
 	{ "pachi-setoption",	    cmd_pachi_setoption },  /* Set/change engine option */
 	{ "pachi-getoption",	    cmd_pachi_getoption },  /* Get engine option(s) */
 
-	{ "lz-analyze",             cmd_lz_analyze },       /* For Lizzie */
-	{ "lz-genmove_analyze",     cmd_genmove_analyze },  /* Sabaki etc */
+	{ "lz-analyze",             cmd_lz_analyze },         /* Lizzie, Sabaki, etc */
+	{ "lz-genmove_analyze",     cmd_lz_genmove_analyze },
 
 	/* Short aliases */
 	{ "predict",                cmd_pachi_predict },
@@ -1091,6 +1130,8 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 
 	if (gtp->analyze_running && strcasecmp(gtp->cmd, "lz-analyze"))
 		stop_analyzing(gtp, b, e);
+	if (gtp->analyze_mode && strstr(gtp->cmd, "genmove"))
+		gtp_set_analyze_mode(gtp, b, e, ti, false);
 	
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))

@@ -34,6 +34,14 @@ sub pachi_command
 {
     my ($cmd) = @_;
     print PACHI_IN "$cmd\n";  # Forward command to pachi
+    
+    # lz-analyze is special, doesn't finish until next command comes in...
+    if ($cmd =~ m/lz-analyze/) {
+	sleep(1);
+	print PACHI_IN "name\n";
+	check_reply();
+    }
+    
     check_reply();
 }
 

@@ -60,6 +60,7 @@ setup_state(uct_t *u, board_t *b, enum stone color)
 static void
 reset_state(uct_t *u)
 {
+	if (UDEBUGL(3)) fprintf(stderr, "resetting tree\n");
 	assert(u->t);
 	tree_done(u->t); u->t = NULL;
 }
@@ -175,8 +176,7 @@ uct_ownermap(engine_t *e, board_t *b)
 	uct_t *u = (uct_t*)b->es;
 	
 	/* Make sure ownermap is well-seeded. */
-	enum stone color = (last_move(b).color ? stone_other(last_move(b).color) : S_BLACK);
-	uct_mcowner_playouts(u, b, color);
+	uct_mcowner_playouts(u, b, board_to_play(b));
 	
 	return &u->ownermap;
 }
@@ -224,8 +224,10 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 	/* If we are a slave in a distributed engine, start pondering once
 	 * we know which move we actually played. See uct_genmove() about
 	 * the check for pass. */
-	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord))
+	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord)) {
+		u->pondering_want_gc = true;
 		uct_pondering_start(u, b, u->t, stone_other(m->color), m->coord, false);
+	}
 	assert(!(u->slave && using_dcnn(b))); // XXX distributed engine dcnn pondering support
 
 	return NULL;
@@ -399,8 +401,11 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	return ctx->games;
 }
 
-/* Start pondering background with @color to play.
- * @our_move: move to be added before starting. 0 means doesn't apply. */
+/* Start pondering in the background with @color to play.
+ * @our_move:          move to be added before starting. 0 means doesn't apply.
+ * @genmove_pondering  pondering after genmove, dcnn eval opponent's replies as well.
+ *                     false: analyzing, regular search.
+ * Set u->pondering_want_gc if you want tree to be garbage collected. */
 static void
 uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, bool genmove_pondering)
 {
@@ -418,8 +423,8 @@ uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t 
 		int res = board_play(b, &m);
 		assert(res >= 0);
 	}
-	if (last_move(b).color != S_NONE)
-		assert(last_move(b).color == stone_other(color));
+	/* analyzing should be only case of switching color to play */
+	if (genmove_pondering)  assert(color == board_to_play(b));
 	
 	setup_dynkomi(u, b, color);
 
@@ -443,6 +448,7 @@ uct_pondering_stop(uct_t *u)
 		free(ctx->b);
 		u->pondering = false;
 		u->genmove_pondering = false;
+		u->reporting = u->reporting_opt;
 		u->report_fh = stderr;
 	}
 }
@@ -480,10 +486,13 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 
 	uct_pondering_stop(u);
 
-	if (u->t && (u->genmove_reset_tree ||
-		     (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN)))) {
-		u->initial_extra_komi = u->t->extra_komi;
-		reset_state(u);
+	if (u->t) {
+		bool unexpected_color = (color != board_to_play(b));  /* playing twice in a row ?? */
+		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
+		if (u->genmove_reset_tree || unexpected_color || missing_dcnn_priors) {
+			u->initial_extra_komi = u->t->extra_komi;
+			reset_state(u);
+		}
 	}
 
 	uct_genmove_setup(u, b, color);
@@ -553,8 +562,10 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		uct_prepare_move(u, b, stone_other(color));
 	}	
 
-	if (u->pondering_opt && u->t)
+	if (u->pondering_opt && u->t) {
+		u->pondering_want_gc = true;
 		uct_pondering_start(u, b, u->t, stone_other(color), best_coord, true);
+	}
 
 	return best_coord;
 }
@@ -564,14 +575,13 @@ static coord_t
 uct_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
 	uct_t *u = (uct_t*)e->data;
-	enum uct_reporting prev = u->reporting;
 
 	uct_pondering_stop(u);   /* Don't clobber report_fh later on... */
 	
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;	
 	coord_t coord = uct_genmove(e, b, ti, color, pass_all_alive);
-	u->reporting = prev;
+	u->reporting = u->reporting_opt;
 	u->report_fh = stderr;
 	
 	return coord;
@@ -584,20 +594,31 @@ static void
 uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 {
 	uct_t *u = (uct_t*)e->data;
-
+	bool genmove_pondering = u->genmove_pondering;   /* false normally, unless pondering + analyzing */
+	
 	if (!start) {
 		if (u->pondering) uct_pondering_stop(u);
-		if (u->t) reset_state(u);
+		if (genmove_pondering)  /* pondering + analyzing ? resume normal pondering */
+			uct_pondering_start(u, b, u->t, board_to_play(b), 0, true);
 		return;
 	}
 
-	/* Start pondering if not already. */
-	if (u->pondering)  return;
-
+	/* If pondering already restart, situation/parameters may have changed.
+	 * For example frequency change or getting analyze cmd while pondering. */
+	if (u->pondering)
+		uct_pondering_stop(u);
+	
+	if (u->t) {
+		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
+		bool switching_color_to_play = (color != stone_other(u->t->root_color));
+		if (missing_dcnn_priors || switching_color_to_play)
+			reset_state(u);
+	}
+	
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
 	if (!u->t)  uct_prepare_move(u, b, color);
-	uct_pondering_start(u, b, u->t, color, 0, false);
+	uct_pondering_start(u, b, u->t, color, 0, genmove_pondering);
 }
 
 /* Same as uct_get_best_moves() for node @parent.
@@ -781,6 +802,7 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 			u->reporting = UR_LEELA_ZERO;
 		} else
 			option_error("UCT: Invalid reporting format %s\n", optval);
+		u->reporting_opt = u->reporting;  /* original value */
 	}
 	else if (!strcasecmp(optname, "reportfreq") && optval) {
 		/* Set search progress info frequency:
@@ -1350,6 +1372,7 @@ uct_state_init(engine_t *e, board_t *b)
 	bool pat_setup = false;	
 
 	u->debug_level = debug_level;
+	u->reporting = u->reporting_opt = UR_TEXT;
 	u->reportfreq_playouts = 1000;
 	u->report_fh = stderr;
 	u->gamelen = MC_GAMELEN;

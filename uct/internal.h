@@ -42,6 +42,7 @@ typedef enum local_tree_eval {
 /* Internal engine state. */
 typedef struct uct {
 	int debug_level;
+	enum uct_reporting reporting_opt;  /* original value */
 	enum uct_reporting reporting;
 	int    reportfreq_playouts;
 	double reportfreq_time;
@@ -80,6 +81,7 @@ typedef struct uct {
 	bool pondering_opt;                /* User wants pondering */
 	bool pondering;                    /* Actually pondering now */
 	bool genmove_pondering;            /* Regular pondering (after a genmove) */
+	bool pondering_want_gc;		   /* Garbage collect tree before pondering */
 	int     dcnn_pondering_prior;      /* Prior next move guesses */
 	int     dcnn_pondering_mcts;       /* Genmove next move guesses */
 	coord_t dcnn_pondering_mcts_c[20];

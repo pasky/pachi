@@ -317,6 +317,9 @@ int board_cmp(board_t *b1, board_t *b2);
 /* Place given handicap on the board; coordinates are printed to f. */
 void board_handicap(board_t *b, int stones, move_queue_t *q);
 
+/* Return color to play */
+static enum stone board_to_play(board_t *b);
+
 /* Returns group id, 0 on allowed suicide, pass or resign, -1 on error */
 int board_play(board_t *b, move_t *m);
 /* Like above, but plays random move; the move coordinate is recorded
@@ -433,6 +436,13 @@ const char *rules2str(enum rules rules);
 		} \
 	} while (0)
 
+
+/* XXX doesn't handle handicap placement phase */
+static inline enum stone
+board_to_play(board_t *b)
+{
+	return (last_move(b).color ? stone_other(last_move(b).color) : S_BLACK);
+}
 
 static inline bool
 board_is_eyelike(board_t *b, coord_t coord, enum stone eye_color)

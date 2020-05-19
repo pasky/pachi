@@ -134,15 +134,16 @@ worker_thread(void *ctx_)
 	tree_t *t = ctx->t;
 	tree_node_t *n = t->root;
 	if (!ctx->tid) {
+		bool already_have = n->is_expanded;
 		enum stone node_color = stone_other(color);
 		assert(node_color == t->root_color);
 		
-		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1)) {
+		if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
 			tree_expand_node(t, n, b, color, u, 1);
-			if (u->genmove_pondering && using_dcnn(b))
-				uct_expand_next_best_moves(u, t, b, color);
-		}
-		else if (DEBUGL(2)) {  /* Show previously computed priors */
+		if (u->genmove_pondering && using_dcnn(b))
+			uct_expand_next_best_moves(u, t, b, color);
+		
+		if (DEBUGL(2) && already_have) {  /* Show previously computed priors */
 			print_joseki_moves(joseki_dict, b, color);
 			print_node_prior_best_moves(b, n);
 		}
@@ -186,14 +187,13 @@ thread_manager(void *ctx_)
 	int joined = 0;
 
 	uct_halt = 0;
+	u->tree_ready = false;
 
 	/* Garbage collect the tree by preference when pondering. */
-	if (u->pondering && t->nodes && t->nodes_size >= t->pruning_threshold) {
+	if (u->pondering && u->pondering_want_gc && t->nodes && t->nodes_size >= t->pruning_threshold)
 		t->root = tree_garbage_collect(t, t->root);
-	}
+	u->pondering_want_gc = false;
 
-	u->tree_ready = false;
-		
 	/* Logging thread for pondering */
 	if (u->pondering)
 		pthread_create(&threads[u->threads], NULL, logger_thread, mctx);
@@ -282,7 +282,6 @@ static void
 uct_expand_next_move(uct_t *u, tree_t *t, board_t *board, enum stone color, coord_t c)
 {
 	tree_node_t *n = tree_get_node(t->root, c);
-	assert(n && tree_leaf_node(n) && !n->is_expanded);
 	
 	board_t b;
 	board_copy(&b, board);
