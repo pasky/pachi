@@ -492,7 +492,7 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	 * memory before stopping search otherwise we can't recover. */
 	tree_t *t  = u->t;
 	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), new_size, pruned_size(new_size),
-			       pruning_threshold(new_size), t->ltree_aging, t->hbits);
+			       pruning_threshold(new_size), t->hbits);
 	if (!t2)  return 0;		/* Not enough memory */
 	
 	int flags = u->search_flags;	/* Save flags ! */
@@ -716,7 +716,7 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 	 * if we aren't completely sure about the winner yet. */
 	if (desired_done) {
 		if (u->policy->winner && u->policy->evaluate) {
-			uct_descent_t descent = uct_descent(ctx->t->root, NULL);
+			uct_descent_t descent = uct_descent(ctx->t->root);
 			u->policy->winner(u->policy, ctx->t, &descent);
 			winner = descent.node;
 		}

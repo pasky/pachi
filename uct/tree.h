@@ -122,19 +122,6 @@ typedef struct {
 	 * search episode. */
 	move_stats_t avg_score;
 
-	/* We merge local (non-tenuki) sequences for both colors, occuring
-	 * anywhere in the tree; nodes are created on-demand, special 'pass'
-	 * nodes represent tenuki. Only u move_stats are used, prior and amaf
-	 * is ignored. Values in root node are ignored. */
-	/* The value corresponds to black-to-play as usual; i.e. if white
-	 * succeeds in its replies, the values will be low. */
-	tree_node_t *ltree_black;
-	/* ltree_white has white-first sequences as children. */
-	tree_node_t *ltree_white;
-	/* Aging factor; 2 means halve all playout values after each turn.
-	 * 1 means don't age at all. */
-	floating_t ltree_aging;
-
 	/* Hash table used when working as slave for the distributed engine.
 	 * Maps coordinate path to tree node. */
 	struct tree_hash *htable;
@@ -151,7 +138,7 @@ typedef struct {
 
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
 tree_t *tree_init(board_t *board, enum stone color, size_t max_tree_size,
-		       size_t max_pruned_size, size_t pruning_threshold, floating_t ltree_aging, int hbits);
+		  size_t max_pruned_size, size_t pruning_threshold, int hbits);
 void tree_done(tree_t *tree);
 void tree_dump(tree_t *tree, double thres);
 void tree_save(tree_t *tree, board_t *b, int thres);
@@ -167,7 +154,6 @@ void tree_promote_node(tree_t *tree, tree_node_t **node);
 bool tree_promote_at(tree_t *tree, board_t *b, coord_t c, int *reason);
 
 void tree_expand_node(tree_t *tree, tree_node_t *node, board_t *b, enum stone color, struct uct *u, int parity);
-tree_node_t *tree_lnode_for_node(tree_t *tree, tree_node_t *ni, tree_node_t *lni, int tenuki_d);
 
 static bool tree_leaf_node(tree_node_t *node);
 

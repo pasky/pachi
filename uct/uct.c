@@ -42,7 +42,7 @@ setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
 	u->t = tree_init(b, color, u->fast_alloc ? size : 0,
-			 pruned_size(size), pruning_threshold(size), u->local_tree_aging, u->stats_hbits);
+			 pruned_size(size), pruning_threshold(size), u->stats_hbits);
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
@@ -699,7 +699,7 @@ uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 	uct_t *u = (uct_t*)e->data;
 	size_t size = u->tree_size;
 	tree_t *t = tree_init(b, color, u->fast_alloc ? size : 0,
-			      pruned_size(size), pruning_threshold(size), u->local_tree_aging, 0);
+			      pruned_size(size), pruning_threshold(size), 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -1244,80 +1244,6 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 		u->val_bytemp_min = atof(optval);
 	}
 
-	/** Local trees */
-	/* (Purely experimental. Does not work - yet!) */
-
-	else if (!strcasecmp(optname, "local_tree")) {
-		/* Whether to bias exploration by local tree values. */
-		u->local_tree = !optval || atoi(optval);
-	}
-	else if (!strcasecmp(optname, "tenuki_d") && optval) {
-		/* Tenuki distance at which to break the local tree. */
-		u->tenuki_d = atoi(optval);
-		if (u->tenuki_d > TREE_NODE_D_MAX + 1)
-			option_error("uct: tenuki_d must not be larger than TREE_NODE_D_MAX+1 %d\n", TREE_NODE_D_MAX + 1);
-	}
-	else if (!strcasecmp(optname, "local_tree_aging") && optval) {
-		/* How much to reduce local tree values between moves. */
-		u->local_tree_aging = atof(optval);
-	}
-	else if (!strcasecmp(optname, "local_tree_depth_decay") && optval) {
-		/* With value x>0, during the descent the node
-		 * contributes 1/x^depth playouts in
-		 * the local tree. I.e., with x>1, nodes more
-		 * distant from local situation contribute more
-		 * than nodes near the root. */
-		u->local_tree_depth_decay = atof(optval);
-	}
-	else if (!strcasecmp(optname, "local_tree_allseq")) {
-		/* If disabled, only complete sequences are stored
-		 * in the local tree. If this is on, also
-		 * subsequences starting at each move are stored. */
-		u->local_tree_allseq = !optval || atoi(optval);
-	}
-	else if (!strcasecmp(optname, "local_tree_neival")) {
-		/* If disabled, local node value is not
-		 * computed just based on terminal status
-		 * of the coordinate, but also its neighbors. */
-		u->local_tree_neival = !optval || atoi(optval);
-	}
-	else if (!strcasecmp(optname, "local_tree_eval")) {
-		/* How is the value inserted in the local tree
-		 * determined. */
-		if (!strcasecmp(optval, "root"))
-			/* All moves within a tree branch are
-			 * considered wrt. their merit
-			 * reaching tachtical goal of making
-			 * the first move in the branch
-			 * survive. */
-			u->local_tree_eval = LTE_ROOT;
-		else if (!strcasecmp(optval, "each"))
-			/* Each move is considered wrt.
-			 * its own survival. */
-			u->local_tree_eval = LTE_EACH;
-		else if (!strcasecmp(optval, "total"))
-			/* The tactical goal is the survival
-			 * of all the moves of my color and
-			 * non-survival of all the opponent
-			 * moves. Local values (and their
-			 * inverses) are averaged. */
-			u->local_tree_eval = LTE_TOTAL;
-		else
-			option_error("uct: unknown local_tree_eval %s\n", optval);
-	}
-	else if (!strcasecmp(optname, "local_tree_rootchoose")) {
-		/* If disabled, only moves within the local
-		 * tree branch are considered; the values
-		 * of the branch roots (i.e. root children)
-		 * are ignored. This may make sense together
-		 * with eval!=each, we consider only moves
-		 * that influence the goal, not the "rating"
-		 * of the goal itself. (The real solution
-		 * will be probably using criticality to pick
-		 * local tree branches.) */
-		u->local_tree_rootchoose = !optval || atoi(optval);
-	}
-
 	/** Other heuristics */
 	
 	else if (!strcasecmp(optname, "patterns")) {  NEED_RESET
@@ -1463,12 +1389,6 @@ uct_state_init(engine_t *e, board_t *b)
 	u->dynkomi_interval = 100;
 	u->dynkomi_mask = S_BLACK | S_WHITE;
 
-	u->tenuki_d = 4;
-	u->local_tree_aging = 80;
-	u->local_tree_depth_decay = 1.5;
-	u->local_tree_eval = LTE_ROOT;
-	u->local_tree_neival = true;
-
 	u->max_slaves = -1;
 	u->slave_index = -1;
 	u->stats_delay = 0.01; // 10 ms
@@ -1492,9 +1412,6 @@ uct_state_init(engine_t *e, board_t *b)
 
 	if (!!u->random_policy_chance ^ !!u->random_policy)
 		die("uct: Only one of random_policy and random_policy_chance is set\n");
-
-	if (!u->local_tree)  /* No ltree aging. */
-		u->local_tree_aging = 1.0f;
 
 	if (u->fast_alloc)
 		uct_tree_size_init(u, u->tree_size);

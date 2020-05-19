@@ -76,7 +76,7 @@ tree_init_node(tree_t *t, coord_t coord, int depth, bool fast_alloc)
  * Returns NULL if out of memory */
 tree_t *
 tree_init(board_t *board, enum stone color, size_t max_tree_size,
-	  size_t max_pruned_size, size_t pruning_threshold, floating_t ltree_aging, int hbits)
+	  size_t max_pruned_size, size_t pruning_threshold, int hbits)
 {
 	tree_node_t *nodes = NULL;
 	if (max_tree_size != 0) {
@@ -100,10 +100,6 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	t->root = tree_init_node(t, pass, 0, t->nodes);
 	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
-
-	t->ltree_black = tree_init_node(t, pass, 0, false);
-	t->ltree_white = tree_init_node(t, pass, 0, false);
-	t->ltree_aging = ltree_aging;
 
 	t->hbits = hbits;
 	if (hbits) t->htable = uct_htable_alloc(hbits);
@@ -176,9 +172,6 @@ tree_done_node_detached(tree_t *t, tree_node_t *n)
 void
 tree_done(tree_t *t)
 {
-	tree_done_node(t, t->ltree_black);
-	tree_done_node(t, t->ltree_white);
-
 	if (t->htable) free(t->htable);
 	if (t->nodes) {
 		free(t->nodes);
@@ -236,13 +229,6 @@ tree_dump(tree_t *tree, double thres)
 	        stone2str(tree->root_color), tree->extra_komi,
 		tree->max_depth - tree->root->depth);
 	tree_node_dump(tree, tree->root, 1, 0, thres_abs);
-
-	if (DEBUGL(3) && tree->ltree_black) {
-		fprintf(stderr, "B local tree:\n");
-		tree_node_dump(tree, tree->ltree_black, tree->root_color == S_WHITE ? 1 : -1, 0, thres_abs);
-		fprintf(stderr, "W local tree:\n");
-		tree_node_dump(tree, tree->ltree_white, tree->root_color == S_BLACK ? 1 : -1, 0, thres_abs);
-	}
 }
 
 
@@ -428,7 +414,7 @@ tree_garbage_collect(tree_t *tree, tree_node_t *node)
 	size_t orig_size = tree->nodes_size;
 
 	tree_t *temp_tree = tree_init(tree->board,  tree->root_color,
-					   tree->max_pruned_size, 0, 0, tree->ltree_aging, 0);
+					   tree->max_pruned_size, 0, 0, 0);
 	temp_tree->nodes_size = 0; // We do not want the dummy pass node
         tree_node_t *temp_node;
 
@@ -507,7 +493,7 @@ tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pru
 	assert(pruning_threshold > t->pruning_threshold);
 
 	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), max_tree_size, max_pruned_size,
-			       pruning_threshold, t->ltree_aging, t->hbits);
+			       pruning_threshold, t->hbits);
 	if (!t2)  return 0;	/* Out of memory */
 
 	tree_copy(t2, t);	assert(t2->root_color == t->root_color);
@@ -573,47 +559,6 @@ tree_get_node2(tree_t *t, tree_node_t *parent, coord_t c, bool create)
 	tree_node_t *nn = tree_init_node(t, c, parent->depth + 1, false);
 	nn->parent = parent; nn->sibling = ni->sibling; ni->sibling = nn;
 	return nn;
-}
-
-/* Get local tree node corresponding to given node, given local node child
- * iterator @lni (which points either at the corresponding node, or at the
- * nearest local tree node after @ni). */
-tree_node_t *
-tree_lnode_for_node(tree_t *tree, tree_node_t *ni, tree_node_t *lni, int tenuki_d)
-{
-	/* Now set up lnode, which is the actual local node
-	 * corresponding to ni - either lni if it is an
-	 * exact match and ni is not tenuki, <pass> local
-	 * node if ni is tenuki, or NULL if there is no
-	 * corresponding node available. */
-
-	if (is_pass(node_coord(ni))) {
-		/* Also, for sanity reasons we never use local
-		 * tree for passes. (Maybe we could, but it's
-		 * too hard to think about.) */
-		return NULL;
-	}
-
-	if (node_coord(lni) == node_coord(ni)) {
-		/* We don't consider tenuki a sequence play
-		 * that we have in local tree even though
-		 * ni->d is too high; this can happen if this
-		 * occured in different board topology. */
-		return lni;
-	}
-
-	if (ni->d >= tenuki_d) {
-		/* Tenuki, pick a pass lsibling if available. */
-		assert(lni->parent && lni->parent->children);
-		if (is_pass(node_coord(lni->parent->children))) {
-			return lni->parent->children;
-		} else {
-			return NULL;
-		}
-	}
-
-	/* No corresponding local node, lnode stays NULL. */
-	return NULL;
 }
 
 
@@ -780,26 +725,6 @@ tree_unlink_node(tree_node_t *node)
 	node->parent = NULL;
 }
 
-/* Reduce weight of statistics on promotion. Remove nodes that
- * get reduced to zero playouts; returns next node to consider
- * in the children list (@node may get deleted). */
-static tree_node_t *
-tree_age_node(tree_t *tree, tree_node_t *node)
-{
-	node->u.playouts /= tree->ltree_aging;
-	if (node->parent && !node->u.playouts) {
-		tree_node_t *sibling = node->sibling;
-		/* Delete node, no playouts. */
-		tree_unlink_node(node);
-		tree_done_node(tree, node);
-		return sibling;
-	}
-
-	tree_node_t *ni = node->children;
-	while (ni) ni = tree_age_node(tree, ni);
-	return node->sibling;
-}
-
 /* Promotes the given node as the root of the tree. In the fast_alloc
  * mode, the node may be moved and some of its subtree may be pruned. */
 void
@@ -827,11 +752,6 @@ tree_promote_node(tree_t *tree, tree_node_t **node)
 	 * tree->max_depth is correct. Otherwise we could traverse the tree
          * to recompute max_depth but it's not worth it: it's just for debugging
 	 * and soon the tree will grow and max_depth will become correct again. */
-
-	if (tree->ltree_aging != 1.0f) { // XXX: != should work here even with the floating_t
-		tree_age_node(tree, tree->ltree_black);
-		tree_age_node(tree, tree->ltree_white);
-	}
 }
 
 bool
