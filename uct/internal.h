@@ -58,7 +58,6 @@ typedef struct uct {
 	bool no_tbook;
 
 	/* Memory management */
-	bool fast_alloc;
 	bool auto_alloc;
 	size_t tree_size;
 	size_t max_tree_size_opt;
