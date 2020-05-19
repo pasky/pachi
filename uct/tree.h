@@ -3,7 +3,16 @@
 
 /* Management of UCT trees. See diagram below for the node structure.
  *
- * Allocation method for tree nodes:
+ * Two allocation methods are supported for the tree nodes:
+ *
+ * - calloc/free: each node is allocated with one calloc.
+ *   After a move, all nodes except the subtree rooted at
+ *   the played move are freed one by one with free().
+ *   Since this can be very slow (seen 9s and loss on time because
+ *   of this) the nodes are freed in a background thread.
+ *   We still reserve enough memory for the next move in case
+ *   the background thread doesn't free nodes fast enough.
+ *
  * - fast_alloc: a large buffer is allocated once, and each
  *   node allocation takes some of this buffer. After a move
  *   is played, no memory if freed if the buffer still has
@@ -12,7 +21,9 @@
  *   if necessary to fit in this small buffer. We copy by
  *   preference nodes with largest number of playouts.
  *   Then the temporary buffer is copied back to the original
- *   buffer, which has now plenty of space. */
+ *   buffer, which has now plenty of space.
+ *   Once the fast_alloc mode is proven reliable, the
+ *   calloc/free method will be removed. */
 
 #include <stdbool.h>
 #include <pthread.h>
@@ -119,10 +130,10 @@ typedef struct {
 	// Statistics
 	int max_depth;
 	volatile size_t nodes_size; // byte size of all allocated nodes
-	size_t max_tree_size; // maximum byte size for entire tree
+	size_t max_tree_size; // maximum byte size for entire tree, > 0 only for fast_alloc
 	size_t max_pruned_size;
 	size_t pruning_threshold;
-	void *nodes; // nodes buffer
+	void *nodes; // nodes buffer, only for fast_alloc
 } tree_t;
 
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
@@ -137,6 +148,7 @@ void tree_replace(tree_t *tree, tree_t *content);
 int  tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold);
 
 tree_node_t *tree_get_node(tree_node_t *parent, coord_t c);
+tree_node_t *tree_get_node2(tree_t *tree, tree_node_t *parent, coord_t c, bool create);
 tree_node_t *tree_garbage_collect(tree_t *tree, tree_node_t *node);
 void tree_promote_node(tree_t *tree, tree_node_t **node);
 bool tree_promote_at(tree_t *tree, board_t *b, coord_t c, int *reason);

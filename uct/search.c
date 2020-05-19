@@ -464,6 +464,8 @@ fullmem_warning(uct_t *u, char *msg)
 int
 uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti, uct_search_state_t *s)
 {
+	assert(u->fast_alloc);
+		
 	size_t old_size = u->tree_size;
 	size_t new_size = old_size * 2;
 	size_t max_tree_size = (u->max_tree_size_opt ? u->max_tree_size_opt : (size_t)-1);

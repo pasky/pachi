@@ -41,7 +41,8 @@ static void
 setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
-	u->t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), u->stats_hbits);
+	u->t = tree_init(b, color, u->fast_alloc ? size : 0,
+			 pruned_size(size), pruning_threshold(size), u->stats_hbits);
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
@@ -697,7 +698,8 @@ uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 {
 	uct_t *u = (uct_t*)e->data;
 	size_t size = u->tree_size;
-	tree_t *t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), 0);
+	tree_t *t = tree_init(b, color, u->fast_alloc ? size : 0,
+			      pruned_size(size), pruning_threshold(size), 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -1080,6 +1082,9 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 		 * limit global memory usage instead. */
 		u->max_tree_size_opt = (size_t)atoll(optval) * 1048576;  /* long is 4 bytes on windows! */
 	}
+	else if (!strcasecmp(optname, "fast_alloc")) {  NEED_RESET
+		u->fast_alloc = !optval || atoi(optval);
+	}
 	else if (!strcasecmp(optname, "reset_tree")) {
 		/* Reset tree before each genmove ?
 		 * Default is to reuse previous tree when not using dcnn. 
@@ -1356,6 +1361,7 @@ uct_state_init(engine_t *e, board_t *b)
 	u->dumpthres = 0.01;
 	u->playout_amaf = true;
 	u->amaf_prior = false;
+	u->fast_alloc = true;
 	u->auto_alloc = true;
 	u->tree_size = uct_default_tree_size();
 	u->max_tree_size_opt = 0;   /* unlimited */
@@ -1407,7 +1413,14 @@ uct_state_init(engine_t *e, board_t *b)
 	if (!!u->random_policy_chance ^ !!u->random_policy)
 		die("uct: Only one of random_policy and random_policy_chance is set\n");
 
-	uct_tree_size_init(u, u->tree_size);
+	if (u->fast_alloc)
+		uct_tree_size_init(u, u->tree_size);
+	else {
+		u->auto_alloc = false;  /* auto_alloc is for fast_alloc */
+		/* Reserve 5% memory in case the background free() are slower
+		 * than the concurrent allocations. */
+		u->tree_size -= u->tree_size / 20;
+	}
 
 	dcnn_init(b);
 	if (!using_dcnn(b))		joseki_load(board_rsize(b));

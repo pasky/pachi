@@ -25,17 +25,21 @@
  * Returns NULL if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static tree_node_t *
-tree_alloc_node(tree_t *t, int count)
+tree_alloc_node(tree_t *t, int count, bool fast_alloc)
 {
 	tree_node_t *n = NULL;
 	size_t nsize = count * sizeof(*n);
 	size_t old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
 
-	if (old_size + nsize > t->max_tree_size)
-		return NULL;
-	assert(t->nodes != NULL);
-	n = (tree_node_t *)((char*)t->nodes + old_size);
-	memset(n, 0, nsize);
+	if (fast_alloc) {
+		if (old_size + nsize > t->max_tree_size)
+			return NULL;
+		assert(t->nodes != NULL);
+		n = (tree_node_t *)((char*)t->nodes + old_size);
+		memset(n, 0, nsize);
+	} else {
+		n = calloc2(count, tree_node_t);
+	}
 	return n;
 }
 
@@ -55,34 +59,35 @@ tree_setup_node(tree_t *t, tree_node_t *n, coord_t coord, int depth)
 		t->max_depth = depth;
 }
 
-/* Allocate and initialize a node. Returns NULL if tree memory is full.
+/* Allocate and initialize a node. Returns NULL (fast_alloc mode)
+ * or exits the main program if not enough memory.
  * This function may be called by multiple threads in parallel. */
 static tree_node_t *
-tree_init_node(tree_t *t, coord_t coord, int depth)
+tree_init_node(tree_t *t, coord_t coord, int depth, bool fast_alloc)
 {
 	tree_node_t *n;
-	n = tree_alloc_node(t, 1);
+	n = tree_alloc_node(t, 1, fast_alloc);
 	if (!n) return NULL;
 	tree_setup_node(t, n, coord, depth);
 	return n;
 }
 
-/* Create a tree structure and pre-allocate all nodes.
+/* Create a tree structure. Pre-allocate all nodes if max_tree_size is > 0.
  * Returns NULL if out of memory */
 tree_t *
 tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	  size_t max_pruned_size, size_t pruning_threshold, int hbits)
 {
 	tree_node_t *nodes = NULL;
-	assert (max_tree_size != 0);
-	
-	/* The nodes buffer doesn't need initialization. This is currently
-	 * done by tree_init_node to spread the load. Doing a memset for the
-	 * entire buffer here would be too slow for large trees (>10 GB). */
-	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", max_tree_size / (1024*1024));
-	if (!(nodes = malloc(max_tree_size))) {
-		if (DEBUGL(2))  fprintf(stderr, "Out of memory.\n");
-		return NULL;
+	if (max_tree_size != 0) {
+		if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", max_tree_size / (1024*1024));
+		if (!(nodes = malloc(max_tree_size))) {
+			if (DEBUGL(2))  fprintf(stderr, "Out of memory.\n");
+			return NULL;
+		}
+		/* The nodes buffer doesn't need initialization. This is currently
+		 * done by tree_init_node to spread the load. Doing a memset for the
+		 * entire buffer here would be too slow for large trees (>10 GB). */
 	}
 	
 	tree_t *t = calloc2(1, tree_t);
@@ -92,7 +97,7 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	t->pruning_threshold = pruning_threshold;
 	t->nodes = nodes;
 	/* The root PASS move is only virtual, we never play it. */
-	t->root = tree_init_node(t, pass, 0);
+	t->root = tree_init_node(t, pass, 0, t->nodes);
 	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
 
@@ -101,13 +106,82 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	return t;
 }
 
+
+/* This function may be called by multiple threads in parallel on the
+ * same tree, but not on node n. n may be detached from the tree but
+ * must have been created in this tree originally.
+ * It returns the remaining size of the tree after n has been freed. */
+static size_t
+tree_done_node(tree_t *t, tree_node_t *n)
+{
+	tree_node_t *ni = n->children;
+	while (ni) {
+		tree_node_t *nj = ni->sibling;
+		tree_done_node(t, ni);
+		ni = nj;
+	}
+	free(n);
+	size_t old_size = __sync_fetch_and_sub(&t->nodes_size, sizeof(*n));
+	return old_size - sizeof(*n);
+}
+
+typedef struct {
+	tree_t *t;
+	tree_node_t *n;
+} subtree_ctx_t;
+
+/* Worker thread for tree_done_node_detached(). Only for fast_alloc=false. */
+static void *
+tree_done_node_worker(void *ctx_)
+{
+	subtree_ctx_t *ctx = (subtree_ctx_t*)ctx_;
+	char *str = coord2str(node_coord(ctx->n));
+
+	size_t tree_size = tree_done_node(ctx->t, ctx->n);
+	if (!tree_size)
+		free(ctx->t);
+	if (DEBUGL(2))
+		fprintf(stderr, "done freeing node at %s, tree size %llu\n", str, (unsigned long long)tree_size);
+	free(str);
+	free(ctx);
+	return NULL;
+}
+
+/* Asynchronously free the subtree of nodes rooted at n. If the tree becomes
+ * empty free the tree also.  Only for fast_alloc=false. */
+static void
+tree_done_node_detached(tree_t *t, tree_node_t *n)
+{
+	if (n->u.playouts < 1000) { // no thread for small tree
+		if (!tree_done_node(t, n))
+			free(t);
+		return;
+	}
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+	pthread_t thread;
+	subtree_ctx_t *ctx = malloc2(subtree_ctx_t);
+	ctx->t = t;
+	ctx->n = n;
+	pthread_create(&thread, &attr, tree_done_node_worker, ctx);
+	pthread_attr_destroy(&attr);
+}
+
 void
 tree_done(tree_t *t)
 {
 	if (t->htable) free(t->htable);
-	assert(t->nodes);
-	free(t->nodes);
-	free(t);
+	if (t->nodes) {
+		free(t->nodes);
+		free(t);
+	} else if (!tree_done_node(t, t->root)) {
+		free(t);
+		/* A tree_done_node_worker might still be running on this tree but
+		 * it will free the tree later. It is also freeing nodes faster than
+		 * we will create new ones. */
+	}
 }
 
 
@@ -260,7 +334,7 @@ tree_load(tree_t *tree, board_t *b)
 
 
 /* Copy the subtree rooted at node: all nodes at or below depth
- * or with at least threshold playouts.
+ * or with at least threshold playouts. Only for fast_alloc.
  * The code is destructive on src. The relative order of children of
  * a given node is preserved (assumed by tree_get_node in particular).
  * Returns the copy of node in the destination tree, or NULL
@@ -270,7 +344,7 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
 	   int threshold, int depth)
 {
 	assert(dest->nodes && node);
-	tree_node_t *n2 = tree_alloc_node(dest, 1);
+	tree_node_t *n2 = tree_alloc_node(dest, 1, true);
 	if (!n2)
 		return NULL;
 	*n2 = *node;
@@ -331,7 +405,7 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
 /* Free all the tree, keeping only the subtree rooted at node.
  * Prune the subtree if necessary to fit in memory or
  * to save time scanning the tree.
- * Returns the moved node. */
+ * Returns the moved node. Only for fast_alloc. */
 tree_node_t *
 tree_garbage_collect(tree_t *tree, tree_node_t *node)
 {
@@ -450,6 +524,43 @@ tree_get_node(tree_node_t *parent, coord_t c)
 	return NULL;
 }
 
+/* Get a node of given coordinate from within parent, possibly creating it
+ * if necessary - in a very raw form (no .d, priors, ...). */
+/* FIXME: Adjust for board symmetry. */
+tree_node_t *
+tree_get_node2(tree_t *t, tree_node_t *parent, coord_t c, bool create)
+{
+	if (!parent->children || node_coord(parent->children) >= c) {
+		/* Special case: Insertion at the beginning. */
+		if (parent->children && node_coord(parent->children) == c)
+			return parent->children;
+		if (!create)
+			return NULL;
+
+		tree_node_t *nn = tree_init_node(t, c, parent->depth + 1, false);
+		nn->parent = parent; nn->sibling = parent->children;
+		parent->children = nn;
+		return nn;
+	}
+
+	/* No candidate at the beginning, look through all the children. */
+
+	tree_node_t *ni;
+	for (ni = parent->children; ni->sibling; ni = ni->sibling)
+		if (node_coord(ni->sibling) >= c)
+			break;
+
+	if (ni->sibling && node_coord(ni->sibling) == c)
+		return ni->sibling;
+	assert(node_coord(ni) < c);
+	if (!create)
+		return NULL;
+
+	tree_node_t *nn = tree_init_node(t, c, parent->depth + 1, false);
+	nn->parent = parent; nn->sibling = ni->sibling; ni->sibling = nn;
+	return nn;
+}
+
 
 /* Tree symmetry: When possible, we will localize the tree to a single part
  * of the board in tree_expand_node() and possibly flip along symmetry axes
@@ -486,9 +597,9 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	} foreach_free_point_end;
 	uct_prior(u, node, &map);
 
-	/* Now, create the nodes (all at once) */
-	tree_node_t *ni = tree_alloc_node(t, child_count);
-	/* We might temporarily run out of nodes but this should be rare. */
+	/* Now, create the nodes (all at once if fast_alloc) */
+	tree_node_t *ni = t->nodes ? tree_alloc_node(t, child_count, true) : tree_alloc_node(t, 1, false);
+	/* In fast_alloc mode we might temporarily run out of nodes but this should be rare. */
 	if (!ni) {
 		node->is_expanded = false;
 		return;
@@ -524,7 +635,7 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 				continue;
 			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
 
-			tree_node_t *nj = first_child + child++;
+			tree_node_t *nj = t->nodes ? first_child + child++ : tree_alloc_node(t, 1, false);
 			tree_setup_node(t, nj, c, node->depth + 1);
 			nj->parent = node; ni->sibling = nj; ni = nj;
 
@@ -614,19 +725,23 @@ tree_unlink_node(tree_node_t *node)
 	node->parent = NULL;
 }
 
-/* Promotes the given node as the root of the tree.
- * The node may be moved and some of its subtree may be pruned. */
+/* Promotes the given node as the root of the tree. In the fast_alloc
+ * mode, the node may be moved and some of its subtree may be pruned. */
 void
 tree_promote_node(tree_t *tree, tree_node_t **node)
 {
 	assert((*node)->parent == tree->root);
 	tree_unlink_node(*node);
-
-	/* Garbage collect if we run out of memory, or it is cheap to do so now: */
-	if (tree->nodes_size >= tree->pruning_threshold ||
-	    (tree->nodes_size >= tree->max_tree_size / 10 && (*node)->u.playouts < SMALL_TREE_PLAYOUTS))
-		*node = tree_garbage_collect(tree, *node);
-
+	if (!tree->nodes) {
+		/* Freeing the rest of the tree can take several seconds on large
+		 * trees, so we must do it asynchronously: */
+		tree_done_node_detached(tree, tree->root);
+	} else {
+		/* Garbage collect if we run out of memory, or it is cheap to do so now: */
+		if (tree->nodes_size >= tree->pruning_threshold
+		    || (tree->nodes_size >= tree->max_tree_size / 10 && (*node)->u.playouts < SMALL_TREE_PLAYOUTS))
+			*node = tree_garbage_collect(tree, *node);
+	}
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);
 
