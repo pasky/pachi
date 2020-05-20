@@ -79,7 +79,7 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	/* The nodes buffer doesn't need initialization. This is currently
 	 * done by tree_init_node to spread the load. Doing a memset for the
 	 * entire buffer here would be too slow for large trees (>10 GB). */
-	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", max_tree_size / (1024*1024));
+	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", (int)(max_tree_size / (1024*1024)));
 	if (!(nodes = malloc(max_tree_size))) {
 		if (DEBUGL(2))  fprintf(stderr, "Out of memory.\n");
 		return NULL;

@@ -484,7 +484,7 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	}
 	
 	if (UDEBUGL(2)) fprintf(stderr, "Tree memory full, reallocating (%i -> %i Mb)\n",
-				old_size / (1024*1024), new_size / (1024*1024));
+				(int)(old_size / (1024*1024)), (int)(new_size / (1024*1024)));
 
 	/* Can't simply use tree_realloc(), need to check if we can allocate
 	 * memory before stopping search otherwise we can't recover. */
