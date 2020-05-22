@@ -175,21 +175,6 @@ board_init_data(board_t *board)
 	board_setup(board);
 	board_resize(board, size);
 
-	/* Setup initial symmetry */
-	if (size % 2) {
-		board->symmetry.d = 1;
-		board->symmetry.x1 = board->symmetry.y1 = stride / 2;
-		board->symmetry.x2 = board->symmetry.y2 = stride - 1;
-		board->symmetry.type = SYM_FULL;
-	} else {
-		/* TODO: We do not handle board symmetry on boards
-		 * with no tengen yet. */
-		board->symmetry.d = 0;
-		board->symmetry.x1 = board->symmetry.y1 = 1;
-		board->symmetry.x2 = board->symmetry.y2 = stride - 1;
-		board->symmetry.type = SYM_NONE;
-	}
-
 	/* Draw the offboard margin */
 	int top_row = board_max_coords(board) - stride;
 	int i;
@@ -391,106 +376,6 @@ board_print_target_move(board_t *b, FILE *f, coord_t target_move)
 	assert(!is_pass(target_move));
 	assert(board_at(b, target_move) == S_NONE);
 	board_hprint(b, f, print_target_move_handler, (void*)(intptr_t)target_move);
-}
-
-
-bool
-board_coord_in_symmetry(board_t *b, coord_t c)
-{
-	if (coord_y(c) < b->symmetry.y1 || coord_y(c) > b->symmetry.y2)
-		return false;
-	if (coord_x(c) < b->symmetry.x1 || coord_x(c) > b->symmetry.x2)
-		return false;
-	if (b->symmetry.d) {
-		int x = coord_x(c);
-		if (b->symmetry.type == SYM_DIAG_DOWN)
-			x = board_stride(b) - 1 - x;
-		if (x > coord_y(c))
-			return false;
-	}
-	return true;
-}
-
-void
-board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c)
-{
-	if (playout_board(b))  return;
-
-	if (likely(symmetry->type == SYM_NONE)) {
-		/* Fully degenerated already. We do not support detection
-		 * of restoring of symmetry, assuming that this is too rare
-		 * a case to handle. */
-		return;
-	}
-
-	int x = coord_x(c), y = coord_y(c), t = board_stride(b) / 2;
-	int dx = board_stride(b) - 1 - x; /* for SYM_DOWN */
-	if (DEBUGL(6))
-		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d] update for %d,%d\n",
-			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
-			symmetry->d, symmetry->type, x, y);
-	
-	switch (symmetry->type) {
-		case SYM_FULL:
-			if (x == t && y == t)				
-				return;        /* Tengen keeps full symmetry. */
-			
-			/* New symmetry now? */
-			if (x == y) {
-				symmetry->type = SYM_DIAG_UP;
-				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
-				symmetry->d = 1;
-			} else if (dx == y) {
-				symmetry->type = SYM_DIAG_DOWN;
-				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
-				symmetry->d = 1;
-			} else if (x == t) {
-				symmetry->type = SYM_HORIZ;
-				symmetry->y1 = 1;
-				symmetry->y2 = board_stride(b) - 1;
-				symmetry->d = 0;
-			} else if (y == t) {
-				symmetry->type = SYM_VERT;
-				symmetry->x1 = 1;
-				symmetry->x2 = board_stride(b) - 1;
-				symmetry->d = 0;
-			} else {
-break_symmetry:
-				symmetry->type = SYM_NONE;
-				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
-				symmetry->d = 0;
-			}
-			break;
-		case SYM_DIAG_UP:
-			if (x == y)
-				return;
-			goto break_symmetry;
-		case SYM_DIAG_DOWN:
-			if (dx == y)
-				return;
-			goto break_symmetry;
-		case SYM_HORIZ:
-			if (x == t)
-				return;
-			goto break_symmetry;
-		case SYM_VERT:
-			if (y == t)
-				return;
-			goto break_symmetry;
-		case SYM_NONE:
-			assert(0);
-			break;
-	}
-
-	if (DEBUGL(6)) {
-		fprintf(stderr, "NEW SYMMETRY [%d,%d,%d,%d|%d=%d]\n",
-			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
-			symmetry->d, symmetry->type);
-	}
-	/* Whew. */
 }
 
 

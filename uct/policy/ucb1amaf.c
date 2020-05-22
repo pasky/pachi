@@ -273,8 +273,6 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		bool *ko_capture_map = &map->is_ko_capture[move+1];
 		int max_threat_dist = b->threat_rave <= 0 ? ko_length(ko_capture_map, map->gamelen - (move+1)) : -1;
 
-		/* This loop ignores symmetry considerations, but they should
-		 * matter only at a point when AMAF doesn't help much. */
 		assert(map->game_baselen >= 0);
 		for (tree_node_t *ni = node->children; ni; ni = ni->sibling) {
 			if (is_pass(node_coord(ni))) continue;

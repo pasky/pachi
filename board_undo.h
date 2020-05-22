@@ -43,7 +43,6 @@ typedef struct board_undo {
  *   - hashes, superko_violation (spathash, hash, qhash, history_hash)
  *   - list of free positions (f / flen)
  *   - list of capturable groups (c / clen)
- *   - symmetry information
  *
  * #define QUICK_BOARD_CODE at the top of your file to get compile-time
  * error if you try to access a forbidden field.

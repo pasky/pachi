@@ -96,7 +96,6 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	t->nodes = nodes;
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0);
-	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
 
 #ifdef DISTRIBUTED
@@ -446,8 +445,7 @@ tree_replace(tree_t *tree, tree_t *content)
 }
 
 
-/* Find node of given coordinate under parent.
- * FIXME: Adjust for board symmetry. */
+/* Find node of given coordinate under parent. */
 tree_node_t *
 tree_get_node(tree_node_t *parent, coord_t c)
 {
@@ -456,12 +454,6 @@ tree_get_node(tree_node_t *parent, coord_t c)
 			return n;
 	return NULL;
 }
-
-
-/* Tree symmetry: When possible, we will localize the tree to a single part
- * of the board in tree_expand_node() and possibly flip along symmetry axes
- * to another part of the board in tree_promote_at(). We follow b->symmetry
- * guidelines here. */
 
 
 /* This function must be thread safe, given that board b is only modified by the calling thread. */
@@ -506,102 +498,20 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	ni->parent = node;
 	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
 
-	/* The loop considers only the symmetry playground. */
-	if (UDEBUGL(6)) {
-		fprintf(stderr, "expanding %s within [%d,%d],[%d,%d] %d-%d\n",
-				coord2sstr(node_coord(node)),
-				b->symmetry.x1, b->symmetry.y1,
-				b->symmetry.x2, b->symmetry.y2,
-				b->symmetry.type, b->symmetry.d);
-	}
 	int child = 1;
-	for (int j = b->symmetry.y1; j <= b->symmetry.y2; j++) {
-		for (int i = b->symmetry.x1; i <= b->symmetry.x2; i++) {
-			if (b->symmetry.d) {
-				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_stride(b) - 1 - i : i;
-				if (x > j) {
-					if (UDEBUGL(7))
-						fprintf(stderr, "drop %d,%d\n", i, j);
-					continue;
-				}
-			}
-
-			coord_t c = coord_xy(i, j);
-			if (!map.consider[c]) // Filter out invalid moves
-				continue;
-			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
-
-			tree_node_t *nj = first_child + child++;
-			tree_setup_node(t, nj, c, node->depth + 1);
-			nj->parent = node; ni->sibling = nj; ni = nj;
-
-			ni->prior = map.prior[c];
-			ni->d = distances[c];
-		}
-	}
+	foreach_point(board) {
+		if (!map.consider[c]) // Filter out invalid moves
+			continue;
+		assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
+		
+		tree_node_t *nj = first_child + child++;
+		tree_setup_node(t, nj, c, node->depth + 1);
+		nj->parent = node; ni->sibling = nj; ni = nj;
+		
+		ni->prior = map.prior[c];
+		ni->d = distances[c];
+	} foreach_point_end;
 	node->children = first_child; // must be done at the end to avoid race
-}
-
-
-static coord_t
-flip_coord(board_t *b, coord_t c,
-           bool flip_horiz, bool flip_vert, int flip_diag)
-{
-	int x = coord_x(c), y = coord_y(c);
-	if (flip_diag)  {  int z = x; x = y; y = z;    }
-	if (flip_horiz) {  x = board_stride(b) - 1 - x;  }
-	if (flip_vert)  {  y = board_stride(b) - 1 - y;  }
-	return coord_xy(x, y);
-}
-
-static void
-tree_fix_node_symmetry(board_t *b, tree_node_t *node,
-                       bool flip_horiz, bool flip_vert, int flip_diag)
-{
-	if (!is_pass(node_coord(node)))
-		node->coord = flip_coord(b, node_coord(node), flip_horiz, flip_vert, flip_diag);
-
-	for (tree_node_t *ni = node->children; ni; ni = ni->sibling)
-		tree_fix_node_symmetry(b, ni, flip_horiz, flip_vert, flip_diag);
-}
-
-static void
-tree_fix_symmetry(tree_t *tree, board_t *b, coord_t c)
-{
-	if (is_pass(c))
-		return;
-
-	board_symmetry_t *s = &tree->root_symmetry;
-	int cx = coord_x(c), cy = coord_y(c);
-
-	/* playground	X->h->v->d normalization
-	 * :::..	.d...
-	 * .::..	v....
-	 * ..:..	.....
-	 * .....	h...X
-	 * .....	.....  */
-	bool flip_horiz = cx < s->x1 || cx > s->x2;
-	bool flip_vert = cy < s->y1 || cy > s->y2;
-
-	bool flip_diag = 0;
-	if (s->d) {
-		bool dir = (s->type == SYM_DIAG_DOWN);
-		int x = dir ^ flip_horiz ^ flip_vert ? board_stride(b) - 1 - cx : cx;
-		if (flip_vert ? x < cy : x > cy) {
-			flip_diag = 1;
-		}
-	}
-
-	if (DEBUGL(4)) {
-		fprintf(stderr, "%s [%d,%d -> %d,%d;%d,%d] will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
-			coord2sstr(c),
-			cx, cy, s->x1, s->y1, s->x2, s->y2,
-			flip_horiz, flip_vert, flip_diag,
-			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag)),
-			s->type, s->d, b->symmetry.type, b->symmetry.d);
-	}
-	if (flip_horiz || flip_vert || flip_diag)
-		tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
 }
 
 
@@ -637,7 +547,6 @@ tree_promote_node(tree_t *tree, tree_node_t **node)
 	tree->root = *node;
 	tree->root_color = stone_other(tree->root_color);
 
-	board_symmetry_update(tree->board, &tree->root_symmetry, node_coord(*node));
 	tree->avg_score.playouts = 0;
 
 	/* If the tree deepest node was under node, or if we called tree_garbage_collect,
@@ -650,7 +559,6 @@ bool
 tree_promote_at(tree_t *t, board_t *b, coord_t c, int *reason)
 {
 	*reason = 0;
-	tree_fix_symmetry(t, b, c);
 
 	tree_node_t *n = tree_get_node(t->root, c);
 	if (!n)  return false;

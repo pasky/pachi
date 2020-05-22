@@ -40,26 +40,6 @@ struct ownermap;
 #define BOARD_MAX_GROUPS  (BOARD_MAX_SIZE * BOARD_MAX_SIZE * 2 / 3)
 /* For 19x19, max 19*2*6 = 228 groups (stacking b&w stones, each third line empty) */
 
-enum symmetry {
-		SYM_FULL,
-		SYM_DIAG_UP,
-		SYM_DIAG_DOWN,
-		SYM_HORIZ,
-		SYM_VERT,
-		SYM_NONE
-};
-
-/* Some engines might normalize their reading and skip symmetrical moves.
- * We will tell them how can they do it. */
-typedef struct {	
-	int x1, x2, y1, y2;   /* Playground is in this rectangle. */
-	int d;                /* d ==  0: Full rectangle
-			       * d ==  1: Top triangle */
-	
-	enum symmetry type;   /* General symmetry type.
-			       * Note that the above is redundant to this, but just provided for easier usage. */
-} board_symmetry_t;
-
 
 typedef uint64_t hash_t;
 #define PRIhash PRIx64
@@ -194,8 +174,6 @@ FB_ONLY(bool playout_board);
 /*************************************************************************************************************/
 /* Not maintained during playouts: */
 	
-FB_ONLY(board_symmetry_t symmetry);               /* Symmetry information */
-
 FB_ONLY(hash_t hash);                             /* Hash of current board position. */
 FB_ONLY(hash_t hash_history)[BOARD_HASH_HISTORY]; /* Last hashes encountered, for superko check. */
 	int    hash_history_next;                 /* (circular buffer) */
@@ -339,14 +317,6 @@ static bool board_playing_ko_threat(board_t *b);
 
 /* Determine number of stones in a group, up to @max stones. */
 static int group_stone_count(board_t *b, group_t group, int max);
-
-#ifndef QUICK_BOARD_CODE
-/* Adjust symmetry information as if given coordinate has been played. */
-void board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c);
-/* Check if coordinates are within symmetry base. (If false, they can
- * be derived from the base.) */
-bool board_coord_in_symmetry(board_t *b, coord_t c);
-#endif
 
 /* Returns true if given coordinate has all neighbors of given color or the edge. */
 static bool board_is_eyelike(board_t *b, coord_t coord, enum stone eye_color);

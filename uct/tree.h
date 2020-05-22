@@ -91,7 +91,6 @@ struct tree_hash;
 typedef struct {
 	board_t *board;
 	tree_node_t *root;
-	board_symmetry_t root_symmetry;
 	enum stone root_color;
 
 	/* Whether to use any extra komi during score counting. This is

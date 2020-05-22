@@ -151,8 +151,6 @@ hash_board(board_t *b)
 	/****************************************************************/
 	/* Full board fields */
 
-	hash_field(symmetry);
-
 	// not hashing hash history ...
 
 	hash_field(hash);
