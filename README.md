@@ -173,14 +173,19 @@ It's also possible to run Pachi with [Lizzie](https://github.com/featurecat/lizz
 This is a great way to explore variations, analyze games or visualize what Pachi is doing while it's thinking,
 the graphics are amazing.
 
-Download windows release: [Lizzie-0.6.Pachi-12.40.Windows.zip](https://github.com/featurecat/lizzie/files/3027159/Lizzie-0.6.Pachi-12.40.Windows.zip)
-
-Or make your own:
-- Download [Lizzie 0.6](https://github.com/featurecat/lizzie/releases/tag/0.6)
-- Download [Pachi 12.40](https://github.com/pasky/pachi/releases/tag/pachi-12.40), extract in Lizzie folder
-- Edit Lizzie config.txt, make it use Pachi instead of Leela-Zero:
-
-        "engine-command": "pachi/pachi --version=0.16",
+Setup:
+- Install [Lizzie 0.7.2](https://github.com/featurecat/lizzie/releases/tag/0.7.2)
+- Download [Pachi 12.50](https://github.com/pasky/pachi/releases/tag/pachi-12.50), extract in Lizzie folder
+- Configure engines:  
+  Start Lizzie, `Menu -> Settings -> Engine`  
+  Add Pachi as "Engine 2":
+  
+      Engine 2:  ./pachi/pachi.exe -o pachi.log
+      
+  Normally Leela-zero and Katago are Default Engine and Engine 1.
+- Lizzie will start with Leela-zero by default,  
+  use `Menu -> Engine -> Engine 2` to switch to Pachi.  
+  (Window title shows current engine).
 
 
 ## Logs
