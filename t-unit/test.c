@@ -509,24 +509,23 @@ test_moggy_status(board_t *b, char *arg)
 
 	bool speed_benchmark = !*arg;
 	int games = (speed_benchmark ? 4000 : 500);
-	coord_t              status_at[10];
+	coord_t              coords[10];
 	enum point_judgement expected[10];
 	int                  thres[10];
 	int n = 0;
 	
 	for (n = 0; *arg; n++) {
 		if (!isalpha(*arg))  die("Invalid arg: '%s'\n", arg);
-		status_at[n] = str2coord(arg);
+		coords[n] = str2coord(arg);
 		next_arg(arg);
 
-		if (!*arg || strlen(arg) != 1) die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n]));
-		thres[n] = 67;
-		if (!strcmp(arg, "X") || !strcmp(arg, "O" )) thres[n] = 80;
+		if (!*arg || strlen(arg) != 1) die("Expected x/o/X/O/: after coord %s\n", coord2sstr(coords[n]));
+		thres[n] = (!strcmp(arg, "X") || !strcmp(arg, "O" ) ? 80 : 67);
 		if      (!strcasecmp(arg, "x"))  expected[n] = PJ_BLACK;
 		else if (!strcasecmp(arg, "o"))  expected[n] = PJ_WHITE;
 		else if (!strcasecmp(arg, ":"))  expected[n] = PJ_SEKI;
 		else if (!strcasecmp(arg, "?"))  { expected[n] = PJ_BLACK; thres[n] = 0;  }
-		else    die("Expected x/o/X/O/: after coord %s\n", coord2sstr(status_at[n]));
+		else    die("Expected x/o/X/O/: after coord %s\n", coord2sstr(coords[n]));
 		next_arg(arg);
 	}
 	args_end();
@@ -535,13 +534,15 @@ test_moggy_status(board_t *b, char *arg)
 	
 	enum stone color = board_to_play(b);
 	board_print_test(2, b);
-	if (DEBUGL(2))  fprintf(stderr, "moggy status ");
-	for (int i = 0; i < n; i++) {
-		const char *chr = (thres[i] == 80 ? ":XO," : ":xo,");
-		if (!thres[i])  chr = "????";
-		if (DEBUGL(2)) fprintf(stderr, "%s %c  ", coord2sstr(status_at[i]),	chr[expected[i]]);
+	if (DEBUGL(2)) {
+		fprintf(stderr, "moggy status ");
+		for (int i = 0; i < n; i++) {
+			const char *chr = (thres[i] == 80 ? ":XO," : ":xo,");
+			if (!thres[i])  chr = "????";
+			fprintf(stderr, "%s %c  ", coord2sstr(coords[i]), chr[expected[i]]);
+		}
+		fprintf(stderr, "\n%s to play. Playing %i games ...\n", stone2str(color), games);
 	}
-	if (DEBUGL(2)) fprintf(stderr, "\n%s to play. Playing %i games ...\n", stone2str(color), games);
 
 	/* Get final status estimate after a number of moggy games */	
 	ownermap_t ownermap;
@@ -549,15 +550,16 @@ test_moggy_status(board_t *b, char *arg)
 
 	int wr_black = wr * 100 / games;
 	int wr_white = (games - wr) * 100 / games;
-	if (wr_black > wr_white)  { if (DEBUGL(2)) fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white); }
-	else		            if (DEBUGL(2)) fprintf(stderr, "Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
-
-	if (DEBUGL(2)) board_print_ownermap(b, stderr, &ownermap);
+	if (DEBUGL(2)) {
+		if (wr_black > wr_white)  fprintf(stderr, "Winrate: [ black %i%% ]  white %i%%\n\n", wr_black, wr_white);
+		else		          fprintf(stderr, "Winrate: black %i%%  [ white %i%% ]\n\n", wr_black, wr_white);
+		board_print_ownermap(b, stderr, &ownermap);
+	}
 
 	/* Check results */
 	bool ret = true;
 	for (int i = 0; i < n; i++) {
-		coord_t c = status_at[i];
+		coord_t c = coords[i];
 		enum point_judgement j = ownermap_judge_point(&ownermap, c, 0.8);
 		if (j == PJ_UNKNOWN) j = ownermap_judge_point(&ownermap, c, 0.67);		
 		enum stone color = (enum stone)j;
@@ -567,7 +569,7 @@ test_moggy_status(board_t *b, char *arg)
 
 		int passed = (!thres[i] || (j == expected[i] && pc >= thres[i]));
 		const char *colorstr = (j == PJ_SEKI ? "seki" : stone2str(color));
-		PRINT_TEST(b, "moggy status %3s %-5s -> %3i%%    ", coord2sstr(c), colorstr, pc);
+		PRINT_TEST(b, "moggy status %3s:  %-5s %3i%%    ", coord2sstr(c), colorstr, pc);
 		
 		if (!passed)  ret = false;
 		PRINT_RES(passed);
