@@ -6,4 +6,5 @@ dir=`dirname "$0"`/..
 cd $dir
 
 # we don't need any engine really, using replay because it starts up fast.
-( ( cat; echo "showboard" ) | ./pachi -d0 -e replay >/dev/null ) 2>&1
+( cat; echo "showboard" ) | ./pachi -e replay --nojoseki  2>/dev/null  |
+tail -24 | grep -A 24 Move | sed -e 's/^= //'
