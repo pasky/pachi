@@ -444,12 +444,15 @@ uct_pondering_stop(uct_t *u)
 	if (!thread_manager_running)
 		return;
 
-	assert(pondering(u));
-	
+	/* Search active but not pondering actually ? Stop search.
+	 * Distributed mode slaves need that, special case. */
+	if (!pondering(u)) {  uct_search_stop();  return;  }
+
 	/* Stop the thread manager. */
 	uct_thread_ctx_t *ctx = uct_search_stop();  /* clears search flags */
-	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, 0, NULL);
 	
+	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, 0, NULL);
+
 	free(ctx->b);
 	u->reporting = u->reporting_opt;
 	u->report_fh = stderr;
