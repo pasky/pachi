@@ -56,13 +56,15 @@ port_listen(char *port, int max_connections)
 	return sock;
 }
 
-/* Returns true if in private address range: 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 */
+/* Returns true if address in private address range:
+ * 10.0.0.0/8,  172.16.0.0/12,  192.168.0.0/16,  127.0.0.1 */
 static bool
 is_private(struct in_addr *in)
 {
 	return (ntohl(in->s_addr) & 0xff000000) >> 24 == 10
 	    || (ntohl(in->s_addr) & 0xfff00000) >> 16 == 172 * 256 + 16
-	    || (ntohl(in->s_addr) & 0xffff0000) >> 16 == 192 * 256 + 168;
+	    || (ntohl(in->s_addr) & 0xffff0000) >> 16 == 192 * 256 + 168
+	    || (ntohl(in->s_addr)) == 127 * 256 * 256 * 256 + 1;
 }
 
 /* Waits for a connection on the given socket, and returns the file descriptor.
@@ -85,6 +87,7 @@ open_server_connection(int socket, struct in_addr *client)
 				*client = client_addr.sin_addr;
 			return fd;
 		}
+		else if (DEBUGL(2))  fprintf(stderr, "connection from address not in private ip range, rejecting\n");
 		close(fd);
 	}
 }
