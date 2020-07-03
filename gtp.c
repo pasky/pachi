@@ -70,7 +70,7 @@ gtp_flush(gtp_t *gtp)
 	gtp->flushed = true;
 	
 	putchar('\n');
-	fflush(stdout);
+	fflush(stdout);		/* in network mode stdout is not line-buffered */
 }
 
 /* Output one line, end-of-line \n added automatically. */
@@ -486,6 +486,8 @@ cmd_lz_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+/* Used by slaves in distributed mode.
+ * Special: may send binary data after gtp reply. */
 static enum parse_code
 cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -499,21 +501,22 @@ cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char *reply = e->genmoves(e, b, ti_genmove, color, gtp->next,
 				  !strcasecmp(gtp->cmd, "pachi-genmoves_cleanup"),
 				  &stats, &stats_size);
-	if (!reply) {
-		gtp_error(gtp, "genmoves error");
-		return P_OK;
-	}
+	if (!reply) {  gtp_error(gtp, "genmoves error");  return P_OK;	}
 	if (DEBUGL(3))                      fprintf(stderr, "proposing moves %s\n", reply);
 	if (DEBUGL(4) && debug_boardprint)  engine_board_print(e, b, stderr);
+	
 	gtp_reply(gtp, reply);
-	if (stats_size > 0) {
+	putchar('\n');		// gtp_flush() sortof,
+	gtp->flushed = true;	// but we handle fflush() ourselves here.
+
+	if (stats_size > 0) {   // send binary part
 		double start = time_now();
 		fwrite(stats, 1, stats_size, stdout);
-		fflush(stdout);
 		if (DEBUGVV(2))
 			fprintf(stderr, "sent reply %d bytes in %.4fms\n",
 				stats_size, (time_now() - start)*1000);
 	}
+	fflush(stdout);
 	return P_OK;
 }
 
@@ -877,6 +880,7 @@ cmd_showboard(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp_printf(gtp, "");
 	board_print(b, stdout);
 	gtp->flushed = 1;  // already ends with \n\n
+	fflush(stdout);
 	return P_OK;
 }
 

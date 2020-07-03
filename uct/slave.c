@@ -182,6 +182,8 @@ uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp)
 		uct_pondering_stop(u);
 	}
 
+	if (id == -1)  return P_OK;
+	
 	/* Force resending the whole command history if we are out of sync
 	 * but do it only once, not if already getting the history. */
 	if ((move_number(id) != b->moves || !board_resized)
