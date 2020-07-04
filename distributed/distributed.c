@@ -387,6 +387,7 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 
 	/* Loop until most slaves want to quit or time elapsed. */
 	int iterations;
+	double last_printed = now;
 	for (iterations = 1; ; iterations++) {
 		double start = now;
 		/* Wait for just one slave to get stats as fresh as possible,
@@ -406,7 +407,11 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 			if (!keep_looking || playouts >= stop.worst.playouts) break;
 			// XXX handle min/max playouts
 		}
-		if (DEBUGVV(2)) {
+		
+		/* Print progress every 0.3s by default (run with -d4 to show everything) */
+		if (DEBUGVV(3) ||
+		    (DEBUGL(2) && now >= last_printed + 0.3)) {
+			last_printed = now;
 			char *coord = coord2sstr(best);
 			snprintf(buf, sizeof(buf),
 				 "temp winner is %s %s with score %1.4f (%d/%d games)"
@@ -453,7 +458,7 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 			 (int)(played/time/threads), 1000*time/iterations);
 		logline(NULL, "* ", buf);
 	}
-	if (DEBUGL(3)) {
+	if (DEBUGL(4)) {
 		int total_hnodes = replies * (1 << dist->stats_hbits);
 		merge_print_stats(total_hnodes);
 	}
@@ -592,4 +597,10 @@ engine_distributed_init(engine_t *e, board_t *b)
 	e->keep_on_clear = true;
 	e->setoption = distributed_setoption;
 	distributed_state_init(e, b);
+
+	if (DEBUGL(2))  fprintf(stderr, "distributed: master node\n");
+	if (DEBUGL(2) && !DEBUGL(3))
+		fprintf(stderr,
+			"distributed: pachi-genmoves subcommands not logged\n"
+			"distributed: run with -d4 to see everything\n");	
 }

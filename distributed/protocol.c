@@ -165,7 +165,8 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
 	assert(size <= *bin_size);
 	*bin_size = size;
 
-	if (DEBUGV(s, 2))
+	/* Log everything except 'genmoves' replies by default (run with -d4 to show them) */
+	if (strchr(reply, '@') ? DEBUGL(3) : DEBUGL(2))
 		logline(&client, "<<", reply);
 	if ((*reply == '=' || *reply == '?') && isdigit(reply[1]))
 		reply_id = atoi(reply+1);
@@ -173,8 +174,7 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
 	/* Read the rest of the ascii reply */
 	char *line = reply + strlen(reply);
 	while (fgets(line, reply + CMDS_SIZE - line, f) && *line != '\n') {
-		if (DEBUGL(3))
-			logline(&client, "<<", line);
+		if (DEBUGL(4))  logline(&client, "<<", line);
 		line += strlen(line);
 	}
 	if (*line != '\n') return -1;
@@ -185,7 +185,7 @@ get_reply(FILE *f, struct in_addr client, char *reply, void *bin_reply, int *bin
 		bin_reply = (char *)bin_reply + len;
 		size -= len;
 	}
-	if (*bin_size && DEBUGVV(2)) {
+	if (*bin_size && DEBUGVV(3)) {
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "read reply %d+%d bytes in %.4fms\n",
 			 (int)strlen(reply), *bin_size,
@@ -223,9 +223,10 @@ send_command(char *to_send, void *bin_buf, int *bin_size,
 		fwrite(bin_buf, 1, *bin_size, f);
 	fflush(f);
 
-	if (DEBUGV(strchr(buf, '@'), 2)) {
+	/* Log everything except 'genmoves' commands by default (run with -d4 to show them) */	
+	if (strchr(buf, '@') ? DEBUGL(3) : DEBUGL(2)) {
 		double ms = (time_now() - start) * 1000.0;
-		if (!DEBUGL(3)) {
+		if (!DEBUGL(4)) {
 			char *s = strchr(buf, '\n');
 			if (s) s[1] = '\0';
 		}
@@ -351,7 +352,7 @@ insert_buf(slave_state_t *sstate, void *buf, int size)
 void
 clear_receive_queue(void)
 {
-	if (DEBUGL(3)) {
+	if (DEBUGL(4)) {
 		char buf[1024];
 		snprintf(buf, sizeof(buf), "clear queue, old length %d age %d\n",
 			 queue_length, queue_age);
@@ -524,8 +525,7 @@ slave_thread(void *arg)
 
 		FILE *f = fdopen(conn, "r+");
 		if (DEBUGL(2)) {
-			snprintf(reply_buf, sizeof(reply_buf),
-				 "new slave, id %d\n", sstate.thread_id);
+			snprintf(reply_buf, sizeof(reply_buf), "new slave, id %d\n", sstate.thread_id);
 			logline(&client, "= ", reply_buf);
 		}
 		if (!is_pachi_slave(f, &client)) continue;
@@ -544,8 +544,7 @@ slave_thread(void *arg)
 		pthread_mutex_unlock(&slave_lock);
 
 		resend = true;
-		if (DEBUGL(2))
-			logline(&client, "= ", "lost slave\n");
+		if (DEBUGL(2))  logline(&client, "= ", "lost slave\n");
 		fclose(f);
 	}
 	pthread_exit(NULL);
