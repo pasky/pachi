@@ -347,7 +347,8 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 			if (now - ti->len.t.timer_start >= stop.worst.time) break;
 			if (!keep_looking && now - first >= MIN_EARLY_STOP_WAIT) break;
 		} else {
-			if (!keep_looking || played >= stop.worst.playouts) break;
+			if (!keep_looking || playouts >= stop.worst.playouts) break;
+			// XXX handle min/max playouts
 		}
 		if (DEBUGVV(2)) {
 			char *coord = coord2sstr(best);
