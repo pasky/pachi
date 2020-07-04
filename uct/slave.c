@@ -46,7 +46,6 @@
 #include "uct/slave.h"
 #include "uct/tree.h"
 
-
 /* UCT infrastructure for a distributed engine slave. */
 
 /* For debugging only. */
@@ -421,12 +420,12 @@ report_incr_stats(uct_t *u, int *stats_size)
  * a list of lines "coord playouts value" with absolute counts for
  * children of the root node (including contributions from other
  * slaves). The last line must not end with \n.
- * If c is non-zero, add this move with a large weight.
+ * If @force is non-zero, add this move with a large weight.
  * This function is called only by the main thread, but may be
  * called while the tree is updated by the worker threads. Keep this
  * code in sync with distributed/distributed.c:select_best_move(). */
 static char *
-report_stats(uct_t *u, board_t *b, coord_t c,
+report_stats(uct_t *u, board_t *b, coord_t force,
 	     bool keep_looking, int bin_size)
 {
 	static char reply[10240];
@@ -452,7 +451,7 @@ report_stats(uct_t *u, board_t *b, coord_t c,
 		if (ni->u.playouts <= min_playouts || ni->hints & TREE_HINT_INVALID)
 			continue;
 		/* A book move is only added at the end: */
-		if (node_coord(ni) == c) continue;
+		if (node_coord(ni) == force) continue;
 
 		char buf[4];
 		/* We return the values as stored in the tree, so from black's view. */
@@ -461,13 +460,39 @@ report_stats(uct_t *u, board_t *b, coord_t c,
 	}
 	/* Give a large but not infinite weight to pass, resign or book move, to avoid
 	 * forcing resign if other slaves don't like it. */
-	if (c) {
+	if (force) {
 		double resign_value = u->t->root_color == S_WHITE ? 0.0 : 1.0;
-		double c_value = is_resign(c) ? resign_value : 1.0 - resign_value;
-		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(c),
-			      2 * max_playouts, c_value);
+		double value = is_resign(force) ? resign_value : 1.0 - resign_value;
+		r += snprintf(r, end - r, "\n%s %d %.1f", coord2sstr(force), 2 * max_playouts, value);
 	}
 	return reply;
+}
+
+/* Check the state of the Monte Carlo Tree Search. Since we're not using the
+ * pondering infrastructure also need to check fullmem and print progress here. */
+static bool
+slave_check_progress(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
+		     uct_search_state_t *s, coord_t *force)
+{
+	/* Print progress */
+	int played_games = uct_search_games(s);
+	uct_search_progress(u, b, color, u->t, ti, s, played_games);
+	u->played_own = played_games - s->base_playouts;
+
+	if (s->fullmem) {
+		/* Stop search, realloc tree and restart search */
+		if (!u->auto_alloc || !uct_search_realloc_tree(u, b, color, ti, s))
+			uct_search_stop();
+	}
+
+	bool keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, s, played_games);
+	coord_t best;
+	uct_search_result(u, b, color, u->pass_all_alive, played_games, s->base_playouts, &best);
+	
+	/* Give heavy weight to pass and resign */
+	if (best < 0)  *force = best;
+
+	return keep_looking;
 }
 
 /* genmoves is issued by the distributed engine master to all slaves, to:
@@ -525,32 +550,17 @@ uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		return NULL;
 	}
 
-	/* Check the state of the Monte Carlo Tree Search. */
-	int played_games = uct_search_games(&s);
-	uct_search_progress(u, b, color, u->t, ti, &s, played_games);
-	u->played_own = played_games - s.base_playouts;
-
-	if (s.fullmem) {
-		/* Stop search, realloc tree and restart search */
-		if (!u->auto_alloc || !uct_search_realloc_tree(u, b, color, ti, &s))
-			uct_search_stop();
-	}
-
 	*stats_size = 0;
 	bool keep_looking = false;
-	coord_t best_coord = pass;
-	if (b->fbook)
-		best_coord = fbook_check(b);
-	if (best_coord == pass) {
-		keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, &s, played_games);
-		uct_search_result(u, b, color, u->pass_all_alive, played_games, s.base_playouts, &best_coord);
-		/* Give heavy weight only to pass, resign and book move: */
-		if (best_coord > 0) best_coord = 0; 
+	coord_t force = (b->fbook ? fbook_check(b) : 0);
 
-		if (u->shared_levels) {
+	/* Book move takes precedence */
+	if (!force) {
+		keep_looking = slave_check_progress(u, b, color, ti, &s, &force);
+		if (u->shared_levels)
 			*stats_buf = report_incr_stats(u, stats_size);
-		}
 	}
-	char *reply = report_stats(u, b, best_coord, keep_looking, *stats_size);
+
+	char *reply = report_stats(u, b, force, keep_looking, *stats_size);
 	return reply;
 }
