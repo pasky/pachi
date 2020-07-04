@@ -512,7 +512,7 @@ cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (stats_size > 0) {   // send binary part
 		double start = time_now();
 		fwrite(stats, 1, stats_size, stdout);
-		if (DEBUGVV(2))
+		if (DEBUGVV(3))
 			fprintf(stderr, "sent reply %d bytes in %.4fms\n",
 				stats_size, (time_now() - start)*1000);
 	}

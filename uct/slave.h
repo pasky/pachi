@@ -5,6 +5,7 @@
 #include "distributed/distributed.h"
 
 
+void uct_slave_init(uct_t *u, board_t *b);
 enum parse_code uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp);
 char *uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		   char *args, bool pass_all_alive, void **stats_buf, int *stats_size);

@@ -236,7 +236,7 @@ receive_stats(uct_t *u, int size)
 
 		prev = node;
 	}
-	if (DEBUGVV(2))
+	if (DEBUGVV(3))
 		fprintf(stderr, "read args for %d nodes in %.4fms\n", nodes,
 			(time_now() - start_time)*1000);
 	return true;
@@ -405,7 +405,7 @@ report_incr_stats(uct_t *u, int *stats_size)
 
 	void *buf = select_best_stats(stats_queue, stats_count, u->shared_nodes, stats_size);
 
-	if (DEBUGVV(2))
+	if (DEBUGVV(3))
 		fprintf(stderr,
 			"min_incr %d games %d stats_queue %d/%d sending %d/%d in %.3fms\n",
 			min_increment, root->u.playouts - root->pu.playouts, stats_count,
@@ -468,6 +468,25 @@ report_stats(uct_t *u, board_t *b, coord_t force,
 	return reply;
 }
 
+void
+uct_slave_init(uct_t *u, board_t *b)
+{
+	assert(u->slave);
+	
+	if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
+	if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
+	assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
+
+	static int showed = 0;
+	if (!showed++) {  /* Display once */
+		if (DEBUGL(2))  fprintf(stderr, "distributed: slave node\n");
+		if (DEBUGL(2) && !DEBUGL(3))
+			fprintf(stderr,
+				"distributed: pachi-genmoves subcommands not logged\n"
+				"distributed: run with -d4 to see everything.\n");
+	}
+}
+
 /* Check the state of the Monte Carlo Tree Search. Since we're not using the
  * pondering infrastructure also need to check fullmem and print progress here. */
 static bool
@@ -486,9 +505,12 @@ slave_check_progress(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	}
 
 	bool keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, s, played_games);
+
 	coord_t best;
+	int debug_level = u->debug_level;  u->debug_level = 0;	/* be quiet */
 	uct_search_result(u, b, color, u->pass_all_alive, played_games, s->base_playouts, &best);
-	
+	u->debug_level = debug_level;	
+
 	/* Give heavy weight to pass and resign */
 	if (best < 0)  *force = best;
 

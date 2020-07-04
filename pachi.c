@@ -503,11 +503,24 @@ int main(int argc, char *argv[])
 }
 
 static void
+log_gtp_input(char *cmd)
+{
+#ifdef DISTRIBUTED
+	/* Log everything except 'pachi-genmoves' subcommands by default,
+	 * slave gets one every 100ms ... */
+	bool genmoves_subcommand = (strchr(cmd, '@') && strstr(cmd, " pachi-genmoves"));
+	if (genmoves_subcommand && !DEBUGL(3))  return;
+#endif
+	
+	if (DEBUGL(1))  fprintf(stderr, "IN: %s", cmd);
+}
+
+static void
 main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default)
 {
 	char buf[4096];
 	while (fgets(buf, 4096, stdin)) {
-		if (DEBUGL(1))  fprintf(stderr, "IN: %s", buf);
+		log_gtp_input(buf);
 
 		enum parse_code c = gtp_parse(gtp, b, e, ti, buf);
 

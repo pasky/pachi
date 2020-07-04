@@ -203,7 +203,8 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 
 	/* Stop pondering, required by tree_promote_at() */
 	uct_pondering_stop(u);
-	if (UDEBUGL(2) && u->slave)  tree_dump(u->t, u->dumpthres);
+	if (UDEBUGL(3) && u->slave && m->color == u->my_color)
+		tree_dump(u->t, u->dumpthres);
 
 	if (is_resign(m->coord)) {  /* Reset state. */
 		reset_state(u);
@@ -1438,15 +1439,9 @@ uct_state_init(engine_t *e, board_t *b)
 	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);
 	if (!u->playout)		u->playout = playout_moggy_init(NULL, b);
 	if (!u->playout->debug_level)	u->playout->debug_level = u->debug_level;
-
 #ifdef DISTRIBUTED
-	if (u->slave) {
-		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
-		if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
-		assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
-	}
+	if (u->slave)			uct_slave_init(u, b);
 #endif
-
 	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 	if (!u->banner)                 u->banner = strdup("Pachi %s, Have a nice game !");
 
