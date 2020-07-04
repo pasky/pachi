@@ -526,10 +526,15 @@ uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	}
 
 	/* Check the state of the Monte Carlo Tree Search. */
-
 	int played_games = uct_search_games(&s);
 	uct_search_progress(u, b, color, u->t, ti, &s, played_games);
 	u->played_own = played_games - s.base_playouts;
+
+	if (s.fullmem) {
+		/* Stop search, realloc tree and restart search */
+		if (!u->auto_alloc || !uct_search_realloc_tree(u, b, color, ti, &s))
+			uct_search_stop();
+	}
 
 	*stats_size = 0;
 	bool keep_looking = false;
