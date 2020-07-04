@@ -36,6 +36,7 @@
 uct_policy_t *policy_ucb1_init(uct_t *u, char *arg);
 uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
 static void uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, int flags);
+static void uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move);
 
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
@@ -65,7 +66,8 @@ reset_state(uct_t *u)
 {
 	if (UDEBUGL(3)) fprintf(stderr, "resetting tree\n");
 	assert(u->t);
-	tree_done(u->t); u->t = NULL;
+	tree_done(u->t);
+	u->t = NULL;
 }
 
 static void
@@ -203,8 +205,7 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 	uct_pondering_stop(u);
 	if (UDEBUGL(2) && u->slave)  tree_dump(u->t, u->dumpthres);
 
-	if (is_resign(m->coord)) {
-		/* Reset state. */
+	if (is_resign(m->coord)) {  /* Reset state. */
 		reset_state(u);
 		return NULL;
 	}
@@ -225,15 +226,13 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 		/* Preserve dynamic komi information, though, that is important. */
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-		return NULL;
 	}
 
 	/* If we are a slave in a distributed engine, start pondering once
 	 * we know which move we actually played. See uct_genmove() about
 	 * the check for pass. */
-	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord))
-		uct_pondering_start(u, b, u->t, stone_other(m->color), m->coord, UCT_SEARCH_WANT_GC);
-	assert(!(u->slave && using_dcnn(b))); // XXX distributed engine dcnn pondering support
+	if (u->slave && u->pondering_opt && m->color == u->my_color && !is_pass(m->coord))
+		uct_genmove_pondering_start(u, b, m->color, m->coord);
 
 	return NULL;
 }
@@ -415,6 +414,34 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	return ctx->games;
 }
 
+/* Start pondering at the end of genmove.
+ * Makes preparations and calls uct_pondering_start()
+ * with the right flags to make dcnn pondering work. */
+static void
+uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move)
+{
+	enum stone other_color = stone_other(color);
+
+	/* Dcnn pondering:
+	 * Promoted node wasn't searched with dcnn priors, start from scratch
+	 * so it gets dcnn evaluated (and next move as well). Save opponent
+	 * best moves from genmove search, will need it later on to guess
+	 * next move. */
+	if (u->pondering_opt && using_dcnn(b) && u->t) {
+		int      nbest =  u->dcnn_pondering_mcts;
+		coord_t *best_c = u->dcnn_pondering_mcts_c;
+		float    best_r[nbest];
+		uct_get_best_moves(u, best_c, best_r, nbest, false, 100);
+
+		u->initial_extra_komi = u->t->extra_komi;
+		reset_state(u);
+	}
+
+	if (!u->t)  uct_prepare_move(u, b, other_color);
+	
+	uct_pondering_start(u, b, u->t, other_color, our_move, UCT_SEARCH_GENMOVE_PONDERING | UCT_SEARCH_WANT_GC);
+}
+
 /* Start pondering in the background with @color to play.
  * @our_move	move to be added before starting. 0 means doesn't apply.
  * @flags	uct_search_start() flags for this search */
@@ -536,8 +563,8 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 {
 	uct_t *u = (uct_t*)e->data;
 
-	coord_t best_coord;
-	tree_node_t *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
+	coord_t best;
+	tree_node_t *best_node = genmove(e, b, ti, color, pass_all_alive, &best);
 
 	/* Pass or resign.
 	 * After a pass, pondering is harmful for two reasons:
@@ -545,11 +572,11 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 	 * Of course this is the case for opponent resign as well.
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */	
-	if (is_pass(best_coord) || is_resign(best_coord)) {
-		if (is_pass(best_coord))
+	if (is_pass(best) || is_resign(best)) {
+		if (is_pass(best))
 			u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-		return best_coord;
+		return best;
 	}
 
 	/* Throw away an untrustworthy tree.
@@ -557,31 +584,12 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 	if (u->t->untrustworthy_tree) {
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-		uct_prepare_move(u, b, stone_other(color));
 	} else
-		tree_promote_node(u->t, &best);
+		tree_promote_node(u->t, &best_node);
 
-	/* Dcnn pondering:
-	 * Promoted node wasn't searched with dcnn priors, start from scratch
-	 * so it gets dcnn evaluated (and next move as well). Save opponent
-	 * best moves from genmove search, will need it later on to guess
-	 * next move. */
-	if (u->pondering_opt && using_dcnn(b)) {
-		int      nbest =  u->dcnn_pondering_mcts;
-		coord_t *best_c = u->dcnn_pondering_mcts_c;
-		float    best_r[nbest];
-		uct_get_best_moves(u, best_c, best_r, nbest, false, 100);
-
-		u->initial_extra_komi = u->t->extra_komi;
-		reset_state(u);
-		uct_prepare_move(u, b, stone_other(color));
-	}	
-
-	if (u->pondering_opt && u->t)
-		uct_pondering_start(u, b, u->t, stone_other(color), best_coord,
-				    UCT_SEARCH_GENMOVE_PONDERING | UCT_SEARCH_WANT_GC);
-
-	return best_coord;
+	if (u->pondering_opt)
+		uct_genmove_pondering_start(u, b, color, best);
+	return best;
 }
 
 /* lz-genmove_analyze */
