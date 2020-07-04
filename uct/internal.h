@@ -70,9 +70,6 @@ typedef struct uct {
 	int threads;
 	enum uct_thread_model thread_model;
 	int virtual_loss;
-	bool slave; /* Act as slave in distributed engine. */
-	int max_slaves; /* Optional, -1 if not set */
-	int slave_index; /* 0..max_slaves-1, or -1 if not set */
 	enum stone my_color;
 
 	/* Current search flags */
@@ -118,6 +115,12 @@ typedef struct uct {
 	ownermap_t ownermap;
 	bool allow_pass;    /* allow pass in uct descent */
 
+	/* Distributed engine */
+	bool slave; /* Act as slave in distributed engine. */
+#ifdef DISTRIBUTED
+	int max_slaves; /* Optional, -1 if not set */
+	int slave_index; /* 0..max_slaves-1, or -1 if not set */
+
 	/* Used for coordination among slaves of the distributed engine. */
 	int stats_hbits;
 	int shared_nodes;
@@ -125,6 +128,7 @@ typedef struct uct {
 	double stats_delay; /* stored in seconds */
 	int played_own;
 	int played_all; /* games played by all slaves */
+#endif
 
 	/* Saved dead groups, for final_status_list dead */
 	move_queue_t dead_groups;
@@ -142,6 +146,14 @@ typedef struct uct {
  * the nodes and recompute them at the next move if necessary. */
 #define pruned_size(tree_size)		((tree_size) / 5)
 #define pruning_threshold(tree_size)	((tree_size) / 10)
+
+#ifdef DISTRIBUTED
+#define stats_hbits(u)			((u)->stats_hbits)
+#define played_all(u)			((u)->played_all)
+#else
+#define stats_hbits(u)			(0)
+#define played_all(u)			(0)
+#endif
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 

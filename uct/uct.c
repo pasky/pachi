@@ -24,11 +24,14 @@
 #include "uct/plugins.h"
 #include "uct/prior.h"
 #include "uct/search.h"
-#include "uct/slave.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "dcnn.h"
+
+#ifdef DISTRIBUTED
+#include "uct/slave.h"
+#endif
 
 uct_policy_t *policy_ucb1_init(uct_t *u, char *arg);
 uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
@@ -41,7 +44,7 @@ static void
 setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
-	u->t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), u->stats_hbits);
+	u->t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), stats_hbits(u));
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
@@ -85,7 +88,9 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 		assert(u->t->root_color == last_move(b).color);
 		if (color != stone_other(u->t->root_color))
 			die("Fatal: Non-alternating play detected %d %d\n", color, u->t->root_color);
+#ifdef DISTRIBUTED
 		uct_htable_reset(u->t);
+#endif
 	} else {
 		/* We need fresh state. */
 		b->es = u;
@@ -93,8 +98,10 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 	}
 
 	ownermap_init(&u->ownermap);
-	u->played_own = u->played_all = 0;
 	u->allow_pass = (b->moves > board_earliest_pass(b));  /* && dames < 10  if using patterns */
+#ifdef DISTRIBUTED
+	u->played_own = u->played_all = 0;
+#endif
 }
 
 /* Does the board look like a final position ?
@@ -402,7 +409,9 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		fprintf(stderr, "--8<-- UCT debug post-run finished --8<--\n");
 	}
 
+#ifdef DISTRIBUTED
 	u->played_own += ctx->games;
+#endif
 	return ctx->games;
 }
 
@@ -1386,10 +1395,12 @@ uct_state_init(engine_t *e, board_t *b)
 	u->dynkomi_interval = 100;
 	u->dynkomi_mask = S_BLACK | S_WHITE;
 
+#ifdef DISTRIBUTED
 	u->max_slaves = -1;
 	u->slave_index = -1;
 	u->stats_delay = 0.01; // 10 ms
 	u->shared_levels = 1;
+#endif
 
 #ifdef PACHI_PLUGINS
 	u->plugins = pluginset_init(b);
@@ -1420,11 +1431,13 @@ uct_state_init(engine_t *e, board_t *b)
 	if (!u->playout)		u->playout = playout_moggy_init(NULL, b);
 	if (!u->playout->debug_level)	u->playout->debug_level = u->debug_level;
 
+#ifdef DISTRIBUTED
 	if (u->slave) {
 		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
 		if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
 		assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
 	}
+#endif
 
 	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 	if (!u->banner)                 u->banner = strdup("Pachi %s, Have a nice game !");

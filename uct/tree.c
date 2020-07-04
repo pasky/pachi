@@ -17,8 +17,11 @@
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
-#include "uct/slave.h"
 #include "dcnn.h"
+
+#ifdef DISTRIBUTED
+#include "uct/slave.h"
+#endif
 
 
 /* Allocate tree node(s). The returned nodes are initialized with zeroes.
@@ -96,15 +99,19 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
 
+#ifdef DISTRIBUTED
 	t->hbits = hbits;
 	if (hbits) t->htable = uct_htable_alloc(hbits);
+#endif
 	return t;
 }
 
 void
 tree_done(tree_t *t)
 {
+#ifdef DISTRIBUTED
 	if (t->htable) free(t->htable);
+#endif
 	assert(t->nodes);
 	free(t->nodes);
 	free(t);
@@ -419,7 +426,7 @@ tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pru
 	assert(pruning_threshold > t->pruning_threshold);
 
 	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), max_tree_size, max_pruned_size,
-			       pruning_threshold, t->hbits);
+			       pruning_threshold, tree_hbits(t));
 	if (!t2)  return 0;	/* Out of memory */
 
 	tree_copy(t2, t);	assert(t2->root_color == t->root_color);

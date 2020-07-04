@@ -4,7 +4,6 @@
 #include "move.h"
 #include "distributed/distributed.h"
 
-#ifdef DISTRIBUTED
 
 enum parse_code uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp);
 char *uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
@@ -12,10 +11,5 @@ char *uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 struct tree_hash *uct_htable_alloc(int hbits);
 void uct_htable_reset(tree_t *t);
 
-
-#else
-#define uct_htable_reset(t)  do { } while(0)
-#define uct_htable_alloc(hbits)  NULL
-#endif /* DISTRIBUTED */
 
 #endif

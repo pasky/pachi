@@ -25,7 +25,6 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "uct/prior.h"
-#include "distributed/distributed.h"
 #include "dcnn.h"
 #include "pachi.h"
 
@@ -490,7 +489,7 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	 * memory before stopping search otherwise we can't recover. */
 	tree_t *t  = u->t;
 	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), new_size, pruned_size(new_size),
-			       pruning_threshold(new_size), t->hbits);
+			       pruning_threshold(new_size), tree_hbits(t));
 	if (!t2)  return 0;		/* Not enough memory */
 	
 	int flags = u->search_flags;	/* Save flags ! */
@@ -694,7 +693,7 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 	if (best) best2 = u->policy->choose(u->policy, ctx->t->root, b, color, node_coord(best));
 
 	/* Possibly stop search early if it's no use to try on. */
-	int played = u->played_all + i - s->base_playouts;
+	int played = played_all(u) + i - s->base_playouts;
 	if (best && uct_search_stop_early(u, ctx->t, b, ti, &s->stop, best, best2, played, s->fullmem))
 		return true;
 

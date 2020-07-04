@@ -111,10 +111,12 @@ typedef struct {
 	 * search episode. */
 	move_stats_t avg_score;
 
+#ifdef DISTRIBUTED
 	/* Hash table used when working as slave for the distributed engine.
 	 * Maps coordinate path to tree node. */
 	struct tree_hash *htable;
 	int hbits;
+#endif
 
 	// Statistics
 	int max_depth;
@@ -145,6 +147,7 @@ void tree_expand_node(tree_t *tree, tree_node_t *node, board_t *b, enum stone co
 
 static bool tree_leaf_node(tree_node_t *node);
 
+
 #define tree_node_parity(tree, node) \
 	((((node)->depth ^ (tree)->root->depth) & 1) ? -1 : 1)
 
@@ -155,6 +158,13 @@ static bool tree_leaf_node(tree_node_t *node);
 /* Get a 0..1 value to maximize; @parity is parity within the tree. */
 #define tree_node_get_value(tree, parity, value) \
 	(tree_parity(tree, parity) > 0 ? value : 1 - value)
+
+#ifdef DISTRIBUTED
+#define tree_hbits(t)	((t)->hbits)
+#else
+#define tree_hbits(t)	(0)
+#endif
+
 
 static inline bool
 tree_leaf_node(tree_node_t *node)
