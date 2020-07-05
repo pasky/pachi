@@ -172,7 +172,7 @@ discard_bin_args(char *args)
 }
 
 enum parse_code
-uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply)
+uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp)
 {
 	uct_t *u = (uct_t*)e->data;
 
@@ -186,18 +186,13 @@ uct_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply)
 	 * but do it only once, not if already getting the history. */
 	if ((move_number(id) != b->moves || !board_resized)
 	    && !reply_disabled(id) && !is_reset(cmd)) {
-		static char buf[128];
-		snprintf(buf, sizeof(buf), "Out of sync, %d %s, move %d expected", id, cmd, b->moves);
-		if (UDEBUGL(0))
-			fprintf(stderr, "%s\n", buf); 
 		discard_bin_args(args);
-
-		*reply = buf;
-		/* Let gtp_parse() complain about invalid commands. */
-		if (!gtp_is_valid(e, cmd) && !is_repeated(cmd)) return P_OK;
-		return P_DONE_ERROR;
+		
+		if (UDEBUGL(0))  fprintf(stderr, "Out of sync, %d %s, move %d expected\n", id, cmd, b->moves);
+		gtp_error_printf(gtp, "Out of sync, %d %s, move %d expected\n", id, cmd, b->moves);
+		return P_OK;
 	}
-	return reply_disabled(id) ? P_NOREPLY : P_OK;
+	return (reply_disabled(id) ? P_NOREPLY : P_OK);
 }
 
 

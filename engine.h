@@ -40,7 +40,7 @@ typedef struct engine engine_t;
 
 typedef void (*engine_init_t)(engine_t *e, board_t *b);
 typedef bool (*engine_setoption_t)(engine_t *e, board_t *b, const char *optname, char *optval, char **err, bool setup, bool *reset);
-typedef enum parse_code (*engine_notify_t)(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply);
+typedef enum parse_code (*engine_notify_t)(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp);
 typedef void (*engine_board_print_t)(engine_t *e, board_t *b, FILE *f);
 typedef char *(*engine_notify_play_t)(engine_t *e, board_t *b, move_t *m, char *enginearg);
 typedef char *(*engine_chat_t)(engine_t *e, board_t *b, bool in_game, char *from, char *cmd);

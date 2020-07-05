@@ -150,7 +150,7 @@ path2sstr(path_t path, board_t *b)
  * The slave lock must not be held upon entry and is released upon return.
  * args is empty or ends with '\n' */
 static enum parse_code
-distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply)
+distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp)
 {
 	distributed_t *dist = (distributed_t*)e->data;
 

@@ -8,11 +8,13 @@ struct engine;
 
 enum parse_code {
 	P_OK,
-	P_NOREPLY,
-	P_DONE_OK,
-	P_DONE_ERROR,
 	P_ENGINE_RESET,
 	P_UNKNOWN_COMMAND,
+	
+	/* For engines notify() handlers: */
+	
+	P_NOREPLY,		/* run default handler but suppress output */
+	P_DONE_OK,		/* override, don't run default handler */
 };
 
 typedef struct
@@ -20,9 +22,10 @@ typedef struct
 	char *cmd;
 	char *next;
 	int   id;
-	bool  quiet;
-	bool  replied;
-	bool  flushed;
+	bool  quiet;		  /* mute all gtp output */
+	bool  replied;		  /* gtp reply sent */
+	bool  flushed;		  /* gtp_flush() called */
+	bool  error;		  /* gtp_error() / gtp_error_printf() called */
 
 	/* Global fields: */
 	int     played_games;

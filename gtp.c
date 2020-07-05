@@ -87,8 +87,9 @@ gtp_reply(gtp_t *gtp, const char *str)
 void
 gtp_error(gtp_t *gtp, const char *str)
 {
-	/* errors never quiet */
+	gtp->error = true;
 	
+	/* errors never quiet */
 	gtp_prefix(gtp, '?');
 	fputs(str, stdout);
 	putchar('\n');
@@ -113,8 +114,9 @@ gtp_printf(gtp_t *gtp, const char *format, ...)
 void
 gtp_error_printf(gtp_t *gtp, const char *format, ...)
 {
+	gtp->error = true;
+	
 	/* errors never quiet */
-
 	va_list ap;
 	va_start(ap, format);
 
@@ -1115,7 +1117,7 @@ static enum parse_code
 gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 {
 	gtp_func_t handler = gtp_get_handler(gtp->cmd);
-	
+
 	if (!handler) {
 		gtp_error(gtp, "unknown command");
 		return P_UNKNOWN_COMMAND;
@@ -1123,20 +1125,16 @@ gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	
 	/* Run engine notify() handler */
 	if (e->notify) {
-		char *reply;
-		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, &reply);
-		if (c == P_NOREPLY) {
-			gtp->quiet = true;
-		} else if (c == P_DONE_OK) {
-			gtp_reply(gtp, reply);
-			return P_OK;
-		} else if (c == P_DONE_ERROR) {
-			gtp_error(gtp, reply);
-			/* This is an internal error for the engine, but
-			 * it is still OK from main's point of view. */
-			return P_OK;
-		} else if (c != P_OK)
-			return c;
+		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, gtp);
+		
+		if (gtp->error)  return P_OK;		      /* error, don't run default handler */
+
+		if (gtp->replied && c == P_OK)
+			die("gtp: %s engine's notify() silently overrides default handler for cmd '%s', that's bad\n", e->name, gtp->cmd);
+		
+		if      (c == P_NOREPLY)  gtp->quiet = true;  /* run default handler but suppress output */
+		else if (c == P_DONE_OK)  return P_OK;	      /* override, don't run default handler */
+		else if (c != P_OK)       return c;	      /* (right now P_ENGINE_RESET would override default handler) */
 	}
 
 	/* Run default handler */
@@ -1154,6 +1152,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	gtp->next = buf;
 	gtp->replied = false;
 	gtp->flushed = false;
+	gtp->error = false;
 	gtp_arg_optional(gtp->cmd);
 	
 	if (isdigit(*gtp->cmd)) {
