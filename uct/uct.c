@@ -191,9 +191,11 @@ uct_ownermap(engine_t *e, board_t *b)
 }
 
 static char *
-uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
+uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print_board)
 {
 	uct_t *u = (uct_t*)e->data;
+	bool was_searching = thread_manager_running;
+	
 	if (!u->t) {
 		/* No state, create one - this is probably game beginning
 		 * and we need to load the opening tbook right now. */
@@ -203,8 +205,11 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 
 	/* Stop pondering, required by tree_promote_at() */
 	uct_pondering_stop(u);
-	if (UDEBUGL(3) && u->slave && m->color == u->my_color)
-		tree_dump(u->t, u->dumpthres);
+	
+	if (u->slave && was_searching && m->color == u->my_color) {
+		if (DEBUGL(1) && debug_boardprint)  *print_board = true;
+		if (UDEBUGL(3)) tree_dump(u->t, u->dumpthres);
+	}
 
 	if (is_resign(m->coord)) {  /* Reset state. */
 		reset_state(u);

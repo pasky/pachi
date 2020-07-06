@@ -558,6 +558,10 @@ uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		/* This is the first genmoves received, start the MCTS now and let it run.
 		 * Can't use uct_pondering_start() here, we need time management.
 		 * So we are pondering with foreground search infrastructure... */
+		
+		if (DEBUGL(2) && debug_boardprint)
+			engine_board_print(e, b, stderr);
+		
 		if (ti->period == TT_NULL)
 				*ti = ti_unlimited();
 		uct_search_start(u, b, color, u->t, ti, &s, 0);

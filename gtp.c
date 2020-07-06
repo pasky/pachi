@@ -363,7 +363,8 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	time_start_timer(&ti[stone_other(m.color)]);
 
 	// XXX engine getting notified if move is illegal !
-	char *reply = (e->notify_play ? e->notify_play(e, b, &m, enginearg) : NULL);
+	bool print = false;
+	char *reply = (e->notify_play ? e->notify_play(e, b, &m, enginearg, &print) : NULL);
 	
 	if (gtp_board_play(gtp, b, &m) < 0) {
 		if (DEBUGL(0)) {
@@ -374,7 +375,7 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	if (DEBUGL(4) && debug_boardprint)
+	if (print || (DEBUGL(4) && debug_boardprint))
 		engine_board_print(e, b, stderr);
 	
 	gtp_reply(gtp, reply);
@@ -842,9 +843,9 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
-	move_t m = move(pass, board_to_play(b));
+	move_t m = move(pass, board_to_play(b));  bool print;
 	if (e->notify_play)
-		e->notify_play(e, b, &m, "");
+		e->notify_play(e, b, &m, "", &print);
 
 	/* Wait for non-undo command to reset engine. */
 	gtp->undo_pending = true;
@@ -867,8 +868,9 @@ undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	b->handicap = handicap;
 
 	for (int i = 0; i < gtp->moves; i++) {
+		bool print;
 		if (e->notify_play)
-			e->notify_play(e, b, &gtp->move[i], "");
+			e->notify_play(e, b, &gtp->move[i], "", &print);
 		int r = board_play(b, &gtp->move[i]);
 		assert(r >= 0);
 	}
