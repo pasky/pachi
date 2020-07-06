@@ -555,9 +555,11 @@ uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 
 	static uct_search_state_t s;
 	if (!thread_manager_running) {
-		/* This is the first genmoves issue, start the MCTS
-		 * now and let it run while we receive stats. */
-		memset(&s, 0, sizeof(s));
+		/* This is the first genmoves received, start the MCTS now and let it run.
+		 * Can't use uct_pondering_start() here, we need time management.
+		 * So we are pondering with foreground search infrastructure... */
+		if (ti->period == TT_NULL)
+				*ti = ti_unlimited();
 		uct_search_start(u, b, color, u->t, ti, &s, 0);
 	}
 
@@ -565,12 +567,10 @@ uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	 * wait a bit to populate the statistics. */
 	int size = 0;
 	char *sizep = strchr(args, '@');
-	if (sizep) size = atoi(sizep+1);
-	if (!size) {
-		time_sleep(u->stats_delay);
-	} else if (!receive_stats(u, size)) {
+	if (sizep)  size = atoi(sizep+1);
+	if (!size)  time_sleep(u->stats_delay);
+	else if (!receive_stats(u, size))
 		return NULL;
-	}
 
 	*stats_size = 0;
 	bool keep_looking = false;

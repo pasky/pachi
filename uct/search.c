@@ -405,12 +405,8 @@ uct_search_start(uct_t *u, board_t *b, enum stone color,
 	/* If restarted timers are already setup, reuse stop condition in s */
 	if (ti && !search_restarted(u)) {
 		if (ti->period == TT_NULL) {
-			if (u->slave)
-				*ti = ti_unlimited();
-			else {
-				*ti = default_ti;
-				time_start_timer(ti);
-			}
+			*ti = default_ti;
+			time_start_timer(ti);
 		}
 		time_stop_conditions(ti, b, u->fuseki_end, u->yose_start, u->max_maintime_ratio, &s->stop);
 	}
