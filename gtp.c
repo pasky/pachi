@@ -133,10 +133,8 @@ gtp_error_printf(gtp_t *gtp, const char *format, ...)
  * it should only be used between master and slaves of the distributed engine.
  * kgs-chat command enabled only if --kgs-chat passed (makes kgsgtp-3.5.20+ crash).
  * For now only uct engine supports gogui-analyze_commands. */
-static char *known_commands = NULL;
-
-static void
-known_commands_init(gtp_t *gtp)
+static char*
+known_commands(gtp_t *gtp)
 {
 	static_strbuf(buf, 8192);
 
@@ -148,20 +146,26 @@ known_commands_init(gtp_t *gtp)
 	}
 	
 	sbprintf(buf, "gogui-analyze_commands\n");
-	known_commands = buf->str;
+	return buf->str;
+}
+
+static gtp_func_t
+gtp_get_handler(const char *cmd)
+{
+	if (!cmd)  return NULL;
+	
+	for (int i = 0; commands[i].cmd; i++)
+		if (!strcasecmp(cmd, commands[i].cmd))
+			return commands[i].f;
+	return NULL;
 }
 
 /* Return true if cmd is a valid gtp command. */
 bool
 gtp_is_valid(engine_t *e, const char *cmd)
 {
-	if (!cmd || !*cmd) return false;
-	const char *s = strcasestr(known_commands, cmd);
-	if (!s) return false;
-	if (s != known_commands && s[-1] != '\n') return false;
-
-	int len = strlen(cmd);
-	return s[len] == '\0' || s[len] == '\n';
+	if (!cmd || !*cmd)  return false;
+	return (gtp_get_handler(cmd) != NULL);
 }
 
 /* Add move to gtp move history. */
@@ -229,7 +233,7 @@ cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_list_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_printf(gtp, "%s", known_commands);
+	gtp_printf(gtp, "%s", known_commands(gtp));
 	return P_OK;
 }
 
@@ -1102,7 +1106,6 @@ void
 gtp_internal_init(gtp_t *gtp)
 {
 	commands = gtp_commands;  /* c++ madness */
-	known_commands_init(gtp);
 }
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
@@ -1111,8 +1114,15 @@ gtp_internal_init(gtp_t *gtp)
 static enum parse_code
 gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 {
+	gtp_func_t handler = gtp_get_handler(gtp->cmd);
+	
+	if (!handler) {
+		gtp_error(gtp, "unknown command");
+		return P_UNKNOWN_COMMAND;
+	}
+	
 	/* Run engine notify() handler */
-	if (e->notify && gtp_is_valid(e, gtp->cmd)) {
+	if (e->notify) {
 		char *reply;
 		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, &reply);
 		if (c == P_NOREPLY) {
@@ -1129,13 +1139,8 @@ gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 			return c;
 	}
 
-	/* Run default gtp handler */
-	for (int i = 0; commands[i].cmd; i++)
-		if (!strcasecmp(gtp->cmd, commands[i].cmd))
-			return commands[i].f(b, e, ti, gtp);
-	
-	gtp_error(gtp, "unknown command");
-	return P_UNKNOWN_COMMAND;
+	/* Run default handler */
+	return handler(b, e, ti, gtp);
 }
 
 enum parse_code
