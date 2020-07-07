@@ -147,7 +147,10 @@ path2sstr(path_t path, board_t *b)
 	return b2;
 }
 
-/* Similar logic as gtp.c cmd_undo() but use own flag for pending undo.
+/* undo: command is forwarded to the slaves so they take care of themselves.
+ * For us however we can't let default gtp handler run otherwise it'll reset us !
+ * so handle it here.
+ * Similar logic as gtp.c cmd_undo() but use own flag for pending undo.
  * Can't update board right away here or we'll be out of sync with slaves
  * if we get two undos in a row. */
 static enum parse_code
@@ -237,11 +240,10 @@ distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t
 	// At the beginning wait even more for late slaves.
 	if (b->moves == 0) sleep(1);
 
-	/* undo: command is forwarded to the slaves so they take care of themselves.
-	 * for us however we can't let default gtp handler run otherwise it'll reset us !
-	 * so handle it here. */
-	if (!strcasecmp(cmd, "undo"))
-		return distributed_undo(dist, b, gtp);
+	/* Commands forwarded to slaves but we shouldn't run: */
+	if (!strcasecmp(cmd, "undo"))		  return distributed_undo(dist, b, gtp);
+	if (!strcasecmp(cmd, "pachi-setoption"))  return P_DONE_OK;   // XXX handle errors, changing options on distributed side ?
+	if (!strcasecmp(cmd, "pachi-getoption"))  {  gtp_error(gtp, "unimplemented"); return P_DONE_OK;  }  // XXX check replies from all slaves agree ?
 	
 	return P_OK;
 }
