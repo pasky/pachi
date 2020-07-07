@@ -50,7 +50,7 @@ engine_dcnn_init(engine_t *e, board_t *b)
 		abort();
 	}
 
-	e->name = (char*)"DCNN Engine";
+	e->name = (char*)"DCNN";
 	e->comment = (char*)"I just select dcnn's best move.";
 	e->genmove = dcnn_genmove;
 	e->best_moves = dcnn_best_moves;

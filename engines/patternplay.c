@@ -202,7 +202,7 @@ patternplay_state_init(engine_t *e, board_t *b)
 void
 engine_patternplay_init(engine_t *e, board_t *b)
 {
-	e->name = "PatternPlay Engine";
+	e->name = "PatternPlay";
 	e->comment = "I select moves blindly according to learned patterns. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
 	e->genmove = patternplay_genmove;
 	e->setoption = patternplay_setoption;

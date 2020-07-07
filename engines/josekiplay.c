@@ -34,7 +34,7 @@ josekiplay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 void
 engine_josekiplay_init(engine_t *e, board_t *b)
 {
-	e->name = "JosekiPlay Engine";
+	e->name = "JosekiPlay";
 	e->comment = "I select joseki moves blindly, if there are none i just pass.";
 	e->genmove = josekiplay_genmove;
 	e->best_moves = josekiplay_best_moves;

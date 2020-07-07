@@ -488,7 +488,7 @@ patternscan_state_init(engine_t *e, board_t *b)
 void
 engine_patternscan_init(engine_t *e, board_t *b)
 {
-	e->name = "PatternScan Engine";
+	e->name = "PatternScan";
 	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of games fed to it as GTP streams for various pattern features.";
 	e->genmove = patternscan_genmove;
 	e->setoption = patternscan_setoption;
