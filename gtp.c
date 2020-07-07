@@ -1108,6 +1108,36 @@ gtp_internal_init(gtp_t *gtp)
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
 
+static enum parse_code
+gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
+{
+	/* Run engine notify() handler */
+	if (e->notify && gtp_is_valid(e, gtp->cmd)) {
+		char *reply;
+		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, &reply);
+		if (c == P_NOREPLY) {
+			gtp->quiet = true;
+		} else if (c == P_DONE_OK) {
+			gtp_reply(gtp, reply);
+			return P_OK;
+		} else if (c == P_DONE_ERROR) {
+			gtp_error(gtp, reply);
+			/* This is an internal error for the engine, but
+			 * it is still OK from main's point of view. */
+			return P_OK;
+		} else if (c != P_OK)
+			return c;
+	}
+
+	/* Run default gtp handler */
+	for (int i = 0; commands[i].cmd; i++)
+		if (!strcasecmp(gtp->cmd, commands[i].cmd))
+			return commands[i].f(b, e, ti, gtp);
+	
+	gtp_error(gtp, "unknown command");
+	return P_UNKNOWN_COMMAND;
+}
+
 enum parse_code
 gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 {
@@ -1137,35 +1167,12 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
 		undo_reload_engine(gtp, b, e, ti);
-	
-	if (e->notify && gtp_is_valid(e, gtp->cmd)) {
-		char *reply;
-		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, &reply);
-		if (c == P_NOREPLY) {
-			gtp->quiet = true;
-		} else if (c == P_DONE_OK) {
-			gtp_reply(gtp, reply);
-			return P_OK;
-		} else if (c == P_DONE_ERROR) {
-			gtp_error(gtp, reply);
-			/* This is an internal error for the engine, but
-			 * it is still OK from main's point of view. */
-			return P_OK;
-		} else if (c != P_OK)
-			return c;
-	}
-	
-	for (int i = 0; commands[i].cmd; i++)
-		if (!strcasecmp(gtp->cmd, commands[i].cmd)) {
-			enum parse_code ret = commands[i].f(b, e, ti, gtp);
-			/* For functions convenience: no reply means empty reply */
-			if (!gtp->flushed)  gtp_flush(gtp);
-			return ret;
-		}
-	
-	gtp_error(gtp, "unknown command");
-	return P_UNKNOWN_COMMAND;
+
+	/* Run handler */
+	enum parse_code c = gtp_run_handler(gtp, b, e, ti, buf);
+	assert(c == P_OK || c == P_ENGINE_RESET || c == P_UNKNOWN_COMMAND);
+
+	/* Add final '\n' and empty reply if needed */
+	if (!gtp->flushed)  gtp_flush(gtp);
+	return c;
 }
-
-
-
