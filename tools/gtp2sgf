@@ -1,7 +1,15 @@
 #!/usr/bin/perl
 # gtp2sgf: convert gtp stream to sgf
+# usage: gtp2sgf < game.gtp   > game.sgf
+#
+# just translates moves and board setup (size, komi, rules, handicap)
+# all time information is ignored. stops processing at first genmove.
+#
+# comments may be added to sgf file by using 'echo comment' gtp commands
+# or lines in '# comment' format
 
 my $size = 19;
+my $rules = "chinese";
 my $abcd = "abcdefghijklmnopqrstuvwxyz";
 
 # Convert gtp coord to sgf
@@ -32,25 +40,39 @@ my @fixed_handi = (
     [ "q16", "d4", "q4", "d16", "d10", "q10", "k16", "k4", "k10" ]
     );
 
+# sgf header
+print "(;";
+
 my $comment = "";
 my $last_color = "B";
 while (my $s = <STDIN>)
 {
     chomp($s);
+
+    # remove gtp ids if present
+    $s =~ s/^[0-9]+ +//;
     
     # flush buffered comments
-    if ($comment ne "" && 
+    if ($comment ne "" &&
 	$s !~ m/^echo/ && $s !~ m/^#/ && $s !~ m/^[ \t]*$/)
     {  printf("C[%s]\n", "$comment"); $comment = "";  }
 
+    # ignored commands
     if    ($s =~ m/^(name|version|protocol_version|list_commands|gogui-)/)  {   }
-    elsif ($s =~ m/^boardsize (.*)/i) {  print "(;RU[Chinese]SZ[$1]\n";  $size = $1;  }
-    elsif ($s =~ m/^clear_board/i)    {   }
-    elsif ($s =~ m/^komi (.*)/i)      {  print "KM[$1]\n";   }
+    elsif ($s =~ m/^(time|kgs-time)/i) {   }
+    elsif ($s =~ m/^kgs-game_over/i) {   }
+    elsif ($s =~ m/^[ \t]*$/) {   }	# empty line
+    elsif ($s =~ m/^final_status_list/) {   }
+
+    # board / play commands
+    elsif ($s =~ m/^kgs-rules (.*)/i) {  $rules = $1;  }
+    elsif ($s =~ m/^boardsize (.*)/i) {  print "SZ[$1]\n";  $size = $1;  }
+    elsif ($s =~ m/^komi (.*)/i)      {  print "KM[$1]\n";  }
+    elsif ($s =~ m/^clear_board/i)    {  print "RU[$rules]\n"}
 
     elsif ($s =~ m/^fixed_handicap (.*)/) {
-	printf("HA[%i]\n", $1);
-	foreach my $c (@{$fixed_handi[$1]}) { printf(";B[%s]\n", gtp2sgf($c));  }
+	print "HA[$1]\n";
+	foreach my $c (@{$fixed_handi[$1]}) {  printf(";B[%s]\n", gtp2sgf($c));  }
     }
 
     elsif ($s =~ m/^set_free_handicap (.*)/) {
@@ -74,14 +96,10 @@ while (my $s = <STDIN>)
 
     # buffer comments
     elsif ($s =~ m/^echo(.*)/ ||
-	   $s =~ m/^#(.*)/) {  
+	   $s =~ m/^#(.*)/) {
 	my $c = $1;  $c =~ s|\[|(|g;  $c =~ s|]|)|g;
 	$comment .= "$c\n";
     }
-
-    # ignore
-    elsif ($s =~ m/^[ \t]*$/) {   }
-    elsif ($s =~ m/^final_status_list/) {   }
 
     else {  die("unhandled gtp command: '$s'\n");  }
 }
