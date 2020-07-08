@@ -1,6 +1,6 @@
 #!/usr/bin/perl
-# pachilog2gtp - reconstruct gtp stream from pachi log
 # usage: pachilog2gtp pachi.log
+# reconstruct gtp stream from pachi log
 
 open(IN, "< $ARGV[0]") || die "couldn't open '$ARGV[0]'";
 
@@ -66,16 +66,24 @@ sub get_genmove_coord
 }
 
 while (my $str = <IN>) {
+    # preserve game start timestamps, turn into comment
+    # Ex: 'Jul 04 16:05:37 2020'
+    if ($str =~ m/^([a-z]{3} \d\d \d\d:\d\d:\d\d.*)$/i) {  print "echo $1\n";  }
+    
     if ($str !~ m/^IN: (.*)/) {  next;  }
+
+    # found gtp command
     $str = $1;
     $str =~ s|\r||g;
 
+    # genmove: get played move from board diagram
     if ($str =~ m/^genmove ([bw])/i) {
 	my $color = lc($1);
 	my $coord = get_genmove_coord();
 	($coord ne "") || die "shouldn't happen";
 	printf("play %s %s\n", $color, $coord);
-	next; 
+	next;
     }
+    
     print "$str\n";
 }
