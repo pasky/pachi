@@ -1,30 +1,43 @@
-#!/usr/bin/perl -ln
+#!/usr/bin/perl
+# usage: kgslog2gtp.pl  < kgs.log   > games.gtp
+# Convert kgsGtp log file to GTP command stream
 #
-# kgslog2gtp - Convert kgsGtp log file to GTP command stream
-#
-# The command stream contains two special GTP commands intended
-# for further script processing (unrecognized by Pachi itself):
-#
-#	pachi-mygame COLOR OPPONENT DATE TIME
-#	pachi-mymove COORD VALUE
-#
-# (You probably want to convert pachi-mymove to play.)
+# The command stream contains extra game info as echo commands:
+#	echo GAME_START_TIMESTAMP
+#	echo starting game as COLOR against OPPONENT
+#       echo final result SCORE
 
-chomp;
+foreach (<STDIN>) {
+    # timestamps
+    #       Jul  8 07:42:12	(short timestamp format)
+    if    (s/^(... .. ..:..:..) //)    {  $timestamp = $1;  }
+    # Jul 08, 2020 10:37:12 AM com.gokgs.client.gtp.GtpClient main   (standard)
+    if    (m/^(.*) com.gokgs.client/)  {  $timestamp = $1;  }
 
-# 19.1.2012 20:47:47 com.gokgs.client.gtp.a <init>
-if (s/^(\S+ \S+) com.gokgs.client.gtp.a <init>$/$1/) {
-	$a = $1;
+    # game start
+    # FINE: Starting game as white against Mateman
+    elsif (m/^FINE:.*as (\S+) against (\w+)/) {
+	$color = substr($1, 0, 1);
+	if ($timestamp ne "")  {  print "echo $timestamp\n";  }
+	print "echo starting game as $1 against $2\n";
+    }
 
-# FINE: Starting game as white against Mateman
-} elsif (s/^FINE:.*as (\S+) against (\w+)/$1 $2/) {
-	print "pachi-mygame $_ $a";
+    # gtp commands sent
+    # FINEST: Command sent to engine: kgs-rules japanese
+    # FINEST: Command queued for sending to engine: boardsize 19
+    # FINEST: Queued command sent to engine: boardsize 19
+    elsif (m/command sent to engine: (.*)$/i &&
+	   not m/(genmove|time|name|version|final_status)/)  {  print "$1\n";  }
 
-# IN: play b o3
-} elsif (s/^IN: // and not /genmove/ and not /kgs-chat/ and not /time/) {
-	print $_;
+    # genmove answers
+    # FINEST: Got successful response to command "genmove b": = D16
+    # FINEST: Got successful response to command "kgs-genmove_cleanup b": = D16
+    elsif (m/Got successful response to command ".*genmove.*": = (.*)$/) {
+	printf("play $color %s\n", lc($1));
+    }
 
-# *** WINNER is C4 (3,4) with score 0.4333 (49243/93153:93153/93393 games), extra komi 0.000000
-} elsif (s/^\*\*\* WINNER is (\S+) .*score (\S+) .*komi 0\.0.*/$1 $2/) {
-	print "pachi-mymove $_";
+    # game over
+    # FINE: Game is over and scored (final result = B+13.5)
+    elsif (m/Game is over and scored \(final result = (.*)\)/) {  print "echo final result: $1\n";  }
+
 }
