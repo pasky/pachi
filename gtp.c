@@ -326,6 +326,7 @@ cmd_kgs_rules(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char *arg;
 	gtp_arg(arg);
 
+	/* Print timestamp at game start, makes logs more useful */
 	if (DEBUGL(2))  fprintf(stderr, "%s\n", time_str());
 	
 	if (forced_ruleset) {

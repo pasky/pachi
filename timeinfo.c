@@ -224,7 +224,7 @@ time_str()
 {
     static char buf[80];
     time_t t = time(NULL);
-    strftime(buf, sizeof(buf), "%b %d %H:%M:%S", localtime(&t));
+    strftime(buf, sizeof(buf), "%b %d %H:%M:%S %Y", localtime(&t));
     return buf;
 }
 
