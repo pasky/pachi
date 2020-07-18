@@ -70,7 +70,7 @@ gtp_flush(gtp_t *gtp)
 	gtp->flushed = true;
 	
 	putchar('\n');
-	fflush(stdout);
+	fflush(stdout);		/* in network mode stdout is not line-buffered */
 }
 
 /* Output one line, end-of-line \n added automatically. */
@@ -87,8 +87,9 @@ gtp_reply(gtp_t *gtp, const char *str)
 void
 gtp_error(gtp_t *gtp, const char *str)
 {
-	/* errors never quiet */
+	gtp->error = true;
 	
+	/* errors never quiet */
 	gtp_prefix(gtp, '?');
 	fputs(str, stdout);
 	putchar('\n');
@@ -113,8 +114,9 @@ gtp_printf(gtp_t *gtp, const char *format, ...)
 void
 gtp_error_printf(gtp_t *gtp, const char *format, ...)
 {
+	gtp->error = true;
+	
 	/* errors never quiet */
-
 	va_list ap;
 	va_start(ap, format);
 
@@ -133,10 +135,8 @@ gtp_error_printf(gtp_t *gtp, const char *format, ...)
  * it should only be used between master and slaves of the distributed engine.
  * kgs-chat command enabled only if --kgs-chat passed (makes kgsgtp-3.5.20+ crash).
  * For now only uct engine supports gogui-analyze_commands. */
-static char *known_commands = NULL;
-
-static void
-known_commands_init(gtp_t *gtp)
+static char*
+known_commands(gtp_t *gtp)
 {
 	static_strbuf(buf, 8192);
 
@@ -148,20 +148,26 @@ known_commands_init(gtp_t *gtp)
 	}
 	
 	sbprintf(buf, "gogui-analyze_commands\n");
-	known_commands = buf->str;
+	return buf->str;
+}
+
+static gtp_func_t
+gtp_get_handler(const char *cmd)
+{
+	if (!cmd)  return NULL;
+	
+	for (int i = 0; commands[i].cmd; i++)
+		if (!strcasecmp(cmd, commands[i].cmd))
+			return commands[i].f;
+	return NULL;
 }
 
 /* Return true if cmd is a valid gtp command. */
 bool
 gtp_is_valid(engine_t *e, const char *cmd)
 {
-	if (!cmd || !*cmd) return false;
-	const char *s = strcasestr(known_commands, cmd);
-	if (!s) return false;
-	if (s != known_commands && s[-1] != '\n') return false;
-
-	int len = strlen(cmd);
-	return s[len] == '\0' || s[len] == '\n';
+	if (!cmd || !*cmd)  return false;
+	return (gtp_get_handler(cmd) != NULL);
 }
 
 /* Add move to gtp move history. */
@@ -229,7 +235,7 @@ cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_list_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_printf(gtp, "%s", known_commands);
+	gtp_printf(gtp, "%s", known_commands(gtp));
 	return P_OK;
 }
 
@@ -357,7 +363,8 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	time_start_timer(&ti[stone_other(m.color)]);
 
 	// XXX engine getting notified if move is illegal !
-	char *reply = (e->notify_play ? e->notify_play(e, b, &m, enginearg) : NULL);
+	bool print = false;
+	char *reply = (e->notify_play ? e->notify_play(e, b, &m, enginearg, &print) : NULL);
 	
 	if (gtp_board_play(gtp, b, &m) < 0) {
 		if (DEBUGL(0)) {
@@ -368,7 +375,7 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 
-	if (DEBUGL(4) && debug_boardprint)
+	if (print || (DEBUGL(4) && debug_boardprint))
 		engine_board_print(e, b, stderr);
 	
 	gtp_reply(gtp, reply);
@@ -480,6 +487,8 @@ cmd_lz_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+/* Used by slaves in distributed mode.
+ * Special: may send binary data after gtp reply. */
 static enum parse_code
 cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -493,21 +502,22 @@ cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char *reply = e->genmoves(e, b, ti_genmove, color, gtp->next,
 				  !strcasecmp(gtp->cmd, "pachi-genmoves_cleanup"),
 				  &stats, &stats_size);
-	if (!reply) {
-		gtp_error(gtp, "genmoves error");
-		return P_OK;
-	}
+	if (!reply) {  gtp_error(gtp, "genmoves error");  return P_OK;	}
 	if (DEBUGL(3))                      fprintf(stderr, "proposing moves %s\n", reply);
 	if (DEBUGL(4) && debug_boardprint)  engine_board_print(e, b, stderr);
+	
 	gtp_reply(gtp, reply);
-	if (stats_size > 0) {
+	putchar('\n');		// gtp_flush() sortof,
+	gtp->flushed = true;	// but we handle fflush() ourselves here.
+
+	if (stats_size > 0) {   // send binary part
 		double start = time_now();
 		fwrite(stats, 1, stats_size, stdout);
-		fflush(stdout);
-		if (DEBUGVV(2))
+		if (DEBUGVV(3))
 			fprintf(stderr, "sent reply %d bytes in %.4fms\n",
 				stats_size, (time_now() - start)*1000);
 	}
+	fflush(stdout);
 	return P_OK;
 }
 
@@ -833,9 +843,9 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
-	move_t m = move(pass, board_to_play(b));
+	move_t m = move(pass, board_to_play(b));  bool print;
 	if (e->notify_play)
-		e->notify_play(e, b, &m, "");
+		e->notify_play(e, b, &m, "", &print);
 
 	/* Wait for non-undo command to reset engine. */
 	gtp->undo_pending = true;
@@ -858,8 +868,9 @@ undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	b->handicap = handicap;
 
 	for (int i = 0; i < gtp->moves; i++) {
+		bool print;
 		if (e->notify_play)
-			e->notify_play(e, b, &gtp->move[i], "");
+			e->notify_play(e, b, &gtp->move[i], "", &print);
 		int r = board_play(b, &gtp->move[i]);
 		assert(r >= 0);
 	}
@@ -871,6 +882,7 @@ cmd_showboard(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	gtp_printf(gtp, "");
 	board_print(b, stdout);
 	gtp->flushed = 1;  // already ends with \n\n
+	fflush(stdout);
 	return P_OK;
 }
 
@@ -1102,11 +1114,38 @@ void
 gtp_internal_init(gtp_t *gtp)
 {
 	commands = gtp_commands;  /* c++ madness */
-	known_commands_init(gtp);
 }
 
 /* XXX: THIS IS TOTALLY INSECURE!!!!
  * Even basic input checking is missing. */
+
+static enum parse_code
+gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
+{
+	gtp_func_t handler = gtp_get_handler(gtp->cmd);
+
+	if (!handler) {
+		gtp_error(gtp, "unknown command");
+		return P_UNKNOWN_COMMAND;
+	}
+	
+	/* Run engine notify() handler */
+	if (e->notify) {
+		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, gtp);
+		
+		if (gtp->error)  return P_OK;		      /* error, don't run default handler */
+
+		if (gtp->replied && c == P_OK)
+			die("gtp: %s engine's notify() silently overrides default handler for cmd '%s', that's bad\n", e->name, gtp->cmd);
+		
+		if      (c == P_NOREPLY)  gtp->quiet = true;  /* run default handler but suppress output */
+		else if (c == P_DONE_OK)  return P_OK;	      /* override, don't run default handler */
+		else if (c != P_OK)       return c;	      /* (right now P_ENGINE_RESET would override default handler) */
+	}
+
+	/* Run default handler */
+	return handler(b, e, ti, gtp);
+}
 
 enum parse_code
 gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
@@ -1119,6 +1158,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	gtp->next = buf;
 	gtp->replied = false;
 	gtp->flushed = false;
+	gtp->error = false;
 	gtp_arg_optional(gtp->cmd);
 	
 	if (isdigit(*gtp->cmd)) {
@@ -1137,35 +1177,12 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
 		undo_reload_engine(gtp, b, e, ti);
-	
-	if (e->notify && gtp_is_valid(e, gtp->cmd)) {
-		char *reply;
-		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, &reply);
-		if (c == P_NOREPLY) {
-			gtp->quiet = true;
-		} else if (c == P_DONE_OK) {
-			gtp_reply(gtp, reply);
-			return P_OK;
-		} else if (c == P_DONE_ERROR) {
-			gtp_error(gtp, reply);
-			/* This is an internal error for the engine, but
-			 * it is still OK from main's point of view. */
-			return P_OK;
-		} else if (c != P_OK)
-			return c;
-	}
-	
-	for (int i = 0; commands[i].cmd; i++)
-		if (!strcasecmp(gtp->cmd, commands[i].cmd)) {
-			enum parse_code ret = commands[i].f(b, e, ti, gtp);
-			/* For functions convenience: no reply means empty reply */
-			if (!gtp->flushed)  gtp_flush(gtp);
-			return ret;
-		}
-	
-	gtp_error(gtp, "unknown command");
-	return P_UNKNOWN_COMMAND;
+
+	/* Run handler */
+	enum parse_code c = gtp_run_handler(gtp, b, e, ti, buf);
+	assert(c == P_OK || c == P_ENGINE_RESET || c == P_UNKNOWN_COMMAND);
+
+	/* Add final '\n' and empty reply if needed */
+	if (!gtp->flushed)  gtp_flush(gtp);
+	return c;
 }
-
-
-

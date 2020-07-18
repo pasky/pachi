@@ -100,6 +100,7 @@ typedef struct {
 	move_stats_t my_last_stats;
 	int slaves;
 	int threads;
+	bool undo_pending;
 } distributed_t;
 
 /* Default number of simulations to perform per move.
@@ -146,14 +147,65 @@ path2sstr(path_t path, board_t *b)
 	return b2;
 }
 
+/* undo: command is forwarded to the slaves so they take care of themselves.
+ * For us however we can't let default gtp handler run otherwise it'll reset us !
+ * so handle it here.
+ * Similar logic as gtp.c cmd_undo() but use own flag for pending undo.
+ * Can't update board right away here or we'll be out of sync with slaves
+ * if we get two undos in a row. */
+static enum parse_code
+distributed_undo(distributed_t *dist, board_t *b, gtp_t *gtp)
+{
+	/* --noundo: undo only allowed for pass. */
+	if (gtp->noundo && !is_pass(last_move(b).coord)) {
+		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(last_move(b).coord));
+		gtp_error(gtp, "cannot undo");
+		return P_DONE_OK;
+	}
+	
+	if (!gtp->moves) {  gtp_error(gtp, "no moves to undo");  return P_DONE_OK;  }
+	if (b->moves == b->handicap) {  gtp_error(gtp, "can't undo handicap");  return P_DONE_OK;  }
+	gtp->moves--;
+
+	/* No need to stop pondering, slaves are already notified. */
+	
+	/* Wait for non-undo command to update board. */
+	dist->undo_pending = true;
+	
+	return P_DONE_OK;
+}
+
+/* Similar to gtp.c undo_reload_engine() but just update board, don't reset engine. */
+static void
+distributed_undo_commit(distributed_t *dist, board_t *b, gtp_t *gtp)
+{
+	if (DEBUGL(3)) fprintf(stderr, "updating board after undo(s).\n");
+	
+	dist->undo_pending = false;
+	
+	/* Update board */
+	int handicap = b->handicap;
+	board_clear(b);
+	b->handicap = handicap;
+
+	for (int i = 0; i < gtp->moves; i++) {
+		int r = board_play(b, &gtp->move[i]);
+		assert(r >= 0);
+	}
+}
+
 /* Dispatch a new gtp command to all slaves.
  * The slave lock must not be held upon entry and is released upon return.
  * args is empty or ends with '\n' */
 static enum parse_code
-distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char **reply)
+distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp)
 {
 	distributed_t *dist = (distributed_t*)e->data;
 
+	/* Pending undo ? Update board */
+	if (dist->undo_pending && strcasecmp(cmd, "undo"))
+		distributed_undo_commit(dist, b, gtp);
+	
 	/* Commands that should not be sent to slaves.
 	 * time_left will be part of next pachi-genmoves,
 	 * we reduce latency by not forwarding it here. */
@@ -187,6 +239,12 @@ distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, char 
 
 	// At the beginning wait even more for late slaves.
 	if (b->moves == 0) sleep(1);
+
+	/* Commands forwarded to slaves but we shouldn't run: */
+	if (!strcasecmp(cmd, "undo"))		  return distributed_undo(dist, b, gtp);
+	if (!strcasecmp(cmd, "pachi-setoption"))  return P_DONE_OK;   // XXX handle errors, changing options on distributed side ?
+	if (!strcasecmp(cmd, "pachi-getoption"))  {  gtp_error(gtp, "unimplemented"); return P_DONE_OK;  }  // XXX check replies from all slaves agree ?
+	
 	return P_OK;
 }
 
@@ -331,6 +389,7 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 
 	/* Loop until most slaves want to quit or time elapsed. */
 	int iterations;
+	double last_printed = now;
 	for (iterations = 1; ; iterations++) {
 		double start = now;
 		/* Wait for just one slave to get stats as fresh as possible,
@@ -347,9 +406,14 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 			if (now - ti->len.t.timer_start >= stop.worst.time) break;
 			if (!keep_looking && now - first >= MIN_EARLY_STOP_WAIT) break;
 		} else {
-			if (!keep_looking || played >= stop.worst.playouts) break;
+			if (!keep_looking || playouts >= stop.worst.playouts) break;
+			// XXX handle min/max playouts
 		}
-		if (DEBUGVV(2)) {
+		
+		/* Print progress every 0.3s by default (run with -d4 to show everything) */
+		if (DEBUGVV(3) ||
+		    (DEBUGL(2) && now >= last_printed + 0.3)) {
+			last_printed = now;
 			char *coord = coord2sstr(best);
 			snprintf(buf, sizeof(buf),
 				 "temp winner is %s %s with score %1.4f (%d/%d games)"
@@ -396,7 +460,7 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 			 (int)(played/time/threads), 1000*time/iterations);
 		logline(NULL, "* ", buf);
 	}
-	if (DEBUGL(3)) {
+	if (DEBUGL(4)) {
 		int total_hnodes = replies * (1 << dist->stats_hbits);
 		merge_print_stats(total_hnodes);
 	}
@@ -535,4 +599,10 @@ engine_distributed_init(engine_t *e, board_t *b)
 	e->keep_on_clear = true;
 	e->setoption = distributed_setoption;
 	distributed_state_init(e, b);
+
+	if (DEBUGL(2))  fprintf(stderr, "distributed: master node\n");
+	if (DEBUGL(2) && !DEBUGL(3))
+		fprintf(stderr,
+			"distributed: pachi-genmoves subcommands not logged\n"
+			"distributed: run with -d4 to see everything\n");	
 }

@@ -281,7 +281,7 @@ genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 }
 
 static char *
-patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
+patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *board_print)
 {
 	patternscan_t *ps = (patternscan_t*)e->data;
 

@@ -24,7 +24,7 @@ typedef struct {
 
 /* Record joseki moves into incrementally-built jdict->hash[]. */
 static char *
-josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags)
+josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags, bool *board_print)
 {
 	josekiscan_t *j = (josekiscan_t*)e->data;
 

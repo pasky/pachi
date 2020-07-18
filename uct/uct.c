@@ -24,15 +24,19 @@
 #include "uct/plugins.h"
 #include "uct/prior.h"
 #include "uct/search.h"
-#include "uct/slave.h"
 #include "uct/tree.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "dcnn.h"
 
+#ifdef DISTRIBUTED
+#include "uct/slave.h"
+#endif
+
 uct_policy_t *policy_ucb1_init(uct_t *u, char *arg);
 uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
 static void uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, int flags);
+static void uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move);
 
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
@@ -41,7 +45,7 @@ static void
 setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
-	u->t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), u->stats_hbits);
+	u->t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), stats_hbits(u));
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
@@ -62,7 +66,8 @@ reset_state(uct_t *u)
 {
 	if (UDEBUGL(3)) fprintf(stderr, "resetting tree\n");
 	assert(u->t);
-	tree_done(u->t); u->t = NULL;
+	tree_done(u->t);
+	u->t = NULL;
 }
 
 static void
@@ -85,7 +90,9 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 		assert(u->t->root_color == last_move(b).color);
 		if (color != stone_other(u->t->root_color))
 			die("Fatal: Non-alternating play detected %d %d\n", color, u->t->root_color);
+#ifdef DISTRIBUTED
 		uct_htable_reset(u->t);
+#endif
 	} else {
 		/* We need fresh state. */
 		b->es = u;
@@ -93,8 +100,10 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 	}
 
 	ownermap_init(&u->ownermap);
-	u->played_own = u->played_all = 0;
 	u->allow_pass = (b->moves > board_earliest_pass(b));  /* && dames < 10  if using patterns */
+#ifdef DISTRIBUTED
+	u->played_own = u->played_all = 0;
+#endif
 }
 
 /* Does the board look like a final position ?
@@ -182,9 +191,11 @@ uct_ownermap(engine_t *e, board_t *b)
 }
 
 static char *
-uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
+uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print_board)
 {
 	uct_t *u = (uct_t*)e->data;
+	bool was_searching = thread_manager_running;
+	
 	if (!u->t) {
 		/* No state, create one - this is probably game beginning
 		 * and we need to load the opening tbook right now. */
@@ -194,10 +205,13 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 
 	/* Stop pondering, required by tree_promote_at() */
 	uct_pondering_stop(u);
-	if (UDEBUGL(2) && u->slave)  tree_dump(u->t, u->dumpthres);
+	
+	if (u->slave && was_searching && m->color == u->my_color) {
+		if (DEBUGL(1) && debug_boardprint)  *print_board = true;
+		if (UDEBUGL(3)) tree_dump(u->t, u->dumpthres);
+	}
 
-	if (is_resign(m->coord)) {
-		/* Reset state. */
+	if (is_resign(m->coord)) {  /* Reset state. */
 		reset_state(u);
 		return NULL;
 	}
@@ -218,15 +232,13 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg)
 		/* Preserve dynamic komi information, though, that is important. */
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-		return NULL;
 	}
 
 	/* If we are a slave in a distributed engine, start pondering once
 	 * we know which move we actually played. See uct_genmove() about
 	 * the check for pass. */
-	if (u->pondering_opt && u->slave && m->color == u->my_color && !is_pass(m->coord))
-		uct_pondering_start(u, b, u->t, stone_other(m->color), m->coord, UCT_SEARCH_WANT_GC);
-	assert(!(u->slave && using_dcnn(b))); // XXX distributed engine dcnn pondering support
+	if (u->slave && u->pondering_opt && m->color == u->my_color && !is_pass(m->coord))
+		uct_genmove_pondering_start(u, b, m->color, m->coord);
 
 	return NULL;
 }
@@ -402,8 +414,38 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 		fprintf(stderr, "--8<-- UCT debug post-run finished --8<--\n");
 	}
 
+#ifdef DISTRIBUTED
 	u->played_own += ctx->games;
+#endif
 	return ctx->games;
+}
+
+/* Start pondering at the end of genmove.
+ * Makes preparations and calls uct_pondering_start()
+ * with the right flags to make dcnn pondering work. */
+static void
+uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move)
+{
+	enum stone other_color = stone_other(color);
+
+	/* Dcnn pondering:
+	 * Promoted node wasn't searched with dcnn priors, start from scratch
+	 * so it gets dcnn evaluated (and next move as well). Save opponent
+	 * best moves from genmove search, will need it later on to guess
+	 * next move. */
+	if (u->pondering_opt && using_dcnn(b) && u->t) {
+		int      nbest =  u->dcnn_pondering_mcts;
+		coord_t *best_c = u->dcnn_pondering_mcts_c;
+		float    best_r[nbest];
+		uct_get_best_moves(u, best_c, best_r, nbest, false, 100);
+
+		u->initial_extra_komi = u->t->extra_komi;
+		reset_state(u);
+	}
+
+	if (!u->t)  uct_prepare_move(u, b, other_color);
+	
+	uct_pondering_start(u, b, u->t, other_color, our_move, UCT_SEARCH_GENMOVE_PONDERING | UCT_SEARCH_WANT_GC);
 }
 
 /* Start pondering in the background with @color to play.
@@ -444,12 +486,15 @@ uct_pondering_stop(uct_t *u)
 	if (!thread_manager_running)
 		return;
 
-	assert(pondering(u));
-	
+	/* Search active but not pondering actually ? Stop search.
+	 * Distributed mode slaves need that, special case. */
+	if (!pondering(u)) {  uct_search_stop();  return;  }
+
 	/* Stop the thread manager. */
 	uct_thread_ctx_t *ctx = uct_search_stop();  /* clears search flags */
-	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, 0, NULL);
 	
+	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, 0, NULL);
+
 	free(ctx->b);
 	u->reporting = u->reporting_opt;
 	u->report_fh = stderr;
@@ -524,8 +569,8 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 {
 	uct_t *u = (uct_t*)e->data;
 
-	coord_t best_coord;
-	tree_node_t *best = genmove(e, b, ti, color, pass_all_alive, &best_coord);
+	coord_t best;
+	tree_node_t *best_node = genmove(e, b, ti, color, pass_all_alive, &best);
 
 	/* Pass or resign.
 	 * After a pass, pondering is harmful for two reasons:
@@ -533,11 +578,11 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 	 * Of course this is the case for opponent resign as well.
 	 * (ii) More importantly, the ownermap will get skewed since
 	 * the UCT will start cutting off any playouts. */	
-	if (is_pass(best_coord) || is_resign(best_coord)) {
-		if (is_pass(best_coord))
+	if (is_pass(best) || is_resign(best)) {
+		if (is_pass(best))
 			u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-		return best_coord;
+		return best;
 	}
 
 	/* Throw away an untrustworthy tree.
@@ -545,31 +590,12 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 	if (u->t->untrustworthy_tree) {
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-		uct_prepare_move(u, b, stone_other(color));
 	} else
-		tree_promote_node(u->t, &best);
+		tree_promote_node(u->t, &best_node);
 
-	/* Dcnn pondering:
-	 * Promoted node wasn't searched with dcnn priors, start from scratch
-	 * so it gets dcnn evaluated (and next move as well). Save opponent
-	 * best moves from genmove search, will need it later on to guess
-	 * next move. */
-	if (u->pondering_opt && using_dcnn(b)) {
-		int      nbest =  u->dcnn_pondering_mcts;
-		coord_t *best_c = u->dcnn_pondering_mcts_c;
-		float    best_r[nbest];
-		uct_get_best_moves(u, best_c, best_r, nbest, false, 100);
-
-		u->initial_extra_komi = u->t->extra_komi;
-		reset_state(u);
-		uct_prepare_move(u, b, stone_other(color));
-	}	
-
-	if (u->pondering_opt && u->t)
-		uct_pondering_start(u, b, u->t, stone_other(color), best_coord,
-				    UCT_SEARCH_GENMOVE_PONDERING | UCT_SEARCH_WANT_GC);
-
-	return best_coord;
+	if (u->pondering_opt)
+		uct_genmove_pondering_start(u, b, color, best);
+	return best;
 }
 
 /* lz-genmove_analyze */
@@ -1383,10 +1409,12 @@ uct_state_init(engine_t *e, board_t *b)
 	u->dynkomi_interval = 100;
 	u->dynkomi_mask = S_BLACK | S_WHITE;
 
+#ifdef DISTRIBUTED
 	u->max_slaves = -1;
 	u->slave_index = -1;
 	u->stats_delay = 0.01; // 10 ms
 	u->shared_levels = 1;
+#endif
 
 #ifdef PACHI_PLUGINS
 	u->plugins = pluginset_init(b);
@@ -1416,13 +1444,9 @@ uct_state_init(engine_t *e, board_t *b)
 	if (!u->prior)			u->prior = uct_prior_init(NULL, b, u);
 	if (!u->playout)		u->playout = playout_moggy_init(NULL, b);
 	if (!u->playout->debug_level)	u->playout->debug_level = u->debug_level;
-
-	if (u->slave) {
-		if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
-		if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
-		assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
-	}
-
+#ifdef DISTRIBUTED
+	if (u->slave)			uct_slave_init(u, b);
+#endif
 	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
 	if (!u->banner)                 u->banner = strdup("Pachi %s, Have a nice game !");
 

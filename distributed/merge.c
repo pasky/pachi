@@ -22,7 +22,7 @@ static hash_counts_t h_counts;
 void
 merge_print_stats(int total_hnodes)
 {
-	if (DEBUGL(3)) {
+	if (DEBUGL(4)) {
 		char buf[BSIZE];
 		snprintf(buf, sizeof(buf),
 			 "stats occupied %ld %.1f%% inserts %ld collisions %ld/%ld %.1f%%\n",
@@ -290,7 +290,7 @@ get_new_stats(incr_stats_t *buf, slave_state_t *sstate, int cmd_id)
 	/* Put the best increments in the output buffer. */
 	int output_nodes = output_stats(buf, sstate, bucket_count, merge_count);
 
-	if (DEBUGVV(2)) {
+	if (DEBUGVV(3)) {
 		char b[1024];
 		snprintf(b, sizeof(b), "merged %d..%d missed %d %d/%d nodes,"
 			 " output %d/%d nodes in %.3fms (clear %.3fms)\n",
