@@ -99,7 +99,8 @@ uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, enum stone color)
 	float   priors[BOARD_MAX_COORDS];  memset(priors, 0, sizeof(priors));
 	get_node_prior_best_moves(node, best_cpr, best_pr, 19 * 19);
 	for (int i = 0; i < 19 * 19; i++)
-		priors[best_cpr[i]] = best_pr[i];
+		if (best_cpr[i] > 0)
+			priors[best_cpr[i]] = best_pr[i];
 
 	for (int i = 0; i < nbest && !is_pass(best_c[i]); i++) {
 		fprintf(fh, "info move %s visits %i winrate %i prior %i order %i ",
