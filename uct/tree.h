@@ -120,6 +120,7 @@ typedef struct {
 	// Statistics
 	int max_depth;
 	volatile size_t nodes_size; // byte size of all allocated nodes
+	                            // beware failed allocs still bump nodes_size
 	size_t max_tree_size; // maximum byte size for entire tree
 	size_t max_pruned_size;
 	size_t pruning_threshold;

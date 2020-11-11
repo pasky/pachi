@@ -26,7 +26,10 @@
 
 /* Allocate tree node(s). The returned nodes are initialized with zeroes.
  * Returns NULL if not enough memory.
- * This function may be called by multiple threads in parallel. */
+ * This function may be called by multiple threads in parallel.
+ * Beware tree nodes_size increases even when alloc fails.
+ * That's fine, used to detect tree memory full and will be fixed
+ * at next tree garbage collect. */
 static tree_node_t *
 tree_alloc_node(tree_t *t, int count)
 {
@@ -35,7 +38,7 @@ tree_alloc_node(tree_t *t, int count)
 	size_t old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
 
 	if (old_size + nsize > t->max_tree_size)
-		return NULL;
+		return NULL;  /* Not reverting nodes_size, see above */
 	assert(t->nodes != NULL);
 	n = (tree_node_t *)((char*)t->nodes + old_size);
 	memset(n, 0, nsize);
@@ -334,9 +337,13 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
  * This guarantees garbage collection in < 1s. */
 #define SMALL_TREE_PLAYOUTS 5000
 
-/* Free all the tree, keeping only the subtree rooted at node.
- * Prune the subtree if necessary to fit in memory or
- * to save time scanning the tree.
+/* Tree garbage collection
+ * Right now this does 3 things:
+ * - reclaim space used by unreachable nodes after move promotion
+ * - prune tree down to max 20% capacity
+ * - prune large trees (>40k playouts) keeping only nodes with enough playouts.
+ * See also LARGE_TREE_PLAYOUTS, DEEP_PLAYOUTS_THRESHOLD above.
+ * Expensive, especially for huge trees, needs to copy the whole tree twice.
  * Returns the moved node. */
 tree_node_t *
 tree_garbage_collect(tree_t *tree, tree_node_t *node)
@@ -532,6 +539,7 @@ tree_unlink_node(tree_node_t *node)
 }
 
 /* Promotes the given node as the root of the tree.
+ * May trigger tree garbage collection:
  * The node may be moved and some of its subtree may be pruned. */
 void
 tree_promote_node(tree_t *tree, tree_node_t **node)
@@ -555,6 +563,10 @@ tree_promote_node(tree_t *tree, tree_node_t **node)
 	 * and soon the tree will grow and max_depth will become correct again. */
 }
 
+/* Promote node with given coordinate as the root of the tree.
+ * May trigger tree garbage collection:
+ * The node may be moved and some of its subtree may be pruned.
+ * Returns true on success, false otherwise (@reason tells why) */
 bool
 tree_promote_at(tree_t *t, board_t *b, coord_t c, int *reason)
 {
