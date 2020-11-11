@@ -12,7 +12,7 @@ lib.a: $(OBJS)
 # Run unit tests
 test: FORCE
 	@if ../pachi --compile-flags | grep -q "BOARD_TESTS"; then  \
-		make test_board test_moggy test_spatial; \
+		make test_moggy test_spatial test_board; \
 	fi
 
 	@make test_gtp
