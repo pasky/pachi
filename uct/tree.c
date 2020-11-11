@@ -436,6 +436,38 @@ tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 	pruning_queue_free(&queue2);
 }
 
+static void
+log_temp_tree_overflow(tree_t *t, tree_t *t2, int threshold, int max_depth)
+{
+	if (!DEBUGL(1))  return;
+
+	fprintf(stderr, "temp tree overflow");
+
+	if (threshold == 0) {
+		/* Tree is small, show dropped amount, won't slow things much.
+		 * Also with threshold=0 we know data_we_could_have_kept = tree_actual_size(t)
+		 * since we're not dropping nodes. */
+		float orig = tree_actual_size(t);
+		float pruned = t2->max_tree_size;
+		float dropped = orig - pruned;
+		fprintf(stderr, ", dropped %0.1f Mb (%i%%)", dropped / (1024*1024),  (int)(dropped * 100 / orig));
+	}
+#if 0
+	else {  /* Debugging only, super expensive if tree is huge */
+		tree_t *t3 = tree_init(t->root_color, t->max_tree_size, 0);
+		tree_prune(t3, t, threshold, max_depth);
+		
+		float orig = tree_actual_size(t3);
+		float pruned = t2->max_tree_size;
+		float dropped = orig - pruned;
+		fprintf(stderr, ", dropped %0.1f Mb (%i%%)", dropped / (1024*1024),  (int)(dropped * 100 / orig));
+		tree_done(t3);
+	}
+#endif
+	
+	fprintf(stderr, "\n");
+}
+
 /* The following constants are used for garbage collection of nodes.
  * A tree is considered large if the top node has >= 40K playouts.
  * For such trees, we copy deep nodes only if they have enough
@@ -467,15 +499,13 @@ tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 void
 tree_garbage_collect(tree_t *t)
 {
-	size_t pruning_threshold = tree_gc_threshold(t);
-	size_t max_pruned_size = tree_max_pruned_size(t);
-	
 	tree_node_t *node = t->root;
 	assert(t->nodes && !node->parent && !node->sibling);
 	double time_start = time_now();
 	size_t orig_size = t->nodes_size;
 	size_t orig_content_size = (DEBUGL(3) ? tree_actual_size(t) : 0);
-
+	size_t max_pruned_size = tree_max_pruned_size(t);
+	
 	/* Temp tree for pruning. */
 	tree_t *t2 = tree_init(t->root_color, max_pruned_size, 0);
 
@@ -502,15 +532,21 @@ tree_garbage_collect(tree_t *t)
 	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD;
 	tree_prune(t2, t, threshold, max_depth);
 
+	/* Temp tree overflow ?
+	 * This is not a serious problem, we will simply recompute the discarded nodes
+	 * at the next move if necessary. This is better than frequently wasting memory. */
+	if (t2->nodes_size >= t2->max_tree_size)
+		log_temp_tree_overflow(t, t2, threshold, max_depth);
+	
 	/* Now copy back to original tree. */
 	tree_copy(t, t2);
 
 	if (DEBUGL(1)) {
 		fprintf(stderr, "tree gc in %0.1fs ", time_now() - time_start);
-		if (!DEBUGL(3))
+		if (!DEBUGL(3))  /* simple */
 			fprintf(stderr, " (%0.1f -> %0.1f Mb)",
 				(float)orig_size / (1024*1024), (float)t->nodes_size / (1024*1024));
-		else {
+		else {           /* detailed */
 			fprintf(stderr, " (%0.1f Mb -> %0.1f Mb used -> %0.1f Mb pruned)\n",
 				(float)orig_size / (1024*1024),
 				(float)orig_content_size / (1024*1024),
@@ -523,16 +559,6 @@ tree_garbage_collect(tree_t *t)
 		fprintf(stderr, "\n");
 	}
 
-	if (t2->nodes_size >= t2->max_tree_size) {
-		fprintf(stderr, "temp tree overflow, max_tree_size %0.1f Mb, pruning_threshold %0.1f Mb\n",
-			(float)t->max_tree_size / (1024*1024), (float)pruning_threshold / (1024*1024));
-		/* This is not a serious problem, we will simply recompute the discarded nodes
-		 * at the next move if necessary. This is better than frequently wasting memory. */
-	} else {
-		assert(t->nodes_size == t2->nodes_size);
-		assert(t->max_depth == t2->max_depth);
-	}
-	
 	tree_done(t2);
 }
 
