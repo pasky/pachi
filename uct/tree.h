@@ -134,6 +134,7 @@ typedef struct {
 tree_t *tree_init(enum stone color, size_t max_tree_size, int hbits);
 void tree_done(tree_t *tree);
 void tree_dump(tree_t *tree, double thres);
+size_t tree_actual_size(tree_t *t);
 void tree_save(tree_t *tree, board_t *b, int thres);
 void tree_load(tree_t *tree, board_t *b);
 void tree_copy(tree_t *dst, tree_t *src);

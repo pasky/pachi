@@ -161,6 +161,28 @@ tree_dump(tree_t *tree, double thres)
 	tree_node_dump(tree, tree->root, 1, 0, thres_abs);
 }
 
+static void
+tree_actual_size_node(tree_t *t, tree_node_t *node, size_t *size)
+{
+	*size += sizeof(*node);
+
+	for (tree_node_t *ni = node->children;  ni;  ni = ni->sibling)
+		tree_actual_size_node(t, ni, size);
+}
+
+/* Walk whole tree and find actual size.
+ * Useful for debugging as t->nodes_size may not reflect actual content:
+ * For example after move promotion or failed tree_alloc_node()'s
+ * (nodes_size is still bumped). */
+size_t
+tree_actual_size(tree_t *t)
+{
+	size_t size = 0;
+	if (t->root)
+		tree_actual_size_node(t, t->root, &size);
+	return size;
+}
+
 
 static char *
 tree_book_name(board_t *b)
