@@ -510,15 +510,58 @@ tree_garbage_collect(tree_t *t)
 /*********************************************************************************/
 /* Tree copy */
 
+/* Copy subtree rooted at node in src to dest.
+ * Same logic as tree_prune_node() but simpler since we can go
+ * depth-first and both trees are same size.
+ * Returns the copy of node in the destination tree. */
+static tree_node_t *
+tree_copy_node(tree_t *dest, tree_t *src, tree_node_t *node)
+{
+	assert(dest->nodes && node);
+	tree_node_t *n2 = tree_alloc_node(dest, 1);
+	if (!n2)  die("tree_copy(): tree_alloc_node() failed. dest tree too small ?\n");
+	*n2 = *node;
+	n2->children = NULL;
+	n2->is_expanded = false;
+
+	if (!node->children)
+		return n2;
+
+	/* Copy children */
+	tree_node_t **prev2 = &(n2->children);
+	tree_node_t *ni;
+	for (ni = node->children;  ni;  ni = ni->sibling) {
+		tree_node_t *ni2 = tree_copy_node(dest, src, ni);
+		assert(ni2);
+		*prev2 = ni2;
+		prev2 = &(ni2->sibling);
+		ni2->parent = n2;
+	}
+	
+	if (!ni)  n2->is_expanded = true;
+	else      n2->children = NULL;     // avoid partially expanded nodes
+	
+	return n2;
+}
+
 /* Copy the whole tree (all reachable nodes)
  * dst tree must be able to hold src's content.
+ * Simpler / faster than tree_prune() as we can process nodes depth-first.
  * The relative order of children of a given node is preserved
  * (assumed by tree_get_node() in particular).
  * Note: Only for fast_alloc. */
 void
 tree_copy(tree_t *dst, tree_t *src)
 {
-	tree_prune(dst, src, 0, src->max_depth);
+	dst->use_extra_komi = src->use_extra_komi;
+	dst->untrustworthy_tree = src->untrustworthy_tree;
+	dst->extra_komi = src->extra_komi;
+	dst->avg_score = src->avg_score;
+	/* DISTRIBUTED htable not copied, gets rebuilt as needed */
+	dst->nodes_size = 0;		  /* we do not want the dummy pass node */
+	dst->max_depth = src->max_depth;  /* same depths */
+	dst->root_color = src->root_color;
+	dst->root = tree_copy_node(dst, src, src->root);
 	assert(dst->root);
 }
 
