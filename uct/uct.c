@@ -599,8 +599,10 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 	if (u->pondering_opt)
 		uct_genmove_pondering_save_replies(u, b, color, best);
 	
-	/* Promote node or throw away tree as needed. */
-	if (!tree_promote_node(u->t, best_node, b, NULL)) {
+	/* Promote node or throw away tree as needed.
+	 * Reset now if we don't reuse tree, avoids unnecessary tree gc. */
+	if (!reusing_tree(u, b) ||
+	    !tree_promote_node(u->t, best_node, b, NULL)) {
 		/* Preserve dynamic komi information though, that is important. */
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
