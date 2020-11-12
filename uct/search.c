@@ -199,7 +199,7 @@ thread_manager(void *ctx_)
 	u->tree_ready = false;
 
 	/* Garbage collect the tree by preference when pondering. */
-	if (pondering(u) && search_want_gc(u) && t->nodes && t->nodes_size >= t->pruning_threshold)
+	if (pondering(u) && search_want_gc(u) && t->nodes && tree_gc_needed(u->t))
 		tree_garbage_collect(t);
 	clear_search_want_gc(u);
 
@@ -484,8 +484,7 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	/* Can't simply use tree_realloc(), need to check if we can allocate
 	 * memory before stopping search otherwise we can't recover. */
 	tree_t *t  = u->t;
-	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), new_size, pruned_size(new_size),
-			       pruning_threshold(new_size), tree_hbits(t));
+	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), new_size, tree_hbits(t));
 	if (!t2)  return 0;		/* Not enough memory */
 	
 	int flags = u->search_flags;	/* Save flags ! */

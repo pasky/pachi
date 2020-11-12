@@ -142,10 +142,6 @@ typedef struct uct {
 	bool tree_ready;
 } uct_t;
 
-/* Limit pruning temp space to 20% of memory. Beyond this we discard
- * the nodes and recompute them at the next move if necessary. */
-#define pruned_size(tree_size)		((tree_size) / 5)
-#define pruning_threshold(tree_size)	((tree_size) / 10)
 
 #ifdef DISTRIBUTED
 #define stats_hbits(u)			((u)->stats_hbits)

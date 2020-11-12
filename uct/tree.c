@@ -76,8 +76,7 @@ tree_init_node(tree_t *t, coord_t coord, int depth)
 /* Create a tree structure and pre-allocate all nodes.
  * Returns NULL if out of memory */
 tree_t *
-tree_init(board_t *board, enum stone color, size_t max_tree_size,
-	  size_t max_pruned_size, size_t pruning_threshold, int hbits)
+tree_init(board_t *board, enum stone color, size_t max_tree_size, int hbits)
 {
 	tree_node_t *nodes = NULL;
 	assert (max_tree_size != 0);
@@ -93,8 +92,6 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	tree_t *t = calloc2(1, tree_t);
 	t->board = board;
 	t->max_tree_size = max_tree_size;
-	t->max_pruned_size = max_pruned_size;
-	t->pruning_threshold = pruning_threshold;
 	t->nodes = nodes;
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0);
@@ -335,7 +332,6 @@ tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 	assert(dest->root);	
 }
 
-
 /* The following constants are used for garbage collection of nodes.
  * A tree is considered large if the top node has >= 40K playouts.
  * For such trees, we copy deep nodes only if they have enough
@@ -367,13 +363,16 @@ tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 void
 tree_garbage_collect(tree_t *t)
 {
+	size_t pruning_threshold = tree_gc_threshold(t);
+	size_t max_pruned_size = tree_max_pruned_size(t);
+	
 	tree_node_t *node = t->root;
 	assert(t->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
 	size_t orig_size = t->nodes_size;
 
 	/* Temp tree for pruning. */
-	tree_t *t2 = tree_init(t->board, t->root_color, t->max_pruned_size, 0, 0, 0);
+	tree_t *t2 = tree_init(t->board, t->root_color, max_pruned_size, 0);
 
 	/* Find the maximum depth at which we can copy all nodes. */
 	int max_nodes = 1;
@@ -381,7 +380,7 @@ tree_garbage_collect(tree_t *t)
 		max_nodes++;
 	size_t nodes_size = max_nodes * sizeof(*node);
 	int max_depth = node->depth;
-	for (;  nodes_size < t->max_pruned_size && max_nodes > 1;  max_depth++) {
+	for (;  nodes_size < max_pruned_size && max_nodes > 1;  max_depth++) {
 		max_nodes--;
 		nodes_size += max_nodes * nodes_size;
 	}
@@ -409,12 +408,12 @@ tree_garbage_collect(tree_t *t)
 			"tree pruned in %0.3fs, prev %0.1fs ago, dest depth %d wanted %d,"
 			" size %llu->%llu/%llu, playouts %d\n",
 			now - start_time, start_time - prev_time, t2->max_depth, max_depth,
-			(unsigned long long)orig_size, (unsigned long long)t2->nodes_size, (unsigned long long)t->max_pruned_size, t->root->u.playouts);
+			(unsigned long long)orig_size, (unsigned long long)t2->nodes_size, (unsigned long long)max_pruned_size, t->root->u.playouts);
 		prev_time = start_time;
 	}
 	if (t2->nodes_size >= t2->max_tree_size) {
 		fprintf(stderr, "temp tree overflow, max_tree_size %llu, pruning_threshold %llu\n",
-			(unsigned long long)t->max_tree_size, (unsigned long long)t->pruning_threshold);
+			(unsigned long long)t->max_tree_size, (unsigned long long)pruning_threshold);
 		/* This is not a serious problem, we will simply recompute the discarded nodes
 		 * at the next move if necessary. This is better than frequently wasting memory. */
 	} else {
@@ -447,14 +446,11 @@ tree_copy(tree_t *dst, tree_t *src)
  * returns 1 if successful
  *         0 if failed (out of memory) */
 int
-tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold)
+tree_realloc(tree_t *t, size_t max_tree_size)
 {
 	assert(max_tree_size > t->max_tree_size);
-	assert(max_pruned_size > t->max_pruned_size);
-	assert(pruning_threshold > t->pruning_threshold);
 
-	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), max_tree_size, max_pruned_size,
-			       pruning_threshold, tree_hbits(t));
+	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), max_tree_size, tree_hbits(t));
 	if (!t2)  return 0;	/* Out of memory */
 
 	tree_copy(t2, t);	assert(t2->root_color == t->root_color);
@@ -569,7 +565,7 @@ tree_promote_node(tree_t *t, tree_node_t *node, board_t *b, enum promote_reason 
 	t->root_color = stone_other(t->root_color);
 	
 	/* Garbage collect if we run out of memory, or it is cheap to do so now: */
-	if (t->nodes_size >= t->pruning_threshold ||
+	if (tree_gc_needed(t) ||
 	    (t->nodes_size >= t->max_tree_size / 10 && node->u.playouts < SMALL_TREE_PLAYOUTS))
 		tree_garbage_collect(t);
 
