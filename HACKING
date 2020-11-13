@@ -140,6 +140,41 @@ much common with classic UCT now) has non-trivial structure by itself:
 	dynkomi.[ch]
 
 
+UCT search modes
+================
+
+There are 4 main modes for move generation depending on client / options used:
+
+   mode                 typical clients      gtp command          uct options
+ ------------------------------------------------------------------------------
+   genmove                   all             genmove
+   genmove_analyze      Lizzie, Sabaki       lz-genmove_analyze                     
+   pondering                 all             genmove               pondering   
+   analyze              Lizzie, Sabaki       lz-analyze
+
+* genmove
+  this is the normal case: client sends "genmove" gtp command to ask engine
+  for a move, uct starts search in the foreground and stops when given time
+  or playouts requirements are met.
+  On kgs there's also "kgs-genmove_cleanup" command which is a special mode
+  entered when playing chinese and opponent doesn't agree on dead stones
+  (both players keep playing until all dead stones are removed)
+* genmove_analyze
+  used by Lizzie, Sabaki etc to display fancy graphics during genmove
+  (gogui uses "gogui-livegfx" for that purpose). same as genmove but client uses
+  "lz-genmove_analyze" gtp command to get updates while search is going on.
+* pondering
+  after genmove search continues in the background while opponent is thinking.
+  pondering stops at next "play" command.
+* analyze  (Lizzie, Sabaki)
+  client sends "lz-analyze" gtp command. no move is generated but search is
+  started in the background and updates sent to client in leela-zero format.
+  search stops when next gtp command is received.
+
+There's also "pachi-genmoves" which is used by the distributed engine to start
+search in the background and report state periodically.
+
+
 Board Implementation
 ====================
 
