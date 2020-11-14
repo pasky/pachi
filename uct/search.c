@@ -724,18 +724,19 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 	return false;
 }
 
-/* uct_pass_is_safe() also called by uct policy, beware.  */
+/* Check pass is safe and save dead groups for later, must use
+ * same dead groups at scoring time or we might lose the game.
+ * Do this here, uct_pass_is_safe() also called by uct policy */
 static bool
 uct_search_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg)
 {
-	bool res = uct_pass_is_safe(u, b, color, pass_all_alive, msg);
+	move_queue_t dead;
+	bool res = uct_pass_is_safe(u, b, color, pass_all_alive, &dead, msg, true);
 
 	/* Save dead groups for final_status_list dead. */
 	if (res) {
-		move_queue_t unclear;
-		move_queue_t *dead = &u->dead_groups;
+		u->dead_groups = dead;
 		u->pass_moveno = b->moves + 1;
-		ownermap_dead_groups(b, &u->ownermap, dead, &unclear);
 	}
 	return res;
 }
