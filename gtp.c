@@ -730,7 +730,7 @@ cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 	}
 
 	if (DEBUGL(1)) {   /* show final score and board */
-		fprintf(stderr, "\nfinal score: %s\n", board_official_score_str(b, &q));
+		fprintf(stderr, "\nfinal score: %s  (%s)\n", board_official_score_str(b, &q), rules2str(b->rules));
 		board_print_official_ownermap(b, &q);
 	}
 
