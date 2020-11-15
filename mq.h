@@ -39,7 +39,8 @@ static void mq_append(move_queue_t *qd, move_queue_t *qs);
 static void mq_nodup(move_queue_t *q);
 
 /* Print queue contents on stderr. */
-static void mq_print(move_queue_t *q, char *label);
+static int  mq_print(char *label, move_queue_t *q);
+static void mq_print_line(char *label, move_queue_t *q);
 
 
 /* Variations of the above that allow move weighting. */
@@ -104,12 +105,19 @@ mq_nodup(move_queue_t *q)
 	}
 }
 
-static inline void
-mq_print(move_queue_t *q, char *label)
+static inline int
+mq_print(char *label, move_queue_t *q)
 {
-	fprintf(stderr, "%s candidate moves: ", label);
+	int n = fprintf(stderr, "%s", label);
 	for (unsigned int i = 0; i < q->moves; i++)
-		fprintf(stderr, "%s ", coord2sstr(q->move[i]));
+		n += fprintf(stderr, "%s ", coord2sstr(q->move[i]));
+	return n;
+}
+
+static inline void
+mq_print_line(char *label, move_queue_t *q)
+{
+	mq_print(label, q);
 	fprintf(stderr, "\n");
 }
 
