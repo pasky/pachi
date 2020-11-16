@@ -278,8 +278,8 @@ board_position_final_full(board_t *b, ownermap_t *ownermap,
 		foreach_neighbor(b, dame, {
 			ne[final_ownermap[c]]++;
 		});		
-		if (ne[S_BLACK] + ne[FO_DAME] == 4 ||
-		    ne[S_WHITE] + ne[FO_DAME] == 4) {
+		if (ne[S_BLACK] + ne[FO_DAME] + ne[S_OFFBOARD] == 4 ||
+		    ne[S_WHITE] + ne[FO_DAME] + ne[S_OFFBOARD] == 4) {
 			static char buf[100];
 			sprintf(buf, "non-final position at %s", coord2sstr(dame));
 			*msg = buf;
