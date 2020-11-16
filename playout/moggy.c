@@ -200,7 +200,7 @@ test_pattern3_here(playout_policy_t *p, board_t *b, move_t *m, bool middle_ladde
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
 	if (atari_neighbor && is_ladder(b, atari_neighbor, middle_ladder)
-	    && !can_countercapture(b, atari_neighbor, NULL, 0))
+	    && !can_countercapture(b, atari_neighbor, NULL))
 		return false;
 	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord), (int) pi, pp->pat3_gammas[(int) pi]);
 	*gamma = pp->pat3_gammas[(int) pi];

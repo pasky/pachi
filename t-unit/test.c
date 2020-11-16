@@ -400,7 +400,7 @@ test_can_countercap(board_t *b, char *arg)
 	enum stone color = board_at(b, c);
 	group_t g = group_at(b, c);
 	assert(color == S_BLACK || color == S_WHITE);
-	int rres = can_countercapture(b, g, NULL, 0);
+	int rres = can_countercapture(b, g, NULL);
 
 	PRINT_RES(rres == eres);
 	return   (rres == eres);

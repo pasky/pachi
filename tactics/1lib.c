@@ -76,8 +76,9 @@ can_play_on_lib(board_t *b, group_t g, enum stone to_play)
 
 /* Checks snapbacks */
 bool
-can_countercapture(board_t *b, group_t group, move_queue_t *q, int tag)
+can_countercapture(board_t *b, group_t group, move_queue_t *q)
 {
+	if (q) mq_init(q);
 	enum stone color = board_at(b, group);
 	enum stone other = stone_other(color);
 	assert(color == S_BLACK || color == S_WHITE);	
@@ -94,7 +95,7 @@ can_countercapture(board_t *b, group_t group, move_queue_t *q, int tag)
 				continue;
 
 			if (!q) return true;
-			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], tag);
+			mq_add(q, board_group_info(b, group_at(b, c)).lib[0], 0);
 			mq_nodup(q);
 		});
 	} foreach_in_group_end;
@@ -163,14 +164,14 @@ can_countercapture_any(board_t *b, group_t group, move_queue_t *q, int tag)
 
 #ifdef NO_DOOMED_GROUPS
 static bool
-can_be_rescued(board_t *b, group_t group, enum stone color, int tag)
+can_be_rescued(board_t *b, group_t group, enum stone color)
 {
 	/* Does playing on the liberty rescue the group? */
 	if (can_play_on_lib(b, group, color))
 		return true;
 
 	/* Then, maybe we can capture one of our neighbors? */
-	return can_countercapture(b, group, NULL, tag);
+	return can_countercapture(b, group, NULL);
 }
 #endif
 
@@ -191,7 +192,7 @@ group_atari_check(unsigned int alwaysccaprate, board_t *b, group_t group, enum s
 		 * our group, since we can capture the culprit. */
 #ifdef NO_DOOMED_GROUPS
 		/* Do not remove group that cannot be saved by the opponent. */
-		if (!can_be_rescued(b, group, color, tag))
+		if (!can_be_rescued(b, group, color))
 			return;
 #endif
 		if (can_play_on_lib(b, group, to_play)) {

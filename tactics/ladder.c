@@ -26,7 +26,7 @@ is_border_ladder(board_t *b, group_t laddered)
 	coord_t coord = board_group_info(b, laddered).lib[0];
 	enum stone lcolor = board_at(b, group_base(laddered));
 	
-	if (can_countercapture(b, laddered, NULL, 0))
+	if (can_countercapture(b, laddered, NULL))
 		return false;
 	
 	int x = coord_x(coord), y = coord_y(coord);
@@ -185,8 +185,8 @@ middle_ladder_walk(board_t *b, group_t laddered, enum stone lcolor, coord_t prev
 		});
 
 	/* Check countercaptures */
-	move_queue_t ccq;  mq_init(&ccq);
-	can_countercapture(b, laddered, &ccq, 0);
+	move_queue_t ccq;
+	can_countercapture(b, laddered, &ccq);
 	
 	if (chaser_capture_escapes(b, laddered, lcolor, &ccq))
 		return 0;
