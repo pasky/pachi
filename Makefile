@@ -5,7 +5,7 @@
 # 	make MAC=1 DOUBLE_FLOATING=1
 # or use the short aliases (make fast, make generic ...)
 
-######################### Build #########################
+################################ Build ################################
 
 # Generic build ?
 # If binary will be distributed you need this !
@@ -26,7 +26,7 @@
 
 # MAC=1
 
-#################### Deep Learning ######################
+############################ Deep Learning ############################
 
 # Compile Pachi with dcnn support ?
 # You'll need to install Boost and Caffe libraries.
@@ -41,7 +41,7 @@ DCNN=1
 DCNN_DETLEF=1
 DCNN_DARKFOREST=1
 
-######################## Extras #########################
+############################ Special Builds ###########################
 
 # Fixed board size. Set this to enable more aggressive optimizations
 # if you only play on 19x19. Pachi won't be able to play on other
@@ -75,7 +75,7 @@ DCNN_DARKFOREST=1
 # Compile extra tests ? Enable this to test board implementation.
 # BOARD_TESTS=1
 
-###################### Profiling ########################
+############################## Profiling ##############################
 
 # Enable performance profiling using gprof. Note that this also disables
 # inlining, which allows more fine-grained profile, but may also distort
@@ -89,7 +89,7 @@ DCNN_DARKFOREST=1
 
 # PROFILING=perftools
 
-######################## Install #########################
+############################### Install ###############################
 
 # Target directories when running 'make install' / 'make install-data'.
 # Pachi will look for extra data files (such as dcnn, pattern, joseki or
@@ -109,7 +109,7 @@ CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length
 CXXFLAGS     := -std=c++11
 
 
-##############################################################################
+#########################################################################
 ### CONFIGURATION END
 
 # Main rule + aliases
@@ -141,7 +141,7 @@ double:
 	+@make DOUBLE_FLOATING=1
 
 
-###############################################################################################################
+#######################################################################
 
 MAKEFLAGS += --no-print-directory
 ARCH = $(shell uname -m)
@@ -267,7 +267,7 @@ SUBDIRS   = $(EXTRA_SUBDIRS) uct uct/policy t-unit t-predict engines playout tac
 DATAFILES = patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.gtp
 
 
-###############################################################################################################
+############################################################################################################
 
 LOCALLIBS=$(SUBDIRS:%=%/lib.a)
 $(LOCALLIBS): all-recursive
