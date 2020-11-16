@@ -327,11 +327,14 @@ bool board_is_one_point_eye(board_t *b, coord_t c, enum stone eye_color);
 /* Returns 1pt eye color (can be false-eye) */
 enum stone board_eye_color(board_t *board, coord_t c);
 
+/* For final ownermaps (see board_official_score_details()) */
+#define FO_DAME  S_NONE
+
+/* Scoring functions:  Positive: W wins */
 /* board_official_score() is the scoring method for yielding score suitable
  * for external presentation. For fast scoring of entirely filled boards
  * (e.g. playouts), use board_fast_score(). */
-/* Positive: W wins */
-/* Compare number of stones + 1pt eyes. */
+/* Playout scoring: Compare number of stones + 1pt eyes. */
 floating_t board_fast_score(board_t *board);
 floating_t board_score(board_t *b, int scores[S_MAX]);
 /* Tromp-Taylor scoring, assuming given groups are actually dead. */

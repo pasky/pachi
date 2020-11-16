@@ -268,16 +268,16 @@ board_position_final_full(board_t *b, ownermap_t *ownermap,
 	 * most likely some territories are still open ... */
 	foreach_point(b) {
 		if (board_at(b, c) == S_OFFBOARD) continue;
-		if (final_ownermap[c] != 3)  continue;
+		if (final_ownermap[c] != FO_DAME)  continue;
 		if (ownermap_judge_point(ownermap, c, GJ_THRES) == PJ_SEKI) continue;
 
 		coord_t dame = c;
-		int around[4] = { 0, };
+		int ne[4] = { 0, };
 		foreach_neighbor(b, dame, {
-			around[final_ownermap[c]]++;
+			ne[final_ownermap[c]]++;
 		});		
-		if (around[S_BLACK] + around[3] == 4 ||
-		    around[S_WHITE] + around[3] == 4) {
+		if (ne[S_BLACK] + ne[FO_DAME] == 4 ||
+		    ne[S_WHITE] + ne[FO_DAME] == 4) {
 			static char buf[100];
 			sprintf(buf, "non-final position at %s", coord2sstr(dame));
 			*msg = buf;
