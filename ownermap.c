@@ -7,6 +7,7 @@
 #include "debug.h"
 #include "move.h"
 #include "mq.h"
+#include "tactics/1lib.h"
 #include "ownermap.h"
 
 void
@@ -255,6 +256,7 @@ board_position_final_full(board_t *b, ownermap_t *ownermap,
 		group_t g = group_at(b, c);
 		if (!g || board_group_info(b, g).libs > 1)  continue;
 		if (!border_stone(b, c, final_ownermap))  continue;
+		if (capturing_group_is_snapback(b, g))  continue;
 
 		enum stone color = board_at(b, c);
 		foreach_neighbor(b, board_group_info(b, g).lib[0], {
