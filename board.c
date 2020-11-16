@@ -38,6 +38,7 @@ board_setup(board_t *b)
 
 	memset(b, 0, sizeof(*b));
 
+	b->rules = RULES_CHINESE;
 	move_t m = { pass, S_NONE };
 	for (int i = 0; i < BOARD_LAST_N; i++)
 		last_moven(b, i) = m;

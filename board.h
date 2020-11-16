@@ -87,6 +87,7 @@ typedef struct {
  * should work with rules allowing suicide, just not taking
  * full advantage of them. */
 enum rules {
+	RULES_INVALID,
 	RULES_CHINESE,        /* default */
 	RULES_AGA,
 	RULES_NEW_ZEALAND,

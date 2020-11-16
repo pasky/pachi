@@ -249,7 +249,6 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 	int *first_move = &first_map[1]; // +1 for pass
 
 #if 0
-	board_t bb; bb.size = 9+2;
 	for (tree_node_t *ni = node; ni; ni = ni->parent)
 		fprintf(stderr, "%s ", coord2sstr(node_coord(ni)));
 	fprintf(stderr, "[color %d] update result %d (color %d)\n",
