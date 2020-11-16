@@ -266,6 +266,23 @@ board_position_final_full(board_t *b, ownermap_t *ownermap,
 		});
 	} foreach_point_end;
 
+	/* Can't have b&w dead groups next to each other */
+	if (dead->moves < 2)  goto skip;
+	foreach_point(b) {
+		group_t g = group_at(b, c);
+		if (!g || !mq_has(dead, g))  continue;
+		enum stone other_color = stone_other(board_at(b, c));
+
+		foreach_neighbor(b, c, {
+			group_t g2 = group_at(b, c);
+			if (!g2 || g2 == g || board_at(b, c) != other_color || !mq_has(dead, g2))
+				continue;
+			*msg = "b&w dead groups next to each other";
+			return false;
+		});
+	} foreach_point_end;
+	
+ skip:
 	/* Non-seki dames surrounded by only dames / border / one color are no dame to me,
 	 * most likely some territories are still open ... */
 	foreach_point(b) {
