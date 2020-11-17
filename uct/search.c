@@ -733,7 +733,6 @@ uct_search_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_al
 	move_queue_t dead;
 	bool res = uct_pass_is_safe(u, b, color, pass_all_alive, &dead, msg, true);
 
-	/* Save dead groups for final_status_list dead. */
 	if (res) {
 		u->dead_groups = dead;
 		u->pass_moveno = b->moves + 1;
@@ -803,6 +802,19 @@ uct_search_result(uct_t *u, board_t *b, enum stone color,
 		return NULL;
 	}
 
+	char *msg;
+	
+	/* Pass best move ? Still check if it's safe to do so
+	 * so we get (hopefully) good dead groups for scoring phase. */
+	if (is_pass(*best_coord)) {
+		if (uct_search_pass_is_safe(u, b, color, pass_all_alive, &msg)) {
+			if (UDEBUGL(0)) fprintf(stderr, "<Looks safe enough. Final score: %s>\n", board_official_score_str(b, &u->dead_groups));
+			return best;
+		}
+		if (UDEBUGL(1))	fprintf(stderr, "Pass looks unsafe, we might be screwed (%s)\n", msg);
+		return best;
+	}
+	
 	bool opponent_passed = is_pass(last_move(b).coord);
 	bool pass_first = uct_pass_first(u, b, color, pass_all_alive, *best_coord);
 	if (UDEBUGL(2) && pass_first)  fprintf(stderr, "pass first ok\n");
@@ -812,15 +824,9 @@ uct_search_result(uct_t *u, board_t *b, enum stone color,
 	 * For option stones_only, we pass only when there is nothing else to do,
 	 * to show how to maximize score. */
 	if ((opponent_passed || pass_first) &&
-	    !is_pass(*best_coord) &&
 	    b->moves > 10 && b->rules != RULES_STONES_ONLY) {
-		char *msg;
 		if (uct_search_pass_is_safe(u, b, color, pass_all_alive, &msg)) {
-			if (UDEBUGL(0)) {
-				float score = -1 * board_official_score(b, &u->dead_groups);
-				fprintf(stderr, "<Will rather pass, looks safe enough. Final score: %s%.1f>\n",
-					(score > 0 ? "B+" : "W+"), fabs(score));
-			}
+			if (UDEBUGL(0))  fprintf(stderr, "<Will rather pass, looks safe enough. Final score: %s>\n", board_official_score_str(b, &u->dead_groups));
 			*best_coord = pass;
 			return NULL;
 		}
