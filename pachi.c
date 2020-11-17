@@ -41,6 +41,7 @@ static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time
 
 char *pachi_exe = NULL;
 int   debug_level = 3;
+int   saved_debug_level;
 bool  debug_boardprint = true;
 long  verbose_logs = 0;
 char *forced_ruleset = NULL;

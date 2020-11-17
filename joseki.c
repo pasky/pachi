@@ -268,8 +268,7 @@ joseki_load(int bsize)
 
 	joseki_dict = joseki_init(bsize);
 
-	int saved_debug_level = debug_level;
-	debug_level = 0;   /* quiet */
+	DEBUG_QUIET();
 	board_t *b = board_new(bsize, NULL);
 	engine_t e;  engine_init(&e, E_JOSEKISCAN, NULL, NULL);
 	time_info_t ti[S_MAX];
@@ -289,7 +288,7 @@ joseki_load(int bsize)
 	}
 	engine_done(&e);
 	board_delete(&b);
-	debug_level = saved_debug_level;
+	DEBUG_QUIET_END();
 	int variations = gtp.played_games;
 	
 	if (DEBUGL(2))  fprintf(stderr, "Loaded joseki dictionary for %ix%i (%i variations).\n", bsize, bsize, variations);

@@ -506,10 +506,10 @@ slave_check_progress(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 
 	bool keep_looking = !uct_search_check_stop(u, b, color, u->t, ti, s, played_games);
 
+	DEBUG_QUIET();
 	coord_t best;
-	int debug_level = u->debug_level;  u->debug_level = 0;	/* be quiet */
 	uct_search_result(u, b, color, u->pass_all_alive, played_games, s->base_playouts, &best);
-	u->debug_level = debug_level;	
+	DEBUG_QUIET_END();
 
 	/* Give heavy weight to pass and resign */
 	if (best < 0)  *force = best;
