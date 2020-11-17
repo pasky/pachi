@@ -174,8 +174,25 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 			return true;
 		init_pass_is_safe_groups();  /* revert changes */
 	}
-
-	/* Strict mode then: don't pass until everything is clarified. */
+	
+	/* smart pass: brute force it then. try any combination that works. */
+	if (guess_unclear_ok && unclear.moves && unclear.moves < 10) {
+		int n = (1 << unclear_orig.moves);
+		for (int k = 0; k < n; k++) {
+			mq_init(&unclear);  /* all unpicked groups -> alive */
+			
+			for (unsigned int i = 0; i < unclear_orig.moves; i++)
+				if (!(k & (1 << i)))
+					mq_add(&dead_extra, unclear_orig.move[i], 0); /* picked groups -> dead */
+			if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
+					 dead, &dead_extra, &unclear, true, ""))
+				return true;
+			init_pass_is_safe_groups();  /* revert changes */
+		}
+		return false;
+	}
+	
+	/* Strict mode: don't pass until everything is clarified. */
 	return pass_is_safe(u, b, color, pass_all_alive, msg, log,
 			    dead, &dead_extra, &unclear, false, "");
 }
