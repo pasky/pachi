@@ -263,6 +263,15 @@ show_title_if_needed()
 		if (DEBUGL(1))  fprintf(stderr, "OK\n");		\
 } while(0)
 
+/* Print test result, show returned value if it fails */
+#define PRINT_RES_VAL(format, value)  do {			\
+	if (rres != eres) {					\
+		show_title_if_needed();				\
+		if (DEBUGL(0))  fprintf(stderr, "got " format "  FAILED %s\n", value, (optional ? "(optional)" : "")); \
+	} else								\
+		if (DEBUGL(1))  fprintf(stderr, "OK\n");		\
+} while(0)
+
 
 static bool
 test_bad_selfatari(board_t *b, char *arg)
@@ -519,6 +528,34 @@ test_pass_is_safe(board_t *b, char *arg)
 	return   (rres == eres);
 }
 
+/* syntax: final_score expected_result */
+static bool
+test_final_score(board_t *b, char *arg)
+{
+	next_arg(arg);
+	assert(str_prefix("B+", arg) || str_prefix("W+", arg));
+	assert(isdigit(arg[2]) || arg[2] == '.');
+	float sign = (str_prefix("B+", arg) ? -1 : 1);
+	float eres = sign * atof(arg + 2);
+	args_end();
+
+	engine_t *e = new_engine(E_UCT, "", b);
+	move_queue_t dead;
+	gtp_t gtp;  gtp_init(&gtp);
+	engine_dead_groups(e, &gtp, b, &dead);
+		
+	float rres = board_official_score(b, &dead);
+
+	board_print_official_ownermap(b, &dead);
+	board_printed = true;
+	PRINT_TEST(b, "final_score %s...\t", arg);
+
+	engine_done(e);
+	
+	PRINT_RES_VAL("%s", board_official_score_str(b, &dead));
+	return (rres == eres);
+}
+
 /* Sample moves played by moggy in a given position.
  * Board last move matters quite a lot and must be set.
  * 
@@ -697,6 +734,7 @@ static t_unit_cmd commands[] = {
 	{ "moggy status",           test_moggy_status,          },
 	{ "false_eye_seki",         test_false_eye_seki,        },
 	{ "pass_is_safe",           test_pass_is_safe,          },
+	{ "final_score",            test_final_score,           },
 #ifdef BOARD_TESTS
 	{ "board_undo_stress_test", board_undo_stress_test,     },
 	{ "board_regtest",          board_regression_test,      },
