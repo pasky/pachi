@@ -162,7 +162,6 @@ engine_reset(engine_t *e, board_t *b)
 	engine_options_copy(&options, &e->options);  /* Save options. */
 	
 	e->options.n = 0;
-	b->es = NULL;
 	engine_done(e);
 	
 	engine_options_copy(&e->options, &options);  /* Restore options. */

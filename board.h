@@ -195,9 +195,6 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 	char *fbookfile;
 	struct fbook *fbook;		   /* Opening book */
 	 
-	void *es;                          /* Engine-specific state; persistent through board development.
-					    * reset only at clear_board. */
-	
 	void *ps;                          /* Playout-specific state; persistent through board development,
 					    * initialized by play_random_game() and free()'d at board destroy time */
 } board_t;

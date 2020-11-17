@@ -82,9 +82,7 @@ setup_dynkomi(uct_t *u, board_t *b, enum stone to_play)
 void
 uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 {
-	if (u->t) {
-		/* Verify that we have sane state. */
-		assert(b->es == u);
+	if (u->t) {  /* Verify that we have sane state. */
 		assert(u->t && b->moves);
 		assert(node_coord(u->t->root) == last_move(b).coord);
 		assert(u->t->root_color == last_move(b).color);
@@ -93,11 +91,8 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 #ifdef DISTRIBUTED
 		uct_htable_reset(u->t);
 #endif
-	} else {
-		/* We need fresh state. */
-		b->es = u;
+	} else  /* We need fresh state. */
 		setup_state(u, b, color);
-	}
 
 	ownermap_init(&u->ownermap);
 	u->allow_pass = (b->moves > board_earliest_pass(b));  /* && dames < 10  if using patterns */
@@ -158,7 +153,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ch
 static void
 uct_board_print(engine_t *e, board_t *b, FILE *f)
 {
-	uct_t *u = (uct_t*)b->es;
+	uct_t *u = (uct_t*)e->data;
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
@@ -182,7 +177,7 @@ uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color)
 static ownermap_t*
 uct_ownermap(engine_t *e, board_t *b)
 {
-	uct_t *u = (uct_t*)b->es;
+	uct_t *u = (uct_t*)e->data;
 	
 	/* Make sure ownermap is well-seeded. */
 	uct_mcowner_playouts(u, b, board_to_play(b));
