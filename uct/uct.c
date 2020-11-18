@@ -1460,7 +1460,7 @@ uct_state_init(engine_t *e, board_t *b)
 }
 
 void
-engine_uct_init(engine_t *e, board_t *b)
+uct_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "UCT";
 	e->setoption = uct_setoption;

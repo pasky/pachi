@@ -42,7 +42,7 @@ dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 }	
 
 void
-engine_dcnn_init(engine_t *e, board_t *b)
+dcnn_engine_init(engine_t *e, board_t *b)
 {
 	dcnn_init(b);
 	if (!caffe_ready()) {

@@ -4,7 +4,7 @@
 #include "engine.h"
 #include "../pattern.h"
 
-void engine_pattern_init(engine_t *e, board_t *b);
+void pattern_engine_init(engine_t *e, board_t *b);
 pattern_config_t *pattern_engine_get_pc(engine_t *e);
 bool pattern_engine_matched_locally(engine_t *e);
 

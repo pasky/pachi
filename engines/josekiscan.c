@@ -137,7 +137,7 @@ josekiscan_done(engine_t *e)
 }
 
 void
-engine_josekiscan_init(engine_t *e, board_t *b)
+josekiscan_engine_init(engine_t *e, board_t *b)
 {
 	josekiscan_t *j = josekiscan_state_init(e);
 	e->name = "Josekiscan";

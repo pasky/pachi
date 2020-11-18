@@ -99,6 +99,6 @@ typedef struct {
 #define reply_disabled(id) ((id) < DIST_GAMELEN)
 
 char *path2sstr(path_t path, board_t *b);
-void engine_distributed_init(engine_t *e, board_t *b);
+void distributed_engine_init(engine_t *e, board_t *b);
 
 #endif

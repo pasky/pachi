@@ -103,24 +103,24 @@ typedef struct {
 
 /* Must match order in engine.h */
 engine_map_t engines[] = {
-	{ E_UCT,         "uct",         engine_uct_init,            1 },
+	{ E_UCT,         "uct",         uct_engine_init,            1 },
 #ifdef DCNN
-	{ E_DCNN,        "dcnn",        engine_dcnn_init,           1 },
+	{ E_DCNN,        "dcnn",        dcnn_engine_init,           1 },
 #endif
-	{ E_PATTERN,     "pattern",     engine_pattern_init,        1 },
-	{ E_PATTERNSCAN, "patternscan", engine_patternscan_init,    0 },
-	{ E_JOSEKI,      "joseki",      engine_joseki_init,         1 },
-	{ E_JOSEKISCAN,  "josekiscan",  engine_josekiscan_init,     0 },
-	{ E_RANDOM,      "random",      engine_random_init,         1 },
-	{ E_REPLAY,      "replay",      engine_replay_init,         1 },
-	{ E_MONTECARLO,  "montecarlo",  engine_montecarlo_init,     1 },
+	{ E_PATTERN,     "pattern",     pattern_engine_init,        1 },
+	{ E_PATTERNSCAN, "patternscan", patternscan_engine_init,    0 },
+	{ E_JOSEKI,      "joseki",      joseki_engine_init,         1 },
+	{ E_JOSEKISCAN,  "josekiscan",  josekiscan_engine_init,     0 },
+	{ E_RANDOM,      "random",      random_engine_init,         1 },
+	{ E_REPLAY,      "replay",      replay_engine_init,         1 },
+	{ E_MONTECARLO,  "montecarlo",  montecarlo_engine_init,     1 },
 #ifdef DISTRIBUTED
-	{ E_DISTRIBUTED, "distributed", engine_distributed_init,    1 },
+	{ E_DISTRIBUTED, "distributed", distributed_engine_init,    1 },
 #endif
 
 /* Alternative names */
-	{ E_PATTERN,     "patternplay", engine_pattern_init,        1 },  /* backwards compatibility */
-	{ E_JOSEKI,      "josekiplay",  engine_joseki_init,         1 },
+	{ E_PATTERN,     "patternplay", pattern_engine_init,        1 },  /* backwards compatibility */
+	{ E_JOSEKI,      "josekiplay",  joseki_engine_init,         1 },
 	
 	{ 0, 0, 0, 0 }
 };

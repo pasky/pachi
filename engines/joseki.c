@@ -32,7 +32,7 @@ joseki_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color
 }
 
 void
-engine_joseki_init(engine_t *e, board_t *b)
+joseki_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "Joseki";
 	e->comment = "I select joseki moves blindly, if there are none i just pass.";

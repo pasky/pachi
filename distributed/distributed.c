@@ -585,7 +585,7 @@ distributed_state_init(engine_t *e, board_t *b)
 }
 
 void
-engine_distributed_init(engine_t *e, board_t *b)
+distributed_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "Distributed";
 	e->comment = "If you believe you have won but I am still playing, "
