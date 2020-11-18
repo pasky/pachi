@@ -129,6 +129,16 @@ engine_name_to_id(const char *name)
 	return E_MAX;
 }
 
+static char*
+supported_engines(bool show_all)
+{
+	static_strbuf(buf, 512);
+	for (int i = 0; engines[i].name; i++)
+		if (show_all || engines[i].show)
+			strbuf_printf(buf, "%s%s", engines[i].name, (engines[i+1].name ? ", " : ""));
+	return buf->str;
+}
+
 static void
 init()
 {
@@ -152,8 +162,10 @@ usage()
 	fprintf(stderr,
 		"Options: \n"
                 "      --compile-flags               show pachi's compile flags \n"
-		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
-                "                                    uct, dcnn, patternplay, replay, random, montecarlo, distributed \n"
+		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n");
+	fprintf(stderr,
+		"                                    %s \n", supported_engines(false));
+	fprintf(stderr,
 		"  -h, --help                        show usage \n"
 		"  -s, --seed RANDOM_SEED            set random seed \n"
 		"  -u, --unit-test FILE              run unit tests \n"
@@ -217,11 +229,10 @@ usage()
 		" \n"
 		"Engine args: \n"
 		"  Comma/space separated engine specific options as in:\n"
-		"      pachi threads=8 max_tree_size=3072 pondering \n"
-		"      pachi threads=8,max_tree_size=3072,pondering            (pachi < 12.50) \n"
+		"      pachi threads=8 resign_threshold=0.25 pondering \n"
+		"      pachi threads=8,resign_threshold=0.25,pondering            (pachi < 12.50) \n"
 		"\n"
 		"  See respective engines for details. Most common options for uct: \n"
-		"      max_tree_size=100             use max 100 Mb of memory for tree search (default: unlimited) \n"
 		"      resign_threshold=0.25         resign if winrate < 25%% (default: 20%%) \n"
 		"      reportfreq=1s                 show search progress every second (default: 1000 playouts) \n"
 		"      threads=4                     use 4 threads for tree search (default: #cores) \n"
