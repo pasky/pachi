@@ -15,9 +15,9 @@
 #include "engines/montecarlo.h"
 #include "engines/random.h"
 #include "engines/patternscan.h"
-#include "engines/patternplay.h"
+#include "engines/pattern.h"
 #include "engines/josekiscan.h"
-#include "engines/josekiplay.h"
+#include "engines/joseki.h"
 #include "engines/dcnn.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
@@ -107,9 +107,9 @@ engine_map_t engines[] = {
 #ifdef DCNN
 	{ E_DCNN,        "dcnn",        engine_dcnn_init,           1 },
 #endif
-	{ E_PATTERNPLAY, "patternplay", engine_patternplay_init,    1 },
+	{ E_PATTERN,     "pattern",     engine_pattern_init,        1 },
 	{ E_PATTERNSCAN, "patternscan", engine_patternscan_init,    0 },
-	{ E_JOSEKIPLAY,  "josekiplay",  engine_josekiplay_init,     1 },
+	{ E_JOSEKI,      "joseki",      engine_joseki_init,         1 },
 	{ E_JOSEKISCAN,  "josekiscan",  engine_josekiscan_init,     0 },
 	{ E_RANDOM,      "random",      engine_random_init,         1 },
 	{ E_REPLAY,      "replay",      engine_replay_init,         1 },
@@ -117,6 +117,11 @@ engine_map_t engines[] = {
 #ifdef DISTRIBUTED
 	{ E_DISTRIBUTED, "distributed", engine_distributed_init,    1 },
 #endif
+
+/* Alternative names */
+	{ E_PATTERN,     "patternplay", engine_pattern_init,        1 },  /* backwards compatibility */
+	{ E_JOSEKI,      "josekiplay",  engine_joseki_init,         1 },
+	
 	{ 0, 0, 0, 0 }
 };
 
@@ -133,7 +138,7 @@ static char*
 supported_engines(bool show_all)
 {
 	static_strbuf(buf, 512);
-	for (int i = 0; engines[i].name; i++)
+	for (int i = 0; i < E_MAX; i++)  /* Don't list alt names */
 		if (show_all || engines[i].show)
 			strbuf_printf(buf, "%s%s", engines[i].name, (engines[i+1].name ? ", " : ""));
 	return buf->str;

@@ -22,9 +22,9 @@ enum engine_id {
 #ifdef DCNN
 	E_DCNN,
 #endif
-	E_PATTERNPLAY,
+	E_PATTERN,
 	E_PATTERNSCAN,
-	E_JOSEKIPLAY,
+	E_JOSEKI,
 	E_JOSEKISCAN,
 	E_RANDOM,
 	E_REPLAY,

@@ -10,8 +10,8 @@
 #include "joseki.h"
 #include "uct/uct.h"
 #include "pattern.h"
-#include "engines/patternplay.h"
-#include "engines/josekiplay.h"
+#include "engines/pattern.h"
+#include "engines/joseki.h"
 #include "patternsp.h"
 #include "patternprob.h"
 
@@ -516,7 +516,7 @@ enum parse_code
 cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	if (!using_joseki(b)) {  gtp_reply(gtp, "TEXT Not using joseki");  return P_OK;  }
-	if (!joseki_engine)   joseki_engine = new_engine(E_JOSEKIPLAY, NULL, b);
+	if (!joseki_engine)   joseki_engine = new_engine(E_JOSEKI, NULL, b);
 
 	enum stone color = board_to_play(b);
 	float joseki_map[BOARD_MAX_COORDS];
@@ -566,23 +566,23 @@ cmd_gogui_joseki_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *g
 static engine_t *pattern_engine = NULL;
 
 static void
-init_patternplay_engine(board_t *b)
+init_pattern_engine(board_t *b)
 {
 	char args[] = "mcowner_fast=0";
-	pattern_engine = new_engine(E_PATTERNPLAY, args, b);
+	pattern_engine = new_engine(E_PATTERN, args, b);
 }
 
 enum parse_code
 cmd_gogui_pattern_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   init_patternplay_engine(b);
+	if (!pattern_engine)   init_pattern_engine(b);
 
 	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
 	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_NBEST, GOGUI_BEST_MOVES, GOGUI_RESCALE_NONE);
 
-	bool locally = patternplay_matched_locally(pattern_engine);
+	bool locally = pattern_engine_matched_locally(pattern_engine);
 	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	return P_OK;
 }
@@ -590,14 +590,14 @@ cmd_gogui_pattern_best(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_pattern_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   init_patternplay_engine(b);
+	if (!pattern_engine)   init_pattern_engine(b);
 
 	enum stone color = board_to_play(b);
 
 	gtp_printf(gtp, "");  /* gtp prefix */	
 	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_COLORS, GOGUI_RESCALE_LOG);
 
-	bool locally = patternplay_matched_locally(pattern_engine);
+	bool locally = pattern_engine_matched_locally(pattern_engine);
 	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	return P_OK;
 }
@@ -605,14 +605,14 @@ cmd_gogui_pattern_colors(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   init_patternplay_engine(b);
+	if (!pattern_engine)   init_pattern_engine(b);
 
 	enum stone color = board_to_play(b);	
 
 	gtp_printf(gtp, "");   /* gtp prefix */
 	gogui_best_moves(stdout, pattern_engine, b, ti, color, GOGUI_MANY, GOGUI_BEST_WINRATES, GOGUI_RESCALE_NONE);
 
-	bool locally = patternplay_matched_locally(pattern_engine);
+	bool locally = pattern_engine_matched_locally(pattern_engine);
 	printf("TEXT Matching Locally: %s\n", (locally ? "Yes" : "No"));
 	return P_OK;
 }
@@ -621,7 +621,7 @@ cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   init_patternplay_engine(b);
+	if (!pattern_engine)   init_pattern_engine(b);
 
 	enum stone color = board_to_play(b);
 	
@@ -632,7 +632,7 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	ownermap_t ownermap;
 	pattern_t p;
 	move_t m = move(coord, color);
-	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
+	pattern_config_t *pc = pattern_engine_get_pc(pattern_engine);
 	mcowner_playouts(b, color, &ownermap);
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
 	pattern_match(pc, &p, b, &m, &ownermap, locally);
@@ -653,7 +653,7 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   init_patternplay_engine(b);
+	if (!pattern_engine)   init_pattern_engine(b);
 
 	enum stone color = board_to_play(b);	
 	char *arg;  gtp_arg(arg);
@@ -663,7 +663,7 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	ownermap_t ownermap;
 	pattern_t p;
 	move_t m = move(coord, color);
-	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
+	pattern_config_t *pc = pattern_engine_get_pc(pattern_engine);
 	mcowner_playouts(b, color, &ownermap);
 	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
 	pattern_match(pc, &p, b, &m, &ownermap, locally);
@@ -680,8 +680,8 @@ static int spatial_dist = 6;
 enum parse_code
 cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   init_patternplay_engine(b);
-	pattern_config_t *pc = patternplay_get_pc(pattern_engine);
+	if (!pattern_engine)   init_pattern_engine(b);
+	pattern_config_t *pc = pattern_engine_get_pc(pattern_engine);
 
 	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
