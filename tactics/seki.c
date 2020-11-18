@@ -10,7 +10,53 @@
 #include "debug.h"
 #include "tactics/1lib.h"
 #include "tactics/dragon.h"
+#include "tactics/selfatari.h"
 #include "tactics/seki.h"
+
+
+/* Breaking local seki at c:
+ *   - 2 opposing groups with 2 libs
+ *   - c             selfatari for both
+ *   - our other lib selfatari for both
+ *   - opp other lib selfatari for both (if different)
+ *
+ * This way it works for all kinds of sekis whether the liberties are shared
+ * or not, adjacent or not, in eyes etc (see t-unit/moggy_seki.t for example).
+ * Symmetric so no need to pass color */
+bool
+breaking_local_seki(board_t *b, selfatari_state_t *s, group_t c)
+{
+	assert(board_at(b, c) == S_NONE);
+	if (!s->groupcts[S_BLACK] || !s->groupcts[S_WHITE])
+		return false;
+
+	/* 2 opposing groups with 2 libs */
+	group_t g  = s->groupids[S_BLACK][0];        assert(g  && board_at(b, g)  == S_BLACK);
+	group_t g2 = s->groupids[S_WHITE][0];        assert(g2 && board_at(b, g2) == S_WHITE);
+	if (board_group_info(b, g).libs  != 2 ||
+	    board_group_info(b, g2).libs != 2)
+		return false;
+	
+	/* Play at c selfatari for both */
+	if (!(is_selfatari(b, S_BLACK, c) &&
+	      is_selfatari(b, S_WHITE, c)))
+		return false;
+
+	/* Play at our other lib also */
+	coord_t other  = board_group_other_lib(b, g, c);
+	if (!(is_selfatari(b, S_BLACK, other) &&
+	      is_selfatari(b, S_WHITE, other)))
+		return false;
+
+	/* Play at opp other lib also, if different */
+	coord_t other2 = board_group_other_lib(b, g2, c);
+	if (other2 != other &&
+	    !(is_selfatari(b, S_BLACK, other2) &&
+	      is_selfatari(b, S_WHITE, other2)))
+		return false;
+
+	return true;
+}
 
 
 /*   . . O O O |   We're black.
@@ -18,7 +64,9 @@
  *   O X X X * |   Are we about to break false eye seki ?
  *   O X O O X |     - b about to fill false eye
  *   O X . O . |     - b groups 2 libs
- *  -----------+     - dead shape after filling eye    */
+ *  -----------+     - dead shape after filling eye    
+ *
+ *  breaking_local_seki() doesn't handle this, not selfatari... */
 bool
 breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 {
