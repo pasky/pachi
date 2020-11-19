@@ -190,82 +190,6 @@ engine_ownermap(engine_t *e, board_t *b)
 	return (e->ownermap ? e->ownermap(e, b) : NULL);
 }
 
-/* Ask GnuGo for dead groups.
- * GnuGo is really good at scoring finished games, does better than
- * playouts which get tripped by some sekis in certain situations.
- * Right now Pachi gets about 95% of games right, GnuGo 99%. */
-static void
-gnugo_dead_groups(gtp_t *gtp, board_t *b, move_queue_t *q)
-{
-	if (DEBUGL(3)) fprintf(stderr, "using gnugo for dead stones\n");
-		
-	/* Generate gtp commands for game */
-	
-	char file_in[1024] = "pachi.XXXXXX";
-	int fd = pachi_mkstemp(file_in, sizeof(file_in));	if (fd == -1)  fail("mkstemp");
-	FILE *f = fdopen(fd, "w");				if (!f)        fail("fdopen");
-	fprintf(f, "boardsize %i\n", board_rsize(b));
-	fprintf(f, "clear_board\n");
-	fprintf(f, "komi %.1f\n", b->komi);
-	/* don't bother with handicap, only care about dead stones */		
-	for (int i = 0; i < gtp->moves; i++)
-		fprintf(f, "play %c %s\n", stone2str(gtp->move[i].color)[0], coord2str(gtp->move[i].coord));
-	fprintf(f, "final_status_list dead\n");
-	fclose(f);  f = NULL;  fd = -1;
-
-	char cmd[256];
-	if (DEBUGL(4)) {
-		fprintf(stderr, "---------------- in -----------------\n");
-		snprintf(cmd, sizeof(cmd), "cat %s 1>&2", file_in);
-		if (system(cmd) != 0)		warning("system(%s) failed\n", cmd);
-		fprintf(stderr, "-------------------------------------\n");
-	}
-	
-	/* And fire up GnuGo on it */
-	
-	char file_out[1024] = "pachi.XXXXXX";
-	fd = pachi_mkstemp(file_out, sizeof(file_out));		if (fd == -1)  fail("mkstemp");
-	close(fd);  fd = -1;
-	char *rules;
-	if      (b->rules == RULES_JAPANESE)  rules = "--japanese-rules";
-	else if (b->rules == RULES_CHINESE)   rules = "--chinese-rules";
-	else die("rules must be japanese or chinese when scoring with gnugo\n");
-	snprintf(cmd, sizeof(cmd), "%s --mode gtp %s < %s > %s", gnugo_exe, rules, file_in, file_out);
-	if (DEBUGL(4))  fprintf(stderr, "cmd: '%s'\n", cmd);
-	double time_start = time_now();
-	if (system(cmd) != 0)  die("couldn't run gnugo\n");
-	if (DEBUGL(2)) fprintf(stderr, "gnugo dead stones in %.1fs\n", time_now() - time_start);
-
-	if (DEBUGL(4)) {
-		fprintf(stderr, "---------------- out -----------------\n");
-		snprintf(cmd, sizeof(cmd), "cat %s 1>&2", file_out);
-		if (system(cmd) != 0)		warning("system(%s) failed\n", cmd);
-		fprintf(stderr, "-------------------------------------\n");
-	}
-	
-	/* Extract output */
-	
-	f = fopen(file_out, "r");      if (!f) fail("fopen");
-	char buf[256];
-	while (fgets(buf, sizeof(buf), f)) {
-		char *line = buf;
-		if (!strcmp(line, "= \n") || !strcmp(line, "\n"))  continue;
-		
-		if (line[0] == '?')          die("Eeeek, some gnugo commands failed !\n");
-		if (str_prefix("= ", line))  line += 2;  /* first line, eat up prefix */
-
-		/* One group per line, just get first coord. */
-		assert(line[0] && isalpha(line[0]));
-		coord_t c = str2coord_for(line, board_rsize(b));  assert(c != pass);
-		group_t g = group_at(b, c);   assert(g);
-		mq_add(q, g, 0);
-	}
-	fclose(f);  f = NULL;
-		
-	unlink(file_in);
-	unlink(file_out);
-}
-
 static void
 print_dead_groups(board_t *b, move_queue_t *dead)
 {
@@ -280,7 +204,7 @@ print_dead_groups(board_t *b, move_queue_t *dead)
 	}
 }
 
-/* Ask engine for dead stones, or use gnugo if --accurate-scoring */
+/* Ask engine for dead stones */
 void
 engine_dead_groups(engine_t *e, gtp_t *gtp, board_t *b, move_queue_t *q)
 {
@@ -289,10 +213,7 @@ engine_dead_groups(engine_t *e, gtp_t *gtp, board_t *b, move_queue_t *q)
 	/* Tell engine to stop pondering, the game is probably over. */
 	if (e->stop)  e->stop(e);
 	
-	if (gtp->accurate_scoring)
-		gnugo_dead_groups(gtp, b, q);
-	else
-		if (e->dead_groups)  e->dead_groups(e, b, q);
+	if (e->dead_groups)  e->dead_groups(e, b, q);
 	/* else we return empty list - i.e. engine not supporting
 	 * this assumes all stones alive at the game end. */
 

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <stdbool.h>
 
 #undef MIN
 #undef MAX
@@ -201,9 +200,6 @@ int strbuf_printf(strbuf_t *buf, const char *format, ...)
 /* like mkstemp() but takes care of creating file in system's temp directory 
  * on return @pattern contains the full path to the file. */
 int pachi_mkstemp(char *pattern, size_t max_size);
-
-extern char *gnugo_exe;
-bool check_gnugo();
 
 
 #endif

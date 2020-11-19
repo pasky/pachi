@@ -48,7 +48,6 @@ char *forced_ruleset = NULL;
 
 static char *gtp_port = NULL;
 static bool  nopassfirst = false;
-static int   accurate_scoring_wanted = 0;
 
 static void
 network_init()
@@ -63,36 +62,6 @@ bool
 pachi_nopassfirst(board_t *b)
 {
 	return (nopassfirst && b->rules == RULES_CHINESE);
-}
-
-bool
-pachi_set_rules(gtp_t *gtp, board_t *b, const char *name)
-{
-	if (gtp->accurate_scoring &&   /* GnuGo handles japaneses or chinese */
-	    b->rules != RULES_JAPANESE && b->rules != RULES_CHINESE)
-		die("--accurate-scoring: rules must be japanese or chinese\n");
-
-	return board_set_rules(b, name);
-}
-
-static void
-accurate_scoring_init(gtp_t *gtp, board_t *b) {
-	if (!accurate_scoring_wanted) {
-		if (DEBUGL(1)) fprintf(stderr, "Scoring: using mcts (possibly inaccurate)\n");
-		return;
-	}
-	
-	if (check_gnugo()) {
-		gtp->accurate_scoring = true;
-		pachi_set_rules(gtp, b, rules2str(b->rules));  /* recheck rules */
-		if (DEBUGL(1)) fprintf(stderr, "Scoring: using gnugo (accurate)\n");
-		return;
-	}
-	
-	if (accurate_scoring_wanted > 1)  /* required ? */
-		die("Couldn't find gnugo, needed for --accurate-scoring. Aborting.\n");
-	else
-		if (DEBUGL(1)) warning("WARNING: gnugo not found, using mcts to compute dead stones (possibly inaccurate)\n");
 }
 
 typedef struct {
@@ -185,13 +154,11 @@ usage()
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
 		"KGS: \n"
-		"      --accurate-scoring            use GnuGo to compute dead stones at the end. otherwise expect \n"
-		"                                    ~5%% games to be scored incorrectly. recommended for online play \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
 		"      --kgs-chat                    enable kgs-chat cmd (kgsGtp 3.5.11 only, crashes 3.5.20+) \n"
 		"      --nopassfirst                 don't pass first when playing chinese \n"
 		"      --kgs                         use this when playing on kgs, \n"
-		"                                    enables --nopassfirst, and --accurate-scoring if gnugo is found \n"
+		"                                    enables --nopassfirst \n"
 		"Logs / IO: \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
@@ -282,7 +249,6 @@ show_version(FILE *s)
 #define OPT_KGS_CHAT	      272
 
 static struct option longopts[] = {
-	{ "accurate-scoring",   no_argument,       0, OPT_ACCURATE_SCORING },	
 	{ "chatfile",           required_argument, 0, 'c' },
 	{ "compile-flags",      no_argument,       0, OPT_COMPILE_FLAGS },
 	{ "debug-level",        required_argument, 0, 'd' },
@@ -347,9 +313,6 @@ int main(int argc, char *argv[])
 	/* Leading ':' -> we handle error messages. */
 	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v::", longopts, &option_index)) != -1) {
 		switch (opt) {
-			case OPT_ACCURATE_SCORING:
-				accurate_scoring_wanted = 2; /* required */
-				break;
 			case 'c':
 				chatfile = strdup(optarg);
 				break;
@@ -390,7 +353,6 @@ int main(int argc, char *argv[])
 			case OPT_KGS:
 				gtp->kgs = true;                /* Show engine comment in version. */
 				nopassfirst = true;             /* --nopassfirst */
-				accurate_scoring_wanted = 1;    /* use gnugo to get dead stones, if possible */
 				break;
 			case OPT_KGS_CHAT:
 				gtp->kgs_chat = true;
@@ -493,11 +455,10 @@ int main(int argc, char *argv[])
 
 	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
 	if (forced_ruleset) {
-		if (!pachi_set_rules(gtp, b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
+		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
 	}
 	gtp_internal_init(gtp);
-	accurate_scoring_init(gtp, b);
 
 	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_default;

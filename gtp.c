@@ -340,7 +340,7 @@ cmd_kgs_rules(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		return P_OK;
 	}
 	
-	if (!pachi_set_rules(gtp, b, arg))
+	if (!board_set_rules(b, arg))
 		gtp_error(gtp, "unknown rules");
 
 	return P_OK;
