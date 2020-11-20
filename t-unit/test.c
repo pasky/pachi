@@ -255,7 +255,7 @@ show_title_if_needed()
 
 
 static bool
-test_selfatari(board_t *b, char *arg)
+test_bad_selfatari(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -265,7 +265,7 @@ test_selfatari(board_t *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	PRINT_TEST(b, "bad_selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_bad_selfatari(b, color, c);
@@ -275,7 +275,7 @@ test_selfatari(board_t *b, char *arg)
 }
 
 static bool
-test_selfatari_really_bad(board_t *b, char *arg)
+test_really_bad_selfatari(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -285,7 +285,7 @@ test_selfatari_really_bad(board_t *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "selfatari_really_bad %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	PRINT_TEST(b, "really_bad_selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_really_bad_selfatari(b, color, c);
@@ -657,9 +657,8 @@ typedef struct {
 } t_unit_cmd;
 
 static t_unit_cmd commands[] = {
-	{ "selfatari",              test_selfatari,             },
-	{ "sar",                    test_selfatari,             },  /* alias */
-	{ "selfatari_really_bad",   test_selfatari_really_bad,  },	
+	{ "bad_selfatari",          test_bad_selfatari,         },
+	{ "really_bad_selfatari",   test_really_bad_selfatari,  },
 	{ "ladder",                 test_ladder,                },
 	{ "ladder_any",             test_ladder_any,            },
 	{ "wouldbe_ladder",         test_wouldbe_ladder,        },
@@ -677,6 +676,11 @@ static t_unit_cmd commands[] = {
 	{ "moggy_regtest",          moggy_regression_test,      },
 	{ "spatial_regtest",        spatial_regression_test,    },
 #endif
+
+/* Aliases */
+	{ "sar",                    test_bad_selfatari,             },  /* backward compatibility */
+	{ "rbsar",                  test_really_bad_selfatari,      },
+	
 	{ 0, 0 }
 };
 
