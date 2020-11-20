@@ -15,8 +15,8 @@ test: FORCE
 		make test_moggy test_spatial test_board; \
 	fi
 
-	@make test_gtp
 	./run_tests
+	@make test_gtp
 
 	@echo -n "Testing uct genmove...   "
 	@ ../pachi -d0 -t =1000 < ../gtp/genmove.gtp  2>pachi.log >/dev/null

@@ -119,6 +119,26 @@ set_komi(board_t *b, char *arg)
 }
 
 static void
+set_rules(board_t *b, char *arg)
+{
+	next_arg(arg);
+	bool r = board_set_rules(b, arg);
+	if (!r)  die("bad rules: %s\n", arg);
+}
+
+static void
+set_passes(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	assert(color != S_NONE);
+	next_arg(arg);
+	assert(isdigit(*arg));
+	int n = atoi(arg);
+	b->passes[color] += n;
+}
+
+static void
 set_handicap(board_t *b, char *arg)
 {
 	next_arg(arg);	
@@ -135,6 +155,7 @@ board_load(board_t *b, FILE *f, char *arg)
 	move_t last_move = move(pass, S_NONE);
 	last_move_set = false;
 	board_resize(b, size);
+	b->rules = RULES_CHINESE;  /* reset rules in case they got changed */
 	board_clear(b);
 	for (int y = size - 1; y >= 0; y--) {
 		char line[256];
@@ -145,6 +166,8 @@ board_load(board_t *b, FILE *f, char *arg)
 		char *cmd = line;
 		if ('a' <= line[0] && line[0] <= 'z')  init_arg(line);
 		if (!strcmp("komi", cmd))     {  set_komi(b, next);     y++; continue;  }
+		if (!strcmp("rules", cmd))    {  set_rules(b, next);    y++; continue;  }
+		if (!strcmp("passes", cmd))   {  set_passes(b, next);   y++; continue;  }
 		if (!strcmp("handicap", cmd)) {  set_handicap(b, next); y++; continue;  }
 
 		if ((int)strlen(line) != size * 2 - 1 && 
@@ -714,6 +737,8 @@ unit_test(char *filename)
 		}
 
 		if (str_prefix("boardsize ", line)) {  init_arg(line); board_load(b, f, next); continue;  }
+		if (str_prefix("rules ", line))     {  init_arg(line); set_rules(b, next); continue;  }
+		if (str_prefix("komi ", line))      {  init_arg(line); set_komi(b, next); continue;  }
 		if (str_prefix("ko ", line))	    {  init_arg(line); set_ko(b, next); continue;  }
 
 		if (optional)  {  total_opt++;  passed_opt += unit_test_cmd(b, line); }
