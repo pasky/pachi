@@ -95,6 +95,7 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 	foreach_neighbor(b, lib2, {
 		if (board_at(b, c) != other_color)  continue;
 		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)  return false;
 		if (!in)  {  in = g;  continue;  }		
 		if (in != g)  return false;  /* Multiple inside groups */
 	});
