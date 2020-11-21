@@ -266,6 +266,10 @@ tree_load(tree_t *tree, board_t *b)
 	fclose(f);
 }
 
+
+/************************************************************************/
+/* Tree garbage collection */
+
 static tree_node_t *
 tree_prune_node(tree_t *dest, tree_t *src, tree_node_t *node,
 		int threshold, int depth)
@@ -361,14 +365,15 @@ tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
  * See also LARGE_TREE_PLAYOUTS, DEEP_PLAYOUTS_THRESHOLD above.
  * Expensive, especially for huge trees, needs to copy the whole tree twice. */
 void
-tree_garbage_collect(tree_t *tree)
+tree_garbage_collect(tree_t *t)
 {
-	tree_node_t *node = tree->root;
-	assert(tree->nodes && !node->parent && !node->sibling);
+	tree_node_t *node = t->root;
+	assert(t->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
-	size_t orig_size = tree->nodes_size;
+	size_t orig_size = t->nodes_size;
 
-	tree_t *temp_tree = tree_init(tree->board, tree->root_color, tree->max_pruned_size, 0, 0, 0);
+	/* Temp tree for pruning. */
+	tree_t *t2 = tree_init(t->board, t->root_color, t->max_pruned_size, 0, 0, 0);
 
 	/* Find the maximum depth at which we can copy all nodes. */
 	int max_nodes = 1;
@@ -376,13 +381,13 @@ tree_garbage_collect(tree_t *tree)
 		max_nodes++;
 	size_t nodes_size = max_nodes * sizeof(*node);
 	int max_depth = node->depth;
-	while (nodes_size < tree->max_pruned_size && max_nodes > 1) {
+	for (;  nodes_size < t->max_pruned_size && max_nodes > 1;  max_depth++) {
 		max_nodes--;
 		nodes_size += max_nodes * nodes_size;
-		max_depth++;
 	}
 
-	/* Copy all nodes for small trees. For large trees, copy all nodes
+	/* Prune tree:
+	 * Copy all nodes for small trees. For large trees, copy all nodes
 	 * with depth <= max_depth, and all nodes with enough playouts.
 	 * Avoiding going too deep (except for nodes with many playouts) is mostly
 	 * to save time scanning the source tree. It can take over 20s to traverse
@@ -390,12 +395,11 @@ tree_garbage_collect(tree_t *tree)
 	 * the traversal is not friendly at all with the memory cache. */
 	int threshold = (node->u.playouts - LARGE_TREE_PLAYOUTS) * DEEP_PLAYOUTS_THRESHOLD / LARGE_TREE_PLAYOUTS;
 	if (threshold < 0) threshold = 0;
-	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD; 
-	tree_prune(temp_tree, tree, threshold, max_depth);
+	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD;
+	tree_prune(t2, t, threshold, max_depth);
 
 	/* Now copy back to original tree. */
-	tree_copy(tree, temp_tree);
-	tree_node_t *new_node = tree->root;
+	tree_copy(t, t2);
 
 	if (DEBUGL(1)) {
 		double now = time_now();
@@ -404,21 +408,26 @@ tree_garbage_collect(tree_t *tree)
 		fprintf(stderr,
 			"tree pruned in %0.3fs, prev %0.1fs ago, dest depth %d wanted %d,"
 			" size %llu->%llu/%llu, playouts %d\n",
-			now - start_time, start_time - prev_time, temp_tree->max_depth, max_depth,
-			(unsigned long long)orig_size, (unsigned long long)temp_tree->nodes_size, (unsigned long long)tree->max_pruned_size, new_node->u.playouts);
+			now - start_time, start_time - prev_time, t2->max_depth, max_depth,
+			(unsigned long long)orig_size, (unsigned long long)t2->nodes_size, (unsigned long long)t->max_pruned_size, t->root->u.playouts);
 		prev_time = start_time;
 	}
-	if (temp_tree->nodes_size >= temp_tree->max_tree_size) {
+	if (t2->nodes_size >= t2->max_tree_size) {
 		fprintf(stderr, "temp tree overflow, max_tree_size %llu, pruning_threshold %llu\n",
-			(unsigned long long)tree->max_tree_size, (unsigned long long)tree->pruning_threshold);
+			(unsigned long long)t->max_tree_size, (unsigned long long)t->pruning_threshold);
 		/* This is not a serious problem, we will simply recompute the discarded nodes
 		 * at the next move if necessary. This is better than frequently wasting memory. */
 	} else {
-		assert(tree->nodes_size == temp_tree->nodes_size);
-		assert(tree->max_depth == temp_tree->max_depth);
+		assert(t->nodes_size == t2->nodes_size);
+		assert(t->max_depth == t2->max_depth);
 	}
-	tree_done(temp_tree);
+	
+	tree_done(t2);
 }
+
+
+/*********************************************************************************/
+/* Tree copy */
 
 /* Copy the whole tree (all reachable nodes)
  * dst tree must be able to hold src's content.
