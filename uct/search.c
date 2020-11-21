@@ -200,7 +200,7 @@ thread_manager(void *ctx_)
 
 	/* Garbage collect the tree by preference when pondering. */
 	if (pondering(u) && search_want_gc(u) && t->nodes && t->nodes_size >= t->pruning_threshold)
-		t->root = tree_garbage_collect(t, t->root);
+		tree_garbage_collect(t);
 	clear_search_want_gc(u);
 
 	/* Logging thread for pondering */

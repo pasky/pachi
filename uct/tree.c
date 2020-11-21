@@ -266,16 +266,9 @@ tree_load(tree_t *tree, board_t *b)
 	fclose(f);
 }
 
-
-/* Copy the subtree rooted at node: all nodes at or below depth
- * or with at least threshold playouts.
- * The code is destructive on src. The relative order of children of
- * a given node is preserved (assumed by tree_get_node in particular).
- * Returns the copy of node in the destination tree, or NULL
- * if we could not copy it. */
 static tree_node_t *
-tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
-	   int threshold, int depth)
+tree_prune_node(tree_t *dest, tree_t *src, tree_node_t *node,
+		int threshold, int depth)
 {
 	assert(dest->nodes && node);
 	tree_node_t *n2 = tree_alloc_node(dest, 1);
@@ -300,7 +293,7 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
 		return n2;
 	tree_node_t **prev2 = &(n2->children);
 	while (ni) {
-		tree_node_t *ni2 = tree_prune(dest, src, ni, threshold, depth);
+		tree_node_t *ni2 = tree_prune_node(dest, src, ni, threshold, depth);
 		if (!ni2) break;
 		*prev2 = ni2;
 		prev2 = &(ni2->sibling);
@@ -314,6 +307,30 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
 	}
 	return n2;
 }
+
+/* Prune src tree into dest (nodes are copied).
+ * Keep all nodes at or below depth with at least threshold playouts.
+ * The relative order of children of a given node is preserved
+ * (assumed by tree_get_node() in particular).
+ * Note: Only for fast_alloc. */
+static void
+tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
+{
+        tree_node_t *node = src->root;
+	assert(dest->nodes && node);
+
+	dest->use_extra_komi = src->use_extra_komi;
+	dest->untrustworthy_tree = src->untrustworthy_tree;
+	dest->extra_komi = src->extra_komi;
+	dest->avg_score = src->avg_score;
+	/* DISTRIBUTED htable not copied, gets rebuilt as needed */
+	dest->nodes_size = 0;	/* we do not want the dummy pass node */
+	dest->max_depth = 0;	/* gets recomputed */
+	dest->root_color = src->root_color;
+	dest->root = tree_prune_node(dest, src, node, threshold, depth);
+	assert(dest->root);	
+}
+
 
 /* The following constants are used for garbage collection of nodes.
  * A tree is considered large if the top node has >= 40K playouts.
@@ -342,19 +359,16 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
  * - prune tree down to max 20% capacity
  * - prune large trees (>40k playouts) keeping only nodes with enough playouts.
  * See also LARGE_TREE_PLAYOUTS, DEEP_PLAYOUTS_THRESHOLD above.
- * Expensive, especially for huge trees, needs to copy the whole tree twice.
- * Returns the moved node. */
-tree_node_t *
-tree_garbage_collect(tree_t *tree, tree_node_t *node)
+ * Expensive, especially for huge trees, needs to copy the whole tree twice. */
+void
+tree_garbage_collect(tree_t *tree)
 {
+	tree_node_t *node = tree->root;
 	assert(tree->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
 	size_t orig_size = tree->nodes_size;
 
-	tree_t *temp_tree = tree_init(tree->board,  tree->root_color,
-					   tree->max_pruned_size, 0, 0, 0);
-	temp_tree->nodes_size = 0; // We do not want the dummy pass node
-        tree_node_t *temp_node;
+	tree_t *temp_tree = tree_init(tree->board, tree->root_color, tree->max_pruned_size, 0, 0, 0);
 
 	/* Find the maximum depth at which we can copy all nodes. */
 	int max_nodes = 1;
@@ -377,13 +391,11 @@ tree_garbage_collect(tree_t *tree, tree_node_t *node)
 	int threshold = (node->u.playouts - LARGE_TREE_PLAYOUTS) * DEEP_PLAYOUTS_THRESHOLD / LARGE_TREE_PLAYOUTS;
 	if (threshold < 0) threshold = 0;
 	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD; 
-	temp_node = tree_prune(temp_tree, tree, node, threshold, max_depth);
-	assert(temp_node);
+	tree_prune(temp_tree, tree, threshold, max_depth);
 
 	/* Now copy back to original tree. */
-	tree->nodes_size = 0;
-	tree->max_depth = 0;
-	tree_node_t *new_node = tree_prune(tree, temp_tree, temp_node, 0, temp_tree->max_depth);
+	tree_copy(tree, temp_tree);
+	tree_node_t *new_node = tree->root;
 
 	if (DEBUGL(1)) {
 		double now = time_now();
@@ -406,18 +418,20 @@ tree_garbage_collect(tree_t *tree, tree_node_t *node)
 		assert(tree->max_depth == temp_tree->max_depth);
 	}
 	tree_done(temp_tree);
-	return new_node;
 }
 
+/* Copy the whole tree (all reachable nodes)
+ * dst tree must be able to hold src's content.
+ * The relative order of children of a given node is preserved
+ * (assumed by tree_get_node() in particular).
+ * Note: Only for fast_alloc. */
 void
 tree_copy(tree_t *dst, tree_t *src)
 {
-	dst->nodes_size = 0;
-	dst->max_depth = 0;
-	// just copy everything for now ...
-	dst->root = tree_prune(dst, src, src->root, 0, src->max_depth);
+	tree_prune(dst, src, 0, src->max_depth);
 	assert(dst->root);
 }
+
 
 /* Realloc internal tree memory so it can accomodate bigger search tree
  * Expensive: needs to allocate a new tree and copy it over.
@@ -520,41 +534,26 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	node->children = first_child; // must be done at the end to avoid race
 }
 
-
-static void
-tree_unlink_node(tree_node_t *node)
-{
-	tree_node_t *ni = node->parent;
-	if (ni->children == node) {
-		ni->children = node->sibling;
-	} else {
-		ni = ni->children;
-		while (ni->sibling != node)
-			ni = ni->sibling;
-		ni->sibling = node->sibling;
-	}
-	node->sibling = NULL;
-	node->parent = NULL;
-}
-
 /* Promotes the given node as the root of the tree.
  * May trigger tree garbage collection:
  * The node may be moved and some of its subtree may be pruned. */
 void
-tree_promote_node(tree_t *tree, tree_node_t **node)
+tree_promote_node(tree_t *t, tree_node_t *node)
 {
-	assert((*node)->parent == tree->root);
-	tree_unlink_node(*node);
+	assert(node->parent == t->root);
 
+	node->parent = NULL;
+	node->sibling = NULL;
+
+	t->root = node;
+	t->root_color = stone_other(t->root_color);
+	
 	/* Garbage collect if we run out of memory, or it is cheap to do so now: */
-	if (tree->nodes_size >= tree->pruning_threshold ||
-	    (tree->nodes_size >= tree->max_tree_size / 10 && (*node)->u.playouts < SMALL_TREE_PLAYOUTS))
-		*node = tree_garbage_collect(tree, *node);
+	if (t->nodes_size >= t->pruning_threshold ||
+	    (t->nodes_size >= t->max_tree_size / 10 && node->u.playouts < SMALL_TREE_PLAYOUTS))
+		tree_garbage_collect(t);
 
-	tree->root = *node;
-	tree->root_color = stone_other(tree->root_color);
-
-	tree->avg_score.playouts = 0;
+	t->avg_score.playouts = 0;
 
 	/* If the tree deepest node was under node, or if we called tree_garbage_collect,
 	 * tree->max_depth is correct. Otherwise we could traverse the tree
@@ -579,6 +578,6 @@ tree_promote_at(tree_t *t, board_t *b, coord_t c, int *reason)
 		return false;  /* No dcnn priors, can't reuse ... */
 	}
 	
-	tree_promote_node(t, &n);
+	tree_promote_node(t, n);
 	return true;
 }

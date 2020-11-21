@@ -587,7 +587,7 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
 	} else
-		tree_promote_node(u->t, &best_node);
+		tree_promote_node(u->t, best_node);
 
 	if (u->pondering_opt)
 		uct_genmove_pondering_start(u, b, color, best);
