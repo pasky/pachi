@@ -141,7 +141,7 @@ int  tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_
 tree_node_t *tree_get_node(tree_node_t *parent, coord_t c);
 void tree_garbage_collect(tree_t *tree);
 void tree_promote_node(tree_t *tree, tree_node_t *node);
-bool tree_promote_at(tree_t *tree, board_t *b, coord_t c, int *reason);
+bool tree_promote_move(tree_t *tree, board_t *b, move_t *m, int *reason);
 
 void tree_expand_node(tree_t *tree, tree_node_t *node, board_t *b, enum stone color, struct uct *u, int parity);
 

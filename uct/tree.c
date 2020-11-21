@@ -561,16 +561,19 @@ tree_promote_node(tree_t *t, tree_node_t *node)
 	 * and soon the tree will grow and max_depth will become correct again. */
 }
 
-/* Promote node with given coordinate as the root of the tree.
+/* Promote node for given move as the root of the tree.
  * May trigger tree garbage collection:
  * The node may be moved and some of its subtree may be pruned.
  * Returns true on success, false otherwise (@reason tells why) */
 bool
-tree_promote_at(tree_t *t, board_t *b, coord_t c, int *reason)
+tree_promote_move(tree_t *t, board_t *b, move_t *m, int *reason)
 {
 	*reason = 0;
 
-	tree_node_t *n = tree_get_node(t->root, c);
+	if (m->color != stone_other(t->root_color))
+		return false;  /* Bad color */
+	
+	tree_node_t *n = tree_get_node(t->root, m->coord);
 	if (!n)  return false;
 	
 	if (using_dcnn(b) && !(n->hints & TREE_HINT_DCNN)) {

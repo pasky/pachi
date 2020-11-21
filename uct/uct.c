@@ -199,7 +199,7 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print
 		assert(u->t);
 	}
 
-	/* Stop pondering, required by tree_promote_at() */
+	/* Stop pondering, required by tree_promote_move() */
 	uct_pondering_stop(u);
 	
 	if (u->slave && was_searching && m->color == u->my_color) {
@@ -218,7 +218,7 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print
 	 * if we started searching without dcnn data better start from scratch. */
 	int reason;	
 	assert(u->t->root);
-	if (u->t->untrustworthy_tree || !tree_promote_at(u->t, b, m->coord, &reason)) {
+	if (u->t->untrustworthy_tree || !tree_promote_move(u->t, b, m, &reason)) {
 		if (UDEBUGL(3)) {
 			if      (u->t->untrustworthy_tree)  fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
 			else if (reason == TREE_HINT_DCNN)  fprintf(stderr, "Played move has no dcnn priors, resetting tree.\n");
