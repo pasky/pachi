@@ -45,6 +45,7 @@ static void
 setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
+	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", (int)(size / (1024*1024)));
 	u->t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), stats_hbits(u));
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
