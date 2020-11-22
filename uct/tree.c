@@ -490,11 +490,12 @@ log_temp_tree_overflow(tree_t *t, tree_t *t2, int threshold, int max_depth)
 #define SMALL_TREE_PLAYOUTS 5000
 
 /* Tree garbage collection
- * Right now this does 3 things:
+ * Main job:
  * - reclaim space used by unreachable nodes after move promotion
- * - prune tree down to max 20% capacity
- * - prune large trees (>40k playouts) keeping only nodes with enough playouts.
- * See also LARGE_TREE_PLAYOUTS, DEEP_PLAYOUTS_THRESHOLD above.
+ * For large trees also:
+ * - prune tree down to max 20% capacity      (>300Mb)
+ * - keep only nodes with enough playouts.    (>40k playouts)
+ * See also LARGE_TREE_PLAYOUTS, DEEP_PLAYOUTS_THRESHOLD above, tree_max_pruned_size()
  * Expensive, especially for huge trees, needs to copy the whole tree twice. */
 void
 tree_garbage_collect(tree_t *t)
@@ -505,6 +506,9 @@ tree_garbage_collect(tree_t *t)
 	size_t orig_size = t->nodes_size;
 	size_t orig_content_size = (DEBUGL(3) ? tree_actual_size(t) : 0);
 	size_t max_pruned_size = tree_max_pruned_size(t);
+
+	if (DEBUGL(3)) fprintf(stderr, "tree gc     tree: %0.1f Mb -> %0.1f Mb temp space\n",
+			       (float)t->max_tree_size / (1024*1024), (float)max_pruned_size / (1024*1024));
 	
 	/* Temp tree for pruning. */
 	tree_t *t2 = tree_init(t->root_color, max_pruned_size, 0);

@@ -124,9 +124,11 @@ typedef struct {
 } tree_t;
 
 /* Tree garbage collection:
- * Limit pruning temp space to 20% of memory. Beyond this we discard
- * the nodes and recompute them at the next move if necessary. */
-#define tree_max_pruned_size(t)		((t)->max_tree_size * 20 / 100)
+ * For large trees (>300Mb) limit pruning temp space to 20% of memory. Beyond
+ * this we discard the nodes and recompute them at the next move if necessary. */
+#define tree_max_pruned_size(t)		((t)->max_tree_size <= 300 * 1024 * 1024  ?	\
+					 (t)->max_tree_size :				\
+					 (t)->max_tree_size * 20 / 100)
 #define tree_gc_threshold(t)		((t)->max_tree_size * 10 / 100)
 #define tree_gc_needed(t)		((t)->nodes_size >= tree_gc_threshold((t)))
 
