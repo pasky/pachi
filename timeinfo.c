@@ -38,12 +38,15 @@ bool
 time_parse(time_info_t *ti, char *s)
 {
 	char *end = s;
+	ti->can_stop_early = true;
 	switch (s[0]) {
 		case '_': ti->type = TT_TOTAL; s++; break;
 		default: ti->type = TT_MOVE; break;
 	}
 	switch (s[0]) {
 		case '=':
+			ti->can_stop_early = false;
+		case '~':
 			ti->dim = TD_GAMES;
 			ti->games = strtol(++s, &end, 10);
 			ti->games_max = 0;
@@ -56,6 +59,7 @@ time_parse(time_info_t *ti, char *s)
 			if (*end) return false;
 			break;
 	        default:
+			if (!isdigit(s[0]))  return false;
 			ti->dim = TD_WALLTIME;
 			ti->timer_start = 0;
 			if (ti->type == TT_TOTAL) {

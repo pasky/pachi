@@ -568,13 +568,26 @@ uct_search_stop_early(uct_t *u, tree_t *t, board_t *b,
 		if (elapsed < TREE_BUSYWAIT_INTERVAL) return false;
 	}
 
-	/* Break early if we estimate the second-best move cannot
+	/* Fixed Playouts: Stop early if the second-best move cannot catch up anymore */
+	if (ti->can_stop_early && ti->dim == TD_GAMES &&
+	    played >= PLAYOUT_EARLY_BREAK_MIN && best2) {
+		int total_played = t->root->u.playouts;
+		int remaining = stop->worst.playouts - total_played;
+		if (remaining > 0 &&
+		    best->u.playouts > best2->u.playouts + remaining) {
+			if (UDEBUGL(2))  fprintf(stderr, "Early stop, result cannot change (best: %d, 2nd: %d)\n",
+						 best->u.playouts, best2->u.playouts);
+			return true;
+		}
+	}
+
+	/* Walltime: Stop early if we estimate the second-best move cannot
 	 * catch up in assigned time anymore. We use all our time
 	 * if we are in byoyomi with single stone remaining in our
 	 * period, however - it's better to pre-ponder. */
 	bool time_indulgent = (!ti->main_time && ti->byoyomi_stones == 1);
-	if (best2 && ti->dim == TD_WALLTIME
-	    && played >= PLAYOUT_EARLY_BREAK_MIN && !time_indulgent) {
+	if (ti->can_stop_early && ti->dim == TD_WALLTIME &&
+	    played >= PLAYOUT_EARLY_BREAK_MIN && !time_indulgent && best2) {
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;

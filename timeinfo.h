@@ -63,6 +63,8 @@ typedef struct {
 	bool ignore_gtp;	/* If true, this time info is independent from GTP time_left updates,
 				 * which will be ignored. This is the case if the time settings were
 				 * forced on the command line. */
+	bool can_stop_early;	/* Stop early once best move is decided (saves time / cpu).
+				 * default: true for TD_WALLTIME, false for TD_GAMES */
 } time_info_t;
 
 extern const time_info_t ti_none;
