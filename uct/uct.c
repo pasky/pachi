@@ -216,13 +216,13 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print
 	 * If using dcnn, only promote node if it has dcnn priors:
 	 * Direction of tree search is heavily influenced by initial priors,
 	 * if we started searching without dcnn data better start from scratch. */
-	int reason;	
+	enum promote_reason reason;
 	assert(u->t->root);
-	if (u->t->untrustworthy_tree || !tree_promote_move(u->t, b, m, &reason)) {
+	if (!tree_promote_move(u->t, m, b, &reason)) {
 		if (UDEBUGL(3)) {
-			if      (u->t->untrustworthy_tree)  fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
-			else if (reason == TREE_HINT_DCNN)  fprintf(stderr, "Played move has no dcnn priors, resetting tree.\n");
-			else				    fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+			if      (reason == PROMOTE_UNTRUSTWORTHY)  fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
+			else if (reason == PROMOTE_DCNN_MISSING)   fprintf(stderr, "Played move has no dcnn priors, resetting tree.\n");
+			else					   fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
 		}
 
 		/* Preserve dynamic komi information, though, that is important. */
@@ -581,13 +581,12 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		return best;
 	}
 
-	/* Throw away an untrustworthy tree.
-	 * Preserve dynamic komi information though, that is important. */
-	if (u->t->untrustworthy_tree) {
+	/* Promote node or throw away tree as needed. */
+	if (!tree_promote_node(u->t, best_node, b, NULL)) {
+		/* Preserve dynamic komi information though, that is important. */
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-	} else
-		tree_promote_node(u->t, best_node);
+	}
 
 	if (u->pondering_opt)
 		uct_genmove_pondering_start(u, b, color, best);

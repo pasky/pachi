@@ -534,14 +534,25 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	node->children = first_child; // must be done at the end to avoid race
 }
 
+#define set_reason(val)		do {  if (reason) *reason = val;       } while(0)
+#define promote_fail(val)	do {  set_reason(val);  return false;  } while(0)
+
 /* Promotes the given node as the root of the tree.
  * May trigger tree garbage collection:
- * The node may be moved and some of its subtree may be pruned. */
-void
-tree_promote_node(tree_t *t, tree_node_t *node)
+ * The node may be moved and some of its subtree may be pruned.
+ * Returns true on success, false otherwise (@reason tells why) */
+bool
+tree_promote_node(tree_t *t, tree_node_t *node, board_t *b, enum promote_reason *reason)
 {
 	assert(node->parent == t->root);
+	set_reason(PROMOTE_REASON_NONE);
 
+	if (t->untrustworthy_tree)
+		promote_fail(PROMOTE_UNTRUSTWORTHY);
+	
+	if (using_dcnn(b) && !(node->hints & TREE_HINT_DCNN))
+		promote_fail(PROMOTE_DCNN_MISSING);
+	
 	node->parent = NULL;
 	node->sibling = NULL;
 
@@ -559,6 +570,7 @@ tree_promote_node(tree_t *t, tree_node_t *node)
 	 * tree->max_depth is correct. Otherwise we could traverse the tree
          * to recompute max_depth but it's not worth it: it's just for debugging
 	 * and soon the tree will grow and max_depth will become correct again. */
+	return true;
 }
 
 /* Promote node for given move as the root of the tree.
@@ -566,21 +578,15 @@ tree_promote_node(tree_t *t, tree_node_t *node)
  * The node may be moved and some of its subtree may be pruned.
  * Returns true on success, false otherwise (@reason tells why) */
 bool
-tree_promote_move(tree_t *t, board_t *b, move_t *m, int *reason)
+tree_promote_move(tree_t *t, move_t *m, board_t *b, enum promote_reason *reason)
 {
-	*reason = 0;
+	set_reason(PROMOTE_REASON_NONE);
 
 	if (m->color != stone_other(t->root_color))
-		return false;  /* Bad color */
+		return false;	/* Bad color */
 	
 	tree_node_t *n = tree_get_node(t->root, m->coord);
-	if (!n)  return false;
-	
-	if (using_dcnn(b) && !(n->hints & TREE_HINT_DCNN)) {
-		*reason = TREE_HINT_DCNN;
-		return false;  /* No dcnn priors, can't reuse ... */
-	}
-	
-	tree_promote_node(t, n);
-	return true;
+	if (!n)  return false;	/* Not found */
+
+	return tree_promote_node(t, n, b, reason);
 }
