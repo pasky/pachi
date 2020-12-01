@@ -547,7 +547,8 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 	if (u->t) {
 		bool unexpected_color = (color != board_to_play(b));  /* playing twice in a row ?? */
 		bool missing_dcnn_priors = (using_dcnn(b) && !(u->t->root->hints & TREE_HINT_DCNN));
-		if (u->genmove_reset_tree || unexpected_color || missing_dcnn_priors) {
+		if (u->genmove_reset_tree || u->t->untrustworthy_tree ||
+		    unexpected_color || missing_dcnn_priors) {
 			u->initial_extra_komi = u->t->extra_komi;
 			reset_state(u);
 		}
