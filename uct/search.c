@@ -581,13 +581,14 @@ uct_search_stop_early(uct_t *u, tree_t *t, board_t *b,
 		}
 	}
 
-	/* Walltime: Stop early if we estimate the second-best move cannot
-	 * catch up in assigned time anymore. We use all our time
-	 * if we are in byoyomi with single stone remaining in our
-	 * period, however - it's better to pre-ponder. */
-	bool time_indulgent = (!ti->main_time && ti->byoyomi_stones == 1);
+	/* Walltime: Stop early if we estimate the second-best move cannot catch up in  
+	 * assigned time anymore. If we are in byoyomi with single period remaining
+	 * and can do some lookahead, use all our time - it's better to pre-ponder. */
+	bool last_byoyomi = (!ti->main_time && ti->byoyomi_stones == 1);
+	bool keep_looking = (last_byoyomi && reusing_tree(u, b));
 	if (ti->can_stop_early && ti->dim == TD_WALLTIME &&
-	    played >= PLAYOUT_EARLY_BREAK_MIN && !time_indulgent && best2) {
+	    !keep_looking &&
+	    played >= PLAYOUT_EARLY_BREAK_MIN && best2) {
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
