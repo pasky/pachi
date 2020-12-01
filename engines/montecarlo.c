@@ -102,13 +102,13 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 
 	if (ti->dim == TD_WALLTIME) {
 		fprintf(stderr, "Warning: TD_WALLTIME time mode not supported, resetting to defaults.\n");
-		ti->period = TT_NULL;
+		ti->type = TT_NULL;
 	}
-	if (ti->period == TT_NULL) {
-		ti->period = TT_MOVE;
+	if (ti->type == TT_NULL) {
+		ti->type = TT_MOVE;
 		ti->dim = TD_GAMES;
-		ti->len.games = MC_GAMES;
-		ti->len.games_max = 0;
+		ti->games = MC_GAMES;
+		ti->games_max = 0;
 	}
 	time_stop_t stop;
 	time_stop_conditions(ti, b, 20, 40, 3.0, &stop);

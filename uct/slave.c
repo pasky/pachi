@@ -545,8 +545,8 @@ uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	 * in sync with distibuted/distributed.c:distributed_genmove(). */
 	if ((ti->dim == TD_WALLTIME
 	     && sscanf(args, "%d %lf %lf %d %d", &u->played_all,
-		       &ti->len.t.main_time, &ti->len.t.byoyomi_time,
-		       &ti->len.t.byoyomi_periods, &ti->len.t.byoyomi_stones) != 5)
+		       &ti->main_time, &ti->byoyomi_time,
+		       &ti->byoyomi_periods, &ti->byoyomi_stones) != 5)
 
 	    || (ti->dim == TD_GAMES && sscanf(args, "%d", &u->played_all) != 1)) {
 		return NULL;
@@ -561,7 +561,7 @@ uct_genmoves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		if (DEBUGL(2) && debug_boardprint)
 			engine_board_print(e, b, stderr);
 		
-		if (ti->period == TT_NULL)
+		if (ti->type == TT_NULL)
 				*ti = ti_unlimited();
 		uct_search_start(u, b, color, u->t, ti, &s, 0);
 	}

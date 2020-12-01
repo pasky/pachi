@@ -337,8 +337,8 @@ genmoves_args(char *args, enum stone color, int played,
 
 	if (ti->dim == TD_WALLTIME) {
 		s += snprintf(s, end - s, " %.3f %.3f %d %d",
-			      ti->len.t.main_time, ti->len.t.byoyomi_time,
-			      ti->len.t.byoyomi_periods, ti->len.t.byoyomi_stones);
+			      ti->main_time, ti->byoyomi_time,
+			      ti->byoyomi_periods, ti->byoyomi_stones);
 	}
 	s += snprintf(s, end - s, binary_args ? " @0\n" : "\n");
 }
@@ -364,12 +364,12 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 	coord_t best;
 	int played, playouts, threads;
 
-	if (ti->period == TT_NULL) {
+	if (ti->type == TT_NULL) {
 		*ti = ti_none;
-		ti->period = TT_MOVE;
+		ti->type = TT_MOVE;
 		ti->dim = TD_GAMES;
-		ti->len.games = DIST_GAMES;
-		ti->len.games_max = 0;
+		ti->games = DIST_GAMES;
+		ti->games_max = 0;
 	}
 	time_stop_t stop;
 	time_stop_conditions(ti, b, FUSEKI_END, YOSE_START, MAX_MAINTIME_RATIO, &stop);
@@ -403,7 +403,7 @@ distributed_genmove(engine_t *e, board_t *b, time_info_t *ti,
 		best = select_best_move(b, stats, &played, &playouts, &threads, &keep_looking);
 
 		if (ti->dim == TD_WALLTIME) {
-			if (now - ti->len.t.timer_start >= stop.worst.time) break;
+			if (now - ti->timer_start >= stop.worst.time) break;
 			if (!keep_looking && now - first >= MIN_EARLY_STOP_WAIT) break;
 		} else {
 			if (!keep_looking || playouts >= stop.worst.playouts) break;
