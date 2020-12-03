@@ -80,8 +80,8 @@ bool board_position_final_full(board_t *b, ownermap_t *ownermap,
 			       int *final_ownermap, int final_dames, float final_score, char **msg);
 
 /* Don't allow passing earlier than that:
- * 19x19: 120    15x15: 56    13x13: 33    9x9: 16 */
-#define board_earliest_pass(b)  (board_rsize2(b) / (7 - 2 * board_rsize(b) / 9))
+ * 19x19: 90    15x15: 56    13x13: 33    9x9: 13 */
+#define board_earliest_pass(b)  (board_rsize2(b) / (7 - board_rsize(b) / 5))
 
 
 #endif
