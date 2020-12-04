@@ -179,9 +179,9 @@ X X O O X O X . X
 . X X X X X X X X
 
 rules chinese
-!pass_is_safe b 1         # XXX fixme !
+!pass_is_safe b 1	# XXX possibly we never pass under chinese !
 rules japanese
-!pass_is_safe b 1         # XXX fixme !
+pass_is_safe b 1
 
 
 % nothing special, W+7.5
