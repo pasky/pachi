@@ -362,7 +362,7 @@ scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significan
 }
 
 static tree_node_t *
-uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, tree_t *t, int *presult)
+uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, int *presult)
 {
 	playout_amafmap_t amaf;
 	amaf.gamelen = amaf.game_baselen = 0;
@@ -441,16 +441,16 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 			__sync_fetch_and_add(&n->descents, u->virtual_loss);
 
 		move_t m = { node_coord(n), node_color };
-		int res = board_play(b2, &m);
+		int res = board_play(b, &m);
 
-		if (res < 0 || (!is_pass(m.coord) && !group_at(b2, m.coord)) /* suicide */
-		    || b2->superko_violation) {
+		if (res < 0 || (!is_pass(m.coord) && !group_at(b, m.coord)) /* suicide */
+		    || b->superko_violation) {
 			if (UDEBUGL(4)) {
 				for (tree_node_t *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%" PRIhash "> ", coord2sstr(node_coord(ni)), ni->hash);
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
 				        stone2str(node_color), coord_x(node_coord(n)), coord_y(node_coord(n)),
-					res, group_at(b2, m.coord), b2->superko_violation);
+					res, group_at(b, m.coord), b->superko_violation);
 			}
 			n->hints |= TREE_HINT_INVALID;
 			*presult = 0;
@@ -458,7 +458,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 		}
 
 		assert(node_coord(n) >= -1);
-		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(b2));
+		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(b));
 
 		if (is_pass(node_coord(n)))  passes++;
 		else                         passes = 0;
@@ -474,13 +474,13 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 		if (tree_leaf_node(n)
 		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < t->max_tree_size
 		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
-			tree_expand_node(t, n, b2, next_color, u, -parity);
+			tree_expand_node(t, n, b, next_color, u, -parity);
 	}
 
 	amaf.game_baselen = amaf.gamelen;
 
 	if (t->use_extra_komi && u->dynkomi->persim)
-		b2->komi += round(u->dynkomi->persim(u->dynkomi, b2, t, n));
+		b->komi += round(u->dynkomi->persim(u->dynkomi, b, t, n));
 
 	/* !!! !!! !!!
 	 * ALERT: The "result" number is extremely confusing. In some parts
@@ -491,7 +491,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 	// assert(tree_leaf_node(n));
 	/* In case of parallel tree search, the assertion might
 	 * not hold if two threads chew on the same node. */
-	result = uct_leaf_node(u, b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
+	result = uct_leaf_node(u, b, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
 		unsigned int cutoff = amaf.game_baselen;
@@ -503,7 +503,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 
 	assert(n == t->root || n->parent);
 	floating_t rval = scale_value(u, b, node_color, significant, result);
-	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b2, rval);
+	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b, rval);
 
 	stats_add_result(&t->avg_score, (float)result / 2, 1);
 	if (t->use_extra_komi) {
@@ -522,7 +522,7 @@ uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 	board_copy(&b2, b);
 	
 	int result;
-	tree_node_t *n = uct_playout_descent(u, b, &b2, player_color, t, &result);
+	tree_node_t *n = uct_playout_descent(u, &b2, player_color, t, &result);
 	
 	/* We need to undo the virtual loss we added during descend. */
 	if (u->virtual_loss) {
