@@ -36,6 +36,7 @@
 uct_policy_t *policy_ucb1_init(uct_t *u, char *arg);
 uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
 static void uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, int flags);
+static void uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord_t next_move);
 static void uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move);
 
 /* Maximal simulation length. */
@@ -212,6 +213,10 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print
 		return NULL;
 	}
 
+	/* Save best replies before resetting tree (dcnn pondering). */
+	if (u->slave && u->pondering_opt)
+		uct_genmove_pondering_save_replies(u, b, m->color, m->coord);
+	
 	/* Promote node of the appropriate move to the tree root.
 	 * If using dcnn, only promote node if it has dcnn priors:
 	 * Direction of tree search is heavily influenced by initial priors,
@@ -416,28 +421,37 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	return ctx->games;
 }
 
+/* Dcnn pondering:
+ * Next move wasn't searched with dcnn priors, search will start from scratch
+ * so it gets dcnn evaluated (and next move as well). Save opponent best replies
+ * from search before tree gets reset, will need it later to guess next move.
+ * Call order must be:
+ *     uct_genmove_pondering_save_replies()
+ *     tree_promote_node()
+ *     uct_genmove_pondering_start() */
+static void
+uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord_t next_move)
+{
+	if (!(u->pondering_opt && using_dcnn(b)))  return;
+	
+	int      nbest =  u->dcnn_pondering_mcts;
+	coord_t *best_c = u->dcnn_pondering_mcts_c;
+	float    best_r[nbest];
+	for (int i = 0; i < nbest; i++)
+		best_c[i] = pass;
+	
+	if (!(u->t && color == stone_other(u->t->root_color)))  return;
+	tree_node_t *best = tree_get_node(u->t->root, next_move);
+	if (!best)  return;
+	uct_get_best_moves_at(u, best, best_c, best_r, nbest, false, 100);
+}
+
 /* Start pondering at the end of genmove.
- * Makes preparations and calls uct_pondering_start()
- * with the right flags to make dcnn pondering work. */
+ * Must call uct_genmove_pondering_save_replies() before. */
 static void
 uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move)
 {
 	enum stone other_color = stone_other(color);
-
-	/* Dcnn pondering:
-	 * Promoted node wasn't searched with dcnn priors, start from scratch
-	 * so it gets dcnn evaluated (and next move as well). Save opponent
-	 * best moves from genmove search, will need it later on to guess
-	 * next move. */
-	if (u->pondering_opt && using_dcnn(b) && u->t) {
-		int      nbest =  u->dcnn_pondering_mcts;
-		coord_t *best_c = u->dcnn_pondering_mcts_c;
-		float    best_r[nbest];
-		uct_get_best_moves(u, best_c, best_r, nbest, false, 100);
-
-		u->initial_extra_komi = u->t->extra_komi;
-		reset_state(u);
-	}
 
 	if (!u->t)  uct_prepare_move(u, b, other_color);
 	
@@ -581,6 +595,10 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		return best;
 	}
 
+	/* Save best replies before resetting tree (dcnn pondering). */
+	if (u->pondering_opt)
+		uct_genmove_pondering_save_replies(u, b, color, best);
+	
 	/* Promote node or throw away tree as needed. */
 	if (!tree_promote_node(u->t, best_node, b, NULL)) {
 		/* Preserve dynamic komi information though, that is important. */
