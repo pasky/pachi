@@ -19,26 +19,29 @@ enum parse_code {
 
 typedef struct
 {
+	/* Gtp Options */
+	bool    noundo;               /* undo only allowed for pass */
+	bool    kgs;		      /* show engine comment in version */
+	bool    kgs_chat;             /* enable kgs-chat command ? */
+	char*   custom_name;
+	char*   custom_version;
+	
+	/* Private fields (global) */
+	int     played_games;
+	move_t  move[1500];           /* move history, for undo */
+	int     moves;
+	bool    undo_pending;
+	bool    analyze_mode;         /* analyze mode / genmove mode */
+	bool    analyze_running;
+
+	/* Single cmd scope: */
 	char *cmd;
 	char *next;
 	int   id;
 	bool  quiet;		  /* mute all gtp output */
 	bool  replied;		  /* gtp reply sent */
 	bool  flushed;		  /* gtp_flush() called */
-	bool  error;		  /* gtp_error() / gtp_error_printf() called */
-
-	/* Global fields: */
-	int     played_games;
-	move_t  move[1500];        /* move history, for undo */
-	int     moves;
-	bool    undo_pending;
-	bool    noundo;            /* undo only allowed for pass */
-	bool    kgs;
-	bool    kgs_chat;          /* enable kgs-chat command ? */
-	bool    analyze_mode;      /* analyze mode / genmove mode */
-	bool    analyze_running;
-	char*   custom_name;
-	char*   custom_version;
+	bool  error;		  /* gtp_error() / gtp_error_printf() called */	
 } gtp_t;
 
 #define gtp_arg_next(gtp) \

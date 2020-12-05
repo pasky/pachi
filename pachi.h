@@ -7,20 +7,25 @@
 struct board;
 struct engine;
 
+/* Global options */
+typedef struct {
+	bool    kgs;
+	bool    nopassfirst;		/* don't pass first when playing chinese */
+	enum rules forced_rules;
+} pachi_options_t;
+
+
 /* Free globals */
 void pachi_done();
 
 /* Init engines */
 void pachi_engine_init(struct engine *e, int id, struct board *b);
 
+/* Get global options */
+const pachi_options_t *pachi_options();
+
 /* Pachi binary */
 extern char *pachi_exe;
-
-/* Ruleset from cmdline, if present. */
-extern char *forced_ruleset;
-
-/* Don't pass first ? Needed when playing chinese rules on kgs or cleanup phase can be abused. */
-bool pachi_nopassfirst(struct board *b);
 
 
 #endif

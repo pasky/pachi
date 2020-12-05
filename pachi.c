@@ -37,32 +37,18 @@
 #include "patternprob.h"
 #include "joseki.h"
 
-static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default);
+/* Main options */
+static pachi_options_t main_options = { 0, };
+const  pachi_options_t *pachi_options() {  return &main_options;  }
 
 char *pachi_exe = NULL;
+
 int   debug_level = 3;
 int   saved_debug_level;
 bool  debug_boardprint = true;
 long  verbose_logs = 0;
-char *forced_ruleset = NULL;
 
-static char *gtp_port = NULL;
-static bool  nopassfirst = false;
-
-static void
-network_init()
-{
-#ifdef NETWORK
-	int gtp_sock = -1;
-	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
-#endif
-}
-
-bool
-pachi_nopassfirst(board_t *b)
-{
-	return (nopassfirst && b->rules == RULES_CHINESE);
-}
+static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port);
 
 typedef struct {
 	int		id;
@@ -115,13 +101,18 @@ supported_engines(bool show_all)
 }
 
 static void
-init()
+pachi_init(int argc, char *argv[])
 {
+	setlinebuf(stdout);
+	setlinebuf(stderr);
+	
+	pachi_exe = argv[0];
+	win_set_pachi_cwd(argv[0]);
+	
 	/* Check engine list is sane. */
 	for (int i = 0; i < E_MAX; i++)
 		assert(engines[i].name && engines[i].id == i);
 };
-
 
 void
 pachi_engine_init(engine_t *e, int id, board_t *b)
@@ -287,26 +278,24 @@ static struct option longopts[] = {
 
 int main(int argc, char *argv[])
 {
-	init();
+	pachi_options_t *options = &main_options;
+
+	gtp_t main_gtp;	
+	gtp_t *gtp = &main_gtp;
+	gtp_init(gtp);
 	
-	pachi_exe = argv[0];
 	enum engine_id engine_id = E_UCT;
 	time_info_t ti_default = ti_none;
 	int  seed = time(NULL) ^ getpid();
 	char *testfile = NULL;
+	char *gtp_port = NULL;
 	char *log_port = NULL;
 	char *chatfile = NULL;
 	char *fbookfile = NULL;
 	FILE *file = NULL;
 	bool verbose_caffe = false;
 
-	setlinebuf(stdout);
-	setlinebuf(stderr);
-
-	win_set_pachi_cwd(argv[0]);
-
-	gtp_t maingtp, *gtp = &maingtp;
-	gtp_init(gtp);
+	pachi_init(argc, argv);
 	
 	int opt;
 	int option_index;
@@ -351,8 +340,8 @@ int main(int argc, char *argv[])
 				require_joseki();
 				break;
 			case OPT_KGS:
-				gtp->kgs = true;                /* Show engine comment in version. */
-				nopassfirst = true;             /* --nopassfirst */
+				options->kgs = gtp->kgs = true;
+				options->nopassfirst = true;           /* --nopassfirst */
 				break;
 			case OPT_KGS_CHAT:
 				gtp->kgs_chat = true;
@@ -383,7 +372,7 @@ int main(int argc, char *argv[])
 				disable_joseki();
 				break;
 			case OPT_NOPASSFIRST:
-				nopassfirst = true;
+				options->nopassfirst = true;
 				break;
 			case OPT_NOPATTERNS:
 				disable_patterns();
@@ -392,7 +381,9 @@ int main(int argc, char *argv[])
 				require_patterns();
 				break;
 			case 'r':
-				forced_ruleset = strdup(optarg);
+				options->forced_rules = board_parse_rules(optarg);
+				if (options->forced_rules == RULES_INVALID)
+					die("Unknown ruleset: %s\n", optarg);
 				break;
 			case 's':
 				seed = atoi(optarg);
@@ -454,9 +445,9 @@ int main(int argc, char *argv[])
 	fifo_init();
 
 	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
-	if (forced_ruleset) {
-		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
-		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
+	if (options->forced_rules) {
+		b->rules = options->forced_rules;
+		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", rules2str(b->rules));
 	}
 	gtp_internal_init(gtp);
 
@@ -473,12 +464,12 @@ int main(int argc, char *argv[])
 	char *engine_args = buf->str;
 	
 	engine_t e;  engine_init(&e, engine_id, engine_args, b);
-	network_init();
+	network_init(gtp_port);
 
 	while (1) {
-		main_loop(gtp, b, &e, ti, &ti_default);
-		if (!gtp_port) break;
-		network_init();
+		main_loop(gtp, b, &e, ti, &ti_default, gtp_port);
+		if (!gtp_port)  break;
+		network_init(gtp_port);
 	}
 
 	engine_done(&e);
@@ -489,7 +480,6 @@ int main(int argc, char *argv[])
 	free(log_port);
 	free(chatfile);
 	free(fbookfile);
-	free(forced_ruleset);
 	return 0;
 }
 
@@ -507,7 +497,7 @@ log_gtp_input(char *cmd)
 }
 
 static void
-main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default)
+main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port)
 {
 	char buf[4096];
 	while (fgets(buf, 4096, stdin)) {
