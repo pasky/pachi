@@ -224,13 +224,13 @@ FB_ONLY(int moveno)[BOARD_MAX_COORDS];     /* Move number for each coord */
 #define board_small(b_) (board_rsize(b_) <= 9)
 
 #if BOARD_SIZE == 19
-#  define board_bits2(b_) 9
+#  define board_bits2() 9
 #elif BOARD_SIZE == 13
-#  define board_bits2(b_) 8
+#  define board_bits2() 8
 #elif BOARD_SIZE == 9
-#  define board_bits2(b_) 7
+#  define board_bits2() 7
 #else
-#  define board_bits2(b_) (board_statics.bits2)
+#  define board_bits2() (board_statics.bits2)
 #endif
 
 #define last_move(b)  ((b)->last_moves[b->last_move_i])

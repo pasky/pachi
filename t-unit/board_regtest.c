@@ -48,7 +48,7 @@ hash_board_statics(board_t *b)
 
 	/* These are board statics really */
 	hash_int(board_max_coords(b));
-	hash_int(board_bits2(b));
+	hash_int(board_bits2());
 
 	/* Just care about hashes here */
 	for (int color = S_BLACK; color <= S_WHITE; color++) {
