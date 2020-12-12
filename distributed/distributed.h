@@ -19,10 +19,10 @@ typedef int64_t path_t;
 #define hash_mask(bits) ((1<<(bits))-1)
 
 /* parent_path() must never be used if path might be pass or resign. */
-#define parent_path(path, board) ((path) >> board_bits2(board))
-#define leaf_coord(path, board) ((path) & hash_mask(board_bits2(board)))
-#define append_child(path, c, board) (((path) << board_bits2(board)) | (c))
-#define max_parent_path(u, b) (((path_t)1) << (((u)->shared_levels - 1) * board_bits2(b)))
+#define parent_path(path) ((path) >> board_bits2())
+#define leaf_coord(path)  ((path) & hash_mask(board_bits2()))
+#define append_child(path, c) (((path) << board_bits2()) | (c))
+#define max_parent_path(u) (((path_t)1) << (((u)->shared_levels - 1) * board_bits2()))
 
 
 /* For debugging only */
@@ -98,7 +98,7 @@ typedef struct {
 #define move_number(id)    ((id) % DIST_GAMELEN)
 #define reply_disabled(id) ((id) < DIST_GAMELEN)
 
-char *path2sstr(path_t path, board_t *b);
+char *path2sstr(path_t path);
 void distributed_engine_init(engine_t *e, board_t *b);
 
 #endif

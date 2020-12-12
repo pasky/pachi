@@ -108,13 +108,13 @@ tree_find_node(tree_t *t, incr_stats_t *is, tree_node_t *prev)
 	if (DEBUGVV(7))
 		fprintf(stderr,
 			"find_node %" PRIpath " %s found %d hash %d playouts %d node %p\n", path,
-			path2sstr(path, t->board), found, hash, is->incr.playouts, hnode->node);
+			path2sstr(path), found, hash, is->incr.playouts, hnode->node);
 
 	if (found) return hnode->node;
 
 	/* The master sends parents before children so the parent should
 	 * already be in the hash table. */
-	path_t parent_p = parent_path(path, t->board);
+	path_t parent_p = parent_path(path);
 	tree_node_t *parent;
 	if (parent_p) {
 		find_hash(parent_hash, t->htable, t->hbits,
@@ -126,7 +126,7 @@ tree_find_node(tree_t *t, incr_stats_t *is, tree_node_t *prev)
 	tree_node_t *node = NULL;
 	if (parent) {
 		/* Search for the node in parent's children. */
-		coord_t leaf = leaf_coord(path, t->board);
+		coord_t leaf = leaf_coord(path);
 		node = (prev && prev->parent == parent ? prev->sibling : parent->children);
 		while (node && node_coord(node) != leaf) node = node->sibling;
 
@@ -135,7 +135,7 @@ tree_find_node(tree_t *t, incr_stats_t *is, tree_node_t *prev)
 		if (DEBUG_MODE) parent_not_found++;
 		if (DEBUGVV(7))
 			fprintf(stderr, "parent of %" PRIpath " %s not found\n",
-				path, path2sstr(path, t->board));
+				path, path2sstr(path));
 	}
 
 	/* Insert the node in the hash table. */
@@ -143,7 +143,7 @@ tree_find_node(tree_t *t, incr_stats_t *is, tree_node_t *prev)
 	if (DEBUG_MODE) h_counts.inserts++, h_counts.occupied++;
 	if (DEBUGVV(7))
 		fprintf(stderr, "insert path %" PRIpath " %s hash %d playouts %d node %p\n",
-			path, path2sstr(path, t->board), hash, is->incr.playouts, node);
+			path, path2sstr(path), hash, is->incr.playouts, node);
 
 	if (DEBUG_MODE && !node) node_not_found++;
 
@@ -223,7 +223,7 @@ receive_stats(uct_t *u, int size)
 		if (UDEBUGL(7))
 			fprintf(stderr, "read %5d/%d %6d %.3f %" PRIpath " %s\n", n, nodes,
 				is.incr.playouts, is.incr.value, is.coord_path,
-				path2sstr(is.coord_path, t->board));
+				path2sstr(is.coord_path));
 
 		tree_node_t *node = tree_find_node(t, &is, prev);
 		if (!node) continue;
@@ -282,7 +282,7 @@ append_stats(stats_candidate_t *stats_queue, tree_node_t *node, int stats_count,
 				fprintf(stderr, "*** stats overflow %d nodes\n", stats_count);
 			return stats_count;
 		}
-		path_t child_path = append_child(start_path, node_coord(ni), b);
+		path_t child_path = append_child(start_path, node_coord(ni));
 		stats_queue[stats_count].playout_incr = incr;
 		stats_queue[stats_count].coord_path = child_path;
 		stats_queue[stats_count++].node = ni;
@@ -401,7 +401,7 @@ report_incr_stats(uct_t *u, int *stats_size)
 	}
 
 	stats_count = append_stats(stats_queue, root, 0, max_nodes, 0,
-				   max_parent_path(u, b), min_increment, b);
+				   max_parent_path(u), min_increment, b);
 
 	void *buf = select_best_stats(stats_queue, stats_count, u->shared_nodes, stats_size);
 
@@ -475,7 +475,7 @@ uct_slave_init(uct_t *u, board_t *b)
 	
 	if (!u->stats_hbits) u->stats_hbits = DEFAULT_STATS_HBITS;
 	if (!u->shared_nodes) u->shared_nodes = DEFAULT_SHARED_NODES;
-	assert(u->shared_levels * board_bits2(b) <= 8 * (int)sizeof(path_t));
+	assert(u->shared_levels * board_bits2() <= 8 * (int)sizeof(path_t));
 
 	static int showed = 0;
 	if (!showed++) {  /* Display once */
