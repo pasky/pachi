@@ -266,6 +266,8 @@ board_position_final(board_t *b, ownermap_t *ownermap, char **msg)
 					 final_ownermap, dame, final_score, msg);
 }
 
+/* Not thread-safe if called on the main board !  (can call with_move()...)
+ * Must call on board copy in this case. */
 bool
 board_position_final_full(board_t *b, ownermap_t *ownermap,
 			  move_queue_t *dead, move_queue_t *unclear, float score_est,

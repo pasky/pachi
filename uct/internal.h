@@ -138,6 +138,7 @@ typedef struct uct {
 	double mcts_time;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
+	board_t *main_board;
 	tree_t *t;
 	bool tree_ready;
 } uct_t;
