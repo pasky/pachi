@@ -47,7 +47,7 @@ setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
 	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", (int)(size / (1024*1024)));
-	u->t = tree_init(b, color, size, stats_hbits(u));
+	u->t = tree_init(color, size, stats_hbits(u));
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
@@ -383,7 +383,7 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 			u->dynkomi->score.value, u->dynkomi->score.playouts,
 			u->dynkomi->value.value, u->dynkomi->value.playouts);
 	if (print_progress)
-		uct_progress_status(u, t, color, 0, NULL);
+		uct_progress_status(u, t, b, color, 0, NULL);
 
 	if (u->debug_after.playouts > 0) {
 		/* Now, start an additional run of playouts, single threaded. */
@@ -503,7 +503,7 @@ uct_pondering_stop(uct_t *u)
 	/* Stop the thread manager. */
 	uct_thread_ctx_t *ctx = uct_search_stop();  /* clears search flags */
 	
-	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, 0, NULL);
+	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->b, ctx->color, 0, NULL);
 
 	free(ctx->b);
 	u->reporting = u->reporting_opt;
@@ -569,7 +569,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 			total_time, mcts_time, (int)(played_games/mcts_time), (int)(played_games/mcts_time/u->threads));
 	}
 
-	uct_progress_status(u, u->t, color, 0, best_coord);
+	uct_progress_status(u, u->t, b, color, 0, best_coord);
 
 	return best;
 }
@@ -736,7 +736,7 @@ uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 {
 	uct_t *u = (uct_t*)e->data;
 	size_t size = u->tree_size;
-	tree_t *t = tree_init(b, color, size, 0);
+	tree_t *t = tree_init(color, size, 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);

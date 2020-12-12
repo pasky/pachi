@@ -76,7 +76,7 @@ tree_init_node(tree_t *t, coord_t coord, int depth)
 /* Create a tree structure and pre-allocate all nodes.
  * Returns NULL if out of memory */
 tree_t *
-tree_init(board_t *board, enum stone color, size_t max_tree_size, int hbits)
+tree_init(enum stone color, size_t max_tree_size, int hbits)
 {
 	tree_node_t *nodes = NULL;
 	assert (max_tree_size != 0);
@@ -90,7 +90,6 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size, int hbits)
 	}
 	
 	tree_t *t = calloc2(1, tree_t);
-	t->board = board;
 	t->max_tree_size = max_tree_size;
 	t->nodes = nodes;
 	/* The root PASS move is only virtual, we never play it. */
@@ -372,7 +371,7 @@ tree_garbage_collect(tree_t *t)
 	size_t orig_size = t->nodes_size;
 
 	/* Temp tree for pruning. */
-	tree_t *t2 = tree_init(t->board, t->root_color, max_pruned_size, 0);
+	tree_t *t2 = tree_init(t->root_color, max_pruned_size, 0);
 
 	/* Find the maximum depth at which we can copy all nodes. */
 	int max_nodes = 1;
@@ -450,7 +449,7 @@ tree_realloc(tree_t *t, size_t max_tree_size)
 {
 	assert(max_tree_size > t->max_tree_size);
 
-	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), max_tree_size, tree_hbits(t));
+	tree_t *t2 = tree_init(stone_other(t->root_color), max_tree_size, tree_hbits(t));
 	if (!t2)  return 0;	/* Out of memory */
 
 	tree_copy(t2, t);	assert(t2->root_color == t->root_color);

@@ -27,9 +27,8 @@
 
 
 static void
-uct_progress_text(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
-	board_t *b = t->board;
 	if (!UDEBUGL(0))
 		return;
 
@@ -79,9 +78,8 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts)
 /* Leela-zero format:
  * info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...] */
 static void
-uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, enum stone color)
+uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color)
 {
-	board_t *b = t->board;
 	tree_node_t *node = u->t->root;
 
 	/* Best candidates */
@@ -121,45 +119,45 @@ uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, enum stone color)
 
 /* GoGui live gfx: show best sequence */
 static void
-uct_progress_gogui_sequence(uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_sequence(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
 	int n = 20;
 	coord_t seq[n];   for (int i = 0; i < n; i++)  seq[i] = pass;
 
 	/* Best move */
-	tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+	tree_node_t *best = u->policy->choose(u->policy, t->root, b, color, resign);
 	if (!best) {  fprintf(stderr, "... No moves left\n"); return;  }
 	
 	for (int i = 0; i < n && best && best->u.playouts >= 50; i++) {
 		seq[i] = node_coord(best);
-		best = u->policy->choose(u->policy, best, t->board, color, resign);
+		best = u->policy->choose(u->policy, best, b, color, resign);
 	}
 	
-	gogui_show_best_seq(stderr, t->board, color, seq, n);
+	gogui_show_best_seq(stderr, b, color, seq, n);
 }
 
 /* GoGui live gfx: show best moves */
 static void
-uct_progress_gogui_best_moves(uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
 	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, false, 200);
-	gogui_show_best_moves(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
+	gogui_show_best_moves(stderr, b, color, best_c, best_r, GOGUI_NBEST);
 }
 
 /* GoGui live gfx: show winrates */
 static void
-uct_progress_gogui_winrates(uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
 	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, true, 200);
-	gogui_show_winrates(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
+	gogui_show_winrates(stderr, b, color, best_c, best_r, GOGUI_NBEST);
 }
 
 static void
-uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final, bool big)
+uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final, bool big)
 {
 	/* Prefix indicating JSON line. */
 	fprintf(fh, "{\"%s\": {", final ? "move" : "frame");
@@ -176,7 +174,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 		fprintf(fh, ", \"choice\": \"%s\"",
 			coord2sstr(*final));
 	} else {
-		tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+		tree_node_t *best = u->policy->choose(u->policy, t->root, b, color, resign);
 		if (best) {
 			/* Best move */
 			fprintf(fh, ", \"best\": {\"%s\": %f}",
@@ -214,7 +212,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 				coord2sstr(best->coord),
 				tree_node_get_value(t, 1, best->u.value),
 				best->u.playouts);
-			best = u->policy->choose(u->policy, best, t->board, color, resign);
+			best = u->policy->choose(u->policy, best, b, color, resign);
 		}
 		fprintf(fh, "]");
 	}
@@ -229,9 +227,9 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 		/* Position coloring information. */
 		fprintf(fh, "\"colors\": [");
 		int f = 0;
-		foreach_point(t->board) {
-			if (board_at(t->board, c) == S_OFFBOARD) continue;
-			fprintf(fh, "%s%d", f++ > 0 ? "," : "", board_at(t->board, c));
+		foreach_point(b) {
+			if (board_at(b, c) == S_OFFBOARD) continue;
+			fprintf(fh, "%s%d", f++ > 0 ? "," : "", board_at(b, c));
 		} foreach_point_end;
 		fprintf(fh, "]");
 		/* Ownership statistics. Value (0..1000) for each possible
@@ -240,8 +238,8 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 		 * seki points, but these should be rare. */
 		fprintf(fh, ", \"territory\": [");
 		f = 0;
-		foreach_point(t->board) {
-			if (board_at(t->board, c) == S_OFFBOARD) continue;
+		foreach_point(b) {
+			if (board_at(b, c) == S_OFFBOARD) continue;
 			int rate = u->ownermap.map[c][S_BLACK] * 1000 / u->ownermap.playouts;
 			fprintf(fh, "%s%d", f++ > 0 ? "," : "", rate);
 		} foreach_point_end;
@@ -253,16 +251,16 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 }
 
 static void
-uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
+uct_progress_gogui_livegfx(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final)
 {
 	if (!gogui_livegfx)  return;
 
 	/* GoGui reads live gfx commands on stderr. */
 	fprintf(stderr, "gogui-gfx:\n");
 
-	if      (gogui_livegfx == UR_GOGUI_BEST)  uct_progress_gogui_best_moves(u, t, color, playouts);
-	else if (gogui_livegfx == UR_GOGUI_SEQ)   uct_progress_gogui_sequence(u, t, color, playouts);
-	else if (gogui_livegfx == UR_GOGUI_WR)    uct_progress_gogui_winrates(u, t, color, playouts);
+	if      (gogui_livegfx == UR_GOGUI_BEST)  uct_progress_gogui_best_moves(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_SEQ)   uct_progress_gogui_sequence(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_WR)    uct_progress_gogui_winrates(u, t, b, color, playouts);
 	else    assert(0);
 
 	fprintf(stderr, "\n");
@@ -272,18 +270,18 @@ uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, 
  * Also takes care of gogui livegfx updates if enabled.
  * If @playouts is 0 show total playouts */
 void
-uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
+uct_progress_status(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final)
 {
 	if (!playouts)
 		playouts = t->root->u.playouts;
 		
-	if      (u->reporting == UR_TEXT)        uct_progress_text(u->report_fh, u, t, color, playouts);
-	else if (u->reporting == UR_JSON)        uct_progress_json(u->report_fh, u, t, color, playouts, final, false);
-	else if (u->reporting == UR_JSON_BIG)    uct_progress_json(u->report_fh, u, t, color, playouts, final, true);
-	else if (u->reporting == UR_LEELA_ZERO)  uct_progress_lz(u->report_fh, u, t, color);
+	if      (u->reporting == UR_TEXT)        uct_progress_text(u->report_fh, u, t, b, color, playouts);
+	else if (u->reporting == UR_JSON)        uct_progress_json(u->report_fh, u, t, b, color, playouts, final, false);
+	else if (u->reporting == UR_JSON_BIG)    uct_progress_json(u->report_fh, u, t, b, color, playouts, final, true);
+	else if (u->reporting == UR_LEELA_ZERO)  uct_progress_lz(u->report_fh, u, t, b, color);
 	else    assert(0);
 	
-	uct_progress_gogui_livegfx(u, t, color, playouts, final);
+	uct_progress_gogui_livegfx(u, t, b, color, playouts, final);
 }
 
 static inline void

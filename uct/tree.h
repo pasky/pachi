@@ -19,7 +19,6 @@
 #include "move.h"
 #include "stats.h"
 
-struct board;
 struct uct;
 
 /*
@@ -89,7 +88,6 @@ typedef struct tree_node {
 struct tree_hash;
 
 typedef struct {
-	board_t *board;
 	tree_node_t *root;
 	enum stone root_color;
 
@@ -133,7 +131,7 @@ typedef struct {
 #define tree_gc_needed(t)		((t)->nodes_size >= tree_gc_threshold((t)))
 
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
-tree_t *tree_init(board_t *board, enum stone color, size_t max_tree_size, int hbits);
+tree_t *tree_init(enum stone color, size_t max_tree_size, int hbits);
 void tree_done(tree_t *tree);
 void tree_dump(tree_t *tree, double thres);
 void tree_save(tree_t *tree, board_t *b, int thres);

@@ -264,7 +264,7 @@ static int bucket_count[MAX_BUCKETS];
  * Return the updated stats count. */
 static int
 append_stats(stats_candidate_t *stats_queue, tree_node_t *node, int stats_count,
-	     int max_count, path_t start_path, path_t max_path, int min_increment, board_t *b)
+	     int max_count, path_t start_path, path_t max_path, int min_increment)
 {
 	/* The children field is set only after all children are created
 	 * so we can traverse the the tree while it is updated. */
@@ -294,7 +294,7 @@ append_stats(stats_candidate_t *stats_queue, tree_node_t *node, int stats_count,
 		if (child_path >= max_path) continue;
 
 		stats_count = append_stats(stats_queue, ni, stats_count, max_count,
-					   child_path, max_path, min_increment, b);
+					   child_path, max_path, min_increment);
 	}
 	return stats_count;
 }
@@ -372,7 +372,6 @@ report_incr_stats(uct_t *u, int *stats_size)
 	double start_time = time_now();
 
 	tree_node_t *root = u->t->root;
-	board_t *b = u->t->board;
 
 	/* The factor 3 below has experimentally been found to be
 	 * sufficient. At worst if we fill stats_queue we will
@@ -401,7 +400,7 @@ report_incr_stats(uct_t *u, int *stats_size)
 	}
 
 	stats_count = append_stats(stats_queue, root, 0, max_nodes, 0,
-				   max_parent_path(u), min_increment, b);
+				   max_parent_path(u), min_increment);
 
 	void *buf = select_best_stats(stats_queue, stats_count, u->shared_nodes, stats_size);
 
