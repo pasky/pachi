@@ -26,7 +26,7 @@
 #define DESCENT_DLEN 512
 
 
-void
+static void
 uct_progress_text(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts)
 {
 	board_t *b = t->board;
@@ -158,7 +158,7 @@ uct_progress_gogui_winrates(uct_t *u, tree_t *t, enum stone color, int playouts)
 	gogui_show_winrates(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
 }
 
-void
+static void
 uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final, bool big)
 {
 	/* Prefix indicating JSON line. */
@@ -252,7 +252,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 	fprintf(fh, "}}\n");
 }
 
-void
+static void
 uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
 {
 	if (!gogui_livegfx)  return;
