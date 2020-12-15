@@ -38,6 +38,7 @@ board_setup(board_t *b)
 
 	memset(b, 0, sizeof(*b));
 
+	b->rules = RULES_CHINESE;
 	move_t m = { pass, S_NONE };
 	for (int i = 0; i < BOARD_LAST_N; i++)
 		last_moven(b, i) = m;
@@ -174,21 +175,6 @@ board_init_data(board_t *board)
 
 	board_setup(board);
 	board_resize(board, size);
-
-	/* Setup initial symmetry */
-	if (size % 2) {
-		board->symmetry.d = 1;
-		board->symmetry.x1 = board->symmetry.y1 = stride / 2;
-		board->symmetry.x2 = board->symmetry.y2 = stride - 1;
-		board->symmetry.type = SYM_FULL;
-	} else {
-		/* TODO: We do not handle board symmetry on boards
-		 * with no tengen yet. */
-		board->symmetry.d = 0;
-		board->symmetry.x1 = board->symmetry.y1 = 1;
-		board->symmetry.x2 = board->symmetry.y2 = stride - 1;
-		board->symmetry.type = SYM_NONE;
-	}
 
 	/* Draw the offboard margin */
 	int top_row = board_max_coords(board) - stride;
@@ -394,106 +380,6 @@ board_print_target_move(board_t *b, FILE *f, coord_t target_move)
 }
 
 
-bool
-board_coord_in_symmetry(board_t *b, coord_t c)
-{
-	if (coord_y(c) < b->symmetry.y1 || coord_y(c) > b->symmetry.y2)
-		return false;
-	if (coord_x(c) < b->symmetry.x1 || coord_x(c) > b->symmetry.x2)
-		return false;
-	if (b->symmetry.d) {
-		int x = coord_x(c);
-		if (b->symmetry.type == SYM_DIAG_DOWN)
-			x = board_stride(b) - 1 - x;
-		if (x > coord_y(c))
-			return false;
-	}
-	return true;
-}
-
-void
-board_symmetry_update(board_t *b, board_symmetry_t *symmetry, coord_t c)
-{
-	if (playout_board(b))  return;
-
-	if (likely(symmetry->type == SYM_NONE)) {
-		/* Fully degenerated already. We do not support detection
-		 * of restoring of symmetry, assuming that this is too rare
-		 * a case to handle. */
-		return;
-	}
-
-	int x = coord_x(c), y = coord_y(c), t = board_stride(b) / 2;
-	int dx = board_stride(b) - 1 - x; /* for SYM_DOWN */
-	if (DEBUGL(6))
-		fprintf(stderr, "SYMMETRY [%d,%d,%d,%d|%d=%d] update for %d,%d\n",
-			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
-			symmetry->d, symmetry->type, x, y);
-	
-	switch (symmetry->type) {
-		case SYM_FULL:
-			if (x == t && y == t)				
-				return;        /* Tengen keeps full symmetry. */
-			
-			/* New symmetry now? */
-			if (x == y) {
-				symmetry->type = SYM_DIAG_UP;
-				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
-				symmetry->d = 1;
-			} else if (dx == y) {
-				symmetry->type = SYM_DIAG_DOWN;
-				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
-				symmetry->d = 1;
-			} else if (x == t) {
-				symmetry->type = SYM_HORIZ;
-				symmetry->y1 = 1;
-				symmetry->y2 = board_stride(b) - 1;
-				symmetry->d = 0;
-			} else if (y == t) {
-				symmetry->type = SYM_VERT;
-				symmetry->x1 = 1;
-				symmetry->x2 = board_stride(b) - 1;
-				symmetry->d = 0;
-			} else {
-break_symmetry:
-				symmetry->type = SYM_NONE;
-				symmetry->x1 = symmetry->y1 = 1;
-				symmetry->x2 = symmetry->y2 = board_stride(b) - 1;
-				symmetry->d = 0;
-			}
-			break;
-		case SYM_DIAG_UP:
-			if (x == y)
-				return;
-			goto break_symmetry;
-		case SYM_DIAG_DOWN:
-			if (dx == y)
-				return;
-			goto break_symmetry;
-		case SYM_HORIZ:
-			if (x == t)
-				return;
-			goto break_symmetry;
-		case SYM_VERT:
-			if (y == t)
-				return;
-			goto break_symmetry;
-		case SYM_NONE:
-			assert(0);
-			break;
-	}
-
-	if (DEBUGL(6)) {
-		fprintf(stderr, "NEW SYMMETRY [%d,%d,%d,%d|%d=%d]\n",
-			symmetry->x1, symmetry->y1, symmetry->x2, symmetry->y2,
-			symmetry->d, symmetry->type);
-	}
-	/* Whew. */
-}
-
-
 static void
 board_handicap_stone(board_t *board, int x, int y, move_queue_t *q)
 {
@@ -630,10 +516,9 @@ board_fast_score(board_t *board)
 	return board_score(board, scores);
 }
 
-/* Owner map: 0: undecided; 1: black; 2: white; 3: dame */
-
-/* One flood-fill iteration; returns true if next iteration
- * is required. */
+/* One flood-fill iteration.
+ * Empty spots start with value -1 initially (unset). 
+ * Returns true if next iteration is required. */
 static bool
 board_tromp_taylor_iter(board_t *board, int *ownermap)
 {
@@ -642,34 +527,33 @@ board_tromp_taylor_iter(board_t *board, int *ownermap)
 		/* Ignore occupied and already-dame positions. */
 		assert(board_at(board, c) == S_NONE);
 		if (board->rules == RULES_STONES_ONLY)
-		    ownermap[c] = 3;
-		if (ownermap[c] == 3)
+		    ownermap[c] = FO_DAME;
+		if (ownermap[c] == FO_DAME)
 			continue;
+		
 		/* Count neighbors. */
 		int nei[4] = {0};
 		foreach_neighbor(board, c, {
 			nei[ownermap[c]]++;
 		});
-		/* If we have neighbors of both colors, or dame,
-		 * we are dame too. */
-		if ((nei[1] && nei[2]) || nei[3]) {
-			ownermap[c] = 3;
-			/* Speed up the propagation. */
-			foreach_neighbor(board, c, {
+		
+		/* If we have neighbors of both colors, or dame, we are dame too. */
+		if ((nei[S_BLACK] && nei[S_WHITE]) || nei[FO_DAME]) {
+			ownermap[c] = FO_DAME;
+			foreach_neighbor(board, c, {  /* Speed up the propagation. */
 				if (board_at(board, c) == S_NONE)
-					ownermap[c] = 3;
+					ownermap[c] = FO_DAME;
 			});
 			needs_update = true;
 			continue;
 		}
-		/* If we have neighbors of one color, we are owned
-		 * by that color, too. */
-		if (!ownermap[c] && (nei[1] || nei[2])) {
-			int newowner = nei[1] ? 1 : 2;
+		
+		/* If we have neighbors of one color, we are owned by that color, too. */
+		if (ownermap[c] == -1 && (nei[S_BLACK] || nei[S_WHITE])) {
+			int newowner = (nei[S_BLACK] ? S_BLACK : S_WHITE);
 			ownermap[c] = newowner;
-			/* Speed up the propagation. */
-			foreach_neighbor(board, c, {
-				if (board_at(board, c) == S_NONE && !ownermap[c])
+			foreach_neighbor(board, c, {  /* Speed up the propagation. */
+				if (board_at(board, c) == S_NONE && ownermap[c] == -1)
 					ownermap[c] = newowner;
 			});
 			needs_update = true;
@@ -718,14 +602,14 @@ board_score(board_t *b, int scores[S_MAX])
 }
 
 static void
-printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
+final_ownermap_printhook(board_t *board, coord_t c, strbuf_t *buf, void *data)
 {
 	int *ownermap = (int*)data;
 	
 	if (c == pass)  /* Stuff to display in header */
 		return;
 	
-        const char chr[] = ".XO:";
+        const char chr[] = ":XO#";
         sbprintf(buf, "%c ", chr[ownermap[c]]);
 }
 
@@ -736,12 +620,13 @@ board_print_official_ownermap(board_t *b, move_queue_t *dead)
 	int ownermap[board_max_coords(b)];
 	board_official_score_details(b, dead, &dame, &seki, ownermap, NULL);
 
-        board_print_custom(b, stderr, printhook, ownermap);
+        board_print_custom(b, stderr, final_ownermap_printhook, ownermap);
 }
 
 /* Official score after removing dead groups and Tromp-Taylor counting.
  * Returns number of dames, sekis, final ownermap in @dame, @seki, @ownermap.
- * (only distinguishes between dames/sekis if @po is not NULL) */
+ * (only distinguishes between dames/sekis if @po is not NULL) 
+ * final ownermap values:  FO_DAME  S_BLACK  S_WHITE  S_OFFBOARD */
 floating_t
 board_official_score_details(board_t *b, move_queue_t *dead,
 			     int *dame, int *seki, int *ownermap, ownermap_t *po)
@@ -753,10 +638,10 @@ board_official_score_details(board_t *b, move_queue_t *dead,
 	 * A player's score is the number of points of her color, plus the
 	 * number of empty points that reach only her color. */
 
-	int s[4] = {0};
-	const int o[4] = {0, 1, 2, 0};
+	int s[S_MAX] = {0};
+	const int tr[4] = {-1, 1, 2, 3};  /* -1: unset */
 	foreach_point(b) {
-		ownermap[c] = o[board_at(b, c)];
+		ownermap[c] = tr[board_at(b, c)];
 		s[board_at(b, c)]++;
 	} foreach_point_end;
 
@@ -765,7 +650,7 @@ board_official_score_details(board_t *b, move_queue_t *dead,
 		for (unsigned int i = 0; i < dead->moves; i++) {
 			foreach_in_group(b, dead->move[i]) {
 				enum stone color = board_at(b, c);
-				ownermap[c] = o[stone_other(color)];
+				ownermap[c] = stone_other(color);
 				s[color]--; s[stone_other(color)]++;
 			} foreach_in_group_end;
 		}
@@ -778,13 +663,12 @@ board_official_score_details(board_t *b, move_queue_t *dead,
 	while (board_tromp_taylor_iter(b, ownermap))
 		/* Flood-fill... */;
 
-	int scores[S_MAX] = { 0, };
-
+	int scores[S_MAX] = {0};
 	foreach_point(b) {
-		assert(board_at(b, c) == S_OFFBOARD || ownermap[c] != 0);
+		assert(ownermap[c] != -1);
 		scores[ownermap[c]]++;
 	} foreach_point_end;
-	*dame = scores[3];
+	*dame = scores[FO_DAME];
 	*seki = 0;
 
 	if (po) {

@@ -23,6 +23,50 @@ Compared to earlier versions of Pachi (<= 12.45):
 - `fixed_mem` gives old behavior (tree memory doesn't grow)
 
 
+## Distributed Engine
+
+To run Pachi on a cluster of nodes you need to build Pachi with
+distributed engine support (not built-in by default).
+
+See [INSTALL](INSTALL.md) for build instructions.
+Edit Makefile before building and uncomment these:
+
+    DISTRIBUTED=1
+    NETWORK=1
+
+Distributed engine should be available now
+(`pachi -e distributed` should hang but not return an error).
+
+To try the distributed engine on the same machine run:
+
+    ./pachi -t =4000  -e distributed slave_port=1234        # master
+    
+And in another terminal:
+
+    ./pachi -g localhost:1234 slave                         # slave
+
+Now make it generate a move, type in the first window:
+
+    boardsize 19
+    clear_board
+    genmove b
+
+To use a UI like GoGui or Sabaki give it the command for master.
+Wait until Pachi starts then start the slave. Now you should be
+able to generate moves within the UI.
+
+To try it on a cluster install Pachi on the different nodes,
+run it like (30s per move):
+
+    ./pachi -t 30 -e distributed slave_port=1234           # master
+    ./pachi -g masterhostname:1234 slave                   # slaves
+
+And they should all coordinate when asked to generate a move.
+By default each slave uses all cores available (1 thread per core).
+
+See distributed/distributed.c for details and more options.
+
+
 ## Large Patterns
 
 Pachi uses MM patterns to guide tree search. The pattern matcher runs

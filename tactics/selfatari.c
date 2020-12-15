@@ -541,7 +541,7 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 	 * dead locally. */
 	for (int j = 0; j < s->groupcts[color]; j++) {
 		group_t g2 = s->groupids[color][j];
-		if (can_countercapture(b, g2, NULL, 0))
+		if (can_countercapture(b, g2, NULL))
 			return true;
 	}
 	
@@ -773,7 +773,7 @@ found:;
 		/* Can we get liberties by capturing a neighbor? */
 		move_queue_t ccq;  mq_init(&ccq);
 		if (board_at(b, group) == color &&
-		    can_countercapture(b, group, &ccq, 0)) {
+		    can_countercapture(b, group, &ccq)) {
 			lib2 = mq_pick(&ccq);
 
 		} else {

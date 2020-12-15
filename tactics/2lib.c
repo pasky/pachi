@@ -193,10 +193,10 @@ can_atari_group(board_t *b, group_t group, enum stone owner,
 
 	if (DEBUGL(7)) {
 		char label[256];
-		snprintf(label, 256, "= final %s %s liberties to play by %s",
+		snprintf(label, 256, "final %s %s liberties to play by %s = ",
 			stone2str(owner), coord2sstr(group),
 			stone2str(to_play));
-		mq_print(q, label);
+		mq_print_line(label, q);
 	}
 }
 

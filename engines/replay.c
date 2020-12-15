@@ -204,7 +204,7 @@ replay_state_init(engine_t *e, board_t *b)
 
 
 void
-engine_replay_init(engine_t *e, board_t *b)
+replay_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "PlayoutReplay";
 	e->comment = "I select the most probable move from moggy playout policy";

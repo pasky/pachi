@@ -305,7 +305,6 @@ board_play_outside(board_t *board, move_t *m, int f)
 	board_commit_move(board, m);
 #ifdef FULL_BOARD
 	board_hash_update(board, coord, color);
-	board_symmetry_update(board, &board->symmetry, coord);
 #endif
 	move_t ko = { pass, S_NONE };
 	board->ko = ko;
@@ -392,7 +391,6 @@ board_play_in_eye(board_t *board, move_t *m, int f)
 #ifdef FULL_BOARD
 	board_hash_update(board, coord, color);
 	board_hash_commit(board);
-	board_symmetry_update(board, &board->symmetry, coord);
 #endif
 	board->ko = ko;
 

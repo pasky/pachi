@@ -199,7 +199,7 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 
 	/* Check group is completely surrounded.
 	 * If it can countercapture for sure it's not completely surrounded */
-	if (can_countercapture(b, g3, NULL, 0))
+	if (can_countercapture(b, g3, NULL))
 		return false;
 	int visited[BOARD_MAX_COORDS] = {0, };
 	if (!big_eye_area(b, color, group_base(g3), visited))

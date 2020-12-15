@@ -66,6 +66,10 @@ pairing_param() { # Accessor method
 
 
 echo "Loaded $pairs pairings"
+if [ "$pairs" = "0" ]; then
+    echo "Nothing to do, exiting."
+    sleep 1; exit 0
+fi
 
 # XXX RANDOM is bash-specific
 pair="$((RANDOM % $pairs))"
@@ -95,11 +99,10 @@ prun_get prun_black "$p_black" $pa_black
 prun_get prun_white "$p_white" $pa_white
 komi="$(pairing_param $pair komi | sed 's/^h/0.5 -handicap /')"
 
-
 # Run twogtp!
 rm -f "c/$clientid"/scratch*
 echo $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch"
-$twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch" 2> >(tee -a "c/$clientid/game.log" >&2)
+     $twogtp_path -black "$prun_black" -white "$prun_white" -auto -verbose -size "$(pairing_param $pair bsize)" -komi $komi -games 1 -sgffile "c/$clientid/scratch" 2> >(tee "c/$clientid/game.log" >&2)
 
 # Get count of our game
 mkdir -p "c/$clientid/$pairid"

@@ -81,11 +81,12 @@ number. Usually, worker failures will result from interrupting a client.
 LOGS
 ----
 
-By default players' logs for all games are saved.
-Current game log for each worker is in c/hostname-id/game.log
-Once game is finished log is moved to  c/hostname-id/pairing/game-number.log
+By default players' logs for all games are saved:
+Current game log for each worker is c/hostname-id/game.log
+Finished games logs are in c/hostname-id/pairing/
+In case of crash log is moved under crashes/
 
-These are two-gtp's logs, so they have both players' stderr plus some two-gtp
+These are two-gtp's logs, so have both players' stderr plus some two-gtp
 output of its own. They will end up taking quite a bit of space if you play
 lots of games. To remove a given pairing's logs do:
 

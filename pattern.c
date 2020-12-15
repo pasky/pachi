@@ -395,10 +395,10 @@ cutting_stones_and_can_capture_other_after_atari(board_t *b, move_t *m, group_t 
 		if (!cutting_stones(b, atariable))		break;
 		if (!cutting_stones(b, other))			break;
 		
-		move_queue_t mq;  mq_init(&mq);
+		move_queue_t mq;
 		coord_t lib = board_group_info(b, atariable).lib[0];
+		can_countercapture(b, atariable, &mq);
 		mq_add(&mq, lib, 0);
-		can_countercapture(b, atariable, &mq, 0);
 		
 		/* try possible replies, must work for all of them */
 		for (unsigned int i = 0; i < mq.moves; i++) {
@@ -668,7 +668,7 @@ is_net(board_t *b, coord_t target, coord_t net)
 
 	group_t g = group_at(b, target);
 	assert(board_group_info(b, g).libs == 2);
-	if (can_countercapture(b, g, NULL, 0))  return false;  /* For now. */
+	if (can_countercapture(b, g, NULL))  return false;  /* For now. */
 
 	group_t netg = group_at(b, net);
 	assert(board_group_info(b, netg).libs >= 2);

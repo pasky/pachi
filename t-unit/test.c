@@ -26,15 +26,55 @@
 static bool tunit_over_gtp = 1;
 static bool board_printed;
 static bool last_move_set;
-static char *next;
+static char *current_cmd = NULL;
+static char *next = NULL;
 
-#define next_arg(to_) \
+/* Get next argument (must be there) */
+#define next_arg(to_)   do { \
+	to_ = next; \
+	if (!*(to_))  die("%s: argument missing\n", current_cmd); \
+	next += strcspn(next, " \t"); \
+	if (*next) { \
+		*next = 0; next++; \
+		next += strspn(next, " \t"); \
+	} \
+} while (0)
+
+/* Get next argument (optional) */
+#define next_arg_opt(to_)   do { \
 	to_ = next; \
 	next += strcspn(next, " \t"); \
 	if (*next) { \
 		*next = 0; next++; \
 		next += strspn(next, " \t"); \
 	} \
+} while (0)
+
+/* save current command and skip to first argument
+ * before calling function */
+static void
+init_arg(char *line)
+{
+	current_cmd = next = line;
+	char *arg;
+	next_arg(arg);	
+}
+
+static void
+init_arg_len(char *line, int len)
+{
+	current_cmd = next = line;
+	next = line + len - 1;
+	char *arg;
+	next_arg(arg);
+}
+
+/* Check no more args */
+static void
+args_end()
+{
+	if (*next)  die("Invalid extra arg: '%s'\n", next);
+}
 
 static void
 chomp(char *line)
@@ -49,13 +89,6 @@ remove_comments(char *line)
 {
 	if (strchr(line, '#'))
 		*strchr(line, '#') = 0;
-}
-
-/* Check no more args */
-static void
-args_end()
-{
-	if (*next)  die("Invalid extra arg: '%s'\n", next);
 }
 
 static void
@@ -80,23 +113,49 @@ check_play_move(board_t *b, move_t *m)
 static void
 set_komi(board_t *b, char *arg)
 {
+	next_arg(arg);
 	assert(*arg == '-' || *arg == '+' || isdigit(*arg));
 	b->komi = atof(arg);
 }
 
 static void
+set_rules(board_t *b, char *arg)
+{
+	next_arg(arg);
+	bool r = board_set_rules(b, arg);
+	if (!r)  die("bad rules: %s\n", arg);
+}
+
+static void
+set_passes(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	assert(color != S_NONE);
+	next_arg(arg);
+	assert(isdigit(*arg));
+	int n = atoi(arg);
+	b->passes[color] += n;
+}
+
+static void
 set_handicap(board_t *b, char *arg)
 {
+	next_arg(arg);	
 	assert(isdigit(*arg));
 	b->handicap = atoi(arg);
 }
 
 static void
-board_load(board_t *b, FILE *f, int size)
+board_load(board_t *b, FILE *f, char *arg)
 {
+	next_arg(arg);
+	assert(isdigit(*arg));
+	int size = atoi(arg);
 	move_t last_move = move(pass, S_NONE);
 	last_move_set = false;
 	board_resize(b, size);
+	b->rules = RULES_CHINESE;  /* reset rules in case they got changed */
 	board_clear(b);
 	for (int y = size - 1; y >= 0; y--) {
 		char line[256];
@@ -104,8 +163,12 @@ board_load(board_t *b, FILE *f, int size)
 		chomp(line);
 		remove_comments(line);
 
-		if (!strncmp(line, "komi ", 5))     {  set_komi(b, line + 5);     y++; continue;  }
-		if (!strncmp(line, "handicap ", 9)) {  set_handicap(b, line + 9); y++; continue;  }
+		char *cmd = line;
+		if ('a' <= line[0] && line[0] <= 'z')  init_arg(line);
+		if (!strcmp("komi", cmd))     {  set_komi(b, next);     y++; continue;  }
+		if (!strcmp("rules", cmd))    {  set_rules(b, next);    y++; continue;  }
+		if (!strcmp("passes", cmd))   {  set_passes(b, next);   y++; continue;  }
+		if (!strcmp("handicap", cmd)) {  set_handicap(b, next); y++; continue;  }
 
 		if ((int)strlen(line) != size * 2 - 1 && 
 		    (int)strlen(line) != size * 2)       die("Line not %d char long: '%s'\n", size * 2 - 1, line);
@@ -145,6 +208,7 @@ board_load(board_t *b, FILE *f, int size)
 static void
 set_ko(board_t *b, char *arg)
 {
+	next_arg(arg);
 	assert(isalpha(*arg));
 	move_t last;
 	last.coord = str2coord(arg);
@@ -167,9 +231,9 @@ static int optional = 0;
 static char title[256];
 
 static void
-show_title_if_needed(int passed)
+show_title_if_needed()
 {
-	if (!passed && debug_level == 1 && *title) {
+	if (debug_level == 1 && *title) {
 		fprintf(stderr, "\n%s\n", title);
 		*title = 0;
 	}
@@ -180,9 +244,10 @@ show_title_if_needed(int passed)
 	if (DEBUGL(1))  fprintf(stderr, format, __VA_ARGS__);	   \
 } while(0)
 
-#define PRINT_RES(passed)  do {						\
-	if (!(passed)) {					\
-		show_title_if_needed(passed);			\
+/* Print test result (passed / failed) */
+#define PRINT_RES()  do {					\
+	if (rres != eres) {					\
+		show_title_if_needed();				\
 		if (DEBUGL(0))  fprintf(stderr, "FAILED %s\n", (optional ? "(optional)" : "")); \
 	} else								\
 		if (DEBUGL(1))  fprintf(stderr, "OK\n");		\
@@ -190,7 +255,7 @@ show_title_if_needed(int passed)
 
 
 static bool
-test_selfatari(board_t *b, char *arg)
+test_bad_selfatari(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -200,17 +265,17 @@ test_selfatari(board_t *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	PRINT_TEST(b, "bad_selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_bad_selfatari(b, color, c);
 
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
 static bool
-test_selfatari_really_bad(board_t *b, char *arg)
+test_really_bad_selfatari(board_t *b, char *arg)
 {
 	next_arg(arg);
 	enum stone color = str2stone(arg);
@@ -220,12 +285,12 @@ test_selfatari_really_bad(board_t *b, char *arg)
 	int eres = atoi(arg);
 	args_end();
 
-	PRINT_TEST(b, "selfatari_really_bad %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	PRINT_TEST(b, "really_bad_selfatari %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
 
 	assert(board_at(b, c) == S_NONE);
 	int rres = is_really_bad_selfatari(b, color, c);
 
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -245,7 +310,7 @@ test_corner_seki(board_t *b, char *arg)
 	assert(board_at(b, c) == S_NONE);
 	int rres = breaking_corner_seki(b, c, color);
 
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -265,7 +330,7 @@ test_false_eye_seki(board_t *b, char *arg)
 	assert(board_at(b, c) == S_NONE);
 	int rres = breaking_false_eye_seki(b, c, color);
 
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -288,7 +353,7 @@ test_ladder(board_t *b, char *arg)
 	assert(board_group_info(b, group).libs == 1);
 	int rres = is_ladder(b, group, true);
 	
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -311,7 +376,7 @@ test_ladder_any(board_t *b, char *arg)
 	assert(board_group_info(b, group).libs == 1);
 	int rres = is_ladder_any(b, group, true);
 	
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -335,7 +400,7 @@ test_wouldbe_ladder(board_t *b, char *arg)
 	coord_t chaselib = c;
 	int rres = wouldbe_ladder(b, g, chaselib);
 	
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -358,7 +423,7 @@ test_wouldbe_ladder_any(board_t *b, char *arg)
 	coord_t chaselib = c;
 	int rres = wouldbe_ladder_any(b, g, chaselib);
 	
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -382,7 +447,7 @@ test_useful_ladder(board_t *b, char *arg)
 	int ladder = is_ladder(b, atari_neighbor, true);  assert(ladder);
 	int rres = useful_ladder(b, atari_neighbor);
 	
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -400,9 +465,9 @@ test_can_countercap(board_t *b, char *arg)
 	enum stone color = board_at(b, c);
 	group_t g = group_at(b, c);
 	assert(color == S_BLACK || color == S_WHITE);
-	int rres = can_countercapture(b, g, NULL, 0);
+	int rres = can_countercapture(b, g, NULL);
 
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -422,7 +487,7 @@ test_two_eyes(board_t *b, char *arg)
 	assert(color == S_BLACK || color == S_WHITE);
 	int rres = dragon_is_safe(b, group_at(b, c), color);
 
-	PRINT_RES(rres == eres);
+	PRINT_RES();
 	return   (rres == eres);
 }
 
@@ -505,7 +570,7 @@ moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool 
 static bool
 test_moggy_status(board_t *b, char *arg)
 {
-	next_arg(arg);
+	next_arg_opt(arg);
 
 	bool speed_benchmark = !*arg;
 	int games = (speed_benchmark ? 4000 : 500);
@@ -526,10 +591,10 @@ test_moggy_status(board_t *b, char *arg)
 		else if (!strcasecmp(arg, ":"))  expected[n] = PJ_SEKI;
 		else if (!strcasecmp(arg, "?"))  { expected[n] = PJ_BLACK; thres[n] = 0;  }
 		else    die("Expected x/o/X/O/: after coord %s\n", coord2sstr(coords[n]));
-		next_arg(arg);
+		next_arg_opt(arg);
 	}
 	args_end();
-	
+
 	if (!tunit_over_gtp) assert(last_move_set);
 	
 	enum stone color = board_to_play(b);
@@ -571,8 +636,9 @@ test_moggy_status(board_t *b, char *arg)
 		const char *colorstr = (j == PJ_SEKI ? "seki" : stone2str(color));
 		PRINT_TEST(b, "moggy status %3s:  %-5s %3i%%    ", coord2sstr(c), colorstr, pc);
 		
+		bool rres = passed, eres = true;
+		PRINT_RES();
 		if (!passed)  ret = false;
-		PRINT_RES(passed);
 	}
 	
 	return ret;
@@ -588,31 +654,34 @@ typedef bool (*t_unit_func)(board_t *board, char *arg);
 typedef struct {
 	char *cmd;
 	t_unit_func f;
-	bool needs_arg;
 } t_unit_cmd;
 
 static t_unit_cmd commands[] = {
-	{ "selfatari",              test_selfatari,         1 },
-	{ "sar",                    test_selfatari,         1 },  /* alias */
-	{ "selfatari_really_bad",   test_selfatari_really_bad,  1 },	
-	{ "ladder",                 test_ladder,            1 },
-	{ "ladder_any",             test_ladder_any,        1 },
-	{ "wouldbe_ladder",         test_wouldbe_ladder,    1 },
-	{ "wouldbe_ladder_any",     test_wouldbe_ladder_any,1 },
-	{ "useful_ladder",          test_useful_ladder,     1 },
-	{ "can_countercap",         test_can_countercap,    1 },
-	{ "two_eyes",               test_two_eyes,          1 },
-	{ "moggy moves",            test_moggy_moves,       0 },
-	{ "moggy status",           test_moggy_status,      0 },
-	{ "corner_seki",            test_corner_seki,       1 },
-	{ "false_eye_seki",         test_false_eye_seki,    1 },
+	{ "bad_selfatari",          test_bad_selfatari,         },
+	{ "really_bad_selfatari",   test_really_bad_selfatari,  },
+	{ "ladder",                 test_ladder,                },
+	{ "ladder_any",             test_ladder_any,            },
+	{ "wouldbe_ladder",         test_wouldbe_ladder,        },
+	{ "wouldbe_ladder_any",     test_wouldbe_ladder_any,    },
+	{ "useful_ladder",          test_useful_ladder,         },
+	{ "can_countercap",         test_can_countercap,        },
+	{ "two_eyes",               test_two_eyes,              },
+	{ "moggy moves",            test_moggy_moves,           },
+	{ "moggy status",           test_moggy_status,          },
+	{ "corner_seki",            test_corner_seki,           },
+	{ "false_eye_seki",         test_false_eye_seki,        },
 #ifdef BOARD_TESTS
-	{ "board_undo_stress_test", board_undo_stress_test, 0 },
-	{ "board_regtest",          board_regression_test,  0 },
-	{ "moggy_regtest",          moggy_regression_test,  0 },
-	{ "spatial_regtest",        spatial_regression_test,  0 },
+	{ "board_undo_stress_test", board_undo_stress_test,     },
+	{ "board_regtest",          board_regression_test,      },
+	{ "moggy_regtest",          moggy_regression_test,      },
+	{ "spatial_regtest",        spatial_regression_test,    },
 #endif
-	{ 0, 0, 0 }
+
+/* Aliases */
+	{ "sar",                    test_bad_selfatari,             },  /* backward compatibility */
+	{ "rbsar",                  test_really_bad_selfatari,      },
+	
+	{ 0, 0 }
 };
 
 int
@@ -629,11 +698,8 @@ unit_test_cmd(board_t *b, char *line)
 		char c = line[strlen(cmd)];
 		if (c && c != ' ' && c != '\t')
 			continue;
-		if (commands[i].needs_arg && c != ' ')
-			die("%s\nerror: command %s needs argument(s)\n", line, cmd);
-		
-		next = line + strlen(cmd);
-		next += strspn(next, " \t");
+
+		init_arg_len(line, strlen(cmd));
 		return commands[i].f(b, next);
 	}
 
@@ -673,9 +739,11 @@ unit_test(char *filename)
 				break;
 			case  0 : continue;
 		}
-		
-		if (!strncmp(line, "boardsize ", 10))  {  board_load(b, f, atoi(line + 10)); continue;  }
-		if (!strncmp(line, "ko ", 3))	       {  set_ko(b, line + 3); continue;  }
+
+		if (str_prefix("boardsize ", line)) {  init_arg(line); board_load(b, f, next); continue;  }
+		if (str_prefix("rules ", line))     {  init_arg(line); set_rules(b, next); continue;  }
+		if (str_prefix("komi ", line))      {  init_arg(line); set_komi(b, next); continue;  }
+		if (str_prefix("ko ", line))	    {  init_arg(line); set_ko(b, next); continue;  }
 
 		if (optional)  {  total_opt++;  passed_opt += unit_test_cmd(b, line); }
 		else           {  total++;      passed     += unit_test_cmd(b, line); }

@@ -730,7 +730,7 @@ cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 	}
 
 	if (DEBUGL(1)) {   /* show final score and board */
-		fprintf(stderr, "\nfinal score: %s\n", board_official_score_str(b, &q));
+		fprintf(stderr, "\nfinal score: %s  (%s)\n", board_official_score_str(b, &q), rules2str(b->rules));
 		board_print_official_ownermap(b, &q);
 	}
 
@@ -923,8 +923,7 @@ cmd_pachi_evaluate(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		floating_t vals[b->flen];
 		e->evaluate(e, b, &ti[color], vals, color);
 		for (int i = 0; i < b->flen; i++) {
-			if (!board_coord_in_symmetry(b, b->f[i])
-			    || isnan(vals[i]) || vals[i] < 0.001)
+			if (isnan(vals[i]) || vals[i] < 0.001)
 				continue;
 			gtp_printf(gtp, "%s %.3f\n", coord2sstr(b->f[i]), (double) vals[i]);
 		}

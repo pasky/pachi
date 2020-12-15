@@ -15,9 +15,9 @@
 #include "engines/montecarlo.h"
 #include "engines/random.h"
 #include "engines/patternscan.h"
-#include "engines/patternplay.h"
+#include "engines/pattern.h"
 #include "engines/josekiscan.h"
-#include "engines/josekiplay.h"
+#include "engines/joseki.h"
 #include "engines/dcnn.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
@@ -41,6 +41,7 @@ static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time
 
 char *pachi_exe = NULL;
 int   debug_level = 3;
+int   saved_debug_level;
 bool  debug_boardprint = true;
 long  verbose_logs = 0;
 char *forced_ruleset = NULL;
@@ -94,32 +95,70 @@ accurate_scoring_init(gtp_t *gtp, board_t *b) {
 		if (DEBUGL(1)) warning("WARNING: gnugo not found, using mcts to compute dead stones (possibly inaccurate)\n");
 }
 
-static engine_init_t engine_inits[E_MAX] = { NULL };
+typedef struct {
+	int		id;
+	char	       *name;
+	engine_init_t	init;
+	bool		show;
+} engine_map_t;
+
+/* Must match order in engine.h */
+engine_map_t engines[] = {
+	{ E_UCT,         "uct",         uct_engine_init,            1 },
+#ifdef DCNN
+	{ E_DCNN,        "dcnn",        dcnn_engine_init,           1 },
+#endif
+	{ E_PATTERN,     "pattern",     pattern_engine_init,        1 },
+	{ E_PATTERNSCAN, "patternscan", patternscan_engine_init,    0 },
+	{ E_JOSEKI,      "joseki",      joseki_engine_init,         1 },
+	{ E_JOSEKISCAN,  "josekiscan",  josekiscan_engine_init,     0 },
+	{ E_RANDOM,      "random",      random_engine_init,         1 },
+	{ E_REPLAY,      "replay",      replay_engine_init,         1 },
+	{ E_MONTECARLO,  "montecarlo",  montecarlo_engine_init,     1 },
+#ifdef DISTRIBUTED
+	{ E_DISTRIBUTED, "distributed", distributed_engine_init,    1 },
+#endif
+
+/* Alternative names */
+	{ E_PATTERN,     "patternplay", pattern_engine_init,        1 },  /* backwards compatibility */
+	{ E_JOSEKI,      "josekiplay",  joseki_engine_init,         1 },
+	
+	{ 0, 0, 0, 0 }
+};
+
+static enum engine_id
+engine_name_to_id(const char *name)
+{
+	for (int i = 0; engines[i].name; i++)
+		if (!strcmp(name, engines[i].name))
+			return engines[i].id;
+	return E_MAX;
+}
+
+static char*
+supported_engines(bool show_all)
+{
+	static_strbuf(buf, 512);
+	for (int i = 0; i < E_MAX; i++)  /* Don't list alt names */
+		if (show_all || engines[i].show)
+			strbuf_printf(buf, "%s%s", engines[i].name, (engines[i+1].name ? ", " : ""));
+	return buf->str;
+}
 
 static void
 init()
 {
-	engine_inits[ E_RANDOM ]      = engine_random_init;
-	engine_inits[ E_REPLAY ]      = engine_replay_init;
-	engine_inits[ E_PATTERNSCAN ] = engine_patternscan_init;
-	engine_inits[ E_PATTERNPLAY ] = engine_patternplay_init;
-	engine_inits[ E_JOSEKISCAN ]  = engine_josekiscan_init;
-	engine_inits[ E_JOSEKIPLAY ]  = engine_josekiplay_init;
-	engine_inits[ E_MONTECARLO ]  = engine_montecarlo_init;
-	engine_inits[ E_UCT ]         = engine_uct_init;
-#ifdef DISTRIBUTED
-	engine_inits[ E_DISTRIBUTED ] = engine_distributed_init;
-#endif
-#ifdef DCNN
-	engine_inits[ E_DCNN ]        = engine_dcnn_init;
-#endif
+	/* Check engine list is sane. */
+	for (int i = 0; i < E_MAX; i++)
+		assert(engines[i].name && engines[i].id == i);
 };
+
 
 void
 pachi_engine_init(engine_t *e, int id, board_t *b)
 {
 	assert(id >= 0 && id < E_MAX);	
-	engine_inits[id](e, b);
+	engines[id].init(e, b);
 }
 
 static void
@@ -129,8 +168,10 @@ usage()
 	fprintf(stderr,
 		"Options: \n"
                 "      --compile-flags               show pachi's compile flags \n"
-		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n"
-		"                                    uct, dcnn, patternplay, replay, random, montecarlo, distributed \n"
+		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n");
+	fprintf(stderr,
+		"                                    %s \n", supported_engines(false));
+	fprintf(stderr,
 		"  -h, --help                        show usage \n"
 		"  -s, --seed RANDOM_SEED            set random seed \n"
 		"  -u, --unit-test FILE              run unit tests \n"
@@ -194,11 +235,10 @@ usage()
 		" \n"
 		"Engine args: \n"
 		"  Comma/space separated engine specific options as in:\n"
-		"      pachi threads=8 max_tree_size=3072 pondering \n"
-		"      pachi threads=8,max_tree_size=3072,pondering            (pachi < 12.50) \n"
+		"      pachi threads=8 resign_threshold=0.25 pondering \n"
+		"      pachi threads=8,resign_threshold=0.25,pondering            (pachi < 12.50) \n"
 		"\n"
 		"  See respective engines for details. Most common options for uct: \n"
-		"      max_tree_size=100             use max 100 Mb of memory for tree search (default: unlimited) \n"
 		"      resign_threshold=0.25         resign if winrate < 25%% (default: 20%%) \n"
 		"      reportfreq=1s                 show search progress every second (default: 1000 playouts) \n"
 		"      threads=4                     use 4 threads for tree search (default: #cores) \n"
@@ -319,19 +359,9 @@ int main(int argc, char *argv[])
 				printf("Command:\n%s\n", PACHI_CC1);
 				exit(0);
 			case 'e':
-				if      (!strcasecmp(optarg, "random"))		engine_id = E_RANDOM;
-				else if (!strcasecmp(optarg, "replay"))		engine_id = E_REPLAY;
-				else if (!strcasecmp(optarg, "montecarlo"))	engine_id = E_MONTECARLO;
-				else if (!strcasecmp(optarg, "uct"))		engine_id = E_UCT;
-#ifdef DISTRIBUTED
-				else if (!strcasecmp(optarg, "distributed"))	engine_id = E_DISTRIBUTED;
-#endif
-				else if (!strcasecmp(optarg, "patternscan"))	engine_id = E_PATTERNSCAN;
-				else if (!strcasecmp(optarg, "patternplay"))	engine_id = E_PATTERNPLAY;
-#ifdef DCNN
-				else if (!strcasecmp(optarg, "dcnn"))		engine_id = E_DCNN;
-#endif
-				else die("%s: Invalid -e argument %s\n", argv[0], optarg);
+				engine_id = engine_name_to_id(optarg);
+				if (engine_id == E_MAX)
+					die("%s: invalid engine '%s'\n", argv[0], optarg);
 				break;
 			case 'd':
 				debug_level = atoi(optarg);

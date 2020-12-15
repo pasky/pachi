@@ -200,7 +200,7 @@ test_pattern3_here(playout_policy_t *p, board_t *b, move_t *m, bool middle_ladde
 	/* Ladder moves are stupid. */
 	group_t atari_neighbor = board_get_atari_neighbor(b, m->coord, m->color);
 	if (atari_neighbor && is_ladder(b, atari_neighbor, middle_ladder)
-	    && !can_countercapture(b, atari_neighbor, NULL, 0))
+	    && !can_countercapture(b, atari_neighbor, NULL))
 		return false;
 	//fprintf(stderr, "%s: %d (%.3f)\n", coord2sstr(m->coord), (int) pi, pp->pat3_gammas[(int) pi]);
 	*gamma = pp->pat3_gammas[(int) pi];
@@ -257,7 +257,7 @@ joseki_check(playout_policy_t *p, board_t *b, enum stone to_play, move_queue_t *
 	} foreach_joseki_move_end;
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, "Joseki");
+		mq_print_line("Joseki", q);
 }
 #endif /* MOGGY_JOSEKI */
 
@@ -272,7 +272,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_que
 		for (int g = 0; g < b->clen; g++)
 			group_atari_check(pp->alwaysccaprate, b, group_at(b, group_base(b->c[g])), to_play, q, NULL, pp->middle_ladder, 1<<MQ_GATARI);
 		if (PLDEBUGL(5))
-			mq_print(q, "Global atari");
+			mq_print_line("Global atari", q);
 		if (pp->fullchoose)
 			return;
 	}
@@ -283,7 +283,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_que
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print(q, "Global atari");
+				mq_print_line("Global atari", q);
 			if (pp->fullchoose)
 				return;
 		}
@@ -293,7 +293,7 @@ global_atari_check(playout_policy_t *p, board_t *b, enum stone to_play, move_que
 		if (q->moves > 0) {
 			/* XXX: Try carrying on. */
 			if (PLDEBUGL(5))
-				mq_print(q, "Global atari");
+				mq_print_line("Global atari", q);
 			if (pp->fullchoose)
 				return;
 		}
@@ -327,7 +327,7 @@ local_atari_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, "Local atari");
+		mq_print_line("Local atari", q);
 
 	return (force || pp->lcapturerate > fast_random(100));
 }
@@ -348,7 +348,7 @@ local_ladder_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, "Ladder");
+		mq_print_line("Ladder", q);
 }
 
 
@@ -381,7 +381,7 @@ local_2lib_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, "Local 2lib");
+		mq_print_line("Local 2lib", q);
 }
 
 static void
@@ -415,7 +415,7 @@ local_2lib_capture_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_
 	});
 
 	if (PLDEBUGL(5))
-		mq_print(q, "Local 2lib capture");
+		mq_print_line("Local 2lib capture", q);
 }
 
 static void
@@ -464,7 +464,7 @@ local_nlib_check(playout_policy_t *p, board_t *b, move_t *m, move_queue_t *q)
 	} foreach_8neighbor_end;
 
 	if (PLDEBUGL(5))
-		mq_print(q, "Local nlib");
+		mq_print_line("Local nlib", q);
 }
 
 static coord_t
@@ -571,7 +571,7 @@ eye_fix_check(playout_policy_t *p, board_t *b, move_t *m, enum stone to_play, mo
 	}
 
 	if (q->moves > 0 && PLDEBUGL(5))
-		mq_print(q, "Eye fix");
+		mq_print_line("Eye fix", q);
 }
 
 static coord_t

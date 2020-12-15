@@ -126,7 +126,7 @@ typedef struct {
  * Returns the path string in a static buffer; it is NOT safe for
  * anything but debugging - in particular, it is NOT thread-safe! */
 char *
-path2sstr(path_t path, board_t *b)
+path2sstr(path_t path)
 {
 	/* Special case for pass and resign. */
 	if (path < 0) return coord2sstr((coord_t)path);
@@ -139,9 +139,9 @@ path2sstr(path_t path, board_t *b)
 	char *s = b2;
 	char *end = b2 + 64;
 	coord_t leaf;
-	while ((leaf = leaf_coord(path, b)) != 0) {
+	while ((leaf = leaf_coord(path)) != 0) {
 		s += snprintf(s, end - s, "%s<", coord2sstr(leaf));
-		path = parent_path(path, b);
+		path = parent_path(path);
 	}
 	if (s != b2) s[-1] = '\0';
 	return b2;
@@ -585,7 +585,7 @@ distributed_state_init(engine_t *e, board_t *b)
 }
 
 void
-engine_distributed_init(engine_t *e, board_t *b)
+distributed_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "Distributed";
 	e->comment = "If you believe you have won but I am still playing, "

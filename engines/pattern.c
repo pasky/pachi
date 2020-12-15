@@ -6,8 +6,8 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "engines/patternplay.h"
-#include "pattern.h"
+#include "engines/pattern.h"
+#include "../pattern.h"
 #include "patternsp.h"
 #include "patternprob.h"
 #include "random.h"
@@ -19,25 +19,25 @@ typedef struct {
 	pattern_config_t pc;
 	bool mcowner_fast;
 	int  matched_locally;
-} patternplay_t;
+} pattern_engine_t;
 
 pattern_config_t*
-patternplay_get_pc(engine_t *e)
+pattern_engine_get_pc(engine_t *e)
 {
-	patternplay_t *pp = (patternplay_t*)e->data;
+	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 	return &pp->pc;
 }
 
 bool
-patternplay_matched_locally(engine_t *e)
+pattern_engine_matched_locally(engine_t *e)
 {
-	patternplay_t *pp = (patternplay_t*)e->data;
+	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 	assert(pp->matched_locally != -1);
 	return pp->matched_locally;
 }
 
 static void
-debug_pattern_best_moves(patternplay_t *pp, board_t *b, enum stone color,
+debug_pattern_best_moves(pattern_engine_t *pp, board_t *b, enum stone color,
 			 coord_t *best_c, int nbest)
 {
 	ownermap_t ownermap;
@@ -60,9 +60,9 @@ debug_pattern_best_moves(patternplay_t *pp, board_t *b, enum stone color,
 
 
 static coord_t
-patternplay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
+pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	patternplay_t *pp = (patternplay_t*)e->data;
+	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
 	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
@@ -93,10 +93,10 @@ patternplay_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
 }
 
 static void
-patternplay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
-		       coord_t *best_c, float *best_r, int nbest)
+pattern_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
+			  coord_t *best_c, float *best_r, int nbest)
 {
-	patternplay_t *pp = (patternplay_t*)e->data;
+	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
 	floating_t probs[b->flen];
 	ownermap_t ownermap;
@@ -110,9 +110,9 @@ patternplay_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 }
 
 void
-patternplay_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color)
+pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color)
 {
-	patternplay_t *pp = (patternplay_t*)e->data;
+	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
 	pattern_t pats[b->flen];
 	ownermap_t ownermap;
@@ -144,11 +144,11 @@ patternplay_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals,
 #define option_error engine_setoption_error
 
 static bool
-patternplay_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
-		     char **err, bool setup, bool *reset)
+pattern_engine_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
+			 char **err, bool setup, bool *reset)
 {
 	static_strbuf(ebuf, 256);
-	patternplay_t *pp = (patternplay_t*)e->data;
+	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
 	if (!strcasecmp(optname, "debug")) {
 		if (optval)  pp->debug_level = atoi(optval);
@@ -164,16 +164,16 @@ patternplay_setoption(engine_t *e, board_t *b, const char *optname, char *optval
 		patterns_init(&pp->pc, optval, false, true);
 	}
 	else
-		option_error("patternplay: Invalid engine argument %s or missing value\n", optname);
+		option_error("pattern: Invalid engine argument %s or missing value\n", optname);
 
 	return true;
 }
 
-patternplay_t *
-patternplay_state_init(engine_t *e, board_t *b)
+pattern_engine_t *
+pattern_engine_state_init(engine_t *e, board_t *b)
 {
 	options_t *options = &e->options;
-	patternplay_t *pp = calloc2(1, patternplay_t);
+	pattern_engine_t *pp = calloc2(1, pattern_engine_t);
 	e->data = pp;
 	
 	bool pat_setup = false;
@@ -200,13 +200,13 @@ patternplay_state_init(engine_t *e, board_t *b)
 }
 
 void
-engine_patternplay_init(engine_t *e, board_t *b)
+pattern_engine_init(engine_t *e, board_t *b)
 {
-	e->name = "PatternPlay";
+	e->name = "Pattern";
 	e->comment = "I select moves blindly according to learned patterns. I won't pass as long as there is a place on the board where I can play. When we both pass, I will consider all the stones on the board alive.";
-	e->genmove = patternplay_genmove;
-	e->setoption = patternplay_setoption;
-	e->best_moves = patternplay_best_moves;
-	e->evaluate = patternplay_evaluate;
-	patternplay_state_init(e, b);
+	e->genmove = pattern_engine_genmove;
+	e->setoption = pattern_engine_setoption;
+	e->best_moves = pattern_engine_best_moves;
+	e->evaluate = pattern_engine_evaluate;
+	pattern_engine_state_init(e, b);
 }

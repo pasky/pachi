@@ -26,7 +26,10 @@
 
 /* Allocate tree node(s). The returned nodes are initialized with zeroes.
  * Returns NULL if not enough memory.
- * This function may be called by multiple threads in parallel. */
+ * This function may be called by multiple threads in parallel.
+ * Beware tree nodes_size increases even when alloc fails.
+ * That's fine, used to detect tree memory full and will be fixed
+ * at next tree garbage collect. */
 static tree_node_t *
 tree_alloc_node(tree_t *t, int count)
 {
@@ -35,7 +38,7 @@ tree_alloc_node(tree_t *t, int count)
 	size_t old_size = __sync_fetch_and_add(&t->nodes_size, nsize);
 
 	if (old_size + nsize > t->max_tree_size)
-		return NULL;
+		return NULL;  /* Not reverting nodes_size, see above */
 	assert(t->nodes != NULL);
 	n = (tree_node_t *)((char*)t->nodes + old_size);
 	memset(n, 0, nsize);
@@ -73,8 +76,7 @@ tree_init_node(tree_t *t, coord_t coord, int depth)
 /* Create a tree structure and pre-allocate all nodes.
  * Returns NULL if out of memory */
 tree_t *
-tree_init(board_t *board, enum stone color, size_t max_tree_size,
-	  size_t max_pruned_size, size_t pruning_threshold, int hbits)
+tree_init(enum stone color, size_t max_tree_size, int hbits)
 {
 	tree_node_t *nodes = NULL;
 	assert (max_tree_size != 0);
@@ -82,21 +84,16 @@ tree_init(board_t *board, enum stone color, size_t max_tree_size,
 	/* The nodes buffer doesn't need initialization. This is currently
 	 * done by tree_init_node to spread the load. Doing a memset for the
 	 * entire buffer here would be too slow for large trees (>10 GB). */
-	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", (int)(max_tree_size / (1024*1024)));
 	if (!(nodes = malloc(max_tree_size))) {
 		if (DEBUGL(2))  fprintf(stderr, "Out of memory.\n");
 		return NULL;
 	}
 	
 	tree_t *t = calloc2(1, tree_t);
-	t->board = board;
 	t->max_tree_size = max_tree_size;
-	t->max_pruned_size = max_pruned_size;
-	t->pruning_threshold = pruning_threshold;
 	t->nodes = nodes;
 	/* The root PASS move is only virtual, we never play it. */
 	t->root = tree_init_node(t, pass, 0);
-	t->root_symmetry = board->symmetry;
 	t->root_color = stone_other(color); // to research black moves, root will be white
 
 #ifdef DISTRIBUTED
@@ -266,15 +263,12 @@ tree_load(tree_t *tree, board_t *b)
 }
 
 
-/* Copy the subtree rooted at node: all nodes at or below depth
- * or with at least threshold playouts.
- * The code is destructive on src. The relative order of children of
- * a given node is preserved (assumed by tree_get_node in particular).
- * Returns the copy of node in the destination tree, or NULL
- * if we could not copy it. */
+/************************************************************************/
+/* Tree garbage collection */
+
 static tree_node_t *
-tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
-	   int threshold, int depth)
+tree_prune_node(tree_t *dest, tree_t *src, tree_node_t *node,
+		int threshold, int depth)
 {
 	assert(dest->nodes && node);
 	tree_node_t *n2 = tree_alloc_node(dest, 1);
@@ -299,7 +293,7 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
 		return n2;
 	tree_node_t **prev2 = &(n2->children);
 	while (ni) {
-		tree_node_t *ni2 = tree_prune(dest, src, ni, threshold, depth);
+		tree_node_t *ni2 = tree_prune_node(dest, src, ni, threshold, depth);
 		if (!ni2) break;
 		*prev2 = ni2;
 		prev2 = &(ni2->sibling);
@@ -312,6 +306,29 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
 		n2->children = NULL; // avoid partially expanded nodes
 	}
 	return n2;
+}
+
+/* Prune src tree into dest (nodes are copied).
+ * Keep all nodes at or below depth with at least threshold playouts.
+ * The relative order of children of a given node is preserved
+ * (assumed by tree_get_node() in particular).
+ * Note: Only for fast_alloc. */
+static void
+tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
+{
+        tree_node_t *node = src->root;
+	assert(dest->nodes && node);
+
+	dest->use_extra_komi = src->use_extra_komi;
+	dest->untrustworthy_tree = src->untrustworthy_tree;
+	dest->extra_komi = src->extra_komi;
+	dest->avg_score = src->avg_score;
+	/* DISTRIBUTED htable not copied, gets rebuilt as needed */
+	dest->nodes_size = 0;	/* we do not want the dummy pass node */
+	dest->max_depth = 0;	/* gets recomputed */
+	dest->root_color = src->root_color;
+	dest->root = tree_prune_node(dest, src, node, threshold, depth);
+	assert(dest->root);	
 }
 
 /* The following constants are used for garbage collection of nodes.
@@ -335,21 +352,26 @@ tree_prune(tree_t *dest, tree_t *src, tree_node_t *node,
  * This guarantees garbage collection in < 1s. */
 #define SMALL_TREE_PLAYOUTS 5000
 
-/* Free all the tree, keeping only the subtree rooted at node.
- * Prune the subtree if necessary to fit in memory or
- * to save time scanning the tree.
- * Returns the moved node. */
-tree_node_t *
-tree_garbage_collect(tree_t *tree, tree_node_t *node)
+/* Tree garbage collection
+ * Right now this does 3 things:
+ * - reclaim space used by unreachable nodes after move promotion
+ * - prune tree down to max 20% capacity
+ * - prune large trees (>40k playouts) keeping only nodes with enough playouts.
+ * See also LARGE_TREE_PLAYOUTS, DEEP_PLAYOUTS_THRESHOLD above.
+ * Expensive, especially for huge trees, needs to copy the whole tree twice. */
+void
+tree_garbage_collect(tree_t *t)
 {
-	assert(tree->nodes && !node->parent && !node->sibling);
+	size_t pruning_threshold = tree_gc_threshold(t);
+	size_t max_pruned_size = tree_max_pruned_size(t);
+	
+	tree_node_t *node = t->root;
+	assert(t->nodes && !node->parent && !node->sibling);
 	double start_time = time_now();
-	size_t orig_size = tree->nodes_size;
+	size_t orig_size = t->nodes_size;
 
-	tree_t *temp_tree = tree_init(tree->board,  tree->root_color,
-					   tree->max_pruned_size, 0, 0, 0);
-	temp_tree->nodes_size = 0; // We do not want the dummy pass node
-        tree_node_t *temp_node;
+	/* Temp tree for pruning. */
+	tree_t *t2 = tree_init(t->root_color, max_pruned_size, 0);
 
 	/* Find the maximum depth at which we can copy all nodes. */
 	int max_nodes = 1;
@@ -357,13 +379,13 @@ tree_garbage_collect(tree_t *tree, tree_node_t *node)
 		max_nodes++;
 	size_t nodes_size = max_nodes * sizeof(*node);
 	int max_depth = node->depth;
-	while (nodes_size < tree->max_pruned_size && max_nodes > 1) {
+	for (;  nodes_size < max_pruned_size && max_nodes > 1;  max_depth++) {
 		max_nodes--;
 		nodes_size += max_nodes * nodes_size;
-		max_depth++;
 	}
 
-	/* Copy all nodes for small trees. For large trees, copy all nodes
+	/* Prune tree:
+	 * Copy all nodes for small trees. For large trees, copy all nodes
 	 * with depth <= max_depth, and all nodes with enough playouts.
 	 * Avoiding going too deep (except for nodes with many playouts) is mostly
 	 * to save time scanning the source tree. It can take over 20s to traverse
@@ -371,14 +393,11 @@ tree_garbage_collect(tree_t *tree, tree_node_t *node)
 	 * the traversal is not friendly at all with the memory cache. */
 	int threshold = (node->u.playouts - LARGE_TREE_PLAYOUTS) * DEEP_PLAYOUTS_THRESHOLD / LARGE_TREE_PLAYOUTS;
 	if (threshold < 0) threshold = 0;
-	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD; 
-	temp_node = tree_prune(temp_tree, tree, node, threshold, max_depth);
-	assert(temp_node);
+	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD;
+	tree_prune(t2, t, threshold, max_depth);
 
 	/* Now copy back to original tree. */
-	tree->nodes_size = 0;
-	tree->max_depth = 0;
-	tree_node_t *new_node = tree_prune(tree, temp_tree, temp_node, 0, temp_tree->max_depth);
+	tree_copy(t, t2);
 
 	if (DEBUGL(1)) {
 		double now = time_now();
@@ -387,46 +406,50 @@ tree_garbage_collect(tree_t *tree, tree_node_t *node)
 		fprintf(stderr,
 			"tree pruned in %0.3fs, prev %0.1fs ago, dest depth %d wanted %d,"
 			" size %llu->%llu/%llu, playouts %d\n",
-			now - start_time, start_time - prev_time, temp_tree->max_depth, max_depth,
-			(unsigned long long)orig_size, (unsigned long long)temp_tree->nodes_size, (unsigned long long)tree->max_pruned_size, new_node->u.playouts);
+			now - start_time, start_time - prev_time, t2->max_depth, max_depth,
+			(unsigned long long)orig_size, (unsigned long long)t2->nodes_size, (unsigned long long)max_pruned_size, t->root->u.playouts);
 		prev_time = start_time;
 	}
-	if (temp_tree->nodes_size >= temp_tree->max_tree_size) {
+	if (t2->nodes_size >= t2->max_tree_size) {
 		fprintf(stderr, "temp tree overflow, max_tree_size %llu, pruning_threshold %llu\n",
-			(unsigned long long)tree->max_tree_size, (unsigned long long)tree->pruning_threshold);
+			(unsigned long long)t->max_tree_size, (unsigned long long)pruning_threshold);
 		/* This is not a serious problem, we will simply recompute the discarded nodes
 		 * at the next move if necessary. This is better than frequently wasting memory. */
 	} else {
-		assert(tree->nodes_size == temp_tree->nodes_size);
-		assert(tree->max_depth == temp_tree->max_depth);
+		assert(t->nodes_size == t2->nodes_size);
+		assert(t->max_depth == t2->max_depth);
 	}
-	tree_done(temp_tree);
-	return new_node;
+	
+	tree_done(t2);
 }
 
+
+/*********************************************************************************/
+/* Tree copy */
+
+/* Copy the whole tree (all reachable nodes)
+ * dst tree must be able to hold src's content.
+ * The relative order of children of a given node is preserved
+ * (assumed by tree_get_node() in particular).
+ * Note: Only for fast_alloc. */
 void
 tree_copy(tree_t *dst, tree_t *src)
 {
-	dst->nodes_size = 0;
-	dst->max_depth = 0;
-	// just copy everything for now ...
-	dst->root = tree_prune(dst, src, src->root, 0, src->max_depth);
+	tree_prune(dst, src, 0, src->max_depth);
 	assert(dst->root);
 }
+
 
 /* Realloc internal tree memory so it can accomodate bigger search tree
  * Expensive: needs to allocate a new tree and copy it over.
  * returns 1 if successful
  *         0 if failed (out of memory) */
 int
-tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold)
+tree_realloc(tree_t *t, size_t max_tree_size)
 {
 	assert(max_tree_size > t->max_tree_size);
-	assert(max_pruned_size > t->max_pruned_size);
-	assert(pruning_threshold > t->pruning_threshold);
 
-	tree_t *t2 = tree_init(t->board, stone_other(t->root_color), max_tree_size, max_pruned_size,
-			       pruning_threshold, tree_hbits(t));
+	tree_t *t2 = tree_init(stone_other(t->root_color), max_tree_size, tree_hbits(t));
 	if (!t2)  return 0;	/* Out of memory */
 
 	tree_copy(t2, t);	assert(t2->root_color == t->root_color);
@@ -446,8 +469,7 @@ tree_replace(tree_t *tree, tree_t *content)
 }
 
 
-/* Find node of given coordinate under parent.
- * FIXME: Adjust for board symmetry. */
+/* Find node of given coordinate under parent. */
 tree_node_t *
 tree_get_node(tree_node_t *parent, coord_t c)
 {
@@ -456,12 +478,6 @@ tree_get_node(tree_node_t *parent, coord_t c)
 			return n;
 	return NULL;
 }
-
-
-/* Tree symmetry: When possible, we will localize the tree to a single part
- * of the board in tree_expand_node() and possibly flip along symmetry axes
- * to another part of the board in tree_promote_at(). We follow b->symmetry
- * guidelines here. */
 
 
 /* This function must be thread safe, given that board b is only modified by the calling thread. */
@@ -506,160 +522,75 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	ni->parent = node;
 	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
 
-	/* The loop considers only the symmetry playground. */
-	if (UDEBUGL(6)) {
-		fprintf(stderr, "expanding %s within [%d,%d],[%d,%d] %d-%d\n",
-				coord2sstr(node_coord(node)),
-				b->symmetry.x1, b->symmetry.y1,
-				b->symmetry.x2, b->symmetry.y2,
-				b->symmetry.type, b->symmetry.d);
-	}
 	int child = 1;
-	for (int j = b->symmetry.y1; j <= b->symmetry.y2; j++) {
-		for (int i = b->symmetry.x1; i <= b->symmetry.x2; i++) {
-			if (b->symmetry.d) {
-				int x = b->symmetry.type == SYM_DIAG_DOWN ? board_stride(b) - 1 - i : i;
-				if (x > j) {
-					if (UDEBUGL(7))
-						fprintf(stderr, "drop %d,%d\n", i, j);
-					continue;
-				}
-			}
-
-			coord_t c = coord_xy(i, j);
-			if (!map.consider[c]) // Filter out invalid moves
-				continue;
-			assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
-
-			tree_node_t *nj = first_child + child++;
-			tree_setup_node(t, nj, c, node->depth + 1);
-			nj->parent = node; ni->sibling = nj; ni = nj;
-
-			ni->prior = map.prior[c];
-			ni->d = distances[c];
-		}
-	}
+	foreach_point(board) {
+		if (!map.consider[c]) // Filter out invalid moves
+			continue;
+		assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
+		
+		tree_node_t *nj = first_child + child++;
+		tree_setup_node(t, nj, c, node->depth + 1);
+		nj->parent = node; ni->sibling = nj; ni = nj;
+		
+		ni->prior = map.prior[c];
+		ni->d = distances[c];
+	} foreach_point_end;
 	node->children = first_child; // must be done at the end to avoid race
 }
 
-
-static coord_t
-flip_coord(board_t *b, coord_t c,
-           bool flip_horiz, bool flip_vert, int flip_diag)
-{
-	int x = coord_x(c), y = coord_y(c);
-	if (flip_diag)  {  int z = x; x = y; y = z;    }
-	if (flip_horiz) {  x = board_stride(b) - 1 - x;  }
-	if (flip_vert)  {  y = board_stride(b) - 1 - y;  }
-	return coord_xy(x, y);
-}
-
-static void
-tree_fix_node_symmetry(board_t *b, tree_node_t *node,
-                       bool flip_horiz, bool flip_vert, int flip_diag)
-{
-	if (!is_pass(node_coord(node)))
-		node->coord = flip_coord(b, node_coord(node), flip_horiz, flip_vert, flip_diag);
-
-	for (tree_node_t *ni = node->children; ni; ni = ni->sibling)
-		tree_fix_node_symmetry(b, ni, flip_horiz, flip_vert, flip_diag);
-}
-
-static void
-tree_fix_symmetry(tree_t *tree, board_t *b, coord_t c)
-{
-	if (is_pass(c))
-		return;
-
-	board_symmetry_t *s = &tree->root_symmetry;
-	int cx = coord_x(c), cy = coord_y(c);
-
-	/* playground	X->h->v->d normalization
-	 * :::..	.d...
-	 * .::..	v....
-	 * ..:..	.....
-	 * .....	h...X
-	 * .....	.....  */
-	bool flip_horiz = cx < s->x1 || cx > s->x2;
-	bool flip_vert = cy < s->y1 || cy > s->y2;
-
-	bool flip_diag = 0;
-	if (s->d) {
-		bool dir = (s->type == SYM_DIAG_DOWN);
-		int x = dir ^ flip_horiz ^ flip_vert ? board_stride(b) - 1 - cx : cx;
-		if (flip_vert ? x < cy : x > cy) {
-			flip_diag = 1;
-		}
-	}
-
-	if (DEBUGL(4)) {
-		fprintf(stderr, "%s [%d,%d -> %d,%d;%d,%d] will flip %d %d %d -> %s, sym %d (%d) -> %d (%d)\n",
-			coord2sstr(c),
-			cx, cy, s->x1, s->y1, s->x2, s->y2,
-			flip_horiz, flip_vert, flip_diag,
-			coord2sstr(flip_coord(b, c, flip_horiz, flip_vert, flip_diag)),
-			s->type, s->d, b->symmetry.type, b->symmetry.d);
-	}
-	if (flip_horiz || flip_vert || flip_diag)
-		tree_fix_node_symmetry(b, tree->root, flip_horiz, flip_vert, flip_diag);
-}
-
-
-static void
-tree_unlink_node(tree_node_t *node)
-{
-	tree_node_t *ni = node->parent;
-	if (ni->children == node) {
-		ni->children = node->sibling;
-	} else {
-		ni = ni->children;
-		while (ni->sibling != node)
-			ni = ni->sibling;
-		ni->sibling = node->sibling;
-	}
-	node->sibling = NULL;
-	node->parent = NULL;
-}
+#define set_reason(val)		do {  if (reason) *reason = val;       } while(0)
+#define promote_fail(val)	do {  set_reason(val);  return false;  } while(0)
 
 /* Promotes the given node as the root of the tree.
- * The node may be moved and some of its subtree may be pruned. */
-void
-tree_promote_node(tree_t *tree, tree_node_t **node)
+ * May trigger tree garbage collection:
+ * The node may be moved and some of its subtree may be pruned.
+ * Returns true on success, false otherwise (@reason tells why) */
+bool
+tree_promote_node(tree_t *t, tree_node_t *node, board_t *b, enum promote_reason *reason)
 {
-	assert((*node)->parent == tree->root);
-	tree_unlink_node(*node);
+	assert(node->parent == t->root);
+	set_reason(PROMOTE_REASON_NONE);
 
+	if (t->untrustworthy_tree)
+		promote_fail(PROMOTE_UNTRUSTWORTHY);
+	
+	if (using_dcnn(b) && !(node->hints & TREE_HINT_DCNN))
+		promote_fail(PROMOTE_DCNN_MISSING);
+	
+	node->parent = NULL;
+	node->sibling = NULL;
+
+	t->root = node;
+	t->root_color = stone_other(t->root_color);
+	
 	/* Garbage collect if we run out of memory, or it is cheap to do so now: */
-	if (tree->nodes_size >= tree->pruning_threshold ||
-	    (tree->nodes_size >= tree->max_tree_size / 10 && (*node)->u.playouts < SMALL_TREE_PLAYOUTS))
-		*node = tree_garbage_collect(tree, *node);
+	if (tree_gc_needed(t) ||
+	    (t->nodes_size >= t->max_tree_size / 10 && node->u.playouts < SMALL_TREE_PLAYOUTS))
+		tree_garbage_collect(t);
 
-	tree->root = *node;
-	tree->root_color = stone_other(tree->root_color);
-
-	board_symmetry_update(tree->board, &tree->root_symmetry, node_coord(*node));
-	tree->avg_score.playouts = 0;
+	t->avg_score.playouts = 0;
 
 	/* If the tree deepest node was under node, or if we called tree_garbage_collect,
 	 * tree->max_depth is correct. Otherwise we could traverse the tree
          * to recompute max_depth but it's not worth it: it's just for debugging
 	 * and soon the tree will grow and max_depth will become correct again. */
+	return true;
 }
 
+/* Promote node for given move as the root of the tree.
+ * May trigger tree garbage collection:
+ * The node may be moved and some of its subtree may be pruned.
+ * Returns true on success, false otherwise (@reason tells why) */
 bool
-tree_promote_at(tree_t *t, board_t *b, coord_t c, int *reason)
+tree_promote_move(tree_t *t, move_t *m, board_t *b, enum promote_reason *reason)
 {
-	*reason = 0;
-	tree_fix_symmetry(t, b, c);
+	set_reason(PROMOTE_REASON_NONE);
 
-	tree_node_t *n = tree_get_node(t->root, c);
-	if (!n)  return false;
+	if (m->color != stone_other(t->root_color))
+		return false;	/* Bad color */
 	
-	if (using_dcnn(b) && !(n->hints & TREE_HINT_DCNN)) {
-		*reason = TREE_HINT_DCNN;
-		return false;  /* No dcnn priors, can't reuse ... */
-	}
-	
-	tree_promote_node(t, &n);
-	return true;
+	tree_node_t *n = tree_get_node(t->root, m->coord);
+	if (!n)  return false;	/* Not found */
+
+	return tree_promote_node(t, n, b, reason);
 }

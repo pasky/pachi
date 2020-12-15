@@ -9,7 +9,7 @@
 bool capturing_group_is_snapback(board_t *b, group_t group);
 /* Can group @group usefully capture a neighbor ? 
  * (usefully: not a snapback) */
-bool can_countercapture(board_t *b, group_t group, move_queue_t *q, int tag);
+bool can_countercapture(board_t *b, group_t group, move_queue_t *q);
 /* Same as can_countercapture() but returns capturable groups instead of moves,
  * queue may not be NULL, and is always cleared. */
 bool countercapturable_groups(board_t *b, group_t group, move_queue_t *q);

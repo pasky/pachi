@@ -19,7 +19,6 @@
 #include "move.h"
 #include "stats.h"
 
-struct board;
 struct uct;
 
 /*
@@ -89,9 +88,7 @@ typedef struct tree_node {
 struct tree_hash;
 
 typedef struct {
-	board_t *board;
 	tree_node_t *root;
-	board_symmetry_t root_symmetry;
 	enum stone root_color;
 
 	/* Whether to use any extra komi during score counting. This is
@@ -121,27 +118,38 @@ typedef struct {
 	// Statistics
 	int max_depth;
 	volatile size_t nodes_size; // byte size of all allocated nodes
+	                            // beware failed allocs still bump nodes_size
 	size_t max_tree_size; // maximum byte size for entire tree
-	size_t max_pruned_size;
-	size_t pruning_threshold;
 	void *nodes; // nodes buffer
 } tree_t;
 
+/* Tree garbage collection:
+ * Limit pruning temp space to 20% of memory. Beyond this we discard
+ * the nodes and recompute them at the next move if necessary. */
+#define tree_max_pruned_size(t)		((t)->max_tree_size * 20 / 100)
+#define tree_gc_threshold(t)		((t)->max_tree_size * 10 / 100)
+#define tree_gc_needed(t)		((t)->nodes_size >= tree_gc_threshold((t)))
+
 /* Warning: all functions below except tree_expand_node & tree_leaf_node are THREAD-UNSAFE! */
-tree_t *tree_init(board_t *board, enum stone color, size_t max_tree_size,
-		  size_t max_pruned_size, size_t pruning_threshold, int hbits);
+tree_t *tree_init(enum stone color, size_t max_tree_size, int hbits);
 void tree_done(tree_t *tree);
 void tree_dump(tree_t *tree, double thres);
 void tree_save(tree_t *tree, board_t *b, int thres);
 void tree_load(tree_t *tree, board_t *b);
 void tree_copy(tree_t *dst, tree_t *src);
 void tree_replace(tree_t *tree, tree_t *content);
-int  tree_realloc(tree_t *t, size_t max_tree_size, size_t max_pruned_size, size_t pruning_threshold);
+int  tree_realloc(tree_t *t, size_t max_tree_size);
+
+enum promote_reason {
+	PROMOTE_REASON_NONE,
+	PROMOTE_UNTRUSTWORTHY,
+	PROMOTE_DCNN_MISSING,
+};
+bool tree_promote_node(tree_t *tree, tree_node_t *node, board_t *b, enum promote_reason *reason);
+bool tree_promote_move(tree_t *tree, move_t *m, board_t *b, enum promote_reason *reason);
 
 tree_node_t *tree_get_node(tree_node_t *parent, coord_t c);
-tree_node_t *tree_garbage_collect(tree_t *tree, tree_node_t *node);
-void tree_promote_node(tree_t *tree, tree_node_t **node);
-bool tree_promote_at(tree_t *tree, board_t *b, coord_t c, int *reason);
+void tree_garbage_collect(tree_t *tree);
 
 void tree_expand_node(tree_t *tree, tree_node_t *node, board_t *b, enum stone color, struct uct *u, int parity);
 

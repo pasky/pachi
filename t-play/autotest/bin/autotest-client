@@ -17,12 +17,26 @@ fi
 mkdir -p "c/$clientid"
 log "started client ($clientid)"
 
+# Move log to crashes directory
+collect_crashlog()
+{
+    log="c/$clientid/game.log"
+    if [ -f "$log" ]; then
+	mkdir -p crashes
+	i=0;  while [ -f "crashes/game.log.$i" ]; do i=$[$i+1]; done
+	mv  "$log" "crashes/game.log.$i"
+	echo "Wrote crashes/game.log.$i"
+    fi
+}
+
 while true; do
 	mkdir -p "c/$clientid"
 	date +%s >"c/$clientid/beacon"
 	if ! $bin/autotest-worker "$clientid"; then
+		collect_crashlog
 		echo "*** WORKER FAILED ***"
 		log "worker failed with error code $?"
+		echo ""
 		sleep 1
 	fi
 done

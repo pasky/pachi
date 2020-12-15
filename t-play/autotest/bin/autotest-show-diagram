@@ -43,16 +43,16 @@ my @tab = <IN>;
 # Find name field length
 my $name_field_len = 0;
 foreach my $str (@tab) {
-    if ($str =~ m/([0-9]+) +([0-9.]+) +([0-9.]+) +(.*)/) {
+    if ($str =~ m/ ([0-9]+) +([0-9.]+) +([0-9.]+) +(.*)/) {
 	my ($games, $wr, $sd, $name) = ($1, $2, $3, $4);
 	if (length($name) > $name_field_len) {  $name_field_len = length($name);  }
     }    
 }
 
 foreach my $str (@tab) {
-    if ($str =~ m/([0-9]+) +([0-9.]+) +([0-9.]+) +(.*)/) {
+    if ($str =~ m/ ([0-9]+) +([0-9.]+) +([0-9.]+) +(.*)/) {
 	my ($games, $wr, $sd, $name) = ($1, $2, $3, $4);
-	if (!$games) {  continue;  }
+	if (!$games) {  next;  }
 	
 	$wr = $wr * 100;
 	my $pc = int($wr + 0.5);    # Don't use this for < 0 numbers !
@@ -71,5 +71,6 @@ foreach my $str (@tab) {
 	printf("%4i %-*s  %2i%% [%2i%%-%2i%%] ", $games, $name_field_len, $name, $pc, $min, $max);	
 	printf("%s\n", substr($diag, $diag_min / $scale, ($diag_max - $diag_min) / $scale));
     }
+    if ($str =~ m/^crashes/) {  print $str;  }
 }
 

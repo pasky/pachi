@@ -26,10 +26,9 @@
 #define DESCENT_DLEN 512
 
 
-void
-uct_progress_text(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts)
+static void
+uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
-	board_t *b = t->board;
 	if (!UDEBUGL(0))
 		return;
 
@@ -79,9 +78,8 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts)
 /* Leela-zero format:
  * info move Q16 visits 1 winrate 4687 prior 2198 order 0 pv Q16 [...] */
 static void
-uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, enum stone color)
+uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color)
 {
-	board_t *b = t->board;
 	tree_node_t *node = u->t->root;
 
 	/* Best candidates */
@@ -121,45 +119,45 @@ uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, enum stone color)
 
 /* GoGui live gfx: show best sequence */
 static void
-uct_progress_gogui_sequence(uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_sequence(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
 	int n = 20;
 	coord_t seq[n];   for (int i = 0; i < n; i++)  seq[i] = pass;
 
 	/* Best move */
-	tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+	tree_node_t *best = u->policy->choose(u->policy, t->root, b, color, resign);
 	if (!best) {  fprintf(stderr, "... No moves left\n"); return;  }
 	
 	for (int i = 0; i < n && best && best->u.playouts >= 50; i++) {
 		seq[i] = node_coord(best);
-		best = u->policy->choose(u->policy, best, t->board, color, resign);
+		best = u->policy->choose(u->policy, best, b, color, resign);
 	}
 	
-	gogui_show_best_seq(stderr, t->board, color, seq, n);
+	gogui_show_best_seq(stderr, b, color, seq, n);
 }
 
 /* GoGui live gfx: show best moves */
 static void
-uct_progress_gogui_best_moves(uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
 	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, false, 200);
-	gogui_show_best_moves(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
+	gogui_show_best_moves(stderr, b, color, best_c, best_r, GOGUI_NBEST);
 }
 
 /* GoGui live gfx: show winrates */
 static void
-uct_progress_gogui_winrates(uct_t *u, tree_t *t, enum stone color, int playouts)
+uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
 	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, true, 200);
-	gogui_show_winrates(stderr, t->board, color, best_c, best_r, GOGUI_NBEST);
+	gogui_show_winrates(stderr, b, color, best_c, best_r, GOGUI_NBEST);
 }
 
-void
-uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final, bool big)
+static void
+uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final, bool big)
 {
 	/* Prefix indicating JSON line. */
 	fprintf(fh, "{\"%s\": {", final ? "move" : "frame");
@@ -176,7 +174,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 		fprintf(fh, ", \"choice\": \"%s\"",
 			coord2sstr(*final));
 	} else {
-		tree_node_t *best = u->policy->choose(u->policy, t->root, t->board, color, resign);
+		tree_node_t *best = u->policy->choose(u->policy, t->root, b, color, resign);
 		if (best) {
 			/* Best move */
 			fprintf(fh, ", \"best\": {\"%s\": %f}",
@@ -214,7 +212,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 				coord2sstr(best->coord),
 				tree_node_get_value(t, 1, best->u.value),
 				best->u.playouts);
-			best = u->policy->choose(u->policy, best, t->board, color, resign);
+			best = u->policy->choose(u->policy, best, b, color, resign);
 		}
 		fprintf(fh, "]");
 	}
@@ -229,9 +227,9 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 		/* Position coloring information. */
 		fprintf(fh, "\"colors\": [");
 		int f = 0;
-		foreach_point(t->board) {
-			if (board_at(t->board, c) == S_OFFBOARD) continue;
-			fprintf(fh, "%s%d", f++ > 0 ? "," : "", board_at(t->board, c));
+		foreach_point(b) {
+			if (board_at(b, c) == S_OFFBOARD) continue;
+			fprintf(fh, "%s%d", f++ > 0 ? "," : "", board_at(b, c));
 		} foreach_point_end;
 		fprintf(fh, "]");
 		/* Ownership statistics. Value (0..1000) for each possible
@@ -240,8 +238,8 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 		 * seki points, but these should be rare. */
 		fprintf(fh, ", \"territory\": [");
 		f = 0;
-		foreach_point(t->board) {
-			if (board_at(t->board, c) == S_OFFBOARD) continue;
+		foreach_point(b) {
+			if (board_at(b, c) == S_OFFBOARD) continue;
 			int rate = u->ownermap.map[c][S_BLACK] * 1000 / u->ownermap.playouts;
 			fprintf(fh, "%s%d", f++ > 0 ? "," : "", rate);
 		} foreach_point_end;
@@ -252,17 +250,17 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, enum stone color, int playouts,
 	fprintf(fh, "}}\n");
 }
 
-void
-uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
+static void
+uct_progress_gogui_livegfx(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final)
 {
 	if (!gogui_livegfx)  return;
 
 	/* GoGui reads live gfx commands on stderr. */
 	fprintf(stderr, "gogui-gfx:\n");
 
-	if      (gogui_livegfx == UR_GOGUI_BEST)  uct_progress_gogui_best_moves(u, t, color, playouts);
-	else if (gogui_livegfx == UR_GOGUI_SEQ)   uct_progress_gogui_sequence(u, t, color, playouts);
-	else if (gogui_livegfx == UR_GOGUI_WR)    uct_progress_gogui_winrates(u, t, color, playouts);
+	if      (gogui_livegfx == UR_GOGUI_BEST)  uct_progress_gogui_best_moves(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_SEQ)   uct_progress_gogui_sequence(u, t, b, color, playouts);
+	else if (gogui_livegfx == UR_GOGUI_WR)    uct_progress_gogui_winrates(u, t, b, color, playouts);
 	else    assert(0);
 
 	fprintf(stderr, "\n");
@@ -272,18 +270,18 @@ uct_progress_gogui_livegfx(uct_t *u, tree_t *t, enum stone color, int playouts, 
  * Also takes care of gogui livegfx updates if enabled.
  * If @playouts is 0 show total playouts */
 void
-uct_progress_status(uct_t *u, tree_t *t, enum stone color, int playouts, coord_t *final)
+uct_progress_status(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final)
 {
 	if (!playouts)
 		playouts = t->root->u.playouts;
 		
-	if      (u->reporting == UR_TEXT)        uct_progress_text(u->report_fh, u, t, color, playouts);
-	else if (u->reporting == UR_JSON)        uct_progress_json(u->report_fh, u, t, color, playouts, final, false);
-	else if (u->reporting == UR_JSON_BIG)    uct_progress_json(u->report_fh, u, t, color, playouts, final, true);
-	else if (u->reporting == UR_LEELA_ZERO)  uct_progress_lz(u->report_fh, u, t, color);
+	if      (u->reporting == UR_TEXT)        uct_progress_text(u->report_fh, u, t, b, color, playouts);
+	else if (u->reporting == UR_JSON)        uct_progress_json(u->report_fh, u, t, b, color, playouts, final, false);
+	else if (u->reporting == UR_JSON_BIG)    uct_progress_json(u->report_fh, u, t, b, color, playouts, final, true);
+	else if (u->reporting == UR_LEELA_ZERO)  uct_progress_lz(u->report_fh, u, t, b, color);
 	else    assert(0);
 	
-	uct_progress_gogui_livegfx(u, t, color, playouts, final);
+	uct_progress_gogui_livegfx(u, t, b, color, playouts, final);
 }
 
 static inline void
@@ -362,7 +360,7 @@ scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significan
 }
 
 static tree_node_t *
-uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, tree_t *t, int *presult)
+uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, int *presult)
 {
 	playout_amafmap_t amaf;
 	amaf.gamelen = amaf.game_baselen = 0;
@@ -441,16 +439,16 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 			__sync_fetch_and_add(&n->descents, u->virtual_loss);
 
 		move_t m = { node_coord(n), node_color };
-		int res = board_play(b2, &m);
+		int res = board_play(b, &m);
 
-		if (res < 0 || (!is_pass(m.coord) && !group_at(b2, m.coord)) /* suicide */
-		    || b2->superko_violation) {
+		if (res < 0 || (!is_pass(m.coord) && !group_at(b, m.coord)) /* suicide */
+		    || b->superko_violation) {
 			if (UDEBUGL(4)) {
 				for (tree_node_t *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%" PRIhash "> ", coord2sstr(node_coord(ni)), ni->hash);
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
 				        stone2str(node_color), coord_x(node_coord(n)), coord_y(node_coord(n)),
-					res, group_at(b2, m.coord), b2->superko_violation);
+					res, group_at(b, m.coord), b->superko_violation);
 			}
 			n->hints |= TREE_HINT_INVALID;
 			*presult = 0;
@@ -458,7 +456,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 		}
 
 		assert(node_coord(n) >= -1);
-		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(b2));
+		record_amaf_move(&amaf, node_coord(n), board_playing_ko_threat(b));
 
 		if (is_pass(node_coord(n)))  passes++;
 		else                         passes = 0;
@@ -474,13 +472,13 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 		if (tree_leaf_node(n)
 		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < t->max_tree_size
 		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
-			tree_expand_node(t, n, b2, next_color, u, -parity);
+			tree_expand_node(t, n, b, next_color, u, -parity);
 	}
 
 	amaf.game_baselen = amaf.gamelen;
 
 	if (t->use_extra_komi && u->dynkomi->persim)
-		b2->komi += round(u->dynkomi->persim(u->dynkomi, b2, t, n));
+		b->komi += round(u->dynkomi->persim(u->dynkomi, b, t, n));
 
 	/* !!! !!! !!!
 	 * ALERT: The "result" number is extremely confusing. In some parts
@@ -491,7 +489,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 	// assert(tree_leaf_node(n));
 	/* In case of parallel tree search, the assertion might
 	 * not hold if two threads chew on the same node. */
-	result = uct_leaf_node(u, b2, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
+	result = uct_leaf_node(u, b, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
 		unsigned int cutoff = amaf.game_baselen;
@@ -503,7 +501,7 @@ uct_playout_descent(uct_t *u, board_t *b, board_t *b2, enum stone player_color, 
 
 	assert(n == t->root || n->parent);
 	floating_t rval = scale_value(u, b, node_color, significant, result);
-	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b2, rval);
+	u->policy->update(u->policy, t, n, node_color, player_color, &amaf, b, rval);
 
 	stats_add_result(&t->avg_score, (float)result / 2, 1);
 	if (t->use_extra_komi) {
@@ -522,7 +520,7 @@ uct_playout(uct_t *u, board_t *b, enum stone player_color, tree_t *t)
 	board_copy(&b2, b);
 	
 	int result;
-	tree_node_t *n = uct_playout_descent(u, b, &b2, player_color, t, &result);
+	tree_node_t *n = uct_playout_descent(u, &b2, player_color, t, &result);
 	
 	/* We need to undo the virtual loss we added during descend. */
 	if (u->virtual_loss) {

@@ -98,3 +98,6 @@ for pairing in $( (echo "$pknown" | tr ' ' '\n'; ls r/*.dat | sed 's#^r/##; s#\.
 		printf "$status 0\t-\t-\t$pairing$color_stop\n"
 	fi
 done
+
+echo
+echo "crashes: " `ls crashes/* 2>/dev/null | wc -l`

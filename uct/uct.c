@@ -36,6 +36,7 @@
 uct_policy_t *policy_ucb1_init(uct_t *u, char *arg);
 uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
 static void uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, int flags);
+static void uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord_t next_move);
 static void uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move);
 
 /* Maximal simulation length. */
@@ -45,7 +46,8 @@ static void
 setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
-	u->t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), stats_hbits(u));
+	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", (int)(size / (1024*1024)));
+	u->t = tree_init(color, size, stats_hbits(u));
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
@@ -82,9 +84,7 @@ setup_dynkomi(uct_t *u, board_t *b, enum stone to_play)
 void
 uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 {
-	if (u->t) {
-		/* Verify that we have sane state. */
-		assert(b->es == u);
+	if (u->t) {  /* Verify that we have sane state. */
 		assert(u->t && b->moves);
 		assert(node_coord(u->t->root) == last_move(b).coord);
 		assert(u->t->root_color == last_move(b).color);
@@ -93,11 +93,8 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 #ifdef DISTRIBUTED
 		uct_htable_reset(u->t);
 #endif
-	} else {
-		/* We need fresh state. */
-		b->es = u;
+	} else  /* We need fresh state. */
 		setup_state(u, b, color);
-	}
 
 	ownermap_init(&u->ownermap);
 	u->allow_pass = (b->moves > board_earliest_pass(b));  /* && dames < 10  if using patterns */
@@ -158,7 +155,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, ch
 static void
 uct_board_print(engine_t *e, board_t *b, FILE *f)
 {
-	uct_t *u = (uct_t*)b->es;
+	uct_t *u = (uct_t*)e->data;
 	board_print_ownermap(b, f, (u ? &u->ownermap : NULL));
 }
 
@@ -182,7 +179,7 @@ uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color)
 static ownermap_t*
 uct_ownermap(engine_t *e, board_t *b)
 {
-	uct_t *u = (uct_t*)b->es;
+	uct_t *u = (uct_t*)e->data;
 	
 	/* Make sure ownermap is well-seeded. */
 	uct_mcowner_playouts(u, b, board_to_play(b));
@@ -203,7 +200,7 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print
 		assert(u->t);
 	}
 
-	/* Stop pondering, required by tree_promote_at() */
+	/* Stop pondering, required by tree_promote_move() */
 	uct_pondering_stop(u);
 	
 	if (u->slave && was_searching && m->color == u->my_color) {
@@ -216,17 +213,21 @@ uct_notify_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print
 		return NULL;
 	}
 
+	/* Save best replies before resetting tree (dcnn pondering). */
+	if (u->slave && u->pondering_opt)
+		uct_genmove_pondering_save_replies(u, b, m->color, m->coord);
+	
 	/* Promote node of the appropriate move to the tree root.
 	 * If using dcnn, only promote node if it has dcnn priors:
 	 * Direction of tree search is heavily influenced by initial priors,
 	 * if we started searching without dcnn data better start from scratch. */
-	int reason;	
+	enum promote_reason reason;
 	assert(u->t->root);
-	if (u->t->untrustworthy_tree || !tree_promote_at(u->t, b, m->coord, &reason)) {
+	if (!tree_promote_move(u->t, m, b, &reason)) {
 		if (UDEBUGL(3)) {
-			if      (u->t->untrustworthy_tree)  fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
-			else if (reason == TREE_HINT_DCNN)  fprintf(stderr, "Played move has no dcnn priors, resetting tree.\n");
-			else				    fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
+			if      (reason == PROMOTE_UNTRUSTWORTHY)  fprintf(stderr, "Not promoting move node in untrustworthy tree.\n");
+			else if (reason == PROMOTE_DCNN_MISSING)   fprintf(stderr, "Played move has no dcnn priors, resetting tree.\n");
+			else					   fprintf(stderr, "Warning: Cannot promote move node! Several play commands in row?\n");
 		}
 
 		/* Preserve dynamic komi information, though, that is important. */
@@ -382,7 +383,7 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 			u->dynkomi->score.value, u->dynkomi->score.playouts,
 			u->dynkomi->value.value, u->dynkomi->value.playouts);
 	if (print_progress)
-		uct_progress_status(u, t, color, 0, NULL);
+		uct_progress_status(u, t, b, color, 0, NULL);
 
 	if (u->debug_after.playouts > 0) {
 		/* Now, start an additional run of playouts, single threaded. */
@@ -420,28 +421,37 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	return ctx->games;
 }
 
+/* Dcnn pondering:
+ * Next move wasn't searched with dcnn priors, search will start from scratch
+ * so it gets dcnn evaluated (and next move as well). Save opponent best replies
+ * from search before tree gets reset, will need it later to guess next move.
+ * Call order must be:
+ *     uct_genmove_pondering_save_replies()
+ *     tree_promote_node()
+ *     uct_genmove_pondering_start() */
+static void
+uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord_t next_move)
+{
+	if (!(u->pondering_opt && using_dcnn(b)))  return;
+	
+	int      nbest =  u->dcnn_pondering_mcts;
+	coord_t *best_c = u->dcnn_pondering_mcts_c;
+	float    best_r[nbest];
+	for (int i = 0; i < nbest; i++)
+		best_c[i] = pass;
+	
+	if (!(u->t && color == stone_other(u->t->root_color)))  return;
+	tree_node_t *best = tree_get_node(u->t->root, next_move);
+	if (!best)  return;
+	uct_get_best_moves_at(u, best, best_c, best_r, nbest, false, 100);
+}
+
 /* Start pondering at the end of genmove.
- * Makes preparations and calls uct_pondering_start()
- * with the right flags to make dcnn pondering work. */
+ * Must call uct_genmove_pondering_save_replies() before. */
 static void
 uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move)
 {
 	enum stone other_color = stone_other(color);
-
-	/* Dcnn pondering:
-	 * Promoted node wasn't searched with dcnn priors, start from scratch
-	 * so it gets dcnn evaluated (and next move as well). Save opponent
-	 * best moves from genmove search, will need it later on to guess
-	 * next move. */
-	if (u->pondering_opt && using_dcnn(b) && u->t) {
-		int      nbest =  u->dcnn_pondering_mcts;
-		coord_t *best_c = u->dcnn_pondering_mcts_c;
-		float    best_r[nbest];
-		uct_get_best_moves(u, best_c, best_r, nbest, false, 100);
-
-		u->initial_extra_komi = u->t->extra_komi;
-		reset_state(u);
-	}
 
 	if (!u->t)  uct_prepare_move(u, b, other_color);
 	
@@ -493,7 +503,7 @@ uct_pondering_stop(uct_t *u)
 	/* Stop the thread manager. */
 	uct_thread_ctx_t *ctx = uct_search_stop();  /* clears search flags */
 	
-	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->color, 0, NULL);
+	if (UDEBUGL(1))  uct_progress_status(u, ctx->t, ctx->b, ctx->color, 0, NULL);
 
 	free(ctx->b);
 	u->reporting = u->reporting_opt;
@@ -559,7 +569,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 			total_time, mcts_time, (int)(played_games/mcts_time), (int)(played_games/mcts_time/u->threads));
 	}
 
-	uct_progress_status(u, u->t, color, 0, best_coord);
+	uct_progress_status(u, u->t, b, color, 0, best_coord);
 
 	return best;
 }
@@ -585,13 +595,16 @@ uct_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pas
 		return best;
 	}
 
-	/* Throw away an untrustworthy tree.
-	 * Preserve dynamic komi information though, that is important. */
-	if (u->t->untrustworthy_tree) {
+	/* Save best replies before resetting tree (dcnn pondering). */
+	if (u->pondering_opt)
+		uct_genmove_pondering_save_replies(u, b, color, best);
+	
+	/* Promote node or throw away tree as needed. */
+	if (!tree_promote_node(u->t, best_node, b, NULL)) {
+		/* Preserve dynamic komi information though, that is important. */
 		u->initial_extra_komi = u->t->extra_komi;
 		reset_state(u);
-	} else
-		tree_promote_node(u->t, &best_node);
+	}
 
 	if (u->pondering_opt)
 		uct_genmove_pondering_start(u, b, color, best);
@@ -723,7 +736,7 @@ uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 {
 	uct_t *u = (uct_t*)e->data;
 	size_t size = u->tree_size;
-	tree_t *t = tree_init(b, color, size, pruned_size(size), pruning_threshold(size), 0);
+	tree_t *t = tree_init(color, size, 0);
 	tree_load(t, b);
 	tree_dump(t, 0);
 	tree_done(t);
@@ -1460,7 +1473,7 @@ uct_state_init(engine_t *e, board_t *b)
 }
 
 void
-engine_uct_init(engine_t *e, board_t *b)
+uct_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "UCT";
 	e->setoption = uct_setoption;
