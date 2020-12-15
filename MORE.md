@@ -16,11 +16,11 @@ max_mem        max amount of memory tree search can use
                like "max_tree_size" but takes tree reallocations into account.
 ```
 
-Compared to earlier versions of Pachi (<= 12.45):
+If you're used to earlier versions of Pachi (< 12.50):
 - Not needed to set `max_tree_size` anymore to make long thinking times work
-- If you know how much you need use `tree_size`
+- If you know how much memory you need use `tree_size`
 - If you want to limit total memory used use `max_tree_size` or `max_mem`
-- `fixed_mem` gives old behavior (tree memory doesn't grow)
+- `fixed_mem` gives the old behavior (tree memory doesn't grow)
 
 
 ## Distributed Engine

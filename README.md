@@ -81,9 +81,9 @@ Currently dcnn is used for root node only.
 
 ## How to run
 
-By default Pachi will run on all cores, using up to 200Mb of memory for tree
-search and taking a little under 10 seconds per move.  You can adjust these
-parameters by passing it extra command line options.
+By default Pachi will run on all cores and take a little under 10 seconds
+per move (no pondering). You can adjust these parameters by passing it
+extra command line options.
 
 For main options description try:
 
@@ -102,7 +102,7 @@ It's also possible to force time settings via the command line
 * `pachi -t 20        `     20s per move.
 * `pachi -t _600       `     10 minutes sudden death.
 * `pachi -t =5000       `     5000 playouts per move.
-* `pachi -t =5000:15000   `      Think more when needed. Same but up-to 15000 playouts if best move is unclear.
+* `pachi -t =5000:15000   `      Think more when needed (up to 15k playouts)
 * `pachi -t =5000:15000 --fuseki-time =4000`     Don't think too much during fuseki.
 
 **Fixed Strength**
@@ -124,26 +124,21 @@ Use `pachi --kgs` when playing on KGS. See [kgsgtp.conf](kgs/kgsgtp-pachi.conf?r
 
 * `pachi reportfreq=1s`     Show search progress every second (default: 1000 playouts).
 
-* `pachi -t 10 threads=4,max_tree_size=100`
+* `pachi -t 30 threads=4,max_tree_size=500,pondering`
 
-  Play with 10s per move on 4 threads, taking up to 100Mb of memory
-  (+ several tens Mb as a constant overhead).
+  Play with 30s per move on 4 threads, using max 500Mb of memory for tree
+  search and thinking during the opponent's turn as well.
 
-* `pachi -t _1200 --nodcnn threads=8,max_tree_size=3072,pondering`
+* `pachi -t _1200 --nodcnn threads=8,max_tree_size=3072`
 
   Play without dcnn with time settings 20:00 S.D. on 8 threads,
-  taking up to 3Gb of memory, and thinking during the opponent's turn as well.
-
-> Pachi 12.50 Note:
-> By default Pachi automatically allocates memory for tree search now so you
-> shouldn't have to set "max_tree_size" anymore unless you want to limit max
-> memory used. See [here](MORE.md) for details.
+  taking up to 3Gb of memory.
 
 For now, there is no comprehensive documentation of engine options, but
-you can get a pretty good idea by looking at the uct_state_init() function
-in uct/uct.c - you will find the list of UCT engine options there, each
-with a description. At any rate, usually the four options above are
-the only ones you really want to tweak.
+you can get a pretty good idea by looking at the uct_setoption() function
+in [uct/uct.c](uct/uct.c) - you will find the list of UCT engine options
+there, each with a description. At any rate, usually the four options above
+are the only ones you really want to tweak.
 
 
 ## Analyze commands
@@ -167,24 +162,24 @@ or see [here](MORE.md) for some tools that come with Pachi.
 
 ## Lizzie
 
-<a href="media/screenshot_lizzie_big.jpg?raw=true"> <img align="right" src="media/screenshot_lizzie.jpg" title="pachi in lizzie v0.6 !" /> </a>
+<a href="media/screenshot_lizzie_big.jpg?raw=true"> <img align="right" src="media/screenshot_lizzie.jpg" title="Pachi in Lizzie" /> </a>
 
 It's also possible to run Pachi with [Lizzie](https://github.com/featurecat/lizzie) to analyze things !  
 This is a great way to explore variations, analyze games or visualize what Pachi is doing while it's thinking,
 the graphics are amazing.
 
 Setup:
-- Install [Lizzie 0.7.2](https://github.com/featurecat/lizzie/releases/tag/0.7.2)
-- Download [Pachi 12.50](https://github.com/pasky/pachi/releases/tag/pachi-12.50), extract in Lizzie folder
+- Install [Lizzie](https://github.com/featurecat/lizzie/releases)
+- Get [Pachi](https://github.com/pasky/pachi/releases), extract in Lizzie folder
 - Configure engines:  
   Start Lizzie, `Menu -> Settings -> Engine`  
-  Add Pachi as "Engine 2":
+  Normally Leela-zero and Katago the first two engines.  
+  Add Pachi as "Engine 1":
   
-      Engine 2:  ./pachi/pachi.exe -o pachi.log
-      
-  Normally Leela-zero and Katago are Default Engine and Engine 1.
+      Engine 1:  pachi/pachi.exe -o pachi.log
+
 - Lizzie will start with Leela-zero by default,  
-  use `Menu -> Engine -> Engine 2` to switch to Pachi.  
+  use `Menu -> Engine -> Engine 1` to switch to Pachi.  
   (Window title shows current engine).
 
 
