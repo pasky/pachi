@@ -513,10 +513,10 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	if (u->debug_after.playouts > 0) {
 		/* Now, start an additional run of playouts, single threaded. */
 		time_info_t debug_ti;
-		debug_ti.period = TT_MOVE;
+		debug_ti.type = TT_MOVE;
 		debug_ti.dim = TD_GAMES;
-		debug_ti.len.games = t->root->u.playouts + u->debug_after.playouts;
-		debug_ti.len.games_max = 0;
+		debug_ti.games = t->root->u.playouts + u->debug_after.playouts;
+		debug_ti.games_max = 0;
 
 		board_print_ownermap(b, stderr, &u->ownermap);
 		fprintf(stderr, "--8<-- UCT debug post-run begin (%d:%d) --8<--\n", u->debug_after.level, u->debug_after.playouts);
@@ -849,12 +849,12 @@ uct_gentbook(engine_t *e, board_t *b, time_info_t *ti, enum stone color)
 
 	if (ti->dim == TD_GAMES) {
 		/* Don't count in games that already went into the tbook. */
-		ti->len.games += u->t->root->u.playouts;
+		ti->games += u->t->root->u.playouts;
 	}
 	uct_search(u, b, ti, color, u->t, true);
 
 	assert(ti->dim == TD_GAMES);
-	tree_save(u->t, b, ti->len.games / 100);
+	tree_save(u->t, b, ti->games / 100);
 
 	return true;
 }

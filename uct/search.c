@@ -404,7 +404,7 @@ uct_search_start(uct_t *u, board_t *b, enum stone color,
 
 	/* If restarted timers are already setup, reuse stop condition in s */
 	if (ti && !search_restarted(u)) {
-		if (ti->period == TT_NULL) {
+		if (ti->type == TT_NULL) {
 			*ti = default_ti;
 			time_start_timer(ti);
 		}
@@ -564,25 +564,37 @@ uct_search_stop_early(uct_t *u, tree_t *t, board_t *b,
 	 * important in distributed mode, where this function is called frequently. */
 	double elapsed = 0.0;
 	if (ti->dim == TD_WALLTIME) {
-		elapsed = time_now() - ti->len.t.timer_start;
+		elapsed = time_now() - ti->timer_start;
 		if (elapsed < TREE_BUSYWAIT_INTERVAL) return false;
 	}
 
-	/* Break early if we estimate the second-best move cannot
-	 * catch up in assigned time anymore. We use all our time
-	 * if we are in byoyomi with single stone remaining in our
-	 * period, however - it's better to pre-ponder. */
-	bool time_indulgent = (!ti->len.t.main_time && ti->len.t.byoyomi_stones == 1);
-	if (best2 && ti->dim == TD_WALLTIME
-	    && played >= PLAYOUT_EARLY_BREAK_MIN && !time_indulgent) {
+	/* Fixed Playouts: Stop early if the second-best move cannot catch up anymore */
+	if (ti->can_stop_early && ti->dim == TD_GAMES &&
+	    played >= PLAYOUT_EARLY_BREAK_MIN && best2) {
+		int total_played = t->root->u.playouts;
+		int remaining = stop->worst.playouts - total_played;
+		if (remaining > 0 &&
+		    best->u.playouts > best2->u.playouts + remaining) {
+			if (UDEBUGL(2))  fprintf(stderr, "Early stop, result cannot change\n");
+			return true;
+		}
+	}
+
+	/* Walltime: Stop early if we estimate the second-best move cannot catch up in  
+	 * assigned time anymore. If we are in byoyomi with single period remaining
+	 * and can do some lookahead, use all our time - it's better to pre-ponder. */
+	bool last_byoyomi = (!ti->main_time && ti->byoyomi_stones == 1);
+	bool keep_looking = (last_byoyomi && reusing_tree(u, b));
+	if (ti->can_stop_early && ti->dim == TD_WALLTIME &&
+	    !keep_looking &&
+	    played >= PLAYOUT_EARLY_BREAK_MIN && best2) {
 		double remaining = stop->worst.time - elapsed;
 		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
 		if (best->u.playouts > best2->u.playouts + estplayouts) {
-			if (UDEBUGL(2))
-				fprintf(stderr, "Early stop, result cannot change: "
-					"best %d, best2 %d, estimated %f simulations to go (%d/%f=%f pps)\n",
-					best->u.playouts, best2->u.playouts, estplayouts, played, elapsed, pps);
+			if (UDEBUGL(2))  fprintf(stderr, "Early stop, result cannot change\n");
+			if (UDEBUGL(3))  fprintf(stderr, "best %d, best2 %d, estimated %i sims to go (%d/%.1f=%i pps)\n",
+						 best->u.playouts, best2->u.playouts, (int)estplayouts, played, elapsed, (int)pps);
 			return true;
 		}
 	}
@@ -615,7 +627,7 @@ uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
 	floating_t beta = 2 * (tree_node_get_value(t, 1, best->u.value) - 0.5);
 	if (ti->dim == TD_WALLTIME && beta > 0) {
 		double good_enough = stop->desired.time * beta + stop->worst.time * (1 - beta);
-		double elapsed = time_now() - ti->len.t.timer_start;
+		double elapsed = time_now() - ti->timer_start;
 		if (elapsed > good_enough) return false;
 	}
 
@@ -675,7 +687,7 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 	 * time pressure but the tree is going to be just too messed
 	 * up otherwise - we might even play invalid suicides or pass
 	 * when we mustn't. */
-	assert(!(ti->dim == TD_GAMES && ti->len.games < GJ_MINGAMES));
+	assert(!(ti->dim == TD_GAMES && ti->games < GJ_MINGAMES));
 	if (i < GJ_MINGAMES)
 		return false;
 
@@ -695,7 +707,7 @@ uct_search_check_stop(uct_t *u, board_t *b, enum stone color,
 	/* Check against time settings. */
 	bool desired_done;
 	if (ti->dim == TD_WALLTIME) {
-		double elapsed = time_now() - ti->len.t.timer_start;
+		double elapsed = time_now() - ti->timer_start;
 		if (elapsed > s->stop.worst.time) return true;
 		desired_done = elapsed > s->stop.desired.time;
 

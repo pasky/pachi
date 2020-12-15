@@ -408,7 +408,7 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 	if (DEBUGL(2) && debug_boardprint)
 		engine_board_print(e, b, stderr);
 		
-	if (!ti[color].len.t.timer_start)    /* First game move. */
+	if (!ti[color].timer_start)    /* First game move. */
 		time_start_timer(&ti[color]);
 	
 #ifdef PACHI_FIFO   /* Coordinate between multiple Pachi instances. */
@@ -443,8 +443,8 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 	/* (XXX: Except if we pass to byoyomi and the peer doesn't, but that
 	 * should be absolutely rare situation and we will just spend a little
 	 * less time than we could on next few moves.) */
-	if (ti[color].period != TT_NULL && ti[color].dim == TD_WALLTIME)
-		time_sub(&ti[color], time_now() - ti[color].len.t.timer_start, true);
+	if (ti[color].type != TT_NULL && ti[color].dim == TD_WALLTIME)
+		time_sub(&ti[color], time_now() - ti[color].timer_start, true);
 	
 	return c;
 }
@@ -527,8 +527,8 @@ gtp_reset_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	engine_reset(e, b);
 
 	/* Reset timer */
-	ti[S_BLACK].len.t.timer_start = 0;
-	ti[S_WHITE].len.t.timer_start = 0;
+	ti[S_BLACK].timer_start = 0;
+	ti[S_WHITE].timer_start = 0;
 }
 
 static int

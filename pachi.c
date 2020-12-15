@@ -219,8 +219,8 @@ usage(char *arg)
 		"  =SIMS           fixed number of Monte-Carlo simulations per move \n"
 		"                  Pachi will play fast on a fast computer, slow on a slow computer, \n"
 		"                  but strength will remain the same. \n"
-		"  =SIMS:MAX_SIMS  same but allow playing up-to MAX_SIMS simulations if best move is unclear. \n"
-		"                  useful to avoid blunders when playing with very low number of simulations. \n"
+		"  ~SIMS           stop early once best move is decided (saves time / cpu). \n"
+		"  =SIMS:MAX_SIMS  allow up-to MAX_SIMS simulations if best move is unclear. \n"
 		"  SECS            fixed number of seconds per move \n"
 		"                  Pachi will spend a little less to allow for network latency and other \n"
 		"                  unexpected slowdowns. This is the same as one-period japanese byoyomi. \n"
@@ -442,7 +442,7 @@ int main(int argc, char *argv[])
 				if (!time_parse(&ti_default, optarg))
 					die("%s: Invalid -t argument %s\n", argv[0], optarg);
 				ti_default.ignore_gtp = true;
-				assert(ti_default.period != TT_NULL);
+				assert(ti_default.type != TT_NULL);
 				break;
 			case OPT_FUSEKI:
 				set_fuseki_moves(atoi(optarg));
@@ -451,7 +451,7 @@ int main(int argc, char *argv[])
 				if (!time_parse(&ti_fuseki, optarg))
 					die("%s: Invalid --fuseki-time argument %s\n", argv[0], optarg);
 				ti_fuseki.ignore_gtp = true;
-				assert(ti_fuseki.period != TT_NULL);
+				assert(ti_fuseki.type != TT_NULL);
 				break;
 			case OPT_NAME:
 				gtp->custom_name = strdup(optarg);
