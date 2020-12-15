@@ -143,6 +143,13 @@ typedef struct uct {
 } uct_t;
 
 
+/* Whether search tree carries over for next move under current uct settings.
+ * Only case where tree can't be reused is the default case: dcnn without pondering. */
+#define reusing_tree(u, b)	(! ((using_dcnn(b) && !u->pondering_opt) ||			\
+				    (u->t && u->t->untrustworthy_tree)   ||			\
+				    u->genmove_reset_tree))
+
+
 #ifdef DISTRIBUTED
 #define stats_hbits(u)			((u)->stats_hbits)
 #define played_all(u)			((u)->played_all)

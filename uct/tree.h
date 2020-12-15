@@ -124,9 +124,11 @@ typedef struct {
 } tree_t;
 
 /* Tree garbage collection:
- * Limit pruning temp space to 20% of memory. Beyond this we discard
- * the nodes and recompute them at the next move if necessary. */
-#define tree_max_pruned_size(t)		((t)->max_tree_size * 20 / 100)
+ * For large trees (>300Mb) limit pruning temp space to 20% of memory. Beyond
+ * this we discard the nodes and recompute them at the next move if necessary. */
+#define tree_max_pruned_size(t)		((t)->max_tree_size <= 300 * 1024 * 1024  ?	\
+					 (t)->max_tree_size :				\
+					 (t)->max_tree_size * 20 / 100)
 #define tree_gc_threshold(t)		((t)->max_tree_size * 10 / 100)
 #define tree_gc_needed(t)		((t)->nodes_size >= tree_gc_threshold((t)))
 
@@ -134,6 +136,7 @@ typedef struct {
 tree_t *tree_init(enum stone color, size_t max_tree_size, int hbits);
 void tree_done(tree_t *tree);
 void tree_dump(tree_t *tree, double thres);
+size_t tree_actual_size(tree_t *t);
 void tree_save(tree_t *tree, board_t *b, int thres);
 void tree_load(tree_t *tree, board_t *b);
 void tree_copy(tree_t *dst, tree_t *src);

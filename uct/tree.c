@@ -161,6 +161,28 @@ tree_dump(tree_t *tree, double thres)
 	tree_node_dump(tree, tree->root, 1, 0, thres_abs);
 }
 
+static void
+tree_actual_size_node(tree_t *t, tree_node_t *node, size_t *size)
+{
+	*size += sizeof(*node);
+
+	for (tree_node_t *ni = node->children;  ni;  ni = ni->sibling)
+		tree_actual_size_node(t, ni, size);
+}
+
+/* Walk whole tree and find actual size.
+ * Useful for debugging as t->nodes_size may not reflect actual content:
+ * For example after move promotion or failed tree_alloc_node()'s
+ * (nodes_size is still bumped). */
+size_t
+tree_actual_size(tree_t *t)
+{
+	size_t size = 0;
+	if (t->root)
+		tree_actual_size_node(t, t->root, &size);
+	return size;
+}
+
 
 static char *
 tree_book_name(board_t *b)
@@ -266,11 +288,10 @@ tree_load(tree_t *tree, board_t *b)
 /************************************************************************/
 /* Tree garbage collection */
 
-static tree_node_t *
-tree_prune_node(tree_t *dest, tree_t *src, tree_node_t *node,
-		int threshold, int depth)
+static tree_node_t*
+tree_prune_dup_node(tree_t *dest, tree_t *src, tree_node_t *node,
+		    int threshold, int depth)
 {
-	assert(dest->nodes && node);
 	tree_node_t *n2 = tree_alloc_node(dest, 1);
 	if (!n2)
 		return NULL;
@@ -279,44 +300,110 @@ tree_prune_node(tree_t *dest, tree_t *src, tree_node_t *node,
 		dest->max_depth = n2->depth;
 	n2->children = NULL;
 	n2->is_expanded = false;
+	return n2;
+}
+
+/* breadth-first tree pruning queue */
+typedef struct {
+	unsigned int n;
+	unsigned int max_nodes;
+	tree_node_t **src_nodes;
+	tree_node_t **dst_nodes;
+} pruning_queue_t;
+
+static void
+pruning_queue_init(pruning_queue_t *q, unsigned int max_nodes)
+{
+	q->n = 0;
+	q->max_nodes = max_nodes;
+	q->src_nodes  = cmalloc(max_nodes * sizeof(tree_node_t *));
+	q->dst_nodes  = cmalloc(max_nodes * sizeof(tree_node_t *));
+}
+
+static void
+pruning_queue_free(pruning_queue_t *q) {
+	free(q->src_nodes);  q->src_nodes = NULL;
+	free(q->dst_nodes);  q->dst_nodes = NULL;
+}
+
+static void
+pruning_queue_push(pruning_queue_t *q, tree_node_t *src, tree_node_t *dst)
+{
+	if (q->n == q->max_nodes) {
+		if (DEBUGL(4)) fprintf(stderr, "pruning queue realloc: %i -> %i\n", q->max_nodes, q->max_nodes * 2);
+		q->max_nodes *= 2;
+		q->src_nodes = crealloc(q->src_nodes, q->max_nodes * sizeof(tree_node_t *));
+		q->dst_nodes = crealloc(q->dst_nodes, q->max_nodes * sizeof(tree_node_t *));
+	}
+
+	q->src_nodes[q->n] = src;
+	q->dst_nodes[q->n] = dst;
+	q->n++;
+}
+
+static void
+pruning_queue_pop(pruning_queue_t *q)
+{
+	assert(q->n);
+	q->n--;
+}
+
+/* Prune children of given node.
+ * Queue them since we're going breadth-first. */
+static void
+tree_prune_node(tree_t *dest, tree_t *src,
+		pruning_queue_t *queue, unsigned int node_index,
+		int threshold, int depth)
+{
+	tree_node_t *node = queue->src_nodes[node_index];
+	tree_node_t *n2	  = queue->dst_nodes[node_index];
+	assert(n2);
+	assert(node);
 
 	if (node->depth >= depth && node->u.playouts < threshold)
-		return n2;
-	/* For deep nodes with many playouts, we must copy all children,
+		return;
+	
+	if (!node->children)
+		return;
+
+	/* Prune children:
+	 * For deep nodes with many playouts, we must copy all children,
 	 * even those with zero playouts, because partially expanded
 	 * nodes are not supported. Considering them as fully expanded
 	 * would degrade the playing strength. The only exception is
 	 * when dest becomes full, but this should never happen in practice
 	 * if threshold is chosen to limit the number of nodes traversed. */
-	tree_node_t *ni = node->children;
-	if (!ni)
-		return n2;
+	int added = 0;	
 	tree_node_t **prev2 = &(n2->children);
-	while (ni) {
-		tree_node_t *ni2 = tree_prune_node(dest, src, ni, threshold, depth);
-		if (!ni2) break;
+	tree_node_t *ni;
+	for (ni = node->children;  ni;  ni = ni->sibling, added++) {
+		tree_node_t *ni2 = tree_prune_dup_node(dest, src, ni, threshold, depth);
+		if (!ni2)  break;
 		*prev2 = ni2;
 		prev2 = &(ni2->sibling);
 		ni2->parent = n2;
-		ni = ni->sibling;
+		
+		pruning_queue_push(queue, ni, ni2);
 	}
-	if (!ni) {
+	
+	if (!ni)
 		n2->is_expanded = true;
-	} else {
-		n2->children = NULL; // avoid partially expanded nodes
+	else {
+		n2->children = NULL;  // avoid partially expanded nodes
+		for (int i = 0; i < added; i++)  pruning_queue_pop(queue);
 	}
-	return n2;
 }
 
 /* Prune src tree into dest (nodes are copied).
  * Keep all nodes at or below depth with at least threshold playouts.
  * The relative order of children of a given node is preserved
  * (assumed by tree_get_node() in particular).
+ * Process nodes breadth-first so that we don't drop toplevel nodes !
  * Note: Only for fast_alloc. */
 static void
 tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 {
-        tree_node_t *node = src->root;
+	tree_node_t *node = src->root;
 	assert(dest->nodes && node);
 
 	dest->use_extra_komi = src->use_extra_komi;
@@ -326,9 +413,59 @@ tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 	/* DISTRIBUTED htable not copied, gets rebuilt as needed */
 	dest->nodes_size = 0;	/* we do not want the dummy pass node */
 	dest->max_depth = 0;	/* gets recomputed */
-	dest->root_color = src->root_color;
-	dest->root = tree_prune_node(dest, src, node, threshold, depth);
-	assert(dest->root);	
+ 	dest->root_color = src->root_color;
+	dest->root = tree_prune_dup_node(dest, src, node, threshold, depth);
+	assert(dest->root);
+
+	unsigned int pruning_queue_len = 32768;
+	pruning_queue_t queue;   pruning_queue_init(&queue, pruning_queue_len);
+	pruning_queue_t queue2;  pruning_queue_init(&queue2, pruning_queue_len);
+	pruning_queue_push(&queue, node, dest->root);
+
+	//int cur_depth = 1;
+	while(queue.n) {
+		// if (DEBUGL(1)) fprintf(stderr, "processing depth %i\n", cur_depth++);
+		for (unsigned int i = 0; i < queue.n; i++)
+			tree_prune_node(dest, src, &queue, i, threshold, depth);
+		
+		swap(queue, queue2);
+		queue2.n = 0;
+	}
+
+	pruning_queue_free(&queue);
+	pruning_queue_free(&queue2);
+}
+
+static void
+log_temp_tree_overflow(tree_t *t, tree_t *t2, int threshold, int max_depth)
+{
+	if (!DEBUGL(1))  return;
+
+	fprintf(stderr, "temp tree overflow");
+
+	if (threshold == 0) {
+		/* Tree is small, show dropped amount, won't slow things much.
+		 * Also with threshold=0 we know data_we_could_have_kept = tree_actual_size(t)
+		 * since we're not dropping nodes. */
+		float orig = tree_actual_size(t);
+		float pruned = t2->max_tree_size;
+		float dropped = orig - pruned;
+		fprintf(stderr, ", dropped %0.1f Mb (%i%%)", dropped / (1024*1024),  (int)(dropped * 100 / orig));
+	}
+#if 0
+	else {  /* Debugging only, super expensive if tree is huge */
+		tree_t *t3 = tree_init(t->root_color, t->max_tree_size, 0);
+		tree_prune(t3, t, threshold, max_depth);
+		
+		float orig = tree_actual_size(t3);
+		float pruned = t2->max_tree_size;
+		float dropped = orig - pruned;
+		fprintf(stderr, ", dropped %0.1f Mb (%i%%)", dropped / (1024*1024),  (int)(dropped * 100 / orig));
+		tree_done(t3);
+	}
+#endif
+	
+	fprintf(stderr, "\n");
 }
 
 /* The following constants are used for garbage collection of nodes.
@@ -353,23 +490,26 @@ tree_prune(tree_t *dest, tree_t *src, int threshold, int depth)
 #define SMALL_TREE_PLAYOUTS 5000
 
 /* Tree garbage collection
- * Right now this does 3 things:
+ * Main job:
  * - reclaim space used by unreachable nodes after move promotion
- * - prune tree down to max 20% capacity
- * - prune large trees (>40k playouts) keeping only nodes with enough playouts.
- * See also LARGE_TREE_PLAYOUTS, DEEP_PLAYOUTS_THRESHOLD above.
+ * For large trees also:
+ * - prune tree down to max 20% capacity      (>300Mb)
+ * - keep only nodes with enough playouts.    (>40k playouts)
+ * See also LARGE_TREE_PLAYOUTS, DEEP_PLAYOUTS_THRESHOLD above, tree_max_pruned_size()
  * Expensive, especially for huge trees, needs to copy the whole tree twice. */
 void
 tree_garbage_collect(tree_t *t)
 {
-	size_t pruning_threshold = tree_gc_threshold(t);
-	size_t max_pruned_size = tree_max_pruned_size(t);
-	
 	tree_node_t *node = t->root;
 	assert(t->nodes && !node->parent && !node->sibling);
-	double start_time = time_now();
+	double time_start = time_now();
 	size_t orig_size = t->nodes_size;
+	size_t orig_content_size = (DEBUGL(3) ? tree_actual_size(t) : 0);
+	size_t max_pruned_size = tree_max_pruned_size(t);
 
+	if (DEBUGL(3)) fprintf(stderr, "tree gc     tree: %0.1f Mb -> %0.1f Mb temp space\n",
+			       (float)t->max_tree_size / (1024*1024), (float)max_pruned_size / (1024*1024));
+	
 	/* Temp tree for pruning. */
 	tree_t *t2 = tree_init(t->root_color, max_pruned_size, 0);
 
@@ -396,30 +536,33 @@ tree_garbage_collect(tree_t *t)
 	if (threshold > DEEP_PLAYOUTS_THRESHOLD) threshold = DEEP_PLAYOUTS_THRESHOLD;
 	tree_prune(t2, t, threshold, max_depth);
 
+	/* Temp tree overflow ?
+	 * This is not a serious problem, we will simply recompute the discarded nodes
+	 * at the next move if necessary. This is better than frequently wasting memory. */
+	if (t2->nodes_size >= t2->max_tree_size)
+		log_temp_tree_overflow(t, t2, threshold, max_depth);
+	
 	/* Now copy back to original tree. */
 	tree_copy(t, t2);
 
 	if (DEBUGL(1)) {
-		double now = time_now();
-		static double prev_time;
-		if (!prev_time) prev_time = start_time;
-		fprintf(stderr,
-			"tree pruned in %0.3fs, prev %0.1fs ago, dest depth %d wanted %d,"
-			" size %llu->%llu/%llu, playouts %d\n",
-			now - start_time, start_time - prev_time, t2->max_depth, max_depth,
-			(unsigned long long)orig_size, (unsigned long long)t2->nodes_size, (unsigned long long)max_pruned_size, t->root->u.playouts);
-		prev_time = start_time;
+		fprintf(stderr, "tree gc in %0.1fs ", time_now() - time_start);
+		if (!DEBUGL(3))  /* simple */
+			fprintf(stderr, " (%0.1f -> %0.1f Mb)",
+				(float)orig_size / (1024*1024), (float)t->nodes_size / (1024*1024));
+		else {           /* detailed */
+			fprintf(stderr, " (%0.1f Mb -> %0.1f Mb used -> %0.1f Mb pruned)\n",
+				(float)orig_size / (1024*1024),
+				(float)orig_content_size / (1024*1024),
+				(float)t->nodes_size / (1024*1024));
+			fprintf(stderr, "pruned %i nodes (%i%%), dest depth %d, wanted %d",
+				(orig_size - t->nodes_size) / sizeof(tree_node_t),
+				(orig_size - t->nodes_size) * 100 / orig_size,
+				t2->max_depth, max_depth);
+		}
+		fprintf(stderr, "\n");
 	}
-	if (t2->nodes_size >= t2->max_tree_size) {
-		fprintf(stderr, "temp tree overflow, max_tree_size %llu, pruning_threshold %llu\n",
-			(unsigned long long)t->max_tree_size, (unsigned long long)pruning_threshold);
-		/* This is not a serious problem, we will simply recompute the discarded nodes
-		 * at the next move if necessary. This is better than frequently wasting memory. */
-	} else {
-		assert(t->nodes_size == t2->nodes_size);
-		assert(t->max_depth == t2->max_depth);
-	}
-	
+
 	tree_done(t2);
 }
 
@@ -427,15 +570,58 @@ tree_garbage_collect(tree_t *t)
 /*********************************************************************************/
 /* Tree copy */
 
+/* Copy subtree rooted at node in src to dest.
+ * Same logic as tree_prune_node() but simpler since we can go
+ * depth-first and both trees are same size.
+ * Returns the copy of node in the destination tree. */
+static tree_node_t *
+tree_copy_node(tree_t *dest, tree_t *src, tree_node_t *node)
+{
+	assert(dest->nodes && node);
+	tree_node_t *n2 = tree_alloc_node(dest, 1);
+	if (!n2)  die("tree_copy(): tree_alloc_node() failed. dest tree too small ?\n");
+	*n2 = *node;
+	n2->children = NULL;
+	n2->is_expanded = false;
+
+	if (!node->children)
+		return n2;
+
+	/* Copy children */
+	tree_node_t **prev2 = &(n2->children);
+	tree_node_t *ni;
+	for (ni = node->children;  ni;  ni = ni->sibling) {
+		tree_node_t *ni2 = tree_copy_node(dest, src, ni);
+		assert(ni2);
+		*prev2 = ni2;
+		prev2 = &(ni2->sibling);
+		ni2->parent = n2;
+	}
+	
+	if (!ni)  n2->is_expanded = true;
+	else      n2->children = NULL;     // avoid partially expanded nodes
+	
+	return n2;
+}
+
 /* Copy the whole tree (all reachable nodes)
  * dst tree must be able to hold src's content.
+ * Simpler / faster than tree_prune() as we can process nodes depth-first.
  * The relative order of children of a given node is preserved
  * (assumed by tree_get_node() in particular).
  * Note: Only for fast_alloc. */
 void
 tree_copy(tree_t *dst, tree_t *src)
 {
-	tree_prune(dst, src, 0, src->max_depth);
+	dst->use_extra_komi = src->use_extra_komi;
+	dst->untrustworthy_tree = src->untrustworthy_tree;
+	dst->extra_komi = src->extra_komi;
+	dst->avg_score = src->avg_score;
+	/* DISTRIBUTED htable not copied, gets rebuilt as needed */
+	dst->nodes_size = 0;		  /* we do not want the dummy pass node */
+	dst->max_depth = src->max_depth;  /* same depths */
+	dst->root_color = src->root_color;
+	dst->root = tree_copy_node(dst, src, src->root);
 	assert(dst->root);
 }
 
@@ -458,7 +644,8 @@ tree_realloc(tree_t *t, size_t max_tree_size)
 }
 
 /* tree <- content
- * makes @tree be @content without changing tree_t pointers (cheap)
+ * makes @tree be @content without changing tree_t pointers.
+ * Cheap but there must not be dangling pointers to @tree content.
  * afterwards @tree prev content and @content pointer are invalid */
 void
 tree_replace(tree_t *tree, tree_t *content)

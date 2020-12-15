@@ -12,6 +12,8 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b));
 #define MAX(a, b) ((a) > (b) ? (a) : (b));
 
+#define swap(x, y)  do { typeof(x) __tmp;  __tmp = (x);  (x) = (y);  (y) = __tmp;  } while(0)
+
 #ifdef __cplusplus
 #define typeof decltype
 #define restrict __restrict__
@@ -131,11 +133,22 @@ checked_calloc(size_t nmemb, size_t size, const char *filename, unsigned int lin
 	return p;
 }
 
+static inline void *
+checked_realloc(void *ptr, size_t size, char *filename, unsigned int line, const char *func)
+{
+	void *p = realloc(ptr, size);
+	if (!p)
+		die("%s:%u: %s: OUT OF MEMORY realloc(%u)\n",
+		    filename, line, func, (unsigned) size);
+	return p;
+}
+
 /* casts: make c++ happy */
 #define cmalloc(size)        checked_malloc((size), __FILE__, __LINE__, __func__)
 #define ccalloc(nmemb, size) checked_calloc((nmemb), (size), __FILE__, __LINE__, __func__)
 #define malloc2(type)        ((type*)cmalloc(sizeof(type)))
 #define calloc2(nmemb, type) ((type*)ccalloc(nmemb, sizeof(type)))
+#define crealloc(ptr, size)  checked_realloc((ptr), (size), __FILE__, __LINE__, __func__)
 
 #define checked_write(fd, pt, size)	(assert(write((fd), (pt), (size)) == (size)))
 #define checked_fread(pt, size, n, f)   (assert(fread((pt), (size), (n), (f)) == (n)))
