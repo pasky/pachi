@@ -21,6 +21,7 @@
 #endif
 
 #include "debug.h"
+#include "network.h"
 #include "util.h"
 
 #define STDIN  0
@@ -228,4 +229,12 @@ open_gtp_connection(int *socket, char *port)
 	}
 	if (DEBUGL(0))
 		fprintf(stderr, "gtp connection opened\n");
+}
+
+void
+network_init(char *gtp_port)
+{
+	if (!gtp_port)  return;
+	int gtp_sock = -1;
+	open_gtp_connection(&gtp_sock, gtp_port);
 }

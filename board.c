@@ -712,19 +712,23 @@ board_official_score_color(board_t *b, move_queue_t *dead, enum stone color)
 bool
 board_set_rules(board_t *board, const char *name)
 {
-	if (!strcasecmp(name, "japanese"))
-		board->rules = RULES_JAPANESE;
-	else if (!strcasecmp(name, "chinese"))
-		board->rules = RULES_CHINESE;
-	else if (!strcasecmp(name, "aga"))
-		board->rules = RULES_AGA;
-	else if (!strcasecmp(name, "new_zealand"))
-		board->rules = RULES_NEW_ZEALAND;
-	else if (!strcasecmp(name, "siming") || !strcasecmp(name, "simplified_ing"))
-		board->rules = RULES_SIMING;
-	else
+	enum rules rules = board_parse_rules(name);
+	if (rules == RULES_INVALID)
 		return false;
+	board->rules = rules;
 	return true;
+}
+
+enum rules
+board_parse_rules(const char *name)
+{
+	if (!strcasecmp(name, "japanese"))       return RULES_JAPANESE;
+	if (!strcasecmp(name, "chinese"))        return RULES_CHINESE;
+	if (!strcasecmp(name, "aga"))            return RULES_AGA;
+	if (!strcasecmp(name, "new_zealand"))    return RULES_NEW_ZEALAND;
+	if (!strcasecmp(name, "siming") ||
+	    !strcasecmp(name, "simplified_ing")) return RULES_SIMING;
+	return RULES_INVALID;
 }
 
 const char*

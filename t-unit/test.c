@@ -19,6 +19,7 @@
 #include "timeinfo.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"
+#include "uct/internal.h"
 #include "ownermap.h"
 
 
@@ -92,11 +93,20 @@ remove_comments(char *line)
 }
 
 static void
-board_print_test(int level, board_t *b)
+board_print_test(board_t *b)
 {
-	if (!DEBUGL(level) || board_printed)
+	if (!DEBUGL(2) || board_printed)
 		return;
 	board_print(b, stderr);
+	board_printed = true;
+}
+
+static void
+engine_board_print_test(engine_t *e, board_t *b)
+{
+	if (!DEBUGL(2) || board_printed)
+		return;
+	engine_board_print(e, b, stderr);
 	board_printed = true;
 }
 
@@ -240,7 +250,7 @@ show_title_if_needed()
 }
 
 #define PRINT_TEST(board, format, ...)	do {			   \
-	board_print_test(2, board);				   \
+	board_print_test(board);				   \
 	if (DEBUGL(1))  fprintf(stderr, format, __VA_ARGS__);	   \
 } while(0)
 
@@ -249,6 +259,15 @@ show_title_if_needed()
 	if (rres != eres) {					\
 		show_title_if_needed();				\
 		if (DEBUGL(0))  fprintf(stderr, "FAILED %s\n", (optional ? "(optional)" : "")); \
+	} else								\
+		if (DEBUGL(1))  fprintf(stderr, "OK\n");		\
+} while(0)
+
+/* Print test result, show returned value if it fails */
+#define PRINT_RES_VAL(format, value)  do {			\
+	if (rres != eres) {					\
+		show_title_if_needed();				\
+		if (DEBUGL(0))  fprintf(stderr, "got " format "  FAILED %s\n", value, (optional ? "(optional)" : "")); \
 	} else								\
 		if (DEBUGL(1))  fprintf(stderr, "OK\n");		\
 } while(0)
@@ -336,7 +355,6 @@ test_ladder(board_t *b, char *arg)
 	return   (rres == eres);
 }
 
-
 static bool
 test_ladder_any(board_t *b, char *arg)
 {
@@ -358,7 +376,6 @@ test_ladder_any(board_t *b, char *arg)
 	PRINT_RES();
 	return   (rres == eres);
 }
-
 
 static bool
 test_wouldbe_ladder(board_t *b, char *arg)
@@ -406,7 +423,6 @@ test_wouldbe_ladder_any(board_t *b, char *arg)
 	return   (rres == eres);
 }
 
-
 static bool
 test_useful_ladder(board_t *b, char *arg)
 {
@@ -450,7 +466,6 @@ test_can_countercap(board_t *b, char *arg)
 	return   (rres == eres);
 }
 
-
 static bool
 test_two_eyes(board_t *b, char *arg)
 {
@@ -471,6 +486,76 @@ test_two_eyes(board_t *b, char *arg)
 }
 
 
+/* syntax: pass_is_safe color expected_result */
+static bool
+test_pass_is_safe(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	DEBUG_QUIET();
+	engine_t *e = new_engine(E_UCT, "", b);
+	uct_t *u = (uct_t*)(e->data);
+	DEBUG_QUIET_END();
+
+	/* Not exactly same as game conditions as we just run some playouts
+	 * instead of full tree search, but should be good enough for testing. */
+
+	// show board with ownermap
+	engine_ownermap(e, b);
+	engine_board_print_test(e, b);
+	PRINT_TEST(b, "pass_is_safe %s ?\n", stone2str(color));
+	
+	char *msg;
+	move_queue_t dead;
+	int rres = uct_pass_is_safe(u, b, color, false, &dead, &msg, DEBUGL(2));
+
+	if (DEBUGL(2) && rres)  {
+		fprintf(stderr, "-> yes: final score %s  (%s)\n", board_official_score_str(b, &dead), rules2str(b->rules));
+		board_print_official_ownermap(b, &dead);
+	}
+	if (DEBUGL(2) && !rres)  // show reason
+		fprintf(stderr, "-> no:  %s\n", msg);
+	
+	PRINT_TEST(b, "pass_is_safe %s %d...\t", stone2str(color), eres);
+
+	engine_done(e);
+	
+	PRINT_RES();
+	return   (rres == eres);
+}
+
+/* syntax: final_score expected_result */
+static bool
+test_final_score(board_t *b, char *arg)
+{
+	next_arg(arg);
+	assert(str_prefix("B+", arg) || str_prefix("W+", arg));
+	assert(isdigit(arg[2]) || arg[2] == '.');
+	float sign = (str_prefix("B+", arg) ? -1 : 1);
+	float eres = sign * atof(arg + 2);
+	args_end();
+
+	engine_t *e = new_engine(E_UCT, "", b);
+	move_queue_t dead;
+	gtp_t gtp;  gtp_init(&gtp);
+	engine_dead_groups(e, &gtp, b, &dead);
+		
+	float rres = board_official_score(b, &dead);
+
+	board_print_official_ownermap(b, &dead);
+	board_printed = true;
+	PRINT_TEST(b, "final_score %s...\t", arg);
+
+	engine_done(e);
+	
+	PRINT_RES_VAL("%s", board_official_score_str(b, &dead));
+	return (rres == eres);
+}
+
 /* Sample moves played by moggy in a given position.
  * Board last move matters quite a lot and must be set.
  * 
@@ -483,7 +568,7 @@ test_moggy_moves(board_t *b, char *arg)
 
 	args_end();
 	if (!tunit_over_gtp) assert(last_move_set);
-	board_print_test(2, b);
+	board_print_test(b);
 
 	char e_arg[128];  sprintf(e_arg, "runs=%i", runs);
 	engine_t e;  engine_init(&e, E_REPLAY, e_arg, b);
@@ -577,7 +662,7 @@ test_moggy_status(board_t *b, char *arg)
 	if (!tunit_over_gtp) assert(last_move_set);
 	
 	enum stone color = board_to_play(b);
-	board_print_test(2, b);
+	board_print_test(b);
 	if (DEBUGL(2)) {
 		fprintf(stderr, "moggy status ");
 		for (int i = 0; i < n; i++) {
@@ -648,6 +733,8 @@ static t_unit_cmd commands[] = {
 	{ "moggy moves",            test_moggy_moves,           },
 	{ "moggy status",           test_moggy_status,          },
 	{ "false_eye_seki",         test_false_eye_seki,        },
+	{ "pass_is_safe",           test_pass_is_safe,          },
+	{ "final_score",            test_final_score,           },
 #ifdef BOARD_TESTS
 	{ "board_undo_stress_test", board_undo_stress_test,     },
 	{ "board_regtest",          board_regression_test,      },
@@ -722,7 +809,7 @@ unit_test(char *filename)
 		if (str_prefix("rules ", line))     {  init_arg(line); set_rules(b, next); continue;  }
 		if (str_prefix("komi ", line))      {  init_arg(line); set_komi(b, next); continue;  }
 		if (str_prefix("ko ", line))	    {  init_arg(line); set_ko(b, next); continue;  }
-
+		
 		if (optional)  {  total_opt++;  passed_opt += unit_test_cmd(b, line); }
 		else           {  total++;      passed     += unit_test_cmd(b, line); }
 	}

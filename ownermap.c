@@ -7,6 +7,8 @@
 #include "debug.h"
 #include "move.h"
 #include "mq.h"
+#include "tactics/1lib.h"
+#include "tactics/selfatari.h"
 #include "ownermap.h"
 
 void
@@ -206,9 +208,36 @@ ownermap_score_est_str(board_t *b, ownermap_t *ownermap)
 }
 
 static bool
-border_stone(board_t *b, coord_t c, int *final_ownermap)
+is_ko_stone(board_t *b, coord_t c)
 {
 	enum stone color = board_at(b, c);
+	group_t g = group_at(b, c);  assert(g);
+	coord_t lib = board_group_info(b, g).lib[0];
+	if (board_group_info(b, g).libs != 1)  return false;
+	if (!group_is_onestone(b, g))          return false;
+	if (!board_is_eyelike(b, lib, color))  return false;
+
+	move_queue_t q;
+	board_get_atari_neighbors(b, lib, color, &q);
+	if (q.moves != 1)  return false;
+	return true;
+}
+
+static bool
+border_atari_stone(board_t *b, coord_t c, int *final_ownermap)
+{
+	group_t g = group_at(b, c);  assert(g);
+	enum stone color = board_at(b, c);
+	coord_t lib = board_group_info(b, g).lib[0];
+	if (board_group_info(b, g).libs != 1)
+		return false;
+	
+	/* Next to own territory (group may be dead or not, we don't care) */
+	int ne[4] = { 0, };
+	foreach_neighbor(b, lib, { ne[final_ownermap[c]]++; });
+	if (!ne[color])  return false;
+
+	/* Next to opponent territory */
 	foreach_neighbor(b, c, {
 		if (board_at(b, c) == stone_other(color) &&
 		    final_ownermap[c] == (int)stone_other(color))
@@ -237,6 +266,8 @@ board_position_final(board_t *b, ownermap_t *ownermap, char **msg)
 					 final_ownermap, dame, final_score, msg);
 }
 
+/* Not thread-safe if called on the main board !  (can call with_move()...)
+ * Must call on board copy in this case. */
 bool
 board_position_final_full(board_t *b, ownermap_t *ownermap,
 			  move_queue_t *dead, move_queue_t *unclear, float score_est,
@@ -252,18 +283,37 @@ board_position_final_full(board_t *b, ownermap_t *ownermap,
 
 	/* Border stones in atari ? */
 	foreach_point(b) {
+		if (!group_at(b, c))  continue;
 		group_t g = group_at(b, c);
-		if (!g || board_group_info(b, g).libs > 1)  continue;
-		if (!border_stone(b, c, final_ownermap))  continue;
-
+		coord_t lib = board_group_info(b, g).lib[0];
 		enum stone color = board_at(b, c);
-		foreach_neighbor(b, board_group_info(b, g).lib[0], {
-			if (final_ownermap[c] != (int)color) continue;
-			*msg = "border stones in atari";
+		
+		if (!border_atari_stone(b, c, final_ownermap))  continue;
+		if (capturing_group_is_snapback(b, g))  continue;
+		/* ko that can't be filled ? Could be double ko, let it be or we'll never pass. */
+		if (is_ko_stone(b, c) && is_selfatari(b, color, lib))  continue;
+		
+		*msg = "border stones in atari";
+		return false;
+	} foreach_point_end;
+
+	/* Can't have b&w dead groups next to each other */
+	if (dead->moves < 2)  goto skip;
+	foreach_point(b) {
+		group_t g = group_at(b, c);
+		if (!g || !mq_has(dead, g))  continue;
+		enum stone other_color = stone_other(board_at(b, c));
+
+		foreach_neighbor(b, c, {
+			group_t g2 = group_at(b, c);
+			if (!g2 || g2 == g || board_at(b, c) != other_color || !mq_has(dead, g2))
+				continue;
+			*msg = "b&w dead groups next to each other";
 			return false;
 		});
 	} foreach_point_end;
-
+	
+ skip:
 	/* Non-seki dames surrounded by only dames / border / one color are no dame to me,
 	 * most likely some territories are still open ... */
 	foreach_point(b) {
@@ -276,8 +326,8 @@ board_position_final_full(board_t *b, ownermap_t *ownermap,
 		foreach_neighbor(b, dame, {
 			ne[final_ownermap[c]]++;
 		});		
-		if (ne[S_BLACK] + ne[FO_DAME] == 4 ||
-		    ne[S_WHITE] + ne[FO_DAME] == 4) {
+		if (ne[S_BLACK] + ne[FO_DAME] + ne[S_OFFBOARD] == 4 ||
+		    ne[S_WHITE] + ne[FO_DAME] + ne[S_OFFBOARD] == 4) {
 			static char buf[100];
 			sprintf(buf, "non-final position at %s", coord2sstr(dame));
 			*msg = buf;

@@ -37,32 +37,18 @@
 #include "patternprob.h"
 #include "joseki.h"
 
-static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default);
+/* Main options */
+static pachi_options_t main_options = { 0, };
+const  pachi_options_t *pachi_options() {  return &main_options;  }
 
 char *pachi_exe = NULL;
+
 int   debug_level = 3;
 int   saved_debug_level;
 bool  debug_boardprint = true;
 long  verbose_logs = 0;
-char *forced_ruleset = NULL;
 
-static char *gtp_port = NULL;
-static bool  nopassfirst = false;
-
-static void
-network_init()
-{
-#ifdef NETWORK
-	int gtp_sock = -1;
-	if (gtp_port)		open_gtp_connection(&gtp_sock, gtp_port);
-#endif
-}
-
-bool
-pachi_nopassfirst(board_t *b)
-{
-	return (nopassfirst && b->rules == RULES_CHINESE);
-}
+static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port);
 
 typedef struct {
 	int		id;
@@ -115,13 +101,18 @@ supported_engines(bool show_all)
 }
 
 static void
-init()
+pachi_init(int argc, char *argv[])
 {
+	setlinebuf(stdout);
+	setlinebuf(stderr);
+	
+	pachi_exe = argv[0];
+	win_set_pachi_cwd(argv[0]);
+	
 	/* Check engine list is sane. */
 	for (int i = 0; i < E_MAX; i++)
 		assert(engines[i].name && engines[i].id == i);
 };
-
 
 void
 pachi_engine_init(engine_t *e, int id, board_t *b)
@@ -131,8 +122,41 @@ pachi_engine_init(engine_t *e, int id, board_t *b)
 }
 
 static void
-usage()
+usage_smart_pass()
 {
+	fprintf(stderr,
+		"[ smart pass ]                (!! ok only if players can negotiate dead stones  !!)\n"
+		"\n"
+		"By default Pachi is fairly pedantic at the end of the game and will refuse to pass \n"
+		"until everything is nice and clear to him. This can take some moves depending on the \n"
+		"situation if there are unclear groups. Guessing allows more user-friendly behavior, \n"
+		"passing earlier without having to clarify everything. Under japanese rules this can \n"
+		"also prevent him from losing the game if clarifying would cost too many points. \n"
+		"\n"
+		"Even though Pachi will only guess won positions there is a possibility of getting dead \n"
+		"group status wrong, so only ok if game setup asks players for dead stones and game can \n"
+		"resume in case of disagreement (auto-scored games like on ogs for example are definitely \n"
+		"not ok). \n"
+		"\n"
+		"Basically: \n"
+		"- direct interactive play           : ok \n"
+		"- any kind of automated/online play : no ! \n"
+		"- except online play on kgs         : ok   (enabled automatically) \n"
+		" \n"
+		"So off by default except when playing japanese on kgs. \n"
+		"If unsure don't use. \n");
+}
+
+static void
+usage(char *arg)
+{
+	if (arg) {
+		if (!strcmp(arg, "smart-pass") ||
+		    !strcmp(arg, "guess-unclear"))  usage_smart_pass();
+		else    die("unknown help topic '%s'\n", arg);
+		return;
+	}
+	
 	fprintf(stderr, "Usage: pachi [OPTIONS] [ENGINE_ARGS...]\n\n");
 	fprintf(stderr,
 		"Options: \n"
@@ -150,15 +174,17 @@ usage()
 		" \n"
 		"Gameplay: \n"
 		"  -f, --fbook FBOOKFILE             use opening book \n"
+		"      --smart-pass, --guess-unclear more user-friendly pass behavior (dangerous) \n"
+		"                                    see 'pachi --help smart-pass' for details \n"
 		"      --noundo                      undo only allowed for pass \n"
 		"  -r, --rules RULESET               rules to use: (default chinese) \n"
 		"                                    japanese|chinese|aga|new_zealand|simplified_ing \n"
 		"KGS: \n"
+		"      --kgs                         use this when playing on kgs, \n"
 		"  -c, --chatfile FILE               set kgs chatfile \n"
 		"      --kgs-chat                    enable kgs-chat cmd (kgsGtp 3.5.11 only, crashes 3.5.20+) \n"
 		"      --nopassfirst                 don't pass first when playing chinese \n"
-		"      --kgs                         use this when playing on kgs, \n"
-		"                                    enables --nopassfirst \n"
+		" \n"
 		"Logs / IO: \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
 		"  -D                                don't log board diagrams \n"
@@ -247,6 +273,7 @@ show_version(FILE *s)
 #define OPT_LIST_DCNNS	      270
 #define OPT_ACCURATE_SCORING  271
 #define OPT_KGS_CHAT	      272
+#define OPT_SMART_PASS        273
 
 static struct option longopts[] = {
 	{ "chatfile",           required_argument, 0, 'c' },
@@ -261,6 +288,7 @@ static struct option longopts[] = {
 	{ "gtp-port",           required_argument, 0, 'g' },
 	{ "log-port",           required_argument, 0, 'l' },
 #endif
+	{ "guess-unclear",      no_argument,       0, OPT_SMART_PASS },
 	{ "help",               no_argument,       0, 'h' },
 	{ "joseki",             no_argument,       0, OPT_JOSEKI },	
 	{ "kgs",                no_argument,       0, OPT_KGS },
@@ -278,6 +306,7 @@ static struct option longopts[] = {
 	{ "patterns",           no_argument,       0, OPT_PATTERNS },
 	{ "rules",              required_argument, 0, 'r' },
 	{ "seed",               required_argument, 0, 's' },
+	{ "smart-pass",         no_argument,       0, OPT_SMART_PASS },
 	{ "time",               required_argument, 0, 't' },
 	{ "unit-test",          required_argument, 0, 'u' },
 	{ "verbose-caffe",      no_argument,       0, OPT_VERBOSE_CAFFE },
@@ -287,26 +316,24 @@ static struct option longopts[] = {
 
 int main(int argc, char *argv[])
 {
-	init();
+	pachi_options_t *options = &main_options;
+
+	gtp_t main_gtp;	
+	gtp_t *gtp = &main_gtp;
+	gtp_init(gtp);
 	
-	pachi_exe = argv[0];
 	enum engine_id engine_id = E_UCT;
 	time_info_t ti_default = ti_none;
 	int  seed = time(NULL) ^ getpid();
 	char *testfile = NULL;
+	char *gtp_port = NULL;
 	char *log_port = NULL;
 	char *chatfile = NULL;
 	char *fbookfile = NULL;
 	FILE *file = NULL;
 	bool verbose_caffe = false;
 
-	setlinebuf(stdout);
-	setlinebuf(stderr);
-
-	win_set_pachi_cwd(argv[0]);
-
-	gtp_t maingtp, *gtp = &maingtp;
-	gtp_init(gtp);
+	pachi_init(argc, argv);
 	
 	int opt;
 	int option_index;
@@ -344,15 +371,19 @@ int main(int argc, char *argv[])
 				gtp_port = strdup(optarg);
 				break;
 #endif
+			case OPT_SMART_PASS:
+				options->guess_unclear_groups = true;
+				break;
 			case 'h':
-				usage();
+				usage(argv[optind]);
 				exit(0);
 			case OPT_JOSEKI:
 				require_joseki();
 				break;
 			case OPT_KGS:
-				gtp->kgs = true;                /* Show engine comment in version. */
-				nopassfirst = true;             /* --nopassfirst */
+				options->kgs = gtp->kgs = true;
+				options->nopassfirst = true;           /* --nopassfirst */
+				options->guess_unclear_groups = true;  /* only affects japanese games here */
 				break;
 			case OPT_KGS_CHAT:
 				gtp->kgs_chat = true;
@@ -383,7 +414,7 @@ int main(int argc, char *argv[])
 				disable_joseki();
 				break;
 			case OPT_NOPASSFIRST:
-				nopassfirst = true;
+				options->nopassfirst = true;
 				break;
 			case OPT_NOPATTERNS:
 				disable_patterns();
@@ -392,7 +423,9 @@ int main(int argc, char *argv[])
 				require_patterns();
 				break;
 			case 'r':
-				forced_ruleset = strdup(optarg);
+				options->forced_rules = board_parse_rules(optarg);
+				if (options->forced_rules == RULES_INVALID)
+					die("Unknown ruleset: %s\n", optarg);
 				break;
 			case 's':
 				seed = atoi(optarg);
@@ -454,9 +487,9 @@ int main(int argc, char *argv[])
 	fifo_init();
 
 	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
-	if (forced_ruleset) {
-		if (!board_set_rules(b, forced_ruleset))  die("Unknown ruleset: %s\n", forced_ruleset);
-		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", forced_ruleset);
+	if (options->forced_rules) {
+		b->rules = options->forced_rules;
+		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", rules2str(b->rules));
 	}
 	gtp_internal_init(gtp);
 
@@ -473,12 +506,12 @@ int main(int argc, char *argv[])
 	char *engine_args = buf->str;
 	
 	engine_t e;  engine_init(&e, engine_id, engine_args, b);
-	network_init();
+	network_init(gtp_port);
 
 	while (1) {
-		main_loop(gtp, b, &e, ti, &ti_default);
-		if (!gtp_port) break;
-		network_init();
+		main_loop(gtp, b, &e, ti, &ti_default, gtp_port);
+		if (!gtp_port)  break;
+		network_init(gtp_port);
 	}
 
 	engine_done(&e);
@@ -489,7 +522,6 @@ int main(int argc, char *argv[])
 	free(log_port);
 	free(chatfile);
 	free(fbookfile);
-	free(forced_ruleset);
 	return 0;
 }
 
@@ -507,7 +539,7 @@ log_gtp_input(char *cmd)
 }
 
 static void
-main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default)
+main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port)
 {
 	char buf[4096];
 	while (fgets(buf, 4096, stdin)) {

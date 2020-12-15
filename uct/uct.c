@@ -8,6 +8,7 @@
 #define DEBUG
 
 #include "debug.h"
+#include "pachi.h"
 #include "board.h"
 #include "gtp.h"
 #include "chat.h"
@@ -47,6 +48,7 @@ setup_state(uct_t *u, board_t *b, enum stone color)
 {
 	size_t size = u->tree_size;
 	if (DEBUGL(3)) fprintf(stderr, "allocating %i Mb for search tree\n", (int)(size / (1024*1024)));
+	u->main_board = b;
 	u->t = tree_init(color, size, stats_hbits(u));
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
@@ -70,6 +72,7 @@ reset_state(uct_t *u)
 	assert(u->t);
 	tree_done(u->t);
 	u->t = NULL;
+	u->main_board = NULL;
 }
 
 static void
@@ -103,51 +106,173 @@ uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 #endif
 }
 
-/* Does the board look like a final position ?
- * And do we win counting, considering that given groups are dead ?
- * (if allow_losing_pass wasn't set) */
+static bool pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg, bool log,
+			 move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
+			 bool unclear_kludge, char *label);
+static bool pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg,
+			  move_queue_t *dead, move_queue_t *unclear, bool unclear_kludge);
+
+/* Does the board look like a final position, and do we win counting ?
+ * (if allow_losing_pass was set we don't care about score)
+ * If true, returns dead groups used to evaluate position in @dead
+ * (possibly guessed if there are unclear groups). */
 bool
-uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg)
+uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
+		 move_queue_t *dead, char **msg, bool log)
 {
+	mq_init(dead);
+	
 	/* Check this early, no need to go through the whole thing otherwise. */
 	*msg = "too early to pass";
 	if (b->moves < board_earliest_pass(b))
 		return false;
+
+	/* Must be thread-safe inasmuch as this also gets called from the main thread
+	 * through uct policy choose() (uct_progress_status(), uct_search_check_stop())
+	 * and main board may not be changed even for a split second without risking
+	 * having another thread grab it in an invalid state.
+	 * board_position_final() uses with_move() so copy board first. */
+	board_t b2;
+	if (b == u->main_board) {  board_copy(&b2, b);  b = &b2;  }
 	
 	/* Make sure enough playouts are simulated to get a reasonable dead group list. */
-	move_queue_t dead, unclear;	
+	move_queue_t dead_orig;
+	move_queue_t unclear_orig;
 	uct_mcowner_playouts(u, b, color);
-	ownermap_dead_groups(b, &u->ownermap, &dead, &unclear);
+	ownermap_dead_groups(b, &u->ownermap, &dead_orig, &unclear_orig);
 
+#define init_pass_is_safe_groups()  do {	\
+		unclear = unclear_orig;		\
+		*dead = dead_orig;		\
+		mq_init(&dead_extra);		\
+	} while (0)
+
+	move_queue_t unclear;
+	move_queue_t dead_extra;
+	init_pass_is_safe_groups();
+	
+	if (DEBUGL(2) && log && unclear.moves)  mq_print_line("unclear groups: ", &unclear);
+
+	/* Guess unclear groups ?
+	 * By default Pachi is fairly pedantic at the end of the game and will 
+	 * refuse to pass until everything is nice and clear to him. This can 
+	 * take some moves depending on the situation if there are unclear
+	 * groups. Guessing allows more user-friendly behavior, passing earlier
+	 * without having to clarify everything. Under japanese rules this can
+	 * also prevent him from losing the game if clarifying would cost too
+	 * many points.
+	 * Even though Pachi will only guess won positions there is a possibility
+	 * of getting dead group status wrong, so only ok if game setup asks
+	 * players for dead stones and game can resume in case of disagreement
+	 * (auto-scored games like on ogs for example are definitely not ok).
+	 * -> Only enabled if user asked for it or playing japanese on kgs
+	 * (for chinese don't risk screwing up and ending up in cleanup phase) */
+	bool guess_unclear_ok = pachi_options()->guess_unclear_groups;
+	if (pachi_options()->kgs)
+		guess_unclear_ok = (b->rules == RULES_JAPANESE);
+
+	/* smart pass: try worst-case scenario first:
+	 * own unclear groups are dead and opponent's are alive.
+	 * If we still win this way for sure it's ok. */
+	if (guess_unclear_ok && unclear.moves) {
+		for (unsigned int i = 0; i < unclear.moves; i++)
+			if (board_at(b, unclear.move[i]) == color)
+				mq_add(&dead_extra, unclear.move[i], 0);    /* own groups -> dead */
+		unclear.moves = 0;                                          /* opponent's groups -> alive */
+		if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
+				 dead, &dead_extra, &unclear, true, "(worst-case)"))
+			return true;
+		init_pass_is_safe_groups();  /* revert changes */
+	}
+	
+	/* smart pass: brute force it then. try any combination that works. */
+	if (guess_unclear_ok && unclear.moves && unclear.moves < 10) {
+		int n = (1 << unclear_orig.moves);
+		for (int k = 0; k < n; k++) {
+			mq_init(&unclear);  /* all unpicked groups -> alive */
+			
+			for (unsigned int i = 0; i < unclear_orig.moves; i++)
+				if (!(k & (1 << i)))
+					mq_add(&dead_extra, unclear_orig.move[i], 0); /* picked groups -> dead */
+			if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
+					 dead, &dead_extra, &unclear, true, ""))
+				return true;
+			init_pass_is_safe_groups();  /* revert changes */
+		}
+		return false;
+	}
+	
+	/* Strict mode: don't pass until everything is clarified. */
+	return pass_is_safe(u, b, color, pass_all_alive, msg, log,
+			    dead, &dead_extra, &unclear, false, "");
+}
+
+static bool
+pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg, bool log,
+	     move_queue_t *dead, move_queue_t *dead_extra, move_queue_t *unclear,
+	     bool unclear_kludge, char *label)
+{
+	move_queue_t guessed;  guessed = *dead_extra;
+	mq_append(dead, dead_extra);
+	
+	bool r = pass_is_safe_(u, b, color, pass_all_alive, msg, dead, unclear, unclear_kludge);
+
+	/* smart pass: log guessed unclear groups if successful    (DEBUGL(2)) */
+	if (unclear_kludge && log && r && DEBUGL(2) && !DEBUGL(3)) {
+		mq_print("pass ok assuming dead: ", &guessed);
+		fprintf(stderr, "%s\n", label);
+	}
+
+	/* smart pass: log failed attempts as well                 (DEBUGL(3)) */
+	if (unclear_kludge && log && DEBUGL(3)) { /* log everything */
+		fprintf(stderr, "  pass %s ", (r ? "ok" : "no"));
+		int n = 0;
+		n += mq_print("assuming dead: ", &guessed);
+		fprintf(stderr, "%*s -> %-7s %s %s\n", abs(50-n), "",
+			board_official_score_str(b, dead), (r ? "" : *msg), label);
+	}
+	
+	return r;
+}
+
+static bool
+pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg,
+	      move_queue_t *dead, move_queue_t *unclear, bool unclear_kludge)
+{
 	bool check_score = !u->allow_losing_pass;
 
-	if (pass_all_alive) {
+	if (pass_all_alive) {  /* kgs chinese rules cleanup phase */
 		*msg = "need to remove opponent dead groups first";
-		for (unsigned int i = 0; i < dead.moves; i++)
-			if (board_at(b, dead.move[i]) == stone_other(color))
+		for (unsigned int i = 0; i < dead->moves; i++)
+			if (board_at(b, dead->move[i]) == stone_other(color))
 				return false;
-		dead.moves = 0; // our dead stones are alive when pass_all_alive is true
+		dead->moves = 0; // our dead stones are alive when pass_all_alive is true
 
-		float final_score = board_official_score_color(b, &dead, color);
+		float final_score = board_official_score_color(b, dead, color);
 		*msg = "losing on official score";
 		return (check_score ? final_score >= 0 : true);
 	}
-
-	/* Check score estimate first, official score is off if position is not final */
-	*msg = "losing on score estimate";
-	floating_t score_est = ownermap_score_est_color(b, &u->ownermap, color);
-	if (check_score && score_est < 0)  return false;
 	
 	int final_ownermap[board_max_coords(b)];
 	int dame, seki;
-	floating_t final_score = board_official_score_details(b, &dead, &dame, &seki, final_ownermap, &u->ownermap);
+	floating_t final_score = board_official_score_details(b, dead, &dame, &seki, final_ownermap, &u->ownermap);
 	if (color == S_BLACK)  final_score = -final_score;
+
+	floating_t score_est;
+	if (unclear_kludge)
+		score_est = final_score;   /* unclear groups, can't trust score est ... */
+	else {
+		/* Check score estimate first, official score is off if position is not final */
+		*msg = "losing on score estimate";
+		score_est = ownermap_score_est_color(b, &u->ownermap, color);
+		if (check_score && score_est < 0)  return false;
+	}
 	
 	/* Don't go to counting if position is not final. */
-	if (!board_position_final_full(b, &u->ownermap, &dead, &unclear, score_est,
+	if (!board_position_final_full(b, &u->ownermap, dead, unclear, score_est,
 				       final_ownermap, dame, final_score, msg))
 		return false;
-	
+
 	*msg = "losing on official score";
 	return (check_score ? final_score >= 0 : true);
 }
@@ -291,7 +416,7 @@ uct_dead_groups(engine_t *e, board_t *b, move_queue_t *dead)
 
 	/* Normally last genmove was a pass and we've already figured out dead groups.
 	 * Don't recompute dead groups here, result could be different this time and
-	 * lead to wrong list. */
+	 * lead to bad result ! */
 	if (u->pass_moveno == b->moves || u->pass_moveno == b->moves - 1) {
 		memcpy(dead, &u->dead_groups, sizeof(*dead));
 		return;

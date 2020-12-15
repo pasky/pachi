@@ -138,6 +138,7 @@ typedef struct uct {
 	double mcts_time;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
+	board_t *main_board;
 	tree_t *t;
 	bool tree_ready;
 } uct_t;
@@ -160,7 +161,7 @@ typedef struct uct {
 
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
-bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char **msg);
+bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, move_queue_t *dead, char **msg, bool log);
 void uct_prepare_move(uct_t *u, board_t *b, enum stone color);
 void uct_genmove_setup(uct_t *u, board_t *b, enum stone color);
 void uct_pondering_stop(uct_t *u);

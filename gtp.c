@@ -335,8 +335,8 @@ cmd_kgs_rules(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	/* Print timestamp at game start, makes logs more useful */
 	if (DEBUGL(2))  fprintf(stderr, "%s\n", time_str());
 	
-	if (forced_ruleset) {
-		if (DEBUGL(2))  fprintf(stderr, "ignored kgs-rules, using %s.\n", forced_ruleset);
+	if (pachi_options()->forced_rules) {
+		if (DEBUGL(2))  fprintf(stderr, "ignored kgs-rules, using %s.\n", rules2str(b->rules));
 		return P_OK;
 	}
 	
