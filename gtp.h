@@ -39,7 +39,6 @@ typedef struct
 	bool    analyze_running;
 	char*   custom_name;
 	char*   custom_version;
-	bool    accurate_scoring;  /* use gnugo to get dead stones */
 } gtp_t;
 
 #define gtp_arg_next(gtp) \

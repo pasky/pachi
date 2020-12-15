@@ -10,7 +10,53 @@
 #include "debug.h"
 #include "tactics/1lib.h"
 #include "tactics/dragon.h"
+#include "tactics/selfatari.h"
 #include "tactics/seki.h"
+
+
+/* Breaking local seki at c:
+ *   - 2 opposing groups with 2 libs
+ *   - c             selfatari for both
+ *   - our other lib selfatari for both
+ *   - opp other lib selfatari for both (if different)
+ *
+ * This way it works for all kinds of sekis whether the liberties are shared
+ * or not, adjacent or not, in eyes etc (see t-unit/moggy_seki.t for example).
+ * Symmetric so no need to pass color */
+bool
+breaking_local_seki(board_t *b, selfatari_state_t *s, group_t c)
+{
+	assert(board_at(b, c) == S_NONE);
+	if (!s->groupcts[S_BLACK] || !s->groupcts[S_WHITE])
+		return false;
+
+	/* 2 opposing groups with 2 libs */
+	group_t g  = s->groupids[S_BLACK][0];        assert(g  && board_at(b, g)  == S_BLACK);
+	group_t g2 = s->groupids[S_WHITE][0];        assert(g2 && board_at(b, g2) == S_WHITE);
+	if (board_group_info(b, g).libs  != 2 ||
+	    board_group_info(b, g2).libs != 2)
+		return false;
+	
+	/* Play at c selfatari for both */
+	if (!(is_selfatari(b, S_BLACK, c) &&
+	      is_selfatari(b, S_WHITE, c)))
+		return false;
+
+	/* Play at our other lib also */
+	coord_t other  = board_group_other_lib(b, g, c);
+	if (!(is_selfatari(b, S_BLACK, other) &&
+	      is_selfatari(b, S_WHITE, other)))
+		return false;
+
+	/* Play at opp other lib also, if different */
+	coord_t other2 = board_group_other_lib(b, g2, c);
+	if (other2 != other &&
+	    !(is_selfatari(b, S_BLACK, other2) &&
+	      is_selfatari(b, S_WHITE, other2)))
+		return false;
+
+	return true;
+}
 
 
 /*   . . O O O |   We're black.
@@ -18,7 +64,9 @@
  *   O X X X * |   Are we about to break false eye seki ?
  *   O X O O X |     - b about to fill false eye
  *   O X . O . |     - b groups 2 libs
- *  -----------+     - dead shape after filling eye    */
+ *  -----------+     - dead shape after filling eye    
+ *
+ *  breaking_local_seki() doesn't handle this, not selfatari... */
 bool
 breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 {
@@ -47,6 +95,7 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 	foreach_neighbor(b, lib2, {
 		if (board_at(b, c) != other_color)  continue;
 		group_t g = group_at(b, c);
+		if (board_group_info(b, g).libs != 2)  return false;
 		if (!in)  {  in = g;  continue;  }		
 		if (in != g)  return false;  /* Multiple inside groups */
 	});
@@ -56,78 +105,6 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 	if (board_group_other_lib(b, in, lib2) != lib3)
 		return false;
 	
-	return true;
-}
-
-
-/*     . O O O |                   We're white.
- *     . O X X |      . O O O |
- *     O O X . |      . O X X |    Are we about to break corner seki by playing at @coord ?
- *     O X X X |      O O X . |    Assumes selfatari checks already passed.
- *     O X O * |      O X X X |      - b has 2 libs and one eye
- *     O X O O |      O X * O |      - w has one eye in the corner (other lib)
- *     O X O . |      O X O . |      - w makes a dead shape selfatari by playing at @coord
- *    ---------+     ---------+        (selfatari checks passed, so we know shape is dead)   */
-bool
-breaking_corner_seki(board_t *b, coord_t coord, enum stone color)
-{
-	enum stone other_color = stone_other(color);	
-
-	if (immediate_liberty_count(b, coord))  /* Other lib checked later ... */
-		return false;
-	
-	/* Own group(s) with 2 libs nearby ? */
-	group_t gi = 0;
-	coord_t lib2 = 0;
-	foreach_neighbor(b, coord, {
-		group_t g = group_at(b, c);
-		if (g && board_group_info(b, g).libs != 2) /* Check groups of both colors */
-			return false;
-		if (board_at(b, c) != color)  continue;
-
-		if (!gi) {
-			gi = g;
-			lib2 = board_group_other_lib(b, gi, coord);
-			continue;
-		}		
-		if (g == gi) continue;
-
-		/* 2 groups ? Must share same libs */
-		for (int i = 0; i < 2; i++) {
-			coord_t lib = board_group_info(b, g).lib[i];
-			if (lib != coord && lib != lib2)
-				return false;
-		}
-	});
-	if (!gi)  return false;
-
-	/* Other lib is corner eye ? */
-	int x = coord_x(lib2), y = coord_y(lib2);
-	if ((x != 1 && x != board_rsize(b)) ||
-	    (y != 1 && y != board_rsize(b)) ||
-	    !board_is_one_point_eye(b, lib2, color))
-		return false;	
-
-	/* Find outside group */
-	group_t out = 0;
-	foreach_neighbor(b, coord, {
-		if (board_at(b, c) != other_color)  continue;
-		group_t g = group_at(b, c);
-		if (!out)  {  out = g;  continue;  }
-		/* Multiple outside groups ? */
-		if (out != g)  return false;
-	});
-	if (!out)  return false;
-
-	/* Outside group has one eye ? */
-	coord_t out_other_lib = board_group_other_lib(b, out, coord);
-	if (!board_is_one_point_eye(b, out_other_lib, other_color))
-		return false;
-
-	//fprintf(stderr, "corner seki break: %s %s\n", stone2str(color), coord2sstr(coord, b));
-	//board_print(b, stderr);
-
-	/* We don't capture anything so it's selfatari */
 	return true;
 }
 

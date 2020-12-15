@@ -110,6 +110,33 @@ bad_selfatari b b2 1
 bad_selfatari w d4 1
 bad_selfatari b d4 1
 
+% Seki destruction (2 stones)
+boardsize 6
+. . O X . O
+. O O X . O
+. O X O O O
+. O X X X X
+. O X . X .
+. O X . X .
+sar b e6 1
+sar w e6 1
+sar b e5 1
+sar w e5 1
+
+% Seki destruction (3 stones)
+boardsize 6
+. . O X . O
+. . O X . O
+. O O X O O
+. O X O O X
+. O X X X X
+. O X . X .
+
+sar b e6 1
+sar w e6 1
+sar b e5 1
+sar w e5 1
+
 % Bulky five nakade
 boardsize 5
 X X X X X

@@ -7,6 +7,22 @@
 #include "board_undo.h"
 #include "debug.h"
 
+typedef struct {
+	int     groupcts[S_MAX];	/* number of neighbor groups for each color */
+	group_t groupids[S_MAX][4];	/* and their ids */
+	int     libs;
+	
+	bool    friend_has_no_libs;	/* This is set if this move puts a group out of _all_
+					 * liberties; we need to watch out for snapback then. */
+	
+	group_t needs_more_lib;		/* We may have one liberty, but be looking for one more.
+					 * In that case, @needs_more_lib is id of group
+					 * already providing one, don't consider it again. */
+	
+	coord_t needs_more_lib_except;  /* ID of the first liberty, providing it again is not interesting. */
+} selfatari_state_t;
+
+
 /* Check if this move is undesirable self-atari (resulting group would have
  * only single liberty and not capture anything; ko is allowed); we mostly
  * want to avoid these moves. The function actually does a rather elaborate

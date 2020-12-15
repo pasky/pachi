@@ -172,37 +172,6 @@ pachi_mkstemp(char *pattern, size_t max_size)
 }
 
 
-char *gnugo_exe = NULL;
-
-bool
-check_gnugo()
-{
-#ifdef _WIN32
-  
-	static char path[MAX_PATH] = "gnugo.exe";
-	
-	if (file_exists("gnugo.exe"))     {  gnugo_exe = "gnugo";  return true;  }
-	if (file_exists("gnugo.bat"))     {  gnugo_exe = "gnugo";  return true;  }
-	if (PathFindOnPathA(path, NULL))  {  gnugo_exe = "gnugo";  return true;  }
-
-#else
-  
-	char *cmds[] = { "./gnugo", "gnugo", "/usr/games/gnugo", NULL };
-	char cmd[256];
-
-	for (int i = 0; cmds[i]; i++) {
-		snprintf(cmd, sizeof(cmd), "%s -h >/dev/null 2>&1", cmds[i]);
-		if (system(cmd) == 0) {
-			gnugo_exe = cmds[i];
-			return true;
-		}
-	}
-	
-#endif
-	return false;	
-}
-
-
 /**************************************************************************************************/
 /* String buffer */
 

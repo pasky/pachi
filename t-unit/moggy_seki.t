@@ -15,6 +15,30 @@ moggy moves
 moggy status d9 O   e9 :   f9 X 
 
 
+% 2 stones seki
+boardsize 6
+. . O X . O
+. O O X . O
+. O X O O O
+. O X X X X)
+. O X . X .
+. O X . X .
+
+moggy status e6 :
+
+
+% 3 stones seki
+boardsize 6
+. . O X . O
+. . O X . O
+. O O X O O
+. O X O O X)
+. O X X X X
+. O X . X .
+
+moggy status e6 :
+
+
 % Nakade move breaking seki  FIXME
 boardsize 7
 . X O O O O O

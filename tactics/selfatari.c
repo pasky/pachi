@@ -12,25 +12,9 @@
 #include "tactics/1lib.h"
 #include "tactics/selfatari.h"
 #include "tactics/dragon.h"
+#include "tactics/seki.h"
 #include "nakade.h"
 
-
-typedef struct {
-	int groupcts[S_MAX];
-	group_t groupids[S_MAX][4];
-	int libs;
-
-	/* This is set if this move puts a group out of _all_
-	 * liberties; we need to watch out for snapback then. */
-	bool friend_has_no_libs;
-	/* We may have one liberty, but be looking for one more.
-	 * In that case, @needs_more_lib is id of group
-	 * already providing one, don't consider it again. */
-	group_t needs_more_lib;
-	/* ID of the first liberty, providing it again is not
-	 * interesting. */
-	coord_t needs_more_lib_except;
-} selfatari_state_t;
 
 static bool
 three_liberty_suicide(board_t *b, group_t g, enum stone color, coord_t to, selfatari_state_t *s)
@@ -321,16 +305,33 @@ capture_would_make_extra_eye(board_t *b, enum stone color, coord_t to, selfatari
 
 /* Only cares about dead shape. */
 static bool
-nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, int stones)
+nakade_making_dead_shape(board_t *b, selfatari_state_t *s, enum stone color, coord_t to, int stones)
 {
 	assert(stones >= 1);
 	assert(stones <= 5);
+
+	/* Breaking seki ? */
+	bool breaking_seki = breaking_local_seki(b, s, to);
 	
 	int dead_shape;
 	/* Play self-atari */
-	with_move_strict(b, to, color, {	
-		/* Play capture */
+	with_move_strict(b, to, color, {
+		enum stone other_color  = stone_other(color);
 		group_t g = group_at(b, to);
+
+		/* If breaking seki check we are really atariing *everything* around us from the inside */
+		if (breaking_seki) {
+			foreach_in_group(b, g) {
+				foreach_neighbor(b, c, {
+					if (board_at(b, c) != other_color) continue;
+					group_t g2 = group_at(b, c);
+					if (board_group_info(b, g2).libs > 1)
+						with_move_return(false);  /* Surrounding group not in atari */
+					});
+			} foreach_in_group_end;
+		}
+		
+		/* Play capture */
 		with_move_strict(b, board_group_info(b, g).lib[0], stone_other(color), {
 				assert(!group_at(b, to));
 				dead_shape = nakade_dead_shape(b, to, stone_other(color));
@@ -400,7 +401,7 @@ useful_nakade_making_dead_shape(board_t *b, enum stone color, coord_t to, selfat
 		    return false;   /* Bad nakade */
 	}
 	
-	return nakade_making_dead_shape(b, color, to, stones);
+	return nakade_making_dead_shape(b, s, color, to, stones);
 }
 
 
@@ -544,7 +545,7 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 		if (can_countercapture(b, g2, NULL))
 			return true;
 	}
-	
+
 	int stones = 0;
 	for (int j = 0; j < s->groupcts[color]; j++) {
 		group_t g2 = s->groupids[color][j];
@@ -553,7 +554,44 @@ setup_nakade_big_group_only(board_t *b, enum stone color, coord_t to, selfatari_
 			return true;
 	}
 	
-	return (nakade_making_dead_shape(b, color, to, stones) ? false : true);
+	/* Look at the enemy groups and determine the other contended
+	 * liberty. We must make sure the liberty:
+	 * (i) is an internal liberty
+	 * (ii) filling it to capture our group will not gain safety */
+	coord_t lib2 = pass;
+	for (int i = 0; i < s->groupcts[stone_other(color)]; i++) {
+		group_t g = s->groupids[stone_other(color)][i];
+		if (board_group_info(b, g).libs != 2)
+			continue;
+
+		coord_t this_lib2 = board_group_other_lib(b, g, to);
+		if (is_pass(lib2)) 
+			lib2 = this_lib2;
+		else if (this_lib2 != lib2) {
+			/* If we have two neighboring groups that do
+			 * not share the other liberty, this for sure
+			 * is not a good nakade. */
+			return -1;
+		}
+	}
+
+	if (!is_pass(lib2)) {
+		/* We would create more than 2-stone group; in that
+		 * case, the liberty of our result must be lib2,
+		 * indicating this really is a nakade. */
+		for (int j = 0; j < s->groupcts[color]; j++) {
+			group_t g2 = s->groupids[color][j];
+			assert(board_group_info(b, g2).libs <= 2);
+			if (board_group_info(b, g2).libs == 2) {
+				if (board_group_info(b, g2).lib[0] != lib2 &&
+				    board_group_info(b, g2).lib[1] != lib2)
+					return -1;
+			} else
+				assert(board_group_info(b, g2).lib[0] == to);
+		}
+	}
+	
+	return (nakade_making_dead_shape(b, s, color, to, stones) ? false : true);
 }
 
 #if 0

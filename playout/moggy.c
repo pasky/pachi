@@ -1118,8 +1118,7 @@ eyefill_skip:
 		if (breaking_3_stone_seki(b, m->coord, m->color))
 			return false;
 		if (check_endgame_sekis(b, m, random_move) &&
-		    (breaking_corner_seki(b, m->coord, m->color) ||
-		     breaking_false_eye_seki(b, m->coord, m->color)))
+		    breaking_false_eye_seki(b, m->coord, m->color))
 			return false;
 	}
 	return true;
