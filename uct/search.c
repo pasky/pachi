@@ -575,8 +575,7 @@ uct_search_stop_early(uct_t *u, tree_t *t, board_t *b,
 		int remaining = stop->worst.playouts - total_played;
 		if (remaining > 0 &&
 		    best->u.playouts > best2->u.playouts + remaining) {
-			if (UDEBUGL(2))  fprintf(stderr, "Early stop, result cannot change (best: %d, 2nd: %d)\n",
-						 best->u.playouts, best2->u.playouts);
+			if (UDEBUGL(2))  fprintf(stderr, "Early stop, result cannot change\n");
 			return true;
 		}
 	}
@@ -593,10 +592,9 @@ uct_search_stop_early(uct_t *u, tree_t *t, board_t *b,
 		double pps = ((double)played) / elapsed;
 		double estplayouts = remaining * pps + PLAYOUT_DELTA_SAFEMARGIN;
 		if (best->u.playouts > best2->u.playouts + estplayouts) {
-			if (UDEBUGL(2))
-				fprintf(stderr, "Early stop, result cannot change: "
-					"best %d, best2 %d, estimated %f simulations to go (%d/%f=%f pps)\n",
-					best->u.playouts, best2->u.playouts, estplayouts, played, elapsed, pps);
+			if (UDEBUGL(2))  fprintf(stderr, "Early stop, result cannot change\n");
+			if (UDEBUGL(3))  fprintf(stderr, "best %d, best2 %d, estimated %i sims to go (%d/%.1f=%i pps)\n",
+						 best->u.playouts, best2->u.playouts, (int)estplayouts, played, elapsed, (int)pps);
 			return true;
 		}
 	}
