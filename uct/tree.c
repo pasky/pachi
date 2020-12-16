@@ -555,9 +555,9 @@ tree_garbage_collect(tree_t *t)
 				(float)orig_size / (1024*1024),
 				(float)orig_content_size / (1024*1024),
 				(float)t->nodes_size / (1024*1024));
-			fprintf(stderr, "pruned %i nodes (%i%%), dest depth %d, wanted %d",
-				(orig_size - t->nodes_size) / sizeof(tree_node_t),
-				(orig_size - t->nodes_size) * 100 / orig_size,
+			fprintf(stderr, "pruned %lu nodes (%i%%), dest depth %d, wanted %d",
+				(unsigned long)((orig_size - t->nodes_size) / sizeof(tree_node_t)),
+				(int)((orig_size - t->nodes_size) * 100 / orig_size),
 				t2->max_depth, max_depth);
 		}
 		fprintf(stderr, "\n");
