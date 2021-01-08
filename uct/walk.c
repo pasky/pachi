@@ -29,6 +29,8 @@
 static void
 uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
+	int parity = (genmove_pondering(u) ? -1 : 1);
+	
 	if (!UDEBUGL(0))
 		return;
 
@@ -39,7 +41,7 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 		return;
 	}
 	fprintf(fh, "[%d] ", playouts);
-	fprintf(fh, "best %.1f%% ", 100 * tree_node_get_value(t, 1, best->u.value));
+	fprintf(fh, "best %.1f%% ", 100 * tree_node_get_value(t, parity, best->u.value));
 
 	/* Dynamic komi */
 	if (t->use_extra_komi)
@@ -62,11 +64,14 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	uct_get_best_moves(u, best_c, best_r, nbest, true, 100);
 
 	fprintf(fh, "| can %c ", color == S_BLACK ? 'b' : 'w');
-	for (int i = 0; i < nbest; i++)
+	for (int i = 0; i < nbest; i++) {
+		/* fix parity */
+		best_r[i] = (parity == 1 ? best_r[i] : 1.0 - best_r[i]);
 		if (!is_pass(best_c[i]))
 			fprintf(fh, "%3s(%.1f) ", coord2sstr(best_c[i]), 100 * best_r[i]);
 		else
 			fprintf(fh, "          ");
+	}
 
 	/* Tree memory usage */
 	if (UDEBUGL(3))
@@ -153,12 +158,19 @@ uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
 	uct_get_best_moves(u, best_c, best_r, GOGUI_NBEST, true, 200);
+
+	int parity = (genmove_pondering(u) ? -1 : 1);
+	for (int i = 0; i < GOGUI_NBEST; i++)
+		best_r[i] = (parity == 1 ? best_r[i] : 1.0 - best_r[i]);
+	
 	gogui_show_winrates(stderr, b, color, best_c, best_r, GOGUI_NBEST);
 }
 
 static void
 uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts, coord_t *final, bool big)
 {
+	int parity = (genmove_pondering(u) ? -1 : 1);
+	
 	/* Prefix indicating JSON line. */
 	fprintf(fh, "{\"%s\": {", final ? "move" : "frame");
 
@@ -179,7 +191,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 			/* Best move */
 			fprintf(fh, ", \"best\": {\"%s\": %f}",
 				coord2sstr(best->coord),
-				tree_node_get_value(t, 1, best->u.value));
+				tree_node_get_value(t, parity, best->u.value));
 		}
 	}
 
@@ -210,7 +222,7 @@ uct_progress_json(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 			if (!best || best->u.playouts < 1) break;
 			fprintf(fh, "%s{\"%s\": [%.3f, %i]}", depth > 0 ? "," : "",
 				coord2sstr(best->coord),
-				tree_node_get_value(t, 1, best->u.value),
+				tree_node_get_value(t, parity, best->u.value),
 				best->u.playouts);
 			best = u->policy->choose(u->policy, best, b, color, resign);
 		}
