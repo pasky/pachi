@@ -106,6 +106,9 @@ enum feature_id {
 #define	PF_WEDGE_LINE3		0  /*     3rd line wedge that can't be blocked */
 #define PF_WEDGE_N		1
 
+	/* First line blunder */
+	FEAT_L1_BLUNDER_PUNISH,	   /***   Punish first line blunder (connect and short of liberties) */
+	
 	/* Double snapback */
 	FEAT_DOUBLE_SNAPBACK,      /***** Just what it says. */
 
@@ -221,5 +224,8 @@ pattern_eq(pattern_t *p1, pattern_t *p2)
 			return false;
 	return true;
 }
+
+
+int pattern_match_l1_blunder_punish(board_t *b, move_t *m);
 
 #endif
