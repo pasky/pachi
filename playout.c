@@ -97,70 +97,85 @@ playout_play_move(playout_setup_t *setup,
 	return coord;
 }
 
-/*   | . . . . . .
- *   | O O O O O . 
- *   | X X X X O . 
- *   | * X . X O . 
- *   | O O O X O . 
- *   +-------------
- */
-
-static coord_t
-fill_bent_four(board_t *b, enum stone color, coord_t *other, coord_t *kill)
+static bool
+check_bent_four_surrounding(board_t *b, enum stone other_color, coord_t lib, group_t wanted_surrounding)
 {
-	enum stone other_color = stone_other(color);  // white here
+	group_t surrounding = 0;
+	foreach_neighbor(b, lib, {
+		if (board_at(b, c) == other_color) {
+			surrounding = group_at(b, c);
+			if (surrounding != wanted_surrounding)
+				return false;
+		}
+	});
+	return (surrounding != 0);
+}
+
+/* Fill bent-four in the corner:
+ * 
+ *   | . . . . . .       | O O O . . .              | X X O O . .     | . . . . . .
+ *   | O O O O O .   or  | X X O . . .	   but not  | . X X O . .     | O O . . . .
+ *   | X X X X O .       | * X O O O .	            | O . X O . .     | . O O O O O
+ *   | * X . X O .       | O X X X O .              | O X X O . .     | O X X X . O
+ *   | O O O X O .       | O O . X O .	            | O X O O . .     | O O . X O O
+ *   +-------------      +------------	            +------------     +-------------
+ *   
+ *   color       : bent-four stones color         (white here, color to play)
+ *   other_color : surrounding group color        (black here)
+ *
+ *   returns coord to fill to make bent-four (first found, pass if none).
+ *   @bent4_lib:  bent-four last liberty
+ *   @bent4_kill: killing move after capture  */
+static coord_t
+fill_bent_four(board_t *b, enum stone color, coord_t *bent4_lib, coord_t *bent4_kill)
+{
+	enum stone other_color = stone_other(color);
 	int s = board_rsize(b);
-	coord_t corners[4] = { coord_xy(1, 1),
-			       coord_xy(1, s),
-			       coord_xy(s, 1),
-			       coord_xy(s, s),
-	};
+	coord_t xs[] = { 1, 1, s, s },  dx[] = { 1,  1, -1, -1 };
+	coord_t ys[] = { 1, s, 1, s },  dy[] = { 1, -1,  1, -1 };
 	
 	for (int i = 0; i < 4; i++) {
-		coord_t corner = corners[i];
+		coord_t corner = coord_xy(xs[i], ys[i]);
 		group_t g = group_at(b, corner);
-		if (!g || board_at(b, corner) != other_color ||
-		    immediate_liberty_count(b, corner) != 1 ||
+		if (!g || board_at(b, corner) != color ||
 		    group_stone_count(b, g, 4) != 3 || board_group_info(b, g).libs != 2)
 			continue;
 
+		coord_t twotwo = coord_xy(xs[i] + dx[i], ys[i] + dy[i]);
+		group_t surrounding = group_at(b, twotwo);
+		if (!surrounding || board_at(b, twotwo) != other_color || board_group_info(b, surrounding).libs != 2)
+			continue;
+
+		/* check really surrounding */
+		if (!check_bent_four_surrounding(b, other_color, board_group_info(b, g).lib[0], surrounding) ||
+		    !check_bent_four_surrounding(b, other_color, board_group_info(b, g).lib[1], surrounding))
+			continue;
+
+		/* find suitable lib to fill  (first line and other coord == 2 or 3)  */
+		coord_t fill;
+		for (int j = 0; j < 2; j++) {
+			fill = board_group_info(b, g).lib[j];
+			int x = coord_x(fill),  y = coord_y(fill);
+			
+			if (x == xs[i] && (y == ys[i] + dy[i]  ||  y == ys[i] + 2 * dy[i])) {
+				if (y == ys[i] + dy[i])   *bent4_kill = coord_xy(xs[i] + dx[i], ys[i]);   /* 3 in line horizontally */
+				else			  *bent4_kill = coord_xy(xs[i], ys[i] + dy[i]);   /* bent-three */
+				break;
+			}
+			
+			if (y == ys[i] && (x == xs[i] + dx[i]  ||  x == xs[i] + 2 * dx[i])) {
+				if (x == xs[i] + dx[i])   *bent4_kill = coord_xy(xs[i], ys[i] + dy[i]);   /* 3 in line vertically */
+				else                      *bent4_kill = coord_xy(xs[i] + dx[i], ys[i]);   /* bent-three */
+				break;
+			}
+			
+			fill = pass;
+		}
+		if (fill == pass)  continue;
 		
-		coord_t stone3 = pass;
-		int x = coord_x(corner);
-		int y = coord_y(corner);
-
-		/* check 3 in line, horizontal */
-		int dx = (x == 1 ? 1 : -1);
-		for (int j = 0; j < 3; j++) {
-			coord_t c = coord_xy(x + j * dx, y);
-			if (board_at(b, c) != other_color)  break;
-			if (j == 2)  {  stone3 = c;  *kill = coord_xy(x + dx, y);  }
-		}
-
-		/* check 3 in line, vertical */
-		int dy = (y == 1 ? 1 : -1);
-		for (int j = 0; j < 3; j++) {
-			coord_t c = coord_xy(x, y + j * dy);
-			if (board_at(b, c) != other_color)  break;
-			if (j == 2)  {  stone3 = c;  *kill = coord_xy(x, y + dy);  }
-		}
-
-		if (stone3 == pass)  continue;
-
-		group_t surrounding = 0;
-		foreach_neighbor(b, stone3, {
-				if (board_at(b, c) == color) {  surrounding = group_at(b, c);  break;  }
-			});
-		if (!surrounding || board_group_info(b, surrounding).libs != 2)  continue;
-
-		coord_t fill = pass;
-		foreach_neighbor(b, corner, {
-				if (board_at(b, c) == S_NONE)  {  fill = c;  break;  }
-			});
-
-		move_t m = move(fill, other_color);
+		move_t m = move(fill, color);
 		if (board_permit(b, &m, NULL)) {
-			*other = board_group_other_lib(b, g, fill);
+			*bent4_lib = board_group_other_lib(b, g, fill);
 			return fill;
 		}
 	}
@@ -222,7 +237,7 @@ playout_play_game(playout_setup_t *setup,
 	}	
 
 	int bent4_moves = -2;
-	coord_t bent4_other = pass;
+	coord_t bent4_lib = pass;
 	coord_t bent4_kill = pass;
 
 	/* Play some more, handling bent-fours this time ...
@@ -233,19 +248,21 @@ playout_play_game(playout_setup_t *setup,
 		coord_t coord;
 		
 		/* Kill bent-four group after filling. */
-		if (b->moves == bent4_moves + 1) {
-			/* Capture or kill group. */
-			coord = (board_at(b, bent4_other) == S_NONE ? bent4_other : bent4_kill);
+		if (b->moves == bent4_moves + 2) {
+			/* Kill group (or capture if opponent didn't take) */
+			//fprintf(stderr, "bent-four: capture / kill ...\n");
+			coord = (board_at(b, bent4_lib) == S_NONE ? bent4_lib : bent4_kill);
 			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r == 0);
 		}
 		else    coord = playout_play_move(setup, b, color, policy);
 		
 		/* Fill bent-fours */
-		if (coord == pass && (coord = fill_bent_four(b, stone_other(color), &bent4_other, &bent4_kill)) != pass) {
+		if (coord == pass && (coord = fill_bent_four(b, color, &bent4_lib, &bent4_kill)) != pass) {
+			//fprintf(stderr, "bent-four: filling ...\n");
+			bent4_moves = b->moves;
 			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r == 0);
-			bent4_moves = b->moves;
 		}
 
 		random_game_loop_stuff
