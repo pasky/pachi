@@ -14,7 +14,7 @@
 #include "chat.h"
 #include "move.h"
 #include "mq.h"
-#include "joseki.h"
+#include "joseki/joseki.h"
 #include "playout.h"
 #include "playout/moggy.h"
 #include "playout/light.h"

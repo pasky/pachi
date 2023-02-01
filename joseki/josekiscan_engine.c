@@ -6,9 +6,9 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "engines/josekiscan.h"
+#include "josekiscan_engine.h"
 #include "tactics/util.h"
-#include "../joseki.h"
+#include "joseki.h"
 
 
 /* Internal engine state. */

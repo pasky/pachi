@@ -16,9 +16,9 @@
 #include "engines/random.h"
 #include "engines/patternscan.h"
 #include "engines/pattern.h"
-#include "engines/josekiscan.h"
-#include "engines/joseki.h"
 #include "engines/dcnn.h"
+#include "joseki/joseki_engine.h"
+#include "joseki/josekiscan_engine.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "distributed/distributed.h"
@@ -35,7 +35,7 @@
 #include "pattern.h"
 #include "patternsp.h"
 #include "patternprob.h"
-#include "joseki.h"
+#include "joseki/joseki.h"
 
 /* Main options */
 static pachi_options_t main_options = { 0, };

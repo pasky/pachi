@@ -6,8 +6,8 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "../joseki.h"
-#include "engines/joseki.h"
+#include "joseki.h"
+#include "joseki_engine.h"
 
 static void
 joseki_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,

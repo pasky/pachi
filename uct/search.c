@@ -13,7 +13,7 @@
 
 #include "debug.h"
 #include "board.h"
-#include "joseki.h"
+#include "joseki/joseki.h"
 #include "random.h"
 #include "timeinfo.h"
 #include "tactics/1lib.h"

@@ -7,11 +7,11 @@
 #include "gtp.h"
 #include "gogui.h"
 #include "ownermap.h"
-#include "joseki.h"
+#include "joseki/joseki.h"
 #include "uct/uct.h"
 #include "pattern.h"
 #include "engines/pattern.h"
-#include "engines/joseki.h"
+#include "joseki/joseki_engine.h"
 #include "patternsp.h"
 #include "patternprob.h"
 
