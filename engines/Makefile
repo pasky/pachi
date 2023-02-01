@@ -1,6 +1,6 @@
 INCLUDES=-I..
 
-OBJS=montecarlo.o pattern.o patternscan.o random.o replay.o
+OBJS=montecarlo.o random.o replay.o
 
 ifeq ($(DCNN), 1)
 	OBJS+=dcnn.o

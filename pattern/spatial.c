@@ -7,8 +7,8 @@
 
 #include "board.h"
 #include "debug.h"
-#include "pattern.h"
-#include "patternsp.h"
+#include "pattern/pattern.h"
+#include "pattern/spatial.h"
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). The array is ordered

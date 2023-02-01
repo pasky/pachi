@@ -3,7 +3,7 @@
 
 #include "debug.h"
 #include "board.h"
-#include "patternsp.h"
+#include "pattern/spatial.h"
 
 #define JOSEKI_PATTERN_DIST	     9
 

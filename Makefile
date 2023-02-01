@@ -259,11 +259,11 @@ unexport INCLUDES
 INCLUDES=-I.
 
 OBJS = $(EXTRA_OBJS) \
-       board.o board_undo.o engine.o gogui.o gtp.o move.o ownermap.o pachi.o pattern3.o pattern.o \
-       patternsp.o patternprob.o playout.o random.o stone.o timeinfo.o fbook.o chat.o util.o
+       board.o board_undo.o engine.o gogui.o gtp.o move.o ownermap.o pachi.o pattern3.o \
+       playout.o random.o stone.o timeinfo.o fbook.o chat.o util.o
 
 # Low-level dependencies last
-SUBDIRS   = $(EXTRA_SUBDIRS) joseki uct uct/policy t-unit t-predict engines playout tactics
+SUBDIRS   = $(EXTRA_SUBDIRS) pattern joseki uct uct/policy t-unit t-predict engines playout tactics
 DATAFILES = patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.gtp
 
 

@@ -7,9 +7,9 @@
 
 #include "board.h"
 #include "debug.h"
-#include "pattern.h"
-#include "patternsp.h"
-#include "patternprob.h"
+#include "pattern/pattern.h"
+#include "pattern/spatial.h"
+#include "pattern/prob.h"
 #include "tactics/ladder.h"
 #include "tactics/selfatari.h"
 #include "tactics/1lib.h"

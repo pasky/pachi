@@ -6,9 +6,9 @@
 
 #include "board.h"
 #include "debug.h"
-#include "pattern.h"
-#include "patternsp.h"
-#include "patternprob.h"
+#include "pattern/pattern.h"
+#include "pattern/spatial.h"
+#include "pattern/prob.h"
 #include "engine.h"
 
 prob_dict_t    *prob_dict = NULL;

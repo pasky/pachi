@@ -9,11 +9,11 @@
 #include "ownermap.h"
 #include "joseki/joseki.h"
 #include "uct/uct.h"
-#include "pattern.h"
-#include "engines/pattern.h"
+#include "pattern/pattern.h"
+#include "pattern/pattern_engine.h"
 #include "joseki/joseki_engine.h"
-#include "patternsp.h"
-#include "patternprob.h"
+#include "pattern/spatial.h"
+#include "pattern/prob.h"
 
 #ifdef DCNN
 #include "engines/dcnn.h"

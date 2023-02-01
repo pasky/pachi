@@ -9,7 +9,7 @@
 #include "caffe.h"
 #include "dcnn.h"
 #include "timeinfo.h"
-#include "pattern.h"
+#include "pattern/pattern.h"
 #include "tactics/util.h"
 #include "tactics/2lib.h"
 #include "board_undo.h"
