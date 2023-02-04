@@ -59,6 +59,36 @@ O O . X O O X . .
 moggy status  C3 o  B2 x   G7 o  H8 x   
 
 
+% Test bent-four (unfilled bent-three, all corners dead)
+boardsize 9
+. X . O X O . X .
+X O O O X O O O X
+. O . X X . . O .
+O O . X X . X O O
+X)X X . X X X X X
+O O X X . X . O O
+. O . X X X . O .
+X O O O X O O O X
+. X . O X O . X .
+
+moggy status  B2 x   B8 x   H2 x   H8 x
+
+
+% Unfilled bent-four (2+1 stones, corner alive)
+boardsize 9
+. . O X). . . . .
+. . O X . . . . .
+. . O X X X X . .
+. . . O . . X . .
+O O O . O . X X X
+. . O O O X X O O
+X X X X X O O O .
+. X X O O O . O X
+X . X X X O X X .
+
+moggy status  H2 o   H1 x
+
+
 % Two full-board bent-fours (dead)
 boardsize 19
 . . . X X O . . . . . . . . . X O . X

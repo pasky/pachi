@@ -183,6 +183,63 @@ fill_bent_four(board_t *b, enum stone color, coord_t *bent4_lib, coord_t *bent4_
 	return pass;
 }
 
+/* Fill bent-three in the corner:   (leads to bent-four)
+ * 
+ *   | O O O . . . 
+ *   | X X O . . . 
+ *   | . X O O O . 
+ *   | O X X X O . 
+ *   | * O . X O . 
+ *   +-------------
+ *   
+ *   color       : bent-three stones color        (white here, color to play)
+ *   other_color : surrounding group color        (black here)
+ *
+ *   returns coord to fill (first found, pass if none). */
+static coord_t
+fill_bent_three(board_t *b, enum stone color)
+{
+	enum stone other_color = stone_other(color);
+	int s = board_rsize(b);
+	coord_t xs[] = { 1, 1, s, s },  dx[] = { 1,  1, -1, -1 };
+	coord_t ys[] = { 1, s, 1, s },  dy[] = { 1, -1,  1, -1 };
+	
+	for (int i = 0; i < 4; i++) {
+		coord_t corner = coord_xy(xs[i], ys[i]);
+		if (board_at(b, corner) != S_NONE)
+			continue;
+		
+		coord_t c1 = coord_xy(xs[i], ys[i] + dy[i]);
+		coord_t c2 = coord_xy(xs[i] + dx[i], ys[i]);
+		if (board_at(b, c1) != color || board_at(b, c2) != color)
+			continue;
+
+		group_t g1 = group_at(b, c1);
+		group_t g2 = group_at(b, c2);
+		if (!group_is_onestone(b, g1) || !group_is_onestone(b, g2) ||
+		    board_group_info(b, g1).libs != 2 || board_group_info(b, g2).libs != 2)
+			continue;
+
+		coord_t twotwo = coord_xy(xs[i] + dx[i], ys[i] + dy[i]);
+		group_t surrounding = group_at(b, twotwo);
+		if (!surrounding || board_at(b, twotwo) != other_color || board_group_info(b, surrounding).libs != 2)
+			continue;
+
+		/* Check really surrounding */
+		coord_t libs[] = { coord_xy(xs[i], ys[i] + 2 * dy[i]),  coord_xy(xs[i] + 2 * dx[i], ys[i]) };
+		assert(board_at(b, libs[0]) == S_NONE && board_at(b, libs[1]) == S_NONE);
+		if (!check_bent_four_surrounding(b, other_color, libs[0], surrounding) ||
+		    !check_bent_four_surrounding(b, other_color, libs[1], surrounding))
+			continue;
+		
+		move_t m = move(corner, color);
+		if (board_permit(b, &m, NULL))
+			return corner;
+	}
+
+	return pass;
+}
+
 #define random_game_loop_stuff  \
 		if (PLDEBUGL(7)) { \
 			fprintf(stderr, "%s %s\n", stone2str(color), coord2sstr(coord)); \
@@ -265,6 +322,13 @@ playout_play_game(playout_setup_t *setup,
 			int r = board_play(b, &m);  assert(r == 0);
 		}
 
+		/* Fill bent-threes */
+		if (coord == pass && (coord = fill_bent_three(b, color)) != pass) {
+			//fprintf(stderr, "bent-three: filling ...\n");
+			move_t m = move(coord, color);
+			int r = board_play(b, &m);  assert(r == 0);
+		}
+		
 		random_game_loop_stuff
 	}
 	
