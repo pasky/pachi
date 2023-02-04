@@ -1147,6 +1147,11 @@ static gtp_command_t gtp_commands[] =
 	{ "gogui-show_spatial",     cmd_gogui_show_spatial },
 	{ "gogui-spatial_size",     cmd_gogui_spatial_size },
 	{ "gogui-color_palette",    cmd_gogui_color_palette },
+#ifdef JOSEKIFIX
+	{ "gogui-josekifix_set_coord",    cmd_gogui_josekifix_set_coord },
+	{ "gogui-josekifix_show_pattern", cmd_gogui_josekifix_show_pattern },
+	{ "gogui-josekifix_dump_templates", cmd_gogui_josekifix_dump_templates },
+#endif
 
 	{ 0, 0 }
 };
