@@ -1,0 +1,224 @@
+#!/usr/bin/perl
+# Usage: sgfdump file.sgf
+# Convert joseki overrides in file.sgf into annotated gtp sequence
+# for josekifix module. Expects specific syntax in sgf comments for
+# overrides metadata (see README and josekifix.sgf for details).
+use strict;
+
+eval "use Games::SGF::Go";
+if ($@) {  die "josekifix/sgfdump: SGF perl module is missing, try:\n\t\$ cpan \n\tcpan[1]> install Games::SGF::Go \n\n";  }
+
+my $sgf = new Games::SGF::Go;
+my $file = $ARGV[0];
+$sgf->readFile($file);
+
+my $boardsize = 19;
+if ($sgf->property('SZ')) {  $boardsize = $sgf->property('SZ')->[0];  }
+
+my @abcd = split("", "abcdefghjklmnopqrst");
+my $variations = 0;
+my $overrides = 0;
+my $loggedvars = 0;
+
+sub gtp_coord
+{
+    my ($prop) = @_;
+    if (@$prop != 2) {  return "pass";  }
+    my ($x, $y) = ($prop->[0], $boardsize - $prop->[1]);
+    if ($x < 0 || $y < 0)                     {  die "sgfdump: $file: Bad coord ($x, $y)";  }
+    if ($x >= $boardsize || $y >= $boardsize) {  die "sgfdump: $file: Bad coord ($x, $y)";  }
+    return "$abcd[$x]$y";
+}
+
+# move comment data: override variables and extra comment
+my %override_vars;
+my @move_comment;
+
+# keep some values as default for next overrides ...
+my $default_name = "";
+my $default_around = "";
+
+sub save_defaults
+{
+    if ($override_vars{"name"} ne "")   {  $default_name = $override_vars{"name"};  }
+    if ($override_vars{"around"} ne "") {  $default_around = $override_vars{"around"};  }    
+}
+
+sub reset_defaults
+{
+    $default_name = "";
+    $default_around = "";    
+}
+
+my $section;		# "override" or "log"
+
+# parse [log] or [override] section inside move comment
+sub parse_override
+{
+    $section = "";
+    %override_vars = ();
+    @move_comment = ();
+    
+    if (!$sgf->property('C'))  {  return "";  }
+    my $comment = $sgf->property('C')->[0];
+    my @lines = split("\n", $comment);
+
+    my $parsing_override = 0;
+    my $i = 0;
+    foreach my $line (@lines) {
+	$i++;
+	
+	# [log] or [override] section ?  (must be on first line)
+	if ($i == 1 && $line =~ m/\[ *(override|log) *\]/) {
+	    $section = $1;
+	    $parsing_override = 1;
+	    next;
+	}
+
+	# check no unknown section ...
+	if ($i == 1 && $line =~m /^ *\[.*\]/) {  die("sgfdump: $file: unknown override section '" . $line . "'\n");  }
+
+	# blank line = end of section
+	if ($line =~ m/^ *$/)  {
+	    $parsing_override = 0;
+	    next;
+	}
+
+	# parse section variables
+	if ($parsing_override) {	# variable
+	    $line =~ s/ *=/=/g;	 # trim spaces
+	    $line =~ s/= */=/g;
+	    $line =~ s/"//g;     # remove quotes
+
+	    # var dictionary
+	    my ($name, $value) = ($line, "");
+	    if ($line =~ m/=/) {  ($name, $value) = split(/=/, $line);  }
+	    $override_vars{$name} = $value;
+	}
+	else {				# comment
+	    push(@move_comment, $line);
+	}
+    }
+}
+
+sub val {  return $sgf->property($_[0])->[0];  }
+
+# fill-in defaults if missing ...
+sub override_fill_defaults
+{
+    if ($override_vars{"name"}   eq "") {  $override_vars{"name"} = $default_name;  }
+    if ($override_vars{"around"} eq "") {  $override_vars{"around"} = $default_around;  }
+}
+
+sub override_sanity_checks
+{
+    # don't check name missing here, let josekifix handle it (can show board position).
+    if ($override_vars{"name"} eq "") {  return;  }
+    
+    if ($override_vars{"around"} eq "")  {
+	die(sprintf("sgfdump: $file: \"%s\": 'around' missing, aborting.\n", $override_vars{"name"}));
+    }
+}
+
+# List override variables in nice order
+sub list_override_vars
+{
+    my @vars = sort(keys(%override_vars));
+
+    # name first, helps debugging
+    if ($override_vars{"name"} ne "") {
+	@vars = grep(!/^name$/, @vars);
+	unshift(@vars, "name");
+    }
+
+    return @vars;
+}
+
+sub print_move
+{
+    foreach my $tag ('B', 'W') {			# Normal move
+	if ($sgf->property($tag)) {
+	    my $coord = gtp_coord(val($tag));
+
+	    # parse move comment
+	    parse_override();
+	    save_defaults();
+
+	    print("play $tag $coord  ");
+	    if ($section ne "") {
+		
+		if ($section eq "override") {  $overrides++;  override_fill_defaults();  }	# fill-in defaults ...
+		else                        {  $loggedvars++;  }
+		
+		my @name_value = ();
+		foreach my $name (list_override_vars()) {
+		    my $value = $override_vars{$name};
+		    if ($value ne "") {  push(@name_value, sprintf("%s=%s", $name, $value));  }
+		    else              {  push(@name_value, $name);  }
+		}
+
+		printf("%s %s", $section, join("|", @name_value));
+		override_sanity_checks();
+	    }
+	    print("\n");
+
+	    # keep sgf comments as echo commands
+	    # foreach my $s (@move_comment) {
+	    #     print "echo $s\n";
+	    # }	    	    
+	}
+    }
+}
+
+sub print_sequence
+{
+    my $here = $sgf->getAddress();
+
+    if ($sgf->prev) {
+	print_sequence();
+    }
+	
+    $sgf->goto($here);
+    print_move();
+}
+
+sub print_branch
+{
+    print("\nclear_board\n");    
+    reset_defaults();   
+    print_sequence();
+}
+
+# walk sgf tree and print moves.
+# order matters, so take care to preserve original branch order.
+sub scan_tree
+{
+    if ($sgf->property('AE')) {  die "sgfdump: $file: 'AE' tag unsupported (setup stones removal), aborting\n";  }
+    
+    foreach my $tag ('AB', 'AW') {			# Setup stones
+	if ($sgf->property($tag)) {  die "sgfdump: $file: setup stones unsupported for now, aborting\n";  }
+    }
+    
+    for (my $j = 0; $j < $sgf->branches; $j++) {	# scan branches (branch 0 = current sequence)
+	my $here = $sgf->getAddress();
+	$sgf->gotoBranch($j);
+	scan_tree();
+	$sgf->goto($here);
+    }
+
+    if (!$sgf->next) {					# reached leaf, dump whole branch
+	$variations++;	
+	print_branch();  				
+    }
+}
+
+print "# Generated from josekifix/$file\n";
+print "# Do not edit directly !\n";
+print "\n";
+print "boardsize $boardsize\n";
+
+$sgf->gotoRoot;
+scan_tree();
+print "\n";
+
+print STDERR "$file: $variations variations, $overrides overrides, $loggedvars logged variations\n";
