@@ -20,6 +20,7 @@
 #include "pattern/pattern_engine.h"
 #include "joseki/joseki_engine.h"
 #include "joseki/josekiscan_engine.h"
+#include "josekifix/josekifixscan_engine.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "distributed/distributed.h"
@@ -69,6 +70,9 @@ engine_map_t engines[] = {
 	{ E_PATTERNSCAN,	"patternscan",    patternscan_engine_init,    0 },
 	{ E_JOSEKI,		"joseki",         joseki_engine_init,         1 },
 	{ E_JOSEKISCAN,		"josekiscan",     josekiscan_engine_init,     0 },
+#ifdef JOSEKIFIX
+	{ E_JOSEKIFIXSCAN,	"josekifixscan",  josekifixscan_engine_init,  0 },
+#endif
 	{ E_RANDOM,		"random",         random_engine_init,         1 },
 	{ E_REPLAY,		"replay",         replay_engine_init,         1 },
 	{ E_MONTECARLO,		"montecarlo",     montecarlo_engine_init,     1 },

@@ -68,8 +68,10 @@ valid_str_coord(char *s)
 
 	char c1 = toupper(s[0]);
 	char c2 = s[1];
+	int n = atoi(s + 1);
 	return (c1 >= 'A' && c1 <= 'T' &&
-		c2 >= '0' && c2 <= '9');
+		c2 >= '0' && c2 <= '9' &&
+		n >= 1 && n <= 19);
 }
 
 

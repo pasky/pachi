@@ -1,6 +1,6 @@
 INCLUDES=-I..
 
-OBJS := fuseki.o josekifix.o
+OBJS := fuseki.o josekifix.o josekifixscan_engine.o
 
 
 all: lib.a

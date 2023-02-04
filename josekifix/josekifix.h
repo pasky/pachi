@@ -65,7 +65,15 @@ typedef struct {
 /* global */
 void disable_josekifix();
 void require_josekifix();
+
+/* loading overrides */
 void josekifix_init(board_t *b);
+void joseki_override_fill_hashes(override_t *override, board_t *b);
+void joseki_override_print(override_t *override, char *section);
+void josekifix_add_override(board_t *b, override_t *override);
+void josekifix_add_override_and(board_t *b, override_t *override1, override_t *override2);
+void josekifix_add_logged_variation(board_t *b, override_t *override);
+void josekifix_add_logged_variation_and(board_t *b, override_t *log1, override_t *log2);
 
 /* genmove */
 coord_t joseki_override_before_genmove(board_t *b, enum stone color);
