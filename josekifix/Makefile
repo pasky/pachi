@@ -1,16 +1,11 @@
 INCLUDES=-I..
 
-OBJS = fuseki.o josekifix.o josekifixscan_engine.o
+OBJS = fuseki.o josekifix.o josekifixscan_engine.o special_checks.o
 SGF  = josekifix.sgf fusekifix.sgf
 
 all: lib.a data
 
 data: ../josekifix.gtp
-
-# update database: get latest josekifix.sgf from github, and regen josekifix.gtp
-update: FORCE
-	./update_database
-	@make data
 
 
 # Generate josekifix.gtp from josekifix.sgf

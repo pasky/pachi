@@ -1096,6 +1096,12 @@ joseki_override_(struct board *b, strbuf_t *log,
 		if (!is_pass(c))  return c;
 	}
 	
+	/* Kill 3-3 invasion */
+	if (prev_ownermap) {
+		c = josekifix_kill_3_3_invasion(b, prev_ownermap, lasth);
+		if (!is_pass(c))  return c;
+	}
+	
 	/**********************************************************************************/
 	/* Choose inital fuseki */
 

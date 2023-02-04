@@ -91,6 +91,9 @@ void    josekifix_log(const char *format, ...);
 /* fuseki */
 coord_t josekifix_initial_fuseki(struct board *b, strbuf_t *log, hash_t lasth);
 
+/* special checks */
+coord_t josekifix_kill_3_3_invasion(struct board *b, struct ownermap *prev_ownermap, hash_t lasth);
+
 /* external joseki engine */
 void    external_joseki_engine_play(coord_t c, enum stone color);
 void    external_joseki_engine_fixed_handicap(int stones);
