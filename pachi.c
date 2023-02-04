@@ -14,6 +14,7 @@
 #include "engines/replay.h"
 #include "engines/montecarlo.h"
 #include "engines/random.h"
+#include "engines/external.h"
 #include "engines/dcnn.h"
 #include "pattern/patternscan_engine.h"
 #include "pattern/pattern_engine.h"
@@ -73,6 +74,7 @@ engine_map_t engines[] = {
 #ifdef DISTRIBUTED
 	{ E_DISTRIBUTED, "distributed", distributed_engine_init,    1 },
 #endif
+	{ E_EXTERNAL,	 "external",    external_engine_init,       0 },
 
 /* Alternative names */
 	{ E_PATTERN,     "patternplay", pattern_engine_init,        1 },  /* backwards compatibility */
