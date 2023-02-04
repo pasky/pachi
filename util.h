@@ -8,8 +8,8 @@
 #undef MIN
 #undef MAX
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b));
-#define MAX(a, b) ((a) > (b) ? (a) : (b));
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 #define swap(x, y)  do { typeof(x) __tmp;  __tmp = (x);  (x) = (y);  (y) = __tmp;  } while(0)
 

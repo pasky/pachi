@@ -32,7 +32,9 @@ enum engine_id {
 #ifdef DISTRIBUTED
 	E_DISTRIBUTED,
 #endif
+#ifdef JOSEKIFIX
 	E_EXTERNAL,
+#endif
 	E_MAX,
 };
 

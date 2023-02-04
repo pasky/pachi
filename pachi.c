@@ -37,6 +37,7 @@
 #include "pattern/spatial.h"
 #include "pattern/prob.h"
 #include "joseki/joseki.h"
+#include "josekifix/josekifix.h"
 
 /* Main options */
 static pachi_options_t main_options = { 0, };
@@ -60,25 +61,27 @@ typedef struct {
 
 /* Must match order in engine.h */
 engine_map_t engines[] = {
-	{ E_UCT,         "uct",         uct_engine_init,            1 },
+	{ E_UCT,		"uct",            uct_engine_init,            1 },
 #ifdef DCNN
-	{ E_DCNN,        "dcnn",        dcnn_engine_init,           1 },
+	{ E_DCNN,		"dcnn",           dcnn_engine_init,           1 },
 #endif
-	{ E_PATTERN,     "pattern",     pattern_engine_init,        1 },
-	{ E_PATTERNSCAN, "patternscan", patternscan_engine_init,    0 },
-	{ E_JOSEKI,      "joseki",      joseki_engine_init,         1 },
-	{ E_JOSEKISCAN,  "josekiscan",  josekiscan_engine_init,     0 },
-	{ E_RANDOM,      "random",      random_engine_init,         1 },
-	{ E_REPLAY,      "replay",      replay_engine_init,         1 },
-	{ E_MONTECARLO,  "montecarlo",  montecarlo_engine_init,     1 },
+	{ E_PATTERN,		"pattern",        pattern_engine_init,        1 },
+	{ E_PATTERNSCAN,	"patternscan",    patternscan_engine_init,    0 },
+	{ E_JOSEKI,		"joseki",         joseki_engine_init,         1 },
+	{ E_JOSEKISCAN,		"josekiscan",     josekiscan_engine_init,     0 },
+	{ E_RANDOM,		"random",         random_engine_init,         1 },
+	{ E_REPLAY,		"replay",         replay_engine_init,         1 },
+	{ E_MONTECARLO,		"montecarlo",     montecarlo_engine_init,     1 },
 #ifdef DISTRIBUTED
-	{ E_DISTRIBUTED, "distributed", distributed_engine_init,    1 },
+	{ E_DISTRIBUTED,	"distributed",    distributed_engine_init,    1 },
 #endif
-	{ E_EXTERNAL,	 "external",    external_engine_init,       0 },
+#ifdef JOSEKIFIX
+	{ E_EXTERNAL,		"external",       external_engine_init,       0 },
+#endif
 
 /* Alternative names */
-	{ E_PATTERN,     "patternplay", pattern_engine_init,        1 },  /* backwards compatibility */
-	{ E_JOSEKI,      "josekiplay",  joseki_engine_init,         1 },
+	{ E_PATTERN,		"patternplay",    pattern_engine_init,        1 },  /* backwards compatibility */
+	{ E_JOSEKI,		"josekiplay",     joseki_engine_init,         1 },
 	
 	{ 0, 0, 0, 0 }
 };
@@ -202,7 +205,15 @@ usage(char *arg)
 		"Engine components: \n"
 		"      --dcnn,     --nodcnn          dcnn required / disabled \n"
 		"      --patterns, --nopatterns      mm patterns required / disabled \n"
-		"      --joseki,   --nojoseki        joseki engine required / disabled \n"
+		"                                    guides tree search.                (default: enabled) \n"
+		"      --joseki,   --nojoseki        (nodcnn) joseki module required / disabled \n"
+#ifdef JOSEKIFIX
+		"      --josekifix, --nojosekifix    (dcnn)   joseki fixes required / disabled \n"
+		"                                    fixes for joseki/fuseki lines that dcnn plays poorly. \n"
+		"                                    requires external engine to act as joseki engine \n"
+		"                                    (see --external-joseki-engine)     (default: enabled) \n"
+		"      --external-joseki-engine CMD  joseki engine for josekifix module (default: katago) \n"
+#endif
 		" \n"
 #ifdef DCNN
 		"Deep learning: \n"
@@ -276,43 +287,56 @@ show_version(FILE *s)
 #define OPT_ACCURATE_SCORING  271
 #define OPT_KGS_CHAT	      272
 #define OPT_SMART_PASS        273
+#define OPT_EXT_JOSEKI_ENGINE 274
+#define OPT_JOSEKIFIX         275
+#define OPT_NOJOSEKIFIX       276
+
 
 static struct option longopts[] = {
-	{ "chatfile",           required_argument, 0, 'c' },
-	{ "compile-flags",      no_argument,       0, OPT_COMPILE_FLAGS },
-	{ "debug-level",        required_argument, 0, 'd' },
-	{ "dcnn",               optional_argument, 0, OPT_DCNN },
-	{ "engine",             required_argument, 0, 'e' },
-	{ "fbook",              required_argument, 0, 'f' },
-	{ "fuseki-time",        required_argument, 0, OPT_FUSEKI_TIME },
-	{ "fuseki",             required_argument, 0, OPT_FUSEKI },
+	{ "chatfile",               required_argument, 0, 'c' },
+	{ "compile-flags",          no_argument,       0, OPT_COMPILE_FLAGS },
+	{ "debug-level",            required_argument, 0, 'd' },
+	{ "dcnn",                   optional_argument, 0, OPT_DCNN },
+	{ "engine",                 required_argument, 0, 'e' },
+#ifdef JOSEKIFIX
+	{ "external-joseki-engine", required_argument, 0, OPT_EXT_JOSEKI_ENGINE },
+#endif	
+	{ "fbook",                  required_argument, 0, 'f' },
+	{ "fuseki-time",            required_argument, 0, OPT_FUSEKI_TIME },
+	{ "fuseki",                 required_argument, 0, OPT_FUSEKI },
 #ifdef NETWORK
-	{ "gtp-port",           required_argument, 0, 'g' },
-	{ "log-port",           required_argument, 0, 'l' },
+	{ "gtp-port",               required_argument, 0, 'g' },
+	{ "log-port",               required_argument, 0, 'l' },
 #endif
-	{ "guess-unclear",      no_argument,       0, OPT_SMART_PASS },
-	{ "help",               no_argument,       0, 'h' },
-	{ "joseki",             no_argument,       0, OPT_JOSEKI },	
-	{ "kgs",                no_argument,       0, OPT_KGS },
-	{ "kgs-chat",           no_argument,       0, OPT_KGS_CHAT },
+	{ "guess-unclear",          no_argument,       0, OPT_SMART_PASS },
+	{ "help",                   no_argument,       0, 'h' },
+	{ "joseki",                 no_argument,       0, OPT_JOSEKI },
+#ifdef JOSEKIFIX
+	{ "josekifix",              no_argument,       0, OPT_JOSEKIFIX },
+#endif
+	{ "kgs",                    no_argument,       0, OPT_KGS },
+	{ "kgs-chat",               no_argument,       0, OPT_KGS_CHAT },
 #ifdef DCNN
-	{ "list-dcnns",         no_argument,       0, OPT_LIST_DCNNS },
+	{ "list-dcnns",             no_argument,       0, OPT_LIST_DCNNS },
 #endif
-	{ "log-file",           required_argument, 0, 'o' },
-	{ "name",               required_argument, 0, OPT_NAME },
-	{ "nodcnn",             no_argument,       0, OPT_NODCNN },
-	{ "noundo",             no_argument,       0, OPT_NOUNDO },
-	{ "nojoseki",           no_argument,       0, OPT_NOJOSEKI },
-	{ "nopassfirst",        no_argument,       0, OPT_NOPASSFIRST },
-	{ "nopatterns",         no_argument,       0, OPT_NOPATTERNS },
-	{ "patterns",           no_argument,       0, OPT_PATTERNS },
-	{ "rules",              required_argument, 0, 'r' },
-	{ "seed",               required_argument, 0, 's' },
-	{ "smart-pass",         no_argument,       0, OPT_SMART_PASS },
-	{ "time",               required_argument, 0, 't' },
-	{ "unit-test",          required_argument, 0, 'u' },
-	{ "verbose-caffe",      no_argument,       0, OPT_VERBOSE_CAFFE },
-	{ "version",            optional_argument, 0, 'v' },
+	{ "log-file",               required_argument, 0, 'o' },
+	{ "name",                   required_argument, 0, OPT_NAME },
+	{ "nodcnn",                 no_argument,       0, OPT_NODCNN },
+	{ "noundo",                 no_argument,       0, OPT_NOUNDO },
+	{ "nojoseki",               no_argument,       0, OPT_NOJOSEKI },
+#ifdef JOSEKIFIX
+	{ "nojosekifix",            no_argument,       0, OPT_NOJOSEKIFIX },
+#endif
+	{ "nopassfirst",            no_argument,       0, OPT_NOPASSFIRST },
+	{ "nopatterns",             no_argument,       0, OPT_NOPATTERNS },
+	{ "patterns",               no_argument,       0, OPT_PATTERNS },
+	{ "rules",                  required_argument, 0, 'r' },
+	{ "seed",                   required_argument, 0, 's' },
+	{ "smart-pass",             no_argument,       0, OPT_SMART_PASS },
+	{ "time",                   required_argument, 0, 't' },
+	{ "unit-test",              required_argument, 0, 'u' },
+	{ "verbose-caffe",          no_argument,       0, OPT_VERBOSE_CAFFE },
+	{ "version",                optional_argument, 0, 'v' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -350,11 +374,6 @@ int main(int argc, char *argv[])
 				printf("CFLAGS:\n%s\n\n", PACHI_CFLAGS);
 				printf("Command:\n%s\n", PACHI_CC1);
 				exit(0);
-			case 'e':
-				engine_id = engine_name_to_id(optarg);
-				if (engine_id == E_MAX)
-					die("%s: invalid engine '%s'\n", argv[0], optarg);
-				break;
 			case 'd':
 				debug_level = atoi(optarg);
 				break;
@@ -365,6 +384,16 @@ int main(int argc, char *argv[])
 				if (optarg)  set_dcnn(optarg);
 				require_dcnn();
 				break;
+			case 'e':
+				engine_id = engine_name_to_id(optarg);
+				if (engine_id == E_MAX)
+					die("%s: invalid engine '%s'\n", argv[0], optarg);
+				break;
+#ifdef JOSEKIFIX
+			case OPT_EXT_JOSEKI_ENGINE:
+				external_joseki_engine_cmd = strdup(optarg);
+				break;
+#endif
 			case 'f':
 				fbookfile = strdup(optarg);
 				break;
@@ -382,6 +411,11 @@ int main(int argc, char *argv[])
 			case OPT_JOSEKI:
 				require_joseki();
 				break;
+#ifdef JOSEKIFIX
+			case OPT_JOSEKIFIX:
+				require_josekifix();
+				break;
+#endif
 			case OPT_KGS:
 				options->kgs = gtp->kgs = true;
 				options->nopassfirst = true;           /* --nopassfirst */
@@ -415,6 +449,11 @@ int main(int argc, char *argv[])
 			case OPT_NOJOSEKI:
 				disable_joseki();
 				break;
+#ifdef JOSEKIFIX
+			case OPT_NOJOSEKIFIX:
+				disable_josekifix();
+				break;
+#endif
 			case OPT_NOPASSFIRST:
 				options->nopassfirst = true;
 				break;
@@ -500,6 +539,9 @@ int main(int argc, char *argv[])
 	ti[S_WHITE] = ti_default;
 
 	chat_init(chatfile);
+#ifdef JOSEKIFIX
+	josekifix_init(b);
+#endif
 
 	/* Extra cmdline args are engine parameters */
 	strbuf(buf, 1000);
@@ -568,4 +610,11 @@ pachi_done()
 	joseki_done();
 	prob_dict_done();
 	spatial_dict_done();
+
+#ifdef JOSEKIFIX
+	if (external_joseki_engine) {
+		engine_done(external_joseki_engine);
+		external_joseki_engine = NULL;
+	}
+#endif
 }

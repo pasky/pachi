@@ -301,7 +301,14 @@ board_print_custom(board_t *board, FILE *f, board_cprint cprint, void *data)
 
 	sbprintf(buf, "Move: % 3d  Komi: %2.1f  Handicap: %d  Captures B: %d W: %d  ",
 		 board->moves, board->komi, board->handicap,
-		 board->captures[S_BLACK], board->captures[S_WHITE]);	
+		 board->captures[S_BLACK], board->captures[S_WHITE]);
+#ifdef JOSEKIFIX
+	sbprintf(buf, "[%i %i %i %i]  ",
+		 board->external_joseki_engine_moves_left_by_quadrant[0],
+		 board->external_joseki_engine_moves_left_by_quadrant[1],
+		 board->external_joseki_engine_moves_left_by_quadrant[2],
+		 board->external_joseki_engine_moves_left_by_quadrant[3]);
+#endif
 	
 	if (cprint) /* handler can add things to header when called with pass */
 		cprint(board, pass, buf, data);
@@ -744,6 +751,41 @@ rules2str(enum rules rules)
 		default:                die("invalid rules: %i\n", rules);
 	}
 	return NULL;
+}
+
+
+/********************************************************************************************************/
+/* board quadrants */
+
+/* returns coord board quadrant:
+ *   [ 0 1 ]   or -1 if on center lines
+ *   [ 3 2 ]   */
+int
+board_quadrant(board_t *b, coord_t c)
+{
+	assert(!is_pass(c));
+	
+	int x = coord_x(c);
+	int y = coord_y(c);
+	int mid = (board_rsize(b) + 1) / 2;
+	if (y > mid) {
+		if (x < mid)  return 0;
+		if (x > mid)  return 1;	
+	}
+	if (y < mid) {
+		if (x < mid)  return 3;
+		if (x > mid)  return 2;
+	}
+	
+	return -1;	/* center lines */
+}
+
+/* return opposite quadrant (diagonal) */
+int diag_quadrant(int quad)
+{
+	static int vals[] = { -1, 2, 3, 0, 1 };
+	int *diag = &vals[1];
+	return diag[quad];
 }
 
 

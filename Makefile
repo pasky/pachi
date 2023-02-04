@@ -49,6 +49,12 @@ DCNN_DARKFOREST=1
 
 # BOARD_SIZE=19
 
+# Build josekifix module ?
+# Provides fixes for joseki lines that dcnn plays poorly, and more varied
+# fusekis when playing as black.
+
+JOSEKIFIX=1
+
 # Running multiple Pachi instances ? Enable this to coordinate them so that
 # only one takes the cpu at a time. If your system uses systemd beware !
 # Go and read note at top of fifo.c
@@ -224,6 +230,11 @@ endif
 
 ifeq ($(PLUGINS), 1)
 	COMMON_FLAGS += -DPACHI_PLUGINS
+endif
+
+ifeq ($(JOSEKIFIX), 1)
+	COMMON_FLAGS += -DJOSEKIFIX
+	EXTRA_SUBDIRS += josekifix
 endif
 
 ifeq ($(BOARD_TESTS), 1)

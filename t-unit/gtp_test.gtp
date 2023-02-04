@@ -330,7 +330,9 @@ gogui-spatial_size 6
 gogui-color_palette
 gogui-analyze_commands
 
-
+gogui-josekifix_set_coord C4
+gogui-josekifix_show_pattern
+gogui-josekifix_dump_templates
 
 kgs-game_over
 quit
