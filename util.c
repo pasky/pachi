@@ -213,11 +213,8 @@ new_strbuf(int size)
 
 
 int
-strbuf_printf(strbuf_t *buf, const char *format, ...)
+strbuf_vprintf(strbuf_t *buf, const char *format, va_list ap)
 {
-	va_list ap;
-	va_start(ap, format);
-
 	int n = vsnprintf(buf->cur, buf->remaining, format, ap);
 	assert(n >= 0);
 	
@@ -229,6 +226,15 @@ strbuf_printf(strbuf_t *buf, const char *format, ...)
 	buf->cur += n;
 	buf->remaining -= n;
 
+	return n;
+}
+
+int
+strbuf_printf(strbuf_t *buf, const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	int n = strbuf_vprintf(buf, format, ap);
 	va_end(ap);
 	return n;
 }

@@ -193,6 +193,7 @@ strbuf_t *new_strbuf(int size);
  * Use sbprintf(buf, format, ...) to accumulate output. */
 int strbuf_printf(strbuf_t *buf, const char *format, ...)
 	__attribute__ ((format (printf, 2, 3)));
+int strbuf_vprintf(strbuf_t *buf, const char *format, va_list ap);
 
 #define sbprintf strbuf_printf
 
