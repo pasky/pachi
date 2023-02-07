@@ -79,6 +79,8 @@ char *stpcpy (char *dest, const char *src);
 
 const char *strcasestr(const char *haystack, const char *needle);
 
+/* Like perror() for windows API calls */
+void win_perror(char *function);
 
 #endif /* _WIN32 */
 
@@ -200,6 +202,9 @@ int strbuf_printf(strbuf_t *buf, const char *format, ...)
 /* like mkstemp() but takes care of creating file in system's temp directory 
  * on return @pattern contains the full path to the file. */
 int pachi_mkstemp(char *pattern, size_t max_size);
+
+/* Remove trailing '\n'		(or "\r\n" on windows) */
+void chomp(char *line);
 
 
 #endif

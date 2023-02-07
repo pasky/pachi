@@ -78,14 +78,6 @@ args_end()
 }
 
 static void
-chomp(char *line)
-{
-	int n = strlen(line);
-	if (line[n - 1] == '\n')
-		line[n - 1] = 0;
-}
-
-static void
 remove_comments(char *line)
 {
 	if (strchr(line, '#'))
