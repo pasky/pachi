@@ -141,7 +141,7 @@ create_child_process(external_engine_t *pp, HANDLE *pipe1, HANDLE *pipe2)
 	pp->pid = proc_info.dwProcessId;
 	pp->phandle = OpenProcess(PROCESS_QUERY_INFORMATION, false, pp->pid);   // or QUERY_LIMITED_INFORMATION ?
 	
-	return (pp->handle != INVALID_HANDLE_VALUE);
+	return (pp->phandle != INVALID_HANDLE_VALUE);
 }
 
 static bool

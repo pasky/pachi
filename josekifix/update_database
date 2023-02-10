@@ -8,12 +8,22 @@ if ! [ -f update_database ]; then
 fi
 
 echo "Getting latest version of josekifix.sgf, fusekifix.sgf ..."
+echo "    https://github.com/pasky/pachi/tree/joseki_fixes"
 echo ""
 
-[ -f josekifix.sgf ] && mv josekifix.sgf josekifix.sgf.old
-[ -f fusekifix.sgf ] && mv fusekifix.sgf fusekifix.sgf.old
+for file in josekifix.sgf fusekifix.sgf; do
+    [ -f $file ]   &&   cp $file $file.bak	# backup existing
 
-wget -O josekifix.sgf  'https://github.com/pasky/pachi/raw/joseki_fixes/josekifix.sgf'
-wget -O fusekifix.sgf  'https://github.com/pasky/pachi/raw/joseki_fixes/fusekifix.sgf'
+    if wget -q -O $file  "https://github.com/pasky/pachi/raw/joseki_fixes/$file"; then	
+	if [ -f $file.bak ] && cmp -s $file $file.bak; then
+	    echo "$file: already up-to-date"
+	else
+	    echo "$file: updated to latest version"
+	fi
+    else
+	echo "failed to download $file  (network failure ?)"
+    fi    
+done
 
-echo "done."
+echo ""
+
