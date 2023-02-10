@@ -28,12 +28,8 @@ void disable_josekifix()  {  josekifix_enabled = false;  }
 void require_josekifix()  {  josekifix_required = true;  }
 
 
-/*****************************************************************************/
-/* Override list stuff */
-
-/* Overrides and logged variations loaded at startup. */
-override_t  *joseki_overrides = NULL;
-override_t  *logged_variations = NULL;
+static override_t *joseki_overrides = NULL;
+static override_t *logged_variations = NULL;
 
 
 /*****************************************************************************/
@@ -628,6 +624,12 @@ joseki_override_(struct board *b, strbuf_t *log,
 		c = check_joseki_overrides(b, lasth);
 		if (!is_pass(c))  return c;
 	}
+	
+	/**********************************************************************************/
+	/* Choose inital fuseki */
+
+	c = josekifix_initial_fuseki(b, log, lasth);
+	if (!is_pass(c))  return c;
 	
 	return pass;
 }
