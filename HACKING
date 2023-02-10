@@ -54,17 +54,48 @@ Pachi consists of the following components:
 	ownermap.[ch]	 simulation-based finalpos. "owner map" data structure
 	fbook.[ch]       fuseki database (opening book)
 	pattern3.[ch]	 fast 3x3 spatial pattern matcher
-	pattern.[ch]	 general multi-feature pattern matcher
-	patternsp.[ch]   spatial pattern matching
-	patternprob.[ch] pattern-based move predictor
-	joseki.[ch]      pattern based joseki engine
 	dcnn.[ch]        dcnn-based move predictor
 	caffe.cpp        c++ interface with caffe for dcnn evaluation
 
-* "tactical library" provides extended interfaces for the go board,
+* "pattern" mm pattern matcher provides priors to guide tree search
+
+	pattern/pattern.[ch]		general multi-feature pattern matcher
+	pattern/spatial.[ch]		spatial pattern matching
+	pattern/prob.[ch]		pattern-based move predictor
+	pattern/pattern_engine.c	example "mm patterns move generator" engine, used for testing / debugging
+	pattern/patternscan_engine.c	auxiliary engine used by mm pattern training pipeline
+	training/                       mm training pipeline
+	patterns_mm.spat		spatial patterns data
+	patterns_mm.gamma		mm patterns gammas
+
+* "joseki" provides joseki sequences to guide tree search when playing without dcnn
+
+	joseki/*.sgf			joseki data
+	joseki19.gtp			joseki data (as GTP stream)
+	joseki/joseki.[ch]		pattern based joseki engine
+	joseki/joseki_engine.c		"joseki move generator" engine used to visualize joseki data in gogui
+	joseki/josekiscan_engine.c      internal engine used for loading joseki patterns
+
+* "josekifix" allows to override joseki moves that the dcnn plays poorly
+
+	josekifix/*.sgf			joseki overrides (SGF file)
+	josekifix.gtp			joseki overrides (as GTP stream)
+	josekifix/josekifix.[ch]	pattern based joseki overrides matching
+	josekifix/josekifixscan_engine.c internal engine used for loading joseki overrides
+	josekifix/fuseki.c              choose initial fuseki
+
+* "tactics" provides extended interfaces for the go board,
   most important non-trivial tactical information
 
-	tactics/
+	tactics/1lib.c		dealing with 1-liberty groups (captures)
+	tactics/2lib.c		dealing with 2-liberties groups
+	tactics/dragon.c	recognizing connected groups
+	tactics/ladder.c	ladder checker
+	tactics/nakade.c	recognizing dead shapes
+	tactics/nlib.c		dealing with n-liberties groups
+	tactics/seki.c		handling sekis
+	tactics/selfatari.c	distinguish between good / bad self-ataris
+	tactics/util.c		board utils
 
 * "engine" receives notifications about opponent moves and is asked
   to generate a move to play on given board
@@ -73,14 +104,12 @@ Pachi consists of the following components:
 	uct/		the main UCT-player engine, see below
 	distributed/	"meta-engine" for distributed play by orchestrating
 			    several UCT engines on different computers
-	engines/	other engines:
-	  dcnn.c            example "dcnn move generator" engine
-	  patternplay.c	    example "mm patterns move generator" engine
-	  random.c	    example "random move generator" engine
-	  replay.c	    example "playout move generator" engine
-	  montecarlo.c	    simple treeless Monte Carlo engine, quite bitrotten
-	  patternscan.c	    auxiliary engine for mm patterns training pipeline
-	  josekiscan.c	    auxiliary engine for generating joseki patterns
+  other engines:
+	engines/dcnn.c		example "dcnn move generator" engine
+	engines/external.c      call external GTP engine
+	engines/random.c	example "random move generator" engine
+	engines/replay.c	example "playout move generator" engine
+	engines/montecarlo.c	simple treeless Monte Carlo engine, quite bitrotten
 
 * "playout" policy is asked to generate moves to play during the Monte Carlo
   simulations, and to provide rough evaluation of moves feasibility for
