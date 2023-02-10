@@ -171,6 +171,17 @@ pachi_mkstemp(char *pattern, size_t max_size)
 	return mkstemp(pattern);
 }
 
+/* Remove trailing '\n'		(or "\r\n" on windows) */
+void
+chomp(char *line)
+{
+	int n = strlen(line);
+	if (n && line[n - 1] == '\n')		// remove '\n'
+		line[n - 1] = 0;
+	if (n >= 2 && line[n - 2] == '\r')	// remove '\r'  (windows)
+		line[n - 2] = 0;
+}
+
 
 /**************************************************************************************************/
 /* String buffer */
@@ -202,11 +213,8 @@ new_strbuf(int size)
 
 
 int
-strbuf_printf(strbuf_t *buf, const char *format, ...)
+strbuf_vprintf(strbuf_t *buf, const char *format, va_list ap)
 {
-	va_list ap;
-	va_start(ap, format);
-
 	int n = vsnprintf(buf->cur, buf->remaining, format, ap);
 	assert(n >= 0);
 	
@@ -218,6 +226,15 @@ strbuf_printf(strbuf_t *buf, const char *format, ...)
 	buf->cur += n;
 	buf->remaining -= n;
 
+	return n;
+}
+
+int
+strbuf_printf(strbuf_t *buf, const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	int n = strbuf_vprintf(buf, format, ap);
 	va_end(ap);
 	return n;
 }
@@ -255,6 +272,29 @@ strcasestr(const char *haystack, const char *needle)
 more_hay:;
 	}
 	return NULL;
+}
+
+/* Like perror() for windows API calls */
+void
+win_perror(char *function)
+{
+	long error = GetLastError();  
+	char *msg = NULL;
+
+	FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		      FORMAT_MESSAGE_FROM_SYSTEM |
+		      FORMAT_MESSAGE_IGNORE_INSERTS,
+		      NULL,
+		      error,
+		      MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		      (char*) &msg,
+		      0, NULL);
+	
+	fprintf(stderr, "%s failed: %s", function, msg);
+
+	// Normally msg is already newline terminated.
+	if (msg[0] && msg[strlen(msg) - 1] != '\n')
+		fprintf(stderr, "\r\n");
 }
 
 

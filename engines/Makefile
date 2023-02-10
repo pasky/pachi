@@ -6,6 +6,10 @@ ifeq ($(DCNN), 1)
 	OBJS+=dcnn.o
 endif
 
+ifeq ($(JOSEKIFIX), 1)
+	OBJS+=external.o
+endif
+
 all: lib.a
 lib.a: $(OBJS)
 

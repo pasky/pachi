@@ -1,0 +1,19 @@
+#!/bin/bash
+# get latest joseki fixes database from github.
+# most up-to-date version is in 'joseki_fixes' branch.
+
+if ! [ -f update_database ]; then
+    echo "update_database: must run in josekifix/ directory"
+    exit 1
+fi
+
+echo "Getting latest version of josekifix.sgf, fusekifix.sgf ..."
+echo ""
+
+[ -f josekifix.sgf ] && mv josekifix.sgf josekifix.sgf.old
+[ -f fusekifix.sgf ] && mv fusekifix.sgf fusekifix.sgf.old
+
+wget -O josekifix.sgf  'https://github.com/pasky/pachi/raw/joseki_fixes/josekifix.sgf'
+wget -O fusekifix.sgf  'https://github.com/pasky/pachi/raw/joseki_fixes/fusekifix.sgf'
+
+echo "done."

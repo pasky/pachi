@@ -1,0 +1,273 @@
+(;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
+RU[Japanese]SZ[19]KM[0.00]
+PW[White]PB[Black]C[This file contains fuseki fixes which are loaded at startup by Pachi.
+
+It's used to generate josekifix.gtp which Pachi looks for in the directory where it
+runs. To regenerate it after making changes type:
+    $ cd josekifix ; make data 
+
+To get latest version of this file, run:          (joseki_fixes branch on github)
+    $ cd josekifix ; make update
+
+Actual fixes are moves with an [override\] section at the top of the move comment.
+See josekifix.sgf for details.
+]
+(;B[pq]
+;W[]
+(;B[qk]
+;W[pp]
+;B[qp]C[[override\]
+name = "anti chinese attach"
+around = P5
+
+
+R4 best, then P3 hane, Q5 atari + defend to keep it simple]
+;W[oq]
+;B[po]C[[override\]
+
+]
+;W[op]
+;B[qq]C[[override\]
+])
+(;B[pk]
+;W[pp]
+;B[qp]C[[override\]
+name = "anti chinese attach"
+around = "last"]
+;W[oq]
+;B[po]C[[override\]
+around = Q4]
+;W[op]
+;B[qq]C[[override\]
+]))
+(;B[pd]
+(;W[]
+(;B[pp]
+;W[]
+;B[pj]
+(;W[nc]
+;B[lc]
+(;W[qc]
+(;B[qd]
+;W[pc]
+;B[od]
+;W[nb]
+;B[me]
+(;W[nq]
+(;B[lq]
+;W[qn]C[[override\]
+name = "anti sanrensei double kakariii"
+around = P6
+around2= O14
+
+]
+(;B[on]
+;W[ql]C[[override\]
+around = "last"
+around2 = O14
+
+
+Don't take corner !
+
+pachipachi past  Jul 05 2020 18:03:20]
+;B[pk]
+;W[rj]C[[override\]
+around = Q7
+around2 = O14
+
+
+P7 good way to get in trouble,
+just extend. 
+
+pachipachi concord  2022-10-30])
+(;B[qq]
+(;W[oo]
+;B[po]
+;W[pn]
+;B[on]
+;W[no]
+;B[om]
+;W[ql]
+;B[rk]
+;W[ol]
+;B[pm]
+;W[qm]
+;B[pl]
+;W[qk]
+;B[pk]
+;W[qj]
+;B[qi]
+;W[rj]
+;B[ri]
+;W[rp]
+;B[rq]
+;W[ro]
+;B[or]
+;W[oq]C[[override\]
+around = P3
+
+
+Ex: pachipachi niceguy0  2022-11-09 09:25])
+(;W[]C[[override\]
+around = P6
+
+
+let external engine take over]))
+(;B[ql]
+;W[qp]C[[override\]
+around = P6
+around2 = O14
+
+
+Don't take corner !
+]))
+(;B[qq]
+;W[kq]
+;B[no]
+;W[mj]C[[override\]
+name = "anti sanrensei moyo"
+around = O6
+around2 = O14
+
+
+Don't invade too deep !
+
+pachipachi past   Jul  7 22:24:51  2020 ]))
+(;W[lb]
+;B[kc]C[[override\]
+name = "sanrensei breakout fix"
+around = O18
+
+
+don't hane, deadly
+
+match low so don't care about T17 area])
+(;W[rc]
+;B[rd]
+;W[lb]
+;B[kc]C[[override\]
+name = "sanrensei breakout fix"
+around = O18])
+(;W[]
+;B[rd]
+;W[lb]
+;B[kc]C[[override\]
+name = "sanrensei breakout fix"
+around = O18]))
+(;B[pc]
+;W[qd]
+;B[pe]
+;W[pb]
+;B[ob]
+;W[qb]
+;B[nb]
+;W[qf]
+;B[pf]
+;W[qg]
+;B[pg]
+;W[qh]C[[override\]
+name = "anti sanrensei fix"
+around = S13
+
+
+don't Q12, sure disaster !
+R12 for now
+
+Ex:  pachipachi kankie  2023-01-03 09:44 ]))
+(;W[ld]
+;B[kd]
+;W[md]
+;B[pf]C[[override\]
+name = "sanrensei arkgo"
+around = O14
+
+
+simple, don't get in trouble right away.
+
+Ex: arkgo pachipachi  2022-11-04]))
+(;W[nq]))
+(;B[pq]
+;W[dp]
+;B[fq]
+;W[cn]
+(;B[jp]
+(;W[qn]
+;B[po]
+;W[rp]
+;B[ro]
+;W[qo]
+;B[qp]
+;W[rn]C[[override\]
+name = "kobayashi trick play"
+around = "last"
+
+
+S6 or Q6, Don't S3
+
+Ex:  pachipachi shawn  online-go.com/game/12533278])
+(;W[pn]
+;B[qo]
+;W[pj]
+;B[qn]
+;W[lq]
+;B[kq]
+;W[oq]
+;B[lp]C[[override\]
+name = "high kobayashi 2"
+around = P5
+
+]
+;W[mp]
+;B[lo]C[[override\]
+around = "last"
+]
+;W[pm]
+;B[qm]C[[override\]
+around = P5
+]
+;W[pl]
+;B[rk]C[[override\]
+around = Q6
+]))
+(;B[ip]
+;W[pn]
+;B[qo]
+;W[pj]
+;B[qn]
+(;W[oq]
+;B[mq]C[[override\]
+name = "high kobayashi"
+around = O4
+
+
+Ex: TOSHI1011 pachipachi  2018-02-21 ]
+;W[nq]
+;B[pr]C[[override\]
+]
+;W[pm]
+;B[qm]C[[override\]
+around = "last"
+])
+(;W[kq]
+;B[mq]C[[override\]
+name = "high kobayashi"
+around = "last"
+
+]))))
+(;W[ec]
+;B[cd]
+;W[df]
+;B[ce]
+;W[ee]
+;B[cg]
+;W[nc]
+;B[lc]C[[override\]
+name = "yz_taisha"
+around = "last"
+around2 = E15
+
+
+Try pincer, L16 too good for w
+
+YZ1509 special opening.]
+;W[])))

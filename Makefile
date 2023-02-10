@@ -49,6 +49,12 @@ DCNN_DARKFOREST=1
 
 # BOARD_SIZE=19
 
+# Build josekifix module ?
+# Provides fixes for joseki lines that dcnn plays poorly, and more varied
+# fusekis when playing as black.
+
+JOSEKIFIX=1
+
 # Running multiple Pachi instances ? Enable this to coordinate them so that
 # only one takes the cpu at a time. If your system uses systemd beware !
 # Go and read note at top of fifo.c
@@ -226,6 +232,12 @@ ifeq ($(PLUGINS), 1)
 	COMMON_FLAGS += -DPACHI_PLUGINS
 endif
 
+ifeq ($(JOSEKIFIX), 1)
+	COMMON_FLAGS += -DJOSEKIFIX
+	EXTRA_SUBDIRS += josekifix
+	EXTRA_DATAFILES += josekifix.gtp
+endif
+
 ifeq ($(BOARD_TESTS), 1)
 	SYS_LIBS      += -lcrypto
 	COMMON_FLAGS  += -DBOARD_TESTS
@@ -264,7 +276,7 @@ OBJS = $(EXTRA_OBJS) \
 
 # Low-level dependencies last
 SUBDIRS   = $(EXTRA_SUBDIRS) pattern joseki uct uct/policy t-unit t-predict engines playout tactics
-DATAFILES = patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.gtp
+DATAFILES = $(EXTRA_DATAFILES) patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.gtp
 
 
 ############################################################################################################

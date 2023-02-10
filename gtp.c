@@ -21,6 +21,7 @@
 #include "ownermap.h"
 #include "gogui.h"
 #include "t-predict/predict.h"
+#include "josekifix/josekifix.h"
 #include "t-unit/test.h"
 #include "fifo.h"
 
@@ -292,7 +293,7 @@ cmd_clear_board(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	/* Reset move history. */
 	gtp->moves = 0;
-	
+
 	return P_ENGINE_RESET;
 }
 
@@ -403,6 +404,31 @@ cmd_pachi_predict(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+/* Get move from engine, or joseki override if there is one.
+ * There are 2 joseki override hooks : one before engine genmove (this one),
+ * and another one at the end of uct genmove. Without external engine we'd
+ * need only the second one, but with 2 engines we want to avoid asking both
+ * engines as that would mean a serious delay. So this acts as a dispatch,
+ * short-cirtuiting engine genmove when we know it will be overridden by an
+ * external engine move. */
+static coord_t
+genmove_get_move(board_t *b, enum stone color, engine_t *e, time_info_t *ti_genmove,
+		 gtp_t *gtp, engine_genmove_t genmove_func)
+{
+	bool pass_all_alive = !strcasecmp(gtp->cmd, "kgs-genmove_cleanup");    
+	coord_t c = pass;
+
+#ifdef JOSEKIFIX
+	if (is_pass(c) && e->id == E_UCT)
+		c = joseki_override_before_genmove(b, color);
+#endif
+	
+	if (is_pass(c))
+		c = genmove_func(e, b, ti_genmove, color, pass_all_alive);
+
+	return c;
+}
+
 static coord_t
 genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, engine_genmove_t genmove_func)
 {
@@ -418,13 +444,16 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 	double time_start = time_now();
 #endif
 
+#ifdef JOSEKIFIX
+	external_joseki_engine_genmoved = 0;
+#endif
+	
 	time_info_t *ti_genmove = time_info_genmove(b, ti, color);
 	coord_t c = (b->fbook ? fbook_check(b) : pass);
-	bool pass_all_alive = !strcasecmp(gtp->cmd, "kgs-genmove_cleanup");
 	if (is_pass(c))
-		c = genmove_func(e, b, ti_genmove, color, pass_all_alive);
+		c = genmove_get_move(b, color, e, ti_genmove, gtp, genmove_func);
 
-#ifdef PACHI_FIFO	
+#ifdef PACHI_FIFO
 	if (DEBUGL(2)) fprintf(stderr, "fifo: genmove in %0.2fs  (waited %0.1fs)\n", time_now() - time_start, time_start - time_wait);
 	fifo_task_done(ticket);
 #endif
@@ -433,12 +462,18 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 		move_t m = move(c, color);
 		if (gtp_board_play(gtp, b, &m) < 0)
 			die("Attempted to generate an illegal move: %s %s\n", stone2str(m.color), coord2sstr(m.coord));
+
+#ifdef JOSEKIFIX
+		/* send new move to external engine if it doesn't come from it */
+		if (!external_joseki_engine_genmoved && e->id == E_UCT)
+			external_joseki_engine_play(c, color);
+#endif
 	}
 	
 	char *str = coord2sstr(c);
 	if (DEBUGL(4))                      fprintf(stderr, "playing move %s\n", str);
 	if (DEBUGL(1) && debug_boardprint)  engine_board_print(e, b, stderr);
-
+	
 	/* Account for spent time. If our GTP peer keeps our clock, this will
 	 * be overriden by next time_left GTP command properly. */
 	/* (XXX: Except if we pass to byoyomi and the peer doesn't, but that
@@ -650,6 +685,12 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 		gtp_add_move(gtp, &m);
 	}
 	gtp_printf(gtp, "\n");
+
+#ifdef JOSEKIFIX
+	if (external_joseki_engine && !strcmp(gtp->cmd, "place_free_handicap") && engine->id == E_UCT)
+		external_joseki_engine_fixed_handicap(stones);			// XXX assumes other engine places fixed handi stones like us ...
+#endif
+	
 	return P_OK;
 }
 
@@ -1106,6 +1147,11 @@ static gtp_command_t gtp_commands[] =
 	{ "gogui-show_spatial",     cmd_gogui_show_spatial },
 	{ "gogui-spatial_size",     cmd_gogui_spatial_size },
 	{ "gogui-color_palette",    cmd_gogui_color_palette },
+#ifdef JOSEKIFIX
+	{ "gogui-josekifix_set_coord",    cmd_gogui_josekifix_set_coord },
+	{ "gogui-josekifix_show_pattern", cmd_gogui_josekifix_show_pattern },
+	{ "gogui-josekifix_dump_templates", cmd_gogui_josekifix_dump_templates },
+#endif
 
 	{ 0, 0 }
 };
@@ -1153,6 +1199,9 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	if (strchr(buf, '#'))
 		*strchr(buf, '#') = 0;
 
+	char orig_cmd[1024];
+	strncpy(orig_cmd, buf, sizeof(orig_cmd));
+	
 	/* Reset non global fields. */
 	gtp->id = -1;
 	gtp->next = buf;
@@ -1173,6 +1222,11 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 		stop_analyzing(gtp, b, e);
 	if (gtp->analyze_mode && strstr(gtp->cmd, "genmove"))
 		gtp_set_analyze_mode(gtp, b, e, ti, false);
+
+#ifdef JOSEKIFIX
+	if (e->id == E_UCT)
+		external_joseki_engine_forward_cmd(gtp, orig_cmd);
+#endif
 	
 	/* Undo: reload engine after first non-undo command. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))

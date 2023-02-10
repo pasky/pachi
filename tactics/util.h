@@ -15,6 +15,8 @@ static int coord_edge_distance(coord_t c);
 /* Distance of two points in gridcular metric - this metric defines
  * circle-like structures on the square grid. */
 static int coord_gridcular_distance(coord_t c1, coord_t c2);
+/* Regular distance */
+float coord_distance(coord_t c1, coord_t c2);
 
 /* Cona_t "common fate graph" from given coordinate; that is, a weighted
  * graph of intersections where edges between all neighbors have weight 1,

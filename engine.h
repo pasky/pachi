@@ -26,11 +26,17 @@ enum engine_id {
 	E_PATTERNSCAN,
 	E_JOSEKI,
 	E_JOSEKISCAN,
+#ifdef JOSEKIFIX
+	E_JOSEKIFIXSCAN,
+#endif
 	E_RANDOM,
 	E_REPLAY,
 	E_MONTECARLO,
 #ifdef DISTRIBUTED
 	E_DISTRIBUTED,
+#endif
+#ifdef JOSEKIFIX
+	E_EXTERNAL,
 #endif
 	E_MAX,
 };

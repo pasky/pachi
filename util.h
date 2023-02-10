@@ -8,8 +8,8 @@
 #undef MIN
 #undef MAX
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b));
-#define MAX(a, b) ((a) > (b) ? (a) : (b));
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 #define swap(x, y)  do { typeof(x) __tmp;  __tmp = (x);  (x) = (y);  (y) = __tmp;  } while(0)
 
@@ -79,6 +79,8 @@ char *stpcpy (char *dest, const char *src);
 
 const char *strcasestr(const char *haystack, const char *needle);
 
+/* Like perror() for windows API calls */
+void win_perror(char *function);
 
 #endif /* _WIN32 */
 
@@ -191,6 +193,7 @@ strbuf_t *new_strbuf(int size);
  * Use sbprintf(buf, format, ...) to accumulate output. */
 int strbuf_printf(strbuf_t *buf, const char *format, ...)
 	__attribute__ ((format (printf, 2, 3)));
+int strbuf_vprintf(strbuf_t *buf, const char *format, va_list ap);
 
 #define sbprintf strbuf_printf
 
@@ -200,6 +203,9 @@ int strbuf_printf(strbuf_t *buf, const char *format, ...)
 /* like mkstemp() but takes care of creating file in system's temp directory 
  * on return @pattern contains the full path to the file. */
 int pachi_mkstemp(char *pattern, size_t max_size);
+
+/* Remove trailing '\n'		(or "\r\n" on windows) */
+void chomp(char *line);
 
 
 #endif

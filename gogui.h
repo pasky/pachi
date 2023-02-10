@@ -39,6 +39,9 @@ enum parse_code cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t 
 enum parse_code cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 enum parse_code cmd_gogui_spatial_size(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_josekifix_set_coord(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_josekifix_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
+enum parse_code cmd_gogui_josekifix_dump_templates(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 
 void gogui_show_best_moves(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int n);
 void gogui_show_winrates(FILE *f, board_t *b, enum stone color, coord_t *best_c, float *best_r, int nbest);

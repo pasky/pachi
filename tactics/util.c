@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define DEBUG
 #include "board.h"
@@ -32,6 +33,12 @@ board_stone_radar(board_t *b, coord_t coord, int distance)
 	return false;
 }
 
+float
+coord_distance(coord_t c1, coord_t c2)
+{
+	int dx = coord_dx(c1, c2),  dy = coord_dy(c1, c2);
+	return sqrtf(dx * dx + dy * dy);
+}
 
 void
 cfg_distances(board_t *b, coord_t start, int *distances, int maxdist)
