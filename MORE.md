@@ -1,6 +1,77 @@
+
+## Joseki fixes (dcnn)
+
+By editing an SGF file it's possible to steer the engine towards / away
+from certain joseki variations, or fix joseki / fuseki lines that Pachi
+plays poorly.
+
+This is important for online play where known weaknesses tend to be
+repeatedly abused. By now there is a database of fixes which Pachi can
+load at startup. For this to work an external joseki engine (KataGo or
+other) must also be available. 
+
+If you plan to let Pachi play online please take the time to set this up
+correcly and keep the database up-to-date, it will be very much worth it
+in the long run.
+
+See josekifix/README for details.
+
+
+## Joseki engine (nodcnn)
+
+When playing without dcnn Pachi uses joseki data to improve play during the
+opening. Joseki data comes from the various SGF files in joseki/ directory,
+and are translated into 'joseki19.gtp' which Pachi loads at startup.
+
+If you want to tweak those, read joseki/README for a description of the
+joseki engine and syntax used.
+
+
+## Opening book
+
+> Mostly useful when running without dcnn (dcnn can deal with fuseki).
+
+Pachi can use an opening book in a Fuego-compatible format - you can
+obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
+with the -f parameter:
+
+	pachi -f book.dat ...
+
+You may wish to append some custom Pachi opening book lines to book.dat;
+take them from the book.dat.extra file. If using the default Fuego book,
+you may want to remove the lines listed in book.dat.bad.
+
+
+## Greedy Pachi
+
+> Mostly useful when running without dcnn
+
+Normally, Pachi cares only for win or loss and does not take into
+account the point amount. This means that it will play slack endgame
+when winning and crazy moves followed with a resign when losing.
+
+It may give you a more pleasurable playing experience if Pachi
+_does_ take into account the point size, strives for a maximum
+(reasonable) win margin when winning and minimal point loss when
+losing. This is possible by using the maximize_score parameter, e.g.:
+
+	pachi -t _1200 threads=8,maximize_score
+
+This enables an aggressive dynamic komi usage and end result margin
+is included in node values aside of winrate. Pachi will also enter
+scoring even when losing (normally, Pachi will never pass in that case).
+Note that if you pass any 'dynkomi' parameter to Pachi, you will reset
+the values set by 'maximize_score'.
+
+Note that Pachi in this mode may be slightly weaker, and result margin
+should not be taken into account when judging either player's strength.
+During the game, the winning/losing margin can be approximated from
+Pachi's "extra komi" or "xkomi" reporting in the progress messages.
+
+
 ## Memory management
 
-By default Pachi automatically allocates memory for tree search now:
+By default Pachi automatically allocates memory for tree search:
 
 ```
 auto_alloc     automatically grow tree memory as needed (default)
@@ -21,6 +92,18 @@ If you're used to earlier versions of Pachi (< 12.50):
 - If you know how much memory you need use `tree_size`
 - If you want to limit total memory used use `max_tree_size` or `max_mem`
 - `fixed_mem` gives the old behavior (tree memory doesn't grow)
+
+
+## Large Patterns
+
+Pachi uses MM patterns to guide tree search. The pattern matcher runs
+on the cpu each time a new node is explored (see pattern/README for details).
+Right now prediction rate is about 37%.
+
+One benefit of MM is that the weights are very small. If you used previous
+Pachi versions, it's no longer necessary to install extra files to
+get patterns working. Patterns should load instantly now and take up
+very little memory.
 
 
 ## Distributed Engine
@@ -65,73 +148,6 @@ And they should all coordinate when asked to generate a move.
 By default each slave uses all cores available (1 thread per core).
 
 See distributed/distributed.c for details and more options.
-
-
-## Large Patterns
-
-Pachi uses MM patterns to guide tree search. The pattern matcher runs
-on the cpu each time a new node is explored (see pattern/README for details).
-Right now prediction rate is about 37%.
-
-One benefit of MM is that the weights are very small. If you used previous
-Pachi versions, it's no longer necessary to install extra files to
-get patterns working. Patterns should load instantly now and take up
-very little memory.
-
-
-## Joseki engine
-
-When playing without dcnn Pachi uses a joseki engine to improve play during
-the opening. The "Joseki Moves" gogui analyze command can be used to display
-what moves Pachi would consider in a given position. Just keep in mind these
-are "Pachi joseki moves": moves Pachi might want to play at around 3k level.
-For a full joseki reference from a player's point of view see Kogo joseki
-dictionary for example.
-
-To run Pachi without joseki engine:
-   `pachi --nodcnn --nojoseki -t =5000`
-
-
-## Opening book
-
-> Mostly useful when running without dcnn (dcnn can deal with fuseki).
-
-Pachi can use an opening book in a Fuego-compatible format - you can
-obtain one at http://gnugo.baduk.org/fuegoob.htm and use it in Pachi
-with the -f parameter:
-
-	pachi -f book.dat ...
-
-You may wish to append some custom Pachi opening book lines to book.dat;
-take them from the book.dat.extra file. If using the default Fuego book,
-you may want to remove the lines listed in book.dat.bad.
-
-
-## Greedy Pachi
-
-> Mostly useful when running without dcnn
-
-Normally, Pachi cares only for win or loss and does not take into
-account the point amount. This means that it will play slack endgame
-when winning and crazy moves followed with a resign when losing.
-
-It may give you a more pleasurable playing experience if Pachi
-_does_ take into account the point size, strives for a maximum
-(reasonable) win margin when winning and minimal point loss when
-losing. This is possible by using the maximize_score parameter, e.g.:
-
-	pachi -t _1200 threads=8,maximize_score
-
-This enables an aggressive dynamic komi usage and end result margin
-is included in node values aside of winrate. Pachi will also enter
-scoring even when losing (normally, Pachi will never pass in that case).
-Note that if you pass any 'dynkomi' parameter to Pachi, you will reset
-the values set by 'maximize_score'.
-
-Note that Pachi in this mode may be slightly weaker, and result margin
-should not be taken into account when judging either player's strength.
-During the game, the winning/losing margin can be approximated from
-Pachi's "extra komi" or "xkomi" reporting in the progress messages.
 
 
 ## Setting Engine Options Over GTP

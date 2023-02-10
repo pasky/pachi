@@ -18,12 +18,11 @@ i7) without dcnn.
 When using a large cluster (64 machines, 20 cores each), it maintains
 KGS 3d to 4d and has won e.g. a 7-stone handicap game against Zhou Junxun 9p.
 
-By default, Pachi currently uses the UCT engine that combines
-Monte Carlo approach with tree search; UCB1AMAF tree policy using
-the RAVE method is used for tree search, while the Moggy playout
-policy using 3x3 patterns and various tactical checks is used for
-the semi-random Monte Carlo playouts. MM patterns are used in the
-tree search.
+By default, Pachi uses the UCT engine that combines Monte Carlo approach
+with tree search; UCB1AMAF tree policy using the RAVE method is used for
+tree search, while the Moggy playout policy using 3x3 patterns and various
+tactical checks is used for the semi-random Monte Carlo playouts. MM
+patterns and deep learning are used to guide tree search.
 
 
 ## Binary Releases
@@ -116,7 +115,9 @@ will remain the same:
 
 **KGS**
 
-Use `pachi --kgs` when playing on KGS. See [kgsgtp.conf](kgs/kgsgtp-pachi.conf?raw=true) for example.
+Use `pachi --kgs --josekifix` when playing on KGS. See [kgsgtp.conf](kgs/kgsgtp-pachi.conf?raw=true) for example.
+
+You want joseki fixes working if playing ranked games (see [josekifix](josekifix/README?raw=true)).
 
 **Other Options**
 
