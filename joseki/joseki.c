@@ -12,7 +12,7 @@
 #include "engine.h"
 #include "dcnn.h"
 #include "tactics/util.h"
-#include "engines/josekiscan.h"
+#include "josekiscan_engine.h"
 
 static bool joseki_enabled = true;
 static bool joseki_required = false;

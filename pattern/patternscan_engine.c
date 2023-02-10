@@ -6,9 +6,9 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "engines/patternscan.h"
-#include "pattern.h"
-#include "patternsp.h"
+#include "pattern/patternscan_engine.h"
+#include "pattern/pattern.h"
+#include "pattern/spatial.h"
 #include "../random.h"
 
 

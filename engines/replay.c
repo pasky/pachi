@@ -8,7 +8,7 @@
 #include "engine.h"
 #include "move.h"
 #include "playout.h"
-#include "../joseki.h"
+#include "joseki/joseki.h"
 #include "playout/light.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"

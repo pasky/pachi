@@ -5,7 +5,7 @@
 
 #include "board.h"
 #include "move.h"
-#include "pattern.h"
+#include "pattern/pattern.h"
 
 /* Spatial stone configuration pattern features - like pattern3 handles
  * 3x3-area, this handles general N-area (where N is distance in

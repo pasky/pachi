@@ -6,10 +6,10 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "engines/pattern.h"
-#include "../pattern.h"
-#include "patternsp.h"
-#include "patternprob.h"
+#include "pattern/pattern_engine.h"
+#include "pattern/pattern.h"
+#include "pattern/spatial.h"
+#include "pattern/prob.h"
 #include "random.h"
 
 

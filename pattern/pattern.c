@@ -7,9 +7,9 @@
 
 #include "board.h"
 #include "debug.h"
-#include "pattern.h"
-#include "patternsp.h"
-#include "patternprob.h"
+#include "pattern/pattern.h"
+#include "pattern/spatial.h"
+#include "pattern/prob.h"
 #include "tactics/ladder.h"
 #include "tactics/selfatari.h"
 #include "tactics/1lib.h"
@@ -83,7 +83,9 @@ features_init()
 	features[FEAT_CUT] =             feature_info("cut",             PF_CUT_N,        0);
 	features[FEAT_NET] =             feature_info("net",             PF_NET_N,        0);
 	features[FEAT_DEFENCE] =         feature_info("defence",         PF_DEFENCE_N,    0);
+	features[FEAT_WEDGE] =           feature_info("wedge",           PF_WEDGE_N,      0);
 	features[FEAT_DOUBLE_SNAPBACK] = feature_info("double_snapback", 1,               0);
+      features[FEAT_L1_BLUNDER_PUNISH] = feature_info("l1_blunder_punish", 1,             0);
 	features[FEAT_SELFATARI] =       feature_info("selfatari",       PF_SELFATARI_N,  0);
 	features[FEAT_BORDER] =          feature_info("border",          -1,              0);
 	features[FEAT_DISTANCE] =        feature_info("dist",            19,              0);
@@ -148,6 +150,8 @@ payloads_names_init()
 	
 	payloads_names[FEAT_DEFENCE][PF_DEFENCE_LINE2] = "line2";
 	payloads_names[FEAT_DEFENCE][PF_DEFENCE_SILLY] = "silly";
+
+	payloads_names[FEAT_WEDGE][PF_WEDGE_LINE3] = "line3";
 }
 
 static void
@@ -822,6 +826,54 @@ pattern_match_defence(board_t *b, move_t *m)
 	return -1;
 }
 
+static bool
+check_wedge_neighbors(struct board *b, coord_t coord, enum stone color)
+{
+	foreach_neighbor(b, coord, {
+		if (coord_edge_distance(c) != 1) continue;
+		if (immediate_liberty_count(b, c) < 3) return false;
+	});
+	return true;
+}
+
+/* -------------
+ *  . . . . . .   
+ *  . . . . . .  3rd line wedge that can't be blocked
+ *  . X * X X .
+ *  . O O O X .  
+ *  . . . . . .  */
+static int
+pattern_match_wedge(board_t *b, move_t *m)
+{
+	enum stone other_color = stone_other(m->color);
+	if (coord_edge_distance(m->coord) != 2)  return -1;
+	if (neighbor_count_at(b, m->coord, m->color) != 1) return -1;
+	if (neighbor_count_at(b, m->coord, other_color) != 2) return -1;
+	
+	int groups = 0;
+	int found = 0;
+	foreach_neighbor(b, m->coord, {
+		int bdist = coord_edge_distance(c);
+		group_t g = group_at(b, c);
+		switch (bdist) {
+			case 1: if (board_at(b, c) != S_NONE ||
+				    neighbor_count_at(b, c, other_color) != 0 ||
+				    neighbor_count_at(b, c, m->color)    != 0 ||
+				    !check_wedge_neighbors(b, c, m->color))  return -1;
+				break;
+			case 3: if (board_group_info(b, g).libs <= 2)  return -1; /* short of libs */
+				break;
+			case 2: if (board_at(b, c) != other_color)  break;
+				groups++;
+				if (group_is_onestone(b, g) && board_group_info(b, g).libs <= 3)  found = 1;
+				break;
+			default: assert(0);
+		}
+	});
+	
+	return (groups == 2 && found ? PF_WEDGE_LINE3 : -1);
+}
+
 /*   O O X X X O O
  *   O X . X . X O
  *   O X . * . X O
@@ -867,6 +919,80 @@ pattern_match_double_snapback(board_t *b, move_t *m)
 	if (snap == 2)  return 0;
 	
 	return -1;
+}
+
+/*  Punish silly first-line connects
+ *   case 1)               case 2)
+ *  # . . O .            . . X . . #
+ *  # . . O .            . . . * . #
+ *  # . . * X            O O . X . #
+ *  # O)O O X            . . O X X)#
+ *  # O X X X            . . O O X #
+ *  # X . . .            . . . . O #
+ *  # . . . .            . . . . . #     */
+int
+pattern_match_l1_blunder_punish(board_t *b, move_t *m)
+{
+	enum stone color = m->color;
+	enum stone other_color = stone_other(color);
+	
+	/* Check last move was on first line ... */
+	coord_t last = last_move(b).coord;
+	if (is_pass(last) || coord_edge_distance(last) != 0)  return -1;
+
+	/* creates neighbor group with 3 libs ... */
+	group_t g = group_at(b, last);
+	if (!g)  return -1;
+	if (board_group_info(b, g).libs != 3)   return -1;
+	if (!is_neighbor_group(b, m->coord, g)) return -1;
+	
+	/* with one lib on each line ... */
+	coord_t libs[3] = { 0, };  // libs by edge distance
+	for (int i = 0; i < board_group_info(b, g).libs; i++) {
+		coord_t lib = board_group_info(b, g).lib[i];
+		int d = coord_edge_distance(lib);
+		if (d < 3)
+			libs[d] = lib;
+	}
+	if (!libs[0] || !libs[1] || !libs[2])  return -1;
+
+	/* case 1) playing on 3rd-line lib */
+	bool found = false;
+	if (m->coord == libs[2]) {
+		with_move(b, libs[2], color, {		    // we play 3rd-line lib
+			with_move(b, libs[1], other_color, {    // opp plays 2nd-line lib
+				group_t g = group_at(b, last);
+				if (!g || board_group_info(b, g).libs != 2)  break;
+				if (can_capture_2lib_group(b, g, NULL, 0))
+					found = true;
+			});
+		});
+	}
+	
+	/* case 2) check playing on 2nd-line lib */
+	if (m->coord == libs[1]) {
+		with_move(b, libs[1], color, {		     // we play 2nd-line lib
+			/* stone must have 3 libs ... */
+			if (immediate_liberty_count(b, libs[1]) != 3) break;
+		    
+			/* opponent group can't escape on 3rd line ... */
+			bool noescape = false;
+			with_move(b, libs[2], other_color, {     // opp plays 3rd-line lib
+				group_t g = group_at(b, last);
+				if (!g || board_group_info(b, g).libs != 2)  break;
+				if (can_capture_2lib_group(b, g, NULL, 0))
+					noescape = true;
+			});
+			if (!noescape)  break;
+		    
+			group_t g = group_at(b, last);
+			if (!g || board_group_info(b, g).libs != 2)  break;		
+			if (can_capture_2lib_group(b, g, NULL, 0))
+				found = true;
+		});
+	}
+
+	return (found ? 0 : -1);
 }
 
 
@@ -1125,6 +1251,8 @@ pattern_match_internal(pattern_config_t *pc, pattern_t *pattern, board_t *b,
 
 	check_feature(pattern_match_net(b, m, ownermap), FEAT_NET);
 	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
+	check_feature(pattern_match_wedge(b, m), FEAT_WEDGE);
+	check_feature(pattern_match_l1_blunder_punish(b, m), FEAT_L1_BLUNDER_PUNISH);
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
 	if (locally) {

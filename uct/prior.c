@@ -7,7 +7,7 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "joseki.h"
+#include "joseki/joseki.h"
 #include "move.h"
 #include "random.h"
 #include "engine.h"

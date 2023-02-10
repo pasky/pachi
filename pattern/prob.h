@@ -7,7 +7,7 @@
 
 #include "board.h"
 #include "move.h"
-#include "pattern.h"
+#include "pattern/pattern.h"
 
 /* The pattern probability table considers each pattern as a whole
  * (not dividing it to individual features) and stores probability

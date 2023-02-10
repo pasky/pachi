@@ -24,6 +24,7 @@
 #include "t-unit/test.h"
 #include "fifo.h"
 
+
 /* Sleep 5 seconds after a game ends to give time to kill the program. */
 #define GAME_OVER_SLEEP 5
 
