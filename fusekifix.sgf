@@ -194,7 +194,7 @@ Ex: arkgo pachipachi  2022-11-04]))
 (;W[qn]
 ;B[po]
 ;W[rp]
-;B[ro]
+(;B[ro]
 ;W[qo]
 ;B[qp]
 ;W[rn]C[[override\]
@@ -205,6 +205,16 @@ around = "last"
 S6 or Q6, Don't S3
 
 Ex:  pachipachi shawn  online-go.com/game/12533278])
+(;B[pn]
+;W[qm]
+;B[pm]
+;W[ql]C[[override\]
+name = "kobayashi press"
+around = R5
+
+don't hane at Q8, disaster.
+
+Ex: pachipachi globax  2023-02-05]))
 (;W[pn]
 ;B[qo]
 ;W[pj]
