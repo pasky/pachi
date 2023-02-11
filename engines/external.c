@@ -257,7 +257,7 @@ start_external_engine(engine_t *e, board_t *b)
 #endif
 
 	if (!r) {
-		fprintf(stderr, "external engine: couldn't run '%s'\n", pp->cmd);
+		if (DEBUGL(1)) fprintf(stderr, "external engine: couldn't run '%s'\n", pp->cmd);
 		return r;
 	}
 

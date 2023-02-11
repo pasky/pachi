@@ -1054,7 +1054,7 @@ josekifix_init(board_t *b)
 			 * joseki fixes database is designed with external engine in mind and will not play its role
 			 * without it. Disable joseki fixes and let user know. */
 			if (josekifix_required)  die("josekifix required but external joseki engine missing, aborting.\n");
-			fprintf(stderr, "Joseki fixes disabled: external joseki engine missing\n");
+			if (DEBUGL(1)) fprintf(stderr, "Joseki fixes disabled: external joseki engine missing\n");
 			josekifix_enabled = false;
 		} else  /* Load database of joseki fixes */
 			josekifix_load();
