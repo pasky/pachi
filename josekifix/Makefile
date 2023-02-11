@@ -3,7 +3,8 @@ INCLUDES=-I..
 OBJS = fuseki.o josekifix.o josekifixscan_engine.o special_checks.o
 SGF  = josekifix.sgf fusekifix.sgf
 
-all: lib.a data
+# don't build data by default, trips automated build systems
+all: lib.a
 
 data: ../josekifix.gtp
 

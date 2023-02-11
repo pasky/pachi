@@ -1,0 +1,1461 @@
+# Generated from josekifix/josekifix.sgf
+# Do not edit directly !
+
+boardsize 19
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2
+play B d2  
+play W b2  override name=3-4 trick punish|around=last
+play B e2  
+play W f2  override name=3-4 trick punish|around=C2
+play B f3  
+play W g2  override name=3-4 trick punish|around=C2
+play B g3  
+play W e1  override name=3-4 trick punish|around=D2
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2
+play B d2  
+play W b2  override name=3-4 trick punish|around=last
+play B e2  
+play W f2  override name=3-4 trick punish|around=C2
+play B f3  
+play W g2  override name=3-4 trick punish|around=C2
+play B b4  
+play W c1  override name=3-4 trick punish|around=D3
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2
+play B d2  
+play W b2  override name=3-4 trick punish|around=last
+play B e2  
+play W f2  override name=3-4 trick punish|around=C2
+play B g2  
+play W f3  
+play B f1  
+play W e1  override name=3-4 trick punish|around=D2
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W b2  override name=3-4 trick ladder|around=D2|external_engine
+play B e2  
+play W g3  override name=3-4 trick ladder|around=D2
+play B b4  
+play W c1  override name=3-4 trick ladder|around=D2
+play B d2  
+play W f2  override name=3-4 trick ladder|around=last
+play B f4  
+play W f3  override name=3-4 trick ladder|around=D2
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W b2  override name=3-4 trick ladder|around=D2|external_engine
+play B e2  
+play W g3  override name=3-4 trick ladder|around=D2
+play B e3  
+play W f4  override name=3-4 trick empty triangle|around=D2
+play B b1  
+play W b4  
+play B c5  
+play W f2  
+play B e1  
+play W d1  override name=3-4 trick empty triangle|around=D2
+play B c1  
+play W a2  override name=3-4 trick empty triangle|around=D2
+play B b5  
+play W a4  override name=3-4 trick empty triangle|around=D2
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W b2  override name=3-4 trick ladder|around=D2|external_engine
+play B e2  
+play W g3  override name=3-4 trick ladder|around=D2
+play B e3  
+play W f4  override name=3-4 trick empty triangle|around=D2
+play B b1  
+play W b4  
+play B c5  
+play W f2  
+play B e1  
+play W d1  override name=3-4 trick empty triangle|around=D2
+play B b5  
+play W c1  override name=3-4 trick empty triangle bad|around=D2
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W b2  override name=3-4 trick ladder|around=D2|external_engine
+play B e2  
+play W g3  override name=3-4 trick ladder|around=D2
+play B g2  
+play W e3  
+play B d2  
+play W f2  override name=3-4 trick ladder jump|around=D3
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W b2  override name=3-4 trick ladder|around=D2|external_engine
+play B d2  
+play W f3  
+play B f2  
+play W g2  
+play B e2  
+play W b4  
+play B c5  
+play W g3  
+play B b1  
+play W c1  
+play B d1  
+play W b5  override name=3-4 trick ladder connect|around=D2
+play B b6  
+play W a2  override name=3-4 trick ladder connect|around=D2
+play B f1  
+play W e5  override name=3-4 trick ladder connect|around=D2
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W b2  override name=3-4 trick ladder|around=D2|external_engine
+play B e3  
+play W f4  
+play B f3  
+play W g3  override name=3-4 trick ladder extend|around=D2
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B b4  
+play W pass  override name=3-4 not trick play|around=E4
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B b3  
+play W d3  
+play B b5  
+play W f5  
+play B k3  
+play W c6  
+play B pass  override name=3-4 pincer tiger tenuki|around=B5
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B b3  
+play W d3  
+play B b2  
+play W pass  override name=3-4 pincer b2 dev|around=D4
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B d3  
+play W d4  
+play B e3  
+play W f3  
+play B f4  
+play W f2  
+play B c2  
+play W b3  
+play B e2  
+play W c5  
+play B b2  
+play W pass  override name=3-4 crosscut switch sides|around=E3
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B d4  
+play W d3  
+play B e3  
+play W b4  
+play B b5  
+play W pass  override name=3-4 crosscut2|around=E4
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B c7  
+play W b4  
+play B d3  
+play W pass  override name=3-4 pincer 2spc jump hane|around=C3
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B c7  
+play W d4  
+play B b4  
+play W e2  override name=3-4 pincer attach extend|around=C2
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W f5  
+play B g5  
+play W g6  
+play B h5  
+play W pass  override name=3-4 pincer kosumi|around=E5
+
+clear_board
+play B c4  
+play W e4  
+play B d6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B c5  
+play W pass  override name=3-4 keima trick|around=D5
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B e5  
+play W f5  
+play B e6  
+play W d4  
+play B c5  
+play W c3  
+play B c6  
+play W f6  
+play B e7  
+play W d2  override name=magic sword safe|around=E5
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B e5  
+play W f5  
+play B e6  
+play W d4  
+play B c5  
+play W c3  
+play B c6  
+play W f6  
+play B e7  
+play W b3  
+play B d10  
+play W pass  
+play B f4  
+play W g4  
+play B f3  
+play W g3  
+play B e2  
+play W e3  
+play B f2  
+play W g2  
+play B d2  
+play W d3  
+play B g5  
+play W j2  
+play B j3  
+play W h2  
+play B h7  override name=magic sword punish b3|around=F6
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B e5  
+play W f5  
+play B e6  
+play W d4  
+play B c5  
+play W c3  
+play B c6  
+play W f6  
+play B e7  
+play W b3  
+play B f4  
+play W pass  log name=magic sword cut v2|around=E5
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B e5  
+play W f5  
+play B e6  
+play W d4  
+play B c5  
+play W c3  
+play B b3  
+play W d5  
+play B d6  
+play W pass  override name=magic sword mega mess|around=D4
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B e5  
+play W f5  
+play B e6  
+play W d4  
+play B d5  
+play W c3  
+play B b3  
+play W pass  override name=magic sword trick|around=E5
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B e5  
+play W f5  
+play B e6  
+play W d4  
+play B c6  
+play W c3  
+play B b4  
+play W f6  
+play B e7  
+play W b3  
+play B pass  log name=magic sword cut|around=E5
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B e5  
+play W f5  
+play B e6  
+play W d4  
+play B c6  
+play W c3  
+play B b4  
+play W f6  
+play B e7  
+play W b3  
+play B f4  
+play W pass  log name=magic sword cut|around=E5
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B e5  
+play W f5  
+play B e6  
+play W f6  
+play B e7  
+play W d4  
+play B c6  override name=magic sword ooo|around=last
+play W c3  
+play B b4  override name=magic sword ooo punish|around=D4
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B d6  
+play W d5  
+play B c6  
+play W c5  
+play B b4  
+play W b5  
+play B e6  
+play W b6  
+play B c7  
+play W c3  override name=magic sword sp var|around=last
+play B e3  
+play W d3  
+play B f4  
+play W f3  
+play B e5  
+play W e2  
+play B d4  
+play W e3  override name=magic sword sp var|around=last
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W d7  
+play B d4  
+play W e5  
+play B e3  
+play W f3  
+play B f4  
+play W pass  override name=magic sword d4|around=last
+
+clear_board
+play B c4  
+play W e4  
+play B h4  
+play W c5  
+play B b5  
+play W c3  
+play B pass  override name=3-4 keima pincer double attach|around=D4
+
+clear_board
+play B c4  
+play W e4  
+play B e3  
+play W d4  
+play B d3  
+play W c5  
+play B c3  override name=avalanche|around=last
+
+clear_board
+play B c4  
+play W e4  
+play B j4  
+play W d6  
+play B e5  
+play W d5  
+play B d4  
+play W pass  override name=large 3-4 pincer|around=last
+
+clear_board
+play B c4  
+play W e3  
+play B g3  
+play W d5  
+play B pass  override name=3-4 pincer keima|around=A4
+
+clear_board
+play B c4  
+play W e3  
+play B g3  
+play W d5  
+play B d4  
+play W e4  
+play B e5  
+play W d6  
+play B f5  
+play W c2  
+play B b2  
+play W d2  
+play B b6  
+play W c7  
+play B b7  
+play W c9  
+play B b8  override name=3-4 pincer keima katafix|around=B6
+
+clear_board
+play B c4  
+play W pass  
+play B f3  
+play W c3  
+play B d4  
+play W b4  override name=large keima to 3-3|around=C2
+
+clear_board
+play B d4  
+play W c6  
+play B c8  
+play W c4  
+play B c3  
+play W d3  
+play B e4  
+play W c2  
+play B b3  
+play W d5  
+play B b4  override name=3-4 trick from 4-4 punish|around=D4|external_engine
+play W c5  
+play B b2  override name=3-4 trick from 4-4 punish|around=D4
+play W e2  
+play B e5  override name=3-4 trick from 4-4 punish|around=D4
+play W e6  
+play B e3  override name=3-4 trick from 4-4 punish|around=D4
+play W d2  
+play B f2  override name=3-4 trick from 4-4 punish|around=D1
+play W f3  
+play B g3  override name=3-4 trick from 4-4 punish|around=D1
+play W f4  
+play B f5  override name=3-4 trick from 4-4 punish|around=D1
+play W g4  
+play B g5  override name=3-4 trick from 4-4 punish|around=F1
+play W h4  
+play B g2  override name=3-4 trick from 4-4 punish|around=F1
+play W h3  
+play B c1  override name=3-4 trick from 4-4 punish|around=F1
+
+clear_board
+play B d4  
+play W c6  
+play B c8  
+play W c4  
+play B c3  
+play W d3  
+play B e4  
+play W c2  
+play B b3  
+play W d5  
+play B b4  override name=3-4 trick from 4-4 punish|around=D4|external_engine
+play W c5  
+play B b2  override name=3-4 trick from 4-4 punish|around=D4
+play W d2  
+play B f3  override name=3-4 trick from 4-4 connect|around=C3
+
+clear_board
+play B d4  
+play W c6  
+play B f3  
+play W c3  
+play B c4  
+play W b4  
+play B b5  
+play W b3  
+play B c5  
+play W h3  
+play B pass  
+play W e2  
+play B e3  override name=hoshi 3-3 block|around=F3
+
+clear_board
+play B d4  
+play W c6  
+play B f3  
+play W c3  
+play B c4  
+play W b4  
+play B b5  
+play W b3  
+play B c5  
+play W j3  
+play B pass  
+play W e2  
+play B e3  override name=hoshi 3-3 block|around=F3
+
+clear_board
+play B d4  
+play W c6  
+play B f3  
+play W c3  
+play B c4  
+play W b4  
+play B b5  
+play W b3  
+play B c5  
+play W k3  
+play B pass  
+play W e2  
+play B e3  override name=hoshi 3-3 block|around=F3
+
+clear_board
+play B d4  
+play W pass  
+play B c6  
+play W c3  
+play B d3  
+play W d2  override name=hoshi basic 3-3|around=B3
+play B e2  
+play W b2  override name=hoshi basic 3-3|around=A3
+
+clear_board
+play B d4  
+play W pass  
+play B c6  
+play W c3  
+play B d3  
+play W c4  
+play B c5  
+play W d2  
+play B e2  
+play W b2  
+play B d1  
+play W c1  override name=hoshi 3-3|around=C2
+
+clear_board
+play B d4  
+play W pass  
+play B c6  
+play W pass  
+play B f3  
+play W c3  
+play B c4  
+play W d3  override name=hoshi basic 3-3 (2 ext)|around=C2
+
+clear_board
+play B d4  
+play W pass  
+play B c6  
+play W pass  
+play B g3  
+play W c3  
+play B d3  
+play W c4  override name=hoshi basic 3-3 (2 ext)|around=B3
+
+clear_board
+play B d4  
+play W pass  
+play B c6  
+play W e2  
+play B d2  
+play W d3  
+play B c3  override name=4-4 low approach|around=B1
+play W e3  
+play B c2  
+play W d5  
+play B c4  override name=4-4 low approach|around=A3
+
+clear_board
+play B d4  
+play W pass  
+play B c7  
+play W f3  
+play B h3  
+play W c3  
+play B d3  
+play W c4  
+play B c2  
+play W d5  
+play B e5  
+play W c6  
+play B d6  
+play W c5  
+play B d7  
+play W b2  override name=4-4 large keima 3-3 var|around=C5
+play B d2  
+play W e4  override name=4-4 large keima 3-3 var|around=C5
+play B f2  
+play W f5  override name=4-4 large keima 3-3 var|around=D5
+
+clear_board
+play B d4  
+play W pass  
+play B c12  
+play W c10  
+play B pass  
+play W c6  
+play B c8  
+play W b8  
+play B f3  override name=4-4 3spaces approach|around=E6
+play W d8  
+play B c5  override name=4-4 3spaces approach|around=D6
+play W d6  
+play B b6  override name=4-4 3spaces approach|around=last
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B j3  override name=4-4 shoulder hit|around=G2
+play W k4  
+play B k3  
+play W l4  
+play B m3  
+play W n5  
+play B g4  
+play W c3  override name=4-4 shoulder hit 3-3|around=F5
+play B g5  
+play W g6  
+play B f4  
+play W h6  
+play B d3  
+play W b4  
+play B b5  
+play W d2  
+play B e2  
+play W b2  
+play B d1  
+play W c2  
+play B a3  
+play W a4  
+play B a2  
+play W c1  override name=4-4 shoulder hit 3-3 overplay|around=B2
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B j3  override name=4-4 shoulder hit|around=G2
+play W k4  
+play B k3  
+play W l4  
+play B m3  
+play W n5  
+play B g4  
+play W c3  override name=4-4 shoulder hit 3-3|around=F5
+play B g5  
+play W g6  
+play B f4  
+play W h6  
+play B d3  
+play W b4  
+play B b6  
+play W d2  
+play B e2  
+play W b2  
+play B d1  
+play W c2  
+play B a3  
+play W b5  
+play B a4  
+play W a2  
+play B a5  
+play W c6  
+play B c5  
+play W c7  
+play B b7  
+play W c8  override name=4-4 shoulder hit 3-3 resist|around=B5
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B j5  
+play W pass  override name=4-4 shoulder hit crosscut|around=G2
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W h4  
+play B pass  override name=4-4 keima pincer tsuke|around=E4
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W d6  
+play B f4  
+play W c4  
+play B pass  override name=4-4 pincer high approach tsuke|around=D3
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W d3  
+play B c3  
+play W c4  
+play B d5  override name=4-4 crosscut|around=D4|external_engine
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W d3  
+play B c3  
+play W c2  
+play B pass  override name=4-4 keima pincer attach|around=E1
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W c3  
+play B d3  
+play W c4  
+play B c5  
+play W c2  override name=3-3 block overplay|around=C4
+play B d2  
+play W d5  override name=3-3 block overplay|around=C4
+play B c6  
+play W e4  override name=3-3 block overplay|around=C4
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W c3  
+play B d3  
+play W c4  
+play B c5  
+play W c2  override name=3-3 block overplay|around=C4
+play B d2  
+play W d5  override name=3-3 block overplay|around=C4
+play B b5  
+play W e4  override name=3-3 block overplay|around=C4
+
+clear_board
+play B d4  
+play W f3  
+play B d6  
+play W c3  
+play B d3  
+play W d2  
+play B e2  
+play W c2  
+play B e3  
+play W b5  
+play B b6  
+play W b4  override name=3-3 block live|around=A4
+
+clear_board
+play B d4  
+play W f3  
+play B d6  
+play W c3  
+play B d3  
+play W d2  
+play B e2  
+play W c2  
+play B e3  
+play W f2  
+play B c4  override name=hoshi 3-3 cut hack|around=D2
+
+clear_board
+play B d4  
+play W f3  
+play B d6  
+play W c3  
+play B d3  
+play W d2  
+play B e2  
+play W c2  
+play B f2  
+play W b5  
+play B b6  
+play W b4  override name=3-3 block live|around=B2
+
+clear_board
+play B d4  
+play W f3  
+play B f4  
+play W g4  
+play B g5  
+play W e4  
+play B f5  
+play W pass  override name=4-4 approach tsuke hane|around=E3
+
+clear_board
+play B d4  
+play W f3  
+play B c6  
+play W d2  
+play B g3  
+play W g4  
+play B h3  
+play W h4  
+play B j3  
+play W f4  override name=4-4 keima keima slide tsuke|around=F3
+
+clear_board
+play B d4  
+play W f3  
+play B c6  
+play W f5  
+play B d2  
+play W e2  
+play B e3  
+play W f2  
+play B pass  
+play W d5  
+play B c5  
+play W c3  
+play B d3  
+play W d6  
+play B c2  override name=4-4 keima jump tenuki tsuke|around=C3
+
+clear_board
+play B d4  
+play W f3  
+play B c6  
+play W f5  
+play B pass  
+play W c3  
+play B d3  
+play W c4  
+play B d5  override name=4-4 keima keima jump 3-3 block|around=last
+
+clear_board
+play B d4  
+play W f3  
+play B c6  
+play W d3  
+play B c3  
+play W c2  
+play B pass  override name=4-4 keima keima tsuke|around=E1
+
+clear_board
+play B d4  
+play W f3  
+play B j4  
+play W c6  
+play B f4  
+play W g4  
+play B f5  
+play W c3  override name=4-4 high pincer dbl kakari|around=E5
+
+clear_board
+play B d4  
+play W f3  
+play B j4  
+play W pass  
+play B d10  
+play W c3  
+play B c4  
+play W d3  
+play B e4  
+play W f4  
+play B e3  
+play W e2  
+play B f2  
+play W g2  
+play B d2  
+play W f1  
+play B c2  
+play W f6  override name=4-4 high pincer bad sacrifice|around=E6
+
+clear_board
+play B d4  
+play W f3  
+play B pass  
+play W c6  
+play B f4  
+play W g4  
+play B f5  
+play W c3  override name=4-4 dbl kakari|around=E5
+
+clear_board
+play B d5  
+play W pass  override name=taka|around=B2
+
+clear_board
+play B d5  
+play W d3  
+play B f4  
+play W pass  override name=deadly taka|around=B2
+
+clear_board
+play B d5  
+play W d3  
+play B f4  
+play W c5  
+play B c4  
+play W d4  
+play B c3  
+play W c6  override name=deadly taka ladder|around=last|external_engine|external_engine_diag
+
+clear_board
+play B d5  
+play W d3  
+play B f4  
+play W c5  
+play B c4  
+play W d4  
+play B c3  
+play W c2  
+play B b2  
+play W d2  
+play B b5  
+play W c6  
+play B b6  
+play W c7  
+play B e5  
+play W b1  
+play B b3  
+play W g3  
+play B h5  
+play W h3  override name=deadly taka fighting var deviation|around=F3
+
+clear_board
+play B d5  
+play W d3  
+play B g4  
+play W pass  override name=magic sword without pincer|around=D4
+
+clear_board
+play B d5  
+play W c3  
+play B g4  
+play W pass  override name=magic sword without pincer (3-3)|around=D4
+
+clear_board
+play B e5  
+play W pass  override name=5-5|around=C3
+
+clear_board
+play B d6  
+play W pass  override name=ootaka|around=B2
+
+clear_board
+play B c5  
+play W pass  override name=moku|around=B2
+
+clear_board
+play B c5  
+play W d3  
+play B f4  
+play W e3  override name=taisha|around=last
+
+clear_board
+play B c5  
+play W d3  
+play B e4  
+play W e3  
+play B f4  
+play W g3  
+play B g4  
+play W h3  
+play B h4  
+play W j3  override name=moku press avoid|around=F2
+
+clear_board
+play B c5  
+play W e4  
+play B g3  
+play W pass  override name=moku pincer|around=D1
+
+clear_board
+play B k10  
+play W j10  
+play B j11  
+play W k11  
+play B pass  
+play W d4  
+play B f3  
+play W h3  
+play B f5  
+play W d6  
+play B j4  
+
+# Generated from josekifix/fusekifix.sgf
+# Do not edit directly !
+
+boardsize 19
+
+clear_board
+play B q3  
+play W pass  
+play B r9  
+play W q4  
+play B r4  override name=anti chinese attach|around=P5
+play W p3  
+play B q5  override name=anti chinese attach|around=P5
+play W p4  
+play B r3  override name=anti chinese attach|around=P5
+
+clear_board
+play B q3  
+play W pass  
+play B q9  
+play W q4  
+play B r4  override name=anti chinese attach|around=last
+play W p3  
+play B q5  override name=anti chinese attach|around=Q4
+play W p4  
+play B r3  override name=anti chinese attach|around=Q4
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o18  
+play B n15  
+play W o3  
+play B m3  
+play W r6  override name=anti sanrensei double kakariii|around=P6|around2=O14
+play B p6  
+play W r8  override name=anti sanrensei double kakariii|around=last|around2=O14
+play B q9  
+play W s10  override name=anti sanrensei double kakariii|around=Q7|around2=O14
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o18  
+play B n15  
+play W o3  
+play B m3  
+play W r6  override name=anti sanrensei double kakariii|around=P6|around2=O14
+play B r3  
+play W p5  
+play B q5  
+play W q6  
+play B p6  
+play W o5  
+play B p7  
+play W r8  
+play B s9  
+play W p8  
+play B q7  
+play W r7  
+play B q8  
+play W r9  
+play B q9  
+play W r10  
+play B r11  
+play W s10  
+play B s11  
+play W s4  
+play B s3  
+play W s5  
+play B p2  
+play W p3  override name=anti sanrensei double kakariii|around=P3
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o18  
+play B n15  
+play W o3  
+play B m3  
+play W r6  override name=anti sanrensei double kakariii|around=P6|around2=O14
+play B r3  
+play W pass  override name=anti sanrensei double kakariii|around=P6
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o18  
+play B n15  
+play W o3  
+play B m3  
+play W r6  override name=anti sanrensei double kakariii|around=P6|around2=O14
+play B r8  
+play W r4  override name=anti sanrensei double kakariii|around=P6|around2=O14
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o18  
+play B n15  
+play W o3  
+play B r3  
+play W l3  
+play B o5  
+play W n10  override name=anti sanrensei moyo|around=O6|around2=O14
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o18  
+play B n15  
+play W m18  
+play B l17  override name=sanrensei breakout fix|around=O18
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o18  
+play B n15  
+play W s17  
+play B s16  
+play W m18  
+play B l17  override name=sanrensei breakout fix|around=O18
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o18  
+play B n15  
+play W pass  
+play B s16  
+play W m18  
+play B l17  override name=sanrensei breakout fix|around=O18
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
+play B q17  
+play W r16  
+play B q15  
+play W q18  
+play B p18  
+play W r18  
+play B o18  
+play W r14  
+play B q14  
+play W r13  
+play B q13  
+play W r12  override name=anti sanrensei fix|around=S13
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W m16  
+play B l16  
+play W n16  
+play B q14  override name=sanrensei arkgo|around=O14
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o3  
+
+clear_board
+play B q16  
+play W pass  
+play B q3  
+play W d4  
+play B f3  
+play W c6  
+play B k4  
+play W r6  
+play B q5  
+play W s4  
+play B s5  
+play W r5  
+play B r4  
+play W s6  override name=kobayashi trick play|around=last
+
+clear_board
+play B q16  
+play W pass  
+play B q3  
+play W d4  
+play B f3  
+play W c6  
+play B k4  
+play W q6  
+play B r5  
+play W q10  
+play B r6  
+play W m3  
+play B l3  
+play W p3  
+play B m4  override name=high kobayashi 2|around=P5
+play W n4  
+play B m5  override name=high kobayashi 2|around=last
+play W q7  
+play B r7  override name=high kobayashi 2|around=P5
+play W q8  
+play B s9  override name=high kobayashi 2|around=Q6
+
+clear_board
+play B q16  
+play W pass  
+play B q3  
+play W d4  
+play B f3  
+play W c6  
+play B j4  
+play W q6  
+play B r5  
+play W q10  
+play B r6  
+play W p3  
+play B n3  override name=high kobayashi|around=O4
+play W o3  
+play B q2  override name=high kobayashi|around=O4
+play W q7  
+play B r7  override name=high kobayashi|around=last
+
+clear_board
+play B q16  
+play W pass  
+play B q3  
+play W d4  
+play B f3  
+play W c6  
+play B j4  
+play W q6  
+play B r5  
+play W q10  
+play B r6  
+play W l3  
+play B n3  override name=high kobayashi|around=last
+
+clear_board
+play B q16  
+play W e17  
+play B c16  
+play W d14  
+play B c15  
+play W e15  
+play B c13  
+play W o17  
+play B m17  override name=yz_taisha|around=last|around2=E15
+play W pass  
+

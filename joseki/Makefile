@@ -4,7 +4,10 @@ OBJS := joseki.o joseki_engine.o josekiscan_engine.o
 
 SGF = joseki_44.sgf joseki_34.sgf joseki_54.sgf joseki_33.sgf 
 
-all: ../joseki19.gtp lib.a
+# don't build data by default, trips automated build systems
+all: lib.a
+
+data: ../joseki19.gtp
 
 ../joseki19.gtp: $(SGF)
 	@echo -n "" > $@.tmp

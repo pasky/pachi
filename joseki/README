@@ -34,7 +34,7 @@ tuned against patterns priors, would need some tweaking.
 
 To generate the joseki database from sgf variations type:
 
-	cd joseki ; make
+	cd joseki ; make data
 
 this will (re)create joseki19.gtp. If Pachi finds it it will use it to
 match joseki patterns and guide tree search when playing without dcnn,
