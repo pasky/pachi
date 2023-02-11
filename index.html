@@ -31,12 +31,12 @@ hardware (Raspberry Pi, dcnn) or faster machine (e.g. six-way Intel i7) without 
 When using a large cluster (64 machines, 20 cores each), it maintains KGS 4d
 and has won e.g. <a href="http://files.gokgs.com/games/2011/4/14/nutngo1-pachi2.sgf">a 7-stone handicap game against Zhou Junxun 9p</a>.</p>
 
-<p>By default, Pachi currently uses the UCT engine that combines
+<p>By default, Pachi uses the UCT engine that combines
 Monte Carlo approach with tree search; UCB1AMAF tree policy using
 the RAVE method is used for tree search, while the Moggy playout
 policy using 3&times;3 patterns and various tactical checks is used for
 the semi-random Monte Carlo playouts.
-MM patterns are used in the tree search.
+MM patterns and deep learning are used to guide tree search.
 Technical information about Pachi's architecture and algorithms
 can be found in <a href="http://pasky.or.cz/go/prace.pdf">Petr Baudis'
 	Master's Thesis</a> <a href="http://pasky.or.cz/go/">(more papers)</a>.</p>
@@ -45,7 +45,7 @@ can be found in <a href="http://pasky.or.cz/go/prace.pdf">Petr Baudis'
 
 <h2>Download and Development</h2>
 
-<p>Current stable Pachi version is <strong>12.60</strong> (codename Jowa), released on Dec 15, 2020.<br>
+<p>Current stable Pachi version is <strong>12.70</strong> (codename Jowa), released on Feb 10, 2023.<br>
 You can <a href="https://github.com/pasky/pachi/releases">download</a> it
 or <a href="https://github.com/pasky/pachi">explore the source code online</a>.
 </p>
@@ -68,7 +68,7 @@ to connect your Pachi instance to an internet Go server
 <a href="https://github.com/pasky/pachi/blob/master/kgs/kgsgtp-pachi.conf?raw=true">(example config)</a>.</p>
 
 <p>Pachi's source code is maintained within the
-<a href="https://github.com/pasky/pachi">pachi</a> git repository.<br>
+<a href="https://github.com/pasky/pachi">Pachi</a> git repository.<br>
 Patches and help is encouraged, as well as reuse of the source code base for your own research.</p>
 
 <div style="border: 1pt solid; padding: 0 1em; width: 45%; margin: 0 0.5em; float: left">
