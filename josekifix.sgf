@@ -254,7 +254,23 @@ otherwise b E2
 Ex: pachipachi nekomichan  2022-12-13 14:29  
 ])))
 (;W[fo]
-;B[go]
+(;B[cm]
+;W[hp]
+;B[dq]
+;W[eq]
+;B[iq]
+;W[jp]
+;B[ip]
+;W[io]
+;B[jq]C[[override\]
+name = "3-4 pincer diag shoulder hit"
+around = G4
+
+
+K5 mistake, play under
+
+pachipachi jio8 2023-02-12])
+(;B[go]
 ;W[gn]
 ;B[ho]
 ;W[]TR[cn][fq]C[[override\]
@@ -265,7 +281,7 @@ around = E5
 F3 (fight) or C6 now.
 But certainly not H6, C3, C5
 
-Ex: pachipachi itmicter 2018-05-05 08:43:15  (H4)]))
+Ex: pachipachi itmicter 2018-05-05 08:43:15  (H4)])))
 (;B[dn]
 ;W[cq]
 ;B[dq]
