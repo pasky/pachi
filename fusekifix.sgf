@@ -55,72 +55,14 @@ around = Q4]
 ;B[me]
 (;W[nq]
 (;B[lq]
-;W[qn]C[[override\]
-name = "anti sanrensei double kakariii"
-around = P6
-around2= O14
-
-]
-(;B[on]
-;W[ql]C[[override\]
-around = "last"
+;W[pn]C[[override\]
+name = "anti sanrensei high kakari"
+around = Q5
 around2 = O14
 
 
-Don't take corner !
-
-pachipachi past  Jul 05 2020 18:03:20]
-;B[pk]
-;W[rj]C[[override\]
-around = Q7
-around2 = O14
-
-
-P7 good way to get in trouble,
-just extend. 
-
-pachipachi concord  2022-10-30])
-(;B[qq]
-(;W[oo]
-;B[po]
-;W[pn]
-;B[on]
-;W[no]
-;B[om]
-;W[ql]
-;B[rk]
-;W[ol]
-;B[pm]
-;W[qm]
-;B[pl]
-;W[qk]
-;B[pk]
-;W[qj]
-;B[qi]
-;W[rj]
-;B[ri]
-;W[rp]
-;B[rq]
-;W[ro]
-;B[or]
-;W[oq]C[[override\]
-around = P3
-
-
-Ex: pachipachi niceguy0  2022-11-09 09:25])
-(;W[]C[[override\]
-around = P6
-
-
-let external engine take over]))
-(;B[ql]
-;W[qp]C[[override\]
-around = P6
-around2 = O14
-
-
-Don't take corner !
-]))
+was R6 double kakari before, tough fight...
+])
 (;B[qq]
 ;W[kq]
 ;B[no]
