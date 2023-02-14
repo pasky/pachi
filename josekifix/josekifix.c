@@ -897,8 +897,8 @@ override_sanity_checks(board_t *b, override_t *override)
 #define point_dist(a, b)  (is_pass(a) || is_pass(b) ? 0 : roundf(coord_distance(a, b)))
 	
 	int dist = point_dist(prev, next);
-	if (dist > 6) {
-		board_print(b, stderr);		
+	if (dist > 8) {
+		board_print(b, stderr);
 		fprintf(stderr, "josekifix: \"%s\": big distance between prev move (%s) and next move (%s), bad override coords ?\n\n",
 			override->name, override->prev, override->next);
 	}
