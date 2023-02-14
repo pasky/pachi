@@ -302,9 +302,9 @@ E3 now, black can't save his stones
 ;W[fo]
 ;B[en]
 (;W[dp]
-(;B[co]
-;W[cq]
 (;B[cn]
+;W[cq]
+(;B[co]
 ;W[fn]
 ;B[em]
 (;W[dr]C[[override\]
@@ -317,7 +317,12 @@ Kogo: D2  (safe)
 
 he tends to B3 but doesn't know followup so be safe ...])
 (;W[bq]
-(;B[dj]
+;B[dj]C[[override\]
+name = "magic sword extend"
+around = D6
+
+
+don't cut right away, please]
 ;W[]
 ;B[fp]
 ;W[gp]
@@ -342,12 +347,17 @@ b already has D10, w can't play B3 here.
 so b cuts at F4 ...
 H7 tesuji to bend the ladder now
 
-Ex: https://online-go.com/game/12654852  ])
-(;B[fp]
-;W[]C[[log\]
-name = "magic sword cut v2"
-around = E5])))
-(;B[bq]
+Ex: https://online-go.com/game/12654852  ]))
+(;B[bp]
+;W[gq]C[[override\]
+name = "magic sword connect"
+around = E3
+
+
+katago likes this one]))
+(;B[co]
+;W[cq]
+;B[bq]
 ;W[do]
 ;B[dn]
 ;W[]C[[override\]
@@ -355,7 +365,7 @@ name = "magic sword mega mess"
 around = "D4"
 
 
-Ex: pachipachi spring  2022-12-17 19:00]))
+Ex: pachipachi spring  2022-12-17 19:00])
 (;B[do]
 ;W[cq]
 ;B[bq]
@@ -367,28 +377,7 @@ around = E5
 B3 trick play
 -> C5 atari (B4 is getting tricked)
 
-(not really necessary, dcnn finds it. for clarity ...)])
-(;B[cn]
-;W[cq]
-;B[bp]
-;W[fn]
-;B[em]
-;W[bq]
-(;B[]C[[log\]
-name = "magic sword cut"
-around = E5
-
-(we cut)
-
-Ex: pachipachi keats  2020-06-05 ])
-(;B[fp]
-;W[]C[[log\]
-name = "magic sword cut"
-around = E5
-
-(we get cut)
-
-Ex: pachipachi keats  2020-06-05 ])))
+(not really necessary, dcnn finds it. for clarity ...)]))
 (;W[fn]
 ;B[em]
 ;W[dp]
