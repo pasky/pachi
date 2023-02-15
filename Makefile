@@ -285,7 +285,7 @@ LOCALLIBS=$(SUBDIRS:%=%/lib.a)
 $(LOCALLIBS): all-recursive
 	@
 
-pachi: $(OBJS) $(LOCALLIBS)
+pachi: $(OBJS) $(LOCALLIBS) $(EXTRA_DEPS)
 	$(call cmd,link)
 
 # Use runtime gcc profiling for extra optimization. This used to be a large

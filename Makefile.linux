@@ -1,6 +1,10 @@
 # Static build ?
 # STATIC_BUILD=1
 
+# If static build fails on ubuntu / debian try this.
+# UBUNTU_STATIC=1
+
+
 COMMON_FLAGS += $(TUNE)
 LDFLAGS      := -pthread -rdynamic
 SYS_LIBS     := -lm -lrt -ldl
@@ -26,6 +30,11 @@ ifdef STATIC_BUILD
 		CAFFE_STATIC_LIB = -Wl,--whole-archive -l:libcaffe.a -Wl,--no-whole-archive
 	endif
 
+	ifdef UBUNTU_STATIC
+		SYS_LIBS   += libunwind.a -llzma
+		EXTRA_DEPS += libunwind.a
+	endif
+
 	LDFLAGS   := -pthread -static
 	DCNN_LIBS := $(CAFFE_STATIC_LIB) -lglog -lgflags -lprotobuf -lboost_system -lboost_thread -lopenblas $(HDF5_LIBS) -lstdc++  $(SYS_LIBS)
 endif
@@ -44,5 +53,24 @@ ifdef STATIC_BUILD
 layer_factory.o: $(CAFFE_PREFIX)/lib/libcaffe.a
 	@echo "[AR]   $@"
 	@ar x $< $@
+
+endif
+
+
+ifdef UBUNTU_STATIC
+
+LIBUNWIND_OBJS = SetGR.o GetIPInfo.o SetIP.o GetLanguageSpecificData.o GetRegionStart.o \
+                 GetDataRelBase.o GetTextRelBase.o RaiseException.o Resume.o Resume_or_Rethrow.o \
+                 DeleteException.o
+
+# Ubuntu libunwind madness ...
+libunwind.a:
+	-@ rm -rf libunwind.a libunwind  2>/dev/null
+	-@ mkdir libunwind
+	@ echo "[AR]    libunwind.a"
+	@ cd libunwind; \
+	  ar x /usr/lib/*-linux-gnu/libunwind.a; \
+          rm $(LIBUNWIND_OBJS); \
+	  ar cr ../libunwind.a *.o
 
 endif
