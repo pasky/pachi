@@ -30,9 +30,6 @@ Otherwise:
 After compiling and setting up data files you can install pachi with:
 
     make install
-    make install-data
 
-Pachi will look for extra data files (such as dcnn, pattern, joseki or
-fuseki database) in pachi's system directory (`/usr/local/share/pachi`
-by default), current directory or executable directory. System data directory can be
-overridden at runtime by setting `DATA_DIR` environment variable.
+This will install pachi in PREFIX/bin and datafiles in PREFIX/share/pachi-go
+(or whatever DATADIR was set to).

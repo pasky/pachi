@@ -97,10 +97,10 @@ JOSEKIFIX=1
 
 ############################### Install ###############################
 
-# Target directories when running 'make install' / 'make install-data'.
-# Pachi will look for extra data files (such as dcnn, pattern, joseki or
-# fuseki database) in system directory below in addition to current directory
-# (or DATA_DIR environment variable if present).
+# Target directories when running 'make install'.
+# Pachi will look for its data files (dcnn, pattern, joseki etc) in
+# system directory below (in addition to current directory / DATA_DIR
+# environment variable if present).
 PREFIX=$(DESTDIR)/usr
 BINDIR=$(PREFIX)/bin
 DATADIR=$(PREFIX)/share/pachi-go
@@ -276,7 +276,7 @@ OBJS = $(EXTRA_OBJS) \
 
 # Low-level dependencies last
 SUBDIRS   = $(EXTRA_SUBDIRS) pattern joseki uct uct/policy t-unit t-predict engines playout tactics
-DATAFILES = $(EXTRA_DATAFILES) patterns_mm.gamma patterns_mm.spat book.dat golast19.prototxt golast.trained joseki19.gtp
+DATAFILES = $(EXTRA_DATAFILES) detlef54.prototxt detlef54.trained joseki19.gtp opening.dat patterns_mm.gamma patterns_mm.spat 
 
 
 ############################################################################################################
@@ -334,8 +334,10 @@ distribute: FORCE
 	cp pachi distribute/
 	+@make strip      # arch specific stuff
 
-# install-recursive?
-install: distribute
+# install everything
+install: install-bin install-data
+
+install-bin: distribute
 	$(INSTALL) -d $(BINDIR)
 	$(INSTALL) distribute/pachi $(BINDIR)/
 
@@ -346,7 +348,8 @@ install-data:
 			echo $(INSTALL) $$file $(DATADIR)/;       \
 			$(INSTALL) $$file $(DATADIR)/;            \
 		else                                              \
-			echo "WARNING: $$file datafile is missing";   \
+			echo "FATAL: datafile '$$file' is missing";   \
+			exit 1;                                   \
 		fi                                                \
 	done;
 
