@@ -1,5 +1,5 @@
 # Try static build ?
-# MSYS2_STATIC=1
+# STATIC_BUILD=1
 
 # For dcnn build, caffe msys2 package is probably in the repos now.
 # Otherwise get one from https://github.com/lemonsqueeze/mingw-caffe
@@ -23,7 +23,7 @@ endif
 
 DCNN_LIBS := -lcaffe -lboost_system-mt -lglog -lstdc++ $(SYS_LIBS)
 
-ifdef MSYS2_STATIC		# Static build, good luck
+ifdef STATIC_BUILD		# Static build, good luck
         # Which type of caffe package do you have ?
         # Regular caffe package is fine but pulls in hdf5 (+deps) which we don't need
         # and requires --whole-archive for static linking. This makes binaries unnecessarily
@@ -66,9 +66,14 @@ strip: FORCE
         endif
 
 
-# 'mini' caffe static link hack.
-ifdef MSYS2_STATIC
+#####################################################################################
+# Extra rules for static linking
+
+ifdef STATIC_BUILD
+
+# caffe static link: pull layer_factory.o from libcaffe.a
 layer_factory.o: $(MINGW_PREFIX)/lib/libcaffe.a
 	@echo "[AR]   $@"
 	@ar x $< $@
+
 endif

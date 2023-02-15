@@ -14,6 +14,9 @@ cc1=$( $CC $CFLAGS -E -v - </dev/null 2>&1 | grep cc1 | head -1 | tr -d '\\"' )
                                          build="${green}[native]${end}"
 echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
 
+                           static=""
+[ "$STATIC_BUILD" = 1 ] && static="  ${green}[static]${end}"
+
                       dcnn="  ${cyan}[!dcnn]${end}"
 [ "$DCNN" = 1 ]    && dcnn="  ${green}[dcnn]${end}"
 
@@ -33,7 +36,7 @@ echo "$cc1" | grep -q "mtune=generic" && build="${cyan}[generic]${end}"
 [ "$DISTRIBUTED" = 1 ] && distributed="  ${cyan}[distributed]${end}"
 
 
-status="$build$dcnn$opt$boardsize$fifo$float$distributed"
+status="$build$static$dcnn$opt$boardsize$fifo$float$distributed"
 
 raw=${status//?????m/}; raw=${raw//${end}/}
 n=`max $[45-${#raw}] 0`;  n1=$[$n/2];  n2=$[$n-$n1]
