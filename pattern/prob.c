@@ -19,10 +19,8 @@ prob_dict_init(char *filename, pattern_config_t *pc)
 	assert(!prob_dict);
 	if (!filename)  filename = "patterns_mm.gamma";
 	FILE *f = fopen_data_file(filename, "r");
-	if (!f) {
-		if (DEBUGL(1))  fprintf(stderr, "%s not found, will not use mm patterns.\n", filename);
-		return;
-	}
+	if (!f)
+		die("Pattern file %s missing, aborting.\n", filename);
 
 	prob_dict = calloc2(1, prob_dict_t);
 	prob_dict->table = calloc2(spat_dict->nspatials + 1, pattern_prob_t*);

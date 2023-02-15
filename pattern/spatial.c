@@ -500,10 +500,8 @@ spatial_dict_init(pattern_config_t *pc, bool create)
 {
 	assert(!spat_dict);	
 	FILE *f = fopen_data_file(spatial_dict_filename, "r");
-	if (!f && !create) {
-		if (DEBUGL(1)) fprintf(stderr, "%s not found, mm patterns disabled.\n", spatial_dict_filename);
-		return;
-	}
+	if (!f && !create)
+		die("Pattern file %s missing, aborting.\n", spatial_dict_filename);
 
 	spat_dict = calloc2(1, spatial_dict_t);
 	/* Dummy record for index 0 so ids start at 1. */

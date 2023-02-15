@@ -260,11 +260,8 @@ joseki_load(int bsize)
 	char fname[1024];
 	snprintf(fname, 1024, "joseki19.gtp");
 	FILE *f = fopen_data_file(fname, "r");
-	if (!f) {
-		if (DEBUGL(3))  perror(fname);
-		if (joseki_required)  die("joseki required but joseki19.gtp not found, aborting.\n");
-		return;  
-	}
+	if (!f)
+		die("Joseki file joseki19.gtp missing, aborting.\n");
 
 	joseki_dict = joseki_init(bsize);
 
