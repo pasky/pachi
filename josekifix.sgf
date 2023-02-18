@@ -600,7 +600,7 @@ around = F1]
 name = "3-4 trick from 4-4 connect"
 around = C3]))
 (;B[fq]
-;W[cq]
+(;W[cq]
 ;B[cp]
 ;W[bp]
 ;B[bo]
@@ -637,7 +637,15 @@ around = F3
 
 B should E3, not F2 if w has support on the side.
 
-Ex: marzipan pachipachi 2018-02-15])))
+Ex: marzipan pachipachi 2018-02-15]))
+(;W[gq]
+;B[]C[[override\]
+name = "4-4 keima bully"
+around = D3
+
+
+magoa pachipachi 2023-02-17
+])))
 (;W[]
 (;B[cn]
 (;W[cq]
