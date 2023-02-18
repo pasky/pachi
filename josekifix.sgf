@@ -1260,7 +1260,7 @@ C3 but can get tricky...
 
 Ex: pachipachi coax  2022-11-04  14:14 ])
 (;W[cq]
-;B[dq]
+(;B[dq]
 ;W[dr]
 ;B[eq]
 ;W[er]
@@ -1272,7 +1272,26 @@ around = D3
 
 C4 natural but not so good actually.
 
-pachipachi coax 2023-02-17]))
+pachipachi coax 2023-02-17])
+(;B[eq]
+;W[dp]C[[log\]
+name = "moku 3-3 pincer slice-through"
+around = C3
+
+
+pachipachi globax 2023-02-18]
+;B[dn]
+;W[fp]C[[override\]
+around = D3]
+;B[fq]
+;W[do]C[[override\]
+]
+(;B[gp]
+;W[cn]C[[override\]
+])
+(;B[cm]
+;W[gp]C[[override\]
+]))))
 (;B[jj]TR[ij]
 ;W[ij]CR[je][hf][if][jf][kf][lf][gg][mg][fh][nh][fi][ni][ej][fj][nj][oj][fk][nk][fl][nl][gm][mm][hn][in][jn][kn][ln][jo]C[Demo
 
