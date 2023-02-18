@@ -360,12 +360,24 @@ katago likes this one]))
 ;B[bq]
 ;W[do]
 ;B[dn]
-;W[]C[[override\]
+(;W[]C[[override\]
 name = "magic sword mega mess"
 around = "D4"
 
 
 Ex: pachipachi spring  2022-12-17 19:00])
+(;W[cn]
+;B[bn]
+;W[cm]
+;B[em]
+;W[br]
+;B[dl]
+;W[cl]C[[override\]
+name = "magic sword mega mess"
+around = D5
+
+
+spring pachipachi 2023-02-18]))
 (;B[do]
 ;W[cq]
 ;B[bq]
