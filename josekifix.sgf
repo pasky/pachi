@@ -509,7 +509,7 @@ Ex:  hellness pachipachi  2022-12-09 ])
 (;B[dp]
 ;W[ep]
 ;B[eo]
-;W[dn]
+(;W[dn]
 ;B[fo]
 ;W[cr]
 ;B[br]
@@ -526,7 +526,15 @@ around = B6
 -> B8 not B4 (gets killed)  
 even 10b kata makes mistakes =) 
 
-Ex:  pachipachi zeekmund  2022-12-26 ]))
+Ex:  pachipachi zeekmund  2022-12-26 ])
+(;W[fo]
+;B[en]
+;W[gp]
+;B[dm]C[[override\]
+name = "3-4 pincer keima"
+around = D4
+
+babecool pachipachi 2023-02-20])))
 (;W[]
 ;B[fq]
 ;W[cq]
