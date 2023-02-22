@@ -1133,7 +1133,19 @@ around = E5
 
 Keep it simple, just take corner (XXX not best joseki)
 
-Ex: pachipachi ziker  2018-02-22])))
+Ex: pachipachi ziker  2018-02-22]))
+(;W[cq]
+;B[cp]
+;W[dq]
+;B[ep]
+;W[fr]C[[override\]
+name = "hoshi 3-3 slide"
+around = D3
+
+avoid E3, doesn't handle it very well.
+
+pachipachi winkgs  2023-02-22
+]))
 (;B[do]
 (;W[]C[[override\]
 name = "taka"
