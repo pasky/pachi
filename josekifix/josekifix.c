@@ -108,6 +108,8 @@ static bool want_external_engine_next = false;
 static bool want_external_engine_diag_next = false;
 static bool external_engine_overrides_enabled = true;
 
+#define external_engine_move -3
+
 static void
 external_joseki_engine_init(board_t *b)
 {
@@ -475,7 +477,7 @@ check_override_at_rot(struct board *b, override_t *override, int rot,
 			want_external_engine_next = (is_pass(next) || override->external_engine);
 			want_external_engine_diag_next = override->external_engine_diag;
 			if (is_pass(next))
-				return external_joseki_engine_genmove(b);
+				return external_engine_move;
 			return rotate_coord(next, rot);
 		}
 	}
@@ -517,7 +519,7 @@ check_override_last_rot(struct board *b, override_t *override, int rot, hash_t l
 		want_external_engine_next = (is_pass(next) || override->external_engine);
 		want_external_engine_diag_next = override->external_engine_diag;
 		if (is_pass(next))
-			return external_joseki_engine_genmove(b);
+			return external_engine_move;
 		return rotate_coord(next, rot);
 	}
 	return pass;
@@ -543,6 +545,7 @@ check_override_last(struct board *b, override_t *override, int *prot, hash_t las
 bool
 josekifix_sane_override(struct board *b, coord_t c, char *name, int n)
 {
+	assert(c != external_engine_move);
 	enum stone color = stone_other(last_move(b).color);
 	if (is_pass(c))  return true;
 	if (!board_is_valid_play_no_suicide(b, color, c)) {
@@ -580,6 +583,10 @@ check_override(struct board *b, override_t *override, int *prot, hash_t lasth)
 {
 	coord_t c = check_override_(b, override, prot, lasth);
 
+	/* Get external engine move now if needed */
+	if (c == external_engine_move)
+		c = external_joseki_engine_genmove(b);
+	
 	/* Check move is sane... */
 	int n = override_entry_number(joseki_overrides.overrides, override);
 	if (!josekifix_sane_override(b, c, override->name, n))
@@ -681,6 +688,10 @@ check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t la
 		for (int i = 1; overrides[i].name && !is_pass(c); i++)
 			c = check_override_rot_(b, &overrides[i], rot, lasth);
 		if (is_pass(c))  continue;
+
+		/* Passes all checks, get external engine move now if needed */
+		if (c == external_engine_move)
+			c = external_joseki_engine_genmove(b);
 		
 		/* Check move is sane... */
 		if (!josekifix_sane_override(b, c, overrides[0].name, -1))
