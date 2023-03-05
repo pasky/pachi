@@ -212,9 +212,26 @@ sub scan_tree
     }
 }
 
+sub pachi_version_check
+{
+    $sgf->gotoRoot;
+
+    if (!$sgf->property('C'))  {  return;  }
+    my $comment = $sgf->property('C')->[0];
+    my @lines = split("\n", $comment);
+    my $line = $lines[0];	# first line
+    if ($line =~ m/^pachi_version = ([0-9.]+)/) {
+	print "# Pachi $1\n";
+	print "\n";
+    }
+}
+
 print "# Generated from josekifix/$file\n";
 print "# Do not edit directly !\n";
 print "\n";
+
+pachi_version_check();
+
 print "boardsize $boardsize\n";
 
 $sgf->gotoRoot;

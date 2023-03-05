@@ -15,6 +15,7 @@
 #include "tactics/2lib.h"
 #include "tactics/ladder.h"
 #include "pachi.h"
+#include "version.h"
 #include "engines/external.h"
 
 coord_t joseki_override_(struct board *b, strbuf_t *log,
@@ -1037,6 +1038,14 @@ josekifix_load(void)
 	char buf[4096];
 	gtp_t gtp;  gtp_init(&gtp, b);
 	for (int lineno = 1; fgets(buf, 4096, f); lineno++) {
+		/* Pachi version check */
+		if (str_prefix("# Pachi ", buf)) {
+			double wanted  = atof(buf + strlen("# Pachi "));
+			if (saved_debug_level > 3) fprintf(stderr, "checking version >= %.2f\n", wanted);
+			if (PACHI_VERNUM < wanted)
+				die("%s: need pachi version >= %.2f\n", fname, wanted);
+		}
+		
 		gtp.quiet = true;  // XXX fixme, refactor
 		enum parse_code c = gtp_parse(&gtp, b, &e, ti, buf);  /* quiet */
 		/* TODO check gtp command didn't gtp_error() also, will still return P_OK on error ... */
