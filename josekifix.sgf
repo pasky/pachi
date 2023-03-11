@@ -108,9 +108,11 @@ next B1 B4 C5 F2 E1
 Ex: pachipachi Takeo  2022-10-09 16:21
 ]
 ;B[bs]
-;W[bp]
+;W[bp]C[[override\]
+]
 ;B[co]
-;W[fr]
+;W[fr]C[[override\]
+]
 ;B[es]
 ;W[ds]C[[override\]]
 (;B[cs]
@@ -123,21 +125,26 @@ name = "3-4 trick empty triangle bad"
 
 B screws up, B5 bad]))
 (;B[gr]
-;W[eq]
+;W[eq]C[[override\]
+name = "3-4 trick ladder jump"]
 ;B[dr]
 ;W[fr]C[[override\]
-name = "3-4 trick ladder jump"
 around = D3]))
 (;B[dr]
-;W[fq]
+;W[fq]C[[override\]
+]
 ;B[fr]
-;W[gr]
+;W[gr]C[[override\]
+]
 ;B[er]
-;W[bp]
+;W[bp]C[[override\]
+]
 ;B[co]
-;W[gq]
+;W[gq]C[[override\]
+]
 ;B[bs]
-;W[cs]
+;W[cs]C[[override\]
+]
 ;B[ds]
 ;W[bo]C[[override\]
 name = "3-4 trick ladder connect"
@@ -155,10 +162,11 @@ B5, don't F1 !]
 after B makes an eye with F1 don't descend,
 E5 much better])
 (;B[eq]
-;W[fp]
+;W[fp]C[[override\]
+name = "3-4 trick ladder extend"]
 ;B[fq]
 ;W[gq]C[[override\]
-name = "3-4 trick ladder extend"])))
+])))
 (;B[bp]
 ;W[]C[[override\]
 name = "3-4 not trick play"
