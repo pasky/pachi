@@ -1,6 +1,9 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Japanese]SZ[19]KM[0.00]
-PW[White]PB[Black]TR[jj]C[This file contains joseki fixes which are loaded at startup by Pachi.
+PW[White]PB[Black]TR[jj]C[pachi_version = 12.70
+
+
+This file contains joseki fixes which are loaded at startup by Pachi.
 
 It's used to generate josekifix.gtp which Pachi looks for in the directory where it
 runs. To regenerate it after making changes type:
