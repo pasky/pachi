@@ -1177,7 +1177,19 @@ around = E5
 
 Keep it simple, just take corner (XXX not best joseki)
 
-Ex: pachipachi ziker  2018-02-22]))
+Ex: pachipachi ziker  2018-02-22]
+;B[eq]
+;W[cp]
+;B[gq]
+;W[]
+;B[cl]
+;W[cm]C[[override\]
+name = "4-4 dbl kakari corner attack"
+around = A5
+
+Prevent b b5
+
+pachipachi huff  2023-03-15]))
 (;W[cq]
 ;B[cp]
 ;W[dq]
