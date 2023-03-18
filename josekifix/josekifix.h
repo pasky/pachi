@@ -84,6 +84,7 @@ coord_t joseki_override_external_engine_only(board_t *b);
 /* low level override matching */
 coord_t check_override(struct board *b, override_t *override, int *prot, hash_t lasth);
 coord_t check_override_last(struct board *b, override_t *override, int *prot, hash_t lasth);
+coord_t check_override_rot(struct board *b, override_t *override, int rot, hash_t lasth);
 coord_t check_overrides(struct board *b, override_t overrides[], hash_t lasth);
 coord_t check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t lasth, bool log);
 bool    josekifix_sane_override(struct board *b, coord_t c, char *name, int n);

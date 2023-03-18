@@ -586,8 +586,8 @@ josekifix_sane_override(struct board *b, coord_t c, char *name, int n)
 	return true;
 }
 
-static coord_t
-check_override_rot_(struct board *b, override_t *override, int rot, hash_t lasth)
+coord_t
+check_override_rot(struct board *b, override_t *override, int rot, hash_t lasth)
 {
 	enum stone color = last_move(b).color;
 	if (override->coord_other)  return check_override_at_rot(b, override, rot, override->coord_other, color);
@@ -711,11 +711,11 @@ check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t la
 {
 	/* Check which rotations match for first pattern, use same for the others. */
 	for (int rot = 0; rot < 8; rot++) {
-		coord_t c = check_override_rot_(b, &overrides[0], rot, lasth);
+		coord_t c = check_override_rot(b, &overrides[0], rot, lasth);
 		if (is_pass(c))  continue;
 
 		for (int i = 1; overrides[i].name && !is_pass(c); i++)
-			c = check_override_rot_(b, &overrides[i], rot, lasth);
+			c = check_override_rot(b, &overrides[i], rot, lasth);
 		if (is_pass(c))  continue;
 
 		/* Passes all checks, get external engine move now if needed */
