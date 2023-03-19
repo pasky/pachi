@@ -854,7 +854,7 @@ Ex: Silverwing pachipachi  2022-11-07 17:22]
 ;W[kp]
 ;B[lq]
 ;W[mo]
-;B[gp]
+(;B[gp]
 ;W[cq]C[[override\]
 name = "4-4 shoulder hit 3-3"
 around = F5
@@ -912,6 +912,37 @@ around = B5
 3-3 invasion after b cut w pincer stones
 regular variation : b blocks with B6
 but tries to resist w B5]))
+(;B[mq]
+;W[fm]
+;B[]
+;W[fk]
+;B[]
+;W[cl]
+;B[cm]
+;W[dl]
+;B[dr]
+;W[co]
+;B[do]
+;W[bm]
+;B[cn]C[[override\]
+name = "4-4 shoulder hit corner surround"
+around = A5
+
+Don't try something crazy with B6 and die !
+
+pachipachi nuborn  2023-03-19]
+;W[bn]
+;B[bo]
+;W[cq]
+;B[bq]C[[override\]
+around = A3
+]
+(;W[dq]
+;B[cr]C[[override\]
+])
+(;W[cr]
+;B[dq]C[[override\]
+])))
 (;B[io]
 ;W[]C[[override\]
 name = "4-4 shoulder hit crosscut"
