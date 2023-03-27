@@ -294,7 +294,7 @@ But certainly not H6, C3, C5
 
 Ex: pachipachi itmicter 2018-05-05 08:43:15  (H4)])))
 (;B[dn]
-;W[cq]
+(;W[cq]
 ;B[dq]
 ;W[dp]
 ;B[cr]
@@ -307,6 +307,18 @@ around = D5
 
 E3 now, black can't save his stones
 ])
+(;W[en]
+;B[em]
+;W[fn]
+;B[do]
+;W[gl]
+;B[eo]C[[override\]
+name = "high 3-4 center push keima"
+around = E5
+
+E7 not very good here
+
+huff pachipachi  2023-03-27]))
 (;B[hp]
 (;W[dm]
 (;B[eo]
