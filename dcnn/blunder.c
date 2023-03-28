@@ -45,8 +45,9 @@ dcnn_rescale_values(board_t *b, float result[])
 
 /**********************************************************************************/
 
-/* Prevent silly first-line connect blunders where group can be captured afterwards */
-static bool
+/* Prevent silly first-line connect blunders where group can be captured afterwards.
+ * See t-unit/first_line_blunder.t for examples */
+bool
 dcnn_first_line_connect_blunder(board_t *b, move_t *m)
 {
 	/* First-line connect blunder ? */

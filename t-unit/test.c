@@ -13,14 +13,16 @@
 #include "tactics/1lib.h"
 #include "tactics/2lib.h"
 #include "tactics/seki.h"
+#include "tactics/util.h"
 #include "util.h"
 #include "random.h"
 #include "playout.h"
 #include "timeinfo.h"
+#include "ownermap.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"
 #include "uct/internal.h"
-#include "ownermap.h"
+#include "dcnn/dcnn.h"
 
 
 /* Running tests over gtp ? */
@@ -439,6 +441,36 @@ test_useful_ladder(board_t *b, char *arg)
 }
 
 static bool
+test_first_line_blunder(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "first_line_blunder %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	
+	assert(board_at(b, c) == S_NONE);	/* Sanity checks */
+	assert(coord_edge_distance(c) == 0);
+	with_move_strict(b, c, color, {
+		group_t g = group_at(b, c);
+		assert(g);
+		assert(group_stone_count(b, g, 4) >= 3);
+		assert(board_group_info(b, g).libs == 3 ||
+		       board_group_info(b, g).libs == 2);
+	});
+	
+	move_t m = move(c, color);
+	int rres = dcnn_first_line_connect_blunder(b, &m);
+	
+	PRINT_RES();
+	return   (rres == eres);
+}
+
+static bool
 test_can_countercap(board_t *b, char *arg)
 {
 	next_arg(arg);
@@ -781,6 +813,7 @@ static t_unit_cmd commands[] = {
 	{ "wouldbe_ladder",         test_wouldbe_ladder,        },
 	{ "wouldbe_ladder_any",     test_wouldbe_ladder_any,    },
 	{ "useful_ladder",          test_useful_ladder,         },
+	{ "first_line_blunder",     test_first_line_blunder     },
 	{ "can_countercap",         test_can_countercap,        },
 	{ "atari",		    test_atari			},
 	{ "two_eyes",               test_two_eyes,              },
@@ -790,10 +823,10 @@ static t_unit_cmd commands[] = {
 	{ "pass_is_safe",           test_pass_is_safe,          },
 	{ "final_score",            test_final_score,           },
 #ifdef BOARD_TESTS
-	{ "board_undo_stress_test", board_undo_stress_test,     },
-	{ "board_regtest",          board_regression_test,      },
-	{ "moggy_regtest",          moggy_regression_test,      },
-	{ "spatial_regtest",        spatial_regression_test,    },
+	{ "board_undo_stress_test", board_undo_stress_test      },
+	{ "board_regtest",          board_regression_test       },
+	{ "moggy_regtest",          moggy_regression_test       },
+	{ "spatial_regtest",        spatial_regression_test     },
 #endif
 
 /* Aliases */
