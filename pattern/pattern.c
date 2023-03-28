@@ -921,15 +921,25 @@ pattern_match_double_snapback(board_t *b, move_t *m)
 	return -1;
 }
 
+static coord_t
+second_line_neighbor(board_t *b, coord_t coord)
+{
+	foreach_neighbor(b, coord, {
+		if (coord_edge_distance(c) == 1)
+			return c;
+	});
+	return pass;
+}
+
 /*  Punish silly first-line connects
- *   case 1)               case 2)
- *  # . . O .            . . X . . #
- *  # . . O .            . . . * . #
- *  # . . * X            O O . X . #
- *  # O)O O X            . . O X X)#
- *  # O X X X            . . O O X #
- *  # X . . .            . . . . O #
- *  # . . . .            . . . . . #     */
+ *   case 1)           case 2)          not case 1)
+ *  # . . O .        . . X . . #        # . . O .
+ *  # . . O .        . . . * . #        # . . . O
+ *  # . . * X        O O . X . #        # . . * O
+ *  # O)O O X        . . O X X)#        # . . O X
+ *  # O X X X        . . O O X #        # O)O O X
+ *  # X . . .        . . . . O #        # X X X X
+ *  # . . . .        . . . . . #        # . . . .   */
 int
 pattern_match_l1_blunder_punish(board_t *b, move_t *m)
 {
@@ -960,7 +970,12 @@ pattern_match_l1_blunder_punish(board_t *b, move_t *m)
 	bool found = false;
 	if (m->coord == libs[2]) {
 		with_move(b, libs[2], color, {		    // we play 3rd-line lib
-			with_move(b, libs[1], other_color, {    // opp plays 2nd-line lib
+			group_t g2 = group_at(b, libs[2]);
+			if (!g2 || board_group_info(b, g2).libs <= 2)
+				break;
+			coord_t below = second_line_neighbor(b, libs[2]);
+			assert(below != pass);
+			with_move(b, below, other_color, {    // opp plays below (may not be 2nd-line lib)
 				group_t g = group_at(b, last);
 				if (!g || board_group_info(b, g).libs != 2)  break;
 				if (can_capture_2lib_group(b, g, NULL, 0))
