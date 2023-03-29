@@ -1207,7 +1207,18 @@ around = E6
 deviation:
 b sacrificed at F2 instead of D2 (not joseki)
 
-Ex: ogs game 12545540]))
+Ex: ogs game 12545540])
+(;W[fo]
+;B[dn]
+;W[pp]
+;B[]
+;W[in]
+;B[mq]C[[override\]
+name = "4-4 2-spc high pincer cap"
+around = K3
+
+
+huff pachipachi 2023-03-29]))
 (;B[]
 ;W[cn]
 ;B[fp]
