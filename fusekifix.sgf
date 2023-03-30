@@ -52,7 +52,7 @@ around = Q4]
 ;W[pc]
 ;B[od]
 ;W[nb]
-;B[me]
+(;B[me]
 (;W[nq]
 (;B[lq]
 ;W[pn]C[[override\]
@@ -96,6 +96,15 @@ around = O18])
 ;B[kc]C[[override\]
 name = "sanrensei breakout fix"
 around = O18]))
+(;B[nd]
+;W[]C[[override\]
+name = "sanrensei corner tight seal"
+around = P17
+
+avoid N16 right away, not so good
+
+pachipachi half 2023-03-30
+]))
 (;B[pc]
 ;W[qd]
 ;B[pe]
