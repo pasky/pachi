@@ -162,6 +162,7 @@ Ex:  pachipachi shawn  online-go.com/game/12533278])
 ;W[ql]C[[override\]
 name = "kobayashi press"
 around = R5
+external_engine
 
 don't hane at Q8, disaster.
 
