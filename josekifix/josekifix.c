@@ -1024,7 +1024,7 @@ josekifix_load(void)
 	ti[S_BLACK] = ti_none;
 	ti[S_WHITE] = ti_none;
 	char buf[4096];
-	gtp_t gtp;  gtp_init(&gtp);
+	gtp_t gtp;  gtp_init(&gtp, b);
 	for (int lineno = 1; fgets(buf, 4096, f); lineno++) {
 		gtp.quiet = true;  // XXX fixme, refactor
 		enum parse_code c = gtp_parse(&gtp, b, &e, ti, buf);  /* quiet */

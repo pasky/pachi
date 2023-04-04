@@ -272,7 +272,7 @@ joseki_load(int bsize)
 	ti[S_BLACK] = ti_none;
 	ti[S_WHITE] = ti_none;
 	char buf[4096];
-	gtp_t gtp;  gtp_init(&gtp);
+	gtp_t gtp;  gtp_init(&gtp, b);
 	for (int lineno = 1; fgets(buf, 4096, f); lineno++) {
 		if (bsize != 19 && convert_coords(bsize, buf) < 0)
 			skip_sequence(buf, 4096, f, &lineno);

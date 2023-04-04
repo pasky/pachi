@@ -350,7 +350,6 @@ int main(int argc, char *argv[])
 
 	gtp_t main_gtp;	
 	gtp_t *gtp = &main_gtp;
-	gtp_init(gtp);
 	
 	enum engine_id engine_id = E_UCT;
 	time_info_t ti_default = ti_none;
@@ -537,6 +536,7 @@ int main(int argc, char *argv[])
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", rules2str(b->rules));
 	}
 	gtp_internal_init(gtp);
+	gtp_init(gtp, b);
 
 	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_default;

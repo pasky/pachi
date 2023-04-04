@@ -266,7 +266,7 @@ board_regression_test(board_t *b, char *arg)
 	ti[S_BLACK] = ti_none;
 	ti[S_WHITE] = ti_none;
 
-	gtp_t gtp;  gtp_init(&gtp);
+	gtp_t gtp;  gtp_init(&gtp, b);
 	char buf[4096];
 	engine_t e;  memset(&e, 0, sizeof(e));  /* dummy engine */
 	while (fgets(buf, 4096, stdin)) {

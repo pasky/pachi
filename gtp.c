@@ -35,9 +35,10 @@
  * context is appropriate. */
 
 void
-gtp_init(gtp_t *gtp)
+gtp_init(gtp_t *gtp, board_t *b)
 {
 	memset(gtp, 0, sizeof(*gtp));
+	b->move_history = &gtp->history;
 }
 
 
@@ -176,8 +177,9 @@ gtp_is_valid(engine_t *e, const char *cmd)
 static void
 gtp_add_move(gtp_t *gtp, move_t *m)
 {
-	assert(gtp->moves < (int)(sizeof(gtp->move) / sizeof(gtp->move[0])));
-	gtp->move[gtp->moves++] = *m;
+	move_history_t *h = &gtp->history;
+	assert(h->moves < (int)(sizeof(h->move) / sizeof(h->move[0])));
+	h->move[h->moves++] = *m;
 }
 
 static int
@@ -292,7 +294,7 @@ cmd_clear_board(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		board_print(b, stderr);
 
 	/* Reset move history. */
-	gtp->moves = 0;
+	gtp->history.moves = 0;
 
 	return P_ENGINE_RESET;
 }
@@ -879,10 +881,11 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		gtp_error(gtp, "cannot undo");
 		return P_OK;
 	}
-	
-	if (!gtp->moves) {  gtp_error(gtp, "no moves to undo");  return P_OK;  }
+
+	move_history_t *h = &gtp->history;
+	if (!h->moves) {  gtp_error(gtp, "no moves to undo");  return P_OK;  }
 	if (b->moves == b->handicap) {  gtp_error(gtp, "can't undo handicap");  return P_OK;  }
-	gtp->moves--;
+	h->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
 	move_t m = move(pass, board_to_play(b));  bool print;
@@ -909,11 +912,12 @@ undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	board_clear(b);
 	b->handicap = handicap;
 
-	for (int i = 0; i < gtp->moves; i++) {
+	move_history_t *h = &gtp->history;
+	for (int i = 0; i < h->moves; i++) {
 		bool print;
 		if (e->notify_play)
-			e->notify_play(e, b, &gtp->move[i], "", &print);
-		int r = board_play(b, &gtp->move[i]);
+			e->notify_play(e, b, &h->move[i], "", &print);
+		int r = board_play(b, &h->move[i]);
 		assert(r >= 0);
 	}
 }

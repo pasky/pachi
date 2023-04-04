@@ -78,6 +78,7 @@ board_copy(board_t *b2, board_t *b1)
 	// XXX: Special semantics.
 	b2->fbook = NULL;
 	b2->ps = NULL;
+	b2->move_history = NULL;
 }
 
 void
@@ -216,6 +217,7 @@ board_clear(board_t *board)
 	floating_t komi = board->komi;
 	char *fbookfile = board->fbookfile;
 	enum rules rules = board->rules;
+	move_history_t *history = board->move_history;
 
 	board_done(board);
 
@@ -232,6 +234,7 @@ board_clear(board_t *board)
 	board->komi = komi;
 	board->fbookfile = fbookfile;
 	board->rules = rules;
+	board->move_history = history;
 
 	if (board->fbookfile)
 		board->fbook = fbook_init(board->fbookfile, board);

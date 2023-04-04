@@ -65,6 +65,11 @@ typedef struct {
 	char colors[S_MAX];
 } neighbors_t;
 
+typedef struct {
+	move_t  move[1500];
+	int     moves;
+} move_history_t;
+
 
 /* Quick hack to help ensure tactics code stays within quick board limitations.
  * Ideally we'd have two different types for boards and quick_boards. The idea
@@ -174,6 +179,8 @@ FB_ONLY(bool playout_board);
 
 /*************************************************************************************************************/
 /* Not maintained during playouts: */
+
+FB_ONLY(move_history_t *move_history);		  /* main gtp board move history (optional) */
 	
 FB_ONLY(hash_t hash);                             /* Hash of current board position. */
 FB_ONLY(hash_t hash_history)[BOARD_HASH_HISTORY]; /* Last hashes encountered, for superko check. */
