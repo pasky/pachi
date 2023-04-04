@@ -705,7 +705,7 @@ cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	}
 
 	move_queue_t q;
-	engine_dead_groups(e, gtp, b, &q);
+	engine_dead_groups(e, b, &q);
 	char *score_str = board_official_score_str(b, &q);
 
 	if (DEBUGL(1))  fprintf(stderr, "official score: %s\n", score_str);
@@ -762,7 +762,7 @@ static int
 cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
 	move_queue_t q;
-	engine_dead_groups(e, gtp, b, &q);
+	engine_dead_groups(e, b, &q);
 
 	for (unsigned int i = 0; i < q.moves; i++) {
 		foreach_in_group(b, q.move[i]) {
@@ -783,7 +783,7 @@ static int
 cmd_final_status_list_alive(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
 	move_queue_t q;
-	engine_dead_groups(e, gtp, b, &q);
+	engine_dead_groups(e, b, &q);
 	int printed = 0;
 	
 	foreach_point(b) { // foreach_group, effectively

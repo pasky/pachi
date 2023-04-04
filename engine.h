@@ -131,7 +131,7 @@ void engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 		       coord_t *best_c, float *best_r, int nbest);
 struct ownermap* engine_ownermap(engine_t *e, board_t *b);
 /* Ask engine for dead stones */
-void engine_dead_groups(engine_t *e, gtp_t *gtp, board_t *b, move_queue_t *mq);
+void engine_dead_groups(engine_t *e, board_t *b, move_queue_t *mq);
 
 /* Set/change engine option(s). May reset engine if needed.
  * New options are saved, so persist across engine resets.

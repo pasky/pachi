@@ -533,8 +533,7 @@ test_final_score(board_t *b, char *arg)
 
 	engine_t *e = new_engine(E_UCT, "", b);
 	move_queue_t dead;
-	gtp_t gtp;  gtp_init(&gtp);
-	engine_dead_groups(e, &gtp, b, &dead);
+	engine_dead_groups(e, b, &dead);
 		
 	float rres = board_official_score(b, &dead);
 
