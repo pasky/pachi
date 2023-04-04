@@ -1123,8 +1123,18 @@ joseki_override_(struct board *b, strbuf_t *log,
 	}
 	
 	/**********************************************************************************/
-	/* Choose inital fuseki */
+	/* Fuseki overrides */
 
+	/* Influence-only fusekis countermeasures */
+	if (playing_against_influence_fuseki(b)) {
+		c = external_joseki_engine_genmove(b);
+		if (!b->influence_fuseki_by_quadrant[last_quadrant(b)]++)
+			josekifix_log("joseki override: %s (influence fuseki)\n", coord2sstr(c));
+		want_external_engine_next = true;
+		return c;
+	}
+
+	/* Choose inital fuseki */
 	c = josekifix_initial_fuseki(b, log, lasth);
 	if (!is_pass(c))  return c;
 	

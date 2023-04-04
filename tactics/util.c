@@ -168,3 +168,88 @@ int diag_quadrant(int quad)
 }
 
 
+/***********************************************************************************************/
+/* fuseki */
+
+/* Number of high fuseki stones for color @color */
+int
+fuseki_high_stones(board_t *b, enum stone color)
+{
+	int high_own = 0;
+	
+	foreach_point(b) {
+		if (board_at(b, c) == color && coord_edge_distance(c) >= 3)
+			high_own++;
+	} foreach_point_end;
+	
+	return high_own;
+}
+
+int
+fuseki_high_stones_by_quadrant(board_t *b, enum stone color, int quad)
+{
+	int high_own = 0;
+	
+	foreach_point(b) {
+		if (board_at(b, c) == color &&
+		    coord_quadrant(c) == quad &&
+		    coord_edge_distance(c) >= 3)
+			high_own++;
+	} foreach_point_end;
+	
+	return high_own;
+}
+
+/* Return sum of edge distances for first @n moves of color @color.
+ * Take captured stones' moves into account:
+ * use move history, not current board stones */
+static int
+fuseki_stone_heights_sum(board_t *b, enum stone color, int n)	
+{
+	move_history_t *hist = b->move_history;
+	int heights = 0;
+
+	for (int i = 0; i < n; i++) {
+		move_t *m = &hist->move[i];
+		if (m->color == color && !is_pass(m->coord))
+			heights += coord_edge_distance(m->coord);
+	}
+	
+	return heights;
+}
+
+/* Stone height difference between opponent stones and ours.
+ * Always compare equal number of stones (ignore last move if necessary).
+ * Only makes sense for even games. */
+int
+fuseki_stone_heights_diff(board_t *b, enum stone color)
+{
+	int n = b->move_history->moves & ~0x1;  /* ignore last move if necessary */
+	int heights_own   = fuseki_stone_heights_sum(b, color, n);
+	int heights_other = fuseki_stone_heights_sum(b, stone_other(color), n);
+	return (heights_other - heights_own);
+}
+
+bool
+playing_against_influence_fuseki(board_t *b)
+{
+	enum stone color = board_to_play(b);
+	
+	if (b->handicap || b->moves < 10 || b->moves > 65)
+		return false;
+
+#if 0
+	/* Simple but lots of false positive ... */
+	int high_own   = fuseki_high_stones(b, color);
+	int high_other = fuseki_high_stones(b, stone_other(color));
+	return (high_other >= 10 && high_other >= 2 * high_own - 2);
+#endif
+
+	int diff = fuseki_stone_heights_diff(b, color);
+	int quadrants = 0;
+	for (int q = 0; q < 4; q++)
+		if (fuseki_high_stones_by_quadrant(b, stone_other(color), q) >= 4)
+			quadrants++;
+	
+	return (diff >= 10 && quadrants >= 3);
+}

@@ -186,8 +186,9 @@ FB_ONLY(hash_t hash);                             /* Hash of current board posit
 FB_ONLY(hash_t hash_history)[BOARD_HASH_HISTORY]; /* Last hashes encountered, for superko check. */
 	int    hash_history_next;                 /* (circular buffer) */
 
-#ifdef JOSEKIFIX
-FB_ONLY(int external_joseki_engine_moves_left_by_quadrant)[4]; /* XXX move elsewhere (uct) ? */
+#ifdef JOSEKIFIX						/* XXX move elsewhere ? */
+FB_ONLY(int external_joseki_engine_moves_left_by_quadrant)[4];  /* Moves left for external joseki engine mode */
+FB_ONLY(int influence_fuseki_by_quadrant)[4];	  /* Keep track where influence fuseki countermeasures have been enabled */
 #endif
 
 /*************************************************************************************************************/

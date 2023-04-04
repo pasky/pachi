@@ -49,6 +49,12 @@ int board_estimated_moves_left(board_t *b);
  * to play if we don't have more precise information from gtp time_left: */
 #define MIN_MOVES_LEFT 30
 
+/* Number of high fuseki stones for color @color */
+int fuseki_high_stones(board_t *b, enum stone color);
+int fuseki_high_stones_by_quadrant(board_t *b, enum stone color, int q);
+int fuseki_stone_heights_diff(board_t *b, enum stone color);
+bool playing_against_influence_fuseki(board_t *b);
+
 /* Tactical evaluation of move @coord by color @color, given
  * simulation end position @b. I.e., a move is tactically good
  * if the resulting group stays on board until the game end.
