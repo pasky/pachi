@@ -119,37 +119,51 @@ board_estimated_moves_left(board_t *b)
 }
 
 
-/********************************************************************************************************/
+/***********************************************************************************************/
 /* board quadrants */
 
-/* returns coord board quadrant:
- *   [ 0 1 ]   or -1 if on center lines
- *   [ 3 2 ]   */
+/* Coord board quadrant:
+      +---------------------------+
+   13 | 0 0 0 0 0 0 0 1 1 1 1 1 1 |
+   12 | 0 0 0 0 0 0 0 1 1 1 1 1 1 |
+   11 | 0 0 0 0 0 0 0 1 1 1 1 1 1 |
+   10 | 0 0 0 0 0 0 0 1 1 1 1 1 1 |
+    9 | 0 0 0 0 0 0 0 1 1 1 1 1 1 |
+    8 | 0 0 0 0 0 0 0 1 1 1 1 1 1 |
+    7 | 3 3 3 3 3 3 0 1 1 1 1 1 1 |
+    6 | 3 3 3 3 3 3 2 2 2 2 2 2 2 |
+    5 | 3 3 3 3 3 3 2 2 2 2 2 2 2 |
+    4 | 3 3 3 3 3 3 2 2 2 2 2 2 2 |
+    3 | 3 3 3 3 3 3 2 2 2 2 2 2 2 |
+    2 | 3 3 3 3 3 3 2 2 2 2 2 2 2 |
+    1 | 3 3 3 3 3 3 2 2 2 2 2 2 2 |
+      +---------------------------+   
+        A B C D E F G H J K L M N      */
 int
 coord_quadrant(coord_t c)
 {
-	assert(!is_pass(c));
+	if (is_pass(c))
+		return 0;
 	
-	int x = coord_x(c);
-	int y = coord_y(c);
-	int mid = (the_board_rsize() + 1) / 2;
-	if (y > mid) {
-		if (x < mid)  return 0;
-		if (x > mid)  return 1;	
-	}
-	if (y < mid) {
-		if (x < mid)  return 3;
-		if (x > mid)  return 2;
-	}
+	/* Multiply everything by 2 so works for even-sized boards too */
+	int x = coord_x(c) * 2;			// x
+	int y = coord_y(c) * 2;			// y
+	int mid = the_board_rsize() + 1;	// (board_size + 1) / 2
 	
-	return -1;	/* center lines */
+	if (y > mid)  return (x <= mid ? 0 : 1);
+	if (y < mid)  return (x >= mid ? 2 : 3);
+
+	if (x < mid)  return 3;
+	if (x > mid)  return 1;
+	return 0;	/* Tengen */
 }
 
-/* return opposite quadrant (diagonal) */
+/* Return opposite quadrant (diagonal) */
 int diag_quadrant(int quad)
 {
-	static int vals[] = { -1, 2, 3, 0, 1 };
-	int *diag = &vals[1];
+	assert(quad >= 0 && quad <= 3);
+	
+	static int diag[] = { 2, 3, 0, 1 };
 	return diag[quad];
 }
 

@@ -1,7 +1,7 @@
 #ifndef PACHI_TACTICS_UTIL_H
 #define PACHI_TACTICS_UTIL_H
 
-/* Advanced tactical checks non-essential to the board implementation. */
+/* Tactical checks and utilities non-essential to the board implementation. */
 
 #include "board.h"
 #include "debug.h"

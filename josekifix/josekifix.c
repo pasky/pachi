@@ -211,8 +211,8 @@ external_joseki_engine_forward_cmd(gtp_t *gtp, char *command)
 static void
 set_external_engine_mode_on(board_t *b, int quad)
 {
-	if (quad != -1)
-		b->external_joseki_engine_moves_left_by_quadrant[quad] = 15;
+	assert(quad >= 0 && quad <= 3);
+	b->external_joseki_engine_moves_left_by_quadrant[quad] = 15;
 }
 
 /* If last move near middle, turn on adjacent quadrant as well */
@@ -1206,9 +1206,8 @@ joseki_override_before_genmove(board_t *b, enum stone color)
 	if (!josekifix_enabled)  return pass;
 	
 	coord_t c = pass;
-	coord_t prev = last_move(b).coord;
-	int quad = (is_pass(prev) ? -1 : coord_quadrant(prev));
-	bool external_joseki_engine_mode_on = (quad != -1 && b->external_joseki_engine_moves_left_by_quadrant[quad]);
+	int quad = last_quadrant(b);
+	bool external_joseki_engine_mode_on = b->external_joseki_engine_moves_left_by_quadrant[quad];
 	
 	if (external_joseki_engine_mode_on) {
 		b->external_joseki_engine_moves_left_by_quadrant[quad]--;
