@@ -1207,7 +1207,7 @@ joseki_override_before_genmove(board_t *b, enum stone color)
 	
 	coord_t c = pass;
 	coord_t prev = last_move(b).coord;
-	int quad = (is_pass(prev) ? -1 : board_quadrant(b, prev));	
+	int quad = (is_pass(prev) ? -1 : coord_quadrant(prev));
 	bool external_joseki_engine_mode_on = (quad != -1 && b->external_joseki_engine_moves_left_by_quadrant[quad]);
 	
 	if (external_joseki_engine_mode_on) {

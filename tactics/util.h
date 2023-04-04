@@ -18,6 +18,15 @@ static int coord_gridcular_distance(coord_t c1, coord_t c2);
 /* Regular distance */
 float coord_distance(coord_t c1, coord_t c2);
 
+/* returns coord board quadrant:
+ *   [ 0 1 ]   or -1 if on center lines
+ *   [ 3 2 ]   */
+int coord_quadrant(coord_t c);
+/* last move quadrant */
+#define last_quadrant(b)		( coord_quadrant(last_move(b).coord) )
+/* return opposite quadrant (diagonal) */
+int diag_quadrant(int quad);
+
 /* Cona_t "common fate graph" from given coordinate; that is, a weighted
  * graph of intersections where edges between all neighbors have weight 1,
  * but edges between neighbors of same color have weight 0. Thus, this is

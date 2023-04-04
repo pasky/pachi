@@ -117,3 +117,40 @@ board_estimated_moves_left(board_t *b)
 	int moves_left = (b->flen - total_points*EXPECTED_FINAL_EMPTY_PERCENT/100)/2;
 	return moves_left > MIN_MOVES_LEFT ? moves_left : MIN_MOVES_LEFT;
 }
+
+
+/********************************************************************************************************/
+/* board quadrants */
+
+/* returns coord board quadrant:
+ *   [ 0 1 ]   or -1 if on center lines
+ *   [ 3 2 ]   */
+int
+coord_quadrant(coord_t c)
+{
+	assert(!is_pass(c));
+	
+	int x = coord_x(c);
+	int y = coord_y(c);
+	int mid = (the_board_rsize() + 1) / 2;
+	if (y > mid) {
+		if (x < mid)  return 0;
+		if (x > mid)  return 1;	
+	}
+	if (y < mid) {
+		if (x < mid)  return 3;
+		if (x > mid)  return 2;
+	}
+	
+	return -1;	/* center lines */
+}
+
+/* return opposite quadrant (diagonal) */
+int diag_quadrant(int quad)
+{
+	static int vals[] = { -1, 2, 3, 0, 1 };
+	int *diag = &vals[1];
+	return diag[quad];
+}
+
+

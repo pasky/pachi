@@ -494,14 +494,5 @@ group_stone_count(board_t *b, group_t group, int max)
 	return n;
 }
 
-/* returns coord board quadrant:
- *   [ 0 1 ]   or -1 if on center lines
- *   [ 3 2 ]   */
-int board_quadrant(board_t *b, coord_t c);
-/* last move quadrant */
-#define last_quadrant(b)		( board_quadrant((b), last_move(b).coord) )
-/* return opposite quadrant (diagonal) */
-int diag_quadrant(int quad);
-
 
 #endif
