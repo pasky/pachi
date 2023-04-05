@@ -1545,4 +1545,9 @@ So something like:
 [override\]
 name "hoshi shoulder hit"
 around = G2
+])
+(;B[cn]
+;W[]C[[log\]
+name = "empty corner keima"
+around = D4
 ]))
