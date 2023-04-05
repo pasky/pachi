@@ -236,8 +236,10 @@ board_clear(board_t *board)
 	board->rules = rules;
 	board->move_history = history;
 
-	if (board->fbookfile)
+	if (board->fbookfile)			/* Clear/init fbook */
 		board->fbook = fbook_init(board->fbookfile, board);
+	if (board->move_history)		/* Clear move history */
+		board->move_history->moves = 0;
 }
 
 static void
@@ -784,11 +786,16 @@ board_commit_move(board_t *b, move_t *m)
 		if (darkforest_dcnn && !is_pass(m->coord))
 			b->moveno[m->coord] = b->moves;
 #endif
+		if (b->move_history) {
+			move_history_t *h = b->move_history;
+			assert(h->moves < (int)(sizeof(h->move) / sizeof(h->move[0])));
+			h->move[h->moves++] = *m;
+		}
 	}
 
 	b->last_move_i = last_move_nexti(b);
 	last_move(b) = *m;
-
+	
 	b->moves++;
 }
 
