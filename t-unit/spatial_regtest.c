@@ -10,8 +10,8 @@
 #include "timeinfo.h"
 #include "engine.h"
 #include "gtp.h"
-#include "patternsp.h"
-#include "patternprob.h"
+#include "pattern/spatial.h"
+#include "pattern/prob.h"
 
 static void
 fake_ownermap(board_t *b, ownermap_t *ownermap)
