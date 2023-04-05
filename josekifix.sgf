@@ -1064,7 +1064,7 @@ live, keep sente.
 (;W[dr]
 ;B[hq]
 ;W[cq]
-;B[eq]
+(;B[eq]
 ;W[er]
 ;B[fp]
 (;W[gq]C[[override\]
@@ -1082,6 +1082,16 @@ pachipachi huff  2023-03-15
 (;W[]C[[override\]
 name = "4-4 keima jump slide pincer fix"
 around = E3
+]))
+(;B[fp]
+;W[bo]C[[override\]
+name = "4-4 keima jump slide pincer trick"
+around = E3
+external_engine
+
+Don't hane, awful
+
+pachipachi pilaf  2023-04-05
 ])))
 (;B[fp]
 ;W[gp]
