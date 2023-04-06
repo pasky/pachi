@@ -493,8 +493,8 @@ Ex: pachipachi globax  2018-03-18 (11:00)]))
 ;W[dp]
 ;B[dq]
 ;W[co]
-;B[cq]C[[override\]
-name = "avalanche"
+(;B[cq]C[[override\]
+name = "avalanche (avoid)"
 around = "last"
 
 
@@ -502,6 +502,20 @@ Avoid for now ...
 
 Ex: doolam pachipachi 2018-02-15
 ])
+(;B[fp]
+;W[]C[[override\]
+name = "small avalanche"
+around = C3
+
+much potential for abuse
+Ex: mi1 pachipachi 2023-04-06])
+(;B[fq]
+;W[]C[[override\]
+name = "large avalanche"
+around = C3
+
+actually can still avoid at this stage
+]))
 (;B[ip]
 ;W[dn]
 ;B[eo]
