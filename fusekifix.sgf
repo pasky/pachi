@@ -12,40 +12,12 @@ To get latest version of this file, run:          (joseki_fixes branch on github
 Actual fixes are moves with an [override\] section at the top of the move comment.
 See josekifix.sgf for details.
 ]
-(;B[pq]
-;W[]
-(;B[qk]
-;W[pp]
-;B[qp]C[[override\]
-name = "anti chinese attach"
-around = P5
-
-
-R4 best, then P3 hane, Q5 atari + defend to keep it simple]
-;W[oq]
-;B[po]C[[override\]
-
-]
-;W[op]
-;B[qq]C[[override\]
-])
-(;B[pk]
-;W[pp]
-;B[qp]C[[override\]
-name = "anti chinese attach"
-around = "last"]
-;W[oq]
-;B[po]C[[override\]
-around = Q4]
-;W[op]
-;B[qq]C[[override\]
-]))
-(;B[pd]
+;B[pd]
 (;W[]
 (;B[pp]
 ;W[]
 ;B[pj]
-(;W[nc]
+;W[nc]
 ;B[lc]
 (;W[qc]
 (;B[qd]
@@ -136,9 +108,35 @@ around = O14
 simple, don't get in trouble right away.
 
 Ex: arkgo pachipachi  2022-11-04]))
-(;W[nq]))
 (;B[pq]
-;W[dp]
+(;W[]
+(;B[qk]
+;W[pp]
+;B[qp]C[[override\]
+name = "anti chinese attach"
+around = P5
+
+
+R4 best, then P3 hane, Q5 atari + defend to keep it simple]
+;W[oq]
+;B[po]C[[override\]
+
+]
+;W[op]
+;B[qq]C[[override\]
+])
+(;B[pk]
+;W[pp]
+;B[qp]C[[override\]
+name = "anti chinese attach"
+around = "last"]
+;W[oq]
+;B[po]C[[override\]
+around = Q4]
+;W[op]
+;B[qq]C[[override\]
+]))
+(;W[dp]
 ;B[fq]
 ;W[cn]
 (;B[jp]
@@ -250,7 +248,7 @@ pachipachi kgsfan2021  2023-02-10])
 ;B[kr]C[
 
 tricked.
-because of K3 b can escape...]))))
+because of K3 b can escape...])))))
 (;W[ec]
 ;B[cd]
 ;W[df]
@@ -267,4 +265,4 @@ around2 = E15
 Try pincer, L16 too good for w
 
 YZ1509 special opening.]
-;W[])))
+;W[]))
