@@ -111,7 +111,25 @@ Ex: arkgo pachipachi  2022-11-04]))
 (;B[pq]
 (;W[]
 (;B[qk]
-;W[pp]
+(;W[po]
+;B[np]
+;W[qq]
+;B[qr]
+;W[qp]
+;B[rr]
+;W[qm]
+;B[nn]
+;W[om]
+;B[ok]
+;W[nm]
+;B[kp]C[[override\]
+name = "chinese high approach profit"
+around = P4
+
+Don't hane at N7
+
+kakae pachipachi 2023-04-06])
+(;W[pp]
 ;B[qp]C[[override\]
 name = "anti chinese attach"
 around = P5
@@ -124,7 +142,7 @@ R4 best, then P3 hane, Q5 atari + defend to keep it simple]
 ]
 ;W[op]
 ;B[qq]C[[override\]
-])
+]))
 (;B[pk]
 ;W[pp]
 ;B[qp]C[[override\]
