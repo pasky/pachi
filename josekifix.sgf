@@ -485,7 +485,16 @@ mainline is G3 here.
 D3 possible but complicated ...
 
 Ex: TOSHI1011 pachipachi 2018-02-19
-]))
+])
+(;B[cn]
+;W[]C[[override\]
+name = "magic sword kata"
+around = D4
+
+katago magic sword variation :
+he prefers C6 to classic E5 variation
+
+pachipachi coq 2023-04-07]))
 (;W[co]
 ;B[bo]
 ;W[cq]
