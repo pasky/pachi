@@ -1038,7 +1038,23 @@ Ex:  mss2 pachipachi       2022-12-10 18:31]))
 (;W[cq]
 ;B[dq]
 ;W[cp]
-;B[co]
+(;B[do]
+;W[dr]
+;B[er]
+;W[cr]
+;B[eq]
+;W[cn]
+;B[]
+;W[fr]
+;B[]C[[override\]
+name = "4-4 corner + outside hustling"
+around = D3
+
+can easily screw up
+
+Ex: pachipachi sylpheed7  2023-04-08
+])
+(;B[co]
 ;W[cr]C[[override\]
 name = "3-3 block overplay"
 around = C4
@@ -1053,7 +1069,7 @@ b can't block at C5 because of F3]
 ])
 (;B[bo]
 ;W[ep]C[[override\]
-])))
+]))))
 (;B[dn]
 (;W[cq]
 ;B[dq]
