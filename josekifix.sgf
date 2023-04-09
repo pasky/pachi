@@ -1355,6 +1355,28 @@ external_engine_diag
 actually, always play C6, even if w doesn't have ladder ...
 
 Ex: pachipachi mommy123  2022-11-19 16:35
+]
+;B[cj]C[variation where b already has a stone at C10]
+;W[]
+;B[ep]
+;W[dr]
+;B[cr]
+;W[fr]
+;B[bo]
+;W[bn]C[[override\]
+name = "deadly taka winkgs"
+around = D3
+]
+;B[bp]
+;W[dn]C[[override\]
+around = C5
+
+with C10 stone atari better than E7
+
+Ex: pachipachi winkgs 2023-04-09]
+;B[eo]
+;W[gq]C[[override\]
+around = D3
 ])
 (;W[cr]
 ;B[br]
