@@ -1019,7 +1019,7 @@ around = E4
 
 Ex: YZ1509 pachipachi  2018-02-19 ])
 (;W[dn]
-;B[fp]
+(;B[fp]
 ;W[cp]
 ;B[]C[[override\]
 name = "4-4 pincer high approach tsuke"
@@ -1030,6 +1030,36 @@ E3 only move !
 otherwise he plays C3, disaster. 
 
 Ex: rsun pachipachi jan 10 2021])
+(;B[en]
+(;W[]C[[override\]
+name = "4-4 pincer high approach cap"
+around = D3
+
+gets tricky fast])
+(;W[em]
+;B[eo]
+;W[cq]
+;B[dq]
+;W[cp]
+;B[co]
+;W[do]C[[override\]
+name = "4-4 pincer high approach cap"
+around = D3
+
+]
+;B[bo]
+;W[cn]C[[override\]
+
+]
+;B[cr]
+;W[ep]
+;B[eq]
+;W[fp]
+;B[go]
+;W[dr]C[[override\]
+
+
+pachipachi EnjoyGo 2023-04-10])))
 (;W[dq]
 ;B[cq]
 (;W[cp]
