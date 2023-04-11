@@ -1277,17 +1277,6 @@ around = B3
 
 pachipachi madalinG 2023-02-16])
 (;B[ip]
-(;W[cn]
-;B[fp]
-;W[gp]
-;B[fo]
-;W[cq]C[[override\]
-name = "4-4 high pincer dbl kakari"
-around = E5
-
-
-Just take corner.
-E3 joseki too but gets ugly.])
 (;W[]
 ;B[dj]
 ;W[cq]
@@ -1329,13 +1318,14 @@ huff pachipachi 2023-03-29]))
 ;B[fo]
 ;W[cq]C[[override\]
 name = "4-4 dbl kakari"
-around = E5
+around = C3
 
 
 Keep it simple, just take corner (XXX not best joseki)
+match low so works with pincer stones too
 
 Ex: pachipachi ziker  2018-02-22]
-;B[eq]
+(;B[eq]
 ;W[cp]
 ;B[gq]
 ;W[]
@@ -1346,7 +1336,13 @@ around = A5
 
 Prevent b b5
 
-pachipachi huff  2023-03-15]))
+pachipachi huff  2023-03-15])
+(;B[gq]
+;W[]C[[override\]
+name = "4-4 dbl kakari crosscut"
+
+
+coq pachipachi  2023-04-11])))
 (;W[cq]
 ;B[cp]
 ;W[dq]
