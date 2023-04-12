@@ -1514,7 +1514,7 @@ Ex: pachipachi coax  2022-11-04  14:14 ])
 (;B[dq]
 ;W[dr]
 ;B[eq]
-;W[er]
+(;W[er]
 ;B[gq]
 ;W[fq]C[[override\]
 name = "moku 3-3 press jump"
@@ -1524,6 +1524,22 @@ around = D3
 C4 natural but not so good actually.
 
 pachipachi coax 2023-02-17])
+(;W[cp]
+;B[do]
+;W[er]
+;B[gq]
+;W[dp]
+;B[ep]
+;W[eo]
+;B[bo]
+;W[br]C[[override\]
+name = "moku 3-3 unusual var defend"
+around = C3
+
+don't die !
+
+coax pachipachi 2023-04-12
+]))
 (;B[eq]
 ;W[dp]C[[log\]
 name = "moku 3-3 pincer slice-through"
