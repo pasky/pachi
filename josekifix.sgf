@@ -625,14 +625,38 @@ around = D4
 babecool pachipachi 2023-02-20])))
 (;W[]
 ;B[fq]
-;W[cq]
+(;W[cq]
 ;B[dp]
 ;W[bp]C[[override\]
-name = "large keima to 3-3"
+name = "3-4 large keima to 3-3"
 around = C2
 
 
 same as hoshi 3-3 invasion in reverse order])
+(;W[dp]
+;B[dq]
+;W[co]
+(;B[]C[[log\]
+name = "3-4 large keima lean"
+around = D3
+])
+(;B[ep]
+;W[do]
+;B[bp]
+;W[cq]
+;B[bq]
+;W[eo]
+;B[fo]
+;W[fn]
+;B[go]
+;W[gn]
+;B[ho]C[[override\]
+name = "3-4 large keima lean fix"
+around = E4
+
+don't hane
+
+Song17 pachipachi 2023-04-15])))
 (;W[fp]
 (;B[]C[[log\]
 name = "3-4 two-spaces high approach"
