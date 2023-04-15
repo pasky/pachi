@@ -554,7 +554,7 @@ actually can still avoid at this stage
 ;B[eo]
 ;W[do]
 ;B[dp]
-;W[]C[[override\]
+(;W[]C[[override\]
 name = "large 3-4 pincer"
 around = "last"
 
@@ -563,7 +563,25 @@ Weird large 3-4 pincer
 
 C15, not D14 
 
-Ex: hasu003 pachipachi 2018-02-09]))
+Ex: hasu003 pachipachi 2018-02-09])
+(;W[eq]
+;B[en]
+;W[bo]
+;B[bp]
+;W[bm]
+;B[dq]
+;W[er]
+;B[dr]
+;W[em]
+;B[fm]
+;W[el]C[[override\]
+name = "large 3-4 pincer"
+around = D4
+
+
+can't hane, disaster
+
+pachipachi coq 2023-04-15])))
 (;W[eq]
 ;B[gq]
 ;W[do]
