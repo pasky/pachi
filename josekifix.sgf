@@ -1368,7 +1368,7 @@ match low so works with pincer stones too
 
 Ex: pachipachi ziker  2018-02-22]
 (;B[eq]
-;W[cp]
+(;W[cp]
 ;B[gq]
 ;W[]
 ;B[cl]
@@ -1379,6 +1379,16 @@ around = A5
 Prevent b b5
 
 pachipachi huff  2023-03-15])
+(;W[gq]
+;B[cp]
+;W[er]C[[override\]
+name = "4-4 dbl kakari keep side"
+
+
+B4 hane not good idea
+
+pachipachi Versailles 2023-04-17
+]))
 (;B[gq]
 ;W[]C[[override\]
 name = "4-4 dbl kakari crosscut"
