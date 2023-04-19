@@ -129,14 +129,20 @@ dcnn_group_2lib_blunder(board_t *b, move_t *m)
  * Return true:                 clobber move
  * Return true + set redirect:  redirect dcnn prior and clobber move */
 static bool
-dcnn_blunder(board_t *b, move_t *m, float r, move_t *redirect)
+dcnn_blunder(board_t *b, move_t *m, float r, move_t *redirect, char **name)
 {
 	if (r < 0.01)  return false;
 	if (board_playing_ko_threat(b))  return false;
-	
+
+	*name = "first line connect blunder";
 	if (dcnn_first_line_connect_blunder(b, m))      return true;
+	
+	*name = "4-4 reduce 3-3 blunder";
 	if (dcnn_44_reduce_33_blunder(b, m, redirect))  return true;
-	if (dcnn_group_2lib_blunder(b, m))		return true;
+
+	*name = "group 2lib blunder";
+	if (dcnn_group_2lib_blunder(b, m))	        return true;
+	
 	return false;
 }
 
@@ -152,21 +158,23 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], bool debugl)
 		int k = coord2dcnn_idx(c);
 		move_t m = move(c, color);
 		move_t redirect = move(pass, color);
+		char *name = "";
 		
-		if (dcnn_blunder(b, &m, result[k], &redirect)) {
-			if (redirect.coord != pass) {		/* redirect + clobber */
-				int k2 = coord2dcnn_idx(redirect.coord);
-				result[k2] += result[k];
-				if (debugl)  fprintf(stderr, "dcnn blunder: replaced %-3s -> %-3s  (%i%%)\n",
-						     coord2sstr(c), coord2sstr(redirect.coord), (int)(result[k] * 100));
-			}
-			else					/* clobber */
-				if (debugl)  fprintf(stderr, "dcnn blunder: fixed %-3s  %i%% -> %i%%\n",
-						     coord2sstr(c), (int)(result[k] * 100), (int)(blunder_rating * 100));
-			
-			result[k] = blunder_rating;
-			changes++;
+		if (!dcnn_blunder(b, &m, result[k], &redirect, &name))
+			continue;
+		
+		if (redirect.coord != pass) {		/* redirect + clobber */
+			int k2 = coord2dcnn_idx(redirect.coord);
+			result[k2] += result[k];
+			if (debugl)  fprintf(stderr, "dcnn blunder: replaced %-3s -> %-3s  (%i%%)  (%s)\n",
+					     coord2sstr(c), coord2sstr(redirect.coord), (int)(result[k] * 100), name);
 		}
+		else					/* clobber */
+			if (debugl)  fprintf(stderr, "dcnn blunder: fixed %-3s  %i%% -> %i%%  (%s)\n",
+					     coord2sstr(c), (int)(result[k] * 100), (int)(blunder_rating * 100), name);
+		
+		result[k] = blunder_rating;
+		changes++;
 	} foreach_free_point_end;
 
 	if (changes)
