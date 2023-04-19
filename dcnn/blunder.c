@@ -12,6 +12,23 @@
 #include "board_undo.h"
 #include "josekifix/josekifix.h"
 
+
+/* Rescale dcnn values so that probabilities add up to 1.0 again */
+static void
+dcnn_rescale_values(board_t *b, float result[])
+{
+	float total = 0;
+	foreach_free_point(b) {
+		int k = coord2dcnn_idx(c);
+		total += result[k];
+	} foreach_free_point_end;
+
+	foreach_free_point(b) {
+		int k = coord2dcnn_idx(c);
+		result[k] /= total;
+	} foreach_free_point_end;
+}
+
 /* Prevent silly first-line connect blunders where group can be captured afterwards */
 static bool
 dcnn_first_line_connect_blunder(board_t *b, move_t *m)
@@ -99,10 +116,11 @@ dcnn_blunder(board_t *b, move_t *m, float r, move_t *redirect)
 
 /* Fix dcnn blunders by altering dcnn priors before they get used.
  * (last resort, for moves which are a bad fit for a joseki override) */
-void
+int
 dcnn_fix_blunders(board_t *b, enum stone color, float result[], bool debugl)
 {
-	float blunder_rating = 0.005;  /* 0.5% */
+	float blunder_rating = 0.001;  /* 0.1% */
+	int changes = 0;
 
 	foreach_free_point(b) {
 		int k = coord2dcnn_idx(c);
@@ -121,6 +139,19 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], bool debugl)
 						     coord2sstr(c), (int)(result[k] * 100), (int)(blunder_rating * 100));
 			
 			result[k] = blunder_rating;
+			changes++;
 		}
 	} foreach_free_point_end;
+
+	if (changes)
+		dcnn_rescale_values(b, result);
+		
+	if (changes && debugl) {
+		coord_t best_c[DCNN_BEST_N];
+		float   best_r[DCNN_BEST_N];
+		get_dcnn_best_moves(b, result, best_c, best_r, DCNN_BEST_N);
+		print_dcnn_best_moves(b, best_c, best_r, DCNN_BEST_N);
+	}
+	
+	return changes;
 }

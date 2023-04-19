@@ -129,7 +129,6 @@ dcnn_evaluate(board_t *b, enum stone color, float result[], bool debugl)
 {
 	double time_start = time_now();
 	dcnn->eval(b, color, result);
-	dcnn_fix_blunders(b, color, result, debugl);
 	
 	if (debugl) {
 		fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
@@ -139,6 +138,8 @@ dcnn_evaluate(board_t *b, enum stone color, float result[], bool debugl)
 		get_dcnn_best_moves(b, result, best_c, best_r, DCNN_BEST_N);
 		print_dcnn_best_moves(b, best_c, best_r, DCNN_BEST_N);
 	}
+
+	dcnn_fix_blunders(b, color, result, debugl);
 }
 
 
