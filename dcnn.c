@@ -164,8 +164,10 @@ dcnn_blunder(board_t *b, move_t *m, float r)
     return false;
 }
 
+/* Fix dcnn blunders by altering dcnn priors before they get used.
+ * (last resort, for moves which are a bad fit for a joseki override) */
 static void
-fix_dcnn_blunders(board_t *b, enum stone color, float result[], bool debugl)
+dcnn_fix_blunders(board_t *b, enum stone color, float result[], bool debugl)
 {
 	float blunder_rating = 0.005;  /* 0.5% */
 	
@@ -181,19 +183,20 @@ fix_dcnn_blunders(board_t *b, enum stone color, float result[], bool debugl)
 }
 
 void
-dcnn_evaluate_quiet(board_t *b, enum stone color, float result[])
+dcnn_evaluate(board_t *b, enum stone color, float result[], bool debugl)
 {
+	double time_start = time_now();
 	dcnn->eval(b, color, result);
-	fix_dcnn_blunders(b, color, result, false);
-}
-
-void
-dcnn_evaluate(board_t *b, enum stone color, float result[])
-{
-	double time_start = time_now();	
-	dcnn->eval(b, color, result);
-	if (DEBUGL(2))  fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
-	fix_dcnn_blunders(b, color, result, DEBUGL(2));
+	dcnn_fix_blunders(b, color, result, debugl);
+	
+	if (debugl) {
+		fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
+		
+		coord_t best_c[DCNN_BEST_N];
+		float   best_r[DCNN_BEST_N];
+		get_dcnn_best_moves(b, result, best_c, best_r, DCNN_BEST_N);
+		print_dcnn_best_moves(b, best_c, best_r, DCNN_BEST_N);
+	}
 }
 
 

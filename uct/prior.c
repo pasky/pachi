@@ -104,17 +104,12 @@ uct_prior_dcnn(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 #ifdef DCNN
 	float   r[19 * 19];
-	coord_t best_c[DCNN_BEST_N];
-	float   best_r[DCNN_BEST_N];
-	if (!node->parent)  dcnn_evaluate(map->b, map->to_play, r);
-	else                dcnn_evaluate_quiet(map->b, map->to_play, r);
-	get_dcnn_best_moves(map->b, r, best_c, best_r, DCNN_BEST_N);
+	bool    debugl = (UDEBUGL(2) && !node->parent);
 	
-	if (UDEBUGL(2) && !node->parent)
-		print_dcnn_best_moves(map->b, best_c, best_r, DCNN_BEST_N);
-
+	dcnn_evaluate(map->b, map->to_play, r, debugl);
+	
 	for (unsigned int i = 0; i < map->consider->moves; i++) {
-		coord_t c = map->consider->move[i];		
+		coord_t c = map->consider->move[i];
 		int k = coord2dcnn_idx(c);
 		float val = r[k];
 		if (isnan(val) || val < 0.001)

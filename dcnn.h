@@ -15,8 +15,7 @@ int dcnn_default_board_size(void);
 void require_dcnn(void);
 void disable_dcnn(void);
 
-void dcnn_evaluate(board_t *b, enum stone color, float result[]);
-void dcnn_evaluate_quiet(board_t *b, enum stone color, float result[]);
+void dcnn_evaluate(board_t *b, enum stone color, float result[], bool debugl);
 bool using_dcnn(board_t *b);
 void dcnn_init(board_t *b);
 void get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest);
