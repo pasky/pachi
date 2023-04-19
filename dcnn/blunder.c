@@ -100,6 +100,31 @@ dcnn_44_reduce_33_blunder(board_t *b, move_t *m, move_t *redirect)
 	return false;
 }
 
+/*    . . X X X X O O O		Prevent blunders making big 2 libs groups that can be captured.
+ *    . X . . . O O X O
+ *    X X O O O O X X O		XXX false positives
+ *    X . X X X O)X O .             - will also block nakade moves that are useful to kill a group.
+ *    . X . . . * X O .               fortunately mcts is good at finding them, looks ok if missing from dcnn output.
+ *    . . . . . . X O .             - other cases ?
+ *    . X . . X X O O .		
+ *    . . . X O O . O .		
+ *    . . . X O . O . .		Ex:  t-unit/dcnn_blunder.t  t-regress/atari_ladder_big4  */
+static bool
+dcnn_group_2lib_blunder(board_t *b, move_t *m)
+{
+	enum stone color = m->color;
+	
+	with_move(b, m->coord, color, {
+		group_t g = group_at(b, m->coord);
+		if (!g)  break;
+		if (board_group_info(b, g).libs != 2)  break;	/* 2 libs */
+		if (group_stone_count(b, g, 4) < 3)    break;	/* creates own group with at least 3 stones */
+		if (can_capture_2lib_group(b, g, NULL, 0))	/* can be captured now */
+			with_move_return(true);
+	});
+	return false;
+}
+
 /* Check if move m is a dcnn blunder.
  * Return true:                 clobber move
  * Return true + set redirect:  redirect dcnn prior and clobber move */
@@ -111,6 +136,7 @@ dcnn_blunder(board_t *b, move_t *m, float r, move_t *redirect)
 	
 	if (dcnn_first_line_connect_blunder(b, m))      return true;
 	if (dcnn_44_reduce_33_blunder(b, m, redirect))  return true;
+	if (dcnn_group_2lib_blunder(b, m))		return true;
 	return false;
 }
 
