@@ -458,23 +458,22 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 	bool ladder_big = false, ladder_safe = false, ladder_cut = false, ladder_last = false;
 
 	/* Check snapback on stones we don't own already. */
-	if (immediate_liberty_count(b, m->coord) == 1 &&
-	    !neighbor_count_at(b, m->coord, m->color)) {
+	if (immediate_liberty_count(b, m->coord) == 1 && !neighbor_count_at(b, m->coord, color)) {
 		with_move(b, m->coord, m->color, {
-				group_t g = group_at(b, m->coord);
-				group_t atari_neighbor;
-				if (g && capturing_group_is_snapback(b, g) &&
-				    (atari_neighbor = board_get_atari_neighbor(b, g, other_color)) &&
-				    ownermap_color(ownermap, atari_neighbor, 0.67) != m->color)  // XXX check other stones in group ?)
-					snapback = true;
+			group_t g = group_at(b, m->coord);  /* throwin stone */
+			group_t atari_neighbor;
+			if (g && capturing_group_is_snapback(b, g) &&
+			    (atari_neighbor = board_get_atari_neighbor(b, g, other_color)) &&
+			    ownermap_color(ownermap, atari_neighbor, 0.67) != color)
+				snapback = true;
 		});
 	}
 	if (snapback)  return PF_ATARI_SNAPBACK;
 
 	bool selfatari = is_selfatari(b, m->color, m->coord);
-	if (!board_playing_ko_threat(b) && selfatari)  return -1;
-	// XXX throw-in to capture a group with an eye isn't counted as atari with this ...
-
+	if (selfatari && !board_is_valid_play_no_suicide(b, color, m->coord))
+		return -1;	/* Check suicides (for outside callers) */
+	
 	foreach_neighbor(b, m->coord, {
 		if (board_at(b, c) != other_color)           continue;
 		group_t g = group_at(b, c);
@@ -483,7 +482,8 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 		/* Can atari! */
 
 		/* Double atari ? */
-		if (g1 && g != g1 && !can_countercap_common_stone(b, m->coord, color, g, g1))
+		if (!selfatari &&
+		    g1 && g != g1 && !can_countercap_common_stone(b, m->coord, color, g, g1))
 			double_atari = true;
 		g1 = g;
 		
@@ -505,23 +505,22 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 	if (!g1)  return -1;
 
 	/* Can capture other group after atari ? */
-	if (g3libs && !ladder_atari &&
+	if (g3libs && !selfatari && !ladder_atari &&
 	    ownermap_color(ownermap, g3libs, 0.67) != color &&
 	    cutting_stones_and_can_capture_other_after_atari(b, m, g1, g3libs))
 		atari_and_cap = true;
-
-	if (!selfatari) {
-		if (ladder_big)		return PF_ATARI_LADDER_BIG;
-		if (ladder_last)        return PF_ATARI_LADDER_LAST;
-		if (atari_and_cap)	return PF_ATARI_AND_CAP;
-		if (double_atari)	return PF_ATARI_DOUBLE;
-		if (ladder_safe)	return PF_ATARI_LADDER_SAFE;
-		if (ladder_cut)		return PF_ATARI_LADDER_CUT;
-		if (ladder_atari)	return PF_ATARI_LADDER;
-	}
-		
-	if (!is_pass(b->ko.coord))	return PF_ATARI_KO;
-	else				return PF_ATARI_SOME;
+	
+	if (ladder_big)		return PF_ATARI_LADDER_BIG;
+	if (ladder_last)	return PF_ATARI_LADDER_LAST;
+	if (atari_and_cap)	return PF_ATARI_AND_CAP;
+	if (double_atari)	return PF_ATARI_DOUBLE;
+	if (ladder_safe)	return PF_ATARI_LADDER_SAFE;
+	if (ladder_cut)		return PF_ATARI_LADDER_CUT;
+	if (ladder_atari)	return PF_ATARI_LADDER;
+	
+	if (board_playing_ko_threat(b))	return PF_ATARI_KO;
+	if (selfatari)			return -1;
+	return PF_ATARI_SOME;
 }
 
 static int
