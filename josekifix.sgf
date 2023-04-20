@@ -1230,7 +1230,22 @@ pachipachi pilaf  2023-04-05
 ])))
 (;B[fp]
 ;W[gp]
-;B[go]
+(;B[fo]
+;W[eq]
+;B[dq]
+;W[go]
+;B[gn]
+;W[hn]
+;B[hm]
+;W[]C[[override\]
+name = "4-4 keima tsuke push double hane madness"
+around = E4
+
+have to cut at E4 now, crazy fight
+
+pachipachi fidibus 2023-04-20
+])
+(;B[go]
 ;W[ep]
 ;B[fo]
 ;W[]C[[override\]
@@ -1240,7 +1255,7 @@ around = E3
 
 E5 mistake according to kogo.  
 
-Ex: HHOO pachipachi  https://online-go.com/game/12390598 ])
+Ex: HHOO pachipachi  https://online-go.com/game/12390598 ]))
 (;B[cn]
 (;W[dr]
 ;B[gq]
