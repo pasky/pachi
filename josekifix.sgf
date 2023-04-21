@@ -952,7 +952,7 @@ Also matches B keima kind (C6 instead of D6)
 Ex: Silverwing pachipachi  2022-11-07 17:22]
 ;W[jp]
 ;B[jq]
-;W[kp]
+(;W[kp]
 ;B[lq]
 ;W[mo]
 (;B[gp]
@@ -1044,6 +1044,27 @@ around = A3
 (;W[cr]
 ;B[dq]C[[override\]
 ])))
+(;W[kq]
+;B[kp]C[[override\]
+name = "4-4 shoulder hit hustling"
+around = G3
+external_engine
+
+
+ladyboy pachipachi 2023-04-21]
+;W[lq]
+;B[go]C[[override\]
+]
+;W[in]
+;B[hn]C[[override\]
+
+]
+;W[io]
+;B[gp]C[[override\]
+]
+;W[gn]
+;B[fp]C[[override\]
+]))
 (;B[io]
 ;W[]C[[override\]
 name = "4-4 shoulder hit crosscut"
