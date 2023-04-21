@@ -1384,7 +1384,7 @@ match low so works with pincer stones too
 Ex: pachipachi ziker  2018-02-22]
 (;B[eq]
 (;W[cp]
-;B[gq]
+(;B[gq]
 ;W[]
 ;B[cl]
 ;W[cm]C[[override\]
@@ -1394,6 +1394,16 @@ around = A5
 Prevent b b5
 
 pachipachi huff  2023-03-15])
+(;B[dr]
+;W[cr]
+;B[cl]
+;W[cm]C[[override\]
+name = "4-4 dbl kakari corner attack"
+around = A5
+
+Prevent b b5
+
+]))
 (;W[gq]
 ;B[cp]
 ;W[er]C[[override\]
