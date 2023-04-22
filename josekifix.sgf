@@ -214,7 +214,7 @@ globax pachipachi 2023-04-10]))
 ;W[dp]
 ;B[eq]
 ;W[fq]
-;B[fp]
+(;B[fp]
 ;W[fr]
 ;B[cr]
 ;W[bq]
@@ -222,7 +222,7 @@ globax pachipachi 2023-04-10]))
 ;W[co]
 ;B[br]
 ;W[]C[[override\]
-name = "3-4 crosscut switch sides"
+name = "3-4 pincer crosscut switch sides"
 around = E3
 
 normal joseki is B G2 instead of B2.
@@ -233,6 +233,47 @@ Ex: pachipaci DRYDRY  2022-10-07
 
 
 ])
+(;B[cr]
+(;W[fp]C[[override\]
+name = "3-4 pincer crosscut trick play (ladder)"
+around = D3
+ladder_own = H3
+ladder_own_setup_own = F4 G2
+ladder_own_setup_other = F2 E2
+
+C2 trick play according to kogo, but katago preferred variation.
+so probably becoming normal joseki now.
+
+F4 to punish if b has ladder (kogo)
+however katago likes B3 best (falling into the trap), surprising ...
+let's go with kogo for now, see how it goes.
+
+Zurg pachipachi 2023-04-22]
+(;B[bq]
+;W[gr]C[[override\]
+])
+(;B[fr]
+;W[gr]C[[override\]
+external_engine
+external_engine_diag]
+;B[er]
+;W[co]
+;B[bq]
+;W[hq]))
+(;W[fr]C[[override\]
+name = "3-4 pincer crosscut trick play (no ladder)"
+around = D3
+
+
+]
+(;B[bq]
+;W[gp]C[[override\]
+])
+(;B[fp]
+;W[bq]C[[override\]
+name = "3-4 pincer crosscut trick play (revert)"
+
+reverts to usual joseki]))))
 (;B[dp]
 ;W[dq]
 ;B[eq]
