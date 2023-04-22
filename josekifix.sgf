@@ -1013,7 +1013,13 @@ around = B5
 3-3 invasion after b cut w pincer stones
 regular variation : b blocks with B6
 but tries to resist w B5]))
-(;B[mq]
+(;B[mq]C[[override\]
+name = "4-4 shoulder hit defense"
+around = J3
+
+just be safe ...
+
+Zurg pachipachi 2023-04-22]
 ;W[fm]
 ;B[]
 ;W[fk]
