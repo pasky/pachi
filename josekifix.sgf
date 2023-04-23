@@ -1504,7 +1504,14 @@ pachipachi winkgs  2023-02-22
 ;W[gr]
 ;B[hp]
 ;W[gq]C[[override\]
-]))
+])
+(;W[ep]
+;B[]C[[override\]
+name = "4-4 attach"
+around = C3
+
+
+magoa pachipachi 2023-04-23]))
 (;B[do]
 (;W[]C[[override\]
 name = "taka"
