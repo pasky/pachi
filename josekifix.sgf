@@ -988,8 +988,6 @@ Also match B keima kind (C6 instead of D6)
 Ex: Silverwing pachipachi  2022-11-07 17:22  ]
 ;W[ho]
 (;B[iq]C[[override\]
-name = "4-4 shoulder hit"
-around = G2
 
 
 always J3 for now ...
@@ -999,7 +997,7 @@ Also matches B keima kind (C6 instead of D6)
 
 Ex: Silverwing pachipachi  2022-11-07 17:22]
 ;W[jp]
-;B[jq]
+;B[jq]C[[override\]]
 (;W[kp]
 ;B[lq]
 ;W[mo]
