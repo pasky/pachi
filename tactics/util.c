@@ -159,12 +159,26 @@ coord_quadrant(coord_t c)
 }
 
 /* Return opposite quadrant (diagonal) */
-int diag_quadrant(int quad)
+int
+diag_quadrant(int quad)
 {
 	assert(quad >= 0 && quad <= 3);
 	
 	static int diag[] = { 2, 3, 0, 1 };
 	return diag[quad];
+}
+
+int
+rotate_quadrant(int q, int rot)
+{
+	static int rotx[4] = { 1, 0, 3, 2 };
+	static int roty[4] = { 3, 2, 1, 0 };
+	static int rotr[4] = { 3, 0, 1, 2 };
+
+	if (rot & 1)  q = roty[q];
+	if (rot & 2)  q = rotx[q];
+	if (rot & 4)  q = rotr[q];
+	return q;
 }
 
 

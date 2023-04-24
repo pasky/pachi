@@ -26,6 +26,12 @@ int coord_quadrant(coord_t c);
 #define last_quadrant(b)		( coord_quadrant(last_move(b).coord) )
 /* return opposite quadrant (diagonal) */
 int diag_quadrant(int quad);
+/* Rotate quadrant according to rot: [0-7] for 8 board symmetries.
+ * Bad idea to use this most of the time as:
+ *     rotate_quadrant(coord_quadrant(c), rot) == coord_quadrant(rotate_coord(c, rot))
+ * doesn't hold for center lines. Instead use:
+ *     coord_quadrant(rotate_coord(c, rot))  */
+int rotate_quadrant(int q, int rot);
 
 /* Cona_t "common fate graph" from given coordinate; that is, a weighted
  * graph of intersections where edges between all neighbors have weight 1,

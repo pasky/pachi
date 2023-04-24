@@ -105,8 +105,7 @@ char     *external_joseki_engine_cmd = "katago gtp";
 engine_t *external_joseki_engine = NULL;
 int       external_joseki_engine_genmoved = 0;
 
-static bool want_external_engine_next = false;
-static bool want_external_engine_diag_next = false;
+static bool wanted_external_engine_mode[4] = { 0, };	/* for each quadrant, whether to enable external engine mode */
 static bool external_engine_overrides_enabled = true;
 
 #define external_engine_move -3
@@ -212,15 +211,15 @@ external_joseki_engine_forward_cmd(gtp_t *gtp, char *command)
 
 /* <external joseki engine mode> on in this quadrant for next 15 moves */
 static void
-set_external_engine_mode_on(board_t *b, int quad)
+set_external_engine_mode_quad(board_t *b, int quadrant)
 {
-	assert(quad >= 0 && quad <= 3);
-	b->external_joseki_engine_moves_left_by_quadrant[quad] = 15;
+	assert(quadrant >= 0 && quadrant <= 3);
+	b->external_joseki_engine_moves_left_by_quadrant[quadrant] = 15;
 }
 
 /* If last move near middle, turn on adjacent quadrant as well */
 static void
-check_set_external_engine_mode_adjacent(board_t *b)
+check_set_external_engine_mode_adjacent_quad(board_t *b)
 {	
 	int x = coord_x(last_move(b).coord);
 	int y = coord_y(last_move(b).coord);
@@ -230,23 +229,23 @@ check_set_external_engine_mode_adjacent(board_t *b)
 	
 	if (adx < ady && adx <= 2) {
 	    if (y > mid) {
-		set_external_engine_mode_on(b, 0);
-		set_external_engine_mode_on(b, 1);
+		set_external_engine_mode_quad(b, 0);
+		set_external_engine_mode_quad(b, 1);
 	    }
 	    if (y < mid) {
-		set_external_engine_mode_on(b, 2);
-		set_external_engine_mode_on(b, 3);
+		set_external_engine_mode_quad(b, 2);
+		set_external_engine_mode_quad(b, 3);
 	    }	    
 	}
 	
 	if (ady < adx && ady <= 2) {
 	    if (x < mid) {
-		set_external_engine_mode_on(b, 0);
-		set_external_engine_mode_on(b, 3);
+		set_external_engine_mode_quad(b, 0);
+		set_external_engine_mode_quad(b, 3);
 	    }	    
 	    if (x > mid) {
-		set_external_engine_mode_on(b, 1);
-		set_external_engine_mode_on(b, 2);
+		set_external_engine_mode_quad(b, 1);
+		set_external_engine_mode_quad(b, 2);
 	    }
 	}
 }
@@ -257,9 +256,32 @@ static void
 set_external_engine_mode_all_quadrants(board_t *b)
 {
 	for (int quad = 0; quad < 4; quad++)
-		set_external_engine_mode_on(b, quad);
+		set_external_engine_mode_quad(b, quad);
 }
 #endif
+
+static void
+set_wanted_external_engine_mode(board_t *b, override_t *override, coord_t next, int rot)
+{
+	for (int q = 0; q < 4; q++)
+		if (override->external_engine[q])
+			wanted_external_engine_mode[rotate_quadrant(q, rot)] = true;
+	
+	if (is_pass(next))
+		wanted_external_engine_mode[last_quadrant(b)] = true;
+}
+
+static void
+commit_wanted_external_engine_mode(board_t *b)
+{
+	for (int q = 0; q < 4; q++)
+		/* enable external joseki engine mode in this quadrant for next moves ? */
+		if (wanted_external_engine_mode[q]) {
+			set_external_engine_mode_quad(b, q);
+			if (q == last_quadrant(b))
+				check_set_external_engine_mode_adjacent_quad(b);
+		}
+}
 
 
 /*****************************************************************************/
@@ -475,8 +497,7 @@ check_override_at_rot(struct board *b, override_t *override, int rot,
 		hash_t h = outer_spatial_hash_from_board(b, rcoord, last_move(b).color); /* hash with last move color */
 		if (h == override->hashes[rot] &&
 		    check_override_ladder(b, override, rot)) {
-			want_external_engine_next = (is_pass(next) || override->external_engine);
-			want_external_engine_diag_next = override->external_engine_diag;
+			set_wanted_external_engine_mode(b, override, next, rot);
 			if (is_pass(next))
 				return external_engine_move;
 			return rotate_coord(next, rot);
@@ -517,8 +538,7 @@ check_override_last_rot(struct board *b, override_t *override, int rot, hash_t l
 	
 	if (lasth == override->hashes[rot] &&
 	    check_override_ladder(b, override, rot)) {
-		want_external_engine_next = (is_pass(next) || override->external_engine);
-		want_external_engine_diag_next = override->external_engine_diag;
+		set_wanted_external_engine_mode(b, override, next, rot);
 		if (is_pass(next))
 			return external_engine_move;
 		return rotate_coord(next, rot);
@@ -742,8 +762,10 @@ joseki_override_print(override_t *override, char *section)
 	if (override->ladder_check.coord)  {  print_ladder_check("",  &override->ladder_check);  }
 	if (override->ladder_check2.coord) {  print_ladder_check("2", &override->ladder_check2);  }
 
-	if (override->external_engine)       fprintf(stderr, "  external_engine\n");
-	if (override->external_engine_diag)  fprintf(stderr, "  external_engine_diag\n");
+	fprintf(stderr, "  external_engine = [ ");
+	for (int q = 0; q < 4; q++)
+		fprintf(stderr, "%i ", override->external_engine[q]);
+	fprintf(stderr, "]\n");
 
 	fprintf(stderr, "  hashes = { ");
 	for (int i = 0; i < 8; i++) {
@@ -797,8 +819,7 @@ override_cmp(override_t *o1, override_t *o2)
 		 same_str(o1->coord_empty, o2->coord_empty) &&
 		 !ladder_check_cmp(&o1->ladder_check, &o2->ladder_check) &&
 		 !ladder_check_cmp(&o1->ladder_check2, &o2->ladder_check2) &&
-		 o1->external_engine == o2->external_engine &&
-		 o1->external_engine_diag == o2->external_engine_diag);
+		 !memcmp(o1->external_engine, o2->external_engine, sizeof(o1->external_engine)));
 }
 
 
@@ -1092,9 +1113,9 @@ joseki_override_(struct board *b, strbuf_t *log,
 {
 	/* Shouldn't reach here if module disabled */
 	assert(josekifix_enabled);
-	
-	want_external_engine_next = false;
-	want_external_engine_diag_next = false;
+
+	for (int q = 0; q < 4; q++)
+		wanted_external_engine_mode[q] = false;
 	external_engine_overrides_enabled = external_engine_enabled;
 	log_buf = log;
     
@@ -1130,7 +1151,7 @@ joseki_override_(struct board *b, strbuf_t *log,
 		c = external_joseki_engine_genmove(b);
 		if (!b->influence_fuseki_by_quadrant[last_quadrant(b)]++)
 			josekifix_log("joseki override: %s (influence fuseki)\n", coord2sstr(c));
-		want_external_engine_next = true;
+		wanted_external_engine_mode[last_quadrant(b)] = true;
 		return c;
 	}
 
@@ -1161,13 +1182,7 @@ joseki_override_external_engine_only(board_t *b)
 		/* display log, we have a match */
 		if (DEBUGL(2))  fprintf(stderr, "%s", log->str);
 		
-		if (want_external_engine_next) {		/* <external joseki engine mode> on in this quadrant for next moves */
-			set_external_engine_mode_on(b, last_quadrant(b));
-			check_set_external_engine_mode_adjacent(b);
-		}
-		if (want_external_engine_diag_next)
-			set_external_engine_mode_on(b, diag_quadrant(last_quadrant(b)));
-					
+		commit_wanted_external_engine_mode(b);
 		return c;
 	}
 	return pass;
@@ -1185,13 +1200,7 @@ joseki_override_no_external_engine(struct board *b, struct ownermap *prev_ownerm
 	coord_t c = joseki_override_(b, log, prev_ownermap, ownermap, false);
 	if (DEBUGL(2))  fprintf(stderr, "%s", log->str);	/* display log */
 
-	if (want_external_engine_next) {		/* <external joseki engine mode> on in this quadrant for 15 moves */
-	    set_external_engine_mode_on(b, last_quadrant(b));
-	    check_set_external_engine_mode_adjacent(b);
-	}
-	if (want_external_engine_diag_next)
-	    set_external_engine_mode_on(b, diag_quadrant(last_quadrant(b)));
-	
+	commit_wanted_external_engine_mode(b);
 	return c;
 }
 
@@ -1206,13 +1215,7 @@ joseki_override(struct board *b)
 	coord_t c = joseki_override_(b, log, NULL, NULL, true);
 	if (DEBUGL(2))  fprintf(stderr, "%s", log->str);	/* display log */
 
-	if (want_external_engine_next) {		/* <external joseki engine mode> on in this quadrant for 15 moves */
-	    set_external_engine_mode_on(b, last_quadrant(b));
-	    check_set_external_engine_mode_adjacent(b);
-	}
-	if (want_external_engine_diag_next)
-	    set_external_engine_mode_on(b, diag_quadrant(last_quadrant(b)));
-	
+	commit_wanted_external_engine_mode(b);
 	return c;
 }
 

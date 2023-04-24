@@ -7,6 +7,7 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
+#include "tactics/util.h"
 #include "pattern/spatial.h"
 #include "josekifix/josekifixload.h"
 #include "josekifix/josekifix.h"
@@ -81,6 +82,30 @@ parse_ladder_setup(char **override_ladder_setup, char *value)
 			s = spc + 1;
 		}
 	}	
+}
+
+static void
+parse_external_engine(board_t *b, override_t *override, char *value)
+{
+	/* no value = current quadrant */
+	if (!value || !value[0]) {
+		override->external_engine[last_quadrant(b)] = true;
+		return;
+	}
+
+	char *s = value;
+	for (int i = 0; s && *s; i++) {
+		int q = atoi(s);
+		if (!isdigit(*s) || q < 0 || q > 3)
+			die("josekifix: \"%s\": bad external_engine value '%s', quadrants must be 0, 1, 2 or 3\n",
+			    (override->name ? override->name : ""), value);
+		
+		override->external_engine[q] = true;
+
+		char *spc = s = strchr(s, ' ');
+		if (spc)
+			s = spc + 1;
+	}
 }
 
 /* Set override around coord */
@@ -241,10 +266,10 @@ add_override(board_t *b, move_t *m, char *move_str)
 		/************************************************************************************/		
 		
 		else if (!strcmp(name, "external_engine"))
-			override.external_engine = true;
+			parse_external_engine(b, &override, value);
 		
 		else if (!strcmp(name, "external_engine_diag"))
-			override.external_engine_diag = true;
+			override.external_engine[diag_quadrant(last_quadrant(b))] = true;
 		
 		else {
 			board_print(b, stderr);

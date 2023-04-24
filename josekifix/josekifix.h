@@ -55,10 +55,9 @@ typedef struct {
 	ladder_check_t ladder_check;	/* ladder checks */
 	ladder_check_t ladder_check2;
 
-	bool  external_engine;	       /* turn external joseki engine mode in this quadrant for following moves.
-					* (ie in case of unknown deviation, external engine takes over).
-					* setting "pass" as next move also turns this on. */
-        bool  external_engine_diag;    /* same for opposite quadrant (diagonal) */
+        bool external_engine[4];   /* turn on external joseki engine mode for following moves ? (one flag per quadrant)
+				    * (ie in case of unknown deviation, external engine takes over).
+				    * setting "pass" as next move also turns this on for current quadrant */
 } override_t;
 
 

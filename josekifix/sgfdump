@@ -50,6 +50,24 @@ sub reset_defaults
     $default_around = "";    
 }
 
+# parse quadrant names, replace by quadrant numbers
+sub parse_external_engine
+{
+    my ($value) = @_;
+    if ($value eq "") {  return $value;  }
+
+    my @tab = split(" ", $value);
+    for (my $i = 0; $i < @tab; $i++) {
+	my $s = $tab[$i];
+	if ($s eq "top_left"     || $s eq "upper_left")  {  $tab[$i] = 0;  }
+	if ($s eq "top_right"    || $s eq "upper_right") {  $tab[$i] = 1;  }
+	if ($s eq "bottom_right" || $s eq "lower_right") {  $tab[$i] = 2;  }
+	if ($s eq "bottom_left"  || $s eq "lower_left")  {  $tab[$i] = 3;  }
+    }
+    
+    return join(" ", @tab);
+}
+
 my $section;		# "override" or "log"
 
 # parse [log] or [override] section inside move comment
@@ -88,11 +106,16 @@ sub parse_override
 	if ($parsing_override) {	# variable
 	    $line =~ s/ *=/=/g;	 # trim spaces
 	    $line =~ s/= */=/g;
+	    $line =~ s/ +/ /g;
 	    $line =~ s/"//g;     # remove quotes
 
 	    # var dictionary
 	    my ($name, $value) = ($line, "");
 	    if ($line =~ m/=/) {  ($name, $value) = split(/=/, $line);  }
+
+	    if ($name eq "external_engine") {  $value = parse_external_engine($value);  }
+
+	    if (defined($override_vars{$name})) {  die("sgfdump: $file: $override_vars{name}: '$name' redefined \n");  }
 	    $override_vars{$name} = $value;
 	}
 	else {				# comment
