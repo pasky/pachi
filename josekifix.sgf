@@ -826,24 +826,14 @@ B should E3, not F2 if w has support on the side.
 
 Ex: marzipan pachipachi 2018-02-15]))
 (;W[gq]
-(;B[]C[[override\]
-name = "4-4 keima bully"
+;B[]C[[override\]
+name = "4-4 keima swindle"
 around = D3
+external_engine = lower_left  lower_right
 
 
 magoa pachipachi 2023-02-17
-])
-(;B[gp]
-;W[hq]
-;B[fp]
-;W[]
-;B[pp]
-;W[nq]
-;B[]C[[override\]
-name = "4-4 keima bully"
-around = O3
-around2 = H3
-]))))
+])))
 (;W[]
 (;B[cn]
 (;W[cq]
