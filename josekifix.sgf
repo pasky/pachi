@@ -1513,10 +1513,12 @@ avoid E3, doesn't handle it very well.
 pachipachi winkgs  2023-02-22
 ]
 ;B[fq]
-;W[gr]
-;B[hp]
-;W[gq]C[[override\]
-])
+;W[]C[[override\]
+around = C3
+external_engine
+
+
+pachipachi snow0115 2023-04-25])
 (;W[ep]
 ;B[]C[[override\]
 name = "4-4 attach"
