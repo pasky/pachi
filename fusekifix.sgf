@@ -239,7 +239,7 @@ around = P5
 around = Q6
 ]))
 (;B[ip]
-;W[pn]
+(;W[pn]
 ;B[qo]
 ;W[pj]
 ;B[qn]
@@ -263,6 +263,36 @@ name = "high kobayashi"
 around = "last"
 
 ]))
+(;W[qn]
+;B[po]
+;W[rp]
+;B[pl]
+(;W[]C[[log\]
+name = "kobayashi high pincer"
+around = R4])
+(;W[pn]
+;B[on]
+;W[om]
+;B[pm]
+;W[oo]
+;B[nn]
+;W[pp]
+;B[op]
+;W[qo]
+;B[no]
+;W[oq]
+;B[po]
+;W[pr]
+;B[qp]
+;W[qq]
+;B[pp]
+;W[np]C[[override\]
+name = "kobayashi high pincer"
+around = R4
+
+don't forget atari before defending
+
+pachipachi Beutlin 2023-04-24])))
 (;B[jq]
 ;W[qn]
 ;B[pl]
