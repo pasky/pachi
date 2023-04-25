@@ -892,9 +892,9 @@ ladder_sanity_check(board_t *board, ladder_check_t *check, override_t *override)
 	}
 }
 
-/* Check override is sane, help locate bad override otherwise. */
-static void
-override_sanity_checks(board_t *b, override_t *override)
+/* Common sanity checks for [override] and [log] sections */
+static char*
+common_sanity_checks(board_t *b, override_t *override)
 {
 	if (!override->name || !override->name[0]) {
 		board_print(b, stderr);
@@ -930,6 +930,16 @@ override_sanity_checks(board_t *b, override_t *override)
 	
 	/* Not checking hashes ... */
 
+	return around_str;
+}
+
+/* Check override is sane, help locate bad override otherwise. */
+static void
+override_sanity_checks(board_t *b, override_t *override)
+{
+	/* Common checks first */
+	char *around_str = common_sanity_checks(b, override);
+	
 	/* Warn if moves are too far apart. */
 	coord_t prev = str2coord(override->prev);
 	coord_t next = str2coord(override->next);
@@ -959,6 +969,26 @@ override_sanity_checks(board_t *b, override_t *override)
 	}
 
 	// TODO if next move, check it's inside match pattern ...
+}
+
+/* Check log is sane, help locate bad override otherwise. */
+static void
+log_sanity_checks(board_t *b, override_t *override)
+{
+	/* Common checks first */
+	char *around_str = common_sanity_checks(b, override);
+
+	/* Warn if moves are too far apart.
+	 * (only check prev and around, logs have dummy next) */
+	coord_t prev = str2coord(override->prev);
+	coord_t around = (around_str ? str2coord(around_str) : pass);
+	
+	int dist = point_dist(prev, around);
+	if (dist > 6) {
+		board_print(b, stderr);
+		fprintf(stderr, "josekifix: \"%s\": big distance between prev move (%s) and around coord (%s), bad override coords ?\n\n",
+			override->name, override->prev, coord2sstr(around));
+	}
 }
 
 /* Add a new override to the set of checked overrides. */
@@ -1010,7 +1040,7 @@ josekifix_add_logged_variation(board_t *b, override_t *log)
 		if (!override_cmp(log, &logged_variations.overrides[i]))
 			return;	
 
-	override_sanity_checks(b, log);
+	log_sanity_checks(b, log);
 	override_list_add(&logged_variations, log);
 }
 
@@ -1028,9 +1058,9 @@ josekifix_add_logged_variation_and(board_t *b, override_t *log1, override_t *log
 		    !override_cmp(log2, &logged_variations2.overrides[i].override2))
 			return;	
 
-	override_sanity_checks(b, log1);
+	log_sanity_checks(b, log1);
 	/* Skip override2 sanity check (long distance warning but that's ok here). */
-	//override_sanity_checks(b, log2);
+	//log_sanity_checks(b, log2);
 
 	override2_t and_check = { 0, };
 	and_check.override1 = *log1;
