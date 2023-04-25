@@ -264,7 +264,7 @@ around = "last"
 
 ]))
 (;W[qn]
-;B[po]
+(;B[po]
 ;W[rp]
 ;B[pl]
 (;W[]C[[log\]
@@ -291,6 +291,12 @@ name = "kobayashi high pincer"
 around = R4
 
 don't forget atari before defending
+
+pachipachi Beutlin 2023-04-24]))
+(;B[ql]
+;W[]C[[override\]
+name = "kobayashi immediate pincer"
+around = R4
 
 pachipachi Beutlin 2023-04-24])))
 (;B[jq]
