@@ -1533,7 +1533,7 @@ coq pachipachi  2023-04-11])))
 (;W[cq]
 ;B[cp]
 ;W[dq]
-;B[ep]
+(;B[ep]
 ;W[fr]C[[override\]
 name = "hoshi 3-3 slide"
 around = D3
@@ -1549,6 +1549,15 @@ external_engine
 
 
 pachipachi snow0115 2023-04-25])
+(;B[eq]
+;W[er]
+;B[dr]
+;W[]C[[override\]
+name = "hoshi 3-3 hane inside"
+around = C2
+
+
+pachipachi Beutlin 2023-04-25]))
 (;W[ep]
 ;B[]C[[override\]
 name = "4-4 attach"
