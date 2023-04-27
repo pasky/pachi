@@ -27,27 +27,19 @@ See josekifix.sgf for details.
 (;B[me]
 (;W[nq]
 (;B[lq]
-;W[pn]C[[override\]
-name = "anti sanrensei high kakari"
-around = Q5
+;W[qq]
+;B[qp]
+;W[pq]
+;B[op]
+;W[nr]
+;B[mo]
+;W[]C[[override\]
+name = "anti sanrensei"
+around = O6
 around2 = O14
+external_engine = upper_right lower_right
 
-
-was R6 double kakari before, tough fight...
-]
-;B[qq]
-;W[no]
-;B[oo]
-;W[on]
-;B[nn]
-;W[mo]
-;B[nm]
-;W[pl]C[[override\]
-
-
-P8 not very good
-
-pachipachi niceguy0 2023-04-16])
+pachipachi niceguy0 2023-05-03])
 (;B[qq]
 ;W[kq]
 ;B[no]
