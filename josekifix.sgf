@@ -1270,6 +1270,52 @@ b can't block at C5 because of F3]
 (;B[bo]
 ;W[ep]C[[override\]
 ]))))
+(;B[iq]
+;W[cn]
+;B[fp]
+;W[gp]C[[override\]
+name = "4-4 2spc low pincer double kakari"
+around = E3
+
+
+rockhard pachipachi 2023-04-27]
+;B[gq]
+;W[cq]C[[override\]])
+(;B[ip]
+(;W[]
+;B[dj]
+;W[cq]
+;B[cp]
+;W[dq]
+;B[ep]
+;W[fp]
+;B[eq]
+;W[er]
+;B[fr]
+;W[gr]
+;B[dr]
+;W[fs]
+;B[cr]
+;W[fn]C[[override\]
+name = "4-4 high pincer bad sacrifice"
+around = E6
+
+
+deviation:
+b sacrificed at F2 instead of D2 (not joseki)
+
+Ex: ogs game 12545540])
+(;W[fo]
+;B[dn]
+;W[pp]
+;B[]
+;W[in]
+;B[mq]C[[override\]
+name = "4-4 2-spc high pincer cap"
+around = K3
+
+
+huff pachipachi 2023-03-29]))
 (;B[dn]
 (;W[cq]
 ;B[dq]
@@ -1443,41 +1489,6 @@ around = B3
 
 
 pachipachi madalinG 2023-02-16])
-(;B[ip]
-(;W[]
-;B[dj]
-;W[cq]
-;B[cp]
-;W[dq]
-;B[ep]
-;W[fp]
-;B[eq]
-;W[er]
-;B[fr]
-;W[gr]
-;B[dr]
-;W[fs]
-;B[cr]
-;W[fn]C[[override\]
-name = "4-4 high pincer bad sacrifice"
-around = E6
-
-
-deviation:
-b sacrificed at F2 instead of D2 (not joseki)
-
-Ex: ogs game 12545540])
-(;W[fo]
-;B[dn]
-;W[pp]
-;B[]
-;W[in]
-;B[mq]C[[override\]
-name = "4-4 2-spc high pincer cap"
-around = K3
-
-
-huff pachipachi 2023-03-29]))
 (;B[]
 ;W[cn]
 ;B[fp]
