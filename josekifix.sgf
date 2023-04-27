@@ -1414,7 +1414,7 @@ E5 mistake according to kogo.
 Ex: HHOO pachipachi  https://online-go.com/game/12390598 ]))
 (;B[cn]
 (;W[dr]
-;B[gq]
+(;B[gq]
 ;W[gp]
 ;B[hq]
 ;W[hp]
@@ -1428,6 +1428,27 @@ tends to J4 (risky ...)
 F4 best
 
 Ex: pachipachi moka  2022-11-19])
+(;B[hq]
+;W[cq]
+;B[eq]
+;W[er]
+;B[fp]
+(;W[gq]C[[override\]
+name = "4-4 keima keima slide pincer fix"
+around = E3
+ladder_other = G5
+ladder_other_setup_own = G4 F2
+ladder_other_setup_other = G3
+external_engine
+
+Don't hane if opponent has ladder
+
+pachipachi huff  2023-04-27
+])
+(;W[]C[[override\]
+name = "4-4 keima keima slide pincer fix"
+around = E3
+])))
 (;W[fo]
 (;B[dr]
 ;W[er]
