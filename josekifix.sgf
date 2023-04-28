@@ -731,7 +731,7 @@ same as hoshi 3-3 invasion in reverse order])
 (;W[dp]
 ;B[dq]
 ;W[co]
-(;B[]C[[log\]
+(;B[]C[[override\]
 name = "3-4 large keima lean"
 around = D3
 ])
