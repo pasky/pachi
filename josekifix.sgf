@@ -571,7 +571,23 @@ around = D4
 
 Ex: pachipachi globax  2018-03-18 (11:00)]))
 (;B[eq]
-;W[dp]
+(;W[fq]
+;B[dq]
+;W[fp]
+;B[cn]
+;W[jq]
+;B[]
+;W[cl]
+;B[en]
+;W[do]
+;B[dn]C[[override\]
+name = "3-4 tsuke hane and connect later peep"
+around = C3
+external_engine
+
+
+Spass pachipachi 2023-04-29])
+(;W[dp]
 ;B[dq]
 ;W[co]
 (;B[cq]C[[override\]
@@ -596,7 +612,7 @@ name = "large avalanche"
 around = C3
 
 actually can still avoid at this stage
-]))
+])))
 (;B[ip]
 ;W[dn]
 ;B[eo]
