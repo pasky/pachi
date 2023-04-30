@@ -147,7 +147,17 @@ R4 best, then P3 hane, Q5 atari + defend to keep it simple]
 ]
 ;W[op]
 ;B[qq]C[[override\]
-]))
+])
+(;W[mp]
+;B[kp]
+;W[pp]
+;B[qp]
+;W[]C[[override\]
+name = "chinese pincer crosscut"
+around = Q4
+
+
+pachipachi dsazx 2023-04-29]))
 (;B[pk]
 ;W[pp]
 ;B[qp]C[[override\]
