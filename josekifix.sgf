@@ -745,13 +745,15 @@ around = C2
 
 same as hoshi 3-3 invasion in reverse order])
 (;W[dp]
-;B[dq]
-;W[co]
 (;B[]C[[override\]
 name = "3-4 large keima lean"
-around = D3
-])
-(;B[ep]
+around = C3
+
+
+wildmushrm pachipachi 2023-05-05])
+(;B[dq]
+;W[co]
+;B[ep]
 ;W[do]
 ;B[bp]
 ;W[cq]
