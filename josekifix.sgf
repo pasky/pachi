@@ -453,15 +453,17 @@ katago likes this one]))
 (;B[co]
 ;W[cq]
 ;B[bq]
-;W[do]
-;B[dn]
-(;W[]C[[override\]
+;W[do]C[[override\]
 name = "magic sword mega mess"
 around = "D4"
+external_engine
+external_engine_diag
 
 
-Ex: pachipachi spring  2022-12-17 19:00])
-(;W[cn]
+pachipachi spring             2022-12-17 19:00
+pachipachi masato3012  2023-05-07  (weird variation)]
+;B[dn]
+;W[cn]
 ;B[bn]
 ;W[cm]
 ;B[em]
@@ -472,7 +474,7 @@ name = "magic sword mega mess"
 around = D5
 
 
-spring pachipachi 2023-02-18]))
+spring pachipachi 2023-02-18])
 (;B[do]
 ;W[cq]
 ;B[bq]
