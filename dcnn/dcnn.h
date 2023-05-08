@@ -22,7 +22,10 @@ void get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, i
 void print_dcnn_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest);
 
 /* Convert board coord to dcnn data index */
-static inline int coord2dcnn_idx(coord_t c);
+static int coord2dcnn_idx(coord_t c);
+
+/* Private use (don't call directly) */
+void dcnn_fix_blunders(board_t *b, enum stone color, float result[], bool debugl);
 
 extern int darkforest_dcnn;
 

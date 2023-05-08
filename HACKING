@@ -60,6 +60,8 @@ Pachi consists of the following components:
 	dcnn/dcnn.[ch]			network loading and evaluation (c side)
 	dcnn/caffe.cpp			network loading and evaluation (c++ side)
 	dcnn/dcnn_engine.c		example "dcnn move generator" engine
+	dcnn/blunder.c			filter out some obvious bad moves from dcnn output before
+					they get used in search to work around dcnn blind spots
 
 * "pattern" mm pattern matcher provides priors to guide tree search
 
