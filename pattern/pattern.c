@@ -484,7 +484,8 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 
 		/* Double atari ? */
 		if (!selfatari &&
-		    g1 && g != g1 && !can_countercap_common_stone(b, m->coord, color, g, g1))
+		    g1 && g != g1 && !can_countercap_common_stone(b, m->coord, color, g, g1) &&
+		    board_group_other_lib(b, g, m->coord) != board_group_other_lib(b, g1, m->coord))
 			double_atari = true;
 		g1 = g;
 		
