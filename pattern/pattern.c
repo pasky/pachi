@@ -492,7 +492,7 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 			enum stone gown = ownermap_color(ownermap, g, 0.67);
 			enum stone aown = owner_around(b, ownermap, m->coord);
 			// capturing big group not dead yet
-			if (gown != color && group_stone_count(b, g, 5) >= 4)   ladder_big = true;
+			if (gown != color && group_stone_count(b, g, 5) >= 3)   ladder_big = true;
 			// ladder last move
 			if (g == group_at(b, last_move(b).coord))               ladder_last = true;
 			// capturing something in opponent territory, yummy
