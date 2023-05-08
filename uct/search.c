@@ -637,7 +637,7 @@ uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
 		 * keep simulating. */
 		if (best2 && best2->u.playouts
 		    && (double)best->u.playouts / best2->u.playouts < u->best2_ratio) {
-			if (UDEBUGL(3))
+			if (UDEBUGL(4))
 				fprintf(stderr, "Best2 ratio %f < threshold %f\n",
 					(double)best->u.playouts / best2->u.playouts,
 					u->best2_ratio);
