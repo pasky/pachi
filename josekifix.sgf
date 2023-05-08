@@ -687,7 +687,21 @@ external_engine
 B5 maybe better but crazy fight.
 keep it simple and live.
 
-pachipachi Beutlin 2023-04-25]))))
+pachipachi Beutlin 2023-04-25]))
+(;W[dp]
+;B[do]
+;W[cq]
+;B[bq]
+;W[co]
+;B[bp]
+;W[cn]
+;B[fp]
+;W[dq]C[[override\]
+name = "3-4 tsuke on top"
+around = C3
+
+
+pachipachi Beutlin 2023-05-08 13:33])))
 (;W[eq]
 (;B[gq]
 ;W[do]
