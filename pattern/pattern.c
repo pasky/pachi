@@ -464,6 +464,7 @@ pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 			group_t atari_neighbor;
 			if (g && capturing_group_is_snapback(b, g) &&
 			    (atari_neighbor = board_get_atari_neighbor(b, g, other_color)) &&
+			    !can_countercapture(b, atari_neighbor, NULL) &&
 			    ownermap_color(ownermap, atari_neighbor, 0.67) != color)
 				snapback = true;
 		});
