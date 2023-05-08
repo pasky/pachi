@@ -458,6 +458,68 @@ test_can_countercap(board_t *b, char *arg)
 	return   (rres == eres);
 }
 
+/* Test mm atari pattern. usage:
+ *	atari color coord [!]atari_feature
+ * For example:
+ *      atari b d4 atari:snapback
+ *      atari b d4 !atari:and_cap  
+ *      atari b d4 -1               (no match) */
+static bool
+test_atari(board_t *b, char *arg)
+{
+	static int init = 0;
+	if (!init) {	/* init feature info */
+		pattern_config_t pc;
+		patterns_init(&pc, NULL, false, true);
+		init = 1;
+	}
+	
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	bool negated = (*arg == '!');
+	if (negated)  arg++;
+	int expected = -1;
+	feature_t f;
+	if (atoi(arg) != -1) {
+		str2feature(arg, &f);
+		assert(f.id == FEAT_ATARI);
+		expected = f.payload;
+	}
+	args_end();
+
+	ownermap_t ownermap;
+	mcowner_playouts(b, color, &ownermap);
+	board_print_ownermap(b, stderr, &ownermap);
+	board_printed = true;
+
+	if (expected == -1)  PRINT_TEST(b, "atari %s %-3s -1...\t", stone2str(color), coord2sstr(c));
+	else                 PRINT_TEST(b, "atari %s %-3s %s%s...\t", stone2str(color), coord2sstr(c),
+					(negated ? "!" : ""), feature2sstr(&f));
+	
+	assert(board_at(b, c) == S_NONE);
+	with_move_strict(b, c, color, {
+		assert(board_get_atari_neighbor(b, c, stone_other(color)) ||
+		       board_at(b, c) == S_NONE);   // suicide
+	});
+
+	move_t m = move(c, color);
+	int feature = pattern_match_atari(b, &m, &ownermap);
+	
+	int eres = true;
+	int rres = (negated ? feature != expected : feature == expected);
+	
+	PRINT_RES();
+	if (rres != eres && DEBUGL(1)) {
+		f.payload = feature;
+		if (rres == -1)  fprintf(stderr, "           got  -1\n");
+		else             fprintf(stderr, "           got  %s\n", feature2sstr(&f));
+	}
+	return   (rres == eres);
+}
+
 static bool
 test_two_eyes(board_t *b, char *arg)
 {
@@ -720,6 +782,7 @@ static t_unit_cmd commands[] = {
 	{ "wouldbe_ladder_any",     test_wouldbe_ladder_any,    },
 	{ "useful_ladder",          test_useful_ladder,         },
 	{ "can_countercap",         test_can_countercap,        },
+	{ "atari",		    test_atari			},
 	{ "two_eyes",               test_two_eyes,              },
 	{ "moggy moves",            test_moggy_moves,           },
 	{ "moggy status",           test_moggy_status,          },

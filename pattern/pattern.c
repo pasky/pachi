@@ -564,7 +564,7 @@ owner_around(board_t *b, ownermap_t *ownermap, coord_t coord)
 	return own;
 }
 
-static int
+int
 pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap)
 {
 	enum stone color = m->color;
@@ -1445,7 +1445,7 @@ feature2sstr(feature_t *f)
 }
 
 /* Convert string to feature, return pointer after the featurespec. */
-static char *
+char *
 str2feature(char *str, feature_t *f)
 {
 	while (isspace(*str)) str++;
