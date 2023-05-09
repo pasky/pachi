@@ -175,14 +175,11 @@ usage(char *arg)
 	fprintf(stderr, "Usage: pachi [OPTIONS] [ENGINE_ARGS...]\n\n");
 	fprintf(stderr,
 		"Options: \n"
-                "      --compile-flags               show pachi's compile flags \n"
 		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n");
 	fprintf(stderr,
 		"                                    %s \n", supported_engines(false));
 	fprintf(stderr,
 		"  -h, --help                        show usage \n"
-		"  -s, --seed RANDOM_SEED            set random seed \n"
-		"  -u, --unit-test FILE              run unit tests \n"
 		"  -v, --version                     show version \n"
 		"      --version=VERSION             version to return to gtp frontend \n"
 		"      --name=NAME                   name to return to gtp frontend \n"
@@ -210,6 +207,12 @@ usage(char *arg)
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
 #endif
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
+		" \n"
+		"Testing: \n"
+                "      --compile-flags               show compiler flags \n"
+		"  -s, --seed RANDOM_SEED            set random seed \n"
+		"  -u, --unit-test FILE              run unit tests \n"
+		"      --tunit-fatal                 abort on failed unit test \n"
 		" \n"
 		"Engine components: \n"
 		"      --dcnn,     --nodcnn          dcnn required / disabled \n"
@@ -302,6 +305,7 @@ show_version(FILE *s)
 #define OPT_JOSEKIFIX         275
 #define OPT_NOJOSEKIFIX       276
 #define OPT_NODCNN_BLUNDER    277
+#define OPT_TUNIT_FATAL	      278
 
 
 static struct option longopts[] = {
@@ -347,6 +351,7 @@ static struct option longopts[] = {
 	{ "seed",                   required_argument, 0, 's' },
 	{ "smart-pass",             no_argument,       0, OPT_SMART_PASS },
 	{ "time",                   required_argument, 0, 't' },
+	{ "tunit-fatal",	    no_argument,       0, OPT_TUNIT_FATAL },
 	{ "unit-test",              required_argument, 0, 'u' },
 	{ "verbose-caffe",          no_argument,       0, OPT_VERBOSE_CAFFE },
 	{ "version",                optional_argument, 0, 'v' },
@@ -511,6 +516,9 @@ int main(int argc, char *argv[])
 				break;
 			case OPT_NAME:
 				gtp->custom_name = strdup(optarg);
+				break;
+			case OPT_TUNIT_FATAL:
+				options->tunit_fatal = true;
 				break;
 			case 'u':
 				testfile = strdup(optarg);

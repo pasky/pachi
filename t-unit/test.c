@@ -7,6 +7,7 @@
 
 #include "board.h"
 #include "debug.h"
+#include "pachi.h"
 #include "tactics/selfatari.h"
 #include "tactics/dragon.h"
 #include "tactics/ladder.h"
@@ -944,7 +945,7 @@ unit_test_cmd(board_t *b, char *line)
 	board_printed = false;
 	chomp(line);
 	remove_comments(line);
-	
+
 	for (int i = 0; commands[i].cmd; i++) {
 		char *cmd = commands[i].cmd;
 		if (!str_prefix(cmd, line))
@@ -954,7 +955,10 @@ unit_test_cmd(board_t *b, char *line)
 			continue;
 
 		init_arg_len(line, strlen(cmd));
-		return commands[i].f(b, next);
+		bool r = commands[i].f(b, next);
+		if (!r && pachi_options()->tunit_fatal)
+			exit(EXIT_FAILURE);
+		return r;
 	}
 
 	die("Syntax error: %s\n", line);
