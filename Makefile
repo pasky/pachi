@@ -331,6 +331,9 @@ test_moggy: FORCE
 test_spatial: FORCE
 	+@make -C t-unit test_spatial
 
+# Regression tests
+regtest: FORCE
+	+@make -C t-regress regtest
 
 # Prepare for install
 distribute: FORCE
