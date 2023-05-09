@@ -946,6 +946,9 @@ unit_test_cmd(board_t *b, char *line)
 	chomp(line);
 	remove_comments(line);
 
+	int optional = 0;  /* for t-unit over gtp ... */
+	if (line[0] == '!') {  optional = 1;  line++;  }
+	
 	for (int i = 0; commands[i].cmd; i++) {
 		char *cmd = commands[i].cmd;
 		if (!str_prefix(cmd, line))
@@ -956,7 +959,7 @@ unit_test_cmd(board_t *b, char *line)
 
 		init_arg_len(line, strlen(cmd));
 		bool r = commands[i].f(b, next);
-		if (!r && pachi_options()->tunit_fatal)
+		if (!r && !optional && pachi_options()->tunit_fatal)
 			exit(EXIT_FAILURE);
 		return r;
 	}
