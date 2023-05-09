@@ -543,7 +543,6 @@ int main(int argc, char *argv[])
 	
 	if (!verbose_caffe)      quiet_caffe(argc, argv);
 	if (log_port)            open_log_port(log_port);
-	if (testfile)		 return unit_test(testfile);
 	if (DEBUGL(0))           show_version(stderr);
 	if (getenv("DATA_DIR"))
 		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
@@ -567,6 +566,8 @@ int main(int argc, char *argv[])
 	josekifix_init(b);
 #endif
 
+	if (testfile)		 return unit_test(testfile);
+	
 	/* Extra cmdline args are engine parameters */
 	strbuf(buf, 1000);
 	for (int i = optind; i < argc; i++)

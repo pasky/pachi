@@ -764,6 +764,81 @@ test_moggy_status(board_t *b, char *arg)
 	return ret;
 }
 
+/* Test uct genmove on given position, make sure we get/don't get wanted/unwanted moves.
+ * Although should be fine as t-unit test in most cases, to reproduce game conditions
+ * exactly better use t-unit over gtp ('tunit genmove ...' cmd), t-unit board diagrams
+ * don't preserve last 4 moves.
+ *
+ * Syntax:
+ *   genmove color move                        expect move
+ *   genmove color move1 move2 [...]           expect move1 or move2
+ *   genmove color !move                       expect anything but move
+ *   genmove color !move1 !move2 [...]         expect anything but move1 and move2    */
+static bool
+test_genmove(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+
+	char* args[30];  int n;
+	move_queue_t wanted;    mq_init(&wanted);
+	move_queue_t unwanted;  mq_init(&unwanted);
+	for (n = 0; *arg; n++) {
+		args[n] = arg;
+		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
+		if (*arg == '!')  arg++;
+		if (!strcmp(arg, "pass"))   {  mq_add(q, pass, 0);    next_arg_opt(arg);  continue;  }
+		if (!strcmp(arg, "resign")) {  mq_add(q, resign, 0);  next_arg_opt(arg);  continue;  }
+		if (!valid_str_coord(arg))  die("Invalid move: '%s'\n", arg);
+		mq_add(q, str2coord(arg), 0);
+		next_arg_opt(arg);
+	}
+	if (!wanted.moves && !unwanted.moves)  die("No moves specified");
+	if (wanted.moves && unwanted.moves)    die("Can't have both wanted and unwanted moves");
+	args_end();
+	
+	board_print_test(b);
+	fprintf(stderr, "genmove %s ", stone2str(color));
+	for (int i = 0; i < n; i++)
+		fprintf(stderr, "%s ", args[i]);
+	fprintf(stderr, "...\n\n");
+
+	static engine_t *e = NULL;
+	if (!e)  e = new_engine(E_UCT, "", b);
+
+	/* Sanity checks */
+	board_t *tmp = board_new(19, NULL);
+	assert(using_dcnn(tmp));
+	assert(using_patterns());
+	board_delete(&tmp);
+
+	static time_info_t ti = { 0, };
+	if (!time_parse(&ti, "=5000:10000"))  die("shouldn't happen");
+	coord_t c = e->genmove(e, b, &ti, color, false);
+
+	board_t b2;  board_copy(&b2, b);
+	if (c != resign) {
+		move_t m = move(c, color);
+		if (board_play(&b2, &m) < 0)  die("invalid move, shouldn't happen");
+	}
+	engine_board_print(e, &b2, stderr);
+	
+	bool eres = true;
+	bool rres = (wanted.moves ? false : true);
+	for (int i = 0; i < n; i++)
+		if (c == wanted.move[i])
+			rres = true;
+	for (int i = 0; i < n; i++)
+		if (c == unwanted.move[i])
+			rres = false;
+
+	fprintf(stderr, "\n");
+	PRINT_RES_VAL("%s", coord2sstr(c));
+	
+	return rres;
+}
+
 
 #ifdef DCNN
 
@@ -921,6 +996,7 @@ static t_unit_cmd commands[] = {
 	{ "false_eye_seki",         test_false_eye_seki,        },
 	{ "pass_is_safe",           test_pass_is_safe,          },
 	{ "final_score",            test_final_score,           },
+	{ "genmove",		    test_genmove                },
 #ifdef DCNN
 	{ "dcnn_blunder",	    test_dcnn_blunder           },
 	{ "first_line_blunder",     test_first_line_blunder     },
