@@ -1,0 +1,32 @@
+
+YZ1509 pachipachi  2018-02-20
+
+Move:  250  Komi: 0.5  Handicap: 3  Captures B: 9 W: 25  Score Est: B+6.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . . . . . O O . . O O . | 19 | O O O O O O O O O O O O O O O O O O O |
+ 18 | . . . . . O X X O . X O . O . . . . . | 18 | O O O O O O O O O O O O O O O O O O O |
+ 17 | . . . O O O O X O . X . O O O . O . O | 17 | O O O O O O O O O O O O O O O O O O O |
+ 16 | . O O X X O X O O O X . . O . . O O O | 16 | O O O X X O X O O O O O O O O O O O O |
+ 15 | . O X X . X X X O X X . O O . O O X O | 15 | O O X X X X X X O O O O O O O O O X O |
+ 14 | O O O X X X O X X O X O . O . O O)X X | 14 | O O O X X X O X X O O O O O O O , X X |
+ 13 | X X X X . . O O O O O . . O . O X . . | 13 | X X X X , , O O O O O O O O O O X X X |
+ 12 | . O O X O O O . . O X . O X O O X X . | 12 | X X X X O O O O O O O O O X O O X X X |
+ 11 | . O X O O X X O O O O O . X X X X . . | 11 | X X X O O X X O O O O O , X X X X X X |
+ 10 | . X X X X O X X X O X O X . . X O X X | 10 | X X X X X O X X X O X O X X X X O X X |
+  9 | . . X . O O O O X X X X . . X . O O X |  9 | X X X , O O O O X X X X X X X , O O X |
+  8 | . X X O . . . O X . . . . . X O O . O |  8 | X X X O O O O O X X X X X X X O O O O |
+  7 | X X O O O O O X . . . . . X O O . O . |  7 | X X O O O O O X X X X X X X O O O O O |
+  6 | X O O . X X O X . . . . . X X O O O O |  6 | X O O , X X O X X X X X X X X O O O O |
+  5 | O O X X . . X . . X . . . . O X O X O |  5 | O O X X X X X X X X X X X X X X O X O |
+  4 | . O O X . X . . O X O . . . X X X X X |  4 | O O O X X X X X X X X X X X X X X X X |
+  3 | O O X X . . . X X X X O . X O . . . . |  3 | O O X X X X X X X X X X X X X X X X X |
+  2 | O X X . . . . . O X O . . . X . . . . |  2 | O X X X X X X X X X X X X X X X X X X |
+  1 | . O X . . . . . . . . . . . . . . . . |  1 | , , X X X X X X X X X X X X X X X X X |
+    +---------------------------------------+    +---------------------------------------+
+
+dcnn = [ A1  T12 N11 T11 T13 Q9  D6  D9  C17 J19 A11 S13 C18 N13 K18 K19 F8  L19 A9  E13 ]
+       [ 30  27  26  6   3   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+must defend double snapback
