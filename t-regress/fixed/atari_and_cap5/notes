@@ -1,0 +1,58 @@
+
+pachipachi TianKhan  2023-04-23
+
+Move:  177  Komi: 6.5  Handicap: 0  Captures B: 3 W: 1  [0 0 0 0]  d=23 
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . X). . . . . . . . . X . . . . . . | 19 | : : : : : : : : : : : : : : : : : : : |
+ 18 | . X O . O O X . X . . X . X X O O . . | 18 | : : : : : : : : : : : : : : : : : : : |
+ 17 | . X O . . X O X . . O X . X . X O . . | 17 | : : : : : : : : : : : : : : : : : : : |
+ 16 | . . X O O . O O X X X O X . . X O . O | 16 | : : : : : : : : : : : : : : : : : : : |
+ 15 | . . X X O X X . O . . O O . . . X O . | 15 | : : : : : : : : : : : : : : : : : : : |
+ 14 | . . . . X O . O . . . . . . . . X O X | 14 | : : : : : : : : : : : : : : : : : : : |
+ 13 | . . . . X O . O O . . . . O O X X X . | 13 | : : : : : : : : : : : : : : : : : : : |
+ 12 | . . . . X O X . . . . . O X X O O O . | 12 | : : : : : : : : : : : : : : : : : : : |
+ 11 | . . . . X X O O . . . . O X X X X . . | 11 | : : : : : : : : : : : : : : : : : : : |
+ 10 | . . O . . . . . . O O O . O X . . . . | 10 | : : : : : : : : : : : : : : : : : : : |
+  9 | . . . . X X X X X X X O . O . X X . . |  9 | : : : : : : : : : : : : : : : : : : : |
+  8 | . . . O O O O O O X . X O . . X O . . |  8 | : : : : : : : : : : : : : : : : : : : |
+  7 | . . . . . . . . X O . X X O . X O . . |  7 | : : : : : : : : : : : : : : : : : : : |
+  6 | . . O . . . X . X O . X O O O X O . . |  6 | : : : : : : : : : : : : : : : : : : : |
+  5 | . . O X . . . . X O . X X X X O . . . |  5 | : : : : : : : : : : : : : : : : : : : |
+  4 | . . . O X . . X O O X . . X O O O O . |  4 | : : : : : : : : : : : : : : : : : : : |
+  3 | . . O O . X . X O . O O O O X X O . O |  3 | : : : : : : : : : : : : : : : : : : : |
+  2 | . X O X X . X O O . O X X X . X X O . |  2 | : : : : : : : : : : : : : : : : : : : |
+  1 | . . . . . . . . . . . X . . . . . X . |  1 | : : : : : : : : : : : : : : : : : : : |
+    +---------------------------------------+    +---------------------------------------+
+
+dcnn = [ D19 G19 D18 C13 E17 F16 C12 C1  O16 D1  B19 Q15 L15 B12 F5  P15 S9  D17 E5  H18 ]
+       [ 48  19  4   4   3   3   2   2   1   1   1   1   0   0   0   0   0   0   0   0   ]
+
+can't answer at D19, otherwise disaster:
+
+Move:  182  Komi: 6.5  Handicap: 0  Captures B: 3 W: 1  [0 0 0 0]  d=24 Score Est: B+20.5
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . X O . . . . . . . . X . . . . . . | 19 | x x x x x x X X X X X X X X x , o o o |
+ 18 | . X O . O O X . X . . X . X X O O . . | 18 | X X x x x x X X X X X X X X X o o o o |
+ 17 | . X O O)X X O X . . O X . X . X O . . | 17 | X X x X X X O X X X X X X X X X o o o |
+ 16 | . . X O O X O O X X X O X . . X O . O | 16 | x x X X X X O O X X X O X , , X o o o |
+ 15 | . . X X O X X O O . . O O . . . X O . | 15 | x x X X X X X O O , , O O , , X X o , |
+ 14 | . . . . X O . O . . . . . . . . X O X | 14 | x x X X X O o O O o o O O o , x X o X |
+ 13 | . . . . X O . O O . . . . O O X X X . | 13 | , , x x X O O O O O O O O O O X X X X |
+ 12 | . . . . X O X . . . . . O X X O O O . | 12 | , , , x X O O O O O O O O X X X X X X |
+ 11 | . . . . X X O O . . . . O X X X X . . | 11 | , , , , X X O O O O O O O X X X X X X |
+ 10 | . . O . . . . . . O O O . O X . . . . | 10 | o o O , x X , , , O O O O O X X X X x |
+  9 | . . . . X X X X X X X O . O . X X . . |  9 | o o o , X X X X X X X O O O , X X , , |
+  8 | . . . O O O O O O X . X O . . X O . . |  8 | O O O O O O O O O X X X O O , X O , , |
+  7 | . . . . . . . . X O . X X O . X O . . |  7 | O O O o o , , , X , x X X O , X O o o |
+  6 | . . O . . . X . X O . X O O O X O . . |  6 | O O O , , , X X X , , X O O O X O O O |
+  5 | . . O X . . . . X O . X X X X O . . . |  5 | O O O x x x X X X , x X X X X O O O O |
+  4 | . . . O X . . X O O X . . X O O O O . |  4 | O O O O X X X X , , X x , X O O O O O |
+  3 | . . O O . X . X O . O O O O X X O . O |  3 | o o O O , X X X , , , , , , x x O O O |
+  2 | . X O X X . X O O . O X X X . X X O . |  2 | o o O X X X X , , , , x x x x x x O o |
+  1 | . . . . . . . . . . . X . . . . . X . |  1 | o o , x X X X , , , x x x x x x x x , |
+    +---------------------------------------+    +---------------------------------------+
+
+
+fixed with dcnn blunder: boost all moves that fix some atari_and_cap situation

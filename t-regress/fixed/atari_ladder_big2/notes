@@ -1,0 +1,38 @@
+
+pachipachi applefishB   2017-10-23
+
+Move:  228  Komi: 0.5  Handicap: 4  Captures B: 17 W: 2  Score Est: W+34.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . . . . . . . . . . O . | 19 | o o o O o , x x x , , O O O O O O O , |
+ 18 | . . X O O X X . . . . O X O O . O X . | 18 | o o o O O x x x x x , O O O O O O X x |
+ 17 | . X X X O O O X X X . O X X O O X . X | 17 | o o o o O O O X X X , O O O O O X X X |
+ 16 | . . X O . O X X . X . . O X O X X X . | 16 | O O o O O O X X X X x , O O O X X X X |
+ 15 | . O O O . X O X . X . X O O X O X . . | 15 | O O O O O O O X X X X X O O O O X X X |
+ 14 | . . X O . O O X . X . X O . X O O X . | 14 | o o , O O O O X X X X X O O O O O X X |
+ 13 | . . X O . O X X . X X . X O X . O X . | 13 | o , , O O O X X X X X X X O O O O X , |
+ 12 | . O . X . . O O X X . X . O . . . O . | 12 | , , , x , O O O X X , X , O O O O O o |
+ 11 | . . . X O O O X O O O O . . . . O . . | 11 | , , , x O O O O O O O O O O O O O O O |
+ 10 | . . . . O X . X . . O X O O . . . . . | 10 | x x , , O O O O O O O X O O O O O O O |
+  9 | . . . . . . . X X O X X X O X . . . . |  9 | X x x , O O O O O O X X X O o O O O O |
+  8 | . . X X O O X O X O X . X . . O . . . |  8 | X X X X O O O O O O X X X , o O O O O |
+  7 | . O X . X O X)O O O O X X O O . O O . |  7 | X X X X X O O O O O O X X O O O O O , |
+  6 | . X . X X O X X . . . X X X X O O X . |  6 | X X X X X O O O O , , X X X X O O X X |
+  5 | . . X . X X O . O . X X . X . X O X O |  5 | X X X X X X O O O , X X X X X X O X X |
+  4 | . . X . . X O O . O O O X O X X X . X |  4 | X X X X X X O O O O O O X O X X X X X |
+  3 | . . O X . X O X O X X X X O O X X X X |  3 | X X X X X X O X O X X X X O O X X X X |
+  2 | . . X X . . X X O X . O O . O O X . . |  2 | X X X X X X X X O X , O O O O O X X X |
+  1 | . . . . X X . O . . . . . O . O O X . |  1 | X X X X X X X o o x , O O O O O O X X |
+    +---------------------------------------+    +---------------------------------------+
+
+dcnn = [ G9  J6  F9  G10 E9  K5  D10 C10 D9  J4  J10 K1  B10 H5  C12 J1  L2  K6  F2  C11 ]
+       [ 43  23  10  7   4   2   1   1   1   0   0   0   0   0   0   0   0   0   0   0   ]
+
+G9 bad
+in the game, J6 and w loses F8 surrounding stones + black prisoners escape ...
+Still wins the game, but hurts a lot.
+
+Just F9 or E9
+
+fixed with atari:ladder_big dcnn_blunder

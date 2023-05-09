@@ -1,0 +1,40 @@
+Move:  116  Komi: 0.5  Handicap: 0  Captures B: 0 W: 0 [0 0 0 0]  
+      A B C D E F G H J K L M N O P Q R S T      
+    +---------------------------------------+    
+ 19 | . . . . . . . . . . . . . . . . . . . | 19 
+ 18 | . . X . . . X X O . . O O X X X . . . | 18 
+ 17 | . X . . X . X O . O O X X . . X . . . | 17 
+ 16 | . O O O X . . O . O X X . X X X . . . | 16 
+ 15 | . . . X O O . . . O X O X X . . X . . | 15 
+ 14 | . O . X . . . O . O O O . . . O O . . | 14 
+ 13 | . O X . . . X . . . . O . . . . . . . | 13 
+ 12 | . . O X X . . . X . X X X . . . . . . | 12 
+ 11 | . . . O X . X . . . . . . . . . . . . | 11 
+ 10 | . . O O O O . . . . . . . . . . O . . | 10 
+  9 | . . O X . . . O . . . . . . . . O . . |  9 
+  8 | O O O X . . . . . . . . . . . . O . . |  8 
+  7 | O X X . . . . X X . . . . . . . . . . |  7 
+  6 | X . . . X . . . . . . . . . X X . O . |  6 
+  5 | . X . . . O . X . O . . . . . . X O . |  5 
+  4 | . . . X . . . . . . . O O O X X X X O |  4 
+  3 | . . . X . O . X X O O X X X . . . . X)|  3 
+  2 | . . . X O . . O O O . O X . . . . . . |  2 
+  1 | . . . . . . . . . . O . . . . . . . . |  1 
+    +---------------------------------------+    
+
+dcnn = [ T5  S15 N1  S14 D1  S3  K11 P2  J10 T6  P12 F6  P3  K9  C17 E8  O17 D18 E5  F16 ]
+       [ 85  3   2   1   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+can't defend at T5 otherwise all 4 stones get captured !
+  T5 S7 R7 R6
+
+however T5 dcnn 85%,
+takes 40k+ playouts to override ...
+
+
+------------------------------------------------------------------------------------------
+fixed !
+
+dcnn blunder fix
+
+

@@ -1,0 +1,39 @@
+
+pachipachi kankie  2022-11-06
+
+Move:  219  Komi: 0.5  Handicap: 0  Captures B: 0 W: 0 [0 0 0 0]
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . X O O . . . O . . . . . X . X . | 19 | : : : : : : : : : : : : : : : : : : : |
+ 18 | . . . X X O . . O . O X . X X . X O . | 18 | : : : : : : : : : : : : : : : : : : : |
+ 17 | . . . . X O X)X O O X X X O O X X O . | 17 | : : : : : : : : : : : : : : : : : : : |
+ 16 | X X . X X X O . O . . O X X O O O O . | 16 | : : : : : : : : : : : : : : : : : : : |
+ 15 | X O X X . O O . O X X X O O . O X X . | 15 | : : : : : : : : : : : : : : : : : : : |
+ 14 | O O O X O . . O . O . X X O O X O X . | 14 | : : : : : : : : : : : : : : : : : : : |
+ 13 | O . O O X X X X O . . X O O . X . . . | 13 | : : : : : : : : : : : : : : : : : : : |
+ 12 | . O X X O O . . . . . X O . X . X X . | 12 | : : : : : : : : : : : : : : : : : : : |
+ 11 | X X X . . . O O O O O O O O X O X O . | 11 | : : : : : : : : : : : : : : : : : : : |
+ 10 | . . . X . X X X X X X O . X X X O O . | 10 | : : : : : : : : : : : : : : : : : : : |
+  9 | X . O X X O . . . . X X X X X O O . . |  9 | : : : : : : : : : : : : : : : : : : : |
+  8 | . . O . X O . X X O O O X O O . . . . |  8 | : : : : : : : : : : : : : : : : : : : |
+  7 | . O X O X O O X O . O . O X O . . . . |  7 | : : : : : : : : : : : : : : : : : : : |
+  6 | . . . . X X O O . O . O O X . O . O . |  6 | : : : : : : : : : : : : : : : : : : : |
+  5 | . X O O O . . . . . . . X X O . . . O |  5 | : : : : : : : : : : : : : : : : : : : |
+  4 | . O . O . O O O O O O O . X . . O O X |  4 | : : : : : : : : : : : : : : : : : : : |
+  3 | . O . . . O X X X X X O X . X O O X X |  3 | : : : : : : : : : : : : : : : : : : : |
+  2 | . O O . O X . X . X O X . . . X X X . |  2 | : : : : : : : : : : : : : : : : : : : |
+  1 | . . O O X X X . . . . . . . . . . . . |  1 | : : : : : : : : : : : : : : : : : : : |
+    +---------------------------------------+    +---------------------------------------+
+
+
+H19 only move, but would take ~17k sims to find it with pachi 12.70
+
+fixed in 12.80:
+
+dcnn = [ H18 G18 H19 G19 H16 P4  E11 A8  M19 N2  B9  K16 T12 D6  H12 C17 B10 G12 T18 B17 ]
+       [ 44  43  8   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+dcnn blunder: boosted [ H19 ] (atari ladder big defense)
+dcnn blunder: fixed G19  1% -> 0%  (first line connect blunder)
+dcnn blunder: fixed G18  26% -> 0%  (group 2lib blunder)
+dcnn = [ H19 H18 H16 G19 G18 P4  E11 A8  M19 N2  B9  K16 T12 D6  H12 C17 B10 G12 T18 B17 ]
+       [ 61  37  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]

@@ -1,0 +1,35 @@
+pachipachi iwonder  2016-09-24
+
+Move:  209  Komi: 0.5  Handicap: 7  Captures B: 0 W: 2
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . . . O X X . . . . . . | 19 | O O O O O O O O O O O X X X X X X X X |
+ 18 | . . O . O O O . . X O O X X . X . X . | 18 | O O O O O O O O O O O O X X X X X X X |
+ 17 | . O . O X O X X X O O O X O O X . X . | 17 | O O O O X O O O O O O O X X X X X X X |
+ 16 | . O O X X O O O O X O . O X O X X O X | 16 | O O O X X O O O O X O O O X X X X O X |
+ 15 | . O X X . X X X X X O . O X X O O O . | 15 | O O X X X X X X X X O O O X X O O O , |
+ 14 | O X X . . . X X O O O O X . . X X O . | 14 | O X X X X X X X O O O O X X X X X O O |
+ 13 | . O O X . X O O O X O O X X X X O O . | 13 | O O O X X X O O O X O O X X X X O O O |
+ 12 | . X O X . . X X O X X O X). O O O . . | 12 | O O O X X X X X O X X O , , O O O O O |
+ 11 | . . O X . . . . X . X X X X O . . . . | 11 | O O O X X X X X X X X X X X O O O O O |
+ 10 | . . O X . . . . . X . . X O O X O . . | 10 | O O O X X X X X X X X X X O O O O O O |
+  9 | O O O O X . . . . . . . . X X O O O O |  9 | O O O O X X X X X X X X X X X O O O O |
+  8 | O X O . X . . . . . . . . . . X X X O |  8 | O X O , X X X X X X X X X X X X X X O |
+  7 | O X O X . . . . . . X X . . . . X O O |  7 | O X O X X X X X X X X X X X X X X O O |
+  6 | X X X X . . . . X X . O X X . . X X X |  6 | X X X X X X X X X X , O X X X X X X X |
+  5 | . . . . X X X X O O O O O O X . . X . |  5 | X X X X X X X X O O O O O O X X X X , |
+  4 | . . X X O X O O O X X X . . . X X O O |  4 | X X X X O X O O O X X X o , X X X O O |
+  3 | . . X O O O . . . O O X X X X O O O . |  3 | X X X O O O O O O O O X X X X O O O O |
+  2 | X X O O . . . . . . . O O O O . . . . |  2 | X X O O O O O O O O O O O O O O O O O |
+  1 | . O . . . . . . . . . . . . . . . . . |  1 | , O O O O O O O O O O O O O O O O O O |
+    +---------------------------------------+    +---------------------------------------+
+
+dcnn = [ T15 J18 C1  T17 O4  M16 H18 B3  L6  D8  O12 E14 P4  K19 F12 T5  P14 S11 A13 A12 ]
+       [ 89  4   2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+L19 short of liberties,
+should J18 (or K19) to avoid losing 2 stones at N16
+(close game, so severe)
+
+needs about 11k sims to find it
+

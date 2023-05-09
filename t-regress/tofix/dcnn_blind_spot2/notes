@@ -1,0 +1,55 @@
+
+pachipachi kawa  2017-08-02
+
+Move:  169  Komi: 0.5  Handicap: 0  Captures B: 2 W: 1  [0 0 0 0]  d=4 
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . O . . . . . X X . . . . | 19 | : : : : : : : : : : : : : : : : : : : |
+ 18 | . . . . . . O . O X . . O X O X . . . | 18 | : : : : : : : : : : : : : : : : : : : |
+ 17 | O O . O . O O O X X X X X O O X . . . | 17 | : : : : : : : : : : : : : : : : : : : |
+ 16 | X O O . . . . X X X O O O X . X . . . | 16 | : : : : : : : : : : : : : : : : : : : |
+ 15 | X X O X . . . O O O . . . O X . . . . | 15 | : : : : : : : : : : : : : : : : : : : |
+ 14 | X . X X O . . . . . . . . O X . X . . | 14 | : : : : : : : : : : : : : : : : : : : |
+ 13 | . X . X O . . . . . . . . . O X . O . | 13 | : : : : : : : : : : : : : : : : : : : |
+ 12 | X O O . . . . . . . . . . . O . X O . | 12 | : : : : : : : : : : : : : : : : : : : |
+ 11 | X X O . O O . O O . . . . . . . . X). | 11 | : : : : : : : : : : : : : : : : : : : |
+ 10 | . O X . . X X . X O O . O O O O O . . | 10 | : : : : : : : : : : : : : : : : : : : |
+  9 | . X X . X . O . X X X X X X O X . . . |  9 | : : : : : : : : : : : : : : : : : : : |
+  8 | . O X . . X . O O X . O X . X X X X . |  8 | : : : : : : : : : : : : : : : : : : : |
+  7 | . O O . O X . O X O X O . X . O O O . |  7 | : : : : : : : : : : : : : : : : : : : |
+  6 | . . . . O X . X X . X . O O O . O . . |  6 | : : : : : : : : : : : : : : : : : : : |
+  5 | . . . O X X . . . X O . O X X . X O . |  5 | : : : : : : : : : : : : : : : : : : : |
+  4 | . . . O . . . . . . . O X . X X . O . |  4 | : : : : : : : : : : : : : : : : : : : |
+  3 | . . . O X X . . . . X X . X O X O . . |  3 | : : : : : : : : : : : : : : : : : : : |
+  2 | . . . O O X X . . . . . . X O O O . . |  2 | : : : : : : : : : : : : : : : : : : : |
+  1 | . . . . O O X . . . . . . . X . . . . |  1 | : : : : : : : : : : : : : : : : : : : |
+    +---------------------------------------+    +---------------------------------------+
+
+mcowner 0.23s
+dcnn in 1.13s
+dcnn = [ R11 S10 S14 R13 S9  Q12 T11 E15 G16 H10 R15 S15 D12 Q1  F15 L4  A9  T8  S16 G15 ]
+       [ 72  24  2   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+
+Should S10 and save the 2 stones of course, but R11 instead
+dcnn blind spot
+
+
+
+happens pretty often:
+
+$ (while true ; do cat foo.gtp; done) |  ../../../pachi -t =5000:10000  2>&1 | grep WINNER
+*** WINNER is S10 with score 0.4084 (5600/10004:10004/10004 games), extra komi 0.000000
+*** WINNER is S10 with score 0.4217 (5397/10041:10041/10041 games), extra komi 0.000000
+*** WINNER is S10 with score 0.4044 (5532/10145:10145/10145 games), extra komi 0.000000
+*** WINNER is R11 with score 0.3720 (5231/10039:10039/10039 games), extra komi 0.000000
+*** WINNER is S10 with score 0.4100 (5446/10119:10119/10119 games), extra komi 0.000000
+*** WINNER is S10 with score 0.4260 (5996/10014:10014/10014 games), extra komi 0.000000
+*** WINNER is R11 with score 0.3571 (5548/10142:10142/10142 games), extra komi 0.000000
+*** WINNER is R11 with score 0.3584 (5270/10078:10078/10078 games), extra komi 0.000000
+*** WINNER is S10 with score 0.4183 (5331/10039:10039/10039 games), extra komi 0.000000
+*** WINNER is R11 with score 0.3615 (5234/10079:10079/10079 games), extra komi 0.000000
+*** WINNER is S10 with score 0.4078 (5373/10003:10003/10004 games), extra komi 0.000000
+*** WINNER is S10 with score 0.4275 (6161/10034:10034/10034 games), extra komi 0.000000
+*** WINNER is R11 with score 0.3543 (5094/10029:10029/10031 games), extra komi 0.000000
+

@@ -1,0 +1,45 @@
+
+pachipachi tomsamasan  May 14 22:35:21
+
+Move:  237  Komi: 0.5  Handicap: 3  Captures B: 5 W: 7  Score Est: W+5.5
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . O X X X X O . . O X X X . | 19 | O O O O O O O X X X X O O O O X X X X |
+ 18 | . . X X X O O O X . O O O O O O X . X | 18 | O O O O O O O O X , O O O O O O X X X |
+ 17 | . O O X O . O X X X O X X O X O O X . | 17 | O O O O O O O X X X O X X O X O O X X |
+ 16 | . . . O O O O X O O O X O O X X X X . | 16 | O O O O O O O X O O O X O O X X X X X |
+ 15 | . . O X . O X X O . O X X X . . . . . | 15 | O O O X , O X X O O O X X X X X X X X |
+ 14 | . . O X . O X . X O O O X . . . . . . | 14 | O O O X , O X X X O O O X X X X X X X |
+ 13 | . . O X X X X X X X O X X . . . . . . | 13 | O O O X X X X X X X O X X X X X X X X |
+ 12 | . . O X O X X . X O . O X . . . . . . | 12 | O O O X O X X X X O O O X X X X X X X |
+ 11 | . . . O O O X X O O . O O X X . . . . | 11 | O O O O O O X X O O O O O X X X X X X |
+ 10 | . . . . . O X X X O . . . O O X . . . | 10 | O O O O O O X X X O O O O O O X X X X |
+  9 | . . . X O X X X O O . . . O X X . X . |  9 | O O O O O X X X O O O O O O X X X X X |
+  8 | . O O . O O O X X X O O X O O X O . . |  8 | O O O O O O O X X X O O O O O X X X X |
+  7 | . O X O . . O O O X X)O O X X . . . . |  7 | O O X O O O O O , X , O O X X X X X X |
+  6 | O X X X O O O X X X X O X . . X . . . |  6 | O X X X O O O X X X X O X X X X X X X |
+  5 | . O O X X O O O X O O X X X X . . . . |  5 | O O O X X O O O X O O X X X X X X X X |
+  4 | . O X X . X O O O . O O O X O X . . . |  4 | O O X X X X O O O O O O O X O X X X X |
+  3 | . O O X X X O X O O . . . O O X . . . |  3 | O O O X X X O X O O O O O O O X X X X |
+  2 | . O X X . X X X X O . . O . O X . . . |  2 | O O X X X X X X X O O O O O O X X X X |
+  1 | . O O X . . . X O O . . . O X X . . . |  1 | O O O X X X X X O O O O O O X X X X X |
+    +---------------------------------------+    +---------------------------------------+
+
+Need to defend after L7, B18 in the game and loses M8 stones
+
+dcnn = [ N9  M9  L9  M10 N10 E15 L12 O12 D8  Q11 K18 E14 P15 R5  Q7  E1  C11 F1  R7  B18 ]
+       [ 51  17  10  5   4   2   1   1   1   0   0   0   0   0   0   0   0   0   0   0   ]
+
+dcnn is right, search screws up:
+
+[1000] best 82.3% xkomi -0.0 | seq  N9 B18 A18     | can w  N9(82.3)  L9(82.0)  M9(79.7) A18(88.8)
+[2000] best 82.6% xkomi -0.0 | seq  N9 B18 A18     | can w  N9(82.6) A18(87.2)  L9(82.6)  M9(78.4)
+[3000] best 88.5% xkomi -0.0 | seq A18  D8  E7  R7 | can w A18(88.5)  N9(82.6)  L9(82.6)  M9(78.1)
+[4000] best 88.0% xkomi -0.0 | seq A18  D8  E7  R7 | can w A18(88.0)  N9(82.6)  D8(87.7)  L9(82.6)
+[5000] best 88.4% xkomi -0.0 | seq  D8 B18 A18 C11 | can w  D8(88.4) A18(88.0)  N9(82.6)  L9(82.6)
+[6000] best 88.4% xkomi -0.0 | seq  D8 B18 A18 C11 | can w  D8(88.4) A18(88.0) B18(89.0)  N9(82.6)
+
+
+pachi <= 12.70: not matched as atari:and_cap
+
+extending atari:and_cap pattern to handle this fixes it
