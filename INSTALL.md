@@ -1,35 +1,73 @@
-## Compiling
-
-Currently Unix, Mac and Windows are supported.  
-To build Pachi, simply type:
-
-	make
+Building from source
+====================
 
 
-In case you hit compilation issues (e.g. when building on MacOS/X)
-or want to change the build configuration, check the user configurable
-section at the top of the Makefile.
+## Install dependencies
 
-Here is an example for installing all dependencies and compiling Pachi
-from source under Ubuntu 18.04:
+- Ubuntu 18.04 / 20.04
 
 	sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
+
+- Ubuntu (other versions)
+
+	sudo add-apt-repository ppa:lemonsqueeze/pachi
+	sudo apt update
+	sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
+
+- Other distributions
+
+  Install [Caffe](http://caffe.berkeleyvision.org) package or build from source.
+  
+  CPU-only build is fine, no need for GPU, cuda or the other optional dependencies.
+  You need OpenBlas for good performance.
+  (if caffe is installed in an unusual location edit Makefile)
+  
+
+## Build
+
+Download pachi repository:
+
 	git clone https://github.com/pasky/pachi
 	cd pachi
+
+Edit Makefile, top section has configuration options.  
+Currently Unix and Windows are supported (MAC build currently untested).
+
+To build Pachi type:
+
+	make clean
 	make
 
-Install libcaffe-cuda-dev instead for nvidia gpu acceleration.  
-Non-dcnn build just needs git make and gcc.
 
-Otherwise:
-- Install [Caffe](http://caffe.berkeleyvision.org)  
-  CPU-only build is fine, no need for GPU, cuda or the other optional dependencies.  
-  You need openblas for good performance.
-- Edit Makefile, point it to where caffe is installed and build.
+## Download datafiles
 
-After compiling and setting up data files you can install pachi with:
+Get dcnn data files from github (not kept in git repo):
 
-    make install
+	make datafiles
 
-This will install pachi in PREFIX/bin and datafiles in PREFIX/share/pachi-go
-(or whatever DATADIR was set to).
+Or if that fails you can get them manually from
+[here](https://github.com/pasky/pachi/releases/download/pachi_networks/detlef54.zip).
+
+
+## Test
+
+Run basic tests:
+
+	make test
+
+You can play around with pachi in current directory without installing (run `./pachi`).
+
+
+## Install
+
+	make install
+
+Install pachi in BINDIR (default /usr/bin) and datafiles in DATADIR (default /usr/share/pachi-go).
+
+Edit Makefile or pass variables to change install directories (if you change PREFIX / DATADIR you need to rebuild).
+
+For example, build and install to /usr/local:
+
+	make clean
+	make          PREFIX=/usr/local 
+	make install  PREFIX=/usr/local
