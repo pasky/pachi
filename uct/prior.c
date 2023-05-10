@@ -187,11 +187,13 @@ uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map)
 		add_prior_value(map, pass, 1.0, u->prior->pattern_eqex * 3 / 4);
 
 	if (u->prior->even_eqex)			uct_prior_even(u, node, map);
-	
-	/* Use dcnn for root priors */
-	if (u->prior->dcnn_eqex && !u->tree_ready)	uct_prior_dcnn(u, node, map);
 
-	if (u->prior->pattern_eqex)			uct_prior_pattern(u, node, map);
+	if (!u->tree_ready) {  /* Root node: use dcnn for priors, don't mix pattern priors */
+		if      (u->prior->dcnn_eqex)		uct_prior_dcnn(u, node, map);
+		else if (u->prior->pattern_eqex)	uct_prior_pattern(u, node, map);
+	}
+	else
+		if (u->prior->pattern_eqex)		uct_prior_pattern(u, node, map);
 
 	if (u->prior->joseki_eqex)			uct_prior_joseki(u, node, map);
 
