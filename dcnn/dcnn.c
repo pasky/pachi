@@ -119,8 +119,10 @@ dcnn_init(board_t *b)
 	if (!dcnn)  dcnn = &dcnns[0];
 	if (dcnn_enabled && !dcnn_supported_board_size(b) && find_dcnn_for_board(b))
 		caffe_done();  /* Reload net */	
-	if (dcnn_enabled && dcnn_supported_board_size(b))
+	if (dcnn_enabled && dcnn_supported_board_size(b)) {
 		caffe_init(board_rsize(b), dcnn->model_filename, dcnn->weights_filename, dcnn->full_name, dcnn->default_size);
+		dcnn_blunder_init();
+	}
 	if (dcnn_required && !caffe_ready())  die("dcnn required, aborting.\n");
 }
 

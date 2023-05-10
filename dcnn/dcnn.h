@@ -15,6 +15,9 @@ int dcnn_default_board_size(void);
 void require_dcnn(void);
 void disable_dcnn(void);
 
+void disable_dcnn_blunder(void);
+void dcnn_blunder_init(void);
+
 /* Evaluate dcnn and fix dcnn blunders (if they haven't been disabled) */
 void dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl);
 /* Raw dcnn output (doesn't fix blunders) */
@@ -54,6 +57,9 @@ coord2dcnn_idx(coord_t c)
 #define require_dcnn()  die("dcnn required but not compiled in, aborting.\n")
 #define using_dcnn(b)   0
 #define dcnn_init(b)    ((void)0)
+
+#define dcnn_blunder_init()	((void)0)
+#define disable_dcnn_blunder()	((void)0)
 
 
 #endif

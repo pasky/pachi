@@ -210,7 +210,6 @@ usage(char *arg)
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
 #endif
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
-		"      --verbose-caffe               enable caffe logging \n"
 		" \n"
 		"Engine components: \n"
 		"      --dcnn,     --nodcnn          dcnn required / disabled \n"
@@ -230,6 +229,8 @@ usage(char *arg)
 		"      --dcnn=name                   choose which dcnn to load (default detlef) \n"
 		"      --dcnn=file                   \n"
 		"      --list-dcnns                  show supported networks \n"
+		"      --nodcnn-blunder              don't filter dcnn blunders         (default: enabled) \n"
+		"      --verbose-caffe               enable caffe logging \n"		
 		" \n"
 #endif
 		"Time settings: \n"
@@ -300,6 +301,7 @@ show_version(FILE *s)
 #define OPT_EXT_JOSEKI_ENGINE 274
 #define OPT_JOSEKIFIX         275
 #define OPT_NOJOSEKIFIX       276
+#define OPT_NODCNN_BLUNDER    277
 
 
 static struct option longopts[] = {
@@ -332,6 +334,7 @@ static struct option longopts[] = {
 	{ "log-file",               required_argument, 0, 'o' },
 	{ "name",                   required_argument, 0, OPT_NAME },
 	{ "nodcnn",                 no_argument,       0, OPT_NODCNN },
+	{ "nodcnn-blunder",         no_argument,       0, OPT_NODCNN_BLUNDER },
 	{ "noundo",                 no_argument,       0, OPT_NOUNDO },
 	{ "nojoseki",               no_argument,       0, OPT_NOJOSEKI },
 #ifdef JOSEKIFIX
@@ -451,6 +454,9 @@ int main(int argc, char *argv[])
 				break;
 			case OPT_NODCNN:
 				disable_dcnn();
+				break;
+			case OPT_NODCNN_BLUNDER:
+				disable_dcnn_blunder();
 				break;
 			case OPT_NOUNDO:
 				gtp->noundo = true;

@@ -14,6 +14,18 @@
 #include "josekifix/josekifix.h"
 
 
+static bool dcnn_blunder_enabled = true;
+void disable_dcnn_blunder(void)  {  dcnn_blunder_enabled = false;  }
+
+void dcnn_blunder_init(void)
+{
+	if (DEBUGL(1) && !dcnn_blunder_enabled)
+		fprintf(stderr, "Disabled dcnn blunder filtering\n");
+}
+
+
+/**********************************************************************************/
+
 static float
 dcnn_max_value(board_t *b, float result[])
 {
@@ -418,13 +430,16 @@ dcnn_blunder(board_t *b, move_t *m, float r, move_t *redirect, char **name)
 int
 dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl)
 {
+	if (!dcnn_blunder_enabled)
+		return 0;
+	
 	/* Make ownermap if caller didn't provide one */
 	if (!ownermap) {
 		ownermap = alloca(sizeof(*ownermap));
 		ownermap_init(ownermap);
 		mcowner_playouts(b, color, ownermap);
 	}
-	
+
 	float blunder_rating = 0.001;  /* 0.1% */
 	int changes = 0;
 
