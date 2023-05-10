@@ -388,7 +388,7 @@ josekifix_ladder_setup(board_t *b, int rot, ladder_check_t *check)
 		move_t m = { c, color };
 		//josekifix_log("setup %s %s\n", stone2str(color), coord2str(c));
 		int r = board_play(b, &m);
-		if (r != 0)  return false;		// shouldn't happen really
+		if (r < 0)  return false;		// shouldn't happen really
 	}
 	
 	for (int i = 0; i < n; i++) {
@@ -399,7 +399,7 @@ josekifix_ladder_setup(board_t *b, int rot, ladder_check_t *check)
 		move_t m = { c, stone_other(color) };
 		//josekifix_log("setup %s %s\n", stone2str(stone_other(color)), coord2str(c));
 		int r = board_play(b, &m);
-		if (r != 0)  return false;		// shouldn't happen really
+		if (r < 0)  return false;		// shouldn't happen really
 	}
 
 	return true;
