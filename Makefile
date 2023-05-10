@@ -1,4 +1,4 @@
-#### CONFIGURATION
+############################ CONFIGURATION ############################
 
 # Tweak options below to change the way Pachi is built.
 # Alternatively, you can pass the option to make itself, like:
@@ -118,7 +118,7 @@ CXXFLAGS     := -std=c++11
 #########################################################################
 ### CONFIGURATION END
 
-# Main rule + aliases
+# Main rules + aliases
 # Aliases are nice, but don't ask too much: 'make quick 19' won't do what
 # you expect for example (use 'make OPT=-O0 BOARD_SIZE=19' instead)
 
@@ -341,7 +341,7 @@ install-bin: distribute
 	$(INSTALL) -d $(BINDIR)
 	$(INSTALL) distribute/pachi $(BINDIR)/
 
-install-data:
+install-data: $(DATAFILES)
 	$(INSTALL) -d $(DATADIR)
 	@for file in $(DATAFILES); do                             \
 		if [ -f $$file ]; then                            \
@@ -352,6 +352,16 @@ install-data:
 			exit 1;                                   \
 		fi                                                \
 	done;
+
+# Get missing datafiles
+datafiles: $(DATAFILES)
+
+# Download dcnn files from github
+detlef54.prototxt detlef54.trained:
+	@echo "Getting dcnn datafiles:" ; echo ""
+	wget -c -O detlef54.zip 'https://github.com/pasky/pachi/releases/download/pachi_networks/detlef54.zip'
+	unzip -q -o detlef54.zip  detlef54.prototxt detlef54.trained
+	rm detlef54.zip
 
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive
