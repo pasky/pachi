@@ -10,7 +10,7 @@
 #include "gtp.h"
 #include "joseki.h"
 #include "engine.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 #include "tactics/util.h"
 #include "josekiload.h"
 

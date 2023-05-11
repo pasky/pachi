@@ -54,8 +54,12 @@ Pachi consists of the following components:
 	ownermap.[ch]	 simulation-based finalpos. "owner map" data structure
 	fbook.[ch]       fuseki database (opening book)
 	pattern3.[ch]	 fast 3x3 spatial pattern matcher
-	dcnn.[ch]        dcnn-based move predictor
-	caffe.cpp        c++ interface with caffe for dcnn evaluation
+
+* "dcnn" manages neural networks for root node evaluation (policy network)
+
+	dcnn/dcnn.[ch]			network loading and evaluation (c side)
+	dcnn/caffe.cpp			network loading and evaluation (c++ side)
+	dcnn/dcnn_engine.c		example "dcnn move generator" engine
 
 * "pattern" mm pattern matcher provides priors to guide tree search
 
@@ -105,7 +109,6 @@ Pachi consists of the following components:
 	distributed/	"meta-engine" for distributed play by orchestrating
 			    several UCT engines on different computers
   other engines:
-	engines/dcnn.c		example "dcnn move generator" engine
 	engines/external.c      call external GTP engine
 	engines/random.c	example "random move generator" engine
 	engines/replay.c	example "playout move generator" engine
@@ -256,8 +259,8 @@ The final_status_list command requires engine support.
 DCNN
 ====
 
-dcnn.c has the code that prepares the input planes from board state and
-feeds that to caffe for dcnn evaluation (caffe.cpp). If you want to use
+dcnn/dcnn.c has the code that prepares the input planes from board state and
+feeds that to caffe for dcnn evaluation (dcnn/caffe.cpp). If you want to use
 a network with different inputs this is the place to accomodate it.
 
 

@@ -8,7 +8,7 @@
 #include "pattern/spatial.h"
 #include "ownermap.h"
 #include "engine.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 #include "joseki/joseki.h"
 #include "josekifix/josekifix.h"
 #include "tactics/util.h"

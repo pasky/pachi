@@ -194,7 +194,8 @@ endif
 
 ifeq ($(DCNN), 1)
 	COMMON_FLAGS   += -DDCNN
-	EXTRA_OBJS     += $(EXTRA_DCNN_OBJS) caffe.o dcnn.o
+	EXTRA_SUBDIRS  += dcnn
+	EXTRA_OBJS     += $(EXTRA_DCNN_OBJS)
 	SYS_LIBS := $(DCNN_LIBS)
 else
 	DCNN_DETLEF = 0

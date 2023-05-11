@@ -11,7 +11,7 @@
 #include "mq.h"
 #include "random.h"
 #include "ownermap.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 
 #ifdef BOARD_PAT3
 #include "pattern3.h"

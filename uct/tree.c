@@ -19,7 +19,7 @@
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 
 #ifdef DISTRIBUTED
 #include "uct/slave.h"

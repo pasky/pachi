@@ -15,7 +15,7 @@
 #include "uct/plugins.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 
 #define PRIOR_BEST_N 20
 

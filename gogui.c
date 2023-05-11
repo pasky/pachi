@@ -17,8 +17,8 @@
 #include "pattern/prob.h"
 
 #ifdef DCNN
-#include "engines/dcnn.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
+#include "dcnn/dcnn_engine.h"
 #endif /* DCNN */
 
 typedef enum {

@@ -25,7 +25,7 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "uct/prior.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 #include "pachi.h"
 
 static int

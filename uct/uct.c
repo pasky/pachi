@@ -29,7 +29,7 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "josekifix/josekifix.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 
 #ifdef DISTRIBUTED
 #include "uct/slave.h"

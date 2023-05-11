@@ -5,8 +5,8 @@
 #include "board.h"
 #include "engine.h"
 #include "caffe.h"
-#include "../dcnn.h"
-#include "engines/dcnn.h"
+#include "dcnn/dcnn.h"
+#include "dcnn/dcnn_engine.h"
 
 
 
