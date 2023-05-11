@@ -441,36 +441,6 @@ test_useful_ladder(board_t *b, char *arg)
 }
 
 static bool
-test_first_line_blunder(board_t *b, char *arg)
-{
-	next_arg(arg);
-	enum stone color = str2stone(arg);
-	next_arg(arg);
-	coord_t c = str2coord(arg);
-	next_arg(arg);
-	int eres = atoi(arg);
-	args_end();
-
-	PRINT_TEST(b, "first_line_blunder %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
-	
-	assert(board_at(b, c) == S_NONE);	/* Sanity checks */
-	assert(coord_edge_distance(c) == 0);
-	with_move_strict(b, c, color, {
-		group_t g = group_at(b, c);
-		assert(g);
-		assert(group_stone_count(b, g, 4) >= 3);
-		assert(board_group_info(b, g).libs == 3 ||
-		       board_group_info(b, g).libs == 2);
-	});
-	
-	move_t m = move(c, color);
-	int rres = dcnn_first_line_connect_blunder(b, &m);
-	
-	PRINT_RES();
-	return   (rres == eres);
-}
-
-static bool
 test_can_countercap(board_t *b, char *arg)
 {
 	next_arg(arg);
@@ -793,6 +763,135 @@ test_moggy_status(board_t *b, char *arg)
 	return ret;
 }
 
+
+#ifdef DCNN
+
+/* Use fake values for dcnn blunder testing (fast + ensures all moves are tested) */
+#define FAKE_DCNN_OUTPUT  1
+
+/* Test dcnn blunders on given position, make sure we get/don't get wanted/unwanted moves.
+ *   dcnn_blunder         color coords   ->  check killed moves
+ *   dcnn_blunder boosted color coords   ->  check boosted moves
+ * Better use t-unit over gtp to reproduce game conditions exactly (see test_genmove comment)
+ *
+ * Syntax:
+ *   dcnn_blunder [boosted] color coord                       expect blunder coord
+ *   dcnn_blunder [boosted] color coord1 coord2               expect blunders coord1 and coord2
+ *   dcnn_blunder [boosted] color coord1 coord2 !coord3       expect blunders coord1 and coord2, but not coord3 ... */
+static bool
+test_dcnn_blunder(board_t *b, char *arg)
+{
+	static int init = 0;
+	if (!init) {
+#ifndef FAKE_DCNN_OUTPUT
+		dcnn_init(b);
+#endif
+		pattern_config_t pc;
+		patterns_init(&pc, NULL, false, true);
+		init = 1;
+	}
+
+	next_arg(arg);
+	bool boosted = !strcmp(arg, "boosted");
+	if (boosted)
+		next_arg(arg);
+	
+	enum stone color = str2stone(arg);
+	assert(color != S_NONE);
+	next_arg(arg);
+
+	char* args[30];  int n;
+	move_queue_t wanted;    mq_init(&wanted);
+	move_queue_t unwanted;  mq_init(&unwanted);
+	for (n = 0; *arg; n++) {
+		args[n] = arg;
+		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
+		if (*arg == '!')  arg++;
+		if (!strcmp(arg, "pass") || !strcmp(arg, "resign"))  die("Can't have pass or resign here.\n");
+		if (!valid_str_coord(arg))  die("Invalid move: '%s'\n", arg);
+		mq_add(q, str2coord(arg), 0);
+		next_arg_opt(arg);
+	}
+	if (!wanted.moves && !unwanted.moves)  die("No moves specified");
+	args_end();
+	
+	board_print_test(b);
+	if (boosted)  fprintf(stderr, "dcnn_blunder boosted %s ", stone2str(color));
+	else          fprintf(stderr, "dcnn_blunder %s ", stone2str(color));
+	for (int i = 0; i < n; i++)
+		fprintf(stderr, "%s ", args[i]);
+	fprintf(stderr, "...\n\n");
+
+	/***********************************************************************/
+	/* Get ownermap */
+	ownermap_t ownermap;  ownermap_init(&ownermap);
+	mcowner_playouts(b, color, &ownermap);
+
+	/* Get dcnn output */
+	float result[19 * 19];
+#ifdef FAKE_DCNN_OUTPUT
+	for (int i = 0; i < 19 * 19; i++)  /* Fake dcnn output */
+		result[i] = 0.015;         /* All moves 1.5%   (less than 2% so we can test boosted move trimming) */
+#else
+	dcnn_evaluate_raw(b, color, result, &ownermap, DEBUGL(2));
+#endif
+
+	/* Get blunders */
+	move_queue_t blunders;  mq_init(&blunders);
+	get_dcnn_blunders(boosted, b, color, result, &ownermap, &blunders);
+	//fprintf(stderr, "found %i\n", blunders.moves);
+
+	/* Still run regular blunder code so they get logged */
+	dcnn_fix_blunders(b, color, result, &ownermap, DEBUGL(2));
+	
+	/***********************************************************************/	
+	/* Check results */
+	bool eres = true, rres = true;
+	for (unsigned int i = 0; i < wanted.moves; i++)
+		if (!mq_has(&blunders, wanted.move[i]))
+			rres = false;
+	
+	for (unsigned int i = 0; i < unwanted.moves; i++)
+		if (mq_has(&blunders, unwanted.move[i]))
+			rres = false;
+	
+	PRINT_RES();
+	
+	return rres;
+}
+
+static bool
+test_first_line_blunder(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "first_line_blunder %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	
+	assert(board_at(b, c) == S_NONE);	/* Sanity checks */
+	assert(coord_edge_distance(c) == 0);
+	with_move_strict(b, c, color, {
+		group_t g = group_at(b, c);
+		assert(g);
+		assert(group_stone_count(b, g, 4) >= 3);
+		assert(board_group_info(b, g).libs == 3 ||
+		       board_group_info(b, g).libs == 2);
+	});
+	
+	move_t m = move(c, color);
+	int rres = dcnn_first_line_connect_blunder(b, &m);
+	
+	PRINT_RES();
+	return   (rres == eres);
+}
+
+#endif /* DCNN */
+
 bool board_undo_stress_test(board_t *orig, char *arg);
 bool board_regression_test(board_t *orig, char *arg);
 bool moggy_regression_test(board_t *orig, char *arg);
@@ -813,7 +912,6 @@ static t_unit_cmd commands[] = {
 	{ "wouldbe_ladder",         test_wouldbe_ladder,        },
 	{ "wouldbe_ladder_any",     test_wouldbe_ladder_any,    },
 	{ "useful_ladder",          test_useful_ladder,         },
-	{ "first_line_blunder",     test_first_line_blunder     },
 	{ "can_countercap",         test_can_countercap,        },
 	{ "atari",		    test_atari			},
 	{ "two_eyes",               test_two_eyes,              },
@@ -822,6 +920,10 @@ static t_unit_cmd commands[] = {
 	{ "false_eye_seki",         test_false_eye_seki,        },
 	{ "pass_is_safe",           test_pass_is_safe,          },
 	{ "final_score",            test_final_score,           },
+#ifdef DCNN
+	{ "dcnn_blunder",	    test_dcnn_blunder           },
+	{ "first_line_blunder",     test_first_line_blunder     },
+#endif
 #ifdef BOARD_TESTS
 	{ "board_undo_stress_test", board_undo_stress_test      },
 	{ "board_regtest",          board_regression_test       },
