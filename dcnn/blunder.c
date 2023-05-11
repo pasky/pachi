@@ -145,46 +145,126 @@ dcnn_group_2lib_blunder(board_t *b, move_t *m)
 /**********************************************************************************/
 /* Atari defense move boosting */
 
+typedef struct {
+	coord_t coord;
+	float   dist;
+} coord_dist_t;
+
 static int
-count_atari_moves(int feature, board_t *b, enum stone to_play, ownermap_t *ownermap)
+coord_dist_cmp(const void *pa, const void *pb)
+{
+	const coord_dist_t *a = pa;
+	const coord_dist_t *b = pb;
+	if (a->dist == b->dist)
+		return 0;
+	return (a->dist < b->dist ? -1 : 1);
+}
+
+static int
+keep_closest_moves(coord_dist_t candidates[], int ncandidates, move_queue_t *defense_moves, float result[])
+{
+	/* Sort defense_moves by distance to closest fixed atari */
+	qsort(candidates, ncandidates, sizeof(*candidates), coord_dist_cmp);
+
+	/* Keep first 5 and dcnn moves */
+	defense_moves->moves = 0;
+	for (int i = 0; i < ncandidates; i++) {
+		coord_t c = candidates[i].coord;
+		int k = coord2dcnn_idx(c);
+		//fprintf(stderr, "%s dist %.1f\n", coord2sstr(c), coord_dist[i].dist);
+		if (i >= 5 && result[k] < 0.02)		// throw away
+			continue;
+
+		mq_add(defense_moves, c, 0);
+	}
+	
+	return defense_moves->moves;
+}
+
+static int
+find_atari_moves(move_queue_t *q, int feature, board_t *b, enum stone to_play, ownermap_t *ownermap)
 {
 	int n = 0;
 	
 	foreach_free_point(b) {
 		move_t m = move(c, to_play);
-		if (pattern_match_atari(b, &m, ownermap) == feature)
+		if (pattern_match_atari(b, &m, ownermap) == feature) {
 			n++;
+			if (q)  mq_add(q, c, 0);
+		}
 	} foreach_free_point_end;
 
 	return n;
 }
 
+static void
+show_which_move_fixes_which_atari(coord_t c, move_queue_t *fixed)
+{
+	fprintf(stderr, "dcnn_blunder: %s fixes ataris ", coord2sstr(c));
+	for (unsigned int i = 0; i < fixed->moves; i++)
+		fprintf(stderr, "%s ", coord2sstr(fixed->move[i]));
+	fprintf(stderr, "\n");
+}
+
 static int
 find_atari_defense_moves(char *name, int feature,
 			 board_t *b, enum stone color, float result[], ownermap_t *ownermap,
-			 move_queue_t *defense_moves)
+			 coord_dist_t candidates[])
 {
 	enum stone other_color = stone_other(color);
-	int n = count_atari_moves(feature, b, other_color, ownermap);
+	move_queue_t atari_moves;  mq_init(&atari_moves);
+	int n = find_atari_moves(&atari_moves, feature, b, other_color, ownermap);
 	if (!n)  return 0;
 
+	int ncandidates = 0;
 	foreach_free_point(b) {
 		if (is_selfatari(b, color, c))
 			continue;
 		
 		with_move(b, c, color, {
-			if (count_atari_moves(feature, b, other_color, ownermap) >= n)
+			move_queue_t atari_moves2;  mq_init(&atari_moves2);
+			if (find_atari_moves(&atari_moves2, feature, b, other_color, ownermap) >= n)
 				break;		/* doesn't help */
+
+			/* Find which atari(s) got fixed */
+			move_queue_t fixed;  mq_init(&fixed);
+			mq_sub(&atari_moves, &atari_moves2, &fixed);
+
+			if (DEBUGL(4))  show_which_move_fixes_which_atari(c, &fixed);
 			
-			mq_add(defense_moves, c, 0);
+			/* Find distance to closest fixed atari */
+			float dist = 9999999;
+			for (unsigned int i = 0; i < fixed.moves; i++) {
+				coord_t atari = fixed.move[i];
+				dist = MIN(dist, coord_distance(atari, c));
+			}
+
+			candidates[ncandidates].dist = dist;
+			candidates[ncandidates++].coord = c;
 		});
 	} foreach_free_point_end;
 
-	return defense_moves->moves;
+	return ncandidates;
+}
+
+static int
+select_atari_defense_moves(char *name, int feature,
+			   board_t *b, enum stone color, float result[], ownermap_t *ownermap,
+			   move_queue_t *defense_moves, int *dropped)
+{
+	coord_dist_t candidates[BOARD_MAX_MOVES];
+	int n = find_atari_defense_moves(name, feature, b, color, result, ownermap, candidates);
+	if (!n)  return 0;
+	
+	/* Just keep close ones and dcnn moves */
+	int moves = keep_closest_moves(candidates, n, defense_moves, result);
+
+	*dropped = (n - moves);
+	return moves;
 }
 
 static void
-boost_atari_defense_short_log(char *name, board_t *b, float result[], move_queue_t *defense_moves)
+boost_atari_defense_short_log(char *name, board_t *b, float result[], move_queue_t *defense_moves, int dropped)
 {
 	int moves = defense_moves->moves;
 	int best_n = 12;
@@ -200,6 +280,7 @@ boost_atari_defense_short_log(char *name, board_t *b, float result[], move_queue
 	}
 	if (moves > best_n)  fprintf(stderr, "... ] (%s) (%i moves)", name, moves);
 	else		     fprintf(stderr, "] (%s)", name);
+	if (dropped)         fprintf(stderr, " (dropped %i)", dropped);
 	fprintf(stderr, "\n");
 }
 
@@ -208,7 +289,9 @@ boost_atari_defense_moves(char *name, int feature,
 			  board_t *b, enum stone color, float result[], ownermap_t *ownermap, int debugl)
 {
 	move_queue_t defense_moves;	mq_init(&defense_moves);
-	int          moves = find_atari_defense_moves(name, feature, b, color, result, ownermap, &defense_moves);
+	int          dropped;
+	int          moves = select_atari_defense_moves(name, feature, b, color, result, ownermap,
+							&defense_moves, &dropped);
 	if (!moves)  return 0;
 	
 	/* Now we know how many moves will get boosted */
@@ -226,7 +309,7 @@ boost_atari_defense_moves(char *name, int feature,
 	dcnn_rescale_values(b, result);
 	
 	if (!log_verbose)	/* short log (one line) */
-		boost_atari_defense_short_log(name, b, result, &defense_moves);
+		boost_atari_defense_short_log(name, b, result, &defense_moves, dropped);
 
 	return moves;
 }

@@ -34,6 +34,9 @@ static bool mq_has(move_queue_t *q, coord_t c);
 /* Cat two queues together. */
 static void mq_append(move_queue_t *qd, move_queue_t *qs);
 
+/* Subtract two queues (find elements in a not in b) */
+static void mq_sub(move_queue_t *a, move_queue_t *b, move_queue_t *res);
+
 /* Check if the last move in queue is not a dupe, and remove it
  * in that case. */
 static void mq_nodup(move_queue_t *q);
@@ -90,6 +93,15 @@ mq_append(move_queue_t *qd, move_queue_t *qs)
 	memcpy(&qd->tag[qd->moves], qs->tag, qs->moves * sizeof(*qs->tag));
 	memcpy(&qd->move[qd->moves], qs->move, qs->moves * sizeof(*qs->move));
 	qd->moves += qs->moves;
+}
+
+static inline void
+mq_sub(move_queue_t *a, move_queue_t *b, move_queue_t *res)
+{
+	unsigned int n = a->moves;
+	for (unsigned int i = 0; i < n; i++)
+		if (!mq_has(b, a->move[i]))
+			mq_add(res, a->move[i], 0);
 }
 
 static inline void
