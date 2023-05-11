@@ -9,9 +9,22 @@
 #include "pattern/pattern.h"
 #include "tactics/util.h"
 #include "tactics/2lib.h"
+#include "tactics/selfatari.h"
 #include "board_undo.h"
 #include "josekifix/josekifix.h"
 
+
+static float
+dcnn_max_value(board_t *b, float result[])
+{
+	float max = 0.0;
+	foreach_free_point(b) {
+		int k = coord2dcnn_idx(c);
+		max = MAX(max, result[k]);
+	} foreach_free_point_end;
+
+	return max;
+}
 
 /* Rescale dcnn values so that probabilities add up to 1.0 again */
 static void
@@ -28,6 +41,9 @@ dcnn_rescale_values(board_t *b, float result[])
 		result[k] /= total;
 	} foreach_free_point_end;
 }
+
+
+/**********************************************************************************/
 
 /* Prevent silly first-line connect blunders where group can be captured afterwards */
 static bool
@@ -125,6 +141,99 @@ dcnn_group_2lib_blunder(board_t *b, move_t *m)
 	return false;
 }
 
+
+/**********************************************************************************/
+/* Atari defense move boosting */
+
+static int
+count_atari_moves(int feature, board_t *b, enum stone to_play, ownermap_t *ownermap)
+{
+	int n = 0;
+	
+	foreach_free_point(b) {
+		move_t m = move(c, to_play);
+		if (pattern_match_atari(b, &m, ownermap) == feature)
+			n++;
+	} foreach_free_point_end;
+
+	return n;
+}
+
+static int
+find_atari_defense_moves(char *name, int feature,
+			 board_t *b, enum stone color, float result[], ownermap_t *ownermap,
+			 move_queue_t *defense_moves)
+{
+	enum stone other_color = stone_other(color);
+	int n = count_atari_moves(feature, b, other_color, ownermap);
+	if (!n)  return 0;
+
+	foreach_free_point(b) {
+		if (is_selfatari(b, color, c))
+			continue;
+		
+		with_move(b, c, color, {
+			if (count_atari_moves(feature, b, other_color, ownermap) >= n)
+				break;		/* doesn't help */
+			
+			mq_add(defense_moves, c, 0);
+		});
+	} foreach_free_point_end;
+
+	return defense_moves->moves;
+}
+
+static void
+boost_atari_defense_short_log(char *name, board_t *b, float result[], move_queue_t *defense_moves)
+{
+	int moves = defense_moves->moves;
+	int best_n = 12;
+	coord_t best_c[12];
+	float   best_r[12];
+	get_dcnn_best_moves(b, result, best_c, best_r, best_n);
+	
+	fprintf(stderr, "dcnn blunder: boosted [ ");
+	for (int i = 0; i < best_n; i++) {
+		if (!mq_has(defense_moves, best_c[i]))  continue;
+		const char *str = (is_pass(best_c[i]) ? "" : coord2sstr(best_c[i]));
+		fprintf(stderr, "%s ", str);
+	}
+	if (moves > best_n)  fprintf(stderr, "... ] (%s) (%i moves)", name, moves);
+	else		     fprintf(stderr, "] (%s)", name);
+	fprintf(stderr, "\n");
+}
+
+static int
+boost_atari_defense_moves(char *name, int feature,
+			  board_t *b, enum stone color, float result[], ownermap_t *ownermap, int debugl)
+{
+	move_queue_t defense_moves;	mq_init(&defense_moves);
+	int          moves = find_atari_defense_moves(name, feature, b, color, result, ownermap, &defense_moves);
+	if (!moves)  return 0;
+	
+	/* Now we know how many moves will get boosted */
+	float maxres = dcnn_max_value(b, result);
+	bool  log_verbose = (debugl && DEBUGL(3));	/* log each move individually */
+	for (unsigned int i = 0; i < defense_moves.moves; i++) {
+		coord_t c = defense_moves.move[i];
+		int k = coord2dcnn_idx(c);
+		float newres = maxres + 0.2 * moves + result[k];
+		if (log_verbose)  fprintf(stderr, "dcnn blunder: boost %-3s  %i%% -> %i%%  (%s)\n",
+					  coord2sstr(c), (int)(result[k] * 100), (int)(newres * 100), name);
+		result[k] = newres;
+	}
+	
+	dcnn_rescale_values(b, result);
+	
+	if (!log_verbose)	/* short log (one line) */
+		boost_atari_defense_short_log(name, b, result, &defense_moves);
+
+	return moves;
+}
+
+
+/**********************************************************************************/
+
 /* Check if move m is a dcnn blunder.
  * Return true:                 clobber move
  * Return true + set redirect:  redirect dcnn prior and clobber move */
@@ -149,11 +258,20 @@ dcnn_blunder(board_t *b, move_t *m, float r, move_t *redirect, char **name)
 /* Fix dcnn blunders by altering dcnn priors before they get used.
  * (last resort, for moves which are a bad fit for a joseki override) */
 int
-dcnn_fix_blunders(board_t *b, enum stone color, float result[], bool debugl)
+dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl)
 {
+	/* Make ownermap if caller didn't provide one */
+	if (!ownermap) {
+		ownermap = alloca(sizeof(*ownermap));
+		ownermap_init(ownermap);
+		mcowner_playouts(b, color, ownermap);
+	}
+	
 	float blunder_rating = 0.001;  /* 0.1% */
 	int changes = 0;
 
+	changes += boost_atari_defense_moves("atari and cap defense", PF_ATARI_AND_CAP, b, color, result, ownermap, debugl);
+	
 	foreach_free_point(b) {
 		int k = coord2dcnn_idx(c);
 		move_t m = move(c, color);

@@ -106,7 +106,7 @@ uct_prior_dcnn(uct_t *u, tree_node_t *node, prior_map_t *map)
 	float   r[19 * 19];
 	bool    debugl = (UDEBUGL(2) && !node->parent);
 	
-	dcnn_evaluate(map->b, map->to_play, r, debugl);
+	dcnn_evaluate(map->b, map->to_play, r, &u->ownermap, debugl);
 	
 	for (unsigned int i = 0; i < map->consider->moves; i++) {
 		coord_t c = map->consider->move[i];

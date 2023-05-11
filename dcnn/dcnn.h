@@ -15,7 +15,7 @@ int dcnn_default_board_size(void);
 void require_dcnn(void);
 void disable_dcnn(void);
 
-void dcnn_evaluate(board_t *b, enum stone color, float result[], bool debugl);
+void dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl);
 bool using_dcnn(board_t *b);
 void dcnn_init(board_t *b);
 void get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest);
@@ -25,7 +25,7 @@ void print_dcnn_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest
 static int coord2dcnn_idx(coord_t c);
 
 /* Private use (don't call directly) */
-int dcnn_fix_blunders(board_t *b, enum stone color, float result[], bool debugl);
+int dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl);
 
 extern int darkforest_dcnn;
 
