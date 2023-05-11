@@ -680,13 +680,6 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 		}
 	}
 
-#ifdef JOSEKIFIX
-	/* Save prev ownermap for joseki_override() */
-	struct ownermap prev_ownermap;  ownermap_init(&prev_ownermap);
-	if (u->ownermap.playouts >= GJ_MINGAMES)
-		prev_ownermap = u->ownermap;
-#endif
-
 	uct_genmove_setup(u, b, color);
 
         /* Start the Monte Carlo Tree Search! */
@@ -708,13 +701,16 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 #ifdef JOSEKIFIX
 	/* Check joseki override */
 	if (best) {
-		coord_t c = joseki_override_no_external_engine(b, &prev_ownermap, uct_ownermap(e, b));
+		coord_t c = joseki_override_no_external_engine(b, &u->prev_ownermap, uct_ownermap(e, b));
 		if (!is_pass(c)) {
 			*best_coord = c;
 			best = tree_get_node(u->t->root, c);
 			assert(best);
 		}
 	}
+
+	/* Save ownermap */
+	u->prev_ownermap = u->ownermap;
 #endif
 
 	return best;
