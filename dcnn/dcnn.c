@@ -125,7 +125,7 @@ dcnn_init(board_t *b)
 }
 
 void
-dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl)
+dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl)
 {
 	double time_start = time_now();
 	dcnn->eval(b, color, result);
@@ -138,7 +138,12 @@ dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap
 		get_dcnn_best_moves(b, result, best_c, best_r, DCNN_BEST_N);
 		print_dcnn_best_moves(b, best_c, best_r, DCNN_BEST_N);
 	}
+}
 
+void
+dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl)
+{
+	dcnn_evaluate_raw(b, color, result, ownermap, debugl);
 	dcnn_fix_blunders(b, color, result, ownermap, debugl);
 }
 

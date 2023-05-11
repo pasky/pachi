@@ -466,3 +466,29 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *owne
 	
 	return changes;
 }
+
+/* For testing: Return list of boosted or killed blunders in list @q.
+ * @boosted selects what to return. */
+void
+get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ownermap_t *ownermap, move_queue_t *q)
+{
+	if (boosted) {
+		int dropped;		/* keep in sync with dcnn_fix_blunders() calls */
+		select_atari_defense_moves("atari and cap defense", PF_ATARI_AND_CAP, b, color, result, ownermap, q, &dropped);
+		select_atari_defense_moves("atari ladder big defense", PF_ATARI_LADDER_BIG, b, color, result, ownermap, q, &dropped);
+	}
+
+	/* boosted = false :  add killed moves
+	 * boosted = true  :  remove killed moves from boosted list */
+	foreach_free_point(b) {
+		int k = coord2dcnn_idx(c);
+		move_t m = move(c, color);
+		move_t redirect = move(pass, color);
+		char *name = "";
+		
+		if (dcnn_blunder(b, &m, result[k], &redirect, &name)) {
+			if (!boosted)  mq_add(q, c, 0);
+			else           mq_remove(q, c);
+		}
+	} foreach_free_point_end;
+}
