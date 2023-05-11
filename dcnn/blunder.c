@@ -272,6 +272,7 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *owne
 
 	changes += boost_atari_defense_moves("atari and cap defense", PF_ATARI_AND_CAP, b, color, result, ownermap, debugl);
 	changes += boost_atari_defense_moves("atari and cap2 defense", PF_ATARI_AND_CAP2, b, color, result, ownermap, debugl);
+	changes += boost_atari_defense_moves("atari ladder big defense", PF_ATARI_LADDER_BIG, b, color, result, ownermap, debugl);
 	
 	foreach_free_point(b) {
 		int k = coord2dcnn_idx(c);
