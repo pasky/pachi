@@ -145,26 +145,30 @@ dcnn_group_2lib_blunder(board_t *b, move_t *m)
 /**********************************************************************************/
 /* Atari defense move boosting */
 
+#define MAX_ATARIS 15
+
 typedef struct {
-	coord_t coord;
-	float   dist;
-} coord_dist_t;
+	coord_t		coord;
+	coord_t         fixed_ataris[MAX_ATARIS];
+	int             nfixed_ataris;
+	float           dist;		/* distance to closest fixed atari */
+} defense_move_t;
 
 static int
-coord_dist_cmp(const void *pa, const void *pb)
+candidate_dist_cmp(const void *pa, const void *pb)
 {
-	const coord_dist_t *a = pa;
-	const coord_dist_t *b = pb;
+	const defense_move_t *a = pa;
+	const defense_move_t *b = pb;
 	if (a->dist == b->dist)
 		return 0;
 	return (a->dist < b->dist ? -1 : 1);
 }
 
 static int
-keep_closest_moves(coord_dist_t candidates[], int ncandidates, move_queue_t *defense_moves, float result[])
+keep_closest_moves(defense_move_t candidates[], int ncandidates, float result[], move_queue_t *defense_moves)
 {
-	/* Sort defense_moves by distance to closest fixed atari */
-	qsort(candidates, ncandidates, sizeof(*candidates), coord_dist_cmp);
+	/* Sort defense_moves by distance to corresponding atari move */
+	qsort(candidates, ncandidates, sizeof(*candidates), candidate_dist_cmp);
 
 	/* Keep first 5 and dcnn moves */
 	defense_moves->moves = 0;
@@ -181,6 +185,33 @@ keep_closest_moves(coord_dist_t candidates[], int ncandidates, move_queue_t *def
 	return defense_moves->moves;
 }
 
+/* Keep best combos only. Most of the time this does nothing as there will be a
+ * single atari to defend, but in case where there are multiple ataris this can
+ * get rid of some silly moves. For example:
+ *
+ *    N O P Q R S T
+ *    . . . . . . . | 10      S5 defends ataris S7
+ *    . . . O O O . |  9      T5 defends ataris S7
+ *    . . X O X X . |  8      S6 defends ataris S6 S7   ->  keep S6 S7 T7 T8  (best combos)
+ *    . . X X O . . |  7      T6 defends ataris S7          drop S5 T5 T6     (only fix S7)
+ *    . . X O O . . |  6      S7 defends ataris S6 S7
+ *    . . . X X . . |  5      T7 defends ataris S6 S7
+ *    . . . . . O . |  4      T8 defends ataris S6 S7
+ *    . . . . . . . |  3					*/
+static int
+keep_best_combos(defense_move_t candidates[], int ncandidates, int best_combos[])
+{
+	for (int i = 0; i < ncandidates; i++) {
+		defense_move_t *def = &candidates[i];
+		coord_t atari = def->fixed_ataris[0];
+		if (def->nfixed_ataris == 1 && best_combos[atari] > 1)
+			candidates[i--] = candidates[--ncandidates];	  /* drop it */
+	}
+
+	return ncandidates;
+}
+
+/* Find all @feature atari moves on the board. */
 static int
 find_atari_moves(move_queue_t *q, int feature, board_t *b, enum stone to_play, ownermap_t *ownermap)
 {
@@ -207,9 +238,9 @@ show_which_move_fixes_which_atari(coord_t c, move_queue_t *fixed)
 }
 
 static int
-find_atari_defense_moves(char *name, int feature,
-			 board_t *b, enum stone color, float result[], ownermap_t *ownermap,
-			 coord_dist_t candidates[])
+find_atari_defense_moves(int feature,
+			 board_t *b, enum stone color, ownermap_t *ownermap,
+			 defense_move_t candidates[], int best_combos[])
 {
 	enum stone other_color = stone_other(color);
 	move_queue_t atari_moves;  mq_init(&atari_moves);
@@ -226,21 +257,25 @@ find_atari_defense_moves(char *name, int feature,
 			if (find_atari_moves(&atari_moves2, feature, b, other_color, ownermap) >= n)
 				break;		/* doesn't help */
 
+			/* Found potential atari defense move. Look closer so we can filter later on. */
+			
 			/* Find which atari(s) got fixed */
 			move_queue_t fixed;  mq_init(&fixed);
 			mq_sub(&atari_moves, &atari_moves2, &fixed);
 
 			if (DEBUGL(4))  show_which_move_fixes_which_atari(c, &fixed);
 			
-			/* Find distance to closest fixed atari */
-			float dist = 9999999;
-			for (unsigned int i = 0; i < fixed.moves; i++) {
+			/* Store defense move, corresponding ataris, distance, and keep track of best combos */
+			defense_move_t *def = &candidates[ncandidates++];
+			def->coord = c;
+			def->dist = 9999999;
+			for (unsigned int i = 0; i < fixed.moves && i < MAX_ATARIS; i++) {
 				coord_t atari = fixed.move[i];
-				dist = MIN(dist, coord_distance(atari, c));
+				def->fixed_ataris[i] = atari;
+				def->nfixed_ataris++;
+				def->dist = MIN(def->dist, coord_distance(atari, c));
+				best_combos[atari] = MAX((int)fixed.moves, best_combos[atari]);
 			}
-
-			candidates[ncandidates].dist = dist;
-			candidates[ncandidates++].coord = c;
 		});
 	} foreach_free_point_end;
 
@@ -252,12 +287,20 @@ select_atari_defense_moves(char *name, int feature,
 			   board_t *b, enum stone color, float result[], ownermap_t *ownermap,
 			   move_queue_t *defense_moves, int *dropped)
 {
-	coord_dist_t candidates[BOARD_MAX_MOVES];
-	int n = find_atari_defense_moves(name, feature, b, color, result, ownermap, candidates);
+	defense_move_t candidates[BOARD_MAX_MOVES];        memset(candidates, 0, sizeof(candidates));
+	int            best_combos[BOARD_MAX_COORDS];      memset(best_combos, 0, sizeof(best_combos));
+	int n = find_atari_defense_moves(feature, b, color, ownermap, candidates, best_combos);
 	if (!n)  return 0;
+
+	/* Found atari defense moves. Could stop here and just boost all of them,
+	 * but can be tens of them (ladder breakers) and boosting becomes less
+	 * effective the more moves we boost, so keep only a few. */
+	
+	/* Keep best combos only */
+	int moves = keep_best_combos(candidates, n, best_combos);
 	
 	/* Just keep close ones and dcnn moves */
-	int moves = keep_closest_moves(candidates, n, defense_moves, result);
+	moves = keep_closest_moves(candidates, moves, result, defense_moves);
 
 	*dropped = (n - moves);
 	return moves;
