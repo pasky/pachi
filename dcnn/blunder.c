@@ -237,6 +237,27 @@ show_which_move_fixes_which_atari(coord_t c, move_queue_t *fixed)
 	fprintf(stderr, "\n");
 }
 
+static bool
+really_defends_atari(board_t *b, board_t *orig_board, enum stone color, coord_t atari)
+{
+	move_queue_t targets;
+	board_get_2lib_neighbors(orig_board, atari, color, &targets);
+	
+	/* If multiple target groups should at least defend one,
+	 * but don't let a big group get captured */
+	bool found = false;
+	for (unsigned int i = 0; i < targets.moves; i++) {
+		group_t g = group_at(b, targets.move[i]);  assert(g);
+		int libs = board_group_info(b, g).libs;  /* May not have 2 libs anymore */
+		bool can_cap = (libs == 2 && can_capture_2lib_group(b, g, NULL, 0));
+		if (can_cap && group_stone_count(b, g, 4) >= 3)
+			return false;
+		if (!can_cap)
+			found = true;
+	}
+	return found;
+}
+
 static int
 find_atari_defense_moves(int feature,
 			 board_t *b, enum stone color, ownermap_t *ownermap,
@@ -247,6 +268,8 @@ find_atari_defense_moves(int feature,
 	int n = find_atari_moves(&atari_moves, feature, b, other_color, ownermap);
 	if (!n)  return 0;
 
+	board_t orig_board;  board_copy(&orig_board, b);
+	
 	int ncandidates = 0;
 	foreach_free_point(b) {
 		if (is_selfatari(b, color, c))
@@ -259,10 +282,18 @@ find_atari_defense_moves(int feature,
 
 			/* Found potential atari defense move. Look closer so we can filter later on. */
 			
-			/* Find which atari(s) got fixed */
+			/* Find which atari(s) got changed/fixed */
 			move_queue_t fixed;  mq_init(&fixed);
 			mq_sub(&atari_moves, &atari_moves2, &fixed);
 
+			/* Check move really defends something. Move may be really stupid
+			 * actually, like changing a ladder to a snapback or an atari_and_cap
+			 * to a double atari */
+			for (unsigned int i = 0; i < fixed.moves; i++)
+				if (!really_defends_atari(b, &orig_board, color, fixed.move[i]))
+					mq_remove_index(&fixed, i--);	/* Delete */
+			if (!fixed.moves)  break;
+			
 			if (DEBUGL(4))  show_which_move_fixes_which_atari(c, &fixed);
 			
 			/* Store defense move, corresponding ataris, distance, and keep track of best combos */

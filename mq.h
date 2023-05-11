@@ -28,6 +28,9 @@ static coord_t mq_pick(move_queue_t *q);
 /* Add a move to the queue. */
 static void mq_add(move_queue_t *q, coord_t c, unsigned char tag);
 
+/* Remove i'th item from queue */
+static void mq_remove_index(move_queue_t *q, int i);
+
 /* Is move in the queue ? */
 static bool mq_has(move_queue_t *q, coord_t c);
 
@@ -75,6 +78,14 @@ mq_add(move_queue_t *q, coord_t c, unsigned char tag)
 	assert(q->moves < MQL);
 	q->tag[q->moves] = tag;
 	q->move[q->moves++] = c;
+}
+
+static inline void
+mq_remove_index(move_queue_t *q, int i)
+{
+	assert(q->moves);
+	q->tag[i]  = q->tag[q->moves - 1];
+	q->move[i] = q->move[q->moves-- - 1];
 }
 
 static inline bool
