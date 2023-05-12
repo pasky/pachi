@@ -82,6 +82,10 @@ while (my $str = <IN>) {
     $str = $1;
     $str =~ s|\r||g;
 
+    # Skip time_left and game_over commands
+    if ($str =~ m/^time_left/)     {  next;  }
+    if ($str =~ m/^kgs-game_over/) {  next;  }
+    
     # Turn genmove commands into play commands
     if ($str =~ m/^genmove ([bw])/i) {
 	my $color = lc($1);
