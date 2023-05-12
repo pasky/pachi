@@ -744,12 +744,41 @@ around = D4
 
 babecool pachipachi 2023-02-20])))
 (;B[hp]
-;W[en]
+(;W[en]
 ;B[]C[[override\]
 name = "3-4 2spc high pincer 2spc jump"
 around = D3
 
-pachipachi move37x 2023-04-23]))
+pachipachi move37x 2023-04-23])
+(;W[do]
+;B[dp]
+;W[ep]
+;B[eo]
+;W[co]
+;B[bo]
+;W[bn]
+;B[bp]
+;W[cm]
+;B[en]
+;W[cr]
+;B[dm]
+;W[cn]
+;B[br]
+;W[cq]
+;B[bq]
+;W[dq]
+;B[bs]
+;W[ao]
+;B[fp]
+;W[gr]
+;B[gq]C[[override\]
+name = "3-4 2spc high pincer keima corner kill"
+around = E2
+
+w goes for corner kill although not very good for him.
+G3 best here
+
+pachipachi jciloa  2023-05-12])))
 (;W[]
 ;B[fq]
 (;W[cq]
