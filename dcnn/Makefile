@@ -1,6 +1,10 @@
 INCLUDES=-I..
 
-OBJS=caffe.o dcnn.o blunder.o dcnn_engine.o blunderscan.o
+OBJS=caffe.o dcnn.o blunder.o dcnn_engine.o
+
+ifeq ($(EXTRA_ENGINES), 1)
+	OBJS += blunderscan.o
+endif
 
 all: lib.a
 lib.a: $(OBJS)

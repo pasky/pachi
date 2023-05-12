@@ -78,6 +78,9 @@ JOSEKIFIX=1
 
 # PLUGINS=1
 
+# Build extra engines used for development ?
+# EXTRA_ENGINES=1
+
 # Compile extra tests ? Enable this to test board implementation.
 # BOARD_TESTS=1
 
@@ -231,6 +234,10 @@ endif
 
 ifeq ($(PLUGINS), 1)
 	COMMON_FLAGS += -DPACHI_PLUGINS
+endif
+
+ifeq ($(EXTRA_ENGINES), 1)
+	COMMON_FLAGS += -DEXTRA_ENGINES
 endif
 
 ifeq ($(JOSEKIFIX), 1)

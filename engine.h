@@ -21,10 +21,14 @@ enum engine_id {
 	E_UCT,
 #ifdef DCNN
 	E_DCNN,
+#ifdef EXTRA_ENGINES
 	E_BLUNDERSCAN,
 #endif
+#endif
 	E_PATTERN,
+#ifdef EXTRA_ENGINES
 	E_PATTERNSCAN,
+#endif
 	E_JOSEKI,
 	E_JOSEKILOAD,
 #ifdef JOSEKIFIX

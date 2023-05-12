@@ -66,10 +66,14 @@ engine_map_t engines[] = {
 	{ E_UCT,		"uct",            uct_engine_init,            1 },
 #ifdef DCNN
 	{ E_DCNN,		"dcnn",           dcnn_engine_init,           1 },
+#ifdef EXTRA_ENGINES
 	{ E_BLUNDERSCAN,	"blunderscan",    blunderscan_engine_init,    0 },
 #endif
+#endif
 	{ E_PATTERN,		"pattern",        pattern_engine_init,        1 },
+#ifdef EXTRA_ENGINES
 	{ E_PATTERNSCAN,	"patternscan",    patternscan_engine_init,    0 },
+#endif
 	{ E_JOSEKI,		"joseki",         joseki_engine_init,         1 },
 	{ E_JOSEKILOAD,		"josekiload",     josekiload_engine_init,     0 },
 #ifdef JOSEKIFIX
