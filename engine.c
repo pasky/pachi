@@ -195,7 +195,7 @@ print_dead_groups(board_t *b, move_queue_t *dead)
 {
 	if (!DEBUGL(1)) return;
 
-	for (unsigned int i = 0; i < dead->moves; i++) {
+	for (int i = 0; i < dead->moves; i++) {
 		fprintf(stderr, "  ");
 		foreach_in_group(b, dead->move[i]) {
 			fprintf(stderr, "%s ", coord2sstr(c));

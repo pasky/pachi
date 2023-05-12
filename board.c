@@ -659,7 +659,7 @@ board_official_score_details(board_t *b, move_queue_t *dead,
 
 	if (dead) {
 		/* Process dead groups. */
-		for (unsigned int i = 0; i < dead->moves; i++) {
+		for (int i = 0; i < dead->moves; i++) {
 			foreach_in_group(b, dead->move[i]) {
 				enum stone color = board_at(b, c);
 				ownermap[c] = stone_other(color);

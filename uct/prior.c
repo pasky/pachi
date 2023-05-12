@@ -93,7 +93,7 @@ uct_prior_even(uct_t *u, tree_node_t *node, prior_map_t *map)
 	/* This may be dubious for normal UCB1 but is essential for
 	 * reading stability of RAVE, it appears. */
 	add_prior_value(map, pass, 0.5, u->prior->even_eqex);
-	for (unsigned int i = 0; i < map->consider->moves; i++) {
+	for (int i = 0; i < map->consider->moves; i++) {
 		coord_t c = map->consider->move[i];
 		add_prior_value(map, c, 0.5, u->prior->even_eqex);
 	}
@@ -108,7 +108,7 @@ uct_prior_dcnn(uct_t *u, tree_node_t *node, prior_map_t *map)
 	
 	dcnn_evaluate(map->b, map->to_play, r, &u->ownermap, debugl);
 	
-	for (unsigned int i = 0; i < map->consider->moves; i++) {
+	for (int i = 0; i < map->consider->moves; i++) {
 		coord_t c = map->consider->move[i];
 		int k = coord2dcnn_idx(c);
 		float val = r[k];

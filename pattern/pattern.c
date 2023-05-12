@@ -283,7 +283,7 @@ pattern_match_capture(board_t *b, move_t *m)
 		goto regular_stuff;
 
 	/* Last move features */
-	for (unsigned int i = 0; i < atari_neighbors.moves; i++) {
+	for (int i = 0; i < atari_neighbors.moves; i++) {
 		group_t capg = atari_neighbors.move[i];  /* Can capture capg */
 		
 		/* Capture group contiguous to new group in atari ? */
@@ -291,7 +291,7 @@ pattern_match_capture(board_t *b, move_t *m)
 			group_t own_atari = g;
 			move_queue_t q;
 			countercapturable_groups(b, own_atari, &q);
-			for (unsigned int i = 0; i < q.moves; i++)
+			for (int i = 0; i < q.moves; i++)
 				if (capg == q.move[i])
 					return PF_CAPTURE_ATARIDEF;
 		} foreach_atari_neighbor_end;
@@ -311,7 +311,7 @@ pattern_match_capture(board_t *b, move_t *m)
 	}
 		
  regular_stuff:
-	for (unsigned int i = 0; i < atari_neighbors.moves; i++) {
+	for (int i = 0; i < atari_neighbors.moves; i++) {
 		group_t capg = atari_neighbors.move[i];  /* Can capture capg */
 		if (is_ladder_any(b, capg, true))
 			return PF_CAPTURE_LADDER;
@@ -411,7 +411,7 @@ cutting_stones_and_can_capture_other_after_atari(board_t *b, move_t *m,
 		mq_add(&mq, lib, 0);
 		
 		/* try possible replies, must work for all of them */
-		for (unsigned int i = 0; i < mq.moves; i++) {
+		for (int i = 0; i < mq.moves; i++) {
 			with_move(b, mq.move[i], other_color, {
 				group_t g = group_at(b, other);
 				if (g && board_group_info(b, g).libs == 2 &&
@@ -480,11 +480,11 @@ cutting_stones_and_can_capture_nearby_after_atari_(board_t *b, move_t *m, group_
 	mq_add(&q, lib, 0);
 
 	/* Play defense and check if we can capture any target now */
-	for (unsigned int k = 0; !found && k < targets.moves; k++) {
+	for (int k = 0; !found && k < targets.moves; k++) {
 		group_t target = group_at(b, targets.move[k]);
 		
 		/* Try possible answers, must work for all of them */
-		for (unsigned int i = 0; i < q.moves; i++) {
+		for (int i = 0; i < q.moves; i++) {
 			with_move(b, q.move[i], other_color, {
 				group_t g = group_at(b, target);
 				//fprintf(stderr, "target group %s:\n", coord2sstr(g));

@@ -176,7 +176,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	 * own unclear groups are dead and opponent's are alive.
 	 * If we still win this way for sure it's ok. */
 	if (guess_unclear_ok && unclear.moves) {
-		for (unsigned int i = 0; i < unclear.moves; i++)
+		for (int i = 0; i < unclear.moves; i++)
 			if (board_at(b, unclear.move[i]) == color)
 				mq_add(&dead_extra, unclear.move[i], 0);    /* own groups -> dead */
 		unclear.moves = 0;                                          /* opponent's groups -> alive */
@@ -192,7 +192,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 		for (int k = 0; k < n; k++) {
 			mq_init(&unclear);  /* all unpicked groups -> alive */
 			
-			for (unsigned int i = 0; i < unclear_orig.moves; i++)
+			for (int i = 0; i < unclear_orig.moves; i++)
 				if (!(k & (1 << i)))
 					mq_add(&dead_extra, unclear_orig.move[i], 0); /* picked groups -> dead */
 			if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
@@ -244,7 +244,7 @@ pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char 
 
 	if (pass_all_alive) {  /* kgs chinese rules cleanup phase */
 		*msg = "need to remove opponent dead groups first";
-		for (unsigned int i = 0; i < dead->moves; i++)
+		for (int i = 0; i < dead->moves; i++)
 			if (board_at(b, dead->move[i]) == stone_other(color))
 				return false;
 		dead->moves = 0; // our dead stones are alive when pass_all_alive is true

@@ -923,11 +923,11 @@ test_dcnn_blunder(board_t *b, char *arg)
 	/***********************************************************************/	
 	/* Check results */
 	bool eres = true, rres = true;
-	for (unsigned int i = 0; i < wanted.moves; i++)
+	for (int i = 0; i < wanted.moves; i++)
 		if (!mq_has(&blunders, wanted.move[i]))
 			rres = false;
 	
-	for (unsigned int i = 0; i < unwanted.moves; i++)
+	for (int i = 0; i < unwanted.moves; i++)
 		if (mq_has(&blunders, unwanted.move[i]))
 			rres = false;
 	

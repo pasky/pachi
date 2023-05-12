@@ -245,7 +245,7 @@ static void
 show_which_move_fixes_which_atari(coord_t c, move_queue_t *fixed)
 {
 	fprintf(stderr, "dcnn_blunder: %s fixes ataris ", coord2sstr(c));
-	for (unsigned int i = 0; i < fixed->moves; i++)
+	for (int i = 0; i < fixed->moves; i++)
 		fprintf(stderr, "%s ", coord2sstr(fixed->move[i]));
 	fprintf(stderr, "\n");
 }
@@ -259,7 +259,7 @@ really_defends_atari(board_t *b, board_t *orig_board, enum stone color, coord_t 
 	/* If multiple target groups should at least defend one,
 	 * but don't let a big group get captured */
 	bool found = false;
-	for (unsigned int i = 0; i < targets.moves; i++) {
+	for (int i = 0; i < targets.moves; i++) {
 		group_t g = group_at(b, targets.move[i]);  assert(g);
 		int libs = board_group_info(b, g).libs;  /* May not have 2 libs anymore */
 		bool can_cap = (libs == 2 && can_capture_2lib_group(b, g, NULL, 0));
@@ -302,7 +302,7 @@ find_atari_defense_moves(int feature,
 			/* Check move really defends something. Move may be really stupid
 			 * actually, like changing a ladder to a snapback or an atari_and_cap
 			 * to a double atari */
-			for (unsigned int i = 0; i < fixed.moves; i++)
+			for (int i = 0; i < fixed.moves; i++)
 				if (!really_defends_atari(b, &orig_board, color, fixed.move[i]))
 					mq_remove_index(&fixed, i--);	/* Delete */
 			if (!fixed.moves)  break;
@@ -313,7 +313,7 @@ find_atari_defense_moves(int feature,
 			defense_move_t *def = &candidates[ncandidates++];
 			def->coord = c;
 			def->dist = 9999999;
-			for (unsigned int i = 0; i < fixed.moves && i < MAX_ATARIS; i++) {
+			for (int i = 0; i < fixed.moves && i < MAX_ATARIS; i++) {
 				coord_t atari = fixed.move[i];
 				def->fixed_ataris[i] = atari;
 				def->nfixed_ataris++;
@@ -384,7 +384,7 @@ boost_atari_defense_moves(char *name, int feature,
 	/* Now we know how many moves will get boosted */
 	float maxres = dcnn_max_value(b, result);
 	bool  log_verbose = (debugl && DEBUGL(3));	/* log each move individually */
-	for (unsigned int i = 0; i < defense_moves.moves; i++) {
+	for (int i = 0; i < defense_moves.moves; i++) {
 		coord_t c = defense_moves.move[i];
 		int k = coord2dcnn_idx(c);
 		float newres = maxres + 0.2 * moves + result[k];

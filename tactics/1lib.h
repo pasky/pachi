@@ -63,7 +63,7 @@ board_get_atari_neighbors(board_t *b, coord_t c, enum stone group_color, move_qu
 	do {								\
 		move_queue_t __q;					\
 		board_get_atari_neighbors(b, (c), (group_color), &__q);	\
-		for (unsigned int __i = 0; __i < __q.moves; __i++) {		\
+		for (int __i = 0; __i < __q.moves; __i++) {		\
 			group_t g = __q.move[__i];
 
 #define foreach_atari_neighbor_end  \

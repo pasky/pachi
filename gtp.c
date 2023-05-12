@@ -652,7 +652,7 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	if (DEBUGL(1) && debug_boardprint)
 		board_print(b, stderr);
 
-	for (unsigned int i = 0; i < q.moves; i++) {
+	for (int i = 0; i < q.moves; i++) {
 		move_t m = move(q.move[i], S_BLACK);
 		gtp_printf(gtp, "%s ", coord2sstr(m.coord));
 	}
@@ -736,7 +736,7 @@ cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 	move_queue_t q;
 	engine_dead_groups(e, b, &q);
 
-	for (unsigned int i = 0; i < q.moves; i++) {
+	for (int i = 0; i < q.moves; i++) {
 		foreach_in_group(b, q.move[i]) {
 			gtp_printf(gtp, "%s ", coord2sstr(c));
 		} foreach_in_group_end;
@@ -762,7 +762,7 @@ cmd_final_status_list_alive(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 		group_t g = group_at(b, c);
 		if (!g || g != c) continue;
 
-		for (unsigned int i = 0; i < q.moves; i++)
+		for (int i = 0; i < q.moves; i++)
 			if (q.move[i] == g)  goto next_group;
 			
 		foreach_in_group(b, g) {
@@ -794,7 +794,7 @@ cmd_final_status_list_seki(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 		});
 	} foreach_point_end;
 
-	for (unsigned int i = 0; i < sekis.moves; i++) {
+	for (int i = 0; i < sekis.moves; i++) {
 		foreach_in_group(b, sekis.move[i]) {
 			gtp_printf(gtp, "%s ", coord2sstr(c));
 		} foreach_in_group_end;

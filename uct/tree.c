@@ -736,7 +736,7 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	/* Setup other children */
 	tree_node_t *prev = first_child;
 	tree_node_t *ni   = first_child + 1;
-	for (unsigned int i = 0; i < consider.moves; i++, ni++) {
+	for (int i = 0; i < consider.moves; i++, ni++) {
 		coord_t c = consider.move[i];
 		assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
 		

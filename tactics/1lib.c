@@ -85,7 +85,7 @@ can_countercapture(board_t *b, group_t group, move_queue_t *q)
 	assert(color == S_BLACK || color == S_WHITE);	
 	// Not checking b->clen, not maintained by board_quick_play()
 	
-	unsigned int qmoves_prev = q ? q->moves : 0;
+	int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
@@ -140,7 +140,7 @@ can_countercapture_any(board_t *b, group_t group, move_queue_t *q, int tag)
 	assert(color == S_BLACK || color == S_WHITE);
 	// Not checking b->clen, not maintained by board_quick_play()
 	
-	unsigned int qmoves_prev = q ? q->moves : 0;
+	int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {

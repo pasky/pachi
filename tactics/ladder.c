@@ -136,7 +136,7 @@ middle_ladder_chase(board_t *b, group_t laddered, enum stone lcolor, coord_t pre
 static bool
 chaser_capture_escapes(board_t *b, group_t laddered, enum stone lcolor, move_queue_t *ccq)
 {
-	for (unsigned int i = 0; i < ccq->moves; i++) {
+	for (int i = 0; i < ccq->moves; i++) {
 		coord_t lib = ccq->move[i];
 		if (!board_is_valid_play(b, lcolor, lib))
 			continue;

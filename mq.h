@@ -13,7 +13,7 @@
 
 #define MQL 512 /* XXX: On larger board this might not be enough. */
 typedef struct {
-	unsigned int moves;
+	int moves;
 	coord_t move[MQL];
 	/* Each move can have an optional tag or set of tags.
 	 * The usage of these is user-dependent. */
@@ -86,7 +86,7 @@ mq_add(move_queue_t *q, coord_t c, unsigned char tag)
 static inline void
 mq_remove(move_queue_t *q, coord_t c)
 {
-	for (unsigned int i = 0; i < q->moves; i++)
+	for (int i = 0; i < q->moves; i++)
 		if (q->move[i] == c)
 			mq_remove_index(q, i--);
 }
@@ -102,7 +102,7 @@ mq_remove_index(move_queue_t *q, int i)
 static inline bool
 mq_has(move_queue_t *q, coord_t c)
 {
-	for (unsigned int i = 0; i < q->moves; i++)
+	for (int i = 0; i < q->moves; i++)
 		if (q->move[i] == c)
 			return true;
 	return false;
@@ -120,8 +120,8 @@ mq_append(move_queue_t *qd, move_queue_t *qs)
 static inline void
 mq_sub(move_queue_t *a, move_queue_t *b, move_queue_t *res)
 {
-	unsigned int n = a->moves;
-	for (unsigned int i = 0; i < n; i++)
+	int n = a->moves;
+	for (int i = 0; i < n; i++)
 		if (!mq_has(b, a->move[i]))
 			mq_add(res, a->move[i], 0);
 }
@@ -129,8 +129,8 @@ mq_sub(move_queue_t *a, move_queue_t *b, move_queue_t *res)
 static inline void
 mq_nodup(move_queue_t *q)
 {
-	unsigned int n = q->moves;
-	for (unsigned int i = 0; i < n - 1; i++) {
+	int n = q->moves;
+	for (int i = 0; i < n - 1; i++) {
 		if (q->move[i] == q->move[n - 1]) {
 			q->tag[i] |= q->tag[n - 1];
 			q->moves--;
@@ -143,7 +143,7 @@ static inline int
 mq_print(char *label, move_queue_t *q)
 {
 	int n = fprintf(stderr, "%s", label);
-	for (unsigned int i = 0; i < q->moves; i++)
+	for (int i = 0; i < q->moves; i++)
 		n += fprintf(stderr, "%s ", coord2sstr(q->move[i]));
 	return n;
 }
@@ -161,12 +161,12 @@ mq_gamma_pick(move_queue_t *q, fixp_t *gammas)
 	if (!q->moves)  return pass;
 
 	fixp_t total = 0;
-	for (unsigned int i = 0; i < q->moves; i++)
+	for (int i = 0; i < q->moves; i++)
 		total += gammas[i];
 	if (!total)     return pass;
 
 	fixp_t stab = fast_irandom(total);
-	for (unsigned int i = 0; i < q->moves; i++) {
+	for (int i = 0; i < q->moves; i++) {
 		if (stab < gammas[i])
 			return q->move[i];
 		stab -= gammas[i];
@@ -186,7 +186,7 @@ static inline void
 mq_gamma_print(move_queue_t *q, fixp_t *gammas, char *label)
 {
 	fprintf(stderr, "%s candidate moves: ", label);
-	for (unsigned int i = 0; i < q->moves; i++)
+	for (int i = 0; i < q->moves; i++)
 		fprintf(stderr, "%s(%.3f) ", coord2sstr(q->move[i]), fixp_to_double(gammas[i]));
 	fprintf(stderr, "\n");
 }

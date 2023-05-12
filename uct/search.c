@@ -367,12 +367,12 @@ uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color)
 	
 	if (DEBUGL(2)) {  /* Show guesses. */
 		fprintf(stderr, "dcnn eval %s ", stone2str(color));
-		for (unsigned int i = 0; i < q.moves; i++)
+		for (int i = 0; i < q.moves; i++)
 			fprintf(stderr, "%s ", coord2sstr(q.move[i]));
 		fflush(stderr);
 	}
 
-	for (unsigned int i = 0; i < q.moves && !uct_halt; i++) { /* Don't hang if genmove comes in. */
+	for (int i = 0; i < q.moves && !uct_halt; i++) { /* Don't hang if genmove comes in. */
 		uct_expand_next_move(u, t, b, color, q.move[i]);
 		if (DEBUGL(2)) {  fprintf(stderr, ".");  fflush(stderr);  }
 	}
