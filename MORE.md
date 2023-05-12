@@ -1,30 +1,38 @@
 
 ## Joseki fixes (dcnn)
 
-By editing an SGF file it's possible to steer the engine towards / away
-from certain joseki variations, or fix joseki / fuseki lines that Pachi
-plays poorly.
+It's possible to override joseki sequences by editing an SGF file.  
+Useful to fix joseki variations that Pachi plays poorly, or make it play
+some josekis / fusekis that it would never play otherwise. 
 
-This is important for online play where known weaknesses tend to be
-repeatedly abused. By now there is a database of fixes which Pachi can
-load at startup. For this to work an external joseki engine (KataGo or
-other) must also be available. 
+By now there's a [database](https://github.com/pasky/pachi/tree/joseki_fixes)
+of joseki fixes which Pachi can use.  
+You can either start from scratch and create your own tweaks, or use / modify
+the existing database.
 
-If you plan to let Pachi play online please take the time to set this up
-correcly and keep the database up-to-date, it will be very much worth it
-in the long run.
+> If you plan to let Pachi play online it's recommended to use it,
+> otherwise it will likely get abused with all kinds of trick plays =P
 
-See josekifix/README for details.
+To use this module you also need an external joseki engine setup
+([KataGo](https://github.com/lightvector/KataGo) or other).
+
+Setup instructions:
+  - [Windows](https://github.com/pasky/pachi/issues/154)
+  - [Raspberry Pi](josekifix/katago/README)
+
+See josekifix [README](josekifix/README.md) for details.
 
 
 ## Joseki engine (nodcnn)
 
 When playing without dcnn Pachi uses joseki data to improve play during the
-opening. Joseki data comes from the various SGF files in joseki/ directory,
+opening.
+
+Joseki data comes from the various SGF files in [joseki](joseki) directory,
 and are translated into 'joseki19.gtp' which Pachi loads at startup.
 
-If you want to tweak those, read joseki/README for a description of the
-joseki engine and syntax used.
+If you want to tweak those, read [joseki/README](joseki/README) for a
+description of the joseki engine and syntax used.
 
 
 ## Opening book
@@ -97,8 +105,8 @@ If you're used to earlier versions of Pachi (< 12.50):
 ## Large Patterns
 
 Pachi uses MM patterns to guide tree search. The pattern matcher runs
-on the cpu each time a new node is explored (see pattern/README for details).
-Right now prediction rate is about 37%.
+on the cpu each time a new node is explored (see [pattern/README](pattern/README)
+for details). Right now prediction rate is about 37%.
 
 One benefit of MM is that the weights are very small. If you used previous
 Pachi versions, it's no longer necessary to install extra files to

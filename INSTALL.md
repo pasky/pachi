@@ -4,23 +4,30 @@ Building from source
 
 ## Install dependencies
 
-- Ubuntu 18.04 / 20.04
+**Ubuntu 18.04 / 20.04**
+
+Caffe package is present so you can install all dependencies with one command:
 
 	sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
 
-- Ubuntu (other versions)
+
+**Ubuntu (other versions)**
+
+Caffe package no longer present in Ubuntu, use this ppa or build from source:
 
 	sudo add-apt-repository ppa:lemonsqueeze/pachi
 	sudo apt update
 	sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
 
-- Other distributions
 
-  Install [Caffe](http://caffe.berkeleyvision.org) package or build from source.
+**Other distributions**
+
+  Install [Caffe](http://caffe.berkeleyvision.org) package, or build from source if your distribution doesn't have one.
   
-  CPU-only build is fine, no need for GPU, cuda or the other optional dependencies.
+  CPU-only build is fine, no need for GPU, cuda or the other optional dependencies.  
   You need OpenBlas for good performance.
-  (if caffe is installed in an unusual location edit Makefile)
+  
+  > If caffe is installed in an unusual location set CAFFE_PREFIX in Makefile.
   
 
 ## Build

@@ -162,6 +162,7 @@ much common with classic UCT now) has non-trivial structure by itself:
   statistics ("prior values") to focus the search better
 
 	prior.[ch]	variety of methods for setting the priors
+			(dcnn for root node, mm patterns for others)
 
 * "node policy" mainly chooses the current node's child to descend
   through during the tree walk, based on the already recorded statistics;
@@ -267,13 +268,13 @@ to enforce the superko rule in your engine.
 GTP Implementation
 ==================
 
-...is a very sad hack. ENSURE that only trusted parties talk to Pachi's
-GTP interface, as it is totally non-resilient to any kind of overflow
-or bad input attacks and allowing arbitrary input to be entered within
-is a major security hole. Yes, this needs to be cleaned up. Also, currently
-engines cannot plug in their own commands.
+... should be better now, but has certainly not been written (or tested)
+with security in mind. ENSURE that only trusted parties talk to Pachi's GTP
+interface, as it totally non-resilient to any kind of overflow or bad input
+attacks and allowing arbitrary input to be entered within is a major security
+hole. Yes, this needs to be cleaned up.
 
-Pachi supports only few GTP commands now.
+Also, currently engines cannot plug in their own commands.
 The final_status_list command requires engine support.
 
 
@@ -370,3 +371,5 @@ To enable local trees usage, pass local_tree=1 to the UCT engine.
 There are many further knobs to twiddle, too.
 
 Code is in local_tree branch.
+
+
