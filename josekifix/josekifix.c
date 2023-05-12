@@ -1019,7 +1019,7 @@ josekifix_load(void)
 
 	DEBUG_QUIET();		// turn off debugging (only want debug msg inside josekifixscan engine)
 	board_t *b = board_new(19, NULL);
-	engine_t e;  engine_init(&e, E_JOSEKIFIXSCAN, NULL, NULL);
+	engine_t e;  engine_init(&e, E_JOSEKIFIXLOAD, NULL, NULL);
 	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_none;
 	ti[S_WHITE] = ti_none;

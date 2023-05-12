@@ -27,7 +27,7 @@ enum engine_id {
 	E_JOSEKI,
 	E_JOSEKILOAD,
 #ifdef JOSEKIFIX
-	E_JOSEKIFIXSCAN,
+	E_JOSEKIFIXLOAD,
 #endif
 	E_RANDOM,
 	E_REPLAY,

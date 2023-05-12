@@ -81,8 +81,8 @@ Pachi consists of the following components:
 	josekifix/*.sgf			joseki overrides (SGF file)
 	josekifix.gtp			joseki overrides (as GTP stream)
 	josekifix/josekifix.[ch]	pattern based joseki overrides matching
-	josekifix/josekifixscan_engine.c internal engine used for loading joseki overrides
-	josekifix/fuseki.c              choose initial fuseki
+	josekifix/josekifixload.c	load override data (internal engine) 
+	josekifix/fuseki.c		choose initial fuseki
 
 * "tactics" provides extended interfaces for the go board,
   most important non-trivial tactical information

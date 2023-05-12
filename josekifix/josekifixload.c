@@ -8,7 +8,7 @@
 #include "engine.h"
 #include "move.h"
 #include "pattern/spatial.h"
-#include "josekifix/josekifixscan_engine.h"
+#include "josekifix/josekifixload.h"
 #include "josekifix/josekifix.h"
 
 
@@ -300,7 +300,7 @@ add_override(board_t *b, move_t *m, char *move_str)
  * Debugging: to dump all overrides, run                      'pachi -d4'
  *            to dump all overrides + earlier positions, run  'pachi -d5'  */
 static char *
-josekifixscan_notify_play(engine_t *e, board_t *b, move_t *m, char *move_str, bool *printed_board)
+josekifixload_notify_play(engine_t *e, board_t *b, move_t *m, char *move_str, bool *printed_board)
 {
 	DEBUG_QUIET_END();	/* debugging hack (re-enable debug msg just here) */
 	chomp(move_str);	/* XXX should be done by gtp layer ! */
@@ -320,13 +320,13 @@ josekifixscan_notify_play(engine_t *e, board_t *b, move_t *m, char *move_str, bo
 }
 
 static coord_t
-josekifixscan_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
+josekifixload_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	die("genmove command not available in josekifixscan engine!\n");
+	die("genmove command not available in josekifixload engine!\n");
 }
 
 static void
-josekifixscan_state_init(engine_t *e)
+josekifixload_state_init(engine_t *e)
 {
 	options_t *options = &e->options;
 
@@ -334,18 +334,18 @@ josekifixscan_state_init(engine_t *e)
 		const char *optname = options->o[i].name;
 		//const char *optval = options->o[i].val;
 
-		die("josekifixscan: Invalid engine argument %s or missing value\n", optname);
+		die("josekifixload: Invalid engine argument %s or missing value\n", optname);
 	}
 }
 
 void
-josekifixscan_engine_init(engine_t *e, board_t *b)
+josekifixload_engine_init(engine_t *e, board_t *b)
 {
-	josekifixscan_state_init(e);
-	e->name = "Josekifixscan";
-	e->comment = "You cannot play Pachi with this engine, it is intended for internal use - scanning of joseki sequences fed to it within the GTP stream.";
-	e->genmove = josekifixscan_genmove;
-	e->notify_play = josekifixscan_notify_play;
+	josekifixload_state_init(e);
+	e->name = "JosekifixLoad";
+	e->comment = "You cannot play Pachi with this engine, it is intended for internal use (loading josekifix data)";
+	e->genmove = josekifixload_genmove;
+	e->notify_play = josekifixload_notify_play;
 	
 	// clear_board does not concern us, we like to work over many games
 	e->keep_on_clear = true;
