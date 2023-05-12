@@ -21,6 +21,7 @@ enum engine_id {
 	E_UCT,
 #ifdef DCNN
 	E_DCNN,
+	E_BLUNDERSCAN,
 #endif
 	E_PATTERN,
 	E_PATTERNSCAN,

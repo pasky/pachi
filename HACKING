@@ -62,6 +62,7 @@ Pachi consists of the following components:
 	dcnn/dcnn_engine.c		example "dcnn move generator" engine
 	dcnn/blunder.c			filter out some obvious bad moves from dcnn output before
 					they get used in search to work around dcnn blind spots
+	dcnn/blunderscan.c		internal engine for dcnn blunder debugging
 
 * "pattern" mm pattern matcher provides priors to guide tree search
 

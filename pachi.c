@@ -16,6 +16,7 @@
 #include "engines/random.h"
 #include "engines/external.h"
 #include "dcnn/dcnn_engine.h"
+#include "dcnn/blunderscan.h"
 #include "pattern/patternscan.h"
 #include "pattern/pattern_engine.h"
 #include "joseki/joseki_engine.h"
@@ -65,6 +66,7 @@ engine_map_t engines[] = {
 	{ E_UCT,		"uct",            uct_engine_init,            1 },
 #ifdef DCNN
 	{ E_DCNN,		"dcnn",           dcnn_engine_init,           1 },
+	{ E_BLUNDERSCAN,	"blunderscan",    blunderscan_engine_init,    0 },
 #endif
 	{ E_PATTERN,		"pattern",        pattern_engine_init,        1 },
 	{ E_PATTERNSCAN,	"patternscan",    patternscan_engine_init,    0 },
