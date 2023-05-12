@@ -12,7 +12,7 @@
 #include "engine.h"
 #include "dcnn.h"
 #include "tactics/util.h"
-#include "josekiscan_engine.h"
+#include "josekiload.h"
 
 static bool joseki_enabled = true;
 static bool joseki_required = false;
@@ -267,7 +267,7 @@ joseki_load(int bsize)
 
 	DEBUG_QUIET();
 	board_t *b = board_new(bsize, NULL);
-	engine_t e;  engine_init(&e, E_JOSEKISCAN, NULL, NULL);
+	engine_t e;  engine_init(&e, E_JOSEKILOAD, NULL, NULL);
 	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_none;
 	ti[S_WHITE] = ti_none;

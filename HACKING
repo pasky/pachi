@@ -74,7 +74,7 @@ Pachi consists of the following components:
 	joseki19.gtp			joseki data (as GTP stream)
 	joseki/joseki.[ch]		pattern based joseki engine
 	joseki/joseki_engine.c		"joseki move generator" engine used to visualize joseki data in gogui
-	joseki/josekiscan_engine.c      internal engine used for loading joseki patterns
+	joseki/josekiload.c		load joseki data (internal engine)
 
 * "josekifix" allows to override joseki moves that the dcnn plays poorly
 
@@ -287,7 +287,7 @@ The joseki database is generated from variations of a SGF file. Josekis
 patterns are matched based on spatial patterns: situation around previous
 move and move to play must match (circle of 4 stones radius). See
 joseki/README for details on how to generate the joseki database from sgf
-files, and joseki.[ch] for the implementation. engines/josekiscan.[ch] is
+files, and joseki.[ch] for the implementation. engines/josekiload.[ch] is
 the aux engine for generating joseki patterns from gtp moves.
 
 

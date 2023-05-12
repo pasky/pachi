@@ -1,6 +1,6 @@
 INCLUDES=-I..
 
-OBJS := joseki.o joseki_engine.o josekiscan_engine.o
+OBJS := joseki.o joseki_engine.o josekiload.o
 
 SGF = joseki_44.sgf joseki_34.sgf joseki_54.sgf joseki_33.sgf 
 

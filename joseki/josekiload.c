@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "josekiscan_engine.h"
+#include "josekiload.h"
 #include "tactics/util.h"
 #include "joseki.h"
 
@@ -18,15 +18,15 @@ typedef struct {
 	board_t *b[16]; // boards with reversed color, mirrored and rotated
 	josekipat_t *prev[16];
 	int next_flags;
-} josekiscan_t;
+} josekiload_t;
 
 #define board_captures(b)  (b->captures[S_BLACK] + b->captures[S_WHITE])
 
 /* Record joseki moves into incrementally-built jdict->hash[]. */
 static char *
-josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags, bool *board_print)
+josekiload_play(engine_t *e, board_t *board, move_t *m, char *move_tags, bool *board_print)
 {
-	josekiscan_t *j = (josekiscan_t*)e->data;
+	josekiload_t *j = (josekiload_t*)e->data;
 
 	if (!board->moves) {
 		/* New game, reset state. */
@@ -67,7 +67,7 @@ josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags, bool *b
 
 	coord_t last = last_move(board).coord;
 	if (last != pass && coord_gridcular_distance(m->coord, last) >= 30)
-		fprintf(stderr, "warning: josekiscan %s %s: big distance to prev move, use pass / setup stones for tenuki\n",
+		fprintf(stderr, "warning: josekiload %s %s: big distance to prev move, use pass / setup stones for tenuki\n",
 			coord2sstr(last), coord2sstr(m->coord));
 
 	/* Record next move in all rotations and add joseki pattern. */
@@ -94,16 +94,16 @@ josekiscan_play(engine_t *e, board_t *board, move_t *m, char *move_tags, bool *b
 }
 
 static coord_t
-josekiscan_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
+josekiload_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	die("genmove command not available in josekiscan engine!\n");
+	die("genmove command not available in josekiload engine!\n");
 }
 
-static josekiscan_t *
-josekiscan_state_init(engine_t *e)
+static josekiload_t *
+josekiload_state_init(engine_t *e)
 {
 	options_t *options = &e->options;
-	josekiscan_t *j = calloc2(1, josekiscan_t);
+	josekiload_t *j = calloc2(1, josekiload_t);
 
 	for (int i = 0; i < 16; i++)
 		j->b[i] = board_new(19, NULL);
@@ -121,30 +121,30 @@ josekiscan_state_init(engine_t *e)
 				j->debug_level++;
 
 		} else
-			die("josekiscan: Invalid engine argument %s or missing value\n", optname);
+			die("josekiload: Invalid engine argument %s or missing value\n", optname);
 	}
 
 	return j;
 }
 
 static void
-josekiscan_done(engine_t *e)
+josekiload_done(engine_t *e)
 {
-	josekiscan_t *j = (josekiscan_t*)e->data;
+	josekiload_t *j = (josekiload_t*)e->data;
 
 	for (int i = 0; i < 16; i++)
 		board_delete(&j->b[i]);
 }
 
 void
-josekiscan_engine_init(engine_t *e, board_t *b)
+josekiload_engine_init(engine_t *e, board_t *b)
 {
-	josekiscan_t *j = josekiscan_state_init(e);
-	e->name = "Josekiscan";
-	e->comment = "You cannot play Pachi with this engine, it is intended for special development use - scanning of joseki sequences fed to it within the GTP stream.";
-	e->genmove = josekiscan_genmove;
-	e->notify_play = josekiscan_play;
-	e->done = josekiscan_done;
+	josekiload_t *j = josekiload_state_init(e);
+	e->name = "JosekiLoad";
+	e->comment = "You cannot play Pachi with this engine, it is intended for internal use (loading joseki sequences)";
+	e->genmove = josekiload_genmove;
+	e->notify_play = josekiload_play;
+	e->done = josekiload_done;
 	e->data = j;
 	// clear_board does not concern us, we like to work over many games
 	e->keep_on_clear = true;
