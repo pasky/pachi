@@ -1024,10 +1024,10 @@ playout_moggy_assess(playout_policy_t *p, prior_map_t *map, int games)
 	/* Then, assess individual moves. */
 	if (!pp->patternrate && !pp->selfatarirate)
 		return;
-	foreach_free_point(map->b) {
-		if (map->consider[c])
-			playout_moggy_assess_one(p, map, c, games);
-	} foreach_free_point_end;
+	for (unsigned int i = 0; i < map->consider->moves; i++) {
+		coord_t c = map->consider->move[i];
+		playout_moggy_assess_one(p, map, c, games);
+	}
 }
 
 

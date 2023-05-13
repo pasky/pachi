@@ -93,11 +93,10 @@ uct_prior_even(uct_t *u, tree_node_t *node, prior_map_t *map)
 	/* This may be dubious for normal UCB1 but is essential for
 	 * reading stability of RAVE, it appears. */
 	add_prior_value(map, pass, 0.5, u->prior->even_eqex);
-	foreach_free_point(map->b) {
-		if (!map->consider[c])
-			continue;
+	for (unsigned int i = 0; i < map->consider->moves; i++) {
+		coord_t c = map->consider->move[i];
 		add_prior_value(map, c, 0.5, u->prior->even_eqex);
-	} foreach_free_point_end;
+	}
 }
 
 static void
@@ -113,18 +112,16 @@ uct_prior_dcnn(uct_t *u, tree_node_t *node, prior_map_t *map)
 	
 	if (UDEBUGL(2) && !node->parent)
 		print_dcnn_best_moves(map->b, best_c, best_r, DCNN_BEST_N);
-	
-	foreach_free_point(map->b) {
-		if (!map->consider[c])
-			continue;
-		
+
+	for (unsigned int i = 0; i < map->consider->moves; i++) {
+		coord_t c = map->consider->move[i];		
 		int k = coord2dcnn_idx(c);
 		float val = r[k];
 		if (isnan(val) || val < 0.001)
 			continue;
 		assert(val >= 0.0 && val <= 1.0);
 		add_prior_value(map, c, 1, sqrt(val) * u->prior->dcnn_eqex);
-	} foreach_free_point_end;
+	}
 
 	node->hints |= TREE_HINT_DCNN;
 #endif
