@@ -266,6 +266,10 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		playout_amafmap_t *map, board_t *final_board,
 		floating_t result)
 {
+	ucb1_update(p, tree, node, node_color, player_color, map, final_board, result);
+	return;
+
+#if 0	
 	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
 
@@ -346,6 +350,7 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		}
 		node = node->parent;
 	}
+#endif
 }
 
 void
