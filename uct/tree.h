@@ -80,7 +80,7 @@ typedef struct tree_node {
 	*   1) children == null, is_expanded == false: leaf node
 	*   2) children == null, is_expanded == true: one thread currently expanding
 	*   2) children != null, is_expanded == true: fully expanded node */
-	bool is_expanded;
+	unsigned char is_expanded;
 } tree_node_t;
 
 struct tree_hash;
