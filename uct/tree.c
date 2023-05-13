@@ -703,11 +703,11 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
 
 	/* Include pass in the prior map. */
-	move_stats_t map_prior[board_max_coords(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
+	//move_stats_t map_prior[board_max_coords(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
 	bool         map_consider[board_max_coords(b) + 1];   memset(map_consider, 0, sizeof(map_consider));
 	
 	/* Get a map of prior values to initialize the new nodes with. */
-	prior_map_t map = { b, color, tree_parity(t, parity), &map_prior[1], &map_consider[1], distances };
+	prior_map_t map = { b, color, tree_parity(t, parity), NULL, &map_consider[1], distances };
 	
 	map.consider[pass] = true;
 	int child_count = 1; // for pass
@@ -718,7 +718,8 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 			child_count++;
 		}
 	} foreach_free_point_end;
-	uct_prior(u, node, &map);
+	
+	//uct_prior(u, node, &map);
 
 	/* Now, create the nodes (all at once) */
 	tree_node_t *ni = tree_alloc_node(t, child_count);
@@ -729,9 +730,13 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	}
 	tree_setup_node(t, ni, pass, node->depth + 1);
 
+	// Even prior: can skip parity check (0.5 == 1 - 0.5)
+	move_stats_t even_prior = move_stats(0.5, u->prior->even_eqex);
+	
 	tree_node_t *first_child = ni;
 	ni->parent = node;
-	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
+	ni->prior = even_prior;
+	ni->d = TREE_NODE_D_MAX + 1;
 
 	int child = 1;
 	foreach_point(board) {
@@ -742,8 +747,10 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 		tree_node_t *nj = first_child + child++;
 		tree_setup_node(t, nj, c, node->depth + 1);
 		nj->parent = node; ni->sibling = nj; ni = nj;
+
+		// node prior: put even prior for stability
+		ni->prior = even_prior;
 		
-		ni->prior = map.prior[c];
 		ni->d = distances[c];
 	} foreach_point_end;
 	node->children = first_child; // must be done at the end to avoid race
