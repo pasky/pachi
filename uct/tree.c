@@ -254,7 +254,9 @@ tree_node_load(FILE *f, tree_node_t *node, int *num)
 	if (node->amaf.playouts > MAX_PLAYOUTS) {
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
+#ifdef DISTRIBUTED
 	memcpy(&node->pu, &node->u, sizeof(node->u));
+#endif
 
 	tree_node_t *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {

@@ -51,8 +51,10 @@ typedef struct tree_node {
 	move_stats_t prior;
 	/* XXX: Should be way for policies to add their own stats */
 	move_stats_t amaf;
+#ifdef DISTRIBUTED
 	/* Stats before starting playout; used for distributed engine. */
 	move_stats_t pu;
+#endif
 	/* Criticality information; information about final board owner
 	 * of the tree coordinate corresponding to the node */
 	move_stats_t winner_owner; // owner == winner
