@@ -322,7 +322,7 @@ uct_leaf_node(uct_t *u, board_t *b, enum stone player_color,
 
 	playout_setup_t ps = playout_setup(u->gamelen, u->mercymin);
 	int result = playout_play_game(&ps, b, next_color,
-				       u->playout_amaf ? amaf : NULL,
+				       NULL,         // u->playout_amaf ? amaf : NULL,
 				       &u->ownermap, u->playout);
 	if (next_color == S_WHITE) {
 		/* We need the result from black's perspective. */
