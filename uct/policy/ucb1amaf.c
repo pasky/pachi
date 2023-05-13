@@ -178,6 +178,34 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int par
 void
 ucb1rave_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, bool allow_pass)
 {
+#if 1
+	/* Simple random descent */
+	
+	tree_node_t *node = descent->node->children;
+
+	/* Find number of children */
+	int moves = 0;
+	for (tree_node_t *n = node; n; n = n->sibling)
+		moves++;
+
+	/* Pick one at random */
+	while(1) {
+		int k = fast_random(moves);
+		tree_node_t *n = node;
+		for (int i = 0; i < k; i++)
+			n = n->sibling;
+
+		if ((!allow_pass && is_pass(node_coord(n))) || (n->hints & TREE_HINT_INVALID))
+			continue;
+
+		uct_descent_t tmp = uct_descent(n);
+		*descent = tmp;
+		return;
+	}
+
+	assert(0);
+#else		
+	
 	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	floating_t nconf = 1.f;
 	if (b->explore_p > 0)
@@ -212,6 +240,7 @@ ucb1rave_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int pari
 	} uctd_set_best_child(di, urgency);
 
 	uctd_get_best_child(descent);
+#endif
 }
 
 
