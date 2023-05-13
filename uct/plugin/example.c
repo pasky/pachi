@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 /* The basic plugin interface. */
 #include "uct/plugin.h"
@@ -44,9 +45,8 @@ pachi_plugin_prior(void *data, tree_node_t *node, prior_map_t *map, int eqex)
 
 	/* foreach_free_point defines a variable @c corresponding
 	 * to our current coordinate. */
-	foreach_free_point(map->b) {
-		if (!map->consider[c])
-			continue;
+	for (int i = 0; i < map->consider->moves; i++) {
+		coord_t c = map->consider->move[i];
 
 		/* We will look at the current point's 4-neighborhood;
 		 * we are to set a prior if we spot two different
@@ -96,7 +96,7 @@ set_prior:
 		 * (strongly favor). eqex is the number of simulations
 		 * the value is worth. */
 		add_prior_value(map, c, 1.0, eqex);
-	} foreach_free_point_end;
+	}
 }
 
 void *

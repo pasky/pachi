@@ -187,6 +187,7 @@ update mode.
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 /* The basic plugin interface. */
 #include "uct/plugin.h"
@@ -244,16 +245,16 @@ pachi_plugin_prior(void *data, tree_node_t *node, prior_map_t *map, int eqex)
 	char bin[BIGSTR];
 	char bout[BIGSTR];
 	char *bip = bin;
-	*bip++ = bsize2digit(board_size(b) - 2);
+	*bip++ = bsize2digit(board_rsize(b));
 	foreach_point(b) {
 		enum stone s = board_at(b, c);
 		if (s == S_NONE || s == S_OFFBOARD) continue;
-		*bip++ = coord2digit(s, coord_x(c, b));
-		*bip++ = coord2digit(s, coord_y(c, b));
+		*bip++ = coord2digit(s, coord_x(c));
+		*bip++ = coord2digit(s, coord_y(c));
 	} foreach_point_end;
 	if (!is_pass(b->ko.coord)) {
-		*bip++ = coord2digit(S_BLACK, coord_x(b->ko.coord, b));
-		*bip++ = coord2digit(S_WHITE, coord_y(b->ko.coord, b));
+		*bip++ = coord2digit(S_BLACK, coord_x(b->ko.coord));
+		*bip++ = coord2digit(S_WHITE, coord_y(b->ko.coord));
 	}
 	*bip++ = '%';
 	*bip++ = map->to_play == S_BLACK ? 'b' : 'w';
@@ -271,35 +272,33 @@ pachi_plugin_prior(void *data, tree_node_t *node, prior_map_t *map, int eqex)
 	influ_board values;
 	byte_board *chaininfo;
 	ctx->FINDMOVE2(map->to_play == S_BLACK ? 1 : -1, &bestx, &besty, &bestval, &values, &chaininfo);
-	// fprintf(stderr, "best is (%d,%d)%s %f\n", bestx, besty, coord2sstr(coord_xy(b, bestx, besty), b), bestval);
+	// fprintf(stderr, "best is (%d,%d)%s %f\n", bestx, besty, coord2sstr(coord_xy(bestx, besty)), bestval);
 
 	/* In the first pass, determine best and worst value. (Best value
 	 * reported by FINDMOVE2 is wrong.) In the second pass, we set the
 	 * priors by normalization based on the determined values. */
 	floating_t best = -1000, worst = 1000;
-	foreach_free_point(map->b) {
-		if (!map->consider[c])
-			continue;
-		floating_t value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
+	for (int i = 0; i < map->consider->moves; i++) {
+		coord_t c = map->consider->move[i];
+		floating_t value = values[coord_x(c) - 1][coord_y(c) - 1];
 		if (map->to_play == S_WHITE) value = -value;
 		if (value > best) best = value;
 		else if (value < worst) worst = value;
-	} foreach_point_end;
+	}
 
-	foreach_free_point(map->b) {
-		if (!map->consider[c])
-			continue;
+	for (int i = 0; i < map->consider->moves; i++) {
+		coord_t c = map->consider->move[i];
 
 		/* Take the value and normalize it somehow. */
 		/* Right now, we just do this by linear rescaling from
 		 * [worst, best] to [0,1]. */
-		floating_t value = values[coord_x(c, b) - 1][coord_y(c, b) - 1];
+		floating_t value = values[coord_x(c) - 1][coord_y(c) - 1];
 		if (map->to_play == S_WHITE) value = -value;
 		value = (value - worst) / (best - worst);
 		// fprintf(stderr, "\t[%s %s] %f/%f\n", stone2str(map->to_play), coord2sstr(c, b), value, best);
 
 		add_prior_value(map, c, (value - worst) / best, eqex);
-	} foreach_free_point_end;
+	}
 }
 
 
