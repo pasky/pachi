@@ -68,10 +68,6 @@ typedef struct tree_node {
 	* Used for virtual loss computation. */
 	signed char descents;
 
-	/* Common Fate Graph distance from parent, but at most TREE_NODE_D_MAX+1 */
-#define TREE_NODE_D_MAX 3
-	unsigned char d;
-
 #define TREE_HINT_INVALID 1 // don't go to this node, invalid move
 #define TREE_HINT_DCNN    2 // node has dcnn priors
 	unsigned char hints;

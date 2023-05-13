@@ -34,8 +34,6 @@ typedef struct prior_map {
 	/* [board_size2(b)] array, whether to compute
 	 * prior for the given value. */
 	bool *consider;
-	/* [board_size2(b)] array from cfg_distances() */
-	int *distances;
 } prior_map_t;
 
 /* @value is the value, @playouts is its weight. */

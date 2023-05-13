@@ -695,19 +695,12 @@ tree_expand_consider_move(board_t *b, coord_t c, enum stone color, uct_t *u)
 void
 tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct_t *u, int parity)
 {
-	/* Get a Common Fate Graph distance map from parent node. */
-	int distances[board_max_coords(b)];
-	if (!is_pass(last_move(b).coord))
-		cfg_distances(b, last_move(b).coord, distances, TREE_NODE_D_MAX);
-	else    // Pass - everything is too far.
-		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
-
 	/* Include pass in the prior map. */
 	move_stats_t map_prior[board_max_coords(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
 	bool         map_consider[board_max_coords(b) + 1];   memset(map_consider, 0, sizeof(map_consider));
 	
 	/* Get a map of prior values to initialize the new nodes with. */
-	prior_map_t map = { b, color, tree_parity(t, parity), &map_prior[1], &map_consider[1], distances };
+	prior_map_t map = { b, color, tree_parity(t, parity), &map_prior[1], &map_consider[1] };
 	
 	map.consider[pass] = true;
 	int child_count = 1; // for pass
@@ -731,7 +724,7 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 
 	tree_node_t *first_child = ni;
 	ni->parent = node;
-	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
+	ni->prior = map.prior[pass];
 
 	int child = 1;
 	foreach_point(board) {
@@ -744,7 +737,6 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 		nj->parent = node; ni->sibling = nj; ni = nj;
 		
 		ni->prior = map.prior[c];
-		ni->d = distances[c];
 	} foreach_point_end;
 	node->children = first_child; // must be done at the end to avoid race
 }
