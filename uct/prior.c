@@ -103,6 +103,7 @@ uct_prior_even(uct_t *u, tree_node_t *node, prior_map_t *map)
 	} foreach_free_point_end;
 }
 
+#if 0
 static void
 uct_prior_eye(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
@@ -121,6 +122,7 @@ uct_prior_eye(uct_t *u, tree_node_t *node, prior_map_t *map)
 		add_prior_value(map, c, 0, u->prior->eye_eqex);
 	} foreach_free_point_end;
 }
+#endif
 
 
 static void
@@ -153,6 +155,7 @@ uct_prior_dcnn(uct_t *u, tree_node_t *node, prior_map_t *map)
 #endif
 }
 
+#if 0
 static void
 uct_prior_ko(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
@@ -212,6 +215,7 @@ uct_prior_cfgd(uct_t *u, tree_node_t *node, prior_map_t *map)
 		add_prior_value(map, c, 1, bonus);
 	} foreach_free_point_end;
 }
+#endif
 
 static void
 uct_prior_joseki(uct_t *u, tree_node_t *node, prior_map_t *map)
@@ -236,6 +240,7 @@ uct_prior_joseki(uct_t *u, tree_node_t *node, prior_map_t *map)
 	}
 }
 
+#if 0
 static void
 uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
@@ -265,6 +270,7 @@ uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 		add_prior_value(map, b->f[f], 1.0, sqrt(probs[f]) * u->prior->pattern_eqex);
 	}
 }
+#endif
 
 void
 uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map)
@@ -277,6 +283,7 @@ uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map)
 	/* Use dcnn for root priors */
 	if (u->prior->dcnn_eqex && !u->tree_ready)	uct_prior_dcnn(u, node, map);
 
+#if 0	
 	if (u->prior->pattern_eqex)			uct_prior_pattern(u, node, map);
 	else {  /* Fallback to old prior features if patterns are off. */
 		if (u->prior->eye_eqex)			uct_prior_eye(u, node, map);
@@ -285,6 +292,7 @@ uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map)
 		if (u->prior->policy_eqex)		uct_prior_playout(u, node, map);
 		if (u->prior->cfgd_eqex)		uct_prior_cfgd(u, node, map);
 	}
+#endif
 
 	if (u->prior->joseki_eqex)			uct_prior_joseki(u, node, map);
 
