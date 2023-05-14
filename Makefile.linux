@@ -7,8 +7,8 @@
 
 COMMON_FLAGS += $(TUNE)
 LDFLAGS      := -pthread -rdynamic
-SYS_LIBS     := -lm -lrt -ldl
-DCNN_LIBS    := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
+LIBS         := -lm -lrt -ldl
+DCNN_LIBS    := -lcaffe -lboost_system -lglog -lstdc++ $(LIBS)
 
 ifdef STATIC_BUILD
         # Which type of caffe package do you have ?
@@ -31,12 +31,12 @@ ifdef STATIC_BUILD
 	endif
 
 	ifdef UBUNTU_STATIC
-		SYS_LIBS   += libunwind.a -llzma
+		LIBS       += libunwind.a -llzma
 		EXTRA_DEPS += libunwind.a
 	endif
 
 	LDFLAGS   := -pthread -static
-	DCNN_LIBS := $(CAFFE_STATIC_LIB) -lglog -lgflags -lprotobuf -lboost_system -lboost_thread -lopenblas $(HDF5_LIBS) -lstdc++  $(SYS_LIBS)
+	DCNN_LIBS := $(CAFFE_STATIC_LIB) -lglog -lgflags -lprotobuf -lboost_system -lboost_thread -lopenblas $(HDF5_LIBS) -lstdc++  $(LIBS)
 endif
 
 

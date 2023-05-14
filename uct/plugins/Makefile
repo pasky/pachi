@@ -1,7 +1,7 @@
 INCLUDES  = -I../..
 CFLAGS   += -fPIC
 LDFLAGS   = -shared
-SYS_LIBS  = 
+LIBS      =
 
 OBJS    = example.o wolf.o
 

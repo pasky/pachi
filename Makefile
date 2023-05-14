@@ -199,7 +199,7 @@ ifeq ($(DCNN), 1)
 	COMMON_FLAGS   += -DDCNN
 	EXTRA_SUBDIRS  += dcnn
 	EXTRA_OBJS     += $(EXTRA_DCNN_OBJS)
-	SYS_LIBS := $(DCNN_LIBS)
+	LIBS           := $(DCNN_LIBS)
 else
 	DCNN_DETLEF = 0
 	DCNN_DARKFOREST = 0
@@ -241,13 +241,13 @@ ifeq ($(EXTRA_ENGINES), 1)
 endif
 
 ifeq ($(JOSEKIFIX), 1)
-	COMMON_FLAGS += -DJOSEKIFIX
-	EXTRA_SUBDIRS += josekifix
+	COMMON_FLAGS    += -DJOSEKIFIX
+	EXTRA_SUBDIRS   += josekifix
 	EXTRA_DATAFILES += josekifix.gtp
 endif
 
 ifeq ($(BOARD_TESTS), 1)
-	SYS_LIBS      += -lcrypto
+	LIBS          += -lcrypto
 	COMMON_FLAGS  += -DBOARD_TESTS
 endif
 
@@ -258,7 +258,7 @@ else
         # Whee, an extra register!
 	COMMON_FLAGS += -fomit-frame-pointer
 ifeq ($(PROFILING), perftools)
-	SYS_LIBS += -lprofiler
+	LIBS         += -lprofiler
 endif
 endif
 

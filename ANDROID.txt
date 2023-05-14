@@ -4,5 +4,5 @@
 make \
     CC=arm-linux-androideabi-gcc \
     SYS_CFLAGS='-march=armv7-a -isysroot/opt/android-ndk/platforms/android-16/arch-arm' \
-    SYS_LIBS='-lc -ldl -lm' \
+    LIBS='-lc -ldl -lm' \
     SYS_LDFLAGS='-pthread -B/opt/android-ndk/platforms/android-16/arch-arm/usr/lib/'

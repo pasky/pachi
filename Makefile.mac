@@ -1,7 +1,7 @@
 COMMON_FLAGS += -DNO_THREAD_LOCAL
 LDFLAGS      := -pthread -rdynamic
-SYS_LIBS     := -lm -ldl
-DCNN_LIBS    := -lcaffe -lboost_system -lglog -lstdc++ $(SYS_LIBS)
+LIBS         := -lm -ldl
+DCNN_LIBS    := -lcaffe -lboost_system -lglog -lstdc++ $(LIBS)
 
 
 strip: FORCE
