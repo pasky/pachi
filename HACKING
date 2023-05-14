@@ -63,7 +63,7 @@ Pachi consists of the following components:
 	pattern/spatial.[ch]		spatial pattern matching
 	pattern/prob.[ch]		pattern-based move predictor
 	pattern/pattern_engine.c	example "mm patterns move generator" engine, used for testing / debugging
-	pattern/patternscan_engine.c	auxiliary engine used by mm pattern training pipeline
+	pattern/patternscan.c		auxiliary engine used by mm pattern training pipeline
 	training/                       mm training pipeline
 	patterns_mm.spat		spatial patterns data
 	patterns_mm.gamma		mm patterns gammas

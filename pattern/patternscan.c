@@ -6,10 +6,10 @@
 #include "debug.h"
 #include "engine.h"
 #include "move.h"
-#include "pattern/patternscan_engine.h"
+#include "random.h"
 #include "pattern/pattern.h"
 #include "pattern/spatial.h"
-#include "../random.h"
+#include "pattern/patternscan.h"
 
 
 /* The engine has two modes:

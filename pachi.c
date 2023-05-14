@@ -16,7 +16,7 @@
 #include "engines/random.h"
 #include "engines/external.h"
 #include "engines/dcnn.h"
-#include "pattern/patternscan_engine.h"
+#include "pattern/patternscan.h"
 #include "pattern/pattern_engine.h"
 #include "joseki/joseki_engine.h"
 #include "joseki/josekiload.h"
