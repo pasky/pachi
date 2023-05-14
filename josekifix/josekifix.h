@@ -55,9 +55,11 @@ typedef struct {
 	ladder_check_t ladder_check;	/* ladder checks */
 	ladder_check_t ladder_check2;
 
-        bool external_engine[4];   /* turn on external joseki engine mode for following moves ? (one flag per quadrant)
-				    * (ie in case of unknown deviation, external engine takes over).
-				    * setting "pass" as next move also turns this on for current quadrant */
+#define DEFAULT_EXTERNAL_ENGINE_MOVES	15
+        int external_engine_mode[4];    /* if set, external engine handles follow-up (one value per quadrant).
+					 * value specifies number of external engine moves to play.
+					 * note: can also just set "pass" as next move instead of filling this
+					 *       (= enable for current quadrant, 15 moves)  */
 } override_t;
 
 

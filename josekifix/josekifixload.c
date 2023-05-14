@@ -84,28 +84,91 @@ parse_ladder_setup(char **override_ladder_setup, char *value)
 	}	
 }
 
-static void
-parse_external_engine(board_t *b, override_t *override, char *value)
-{
-	/* no value = current quadrant */
-	if (!value || !value[0]) {
-		override->external_engine[last_quadrant(b)] = true;
-		return;
-	}
+typedef struct {
+	int quadrants[4];   /* quadrant(s) in the order they were given (if present) */
+	int n;
+} external_engine_setting_t;
 
+static void
+parse_external_engine(board_t *b, override_t *override, external_engine_setting_t *setting, char *value)
+{
+	char *name = (override->name ? override->name : "");
+	
+        /* no value = current quadrant */
+        if (!value || !value[0]) {
+		int q = last_quadrant(b);
+                override->external_engine_mode[q] = DEFAULT_EXTERNAL_ENGINE_MOVES;
+		setting->quadrants[setting->n++] = q;
+                return;
+        }
+
+        char *s = value;
+        for (int i = 0; s && *s; i++) {
+                int q = atoi(s);
+                if (!isdigit(*s) || q < 0 || q > 3)
+                        die("josekifix: \"%s\": bad external_engine value '%s', quadrants must be 0, 1, 2 or 3\n",
+                            name, value);
+
+                override->external_engine_mode[q] = DEFAULT_EXTERNAL_ENGINE_MOVES;
+
+		/* Remember quadrants order for 'external_engine_moves' */
+		setting->quadrants[setting->n++] = q;
+
+                char *spc = s = strchr(s, ' ');
+                if (spc)
+                        s = spc + 1;
+        }
+}
+
+static void
+parse_external_engine_moves(board_t *b, override_t *override, external_engine_setting_t *setting, char *value)
+{
+	assert(value && value[0]);
+	char *name = (override->name ? override->name : "");
+
+	int values[4];
+	int n = 0;
+	
 	char *s = value;
-	for (int i = 0; s && *s; i++) {
-		int q = atoi(s);
-		if (!isdigit(*s) || q < 0 || q > 3)
-			die("josekifix: \"%s\": bad external_engine value '%s', quadrants must be 0, 1, 2 or 3\n",
-			    (override->name ? override->name : ""), value);
+	int q;
+	for (q = 0; s && *s; q++) {
+		int moves = atoi(s);
+		if (!isdigit(*s) || moves <= 0)
+			die("josekifix: \"%s\": bad external_engine_moves value '%s'\n", name, value);
+		if (moves >= 80)
+			fprintf(stderr, "josekifix: \"%s\": warning, really high number of external engine moves given: %i\n",
+				name, moves);
+		if (n >= 4)
+			die("josekifix: \"%s\": too many values for external_engine_moves (4 max)\n", name);
 		
-		override->external_engine[q] = true;
+		values[n++] = moves;
 
 		char *spc = s = strchr(s, ' ');
 		if (spc)
 			s = spc + 1;
 	}
+
+	/* One value given: use that for all enabled quadrants */
+	if (n == 1) {
+		if (!setting->n) {
+			override->external_engine_mode[last_quadrant(b)] = values[0];
+			return;
+		}
+		
+		for (int i = 0; i < setting->n; i++)
+			override->external_engine_mode[setting->quadrants[i]] = values[0];
+		return;
+	}
+
+	/* Multiple values given: must match previous 'external_engine_mode' setting */
+	if (!setting->n)
+		die("josekifix: \"%s\": 'external_engine_moves' needs a corresponding 'external_engine' setting.\n", name);
+	if (n != setting->n)
+		die("josekifix: \"%s\": 'external_engine_moves' and 'external_engine' must specify same number of quadrants.\n", name);
+	assert(n == setting->n);
+	
+	for (int i = 0; i < n; i++)
+		override->external_engine_mode[setting->quadrants[i]] = values[i];
 }
 
 /* Set override around coord */
@@ -138,6 +201,9 @@ add_override(board_t *b, move_t *m, char *move_str)
 		die("josekifix: unknown section '%s', aborting. (run with -d5 to see previous moves)\n", section);
 	}
 
+	if (!b->moves)
+		die("josekifix: can't add an override on empty board.\n");
+
 	if (!vars_len) {  free(move_str);  return;  }
 
 	// dump vars
@@ -154,19 +220,22 @@ add_override(board_t *b, move_t *m, char *move_str)
 	// Second area check ?
 	override_t override2 = { 0, };
 	char *around2 = NULL;
-	
+
+	external_engine_setting_t setting;  setting.n = 0;
+
+	char *override_name = "";
 	for (int i = 0; i < vars_len; i++) {
 		char *name  = vars[i].name;
 		char *value = vars[i].value;
 		
 		if      (!strcmp(name, "name"))
-			override.name = value;
+			override.name = override_name = value;
 		
 		else if (!strcmp(name, "around")) {
 			if (strcmp(value, "last") && !valid_str_coord(value)) {
 				board_print(b, stderr);
 				die("josekifix: \"%s\": invalid around coord '%s', aborting. (run with -d5 to see previous moves)\n",
-				    (override.name ? override.name : ""), value);
+				    override_name, value);
 			}
 
 			has_around = true;
@@ -179,7 +248,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 			if (strcmp(value, "last") && !valid_str_coord(value)) {
 				board_print(b, stderr);
 				die("josekifix: \"%s\": invalid around2 coord '%s', aborting. (run with -d5 to see previous moves)\n",
-				    (override.name ? override.name : ""), value);
+				    override_name, value);
 			}
 			
 			around2 = value;		// deal with it later
@@ -266,15 +335,21 @@ add_override(board_t *b, move_t *m, char *move_str)
 		/************************************************************************************/		
 		
 		else if (!strcmp(name, "external_engine"))
-			parse_external_engine(b, &override, value);
+			parse_external_engine(b, &override, &setting, value);
 		
-		else if (!strcmp(name, "external_engine_diag"))
-			override.external_engine[diag_quadrant(last_quadrant(b))] = true;
+		else if (!strcmp(name, "external_engine_diag")) {
+			int q = diag_quadrant(last_quadrant(b));
+			override.external_engine_mode[q] = DEFAULT_EXTERNAL_ENGINE_MOVES;
+			setting.quadrants[setting.n++] = q;
+		}
+		
+		else if (!strcmp(name, "external_engine_moves"))
+			parse_external_engine_moves(b, &override, &setting, value);
 		
 		else {
 			board_print(b, stderr);
 			die("josekifix: \"%s\": unknown josekifix variable: '%s', aborting. (run with -d5 to see previous moves)\n",
-			    (override.name ? override.name : ""), name);
+			    override_name, name);
 		}
 	}
 	
@@ -308,7 +383,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 	if (!has_around) {
 		board_print(b, stderr);
 		die("josekifix: \"%s\": around coord missing, aborting. (run with -d5 to see previous moves)\n",
-		    (override.name ? override.name : ""));
+		    override_name);
 	}
 
 	if (!strcmp(section, "override")) {
