@@ -20,10 +20,10 @@ something like:
   around = D4
 
 Moves without comments are just setup stones.
-Except for previous move, move order doesn't really matter.
+Except for last move, move order doesn't really matter.
 
 Sequences normally take place in the lower-left corner to make it easy to navigate
-/ search existing sequences, but for now play tengen (K10) to learn how overrides work.]
+/ search existing sequences, but for now play tengen to see how overrides work.]
 (;B[cp]
 (;W[ep]
 (;B[cn]
@@ -1870,8 +1870,13 @@ around = D3]
 (;B[cm]
 ;W[gp]C[[override\]
 ]))))
+(;B[cn]
+;W[]C[[log\]
+name = "empty corner keima"
+around = D4
+])
 (;B[jj]TR[ij]
-;W[ij]CR[je][hf][if][jf][kf][lf][gg][mg][fh][nh][fi][ni][ej][fj][nj][oj][fk][nk][fl][nl][gm][mm][hn][in][jn][kn][ln][jo]C[Demo
+;W[ij]CR[je][hf][if][kf][lf][gg][mg][fh][nh][fi][ni][ej][oj][fk][nk][fl][nl][gm][mm][hn][in][kn][ln][jo]C[Demo
 
 [override\]
 name = "tengen fight"
@@ -1888,7 +1893,7 @@ Note:
         Right now there can be only one section per move.
 
 Pass as current move is special : we don't provide an answer move.
-In this case external joseki engine will take care of following sequence in this area.
+In this case external joseki engine takes over following sequence in this area.
 
 - Pattern area:
 
@@ -1903,31 +1908,6 @@ Best way to visualize pattern area is to bring Pachi up in GoGui and click :
     Tools -> Analyze Commands -> Josekifix Set Coord -> Run
 Clicking different coordinates will display pattern area at that location.
 This way you instantly see which stones are/are not included in the pattern.
-
-- Ladder checks:
-
-Overrides can also specify up to 2 ladder checks.
-Syntax is more complicated because there are usually setup stones involved,
-but otherwise you can write things like 'noladder_other = F2' or 'ladder_own = D4'
-meaning "ladder at F2 doesn't work for opponent" and "ladder at D4 works for us".
-See first variation in the tree ("3-4 trick play") for example.
-
-- Optional flags:
-
-external_engine:
-Turn external engine mode on in this quadrant, even though an answer move is
-provided. Useful to let external engine takeover if we don't have an answer here
-to all possible deviations further down the line.
-
-external_engine_diag:
-Same but for diagonally opposite quadrant.
-
-- Logged variations:
-
-It's also possible to just log a variation without interfering with game moves.
-In this case create a [log\] section instead of an [override\] section.
-They work just the same (matching etc) except answer move will be ignored.
-So it can be anything, but probably less confusing to make it pass.
 ]
 ;B[ii]TR[ji]C[Demo
 
@@ -1946,24 +1926,19 @@ In this case we didn't specify 'name' or 'around' so it will reuse previous valu
 This way if you have several overrides in a branch you only need to give values
 for things that changed.
 
-This demo is coming to an end, hopefully things are clearer.
 Next moves show what the circle pattern looks like at different locations in the 
 corner, and how to pick a good location on an example.
-
-Feel free to check out other variations, see how they work, try some of your own...
-If something's unclear still you can ask on github.
-
-lemon]
-;B[]CR[dk][bl][cl][dl][el][fl][am][gm][hn][ho][dp][hp][ip][hq][hr][gs]C[Demo
+]
+;B[]CR[dk][bl][cl][el][fl][am][gm][hn][ho][dp][ip][hq][hr][gs]C[Demo
 
 pattern for "around = D4"]
-;CR[dl][bm][cm][dm][em][fm][an][gn][ho][hp][dq][hq][iq][hr][hs]C[Demo
+;CR[dl][bm][cm][em][fm][an][gn][ho][hp][dq][iq][hr][hs]C[Demo
 
 pattern for "around = D3"]
-;CR[dm][bn][cn][dn][en][fn][ao][go][hp][hq][dr][hr][ir][hs]C[Demo
+;CR[dm][bn][cn][en][fn][ao][go][hp][hq][dr][ir][hs]C[Demo
 
 pattern for "around = D2"]
-;CR[dn][bo][co][do][eo][fo][ap][gp][hq][hr][ds][hs][is]C[Demo
+;CR[dn][bo][co][eo][fo][ap][gp][hq][hr][ds][is]C[Demo
 
 pattern for "around = D1"]
 ;W[dp]
@@ -1971,7 +1946,7 @@ pattern for "around = D1"]
 ;W[hq]
 ;B[fo]
 ;W[dn]
-;B[ip]CR[gm][en][fn][gn][hn][in][do][jo][cp][kp][cq][kq][br][cr][gr][kr][lr][cs][ks]C[Demo
+;B[ip]CR[gm][en][fn][hn][in][do][jo][cp][kp][cq][kq][br][gr][lr][cs][ks]C[Demo
 
 Say you want to match this sequence, but you don't care if white's stone is
 at D6 or C6.
@@ -1983,9 +1958,50 @@ So something like:
 [override\]
 name "hoshi shoulder hit"
 around = G2
-])
-(;B[cn]
-;W[]C[[log\]
-name = "empty corner keima"
-around = D4
-]))
+]
+;W[]C[End of demo
+
+There are a few extra things overrides can have like ladder checks and optional settings,
+but this is probably enough to get started. You can always come back later if needed.
+
+
+
+- Logged variations:
+
+It's possible to just log a variation without interfering with game moves.
+In this case create a [log\] section instead of an [override\] section.
+
+They work just the same (matching etc) except answer move is ignored.
+So it can be anything, but for sanity's sake it's always pass here.
+
+
+- Ladder checks:
+
+Overrides can also specify up to 2 ladder checks.
+Syntax is more complicated because there are usually setup stones involved,
+but otherwise you can write things like 'noladder_other = F2' or 'ladder_own = D4'
+meaning "ladder at F2 doesn't work for opponent" and "ladder at D4 works for us".
+See first variation in the tree ("3-4 trick play") for example.
+
+
+- Optional settings:
+
+  external_engine
+  external_engine = lower_left lower_right
+
+Turn external engine mode on in this quadrant (or quadrants).
+This setting exists so you can enable more than one quadrant, or enable
+external engine mode in normal overrides (which have an answer move).
+In this case, useful to make sure external engine take over in case of
+unknown deviation if variation is pretty critical.
+
+  external_engine_diag
+
+Same as external_engine but for diagonally opposite quadrant.
+
+  external_engine_moves = n
+  external_engine_moves = n1 n2 [...\]
+
+Specify number of moves for external engine mode (default 15).
+Can pass one number for each quadrant if more than one quadrant has
+been enabled (in same order as external_engine setting).]))
