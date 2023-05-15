@@ -1100,7 +1100,7 @@ Ex: Silverwing pachipachi  2022-11-07 17:22]
 ;B[jq]C[[override\]]
 (;W[kp]
 ;B[lq]
-;W[mo]
+(;W[mo]
 (;B[gp]
 ;W[cq]C[[override\]
 name = "4-4 shoulder hit 3-3"
@@ -1196,6 +1196,24 @@ around = A3
 (;W[cr]
 ;B[dq]C[[override\]
 ])))
+(;W[gp]
+(;B[]C[[override\]
+name = "4-4 shoulder hit keep all"
+around = H3
+
+])
+(;B[lp]
+;W[lo]
+;B[mo]
+;W[ln]
+;B[mn]
+;W[mp]
+;B[]C[[override\]
+name = "4-4 shoulder hit keep all"
+around = K3
+
+
+half pachipachi  2023-05-15])))
 (;W[kq]
 ;B[kp]C[[override\]
 name = "4-4 shoulder hit hustling"
