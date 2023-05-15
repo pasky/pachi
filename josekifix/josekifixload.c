@@ -70,6 +70,8 @@ parse_josekifix_vars(board_t *b, char *str, int *vars_len)
 	return vars;
 }
 
+/* ladder_own_setup_own    coord1 [coord2 ...]		setup stones for ladder_own ladder check (own stones)
+ * ladder_own_setup_other  coord1 [coord2 ...]		setup stones for ladder_own ladder check (opponent stones) */
 static void
 parse_ladder_setup(char **override_ladder_setup, char *value)
 {
@@ -89,6 +91,8 @@ typedef struct {
 	int n;
 } external_engine_setting_t;
 
+/* external_engine			enable external engine mode in current quadrant
+ * external_engine = q1 [q2 ...]	enable external engine mode in given quadrants (numeric)   */
 static void
 parse_external_engine(board_t *b, override_t *override, external_engine_setting_t *setting, char *value)
 {
@@ -120,6 +124,8 @@ parse_external_engine(board_t *b, override_t *override, external_engine_setting_
         }
 }
 
+/* external_engine_moves = n			specify number of moves for external engine mode
+ * external_engine_moves = n1 n2 [...]		same for each quadrant if multiple quadrants have been enabled */
 static void
 parse_external_engine_moves(board_t *b, override_t *override, external_engine_setting_t *setting, char *value)
 {
@@ -227,10 +233,13 @@ add_override(board_t *b, move_t *m, char *move_str)
 	for (int i = 0; i < vars_len; i++) {
 		char *name  = vars[i].name;
 		char *value = vars[i].value;
-		
+
+		/* name = override_name */
 		if      (!strcmp(name, "name"))
 			override.name = override_name = value;
-		
+
+		/* around = coord		match pattern origin.
+		 * around = last		(use last move) */
 		else if (!strcmp(name, "around")) {
 			if (strcmp(value, "last") && !valid_str_coord(value)) {
 				board_print(b, stderr);
@@ -244,6 +253,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 				joseki_override_set_around(&override, b, value);
 		}
 
+		/* around2 = coord		also check pattern at this location */
 		else if (!strcmp(name, "around2")) {	// second area check
 			if (strcmp(value, "last") && !valid_str_coord(value)) {
 				board_print(b, stderr);
@@ -256,16 +266,19 @@ add_override(board_t *b, move_t *m, char *move_str)
 		
 		/************************************************************************************/
 		/* First ladder check */
-		
+
+		/* ladder_own = coord		ladder works for us at given coord (we atari) */
 		else if (!strcmp(name, "ladder_own")) {
 			ladder_check->own_color = true;
 			ladder_check->coord = value;
 			ladder_check->works = true;
 		}
+		/* ladder_own_setup_own    coord1 [coord2 ...]		setup stones for ladder_own ladder check (own stones)
+		 * ladder_own_setup_other  coord1 [coord2 ...]		setup stones for ladder_own ladder check (opponent stones) */
 		else if (!strcmp(name, "ladder_own_setup_own"))		parse_ladder_setup(ladder_check->setup_own, value);
 		else if (!strcmp(name, "ladder_own_setup_other"))	parse_ladder_setup(ladder_check->setup_other, value);
 
-
+		/* noladder_own = coord		ladder doesn't works for us at given coord (we atari) */
 		else if (!strcmp(name, "noladder_own")) {
 			ladder_check->own_color = true;
 			ladder_check->coord = value;
@@ -273,8 +286,8 @@ add_override(board_t *b, move_t *m, char *move_str)
 		}
 		else if (!strcmp(name, "noladder_own_setup_own"))	parse_ladder_setup(ladder_check->setup_own, value);
 		else if (!strcmp(name, "noladder_own_setup_other"))	parse_ladder_setup(ladder_check->setup_other, value);
-		
-		
+
+		/* ladder_other = coord		ladder works for opponent at given coord (he ataris) */
 		else if (!strcmp(name, "ladder_other")) {
 			ladder_check->own_color = false;
 			ladder_check->coord = value;
@@ -283,7 +296,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 		else if (!strcmp(name, "ladder_other_setup_own"))	parse_ladder_setup(ladder_check->setup_own, value);
 		else if (!strcmp(name, "ladder_other_setup_other"))	parse_ladder_setup(ladder_check->setup_other, value);
 
-		
+		/* noladder_other = coord	ladder doesn't works for opponent at given coord (he ataris) */
 		else if (!strcmp(name, "noladder_other")) {
 			ladder_check->own_color = false;
 			ladder_check->coord = value;
@@ -296,6 +309,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 		/************************************************************************************/
 		/* Second ladder check */
 
+		/* ladder_own2 = coord		ladder works for us at given coord (we atari) */
 		else if (!strcmp(name, "ladder_own2")) {
 			ladder_check2->own_color = true;
 			ladder_check2->coord = value;
@@ -304,7 +318,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 		else if (!strcmp(name, "ladder_own2_setup_own"))	parse_ladder_setup(ladder_check2->setup_own, value);
 		else if (!strcmp(name, "ladder_own2_setup_other"))	parse_ladder_setup(ladder_check2->setup_other, value);
 
-
+		/* noladder_own2 = coord	ladder doesn't works for us at given coord (we atari) */
 		else if (!strcmp(name, "noladder_own2")) {
 			ladder_check2->own_color = true;
 			ladder_check2->coord = value;
@@ -313,7 +327,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 		else if (!strcmp(name, "noladder_own2_setup_own"))	parse_ladder_setup(ladder_check2->setup_own, value);
 		else if (!strcmp(name, "noladder_own2_setup_other"))	parse_ladder_setup(ladder_check2->setup_other, value);
 
-
+		/* ladder_other2 = coord	ladder works for opponent at given coord (he ataris) */
 		else if (!strcmp(name, "ladder_other2")) {
 			ladder_check2->own_color = false;
 			ladder_check2->coord = value;
@@ -322,7 +336,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 		else if (!strcmp(name, "ladder_other2_setup_own"))	parse_ladder_setup(ladder_check2->setup_own, value);
 		else if (!strcmp(name, "ladder_other2_setup_other"))	parse_ladder_setup(ladder_check2->setup_other, value);
 
-		
+		/* noladder_other2 = coord	ladder doesn't works for opponent at given coord (he ataris) */
 		else if (!strcmp(name, "noladder_other2")) {
 			ladder_check2->own_color = false;
 			ladder_check2->coord = value;
@@ -333,16 +347,19 @@ add_override(board_t *b, move_t *m, char *move_str)
 		
 		
 		/************************************************************************************/		
-		
+
+		/* see above */
 		else if (!strcmp(name, "external_engine"))
 			parse_external_engine(b, &override, &setting, value);
-		
+
+		/* external_engine_diag		enable external engine mode in opposite quadrant */
 		else if (!strcmp(name, "external_engine_diag")) {
 			int q = diag_quadrant(last_quadrant(b));
 			override.external_engine_mode[q] = DEFAULT_EXTERNAL_ENGINE_MOVES;
 			setting.quadrants[setting.n++] = q;
 		}
-		
+
+		/* see above */
 		else if (!strcmp(name, "external_engine_moves"))
 			parse_external_engine_moves(b, &override, &setting, value);
 		

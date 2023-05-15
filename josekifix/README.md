@@ -1,56 +1,54 @@
-[ Joseki overrides ]
+## Joseki overrides
 
 This is the josekifix module. It allows to override the main engine moves
 to, for example, fix joseki lines that the dcnn plays poorly. It's also
 used for some fuseki uses, like fixing a particular fuseki or provide more
 varied fusekis when playing as black.
 
-Most overrides are specified in SGF form (josekifix.sgf, fusekifix.sgf),
+Most overrides are specified in SGF form
+([josekifix.sgf](josekifix.sgf?raw=true), [fusekifix.sgf](fusekifix.sgf?raw=true)),
 which are used to generate josekifix.gtp (GTP stream), which is loaded by
-Pachi at startup. In the SGF file overrides are represented by [override]
-sections inside move comments with required metadata (See demo in
-josekifix.sgf for details).
+Pachi at startup. In the SGF file overrides are represented by `[override]`
+sections inside move comments with required metadata.
 
 Matching is based on last move and the local pattern around it (or a point
 nearby) but can optionnally include things like ladder checks, or pattern
 at another location (useful to check both corners in fuseki overrides for
 example).
 
-There are GoGui analyze commands to help visualize the matching pattern
-area at different locations, or dump an override struct's data for a given
-position when experimenting with code. For example try bringing Pachi up in
-GoGui and click different locations after clicking:
+See demo in [josekifix.sgf](josekifix.sgf?raw=true) for details.
 
-    Tools -> Analyze Commands -> Josekifix Set Coord -> Run
+## External engine
 
-- orange area is matching pattern area for that location
-- blue area the one for last move ('around = "last"' in josekifix.sgf)
-
-Overrides are logged when they get triggered (every joseki line has a name).
-It's possible to just log a position or joseki line without interfering with it
-([log] section instead of [override] in this case).
-
-Overrides can either specify next move ("just override this move"), or leave
-it as "pass" to let an external joseki engine take over the following sequence
-in this quadrant.
+Overrides can either specify next move ("just override this move"), or let an
+external joseki engine take over the following sequence in this quadrant.
 
 While it's possible in theory to provide all answers to all possible deviations,
-in practice it's much more robust and manageable to depend on an external engine
-for tricky variations that Pachi tends to get wrong in many different ways.
+in practice it's much more manageable to depend on an external engine for tricky
+variations that Pachi tends to get wrong in many different ways.
+
+	pachi --josekifix
+
 The downside is that if the external engine is missing at runtime the josekifix
-module will be disabled. Running with --josekifix will make it abort instead
-though.
+module will be disabled.  
+Running with `--josekifix` option ensures that Pachi never runs without joseki fixes
+(abort if necessary).
+
+	pachi --external-joseki-engine "command"
+
+Use this to specify external engine command (default: KataGo)
 
 
-[ Running ]
+## KataGo setup
 
-Default external engine is KataGo.
-This can be changed with --external-joseki-engine Pachi option.
-See josekifix/katago directory for an example KataGo setup for Raspberry Pi.
+[KataGo](https://github.com/lightvector/KataGo) setup instructions:
+  - [Windows](https://github.com/pasky/pachi/issues/154)
+  - [Raspberry Pi](katago/README)
 
 When all is setup and working correcly you should see something like this on
 startup:
 
+    $ pachi --external-joseki-engine "/path/to/katago gtp"
     Random seed: 1675600712
     External engine: KataGo version 1.11.0
     Loading joseki fixes ...
@@ -58,15 +56,75 @@ startup:
     Loaded Detlef's 54% dcnn for 19x19
     ...
 
+
+## Updates
+
+Minor updates to the SGF database are kept in a different branch
+([joseki_fixes](https://github.com/pasky/pachi/tree/joseki_fixes))
+to avoid polluting the git history too much.
+
+If you're using a Pachi release, or even Pachi git repository, the included SGF
+database is likely not the latest.
+
+To get latest joseki fixes, run:
+
+    $ git clone https://github.com/pasky/pachi
+    $ cd pachi/josekifix
+    $ make update
+   
+That should get you the latest sgf database and regenerate `josekifix.gtp`
+(parent directory).
+
+Copy `josekifix.gtp` to the directory where Pachi runs and Pachi should pick
+it up next time it starts.
+
+
+## Adding new overrides
+
+Edit [josekifix.sgf](josekifix.sgf?raw=true) / [fusekifix.sgf](fusekifix.sgf?raw=true)
+to add new overrides (see demo in josekifix.sgf to get started).
+
+Find an SGF editor that lets you visualize move tree and comments easily:
+
+<a href="../media/screenshot_josekifix_patterns.jpg?raw=true">
+<img align="right" src="../media/screenshot_josekifix_patterns_small.jpg">
+</a>
+
+- cgoban3 (KGS client), Sabaki etc all work well.
+- GoGui is not ideal for navigating branches (doesn't draw the move tree !)
+  but can be workable if you show info panel (comments).
+
+  The fact that it can show pattern areas interactively at different locations
+  can be of great help to visualize things.
+
+  You need to attach Pachi engine first.  
+  Then try clicking different locations after clicking:
+
+      Tools -> Analyze Commands -> Josekifix Set Coord -> Run
+
+  - orange area is matching pattern area for that location
+  - blue area the one around last move
+
+
+Once done sgf editing, regenerate database with:
+
+    $ cd josekifix
+    $ make data
+
+
+## Logs
+
+
 When an override or logged variation triggers you should see something like:
 
     joseki_override: R3 (magic sword)				(override)
     joseki_variation: A1 (magic sword cut v2)			(logged variation)
 
 
-When external joseki engine mode gets triggered (an override delegates sequence to
-external engine), ascii board diagrams' header will show number of external
-engine moves remaining in each quadrant:
+When external joseki engine mode triggers ascii board diagram headers show 
+number of external engine moves remaining in each quadrant:
+
+In this case, 15 moves remaining in upper-left and lower-right   (order: [UL UR LR LL])
     
     Move:   7  Komi: 6.5  Handicap: 0  Captures B: 0 W: 0 [15 0 15 0]
           A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
@@ -92,51 +150,8 @@ engine moves remaining in each quadrant:
       1 | . . . . . . . . . . . . . . . . . . . |  1 | : : : : : : : : : : : : : : : : : : : |
         +---------------------------------------+    +---------------------------------------+
 
-In this case 15 moves remaining in quadrants 0 and 2 (top-left and bottom-right).
 
-
-[ Updates ]
-
-Minor updates to the SGF database are kept in a different branch (joseki_fixes)
-to avoid polluting the git history too much. So if you've just checked out
-Pachi git repository it's likely the included SGF database is not the most
-up-to-date.
-
-To get latest joseki fixes, run:
-
-    $ cd josekifix
-    $ make update
-   
-That should get you the latest sgf database and regenerate josekifix.gtp.
-Copy josekifix.gtp to the directory where Pachi runs and Pachi should pick
-it up next time it starts.
-
-
-[ Adding new overrides ]
-
-If you find a position is being repeatedly abused you can add new overrides
-to josekifix.sgf / fusekifix.sgf. See demo in josekifix.sgf to get started.
-
-You want an SGF editor that lets you visualize move tree and comments easily:
-- cgoban3 (KGS client), Sabaki etc all work well.
-- GoGui is not ideal for navigating branches (doesn't draw the move tree !)
-  but can be workable if you show info panel (comments). The fact that it
-  can show pattern areas interactively can make up for it greatly (see
-  Analyze Commands example above. You need to attach Pachi first).
-
-Once done editing, type:
-
-    $ cd josekifix
-    $ make data
-
-To regenerate josekifix.gtp
-
-If you want to test the override in GoGui, Sabaki etc make sure to copy
-josekifix.gtp in the directory where Pachi runs and restart it (overrides
-are loaded on startup).
-
-
-[ Debugging ]
+## Debugging
 
 To dump all overrides loaded on startup, run:
 
