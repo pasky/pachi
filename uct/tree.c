@@ -13,6 +13,8 @@
 #include "move.h"
 #include "playout.h"
 #include "tactics/util.h"
+#include "tactics/1lib.h"
+#include "tactics/ladder.h"
 #include "timeinfo.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
@@ -666,6 +668,28 @@ tree_get_node(tree_node_t *parent, coord_t c)
 	return NULL;
 }
 
+static bool
+tree_expand_consider_move(board_t *b, coord_t c, enum stone color, uct_t *u)
+{
+	if (!board_is_valid_play_no_suicide(b, color, c))
+		return false;
+	
+	if (u->prior->prune_ladders && !board_playing_ko_threat(b)) {
+		/* Don't try to escape non-working ladders */
+		group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
+		if (atari_neighbor && is_ladder(b, atari_neighbor, true) &&
+		    !useful_ladder(b, atari_neighbor)) {
+			if (UDEBUGL(5))	fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c));
+			return false;
+		}
+		
+		/* Don't atari non-working ladders */
+		if (harmful_ladder_atari(b, c, color))
+			return false;
+	}
+
+	return true;
+}
 
 /* This function must be thread safe, given that board b is only modified by the calling thread. */
 void
@@ -689,10 +713,10 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 	int child_count = 1; // for pass
 	foreach_free_point(b) {
 		assert(board_at(b, c) == S_NONE);
-		if (!board_is_valid_play_no_suicide(b, color, c))
-			continue;
-		map.consider[c] = true;
-		child_count++;
+		if (tree_expand_consider_move(b, color, c, u)) {
+			map.consider[c] = true;
+			child_count++;
+		}
 	} foreach_free_point_end;
 	uct_prior(u, node, &map);
 
