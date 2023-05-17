@@ -190,7 +190,8 @@ pattern_rate_moves_fast(pattern_config_t *pc,
 	/* Try local moves first. */
 	floating_t max = pattern_max_rating_fast(pc, b, color, probs, ownermap, true);
 
-	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
+	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves.
+	 * (Looks terribly inefficient but this gets hit so rarely it's not worth bothering) */
 	if (max < LOW_PATTERN_RATING)
 		max = pattern_max_rating_fast(pc, b, color, probs, ownermap, false);
 	
