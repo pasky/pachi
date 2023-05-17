@@ -6,6 +6,9 @@
 #include "board.h"
 #include "debug.h"
 
+/* Can capture group g (not snapback) */
+bool can_capture(board_t *b, group_t g, enum stone to_play);
+
 bool capturing_group_is_snapback(board_t *b, group_t group);
 /* Can group @group usefully capture a neighbor ? 
  * (usefully: not a snapback) */

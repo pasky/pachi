@@ -75,13 +75,14 @@ enum feature_id {
 #define PF_ATARI_LADDER_BIG	1  /***** Can ladder big safe opponent group */
 #define PF_ATARI_LADDER_LAST    2  /*     Ladder last move */
 #define PF_ATARI_AND_CAP	3  /***   Atari + can capture other group if opponent defends. */
-#define PF_ATARI_DOUBLE		4  /***   Double atari */
-#define PF_ATARI_LADDER_SAFE	5  /***** Can ladder safe opponent stone(s) */
-#define PF_ATARI_LADDER_CUT	6  /*     Can ladder cutting stone(s) */
-#define PF_ATARI_LADDER		7  /*     The atari'd group gets laddered? */
-#define PF_ATARI_KO		8  /***** Atari as ko-threat ? disables selfatari feature. */
-#define PF_ATARI_SOME		9  /*     Can atari something */
-#define PF_ATARI_N		10
+#define PF_ATARI_AND_CAP2	4  /***   Atari + can capture other group if opponent defends. */
+#define PF_ATARI_DOUBLE		5  /***   Double atari */
+#define PF_ATARI_LADDER_SAFE	6  /***** Can ladder safe opponent stone(s) */
+#define PF_ATARI_LADDER_CUT	7  /*     Can ladder cutting stone(s) */
+#define PF_ATARI_LADDER		8  /*     The atari'd group gets laddered? */
+#define PF_ATARI_KO		9  /***** Atari as ko-threat ? disables selfatari feature. */
+#define PF_ATARI_SOME		10 /*     Can atari something */
+#define PF_ATARI_N		11
 
 	/* Net */
 	FEAT_NET,

@@ -46,9 +46,10 @@ capturing_group_is_snapback(board_t *b, group_t group)
 //#define NO_DOOMED_GROUPS
 
 
-static inline bool
+bool
 can_capture(board_t *b, group_t g, enum stone to_play)
 {
+	//assert(g && board_group_info(b, g).libs == 1);
 	coord_t capture = board_group_info(b, g).lib[0];
 	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
 	
