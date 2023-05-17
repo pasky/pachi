@@ -720,27 +720,30 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 
 	/* Now, create the nodes (all at once)
 	 * We might temporarily run out of nodes but this should be rare. */
-	tree_node_t *ni = tree_alloc_node(t, consider.moves + 1);  // + 1 for pass
-	if (!ni) {
+	tree_node_t *first_child = tree_alloc_node(t, consider.moves + 1);  // + 1 for pass
+	if (!first_child) {
 		node->is_expanded = false;
 		return;
 	}
-	tree_setup_node(t, ni, pass, node->depth + 1);
 
-	tree_node_t *first_child = ni;
-	ni->parent = node;
-	ni->prior = map.prior[pass];
+	/* Setup pass node */
+	tree_setup_node(t, first_child, pass, node->depth + 1);
+	first_child->parent = node;
+	first_child->prior = map.prior[pass];
 
-	int child = 1;
-	for (unsigned int i = 0; i < consider.moves; i++) {
+	/* Setup other children */
+	tree_node_t *prev = first_child;
+	tree_node_t *ni   = first_child + 1;
+	for (unsigned int i = 0; i < consider.moves; i++, ni++) {
 		coord_t c = consider.move[i];
 		assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
 		
-		tree_node_t *nj = first_child + child++;
-		tree_setup_node(t, nj, c, node->depth + 1);
-		nj->parent = node; ni->sibling = nj; ni = nj;
-		
+		tree_setup_node(t, ni, c, node->depth + 1);
+		ni->parent = node;
 		ni->prior = map.prior[c];
+
+		prev->sibling = ni;
+		prev = ni;
 	}
 	node->children = first_child; // must be done at the end to avoid race
 }
