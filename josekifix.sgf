@@ -303,16 +303,14 @@ https://online-go.com/game/12532271
 ])
 (;W[dp]
 ;B[bp]
-;W[er]C[[override\]
-name = "3-4 pincer attach extend"
+;W[]C[[override\]
+name = "3-4 pincer attach side extend"
 around = C2
 
-
-E2 first, not B3
-otherwise b E2
+many ways to screw up
 
 Ex: pachipachi nekomichan  2022-12-13 14:29  
-]))
+       mss2 pachipachi  2023-05-18]))
 (;B[bp]
 ;W[]C[[override\]
 name = "3-4 pincer B4 tricks"
