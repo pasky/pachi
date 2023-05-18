@@ -27,19 +27,10 @@ See josekifix.sgf for details.
 (;B[me]
 (;W[nq]
 (;B[lq]
-;W[qq]
-;B[qp]
-;W[pq]
-;B[op]
-;W[nr]
-;B[mo]
-;W[]C[[override\]
-name = "anti sanrensei"
-around = O6
-around2 = O14
-external_engine = upper_right lower_right
-
-pachipachi niceguy0 2023-05-03])
+;W[no]C[[override\]
+name = "sanrensei jump"
+around = P4
+around2 = O14])
 (;B[qq]
 ;W[kq]
 ;B[no]
