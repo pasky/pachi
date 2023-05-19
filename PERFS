@@ -1,0 +1,125 @@
+UCT performance
+===============
+
+What's the cost of the different components, and where do the cpu cycles go ?
+
+Here's the result of a performance analysis on Raspberry Pi with Pachi 12.70
+to answer that question:
+
+		test                         playouts/s		component cost
+----------------------------------------------------------------------------------------------
+1)    raw playouts, single threaded		850
+2)    raw playouts on 4 cores			800
+----------------------------------------------------------------------------------------------
+10)                                                          tree management ?         5
+9)        no playout amafmap			795          amafmap                   5
+8)        ucb1amaf: simple update		790          ucb1amaf update          30
+7)        ucb1amaf: random descent		760          ucb1amaf descent         75
+6)        no cfg distance			685          cfg distances             0
+5)        no priors (fast even prior)		685            (all priors                135)
+                                                             map_prior + even prior   40
+4)        no pattern prior			645          pattern prior            95
+3)    uct search (master)			550
+----------------------------------------------------------------------------------------------
+                total diff			250                                  250
+
+
+1) Single threaded raw playout speed:
+   That's what we get by just doing playouts: (no tree search)
+
+	$ git checkout pachi-12.70
+	$ make clean ; make -j4
+	$ ./pachi -u t-unit blank.t
+ 
+   -> 850 playouts/s
+
+2) Raw playouts on 4 cores:
+   Raspberry Pi has 4 cores so we run 1 instance on each:
+   
+	$ ./pachi -u t-unit blank.t & ./pachi -u t-unit blank.t & ./pachi -u t-unit blank.t & ./pachi -u t-unit blank.t
+
+   -> ~800 playouts/s
+   That's our theoretical maximum (the number we would get if uct cost was 0).
+
+3) uct search, master branch:
+   full uct search, 10000 playouts (4 threads)
+
+	$ cat genmove.gtp
+	boardsize 19
+	clear_board
+	play b q16
+	genmove w
+
+	$ ./pachi -t =10000 < genmove.gtp
+
+   -> 550 playouts/s		              total uct cost = 250
+
+   Now we start from master branch and turn off components on by one to assess
+   the cost of each one until we get as close as possible to raw playout speed.
+   (we follow commits in branch uct_perf_12.70)
+
+   Care must be taken because if changes impact search dynamics too much
+   then numbers are meaningless, we're just measuring the impact on other
+   components (try disabling amafmap first for example...)
+   Hopefully i didn't screw up.
+
+4) no pattern prior	(uct_perf_12.70~5)
+   disabled call to pattern code in uct_prior()
+
+	$ git checkout uct_perf_12.70~5
+	$ make -j4
+	$ ./pachi -t =10000 < genmove.gtp
+
+   -> 645 playouts/s		          pattern prior cost = 95
+
+5) no priors		(uct_perf_12.70~4)
+   completely removed prior infrastructure in tree_expand_node().
+   must keep even prior for stability, but we can write node priors
+   directly, no need for map_prior.
+
+   -> 685 playouts/s		             all priors cost = 135
+				 map_prior + even prior cost = 40
+
+6) no cfg distance	(uct_perf_12.70~3)
+   removed distance calculation in tree_expand_node()
+
+   -> 685 playouts/s		           cfg distance cost = 0
+
+7) random descent	(uct_perf_12.70~2)
+   replaced ucb1amaf descend() calculations with cheap random descent
+
+   -> 760 playouts/s		       ucb1amaf descend cost = 75
+
+8) simple policy update
+   replaced ucb1amaf update() with ucb1's
+
+   -> 790 playouts/s			ucb1amaf update cost = 30
+
+9) no playouts amafmap	(uct_perf_12.70~)
+   don't record moves in amafmap during playouts
+
+   -> 795 playouts/s			        amafmap cost = 5
+
+10) remaining
+    245 of 250 total cost is accounted for so far,
+    5 remains, most likely tree management and memory cost
+
+
+Conclusion
+==========
+
+during tree search:
+   uct search takes 30% cpu time
+   leaving          70% for playouts.
+
+if uct is now 100% and we break it down further:
+  priors represent     54% of that   (pattern prior 40%)
+  ucb1amaf policy      38%
+  tree stuff etc        8%
+
+Most expensive components are pattern priors and ucb1amaf calculations
+(about 40% of total uct cost each). In particular any optimization for
+ucb1rave_evaluate() calculations will likely yield big speedups.
+Pattern code can probably be optimized further too.
+Further testing suggests that even prior cost is about 0, so map_prior
+cost is significant actually (not cache friendly).

@@ -175,6 +175,24 @@ much common with classic UCT now) has non-trivial structure by itself:
 	dynkomi.[ch]
 
 
+UCT performance
+===============
+
+What's the cost of the different components, and where do the cpu cycles go ?
+
+Here's the result of a performance analysis on Raspberry Pi with Pachi 12.70
+to answer that question (see PERFS for details):
+
+during tree search:
+   uct search takes 30% cpu time
+   leaving          70% for playouts.
+
+if uct is now 100% and we break it down further:
+  priors represent     54% of that   (pattern prior 40%)
+  ucb1amaf policy      38%
+  tree stuff etc        8%
+
+
 UCT search modes
 ================
 
