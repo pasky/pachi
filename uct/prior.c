@@ -269,28 +269,6 @@ uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 void
 uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
-	board_t *b = map->b;
-	
-	if (u->prior->prune_ladders && !board_playing_ko_threat(b)) {
-		foreach_free_point(b) {
-			if (!map->consider[c])
-				continue;
-
-			/* Don't try to escape non-working ladders */
-			group_t atari_neighbor = board_get_atari_neighbor(b, c, map->to_play);
-			if (atari_neighbor && is_ladder(b, atari_neighbor, true) &&
-			    !useful_ladder(b, atari_neighbor)) {
-				if (UDEBUGL(5))	fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c));
-				map->consider[c] = false;  continue;
-			}
-
-			/* Don't atari non-working ladders */
-			if (harmful_ladder_atari(b, c, map->to_play))
-				map->consider[c] = false;
-
-		} foreach_free_point_end;
-	}
-
 	if (u->prior->boost_pass)  /* Endgame with japanese rules, pass can be hard to find. */
 		add_prior_value(map, pass, 1.0, u->prior->pattern_eqex * 3 / 4);
 
