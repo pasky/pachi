@@ -1348,7 +1348,14 @@ b can't block at C5 because of F3]
 ])
 (;B[bo]
 ;W[ep]C[[override\]
-]))))
+]))
+(;B[cr]
+;W[]C[[override\]
+name = "4-4 keima pincer 3-3 inside block"
+around = D2
+
+
+pachipachi Bavink  2023-05-19])))
 (;B[iq]
 ;W[cn]
 ;B[fp]
