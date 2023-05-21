@@ -11,7 +11,7 @@
 #include "mq.h"
 #include "random.h"
 #include "ownermap.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 
 #ifdef BOARD_PAT3
 #include "pattern3.h"
@@ -78,6 +78,7 @@ board_copy(board_t *b2, board_t *b1)
 	// XXX: Special semantics.
 	b2->fbook = NULL;
 	b2->ps = NULL;
+	b2->move_history = NULL;
 }
 
 void
@@ -216,6 +217,7 @@ board_clear(board_t *board)
 	floating_t komi = board->komi;
 	char *fbookfile = board->fbookfile;
 	enum rules rules = board->rules;
+	move_history_t *history = board->move_history;
 
 	board_done(board);
 
@@ -232,9 +234,12 @@ board_clear(board_t *board)
 	board->komi = komi;
 	board->fbookfile = fbookfile;
 	board->rules = rules;
+	board->move_history = history;
 
-	if (board->fbookfile)
+	if (board->fbookfile)			/* Clear/init fbook */
 		board->fbook = fbook_init(board->fbookfile, board);
+	if (board->move_history)		/* Clear move history */
+		board->move_history->moves = 0;
 }
 
 static void
@@ -654,7 +659,7 @@ board_official_score_details(board_t *b, move_queue_t *dead,
 
 	if (dead) {
 		/* Process dead groups. */
-		for (unsigned int i = 0; i < dead->moves; i++) {
+		for (int i = 0; i < dead->moves; i++) {
 			foreach_in_group(b, dead->move[i]) {
 				enum stone color = board_at(b, c);
 				ownermap[c] = stone_other(color);
@@ -755,41 +760,6 @@ rules2str(enum rules rules)
 
 
 /********************************************************************************************************/
-/* board quadrants */
-
-/* returns coord board quadrant:
- *   [ 0 1 ]   or -1 if on center lines
- *   [ 3 2 ]   */
-int
-board_quadrant(board_t *b, coord_t c)
-{
-	assert(!is_pass(c));
-	
-	int x = coord_x(c);
-	int y = coord_y(c);
-	int mid = (board_rsize(b) + 1) / 2;
-	if (y > mid) {
-		if (x < mid)  return 0;
-		if (x > mid)  return 1;	
-	}
-	if (y < mid) {
-		if (x < mid)  return 3;
-		if (x > mid)  return 2;
-	}
-	
-	return -1;	/* center lines */
-}
-
-/* return opposite quadrant (diagonal) */
-int diag_quadrant(int quad)
-{
-	static int vals[] = { -1, 2, 3, 0, 1 };
-	int *diag = &vals[1];
-	return diag[quad];
-}
-
-
-/********************************************************************************************************/
 /* board_play() implementation */
 
 static inline void
@@ -816,11 +786,16 @@ board_commit_move(board_t *b, move_t *m)
 		if (darkforest_dcnn && !is_pass(m->coord))
 			b->moveno[m->coord] = b->moves;
 #endif
+		if (b->move_history) {
+			move_history_t *h = b->move_history;
+			assert(h->moves < (int)(sizeof(h->move) / sizeof(h->move[0])));
+			h->move[h->moves++] = *m;
+		}
 	}
 
 	b->last_move_i = last_move_nexti(b);
 	last_move(b) = *m;
-
+	
 	b->moves++;
 }
 

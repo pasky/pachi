@@ -1,0 +1,37 @@
+
+pachipachi leobonart  2017-06-12
+
+IN: play b pass
+IN: genmove w
+Move:  137  Komi: 0.5  Handicap: 6  Captures B: 1 W: 1  Score Est: B+17.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . . . . . . . . . . . . | 19 | O O O O O O , , , o O O O O O O O O O |
+ 18 | . . . . . . O . X O . . . O X O O . . | 18 | O O O O O O o , x O O O O O O O O O O |
+ 17 | . O O O . O . . X O . . X O O X O . . | 17 | o O O O O O , , x O O O O O O X O O O |
+ 16 | . X X X O . . X . O . . X O . X O . . | 16 | , X X X O O , x , O O O O O , X O O o |
+ 15 | . . X O . O . . . . O . O X X X X O . | 15 | X X X O O O , , , , O O O X X X X O o |
+ 14 | . . X . . . . X X . . . O X . O X O . | 14 | X X X , , o , X X , o o O X , O X O , |
+ 13 | . X X O . O . . . . . . . O . O X X . | 13 | X X X O , O , x x , o o O O O O X X x |
+ 12 | X . . . . . . X . . O . O . O . O X . | 12 | X X X , , o , X x , O , O O O O O X X |
+ 11 | O X X X . O . . X X . X . O O O O X . | 11 | O X X X , O , , X X , X , O O O O X X |
+ 10 | O O O X . . . O O X . . X X O X X . . | 10 | O O O X , , , o o X X X X X O X X X X |
+  9 | . . . O O . . . X X . . . . X . . . . |  9 | O O O O O , , , X X X X X X X X X X X |
+  8 | . . O . . . X . . . . . . . . . . . . |  8 | O O O o , , X X X X X X X X X X X X X |
+  7 | . . . . . . . . . . . . . . . . . . . |  7 | O O o , , x X X X X X X X X X X X X X |
+  6 | . O O . . X . . . . . . . . . . . . . |  6 | , O O , , X X X X X X X X X X X X X X |
+  5 | . X O . . . . X X . . . . . . . . . . |  5 | X X O , , x X X X X X X X X X X X X X |
+  4 | X . X X . . . . O X X X X . . X X . . |  4 | X X X X X X x , O X X X X X X X X X X |
+  3 | . X X . . X . O . O O O O X X . X . . |  3 | X X X X X X , O O O O O O X X , X X X |
+  2 | . . . . X X O . . . . . . O O O X X . |  2 | X X X X X X O O O O O O O O O O X X X |
+  1 | . . . . X O O . . . . . . . . O O X . |  1 | X X X X X O O O O O O O O O O O O X X |
+    +---------------------------------------+    +---------------------------------------+
+
+*** WINNER is J16 (9,16) with score 0.3232 (3410/15105:15105/15244 games), extra komi 4.160000
+<Will rather pass, looks safe enough. Final score: W+23.5>
+
+
+b plays early pass, pachi losing but passes too !
+
+fixed

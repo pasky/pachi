@@ -1,0 +1,45 @@
+kgs-rules japanese
+boardsize 19
+clear_board
+komi 6.50
+play B q16
+play W q5
+play B q3
+play W r14
+play B o17
+play W q11
+play B r5
+play W r6
+play B r4
+play W q6
+play B c16
+play W d4
+play B o3
+play W p4
+play B n2
+play W q4
+play B r3
+play W e16
+play B g17
+play W f15
+play B c13
+play W h16
+play B d17
+play W j14
+play B f3
+play W m5
+play B c3
+play W d3
+play B c4
+play W d5
+play B d2
+play W e2
+play B c2
+play W e3
+play B c6
+play W d6
+play B c7
+play W k4
+play B e8
+play W h8
+genmove b

@@ -20,28 +20,27 @@ enum parse_code {
 typedef struct
 {
 	/* Gtp Options */
-	bool    noundo;               /* undo only allowed for pass */
-	bool    kgs;		      /* show engine comment in version */
-	bool    kgs_chat;             /* enable kgs-chat command ? */
-	char*   custom_name;
-	char*   custom_version;
+	bool		noundo;			/* undo only allowed for pass */
+	bool		kgs;			/* show engine comment in version */
+	bool		kgs_chat;		/* enable kgs-chat command ? */
+	char*		custom_name;
+	char*		custom_version;
 	
 	/* Private fields (global) */
-	int     played_games;
-	move_t  move[1500];           /* move history, for undo */
-	int     moves;
-	bool    undo_pending;
-	bool    analyze_mode;         /* analyze mode / genmove mode */
-	bool    analyze_running;
+	int		played_games;
+	move_history_t	history;		/* move history, for undo */
+	bool		undo_pending;
+	bool		analyze_mode;		/* analyze mode / genmove mode */
+	bool		analyze_running;
 
 	/* Single cmd scope: */
-	char *cmd;
-	char *next;
-	int   id;
-	bool  quiet;		  /* mute all gtp output */
-	bool  replied;		  /* gtp reply sent */
-	bool  flushed;		  /* gtp_flush() called */
-	bool  error;		  /* gtp_error() / gtp_error_printf() called */	
+	char*		cmd;
+	char*		next;
+	int		id;
+	bool		quiet;			/* mute all gtp output */
+	bool		replied;		/* gtp reply sent */
+	bool		flushed;		/* gtp_flush() called */
+	bool		error;			/* gtp_error() / gtp_error_printf() called */
 } gtp_t;
 
 #define gtp_arg_next(gtp) \
@@ -66,7 +65,7 @@ typedef struct
 } while(0)
 
 
-void   gtp_init(gtp_t *gtp);
+void   gtp_init(gtp_t *gtp, board_t *b);
 
 void gtp_internal_init(gtp_t *gtp);
 enum parse_code gtp_parse(gtp_t *gtp, board_t *b, struct engine *e, time_info_t *ti, char *buf);

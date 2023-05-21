@@ -75,13 +75,14 @@ enum feature_id {
 #define PF_ATARI_LADDER_BIG	1  /***** Can ladder big safe opponent group */
 #define PF_ATARI_LADDER_LAST    2  /*     Ladder last move */
 #define PF_ATARI_AND_CAP	3  /***   Atari + can capture other group if opponent defends. */
-#define PF_ATARI_DOUBLE		4  /***   Double atari */
-#define PF_ATARI_LADDER_SAFE	5  /***** Can ladder safe opponent stone(s) */
-#define PF_ATARI_LADDER_CUT	6  /*     Can ladder cutting stone(s) */
-#define PF_ATARI_LADDER		7  /*     The atari'd group gets laddered? */
-#define PF_ATARI_KO		8  /***** Atari as ko-threat ? disables selfatari feature. */
-#define PF_ATARI_SOME		9  /*     Can atari something */
-#define PF_ATARI_N		10
+#define PF_ATARI_AND_CAP2	4  /***   Atari + can capture other group if opponent defends. */
+#define PF_ATARI_DOUBLE		5  /***   Double atari */
+#define PF_ATARI_LADDER_SAFE	6  /***** Can ladder safe opponent stone(s) */
+#define PF_ATARI_LADDER_CUT	7  /*     Can ladder cutting stone(s) */
+#define PF_ATARI_LADDER		8  /*     The atari'd group gets laddered? */
+#define PF_ATARI_KO		9  /***** Atari as ko-threat ? disables selfatari feature. */
+#define PF_ATARI_SOME		10 /*     Can atari something */
+#define PF_ATARI_N		11
 
 	/* Net */
 	FEAT_NET,
@@ -177,6 +178,8 @@ void patterns_init(pattern_config_t *pc, char *arg, bool create, bool load_prob)
 char *feature2str(char *str, feature_t *f);
 /* Feature to static string */
 char *feature2sstr(feature_t *f);
+/* String to feature */
+char *str2feature(char *str, feature_t *f);
 /* Get number of possible payload values associated with the feature. */
 int feature_payloads(int id);
 
@@ -202,6 +205,11 @@ void mcowner_playouts(board_t *b, enum stone color, ownermap_t *ownermap);
 /* Faster version with few playouts, don't use for anything reliable. */
 void mcowner_playouts_fast(board_t *b, enum stone color, ownermap_t *ownermap);
 
+/* Low-level functions for unit-tests and outside tactical checks */
+int pattern_match_l1_blunder_punish(board_t *b, move_t *m);
+int pattern_match_atari(board_t *b, move_t *m, ownermap_t *ownermap);
+
+
 #ifdef PATTERN_FEATURE_STATS
 void pattern_stats_new_position();
 #endif
@@ -225,7 +233,5 @@ pattern_eq(pattern_t *p1, pattern_t *p2)
 	return true;
 }
 
-
-int pattern_match_l1_blunder_punish(board_t *b, move_t *m);
 
 #endif

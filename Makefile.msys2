@@ -9,7 +9,7 @@ WIN_HAVE_NO_REGEX_SUPPORT=1
 
 COMMON_FLAGS += $(TUNE)
 LDFLAGS      := -pthread -L$(CAFFE_PREFIX)/bin -L$(MINGW_PREFIX)/bin
-SYS_LIBS     := -lws2_32 -lshlwapi
+LIBS         := -lws2_32 -lshlwapi
 CXXFLAGS     += -I$(MINGW_PREFIX)/include/OpenBLAS
 
 # Enable mingw-w64 C99 printf() / scanf() layer ?
@@ -18,10 +18,10 @@ COMMON_FLAGS += -D__USE_MINGW_ANSI_STDIO
 ifdef WIN_HAVE_NO_REGEX_SUPPORT
 	COMMON_FLAGS += -DHAVE_NO_REGEX_SUPPORT
 else
-	SYS_LIBS += -lregex -ltre -lintl -liconv	# Oh, dear...
+	LIBS         += -lregex -ltre -lintl -liconv	# Oh, dear...
 endif
 
-DCNN_LIBS := -lcaffe -lboost_system-mt -lglog -lstdc++ $(SYS_LIBS)
+DCNN_LIBS := -lcaffe -lboost_system-mt -lglog -lstdc++ $(LIBS)
 
 ifdef STATIC_BUILD		# Static build, good luck
         # Which type of caffe package do you have ?

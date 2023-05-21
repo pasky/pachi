@@ -12,115 +12,34 @@ To get latest version of this file, run:          (joseki_fixes branch on github
 Actual fixes are moves with an [override\] section at the top of the move comment.
 See josekifix.sgf for details.
 ]
-(;B[pq]
-;W[]
-(;B[qk]
-;W[pp]
-;B[qp]C[[override\]
-name = "anti chinese attach"
-around = P5
-
-
-R4 best, then P3 hane, Q5 atari + defend to keep it simple]
-;W[oq]
-;B[po]C[[override\]
-
-]
-;W[op]
-;B[qq]C[[override\]
-])
-(;B[pk]
-;W[pp]
-;B[qp]C[[override\]
-name = "anti chinese attach"
-around = "last"]
-;W[oq]
-;B[po]C[[override\]
-around = Q4]
-;W[op]
-;B[qq]C[[override\]
-]))
-(;B[pd]
+;B[pd]
 (;W[]
 (;B[pp]
 ;W[]
 ;B[pj]
-(;W[nc]
+;W[nc]
 ;B[lc]
 (;W[qc]
 (;B[qd]
 ;W[pc]
 ;B[od]
 ;W[nb]
-;B[me]
+(;B[me]
 (;W[nq]
 (;B[lq]
-;W[qn]C[[override\]
-name = "anti sanrensei double kakariii"
-around = P6
-around2= O14
-
-]
-(;B[on]
-;W[ql]C[[override\]
-around = "last"
+;W[qq]
+;B[qp]
+;W[pq]
+;B[op]
+;W[nr]
+;B[mo]
+;W[]C[[override\]
+name = "anti sanrensei"
+around = O6
 around2 = O14
+external_engine = upper_right lower_right
 
-
-Don't take corner !
-
-pachipachi past  Jul 05 2020 18:03:20]
-;B[pk]
-;W[rj]C[[override\]
-around = Q7
-around2 = O14
-
-
-P7 good way to get in trouble,
-just extend. 
-
-pachipachi concord  2022-10-30])
-(;B[qq]
-(;W[oo]
-;B[po]
-;W[pn]
-;B[on]
-;W[no]
-;B[om]
-;W[ql]
-;B[rk]
-;W[ol]
-;B[pm]
-;W[qm]
-;B[pl]
-;W[qk]
-;B[pk]
-;W[qj]
-;B[qi]
-;W[rj]
-;B[ri]
-;W[rp]
-;B[rq]
-;W[ro]
-;B[or]
-;W[oq]C[[override\]
-around = P3
-
-
-Ex: pachipachi niceguy0  2022-11-09 09:25])
-(;W[]C[[override\]
-around = P6
-
-
-let external engine take over]))
-(;B[ql]
-;W[qp]C[[override\]
-around = P6
-around2 = O14
-
-
-Don't take corner !
-]))
+pachipachi niceguy0 2023-05-03])
 (;B[qq]
 ;W[kq]
 ;B[no]
@@ -154,6 +73,15 @@ around = O18])
 ;B[kc]C[[override\]
 name = "sanrensei breakout fix"
 around = O18]))
+(;B[nd]
+;W[]C[[override\]
+name = "sanrensei corner tight seal"
+around = P17
+
+avoid N16 right away, not so good
+
+pachipachi half 2023-03-30
+]))
 (;B[pc]
 ;W[qd]
 ;B[pe]
@@ -185,16 +113,70 @@ around = O14
 simple, don't get in trouble right away.
 
 Ex: arkgo pachipachi  2022-11-04]))
-(;W[nq]))
 (;B[pq]
-;W[dp]
+(;W[]
+(;B[qk]
+(;W[po]
+;B[np]
+;W[qq]
+;B[qr]
+;W[qp]
+;B[rr]
+;W[qm]
+;B[nn]
+;W[om]
+;B[ok]
+;W[nm]
+;B[kp]C[[override\]
+name = "chinese high approach profit"
+around = P4
+
+Don't hane at N7
+
+kakae pachipachi 2023-04-06])
+(;W[pp]
+;B[qp]C[[override\]
+name = "anti chinese attach"
+around = P5
+
+
+R4 best, then P3 hane, Q5 atari + defend to keep it simple]
+;W[oq]
+;B[po]C[[override\]
+
+]
+;W[op]
+;B[qq]C[[override\]
+])
+(;W[mp]
+;B[kp]
+;W[pp]
+;B[qp]
+;W[]C[[override\]
+name = "chinese pincer crosscut"
+around = Q4
+
+
+pachipachi dsazx 2023-04-29]))
+(;B[pk]
+;W[pp]
+;B[qp]C[[override\]
+name = "anti chinese attach"
+around = "last"]
+;W[oq]
+;B[po]C[[override\]
+around = Q4]
+;W[op]
+;B[qq]C[[override\]
+]))
+(;W[dp]
 ;B[fq]
 ;W[cn]
 (;B[jp]
 (;W[qn]
 ;B[po]
 ;W[rp]
-;B[ro]
+(;B[ro]
 ;W[qo]
 ;B[qp]
 ;W[rn]C[[override\]
@@ -205,6 +187,35 @@ around = "last"
 S6 or Q6, Don't S3
 
 Ex:  pachipachi shawn  online-go.com/game/12533278])
+(;B[pn]
+;W[qm]
+;B[pm]
+;W[ql]C[[override\]
+name = "kobayashi press"
+around = R5
+external_engine
+
+don't hane at Q8, disaster.
+
+Ex: pachipachi globax  2023-02-05])
+(;B[pm]
+(;W[]C[[override\]
+name = "kobayashi tobi"
+around = R4
+
+weird variation
+
+])
+(;W[pn]
+;B[on]
+;W[qm]
+;B[ql]
+;W[]C[[override\]
+name = "kobayashi tobi double hane"
+around = R5
+
+
+pachipachi tomsama 2023-04-23])))
 (;W[pn]
 ;B[qo]
 ;W[pj]
@@ -230,7 +241,7 @@ around = P5
 around = Q6
 ]))
 (;B[ip]
-;W[pn]
+(;W[pn]
 ;B[qo]
 ;W[pj]
 ;B[qn]
@@ -253,7 +264,92 @@ around = "last"
 name = "high kobayashi"
 around = "last"
 
-]))))
+]))
+(;W[qn]
+(;B[po]
+;W[rp]
+(;B[ql]
+(;W[]C[[log\]
+name = "kobayashi low pincer"
+around = R4
+])
+(;W[pn]
+;B[qo]
+;W[ro]
+;B[rm]
+;W[]C[[override\]
+name = "kobayashi low pincer trick play"
+around = R4
+
+pachipachi Beutlin 2023-04-25]))
+(;B[pl]
+(;W[]C[[log\]
+name = "kobayashi high pincer"
+around = R4])
+(;W[pn]
+;B[on]
+;W[om]
+;B[pm]
+;W[oo]
+;B[nn]
+;W[pp]
+;B[op]
+;W[qo]
+;B[no]
+;W[oq]
+;B[po]
+;W[pr]
+;B[qp]
+;W[qq]
+;B[pp]
+;W[np]C[[override\]
+name = "kobayashi high pincer"
+around = R4
+
+don't forget atari before defending
+
+pachipachi Beutlin 2023-04-24])))
+(;B[ql]
+;W[]C[[override\]
+name = "kobayashi immediate pincer"
+around = R4
+
+pachipachi Beutlin 2023-04-24])))
+(;B[jq]
+;W[qn]
+;B[pl]
+(;W[]C[[override\]
+name = "kobayashi crosscut trick"
+around = R5
+around2 = M3
+
+
+can't play crosscut at R3 if b has K3
+
+pachipachi kgsfan2021  2023-02-10])
+(;W[qq]
+;B[qp]
+;W[pp]
+;B[po]
+;W[op]
+;B[qr]
+;W[rq]
+;B[qo]
+;W[oq]
+;B[pr]
+;W[rr]
+;B[or]
+;W[nr]
+;B[mr]
+;W[nq]
+;B[ns]
+;W[os]
+;B[ps]
+;W[lq]
+;B[kr]C[
+
+tricked.
+because of K3 b can escape...])))))
 (;W[ec]
 ;B[cd]
 ;W[df]
@@ -270,4 +366,4 @@ around2 = E15
 Try pincer, L16 too good for w
 
 YZ1509 special opening.]
-;W[])))
+;W[]))

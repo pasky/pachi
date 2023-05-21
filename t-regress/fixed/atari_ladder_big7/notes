@@ -1,0 +1,44 @@
+
+pachipachi eki 2018-04-21	(https://online-go.com/game/12554483)
+
+Move:  173  Komi: 7.5  Handicap: 0  Captures B: 0 W: 0  
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . O . . . . . . . . . X)X O . . . . . | 19 | : : : : : : : : : : : : : : : : : : : |
+ 18 | X O . . . . . O O O O X O . O . . . . | 18 | : : : : : : : : : : : : : : : : : : : |
+ 17 | . X O O . O O X O X O X O O X O O O . | 17 | : : : : : : : : : : : : : : : : : : : |
+ 16 | . X X O . . X X X X X . O X X X X O . | 16 | : : : : : : : : : : : : : : : : : : : |
+ 15 | . X O O . . . . . . . X X . . . . X . | 15 | : : : : : : : : : : : : : : : : : : : |
+ 14 | . . X . X X . . . . . . . . X . O X . | 14 | : : : : : : : : : : : : : : : : : : : |
+ 13 | . . . X . . . . . . . . . O X X O X . | 13 | : : : : : : : : : : : : : : : : : : : |
+ 12 | . . X O X . X . . . . . X X O X X O . | 12 | : : : : : : : : : : : : : : : : : : : |
+ 11 | . X X O . . . X . X X X O O O O O . . | 11 | : : : : : : : : : : : : : : : : : : : |
+ 10 | . X O O . . O O X X O O . . . . . O . | 10 | : : : : : : : : : : : : : : : : : : : |
+  9 | . O O . X . O X X O O . O X . X X O . |  9 | : : : : : : : : : : : : : : : : : : : |
+  8 | . . . O X . O O O X . . O X . . O X . |  8 | : : : : : : : : : : : : : : : : : : : |
+  7 | . . O X . X O . . . . . O O X . . X . |  7 | : : : : : : : : : : : : : : : : : : : |
+  6 | . . O X . X O . . . . . O X X . . . . |  6 | : : : : : : : : : : : : : : : : : : : |
+  5 | . . O X . X X O . . . . . O X . . . . |  5 | : : : : : : : : : : : : : : : : : : : |
+  4 | . . . O . X O O . O . . O O O X . . . |  4 | : : : : : : : : : : : : : : : : : : : |
+  3 | . . . O X . X X X O . . O X X X . . . |  3 | : : : : : : : : : : : : : : : : : : : |
+  2 | O O O X X . . X O O . . O O X . . . . |  2 | : : : : : : : : : : : : : : : : : : : |
+  1 | . X X . . . . . . . . . . O O X . . . |  1 | : : : : : : : : : : : : : : : : : : : |
+    +---------------------------------------+    +---------------------------------------+
+
+dcnn in 1.01s
+dcnn = [ L19 Q18 R18 Q19 O18 S19 F16 F11 T8  G11 S18 T13 R19 T15 T12 A10 P9  T9  M12 Q10 ]
+       [ 38  17  16  14  3   2   1   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+In the game L19 and loses all the white stones ...
+O18, Q18 or Q19 ...
+
+
+still happens pretty often:
+dcnn blunder code would save the day, but it doesn't trigger:
+
+mcowner ownermap is too one-sided (thinks w group is already captured)
+so atari:ladder_big doesn't trigger
+
+looks like playout issue, if we move last move somewhere else then
+ownermap gets fixed.
+

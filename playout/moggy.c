@@ -730,8 +730,8 @@ mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, move_queue
 	/* First, merge all entries for a move. */
 	/* We use a naive O(N^2) since the average length of the queue
 	 * is about 1.4. */
-	for (unsigned int i = 0; i < q->moves; i++) {
-		for (unsigned int j = i + 1; j < q->moves; j++) {
+	for (int i = 0; i < q->moves; i++) {
+		for (int j = i + 1; j < q->moves; j++) {
 			if (q->move[i] != q->move[j])
 				continue;
 			q->tag[i] |= q->tag[j];
@@ -744,7 +744,7 @@ mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, move_queue
 	/* Now, cona_t probdist. */
 	fixp_t total = 0;
 	fixp_t pd[q->moves];
-	for (unsigned int i = 0; i < q->moves; i++) {
+	for (int i = 0; i < q->moves; i++) {
 		double val = 1.0;
 		assert(q->tag[i] != 0);
 		for (int j = 0; j < MQ_MAX; j++)
@@ -761,12 +761,11 @@ mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, move_queue
 	fixp_t stab = fast_irandom(total);
 	if (PLDEBUGL(5)) {
 		fprintf(stderr, "Pick (total %.3f stab %.3f): ", fixp_to_double(total), fixp_to_double(stab));
-		for (unsigned int i = 0; i < q->moves; i++) {
+		for (int i = 0; i < q->moves; i++)
 			fprintf(stderr, "%s(%x:%.3f) ", coord2sstr(q->move[i]), q->tag[i], fixp_to_double(pd[i]));
-		}
 		fprintf(stderr, "\n");
 	}
-	for (unsigned int i = 0; i < q->moves; i++) {
+	for (int i = 0; i < q->moves; i++) {
 		//fprintf(stderr, "%s(%x) %f (%f/%f)\n", coord2sstr(q->move[i]), q->tag[i], fixp_to_double(stab), fixp_to_double(pd[i]), fixp_to_double(total));
 		if (stab < pd[i])
 			return q->move[i];
@@ -849,7 +848,7 @@ playout_moggy_fullchoose(playout_policy_t *p, playout_setup_t *s, board_t *b, en
 #if 0
 	/* Average length of the queue is 1.4 move. */
 	printf("MQL %d ", q.moves);
-	for (unsigned int i = 0; i < q.moves; i++)
+	for (int i = 0; i < q.moves; i++)
 		printf("%s ", coord2sstr(q.move[i]));
 	printf("\n");
 #endif
@@ -1024,10 +1023,10 @@ playout_moggy_assess(playout_policy_t *p, prior_map_t *map, int games)
 	/* Then, assess individual moves. */
 	if (!pp->patternrate && !pp->selfatarirate)
 		return;
-	foreach_free_point(map->b) {
-		if (map->consider[c])
-			playout_moggy_assess_one(p, map, c, games);
-	} foreach_free_point_end;
+	for (int i = 0; i < map->consider->moves; i++) {
+		coord_t c = map->consider->move[i];
+		playout_moggy_assess_one(p, map, c, games);
+	}
 }
 
 

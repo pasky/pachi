@@ -1,0 +1,38 @@
+
+pachipachi itmicter  Jun 21 04:30:21
+
+<Will rather pass, looks safe enough. Final score: W+21.5>
+genmove in 3.51s, mcts 2.59s (2023 games/s, 505 games/s/thread)
+[5245] best 99.0% xkomi -11.0 | seq D11 H10  F9 P12 | can w D11(99.0) N19(62.5) E17(60.0)           
+Move:  315  Komi: 0.5  Handicap: 4  Captures B: 18 W: 22  Score Est: W+22.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . X O O O . . . O . O O . O | 19 | X X X X X X X O O O O O O O O O O O O |
+ 18 | X X . . . O X X X O O . . X O . O O O | 18 | X X X X X X X X X O O O O O O O O O O |
+ 17 | O X X X . . X . X X O . . X X O O X O | 17 | O X X X X X X X X X O O O O O O O X O |
+ 16 | O O X O X X X O X X O . . O O X X X X | 16 | O O X O X X X X X X O O O O O X X X X |
+ 15 | . O O O O O O X X O O . . O X . . . . | 15 | O O O O O O O X X O O O O O X X X X X |
+ 14 | O O . . O . O O O X . . . O X . . X X | 14 | O O O O O O O O O O O O O O X X X X X |
+ 13 | O X O O O O X O . . . . O O X X . X O | 13 | O O O O O O X O O O O O O O X X X X O |
+ 12 | X X X X O X X X O O . . O X . X X O O | 12 | O O O O O X X X O O O O O X X X X O O |
+ 11 | X O X . X O . X X X O . O X X X O O . | 11 | O O O O X X X X X X O O O X X X O O O |
+ 10 | X O O X X O . . X O O O O O O X O . . | 10 | O O O X X X X X X O O O O O O X O O O |
+  9 | X O . O X . X O X X X X O X X X O X . |  9 | O O O O X X X X X X X X O X X X O O O |
+  8 | O . O O X . X O X . . . X X X O O O X |  8 | O O O O X X X X X X X X X X X O O O O |
+  7 | . O O X X X X X X X X X X O O O O X . |  7 | O O O X X X X X X X X X X O O O O O O |
+  6 | O O O X O O O O O O O O O O . O O . . |  6 | O O O X O O O O O O O O O O , O O O O |
+  5 | X O X X X O X X X X X O O X X X O O O |  5 | X O X X X O X X X X X O O X X X O O O |
+  4 | X X X O O O O O X . . X O . X X X X O |  4 | X X X O O O O O X X X X O , X X X X O |
+  3 | X O X X X O X X X . . X O O O X . . X |  3 | X O X X X O X X X X X X O O O X X X X |
+  2 | X O O O O O O X . . . X X O O O X X . |  2 | X O O O O O O X X X X X X O O O X X X |
+  1 | . O . . O O X X . . . X . X X X . X . |  1 | , O O O O O X X X X X X X X X X X X X |
+    +---------------------------------------+    +---------------------------------------+
+
+b should have connected A12 stones, now w sees them dead.
+kgs flood-fills dead stones, so for kgs this implies E11 group dead as well...
+-> genmove_cleanup phase
+
+board_official_score() probably should flood fill dead stones as well,
+would avoid a cleanup phase here.
+

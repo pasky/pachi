@@ -162,10 +162,11 @@ distributed_undo(distributed_t *dist, board_t *b, gtp_t *gtp)
 		gtp_error(gtp, "cannot undo");
 		return P_DONE_OK;
 	}
-	
-	if (!gtp->moves) {  gtp_error(gtp, "no moves to undo");  return P_DONE_OK;  }
+
+	move_history_t *h = &gtp->history;
+	if (!h->moves) {  gtp_error(gtp, "no moves to undo");  return P_DONE_OK;  }
 	if (b->moves == b->handicap) {  gtp_error(gtp, "can't undo handicap");  return P_DONE_OK;  }
-	gtp->moves--;
+	h->moves--;
 
 	/* No need to stop pondering, slaves are already notified. */
 	
@@ -188,8 +189,9 @@ distributed_undo_commit(distributed_t *dist, board_t *b, gtp_t *gtp)
 	board_clear(b);
 	b->handicap = handicap;
 
-	for (int i = 0; i < gtp->moves; i++) {
-		int r = board_play(b, &gtp->move[i]);
+	move_history_t *h = &gtp->history;
+	for (int i = 0; i < h->moves; i++) {
+		int r = board_play(b, &h->move[i]);
 		assert(r >= 0);
 	}
 }

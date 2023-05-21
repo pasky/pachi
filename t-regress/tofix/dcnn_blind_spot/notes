@@ -1,0 +1,33 @@
+
+pachi auryppp  2018-03-21  (ogs)
+
+Move:  58  Komi: 0.5  Handicap: 4  Captures B: 0 W: 0  Score Est: B+49.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . . . . . . . . . . . . | 19 | x x x X X X X x x x , , , o o o o o , |
+ 18 | . . . . . . . . . . . . . . . . . . . | 18 | x x X X X X X x x x x , , o o o o , , |
+ 17 | . . . . . X . . . . X . . O . O O . . | 17 | X X X X X X X x X x X , , O O O O , x |
+ 16 | . . . X . . . . X . . . . . O X X X . | 16 | X X X X X X x x X x , , , O O X X X X |
+ 15 | . . X . . . . . . . . . O O X . . . . | 15 | X X X X x x x x x , , , O O X X X X X |
+ 14 | . . . . . . . . . . . . . X X X O X . | 14 | x X X x x x , , , , , , , X X X X X X |
+ 13 | . . . . . . . . . . . . . . O O X X . | 13 | x x x x , , , , , , , , , , o o X X x |
+ 12 | . . X . . . . . . . . . . . . . O O . | 12 | , x X , , , , , , , , , , , , o O O , |
+ 11 | . . . . . . . . . . . . . . . . . . . | 11 | , , , , , , , , , , , , , , , o o o o |
+ 10 | . . O . . . . . . . . . . . . . . . . | 10 | , o O , , , , , , , , , , , , o o o o |
+  9 | . . . O . . . . . . . . . . . . . . . |  9 | , o o O o , , , , , , , , , o o o o o |
+  8 | . . X . . . . . . . . . . . . O . . . |  8 | o o , o o , , , , , , , , , o O O O o |
+  7 | . . . . O . . . . . . . . . . . . . . |  7 | o o o o O , , , , , , , , , , o O O O |
+  6 | . O O . O X . . . . . . . . . . O . . |  6 | , O O o O x , , , , , , , , , , O O O |
+  5 | . X X . O X). . . . . . . . . . . . . |  5 | , X X , , , , , , o o , , , , , , o o |
+  4 | . . . X . X . O . O O O . . . X . O . |  4 | x x x X , X , o o O O O , , x X , O o |
+  3 | . . . . * . X O . X X O X X . . X . . |  3 | x x x x , x x o , X X O X X X X X , , |
+  2 | . . . . . . . . . . . X . . . . . . . |  2 | x x x x x x , , , x x X X X X X X , , |
+  1 | . . . . . . . . . . . . . . . . . . . |  1 | x x x x x , , , , , x X X X X X X x , |
+    +---------------------------------------+    +---------------------------------------+
+
+dcnn in 0.69s
+dcnn = [ E4  G2  E3  N2  E2  F2  H7  H6  C17 F7  O5  J2  G8  J7  H2  C3  N12 A5  S3  M18 ]
+       [ 54  9   5   3   3   3   2   1   1   1   1   1   0   0   0   0   0   0   0   0   ]
+
+E3, not E4

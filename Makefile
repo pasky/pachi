@@ -1,4 +1,4 @@
-#### CONFIGURATION
+############################ CONFIGURATION ############################
 
 # Tweak options below to change the way Pachi is built.
 # Alternatively, you can pass the option to make itself, like:
@@ -78,6 +78,9 @@ JOSEKIFIX=1
 
 # PLUGINS=1
 
+# Build extra engines used for development ?
+# EXTRA_ENGINES=1
+
 # Compile extra tests ? Enable this to test board implementation.
 # BOARD_TESTS=1
 
@@ -118,7 +121,7 @@ CXXFLAGS     := -std=c++11
 #########################################################################
 ### CONFIGURATION END
 
-# Main rule + aliases
+# Main rules + aliases
 # Aliases are nice, but don't ask too much: 'make quick 19' won't do what
 # you expect for example (use 'make OPT=-O0 BOARD_SIZE=19' instead)
 
@@ -194,8 +197,9 @@ endif
 
 ifeq ($(DCNN), 1)
 	COMMON_FLAGS   += -DDCNN
-	EXTRA_OBJS     += $(EXTRA_DCNN_OBJS) caffe.o dcnn.o
-	SYS_LIBS := $(DCNN_LIBS)
+	EXTRA_SUBDIRS  += dcnn
+	EXTRA_OBJS     += $(EXTRA_DCNN_OBJS)
+	LIBS           := $(DCNN_LIBS)
 else
 	DCNN_DETLEF = 0
 	DCNN_DARKFOREST = 0
@@ -232,14 +236,18 @@ ifeq ($(PLUGINS), 1)
 	COMMON_FLAGS += -DPACHI_PLUGINS
 endif
 
+ifeq ($(EXTRA_ENGINES), 1)
+	COMMON_FLAGS += -DEXTRA_ENGINES
+endif
+
 ifeq ($(JOSEKIFIX), 1)
-	COMMON_FLAGS += -DJOSEKIFIX
-	EXTRA_SUBDIRS += josekifix
+	COMMON_FLAGS    += -DJOSEKIFIX
+	EXTRA_SUBDIRS   += josekifix
 	EXTRA_DATAFILES += josekifix.gtp
 endif
 
 ifeq ($(BOARD_TESTS), 1)
-	SYS_LIBS      += -lcrypto
+	LIBS          += -lcrypto
 	COMMON_FLAGS  += -DBOARD_TESTS
 endif
 
@@ -250,7 +258,7 @@ else
         # Whee, an extra register!
 	COMMON_FLAGS += -fomit-frame-pointer
 ifeq ($(PROFILING), perftools)
-	SYS_LIBS += -lprofiler
+	LIBS         += -lprofiler
 endif
 endif
 
@@ -323,6 +331,9 @@ test_moggy: FORCE
 test_spatial: FORCE
 	+@make -C t-unit test_spatial
 
+# Regression tests
+regtest: FORCE
+	+@make -C t-regress regtest
 
 # Prepare for install
 distribute: FORCE
@@ -341,7 +352,7 @@ install-bin: distribute
 	$(INSTALL) -d $(BINDIR)
 	$(INSTALL) distribute/pachi $(BINDIR)/
 
-install-data:
+install-data: $(DATAFILES)
 	$(INSTALL) -d $(DATADIR)
 	@for file in $(DATAFILES); do                             \
 		if [ -f $$file ]; then                            \
@@ -352,6 +363,16 @@ install-data:
 			exit 1;                                   \
 		fi                                                \
 	done;
+
+# Get missing datafiles
+datafiles: $(DATAFILES)
+
+# Download dcnn files from github
+detlef54.prototxt detlef54.trained:
+	@echo "Getting dcnn datafiles:" ; echo ""
+	wget -c -O detlef54.zip 'https://github.com/pasky/pachi/releases/download/pachi_networks/detlef54.zip'
+	unzip -q -o detlef54.zip  detlef54.prototxt detlef54.trained
+	rm detlef54.zip
 
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive

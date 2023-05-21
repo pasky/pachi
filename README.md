@@ -36,8 +36,6 @@ and follow instructions inside.
     sudo apt-get update
     sudo apt-get install pachi-go
 
-> Performance might be better if you recompile for your own system though.
-
 For build instructions see [INSTALL](INSTALL.md).
 
 <img align="right" src="media/screenshot_sabaki.jpg" title="playing through sabaki">
@@ -49,8 +47,8 @@ Go program interface (e.g. [gogui][1], [sabaki][2], [lizzie](#Lizzie)),
 or use [kgsGtp][3] to connect it to KGS.
 
 > DO NOT make the GTP interface accessible directly to untrusted users
-> since the parser is not secure - see the [HACKING](HACKING?raw=true)
-> file for details.
+> since the parser is not secure - see [HACKING](HACKING?raw=true)
+> for details.
 
 [1]: https://sourceforge.net/projects/gogui/
 [2]: http://sabaki.yichuanshen.de/
@@ -72,7 +70,7 @@ when to pass or resign !).
 `pachi --list-dcnn`    List supported networks.  
 `pachi --dcnn=name`    Choose network to use (Detlef's 54% dcnn by default).
 
-Releases come with Detlef's 54% dcnn by default.
+Releases come with Detlef's 54% dcnn by default.  
 For other networks see [Pachi Networks](https://github.com/pasky/pachi/releases/tag/pachi_networks).
 
 Currently dcnn is used for root node only.
@@ -115,9 +113,11 @@ will remain the same:
 
 **KGS**
 
-Use `pachi --kgs --josekifix` when playing on KGS. See [kgsgtp.conf](kgs/kgsgtp-pachi.conf?raw=true) for example.
+Use `pachi --kgs --josekifix` when playing on KGS.
 
-You want joseki fixes working if playing ranked games (see [josekifix](josekifix/README?raw=true)).
+See [kgsgtp.conf](kgs/kgsgtp-pachi.conf?raw=true) for example setup.  
+You want joseki fixes working if playing ranked games
+(see [MORE](MORE.md) and josekifix [README](josekifix/README.md) for details).
 
 **Other Options**
 
@@ -156,9 +156,6 @@ via the live gfx commands.
 
 ![score estimate](media/screenshot_score_est.png?raw=true "score estimate")
 ![dcnn colormap](media/screenshot_dcnn_colors.png?raw=true "dcnn colormap")
-
-For game analysis try [GoReviewPartner](https://github.com/pnprog/goreviewpartner),
-or see [here](MORE.md) for some tools that come with Pachi.
 
 
 ## Lizzie

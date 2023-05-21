@@ -32,7 +32,7 @@ sub parse_board_line
 }
 
 
-# Parse last board diagram to get genmove coord
+# Get last move from board diagram
 # returns "pass" for pass or resign ...
 sub get_board_print_last_move
 {
@@ -56,34 +56,47 @@ sub get_board_print_last_move
     die "shouldn't happen";
 }
 
+# Find generated move
 sub get_genmove_coord
 {
-    while (my $s = <IN>) {
-	if ($s =~ m/^Move:/) {  get_board_print_last_move();  return get_board_print_last_move();  }
-	if ($s =~ m/^IN: /)  {  die "fixme, handle new gtp command inside genmove";  }
+    # Skip first board diagram
+    my $s = <IN>;
+    ($s =~ m/^Move:/) || die("shouldn't happen, first line after genmove not board diagram.");
+    
+    while ($s = <IN>) {
+	if ($s =~ m/<resign>/)  {  return "resign";  }
+	if ($s =~ m/^Move:/)    {  return get_board_print_last_move();  }
+	if ($s =~ m/^IN: /)     {  die "fixme, handle new gtp command inside genmove";  }
     }
     die "shouldn't happen";
 }
 
 while (my $str = <IN>) {
-    # preserve game start timestamps, turn into comment
+    # Preserve game start timestamps, turn into comment
     # Ex: 'Jul 04 16:05:37 2020'
     if ($str =~ m/^([a-z]{3} \d\d \d\d:\d\d:\d\d.*)$/i) {  print "echo $1\n";  }
     
     if ($str !~ m/^IN: (.*)/) {  next;  }
 
-    # found gtp command
+    # Found gtp command
     $str = $1;
     $str =~ s|\r||g;
 
-    # genmove: get played move from board diagram
+    # Skip time_left and game_over commands
+    if ($str =~ m/^time_left/)     {  next;  }
+    if ($str =~ m/^kgs-game_over/) {  next;  }
+    
+    # Turn genmove commands into play commands
     if ($str =~ m/^genmove ([bw])/i) {
 	my $color = lc($1);
 	my $coord = get_genmove_coord();
 	($coord ne "") || die "shouldn't happen";
-	printf("play %s %s\n", $color, $coord);
+	if ($coord ne "resign") {
+	    printf("play %s %s\n", $color, $coord);
+	}
 	next;
     }
-    
+
+    # Print gtp command
     print "$str\n";
 }

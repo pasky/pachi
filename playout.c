@@ -310,7 +310,7 @@ playout_play_game(playout_setup_t *setup,
 			//fprintf(stderr, "bent-four: capture / kill ...\n");
 			coord = (board_at(b, bent4_lib) == S_NONE ? bent4_lib : bent4_kill);
 			move_t m = move(coord, color);
-			int r = board_play(b, &m);  assert(r == 0);
+			int r = board_play(b, &m);  assert(r >= 0);
 		}
 		else    coord = playout_play_move(setup, b, color, policy);
 		
@@ -319,14 +319,14 @@ playout_play_game(playout_setup_t *setup,
 			//fprintf(stderr, "bent-four: filling ...\n");
 			bent4_moves = b->moves;
 			move_t m = move(coord, color);
-			int r = board_play(b, &m);  assert(r == 0);
+			int r = board_play(b, &m);  assert(r >= 0);
 		}
 
 		/* Fill bent-threes */
 		if (coord == pass && (coord = fill_bent_three(b, color)) != pass) {
 			//fprintf(stderr, "bent-three: filling ...\n");
 			move_t m = move(coord, color);
-			int r = board_play(b, &m);  assert(r == 0);
+			int r = board_play(b, &m);  assert(r >= 0);
 		}
 		
 		random_game_loop_stuff

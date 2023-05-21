@@ -65,6 +65,11 @@ typedef struct {
 	char colors[S_MAX];
 } neighbors_t;
 
+typedef struct {
+	move_t  move[1500];
+	int     moves;
+} move_history_t;
+
 
 /* Quick hack to help ensure tactics code stays within quick board limitations.
  * Ideally we'd have two different types for boards and quick_boards. The idea
@@ -174,13 +179,16 @@ FB_ONLY(bool playout_board);
 
 /*************************************************************************************************************/
 /* Not maintained during playouts: */
+
+FB_ONLY(move_history_t *move_history);		  /* main gtp board move history (optional) */
 	
 FB_ONLY(hash_t hash);                             /* Hash of current board position. */
 FB_ONLY(hash_t hash_history)[BOARD_HASH_HISTORY]; /* Last hashes encountered, for superko check. */
 	int    hash_history_next;                 /* (circular buffer) */
 
-#ifdef JOSEKIFIX
-FB_ONLY(int external_joseki_engine_moves_left_by_quadrant)[4]; /* XXX move elsewhere (uct) ? */
+#ifdef JOSEKIFIX						/* XXX move elsewhere ? */
+FB_ONLY(int external_joseki_engine_moves_left_by_quadrant)[4];  /* Moves left for external joseki engine mode */
+FB_ONLY(int influence_fuseki_by_quadrant)[4];	  /* Keep track where influence fuseki countermeasures have been enabled */
 #endif
 
 /*************************************************************************************************************/
@@ -493,15 +501,6 @@ group_stone_count(board_t *b, group_t group, int max)
 	} foreach_in_group_end;
 	return n;
 }
-
-/* returns coord board quadrant:
- *   [ 0 1 ]   or -1 if on center lines
- *   [ 3 2 ]   */
-int board_quadrant(board_t *b, coord_t c);
-/* last move quadrant */
-#define last_quadrant(b)		( board_quadrant((b), last_move(b).coord) )
-/* return opposite quadrant (diagonal) */
-int diag_quadrant(int quad);
 
 
 #endif

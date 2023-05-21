@@ -17,8 +17,8 @@
 #include "pattern/prob.h"
 
 #ifdef DCNN
-#include "engines/dcnn.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
+#include "dcnn/dcnn_engine.h"
 #endif /* DCNN */
 
 typedef enum {
@@ -412,7 +412,7 @@ cmd_gogui_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	}
 
 	move_queue_t q;
-	engine_dead_groups(e, gtp, b, &q);
+	engine_dead_groups(e, b, &q);
 	
 	int dame, seki;
 	int ownermap[board_max_coords(b)];

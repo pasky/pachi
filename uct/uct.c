@@ -29,7 +29,7 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "josekifix/josekifix.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 
 #ifdef DISTRIBUTED
 #include "uct/slave.h"
@@ -176,7 +176,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 	 * own unclear groups are dead and opponent's are alive.
 	 * If we still win this way for sure it's ok. */
 	if (guess_unclear_ok && unclear.moves) {
-		for (unsigned int i = 0; i < unclear.moves; i++)
+		for (int i = 0; i < unclear.moves; i++)
 			if (board_at(b, unclear.move[i]) == color)
 				mq_add(&dead_extra, unclear.move[i], 0);    /* own groups -> dead */
 		unclear.moves = 0;                                          /* opponent's groups -> alive */
@@ -192,7 +192,7 @@ uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive,
 		for (int k = 0; k < n; k++) {
 			mq_init(&unclear);  /* all unpicked groups -> alive */
 			
-			for (unsigned int i = 0; i < unclear_orig.moves; i++)
+			for (int i = 0; i < unclear_orig.moves; i++)
 				if (!(k & (1 << i)))
 					mq_add(&dead_extra, unclear_orig.move[i], 0); /* picked groups -> dead */
 			if (pass_is_safe(u, b, color, pass_all_alive, msg, log,
@@ -244,7 +244,7 @@ pass_is_safe_(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, char 
 
 	if (pass_all_alive) {  /* kgs chinese rules cleanup phase */
 		*msg = "need to remove opponent dead groups first";
-		for (unsigned int i = 0; i < dead->moves; i++)
+		for (int i = 0; i < dead->moves; i++)
 			if (board_at(b, dead->move[i]) == stone_other(color))
 				return false;
 		dead->moves = 0; // our dead stones are alive when pass_all_alive is true
@@ -680,13 +680,6 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 		}
 	}
 
-#ifdef JOSEKIFIX
-	/* Save prev ownermap for joseki_override() */
-	struct ownermap prev_ownermap;  ownermap_init(&prev_ownermap);
-	if (u->ownermap.playouts >= GJ_MINGAMES)
-		prev_ownermap = u->ownermap;
-#endif
-
 	uct_genmove_setup(u, b, color);
 
         /* Start the Monte Carlo Tree Search! */
@@ -708,13 +701,16 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 #ifdef JOSEKIFIX
 	/* Check joseki override */
 	if (best) {
-		coord_t c = joseki_override_no_external_engine(b, &prev_ownermap, uct_ownermap(e, b));
+		coord_t c = joseki_override_no_external_engine(b, &u->prev_ownermap, uct_ownermap(e, b));
 		if (!is_pass(c)) {
 			*best_coord = c;
 			best = tree_get_node(u->t->root, c);
 			assert(best);
 		}
 	}
+
+	/* Save ownermap */
+	u->prev_ownermap = u->ownermap;
 #endif
 
 	return best;

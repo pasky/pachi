@@ -1,7 +1,7 @@
 #ifndef PACHI_TACTICS_UTIL_H
 #define PACHI_TACTICS_UTIL_H
 
-/* Advanced tactical checks non-essential to the board implementation. */
+/* Tactical checks and utilities non-essential to the board implementation. */
 
 #include "board.h"
 #include "debug.h"
@@ -17,6 +17,21 @@ static int coord_edge_distance(coord_t c);
 static int coord_gridcular_distance(coord_t c1, coord_t c2);
 /* Regular distance */
 float coord_distance(coord_t c1, coord_t c2);
+
+/* returns coord board quadrant:
+ *   [ 0 1 ]   or -1 if on center lines
+ *   [ 3 2 ]   */
+int coord_quadrant(coord_t c);
+/* last move quadrant */
+#define last_quadrant(b)		( coord_quadrant(last_move(b).coord) )
+/* return opposite quadrant (diagonal) */
+int diag_quadrant(int quad);
+/* Rotate quadrant according to rot: [0-7] for 8 board symmetries.
+ * Bad idea to use this most of the time as:
+ *     rotate_quadrant(coord_quadrant(c), rot) == coord_quadrant(rotate_coord(c, rot))
+ * doesn't hold for center lines. Instead use:
+ *     coord_quadrant(rotate_coord(c, rot))  */
+int rotate_quadrant(int q, int rot);
 
 /* Cona_t "common fate graph" from given coordinate; that is, a weighted
  * graph of intersections where edges between all neighbors have weight 1,
@@ -39,6 +54,12 @@ int board_estimated_moves_left(board_t *b);
 /* To avoid running out of time, assume we always have at least 30 more moves
  * to play if we don't have more precise information from gtp time_left: */
 #define MIN_MOVES_LEFT 30
+
+/* Number of high fuseki stones for color @color */
+int fuseki_high_stones(board_t *b, enum stone color);
+int fuseki_high_stones_by_quadrant(board_t *b, enum stone color, int q);
+int fuseki_stone_heights_diff(board_t *b, enum stone color);
+bool playing_against_influence_fuseki(board_t *b);
 
 /* Tactical evaluation of move @coord by color @color, given
  * simulation end position @b. I.e., a move is tactically good

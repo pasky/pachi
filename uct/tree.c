@@ -13,11 +13,13 @@
 #include "move.h"
 #include "playout.h"
 #include "tactics/util.h"
+#include "tactics/1lib.h"
+#include "tactics/ladder.h"
 #include "timeinfo.h"
 #include "uct/internal.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 
 #ifdef DISTRIBUTED
 #include "uct/slave.h"
@@ -252,7 +254,9 @@ tree_node_load(FILE *f, tree_node_t *node, int *num)
 	if (node->amaf.playouts > MAX_PLAYOUTS) {
 		node->amaf.playouts = MAX_PLAYOUTS;
 	}
+#ifdef DISTRIBUTED
 	memcpy(&node->pu, &node->u, sizeof(node->u));
+#endif
 
 	tree_node_t *ni = NULL, *ni_prev = NULL;
 	while (fgetc(f)) {
@@ -666,62 +670,83 @@ tree_get_node(tree_node_t *parent, coord_t c)
 	return NULL;
 }
 
+static bool
+tree_expand_consider_move(board_t *b, coord_t c, enum stone color, uct_t *u)
+{
+	if (!board_is_valid_play_no_suicide(b, color, c))
+		return false;
+	
+	if (u->prior->prune_ladders && !board_playing_ko_threat(b)) {
+		/* Don't try to escape non-working ladders */
+		group_t atari_neighbor = board_get_atari_neighbor(b, c, color);
+		if (atari_neighbor && is_ladder(b, atari_neighbor, true) &&
+		    !useful_ladder(b, atari_neighbor)) {
+			if (UDEBUGL(5))	fprintf(stderr, "Pruning ladder move %s\n", coord2sstr(c));
+			return false;
+		}
+		
+		/* Don't atari non-working ladders */
+		if (harmful_ladder_atari(b, c, color))
+			return false;
+	}
+
+	return true;
+}
+
+/* Fill list of considered moves */
+static void
+tree_expand_get_moves(move_queue_t *consider, board_t *b, enum stone color, uct_t *u)
+{
+	foreach_free_point(b) {
+		if (tree_expand_consider_move(b, c, color, u))
+			mq_add(consider, c, 0);
+	} foreach_free_point_end;
+}
 
 /* This function must be thread safe, given that board b is only modified by the calling thread. */
 void
 tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct_t *u, int parity)
 {
-	/* Get a Common Fate Graph distance map from parent node. */
-	int distances[board_max_coords(b)];
-	if (!is_pass(last_move(b).coord))
-		cfg_distances(b, last_move(b).coord, distances, TREE_NODE_D_MAX);
-	else    // Pass - everything is too far.
-		foreach_point(b) { distances[c] = TREE_NODE_D_MAX + 1; } foreach_point_end;
-
 	/* Include pass in the prior map. */
 	move_stats_t map_prior[board_max_coords(b) + 1];      memset(map_prior, 0, sizeof(map_prior));
-	bool         map_consider[board_max_coords(b) + 1];   memset(map_consider, 0, sizeof(map_consider));
+	move_queue_t consider;  mq_init(&consider);
 	
-	/* Get a map of prior values to initialize the new nodes with. */
-	prior_map_t map = { b, color, tree_parity(t, parity), &map_prior[1], &map_consider[1], distances };
-	
-	map.consider[pass] = true;
-	int child_count = 1; // for pass
-	foreach_free_point(b) {
-		assert(board_at(b, c) == S_NONE);
-		if (!board_is_valid_play_no_suicide(b, color, c))
-			continue;
-		map.consider[c] = true;
-		child_count++;
-	} foreach_free_point_end;
+	/* Map of prior values to initialize the new nodes with. */
+	prior_map_t map = { b, color, tree_parity(t, parity), &map_prior[1], &consider };
+
+	/* Get considered moves */
+	tree_expand_get_moves(&consider, b, color, u);
+
+	/* Fill priors */
 	uct_prior(u, node, &map);
 
-	/* Now, create the nodes (all at once) */
-	tree_node_t *ni = tree_alloc_node(t, child_count);
-	/* We might temporarily run out of nodes but this should be rare. */
-	if (!ni) {
+	/* Now, create the nodes (all at once)
+	 * We might temporarily run out of nodes but this should be rare. */
+	tree_node_t *first_child = tree_alloc_node(t, consider.moves + 1);  // + 1 for pass
+	if (!first_child) {
 		node->is_expanded = false;
 		return;
 	}
-	tree_setup_node(t, ni, pass, node->depth + 1);
 
-	tree_node_t *first_child = ni;
-	ni->parent = node;
-	ni->prior = map.prior[pass]; ni->d = TREE_NODE_D_MAX + 1;
+	/* Setup pass node */
+	tree_setup_node(t, first_child, pass, node->depth + 1);
+	first_child->parent = node;
+	first_child->prior = map.prior[pass];
 
-	int child = 1;
-	foreach_point(board) {
-		if (!map.consider[c]) // Filter out invalid moves
-			continue;
+	/* Setup other children */
+	tree_node_t *prev = first_child;
+	tree_node_t *ni   = first_child + 1;
+	for (int i = 0; i < consider.moves; i++, ni++) {
+		coord_t c = consider.move[i];
 		assert(c != node_coord(node)); // I have spotted "C3 C3" in some sequence...
 		
-		tree_node_t *nj = first_child + child++;
-		tree_setup_node(t, nj, c, node->depth + 1);
-		nj->parent = node; ni->sibling = nj; ni = nj;
-		
+		tree_setup_node(t, ni, c, node->depth + 1);
+		ni->parent = node;
 		ni->prior = map.prior[c];
-		ni->d = distances[c];
-	} foreach_point_end;
+
+		prev->sibling = ni;
+		prev = ni;
+	}
 	node->children = first_child; // must be done at the end to avoid race
 }
 

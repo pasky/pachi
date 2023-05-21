@@ -190,7 +190,8 @@ pattern_rate_moves_fast(pattern_config_t *pc,
 	/* Try local moves first. */
 	floating_t max = pattern_max_rating_fast(pc, b, color, probs, ownermap, true);
 
-	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
+	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves.
+	 * (Looks terribly inefficient but this gets hit so rarely it's not worth bothering) */
 	if (max < LOW_PATTERN_RATING)
 		max = pattern_max_rating_fast(pc, b, color, probs, ownermap, false);
 	
@@ -235,14 +236,14 @@ pattern_matching_locally(pattern_config_t *pc,
 void
 dump_gammas(strbuf_t *buf, pattern_config_t *pc, pattern_t *p)
 {
-	char head[4] = { 0, };
+	const char *head = "";
 	floating_t gamma = pattern_gamma(pc, p);
 	sbprintf(buf, "%.2f = ", gamma);
 	
 	for (int i = 0; i < p->n; i++) {
 		feature_t *f = &p->f[i];		
 		sbprintf(buf, "%s(%s) %.2f ", head, feature2sstr(f), feature_gamma(pc, f));
-		strcpy(head, "* ");
+		head = "* ";
 		continue;
 	}
 }

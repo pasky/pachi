@@ -46,9 +46,10 @@ capturing_group_is_snapback(board_t *b, group_t group)
 //#define NO_DOOMED_GROUPS
 
 
-static inline bool
+bool
 can_capture(board_t *b, group_t g, enum stone to_play)
 {
+	//assert(g && board_group_info(b, g).libs == 1);
 	coord_t capture = board_group_info(b, g).lib[0];
 	if (DEBUGL(6))  fprintf(stderr, "can capture group %d (%s)?\n", g, coord2sstr(capture));
 	
@@ -84,7 +85,7 @@ can_countercapture(board_t *b, group_t group, move_queue_t *q)
 	assert(color == S_BLACK || color == S_WHITE);	
 	// Not checking b->clen, not maintained by board_quick_play()
 	
-	unsigned int qmoves_prev = q ? q->moves : 0;
+	int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {
@@ -139,7 +140,7 @@ can_countercapture_any(board_t *b, group_t group, move_queue_t *q, int tag)
 	assert(color == S_BLACK || color == S_WHITE);
 	// Not checking b->clen, not maintained by board_quick_play()
 	
-	unsigned int qmoves_prev = q ? q->moves : 0;
+	int qmoves_prev = q ? q->moves : 0;
 
 	foreach_in_group(b, group) {
 		foreach_neighbor(b, c, {

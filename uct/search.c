@@ -25,7 +25,7 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "uct/prior.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 #include "pachi.h"
 
 static int
@@ -367,12 +367,12 @@ uct_expand_next_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color)
 	
 	if (DEBUGL(2)) {  /* Show guesses. */
 		fprintf(stderr, "dcnn eval %s ", stone2str(color));
-		for (unsigned int i = 0; i < q.moves; i++)
+		for (int i = 0; i < q.moves; i++)
 			fprintf(stderr, "%s ", coord2sstr(q.move[i]));
 		fflush(stderr);
 	}
 
-	for (unsigned int i = 0; i < q.moves && !uct_halt; i++) { /* Don't hang if genmove comes in. */
+	for (int i = 0; i < q.moves && !uct_halt; i++) { /* Don't hang if genmove comes in. */
 		uct_expand_next_move(u, t, b, color, q.move[i]);
 		if (DEBUGL(2)) {  fprintf(stderr, ".");  fflush(stderr);  }
 	}
@@ -637,7 +637,7 @@ uct_search_keep_looking(uct_t *u, tree_t *t, board_t *b,
 		 * keep simulating. */
 		if (best2 && best2->u.playouts
 		    && (double)best->u.playouts / best2->u.playouts < u->best2_ratio) {
-			if (UDEBUGL(3))
+			if (UDEBUGL(4))
 				fprintf(stderr, "Best2 ratio %f < threshold %f\n",
 					(double)best->u.playouts / best2->u.playouts,
 					u->best2_ratio);

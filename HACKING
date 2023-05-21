@@ -54,8 +54,15 @@ Pachi consists of the following components:
 	ownermap.[ch]	 simulation-based finalpos. "owner map" data structure
 	fbook.[ch]       fuseki database (opening book)
 	pattern3.[ch]	 fast 3x3 spatial pattern matcher
-	dcnn.[ch]        dcnn-based move predictor
-	caffe.cpp        c++ interface with caffe for dcnn evaluation
+
+* "dcnn" manages neural networks for root node evaluation (policy network)
+
+	dcnn/dcnn.[ch]			network loading and evaluation (c side)
+	dcnn/caffe.cpp			network loading and evaluation (c++ side)
+	dcnn/dcnn_engine.c		example "dcnn move generator" engine
+	dcnn/blunder.c			filter out some obvious bad moves from dcnn output before
+					they get used in search to work around dcnn blind spots
+	dcnn/blunderscan.c		internal engine for dcnn blunder debugging
 
 * "pattern" mm pattern matcher provides priors to guide tree search
 
@@ -63,7 +70,7 @@ Pachi consists of the following components:
 	pattern/spatial.[ch]		spatial pattern matching
 	pattern/prob.[ch]		pattern-based move predictor
 	pattern/pattern_engine.c	example "mm patterns move generator" engine, used for testing / debugging
-	pattern/patternscan_engine.c	auxiliary engine used by mm pattern training pipeline
+	pattern/patternscan.c		auxiliary engine used by mm pattern training pipeline
 	training/                       mm training pipeline
 	patterns_mm.spat		spatial patterns data
 	patterns_mm.gamma		mm patterns gammas
@@ -74,15 +81,15 @@ Pachi consists of the following components:
 	joseki19.gtp			joseki data (as GTP stream)
 	joseki/joseki.[ch]		pattern based joseki engine
 	joseki/joseki_engine.c		"joseki move generator" engine used to visualize joseki data in gogui
-	joseki/josekiscan_engine.c      internal engine used for loading joseki patterns
+	joseki/josekiload.c		load joseki data (internal engine)
 
 * "josekifix" allows to override joseki moves that the dcnn plays poorly
 
 	josekifix/*.sgf			joseki overrides (SGF file)
 	josekifix.gtp			joseki overrides (as GTP stream)
 	josekifix/josekifix.[ch]	pattern based joseki overrides matching
-	josekifix/josekifixscan_engine.c internal engine used for loading joseki overrides
-	josekifix/fuseki.c              choose initial fuseki
+	josekifix/josekifixload.c	load override data (internal engine) 
+	josekifix/fuseki.c		choose initial fuseki
 
 * "tactics" provides extended interfaces for the go board,
   most important non-trivial tactical information
@@ -105,7 +112,6 @@ Pachi consists of the following components:
 	distributed/	"meta-engine" for distributed play by orchestrating
 			    several UCT engines on different computers
   other engines:
-	engines/dcnn.c		example "dcnn move generator" engine
 	engines/external.c      call external GTP engine
 	engines/random.c	example "random move generator" engine
 	engines/replay.c	example "playout move generator" engine
@@ -156,6 +162,7 @@ much common with classic UCT now) has non-trivial structure by itself:
   statistics ("prior values") to focus the search better
 
 	prior.[ch]	variety of methods for setting the priors
+			(dcnn for root node, mm patterns for others)
 
 * "node policy" mainly chooses the current node's child to descend
   through during the tree walk, based on the already recorded statistics;
@@ -167,6 +174,24 @@ much common with classic UCT now) has non-trivial structure by itself:
 * "dynkomi driver" dynamically determines self-imposed extra virtual komi
 
 	dynkomi.[ch]
+
+
+UCT performance
+===============
+
+What's the cost of the different components, and where do the cpu cycles go ?
+
+Here's the result of a performance analysis on Raspberry Pi with Pachi 12.70
+to answer that question (see PERFS for details):
+
+during tree search:
+   uct search takes 30% cpu time
+   leaving          70% for playouts.
+
+if uct is now 100% and we break it down further:
+  priors represent     54% of that   (pattern prior 40%)
+  ucb1amaf policy      38%
+  tree stuff etc        8%
 
 
 UCT search modes
@@ -243,21 +268,21 @@ to enforce the superko rule in your engine.
 GTP Implementation
 ==================
 
-...is a very sad hack. ENSURE that only trusted parties talk to Pachi's
-GTP interface, as it is totally non-resilient to any kind of overflow
-or bad input attacks and allowing arbitrary input to be entered within
-is a major security hole. Yes, this needs to be cleaned up. Also, currently
-engines cannot plug in their own commands.
+... should be better now, but has certainly not been written (or tested)
+with security in mind. ENSURE that only trusted parties talk to Pachi's GTP
+interface, as it totally non-resilient to any kind of overflow or bad input
+attacks and allowing arbitrary input to be entered within is a major security
+hole. Yes, this needs to be cleaned up.
 
-Pachi supports only few GTP commands now.
+Also, currently engines cannot plug in their own commands.
 The final_status_list command requires engine support.
 
 
 DCNN
 ====
 
-dcnn.c has the code that prepares the input planes from board state and
-feeds that to caffe for dcnn evaluation (caffe.cpp). If you want to use
+dcnn/dcnn.c has the code that prepares the input planes from board state and
+feeds that to caffe for dcnn evaluation (dcnn/caffe.cpp). If you want to use
 a network with different inputs this is the place to accomodate it.
 
 
@@ -287,7 +312,7 @@ The joseki database is generated from variations of a SGF file. Josekis
 patterns are matched based on spatial patterns: situation around previous
 move and move to play must match (circle of 4 stones radius). See
 joseki/README for details on how to generate the joseki database from sgf
-files, and joseki.[ch] for the implementation. engines/josekiscan.[ch] is
+files, and joseki.[ch] for the implementation. engines/josekiload.[ch] is
 the aux engine for generating joseki patterns from gtp moves.
 
 
@@ -346,3 +371,5 @@ To enable local trees usage, pass local_tree=1 to the UCT engine.
 There are many further knobs to twiddle, too.
 
 Code is in local_tree branch.
+
+

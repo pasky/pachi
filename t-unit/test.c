@@ -7,20 +7,23 @@
 
 #include "board.h"
 #include "debug.h"
+#include "pachi.h"
 #include "tactics/selfatari.h"
 #include "tactics/dragon.h"
 #include "tactics/ladder.h"
 #include "tactics/1lib.h"
 #include "tactics/2lib.h"
 #include "tactics/seki.h"
+#include "tactics/util.h"
 #include "util.h"
 #include "random.h"
 #include "playout.h"
 #include "timeinfo.h"
+#include "ownermap.h"
 #include "playout/moggy.h"
 #include "engines/replay.h"
 #include "uct/internal.h"
-#include "ownermap.h"
+#include "dcnn/dcnn.h"
 
 
 /* Running tests over gtp ? */
@@ -458,6 +461,68 @@ test_can_countercap(board_t *b, char *arg)
 	return   (rres == eres);
 }
 
+/* Test mm atari pattern. usage:
+ *	atari color coord [!]atari_feature
+ * For example:
+ *      atari b d4 atari:snapback
+ *      atari b d4 !atari:and_cap  
+ *      atari b d4 -1               (no match) */
+static bool
+test_atari(board_t *b, char *arg)
+{
+	static int init = 0;
+	if (!init) {	/* init feature info */
+		pattern_config_t pc;
+		patterns_init(&pc, NULL, false, true);
+		init = 1;
+	}
+	
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	bool negated = (*arg == '!');
+	if (negated)  arg++;
+	int expected = -1;
+	feature_t f;
+	if (atoi(arg) != -1) {
+		str2feature(arg, &f);
+		assert(f.id == FEAT_ATARI);
+		expected = f.payload;
+	}
+	args_end();
+
+	ownermap_t ownermap;
+	mcowner_playouts(b, color, &ownermap);
+	board_print_ownermap(b, stderr, &ownermap);
+	board_printed = true;
+
+	if (expected == -1)  PRINT_TEST(b, "atari %s %-3s -1...\t", stone2str(color), coord2sstr(c));
+	else                 PRINT_TEST(b, "atari %s %-3s %s%s...\t", stone2str(color), coord2sstr(c),
+					(negated ? "!" : ""), feature2sstr(&f));
+	
+	assert(board_at(b, c) == S_NONE);
+	with_move_strict(b, c, color, {
+		assert(board_get_atari_neighbor(b, c, stone_other(color)) ||
+		       board_at(b, c) == S_NONE);   // suicide
+	});
+
+	move_t m = move(c, color);
+	int feature = pattern_match_atari(b, &m, &ownermap);
+	
+	int eres = true;
+	int rres = (negated ? feature != expected : feature == expected);
+	
+	PRINT_RES();
+	if (rres != eres && DEBUGL(1)) {
+		f.payload = feature;
+		if (rres == -1)  fprintf(stderr, "           got  -1\n");
+		else             fprintf(stderr, "           got  %s\n", feature2sstr(&f));
+	}
+	return   (rres == eres);
+}
+
 static bool
 test_two_eyes(board_t *b, char *arg)
 {
@@ -533,8 +598,7 @@ test_final_score(board_t *b, char *arg)
 
 	engine_t *e = new_engine(E_UCT, "", b);
 	move_queue_t dead;
-	gtp_t gtp;  gtp_init(&gtp);
-	engine_dead_groups(e, &gtp, b, &dead);
+	engine_dead_groups(e, b, &dead);
 		
 	float rres = board_official_score(b, &dead);
 
@@ -700,6 +764,210 @@ test_moggy_status(board_t *b, char *arg)
 	return ret;
 }
 
+/* Test uct genmove on given position, make sure we get/don't get wanted/unwanted moves.
+ * Although should be fine as t-unit test in most cases, to reproduce game conditions
+ * exactly better use t-unit over gtp ('tunit genmove ...' cmd), t-unit board diagrams
+ * don't preserve last 4 moves.
+ *
+ * Syntax:
+ *   genmove color move                        expect move
+ *   genmove color move1 move2 [...]           expect move1 or move2
+ *   genmove color !move                       expect anything but move
+ *   genmove color !move1 !move2 [...]         expect anything but move1 and move2    */
+static bool
+test_genmove(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+
+	char* args[30];  int n;
+	move_queue_t wanted;    mq_init(&wanted);
+	move_queue_t unwanted;  mq_init(&unwanted);
+	for (n = 0; *arg; n++) {
+		args[n] = arg;
+		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
+		if (*arg == '!')  arg++;
+		if (!strcmp(arg, "pass"))   {  mq_add(q, pass, 0);    next_arg_opt(arg);  continue;  }
+		if (!strcmp(arg, "resign")) {  mq_add(q, resign, 0);  next_arg_opt(arg);  continue;  }
+		if (!valid_str_coord(arg))  die("Invalid move: '%s'\n", arg);
+		mq_add(q, str2coord(arg), 0);
+		next_arg_opt(arg);
+	}
+	if (!wanted.moves && !unwanted.moves)  die("No moves specified");
+	if (wanted.moves && unwanted.moves)    die("Can't have both wanted and unwanted moves");
+	args_end();
+	
+	board_print_test(b);
+	fprintf(stderr, "genmove %s ", stone2str(color));
+	for (int i = 0; i < n; i++)
+		fprintf(stderr, "%s ", args[i]);
+	fprintf(stderr, "...\n\n");
+
+	static engine_t *e = NULL;
+	if (!e)  e = new_engine(E_UCT, "", b);
+
+	/* Sanity checks */
+	board_t *tmp = board_new(19, NULL);
+	assert(using_dcnn(tmp));
+	assert(using_patterns());
+	board_delete(&tmp);
+
+	static time_info_t ti = { 0, };
+	if (!time_parse(&ti, "=5000:10000"))  die("shouldn't happen");
+	coord_t c = e->genmove(e, b, &ti, color, false);
+
+	board_t b2;  board_copy(&b2, b);
+	if (c != resign) {
+		move_t m = move(c, color);
+		if (board_play(&b2, &m) < 0)  die("invalid move, shouldn't happen");
+	}
+	engine_board_print(e, &b2, stderr);
+	
+	bool eres = true;
+	bool rres = (wanted.moves ? false : true);
+	for (int i = 0; i < n; i++)
+		if (c == wanted.move[i])
+			rres = true;
+	for (int i = 0; i < n; i++)
+		if (c == unwanted.move[i])
+			rres = false;
+
+	fprintf(stderr, "\n");
+	PRINT_RES_VAL("%s", coord2sstr(c));
+	
+	return rres;
+}
+
+
+#ifdef DCNN
+
+/* Use fake values for dcnn blunder testing (fast + ensures all moves are tested) */
+#define FAKE_DCNN_OUTPUT  1
+
+/* Test dcnn blunders on given position, make sure we get/don't get wanted/unwanted moves.
+ *   dcnn_blunder         color coords   ->  check killed moves
+ *   dcnn_blunder boosted color coords   ->  check boosted moves
+ * Better use t-unit over gtp to reproduce game conditions exactly (see test_genmove comment)
+ *
+ * Syntax:
+ *   dcnn_blunder [boosted] color coord                       expect blunder coord
+ *   dcnn_blunder [boosted] color coord1 coord2               expect blunders coord1 and coord2
+ *   dcnn_blunder [boosted] color coord1 coord2 !coord3       expect blunders coord1 and coord2, but not coord3 ... */
+static bool
+test_dcnn_blunder(board_t *b, char *arg)
+{
+	static int init = 0;
+	if (!init) {
+#ifndef FAKE_DCNN_OUTPUT
+		dcnn_init(b);
+#endif
+		pattern_config_t pc;
+		patterns_init(&pc, NULL, false, true);
+		init = 1;
+	}
+
+	next_arg(arg);
+	bool boosted = !strcmp(arg, "boosted");
+	if (boosted)
+		next_arg(arg);
+	
+	enum stone color = str2stone(arg);
+	assert(color != S_NONE);
+	next_arg(arg);
+
+	char* args[30];  int n;
+	move_queue_t wanted;    mq_init(&wanted);
+	move_queue_t unwanted;  mq_init(&unwanted);
+	for (n = 0; *arg; n++) {
+		args[n] = arg;
+		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
+		if (*arg == '!')  arg++;
+		if (!strcmp(arg, "pass") || !strcmp(arg, "resign"))  die("Can't have pass or resign here.\n");
+		if (!valid_str_coord(arg))  die("Invalid move: '%s'\n", arg);
+		mq_add(q, str2coord(arg), 0);
+		next_arg_opt(arg);
+	}
+	if (!wanted.moves && !unwanted.moves)  die("No moves specified");
+	args_end();
+	
+	board_print_test(b);
+	if (boosted)  fprintf(stderr, "dcnn_blunder boosted %s ", stone2str(color));
+	else          fprintf(stderr, "dcnn_blunder %s ", stone2str(color));
+	for (int i = 0; i < n; i++)
+		fprintf(stderr, "%s ", args[i]);
+	fprintf(stderr, "...\n\n");
+
+	/***********************************************************************/
+	/* Get ownermap */
+	ownermap_t ownermap;  ownermap_init(&ownermap);
+	mcowner_playouts(b, color, &ownermap);
+
+	/* Get dcnn output */
+	float result[19 * 19];
+#ifdef FAKE_DCNN_OUTPUT
+	for (int i = 0; i < 19 * 19; i++)  /* Fake dcnn output */
+		result[i] = 0.015;         /* All moves 1.5%   (less than 2% so we can test boosted move trimming) */
+#else
+	dcnn_evaluate_raw(b, color, result, &ownermap, DEBUGL(2));
+#endif
+
+	/* Get blunders */
+	move_queue_t blunders;  mq_init(&blunders);
+	get_dcnn_blunders(boosted, b, color, result, &ownermap, &blunders);
+	//fprintf(stderr, "found %i\n", blunders.moves);
+
+	/* Still run regular blunder code so they get logged */
+	dcnn_fix_blunders(b, color, result, &ownermap, DEBUGL(2));
+	
+	/***********************************************************************/	
+	/* Check results */
+	bool eres = true, rres = true;
+	for (int i = 0; i < wanted.moves; i++)
+		if (!mq_has(&blunders, wanted.move[i]))
+			rres = false;
+	
+	for (int i = 0; i < unwanted.moves; i++)
+		if (mq_has(&blunders, unwanted.move[i]))
+			rres = false;
+	
+	PRINT_RES();
+	
+	return rres;
+}
+
+static bool
+test_first_line_blunder(board_t *b, char *arg)
+{
+	next_arg(arg);
+	enum stone color = str2stone(arg);
+	next_arg(arg);
+	coord_t c = str2coord(arg);
+	next_arg(arg);
+	int eres = atoi(arg);
+	args_end();
+
+	PRINT_TEST(b, "first_line_blunder %s %s %d...\t", stone2str(color), coord2sstr(c), eres);
+	
+	assert(board_at(b, c) == S_NONE);	/* Sanity checks */
+	assert(coord_edge_distance(c) == 0);
+	with_move_strict(b, c, color, {
+		group_t g = group_at(b, c);
+		assert(g);
+		assert(group_stone_count(b, g, 4) >= 3);
+		assert(board_group_info(b, g).libs == 3 ||
+		       board_group_info(b, g).libs == 2);
+	});
+	
+	move_t m = move(c, color);
+	int rres = dcnn_first_line_connect_blunder(b, &m);
+	
+	PRINT_RES();
+	return   (rres == eres);
+}
+
+#endif /* DCNN */
+
 bool board_undo_stress_test(board_t *orig, char *arg);
 bool board_regression_test(board_t *orig, char *arg);
 bool moggy_regression_test(board_t *orig, char *arg);
@@ -721,17 +989,23 @@ static t_unit_cmd commands[] = {
 	{ "wouldbe_ladder_any",     test_wouldbe_ladder_any,    },
 	{ "useful_ladder",          test_useful_ladder,         },
 	{ "can_countercap",         test_can_countercap,        },
+	{ "atari",		    test_atari			},
 	{ "two_eyes",               test_two_eyes,              },
 	{ "moggy moves",            test_moggy_moves,           },
 	{ "moggy status",           test_moggy_status,          },
 	{ "false_eye_seki",         test_false_eye_seki,        },
 	{ "pass_is_safe",           test_pass_is_safe,          },
 	{ "final_score",            test_final_score,           },
+	{ "genmove",		    test_genmove                },
+#ifdef DCNN
+	{ "dcnn_blunder",	    test_dcnn_blunder           },
+	{ "first_line_blunder",     test_first_line_blunder     },
+#endif
 #ifdef BOARD_TESTS
-	{ "board_undo_stress_test", board_undo_stress_test,     },
-	{ "board_regtest",          board_regression_test,      },
-	{ "moggy_regtest",          moggy_regression_test,      },
-	{ "spatial_regtest",        spatial_regression_test,    },
+	{ "board_undo_stress_test", board_undo_stress_test      },
+	{ "board_regtest",          board_regression_test       },
+	{ "moggy_regtest",          moggy_regression_test       },
+	{ "spatial_regtest",        spatial_regression_test     },
 #endif
 
 /* Aliases */
@@ -747,6 +1021,9 @@ unit_test_cmd(board_t *b, char *line)
 	board_printed = false;
 	chomp(line);
 	remove_comments(line);
+
+	int optional = 0;  /* for t-unit over gtp ... */
+	if (line[0] == '!') {  optional = 1;  line++;  }
 	
 	for (int i = 0; commands[i].cmd; i++) {
 		char *cmd = commands[i].cmd;
@@ -757,7 +1034,10 @@ unit_test_cmd(board_t *b, char *line)
 			continue;
 
 		init_arg_len(line, strlen(cmd));
-		return commands[i].f(b, next);
+		bool r = commands[i].f(b, next);
+		if (!r && !optional && pachi_options()->tunit_fatal)
+			exit(EXIT_FAILURE);
+		return r;
 	}
 
 	die("Syntax error: %s\n", line);

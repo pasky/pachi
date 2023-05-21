@@ -1,0 +1,40 @@
+
+Move:  220  Komi: 0.5  Handicap: 4  Captures B: 6 W: 0  Score Est: B+0.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . O X . . . . X X X O . O O X . . . . | 19 | O O X X X X X X X X O O O O X X X X X |
+ 18 | . O X X . . . . X O O . O X . X . X X | 18 | O O X X X X X X X O O O O X X X X X X |
+ 17 | . O X . X . X X X X O O O X X . X X O | 17 | O O X X X X X X X X O O O X X X X X O |
+ 16 | . . O X . X O X . X O X X X O X X O O | 16 | O O O X X X X X X X O X X X O X X O O |
+ 15 | . . O X . X O . X O O O O O O O O O X | 15 | O O O X X X X X X O O O O O O O O O X |
+ 14 | . . O X X O X . X O X . . . O . O X X | 14 | O O O X X O X X X O O O O O O O O X X |
+ 13 | . . . O O O X . X O . . . . . O . O X | 13 | O O O O O O X X X O O O O O O O O O X |
+ 12 | . . O . O X X X O X . . X . . . . O X | 12 | O O O O O X X X O O O O O O O O O O X |
+ 11 | . . . . O X O O O . . . . . . . O O X | 11 | O O O O O X O O O O O O O O O O O O X |
+ 10 | . . . . O X X O . . . . . O . . . O X | 10 | O O O O O X X O O O O O O O O O O O X |
+  9 | O O O . O O O . . . . X . . . . . O X |  9 | O O O O O O O O O O O O O O O O O O X |
+  8 | X X O O X X X O O O . . . . . . . O X |  8 | X X O O X X X O O O O O O O O O O O X |
+  7 | X X X X O . X X X X O O O O . . . O X |  7 | X X X X X X X X X X O O O O O O O O X |
+  6 | X O X X . . X O O O X X X O O . O O X |  6 | X O X X X X X X X X X X X O O O O O X |
+  5 | O O O X . . . . X X . X . X X O O O X |  5 | O O O X X X X X X X X X X X X O O O X |
+  4 | . . O X . . . . . O . . X . X X O X X |  4 | O O O X X X X X X X X X X X X X O X X |
+  3 | . . O X . X . . . X O O . . O O X X . |  3 | O O O X X X X X X X X X X X X X X X X |
+  2 | . O O O X . X . X . X X X . O X X . X |  2 | O O O O X X X X X X X X X X X X X X X |
+  1 | . . . O O X . . . X . . . . . . . . . |  1 | O O O O O X X X X X X X X X X X X X X |
+    +---------------------------------------+    +---------------------------------------+
+
+[1000] best 53.1% xkomi 0.0 | seq  J4  L9  N3 L13 | can b  J4(53.1)  N3(55.0) A18(51.7) B16(62.1)
+[2000] best 52.6% xkomi 0.0 | seq  J4  L9  N3 L13 | can b  J4(52.6) A18(51.2) B16(49.8)  N3(55.0)
+[3000] best 55.2% xkomi 0.0 | seq A19 M14 L13 L12 | can b A19(55.2)  J4(52.6) A18(51.2) A16(55.5)
+[4000] best 53.5% xkomi 0.0 | seq A19 M14 L13 L12 | can b A19(53.5) M14(54.5)  J4(52.6) B16(51.6)
+[5000] best 52.3% xkomi 0.0 | seq A19 M14 L13 L12 | can b A19(52.3) B16(51.3) M14(54.5)  J4(52.6)
+(avg score 1.657980/5045; dynkomi's 1.647369/5035 value 0.518269/5036)
+*** WINNER is A19 with score 0.5230 (1065/5040:5040/5083 games), extra komi 0.000000
+genmove in 4.21s, mcts 3.90s (1302 games/s, 325 games/s/thread)
+[5083] best 52.3% xkomi 0.0 | seq A19 M14 L13 L12 | can b A19(52.3) B16(51.2) M14(54.5)  J4(52.6)
+
+
+pass only move under japanese rules -> B+0.5
+b loses otherwise ...
+

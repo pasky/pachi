@@ -17,9 +17,8 @@ typedef struct {
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6
 	 * playouts per source seems best. */
 	int eqex;
-	int even_eqex, policy_eqex, b19_eqex, eye_eqex, ko_eqex, plugin_eqex;
-	int joseki_eqex, joseki_eqex_far, pattern_eqex, dcnn_eqex;
-	int cfgdn; int *cfgd_eqex;
+	int even_eqex, plugin_eqex;
+	int joseki_eqex, pattern_eqex, dcnn_eqex;
 	bool prune_ladders;
 	bool boost_pass;
 } uct_prior_t;
@@ -34,9 +33,7 @@ typedef struct prior_map {
 	move_stats_t *prior;
 	/* [board_size2(b)] array, whether to compute
 	 * prior for the given value. */
-	bool *consider;
-	/* [board_size2(b)] array from cfg_distances() */
-	int *distances;
+	move_queue_t *consider;
 } prior_map_t;
 
 /* @value is the value, @playouts is its weight. */

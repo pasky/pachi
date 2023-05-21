@@ -1,0 +1,31 @@
+
+pachipachi tetl  Feb 14 01:47:18
+
+Move:  244  Komi: 6.5  Handicap: 0  Captures B: 9 W: 1  Score Est: W+29.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . X . X O O O . . O X . . . | 19 | X X X X X X X X X O O O O O O X X X X |
+ 18 | . . . X X O O X X X X O X . O X X . . | 18 | X X X X X X X X X X X O O O O X X X X |
+ 17 | . . . . O X X . O O X O X O . O X X O | 17 | X X X X X X X X X X X O O O O O X X X |
+ 16 | . . X . . . . . X X O O X O . O X . X | 16 | X X X X X X X X X X O O O O O O X X X |
+ 15 | X X . . . . . . . X O O O . . . O X . | 15 | X X X X X X X X X X O O O O O O O X X |
+ 14 | O X X . . . . . . . X O . O O O O X X | 14 | O X X X X X X X X X X O O O O O O X X |
+ 13 | O O X . . . . . . . . X O O X X O X . | 13 | O O X X X X X X X X X X O O X X O X X |
+ 12 | . O O X X . X X X X X . X O X O O O X | 12 | O O O X X X X X X X X X X O X O O O X |
+ 11 | . . O O X X O O X O X X X X X X X O X | 11 | O O O O X X O O X O X X X X X X X O X |
+ 10 | . . O X X X O . O O O O O O O X . X . | 10 | O O O X X X O O O O O O O O O X X X X |
+  9 | . . O X O O O O X . . . . . O O X X X |  9 | O O O X O O O O O O O O O O O O X X X |
+  8 | . . O X O O X O X O . . . . . . O O X |  8 | O O O X O O X O O O O O O O O O O O X |
+  7 | . . O O O X X X O O . . . . . . O O O |  7 | O O O O O X X X O O O O O O O O O O O |
+  6 | . O . X X O X X O X . . . . . . O X O |  6 | O O O O O O X X O O O O O O O O O O O |
+  5 | O O O O O O O X X O O . . . . O O X O |  5 | O O O O O O O X X O O O O O O O O O O |
+  4 | X O X X O X X X X X O . . . . O X . X |  4 | O O X X O X X X X X O O O O O O O O O |
+  3 | . X . X X . . X X O . O O O . O X X X |  3 | O X X X X X X X X O O O O O O O O O O |
+  2 | X X . . X X . X O . O O . O O X X . O |  2 | X X X X X X X X O O O O O O O O O O O |
+  1 | . . . . . . X X O O O X X X X . X X . |  1 | X X X X X X X X O O O O O O O O O O O |
+    +---------------------------------------+    +---------------------------------------+
+
+A4 seen as dead, but for kgs this means all neighbor b groups at B2 etc are dead ...
+
+fixed

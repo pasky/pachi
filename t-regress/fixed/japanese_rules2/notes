@@ -1,0 +1,30 @@
+
+
+Move:  133  Komi: 0.5  Handicap: 0  Captures B: 0 W: 0  Score Est: B+0.5
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . O X X . . . . . . . . | 19 | O O O O O O O O O X X X X X X X X X X |
+ 18 | . O . . . . . . O X X . . . . . . X . | 18 | O O O O O O O O O X X X X X X X X X X |
+ 17 | . . O . . . . . O X X . . . . . X . . | 17 | O O O O O O O O O X X X X X X X X X X |
+ 16 | . . . O . . . . O X X . . . . X . . . | 16 | O O O O O O O O O X X X X X X X X X X |
+ 15 | . . . . O . . . O X X . . . X . . . . | 15 | O O O O O O O O O X X X X X X X X X X |
+ 14 | . . . . . O . . O X X . . X . . . . . | 14 | O O O O O O O O O X X X X X X X X X X |
+ 13 | . . . . . . O . O X X . X . . . . . . | 13 | O O O O O O O O O X X X X X X X X X X |
+ 12 | . . . . . . . O O X X X). . . . . . . | 12 | O O O O O O O O O X X X X X X X X X X |
+ 11 | O O O O O O O O O X X X X X X X X X X | 11 | O O O O O O O O O X X X X X X X X X X |
+ 10 | O O O O O O O O O X X X X X X X X X X | 10 | O O O O O O O O O X X X X X X X X X X |
+  9 | X X X X X X X X X O O O O O O O O O O |  9 | X X X X X X X X X O O O O O O O O O O |
+  8 | . . . . . . . X X O O O . . . . . . . |  8 | X X X X X X X X X O O O O O O O O O O |
+  7 | . . . . . . X . X O O . O . . . . . . |  7 | X X X X X X X X X O O O O O O O O O O |
+  6 | . . . . . X . . X O O . . O . . . . . |  6 | X X X X X X X X X O O O O O O O O O O |
+  5 | . . . . X . . . X O O . . . O . . . . |  5 | X X X X X X X X X O O O O O O O O O O |
+  4 | . . . X . . . . X O O . . . . O . . . |  4 | X X X X X X X X X O O O O O O O O O O |
+  3 | . . X . . . . . X O O . . . . . O . . |  3 | X X X X X X X X X O O O O O O O O O O |
+  2 | . X . . . . . . X O O . . . . . . O . |  2 | X X X X X X X X X O O O O O O O O O O |
+  1 | . . . . . . . . X O O . . . . . . . . |  1 | X X X X X X X X X O O O O O O O O O O |
+    +---------------------------------------+    +---------------------------------------+
+
+japanese rules, w to play: pass only move to win the game.
+uct won't consider it if pass_limit is 19*19/2 = 180
+
+-> pass_limit = board_earliest_pass(b) fixes it.

@@ -4,7 +4,7 @@ General Pattern Matcher
 Pachi has a general pattern matcher that can match various sets of features
 (spatial and others). Previous versions used a bayesian large pattern
 database inspired by the van der Werf - de Groot - Stern pattern model
-(http://pachi.or.cz/pat/), while current implementation uses mm patterns
+(http://pachi.or.cz/pat/), while current implementation uses MM patterns
 following Rémi's paper with some tweaks and custom features. See pattern.h
 for detailed description of the pattern concept and recognized features,
 and Rémi's paper:
@@ -13,6 +13,8 @@ and Rémi's paper:
 
 
 MM Training Pipeline:
+
+- Rebuild Pachi with EXTRA_ENGINES set, so patternscan engine gets built.
 
 - Pick one month of kgs high-dans game records (~500 games), this is your
   training set:  https://www.u-go.net/gamerecords/

@@ -16,6 +16,9 @@ void group_2lib_capture_check(board_t *b, group_t group, enum stone to_play, mov
 /* Returns 0 or ID of neighboring group with 2 libs. */
 static group_t board_get_2lib_neighbor(board_t *b, coord_t c, enum stone color);
 
+/* Get all neighboring groups with 2 libs. Returns number of groups found. */
+static void board_get_2lib_neighbors(board_t *b, coord_t c, enum stone color, move_queue_t *q);
+
 
 static inline group_t
 board_get_2lib_neighbor(board_t *b, coord_t c, enum stone color)
@@ -26,6 +29,17 @@ board_get_2lib_neighbor(board_t *b, coord_t c, enum stone color)
 			return g;
 	});
 	return 0;
+}
+
+static inline void
+board_get_2lib_neighbors(board_t *b, coord_t c, enum stone color, move_queue_t *q)
+{
+	q->moves = 0;
+	foreach_neighbor(b, c, {
+		group_t g = group_at(b, c);
+		if (board_at(b, c) == color && board_group_info(b, g).libs == 2)
+			mq_add(q, g, 0);
+	});
 }
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # Usage: sgfdump file.sgf
 # Convert joseki database in file.sgf into annotated gtp sequence
-# for josekiscan engine. Expects specific tags in sgf comments for
+# for josekiload engine. Expects specific tags in sgf comments for
 # moves meta meaning (see README for details).
 use strict;
 

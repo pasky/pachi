@@ -1,0 +1,30 @@
+
+Move:  320  Komi: 0.5  Handicap: 6  Captures B: 12 W: 32  Score Est: W+5.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | O O O O X X X . . . . . . X O O O . O | 19 | O O O O X X X X X X X X X X O O O O O |
+ 18 | O . O O O O X . . . . X X X X O O O . | 18 | O O O O O O X X X X X X X X X O O O O |
+ 17 | O . . . . O X X X X X X O O X X O . O | 17 | O O O O O O X X X X X X O O X X O O O |
+ 16 | . O . . O O O X O O O X O . O X X O . | 16 | O O O O O O O X O O O X O O O X X O O |
+ 15 | O . . . . O O X O . O O . O O X X O . | 15 | O O O O O O O X O O O O O O O X X O O |
+ 14 | O . . O . O X X X O O X O O X X O O O | 14 | O O O O O O X X X O O X O O X X O O O |
+ 13 | O O O O O O O X O O X X X O X X X O O | 13 | O O O O O O O X O O X X X O X X X O O |
+ 12 | O X O O . O O X O O X X O . O O X X O | 12 | O X O O O O O X O O X X O O O O X X O |
+ 11 | O X X O O X X X X X X X O O . O X O O | 11 | O X X O O X X X X X X X O O O O X O O |
+ 10 | O X X X O O O X X O O O O O O X X X O | 10 | O X X X O O O X X O O O O O O X X X O |
+  9 | X X X . X X O X . X O . O X X . X . X |  9 | X X X X X X O X X X O O O X X X X X X |
+  8 | O . X . X . X . X . X O O X . X . X . |  8 | X X X X X X X X X X X O O X X X X X X |
+  7 | . . . X X X X . . X X O O X X X X . . |  7 | X X X X X X X X X X X O O X X X X X X |
+  6 | X . X . . . O X . X O O . O O O X . . |  6 | X X X X X X X X X X O O O O O O X X X |
+  5 | O X . . . . . X X O O O O . O O X X X |  5 | O X X X X X X X X O O O O O O O X X X |
+  4 | O O X X . . . . O X O O X O O X X O O |  4 | O O X X X X X X X X O O X O O X X O O |
+  3 | . O O O X X X X X X O O X X X O O O . |  3 | O O O O X X X X X X O O X X X O O O O |
+  2 | . . O . O O O O X . X O X O O O O)O X |  2 | O O O O O O O O X X X O X O O O O O x |
+  1 | . O . O X . O X X X X X X X X O . X . |  1 | O O O O O O O X X X X X X X X O O x x |
+    +---------------------------------------+    +---------------------------------------+
+
+b should win this, but after b T1 playouts don't know to break seki to make bent-four,
+so thinks w group lives, and resigns
+
+fixed (extra bentfour logic)

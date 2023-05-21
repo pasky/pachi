@@ -12,6 +12,7 @@ typedef struct {
 	bool    kgs;
 	bool    nopassfirst;		/* don't pass first when playing chinese */
 	bool    guess_unclear_groups;   /* ok to guess unclear dead groups ? (smart pass) */
+	bool    tunit_fatal;            /* abort on failed t-unit test */
 	enum rules forced_rules;
 } pachi_options_t;
 

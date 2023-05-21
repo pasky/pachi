@@ -1,0 +1,55 @@
+#!/bin/bash
+# run regression tests
+# usage: run_tests dir
+
+set -o pipefail
+
+die()      {  echo "$@";  exit 1;  }
+usage()    {  die "usage: run_tests <dir>";  }
+log()      {  tee -a short.log;  }
+log_full() {  cat >> full.log;  }
+lgrep()    {  grep --line-buffered "$@";  }
+
+
+pachi_options="--dcnn --patterns -t =5000:10000 --tunit-fatal "
+
+base_dir=`dirname "$( realpath "$0" )"`
+cd "$base_dir" || die "cd $base_dir failed"
+
+[ $# = 1 ] || usage
+
+dir="$1"
+[ -d "$dir" ] || die "$dir: no such directory"
+
+echo "see t-regress/full.log for full output"
+echo ""
+
+rm short.log full.log >/dev/null 2>&1
+passed=0
+total=0
+for f in $dir/*/*.gtp; do
+    if ! grep -q tunit $f; then
+	echo "$f: unit test missing, skipping" | log
+	continue
+    fi
+
+    echo ""					       | log_full    
+    echo "-------------------------------------------" | log_full
+    echo "$f"					       | log_full
+    echo ""					       | log_full    
+
+    echo -n "$f: " | log
+    if  ../pachi $pachi_options < $f      2>&1  >/dev/null |
+	    lgrep -v "^IN:" | log_full ; then
+	echo "OK" | log;	passed=$[$passed + 1]
+    else
+	echo "FAILED" | log
+    fi
+    total=$[$total + 1]
+
+done
+
+echo "" | log
+echo "$passed / $total tests passed" | log
+
+exit $[$passed != $total]

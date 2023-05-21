@@ -15,12 +15,13 @@
 #include "engines/montecarlo.h"
 #include "engines/random.h"
 #include "engines/external.h"
-#include "engines/dcnn.h"
-#include "pattern/patternscan_engine.h"
+#include "dcnn/dcnn_engine.h"
+#include "dcnn/blunderscan.h"
+#include "pattern/patternscan.h"
 #include "pattern/pattern_engine.h"
 #include "joseki/joseki_engine.h"
-#include "joseki/josekiscan_engine.h"
-#include "josekifix/josekifixscan_engine.h"
+#include "joseki/josekiload.h"
+#include "josekifix/josekifixload.h"
 #include "t-unit/test.h"
 #include "uct/uct.h"
 #include "distributed/distributed.h"
@@ -32,8 +33,8 @@
 #include "network.h"
 #include "uct/tree.h"
 #include "fifo.h"
-#include "dcnn.h"
-#include "caffe.h"
+#include "dcnn/dcnn.h"
+#include "dcnn/caffe.h"
 #include "pattern/pattern.h"
 #include "pattern/spatial.h"
 #include "pattern/prob.h"
@@ -65,13 +66,18 @@ engine_map_t engines[] = {
 	{ E_UCT,		"uct",            uct_engine_init,            1 },
 #ifdef DCNN
 	{ E_DCNN,		"dcnn",           dcnn_engine_init,           1 },
+#ifdef EXTRA_ENGINES
+	{ E_BLUNDERSCAN,	"blunderscan",    blunderscan_engine_init,    0 },
+#endif
 #endif
 	{ E_PATTERN,		"pattern",        pattern_engine_init,        1 },
+#ifdef EXTRA_ENGINES
 	{ E_PATTERNSCAN,	"patternscan",    patternscan_engine_init,    0 },
+#endif
 	{ E_JOSEKI,		"joseki",         joseki_engine_init,         1 },
-	{ E_JOSEKISCAN,		"josekiscan",     josekiscan_engine_init,     0 },
+	{ E_JOSEKILOAD,		"josekiload",     josekiload_engine_init,     0 },
 #ifdef JOSEKIFIX
-	{ E_JOSEKIFIXSCAN,	"josekifixscan",  josekifixscan_engine_init,  0 },
+	{ E_JOSEKIFIXLOAD,	"josekifixload",  josekifixload_engine_init,  0 },
 #endif
 	{ E_RANDOM,		"random",         random_engine_init,         1 },
 	{ E_REPLAY,		"replay",         replay_engine_init,         1 },
@@ -169,14 +175,11 @@ usage(char *arg)
 	fprintf(stderr, "Usage: pachi [OPTIONS] [ENGINE_ARGS...]\n\n");
 	fprintf(stderr,
 		"Options: \n"
-                "      --compile-flags               show pachi's compile flags \n"
 		"  -e, --engine ENGINE               select engine (default uct). Supported engines: \n");
 	fprintf(stderr,
 		"                                    %s \n", supported_engines(false));
 	fprintf(stderr,
 		"  -h, --help                        show usage \n"
-		"  -s, --seed RANDOM_SEED            set random seed \n"
-		"  -u, --unit-test FILE              run unit tests \n"
 		"  -v, --version                     show version \n"
 		"      --version=VERSION             version to return to gtp frontend \n"
 		"      --name=NAME                   name to return to gtp frontend \n"
@@ -204,7 +207,12 @@ usage(char *arg)
 		"  -l, --log-port [HOST:]LOG_PORT    log to remote host instead of stderr \n"
 #endif
 		"  -o  --log-file FILE               log to FILE instead of stderr \n"
-		"      --verbose-caffe               enable caffe logging \n"
+		" \n"
+		"Testing: \n"
+                "      --compile-flags               show compiler flags \n"
+		"  -s, --seed RANDOM_SEED            set random seed \n"
+		"  -u, --unit-test FILE              run unit tests \n"
+		"      --tunit-fatal                 abort on failed unit test \n"
 		" \n"
 		"Engine components: \n"
 		"      --dcnn,     --nodcnn          dcnn required / disabled \n"
@@ -224,6 +232,8 @@ usage(char *arg)
 		"      --dcnn=name                   choose which dcnn to load (default detlef) \n"
 		"      --dcnn=file                   \n"
 		"      --list-dcnns                  show supported networks \n"
+		"      --nodcnn-blunder              don't filter dcnn blunders         (default: enabled) \n"
+		"      --verbose-caffe               enable caffe logging \n"		
 		" \n"
 #endif
 		"Time settings: \n"
@@ -294,6 +304,8 @@ show_version(FILE *s)
 #define OPT_EXT_JOSEKI_ENGINE 274
 #define OPT_JOSEKIFIX         275
 #define OPT_NOJOSEKIFIX       276
+#define OPT_NODCNN_BLUNDER    277
+#define OPT_TUNIT_FATAL	      278
 
 
 static struct option longopts[] = {
@@ -326,6 +338,7 @@ static struct option longopts[] = {
 	{ "log-file",               required_argument, 0, 'o' },
 	{ "name",                   required_argument, 0, OPT_NAME },
 	{ "nodcnn",                 no_argument,       0, OPT_NODCNN },
+	{ "nodcnn-blunder",         no_argument,       0, OPT_NODCNN_BLUNDER },
 	{ "noundo",                 no_argument,       0, OPT_NOUNDO },
 	{ "nojoseki",               no_argument,       0, OPT_NOJOSEKI },
 #ifdef JOSEKIFIX
@@ -338,6 +351,7 @@ static struct option longopts[] = {
 	{ "seed",                   required_argument, 0, 's' },
 	{ "smart-pass",             no_argument,       0, OPT_SMART_PASS },
 	{ "time",                   required_argument, 0, 't' },
+	{ "tunit-fatal",	    no_argument,       0, OPT_TUNIT_FATAL },
 	{ "unit-test",              required_argument, 0, 'u' },
 	{ "verbose-caffe",          no_argument,       0, OPT_VERBOSE_CAFFE },
 	{ "version",                optional_argument, 0, 'v' },
@@ -350,7 +364,6 @@ int main(int argc, char *argv[])
 
 	gtp_t main_gtp;	
 	gtp_t *gtp = &main_gtp;
-	gtp_init(gtp);
 	
 	enum engine_id engine_id = E_UCT;
 	time_info_t ti_default = ti_none;
@@ -447,6 +460,9 @@ int main(int argc, char *argv[])
 			case OPT_NODCNN:
 				disable_dcnn();
 				break;
+			case OPT_NODCNN_BLUNDER:
+				disable_dcnn_blunder();
+				break;
 			case OPT_NOUNDO:
 				gtp->noundo = true;
 				break;
@@ -501,6 +517,9 @@ int main(int argc, char *argv[])
 			case OPT_NAME:
 				gtp->custom_name = strdup(optarg);
 				break;
+			case OPT_TUNIT_FATAL:
+				options->tunit_fatal = true;
+				break;
 			case 'u':
 				testfile = strdup(optarg);
 				break;
@@ -524,7 +543,6 @@ int main(int argc, char *argv[])
 	
 	if (!verbose_caffe)      quiet_caffe(argc, argv);
 	if (log_port)            open_log_port(log_port);
-	if (testfile)		 return unit_test(testfile);
 	if (DEBUGL(0))           show_version(stderr);
 	if (getenv("DATA_DIR"))
 		if (DEBUGL(1))   fprintf(stderr, "Using data dir %s\n", getenv("DATA_DIR"));
@@ -537,6 +555,7 @@ int main(int argc, char *argv[])
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", rules2str(b->rules));
 	}
 	gtp_internal_init(gtp);
+	gtp_init(gtp, b);
 
 	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_default;
@@ -547,6 +566,8 @@ int main(int argc, char *argv[])
 	josekifix_init(b);
 #endif
 
+	if (testfile)		 return unit_test(testfile);
+	
 	/* Extra cmdline args are engine parameters */
 	strbuf(buf, 1000);
 	for (int i = optind; i < argc; i++)

@@ -1,0 +1,34 @@
+
+togoturn pachipachi  Nov 24 07:53:52
+
+Move:  150  Komi: 0.5  Handicap: 0  Captures B: 2 W: 5  Score Est: B+13.5
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . O)O . . O O X . . . . . . . . | 19 | X X X X , O O O O O X X X X X X X X X |
+ 18 | . . . . X . O . O X X . . . . . . . . | 18 | X X X X X , O O O X X X X X X X X X X |
+ 17 | . . . . X O . O . X . . . . . . X X . | 17 | X X X X X O O O , X X X X X X X X X X |
+ 16 | . . X . X . O . . X . . . . X X O . . | 16 | X X X X X , O O , X X X X X X X O , , |
+ 15 | . . . . X O . O . . . . . . X O O O . | 15 | X X X X X O O O , X X X X X X O O O o |
+ 14 | . . . . X O . . . X . . . X O X . . . | 14 | X X X X X O O O , X X X X X O O O O O |
+ 13 | . . . . . X O O . . . . . X O O . . . | 13 | X X X X X X O O , X X X X X O O O O O |
+ 12 | . . X X . X . . . X . . X O . . . . . | 12 | X X X X X X , o , X X X X O O O O O O |
+ 11 | . X X O . X . O O X . . X O . O . . . | 11 | X X X o , X , O O X X X X O O O O O O |
+ 10 | . X O O . . . . . X . X O X . . . . . | 10 | , X o o , X , o , X X X O O O O O O O |
+  9 | O O . O . X . O . . X O O . . . . . . |  9 | o o o o , X , O , X X O O O O O O O O |
+  8 | . O O X X . . . . X O . O O . . . . . |  8 | o o o X X , , o , X O O O O O O O O O |
+  7 | . O X . . . O . O X . O . . O . . . . |  7 | o o X X X , O O O X , O O O O O O O O |
+  6 | . O X . . X O . O X O O . O O . . . . |  6 | o o X X X X O O O X O O O O O O O O O |
+  5 | . O X . . . O . X . X O O X . . . . . |  5 | o o X X X , O , X X X O O , O O O O O |
+  4 | . O O X X X O . X . X X X . O . O . . |  4 | o o o X X X O , X X X X X , O O O O O |
+  3 | . O X X O . O . X X . O X X O . . . . |  3 | , o X X o , O , X X X X X X O O O O O |
+  2 | . X . X O . . O X O X . . X X O O . . |  2 | x X X X o o O O X x X X X X X O O O O |
+  1 | . . . . . . . . O . . . . . . X X . . |  1 | X X X x , o o o o x X X X X X X , o O |
+    +---------------------------------------+    +---------------------------------------+
+
+dcnn in 0.74s (detlef)
+prior_dcnn(pass) = [ D19 C18 D18 S2  S1  F18 T16 K1  C19 O4  S16 F3  A3  F2  G10 F7  T15 E1  H8  A2  ]
+                   [ 78  15  3   1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+D19 doesn't work, you silly you !
+C18 !

@@ -51,8 +51,10 @@ typedef struct tree_node {
 	move_stats_t prior;
 	/* XXX: Should be way for policies to add their own stats */
 	move_stats_t amaf;
+#ifdef DISTRIBUTED
 	/* Stats before starting playout; used for distributed engine. */
 	move_stats_t pu;
+#endif
 	/* Criticality information; information about final board owner
 	 * of the tree coordinate corresponding to the node */
 	move_stats_t winner_owner; // owner == winner
@@ -68,10 +70,6 @@ typedef struct tree_node {
 	* Used for virtual loss computation. */
 	signed char descents;
 
-	/* Common Fate Graph distance from parent, but at most TREE_NODE_D_MAX+1 */
-#define TREE_NODE_D_MAX 3
-	unsigned char d;
-
 #define TREE_HINT_INVALID 1 // don't go to this node, invalid move
 #define TREE_HINT_DCNN    2 // node has dcnn priors
 	unsigned char hints;
@@ -82,7 +80,7 @@ typedef struct tree_node {
 	*   1) children == null, is_expanded == false: leaf node
 	*   2) children == null, is_expanded == true: one thread currently expanding
 	*   2) children != null, is_expanded == true: fully expanded node */
-	bool is_expanded;
+	unsigned char is_expanded;
 } tree_node_t;
 
 struct tree_hash;

@@ -55,10 +55,11 @@ typedef struct {
 	ladder_check_t ladder_check;	/* ladder checks */
 	ladder_check_t ladder_check2;
 
-	bool  external_engine;	       /* turn external joseki engine mode in this quadrant for following moves.
-					* (ie in case of unknown deviation, external engine takes over).
-					* setting "pass" as next move also turns this on. */
-        bool  external_engine_diag;    /* same for opposite quadrant (diagonal) */
+#define DEFAULT_EXTERNAL_ENGINE_MOVES	15
+        int external_engine_mode[4];    /* if set, external engine handles follow-up (one value per quadrant).
+					 * value specifies number of external engine moves to play.
+					 * note: can also just set "pass" as next move instead of filling this
+					 *       (= enable for current quadrant, 15 moves)  */
 } override_t;
 
 
@@ -83,6 +84,7 @@ coord_t joseki_override_external_engine_only(board_t *b);
 /* low level override matching */
 coord_t check_override(struct board *b, override_t *override, int *prot, hash_t lasth);
 coord_t check_override_last(struct board *b, override_t *override, int *prot, hash_t lasth);
+coord_t check_override_rot(struct board *b, override_t *override, int rot, hash_t lasth);
 coord_t check_overrides(struct board *b, override_t overrides[], hash_t lasth);
 coord_t check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t lasth, bool log);
 bool    josekifix_sane_override(struct board *b, coord_t c, char *name, int n);

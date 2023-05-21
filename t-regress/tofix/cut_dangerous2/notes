@@ -1,0 +1,56 @@
+
+pachipachi alef  2022-12-09
+
+Move:  116  Komi: 0.5  Handicap: 6  Captures B: 0 W: 1 [0 0 0 0]
+      A B C D E F G H J K L M N O P Q R S T   
+    +---------------------------------------+ 
+ 19 | . . . . . . . . . . . . . . . . . . . | 
+ 18 | . . . . O X O . . . . . O X O . . . . | 
+ 17 | . O O O X O . . . . . . . O X O O O O | 
+ 16 | . O X X X O . . . O . . . O X X X X O | 
+ 15 | . X . . . X O . . . . . O X . . . X X | 
+ 14 | . . X . . X O . . . . . O X . . . . . | 
+ 13 | . . . X . X O . . . . . . X . X . . . | 
+ 12 | . . . . . X . . . . . O . . . . . . . | 
+ 11 | . . . . . . . O . . . . . X . . . . . | 
+ 10 | . . . X . . X O . . . O . O X X . . . | 
+  9 | . . . . . . X . . . . . O . O X). . . | 
+  8 | . . . . . . . X O . . O O O X X . . . | 
+  7 | . . . X . . . X O . . O X O O X . . . | 
+  6 | . . X . . . . X . . . . X X X . X . . | 
+  5 | . X . . . . X . . . . . . . . . . X . | 
+  4 | . O X X X X O O . . X . X X X X X O . | 
+  3 | . O O O O O . . O O X . X . O O O O . | 
+  2 | . . . . . . . . . . O . X O . . . . . | 
+  1 | . . . . . . . . . . . . . . . . . . . | 
+    +---------------------------------------+ 
+
+mcowner 0.18s
+dcnn in 0.50s
+dcnn = [ N11 M2  G11 H9  N12 O12 G12 T5  J6  A15 A5  N13 L6  O9  A16 M6  H5  N1  F19 T4  ]
+       [ 52  15  12  3   3   1   1   1   1   1   0   0   0   0   0   0   0   0   0   0   ]
+[1000] best 70.6% xkomi 10.9 | seq N11  O9 N10     | can w N11(70.6)  M2(70.1)                     
+[2000] best 69.8% xkomi 10.9 | seq N11  O9 N10     | can w N11(69.8)  M2(68.7)                     
+[3000] best 68.4% xkomi 10.9 | seq N11  O9 N10     | can w N11(68.4)  M2(68.0) G11(66.7)           
+[4000] best 66.9% xkomi 10.9 | seq N11 Q18 O19  O9 | can w N11(66.9)  M2(67.6) G11(67.1) Q18(71.5) 
+[5000] best 65.9% xkomi 10.9 | seq N11 Q18 O19  O9 | can w N11(65.9)  M2(67.4) G11(67.2) Q18(69.3) 
+[6000] best 65.5% xkomi 10.9 | seq N11 Q18 O19  O9 | can w N11(65.5) G11(67.1)  M2(67.1) Q18(69.3) 
+[7000] best 65.6% xkomi 10.9 | seq N11 Q18 O19  M2 | can w N11(65.6) G11(67.6)  M2(67.1) Q18(68.4) 
+[8000] best 65.4% xkomi 10.9 | seq N11 Q18 O19  M2 | can w N11(65.4) G11(67.2) Q18(68.3)  M2(67.0) 
+[9000] best 65.1% xkomi 10.9 | seq N11 Q18 O19 R18 | can w N11(65.1) G11(67.5) Q18(67.9)  M2(66.7) 
+[10000] best 64.7% xkomi 10.9 | seq N11 Q18 O19 R18 | can w N11(64.7) G11(66.6) Q18(67.2)  M2(66.7) 
+(avg score -8.897493/10233; dynkomi's 3.398987/475691 value 0.492949/475597)
+*** WINNER is N11 with score 0.6471 (4075/10232:10232/10234 games), extra komi 10.880000
+
+
+need move at O19 or Q18
+if b Q18, 5-stones group gets captured
+
+stays unplayed for a long time until black sees it.
+same on the other side (!)
+
+dcnn blind spot ...
+mcts finds Q18 but
+           R18 takes too long
+
+extend cut:dangerous / atari:and_cap ?

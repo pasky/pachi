@@ -1,0 +1,43 @@
+
+Oo0oO pachipachi  May 14 16:38:04
+
+Move:  212  Komi: 0.5  Handicap: 0  Captures B: 4 W: 6  Score Est: W+5.5
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . O)X * . . . . . . X X O X X . X . | 19 | O O o , , x X X X X X X X O O O O O O |
+ 18 | . . . O X . X . . . . X O O O X X X O | 18 | O O O O X X X X X X X X O O O O O O O |
+ 17 | . . . O X X O X X . X X X O O X O O O | 17 | O O O O X X O X X X X X X O O O O O O |
+ 16 | . O O O O O O O . O X X O O O O O O O | 16 | O O O O O O O O , , X X O O O O O O O |
+ 15 | O . O X . . . . . . . X O O X X O X . | 15 | O O O X , o , , x x X X O O X X O X , |
+ 14 | . O X X . O X X X X X . O X O X X X . | 14 | O O X X , o X X X X X x O X X X X X X |
+ 13 | . X . X . X X O O O X O O X . . O . . | 13 | , x x X X X X O O O X O O X X X X X X |
+ 12 | . . . O X X O . . X O X O X O X X . . | 12 | , , , O X X O O O o O X O X X X X X X |
+ 11 | . . . O O O . O . . O X . X X . . . . | 11 | , , O O O O O O O O O X , X X X X X X |
+ 10 | . . . . . . . . . . O . . X O . X X . | 10 | o o O O O O O O O o O , , X O , X X , |
+  9 | . O O O . . . . O . . . . X . O X O . |  9 | O O O O O O O O O , , , , X , O X O O |
+  8 | . . X O X . O . . . . . O X X O O . O |  8 | , , X O O O O , , , , x , X X O O O O |
+  7 | . . X X O O O X X . . X X . . X O O . |  7 | , x X X O O O X X x x X X X X X O O O |
+  6 | . . . . X X O O X . . X O X X X X O . |  6 | x X X X X X O O X , x X O X X X X O O |
+  5 | . . . X . . O . X . . X O O X . . O . |  5 | X X X X x , O , X , , X O O X , , O O |
+  4 | . . X . . X O . X O O O . O X . O O O |  4 | X X X x x X O , X O O O O O X , O O O |
+  3 | . . X O . . O . X O . X . O . X X O . |  3 | X X X , , , O , X O O O O O , X X O o |
+  2 | . X O . O . . . X O . O X O X . . X O |  2 | X X x x , , , , X O O O O O x x X X o |
+  1 | . . X . . . . . X X O . . O . . . X . |  1 | X X X x , , , x X X O O O O o x x X , |
+    +---------------------------------------+    +---------------------------------------+
+
+Can't defend at E19, w will capture the whole thing
+dcnn blind spot:
+
+dcnn = [ E19 F19 J16 D2  C18 M10 F3  T10 H18 K9  H12 B8  P1  F18 T15 H9  Q10 H8  B19 J11 ]
+       [ 97  1   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+but also search is confused about semeai:
+thinks w absolutely wants to T19
+
+if we get rid of semeai still takes 30000 sims to get out of E19 !
+
+
+------------------------------------------------------------------------------------------
+
+fixed: dcnn blunder
+

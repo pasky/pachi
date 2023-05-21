@@ -1,0 +1,27 @@
+boardsize 19
+clear_board
+komi 7.5
+play b q16
+play b p8
+play b r8
+play b s8
+play b p7
+play b q7
+play b p6
+play b q5
+play b k4
+play b f3
+play b q3
+play w d17
+play w q9
+play w r9
+play w s9
+play w q8
+play w r7
+play w c6
+play w q6
+play w r6
+play w d4
+play w s4
+play b r5
+tunit genmove w  !S5

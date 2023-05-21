@@ -195,7 +195,7 @@ print_dead_groups(board_t *b, move_queue_t *dead)
 {
 	if (!DEBUGL(1)) return;
 
-	for (unsigned int i = 0; i < dead->moves; i++) {
+	for (int i = 0; i < dead->moves; i++) {
 		fprintf(stderr, "  ");
 		foreach_in_group(b, dead->move[i]) {
 			fprintf(stderr, "%s ", coord2sstr(c));
@@ -206,7 +206,7 @@ print_dead_groups(board_t *b, move_queue_t *dead)
 
 /* Ask engine for dead stones */
 void
-engine_dead_groups(engine_t *e, gtp_t *gtp, board_t *b, move_queue_t *q)
+engine_dead_groups(engine_t *e, board_t *b, move_queue_t *q)
 {
 	mq_init(q);
 

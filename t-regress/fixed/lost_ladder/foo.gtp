@@ -1,0 +1,57 @@
+boardsize 19
+clear_board
+komi 0.50
+fixed_handicap 4
+play B d16
+play B q16
+play B q4
+play B d4
+play W r14
+play B r15
+play W q14
+play B o16
+play W r10
+play B s14
+play W s13
+play B s16
+play W r6
+play B r5
+play W q6
+play B o4
+play W m3
+play B n3
+play W m4
+play B m2
+play W l2
+play B o2
+play W m1
+play B n2
+play W f3
+play B e3
+play W f4
+play B j5
+play W d5
+play B c5
+play W d6
+play B c6
+play W c3
+play B b4
+play W e2
+play B c4
+play W d7
+play B b3
+play W e4
+play B d3
+play W j3
+play B r13
+play W t14
+play B s15
+play W r12
+play B q13
+
+play w p13
+play b q12
+play w q11
+play b p12
+
+tunit genmove w  !O12

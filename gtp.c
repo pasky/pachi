@@ -35,9 +35,10 @@
  * context is appropriate. */
 
 void
-gtp_init(gtp_t *gtp)
+gtp_init(gtp_t *gtp, board_t *b)
 {
 	memset(gtp, 0, sizeof(*gtp));
+	b->move_history = &gtp->history;
 }
 
 
@@ -172,26 +173,6 @@ gtp_is_valid(engine_t *e, const char *cmd)
 	return (gtp_get_handler(cmd) != NULL);
 }
 
-/* Add move to gtp move history. */
-static void
-gtp_add_move(gtp_t *gtp, move_t *m)
-{
-	assert(gtp->moves < (int)(sizeof(gtp->move) / sizeof(gtp->move[0])));
-	gtp->move[gtp->moves++] = *m;
-}
-
-static int
-gtp_board_play(gtp_t *gtp, board_t *b, move_t *m)
-{
-	int r = board_play(b, m);
-	if (r < 0)  return r;
-	
-	/* Add to gtp move history. */
-	gtp_add_move(gtp, m);
-	
-	return r;
-}
-
 static enum parse_code
 cmd_protocol_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -291,9 +272,6 @@ cmd_clear_board(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (DEBUGL(3) && debug_boardprint)
 		board_print(b, stderr);
 
-	/* Reset move history. */
-	gtp->moves = 0;
-
 	return P_ENGINE_RESET;
 }
 
@@ -368,7 +346,7 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	bool print = false;
 	char *reply = (e->notify_play ? e->notify_play(e, b, &m, enginearg, &print) : NULL);
 	
-	if (gtp_board_play(gtp, b, &m) < 0) {
+	if (board_play(b, &m) < 0) {
 		if (DEBUGL(0)) {
 			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str(m.color), coord2sstr(m.coord));
 			board_print(b, stderr);
@@ -396,9 +374,6 @@ cmd_pachi_predict(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	char *str = predict_move(b, e, ti, &m, gtp->played_games);
 
-	/* Add to gtp move history. */
-	gtp_add_move(gtp, &m);
-	
 	gtp_reply(gtp, str);
 	free(str);
 	return P_OK;
@@ -460,7 +435,7 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 
 	if (!is_resign(c)) {
 		move_t m = move(c, color);
-		if (gtp_board_play(gtp, b, &m) < 0)
+		if (board_play(b, &m) < 0)
 			die("Attempted to generate an illegal move: %s %s\n", stone2str(m.color), coord2sstr(m.coord));
 
 #ifdef JOSEKIFIX
@@ -647,7 +622,7 @@ cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		if (DEBUGL(4))  fprintf(stderr, "setting handicap %s\n", arg);
 
 		// XXX board left in inconsistent state if illegal move comes in
-		if (gtp_board_play(gtp, b, &m) < 0) {
+		if (board_play(b, &m) < 0) {
 			if (DEBUGL(0))  fprintf(stderr, "! ILLEGAL MOVE %s\n", arg);
 			gtp_error(gtp, "illegal move");
 		}
@@ -677,12 +652,9 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	if (DEBUGL(1) && debug_boardprint)
 		board_print(b, stderr);
 
-	for (unsigned int i = 0; i < q.moves; i++) {
+	for (int i = 0; i < q.moves; i++) {
 		move_t m = move(q.move[i], S_BLACK);
 		gtp_printf(gtp, "%s ", coord2sstr(m.coord));
-
-		/* Add to gtp move history. */
-		gtp_add_move(gtp, &m);
 	}
 	gtp_printf(gtp, "\n");
 
@@ -705,7 +677,7 @@ cmd_final_score(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	}
 
 	move_queue_t q;
-	engine_dead_groups(e, gtp, b, &q);
+	engine_dead_groups(e, b, &q);
 	char *score_str = board_official_score_str(b, &q);
 
 	if (DEBUGL(1))  fprintf(stderr, "official score: %s\n", score_str);
@@ -762,9 +734,9 @@ static int
 cmd_final_status_list_dead(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
 	move_queue_t q;
-	engine_dead_groups(e, gtp, b, &q);
+	engine_dead_groups(e, b, &q);
 
-	for (unsigned int i = 0; i < q.moves; i++) {
+	for (int i = 0; i < q.moves; i++) {
 		foreach_in_group(b, q.move[i]) {
 			gtp_printf(gtp, "%s ", coord2sstr(c));
 		} foreach_in_group_end;
@@ -783,14 +755,14 @@ static int
 cmd_final_status_list_alive(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 {
 	move_queue_t q;
-	engine_dead_groups(e, gtp, b, &q);
+	engine_dead_groups(e, b, &q);
 	int printed = 0;
 	
 	foreach_point(b) { // foreach_group, effectively
 		group_t g = group_at(b, c);
 		if (!g || g != c) continue;
 
-		for (unsigned int i = 0; i < q.moves; i++)
+		for (int i = 0; i < q.moves; i++)
 			if (q.move[i] == g)  goto next_group;
 			
 		foreach_in_group(b, g) {
@@ -822,7 +794,7 @@ cmd_final_status_list_seki(char *arg, board_t *b, engine_t *e, gtp_t *gtp)
 		});
 	} foreach_point_end;
 
-	for (unsigned int i = 0; i < sekis.moves; i++) {
+	for (int i = 0; i < sekis.moves; i++) {
 		foreach_in_group(b, sekis.move[i]) {
 			gtp_printf(gtp, "%s ", coord2sstr(c));
 		} foreach_in_group_end;
@@ -879,10 +851,11 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		gtp_error(gtp, "cannot undo");
 		return P_OK;
 	}
-	
-	if (!gtp->moves) {  gtp_error(gtp, "no moves to undo");  return P_OK;  }
+
+	move_history_t *h = &gtp->history;
+	if (!h->moves) {  gtp_error(gtp, "no moves to undo");  return P_OK;  }
 	if (b->moves == b->handicap) {  gtp_error(gtp, "can't undo handicap");  return P_OK;  }
-	gtp->moves--;
+	h->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
 	move_t m = move(pass, board_to_play(b));  bool print;
@@ -906,16 +879,20 @@ undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	
 	/* Reset board */
 	int handicap = b->handicap;
+	b->move_history = NULL;		/* Preserve history ! */
 	board_clear(b);
 	b->handicap = handicap;
 
-	for (int i = 0; i < gtp->moves; i++) {
+	move_history_t *h = &gtp->history;
+	for (int i = 0; i < h->moves; i++) {
 		bool print;
 		if (e->notify_play)
-			e->notify_play(e, b, &gtp->move[i], "", &print);
-		int r = board_play(b, &gtp->move[i]);
+			e->notify_play(e, b, &h->move[i], "", &print);
+		int r = board_play(b, &h->move[i]);
 		assert(r >= 0);
 	}
+
+	b->move_history = &gtp->history;
 }
 
 static enum parse_code
@@ -1200,7 +1177,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 		*strchr(buf, '#') = 0;
 
 	char orig_cmd[1024];
-	strncpy(orig_cmd, buf, sizeof(orig_cmd));
+	strncpy(orig_cmd, buf, sizeof(orig_cmd) - 1);
 	
 	/* Reset non global fields. */
 	gtp->id = -1;

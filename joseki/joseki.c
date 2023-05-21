@@ -10,9 +10,9 @@
 #include "gtp.h"
 #include "joseki.h"
 #include "engine.h"
-#include "dcnn.h"
+#include "dcnn/dcnn.h"
 #include "tactics/util.h"
-#include "josekiscan_engine.h"
+#include "josekiload.h"
 
 static bool joseki_enabled = true;
 static bool joseki_required = false;
@@ -267,12 +267,12 @@ joseki_load(int bsize)
 
 	DEBUG_QUIET();
 	board_t *b = board_new(bsize, NULL);
-	engine_t e;  engine_init(&e, E_JOSEKISCAN, NULL, NULL);
+	engine_t e;  engine_init(&e, E_JOSEKILOAD, NULL, NULL);
 	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_none;
 	ti[S_WHITE] = ti_none;
 	char buf[4096];
-	gtp_t gtp;  gtp_init(&gtp);
+	gtp_t gtp;  gtp_init(&gtp, b);
 	for (int lineno = 1; fgets(buf, 4096, f); lineno++) {
 		if (bsize != 19 && convert_coords(bsize, buf) < 0)
 			skip_sequence(buf, 4096, f, &lineno);
