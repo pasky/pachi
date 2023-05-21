@@ -1177,7 +1177,7 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 		*strchr(buf, '#') = 0;
 
 	char orig_cmd[1024];
-	strncpy(orig_cmd, buf, sizeof(orig_cmd));
+	strncpy(orig_cmd, buf, sizeof(orig_cmd) - 1);
 	
 	/* Reset non global fields. */
 	gtp->id = -1;

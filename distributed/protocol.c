@@ -207,7 +207,7 @@ send_command(char *to_send, void *bin_buf, int *bin_size,
 	     FILE *f, slave_state_t *sstate, char *buf)
 {
 	assert(to_send && gtp_cmd && bin_buf && bin_size);
-	strncpy(buf, to_send, CMDS_SIZE);
+	strncpy(buf, to_send, CMDS_SIZE - 1);
 	bool resend = to_send != gtp_cmd;
 
 	pthread_mutex_unlock(&slave_lock);
@@ -389,7 +389,7 @@ process_reply(int reply_id, char *reply, char *reply_buf,
 		return true;
 	}
 
-	strncpy(reply_buf, reply, CMDS_SIZE);
+	strncpy(reply_buf, reply, CMDS_SIZE - 1);
 	if (reply_id != *last_reply_id)
 		*reply_slot = reply_count++;
 	gtp_replies[*reply_slot] = reply_buf;

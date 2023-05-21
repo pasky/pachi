@@ -42,7 +42,7 @@ external_engine_send_cmd(engine_t *e, char *cmd, char **reply, char **error)
 	char buf2[10];
 	external_engine_t *pp = (external_engine_t*)e->data;
 	
-	strncpy(buf, cmd, sizeof(buf));
+	strncpy(buf, cmd, sizeof(buf) - 1);
 	int n = strlen(buf);    
 	if (n && buf[n-1] == '\n')		/* remove newline if present */
 		buf[--n] = 0;
