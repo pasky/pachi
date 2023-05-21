@@ -200,10 +200,6 @@ int strbuf_vprintf(strbuf_t *buf, const char *format, va_list ap);
 
 /**************************************************************************************************/
 
-/* like mkstemp() but takes care of creating file in system's temp directory 
- * on return @pattern contains the full path to the file. */
-int pachi_mkstemp(char *pattern, size_t max_size);
-
 /* Remove trailing '\n'		(or "\r\n" on windows) */
 void chomp(char *line);
 
