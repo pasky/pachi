@@ -740,7 +740,19 @@ Ex:  pachipachi zeekmund  2022-12-26 ])
 name = "3-4 pincer keima"
 around = D4
 
-babecool pachipachi 2023-02-20])))
+babecool pachipachi 2023-02-20])
+(;W[co]
+;B[bo]
+;W[bn]
+;B[bp]
+;W[fo]
+;B[en]
+;W[dm]
+;B[dr]C[[override\]
+name = "3-4 pincer keima"
+around = C3
+
+maimaimai pachipachi  2023-05-23])))
 (;B[hp]
 (;W[en]
 ;B[]C[[override\]
