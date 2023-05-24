@@ -1355,7 +1355,21 @@ name = "4-4 keima pincer 3-3 inside block"
 around = D2
 
 
-pachipachi Bavink  2023-05-19])))
+pachipachi Bavink  2023-05-19]))
+(;W[cn]
+;B[fp]
+;W[gp]
+;B[gq]
+;W[cq]
+;B[eq]
+;W[cp]
+;B[cl]
+;W[cm]C[[override\]
+name = "4-4 keima pincer dbl kakari corner attack"
+around = C3
+
+
+pachipachi pigeonhole  2023-05-23]))
 (;B[iq]
 ;W[cn]
 ;B[fp]
