@@ -185,7 +185,7 @@ E3 not always good:
 ;W[fo]
 ;B[jq]
 ;W[cn]
-;B[]C[[override\]
+(;B[]C[[override\]
 name = "3-4 pincer tiger tenuki"
 around = B5
 
@@ -194,6 +194,26 @@ if b tenukis corner (to extend G3),
 after w C6 must C7, not D5
 
 then w B6, b B7])
+(;B[cm]
+;W[bn]C[[override\]
+name = "3-4 pincer tiger tenuki"
+around = B5
+external_engine
+
+
+globax pachipachi 2023-05-29]
+;B[dn]
+;W[do]
+;B[co]
+;W[bm]
+;B[cl]
+;W[bl]
+;B[ck]
+;W[bk]
+;B[cj]
+;W[ao]C[[override\]
+around = B6
+]))
 (;B[br]
 ;W[]C[[override\]
 name = "3-4 pincer b2 dev"
