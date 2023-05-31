@@ -38,11 +38,10 @@ void prob_dict_init(char *filename, pattern_config_t *pc);
 /* Free patterns probability dictionary. */
 void prob_dict_done();
 
-/* Evaluate patterns for all available moves. Stores found patterns to pats[b->flen]
- * and NON-normalized probability of each pattern to probs[b->flen].
- * Returns the sum of all probabilities that can be used for normalization. */
+/* Get pattern probabilities for all possible moves.
+ * Stores normalized probability of each pattern in probs[b->flen] */
 void pattern_rate_moves(board_t *b, enum stone color, floating_t *probs, pattern_context_t *ct);
-/* Save pattern for each move as well. */
+/* Also stores found patterns in pats[b->flen] */
 void pattern_rate_moves_full(board_t *b, enum stone color,
 			     pattern_t *pats, floating_t *probs,
 			     pattern_context_t *ct);

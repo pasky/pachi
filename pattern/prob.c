@@ -67,11 +67,11 @@ prob_dict_done()
 }
 
 static void
-rescale_probs(board_t *b, floating_t *probs, floating_t max)
+rescale_probs(board_t *b, floating_t *probs, floating_t total)
 {
 	for (int f = 0; f < b->flen; f++)
 		if (!isnan(probs[f]))
-			probs[f] /= max;
+			probs[f] /= total;
 }
 
 static floating_t
@@ -123,12 +123,16 @@ pattern_max_rating_full(board_t *b, enum stone color, pattern_t *pats, floating_
 			pattern_context_t *ct, bool locally)
 {
 	floating_t max = -10000000;
+	floating_t total = 0;
 	for (int f = 0; f < b->flen; f++) {
 		move_t m = move(b->f[f], color);
 		probs[f] = pattern_rate_move_full(b, &m, &pats[f], ct, locally);
-		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
+		if (!isnan(probs[f])) {  total += probs[f];  max = MAX(probs[f], max);  }
 	}
 
+	rescale_probs(b, probs, total);
+	total = 1.0;
+	
 	return max;
 }
 
@@ -136,12 +140,16 @@ static floating_t
 pattern_max_rating(board_t *b, enum stone color, floating_t *probs,
 		   pattern_context_t *ct, bool locally)
 {
-	floating_t max = -10000000;
+	floating_t max = -100000;
+	floating_t total = 0;
 	for (int f = 0; f < b->flen; f++) {
 		move_t m = move(b->f[f], color);
 		probs[f] = pattern_rate_move(b, &m, ct, locally);
-		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
+		if (!isnan(probs[f])) {  total += probs[f];  max = MAX(max, probs[f]);  }
 	}
+
+	rescale_probs(b, probs, total);
+	total = 1.0;
 
 	return max;
 }
@@ -163,9 +171,7 @@ pattern_rate_moves_full(board_t *b, enum stone color,
 
 	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
 	if (max < LOW_PATTERN_RATING)
-		max = pattern_max_rating_full(b, color, pats, probs, ct, false);
-	
-	rescale_probs(b, probs, max);
+		pattern_max_rating_full(b, color, pats, probs, ct, false);
 }
 
 void
@@ -181,12 +187,7 @@ pattern_rate_moves(board_t *b, enum stone color, floating_t *probs, pattern_cont
 	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves.
 	 * (Looks terribly inefficient but this gets hit so rarely it's not worth bothering) */
 	if (max < LOW_PATTERN_RATING)
-		max = pattern_max_rating(b, color, probs, ct, false);
-	
-	/* Normal thing to do here would be to normalize probabilities based on total sum.
-	 * But we use max instead in order to get values like pre-mm pattern code so things
-	 * remain the same from prior code point of view. */
-	rescale_probs(b, probs, max);
+		pattern_max_rating(b, color, probs, ct, false);
 }
 
 /* For testing purposes: no prioritized features, check every feature. */
@@ -195,14 +196,15 @@ pattern_rate_moves_vanilla(board_t *b, enum stone color,
 			   pattern_t *pats, floating_t *probs,
 			   pattern_context_t *ct)
 {
-	floating_t max = -10000000;
+	floating_t total = 0;
 	for (int f = 0; f < b->flen; f++) {
 		move_t m = move(b->f[f], color);
 		probs[f] = pattern_rate_move_vanilla(b, &m, &pats[f], ct);
-		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
+		if (!isnan(probs[f])) {  total += probs[f];  }
 	}
 	
-	rescale_probs(b, probs, max);
+	rescale_probs(b, probs, total);
+	total = 1.0;
 }
 
 bool
