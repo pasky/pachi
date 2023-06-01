@@ -153,7 +153,9 @@ uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 
 	board_t *b = map->b;
 	floating_t probs[b->flen];
-	pattern_rate_moves_fast(&u->pc, b, map->to_play, probs, &u->ownermap);
+	pattern_context_t ct;
+	pattern_context_init(&ct, &u->pc, &u->ownermap);
+	pattern_rate_moves(b, map->to_play, probs, &ct);
 
 	/* Show patterns best moves for root node if not using dcnn. */
 	if (DEBUGL(2) && !node->parent && !using_dcnn(b)) {

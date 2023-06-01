@@ -213,11 +213,11 @@ static void
 mm_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 		bool game_move, void *data)
 {
-	ownermap_t *ownermap = (ownermap_t*)data;
+	pattern_context_t *ct = (pattern_context_t*)data;
 	
 	/* Now, match the pattern. */
 	pattern_t p;
-	pattern_match(&ps->pc, &p, b, m, ownermap, true);
+	pattern_match(b, m, &p, ct, true);
 
 	if (game_move) {
 		sbprintf(buf, "#\n");
@@ -310,7 +310,11 @@ patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *boar
 		ownermap_t ownermap;
 		if (ps->mcowner_fast)  mcowner_playouts_fast(b, m->color, &ownermap);
 		else		       mcowner_playouts(b, m->color, &ownermap); /* slooow */
-		process_pattern(ps, b, m, true, mm_process_move, &ownermap);
+		
+		pattern_context_t ct;
+		pattern_context_init(&ct, &ps->pc, &ownermap);
+
+		process_pattern(ps, b, m, true, mm_process_move, &ct);
 	}
 
 	return ps->buf.str;

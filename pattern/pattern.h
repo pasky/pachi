@@ -169,6 +169,13 @@ typedef struct {
 } pattern_config_t;
 
 
+/* Common pre-computed data-structures before matching individual patterns */
+typedef struct {
+	pattern_config_t *pc;
+	ownermap_t *ownermap;
+	struct engine *engine;	/* optional, pattern_context_new() only */
+} pattern_context_t;
+
 bool using_patterns();
 void disable_patterns();
 void require_patterns();
@@ -194,11 +201,20 @@ char *str2pattern(char *str, pattern_t *p);
 /* Compare two patterns for equality. Assumes fixed feature order. */
 static bool pattern_eq(pattern_t *p1, pattern_t *p2);
 
+/* Initialize context from existing parts. */
+void pattern_context_init(pattern_context_t *ct, pattern_config_t *pc, ownermap_t *ownermap);
+/* Allocate and setup new context and all required parts (expensive) */
+pattern_context_t *pattern_context_new(board_t *b, enum stone color, bool mcowner_fast);
+/* Same if you already have a pattern config */
+pattern_context_t *pattern_context_new2(board_t *b, enum stone color, pattern_config_t *pc, bool mcowner_fast);
+/* Free context created with pattern_context_new() */
+void pattern_context_free(pattern_context_t *ct);
+
 /* Initialize p and fill it with features matched by the given board move. 
  * @locally: Looking for local moves ? Distance features disabled if false. */
-void pattern_match(pattern_config_t *pc, pattern_t *p, board_t *b, move_t *m, ownermap_t *ownermap, bool locally);
+void pattern_match(board_t *b, move_t *m, pattern_t *p, pattern_context_t *ct, bool locally);
 /* For testing purposes: no prioritized features, check every feature. */
-void pattern_match_vanilla(pattern_config_t *pc, pattern_t *p, board_t *b, move_t *m, ownermap_t *ownermap);
+void pattern_match_vanilla(board_t *b, move_t *m, pattern_t *p, pattern_context_t *ct);
 
 /* Fill ownermap for mcowner feature. */
 void mcowner_playouts(board_t *b, enum stone color, ownermap_t *ownermap);

@@ -40,9 +40,9 @@ prob_dict_init(char *filename, pattern_config_t *pc)
 		str2pattern(buf, &pb->p);
 		assert(pb->p.n == 1);				/* One gamma per feature, please ! */
 
-		uint32_t spi = feature2spatial(pc, &pb->p.f[0]);
+		uint32_t spi = feature2spatial(&pb->p.f[0], pc);
 		assert(spi <= spat_dict->nspatials);		/* Bad patterns.spat / patterns.prob ? */
-		if (feature_has_gamma(pc, &pb->p.f[0]))
+		if (feature_has_gamma(&pb->p.f[0], pc))
 			die("%s: multiple gammas for feature %s\n", filename, pattern2sstr(&pb->p));
 		pb->next = prob_dict->table[spi];
 		prob_dict->table[spi] = pb;
@@ -82,17 +82,16 @@ rescale_probs(board_t *b, floating_t *probs, floating_t max)
 }
 
 static floating_t
-pattern_rate_move(pattern_config_t *pc,
-		  board_t *b, move_t *m,
-		  pattern_t *pat, ownermap_t *ownermap, bool locally)
+pattern_rate_move_full(board_t *b, move_t *m, pattern_t *pat,
+		       pattern_context_t *ct, bool locally)
 {
 	floating_t prob = NAN;
 
 	if (is_pass(m->coord))	return prob;
 	if (!board_is_valid_play_no_suicide(b, m->color, m->coord)) return prob;
 
-	pattern_match(pc, pat, b, m, ownermap, locally);
-	prob = pattern_gamma(pc, pat);
+	pattern_match(b, m, pat, ct, locally);
+	prob = pattern_gamma(pat, ct->pc);
 	
 	//if (DEBUGL(5)) {
 	//	char buf[256]; pattern2str(buf, pat);
@@ -102,17 +101,15 @@ pattern_rate_move(pattern_config_t *pc,
 }
 
 static floating_t
-pattern_rate_move_vanilla(pattern_config_t *pc,
-			  board_t *b, move_t *m,
-			  pattern_t *pat, ownermap_t *ownermap)
+pattern_rate_move_vanilla(board_t *b, move_t *m, pattern_t *pat, pattern_context_t *ct)
 {
 	floating_t prob = NAN;
 
 	if (is_pass(m->coord))	return prob;
 	if (!board_is_valid_play_no_suicide(b, m->color, m->coord)) return prob;
 
-	pattern_match_vanilla(pc, pat, b, m, ownermap);
-	prob = pattern_gamma(pc, pat);
+	pattern_match_vanilla(b, m, pat, ct);
+	prob = pattern_gamma(pat, ct->pc);
 	
 	//if (DEBUGL(5)) {
 	//	char buf[256]; pattern2str(buf, pat);
@@ -122,15 +119,20 @@ pattern_rate_move_vanilla(pattern_config_t *pc,
 }
 
 static floating_t
-pattern_max_rating(pattern_config_t *pc,
-		   board_t *b, enum stone color,
-		   pattern_t *pats, floating_t *probs,
-		   ownermap_t *ownermap, bool locally)
+pattern_rate_move(board_t *b, move_t *m, pattern_context_t *ct, bool locally)
+{
+	pattern_t pat;
+	return pattern_rate_move_full(b, m, &pat, ct, locally);
+}
+
+static floating_t
+pattern_max_rating_full(board_t *b, enum stone color, pattern_t *pats, floating_t *probs,
+			pattern_context_t *ct, bool locally)
 {
 	floating_t max = -10000000;
 	for (int f = 0; f < b->flen; f++) {
 		move_t m = move(b->f[f], color);
-		probs[f] = pattern_rate_move(pc, b, &m, &pats[f], ownermap, locally);
+		probs[f] = pattern_rate_move_full(b, &m, &pats[f], ct, locally);
 		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
 	}
 
@@ -138,16 +140,13 @@ pattern_max_rating(pattern_config_t *pc,
 }
 
 static floating_t
-pattern_max_rating_fast(pattern_config_t *pc,
-			board_t *b, enum stone color,
-			floating_t *probs,
-			ownermap_t *ownermap, bool locally)
+pattern_max_rating(board_t *b, enum stone color, floating_t *probs,
+		   pattern_context_t *ct, bool locally)
 {
 	floating_t max = -10000000;
 	for (int f = 0; f < b->flen; f++) {
 		move_t m = move(b->f[f], color);
-		pattern_t pat;
-		probs[f] = pattern_rate_move(pc, b, &m, &pat, ownermap, locally);
+		probs[f] = pattern_rate_move(b, &m, ct, locally);
 		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
 	}
 
@@ -158,42 +157,38 @@ pattern_max_rating_fast(pattern_config_t *pc,
 
 /* Save patterns for each move as well. */
 floating_t
-pattern_rate_moves(pattern_config_t *pc,
-		   board_t *b, enum stone color,
-		   pattern_t *pats, floating_t *probs,
-		   ownermap_t *ownermap)
+pattern_rate_moves_full(board_t *b, enum stone color,
+			pattern_t *pats, floating_t *probs,
+			pattern_context_t *ct)
 {
 #ifdef PATTERN_FEATURE_STATS
 	pattern_stats_new_position();
 #endif
 
 	/* Try local moves first. */
-	floating_t max = pattern_max_rating(pc, b, color, pats, probs, ownermap, true);
+	floating_t max = pattern_max_rating_full(b, color, pats, probs, ct, true);
 
 	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves. */
 	if (max < LOW_PATTERN_RATING)
-		max = pattern_max_rating(pc, b, color, pats, probs, ownermap, false);
+		max = pattern_max_rating_full(b, color, pats, probs, ct, false);
 	
 	return rescale_probs(b, probs, max);
 }
 
 floating_t
-pattern_rate_moves_fast(pattern_config_t *pc,
-			board_t *b, enum stone color,
-			floating_t *probs,
-			ownermap_t *ownermap)
+pattern_rate_moves(board_t *b, enum stone color, floating_t *probs, pattern_context_t *ct)
 {
 #ifdef PATTERN_FEATURE_STATS
 	pattern_stats_new_position();
 #endif
 
 	/* Try local moves first. */
-	floating_t max = pattern_max_rating_fast(pc, b, color, probs, ownermap, true);
+	floating_t max = pattern_max_rating(b, color, probs, ct, true);
 
 	/* Nothing big matches ? Try again ignoring distance so we get good tenuki moves.
 	 * (Looks terribly inefficient but this gets hit so rarely it's not worth bothering) */
 	if (max < LOW_PATTERN_RATING)
-		max = pattern_max_rating_fast(pc, b, color, probs, ownermap, false);
+		max = pattern_max_rating(b, color, probs, ct, false);
 	
 	/* Normal thing to do here would be to normalize probabilities based on total sum.
 	 * But we use max instead in order to get values like pre-mm pattern code so things
@@ -203,46 +198,38 @@ pattern_rate_moves_fast(pattern_config_t *pc,
 
 /* For testing purposes: no prioritized features, check every feature. */
 floating_t
-pattern_rate_moves_vanilla(pattern_config_t *pc,
-			   board_t *b, enum stone color,
+pattern_rate_moves_vanilla(board_t *b, enum stone color,
 			   pattern_t *pats, floating_t *probs,
-			   ownermap_t *ownermap)
+			   pattern_context_t *ct)
 {
-#ifdef PATTERN_FEATURE_STATS
-	pattern_stats_new_position();
-#endif
-
 	floating_t max = -10000000;
 	for (int f = 0; f < b->flen; f++) {
 		move_t m = move(b->f[f], color);
-		probs[f] = pattern_rate_move_vanilla(pc, b, &m, &pats[f], ownermap);
+		probs[f] = pattern_rate_move_vanilla(b, &m, &pats[f], ct);
 		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
 	}
 	
 	return rescale_probs(b, probs, max);
 }
 
-
 bool
-pattern_matching_locally(pattern_config_t *pc,
-			 board_t *b, enum stone color,
-			 ownermap_t *ownermap)
+pattern_matching_locally(board_t *b, enum stone color, pattern_context_t *ct)
 {
 	floating_t probs[b->flen];
-	floating_t max = pattern_max_rating_fast(pc, b, color, probs, ownermap, true);
+	floating_t max = pattern_max_rating(b, color, probs, ct, true);
 	return (max >= LOW_PATTERN_RATING);
 }
 
 void
-dump_gammas(strbuf_t *buf, pattern_config_t *pc, pattern_t *p)
+dump_gammas(strbuf_t *buf, pattern_t *p, pattern_config_t *pc)
 {
 	const char *head = "";
-	floating_t gamma = pattern_gamma(pc, p);
+	floating_t gamma = pattern_gamma(p, pc);
 	sbprintf(buf, "%.2f = ", gamma);
 	
 	for (int i = 0; i < p->n; i++) {
 		feature_t *f = &p->f[i];		
-		sbprintf(buf, "%s(%s) %.2f ", head, feature2sstr(f), feature_gamma(pc, f));
+		sbprintf(buf, "%s(%s) %.2f ", head, feature2sstr(f), feature_gamma(f, pc));
 		head = "* ";
 		continue;
 	}
@@ -250,9 +237,9 @@ dump_gammas(strbuf_t *buf, pattern_config_t *pc, pattern_t *p)
 
 /* Do we have a gamma for that feature ? */
 bool
-feature_has_gamma(pattern_config_t *pc, feature_t *f)
+feature_has_gamma(feature_t *f, pattern_config_t *pc)
 {
-	uint32_t spi = feature2spatial(pc, f);
+	uint32_t spi = feature2spatial(f, pc);
 	for (pattern_prob_t *pb = prob_dict->table[spi]; pb; pb = pb->next)
 		if (feature_eq(f, &pb->p.f[0]))
 			return true;

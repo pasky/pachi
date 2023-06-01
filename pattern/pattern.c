@@ -18,6 +18,8 @@
 #include "playout.h"
 #include "playout/moggy.h"
 #include "ownermap.h"
+#include "engine.h"
+#include "pattern/pattern_engine.h"
 #include "mq.h"
 
 /* Number of playouts for mcowner_fast().
@@ -243,6 +245,45 @@ patterns_init(pattern_config_t *pc, char *arg, bool create, bool load_prob)
 	}
 }
 
+void
+pattern_context_init(pattern_context_t *ct, pattern_config_t *pc, ownermap_t *ownermap)
+{
+	ct->pc = pc;
+	ct->ownermap = ownermap;
+}
+
+pattern_context_t*
+pattern_context_new(board_t *b, enum stone color, bool mcowner_fast)
+{
+	engine_t *engine = new_engine(E_PATTERN, "", b);
+	pattern_config_t *pc = pattern_engine_get_pc(engine);
+
+	pattern_context_t *ct = pattern_context_new2(b, color, pc, mcowner_fast);
+	ct->engine = engine;
+	return ct;
+}
+
+pattern_context_t*
+pattern_context_new2(board_t *b, enum stone color, pattern_config_t *pc, bool mcowner_fast)
+{
+	pattern_context_t *ct = calloc2(1, pattern_context_t);
+	
+	ownermap_t *ownermap = malloc2(ownermap_t);	
+	if (mcowner_fast)  mcowner_playouts_fast(b, color, ownermap);
+	else		   mcowner_playouts(b, color, ownermap);
+	
+	pattern_context_init(ct, pc, ownermap);
+	return ct;
+}
+
+void
+pattern_context_free(pattern_context_t *ct)
+{
+	if (ct->engine)
+		delete_engine(&ct->engine);
+	free(ct->ownermap);
+	free(ct);
+}
 
 static bool
 is_neighbor(board_t *b, coord_t c1, coord_t c2)
@@ -1143,9 +1184,8 @@ pattern_match_l1_blunder_punish(board_t *b, move_t *m)
  * archs this is almost 20% genmove time. Any optimization here
  * will make a big difference. */
 static feature_t *
-pattern_match_spatial_outer(pattern_config_t *pc, 
-                            pattern_t *p, feature_t *f,
-		            board_t *b, move_t *m, hash_t h)
+pattern_match_spatial_outer(board_t *b, move_t *m, pattern_t *p, feature_t *f,
+			    pattern_config_t *pc)
 {
 #if 0   /* Simple & Slow */
 	spatial_t s;
@@ -1162,7 +1202,11 @@ pattern_match_spatial_outer(pattern_config_t *pc,
 		if (!pc->spat_largest)
 			(f++, p->n++);
 	}
-#else  
+#else
+	/* This is partially duplicated from spatial_from_board(),
+	 * but we build a hash instead of spatial record. */
+	hash_t h = pthashes[0][0][S_NONE];
+	
 	/* We record all spatial patterns black-to-play; simply
 	 * reverse all colors if we are white-to-play. */
 	static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
@@ -1191,27 +1235,23 @@ pattern_match_spatial_outer(pattern_config_t *pc,
 	return f;
 }
 
-feature_t *
-pattern_match_spatial(pattern_config_t *pc, 
-                      pattern_t *p, feature_t *f,
-		      board_t *b, move_t *m)
+static void
+pattern_match_spatial(board_t *b, move_t *m, pattern_t *p,
+		      pattern_config_t *pc)
 {
-	if (pc->spat_max <= 0 || !spat_dict)  return f;
+	if (pc->spat_max <= 0 || !spat_dict)  return;
 	assert(pc->spat_min > 0);
-	feature_t *orig_f = f;
+
+	feature_t *f = &p->f[p->n];
+	feature_t *f_orig = f;
 	f->id = FEAT_NO_SPATIAL;
 	f->payload = 0;
 
-	/* XXX: This is partially duplicated from spatial_from_board(), but
-	 * we build a hash instead of spatial record. */
-
-	hash_t h = pthashes[0][0][S_NONE];
 	assert(BOARD_SPATHASH_MAXD < 2);
 	if (pc->spat_max > BOARD_SPATHASH_MAXD)
-		f = pattern_match_spatial_outer(pc, p, f, b, m, h);
+		f = pattern_match_spatial_outer(b, m, p, f, pc);
 	if (pc->spat_largest && f->id >= FEAT_SPATIAL)		(f++, p->n++);
-	if (f == orig_f) /* FEAT_NO_SPATIAL */			(f++, p->n++);
-	return f;
+	if (f == f_orig) /* FEAT_NO_SPATIAL */			(f++, p->n++);
 }
 
 static int
@@ -1312,41 +1352,32 @@ add_feature_stats(pattern_t *pattern)
 
 /* For testing purposes: no prioritized features, check every feature. */
 void
-pattern_match_vanilla(pattern_config_t *pc, pattern_t *pattern, board_t *b,
-		      move_t *m, ownermap_t *ownermap)
+pattern_match_vanilla(board_t *b, move_t *m, pattern_t *pattern, pattern_context_t *ct)
 {
-#ifdef PATTERN_FEATURE_STATS
-	dump_feature_stats(pc);
-#endif
-
 	feature_t *f = &pattern->f[0];
 	int p;  /* payload */
 	pattern->n = 0;
 	assert(!is_pass(m->coord));   assert(!is_resign(m->coord));
 
-	check_feature(pattern_match_atari(b, m, ownermap), FEAT_ATARI);
+	check_feature(pattern_match_atari(b, m, ct->ownermap), FEAT_ATARI);
 	check_feature(pattern_match_double_snapback(b, m), FEAT_DOUBLE_SNAPBACK);
 	check_feature(pattern_match_capture(b, m), FEAT_CAPTURE);
 	check_feature(pattern_match_aescape(b, m), FEAT_AESCAPE);
-	check_feature(pattern_match_cut(b, m, ownermap), FEAT_CUT);
-	check_feature(pattern_match_net(b, m, ownermap), FEAT_NET);
+	check_feature(pattern_match_cut(b, m, ct->ownermap), FEAT_CUT);
+	check_feature(pattern_match_net(b, m, ct->ownermap), FEAT_NET);
 	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
 	check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
-	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
+	check_feature(pattern_match_border(b, m, ct->pc), FEAT_BORDER);
 	check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
 	check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
-	check_feature(pattern_match_mcowner(b, m, ownermap), FEAT_MCOWNER);
-	pattern_match_spatial(pc, pattern, f, b, m);
-
-#ifdef PATTERN_FEATURE_STATS
-	add_feature_stats(p);
-#endif
+	check_feature(pattern_match_mcowner(b, m, ct->ownermap), FEAT_MCOWNER);
+	pattern_match_spatial(b, m, pattern, ct->pc);
 }
 
 /* TODO: We should match pretty much all of these features incrementally. */
 static void
-pattern_match_internal(pattern_config_t *pc, pattern_t *pattern, board_t *b,
-		       move_t *m, ownermap_t *ownermap, bool locally)
+pattern_match_internal(board_t *b, move_t *m, pattern_t *pattern,
+		       pattern_context_t *ct, bool locally)
 {
 #ifdef PATTERN_FEATURE_STATS
 	dump_feature_stats(pc);
@@ -1361,7 +1392,7 @@ pattern_match_internal(pattern_config_t *pc, pattern_t *pattern, board_t *b,
 	/***********************************************************************************/
 	/* Prioritized features, don't let others pull them down. */
 	
-	check_feature(pattern_match_atari(b, m, ownermap), FEAT_ATARI);
+	check_feature(pattern_match_atari(b, m, ct->ownermap), FEAT_ATARI);
 	bool atari_ladder = (p == PF_ATARI_LADDER);
 	{       if (p == PF_ATARI_LADDER_BIG)  return;  /* don't let selfatari kick-in ... */
 		if (p == PF_ATARI_SNAPBACK)    return;  
@@ -1381,32 +1412,32 @@ pattern_match_internal(pattern_config_t *pc, pattern_t *pattern, board_t *b,
 	check_feature(pattern_match_aescape(b, m), FEAT_AESCAPE);
 	{	if (p == PF_AESCAPE_FILL_KO)  return;  }
 
-	check_feature(pattern_match_cut(b, m, ownermap), FEAT_CUT);
+	check_feature(pattern_match_cut(b, m, ct->ownermap), FEAT_CUT);
 	{	if (p == PF_CUT_DANGEROUS)  return;  }
 
 	/***********************************************************************************/
 	/* Other features */
 
-	check_feature(pattern_match_net(b, m, ownermap), FEAT_NET);
+	check_feature(pattern_match_net(b, m, ct->ownermap), FEAT_NET);
 	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
 	check_feature(pattern_match_wedge(b, m), FEAT_WEDGE);
 	check_feature(pattern_match_l1_blunder_punish(b, m), FEAT_L1_BLUNDER_PUNISH);
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
-	check_feature(pattern_match_border(b, m, pc), FEAT_BORDER);
+	check_feature(pattern_match_border(b, m, ct->pc), FEAT_BORDER);
 	if (locally) {
 		check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
 		check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
 	}
-	check_feature(pattern_match_mcowner(b, m, ownermap), FEAT_MCOWNER);
+	check_feature(pattern_match_mcowner(b, m, ct->ownermap), FEAT_MCOWNER);
 
-	f = pattern_match_spatial(pc, pattern, f, b, m);
+	pattern_match_spatial(b, m, pattern, ct->pc);
 }
 
 void
-pattern_match(pattern_config_t *pc, pattern_t *p, board_t *b,
-	      move_t *m, ownermap_t *ownermap, bool locally)
+pattern_match(board_t *b, move_t *m, pattern_t *p,
+	      pattern_context_t *ct, bool locally)
 {
-	pattern_match_internal(pc, p, b, m, ownermap, locally);
+	pattern_match_internal(b, m, p, ct, locally);
 	
 	/* Debugging */
 	//if (pattern_has_feature(p, FEAT_ATARI, PF_ATARI_AND_CAP))  show_move(b, m, "atari_and_cap");
@@ -1516,14 +1547,14 @@ check_pattern_gammas(pattern_config_t *pc)
 				assert(s->dist >= 3);
 				f.id = (enum feature_id)(FEAT_SPATIAL + s->dist - 3);
 				f.payload = j;
-				if (!feature_has_gamma(pc, &f))  goto error;
+				if (!feature_has_gamma(&f, pc))  goto error;
 			}
 			goto done;  /* Check all spatial features at once ... */
 		}
 
 		for (int j = 0; j < feature_payloads((enum feature_id)i); j++) {
 			f.payload = j;
-			if (!feature_has_gamma(pc, &f))  goto error;
+			if (!feature_has_gamma(&f, pc))  goto error;
 		}
 	}
 
