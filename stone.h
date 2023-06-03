@@ -20,7 +20,10 @@ static enum stone stone_other(enum stone s);
 static inline char
 stone2char(enum stone s)
 {
-	return ".XO#"[s];
+	/* Hack: stone2char(S_MAX) = ' '
+	 *       Allow S_MAX here so can blank-out parts of the
+	 *       board in board_print() (see spatial_print()) */
+	return ".XO# "[s];
 }
 
 static inline enum stone

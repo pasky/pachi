@@ -200,19 +200,21 @@ spatial2str(spatial_t *s)
 }
 
 void
-spatial_print(board_t *board, spatial_t *s, FILE *f, move_t *at)
+spatial_print(board_t *board, FILE *f, spatial_t *s, coord_t c)
 {
 	int size = board_rsize(board);
 	board_t *b = board_new(size, NULL);
-	last_move(b).coord = at->coord;
-	
+	last_move(b).coord = c;
+
+	/* Blank whole board so pattern stands out (only pattern area gets printed).
+	 * Set every stone to S_MAX (stone2char(S_MAX) = ' ') */
 	for (int i = 0; i < size; i++)
 		for (int j = 0; j < size; j++) {
 			coord_t c = coord_xy(i+1, j+1);
-			board_at(b, c) = (enum stone)4; // HACK !
+			board_at(b, c) = S_MAX;  // HACK
 		}
 	
-	int cx = coord_x(at->coord), cy = coord_y(at->coord);
+	int cx = coord_x(c), cy = coord_y(c);
 	for (unsigned int j = 0; j < ptind[s->dist + 1]; j++) {
 		ptcoords_at(x, y, cx, cy, j);
 		move_t m = move(coord_xy(x, y), spatial_point_at(*s, j) );

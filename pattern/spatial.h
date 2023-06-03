@@ -66,12 +66,15 @@
  *       20 8  2  7  19             58 34 18 6  1  5  17 33 57
  *          16 10 15             72 48 28 12 4  0  3  11 27 47 71
  *                                  60 36 20 8  2  7  19 35 59
- *                                  70 46 26 16 10 15 25 45 69
- *                                     56 42 32 22 31 41 55
- *                                        66 52 38 51 65
- *                                              62
+ *   d=6       21                   70 46 26 16 10 15 25 45 69
+ *       24 14 9  13 23                56 42 32 22 31 41 55
+ *       18 6  1  5  17                   66 52 38 51 65
+ *    28 12 4  0  3  11 27                      62
+ *       20 8  2  7  19
+ *       26 16 10 15 25
+ *             22
  */
-typedef struct {	
+ typedef struct {
 	unsigned char dist;		/* Gridcular radius of matched pattern. */
 	unsigned char points[MAX_PATTERN_AREA / 4];
 } spatial_t;
@@ -129,8 +132,31 @@ hash_t outer_spatial_hash_from_board_rot_d(board_t *b, coord_t coord, enum stone
 /* Convert given spatial pattern to string. */
 char *spatial2str(spatial_t *s);
 
-/* Print spatial on board centered on @at */
-void spatial_print(board_t *b, spatial_t *s, FILE *f, move_t *at);
+/* Print spatial on board centered on @at.
+ * Board content is irrelevant, only pattern area is printed:
+ *         A B C D E F G H J K L M N O P Q R S T  
+ *       +---------------------------------------+
+ *    19 |     .                                 |
+ *    18 | . . . . .                             |
+ *    17 | . . . X X O                           |
+ *    16 | . . X . O O .                         |
+ *    15 | . . . . . . .                         |
+ *    14 | . . .). . . . .                       |
+ *    13 | . . . . . . .                         |
+ *    12 | . . . . . . .                         |
+ *    11 | . . . . . .                           |
+ *    10 | . . . . .                             |
+ *     9 |     .                                 |
+ *     8 |                                       |
+ *     7 |                                       |
+ *     6 |                                       |
+ *     5 |                                       |
+ *     4 |                                       |
+ *     3 |                                       |
+ *     2 |                                       |
+ *     1 |                                       |
+ *       +---------------------------------------+  */
+void spatial_print(board_t *b, FILE *f, spatial_t *s, coord_t at);
 
 /* Mapping from point sequence to coordinate offsets (to determine
  * coordinates relative to pattern center). */
