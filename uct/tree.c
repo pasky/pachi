@@ -747,6 +747,7 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 		prev->sibling = ni;
 		prev = ni;
 	}
+	u->expanded_nodes++;
 	node->children = first_child; // must be done at the end to avoid race
 }
 

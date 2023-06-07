@@ -134,8 +134,9 @@ typedef struct uct {
 	move_queue_t dead_groups;
 	int pass_moveno;
 	
-	/* Timing */
+	/* Timing, stats */
 	double mcts_time;
+	int expanded_nodes;
 
 	/* Game state - maintained by setup_state(), reset_state(). */
 	board_t *main_board;

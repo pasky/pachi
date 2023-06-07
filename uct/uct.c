@@ -502,7 +502,10 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	}
 
 	uct_thread_ctx_t *ctx = uct_search_stop();
-	if (UDEBUGL(3)) tree_dump(t, u->dumpthres);
+	if (UDEBUGL(3)) {
+		tree_dump(t, u->dumpthres);
+		fprintf(stderr, "expanded nodes: %i\n", u->expanded_nodes);
+	}
 	if (UDEBUGL(2))
 		fprintf(stderr, "(avg score %f/%d; dynkomi's %f/%d value %f/%d)\n",
 			t->avg_score.value, t->avg_score.playouts,
@@ -667,6 +670,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 	double time_start = time_now();
 	u->pass_all_alive |= pass_all_alive;
 	u->mcts_time = 0;
+	u->expanded_nodes = 0;
 
 	uct_pondering_stop(u);
 
