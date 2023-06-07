@@ -31,11 +31,13 @@ typedef struct {
 	 * for the parent node. */
 	bool vloss_sqrt;
 	floating_t vloss_coeff;	/* Pre-computed value */
+#ifdef DISTRIBUTED
 	/* In distributed mode, encourage different slaves to work on different
 	 * parts of the tree by adding virtual wins to different nodes. */
 	int virtual_win;
 	int root_virtual_win;
 	int vwin_min_playouts;
+#endif
 	/* First Play Urgency - if set to less than infinity (the MoGo paper
 	 * above reports 1.0 as the best), new branches are explored only
 	 * if none of the existing ones has higher urgency than fpu. */
@@ -356,9 +358,11 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 
 	b->vloss_sqrt = true;
 
+#ifdef DISTRIBUTED
 	b->virtual_win = 5;
 	b->root_virtual_win = 30;
 	b->vwin_min_playouts = 1000;
+#endif
 
 	if (arg) {
 		char *optspec, *next = arg;
