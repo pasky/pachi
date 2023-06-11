@@ -209,13 +209,15 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 	uct_prior_t *p = calloc2(1, uct_prior_t);
 
 	p->even_eqex = p->plugin_eqex = -20;
-	/* FIXME: Optimal pattern_eqex is about -200 with small playout counts
-	 * but only -80 on a cluster. We need a better way to set the default
-	 * here. */
-	p->pattern_eqex    = -160;
+	/* FIXME: Optimal pattern_eqex is about 300 with small playout counts
+	 * but only half on a cluster. We need a better way to set the default
+	 * here. For high playouts lowering it may be better. */
+	p->pattern_eqex    = -300;
 
-	/* Override patterns for nearby joseki moves. */
-	p->joseki_eqex     = -320;
+	/* joseki_eqex: Double pattern_eqex to override patterns.
+	 * (remember to also change joseki prior when setting pattern prior
+	 *  through command line). */
+	p->joseki_eqex     = p->pattern_eqex * 2;
 
 	/* Best value for dcnn_eqex so far seems to be 1300 with ~88% winrate
 	 * against regular pachi. Below 1200 is bad (50% winrate and worse), more
