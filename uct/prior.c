@@ -208,14 +208,14 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 {
 	uct_prior_t *p = calloc2(1, uct_prior_t);
 
-	p->even_eqex = p->plugin_eqex = -100;
-	/* FIXME: Optimal pattern_eqex is about -1000 with small playout counts
-	 * but only -400 on a cluster. We need a better way to set the default
+	p->even_eqex = p->plugin_eqex = -20;
+	/* FIXME: Optimal pattern_eqex is about -200 with small playout counts
+	 * but only -80 on a cluster. We need a better way to set the default
 	 * here. */
-	p->pattern_eqex    = -800;
+	p->pattern_eqex    = -160;
 
 	/* Override patterns for nearby joseki moves. */
-	p->joseki_eqex     = -1600;
+	p->joseki_eqex     = -320;
 
 	/* Best value for dcnn_eqex so far seems to be 1300 with ~88% winrate
 	 * against regular pachi. Below 1200 is bad (50% winrate and worse), more
@@ -223,7 +223,7 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 	p->dcnn_eqex       = 1300;
 
 	/* Even number! */
-	p->eqex = board_large(b) ? 20 : 14;
+	p->eqex = (board_large(b) ? 20 : 14);
 
 	p->prune_ladders = true;
 
@@ -241,10 +241,10 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 			if (!strcasecmp(optname, "eqex") && optval) {
 				p->eqex = atoi(optval);
 
-			/* In the following settings, you can use negative
-			 * numbers to give the hundredths of default eqex.
-			 * E.g. -100 is default eqex, -50 is half of the
-			 * default eqex, -200 is double the default eqex. */
+			/* In the following settings you can use negative numbers
+			 * to scale values automatically based on default eqex.
+			 * E.g. with default settings -100 means 100 on large
+			 * boards, and 70 on small boards. */
 			} else if (!strcasecmp(optname, "even") && optval) {
 				p->even_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "joseki") && optval) {
@@ -266,11 +266,11 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 		}
 	}
 
-	if (p->even_eqex < 0)    p->even_eqex    = p->eqex * -p->even_eqex / 100;
-	if (p->joseki_eqex < 0)  p->joseki_eqex  = p->eqex * -p->joseki_eqex / 100;
-	if (p->pattern_eqex < 0) p->pattern_eqex = p->eqex * -p->pattern_eqex / 100;
-	if (p->plugin_eqex < 0)  p->plugin_eqex  = p->eqex * -p->plugin_eqex / 100;
-	if (p->dcnn_eqex < 0)    p->dcnn_eqex    = p->eqex * -p->dcnn_eqex / 100;
+	if (p->even_eqex < 0)    p->even_eqex    = -p->even_eqex * p->eqex / 20;
+	if (p->joseki_eqex < 0)  p->joseki_eqex  = -p->joseki_eqex * p->eqex / 20;
+	if (p->pattern_eqex < 0) p->pattern_eqex = -p->pattern_eqex * p->eqex / 20;
+	if (p->plugin_eqex < 0)  p->plugin_eqex  = -p->plugin_eqex * p->eqex / 20;
+	if (p->dcnn_eqex < 0)    p->dcnn_eqex    = -p->dcnn_eqex * p->eqex / 20;
 
 	if (!using_joseki(b))   p->joseki_eqex = 0;
 	if (!using_dcnn(b))     p->dcnn_eqex = 0;
