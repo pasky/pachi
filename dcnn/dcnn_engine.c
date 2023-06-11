@@ -16,7 +16,7 @@ dcnn_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pa
 	float r[19 * 19];
 	float best_r[DCNN_BEST_N];
 	coord_t best_moves[DCNN_BEST_N];
-	dcnn_evaluate(b, color, r, NULL, DEBUGL(2));
+	dcnn_evaluate(b, color, r, NULL, DEBUGL(2), "");
 	get_dcnn_best_moves(b, r, best_moves, best_r, DCNN_BEST_N);
 	
 	/* Make sure move is valid ... */
@@ -35,7 +35,7 @@ dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 		coord_t *best_c, float *best_r, int nbest)
 {
 	float r[19 * 19];
-	dcnn_evaluate(b, color, r, NULL, DEBUGL(2));
+	dcnn_evaluate(b, color, r, NULL, DEBUGL(2), "");
 	get_dcnn_best_moves(b, r, best_c, best_r, nbest);
 }	
 

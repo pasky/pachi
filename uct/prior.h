@@ -16,7 +16,8 @@ typedef struct uct_prior {
 	 * playouts per source seems best. */
 	int eqex;
 	int even_eqex, plugin_eqex;
-	int joseki_eqex, pattern_eqex, dcnn_eqex;
+	int joseki_eqex, pattern_eqex;
+	int dcnn_eqex_high, dcnn_eqex_low;
 	bool prune_ladders;
 	bool boost_pass;
 } uct_prior_t;

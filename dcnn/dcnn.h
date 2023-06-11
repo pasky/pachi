@@ -19,9 +19,9 @@ void disable_dcnn_blunder(void);
 void dcnn_blunder_init(void);
 
 /* Evaluate dcnn and fix dcnn blunders (if they haven't been disabled) */
-void dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl);
+void dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log);
 /* Raw dcnn output (doesn't fix blunders) */
-void dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl);
+void dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log);
 bool using_dcnn(board_t *b);
 void dcnn_init(board_t *b);
 void get_dcnn_best_moves(board_t *b, float *r, coord_t *best_c, float *best_r, int nbest);
