@@ -41,16 +41,15 @@ void prob_dict_done();
 /* Evaluate patterns for all available moves. Stores found patterns to pats[b->flen]
  * and NON-normalized probability of each pattern to probs[b->flen].
  * Returns the sum of all probabilities that can be used for normalization. */
-floating_t pattern_rate_moves(board_t *b, enum stone color, floating_t *probs,
-			      pattern_context_t *ct);
+void pattern_rate_moves(board_t *b, enum stone color, floating_t *probs, pattern_context_t *ct);
 /* Save pattern for each move as well. */
-floating_t pattern_rate_moves_full(board_t *b, enum stone color,
-				   pattern_t *pats, floating_t *probs,
-				   pattern_context_t *ct);
+void pattern_rate_moves_full(board_t *b, enum stone color,
+			     pattern_t *pats, floating_t *probs,
+			     pattern_context_t *ct);
 /* For testing purposes: no prioritized features, check every feature. */
-floating_t pattern_rate_moves_vanilla(board_t *b, enum stone color,
-				      pattern_t *pats, floating_t *probs,
-				      pattern_context_t *ct);
+void pattern_rate_moves_vanilla(board_t *b, enum stone color,
+				pattern_t *pats, floating_t *probs,
+				pattern_context_t *ct);
 
 
 /* Helper function for pattern_match() callers:

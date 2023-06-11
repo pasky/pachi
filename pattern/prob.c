@@ -66,19 +66,12 @@ prob_dict_done()
 	prob_dict = NULL;
 }
 
-static floating_t
+static void
 rescale_probs(board_t *b, floating_t *probs, floating_t max)
 {
-	floating_t total = 0;
-	
-	for (int f = 0; f < b->flen; f++) {
-		if (isnan(probs[f]))  continue;
-		probs[f] /= max;
-		total += probs[f];
-	}
-	
-	//fprintf(stderr, "pattern probs total: %.2f\n", total);
-	return total;
+	for (int f = 0; f < b->flen; f++)
+		if (!isnan(probs[f]))
+			probs[f] /= max;
 }
 
 static floating_t
@@ -156,7 +149,7 @@ pattern_max_rating(board_t *b, enum stone color, floating_t *probs,
 #define LOW_PATTERN_RATING 6.0
 
 /* Save patterns for each move as well. */
-floating_t
+void
 pattern_rate_moves_full(board_t *b, enum stone color,
 			pattern_t *pats, floating_t *probs,
 			pattern_context_t *ct)
@@ -172,10 +165,10 @@ pattern_rate_moves_full(board_t *b, enum stone color,
 	if (max < LOW_PATTERN_RATING)
 		max = pattern_max_rating_full(b, color, pats, probs, ct, false);
 	
-	return rescale_probs(b, probs, max);
+	rescale_probs(b, probs, max);
 }
 
-floating_t
+void
 pattern_rate_moves(board_t *b, enum stone color, floating_t *probs, pattern_context_t *ct)
 {
 #ifdef PATTERN_FEATURE_STATS
@@ -193,11 +186,11 @@ pattern_rate_moves(board_t *b, enum stone color, floating_t *probs, pattern_cont
 	/* Normal thing to do here would be to normalize probabilities based on total sum.
 	 * But we use max instead in order to get values like pre-mm pattern code so things
 	 * remain the same from prior code point of view. */
-	return rescale_probs(b, probs, max);
+	rescale_probs(b, probs, max);
 }
 
 /* For testing purposes: no prioritized features, check every feature. */
-floating_t
+void
 pattern_rate_moves_vanilla(board_t *b, enum stone color,
 			   pattern_t *pats, floating_t *probs,
 			   pattern_context_t *ct)
@@ -209,7 +202,7 @@ pattern_rate_moves_vanilla(board_t *b, enum stone color,
 		if (!isnan(probs[f])) {  max = MAX(probs[f], max);  }
 	}
 	
-	return rescale_probs(b, probs, max);
+	rescale_probs(b, probs, max);
 }
 
 bool
