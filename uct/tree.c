@@ -16,8 +16,8 @@
 #include "tactics/1lib.h"
 #include "tactics/ladder.h"
 #include "timeinfo.h"
-#include "uct/internal.h"
 #include "uct/prior.h"
+#include "uct/internal.h"
 #include "uct/tree.h"
 #include "dcnn/dcnn.h"
 

@@ -7,15 +7,16 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "joseki/joseki.h"
 #include "move.h"
 #include "random.h"
 #include "engine.h"
-#include "uct/internal.h"
-#include "uct/plugins.h"
+#include "joseki/joseki.h"
+#include "pattern/prob.h"
+#include "dcnn/dcnn.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
-#include "dcnn/dcnn.h"
+#include "uct/plugins.h"
+#include "uct/internal.h"
 
 #define PRIOR_BEST_N 20
 

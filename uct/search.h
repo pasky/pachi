@@ -11,14 +11,7 @@
 #include <signal.h> // sig_atomic_t
 
 #include "debug.h"
-#include "move.h"
-#include "ownermap.h"
-#include "playout.h"
 #include "timeinfo.h"
-#include "uct/internal.h"
-
-struct tree;
-struct tree_node;
 
 /* Internal UCT structures */
 

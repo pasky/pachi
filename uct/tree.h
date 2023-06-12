@@ -19,7 +19,7 @@
 #include "move.h"
 #include "stats.h"
 
-struct uct;
+typedef struct uct uct_t;
 
 /*
  *            +------+
@@ -85,7 +85,7 @@ typedef struct tree_node {
 
 struct tree_hash;
 
-typedef struct {
+typedef struct tree {
 	tree_node_t *root;
 	enum stone root_color;
 
@@ -152,7 +152,7 @@ bool tree_promote_move(tree_t *tree, move_t *m, board_t *b, enum promote_reason 
 tree_node_t *tree_get_node(tree_node_t *parent, coord_t c);
 void tree_garbage_collect(tree_t *tree);
 
-void tree_expand_node(tree_t *tree, tree_node_t *node, board_t *b, enum stone color, struct uct *u, int parity);
+void tree_expand_node(tree_t *tree, tree_node_t *node, board_t *b, enum stone color, uct_t *u, int parity);
 
 static bool tree_leaf_node(tree_node_t *node);
 

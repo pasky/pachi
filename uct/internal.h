@@ -6,20 +6,17 @@
 #include "debug.h"
 #include "move.h"
 #include "ownermap.h"
-#include "pattern/pattern.h"
-#include "pattern/spatial.h"
-#include "pattern/prob.h"
 #include "playout.h"
 #include "stats.h"
 #include "mq.h"
-#include "uct/tree.h"
-#include "uct/prior.h"
+#include "pattern/pattern.h"
 
-struct uct_prior;
-struct uct_dynkomi;
-struct uct_pluginset;
-
+typedef struct uct_prior uct_prior_t;
+typedef struct uct_dynkomi uct_dynkomi_t;
+typedef struct uct_pluginset uct_pluginset_t;
 typedef struct uct_policy uct_policy_t;
+typedef struct tree tree_t;
+typedef struct tree_node tree_node_t;
 
 typedef enum uct_reporting {
 	UR_TEXT,
@@ -85,7 +82,7 @@ typedef struct uct {
 
 	int dynkomi_mask;
 	int dynkomi_interval;
-	struct uct_dynkomi *dynkomi;
+	uct_dynkomi_t *dynkomi;
 	floating_t initial_extra_komi;
 
 	floating_t val_scale;
@@ -108,7 +105,7 @@ typedef struct uct {
 	uct_policy_t *random_policy;
 	playout_policy_t *playout;
 	uct_prior_t *prior;
-	struct uct_pluginset *plugins;
+	uct_pluginset_t *plugins;
 	pattern_config_t pc;
 
 	/* Used within frame of single genmove. */
