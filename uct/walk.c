@@ -469,9 +469,10 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 		 * the maximum in multi-threaded case but not by much so it's ok.
 		 * The size test must be before the test&set not after, to allow
 		 * expansion of the node later if enough nodes have been freed. */
-		if (tree_leaf_node(n)
-		    && n->u.playouts - u->virtual_loss >= u->expand_p && t->nodes_size < t->max_tree_size
-		    && !__sync_lock_test_and_set(&n->is_expanded, 1))
+		if (tree_leaf_node(n) &&
+		    n->u.playouts >= u->expand_p &&
+		    t->nodes_size < t->max_tree_size &&
+		    !__sync_lock_test_and_set(&n->is_expanded, 1))
 			tree_expand_node(t, n, b, next_color, u, -parity);
 	}
 
