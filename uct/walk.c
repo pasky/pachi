@@ -472,8 +472,10 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 		if (tree_leaf_node(n) &&
 		    n->u.playouts >= u->expand_p &&
 		    t->nodes_size < t->max_tree_size &&
-		    !__sync_lock_test_and_set(&n->is_expanded, 1))
+		    !__sync_lock_test_and_set(&n->is_expanded, 1)) {
 			tree_expand_node(t, n, b, next_color, u, -parity);
+			break;
+		}
 	}
 
 	amaf.game_baselen = amaf.gamelen;
