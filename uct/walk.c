@@ -23,8 +23,6 @@
 #include "uct/prior.h"
 #include "gogui.h"
 
-#define DESCENT_DLEN 512
-
 
 static void
 uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
@@ -307,8 +305,6 @@ record_amaf_move(playout_amafmap_t *amaf, coord_t coord, bool is_ko_capture)
 static int
 uct_leaf_node(uct_t *u, board_t *b, enum stone player_color,
               playout_amafmap_t *amaf,
-	      uct_descent_t *descent, int *dlen,
-	      tree_node_t *significant[2],
               tree_t *t, tree_node_t *n, enum stone node_color,
 	      char *spaces)
 {
@@ -388,14 +384,10 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 	if (tree_leaf_node(n) && !__sync_lock_test_and_set(&n->is_expanded, 1))
 		tree_expand_node(t, n, b, player_color, u, 1);
 	
-	/* Tree descent history. */
-	/* XXX: This is somewhat messy since @n and descent[dlen-1].node are
-	 * redundant. */
-	uct_descent_t descent[DESCENT_DLEN];
-	descent[0].node = n;
+	/* Tree descent */
+	/* XXX: This is somewhat messy since @n and descent.node are redundant. */
+	uct_descent_t descent;  descent.node = n;
 	int dlen = 1;
-	/* Total value of the sequence. */
-	move_stats_t seq_value = move_stats(0.0, 0);
 	/* The last "significant" node along the descent (i.e. node
 	 * with higher than configured number of playouts). For black
 	 * and white. */
@@ -423,23 +415,19 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 		node_color = stone_other(node_color);
 		int parity = (node_color == player_color ? 1 : -1);
 
-		assert(dlen < DESCENT_DLEN);
-		descent[dlen] = descent[dlen - 1];
-
 		if (!u->random_policy_chance || fast_random(u->random_policy_chance))
-			u->policy->descend(u->policy, t, &descent[dlen], parity, u->allow_pass);
+			u->policy->descend(u->policy, t, &descent, parity, u->allow_pass);
 		else
-			u->random_policy->descend(u->random_policy, t, &descent[dlen], parity, u->allow_pass);
+			u->random_policy->descend(u->random_policy, t, &descent, parity, u->allow_pass);
 
 
 		/*** Perform the descent: */
 
-		if (descent[dlen].node->u.playouts >= u->significant_threshold)
-			significant[node_color - 1] = descent[dlen].node;
+		if (descent.node->u.playouts >= u->significant_threshold)
+			significant[node_color - 1] = descent.node;
 
-		seq_value.playouts += descent[dlen].value.playouts;
-		seq_value.value += descent[dlen].value.value * descent[dlen].value.playouts;
-		n = descent[dlen++].node;
+		n = descent.node;
+		dlen++;
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
 			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %d,%f\n",
@@ -501,7 +489,7 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 	// assert(tree_leaf_node(n));
 	/* In case of parallel tree search, the assertion might
 	 * not hold if two threads chew on the same node. */
-	result = uct_leaf_node(u, b, player_color, &amaf, descent, &dlen, significant, t, n, node_color, spaces);
+	result = uct_leaf_node(u, b, player_color, &amaf, t, n, node_color, spaces);
 
 	if (u->policy->wants_amaf && u->playout_amaf_cutoff) {
 		unsigned int cutoff = amaf.game_baselen;
