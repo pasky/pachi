@@ -1704,7 +1704,14 @@ name = "4-4 dbl kakari crosscut"
 
 coq pachipachi  2023-04-11])))
 (;W[cq]
-;B[cp]
+(;B[]C[[override\]
+name = "hoshi direct 3-3"
+around = D4
+
+many ways to abuse now
+
+coolbaby pachipachi 2023-06-16*])
+(;B[cp]
 ;W[dq]
 (;B[ep]
 ;W[fr]C[[override\]
@@ -1730,7 +1737,7 @@ name = "hoshi 3-3 hane inside"
 around = C2
 
 
-pachipachi Beutlin 2023-04-25]))
+pachipachi Beutlin 2023-04-25])))
 (;W[ep]
 ;B[]C[[override\]
 name = "4-4 attach"
