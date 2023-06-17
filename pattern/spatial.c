@@ -147,7 +147,7 @@ spatial_hash(unsigned int rotation, spatial_t *s)
 {
 	hash_t h = 0;
 	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
-		h ^= pthashes[rotation][i][spatial_point_at(*s, i)];
+		h ^= pthashes[rotation][i][spatial_point(s, i)];
 	}
 	return h;
 }
@@ -193,7 +193,7 @@ spatial2str(spatial_t *s)
 {
 	static char buf[1024];
 	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
-		buf[i] = stone2char(spatial_point_at(*s, i));
+		buf[i] = stone2char(spatial_point(s, i));
 	}
 	buf[ptind[s->dist + 1]] = 0;
 	return buf;
@@ -217,7 +217,7 @@ spatial_print(board_t *board, FILE *f, spatial_t *s, coord_t c)
 	int cx = coord_x(c), cy = coord_y(c);
 	for (unsigned int j = 0; j < ptind[s->dist + 1]; j++) {
 		ptcoords_at(x, y, cx, cy, j);
-		move_t m = move(coord_xy(x, y), spatial_point_at(*s, j) );
+		move_t m = move(coord_xy(x, y), spatial_point(s, j) );
 		board_at(b, m.coord) = m.color;
 	}
 	board_print(b, stderr);	
@@ -241,7 +241,8 @@ spatial_from_board(pattern_config_t *pc, spatial_t *s,
 	int cx = coord_x(m->coord), cy = coord_y(m->coord);
 	for (unsigned int j = 0; j < ptind[pc->spat_max + 1]; j++) {
 		ptcoords_at(x, y, cx, cy, j);
-		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
+		enum stone color = (*bt)[board_atxy(b, x, y)];
+		set_spatial_point(s, j, color);
 	}
 	s->dist = pc->spat_max;
 }
@@ -372,7 +373,8 @@ spatial_dict_read(char *buf)
 	spatial_t s = { radius, };
 	unsigned int sl = 0;
 	while (!isspace(*bufp)) {
-		s.points[sl / 4] |= char2stone(*bufp++) << ((sl % 4)*2);
+		enum stone color = char2stone(*bufp++);
+		set_spatial_point(&s, sl, color);
 		sl++;
 	}
 	while (isspace(*bufp)) bufp++;

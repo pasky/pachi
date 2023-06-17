@@ -78,8 +78,8 @@ typedef struct {
 	unsigned char points[(MAX_PATTERN_AREA + 3) / 4];
 } spatial_t;
 
-#define spatial_point_at(s, i) ((enum stone)(((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3))
-
+#define spatial_point(s, i)             ((enum stone)(((s)->points[(i) / 4] >> (((i) % 4) * 2)) & 3))
+#define set_spatial_point(s, i, color)	do {  (s)->points[(i) / 4] |= (color) << (((i) % 4) * 2);  } while(0)
 
 /* Spatial dictionary - collection of stone configurations. */
 
