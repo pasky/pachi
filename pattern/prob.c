@@ -24,32 +24,38 @@ prob_dict_init(char *filename)
 
 	int gammas = pattern_gammas();
 	prob_dict = calloc2(1, prob_dict_t);
-	prob_dict->table = calloc2(gammas, pattern_prob_t);
+	prob_dict->gamma_table   = calloc2(gammas, floating_t);
+	prob_dict->feature_table = calloc2(gammas, feature_t);
 
-	/* Init all gammas to -1.0 (= unset) */
+	/* All gammas = -1.0 (unset) */
 	for (int i = 0; i < gammas; i++)
-		prob_dict->table[i].gamma = -1.0;
+		prob_dict->gamma_table[i] = -1.0;
 
+	/* Read in gammas */
 	int n = 0;
 	char sbuf[1024];
 	while (fgets(sbuf, sizeof(sbuf), f)) {
-		pattern_prob_t pb;  memset(&pb, 0, sizeof(pb));
-		//int c, o;
-
 		char *buf = sbuf;
-		if (buf[0] == '#') continue;
-		while (isspace(*buf)) buf++;
-		float gamma = strtof(buf, &buf);
-		pb.gamma = gamma;
-		while (isspace(*buf)) buf++;
-		str2pattern(buf, &pb.p);
-		assert(pb.p.n == 1);				/* One gamma per feature, please ! */
 
-		int i = feature_gamma_number(&pb.p.f[0]);
+		if (buf[0] == '#')   /* Comment */
+			continue;
+		
+		while (isspace(*buf))  buf++;
+		float gamma = strtof(buf, &buf);
+		
+		while (isspace(*buf)) buf++;		
+		pattern_t p;  memset(&p, 0, sizeof(p));
+		feature_t *f = &p.f[0];
+		str2pattern(buf, &p);
+		assert(p.n == 1);	/* One gamma per feature, please ! */
+
+		int i = feature_gamma_number(f);
 		assert(i < pattern_gammas());		/* Bad patterns.spat / patterns.prob ? */
-		if (feature_has_gamma(&pb.p.f[0]))
-			die("%s: multiple gammas for feature %s\n", filename, pattern2sstr(&pb.p));
-		prob_dict->table[i] = pb;
+		if (feature_has_gamma(f))
+			die("%s: multiple gammas for feature %s\n", filename, pattern2sstr(&p));
+		
+		prob_dict->gamma_table[i] = gamma;
+		prob_dict->feature_table[i] = *f;
 
 		n++;
 	}
@@ -63,7 +69,8 @@ prob_dict_done()
 {
 	if (!prob_dict)  return;
 
-	free(prob_dict->table);
+	free(prob_dict->gamma_table);
+	free(prob_dict->feature_table);
 	free(prob_dict);
 	prob_dict = NULL;
 }
@@ -77,25 +84,18 @@ bool
 feature_has_gamma(feature_t *f)
 {
 	int i = feature_gamma_number(f);
-	pattern_prob_t *pb = &prob_dict->table[i];
-	return (feature_eq(f, &pb->p.f[0]) && pb->gamma != -1);
-}
-
-static pattern_prob_t*
-feature_prob(feature_t *f)
-{
-	int i = feature_gamma_number(f);
-	pattern_prob_t *pb = &prob_dict->table[i];
-	assert(feature_eq(f, &pb->p.f[0]));
-	return pb;
+	return (feature_eq(f, &prob_dict->feature_table[i]) &&
+		prob_dict->gamma_table[i] != -1);
 }
 
 /* Lookup gamma for that feature. */
 static floating_t
 feature_gamma(feature_t *f)
 {
-	pattern_prob_t *pb = feature_prob(f);
-	return pb->gamma;
+	/* Not checking feature_eq(f, prob_dict->feature_table[i]),
+	 * we should be properly initialized at this stage. */
+	int i = feature_gamma_number(f);
+	return prob_dict->gamma_table[i];
 }
 
 /* Return probability associated with given pattern. */

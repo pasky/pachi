@@ -1,8 +1,6 @@
 #ifndef PACHI_PATTERNPROB_H
 #define PACHI_PATTERNPROB_H
 
-/* Pattern probability table. */
-
 #include <math.h>
 
 #include "board.h"
@@ -13,13 +11,9 @@
  * and using Rémi MM formula. The probability table has one gamma for
  * each possible feature. */
 
-typedef struct pattern_prob {
-	pattern_t p;
-	floating_t gamma;
-} pattern_prob_t;
-
 typedef struct {
-	pattern_prob_t *table; /* [pattern_gammas()] */
+	floating_t *gamma_table;    /* [pattern_gammas()] */
+	feature_t  *feature_table;  /* [pattern_gammas()] */
 } prob_dict_t;
 
 /* The patterns probability dictionary */
