@@ -185,6 +185,20 @@ init_feature_info(pattern_config_t *pc)
 		/* Regular feature */
 		assert(features[i].payloads > 0);
 	}
+
+	/* Init gamma numbers */
+	int gamma_number = 0;
+	for (int i = 0; i < FEAT_MAX; i++) {
+		features[i].first_gamma = gamma_number;
+		assert(features[i].payloads > 0);
+		gamma_number += features[i].payloads;
+	}
+}
+
+int
+pattern_gammas(void)
+{
+	return features[FEAT_MAX-1].first_gamma + feature_payloads(FEAT_MAX-1);
 }
 
 void

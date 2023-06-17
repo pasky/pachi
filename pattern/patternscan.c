@@ -36,7 +36,6 @@ typedef struct {
 	int loaded_spatials;      /* Number of loaded spatials; checkpoint for saving new sids
 				   * in case gen_spat_dict is enabled. */
 
-	unsigned int feature2mm[FEAT_MAX];  /* gamma number feature starts from */
 	unsigned int *spatial2mm;	    /* 0-based spatial index by dist for each spatial */
 	strbuf_t buf;
 
@@ -63,7 +62,7 @@ static feature_info_t *features = pattern_features;
 static void
 mm_print_feature(patternscan_t *ps, strbuf_t *buf, feature_t *f)
 {
-	int mm_number = ps->feature2mm[f->id];
+	int mm_number = features[f->id].first_gamma;
 	assert(f->id >= 0 && f->id < FEAT_MAX);
 
 	/* Spatial feature */
@@ -98,17 +97,11 @@ mm_print_pattern(patternscan_t *ps, strbuf_t *buf, pattern_t *p)
 	sbprintf(buf, "\n");
 }
 
-static int
-mm_gammas(patternscan_t *ps)
-{
-	return ps->feature2mm[FEAT_MAX-1] + feature_payloads(FEAT_MAX-1);
-}
-
 static void
 mm_header(patternscan_t *ps)
 {
 	/* Number of gammas */
-	printf("! %i\n", mm_gammas(ps));
+	printf("! %i\n", pattern_gammas());
 
 	/* Number of features */
 	printf("%i\n", FEAT_MAX);
@@ -127,7 +120,7 @@ mm_table(patternscan_t *ps)
 	
 	for (int i = 0; i < FEAT_MAX; i++) {
 		feature_t f = feature(i, 0);
-		int gamma = ps->feature2mm[i];
+		int gamma = features[i].first_gamma;
 		
 		if (i >= FEAT_SPATIAL) {  /* Spatial feature */
 			for (unsigned int j = 0; j < spat_dict->nspatials; j++) {
@@ -152,24 +145,10 @@ mm_table(patternscan_t *ps)
 	fclose(file);
 }
 
-/* Init features gamma numbers */
-static void
-init_feature_numbers(patternscan_t *ps)
-{
-	int number = 0;  /* mm gamma numbers are 0-based */
-	for (int i = 0; i < FEAT_MAX; i++) {
-		ps->feature2mm[i] = number;
-		
-		assert(features[i].payloads > 0);
-		number += features[i].payloads;
-	}
-}
 
 static void
 patternscan_mm_init(patternscan_t *ps)
 {
-	init_feature_numbers(ps);
-	
 	/* Assign mm number to each spatial */
 	ps->spatial2mm = calloc2(spat_dict->nspatials, unsigned int);
 	unsigned int nspatials_by_dist[MAX_PATTERN_DIST+1] = { 0, };

@@ -33,6 +33,7 @@ typedef struct {
 	char        *name;
 	unsigned int payloads;
 	int          spatial;		/* For spatial features, spatial feature dist */
+	int          first_gamma;	/* gamma numbers for this feature start from here */
 } feature_info_t;
 
 extern feature_info_t pattern_features[];
@@ -189,6 +190,8 @@ char *feature2sstr(feature_t *f);
 char *str2feature(char *str, feature_t *f);
 /* Get number of possible payload values associated with the feature. */
 #define feature_payloads(id)  (pattern_features[id].payloads)
+/* Get total number of gammas for all features */
+int pattern_gammas(void);
 
 /* Append pattern as feature spec string. */
 char *pattern2str(char *str, pattern_t *p);
