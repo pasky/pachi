@@ -190,6 +190,8 @@ char *feature2sstr(feature_t *f);
 char *str2feature(char *str, feature_t *f);
 /* Get number of possible payload values associated with the feature. */
 #define feature_payloads(id)  (pattern_features[id].payloads)
+/* Get gamma number for feature */
+static int feature_gamma_number(feature_t *f);
 /* Get total number of gammas for all features */
 int pattern_gammas(void);
 
@@ -250,6 +252,13 @@ pattern_eq(pattern_t *p1, pattern_t *p2)
 		if (!feature_eq(&p1->f[i], &p2->f[i]))
 			return false;
 	return true;
+}
+
+static inline int
+feature_gamma_number(feature_t *f)
+{
+	assert(f->payload < feature_payloads(f->id));
+	return pattern_features[f->id].first_gamma + f->payload;
 }
 
 

@@ -168,29 +168,30 @@ init_feature_info(pattern_config_t *pc)
 	/* Sanity check, we use FEAT_MAX to iterate over features. */
 	assert(sizeof(pattern_features) / sizeof(*pattern_features) == FEAT_MAX);
 
+	/* Check spatial features come last */
+	int first_spatial = 0;
+	for (int i = 0; i < FEAT_MAX; i++)
+		if (features[i].spatial)  {  first_spatial = i;  break;  }
+	for (int i = 0; i < FEAT_MAX; i++)
+		if (!features[i].spatial && i > first_spatial)
+			die("spatial features must be last !");
+	
 	/* Init feature payloads */
-	bool after_spatial = false;
+	features[FEAT_BORDER].payloads = pc->bdist_max + 1;
 	for (int i = 0; i < FEAT_MAX; i++) {
-		if (features[i].spatial) {
-			after_spatial = true;
+		if (features[i].spatial)
 			features[i].payloads = spat_dict->nspatials_by_dist[features[i].spatial];
-			continue;
-		} else if (after_spatial)  die("spatial features must be last !");
-		
-		if (i == FEAT_BORDER)  {
-			features[i].payloads = pc->bdist_max + 1;
-			continue;  
-		}
-		
-		/* Regular feature */
+
+#ifndef GENSPATIAL
+		/* Sanity check, empty features likely not a good sign ... */
 		assert(features[i].payloads > 0);
+#endif
 	}
 
 	/* Init gamma numbers */
 	int gamma_number = 0;
 	for (int i = 0; i < FEAT_MAX; i++) {
 		features[i].first_gamma = gamma_number;
-		assert(features[i].payloads > 0);
 		gamma_number += features[i].payloads;
 	}
 }
@@ -1204,9 +1205,8 @@ pattern_match_spatial_outer(board_t *b, move_t *m, pattern_t *p, feature_t *f,
 		spatial_t *s2 = spatial_dict_lookup(d, spatial_hash(0, &s));
 		if (!s2)  continue;
 
-		unsigned int sid = spatial_id(s2);
 		f->id = FEAT_SPATIAL3 + d - 3;
-		f->payload = sid;
+		f->payload = spatial_payload(s2);
 		if (!pc->spat_largest)
 			(f++, p->n++);
 	}
@@ -1233,9 +1233,8 @@ pattern_match_spatial_outer(board_t *b, move_t *m, pattern_t *p, feature_t *f,
 		if (!s)			continue;
 		
 		/* Record spatial feature, one per distance. */
-		unsigned int sid = spatial_id(s);
 		f->id = (enum feature_id)(FEAT_SPATIAL3 + d - 3);
-		f->payload = sid;
+		f->payload = spatial_payload(s);
 		if (!pc->spat_largest)
 			(f++, p->n++);
 	}
@@ -1542,36 +1541,20 @@ pattern2sstr(pattern_t *p)
 static void
 check_pattern_gammas(pattern_config_t *pc)
 {
-	feature_t f;
-
 	if (DEBUGL(1)) {  fprintf(stderr, "Checking gammas ...");  fflush(stderr);  }
+
+	feature_t f;	
 	for (int i = 0; i < FEAT_MAX; i++) {
 		f.id = (enum feature_id)i;
 
-		if (i >= FEAT_SPATIAL) { 
-			for (unsigned int j = 0; j < spat_dict->nspatials; j++) {
-                                spatial_t *s = get_spatial(j);
-				if (!s->dist)  continue;
-				assert(s->dist >= 3);
-				f.id = (enum feature_id)(FEAT_SPATIAL + s->dist - 3);
-				f.payload = j;
-				if (!feature_has_gamma(&f))  goto error;
-			}
-			goto done;  /* Check all spatial features at once ... */
-		}
-
 		for (unsigned int j = 0; j < feature_payloads(i); j++) {
 			f.payload = j;
-			if (!feature_has_gamma(&f))  goto error;
+			if (!feature_has_gamma(&f))
+				die("\nNo gamma for feature (%s)\n", feature2sstr(&f));
 		}
 	}
 
- done:
 	if (DEBUGL(1)) fprintf(stderr, " OK\n");
-	return;
-
- error:
-	die("\nNo gamma for feature (%s)\n", feature2sstr(&f));
 }
 
 char *

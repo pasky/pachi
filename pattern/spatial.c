@@ -492,7 +492,11 @@ spatial_dict_index_by_dist(pattern_config_t *pc, const char *filename)
 		if (!d) continue;
 		assert(d <= MAX_PATTERN_DIST && d >= 3);
 		if (d < prev_d)  die("%s: spatial dictionary must be sorted by distance\n", filename);
+		
 		spat_dict->nspatials_by_dist[d]++;
+		if (d != prev_d)
+			spat_dict->first_id[d] = i;
+		
 		prev_d = d;
 	}
 	

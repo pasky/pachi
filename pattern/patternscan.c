@@ -36,7 +36,6 @@ typedef struct {
 	int loaded_spatials;      /* Number of loaded spatials; checkpoint for saving new sids
 				   * in case gen_spat_dict is enabled. */
 
-	unsigned int *spatial2mm;	    /* 0-based spatial index by dist for each spatial */
 	strbuf_t buf;
 
 	/* Book-keeping of spatial occurence count. */
@@ -62,26 +61,9 @@ static feature_info_t *features = pattern_features;
 static void
 mm_print_feature(patternscan_t *ps, strbuf_t *buf, feature_t *f)
 {
-	int mm_number = features[f->id].first_gamma;
 	assert(f->id >= 0 && f->id < FEAT_MAX);
-
-	/* Spatial feature */
-	if (f->id >= FEAT_SPATIAL) {
-		spatial_t *s = &spat_dict->spatials[f->payload];
-		int spatial_id = s - spat_dict->spatials;
-		assert(s->dist == features[f->id].spatial);
-		mm_number += ps->spatial2mm[spatial_id];
-		sbprintf(buf, "%i", mm_number);
-#ifdef DEBUG_MM
-		sbprintf(buf, "(%s:%i=%i)", features[f->id].name, mm_number, f->payload);
-#endif
-		return;
-	}
-
-	/* Regular feature */	
-	assert(f->payload < feature_payloads(f->id));  /* Sanity check, payloads are 0-based */
-	mm_number += f->payload;
-	sbprintf(buf, "%i", mm_number);
+	
+	sbprintf(buf, "%i", feature_gamma_number(f));
 #ifdef DEBUG_MM
 	sbprintf(buf, "(%s:%i)", features[f->id].name, f->payload);
 #endif
@@ -120,25 +102,9 @@ mm_table(patternscan_t *ps)
 	
 	for (int i = 0; i < FEAT_MAX; i++) {
 		feature_t f = feature(i, 0);
-		int gamma = features[i].first_gamma;
-		
-		if (i >= FEAT_SPATIAL) {  /* Spatial feature */
-			for (unsigned int j = 0; j < spat_dict->nspatials; j++) {
-                                spatial_t *s = get_spatial(j);
-				f.payload = j;
-                                if (s->dist == features[i].spatial) {
-					int spatial_id = s - spat_dict->spatials;
-					int mm_number = ps->spatial2mm[spatial_id];
-					fprintf(file, "%i (%s)\n", gamma + mm_number, feature2sstr(&f));
-				}
-			}
-			continue;
-		}
-
-		/* Regular feature */
 		for (unsigned int j = 0; j < feature_payloads(i); j++) {
 			f.payload = j;
-			fprintf(file, "%i (%s)\n", gamma + j, feature2sstr(&f));
+			fprintf(file, "%i (%s)\n", feature_gamma_number(&f), feature2sstr(&f));
 		}
 	}
 	
@@ -149,17 +115,6 @@ mm_table(patternscan_t *ps)
 static void
 patternscan_mm_init(patternscan_t *ps)
 {
-	/* Assign mm number to each spatial */
-	ps->spatial2mm = calloc2(spat_dict->nspatials, unsigned int);
-	unsigned int nspatials_by_dist[MAX_PATTERN_DIST+1] = { 0, };
-	for (unsigned int i = 0; i < spat_dict->nspatials; i++) {
-		spatial_t *s = get_spatial(i);
-		int d = s->dist;
-		if (!d) continue;
-		assert(d <= MAX_PATTERN_DIST && d >= 3);
-		ps->spatial2mm[i] = nspatials_by_dist[d]++;
-	}
-
 	/* mm header */
 	mm_header(ps);
 	
@@ -375,7 +330,6 @@ patternscan_done(engine_t *e)
 	if (ps->gen_spat_dict)
 		genspatial_done(ps);
 
-	free(ps->spatial2mm);  ps->spatial2mm = NULL;	
 	free(ps->buf.str);     ps->buf.str = NULL;
 }
 

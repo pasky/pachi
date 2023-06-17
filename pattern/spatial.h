@@ -98,11 +98,15 @@ typedef struct spatial_entry {
 
 typedef struct {
 	/* Indexed base store */
-	unsigned int nspatials; /* Number of records. */
-	spatial_t *spatials; /* Actual records. */
+	unsigned int nspatials;  /* Number of records. */
+	spatial_t   *spatials;   /* Actual records. */
 	
-	/* number of spatials for each dist, for mm tool */
-	unsigned int     nspatials_by_dist[MAX_PATTERN_DIST+1];
+	/* Number of spatials for each distance */
+	unsigned int nspatials_by_dist[MAX_PATTERN_DIST+1];
+
+	/* Id of first entry for each distance (during normal
+	 * operations dictionary is sorted by spatial distance) */
+	unsigned int first_id[MAX_PATTERN_DIST+1];
 
 	/* Hashed access (all isomorphous configurations are also hashed)
 	 * Maps to spatials[] indices. Hash function: zobrist hashing with fixed values. */
@@ -112,8 +116,13 @@ typedef struct {
 extern spatial_dict_t *spat_dict;
 extern const char *spatial_dict_filename;
 
-#define spatial_id(s)    ((unsigned int)((s) - spat_dict->spatials))
-#define get_spatial(id)  (spat_dict->spatials + (id))
+ 
+/* Get feature payload for this spatial. */
+#define spatial_payload(s)  (spatial_id(s) - spat_dict->first_id[s->dist])
+
+/* Pretty much nothing outside of spatial.c should be using spatial_id() anymore */
+#define spatial_id(s)       ((unsigned int)((s) - spat_dict->spatials))
+#define get_spatial(id)     (spat_dict->spatials + (id))
 
 
 /* Fill up the spatial record from @m vincinity, up to full distance
