@@ -1193,10 +1193,10 @@ pattern_match_spatial_outer(board_t *b, move_t *m, pattern_t *p, feature_t *f,
 	int dmax = s.dist;
 	for (int d = pc->spat_min; d <= dmax; d++) {
 		s.dist = d;
-		spatial_t *s2 = spatial_dict_lookup(spat_dict, d, spatial_hash(0, &s));
+		spatial_t *s2 = spatial_dict_lookup(d, spatial_hash(0, &s));
 		if (!s2)  continue;
 
-		unsigned int sid = spatial_id(s2, spat_dict);
+		unsigned int sid = spatial_id(s2);
 		f->id = FEAT_SPATIAL3 + d - 3;
 		f->payload = sid;
 		if (!pc->spat_largest)
@@ -1221,11 +1221,11 @@ pattern_match_spatial_outer(board_t *b, move_t *m, pattern_t *p, feature_t *f,
 			h ^= pthashes[0][j][bt[board_atxy(b, x, y)]];
 		}
 		if (d < pc->spat_min)	continue;			
-		spatial_t *s = spatial_dict_lookup(spat_dict, d, h);
+		spatial_t *s = spatial_dict_lookup(d, h);
 		if (!s)			continue;
 		
 		/* Record spatial feature, one per distance. */
-		unsigned int sid = spatial_id(s, spat_dict);
+		unsigned int sid = spatial_id(s);
 		f->id = (enum feature_id)(FEAT_SPATIAL3 + d - 3);
 		f->payload = sid;
 		if (!pc->spat_largest)
@@ -1542,7 +1542,7 @@ check_pattern_gammas(pattern_config_t *pc)
 
 		if (i >= FEAT_SPATIAL) { 
 			for (unsigned int j = 0; j < spat_dict->nspatials; j++) {
-                                spatial_t *s = &spat_dict->spatials[j];
+                                spatial_t *s = get_spatial(j);
 				if (!s->dist)  continue;
 				assert(s->dist >= 3);
 				f.id = (enum feature_id)(FEAT_SPATIAL + s->dist - 3);

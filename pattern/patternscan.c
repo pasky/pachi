@@ -131,7 +131,7 @@ mm_table(patternscan_t *ps)
 		
 		if (i >= FEAT_SPATIAL) {  /* Spatial feature */
 			for (unsigned int j = 0; j < spat_dict->nspatials; j++) {
-                                spatial_t *s = &spat_dict->spatials[j];
+                                spatial_t *s = get_spatial(j);
 				f.payload = j;
                                 if (s->dist == features[i].spatial) {
 					int spatial_id = s - spat_dict->spatials;
@@ -174,7 +174,7 @@ patternscan_mm_init(patternscan_t *ps)
 	ps->spatial2mm = calloc2(spat_dict->nspatials, unsigned int);
 	unsigned int nspatials_by_dist[MAX_PATTERN_DIST+1] = { 0, };
 	for (unsigned int i = 0; i < spat_dict->nspatials; i++) {
-		spatial_t *s = &spat_dict->spatials[i];
+		spatial_t *s = get_spatial(i);
 		int d = s->dist;
 		if (!d) continue;
 		assert(d <= MAX_PATTERN_DIST && d >= 3);
@@ -249,7 +249,7 @@ genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 	int dmax = s.dist;
 	for (int d = ps->pc.spat_min; d <= dmax; d++) {
 		s.dist = d;
-		unsigned int sid = spatial_dict_add(spat_dict, &s);
+		unsigned int sid = spatial_dict_add(&s);
 #define SCOUNTS_ALLOC 1048576 // Allocate space in 1M*4 blocks.
 		if (sid >= ps->nscounts) {
 			int newnsc = (sid / SCOUNTS_ALLOC + 1) * SCOUNTS_ALLOC;
@@ -341,7 +341,7 @@ genspatial_done(patternscan_t *ps)
 	bool newfile = !file_exists(spatial_dict_filename);
 	FILE *f = fopen(spatial_dict_filename, "a");
 	if (newfile)
-		spatial_dict_writeinfo(spat_dict, f);
+		spatial_dict_writeinfo(f);
 
 	/* Sort new spatials, most frequent first */
 #define MATCHES_ALLOC 65536
@@ -363,8 +363,8 @@ genspatial_done(patternscan_t *ps)
 	for (unsigned int j = 0; j < nmatches; j++) {
 		unsigned int id = matches[j];
 		unsigned int newid = ps->loaded_spatials + j;
-		spatial_t *s = &spat_dict->spatials[id];
-		spatial_write(spat_dict, s, newid, f);
+		spatial_t *s = get_spatial(id);
+		spatial_write(s, newid, f);
 
 		/* Stats */
 		fprintf(stderr, "hits=%-6i   id=%-6i    d=%-2i    %s\n", ps->scounts[id], id, s->dist, spatial2str(s));

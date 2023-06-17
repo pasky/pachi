@@ -113,8 +113,8 @@ typedef struct {
 extern spatial_dict_t *spat_dict;
 extern const char *spatial_dict_filename;
 
-#define spatial_id(s, dict)  ((unsigned int)((s) - (dict)->spatials))
-#define spatial(id, dict)    ((dict)->spatials + (id))
+#define spatial_id(s)    ((unsigned int)((s) - spat_dict->spatials))
+#define get_spatial(id)  (spat_dict->spatials + (id))
 
 
 /* Fill up the spatial record from @m vincinity, up to full distance
@@ -189,17 +189,17 @@ void spatial_dict_init(pattern_config_t *pc, bool create);
 void spatial_dict_done();
 
 /* Lookup spatial pattern (resolves collisions). */
-spatial_t *spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t spatial_hash);
+spatial_t *spatial_dict_lookup(int dist, hash_t spatial_hash);
 
 /* Store specified spatial pattern in the dictionary if it is not known yet.
  * Returns spatial id. */
-unsigned int spatial_dict_add(spatial_dict_t *dict, spatial_t *s);
+unsigned int spatial_dict_add(spatial_t *s);
 
 /* Write comment lines describing the dictionary (e.g. point order
  * in patterns) to given file. */
-void spatial_dict_writeinfo(spatial_dict_t *dict, FILE *f);
+void spatial_dict_writeinfo(FILE *f);
 
 /* Append specified spatial pattern to the given file. */
-void spatial_write(spatial_dict_t *dict, spatial_t *s, unsigned int id, FILE *f);
+void spatial_write(spatial_t *s, unsigned int id, FILE *f);
 
 #endif
