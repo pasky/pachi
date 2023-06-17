@@ -239,7 +239,7 @@ patterns_init(pattern_config_t *pc, char *arg, bool create, bool load_prob)
 	
 	/* Load probability dictionary */
 	if (!prob_dict) {
-		prob_dict_init(pdict_file, pc);		
+		prob_dict_init(pdict_file);
 		/* Make sure each feature has a gamma ... */
 		if (prob_dict)  check_pattern_gammas(pc);
 	}
@@ -1547,14 +1547,14 @@ check_pattern_gammas(pattern_config_t *pc)
 				assert(s->dist >= 3);
 				f.id = (enum feature_id)(FEAT_SPATIAL + s->dist - 3);
 				f.payload = j;
-				if (!feature_has_gamma(&f, pc))  goto error;
+				if (!feature_has_gamma(&f))  goto error;
 			}
 			goto done;  /* Check all spatial features at once ... */
 		}
 
 		for (int j = 0; j < feature_payloads((enum feature_id)i); j++) {
 			f.payload = j;
-			if (!feature_has_gamma(&f, pc))  goto error;
+			if (!feature_has_gamma(&f))  goto error;
 		}
 	}
 

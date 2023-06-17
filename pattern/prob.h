@@ -33,7 +33,7 @@ extern prob_dict_t *prob_dict;
 
 /* Initialize the prob_dict data structure from a given file (pass NULL
  * to use default filename). */
-void prob_dict_init(char *filename, pattern_config_t *pc);
+void prob_dict_init(char *filename);
 
 /* Free patterns probability dictionary. */
 void prob_dict_done();
@@ -59,26 +59,26 @@ void print_pattern_best_moves(board_t *b, coord_t *best_c, float *best_r, int nb
 void get_pattern_best_moves(board_t *b, floating_t *probs, coord_t *best_c, float *best_r, int nbest);
 
 /* Debugging */
-void dump_gammas(strbuf_t *buf, pattern_t *p, pattern_config_t *pc);
+void dump_gammas(strbuf_t *buf, pattern_t *p);
 
 /* Do we have a gamma for that feature ? */
-bool feature_has_gamma(feature_t *f, pattern_config_t *pc);
+bool feature_has_gamma(feature_t *f);
 
 /* Lookup gamma for that feature. */
-static floating_t feature_gamma(feature_t *f, pattern_config_t *pc);
+static floating_t feature_gamma(feature_t *f);
 
 /* Return probability associated with given pattern. */
-static floating_t pattern_gamma(pattern_t *p, pattern_config_t *pc);
+static floating_t pattern_gamma(pattern_t *p);
 
 /* Extract spatial id from pattern feature.
  * If not a spatial feature returns highest spatial id plus one. */
-static uint32_t feature2spatial(feature_t *f, pattern_config_t *pc);
+static uint32_t feature2spatial(feature_t *f);
 
 
 static inline floating_t
-feature_gamma(feature_t *f, pattern_config_t *pc)
+feature_gamma(feature_t *f)
 {
-	uint32_t spi = feature2spatial(f, pc);
+	uint32_t spi = feature2spatial(f);
 	for (pattern_prob_t *pb = prob_dict->table[spi]; pb; pb = pb->next)
 		if (feature_eq(f, &pb->p.f[0]))
 			return pb->gamma;
@@ -87,17 +87,17 @@ feature_gamma(feature_t *f, pattern_config_t *pc)
 }
 
 static inline floating_t
-pattern_gamma(pattern_t *p, pattern_config_t *pc)
+pattern_gamma(pattern_t *p)
 {
 	floating_t gammas = 1;
 	for (int i = 0; i < p->n; i++)
-		gammas *= feature_gamma(&p->f[i], pc);
+		gammas *= feature_gamma(&p->f[i]);
 	return gammas;
 }
 
 
 static inline uint32_t
-feature2spatial(feature_t *f, pattern_config_t *pc)
+feature2spatial(feature_t *f)
 {
 	if (f->id >= FEAT_SPATIAL3)
 		return f->payload;

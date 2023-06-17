@@ -799,7 +799,7 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	pattern_match(b, &m, &p, ct, locally);
 	
 	strbuf(buf, 1000);
-	dump_gammas(buf, &p, ct->pc);
+	dump_gammas(buf, &p);
 	pattern_context_free(ct);
 
 	gtp_printf(gtp, "TEXT %s\n", buf->str);

@@ -14,7 +14,7 @@
 prob_dict_t    *prob_dict = NULL;
 
 void
-prob_dict_init(char *filename, pattern_config_t *pc)
+prob_dict_init(char *filename)
 {
 	assert(!prob_dict);
 	if (!filename)  filename = "patterns_mm.gamma";
@@ -40,9 +40,9 @@ prob_dict_init(char *filename, pattern_config_t *pc)
 		str2pattern(buf, &pb->p);
 		assert(pb->p.n == 1);				/* One gamma per feature, please ! */
 
-		uint32_t spi = feature2spatial(&pb->p.f[0], pc);
+		uint32_t spi = feature2spatial(&pb->p.f[0]);
 		assert(spi <= spat_dict->nspatials);		/* Bad patterns.spat / patterns.prob ? */
-		if (feature_has_gamma(&pb->p.f[0], pc))
+		if (feature_has_gamma(&pb->p.f[0]))
 			die("%s: multiple gammas for feature %s\n", filename, pattern2sstr(&pb->p));
 		pb->next = prob_dict->table[spi];
 		prob_dict->table[spi] = pb;
@@ -84,7 +84,7 @@ pattern_rate_move_full(board_t *b, move_t *m, pattern_t *pat,
 	if (!board_is_valid_play_no_suicide(b, m->color, m->coord)) return prob;
 
 	pattern_match(b, m, pat, ct, locally);
-	prob = pattern_gamma(pat, ct->pc);
+	prob = pattern_gamma(pat);
 	
 	//if (DEBUGL(5)) {
 	//	char buf[256]; pattern2str(buf, pat);
@@ -102,7 +102,7 @@ pattern_rate_move_vanilla(board_t *b, move_t *m, pattern_t *pat, pattern_context
 	if (!board_is_valid_play_no_suicide(b, m->color, m->coord)) return prob;
 
 	pattern_match_vanilla(b, m, pat, ct);
-	prob = pattern_gamma(pat, ct->pc);
+	prob = pattern_gamma(pat);
 	
 	//if (DEBUGL(5)) {
 	//	char buf[256]; pattern2str(buf, pat);
@@ -216,15 +216,15 @@ pattern_matching_locally(board_t *b, enum stone color, pattern_context_t *ct)
 }
 
 void
-dump_gammas(strbuf_t *buf, pattern_t *p, pattern_config_t *pc)
+dump_gammas(strbuf_t *buf, pattern_t *p)
 {
 	const char *head = "";
-	floating_t gamma = pattern_gamma(p, pc);
+	floating_t gamma = pattern_gamma(p);
 	sbprintf(buf, "%.2f = ", gamma);
 	
 	for (int i = 0; i < p->n; i++) {
 		feature_t *f = &p->f[i];		
-		sbprintf(buf, "%s(%s) %.2f ", head, feature2sstr(f), feature_gamma(f, pc));
+		sbprintf(buf, "%s(%s) %.2f ", head, feature2sstr(f), feature_gamma(f));
 		head = "* ";
 		continue;
 	}
@@ -232,9 +232,9 @@ dump_gammas(strbuf_t *buf, pattern_t *p, pattern_config_t *pc)
 
 /* Do we have a gamma for that feature ? */
 bool
-feature_has_gamma(feature_t *f, pattern_config_t *pc)
+feature_has_gamma(feature_t *f)
 {
-	uint32_t spi = feature2spatial(f, pc);
+	uint32_t spi = feature2spatial(f);
 	for (pattern_prob_t *pb = prob_dict->table[spi]; pb; pb = pb->next)
 		if (feature_eq(f, &pb->p.f[0]))
 			return true;

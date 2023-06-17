@@ -50,7 +50,7 @@ debug_pattern_best_moves(pattern_engine_t *pp, board_t *b, enum stone color,
 		pattern_match(b, &m, &p, ct, locally);
 
 		strbuf(buf, 512);
-		dump_gammas(buf, &p, &pp->pc);
+		dump_gammas(buf, &p);
 		fprintf(stderr, "%3s gamma %s\n", coord2sstr(m.coord), buf->str);
 	}
 	fprintf(stderr, "\n");
