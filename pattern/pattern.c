@@ -53,17 +53,19 @@ static void check_pattern_gammas(pattern_config_t *pc);
     } while(0)
 
 /* Debugging. Find if pattern has given feature.
- * @payload: -1 to match any feature of this kind or payload to match */
+ * @payload: payload to match, or -1 to match any feature of this kind. */
 static inline bool
-pattern_has_feature(pattern_t *p, int feature_id, int payload)
+pattern_has_feature(pattern_t *p, enum feature_id id, int payload)
 {
-	assert(feature_id < FEAT_MAX);
+	unsigned int payload_ = payload;
+	
+	assert(id < FEAT_MAX);
 	for (int i = 0; i < p->n; i++) {
 		feature_t *f = &p->f[i];
-		if (f->id != feature_id)  continue;
+		if (f->id != id)  continue;
 		
 		if (payload == -1)		return true;
-		if (f->payload == payload)	return true;
+		if (f->payload == payload_)	return true;
 	}
 	return false;
 }
@@ -94,14 +96,14 @@ features_init()
 	features[FEAT_DISTANCE2] =       feature_info("dist2",           19,              0);
 	features[FEAT_MCOWNER] =         feature_info("mcowner",         9,               0);
 	features[FEAT_NO_SPATIAL] =      feature_info("nospat",          1,               0);
-	features[FEAT_SPATIAL3] =        feature_info("s3",              -1,              3);
-	features[FEAT_SPATIAL4] =        feature_info("s4",              -1,              4);
-	features[FEAT_SPATIAL5] =        feature_info("s5",              -1,              5);
-	features[FEAT_SPATIAL6] =        feature_info("s6",              -1,              6);
-	features[FEAT_SPATIAL7] =        feature_info("s7",              -1,              7);
-	features[FEAT_SPATIAL8] =        feature_info("s8",              -1,              8);
-	features[FEAT_SPATIAL9] =        feature_info("s9",              -1,              9);
-	features[FEAT_SPATIAL10] =       feature_info("s10",             -1,              10);
+	features[FEAT_SPATIAL3] =        feature_info("s3",              0,               3);
+	features[FEAT_SPATIAL4] =        feature_info("s4",              0,               4);
+	features[FEAT_SPATIAL5] =        feature_info("s5",              0,               5);
+	features[FEAT_SPATIAL6] =        feature_info("s6",              0,               6);
+	features[FEAT_SPATIAL7] =        feature_info("s7",              0,               7);
+	features[FEAT_SPATIAL8] =        feature_info("s8",              0,               8);
+	features[FEAT_SPATIAL9] =        feature_info("s9",              0,               9);
+	features[FEAT_SPATIAL10] =       feature_info("s10",             0,               10);
 }
 
 /* Feature values may be named, otherwise payload is printed as number.
@@ -183,14 +185,6 @@ init_feature_info(pattern_config_t *pc)
 		/* Regular feature */
 		assert(features[i].payloads > 0);
 	}
-}
-
-int
-feature_payloads(int id)
-{
-	assert(id >= 0 && id < FEAT_MAX);
-	assert(features[id].payloads > 0);
-	return features[id].payloads;
 }
 
 void
@@ -1552,7 +1546,7 @@ check_pattern_gammas(pattern_config_t *pc)
 			goto done;  /* Check all spatial features at once ... */
 		}
 
-		for (int j = 0; j < feature_payloads((enum feature_id)i); j++) {
+		for (unsigned int j = 0; j < feature_payloads(i); j++) {
 			f.payload = j;
 			if (!feature_has_gamma(&f))  goto error;
 		}

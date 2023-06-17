@@ -143,7 +143,7 @@ mm_table(patternscan_t *ps)
 		}
 
 		/* Regular feature */
-		for (int j = 0; j < feature_payloads(i); j++) {
+		for (unsigned int j = 0; j < feature_payloads(i); j++) {
 			f.payload = j;
 			fprintf(file, "%i (%s)\n", gamma + j, feature2sstr(&f));
 		}

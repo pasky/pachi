@@ -775,7 +775,7 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	int dist = 0;
 	for (int i = 0; i < p.n; i++)
 		if (p.f[i].id >= FEAT_SPATIAL3)
-			dist = MAX(dist, p.f[i].id - FEAT_SPATIAL3 + 3);
+			dist = MAX(dist, (int)p.f[i].id - FEAT_SPATIAL3 + 3);
 	
 	gtp_printf(gtp, "TEXT %s\n", pattern2sstr(&p));
 	if (dist)  gogui_show_pattern(b, coord, dist);

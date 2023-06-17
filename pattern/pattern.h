@@ -30,9 +30,9 @@
 //#define PATTERN_FEATURE_STATS 1
 
 typedef struct {
-	char *name;
-	int payloads;
-	int spatial;   /* For spatial features, spatial feature dist */
+	char        *name;
+	unsigned int payloads;
+	int          spatial;		/* For spatial features, spatial feature dist */
 } feature_info_t;
 
 extern feature_info_t pattern_features[];
@@ -143,8 +143,8 @@ enum feature_id {
 #define FEAT_SPATIAL FEAT_SPATIAL3
 
 typedef struct {
-	enum feature_id id:8;
-	unsigned int payload:24;
+	enum feature_id id;
+	unsigned int    payload;
 } feature_t;
 
 #define feature(id, payload)  {  (enum feature_id)(id), (payload)  }
@@ -188,7 +188,7 @@ char *feature2sstr(feature_t *f);
 /* String to feature */
 char *str2feature(char *str, feature_t *f);
 /* Get number of possible payload values associated with the feature. */
-int feature_payloads(int id);
+#define feature_payloads(id)  (pattern_features[id].payloads)
 
 /* Append pattern as feature spec string. */
 char *pattern2str(char *str, pattern_t *p);
