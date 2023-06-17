@@ -349,28 +349,26 @@ spatial_dict_add(spatial_t *s)
 
 
 /* Spatial dictionary file format:
- * /^#/ - comments
- * INDEX RADIUS STONES HASH...
- * INDEX: index in the spatial table
- * RADIUS: @d of the pattern
- * STONES: string of ".XO#" chars
- * HASH...: space-separated 18bit hash-table indices for the pattern */
-
+ *   # comments
+ *   INDEX DIST STONES
+ * INDEX:  index in the spatial table
+ * DIST:   @d of the pattern (radius)
+ * STONES: string of ".XO#" chars   */
 static void
 spatial_dict_read(char *buf)
 {
 	/* XXX: We trust the data. Bad data will crash us. */
 	char *bufp = buf;
 
-	unsigned int index, radius;
+	unsigned int index, dist;
 	index = strtoul(bufp, &bufp, 10);
-	radius = strtoul(bufp, &bufp, 10);
+	dist = strtoul(bufp, &bufp, 10);
 	while (isspace(*bufp)) bufp++;
 
-	assert(radius <= MAX_PATTERN_DIST);
+	assert(dist <= MAX_PATTERN_DIST);
 
 	/* Load the stone configuration. */
-	spatial_t s = { radius, };
+	spatial_t s = { dist, };
 	unsigned int sl = 0;
 	while (!isspace(*bufp)) {
 		enum stone color = char2stone(*bufp++);
@@ -381,7 +379,7 @@ spatial_dict_read(char *buf)
 
 	/* Sanity check. */
 	if (sl != ptind[s.dist + 1])
-		die("Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n", sl, ptind[radius + 1] - 1, buf);
+		die("Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n", sl, ptind[dist + 1] - 1, buf);
 
 	unsigned int id = spatial_dict_add(&s);
 	assert(id == index);
@@ -467,7 +465,7 @@ spatial_dict_writeinfo(FILE *f)
 	/* New file. First, create a comment describing order
 	 * of points in the array. This is just for purposes
 	 * of external tools, Pachi never interprets it itself. */
-	fprintf(f, "# Pachi spatial patterns dictionary v1.0 maxdist %d\n",
+	fprintf(f, "# Pachi spatial patterns dictionary v1.1 maxdist %d\n",
 		MAX_PATTERN_DIST);
 	for (unsigned int d = 0; d <= MAX_PATTERN_DIST; d++) {
 		fprintf(f, "# Point order: d=%d ", d);
@@ -478,21 +476,24 @@ spatial_dict_writeinfo(FILE *f)
 	}
 }
 
+/* Count number of spatials for each distance. */
 static void
-spatial_dict_index_by_dist(pattern_config_t *pc)
+spatial_dict_index_by_dist(pattern_config_t *pc, const char *filename)
 {
 	assert(MAX_PATTERN_DIST == 10);
 	assert(pc->spat_max == MAX_PATTERN_DIST);
 	assert(pc->spat_min == 3);
 
+	int prev_d = 0;
 	for (unsigned int i = 0; i < spat_dict->nspatials; i++) {
 		spatial_t *s = get_spatial(i);
 		int d = s->dist;
 		//fprintf(stderr, "d: %i  %s\n", d, spatial2str(s));
-		/* XXX FIXME what are all these d=0 spatials ?! */
 		if (!d) continue;
 		assert(d <= MAX_PATTERN_DIST && d >= 3);
+		if (d < prev_d)  die("%s: spatial dictionary must be sorted by distance\n", filename);
 		spat_dict->nspatials_by_dist[d]++;
+		prev_d = d;
 	}
 	
 	for (int d = 3; d <= MAX_PATTERN_DIST; d++)
@@ -516,7 +517,7 @@ spatial_dict_init(pattern_config_t *pc, bool create)
 
 	if (f) {
 		spatial_dict_load(f);
-		spatial_dict_index_by_dist(pc);
+		spatial_dict_index_by_dist(pc, spatial_dict_filename);
 		fclose(f); f = NULL;
 	} else  assert(create);
 }

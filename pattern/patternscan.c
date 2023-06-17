@@ -305,11 +305,20 @@ patternscan_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, 
 	die("genmove command not available during patternscan!\n");
 }
 
+/* Sort spatials by distance + frequency */
 static int
-compare_pattern_counts(const void *p1, const void *p2)
+compare_spatials(const void *p1, const void *p2)
 {
 	unsigned int id1 = *(unsigned int*)p1;
 	unsigned int id2 = *(unsigned int*)p2;
+	spatial_t *s1 = get_spatial(id1);
+	spatial_t *s2 = get_spatial(id2);
+	
+	/* Sort by distance */
+	if (s1->dist != s2->dist)
+		return (s1->dist - s2->dist);
+	
+	/* Then by pattern frequency */
 	return (global_ps->scounts[id2] - global_ps->scounts[id1]);
 }
 
@@ -322,7 +331,7 @@ genspatial_done(patternscan_t *ps)
 	if (newfile)
 		spatial_dict_writeinfo(f);
 
-	/* Sort new spatials, most frequent first */
+	/* Sort new spatials by distance and frequency (most frequent first). */
 #define MATCHES_ALLOC 65536
 	unsigned int *matches = 0;
 	unsigned int nmatches = 0;
@@ -337,7 +346,7 @@ genspatial_done(patternscan_t *ps)
 		}
 	}
 
-	qsort(matches, nmatches, sizeof(*matches), compare_pattern_counts);
+	qsort(matches, nmatches, sizeof(*matches), compare_spatials);
 	
 	for (unsigned int j = 0; j < nmatches; j++) {
 		unsigned int id = matches[j];
