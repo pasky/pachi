@@ -12,7 +12,7 @@ To get latest version of this file, run:          (joseki_fixes branch on github
 Actual fixes are moves with an [override\] section at the top of the move comment.
 See josekifix.sgf for details.
 ]
-;B[pd]
+(;B[pd]
 (;W[]
 (;B[pp]
 ;W[]
@@ -358,3 +358,29 @@ Try pincer, L16 too good for w
 
 YZ1509 special opening.]
 ;W[]))
+(;B[dp]
+;W[]
+;B[pp]
+;W[fq]
+;B[hq]
+;W[fo]
+;B[dn]
+;W[nq]
+;B[kq]
+;W[no]
+;B[pn]
+;W[om]
+;B[pm]
+(;W[jp]
+;B[]C[[override\]
+name = "magoa h4 play"
+around = "K4"
+
+magoa pachipachi 2023-06-19
+])
+(;W[ip]
+;B[]C[[override\]
+name = "magoa h4 play"
+around = "K4"
+
+])))
