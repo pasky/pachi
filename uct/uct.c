@@ -477,14 +477,17 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	 * to reference ctx->t directly since the
 	 * thread manager will swap the tree pointer asynchronously. */
 
-	/* Now, just periodically poll the search tree. */
-	/* Note that in case of TD_GAMES, threads will not wait for
-	 * the uct_search_check_stop() signalization. */
+	/* Now, just periodically poll the search tree.
+	 * Note that in case of TD_GAMES, threads will not wait for the
+	 * uct_search_check_stop() signalization. 
+	 * TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
+	 * time control is broken. But if it happens to be less, we still search
+	 * at least 100ms otherwise the move is completely random. */
+	double interval = TREE_BUSYWAIT_INTERVAL;
+	bool   interval_set = false;
 	while (1) {
-		time_sleep(TREE_BUSYWAIT_INTERVAL);
-		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
-		 * time control is broken. But if it happens to be less, we still search
-		 * at least 100ms otherwise the move is completely random. */
+		uct_search_interval(u, &interval, &interval_set);
+		time_sleep(interval);
 
 		int i = uct_search_games(&s);
 		/* Print notifications etc. */

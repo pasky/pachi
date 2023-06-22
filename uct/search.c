@@ -119,6 +119,7 @@ worker_thread(void *ctx_)
 		uct_mcowner_playouts(u, b, color);
 		
 		if (!ctx->tid && !restarted) {
+			u->raw_playouts_per_sec = u->ownermap.playouts / (time_now() - time_start);
 			if (DEBUGL(2))  fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
 			if (DEBUGL(4))  fprintf(stderr, "\npattern ownermap:\n");
 			if (DEBUGL(4))  board_print_ownermap(b, stderr, &u->ownermap);
@@ -162,7 +163,7 @@ worker_thread(void *ctx_)
 		     usleep(100 * 1000);
 
 	/* Run */
-	if (!ctx->tid)  s->mcts_time_start = s->last_print_time = time_now();
+	if (!ctx->tid)  s->mcts_time_start = s->last_time = time_now();
 	ctx->games = uct_playouts(ctx->u, ctx->b, ctx->color, ctx->t, ctx->ti);
 	
 	/* Finish */
@@ -399,7 +400,7 @@ uct_search_start(uct_t *u, board_t *b, enum stone color,
 	u->search_flags = flags;
 	
 	/* Set up search state. */
-	s->base_playouts = s->last_dynkomi = s->last_print_playouts = t->root->u.playouts;
+	s->base_playouts = s->last_dynkomi = s->last_playouts = t->root->u.playouts;
 	s->fullmem = false;
 
 	/* If restarted timers are already setup, reuse stop condition in s */
@@ -503,6 +504,30 @@ uct_search_realloc_tree(uct_t *u, board_t *b, enum stone color, time_info_t *ti,
 	return 1;
 }
 
+/* Find appropriate uct_search() sleep() interval. */
+void
+uct_search_interval(uct_t *u, double *interval, bool *interval_set)
+{
+	if (*interval_set)
+		return;
+	
+	/* Time based */
+	if (u->reportfreq_time) {
+		*interval = MIN(*interval, u->reportfreq_time);
+		*interval_set = true;
+		return;
+	}
+
+	/* Playouts based */
+	if (!u->raw_playouts_per_sec)   /* Wait for mcowner to finish */
+		return;
+	
+	int playouts_per_sec = u->raw_playouts_per_sec;  /* Rough mcts playouts/s estimate */
+	if (playouts_per_sec * *interval > u->reportfreq_playouts)
+		*interval /= 2.0;
+	*interval_set = true;
+}
+
 void
 uct_search_progress(uct_t *u, board_t *b, enum stone color,
 		    tree_t *t, time_info_t *ti,
@@ -524,16 +549,18 @@ uct_search_progress(uct_t *u, board_t *b, enum stone color,
 
 	/* Print progress ? */
 	if (u->reportfreq_time) { /* Time based */
-		if (playouts > 100 && time_now() - s->last_print_time > u->reportfreq_time) {
-			s->last_print_time = time_now();
+		if (playouts > 100 && time_now() - s->last_time > u->reportfreq_time) {
+			s->last_time = time_now();
 			uct_progress_status(u, ctx->t, ctx->b, color, playouts, NULL);
 		}
 	}
-	else		          /* Playouts based */
-		if (playouts - s->last_print_playouts > u->reportfreq_playouts) {
-			s->last_print_playouts += u->reportfreq_playouts; // keep the numbers tidy
-			uct_progress_status(u, ctx->t, ctx->b, color, s->last_print_playouts, NULL);
+	else {		          /* Playouts based */
+		int reportfreq = u->reportfreq_playouts;
+		if (playouts - s->last_playouts > reportfreq) {
+			s->last_playouts += (playouts - s->last_playouts) / reportfreq * reportfreq; // keep the numbers tidy
+			uct_progress_status(u, ctx->t, ctx->b, color, s->last_playouts, NULL);
 		}
+	}
 
         if (!s->fullmem && ctx->t->nodes_size > ctx->t->max_tree_size) {
 		s->fullmem = true;
