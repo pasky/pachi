@@ -1234,7 +1234,15 @@ around = A3
 ])
 (;W[cr]
 ;B[dq]C[[override\]
-])))
+]))
+(;B[go]
+;W[gn]
+;B[gp]
+;W[hn]C[[override\]
+name = "4-4 shoulder hit cut defense"
+around = F3
+
+pachipachi globax 2023-06-26]))
 (;W[gp]
 (;B[]C[[override\]
 name = "4-4 shoulder hit keep all"
