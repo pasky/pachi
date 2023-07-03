@@ -16,9 +16,8 @@
 
 /* Maximum spatial pattern diameter. */
 #define MAX_PATTERN_DIST 10
-/* Maximum number of points in spatial pattern (upper bound).
- * TODO: Better upper bound to save more data. */
-#define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
+/* Maximum number of points in spatial pattern (upper bound). */
+#define MAX_PATTERN_AREA  73
 
 /* For each encountered configuration of stones, we keep it "spelled out"
  * in the spatial dictionary records, index them and refer just the indices
@@ -74,9 +73,9 @@
  *       26 16 10 15 25
  *             22
  */
- typedef struct {
+typedef struct {
 	unsigned char dist;		/* Gridcular radius of matched pattern. */
-	unsigned char points[MAX_PATTERN_AREA / 4];
+	unsigned char points[(MAX_PATTERN_AREA + 3) / 4];
 } spatial_t;
 
 #define spatial_point_at(s, i) ((enum stone)(((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3))
