@@ -39,18 +39,45 @@ dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color,
 	get_dcnn_best_moves(b, r, best_c, best_r, nbest);
 }	
 
+#define option_error engine_setoption_error
+
+static bool
+dcnn_engine_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
+		      char **err, bool setup, bool *reset)
+{
+	static_strbuf(ebuf, 256);
+
+	if (!strcasecmp(optname, "threads") && optval) {
+		/* Set number of threads for dcnn evaluation */
+		dcnn_set_threads(atoi(optval));
+	}
+	else
+		option_error("dcnn: Invalid engine argument %s or missing value\n", optname);
+
+	return true;
+}
+
 void
 dcnn_engine_init(engine_t *e, board_t *b)
 {
+	e->name = (char*)"DCNN";
+	e->comment = (char*)"I just select dcnn's best move.";
+	e->genmove = dcnn_genmove;
+	e->setoption = dcnn_engine_setoption;
+	e->best_moves = dcnn_best_moves;
+
+	/* Process engine options. */
+	char *err;
+	options_t *options = &e->options;
+	for (int i = 0; i < options->n; i++)
+		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
+			die("%s", err);
+	
 	dcnn_init(b);
 	if (!caffe_ready()) {
 		fprintf(stderr, "Couldn't initialize dcnn, aborting.\n");
 		abort();
 	}
 
-	e->name = (char*)"DCNN";
-	e->comment = (char*)"I just select dcnn's best move.";
-	e->genmove = dcnn_genmove;
-	e->best_moves = dcnn_best_moves;
 }
 
