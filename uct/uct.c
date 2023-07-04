@@ -1601,6 +1601,7 @@ uct_state_init(engine_t *e, board_t *b)
 
 	uct_tree_size_init(u, u->tree_size);
 
+	dcnn_set_threads(u->threads);
 	dcnn_init(b);
 	if (!using_dcnn(b))		joseki_load(board_rsize(b));
 	if (!pat_setup)			patterns_init(&u->pc, NULL, false, true);

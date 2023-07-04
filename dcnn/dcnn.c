@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <math.h>
+#include <openblas/cblas.h>
 
 #include "debug.h"
 #include "board.h"
@@ -111,6 +112,16 @@ using_dcnn(board_t *b)
 	bool r = dcnn_enabled && dcnn_supported_board_size(b) && caffe_ready();
 	if (dcnn_required && !r)  die("dcnn required but not used, aborting.\n");
 	return r;
+}
+
+/* Set number of threads to use for dcnn evaluation (default: number of cores). */
+void
+dcnn_set_threads(int threads)
+{
+	if (!dcnn_enabled)
+		return;
+	
+	openblas_set_num_threads(threads);
 }
 
 void
