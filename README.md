@@ -10,10 +10,10 @@ within this framework.
 
 ## Engine
 
-The default engine plays by Chinese rules and should be about 7d KGS
-strength on 9x9. On 19x19 it can hold a solid KGS 2d rank on modest
-hardware (Raspberry Pi, dcnn) or faster machine (e.g. six-way Intel
-i7) without dcnn.
+The default engine plays by Japanese or Chinese rules and should be about
+7d KGS strength on 9x9. On 19x19 it can hold a solid KGS 2d rank on modest
+hardware (Raspberry Pi, dcnn) or faster machine (e.g. six-way Intel i7)
+without dcnn.
 
 When using a large cluster (64 machines, 20 cores each), it maintains
 KGS 3d to 4d and has won e.g. a 7-stone handicap game against Zhou Junxun 9p.
@@ -21,8 +21,8 @@ KGS 3d to 4d and has won e.g. a 7-stone handicap game against Zhou Junxun 9p.
 By default, Pachi uses the UCT engine that combines Monte Carlo approach
 with tree search; UCB1AMAF tree policy using the RAVE method is used for
 tree search, while the Moggy playout policy using 3x3 patterns and various
-tactical checks is used for the semi-random Monte Carlo playouts. MM
-patterns and deep learning are used to guide tree search.
+tactical checks is used for the semi-random Monte Carlo playouts. MM patterns
+and deep learning are used to guide tree search.
 
 
 ## Binary Releases
