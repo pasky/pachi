@@ -758,21 +758,18 @@ cmd_gogui_pattern_rating(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   init_pattern_engine(b);
-
 	enum stone color = board_to_play(b);
 	
 	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 	
-	ownermap_t ownermap;
 	pattern_t p;
 	move_t m = move(coord, color);
-	pattern_config_t *pc = pattern_engine_get_pc(pattern_engine);
-	mcowner_playouts(b, color, &ownermap);
-	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
-	pattern_match(pc, &p, b, &m, &ownermap, locally);
+	pattern_context_t *ct = pattern_context_new(b, color, false);
+	bool locally = pattern_matching_locally(b, color, ct);
+	pattern_match(b, &m, &p, ct, locally);
+	pattern_context_free(ct);
 
 	/* Show largest spatial */
 	int dist = 0;
@@ -790,23 +787,20 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	if (!pattern_engine)   init_pattern_engine(b);
-
 	enum stone color = board_to_play(b);	
 	char *arg;  gtp_arg(arg);
 	coord_t coord = str2coord(arg);
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
-	
-	ownermap_t ownermap;
+
 	pattern_t p;
 	move_t m = move(coord, color);
-	pattern_config_t *pc = pattern_engine_get_pc(pattern_engine);
-	mcowner_playouts(b, color, &ownermap);
-	bool locally = pattern_matching_locally(pc, b, color, &ownermap);
-	pattern_match(pc, &p, b, &m, &ownermap, locally);
-
+	pattern_context_t *ct = pattern_context_new(b, color, false);
+	bool locally = pattern_matching_locally(b, color, ct);
+	pattern_match(b, &m, &p, ct, locally);
+	
 	strbuf(buf, 1000);
-	dump_gammas(buf, pc, &p);
+	dump_gammas(buf, &p, ct->pc);
+	pattern_context_free(ct);
 
 	gtp_printf(gtp, "TEXT %s\n", buf->str);
 	return P_OK;

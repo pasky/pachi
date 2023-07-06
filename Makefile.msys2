@@ -21,7 +21,7 @@ else
 	LIBS         += -lregex -ltre -lintl -liconv	# Oh, dear...
 endif
 
-DCNN_LIBS := -lcaffe -lboost_system-mt -lglog -lstdc++ $(LIBS)
+DCNN_LIBS := -lcaffe -lopenblas -lboost_system-mt -lglog -lstdc++ $(LIBS)
 
 ifdef STATIC_BUILD		# Static build, good luck
         # Which type of caffe package do you have ?

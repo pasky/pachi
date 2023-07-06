@@ -7,15 +7,16 @@
 #define DEBUG
 #include "board.h"
 #include "debug.h"
-#include "joseki/joseki.h"
 #include "move.h"
 #include "random.h"
 #include "engine.h"
-#include "uct/internal.h"
-#include "uct/plugins.h"
+#include "joseki/joseki.h"
+#include "pattern/prob.h"
+#include "dcnn/dcnn.h"
 #include "uct/prior.h"
 #include "uct/tree.h"
-#include "dcnn/dcnn.h"
+#include "uct/plugins.h"
+#include "uct/internal.h"
 
 #define PRIOR_BEST_N 20
 
@@ -103,10 +104,24 @@ static void
 uct_prior_dcnn(uct_t *u, tree_node_t *node, prior_map_t *map)
 {
 #ifdef DCNN
+	board_t *b = map->b;
 	float   r[19 * 19];
 	bool    debugl = (UDEBUGL(2) && !node->parent);
-	
-	dcnn_evaluate(map->b, map->to_play, r, &u->ownermap, debugl);
+
+	int high = u->prior->dcnn_eqex_high;
+	int low  = u->prior->dcnn_eqex_low;
+	int board_size2 = board_rsize(b) * board_rsize(b);
+	int moves = 0.42 * board_size2;  // 150 on 19x19
+	assert(high >= low);
+
+	/* Progressively decrease dcnn prior until middle-game. */
+	int dcnn_eqex;
+	if (b->moves >= moves)  dcnn_eqex = low;
+	else                    dcnn_eqex = (high - b->moves * (high - low) / moves) / 10 * 10;
+
+	strbuf(buf, 128);
+	strbuf_printf(buf, "(dcnn prior = %i)", dcnn_eqex);
+	dcnn_evaluate(map->b, map->to_play, r, &u->ownermap, debugl, buf->str);
 	
 	for (int i = 0; i < map->consider->moves; i++) {
 		coord_t c = map->consider->move[i];
@@ -115,7 +130,7 @@ uct_prior_dcnn(uct_t *u, tree_node_t *node, prior_map_t *map)
 		if (isnan(val) || val < 0.001)
 			continue;
 		assert(val >= 0.0 && val <= 1.0);
-		add_prior_value(map, c, 1, sqrt(val) * u->prior->dcnn_eqex);
+		add_prior_value(map, c, 1, sqrt(val) * dcnn_eqex);
 	}
 
 	node->hints |= TREE_HINT_DCNN;
@@ -152,7 +167,9 @@ uct_prior_pattern(uct_t *u, tree_node_t *node, prior_map_t *map)
 
 	board_t *b = map->b;
 	floating_t probs[b->flen];
-	pattern_rate_moves_fast(&u->pc, b, map->to_play, probs, &u->ownermap);
+	pattern_context_t ct;
+	pattern_context_init(&ct, &u->pc, &u->ownermap);
+	pattern_rate_moves(b, map->to_play, probs, &ct);
 
 	/* Show patterns best moves for root node if not using dcnn. */
 	if (DEBUGL(2) && !node->parent && !using_dcnn(b)) {
@@ -184,7 +201,7 @@ uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map)
 	if (u->prior->even_eqex)			uct_prior_even(u, node, map);
 
 	if (!u->tree_ready) {  /* Root node: use dcnn for priors, don't mix pattern priors */
-		if      (u->prior->dcnn_eqex)		uct_prior_dcnn(u, node, map);
+		if      (u->prior->dcnn_eqex_high)	uct_prior_dcnn(u, node, map);
 		else if (u->prior->pattern_eqex)	uct_prior_pattern(u, node, map);
 	}
 	else
@@ -205,22 +222,27 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 {
 	uct_prior_t *p = calloc2(1, uct_prior_t);
 
-	p->even_eqex = p->plugin_eqex = -100;
-	/* FIXME: Optimal pattern_eqex is about -1000 with small playout counts
-	 * but only -400 on a cluster. We need a better way to set the default
-	 * here. */
-	p->pattern_eqex    = -800;
+	p->even_eqex = p->plugin_eqex = -20;
+	/* FIXME: Optimal pattern_eqex is about 300 with small playout counts
+	 * but only half on a cluster. We need a better way to set the default
+	 * here. For high playouts lowering it may be better. */
+	p->pattern_eqex    = -300;
 
-	/* Override patterns for nearby joseki moves. */
-	p->joseki_eqex     = -1600;
+	/* joseki_eqex: Double pattern_eqex to override patterns.
+	 * (remember to also change joseki prior when setting pattern prior
+	 *  through command line). */
+	p->joseki_eqex     = p->pattern_eqex * 2;
 
-	/* Best value for dcnn_eqex so far seems to be 1300 with ~88% winrate
-	 * against regular pachi. Below 1200 is bad (50% winrate and worse), more
-	 * gives diminishing returns (1500 -> 78%, 2000 -> 70% ...) */
-	p->dcnn_eqex       = 1300;
+	/* Progressively decrease dcnn prior from dcnn_eqex_high to dcnn_eqex_low.
+	 * For a fixed dcnn prior sweet spot is between 600 and 900 now (was 1300).
+	 * However low prior isn't great early game: playouts are pretty clueless,
+	 * leading to early game blunders. On the other hand it's good in middle/
+	 * end game to escape dcnn blind spots. Progressive prior seems best. */
+	p->dcnn_eqex_high  = -1300;
+	p->dcnn_eqex_low   = -900;
 
 	/* Even number! */
-	p->eqex = board_large(b) ? 20 : 14;
+	p->eqex = (board_large(b) ? 20 : 14);
 
 	p->prune_ladders = true;
 
@@ -238,10 +260,10 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 			if (!strcasecmp(optname, "eqex") && optval) {
 				p->eqex = atoi(optval);
 
-			/* In the following settings, you can use negative
-			 * numbers to give the hundredths of default eqex.
-			 * E.g. -100 is default eqex, -50 is half of the
-			 * default eqex, -200 is double the default eqex. */
+			/* In the following settings you can use negative numbers
+			 * to scale values automatically based on default eqex.
+			 * E.g. with default settings -100 means 100 on large
+			 * boards, and 70 on small boards. */
 			} else if (!strcasecmp(optname, "even") && optval) {
 				p->even_eqex = atoi(optval);
 			} else if (!strcasecmp(optname, "joseki") && optval) {
@@ -255,22 +277,31 @@ uct_prior_init(char *arg, board_t *b, uct_t *u)
 			} else if (!strcasecmp(optname, "prune_ladders")) {
 				p->prune_ladders = !optval || atoi(optval);
 #ifdef DCNN
+			} else if (!strcasecmp(optname, "dcnn_high") && optval) {
+				/* Progressive dcnn prior: fuseki dcnn prior. */
+				p->dcnn_eqex_high = atoi(optval);
+			} else if (!strcasecmp(optname, "dcnn_low") && optval) {
+				/* Progressive dcnn prior: middle/end game dcnn prior. */
+				p->dcnn_eqex_low = atoi(optval);
 			} else if (!strcasecmp(optname, "dcnn") && optval) {
-				p->dcnn_eqex = atoi(optval);
+				/* Fixed dcnn prior. */
+				p->dcnn_eqex_high = atoi(optval);
+				p->dcnn_eqex_low = atoi(optval);
 #endif
 			} else
 				die("uct: Invalid prior argument %s or missing value\n", optname);
 		}
 	}
 
-	if (p->even_eqex < 0)    p->even_eqex    = p->eqex * -p->even_eqex / 100;
-	if (p->joseki_eqex < 0)  p->joseki_eqex  = p->eqex * -p->joseki_eqex / 100;
-	if (p->pattern_eqex < 0) p->pattern_eqex = p->eqex * -p->pattern_eqex / 100;
-	if (p->plugin_eqex < 0)  p->plugin_eqex  = p->eqex * -p->plugin_eqex / 100;
-	if (p->dcnn_eqex < 0)    p->dcnn_eqex    = p->eqex * -p->dcnn_eqex / 100;
+	if (p->even_eqex < 0)      p->even_eqex      = -p->even_eqex * p->eqex / 20;
+	if (p->joseki_eqex < 0)    p->joseki_eqex    = -p->joseki_eqex * p->eqex / 20;
+	if (p->pattern_eqex < 0)   p->pattern_eqex   = -p->pattern_eqex * p->eqex / 20;
+	if (p->plugin_eqex < 0)    p->plugin_eqex    = -p->plugin_eqex * p->eqex / 20;
+	if (p->dcnn_eqex_high < 0) p->dcnn_eqex_high = -p->dcnn_eqex_high * p->eqex / 20;
+	if (p->dcnn_eqex_low < 0)  p->dcnn_eqex_low  = -p->dcnn_eqex_low * p->eqex / 20;
 
 	if (!using_joseki(b))   p->joseki_eqex = 0;
-	if (!using_dcnn(b))     p->dcnn_eqex = 0;
+	if (!using_dcnn(b))     p->dcnn_eqex_high = 0;
 	if (!using_patterns())  p->pattern_eqex = 0;
 	
 	return p;

@@ -7,13 +7,19 @@ set -o pipefail
 
 usage()
 {
-    echo "usage: pattern/mm_games <sgf_files>"
+    echo "usage: pattern/mm_games [--slow] <sgf_files>"    
     exit 1
 }
 
 
 if [ "$1" = "-h" ] || [ $# = 0 ]; then
     usage
+fi
+
+options=""
+if [ "$1" = "--slow" ]; then
+    options="mcowner_fast=0"
+    shift
 fi
 
 ( i=0;   n=`echo "$@" | wc -w`
@@ -27,7 +33,7 @@ fi
       printf "[ %i / %i ]  %i%%           mm-input.dat: %s\r" $i $n  $[$i * 100 / $n] "$du" >&2
       i=$[$i+1]
   done) |
-  ./pachi -e patternscan 2>pachi.log |
+  ./pachi -e patternscan $options  2>pachi.log |
   perl -nle 's/^= //; if ($_ ne "") { print $_; }'  > mm-input.dat
 
 echo ""

@@ -42,7 +42,7 @@
  * deinitialized and the init function is called again. The game is monotonic;
  * no moves are undone when made (in case of undo, the game is cancelled and
  * re-played from beginning). */
-void *pachi_plugin_init(char *args, struct board *b, int seed);
+void *pachi_plugin_init(char *args, board_t *b, int seed);
 
 /* This function is called when priors are to be assigned to all leaves
  * of a given node. Usually, the leaves have been freshly expanded (but in
@@ -57,7 +57,7 @@ void *pachi_plugin_init(char *args, struct board *b, int seed);
  * are pre-computed Common Fate Graph distances from the last move. To record
  * priors, use add_prior_value(). See <uct/prior.h> for details and the
  * <uct/prior.c> for the default prior evaluation functions. */
-void pachi_plugin_prior(void *data, struct tree_node *node, struct prior_map *map, int eqex);
+void pachi_plugin_prior(void *data, tree_node_t *node, prior_map_t *map, int eqex);
 
 /* This function is called when the game has ended and the context needs
  * to be deinitialized. */

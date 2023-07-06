@@ -2,23 +2,22 @@
 #define PACHI_UCT_PRIOR_H
 
 #include "move.h"
-#include "uct/tree.h"
+#include "stats.h"
 
-struct tree;
-struct tree_node;
-struct uct;
-struct board;
+typedef struct tree_node tree_node_t;
+typedef struct uct uct_t;
 
 /* Applying heuristic values to the tree nodes, skewing the reading in
  * most interesting directions. */
 
-typedef struct {
+typedef struct uct_prior {
 	/* Equivalent experience for prior knowledge. MoGo paper recommends
 	 * 50 playouts per source; in practice, esp. with RAVE, about 6
 	 * playouts per source seems best. */
 	int eqex;
 	int even_eqex, plugin_eqex;
-	int joseki_eqex, pattern_eqex, dcnn_eqex;
+	int joseki_eqex, pattern_eqex;
+	int dcnn_eqex_high, dcnn_eqex_low;
 	bool prune_ladders;
 	bool boost_pass;
 } uct_prior_t;
@@ -39,9 +38,9 @@ typedef struct prior_map {
 /* @value is the value, @playouts is its weight. */
 static void add_prior_value(prior_map_t *map, coord_t c, floating_t value, int playouts);
 
-void uct_prior(struct uct *u, tree_node_t *node, prior_map_t *map);
+void uct_prior(uct_t *u, tree_node_t *node, prior_map_t *map);
 
-uct_prior_t *uct_prior_init(char *arg, board_t *b, struct uct *u);
+uct_prior_t *uct_prior_init(char *arg, board_t *b, uct_t *u);
 void uct_prior_done(uct_prior_t *p);
 
 

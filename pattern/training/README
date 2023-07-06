@@ -12,49 +12,58 @@ and Rémi's paper:
   https://www.remi-coulom.fr/Amsterdam2007/
 
 
-MM Training Pipeline:
+[ MM Training Pipeline ]
 
 - Rebuild Pachi with EXTRA_ENGINES set, so patternscan engine gets built.
 
-- Pick one month of kgs high-dans game records (~500 games), this is your
-  training set:  https://www.u-go.net/gamerecords/
+- Pick one month of kgs high-dans game records (~500 games):
+      https://www.u-go.net/gamerecords/
+  This is your training set. Put sgf files in sgf_train/ directory.
 
-- pattern/spatial_gen  sgf_train/*.sgf
+-     $ pattern/training/spatial_gen  sgf_train/*.sgf
   Generate spatial dictionary by collecting spatial patterns found at
   least N times in the training set. Will generate patterns_mm.spat
   You should end up with 15k-20k patterns.
 
-- pattern/mm_games  sgf_train/*.sgf
+
+-     $ pattern/trainingn/mm_games  sgf_train/*.sgf
+  or
+      $ pattern/trainingn/mm_games --slow  sgf_train/*.sgf      
   Pattern match all moves in the training set, turning them into teams of
   features suitable for mm tool. Generates mm-pachi.table and mm-input.dat,
   which will be rather large by the time it's done (~800Mb). Because we
-  need to run some playouts for the mcowner feature this will take a while.
+  need to run some playouts for the mcowner feature this will take a while
+  (--slow version more accurate but much slower).
 
-- pattern/mm/mm < mm-input.dat
+-     $ pattern/training/mm/mm < mm-input.dat
   Compute optimal gammas for each feature to maximize prediction rate on
   the training set. Needs enough ram to keep everything in memory.
   Generates mm-with-freq.dat
 
-- pattern/mm_gammas
-  Simple script to translate mm's output back into pachi's gammas.
+-     $ pattern/training/mm_gammas
+  Translate mm's output back into pachi's gammas.
   Writes patterns_mm.gamma.
 
-Test:
-- Pick another month of kgs games as your testing set and run:
-    ln -s sgf_test t-predict/sgf
-    t-predict/predict -e patternplay
+
+[ Test ]
+
+- Pick another month of kgs games as your testing set,
+  Put in sgf_test/ directory and run:
+      $ ln -s sgf_test t-predict/sgf
+      $ t-predict/predict -e patternplay
   If all goes well you should get ~34% prediction rate.
 
-- Set artificial gammas for tactical features which won't show up in 6d+
-  games but which should get high gammas to be useful in tree search
+- Set/copy artificial gammas for tactical features which won't show up in
+  6d+ games but which should get high gammas to be useful in tree search
   (atari:ladder_big, atari:and_cap ...)
 
 - Test again, make sure that doesn't impact prediction rate too much,
   otherwise custom feature / gamma needs fixing.
-  Done !
+  
+Done !
 
 
-Spatial features:
+[ Spatial features ]
 
 "Spatial" features represent a particular configuration of stones in a
 circle around the move-to-play; each configuration has its own record in

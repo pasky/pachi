@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <math.h>
+#include <openblas/cblas.h>
 
 #include "debug.h"
 #include "board.h"
@@ -113,6 +114,16 @@ using_dcnn(board_t *b)
 	return r;
 }
 
+/* Set number of threads to use for dcnn evaluation (default: number of cores). */
+void
+dcnn_set_threads(int threads)
+{
+	if (!dcnn_enabled)
+		return;
+	
+	openblas_set_num_threads(threads);
+}
+
 void
 dcnn_init(board_t *b)
 {
@@ -127,13 +138,14 @@ dcnn_init(board_t *b)
 }
 
 void
-dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl)
+dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log)
 {
 	double time_start = time_now();
 	dcnn->eval(b, color, result);
 	
 	if (debugl) {
-		fprintf(stderr, "dcnn in %.2fs\n", time_now() - time_start);
+		if (!extra_log)  extra_log = "";
+		fprintf(stderr, "dcnn in %.2fs %s\n", time_now() - time_start, extra_log);
 		
 		coord_t best_c[DCNN_BEST_N];
 		float   best_r[DCNN_BEST_N];
@@ -143,9 +155,9 @@ dcnn_evaluate_raw(board_t *b, enum stone color, float result[], ownermap_t *owne
 }
 
 void
-dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl)
+dcnn_evaluate(board_t *b, enum stone color, float result[], ownermap_t *ownermap, bool debugl, char *extra_log)
 {
-	dcnn_evaluate_raw(b, color, result, ownermap, debugl);
+	dcnn_evaluate_raw(b, color, result, ownermap, debugl, extra_log);
 	dcnn_fix_blunders(b, color, result, ownermap, debugl);
 }
 

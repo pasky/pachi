@@ -40,22 +40,22 @@ static void
 debug_pattern_best_moves(pattern_engine_t *pp, board_t *b, enum stone color,
 			 coord_t *best_c, int nbest)
 {
-	ownermap_t ownermap;
-	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
-	else                   mcowner_playouts(b, color, &ownermap);
-	bool locally = pattern_matching_locally(&pp->pc, b, color, &ownermap);
+	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
+	bool locally = pattern_matching_locally(b, color, ct);
 	
 	fprintf(stderr, "\n");
 	for (int i = 0; i < nbest; i++) {
 		move_t m = move(best_c[i], color);
 		pattern_t p;
-		pattern_match(&pp->pc, &p, b, &m, &ownermap, locally);
+		pattern_match(b, &m, &p, ct, locally);
 
 		strbuf(buf, 512);
-		dump_gammas(buf, &pp->pc, &p);
+		dump_gammas(buf, &p, &pp->pc);
 		fprintf(stderr, "%3s gamma %s\n", coord2sstr(m.coord), buf->str);
 	}
 	fprintf(stderr, "\n");
+
+	pattern_context_free(ct);
 }
 
 
@@ -66,11 +66,9 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 
 	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
-	ownermap_t ownermap;
-	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
-	else		       mcowner_playouts(b, color, &ownermap);
+	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
 	pp->matched_locally = -1;  // Invalidate
-	pattern_rate_moves(&pp->pc, b, color, pats, probs, &ownermap);
+	pattern_rate_moves_full(b, color, pats, probs, ct);
 
 	float best_r[20];
 	coord_t best_c[20];
@@ -89,6 +87,7 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 			best = f;
 	}
 
+	pattern_context_free(ct);
 	return b->f[best];
 }
 
@@ -99,31 +98,29 @@ pattern_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone c
 	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
 	floating_t probs[b->flen];
-	ownermap_t ownermap;
-	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
-	else		       mcowner_playouts(b, color, &ownermap);
-	pp->matched_locally = pattern_matching_locally(&pp->pc, b, color, &ownermap);
-	pattern_rate_moves_fast(&pp->pc, b, color, probs, &ownermap);
+	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
+	pp->matched_locally = pattern_matching_locally(b, color, ct);
+	pattern_rate_moves(b, color, probs, ct);
 
 	get_pattern_best_moves(b, probs, best_c, best_r, nbest);
 	print_pattern_best_moves(b, best_c, best_r, nbest);
+
+	pattern_context_free(ct);
 }
 
 void
-pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color)
+pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *probs, enum stone color)
 {
 	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
 	pattern_t pats[b->flen];
-	ownermap_t ownermap;
-	if (pp->mcowner_fast)  mcowner_playouts_fast(b, color, &ownermap);
-	else                   mcowner_playouts(b, color, &ownermap);
+	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
 	pp->matched_locally = -1;  // Invalidate
-	pattern_rate_moves(&pp->pc, b, color, pats, vals, &ownermap);
+	pattern_rate_moves_full(b, color, pats, probs, ct);
 
 #if 0
 	// unused variable 'total' in above call to pattern_rate_moves()
-	floating_t total = pattern_rate_moves_fast(&pp->pc, b, color, pats, vals);
+	floating_t total = pattern_rate_moves_fast(&pp->pc, b, color, pats, probs);
 	/* Rescale properly. */
 	for (int f = 0; f < b->flen; f++) {
 		probs[f] /= total;
@@ -132,12 +129,14 @@ pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *va
 
 	if (pp->debug_level >= 4) {
 		for (int f = 0; f < b->flen; f++) {
-			if (vals[f] >= 0.001) {
+			if (probs[f] >= 0.001) {
 				char s[256]; pattern2str(s, &pats[f]);
-				fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), vals[f], s);
+				fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), probs[f], s);
 			}
 		}
 	}
+
+	pattern_context_free(ct);
 }
 
 #define NEED_RESET   ENGINE_SETOPTION_NEED_RESET

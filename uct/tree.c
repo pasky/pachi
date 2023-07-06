@@ -16,8 +16,8 @@
 #include "tactics/1lib.h"
 #include "tactics/ladder.h"
 #include "timeinfo.h"
-#include "uct/internal.h"
 #include "uct/prior.h"
+#include "uct/internal.h"
 #include "uct/tree.h"
 #include "dcnn/dcnn.h"
 
@@ -747,6 +747,7 @@ tree_expand_node(tree_t *t, tree_node_t *node, board_t *b, enum stone color, uct
 		prev->sibling = ni;
 		prev = ni;
 	}
+	u->expanded_nodes++;
 	node->children = first_child; // must be done at the end to avoid race
 }
 

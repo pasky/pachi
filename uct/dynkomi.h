@@ -4,8 +4,6 @@
 /* Dynamic computation of artificial komi values to stabilize the MCTS. */
 
 #include "move.h"
-#include "uct/internal.h"
-#include "uct/tree.h"
 
 /* Motivation: Monte Carlo Tree Search tends to produce unstable and
  * unreasonable results when playing in situation of extreme advantage
@@ -18,7 +16,6 @@
  * komi values to the score. The used algorithm is transparent to the
  * rest of UCT implementation. */
 
-struct board;
 typedef struct uct_dynkomi uct_dynkomi_t;
 
 /* Compute effective komi value for given color: Positive value

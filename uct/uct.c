@@ -20,12 +20,12 @@
 #include "playout/light.h"
 #include "tactics/util.h"
 #include "timeinfo.h"
-#include "uct/dynkomi.h"
-#include "uct/internal.h"
-#include "uct/plugins.h"
 #include "uct/prior.h"
+#include "uct/plugins.h"
+#include "uct/internal.h"
 #include "uct/search.h"
 #include "uct/tree.h"
+#include "uct/dynkomi.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "josekifix/josekifix.h"
@@ -477,14 +477,17 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	 * to reference ctx->t directly since the
 	 * thread manager will swap the tree pointer asynchronously. */
 
-	/* Now, just periodically poll the search tree. */
-	/* Note that in case of TD_GAMES, threads will not wait for
-	 * the uct_search_check_stop() signalization. */
+	/* Now, just periodically poll the search tree.
+	 * Note that in case of TD_GAMES, threads will not wait for the
+	 * uct_search_check_stop() signalization. 
+	 * TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
+	 * time control is broken. But if it happens to be less, we still search
+	 * at least 100ms otherwise the move is completely random. */
+	double interval = TREE_BUSYWAIT_INTERVAL;
+	bool   interval_set = false;
 	while (1) {
-		time_sleep(TREE_BUSYWAIT_INTERVAL);
-		/* TREE_BUSYWAIT_INTERVAL should never be less than desired time, or the
-		 * time control is broken. But if it happens to be less, we still search
-		 * at least 100ms otherwise the move is completely random. */
+		uct_search_interval(u, &interval, &interval_set);
+		time_sleep(interval);
 
 		int i = uct_search_games(&s);
 		/* Print notifications etc. */
@@ -502,7 +505,10 @@ uct_search(uct_t *u, board_t *b, time_info_t *ti, enum stone color, tree_t *t, b
 	}
 
 	uct_thread_ctx_t *ctx = uct_search_stop();
-	if (UDEBUGL(3)) tree_dump(t, u->dumpthres);
+	if (UDEBUGL(3)) {
+		tree_dump(t, u->dumpthres);
+		fprintf(stderr, "expanded nodes: %i\n", u->expanded_nodes);
+	}
 	if (UDEBUGL(2))
 		fprintf(stderr, "(avg score %f/%d; dynkomi's %f/%d value %f/%d)\n",
 			t->avg_score.value, t->avg_score.playouts,
@@ -667,6 +673,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 	double time_start = time_now();
 	u->pass_all_alive |= pass_all_alive;
 	u->mcts_time = 0;
+	u->expanded_nodes = 0;
 
 	uct_pondering_stop(u);
 
@@ -1594,6 +1601,7 @@ uct_state_init(engine_t *e, board_t *b)
 
 	uct_tree_size_init(u, u->tree_size);
 
+	dcnn_set_threads(u->threads);
 	dcnn_init(b);
 	if (!using_dcnn(b))		joseki_load(board_rsize(b));
 	if (!pat_setup)			patterns_init(&u->pc, NULL, false, true);
