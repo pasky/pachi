@@ -7,6 +7,9 @@
 #    -e, --elo:    display winrates in terms of Elo points.
 bin=`dirname $0`
 
+# Make printf work for floats
+export LC_NUMERIC="en_US.UTF-8"
+
 do_elo=
 if [ "$1" = "-e" ] || [ "$1" = "--elo" ]; then
 	do_elo=1
