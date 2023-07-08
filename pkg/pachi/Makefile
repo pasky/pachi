@@ -51,7 +51,7 @@ checkout:
            git remote add -f origin ../../../.git  && \
            git checkout $(GIT_BRANCH)              && \
 	   QUILT_PATCHES=../src/debian/patches quilt push -a  && \
-	   make  build.h   && \
+	   make  build.h.git   && \
            quilt pop -a
 
 copy_data:
