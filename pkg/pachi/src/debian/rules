@@ -12,6 +12,7 @@
 override_dh_auto_test:
 	@echo "WARNING: Skipping unit tests ..."
 
-#override_dh_auto_build:
+override_dh_auto_build:
+	make GENERIC=1
 
 #override_dh_auto_install:
