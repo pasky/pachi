@@ -310,10 +310,14 @@ spudfrog: FORCE
 	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./spudfrog
 
 # Build info
-build.h: .git/HEAD .git/index Makefile
+build.h: build.h.git Makefile
 	+@make spudfrog
 	@echo "[make] build.h"
-	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild > $@
+	@cp build.h.git $@
+	@CC="$(CC)" CFLAGS="$(CFLAGS)" ./genbuild >> $@
+
+build.h.git: .git/HEAD .git/index
+	@./genbuild --git > $@
 
 # Unit tests
 test: FORCE
@@ -376,7 +380,7 @@ detlef54.prototxt detlef54.trained:
 
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive
-	-@rm pachi build.h >/dev/null 2>&1
+	-@rm pachi build.h* >/dev/null 2>&1
 	@echo ""
 
 clean-profiled:: clean-profiled-recursive

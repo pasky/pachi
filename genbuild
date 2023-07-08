@@ -1,10 +1,17 @@
 #!/bin/bash
 # generate build.h
 
+# Just git info ?
+if [ "$1" = "--git" ]; then
+    branch=`git status | grep '^On branch' | sed -e 's/On branch //'`
+    hash=`git rev-parse --short HEAD`
+    echo "#define PACHI_GIT_BRANCH   \"$branch\""
+    echo "#define PACHI_GIT_HASH     \"$hash\""
+    exit 0
+fi
+
 [ -n "$CC" ] && [ -n "$CFLAGS" ] || exit 1
 
-branch=`git status | grep '^On branch' | sed -e 's/On branch //'`
-hash=`git rev-parse --short HEAD`
 date=`date +"%b %e %Y"`
 compiler=`$CC --version | head -1`
 
@@ -22,8 +29,6 @@ fi
 
 CFLAGS=$( echo "$CFLAGS" | tr -d '\\"' )
 
-echo "#define PACHI_GIT_BRANCH   \"$branch\""
-echo "#define PACHI_GIT_HASH     \"$hash\""
 echo "#define PACHI_BUILD_DATE   \"$date\""
 echo "#define PACHI_BUILD_TARGET \"$target\""
 echo "#define PACHI_CFLAGS       \"$CFLAGS\""
