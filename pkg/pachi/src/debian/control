@@ -41,12 +41,3 @@ Description: engine for the game of go / weiqi / baduk
  about Pachi's architecture and algorithms can be found in Petr Baudis'
  Master's Thesis:   https://github.com/pasky/pachi
 
-Package: pachi-go-data
-Architecture: all
-Depends: 
-Description: Pachi go engine data files
- Pachi is a reasonably strong engine for the ancient game of go
- (http://senseis.xmp.net/?Go)
- .
- This package contains data files used by Pachi
-
