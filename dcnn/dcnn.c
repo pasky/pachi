@@ -2,7 +2,9 @@
 #include <assert.h>
 #include <unistd.h>
 #include <math.h>
-#include <openblas/cblas.h>
+
+/* Don't #include <openblas/cblas.h> just for this (build hell). */
+void openblas_set_num_threads(int num_threads);
 
 #include "debug.h"
 #include "board.h"
