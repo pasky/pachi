@@ -294,6 +294,8 @@ pattern_context_free(pattern_context_t *ct)
 	free(ct);
 }
 
+#define have_last_move(b)  (!is_pass(last_move(b).coord))
+
 static bool
 is_neighbor(board_t *b, coord_t c1, coord_t c2)
 {
@@ -321,20 +323,24 @@ pattern_match_capture(board_t *b, move_t *m)
 {
 	enum stone other_color = stone_other(m->color);
 	coord_t last_move = last_move(b).coord;
-	move_queue_t atari_neighbors;
-	board_get_atari_neighbors(b, m->coord, other_color, &atari_neighbors);
-	if (!atari_neighbors.moves)  return -1;
+	move_queue_t can_cap;  mq_init(&can_cap);
+
+	foreach_atari_neighbor(b, m->coord, other_color) {
+		if (can_capture(b, g, m->color))
+			mq_add(&can_cap, g, 0);
+	} foreach_atari_neighbor_end;
+	if (!can_cap.moves)  return -1;
 
 	/* Recapture ko after playing ko-threat ? */
 	if (b->last_ko_age == b->moves - 2 && m->coord == b->last_ko.coord)
 		return PF_CAPTURE_TAKE_KO;
 	
-	if (is_pass(last_move) || last_move(b).color != other_color)
+	if (!have_last_move(b))
 		goto regular_stuff;
 
 	/* Last move features */
-	for (int i = 0; i < atari_neighbors.moves; i++) {
-		group_t capg = atari_neighbors.move[i];  /* Can capture capg */
+	for (int i = 0; i < can_cap.moves; i++) {
+		group_t capg = can_cap.move[i];
 		
 		/* Capture group contiguous to new group in atari ? */
 		foreach_atari_neighbor(b, last_move, m->color) {
@@ -361,8 +367,8 @@ pattern_match_capture(board_t *b, move_t *m)
 	}
 		
  regular_stuff:
-	for (int i = 0; i < atari_neighbors.moves; i++) {
-		group_t capg = atari_neighbors.move[i];  /* Can capture capg */
+	for (int i = 0; i < can_cap.moves; i++) {
+		group_t capg = can_cap.move[i];  /* Can capture capg */
 		if (is_ladder_any(b, capg, true))
 			return PF_CAPTURE_LADDER;
 		return PF_CAPTURE_NOLADDER;
