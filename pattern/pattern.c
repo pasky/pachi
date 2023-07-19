@@ -379,9 +379,11 @@ pattern_match_aescape(board_t *b, move_t *m)
 	coord_t last_move = last_move(b).coord;
 	bool found = false, ladder = false;
 
+	if (is_selfatari(b, m->color, m->coord))
+		return -1;
+	
 	/* Fill ko, ignoring ko-threat. */
-	if (b->last_ko_age == b->moves - 1 && m->coord == b->last_ko.coord &&
-	    !is_selfatari(b, m->color, m->coord))
+	if (b->last_ko_age == b->moves - 1 && m->coord == b->last_ko.coord)
 		return PF_AESCAPE_FILL_KO;
 	
 	foreach_atari_neighbor(b, m->coord, m->color) {
