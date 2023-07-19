@@ -82,6 +82,7 @@ features_init()
 	memset(pattern_features, 0, sizeof(pattern_features));
 	
 	features[FEAT_CAPTURE] =         feature_info("capture",         PF_CAPTURE_N,    0);
+	features[FEAT_CAPTURE2] =        feature_info("capture2",        PF_CAPTURE2_N,   0);
 	features[FEAT_AESCAPE] =         feature_info("atariescape",     PF_AESCAPE_N,    0);
 	features[FEAT_ATARI] =           feature_info("atari",           PF_ATARI_N,      0);
 	features[FEAT_CUT] =             feature_info("cut",             PF_CUT_N,        0);
@@ -117,13 +118,14 @@ payloads_names_init()
 	memset(payloads_names, 0, sizeof(payloads_names));
 
 	payloads_names[FEAT_CAPTURE][PF_CAPTURE_ATARIDEF] = "ataridef";
-	payloads_names[FEAT_CAPTURE][PF_CAPTURE_LAST] = "last";
 	payloads_names[FEAT_CAPTURE][PF_CAPTURE_PEEP] = "peep";
 	payloads_names[FEAT_CAPTURE][PF_CAPTURE_LADDER] = "ladder";
 	payloads_names[FEAT_CAPTURE][PF_CAPTURE_NOLADDER] = "noladder";
 	payloads_names[FEAT_CAPTURE][PF_CAPTURE_TAKE_KO] = "take_ko";
 	payloads_names[FEAT_CAPTURE][PF_CAPTURE_END_KO] = "end_ko";
 
+	payloads_names[FEAT_CAPTURE2][PF_CAPTURE2_LAST] = "last";
+	
 	payloads_names[FEAT_AESCAPE][PF_AESCAPE_NEW_NOLADDER] = "new_noladder";
 	payloads_names[FEAT_AESCAPE][PF_AESCAPE_NEW_LADDER] = "new_ladder";
 	payloads_names[FEAT_AESCAPE][PF_AESCAPE_NOLADDER] = "noladder";
@@ -319,6 +321,24 @@ is_neighbor_group(board_t *b, coord_t coord, group_t g)
 static bool move_can_be_captured(board_t *b, move_t *m);
 
 static int
+pattern_match_capture2(board_t *b, move_t *m)
+{
+	if (!have_last_move(b))      return -1;
+	
+	enum stone other_color = stone_other(m->color);
+	coord_t last_move = last_move(b).coord;
+
+	group_t lastg = group_at(b, last_move);
+	foreach_atari_neighbor(b, m->coord, other_color) {
+		if (!can_capture(b, g, m->color))  continue;
+		if (g == lastg)  /* Capture last move */
+			return PF_CAPTURE2_LAST;
+	} foreach_atari_neighbor_end;
+	
+	return -1;
+}
+
+static int
 pattern_match_capture(board_t *b, move_t *m)
 {
 	enum stone other_color = stone_other(m->color);
@@ -352,10 +372,6 @@ pattern_match_capture(board_t *b, move_t *m)
 					return PF_CAPTURE_ATARIDEF;
 		} foreach_atari_neighbor_end;
 
-		/* Recapture previous move ? */
-		if (capg == group_at(b, last_move))
-			return PF_CAPTURE_LAST;
-		
 		/* Prevent connection to previous move ? */
 		if (capg != group_at(b, last_move) &&
 		    is_neighbor(b, m->coord, last_move))
@@ -1377,6 +1393,7 @@ pattern_match_vanilla(board_t *b, move_t *m, pattern_t *pattern, pattern_context
 	check_feature(pattern_match_atari(b, m, ct->ownermap), FEAT_ATARI);
 	check_feature(pattern_match_double_snapback(b, m), FEAT_DOUBLE_SNAPBACK);
 	check_feature(pattern_match_capture(b, m), FEAT_CAPTURE);
+	check_feature(pattern_match_capture2(b, m), FEAT_CAPTURE2);
 	check_feature(pattern_match_aescape(b, m), FEAT_AESCAPE);
 	check_feature(pattern_match_cut(b, m, ct->ownermap), FEAT_CUT);
 	check_feature(pattern_match_net(b, m, ct->ownermap), FEAT_NET);
@@ -1418,6 +1435,8 @@ pattern_match_internal(board_t *b, move_t *m, pattern_t *pattern,
 
 	check_feature(pattern_match_double_snapback(b, m), FEAT_DOUBLE_SNAPBACK);
 	{	if (p == 0)  return;  }
+
+	check_feature(pattern_match_capture2(b, m), FEAT_CAPTURE2);
 	
 	check_feature(pattern_match_capture(b, m), FEAT_CAPTURE); {
 		if (p == PF_CAPTURE_TAKE_KO)  return;  /* don't care about distance etc */
