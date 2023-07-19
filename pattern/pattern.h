@@ -45,15 +45,18 @@ extern feature_info_t pattern_features[];
 enum feature_id {
 	/* Capture */
 	FEAT_CAPTURE,	
-#define PF_CAPTURE_ATARIDEF	0  /*     Capture group contiguous to new group in atari */	
-#define PF_CAPTURE_LAST		1  /*     Recapture previous move */
-#define PF_CAPTURE_PEEP		2  /*     Prevent connection to previous move */
-#define PF_CAPTURE_LADDER	3  /*     Capturing group already in a ladder */
-#define PF_CAPTURE_NOLADDER	4  /*     Capturing group not in a ladder */
-#define PF_CAPTURE_TAKE_KO	5  /***** Recapture ko after ko-threat */
-#define PF_CAPTURE_END_KO	6  /***** End ko by capturing something else */
-#define PF_CAPTURE_N		7
+#define PF_CAPTURE_ATARIDEF	0  /*     Capture group contiguous to new group in atari */
+#define PF_CAPTURE_PEEP		1  /*     Prevent connection to previous move */
+#define PF_CAPTURE_LADDER	2  /*     Capturing group already in a ladder */
+#define PF_CAPTURE_NOLADDER	3  /*     Capturing group not in a ladder */
+#define PF_CAPTURE_TAKE_KO	4  /***** Recapture ko after ko-threat */
+#define PF_CAPTURE_END_KO	5  /***** End ko by capturing something else */
+#define PF_CAPTURE_N		6
 
+	FEAT_CAPTURE2,             /* Capture features matched in addition to FEAT_CAPTURE */
+#define PF_CAPTURE2_LAST	0  /***   Recapture previous move */
+#define PF_CAPTURE2_N	        1
+	
 	/* Atari escape (extension). */
 	FEAT_AESCAPE,	
 #define PF_AESCAPE_NEW_NOLADDER	0  /*     Escape new atari, not in a ladder */
