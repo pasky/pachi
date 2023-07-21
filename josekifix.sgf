@@ -1747,12 +1747,31 @@ around = C2
 
 pachipachi Beutlin 2023-04-25])
 (;B[fq]
-;W[]C[[override\]
+(;W[]C[[override\]
 name = "hoshi direct 3-3 (invading)"
 around = C3
 
 
-urgs pachipachi 2023-07-20])))
+urgs pachipachi 2023-07-20])
+(;W[fr]
+;B[gr]
+;W[eq]
+;B[fp]
+;W[ep]
+;B[eo]
+;W[do]
+;B[bo]
+;W[dn]
+;B[en]
+;W[em]
+;B[fo]C[[override\]
+name = "hoshi direct 3-3 shenanigans"
+around = D3
+external_engine
+
+don't hane at D7, kata says bad
+
+urgs pachipachi 2023-07-21]))))
 (;W[ep]
 ;B[]C[[override\]
 name = "4-4 attach"
