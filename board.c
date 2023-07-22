@@ -544,7 +544,8 @@ board_tromp_taylor_iter(board_t *board, int *ownermap)
 			continue;
 		
 		/* Count neighbors. */
-		int nei[4] = {0};
+		int nei_[5] = {0};
+		int *nei = &nei_[1];  /* Index can be -1 */
 		foreach_neighbor(board, c, {
 			nei[ownermap[c]]++;
 		});
