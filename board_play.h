@@ -29,7 +29,7 @@ static void
 board_group_find_extra_libs(board_t *board, group_t group, group_info_t *gi, coord_t avoid)
 {
 	/* Add extra liberty from the board to our liberty list. */
-	unsigned char watermark[board_max_coords(board) / 8];
+	unsigned char watermark[(board_max_coords(board) + 7) / 8];
 	memset(watermark, 0, sizeof(watermark));
 #define watermark_get(c)	(watermark[c >> 3] & (1 << (c & 7)))
 #define watermark_set(c)	watermark[c >> 3] |= (1 << (c & 7))
