@@ -30,7 +30,8 @@ See josekifix.sgf for details.
 ;W[no]C[[override\]
 name = "sanrensei jump"
 around = P4
-around2 = O14])
+around2 = O14
+external_engine])
 (;B[qq]
 ;W[kq]
 ;B[no]
