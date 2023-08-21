@@ -1710,7 +1710,30 @@ pachipachi Versailles 2023-04-17
 name = "4-4 dbl kakari crosscut"
 
 
-coq pachipachi  2023-04-11])))
+coq pachipachi  2023-04-11]))
+(;B[jq]
+;W[cn]
+;B[cq]
+;W[eo]
+;B[ep]
+;W[fp]
+;B[fo]
+;W[en]
+;B[fn]
+;W[fm]
+;B[ho]
+;W[ip]
+;B[em]
+;W[co]
+;B[hp]
+;W[iq]
+;B[hq]
+;W[hr]C[[override\]
+name = "4-4 dbl kakari kobayashi fight"
+around = F3
+
+Pi9999 pachipachi 2023-08-20
+]))
 (;W[cq]
 (;B[]C[[override\]
 name = "hoshi direct 3-3"
