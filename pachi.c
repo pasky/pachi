@@ -377,6 +377,10 @@ int main(int argc, char *argv[])
 	bool verbose_caffe = false;
 
 	pachi_init(argc, argv);
+
+	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
+	gtp_internal_init(gtp);
+	gtp_init(gtp, b);
 	
 	int opt;
 	int option_index;
@@ -549,13 +553,14 @@ int main(int argc, char *argv[])
 	if (DEBUGL(2))	         fprintf(stderr, "Random seed: %d\n", seed);
 	fifo_init();
 
-	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
+	if (fbookfile) {
+		b->fbookfile = strdup(fbookfile);
+		board_clear(b);
+	}
 	if (options->forced_rules) {
 		b->rules = options->forced_rules;
 		if (DEBUGL(1))  fprintf(stderr, "Rules: %s\n", rules2str(b->rules));
 	}
-	gtp_internal_init(gtp);
-	gtp_init(gtp, b);
 
 	time_info_t ti[S_MAX];
 	ti[S_BLACK] = ti_default;
