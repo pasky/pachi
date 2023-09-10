@@ -64,8 +64,9 @@ typedef struct {
 
 
 /* global */
-void disable_josekifix();
-void require_josekifix();
+void disable_josekifix(void);
+void require_josekifix(void);
+bool get_josekifix_enabled(void);
 
 /* loading overrides */
 void josekifix_init(board_t *b);
