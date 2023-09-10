@@ -41,6 +41,13 @@ gtp_init(gtp_t *gtp, board_t *b)
 	b->move_history = &gtp->history;
 }
 
+void
+gtp_done(gtp_t *gtp)
+{
+	if (gtp->custom_name)   free(gtp->custom_name);
+	if (gtp->banner)	free(gtp->banner);
+	memset(gtp, 0, sizeof(*gtp));
+}
 
 typedef enum parse_code (*gtp_func_t)(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp);
 
@@ -198,19 +205,21 @@ cmd_echo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
-/* Return engine comment if playing on kgs, Pachi version otherwise.
- * See "banner" uct param to set engine comment. */
+/* Return Pachi version.
+ * On kgs also return banner (game start message, set with --banner). */
 static enum parse_code
 cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	/* kgs hijacks 'version' gtp command for game start message. */	
-	const char *version = (gtp->kgs ? e->comment : "%s");
+	gtp_printf(gtp, "%s", PACHI_VERSION);
 
-	/* Custom gtp version ? */
-	if (gtp->custom_version)  version = gtp->custom_version;
+	/* Show josekifix status */
+ 	if (!get_josekifix_enabled() && e->id == E_UCT)
+		gtp_printf(gtp, " (joseki fixes disabled)");
 	
-	/* %s in version string stands for Pachi version. */
-	gtp_printf(gtp, version, PACHI_VERSION);
+	/* kgs hijacks 'version' gtp command for game start message. */
+	if (gtp->kgs && gtp->banner)
+		gtp_printf(gtp, ". %s", gtp->banner);
+	
 	gtp_printf(gtp, "\n");
 	return P_OK;
 }

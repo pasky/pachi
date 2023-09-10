@@ -12,7 +12,7 @@ To get latest version of this file, run:          (joseki_fixes branch on github
 Actual fixes are moves with an [override\] section at the top of the move comment.
 See josekifix.sgf for details.
 ]
-;B[pd]
+(;B[pd]
 (;W[]
 (;B[pp]
 ;W[]
@@ -27,19 +27,11 @@ See josekifix.sgf for details.
 (;B[me]
 (;W[nq]
 (;B[lq]
-;W[qq]
-;B[qp]
-;W[pq]
-;B[op]
-;W[nr]
-;B[mo]
-;W[]C[[override\]
-name = "anti sanrensei"
-around = O6
+;W[no]C[[override\]
+name = "sanrensei jump"
+around = P4
 around2 = O14
-external_engine = upper_right lower_right
-
-pachipachi niceguy0 2023-05-03])
+external_engine])
 (;B[qq]
 ;W[kq]
 ;B[no]
@@ -215,7 +207,23 @@ name = "kobayashi tobi double hane"
 around = R5
 
 
-pachipachi tomsama 2023-04-23])))
+pachipachi tomsama 2023-04-23]))
+(;B[ql]
+;W[pn]
+;B[qo]
+;W[ro]
+;B[qq]
+;W[pl]
+;B[pk]
+;W[ol]
+;B[rm]
+;W[rn]
+;B[qj]C[[override\]
+name = "kobayashi pincer tsuke"
+around = Q7
+
+spring pachipachi 2023-08-20
+]))
 (;W[pn]
 ;B[qo]
 ;W[pj]
@@ -367,3 +375,29 @@ Try pincer, L16 too good for w
 
 YZ1509 special opening.]
 ;W[]))
+(;B[dp]
+;W[]
+;B[pp]
+;W[fq]
+;B[hq]
+;W[fo]
+;B[dn]
+;W[nq]
+;B[kq]
+;W[no]
+;B[pn]
+;W[om]
+;B[pm]
+(;W[jp]
+;B[]C[[override\]
+name = "magoa h4 play"
+around = "K4"
+
+magoa pachipachi 2023-06-19
+])
+(;W[ip]
+;B[]C[[override\]
+name = "magoa h4 play"
+around = "K4"
+
+])))

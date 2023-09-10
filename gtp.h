@@ -21,10 +21,10 @@ typedef struct
 {
 	/* Gtp Options */
 	bool		noundo;			/* undo only allowed for pass */
-	bool		kgs;			/* show engine comment in version */
+	bool		kgs;			/* kgs mode */
 	bool		kgs_chat;		/* enable kgs-chat command ? */
 	char*		custom_name;
-	char*		custom_version;
+	char*		banner;			/* kgs game start message */
 	
 	/* Private fields (global) */
 	int		played_games;
@@ -65,7 +65,8 @@ typedef struct
 } while(0)
 
 
-void   gtp_init(gtp_t *gtp, board_t *b);
+void gtp_init(gtp_t *gtp, board_t *b);
+void gtp_done(gtp_t *gtp);
 
 void gtp_internal_init(gtp_t *gtp);
 enum parse_code gtp_parse(gtp_t *gtp, board_t *b, struct engine *e, time_info_t *ti, char *buf);

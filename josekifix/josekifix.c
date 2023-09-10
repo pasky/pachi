@@ -25,8 +25,9 @@ coord_t joseki_override_(struct board *b, strbuf_t *log,
 
 static bool josekifix_enabled = true;
 static bool josekifix_required = false;
-void disable_josekifix()  {  josekifix_enabled = false;  }
-void require_josekifix()  {  josekifix_required = true;  }
+void disable_josekifix()     {  josekifix_enabled = false;  }
+void require_josekifix()     {  josekifix_required = true;  }
+bool get_josekifix_enabled() {  return josekifix_enabled;  }
 
 
 /*****************************************************************************/
@@ -261,6 +262,13 @@ set_external_engine_mode_all_quadrants(board_t *b, int moves)
 		set_external_engine_mode_quad(b, quad, moves);
 }
 #endif
+
+static void
+clear_wanted_external_engine_mode(void)
+{
+	for (int q = 0; q < 4; q++)
+		wanted_external_engine_mode[q] = 0;
+}
 
 static void
 set_wanted_external_engine_mode(board_t *b, override_t *override, coord_t next, int rot)
@@ -707,13 +715,16 @@ check_logged_variations(struct board *b, hash_t lasth)
  * All overrides must match (in the same rotation) for this to match.
  * Returns last entry's next move. */
 coord_t
-check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t lasth, bool log)		    
+check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t lasth, bool log)
 {
-	/* Check which rotations match for first pattern, use same for the others. */
 	for (int rot = 0; rot < 8; rot++) {
+		clear_wanted_external_engine_mode();	/* Cleanup in case of partial match */
+
+		/* Check if first override matches ... */
 		coord_t c = check_override_rot(b, &overrides[0], rot, lasth);
 		if (is_pass(c))  continue;
 
+		/* And all other overrides match in same rotation.  */
 		for (int i = 1; overrides[i].name && !is_pass(c); i++)
 			c = check_override_rot(b, &overrides[i], rot, lasth);
 		if (is_pass(c))  continue;
@@ -724,7 +735,7 @@ check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t la
 		
 		/* Check move is sane... */
 		if (!josekifix_sane_override(b, c, overrides[0].name, -1))
-			return pass;
+			break;
 		
 		if (log && overrides[0].name)
 			josekifix_log("joseki_override: %s (%s)\n", coord2sstr(c), overrides[0].name);
@@ -732,6 +743,7 @@ check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t la
 		return c;
 	}
 
+	clear_wanted_external_engine_mode();	/* Cleanup in case of partial match */
 	return pass;
 }
 
@@ -1152,8 +1164,7 @@ joseki_override_(struct board *b, strbuf_t *log,
 	/* Shouldn't reach here if module disabled */
 	assert(josekifix_enabled);
 
-	for (int q = 0; q < 4; q++)
-		wanted_external_engine_mode[q] = 0;
+	clear_wanted_external_engine_mode();
 	external_engine_overrides_enabled = external_engine_enabled;
 	log_buf = log;
     

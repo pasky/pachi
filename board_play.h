@@ -28,29 +28,23 @@ board_group_addlib(board_t *board, group_t group, coord_t coord)
 static void
 board_group_find_extra_libs(board_t *board, group_t group, group_info_t *gi, coord_t avoid)
 {
-	/* Add extra liberty from the board to our liberty list. */
-	unsigned char watermark[board_max_coords(board) / 8];
-	memset(watermark, 0, sizeof(watermark));
-#define watermark_get(c)	(watermark[c >> 3] & (1 << (c & 7)))
-#define watermark_set(c)	watermark[c >> 3] |= (1 << (c & 7))
-
+	/* Liberties we know about. */
+	move_queue_t visited;  mq_init(&visited);
 	for (int i = 0; i < GROUP_KEEP_LIBS - 1; i++)
-		watermark_set(gi->lib[i]);
-	watermark_set(avoid);
+		mq_add(&visited, gi->lib[i], 0);
+	mq_add(&visited, avoid, 0);
 
 	foreach_in_group(board, group) {
 		coord_t coord2 = c;
 		foreach_neighbor(board, coord2, {
-			if (board_at(board, c) + watermark_get(c) != S_NONE)
+			if (board_at(board, c) != S_NONE || mq_has(&visited, c))
 				continue;
-			watermark_set(c);
+			mq_add(&visited, c, 0);
 			gi->lib[gi->libs++] = c;
 			if (unlikely(gi->libs >= GROUP_KEEP_LIBS))
 				return;
 		} );
 	} foreach_in_group_end;
-#undef watermark_get
-#undef watermark_set
 }
 
 static void

@@ -449,7 +449,6 @@ uct_done(engine_t *e)
 {
 	uct_t *u = (uct_t*)e->data;
 
-	free(u->banner);
 	uct_pondering_stop(u);
 	if (u->t)             reset_state(u);
 	if (u->dynkomi)       u->dynkomi->done(u->dynkomi);
@@ -1093,16 +1092,6 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 			u->debug_after.playouts = 1000;
 		}
 	}
-	else if ((!strcasecmp(optname, "banner") && optval) ||
-		 (!strcasecmp(optname, "comment") && optval)) {  NEED_RESET
-		/* Set message displayed at game start on kgs.
-		 * Default is "Pachi %s, Have a nice game !"
-		 * '%s' is replaced by Pachi version.
-		 * You can use '+' instead of ' ' if you are wrestling with kgsGtp. */
-		u->banner = strdup(optval);
-		for (char *b = u->banner; *b; b++)
-			if (*b == '+') *b = ' ';
-	}
 #ifdef PACHI_PLUGINS
 	else if (!strcasecmp(optname, "plugin") && optval) {
 		/* Load an external plugin; filename goes before the colon,
@@ -1613,7 +1602,6 @@ uct_state_init(engine_t *e, board_t *b)
 	if (u->slave)			uct_slave_init(u, b);
 #endif
 	if (!u->dynkomi)		u->dynkomi = uct_dynkomi_init_linear(u, NULL, b);
-	if (!u->banner)                 u->banner = strdup("Pachi %s, Have a nice game !");
 
 	/* Some things remain uninitialized for now - the opening tbook
 	 * is not loaded and the tree not set up. */
@@ -1643,13 +1631,14 @@ uct_engine_init(engine_t *e, board_t *b)
 	e->done = uct_done;
 	e->ownermap = uct_ownermap;
 
-	uct_t *u = uct_state_init(e, b);
+	uct_state_init(e, b);
 
 #ifdef DISTRIBUTED
+	uct_t *u = (uct_t*)e->data;
 	e->genmoves = uct_genmoves;
 	if (u->slave)
 		e->notify = uct_notify;
 #endif
 
-	e->comment = u->banner;
+	e->comment = "Pachi UCT Monte Carlo Tree Search engine";
 }

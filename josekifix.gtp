@@ -229,6 +229,30 @@ play B g3
 play W c3  
 play B b3  
 play W d3  
+play B b5  
+play W f5  
+play B k3  
+play W c6  
+play B c7  
+play W b6  override name=3-4 pincer tiger tenuki|around=B5|external_engine
+play B d6  
+play W d5  
+play B c5  
+play W b7  
+play B c8  
+play W b8  
+play B c9  
+play W b9  
+play B c10  
+play W a5  override name=3-4 pincer tiger tenuki|around=B6
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B b3  
+play W d3  
 play B b2  
 play W pass  override name=3-4 pincer b2 dev|around=D4
 
@@ -350,7 +374,7 @@ play W c3
 play B c7  
 play W d4  
 play B b4  
-play W e2  override name=3-4 pincer attach extend|around=C2
+play W pass  override name=3-4 pincer attach side extend|around=C2
 
 clear_board
 play B c4  
@@ -768,6 +792,23 @@ play B d7  override name=3-4 pincer keima|around=D4
 clear_board
 play B c4  
 play W e3  
+play B g3  
+play W d5  
+play B d4  
+play W e4  
+play B e5  
+play W c5  
+play B b5  
+play W b6  
+play B b4  
+play W f5  
+play B e6  
+play W d7  
+play B d2  override name=3-4 pincer keima|around=C3
+
+clear_board
+play B c4  
+play W e3  
 play B h4  
 play W e6  
 play B pass  override name=3-4 2spc high pincer 2spc jump|around=D3
@@ -852,6 +893,13 @@ play W e2
 play B d2  
 play W f2  
 play B c6  override name=3-4 two-spaces high approach fight|around=C3
+
+clear_board
+play B c4  
+play W f3  
+play B d3  
+play W c6  
+play B pass  override name=3-4 kosumi double approach|around=C3
 
 clear_board
 play B d4  
@@ -1203,6 +1251,66 @@ play W h5
 play B j3  override name=4-4 shoulder hit|around=G2
 play W k4  
 play B k3  override name=4-4 shoulder hit|around=G2
+play W l4  
+play B m3  
+play W n5  
+play B g5  
+play W g6  
+play B g4  
+play W h6  override name=4-4 shoulder hit cut defense|around=F3
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B j3  override name=4-4 shoulder hit|around=G2
+play W k4  
+play B k3  override name=4-4 shoulder hit|around=G2
+play W l4  
+play B m3  
+play W g4  
+play B pass  override name=4-4 shoulder hit keep all|around=H3
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B j3  override name=4-4 shoulder hit|around=G2
+play W k4  
+play B k3  override name=4-4 shoulder hit|around=G2
+play W l4  
+play B m3  
+play W g4  
+play B m4  
+play W m5  
+play B n5  
+play W m6  
+play B n6  
+play W n4  
+play B pass  override name=4-4 shoulder hit keep all|around=K3
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B j3  override name=4-4 shoulder hit|around=G2
+play W k4  
+play B k3  override name=4-4 shoulder hit|around=G2
 play W l3  
 play B l4  override name=4-4 shoulder hit hustling|around=G3|external_engine
 play W m3  
@@ -1334,6 +1442,30 @@ play B d2
 play W d5  override name=3-3 block overplay|around=C4
 play B b5  
 play W e4  override name=3-3 block overplay|around=C4
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W c3  
+play B d3  
+play W c4  
+play B c2  
+play W pass  override name=4-4 keima pincer 3-3 inside block|around=D2
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W c6  
+play B f4  
+play W g4  
+play B g3  
+play W c3  
+play B e3  
+play W c4  
+play B c8  
+play W c7  override name=4-4 keima pincer dbl kakari corner attack|around=C3
 
 clear_board
 play B d4  
@@ -1622,6 +1754,33 @@ play W pass  override name=4-4 dbl kakari crosscut|around=C3
 
 clear_board
 play B d4  
+play W f3  
+play B k3  
+play W c6  
+play B c3  
+play W e5  
+play B e4  
+play W f4  
+play B f5  
+play W e6  
+play B f6  
+play W f7  
+play B h5  
+play W j4  
+play B e7  
+play W c5  
+play B h4  
+play W j3  
+play B h3  
+play W h2  override name=4-4 dbl kakari kobayashi fight|around=F3
+
+clear_board
+play B d4  
+play W c3  
+play B pass  override name=hoshi direct 3-3|around=D4
+
+clear_board
+play B d4  
 play W c3  
 play B c4  
 play W d3  
@@ -1639,6 +1798,33 @@ play B e3
 play W e2  
 play B d2  
 play W pass  override name=hoshi 3-3 hane inside|around=C2
+
+clear_board
+play B d4  
+play W c3  
+play B c4  
+play W d3  
+play B f3  
+play W pass  override name=hoshi direct 3-3 (invading)|around=C3
+
+clear_board
+play B d4  
+play W c3  
+play B c4  
+play W d3  
+play B f3  
+play W f2  
+play B g2  
+play W e3  
+play B f4  
+play W e4  
+play B e5  
+play W d5  
+play B b5  
+play W d6  
+play B e6  
+play W e7  
+play B f5  override name=hoshi direct 3-3 shenanigans|around=D3|external_engine
 
 clear_board
 play B d4  
@@ -1722,7 +1908,7 @@ play W pass  override name=5-5|around=C3
 
 clear_board
 play B d6  
-play W pass  override name=ootaka|around=B2
+play W pass  override name=ootaka|around=C4
 
 clear_board
 play B c5  
@@ -1803,6 +1989,10 @@ play B c7
 play W g4  override name=moku 3-3 pincer slice-through|around=D3
 
 clear_board
+play B c6  
+play W pass  log name=empty corner keima|around=D4
+
+clear_board
 play B k10  
 play W j10  
 play B j11  
@@ -1814,10 +2004,7 @@ play W h3
 play B f5  
 play W d6  
 play B j4  
-
-clear_board
-play B c6  
-play W pass  log name=empty corner keima|around=D4
+play W pass  
 
 # Generated from josekifix/fusekifix.sgf
 # Do not edit directly !
@@ -1840,13 +2027,7 @@ play W o18
 play B n15  
 play W o3  
 play B m3  
-play W r3  
-play B r4  
-play W q3  
-play B p4  
-play W o2  
-play B n5  
-play W pass  override name=anti sanrensei|around=O6|around2=O14|external_engine=1 2
+play W o5  override name=sanrensei jump|around=P4|around2=O14|external_engine
 
 clear_board
 play B q16  
@@ -2103,6 +2284,29 @@ play W d4
 play B f3  
 play W c6  
 play B k4  
+play W r6  
+play B q5  
+play W s4  
+play B r8  
+play W q6  
+play B r5  
+play W s5  
+play B r3  
+play W q8  
+play B q9  
+play W p8  
+play B s7  
+play W s6  
+play B r10  override name=kobayashi pincer tsuke|around=Q7
+
+clear_board
+play B q16  
+play W pass  
+play B q3  
+play W d4  
+play B f3  
+play W c6  
+play B k4  
 play W q6  
 play B r5  
 play W q10  
@@ -2294,4 +2498,38 @@ play B c13
 play W o17  
 play B m17  override name=yz_taisha|around=last|around2=E15
 play W pass  
+
+clear_board
+play B d4  
+play W pass  
+play B q4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W o3  
+play B l3  
+play W o5  
+play B q6  
+play W p7  
+play B q7  
+play W k4  
+play B pass  override name=magoa h4 play|around=K4
+
+clear_board
+play B d4  
+play W pass  
+play B q4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W o3  
+play B l3  
+play W o5  
+play B q6  
+play W p7  
+play B q7  
+play W j4  
+play B pass  override name=magoa h4 play|around=K4
 
