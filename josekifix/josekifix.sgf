@@ -185,7 +185,7 @@ E3 not always good:
 ;W[fo]
 ;B[jq]
 ;W[cn]
-;B[]C[[override\]
+(;B[]C[[override\]
 name = "3-4 pincer tiger tenuki"
 around = B5
 
@@ -194,6 +194,26 @@ if b tenukis corner (to extend G3),
 after w C6 must C7, not D5
 
 then w B6, b B7])
+(;B[cm]
+;W[bn]C[[override\]
+name = "3-4 pincer tiger tenuki"
+around = B5
+external_engine
+
+
+globax pachipachi 2023-05-29]
+;B[dn]
+;W[do]
+;B[co]
+;W[bm]
+;B[cl]
+;W[bl]
+;B[ck]
+;W[bk]
+;B[cj]
+;W[ao]C[[override\]
+around = B6
+]))
 (;B[br]
 ;W[]C[[override\]
 name = "3-4 pincer b2 dev"
@@ -303,16 +323,14 @@ https://online-go.com/game/12532271
 ])
 (;W[dp]
 ;B[bp]
-;W[er]C[[override\]
-name = "3-4 pincer attach extend"
+;W[]C[[override\]
+name = "3-4 pincer attach side extend"
 around = C2
 
-
-E2 first, not B3
-otherwise b E2
+many ways to screw up
 
 Ex: pachipachi nekomichan  2022-12-13 14:29  
-]))
+       mss2 pachipachi  2023-05-18]))
 (;B[bp]
 ;W[]C[[override\]
 name = "3-4 pincer B4 tricks"
@@ -742,7 +760,19 @@ Ex:  pachipachi zeekmund  2022-12-26 ])
 name = "3-4 pincer keima"
 around = D4
 
-babecool pachipachi 2023-02-20])))
+babecool pachipachi 2023-02-20])
+(;W[co]
+;B[bo]
+;W[bn]
+;B[bp]
+;W[fo]
+;B[en]
+;W[dm]
+;B[dr]C[[override\]
+name = "3-4 pincer keima"
+around = C3
+
+maimaimai pachipachi  2023-05-23])))
 (;B[hp]
 (;W[en]
 ;B[]C[[override\]
@@ -834,7 +864,16 @@ name = "3-4 two-spaces high approach fight"
 around = C3
 
 
-pachipachi winkgs 2023-02-16])))
+pachipachi winkgs 2023-02-16]))
+(;W[fq]
+;B[dq]
+;W[cn]
+;B[]C[[override\]
+name = "3-4 kosumi double approach"
+around = C3
+
+
+zzz010307 pachipachi  2023-05-28]))
 (;B[dp]
 (;W[cn]
 (;B[cl]
@@ -1100,7 +1139,7 @@ Ex: Silverwing pachipachi  2022-11-07 17:22]
 ;B[jq]C[[override\]]
 (;W[kp]
 ;B[lq]
-;W[mo]
+(;W[mo]
 (;B[gp]
 ;W[cq]C[[override\]
 name = "4-4 shoulder hit 3-3"
@@ -1195,7 +1234,33 @@ around = A3
 ])
 (;W[cr]
 ;B[dq]C[[override\]
-])))
+]))
+(;B[go]
+;W[gn]
+;B[gp]
+;W[hn]C[[override\]
+name = "4-4 shoulder hit cut defense"
+around = F3
+
+pachipachi globax 2023-06-26]))
+(;W[gp]
+(;B[]C[[override\]
+name = "4-4 shoulder hit keep all"
+around = H3
+
+])
+(;B[lp]
+;W[lo]
+;B[mo]
+;W[ln]
+;B[mn]
+;W[mp]
+;B[]C[[override\]
+name = "4-4 shoulder hit keep all"
+around = K3
+
+
+half pachipachi  2023-05-15])))
 (;W[kq]
 ;B[kp]C[[override\]
 name = "4-4 shoulder hit hustling"
@@ -1332,7 +1397,28 @@ b can't block at C5 because of F3]
 ])
 (;B[bo]
 ;W[ep]C[[override\]
-]))))
+]))
+(;B[cr]
+;W[]C[[override\]
+name = "4-4 keima pincer 3-3 inside block"
+around = D2
+
+
+pachipachi Bavink  2023-05-19]))
+(;W[cn]
+;B[fp]
+;W[gp]
+;B[gq]
+;W[cq]
+;B[eq]
+;W[cp]
+;B[cl]
+;W[cm]C[[override\]
+name = "4-4 keima pincer dbl kakari corner attack"
+around = C3
+
+
+pachipachi pigeonhole  2023-05-23]))
 (;B[iq]
 ;W[cn]
 ;B[fp]
@@ -1624,9 +1710,39 @@ pachipachi Versailles 2023-04-17
 name = "4-4 dbl kakari crosscut"
 
 
-coq pachipachi  2023-04-11])))
+coq pachipachi  2023-04-11]))
+(;B[jq]
+;W[cn]
+;B[cq]
+;W[eo]
+;B[ep]
+;W[fp]
+;B[fo]
+;W[en]
+;B[fn]
+;W[fm]
+;B[ho]
+;W[ip]
+;B[em]
+;W[co]
+;B[hp]
+;W[iq]
+;B[hq]
+;W[hr]C[[override\]
+name = "4-4 dbl kakari kobayashi fight"
+around = F3
+
+Pi9999 pachipachi 2023-08-20
+]))
 (;W[cq]
-;B[cp]
+(;B[]C[[override\]
+name = "hoshi direct 3-3"
+around = D4
+
+many ways to abuse now
+
+coolbaby pachipachi 2023-06-16*])
+(;B[cp]
 ;W[dq]
 (;B[ep]
 ;W[fr]C[[override\]
@@ -1652,7 +1768,33 @@ name = "hoshi 3-3 hane inside"
 around = C2
 
 
-pachipachi Beutlin 2023-04-25]))
+pachipachi Beutlin 2023-04-25])
+(;B[fq]
+(;W[]C[[override\]
+name = "hoshi direct 3-3 (invading)"
+around = C3
+
+
+urgs pachipachi 2023-07-20])
+(;W[fr]
+;B[gr]
+;W[eq]
+;B[fp]
+;W[ep]
+;B[eo]
+;W[do]
+;B[bo]
+;W[dn]
+;B[en]
+;W[em]
+;B[fo]C[[override\]
+name = "hoshi direct 3-3 shenanigans"
+around = D3
+external_engine
+
+don't hane at D7, kata says bad
+
+urgs pachipachi 2023-07-21]))))
 (;W[ep]
 ;B[]C[[override\]
 name = "4-4 attach"
@@ -1772,7 +1914,7 @@ Ex: pachipachi botch  2022-11-20])
 (;B[dn]
 ;W[]C[[override\]
 name = "ootaka"
-around = B2
+around = C4
 
 
 ootakamoku (high takamoku, 6-4 point)
