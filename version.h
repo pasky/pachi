@@ -3,8 +3,8 @@
 
 #include "build.h"
 
-#define PACHI_VERNUM 12.82
-#define PACHI_VERNUMS "12.82"
+#define PACHI_VERNUM 12.84
+#define PACHI_VERNUMS "12.84"
 
 /* 00. Wang Zhi
  * 01. Sansa     Meijin  1612-1623
