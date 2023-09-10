@@ -24,7 +24,6 @@ typedef struct
 	bool		kgs;			/* show engine comment in version */
 	bool		kgs_chat;		/* enable kgs-chat command ? */
 	char*		custom_name;
-	char*		custom_version;
 	
 	/* Private fields (global) */
 	int		played_games;

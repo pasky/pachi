@@ -206,9 +206,6 @@ cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	/* kgs hijacks 'version' gtp command for game start message. */	
 	const char *version = (gtp->kgs ? e->comment : "%s");
 
-	/* Custom gtp version ? */
-	if (gtp->custom_version)  version = gtp->custom_version;
-	
 	/* %s in version string stands for Pachi version. */
 	gtp_printf(gtp, version, PACHI_VERSION);
 	gtp_printf(gtp, "\n");
