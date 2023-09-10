@@ -181,7 +181,6 @@ usage(char *arg)
 	fprintf(stderr,
 		"  -h, --help                        show usage \n"
 		"  -v, --version                     show version \n"
-		"      --version=VERSION             version to return to gtp frontend \n"
 		"      --name=NAME                   name to return to gtp frontend \n"
 		" \n"
 		"Gameplay: \n"
@@ -354,7 +353,7 @@ static struct option longopts[] = {
 	{ "tunit-fatal",	    no_argument,       0, OPT_TUNIT_FATAL },
 	{ "unit-test",              required_argument, 0, 'u' },
 	{ "verbose-caffe",          no_argument,       0, OPT_VERBOSE_CAFFE },
-	{ "version",                optional_argument, 0, 'v' },
+	{ "version",                no_argument,       0, 'v' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -531,8 +530,8 @@ int main(int argc, char *argv[])
 				verbose_caffe = true;
 				break;
 			case 'v':
-				if (optarg)  gtp->custom_version = strdup(optarg);
-				else         {  show_version(stdout);  exit(0);  }
+				show_version(stdout);
+				exit(0);
 				break;
 			case ':':
 				die("%s: Missing argument\n"
