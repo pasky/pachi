@@ -16,9 +16,8 @@
 
 /* Maximum spatial pattern diameter. */
 #define MAX_PATTERN_DIST 10
-/* Maximum number of points in spatial pattern (upper bound).
- * TODO: Better upper bound to save more data. */
-#define MAX_PATTERN_AREA (MAX_PATTERN_DIST*MAX_PATTERN_DIST)
+/* Maximum number of points in spatial pattern (upper bound). */
+#define MAX_PATTERN_AREA  73
 
 /* For each encountered configuration of stones, we keep it "spelled out"
  * in the spatial dictionary records, index them and refer just the indices
@@ -74,13 +73,13 @@
  *       26 16 10 15 25
  *             22
  */
- typedef struct {
+typedef struct {
 	unsigned char dist;		/* Gridcular radius of matched pattern. */
-	unsigned char points[MAX_PATTERN_AREA / 4];
+	unsigned char points[(MAX_PATTERN_AREA + 3) / 4];
 } spatial_t;
 
-#define spatial_point_at(s, i) ((enum stone)(((s).points[(i) / 4] >> (((i) % 4) * 2)) & 3))
-
+#define spatial_point(s, i)             ((enum stone)(((s)->points[(i) / 4] >> (((i) % 4) * 2)) & 3))
+#define set_spatial_point(s, i, color)	do {  (s)->points[(i) / 4] |= (color) << (((i) % 4) * 2);  } while(0)
 
 /* Spatial dictionary - collection of stone configurations. */
 
@@ -99,11 +98,15 @@ typedef struct spatial_entry {
 
 typedef struct {
 	/* Indexed base store */
-	unsigned int nspatials; /* Number of records. */
-	spatial_t *spatials; /* Actual records. */
+	unsigned int nspatials;  /* Number of records. */
+	spatial_t   *spatials;   /* Actual records. */
 	
-	/* number of spatials for each dist, for mm tool */
-	unsigned int     nspatials_by_dist[MAX_PATTERN_DIST+1];
+	/* Number of spatials for each distance */
+	unsigned int nspatials_by_dist[MAX_PATTERN_DIST+1];
+
+	/* Id of first entry for each distance (during normal
+	 * operations dictionary is sorted by spatial distance) */
+	unsigned int first_id[MAX_PATTERN_DIST+1];
 
 	/* Hashed access (all isomorphous configurations are also hashed)
 	 * Maps to spatials[] indices. Hash function: zobrist hashing with fixed values. */
@@ -113,8 +116,13 @@ typedef struct {
 extern spatial_dict_t *spat_dict;
 extern const char *spatial_dict_filename;
 
-#define spatial_id(s, dict)  ((unsigned int)((s) - (dict)->spatials))
-#define spatial(id, dict)    ((dict)->spatials + (id))
+ 
+/* Get feature payload for this spatial. */
+#define spatial_payload(s)  (spatial_id(s) - spat_dict->first_id[s->dist])
+
+/* Pretty much nothing outside of spatial.c should be using spatial_id() anymore */
+#define spatial_id(s)       ((unsigned int)((s) - spat_dict->spatials))
+#define get_spatial(id)     (spat_dict->spatials + (id))
 
 
 /* Fill up the spatial record from @m vincinity, up to full distance
@@ -189,17 +197,17 @@ void spatial_dict_init(pattern_config_t *pc, bool create);
 void spatial_dict_done();
 
 /* Lookup spatial pattern (resolves collisions). */
-spatial_t *spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t spatial_hash);
+spatial_t *spatial_dict_lookup(int dist, hash_t spatial_hash);
 
 /* Store specified spatial pattern in the dictionary if it is not known yet.
  * Returns spatial id. */
-unsigned int spatial_dict_add(spatial_dict_t *dict, spatial_t *s);
+unsigned int spatial_dict_add(spatial_t *s);
 
 /* Write comment lines describing the dictionary (e.g. point order
  * in patterns) to given file. */
-void spatial_dict_writeinfo(spatial_dict_t *dict, FILE *f);
+void spatial_dict_writeinfo(FILE *f);
 
 /* Append specified spatial pattern to the given file. */
-void spatial_write(spatial_dict_t *dict, spatial_t *s, unsigned int id, FILE *f);
+void spatial_write(spatial_t *s, unsigned int id, FILE *f);
 
 #endif

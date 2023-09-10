@@ -30,9 +30,10 @@
 //#define PATTERN_FEATURE_STATS 1
 
 typedef struct {
-	char *name;
-	int payloads;
-	int spatial;   /* For spatial features, spatial feature dist */
+	char        *name;
+	unsigned int payloads;
+	int          spatial;		/* For spatial features, spatial feature dist */
+	int          first_gamma;	/* gamma numbers for this feature start from here */
 } feature_info_t;
 
 extern feature_info_t pattern_features[];
@@ -143,8 +144,8 @@ enum feature_id {
 #define FEAT_SPATIAL FEAT_SPATIAL3
 
 typedef struct {
-	enum feature_id id:8;
-	unsigned int payload:24;
+	enum feature_id id;
+	unsigned int    payload;
 } feature_t;
 
 #define feature(id, payload)  {  (enum feature_id)(id), (payload)  }
@@ -188,7 +189,11 @@ char *feature2sstr(feature_t *f);
 /* String to feature */
 char *str2feature(char *str, feature_t *f);
 /* Get number of possible payload values associated with the feature. */
-int feature_payloads(int id);
+#define feature_payloads(id)  (pattern_features[id].payloads)
+/* Get gamma number for feature */
+static int feature_gamma_number(feature_t *f);
+/* Get total number of gammas for all features */
+int pattern_gammas(void);
 
 /* Append pattern as feature spec string. */
 char *pattern2str(char *str, pattern_t *p);
@@ -247,6 +252,13 @@ pattern_eq(pattern_t *p1, pattern_t *p2)
 		if (!feature_eq(&p1->f[i], &p2->f[i]))
 			return false;
 	return true;
+}
+
+static inline int
+feature_gamma_number(feature_t *f)
+{
+	assert(f->payload < feature_payloads(f->id));
+	return pattern_features[f->id].first_gamma + f->payload;
 }
 
 

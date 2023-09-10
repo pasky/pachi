@@ -147,7 +147,7 @@ spatial_hash(unsigned int rotation, spatial_t *s)
 {
 	hash_t h = 0;
 	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
-		h ^= pthashes[rotation][i][spatial_point_at(*s, i)];
+		h ^= pthashes[rotation][i][spatial_point(s, i)];
 	}
 	return h;
 }
@@ -193,7 +193,7 @@ spatial2str(spatial_t *s)
 {
 	static char buf[1024];
 	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
-		buf[i] = stone2char(spatial_point_at(*s, i));
+		buf[i] = stone2char(spatial_point(s, i));
 	}
 	buf[ptind[s->dist + 1]] = 0;
 	return buf;
@@ -217,7 +217,7 @@ spatial_print(board_t *board, FILE *f, spatial_t *s, coord_t c)
 	int cx = coord_x(c), cy = coord_y(c);
 	for (unsigned int j = 0; j < ptind[s->dist + 1]; j++) {
 		ptcoords_at(x, y, cx, cy, j);
-		move_t m = move(coord_xy(x, y), spatial_point_at(*s, j) );
+		move_t m = move(coord_xy(x, y), spatial_point(s, j) );
 		board_at(b, m.coord) = m.color;
 	}
 	board_print(b, stderr);	
@@ -241,7 +241,8 @@ spatial_from_board(pattern_config_t *pc, spatial_t *s,
 	int cx = coord_x(m->coord), cy = coord_y(m->coord);
 	for (unsigned int j = 0; j < ptind[pc->spat_max + 1]; j++) {
 		ptcoords_at(x, y, cx, cy, j);
-		s->points[j / 4] |= (*bt)[board_atxy(b, x, y)] << ((j % 4) * 2);
+		enum stone color = (*bt)[board_atxy(b, x, y)];
+		set_spatial_point(s, j, color);
 	}
 	s->dist = pc->spat_max;
 }
@@ -287,12 +288,12 @@ static unsigned int
 spatial_dict_hash(hash_t h) {  return h & spatial_hash_mask;  }
 
 spatial_t*
-spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t hash)
+spatial_dict_lookup(int dist, hash_t hash)
 {
-	spatial_entry_t *e = dict->hashtable[spatial_dict_hash(hash)];
+	spatial_entry_t *e = spat_dict->hashtable[spatial_dict_hash(hash)];
 	for (; e ; e = e->next)
-		if (e->hash == hash && spatial(e->id, dict)->dist == dist)
-			return spatial(e->id, dict);
+		if (e->hash == hash && get_spatial(e->id)->dist == dist)
+			return get_spatial(e->id);
 	return NULL;
 }
 
@@ -304,8 +305,10 @@ spatial_dict_lookup(spatial_dict_t *dict, int dist, hash_t hash)
 
 /* Add to collection, returns new pattern id */
 static unsigned int
-spatial_dict_addc(spatial_dict_t *d, spatial_t *s)
+spatial_dict_addc(spatial_t *s)
 {
+	spatial_dict_t *d = spat_dict;
+	
 	if (!(d->nspatials % SPATIALS_ALLOC))
 		d->spatials = (spatial_t*)realloc(d->spatials, (d->nspatials + SPATIALS_ALLOC) * sizeof(*d->spatials));
 	d->spatials[d->nspatials] = *s;
@@ -314,7 +317,7 @@ spatial_dict_addc(spatial_dict_t *d, spatial_t *s)
 
 /* Add to hashtable */
 static void
-spatial_dict_addh(spatial_dict_t *dict, hash_t spatial_hash, unsigned int id)
+spatial_dict_addh(hash_t spatial_hash, unsigned int id)
 {
 	spatial_entry_t *e = malloc2(spatial_entry_t);
 	e->hash = spatial_hash;
@@ -322,69 +325,68 @@ spatial_dict_addh(spatial_dict_t *dict, hash_t spatial_hash, unsigned int id)
 	e->next = NULL;
 
 	uint32_t h = spatial_dict_hash(spatial_hash);
-	e->next = dict->hashtable[h];
-	dict->hashtable[h] = e;
+	e->next = spat_dict->hashtable[h];
+	spat_dict->hashtable[h] = e;
 }
 
 unsigned int
-spatial_dict_add(spatial_dict_t *dict, spatial_t *s)
+spatial_dict_add(spatial_t *s)
 {
-	spatial_t *s2 = spatial_dict_lookup(dict, s->dist, spatial_hash(0, s));
+	spatial_t *s2 = spatial_dict_lookup(s->dist, spatial_hash(0, s));
 	if (s2) {
 		assert(spatial_equal(s, s2));	/* Sanity check */
-		return spatial_id(s2, dict);	/* Already have */
+		return spatial_id(s2);		/* Already have */
 	}
 
 	/* Add to collection */
-	unsigned int id = spatial_dict_addc(dict, s);
+	unsigned int id = spatial_dict_addc(s);
 
 	/* Add rotations to hashtable */
 	for (unsigned int r = 0; r < PTH__ROTATIONS; r++)
-		spatial_dict_addh(dict, spatial_hash(r, s), id);
+		spatial_dict_addh(spatial_hash(r, s), id);
 	return id;
 }
 
 
 /* Spatial dictionary file format:
- * /^#/ - comments
- * INDEX RADIUS STONES HASH...
- * INDEX: index in the spatial table
- * RADIUS: @d of the pattern
- * STONES: string of ".XO#" chars
- * HASH...: space-separated 18bit hash-table indices for the pattern */
-
+ *   # comments
+ *   INDEX DIST STONES
+ * INDEX:  index in the spatial table
+ * DIST:   @d of the pattern (radius)
+ * STONES: string of ".XO#" chars   */
 static void
-spatial_dict_read(spatial_dict_t *dict, char *buf)
+spatial_dict_read(char *buf)
 {
 	/* XXX: We trust the data. Bad data will crash us. */
 	char *bufp = buf;
 
-	unsigned int index, radius;
+	unsigned int index, dist;
 	index = strtoul(bufp, &bufp, 10);
-	radius = strtoul(bufp, &bufp, 10);
+	dist = strtoul(bufp, &bufp, 10);
 	while (isspace(*bufp)) bufp++;
 
-	assert(radius <= MAX_PATTERN_DIST);
+	assert(dist <= MAX_PATTERN_DIST);
 
 	/* Load the stone configuration. */
-	spatial_t s = { radius, };
+	spatial_t s = { dist, };
 	unsigned int sl = 0;
 	while (!isspace(*bufp)) {
-		s.points[sl / 4] |= char2stone(*bufp++) << ((sl % 4)*2);
+		enum stone color = char2stone(*bufp++);
+		set_spatial_point(&s, sl, color);
 		sl++;
 	}
 	while (isspace(*bufp)) bufp++;
 
 	/* Sanity check. */
 	if (sl != ptind[s.dist + 1])
-		die("Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n", sl, ptind[radius + 1] - 1, buf);
+		die("Spatial dictionary: Invalid number of stones (%d != %d) on this line: %s\n", sl, ptind[dist + 1] - 1, buf);
 
-	unsigned int id = spatial_dict_add(dict, &s);
+	unsigned int id = spatial_dict_add(&s);
 	assert(id == index);
 }
 
 void
-spatial_write(spatial_dict_t *dict, spatial_t *s, unsigned int id, FILE *f)
+spatial_write(spatial_t *s, unsigned int id, FILE *f)
 {
 	fprintf(f, "%d %d ", id, s->dist);
 	fputs(spatial2str(s), f);
@@ -392,15 +394,15 @@ spatial_write(spatial_dict_t *dict, spatial_t *s, unsigned int id, FILE *f)
 }
 
 static void
-spatial_dict_load(spatial_dict_t *dict, FILE *f)
+spatial_dict_load(FILE *f)
 {
 	char buf[1024];
 	while (fgets(buf, sizeof(buf), f)) {
 		if (buf[0] == '#') continue;
-		spatial_dict_read(dict, buf);
+		spatial_dict_read(buf);
 	}
-	if (DEBUGL(1)) fprintf(stderr, "Loaded spatial dictionary of %d patterns.\n", dict->nspatials);
-	if (DEBUGL(3)) spatial_dict_hashstats(dict);
+	if (DEBUGL(1)) fprintf(stderr, "Loaded spatial dictionary of %d patterns.\n", spat_dict->nspatials);
+	if (DEBUGL(3)) spatial_dict_hashstats(spat_dict);
 }
 
 static void
@@ -458,12 +460,12 @@ spatial_dict_hashstats(spatial_dict_t *dict)
 }
 
 void
-spatial_dict_writeinfo(spatial_dict_t *dict, FILE *f)
+spatial_dict_writeinfo(FILE *f)
 {
 	/* New file. First, create a comment describing order
 	 * of points in the array. This is just for purposes
 	 * of external tools, Pachi never interprets it itself. */
-	fprintf(f, "# Pachi spatial patterns dictionary v1.0 maxdist %d\n",
+	fprintf(f, "# Pachi spatial patterns dictionary v1.1 maxdist %d\n",
 		MAX_PATTERN_DIST);
 	for (unsigned int d = 0; d <= MAX_PATTERN_DIST; d++) {
 		fprintf(f, "# Point order: d=%d ", d);
@@ -474,21 +476,28 @@ spatial_dict_writeinfo(spatial_dict_t *dict, FILE *f)
 	}
 }
 
+/* Count number of spatials for each distance. */
 static void
-spatial_dict_index_by_dist(pattern_config_t *pc)
+spatial_dict_index_by_dist(pattern_config_t *pc, const char *filename)
 {
 	assert(MAX_PATTERN_DIST == 10);
 	assert(pc->spat_max == MAX_PATTERN_DIST);
 	assert(pc->spat_min == 3);
 
+	int prev_d = 0;
 	for (unsigned int i = 0; i < spat_dict->nspatials; i++) {
-		spatial_t *s = &spat_dict->spatials[i];
+		spatial_t *s = get_spatial(i);
 		int d = s->dist;
 		//fprintf(stderr, "d: %i  %s\n", d, spatial2str(s));
-		/* XXX FIXME what are all these d=0 spatials ?! */
 		if (!d) continue;
 		assert(d <= MAX_PATTERN_DIST && d >= 3);
+		if (d < prev_d)  die("%s: spatial dictionary must be sorted by distance\n", filename);
+		
 		spat_dict->nspatials_by_dist[d]++;
+		if (d != prev_d)
+			spat_dict->first_id[d] = i;
+		
+		prev_d = d;
 	}
 	
 	for (int d = 3; d <= MAX_PATTERN_DIST; d++)
@@ -508,11 +517,11 @@ spatial_dict_init(pattern_config_t *pc, bool create)
 	spat_dict = calloc2(1, spatial_dict_t);
 	/* Dummy record for index 0 so ids start at 1. */
 	spatial_t dummy = { 0, };
-	spatial_dict_addc(spat_dict, &dummy);
+	spatial_dict_addc(&dummy);
 
 	if (f) {
-		spatial_dict_load(spat_dict, f);
-		spatial_dict_index_by_dist(pc);
+		spatial_dict_load(f);
+		spatial_dict_index_by_dist(pc, spatial_dict_filename);
 		fclose(f); f = NULL;
 	} else  assert(create);
 }

@@ -775,7 +775,7 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	int dist = 0;
 	for (int i = 0; i < p.n; i++)
 		if (p.f[i].id >= FEAT_SPATIAL3)
-			dist = MAX(dist, p.f[i].id - FEAT_SPATIAL3 + 3);
+			dist = MAX(dist, (int)p.f[i].id - FEAT_SPATIAL3 + 3);
 	
 	gtp_printf(gtp, "TEXT %s\n", pattern2sstr(&p));
 	if (dist)  gogui_show_pattern(b, coord, dist);
@@ -799,7 +799,7 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	pattern_match(b, &m, &p, ct, locally);
 	
 	strbuf(buf, 1000);
-	dump_gammas(buf, &p, ct->pc);
+	dump_gammas(buf, &p);
 	pattern_context_free(ct);
 
 	gtp_printf(gtp, "TEXT %s\n", buf->str);
@@ -824,11 +824,11 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	spatial_t s;
 	spatial_from_board(pc, &s, b, &m);
 	s.dist = spatial_dist;
-	spatial_t *s2 = spatial_dict_lookup(spat_dict, s.dist, spatial_hash(0, &s));
-	if (s2)	printf("TEXT matches s%i:%i\n", spatial_dist, spatial_id(s2, spat_dict));
+	spatial_t *s2 = spatial_dict_lookup(s.dist, spatial_hash(0, &s));
+	if (s2)	printf("TEXT matches s%i:%i\n", spatial_dist, spatial_payload(s2));
 	else	printf("TEXT unknown s%i spatial\n", spatial_dist);
 
-	spatial_write(spat_dict, &s, 0, stderr);
+	spatial_write(&s, 0, stderr);
 
 	return P_OK;
 }

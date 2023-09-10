@@ -14,7 +14,7 @@
 prob_dict_t    *prob_dict = NULL;
 
 void
-prob_dict_init(char *filename, pattern_config_t *pc)
+prob_dict_init(char *filename)
 {
 	assert(!prob_dict);
 	if (!filename)  filename = "patterns_mm.gamma";
@@ -22,36 +22,46 @@ prob_dict_init(char *filename, pattern_config_t *pc)
 	if (!f)
 		die("Pattern file %s missing, aborting.\n", filename);
 
+	int gammas = pattern_gammas();
 	prob_dict = calloc2(1, prob_dict_t);
-	prob_dict->table = calloc2(spat_dict->nspatials + 1, pattern_prob_t*);
+	prob_dict->gamma_table   = calloc2(gammas, floating_t);
+	prob_dict->feature_table = calloc2(gammas, feature_t);
 
-	int i = 0;
+	/* All gammas = -1.0 (unset) */
+	for (int i = 0; i < gammas; i++)
+		prob_dict->gamma_table[i] = -1.0;
+
+	/* Read in gammas */
+	int n = 0;
 	char sbuf[1024];
 	while (fgets(sbuf, sizeof(sbuf), f)) {
-		pattern_prob_t *pb = calloc2(1, pattern_prob_t);
-		//int c, o;
-
 		char *buf = sbuf;
-		if (buf[0] == '#') continue;
-		while (isspace(*buf)) buf++;
+
+		if (buf[0] == '#')   /* Comment */
+			continue;
+		
+		while (isspace(*buf))  buf++;
 		float gamma = strtof(buf, &buf);
-		pb->gamma = gamma;
-		while (isspace(*buf)) buf++;
-		str2pattern(buf, &pb->p);
-		assert(pb->p.n == 1);				/* One gamma per feature, please ! */
+		
+		while (isspace(*buf)) buf++;		
+		pattern_t p;  memset(&p, 0, sizeof(p));
+		feature_t *f = &p.f[0];
+		str2pattern(buf, &p);
+		assert(p.n == 1);	/* One gamma per feature, please ! */
 
-		uint32_t spi = feature2spatial(&pb->p.f[0], pc);
-		assert(spi <= spat_dict->nspatials);		/* Bad patterns.spat / patterns.prob ? */
-		if (feature_has_gamma(&pb->p.f[0], pc))
-			die("%s: multiple gammas for feature %s\n", filename, pattern2sstr(&pb->p));
-		pb->next = prob_dict->table[spi];
-		prob_dict->table[spi] = pb;
+		int i = feature_gamma_number(f);
+		assert(i < pattern_gammas());		/* Bad patterns.spat / patterns.prob ? */
+		if (feature_has_gamma(f))
+			die("%s: multiple gammas for feature %s\n", filename, pattern2sstr(&p));
+		
+		prob_dict->gamma_table[i] = gamma;
+		prob_dict->feature_table[i] = *f;
 
-		i++;
+		n++;
 	}
 
 	fclose(f);
-	if (DEBUGL(1))  fprintf(stderr, "Loaded %d gammas.\n", i);
+	if (DEBUGL(1))  fprintf(stderr, "Loaded %d gammas.\n", n);
 }
 
 void
@@ -59,12 +69,64 @@ prob_dict_done()
 {
 	if (!prob_dict)  return;
 
-	for (unsigned int id = 0; id < spat_dict->nspatials; id++)
-		free(prob_dict->table[id]);
-	free(prob_dict->table);
+	free(prob_dict->gamma_table);
+	free(prob_dict->feature_table);
 	free(prob_dict);
 	prob_dict = NULL;
 }
+
+
+/*****************************************************************************/
+/* Low-level pattern rating */
+
+/* Do we have a gamma for that feature ? */
+bool
+feature_has_gamma(feature_t *f)
+{
+	int i = feature_gamma_number(f);
+	return (feature_eq(f, &prob_dict->feature_table[i]) &&
+		prob_dict->gamma_table[i] != -1);
+}
+
+/* Lookup gamma for that feature. */
+static floating_t
+feature_gamma(feature_t *f)
+{
+	/* Not checking feature_eq(f, prob_dict->feature_table[i]),
+	 * we should be properly initialized at this stage. */
+	int i = feature_gamma_number(f);
+	return prob_dict->gamma_table[i];
+}
+
+/* Return probability associated with given pattern. */
+static floating_t
+pattern_gamma(pattern_t *p)
+{
+	floating_t gammas = 1;
+	for (int i = 0; i < p->n; i++)
+		gammas *= feature_gamma(&p->f[i]);
+	return gammas;
+}
+
+/* Print pattern features' gamma details in @buf */
+void
+dump_gammas(strbuf_t *buf, pattern_t *p)
+{
+	const char *head = "";
+	floating_t gamma = pattern_gamma(p);
+	sbprintf(buf, "%.2f = ", gamma);
+	
+	for (int i = 0; i < p->n; i++) {
+		feature_t *f = &p->f[i];
+		sbprintf(buf, "%s(%s) %.2f ", head, feature2sstr(f), feature_gamma(f));
+		head = "* ";
+		continue;
+	}
+}
+
+
+/*****************************************************************************/
+/* Move rating */
 
 static void
 rescale_probs(board_t *b, floating_t *probs, floating_t total)
@@ -84,7 +146,7 @@ pattern_rate_move_full(board_t *b, move_t *m, pattern_t *pat,
 	if (!board_is_valid_play_no_suicide(b, m->color, m->coord)) return prob;
 
 	pattern_match(b, m, pat, ct, locally);
-	prob = pattern_gamma(pat, ct->pc);
+	prob = pattern_gamma(pat);
 	
 	//if (DEBUGL(5)) {
 	//	char buf[256]; pattern2str(buf, pat);
@@ -102,7 +164,7 @@ pattern_rate_move_vanilla(board_t *b, move_t *m, pattern_t *pat, pattern_context
 	if (!board_is_valid_play_no_suicide(b, m->color, m->coord)) return prob;
 
 	pattern_match_vanilla(b, m, pat, ct);
-	prob = pattern_gamma(pat, ct->pc);
+	prob = pattern_gamma(pat);
 	
 	//if (DEBUGL(5)) {
 	//	char buf[256]; pattern2str(buf, pat);
@@ -213,32 +275,6 @@ pattern_matching_locally(board_t *b, enum stone color, pattern_context_t *ct)
 	floating_t probs[b->flen];
 	floating_t max = pattern_max_rating(b, color, probs, ct, true);
 	return (max >= LOW_PATTERN_RATING);
-}
-
-void
-dump_gammas(strbuf_t *buf, pattern_t *p, pattern_config_t *pc)
-{
-	const char *head = "";
-	floating_t gamma = pattern_gamma(p, pc);
-	sbprintf(buf, "%.2f = ", gamma);
-	
-	for (int i = 0; i < p->n; i++) {
-		feature_t *f = &p->f[i];		
-		sbprintf(buf, "%s(%s) %.2f ", head, feature2sstr(f), feature_gamma(f, pc));
-		head = "* ";
-		continue;
-	}
-}
-
-/* Do we have a gamma for that feature ? */
-bool
-feature_has_gamma(feature_t *f, pattern_config_t *pc)
-{
-	uint32_t spi = feature2spatial(f, pc);
-	for (pattern_prob_t *pb = prob_dict->table[spi]; pb; pb = pb->next)
-		if (feature_eq(f, &pb->p.f[0]))
-			return true;
-	return false;
 }
 
 void
