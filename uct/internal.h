@@ -99,8 +99,6 @@ typedef struct uct {
 		int playouts;
 	} debug_after;
 
-	char *banner;
-
 	uct_policy_t *policy;
 	uct_policy_t *random_policy;
 	playout_policy_t *playout;

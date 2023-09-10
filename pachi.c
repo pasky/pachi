@@ -195,6 +195,9 @@ usage(char *arg)
 		"  -c, --chatfile FILE               set kgs chatfile \n"
 		"      --kgs-chat                    enable kgs-chat cmd (kgsGtp 3.5.11 only, crashes 3.5.20+) \n"
 		"      --nopassfirst                 don't pass first when playing chinese \n"
+		"      --banner BANNER               kgs game start message (default: \"Have a good game !\") \n"
+		"                                    can use '+' instead of ' ' if you are wrestling with kgsGtp:"
+		"                                      pachi --kgs --banner Have+a+good+game! \n"
 		" \n"
 		"Logs / IO: \n"
 		"  -d, --debug-level LEVEL           set debug level \n"
@@ -305,9 +308,11 @@ show_version(FILE *s)
 #define OPT_NOJOSEKIFIX       276
 #define OPT_NODCNN_BLUNDER    277
 #define OPT_TUNIT_FATAL	      278
+#define OPT_BANNER            279
 
 
 static struct option longopts[] = {
+	{ "banner",                 required_argument, 0, OPT_BANNER },
 	{ "chatfile",               required_argument, 0, 'c' },
 	{ "compile-flags",          no_argument,       0, OPT_COMPILE_FLAGS },
 	{ "debug-level",            required_argument, 0, 'd' },
@@ -380,12 +385,20 @@ int main(int argc, char *argv[])
 	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
 	gtp_internal_init(gtp);
 	gtp_init(gtp, b);
+	gtp->banner = strdup("Have a good game !");
 	
 	int opt;
 	int option_index;
 	/* Leading ':' -> we handle error messages. */
 	while ((opt = getopt_long(argc, argv, ":c:e:d:Df:g:hl:o:r:s:t:u:v::", longopts, &option_index)) != -1) {
 		switch (opt) {
+			case OPT_BANNER:
+				if (gtp->banner)  free(gtp->banner);
+				gtp->banner = strdup(optarg);
+				/* Can use '+' instead of spaces. */
+				for (char *s = gtp->banner; *s; s++)
+					if (*s == '+') *s = ' ';
+				break;
 			case 'c':
 				chatfile = strdup(optarg);
 				break;
@@ -589,6 +602,7 @@ int main(int argc, char *argv[])
 
 	engine_done(&e);
 	board_delete(&b);
+	gtp_done(gtp);
 	chat_done();
 	free(testfile);
 	free(gtp_port);
