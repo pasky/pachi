@@ -1112,17 +1112,13 @@ around = "last"
 (;W[fq]
 (;B[hq]
 (;W[fo]
-;B[dn]
+;B[dn]TR[cn]C[
+Following should take care to also match position with C6 instead of D6 ...]
 ;W[ip]
 ;B[hp]C[[override\]
 name = "4-4 shoulder hit"
 around = G2
 
-
-Always J3 for now,
-J5 playable but falls for trick play ...
-
-Also match B keima kind (C6 instead of D6)
 
 Ex: Silverwing pachipachi  2022-11-07 17:22  ]
 ;W[ho]
@@ -1141,63 +1137,19 @@ Ex: Silverwing pachipachi  2022-11-07 17:22]
 ;B[lq]
 (;W[mo]
 (;B[gp]
-;W[cq]C[[override\]
-name = "4-4 shoulder hit 3-3"
-around = F5
+;W[]C[[override\]
+name="4-4 shoulder hit cut"
 
 
-3-3 invasion after b cut w pincer stones
-kogo says G5 first, but wth just invade !
+used to jump at 3-3 here but many shenanigans ...])
+(;B[go]
+;W[]C[[override\]
+name="4-4 shoulder hit high cut"
 
-Ex: niceguy pachipachi 2018-05-01  07:09:28]
-;B[go]
-;W[gn]
-;B[fp]
-;W[hn]
-;B[dq]
-;W[bp]
-(;B[bo]
-;W[dr]
-;B[er]
-;W[br]
-;B[ds]
-;W[cr]
-;B[aq]
-;W[ap]
-;B[ar]
-;W[cs]C[[override\]
-name = "4-4 shoulder hit 3-3 overplay"
-around = B2
+same, let kata handle it.
 
-
-b played B5 which looks overplay: B6 normally 
-XXX how to punish ?
-
-live for now
-Ex: https://online-go.com/game/12656997 ])
-(;B[bn]
-;W[dr]
-;B[er]
-;W[br]
-;B[ds]
-;W[cr]
-;B[aq]
-;W[bo]
-;B[ap]
-;W[ar]
-;B[ao]
-;W[cn]
-;B[co]
-;W[cm]
-;B[bm]
-;W[cl]C[[override\]
-name = "4-4 shoulder hit 3-3 resist"
-around = B5
-
-
-3-3 invasion after b cut w pincer stones
-regular variation : b blocks with B6
-but tries to resist w B5]))
+pachipachi laercioskt  2024-08-20
+pachipachi globax 2023-06-26])
 (;B[mq]C[[override\]
 name = "4-4 shoulder hit defense"
 around = J3
@@ -1234,15 +1186,7 @@ around = A3
 ])
 (;W[cr]
 ;B[dq]C[[override\]
-]))
-(;B[go]
-;W[gn]
-;B[gp]
-;W[hn]C[[override\]
-name = "4-4 shoulder hit cut defense"
-around = F3
-
-pachipachi globax 2023-06-26]))
+])))
 (;W[gp]
 (;B[]C[[override\]
 name = "4-4 shoulder hit keep all"
@@ -1264,7 +1208,7 @@ half pachipachi  2023-05-15])))
 (;W[kq]
 ;B[kp]C[[override\]
 name = "4-4 shoulder hit hustling"
-around = G3
+around = H3
 external_engine
 
 
