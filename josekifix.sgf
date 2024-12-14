@@ -44,6 +44,7 @@ noladder_other2_setup_own = E3 F2 G2
 noladder_other2_setup_other = D2 E2 F3 G3
 external_engine
 external_engine_diag
+priority = 2
 
 
 3-4 joseki trick play:
@@ -888,6 +889,7 @@ zzz010307 pachipachi  2023-05-28]))
 name = "3-4 trick from 4-4 punish"
 around = D4
 external_engine
+priority = 5
 
 
 3-4 joseki trick play (ladder, from 4-4 cross cut)
