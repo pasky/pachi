@@ -48,11 +48,11 @@ external_engine_diag
 
 3-4 joseki trick play:
 
-If W doesn't have ladder around F4, B can punish:   
-B can E3 as long as he doesn't play B4 (tricky !)
+If B doesn't have ladder around F4, W can punish:   
+W can E3 as long as he doesn't play B4 (tricky !)
 Ex: pachipachi OVO 2022-05-10
 
-Interestingly 4-4 cross cut can revert to this (B stone at C8 in this case)
+Interestingly 4-4 cross cut can revert to this (W stone at C8 in this case)
 -> Match around D2 to match this also.
 Ex: OVO SwissBot1 2022-10-26 08:29
 
@@ -84,7 +84,7 @@ around = D2
 external_engine
 
 
-If W has ladder around F4, can't E3.
+If B has ladder around F4, W can't E3.
 B2 best]
 (;B[er]
 ;W[gq]C[[override\]]
