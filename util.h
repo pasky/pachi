@@ -180,14 +180,14 @@ strbuf_t *strbuf_init_alloc(strbuf_t *buf, int size);
 strbuf_t *new_strbuf(int size);
 
 /* Create string buffer for use within current function (stack-allocated). */
-#define strbuf(buf, size)  \
-	char buffer_[(size)];  strbuf_t strbuf_; \
-	strbuf_t *buf = strbuf_init(&strbuf_, buffer_, sizeof(buffer_));
+#define strbuf(name, size)  \
+	char buffer_ ## name [(size)];  strbuf_t strbuf_ ## name; \
+	strbuf_t *name = strbuf_init(&strbuf_ ## name, buffer_ ## name, sizeof(buffer_ ## name));
 
 /* Create static string buffer: can return buf->str (but not buf). */
-#define static_strbuf(buf, size)  \
-	static char buffer_[(size)];  strbuf_t strbuf_; \
-	strbuf_t *buf = strbuf_init(&strbuf_, buffer_, sizeof(buffer_));
+#define static_strbuf(name, size)  \
+	static char buffer_ ## name [(size)];  strbuf_t strbuf_ ## name; \
+	strbuf_t *name = strbuf_init(&strbuf_ ## name, buffer_ ## name, sizeof(buffer_ ## name));
 
 /* String buffer version of printf():
  * Use sbprintf(buf, format, ...) to accumulate output. */
