@@ -5,6 +5,94 @@
 #include "debug.h"
 #include "pachi.h"
 
+/* engine headers */
+#include "uct/uct.h"
+#include "distributed/distributed.h"
+#include "engines/replay.h"
+#include "engines/montecarlo.h"
+#include "engines/random.h"
+#include "engines/external.h"
+#include "dcnn/dcnn_engine.h"
+#include "dcnn/blunderscan.h"
+#include "pattern/patternscan.h"
+#include "pattern/pattern_engine.h"
+#include "joseki/joseki_engine.h"
+#include "joseki/josekiload.h"
+#include "josekifix/josekifixload.h"
+
+
+/**************************************************************************************************/
+/* Engines list */
+
+typedef struct {
+	int		id;
+	char	       *name;
+	engine_init_t	init;
+	bool		show;
+} engine_map_t;
+
+/* Must match order in engine.h */
+engine_map_t engines[] = {
+	{ E_UCT,		"uct",            uct_engine_init,            1 },
+#ifdef DCNN
+	{ E_DCNN,		"dcnn",           dcnn_engine_init,           1 },
+#ifdef EXTRA_ENGINES
+	{ E_BLUNDERSCAN,	"blunderscan",    blunderscan_engine_init,    0 },
+#endif
+#endif
+	{ E_PATTERN,		"pattern",        pattern_engine_init,        1 },
+#ifdef EXTRA_ENGINES
+	{ E_PATTERNSCAN,	"patternscan",    patternscan_engine_init,    0 },
+#endif
+	{ E_JOSEKI,		"joseki",         joseki_engine_init,         1 },
+	{ E_JOSEKILOAD,		"josekiload",     josekiload_engine_init,     0 },
+#ifdef JOSEKIFIX
+	{ E_JOSEKIFIXLOAD,	"josekifixload",  josekifixload_engine_init,  0 },
+#endif	
+	{ E_RANDOM,		"random",         random_engine_init,         1 },
+	{ E_REPLAY,		"replay",         replay_engine_init,         1 },
+	{ E_MONTECARLO,		"montecarlo",     montecarlo_engine_init,     1 },
+#ifdef DISTRIBUTED
+	{ E_DISTRIBUTED,	"distributed",    distributed_engine_init,    1 },
+#endif
+#ifdef JOSEKIFIX
+	{ E_EXTERNAL,		"external",       external_engine_init,       0 },
+#endif
+
+/* Alternative names */
+	{ E_PATTERN,		"patternplay",    pattern_engine_init,        1 },  /* backwards compatibility */
+	{ E_JOSEKI,		"josekiplay",     joseki_engine_init,         1 },
+	
+	{ 0, 0, 0, 0 }
+};
+
+void
+engine_init_checks(void)
+{
+	/* Check engines list is sane. */
+	for (int i = 0; i < E_MAX; i++)
+		assert(engines[i].name && engines[i].id == i);
+}
+
+enum engine_id
+engine_name_to_id(const char *name)
+{
+	for (int i = 0; engines[i].name; i++)
+		if (!strcmp(name, engines[i].name))
+			return engines[i].id;
+	return E_MAX;
+}
+
+char*
+supported_engines(bool show_all)
+{
+	static_strbuf(buf, 512);
+	for (int i = 0; i < E_MAX; i++)  /* Don't list alt names */
+		if (show_all || engines[i].show)
+			strbuf_printf(buf, "%s%s", engines[i].name, (engines[i+1].name ? ", " : ""));
+	return buf->str;
+}
+
 
 /**************************************************************************************************/
 /* Engine options */
@@ -104,11 +192,14 @@ engine_options_concat(strbuf_t *buf, options_t *options)
 
 
 /**************************************************************************************************/
+/* Engine init */
 
 /* init from scratch, preserving options. */
 static void
 engine_init_(engine_t *e, int id, board_t *b)
 {
+	assert(id >= 0 && id < E_MAX);
+	
 	options_t options;
 	//engine_options_print(&e->options);
 
@@ -117,7 +208,7 @@ engine_init_(engine_t *e, int id, board_t *b)
 	engine_options_copy(&e->options, &options);
 
 	e->id = id;
-	pachi_engine_init(e, id, b);
+	engines[id].init(e, b);
 }
 
 /* init from scratch */

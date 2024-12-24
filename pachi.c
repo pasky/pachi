@@ -11,27 +11,13 @@
 #include "pachi.h"
 #include "debug.h"
 #include "engine.h"
-#include "engines/replay.h"
-#include "engines/montecarlo.h"
-#include "engines/random.h"
-#include "engines/external.h"
-#include "dcnn/dcnn_engine.h"
-#include "dcnn/blunderscan.h"
-#include "pattern/patternscan.h"
-#include "pattern/pattern_engine.h"
-#include "joseki/joseki_engine.h"
-#include "joseki/josekiload.h"
-#include "josekifix/josekifixload.h"
 #include "t-unit/test.h"
-#include "uct/uct.h"
-#include "distributed/distributed.h"
 #include "gtp.h"
 #include "chat.h"
 #include "timeinfo.h"
 #include "random.h"
 #include "version.h"
 #include "network.h"
-#include "uct/tree.h"
 #include "fifo.h"
 #include "dcnn/dcnn.h"
 #include "dcnn/caffe.h"
@@ -54,67 +40,6 @@ long  verbose_logs = 0;
 
 static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port);
 
-typedef struct {
-	int		id;
-	char	       *name;
-	engine_init_t	init;
-	bool		show;
-} engine_map_t;
-
-/* Must match order in engine.h */
-engine_map_t engines[] = {
-	{ E_UCT,		"uct",            uct_engine_init,            1 },
-#ifdef DCNN
-	{ E_DCNN,		"dcnn",           dcnn_engine_init,           1 },
-#ifdef EXTRA_ENGINES
-	{ E_BLUNDERSCAN,	"blunderscan",    blunderscan_engine_init,    0 },
-#endif
-#endif
-	{ E_PATTERN,		"pattern",        pattern_engine_init,        1 },
-#ifdef EXTRA_ENGINES
-	{ E_PATTERNSCAN,	"patternscan",    patternscan_engine_init,    0 },
-#endif
-	{ E_JOSEKI,		"joseki",         joseki_engine_init,         1 },
-	{ E_JOSEKILOAD,		"josekiload",     josekiload_engine_init,     0 },
-#ifdef JOSEKIFIX
-	{ E_JOSEKIFIXLOAD,	"josekifixload",  josekifixload_engine_init,  0 },
-#endif
-	{ E_RANDOM,		"random",         random_engine_init,         1 },
-	{ E_REPLAY,		"replay",         replay_engine_init,         1 },
-	{ E_MONTECARLO,		"montecarlo",     montecarlo_engine_init,     1 },
-#ifdef DISTRIBUTED
-	{ E_DISTRIBUTED,	"distributed",    distributed_engine_init,    1 },
-#endif
-#ifdef JOSEKIFIX
-	{ E_EXTERNAL,		"external",       external_engine_init,       0 },
-#endif
-
-/* Alternative names */
-	{ E_PATTERN,		"patternplay",    pattern_engine_init,        1 },  /* backwards compatibility */
-	{ E_JOSEKI,		"josekiplay",     joseki_engine_init,         1 },
-	
-	{ 0, 0, 0, 0 }
-};
-
-static enum engine_id
-engine_name_to_id(const char *name)
-{
-	for (int i = 0; engines[i].name; i++)
-		if (!strcmp(name, engines[i].name))
-			return engines[i].id;
-	return E_MAX;
-}
-
-static char*
-supported_engines(bool show_all)
-{
-	static_strbuf(buf, 512);
-	for (int i = 0; i < E_MAX; i++)  /* Don't list alt names */
-		if (show_all || engines[i].show)
-			strbuf_printf(buf, "%s%s", engines[i].name, (engines[i+1].name ? ", " : ""));
-	return buf->str;
-}
-
 static void
 pachi_init(int argc, char *argv[])
 {
@@ -123,18 +48,9 @@ pachi_init(int argc, char *argv[])
 	
 	pachi_exe = argv[0];
 	win_set_pachi_cwd(argv[0]);
-	
-	/* Check engine list is sane. */
-	for (int i = 0; i < E_MAX; i++)
-		assert(engines[i].name && engines[i].id == i);
-};
 
-void
-pachi_engine_init(engine_t *e, int id, board_t *b)
-{
-	assert(id >= 0 && id < E_MAX);	
-	engines[id].init(e, b);
-}
+	engine_init_checks();
+};
 
 static void
 usage_smart_pass()

@@ -115,6 +115,15 @@ struct engine {
 };
 
 
+/* Initial sanity checks. */
+void engine_init_checks(void);
+
+/* Convert engine name to id. */
+enum engine_id engine_name_to_id(const char *name);
+
+/* List supported engines (show_all: show/hide internal engines). */
+char* supported_engines(bool show_all);
+
 /* Initialize engine. Call engine_done() later when finished with it. */
 void engine_init(engine_t *e, int id, const char *e_arg, board_t *b);
 

@@ -20,9 +20,6 @@ typedef struct {
 /* Free globals */
 void pachi_done();
 
-/* Init engines */
-void pachi_engine_init(struct engine *e, int id, struct board *b);
-
 /* Get global options */
 const pachi_options_t *pachi_options();
 
