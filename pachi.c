@@ -52,6 +52,20 @@ pachi_init(int argc, char *argv[])
 	engine_init_checks();
 };
 
+static engine_t *
+new_main_engine(int engine_id, board_t *b, int argc, char **argv, int optind)
+{
+	/* Extra cmdline args are engine parameters */
+	strbuf(buf, 1000);
+	for (int i = optind; i < argc; i++)
+		sbprintf(buf, "%s%s", (i == optind ? "" : ","), argv[i]);
+	char *engine_args = buf->str;
+
+	engine_t *e = new_engine(engine_id, engine_args, b);
+	
+	return e;
+}
+
 static void
 log_gtp_input(char *cmd)
 {
@@ -322,11 +336,14 @@ static struct option longopts[] = {
 /**********************************************************************************************************/
 /* Main */
 
+static gtp_t	 main_gtp;
+static board_t	*main_board = NULL;
+static engine_t *main_engine;
+
 int main(int argc, char *argv[])
 {
 	pachi_options_t *options = &main_options;
 
-	gtp_t main_gtp;	
 	gtp_t *gtp = &main_gtp;
 	
 	enum engine_id engine_id = E_UCT;
@@ -342,7 +359,7 @@ int main(int argc, char *argv[])
 
 	pachi_init(argc, argv);
 
-	board_t *b = board_new(dcnn_default_board_size(), fbookfile);
+	board_t *b = main_board = board_new(dcnn_default_board_size(), fbookfile);
 	gtp_internal_init(gtp);
 	gtp_init(gtp, b);
 	gtp->banner = strdup("Have a good game !");
@@ -547,37 +564,36 @@ int main(int argc, char *argv[])
 #endif
 
 	if (testfile)		 return unit_test(testfile);
+
+	engine_t *e = main_engine = new_main_engine(engine_id, b, argc, argv, optind);
 	
-	/* Extra cmdline args are engine parameters */
-	strbuf(buf, 1000);
-	for (int i = optind; i < argc; i++)
-		sbprintf(buf, "%s%s", (i == optind ? "" : ","), argv[i]);
-	char *engine_args = buf->str;
-	
-	engine_t e;  engine_init(&e, engine_id, engine_args, b);
 	network_init(gtp_port);
 
 	while (1) {
-		main_loop(gtp, b, &e, ti, &ti_default, gtp_port);
+		main_loop(gtp, b, e, ti, &ti_default, gtp_port);
 		if (!gtp_port)  break;
 		network_init(gtp_port);
 	}
 
-	engine_done(&e);
-	board_delete(&b);
-	gtp_done(gtp);
-	chat_done();
 	free(testfile);
 	free(gtp_port);
 	free(log_port);
 	free(chatfile);
 	free(fbookfile);
+	
+	pachi_done();
+	
 	return 0;
 }
 
 void
 pachi_done()
 {
+	delete_engine(&main_engine);
+	board_delete(&main_board);
+	gtp_done(&main_gtp);
+	
+	chat_done();
 	joseki_done();
 	prob_dict_done();
 	spatial_dict_done();
