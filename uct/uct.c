@@ -961,6 +961,12 @@ uct_tree_size_init(uct_t *u, size_t tree_size)
 	u->tree_size = tree_size;
 }
 
+bool
+uct_is_slave(engine_t *e)
+{
+	uct_t *u = (uct_t*)e->data;
+	return u->slave;
+}
 
 #define NEED_RESET   ENGINE_SETOPTION_NEED_RESET
 #define option_error engine_setoption_error

@@ -361,7 +361,7 @@ josekifix_engine_if_needed(engine_t *uct, board_t *b)
 {
 	uct_engine = uct;
 
-	if (!using_dcnn(b)) {
+	if (!using_dcnn(b) || uct_is_slave(uct)) {
 		disable_josekifix();
 		return uct_engine;
 	}
