@@ -22,6 +22,7 @@
 static engine_t  *uct_engine = NULL;
 static engine_t  *external_joseki_engine = NULL;
 static bool       undo_pending = false;
+static bool       fake_external_joseki_engine = false;
 static ownermap_t prev_ownermap;
 
 /* Globals */
@@ -68,14 +69,25 @@ start_external_joseki_engine(board_t *b)
 	return true;
 }
 
+void
+set_fake_external_joseki_engine(void)
+{
+	fake_external_joseki_engine = true;
+}
+
 coord_t
 external_joseki_engine_genmove(board_t *b)
 {
+	external_joseki_engine_genmoved = true;
+
+	if (fake_external_joseki_engine) {	/* Fake engine ? Return first move available. */
+		coord_t c = b->f[0];
+		if (DEBUGL(2))  fprintf(stderr, "external joseki engine move: %s  (fake)\n", coord2sstr(c));
+		return c;
+	}
+	
 	enum stone color = board_to_play(b);
 	coord_t c = external_joseki_engine->genmove(external_joseki_engine, b, NULL, color, false);
-	
-	external_joseki_engine_genmoved = true;
-	
 	return c;
 }
 

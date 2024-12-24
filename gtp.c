@@ -652,7 +652,7 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	move_queue_t q;  mq_init(&q);
 	board_handicap(b, stones, &q);
 	
-	if (DEBUGL(1) && debug_boardprint)
+	if (DEBUGL(3) && debug_boardprint)
 		board_print(b, stderr);
 
 	for (int i = 0; i < q.moves; i++) {

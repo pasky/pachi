@@ -5,6 +5,10 @@ SGF  = josekifix.sgf fusekifix.sgf
 
 ifeq ($(JOSEKIFIX), 1)
 	OBJS += fuseki.o joseki_override.o josekifix_engine.o josekifixload.o special_checks.o
+
+ifeq ($(EXTRA_ENGINES), 1)
+	OBJS += josekifixscan.o
+endif
 endif
 
 
