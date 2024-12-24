@@ -292,7 +292,8 @@ cmd_boardsize(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	}
 	board_resize(b, size);
 	board_clear(b);
-	return P_ENGINE_RESET;
+
+	return (e->keep_on_clear ? P_OK : P_ENGINE_RESET);
 }
 
 static enum parse_code
@@ -303,7 +304,7 @@ cmd_clear_board(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (DEBUGL(3) && debug_boardprint)
 		board_print(b, stderr);
 
-	return P_ENGINE_RESET;
+	return (e->keep_on_clear ? P_OK : P_ENGINE_RESET);
 }
 
 static enum parse_code

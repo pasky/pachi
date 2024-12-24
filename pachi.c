@@ -97,8 +97,7 @@ main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_
 		if (c == P_ENGINE_RESET) {
 			ti[S_BLACK] = *ti_default;
 			ti[S_WHITE] = *ti_default;
-			if (!e->keep_on_clear)
-				engine_reset(e, b);
+			engine_reset(e, b);
 		}
 	}
 }
