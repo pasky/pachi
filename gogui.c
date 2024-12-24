@@ -56,18 +56,18 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		//printf("plist/Final Status List Black/final_status_list black_territory\n");
 		//printf("plist/Final Status List White/final_status_list white_territory\n");
 	}
-	if (!strcmp(e->name, "UCT") && using_joseki(b)) {
+	if (str_prefix("UCT", e->name) && using_joseki(b)) {
 		printf("gfx/Joseki Moves/gogui-joseki_moves\n");
 		printf("gfx/Joseki Range/gogui-joseki_show_pattern %%p\n");
 	}
 #ifdef DCNN                            /* board check fake since we're called once on startup ... */
-	if (!strcmp(e->name, "UCT") && using_dcnn(b)) {
+	if (str_prefix("UCT", e->name) && using_dcnn(b)) {
 		printf("gfx/DCNN Best Moves/gogui-dcnn_best\n");
 		printf("gfx/DCNN Color Map/gogui-dcnn_colors\n");
 		printf("gfx/DCNN Ratings/gogui-dcnn_rating\n");
 	}
 #endif
-	if (!strcmp(e->name, "UCT") && using_patterns()) {
+	if (str_prefix("UCT", e->name) && using_patterns()) {
 		printf("gfx/Pattern Best Moves/gogui-pattern_best\n");
 		printf("gfx/Pattern Color Map/gogui-pattern_colors\n");
 		printf("gfx/Pattern Ratings/gogui-pattern_rating\n");
@@ -76,7 +76,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Set Spatial Size/gogui-spatial_size %%o\n");
 		printf("gfx/Show Spatial/gogui-show_spatial %%p\n");
 	}
-	if (!strcmp(e->name, "UCT")) {
+	if (str_prefix("UCT", e->name)) {
 		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves\n");
 		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq\n");
 		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates\n");

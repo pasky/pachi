@@ -214,7 +214,7 @@ static enum parse_code
 cmd_name(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *name = "Pachi %s";
-	if (!strcmp(e->name, "UCT"))  name = "Pachi";
+	if (str_prefix("UCT", e->name))  name = "Pachi";
 	if (gtp->custom_name)         name = gtp->custom_name;
 	gtp_printf(gtp, name, e->name);
 	gtp_printf(gtp, "\n");
