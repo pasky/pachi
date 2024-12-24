@@ -1203,8 +1203,9 @@ gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	}
 	
 	/* Run engine notify() handler */
+	enum parse_code c;
 	if (e->notify) {
-		enum parse_code c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, gtp);
+		c = e->notify(e, b, gtp->id, gtp->cmd, gtp->next, gtp);
 		
 		if (gtp->error)  return P_OK;		      /* error, don't run default handler */
 
@@ -1217,7 +1218,13 @@ gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	}
 
 	/* Run default handler */
-	return handler(b, e, ti, gtp);
+	c = handler(b, e, ti, gtp);
+
+	/* Run engine notify_after() handler */
+	if (e->notify_after)
+		e->notify_after(e, b, gtp->id, gtp->cmd, gtp);
+	
+	return c;
 }
 
 enum parse_code
