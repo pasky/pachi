@@ -233,7 +233,10 @@ cmd_echo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_printf(gtp, "%s", PACHI_VERSION);
+	if (e->version)
+		gtp_printf(gtp, "%s", e->version);
+	else
+		gtp_printf(gtp, "%s", PACHI_VERSION);
 
 	/* Show josekifix status */
  	if (!get_josekifix_enabled() && e->id == E_UCT)

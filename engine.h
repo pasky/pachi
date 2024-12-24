@@ -75,6 +75,7 @@ struct engine {
 	int   id;
 	char *name;
 	char *comment;
+	char *version;				    /* Replaces default gtp answer if present. */
 
 	options_t options;
 
