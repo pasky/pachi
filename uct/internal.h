@@ -162,11 +162,9 @@ typedef struct uct {
 #define UDEBUGL(n) DEBUGL_(u->debug_level, n)
 
 bool uct_pass_is_safe(uct_t *u, board_t *b, enum stone color, bool pass_all_alive, move_queue_t *dead, char **msg, bool log);
-void uct_prepare_move(uct_t *u, board_t *b, enum stone color);
 void uct_genmove_setup(uct_t *u, board_t *b, enum stone color);
 void uct_pondering_stop(uct_t *u);
 void uct_get_best_moves(uct_t *u, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts);
-void uct_get_best_moves_at(uct_t *u, tree_node_t *n, coord_t *best_c, float *best_r, int nbest, bool winrates, int min_playouts);
 void uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color);
 void uct_tree_size_init(uct_t *u, size_t tree_size);
 
