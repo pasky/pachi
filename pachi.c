@@ -53,6 +53,61 @@ pachi_init(int argc, char *argv[])
 };
 
 static void
+log_gtp_input(char *cmd)
+{
+#ifdef DISTRIBUTED
+	/* Log everything except 'pachi-genmoves' subcommands by default,
+	 * slave gets one every 100ms ... */
+	bool genmoves_subcommand = (strchr(cmd, '@') && strstr(cmd, " pachi-genmoves"));
+	if (genmoves_subcommand && !DEBUGL(3))  return;
+#endif
+	
+	if (DEBUGL(1))  fprintf(stderr, "IN: %s", cmd);
+}
+
+static void
+show_version(FILE *s)
+{
+	fprintf(s, "Pachi %s\n", PACHI_VERSION_FULL);
+	if (!DEBUGL(2)) return;
+
+	fprintf(s, "git %s\n", PACHI_VERGIT);
+
+	/* Build info */
+	char boardsize[32] = "";
+#ifdef BOARD_SIZE
+	sprintf(boardsize, "[%ix%i]", BOARD_SIZE, BOARD_SIZE);
+#endif
+	fprintf(s, "%s  %s\n\n", PACHI_VERBUILD, boardsize);
+}
+
+static void
+main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port)
+{
+	char buf[4096];
+	while (fgets(buf, 4096, stdin)) {
+		log_gtp_input(buf);
+
+		enum parse_code c = gtp_parse(gtp, b, e, ti, buf);
+
+		/* The gtp command is a weak identity check,
+		 * close the connection with a wrong peer. */
+		if (c == P_UNKNOWN_COMMAND && gtp_port)  return;
+		
+		if (c == P_ENGINE_RESET) {
+			ti[S_BLACK] = *ti_default;
+			ti[S_WHITE] = *ti_default;
+			if (!e->keep_on_clear)
+				engine_reset(e, b);
+		}
+	}
+}
+
+
+/**********************************************************************************************************/
+/* Options */
+
+static void
 usage_smart_pass()
 {
 	fprintf(stderr,
@@ -184,23 +239,6 @@ usage(char *arg)
 		" \n");
 }
 
-static void
-show_version(FILE *s)
-{
-	fprintf(s, "Pachi %s\n", PACHI_VERSION_FULL);
-	if (!DEBUGL(2)) return;
-
-	fprintf(s, "git %s\n", PACHI_VERGIT);
-
-	/* Build info */
-	char boardsize[32] = "";
-#ifdef BOARD_SIZE
-	sprintf(boardsize, "[%ix%i]", BOARD_SIZE, BOARD_SIZE);
-#endif
-	fprintf(s, "%s  %s\n\n", PACHI_VERBUILD, boardsize);
-}
-
-
 #define OPT_FUSEKI_TIME       256
 #define OPT_NODCNN            257
 #define OPT_DCNN              258
@@ -277,6 +315,10 @@ static struct option longopts[] = {
 	{ "version",                no_argument,       0, 'v' },
 	{ 0, 0, 0, 0 }
 };
+
+
+/**********************************************************************************************************/
+/* Main */
 
 int main(int argc, char *argv[])
 {
@@ -526,41 +568,6 @@ int main(int argc, char *argv[])
 	free(chatfile);
 	free(fbookfile);
 	return 0;
-}
-
-static void
-log_gtp_input(char *cmd)
-{
-#ifdef DISTRIBUTED
-	/* Log everything except 'pachi-genmoves' subcommands by default,
-	 * slave gets one every 100ms ... */
-	bool genmoves_subcommand = (strchr(cmd, '@') && strstr(cmd, " pachi-genmoves"));
-	if (genmoves_subcommand && !DEBUGL(3))  return;
-#endif
-	
-	if (DEBUGL(1))  fprintf(stderr, "IN: %s", cmd);
-}
-
-static void
-main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port)
-{
-	char buf[4096];
-	while (fgets(buf, 4096, stdin)) {
-		log_gtp_input(buf);
-
-		enum parse_code c = gtp_parse(gtp, b, e, ti, buf);
-
-		/* The gtp command is a weak identity check,
-		 * close the connection with a wrong peer. */
-		if (c == P_UNKNOWN_COMMAND && gtp_port)  return;
-		
-		if (c == P_ENGINE_RESET) {
-			ti[S_BLACK] = *ti_default;
-			ti[S_WHITE] = *ti_default;
-			if (!e->keep_on_clear)
-				engine_reset(e, b);
-		}
-	}
 }
 
 void
