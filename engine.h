@@ -78,7 +78,8 @@ struct engine {
 
 	options_t options;
 
-	bool keep_on_clear;			    /* If set, do not reset the engine state on clear_board. */
+	bool keep_on_clear;			    /* Do not reset engine on clear_board. */
+	bool keep_on_undo;			    /* Do not reset engine after undo. */
 
 	engine_setoption_t       setoption;	    /* Set/change engine option. Don't call directly.
 						     * @optname/@optval: option name/value. @optval may be changed by engine.

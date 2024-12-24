@@ -884,35 +884,40 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	h->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
+	/* XXX should use engine->stop() instead  (needs distributed fix)  */
 	move_t m = move(pass, board_to_play(b));  bool print;
-	if (e->notify_play)
+	if (!e->keep_on_undo && e->notify_play)
 		e->notify_play(e, b, &m, "", &print);
 
-	/* Wait for non-undo command to reset engine. */
+	/* Wait for non-undo command to recreate board (and reset engine if necessary). */
 	gtp->undo_pending = true;
 	
 	return P_OK;
 }
 
+/* Recreate board and reset engine if needed. */
 static void
-undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
+gtp_process_undo(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 {
-	if (DEBUGL(3)) fprintf(stderr, "reloading engine after undo(s).\n");
-	
+	bool reset_engine = !e->keep_on_undo;
 	gtp->undo_pending = false;
 
-	gtp_reset_engine(gtp, b, e, ti);
-	
 	/* Reset board */
 	int handicap = b->handicap;
 	b->move_history = NULL;		/* Preserve history ! */
 	board_clear(b);
 	b->handicap = handicap;
 
+	if (reset_engine) {
+		if (DEBUGL(3)) fprintf(stderr, "reloading engine after undo(s).\n");
+		gtp_reset_engine(gtp, b, e, ti);
+	}
+
+	/* Replay remaining moves. */
 	move_history_t *h = &gtp->history;
 	for (int i = 0; i < h->moves; i++) {
 		bool print;
-		if (e->notify_play)
+		if (reset_engine && e->notify_play)
 			e->notify_play(e, b, &h->move[i], "", &print);
 		int r = board_play(b, &h->move[i]);
 		assert(r >= 0);
@@ -1223,10 +1228,10 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	if (e->id == E_UCT)
 		external_joseki_engine_forward_cmd(gtp, orig_cmd);
 #endif
-	
-	/* Undo: reload engine after first non-undo command. */
+
+	/* Handle undo after first non-undo command: recreate board and reload engine if necessary. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
-		undo_reload_engine(gtp, b, e, ti);
+		gtp_process_undo(gtp, b, e, ti);
 
 	/* Run handler */
 	enum parse_code c = gtp_run_handler(gtp, b, e, ti, buf);
