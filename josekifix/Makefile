@@ -1,6 +1,6 @@
 INCLUDES=-I..
 
-OBJS = fuseki.o josekifix.o josekifixload.o special_checks.o
+OBJS = fuseki.o josekifix.o josekifix_engine.o josekifixload.o special_checks.o
 SGF  = josekifix.sgf fusekifix.sgf
 
 # don't build data by default, trips automated build systems

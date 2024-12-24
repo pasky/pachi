@@ -26,6 +26,7 @@
 #include "pattern/prob.h"
 #include "joseki/joseki.h"
 #include "josekifix/josekifix.h"
+#include "josekifix/josekifix_engine.h"
 
 /* Main options */
 static pachi_options_t main_options = { 0, };
@@ -63,6 +64,12 @@ new_main_engine(int engine_id, board_t *b, int argc, char **argv, int optind)
 
 	engine_t *e = new_engine(engine_id, engine_args, b);
 	
+#ifdef JOSEKIFIX
+	/* When joseki fixes are active josekifix engine is main engine
+	 * and acts as middle man between gtp and uct engine. */
+	if (engine_id == E_UCT)
+		e = josekifix_engine_if_needed(e, b);
+#endif
 	return e;
 }
 
@@ -559,9 +566,6 @@ int main(int argc, char *argv[])
 	ti[S_WHITE] = ti_default;
 
 	chat_init(chatfile);
-#ifdef JOSEKIFIX
-	josekifix_init(b);
-#endif
 
 	if (testfile)		 return unit_test(testfile);
 
@@ -586,6 +590,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+/* Also called on gtp quit command. */
 void
 pachi_done()
 {
@@ -597,11 +602,4 @@ pachi_done()
 	joseki_done();
 	prob_dict_done();
 	spatial_dict_done();
-
-#ifdef JOSEKIFIX
-	if (external_joseki_engine) {
-		engine_done(external_joseki_engine);
-		external_joseki_engine = NULL;
-	}
-#endif
 }

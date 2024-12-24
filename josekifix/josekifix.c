@@ -11,6 +11,7 @@
 #include "dcnn/dcnn.h"
 #include "joseki/joseki.h"
 #include "josekifix/josekifix.h"
+#include "josekifix/josekifix_engine.h"
 #include "tactics/util.h"
 #include "tactics/2lib.h"
 #include "tactics/ladder.h"
@@ -25,9 +26,10 @@ coord_t joseki_override_(struct board *b, strbuf_t *log,
 
 static bool josekifix_enabled = true;
 static bool josekifix_required = false;
-void disable_josekifix()     {  josekifix_enabled = false;  }
-void require_josekifix()     {  josekifix_required = true;  }
-bool get_josekifix_enabled() {  return josekifix_enabled;  }
+void disable_josekifix()      {  josekifix_enabled = false;  }
+void require_josekifix()      {  josekifix_required = true;  }
+bool get_josekifix_enabled()  {  return josekifix_enabled;   }
+bool get_josekifix_required() {  return josekifix_required;  }
 
 
 /*****************************************************************************/
@@ -102,40 +104,12 @@ override2_list_add(override2_list_t *list, override2_t *override)
 /*****************************************************************************/
 /* External engine */
 
-char     *external_joseki_engine_cmd = "katago gtp";
-engine_t *external_joseki_engine = NULL;
-int       external_joseki_engine_genmoved = 0;
-
 /* For each quadrant, whether to enable external engine mode (value specifies number of moves)  */
 static int  wanted_external_engine_mode[4] = { 0, };
 
 static bool external_engine_overrides_enabled = true;
 
 #define EXTERNAL_ENGINE_MOVE -3
-
-static void
-external_joseki_engine_init(board_t *b)
-{
-	char *cmd = external_joseki_engine_cmd;	
-	if (!cmd)  return;
-
-	strbuf(buf, 1024);
-	strbuf_printf(buf, "cmd=%s", cmd);
-	external_joseki_engine = new_engine(E_EXTERNAL, buf->str, b);
-	if (!external_engine_started(external_joseki_engine))
-		external_joseki_engine = NULL;
-}
-
-coord_t
-external_joseki_engine_genmove(board_t *b)
-{
-	enum stone color = board_to_play(b);
-	coord_t c = external_joseki_engine->genmove(external_joseki_engine, b, NULL, color, false);
-	
-	external_joseki_engine_genmoved = 1;
-	
-	return c;
-}
 
 /* <external joseki engine mode> on in this quadrant for next moves */
 static void
@@ -1010,7 +984,7 @@ josekifix_add_logged_variation_and(board_t *b, override_t *log1, override_t *log
 /* Load josekifix overrides from file.
  * Debugging: to get a dump of all entries, run                      'pachi -d4'
  *            to get a dump of all entries + earlier positions, run  'pachi -d5'  */
-static void
+static bool
 josekifix_load(void)
 {
 	const char *fname = "josekifix.gtp";
@@ -1020,8 +994,7 @@ josekifix_load(void)
 		if (DEBUGL(2))		 fprintf(stderr, "Joseki fixes: file %s missing\n", fname);
 		if (josekifix_required)  die("josekifix required but %s missing, aborting.\n", fname);
 		if (DEBUGL(2))		 fprintf(stderr, "Joseki fixes disabled\n");
-		josekifix_enabled = false;
-		return;
+		return false;
 	}
 	if (DEBUGL(2))  fprintf(stderr, "Loading joseki fixes ...\n");
 
@@ -1056,25 +1029,21 @@ josekifix_load(void)
 	else if (DEBUGL(2))  fprintf(stderr, "Loaded %i overrides.\n", joseki_overrides.len);
 
 	fclose(f);
+	return true;
 }
 
-void
+bool
 josekifix_init(board_t *b)
 {
-	if (josekifix_enabled) {
-		assert(!joseki_overrides.overrides);
-		external_joseki_engine_init(b);
-		
-		if (!external_joseki_engine) {
-			/* While we could support a degraded mode where only self-contained overrides are supported,
-			 * joseki fixes database is designed with external engine in mind and will not play its role
-			 * without it. Disable joseki fixes and let user know. */
-			if (josekifix_required)  die("josekifix required but external joseki engine missing, aborting.\n");
-			if (DEBUGL(1)) fprintf(stderr, "Joseki fixes disabled: external joseki engine missing\n");
-			josekifix_enabled = false;
-		} else  /* Load database of joseki fixes */
-			josekifix_load();
-	} else if (DEBUGL(2))  fprintf(stderr, "Joseki fixes disabled\n");
+	assert(!joseki_overrides.overrides);
+	
+	/* Load database of joseki fixes */
+	if (!josekifix_load()) {
+		josekifix_enabled = false;
+		return false;
+	}
+
+	return true;
 }
 
 
@@ -1145,10 +1114,8 @@ joseki_override_(struct board *b, strbuf_t *log,
 coord_t
 joseki_override_external_engine_only(board_t *b)
 {
-	if (!josekifix_enabled)		return pass;
-	if (!external_joseki_engine)	return pass;
-	
-	external_joseki_engine_genmoved = 0;
+	assert(josekifix_enabled);
+	external_joseki_engine_genmoved = false;
 	strbuf(log, 4096);
 	coord_t c = joseki_override_(b, log, NULL, NULL, true);
 	
@@ -1168,8 +1135,7 @@ joseki_override_external_engine_only(board_t *b)
 coord_t
 joseki_override_no_external_engine(struct board *b, struct ownermap *prev_ownermap, struct ownermap *ownermap)
 {
-	if (!josekifix_enabled)  return pass;
-	
+	assert(josekifix_enabled);
 	strbuf(log, 4096);    
 	coord_t c = joseki_override_(b, log, prev_ownermap, ownermap, false);
 	if (DEBUGL(2))  fprintf(stderr, "%s", log->str);	/* display log */
@@ -1179,12 +1145,11 @@ joseki_override_no_external_engine(struct board *b, struct ownermap *prev_ownerm
 }
 
 /* Return joseki override move for current position (pass = no override). */
-static coord_t
+coord_t
 joseki_override(struct board *b)
 {
-	if (!josekifix_enabled)  return pass;
-	
-	external_joseki_engine_genmoved = 0;
+	assert(josekifix_enabled);
+	external_joseki_engine_genmoved = false;
 	strbuf(log, 4096);
 	coord_t c = joseki_override_(b, log, NULL, NULL, true);
 	if (DEBUGL(2))  fprintf(stderr, "%s", log->str);	/* display log */
@@ -1193,57 +1158,4 @@ joseki_override(struct board *b)
 	return c;
 }
 
-
-/**********************************************************************************************************/
-
-/* GTP early genmove logic: Called from GTP layer before engine genmove.
- * If there's an override involving external joseki engine we want to avoid spending
- * time in both engines.
- * 
- * So check if there's an override involving external engine.
- * - If so get final move from it. Caller should skip engine genmove entirely.
- * - Otherwise return pass. Override will be handled normally at the end of genmove (if any).
- * 
- * Also take care to apply overrides to external engine moves if in external_joseki_engine_mode,
- * they should take precedence. If there's an override still ask it for a move even though we
- * don't need it to keep game timing the same. */
-coord_t
-joseki_override_before_genmove(board_t *b, enum stone color)
-{
-	if (!josekifix_enabled)  return pass;
-	
-	coord_t c = pass;
-	int quad = last_quadrant(b);
-	bool external_joseki_engine_mode_on = b->external_joseki_engine_moves_left_by_quadrant[quad];
-	
-	if (external_joseki_engine_mode_on) {
-		b->external_joseki_engine_moves_left_by_quadrant[quad]--;
-		
-		if (DEBUGL(3))  fprintf(stderr, "external joseki engine mode: quadrant %i, moves left: %i\n",
-					quad, b->external_joseki_engine_moves_left_by_quadrant[quad]);
-
-		/* First check overrides. */
-		c = joseki_override(b);
-
-		/* If genmoved, we have final move and we spent some time thinking, all good.  */
-		if (external_joseki_engine_genmoved)  return c;
-
-		/* Get move now then ... */
-		coord_t c2 = external_joseki_engine_genmove(b);
-
-		/* But let override take over if different. */
-		if (!is_pass(c) && !is_pass(c2) && c2 != c) {   /* Keep engines in sync ! */
-			c2 = c;
-			external_engine_undo(external_joseki_engine);	        /* Undo external engine move, */
-			external_joseki_engine_genmoved = 0;			/* GTP layer will send play commend */
-		}
-		
-		return c2;
-	}
-	
-	if (is_pass(c))
-		c = joseki_override_external_engine_only(b);
-
-	return c;
-}
 

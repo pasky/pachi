@@ -20,9 +20,8 @@
 #include "timeinfo.h"
 #include "ownermap.h"
 #include "gogui.h"
+#include "dcnn/dcnn.h"
 #include "t-predict/predict.h"
-#include "josekifix/josekifix.h"
-#include "engines/external.h"
 #include "t-unit/test.h"
 #include "fifo.h"
 
@@ -239,10 +238,6 @@ cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	else
 		gtp_printf(gtp, "%s", PACHI_VERSION);
 
-	/* Show josekifix status */
- 	if (!get_josekifix_enabled() && e->id == E_UCT)
-		gtp_printf(gtp, " (joseki fixes disabled)");
-	
 	/* kgs hijacks 'version' gtp command for game start message. */
 	if (gtp->kgs && gtp->banner)
 		gtp_printf(gtp, ". %s", gtp->banner);
@@ -403,13 +398,6 @@ cmd_pachi_predict(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
-/* Get move from engine, or joseki override if there is one.
- * There are 2 joseki override hooks : one before engine genmove (this one),
- * and another one at the end of uct genmove. Without external engine we'd
- * need only the second one, but with 2 engines we want to avoid asking both
- * engines as that would mean a serious delay. So this acts as a dispatch,
- * short-cirtuiting engine genmove when we know it will be overridden by an
- * external engine move. */
 static coord_t
 genmove_get_move(board_t *b, enum stone color, engine_t *e, time_info_t *ti_genmove,
 		 gtp_t *gtp, engine_genmove_t genmove_func)
@@ -417,11 +405,6 @@ genmove_get_move(board_t *b, enum stone color, engine_t *e, time_info_t *ti_genm
 	bool pass_all_alive = !strcasecmp(gtp->cmd, "kgs-genmove_cleanup");    
 	coord_t c = pass;
 
-#ifdef JOSEKIFIX
-	if (is_pass(c) && e->id == E_UCT)
-		c = joseki_override_before_genmove(b, color);
-#endif
-	
 	if (is_pass(c))
 		c = genmove_func(e, b, ti_genmove, color, pass_all_alive);
 
@@ -443,10 +426,6 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 	double time_start = time_now();
 #endif
 
-#ifdef JOSEKIFIX
-	external_joseki_engine_genmoved = 0;
-#endif
-	
 	time_info_t *ti_genmove = time_info_genmove(b, ti, color);
 	coord_t c = (b->fbook ? fbook_check(b) : pass);
 	if (is_pass(c))
@@ -461,12 +440,6 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 		move_t m = move(c, color);
 		if (board_play(b, &m) < 0)
 			die("Attempted to generate an illegal move: %s %s\n", stone2str(m.color), coord2sstr(m.coord));
-
-#ifdef JOSEKIFIX
-		/* send new move to external engine if it doesn't come from it */
-		if (!external_joseki_engine_genmoved && e->id == E_UCT)
-			external_engine_play(external_joseki_engine, c, color);
-#endif
 	}
 	
 	char *str = coord2sstr(c);
@@ -1197,11 +1170,6 @@ gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 		gtp_error(gtp, "unknown command");
 		return P_UNKNOWN_COMMAND;
 	}
-
-#ifdef JOSEKIFIX
-	if (external_joseki_engine)
-		external_joseki_engine->notify(external_joseki_engine, b, gtp->id, gtp->cmd, gtp->next, gtp);
-#endif
 	
 	/* Run engine notify() handler */
 	enum parse_code c;

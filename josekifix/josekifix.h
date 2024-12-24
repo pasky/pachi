@@ -67,9 +67,10 @@ typedef struct {
 void disable_josekifix(void);
 void require_josekifix(void);
 bool get_josekifix_enabled(void);
+bool get_josekifix_required(void);
 
 /* loading overrides */
-void josekifix_init(board_t *b);
+bool josekifix_init(board_t *b);
 void joseki_override_fill_hashes(override_t *override, board_t *b);
 void joseki_override_print(override_t *override, char *section);
 void josekifix_add_override(board_t *b, override_t *override);
@@ -78,9 +79,10 @@ void josekifix_add_logged_variation(board_t *b, override_t *override);
 void josekifix_add_logged_variation_and(board_t *b, override_t *log1, override_t *log2);
 
 /* genmove */
-coord_t joseki_override_before_genmove(board_t *b, enum stone color);
+coord_t joseki_override(struct board *b);
 coord_t joseki_override_no_external_engine(struct board *b, struct ownermap *prev_ownermap, struct ownermap *ownermap);
 coord_t joseki_override_external_engine_only(board_t *b);
+
 
 /* low level override matching */
 coord_t check_override(struct board *b, override_t *override, int *prot, hash_t lasth);
@@ -96,11 +98,6 @@ coord_t josekifix_initial_fuseki(struct board *b, strbuf_t *log, hash_t lasth);
 
 /* special checks */
 coord_t josekifix_kill_3_3_invasion(struct board *b, struct ownermap *prev_ownermap, hash_t lasth);
-
-extern char     *external_joseki_engine_cmd;
-extern engine_t *external_joseki_engine;
-extern int	 external_joseki_engine_genmoved;
-
 
 
 #endif /* JOSEKIFIX */

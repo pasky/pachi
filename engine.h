@@ -32,6 +32,7 @@ enum engine_id {
 	E_JOSEKI,
 	E_JOSEKILOAD,
 #ifdef JOSEKIFIX
+	E_JOSEKIFIX,
 	E_JOSEKIFIXLOAD,
 #endif
 	E_RANDOM,
@@ -172,6 +173,7 @@ int  best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest);
 void      engine_options_print(options_t *options);
 option_t *engine_options_lookup(options_t *options, const char *name);
 void      engine_options_concat(strbuf_t *buf, options_t *options);
+void	  engine_options_add(options_t *options, const char *name, const char *val);
 
 /* For options which need to be set at engine setup time: */
 #define ENGINE_SETOPTION_NEED_RESET  \

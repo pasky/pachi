@@ -9,6 +9,7 @@
 
 #include "debug.h"
 #include "pachi.h"
+#include "version.h"
 #include "board.h"
 #include "gtp.h"
 #include "chat.h"
@@ -708,7 +709,7 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 
 #ifdef JOSEKIFIX
 	/* Check joseki override */
-	if (best) {
+	if (best && get_josekifix_enabled()) {
 		coord_t c = joseki_override_no_external_engine(b, &u->prev_ownermap, uct_ownermap(e, b));
 		if (!is_pass(c)) {
 			*best_coord = c;
@@ -1618,6 +1619,8 @@ void
 uct_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "UCT";
+	e->comment = "Pachi UCT Monte Carlo Tree Search engine";
+	
 	e->setoption = uct_setoption;
 	e->board_print = uct_board_print;
 	e->notify_play = uct_notify_play;
@@ -1635,12 +1638,18 @@ uct_engine_init(engine_t *e, board_t *b)
 
 	uct_state_init(e, b);
 
+	/* Version: show josekifix/dcnn status.
+	 * Joseki fixes are always disabled if gtp is asking us for version.
+	 * (When joseki fixes are enabled uct is not main engine). */
+	if (using_dcnn(b))
+		e->version = PACHI_VERSION " (joseki fixes disabled)";
+	else
+		e->version = PACHI_VERSION " (no dcnn)";
+	
 #ifdef DISTRIBUTED
 	uct_t *u = (uct_t*)e->data;
 	e->genmoves = uct_genmoves;
 	if (u->slave)
 		e->notify = uct_notify;
 #endif
-
-	e->comment = "Pachi UCT Monte Carlo Tree Search engine";
 }
