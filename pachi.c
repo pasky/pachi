@@ -347,6 +347,12 @@ static gtp_t	 main_gtp;
 static board_t	*main_board = NULL;
 static engine_t *main_engine;
 
+engine_t *
+pachi_main_engine(void)
+{
+	return main_engine;
+}
+
 int main(int argc, char *argv[])
 {
 	pachi_options_t *options = &main_options;

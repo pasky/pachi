@@ -804,8 +804,8 @@ test_genmove(board_t *b, char *arg)
 		fprintf(stderr, "%s ", args[i]);
 	fprintf(stderr, "...\n\n");
 
-	static engine_t *e = NULL;
-	if (!e)  e = new_engine(E_UCT, "", b);
+	/* Use main engine. Creating new engine messes up context which is important here. */
+	engine_t *e = pachi_main_engine();
 
 	/* Sanity checks */
 	board_t *tmp = board_new(19, NULL);
