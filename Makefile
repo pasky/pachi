@@ -49,7 +49,7 @@ DCNN_DARKFOREST=1
 
 # BOARD_SIZE=19
 
-# Build josekifix module ?
+# Build josekifix module ?	 (DCNN must be enabled as well)
 # Provides fixes for joseki lines that dcnn plays poorly, and more varied
 # fusekis when playing as black.
 
@@ -151,6 +151,23 @@ double:
 
 
 #######################################################################
+# Sanity checks
+
+ifeq ($(DCNN), 1)
+ifndef JOSEKIFIX
+$(error JOSEKIFIX must be enabled for DCNN build)
+endif
+endif
+
+ifeq ($(JOSEKIFIX), 1)
+ifndef DCNN
+$(error DCNN must be enabled for JOSEKIFIX build)
+endif
+endif
+
+
+#######################################################################
+# Variables
 
 MAKEFLAGS += --no-print-directory
 ARCH = $(shell uname -m)
