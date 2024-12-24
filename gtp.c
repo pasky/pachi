@@ -903,8 +903,10 @@ gtp_process_undo(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	gtp->undo_pending = false;
 
 	/* Reset board */
+	move_history_t *h = &gtp->history;
+	int n = h->moves;	// save, board_clear() resets number of moves to 0
 	int handicap = b->handicap;
-	b->move_history = NULL;		/* Preserve history ! */
+	
 	board_clear(b);
 	b->handicap = handicap;
 
@@ -914,16 +916,17 @@ gtp_process_undo(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 	}
 
 	/* Replay remaining moves. */
-	move_history_t *h = &gtp->history;
-	for (int i = 0; i < h->moves; i++) {
+	for (int i = 0; i < n; i++) {
+		move_t m = h->move[i];
 		bool print;
 		if (reset_engine && e->notify_play)
-			e->notify_play(e, b, &h->move[i], "", &print);
-		int r = board_play(b, &h->move[i]);
+			e->notify_play(e, b, &m, "", &print);
+		int r = board_play(b, &m);
 		assert(r >= 0);
 	}
 
-	b->move_history = &gtp->history;
+	assert(b->move_history == &gtp->history);
+	assert(b->move_history->moves == n);
 }
 
 static enum parse_code
