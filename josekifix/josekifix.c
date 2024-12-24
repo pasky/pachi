@@ -126,90 +126,15 @@ external_joseki_engine_init(board_t *b)
 		external_joseki_engine = NULL;
 }
 
-void
-external_joseki_engine_play(coord_t c, enum stone color)
-{
-	if (!external_joseki_engine)  return;
-	
-	strbuf(buf, 100);
-	strbuf_printf(buf, "play %s %s", stone2str(color), coord2sstr(c));
-	char *reply, *error;
-	int r = external_engine_send_cmd(external_joseki_engine, buf->str, &reply, &error);
-	assert(r);	
-}
-
-void
-external_joseki_engine_fixed_handicap(int stones)
-{
-	if (!external_joseki_engine)  return;
-	
-	strbuf(buf, 100);
-	strbuf_printf(buf, "fixed_handicap %i", stones);
-	char *reply, *error;
-	int r = external_engine_send_cmd(external_joseki_engine, buf->str, &reply, &error);
-	assert(r);
-}
-
-static void
-external_joseki_engine_undo(board_t *b)
-{
-	if (DEBUGL(3))  fprintf(stderr, "external joseki engine undo\n");
-	char *reply, *error;
-	int r = external_engine_send_cmd(external_joseki_engine, "undo", &reply, &error);
-	if (!r)  fprintf(stderr, "external joseki engine undo failed !\n");
-}
-
-static coord_t
+coord_t
 external_joseki_engine_genmove(board_t *b)
 {
-	if (!external_joseki_engine)  return pass;
-
-	char* cmd = (board_to_play(b) == S_BLACK ? "genmove b" : "genmove w");
-	char *reply, *error;
-	double time_start = time_now();
-	int r = external_engine_send_cmd(external_joseki_engine, cmd, &reply, &error);
-	if (!r) {
-		fprintf(stderr, "external joseki engine genmove failed !\n");
-		return pass;
-	}
-
+	enum stone color = board_to_play(b);
+	coord_t c = external_joseki_engine->genmove(external_joseki_engine, b, NULL, color, false);
+	
 	external_joseki_engine_genmoved = 1;
-    
-	coord_t c = str2coord(reply);
-	if (DEBUGL(2))  fprintf(stderr, "external joseki engine move: %s  (%.1fs)\n", coord2sstr(c), time_now() - time_start);
 	
 	return c;
-}
-
-static char* forwarded_external_engine_commands[] =
-{
-	"boardsize",
-	"clear_board",
-	"komi",
-	"play",
-	//"genmove",		// special handling
-	"set_free_handicap",
-	//"place_free_handicap",  // special handling
-	"fixed_handicap",
-	"undo",
-	//"kgs-genmove_cleanup",	// special handling
-	NULL
-};
-
-/* Forward gtp command (if needed) to external engine. */
-void
-external_joseki_engine_forward_cmd(gtp_t *gtp, char *command)
-{
-	if (!external_joseki_engine)  return;
-    
-	char** commands = forwarded_external_engine_commands;
-	for (int i = 0; commands[i]; i++)
-		if (!strcasecmp(gtp->cmd, commands[i])) {
-			char *reply, *error;
-			int r = external_engine_send_cmd(external_joseki_engine, command, &reply, &error);
-			if (!r)  fprintf(stderr, "external engine: cmd '%s' failed: %s\n", gtp->cmd, error);
-			break;
-		}
 }
 
 /* <external joseki engine mode> on in this quadrant for next moves */
@@ -1309,8 +1234,8 @@ joseki_override_before_genmove(board_t *b, enum stone color)
 		/* But let override take over if different. */
 		if (!is_pass(c) && !is_pass(c2) && c2 != c) {   /* Keep engines in sync ! */
 			c2 = c;
-			external_joseki_engine_undo(b);	        /* Undo external engine move, */
-			external_joseki_engine_genmoved = 0;	/* GTP layer will send play commend */
+			external_engine_undo(external_joseki_engine);	        /* Undo external engine move, */
+			external_joseki_engine_genmoved = 0;			/* GTP layer will send play commend */
 		}
 		
 		return c2;

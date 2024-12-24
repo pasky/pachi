@@ -97,11 +97,6 @@ coord_t josekifix_initial_fuseki(struct board *b, strbuf_t *log, hash_t lasth);
 /* special checks */
 coord_t josekifix_kill_3_3_invasion(struct board *b, struct ownermap *prev_ownermap, hash_t lasth);
 
-/* external joseki engine */
-void    external_joseki_engine_play(coord_t c, enum stone color);
-void    external_joseki_engine_fixed_handicap(int stones);
-void    external_joseki_engine_forward_cmd(gtp_t *gtp, char *command);
-
 extern char     *external_joseki_engine_cmd;
 extern engine_t *external_joseki_engine;
 extern int	 external_joseki_engine_genmoved;

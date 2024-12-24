@@ -22,6 +22,7 @@
 #include "gogui.h"
 #include "t-predict/predict.h"
 #include "josekifix/josekifix.h"
+#include "engines/external.h"
 #include "t-unit/test.h"
 #include "fifo.h"
 
@@ -464,7 +465,7 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 #ifdef JOSEKIFIX
 		/* send new move to external engine if it doesn't come from it */
 		if (!external_joseki_engine_genmoved && e->id == E_UCT)
-			external_joseki_engine_play(c, color);
+			external_engine_play(external_joseki_engine, c, color);
 #endif
 	}
 	
@@ -687,11 +688,6 @@ cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 	}
 	gtp_printf(gtp, "\n");
 
-#ifdef JOSEKIFIX
-	if (external_joseki_engine && !strcmp(gtp->cmd, "place_free_handicap") && engine->id == E_UCT)
-		external_joseki_engine_fixed_handicap(stones);			// XXX assumes other engine places fixed handi stones like us ...
-#endif
-	
 	return P_OK;
 }
 
@@ -1201,6 +1197,11 @@ gtp_run_handler(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 		gtp_error(gtp, "unknown command");
 		return P_UNKNOWN_COMMAND;
 	}
+
+#ifdef JOSEKIFIX
+	if (external_joseki_engine)
+		external_joseki_engine->notify(external_joseki_engine, b, gtp->id, gtp->cmd, gtp->next, gtp);
+#endif
 	
 	/* Run engine notify() handler */
 	enum parse_code c;
@@ -1256,11 +1257,6 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 		stop_analyzing(gtp, b, e);
 	if (gtp->analyze_mode && strstr(gtp->cmd, "genmove"))
 		gtp_set_analyze_mode(gtp, b, e, ti, false);
-
-#ifdef JOSEKIFIX
-	if (e->id == E_UCT)
-		external_joseki_engine_forward_cmd(gtp, orig_cmd);
-#endif
 
 	/* Handle undo after first non-undo command: recreate board and reload engine if necessary. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))

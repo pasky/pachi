@@ -75,6 +75,32 @@ external_engine_send_cmd(engine_t *e, char *cmd, char **reply, char **error)
 	return status;
 }
 
+void
+external_engine_undo(engine_t *e)
+{
+	if (DEBUGL(3))  fprintf(stderr, "external engine undo\n");
+	int r = external_engine_send_cmd(e, "undo", NULL, NULL);
+	if (!r)  fprintf(stderr, "external engine undo failed !\n");
+}
+
+void
+external_engine_play(engine_t *e, coord_t c, enum stone color)
+{
+	strbuf(buf, 100);
+	strbuf_printf(buf, "play %s %s", stone2str(color), coord2sstr(c));
+	int r = external_engine_send_cmd(e, buf->str, NULL, NULL);
+	assert(r);
+}
+
+static void
+external_engine_fixed_handicap(engine_t *e, int stones)
+{
+	strbuf(buf, 100);
+	strbuf_printf(buf, "fixed_handicap %i", stones);
+	int r = external_engine_send_cmd(e, buf->str, NULL, NULL);
+	assert(r);
+}
+
 bool
 external_engine_started(engine_t *e)
 {
@@ -298,8 +324,66 @@ stop_external_engine(engine_t *e)
 static coord_t
 external_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	assert(0);
-	return pass;
+	char* cmd = (board_to_play(b) == S_BLACK ? "genmove b" : "genmove w");
+	char *reply;
+	double time_start = time_now();
+	int r = external_engine_send_cmd(e, cmd, &reply, NULL);
+	if (!r) {
+		fprintf(stderr, "external engine genmove failed !\n");
+		return pass;
+	}
+    
+	coord_t c = str2coord(reply);
+	if (DEBUGL(2))  fprintf(stderr, "external joseki engine move: %s  (%.1fs)\n", coord2sstr(c), time_now() - time_start);
+	
+	return c;
+}
+
+static char* forwarded_commands[] =
+{
+	"boardsize",
+	"clear_board",
+	"komi",
+	"play",
+	//"genmove",		// special handling
+	"set_free_handicap",
+	//"place_free_handicap",  // special handling
+	"fixed_handicap",
+	"showboard",
+	"undo",
+	//"kgs-genmove_cleanup",	// special handling
+	NULL
+};
+
+
+/* Forward gtp commands that are needed to keep external engine in sync. */
+static enum parse_code
+external_engine_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp)
+{
+	/* Special handling */
+	
+	/* place_free_handicap: send fixed_handicap to external engine.
+	 * XXX assumes other engine places fixed handi stones like us ... */
+	if (!strcmp(cmd, "place_free_handicap")) {
+		int stones = atoi(args);
+		external_engine_fixed_handicap(e, stones);
+		return P_OK;
+	}
+
+	/* Forwarded commands */
+	char** commands = forwarded_commands;
+	for (int i = 0; commands[i]; i++)
+		if (!strcasecmp(cmd, commands[i])) {
+			strbuf(command, 512);
+			sbprintf(command, "%s %s", cmd, args);
+			char *orig_cmd = command->str;
+			
+			char *reply, *error;
+			int r = external_engine_send_cmd(e, orig_cmd, &reply, &error);
+			if (!r)  fprintf(stderr, "external engine: cmd '%s' failed: %s\n", cmd, error);
+			break;
+		}
+	return P_OK;
 }
 
 static void
@@ -337,7 +421,7 @@ external_engine_setoption(engine_t *e, board_t *b, const char *optname, char *op
 	return true;
 }
 
-external_engine_t *
+static void
 external_engine_state_init(engine_t *e, board_t *b)
 {
 	options_t *options = &e->options;
@@ -350,8 +434,6 @@ external_engine_state_init(engine_t *e, board_t *b)
 		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
 			die("%s", err);
 	}
-
-	return pp;
 }
 
 void
@@ -359,6 +441,11 @@ external_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "External";
 	e->comment = "";
+	
+	e->keep_on_clear = true;	/* Do not reset engine on clear_board */
+	e->keep_on_undo = true;		/* Do not reset engine after undo */
+
+	e->notify = external_engine_notify;
 	e->genmove = external_engine_genmove;
 	e->setoption = external_engine_setoption;
 	e->done = external_done;
