@@ -1,0 +1,143 @@
+external engine cmd: 'gnugo --mode gtp'
+external engine: 'name'
+external engine: = GNU Go
+external engine: 'version'
+external engine: = 3.8
+external engine: 'boardsize 19'
+external engine: = 
+external engine: 'clear_board '
+external engine: = 
+external engine: 'komi 1.5'
+external engine: = 
+external engine: 'fixed_handicap 4'
+external engine: = D16 Q16 D4 Q4
+external engine: 'play W r14'
+external engine: = 
+external engine: 'play B r15'
+external engine: = 
+external engine: 'play W q14'
+external engine: = 
+external engine: 'play B o16'
+external engine: = 
+external engine: 'play W r10'
+external engine: = 
+external engine: 'play B s14'
+external engine: = 
+external engine: 'play W s13'
+external engine: = 
+external engine: 'play B s16'
+external engine: = 
+external engine: 'play W r6'
+external engine: = 
+external engine: 'play B r5'
+external engine: = 
+external engine: 'play W q6'
+external engine: = 
+external engine: 'play B o4'
+external engine: = 
+external engine: 'play W m3'
+external engine: = 
+external engine: 'play B n3'
+external engine: = 
+external engine: 'play W m4'
+external engine: = 
+external engine: 'play B m2'
+external engine: = 
+external engine: 'play w j10'
+external engine: = 
+external engine: 'play b k10'
+external engine: = 
+external engine: 'play w k11'
+external engine: = 
+external engine: 'play b j11'
+external engine: = 
+external engine: 'showboard '
+external engine: = 
+external engine:    A B C D E F G H J K L M N O P Q R S T
+external engine: 19 . . . . . . . . . . . . . . . . . . . 19
+external engine: 18 . . . . . . . . . . . . . . . . . . . 18
+external engine: 17 . . . . . . . . . . . . . . . . . . . 17
+external engine: 16 . . . X . . . . . + . . . X . X . X . 16
+external engine: 15 . . . . . . . . . . . . . . . . X . . 15
+external engine: 14 . . . . . . . . . . . . . . . O O X . 14
+external engine: 13 . . . . . . . . . . . . . . . . . O . 13
+external engine: 12 . . . . . . . . . . . . . . . . . . . 12
+external engine: 11 . . . . . . . . X O . . . . . . . . . 11     WHITE (O) has captured 0 stones
+external engine: 10 . . . + . . . . O X . . . . . + O . . 10     BLACK (X) has captured 0 stones
+external engine:  9 . . . . . . . . . . . . . . . . . . . 9
+external engine:  8 . . . . . . . . . . . . . . . . . . . 8
+external engine:  7 . . . . . . . . . . . . . . . . . . . 7
+external engine:  6 . . . . . . . . . . . . . . . O O . . 6
+external engine:  5 . . . . . . . . . . . . . . . . X . . 5
+external engine:  4 . . . X . . . . . + . O . X . X . . . 4
+external engine:  3 . . . . . . . . . . . O X . . . . . . 3
+external engine:  2 . . . . . . . . . . . X . . . . . . . 2
+external engine:  1 . . . . . . . . . . . . . . . . . . . 1
+external engine:    A B C D E F G H J K L M N O P Q R S T
+external engine: 'undo '
+external engine: = 
+external engine: 'undo '
+external engine: = 
+external engine: 'undo '
+external engine: = 
+external engine: 'undo '
+external engine: = 
+external engine: 'showboard '
+external engine: = 
+external engine:    A B C D E F G H J K L M N O P Q R S T
+external engine: 19 . . . . . . . . . . . . . . . . . . . 19
+external engine: 18 . . . . . . . . . . . . . . . . . . . 18
+external engine: 17 . . . . . . . . . . . . . . . . . . . 17
+external engine: 16 . . . X . . . . . + . . . X . X . X . 16
+external engine: 15 . . . . . . . . . . . . . . . . X . . 15
+external engine: 14 . . . . . . . . . . . . . . . O O X . 14
+external engine: 13 . . . . . . . . . . . . . . . . . O . 13
+external engine: 12 . . . . . . . . . . . . . . . . . . . 12
+external engine: 11 . . . . . . . . . . . . . . . . . . . 11     WHITE (O) has captured 0 stones
+external engine: 10 . . . + . . . . . + . . . . . + O . . 10     BLACK (X) has captured 0 stones
+external engine:  9 . . . . . . . . . . . . . . . . . . . 9
+external engine:  8 . . . . . . . . . . . . . . . . . . . 8
+external engine:  7 . . . . . . . . . . . . . . . . . . . 7
+external engine:  6 . . . . . . . . . . . . . . . O O . . 6
+external engine:  5 . . . . . . . . . . . . . . . . X . . 5
+external engine:  4 . . . X . . . . . + . O . X . X . . . 4
+external engine:  3 . . . . . . . . . . . O X . . . . . . 3
+external engine:  2 . . . . . . . . . . . X . . . . . . . 2
+external engine:  1 . . . . . . . . . . . . . . . . . . . 1
+external engine:    A B C D E F G H J K L M N O P Q R S T
+external engine: 'play W l2'
+external engine: = 
+external engine: 'play B o2'
+external engine: = 
+external engine: 'play W m1'
+external engine: = 
+external engine: 'play B n2'
+external engine: = 
+external engine: 'play W f3'
+external engine: = 
+external engine: 'showboard '
+external engine: = 
+external engine:    A B C D E F G H J K L M N O P Q R S T
+external engine: 19 . . . . . . . . . . . . . . . . . . . 19
+external engine: 18 . . . . . . . . . . . . . . . . . . . 18
+external engine: 17 . . . . . . . . . . . . . . . . . . . 17
+external engine: 16 . . . X . . . . . + . . . X . X . X . 16
+external engine: 15 . . . . . . . . . . . . . . . . X . . 15
+external engine: 14 . . . . . . . . . . . . . . . O O X . 14
+external engine: 13 . . . . . . . . . . . . . . . . . O . 13
+external engine: 12 . . . . . . . . . . . . . . . . . . . 12
+external engine: 11 . . . . . . . . . . . . . . . . . . . 11     WHITE (O) has captured 0 stones
+external engine: 10 . . . + . . . . . + . . . . . + O . . 10     BLACK (X) has captured 0 stones
+external engine:  9 . . . . . . . . . . . . . . . . . . . 9
+external engine:  8 . . . . . . . . . . . . . . . . . . . 8
+external engine:  7 . . . . . . . . . . . . . . . . . . . 7
+external engine:  6 . . . . . . . . . . . . . . . O O . . 6
+external engine:  5 . . . . . . . . . . . . . . . . X . . 5
+external engine:  4 . . . X . . . . . + . O . X . X . . . 4
+external engine:  3 . . . . . O . . . . . O X . . . . . . 3
+external engine:  2 . . . . . . . . . . O X X X . . . . . 2
+external engine:  1 . . . . . . . . . . . O . . . . . . . 1
+external engine:    A B C D E F G H J K L M N O P Q R S T
+shutting down external engine ...
+external engine: 'quit'
+external engine: = 

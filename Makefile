@@ -340,6 +340,9 @@ test_moggy: FORCE
 test_spatial: FORCE
 	+@make -C t-unit test_spatial
 
+test_external_engine: FORCE
+	+@make -C t-unit test_external_engine
+
 # Regression tests
 regtest: FORCE
 	+@make -C t-regress regtest
