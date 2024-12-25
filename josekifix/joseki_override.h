@@ -51,6 +51,7 @@ typedef struct {
 					 * value specifies number of external engine moves to play.
 					 * note: can also just set "pass" as next move instead of filling this
 					 *       (= enable for current quadrant, 15 moves)  */
+	int priority;			/* pattern priority  (in case there are multiple matches) */	
 } joseki_override_t;
 
 /* Representation of an <and> check (2 overrides).
