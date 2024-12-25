@@ -218,7 +218,7 @@ ladder_check(board_t *board, joseki_override_t *override, int rot, ladder_check_
 	
 	//board_print(b, stderr);
 	bool result = (check->works ? ladder : !ladder);
-	josekifix_log("joseki_override:      %s:  %s ladder at %s = %i  (%s)\n", override->name,
+	josekifix_log("joseki_override (move %i):      %s:  %s ladder at %s = %i  (%s)\n", board->moves, override->name,
 		      stone2str(ladder_color), coord2sstr(c), ladder, (result ? "ok" : "bad"));
 	return result;
 }
@@ -358,9 +358,9 @@ sane_joseki_override_move(struct board *b, coord_t c, char *name, int n)
 		/* Override or external engine returned an invalid move.
 		 * This should never happen, something very wrong is going on.
 		 * Log now (not through josekifix_log() which will get silenced). */
-		fprintf(stderr, "joseki_override: %s (%s", coord2sstr(c), name);
+		fprintf(stderr, "joseki_override (move %i): %s (%s", b->moves, coord2sstr(c), name);
 		if (n > 1)  fprintf(stderr, ", %i", n);
-		fprintf(stderr, (")  WARNING invalid move !!\n");
+		fprintf(stderr, ")  WARNING invalid move !!\n");
 		return false;
 	}
 	return true;
@@ -456,7 +456,7 @@ check_joseki_overrides_list(struct board *b, joseki_override_t overrides[], hash
 		if (!is_pass(c)) {
 			if (title) {  /* log */
 				int n = override_entry_number(overrides, override);
-				josekifix_log("%s: %s (%s", title, coord2sstr(c), override->name);
+				josekifix_log("%s (move %i): %s (%s", title, b->moves, coord2sstr(c), override->name);
 				if (n != 1)  josekifix_log(", %i", n);
 				josekifix_log(")\n");
 			}
@@ -479,7 +479,7 @@ check_joseki_overrides2_list(struct board *b, joseki_override2_t overrides[], ha
 		if (!is_pass(c)) {
 			if (title) {  /* log */
 				int n = override2_entry_number(overrides, override);
-				josekifix_log("%s: %s (%s", title, coord2sstr(c), override1->name);
+				josekifix_log("%s (move %i): %s (%s", title, b->moves, coord2sstr(c), override1->name);
 				if (n != 1)  josekifix_log(", %i", n);
 				josekifix_log(")\n");
 			}
@@ -559,7 +559,7 @@ joseki_override_(struct board *b, strbuf_t *log,
 	if (playing_against_influence_fuseki(b)) {
 		c = external_joseki_engine_genmove(b);
 		if (!b->influence_fuseki_by_quadrant[last_quadrant(b)]++)
-			josekifix_log("joseki override: %s (influence fuseki)\n", coord2sstr(c));
+			josekifix_log("joseki_override (move %i): %s (influence fuseki)\n", b->moves, coord2sstr(c));
 		wanted_external_engine_mode[last_quadrant(b)] = DEFAULT_EXTERNAL_ENGINE_MOVES;
 		return c;
 	}

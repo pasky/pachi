@@ -143,7 +143,7 @@ sane_override_move(struct board *b, coord_t c, char *name, char *title)
 		/* Override returned an invalid move.
 		 * This should never happen, something very wrong is going on.
 		 * Log now (not through josekifix_log() which will get silenced). */
-		fprintf(stderr, "%s: %s (%s)  WARNING invalid move !!\n", title, coord2sstr(c), name);
+		fprintf(stderr, "%s (move %i): %s (%s)  WARNING invalid move !!\n", title, b->moves, coord2sstr(c), name);
 		return false;
 	}
 	return true;
