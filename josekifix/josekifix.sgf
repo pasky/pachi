@@ -2128,6 +2128,13 @@ See first variation in the tree ("3-4 trick play") for example.
 
 - Optional settings:
 
+  priority = n
+
+Set override priority (default 0).
+Can be useful to resolve cases where multiple overrides match but some are
+more specific / desirable than others. Otherwise first match is kept and a warning
+is issued.
+
   external_engine
   external_engine = lower_left lower_right
 

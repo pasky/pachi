@@ -829,6 +829,12 @@ add_override(board_t *b, move_t *m, char *move_str)
 		/* see above */
 		else if (!strcmp(name, "external_engine_moves"))
 			parse_external_engine_moves(b, &override, &setting, value);
+
+		else if (!strcmp(name, "priority")) {
+			if (!value || !value[0])
+				die("josekifix: priority: value needed.\n");
+			override.priority = atoi(value);
+		}
 		
 		else {
 			board_print(b, stderr);
