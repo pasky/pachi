@@ -153,12 +153,6 @@ double:
 #######################################################################
 # Sanity checks
 
-ifeq ($(DCNN), 1)
-ifndef JOSEKIFIX
-$(error JOSEKIFIX must be enabled for DCNN build)
-endif
-endif
-
 ifeq ($(JOSEKIFIX), 1)
 ifndef DCNN
 $(error DCNN must be enabled for JOSEKIFIX build)
@@ -254,7 +248,6 @@ endif
 
 ifeq ($(JOSEKIFIX), 1)
 	COMMON_FLAGS    += -DJOSEKIFIX
-	EXTRA_SUBDIRS   += josekifix
 	EXTRA_DATAFILES += josekifix.gtp
 endif
 
@@ -295,7 +288,7 @@ OBJS = $(EXTRA_OBJS) \
        playout.o random.o stone.o timeinfo.o fbook.o chat.o util.o
 
 # Low-level dependencies last
-SUBDIRS   = $(EXTRA_SUBDIRS) pattern joseki uct uct/policy t-unit t-predict engines playout tactics
+SUBDIRS   = $(EXTRA_SUBDIRS) engines joseki josekifix pattern playout tactics t-predict t-unit uct uct/policy
 DATAFILES = $(EXTRA_DATAFILES) detlef54.prototxt detlef54.trained joseki19.gtp opening.dat patterns_mm.gamma patterns_mm.spat 
 
 
