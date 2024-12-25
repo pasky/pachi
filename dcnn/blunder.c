@@ -120,7 +120,8 @@ dcnn_44_reduce_33_blunder(board_t *b, move_t *m, move_t *redirect)
 		if (m->coord != rb3 && m->coord != rc1)  continue;
 		
 		coord_t c = check_override_rot(b, &override, rot, 0);
-		if (!is_pass(c)) {		/* Would rather just clobber since w doesn't want to play B2 right away, */
+		if (!is_pass(c) && sane_override_move(b, c, "4-4 reduce 3-3 blunder", "dcnn_blunder")) {
+						/* Would rather just clobber since w doesn't want to play B2 right away, */
 			redirect->coord = c;	/* but mcts ends up playing B3 anyway sometimes in this case ! */
 			return true;		/* So redirect, if it had a big prior will play B2 right away, */
 		}				/* no big deal. */
