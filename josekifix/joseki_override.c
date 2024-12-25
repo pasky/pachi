@@ -355,9 +355,12 @@ sane_joseki_override_move(struct board *b, coord_t c, char *name, int n)
 	enum stone color = stone_other(last_move(b).color);
 	if (is_pass(c))  return true;
 	if (!board_is_valid_play_no_suicide(b, color, c)) {
-		josekifix_log("joseki_override: %s (%s", coord2sstr(c), name);
-		if (n > 1)  josekifix_log(", %i", n);
-		josekifix_log(")  WARNING invalid move !!\n");
+		/* Override or external engine returned an invalid move.
+		 * This should never happen, something very wrong is going on.
+		 * Log now (not through josekifix_log() which will get silenced). */
+		fprintf(stderr, "joseki_override: %s (%s", coord2sstr(c), name);
+		if (n > 1)  fprintf(stderr, ", %i", n);
+		fprintf(stderr, (")  WARNING invalid move !!\n");
 		return false;
 	}
 	return true;

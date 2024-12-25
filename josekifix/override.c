@@ -6,7 +6,6 @@
 #include "debug.h"
 #include "pattern/spatial.h"
 #include "josekifix/override.h"
-#include "josekifix/joseki_override.h"
 
 
 /*****************************************************************************/
@@ -141,7 +140,10 @@ sane_override_move(struct board *b, coord_t c, char *name, char *title)
 	enum stone color = stone_other(last_move(b).color);
 	if (is_pass(c))  return true;
 	if (!board_is_valid_play_no_suicide(b, color, c) && DEBUGL(0)) {
-		josekifix_log("%s (move %i): %s (%s)  WARNING invalid move !!\n", title, b->moves, coord2sstr(c), name);
+		/* Override returned an invalid move.
+		 * This should never happen, something very wrong is going on.
+		 * Log now (not through josekifix_log() which will get silenced). */
+		fprintf(stderr, "%s: %s (%s)  WARNING invalid move !!\n", title, coord2sstr(c), name);
 		return false;
 	}
 	return true;
