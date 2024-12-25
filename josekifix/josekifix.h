@@ -62,6 +62,14 @@ typedef struct {
 					 *       (= enable for current quadrant, 15 moves)  */
 } override_t;
 
+/* Representation of an <and> check (2 overrides).
+ * Terminating null kept for convenience */
+typedef struct {
+	override_t override1;
+	override_t override2;
+	override_t null;
+} override2_t;
+
 
 /* global */
 void disable_josekifix(void);
@@ -71,12 +79,6 @@ bool get_josekifix_required(void);
 
 /* loading overrides */
 bool josekifix_init(board_t *b);
-void joseki_override_fill_hashes(override_t *override, board_t *b);
-void joseki_override_print(override_t *override, char *section);
-void josekifix_add_override(board_t *b, override_t *override);
-void josekifix_add_override_and(board_t *b, override_t *override1, override_t *override2);
-void josekifix_add_logged_variation(board_t *b, override_t *override);
-void josekifix_add_logged_variation_and(board_t *b, override_t *log1, override_t *log2);
 
 /* genmove */
 coord_t joseki_override(struct board *b);
@@ -92,6 +94,7 @@ coord_t check_overrides(struct board *b, override_t overrides[], hash_t lasth);
 coord_t check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t lasth, bool log);
 bool    josekifix_sane_override(struct board *b, coord_t c, char *name, int n);
 void    josekifix_log(const char *format, ...);
+bool    josekifix_ladder_setup(board_t *b, int rot, ladder_check_t *check);
 
 /* fuseki */
 coord_t josekifix_initial_fuseki(struct board *b, strbuf_t *log, hash_t lasth);

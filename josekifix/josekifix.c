@@ -1,28 +1,23 @@
 #include <assert.h>
 #include <stdarg.h>
-#include <math.h>
 
 #define DEBUG
 #include "board.h"
-#include "random.h"
+#include "debug.h"
 #include "pattern/spatial.h"
 #include "ownermap.h"
-#include "engine.h"
 #include "dcnn/dcnn.h"
-#include "joseki/joseki.h"
 #include "josekifix/josekifix.h"
+#include "josekifix/josekifixload.h"
 #include "josekifix/josekifix_engine.h"
 #include "tactics/util.h"
 #include "tactics/2lib.h"
 #include "tactics/ladder.h"
-#include "pachi.h"
-#include "version.h"
 #include "engines/external.h"
 
-coord_t joseki_override_(struct board *b, strbuf_t *log,
-			 struct ownermap *prev_ownermap, struct ownermap *ownermap,
-			 bool external_engine_enabled);
 
+/*****************************************************************************/
+/* Init */
 
 static bool josekifix_enabled = true;
 static bool josekifix_required = false;
@@ -31,73 +26,18 @@ void require_josekifix()      {  josekifix_required = true;  }
 bool get_josekifix_enabled()  {  return josekifix_enabled;   }
 bool get_josekifix_required() {  return josekifix_required;  }
 
-
-/*****************************************************************************/
-/* Override list stuff */
-
-/* Representation of an <and> check (2 overrides).
- * Terminating null kept for convenience */
-typedef struct {
-	override_t override1;
-	override_t override2;
-	override_t null;
-} override2_t;
-
-/* Growable list of overrides.
- * Ensures trailing null override always available (if zero'ed initially) */
-typedef struct {
-	override_t *overrides;
-	int          alloc;
-	int          len;
-} override_list_t;
-
-/* Growable list of overrides (2 overrides <and> check)
- * Ensures trailing null override always available (if zero'ed initially) */
-typedef struct {
-	override2_t *overrides;
-	int          alloc;
-	int          len;
-} override2_list_t;
-
-/* Overrides and logged variations loaded at startup. */
-override_list_t  joseki_overrides   = { 0, };
-override2_list_t joseki_overrides2  = { 0, };	/* <and> checks */
-override_list_t  logged_variations  = { 0, };
-override2_list_t logged_variations2 = { 0, };	/* <and> checks */
-
-
-/* Append override to list, realloc if necessary.  (override data is copied) */
-static void
-override_list_add(override_list_t *list, override_t *override)
+bool
+josekifix_init(board_t *b)
 {
-	if (list->len + 2 > list->alloc) {  /* realloc */
-		size_t size = sizeof(*override);
-		int prev_n = list->alloc;
-		list->alloc *= 2;
-		list->alloc = MAX(list->alloc, 16);
-		int n = list->alloc;
-		list->overrides = crealloc(list->overrides, n * size);
-		memset(list->overrides + prev_n, 0, (n - prev_n) * size);   /* zero newly allocated memory ! */
-	}
+	assert(!joseki_overrides);
 	
-	list->overrides[list->len++] = *override;
-}
+	/* Load database of joseki fixes */
+	if (!josekifix_load()) {
+		josekifix_enabled = false;
+		return false;
+	}
 
-/* Append override to list, realloc if necessary.  (override data is copied) */
-static void
-override2_list_add(override2_list_t *list, override2_t *override)
-{
-	if (list->len + 2 > list->alloc) {  /* realloc */
-		size_t size = sizeof(*override);
-		int prev_n = list->alloc;
-		list->alloc *= 2;
-		list->alloc = MAX(list->alloc, 16);
-		int n = list->alloc;
-		list->overrides = crealloc(list->overrides, n * size);
-		memset(list->overrides + prev_n, 0, (n - prev_n) * size);   /* zero newly allocated memory ! */
-	}
-	
-	list->overrides[list->len++] = *override;
+	return true;
 }
 
 
@@ -260,28 +200,10 @@ board_print_pattern(struct board *b, coord_t coord)
 
 
 /*****************************************************************************/
-
-/* Fill in override hashes from board position (all rotations) */
-void
-joseki_override_fill_hashes(override_t *override, board_t *b)
-{
-	enum stone color = last_move(b).color;	// last move color
-	
-	coord_t around = last_move(b).coord;
-	if (override->coord_empty)  around = str2coord(override->coord_empty);
-	if (override->coord_own)    around = str2coord(override->coord_own);
-	if (override->coord_other)  around = str2coord(override->coord_other);
-	
-	for (int rot = 0; rot < 8; rot++)
-		override->hashes[rot] = outer_spatial_hash_from_board_rot_d(b, around, color, rot, MAX_PATTERN_DIST);	
-}
-
-
-/*****************************************************************************/
 /* Ladder checks */
 
 /* Add ladder check setup stones */
-static bool
+bool
 josekifix_ladder_setup(board_t *b, int rot, ladder_check_t *check)
 {
 	enum stone color = board_to_play(b);
@@ -524,7 +446,7 @@ check_override(struct board *b, override_t *override, int *prot, hash_t lasth)
 		c = external_joseki_engine_genmove(b);
 	
 	/* Check move is sane... */
-	int n = override_entry_number(joseki_overrides.overrides, override);
+	int n = override_entry_number(joseki_overrides, override);
 	if (!josekifix_sane_override(b, c, override->name, n))
 		return pass;
 	
@@ -590,11 +512,11 @@ check_joseki_overrides(struct board *b, hash_t lasth)
 	coord_t c = pass;
 	
 	/* <and> checks first */
-	c = check_overrides2_full(b, joseki_overrides2.overrides, NULL, lasth, "joseki_override");
+	c = check_overrides2_full(b, joseki_overrides2, NULL, lasth, "joseki_override");
 	if (!is_pass(c))  return c;
 
 	/* regular overrides */
-	c = check_overrides_full(b, joseki_overrides.overrides, NULL, lasth, "joseki_override");
+	c = check_overrides_full(b, joseki_overrides, NULL, lasth, "joseki_override");
 	if (!is_pass(c))  return c;
 
 	return pass;
@@ -605,8 +527,8 @@ static void
 check_logged_variations(struct board *b, hash_t lasth)
 {
 	/* <and> checks first */	
-	check_overrides2_full(b, logged_variations2.overrides, NULL, lasth, "joseki_variation");
-	check_overrides_full(b, logged_variations.overrides, NULL, lasth, "joseki_variation");
+	check_overrides2_full(b, logged_variations2, NULL, lasth, "joseki_variation");
+	check_overrides_full(b, logged_variations, NULL, lasth, "joseki_variation");
 }
 
 
@@ -644,406 +566,6 @@ check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t la
 
 	clear_wanted_external_engine_mode();	/* Cleanup in case of partial match */
 	return pass;
-}
-
-
-/**********************************************************************************************************/
-/* Override printing, comparing */
-
-static void
-print_ladder_check(char *idx, ladder_check_t *c)
-{
-	char *color = (c->own_color ? "own" : "other");
-	char *works = (c->works ? "" : "no");	
-	
-	fprintf(stderr, "  %sladder_%s%s = %s  [ ", works, color, idx, c->coord);
-	for (int i = 0; c->setup_own[i]; i++)
-		fprintf(stderr, "%s ", c->setup_own[i]);
-	fprintf(stderr, "]  [ ");
-	for (int i = 0; c->setup_other[i]; i++)
-		fprintf(stderr, "%s ", c->setup_other[i]);
-	fprintf(stderr, "]\n");
-}
-
-void
-joseki_override_print(override_t *override, char *section)
-{
-	fprintf(stderr, "%s:\n", section);
-	fprintf(stderr, "  name = \"%s\"\n", override->name);
-	fprintf(stderr, "  prev = %s\n", override->prev);
-	fprintf(stderr, "  next = %s\n", override->next);
-	
-	if (override->coord_own)	fprintf(stderr, "  coord_own = %s\n", override->coord_own);
-	if (override->coord_other)	fprintf(stderr, "  coord_other = %s\n", override->coord_other);
-	if (override->coord_empty)	fprintf(stderr, "  coord_empty = %s\n", override->coord_empty);
-		
-
-	if (override->ladder_check.coord)  {  print_ladder_check("",  &override->ladder_check);  }
-	if (override->ladder_check2.coord) {  print_ladder_check("2", &override->ladder_check2);  }
-
-	fprintf(stderr, "  external_engine = [ ");
-	for (int q = 0; q < 4; q++)
-		fprintf(stderr, "%i ", override->external_engine_mode[q]);
-	fprintf(stderr, "]\n");
-
-	fprintf(stderr, "  hashes = { ");
-	for (int i = 0; i < 8; i++) {
-		fprintf(stderr, "0x%"PRIhash"%s ", override->hashes[i], (i != 7 ? "," : " }\n"));
-		if (i == 3)  fprintf(stderr, "\n             ");
-	}
-}
-
-/* like strcmp() but handle NULLs */
-static int
-same_str(char *s1, char *s2)
-{
-	return ((!s1 && !s2) ||
-		(s1 && s2 && !strcmp(s1, s2)));
-}
-
-static int
-ladder_check_cmp(ladder_check_t *c1, ladder_check_t *c2)
-{
-	if (!same_str(c1->coord, c2->coord) ||
-	    c1->works != c2->works ||
-	    c1->own_color != c2->own_color)
-		return 1;
-	
-	for (int i = 0; i < JOSEKIFIX_LADDER_SETUP_MAX; i++) {
-		if (!same_str(c1->setup_own[i], c2->setup_own[i]))
-			return 1;
-		if (!c1->setup_own[i] && !c2->setup_own[i])
-			break;
-	}
-	
-	for (int i = 0; i < JOSEKIFIX_LADDER_SETUP_MAX; i++) {
-		if (!same_str(c1->setup_other[i], c2->setup_other[i]))
-			return 1;
-		if (!c1->setup_other[i] && !c2->setup_other[i])
-			break;
-	}
-
-	return 0;
-}
-
-/* Compare 2 overrides (don't use that for sorting!) */
-static int
-override_cmp(override_t *o1, override_t *o2)
-{
-	return !(same_str(o1->prev, o2->prev) &&
-		 same_str(o1->next, o2->next) &&
-		 !memcmp(o1->hashes, o2->hashes, sizeof(o1->hashes)) &&
-		 same_str(o1->coord_own, o2->coord_own) &&
-		 same_str(o1->coord_other, o2->coord_other) &&
-		 same_str(o1->coord_empty, o2->coord_empty) &&
-		 !ladder_check_cmp(&o1->ladder_check, &o2->ladder_check) &&
-		 !ladder_check_cmp(&o1->ladder_check2, &o2->ladder_check2) &&
-		 !memcmp(o1->external_engine_mode, o2->external_engine_mode, sizeof(o1->external_engine_mode)));
-}
-
-
-/**********************************************************************************************************/
-/* Load from file */
-
-static void
-ladder_sanity_check(board_t *board, ladder_check_t *check, override_t *override)
-{
-	board_t b2;  board_copy(&b2, board);
-	board_t *b = &b2;
-
-	/* Check coords are valid */
-	
-	if (!valid_coord(check->coord)) {
-		board_print(board, stderr);	/* orig board, without setup stones */
-		die("josekifix: \"%s\": invalid ladder coord '%s', aborting. (run with -d5 to see previous moves)\n",
-		    override->name, check->coord);
-	}
-	
-	int n = JOSEKIFIX_LADDER_SETUP_MAX;
-	for (int i = 0; i < n && check->setup_own[i]; i++)
-		if (!valid_coord(check->setup_own[i])) {
-			board_print(board, stderr);
-			die("josekifix: \"%s\": invalid ladder setup_own coord '%s', aborting. (run with -d5 to see previous moves)\n",
-			    override->name, check->setup_own[i]);
-		}
-
-	for (int i = 0; i < n && check->setup_other[i]; i++)
-		if (!valid_coord(check->setup_other[i])) {
-			board_print(board, stderr);
-			die("josekifix: \"%s\": invalid ladder setup_other coord '%s', aborting. (run with -d5 to see previous moves)\n",
-			    override->name, check->setup_other[i]);
-		}
-	
-	/* Check board setup is sane */
-	
-	if (!josekifix_ladder_setup(b, 0, check)) {
-		board_print(board, stderr);
-		die("josekifix: \"%s\": bad ladder setup, some invalid move(s), aborting. (run with -d5 to see previous moves)\n",
-		    override->name);
-	}
-	
-	enum stone own_color = board_to_play(board);
-	enum stone ladder_color = (check->own_color ? own_color : stone_other(own_color));
-	coord_t c = str2coord(check->coord);
-	group_t g = board_get_2lib_neighbor(b, c, stone_other(ladder_color));
-
-	if (!g) {
-		board_print(board, stderr);	/* orig board */
-		board_print(b, stderr);		/* ladder setup board */
-		die("josekifix: \"%s\": bad ladder check, no ladder at %s ! aborting. (run with -d5 to see previous moves)\n",
-		    override->name, check->coord);
-	}
-
-	bool good_color = (board_at(b, g) == stone_other(ladder_color));
-	if (!good_color) {
-		board_print(board, stderr);	/* orig board */
-		board_print(b, stderr);		/* ladder setup board */
-		die("josekifix: \"%s\": ladder check at %s: wrong color, aborting. (run with -d5 to see previous moves)\n",
-		    override->name, check->coord);
-	}
-}
-
-/* Common sanity checks for [override] and [log] sections */
-static char*
-common_sanity_checks(board_t *b, override_t *override)
-{
-	if (!override->name || !override->name[0]) {
-		board_print(b, stderr);
-		die("josekifix: this override has no name, aborting. (run with -d5 to see previous moves)\n");
-	}
-
-	if (!valid_coord(override->prev) && strcmp(override->prev, "pass")) {
-		board_print(b, stderr);
-		die("josekifix: \"%s\": invalid prev move '%s', aborting. (run with -d5 to see previous moves)\n",
-		    override->name, override->prev);
-	}
-
-	if (!valid_coord(override->next) && strcmp(override->next, "pass")) {
-		board_print(b, stderr);
-		die("josekifix: \"%s\": invalid next move '%s', aborting. (run with -d5 to see previous moves)\n",
-		    override->name, override->next);
-	}
-
-	/* Already checked by josekifixscan but doesn't hurt ... */
-	char *around_str = NULL;
-	if (override->coord_own)	around_str = override->coord_own;
-	if (override->coord_other)	around_str = override->coord_other;
-	if (override->coord_empty)	around_str = override->coord_empty;
-	
-	if (around_str && !valid_coord(around_str)) {
-		board_print(b, stderr);
-		die("josekifix: \"%s\": invalid around coord '%s', aborting. (run with -d5 to see previous moves)\n",
-		    override->name, around_str);
-	}
-		
-	if (override->ladder_check.coord)   ladder_sanity_check(b, &override->ladder_check, override);
-	if (override->ladder_check2.coord)  ladder_sanity_check(b, &override->ladder_check2, override);
-	
-	/* Not checking hashes ... */
-
-	return around_str;
-}
-
-/* Check override is sane, help locate bad override otherwise. */
-static void
-override_sanity_checks(board_t *b, override_t *override)
-{
-	/* Common checks first */
-	char *around_str = common_sanity_checks(b, override);
-	
-	/* Warn if moves are too far apart. */
-	coord_t prev = str2coord(override->prev);
-	coord_t next = str2coord(override->next);
-	coord_t around = (around_str ? str2coord(around_str) : pass);
-
-#define point_dist(a, b)  (is_pass(a) || is_pass(b) ? 0 : roundf(coord_distance(a, b)))
-	
-	int dist = point_dist(prev, next);
-	if (dist > 8) {
-		board_print(b, stderr);
-		fprintf(stderr, "josekifix: \"%s\": big distance between prev move (%s) and next move (%s), bad override coords ?\n\n",
-			override->name, override->prev, override->next);
-	}
-
-	dist = point_dist(prev, around);
-	if (dist > 6) {
-		board_print(b, stderr);		
-		fprintf(stderr, "josekifix: \"%s\": big distance between prev move (%s) and around coord (%s), bad override coords ?\n\n",
-			override->name, override->prev, coord2sstr(around));
-	}
-
-	dist = point_dist(next, around);
-	if (dist > 6) {
-		board_print(b, stderr);		
-		fprintf(stderr, "josekifix: \"%s\": big distance between next move (%s) and around coord (%s), bad override coords ?\n\n",
-			override->name, override->next, coord2sstr(around));
-	}
-
-	// TODO if next move, check it's inside match pattern ...
-}
-
-/* Check log is sane, help locate bad override otherwise. */
-static void
-log_sanity_checks(board_t *b, override_t *override)
-{
-	/* Common checks first */
-	char *around_str = common_sanity_checks(b, override);
-
-	/* Warn if moves are too far apart.
-	 * (only check prev and around, logs have dummy next) */
-	coord_t prev = str2coord(override->prev);
-	coord_t around = (around_str ? str2coord(around_str) : pass);
-	
-	int dist = point_dist(prev, around);
-	if (dist > 6) {
-		board_print(b, stderr);
-		fprintf(stderr, "josekifix: \"%s\": big distance between prev move (%s) and around coord (%s), bad override coords ?\n\n",
-			override->name, override->prev, coord2sstr(around));
-	}
-}
-
-/* Add a new override to the set of checked overrides. */
-void
-josekifix_add_override(board_t *b, override_t *override)
-{
-	/* Don't add duplicates */
-	for (int i = 0; i < joseki_overrides.len; i++)
-		if (!override_cmp(override, &joseki_overrides.overrides[i]))
-			return;	
-
-	override_sanity_checks(b, override);
-	override_list_add(&joseki_overrides, override);
-}
-
-/* Add new override and check (2 overrides) to the set of checked overrides. */
-void
-josekifix_add_override_and(board_t *b, override_t *override1, override_t *override2)
-{
-	/* Don't add duplicates */
-	for (int i = 0; i < joseki_overrides2.len; i++)
-		if (!override_cmp(override1, &joseki_overrides2.overrides[i].override1) &&
-		    !override_cmp(override2, &joseki_overrides2.overrides[i].override2))
-			return;	
-
-	override_sanity_checks(b, override1);
-	/* Skip override2 sanity check (long distance warning but that's ok here). */
-	//override_sanity_checks(b, override2);
-	
-	override2_t and_check = { 0, };
-	and_check.override1 = *override1;
-	and_check.override2 = *override2;
-	
-	override2_list_add(&joseki_overrides2, &and_check);
-}
-
-/* Add a new logged variation to the set of logged variations.
- * They work like overrides except they only affect logging :
- * They don't interfere with game moves. */
-void
-josekifix_add_logged_variation(board_t *b, override_t *log)
-{
-	// in this case override must have a next move (not pass),
-	// even though it's ignored.
-	log->next = "A1";
-	
-	// don't add duplicates
-	for (int i = 0; i < logged_variations.len; i++)
-		if (!override_cmp(log, &logged_variations.overrides[i]))
-			return;	
-
-	log_sanity_checks(b, log);
-	override_list_add(&logged_variations, log);
-}
-
-void
-josekifix_add_logged_variation_and(board_t *b, override_t *log1, override_t *log2)
-{
-	// in this case overrides must have a next move (not pass),
-	// even though it's ignored.
-	log1->next = "A1";
-	log2->next = "A1";
-	
-	// don't add duplicates
-	for (int i = 0; i < logged_variations2.len; i++)
-		if (!override_cmp(log1, &logged_variations2.overrides[i].override1) &&
-		    !override_cmp(log2, &logged_variations2.overrides[i].override2))
-			return;	
-
-	log_sanity_checks(b, log1);
-	/* Skip override2 sanity check (long distance warning but that's ok here). */
-	//log_sanity_checks(b, log2);
-
-	override2_t and_check = { 0, };
-	and_check.override1 = *log1;
-	and_check.override2 = *log2;
-
-	override2_list_add(&logged_variations2, &and_check);
-}
-
-
-/* Load josekifix overrides from file.
- * Debugging: to get a dump of all entries, run                      'pachi -d4'
- *            to get a dump of all entries + earlier positions, run  'pachi -d5'  */
-static bool
-josekifix_load(void)
-{
-	const char *fname = "josekifix.gtp";
-	FILE *f = fopen_data_file(fname, "r");
-	if (!f) {
-		if (DEBUGL(3))		 perror(fname);
-		if (DEBUGL(2))		 fprintf(stderr, "Joseki fixes: file %s missing\n", fname);
-		if (josekifix_required)  die("josekifix required but %s missing, aborting.\n", fname);
-		if (DEBUGL(2))		 fprintf(stderr, "Joseki fixes disabled\n");
-		return false;
-	}
-	if (DEBUGL(2))  fprintf(stderr, "Loading joseki fixes ...\n");
-
-	DEBUG_QUIET();		// turn off debugging (only want debug msg inside josekifixscan engine)
-	board_t *b = board_new(19, NULL);
-	engine_t e;  engine_init(&e, E_JOSEKIFIXLOAD, NULL, NULL);
-	time_info_t ti[S_MAX];
-	ti[S_BLACK] = ti_none;
-	ti[S_WHITE] = ti_none;
-	char buf[4096];
-	gtp_t gtp;  gtp_init(&gtp, b);
-	for (int lineno = 1; fgets(buf, 4096, f); lineno++) {
-		/* Pachi version check */
-		if (str_prefix("# Pachi ", buf)) {
-			double wanted  = atof(buf + strlen("# Pachi "));
-			if (saved_debug_level > 3) fprintf(stderr, "checking version >= %.2f\n", wanted);
-			if (PACHI_VERNUM < wanted)
-				die("%s: need pachi version >= %.2f\n", fname, wanted);
-		}
-		
-		gtp.quiet = true;  // XXX fixme, refactor
-		enum parse_code c = gtp_parse(&gtp, b, &e, ti, buf);  /* quiet */
-		/* TODO check gtp command didn't gtp_error() also, will still return P_OK on error ... */
-		if (c != P_OK && c != P_ENGINE_RESET)
-			die("%s:%i  gtp command '%s' failed, aborting.\n", fname, lineno, buf);
-	}
-	engine_done(&e);
-	board_delete(&b);
-	DEBUG_QUIET_END();
-
-	if (DEBUGL(3))  fprintf(stderr, "Loaded %i overrides (and: %i), %i logged variations (and: %i)\n", joseki_overrides.len, joseki_overrides2.len, logged_variations.len, logged_variations2.len);
-	else if (DEBUGL(2))  fprintf(stderr, "Loaded %i overrides.\n", joseki_overrides.len);
-
-	fclose(f);
-	return true;
-}
-
-bool
-josekifix_init(board_t *b)
-{
-	assert(!joseki_overrides.overrides);
-	
-	/* Load database of joseki fixes */
-	if (!josekifix_load()) {
-		josekifix_enabled = false;
-		return false;
-	}
-
-	return true;
 }
 
 
