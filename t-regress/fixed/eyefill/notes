@@ -1,0 +1,45 @@
+aguilar1 pachipachi  2024/12/25 18:54
+
+playing 4 handicap as black
+
+Move:  272  Komi: 0.5  Handicap: 4  Captures B: 3 W: 5  [0 0 0 0]  Score Est: B+62.5
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . X O O . . . . O X X X . . . | 19 | X X X X X X o o o o o o o X X X X X X |
+ 18 | . O O X . X X O O . . O O O O X O X . | 18 | X X X X X X X o o o o o o o o X X X X |
+ 17 | X X X X X O X X O O O O X X X X O X X | 17 | X X X X X O X X o o o o X X X X X X X |
+ 16 | X O X X O O X O O X X X X . X X X O X | 16 | X O X X O O X o o X X X X X X X X x X |
+ 15 | O O O O O X X X X . X O O O . O X O O | 15 | O O O O O X X X X X X x x x X x X x x |
+ 14 | . O X X X X X X)X O X O X O . O O O . | 14 | O O X X X X X x X X X x X x x x x x x |
+ 13 | O . O O X X O O X X O O X X X O . X O | 13 | O O O O X X O O X X x x X X X x x x x |
+ 12 | X O O O O O O . O X O O O X O O O O O | 12 | X O O O O O O O O X x x x X x x x x x |
+ 11 | X O X X X X O O O O X O X X X X X X X | 11 | X O X X X X O O O O X x X X X X X X X |
+ 10 | X X X O . O X X . . X X . . . . . . . | 10 | X X X O , O X X , , X X X X X X X X X |
+  9 | X X O O O O . . O O X . . . . X X X X |  9 | X X O O O O , , O O X X X X X X X X X |
+  8 | . X X O . O X X O X X . . . O X O X O |  8 | X X X O O O X X O X X X X X X X O X O |
+  7 | . . . X O O . X X X O O X . X O O O O |  7 | X X X X O O , X X X X X X X X O O O O |
+  6 | . X X X X O . . X O X X X X X O O . . |  6 | X X X X X O , X X O X X X X X O O O O |
+  5 | . . X O O O . X O O O O O X X X O . . |  5 | X X X O O O , X O O O O O X X X O O O |
+  4 | . . X X O X X X O . . X . O O X O . . |  4 | X X X X O X X X O O O O O O O X O O O |
+  3 | . . X O . O . X X O O . . O X X O . . |  3 | X X X O O O , X X O O O O O X X O O O |
+  2 | X X O O . O X X O . O . . . O O O . . |  2 | X X O O O O X X O O O O O O O O O O O |
+  1 | . O O . . O . X O O . . . . . . . . . |  1 | o O O O O O , X O O O O O O O O O O O |
+    +---------------------------------------+    +---------------------------------------+
+
+after w play T12 there should be no way playouts show T13 group as dead (!)
+happens in many moves in the log.
+
+playouts are doing fine (alive 90%).
+
+pattern issue actually:
+- after w K10, b R19 descent: 
+  patterns = [ T14 N4  O8  E3  N2  G1  G9  A1  H9  O2  P14 B13 N8  G6  M3  G3  J10 P15 L4  K19 ]
+             [ 21  9   7   6   4   4   3   3   3   3   2   2   2   1   1   1   1   1   1   1   ]
+	     
+  w T14  fill eye, killing own group
+
+test:   (pattern engine)
+  ../../../pachi -e pattern  < foo.gtp
+
+
+fix:  mm:eyefill with low gamma fixes it

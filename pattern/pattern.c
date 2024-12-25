@@ -92,6 +92,7 @@ features_init()
 	features[FEAT_DOUBLE_SNAPBACK] = feature_info("double_snapback", 1,               0);
       features[FEAT_L1_BLUNDER_PUNISH] = feature_info("l1_blunder_punish", 1,             0);
 	features[FEAT_SELFATARI] =       feature_info("selfatari",       PF_SELFATARI_N,  0);
+	features[FEAT_EYEFILL] =         feature_info("eyefill",         1,		  0);
 	features[FEAT_BORDER] =          feature_info("border",          -1,              0);
 	features[FEAT_DISTANCE] =        feature_info("dist",            19,              0);
 	features[FEAT_DISTANCE2] =       feature_info("dist2",           19,              0);
@@ -1206,6 +1207,26 @@ pattern_match_l1_blunder_punish(board_t *b, move_t *m)
 	return (found ? 0 : -1);
 }
 
+/*  . . . . . . |	Discourage filling own eye.
+ *  . . . X X X |
+ *  . X X X O O |	Without this some pretty bad eyefills can get high enough gammas
+ *  . X O O O * |	near endgame to mess up search and group status pretty badly.
+ *  . X O . X O |       Would end up thinking w group is dead/uncertain here.
+ *  . X O O O O |       
+ *  . X X X X X |	(aguilar1 pachipachi  2024/12/25)  */
+int
+pattern_match_eyefill(board_t *b, move_t *m)
+{
+	/* Own eye, true or false */
+	if (!board_is_eyelike(b, m->coord, m->color))
+		return -1;
+	
+	/* If saving a group in atari don't interfere ! */
+	if (board_get_atari_neighbor(b, m->coord, m->color))
+		return -1;
+
+	return 0;
+}
 
 #ifndef BOARD_SPATHASH
 #undef BOARD_SPATHASH_MAXD
@@ -1399,6 +1420,7 @@ pattern_match_vanilla(board_t *b, move_t *m, pattern_t *pattern, pattern_context
 	check_feature(pattern_match_net(b, m, ct->ownermap), FEAT_NET);
 	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
 	check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
+	check_feature(pattern_match_eyefill(b, m), FEAT_EYEFILL);
 	check_feature(pattern_match_border(b, m, ct->pc), FEAT_BORDER);
 	check_feature(pattern_match_distance(b, m), FEAT_DISTANCE);
 	check_feature(pattern_match_distance2(b, m), FEAT_DISTANCE2);
@@ -1456,6 +1478,7 @@ pattern_match_internal(board_t *b, move_t *m, pattern_t *pattern,
 	check_feature(pattern_match_defence(b, m), FEAT_DEFENCE);
 	check_feature(pattern_match_wedge(b, m), FEAT_WEDGE);
 	check_feature(pattern_match_l1_blunder_punish(b, m), FEAT_L1_BLUNDER_PUNISH);
+	check_feature(pattern_match_eyefill(b, m), FEAT_EYEFILL);
 	if (!atari_ladder)  check_feature(pattern_match_selfatari(b, m), FEAT_SELFATARI);
 	check_feature(pattern_match_border(b, m, ct->pc), FEAT_BORDER);
 	if (locally) {

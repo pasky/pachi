@@ -117,6 +117,9 @@ enum feature_id {
 	/* Double snapback */
 	FEAT_DOUBLE_SNAPBACK,      /***** Just what it says. */
 
+	/* Filling own eye */
+	FEAT_EYEFILL,		   /***   Bad eye fill. */
+	
 	/* Border distance. */
 	FEAT_BORDER,               /*     Payload: Line number, only up to 4. */
 
