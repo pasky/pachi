@@ -12,7 +12,7 @@
 #include "engine.h"
 #include "engines/external.h"
 #include "josekifix/josekifix_engine.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/joseki_override.h"
 #include "tactics/util.h"
 #include "dcnn/dcnn.h"
 #include "uct/uct.h"

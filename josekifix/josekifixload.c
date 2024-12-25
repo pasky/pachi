@@ -12,7 +12,7 @@
 #include "tactics/util.h"
 #include "tactics/2lib.h"
 #include "pattern/spatial.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/joseki_override.h"
 #include "josekifix/josekifixload.h"
 
 
@@ -22,17 +22,17 @@
 /* Growable list of overrides.
  * Ensures trailing null override always available (if zero'ed initially) */
 typedef struct {
-	override_t *overrides;
-	int          alloc;
-	int          len;
+	joseki_override_t *overrides;
+	int		   alloc;
+	int		   len;
 } override_list_t;
 
 /* Growable list of overrides (2 overrides <and> check)
  * Ensures trailing null override always available (if zero'ed initially) */
 typedef struct {
-	override2_t *overrides;
-	int          alloc;
-	int          len;
+	joseki_override2_t *overrides;
+	int		    alloc;
+	int		    len;
 } override2_list_t;
 
 /* Overrides and logged variations loaded at startup. */
@@ -44,7 +44,7 @@ static override2_list_t logged_variations2_list = { 0, };	/* <and> checks */
 
 /* Append override to list, realloc if necessary.  (override data is copied) */
 static void
-override_list_add(override_list_t *list, override_t *override)
+override_list_add(override_list_t *list, joseki_override_t *override)
 {
 	if (list->len + 2 > list->alloc) {  /* realloc */
 		size_t size = sizeof(*override);
@@ -61,7 +61,7 @@ override_list_add(override_list_t *list, override_t *override)
 
 /* Append override to list, realloc if necessary.  (override data is copied) */
 static void
-override2_list_add(override2_list_t *list, override2_t *override)
+override2_list_add(override2_list_t *list, joseki_override2_t *override)
 {
 	if (list->len + 2 > list->alloc) {  /* realloc */
 		size_t size = sizeof(*override);
@@ -95,7 +95,7 @@ print_ladder_check(char *idx, ladder_check_t *c)
 }
 
 static void
-joseki_override_print(override_t *override, char *section)
+joseki_override_print(joseki_override_t *override, char *section)
 {
 	fprintf(stderr, "%s:\n", section);
 	fprintf(stderr, "  name = \"%s\"\n", override->name);
@@ -157,7 +157,7 @@ ladder_check_cmp(ladder_check_t *c1, ladder_check_t *c2)
 
 /* Compare 2 overrides (don't use that for sorting!) */
 static int
-override_cmp(override_t *o1, override_t *o2)
+override_cmp(joseki_override_t *o1, joseki_override_t *o2)
 {
 	return !(same_str(o1->prev, o2->prev) &&
 		 same_str(o1->next, o2->next) &&
@@ -175,7 +175,7 @@ override_cmp(override_t *o1, override_t *o2)
 /* Load from file */
 
 static void
-ladder_sanity_check(board_t *board, ladder_check_t *check, override_t *override)
+ladder_sanity_check(board_t *board, ladder_check_t *check, joseki_override_t *override)
 {
 	board_t b2;  board_copy(&b2, board);
 	board_t *b = &b2;
@@ -234,7 +234,7 @@ ladder_sanity_check(board_t *board, ladder_check_t *check, override_t *override)
 
 /* Common sanity checks for [override] and [log] sections */
 static char*
-common_sanity_checks(board_t *b, override_t *override)
+common_sanity_checks(board_t *b, joseki_override_t *override)
 {
 	if (!override->name || !override->name[0]) {
 		board_print(b, stderr);
@@ -275,7 +275,7 @@ common_sanity_checks(board_t *b, override_t *override)
 
 /* Check override is sane, help locate bad override otherwise. */
 static void
-override_sanity_checks(board_t *b, override_t *override)
+override_sanity_checks(board_t *b, joseki_override_t *override)
 {
 	/* Common checks first */
 	char *around_str = common_sanity_checks(b, override);
@@ -313,7 +313,7 @@ override_sanity_checks(board_t *b, override_t *override)
 
 /* Check log is sane, help locate bad override otherwise. */
 static void
-log_sanity_checks(board_t *b, override_t *override)
+log_sanity_checks(board_t *b, joseki_override_t *override)
 {
 	/* Common checks first */
 	char *around_str = common_sanity_checks(b, override);
@@ -333,7 +333,7 @@ log_sanity_checks(board_t *b, override_t *override)
 
 /* Add a new override to the set of checked overrides. */
 static void
-josekifix_add_override(board_t *b, override_t *override)
+josekifix_add_override(board_t *b, joseki_override_t *override)
 {
 	/* Don't add duplicates */
 	for (int i = 0; i < joseki_overrides_list.len; i++)
@@ -346,7 +346,7 @@ josekifix_add_override(board_t *b, override_t *override)
 
 /* Add new override and check (2 overrides) to the set of checked overrides. */
 static void
-josekifix_add_override_and(board_t *b, override_t *override1, override_t *override2)
+josekifix_add_override_and(board_t *b, joseki_override_t *override1, joseki_override_t *override2)
 {
 	/* Don't add duplicates */
 	for (int i = 0; i < joseki_overrides2_list.len; i++)
@@ -358,7 +358,7 @@ josekifix_add_override_and(board_t *b, override_t *override1, override_t *overri
 	/* Skip override2 sanity check (long distance warning but that's ok here). */
 	//override_sanity_checks(b, override2);
 	
-	override2_t and_check = { 0, };
+	joseki_override2_t and_check = { 0, };
 	and_check.override1 = *override1;
 	and_check.override2 = *override2;
 	
@@ -369,7 +369,7 @@ josekifix_add_override_and(board_t *b, override_t *override1, override_t *overri
  * They work like overrides except they only affect logging :
  * They don't interfere with game moves. */
 static void
-josekifix_add_logged_variation(board_t *b, override_t *log)
+josekifix_add_logged_variation(board_t *b, joseki_override_t *log)
 {
 	// in this case override must have a next move (not pass),
 	// even though it's ignored.
@@ -385,7 +385,7 @@ josekifix_add_logged_variation(board_t *b, override_t *log)
 }
 
 static void
-josekifix_add_logged_variation_and(board_t *b, override_t *log1, override_t *log2)
+josekifix_add_logged_variation_and(board_t *b, joseki_override_t *log1, joseki_override_t *log2)
 {
 	// in this case overrides must have a next move (not pass),
 	// even though it's ignored.
@@ -402,17 +402,17 @@ josekifix_add_logged_variation_and(board_t *b, override_t *log1, override_t *log
 	/* Skip override2 sanity check (long distance warning but that's ok here). */
 	//log_sanity_checks(b, log2);
 
-	override2_t and_check = { 0, };
+	joseki_override2_t and_check = { 0, };
 	and_check.override1 = *log1;
 	and_check.override2 = *log2;
 
 	override2_list_add(&logged_variations2_list, &and_check);
 }
 
-override_t  *joseki_overrides = NULL;
-override2_t *joseki_overrides2 = NULL;
-override_t  *logged_variations = NULL;
-override2_t *logged_variations2 = NULL;
+joseki_override_t  *joseki_overrides = NULL;
+joseki_override2_t *joseki_overrides2 = NULL;
+joseki_override_t  *logged_variations = NULL;
+joseki_override2_t *logged_variations2 = NULL;
 
 /* Load josekifix overrides from file.
  * Debugging: to get a dump of all entries, run                      'pachi -d4'
@@ -477,7 +477,7 @@ josekifix_load(void)
 
 /* Fill in override hashes from board position (all rotations) */
 static void
-joseki_override_fill_hashes(override_t *override, board_t *b)
+joseki_override_fill_hashes(joseki_override_t *override, board_t *b)
 {
 	enum stone color = last_move(b).color;	// last move color
 	
@@ -575,7 +575,7 @@ typedef struct {
 /* external_engine			enable external engine mode in current quadrant
  * external_engine = q1 [q2 ...]	enable external engine mode in given quadrants (numeric)   */
 static void
-parse_external_engine(board_t *b, override_t *override, external_engine_setting_t *setting, char *value)
+parse_external_engine(board_t *b, joseki_override_t *override, external_engine_setting_t *setting, char *value)
 {
 	char *name = (override->name ? override->name : "");
 	
@@ -608,7 +608,7 @@ parse_external_engine(board_t *b, override_t *override, external_engine_setting_
 /* external_engine_moves = n			specify number of moves for external engine mode
  * external_engine_moves = n1 n2 [...]		same for each quadrant if multiple quadrants have been enabled */
 static void
-parse_external_engine_moves(board_t *b, override_t *override, external_engine_setting_t *setting, char *value)
+parse_external_engine_moves(board_t *b, joseki_override_t *override, external_engine_setting_t *setting, char *value)
 {
 	assert(value && value[0]);
 	char *name = (override->name ? override->name : "");
@@ -660,7 +660,7 @@ parse_external_engine_moves(board_t *b, override_t *override, external_engine_se
 
 /* Set override around coord */
 static void
-joseki_override_set_around(override_t *override, board_t *b, char *value)
+joseki_override_set_around(joseki_override_t *override, board_t *b, char *value)
 {	
 	assert(valid_coord(value));
 
@@ -699,13 +699,13 @@ add_override(board_t *b, move_t *m, char *move_str)
 	//	else                fprintf(stderr, "  var:  '%s'\n", vars[i].name);
 
 	// Main override
-	override_t override  = { 0, };
+	joseki_override_t override  = { 0, };
 	ladder_check_t *ladder_check = &override.ladder_check;
 	ladder_check_t *ladder_check2 = &override.ladder_check2;
 	bool has_around = false;
 
 	// Second area check ?
-	override_t override2 = { 0, };
+	joseki_override_t override2 = { 0, };
 	char *around2 = NULL;
 
 	external_engine_setting_t setting;  setting.n = 0;

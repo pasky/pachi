@@ -6,7 +6,6 @@
 #include "timeinfo.h"
 #include "gtp.h"
 #include "gogui.h"
-#include "josekifix/josekifix.h"
 #include "ownermap.h"
 #include "joseki/joseki.h"
 #include "uct/uct.h"

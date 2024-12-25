@@ -11,7 +11,7 @@
 #include "tactics/2lib.h"
 #include "tactics/selfatari.h"
 #include "board_undo.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/override.h"
 
 
 static bool dcnn_blunder_enabled = true;

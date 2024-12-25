@@ -29,8 +29,8 @@
 #include "uct/dynkomi.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
-#include "josekifix/josekifix.h"
 #include "dcnn/dcnn.h"
+#include "josekifix/joseki_override.h"
 
 #ifdef DISTRIBUTED
 #include "uct/slave.h"

@@ -3,7 +3,8 @@
 #include "board.h"
 #include "engine.h"
 #include "pattern/spatial.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/override.h"
+#include "josekifix/joseki_override.h"
 
 
 /*  6 | . . . . . . . 
@@ -22,7 +23,7 @@ josekifix_kill_3_3_invasion(struct board *b, struct ownermap *prev_ownermap,
 	override_t override = 	{ .coord_empty = "B2", .prev = "C3", "B4", "", { 0xfb50710e59804023, 0x7fefef0db770bf17, 0xef77e916af17fb33, 0x255a0304dbe9fd17, 
 										 0x41fad91638b3a0eb, 0xe04691d5dc8ef2f, 0x8e93b792ac2f9dfb, 0x79549dde6309036f } };
 	int rot;
-	coord_t c = check_override(b, &override, &rot, lasth);
+	coord_t c = check_override(b, &override, &rot, lasth, "joseki_override");
 	if (is_pass(c)) return c;
 
 	/* Corner and side owned by us in prev ownermap ?

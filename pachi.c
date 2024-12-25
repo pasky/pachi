@@ -25,7 +25,7 @@
 #include "pattern/spatial.h"
 #include "pattern/prob.h"
 #include "joseki/joseki.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/joseki_override.h"
 #include "josekifix/josekifix_engine.h"
 
 /* Main options */

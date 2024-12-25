@@ -3,7 +3,8 @@
 
 #include "engine.h"
 #include "pattern/spatial.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/override.h"
+#include "josekifix/joseki_override.h"
 #include "tactics/util.h"
 
 typedef coord_t (*override_hook_t)(struct board *b, hash_t lasth);
@@ -131,7 +132,7 @@ double_takamoku_fuseki(struct board *b, hash_t lasth)
 		{ NULL, NULL, NULL }
 	};
 
-	return check_overrides(b, overrides, lasth);
+	return check_overrides(b, overrides, lasth, "fuseki_override");
 }
 
 #if 0
@@ -174,7 +175,7 @@ large_keima_fuseki(struct board *b, hash_t lasth)
 		case 2: if (hash_empty("Q5")  == 0x4ff209de037e7964)  return coord("R4");
 			if (hash_empty("D15") == 0xf38ceba436dc80e4)  return coord("D17");
 			return pass;
-		case 4: return check_override(b, &override, NULL, lasth);
+		case 4: return check_override(b, &override, NULL, lasth, "fuseki_override");
 		default: return pass;
 	}
 }
@@ -263,7 +264,7 @@ check_special_fuseki(struct board *b, hash_t lasth) {
 	if (!fuseki)  return pass;
 	
 	coord_t c = fuseki->override(b, lasth);
-	if (is_pass(c) || !josekifix_sane_override(b, c, fuseki->name, -1)) {
+	if (is_pass(c) || !sane_override_move(b, c, fuseki->name, "fuseki_override")) {
 		reset_fuseki_handler();
 		return pass;
 	}

@@ -1,5 +1,5 @@
-#ifndef PACHI_JOSEKIFIX_H
-#define PACHI_JOSEKIFIX_H
+#ifndef PACHI_JOSEKI_OVERRIDE_H
+#define PACHI_JOSEKI_OVERRIDE_H
 
 #ifdef JOSEKIFIX
 
@@ -12,7 +12,6 @@
  * to let an external joseki engine take over the following sequence in this quadrant.
  */
 
-struct ownermap;
 
 /* Pattern dist used for hashes */
 #define JOSEKIFIX_OVERRIDE_DIST 10
@@ -35,7 +34,6 @@ typedef struct {
  *   - last move
  *   - spatial pattern (radius 5) around last move (or a given coord near it)
  *   - optionally ladder checks (override specifies ladder setup).
- * Custom override code also gets passed current ownermap and can use it in their checks.
  *
  * Coords are just stored as strings: we really don't care about performance here (few
  * entries, running once at the end of genmove) and makes it easy to initialize override
@@ -60,15 +58,15 @@ typedef struct {
 					 * value specifies number of external engine moves to play.
 					 * note: can also just set "pass" as next move instead of filling this
 					 *       (= enable for current quadrant, 15 moves)  */
-} override_t;
+} joseki_override_t;
 
 /* Representation of an <and> check (2 overrides).
  * Terminating null kept for convenience */
 typedef struct {
-	override_t override1;
-	override_t override2;
-	override_t null;
-} override2_t;
+	joseki_override_t override1;
+	joseki_override_t override2;
+	joseki_override_t null;
+} joseki_override2_t;
 
 
 /* global */
@@ -76,23 +74,12 @@ void disable_josekifix(void);
 void require_josekifix(void);
 bool get_josekifix_enabled(void);
 bool get_josekifix_required(void);
-
-/* loading overrides */
 bool josekifix_init(board_t *b);
 
-/* genmove */
 coord_t joseki_override(struct board *b);
 coord_t joseki_override_no_external_engine(struct board *b, struct ownermap *prev_ownermap, struct ownermap *ownermap);
 coord_t joseki_override_external_engine_only(board_t *b);
 
-
-/* low level override matching */
-coord_t check_override(struct board *b, override_t *override, int *prot, hash_t lasth);
-coord_t check_override_last(struct board *b, override_t *override, int *prot, hash_t lasth);
-coord_t check_override_rot(struct board *b, override_t *override, int rot, hash_t lasth);
-coord_t check_overrides(struct board *b, override_t overrides[], hash_t lasth);
-coord_t check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t lasth, bool log);
-bool    josekifix_sane_override(struct board *b, coord_t c, char *name, int n);
 void    josekifix_log(const char *format, ...);
 bool    josekifix_ladder_setup(board_t *b, int rot, ladder_check_t *check);
 

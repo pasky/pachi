@@ -4,12 +4,12 @@
 #ifdef JOSEKIFIX
 
 #include "engine.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/joseki_override.h"
 
-extern override_t  *joseki_overrides;
-extern override2_t *joseki_overrides2;
-extern override_t  *logged_variations;
-extern override2_t *logged_variations2;
+extern joseki_override_t  *joseki_overrides;
+extern joseki_override2_t *joseki_overrides2;
+extern joseki_override_t  *logged_variations;
+extern joseki_override2_t *logged_variations2;
 
 void josekifixload_engine_init(engine_t *e, board_t *b);
 

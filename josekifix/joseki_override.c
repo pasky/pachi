@@ -5,14 +5,12 @@
 #include "board.h"
 #include "debug.h"
 #include "pattern/spatial.h"
-#include "ownermap.h"
-#include "dcnn/dcnn.h"
-#include "josekifix/josekifix.h"
-#include "josekifix/josekifixload.h"
-#include "josekifix/josekifix_engine.h"
 #include "tactics/util.h"
 #include "tactics/2lib.h"
 #include "tactics/ladder.h"
+#include "josekifix/joseki_override.h"
+#include "josekifix/josekifixload.h"
+#include "josekifix/josekifix_engine.h"
 #include "engines/external.h"
 
 
@@ -41,8 +39,9 @@ josekifix_init(board_t *b)
 }
 
 
-/*****************************************************************************/
+/**********************************************************************************************************/
 /* External engine */
+
 
 /* For each quadrant, whether to enable external engine mode (value specifies number of moves)  */
 static int  wanted_external_engine_mode[4] = { 0, };
@@ -110,7 +109,7 @@ clear_wanted_external_engine_mode(void)
 }
 
 static void
-set_wanted_external_engine_mode(board_t *b, override_t *override, coord_t next, int rot)
+set_wanted_external_engine_mode(board_t *b, joseki_override_t *override, coord_t next, int rot)
 {
 	bool have = false;
 	for (int q = 0; q < 4; q++)
@@ -139,12 +138,12 @@ commit_wanted_external_engine_mode(board_t *b)
 }
 
 
-/*****************************************************************************/
+/**********************************************************************************************************/
 /* Logging */
 
 static strbuf_t *log_buf = NULL;
 
-/* Everything here called from joseki_override() should use this for logging.
+/* All code matching overrides should use this for logging.
  * (let caller control logging) */
 void
 josekifix_log(const char *format, ...)
@@ -157,49 +156,7 @@ josekifix_log(const char *format, ...)
 }
 
 
-/*****************************************************************************/
-/* board_print_pattern(): visualize pattern area */
-
-/*
-typedef struct {
-	coord_t coord;
-	unsigned int d;
-} t_print_pattern_data;
-
-static char*
-print_pattern_handler(struct board *b, coord_t c, void *pdata)
-{
-	t_print_pattern_data *data = pdata;
-	int cx = coord_x(data->coord);    int cy = coord_y(data->coord);
-	
-	for (unsigned int d = 2; d <= data->d; d++)
-	for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
-		ptcoords_at(x, y, cx, cy, j);
-		if (coord_xy(b, x, y) == c)
-			return "*";
-	}
-	
-	static char s[2] = { 0, };
-	s[0] = stone2char(board_at(b, c));
-	return s;
-}
-
-static void
-board_print_pattern_full(struct board *b, coord_t coord, unsigned int d)
-{
-	t_print_pattern_data data = { .coord = coord, .d = d };
-	board_hprint(b, stderr, print_pattern_handler, (void*)&data);
-}
-
-static void
-board_print_pattern(struct board *b, coord_t coord)
-{
-	board_print_pattern_full(b, coord, MAX_PATTERN_DIST);
-}
-*/
-
-
-/*****************************************************************************/
+/**********************************************************************************************************/
 /* Ladder checks */
 
 /* Add ladder check setup stones */
@@ -238,7 +195,7 @@ josekifix_ladder_setup(board_t *b, int rot, ladder_check_t *check)
  * note: we assume alternating colors, should be fine here.
  *       (won't work for genmove w after w move) */
 static bool
-ladder_check(board_t *board, override_t *override, int rot, ladder_check_t *check)	
+ladder_check(board_t *board, joseki_override_t *override, int rot, ladder_check_t *check)	
 {
         if (!check->coord)  return true;
 	
@@ -267,18 +224,18 @@ ladder_check(board_t *board, override_t *override, int rot, ladder_check_t *chec
 
 /* Check override ladder checks all match. */
 static bool
-check_override_ladder(board_t *b, override_t *override, int rot)
+check_override_ladder(board_t *b, joseki_override_t *override, int rot)
 {
 	return (ladder_check(b, override, rot, &override->ladder_check) &&
 		ladder_check(b, override, rot, &override->ladder_check2));
 }
 
 
-/*****************************************************************************/
+/**********************************************************************************************************/
 /* Low-level override matching */
 
 static int
-override_entry_number(override_t *overrides, override_t *o)
+override_entry_number(joseki_override_t *overrides, joseki_override_t *o)
 {
 	if (!overrides)  return 1;
 	
@@ -293,7 +250,7 @@ override_entry_number(override_t *overrides, override_t *o)
 }
 
 static int
-override2_entry_number(override2_t *overrides, override2_t *o)
+override2_entry_number(joseki_override2_t *overrides, joseki_override2_t *o)
 {
 	if (!overrides)  return 1;
 	
@@ -316,8 +273,8 @@ str2coord_safe(char *str)
 
 /* Check override at given location (single rotation) */
 static coord_t
-check_override_at_rot(struct board *b, override_t *override, int rot,
-		      char* coordstr, enum stone stone_color)
+check_joseki_override_at_rot(struct board *b, joseki_override_t *override, int rot,
+			     char* coordstr, enum stone stone_color)
 {
 	assert(override->next[0] && override->next[0] != 'X');
 	assert(coordstr[0] && coordstr[0] != 'X');
@@ -346,11 +303,11 @@ check_override_at_rot(struct board *b, override_t *override, int rot,
 /* Check override at given location (all rotations)
  * Rotation found written to @prot in case of match. */
 static coord_t
-check_override_at(struct board *b, override_t *override, int *prot,
-		  char* coordstr, enum stone stone_color)
+check_joseki_override_at(struct board *b, joseki_override_t *override,
+			 int *prot, char* coordstr, enum stone stone_color)
 {
 	for (int rot = 0; rot < 8; rot++) {
-		coord_t c = check_override_at_rot(b, override, rot, coordstr, stone_color);
+		coord_t c = check_joseki_override_at_rot(b, override, rot, coordstr, stone_color);
 		if (!is_pass(c)) {
 			if (prot)  *prot = rot;
 			return c;
@@ -362,7 +319,7 @@ check_override_at(struct board *b, override_t *override, int *prot,
 
 /* Check override around last move (single rotation) */
 static coord_t
-check_override_last_rot(struct board *b, override_t *override, int rot, hash_t lasth)
+check_joseki_override_last_rot(struct board *b, joseki_override_t *override, int rot, hash_t lasth)
 {
 	assert(override->prev[0] && override->prev[0] != 'X');
 	assert(override->next[0] && override->next[0] != 'X');
@@ -385,11 +342,11 @@ check_override_last_rot(struct board *b, override_t *override, int rot, hash_t l
 
 /* Check override around last move (all rotations)
  * Rotation found written to @prot in case of match */
-coord_t
-check_override_last(struct board *b, override_t *override, int *prot, hash_t lasth)
+static coord_t
+check_joseki_override_last(struct board *b, joseki_override_t *override, int *prot, hash_t lasth)
 {
 	for (int rot = 0; rot < 8; rot++) {
-	    coord_t c = check_override_last_rot(b, override, rot, lasth);
+	    coord_t c = check_joseki_override_last_rot(b, override, rot, lasth);
 	    if (!is_pass(c)) {
 		    if (prot)  *prot = rot;
 		    return c;
@@ -400,8 +357,8 @@ check_override_last(struct board *b, override_t *override, int *prot, hash_t las
 }
 
 /* Check and warn if returned move is not sane... */
-bool
-josekifix_sane_override(struct board *b, coord_t c, char *name, int n)
+static bool
+sane_joseki_override_move(struct board *b, coord_t c, char *name, int n)
 {
 	assert(c != EXTERNAL_ENGINE_MOVE);
 	enum stone color = stone_other(last_move(b).color);
@@ -415,31 +372,35 @@ josekifix_sane_override(struct board *b, coord_t c, char *name, int n)
 	return true;
 }
 
-coord_t
-check_override_rot(struct board *b, override_t *override, int rot, hash_t lasth)
+static coord_t
+check_joseki_override_rot(struct board *b, joseki_override_t *override, int rot, hash_t lasth)
 {
 	enum stone color = last_move(b).color;
-	if (override->coord_other)  return check_override_at_rot(b, override, rot, override->coord_other, color);
-	if (override->coord_own)    return check_override_at_rot(b, override, rot, override->coord_own, stone_other(color));
-	if (override->coord_empty)  return check_override_at_rot(b, override, rot, override->coord_empty, S_NONE);
-	return check_override_last_rot(b, override, rot, lasth);
+	if (override->coord_other)  return check_joseki_override_at_rot(b, override, rot, override->coord_other, color);
+	if (override->coord_own)    return check_joseki_override_at_rot(b, override, rot, override->coord_own, stone_other(color));
+	if (override->coord_empty)  return check_joseki_override_at_rot(b, override, rot, override->coord_empty, S_NONE);
+	return check_joseki_override_last_rot(b, override, rot, lasth);
 }
 
 static coord_t
-check_override_(struct board *b, override_t *override, int *prot, hash_t lasth)		
+check_joseki_override_(struct board *b, joseki_override_t *override, int *prot, hash_t lasth)		
 {
 	enum stone color = last_move(b).color;
-	if (override->coord_other)  return check_override_at(b, override, prot, override->coord_other, color);
-	if (override->coord_own)    return check_override_at(b, override, prot, override->coord_own, stone_other(color));
-	if (override->coord_empty)  return check_override_at(b, override, prot, override->coord_empty, S_NONE);
-	return check_override_last(b, override, prot, lasth);
+	if (override->coord_other)  return check_joseki_override_at(b, override, prot, override->coord_other, color);
+	if (override->coord_own)    return check_joseki_override_at(b, override, prot, override->coord_own, stone_other(color));
+	if (override->coord_empty)  return check_joseki_override_at(b, override, prot, override->coord_empty, S_NONE);
+	return check_joseki_override_last(b, override, prot, lasth);
 }
 
+
+/**********************************************************************************************************/
+/* Single override check */
+
 /* Check single override, making sure returned move is sane. */
-coord_t
-check_override(struct board *b, override_t *override, int *prot, hash_t lasth)
+static coord_t
+check_joseki_override(struct board *b, joseki_override_t *override, int *prot, hash_t lasth)
 {
-	coord_t c = check_override_(b, override, prot, lasth);
+	coord_t c = check_joseki_override_(b, override, prot, lasth);
 
 	/* Get external engine move now if needed */
 	if (c == EXTERNAL_ENGINE_MOVE)
@@ -447,107 +408,28 @@ check_override(struct board *b, override_t *override, int *prot, hash_t lasth)
 	
 	/* Check move is sane... */
 	int n = override_entry_number(joseki_overrides, override);
-	if (!josekifix_sane_override(b, c, override->name, n))
+	if (!sane_joseki_override_move(b, c, override->name, n))
 		return pass;
 	
 	return c;
 }
 
-/* Check overrides, return first match's next move (pass if none).
- * Matching needs not be optimized at all (few entries, running once
- * at the end of genmove). So we just run through the whole list, see
- * if there's any match (we have hashes for all rotations). */
-static coord_t
-check_overrides_full(struct board *b, override_t overrides[], int *prot, hash_t lasth, char *title)		     
-{
-	if (!overrides)  return pass;
-	
-	for (int i = 0; overrides[i].name; i++) {
-		coord_t c = check_override(b, &overrides[i], prot, lasth);
-		if (!is_pass(c)) {
-			if (title) {  /* log */
-				int n = override_entry_number(overrides, &overrides[i]);
-				josekifix_log("%s: %s (%s", title, coord2sstr(c), overrides[i].name);
-				if (n != 1)  josekifix_log(", %i", n);
-				josekifix_log(")\n");
-			}
-			return c;
-		}
-	}
-	return pass;
-}
-
-/* Same for overrides <and> checks (override2_t) */
-static coord_t
-check_overrides2_full(struct board *b, override2_t overrides[], int *prot, hash_t lasth, char *title)
-{
-	if (!overrides)  return pass;
-	
-	for (int i = 0; overrides[i].override1.name; i++) {
-		coord_t c = check_overrides_and(b, (override_t*)&overrides[i], prot, lasth, false);
-		if (!is_pass(c)) {
-			if (title) {  /* log */
-				int n = override2_entry_number(overrides, &overrides[i]);
-				josekifix_log("%s: %s (%s", title, coord2sstr(c), overrides[i].override1.name);
-				if (n != 1)  josekifix_log(", %i", n);
-				josekifix_log(")\n");
-			}
-			return c;
-		}
-	}
-	return pass;
-}
-
-/* Check overrides, return first match's next move */
-coord_t
-check_overrides(struct board *b, override_t overrides[], hash_t lasth)
-{
-	return check_overrides_full(b, overrides, NULL, lasth, "joseki_override");
-}
-
-/* Check overrides, return first match's next move */
-coord_t
-check_joseki_overrides(struct board *b, hash_t lasth)
-{
-	coord_t c = pass;
-	
-	/* <and> checks first */
-	c = check_overrides2_full(b, joseki_overrides2, NULL, lasth, "joseki_override");
-	if (!is_pass(c))  return c;
-
-	/* regular overrides */
-	c = check_overrides_full(b, joseki_overrides, NULL, lasth, "joseki_override");
-	if (!is_pass(c))  return c;
-
-	return pass;
-}
-
-/* Check and log logged variations */
-static void
-check_logged_variations(struct board *b, hash_t lasth)
-{
-	/* <and> checks first */	
-	check_overrides2_full(b, logged_variations2, NULL, lasth, "joseki_variation");
-	check_overrides_full(b, logged_variations, NULL, lasth, "joseki_variation");
-}
-
-
 /* Check a group of overrides matches.
  * All overrides must match (in the same rotation) for this to match.
  * Returns last entry's next move. */
-coord_t
-check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t lasth, bool log)
+static coord_t
+check_joseki_overrides_and(struct board *b, joseki_override_t *overrides, int *prot, hash_t lasth, bool log)
 {
 	for (int rot = 0; rot < 8; rot++) {
 		clear_wanted_external_engine_mode();	/* Cleanup in case of partial match */
 
 		/* Check if first override matches ... */
-		coord_t c = check_override_rot(b, &overrides[0], rot, lasth);
+		coord_t c = check_joseki_override_rot(b, &overrides[0], rot, lasth);
 		if (is_pass(c))  continue;
 
 		/* And all other overrides match in same rotation.  */
 		for (int i = 1; overrides[i].name && !is_pass(c); i++)
-			c = check_override_rot(b, &overrides[i], rot, lasth);
+			c = check_joseki_override_rot(b, &overrides[i], rot, lasth);
 		if (is_pass(c))  continue;
 
 		/* Passes all checks, get external engine move now if needed */
@@ -555,7 +437,7 @@ check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t la
 			c = external_joseki_engine_genmove(b);
 		
 		/* Check move is sane... */
-		if (!josekifix_sane_override(b, c, overrides[0].name, -1))
+		if (!sane_joseki_override_move(b, c, overrides[0].name, -1))
 			break;
 		
 		if (log && overrides[0].name)
@@ -570,9 +452,87 @@ check_overrides_and(struct board *b, override_t *overrides, int *prot, hash_t la
 
 
 /**********************************************************************************************************/
-/* Core override checks */
+/* Batch override checking */
 
-coord_t
+/* Check overrides, return first match's next move (pass if none).
+ * Matching needs not be optimized at all (few entries, running once
+ * at the end of genmove). So we just run through the whole list, see
+ * if there's any match (we have hashes for all rotations). */
+static coord_t
+check_joseki_overrides_list(struct board *b, joseki_override_t overrides[], int *prot, hash_t lasth, char *title)		     
+{
+	if (!overrides)  return pass;
+	
+	for (int i = 0; overrides[i].name; i++) {
+		joseki_override_t *override = &overrides[i];
+		coord_t c = check_joseki_override(b, override, prot, lasth);
+		if (!is_pass(c)) {
+			if (title) {  /* log */
+				int n = override_entry_number(overrides, override);
+				josekifix_log("%s: %s (%s", title, coord2sstr(c), override->name);
+				if (n != 1)  josekifix_log(", %i", n);
+				josekifix_log(")\n");
+			}
+			return c;
+		}
+	}
+	return pass;
+}
+
+/* Same for overrides <and> checks (joseki_override2_t) */
+static coord_t
+check_joseki_overrides2_list(struct board *b, joseki_override2_t overrides[], int *prot, hash_t lasth, char *title)
+{
+	if (!overrides)  return pass;
+	
+	for (int i = 0; overrides[i].override1.name; i++) {
+		joseki_override2_t *override = &overrides[i];
+		joseki_override_t  *override1 = &override->override1;
+		coord_t c = check_joseki_overrides_and(b, override1, prot, lasth, false);
+		if (!is_pass(c)) {
+			if (title) {  /* log */
+				int n = override2_entry_number(overrides, override);
+				josekifix_log("%s: %s (%s", title, coord2sstr(c), override1->name);
+				if (n != 1)  josekifix_log(", %i", n);
+				josekifix_log(")\n");
+			}
+			return c;
+		}
+	}
+	return pass;
+}
+
+
+/**********************************************************************************************************/
+/* Top-level calls (internal) */
+
+/* Check overrides, return first match's next move */
+static coord_t
+check_joseki_overrides(struct board *b, hash_t lasth)
+{
+	coord_t c = pass;
+	
+	/* <and> checks first */
+	c = check_joseki_overrides2_list(b, joseki_overrides2, NULL, lasth, "joseki_override");
+	if (!is_pass(c))  return c;
+
+	/* regular overrides */
+	c = check_joseki_overrides_list(b, joseki_overrides, NULL, lasth, "joseki_override");
+	if (!is_pass(c))  return c;
+
+	return pass;
+}
+
+/* Check and log logged variations */
+static void
+check_logged_variations(struct board *b, hash_t lasth)
+{
+	/* <and> checks first */	
+	check_joseki_overrides2_list(b, logged_variations2, NULL, lasth, "joseki_variation");
+	check_joseki_overrides_list(b, logged_variations, NULL, lasth, "joseki_variation");
+}
+
+static coord_t
 joseki_override_(struct board *b, strbuf_t *log,
 		 struct ownermap *prev_ownermap, struct ownermap *ownermap,
 		 bool external_engine_enabled)
@@ -595,12 +555,10 @@ joseki_override_(struct board *b, strbuf_t *log,
 	/**********************************************************************************/
 	/* Joseki overrides */
 
-	/* Joseki overrides, if using dcnn */
-	if (using_dcnn(b)) {
-		check_logged_variations(b, lasth);
-		c = check_joseki_overrides(b, lasth);
-		if (!is_pass(c))  return c;
-	}
+	/* Joseki overrides */
+	check_logged_variations(b, lasth);
+	c = check_joseki_overrides(b, lasth);
+	if (!is_pass(c))  return c;
 	
 	/* Kill 3-3 invasion */
 	if (prev_ownermap) {
