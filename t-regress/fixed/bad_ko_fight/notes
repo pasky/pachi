@@ -1,0 +1,83 @@
+pachipachi zhong1209  2024/12/25 21:32
+
+Move:  173  Komi: 6.5  Handicap: 0  Captures B: 9 W: 9  [0 0 0 0]
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . . . . . . . . . . . . . | 19 | : : : : : : : : : : : : : : : : : : : |
+ 18 | . O X O . O X O X). . X O . . . . . . | 18 | : : : : : : : : : : : : : : : : : : : |
+ 17 | . O X O O X O O X X . X O O O X . . . | 17 | : : : : : : : : : : : : : : : : : : : |
+ 16 | . O O X X . X X O O O O O X . X . . . | 16 | : : : : : : : : : : : : : : : : : : : |
+ 15 | O . . O X X . O O X . O X X . . . . . | 15 | : : : : : : : : : : : : : : : : : : : |
+ 14 | X O O O O X X X X X X O . . . X . . . | 14 | : : : : : : : : : : : : : : : : : : : |
+ 13 | X X X X X . X O O X O O . . . . . . . | 13 | : : : : : : : : : : : : : : : : : : : |
+ 12 | X O . X X X X O X O O . . . . . . . . | 12 | : : : : : : : : : : : : : : : : : : : |
+ 11 | O O O O O O O O X X X O O . . . . . . | 11 | : : : : : : : : : : : : : : : : : : : |
+ 10 | O X X X O X O X X . . X . . . X . . . | 10 | : : : : : : : : : : : : : : : : : : : |
+  9 | O O O X O X X O X X X O . . . . . . . |  9 | : : : : : : : : : : : : : : : : : : : |
+  8 | . O O X X O X O O O X . . . . . . . . |  8 | : : : : : : : : : : : : : : : : : : : |
+  7 | O X X X X O X . X X . . . . . . . . . |  7 | : : : : : : : : : : : : : : : : : : : |
+  6 | X . X X O O X . . . . . . . . . . . . |  6 | : : : : : : : : : : : : : : : : : : : |
+  5 | O X X O . O O X . . . . . . . . . . . |  5 | : : : : : : : : : : : : : : : : : : : |
+  4 | O O O O . . . . . . . . . . . X . . . |  4 | : : : : : : : : : : : : : : : : : : : |
+  3 | O O . . . . . . . . . . . . . . . . . |  3 | : : : : : : : : : : : : : : : : : : : |
+  2 | . . . . . . . . . . . . . . . . . . . |  2 | : : : : : : : : : : : : : : : : : : : |
+  1 | . . . . . . . . . . . . . . . . . . . |  1 | : : : : : : : : : : : : : : : : : : : |
+    +---------------------------------------+    +---------------------------------------+
+
+mcowner 0.14s
+dcnn in 0.71s (dcnn prior = 900)
+dcnn = [ F16 G19 B6  H19 H6  H4  L17 G15 Q18 N10 C12 Q12 O9  P16 C19 F19 Q11 N9  L18 R15 ]
+       [ 66  21  7   4   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+[1000] best 60.3% xkomi 0.0 | seq F16  A8  H4 C12 | can w F16(60.3)  B6(54.1)
+[2000] best 62.8% xkomi 0.0 | seq F16  A8  H7  H6 | can w F16(62.8)  B6(53.1)
+[3000] best 68.5% xkomi 0.0 | seq F16  A8  H7  H6 | can w F16(68.5)  B6(53.0)  H7(67.7)
+[4000] best 72.8% xkomi 0.0 | seq F16  A8  H7  H6 | can w F16(72.8)  B6(53.0)  H7(67.7)
+[5000] best 74.3% xkomi 0.0 | seq F16  A8  H7  H6 | can w F16(74.3)  B6(53.0)  H7(67.7)
+[6000] best 73.9% xkomi 0.0 | seq F16  A8  H7  H6 | can w F16(73.9)  B6(52.4)  H7(67.7)
+[7000] best 74.3% xkomi 0.0 | seq F16  A8  H7  H6 | can w F16(74.3)  B6(52.6)  H7(67.7)
+[8000] best 73.1% xkomi 0.0 | seq F16  A8  H7  H6 | can w F16(73.1)  B6(51.5)  H7(67.7) H19(58.1)
+[9000] best 72.7% xkomi 0.0 | seq F16  A8  H7  H6 | can w F16(72.7)  B6(52.1)  H7(67.7) H19(58.3)
+[10000] best 72.3% xkomi 0.0 | seq F16 B15  B6 F17 | can w F16(72.3)  B6(51.7)  H7(67.7) H19(54.8)
+(avg score -37.066448/10069; dynkomi's -30.599127/640210 value 0.360483/639904)
+*** WINNER is F16 with score 0.7231 (8589/10069:10069/10069 games), extra komi 0.000000
+
+
+ko fight, can't answer b ko threat:
+after b takes the ko no matter what w does b will capture huge A11 group.
+
+patterns mess up search:
+after w answers ko threat, b takes ko, w H6 threat:
+
+Move:  176  Komi: 6.5  Handicap: 0  Captures B: 10 W: 10  [0 0 0 0]
+      A B C D E F G H J K L M N O P Q R S T
+    +---------------------------------------+
+ 19 | . . . . . . . . . . . . . . . . . . . |
+ 18 | . O X O . O X O X . . X O . . . . . . |
+ 17 | . O X O O . O O X X . X O O O X . . . |
+ 16 | . O O X X O X X O O O O O X . X . . . |
+ 15 | O . . O X X . O O X . O X X . . . . . |
+ 14 | X O O O O X X X X X X O . . . X . . . |
+ 13 | X X X X X . X O O X O O . . . . . . . |
+ 12 | X O . X X X X O X O O . . . . . . . . |
+ 11 | O O O O O O O O X X X O O . . . . . . |
+ 10 | O X X X O X O X X . . X . . . X . . . |
+  9 | O O O X O X X O X X X O . . . . . . . |
+  8 | X O O X X O X O O O X . . . . . . . . |
+  7 | . X X X X O X . X X . . . . . . . . . |
+  6 | X . X X O O X O). . . . . . . . . . . |
+  5 | O X X O . O O X . . . . . . . . . . . |
+  4 | O O O O . . . . . . . . . . . X . . . |
+  3 | O O . . . . . . . . . . . . . . . . . |
+  2 | . . . . . . . . . . . . . . . . . . . |
+  1 | . . . . . . . . . . . . . . . . . . . |
+    +---------------------------------------+
+
+patterns = [ H7  J6  J5  C12 H4  F17 N10 M8  G4  H3  K5  N9  G3  F3  N7  L3  M3  O3  N3  G15 ]
+           [ 99  0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   ]
+
+H7 gets huge gamma so other moves are not searched.
+so w thinks b will answer H6 threat, but b will C12 instead (capture whole group).
+
+
+fix: max ko-ending moves' pattern rating so they always get considered during searched.
+     (whatever best rated move is, they get that rating as well)

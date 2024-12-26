@@ -41,29 +41,31 @@ extern feature_info_t pattern_features[];
 /* If you add a payload for a feature, don't forget to update the values in feature_info. 
  * Legend:                          *      Ordinary feature
  *                                  ***    Feature with artificial gamma
- *                                  *****  Prioritized feature, possibly with artificial gamma */
+ *                                  *****  Prioritized feature, possibly with artificial gamma
+ *                                  ++++++ Maxed move  (always gets max rating) */
 enum feature_id {
 	/* Capture */
 	FEAT_CAPTURE,	
-#define PF_CAPTURE_ATARIDEF	0  /*     Capture group contiguous to new group in atari */
-#define PF_CAPTURE_PEEP		1  /*     Prevent connection to previous move */
-#define PF_CAPTURE_LADDER	2  /*     Capturing group already in a ladder */
-#define PF_CAPTURE_NOLADDER	3  /*     Capturing group not in a ladder */
-#define PF_CAPTURE_TAKE_KO	4  /***** Recapture ko after ko-threat */
-#define PF_CAPTURE_END_KO	5  /***** End ko by capturing something else */
+#define PF_CAPTURE_ATARIDEF	0  /*      Capture group contiguous to new group in atari */
+#define PF_CAPTURE_PEEP		1  /*      Prevent connection to previous move */
+#define PF_CAPTURE_LADDER	2  /*      Capturing group already in a ladder */
+#define PF_CAPTURE_NOLADDER	3  /*      Capturing group not in a ladder */
+#define PF_CAPTURE_TAKE_KO	4  /*****  Recapture ko after ko-threat */
+#define PF_CAPTURE_END_KO	5  /*+++++ End ko by capturing something else */
 #define PF_CAPTURE_N		6
 
-	FEAT_CAPTURE2,             /* Capture features matched in addition to FEAT_CAPTURE */
-#define PF_CAPTURE2_LAST	0  /***   Recapture previous move */
+	/* Capture features matched in addition to FEAT_CAPTURE */
+	FEAT_CAPTURE2,
+#define PF_CAPTURE2_LAST	0  /***    Recapture previous move */
 #define PF_CAPTURE2_N	        1
 	
 	/* Atari escape (extension). */
 	FEAT_AESCAPE,	
-#define PF_AESCAPE_NEW_NOLADDER	0  /*     Escape new atari, not in a ladder */
-#define PF_AESCAPE_NEW_LADDER	1  /*     Escape new atari, in a ladder */
-#define PF_AESCAPE_NOLADDER	2  /*     Escape atari, not in a ladder */
-#define PF_AESCAPE_LADDER	3  /*     Escape atari, in a ladder */
-#define PF_AESCAPE_FILL_KO	4  /***** Fill ko, ignoring ko threat */
+#define PF_AESCAPE_NEW_NOLADDER	0  /*      Escape new atari, not in a ladder */
+#define PF_AESCAPE_NEW_LADDER	1  /*      Escape new atari, in a ladder */
+#define PF_AESCAPE_NOLADDER	2  /*      Escape atari, not in a ladder */
+#define PF_AESCAPE_LADDER	3  /*      Escape atari, in a ladder */
+#define PF_AESCAPE_FILL_KO	4  /*+++++ Fill ko, ignoring ko threat */
 #define PF_AESCAPE_N		5
 
 	/* Self-atari move. */
@@ -75,56 +77,56 @@ enum feature_id {
 
 	/* Atari move. */
 	FEAT_ATARI,
-#define PF_ATARI_SNAPBACK       0  /***** Snapback on stones we don't own already. */
-#define PF_ATARI_LADDER_BIG	1  /***** Can ladder big safe opponent group */
-#define PF_ATARI_LADDER_LAST    2  /*     Ladder last move */
-#define PF_ATARI_AND_CAP	3  /***   Atari + can capture other group if opponent defends. */
-#define PF_ATARI_AND_CAP2	4  /***   Atari + can capture other group if opponent defends. */
-#define PF_ATARI_DOUBLE		5  /***   Double atari */
-#define PF_ATARI_LADDER_SAFE	6  /***** Can ladder safe opponent stone(s) */
-#define PF_ATARI_LADDER_CUT	7  /*     Can ladder cutting stone(s) */
-#define PF_ATARI_LADDER		8  /*     The atari'd group gets laddered? */
-#define PF_ATARI_KO		9  /***** Atari as ko-threat ? disables selfatari feature. */
-#define PF_ATARI_SOME		10 /*     Can atari something */
+#define PF_ATARI_SNAPBACK       0  /*****  Snapback on stones we don't own already. */
+#define PF_ATARI_LADDER_BIG	1  /*****  Can ladder big safe opponent group */
+#define PF_ATARI_LADDER_LAST    2  /*      Ladder last move */
+#define PF_ATARI_AND_CAP	3  /***    Atari + can capture other group if opponent defends. */
+#define PF_ATARI_AND_CAP2	4  /***    Atari + can capture other group if opponent defends. */
+#define PF_ATARI_DOUBLE		5  /***    Double atari */
+#define PF_ATARI_LADDER_SAFE	6  /*****  Can ladder safe opponent stone(s) */
+#define PF_ATARI_LADDER_CUT	7  /*      Can ladder cutting stone(s) */
+#define PF_ATARI_LADDER		8  /*      The atari'd group gets laddered? */
+#define PF_ATARI_KO		9  /*****  Atari as ko-threat ? disables selfatari feature. */
+#define PF_ATARI_SOME		10 /*      Can atari something */
 #define PF_ATARI_N		11
 
 	/* Net */
 	FEAT_NET,
-#define PF_NET_LAST		0  /***   Capture last move in net (single stone) */
-#define PF_NET_CUT		1  /***   Net cutting stone (not already owned by us) */
-#define PF_NET_SOME		2  /***   Net something     (not already owned by us) */
-#define PF_NET_DEAD		3  /*     Net something     (own territory) */
+#define PF_NET_LAST		0  /***    Capture last move in net (single stone) */
+#define PF_NET_CUT		1  /***    Net cutting stone (not already owned by us) */
+#define PF_NET_SOME		2  /***    Net something     (not already owned by us) */
+#define PF_NET_DEAD		3  /*      Net something     (own territory) */
 #define PF_NET_N		4
 
 	/* 2nd line defence */
 	FEAT_DEFENCE,
-#define PF_DEFENCE_LINE2	0  /***   Defend stone on second line */
-#define PF_DEFENCE_SILLY	1  /***   Can cap instead */
+#define PF_DEFENCE_LINE2	0  /***    Defend stone on second line */
+#define PF_DEFENCE_SILLY	1  /***    Can cap instead */
 #define PF_DEFENCE_N		2
 
 	/* Cut */
 	FEAT_CUT,
-#define PF_CUT_DANGEROUS	0  /***** Cut that can't be captured with shortage of libs around */
+#define PF_CUT_DANGEROUS	0  /*****  Cut that can't be captured with shortage of libs around */
 #define PF_CUT_N		1
 
 	FEAT_WEDGE,
-#define	PF_WEDGE_LINE3		0  /*     3rd line wedge that can't be blocked */
+#define	PF_WEDGE_LINE3		0  /*      3rd line wedge that can't be blocked */
 #define PF_WEDGE_N		1
 
 	/* First line blunder */
-	FEAT_L1_BLUNDER_PUNISH,	   /***   Punish first line blunder (connect and short of liberties) */
+	FEAT_L1_BLUNDER_PUNISH,	   /***    Punish first line blunder (connect and short of liberties) */
 	
 	/* Double snapback */
-	FEAT_DOUBLE_SNAPBACK,      /***** Just what it says. */
+	FEAT_DOUBLE_SNAPBACK,      /*****  Just what it says. */
 
 	/* Filling own eye */
-	FEAT_EYEFILL,		   /***   Bad eye fill. */
+	FEAT_EYEFILL,		   /***    Bad eye fill. */
 	
 	/* Border distance. */
-	FEAT_BORDER,               /*     Payload: Line number, only up to 4. */
+	FEAT_BORDER,               /*      Payload: Line number, only up to 4. */
 
 	/* Distance to last/2nd last move. */
-	FEAT_DISTANCE,             /*     Payload: The distance - Up to 17. */
+	FEAT_DISTANCE,             /*      Payload: The distance - Up to 17. */
 	FEAT_DISTANCE2,
 
 	/* Monte-carlo owner */
