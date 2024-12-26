@@ -28,20 +28,15 @@ void prob_dict_init(char *filename);
 void prob_dict_done();
 
 /* Get pattern probabilities for all possible moves.
- * Stores normalized probability of each pattern in probs[b->flen] */
-void pattern_rate_moves(board_t *b, enum stone color, floating_t *probs, pattern_context_t *ct);
-/* Also stores found patterns in pats[b->flen] */
-void pattern_rate_moves_full(board_t *b, enum stone color,
-			     pattern_t *pats, floating_t *probs,
-			     pattern_context_t *ct);
+ * Store normalized probability of each pattern in probs[b->flen].
+ * @pats            (optional): save pattern for each move in pats[b->flen].
+ * @matched_locally (optional): store whether local match was used or distance features were ignored. */
+void pattern_rate_moves(board_t *b, enum stone color, floating_t *probs, pattern_t *pats, pattern_context_t *ct, bool *matched_locally);
 /* For testing purposes: no prioritized features, check every feature. */
-void pattern_rate_moves_vanilla(board_t *b, enum stone color,
-				pattern_t *pats, floating_t *probs,
-				pattern_context_t *ct);
+void pattern_rate_moves_vanilla(board_t *b, enum stone color, floating_t *probs, pattern_t *pats, pattern_context_t *ct);
 
-
-/* Helper function for pattern_match() callers:
- * Returns @locally flag to use for this position. */
+/* Helper function for pattern_match() callers: returns @locally flag to use for this position.
+ * For gogui only (super inefficient). */
 bool pattern_matching_locally(board_t *b, enum stone color, pattern_context_t *ct);
 
 void print_pattern_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest);

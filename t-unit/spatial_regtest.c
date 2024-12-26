@@ -41,7 +41,7 @@ dump_spatials(board_t *b, pattern_config_t *pc)
 	ownermap_t ownermap;  fake_ownermap(b, &ownermap);  /* fake */
 	pattern_context_t ct;
 	pattern_context_init(&ct, pc, &ownermap);
-	pattern_rate_moves_vanilla(b, color, pats, probs, &ct);
+	pattern_rate_moves_vanilla(b, color, probs, pats, &ct);
 	
 	for (int f = 0; f < b->flen; f++) {
 		if (isnan(probs[f]))  continue;

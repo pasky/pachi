@@ -18,7 +18,7 @@ typedef struct {
 	int debug_level;
 	pattern_config_t pc;
 	bool mcowner_fast;
-	int  matched_locally;
+	bool matched_locally;
 } pattern_engine_t;
 
 pattern_config_t*
@@ -32,7 +32,6 @@ bool
 pattern_engine_matched_locally(engine_t *e)
 {
 	pattern_engine_t *pp = (pattern_engine_t*)e->data;
-	assert(pp->matched_locally != -1);
 	return pp->matched_locally;
 }
 
@@ -67,8 +66,7 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 	pattern_t pats[b->flen];
 	floating_t probs[b->flen];
 	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
-	pp->matched_locally = -1;  // Invalidate
-	pattern_rate_moves_full(b, color, pats, probs, ct);
+	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 	float best_r[20];
 	coord_t best_c[20];
@@ -86,7 +84,7 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 		if (probs[f] > probs[best])
 			best = f;
 	}
-
+	
 	pattern_context_free(ct);
 	return b->f[best];
 }
@@ -99,8 +97,7 @@ pattern_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone c
 
 	floating_t probs[b->flen];
 	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
-	pp->matched_locally = pattern_matching_locally(b, color, ct);
-	pattern_rate_moves(b, color, probs, ct);
+	pattern_rate_moves(b, color, probs, NULL, ct, &pp->matched_locally);
 
 	get_pattern_best_moves(b, probs, best_c, best_r, nbest);
 	print_pattern_best_moves(b, best_c, best_r, nbest);
@@ -115,8 +112,7 @@ pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *pr
 
 	pattern_t pats[b->flen];
 	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
-	pp->matched_locally = -1;  // Invalidate
-	pattern_rate_moves_full(b, color, pats, probs, ct);
+	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 #if 0
 	// unused variable 'total' in above call to pattern_rate_moves()
@@ -178,7 +174,7 @@ pattern_engine_state_init(engine_t *e, board_t *b)
 	bool pat_setup = false;
 
 	pp->debug_level = debug_level;
-	pp->matched_locally = -1;  /* Invalid */
+	pp->matched_locally = false;
 	pp->mcowner_fast = true;
 
 	/* Process engine options. */
