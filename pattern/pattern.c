@@ -355,6 +355,14 @@ pattern_match_capture(board_t *b, move_t *m)
 	/* Recapture ko after playing ko-threat ? */
 	if (b->last_ko_age == b->moves - 2 && m->coord == b->last_ko.coord)
 		return PF_CAPTURE_TAKE_KO;
+
+	/* End ko by capture, ignoring ko threat ? */
+	if (b->last_ko_age == b->moves - 1)
+		for (int i = 0; i < can_cap.moves; i++) {
+			group_t capg = can_cap.move[i];
+			if (is_neighbor_group(b, last_move2(b).coord, capg))
+				return PF_CAPTURE_END_KO;
+		}
 	
 	if (!have_last_move(b))
 		goto regular_stuff;
@@ -377,10 +385,6 @@ pattern_match_capture(board_t *b, move_t *m)
 		if (capg != group_at(b, last_move) &&
 		    is_neighbor(b, m->coord, last_move))
 			return PF_CAPTURE_PEEP;
-
-		/* End ko by capture, ignoring ko threat ? */
-		if (b->last_ko_age == b->moves - 1 && is_neighbor_group(b, last_move2(b).coord, capg))
-			return PF_CAPTURE_END_KO;
 	}
 		
  regular_stuff:
