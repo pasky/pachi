@@ -1720,13 +1720,42 @@ external_engine
 pachipachi snow0115 2023-04-25])
 (;B[eq]
 ;W[er]
-;B[dr]
+(;B[dr]
 ;W[]C[[override\]
 name = "hoshi 3-3 hane inside"
 around = C2
 
 
 pachipachi Beutlin 2023-04-25])
+(;B[fr]
+;W[bp]
+;B[bo]
+;W[co]
+;B[do]C[
+
+should E4 instead actually (katago)]
+;W[bq]
+(;B[ep]
+;W[cn]
+;B[]C[[override\]
+name = "hoshi 3-3 double hane side fight"
+around = C3
+external_engine = lower_left upper_left
+
+side fight
+
+Ex: AlexeySP pachipachi 2024-12-28 11:24
+])
+(;B[fp]
+;W[cn]
+;B[]C[[override\]
+name = "hoshi 3-3 double hane side fight"
+around = C3
+external_engine = lower_left upper_left
+
+side fight
+
+])))
 (;B[fq]
 (;W[]C[[override\]
 name = "hoshi direct 3-3 (invading)"
