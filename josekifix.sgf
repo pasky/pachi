@@ -338,7 +338,19 @@ name = "3-4 pincer B4 tricks"
 around = C3
 
 
-Spass pachipachi 2023-04-24]))
+Spass pachipachi 2023-04-24])
+(;B[go]
+;W[dp]
+;B[co]
+;W[dr]
+;B[en]
+;W[]C[[override\]
+name = "3-4 pincer jump enclose"
+around = D4
+
+tricky
+
+Ex: maeda pachipachi 2024-12-28]))
 (;W[fo]
 (;B[cm]
 ;W[hp]
