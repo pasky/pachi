@@ -116,8 +116,13 @@ collect_avg_log_stats(predict_stats_t *stats, float *best_r, int moves)
 }
 
 static void
-collect_stats(predict_stats_t *stats, board_t *b, move_t *m, coord_t *best_c, float *best_r, int moves, int games)
+collect_stats(engine_t *e, predict_stats_t *stats,
+	      board_t *b, move_t *m, coord_t *best_c, float *best_r, int moves, int games)
 {
+	/* Run engine specific hook if present */
+	if (e->collect_stats)
+		e->collect_stats(e, b, m, best_c, best_r, moves, games);
+	
 	bool guessed = (best_c[0] == m->coord);
 	
 	/* Stats by move number */
@@ -267,20 +272,20 @@ print_prob_stats(predict_stats_t *stats, strbuf_t *buf)
 	sbprintf(buf, " \n");
 }
 
-static char *
-print_stats(predict_stats_t *stats, int moves, int games)
+static void
+print_stats(engine_t *e, predict_stats_t *stats, strbuf_t *buf, int moves, int games)
 {
-	static_strbuf(buf, 16384);
-	
 	sbprintf(buf, " \n");
+	
+	if (e->print_stats)	/* Run engine specific hook if present */
+		e->print_stats(e, buf, moves, games);
+	
 	print_by_move_number_stats(stats, buf);
 	print_by_move_number_stats_short(stats, buf);
 	print_prob_stats(stats, buf);
 	print_avg_stats(buf, "Average log values:", 50, RESCALE_LOG(PROB_MAX), stats->avg_log_stats, moves);
 	print_avg_stats(buf, "Average values:",     50, PROB_MAX,              stats->avg_stats,     moves);
 	print_topn_stats(stats, buf, moves, games);
-	
-	return buf->str;
 }
 
 
@@ -309,10 +314,6 @@ predict_move(board_t *b, engine_t *e, time_info_t *ti, move_t *m, int games)
 	engine_best_moves(e, b, ti_genmove, color, best_c, best_r, PREDICT_TOPN);
 	//print_dcnn_best_moves(b, best_c, best_r, PREDICT_TOPN);
 
-	// Play correct expected move
-	if (board_play(b, m) < 0)
-		die("ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord), stone2str(m->color));
-
 	fprintf(stderr, "WINNER is %s in the actual game.\n", coord2sstr(m->coord));
 	if (best_c[0] == m->coord)
 		fprintf(stderr, "Move %3i: Predict: Correctly predicted %s %s\n", b->moves,
@@ -321,17 +322,23 @@ predict_move(board_t *b, engine_t *e, time_info_t *ti, move_t *m, int games)
 		fprintf(stderr, "Move %3i: Predict: Wrong prediction: %s %s != %s\n", b->moves,
 			(color == S_BLACK ? "b" : "w"), coord2sstr(best_c[0]), coord2sstr(m->coord));
 
-	if (DEBUGL(1) && debug_boardprint)
-		engine_board_print(e, b, stderr);
-
 	// Collect stats
 	static int moves = 0;
 	static predict_stats_t stats = { 0, };
-	collect_stats(&stats, b, m, best_c, best_r, ++moves, games);
+	collect_stats(e, &stats, b, m, best_c, best_r, ++moves, games);
+
+	// Play correct expected move
+	if (board_play(b, m) < 0)
+		die("ILLEGAL EXPECTED MOVE: [%s, %s]\n", coord2sstr(m->coord), stone2str(m->color));
+	if (DEBUGL(1) && debug_boardprint)
+		engine_board_print(e, b, stderr);
 	
-	// Dump stats from time to time
-	if (moves % 200 == 0)
-		return print_stats(&stats, moves, games);
+	// Print stats from time to time
+	if (moves % 200 == 0) {
+		static_strbuf(buf, 16384);
+		print_stats(e, &stats, buf, moves, games);
+		return buf->str;
+	}
 	
 	return NULL;
 }

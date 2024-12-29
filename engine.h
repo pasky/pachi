@@ -70,6 +70,8 @@ typedef void (*engine_evaluate_t)(engine_t *e, board_t *b, time_info_t *ti, floa
 typedef void (*engine_dead_groups_t)(engine_t *e, board_t *b, move_queue_t *mq);
 typedef ownermap_t* (*engine_ownermap_t)(engine_t *e, board_t *b);
 typedef char *(*engine_result_t)(engine_t *e, board_t *b);
+typedef void (*engine_collect_stats_t)(engine_t *e, board_t *b, move_t *m, coord_t *best_c, float *best_r, int moves, int games);
+typedef void (*engine_print_stats_t)(engine_t *e, strbuf_t *buf, int moves, int games);
 typedef void (*engine_stop_t)(engine_t *e);
 typedef void (*engine_done_t)(engine_t *e);
 
@@ -114,6 +116,9 @@ struct engine {
 	engine_dead_groups_t     dead_groups;       /* One dead group per queued move (coord_t is (ab)used as group_t). */
 	engine_ownermap_t        ownermap;	    /* Return current ownermap, if engine supports it. */
 	engine_result_t          result;	    /* More detailed output of last genmove. */
+	
+	engine_collect_stats_t	 collect_stats;	    /* Engine-specific t-predict stats (collect) */
+	engine_print_stats_t	 print_stats;	    /* Engine-specific t-predict stats (print)   */
 
 	engine_stop_t            stop;		    /* Pause any background thinking being done, but do not tear down
 						     * any data structures yet. */
