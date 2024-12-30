@@ -35,28 +35,35 @@ pattern_engine_matched_locally(engine_t *e)
 	return pp->matched_locally;
 }
 
+/* Print patterns for best moves */
 static void
 debug_pattern_best_moves(pattern_engine_t *pp, board_t *b, enum stone color,
-			 coord_t *best_c, int nbest)
+			 pattern_context_t *ct, coord_t *best_c, int nbest)
 {
-	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
-	bool locally = pattern_matching_locally(b, color, ct);
-	
 	fprintf(stderr, "\n");
 	for (int i = 0; i < nbest; i++) {
 		move_t m = move(best_c[i], color);
 		pattern_t p;
-		pattern_match(b, &m, &p, ct, locally);
+		pattern_match(b, &m, &p, ct, pp->matched_locally);
 
 		strbuf(buf, 512);
 		dump_gammas(buf, &p);
 		fprintf(stderr, "%3s gamma %s\n", coord2sstr(m.coord), buf->str);
 	}
 	fprintf(stderr, "\n");
-
-	pattern_context_free(ct);
 }
 
+/* Print patterns for all moves */
+static void
+debug_pattern_all_moves(pattern_engine_t *pp, board_t *b, floating_t *probs, pattern_t *pats)
+{
+	for (int f = 0; f < b->flen; f++) {
+		if (probs[f] >= 0.001) {
+			char s[256]; pattern2str(s, &pats[f]);
+			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), probs[f], s);
+		}
+	}
+}
 
 static coord_t
 pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
@@ -72,21 +79,14 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 	coord_t best_c[20];
 	get_pattern_best_moves(b, probs, best_c, best_r, 20);
 	print_pattern_best_moves(b, best_c, best_r, 20);
-	if (pp->debug_level >= 4)
-		debug_pattern_best_moves(pp, b, color, best_c, 20);
 
-	int best = 0;
-	for (int f = 0; f < b->flen; f++) {
-		if (pp->debug_level >= 5 && probs[f] >= 0.001) {
-			char s[256]; pattern2str(s, &pats[f]);
-			fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), probs[f], s);
-		}
-		if (probs[f] > probs[best])
-			best = f;
-	}
-	
+	if (pp->debug_level >= 4)
+		debug_pattern_best_moves(pp, b, color, ct, best_c, 20);
+	if (pp->debug_level >= 5)
+		debug_pattern_all_moves(pp, b, probs, pats);
+
 	pattern_context_free(ct);
-	return b->f[best];
+	return best_c[0];
 }
 
 static void
@@ -114,23 +114,8 @@ pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *pr
 	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
-#if 0
-	// unused variable 'total' in above call to pattern_rate_moves()
-	floating_t total = pattern_rate_moves_fast(&pp->pc, b, color, pats, probs);
-	/* Rescale properly. */
-	for (int f = 0; f < b->flen; f++) {
-		probs[f] /= total;
-	}
-#endif
-
-	if (pp->debug_level >= 4) {
-		for (int f = 0; f < b->flen; f++) {
-			if (probs[f] >= 0.001) {
-				char s[256]; pattern2str(s, &pats[f]);
-				fprintf(stderr, "\t%s: %.3f %s\n", coord2sstr(b->f[f]), probs[f], s);
-			}
-		}
-	}
+	if (pp->debug_level >= 4)
+		debug_pattern_all_moves(pp, b, probs, pats);
 
 	pattern_context_free(ct);
 }
