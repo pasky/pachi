@@ -1494,7 +1494,7 @@ pachipachi pilaf  2023-04-05
 (;B[fp]
 ;W[gp]
 (;B[fo]
-;W[eq]
+(;W[eq]
 ;B[dq]
 ;W[go]
 ;B[gn]
@@ -1508,6 +1508,19 @@ have to cut at E4 now, crazy fight
 
 pachipachi fidibus 2023-04-20
 ])
+(;W[cq]
+;B[eq]
+;W[cp]
+;B[cn]
+;W[]C[[log\]
+name = "4-4 keima tsuke push 3-3 keima block"
+around = C3
+
+
+C4 bad now according to katago, should B6 instead ...
+log variation, can quickly become problematic.
+
+Ex: pachipachi samzhang  2024-12-30 12:43]))
 (;B[go]
 ;W[ep]
 ;B[fo]
