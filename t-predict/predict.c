@@ -39,11 +39,17 @@ typedef struct {
 } avg_stats_t;
 
 typedef struct {
+	int guessed;
+	int moves;
+} ko_threats_stats_t;
+
+typedef struct {
 	guess_stats_t		by_move_number[PREDICT_MOVE_MAX/10];
 	guess_stats_t		by_prob[PREDICT_PROBS];
 	int			guessed_top[PREDICT_TOPN];
 	avg_stats_t		avg_stats[PREDICT_TOPN];
 	avg_stats_t		avg_log_stats[PREDICT_TOPN];
+	ko_threats_stats_t	ko_threats_stats;
 } predict_stats_t;
 
 
@@ -116,6 +122,17 @@ collect_avg_log_stats(predict_stats_t *stats, float *best_r, int moves)
 }
 
 static void
+collect_ko_threats_stats(predict_stats_t *stats, board_t *b, bool guessed)
+{
+	if (!board_playing_ko_threat(b))
+		return;
+
+	if (guessed)
+		stats->ko_threats_stats.guessed++;
+	stats->ko_threats_stats.moves++;
+}
+
+static void
 collect_stats(engine_t *e, predict_stats_t *stats,
 	      board_t *b, move_t *m, coord_t *best_c, float *best_r, int moves, int games)
 {
@@ -139,6 +156,9 @@ collect_stats(engine_t *e, predict_stats_t *stats,
 
 	/* Topn stats */
 	collect_topn_stats(stats, m, best_c);
+
+	/* Ko threats stats */
+	collect_ko_threats_stats(stats, b, guessed);
 }
 
 
@@ -273,13 +293,25 @@ print_prob_stats(predict_stats_t *stats, strbuf_t *buf)
 }
 
 static void
-print_stats(engine_t *e, predict_stats_t *stats, strbuf_t *buf, int moves, int games)
+print_ko_threat_stats(predict_stats_t *stats, strbuf_t *buf)
+{
+	sbprintf(buf, "Ko threat stats:\n");
+	int guessed = stats->ko_threats_stats.guessed;
+	int moves = stats->ko_threats_stats.moves;
+	int pc = (moves ? round(guessed * 100 / moves) : 0);
+	sbprintf(buf, "  %i/%i (%i%%)\n", guessed, moves, pc);
+	sbprintf(buf, " \n");
+}
+
+static void
+print_stats(engine_t *e, predict_stats_t *stats, strbuf_t *buf, int moves, int games)	
 {
 	sbprintf(buf, " \n");
 	
 	if (e->print_stats)	/* Run engine specific hook if present */
 		e->print_stats(e, buf, moves, games);
 	
+	print_ko_threat_stats(stats, buf);
 	print_by_move_number_stats(stats, buf);
 	print_by_move_number_stats_short(stats, buf);
 	print_prob_stats(stats, buf);
