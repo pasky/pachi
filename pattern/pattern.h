@@ -206,6 +206,8 @@ char *pattern2sstr(pattern_t *p);
 char *str2pattern(char *str, pattern_t *p);
 /* Dump pattern as numbers for mm tools */
 
+/* Return pattern's biggest spatial dist. */
+int pattern_biggest_spatial(pattern_t *p);
 /* Compare two patterns for equality. Assumes fixed feature order. */
 static bool pattern_eq(pattern_t *p1, pattern_t *p2);
 

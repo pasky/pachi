@@ -1597,3 +1597,16 @@ str2pattern(char *str, pattern_t *p)
 	str++;
 	return str;
 }
+
+int
+pattern_biggest_spatial(pattern_t *p)
+{
+	if (!p->n)  return 0;
+
+	/* Assumes largest spatial comes last. */
+	int i = p->n - 1;
+	int id = p->f[i].id;
+	if (id >= FEAT_SPATIAL3)
+		return (3 + id - FEAT_SPATIAL3);
+	return 0;
+}
