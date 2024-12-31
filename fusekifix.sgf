@@ -23,7 +23,7 @@ See josekifix.sgf for details.
 (;B[qd]
 ;W[pc]
 ;B[od]
-;W[nb]
+(;W[nb]
 (;B[me]
 (;W[nq]
 (;B[lq]
@@ -74,6 +74,13 @@ avoid N16 right away, not so good
 
 pachipachi half 2023-03-30
 ]))
+(;W[nd]
+;B[]C[[override\]
+name = "sanrensei seal resist"
+around = O14
+
+
+Ex: sbng pachipachi  2024-12-31 15:31]))
 (;B[pc]
 ;W[qd]
 ;B[pe]
