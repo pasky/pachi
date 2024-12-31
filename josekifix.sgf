@@ -224,13 +224,26 @@ around = D4
 https://online-go.com/game/12167192 
 ])
 (;B[cm]
-;W[fo]C[[override\]
+(;W[fo]C[[override\]
 name = "3-4 pincer attach hane extend"
 around = D3
 
 G5 not so good
 
-globax pachipachi 2023-04-10]))
+globax pachipachi 2023-04-10])
+(;W[co]
+;B[bo]
+;W[do]
+;B[]C[[override\]
+name = "3-4 pincer attach hane extend tsuke"
+around = D3
+external_engine_moves = 1
+
+
+tends to play B4 which is not great.
+G5 or K3 much better
+
+Ex: pachipachi mir12  2024-12-31 19:04])))
 (;B[dq]
 ;W[dp]
 ;B[eq]
