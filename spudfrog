@@ -5,9 +5,12 @@ die() {  echo "spudfrog: $@"; exit 1;  }
 max() {  [ $1 -gt $2 ] && echo $1 || echo $2;  }
 [ -n "$OPT" ] || die "i need to be called from Makefile"
 
+# set color 237 = gray  (256 color term)
+echo "]4;237;rgb:3a/3a/3a\\"
+
 red="[31;1m";     green="[32;1m";  yellow="[33;1m";  blue="[34;1m"
 purple="[35;1m";  cyan="[36;1m";   end="[0m"
-ngreen="[32m";    white="[37;1m"   gray="[30;1m"
+ngreen="[32m";    white="[37;1m"   gray="[38;5;237m"
 
 cc1=$( $CC $CFLAGS -E -v - </dev/null 2>&1 | grep cc1 | head -1 | tr -d '\\"' )
 
@@ -46,6 +49,6 @@ printf "%s            (.)~(.)                                         $end\n" $s
 printf "%s           (-------)                                        $end\n" $spud
 printf "%s   .------%sooO%s-----%sOoo%s------------------------------.$end\n" $gray $spud $gray $spud $gray
 printf "%s  | ${end} %*s%s%*s $gray |$end\n"                                  $gray  $n1 ""  "$status"  $n2 ""
-printf "%s   ᛫-----------------------------------------------᛫$end\n" $gray
+printf "%s   ˙-----------------------------------------------˙$end\n" $gray
 printf "%s           ( )   ( )                                        $end  \n" $spud
 printf "\n"
