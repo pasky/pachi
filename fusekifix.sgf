@@ -151,7 +151,7 @@ around = Q4
 
 pachipachi dsazx 2023-04-29]))
 (;B[pk]
-;W[pp]
+(;W[pp]
 ;B[qp]C[[override\]
 name = "anti chinese attach"
 around = "last"]
@@ -160,7 +160,66 @@ around = "last"]
 around = Q4]
 ;W[op]
 ;B[qq]C[[override\]
-]))
+])
+(;W[po]
+;B[np]
+;W[qq]
+;B[qr]
+;W[qp]
+;B[rr]
+;W[qm]
+;B[ql]
+;W[pm]
+;B[nk]
+;W[mn]
+;B[lp]
+;W[jq]
+;B[ko]
+;W[lm]
+;B[lk]
+;W[mq]
+;B[mp]
+(;W[oq]
+;B[op]C[[override\]
+name = "high chinese belly trick play"
+around = Q4
+external_engine
+
+
+P3 trick play, should P2 instead.
+if b doesn't answer correctly corner gets captured.
+
+Ex: sbng pachipachi  2024-12-31 15:17]
+;W[pr]
+;B[pp]C[[override\]
+]
+;W[nr]
+;B[nq]C[[override\]
+around = P2
+]
+;W[or]
+;B[mr]C[[override\]
+
+
+N2 now.
+M2 is being tricked.]
+;W[lq]
+;B[lr]C[[override\]
+]
+;W[kq]
+;B[ns]C[[override\]
+])
+(;W[or]
+;B[pr]C[[log\]
+name = "high chinese belly attack"
+around = Q4
+
+normal sequence
+]
+;W[oq]
+;B[op]
+;W[lq]
+;B[pp]))))
 (;W[dp]
 ;B[fq]
 ;W[cn]
