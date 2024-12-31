@@ -1803,11 +1803,12 @@ around = C3
 
 magoa pachipachi 2023-04-23])
 (;W[eq]
-;B[]C[[log\]
+;B[]C[[override\]
 name = "4-4 kosumi"
 around = C3
 
-]))
+
+Ex: sbng pachipachi  2024-12-31 15:17]))
 (;B[do]
 (;W[]C[[override\]
 name = "taka"
