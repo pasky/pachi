@@ -608,14 +608,12 @@ he prefers C6 to classic E5 variation
 
 pachipachi coq 2023-04-07]))
 (;W[co]
-;B[bo]
-;W[cq]
 ;B[]C[[override\]
-name = "3-4 keima pincer double attach"
-around = D4
+name = "3-4 pincer tsuke on top"
+around = D3
 
 
-Ex: pachipachi globax  2018-03-18 (11:00)]))
+Ex: mss2 pachipachi  2025-01-01 18:32]))
 (;B[eq]
 (;W[fq]
 ;B[dq]
