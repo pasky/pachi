@@ -1272,7 +1272,14 @@ name = "4-4 shoulder hit crosscut"
 easy to screw up ...
 
 Ex:  gomj pachipachi  2023-01-23  16:35
-]))
+])
+(;B[eq]
+;W[fr]
+;B[io]
+;W[]C[[override\]
+name = "4-4 shoulder hit crosscut"
+
+Ex: niceguy0 pachipachi  2025-01-01 12:34]))
 (;W[hp]
 ;B[]C[[override\]
 name = "4-4 keima pincer tsuke"
