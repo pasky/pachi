@@ -1177,6 +1177,17 @@ same, let kata handle it.
 
 pachipachi laercioskt  2024-08-20
 pachipachi globax 2023-06-26])
+(;B[eq]
+;W[fr]
+(;B[gp]
+;W[]C[[override\]
+name="4-4 shoulder hit cut"
+])
+(;B[go]
+;W[]C[[override\]
+name="4-4 shoulder hit high cut"
+
+Ex: sbng pachipachi  2025-01-01 11:22]))
 (;B[mq]C[[override\]
 name = "4-4 shoulder hit defense"
 around = J3
