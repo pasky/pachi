@@ -1666,7 +1666,7 @@ pachipachi madalinG 2023-02-16])
 ;B[fp]
 ;W[gp]
 ;B[fo]
-;W[cq]C[[override\]
+(;W[cq]C[[override\]
 name = "4-4 dbl kakari"
 around = C3
 
@@ -1713,6 +1713,18 @@ name = "4-4 dbl kakari crosscut"
 
 
 coq pachipachi  2023-04-11]))
+(;W[eq]
+;B[dq]
+;W[go]
+;B[]C[[override\]
+name = "4-4 dbl kakari fight"
+around = D3
+
+
+b may have a stone as near as J4 so match close to corner.
+crazy fight
+
+Ex: aguilar1 pachipachi  2025-01-01 16:30]))
 (;B[jq]
 ;W[cn]
 ;B[cq]
