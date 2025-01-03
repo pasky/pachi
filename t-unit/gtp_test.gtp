@@ -27,6 +27,7 @@ clear_board
 predict b a1
 clear_board
 pachi-predict b a1
+pachi-engine uct
 
 boardsize 19
 clear_board

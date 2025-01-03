@@ -1006,6 +1006,25 @@ cmd_pachi_tunit(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+/* Let gtp check correct engine is running (but not change it).
+ * For unit testing. Abort if wrong engine is being used.
+ * Usage: pachi-engine <engine_name>  */
+static enum parse_code
+cmd_pachi_engine(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *arg;
+	gtp_arg(arg);
+
+	int id = engine_name_to_id(arg);
+	if (id == E_MAX)
+		gtp_error_printf(gtp, "bad engine '%s'\n", arg);
+	else if (id != e->id)
+		die("GTP expects engine '%s', aborting.\n"
+		    "Try running 'pachi -e %s'\n", arg, arg);
+	
+	return P_OK;
+}
+
 static enum parse_code
 cmd_kgs_chat(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -1149,6 +1168,7 @@ static gtp_command_t gtp_commands[] =
 	{ "lz-genmove_analyze",     cmd_lz_genmove_analyze },
 								/* Pachi */
 	{ "pachi-dumptbook",        cmd_pachi_dumptbook },
+	{ "pachi-engine",	    cmd_pachi_engine },
 	{ "pachi-evaluate",         cmd_pachi_evaluate },
 	{ "pachi-genmoves",         cmd_pachi_genmoves },
 	{ "pachi-genmoves_cleanup", cmd_pachi_genmoves },

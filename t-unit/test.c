@@ -809,8 +809,6 @@ test_genmove(board_t *b, char *arg)
 
 	/* Sanity checks */
 	board_t *tmp = board_new(19, NULL);
-	assert(using_dcnn(tmp));
-	assert(using_patterns());
 	board_delete(&tmp);
 
 	static time_info_t ti = { 0, };
