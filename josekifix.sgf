@@ -1864,9 +1864,10 @@ Ex: pachipachi huff  2022-12-12  09:23 ])
 (;W[]C[[override\]
 name = "deadly taka"
 around = B2
+external_engine_moves = 25
 
 
-Deadly takamoku joseki
+deadly takamoku joseki
 ])
 (;W[co]
 ;B[cp]
@@ -1878,10 +1879,9 @@ around = "last"
 external_engine
 external_engine_diag
 
-# ladder_own = E5
-# ladder_own_setup_own = [ C6 \]
+ladder_own = E5
+ladder_own_setup_own = [ C6 \]
 
-actually, always play C6, even if w doesn't have ladder ...
 
 Ex: pachipachi mommy123  2022-11-19 16:35
 ]
