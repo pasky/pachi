@@ -226,7 +226,32 @@ normal sequence
 ;W[oq]
 ;B[op]
 ;W[lq]
-;B[pp]))))
+;B[pp]))
+(;W[qn]
+;B[qp]
+;W[on]
+;B[mp]
+;W[mn]
+;B[kp]
+;W[ph]
+;B[nk]
+;W[np]
+;B[nq]
+;W[mq]
+;B[lq]
+;W[oq]
+;B[nr]
+;W[pp]
+;B[or]
+;W[op]
+;B[qq]C[[override\]
+name = "high chinese lean defend"
+around = Q3
+
+
+R5 mistake, defend first.
+
+Ex: fater pachipachi  2025-01-04 15:36])))
 (;W[dp]
 ;B[fq]
 ;W[cn]
