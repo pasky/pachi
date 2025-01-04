@@ -104,8 +104,8 @@ static bool
 dcnn_44_reduce_33_blunder(board_t *b, move_t *m, move_t *redirect)
 {
 	/* B3 not blunder if w has a stone at B6, make sure override covers that area. */
-	override_t override = { .coord_empty = "B1", .prev = "pass", "B2", "4-4 reduce 3-3", { 0x104718b6711a28d0, 0xdcd0e566177a90e8, 0xb1256f54939c1c48, 0xce86cd889eb98e38,
-											       0xd39f04865100718, 0x8dfd49f239c658, 0xa84411bdaafa8a10, 0xbd0cd1b2a8ace9b8 } };
+	override_t override = { .coord = "B1", .prev = "pass", "B2", "4-4 reduce 3-3", { 0x104718b6711a28d0, 0xdcd0e566177a90e8, 0xb1256f54939c1c48, 0xce86cd889eb98e38,
+											 0xd39f04865100718, 0x8dfd49f239c658, 0xa84411bdaafa8a10, 0xbd0cd1b2a8ace9b8 } };
 	int dist = coord_edge_distance(m->coord);
 	if (dist != 1 && dist != 0)  return false;
 

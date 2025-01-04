@@ -13,9 +13,6 @@
  * to let an external joseki engine take over the following sequence in this quadrant.
  */
 
-/* Pattern dist used for hashes */
-#define JOSEKIFIX_OVERRIDE_DIST 10
-
 /* Overrides are represented by this struct. 
  * matching is based on:
  *   - last move
@@ -32,10 +29,12 @@ typedef struct {
 	hash_t hashes[8];       /* spatial hashes for all 8 rotations */
 	
 			/* optional fields */
-	char* coord_own;	/* match pattern around this location instead of last move. */
-	char* coord_other;      /* spatial patterns ignore center stone so we need to convey that (3 possibilities) */
-	char* coord_empty;      /* set the one corresponding to board position (own color / other color / empty) */
+	char* coord;		/* match pattern around this location instead of last move. */
 } override_t;
+
+#define josekifix_spatial_hash(b, coord, color)			spatial_hash_from_board(b, coord, color, MAX_PATTERN_DIST)
+#define josekifix_spatial_hash_rot(b, coord, color, rot)	spatial_hash_from_board_rot(b, coord, color, rot, MAX_PATTERN_DIST)
+
 
 /* Low level override matching */
 coord_t check_override(struct board *b, override_t *override, int *prot, hash_t lasth, char *title);

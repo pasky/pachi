@@ -12,6 +12,7 @@
 #include "tactics/util.h"
 #include "tactics/2lib.h"
 #include "pattern/spatial.h"
+#include "josekifix/override.h"
 #include "josekifix/joseki_override.h"
 #include "josekifix/josekifixload.h"
 
@@ -102,10 +103,7 @@ joseki_override_print(joseki_override_t *override, char *section)
 	fprintf(stderr, "  prev = %s\n", override->prev);
 	fprintf(stderr, "  next = %s\n", override->next);
 	
-	if (override->coord_own)	fprintf(stderr, "  coord_own = %s\n", override->coord_own);
-	if (override->coord_other)	fprintf(stderr, "  coord_other = %s\n", override->coord_other);
-	if (override->coord_empty)	fprintf(stderr, "  coord_empty = %s\n", override->coord_empty);
-		
+	if (override->coord)	fprintf(stderr, "  coord = %s\n", override->coord);
 
 	if (override->ladder_check.coord)  {  print_ladder_check("",  &override->ladder_check);  }
 	if (override->ladder_check2.coord) {  print_ladder_check("2", &override->ladder_check2);  }
@@ -162,9 +160,7 @@ override_cmp(joseki_override_t *o1, joseki_override_t *o2)
 	return !(same_str(o1->prev, o2->prev) &&
 		 same_str(o1->next, o2->next) &&
 		 !memcmp(o1->hashes, o2->hashes, sizeof(o1->hashes)) &&
-		 same_str(o1->coord_own, o2->coord_own) &&
-		 same_str(o1->coord_other, o2->coord_other) &&
-		 same_str(o1->coord_empty, o2->coord_empty) &&
+		 same_str(o1->coord, o2->coord) &&
 		 !ladder_check_cmp(&o1->ladder_check, &o2->ladder_check) &&
 		 !ladder_check_cmp(&o1->ladder_check2, &o2->ladder_check2) &&
 		 !memcmp(o1->external_engine_mode, o2->external_engine_mode, sizeof(o1->external_engine_mode)));
@@ -254,11 +250,7 @@ common_sanity_checks(board_t *b, joseki_override_t *override)
 	}
 
 	/* Already checked by add_override() but doesn't hurt ... */
-	char *around_str = NULL;
-	if (override->coord_own)	around_str = override->coord_own;
-	if (override->coord_other)	around_str = override->coord_other;
-	if (override->coord_empty)	around_str = override->coord_empty;
-	
+	char *around_str = override->coord;
 	if (around_str && !valid_coord(around_str)) {
 		board_print(b, stderr);
 		die("josekifix: \"%s\": invalid around coord '%s', aborting. (run with -d5 to see previous moves)\n",
@@ -482,12 +474,11 @@ joseki_override_fill_hashes(joseki_override_t *override, board_t *b)
 	enum stone color = last_move(b).color;	// last move color
 	
 	coord_t around = last_move(b).coord;
-	if (override->coord_empty)  around = str2coord(override->coord_empty);
-	if (override->coord_own)    around = str2coord(override->coord_own);
-	if (override->coord_other)  around = str2coord(override->coord_other);
+	if (override->coord)
+		around = str2coord(override->coord);
 	
 	for (int rot = 0; rot < 8; rot++)
-		override->hashes[rot] = outer_spatial_hash_from_board_rot_d(b, around, color, rot, MAX_PATTERN_DIST);	
+		override->hashes[rot] = josekifix_spatial_hash_rot(b, around, color, rot);
 }
 
 
@@ -664,12 +655,7 @@ joseki_override_set_around(joseki_override_t *override, board_t *b, char *value)
 {	
 	assert(valid_coord(value));
 
-	enum stone own_color = board_to_play(b);
-	enum stone other_color = stone_other(own_color);
-	coord_t c = str2coord(value);
-	if      (board_at(b, c) == own_color)	 override->coord_own = value;
-	else if (board_at(b, c) == other_color)	 override->coord_other = value;
-	else					 override->coord_empty = value;
+	override->coord = value;
 }
 
 /* Parse and add override.
@@ -859,7 +845,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 	
 	if (around2) {  /* second area check */
 		override2 = override;
-		override2.coord_own = override2.coord_other = override2.coord_empty = 0;
+		override2.coord = 0;
 		
 		if (strcmp(around2, "last"))
 			joseki_override_set_around(&override2, b, around2);

@@ -12,10 +12,6 @@
  * to let an external joseki engine take over the following sequence in this quadrant.
  */
 
-
-/* Pattern dist used for hashes */
-#define JOSEKIFIX_OVERRIDE_DIST 10
-
 #define JOSEKIFIX_LADDER_SETUP_MAX 5
 
 
@@ -46,10 +42,7 @@ typedef struct {
 	hash_t hashes[8];       /* spatial hashes for all 8 rotations */
 	
 			/* optional fields */
-	char* coord_own;	/* match pattern around this location instead of last move. */
-	char* coord_other;      /* spatial patterns ignore center stone so we need to convey that (3 possibilities) */
-	char* coord_empty;      /* set the one corresponding to board position (own color / other color / empty) */
-
+	char* coord;			/* match pattern around this location instead of last move. */
 	ladder_check_t ladder_check;	/* ladder checks */
 	ladder_check_t ladder_check2;
 

@@ -14,6 +14,7 @@
 #include "joseki/joseki_engine.h"
 #include "pattern/spatial.h"
 #include "pattern/prob.h"
+#include "josekifix/override.h"
 
 #ifdef DCNN
 #include "dcnn/dcnn.h"
@@ -571,7 +572,7 @@ cmd_gogui_joseki_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *g
 #ifdef JOSEKIFIX
 
 static void
-dump_template_entry_full(char *prefix, struct board *b, coord_t at, unsigned int d)
+dump_template_entry_full(char *prefix, struct board *b, coord_t at)
 {
 	enum stone color = last_move(b).color;
 	//board_print_pattern_full(b, at, d);
@@ -583,16 +584,13 @@ dump_template_entry_full(char *prefix, struct board *b, coord_t at, unsigned int
 	}
 
 	/* Match at given coord ... */
-	char *field = ".coord_empty";
-	if (board_at(b, at) == color)               field = ".coord_other";
-	if (board_at(b, at) == stone_other(color))  field = ".coord_own";
-	printf("%s{ %s = \"%s\", .prev = \"%s\", \"XXX\", \"\", \n", prefix,
-		 field, coord2sstr(at), coord2sstr(last_move(b).coord));
+	printf("%s{ .coord = \"%s\", .prev = \"%s\", \"XXX\", \"\", \n", prefix,
+		 coord2sstr(at), coord2sstr(last_move(b).coord));
 	printf("%s                   { ", prefix);
 
  dump_hash:
 	for (int rot = 0; rot < 8; rot++) {
-		hash_t h = outer_spatial_hash_from_board_rot_d(b, at, color, rot, d);
+		hash_t h = josekifix_spatial_hash_rot(b, at, color, rot);
 		printf("0x%"PRIhash"%s ", h, (rot != 7 ? "," : ""));
 		if (rot == 3)  printf("\n%s                     ", prefix);
 	}
@@ -603,7 +601,7 @@ dump_template_entry_full(char *prefix, struct board *b, coord_t at, unsigned int
 static void
 dump_template_entry(char *prefix, struct board *b, coord_t at)
 {
-	dump_template_entry_full(prefix, b, at, MAX_PATTERN_DIST);
+	dump_template_entry_full(prefix, b, at);
 }
 
 static bool dump_templates = false;
@@ -614,13 +612,12 @@ static void josekifix_set_dump_templates(bool val) {  dump_templates = val;   }
 static void josekifix_set_coord(coord_t c)         {  dump_patterns_coord = c;  }
 
 static void
-josekifix_paint_pattern_full(struct board *b, int colors[BOARD_MAX_COORDS][4],
-			     coord_t coord, unsigned int maxd,
-			     int rr, int gg, int bb)
+josekifix_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
+			coord_t coord, int rr, int gg, int bb)
 {
 	int cx = coord_x(coord);    int cy = coord_y(coord);
 	
-	for (unsigned int d = 2; d <= maxd; d++)
+	for (unsigned int d = 2; d <= MAX_PATTERN_DIST; d++)
 	for (unsigned int j = ptind[d]; j < ptind[d + 1]; j++) {
 		ptcoords_at(x, y, cx, cy, j);
 		coord_t c  = coord_xy(x, y);
@@ -634,13 +631,6 @@ josekifix_paint_pattern_full(struct board *b, int colors[BOARD_MAX_COORDS][4],
 		add_primary_color(2, bb);
 		colors[c][3]++; /* count */
 	}
-}
-
-static void
-josekifix_paint_pattern(struct board *b, int colors[BOARD_MAX_COORDS][4],
-			coord_t coord, int rr, int gg, int bb)
-{
-	josekifix_paint_pattern_full(b, colors, coord, MAX_PATTERN_DIST, rr, gg, bb);
 }
 
 static void

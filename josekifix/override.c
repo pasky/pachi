@@ -63,8 +63,7 @@ str2coord_safe(char *str)
 
 /* Check override at given location (single rotation) */
 static coord_t
-check_override_at_rot(struct board *b, override_t *override,
-		      int rot, char* coordstr, enum stone stone_color)
+check_override_at_rot(struct board *b, override_t *override, int rot, char* coordstr)
 {
 	assert(override->next[0] && override->next[0] != 'X');
 	assert(coordstr[0] && coordstr[0] != 'X');
@@ -77,22 +76,20 @@ check_override_at_rot(struct board *b, override_t *override,
 	assert(!is_pass(next));
 	
 	coord_t rcoord = rotate_coord(coord, rot);
-	if (board_at(b, rcoord) == stone_color) {
-		hash_t h = outer_spatial_hash_from_board(b, rcoord, last_move(b).color); /* hash with last move color */
-		if (h == override->hashes[rot])
-			return rotate_coord(next, rot);
-	}
+	hash_t h = josekifix_spatial_hash(b, rcoord, last_move(b).color); /* hash with last move color */
+	if (h == override->hashes[rot])
+		return rotate_coord(next, rot);
+
 	return pass;
 }
 
 /* Check override at given location (all rotations)
  * Rotation found written to @prot in case of match. */
 static coord_t
-check_override_at(struct board *b, override_t *override,
-		  int *prot, char* coordstr, enum stone stone_color)
+check_override_at(struct board *b, override_t *override, int *prot, char* coordstr)
 {
 	for (int rot = 0; rot < 8; rot++) {
-		coord_t c = check_override_at_rot(b, override, rot, coordstr, stone_color);
+		coord_t c = check_override_at_rot(b, override, rot, coordstr);
 		if (!is_pass(c)) {
 			if (prot)  *prot = rot;
 			return c;
@@ -153,20 +150,16 @@ sane_override_move(struct board *b, coord_t c, char *name, char *title)
 coord_t
 check_override_rot(struct board *b, override_t *override, int rot, hash_t lasth)
 {
-	enum stone color = last_move(b).color;
-	if (override->coord_other)  return check_override_at_rot(b, override, rot, override->coord_other, color);
-	if (override->coord_own)    return check_override_at_rot(b, override, rot, override->coord_own, stone_other(color));
-	if (override->coord_empty)  return check_override_at_rot(b, override, rot, override->coord_empty, S_NONE);
+	if (override->coord)
+		return check_override_at_rot(b, override, rot, override->coord);
 	return check_override_last_rot(b, override, rot, lasth);
 }
 
 static coord_t
 check_override_(struct board *b, override_t *override, int *prot, hash_t lasth)
 {
-	enum stone color = last_move(b).color;
-	if (override->coord_other)  return check_override_at(b, override, prot, override->coord_other, color);
-	if (override->coord_own)    return check_override_at(b, override, prot, override->coord_own, stone_other(color));
-	if (override->coord_empty)  return check_override_at(b, override, prot, override->coord_empty, S_NONE);
+	if (override->coord)
+		return check_override_at(b, override, prot, override->coord);
 	return check_override_last(b, override, prot, lasth);
 }
 
