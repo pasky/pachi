@@ -19,9 +19,10 @@
 
 
 /* Engine state */
-static engine_t *uct_engine = NULL;
-static engine_t *external_joseki_engine = NULL;
-static bool      undo_pending = false;
+static engine_t  *uct_engine = NULL;
+static engine_t  *external_joseki_engine = NULL;
+static bool       undo_pending = false;
+static ownermap_t prev_ownermap;
 
 /* Globals */
 char *external_joseki_engine_cmd = "katago gtp";
@@ -31,27 +32,15 @@ bool  external_joseki_engine_genmoved = false;
 /**********************************************************************************************************/
 /* UCT engine */
 
+/* If uct had state which depended on knowing all moves played in order,
+ * after undo or genmove override we'd need to replay moves like gtp layer
+ * does. That's not the case so just reset engine. */
 static void
-reload_uct_engine(engine_t *e, board_t *board)
+reset_uct_engine(board_t *b)
 {
-	move_history_t *h = board->move_history;
-	int n = h->moves;
-	board_t *b = board_new(board->rsize, NULL);
-	b->handicap = board->handicap;
-
-	if (DEBUGL(3)) fprintf(stderr, "reloading uct engine after undo(s).\n");
+	if (DEBUGL(3)) fprintf(stderr, "Resetting uct engine\n");
 	engine_reset(uct_engine, b);
-	
-	/* Replay remaining moves. */
-	for (int i = 0; i < n; i++) {
-		move_t m = h->move[i];
-		bool print;
-		uct_engine->notify_play(uct_engine, b, &m, "", &print);
-		int r = board_play(b, &m);
-		assert(r >= 0);
-	}
-	
-	board_delete(&b);
+	ownermap_init(&prev_ownermap);
 }
 
 
@@ -141,22 +130,43 @@ joseki_override_before_genmove(board_t *b, enum stone color)
 	return c;
 }
 
-/* Get move from engine, or joseki override if there is one.
- * There are 2 joseki override hooks : one before engine genmove (this one),
- * and another one at the end of uct genmove. Without external engine we'd
- * need only the second one, but with 2 engines we want to avoid asking both
- * engines as that would mean a serious delay. So this acts as a dispatch,
- * short-cirtuiting engine genmove when we know it will be overridden by an
- * external engine move. */
 static coord_t
-genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive, engine_genmove_t uct_genmove_func)
+joseki_override_after_genmove(board_t *b, enum stone color, time_info_t *ti, bool pass_all_alive, engine_genmove_t uct_genmove_func)
+{
+	coord_t c = uct_genmove_func(uct_engine, b, ti, color, pass_all_alive);
+	ownermap_t ownermap = *engine_ownermap(uct_engine, b);  // Copy ownermap
+
+	/* Check joseki override, reset uct if necessary. */
+	if (!is_pass(c)) {
+		coord_t override = joseki_override_no_external_engine(b, &prev_ownermap, &ownermap);
+		if (!is_pass(override) && c != override) {
+			c = override;
+			reset_uct_engine(b);
+		}
+	}
+
+	/* Save ownermap */
+	prev_ownermap = ownermap;
+	
+	return c;
+}
+
+
+/* Get move from engine, or joseki override if there is one.
+ * There are 2 joseki override hooks : one before engine genmove and one after.
+ * Without external engine we'd need only the second one, but with 2 engines we
+ * want to avoid asking both engines as that would mean a serious delay. So this
+ * acts as a dispatch, short-cirtuiting engine genmove when we know it will be
+ * overridden by an external engine move. */
+static coord_t
+genmove(board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive, engine_genmove_t uct_genmove_func)
 {
 	external_joseki_engine_genmoved = false;
 	
 	coord_t c = joseki_override_before_genmove(b, color);
 
 	if (is_pass(c))
-		c = uct_genmove_func(uct_engine, b, ti, color, pass_all_alive);
+		c = joseki_override_after_genmove(b, color, ti, pass_all_alive, uct_genmove_func);
 
 	/* Send new move to external engine if it doesn't come from it. */
 	if (!is_resign(c) && !external_joseki_engine_genmoved)
@@ -168,13 +178,13 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 static coord_t
 josekifix_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	return genmove(e, b, ti, color, pass_all_alive, uct_engine->genmove);
+	return genmove(b, ti, color, pass_all_alive, uct_engine->genmove);
 }
 
 static coord_t
 josekifix_engine_genmove_analyze(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	return genmove(e, b, ti, color, pass_all_alive, uct_engine->genmove_analyze);
+	return genmove(b, ti, color, pass_all_alive, uct_engine->genmove_analyze);
 }
 
 
@@ -198,7 +208,7 @@ josekifix_engine_setoption(engine_t *e, board_t *b, const char *optname, char *o
 
 	/* Engine reset needed ? */
 	if (reset)
-		engine_reset(uct_engine, b);
+		reset_uct_engine(b);
 	
 	return true;
 }
@@ -277,7 +287,7 @@ josekifix_engine_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, 
 	 * uct engine however needs to be reset after first non-undo command. */
 	if (undo_pending && strcmp(cmd, "undo")) {
 		undo_pending = false;
-		reload_uct_engine(e, b);
+		reset_uct_engine(b);
 	}
 	if (!strcmp(cmd, "undo"))
 		undo_pending = true;
@@ -294,7 +304,7 @@ josekifix_engine_notify_after(engine_t *e, board_t *b, int id, char *cmd, gtp_t 
 {
 	/* Commands that need uct_engine reset. */
 	if (!strcmp(cmd, "clear_board") || !strcmp(cmd, "boardsize"))
-		engine_reset(uct_engine, b);
+		reset_uct_engine(b);
 }
 
 
@@ -334,6 +344,8 @@ josekifix_engine_init(engine_t *e, board_t *b)
 	e->ownermap = josekifix_engine_ownermap;
 
 	e->done = josekifix_engine_done;
+
+	ownermap_init(&prev_ownermap);
 }
 
 

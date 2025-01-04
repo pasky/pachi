@@ -707,21 +707,6 @@ genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_al
 
 	uct_progress_status(u, u->t, b, color, 0, best_coord);
 
-#ifdef JOSEKIFIX
-	/* Check joseki override */
-	if (best && get_josekifix_enabled()) {
-		coord_t c = joseki_override_no_external_engine(b, &u->prev_ownermap, uct_ownermap(e, b));
-		if (!is_pass(c)) {
-			*best_coord = c;
-			best = tree_get_node(u->t->root, c);
-			assert(best);
-		}
-	}
-
-	/* Save ownermap */
-	u->prev_ownermap = u->ownermap;
-#endif
-
 	return best;
 }
 
