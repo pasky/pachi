@@ -7,8 +7,8 @@
 
 #define JOSEKI_PATTERN_DIST	     9
 
-#define joseki_spatial_hash(b, coord, color)         (outer_spatial_hash_from_board_rot_d((b), (coord), (enum stone)(color), 0, JOSEKI_PATTERN_DIST))
-#define joseki_3x3_spatial_hash(b, coord, color)     (outer_spatial_hash_from_board_rot_d((b), (coord), (enum stone)(color), 0, 3))
+#define joseki_spatial_hash(b, coord, color)         (joseki_spatial_hash_d((b), (coord), (enum stone)(color), JOSEKI_PATTERN_DIST))
+#define joseki_3x3_spatial_hash(b, coord, color)     (joseki_spatial_hash_d((b), (coord), (enum stone)(color), 3))
 
 #define JOSEKI_FLAGS_IGNORE  (1 << 0)
 #define JOSEKI_FLAGS_3X3     (1 << 1)
@@ -57,6 +57,9 @@ void get_joseki_best_moves(board_t *b, coord_t *coords, float *ratings, int matc
 void print_joseki_best_moves(board_t *b, coord_t *best_c, float *best_r, int nbest);
 void print_joseki_moves(joseki_dict_t *jd, board_t *b, enum stone color);
 
+
+/* Low-level functions */
+hash_t joseki_spatial_hash_d(board_t *b, coord_t coord, enum stone color, unsigned int d);
 
 
 /* Iterate over all dictionary patterns. */
