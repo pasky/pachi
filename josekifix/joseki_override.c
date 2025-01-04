@@ -300,18 +300,15 @@ check_joseki_override_at_rot(struct board *b, joseki_override_t *override, int r
 	return pass;
 }
 
-/* Check override at given location (all rotations)
- * Rotation found written to @prot in case of match. */
+/* Check override at given location (all rotations) */
 static coord_t
 check_joseki_override_at(struct board *b, joseki_override_t *override,
-			 int *prot, char* coordstr, enum stone stone_color)
+			 char* coordstr, enum stone stone_color)
 {
 	for (int rot = 0; rot < 8; rot++) {
 		coord_t c = check_joseki_override_at_rot(b, override, rot, coordstr, stone_color);
-		if (!is_pass(c)) {
-			if (prot)  *prot = rot;
+		if (!is_pass(c))
 			return c;
-		}
 	}
 	
 	return pass;
@@ -340,17 +337,14 @@ check_joseki_override_last_rot(struct board *b, joseki_override_t *override, int
 	return pass;
 }
 
-/* Check override around last move (all rotations)
- * Rotation found written to @prot in case of match */
+/* Check override around last move (all rotations) */
 static coord_t
-check_joseki_override_last(struct board *b, joseki_override_t *override, int *prot, hash_t lasth)
+check_joseki_override_last(struct board *b, joseki_override_t *override, hash_t lasth)
 {
 	for (int rot = 0; rot < 8; rot++) {
 	    coord_t c = check_joseki_override_last_rot(b, override, rot, lasth);
-	    if (!is_pass(c)) {
-		    if (prot)  *prot = rot;
+	    if (!is_pass(c))
 		    return c;
-	    }
 	}
 	
 	return pass;
@@ -383,13 +377,13 @@ check_joseki_override_rot(struct board *b, joseki_override_t *override, int rot,
 }
 
 static coord_t
-check_joseki_override_(struct board *b, joseki_override_t *override, int *prot, hash_t lasth)		
+check_joseki_override_(struct board *b, joseki_override_t *override, hash_t lasth)
 {
 	enum stone color = last_move(b).color;
-	if (override->coord_other)  return check_joseki_override_at(b, override, prot, override->coord_other, color);
-	if (override->coord_own)    return check_joseki_override_at(b, override, prot, override->coord_own, stone_other(color));
-	if (override->coord_empty)  return check_joseki_override_at(b, override, prot, override->coord_empty, S_NONE);
-	return check_joseki_override_last(b, override, prot, lasth);
+	if (override->coord_other)  return check_joseki_override_at(b, override, override->coord_other, color);
+	if (override->coord_own)    return check_joseki_override_at(b, override, override->coord_own, stone_other(color));
+	if (override->coord_empty)  return check_joseki_override_at(b, override, override->coord_empty, S_NONE);
+	return check_joseki_override_last(b, override, lasth);
 }
 
 
@@ -398,9 +392,9 @@ check_joseki_override_(struct board *b, joseki_override_t *override, int *prot, 
 
 /* Check single override, making sure returned move is sane. */
 static coord_t
-check_joseki_override(struct board *b, joseki_override_t *override, int *prot, hash_t lasth)
+check_joseki_override(struct board *b, joseki_override_t *override, hash_t lasth)
 {
-	coord_t c = check_joseki_override_(b, override, prot, lasth);
+	coord_t c = check_joseki_override_(b, override, lasth);
 
 	/* Get external engine move now if needed */
 	if (c == EXTERNAL_ENGINE_MOVE)
@@ -418,7 +412,7 @@ check_joseki_override(struct board *b, joseki_override_t *override, int *prot, h
  * All overrides must match (in the same rotation) for this to match.
  * Returns last entry's next move. */
 static coord_t
-check_joseki_overrides_and(struct board *b, joseki_override_t *overrides, int *prot, hash_t lasth, bool log)
+check_joseki_overrides_and(struct board *b, joseki_override_t *overrides, hash_t lasth)
 {
 	for (int rot = 0; rot < 8; rot++) {
 		clear_wanted_external_engine_mode();	/* Cleanup in case of partial match */
@@ -440,9 +434,6 @@ check_joseki_overrides_and(struct board *b, joseki_override_t *overrides, int *p
 		if (!sane_joseki_override_move(b, c, overrides[0].name, -1))
 			break;
 		
-		if (log && overrides[0].name)
-			josekifix_log("joseki_override: %s (%s)\n", coord2sstr(c), overrides[0].name);
-		if (prot)  *prot = rot;
 		return c;
 	}
 
@@ -459,13 +450,13 @@ check_joseki_overrides_and(struct board *b, joseki_override_t *overrides, int *p
  * at the end of genmove). So we just run through the whole list, see
  * if there's any match (we have hashes for all rotations). */
 static coord_t
-check_joseki_overrides_list(struct board *b, joseki_override_t overrides[], int *prot, hash_t lasth, char *title)		     
+check_joseki_overrides_list(struct board *b, joseki_override_t overrides[], hash_t lasth, char *title)
 {
 	if (!overrides)  return pass;
 	
 	for (int i = 0; overrides[i].name; i++) {
 		joseki_override_t *override = &overrides[i];
-		coord_t c = check_joseki_override(b, override, prot, lasth);
+		coord_t c = check_joseki_override(b, override, lasth);
 		if (!is_pass(c)) {
 			if (title) {  /* log */
 				int n = override_entry_number(overrides, override);
@@ -481,14 +472,14 @@ check_joseki_overrides_list(struct board *b, joseki_override_t overrides[], int 
 
 /* Same for overrides <and> checks (joseki_override2_t) */
 static coord_t
-check_joseki_overrides2_list(struct board *b, joseki_override2_t overrides[], int *prot, hash_t lasth, char *title)
+check_joseki_overrides2_list(struct board *b, joseki_override2_t overrides[], hash_t lasth, char *title)
 {
 	if (!overrides)  return pass;
 	
 	for (int i = 0; overrides[i].override1.name; i++) {
 		joseki_override2_t *override = &overrides[i];
 		joseki_override_t  *override1 = &override->override1;
-		coord_t c = check_joseki_overrides_and(b, override1, prot, lasth, false);
+		coord_t c = check_joseki_overrides_and(b, override1, lasth);
 		if (!is_pass(c)) {
 			if (title) {  /* log */
 				int n = override2_entry_number(overrides, override);
@@ -513,11 +504,11 @@ check_joseki_overrides(struct board *b, hash_t lasth)
 	coord_t c = pass;
 	
 	/* <and> checks first */
-	c = check_joseki_overrides2_list(b, joseki_overrides2, NULL, lasth, "joseki_override");
+	c = check_joseki_overrides2_list(b, joseki_overrides2, lasth, "joseki_override");
 	if (!is_pass(c))  return c;
 
 	/* regular overrides */
-	c = check_joseki_overrides_list(b, joseki_overrides, NULL, lasth, "joseki_override");
+	c = check_joseki_overrides_list(b, joseki_overrides, lasth, "joseki_override");
 	if (!is_pass(c))  return c;
 
 	return pass;
@@ -528,8 +519,8 @@ static void
 check_logged_variations(struct board *b, hash_t lasth)
 {
 	/* <and> checks first */	
-	check_joseki_overrides2_list(b, logged_variations2, NULL, lasth, "joseki_variation");
-	check_joseki_overrides_list(b, logged_variations, NULL, lasth, "joseki_variation");
+	check_joseki_overrides2_list(b, logged_variations2, lasth, "joseki_variation");
+	check_joseki_overrides_list(b, logged_variations, lasth, "joseki_variation");
 }
 
 static coord_t
