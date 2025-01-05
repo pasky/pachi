@@ -225,7 +225,7 @@ https://online-go.com/game/12167192
 ])
 (;B[cm]
 (;W[fo]C[[override\]
-name = "3-4 pincer attach hane extend"
+name = "3-4 pincer attach extend"
 around = D3
 
 G5 not so good
@@ -235,7 +235,7 @@ globax pachipachi 2023-04-10])
 ;B[bo]
 ;W[do]
 ;B[]C[[override\]
-name = "3-4 pincer attach hane extend tsuke"
+name = "3-4 pincer attach extend tsuke"
 around = D3
 external_engine_moves = 1
 
@@ -243,7 +243,23 @@ external_engine_moves = 1
 tends to play B4 which is not great.
 G5 or K3 much better
 
-Ex: pachipachi mir12  2024-12-31 19:04])))
+Ex: pachipachi mir12  2024-12-31 19:04])
+(;W[br]
+;B[bp]
+;W[iq]
+;B[go]C[[log\]
+name = "3-4 pincer attach extend pincer"
+around = E4
+]
+;W[en]
+;B[dl]
+;W[gm]
+;B[hn]C[[override\]
+name = "3-4 pincer attach extend pincer cap"
+around = E4
+
+
+Ex: sbng pachipachi  2025-01-05 13:27])))
 (;B[dq]
 ;W[dp]
 ;B[eq]
