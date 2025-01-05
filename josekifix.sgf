@@ -2069,7 +2069,34 @@ around = D3]
 ])
 (;B[cm]
 ;W[gp]C[[override\]
-]))))
+]))
+(;B[dp]
+;W[dq]
+;B[fq]
+;W[eq]
+;B[fp]
+;W[ep]
+;B[eo]
+(;W[]C[[override\]
+name = "moku 3-3 hane enclose"
+around = C3
+])
+(;W[fo]
+;B[er]
+;W[go]
+;B[dr]
+;W[cr]
+;B[gr]
+;W[en]
+;B[do]
+;W[bn]C[[override\]
+name = "moku 3-3 hane enclose tesuji"
+around = D3
+external_engine
+
+B6 the move according to kata.
+
+Ex: kwetal pachipachi  2025-01-05 20:31]))))
 (;B[cn]
 ;W[]C[[log\]
 name = "empty corner keima"
