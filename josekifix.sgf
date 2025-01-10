@@ -1180,12 +1180,16 @@ Ex: Silverwing pachipachi  2022-11-07 17:22]
 (;B[gp]
 ;W[]C[[override\]
 name="4-4 shoulder hit cut"
+around = F1
 
 
-used to jump at 3-3 here but many shenanigans ...])
+used to jump at 3-3 here but many shenanigans ...
+
+don't assume empty spot at L3])
 (;B[go]
 ;W[]C[[override\]
 name="4-4 shoulder hit high cut"
+around = F1
 
 same, let kata handle it.
 
@@ -1196,10 +1200,13 @@ pachipachi globax 2023-06-26])
 (;B[gp]
 ;W[]C[[override\]
 name="4-4 shoulder hit cut"
+around = F1
+
 ])
 (;B[go]
 ;W[]C[[override\]
 name="4-4 shoulder hit high cut"
+around = F1
 
 Ex: sbng pachipachi  2025-01-01 11:22]))
 (;B[mq]C[[override\]
