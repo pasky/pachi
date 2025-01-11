@@ -306,14 +306,14 @@ static int
 uct_leaf_node(uct_t *u, board_t *b, enum stone player_color,
               playout_amafmap_t *amaf,
               tree_t *t, tree_node_t *n, enum stone node_color,
-	      char *spaces)
+	      int spaces)
 {
 	enum stone next_color = stone_other(node_color);
 	int parity = (next_color == player_color ? 1 : -1);
 
 	if (UDEBUGL(7))
-		fprintf(stderr, "%s*-- UCT playout #%d start [%s] %f\n",
-			spaces, n->u.playouts, coord2sstr(node_coord(n)),
+		fprintf(stderr, "%*s*-- UCT playout #%d start [%s] %f\n",
+			spaces, "", n->u.playouts, coord2sstr(node_coord(n)),
 			tree_node_get_value(t, -parity, n->u.value));
 
 	playout_setup_t ps = playout_setup(u->gamelen, u->mercymin);
@@ -325,8 +325,8 @@ uct_leaf_node(uct_t *u, board_t *b, enum stone player_color,
 		result = - result;
 	}
 	if (UDEBUGL(7))
-		fprintf(stderr, "%s -- [%d..%d] %s random playout result %d\n",
-		        spaces, player_color, next_color, coord2sstr(node_coord(n)), result);
+		fprintf(stderr, "%*s -- [%d..%d] %s random playout result %d\n",
+		        spaces, "", player_color, next_color, coord2sstr(node_coord(n)), result);
 
 	return result;
 }
@@ -387,7 +387,6 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 	/* Tree descent */
 	/* XXX: This is somewhat messy since @n and descent.node are redundant. */
 	uct_descent_t descent;  descent.node = n;
-	int dlen = 1;
 	/* The last "significant" node along the descent (i.e. node
 	 * with higher than configured number of playouts). For black
 	 * and white. */
@@ -399,15 +398,12 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 	int passes = is_pass(last_move(b).coord) && b->moves > 0;
 
 	/* debug */
-	static char spaces[] = "\0                                                      ";
+	int spaces = 0;
 	/* /debug */
 	if (UDEBUGL(8))
 		fprintf(stderr, "--- (#%d) UCT walk with color %d\n", t->root->u.playouts, player_color);
 
 	while (!tree_leaf_node(n) && passes < 2) {
-		spaces[dlen - 1] = ' '; spaces[dlen] = 0;
-
-
 		/*** Choose a node to descend to: */
 
 		/* Parity is chosen already according to the child color, since
@@ -427,11 +423,11 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 			significant[node_color - 1] = descent.node;
 
 		n = descent.node;
-		dlen++;
+		spaces++;
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))
-			fprintf(stderr, "%s+-- UCT sent us to [%s:%d] %d,%f\n",
-			        spaces, coord2sstr(node_coord(n)),
+			fprintf(stderr, "%*s+-- UCT sent us to [%s:%d] %d,%f\n",
+			        spaces, "", coord2sstr(node_coord(n)),
 				node_coord(n), n->u.playouts,
 				tree_node_get_value(t, parity, n->u.value));
 
