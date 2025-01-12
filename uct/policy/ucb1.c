@@ -45,10 +45,9 @@ ucb1_descend(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity, bool 
 		/* xxx: we don't take local-tree information into account. */
 
 		if (uct_playouts) {
-			urgency = (ni->u.playouts * tree_node_get_value(tree, parity, ni->u.value)
-				   + ni->prior.playouts * tree_node_get_value(tree, parity, ni->prior.value))
-				   + (parity > 0 ? 0 : ni->descents)
-				  / uct_playouts;
+			urgency = (ni->u.playouts     * tree_node_get_value(tree, parity, ni->u.value) +
+				   ni->prior.playouts * tree_node_get_value(tree, parity, ni->prior.value) +
+				   (parity > 0 ? 0 : ni->descents)) / uct_playouts;
 			urgency += b->explore_p * sqrt(xpl / uct_playouts);
 		} else {
 			urgency = b->fpu;
