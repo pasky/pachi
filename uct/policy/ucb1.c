@@ -65,15 +65,9 @@ ucb1_update(uct_policy_t *p, tree_t *tree, tree_node_t *node, enum stone node_co
 	 * update all the preceding positions properly since
 	 * they had to all occur in all branches, only in
 	 * different order. */
-	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;
 
 	for (; node; node = node->parent) {
 		stats_add_result(&node->u, result, 1);
-
-		if (!is_pass(node_coord(node))) {
-			stats_add_result(&node->winner_owner, board_at(final_board, node_coord(node)) == winner_color ? 1.0 : 0.0, 1);
-			stats_add_result(&node->black_owner, board_at(final_board, node_coord(node)) == S_BLACK ? 1.0 : 0.0, 1);
-		}
 	}
 }
 
