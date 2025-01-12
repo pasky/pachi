@@ -386,8 +386,7 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 		tree_expand_node(t, n, b, player_color, u, 1);
 	
 	/* Tree descent */
-	/* XXX: This is somewhat messy since @n and descent.node are redundant. */
-	uct_descent_t descent;  descent.node = n;
+	
 	/* The last "significant" node along the descent (i.e. node
 	 * with higher than configured number of playouts). For black
 	 * and white. */
@@ -413,17 +412,15 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 		int parity = (node_color == player_color ? 1 : -1);
 
 		if (!u->random_policy_chance || fast_random(u->random_policy_chance))
-			u->policy->descend(u->policy, t, &descent, parity, u->allow_pass);
+			n = u->policy->descend(u->policy, t, n, parity, u->allow_pass);
 		else
-			u->random_policy->descend(u->random_policy, t, &descent, parity, u->allow_pass);
-
+			n = u->random_policy->descend(u->random_policy, t, n, parity, u->allow_pass);
 
 		/*** Perform the descent: */
 
-		if (descent.node->u.playouts >= u->significant_threshold)
-			significant[node_color - 1] = descent.node;
+		if (n->u.playouts >= u->significant_threshold)
+			significant[node_color - 1] = n;
 
-		n = descent.node;
 		spaces++;
 		assert(n == t->root || n->parent);
 		if (UDEBUGL(7))

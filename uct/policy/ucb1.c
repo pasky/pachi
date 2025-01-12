@@ -28,8 +28,8 @@ typedef struct {
 } ucb1_policy_t;
 
 
-void
-ucb1_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, bool allow_pass)
+static tree_node_t *
+ucb1_descend(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity, bool allow_pass)
 {
 	/* we want to count in the prior stats here after all. otherwise,
 	 * nodes with positive prior will get explored _less_ since the
@@ -37,10 +37,9 @@ ucb1_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, 
 	 * of the explore coefficient. */
 
 	ucb1_policy_t *b = (ucb1_policy_t*)p->data;
-	floating_t xpl = log(descent->node->u.playouts + descent->node->prior.playouts);
+	floating_t xpl = log(node->u.playouts + node->prior.playouts);
 
-	uctd_try_node_children(tree, descent, allow_pass, parity, p->uct->tenuki_d, di, urgency) {
-		tree_node_t *ni = di.node;
+	uctd_try_node_children(tree, node, allow_pass, parity, p->uct->tenuki_d, ni, urgency) {
 		int uct_playouts = ni->u.playouts + ni->prior.playouts + ni->descents;
 
 		/* xxx: we don't take local-tree information into account. */
@@ -54,12 +53,12 @@ ucb1_descend(uct_policy_t *p, tree_t *tree, uct_descent_t *descent, int parity, 
 		} else {
 			urgency = b->fpu;
 		}
-	} uctd_set_best_child(di, urgency);
+	} uctd_set_best_child(ni, urgency);
 
-	uctd_get_best_child(descent);
+	return uctd_get_best_child(node);
 }
 
-void
+static void
 ucb1_update(uct_policy_t *p, tree_t *tree, tree_node_t *node, enum stone node_color, enum stone player_color, playout_amafmap_t *map, board_t *final_board, floating_t result)
 {
 	/* it is enough to iterate by a single chain; we will
@@ -78,7 +77,7 @@ ucb1_update(uct_policy_t *p, tree_t *tree, tree_node_t *node, enum stone node_co
 	}
 }
 
-void
+static void
 ucb1_done(uct_policy_t *p)
 {
 	free(p->data);
