@@ -21,6 +21,7 @@
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "uct/prior.h"
+#include "uct/policy.h"
 #include "gogui.h"
 
 

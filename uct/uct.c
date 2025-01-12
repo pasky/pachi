@@ -27,6 +27,7 @@
 #include "uct/search.h"
 #include "uct/tree.h"
 #include "uct/dynkomi.h"
+#include "uct/policy.h"
 #include "uct/uct.h"
 #include "uct/walk.h"
 #include "dcnn/dcnn.h"

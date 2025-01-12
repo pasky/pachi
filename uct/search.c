@@ -25,6 +25,7 @@
 #include "uct/walk.h"
 #include "uct/prior.h"
 #include "uct/dynkomi.h"
+#include "uct/policy.h"
 #include "dcnn/dcnn.h"
 #include "pachi.h"
 

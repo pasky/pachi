@@ -9,6 +9,7 @@
 #include "move.h"
 #include "random.h"
 #include "uct/internal.h"
+#include "uct/policy.h"
 #include "uct/tree.h"
 #include "uct/policy/generic.h"
 
