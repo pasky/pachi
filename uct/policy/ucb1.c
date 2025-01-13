@@ -31,24 +31,39 @@ typedef struct {
 static tree_node_t *
 ucb1_descend(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity, bool allow_pass)
 {
+	ucb1_policy_t *b = (ucb1_policy_t*)p->data;
+	
 	/* we want to count in the prior stats here after all. otherwise,
 	 * nodes with positive prior will get explored _less_ since the
 	 * urgency will be always higher; even with normal fpu because
 	 * of the explore coefficient. */
-
-	ucb1_policy_t *b = (ucb1_policy_t*)p->data;
+#if 0
+	/* Using parent prior playouts seems dubious here.
+	 * We want log(total playouts) in the formula. For real playouts it works:
+	 *     node->u.playouts = total playouts going through this node
+	 *                      = sum(playouts) for all children
+	 * but node->prior.playouts has no relation to children prior playouts.
+	 * If we treat prior as added playouts we should sum children prior playouts. */
 	floating_t xpl = log(node->u.playouts + node->prior.playouts);
+#else
+	floating_t xpl = 0;
+	if (b->explore_p > 0) {
+		int prior_playouts = 0;		/* Total prior playouts added. */
+		for (tree_node_t *ni = node->children; ni; ni = ni->sibling)	/* xxx recomputed each time */
+			prior_playouts += ni->prior.playouts;
+		xpl = log(node->u.playouts + prior_playouts);
+	}
+#endif
 
 	uctd_try_node_children(tree, node, allow_pass, parity, p->uct->tenuki_d, ni, urgency) {
 		int uct_playouts = ni->u.playouts + ni->prior.playouts + ni->descents;
-
-		/* xxx: we don't take local-tree information into account. */
 
 		if (uct_playouts) {
 			urgency = (ni->u.playouts     * tree_node_get_value(tree, parity, ni->u.value) +
 				   ni->prior.playouts * tree_node_get_value(tree, parity, ni->prior.value) +
 				   (parity > 0 ? 0 : ni->descents)) / uct_playouts;
-			urgency += b->explore_p * sqrt(xpl / uct_playouts);
+			if (b->explore_p > 0)
+				urgency += b->explore_p * sqrt(xpl / uct_playouts);
 		} else {
 			urgency = b->fpu;
 		}
