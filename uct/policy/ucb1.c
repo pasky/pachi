@@ -17,7 +17,7 @@
 
 typedef struct {
 	/* This is what the Modification of UCT with Patterns in Monte Carlo Go
-	 * paper calls 'p'. Original UCB has this on 2, but this seems to
+	 * paper calls 'p'. Original UCB has this on sqrt(2), but this seems to
 	 * produce way too wide searches; reduce this to get deeper and
 	 * narrower readouts - try 0.2. */
 	floating_t explore_p;
