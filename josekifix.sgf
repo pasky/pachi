@@ -886,9 +886,14 @@ don't hane
 
 Song17 pachipachi 2023-04-15])))
 (;W[fp]
-(;B[]C[[log\]
-name = "3-4 two-spaces high approach"
-around = D1])
+(;B[]C[[override\]
+name = "3-4 two-space high approach"
+around = D6
+
+normal approach in kobayashi fuseki when b has a stone at D10
+but very unusual otherwise. match around D6 for empty side case.
+
+Ex: Kwetal pachipachi  2025-01-13 9:45])
 (;B[eq]
 ;W[fq]
 ;B[ep]
@@ -900,7 +905,7 @@ around = D1])
 ;B[dr]
 ;W[fr]
 ;B[cn]C[[override\]
-name = "3-4 two-spaces high approach fight"
+name = "3-4 two-space high approach fight"
 around = C3
 
 
