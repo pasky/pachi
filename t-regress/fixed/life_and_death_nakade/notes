@@ -1,0 +1,39 @@
+globax pachipachi  2024-12-30 19:17
+
+easier version of right side group life and death issue where nakade area is closed:
+(in the game no stone at T8)
+
+      A B C D E F G H J K L M N O P Q R S T        A B C D E F G H J K L M N O P Q R S T  
+    +---------------------------------------+    +---------------------------------------+
+ 19 | . . . . . . . X O O . . . . . X . O . | 19 | o , x X X X X X x x x x x X X X , O O |
+ 18 | . O X . . . X . X O X . O X X O O X O | 18 | o O X X X X X X X x x x x X X O O O O |
+ 17 | O X . X . . . . X O . O O O X X O . . | 17 | O , , X X X X X X x x x x x X X O O O |
+ 16 | . O X . X X . . X O O X O . . X O O . | 16 | O O X X X X X X X x x x x x X X O O O |
+ 15 | . O . . . O . . X O X . X O . X X O . | 15 | O O , , , O , x X x X x X x X X X O O |
+ 14 | . . O . . . . . . . . X X X . X O O X | 14 | O O O , , o , , x X X X X X X X O O , |
+ 13 | . . . O . . . . . X X . X . X O X X X | 13 | O O O O o , , , , X X X X , X O , , , |
+ 12 | . . O . O . . . O X O . X O O O X . O | 12 | o O O O O o , , O X X X X O O O , , , |
+ 11 | . O X O O O . X O O X X O O . X X O O | 11 | o O X O O O , X O O X X O O O , , , , |
+ 10 | . O X X O . O X X O O X X O O O X X O | 10 | , O X X O o O X X O O X X O O O , , , |
+  9 | . X . X X O X . . X O O . O O . O X . |  9 | X X X X X o X X X X O O , O O O O , , |
+  8 | . O X X . . O). . X X O . . . O O X X |  8 | X X X X x , o x x X X O O O O O O , , |
+  7 | O X . X . . . . . . . . O O O O X X O |  7 | X X X X x , , , x X X , O O O O , , O |
+  6 | . . X . X . . . . . X X X . . X X O O |  6 | X X X X X x x x X X X X X , O , , O O |
+  5 | . . . X . . X X X . O . . O O X . O . |  5 | X X X X x x X X X , O , , O O , O O O |
+  4 | . . X . . . O O O . O X X . X O O O X |  4 | X X X , , , O O O o O X X , X O O O O |
+  3 | . . X O . . . . . . O O X . X . O . O |  3 | X X X O , o O O O O O O X x X , O O O |
+  2 | X X O . O . . . . . . . . . . X X O . |  2 | X X O O O O O O O O o o x x x X X O O |
+  1 | . O . . . . . . . . . . . . . . . O O |  1 | x O O O O O O O O o o , , x x x , O O |
+    +---------------------------------------+    +---------------------------------------+
+
+moggy status R11:  white  65%    FAILED 
+
+
+black group is dead, w can make 5 stones nakade
+
+bit of a lottery with previous default nakaderate (60):
+  usually around 65%, sometimes 58% ...
+
+raising nakaderate to 80 fixes it:
+moggy status R11:  white  79%    OK
+
