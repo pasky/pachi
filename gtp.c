@@ -99,11 +99,14 @@ gtp_error(gtp_t *gtp, const char *str)
 {
 	gtp->error = true;
 	
-	/* errors never quiet */
+	/* Errors never quiet */
 	gtp_prefix(gtp, '?');
 	fputs(str, stdout);
 	putchar('\n');
 	gtp_flush(gtp);  /* flush errors right away */
+
+	if (gtp->fatal)
+		die("Command '%s' failed, aborting: %s\n", gtp->cmd, str);
 }
 
 /* Output anything (no \n added). */
@@ -134,6 +137,12 @@ gtp_error_printf(gtp_t *gtp, const char *format, ...)
 	vprintf(format, ap);
 	gtp_flush(gtp);   /* flush errors right away */
 
+	if (gtp->fatal) {
+		fprintf(stderr, "Command '%s' failed, aborting: ", gtp->cmd);
+		vfprintf(stderr, format, ap);
+		exit(EXIT_FAILURE);
+	}
+	
 	va_end(ap);	
 }
 

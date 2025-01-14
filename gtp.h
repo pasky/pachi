@@ -23,6 +23,7 @@ typedef struct
 	bool		noundo;			/* undo only allowed for pass */
 	bool		kgs;			/* kgs mode */
 	bool		kgs_chat;		/* enable kgs-chat command ? */
+	bool		fatal;			/* abort on gtp error */
 	char*		custom_name;
 	char*		banner;			/* kgs game start message */
 	

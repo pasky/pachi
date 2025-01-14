@@ -186,6 +186,7 @@ usage(char *arg)
 		"  -s, --seed RANDOM_SEED            set random seed \n"
 		"  -u, --unit-test FILE              run unit tests \n"
 		"      --tunit-fatal                 abort on failed unit test \n"
+		"      --gtp-fatal                   abort on gtp error \n"
 		" \n"
 		"Engine components: \n"
 		"      --dcnn,     --nodcnn          dcnn required / disabled \n"
@@ -263,6 +264,7 @@ usage(char *arg)
 #define OPT_NODCNN_BLUNDER    277
 #define OPT_TUNIT_FATAL	      278
 #define OPT_BANNER            279
+#define OPT_GTP_FATAL         280
 
 
 static struct option longopts[] = {
@@ -278,6 +280,7 @@ static struct option longopts[] = {
 	{ "fbook",                  required_argument, 0, 'f' },
 	{ "fuseki-time",            required_argument, 0, OPT_FUSEKI_TIME },
 	{ "fuseki",                 required_argument, 0, OPT_FUSEKI },
+	{ "gtp-fatal",		    no_argument,       0, OPT_GTP_FATAL },
 #ifdef NETWORK
 	{ "gtp-port",               required_argument, 0, 'g' },
 	{ "log-port",               required_argument, 0, 'l' },
@@ -387,6 +390,9 @@ int main(int argc, char *argv[])
 #endif
 			case 'f':
 				fbookfile = strdup(optarg);
+				break;
+			case OPT_GTP_FATAL:
+				gtp->fatal = true;
 				break;
 #ifdef NETWORK
 			case 'g':
