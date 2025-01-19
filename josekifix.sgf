@@ -772,7 +772,7 @@ around = C3
 Ex: bondoman pachipachi  2025-01-19 20:36]))
 (;W[eq]
 (;B[gq]
-;W[do]
+(;W[do]
 (;B[]C[[override\]
 name = "3-4 pincer keima"
 around = A4
@@ -823,6 +823,16 @@ name = "3-4 pincer keima"
 around = C3
 
 maimaimai pachipachi  2023-05-23])))
+(;W[eo]
+;B[dq]
+;W[]C[[override\]
+name = "3-4 pincer kick"
+around = D3
+
+gets tricky after w H4
+
+Ex: pachipachi Maeda  2025-01-19 14:30
+]))
 (;B[hp]
 (;W[en]
 ;B[]C[[override\]
