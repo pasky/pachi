@@ -1647,6 +1647,24 @@ name = "4-4 keima keima slide pincer fix"
 around = E3
 ])))
 (;W[fo]
+(;B[]C[[override\]
+name = "4-4 keima direct jump"
+around = F3
+
+bot joseki confusing move
+
+Ex: Maeda pachipachi  2025-01-20 16:41]
+;W[cq]
+;B[dq]
+;W[cp]
+;B[do]C[[override\]
+name = "4-4 keima direct jump 3-3 block"
+around = "last"
+
+
+C5 mistake here !
+
+Ex: pachipachi badatthis  2018-02-22])
 (;B[dr]
 ;W[er]
 ;B[eq]
@@ -1659,7 +1677,7 @@ around = E3
 ;B[dq]
 ;W[dn]
 ;B[cr]C[[override\]
-name = "4-4 keima jump tenuki tsuke"
+name = "4-4 keima direct jump tenuki tsuke"
 around = C3
 
 
@@ -1667,19 +1685,7 @@ must C2 or C4
 don't hane at D7 !
 
 Ex: Kwetal pachipachi 2022-10-06
-])
-(;B[]
-;W[cq]
-;B[dq]
-;W[cp]
-;B[do]C[[override\]
-name = "4-4 keima keima jump 3-3 block"
-around = "last"
-
-
-C5 mistake here !
-
-Ex: pachipachi badatthis  2018-02-22]))
+]))
 (;W[dq]
 ;B[cq]
 ;W[cr]
