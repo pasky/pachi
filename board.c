@@ -405,7 +405,7 @@ board_handicap_stone(board_t *board, int x, int y, move_queue_t *q)
 void
 board_handicap(board_t *board, int stones, move_queue_t *q)
 {
-	assert(stones <= 9);
+	assert(stones >= 0 && stones <= 9);
 	int margin = 3 + (board_rsize(board) >= 13);
 	int min = margin;
 	int mid = board_stride(board) / 2;

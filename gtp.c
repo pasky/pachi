@@ -189,6 +189,21 @@ gtp_is_valid(engine_t *e, const char *cmd)
 	return (gtp_get_handler(cmd) != NULL);
 }
 
+#define gtp_valid_move(b, m)	((m)->coord == pass || (m)->coord == resign || \
+				 board_is_valid_play_no_suicide(b, (m)->color, (m)->coord))
+
+#define gtp_check_valid_move(b, m)	do {				\
+	if (!gtp_valid_move(b, m)) {				\
+		if (DEBUGL(0)) {					\
+			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str((m)->color), coord2sstr((m)->coord)); \
+			board_print(b, stderr);				\
+		}							\
+		gtp_error(gtp, "illegal move");				\
+		return P_OK;						\
+	}								\
+} while(0)
+
+
 static enum parse_code
 cmd_protocol_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
@@ -350,24 +365,18 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	gtp_arg_color(m.color);
 	gtp_arg_coord(m.coord);
+	gtp_check_valid_move(b, &m);
 	
 	char *enginearg = gtp->next;
 
 	// This is where kgs starts the timer, not at genmove!
 	time_start_timer(&ti[stone_other(m.color)]);
 
-	// XXX engine getting notified if move is illegal !
 	bool print = false;
 	char *reply = (e->notify_play ? e->notify_play(e, b, &m, enginearg, &print) : NULL);
 	
-	if (board_play(b, &m) < 0) {
-		if (DEBUGL(0)) {
-			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str(m.color), coord2sstr(m.coord));
-			board_print(b, stderr);
-		}
-		gtp_error(gtp, "illegal move");
-		return P_OK;
-	}
+	int r = board_play(b, &m);
+	assert(r >= 0);
 
 	if (print || (DEBUGL(4) && debug_boardprint))
 		engine_board_print(e, b, stderr);
@@ -624,22 +633,32 @@ cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
+	move_queue_t q;  mq_init(&q);
+
+	/* Check moves are valid first, don't leave half setup board on error. */
+	board_t copy;
+	board_copy(&copy, b);
 	do {
 		move_t m = move(pass, S_BLACK);
 		gtp_arg_coord(m.coord);			// return on invalid coord
+		gtp_check_valid_move(&copy, &m);	// return on invalid move
 
+		int r = board_play(&copy, &m);
+		assert(r >= 0);
+		mq_add(&q, m.coord, 0);
+	} while (*gtp->next);
+
+	/* All good, update main board. */
+	for (int i = 0; i < q.moves; i++) {
+		move_t m = move(q.move[i], S_BLACK);
 		if (DEBUGL(4))  fprintf(stderr, "setting handicap %s\n", coord2sstr(m.coord));
 
-		// XXX board left in inconsistent state if illegal move comes in
-		if (board_play(b, &m) < 0) {
-			if (DEBUGL(0))  fprintf(stderr, "! ILLEGAL MOVE %s\n", coord2sstr(m.coord));
-			gtp_error(gtp, "illegal move");
-		}
-		
-		b->handicap++;
-	} while (*gtp->next);
-	
-	if (DEBUGL(1) && debug_boardprint)
+		int r = board_play(b, &m);
+		assert(r >= 0);
+	}
+	b->handicap += q.moves;
+
+	if (DEBUGL(3) && debug_boardprint)
 		board_print(b, stderr);
 	return P_OK;
 }
