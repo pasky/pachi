@@ -224,7 +224,7 @@ patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *boar
 	/* Deal with broken game records that sometimes get fed in. */
 	assert(board_at(b, m->coord) == S_NONE);
 
-	if (b->moves == (b->handicap ? b->handicap * 2 : 1))
+	if (b->moves == b->handicap + 1)
 		ps->gameno++;
 
 	if (!(m->color & ps->color_mask))
