@@ -181,7 +181,7 @@ parse_external_engine_moves(board_t *b, override_t *override, external_engine_se
 static void
 joseki_override_set_around(override_t *override, board_t *b, char *value)
 {	
-	assert(valid_str_coord(value));
+	assert(valid_coord(value));
 
 	enum stone own_color = board_to_play(b);
 	enum stone other_color = stone_other(own_color);
@@ -241,7 +241,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 		/* around = coord		match pattern origin.
 		 * around = last		(use last move) */
 		else if (!strcmp(name, "around")) {
-			if (strcmp(value, "last") && !valid_str_coord(value)) {
+			if (strcmp(value, "last") && !valid_coord(value)) {
 				board_print(b, stderr);
 				die("josekifix: \"%s\": invalid around coord '%s', aborting. (run with -d5 to see previous moves)\n",
 				    override_name, value);
@@ -255,7 +255,7 @@ add_override(board_t *b, move_t *m, char *move_str)
 
 		/* around2 = coord		also check pattern at this location */
 		else if (!strcmp(name, "around2")) {	// second area check
-			if (strcmp(value, "last") && !valid_str_coord(value)) {
+			if (strcmp(value, "last") && !valid_coord(value)) {
 				board_print(b, stderr);
 				die("josekifix: \"%s\": invalid around2 coord '%s', aborting. (run with -d5 to see previous moves)\n",
 				    override_name, value);
