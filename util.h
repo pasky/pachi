@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 
 #undef MIN
 #undef MAX
@@ -21,6 +22,10 @@
 
 /* Returns true if @str starts with @prefix */
 int str_prefix(char *prefix, char *str);
+
+/* Argument parsing helpers */
+bool valid_number(char *str);
+bool valid_float(char *str);
 
 /* Warn user (popup on windows) */
 void warning(const char *format, ...)

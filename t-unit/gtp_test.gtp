@@ -28,6 +28,7 @@ predict b a1
 clear_board
 pachi-predict b a1
 
+boardsize 19
 clear_board
 set_free_handicap d4 q16
 

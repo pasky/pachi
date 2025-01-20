@@ -557,8 +557,8 @@ cmd_gogui_joseki_moves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_joseki_show_pattern(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;  gtp_arg(arg);
-	coord_t coord = str2coord(arg);
+	coord_t coord;
+	gtp_arg_coord(coord);
 
 	gtp_printf(gtp, "");  /* gtp prefix */
 	gogui_show_pattern(b, coord, JOSEKI_PATTERN_DIST);
@@ -671,8 +671,9 @@ josekifix_gogui_show_patterns(struct board *b)
 enum parse_code
 cmd_gogui_josekifix_set_coord(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;  gtp_arg(arg);
-	coord_t coord = str2coord(arg);
+	coord_t coord;
+	gtp_arg_coord(coord);
+	
 	josekifix_set_coord(coord);
 	return cmd_gogui_josekifix_show_pattern(b, e, ti, gtp);
 }
@@ -759,9 +760,9 @@ enum parse_code
 cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = board_to_play(b);
-	
-	char *arg;  gtp_arg(arg);
-	coord_t coord = str2coord(arg);
+	coord_t coord;
+	gtp_arg_coord(coord);
+
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 	
 	pattern_t p;
@@ -787,9 +788,10 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	enum stone color = board_to_play(b);	
-	char *arg;  gtp_arg(arg);
-	coord_t coord = str2coord(arg);
+	enum stone color = board_to_play(b);
+	coord_t coord;
+	gtp_arg_coord(coord);
+	
 	if (board_at(b, coord) != S_NONE)  {  gtp_reply(gtp, "TEXT Must be empty spot ...");  return P_OK;  }
 
 	pattern_t p;
@@ -814,8 +816,8 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (!pattern_engine)   init_pattern_engine(b);
 	pattern_config_t *pc = pattern_engine_get_pc(pattern_engine);
 
-	char *arg;  gtp_arg(arg);
-	coord_t coord = str2coord(arg);
+	coord_t coord;
+	gtp_arg_coord(coord);
 
 	gtp_printf(gtp, "");   /* gtp prefix */
 	gogui_show_pattern(b, coord, spatial_dist);
@@ -836,11 +838,14 @@ cmd_gogui_show_spatial(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 enum parse_code
 cmd_gogui_spatial_size(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;  gtp_arg_optional(arg);
-	/* Return current value */
-	if (!*arg) {  gtp_printf(gtp, "%i\n", spatial_dist);  return P_OK;  }
+	/* No argument: Return current value */
+	if (!*gtp->next) {
+		gtp_printf(gtp, "%i\n", spatial_dist);
+		return P_OK;
+	}
 
-	int d = atoi(arg);
+	int d;
+	gtp_arg_number(d);
 	if (d < 3 || d > 10) {  gtp_error(gtp, "Between 3 and 10 please");  return P_OK;  }
 	spatial_dist = d;
 	return P_OK;

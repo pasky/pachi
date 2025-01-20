@@ -1,6 +1,8 @@
 #ifndef PACHI_STONE_H
 #define PACHI_STONE_H
 
+#include <assert.h>
+
 enum stone {
 	S_NONE,
 	S_BLACK,
@@ -11,6 +13,7 @@ enum stone {
 
 static char stone2char(enum stone s);
 static enum stone char2stone(char s);
+bool valid_color(char *s);
 char *stone2str(enum stone s); /* static string */
 enum stone str2stone(char *str);
 

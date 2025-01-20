@@ -65,6 +65,51 @@ typedef struct
 	gtp_arg_next(gtp); \
 } while(0)
 
+#define gtp_arg_number(n)   do {  \
+	char *arg_;  \
+	gtp_arg(arg_);  \
+	if (!valid_number(arg_)) {	 \
+	        if (DEBUGL(0)) fprintf(stderr, "Invalid numeric value '%s'\n", arg_);  \
+		gtp_error(gtp, "numeric value expected"); \
+		return P_OK; \
+	} \
+	(n) = atoi(arg_);  \
+} while(0)
+
+#define gtp_arg_float(x)   do {  \
+	char *arg_;  \
+	gtp_arg(arg_);  \
+	if (!valid_float(arg_)) {  \
+	        if (DEBUGL(0)) fprintf(stderr, "Invalid numeric value '%s'\n", arg_);  \
+		gtp_error(gtp, "numeric value expected"); \
+		return P_OK; \
+	} \
+	float *px = &(x);  \
+	sscanf(arg_, "%f", px);  \
+} while(0)
+
+#define gtp_arg_color(color)   do {  \
+	char *arg_;  \
+	gtp_arg(arg_);  \
+	if (!valid_color(arg_)) {  \
+		if (DEBUGL(0)) fprintf(stderr, "Invalid color '%s'\n", arg_);  \
+		gtp_error(gtp, "invalid coord");	\
+		return P_OK; \
+	} \
+	(color) = str2stone(arg_);  \
+} while(0)
+
+#define gtp_arg_coord(c)   do {  \
+	char *arg_;  \
+	gtp_arg(arg_);  \
+	if (!valid_coord(arg_)) {  \
+		if (DEBUGL(0)) fprintf(stderr, "Invalid coord '%s'\n", arg_);  \
+		gtp_error(gtp, "invalid coord");	\
+		return P_OK; \
+	} \
+	(c) = str2coord(arg_);  \
+} while(0)
+
 
 void gtp_init(gtp_t *gtp, board_t *b);
 void gtp_done(gtp_t *gtp);
