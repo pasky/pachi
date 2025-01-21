@@ -1917,7 +1917,7 @@ Ex: pachipachi huff  2022-12-12  09:23 ])
 (;B[fp]
 (;W[]C[[override\]
 name = "deadly taka"
-around = B2
+around = C3
 external_engine_moves = 25
 
 
