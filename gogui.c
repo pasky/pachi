@@ -30,8 +30,8 @@ typedef enum {
 
 typedef enum {
 	GOGUI_RESCALE_NONE,
-	GOGUI_RESCALE_LINEAR = (1 << 0),
-	GOGUI_RESCALE_LOG =    (1 << 1),
+	GOGUI_RESCALE_RANK,
+	GOGUI_RESCALE_LOG
 } gogui_rescale_t;
 
 #define GOGUI_VERSION(major, minor, patch)	(((major) << 16) | ((minor) << 8) | (patch))
@@ -347,15 +347,15 @@ static void
 rescale_best_moves(best_moves_t *best, int rescale)
 {
 	int n = best->n;
-	
-	if (rescale & GOGUI_RESCALE_LINEAR) {
+
+	if (rescale == GOGUI_RESCALE_RANK) {
 		for (int i = 0; i < n; i++) {
 			best->r[i] = (float)(n-i)/n;
-			//fprintf(stderr, "linear: %i\n", (int)(best_r[i] * 100));
+			//fprintf(stderr, "rank: %i\n", (int)(best_r[i] * 100));
 		}
-	}       
+	}
 
-	if (rescale & GOGUI_RESCALE_LOG) {
+	if (rescale == GOGUI_RESCALE_LOG) {
 		float max = log(1.0 * 1000);
 		for (int i = 0; i < n; i++) {
 			best->r[i] = log(best->r[i] * 1000) / max;
@@ -398,7 +398,7 @@ cmd_gogui_color_palette(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		best_c[i] = coord_xy(i%size +1, size-1 - i/size + 1);
 
 	gtp_printf(gtp, "");  /* gtp prefix */
-	rescale_best_moves(&best, GOGUI_RESCALE_LINEAR);
+	rescale_best_moves(&best, GOGUI_RESCALE_RANK);
 	gogui_show_best_moves_colors(stdout, b, color, &best);
 	return P_OK;
 }

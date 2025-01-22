@@ -5,7 +5,7 @@
 
 /* How many moves to display ? */
 #define GOGUI_NBEST 9
-#define GOGUI_MANY 30
+#define GOGUI_MANY 100
 #define GOGUI_NSEQ 20
 
 typedef enum gogui_reporting {
