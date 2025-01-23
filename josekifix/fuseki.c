@@ -224,10 +224,10 @@ static fuseki_t regular_fusekis[] = {
 /* Choose initial fuseki */
 
 /* Proportion of wild fuseki games. */
-static int wild_fuseki_rate = 0;
+static unsigned int wild_fuseki_rate = 0;
 
 /* For regular games, proportion of games left untouched.  */
-static int no_fuseki_rate = 25;
+static unsigned int no_fuseki_rate = 25;
 
 
 static fuseki_t *fuseki_handler = NULL;

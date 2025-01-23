@@ -1,138 +1,79 @@
+/* Multi-thread random number generator */
+
 #include <stdio.h>
 
 #include "random.h"
 
 
-/* Simple Park-Miller for floating point; LCG as used in glibc and other places */
-
-
 /********************************************************************************************/
-#ifdef _WIN32
-#include <windows.h>
+/* Multi-thread storage (Windows) */
 
 /* Use TlsGetValue() / TlsSetValue() for thread-local storage,
  * mingw-w64's __thread is painfully slow. */
 
-static int tls_index = -1;
+#ifdef _WIN32
+
+int random_tls_index = -1;
 
 static void __attribute__((constructor))
-init_fast_random()
+fast_random_init()
 {
-	tls_index = TlsAlloc();
-	fast_srandom(29264);
-}
+	/* Temp initial state until fast_srandom() gets called. */
+	static uint64_t initial_state;
 
-void
-fast_srandom(unsigned long seed_)
-{
-	TlsSetValue(tls_index, (void*)(intptr_t)seed_);
+	random_tls_index = TlsAlloc();
+	fast_srandom(&initial_state, 0xcafef00dd15ea5e5ULL);
 }
-
-unsigned long
-fast_getseed(void)
-{
-	return (unsigned long)(intptr_t)TlsGetValue(tls_index);
-}
-
-uint16_t
-fast_random(unsigned int max)
-{
-	unsigned long pmseed = fast_getseed();
-	pmseed = ((pmseed * 1103515245) + 12345) & 0x7fffffff;
-	fast_srandom(pmseed);
-	return ((pmseed & 0xffff) * max) >> 16;
-}
-
 
 #else
 
-
 /********************************************************************************************/
+/* Multi-thread storage (default) */
+
+/* Use __thread for thread-local storage (preferred method). */
+
 #ifndef NO_THREAD_LOCAL
 
-static __thread unsigned long pmseed = 29264;
-
-void
-fast_srandom(unsigned long seed_)
-{
-	pmseed = seed_;
-}
-
-unsigned long
-fast_getseed(void)
-{
-	return pmseed;
-}
-
-uint16_t
-fast_random(unsigned int max)
-{
-	pmseed = ((pmseed * 1103515245) + 12345) & 0x7fffffff;
-	return ((pmseed & 0xffff) * max) >> 16;
-}
-
-float
-fast_frandom(void)
-{
-	/* Construct (1,2) IEEE floating_t from our random integer */
-	/* http://rgba.org/articles/sfrand/sfrand.htm */
-	union { unsigned long ul; floating_t f; } p;
-	p.ul = (((pmseed *= 16807) & 0x007fffff) - 1) | 0x3f800000;
-	return p.f - 1.0f;
-}
+__thread uint64_t pcg32_state = 0xcafef00dd15ea5e5ULL;
 
 #else
 
-
 /********************************************************************************************/
+/* Multi-thread storage (pthread) */
 
-/* Thread local storage not supported through __thread,
- * use pthread_getspecific() instead. */
+/* No support for __thread local storage, use pthread_getspecific() instead. */
 
-#include <pthread.h>
-
-static pthread_key_t seed_key;
+pthread_key_t random_state_key;
 
 static void __attribute__((constructor))
-random_init(void)
+fast_random_init(void)
 {
-	pthread_key_create(&seed_key, NULL);
-	fast_srandom(29264UL);
+	/* Temp initial state until fast_srandom() gets called. */
+	static uint64_t initial_state;
+	
+	pthread_key_create(&random_state_key, NULL);
+	fast_srandom(&initial_state, 0xcafef00dd15ea5e5ULL);
 }
+
+
+#endif  // NO_THREAD_LOCAL
+#endif  // _WIN32
+
+
+/********************************************************************************************/
+/* RNG seed operations */
 
 void
-fast_srandom(unsigned long seed_)
+fast_srandom(uint64_t *state, uint64_t seed)
 {
-	pthread_setspecific(seed_key, (void *)seed_);
+	if (state)  pcg32_set_state(state);
+	state = pcg32_get_state();
+	*state = seed;
 }
 
-unsigned long
+uint64_t
 fast_getseed(void)
 {
-	return (unsigned long)pthread_getspecific(seed_key);
+	uint64_t *ps = pcg32_get_state();
+	return *ps;
 }
-
-uint16_t
-fast_random(unsigned int max)
-{
-	unsigned long pmseed = (unsigned long)pthread_getspecific(seed_key);
-	pmseed = ((pmseed * 1103515245) + 12345) & 0x7fffffff;
-	pthread_setspecific(seed_key, (void *)pmseed);
-	return ((pmseed & 0xffff) * max) >> 16;
-}
-
-float
-fast_frandom(void)
-{
-	/* Construct (1,2) IEEE floating_t from our random integer */
-	/* http://rgba.org/articles/sfrand/sfrand.htm */
-	unsigned long pmseed = (unsigned long)pthread_getspecific(seed_key);
-	pmseed *= 16807;
-	union { unsigned long ul; floating_t f; } p;
-	p.ul = ((pmseed & 0x007fffff) - 1) | 0x3f800000;
-	pthread_setspecific(seed_key, (void *)pmseed);
-	return p.f - 1.0f;
-}
-
-#endif
-#endif

@@ -581,7 +581,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	fast_srandom(seed);
+	uint64_t random_state;
+	fast_srandom(&random_state, seed);
 	
 	if (!verbose_caffe)      quiet_caffe(argc, argv);
 	if (log_port)            open_log_port(log_port);

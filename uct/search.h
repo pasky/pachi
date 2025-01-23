@@ -44,7 +44,7 @@ typedef struct uct_thread_ctx {
 	board_t *b;
 	enum stone color;
 	tree_t *t;
-	unsigned long seed;
+	uint64_t seed;
 	int games;
 	time_info_t *ti;
 	struct uct_search_state *s;

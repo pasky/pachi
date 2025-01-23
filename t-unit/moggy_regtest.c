@@ -31,7 +31,8 @@ bool
 moggy_regression_test(board_t *board, char *arg)
 {
 	int games = 10;
-	fast_srandom(0x12345);
+	uint64_t random_state;
+	fast_srandom(&random_state, 0x12345);
 	
 	if (DEBUGL(2))  board_print(board, stderr);
 	if (DEBUGL(1))  printf("moggy regression test.   Playing %i games\n", games);

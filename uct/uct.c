@@ -60,9 +60,9 @@ setup_state(uct_t *u, board_t *b, enum stone color)
 	if (u->initial_extra_komi)
 		u->t->extra_komi = u->initial_extra_komi;
 	if (u->force_seed)
-		fast_srandom(u->force_seed);
+		fast_srandom(NULL, u->force_seed);
 	if (UDEBUGL(3))
-		fprintf(stderr, "Fresh board with random seed %lu\n", fast_getseed());
+		fprintf(stderr, "Fresh board with random seed %" PRIrandom_seed "\n", fast_getseed());
 	if (!u->no_tbook && b->moves == 0) {
 		if (color == S_BLACK) {
 			tree_load(u->t, b);

@@ -739,7 +739,7 @@ mq_tagged_choose(playout_policy_t *p, board_t *b, enum stone to_play, mtmq_t *q)
 	total += double_to_fixp(pp->tenuki_prob);
 
 	/* Finally, pick a move! */
-	fixp_t stab = fast_irandom(total);
+	fixp_t stab = fast_random(total);
 	if (DEBUGL(5)) {
 		fprintf(stderr, "Pick (total %.3f stab %.3f): ", fixp_to_double(total), fixp_to_double(stab));
 		for (int i = 0; i < q->moves; i++)

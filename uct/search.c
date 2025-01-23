@@ -111,7 +111,8 @@ worker_thread(void *ctx_)
 	uct_t *u = ctx->u;
 	board_t *b = ctx->b;
 	enum stone color = ctx->color;
-	fast_srandom(ctx->seed);
+	uint64_t random_state;
+	fast_srandom(&random_state, ctx->seed);
 	int restarted = search_restarted(u);
 
 	/* Compute initial ownermap */
@@ -196,7 +197,8 @@ thread_manager(void *ctx_)
 	uct_thread_ctx_t *mctx = (uct_thread_ctx_t*)ctx_;
 	uct_t *u = mctx->u;
 	tree_t *t = mctx->t;
-	fast_srandom(mctx->seed);
+	uint64_t random_state;
+	fast_srandom(&random_state, mctx->seed);
 
 	int played_games = 0;
 	pthread_t threads[u->threads + 1];

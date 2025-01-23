@@ -47,7 +47,7 @@ gmq_pick(gmq_t *q)
 		total += q->gamma[i];
 	if (!total)     return pass;
 
-	fixp_t stab = fast_irandom(total);
+	fixp_t stab = fast_random(total);
 	for (int i = 0; i < q->moves; i++) {
 		if (stab < q->gamma[i])
 			return q->move[i];
