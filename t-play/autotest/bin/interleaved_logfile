@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+# Detect interleaved log files.
+#
+# Older gogui-twogtp versions capture programs' stderr and don't always preserve
+# ordering so their output sometimes get mixed up, leading to interleaved log files.
+# This can be a problem if you want to process game log files with some tool.
+# Run log files through this script to detect if that's the case.
+# (only works for pachi self-play games)
+
+
+# Non-interleaved log:
+# ------------------------------------------------------------------------------------
+# IN: genmove b
+# Move:   4  Komi: 6.5  Handicap: 0  Captures B: 0 W: 0  [0 0 0 0]  Score Est: W+5.5
+# *** WINNER is N6 with score 0.4755 (6156/10008:9911/9911 games), extra komi 0.960000
+# Move:   5  Komi: 6.5  Handicap: 0  Captures B: 0 W: 0  [0 0 0 0]  Score Est: B+2.5
+# IN: genmove w
+# Move:   5  Komi: 6.5  Handicap: 0  Captures B: 0 W: 0  [0 0 0 0]  Score Est: B+1.5
+# *** WINNER is K3 with score 0.5324 (4230/10204:8712/8712 games), extra komi 0.950000
+# Move:   6  Komi: 6.5  Handicap: 0  Captures B: 0 W: 0  [0 0 0 0]  Score Est: B+3.5
+# ------------------------------------------------------------------------------------
+
+
+# Interleaved log: white's prev output gets mixed up with black's
+# ------------------------------------------------------------------------------------
+# IN: genmove b
+# Move:   4  Komi: 6.5  Handicap: 0  Captures B: 0 W: 0  [0 0 0 0]  Score Est: W+5.5
+# Move:   4  Komi: 6.5  Handicap: 0  Captures B: 0 W: 0  [0 0 0 0]  Score Est: W+1.5
+# *** WINNER is N6 with score 0.4755 (6156/10008:9911/9911 games), extra komi 0.960000
+# Move:   5  Komi: 6.5  Handicap: 0  Captures B: 0 W: 0  [0 0 0 0]  Score Est: B+2.5
+# ------------------------------------------------------------------------------------
+
+
+my $prev_kind = 0;
+my $line = 0;
+my $interleaved = 0;
+foreach my $s (<STDIN>) {
+    $line++;
+    
+    my $kind = 0;    
+    if    ($s =~ m|IN: genmove|)  {  $kind = 1;  }
+    elsif ($s =~ m|^Move:|)       {  $kind = 2;  }
+    elsif ($s =~ m|WINNER is|)    {  $kind = 3;  }
+    else {  next;  }
+
+    if ($prev_kind == $kind) {
+	print "line $line: interleaved log file\n";
+	$interleaved = 1;
+    }
+
+    $prev_kind = $kind;
+}
+
+
+exit !$interleaved;
