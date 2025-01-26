@@ -35,6 +35,12 @@ and Rémi's paper:
   need to run some playouts for the mcowner feature this will take a while
   (--slow version more accurate but much slower).
 
+-     $ pattern/trainingn/mm_games_stats | less -r
+  Check game moves feature stats. Highlights features with few matches:
+  Can't be rated accurately if it's a good move feature. For bad move
+  features it's the opposite: shouldn't show up often in game moves,
+  otherwise might indicate a problem.
+
 -     $ pattern/training/mm/mm < mm-input.dat
   Compute optimal gammas for each feature to maximize prediction rate on
   the training set. Needs enough ram to keep everything in memory.
