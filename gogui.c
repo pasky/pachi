@@ -144,7 +144,7 @@ cmd_gogui_analyze_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 		printf("gfx/Playout Moves/gogui-playout_moves/Show playout most played moves for current position\n");
 		printf("gfx/Live gfx = Best Moves/gogui-livegfx best_moves/Show best moves while engine is thinking\n");
 		printf("gfx/Live gfx = Best Sequence/gogui-livegfx best_seq/Show best sequence while engine is thinking\n");
-		printf("gfx/Live gfx = Winrates/gogui-livegfx winrates/Show best moves' winrates while engine is thinking\n");
+		printf("gfx/Live gfx = Best Winrates/gogui-livegfx best_winrates/Show best moves' winrates while engine is thinking\n");
 		printf("gfx/Live gfx = None/gogui-livegfx/Don't display anything while engine is thinking\n");
 	}
 
@@ -451,9 +451,9 @@ static int
 gogui_set_livegfx(engine_t *e, board_t *b, char *arg)
 {
 	gogui_livegfx = UR_GOGUI_NONE;
-	if      (!strcmp(arg, "best_moves"))  gogui_livegfx = UR_GOGUI_BEST;
-	else if (!strcmp(arg, "best_seq"))    gogui_livegfx = UR_GOGUI_SEQ;
-	else if (!strcmp(arg, "winrates"))    gogui_livegfx = UR_GOGUI_WR;
+	if      (!strcmp(arg, "best_moves"))	gogui_livegfx = UR_GOGUI_BEST;
+	else if (!strcmp(arg, "best_seq"))	gogui_livegfx = UR_GOGUI_SEQ;
+	else if (!strcmp(arg, "best_winrates")) gogui_livegfx = UR_GOGUI_WR;
 	else if (*arg)  /* Invalid value */
 		return 0;
 	

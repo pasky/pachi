@@ -133,7 +133,7 @@ uct_progress_lz(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color)
 	fprintf(fh, "\n");
 }
 
-/* GoGui live gfx: show best sequence */
+/* GoGui live gfx: best sequence */
 static void
 uct_progress_gogui_sequence(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
@@ -149,7 +149,7 @@ uct_progress_gogui_sequence(uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	uct_progress_text(stderr, u, t, b, color, playouts, false, false, true);
 }
 
-/* GoGui live gfx: show best moves */
+/* GoGui live gfx: best moves */
 static void
 uct_progress_gogui_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
@@ -165,7 +165,7 @@ uct_progress_gogui_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color,
 	uct_progress_text(stderr, u, t, b, color, playouts, false, false, true);
 }
 
-/* GoGui live gfx: show winrates */
+/* GoGui live gfx: best winrates */
 static void
 uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
