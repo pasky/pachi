@@ -447,17 +447,20 @@ gogui_signed_colormap_cube(FILE *f, board_t *b, float *orig_values)
 
 enum gogui_reporting gogui_livegfx = UR_GOGUI_NONE;
 
-static void
+static int
 gogui_set_livegfx(engine_t *e, board_t *b, char *arg)
 {
 	gogui_livegfx = UR_GOGUI_NONE;
-	if (!strcmp(arg, "best_moves"))  gogui_livegfx = UR_GOGUI_BEST;
-	if (!strcmp(arg, "best_seq"))    gogui_livegfx = UR_GOGUI_SEQ;
-	if (!strcmp(arg, "winrates"))    gogui_livegfx = UR_GOGUI_WR;
+	if      (!strcmp(arg, "best_moves"))  gogui_livegfx = UR_GOGUI_BEST;
+	else if (!strcmp(arg, "best_seq"))    gogui_livegfx = UR_GOGUI_SEQ;
+	else if (!strcmp(arg, "winrates"))    gogui_livegfx = UR_GOGUI_WR;
+	else if (*arg)  /* Invalid value */
+		return 0;
 	
 	/* Override reportfreq to get decent update rates in GoGui */
 	char *err;
 	bool r = engine_setoptions(e, b, "reportfreq=0.2s", &err);  assert(r);
+	return 1;
 }
 
 void
@@ -630,7 +633,9 @@ cmd_gogui_livegfx(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *arg;
 	gtp_arg_optional(arg);
-	gogui_set_livegfx(e, b, arg);
+	if (!gogui_set_livegfx(e, b, arg))
+		gtp_error(gtp, "invalid value");
+	
 	return P_OK;
 }
 
