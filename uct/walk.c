@@ -26,7 +26,8 @@
 
 
 static void
-uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
+uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts,
+		  bool want_dynkomi, bool want_bestseq, bool want_bestcan)
 {
 	int parity = (genmove_pondering(u) ? -1 : 1);
 	
@@ -43,33 +44,37 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	fprintf(fh, "best %.1f%% ", 100 * tree_node_get_value(t, parity, best->u.value));
 
 	/* Dynamic komi */
-	if (t->use_extra_komi)
+	if (want_dynkomi && t->use_extra_komi)
 		fprintf(fh, "xkomi %.1f ", t->extra_komi);
 
 	/* Best sequence */
-	mq_t seq;
-	uct_get_best_sequence(u, b, color, best, &seq, 5, 25);
-	fprintf(fh, "| seq ");
-	for (int i = 0; i < seq.moves; i++)
-		fprintf(fh, "%3s ", coord2sstr(seq.move[i]));
-	for (int i = seq.moves; i < 5; i++)
-		fprintf(fh, "    ");
+	if (want_bestseq) {
+		mq_t seq;
+		uct_get_best_sequence(u, b, color, best, &seq, 5, 25);
+		fprintf(fh, "| seq ");
+		for (int i = 0; i < seq.moves; i++)
+			fprintf(fh, "%3s ", coord2sstr(seq.move[i]));
+		for (int i = seq.moves; i < 5; i++)
+			fprintf(fh, "    ");
+	}
 
 	/* Best candidates */
-	int nbest = 4;
-	float   best_r[nbest];
-	coord_t best_c[nbest];
-	best_moves_setup(best_can, best_c, best_r, nbest);
-	uct_get_best_moves(u, &best_can, true, 100);
+	if (want_bestcan) {
+		int nbest = 4;
+		float   best_r[nbest];
+		coord_t best_c[nbest];
+		best_moves_setup(best_can, best_c, best_r, nbest);
+		uct_get_best_moves(u, &best_can, true, 100);
 
-	fprintf(fh, "| can %c ", color == S_BLACK ? 'b' : 'w');
-	for (int i = 0; i < nbest; i++) {
-		/* fix parity */
-		best_r[i] = (parity == 1 ? best_r[i] : 1.0 - best_r[i]);
-		if (i < best_can.n)
-			fprintf(fh, "%3s(%.1f) ", coord2sstr(best_c[i]), 100 * best_r[i]);
-		else
-			fprintf(fh, "          ");
+		fprintf(fh, "| can %c ", color == S_BLACK ? 'b' : 'w');
+		for (int i = 0; i < nbest; i++) {
+			/* fix parity */
+			best_r[i] = (parity == 1 ? best_r[i] : 1.0 - best_r[i]);
+			if (i < best_can.n)
+				fprintf(fh, "%3s(%.1f) ", coord2sstr(best_c[i]), 100 * best_r[i]);
+			else
+				fprintf(fh, "          ");
+		}
 	}
 
 	/* Tree memory usage */
@@ -138,23 +143,33 @@ uct_progress_gogui_sequence(uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	if (!seq.moves) {  fprintf(stderr, "... No moves left\n"); return;  }
 
 	gogui_show_best_seq(stderr, b, color, &seq);
+
+	/* Status bar */
+	fprintf(stderr, "TEXT ");
+	uct_progress_text(stderr, u, t, b, color, playouts, false, false, true);
 }
 
 /* GoGui live gfx: show best moves */
 static void
 uct_progress_gogui_best_moves(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
+	/* Best moves */
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
 	best_moves_setup(best, best_c, best_r, GOGUI_NBEST);
 	uct_get_best_moves(u, &best, false, 200);
 	gogui_show_best_moves(stderr, b, color, &best);
+
+	/* Status bar */
+	fprintf(stderr, "TEXT ");
+	uct_progress_text(stderr, u, t, b, color, playouts, false, false, true);
 }
 
 /* GoGui live gfx: show winrates */
 static void
 uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, int playouts)
 {
+	/* Best winrates */
 	coord_t best_c[GOGUI_NBEST];
 	float   best_r[GOGUI_NBEST];
 	best_moves_setup(best, best_c, best_r, GOGUI_NBEST);
@@ -163,8 +178,12 @@ uct_progress_gogui_winrates(uct_t *u, tree_t *t, board_t *b, enum stone color, i
 	int parity = (genmove_pondering(u) ? -1 : 1);
 	for (int i = 0; i < best.n; i++)
 		best_r[i] = (parity == 1 ? best_r[i] : 1.0 - best_r[i]);
-	
+
 	gogui_show_winrates(stderr, b, color, &best);
+
+	/* Status bar */
+	fprintf(stderr, "TEXT ");
+	uct_progress_text(stderr, u, t, b, color, playouts, false, false, true);
 }
 
 static void
@@ -286,7 +305,7 @@ uct_progress_status(uct_t *u, tree_t *t, board_t *b, enum stone color, int playo
 	if (!playouts)
 		playouts = t->root->u.playouts;
 		
-	if      (u->reporting == UR_TEXT)        uct_progress_text(u->report_fh, u, t, b, color, playouts);
+	if      (u->reporting == UR_TEXT)        uct_progress_text(u->report_fh, u, t, b, color, playouts, true, true, true);
 	else if (u->reporting == UR_JSON)        uct_progress_json(u->report_fh, u, t, b, color, playouts, final, false);
 	else if (u->reporting == UR_JSON_BIG)    uct_progress_json(u->report_fh, u, t, b, color, playouts, final, true);
 	else if (u->reporting == UR_LEELA_ZERO)  uct_progress_lz(u->report_fh, u, t, b, color);
