@@ -146,7 +146,8 @@ montecarlo_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, b
 			fprintf(stderr, "[%d,%d color %d] playing random game\n", coord_x(coord), coord_y(coord), color);
 
 		playout_setup_t ps = playout_setup(mc->gamelen, 0);
-		int result = playout_play_game(&ps, &b2, color, NULL, NULL, mc->playout);
+		playout_t playout = { &ps, mc->playout };
+		int result = playout_play_game(&playout, &b2, color, NULL, NULL);
 
 		board_done(&b2);
 

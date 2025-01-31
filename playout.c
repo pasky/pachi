@@ -12,6 +12,12 @@
 #include "ownermap.h"
 #include "playout.h"
 
+void
+amaf_init(amafmap_t *amaf)
+{
+	amaf->gamelen = amaf->game_baselen = 0;
+}
+
 /* Full permit logic, ie m->coord may get changed to an alternative move */
 static bool
 playout_permit_move(playout_policy_t *p, board_t *b, move_t *m, bool alt, bool rnd)
@@ -68,12 +74,12 @@ random_permit_handler(board_t *b, move_t *m, void *data)
 
 
 coord_t
-playout_play_move(playout_setup_t *setup,
-		  board_t *b, enum stone color,
-		  playout_policy_t *policy)
+playout_play_move(playout_t *playout, board_t *b, enum stone color)
 {
+	playout_setup_t *setup = playout->setup;
+	playout_policy_t *policy = playout->policy;
 	coord_t coord = pass;
-	
+
 	coord = policy->choose(policy, setup, b, color);
 	if (DEBUGL(5))  fprintf(stderr, "Playout move: %s\n", coord2sstr(coord));
 	coord = playout_check_move(policy, b, coord, color);
@@ -260,17 +266,18 @@ fill_bent_three(board_t *b, enum stone color)
 
 
 int
-playout_play_game(playout_setup_t *setup,
-		  board_t *b, enum stone starting_color,
-		  amafmap_t *amafmap, ownermap_t *ownermap,
-		  playout_policy_t *policy)
+playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
+		  amafmap_t *amafmap, ownermap_t *ownermap)
 {
+	assert(playout && playout->setup && playout->policy);
+	playout_setup_t *setup = playout->setup;
+	playout_policy_t *policy = playout->policy;
+	
 	b->playout_board = true;   // don't need board hash, history ...
 
 	int starting_passes[S_MAX];
 	memcpy(starting_passes, b->passes, sizeof(starting_passes));
 
-	assert(setup && policy);
 	int gamelen = setup->gamelen - b->moves;
 
 	if (policy->setboard)
@@ -281,7 +288,7 @@ playout_play_game(playout_setup_t *setup,
 
 	/* Play until both sides pass, or we hit threshold. */
 	while (gamelen-- > 0 && passes < 2) {
-		coord_t coord = playout_play_move(setup, b, color, policy);		
+		coord_t coord = playout_play_move(playout, b, color);
 		random_game_loop_stuff
 	}	
 
@@ -304,7 +311,7 @@ playout_play_game(playout_setup_t *setup,
 			move_t m = move(coord, color);
 			int r = board_play(b, &m);  assert(r >= 0);
 		}
-		else    coord = playout_play_move(setup, b, color, policy);
+		else    coord = playout_play_move(playout, b, color);
 		
 		/* Fill bent-fours */
 		if (coord == pass && (coord = fill_bent_four(b, color, &bent4_lib, &bent4_kill)) != pass) {

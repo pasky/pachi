@@ -323,6 +323,7 @@ stress_test_foreach_playout_move(int games, board_t *b,
 
 	playout_policy_t *policy = playout_moggy_init(NULL, b);
 	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	playout_t playout = { &setup, policy };
 
 	/* Hijack policy permit() to run at every move. */
 	stress_test.permit = policy->permit;
@@ -334,7 +335,7 @@ stress_test_foreach_playout_move(int games, board_t *b,
 		board_copy(&b2, b);
 		if (game_handler)
 			game_handler(&b2, data);
-		playout_play_game(&setup, &b2, S_BLACK, NULL, NULL, policy);
+		playout_play_game(&playout, &b2, S_BLACK, NULL, NULL);
 		board_done(&b2);
 	}
 	// XXX free playout policies
@@ -989,6 +990,7 @@ moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool 
 {
 	playout_policy_t *policy = playout_moggy_init(NULL, b);
 	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	playout_t playout = { &setup, policy };
 	ownermap_init(ownermap);
 	
 	int wr = 0;
@@ -997,7 +999,7 @@ moggy_games(board_t *b, enum stone color, int games, ownermap_t *ownermap, bool 
 		board_t b2;
 		board_copy(&b2, b);
 		
-		int score = playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
+		int score = playout_play_game(&playout, &b2, color, NULL, ownermap);
 		if (color == S_WHITE)
 			score = -score;
 		wr += (score > 0);
@@ -1260,6 +1262,7 @@ moggy_debug_game(board_t *board, char *arg)
 	int prev_debug_level = debug_level;
 	playout_policy_t *policy = playout_moggy_init(NULL, board);
 	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	playout_t playout = { &setup, policy };
 	
 	board_t b2;
 	board_t *b = &b2;
@@ -1295,7 +1298,7 @@ moggy_debug_game(board_t *board, char *arg)
 		/* Show chosen move and playout thinking logic */
 		fprintf(stderr, "picked move:\n");
 		debug_level = 6;
-		coord_t coord = playout_play_move(&setup, b, color, policy);
+		coord_t coord = playout_play_move(&playout, b, color);
 		debug_level = prev_debug_level;
 		fprintf(stderr, "\n");
 

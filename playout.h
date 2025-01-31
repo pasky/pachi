@@ -65,6 +65,12 @@ struct playout_setup {
 
 #define playout_setup(gamelen, mercymin)  { gamelen, mercymin }
 
+typedef struct {
+	playout_setup_t  *setup;
+	playout_policy_t *policy;
+} playout_t;
+
+
 /* We keep record of the game so that we can examine nakade moves; really going
  * out of our way to implement nakade AMAF properly turns out to be crucial when
  * reading some tactical positions in depth (even if they are just one-stone
@@ -79,24 +85,22 @@ typedef struct {
 } amafmap_t;
 
 
+void amaf_init(amafmap_t *map);
+
 /* >0: starting_color wins,
  * <0: starting_color loses; returned number is DOUBLE the score difference.
  *  0: superko inside the game tree (XXX: jigo not handled) */
-int playout_play_game(playout_setup_t *setup,
-		      board_t *b, enum stone starting_color,
-		      amafmap_t *amafmap,
-		      ownermap_t *ownermap,
-		      playout_policy_t *policy);
+int playout_play_game(playout_t *playout, board_t *b, enum stone starting_color,
+		      amafmap_t *amafmap, ownermap_t *ownermap);
 
 /* Play move returned by playout policy, or a randomly picked move if there was none. */
-coord_t playout_play_move(playout_setup_t *setup,
-			  board_t *b, enum stone color,
-			  playout_policy_t *policy);
+coord_t playout_play_move(playout_t *playout, board_t *b, enum stone color);
 
 /* Is *this* move permitted ? 
  * Called by policy permit() to check something so never the main permit() call. */
 bool playout_permit(playout_policy_t *p, board_t *b, coord_t coord, enum stone color, bool rnd);
 
 void playout_policy_done(playout_policy_t *p);
+
 
 #endif

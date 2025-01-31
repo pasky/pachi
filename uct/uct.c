@@ -325,13 +325,14 @@ void
 uct_mcowner_playouts(uct_t *u, board_t *b, enum stone color)
 {
 	playout_setup_t ps = playout_setup(u->gamelen, u->mercymin);
+	playout_t playout = { &ps, u->playout };
 	
 	/* TODO pick random last move, better playouts randomness */
 
 	while (u->ownermap.playouts < GJ_MINGAMES) {
 		board_t b2;
 		board_copy(&b2, b);
-		playout_play_game(&ps, &b2, color, NULL, &u->ownermap, u->playout);
+		playout_play_game(&playout, &b2, color, NULL, &u->ownermap);
 		board_done(&b2);
 	}
 }

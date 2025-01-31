@@ -309,6 +309,7 @@ uct_leaf_node(uct_t *u, board_t *b, enum stone player_color, amafmap_t *amaf,
 {
 	enum stone next_color = stone_other(node_color);
 	int parity = (next_color == player_color ? 1 : -1);
+	amaf = (u->playout_amaf ? amaf : NULL);
 
 	if (UDEBUGL(7))
 		fprintf(stderr, "%*s*-- UCT playout #%d start [%s] %f\n",
@@ -316,13 +317,13 @@ uct_leaf_node(uct_t *u, board_t *b, enum stone player_color, amafmap_t *amaf,
 			tree_node_get_value(t, -parity, n->u.value));
 
 	playout_setup_t ps = playout_setup(u->gamelen, u->mercymin);
-	int result = playout_play_game(&ps, b, next_color,
-				       u->playout_amaf ? amaf : NULL,
-				       &u->ownermap, u->playout);
-	if (next_color == S_WHITE) {
-		/* We need the result from black's perspective. */
+	playout_t playout = { &ps, u->playout };
+	int result = playout_play_game(&playout, b, next_color, amaf, &u->ownermap);
+	
+	/* Get result from black's perspective. */
+	if (next_color == S_WHITE)
 		result = - result;
-	}
+	
 	if (UDEBUGL(7))
 		fprintf(stderr, "%*s -- [%d..%d] %s random playout result %d\n",
 		        spaces, "", player_color, next_color, coord2sstr(node_coord(n)), result);
@@ -370,7 +371,7 @@ static tree_node_t *
 uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, int *presult)
 {
 	amafmap_t amaf;
-	amaf.gamelen = amaf.game_baselen = 0;
+	amaf_init(&amaf);
 
 	/* Walk the tree until we find a leaf, then expand it and do
 	 * a random playout. */

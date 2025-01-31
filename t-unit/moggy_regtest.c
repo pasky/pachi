@@ -11,15 +11,16 @@
 #include "playout/moggy.h"
 
 static void
-play_game(playout_setup_t *setup,
-	  board_t *b, enum stone color,
-	  playout_policy_t *policy)
+play_game(playout_t *playout, board_t *b, enum stone color)
 {
+	playout_setup_t *setup = playout->setup;
+	playout_policy_t *policy = playout->policy;
+
 	if (policy->setboard)  policy->setboard(policy, b);
 	
 	int passes = 0;
 	for (int gamelen = setup->gamelen; gamelen-- > 0 && passes < 2; ) {
-		coord_t coord = playout_play_move(setup, b, color, policy);
+		coord_t coord = playout_play_move(playout, b, color);
 		fprintf(stderr, "move %-3i %1.1s %s\n", b->moves, stone2str(color), coord2sstr(coord));
 		if (is_pass(coord)) passes++;  else passes = 0;
 		color = stone_other(color);
@@ -39,6 +40,7 @@ moggy_regression_test(board_t *board, char *arg)
 
 	playout_policy_t *policy = playout_moggy_init(NULL, board);
 	playout_setup_t setup = { .gamelen = MAX_GAMELEN };
+	playout_t playout = { &setup, policy };
 	
 	/* Play some games */
 	for (int i = 0; i < games; i++)  {
@@ -46,7 +48,7 @@ moggy_regression_test(board_t *board, char *arg)
 		board_t b;
 		board_copy(&b, board);
 		fprintf(stderr, "game %i:\n", i+1);
-		play_game(&setup, &b, color, policy);
+		play_game(&playout, &b, color);
 		board_done(&b);
 	}
 	

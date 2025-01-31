@@ -1304,6 +1304,7 @@ mcowner_playouts_(board_t *b, enum stone color, ownermap_t *ownermap, int playou
 {
 	static playout_policy_t *policy = NULL;
 	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
+	playout_t playout = { &setup, policy };
 	
 	if (!policy)  policy = playout_moggy_init(NULL, b);
 	ownermap_init(ownermap);
@@ -1311,7 +1312,7 @@ mcowner_playouts_(board_t *b, enum stone color, ownermap_t *ownermap, int playou
 	for (int i = 0; i < playouts; i++)  {
 		board_t b2;
 		board_copy(&b2, b);		
-		playout_play_game(&setup, &b2, color, NULL, ownermap, policy);
+		playout_play_game(&playout, &b2, color, NULL, ownermap);
 		board_done(&b2);
 	}
 	//fprintf(stderr, "pattern ownermap:\n");
