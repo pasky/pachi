@@ -15,17 +15,10 @@
 #include "tactics/1lib.h"
 #include "tactics/2lib.h"
 #include "tactics/util.h"
-#include "playout.h"
-#include "playout/moggy.h"
 #include "ownermap.h"
 #include "engine.h"
 #include "pattern/pattern_engine.h"
 #include "mq.h"
-
-/* Number of playouts for mcowner_fast().
- * Anything reliable uses much more (GJ_MINGAMES).
- * Lower this to make patternplay super fast (and mcowner even more unreliable). */
-#define MM_MINGAMES 100
 
 static bool patterns_enabled = true;
 static bool patterns_required = false;
@@ -298,6 +291,9 @@ pattern_context_free(pattern_context_t *ct)
 }
 
 #define have_last_move(b)  (!is_pass(last_move(b).coord))
+
+/***************************************************************************************/
+/* Feature matching */
 
 static bool
 is_neighbor_group(board_t *b, coord_t coord, group_t g)
@@ -1294,41 +1290,9 @@ pattern_match_spatial(board_t *b, move_t *m, pattern_t *p,
 static int
 pattern_match_mcowner(board_t *b, move_t *m, ownermap_t *o)
 {
-	assert(o->playouts >= MM_MINGAMES);
+	assert(o->playouts >= 100);
 	int r = o->map[m->coord][m->color] * 8 / (o->playouts + 1);
 	return MIN(r, 8);   // multi-threads count not exact, can reach 9 sometimes...
-}
-
-static void
-mcowner_playouts_(board_t *b, enum stone color, ownermap_t *ownermap, int playouts)
-{
-	static playout_policy_t *policy = NULL;
-	playout_setup_t setup = playout_setup(MAX_GAMELEN, 0);
-	playout_t playout = { &setup, policy };
-	
-	if (!policy)  policy = playout_moggy_init(NULL, b);
-	ownermap_init(ownermap);
-	
-	for (int i = 0; i < playouts; i++)  {
-		board_t b2;
-		board_copy(&b2, b);		
-		playout_play_game(&playout, &b2, color, NULL, ownermap);
-		board_done(&b2);
-	}
-	//fprintf(stderr, "pattern ownermap:\n");
-	//board_print_ownermap(b, stderr, ownermap);
-}
-
-void
-mcowner_playouts(board_t *b, enum stone color, ownermap_t *ownermap)
-{
-	mcowner_playouts_(b, color, ownermap, GJ_MINGAMES);
-}
-
-void
-mcowner_playouts_fast(board_t *b, enum stone color, ownermap_t *ownermap)
-{
-	mcowner_playouts_(b, color, ownermap, MM_MINGAMES);
 }
 
 

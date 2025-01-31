@@ -1,6 +1,6 @@
 INCLUDES=-I..
 
-OBJS := pattern.o pattern_engine.o prob.o spatial.o
+OBJS := pattern.o mcowner.o pattern_engine.o prob.o spatial.o
 
 ifeq ($(EXTRA_ENGINES), 1)
 	OBJS += patternscan.o
