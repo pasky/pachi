@@ -262,8 +262,7 @@ fill_bent_three(board_t *b, enum stone color)
 int
 playout_play_game(playout_setup_t *setup,
 		  board_t *b, enum stone starting_color,
-		  playout_amafmap_t *amafmap,
-		  ownermap_t *ownermap,
+		  amafmap_t *amafmap, ownermap_t *ownermap,
 		  playout_policy_t *policy)
 {
 	b->playout_board = true;   // don't need board hash, history ...

@@ -236,8 +236,7 @@ static inline int ko_length(bool *ko_capture_map, int map_length)
 void
 ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 		enum stone node_color, enum stone player_color,
-		playout_amafmap_t *map, board_t *final_board,
-		floating_t result)
+		amafmap_t *map, board_t *final_board, floating_t result)
 {
 	ucb1_policy_amaf_t *b = (ucb1_policy_amaf_t*)p->data;
 	enum stone winner_color = result > 0.5 ? S_BLACK : S_WHITE;

@@ -296,7 +296,7 @@ uct_progress_status(uct_t *u, tree_t *t, board_t *b, enum stone color, int playo
 }
 
 static inline void
-record_amaf_move(playout_amafmap_t *amaf, coord_t coord, bool is_ko_capture)
+record_amaf_move(amafmap_t *amaf, coord_t coord, bool is_ko_capture)
 {
 	assert(amaf->gamelen < MAX_GAMELEN);
 	amaf->is_ko_capture[amaf->gamelen] = is_ko_capture;
@@ -304,10 +304,8 @@ record_amaf_move(playout_amafmap_t *amaf, coord_t coord, bool is_ko_capture)
 }
 
 static int
-uct_leaf_node(uct_t *u, board_t *b, enum stone player_color,
-              playout_amafmap_t *amaf,
-              tree_t *t, tree_node_t *n, enum stone node_color,
-	      int spaces)
+uct_leaf_node(uct_t *u, board_t *b, enum stone player_color, amafmap_t *amaf,
+              tree_t *t, tree_node_t *n, enum stone node_color, int spaces)
 {
 	enum stone next_color = stone_other(node_color);
 	int parity = (next_color == player_color ? 1 : -1);
@@ -371,7 +369,7 @@ scale_value(uct_t *u, board_t *b, enum stone node_color, tree_node_t *significan
 static tree_node_t *
 uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, int *presult)
 {
-	playout_amafmap_t amaf;
+	amafmap_t amaf;
 	amaf.gamelen = amaf.game_baselen = 0;
 
 	/* Walk the tree until we find a leaf, then expand it and do

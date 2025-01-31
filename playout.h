@@ -65,19 +65,18 @@ struct playout_setup {
 
 #define playout_setup(gamelen, mercymin)  { gamelen, mercymin }
 
+/* We keep record of the game so that we can examine nakade moves; really going
+ * out of our way to implement nakade AMAF properly turns out to be crucial when
+ * reading some tactical positions in depth (even if they are just one-stone
+ * snapback). */
 typedef struct {
-	/* We keep record of the game so that we can
-	 * examine nakade moves; really going out of our way to
-	 * implement nakade AMAF properly turns out to be crucial
-	 * when reading some tactical positions in depth (even if
-	 * they are just one-stone-snapback). */
 	coord_t game[MAX_GAMELEN];
 	bool is_ko_capture[MAX_GAMELEN];
 	int gamelen;
-	/* Our current position in the game sequence; in AMAF, we search
-	 * the range [game_baselen, gamelen[ */
+	/* Start of the playout part of the record.
+	 * in AMAF, we search the range [game_baselen, gamelen[ */
 	int game_baselen;
-} playout_amafmap_t;
+} amafmap_t;
 
 
 /* >0: starting_color wins,
@@ -85,7 +84,7 @@ typedef struct {
  *  0: superko inside the game tree (XXX: jigo not handled) */
 int playout_play_game(playout_setup_t *setup,
 		      board_t *b, enum stone starting_color,
-		      playout_amafmap_t *amafmap,
+		      amafmap_t *amafmap,
 		      ownermap_t *ownermap,
 		      playout_policy_t *policy);
 
