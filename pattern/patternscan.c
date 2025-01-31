@@ -242,8 +242,8 @@ patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *boar
 		process_pattern(ps, b, m, true, genspatial_process_move, NULL);
 	else {
 		ownermap_t ownermap;
-		if (ps->mcowner_fast)  mcowner_playouts_fast(b, m->color, &ownermap);
-		else		       mcowner_playouts(b, m->color, &ownermap); /* slooow */
+		if (ps->mcowner_fast)  mcowner_playouts_fast(b, m->color, &ownermap);  /* fast, unreliable ownermap */
+		else		       mcowner_playouts(MAX_THREADS, 500, b, m->color, &ownermap);
 		
 		pattern_context_t ct;
 		pattern_context_init(&ct, &ps->pc, &ownermap);

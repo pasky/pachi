@@ -4,8 +4,9 @@
 /* Matching of multi-featured patterns. */
 
 #include "board.h"
-#include "ownermap.h"
 #include "move.h"
+#include "ownermap.h"
+#include "mcowner.h"
 
 /* When someone says "pattern", you imagine a configuration of stones in given
  * area (e.g. as matched very efficiently by pattern3 in case of 3x3 area).
@@ -131,7 +132,7 @@ enum feature_id {
 
 	/* Monte-carlo owner */
 	FEAT_MCOWNER,
-	
+
 	/* Spatial configuration of stones in certain board area,
 	 * with black to play. */
 	/* Payload: Index in the spatial_dict. */
@@ -164,7 +165,7 @@ typedef struct {
 	feature_t f[FEAT_MAX];
 } pattern_t;
 
-typedef struct {
+typedef struct pattern_config {
 	/* FEAT_BORDER: Generate features only up to this board distance. */
 	unsigned int bdist_max;
 
@@ -231,9 +232,9 @@ static bool pattern_eq(pattern_t *p1, pattern_t *p2);
 /* Initialize context from existing parts. */
 void pattern_context_init(pattern_context_t *ct, pattern_config_t *pc, ownermap_t *ownermap);
 /* Allocate and setup new context and all required parts (expensive) */
-pattern_context_t *pattern_context_new(board_t *b, enum stone color, bool mcowner_fast);
+pattern_context_t *pattern_context_new(int threads, board_t *b, enum stone color);
 /* Same if you already have a pattern config */
-pattern_context_t *pattern_context_new2(board_t *b, enum stone color, pattern_config_t *pc, bool mcowner_fast);
+pattern_context_t *pattern_context_new2(int threads, board_t *b, enum stone color, pattern_config_t *pc);
 /* Free context created with pattern_context_new() */
 void pattern_context_free(pattern_context_t *ct);
 

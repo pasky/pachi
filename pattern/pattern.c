@@ -258,24 +258,24 @@ pattern_context_init(pattern_context_t *ct, pattern_config_t *pc, ownermap_t *ow
 }
 
 pattern_context_t*
-pattern_context_new(board_t *b, enum stone color, bool mcowner_fast)
+pattern_context_new(int threads, board_t *b, enum stone color)
 {
 	engine_t *engine = new_engine(E_PATTERN, "", b);
 	pattern_config_t *pc = pattern_engine_get_pc(engine);
 
-	pattern_context_t *ct = pattern_context_new2(b, color, pc, mcowner_fast);
+	pattern_context_t *ct = pattern_context_new2(threads, b, color, pc);
 	ct->engine = engine;
 	return ct;
 }
 
 pattern_context_t*
-pattern_context_new2(board_t *b, enum stone color, pattern_config_t *pc, bool mcowner_fast)
+pattern_context_new2(int threads, board_t *b, enum stone color, pattern_config_t *pc)
 {
 	pattern_context_t *ct = calloc2(1, pattern_context_t);
 	
-	ownermap_t *ownermap = malloc2(ownermap_t);	
-	if (mcowner_fast)  mcowner_playouts_fast(b, color, ownermap);
-	else		   mcowner_playouts(b, color, ownermap);
+	ownermap_t *ownermap = malloc2(ownermap_t);
+
+	mcowner_playouts(threads, 500, b, color, ownermap);
 	
 	pattern_context_init(ct, pc, ownermap);
 	return ct;
@@ -1294,7 +1294,6 @@ pattern_match_mcowner(board_t *b, move_t *m, ownermap_t *o)
 	int r = o->map[m->coord][m->color] * 8 / (o->playouts + 1);
 	return MIN(r, 8);   // multi-threads count not exact, can reach 9 sometimes...
 }
-
 
 /* Keep track of features hits stats ? */
 #ifdef PATTERN_FEATURE_STATS

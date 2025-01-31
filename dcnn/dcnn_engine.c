@@ -6,13 +6,14 @@
 #include "engine.h"
 #include "caffe.h"
 #include "dcnn/dcnn.h"
+#include "pattern/mcowner.h"
 #include "dcnn/dcnn_engine.h"
 
 static void
 dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
 {
 	ownermap_t ownermap;
-	mcowner_playouts(0, b, color, &ownermap, NULL);
+	mcowner_playouts(MAX_THREADS, 500, b, color, &ownermap);
 	
 	float r[19 * 19];
 	dcnn_evaluate(b, color, r, &ownermap, DEBUGL(2), "");

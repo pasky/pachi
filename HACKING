@@ -69,6 +69,7 @@ Pachi consists of the following components:
 	pattern/pattern.[ch]		general multi-feature pattern matcher
 	pattern/spatial.[ch]		spatial pattern matching
 	pattern/prob.[ch]		pattern-based move predictor
+	pattern/mcowner.[ch]		single/multi-threaded batch playouts to collect data (ownermap, criticality ...)
 	pattern/pattern_engine.c	example "mm patterns move generator" engine, used for testing / debugging
 	pattern/patternscan.c		auxiliary engine used by mm pattern training pipeline
 	training/                       mm training pipeline

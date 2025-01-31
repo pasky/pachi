@@ -641,7 +641,7 @@ test_atari(board_t *b, char *arg)
 	args_end();
 
 	ownermap_t ownermap;
-	mcowner_playouts(b, color, &ownermap);
+	mcowner_playouts(MAX_THREADS, 500, b, color, &ownermap);
 	board_print_ownermap(b, stderr, &ownermap);
 	board_printed = true;
 
@@ -1463,7 +1463,7 @@ test_dcnn_blunder(board_t *b, char *arg)
 	/***********************************************************************/
 	/* Get ownermap */
 	ownermap_t ownermap;  ownermap_init(&ownermap);
-	mcowner_playouts(b, color, &ownermap);
+	mcowner_playouts(MAX_THREADS, 500, b, color, &ownermap);
 
 	/* Get dcnn output */
 	float result[19 * 19];

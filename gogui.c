@@ -851,7 +851,7 @@ cmd_gogui_pattern_features(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	
 	pattern_t p;
 	move_t m = move(coord, color);
-	pattern_context_t *ct = pattern_context_new(b, color, false);
+	pattern_context_t *ct = pattern_context_new(MAX_THREADS, b, color);
 	bool locally = pattern_matching_locally(b, color, ct);
 	pattern_match(b, &m, &p, ct, locally);
 	pattern_context_free(ct);
@@ -880,13 +880,13 @@ cmd_gogui_pattern_gammas(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 
 	pattern_t p;
 	move_t m = move(coord, color);
-	pattern_context_t *ct = pattern_context_new(b, color, false);
+	pattern_context_t *ct = pattern_context_new(MAX_THREADS, b, color);
 	bool locally = pattern_matching_locally(b, color, ct);
 	pattern_match(b, &m, &p, ct, locally);
-	
+	pattern_context_free(ct);
+
 	strbuf(buf, 1000);
 	dump_gammas(buf, &p);
-	pattern_context_free(ct);
 
 	gtp_printf(gtp, "TEXT %s\n", buf->str);
 	return P_OK;

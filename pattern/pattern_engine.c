@@ -75,7 +75,7 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 
 	pattern_t *pats = pp->patterns;
 	floating_t probs[b->flen];
-	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
+	pattern_context_t *ct = pattern_context_new2(MAX_THREADS, b, color, &pp->pc);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 	float best_r[20];
@@ -102,7 +102,7 @@ pattern_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone c
 
 	pattern_t *pats = pp->patterns;	
 	floating_t probs[b->flen];
-	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
+	pattern_context_t *ct = pattern_context_new2(MAX_THREADS, b, color, &pp->pc);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 	get_pattern_best_moves(b, probs, best);
@@ -117,7 +117,7 @@ pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *pr
 	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
 	pattern_t *pats = pp->patterns;
-	pattern_context_t *ct = pattern_context_new2(b, color, &pp->pc, pp->mcowner_fast);
+	pattern_context_t *ct = pattern_context_new2(MAX_THREADS, b, color, &pp->pc);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 	if (pp->debug_level >= 4)
