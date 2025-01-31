@@ -1,13 +1,14 @@
-#define DEBUG
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#define DEBUG
 
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
 #include "dcnn/dcnn.h"
-#include "pattern/pattern.h"
+#include "pattern/mcowner.h"
 #include "dcnn/blunderscan.h"
 
 /* Monitor play commands and run dcnn blunder checks on all game moves.
@@ -16,9 +17,6 @@
 
 /* Fake dcnn output for speed */
 #define BLUNDERSCAN_FAKE_DCNN	1
-
-/* better accuracy on atari patterns matching ?  (will be much slower) */
-//#define BLUNDERSCAN_SLOW_ACCURATE	1
 
 
 static char *
@@ -35,16 +33,16 @@ blunderscan_play(engine_t *e, board_t *board, move_t *m, char *enginearg, bool *
 	
 	enum stone color = board_to_play(b);
 
-	/* Get ownermap */
+	/* Ownermap: fast or accurate ?
+	 * Use fast version, ownermap only used for atari pattern matching. */
 	ownermap_t ownermap;
-#ifdef BLUNDERSCAN_SLOW_ACCURATE
-	mcowner_playouts(b, color, &ownermap);
-#else
+	double time_start = time_now();
 	mcowner_playouts_fast(b, color, &ownermap);
-#endif
-
+	//mcowner_playouts(MAX_THREADS, 500, b, color, &ownermap, NULL);
+	if (DEBUGL(2)) fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
+	
 	/* Get dcnn output */
-	float result[19 * 19];	
+	float result[19 * 19];
 #ifdef BLUNDERSCAN_FAKE_DCNN
 	for (int i = 0; i < 19 * 19; i++)  /* fake dcnn output */
 		result[i] = 0.015;   /* all moves 1.5%   (less than 2% so we can test boosted move trimming) */
@@ -79,7 +77,4 @@ blunderscan_engine_init(engine_t *e, board_t *b)
 #else
 	dcnn_init(b);
 #endif
-		
-	pattern_config_t pc;
-	patterns_init(&pc, NULL, false, true);
 }
