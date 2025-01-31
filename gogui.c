@@ -790,8 +790,7 @@ static engine_t *pattern_engine = NULL;
 static void
 init_pattern_engine(board_t *b)
 {
-	char args[] = "mcowner_fast=0";
-	pattern_engine = new_engine(E_PATTERN, args, b);
+	pattern_engine = new_engine(E_PATTERN, NULL, b);
 }
 
 enum parse_code

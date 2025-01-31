@@ -18,7 +18,8 @@ and Rémi's paper:
 
 - Pick one month of kgs high-dans game records (~500 games):
       https://www.u-go.net/gamerecords/
-  This is your training set. Put sgf files in sgf_train/ directory.
+  Excluding handicap games. This is your training set.
+  Put sgf files in sgf_train/ directory.
 
 -     $ pattern/training/spatial_gen  sgf_train/*.sgf
   Generate spatial dictionary by collecting spatial patterns found at
@@ -27,13 +28,10 @@ and Rémi's paper:
 
 
 -     $ pattern/trainingn/mm_games  sgf_train/*.sgf
-  or
-      $ pattern/trainingn/mm_games --slow  sgf_train/*.sgf      
   Pattern match all moves in the training set, turning them into teams of
   features suitable for mm tool. Generates mm-pachi.table and mm-input.dat,
-  which will be rather large by the time it's done (~800Mb). Because we
-  need to run some playouts for the mcowner feature this will take a while
-  (--slow version more accurate but much slower).
+  which should be around 600-800 Mb when done. This will take a while as we
+  need to run playouts for the mcowner and criticality features.
 
 -     $ pattern/trainingn/mm_games_stats | less -r
   Check game moves feature stats. Highlights features with few matches:

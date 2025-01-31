@@ -17,7 +17,6 @@
 /* Internal engine state. */
 typedef struct {
 	int debug_level;
-	bool mcowner_fast;
 	
 	pattern_config_t pc;
 	pattern_t patterns[BOARD_MAX_MOVES];
@@ -220,12 +219,6 @@ pattern_engine_setoption(engine_t *e, board_t *b, const char *optname, char *opt
 		if (optval)  pp->debug_level = atoi(optval);
 		else         pp->debug_level++;
 	}
-	else if (!strcasecmp(optname, "mcowner_fast") && optval) {
-		/* Use mcowner_fast=0 for better ownermap accuracy,
-		 * Will be much slower though. (Default: mcowner_fast=1) 
-		 * See also MM_MINGAMES. */
-		pp->mcowner_fast = atoi(optval);
-	}
 	else if (!strcasecmp(optname, "patterns") && optval) {  NEED_RESET
 		patterns_init(&pp->pc, optval, false, true);
 	}
@@ -246,7 +239,6 @@ pattern_engine_state_init(engine_t *e, board_t *b)
 
 	pp->debug_level = debug_level;
 	pp->matched_locally = false;
-	pp->mcowner_fast = true;
 
 	/* Process engine options. */
 	for (int i = 0; i < options->n; i++) {
