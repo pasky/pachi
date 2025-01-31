@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DEBUG
+
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -24,7 +26,6 @@
 
 /* Internal engine state. */
 typedef struct {
-	int debug_level;
 	int threads;
 
 	pattern_config_t pc;
@@ -195,7 +196,7 @@ genspatial_process_move(patternscan_t *ps, board_t *b, move_t *m, strbuf_t *buf,
 		}
 		
 		/* Show stats from time to time */
-		if (ps->debug_level > 1 && !fast_random(65536) && !fast_random(32))
+		if (DEBUGL(2) && !fast_random(65536) && !fast_random(32))
 			fprintf(stderr, "%d spatials\n", spat_dict->nspatials);
 			
 		/* Global pattern count (including multiple hits per game) */
@@ -338,11 +339,7 @@ patternscan_setoption(engine_t *e, board_t *b, const char *optname, char *optval
 	static_strbuf(ebuf, 256);
 	patternscan_t *ps = (patternscan_t*)e->data;
 
-	if (!strcasecmp(optname, "debug")) {
-		if (optval)  ps->debug_level = atoi(optval);
-		else         ps->debug_level++;
-	}
-	else if (!strcasecmp(optname, "gen_spat_dict")) {
+	if (!strcasecmp(optname, "gen_spat_dict")) {
 		/* If set, re-generate the spatial patterns
 		 * dictionary; you need to have a dictionary
 		 * of spatial stone configurations in order
@@ -395,7 +392,6 @@ patternscan_state_init(engine_t *e, board_t *b)
 	
 	bool pat_setup = false;
 
-	ps->debug_level = 1;
 	ps->color_mask = S_BLACK | S_WHITE;
 	ps->threads = MAX_THREADS;  /* Default: use all cores */
 

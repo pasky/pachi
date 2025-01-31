@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DEBUG
+
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
@@ -16,7 +18,6 @@
 
 /* Internal engine state. */
 typedef struct {
-	int debug_level;
 	int threads;
 	
 	pattern_config_t pc;
@@ -75,7 +76,10 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 
 	pattern_t *pats = pp->patterns;
 	floating_t probs[b->flen];
+	double time_start = time_now();
 	pattern_context_t *ct = pattern_context_new2(pp->threads, b, color, &pp->pc);
+	if (DEBUGL(2)) fprintf(stderr, "mcowner %.2fs\n", time_now() - time_start);
+
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 	float best_r[20];
@@ -83,12 +87,10 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 	best_moves_setup(best, best_c, best_r, 20);
 	
 	get_pattern_best_moves(b, probs, &best);
-	print_pattern_best_moves(&best);
+	if (DEBUGL(2))  print_pattern_best_moves(&best);
 
-	if (pp->debug_level >= 4)
-		debug_pattern_best_moves(pp, b, color, ct, &best);
-	if (pp->debug_level >= 5)
-		debug_pattern_all_moves(pp, b, probs, pats);
+	if (DEBUGL(4))  debug_pattern_best_moves(pp, b, color, ct, &best);
+	if (DEBUGL(5))  debug_pattern_all_moves(pp, b, probs, pats);
 
 	pattern_context_free(ct);
 	return (best.n ? best_c[0] : pass);
@@ -120,7 +122,7 @@ pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *pr
 	pattern_context_t *ct = pattern_context_new2(pp->threads, b, color, &pp->pc);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
-	if (pp->debug_level >= 4)
+	if (DEBUGL(5))
 		debug_pattern_all_moves(pp, b, probs, pats);
 
 	pattern_context_free(ct);
@@ -216,11 +218,7 @@ pattern_engine_setoption(engine_t *e, board_t *b, const char *optname, char *opt
 	static_strbuf(ebuf, 256);
 	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
-	if (!strcasecmp(optname, "debug")) {
-		if (optval)  pp->debug_level = atoi(optval);
-		else         pp->debug_level++;
-	}
-	else if (!strcasecmp(optname, "threads") && optval) {
+	if (!strcasecmp(optname, "threads") && optval) {
 		/* Set number of threads to use for ownermap, criticality feature.
 		 * Default: use all cores available. */
 		pp->threads = atoi(optval);
@@ -243,7 +241,6 @@ pattern_engine_state_init(engine_t *e, board_t *b)
 	
 	bool pat_setup = false;
 
-	pp->debug_level = debug_level;
 	pp->matched_locally = false;
 	pp->threads = MAX_THREADS;  /* Default: use all cores */
 
