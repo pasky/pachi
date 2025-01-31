@@ -8,37 +8,35 @@
 #include "dcnn/dcnn.h"
 #include "dcnn/dcnn_engine.h"
 
-
+static void
+dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
+{
+	ownermap_t ownermap;
+	mcowner_playouts(0, b, color, &ownermap, NULL);
+	
+	float r[19 * 19];
+	dcnn_evaluate(b, color, r, &ownermap, DEBUGL(2), "");
+	get_dcnn_best_moves(b, r, best);
+}
 
 static coord_t
 dcnn_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	float r[19 * 19];	
-	dcnn_evaluate(b, color, r, NULL, DEBUGL(2), "");
-
 	float best_r[DCNN_BEST_N];
-	coord_t best_moves[DCNN_BEST_N];
-	best_moves_setup(best, best_moves, best_r, DCNN_BEST_N);
-	get_dcnn_best_moves(b, r, &best);
-	
+	coord_t best_c[DCNN_BEST_N];
+	best_moves_setup(best, best_c, best_r, DCNN_BEST_N);
+	dcnn_best_moves(e, b, ti, color, &best);
+
 	/* Make sure move is valid ... */
 	for (int i = 0; i < best.n; i++) {
-		if (is_pass(best_moves[i]) ||
-		    board_is_valid_play_no_suicide(b, color, best_moves[i]))
-			return best_moves[i];
-		die("dcnn suggests invalid move %s !\n", coord2sstr(best_moves[i]));
+		if (is_pass(best_c[i]) ||
+		    board_is_valid_play_no_suicide(b, color, best_c[i]))
+			return best_c[i];
+		die("dcnn suggests invalid move %s !\n", coord2sstr(best_c[i]));
 	}
 	
 	assert(0);
 	return pass;
-}
-
-static void
-dcnn_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone color, best_moves_t *best)
-{
-	float r[19 * 19];
-	dcnn_evaluate(b, color, r, NULL, DEBUGL(2), "");
-	get_dcnn_best_moves(b, r, best);
 }
 
 #define option_error engine_setoption_error
@@ -65,8 +63,8 @@ dcnn_engine_init(engine_t *e, board_t *b)
 	e->name = (char*)"DCNN";
 	e->comment = (char*)"I just select dcnn's best move.";
 	e->genmove = dcnn_genmove;
-	e->setoption = dcnn_engine_setoption;
 	e->best_moves = dcnn_best_moves;
+	e->setoption = dcnn_engine_setoption;
 
 	/* Process engine options. */
 	char *err;

@@ -470,13 +470,8 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *owne
 {
 	if (!dcnn_blunder_enabled)
 		return 0;
-	
-	/* Make ownermap if caller didn't provide one */
-	if (!ownermap) {
-		ownermap = alloca(sizeof(*ownermap));
-		ownermap_init(ownermap);
-		mcowner_playouts(b, color, ownermap);
-	}
+
+	assert(ownermap);
 
 	float blunder_rating = 0.001;  /* 0.1% */
 	int changes = 0;
