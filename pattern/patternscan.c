@@ -25,6 +25,7 @@
 /* Internal engine state. */
 typedef struct {
 	int debug_level;
+	int threads;
 
 	pattern_config_t pc;
 	bool spat_split_sizes;
@@ -240,7 +241,7 @@ patternscan_play(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *boar
 	if (ps->gen_spat_dict)
 		process_pattern(ps, b, m, true, genspatial_process_move, NULL);
 	else {
-		pattern_context_t *ct = pattern_context_new2(MAX_THREADS, b, m->color, &ps->pc);
+		pattern_context_t *ct = pattern_context_new2(ps->threads, b, m->color, &ps->pc);
  		process_pattern(ps, b, m, true, mm_process_move, ct);
  		pattern_context_free(ct);
 	}
@@ -371,6 +372,11 @@ patternscan_setoption(engine_t *e, board_t *b, const char *optname, char *optval
 		 * handicap games.) */
 		ps->color_mask = atoi(optval);
 	}
+	else if (!strcasecmp(optname, "threads") && optval) {
+		/* Set number of threads to use for ownermap, criticality feature.
+		 * Default: use all cores available. */
+		ps->threads = atoi(optval);
+	}
 	else if (!strcasecmp(optname, "patterns") && optval) {  NEED_RESET
 		patterns_init(&ps->pc, optval, ps->gen_spat_dict, false);
 	}
@@ -391,6 +397,7 @@ patternscan_state_init(engine_t *e, board_t *b)
 
 	ps->debug_level = 1;
 	ps->color_mask = S_BLACK | S_WHITE;
+	ps->threads = MAX_THREADS;  /* Default: use all cores */
 
 	/* Default mode: match patterns and generate output for mm tool. */
 	ps->spat_split_sizes = 1;

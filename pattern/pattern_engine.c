@@ -17,6 +17,7 @@
 /* Internal engine state. */
 typedef struct {
 	int debug_level;
+	int threads;
 	
 	pattern_config_t pc;
 	pattern_t patterns[BOARD_MAX_MOVES];
@@ -74,7 +75,7 @@ pattern_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone colo
 
 	pattern_t *pats = pp->patterns;
 	floating_t probs[b->flen];
-	pattern_context_t *ct = pattern_context_new2(MAX_THREADS, b, color, &pp->pc);
+	pattern_context_t *ct = pattern_context_new2(pp->threads, b, color, &pp->pc);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 	float best_r[20];
@@ -101,7 +102,7 @@ pattern_engine_best_moves(engine_t *e, board_t *b, time_info_t *ti, enum stone c
 
 	pattern_t *pats = pp->patterns;	
 	floating_t probs[b->flen];
-	pattern_context_t *ct = pattern_context_new2(MAX_THREADS, b, color, &pp->pc);
+	pattern_context_t *ct = pattern_context_new2(pp->threads, b, color, &pp->pc);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 	get_pattern_best_moves(b, probs, best);
@@ -116,7 +117,7 @@ pattern_engine_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *pr
 	pattern_engine_t *pp = (pattern_engine_t*)e->data;
 
 	pattern_t *pats = pp->patterns;
-	pattern_context_t *ct = pattern_context_new2(MAX_THREADS, b, color, &pp->pc);
+	pattern_context_t *ct = pattern_context_new2(pp->threads, b, color, &pp->pc);
 	pattern_rate_moves(b, color, probs, pats, ct, &pp->matched_locally);
 
 	if (pp->debug_level >= 4)
@@ -219,6 +220,11 @@ pattern_engine_setoption(engine_t *e, board_t *b, const char *optname, char *opt
 		if (optval)  pp->debug_level = atoi(optval);
 		else         pp->debug_level++;
 	}
+	else if (!strcasecmp(optname, "threads") && optval) {
+		/* Set number of threads to use for ownermap, criticality feature.
+		 * Default: use all cores available. */
+		pp->threads = atoi(optval);
+	}
 	else if (!strcasecmp(optname, "patterns") && optval) {  NEED_RESET
 		patterns_init(&pp->pc, optval, false, true);
 	}
@@ -239,6 +245,7 @@ pattern_engine_state_init(engine_t *e, board_t *b)
 
 	pp->debug_level = debug_level;
 	pp->matched_locally = false;
+	pp->threads = MAX_THREADS;  /* Default: use all cores */
 
 	/* Process engine options. */
 	for (int i = 0; i < options->n; i++) {
