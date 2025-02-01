@@ -136,7 +136,7 @@ tree_node_dump(tree_t *tree, tree_node_t *node, int treeparity, int l, int thres
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
 		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
-		tree_node_criticality(tree, node), node->descents,
+		tree_node_criticality(node), node->descents,
 		node->hints, children, node->hash);
 #else
 	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f vloss %d] h=%x c#=%d\n",
@@ -144,7 +144,7 @@ tree_node_dump(tree_t *tree, tree_node_t *node, int treeparity, int l, int thres
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
 		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
 		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
-		tree_node_criticality(tree, node), node->descents,
+		tree_node_criticality(node), node->descents,
 		node->hints, children);
 #endif
 

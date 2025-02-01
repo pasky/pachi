@@ -5,6 +5,7 @@
 
 #include "board.h"
 #include "debug.h"
+#include "stats.h"
 
 /* Checks if there are any stones in n-vincinity of coord. */
 bool board_stone_radar(board_t *b, coord_t coord, int distance);
@@ -80,6 +81,10 @@ static float board_local_value(board_t *b, coord_t coord, enum stone color);
  * encourage taking off external liberties during a semeai. */
 static double rave_board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color);
 
+/* Point criticality  (ownership criticality)
+ * Measure how owning the point at the end of playouts and winning the game are correlated. */
+static floating_t point_criticality(move_stats_t *playouts, move_stats_t *winner_owner, move_stats_t *black_owner);
+
 
 static inline int
 coord_edge_distance(coord_t c)
@@ -141,5 +146,21 @@ rave_board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone col
 		return (board_at(b, coord) == color) ? 1.f : 0.f;
 	}
 }
+
+/* The argument: If 'gets' and 'wins' is uncorrelated, b_gets * b_wins is valid way to obtain
+ * winner_gets. The more correlated it is, the more distorted the result.
+ *
+ * point criticality = cov(player_gets, player_wins)
+ *                   = player_gets_player_wins - player_gets * player_wins
+ *                   = winner_gets - (b_gets * b_wins + w_gets * w_wins)
+ *                   = winner_gets - (b_gets * b_wins + (1 - b_gets) * (1 - b_wins))
+ *                   = winner_gets - (b_gets * b_wins + 1 - b_gets - b_wins + b_gets * b_wins)
+ *                   = winner_gets - (2 * b_gets * b_wins - b_gets - b_wins + 1) */
+static inline floating_t
+point_criticality(move_stats_t *playouts, move_stats_t *winner_owner, move_stats_t *black_owner)
+{
+	return (winner_owner->value - (2 * black_owner->value * playouts->value - black_owner->value - playouts->value + 1));
+}
+
 
 #endif

@@ -132,7 +132,7 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity)
 	if (b->crit_rave > 0 && (b->crit_plthres_coef > 0
 				 ? node->u.playouts > tree->root->u.playouts * b->crit_plthres_coef
 				 : node->u.playouts > b->crit_min_playouts)) {
-		floating_t crit = tree_node_criticality(tree, node);
+		floating_t crit = tree_node_criticality(node);
 		if (b->crit_negative || crit > 0) {
 			floating_t val = 1.0f;
 			if (b->crit_negflip && crit < 0) {

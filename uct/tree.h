@@ -18,6 +18,7 @@
 #include <pthread.h>
 #include "move.h"
 #include "stats.h"
+#include "tactics/util.h"
 
 typedef struct uct uct_t;
 
@@ -188,20 +189,6 @@ tree_leaf_node(tree_node_t *node)
 	return !(node->children);
 }
 
-static inline floating_t
-tree_node_criticality(const tree_t *t, const tree_node_t *node)
-{
-	/* cov(player_gets, player_wins) =
-	 * [The argument: If 'gets' and 'wins' is uncorrelated, b_gets * b_wins
-	 * is valid way to obtain winner_gets. The more correlated it is, the
-	 * more distorted the result.]
-	 * = winner_gets - (b_gets * b_wins + w_gets * w_wins)
-	 * = winner_gets - (b_gets * b_wins + (1 - b_gets) * (1 - b_wins))
-	 * = winner_gets - (b_gets * b_wins + 1 - b_gets - b_wins + b_gets * b_wins)
-	 * = winner_gets - (2 * b_gets * b_wins - b_gets - b_wins + 1) */
-	return node->winner_owner.value
-		- (2 * node->black_owner.value * node->u.value
-		   - node->black_owner.value - node->u.value + 1);
-}
+#define tree_node_criticality(node)	(point_criticality(&(node)->u, &(node)->winner_owner, &(node)->black_owner))
 
 #endif
