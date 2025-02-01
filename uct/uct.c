@@ -39,7 +39,7 @@
 
 uct_policy_t *policy_ucb1_init(uct_t *u, char *arg);
 uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
-static void uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, int flags);
+static void uct_pondering_start(uct_t *u, board_t *b0, enum stone color, coord_t our_move, int flags);
 static void uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord_t next_move);
 static void uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move);
 static void uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,bool winrates, int min_playouts);
@@ -587,17 +587,15 @@ static void
 uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move)
 {
 	enum stone other_color = stone_other(color);
-
-	if (!u->t)  uct_prepare_move(u, b, other_color);
 	
-	uct_pondering_start(u, b, u->t, other_color, our_move, UCT_SEARCH_GENMOVE_PONDERING | UCT_SEARCH_WANT_GC);
+	uct_pondering_start(u, b, other_color, our_move, UCT_SEARCH_GENMOVE_PONDERING | UCT_SEARCH_WANT_GC);
 }
 
 /* Start pondering in the background with @color to play.
  * @our_move	move to be added before starting. 0 means doesn't apply.
  * @flags	uct_search_start() flags for this search */
 static void
-uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, int flags)
+uct_pondering_start(uct_t *u, board_t *main_board, enum stone color, coord_t our_move, int flags)
 {
 	if (UDEBUGL(1))
 		fprintf(stderr, "Starting to ponder with color %s\n", stone2str(stone_other(color)));
@@ -605,13 +603,14 @@ uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t 
 	u->search_flags = flags;
 
 	/* We need a local board copy to ponder upon. */
-	board_t *b = malloc2(board_t); board_copy(b, b0);
+	board_t *b = malloc2(board_t); board_copy(b, main_board);
 
-	/* Board needs updating ? (b0 did not have the genmove'd move played yet) */
+	/* Board needs updating ? (main_board does not have the genmove move yet) */
 	if (our_move) {	          /* 0 never a real coord */
 		move_t m = move(our_move, stone_other(color));
-		int res = board_play(b, &m);
-		assert(res >= 0);
+		int res = board_play(b, &m);  assert(res >= 0);
+
+		uct_prepare_move(u, b, color);
 	}
 	/* analyzing should be only case of switching color to play */
 	if (genmove_pondering(u))  assert(color == board_to_play(b));
@@ -620,7 +619,7 @@ uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t 
 
 	/* Start MCTS manager thread "headless". */
 	static uct_search_state_t s;
-	uct_search_start(u, b, color, t, NULL, &s, flags);
+	uct_search_start(u, b, color, u->t, NULL, &s, flags);
 }
 
 /* uct_search_stop() frontend for the pondering (non-genmove) mode, and
@@ -780,7 +779,7 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	if (!start) {
 		if (pondering(u))  uct_pondering_stop(u);	/* clears flags ! */
 		if (genmove_pondering)  /* pondering + analyzing ? resume normal pondering */
-			uct_pondering_start(u, b, u->t, board_to_play(b), 0, flags);
+			uct_pondering_start(u, b, board_to_play(b), 0, flags);
 		return;
 	}
 
@@ -798,8 +797,8 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 	
 	u->reporting = UR_LEELA_ZERO;
 	u->report_fh = stdout;          /* Reset in uct_pondering_stop() */
-	if (!u->t)  uct_prepare_move(u, b, color);
-	uct_pondering_start(u, b, u->t, color, 0, flags);
+	uct_prepare_move(u, b, color);  /* Always clear ownermap */
+	uct_pondering_start(u, b, color, 0, flags);
 }
 
 /* Same as uct_get_best_moves() for node @parent.
