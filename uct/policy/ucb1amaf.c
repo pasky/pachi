@@ -242,8 +242,8 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 	int start = map->game_baselen;
 	while (node) {
 		if (!is_pass(node_coord(node))) {
-			stats_add_result(&node->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
-			stats_add_result(&node->black_owner, board_local_value(b->crit_lvalue, final_board, node_coord(node), S_BLACK), 1);
+			stats_add_result(&node->winner_owner, rave_board_local_value(b->crit_lvalue, final_board, node_coord(node), winner_color), 1);
+			stats_add_result(&node->black_owner, rave_board_local_value(b->crit_lvalue, final_board, node_coord(node), S_BLACK), 1);
 		}
 		stats_add_result(&node->u, result, 1);
 

@@ -71,7 +71,7 @@ bool playing_against_influence_fuseki(board_t *b);
  * The value is normalized to [0,1]. */
 /* We can also take into account surrounding stones, e.g. to
  * encourage taking off external liberties during a semeai. */
-static double board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color);
+static double rave_board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color);
 
 
 static inline int
@@ -99,7 +99,7 @@ coord_gridcular_distance(coord_t c1, coord_t c2)
 }
 
 static inline double
-board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color)
+rave_board_local_value(bool scan_neis, board_t *b, coord_t coord, enum stone color)
 {
 #ifdef EXTRA_CHECKS
 	assert(sane_coord(coord));
