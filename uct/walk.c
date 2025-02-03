@@ -48,7 +48,7 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 
 	/* Best sequence */
 	fprintf(fh, "| seq ");
-	for (int depth = 0; depth < 4; depth++) {
+	for (int depth = 0; depth < 5; depth++) {
 		if (best && best->u.playouts >= 25) {
 			fprintf(fh, "%3s ", coord2sstr(node_coord(best)));
 			best = u->policy->choose(u->policy, best, b, color, resign);
