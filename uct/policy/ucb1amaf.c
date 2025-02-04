@@ -296,7 +296,8 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 				/* Give more weight to moves played earlier */
 				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - move);
 			}
-			stats_add_result(&ni->amaf, res, weight);
+			if (weight)
+				stats_add_result(&ni->amaf, res, weight);
 
 			if (b->crit_amaf) {
 				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
