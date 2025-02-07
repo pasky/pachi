@@ -21,6 +21,10 @@
 
 typedef struct uct uct_t;
 
+/* Tree debugging ? Store tree node hashes. */
+//#define DEBUG_TREE 1
+
+
 /*
  *            +------+
  *            | node |
@@ -42,7 +46,9 @@ typedef struct uct uct_t;
  * there is large memory overhead for having all nodes separate. */
 
 typedef struct tree_node {
+#if DEBUG_TREE
 	hash_t hash;
+#endif
 	struct tree_node *parent, *sibling, *children;
 
 	/*** From here on, struct is saved/loaded from opening tbook */

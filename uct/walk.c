@@ -438,8 +438,10 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 		if (res < 0 || (!is_pass(m.coord) && !group_at(b, m.coord)) /* suicide */
 		    || b->superko_violation) {
 			if (UDEBUGL(4)) {
+#ifdef DEBUG_TREE
 				for (tree_node_t *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%" PRIhash "> ", coord2sstr(node_coord(ni)), ni->hash);
+#endif
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
 				        stone2str(node_color), coord_x(node_coord(n)), coord_y(node_coord(n)),
 					res, group_at(b, m.coord), b->superko_violation);
