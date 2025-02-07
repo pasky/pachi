@@ -31,7 +31,8 @@ typedef struct {
 	 * exploration caused by this may cause a wrong mean value computed
 	 * for the parent node. */
 	bool vloss_sqrt;
-	floating_t vloss_coeff;	/* Pre-computed value */
+	floating_t vloss_coeff;	  /* Pre-computed value */
+	int vloss_min_descents;   /* No use computing vloss below that, always 0. */
 #ifdef DISTRIBUTED
 	/* In distributed mode, encourage different slaves to work on different
 	 * parts of the tree by adding virtual wins to different nodes. */
@@ -117,7 +118,7 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity)
 		stats_merge(&n, &node->prior);
 	}
 
-	if (p->uct->virtual_loss) {
+	if (p->uct->virtual_loss && node->descents >= b->vloss_min_descents) {
 		/* Add virtual loss if we need to; this is used to discourage
 		 * other threads from visiting this node in case of multiple
 		 * threads doing the tree search. */
@@ -416,6 +417,7 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 	}
 
 	b->vloss_coeff = (b->vloss_sqrt ? sqrt(u->threads) / u->threads : 1.);
+	b->vloss_min_descents = ceil(1.0 / b->vloss_coeff);
 	
 	return p;
 }
