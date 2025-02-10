@@ -122,7 +122,8 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity)
 		/* Add virtual loss if we need to; this is used to discourage
 		 * other threads from visiting this node in case of multiple
 		 * threads doing the tree search. */
-		move_stats_t c = move_stats((parity > 0 ? 0. : 1.), node->descents * b->vloss_coeff);
+		move_stats_t c = move_stats(tree_node_get_value(tree, parity, 0.),
+					    node->descents * b->vloss_coeff);
 		stats_merge(&n, &c);
 	}
 
