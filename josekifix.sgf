@@ -75,10 +75,35 @@ around = D2])
 ;W[cs]C[[override\]
 around = D3]))
 (;B[gr]
-;W[fq]
+;W[fq]C[[override\]
+]
 ;B[fs]
+;W[bp]C[[override\]
+]
+;B[co]
 ;W[es]C[[override\]
-around = D2]))
+around = D2
+]
+;B[ds]
+;W[bs]C[[override\]
+]
+(;B[gs]
+;W[cs]C[[override\]
+]
+;B[es]
+;W[hq]C[[override\]
+around = E2]
+;B[ir]
+;W[hr]
+;B[hs]
+;W[gq]C[[override\]
+]
+;B[is]
+;W[jq]C[[override\]
+around = G2
+external_engine])
+(;B[es]
+;W[cs]C[[override\]])))
 (;W[br]C[[override\]
 name = "3-4 trick ladder"
 around = D2
