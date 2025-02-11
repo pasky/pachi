@@ -18,7 +18,7 @@ See josekifix.sgf for details.
 ;W[]
 ;B[pj]
 ;W[nc]
-;B[lc]
+(;B[lc]
 (;W[qc]
 (;B[qd]
 ;W[pc]
@@ -112,6 +112,15 @@ around = O14
 simple, don't get in trouble right away.
 
 Ex: arkgo pachipachi  2022-11-04]))
+(;B[kd]
+;W[qc]C[[override\]
+name = "sanrensei 2-spc high pincer"
+around = P14
+
+don't double kakari, deadly fight.
+
+Ex: pachipachi kenkong 2025-02-11 08:21
+]))
 (;B[pq]
 (;W[]
 (;B[qk]
