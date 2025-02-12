@@ -1,42 +1,21 @@
-[ KataGo Config ]
+[ KataGo Setup ]
 
 Example KataGo setup to use as external joseki engine.
 
-This is intended for raspberry pi (CPU build), so using small network and few visits.
+This is intended for Raspberry Pi (cpu build), so using small network and few visits.
+Desktop can use 15 block model and more playouts, especially with AVX support.
 Feel free to experiment with other networks / settings.
 
+- Models:
 
-- Build:
-
-    $ git clone https://github.com/lightvector/KataGo
-    $ cd KataGo
-    $ cd cpp
-    $ cmake . -DUSE_BACKEND=EIGEN
-
-  Should give you a CPU build (Eigen backend) once you have all the prerequisites installed.
-
-
-- Network:
-
-  Get 10b network with extended training from:
+  Models are from the [extended training](https://github.com/lightvector/KataGo/blob/master/TrainingHistory.md) run:
+  They are small models which have been trained beyond their normal scope,
+  they do very well for their size (much better than other models of similar size).
   
-    https://katagoarchive.org/g170/neuralnets/index.html   (g170e-b10c128-s1141046784-d204142634.bin.gz)  or
-    https://katagotraining.org/networks/                   (kata1-b10c128-s1141046784-d204142634.txt.gz)
+  10 block model:  [g170e-b10c128-s1141046784-d204142634.bin.gz](https://katagoarchive.org/g170/neuralnets/g170e-b10c128-s1141046784-d204142634.bin.gz)
+  15 block model:  [g170e-b15c192-s1672170752-d466197061.bin.gz](https://katagoarchive.org/g170/neuralnets/g170e-b15c192-s1672170752-d466197061.bin.gz)
     
-  .bin.gz version preferred as it will load faster, otherwise they're the same.
-
-  Rename or symlink it as 'default_model.bin.gz' in the directory where katago runs.
-
-
 - Config:
 
-  Copy 'default_gtp.cfg' (this directory) in the directory where katago runs.
-
-  Note: This is for KataGo v1.11.0.
-  If using different version start from its default config file and adapt settings. 
-
-  Settings we care about:
-    - Don't resign		(allowResignation = false)
-    - Log to file		(logToStderr = false   and   logFile = /tmp/kata.log)
-    - Few visits		(maxPlayouts = 15)
-    - Number of threads		(numSearchThreads = 4   : Number of cores you have)
+  Options you might want to change are numSearchThreads (number of search threads) (not
+  automatically set to your number of cpu cores) and maxPlayouts for thinking time.

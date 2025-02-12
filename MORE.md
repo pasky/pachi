@@ -1,22 +1,25 @@
 
 ## Joseki fixes (dcnn)
 
-It's possible to override joseki sequences by editing an SGF file.  
-Useful to fix joseki variations that Pachi plays poorly, or make it play
-some josekis / fusekis that it would never play otherwise. 
+This module allows to override the main engine moves to fix joseki / fuseki
+lines that the dcnn plays poorly, play more modern josekis (`--modern-joseki`
+option), or play more varied fusekis as black.
 
-By now there's a [database](https://github.com/pasky/pachi/tree/joseki_fixes)
-of joseki fixes which Pachi can use.  
-You can either start from scratch and create your own tweaks, or use / modify
-the existing database.
-
-> If you plan to let Pachi play online it's recommended to use it,
+> If you plan to let Pachi play online it's recommended to use this module,  
 > otherwise it will likely get abused with all kinds of trick plays =P
 
-To use this module you also need an external joseki engine setup
-([KataGo](https://github.com/lightvector/KataGo) or other).
+It uses Katago as external joseki engine and a database of known positions.
+Joseki mistakes can be fixed by editing an SGF file. It can also be used to
+make it play variations that it wouldn't play otherwise.
 
-Setup instructions:
+Since Pachi 12.86 it should just work out of the box if you're using the
+official releases (KataGo CPU build is provided). If you already have KataGo
+installed it's possible to have Pachi use it too.
+
+You can also play directly against KataGo, it's a lot stronger even at low
+playouts.
+
+Some older threads which might help too:
   - [Windows](https://github.com/pasky/pachi/issues/154)
   - [Raspberry Pi](josekifix/katago/README)
 

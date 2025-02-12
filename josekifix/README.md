@@ -1,15 +1,17 @@
 ## Joseki overrides
 
 This is the josekifix module. It allows to override the main engine moves
-to, for example, fix joseki lines that the dcnn plays poorly. It's also
-used for some fuseki uses, like fixing a particular fuseki or provide more
-varied fusekis when playing as black.
+to fix joseki / fuseki lines that the dcnn plays poorly, play more modern
+josekis (--modern-joseki option), or play more varied fusekis as black.
+
+It uses Katago as external joseki engine and a pattern matcher to look for
+overrides in current board position.
 
 Most overrides are specified in SGF form
 ([josekifix.sgf](josekifix.sgf?raw=true), [fusekifix.sgf](fusekifix.sgf?raw=true)),
-which are used to generate josekifix.gtp (GTP stream), which is loaded by
-Pachi at startup. In the SGF file overrides are represented by `[override]`
-sections inside move comments with required metadata.
+which are loaded at startup after being converted to a GTP stream (josekifix.gtp).
+In the SGF file overrides are represented by `[override]` sections inside move
+comments with required metadata.
 
 Matching is based on last move and the local pattern around it (or a point
 nearby) but can optionnally include things like ladder checks, or pattern
@@ -18,32 +20,29 @@ example).
 
 See demo in [josekifix.sgf](josekifix.sgf?raw=true) for details.
 
-## External engine
+## External joseki engine
 
-Overrides can either specify next move ("just override this move"), or let an
+Overrides can either specify next move ("just override this move"), or let
 external joseki engine take over the following sequence in this quadrant.
 
 While it's possible in theory to provide all answers to all possible deviations,
 in practice it's much more manageable to depend on an external engine for tricky
-variations that Pachi tends to get wrong in many different ways.
+variations that Pachi tends to get wrong in many different ways. The downside is
+that if the external engine is missing at runtime the josekifix module will be
+disabled.
 
 	pachi --josekifix
 
-The downside is that if the external engine is missing at runtime the josekifix
-module will be disabled.  
 Running with `--josekifix` option ensures that Pachi never runs without joseki fixes
 (abort if necessary).
 
 	pachi --external-joseki-engine "command"
 
-Use this to specify external engine command (default: KataGo)
+Katago cpu build that comes with Pachi is used by default.
+Use this to use another engine as joseki engine.
 
 
-## KataGo setup
-
-[KataGo](https://github.com/lightvector/KataGo) setup instructions:
-  - [Windows](https://github.com/pasky/pachi/issues/154)
-  - [Raspberry Pi](katago/README)
+## Start
 
 When all is setup and working correcly you should see something like this on
 startup:
@@ -114,11 +113,10 @@ Once done sgf editing, regenerate database with:
 
 ## Logs
 
+When an override or logged variation matches, logs show override move, name and move number:
 
-When an override or logged variation triggers you should see something like:
-
-    joseki_override: R3 (magic sword)				(override)
-    joseki_variation: A1 (magic sword cut v2)			(logged variation)
+    joseki_override (move 20): R3 (magic sword)				(override)
+    joseki_variation (move 9): A1 (magic sword cut v2)			(logged variation)
 
 
 When external joseki engine mode triggers ascii board diagram headers show 
