@@ -121,9 +121,11 @@ You want joseki fixes working if playing ranked games
 
 **Other Options**
 
-* `pachi resign_threshold=0.25`     Resign when winrate < 25% (default: 20%).
+* `pachi --modern-joseki`        Play modern josekis
 
-* `pachi reportfreq=1s`     Show search progress every second (default: 1000 playouts).
+* `pachi resign_threshold=0.25`     Resign when winrate < 25% (default: 20%).
+
+* `pachi reportfreq=1s`         Show search progress every second (default: 1000 playouts).
 
 * `pachi -t 30 threads=4,max_tree_size=500,pondering`
 

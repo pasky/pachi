@@ -2,33 +2,65 @@ Building from source
 ====================
 
 
-## Install dependencies
+## Dependencies
 
-**Ubuntu 18.04 / 20.04**
+- Install caffe dependencies.
+  On Debian / Ubuntu this is:
 
-Caffe package is present so you can install all dependencies with one command:
+	sudo apt install git make gcc g++ libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
 
-	sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
+- Caffe
+  Install caffe package if your distribution has one:
 
+	sudo apt install libcaffe-cpu-dev
 
-**Ubuntu (other versions)**
-
-Caffe package no longer present in Ubuntu, use this ppa or build from source:
+  For older Ubuntu there might be one in my ppa:
 
 	sudo add-apt-repository ppa:lemonsqueeze/pachi
 	sudo apt update
-	sudo apt install git make gcc g++ libcaffe-cpu-dev libboost-all-dev libgflags-dev libgoogle-glog-dev libprotobuf-dev libopenblas-dev
+	sudo apt install libcaffe-cpu-dev
 
+  Otherwise build [caffe](http://caffe.berkeleyvision.org) from source:
 
-**Other distributions**
-
-  Install [Caffe](http://caffe.berkeleyvision.org) package, or build from source if your distribution doesn't have one.
-  
-  CPU-only build is fine, no need for GPU, cuda or the other optional dependencies.  
+  CPU-only build is fine, no need for GPU, cuda, python or the other optional dependencies.  
   You need OpenBlas for good performance.
-  
-  > If caffe is installed in an unusual location set CAFFE_PREFIX in Makefile.
-  
+
+	sudo apt install libhdf5-dev protobuf-compiler
+	git clone https://github.com/BVLC/caffe
+	cd caffe
+	cp Makefile.config.example Makefile.config
+
+  Edit Makefile.config:
+
+	CPU_ONLY := 1
+	...
+	USE_OPENCV := 0
+	USE_LEVELDB := 0
+	USE_LMDB := 0
+	...
+	BLAS := open
+
+  Build and install caffe:
+
+	make all
+	make test
+	make distribute
+	make install		# default: /usr/local
+
+  If `make distribute` insists on building python edit Makefile:
+
+	-$(DISTRIBUTE_DIR): all py | $(DISTRIBUTE_SUBDIRS)
+	+$(DISTRIBUTE_DIR): all | $(DISTRIBUTE_SUBDIRS)
+
+  See caffe [installation instructions](http://caffe.berkeleyvision.org/installation.html) if you run into issues.
+
+- KataGo dependencies (optional)
+  Install cmake and Eigen3 if you want to do the KataGo CPU build (Pachi uses it for joseki purposes).
+
+	sudo apt install cmake libeigen3-dev
+
+  Compiler should support at least C++14.
+
 
 ## Build
 
@@ -39,6 +71,8 @@ Download pachi repository:
 
 Edit Makefile, top section has configuration options.  
 Currently Unix and Windows are supported (MAC build currently untested).
+
+> If caffe is installed in an unusual location set CAFFE_PREFIX.
 
 To build Pachi type:
 
