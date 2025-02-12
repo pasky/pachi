@@ -42,6 +42,9 @@ endif
 
 strip: FORCE
 	cd distribute  &&  strip pachi
+        ifeq ($(BUILD_KATAGO), 1)
+	    cd distribute  &&  strip katago_cpu
+        endif
 
 
 #####################################################################################

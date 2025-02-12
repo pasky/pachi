@@ -1,0 +1,40 @@
+quiet build, set optimization level through pachi Makefile
+
+diff --git a/cpp/CMakeLists.txt b/cpp/CMakeLists.txt
+index 53d2855..81739b8 100644
+--- a/katago/cpp/CMakeLists.txt
++++ b/katago/cpp/CMakeLists.txt
+@@ -451,20 +451,23 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang
+   find_package (Threads REQUIRED)
+   target_link_libraries(katago Threads::Threads)
+ 
+-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -pedantic -Wall -Wextra -Wno-sign-compare -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Wmissing-declarations -Wmissing-include-dirs -Woverloaded-virtual -Wredundant-decls -Wshadow -Wstrict-overflow=1 -Wswitch-default -Wfloat-conversion -Wunused")
++#  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O2 -pedantic -Wall -Wextra -Wno-sign-compare -Wcast-align -Wcast-qual -Wctor-dtor-privacy -Wdisabled-optimization -Wformat=2 -Wmissing-declarations -Wmissing-include-dirs -Woverloaded-virtual -Wredundant-decls -Wshadow -Wstrict-overflow=1 -Wswitch-default -Wfloat-conversion -Wunused")
++
++# Quiet build, -O optimization level option set by pachi Makefile.
++  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare")
+ 
+   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+-    message(STATUS "Enabling GNU-specific build options.")
+-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wlogical-op -Wnoexcept -Wstrict-null-sentinel")
+-    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.1)
+-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnull-dereference -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wdangling-else -Wrestrict")
+-    endif()
++#    message(STATUS "Enabling GNU-specific build options.")
++#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wlogical-op -Wnoexcept -Wstrict-null-sentinel")
++#    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 6.1)
++#      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnull-dereference -Walloc-zero -Wduplicated-branches -Wduplicated-cond -Wdangling-else -Wrestrict")
++#    endif()
+   elseif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+-    message(STATUS "Enabling AppleClang-specific build options.")
+-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnull-dereference -Wdangling-else")
++#    message(STATUS "Enabling AppleClang-specific build options.")
++#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnull-dereference -Wdangling-else")
+   else()
+-    message(STATUS "Enabling Clang-specific build options.")
+-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnull-dereference -Wdangling-else")
++#    message(STATUS "Enabling Clang-specific build options.")
++#    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnull-dereference -Wdangling-else")
+     target_link_libraries(katago "atomic")
+   endif()
+ 

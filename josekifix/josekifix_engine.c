@@ -10,6 +10,7 @@
 #include "board.h"
 #include "debug.h"
 #include "engine.h"
+#include "pachi.h"
 #include "engines/external.h"
 #include "josekifix/josekifix_engine.h"
 #include "josekifix/joseki_override.h"
@@ -26,7 +27,9 @@ static bool       fake_external_joseki_engine = false;
 static ownermap_t prev_ownermap;
 
 /* Globals */
-char *external_joseki_engine_cmd = "katago gtp";
+char *external_joseki_engine_cmd = NULL;
+char *katago_config = KATAGO_CONFIG;
+char *katago_model  = KATAGO_MODEL;
 bool  external_joseki_engine_genmoved = false;
 
 
@@ -48,13 +51,77 @@ reset_uct_engine(board_t *b)
 /**********************************************************************************************************/
 /* External engine */
 
+static char*
+make_katago_command()
+{
+	/* Find katago config */
+	char config[512];
+	strbuf(build_tree_config, 512);
+	strbuf_printf(build_tree_config, "josekifix/katago/%s", katago_config);
+	get_data_file(config, katago_config);
+	if (file_exists(config))
+		;						/* In cwd, exe or data dir */
+	else if (file_exists(build_tree_config->str))
+		strcpy(config, build_tree_config->str);		/* Build tree */
+	else {
+		fprintf(stderr, "Loading katago config: %s\n", config);
+		fprintf(stderr, "Katago config file missing, aborting.\n");
+#ifdef _WIN32
+		popup("ERROR: Couldn't find Katago config file.\n");
+#endif
+		exit(1);
+	}
+
+	/* Find model file */
+	char model[512] = { 0, };
+	strbuf(build_tree_model, 512);
+	strbuf_printf(build_tree_model, "josekifix/katago/%s", katago_model);
+	get_data_file(model, katago_model);
+	if (file_exists(model))
+		;						/* In cwd, exe or data dir */
+	else if (file_exists(build_tree_model->str)) /* Build tree */
+		strncpy(model, build_tree_model->str, 511);
+	else {
+		fprintf(stderr, "Loading katago model: %s\n", model);
+		fprintf(stderr, "Katago model missing, aborting.\n");
+#ifdef _WIN32
+		popup("ERROR: Couldn't find Katago model.\n");
+#endif
+		exit(1);
+	}
+
+	/* Find Katago binary */
+	char *binary = KATAGO_BINARY;
+	bool has_path = (strchr(binary, '/') != NULL) || (strchr(binary, '\\') != NULL);
+	strbuf(pachi_dir_binary, 512);
+	sbprintf(pachi_dir_binary, "%s/%s", pachi_dir, KATAGO_BINARY);
+	if (has_path)
+		binary = KATAGO_BINARY;				/* Full path given */
+	else if (file_exists("./" KATAGO_BINARY))
+		binary = "./" KATAGO_BINARY;			/* Local file */
+	else if (file_exists(pachi_dir_binary->str))
+		binary = pachi_dir_binary->str;			/* Exe directory */
+	else if (file_exists("katago/cpp/" KATAGO_BINARY))
+		binary = "katago/cpp/" KATAGO_BINARY;		/* Build tree */
+	// else assume it's in PATH.
+
+	static_strbuf(buf, 1024);
+	sbprintf(buf, "%s gtp -config %s -model %s", binary, config, model);
+	
+	return buf->str;
+}
+
 static bool
 start_external_joseki_engine(board_t *b)
 {
 	assert(!external_joseki_engine);
- 
-	char *cmd = external_joseki_engine_cmd;
-	if (!cmd)  return false;
+
+	/* Use user-provided command if present. */
+	char *cmd;
+	if (external_joseki_engine_cmd)
+		cmd = external_joseki_engine_cmd;
+	else
+		cmd = make_katago_command();
 
 	strbuf(buf, 1024);
 	strbuf_printf(buf, "cmd=%s", cmd);

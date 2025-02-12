@@ -5,6 +5,7 @@
 # 	make MAC=1 DOUBLE_FLOATING=1
 # or use the short aliases (make fast, make generic ...)
 
+
 ################################ Build ################################
 
 # Generic build ?
@@ -26,6 +27,7 @@
 
 # MAC=1
 
+
 ############################ Deep Learning ############################
 
 # Compile Pachi with dcnn support ?
@@ -41,7 +43,8 @@ DCNN=1
 DCNN_DETLEF=1
 DCNN_DARKFOREST=1
 
-############################ Special Builds ###########################
+
+############################ Build Options ###########################
 
 # Fixed board size. Set this to enable more aggressive optimizations
 # if you only play on 19x19. Pachi won't be able to play on other
@@ -50,8 +53,10 @@ DCNN_DARKFOREST=1
 # BOARD_SIZE=19
 
 # Build josekifix module ?	 (DCNN must be enabled as well)
-# Provides fixes for joseki lines that dcnn plays poorly, and more varied
-# fusekis when playing as black.
+# Provides fixes for joseki lines that dcnn plays poorly, more varied
+# fusekis as black and let Pachi play modern josekis with --modern-joseki
+# option. Uses Katago as joseki engine (cpu version is built by default,
+# or you can use another version, see below).
 
 JOSEKIFIX=1
 
@@ -60,6 +65,63 @@ JOSEKIFIX=1
 # Go and read note at top of fifo.c
 
 # FIFO=1
+
+
+############################### Katago ################################
+
+# JOSEKIFIX module uses katago as joseki engine.
+# If enabled cpu version of katago will be built. To use already
+# installed version instead disable BUILD_KATAGO and set KATAGO_BINARY
+# to katago (or use --external-joseki-engine pachi option).
+
+ifeq ($(JOSEKIFIX), 1)
+	BUILD_KATAGO=1
+endif
+
+KATAGO_BINARY=katago_cpu
+
+# Uncomment to use AVX2 instructions if your cpu supports them.
+# Will speed up Eigen, but won't work on old cpus.
+
+# KATAGO_AVX=1
+
+# Build uses same optimization / tuning options set in this Makefile.
+# To rebuild after changing OPT / GENERIC options do:
+#     $ make clean ; make -j4
+
+# Default config and model to use:
+KATAGO_CONFIG=katago.cfg
+# 10b model for raspberry pi or slow pc without AVX support,
+KATAGO_MODEL=g170e-b10c128-s1141046784-d204142634.bin.gz
+# 15b model for fast pc with AVX support.
+# KATAGO_MODEL=g170e-b15c192-s1672170752-d466197061.bin.gz
+
+# Config and model paths
+KATAGO_MODEL_PATH=josekifix/katago/$(KATAGO_MODEL)
+KATAGO_CONFIG_PATH=josekifix/katago/$(KATAGO_CONFIG)
+
+
+############################### Install ###############################
+
+# Target directories when running 'make install'.
+# Pachi will look for its data files (dcnn, pattern, joseki etc) in
+# system directory below (in addition to current directory / DATA_DIR
+# environment variable if present).
+PREFIX=$(DESTDIR)/usr
+BINDIR=$(PREFIX)/bin
+DATADIR=$(PREFIX)/share/pachi-go
+
+# Generic compiler options. You probably do not really want to twiddle
+# any of this.
+# (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
+# unless PROFILING=gprof.)
+OPT ?= -O3
+COMMON_FLAGS := -Wall -ggdb3 $(OPT) -D_GNU_SOURCE
+CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length
+CXXFLAGS     := -std=c++11
+
+
+############################ Special Builds ############################
 
 # By default, Pachi uses low-precision numbers within the game tree to
 # conserve memory. This can become an issue with playout counts >1M,
@@ -84,6 +146,7 @@ JOSEKIFIX=1
 # Compile extra tests ? Enable this to test board implementation.
 # BOARD_TESTS=1
 
+
 ########################## Address Sanitizer ##########################
 
 # Enable Address Sanitizer build. Pachi will run much slower but every
@@ -92,6 +155,7 @@ JOSEKIFIX=1
 # x86/amd64 linux recommended).
 
 # ASAN=1
+
 
 ############################## Profiling ##############################
 
@@ -107,25 +171,6 @@ JOSEKIFIX=1
 
 # PROFILING=perftools
 
-############################### Install ###############################
-
-# Target directories when running 'make install'.
-# Pachi will look for its data files (dcnn, pattern, joseki etc) in
-# system directory below (in addition to current directory / DATA_DIR
-# environment variable if present).
-PREFIX=$(DESTDIR)/usr
-BINDIR=$(PREFIX)/bin
-DATADIR=$(PREFIX)/share/pachi-go
-
-# Generic compiler options. You probably do not really want to twiddle
-# any of this.
-# (N.B. -ffast-math breaks us; -fomit-frame-pointer is added below
-# unless PROFILING=gprof.)
-OPT ?= -O3
-COMMON_FLAGS := -Wall -ggdb3 $(OPT) -D_GNU_SOURCE
-CFLAGS       := -std=gnu99 -pthread -Wsign-compare -Wno-format-zero-length
-CXXFLAGS     := -std=c++11
-
 
 #########################################################################
 ### CONFIGURATION END
@@ -136,6 +181,9 @@ CXXFLAGS     := -std=c++11
 
 all: build.h
 	+@make all-recursive pachi
+        ifeq ($(BUILD_KATAGO), 1)
+	    +@make katago_cpu
+        endif
 
 debug fast quick O0:
 	+@make OPT=-O0
@@ -174,10 +222,11 @@ endif
 
 MAKEFLAGS += --no-print-directory
 ARCH = $(shell uname -m)
-TUNE := -march=native
 
 ifeq ($(GENERIC), 1)
 	TUNE := -mtune=generic
+else
+	TUNE := -march=native
 endif
 
 ifndef NO_FRENAME_REGISTERS
@@ -185,7 +234,7 @@ ifndef NO_FRENAME_REGISTERS
 endif
 
 ifdef DATADIR
-	COMMON_FLAGS += -DDATA_DIR=\"$(DATADIR)\"
+	COMMON_FLAGS += -DDATA_DIR='"$(DATADIR)"'
 endif
 
 ifdef BOARD_SIZE
@@ -256,8 +305,8 @@ ifeq ($(EXTRA_ENGINES), 1)
 endif
 
 ifeq ($(JOSEKIFIX), 1)
-	COMMON_FLAGS    += -DJOSEKIFIX
-	EXTRA_DATAFILES += josekifix.gtp
+	COMMON_FLAGS    += -DJOSEKIFIX -DKATAGO_BINARY='"$(KATAGO_BINARY)"' -DKATAGO_CONFIG='"$(KATAGO_CONFIG)"' -DKATAGO_MODEL='"$(KATAGO_MODEL)"'
+	EXTRA_DATAFILES += josekifix.gtp $(KATAGO_CONFIG_PATH) $(KATAGO_MODEL_PATH)
 endif
 
 ifeq ($(BOARD_TESTS), 1)
@@ -367,6 +416,62 @@ test_external_engine: FORCE
 regtest: FORCE
 	+@make -C t-regress regtest
 
+
+############################## Katago ##############################
+
+KATAGO_CMAKE_OPTS := -DUSE_BACKEND=EIGEN -DCMAKE_CXX_FLAGS='$(OPT) $(TUNE)'
+MAKEJOBS := $(filter -j%,$(MAKEFLAGS))
+
+ifeq ($(KATAGO_AVX), 1)
+	KATAGO_CMAKE_OPTS += -DUSE_AVX2=1
+endif
+
+katago_banner:
+	@./spudfrog katago
+
+# Get source
+katago:
+	@echo "[GIT]"
+	@git clone --depth 1 -b v1.15.3 -c advice.detachedHead=0 "https://github.com/lightvector/KataGo" katago
+	@echo ""
+	@echo "[PATCH]"
+	@patch -p1 < josekifix/katago/katago_build.patch
+	@echo ""
+
+# Run cmake and find build type (make or ninja)
+katago/cpp/build:
+	@echo "[CMAKE]"
+	@echo "cmake $(KATAGO_CMAKE_OPTS) ."
+	@cd katago/cpp  && cmake $(KATAGO_CMAKE_OPTS) .
+	@[ -f katago/cpp/Makefile ]    && echo "make"  > $@; \
+	 [ -f katago/cpp/build.ninja ] && echo "ninja" > $@; \
+	 [ -f $@ ] || ( echo "Looks like cmake wants to use something other than make or ninja, i don't handle that." ; exit 1 )
+	@echo ""
+
+.NOTPARALLEL: katago_build
+katago_build: katago_banner katago katago/cpp/build
+
+# Configure and build
+katago/cpp/katago_cpu:
+	+@make katago_build
+	+@cd katago/cpp && \
+          if grep -q ninja build; then \
+	    echo "[NINJA]"; ninja; \
+	  else \
+	    echo "[MAKE]"; make $(MAKEJOBS); \
+	  fi
+	@mv  katago/cpp/katago katago/cpp/katago_cpu
+
+katago_cpu: katago/cpp/katago_cpu
+
+katago_clean: FORCE
+	-@ [ -f katago/cpp/Makefile ] && cd katago/cpp && make clean
+	-@ [ -f katago/cpp/build.ninja ] && cd katago/cpp && ninja clean
+	-@cd katago/cpp && rm -rf build Makefile build.ninja CMakeFiles CMakeCache.txt  2>/dev/null
+
+
+############################## Install ##############################
+
 # Prepare for install
 distribute: FORCE
         ifneq ($(GENERIC), 1)
@@ -375,14 +480,21 @@ distribute: FORCE
 
 	@rm -rf distribute 2>/dev/null;  $(INSTALL) -d distribute
 	cp pachi distribute/
+        ifeq ($(BUILD_KATAGO), 1)
+	    cp katago/cpp/katago_cpu distribute/
+        endif
 	+@make strip      # arch specific stuff
 
-# install everything
+# Install everything
 install: install-bin install-data
 
-install-bin: distribute
+install-bin: pachi katago_cpu
+	+@make distribute
 	$(INSTALL) -d $(BINDIR)
 	$(INSTALL) distribute/pachi $(BINDIR)/
+        ifeq ($(BUILD_KATAGO), 1)
+	    $(INSTALL) distribute/katago_cpu $(BINDIR)/
+        endif
 
 install-data: $(DATAFILES)
 	$(INSTALL) -d $(DATADIR)
@@ -401,13 +513,26 @@ datafiles: $(DATAFILES)
 
 # Download dcnn files from github
 detlef54.prototxt detlef54.trained:
-	@echo "Getting dcnn datafiles:" ; echo ""
+	@echo "Get dcnn datafiles:" ; echo ""
 	wget -c -O detlef54.zip 'https://github.com/pasky/pachi/releases/download/pachi_networks/detlef54.zip'
-	unzip -q -o detlef54.zip  detlef54.prototxt detlef54.trained
-	rm detlef54.zip
+	@unzip -q -o detlef54.zip  detlef54.prototxt detlef54.trained
+	@rm detlef54.zip
+
+# Download katago 10b model
+josekifix/katago/g170e-b10c128-s1141046784-d204142634.bin.gz:
+	@echo "Get katago model:  (g170e-b10c128)" ; echo ""
+	wget -c -O model.bin.gz 'https://github.com/pasky/pachi/releases/download/katago_models/g170e-b10c128-s1141046784-d204142634.bin.gz'
+	@mv model.bin.gz $@
+
+# Download katago 15b model
+josekifix/katago/g170e-b15c192-s1672170752-d466197061.bin.gz:
+	@echo "Get katago model:  (g170e-b15c192)" ; echo ""
+	wget -c -O model.bin.gz 'https://github.com/pasky/pachi/releases/download/katago_models/g170e-b15c192-s1672170752-d466197061.bin.gz'
+	@mv model.bin.gz $@
 
 # Generic clean rule is in Makefile.lib
 clean:: clean-recursive
+	-@ [ -d katago ] && make katago_clean
 	-@rm pachi build.h* >/dev/null 2>&1
 	@echo ""
 
