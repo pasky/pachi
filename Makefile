@@ -279,6 +279,10 @@ ifndef INSTALL
 INSTALL=/usr/bin/install
 endif
 
+CFLAGS   := $(COMMON_FLAGS) $(CFLAGS)   $(XCFLAGS)
+CXXFLAGS := $(COMMON_FLAGS) $(CXXFLAGS) $(XCFLAGS)
+LDFLAGS  := $(LDFLAGS) $(XLDFLAGS)
+
 export
 unexport INCLUDES
 INCLUDES=-I.

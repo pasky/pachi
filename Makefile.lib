@@ -47,9 +47,6 @@ quiet_cmd_recmake = "[make] $$subdir"
 
 ### Internal build rules
 
-CFLAGS   := $(COMMON_FLAGS) $(CFLAGS)   $(XCFLAGS)
-CXXFLAGS := $(COMMON_FLAGS) $(CXXFLAGS) $(XCFLAGS)
-LDFLAGS  := $(LDFLAGS) $(XLDFLAGS)
 COMPILE   = $(CC)  $(CFLAGS)   $(INCLUDES)
 COMPILEXX = $(CXX) $(CXXFLAGS) $(INCLUDES)
 LINK      = $(CC)  $(LDFLAGS)
