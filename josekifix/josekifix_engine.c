@@ -30,6 +30,7 @@ static ownermap_t prev_ownermap;
 char *external_joseki_engine_cmd = NULL;
 char *katago_config = KATAGO_CONFIG;
 char *katago_model  = KATAGO_MODEL;
+bool  modern_joseki = false;
 bool  external_joseki_engine_genmoved = false;
 
 
@@ -373,6 +374,15 @@ josekifix_engine_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, 
 
 	/* Forward command to external engine. */
 	external_joseki_engine->notify(external_joseki_engine, b, id, cmd, args, gtp);
+
+	/* Modern joseki: Init external engine counter at game start. */
+	if (modern_joseki) {
+		/* Catch game start if no clear_board command was issued. */
+		bool missed_init = (b->moves < 15 && !b->external_joseki_engine_moves_left_by_quadrant[0]);
+		if (!strcmp(cmd, "clear_board") || !strcmp(cmd, "boardsize") || missed_init)
+			for (int q = 0; q < 4; q++)
+				b->external_joseki_engine_moves_left_by_quadrant[q] = 15;
+	}
 	
 	return P_OK;
 }

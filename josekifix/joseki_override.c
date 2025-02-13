@@ -620,8 +620,10 @@ joseki_override_(struct board *b, strbuf_t *log, external_engine_mode_t *mode,
 	}
 
 	/* Choose inital fuseki */
-	c = josekifix_initial_fuseki(b, log, lasth);
-	if (!is_pass(c))  return c;
+	if (!modern_joseki) {
+		c = josekifix_initial_fuseki(b, log, lasth);
+		if (!is_pass(c))  return c;
+	}
 	
 	return pass;
 }

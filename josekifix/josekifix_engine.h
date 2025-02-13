@@ -6,6 +6,7 @@
 #include "engine.h"
 
 extern char *external_joseki_engine_cmd;
+extern bool  modern_joseki;
 extern bool  external_joseki_engine_genmoved;
 
 

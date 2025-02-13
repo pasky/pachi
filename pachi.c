@@ -76,6 +76,9 @@ new_main_engine(int engine_id, board_t *b, int argc, char **argv, int optind)
 	 * and acts as middle man between gtp and uct engine. */
 	if (engine_id == E_UCT)
 		e = josekifix_engine_if_needed(e, b);
+
+	if (modern_joseki && !get_josekifix_enabled())
+		die("Aborting: --modern-joseki needs josekifix module but currently unavailable/disabled.\n");
 #endif
 	return e;
 }
@@ -221,11 +224,13 @@ usage(char *arg)
 		"                                    guides tree search.                (default: enabled) \n"
 		"      --joseki,   --nojoseki        (nodcnn) joseki module required / disabled \n"
 #ifdef JOSEKIFIX
-		"      --josekifix, --nojosekifix    (dcnn)   joseki fixes required / disabled \n"
-		"                                    fixes for joseki/fuseki lines that dcnn plays poorly. \n"
-		"                                    requires external engine to act as joseki engine \n"
-		"                                    (see --external-joseki-engine)     (default: enabled) \n"
-		"      --external-joseki-engine CMD  joseki engine for josekifix module (default: katago) \n"
+		"      --josekifix, --nojosekifix    (dcnn)   josekifix module required / disabled \n"
+		"                                    provides fixes for joseki lines that dcnn plays poorly, \n"
+		"                                    and more modern josekis with --modern-joseki \n"
+		"                                    (uses katago as as joseki engine)  (default: enabled) \n"
+		"      --modern-joseki               play modern josekis:               (default: off) \n"
+		"                                    katago handles first moves in each corner. \n"
+		"      --external-joseki-engine CMD  use another joseki engine instead of katago. \n"
 #endif
 		" \n"
 #ifdef DCNN
@@ -292,6 +297,7 @@ usage(char *arg)
 #define OPT_TUNIT_FATAL	      278
 #define OPT_BANNER            279
 #define OPT_GTP_FATAL         280
+#define OPT_MODERN_JOSEKI     281
 
 
 static struct option longopts[] = {
@@ -324,6 +330,9 @@ static struct option longopts[] = {
 	{ "list-dcnns",             no_argument,       0, OPT_LIST_DCNNS },
 #endif
 	{ "log-file",               required_argument, 0, 'o' },
+#ifdef JOSEKIFIX
+	{ "modern-joseki",          no_argument,       0, OPT_MODERN_JOSEKI },
+#endif
 	{ "name",                   required_argument, 0, OPT_NAME },
 	{ "nodcnn",                 no_argument,       0, OPT_NODCNN },
 	{ "nodcnn-blunder",         no_argument,       0, OPT_NODCNN_BLUNDER },
@@ -466,6 +475,11 @@ int main(int argc, char *argv[])
 			case OPT_LIST_DCNNS:
 				list_dcnns();
 				exit(0);
+#endif
+#ifdef JOSEKIFIX
+			case OPT_MODERN_JOSEKI:
+				modern_joseki = true;
+				break;
 #endif
 			case 'o':
 				file = fopen(optarg, "w");   if (!file) fail(optarg);
