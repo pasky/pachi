@@ -84,6 +84,15 @@ JOSEKIFIX=1
 # Compile extra tests ? Enable this to test board implementation.
 # BOARD_TESTS=1
 
+########################## Address Sanitizer ##########################
+
+# Enable Address Sanitizer build. Pachi will run much slower but every
+# memory access is checked (think Valgrind on steroids). Both gcc and
+# clang support Address Sanitizer on a number of architectures (linux
+# x86/amd64 linux recommended).
+
+# ASAN=1
+
 ############################## Profiling ##############################
 
 # Enable performance profiling using gprof. Note that this also disables
@@ -259,13 +268,20 @@ endif
 ifeq ($(PROFILING), gprof)
 	LDFLAGS      += -pg
 	COMMON_FLAGS += -pg -fno-inline
-else
-        # Whee, an extra register!
-	COMMON_FLAGS += -fomit-frame-pointer
+endif
+
 ifeq ($(PROFILING), perftools)
 	LIBS         += -lprofiler
 endif
+
+ifeq ($(ASAN), 1)
+	COMMON_FLAGS += -fsanitize=address -fno-omit-frame-pointer
+	LIBS         := -lasan $(LIBS)
+else
+        # Whee, an extra register!
+	COMMON_FLAGS += -fomit-frame-pointer
 endif
+
 
 ifndef LD
 LD=ld
