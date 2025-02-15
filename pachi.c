@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -33,6 +34,7 @@ static pachi_options_t main_options = { 0, };
 const  pachi_options_t *pachi_options() {  return &main_options;  }
 
 char *pachi_exe = NULL;
+char *pachi_dir = NULL;
 
 int   debug_level = 3;
 int   saved_debug_level;
@@ -48,6 +50,11 @@ pachi_init(int argc, char *argv[])
 	setlinebuf(stderr);
 	
 	pachi_exe = argv[0];
+
+	static char buf[512] = { 0, };
+	strncpy(buf, pachi_exe, 511);
+	pachi_dir = dirname(buf);
+
 	win_set_pachi_cwd(argv[0]);
 
 	engine_init_checks();

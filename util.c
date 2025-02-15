@@ -78,10 +78,7 @@ get_data_file_(char buffer[], int size, const char *filename)
 	/* Try exe's directory */
 	{
 		strbuf_t *buf = strbuf_init(&strbuf, buffer, size);
-		char *exe = strdup(pachi_exe);
-		char *exe_dir = dirname(exe);
-		sbprintf(buf, "%s/%s", exe_dir, filename);
-		free(exe);
+		sbprintf(buf, "%s/%s", pachi_dir, filename);
 		if (stat(buf->str, &st) == 0)
 			return;
 	}

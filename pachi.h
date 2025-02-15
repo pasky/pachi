@@ -27,6 +27,7 @@ void pachi_done();
 
 /* Pachi binary */
 extern char *pachi_exe;
+extern char *pachi_dir;
 
 
 #endif
