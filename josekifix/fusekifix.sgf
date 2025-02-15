@@ -18,12 +18,12 @@ See josekifix.sgf for details.
 ;W[]
 ;B[pj]
 ;W[nc]
-;B[lc]
+(;B[lc]
 (;W[qc]
 (;B[qd]
 ;W[pc]
 ;B[od]
-;W[nb]
+(;W[nb]
 (;B[me]
 (;W[nq]
 (;B[lq]
@@ -74,6 +74,13 @@ avoid N16 right away, not so good
 
 pachipachi half 2023-03-30
 ]))
+(;W[nd]
+;B[]C[[override\]
+name = "sanrensei seal resist"
+around = O14
+
+
+Ex: sbng pachipachi  2024-12-31 15:31]))
 (;B[pc]
 ;W[qd]
 ;B[pe]
@@ -105,6 +112,15 @@ around = O14
 simple, don't get in trouble right away.
 
 Ex: arkgo pachipachi  2022-11-04]))
+(;B[kd]
+;W[qc]C[[override\]
+name = "sanrensei 2-spc high pincer"
+around = P14
+
+don't double kakari, deadly fight.
+
+Ex: pachipachi kenkong 2025-02-11 08:21
+]))
 (;B[pq]
 (;W[]
 (;B[qk]
@@ -151,7 +167,7 @@ around = Q4
 
 pachipachi dsazx 2023-04-29]))
 (;B[pk]
-;W[pp]
+(;W[pp]
 ;B[qp]C[[override\]
 name = "anti chinese attach"
 around = "last"]
@@ -160,7 +176,91 @@ around = "last"]
 around = Q4]
 ;W[op]
 ;B[qq]C[[override\]
-]))
+])
+(;W[po]
+;B[np]
+;W[qq]
+;B[qr]
+;W[qp]
+;B[rr]
+;W[qm]
+;B[ql]
+;W[pm]
+;B[nk]
+;W[mn]
+;B[lp]
+;W[jq]
+;B[ko]
+;W[lm]
+;B[lk]
+;W[mq]
+;B[mp]
+(;W[oq]
+;B[op]C[[override\]
+name = "high chinese belly trick play"
+around = Q4
+external_engine
+
+
+P3 trick play, should P2 instead.
+if b doesn't answer correctly corner gets captured.
+
+Ex: sbng pachipachi  2024-12-31 15:17]
+;W[pr]
+;B[pp]C[[override\]
+]
+;W[nr]
+;B[nq]C[[override\]
+around = P2
+]
+;W[or]
+;B[mr]C[[override\]
+
+
+N2 now.
+M2 is being tricked.]
+;W[lq]
+;B[lr]C[[override\]
+]
+;W[kq]
+;B[ns]C[[override\]
+])
+(;W[or]
+;B[pr]C[[log\]
+name = "high chinese belly attack"
+around = Q4
+
+normal sequence
+]
+;W[oq]
+;B[op]
+;W[lq]
+;B[pp]))
+(;W[qn]
+;B[qp]
+;W[on]
+;B[mp]
+;W[mn]
+;B[kp]
+;W[ph]
+;B[nk]
+;W[np]
+;B[nq]
+;W[mq]
+;B[lq]
+;W[oq]
+;B[nr]
+;W[pp]
+;B[or]
+;W[op]
+;B[qq]C[[override\]
+name = "high chinese lean defend"
+around = Q3
+
+
+R5 mistake, defend first.
+
+Ex: fater pachipachi  2025-01-04 15:36])))
 (;W[dp]
 ;B[fq]
 ;W[cn]
@@ -369,12 +469,12 @@ because of K3 b can escape...])))))
 name = "yz_taisha"
 around = "last"
 around2 = E15
+external_engine
 
 
 Try pincer, L16 too good for w
 
-YZ1509 special opening.]
-;W[]))
+YZ1509 special opening.]))
 (;B[dp]
 ;W[]
 ;B[pp]
