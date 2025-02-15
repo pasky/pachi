@@ -1,0 +1,40 @@
+boardsize 19
+clear_board
+komi 1.5
+fixed_handicap 4
+play W r14
+play B r15
+play W q14
+play B o16
+play W r10
+play B s14
+play W s13
+play B s16
+play W r6
+play B r5
+play W q6
+play B o4
+play W m3
+play B n3
+play W m4
+play B m2
+
+play w j10
+play b k10
+play w k11
+play b j11
+showboard
+
+undo
+undo
+undo
+undo
+showboard
+
+play W l2
+play B o2
+play W m1
+play B n2
+play W f3
+showboard
+

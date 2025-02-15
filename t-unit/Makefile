@@ -15,7 +15,12 @@ test: FORCE
 		make test_moggy test_spatial test_board; \
 	fi
 
+	@if ../pachi --compile-flags | grep -q "JOSEKIFIX"; then  \
+		make test_external_engine; \
+	fi
+
 	./run_tests
+
 	@make test_gtp
 
 	@echo -n "Testing uct genmove...   "
@@ -63,6 +68,16 @@ test_gtp: FORCE
            while read f; do  if ! grep -q "^\(# *\|\)$$f" tmp.gtp  ; then \
                echo "t-unit/gtp_test.gtp: command $$f not tested, fixme !"; exit 1 ; fi; done
 	@if ./gtp_check ../pachi -t =1000 -o /dev/null < tmp.gtp;  then \
+	   echo "OK"; else  echo "FAILED"; exit 1;  fi
+
+# Test josekifix external engine sync  (needs gnugo)
+test_external_engine:
+	@gnugo --version >/dev/null 2>&1 || ( echo "gnugo missing or not in path, aborting." ; exit 1 )
+	@gnugo --version | head -1 | grep -q "GNU Go 3.8" || ( echo "need gnugo 3.8, aborting." ; exit 1 )
+	@echo -n "Testing josekifix external engine sync...   "
+	@cat external_engine.gtp | ../pachi -d4 --josekifix --external-joseki-engine 'gnugo --mode gtp' 2>&1 >/dev/null  | \
+          grep 'external engine' > external_engine.out
+	@if cmp external_engine.out external_engine.ref >/dev/null; then \
 	   echo "OK"; else  echo "FAILED"; exit 1;  fi
 
 FORCE:

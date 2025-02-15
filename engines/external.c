@@ -35,44 +35,74 @@ typedef struct {
 } external_engine_t;
 
 
-int
-external_engine_send_cmd(engine_t *e, char *cmd, char **reply, char **error)
+static int
+external_engine_send_cmd(engine_t *e, char *cmd, strbuf_t *reply)
 {
 	static char buf[1024];
-	char buf2[10];
 	external_engine_t *pp = (external_engine_t*)e->data;
 	
 	strncpy(buf, cmd, sizeof(buf) - 1);
-	int n = strlen(buf);    
-	if (n && buf[n-1] == '\n')		/* remove newline if present */
+	int n = strlen(buf);
+	if (n && buf[n-1] == '\n')              /* Remove newline if present */
 		buf[--n] = 0;
+	assert(n);
 	
-	if (DEBUGL(3))  fprintf(stderr, "external engine: sending '%s'\n", buf);
+	if (DEBUGL(3))  fprintf(stderr, "external engine: '%s'\n", buf);
 	
-	buf[n] = '\n';  buf[n+1] = 0;	/* add newline */    
+	buf[n] = '\n';  buf[n+1] = 0;	/* Add trailing newline */
 	int r = write(pp->input, buf, strlen(buf));
 	if (r != (int)strlen(buf))  fail("pipe write");
-	
+
+	/* Parse first line: status, reply */
 	if (!fgets(buf, sizeof(buf), pp->output_stream))  fail("fgets");
-	chomp(buf);	/* remove newline / carriage return */
 	
 	int status = (buf[0] == '=');
-	if (buf[0] == '=') {				/* success */
-		if (reply)  *reply = buf + 2;
-	} else if (buf[0] == '?') {			/* error */
-		if (error)  *error = buf + 2;
+	if (buf[0] == '=' || buf[0] == '?') {
+		if (reply)  strbuf_printf(reply, "%s", buf + 2);
+		if (DEBUGL(3))
+			fprintf(stderr, "external engine: %s", buf);
 	} else
 		die("external engine: malformed answer: '%s'\n", buf);
 
-	// XXX we only handle single-line answers here.
-	
-	if (!fgets(buf2, sizeof(buf2), pp->output_stream))  fail("fgets");
+	/* Parse rest of reply. */
+	while (1) {
+		if (!fgets(buf, sizeof(buf), pp->output_stream))  fail("fgets");
+		
+		/* Trailing newline = end */
+		if (!strcmp(buf, "\n") || !strcmp(buf, "\r\n"))
+			break;
+		
+		if (reply)      strbuf_printf(reply, "%s", buf);
+		if (DEBUGL(3))  fprintf(stderr, "external engine: %s", buf);
+	}
 
-	/* Should end with a trailing newline */
-	if (strcmp(buf2, "\n") && strcmp(buf2, "\r\n"))
-		die("external engine: bad reply, aborting:\n'%s'\n", buf2);
-	
 	return status;
+}
+
+void
+external_engine_undo(engine_t *e)
+{
+	if (DEBUGL(3))  fprintf(stderr, "external engine undo\n");
+	int r = external_engine_send_cmd(e, "undo", NULL);
+	if (!r)  fprintf(stderr, "external engine undo failed !\n");
+}
+
+void
+external_engine_play(engine_t *e, coord_t c, enum stone color)
+{
+	strbuf(buf, 100);
+	strbuf_printf(buf, "play %s %s", stone2str(color), coord2sstr(c));
+	int r = external_engine_send_cmd(e, buf->str, NULL);
+	assert(r);
+}
+
+static void
+external_engine_fixed_handicap(engine_t *e, int stones)
+{
+	strbuf(buf, 100);
+	strbuf_printf(buf, "fixed_handicap %i", stones);
+	int r = external_engine_send_cmd(e, buf->str, NULL);
+	assert(r);
 }
 
 bool
@@ -262,12 +292,15 @@ start_external_engine(engine_t *e, board_t *b)
 	}
 
 	// Show engine name and version.
-	char *reply;
-	if (external_engine_send_cmd(e, "name", &reply, NULL))
-		if (DEBUGL(2))  fprintf(stderr, "External engine: %s ", reply);
-	if (external_engine_send_cmd(e, "version", &reply, NULL))
-		if (DEBUGL(2))  fprintf(stderr, "version %s\n", reply);
-
+	strbuf(name, 256);
+	strbuf(version, 256);
+	if (external_engine_send_cmd(e, "name", name) &&
+	    external_engine_send_cmd(e, "version", version)) {
+		chomp(name->str);
+		chomp(version->str);
+		if (DEBUGL(2))  fprintf(stderr, "External engine: %s version %s\n", name->str, version->str);
+	}
+	
 	return true;
 }
 
@@ -279,7 +312,7 @@ stop_external_engine(engine_t *e)
 	if (!pp->pid)  return;
 	
 	if (DEBUGL(2))  fprintf(stderr, "shutting down external engine ...\n");
-	int r = external_engine_send_cmd(e, "quit", NULL, NULL);
+	int r = external_engine_send_cmd(e, "quit", NULL);
 	assert(r);
 	fclose(pp->output_stream);
 	close(pp->input);
@@ -298,8 +331,66 @@ stop_external_engine(engine_t *e)
 static coord_t
 external_engine_genmove(engine_t *e, board_t *b, time_info_t *ti, enum stone color, bool pass_all_alive)
 {
-	assert(0);
-	return pass;
+	char* cmd = (board_to_play(b) == S_BLACK ? "genmove b" : "genmove w");
+	strbuf(reply, 256);
+	double time_start = time_now();
+	int r = external_engine_send_cmd(e, cmd, reply);
+	if (!r) {
+		fprintf(stderr, "external engine genmove failed !\n");
+		return pass;
+	}
+    
+	coord_t c = str2coord(reply->str);
+	if (DEBUGL(2))  fprintf(stderr, "external joseki engine move: %s  (%.1fs)\n", coord2sstr(c), time_now() - time_start);
+	
+	return c;
+}
+
+static char* forwarded_commands[] =
+{
+	"boardsize",
+	"clear_board",
+	"komi",
+	"play",
+	//"genmove",		// special handling
+	"set_free_handicap",
+	//"place_free_handicap",  // special handling
+	"fixed_handicap",
+	"showboard",
+	"undo",
+	//"kgs-genmove_cleanup",	// special handling
+	NULL
+};
+
+
+/* Forward gtp commands that are needed to keep external engine in sync. */
+static enum parse_code
+external_engine_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp)
+{
+	/* Special handling */
+	
+	/* place_free_handicap: send fixed_handicap to external engine.
+	 * XXX assumes other engine places fixed handi stones like us ... */
+	if (!strcmp(cmd, "place_free_handicap")) {
+		int stones = atoi(args);
+		external_engine_fixed_handicap(e, stones);
+		return P_OK;
+	}
+
+	/* Forwarded commands */
+	char** commands = forwarded_commands;
+	for (int i = 0; commands[i]; i++)
+		if (!strcasecmp(cmd, commands[i])) {
+			strbuf(command, 512);
+			sbprintf(command, "%s %s", cmd, args);
+			char *orig_cmd = command->str;
+			
+			strbuf(reply, 2048);
+			int r = external_engine_send_cmd(e, orig_cmd, reply);
+			if (!r)  fprintf(stderr, "external engine: cmd '%s' failed: %s\n", cmd, reply->str);
+			break;
+		}
+	return P_OK;
 }
 
 static void
@@ -337,7 +428,7 @@ external_engine_setoption(engine_t *e, board_t *b, const char *optname, char *op
 	return true;
 }
 
-external_engine_t *
+static void
 external_engine_state_init(engine_t *e, board_t *b)
 {
 	options_t *options = &e->options;
@@ -350,8 +441,6 @@ external_engine_state_init(engine_t *e, board_t *b)
 		if (!engine_setoption(e, b, &options->o[i], &err, true, NULL))
 			die("%s", err);
 	}
-
-	return pp;
 }
 
 void
@@ -359,6 +448,11 @@ external_engine_init(engine_t *e, board_t *b)
 {
 	e->name = "External";
 	e->comment = "";
+	
+	e->keep_on_clear = true;	/* Do not reset engine on clear_board */
+	e->keep_on_undo = true;		/* Do not reset engine after undo */
+
+	e->notify = external_engine_notify;
 	e->genmove = external_engine_genmove;
 	e->setoption = external_engine_setoption;
 	e->done = external_done;

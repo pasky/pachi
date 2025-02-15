@@ -108,9 +108,6 @@ typedef struct uct {
 
 	/* Used within frame of single genmove. */
 	ownermap_t ownermap;
-#ifdef JOSEKIFIX
-	ownermap_t prev_ownermap;
-#endif
 	int  raw_playouts_per_sec;  /* current raw playouts per second (mcowner) */
 	bool allow_pass;    /* allow pass in uct descent */
 

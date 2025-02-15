@@ -132,10 +132,9 @@ void spatial_from_board(pattern_config_t *pc, spatial_t *s, board_t *b, move_t *
 /* Compute hash of given spatial pattern. */
 hash_t spatial_hash(unsigned int rotation, spatial_t *s);
 
-/* Compute spatial hash from board, ignoring center stone */
-hash_t outer_spatial_hash_from_board(board_t *b, coord_t coord, enum stone color);
-hash_t outer_spatial_hash_from_board_rot(board_t *b, coord_t coord, enum stone color, int rot);
-hash_t outer_spatial_hash_from_board_rot_d(board_t *b, coord_t coord, enum stone color, int rot, unsigned int d);
+/* Compute spatial hash from board. */
+hash_t spatial_hash_from_board(board_t *b, coord_t coord, enum stone color, unsigned int d);
+hash_t spatial_hash_from_board_rot(board_t *b, coord_t coord, enum stone color, int rot, unsigned int d);
 
 /* Convert given spatial pattern to string. */
 char *spatial2str(spatial_t *s);

@@ -1,7 +1,16 @@
 INCLUDES=-I..
 
-OBJS = fuseki.o josekifix.o josekifixload.o special_checks.o
+OBJS = override.o
 SGF  = josekifix.sgf fusekifix.sgf
+
+ifeq ($(JOSEKIFIX), 1)
+	OBJS += fuseki.o joseki_override.o josekifix_engine.o josekifixload.o special_checks.o
+
+ifeq ($(EXTRA_ENGINES), 1)
+	OBJS += josekifixscan.o
+endif
+endif
+
 
 # don't build data by default, trips automated build systems
 all: lib.a

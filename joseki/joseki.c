@@ -32,6 +32,32 @@ using_joseki(board_t *b)
 	return r;
 }
 
+/* Compute spatial hash from board, ignoring center point.
+ * Similar to spatial_hash_from_board() except we pretend center point is empty.
+ * This way we can check previous joseki move hashes, which were computed without 
+ * the move played. */
+hash_t
+joseki_spatial_hash_d(board_t *b, coord_t coord, enum stone color, unsigned int d)
+{
+	hash_t h = pthashes[0][0][S_NONE];	// Pretend center point = empty.
+	assert(d+1 < sizeof(ptind) / sizeof(*ptind));
+
+	if (is_pass(coord) || is_resign(coord))  return 0;
+	
+	/* We record all spatial patterns black-to-play; simply
+	 * reverse all colors if we are white-to-play. */
+	static enum stone bt_black[4] = { S_NONE, S_BLACK, S_WHITE, S_OFFBOARD };
+	static enum stone bt_white[4] = { S_NONE, S_WHITE, S_BLACK, S_OFFBOARD };
+	enum stone (*bt)[4] = color == S_WHITE ? &bt_white : &bt_black;
+
+	int cx = coord_x(coord), cy = coord_y(coord);
+	for (unsigned int i = ptind[2]; i < ptind[d + 1]; i++) {
+		ptcoords_at(x, y, cx, cy, i);
+		h ^= pthashes[0][i][(*bt)[board_atxy(b, x, y)]];
+	}
+	return h;
+}
+
 static joseki_dict_t *
 joseki_init(int bsize)
 {

@@ -18,7 +18,9 @@
 #include "pattern/pattern_engine.h"
 #include "joseki/joseki_engine.h"
 #include "joseki/josekiload.h"
+#include "josekifix/josekifix_engine.h"
 #include "josekifix/josekifixload.h"
+#include "josekifix/josekifixscan.h"
 
 
 /**************************************************************************************************/
@@ -47,7 +49,11 @@ engine_map_t engines[] = {
 	{ E_JOSEKI,		"joseki",         joseki_engine_init,         1 },
 	{ E_JOSEKILOAD,		"josekiload",     josekiload_engine_init,     0 },
 #ifdef JOSEKIFIX
+	{ E_JOSEKIFIX,		"josekifix",	  josekifix_engine_init,      0 },
 	{ E_JOSEKIFIXLOAD,	"josekifixload",  josekifixload_engine_init,  0 },
+#ifdef EXTRA_ENGINES
+	{ E_JOSEKIFIXSCAN,	"josekifixscan",  josekifixscan_engine_init,  0 },
+#endif
 #endif	
 	{ E_RANDOM,		"random",         random_engine_init,         1 },
 	{ E_REPLAY,		"replay",         replay_engine_init,         1 },
@@ -136,7 +142,7 @@ engine_options_free(options_t *options)
 }
 
 /* Add option, overwriting previous value if any. */
-static void
+void
 engine_options_add(options_t *options, const char *name, const char *val)
 {
 	/* Overwrite existing option ? */

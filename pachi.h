@@ -16,12 +16,14 @@ typedef struct {
 	enum rules forced_rules;
 } pachi_options_t;
 
+/* Get global options */
+const pachi_options_t *pachi_options();
+
+/* Get main engine */
+struct engine *pachi_main_engine(void);
 
 /* Free globals */
 void pachi_done();
-
-/* Get global options */
-const pachi_options_t *pachi_options();
 
 /* Pachi binary */
 extern char *pachi_exe;

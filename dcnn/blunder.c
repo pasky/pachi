@@ -11,7 +11,7 @@
 #include "tactics/2lib.h"
 #include "tactics/selfatari.h"
 #include "board_undo.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/override.h"
 
 
 static bool dcnn_blunder_enabled = true;
@@ -104,8 +104,8 @@ static bool
 dcnn_44_reduce_33_blunder(board_t *b, move_t *m, move_t *redirect)
 {
 	/* B3 not blunder if w has a stone at B6, make sure override covers that area. */
-	override_t override = { .coord_empty = "B1", .prev = "pass", "B2", "4-4 reduce 3-3", { 0x104718b6711a28d0, 0xdcd0e566177a90e8, 0xb1256f54939c1c48, 0xce86cd889eb98e38,
-											       0xd39f04865100718, 0x8dfd49f239c658, 0xa84411bdaafa8a10, 0xbd0cd1b2a8ace9b8 } };
+	override_t override = { .coord = "B1", .prev = "pass", "B2", "4-4 reduce 3-3", { 0x104718b6711a28d0, 0xdcd0e566177a90e8, 0xb1256f54939c1c48, 0xce86cd889eb98e38,
+											 0xd39f04865100718, 0x8dfd49f239c658, 0xa84411bdaafa8a10, 0xbd0cd1b2a8ace9b8 } };
 	int dist = coord_edge_distance(m->coord);
 	if (dist != 1 && dist != 0)  return false;
 
@@ -120,7 +120,8 @@ dcnn_44_reduce_33_blunder(board_t *b, move_t *m, move_t *redirect)
 		if (m->coord != rb3 && m->coord != rc1)  continue;
 		
 		coord_t c = check_override_rot(b, &override, rot, 0);
-		if (!is_pass(c)) {		/* Would rather just clobber since w doesn't want to play B2 right away, */
+		if (!is_pass(c) && sane_override_move(b, c, "4-4 reduce 3-3 blunder", "dcnn_blunder")) {
+						/* Would rather just clobber since w doesn't want to play B2 right away, */
 			redirect->coord = c;	/* but mcts ends up playing B3 anyway sometimes in this case ! */
 			return true;		/* So redirect, if it had a big prior will play B2 right away, */
 		}				/* no big deal. */

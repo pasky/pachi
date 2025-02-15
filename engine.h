@@ -32,7 +32,11 @@ enum engine_id {
 	E_JOSEKI,
 	E_JOSEKILOAD,
 #ifdef JOSEKIFIX
+	E_JOSEKIFIX,
 	E_JOSEKIFIXLOAD,
+#ifdef EXTRA_ENGINES
+	E_JOSEKIFIXSCAN,
+#endif
 #endif
 	E_RANDOM,
 	E_REPLAY,
@@ -52,6 +56,7 @@ typedef struct engine engine_t;
 typedef void (*engine_init_t)(engine_t *e, board_t *b);
 typedef bool (*engine_setoption_t)(engine_t *e, board_t *b, const char *optname, char *optval, char **err, bool setup, bool *reset);
 typedef enum parse_code (*engine_notify_t)(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t *gtp);
+typedef void (*engine_notify_after_t)(engine_t *e, board_t *b, int id, char *cmd, gtp_t *gtp);
 typedef void (*engine_board_print_t)(engine_t *e, board_t *b, FILE *f);
 typedef char *(*engine_notify_play_t)(engine_t *e, board_t *b, move_t *m, char *enginearg, bool *print_board);
 typedef char *(*engine_chat_t)(engine_t *e, board_t *b, bool in_game, char *from, char *cmd);
@@ -88,10 +93,11 @@ struct engine {
 						     * @setup: true if called during engine setup.
 						     * @reset: set by engine if option can only be set at setup time. */
 
-	engine_notify_t          notify;
-	engine_board_print_t     board_print;
-	engine_notify_play_t     notify_play;
-	engine_chat_t            chat;
+	engine_notify_play_t     notify_play;	    /* Notify engine of play commands received. */
+	engine_notify_t          notify;            /* Notify engine of all gtp commands received. */
+	engine_notify_after_t    notify_after;      /* Like notify() but called after running default handler. */
+	engine_board_print_t     board_print;	    /* Engine-specific board_print() function. */
+	engine_chat_t            chat;		    /* Answer kgs chat commands. */
 
 	engine_genmove_t         genmove;           /* Generate a move. If pass_all_alive is true, <pass> shall be generated only */
 	engine_genmove_t         genmove_analyze;   /* if all stones on the board can be considered alive, without regard to "dead" */
@@ -107,13 +113,13 @@ struct engine {
 
 	engine_dead_groups_t     dead_groups;       /* One dead group per queued move (coord_t is (ab)used as group_t). */
 	engine_ownermap_t        ownermap;	    /* Return current ownermap, if engine supports it. */
-	engine_result_t          result;
+	engine_result_t          result;	    /* More detailed output of last genmove. */
 
 	engine_stop_t            stop;		    /* Pause any background thinking being done, but do not tear down
 						     * any data structures yet. */
 	engine_done_t            done;		    /* e->data and e will be free()d by caller afterwards. */
 
-	void *data;
+	void *data;				    /* Pointer to engine-specific data structure. */
 };
 
 
@@ -170,6 +176,7 @@ int  best_moves_print(board_t *b, char *str, coord_t *best_c, int nbest);
 void      engine_options_print(options_t *options);
 option_t *engine_options_lookup(options_t *options, const char *name);
 void      engine_options_concat(strbuf_t *buf, options_t *options);
+void	  engine_options_add(options_t *options, const char *name, const char *val);
 
 /* For options which need to be set at engine setup time: */
 #define ENGINE_SETOPTION_NEED_RESET  \

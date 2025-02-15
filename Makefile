@@ -49,7 +49,7 @@ DCNN_DARKFOREST=1
 
 # BOARD_SIZE=19
 
-# Build josekifix module ?
+# Build josekifix module ?	 (DCNN must be enabled as well)
 # Provides fixes for joseki lines that dcnn plays poorly, and more varied
 # fusekis when playing as black.
 
@@ -151,6 +151,17 @@ double:
 
 
 #######################################################################
+# Sanity checks
+
+ifeq ($(JOSEKIFIX), 1)
+ifndef DCNN
+$(error DCNN must be enabled for JOSEKIFIX build)
+endif
+endif
+
+
+#######################################################################
+# Variables
 
 MAKEFLAGS += --no-print-directory
 ARCH = $(shell uname -m)
@@ -237,7 +248,6 @@ endif
 
 ifeq ($(JOSEKIFIX), 1)
 	COMMON_FLAGS    += -DJOSEKIFIX
-	EXTRA_SUBDIRS   += josekifix
 	EXTRA_DATAFILES += josekifix.gtp
 endif
 
@@ -278,7 +288,7 @@ OBJS = $(EXTRA_OBJS) \
        playout.o random.o stone.o timeinfo.o fbook.o chat.o util.o
 
 # Low-level dependencies last
-SUBDIRS   = $(EXTRA_SUBDIRS) pattern joseki uct uct/policy t-unit t-predict engines playout tactics
+SUBDIRS   = $(EXTRA_SUBDIRS) engines joseki josekifix pattern playout tactics t-predict t-unit uct uct/policy
 DATAFILES = $(EXTRA_DATAFILES) detlef54.prototxt detlef54.trained joseki19.gtp opening.dat patterns_mm.gamma patterns_mm.spat 
 
 
@@ -329,6 +339,9 @@ test_moggy: FORCE
 
 test_spatial: FORCE
 	+@make -C t-unit test_spatial
+
+test_external_engine: FORCE
+	+@make -C t-unit test_external_engine
 
 # Regression tests
 regtest: FORCE

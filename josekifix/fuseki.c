@@ -3,7 +3,8 @@
 
 #include "engine.h"
 #include "pattern/spatial.h"
-#include "josekifix/josekifix.h"
+#include "josekifix/override.h"
+#include "josekifix/joseki_override.h"
 #include "tactics/util.h"
 
 typedef coord_t (*override_hook_t)(struct board *b, hash_t lasth);
@@ -19,9 +20,7 @@ typedef struct {
 
 #define coord(str)  (str2coord(str))
 #define empty(str)  (board_at(b, coord(str)) == S_NONE)
-#define white(str)  (board_at(b, coord(str)) == S_WHITE)
-#define hash_empty(str)  (empty(str) ? outer_spatial_hash_from_board(b, coord(str), last_move(b).color) : 0)
-#define hash_white(str)  (white(str) ? outer_spatial_hash_from_board(b, coord(str), last_move(b).color) : 0)
+#define spatial_hash(str)  (josekifix_spatial_hash(b, coord(str), last_move(b).color))
 
 #define random_coord(...)  get_random_coord(b, __VA_ARGS__, NULL)
 
@@ -58,10 +57,10 @@ great_wall_fuseki(struct board *b, hash_t lasth)
 {
 	switch (b->moves) {
 		case 0:  return coord("K10");  // Tengen
-		case 2:  return (hash_empty("K18") == 0xaf1ca7d9bc6ee27b ? coord("K16") : pass);
-		case 4:  return (hash_empty("K2")  == 0x4a56cdcaed2d35eb ? coord("K4")  : pass);
-		case 6:  return (hash_empty("K12") == 0xd696c67a8e541c9f ? coord("L13") : pass);
-		case 8:  return (hash_empty("K8")  == 0xf389fa404333ddc7 ? coord("J7")  : pass);
+		case 2:  return (spatial_hash("K18") == 0xaf1ca7d9bc6ee27b ? coord("K16") : pass);
+		case 4:  return (spatial_hash("K2")  == 0x4a56cdcaed2d35eb ? coord("K4")  : pass);
+		case 6:  return (spatial_hash("K12") == 0xd696c67a8e541c9f ? coord("L13") : pass);
+		case 8:  return (spatial_hash("K8")  == 0xf389fa404333ddc7 ? coord("J7")  : pass);
 		default: return pass;
 	}
 }
@@ -71,11 +70,11 @@ great_cross_fuseki(struct board *b, hash_t lasth)
 {
 	switch (b->moves) {
 		case 0:  return coord("K10");  // Tengen
-		case 2:  return (hash_empty("K15") == 0x52940f053f7d41d8 ? coord("K16") : pass);
-		case 4:  return (hash_empty("K5")  == 0xd3041f9087051224 ? coord("K4")  : pass);
+		case 2:  return (spatial_hash("K15") == 0x52940f053f7d41d8 ? coord("K16") : pass);
+		case 4:  return (spatial_hash("K5")  == 0xd3041f9087051224 ? coord("K4")  : pass);
 
-		case 6:  return (hash_empty("E10") == 0x4b3a2de37f1672b0 ? coord("D10") : pass);
-		case 8:  return (hash_empty("P10") == 0x1a311a3e8d8dc68c ? coord("Q10") : pass);
+		case 6:  return (spatial_hash("E10") == 0x4b3a2de37f1672b0 ? coord("D10") : pass);
+		case 8:  return (spatial_hash("P10") == 0x1a311a3e8d8dc68c ? coord("Q10") : pass);
 		default: return pass;
 	}
 }
@@ -85,11 +84,11 @@ tengen_sanrensei_fuseki(struct board *b, hash_t lasth)
 {
 	switch (b->moves) {
 		case 0: return coord("Q16");
-		case 2: if (hash_empty("Q5")  == 0x4ff209de037e7964)  return coord("Q4");
-			if (hash_empty("D15") == 0xf38ceba436dc80e4)  return coord("D16");
+		case 2: if (spatial_hash("Q5")  == 0x4ff209de037e7964)  return coord("Q4");
+			if (spatial_hash("D15") == 0xf38ceba436dc80e4)  return coord("D16");
 			return pass;
 		case 4:
-			if (hash_empty("K10") == 0x4e62eb7437da8b53)  return coord("K10");
+			if (spatial_hash("K10") == 0x4e62eb7437da8b53)  return coord("K10");
 			return pass;
 		default: return pass;
 	}
@@ -101,11 +100,11 @@ five_five_fuseki(struct board *b, hash_t lasth)
 {
 	switch (b->moves) {
 		case 0: return coord("P15");
-		case 2: if (hash_empty("Q5")  == 0x4ff209de037e7964)  return coord("P5");
-			if (hash_empty("D15") == 0xf38ceba436dc80e4)  return coord("E15");
+		case 2: if (spatial_hash("Q5")  == 0x4ff209de037e7964)  return coord("P5");
+			if (spatial_hash("D15") == 0xf38ceba436dc80e4)  return coord("E15");
 			return pass;
-		case 4:
-			if (hash_white("D4") == 0xfbbb40c10212374b)
+		case 4:			
+			if (spatial_hash("D4") == 0xaed991de623d0bc6)	/* White stone at D4 */
 				return random_coord("F3", "F3", "F4", "G3", "K4");
 			return pass;
 		default: return pass;
@@ -119,19 +118,19 @@ double_takamoku_fuseki(struct board *b, hash_t lasth)
 {
 	switch (b->moves) {
 		case 0: return coord("Q15");
-		case 2: if (hash_empty("Q5")  == 0x4ff209de037e7964)  return coord("P4");
-			if (hash_empty("D15") == 0xf38ceba436dc80e4)  return coord("E16");
+		case 2: if (spatial_hash("Q5")  == 0x4ff209de037e7964)  return coord("P4");
+			if (spatial_hash("D15") == 0xf38ceba436dc80e4)  return coord("E16");
 			return pass;
 	}
 
 	/* Cover invasion, otherwise no fun ... */
 	override_t overrides[] = {
-		{ .coord_empty = "Q5", .prev = "R4", "Q6", "",  { 0xb40892614d827e6, 0xbb42499bcc8ef68a, 0x7f3874ee2d7548a2, 0xfc3dfb8271de3b66,
-								  0xa5f0ba7f0edf4c02, 0x613a14799996cc56, 0xed437c981690dc16, 0x1a8e9d4f0524feea } },
+		{ .coord = "Q5", .prev = "R4", "Q6", "",  { 0xb40892614d827e6, 0xbb42499bcc8ef68a, 0x7f3874ee2d7548a2, 0xfc3dfb8271de3b66,
+							    0xa5f0ba7f0edf4c02, 0x613a14799996cc56, 0xed437c981690dc16, 0x1a8e9d4f0524feea } },
 		{ NULL, NULL, NULL }
 	};
 
-	return check_overrides(b, overrides, lasth);
+	return check_overrides(b, overrides, lasth, "fuseki_override");
 }
 
 #if 0
@@ -141,8 +140,8 @@ christmas_island_fuseki(struct board *b, hash_t lasth)
 {
 	switch (b->moves) {
 		case 0: return coord("R14");
-		case 2: if (hash_empty("D15") == 0xf38ceba436dc80e4)  return coord("F17");
-			if (hash_empty("Q5")  == 0x4ff209de037e7964)  return coord("O3");
+		case 2: if (spatial_hash("D15") == 0xf38ceba436dc80e4)  return coord("F17");
+			if (spatial_hash("Q5")  == 0x4ff209de037e7964)  return coord("O3");
 			return pass;
 		default: return pass;
 	}
@@ -166,15 +165,15 @@ static fuseki_t wild_fusekis[] = {
 static coord_t
 large_keima_fuseki(struct board *b, hash_t lasth)
 {
-	override_t override = { .coord_empty = "P4", .prev = "", "O3", "",  { 0x77980cd3dd9328ef, 0x746b3bf60920fbc7, 0x66dfa042cb1f17cf, 0x652c97671facc4e7,
-									       0x32c2c9f9bfa6523f, 0x42e8884f4f56b037, 0x21066ae947c2613f, 0x512c2b5fb7328337 } };
+	override_t override = { .coord = "P4", .prev = "", "O3", "",  { 0x77980cd3dd9328ef, 0x746b3bf60920fbc7, 0x66dfa042cb1f17cf, 0x652c97671facc4e7,
+									0x32c2c9f9bfa6523f, 0x42e8884f4f56b037, 0x21066ae947c2613f, 0x512c2b5fb7328337 } };
 
 	switch (b->moves) {
 		case 0: return coord("Q16");
-		case 2: if (hash_empty("Q5")  == 0x4ff209de037e7964)  return coord("R4");
-			if (hash_empty("D15") == 0xf38ceba436dc80e4)  return coord("D17");
+		case 2: if (spatial_hash("Q5")  == 0x4ff209de037e7964)  return coord("R4");
+			if (spatial_hash("D15") == 0xf38ceba436dc80e4)  return coord("D17");
 			return pass;
-		case 4: return check_override(b, &override, NULL, lasth);
+		case 4: return check_override(b, &override, NULL, lasth, "fuseki_override");
 		default: return pass;
 	}
 }
@@ -184,13 +183,13 @@ sanrensei_fuseki(struct board *b, hash_t lasth)
 {
 	switch (b->moves) {
 		case 0: return coord("Q16");
-		case 2: if (hash_empty("Q5")  == 0x4ff209de037e7964)  return coord("Q4");
-			if (hash_empty("D15") == 0xf38ceba436dc80e4)  return coord("D16");
+		case 2: if (spatial_hash("Q5")  == 0x4ff209de037e7964)  return coord("Q4");
+			if (spatial_hash("D15") == 0xf38ceba436dc80e4)  return coord("D16");
 			return pass;
 		case 4: if (last_move2(b).coord == coord("Q4"))
-				return (hash_empty("P10") == 0x6824b58429db8cde ? coord("Q10") : pass);
+				return (spatial_hash("P10") == 0x6824b58429db8cde ? coord("Q10") : pass);
 			if (last_move2(b).coord == coord("D16"))
-				return (hash_empty("K15") == 0x1f77eaacf1573066 ? coord("K16") : pass);
+				return (spatial_hash("K15") == 0x1f77eaacf1573066 ? coord("K16") : pass);
 		default: return pass;
 	}
 }
@@ -200,13 +199,13 @@ chinese_fuseki(struct board *b, hash_t lasth)
 {
 	switch (b->moves) {
 		case 0: return coord("Q16");
-		case 2: if (hash_empty("Q5")  == 0x4ff209de037e7964)  return coord("Q3");
-			if (hash_empty("D15") == 0xf38ceba436dc80e4)  return coord("C16");
+		case 2: if (spatial_hash("Q5")  == 0x4ff209de037e7964)  return coord("Q3");
+			if (spatial_hash("D15") == 0xf38ceba436dc80e4)  return coord("C16");
 			return pass;
 		case 4: if (last_move2(b).coord == coord("Q3"))
-				return (hash_empty("P10") == 0x6824b58429db8cde ? random_coord("R9", "Q9") : pass);
+				return (spatial_hash("P10") == 0x6824b58429db8cde ? random_coord("R9", "Q9") : pass);
 			if (last_move2(b).coord == coord("C16"))
-				return (hash_empty("K15") == 0x1f77eaacf1573066 ? random_coord("J17", "J16") : pass);
+				return (spatial_hash("K15") == 0x1f77eaacf1573066 ? random_coord("J17", "J16") : pass);
 		default: return pass;
 	}
 }
@@ -263,7 +262,7 @@ check_special_fuseki(struct board *b, hash_t lasth) {
 	if (!fuseki)  return pass;
 	
 	coord_t c = fuseki->override(b, lasth);
-	if (is_pass(c) || !josekifix_sane_override(b, c, fuseki->name, -1)) {
+	if (is_pass(c) || !sane_override_move(b, c, fuseki->name, "fuseki_override")) {
 		reset_fuseki_handler();
 		return pass;
 	}
@@ -276,6 +275,9 @@ check_special_fuseki(struct board *b, hash_t lasth) {
 coord_t
 josekifix_initial_fuseki(struct board *b, strbuf_t *log, hash_t lasth)
 {
+	/* All hashes are computed with dist 10 here. */
+	assert(MAX_PATTERN_DIST == 10);
+	
 	coord_t c = pass;
 	
 	/* Special fuseki ? */
@@ -292,5 +294,3 @@ josekifix_initial_fuseki(struct board *b, strbuf_t *log, hash_t lasth)
 
 	return pass;
 }
-
-
