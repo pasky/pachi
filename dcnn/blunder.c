@@ -155,6 +155,36 @@ dcnn_group_2lib_blunder(board_t *b, move_t *m)
 	return false;
 }
 
+/* Check if move gives opponent a new atari_and_cap move */
+static bool
+dcnn_new_atari_and_cap_blunder(board_t *b, move_t *m, ownermap_t *ownermap, int feature)
+{
+	enum stone other_color = stone_other(m->color);
+
+	/* Check current status */
+	bool was_already[4] = { false, };
+	int i = -1;
+	foreach_neighbor(b, m->coord, {  i++;
+		move_t m2 = move(c, other_color);
+		if (!board_is_valid_move(b, &m2))  continue;
+		if (pattern_match_atari(b, &m2, ownermap) == feature)
+			was_already[i] = true;
+	});
+
+	/* And status with new move */
+	with_move(b, m->coord, m->color, {
+		i = -1;
+		foreach_neighbor(b, m->coord, {  i++;
+			move_t m2 = move(c, other_color);
+			if (!board_is_valid_move(b, &m2))  continue;
+			if (pattern_match_atari(b, &m2, ownermap) == feature &&
+			    !was_already[i])
+				with_move_return(true);
+		});
+	});
+	return false;
+}
+
 
 /**********************************************************************************/
 /* Atari defense move boosting */
@@ -409,20 +439,24 @@ boost_atari_defense_moves(char *name, int feature,
  * Return true:                 clobber move
  * Return true + set redirect:  redirect dcnn prior and clobber move */
 static bool
-dcnn_blunder(board_t *b, move_t *m, float r, move_t *redirect, char **name)
+dcnn_blunder(board_t *b, move_t *m, ownermap_t *ownermap, float r, move_t *redirect, char **name)
 {
 	if (r < 0.01)  return false;
 	if (board_playing_ko_threat(b))  return false;
 
 	*name = "first line connect blunder";
-	if (dcnn_first_line_connect_blunder(b, m))      return true;
+	if (dcnn_first_line_connect_blunder(b, m))				return true;
 	
 	*name = "4-4 reduce 3-3 blunder";
-	if (dcnn_44_reduce_33_blunder(b, m, redirect))  return true;
+	if (dcnn_44_reduce_33_blunder(b, m, redirect))				return true;
 
 	*name = "group 2lib blunder";
-	if (dcnn_group_2lib_blunder(b, m))	        return true;
-	
+	if (dcnn_group_2lib_blunder(b, m))					return true;
+
+	*name = "atari and cap blunder";
+	if (dcnn_new_atari_and_cap_blunder(b, m, ownermap, PF_ATARI_AND_CAP) ||
+	    dcnn_new_atari_and_cap_blunder(b, m, ownermap, PF_ATARI_AND_CAP2))	return true;
+
 	return false;
 }
 
@@ -444,6 +478,7 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *owne
 	float blunder_rating = 0.001;  /* 0.1% */
 	int changes = 0;
 
+	/* Keep get_dcnn_blunders() in sync with this. */
 	changes += boost_atari_defense_moves("atari and cap defense", PF_ATARI_AND_CAP, b, color, result, ownermap, debugl);
 	changes += boost_atari_defense_moves("atari and cap2 defense", PF_ATARI_AND_CAP2, b, color, result, ownermap, debugl);
 	changes += boost_atari_defense_moves("atari ladder big defense", PF_ATARI_LADDER_BIG, b, color, result, ownermap, debugl);
@@ -454,7 +489,7 @@ dcnn_fix_blunders(board_t *b, enum stone color, float result[], ownermap_t *owne
 		move_t redirect = move(pass, color);
 		char *name = "";
 		
-		if (!dcnn_blunder(b, &m, result[k], &redirect, &name))
+		if (!dcnn_blunder(b, &m, ownermap, result[k], &redirect, &name))
 			continue;
 		
 		if (redirect.coord != pass) {		/* redirect + clobber */
@@ -492,6 +527,7 @@ get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ow
 	if (boosted) {
 		int dropped;		/* keep in sync with dcnn_fix_blunders() calls */
 		select_atari_defense_moves("atari and cap defense", PF_ATARI_AND_CAP, b, color, result, ownermap, q, &dropped);
+		select_atari_defense_moves("atari and cap2 defense", PF_ATARI_AND_CAP2, b, color, result, ownermap, q, &dropped);
 		select_atari_defense_moves("atari ladder big defense", PF_ATARI_LADDER_BIG, b, color, result, ownermap, q, &dropped);
 	}
 
@@ -503,7 +539,7 @@ get_dcnn_blunders(bool boosted, board_t *b, enum stone color, float result[], ow
 		move_t redirect = move(pass, color);
 		char *name = "";
 		
-		if (dcnn_blunder(b, &m, result[k], &redirect, &name)) {
+		if (dcnn_blunder(b, &m, ownermap, result[k], &redirect, &name)) {
 			if (!boosted)  mq_add(q, c, 0);
 			else           mq_remove(q, c);
 		}

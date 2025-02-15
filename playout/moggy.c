@@ -1153,7 +1153,7 @@ playout_moggy_init(char *arg, board_t *b)
 	pp->patternrate = pp->eyefixrate = 100;
 	pp->lcapturerate = 90;
 	pp->atarirate = pp->josekirate = -1U;
-	pp->nakaderate = 60;
+	pp->nakaderate = 80;
 	pp->korate = 40; pp->koage = 3;
 	pp->alwaysccaprate = 40;
 	pp->eyefillrate = 60;

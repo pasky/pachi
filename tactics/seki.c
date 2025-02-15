@@ -109,13 +109,13 @@ breaking_false_eye_seki(board_t *b, coord_t coord, enum stone color)
 }
 
 
-/*   . O O O O |
- *   O . X X X |   We're black.
- *   O . X * O |
- *   O . X X O |   Are we about to break 3-stones seki by playing at @coord ?
- *   O . X . O |   Assumes selfatari checks passed, so b has some outside liberties.
- *   O . X X X |
- *   . O O O O |   */
+/*   . O O O O |       . O O O O |
+ *   O . X X X |       O . X X X |      We're black.
+ *   O . X * O |       O . X O * |
+ *   O . X X O |       O . X O X |      Are we about to break 3-stones seki by playing at @coord ?
+ *   O . X . O |       O . X O . |      Assumes selfatari checks passed, so we have some outside liberties.
+ *   O . X X X |       O . X X X |
+ *   . O O O O |       . O O O O |      */
 bool
 breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 {
@@ -138,28 +138,28 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 		return false;
 
 	/* Check neighbours of the 2 liberties first (also checks shape :) */
-	// FIXME is this enough to check all the bad shapes ?
+	// XXX is this enough to check all the bad shapes ?
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, g3).lib[i];
 		if (immediate_liberty_count(b, lib) >= 1)
 			return false;  /* Bad shape or can escape */
 		if (neighbor_count_at(b, lib, other_color) >= 2)
-			return false;  /* Bad bent-3 or can connect out */
+			return false;  /* Dead bent-3 or can connect out */
 	}
 
-	/*  Anything with liberty next to bent-3's center is no seki:
-	 *   . O O O .    . O O O .   
-	 *   O O X O O 	  O O X . O 
-	 *   O X X . O 	  O X X O O 
-	 *   O O . O O 	  O O . O O 
-	 *   . O O O . 	  . O O O .   */
+	/*  Anything with liberty next to 3 stones' center is no seki:
+	 *   . O O O .    . O O O .    . O O O .
+	 *   O O X O O 	  O O X . O    O O . O O
+	 *   O X X . O 	  O X X O O    O X X X O
+	 *   O O . O O 	  O O . O O    O . O O O
+	 *   . O O O . 	  . O O O .    O O O . .   */
 	for (int i = 0; i < 2; i++) {
 		coord_t lib = board_group_info(b, g3).lib[i];
 		foreach_neighbor(b, lib, {   /* Find adjacent stone */
 			if (board_at(b, c) == other_color &&
-			    neighbor_count_at(b, c, other_color) == 2)
+			    neighbor_count_at(b, c, other_color) != 1)
 				return false;
-			break;        /* Bad bent-3 already taken care of */
+			break;        /* Dead bent-3 already taken care of */
 		});
 	}
 
@@ -174,20 +174,12 @@ breaking_3_stone_seki(board_t *b, coord_t coord, enum stone color)
 	if (!own)
 		return false;
 
-	/* Check group is completely surrounded.
-	 * If it can countercapture for sure it's not completely surrounded */
+	/* Check 3-stone group is completely surrounded.
+	 * Can't escape and can't connect out, only countercaptures left to check. */
 	if (can_countercapture(b, g3, NULL))
 		return false;
-	int visited[BOARD_MAX_COORDS] = {0, };
-	if (!big_eye_area(b, color, group_base(g3), visited))
-		return false;
-	
-	/* Already have 2 eyes ? No need for seki then */
-	int eyes = 1;
-	if (dragon_is_safe_full(b, own, color, visited, &eyes))
-		return false;
 
-	/* Safe after capturing these stones ? */
+	/* Group alive after capturing these stones ? */
 	bool safe = false;
 	coord_t lib1 = board_group_info(b, g3).lib[0];
 	coord_t lib2 = board_group_info(b, g3).lib[1];

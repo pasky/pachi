@@ -48,7 +48,7 @@ uct_progress_text(FILE *fh, uct_t *u, tree_t *t, board_t *b, enum stone color, i
 
 	/* Best sequence */
 	fprintf(fh, "| seq ");
-	for (int depth = 0; depth < 4; depth++) {
+	for (int depth = 0; depth < 5; depth++) {
 		if (best && best->u.playouts >= 25) {
 			fprintf(fh, "%3s ", coord2sstr(node_coord(best)));
 			best = u->policy->choose(u->policy, best, b, color, resign);
@@ -438,8 +438,10 @@ uct_playout_descent(uct_t *u, board_t *b, enum stone player_color, tree_t *t, in
 		if (res < 0 || (!is_pass(m.coord) && !group_at(b, m.coord)) /* suicide */
 		    || b->superko_violation) {
 			if (UDEBUGL(4)) {
+#ifdef DEBUG_TREE
 				for (tree_node_t *ni = n; ni; ni = ni->parent)
 					fprintf(stderr, "%s<%" PRIhash "> ", coord2sstr(node_coord(ni)), ni->hash);
+#endif
 				fprintf(stderr, "marking invalid %s node %d,%d res %d group %d spk %d\n",
 				        stone2str(node_color), coord_x(node_coord(n)), coord_y(node_coord(n)),
 					res, group_at(b, m.coord), b->superko_violation);

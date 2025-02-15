@@ -1,0 +1,26 @@
+#!/bin/bash
+# Test uct virtual loss works
+# usage: test_virtual_loss <color>
+
+playouts=2000
+
+abs() {  echo $[ $1 < 0 ? -$1 : $1 ];  }
+
+get_expanded_nodes()
+{
+    color=$1
+    echo "genmove $color" | ../pachi -d4 -t =$playouts expand_p=0 virtual_loss=10 2>&1 |
+        grep "expanded nodes" | cut -d: -f2
+}
+
+[ -n "$1" ] || exit 1
+
+nodes=`get_expanded_nodes $1`
+#echo "expanded nodes:  $nodes"
+
+diff=`abs $[ $playouts - $nodes ]`
+pc=$[ $diff * 100 / $playouts ]
+#echo "percentage away from $playouts:  $pc%"
+
+# Should get less than 5% difference
+exit $[ ($pc >= 5)  ] 

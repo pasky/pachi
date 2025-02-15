@@ -31,7 +31,8 @@ typedef struct {
 	 * exploration caused by this may cause a wrong mean value computed
 	 * for the parent node. */
 	bool vloss_sqrt;
-	floating_t vloss_coeff;	/* Pre-computed value */
+	floating_t vloss_coeff;	  /* Pre-computed value */
+	int vloss_min_descents;   /* No use computing vloss below that, always 0. */
 #ifdef DISTRIBUTED
 	/* In distributed mode, encourage different slaves to work on different
 	 * parts of the tree by adding virtual wins to different nodes. */
@@ -117,11 +118,12 @@ ucb1rave_evaluate(uct_policy_t *p, tree_t *tree, tree_node_t *node, int parity)
 		stats_merge(&n, &node->prior);
 	}
 
-	if (p->uct->virtual_loss) {
+	if (p->uct->virtual_loss && node->descents >= b->vloss_min_descents) {
 		/* Add virtual loss if we need to; this is used to discourage
 		 * other threads from visiting this node in case of multiple
 		 * threads doing the tree search. */
-		move_stats_t c = move_stats((parity > 0 ? 0. : 1.), node->descents * b->vloss_coeff);
+		move_stats_t c = move_stats(tree_node_get_value(tree, parity, 0.),
+					    node->descents * b->vloss_coeff);
 		stats_merge(&n, &c);
 	}
 
@@ -296,7 +298,8 @@ ucb1amaf_update(uct_policy_t *p, tree_t *tree, tree_node_t *node,
 				/* Give more weight to moves played earlier */
 				weight += b->distance_rave * (map->gamelen - first) / (map->gamelen - move);
 			}
-			stats_add_result(&ni->amaf, res, weight);
+			if (weight)
+				stats_add_result(&ni->amaf, res, weight);
 
 			if (b->crit_amaf) {
 				stats_add_result(&ni->winner_owner, board_local_value(b->crit_lvalue, final_board, node_coord(ni), winner_color), 1);
@@ -415,6 +418,7 @@ policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board)
 	}
 
 	b->vloss_coeff = (b->vloss_sqrt ? sqrt(u->threads) / u->threads : 1.);
+	b->vloss_min_descents = ceil(1.0 / b->vloss_coeff);
 	
 	return p;
 }

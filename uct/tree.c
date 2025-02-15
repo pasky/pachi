@@ -52,15 +52,18 @@ tree_alloc_node(tree_t *t, int count)
 static void
 tree_setup_node(tree_t *t, tree_node_t *n, coord_t coord, int depth)
 {
-	static volatile unsigned int hash = 0;
 	n->coord = coord;
 	n->depth = depth;
+	if (depth > t->max_depth)
+		t->max_depth = depth;
+
+#ifdef DEBUG_TREE
+	static volatile unsigned int hash = 0;
 	/* n->hash is used only for debugging. It is very likely (but not
 	 * guaranteed) to be unique. */
 	hash_t h = n - (tree_node_t *)0;
 	n->hash = (h << 32) + (hash++ & 0xffffffff);
-	if (depth > t->max_depth)
-		t->max_depth = depth;
+#endif
 }
 
 /* Allocate and initialize a node. Returns NULL if tree memory is full.
@@ -126,6 +129,7 @@ tree_node_dump(tree_t *tree, tree_node_t *node, int treeparity, int l, int thres
 		children++;
 	/* We use 1 as parity, since for all nodes we want to know the
 	 * win probability of _us_, not the node color. */
+#ifdef DEBUG_TREE
 	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f vloss %d] h=%x c#=%d <%" PRIhash ">\n",
 		coord2sstr(node_coord(node)),
 		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
@@ -133,6 +137,15 @@ tree_node_dump(tree_t *tree, tree_node_t *node, int treeparity, int l, int thres
 		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
 		tree_node_criticality(tree, node), node->descents,
 		node->hints, children, node->hash);
+#else
+	fprintf(stderr, "[%s] %.3f/%d [prior %.3f/%d amaf %.3f/%d crit %.3f vloss %d] h=%x c#=%d\n",
+		coord2sstr(node_coord(node)),
+		tree_node_get_value(tree, treeparity, node->u.value), node->u.playouts,
+		tree_node_get_value(tree, treeparity, node->prior.value), node->prior.playouts,
+		tree_node_get_value(tree, treeparity, node->amaf.value), node->amaf.playouts,
+		tree_node_criticality(tree, node), node->descents,
+		node->hints, children);
+#endif
 
 	/* Print nodes sorted by #playouts. */
 

@@ -21,12 +21,24 @@ test: FORCE
 
 	./run_tests
 
-	@make test_gtp
+	@make test_gtp test_genmove test_vloss test_quiet
 
+test_genmove:
 	@echo -n "Testing uct genmove...   "
 	@ ../pachi -d0 -t =1000 < ../gtp/genmove.gtp  2>pachi.log >/dev/null
 	@echo "OK"
 
+test_vloss:
+	@echo -n "Testing virtual loss black...    "
+	@ if ./test_virtual_loss black; then \
+	   echo "OK"; else echo "FAILED"; exit 1;  \
+	fi
+	@echo -n "Testing virtual loss white...    "
+	@ if ./test_virtual_loss white; then \
+	   echo "OK"; else echo "FAILED"; exit 1;  \
+        fi
+
+test_quiet:
 	@echo -n "Testing quiet mode...    "
 	@if  grep -q '.' < pachi.log ; then \
 		echo "FAILED:";  cat pachi.log;  exit 1;  else  echo "OK"; \

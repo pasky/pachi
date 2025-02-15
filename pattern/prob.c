@@ -168,15 +168,43 @@ pattern_rate_moves_vanilla(board_t *b, enum stone color,
 /*****************************************************************************/
 /* Move ratings */
 
-/* Get pattern probability for move. */
+/* Moves that should always get max rating no matter what probabilities came out.
+ * ie whatever best rated move is, they get that rating as well.
+ * (their gammas become pretty irrelevant then).
+ *
+ * Max ko-ending moves so they always searched:
+ * That's one case where move prediction and game playing objectives diverge.
+ * We need patterns to provide good moves for search even though ending a ko
+ * happens relatively rarely from a prediction point of view.
+ * (expect this to hurt t-predict rates slightly. disable this during testing
+ * if you care about max prediction rate).  */
+static bool
+pattern_maxed_move(pattern_t *pat)
+{
+	for (int i = 0; i < pat->n; i++) {
+		feature_t *f = &pat->f[i];
+
+		/* Max ko-ending moves so they always get searched. */
+		if ((f->id == FEAT_CAPTURE && f->payload == PF_CAPTURE_END_KO) ||
+		    (f->id == FEAT_AESCAPE && f->payload == PF_AESCAPE_FILL_KO))
+			return true;
+	}
+	return false;
+}
+
+/* Get pattern probability for move.
+ * @maxed_move indicates whether move should be maxed. */
 static floating_t
-pattern_rate_move(board_t *b, move_t *m, pattern_t *pat, pattern_context_t *ct, bool locally)
+pattern_rate_move(board_t *b, move_t *m, pattern_t *pat, pattern_context_t *ct, bool locally, bool *maxed_move)
 {
 	if (is_pass(m->coord) ||
 	    !board_is_valid_play_no_suicide(b, m->color, m->coord))
 		return NAN;
 
 	pattern_match(b, m, pat, ct, locally);
+
+	/* Maxed move ? Save so caller can adjust ratings. */
+	*maxed_move = pattern_maxed_move(pat);
 	
 	return pattern_gamma(pat);
 }
@@ -187,26 +215,42 @@ pattern_max_rating(board_t *b, enum stone color, floating_t *probs, pattern_t *p
 {
 	floating_t max = -100000;
 	floating_t total = 0;
+	move_queue_t maxed_moves;  mq_init(&maxed_moves);
 
 	if (pats)	/* Save pattern for each move */
 		for (int f = 0; f < b->flen; f++) {
 			move_t m = move(b->f[f], color);
-			probs[f] = pattern_rate_move(b, &m, &pats[f], ct, locally);
+			bool maxed_move;
+			probs[f] = pattern_rate_move(b, &m, &pats[f], ct, locally, &maxed_move);
 			if (isnan(probs[f]))  continue;
 			
 			total += probs[f];
 			max = MAX(max, probs[f]);
+			
+			if (maxed_move)		/* Save maxed moves */
+				mq_add(&maxed_moves, f, 0);
 		}
 	else		/* Fast path */
 		for (int f = 0; f < b->flen; f++) {
 			move_t m = move(b->f[f], color);
 			pattern_t pat;  pat.n = 0;
-			probs[f] = pattern_rate_move(b, &m, &pat, ct, locally);
+			bool maxed_move;
+			probs[f] = pattern_rate_move(b, &m, &pat, ct, locally, &maxed_move);
 			if (isnan(probs[f]))  continue;
 			
 			total += probs[f];
 			max = MAX(max, probs[f]);
+
+			if (maxed_move)		/* Save maxed moves */
+				mq_add(&maxed_moves, f, 0);
 		}
+
+	/* Maxed moves always get top rating. */
+	for (int i = 0; i < maxed_moves.moves; i++) {
+		int f = maxed_moves.move[i];
+		total += max - probs[f];
+		probs[f] = max;
+	}
 	
 	rescale_probs(b, probs, total);
 	total = 1.0;
