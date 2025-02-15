@@ -230,6 +230,8 @@ usage(char *arg)
 		"                                    (uses katago as as joseki engine)  (default: enabled) \n"
 		"      --modern-joseki               play modern josekis:               (default: off) \n"
 		"                                    katago handles first moves in each corner. \n"
+		"      --kata-config FILE            set katago config file to use. \n"
+		"      --kata-model FILE             set katago model (for josekifix module) \n"
 		"      --external-joseki-engine CMD  use another joseki engine instead of katago. \n"
 #endif
 		" \n"
@@ -298,6 +300,8 @@ usage(char *arg)
 #define OPT_BANNER            279
 #define OPT_GTP_FATAL         280
 #define OPT_MODERN_JOSEKI     281
+#define OPT_KATA_CONFIG	      282
+#define OPT_KATA_MODEL	      283
 
 
 static struct option longopts[] = {
@@ -324,6 +328,8 @@ static struct option longopts[] = {
 #ifdef JOSEKIFIX
 	{ "josekifix",              no_argument,       0, OPT_JOSEKIFIX },
 #endif
+	{ "kata-config",	    required_argument, 0, OPT_KATA_CONFIG },
+	{ "kata-model",		    required_argument, 0, OPT_KATA_MODEL },
 	{ "kgs",                    no_argument,       0, OPT_KGS },
 	{ "kgs-chat",               no_argument,       0, OPT_KGS_CHAT },
 #ifdef DCNN
@@ -458,6 +464,12 @@ int main(int argc, char *argv[])
 				require_josekifix();
 				break;
 #endif
+			case OPT_KATA_CONFIG:
+				katago_config = strdup(optarg);
+				break;
+			case OPT_KATA_MODEL:
+				katago_model = strdup(optarg);
+				break;
 			case OPT_KGS:
 				options->kgs = gtp->kgs = true;
 				options->nopassfirst = true;           /* --nopassfirst */

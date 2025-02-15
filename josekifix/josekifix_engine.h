@@ -6,6 +6,8 @@
 #include "engine.h"
 
 extern char *external_joseki_engine_cmd;
+extern char *katago_config;
+extern char *katago_model;
 extern bool  modern_joseki;
 extern bool  external_joseki_engine_genmoved;
 
