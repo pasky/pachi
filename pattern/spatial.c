@@ -181,14 +181,42 @@ spatial_hash_from_board(board_t *b, coord_t coord, enum stone color, unsigned in
 	return spatial_hash_from_board_rot(b, coord, color, 0, d);
 }
 
+/* S_MAX allowed here (= point not matched) */
+static char
+spatial_stone2char(enum stone s)
+{
+	return ".XO# "[s];
+}
+
+/* S_MAX allowed here (= point not matched) */
+static enum stone
+spatial_char2stone(char s)
+{
+	switch (s) {
+		case '.': return S_NONE;
+		case 'X': return S_BLACK;
+		case 'O': return S_WHITE;
+		case '#': return S_OFFBOARD;
+		case ' ': return S_MAX;
+	}
+	assert(0);
+}
+
 char *
 spatial2str(spatial_t *s)
 {
 	static char buf[1024];
-	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++) {
-		buf[i] = stone2char(spatial_point(s, i));
-	}
+	for (unsigned int i = 0; i < ptind[s->dist + 1]; i++)
+		buf[i] = spatial_stone2char(spatial_point(s, i));
 	buf[ptind[s->dist + 1]] = 0;
+	return buf;
+}
+
+static char*
+print_handler(board_t *board, coord_t c, void *data)
+{
+	static char buf[2];
+	sprintf(buf, "%c", spatial_stone2char(board_at(board, c)));
 	return buf;
 }
 
@@ -200,7 +228,7 @@ spatial_print(board_t *board, FILE *f, spatial_t *s, coord_t c)
 	last_move(b).coord = c;
 
 	/* Blank whole board so pattern stands out (only pattern area gets printed).
-	 * Set every stone to S_MAX (stone2char(S_MAX) = ' ') */
+	 * Set every stone to S_MAX (spatial_stone2char(S_MAX) = ' ') */
 	for (int i = 0; i < size; i++)
 		for (int j = 0; j < size; j++) {
 			coord_t c = coord_xy(i+1, j+1);
@@ -210,10 +238,9 @@ spatial_print(board_t *board, FILE *f, spatial_t *s, coord_t c)
 	int cx = coord_x(c), cy = coord_y(c);
 	for (unsigned int j = 0; j < ptind[s->dist + 1]; j++) {
 		ptcoords_at(x, y, cx, cy, j);
-		move_t m = move(coord_xy(x, y), spatial_point(s, j) );
-		board_at(b, m.coord) = m.color;
+		board_at(b, coord_xy(x, y)) = spatial_point(s, j);
 	}
-	board_print(b, stderr);	
+	board_hprint(b, stderr, print_handler, NULL);
 	board_delete(&b);
 }
 
@@ -364,7 +391,7 @@ spatial_dict_read(char *buf)
 	spatial_t s = { dist, };
 	unsigned int sl = 0;
 	while (!isspace(*bufp)) {
-		enum stone color = char2stone(*bufp++);
+		enum stone color = spatial_char2stone(*bufp++);
 		set_spatial_point(&s, sl, color);
 		sl++;
 	}

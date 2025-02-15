@@ -23,10 +23,7 @@ static enum stone stone_other(enum stone s);
 static inline char
 stone2char(enum stone s)
 {
-	/* Hack: stone2char(S_MAX) = ' '
-	 *       Allow S_MAX here so can blank-out parts of the
-	 *       board in board_print() (see spatial_print()) */
-	return ".XO# "[s];
+	return ".XO#"[s];
 }
 
 static inline enum stone
@@ -38,10 +35,10 @@ char2stone(char s)
 		case 'O': return S_WHITE;
 		case '#': return S_OFFBOARD;
 	}
-	return S_NONE; // XXX
+	assert(0);
 }
 
-/* Curiously, gcc is reluctant to inline this; I have cofirmed
+/* Curiously, gcc is reluctant to inline this; I have confirmed
  * there is performance benefit. */
 static inline enum stone __attribute__((always_inline))
 stone_other(enum stone s)

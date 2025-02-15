@@ -394,7 +394,6 @@ cmd_pachi_predict(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	char *str = predict_move(b, e, ti, &m, gtp->played_games);
 
 	gtp_reply(gtp, str);
-	free(str);
 	return P_OK;
 }
 
