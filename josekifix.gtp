@@ -1,7 +1,7 @@
 # Generated from josekifix/josekifix.sgf
 # Do not edit directly !
 
-# Pachi 12.80
+# Pachi 12.86
 
 boardsize 19
 
@@ -15,7 +15,7 @@ play W d4
 play B c2  
 play W b3  
 play B d5  
-play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2
+play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2|priority=2
 play B d2  
 play W b2  override name=3-4 trick punish|around=last
 play B e2  
@@ -35,7 +35,7 @@ play W d4
 play B c2  
 play W b3  
 play B d5  
-play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2
+play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2|priority=2
 play B d2  
 play W b2  override name=3-4 trick punish|around=last
 play B e2  
@@ -55,15 +55,55 @@ play W d4
 play B c2  
 play W b3  
 play B d5  
-play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2
+play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2|priority=2
 play B d2  
 play W b2  override name=3-4 trick punish|around=last
 play B e2  
 play W f2  override name=3-4 trick punish|around=C2
 play B g2  
-play W f3  
+play W f3  override name=3-4 trick punish|around=C2
 play B f1  
+play W b4  override name=3-4 trick punish|around=C2
+play B c5  
 play W e1  override name=3-4 trick punish|around=D2
+play B d1  
+play W b1  override name=3-4 trick punish|around=D2
+play B g1  
+play W c1  override name=3-4 trick punish|around=D2
+play B e1  
+play W h3  override name=3-4 trick punish|around=E2
+play B j2  
+play W h2  
+play B h1  
+play W g3  override name=3-4 trick punish|around=E2
+play B j1  
+play W k3  override name=3-4 trick punish|around=G2|external_engine
+
+clear_board
+play B c4  
+play W e4  
+play B c6  
+play W c3  
+play B d3  
+play W d4  
+play B c2  
+play W b3  
+play B d5  
+play W e3  override name=3-4 trick punish|around=D2|external_engine|external_engine_diag|noladder_other=F4|noladder_other2=E5|noladder_other2_setup_other=D2 E2 F3 G3|noladder_other2_setup_own=E3 F2 G2|noladder_other_setup_other=D2 E2 F3|noladder_other_setup_own=E3 F2|priority=2
+play B d2  
+play W b2  override name=3-4 trick punish|around=last
+play B e2  
+play W f2  override name=3-4 trick punish|around=C2
+play B g2  
+play W f3  override name=3-4 trick punish|around=C2
+play B f1  
+play W b4  override name=3-4 trick punish|around=C2
+play B c5  
+play W e1  override name=3-4 trick punish|around=D2
+play B d1  
+play W b1  override name=3-4 trick punish|around=D2
+play B e1  
+play W c1  override name=3-4 trick punish|around=D2
 
 clear_board
 play B c4  
@@ -264,7 +304,37 @@ play W c3
 play B b3  
 play W d3  
 play B c7  
-play W f5  override name=3-4 pincer attach hane extend|around=D3
+play W f5  override name=3-4 pincer attach extend|around=D3
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B b3  
+play W d3  
+play B c7  
+play W c5  
+play B b5  
+play W d5  
+play B pass  override name=3-4 pincer attach extend tsuke|around=D3|external_engine_moves=1
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B b3  
+play W d3  
+play B c7  
+play W b2  
+play B b4  
+play W j3  
+play B g5  log name=3-4 pincer attach extend pincer|around=E4
+play W e6  
+play B d8  
+play W g7  
+play B h6  override name=3-4 pincer attach extend pincer cap|around=E4
 
 clear_board
 play B c4  
@@ -383,6 +453,18 @@ play B g3
 play W c3  
 play B b4  
 play W pass  override name=3-4 pincer B4 tricks|around=C3
+
+clear_board
+play B c4  
+play W e4  
+play B g3  
+play W c3  
+play B g5  
+play W d4  
+play B c5  
+play W d2  
+play B e6  
+play W pass  override name=3-4 pincer jump enclose|around=D4
 
 clear_board
 play B c4  
@@ -611,9 +693,7 @@ play B c4
 play W e4  
 play B h4  
 play W c5  
-play B b5  
-play W c3  
-play B pass  override name=3-4 keima pincer double attach|around=D4
+play B pass  override name=3-4 pincer tsuke on top|around=D3
 
 clear_board
 play B c4  
@@ -752,6 +832,15 @@ play W d3  override name=3-4 tsuke on top|around=C3
 
 clear_board
 play B c4  
+play W e4  
+play B c7  
+play W c3  
+play B b3  
+play W c5  
+play B pass  override name=3-4 2pt jump double tsuke|around=C3
+
+clear_board
+play B c4  
 play W e3  
 play B g3  
 play W d5  
@@ -805,6 +894,14 @@ play W f5
 play B e6  
 play W d7  
 play B d2  override name=3-4 pincer keima|around=C3
+
+clear_board
+play B c4  
+play W e3  
+play B g3  
+play W e5  
+play B d3  
+play W pass  override name=3-4 pincer kick|around=D3
 
 clear_board
 play B c4  
@@ -877,7 +974,7 @@ play B h5  override name=3-4 large keima lean fix|around=E4
 clear_board
 play B c4  
 play W f4  
-play B pass  log name=3-4 two-spaces high approach|around=D1
+play B pass  override name=3-4 two-space high approach|around=D6
 
 clear_board
 play B c4  
@@ -892,7 +989,7 @@ play B g5
 play W e2  
 play B d2  
 play W f2  
-play B c6  override name=3-4 two-spaces high approach fight|around=C3
+play B c6  override name=3-4 two-space high approach fight|around=C3
 
 clear_board
 play B c4  
@@ -912,7 +1009,7 @@ play B e4
 play W c2  
 play B b3  
 play W d5  
-play B b4  override name=3-4 trick from 4-4 punish|around=D4|external_engine
+play B b4  override name=3-4 trick from 4-4 punish|around=D4|external_engine|priority=5
 play W c5  
 play B b2  override name=3-4 trick from 4-4 punish|around=D4
 play W e2  
@@ -943,7 +1040,7 @@ play B e4
 play W c2  
 play B b3  
 play W d5  
-play B b4  override name=3-4 trick from 4-4 punish|around=D4|external_engine
+play B b4  override name=3-4 trick from 4-4 punish|around=D4|external_engine|priority=5
 play W c5  
 play B b2  override name=3-4 trick from 4-4 punish|around=D4
 play W d2  
@@ -1111,23 +1208,7 @@ play W l4
 play B m3  
 play W n5  
 play B g4  
-play W c3  override name=4-4 shoulder hit 3-3|around=F5
-play B g5  
-play W g6  
-play B f4  
-play W h6  
-play B d3  
-play W b4  
-play B b5  
-play W d2  
-play B e2  
-play W b2  
-play B d1  
-play W c2  
-play B a3  
-play W a4  
-play B a2  
-play W c1  override name=4-4 shoulder hit 3-3 overplay|around=B2
+play W pass  override name=4-4 shoulder hit cut|around=F1
 
 clear_board
 play B d4  
@@ -1144,30 +1225,48 @@ play B k3  override name=4-4 shoulder hit|around=G2
 play W l4  
 play B m3  
 play W n5  
-play B g4  
-play W c3  override name=4-4 shoulder hit 3-3|around=F5
 play B g5  
-play W g6  
-play B f4  
-play W h6  
-play B d3  
-play W b4  
-play B b6  
-play W d2  
-play B e2  
-play W b2  
-play B d1  
-play W c2  
-play B a3  
-play W b5  
-play B a4  
-play W a2  
-play B a5  
-play W c6  
-play B c5  
-play W c7  
-play B b7  
-play W c8  override name=4-4 shoulder hit 3-3 resist|around=B5
+play W pass  override name=4-4 shoulder hit high cut|around=F1
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B j3  override name=4-4 shoulder hit|around=G2
+play W k4  
+play B k3  override name=4-4 shoulder hit|around=G2
+play W l4  
+play B m3  
+play W n5  
+play B e3  
+play W f2  
+play B g4  
+play W pass  override name=4-4 shoulder hit cut|around=F1
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B j3  override name=4-4 shoulder hit|around=G2
+play W k4  
+play B k3  override name=4-4 shoulder hit|around=G2
+play W l4  
+play B m3  
+play W n5  
+play B e3  
+play W f2  
+play B g5  
+play W pass  override name=4-4 shoulder hit high cut|around=F1
 
 clear_board
 play B d4  
@@ -1253,26 +1352,6 @@ play W k4
 play B k3  override name=4-4 shoulder hit|around=G2
 play W l4  
 play B m3  
-play W n5  
-play B g5  
-play W g6  
-play B g4  
-play W h6  override name=4-4 shoulder hit cut defense|around=F3
-
-clear_board
-play B d4  
-play W f3  
-play B h3  
-play W f5  
-play B d6  
-play W j4  
-play B h4  override name=4-4 shoulder hit|around=G2
-play W h5  
-play B j3  override name=4-4 shoulder hit|around=G2
-play W k4  
-play B k3  override name=4-4 shoulder hit|around=G2
-play W l4  
-play B m3  
 play W g4  
 play B pass  override name=4-4 shoulder hit keep all|around=H3
 
@@ -1312,15 +1391,15 @@ play B j3  override name=4-4 shoulder hit|around=G2
 play W k4  
 play B k3  override name=4-4 shoulder hit|around=G2
 play W l3  
-play B l4  override name=4-4 shoulder hit hustling|around=G3|external_engine
+play B l4  override name=4-4 shoulder hit hustling|around=H3|external_engine
 play W m3  
-play B g5  override name=4-4 shoulder hit hustling|around=G3
+play B g5  override name=4-4 shoulder hit hustling|around=H3
 play W j6  
-play B h6  override name=4-4 shoulder hit hustling|around=G3
+play B h6  override name=4-4 shoulder hit hustling|around=H3
 play W j5  
-play B g4  override name=4-4 shoulder hit hustling|around=G3
+play B g4  override name=4-4 shoulder hit hustling|around=H3
 play W g6  
-play B f4  override name=4-4 shoulder hit hustling|around=G3
+play B f4  override name=4-4 shoulder hit hustling|around=H3
 
 clear_board
 play B d4  
@@ -1331,6 +1410,20 @@ play B d6
 play W j4  
 play B h4  override name=4-4 shoulder hit|around=G2
 play W h5  
+play B j5  
+play W pass  override name=4-4 shoulder hit crosscut|around=G2
+
+clear_board
+play B d4  
+play W f3  
+play B h3  
+play W f5  
+play B d6  
+play W j4  
+play B h4  override name=4-4 shoulder hit|around=G2
+play W h5  
+play B e3  
+play W f2  
 play B j5  
 play W pass  override name=4-4 shoulder hit crosscut|around=G2
 
@@ -1602,6 +1695,18 @@ play B d4
 play W f3  
 play B f4  
 play W g4  
+play B f5  
+play W c3  
+play B e3  
+play W c4  
+play B c6  
+play W pass  log name=4-4 keima tsuke push 3-3 keima block|around=C3
+
+clear_board
+play B d4  
+play W f3  
+play B f4  
+play W g4  
 play B g5  
 play W e4  
 play B f5  
@@ -1648,6 +1753,17 @@ play B d4
 play W f3  
 play B c6  
 play W f5  
+play B pass  override name=4-4 keima direct jump|around=F3
+play W c3  
+play B d3  
+play W c4  
+play B d5  override name=4-4 keima direct jump 3-3 block|around=last
+
+clear_board
+play B d4  
+play W f3  
+play B c6  
+play W f5  
 play B d2  
 play W e2  
 play B e3  
@@ -1658,18 +1774,7 @@ play B c5
 play W c3  
 play B d3  
 play W d6  
-play B c2  override name=4-4 keima jump tenuki tsuke|around=C3
-
-clear_board
-play B d4  
-play W f3  
-play B c6  
-play W f5  
-play B pass  
-play W c3  
-play B d3  
-play W c4  
-play B d5  override name=4-4 keima keima jump 3-3 block|around=last
+play B c2  override name=4-4 keima direct jump tenuki tsuke|around=C3
 
 clear_board
 play B d4  
@@ -1755,6 +1860,19 @@ play W pass  override name=4-4 dbl kakari crosscut|around=C3
 clear_board
 play B d4  
 play W f3  
+play B pass  
+play W c6  
+play B f4  
+play W g4  
+play B f5  
+play W e3  
+play B d3  
+play W g5  
+play B pass  override name=4-4 dbl kakari fight|around=D3
+
+clear_board
+play B d4  
+play W f3  
 play B k3  
 play W c6  
 play B c3  
@@ -1804,6 +1922,40 @@ play B d4
 play W c3  
 play B c4  
 play W d3  
+play B e3  
+play W e2  
+play B f2  
+play W b4  
+play B b5  
+play W c5  
+play B d5  
+play W b3  
+play B e4  
+play W c6  
+play B pass  override name=hoshi 3-3 double hane side fight|around=C3|external_engine=3 0
+
+clear_board
+play B d4  
+play W c3  
+play B c4  
+play W d3  
+play B e3  
+play W e2  
+play B f2  
+play W b4  
+play B b5  
+play W c5  
+play B d5  
+play W b3  
+play B f4  
+play W c6  
+play B pass  override name=hoshi 3-3 double hane side fight|around=C3|external_engine=3 0
+
+clear_board
+play B d4  
+play W c3  
+play B c4  
+play W d3  
 play B f3  
 play W pass  override name=hoshi direct 3-3 (invading)|around=C3
 
@@ -1834,7 +1986,7 @@ play B pass  override name=4-4 attach|around=C3
 clear_board
 play B d4  
 play W e3  
-play B pass  log name=4-4 kosumi|around=C3
+play B pass  override name=4-4 kosumi|around=C3
 
 clear_board
 play B d5  
@@ -1844,7 +1996,7 @@ clear_board
 play B d5  
 play W d3  
 play B f4  
-play W pass  override name=deadly taka|around=B2
+play W pass  override name=deadly taka|around=C3|external_engine_moves=25
 
 clear_board
 play B d5  
@@ -1989,6 +2141,60 @@ play B c7
 play W g4  override name=moku 3-3 pincer slice-through|around=D3
 
 clear_board
+play B c5  
+play W c3  
+play B d4  
+play W d3  
+play B f3  
+play W e3  
+play B f4  
+play W e4  
+play B e5  
+play W pass  override name=moku 3-3 hane enclose|around=C3
+
+clear_board
+play B c5  
+play W c3  
+play B d4  
+play W d3  
+play B f3  
+play W e3  
+play B f4  
+play W e4  
+play B e5  
+play W f5  
+play B e2  
+play W g5  
+play B d2  
+play W c2  
+play B g2  
+play W e6  
+play B d5  
+play W b6  override name=moku 3-3 hane enclose tesuji|around=D3|external_engine
+
+clear_board
+play B c5  
+play W c3  
+play B d4  
+play W d3  
+play B f3  
+play W e3  
+play B f4  
+play W e4  
+play B e5  
+play W f5  
+play B g5  
+play W f6  
+play B e6  
+play W g6  
+play B e2  
+play W h5  
+play B g4  
+play W h4  
+play B g2  
+play W h2  override name=moku 3-3 hane enclose atari|around=E3
+
+clear_board
 play B c6  
 play W pass  log name=empty corner keima|around=D4
 
@@ -2129,6 +2335,21 @@ play B q10
 play W o17  
 play B m17  
 play W r17  
+play B r16  
+play W q17  
+play B p16  
+play W o16  
+play B pass  override name=sanrensei seal resist|around=O14
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B m17  
+play W r17  
 play B q17  
 play W r16  
 play B q15  
@@ -2154,6 +2375,16 @@ play W m16
 play B l16  
 play W n16  
 play B q14  override name=sanrensei arkgo|around=O14
+
+clear_board
+play B q16  
+play W pass  
+play B q4  
+play W pass  
+play B q10  
+play W o17  
+play B l16  
+play W r17  override name=sanrensei 2-spc high pincer|around=P14
 
 clear_board
 play B q16  
@@ -2211,6 +2442,99 @@ play W p3
 play B q5  override name=anti chinese attach|around=Q4
 play W p4  
 play B r3  override name=anti chinese attach|around=Q4
+
+clear_board
+play B q16  
+play W pass  
+play B q3  
+play W pass  
+play B q9  
+play W q5  
+play B o4  
+play W r3  
+play B r2  
+play W r4  
+play B s2  
+play W r7  
+play B r8  
+play W q7  
+play B o9  
+play W n6  
+play B m4  
+play W k3  
+play B l5  
+play W m7  
+play B m9  
+play W n3  
+play B n4  
+play W p3  
+play B p4  override name=high chinese belly trick play|around=Q4|external_engine
+play W q2  
+play B q4  override name=high chinese belly trick play|around=Q4
+play W o2  
+play B o3  override name=high chinese belly trick play|around=P2
+play W p2  
+play B n2  override name=high chinese belly trick play|around=P2
+play W m3  
+play B m2  override name=high chinese belly trick play|around=P2
+play W l3  
+play B o1  override name=high chinese belly trick play|around=P2
+
+clear_board
+play B q16  
+play W pass  
+play B q3  
+play W pass  
+play B q9  
+play W q5  
+play B o4  
+play W r3  
+play B r2  
+play W r4  
+play B s2  
+play W r7  
+play B r8  
+play W q7  
+play B o9  
+play W n6  
+play B m4  
+play W k3  
+play B l5  
+play W m7  
+play B m9  
+play W n3  
+play B n4  
+play W p2  
+play B q2  log name=high chinese belly attack|around=Q4
+play W p3  
+play B p4  
+play W m3  
+play B q4  
+
+clear_board
+play B q16  
+play W pass  
+play B q3  
+play W pass  
+play B q9  
+play W r6  
+play B r4  
+play W p6  
+play B n4  
+play W n6  
+play B l4  
+play W q12  
+play B o9  
+play W o4  
+play B o3  
+play W n3  
+play B m3  
+play W p3  
+play B o2  
+play W q4  
+play B p2  
+play W p4  
+play B r3  override name=high chinese lean defend|around=Q3
 
 clear_board
 play B q16  
@@ -2496,8 +2820,7 @@ play B c15
 play W e15  
 play B c13  
 play W o17  
-play B m17  override name=yz_taisha|around=last|around2=E15
-play W pass  
+play B m17  override name=yz_taisha|around=last|around2=E15|external_engine
 
 clear_board
 play B d4  

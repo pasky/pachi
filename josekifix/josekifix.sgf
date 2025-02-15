@@ -1,6 +1,6 @@
 (;GM[1]FF[4]CA[UTF-8]AP[CGoban:3]ST[2]
 RU[Japanese]SZ[19]KM[0.00]
-PW[White]PB[Black]TR[jj]C[pachi_version = 12.80
+PW[White]PB[Black]TR[jj]C[pachi_version = 12.86
 
 
 This file contains joseki fixes which are loaded at startup by Pachi.
@@ -44,15 +44,16 @@ noladder_other2_setup_own = E3 F2 G2
 noladder_other2_setup_other = D2 E2 F3 G3
 external_engine
 external_engine_diag
+priority = 2
 
 
 3-4 joseki trick play:
 
-If W doesn't have ladder around F4, B can punish:   
-B can E3 as long as he doesn't play B4 (tricky !)
+If B doesn't have ladder around F4, W can punish:   
+W can E3 as long as he doesn't play B4 (tricky !)
 Ex: pachipachi OVO 2022-05-10
 
-Interestingly 4-4 cross cut can revert to this (B stone at C8 in this case)
+Interestingly 4-4 cross cut can revert to this (W stone at C8 in this case)
 -> Match around D2 to match this also.
 Ex: OVO SwissBot1 2022-10-26 08:29
 
@@ -74,17 +75,42 @@ around = D2])
 ;W[cs]C[[override\]
 around = D3]))
 (;B[gr]
-;W[fq]
+;W[fq]C[[override\]
+]
 ;B[fs]
+;W[bp]C[[override\]
+]
+;B[co]
 ;W[es]C[[override\]
-around = D2]))
+around = D2
+]
+;B[ds]
+;W[bs]C[[override\]
+]
+(;B[gs]
+;W[cs]C[[override\]
+]
+;B[es]
+;W[hq]C[[override\]
+around = E2]
+;B[ir]
+;W[hr]
+;B[hs]
+;W[gq]C[[override\]
+]
+;B[is]
+;W[jq]C[[override\]
+around = G2
+external_engine])
+(;B[es]
+;W[cs]C[[override\]])))
 (;W[br]C[[override\]
 name = "3-4 trick ladder"
 around = D2
 external_engine
 
 
-If W has ladder around F4, can't E3.
+If B has ladder around F4, W can't E3.
 B2 best]
 (;B[er]
 ;W[gq]C[[override\]]
@@ -223,13 +249,42 @@ around = D4
 https://online-go.com/game/12167192 
 ])
 (;B[cm]
-;W[fo]C[[override\]
-name = "3-4 pincer attach hane extend"
+(;W[fo]C[[override\]
+name = "3-4 pincer attach extend"
 around = D3
 
 G5 not so good
 
-globax pachipachi 2023-04-10]))
+globax pachipachi 2023-04-10])
+(;W[co]
+;B[bo]
+;W[do]
+;B[]C[[override\]
+name = "3-4 pincer attach extend tsuke"
+around = D3
+external_engine_moves = 1
+
+
+tends to play B4 which is not great.
+G5 or K3 much better
+
+Ex: pachipachi mir12  2024-12-31 19:04])
+(;W[br]
+;B[bp]
+;W[iq]
+;B[go]C[[log\]
+name = "3-4 pincer attach extend pincer"
+around = E4
+]
+;W[en]
+;B[dl]
+;W[gm]
+;B[hn]C[[override\]
+name = "3-4 pincer attach extend pincer cap"
+around = E4
+
+
+Ex: sbng pachipachi  2025-01-05 13:27])))
 (;B[dq]
 ;W[dp]
 ;B[eq]
@@ -337,7 +392,19 @@ name = "3-4 pincer B4 tricks"
 around = C3
 
 
-Spass pachipachi 2023-04-24]))
+Spass pachipachi 2023-04-24])
+(;B[go]
+;W[dp]
+;B[co]
+;W[dr]
+;B[en]
+;W[]C[[override\]
+name = "3-4 pincer jump enclose"
+around = D4
+
+tricky
+
+Ex: maeda pachipachi 2024-12-28]))
 (;W[fo]
 (;B[cm]
 ;W[hp]
@@ -582,14 +649,12 @@ he prefers C6 to classic E5 variation
 
 pachipachi coq 2023-04-07]))
 (;W[co]
-;B[bo]
-;W[cq]
 ;B[]C[[override\]
-name = "3-4 keima pincer double attach"
-around = D4
+name = "3-4 pincer tsuke on top"
+around = D3
 
 
-Ex: pachipachi globax  2018-03-18 (11:00)]))
+Ex: mss2 pachipachi  2025-01-01 18:32]))
 (;B[eq]
 (;W[fq]
 ;B[dq]
@@ -719,10 +784,20 @@ name = "3-4 tsuke on top"
 around = C3
 
 
-pachipachi Beutlin 2023-05-08 13:33])))
+pachipachi Beutlin 2023-05-08 13:33]))
+(;B[cm]
+;W[cq]
+;B[bq]
+;W[co]
+;B[]C[[override\]
+name = "3-4 2pt jump double tsuke"
+around = C3
+
+
+Ex: bondoman pachipachi  2025-01-19 20:36]))
 (;W[eq]
 (;B[gq]
-;W[do]
+(;W[do]
 (;B[]C[[override\]
 name = "3-4 pincer keima"
 around = A4
@@ -773,6 +848,16 @@ name = "3-4 pincer keima"
 around = C3
 
 maimaimai pachipachi  2023-05-23])))
+(;W[eo]
+;B[dq]
+;W[]C[[override\]
+name = "3-4 pincer kick"
+around = D3
+
+gets tricky after w H4
+
+Ex: pachipachi Maeda  2025-01-19 14:30
+]))
 (;B[hp]
 (;W[en]
 ;B[]C[[override\]
@@ -846,9 +931,14 @@ don't hane
 
 Song17 pachipachi 2023-04-15])))
 (;W[fp]
-(;B[]C[[log\]
-name = "3-4 two-spaces high approach"
-around = D1])
+(;B[]C[[override\]
+name = "3-4 two-space high approach"
+around = D6
+
+normal approach in kobayashi fuseki when b has a stone at D10
+but very unusual otherwise. match around D6 for empty side case.
+
+Ex: Kwetal pachipachi  2025-01-13 9:45])
 (;B[eq]
 ;W[fq]
 ;B[ep]
@@ -860,7 +950,7 @@ around = D1])
 ;B[dr]
 ;W[fr]
 ;B[cn]C[[override\]
-name = "3-4 two-spaces high approach fight"
+name = "3-4 two-space high approach fight"
 around = C3
 
 
@@ -888,6 +978,7 @@ zzz010307 pachipachi  2023-05-28]))
 name = "3-4 trick from 4-4 punish"
 around = D4
 external_engine
+priority = 5
 
 
 3-4 joseki trick play (ladder, from 4-4 cross cut)
@@ -1112,17 +1203,13 @@ around = "last"
 (;W[fq]
 (;B[hq]
 (;W[fo]
-;B[dn]
+;B[dn]TR[cn]C[
+Following should take care to also match position with C6 instead of D6 ...]
 ;W[ip]
 ;B[hp]C[[override\]
 name = "4-4 shoulder hit"
 around = G2
 
-
-Always J3 for now,
-J5 playable but falls for trick play ...
-
-Also match B keima kind (C6 instead of D6)
 
 Ex: Silverwing pachipachi  2022-11-07 17:22  ]
 ;W[ho]
@@ -1141,63 +1228,37 @@ Ex: Silverwing pachipachi  2022-11-07 17:22]
 ;B[lq]
 (;W[mo]
 (;B[gp]
-;W[cq]C[[override\]
-name = "4-4 shoulder hit 3-3"
-around = F5
+;W[]C[[override\]
+name="4-4 shoulder hit cut"
+around = F1
 
 
-3-3 invasion after b cut w pincer stones
-kogo says G5 first, but wth just invade !
+used to jump at 3-3 here but many shenanigans ...
 
-Ex: niceguy pachipachi 2018-05-01  07:09:28]
-;B[go]
-;W[gn]
-;B[fp]
-;W[hn]
-;B[dq]
-;W[bp]
-(;B[bo]
-;W[dr]
-;B[er]
-;W[br]
-;B[ds]
-;W[cr]
-;B[aq]
-;W[ap]
-;B[ar]
-;W[cs]C[[override\]
-name = "4-4 shoulder hit 3-3 overplay"
-around = B2
+don't assume empty spot at L3])
+(;B[go]
+;W[]C[[override\]
+name="4-4 shoulder hit high cut"
+around = F1
 
+same, let kata handle it.
 
-b played B5 which looks overplay: B6 normally 
-XXX how to punish ?
+pachipachi laercioskt  2024-08-20
+pachipachi globax 2023-06-26])
+(;B[eq]
+;W[fr]
+(;B[gp]
+;W[]C[[override\]
+name="4-4 shoulder hit cut"
+around = F1
 
-live for now
-Ex: https://online-go.com/game/12656997 ])
-(;B[bn]
-;W[dr]
-;B[er]
-;W[br]
-;B[ds]
-;W[cr]
-;B[aq]
-;W[bo]
-;B[ap]
-;W[ar]
-;B[ao]
-;W[cn]
-;B[co]
-;W[cm]
-;B[bm]
-;W[cl]C[[override\]
-name = "4-4 shoulder hit 3-3 resist"
-around = B5
+])
+(;B[go]
+;W[]C[[override\]
+name="4-4 shoulder hit high cut"
+around = F1
 
-
-3-3 invasion after b cut w pincer stones
-regular variation : b blocks with B6
-but tries to resist w B5]))
+Ex: sbng pachipachi  2025-01-01 11:22]))
 (;B[mq]C[[override\]
 name = "4-4 shoulder hit defense"
 around = J3
@@ -1234,15 +1295,7 @@ around = A3
 ])
 (;W[cr]
 ;B[dq]C[[override\]
-]))
-(;B[go]
-;W[gn]
-;B[gp]
-;W[hn]C[[override\]
-name = "4-4 shoulder hit cut defense"
-around = F3
-
-pachipachi globax 2023-06-26]))
+])))
 (;W[gp]
 (;B[]C[[override\]
 name = "4-4 shoulder hit keep all"
@@ -1264,7 +1317,7 @@ half pachipachi  2023-05-15])))
 (;W[kq]
 ;B[kp]C[[override\]
 name = "4-4 shoulder hit hustling"
-around = G3
+around = H3
 external_engine
 
 
@@ -1290,7 +1343,14 @@ name = "4-4 shoulder hit crosscut"
 easy to screw up ...
 
 Ex:  gomj pachipachi  2023-01-23  16:35
-]))
+])
+(;B[eq]
+;W[fr]
+;B[io]
+;W[]C[[override\]
+name = "4-4 shoulder hit crosscut"
+
+Ex: niceguy0 pachipachi  2025-01-01 12:34]))
 (;W[hp]
 ;B[]C[[override\]
 name = "4-4 keima pincer tsuke"
@@ -1536,7 +1596,7 @@ pachipachi pilaf  2023-04-05
 (;B[fp]
 ;W[gp]
 (;B[fo]
-;W[eq]
+(;W[eq]
 ;B[dq]
 ;W[go]
 ;B[gn]
@@ -1550,6 +1610,19 @@ have to cut at E4 now, crazy fight
 
 pachipachi fidibus 2023-04-20
 ])
+(;W[cq]
+;B[eq]
+;W[cp]
+;B[cn]
+;W[]C[[log\]
+name = "4-4 keima tsuke push 3-3 keima block"
+around = C3
+
+
+C4 bad now according to katago, should B6 instead ...
+log variation, can quickly become problematic.
+
+Ex: pachipachi samzhang  2024-12-30 12:43]))
 (;B[go]
 ;W[ep]
 ;B[fo]
@@ -1599,6 +1672,24 @@ name = "4-4 keima keima slide pincer fix"
 around = E3
 ])))
 (;W[fo]
+(;B[]C[[override\]
+name = "4-4 keima direct jump"
+around = F3
+
+bot joseki confusing move
+
+Ex: Maeda pachipachi  2025-01-20 16:41]
+;W[cq]
+;B[dq]
+;W[cp]
+;B[do]C[[override\]
+name = "4-4 keima direct jump 3-3 block"
+around = "last"
+
+
+C5 mistake here !
+
+Ex: pachipachi badatthis  2018-02-22])
 (;B[dr]
 ;W[er]
 ;B[eq]
@@ -1611,7 +1702,7 @@ around = E3
 ;B[dq]
 ;W[dn]
 ;B[cr]C[[override\]
-name = "4-4 keima jump tenuki tsuke"
+name = "4-4 keima direct jump tenuki tsuke"
 around = C3
 
 
@@ -1619,19 +1710,7 @@ must C2 or C4
 don't hane at D7 !
 
 Ex: Kwetal pachipachi 2022-10-06
-])
-(;B[]
-;W[cq]
-;B[dq]
-;W[cp]
-;B[do]C[[override\]
-name = "4-4 keima keima jump 3-3 block"
-around = "last"
-
-
-C5 mistake here !
-
-Ex: pachipachi badatthis  2018-02-22]))
+]))
 (;W[dq]
 ;B[cq]
 ;W[cr]
@@ -1664,7 +1743,7 @@ pachipachi madalinG 2023-02-16])
 ;B[fp]
 ;W[gp]
 ;B[fo]
-;W[cq]C[[override\]
+(;W[cq]C[[override\]
 name = "4-4 dbl kakari"
 around = C3
 
@@ -1711,6 +1790,18 @@ name = "4-4 dbl kakari crosscut"
 
 
 coq pachipachi  2023-04-11]))
+(;W[eq]
+;B[dq]
+;W[go]
+;B[]C[[override\]
+name = "4-4 dbl kakari fight"
+around = D3
+
+
+b may have a stone as near as J4 so match close to corner.
+crazy fight
+
+Ex: aguilar1 pachipachi  2025-01-01 16:30]))
 (;B[jq]
 ;W[cn]
 ;B[cq]
@@ -1762,13 +1853,42 @@ external_engine
 pachipachi snow0115 2023-04-25])
 (;B[eq]
 ;W[er]
-;B[dr]
+(;B[dr]
 ;W[]C[[override\]
 name = "hoshi 3-3 hane inside"
 around = C2
 
 
 pachipachi Beutlin 2023-04-25])
+(;B[fr]
+;W[bp]
+;B[bo]
+;W[co]
+;B[do]C[
+
+should E4 instead actually (katago)]
+;W[bq]
+(;B[ep]
+;W[cn]
+;B[]C[[override\]
+name = "hoshi 3-3 double hane side fight"
+around = C3
+external_engine = lower_left upper_left
+
+side fight
+
+Ex: AlexeySP pachipachi 2024-12-28 11:24
+])
+(;B[fp]
+;W[cn]
+;B[]C[[override\]
+name = "hoshi 3-3 double hane side fight"
+around = C3
+external_engine = lower_left upper_left
+
+side fight
+
+])))
 (;B[fq]
 (;W[]C[[override\]
 name = "hoshi direct 3-3 (invading)"
@@ -1803,11 +1923,12 @@ around = C3
 
 magoa pachipachi 2023-04-23])
 (;W[eq]
-;B[]C[[log\]
+;B[]C[[override\]
 name = "4-4 kosumi"
 around = C3
 
-]))
+
+Ex: sbng pachipachi  2024-12-31 15:17]))
 (;B[do]
 (;W[]C[[override\]
 name = "taka"
@@ -1821,10 +1942,11 @@ Ex: pachipachi huff  2022-12-12  09:23 ])
 (;B[fp]
 (;W[]C[[override\]
 name = "deadly taka"
-around = B2
+around = C3
+external_engine_moves = 25
 
 
-Deadly takamoku joseki
+deadly takamoku joseki
 ])
 (;W[co]
 ;B[cp]
@@ -1836,10 +1958,9 @@ around = "last"
 external_engine
 external_engine_diag
 
-# ladder_own = E5
-# ladder_own_setup_own = [ C6 \]
+ladder_own = E5
+ladder_own_setup_own = [ C6 \]
 
-actually, always play C6, even if w doesn't have ladder ...
 
 Ex: pachipachi mommy123  2022-11-19 16:35
 ]
@@ -2011,7 +2132,49 @@ around = D3]
 ])
 (;B[cm]
 ;W[gp]C[[override\]
-]))))
+]))
+(;B[dp]
+;W[dq]
+;B[fq]
+;W[eq]
+;B[fp]
+;W[ep]
+;B[eo]
+(;W[]C[[override\]
+name = "moku 3-3 hane enclose"
+around = C3
+])
+(;W[fo]
+(;B[er]
+;W[go]
+;B[dr]
+;W[cr]
+;B[gr]
+;W[en]
+;B[do]
+;W[bn]C[[override\]
+name = "moku 3-3 hane enclose tesuji"
+around = D3
+external_engine
+
+B6 the move according to kata.
+
+Ex: kwetal pachipachi  2025-01-05 20:31])
+(;B[go]
+;W[fn]
+;B[en]
+;W[gn]
+;B[er]
+;W[ho]
+;B[gp]
+;W[hp]
+;B[gr]
+;W[hr]C[[override\]
+name = "moku 3-3 hane enclose atari"
+around = E3
+
+
+Ex: Kwetal pachipachi  2025-01-15 15:00])))))
 (;B[cn]
 ;W[]C[[log\]
 name = "empty corner keima"
