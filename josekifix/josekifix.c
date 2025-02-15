@@ -854,7 +854,7 @@ ladder_sanity_check(board_t *board, ladder_check_t *check, override_t *override)
 
 	/* Check coords are valid */
 	
-	if (!valid_str_coord(check->coord)) {
+	if (!valid_coord(check->coord)) {
 		board_print(board, stderr);	/* orig board, without setup stones */
 		die("josekifix: \"%s\": invalid ladder coord '%s', aborting. (run with -d5 to see previous moves)\n",
 		    override->name, check->coord);
@@ -862,14 +862,14 @@ ladder_sanity_check(board_t *board, ladder_check_t *check, override_t *override)
 	
 	int n = JOSEKIFIX_LADDER_SETUP_MAX;
 	for (int i = 0; i < n && check->setup_own[i]; i++)
-		if (!valid_str_coord(check->setup_own[i])) {
+		if (!valid_coord(check->setup_own[i])) {
 			board_print(board, stderr);
 			die("josekifix: \"%s\": invalid ladder setup_own coord '%s', aborting. (run with -d5 to see previous moves)\n",
 			    override->name, check->setup_own[i]);
 		}
 
 	for (int i = 0; i < n && check->setup_other[i]; i++)
-		if (!valid_str_coord(check->setup_other[i])) {
+		if (!valid_coord(check->setup_other[i])) {
 			board_print(board, stderr);
 			die("josekifix: \"%s\": invalid ladder setup_other coord '%s', aborting. (run with -d5 to see previous moves)\n",
 			    override->name, check->setup_other[i]);
@@ -913,13 +913,13 @@ common_sanity_checks(board_t *b, override_t *override)
 		die("josekifix: this override has no name, aborting. (run with -d5 to see previous moves)\n");
 	}
 
-	if (!valid_str_coord(override->prev) && strcmp(override->prev, "pass")) {
+	if (!valid_coord(override->prev) && strcmp(override->prev, "pass")) {
 		board_print(b, stderr);
 		die("josekifix: \"%s\": invalid prev move '%s', aborting. (run with -d5 to see previous moves)\n",
 		    override->name, override->prev);
 	}
 
-	if (!valid_str_coord(override->next) && strcmp(override->next, "pass")) {
+	if (!valid_coord(override->next) && strcmp(override->next, "pass")) {
 		board_print(b, stderr);
 		die("josekifix: \"%s\": invalid next move '%s', aborting. (run with -d5 to see previous moves)\n",
 		    override->name, override->next);
@@ -931,7 +931,7 @@ common_sanity_checks(board_t *b, override_t *override)
 	if (override->coord_other)	around_str = override->coord_other;
 	if (override->coord_empty)	around_str = override->coord_empty;
 	
-	if (around_str && !valid_str_coord(around_str)) {
+	if (around_str && !valid_coord(around_str)) {
 		board_print(b, stderr);
 		die("josekifix: \"%s\": invalid around coord '%s', aborting. (run with -d5 to see previous moves)\n",
 		    override->name, around_str);

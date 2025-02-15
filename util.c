@@ -108,6 +108,29 @@ str_prefix(char *prefix, char *str)
 	return (!strncmp(prefix, str, strlen(prefix)));
 }
 
+bool
+valid_number(char *str)
+{
+	char c = *str++;
+	if (c != '-' && !isdigit(c))
+		return false;
+	
+	while (isdigit(*str))
+		str++;
+	return (!*str || isspace(*str));
+}
+
+bool
+valid_float(char *str)
+{
+	char c = *str++;
+	if (c != '-' && c != '.' && !isdigit(c))
+		return false;
+
+	while (isdigit(*str) || *str == '.')
+		str++;
+	return (!*str || isspace(*str));
+}
 
 static void
 vwarning(const char *format, va_list ap)

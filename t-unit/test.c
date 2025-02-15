@@ -790,7 +790,7 @@ test_genmove(board_t *b, char *arg)
 		if (*arg == '!')  arg++;
 		if (!strcmp(arg, "pass"))   {  mq_add(q, pass, 0);    next_arg_opt(arg);  continue;  }
 		if (!strcmp(arg, "resign")) {  mq_add(q, resign, 0);  next_arg_opt(arg);  continue;  }
-		if (!valid_str_coord(arg))  die("Invalid move: '%s'\n", arg);
+		if (!valid_coord(arg))  die("Invalid move: '%s'\n", arg);
 		mq_add(q, str2coord(arg), 0);
 		next_arg_opt(arg);
 	}
@@ -809,8 +809,6 @@ test_genmove(board_t *b, char *arg)
 
 	/* Sanity checks */
 	board_t *tmp = board_new(19, NULL);
-	assert(using_dcnn(tmp));
-	assert(using_patterns());
 	board_delete(&tmp);
 
 	static time_info_t ti = { 0, };
@@ -884,7 +882,7 @@ test_dcnn_blunder(board_t *b, char *arg)
 		move_queue_t *q = (*arg == '!' ? &unwanted : &wanted);
 		if (*arg == '!')  arg++;
 		if (!strcmp(arg, "pass") || !strcmp(arg, "resign"))  die("Can't have pass or resign here.\n");
-		if (!valid_str_coord(arg))  die("Invalid move: '%s'\n", arg);
+		if (!valid_coord(arg))  die("Invalid move: '%s'\n", arg);
 		mq_add(q, str2coord(arg), 0);
 		next_arg_opt(arg);
 	}

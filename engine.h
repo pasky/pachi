@@ -75,10 +75,12 @@ struct engine {
 	int   id;
 	char *name;
 	char *comment;
+	char *version;				    /* Replaces default gtp answer if present. */
 
 	options_t options;
 
-	bool keep_on_clear;			    /* If set, do not reset the engine state on clear_board. */
+	bool keep_on_clear;			    /* Do not reset engine on clear_board. */
+	bool keep_on_undo;			    /* Do not reset engine after undo. */
 
 	engine_setoption_t       setoption;	    /* Set/change engine option. Don't call directly.
 						     * @optname/@optval: option name/value. @optval may be changed by engine.
@@ -114,6 +116,15 @@ struct engine {
 	void *data;
 };
 
+
+/* Initial sanity checks. */
+void engine_init_checks(void);
+
+/* Convert engine name to id. */
+enum engine_id engine_name_to_id(const char *name);
+
+/* List supported engines (show_all: show/hide internal engines). */
+char* supported_engines(bool show_all);
 
 /* Initialize engine. Call engine_done() later when finished with it. */
 void engine_init(engine_t *e, int id, const char *e_arg, board_t *b);

@@ -100,7 +100,6 @@ typedef struct {
 	move_stats_t my_last_stats;
 	int slaves;
 	int threads;
-	bool undo_pending;
 } distributed_t;
 
 /* Default number of simulations to perform per move.
@@ -147,55 +146,6 @@ path2sstr(path_t path)
 	return b2;
 }
 
-/* undo: command is forwarded to the slaves so they take care of themselves.
- * For us however we can't let default gtp handler run otherwise it'll reset us !
- * so handle it here.
- * Similar logic as gtp.c cmd_undo() but use own flag for pending undo.
- * Can't update board right away here or we'll be out of sync with slaves
- * if we get two undos in a row. */
-static enum parse_code
-distributed_undo(distributed_t *dist, board_t *b, gtp_t *gtp)
-{
-	/* --noundo: undo only allowed for pass. */
-	if (gtp->noundo && !is_pass(last_move(b).coord)) {
-		if (DEBUGL(1))  fprintf(stderr, "undo on non-pass move %s\n", coord2sstr(last_move(b).coord));
-		gtp_error(gtp, "cannot undo");
-		return P_DONE_OK;
-	}
-
-	move_history_t *h = &gtp->history;
-	if (!h->moves) {  gtp_error(gtp, "no moves to undo");  return P_DONE_OK;  }
-	if (b->moves == b->handicap) {  gtp_error(gtp, "can't undo handicap");  return P_DONE_OK;  }
-	h->moves--;
-
-	/* No need to stop pondering, slaves are already notified. */
-	
-	/* Wait for non-undo command to update board. */
-	dist->undo_pending = true;
-	
-	return P_DONE_OK;
-}
-
-/* Similar to gtp.c undo_reload_engine() but just update board, don't reset engine. */
-static void
-distributed_undo_commit(distributed_t *dist, board_t *b, gtp_t *gtp)
-{
-	if (DEBUGL(3)) fprintf(stderr, "updating board after undo(s).\n");
-	
-	dist->undo_pending = false;
-	
-	/* Update board */
-	int handicap = b->handicap;
-	board_clear(b);
-	b->handicap = handicap;
-
-	move_history_t *h = &gtp->history;
-	for (int i = 0; i < h->moves; i++) {
-		int r = board_play(b, &h->move[i]);
-		assert(r >= 0);
-	}
-}
-
 /* Dispatch a new gtp command to all slaves.
  * The slave lock must not be held upon entry and is released upon return.
  * args is empty or ends with '\n' */
@@ -204,10 +154,6 @@ distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t
 {
 	distributed_t *dist = (distributed_t*)e->data;
 
-	/* Pending undo ? Update board */
-	if (dist->undo_pending && strcasecmp(cmd, "undo"))
-		distributed_undo_commit(dist, b, gtp);
-	
 	/* Commands that should not be sent to slaves.
 	 * time_left will be part of next pachi-genmoves,
 	 * we reduce latency by not forwarding it here. */
@@ -243,7 +189,6 @@ distributed_notify(engine_t *e, board_t *b, int id, char *cmd, char *args, gtp_t
 	if (b->moves == 0) sleep(1);
 
 	/* Commands forwarded to slaves but we shouldn't run: */
-	if (!strcasecmp(cmd, "undo"))		  return distributed_undo(dist, b, gtp);
 	if (!strcasecmp(cmd, "pachi-setoption"))  return P_DONE_OK;   // XXX handle errors, changing options on distributed side ?
 	if (!strcasecmp(cmd, "pachi-getoption"))  {  gtp_error(gtp, "unimplemented"); return P_DONE_OK;  }  // XXX check replies from all slaves agree ?
 	
@@ -598,7 +543,8 @@ distributed_engine_init(engine_t *e, board_t *b)
 	e->dead_groups = distributed_dead_groups;
 	e->chat = distributed_chat;
 	// Keep the threads and the open socket connections:
-	e->keep_on_clear = true;
+	e->keep_on_clear = true;	/* Do not reset engine on clear_board */
+	e->keep_on_undo = true;		/* Do not reset engine after undo */
 	e->setoption = distributed_setoption;
 	distributed_state_init(e, b);
 

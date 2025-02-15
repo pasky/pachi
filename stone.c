@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "stone.h"
 
@@ -20,6 +21,13 @@ str2stone(char *str)
 	switch (tolower(*str)) {
 		case 'b': return S_BLACK;
 		case 'w': return S_WHITE;
-		default: return S_NONE;
+		default:  assert(0);
 	}
+}
+
+bool
+valid_color(char *str)
+{
+	char c = tolower(*str);
+	return (c == 'b' || c == 'w');
 }

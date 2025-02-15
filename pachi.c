@@ -11,27 +11,13 @@
 #include "pachi.h"
 #include "debug.h"
 #include "engine.h"
-#include "engines/replay.h"
-#include "engines/montecarlo.h"
-#include "engines/random.h"
-#include "engines/external.h"
-#include "dcnn/dcnn_engine.h"
-#include "dcnn/blunderscan.h"
-#include "pattern/patternscan.h"
-#include "pattern/pattern_engine.h"
-#include "joseki/joseki_engine.h"
-#include "joseki/josekiload.h"
-#include "josekifix/josekifixload.h"
 #include "t-unit/test.h"
-#include "uct/uct.h"
-#include "distributed/distributed.h"
 #include "gtp.h"
 #include "chat.h"
 #include "timeinfo.h"
 #include "random.h"
 #include "version.h"
 #include "network.h"
-#include "uct/tree.h"
 #include "fifo.h"
 #include "dcnn/dcnn.h"
 #include "dcnn/caffe.h"
@@ -54,67 +40,6 @@ long  verbose_logs = 0;
 
 static void main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port);
 
-typedef struct {
-	int		id;
-	char	       *name;
-	engine_init_t	init;
-	bool		show;
-} engine_map_t;
-
-/* Must match order in engine.h */
-engine_map_t engines[] = {
-	{ E_UCT,		"uct",            uct_engine_init,            1 },
-#ifdef DCNN
-	{ E_DCNN,		"dcnn",           dcnn_engine_init,           1 },
-#ifdef EXTRA_ENGINES
-	{ E_BLUNDERSCAN,	"blunderscan",    blunderscan_engine_init,    0 },
-#endif
-#endif
-	{ E_PATTERN,		"pattern",        pattern_engine_init,        1 },
-#ifdef EXTRA_ENGINES
-	{ E_PATTERNSCAN,	"patternscan",    patternscan_engine_init,    0 },
-#endif
-	{ E_JOSEKI,		"joseki",         joseki_engine_init,         1 },
-	{ E_JOSEKILOAD,		"josekiload",     josekiload_engine_init,     0 },
-#ifdef JOSEKIFIX
-	{ E_JOSEKIFIXLOAD,	"josekifixload",  josekifixload_engine_init,  0 },
-#endif
-	{ E_RANDOM,		"random",         random_engine_init,         1 },
-	{ E_REPLAY,		"replay",         replay_engine_init,         1 },
-	{ E_MONTECARLO,		"montecarlo",     montecarlo_engine_init,     1 },
-#ifdef DISTRIBUTED
-	{ E_DISTRIBUTED,	"distributed",    distributed_engine_init,    1 },
-#endif
-#ifdef JOSEKIFIX
-	{ E_EXTERNAL,		"external",       external_engine_init,       0 },
-#endif
-
-/* Alternative names */
-	{ E_PATTERN,		"patternplay",    pattern_engine_init,        1 },  /* backwards compatibility */
-	{ E_JOSEKI,		"josekiplay",     joseki_engine_init,         1 },
-	
-	{ 0, 0, 0, 0 }
-};
-
-static enum engine_id
-engine_name_to_id(const char *name)
-{
-	for (int i = 0; engines[i].name; i++)
-		if (!strcmp(name, engines[i].name))
-			return engines[i].id;
-	return E_MAX;
-}
-
-static char*
-supported_engines(bool show_all)
-{
-	static_strbuf(buf, 512);
-	for (int i = 0; i < E_MAX; i++)  /* Don't list alt names */
-		if (show_all || engines[i].show)
-			strbuf_printf(buf, "%s%s", engines[i].name, (engines[i+1].name ? ", " : ""));
-	return buf->str;
-}
-
 static void
 pachi_init(int argc, char *argv[])
 {
@@ -123,18 +48,63 @@ pachi_init(int argc, char *argv[])
 	
 	pachi_exe = argv[0];
 	win_set_pachi_cwd(argv[0]);
-	
-	/* Check engine list is sane. */
-	for (int i = 0; i < E_MAX; i++)
-		assert(engines[i].name && engines[i].id == i);
+
+	engine_init_checks();
 };
 
-void
-pachi_engine_init(engine_t *e, int id, board_t *b)
+static void
+log_gtp_input(char *cmd)
 {
-	assert(id >= 0 && id < E_MAX);	
-	engines[id].init(e, b);
+#ifdef DISTRIBUTED
+	/* Log everything except 'pachi-genmoves' subcommands by default,
+	 * slave gets one every 100ms ... */
+	bool genmoves_subcommand = (strchr(cmd, '@') && strstr(cmd, " pachi-genmoves"));
+	if (genmoves_subcommand && !DEBUGL(3))  return;
+#endif
+	
+	if (DEBUGL(1))  fprintf(stderr, "IN: %s", cmd);
 }
+
+static void
+show_version(FILE *s)
+{
+	fprintf(s, "Pachi %s\n", PACHI_VERSION_FULL);
+	if (!DEBUGL(2)) return;
+
+	fprintf(s, "git %s\n", PACHI_VERGIT);
+
+	/* Build info */
+	char boardsize[32] = "";
+#ifdef BOARD_SIZE
+	sprintf(boardsize, "[%ix%i]", BOARD_SIZE, BOARD_SIZE);
+#endif
+	fprintf(s, "%s  %s\n\n", PACHI_VERBUILD, boardsize);
+}
+
+static void
+main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port)
+{
+	char buf[4096];
+	while (fgets(buf, 4096, stdin)) {
+		log_gtp_input(buf);
+
+		enum parse_code c = gtp_parse(gtp, b, e, ti, buf);
+
+		/* The gtp command is a weak identity check,
+		 * close the connection with a wrong peer. */
+		if (c == P_UNKNOWN_COMMAND && gtp_port)  return;
+		
+		if (c == P_ENGINE_RESET) {
+			ti[S_BLACK] = *ti_default;
+			ti[S_WHITE] = *ti_default;
+			engine_reset(e, b);
+		}
+	}
+}
+
+
+/**********************************************************************************************************/
+/* Options */
 
 static void
 usage_smart_pass()
@@ -215,6 +185,7 @@ usage(char *arg)
 		"  -s, --seed RANDOM_SEED            set random seed \n"
 		"  -u, --unit-test FILE              run unit tests \n"
 		"      --tunit-fatal                 abort on failed unit test \n"
+		"      --gtp-fatal                   abort on gtp error \n"
 		" \n"
 		"Engine components: \n"
 		"      --dcnn,     --nodcnn          dcnn required / disabled \n"
@@ -268,23 +239,6 @@ usage(char *arg)
 		" \n");
 }
 
-static void
-show_version(FILE *s)
-{
-	fprintf(s, "Pachi %s\n", PACHI_VERSION_FULL);
-	if (!DEBUGL(2)) return;
-
-	fprintf(s, "git %s\n", PACHI_VERGIT);
-
-	/* Build info */
-	char boardsize[32] = "";
-#ifdef BOARD_SIZE
-	sprintf(boardsize, "[%ix%i]", BOARD_SIZE, BOARD_SIZE);
-#endif
-	fprintf(s, "%s  %s\n\n", PACHI_VERBUILD, boardsize);
-}
-
-
 #define OPT_FUSEKI_TIME       256
 #define OPT_NODCNN            257
 #define OPT_DCNN              258
@@ -309,6 +263,7 @@ show_version(FILE *s)
 #define OPT_NODCNN_BLUNDER    277
 #define OPT_TUNIT_FATAL	      278
 #define OPT_BANNER            279
+#define OPT_GTP_FATAL         280
 
 
 static struct option longopts[] = {
@@ -324,6 +279,7 @@ static struct option longopts[] = {
 	{ "fbook",                  required_argument, 0, 'f' },
 	{ "fuseki-time",            required_argument, 0, OPT_FUSEKI_TIME },
 	{ "fuseki",                 required_argument, 0, OPT_FUSEKI },
+	{ "gtp-fatal",		    no_argument,       0, OPT_GTP_FATAL },
 #ifdef NETWORK
 	{ "gtp-port",               required_argument, 0, 'g' },
 	{ "log-port",               required_argument, 0, 'l' },
@@ -361,6 +317,10 @@ static struct option longopts[] = {
 	{ "version",                no_argument,       0, 'v' },
 	{ 0, 0, 0, 0 }
 };
+
+
+/**********************************************************************************************************/
+/* Main */
 
 int main(int argc, char *argv[])
 {
@@ -429,6 +389,9 @@ int main(int argc, char *argv[])
 #endif
 			case 'f':
 				fbookfile = strdup(optarg);
+				break;
+			case OPT_GTP_FATAL:
+				gtp->fatal = true;
 				break;
 #ifdef NETWORK
 			case 'g':
@@ -610,41 +573,6 @@ int main(int argc, char *argv[])
 	free(chatfile);
 	free(fbookfile);
 	return 0;
-}
-
-static void
-log_gtp_input(char *cmd)
-{
-#ifdef DISTRIBUTED
-	/* Log everything except 'pachi-genmoves' subcommands by default,
-	 * slave gets one every 100ms ... */
-	bool genmoves_subcommand = (strchr(cmd, '@') && strstr(cmd, " pachi-genmoves"));
-	if (genmoves_subcommand && !DEBUGL(3))  return;
-#endif
-	
-	if (DEBUGL(1))  fprintf(stderr, "IN: %s", cmd);
-}
-
-static void
-main_loop(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, time_info_t *ti_default, char *gtp_port)
-{
-	char buf[4096];
-	while (fgets(buf, 4096, stdin)) {
-		log_gtp_input(buf);
-
-		enum parse_code c = gtp_parse(gtp, b, e, ti, buf);
-
-		/* The gtp command is a weak identity check,
-		 * close the connection with a wrong peer. */
-		if (c == P_UNKNOWN_COMMAND && gtp_port)  return;
-		
-		if (c == P_ENGINE_RESET) {
-			ti[S_BLACK] = *ti_default;
-			ti[S_WHITE] = *ti_default;
-			if (!e->keep_on_clear)
-				engine_reset(e, b);
-		}
-	}
 }
 
 void

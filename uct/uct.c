@@ -40,6 +40,8 @@ uct_policy_t *policy_ucb1amaf_init(uct_t *u, char *arg, board_t *board);
 static void uct_pondering_start(uct_t *u, board_t *b0, tree_t *t, enum stone color, coord_t our_move, int flags);
 static void uct_genmove_pondering_save_replies(uct_t *u, board_t *b, enum stone color, coord_t next_move);
 static void uct_genmove_pondering_start(uct_t *u, board_t *b, enum stone color, coord_t our_move);
+static void uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,bool winrates, int min_playouts);
+
 
 /* Maximal simulation length. */
 #define MC_GAMELEN	MAX_GAMELEN
@@ -85,7 +87,7 @@ setup_dynkomi(uct_t *u, board_t *b, enum stone to_play)
 		u->t->extra_komi = 0;
 }
 
-void
+static void
 uct_prepare_move(uct_t *u, board_t *b, enum stone color)
 {
 	if (u->t) {  /* Verify that we have sane state. */
@@ -816,7 +818,7 @@ uct_analyze(engine_t *e, board_t *b, enum stone color, int start)
 /* Same as uct_get_best_moves() for node @parent.
  * XXX pass can be a valid move in which case you need best_n to check. 
  *     have another function which exposes best_n ? */
-void
+static void
 uct_get_best_moves_at(uct_t *u, tree_node_t *parent, coord_t *best_c, float *best_r, int nbest,
 		      bool winrates, int min_playouts)
 {
@@ -893,7 +895,7 @@ uct_dumptbook(engine_t *e, board_t *b, enum stone color)
 }
 
 
-floating_t
+static floating_t
 uct_evaluate_one(engine_t *e, board_t *b, time_info_t *ti, coord_t c, enum stone color)
 {
 	uct_t *u = (uct_t*)e->data;
@@ -924,7 +926,7 @@ uct_evaluate_one(engine_t *e, board_t *b, time_info_t *ti, coord_t c, enum stone
 	return isnan(bestval) ? NAN : 1.0f - bestval;
 }
 
-void
+static void
 uct_evaluate(engine_t *e, board_t *b, time_info_t *ti, floating_t *vals, enum stone color)
 {
 	for (int i = 0; i < b->flen; i++) {
@@ -942,7 +944,7 @@ log_nthreads(uct_t *u)
 	if (DEBUGL(0) && !logged++)  fprintf(stderr, "Threads: %i\n", u->threads);
 }
 
-size_t
+static size_t
 uct_default_tree_size()
 {
 	/* Double it on 64-bit, tree takes up twice as much memory ... */
@@ -1513,7 +1515,7 @@ uct_setoption(engine_t *e, board_t *b, const char *optname, char *optval,
 	return true;  /* successful */
 }
 
-uct_t *
+static uct_t *
 uct_state_init(engine_t *e, board_t *b)
 {
 	options_t *options = &e->options;

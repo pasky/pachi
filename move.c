@@ -7,6 +7,37 @@
 #include "move.h"
 
 
+/* Check @s is valid coord for given board size. */
+static bool
+valid_coord_for(char *s, int size)
+{
+	if (!s || !s[0])
+		return false;
+
+	if (!strcasecmp(s, "pass") || !strcasecmp(s, "resign"))
+		return true;
+
+	char c1 = tolower(s[0]);
+	char c2 = s[1];
+	int  x  = (c1 - 'a') + 1 - (c1 > 'i');
+	int  y  = atoi(s + 1);
+	int  digits = (y > 9 ? 2 : 1);
+	char endc = (s + 1)[digits];
+	assert(size <= 25);				// 'z' last letter
+	
+	return (c1 != 'i' && isdigit(c2) && (isspace(endc) || endc == 0) &&
+		x >= 1    && x <= size   &&
+		y >= 1    && y <= size);
+}
+
+/* Check @s is valid coord for current board size. */
+bool
+valid_coord(char *s)
+{
+	return valid_coord_for(s, the_board_rsize());
+}
+
+
 /* The S_OFFBOARD margin is not addressable by coordinates. */
 
 static char asdf[] = "abcdefghjklmnopqrstuvwxyz";
@@ -42,16 +73,21 @@ coord2sstr(coord_t c)
 	return coord2bstr(b, c);
 }
 
-/* No sanity checking */
+/* Aborts if coord is invalid. */
 coord_t
 str2coord_for(char *str, int size)
 {
 	if (!strcasecmp(str, "pass"))    return pass;
 	if (!strcasecmp(str, "resign"))	 return resign;
-	
+
+	assert(valid_coord_for(str, size));
+
+	int  stride = size + 2;
 	char xc = tolower(str[0]);
-	int stride = size + 2;
-	return xc - 'a' - (xc > 'i') + 1 + atoi(str + 1) * stride;
+	int  x = (xc - 'a') + 1 - (xc > 'i');
+	int  y = atoi(str + 1);
+	
+	return (y * stride + x);
 }
 
 coord_t
@@ -59,21 +95,6 @@ str2coord(char *str)
 {
 	return str2coord_for(str, the_board_rsize());
 }
-
-bool
-valid_str_coord(char *s)
-{
-	if (!s || !s[0])
-		return false;
-
-	char c1 = toupper(s[0]);
-	char c2 = s[1];
-	int n = atoi(s + 1);
-	return (c1 >= 'A' && c1 <= 'T' &&
-		c2 >= '0' && c2 <= '9' &&
-		n >= 1 && n <= 19);
-}
-
 
 /* Must match rotations in pthashes_init() */
 coord_t

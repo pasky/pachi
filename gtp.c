@@ -99,11 +99,14 @@ gtp_error(gtp_t *gtp, const char *str)
 {
 	gtp->error = true;
 	
-	/* errors never quiet */
+	/* Errors never quiet */
 	gtp_prefix(gtp, '?');
 	fputs(str, stdout);
 	putchar('\n');
 	gtp_flush(gtp);  /* flush errors right away */
+
+	if (gtp->fatal)
+		die("Command '%s' failed, aborting: %s\n", gtp->cmd, str);
 }
 
 /* Output anything (no \n added). */
@@ -134,6 +137,12 @@ gtp_error_printf(gtp_t *gtp, const char *format, ...)
 	vprintf(format, ap);
 	gtp_flush(gtp);   /* flush errors right away */
 
+	if (gtp->fatal) {
+		fprintf(stderr, "Command '%s' failed, aborting: ", gtp->cmd);
+		vfprintf(stderr, format, ap);
+		exit(EXIT_FAILURE);
+	}
+	
 	va_end(ap);	
 }
 
@@ -157,7 +166,6 @@ known_commands(gtp_t *gtp)
 		sbprintf(buf, "%s\n", commands[i].cmd);
 	}
 	
-	sbprintf(buf, "gogui-analyze_commands\n");
 	return buf->str;
 }
 
@@ -179,6 +187,21 @@ gtp_is_valid(engine_t *e, const char *cmd)
 	if (!cmd || !*cmd)  return false;
 	return (gtp_get_handler(cmd) != NULL);
 }
+
+#define gtp_valid_move(b, m)	((m)->coord == pass || (m)->coord == resign || \
+				 board_is_valid_play_no_suicide(b, (m)->color, (m)->coord))
+
+#define gtp_check_valid_move(b, m)	do {				\
+	if (!gtp_valid_move(b, m)) {				\
+		if (DEBUGL(0)) {					\
+			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str((m)->color), coord2sstr((m)->coord)); \
+			board_print(b, stderr);				\
+		}							\
+		gtp_error(gtp, "illegal move");				\
+		return P_OK;						\
+	}								\
+} while(0)
+
 
 static enum parse_code
 cmd_protocol_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
@@ -210,7 +233,10 @@ cmd_echo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_version(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	gtp_printf(gtp, "%s", PACHI_VERSION);
+	if (e->version)
+		gtp_printf(gtp, "%s", e->version);
+	else
+		gtp_printf(gtp, "%s", PACHI_VERSION);
 
 	/* Show josekifix status */
  	if (!get_josekifix_enabled() && e->id == E_UCT)
@@ -234,9 +260,9 @@ cmd_list_commands(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_known_command(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	if (gtp_is_valid(e, arg))  gtp_reply(gtp, "true");
+	char *cmd;
+	gtp_arg(cmd);
+	if (gtp_is_valid(e, cmd))  gtp_reply(gtp, "true");
 	else                       gtp_reply(gtp, "false");
 	return P_OK;
 }
@@ -252,9 +278,8 @@ cmd_quit(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_boardsize(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	int size = atoi(arg);
+	int size;
+	gtp_arg_number(size);
 
 	/* Give sane error msg if pachi was compiled for a specific board size. */
 #ifdef BOARD_SIZE
@@ -270,7 +295,8 @@ cmd_boardsize(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	}
 	board_resize(b, size);
 	board_clear(b);
-	return P_ENGINE_RESET;
+
+	return (e->keep_on_clear ? P_OK : P_ENGINE_RESET);
 }
 
 static enum parse_code
@@ -281,7 +307,7 @@ cmd_clear_board(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (DEBUGL(3) && debug_boardprint)
 		board_print(b, stderr);
 
-	return P_ENGINE_RESET;
+	return (e->keep_on_clear ? P_OK : P_ENGINE_RESET);
 }
 
 static enum parse_code
@@ -306,9 +332,9 @@ cmd_kgs_game_over(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_komi(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	sscanf(arg, PRIfloating, &b->komi);
+	float komi;
+	gtp_arg_float(komi);
+	b->komi = komi;
 
 	if (DEBUGL(3) && debug_boardprint)
 		board_print(b, stderr);
@@ -340,29 +366,20 @@ cmd_play(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	move_t m;
 
-	char *arg;
-	gtp_arg(arg);
-	m.color = str2stone(arg);
-	gtp_arg(arg);
-	m.coord = str2coord(arg);
-	arg = gtp->next;
-	char *enginearg = arg;
+	gtp_arg_color(m.color);
+	gtp_arg_coord(m.coord);
+	gtp_check_valid_move(b, &m);
+	
+	char *enginearg = gtp->next;
 
 	// This is where kgs starts the timer, not at genmove!
 	time_start_timer(&ti[stone_other(m.color)]);
 
-	// XXX engine getting notified if move is illegal !
 	bool print = false;
 	char *reply = (e->notify_play ? e->notify_play(e, b, &m, enginearg, &print) : NULL);
 	
-	if (board_play(b, &m) < 0) {
-		if (DEBUGL(0)) {
-			fprintf(stderr, "! ILLEGAL MOVE %s %s\n", stone2str(m.color), coord2sstr(m.coord));
-			board_print(b, stderr);
-		}
-		gtp_error(gtp, "illegal move");
-		return P_OK;
-	}
+	int r = board_play(b, &m);
+	assert(r >= 0);
 
 	if (print || (DEBUGL(4) && debug_boardprint))
 		engine_board_print(e, b, stderr);
@@ -375,11 +392,8 @@ static enum parse_code
 cmd_pachi_predict(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	move_t m;
-	char *arg;
-	gtp_arg(arg);
-	m.color = str2stone(arg);
-	gtp_arg(arg);
-	m.coord = str2coord(arg);
+	gtp_arg_color(m.color);
+	gtp_arg_coord(m.coord);
 
 	char *str = predict_move(b, e, ti, &m, gtp->played_games);
 
@@ -472,9 +486,8 @@ genmove(board_t *b, enum stone color, engine_t *e, time_info_t *ti, gtp_t *gtp, 
 static enum parse_code
 cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	enum stone color = str2stone(arg);
+	enum stone color;
+	gtp_arg_color(color);
 
 	coord_t c = genmove(b, color, e, ti, gtp, e->genmove);
 	gtp_reply(gtp, coord2sstr(c));
@@ -487,13 +500,11 @@ cmd_genmove(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_lz_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	enum stone color = str2stone(arg);
-	if (color == S_NONE) {  gtp_error(gtp, "bad argument"); return P_OK;  }
-	gtp_arg(arg);
-	if (!isdigit(*arg))  {  gtp_error(gtp, "bad argument"); return P_OK;  }
-	int freq = atoi(arg);  /* frequency (centiseconds) */
+	enum stone color;
+	gtp_arg_color(color);
+
+	int freq;	/* frequency (centiseconds) */
+	gtp_arg_number(freq);
 
 	if (!e->genmove_analyze) {  gtp_error(gtp, "lz-genmove_analyze not supported for this engine"); return P_OK; }
 
@@ -512,9 +523,9 @@ cmd_lz_genmove_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_pachi_genmoves(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	enum stone color = str2stone(arg);
+	enum stone color;
+	gtp_arg_color(color);
+	
 	void *stats;
 	int stats_size;
 
@@ -598,14 +609,15 @@ static enum parse_code
 cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	enum stone color = board_to_play(b);
-	char *arg;
-	gtp_arg(arg);
+
+	/* Optional color argument */
+	if (valid_color(gtp->next))
+		gtp_arg_color(color);
 	
-	/* optional color argument ? */
-	if (tolower(arg[0]) == 'w' || tolower(arg[0]) == 'b') {  color = str2stone(arg);  gtp_arg(arg);  }
-	if (!isdigit(*arg)) {  gtp_error(gtp, "bad argument"); return P_OK;  }
+	int freq;  /* Frequency (centiseconds) */
+	gtp_arg_number(freq);
+
 	if (!e->analyze)    {  gtp_error(gtp, "lz-analyze not supported for this engine"); return P_OK;  }
-	int freq = atoi(arg);  /* frequency (centiseconds) */
 
 	if (!freq)  {  stop_analyzing(gtp, b, e);  return P_OK;  }
 
@@ -624,23 +636,32 @@ cmd_lz_analyze(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	do {
-		move_t m = move(str2coord(arg), S_BLACK);
-		if (DEBUGL(4))  fprintf(stderr, "setting handicap %s\n", arg);
+	move_queue_t q;  mq_init(&q);
 
-		// XXX board left in inconsistent state if illegal move comes in
-		if (board_play(b, &m) < 0) {
-			if (DEBUGL(0))  fprintf(stderr, "! ILLEGAL MOVE %s\n", arg);
-			gtp_error(gtp, "illegal move");
-		}
-		
-		b->handicap++;
-		gtp_arg_optional(arg);
-	} while (*arg);
-	
-	if (DEBUGL(1) && debug_boardprint)
+	/* Check moves are valid first, don't leave half setup board on error. */
+	board_t copy;
+	board_copy(&copy, b);
+	do {
+		move_t m = move(pass, S_BLACK);
+		gtp_arg_coord(m.coord);			// return on invalid coord
+		gtp_check_valid_move(&copy, &m);	// return on invalid move
+
+		int r = board_play(&copy, &m);
+		assert(r >= 0);
+		mq_add(&q, m.coord, 0);
+	} while (*gtp->next);
+
+	/* All good, update main board. */
+	for (int i = 0; i < q.moves; i++) {
+		move_t m = move(q.move[i], S_BLACK);
+		if (DEBUGL(4))  fprintf(stderr, "setting handicap %s\n", coord2sstr(m.coord));
+
+		int r = board_play(b, &m);
+		assert(r >= 0);
+	}
+	b->handicap += q.moves;
+
+	if (DEBUGL(3) && debug_boardprint)
 		board_print(b, stderr);
 	return P_OK;
 }
@@ -651,9 +672,8 @@ cmd_set_free_handicap(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_fixed_handicap(board_t *b, engine_t *engine, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	int stones = atoi(arg);
+	int stones;
+	gtp_arg_number(stones);
 	
 	move_queue_t q;  mq_init(&q);
 	board_handicap(b, stones, &q);
@@ -867,41 +887,49 @@ cmd_undo(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	h->moves--;
 	
 	/* Send a play command to engine so it stops pondering (if it was pondering).  */
+	/* XXX should use engine->stop() instead  (needs distributed fix)  */
 	move_t m = move(pass, board_to_play(b));  bool print;
-	if (e->notify_play)
+	if (!e->keep_on_undo && e->notify_play)
 		e->notify_play(e, b, &m, "", &print);
 
-	/* Wait for non-undo command to reset engine. */
+	/* Wait for non-undo command to recreate board (and reset engine if necessary). */
 	gtp->undo_pending = true;
 	
 	return P_OK;
 }
 
+/* Recreate board and reset engine if needed. */
 static void
-undo_reload_engine(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
+gtp_process_undo(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti)
 {
-	if (DEBUGL(3)) fprintf(stderr, "reloading engine after undo(s).\n");
-	
+	bool reset_engine = !e->keep_on_undo;
 	gtp->undo_pending = false;
 
-	gtp_reset_engine(gtp, b, e, ti);
-	
 	/* Reset board */
+	move_history_t *h = &gtp->history;
+	int n = h->moves;	// save, board_clear() resets number of moves to 0
 	int handicap = b->handicap;
-	b->move_history = NULL;		/* Preserve history ! */
+	
 	board_clear(b);
 	b->handicap = handicap;
 
-	move_history_t *h = &gtp->history;
-	for (int i = 0; i < h->moves; i++) {
+	if (reset_engine) {
+		if (DEBUGL(3)) fprintf(stderr, "reloading engine after undo(s).\n");
+		gtp_reset_engine(gtp, b, e, ti);
+	}
+
+	/* Replay remaining moves. */
+	for (int i = 0; i < n; i++) {
+		move_t m = h->move[i];
 		bool print;
-		if (e->notify_play)
-			e->notify_play(e, b, &h->move[i], "", &print);
-		int r = board_play(b, &h->move[i]);
+		if (reset_engine && e->notify_play)
+			e->notify_play(e, b, &m, "", &print);
+		int r = board_play(b, &m);
 		assert(r >= 0);
 	}
 
-	b->move_history = &gtp->history;
+	assert(b->move_history == &gtp->history);
+	assert(b->move_history->moves == n);
 }
 
 static enum parse_code
@@ -920,9 +948,9 @@ cmd_pachi_gentbook(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	/* Board must be initialized properly, as if for genmove;
 	 * makes sense only as 'uct_gentbook b'. */
-	char *arg;
-	gtp_arg(arg);
-	enum stone color = str2stone(arg);
+	enum stone color;
+	gtp_arg_color(color);
+	
 	if (!uct_gentbook(e, b, &ti[color], color))
 		gtp_error(gtp, "error generating tbook");
 	return P_OK;
@@ -931,9 +959,9 @@ cmd_pachi_gentbook(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_pachi_dumptbook(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	enum stone color = str2stone(arg);
+	enum stone color;
+	gtp_arg_color(color);
+	
 	uct_dumptbook(e, b, color);
 	return P_OK;
 }
@@ -941,10 +969,9 @@ cmd_pachi_dumptbook(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_pachi_evaluate(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	enum stone color = str2stone(arg);
-
+	enum stone color;
+	gtp_arg_color(color);
+	
 	if (!e->evaluate) {
 		gtp_error(gtp, "pachi-evaluate not supported by engine");
 	} else {
@@ -979,18 +1006,40 @@ cmd_pachi_tunit(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	return P_OK;
 }
 
+/* Let gtp check correct engine is running (but not change it).
+ * For unit testing. Abort if wrong engine is being used.
+ * Usage: pachi-engine <engine_name>  */
+static enum parse_code
+cmd_pachi_engine(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
+{
+	char *arg;
+	gtp_arg(arg);
+
+	int id = engine_name_to_id(arg);
+	if (id == E_MAX)
+		gtp_error_printf(gtp, "bad engine '%s'\n", arg);
+	else if (id != e->id)
+		die("GTP expects engine '%s', aborting.\n"
+		    "Try running 'pachi -e %s'\n", arg, arg);
+	
+	return P_OK;
+}
+
 static enum parse_code
 cmd_kgs_chat(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *loc;
 	gtp_arg(loc);
 	bool opponent = !strcasecmp(loc, "game");
+	
 	char *from;
 	gtp_arg(from);
+	
 	char *msg = gtp->next;
 	msg += strspn(msg, " \n\t");
 	char *end = strchr(msg, '\n');
 	if (end) *end = '\0';
+	
 	char *reply = (e->chat ? e->chat(e, b, opponent, from, msg) : NULL);
 	if (reply)  gtp_reply(gtp, reply);
 	else        gtp_error(gtp, "unknown kgs-chat command");
@@ -1000,13 +1049,15 @@ cmd_kgs_chat(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 static enum parse_code
 cmd_time_left(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
-	char *arg;
-	gtp_arg(arg);
-	enum stone color = str2stone(arg);
-	gtp_arg(arg);
-	int time = atoi(arg);
-	gtp_arg(arg);
-	int stones = atoi(arg);
+	enum stone color;
+	gtp_arg_color(color);
+
+	int time;
+	gtp_arg_number(time);
+
+	int stones;
+	gtp_arg_number(stones);
+
 	if (!ti[color].ignore_gtp)
 		time_left(&ti[color], time, stones);
 	else
@@ -1018,33 +1069,24 @@ static enum parse_code
 cmd_kgs_time_settings(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 {
 	char *time_system;
-	char *arg;
-	if (!strcasecmp(gtp->cmd, "kgs-time_settings")) {
+	if (!strcasecmp(gtp->cmd, "kgs-time_settings"))
 		gtp_arg(time_system);
-	} else {
+	else
 		time_system = "canadian";
-	}
 
 	int main_time = 0, byoyomi_time = 0, byoyomi_stones = 0, byoyomi_periods = 0;
 	if (!strcasecmp(time_system, "none")) {
 		main_time = -1;
 	} else if (!strcasecmp(time_system, "absolute")) {
-		gtp_arg(arg);
-		main_time = atoi(arg);
+		gtp_arg_number(main_time);
 	} else if (!strcasecmp(time_system, "byoyomi")) {
-		gtp_arg(arg);
-		main_time = atoi(arg);
-		gtp_arg(arg);
-		byoyomi_time = atoi(arg);
-		gtp_arg(arg);
-		byoyomi_periods = atoi(arg);
+		gtp_arg_number(main_time);
+		gtp_arg_number(byoyomi_time);
+		gtp_arg_number(byoyomi_periods);
 	} else if (!strcasecmp(time_system, "canadian")) {
-		gtp_arg(arg);
-		main_time = atoi(arg);
-		gtp_arg(arg);
-		byoyomi_time = atoi(arg);
-		gtp_arg(arg);
-		byoyomi_stones = atoi(arg);
+		gtp_arg_number(main_time);
+		gtp_arg_number(byoyomi_time);
+		gtp_arg_number(byoyomi_stones);
 	}
 
 	if (DEBUGL(1))
@@ -1053,91 +1095,90 @@ cmd_kgs_time_settings(board_t *b, engine_t *e, time_info_t *ti, gtp_t *gtp)
 	if (!ti[S_BLACK].ignore_gtp) {
 		time_settings(&ti[S_BLACK], main_time, byoyomi_time, byoyomi_stones, byoyomi_periods);
 		ti[S_WHITE] = ti[S_BLACK];
-	} else {
+	} else
 		if (DEBUGL(1)) fprintf(stderr, "ignored time info\n");
-	}
 
 	return P_OK;
 }
 
 
 static gtp_command_t gtp_commands[] =
-{
-	{ "protocol_version",       cmd_protocol_version },
-	{ "name",                   cmd_name },
-	{ "echo",                   cmd_echo },
-	{ "version",                cmd_version },
-	{ "list_commands",          cmd_list_commands },
-	{ "known_command",          cmd_known_command },
-	{ "quit",                   cmd_quit },
+{								/* Core GTP commands */
 	{ "boardsize",              cmd_boardsize },
 	{ "clear_board",            cmd_clear_board },
-	{ "komi",                   cmd_komi },
-	{ "play",                   cmd_play },
-	{ "genmove",                cmd_genmove },
-	{ "time_left",              cmd_time_left },
-	{ "time_settings",          cmd_kgs_time_settings },
-	{ "set_free_handicap",      cmd_set_free_handicap },
-	{ "place_free_handicap",    cmd_fixed_handicap },
-	{ "fixed_handicap",         cmd_fixed_handicap },
+	{ "echo",                   cmd_echo },
 	{ "final_score",            cmd_final_score },
 	{ "final_status_list",      cmd_final_status_list },
+	{ "fixed_handicap",         cmd_fixed_handicap },
+	{ "genmove",                cmd_genmove },
+	{ "known_command",          cmd_known_command },
+	{ "komi",                   cmd_komi },
+	{ "list_commands",          cmd_list_commands },
+	{ "name",                   cmd_name },
+	{ "place_free_handicap",    cmd_fixed_handicap },
+	{ "play",                   cmd_play },
+	{ "protocol_version",       cmd_protocol_version },
+	{ "quit",                   cmd_quit },
+	{ "set_free_handicap",      cmd_set_free_handicap },
+	{ "showboard",              cmd_showboard },
+	{ "time_left",              cmd_time_left },
 	{ "undo",                   cmd_undo },
-	{ "showboard",              cmd_showboard },   	/* ogs */
-
-	{ "kgs-game_over",          cmd_kgs_game_over },
-	{ "kgs-rules",              cmd_kgs_rules },
-	{ "kgs-genmove_cleanup",    cmd_genmove },
-	{ "kgs-time_settings",      cmd_kgs_time_settings },
-	{ "kgs-chat",               cmd_kgs_chat },
-
-	{ "pachi-predict",          cmd_pachi_predict },
-	{ "pachi-tunit",            cmd_pachi_tunit },
-	{ "pachi-genmoves",         cmd_pachi_genmoves },
-	{ "pachi-genmoves_cleanup", cmd_pachi_genmoves },
-	{ "pachi-gentbook",         cmd_pachi_gentbook },
-	{ "pachi-dumptbook",        cmd_pachi_dumptbook },
-	{ "pachi-evaluate",         cmd_pachi_evaluate },
-	{ "pachi-result",           cmd_pachi_result },
-	{ "pachi-score_est",        cmd_pachi_score_est },
-	{ "pachi-setoption",	    cmd_pachi_setoption },  /* Set/change engine option */
-	{ "pachi-getoption",	    cmd_pachi_getoption },  /* Get engine option(s) */
-
-	{ "lz-analyze",             cmd_lz_analyze },         /* Lizzie, Sabaki, etc */
-	{ "lz-genmove_analyze",     cmd_lz_genmove_analyze },
-
-	/* Short aliases */
+	{ "version",                cmd_version },
+								/* Aliases */
 	{ "predict",                cmd_pachi_predict },
-	{ "tunit",		    cmd_pachi_tunit },
 	{ "score_est",              cmd_pachi_score_est },
-
+	{ "time_settings",          cmd_kgs_time_settings },
+	{ "tunit",		    cmd_pachi_tunit },
+								/* GoGui commands */
 	{ "gogui-analyze_commands", cmd_gogui_analyze_commands },
-	{ "gogui-livegfx",          cmd_gogui_livegfx },
-	{ "gogui-influence",        cmd_gogui_influence },
-	{ "gogui-score_est",        cmd_gogui_score_est },
-	{ "gogui-final_score",      cmd_gogui_final_score },
 	{ "gogui-best_moves",       cmd_gogui_best_moves },
-	{ "gogui-winrates",         cmd_gogui_winrates },
-	{ "gogui-joseki_moves",     cmd_gogui_joseki_moves },
-	{ "gogui-joseki_show_pattern", cmd_gogui_joseki_show_pattern },
+	{ "gogui-color_palette",    cmd_gogui_color_palette },
 #ifdef DCNN
 	{ "gogui-dcnn_best",        cmd_gogui_dcnn_best },
 	{ "gogui-dcnn_colors",      cmd_gogui_dcnn_colors },
 	{ "gogui-dcnn_rating",      cmd_gogui_dcnn_rating },
-#endif /* DCNN */
-	{ "gogui-pattern_best",     cmd_gogui_pattern_best },
-	{ "gogui-pattern_colors",   cmd_gogui_pattern_colors },
-	{ "gogui-pattern_rating",   cmd_gogui_pattern_rating },
-	{ "gogui-pattern_features", cmd_gogui_pattern_features },
-	{ "gogui-pattern_gammas",   cmd_gogui_pattern_gammas },
-	{ "gogui-show_spatial",     cmd_gogui_show_spatial },
-	{ "gogui-spatial_size",     cmd_gogui_spatial_size },
-	{ "gogui-color_palette",    cmd_gogui_color_palette },
+#endif
+	{ "gogui-final_score",      cmd_gogui_final_score },
+	{ "gogui-influence",        cmd_gogui_influence },
+	{ "gogui-joseki_moves",     cmd_gogui_joseki_moves },
+	{ "gogui-joseki_show_pattern", cmd_gogui_joseki_show_pattern },
 #ifdef JOSEKIFIX
+	{ "gogui-josekifix_dump_templates", cmd_gogui_josekifix_dump_templates },
 	{ "gogui-josekifix_set_coord",    cmd_gogui_josekifix_set_coord },
 	{ "gogui-josekifix_show_pattern", cmd_gogui_josekifix_show_pattern },
-	{ "gogui-josekifix_dump_templates", cmd_gogui_josekifix_dump_templates },
 #endif
+	{ "gogui-livegfx",          cmd_gogui_livegfx },
+	{ "gogui-pattern_best",     cmd_gogui_pattern_best },
+	{ "gogui-pattern_colors",   cmd_gogui_pattern_colors },
+	{ "gogui-pattern_features", cmd_gogui_pattern_features },
+	{ "gogui-pattern_gammas",   cmd_gogui_pattern_gammas },
+	{ "gogui-pattern_rating",   cmd_gogui_pattern_rating },
+	{ "gogui-score_est",        cmd_gogui_score_est },
+	{ "gogui-show_spatial",     cmd_gogui_show_spatial },
+	{ "gogui-spatial_size",     cmd_gogui_spatial_size },
+	{ "gogui-winrates",         cmd_gogui_winrates },
+								/* KGS commands */
+	{ "kgs-chat",               cmd_kgs_chat },
+	{ "kgs-game_over",          cmd_kgs_game_over },
+	{ "kgs-genmove_cleanup",    cmd_genmove },
+	{ "kgs-rules",              cmd_kgs_rules },
+	{ "kgs-time_settings",      cmd_kgs_time_settings },
+								/* Lizzie, Sabaki, etc */
+	{ "lz-analyze",             cmd_lz_analyze },
+	{ "lz-genmove_analyze",     cmd_lz_genmove_analyze },
+								/* Pachi */
+	{ "pachi-dumptbook",        cmd_pachi_dumptbook },
+	{ "pachi-engine",	    cmd_pachi_engine },
+	{ "pachi-evaluate",         cmd_pachi_evaluate },
+	{ "pachi-genmoves",         cmd_pachi_genmoves },
+	{ "pachi-genmoves_cleanup", cmd_pachi_genmoves },
+	{ "pachi-gentbook",         cmd_pachi_gentbook },
+	{ "pachi-getoption",	    cmd_pachi_getoption },	/* Get engine option(s) */
+	{ "pachi-predict",          cmd_pachi_predict },
+	{ "pachi-result",           cmd_pachi_result },
+	{ "pachi-score_est",        cmd_pachi_score_est },
+	{ "pachi-setoption",	    cmd_pachi_setoption },	/* Set engine option */	
+	{ "pachi-tunit",            cmd_pachi_tunit },
 
 	{ 0, 0 }
 };
@@ -1213,10 +1254,10 @@ gtp_parse(gtp_t *gtp, board_t *b, engine_t *e, time_info_t *ti, char *buf)
 	if (e->id == E_UCT)
 		external_joseki_engine_forward_cmd(gtp, orig_cmd);
 #endif
-	
-	/* Undo: reload engine after first non-undo command. */
+
+	/* Handle undo after first non-undo command: recreate board and reload engine if necessary. */
 	if (gtp->undo_pending && strcasecmp(gtp->cmd, "undo"))
-		undo_reload_engine(gtp, b, e, ti);
+		gtp_process_undo(gtp, b, e, ti);
 
 	/* Run handler */
 	enum parse_code c = gtp_run_handler(gtp, b, e, ti, buf);

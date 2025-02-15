@@ -37,8 +37,8 @@ coord_t str2coord(char *str);
 coord_t str2coord_for(char *str, int size);
 /* Rotate coordinate according to rot: [0-7] for 8 board symmetries. */
 coord_t rotate_coord(coord_t c, int rot);
-/* Check string coord is valid */
-bool valid_str_coord(char *s);
+/* Check string coord is valid for current board. */
+bool valid_coord(char *s);
 
 typedef struct {
 	coord_t coord;
